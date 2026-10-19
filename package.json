@@ -1,0 +1,36 @@
+{
+  "name": "simulation-of-boring-things",
+  "version": "0.1.0",
+  "description": "A first-person leisure-centre pool plant engineering game.",
+  "scripts": {
+    "dev": "vp dev --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "lint": "vp lint .",
+    "format": "vp fmt .",
+    "format:check": "vp fmt --check .",
+    "test": "vp test run --passWithNoTests",
+    "test:watch": "vp test",
+    "build": "npm run typecheck && vp build",
+    "preview": "vp preview --host 127.0.0.1",
+    "check": "vp check"
+  },
+  "type": "module",
+  "dependencies": {
+    "@preact/signals-core": "1.14.4",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "@types/three": "0.186.0",
+    "typescript": "7.0.2",
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.2.0",
+    "vite-plus": "1.2.0"
+  },
+  "private": true,
+  "engines": {
+    "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.2.0"
+  }
+}
