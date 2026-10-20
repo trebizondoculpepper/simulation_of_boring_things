@@ -1,6 +1,6 @@
-import { Group } from 'three';
-import { METRE } from '../../../components/core/logic/units';
+import { BackSide, Group } from 'three';
 import { plantTools } from '../../../components/plant/views/plant-tools';
+import { METRE } from '../../../components/core/logic/units';
 import {
   createPoolUniforms,
   createTileMaterial,
@@ -9,24 +9,34 @@ import {
   EDGE_PROFILES,
   SECTION,
 } from '../../../components/pool/logic/edge-profiles';
+import { bandOutline } from '../../../components/pool/logic/plan-path';
 import type { EdgeProfile } from '../../../components/pool/logic/edge-profiles';
 import {
-  EDGE_SPAN,
+  STEPPED,
   createPoolEdge,
 } from '../../../components/pool/views/pool-edges';
 import type { PlantExhibit } from './exhibit';
 
 /**
- * dev17: pool edges through the decades, each a full-size cut-away on a
- * plinth with the water at its level (`edge-profiles.ts`): the roll-out
+ * dev17: pool edges through the decades, each a full-size stepped run (an
+ * edge, a concave corner, a convex corner) sunk into the floor, the
+ * deck at the floor's level, with the water at its level (`edge-profiles.ts`): the roll-out
  * gutter of the 1940s, the recessed scum trough of the 1960s, the
  * deck-level overflow of the 1980s and today's deck-level grated channel.
  */
 export const PURPOSE =
   'How the water meets the deck: roll-out gutter, scum trough, deck-level overflow, grated channel';
 
-/** The deck's height above the floor, so the cut faces are at eye level. */
-const DECK_HEIGHT = 0.95;
+/** Where the section sits about its exhibit's origin, metres in x. */
+const SHIFT = -0.5;
+
+/**
+ * The plan of each section, which the room cuts out of its floor: the
+ * band of the stepped run from the pool's far side to the deck's end.
+ */
+const PIT = bandOutline(STEPPED, -SECTION.pool, SECTION.deck).map(
+  ([x, z]) => [x + SHIFT, z] as const,
+);
 
 const REFERENCES: Record<EdgeProfile['id'], string> = {
   rollout:
@@ -41,30 +51,24 @@ const REFERENCES: Record<EdgeProfile['id'], string> = {
 
 const exhibit = (profile: EdgeProfile): PlantExhibit => ({
   title: `${profile.era}: ${profile.name.toLowerCase()}`,
-  reference: REFERENCES[profile.id],
-  size: { w: 2.5, d: 1.6, h: DECK_HEIGHT + 0.1, mount: 'floor' },
+  reference: `${REFERENCES[profile.id]}; a concave and a convex corner`,
+  size: { w: 4.1, d: 3.3, h: 0.3, mount: 'floor', pit: PIT },
   build(kit) {
-    const t = plantTools(kit);
     const uniforms = createPoolUniforms(METRE, -100, []);
     uniforms.caustics.value = uniforms.reflected.value = 0;
     const tile = createTileMaterial(uniforms);
     kit.materials.push(tile);
     const group = new Group();
-    const section = createPoolEdge(kit, profile, tile);
-    // Centred over its plinth, the deck at DECK_HEIGHT.
-    section.position.set(-(EDGE_SPAN.from + EDGE_SPAN.to) / 2, DECK_HEIGHT, 0);
+    // A stepped run sunk into the floor, its deck the floor's level; a
+    // dark pit lining round it, under the floor, closes the cut ends.
+    const section = createPoolEdge(kit, profile, tile, STEPPED);
+    section.position.x = SHIFT;
     group.add(section);
-    const bottom = DECK_HEIGHT - SECTION.depth - SECTION.slab;
-    t.box(
-      group,
-      t.paint('#3a3d40', 0.8),
-      EDGE_SPAN.to - EDGE_SPAN.from + 0.1,
-      bottom,
-      1.5,
-      0,
-      bottom / 2,
-      0,
-    );
+    const t = plantTools(kit);
+    const lining = t.paint('#25292b', 0.9);
+    lining.side = BackSide;
+    const depth = SECTION.depth + SECTION.slab + 0.05;
+    t.box(group, lining, 4.1, depth, 3.3, 0, -depth / 2, 0);
     return group;
   },
 });

@@ -20,6 +20,12 @@ export interface ExhibitSize {
   mount: 'floor' | 'wall';
   /** For wall equipment, the height of its middle above the floor. */
   y?: number;
+  /**
+   * For floor equipment sunk into the floor (a pool's edge, a pit): the
+   * outline in plan, (x, z) metres about its origin, that the room cuts
+   * out of its floor for it.
+   */
+  pit?: readonly (readonly [number, number])[];
 }
 
 /** Gap between neighbouring exhibits along a row, metres. */

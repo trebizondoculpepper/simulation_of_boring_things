@@ -1,12 +1,15 @@
 import {
   AmbientLight,
   DirectionalLight,
+  ExtrudeGeometry,
   Group,
   HemisphereLight,
   Mesh,
+  Path,
   PerspectiveCamera,
   Raycaster,
   Scene,
+  Shape,
   Vector2,
 } from 'three';
 import type { Object3D } from 'three';
@@ -124,7 +127,36 @@ export function startEquipmentRoom(
       z: number,
       paint = wallPaint,
     ) => t.box(room, paint, w, h, d, x, y, z);
-    slab(2 * halfX, 0.1, 2 * halfZ, 0, -0.05, 0, floorPaint);
+    // The floor, with a hole for each exhibit sunk into it.
+    const floor = new Shape([
+      new Vector2(-halfX, -halfZ),
+      new Vector2(halfX, -halfZ),
+      new Vector2(halfX, halfZ),
+      new Vector2(-halfX, halfZ),
+    ]);
+    exhibits.forEach((exhibit, i) => {
+      const pit = exhibit.size.pit;
+      if (!pit) return;
+      const { x, z, yaw } = layout.places[i];
+      const c = Math.cos(yaw),
+        s = Math.sin(yaw);
+      // Shape coordinates are (x, −z): the floor is laid with its y up.
+      floor.holes.push(
+        new Path(
+          pit.map(
+            ([px, pz]) =>
+              new Vector2(x + px * c + pz * s, -(z - px * s + pz * c)),
+          ),
+        ),
+      );
+    });
+    const floorGeometry = new ExtrudeGeometry(floor, {
+      depth: 0.1,
+      bevelEnabled: false,
+    });
+    floorGeometry.rotateX(-Math.PI / 2);
+    floorGeometry.translate(0, -0.1, 0);
+    room.add(new Mesh(floorGeometry, floorPaint));
     slab(2 * halfX, 0.1, 2 * halfZ, 0, height + 0.05, 0);
     const bounds: Footprint = {
       minX: -halfX * m,
