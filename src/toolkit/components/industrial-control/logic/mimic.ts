@@ -67,6 +67,16 @@ export interface MimicSpec {
   }[];
   /** LED readouts at the measured points, each with an LCD legend. */
   readouts: readonly { id: string; at: Point }[];
+  /**
+   * Push buttons set into the drawing, in line with the plant they work
+   * (a pump's START and STOP beside its symbol), each named.
+   */
+  buttons?: readonly {
+    id: string;
+    at: Point;
+    colour: 'green' | 'red' | 'black' | 'white';
+    legend?: string;
+  }[];
   /** The display modes, one illuminated button each, in order. */
   modes: readonly { id: string; legend: string }[];
 }
@@ -127,7 +137,11 @@ export function checkMimic(spec: MimicSpec, state?: MimicState): string[] {
   const inside = ([x, y]: Point) =>
     Math.abs(x) <= spec.width / 2 && Math.abs(y) <= spec.height / 2;
   const ids = new Set<string>();
-  for (const item of [...spec.lamps, ...spec.readouts]) {
+  for (const item of [
+    ...spec.lamps,
+    ...spec.readouts,
+    ...(spec.buttons ?? []),
+  ]) {
     if (ids.has(item.id)) problems.push(`duplicate id ${item.id}`);
     ids.add(item.id);
     if (!inside(item.at)) problems.push(`${item.id} is off the board`);

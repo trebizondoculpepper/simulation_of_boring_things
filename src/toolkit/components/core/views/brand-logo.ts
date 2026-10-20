@@ -680,6 +680,38 @@ export function drawBrandMark(
       }
       break;
     }
+    case 'triad': {
+      // A dark cubicle-grey bezel holding three pilot lamps, one lit.
+      ctx.fillStyle = main;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.95, -r * 0.5, r * 1.9, r, r * 0.2);
+      ctx.fill();
+      const lamps: [string, boolean][] = [
+        ['#d8372c', false],
+        ['#f2b43a', false],
+        ['#3ec46a', true],
+      ];
+      lamps.forEach(([colour, lit], i) => {
+        const x = (i - 1) * r * 0.6;
+        ctx.fillStyle = second;
+        ctx.beginPath();
+        ctx.arc(x, 0, r * 0.26, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = colour;
+        ctx.globalAlpha = lit ? 1 : 0.35;
+        ctx.beginPath();
+        ctx.arc(x, 0, r * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        if (lit) {
+          ctx.fillStyle = '#ffffff88';
+          ctx.beginPath();
+          ctx.arc(x - r * 0.06, -r * 0.06, r * 0.06, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      break;
+    }
     case 'lifebuoy': {
       // A ring in white and the brand's colour, four bands round it.
       ctx.lineWidth = r * 0.38;

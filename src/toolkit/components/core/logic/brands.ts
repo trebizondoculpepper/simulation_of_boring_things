@@ -62,7 +62,9 @@ export type BrandMark =
   /** A swirl of air in three curved strokes. */
   | 'swirl'
   /** A lifebuoy ring with its four bands. */
-  | 'lifebuoy';
+  | 'lifebuoy'
+  /** Three pilot lamps in a row, one lit: a tri-state indicator. */
+  | 'triad';
 
 /** Every brand's id: a part names its maker by one of these. */
 export type BrandId =
@@ -90,7 +92,8 @@ export type BrandId =
   | 'chlorella'
   | 'hamwarmy'
   | 'mistral'
-  | 'poolguard';
+  | 'poolguard'
+  | 'penfold';
 
 export interface Brand {
   id: BrandId;
@@ -430,6 +433,19 @@ export const BRANDS: readonly Brand[] = [
     mark: 'lifebuoy',
     colours: ['#e2462f', '#f7f4ee', '#1e1e1e'],
     type: 'slab',
+  },
+  {
+    id: 'penfold',
+    name: 'Penfold Controls',
+    wordmark: 'PENFOLD',
+    tagline: 'Every state at a glance',
+    founded: 1972,
+    country: 'United Kingdom',
+    makes: 'Control panels, mimic cubicles, desks and annunciators',
+    promise: 'Panels that tell you the truth about your plant',
+    mark: 'triad',
+    colours: ['#3d4f63', '#d6d9d6', '#16191c'],
+    type: 'sans',
   },
 ];
 

@@ -1,5 +1,5 @@
 import { computed, signal } from '@preact/signals-core';
-import { BoxGeometry, Group, Mesh } from 'three';
+import { BoxGeometry, Group, Mesh, MeshBasicMaterial } from 'three';
 import type { Object3D } from 'three';
 import { partAudio } from '../../components/core/audio/part-audio';
 import type { SoundRecipe } from '../../components/core/audio/part-audio';
@@ -86,6 +86,13 @@ import type {
   StudioCapColour,
   StudioLedColour,
 } from '../../components/industrial-control/views/studio-controls';
+import { tools } from '../../components/core/views/fitting-tools';
+import {
+  TRI_STATES,
+  triStateIndicator,
+} from '../../components/core/parts/panel-indicators';
+import { swingHandle } from '../../components/core/parts/swing-handle';
+import { PENFOLD_GREY } from '../../components/industrial-control/views/control-cubicle';
 import type { Part, PartSet } from '../../components/core/parts/parts';
 import { createPs1Material } from '../../components/core/parts/ps1-material';
 
@@ -1253,4 +1260,139 @@ export function createSmallControlsBoard(kit: PanelKit): TestFitting {
   );
   board.caption('ILLUMINATED I/O ROCKERS, TWICE LIFE SIZE', 0, -0.16, 0.008);
   return fitting(board);
+}
+
+/**
+ * The TRI-STATE INDICATORS board: three of Penfold's 3-gang tri-state
+ * indicators, life size, as they sit over devices on a cubicle mimic, and
+ * the cubicle door's swing handle. The breaker's follows its selector
+ * (TRIP, OPEN, CLOSE); the pump's runs, stops and now and then faults by
+ * itself; the valve's shows TRAVEL for the four seconds it takes to stroke
+ * after OPEN or SHUT is pressed. Each lamp's lens can be pressed to test.
+ */
+export function createTriStateBoard(kit: PanelKit): TestFitting {
+  const board = createBoard(kit, {
+    title: 'TRI-STATE INDICATORS',
+    width: 0.95,
+    height: 0.5,
+    scale: 1,
+    captionScale: 1.2,
+  });
+  const updates: ((delta: number) => void)[] = [];
+  const add = (indicator: ReturnType<typeof triStateIndicator>, x: number) => {
+    indicator.group.position.set(x, 0.07, 0);
+    board.parts.add(indicator.group);
+    for (const [object, use] of indicator.parts.uses)
+      board.set.uses.set(object, use);
+    updates.push((delta) => indicator.parts.update(delta));
+  };
+  // A breaker, worked by its selector.
+  const breaker = board.place(
+    selector(kit, { positions: 3, initial: 2, legend: 'TRIP · OPEN · CLOSE' }),
+    -0.3,
+    -0.11,
+  );
+  add(
+    triStateIndicator(kit, {
+      lamps: TRI_STATES.breaker,
+      state: computed(() => [2, 1, 0][breaker.position.value]),
+      title: 'BKR 52-1 INCOMER',
+    }),
+    -0.3,
+  );
+  // A pump, cycling by itself.
+  const motor = signal<number | null>(0);
+  let clock = 0;
+  updates.push((delta) => {
+    clock = (clock + delta) % 16;
+    motor.value = clock < 8 ? 0 : clock < 13 ? 1 : 2;
+  });
+  add(
+    triStateIndicator(kit, {
+      lamps: TRI_STATES.motor,
+      state: motor,
+      title: 'P-101 FILTER PUMP 1',
+    }),
+    0,
+  );
+  board.caption('CYCLES BY ITSELF', 0, -0.11, 0.008);
+  // A motorised valve, stroked by OPEN and SHUT.
+  const valve = signal<number | null>(1);
+  let travel = 0,
+    going = 1;
+  const stroke = (to: number) => {
+    if (valve.value === to) return;
+    going = to;
+    travel = 4;
+  };
+  updates.push((delta) => {
+    if (travel > 0) {
+      travel = Math.max(0, travel - delta);
+      valve.value = travel > 0 ? 2 : going;
+    }
+  });
+  add(
+    triStateIndicator(kit, {
+      lamps: TRI_STATES.valve,
+      state: valve,
+      title: 'MV-201 BACKWASH',
+    }),
+    0.3,
+  );
+  board.place(
+    pushButton(kit, {
+      colour: 'red',
+      head: 'flush',
+      legend: 'OPEN',
+      action: () => stroke(0),
+    }),
+    0.25,
+    -0.11,
+  );
+  board.place(
+    pushButton(kit, {
+      colour: 'green',
+      legend: 'SHUT',
+      action: () => stroke(1),
+    }),
+    0.35,
+    -0.11,
+  );
+  board.caption(
+    '3-GANG TRI-STATE INDICATORS, LIFE SIZE: PRESS A LENS TO TEST IT',
+    0,
+    -0.2,
+    0.008,
+  );
+  return fitting(board, updates);
+}
+
+/**
+ * The CUBICLE HANDLE board: the swing handle of a control cubicle's door,
+ * life size, set in a patch of the door's grey: a click works it a step,
+ * out, a quarter turn to unlatch, back and home.
+ */
+export function createSwingHandleBoard(kit: PanelKit): TestFitting {
+  const board = createBoard(kit, {
+    title: 'CUBICLE HANDLE',
+    width: 0.3,
+    height: 0.5,
+    scale: 1,
+    captionScale: 1.2,
+  });
+  const t = tools(kit);
+  const door = new Group();
+  t.box(door, t.paint(PENFOLD_GREY, 0.55), 0.2, 0.36, 0.004, 0, 0.0, 0.002);
+  door.position.set(0, 0.02, 0);
+  board.parts.add(door);
+  const handle = swingHandle(kit);
+  const lamp = new MeshBasicMaterial({ color: '#2a2c2a' });
+  kit.materials.push(lamp);
+  board.place(handle, 0, 0.02, 1).object.position.z += 0.004;
+  board.caption('UNLATCHED', 0, -0.2, 0.008);
+  const tell = t.cyl(board.parts, lamp, 0.006, 0.003, 0, -0.18, 0.003, 'z', 12);
+  tell.userData.live = true;
+  return fitting(board, [
+    () => lamp.color.set(handle.unlatched.value ? '#5dff7a' : '#2a2c2a'),
+  ]);
 }

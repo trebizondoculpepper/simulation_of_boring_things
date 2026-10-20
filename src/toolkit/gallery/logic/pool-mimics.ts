@@ -107,6 +107,20 @@ export const MAIN_POOL_MIMIC: MimicSpec = {
     { id: 'dosing', at: pt(0.88, 0.28), colour: 'green' },
     { id: 'makeup', at: pt(-0.95, -0.14), colour: 'blue', label: 'MAKE-UP' },
     { id: 'level-low', at: pt(-0.69, -0.14), colour: 'red', label: 'LOW' },
+    // Lit while the pumps' local panel is switched to LOCAL: START and
+    // STOP from the control room are then refused.
+    {
+      id: 'pumps-local',
+      at: pt(-0.41, -0.47),
+      colour: 'amber',
+      label: 'LOCAL',
+    },
+  ],
+  buttons: [
+    { id: 'p1-start', at: pt(-0.535, -0.39), colour: 'green', legend: 'START' },
+    { id: 'p1-stop', at: pt(-0.465, -0.39), colour: 'red', legend: 'STOP' },
+    { id: 'p2-start', at: pt(-0.355, -0.39), colour: 'green', legend: 'START' },
+    { id: 'p2-stop', at: pt(-0.285, -0.39), colour: 'red', legend: 'STOP' },
   ],
   readouts: [
     { id: 'tank', at: pt(-0.82, -0.05) },
@@ -123,15 +137,36 @@ export const MAIN_POOL_MIMIC: MimicSpec = {
   ],
 };
 
-export function mainPoolState(p: PlantReading): MimicState {
+/** What the filter pumps are doing, when their controls decide it. */
+export interface PumpsShown {
+  /** 0 running, 1 stopped, 2 tripped, for each pump. */
+  p1: 0 | 1 | 2;
+  p2: 0 | 1 | 2;
+  /** Whether the local panel is in LOCAL. */
+  local: boolean;
+}
+
+export function mainPoolState(p: PlantReading, pumps?: PumpsShown): MimicState {
+  const running = (id: 'p1' | 'p2') => (pumps ? pumps[id] === 0 : p.pumps[id]);
+  const tripped = (id: 'p1' | 'p2') => (pumps ? pumps[id] === 2 : false);
+  // The flow, as the pumps running give it: none with both stopped.
+  const scheduled = Number(p.pumps.p1) + Number(p.pumps.p2);
+  const runningN = Number(running('p1')) + Number(running('p2'));
+  const flow =
+    runningN === 0
+      ? 0
+      : scheduled === 0
+        ? p.flow
+        : p.flow * Math.min(1, runningN / scheduled);
   const worst = Math.max(...p.filterDp);
   const discharge = 2.1 + 0.3 * (worst - 0.4);
   return {
     lamps: {
-      'p1-run': p.pumps.p1,
-      'p1-trip': false,
-      'p2-run': p.pumps.p2,
-      'p2-trip': false,
+      'p1-run': running('p1'),
+      'p1-trip': tripped('p1'),
+      'p2-run': running('p2'),
+      'p2-trip': tripped('p2'),
+      'pumps-local': pumps?.local ?? false,
       ...Object.fromEntries(
         p.filterDp.map((dp, i) => [`f${i + 1}-dp`, dp > 0.7]),
       ),
@@ -152,17 +187,17 @@ export function mainPoolState(p: PlantReading): MimicState {
         water: r(p.balance * 100, '%', 'LEVEL'),
       },
       pumps: {
-        flow: r(p.flow, 'm3/h', 'P1 OUT'),
+        flow: r(flow, 'm3/h', 'P1 OUT'),
         pressure: r(discharge, 'bar', 'P1 OUT', 2),
         temperature: r(p.mainPool - 0.2, 'C', 'SUCTION', 1),
       },
       filters: {
-        flow: r(p.flow / 4, 'm3/h', 'EACH'),
+        flow: r(flow / 4, 'm3/h', 'EACH'),
         pressure: r(worst, 'bar', 'WORST DP', 2),
         water: r(p.chlorine + 0.05, 'mg/l', 'Cl IN', 2),
       },
       return: {
-        flow: r(p.flow, 'm3/h', 'RETURN'),
+        flow: r(flow, 'm3/h', 'RETURN'),
         pressure: r(discharge - worst - 0.55, 'bar', 'RETURN', 2),
         temperature: r(p.mainPool + 1.4, 'C', 'AFTER HX', 1),
         water: r(p.ph, 'pH', 'pH', 2),

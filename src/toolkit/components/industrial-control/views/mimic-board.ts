@@ -181,7 +181,14 @@ function drawSymbol(
 export function createMimicBoard(
   kit: PanelKit,
   spec: MimicSpec,
-  { maker = 'hartwell-bligh' as BrandId } = {},
+  {
+    maker = 'hartwell-bligh' as BrandId,
+    press = () => {},
+  }: {
+    maker?: BrandId;
+    /** Called with a button's id when one of the drawing's buttons is pressed. */
+    press?: (id: string) => void;
+  } = {},
 ): MimicBoardView {
   const t = plantTools(kit);
   const group = new Group();
@@ -310,6 +317,20 @@ export function createMimicBoard(
     group.add(button.object);
     parts.add(button);
   });
+  // The buttons in the drawing.
+  for (const b of spec.buttons ?? []) {
+    const button = pushButton(kit, {
+      colour: b.colour,
+      head: 'flush',
+      legend: b.legend,
+      action: () => press(b.id),
+      name: `${spec.title}: ${b.legend ?? b.id}`,
+    });
+    button.object.position.set(b.at[0], b.at[1], z);
+    live(button.object);
+    group.add(button.object);
+    parts.add(button);
+  }
   const lampTest = pushButton(kit, {
     colour: 'black',
     legend: 'LAMP TEST',

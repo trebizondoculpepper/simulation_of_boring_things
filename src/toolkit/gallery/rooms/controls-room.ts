@@ -37,6 +37,8 @@ import {
   createDisplaysBoard,
   createBoilerControlsBoard,
   createSmallControlsBoard,
+  createSwingHandleBoard,
+  createTriStateBoard,
   createGaugeTestBoard,
   createMimicTestBoard,
   createPeriodBoard,
@@ -220,6 +222,18 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     maxX: (periodX + 0.3) * m,
     minZ: 5.45 * m,
     maxZ: 6.05 * m,
+  });
+  place(createTriStateBoard(kit), periodX, 1.55, -1.0, Math.PI / 2, {
+    minX: -half.x * m,
+    maxX: (periodX + 0.3) * m,
+    minZ: -1.5 * m,
+    maxZ: -0.5 * m,
+  });
+  place(createSwingHandleBoard(kit), periodX, 1.55, 6.6, Math.PI / 2, {
+    minX: -half.x * m,
+    maxX: (periodX + 0.3) * m,
+    minZ: 6.4 * m,
+    maxZ: 6.8 * m,
   });
   [...createMachineGallery(kit), ...createEmptyMachinePlinths(kit)].forEach(
     (plinth, i) => {

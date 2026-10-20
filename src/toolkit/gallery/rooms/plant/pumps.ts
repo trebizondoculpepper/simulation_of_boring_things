@@ -1,5 +1,6 @@
 import { Group } from 'three';
 import type { Object3D } from 'three';
+import { PUMP_PANEL_EXHIBIT } from './pump-panel';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import { plantAt } from '../../logic/control-room-demo';
 import {
@@ -144,4 +145,5 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     size: { w: 0.9, d: 0.3, h: 0.8, mount: 'wall', y: 1.5 },
     build: createDrive,
   },
+  PUMP_PANEL_EXHIBIT,
 ];

@@ -26,6 +26,7 @@ import {
   mainPoolState,
 } from '../../logic/pool-mimics';
 import { createMimicBoard } from '../../../components/industrial-control/views/mimic-board';
+import { pressPump, pumpsShown } from './pump-panel';
 
 /** What this plant room is for, printed on its title card. */
 export const PURPOSE =
@@ -129,11 +130,22 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       y: 1.7,
     },
     build(kit): LiveExhibit {
-      const board = createMimicBoard(kit, spec);
+      // The main pool's board works the filter pumps remotely, through
+      // their local panel (`pump-panel.ts`): refused while it is in LOCAL.
+      const board = createMimicBoard(kit, spec, {
+        press: (id) => pressPump(id, 'remote'),
+      });
       return {
         object: board.group,
         parts: board.parts,
-        update: () => board.show(state(reading())),
+        update: () => {
+          const now = reading();
+          board.show(
+            spec === MAIN_POOL_MIMIC
+              ? mainPoolState(now, pumpsShown(now))
+              : state(now),
+          );
+        },
       };
     },
   })),

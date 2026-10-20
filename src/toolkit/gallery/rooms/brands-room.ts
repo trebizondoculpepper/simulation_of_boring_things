@@ -56,7 +56,7 @@ const ALONG = [-9.6, -4.8, 0, 4.8, 9.6];
 // The north wall, clear of portals, takes one more.
 const NORTH = [-10, -6, -2, 2, 6, 10];
 const ENDS = [-4.5, -1.5, 1.5];
-const MIDDLE = [-7.2, -2.4, 2.4, 7.2];
+const MIDDLE = [-8.8, -4.4, 0, 4.4, 8.8];
 /** How far each face of a freestanding board stands off its middle. */
 const STAND_OFF = 0.03;
 const HANGS: Hang[] = [
@@ -77,7 +77,7 @@ const HANGS: Hang[] = [
     facing: Math.PI / 2,
     off: WALL_OFF,
   })),
-  // The pool trade's brands, on four freestanding double-sided boards
+  // The pool trade's brands, on five freestanding double-sided boards
   // down the middle of the room: their south faces west to east, then
   // their north faces east to west.
   ...MIDDLE.map((x) => ({ x, z: 0, facing: 0, off: STAND_OFF })),

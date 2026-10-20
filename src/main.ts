@@ -96,7 +96,13 @@ const starter = async (
     return (await import('./toolkit/gallery/rooms/fires-room')).startFiresRoom;
   if (room === 'dev11')
     return (await import('./toolkit/gallery/rooms/pool-room')).startPoolRoom;
-  if (room === 'dev10' || room === 'dev12' || room === 'dev13') {
+  if (
+    room === 'dev10' ||
+    room === 'dev12' ||
+    room === 'dev13' ||
+    room === 'dev14' ||
+    room === 'dev15'
+  ) {
     const { startEquipmentRoom } =
       await import('./toolkit/gallery/rooms/plant-room');
     return (surface) => startEquipmentRoom(surface, room);
