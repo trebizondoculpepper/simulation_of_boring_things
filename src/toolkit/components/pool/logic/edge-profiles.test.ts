@@ -32,4 +32,19 @@ describe('the pool edge profiles', () => {
       ]),
     ).toBe(true);
   });
+
+  it('keep the gutters’ water well below the pool’s', () => {
+    for (const p of EDGE_PROFILES) {
+      const gutter = p.water
+        .slice(1)
+
+        // Water lying wholly in a gutter or channel, not the sheet
+        // spilling over the edge into it.
+        .filter((w) => Math.min(...w.map(([x]) => x)) > 0.04);
+      for (const w of gutter)
+        expect(Math.max(...w.map(([, y]) => y)), p.name).toBeLessThan(
+          p.waterLevel - 0.04,
+        );
+    }
+  });
 });

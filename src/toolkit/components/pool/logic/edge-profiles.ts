@@ -7,7 +7,9 @@
  * face (0) out under the deck (+), the pool to the left (−); y from the
  * deck's level (0), up. `solid` is the structure (wall, gutter, deck and
  * pool floor) as one outline; `water` the water's outlines (the pool and
- * whatever lies in the gutter); `grating` where a grating spans a channel.
+ * whatever lies in the gutter: a shallow run along its bottom, always
+ * well below the pool's level, since the gutter drains to the balance
+ * tank); `grating` where a grating spans a channel.
  *
  * - **1940s, roll-out gutter.** The edge itself is the gutter: a rounded
  *   lip at the water line, a trough behind it formed in the coping, and
@@ -112,11 +114,9 @@ export const EDGE_PROFILES: readonly EdgeProfile[] = [
         [-SECTION.pool, -0.075],
       ],
       [
-        [0.08, -0.115],
-        [0.1, -0.14],
+        [0.105, -0.142],
         [0.14, -0.15],
-        [0.18, -0.13],
-        [0.19, -0.115],
+        [0.17, -0.135],
       ],
     ],
   },
@@ -143,12 +143,10 @@ export const EDGE_PROFILES: readonly EdgeProfile[] = [
     water: [
       poolWater(-0.24),
       [
-        [0.03, -0.262],
-        [0.05, -0.29],
+        [0.07, -0.305],
         [0.09, -0.32],
         [0.14, -0.32],
-        [0.18, -0.29],
-        [0.195, -0.262],
+        [0.16, -0.305],
       ],
     ],
   },
@@ -185,8 +183,8 @@ export const EDGE_PROFILES: readonly EdgeProfile[] = [
       [
         [0.13, -0.28],
         [0.39, -0.28],
-        [0.39, -0.24],
-        [0.13, -0.24],
+        [0.39, -0.255],
+        [0.13, -0.255],
       ],
     ],
     grating: {
@@ -226,8 +224,8 @@ export const EDGE_PROFILES: readonly EdgeProfile[] = [
       [
         [0.05, -0.3],
         [0.31, -0.3],
-        [0.31, -0.22],
-        [0.05, -0.22],
+        [0.31, -0.27],
+        [0.05, -0.27],
       ],
     ],
     grating: {

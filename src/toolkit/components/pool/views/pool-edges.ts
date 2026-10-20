@@ -1,9 +1,10 @@
 import {
-  BoxGeometry,
+  CanvasTexture,
   DoubleSide,
   Group,
   Mesh,
   MeshStandardMaterial,
+  RepeatWrapping,
 } from 'three';
 import type { Material } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -100,75 +101,7 @@ export function createPoolEdge(
     [from, top],
   ];
   const g = profile.grating;
-  if (g) {
-    // Its frame and the dark of the channel under it, swept round the
-    // corners; the bars across it on the straight runs.
-    const under = twoSided(t.paint('#2c3133', 0.8));
-    group.add(
-      new Mesh(
-        sweepProfile(
-          rect(g.from, g.to, g.top - g.depth, g.top - g.depth + 0.004),
-          path,
-        ),
-        under,
-      ),
-    );
-    const bar = twoSided(t.paint(g.colour, 0.45));
-    for (const edge of [g.from, g.to - 0.012])
-      group.add(
-        new Mesh(
-          sweepProfile(rect(edge, edge + 0.012, g.top - g.depth, g.top), path),
-          bar,
-        ),
-      );
-    // A mitred corner piece over each corner, as the gratings are made.
-    const clear = g.to + 0.02;
-    for (let i = 1; i < path.length - 1; i++) {
-      const at = (j: number, toward: number) => {
-        const [ax, az] = path[i],
-          [bx, bz] = path[j];
-        const len = Math.hypot(bx - ax, bz - az);
-        return [
-          ax + ((bx - ax) / len) * toward,
-          az + ((bz - az) / len) * toward,
-        ] as const;
-      };
-      const piece = [at(i - 1, clear), path[i], at(i + 1, clear)];
-      group.add(
-        new Mesh(
-          sweepProfile(
-            rect(g.from + 0.012, g.to - 0.012, g.top - 0.008, g.top),
-            piece,
-          ),
-          bar,
-        ),
-      );
-    }
-    const geometry = new BoxGeometry(g.to - g.from - 0.024, g.depth, g.bar);
-    for (let i = 0; i < path.length - 1; i++) {
-      const [ax, az] = path[i],
-        [bx, bz] = path[i + 1];
-      const len = Math.hypot(bx - ax, bz - az);
-      const dx = (bx - ax) / len,
-        dz = (bz - az) / len;
-      const nx = -dz,
-        nz = dx;
-      // Clear of the mitred corners, where only the frame runs.
-      const start = i > 0 ? g.to + 0.02 : g.pitch / 2;
-      const end = i < path.length - 2 ? len - g.to - 0.02 : len - g.pitch / 2;
-      for (let s = start; s <= end; s += g.pitch) {
-        const mesh = new Mesh(geometry, bar);
-        const across = (g.from + g.to) / 2;
-        mesh.position.set(
-          ax + dx * s + nx * across,
-          g.top - g.depth / 2,
-          az + dz * s + nz * across,
-        );
-        mesh.rotation.y = Math.atan2(-nz, nx);
-        group.add(mesh);
-      }
-    }
-  }
+  if (g) group.add(createGrating(kit, g, path));
   if (profile.marker)
     group.add(
       new Mesh(
@@ -191,3 +124,104 @@ export function createPoolEdge(
 
 /** The section's span across, metres: from the pool's far side to the deck's end. */
 export const EDGE_SPAN = { from: -SECTION.pool, to: SECTION.deck };
+
+/**
+ * A grating over a channel: one plate swept along the path, its bars and
+ * slots drawn in a texture laid along the edge, the slots cut out by its
+ * transparency (so the channel and its water show through) and the bars
+ * rounded and ridged for grip by its bump map. Mapped along the edge, the
+ * bars fan round a mitred corner as a corner piece's do.
+ */
+function createGrating(
+  kit: PanelKit,
+  g: NonNullable<EdgeProfile['grating']>,
+  path: PlanPath,
+) {
+  // One tile of the pattern: four bars and their slots along the edge.
+  const px = 256;
+  const bars = 4;
+  const cell = px / bars;
+  const share = g.bar / g.pitch;
+  const draw = (paint: (c: CanvasRenderingContext2D) => void) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = px;
+    const c = canvas.getContext('2d');
+    if (!c) throw new Error('No 2D canvas context.');
+    paint(c);
+    const texture = new CanvasTexture(canvas);
+    texture.wrapS = texture.wrapT = RepeatWrapping;
+    // UVs are metres: one tile spans four pitches along, and the same across.
+    texture.repeat.set(1 / (g.pitch * bars), 1 / (g.pitch * bars));
+    // Bars this fine shimmer at a distance unless filtered steeply.
+    texture.anisotropy = 16;
+    kit.textures.push(texture);
+    return texture;
+  };
+  // Transparency: white where a bar is, black in the slots.
+  const alpha = draw((c) => {
+    c.fillStyle = '#000';
+    c.fillRect(0, 0, px, px);
+    c.fillStyle = '#fff';
+    for (let i = 0; i < bars; i++) c.fillRect(i * cell, 0, cell * share, px);
+  });
+  // Height: each bar's top rounded, with fine ridges across it for grip.
+  const bump = draw((c) => {
+    c.fillStyle = '#000';
+    c.fillRect(0, 0, px, px);
+    for (let i = 0; i < bars; i++) {
+      const x0 = i * cell,
+        w = cell * share;
+      const round = c.createLinearGradient(x0, 0, x0 + w, 0);
+      round.addColorStop(0, '#303030');
+      round.addColorStop(0.5, '#d8d8d8');
+      round.addColorStop(1, '#303030');
+      c.fillStyle = round;
+      c.fillRect(x0, 0, w, px);
+      c.fillStyle = 'rgba(0,0,0,0.12)';
+      for (let y = 0; y < px; y += 16) c.fillRect(x0, y, w, 4);
+    }
+  });
+  const material = new MeshStandardMaterial({
+    color: g.colour,
+    roughness: 0.55,
+    alphaMap: alpha,
+    // The slots cut by multisampled coverage, not a hard alpha test: close
+    // to, crisp edges; far off, the bars blend instead of shimmering.
+    alphaToCoverage: true,
+    bumpMap: bump,
+    bumpScale: 0.8,
+    side: DoubleSide,
+  });
+  kit.materials.push(material);
+  // A sheet at the grating's top: its bars' depth is in the bump map, so
+  // the slots read as one layer rather than two.
+  const plate: Point[] = [
+    [g.from, g.top - 0.002],
+    [g.to, g.top - 0.002],
+    [g.to, g.top],
+    [g.from, g.top],
+  ];
+  const group = new Group();
+  group.name = 'Channel grating';
+  group.add(new Mesh(sweepProfile(plate, path), material));
+  // The channel lies in the deck's shade: a dim veil a little below the
+  // bars, so the slots read dark against them, as on a real deck, while
+  // the channel and its water still show through.
+  const veil = new MeshStandardMaterial({
+    color: '#1d2427',
+    roughness: 1,
+    transparent: true,
+    opacity: 0.7,
+    depthWrite: false,
+    side: DoubleSide,
+  });
+  kit.materials.push(veil);
+  const under: Point[] = [
+    [g.from, g.top - g.depth - 0.002],
+    [g.to, g.top - g.depth - 0.002],
+    [g.to, g.top - g.depth],
+    [g.from, g.top - g.depth],
+  ];
+  group.add(new Mesh(sweepProfile(under, path), veil));
+  return group;
+}
