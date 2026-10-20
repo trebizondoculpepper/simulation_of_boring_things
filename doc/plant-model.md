@@ -6,6 +6,8 @@ The game is about the model: how the pool's systems work and interact. The 3D pl
 
 A design goal, from the owner: this plant should have a bit of everything. Where a real pool of the period might choose one technology, the game's plant may carry several side by side (UV and ozone; hypochlorite and the remains of an older system; analogue gauges beside digital controllers; a cubicle from one decade next to one from another), so that the plant rooms show the full range of what pool engineering involves. Each item is still real and working, and the plant as a whole still has to make sense: everything is connected, and it all has to be maintained.
 
+The same goes for time. The plant spans some forty years of pool technology: most of it is of around 2000, but older and newer machines sit beside it, and an anachronism is welcome (the dosing room's touch-screen controller after a controller of the 2020s stays). What the plant must not do is hand everything to one PC or SCADA screen: the game's fun is in the many different kinds of interface, from dial gauges and annunciators to code displays and touch screens. Every interface must be one the game can simulate (the owner, 2026-10-20).
+
 ## 1. Model first, then machines
 
 The order is: write the model's skeleton, place the machines and bind them to it, then deepen the model room by room.
