@@ -84,7 +84,37 @@ The network is solved for its steady state each step; the plant's slower process
 
 Order of work: schematic; the physics-placed items; envelopes, corridors and walkways per room; the wall sleeves, agreed; the remaining machines; the pipework generated along the corridors; then the dressing (lagging, labels, brackets, wear).
 
-## 4. Where it stands
+## 4. Systems to come: ozone and the sampling bypass
+
+Two systems join the main pool's circulation next, both researched (`doc/research/ozone-plant.md`, `doc/research/water-sampling.md`) and both in keeping with a bit of everything: ozone alongside the UV unit, and the water-quality controller's sampling bypass reaching across three rooms.
+
+### The circulation's order with them
+
+Balance tank → duty and standby pumps (the sample tapping on their outlet main) → filters → ozone injection → contact tank → deozoniser (activated carbon) → heat exchanger → UV unit → chlorine and pH dosing (injected on the return, after the ozone stage, which would destroy chlorine) → pool. The pool overflows back to the balance tank, where the sample returns too.
+
+### Ozone
+
+Full-flow ozonation after PWTAG's code: at least two minutes' contact at 1 g of ozone per m³ of flow (three minutes at 1.2–1.5 g/m³ above 32 °C), a deozonising carbon filter before the water goes on, and a chlorine residual (about 0.5–1 mg/l) still kept in the pool, since ozone leaves none. At our 160 m³/h that is 160 g/h, which ProMinent's Bono Zon BONa 2D (160 g/h, 1600 × 1950 × 500 mm) gives exactly; it is the model for our generator.
+
+As a block made of blocks (`sim/composite.ts`): the **air dryer** (dew point to −60 °C; wet air cuts output and makes nitric acid), the **corona-discharge generator** (about 12 kV, water cooled, about 18 Wh per gram), the **booster pump and venturi injector**, the **contact tank**, the **carbon deozoniser** (whose exhaustion lets ozone through toward the pool), the **off-gas destructor** (heated or catalytic) and the **ozone-in-air monitor** (set low, as ozone is heavier than air; the UK limit is 0.2 ppm over 15 minutes). Outside: circulation flow in, power and cooling water in, the ozone dose (g/h) and residual ozone after the deozoniser (mg/l) out, and its alarms. Its interlocks follow PWTAG's list: no circulation flow, cooling-water failure, dryer failure, loss of vacuum, its cabinet door, and gas detected in the room, each stopping it; after a leak it does not restart until someone has found it.
+
+Rooms (proposed): the generator, its dryer and the room's ozone monitor in a small ozone room of their own, ventilated and alarmed, as the guidance expects (a new dev room); the booster, injector, contact tank and deozoniser beside the filters in the pump room.
+
+### The sampling bypass and the water-quality controller
+
+A tapping on the pump outlet main, before the filters and before any dosing point, so the probes read water as it comes back from the pool, not freshly dosed water; a short small-bore sample line (a booster pump if pressure is low); the flow cell (about 33 l/h, its flow switch alarming below about 21 l/h) with its free-chlorine (amperometric), pH, redox and temperature probes; and the controller above it, driving the hypochlorite and acid dosing pumps in proportion to how far each reading is from its setpoint. The sample returns to the balance tank. Combined chlorine is not measured automatically: the staff find it with the daily manual DPD test, against which the controller is checked (recalibrated if out by more than 0.2 pH or 15% chlorine) and the result logged.
+
+The controller is its own small system with its own controls and indicators: it is the local panel. The dosing room's touch-screen controller (after ProMinent's DULCOMARIN 3, a deliberate anachronism) stays, its menus and readings a state machine in its block. Its interlocks inhibit dosing on lost sample flow (after a delay), on circulation failure, on an empty chemical tank, and when a pump has dosed too long without effect.
+
+As blocks: the **sample tapping** (on the circulation network: a small branch whose flow follows the outlet main's pressure), an optional **sample booster pump**, the **flow cell** with its **flow switch** and **probes** (each with drift and fouling, and a calibration offset set by the daily check), and the **controller** (setpoints, proportional dosing demands, alarms, the inhibit). Outside: sample flow in, the water's chlorine, pH and temperature in (from the chemistry carried along the circulation), readings, dosing demands and alarms out.
+
+Rooms: the tapping in the pump room, the flow cell and controller in the dosing room (beside the pumps they drive, apart from the chemical store), the return visible at the balance tank.
+
+What the rest of the plant shows: the main pool mimic gains a sample take-off symbol on the pump outlet line, a SAMPLE FLOW lamp and a DOSING INHIBITED lamp (it already has the dosing lamp and free chlorine and pH readouts); the annunciator gains SAMPLE FLOW LOW beside its chlorine, pH and dosing windows; the chart recorders trace chlorine and pH from the controller's outputs.
+
+Failures worth playing: a blocked or air-locked sample line, which freezes the readings so that the mimic and recorders look fine while the pool drifts out of balance (the tell-tales are the SAMPLE FLOW lamp out and a dead-flat trace on the recorder); a flow switch fooled into showing flow; probes drifting and fouling until the daily check catches them; and a tapping placed after a dosing point, which reads the dose rather than the pool.
+
+## 5. Where it stands
 
 - `src/game/sim/blocks.ts`: blocks within blocks, addresses, reading and writing by address.
 - `src/game/sim/hydraulics.ts`: the water network solver (pipes and fittings by the square law, non-return valves, pumps on their curves, shut valves), Newton's method on the junction heads.
