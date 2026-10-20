@@ -71,3 +71,27 @@ describe.each([
     },
   );
 });
+
+it('isolates and restores the pump drive supply with its rotary handle', () => {
+  const kit = createPanelKit();
+  const exhibit = PUMPS.find((e) => e.title === 'Variable-speed drive')!;
+  const built = exhibit.build(kit);
+  expect(isLive(built)).toBe(true);
+  if (!isLive(built)) return;
+  const display = built.object.getObjectByName('drive display')!;
+  const [handle, operate] = [...built.parts!.uses.entries()][0];
+  built.update?.(0);
+  expect(display.visible).toBe(true);
+  operate();
+  built.parts!.update(1);
+  built.update?.(1);
+  expect(display.visible).toBe(false);
+  const off = handle.parent!.rotation.z;
+  operate();
+  built.parts!.update(1);
+  built.update?.(1);
+  expect(display.visible).toBe(true);
+  expect(handle.parent!.rotation.z).not.toBe(off);
+  built.parts!.dispose();
+  disposeKit(kit, built.object as never);
+});

@@ -73,6 +73,8 @@ export const COLUMNS: readonly (readonly [number, number])[] = [
   -10, -5, 0, 5, 10,
 ].map((x) => [x, 6.5] as const);
 export const COLUMN_SIDE = 0.6;
+/** Radius of the tiled coving where columns meet the deck, metres. */
+export const COLUMN_COVE_RADIUS = 0.14;
 
 /** Rooflights over the pool: middle x, z and size, metres. */
 export const ROOFLIGHTS: readonly {
@@ -167,7 +169,7 @@ export function poolRoomSolids(): Footprint[] {
     minZ: ARCADE.z - t,
     maxZ: ARCADE.z + t,
   });
-  const c = COLUMN_SIDE / 2;
+  const c = COLUMN_SIDE / 2 + COLUMN_COVE_RADIUS;
   for (const [cx, cz] of COLUMNS)
     solids.push({ minX: cx - c, maxX: cx + c, minZ: cz - c, maxZ: cz + c });
   return solids;

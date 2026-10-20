@@ -154,6 +154,17 @@ export interface PoolKnobs {
   bump: number;
 }
 
+/** The owner's preferred dev11 setup, selected with Copy settings. */
+export const DEFAULT_POOL_LOOK: PoolLookId = 'sunlight';
+export const DEFAULT_POOL_KNOBS: Readonly<PoolKnobs> = {
+  exposure: 0.3,
+  light: 0.4,
+  bounce: 0.6,
+  bloom: 0.4,
+  caustics: 0.1,
+  bump: 0.3,
+};
+
 export const KNOB_NAMES: readonly (keyof PoolKnobs)[] = [
   'exposure',
   'light',

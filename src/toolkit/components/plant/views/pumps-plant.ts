@@ -334,7 +334,7 @@ export function createPumpPair(kit: PanelKit) {
  * Drive FC 202 in its IP55 B2 enclosure (about 243 × 664 × 261 mm): a
  * wall unit with its keypad and display, and a rotary isolator beside it.
  */
-export function createDrive(kit: PanelKit) {
+export function createDriveView(kit: PanelKit) {
   const t = plantTools(kit);
   const group = new Group();
   const w = 0.243,
@@ -369,6 +369,8 @@ export function createDrive(kit: PanelKit) {
     128,
   );
   screen.mesh.position.set(0, h * 0.27, d + 0.015);
+  screen.mesh.name = 'drive display';
+  screen.mesh.userData.live = true;
   group.add(screen.mesh);
   for (let i = 0; i < 6; i++)
     t.cyl(
@@ -413,19 +415,16 @@ export function createDrive(kit: PanelKit) {
   group.add(iso);
   const isolator = brandLivery(kit, 'voltara');
   t.box(iso, isolator.paint.casing, 0.15, 0.2, 0.12, 0, 0, 0.06);
-  t.box(iso, isolator.paint.main, 0.1, 0.1, 0.006, 0, 0, 0.123);
-  const handle = t.box(
-    iso,
-    t.paint('#c42b23', 0.5),
-    0.02,
-    0.09,
-    0.03,
-    0,
-    0,
-    0.14,
-  );
-  handle.rotation.z = Math.PI / 4;
-  return group;
+  const isolatorFace = new Group();
+  isolatorFace.position.z = 0.12;
+  iso.add(isolatorFace);
+  return {
+    group,
+    isolatorFace,
+    setPowered(on: boolean) {
+      screen.mesh.visible = on;
+    },
+  };
 }
 
 /**

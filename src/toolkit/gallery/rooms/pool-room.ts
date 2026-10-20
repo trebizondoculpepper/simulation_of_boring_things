@@ -1,3 +1,4 @@
+import { createColumnCove } from '../../components/architectural/views/column-cove';
 import {
   ACESFilmicToneMapping,
   BoxGeometry,
@@ -55,6 +56,7 @@ import {
   LECTERN,
   COLUMNS,
   COLUMN_SIDE,
+  COLUMN_COVE_RADIUS,
   EAST_GLAZING,
   DEEP_END,
   POOL_FLOOR,
@@ -71,6 +73,8 @@ import {
   poolRoomSolids,
 } from '../logic/pool-room-plan';
 import {
+  DEFAULT_POOL_LOOK,
+  DEFAULT_POOL_KNOBS,
   KNOB_NAMES,
   POOL_LOOKS,
   POOL_LOOK_ORDER,
@@ -136,10 +140,10 @@ import {
 export function startPoolRoom(canvas: HTMLCanvasElement) {
   const m = METRE;
   const id = 'dev11' as const;
-  // The look to start in: `?look=sunlight`, or the first.
+  // Start with the preferred look, unless `?look=` selects another.
   const asked = new URLSearchParams(location.search).get('look');
   const firstLook =
-    POOL_LOOK_ORDER.find((name) => name === asked) ?? POOL_LOOK_ORDER[0];
+    POOL_LOOK_ORDER.find((name) => name === asked) ?? DEFAULT_POOL_LOOK;
   const look = POOL_LOOKS[firstLook];
   const scene = new Scene();
   const renderer = createRenderer(canvas);
@@ -385,8 +389,13 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
   );
 
   // Slim columns along the pool.
-  for (const [x, z] of COLUMNS)
+  for (const [x, z] of COLUMNS) {
     box(tile, COLUMN_SIDE, height, COLUMN_SIDE, x, height / 2, z);
+    add(
+      tile,
+      createColumnCove(COLUMN_SIDE, COLUMN_COVE_RADIUS).translate(x, 0, z),
+    );
+  }
 
   // The ceiling, its rooflights recessed in deep coffers so the light's
   // source is out of sight from most of the room.
@@ -506,8 +515,9 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
       basinFloorAt(x, z),
       z,
     );
+  // Lift the grating rims 1 mm clear of the deck to avoid z-fighting.
   for (const [x, z] of DECK_GULLIES)
-    place(fittings, createDeckGully(ft, fittingKinds), x, 0, z);
+    place(fittings, createDeckGully(ft, fittingKinds), x, 0.001, z);
   for (const f of WALL_FITTINGS) {
     const make =
       f.kind === 'light'
@@ -861,7 +871,7 @@ void main() {
       name: `${name.toUpperCase()} knob`,
       legend: name.toUpperCase(),
       steps: 10,
-      initial: 0.5,
+      initial: DEFAULT_POOL_KNOBS[name],
     });
     knob.object.rotation.x = -Math.PI / 2;
     knob.object.position.set(
@@ -885,7 +895,7 @@ void main() {
   const held: { look?: PoolLookId; knobs: Partial<PoolKnobs> } = { knobs: {} };
   let shownKey = '';
   let lit = '';
-  const apply = () => {
+  const currentSettings = () => {
     const name =
       held.look ?? POOL_LOOK_ORDER[lookKnob.position.value] ?? firstLook;
     const share = Object.fromEntries(
@@ -894,6 +904,10 @@ void main() {
         held.knobs[knob] ?? knobs[i].share.value,
       ]),
     ) as unknown as PoolKnobs;
+    return { look: name, knobs: share };
+  };
+  const apply = () => {
+    const { look: name, knobs: share } = currentSettings();
     const key = `${name} ${KNOB_NAMES.map((k) => share[k]).join(' ')}`;
     if (key === shownKey) return;
     shownKey = key;
@@ -964,6 +978,67 @@ void main() {
   };
   type Ingredient = keyof typeof ingredients;
 
+  // Copy the effective choices, including console overrides, at click time.
+  const settingsText = () => {
+    const current = currentSettings();
+    return JSON.stringify(
+      {
+        room: id,
+        settingsVersion: 1,
+        ...current,
+        factors: Object.fromEntries(
+          KNOB_NAMES.map((name) => [
+            name,
+            knobFactor(name, current.knobs[name]),
+          ]),
+        ),
+        preset: POOL_LOOKS[current.look],
+        ingredients: {
+          tiles: uniforms.tiles.value !== 0,
+          water: water.visible,
+          ao: ao.enabled,
+          bloom: bloom.enabled,
+          fog: scene.fog !== null,
+          film: film.enabled,
+        },
+        rendering: { pixelRatio: renderer.getPixelRatio() },
+        viewpoint: {
+          x: camera.position.x / m,
+          y: camera.position.y / m,
+          z: camera.position.z / m,
+          yaw: camera.rotation.y,
+          pitch: camera.rotation.x,
+          zoom: camera.zoom,
+          fieldOfView: camera.fov,
+        },
+      },
+      null,
+      2,
+    );
+  };
+  const copyOverlay = document.createElement('div');
+  copyOverlay.className = 'pool-settings-copy';
+  const copyButton = document.createElement('button');
+  copyButton.type = 'button';
+  copyButton.textContent = 'Copy settings';
+  const copyStatus = document.createElement('span');
+  copyStatus.setAttribute('role', 'status');
+  copyStatus.textContent = 'Esc releases the mouse';
+  copyOverlay.append(copyButton, copyStatus);
+  canvas.parentElement?.append(copyOverlay);
+  copyButton.addEventListener('click', async () => {
+    copyButton.disabled = true;
+    try {
+      await navigator.clipboard.writeText(settingsText());
+      copyStatus.textContent = 'Copied — paste into chat';
+    } catch {
+      copyStatus.textContent =
+        'Could not copy. Allow clipboard access and try again.';
+    } finally {
+      copyButton.disabled = false;
+    }
+  });
+
   // A development handle for the console: stand anywhere (metres), hold a
   // look or a knob, switch ingredients, read the frame's cost.
   let frameMs = 0;
@@ -972,6 +1047,7 @@ void main() {
       walk.place(x * m, z * m, yaw, pitch);
     },
     looks: POOL_LOOK_ORDER,
+    settings: () => JSON.parse(settingsText()),
     /** Hold a look, or null to follow the LOOK selector. */
     look(name: PoolLookId | null) {
       held.look = name ?? undefined;
@@ -1024,6 +1100,7 @@ void main() {
   });
 
   const dispose = () => {
+    copyOverlay.remove();
     renderer.setAnimationLoop(null);
     observer.disconnect();
     walk.dispose();

@@ -1,11 +1,11 @@
 import { Group } from 'three';
 import type { Object3D } from 'three';
 import { PUMP_PANEL_EXHIBIT } from './pump-panel';
+import { createPumpDrive } from '../../../components/plant/parts/pump-drive';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import { plantAt } from '../../logic/control-room-demo';
 import {
   createAirBlower,
-  createDrive,
   createFlowMeter,
   createJetPump,
   createPlateHeatExchanger,
@@ -143,7 +143,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     title: 'Variable-speed drive',
     reference: 'After Danfoss VLT AQUA Drive FC 202, 30 kW, IP55 frame B2',
     size: { w: 0.9, d: 0.3, h: 0.8, mount: 'wall', y: 1.5 },
-    build: createDrive,
+    build: createPumpDrive,
   },
   PUMP_PANEL_EXHIBIT,
 ];
