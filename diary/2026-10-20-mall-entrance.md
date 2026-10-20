@@ -1,0 +1,9 @@
+# Mall entrance
+
+The owner asked for the countryside outside reception to go: the leisure centre should be entered from a shopping mall the player may not walk into, in keeping with the game's liminal spaces.
+
+Deleted `src/scene/exterior.ts` (grass, road, trees, neighbouring buildings and the outside-only building massing) and added a dead-mall concourse in its place. The layout is pure data in `src/game/mall-plan.ts` with tests: a 24 m concourse past the reception's east wall, a side court beyond its south glazing, about 38 shop units (shuttered, dark or to let, with invented names), a dark passage to the toilets and car park, a light fade along the concourse, and back-of-house bays outside the other low windows. `src/scene/mall-concourse.ts` builds it as merged static geometry with canvas textures: terrazzo floor, ceiling tiles, a glazed barrel vault, fascia signs from one atlas (a few missing letters), the lit "Linden Court Leisure Pool" sign, planters of plastic plants, benches, bins, a dry fountain, a directory board and a stopped escalator up to a bridge in the distance. Brightness falls off through vertex colours rather than fog, so the rooms are unaffected.
+
+The player is kept in by locking the entrance door in the frame loop (`LOCKED_PORTALS`) and adding a solid slab outside it (`MALL_SOLIDS`) to the walking collision; a belt barrier and "No access" notices explain why. The `?at=outside` start is gone. The hooks into `src/rendering/facility-world.ts` are a few lines; the room plan, room models and doors are untouched.
+
+Typecheck, lint, format check, tests and build pass, and a Node smoke test with a stubbed canvas built the mall (about thirty merged meshes). It has not been looked at in a browser: the only browser tab was in use by another session and the repository has no headless renderer. Design notes and references are in `doc/research/mall-entrance.md`.

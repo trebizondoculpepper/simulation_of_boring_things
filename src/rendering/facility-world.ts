@@ -15,7 +15,7 @@ import {
 import type { Side } from '../game/facility-plan';
 import { createFacility, createServiceStair } from '../scene/facility';
 import { createFireSafety } from '../scene/fire-safety';
-import { createExterior } from '../scene/exterior';
+import { createMallConcourse } from '../scene/mall-concourse';
 import { createDoors } from '../scene/doors';
 import { createSkyDome } from '../scene/sky-dome';
 import { SKIES } from '../game/skies';
@@ -35,6 +35,7 @@ import type { DoorState } from '../game/doors';
 import { BASINS } from '../game/pool-layout';
 import { CHANGING_SOLIDS } from '../game/changing-layout';
 import { RECEPTION_SOLIDS } from '../game/reception-layout';
+import { LOCKED_PORTALS, MALL_SOLIDS } from '../game/mall-plan';
 import { createFirstPerson } from '../toolkit/controls/input/first-person';
 import {
   createRenderer,
@@ -71,8 +72,9 @@ export function startFacilityWorld(
   const camera = new PerspectiveCamera(65, 1, 0.05, 400);
   const sky = createSkyDome(300);
   scene.add(sky.dome);
-  const exterior = createExterior();
-  scene.add(exterior.group);
+  // Outside the entrance is a shopping mall the player may not enter.
+  const mall = createMallConcourse();
+  scene.add(mall.group);
   const facility = createFacility();
   scene.add(facility.group);
   const doors = createDoors();
@@ -89,6 +91,7 @@ export function startFacilityWorld(
     ...BASINS,
     ...CHANGING_SOLIDS,
     ...RECEPTION_SOLIDS,
+    ...MALL_SOLIDS,
     ...UPPER_STAIR_GUARDS,
   ];
   const lowerWalls = [
@@ -98,18 +101,15 @@ export function startFacilityWorld(
 
   const at = new URLSearchParams(location.search).get('at');
   const startRoom = at && ROOMS.some((r) => r.id === at) ? roomById(at) : null;
-  const start =
-    at === 'outside'
-      ? { x: 130, z: 25, yaw: FACING.west }
-      : startRoom
-        ? startRoom.id === 'hall'
-          ? { x: 76, z: 34, yaw: FACING.west }
-          : {
-              x: (startRoom.minX + startRoom.maxX) / 2,
-              z: (startRoom.minZ + startRoom.maxZ) / 2,
-              yaw: FACING[startRoom.card],
-            }
-        : START;
+  const start = startRoom
+    ? startRoom.id === 'hall'
+      ? { x: 76, z: 34, yaw: FACING.west }
+      : {
+          x: (startRoom.minX + startRoom.maxX) / 2,
+          z: (startRoom.minZ + startRoom.maxZ) / 2,
+          yaw: FACING[startRoom.card],
+        }
+    : START;
 
   const walk = createFirstPerson({
     canvas,
@@ -149,7 +149,6 @@ export function startFacilityWorld(
     const visible = visibleRooms(room?.id ?? 'outside', doorStates);
     facility.show(visible);
     fireSafety.show(visible);
-    exterior.shell.visible = !room;
     for (const stair of stairs)
       stair.group.visible = Boolean(
         room && (room.id === 'corridor' || room.id === 'lower-corridor'),
@@ -197,14 +196,16 @@ export function startFacilityWorld(
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     for (const portal of PORTALS) {
-      const next = advanceDoor(
-        portal,
-        doorStates.get(portal.id) as DoorState,
-        walk.walker.x,
-        walk.walker.z,
-        walk.floorY,
-        delta,
-      );
+      const next = LOCKED_PORTALS.has(portal.id)
+        ? { open: 0, hold: 0 }
+        : advanceDoor(
+            portal,
+            doorStates.get(portal.id) as DoorState,
+            walk.walker.x,
+            walk.walker.z,
+            walk.floorY,
+            delta,
+          );
       doorStates.set(portal.id, next);
       doors.setOpen(portal.id, next.open);
     }
@@ -223,7 +224,7 @@ export function startFacilityWorld(
     doors.dispose();
     for (const stair of stairs) stair.dispose();
     fireSafety.dispose();
-    exterior.dispose();
+    mall.dispose();
     sky.dispose();
     freeEnvironment();
     renderer.dispose();
