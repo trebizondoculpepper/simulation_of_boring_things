@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850" role="img" aria-labelledby="title desc">
+<title id="title">Conceptual pool district block plan</title>
+<desc id="desc">Main level public pools and service spaces above a lower level balance tank and plant gallery. Connections are illustrative, not a construction plan.</desc>
+<style>
+  text { font-family: Arial, sans-serif; fill: #213b3c; }
+  .title { font-size: 27px; font-weight: 700; }
+  .subtitle { font-size: 14px; fill: #536c6c; }
+  .level { font-size: 18px; font-weight: 700; }
+  .label { font-size: 16px; font-weight: 700; }
+  .small { font-size: 12px; }
+  .public { fill: #e3f0e8; stroke: #497969; stroke-width: 2; }
+  .water { fill: #a9d7df; stroke: #397f8c; stroke-width: 2; }
+  .service { fill: #efe7d7; stroke: #957c50; stroke-width: 2; }
+  .future { fill: #f0f1f0; stroke: #a4abaa; stroke-width: 2; stroke-dasharray: 7 5; }
+  .route { stroke: #4e6763; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+  .pipe { stroke: #397f8c; stroke-width: 3; stroke-dasharray: 7 5; fill: none; marker-end: url(#blue-arrow); }
+  .door { stroke: #fff; stroke-width: 8; }
+</style>
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#4e6763"/></marker>
+  <marker id="blue-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#397f8c"/></marker>
+</defs>
+<rect width="1200" height="850" fill="#fafbf8"/>
+<text x="35" y="46" class="title">Pool district · interconnected spaces</text>
+<text x="35" y="70" class="subtitle">Fictional planning mock-up informed by Scalloway Pool and Sport England plans · not to scale</text>
+<text x="35" y="108" class="level">Main level</text>
+
+<rect x="35" y="128" width="145" height="95" rx="6" class="public"/><text x="107" y="165" text-anchor="middle" class="label">Entrance</text><text x="107" y="185" text-anchor="middle" class="small">public access</text>
+<rect x="200" y="128" width="145" height="95" rx="6" class="public"/><text x="272" y="165" text-anchor="middle" class="label">Reception</text>
+<rect x="365" y="128" width="200" height="95" rx="6" class="public"/><text x="465" y="165" text-anchor="middle" class="label">Changing</text><text x="465" y="185" text-anchor="middle" class="small">showers · toilets</text>
+<path class="route" d="M180 175 H197"/><path class="route" d="M345 175 H362"/><path class="route" d="M565 175 H603 V255"/>
+
+<rect x="35" y="245" width="700" height="275" rx="7" class="public"/>
+<text x="55" y="273" class="label">Public pool hall</text>
+<rect x="74" y="302" width="430" height="170" rx="12" class="water"/><text x="289" y="377" text-anchor="middle" class="label">Conventional pool</text><text x="289" y="400" text-anchor="middle" class="small">first circuit to model</text>
+<rect x="530" y="302" width="170" height="74" rx="12" class="water"/><text x="615" y="344" text-anchor="middle" class="small">Children's pool</text>
+<rect x="530" y="396" width="170" height="76" rx="34" class="water"/><text x="615" y="438" text-anchor="middle" class="small">Spa pool</text>
+<rect x="35" y="535" width="250" height="75" rx="6" class="future"/><text x="160" y="568" text-anchor="middle" class="label">Rapids wing</text><text x="160" y="588" text-anchor="middle" class="small">future connection</text>
+<path class="route" d="M350 520 V571 H289"/>
+
+<rect x="765" y="245" width="400" height="58" rx="6" class="service"/><text x="965" y="280" text-anchor="middle" class="label">Staff service corridor</text>
+<path class="route" d="M735 274 H760"/><text x="738" y="233" class="small">controlled door →</text>
+<rect x="765" y="326" width="120" height="90" rx="5" class="service"/><text x="825" y="362" text-anchor="middle" class="small">Control</text><text x="825" y="380" text-anchor="middle" class="small">office</text>
+<rect x="901" y="326" width="264" height="90" rx="5" class="service"/><text x="1033" y="362" text-anchor="middle" class="label">Water plant</text><text x="1033" y="383" text-anchor="middle" class="small">pumps · filters · UV · dosing</text>
+<rect x="765" y="431" width="120" height="88" rx="5" class="service"/><text x="825" y="467" text-anchor="middle" class="small">Electrical</text><text x="825" y="485" text-anchor="middle" class="small">room</text>
+<rect x="901" y="431" width="127" height="88" rx="5" class="service"/><text x="964" y="468" text-anchor="middle" class="small">Heating</text><text x="964" y="486" text-anchor="middle" class="small">plant</text>
+<rect x="1044" y="431" width="121" height="88" rx="5" class="service"/><text x="1104" y="467" text-anchor="middle" class="small">Stair to</text><text x="1104" y="485" text-anchor="middle" class="small">lower plant</text>
+<path class="route" d="M825 303 V322"/><path class="route" d="M1033 303 V322"/><path class="route" d="M825 303 V425"/><path class="route" d="M964 303 V425"/><path class="route" d="M1104 303 V425"/>
+<rect x="765" y="535" width="185" height="75" rx="5" class="service"/><text x="857" y="565" text-anchor="middle" class="small">Separated chemical</text><text x="857" y="584" text-anchor="middle" class="small">stores · external access</text>
+<rect x="970" y="535" width="195" height="75" rx="5" class="service"/><text x="1067" y="566" text-anchor="middle" class="small">External service yard</text><text x="1067" y="584" text-anchor="middle" class="small">equipment deliveries</text>
+<path class="route" d="M970 572 H954"/><path class="route" d="M1067 535 V422"/>
+
+<line x1="35" y1="642" x2="1165" y2="642" stroke="#c2ceca" stroke-width="2"/>
+<text x="35" y="675" class="level">Lower level</text>
+<rect x="35" y="692" width="310" height="105" rx="6" class="service"/><text x="190" y="731" text-anchor="middle" class="label">Balance tank</text><text x="190" y="753" text-anchor="middle" class="small">beside / beneath pool edge</text>
+<rect x="365" y="692" width="345" height="105" rx="6" class="service"/><text x="537" y="731" text-anchor="middle" class="label">Pipe and inspection gallery</text><text x="537" y="753" text-anchor="middle" class="small">overflow · return · drains</text>
+<rect x="730" y="692" width="275" height="105" rx="6" class="service"/><text x="867" y="731" text-anchor="middle" class="label">Lower plant</text><text x="867" y="753" text-anchor="middle" class="small">equipment service access</text>
+<rect x="1025" y="692" width="140" height="105" rx="6" class="service"/><text x="1095" y="733" text-anchor="middle" class="small">Stair from</text><text x="1095" y="752" text-anchor="middle" class="small">service corridor</text>
+<path class="route" d="M1095 520 V688"/><path class="route" d="M1025 745 H1009"/>
+<path class="pipe" d="M345 745 H360"/><path class="pipe" d="M710 745 H725"/>
+<text x="35" y="828" class="subtitle">Above lower level: upper air-handling plant / mezzanine reached from the service side (not drawn).</text>
+</svg>

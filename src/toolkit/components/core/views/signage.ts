@@ -7,7 +7,7 @@ import { SANS, tools } from './fitting-tools';
  * Signage for rooms and exhibits: section boards, captions and marks.
  */
 
-/** A wall-mounted title board for a section of dev8. */
+/** A wall-mounted title board for a section of dev2. */
 export function createSectionBoard(
   kit: PanelKit,
   title: string,

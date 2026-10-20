@@ -31,6 +31,7 @@ describe('the facility plan', () => {
       for (const b of ROOMS) {
         if (a === b) continue;
         const apart =
+          (a.floorY ?? 0) !== (b.floorY ?? 0) ||
           a.maxX <= b.minX ||
           b.maxX <= a.minX ||
           a.maxZ <= b.minZ ||
@@ -43,6 +44,10 @@ describe('the facility plan', () => {
     for (const door of DOORS) {
       const [a, b] = door.rooms.map((id) => roomById(id));
       const wall = sharedWall(a, b);
+      if (door.stair) {
+        expect(wall).toBeNull();
+        continue;
+      }
       expect(wall, door.rooms.join('/')).not.toBeNull();
       if (!wall) continue;
       // Clear of the corners by at least a wall's thickness.
@@ -63,6 +68,21 @@ describe('the facility plan', () => {
     for (const room of ROOMS) expect(seen.has(room.id), room.id).toBe(true);
   });
 
+  it('places the engineer office next to the control centre and heating plant on the service route', () => {
+    expect(
+      sharedWall(roomById('control-centre'), roomById('engineer-office')),
+    ).not.toBeNull();
+    expect(
+      DOORS.some(
+        (d) =>
+          d.rooms.includes('control-centre') &&
+          d.rooms.includes('engineer-office'),
+      ),
+    ).toBe(true);
+    expect(reachable('control-centre').has('boiler')).toBe(true);
+    expect(reachable('boiler').has('chemicals')).toBe(true);
+  });
+
   it('keeps the back of house behind staff doors', () => {
     const publicIds = new Set(
       ROOMS.filter((r) => r.zone === 'public').map((r) => r.id),
@@ -73,6 +93,16 @@ describe('the facility plan', () => {
     );
     const seen = reachable(START.room, publicDoors);
     expect([...seen].every((id) => publicIds.has(id))).toBe(true);
+  });
+
+  it('leaves a walkable street entrance through reception glazing', () => {
+    const opening = openingsOf(roomById('reception')).east;
+    expect(opening).toContainEqual({ from: 23.5, to: 26.5 });
+    expect(
+      wallFootprints().some(
+        (f) => 112 > f.minX && 112 < f.maxX && 25 > f.minZ && 25 < f.maxZ,
+      ),
+    ).toBe(false);
   });
 
   it('starts the player inside the starting room', () => {
@@ -93,8 +123,13 @@ describe('the facility plan', () => {
   });
 
   it('leaves every doorway open to walk through', () => {
-    const walls = wallFootprints();
     for (const door of DOORS) {
+      if (door.stair) continue;
+      const walls = wallFootprints(
+        ROOMS,
+        DOORS,
+        roomById(door.rooms[0]).floorY ?? 0,
+      );
       const [a, b] = door.rooms.map((id) => roomById(id));
       const wall = sharedWall(a, b);
       if (!wall) continue;

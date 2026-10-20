@@ -1,13 +1,10 @@
 /**
  * The leisure centre's floor plan: every room as a rectangle on one
- * ground floor, in metres, and the doorways that join them. Plan x runs
+ * ground and lower floors, in metres, and the doorways that join them. Plan x runs
  * east, plan z runs south, as in the 3D world.
  *
- * Every room is, for now, an empty shell with its title card on one wall.
- * The rooms sit side by side in world coordinates and share their walls:
- * there are no portals, so what the player walks through is what the plan
- * says is there. Equipment, the pools themselves and the plant will be
- * placed into these shells later.
+ * Rooms are independent models in world coordinates. The lower plant sits
+ * beneath an upper service room; a stair joins its landing to the corridor.
  */
 
 /** Public rooms are tiled; service rooms are painted blockwork. */
@@ -28,6 +25,8 @@ export interface RoomPlan {
   maxZ: number;
   /** Clear height, floor to ceiling, metres. */
   height: number;
+  /** Floor elevation in metres; omitted means ground level. */
+  floorY?: number;
   /** The wall the title card hangs on, centred along it. */
   card: Side;
 }
@@ -39,6 +38,8 @@ export interface DoorPlan {
   at: number;
   /** Clear opening width, metres. */
   width: number;
+  /** A vertical stair link, whose opening is only on the lower wall. */
+  stair?: boolean;
 }
 
 /** Clear height of every doorway, metres. */
@@ -59,7 +60,7 @@ export const ROOMS: readonly RoomPlan[] = [
     minZ: 15,
     maxZ: 35,
     height: 4,
-    card: 'east',
+    card: 'north',
   },
   {
     id: 'changing',
@@ -135,6 +136,18 @@ export const ROOMS: readonly RoomPlan[] = [
     card: 'south',
   },
   {
+    id: 'upper-plant',
+    title: 'Upper Plant Room',
+    purpose: 'Upper service level above the water treatment plant',
+    zone: 'service',
+    minX: 0,
+    maxX: 32,
+    minZ: -20,
+    maxZ: -4,
+    height: 3,
+    card: 'north',
+  },
+  {
     id: 'pumps',
     title: 'Pump and Filtration Room',
     purpose: 'Circulation pumps, sand filters and their valves',
@@ -143,7 +156,8 @@ export const ROOMS: readonly RoomPlan[] = [
     maxX: 20,
     minZ: -20,
     maxZ: -4,
-    height: 4.5,
+    height: 2.7,
+    floorY: -3,
     card: 'north',
   },
   {
@@ -155,8 +169,22 @@ export const ROOMS: readonly RoomPlan[] = [
     maxX: 32,
     minZ: -20,
     maxZ: -4,
-    height: 4.5,
+    height: 2.7,
+    floorY: -3,
     card: 'north',
+  },
+  {
+    id: 'lower-landing',
+    title: 'Lower Plant Landing',
+    purpose: 'Access to the lower water treatment rooms',
+    zone: 'service',
+    minX: 20,
+    maxX: 32,
+    minZ: -4,
+    maxZ: 0,
+    height: 2.7,
+    floorY: -3,
+    card: 'south',
   },
   {
     id: 'chemicals',
@@ -238,6 +266,30 @@ export const ROOMS: readonly RoomPlan[] = [
     minX: 88,
     maxX: 96,
     minZ: -20,
+    maxZ: -12,
+    height: 3,
+    card: 'north',
+  },
+  {
+    id: 'control-centre',
+    title: 'Plant Control Centre',
+    purpose: 'Pool and building systems, alarms and operating records',
+    zone: 'service',
+    minX: 88,
+    maxX: 96,
+    minZ: -12,
+    maxZ: -4,
+    height: 3,
+    card: 'west',
+  },
+  {
+    id: 'engineer-office',
+    title: 'Engineer’s Office',
+    purpose: 'Plant drawings, maintenance planning and technical desk',
+    zone: 'service',
+    minX: 96,
+    maxX: 104,
+    minZ: -12,
     maxZ: -4,
     height: 3,
     card: 'north',
@@ -255,21 +307,24 @@ export const DOORS: readonly DoorPlan[] = [
   { rooms: ['janitorial', 'corridor'], at: 88.5, width: 1.2 },
   { rooms: ['staff', 'corridor'], at: 93.5, width: 1 },
   // Plant rooms off the north side of the corridor; plant gets double doors.
-  { rooms: ['pumps', 'corridor'], at: 10, width: 2.4 },
-  { rooms: ['balance-tank', 'corridor'], at: 26, width: 1.8 },
-  { rooms: ['chemicals', 'corridor'], at: 36, width: 1.8 },
+  { rooms: ['upper-plant', 'corridor'], at: 10, width: 2.4 },
+  { rooms: ['balance-tank', 'lower-landing'], at: 26, width: 1.8 },
+  { rooms: ['chemicals', 'boiler'], at: -12, width: 1.8 },
   { rooms: ['boiler', 'corridor'], at: 47, width: 2.4 },
   { rooms: ['air-handling', 'corridor'], at: 62, width: 2.4 },
   { rooms: ['switch-room', 'corridor'], at: 75, width: 1.8 },
   { rooms: ['office', 'corridor'], at: 84, width: 1 },
-  { rooms: ['workshop', 'corridor'], at: 92, width: 1.8 },
+  { rooms: ['control-centre', 'corridor'], at: 92, width: 1.8 },
+  { rooms: ['control-centre', 'engineer-office'], at: -8, width: 1.2 },
+  { rooms: ['control-centre', 'workshop'], at: 92, width: 1.2 },
   // Internal plant connections.
   { rooms: ['pumps', 'balance-tank'], at: -12, width: 1.8 },
+  { rooms: ['lower-landing', 'corridor'], at: -3.2, width: 1.4, stair: true },
   { rooms: ['workshop', 'stores'], at: -16, width: 1.2 },
 ];
 
 /** Where a new player arrives: inside reception, facing its title card. */
-export const START = { room: 'reception', x: 108, z: 25, yaw: Math.PI / 2 };
+export const START = { room: 'reception', x: 108, z: 25, yaw: -Math.PI / 2 };
 
 export function roomById(id: string, rooms = ROOMS): RoomPlan {
   const room = rooms.find((r) => r.id === id);
@@ -278,11 +333,15 @@ export function roomById(id: string, rooms = ROOMS): RoomPlan {
 }
 
 /** The room containing a plan point, if any. */
-export function roomAt(x: number, z: number, rooms = ROOMS) {
+export function roomAt(x: number, z: number, rooms = ROOMS, floorY = 0) {
   return (
-    rooms.find(
-      (r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ,
-    ) ?? null
+    rooms
+      .filter((r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ)
+      .sort(
+        (a, b) =>
+          Math.abs((a.floorY ?? 0) - floorY) -
+          Math.abs((b.floorY ?? 0) - floorY),
+      )[0] ?? null
   );
 }
 
@@ -292,6 +351,7 @@ export function roomAt(x: number, z: number, rooms = ROOMS) {
  * rooms do not touch along a length of wall.
  */
 export function sharedWall(a: RoomPlan, b: RoomPlan) {
+  if ((a.floorY ?? 0) !== (b.floorY ?? 0)) return null;
   const spanZ = {
     from: Math.max(a.minZ, b.minZ),
     to: Math.min(a.maxZ, b.maxZ),
@@ -336,7 +396,18 @@ export function openingsOf(
   for (const door of doors) {
     if (!door.rooms.includes(room.id)) continue;
     const otherId = door.rooms[0] === room.id ? door.rooms[1] : door.rooms[0];
-    const wall = sharedWall(room, roomById(otherId, rooms));
+    const other = roomById(otherId, rooms);
+    const wall = door.stair
+      ? room.id === 'lower-landing'
+        ? {
+            side: 'east' as Side,
+            line: room.maxX,
+            from: room.minZ,
+            to: room.maxZ,
+          }
+        : null
+      : sharedWall(room, other);
+    if (!wall && door.stair) continue;
     if (!wall)
       throw new Error(`${door.rooms.join(' and ')} do not share a wall.`);
     result[wall.side].push({
@@ -344,6 +415,8 @@ export function openingsOf(
       to: door.at + door.width / 2,
     });
   }
+  // Street entrance is an opening to the exterior, not another room.
+  if (room.id === 'reception') result.east.push({ from: 23.5, to: 26.5 });
   for (const side of Object.values(result))
     side.sort((p, q) => p.from - q.from);
   return result;
@@ -420,9 +493,10 @@ export function runFootprint(
 }
 
 /** Every wall footprint in the building, for walking collision. */
-export function wallFootprints(rooms = ROOMS, doors = DOORS) {
+export function wallFootprints(rooms = ROOMS, doors = DOORS, floorY?: number) {
   const footprints: PlanFootprint[] = [];
   for (const room of rooms) {
+    if (floorY !== undefined && (room.floorY ?? 0) !== floorY) continue;
     const openings = openingsOf(room, rooms, doors);
     for (const side of ['north', 'south', 'east', 'west'] as const)
       for (const run of wallRuns(sideSpan(room, side), openings[side]))

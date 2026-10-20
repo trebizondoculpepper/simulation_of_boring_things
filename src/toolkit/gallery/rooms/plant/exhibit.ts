@@ -1,0 +1,23 @@
+import type { Object3D } from 'three';
+import type { PanelKit } from '../../../components/core/views/eighties-controls';
+import type { ExhibitSize } from '../../logic/plant-room-layout';
+
+/**
+ * One piece of plant shown in a plant development room: a model built at
+ * true size from a referenced commercial product, under a maker's name of
+ * our own.
+ *
+ * `build` makes it in metres. Floor equipment: origin on the floor at the
+ * middle of its footprint, front facing +z, `size.w` along x and `size.d`
+ * along z. Wall equipment: origin in the wall's face at the middle of its
+ * back, front facing +z, standing `size.d` out from the wall. `size` must
+ * enclose the model, so the room can lay it out and keep walkers out of it.
+ */
+export interface PlantExhibit {
+  /** What it is, as an engineer would name it: "Pressure sand filter". */
+  title: string;
+  /** The product it is modelled on and its key size: "After … , 2.8 m dia." */
+  reference: string;
+  size: ExhibitSize;
+  build(kit: PanelKit): Object3D;
+}

@@ -4,16 +4,137 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#16130f" />
-    <title>Pool Plant</title>
+    <title>Pool Plant — Rooms</title>
     <link rel="icon" href="data:," />
+    <meta name="description" content="Choose a room in Pool Plant." />
   </head>
   <body>
-    <div id="app">
-      <canvas
-        id="scene"
-        aria-label="Leisure centre, first-person view"
-      ></canvas>
-      <p id="room-name" aria-live="polite"></p>
+    <main id="room-index">
+      <div class="directory-shell">
+        <header class="directory-head">
+          <p class="directory-kicker">Pool Plant</p>
+          <h1>Rooms</h1>
+          <p>Walk the leisure centre, or visit a development room.</p>
+        </header>
+        <section aria-labelledby="game-heading">
+          <h2 id="game-heading">The game</h2>
+          <div class="room-list level-list">
+            <a href="?room=facility"
+              ><span class="room-code">Play</span
+              ><span class="room-title">Leisure centre</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+          </div>
+        </section>
+        <section aria-labelledby="plant-heading">
+          <h2 id="plant-heading">Equipment development rooms</h2>
+          <div class="room-list dev-list">
+            <a href="?room=dev_pumps"
+              ><span class="room-code">pumps</span
+              ><span class="room-title">Pumps and filtration</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev_balance"
+              ><span class="room-code">balance</span
+              ><span class="room-title">Balance tanks</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev_chemicals"
+              ><span class="room-code">chemicals</span
+              ><span class="room-title">Chemical store</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev_dosing"
+              ><span class="room-code">dosing</span
+              ><span class="room-title">Dosing</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev_boiler"
+              ><span class="room-code">boiler</span
+              ><span class="room-title">Boiler room</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev_air"
+              ><span class="room-code">air</span
+              ><span class="room-title">Air handling</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev_electrical"
+              ><span class="room-code">electrical</span
+              ><span class="room-title">Electrical</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev_control"
+              ><span class="room-code">control</span
+              ><span class="room-title">Control centre</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+          </div>
+        </section>
+        <section aria-labelledby="dev-heading">
+          <h2 id="dev-heading">Development rooms</h2>
+          <div class="room-list dev-list">
+            <a href="?room=dev_corridor"
+              ><span class="room-code">dev corridor</span
+              ><span class="room-title">Dev corridor</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev0"
+              ><span class="room-code">dev0</span
+              ><span class="room-title">Controls and displays</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev1"
+              ><span class="room-code">dev1</span
+              ><span class="room-title">Racks</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev2"
+              ><span class="room-code">dev2</span
+              ><span class="room-title">Fire safety</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev3"
+              ><span class="room-code">dev3</span
+              ><span class="room-title">Building fittings</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev4"
+              ><span class="room-code">dev4</span
+              ><span class="room-title">Repair workshop</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev5"
+              ><span class="room-code">dev5</span
+              ><span class="room-title">Putting things in the bin</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev6"
+              ><span class="room-code">dev6</span
+              ><span class="room-title">Settling objects into skips</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev7"
+              ><span class="room-code">dev7</span
+              ><span class="room-title">Machine tones</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev8"
+              ><span class="room-code">dev8</span
+              ><span class="room-title">Brands and logos</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+            <a href="?room=dev9"
+              ><span class="room-code">dev9</span
+              ><span class="room-title">Fires</span
+              ><span class="room-arrow" aria-hidden="true">↗</span></a
+            >
+          </div>
+        </section>
+      </div>
+    </main>
+    <div id="app" hidden>
+      <canvas id="scene" aria-label="First-person view"></canvas>
       <p id="error" hidden></p>
     </div>
     <script type="module" src="/src/main.ts"></script>

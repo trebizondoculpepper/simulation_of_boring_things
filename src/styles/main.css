@@ -46,7 +46,7 @@ canvas {
   background: #0e0c09;
   color: white;
 }
-#room-name {
+.room-name {
   position: absolute;
   top: max(12px, env(safe-area-inset-top));
   left: max(12px, env(safe-area-inset-left));
@@ -59,7 +59,7 @@ canvas {
     sans-serif;
   pointer-events: none;
 }
-#room-name:empty {
+.room-name:empty {
   display: none;
 }
 
@@ -160,4 +160,109 @@ canvas {
 }
 .touch-stick.is-held .touch-stick-knob {
   background: #5a624e;
+}
+/* Room directory: the site root is a lightweight entry point. */
+#room-index {
+  min-height: 100dvh;
+  padding: clamp(24px, 5vw, 70px);
+  background: #171b19;
+  color: #e7e7dc;
+}
+.directory-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+.directory-head {
+  border-top: 7px solid #d3ad55;
+  padding: 22px 0 24px;
+}
+.directory-kicker {
+  margin: 0;
+  color: #d3ad55;
+  font:
+    700 12px 'Courier New',
+    monospace;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.directory-head h1 {
+  margin: 8px 0 0;
+  font-size: clamp(38px, 6vw, 70px);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+.directory-head > p:last-child {
+  margin: 14px 0 0;
+  color: #aeb7ae;
+}
+#room-index section {
+  margin: 28px 0 42px;
+}
+#room-index h2 {
+  margin: 0 0 13px;
+  font:
+    700 13px 'Courier New',
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #d3ad55;
+}
+.room-list {
+  display: grid;
+  gap: 1px;
+  background: #3c4941;
+  border: 1px solid #3c4941;
+}
+.level-list,
+.other-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.dev-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.room-list a {
+  display: grid;
+  grid-template-columns: minmax(70px, auto) 1fr auto;
+  align-items: center;
+  gap: 15px;
+  min-height: 70px;
+  padding: 14px 18px;
+  background: #252d29;
+  color: inherit;
+  text-decoration: none;
+  transition: background 120ms ease;
+}
+.room-list a:hover,
+.room-list a:focus-visible {
+  background: #35483d;
+  outline: 2px solid #d3ad55;
+  outline-offset: -2px;
+}
+.room-code {
+  color: #d3ad55;
+  font:
+    700 13px 'Courier New',
+    monospace;
+  white-space: nowrap;
+}
+.room-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+.room-arrow {
+  color: #aeb7ae;
+  font-size: 22px;
+}
+@media (max-width: 690px) {
+  .level-list,
+  .other-list,
+  .dev-list {
+    grid-template-columns: 1fr;
+  }
+  .room-list a {
+    min-height: 62px;
+  }
+}
+[hidden] {
+  display: none !important;
 }

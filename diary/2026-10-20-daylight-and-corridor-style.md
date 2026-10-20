@@ -1,0 +1,3 @@
+# Architectural daylight and corridor finish
+
+Reviewed the Sport England six-lane-plus architect plan, sections and elevations. Added high-level pool-hall windows, smaller changing/heating/engineer-office windows and four shallow barrel rooflights over actual hall-ceiling openings; added exterior proxies for these details. Adapted Encabulator’s dev-corridor finish to every service room using painted blockwork, concrete, dark skirting, coloured route stripes, orange doorway markers, battens and cable trays. Kept each room as a separate loadable model. Visual references, adaptations and limits are recorded in `doc/research/daylight-from-architect-plans.md`.

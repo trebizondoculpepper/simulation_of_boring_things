@@ -1,15 +1,26 @@
 import {
   BoxGeometry,
+  CatmullRomCurve3,
+  BufferGeometry,
+  Float32BufferAttribute,
   CanvasTexture,
+  CylinderGeometry,
   Group,
   Mesh,
   MeshBasicMaterial,
+  MeshPhysicalMaterial,
   MeshStandardMaterial,
+  DoubleSide,
+  ExtrudeGeometry,
+  Shape,
   PlaneGeometry,
+  SpotLight,
   RepeatWrapping,
   SRGBColorSpace,
+  TubeGeometry,
+  Vector3,
 } from 'three';
-import type { BufferGeometry, Material, Texture } from 'three';
+import type { Material, Texture } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
   DOOR_HEIGHT,
@@ -21,13 +32,17 @@ import {
 } from '../game/facility-plan';
 import type { RoomPlan, Side, Zone } from '../game/facility-plan';
 import { cardCentreY, cardHeight, cardWidth } from '../game/title-card';
+import { BASINS, cutBasins } from '../game/pool-layout';
+import { ROOFLIGHTS, WINDOWS, cutWindows } from '../game/daylight-plan';
+import {
+  BENCHES,
+  CUBICLES,
+  LOCKER_BANKS,
+  VANITY,
+} from '../game/changing-layout';
+import type { Basin } from '../game/pool-layout';
 
-/**
- * Builds the leisure centre's rooms as empty shells: floor, walls with
- * their doorways, ceiling and a title card. Everything is in metres.
- * Surfaces of one finish are merged into a single mesh, so the whole
- * building draws in a handful of calls.
- */
+/** Each room is an independent model placed in the same world coordinates. */
 
 const SLAB = 0.05;
 
@@ -135,15 +150,44 @@ interface Finishes {
   floor: Record<Zone, Material>;
   wall: Record<Zone, Material>;
   ceiling: Record<Zone, Material>;
+  basin: Material;
+  coping: Material;
+  grating: Material;
+  gully: Material;
+  gullySlat: Material;
+  lane: Material;
+  steel: Material;
+  lightFrame: Material;
+  lightLens: Material;
+  glass: Material;
+  glazingFrame: Material;
+  roofGlass: Material;
+  poolBand: Material;
+  cubicle: Material;
+  cubicleAlt: Material;
+  locker: Material;
+  lockerAlt: Material;
+  bench: Material;
+  mirror: Material;
+  plywood: Material;
+  plywoodEdge: Material;
+  upholstery: Material;
+  vending: Material;
+  vendingDisplay: Material;
+  skirting: Material;
+  cableTray: Material;
+  accents: Record<'water' | 'heat' | 'electric' | 'work', Material>;
 }
 
 function createFinishes(textures: Texture[]): Finishes {
   const keep = <T extends Texture>(t: T) => (textures.push(t), t);
   return {
     floor: {
-      public: new MeshStandardMaterial({
-        map: keep(tileTexture('#e9ecea', '#b9c2c2', 6)),
-        roughness: 0.35,
+      public: new MeshPhysicalMaterial({
+        map: keep(tileTexture('#f5f8f6', '#c4cdcb', 6)),
+        roughness: 0.22,
+        clearcoat: 0.45,
+        clearcoatRoughness: 0.16,
       }),
       service: new MeshStandardMaterial({
         map: keep(concreteTexture()),
@@ -151,18 +195,104 @@ function createFinishes(textures: Texture[]): Finishes {
       }),
     },
     wall: {
-      public: new MeshStandardMaterial({
-        map: keep(tileTexture('#f3f4f1', '#c9cfcd', 4)),
-        roughness: 0.3,
+      public: new MeshPhysicalMaterial({
+        map: keep(tileTexture('#fafbf8', '#c8d0cd', 4)),
+        roughness: 0.15,
+        clearcoat: 0.65,
+        clearcoatRoughness: 0.1,
       }),
       service: new MeshStandardMaterial({
-        map: keep(blockTexture('#d8d6cc', '#bdbab0')),
+        map: keep(blockTexture('#d8d9d2', '#b9bdb7')),
         roughness: 0.85,
       }),
     },
     ceiling: {
       public: new MeshStandardMaterial({ color: '#e6e8e6', roughness: 0.9 }),
-      service: new MeshStandardMaterial({ color: '#c9c8c2', roughness: 0.9 }),
+      service: new MeshStandardMaterial({ color: '#bbbdbb', roughness: 0.9 }),
+    },
+    basin: new MeshPhysicalMaterial({
+      map: keep(tileTexture('#f0f8f7', '#b8cdcc', 5)),
+      roughness: 0.16,
+      clearcoat: 0.65,
+      clearcoatRoughness: 0.12,
+    }),
+    coping: new MeshStandardMaterial({ color: '#e4e8e3', roughness: 0.5 }),
+    grating: new MeshStandardMaterial({ color: '#879796', roughness: 0.7 }),
+    gully: new MeshStandardMaterial({ color: '#536a6c', roughness: 0.52 }),
+    gullySlat: new MeshStandardMaterial({ color: '#e8eeea', roughness: 0.32 }),
+    lane: new MeshStandardMaterial({ color: '#174a62', roughness: 0.45 }),
+    steel: new MeshStandardMaterial({
+      color: '#b5c1c0',
+      metalness: 0.8,
+      roughness: 0.2,
+    }),
+    lightFrame: new MeshStandardMaterial({ color: '#a1aaa9', metalness: 0.3 }),
+    lightLens: new MeshStandardMaterial({
+      color: '#f5f7f1',
+      emissive: '#e8f2f0',
+      emissiveIntensity: 1.6,
+      roughness: 0.5,
+    }),
+    glass: new MeshStandardMaterial({
+      color: '#b4d9e4',
+      metalness: 0.15,
+      roughness: 0.12,
+      transparent: true,
+      opacity: 0.32,
+      depthWrite: false,
+      side: DoubleSide,
+    }),
+    glazingFrame: new MeshStandardMaterial({
+      color: '#4d646e',
+      metalness: 0.55,
+      roughness: 0.35,
+    }),
+    roofGlass: new MeshStandardMaterial({
+      color: '#d7e4e6',
+      roughness: 0.9,
+      transparent: true,
+      opacity: 0.36,
+      depthWrite: false,
+      side: DoubleSide,
+    }),
+    poolBand: new MeshStandardMaterial({ color: '#8db8bc', roughness: 0.48 }),
+    cubicle: new MeshStandardMaterial({ color: '#cbd7d2', roughness: 0.55 }),
+    cubicleAlt: new MeshStandardMaterial({ color: '#b7cbd0', roughness: 0.55 }),
+    locker: new MeshStandardMaterial({ color: '#799ea7', roughness: 0.48 }),
+    lockerAlt: new MeshStandardMaterial({ color: '#a7bbb5', roughness: 0.48 }),
+    bench: new MeshStandardMaterial({ color: '#d2d1c0', roughness: 0.6 }),
+    mirror: new MeshStandardMaterial({
+      color: '#bed0d3',
+      metalness: 0.7,
+      roughness: 0.08,
+    }),
+    plywood: new MeshStandardMaterial({ color: '#bd8751', roughness: 0.46 }),
+    plywoodEdge: new MeshStandardMaterial({
+      color: '#774522',
+      roughness: 0.55,
+    }),
+    upholstery: new MeshStandardMaterial({ color: '#638787', roughness: 0.92 }),
+    vending: new MeshStandardMaterial({
+      color: '#53656a',
+      metalness: 0.3,
+      roughness: 0.35,
+    }),
+    vendingDisplay: new MeshStandardMaterial({
+      color: '#172629',
+      metalness: 0.25,
+      roughness: 0.12,
+    }),
+    skirting: new MeshStandardMaterial({ color: '#5f6262', roughness: 0.9 }),
+    cableTray: new MeshStandardMaterial({
+      color: '#b8bfbd',
+      metalness: 0.45,
+      roughness: 0.5,
+    }),
+    accents: {
+      water: new MeshStandardMaterial({ color: '#138c91', roughness: 0.8 }),
+      heat: new MeshStandardMaterial({ color: '#e27532', roughness: 0.8 }),
+      electric: new MeshStandardMaterial({ color: '#6a3fa0', roughness: 0.8 }),
+      work: new MeshStandardMaterial({ color: '#2f5fb8', roughness: 0.8 }),
     },
   };
 }
@@ -315,56 +445,787 @@ function createTitleCard(room: RoomPlan, textures: Texture[]) {
   return card;
 }
 
-export function createFacility(rooms: readonly RoomPlan[] = ROOMS) {
-  const group = new Group();
-  group.name = 'facility';
-  const textures: Texture[] = [];
-  const finishes = createFinishes(textures);
+/** Empty tiled basin with deck overflow channels and floor outlets. */
+function addBasin(
+  batches: ReturnType<typeof createBatches>,
+  basin: Basin,
+  finish: Finishes,
+) {
+  const x = (basin.minX + basin.maxX) / 2;
+  const z = (basin.minZ + basin.maxZ) / 2;
+  const width = basin.maxX - basin.minX;
+  const length = basin.maxZ - basin.minZ;
+  const depth = basin.depth;
+  const wall = 0.1;
+  batches.add(finish.basin, box(width, SLAB, length, x, -depth, z));
+  for (const edgeX of [basin.minX, basin.maxX]) {
+    batches.add(finish.basin, box(wall, depth, length, edgeX, -depth / 2, z));
+    batches.add(finish.coping, box(0.25, 0.08, length, edgeX, 0.025, z));
+    const drainX = edgeX + (edgeX === basin.minX ? -0.28 : 0.28);
+    batches.add(finish.gully, box(0.22, 0.014, length, drainX, 0.006, z));
+    for (let grateZ = basin.minZ + 0.1; grateZ < basin.maxZ; grateZ += 0.22)
+      batches.add(
+        finish.gullySlat,
+        box(0.205, 0.014, 0.038, drainX, 0.02, grateZ),
+      );
+  }
+  for (const edgeZ of [basin.minZ, basin.maxZ]) {
+    batches.add(finish.basin, box(width, depth, wall, x, -depth / 2, edgeZ));
+    batches.add(finish.coping, box(width, 0.08, 0.25, x, 0.025, edgeZ));
+    const drainZ = edgeZ + (edgeZ === basin.minZ ? -0.28 : 0.28);
+    batches.add(finish.gully, box(width, 0.014, 0.22, x, 0.006, drainZ));
+    for (let grateX = basin.minX + 0.1; grateX < basin.maxX; grateX += 0.22)
+      batches.add(
+        finish.gullySlat,
+        box(0.038, 0.014, 0.205, grateX, 0.02, drainZ),
+      );
+  }
+  const outlets =
+    basin.id === 'main'
+      ? [basin.minX + width * 0.3, basin.minX + width * 0.7]
+      : [x];
+  for (const outletX of outlets) {
+    batches.add(finish.gully, box(0.5, 0.014, 0.5, outletX, -depth + 0.033, z));
+    for (let offset = -0.18; offset <= 0.18; offset += 0.09)
+      batches.add(
+        finish.gullySlat,
+        box(0.035, 0.012, 0.45, outletX + offset, -depth + 0.044, z),
+      );
+  }
+  if (basin.id === 'main') {
+    for (let lane = 0; lane < 6; lane++) {
+      const laneZ = basin.minZ + ((lane + 0.5) * length) / 6;
+      batches.add(
+        finish.lane,
+        box(width - 2, 0.008, 0.18, x, -depth + 0.03, laneZ),
+      );
+    }
+  }
+}
+
+/** Original low-detail rail geometry based on a standard wall ladder. */
+function addLadder(
+  model: Group,
+  basin: Basin,
+  roomX: number,
+  roomZ: number,
+  steel: Material,
+) {
+  const edge = basin.maxX;
+  const centerZ = (basin.minZ + basin.maxZ) / 2;
+  for (const offsetZ of [-0.38, 0.38]) {
+    const points = [
+      new Vector3(
+        edge - 0.25 - roomX,
+        -Math.min(basin.depth - 0.15, 1.2),
+        centerZ + offsetZ - roomZ,
+      ),
+      new Vector3(edge - 0.25 - roomX, 0.35, centerZ + offsetZ - roomZ),
+      new Vector3(edge - 0.05 - roomX, 0.85, centerZ + offsetZ - roomZ),
+      new Vector3(edge + 0.55 - roomX, 0.85, centerZ + offsetZ - roomZ),
+      new Vector3(edge + 0.65 - roomX, 0.05, centerZ + offsetZ - roomZ),
+    ];
+    model.add(
+      new Mesh(
+        new TubeGeometry(new CatmullRomCurve3(points), 30, 0.0215, 8, false),
+        steel,
+      ),
+    );
+  }
+  for (const y of [-0.25, -0.58, -0.91]) {
+    if (-y >= basin.depth - 0.1) continue;
+    const rung = new Mesh(new CylinderGeometry(0.025, 0.025, 0.76, 10), steel);
+    rung.rotation.x = Math.PI / 2;
+    rung.position.set(edge - 0.25 - roomX, y, centerZ - roomZ);
+    model.add(rung);
+  }
+}
+
+/** Shallow barrel glazing over actual openings in the hall ceiling. */
+function addRooflights(model: Group, room: RoomPlan, finish: Finishes) {
+  const cx = (room.minX + room.maxX) / 2;
+  const cz = (room.minZ + room.maxZ) / 2;
+  for (const light of ROOFLIGHTS) {
+    const segments = 16;
+    const vertices: number[] = [];
+    const indices: number[] = [];
+    for (let iz = 0; iz <= 1; iz++)
+      for (let ix = 0; ix <= segments; ix++) {
+        const t = ix / segments;
+        vertices.push(
+          light.minX + (light.maxX - light.minX) * t - cx,
+          room.height + 0.75 * Math.sin(Math.PI * t),
+          (iz ? light.maxZ : light.minZ) - cz,
+        );
+      }
+    for (let ix = 0; ix < segments; ix++) {
+      const a = ix,
+        b = ix + 1,
+        c = segments + 1 + ix,
+        d = c + 1;
+      indices.push(a, c, b, b, c, d);
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    const pane = new Mesh(geometry, finish.roofGlass);
+    pane.name = 'barrel-rooflight';
+    model.add(pane);
+    for (const z of [light.minZ, (light.minZ + light.maxZ) / 2, light.maxZ]) {
+      const points = Array.from({ length: 17 }, (_, i) => {
+        const t = i / 16;
+        return new Vector3(
+          light.minX + (light.maxX - light.minX) * t - cx,
+          room.height + 0.75 * Math.sin(Math.PI * t) + 0.02,
+          z - cz,
+        );
+      });
+      const rib = new Mesh(
+        new TubeGeometry(new CatmullRomCurve3(points), 24, 0.055, 6, false),
+        finish.glazingFrame,
+      );
+      model.add(rib);
+    }
+    for (const x of [light.minX, light.maxX]) {
+      const rail = new Mesh(
+        new BoxGeometry(0.12, 0.15, light.maxZ - light.minZ),
+        finish.glazingFrame,
+      );
+      rail.position.set(
+        x - cx,
+        room.height,
+        (light.minZ + light.maxZ) / 2 - cz,
+      );
+      model.add(rail);
+    }
+  }
+}
+
+function trimBox(
+  room: RoomPlan,
+  side: Side,
+  from: number,
+  to: number,
+  bottom: number,
+  top: number,
+) {
+  const t = 0.025,
+    mid = (from + to) / 2,
+    y = (bottom + top) / 2;
+  if (side === 'north')
+    return box(
+      to - from,
+      top - bottom,
+      t,
+      mid,
+      y,
+      room.minZ + WALL / 2 + t / 2,
+    );
+  if (side === 'south')
+    return box(
+      to - from,
+      top - bottom,
+      t,
+      mid,
+      y,
+      room.maxZ - WALL / 2 - t / 2,
+    );
+  if (side === 'west')
+    return box(
+      t,
+      top - bottom,
+      to - from,
+      room.minX + WALL / 2 + t / 2,
+      y,
+      mid,
+    );
+  return box(t, top - bottom, to - from, room.maxX - WALL / 2 - t / 2, y, mid);
+}
+
+/** Suspended LED battens in public rooms and compact downlights in service rooms. */
+function addCeilingFixtures(
+  batches: ReturnType<typeof createBatches>,
+  room: RoomPlan,
+  finish: Finishes,
+) {
+  const width = room.maxX - room.minX;
+  const depth = room.maxZ - room.minZ;
+  const columns =
+    room.id === 'hall'
+      ? 5
+      : room.id === 'corridor'
+        ? 8
+        : Math.max(1, Math.floor(width / 7));
+  const rows =
+    room.id === 'hall'
+      ? 3
+      : room.id === 'changing' || room.id === 'reception'
+        ? 2
+        : 1;
+  for (let ix = 0; ix < columns; ix++)
+    for (let iz = 0; iz < rows; iz++) {
+      const x = room.minX + ((ix + 0.5) * width) / columns;
+      const z = room.minZ + ((iz + 0.5) * depth) / rows;
+      if (room.zone === 'public') {
+        const drop = room.id === 'hall' ? 1.25 : 0.38;
+        const y = room.height - drop;
+        const length = room.id === 'hall' ? 2.8 : 1.8;
+        batches.add(finish.lightFrame, box(length, 0.12, 0.25, x, y, z));
+        batches.add(
+          finish.lightLens,
+          box(length - 0.12, 0.018, 0.17, x, y - 0.068, z),
+        );
+        for (const endX of [x - length * 0.36, x + length * 0.36]) {
+          batches.add(
+            finish.steel,
+            box(0.018, drop - 0.1, 0.018, endX, room.height - drop / 2, z),
+          );
+          batches.add(
+            finish.lightFrame,
+            box(0.18, 0.035, 0.18, endX, room.height - 0.018, z),
+          );
+        }
+      } else {
+        const y = room.height - 0.13;
+        const bezel = new CylinderGeometry(0.16, 0.16, 0.055, 16);
+        bezel.translate(x, y, z);
+        batches.add(finish.lightFrame, bezel);
+        const lens = new CylinderGeometry(0.12, 0.12, 0.012, 16);
+        lens.translate(x, y - 0.035, z);
+        batches.add(finish.lightLens, lens);
+      }
+    }
+}
+
+/** Simple, cleanable furniture for a mixed changing village. */
+function addChangingFurniture(
+  batches: ReturnType<typeof createBatches>,
+  finish: Finishes,
+) {
+  for (const [index, c] of CUBICLES.entries()) {
+    const panel = index % 2 ? finish.cubicleAlt : finish.cubicle;
+    const midX = (c.minX + c.maxX) / 2;
+    for (const z of [c.minZ, c.maxZ])
+      batches.add(panel, box(c.maxX - c.minX, 2.15, 0.08, midX, 1.12, z));
+    batches.add(panel, box(0.08, 2.15, 1.2, c.maxX, 1.12, c.minZ + 0.6));
+    // A short privacy return keeps the opening offset without adding a door.
+    batches.add(panel, box(0.55, 2.15, 0.08, c.maxX - 0.27, 1.12, c.maxZ));
+    const z = (c.minZ + c.maxZ) / 2;
+    batches.add(finish.bench, box(2.2, 0.11, 0.46, c.minX + 1.75, 0.47, z));
+    batches.add(finish.steel, box(0.05, 0.42, 0.36, c.minX + 1.0, 0.26, z));
+    batches.add(finish.steel, box(0.05, 0.42, 0.36, c.minX + 2.5, 0.26, z));
+    batches.add(finish.steel, box(0.05, 0.05, 0.08, c.minX + 0.08, 1.78, z));
+  }
+  for (const bank of LOCKER_BANKS) {
+    const count = Math.round((bank.maxZ - bank.minZ) / 0.8);
+    for (let i = 0; i < count; i++) {
+      const z = bank.minZ + (i + 0.5) * 0.8;
+      const paint = i % 3 === 0 ? finish.lockerAlt : finish.locker;
+      batches.add(paint, box(0.8, 1.84, 0.78, 94.95, 0.94, z));
+      batches.add(finish.glazingFrame, box(0.035, 0.025, 0.75, 94.53, 0.94, z));
+      for (const y of [0.5, 1.39])
+        batches.add(finish.steel, box(0.035, 0.12, 0.028, 94.49, y, z + 0.23));
+    }
+  }
+  for (const bench of BENCHES) {
+    const x = (bench.minX + bench.maxX) / 2;
+    const z = (bench.minZ + bench.maxZ) / 2;
+    for (const offset of [-0.3, 0, 0.3])
+      batches.add(
+        finish.bench,
+        box(0.24, 0.08, bench.maxZ - bench.minZ, x + offset, 0.49, z),
+      );
+    for (const end of [bench.minZ + 0.6, bench.maxZ - 0.6])
+      batches.add(finish.steel, box(0.65, 0.44, 0.08, x, 0.24, end));
+  }
+  const vanityX = (VANITY.minX + VANITY.maxX) / 2;
+  batches.add(finish.bench, box(6, 0.12, 0.8, vanityX, 0.85, 10.75));
+  batches.add(finish.mirror, box(5.6, 0.9, 0.03, vanityX, 1.72, 10.17));
+  for (const x of [87, 89, 91]) {
+    batches.add(finish.coping, box(0.48, 0.025, 0.36, x, 0.92, 10.79));
+    batches.add(finish.steel, box(0.04, 0.18, 0.04, x, 1.03, 10.48));
+  }
+  // Two simple showers at the wet end, with a low floor drain.
+  for (const x of [90.2, 92.2]) {
+    batches.add(finish.steel, box(0.045, 1.2, 0.045, x, 1.55, 39.78));
+    batches.add(finish.steel, box(0.42, 0.035, 0.14, x, 2.2, 39.65));
+    batches.add(finish.grating, box(0.7, 0.01, 0.08, x, 0.008, 38.4));
+  }
+  for (const x of [89.2, 91.2, 93.2])
+    batches.add(finish.cubicleAlt, box(0.08, 2.1, 1.6, x, 1.1, 39));
+}
+
+/** A shallow curved plan extruded vertically, with a broad customer-facing arc. */
+function receptionDesk(height: number, baseY: number) {
+  const shape = new Shape();
+  shape.moveTo(100.5, -17.4);
+  shape.lineTo(108.5, -17.4);
+  shape.lineTo(108.5, -18.65);
+  shape.quadraticCurveTo(104.5, -21.1, 100.5, -18.65);
+  shape.closePath();
+  const geometry = new ExtrudeGeometry(shape, {
+    depth: height,
+    bevelEnabled: false,
+    curveSegments: 24,
+  });
+  geometry.rotateX(-Math.PI / 2);
+  geometry.translate(0, baseY, 0);
+  return geometry;
+}
+
+/** Public entry fittings, arranged around the central passage. */
+function addReceptionFurniture(
+  batches: ReturnType<typeof createBatches>,
+  finish: Finishes,
+) {
+  // Moulded plywood counter, dark exposed ply edge and a recessed toe kick.
+  batches.add(finish.plywoodEdge, receptionDesk(0.12, 0.04));
+  batches.add(finish.plywood, receptionDesk(0.77, 0.16));
+  batches.add(finish.plywoodEdge, receptionDesk(0.06, 0.93));
+  batches.add(finish.plywood, receptionDesk(0.045, 0.99));
+  // Two small waiting clusters, each with upholstered seats and a low table.
+  for (const x of [101.5, 107.5]) {
+    for (const z of [28.85, 30.75]) {
+      batches.add(finish.plywood, box(1.6, 0.36, 0.9, x, 0.24, z));
+      batches.add(finish.upholstery, box(1.48, 0.13, 0.83, x, 0.49, z));
+      batches.add(
+        finish.upholstery,
+        box(1.48, 0.65, 0.12, x, 0.72, z + (z > 30 ? 0.4 : -0.4)),
+      );
+    }
+    batches.add(finish.plywoodEdge, box(1.4, 0.055, 0.8, x, 0.4, 29.8));
+    for (const legX of [x - 0.5, x + 0.5])
+      batches.add(finish.steel, box(0.04, 0.35, 0.04, legX, 0.19, 29.8));
+  }
+  // Vending machines against the east wall, outside the entrance approach.
+  for (const [index, z] of [17.7, 20.2].entries()) {
+    batches.add(finish.vending, box(1.8, 2.15, 2, 110.4, 1.09, z));
+    batches.add(
+      finish.vendingDisplay,
+      box(0.025, 1.65, 1.34, 109.48, 1.24, z - 0.2),
+    );
+    batches.add(
+      index ? finish.cubicleAlt : finish.poolBand,
+      box(0.03, 0.3, 1.3, 109.46, 1.7, z - 0.2),
+    );
+    batches.add(finish.steel, box(0.035, 0.48, 0.2, 109.45, 0.6, z + 0.62));
+    batches.add(finish.gully, box(0.04, 0.09, 0.6, 109.44, 0.36, z - 0.2));
+  }
+  // Open guide rails frame the entrance to the changing village.
+  for (const z of [21.15, 28.85]) {
+    batches.add(finish.steel, box(0.08, 1.05, 1.7, 98.2, 0.54, z));
+    batches.add(finish.glazingFrame, box(0.8, 0.07, 0.07, 98.2, 0.95, z));
+  }
+}
+
+/** A few actual light sources sit beneath the repeated visible fittings. */
+function addRoomLighting(model: Group, room: RoomPlan, cx: number, cz: number) {
+  const positions =
+    room.id === 'hall'
+      ? [8, 24, 40, 56, 72].map((x) => [x, 25, 50] as const)
+      : room.id === 'changing'
+        ? [17.5, 32.5].flatMap((z) => [84, 92].map((x) => [x, z, 20] as const))
+        : room.id === 'reception'
+          ? [20, 30].flatMap((z) => [100, 108].map((x) => [x, z, 14] as const))
+          : room.id === 'corridor'
+            ? [6, 30, 54, 78].map((x) => [x, -2, 9] as const)
+            : room.zone === 'service'
+              ? [[cx, cz, 9] as const]
+              : [];
+  for (const [x, z, intensity] of positions) {
+    const lamp = new SpotLight(
+      '#edf5f2',
+      intensity * 2.5,
+      room.id === 'hall' ? 28 : 11,
+      Math.PI / 3,
+      0.78,
+      2,
+    );
+    lamp.position.set(
+      x - cx,
+      room.height -
+        (room.id === 'hall' ? 1.35 : room.zone === 'service' ? 0.25 : 0.48),
+      z - cz,
+    );
+    lamp.castShadow = false;
+    lamp.target.position.set(x - cx, 0, z - cz);
+    model.add(lamp);
+    model.add(lamp.target);
+  }
+}
+
+function serviceAccent(room: RoomPlan): keyof Finishes['accents'] {
+  if (
+    ['pumps', 'balance-tank', 'lower-landing', 'upper-plant'].includes(room.id)
+  )
+    return 'water';
+  if (['boiler', 'chemicals'].includes(room.id)) return 'heat';
+  if (['switch-room', 'air-handling'].includes(room.id)) return 'electric';
+  return 'work';
+}
+
+function createRoomModel(
+  room: RoomPlan,
+  finishes: Finishes,
+  textures: Texture[],
+) {
+  const model = new Group();
+  model.name = `room:${room.id}`;
   const batches = createBatches();
-  for (const room of rooms) {
-    const sx = room.maxX - room.minX,
-      sz = room.maxZ - room.minZ;
-    const cx = (room.minX + room.maxX) / 2,
-      cz = (room.minZ + room.maxZ) / 2;
+  const sx = room.maxX - room.minX,
+    sz = room.maxZ - room.minZ;
+  const cx = (room.minX + room.maxX) / 2,
+    cz = (room.minZ + room.maxZ) / 2;
+  if (room.id === 'hall') {
+    for (const deck of cutBasins(room))
+      batches.add(
+        finishes.floor.public,
+        box(
+          deck.maxX - deck.minX,
+          SLAB,
+          deck.maxZ - deck.minZ,
+          (deck.minX + deck.maxX) / 2,
+          -SLAB / 2,
+          (deck.minZ + deck.maxZ) / 2,
+        ),
+      );
+    for (const basin of BASINS) addBasin(batches, basin, finishes);
+    for (const x of [8, 24, 40, 56, 72])
+      batches.add(
+        finishes.ceiling.public,
+        box(0.42, 0.3, 50, x, room.height - 0.08, 25),
+      );
+  } else if (room.id === 'corridor') {
+    // The north side of this stretch is an open stairwell.
+    for (const [from, to, z0, z1] of [
+      [room.minX, 32, room.minZ, room.maxZ],
+      [32, 44, -2.45, room.maxZ],
+      [44, room.maxX, room.minZ, room.maxZ],
+    ])
+      batches.add(
+        finishes.floor.service,
+        box(
+          to - from,
+          SLAB,
+          z1 - z0,
+          (from + to) / 2,
+          -SLAB / 2,
+          (z0 + z1) / 2,
+        ),
+      );
+  } else {
     batches.add(
       finishes.floor[room.zone],
       box(sx, SLAB, sz, cx, -SLAB / 2, cz),
     );
+  }
+  if (room.id === 'hall') {
+    for (const patch of cutBasins(room, ROOFLIGHTS))
+      batches.add(
+        finishes.ceiling.public,
+        box(
+          patch.maxX - patch.minX,
+          SLAB,
+          patch.maxZ - patch.minZ,
+          (patch.minX + patch.maxX) / 2,
+          room.height + SLAB / 2,
+          (patch.minZ + patch.maxZ) / 2,
+        ),
+      );
+    addRooflights(model, room, finishes);
+  } else {
     batches.add(
       finishes.ceiling[room.zone],
       box(sx, SLAB, sz, cx, room.height + SLAB / 2, cz),
     );
-    const openings = openingsOf(room);
-    for (const side of ['north', 'south', 'east', 'west'] as const) {
-      const span = sideSpan(room, side);
-      const wall = finishes.wall[room.zone];
-      for (const run of wallRuns(span, openings[side]))
+  }
+  const openings = openingsOf(room);
+  for (const side of ['north', 'south', 'east', 'west'] as const) {
+    const span = sideSpan(room, side);
+    const wall = finishes.wall[room.zone];
+    const glazed =
+      room.id === 'reception' && (side === 'east' || side === 'south');
+    for (const run of wallRuns(span, openings[side])) {
+      if (!glazed) {
+        const windows = WINDOWS.filter(
+          (w) => w.room === room.id && w.side === side,
+        );
+        const patches = cutWindows(
+          { from: run.from, to: run.to, bottom: 0, top: room.height },
+          windows,
+        );
+        for (const patch of patches.solid)
+          batches.add(
+            wall,
+            wallBox(room, side, patch.from, patch.to, patch.bottom, patch.top),
+          );
+        for (const patch of patches.glass) {
+          batches.add(
+            finishes.glass,
+            wallBox(room, side, patch.from, patch.to, patch.bottom, patch.top),
+          );
+          for (const y of [patch.bottom, patch.top])
+            batches.add(
+              finishes.glazingFrame,
+              trimBox(room, side, patch.from, patch.to, y - 0.04, y + 0.04),
+            );
+          for (const x of [patch.from, patch.to])
+            batches.add(
+              finishes.glazingFrame,
+              trimBox(
+                room,
+                side,
+                x - 0.045,
+                x + 0.045,
+                patch.bottom,
+                patch.top,
+              ),
+            );
+        }
+      } else
         batches.add(
-          wall,
+          finishes.glass,
           wallBox(room, side, run.from, run.to, 0, room.height),
         );
-      // The wall over each doorway.
-      for (const hole of openings[side])
+      if (room.zone === 'service') {
         batches.add(
-          wall,
+          finishes.skirting,
+          trimBox(room, side, run.from, run.to, 0, 0.16),
+        );
+        batches.add(
+          finishes.accents[serviceAccent(room)],
+          trimBox(room, side, run.from, run.to, 0.93, 1.05),
+        );
+      }
+      if (glazed) {
+        // Glazing posts every few metres; the frame is part of this room model.
+        const steps = Math.max(1, Math.ceil((run.to - run.from) / 3));
+        for (let i = 0; i <= steps; i++) {
+          const at = run.from + ((run.to - run.from) * i) / steps;
+          batches.add(
+            finishes.glazingFrame,
+            wallBox(room, side, at - 0.045, at + 0.045, 0, room.height),
+          );
+        }
+        batches.add(
+          finishes.glazingFrame,
+          wallBox(room, side, run.from, run.to, 0, 0.07),
+        );
+        batches.add(
+          finishes.glazingFrame,
+          wallBox(
+            room,
+            side,
+            run.from,
+            run.to,
+            room.height - 0.09,
+            room.height,
+          ),
+        );
+      }
+    }
+    // The wall over each doorway.
+    for (const hole of openings[side]) {
+      if (glazed) {
+        batches.add(
+          finishes.glass,
           wallBox(room, side, hole.from, hole.to, DOOR_HEIGHT, room.height),
         );
+      } else {
+        const windows = WINDOWS.filter(
+          (w) => w.room === room.id && w.side === side,
+        );
+        const patches = cutWindows(
+          {
+            from: hole.from,
+            to: hole.to,
+            bottom: DOOR_HEIGHT,
+            top: room.height,
+          },
+          windows,
+        );
+        for (const patch of patches.solid)
+          batches.add(
+            wall,
+            wallBox(room, side, patch.from, patch.to, patch.bottom, patch.top),
+          );
+        for (const patch of patches.glass)
+          batches.add(
+            finishes.glass,
+            wallBox(room, side, patch.from, patch.to, patch.bottom, patch.top),
+          );
+      }
     }
-    group.add(createTitleCard(room, textures));
   }
-  for (const mesh of batches.meshes()) group.add(mesh);
-  const materials = new Set<Material>();
-  group.traverse((o) => {
-    if (o instanceof Mesh) materials.add(o.material as Material);
+  if (room.zone === 'service' && sx > 2) {
+    // A high cable tray, as in Encabulator's underground service corridor.
+    batches.add(
+      finishes.cableTray,
+      box(sx - 0.6, 0.06, 0.28, cx, room.height - 0.35, room.minZ + 0.42),
+    );
+    batches.add(
+      finishes.cableTray,
+      box(sx - 0.6, 0.12, 0.025, cx, room.height - 0.27, room.minZ + 0.28),
+    );
+  }
+  const card = createTitleCard(room, textures);
+  card.position.x -= cx;
+  card.position.z -= cz;
+  model.add(card);
+  if (room.id === 'hall') {
+    addLadder(model, BASINS[0], cx, cz, finishes.steel);
+    addLadder(model, BASINS[1], cx, cz, finishes.steel);
+  }
+  if (room.id === 'changing') addChangingFurniture(batches, finishes);
+  if (room.id === 'reception') addReceptionFurniture(batches, finishes);
+  addCeilingFixtures(batches, room, finishes);
+  addRoomLighting(model, room, cx, cz);
+  for (const mesh of batches.meshes()) {
+    mesh.geometry.translate(-cx, 0, -cz);
+    model.add(mesh);
+  }
+  model.position.set(cx, room.floorY ?? 0, cz);
+  return model;
+}
+
+/** Build one room at a time. Only current and adjacent rooms need models. */
+export function createFacility(rooms: readonly RoomPlan[] = ROOMS) {
+  const group = new Group();
+  group.name = 'facility';
+  const sharedTextures: Texture[] = [];
+  const finishes = createFinishes(sharedTextures);
+  const materials = new Set<Material>([
+    ...Object.values(finishes.floor),
+    ...Object.values(finishes.wall),
+    ...Object.values(finishes.ceiling),
+    finishes.basin,
+    finishes.coping,
+    finishes.grating,
+    finishes.gully,
+    finishes.gullySlat,
+    finishes.lane,
+    finishes.steel,
+    finishes.lightFrame,
+    finishes.lightLens,
+    finishes.glass,
+    finishes.glazingFrame,
+    finishes.roofGlass,
+    finishes.poolBand,
+    finishes.cubicle,
+    finishes.cubicleAlt,
+    finishes.locker,
+    finishes.lockerAlt,
+    finishes.bench,
+    finishes.mirror,
+    finishes.plywood,
+    finishes.plywoodEdge,
+    finishes.upholstery,
+    finishes.vending,
+    finishes.vendingDisplay,
+    finishes.skirting,
+    finishes.cableTray,
+    ...Object.values(finishes.accents),
+  ]);
+  const models = new Map<string, { group: Group; textures: Texture[] }>();
+  function unload(id: string) {
+    const model = models.get(id);
+    if (!model) return;
+    group.remove(model.group);
+    model.group.traverse((object) => {
+      if (!(object instanceof Mesh)) return;
+      (object.geometry as BufferGeometry).dispose();
+      if (object.name.startsWith('title-card:'))
+        (object.material as Material).dispose();
+    });
+    for (const texture of model.textures) texture.dispose();
+    models.delete(id);
+  }
+  return {
+    group,
+    loaded: () => [...models.keys()],
+    /** Keep exactly these connected room components in the scene. */
+    show(ids: ReadonlySet<string>) {
+      for (const id of models.keys()) if (!ids.has(id)) unload(id);
+      for (const room of rooms) {
+        if (!ids.has(room.id) || models.has(room.id)) continue;
+        const textures: Texture[] = [];
+        const roomGroup = createRoomModel(room, finishes, textures);
+        group.add(roomGroup);
+        models.set(room.id, { group: roomGroup, textures });
+      }
+    },
+    dispose() {
+      for (const id of models.keys()) unload(id);
+      for (const m of materials) m.dispose();
+      for (const t of sharedTextures) t.dispose();
+    },
+  };
+}
+
+/** The stair is a separate architectural component between the two floors. */
+export function createServiceStair() {
+  const group = new Group();
+  group.name = 'service-stair';
+  const concrete = new MeshStandardMaterial({
+    color: '#a6a69d',
+    roughness: 0.85,
+    side: DoubleSide,
   });
+  const stripe = new MeshStandardMaterial({ color: '#e4ce73', roughness: 0.7 });
+  const rail = new MeshStandardMaterial({
+    color: '#62777c',
+    metalness: 0.55,
+    roughness: 0.35,
+  });
+  // From the corridor at x=44 to the lower landing at x=32.
+  const ramp = new Mesh(new BoxGeometry(12, 0.12, 1.5), concrete);
+  ramp.rotation.z = Math.atan2(3, 12);
+  ramp.position.set(38, -1.5, -3.2);
+  group.add(ramp);
+  for (let i = 0; i <= 16; i++) {
+    const x = 44 - i * 0.75;
+    const y = (-i * 3) / 16 + 0.025;
+    const tread = new Mesh(new BoxGeometry(0.06, 0.025, 1.4), stripe);
+    tread.position.set(x, y, -3.2);
+    group.add(tread);
+  }
+  const wallFinish = new MeshStandardMaterial({
+    color: '#d2d1c9',
+    roughness: 0.9,
+  });
+  const profile = new Shape();
+  profile.moveTo(-6, -3);
+  profile.lineTo(6, 0);
+  profile.lineTo(6, 2.8);
+  profile.lineTo(-6, -0.2);
+  profile.closePath();
+  for (const z of [-4.05, -2.52]) {
+    const wall = new Mesh(
+      new ExtrudeGeometry(profile, { depth: 0.12, bevelEnabled: false }),
+      wallFinish,
+    );
+    wall.position.set(38, 0, z);
+    group.add(wall);
+    const handrail = new Mesh(new BoxGeometry(12.36, 0.07, 0.07), rail);
+    handrail.rotation.z = Math.atan2(3, 12);
+    handrail.position.set(38, -0.6, z < -3 ? -3.88 : -2.54);
+    group.add(handrail);
+  }
+  const stairCeiling = new Mesh(new BoxGeometry(12.36, 0.1, 1.65), wallFinish);
+  stairCeiling.rotation.z = Math.atan2(3, 12);
+  stairCeiling.position.set(38, 1.3, -3.2);
+  group.add(stairCeiling);
   return {
     group,
     dispose() {
       group.traverse((o) => {
-        if (o instanceof Mesh) (o.geometry as BufferGeometry).dispose();
+        if (o instanceof Mesh) o.geometry.dispose();
       });
-      for (const m of materials) m.dispose();
-      for (const t of textures) t.dispose();
+      concrete.dispose();
+      stripe.dispose();
+      rail.dispose();
+      wallFinish.dispose();
     },
   };
 }

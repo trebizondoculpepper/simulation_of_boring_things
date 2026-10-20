@@ -119,8 +119,10 @@ export interface FirstPersonOptions {
   camera: PerspectiveCamera;
   /** Scene units per metre. */
   metre: number;
-  /** Height of the floor in scene units. */
+  /** Initial floor height in scene units. */
   floorY: number;
+  /** Optional connected floor surface for stairs and stacked rooms. */
+  floorAt?: (x: number, z: number, previousY: number) => number;
   start: { x: number; z: number; yaw?: number; pitch?: number };
   /** Solid footprints on the floor plan, in scene units. */
   solids?: () => readonly Footprint[];
@@ -619,9 +621,13 @@ export function createFirstPerson(options: FirstPersonOptions) {
     };
   };
 
-  const eyeY = floorY + EYE_HEIGHT_METRES * metre;
+  let currentFloorY = floorY;
+  const eyeY = () => currentFloorY + EYE_HEIGHT_METRES * metre;
   const controller = {
     walker,
+    get floorY() {
+      return currentFloorY;
+    },
     locked,
     /** Where the eye is now, and how it looks. */
     pose(): EyePose {
@@ -656,12 +662,20 @@ export function createFirstPerson(options: FirstPersonOptions) {
       openings = value;
     },
     /** Stand at (x, z) facing `yaw`, looking `pitch` up, with the eye at `y`. */
-    place(x: number, z: number, yaw: number, pitch: number, y = eyeY) {
+    place(
+      x: number,
+      z: number,
+      yaw: number,
+      pitch: number,
+      y?: number,
+      floor?: number,
+    ) {
+      currentFloorY = floor ?? options.floorAt?.(x, z, currentFloorY) ?? floorY;
       walker.x = x;
       walker.z = z;
       walker.yaw = yaw;
       walker.pitch = clampPitch(pitch);
-      walker.eyeOffset = y - eyeY;
+      walker.eyeOffset = (y ?? eyeY()) - eyeY();
       walker.crouched = false;
       walker.lowCrouched = false;
       walker.crouch = 0;
@@ -770,6 +784,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
       walker.stride += Math.hypot(next.x - walker.x, next.z - walker.z);
       walker.x = next.x;
       walker.z = next.z;
+      currentFloorY =
+        options.floorAt?.(walker.x, walker.z, currentFloorY) ?? floorY;
       walker.crouch +=
         ((walker.lowCrouched ? 1.85 : walker.crouched ? 1 : 0) -
           walker.crouch) *
@@ -777,7 +793,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
       const bob = options.reducedMotion?.()
         ? 0
         : Math.sin((walker.stride / metre) * Math.PI * 1.6) * 0.02 * metre;
-      const y = eyeY + walker.eyeOffset - walker.crouch * 0.65 * metre + bob;
+      const y = eyeY() + walker.eyeOffset - walker.crouch * 0.65 * metre + bob;
       camera.position.set(walker.x, y, walker.z);
       camera.lookAt(
         walker.x + Math.sin(walker.yaw) * Math.cos(walker.pitch),
