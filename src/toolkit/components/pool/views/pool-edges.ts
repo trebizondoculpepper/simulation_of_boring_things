@@ -1,10 +1,14 @@
 import {
   CanvasTexture,
+  ClampToEdgeWrapping,
+  DataTexture,
   DoubleSide,
   Group,
+  LinearFilter,
   Mesh,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
+  RGBAFormat,
   RepeatWrapping,
   Vector2,
 } from 'three';
@@ -15,6 +19,7 @@ import { SECTION } from '../logic/edge-profiles';
 import type { EdgeProfile, Point } from '../logic/edge-profiles';
 import { sweepProfile } from './profile-sweep';
 import { insetPolygon, trimPath } from '../logic/plan-path';
+import { OVERFLOW_MAX_SPEED, flowMapTexels } from '../logic/flow-map';
 
 /**
  * A pool edge built full size (`edge-profiles.ts`): its profile swept
@@ -26,6 +31,9 @@ import { insetPolygon, trimPath } from '../logic/plan-path';
  */
 
 export type PlanPath = readonly (readonly [number, number])[];
+
+/** One cycle of the overflow's flow-map ripples, seconds (Vlachos's phase). */
+const FLOW_PERIOD = 0.8;
 
 /** How far the pool is drawn down below its overflow when not full, metres. */
 export const DRAW_DOWN = 0.015;
@@ -157,8 +165,18 @@ export function createPoolEdge(
  * The overflow at a deck-level edge: a film of water millimetres deep,
  * sliding off the pool, over the edge tile and through the first slots of
  * the grating. Too thin to see as water, it shows as glints: a clear,
- * glossy strip whose ripple normal map scrolls outward from the pool, so
- * the highlights run across the edge and vanish into the grating.
+ * glossy strip whose ripples run outward from the pool, so the highlights
+ * slide across the edge and vanish into the grating.
+ *
+ * The ripples move by flow-map water, after Alex Vlachos, "Water Flow in
+ * Portal 2" (SIGGRAPH 2010; the sums in `flow-map.ts`): a flow map of
+ * vectors says how the film runs at each point (slow off the pool, faster
+ * over the edge, fastest through the slots, wandering a little along the
+ * edge), and the material's shader drags its ripple normal map along
+ * them, sampled twice half a cycle apart and cross-faded so that neither
+ * copy is seen to restart, with a noise offsetting the cycle point to
+ * point. A broad layer in the normal map and a fine one in the clearcoat's
+ * are dragged by the same flow, at their own scales.
  */
 function createSpill(
   kit: PanelKit,
@@ -194,12 +212,7 @@ function createSpill(
       image.data[i + 3] = 255;
     }
   c.putImageData(image, 0, 0);
-  // Two layers of the ripples, after Valve's flow-map water (Vlachos,
-  // SIGGRAPH 2010) and the common two-scale trick for water leaving a
-  // ledge: a broad slow layer in the normal map and a fine fast one in the
-  // clearcoat's, sliding at different speeds so the pattern never repeats
-  // visibly. The water only ever runs one way here, so they scroll; no
-  // flow map is needed.
+  // The ripples at two scales: a broad layer and a fine one.
   const layer = (along: number, across: number) => {
     const texture = new CanvasTexture(canvas);
     texture.wrapS = texture.wrapT = RepeatWrapping;
@@ -245,6 +258,58 @@ function createSpill(
     depthWrite: false,
     side: DoubleSide,
   });
+  // The flow map, laid over the film by the mask's UVs: u along the edge
+  // (a metre a repeat), v across it from the pool (0) to the slots (1).
+  const fw = 64,
+    fh = 32;
+  const flowMap = new DataTexture(flowMapTexels(fw, fh), fw, fh, RGBAFormat);
+  flowMap.wrapS = RepeatWrapping;
+  flowMap.wrapT = ClampToEdgeWrapping;
+  flowMap.magFilter = flowMap.minFilter = LinearFilter;
+  flowMap.needsUpdate = true;
+  kit.textures.push(flowMap);
+  const flow = {
+    flowMap: { value: flowMap },
+    flowTime: { value: 0 },
+    flowPeriod: { value: FLOW_PERIOD },
+    flowMaxSpeed: { value: OVERFLOW_MAX_SPEED },
+    flowRepeat: { value: broad.repeat },
+    clearcoatFlowRepeat: { value: fine.repeat },
+  };
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, flow);
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <uv_pars_fragment>',
+        `#include <uv_pars_fragment>
+uniform sampler2D flowMap;
+uniform float flowTime;
+uniform float flowPeriod;
+uniform float flowMaxSpeed;
+uniform vec2 flowRepeat;
+uniform vec2 clearcoatFlowRepeat;
+// A normal map dragged along the flow for two cycles half apart, blended
+// so neither copy's restart shows (Vlachos 2010).
+vec3 flowNormal(sampler2D map, vec2 uv, vec2 repeatPerMetre) {
+  vec4 f = texture2D(flowMap, vAlphaMapUv);
+  vec2 velocity = (f.rg * 2.0 - 1.0) * flowMaxSpeed;
+  float first = fract(flowTime / flowPeriod + f.b);
+  float second = fract(first + 0.5);
+  vec2 drift = velocity * flowPeriod * repeatPerMetre;
+  vec3 a = texture2D(map, uv - drift * first).xyz * 2.0 - 1.0;
+  vec3 b = texture2D(map, uv - drift * second).xyz * 2.0 - 1.0;
+  return mix(a, b, abs(0.5 - first) * 2.0);
+}`,
+      )
+      .replace(
+        'vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;',
+        'vec3 mapN = flowNormal( normalMap, vNormalMapUv, flowRepeat );',
+      )
+      .replace(
+        'vec3 clearcoatMapN = texture2D( clearcoatNormalMap, vClearcoatNormalMapUv ).xyz * 2.0 - 1.0;',
+        'vec3 clearcoatMapN = flowNormal( clearcoatNormalMap, vClearcoatNormalMapUv, clearcoatFlowRepeat );',
+      );
+  };
   kit.materials.push(material);
   const film: Point[] = [
     [spill.from, spill.y - 0.0005],
@@ -256,18 +321,11 @@ function createSpill(
   mesh.name = 'Overflow film';
   mesh.renderOrder = 2;
   mesh.userData.live = true;
-  /** How fast the film runs over the edge, metres a second. */
-  const speed = 0.12;
   return {
     mesh,
-    /** Run the ripples on; `full` (0 to 1) fades the film with the level. */
+    /** Run the flow on; `full` (0 to 1) slows and fades it with the level. */
     update(delta: number, full: number) {
-      // v is across the edge, out from the pool: the ripples run that way,
-      // the fine layer faster and slanting a little.
-      broad.offset.y -= (delta * speed * full) / 0.12;
-      broad.offset.x += delta * 0.02 * full;
-      fine.offset.y -= (delta * speed * 1.6 * full) / 0.045;
-      fine.offset.x -= delta * 0.05 * full;
+      flow.flowTime.value += delta * full;
       const shown = Math.max(0, (full - 0.5) * 2);
       material.opacity = 0.35 * shown;
       mesh.visible = shown > 0.01;
