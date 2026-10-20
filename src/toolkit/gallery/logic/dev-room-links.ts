@@ -44,7 +44,7 @@ export type EquipmentRoomId =
   | 'dev_control'
   | 'dev_ozone';
 export type DevRoomId = GalleryRoomId | EquipmentRoomId;
-export type RoomId = DevRoomId | 'facility' | 'dev_courtyard';
+export type RoomId = DevRoomId | 'facility' | 'dev_courtyard' | 'poolrooms';
 export type PortalSide = 'north' | 'south' | 'east' | 'west';
 export interface Portal {
   to: RoomId;
@@ -104,6 +104,8 @@ export const ROOMS: readonly RoomId[] = [
   'dev_courtyard',
   // Reached through dev16, not from the corridor: its security office.
   'dev18',
+  // The pool rooms, a world of their own (`src/game/poolrooms-plan.ts`).
+  'poolrooms',
 ];
 
 /** A room id from a URL, if it names one. */
@@ -113,6 +115,7 @@ export function resolveRoomId(id: string | null): RoomId | undefined {
 
 export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   facility: 'LEISURE CENTRE',
+  poolrooms: 'THE POOL ROOMS',
   dev0: 'DEV0 · CONTROLS AND DISPLAYS',
   dev1: 'DEV1 · RACKS',
   dev2: 'DEV2 · FIRE SAFETY',
@@ -147,6 +150,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
 /** Each room's portal colour, so a portal says where it goes. */
 export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   facility: '#3aa7c9',
+  poolrooms: '#2f9fc4',
   dev0: '#2fb3a5',
   dev1: '#3f7fe0',
   dev2: '#b8433a',

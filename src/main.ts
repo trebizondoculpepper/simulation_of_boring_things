@@ -68,6 +68,8 @@ const starter = async (
       return startFacilityWorld(surface, hud);
     };
   }
+  if (room === 'poolrooms')
+    return (await import('./rendering/poolrooms-world')).startPoolroomsWorld;
   if (room === 'dev_corridor' || room === 'dev_courtyard')
     // One world: the courtyard is walked into from the corridor.
     return (await import('./rendering/dev-corridor-room')).startDevCorridorRoom;
