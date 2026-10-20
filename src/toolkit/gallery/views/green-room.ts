@@ -2,11 +2,15 @@ import {
   BoxGeometry,
   CircleGeometry,
   DoubleSide,
+  ExtrudeGeometry,
   Group,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  Path,
   PointLight,
+  Shape,
+  ShapeGeometry,
   TorusGeometry,
 } from 'three';
 import {
@@ -14,7 +18,12 @@ import {
   createTileMaterial,
 } from '../../components/pool/views/pool-surfaces';
 import type { Footprint } from '../../controls/logic/walk-collision';
-import { WHITE_CORRIDOR, WHITE_CORRIDOR_START } from './white-corridor';
+import {
+  WHITE_CORRIDOR,
+  WHITE_CORRIDOR_START,
+  WHITE_CORRIDOR_STEPS,
+  whiteCorridorOutline,
+} from './white-corridor';
 
 /** A separate dry room at the north end of the white corridor. */
 export const GREEN_ROOM = {
@@ -22,8 +31,9 @@ export const GREEN_ROOM = {
   southZ: WHITE_CORRIDOR_START - WHITE_CORRIDOR.length,
   width: 30,
   depth: 30,
-  height: 4,
-  floorY: WHITE_CORRIDOR.floorY,
+  height: 10,
+  /** A metre below the white corridor's, down its last steps. */
+  floorY: WHITE_CORRIDOR.floorY - WHITE_CORRIDOR_STEPS.drop,
 } as const;
 
 export function greenRoomZoneAt(x: number, z: number): 'green_room_1' | null {
@@ -89,15 +99,23 @@ export function createGreenRoom(metre: number) {
     r.floorY - 0.04,
     centreZ,
   );
-  add(
-    'green tiled ceiling',
-    r.width,
-    0.12,
-    r.depth,
-    r.x,
-    r.floorY + r.height + 0.06,
-    centreZ,
-  );
+  const ceilingShape = new Shape();
+  ceilingShape.moveTo(-r.width / 2, -r.depth / 2);
+  ceilingShape.lineTo(r.width / 2, -r.depth / 2);
+  ceilingShape.lineTo(r.width / 2, r.depth / 2);
+  ceilingShape.lineTo(-r.width / 2, r.depth / 2);
+  ceilingShape.closePath();
+  for (const dx of [-7.5, 7.5])
+    for (const dz of [-8, -22]) {
+      const hole = new Path();
+      hole.absarc(dx, dz + r.depth / 2, 1.25, 0, Math.PI * 2, true);
+      ceilingShape.holes.push(hole);
+    }
+  const ceiling = new Mesh(new ShapeGeometry(ceilingShape, 48), tile);
+  ceiling.name = 'green tiled ceiling with skylight apertures';
+  ceiling.rotation.x = -Math.PI / 2;
+  ceiling.position.set(r.x, r.floorY + r.height, centreZ);
+  group.add(ceiling);
   for (const side of [-1, 1])
     add(
       'green side wall',
@@ -117,26 +135,28 @@ export function createGreenRoom(metre: number) {
     r.floorY + r.height / 2,
     r.southZ - r.depth,
   );
-  const shoulder = (r.width - WHITE_CORRIDOR.width) / 2;
-  for (const side of [-1, 1])
-    add(
-      'green south jamb',
-      shoulder,
-      r.height,
-      0.16,
-      r.x + side * (WHITE_CORRIDOR.width / 2 + shoulder / 2),
-      r.floorY + r.height / 2,
-      r.southZ,
-    );
-  add(
-    'green south lintel',
-    WHITE_CORRIDOR.width,
-    r.height - WHITE_CORRIDOR.height,
-    0.16,
-    r.x,
-    r.floorY + (r.height + WHITE_CORRIDOR.height) / 2,
-    r.southZ,
+  // The south wall, in one piece, with a hole the white corridor's
+  // outside shape: its casing runs through the hole to the wall's face,
+  // so nothing in the wall lies in the same plane as the corridor.
+  // (Drawn about the corridor's floor, as its outline is.)
+  const above = r.floorY - WHITE_CORRIDOR.floorY;
+  const south = new Shape();
+  south.moveTo(-r.width / 2, above - 0.4);
+  south.lineTo(r.width / 2, above - 0.4);
+  south.lineTo(r.width / 2, above + r.height);
+  south.lineTo(-r.width / 2, above + r.height);
+  south.closePath();
+  south.holes.push(whiteCorridorOutline(new Path()));
+  const southWall = new Mesh(
+    new ExtrudeGeometry(south, {
+      depth: 0.16,
+      bevelEnabled: false,
+      curveSegments: 12,
+    }).translate(r.x, WHITE_CORRIDOR.floorY, r.southZ - 0.08),
+    tile,
   );
+  southWall.name = 'green south wall';
+  group.add(southWall);
 
   const glass = new MeshBasicMaterial({ color: '#d9eef0', side: DoubleSide });
   const frame = new MeshStandardMaterial({
@@ -151,13 +171,19 @@ export function createGreenRoom(metre: number) {
       const skylight = new Mesh(new CircleGeometry(1.25, 48), glass);
       skylight.name = 'round skylight';
       skylight.rotation.x = -Math.PI / 2;
-      skylight.position.set(x, r.floorY + r.height - 0.015, z);
+      skylight.position.set(x, r.floorY + r.height + 0.02, z);
       const rim = new Mesh(new TorusGeometry(1.25, 0.055, 8, 48), frame);
       rim.rotation.x = Math.PI / 2;
       rim.position.copy(skylight.position);
-      rim.position.y -= 0.01;
-      const light = new PointLight('#d9f4ee', 3 * metre * metre, 10 * metre, 2);
-      light.position.set(x, r.floorY + r.height - 0.2, z);
+      rim.position.y -= 0.025;
+      // High over the floor: strong enough to reach it.
+      const light = new PointLight(
+        '#d9f4ee',
+        18 * metre * metre,
+        15 * metre,
+        2,
+      );
+      light.position.set(x, r.floorY + r.height - 0.35, z);
       group.add(skylight, rim, light);
     }
   return group;

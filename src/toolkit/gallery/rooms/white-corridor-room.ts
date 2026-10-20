@@ -130,8 +130,10 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       yaw: 0,
     },
     floorAt: (x, z) =>
-      (whiteCorridorFloorAt(x / metre, z / metre) ?? WHITE_CORRIDOR.floorY) *
-      metre,
+      (whiteCorridorFloorAt(x / metre, z / metre) ??
+        (greenRoomZoneAt(x / metre, z / metre)
+          ? GREEN_ROOM.floorY
+          : WHITE_CORRIDOR.floorY)) * metre,
     solids: () => walls,
     use: () => {},
   });
