@@ -1,3 +1,6 @@
+import { panelMakerMark } from '../../components/core/views/panel-maker-mark';
+import { createPoolRefraction } from '../../components/pool/views/pool-refraction';
+import { createPoolLightGlow } from '../../components/pool/views/pool-light-glow';
 import { createColumnCove } from '../../components/architectural/views/column-cove';
 import {
   ACESFilmicToneMapping,
@@ -13,6 +16,7 @@ import {
   HemisphereLight,
   Mesh,
   MeshBasicMaterial,
+  MeshStandardMaterial,
   PMREMGenerator,
   PerspectiveCamera,
   Raycaster,
@@ -27,6 +31,9 @@ import {
   WebGLCubeRenderTarget,
   WebGLRenderTarget,
   DataTexture,
+  DepthTexture,
+  DepthStencilFormat,
+  UnsignedInt248Type,
   LinearFilter,
   RGBAFormat,
 } from 'three';
@@ -485,7 +492,7 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
     return material;
   };
   const lens = new MeshBasicMaterial({
-    color: new Color('#e9fbff').multiplyScalar(2.5),
+    color: new Color('#e9fbff').multiplyScalar(5),
     fog: false,
   });
   materials.push(lens);
@@ -515,9 +522,9 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
       basinFloorAt(x, z),
       z,
     );
-  // Lift the grating rims 1 mm clear of the deck to avoid z-fighting.
+  // Lift the grating rims 2 mm clear of the deck to avoid z-fighting.
   for (const [x, z] of DECK_GULLIES)
-    place(fittings, createDeckGully(ft, fittingKinds), x, 0.001, z);
+    place(fittings, createDeckGully(ft, fittingKinds), x, 0.002, z);
   for (const f of WALL_FITTINGS) {
     const make =
       f.kind === 'light'
@@ -534,6 +541,16 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
       Math.atan2(f.facing[0], f.facing[1]),
     );
   }
+  const lightGlow = createPoolLightGlow(
+    uniforms,
+    WALL_FITTINGS.filter((f) => f.kind === 'light').map((f) => [
+      f.x + f.facing[0] * 0.06,
+      WATER_Y - f.depth,
+      f.z + f.facing[1] * 0.06,
+    ]),
+  );
+  room.add(lightGlow);
+  materials.push(lightGlow.material);
   room.add(fittings);
   mergeTree(fittings, () => false);
   // The overflow grating, one textured mesh; strips along z sit a hair
@@ -778,8 +795,12 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
     stencilBuffer: true,
     samples: 4,
   });
+  target.depthTexture = new DepthTexture(1, 1, UnsignedInt248Type);
+  target.depthTexture.format = DepthStencilFormat;
   const composer = new EffectComposer(renderer, target);
   composer.addPass(new RenderPass(scene, camera));
+  const refraction = createPoolRefraction(camera, uniforms);
+  composer.addPass(refraction);
   const ao = new GTAOPass(scene, camera, 1, 1);
   ao.updateGtaoMaterial({
     distanceExponent: 1.4,
@@ -793,10 +814,12 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
   const occlude = ao.render.bind(ao);
   ao.render = (...args: Parameters<typeof ao.render>) => {
     const shown = shafts.visible;
-    water.visible = shafts.visible = false;
+    const glowShown = lightGlow.visible;
+    water.visible = shafts.visible = lightGlow.visible = false;
     occlude(...args);
     water.visible = true;
     shafts.visible = shown;
+    lightGlow.visible = glowShown;
   };
   composer.addPass(ao);
   const bloom = new UnrealBloomPass(new Vector2(1, 1), 0, 0, 0);
@@ -832,7 +855,7 @@ void main() {
   });
   composer.addPass(film);
 
-  // ---- The lectern: LOOK, and six knobs to turn its quantities ----------
+  // ---- The lectern: LOOK, and nine knobs to turn its quantities ----------
   const parts = createPartSet();
   const lectern = new Group();
   lectern.position.set(LECTERN.x, 0, LECTERN.z);
@@ -847,14 +870,24 @@ void main() {
   desk.position.y = 1.0;
   desk.rotation.x = 0.45;
   lectern.add(desk);
-  desk.add(new Mesh(new BoxGeometry(0.86, 0.04, 0.42), steel));
+  const fascia = new MeshStandardMaterial({
+    color: '#b5bec2',
+    metalness: 0.6,
+    roughness: 0.38,
+  });
+  kit.materials.push(fascia);
+  desk.add(new Mesh(new BoxGeometry(1.35, 0.04, 0.85), fascia));
+  const makerFace = new Group();
+  makerFace.rotation.x = -Math.PI / 2;
+  desk.add(makerFace);
+  panelMakerMark(kit, makerFace, { width: 1.35, height: 0.85, z: 0.021 });
   const label = (text: string, x: number, z: number, height = 0.022) => {
-    const plate = createMicroLabel(kit, text, { height, ink: '#f0f0ea' });
+    const plate = createMicroLabel(kit, text, { height, ink: '#253238' });
     plate.rotation.x = -Math.PI / 2;
     plate.position.set(x, 0.022, z);
     desk.add(plate);
   };
-  label('POOLROOMS', 0, -0.17, 0.028);
+  label('POOLROOMS', 0, -0.36, 0.028);
   const lookKnob = selector(kit, {
     name: 'LOOK selector',
     legend: 'LOOK',
@@ -862,32 +895,32 @@ void main() {
     initial: POOL_LOOK_ORDER.indexOf(firstLook),
   });
   lookKnob.object.rotation.x = -Math.PI / 2;
-  lookKnob.object.position.set(-0.3, 0.021, 0.03);
+  lookKnob.object.position.set(-0.48, 0.021, 0.04);
   desk.add(lookKnob.object);
   parts.add(lookKnob);
-  label('OVERCAST · SUN · UNITY', -0.3, -0.11, 0.016);
+  label('OVERCAST · SUN · UNITY', -0.48, -0.1, 0.016);
   const knobs = KNOB_NAMES.map((name, i) => {
     const knob = potentiometer(kit, {
-      name: `${name.toUpperCase()} knob`,
-      legend: name.toUpperCase(),
+      name: `${name.replace(/([a-z])([A-Z])/g, '$1 $2').toUpperCase()} knob`,
+      legend: name.replace(/([a-z])([A-Z])/g, '$1 $2').toUpperCase(),
       steps: 10,
       initial: DEFAULT_POOL_KNOBS[name],
     });
     knob.object.rotation.x = -Math.PI / 2;
     knob.object.position.set(
-      -0.07 + (i % 3) * 0.17,
+      -0.12 + (i % 3) * 0.28,
       0.021,
-      -0.06 + Math.floor(i / 3) * 0.17,
+      -0.22 + Math.floor(i / 3) * 0.26,
     );
     desk.add(knob.object);
     parts.add(knob);
     return knob;
   });
   solids.push({
-    minX: (LECTERN.x - 0.35) * m,
-    maxX: (LECTERN.x + 0.35) * m,
-    minZ: (LECTERN.z - 0.5) * m,
-    maxZ: (LECTERN.z + 0.5) * m,
+    minX: (LECTERN.x - 0.45) * m,
+    maxX: (LECTERN.x + 0.45) * m,
+    minZ: (LECTERN.z - 0.725) * m,
+    maxZ: (LECTERN.z + 0.725) * m,
   });
 
   // Set the room to the lectern: its look, and each knob's quantity.
@@ -914,6 +947,9 @@ void main() {
     const look = POOL_LOOKS[name];
     const f = (knob: keyof PoolKnobs) => knobFactor(knob, share[knob]);
     const light = f('light');
+    uniforms.rippleSize.value = Math.max(0.25, f('rippleSize'));
+    uniforms.rippleSpeed.value = f('rippleSpeed');
+    refraction.uniforms.strength.value = f('refraction');
     renderer.toneMappingExposure = look.exposure * f('exposure');
     roof.visible = look.roofArea > 0;
     roof.intensity = look.roofArea * roofShare * light;
@@ -951,6 +987,7 @@ void main() {
     uniforms.caustics.value = look.caustics * f('caustics');
     uniforms.reflected.value = look.reflected * f('caustics');
     bloom.strength = look.bloom.strength * f('bloom');
+    lightGlow.material.uniforms.strength.value = f('bloom');
     bloom.radius = look.bloom.radius;
     bloom.threshold = look.bloom.threshold;
     ao.blendIntensity = look.ao.blend;
@@ -970,9 +1007,17 @@ void main() {
 
   const ingredients = {
     tiles: (on: boolean) => (uniforms.tiles.value = on ? 1 : 0),
-    water: (on: boolean) => (water.visible = on),
+    water: (on: boolean) => {
+      water.visible = on;
+      refraction.enabled = on;
+      lightGlow.visible = on && bloom.enabled;
+    },
+    refraction: (on: boolean) => (refraction.enabled = on),
     ao: (on: boolean) => (ao.enabled = on),
-    bloom: (on: boolean) => (bloom.enabled = on),
+    bloom: (on: boolean) => {
+      bloom.enabled = on;
+      lightGlow.visible = on && water.visible;
+    },
     fog: (on: boolean) => (scene.fog = on ? fog : null),
     film: (on: boolean) => (film.enabled = on),
   };
@@ -996,11 +1041,13 @@ void main() {
         ingredients: {
           tiles: uniforms.tiles.value !== 0,
           water: water.visible,
+          refraction: refraction.enabled,
           ao: ao.enabled,
           bloom: bloom.enabled,
           fog: scene.fog !== null,
           film: film.enabled,
         },
+        poolLights: { lensBrightness: 5, haloWidth: 1.1 },
         rendering: { pixelRatio: renderer.getPixelRatio() },
         viewpoint: {
           x: camera.position.x / m,
@@ -1107,10 +1154,12 @@ void main() {
     portals.dispose();
     composer.dispose();
     ao.dispose();
+    refraction.dispose();
     bloom.dispose();
     target.dispose();
     (water.material as ShaderMaterial).dispose();
     flowMap.dispose();
+    lightGlow.dispose();
     mirror.dispose();
     waterShape.dispose();
     environmentTarget?.dispose();

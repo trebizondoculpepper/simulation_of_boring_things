@@ -152,6 +152,9 @@ export interface PoolKnobs {
   bloom: number;
   caustics: number;
   bump: number;
+  refraction: number;
+  rippleSize: number;
+  rippleSpeed: number;
 }
 
 /** The owner's preferred dev11 setup, selected with Copy settings. */
@@ -163,6 +166,9 @@ export const DEFAULT_POOL_KNOBS: Readonly<PoolKnobs> = {
   bloom: 0.4,
   caustics: 0.1,
   bump: 0.3,
+  refraction: 0.5,
+  rippleSize: 0.5,
+  rippleSpeed: 0.5,
 };
 
 export const KNOB_NAMES: readonly (keyof PoolKnobs)[] = [
@@ -172,6 +178,9 @@ export const KNOB_NAMES: readonly (keyof PoolKnobs)[] = [
   'bloom',
   'caustics',
   'bump',
+  'refraction',
+  'rippleSize',
+  'rippleSpeed',
 ];
 
 /**

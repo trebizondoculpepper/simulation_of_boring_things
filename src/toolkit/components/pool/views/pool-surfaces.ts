@@ -1,3 +1,4 @@
+import { POOL_RIPPLE_GLSL } from './pool-ripples';
 import {
   AdditiveBlending,
   BufferGeometry,
@@ -41,6 +42,8 @@ const glslVec = (v: readonly number[]) =>
 export interface PoolUniforms {
   /** Seconds. */
   time: IUniform<number>;
+  rippleSize: IUniform<number>;
+  rippleSpeed: IUniform<number>;
   /** Scene units per metre. */
   metre: IUniform<number>;
   /** The water surface's height, metres. */
@@ -78,6 +81,8 @@ export function createPoolUniforms(
   while (rects.length < 4) rects.push(new Vector4(1e5, 1e5, 1e5, 1e5));
   return {
     time: { value: 0 },
+    rippleSize: { value: 1 },
+    rippleSpeed: { value: 1 },
     metre: { value: metre },
     waterY: { value: waterY },
     pools: { value: rects },
@@ -217,6 +222,8 @@ export function createTileMaterial(
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, {
       poolTime: uniforms.time,
+      rippleSize: uniforms.rippleSize,
+      rippleSpeed: uniforms.rippleSpeed,
       poolMetre: uniforms.metre,
       poolWaterY: uniforms.waterY,
       poolRects: uniforms.pools,
@@ -429,6 +436,8 @@ export function createPoolWater(
       room: { value: room },
       colour: { value: new Color('#3fb6c4') },
       poolTime: uniforms.time,
+      rippleSize: uniforms.rippleSize,
+      rippleSpeed: uniforms.rippleSpeed,
       poolMetre: uniforms.metre,
       stillness: { value: 1 },
       flowMap: { value: flow?.map ?? null },
@@ -459,7 +468,7 @@ void main() {
     fragmentShader: /* glsl */ `
 uniform samplerCube room;
 uniform vec3 colour;
-uniform float poolTime, poolMetre, stillness;
+uniform float poolTime, poolMetre, stillness, rippleSize, rippleSpeed;
 #ifdef USE_FLOW
 uniform sampler2D flowMap;
 uniform vec4 flowRect;
@@ -468,36 +477,29 @@ uniform float flowMaxSpeed, flowPeriod;
 varying vec3 vWorld;
 #include <common>
 #include <logdepthbuf_pars_fragment>
-// The slope of a few small travelling waves: a nearly still surface.
-vec2 slope(vec2 p, float t) {
-  vec2 g = vec2(0.0);
-  g += vec2(0.8, 0.6) * cos(dot(p, vec2(0.8, 0.6)) * 5.0 + t * 1.1) * 0.5;
-  g += vec2(-0.5, 0.86) * cos(dot(p, vec2(-0.5, 0.86)) * 9.0 + t * 1.6) * 0.32;
-  g += vec2(0.24, -0.97) * cos(dot(p, vec2(0.24, -0.97)) * 15.0 + t * 2.2) * 0.2;
-  g += vec2(-0.95, -0.3) * cos(dot(p, vec2(-0.95, -0.3)) * 27.0 + t * 3.1) * 0.1;
-  g += vec2(0.6, -0.8) * cos(dot(p, vec2(0.6, -0.8)) * 43.0 + t * 3.9) * 0.05;
-  return g;
-}
+${POOL_RIPPLE_GLSL}
 void main() {
   #include <logdepthbuf_fragment>
   vec3 p = vWorld / poolMetre;
+  float t = poolTime * rippleSpeed;
+  float size = max(0.25, rippleSize);
 #ifdef USE_FLOW
   // The ripples dragged along the flow, two phases half a cycle apart.
   vec4 f = texture2D(flowMap, (p.xz - flowRect.xy) / flowRect.zw);
   vec2 velocity = (f.rg * 2.0 - 1.0) * flowMaxSpeed;
-  float first = fract(poolTime / flowPeriod + f.b);
+  float first = fract(t / flowPeriod + f.b);
   float second = fract(first + 0.5);
   vec2 drift = velocity * flowPeriod;
   vec2 g = mix(
-    slope(p.xz - drift * first, poolTime),
-    slope(p.xz - drift * second, poolTime),
+    slope((p.xz - drift * first) / size, t),
+    slope((p.xz - drift * second) / size, t),
     abs(0.5 - first) * 2.0
   );
   // Livelier where the water runs faster.
   g *= 1.0 + length(velocity) * 6.0;
   g *= 0.035 * stillness;
 #else
-  vec2 g = slope(p.xz, poolTime) * 0.035 * stillness;
+  vec2 g = slope(p.xz / size, t) * 0.035 * stillness;
 #endif
   vec3 n = normalize(vec3(-g.x, 1.0, -g.y));
   vec3 v = normalize(cameraPosition - vWorld);
