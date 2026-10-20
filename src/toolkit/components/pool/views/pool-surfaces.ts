@@ -314,11 +314,28 @@ totalEmissiveRadiance += vec3(0.82, 1.0, 1.0) * tileLight * diffuseColor.rgb;`,
  * cube map), which is near enough for a room in which nothing moves. A
  * Fresnel blend leaves the water clear looked down into and a mirror seen
  * edge on.
+ *
+ * Given a `flow`, the ripples move with the water, by flow-map water
+ * after Vlachos, "Water Flow in Portal 2" (SIGGRAPH 2010; the sums in
+ * `../logic/flow-map.ts`): the flow map's vectors (metres a second over
+ * `rect`, in metres) drag the ripple pattern, sampled twice half a cycle
+ * apart and cross-faded so neither restart shows, its phase offset by the
+ * map's noise; and, as Valve's water does, the ripples are livelier where
+ * the water runs faster.
  */
+export interface PoolWaterFlow {
+  map: Texture;
+  rect: { minX: number; minZ: number; w: number; d: number };
+  maxSpeed: number;
+  /** One cycle of the two phases, seconds. */
+  period: number;
+}
+
 export function createPoolWater(
   geometry: BufferGeometry,
   uniforms: PoolUniforms,
   room: Texture | null,
+  flow?: PoolWaterFlow,
 ) {
   const material = new ShaderMaterial({
     name: 'PoolWater',
@@ -330,7 +347,21 @@ export function createPoolWater(
       poolTime: uniforms.time,
       poolMetre: uniforms.metre,
       stillness: { value: 1 },
+      flowMap: { value: flow?.map ?? null },
+      flowRect: {
+        value: flow
+          ? new Vector4(
+              flow.rect.minX,
+              flow.rect.minZ,
+              flow.rect.w,
+              flow.rect.d,
+            )
+          : new Vector4(0, 0, 1, 1),
+      },
+      flowMaxSpeed: { value: flow?.maxSpeed ?? 0 },
+      flowPeriod: { value: flow?.period ?? 1 },
     },
+    defines: flow ? { USE_FLOW: '' } : {},
     vertexShader: /* glsl */ `
 varying vec3 vWorld;
 #include <common>
@@ -345,6 +376,11 @@ void main() {
 uniform samplerCube room;
 uniform vec3 colour;
 uniform float poolTime, poolMetre, stillness;
+#ifdef USE_FLOW
+uniform sampler2D flowMap;
+uniform vec4 flowRect;
+uniform float flowMaxSpeed, flowPeriod;
+#endif
 varying vec3 vWorld;
 #include <common>
 #include <logdepthbuf_pars_fragment>
@@ -361,7 +397,24 @@ vec2 slope(vec2 p, float t) {
 void main() {
   #include <logdepthbuf_fragment>
   vec3 p = vWorld / poolMetre;
+#ifdef USE_FLOW
+  // The ripples dragged along the flow, two phases half a cycle apart.
+  vec4 f = texture2D(flowMap, (p.xz - flowRect.xy) / flowRect.zw);
+  vec2 velocity = (f.rg * 2.0 - 1.0) * flowMaxSpeed;
+  float first = fract(poolTime / flowPeriod + f.b);
+  float second = fract(first + 0.5);
+  vec2 drift = velocity * flowPeriod;
+  vec2 g = mix(
+    slope(p.xz - drift * first, poolTime),
+    slope(p.xz - drift * second, poolTime),
+    abs(0.5 - first) * 2.0
+  );
+  // Livelier where the water runs faster.
+  g *= 1.0 + length(velocity) * 6.0;
+  g *= 0.035 * stillness;
+#else
   vec2 g = slope(p.xz, poolTime) * 0.035 * stillness;
+#endif
   vec3 n = normalize(vec3(-g.x, 1.0, -g.y));
   vec3 v = normalize(cameraPosition - vWorld);
   float facing = max(dot(n, v), 0.0);

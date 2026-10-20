@@ -25,9 +25,14 @@ import {
   ShaderMaterial,
   WebGLCubeRenderTarget,
   WebGLRenderTarget,
+  DataTexture,
+  LinearFilter,
+  RGBAFormat,
 } from 'three';
 import type { BufferGeometry, Material, Object3D, Texture } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { flowMapTexels } from '../../components/pool/logic/flow-map';
+import { POOL_FLOW_MAX, POOL_FLOW_RECT, poolFlowUv } from '../logic/pool-flow';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -498,7 +503,22 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
 
   // The water: its reflection is a picture of the room, taken below.
   const waterShape = new ShapeGeometry(outline(POOL_OUTLINE));
-  const water = createPoolWater(waterShape, uniforms, null);
+  // Its ripples move with the pool's circulation (`pool-flow.ts`): from the
+  // inlets, up the channel, out to the overflow.
+  const flowMap = new DataTexture(
+    flowMapTexels(128, 104, poolFlowUv, POOL_FLOW_MAX),
+    128,
+    104,
+    RGBAFormat,
+  );
+  flowMap.magFilter = flowMap.minFilter = LinearFilter;
+  flowMap.needsUpdate = true;
+  const water = createPoolWater(waterShape, uniforms, null, {
+    map: flowMap,
+    rect: POOL_FLOW_RECT,
+    maxSpeed: POOL_FLOW_MAX,
+    period: 1.5,
+  });
   water.rotation.x = -Math.PI / 2;
   water.position.y = WATER_Y;
   room.add(water);
@@ -968,6 +988,7 @@ void main() {
     bloom.dispose();
     target.dispose();
     (water.material as ShaderMaterial).dispose();
+    flowMap.dispose();
     mirror.dispose();
     waterShape.dispose();
     environmentTarget?.dispose();
