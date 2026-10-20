@@ -11,8 +11,16 @@ import type { Footprint } from '../../controls/logic/walk-collision';
 
 export const ROOM = { minX: -15, maxX: 15, minZ: -9, maxZ: 9, height: 5 };
 
-/** The pool's floor, and the water's surface, metres. */
+/** The pool's floor at its shallow end, and the water's surface, metres. */
 export const POOL_FLOOR = -0.9;
+/**
+ * The main pool's deep end: its floor 2 m down at the east, reached by a
+ * slope from x `from` to `to` (metres); the channel and back pool stay at
+ * the shallow end's depth.
+ */
+export const DEEP_END = { floor: -2.0, from: 1.5, to: 4.5 };
+/** The deepest the walker may wade, metres of floor below the deck. */
+export const WADE_DEPTH = 1.3;
 // A deck-level pool: the water stands at the edge, spilling over it into
 // the overflow grating round the pool (`overflowStrips`).
 export const WATER_Y = -0.02;
@@ -88,6 +96,19 @@ export function inPool(x: number, z: number) {
 export function poolFloorAt(x: number, z: number) {
   if (!inPool(x, z)) return 0;
   for (const [from, to, level] of STEPS) if (x >= from && x < to) return level;
+  return basinFloorAt(x, z);
+}
+
+/** The basin's floor at (x, z), ignoring the steps: shallow, sloping or deep. */
+export function basinFloorAt(x: number, z: number) {
+  const main = POOL_RECTS[0];
+  if (z > main.minZ && z < main.maxZ) {
+    const t = Math.max(
+      0,
+      Math.min(1, (x - DEEP_END.from) / (DEEP_END.to - DEEP_END.from)),
+    );
+    return POOL_FLOOR + (DEEP_END.floor - POOL_FLOOR) * t;
+  }
   return POOL_FLOOR;
 }
 
@@ -117,6 +138,18 @@ export function poolRoomSolids(): Footprint[] {
       minZ: Math.min(a[1], b[1]) - half,
       maxZ: Math.max(a[1], b[1]) + half,
     }));
+  // The deep end, where the water would close over the walker's head.
+  const main = POOL_RECTS[0];
+  const wade =
+    DEEP_END.from +
+    ((WADE_DEPTH + POOL_FLOOR) / (POOL_FLOOR - DEEP_END.floor)) *
+      (DEEP_END.to - DEEP_END.from);
+  solids.push({
+    minX: wade,
+    maxX: main.maxX,
+    minZ: main.minZ,
+    maxZ: main.maxZ,
+  });
   const t = ARCADE.thickness / 2;
   let x = ROOM.minX;
   for (const middle of ARCADE.arches) {
@@ -250,17 +283,21 @@ export function overflowStrips(width = OVERFLOW_WIDTH): Opening[] {
   });
 }
 
-/** Main drains in the pool floor, in pairs at least 2 m apart: x, z. */
+/**
+ * Main drains in the pool floor, in pairs at least 2 m apart: x, z. The
+ * main pool's pair at its deep end, where the floor falls to them.
+ */
 export const MAIN_DRAINS: readonly (readonly [number, number])[] = [
-  [-2.5, 1.5],
-  [0.5, 1.5],
+  [5.6, 0.4],
+  [5.6, 2.6],
   [-1.5, -6.4],
   [1.5, -6.4],
 ];
 
 /** Floor inlets spread over the pool floor (vertical flow): x, z. */
 export const FLOOR_INLETS: readonly (readonly [number, number])[] = [
-  ...[-6.5, -4, -1, 2, 4.5].flatMap((x) =>
+  // On the flat of the shallow end and the deep end, not the slope.
+  ...[-6.5, -4, -1.5, 1, 6.4].flatMap((x) =>
     [-0.3, 3.3].map((z) => [x, z] as const),
   ),
   ...[-2.5, 2.5].flatMap((x) => [-5.2, -7.6].map((z) => [x, z] as const)),

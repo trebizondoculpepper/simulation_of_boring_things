@@ -56,7 +56,9 @@ import {
   COLUMNS,
   COLUMN_SIDE,
   EAST_GLAZING,
+  DEEP_END,
   POOL_FLOOR,
+  basinFloorAt,
   POOL_OUTLINE,
   POOL_RECTS,
   ROOFLIGHTS,
@@ -111,6 +113,7 @@ import {
   createPoolUniforms,
   createLightShaft,
   createPoolWater,
+  setPoolFlow,
   createTileMaterial,
 } from '../../components/pool/views/pool-surfaces';
 
@@ -244,15 +247,40 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
   for (const [x, z] of DECK_GULLIES) deckShape.holes.push(opening(x, z, 0.13));
   add(deck, new ShapeGeometry(deckShape).rotateX(-Math.PI / 2));
 
-  // The basin: its floor, steps, side walls and a rounded nosing.
-  const poolFloor = outline(POOL_OUTLINE);
-  for (const [x, z] of MAIN_DRAINS) poolFloor.holes.push(opening(x, z, 0.44));
-  add(
-    basin,
-    new ShapeGeometry(poolFloor)
-      .rotateX(-Math.PI / 2)
-      .translate(0, POOL_FLOOR, 0),
-  );
+  // The basin: its floor (the main pool's shallow end, its slope and its
+  // deep end; the channel; the back pool), steps, side walls and a rounded
+  // nosing. Each piece of floor is flat or a single slope, its height at
+  // each corner the floor's there, the main drains cut through it.
+  const floorPiece = (
+    minX: number,
+    maxX: number,
+    minZ: number,
+    maxZ: number,
+  ) => {
+    const piece = outline([
+      [minX, minZ],
+      [minX, maxZ],
+      [maxX, maxZ],
+      [maxX, minZ],
+    ]);
+    for (const [x, z] of MAIN_DRAINS)
+      if (x > minX && x < maxX && z > minZ && z < maxZ)
+        piece.holes.push(opening(x, z, 0.44));
+    const geometry = new ShapeGeometry(piece).rotateX(-Math.PI / 2);
+    const at = geometry.getAttribute('position');
+    for (let i = 0; i < at.count; i++)
+      at.setY(i, basinFloorAt(at.getX(i), at.getZ(i)));
+    geometry.computeVertexNormals();
+    add(basin, geometry);
+  };
+  {
+    const [main, channel, back] = POOL_RECTS;
+    const cuts = [main.minX, DEEP_END.from, DEEP_END.to, main.maxX];
+    for (let i = 0; i + 1 < cuts.length; i++)
+      floorPiece(cuts[i], cuts[i + 1], main.minZ, main.maxZ);
+    floorPiece(channel.minX, channel.maxX, channel.minZ, channel.maxZ);
+    floorPiece(back.minX, back.maxX, back.minZ, back.maxZ);
+  }
   const main = POOL_RECTS[0];
   for (const [from, to, level] of STEPS)
     box(
@@ -264,7 +292,9 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
       (level + POOL_FLOOR) / 2,
       (main.minZ + main.maxZ) / 2,
     );
-  const sink = -POOL_FLOOR;
+  // The walls go down to the deep end's floor (below the shallower floors
+  // they are hidden).
+  const sink = -DEEP_END.floor;
   for (const { a, b } of poolEdges()) {
     const mx = (a[0] + b[0]) / 2,
       mz = (a[1] + b[1]) / 2;
@@ -461,9 +491,21 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
   const fittings = new Group();
   fittings.name = 'Pool fittings';
   for (const [x, z] of MAIN_DRAINS)
-    place(fittings, createMainDrain(ft, fittingKinds), x, POOL_FLOOR, z);
+    place(
+      fittings,
+      createMainDrain(ft, fittingKinds),
+      x,
+      basinFloorAt(x, z),
+      z,
+    );
   for (const [x, z] of FLOOR_INLETS)
-    place(fittings, createFloorInlet(ft, fittingKinds), x, POOL_FLOOR, z);
+    place(
+      fittings,
+      createFloorInlet(ft, fittingKinds),
+      x,
+      basinFloorAt(x, z),
+      z,
+    );
   for (const [x, z] of DECK_GULLIES)
     place(fittings, createDeckGully(ft, fittingKinds), x, 0, z);
   for (const f of WALL_FITTINGS) {
@@ -513,12 +555,15 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
   );
   flowMap.magFilter = flowMap.minFilter = LinearFilter;
   flowMap.needsUpdate = true;
-  const water = createPoolWater(waterShape, uniforms, null, {
+  const flow = {
     map: flowMap,
     rect: POOL_FLOW_RECT,
     maxSpeed: POOL_FLOW_MAX,
     period: 1.5,
-  });
+  };
+  const water = createPoolWater(waterShape, uniforms, null, flow);
+  // The caustics on the pool's floor move with the same flow.
+  setPoolFlow(uniforms, flow);
   water.rotation.x = -Math.PI / 2;
   water.position.y = WATER_Y;
   room.add(water);

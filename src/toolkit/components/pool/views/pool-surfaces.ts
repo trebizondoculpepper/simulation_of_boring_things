@@ -10,6 +10,12 @@ import {
   Vector4,
 } from 'three';
 import type { IUniform, Texture, Vector3 } from 'three';
+import {
+  ABSORPTION,
+  CAUSTIC_FOCUS,
+  SCATTER,
+  WATER_IOR,
+} from '../logic/water-optics';
 
 /**
  * The surfaces of a pool in the "poolrooms" style
@@ -26,6 +32,10 @@ import type { IUniform, Texture, Vector3 } from 'three';
  * the water's depth and lit by moving caustics; above it, near the pool,
  * a fainter reflected caustic plays on walls and ceiling.
  */
+
+/** A three-number constant as a GLSL vec3 literal. */
+const glslVec = (v: readonly number[]) =>
+  `vec3(${v.map((x) => x.toFixed(4)).join(', ')})`;
 
 /** Uniforms shared by every pool surface in a room, updated each frame. */
 export interface PoolUniforms {
@@ -45,6 +55,16 @@ export interface PoolUniforms {
   /** A rectangle (minX, minZ, maxX, maxZ), metres, left in shade, and how dark. */
   shade: IUniform<Vector4>;
   shadeDepth: IUniform<number>;
+  /**
+   * The water's flow, for caustics that move with it (`setPoolFlow`): the
+   * flow map, its rect (minX, minZ, width, depth, metres), its full-scale
+   * speed and phase period, and whether it is on.
+   */
+  flowMap: IUniform<Texture | null>;
+  flowRect: IUniform<Vector4>;
+  flowMaxSpeed: IUniform<number>;
+  flowPeriod: IUniform<number>;
+  flowOn: IUniform<number>;
 }
 
 export function createPoolUniforms(
@@ -66,7 +86,30 @@ export function createPoolUniforms(
     tiles: { value: 1 },
     shade: { value: new Vector4(1e5, 1e5, 1e5, 1e5) },
     shadeDepth: { value: 0 },
+    flowMap: { value: null },
+    flowRect: { value: new Vector4(0, 0, 1, 1) },
+    flowMaxSpeed: { value: 0 },
+    flowPeriod: { value: 1 },
+    flowOn: { value: 0 },
   };
+}
+
+/**
+ * Let the caustics under the water move with its flow (`PoolWaterFlow`):
+ * their network is dragged along the flow map by the same two-phase sums
+ * as the water's ripples (Vlachos 2010), on the pool's floor.
+ */
+export function setPoolFlow(uniforms: PoolUniforms, flow: PoolWaterFlow) {
+  uniforms.flowMap.value = flow.map;
+  uniforms.flowRect.value.set(
+    flow.rect.minX,
+    flow.rect.minZ,
+    flow.rect.w,
+    flow.rect.d,
+  );
+  uniforms.flowMaxSpeed.value = flow.maxSpeed;
+  uniforms.flowPeriod.value = flow.period;
+  uniforms.flowOn.value = 1;
 }
 
 /** Shared GLSL: hashing, and the caustic network. */
@@ -182,6 +225,11 @@ export function createTileMaterial(
       poolTiles: uniforms.tiles,
       poolShade: uniforms.shade,
       poolShadeDepth: uniforms.shadeDepth,
+      poolFlowMap: uniforms.flowMap,
+      poolFlowRect: uniforms.flowRect,
+      poolFlowMax: uniforms.flowMaxSpeed,
+      poolFlowPeriod: uniforms.flowPeriod,
+      poolFlowOn: uniforms.flowOn,
       ...own,
     });
     shader.vertexShader = shader.vertexShader
@@ -207,6 +255,9 @@ uniform float poolTime, poolMetre, poolWaterY, poolCausticStrength, poolReflecte
 uniform vec4 poolShade;
 uniform float poolShadeDepth;
 uniform vec4 poolRects[4];
+uniform sampler2D poolFlowMap;
+uniform vec4 poolFlowRect;
+uniform float poolFlowMax, poolFlowPeriod, poolFlowOn;
 uniform float tileSize, tileJoint, roughLow, roughHigh, tileBump, tilePlain;
 uniform vec3 groutColour;
 ${COMMON}`,
@@ -243,13 +294,46 @@ diffuseColor.rgb = mix(groutColour, tileGlaze, tileCover);
 // Under the water: tinted by its depth, and lit by caustics.
 float tileDepth = poolWaterY - tileP.y;
 float tileWet = step(0.0, tileDepth);
-diffuseColor.rgb *= mix(vec3(1.0), mix(vec3(0.72, 0.95, 0.97), vec3(0.3, 0.78, 0.86), clamp(tileDepth / 1.2, 0.0, 1.0)), tileWet);
+// Beer–Lambert absorption over the light's path (\`water-optics.ts\`):
+// down through the depth, then up the refracted line of sight; what the
+// water takes from the tile it gives back as its own scattered glow.
+{
+  vec3 tileLook = normalize(vTileWorld - cameraPosition);
+  float tileDown = min(1.0, abs(tileLook.y));
+  float tileSinW = sqrt(1.0 - tileDown * tileDown) / ${WATER_IOR.toFixed(3)};
+  float tileCosW = sqrt(1.0 - tileSinW * tileSinW);
+  float tilePath = max(tileDepth, 0.0) * (1.0 + 1.0 / tileCosW);
+  vec3 tileKept = exp(-${glslVec(ABSORPTION)} * tilePath);
+  vec3 tileSeen = diffuseColor.rgb * tileKept + ${glslVec(SCATTER)} * (1.0 - tileKept);
+  diffuseColor.rgb = mix(diffuseColor.rgb, tileSeen, tileWet);
+}
 vec2 tileCausticUv = tileA.y > 0.5 ? tileP.xz : tileUv * vec2(1.0, 0.6);
-float tileSharp = 0.12 + 1.5 * max(tileFw.x, tileFw.y) * tileSize / 0.55;
+float tileSharp = 0.12 + 1.5 * max(tileFw.x, tileFw.y) * tileSize / 0.55
+  // Softer as the light leaves focus, above or below its focal depth.
+  + 0.1 * abs(max(poolWaterY - tileP.y, 0.0) - ${CAUSTIC_FOCUS.toFixed(3)});
 float tileLight = 0.0;
 if (tileWet > 0.5) {
-  tileLight = poolCausticStrength * clamp(poolCaustics(tileCausticUv, poolTime, tileSharp), 0.0, 1.5)
-    * mix(1.0, 0.55, step(tileA.y, 0.5)) * clamp(1.4 - tileDepth * 0.4, 0.4, 1.0);
+  float tileCaustic;
+  if (poolFlowOn > 0.5 && tileA.y > 0.5) {
+    // On the floor, the network dragged along the water's flow: two
+    // phases half a cycle apart, cross-faded (Vlachos 2010).
+    vec4 tileFlow = texture2D(poolFlowMap, (tileP.xz - poolFlowRect.xy) / poolFlowRect.zw);
+    vec2 tileDrift = (tileFlow.rg * 2.0 - 1.0) * poolFlowMax * poolFlowPeriod;
+    float first = fract(poolTime / poolFlowPeriod + tileFlow.b);
+    float second = fract(first + 0.5);
+    tileCaustic = mix(
+      poolCaustics(tileCausticUv - tileDrift * first, poolTime, tileSharp),
+      poolCaustics(tileCausticUv - tileDrift * second, poolTime, tileSharp),
+      abs(0.5 - first) * 2.0
+    );
+  } else {
+    tileCaustic = poolCaustics(tileCausticUv, poolTime, tileSharp);
+  }
+  tileLight = poolCausticStrength * clamp(tileCaustic, 0.0, 1.5)
+    * mix(1.0, 0.55, step(tileA.y, 0.5))
+    // Focusing: none at the surface, brightest at the focal depth, easing
+    // away beyond it (\`causticFocus\`); absorption dims it further.
+    * (tileDepth / ${CAUSTIC_FOCUS.toFixed(3)}) * exp(1.0 - tileDepth / ${CAUSTIC_FOCUS.toFixed(3)});
 } else {
   float near = 1.0 - smoothstep(0.0, 2.2, poolDistance(tileP.xz, poolRects));
   float high = tileN.y < -0.5 ? 1.0 : smoothstep(-0.2, 1.2, tileP.y - poolWaterY) * (1.0 - smoothstep(2.5, 4.5, tileP.y));

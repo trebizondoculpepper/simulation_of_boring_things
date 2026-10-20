@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   ARCADE,
   COLUMNS,
+  DEEP_END,
   POOL_FLOOR,
+  WADE_DEPTH,
   POOL_OUTLINE,
   POOL_RECTS,
   ROOM,
@@ -125,7 +127,11 @@ describe('the pool fittings', () => {
   it('sets the drains and inlets in the pool floor, clear of the steps', () => {
     for (const [x, z] of [...MAIN_DRAINS, ...FLOOR_INLETS]) {
       expect(inPool(x, z)).toBe(true);
-      expect(poolFloorAt(x, z)).toBe(POOL_FLOOR);
+      // On a flat of the floor (shallow or deep), not a step or the slope.
+      const floor = poolFloorAt(x, z);
+      expect(
+        [POOL_FLOOR, DEEP_END.floor].some((f) => Math.abs(floor - f) < 1e-9),
+      ).toBe(true);
     }
   });
 
@@ -209,5 +215,21 @@ describe('the deck edge', () => {
     expect(grown).toBeGreaterThan(0);
     expect(grown).toBeLessThanOrEqual(gratingArea + 1e-9);
     expect(edge[0]).toEqual([-9 - OVERFLOW_WIDTH, 4.5 + OVERFLOW_WIDTH]);
+  });
+
+  it('slopes from its shallow end to a 2 m deep end, and keeps the walker out of the deep', () => {
+    expect(poolFloorAt(-4, 1)).toBe(POOL_FLOOR);
+    expect(poolFloorAt(6, 1)).toBeCloseTo(DEEP_END.floor, 9);
+    const mid = poolFloorAt((DEEP_END.from + DEEP_END.to) / 2, 1);
+    expect(mid).toBeLessThan(POOL_FLOOR);
+    expect(mid).toBeGreaterThan(DEEP_END.floor);
+    // The channel and back pool keep the shallow depth.
+    expect(poolFloorAt(0, -3)).toBe(POOL_FLOOR);
+    const solids = poolRoomSolids();
+    const blocked = (x: number) =>
+      solids.some((s) => x > s.minX && x < s.maxX && 1 > s.minZ && 1 < s.maxZ);
+    expect(blocked(6)).toBe(true);
+    expect(blocked(0)).toBe(false);
+    expect(-poolFloorAt(2.5, 1)).toBeLessThan(WADE_DEPTH);
   });
 });
