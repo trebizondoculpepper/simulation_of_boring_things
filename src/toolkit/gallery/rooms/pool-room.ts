@@ -3,6 +3,36 @@ import { createPoolRefraction } from '../../components/pool/views/pool-refractio
 import { createPoolLightGlow } from '../../components/pool/views/pool-light-glow';
 import { createColumnCove } from '../../components/architectural/views/column-cove';
 import {
+  createDryStairPassage,
+  createRoundPinkRoom,
+  DRY_PASSAGE,
+  dryPassageFloorAt,
+  dryPassageSolids,
+  roundRoomFloorAt,
+  roundRoomSolids,
+} from '../views/dry-stair-passage';
+import {
+  archedCorridorSolids,
+  archedFloorAt,
+  archedZoneAt,
+  archedWallShape,
+  corridorJambs,
+  createArchedCorridor,
+} from '../views/arched-corridor';
+import {
+  createRedBendy,
+  redBendyJambs,
+  redBendySolids,
+  redBendyWallShape,
+  redBendyZoneAt,
+} from '../views/red-bendy';
+import { createWhiteCorridor } from '../views/white-corridor';
+import { createGreenRoom } from '../views/green-room';
+import { createPoolLadder } from '../views/pool-ladder';
+
+/** PR_A's ladder, on the back pool's west side: its middle. */
+const BACK_LADDER = { x: POOL_RECTS[2].minX, z: -6.4 };
+import {
   ACESFilmicToneMapping,
   BoxGeometry,
   Color,
@@ -49,6 +79,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { DEV_ROOM_NAMES, devPortals, devWalls } from '../logic/dev-room-links';
+import { cutOpenings } from '../../controls/logic/walk-collision';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import {
   ARCADE,
@@ -66,13 +97,12 @@ import {
   COLUMN_COVE_RADIUS,
   EAST_GLAZING,
   DEEP_END,
-  POOL_FLOOR,
   basinFloorAt,
   POOL_OUTLINE,
+  POOL_FLOOR,
   POOL_RECTS,
   ROOFLIGHTS,
   ROOM,
-  STEPS,
   WATER_Y,
   inPool,
   poolEdges,
@@ -129,8 +159,8 @@ import {
 } from '../../components/pool/views/pool-surfaces';
 
 /**
- * The poolrooms rooms, dev11 to dev13: feasibility studies for the look
- * the leisure centre's pools are to have (`doc/research/poolrooms-look.md`).
+ * The PR_A rooms, dev11 to dev13: feasibility studies for the look
+ * the leisure centre's pools are to have (`doc/research/PR_A-look.md`).
  * The room is the same in each: glazed white tile on everything, a
  * wading pool running through an arcade, rooflights recessed out of
  * sight and a wall of frosted glazing; the water is clear, nearly still,
@@ -144,9 +174,11 @@ import {
  * adds and what it costs: `poolRoom.set('bloom', false)`, and
  * `poolRoom.ingredients` lists them.
  */
-export function startPoolRoom(canvas: HTMLCanvasElement) {
+export function startPoolRoom(
+  canvas: HTMLCanvasElement,
+  id: 'dev11' | 'PR_A' = 'dev11',
+) {
   const m = METRE;
-  const id = 'dev11' as const;
   // Start with the preferred look, unless `?look=` selects another.
   const asked = new URLSearchParams(location.search).get('look');
   const firstLook =
@@ -175,6 +207,7 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
   const room = new Group();
   room.scale.setScalar(m);
   scene.add(room);
+  let dryOnly = false;
 
   const uniforms = createPoolUniforms(m, WATER_Y, POOL_RECTS);
   // The back hall, beyond the arcade, has no light of its own.
@@ -221,8 +254,7 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
   ) => add(material, new BoxGeometry(w, h, d).translate(x, y, z));
 
   const { minX, maxX, minZ, maxZ, height } = ROOM;
-  const width = maxX - minX,
-    depth = maxZ - minZ;
+  const depth = maxZ - minZ;
   const wall = 0.3;
 
   // The deck, with the pool cut out of it. A shape in (x, −z), laid flat.
@@ -259,7 +291,7 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
   add(deck, new ShapeGeometry(deckShape).rotateX(-Math.PI / 2));
 
   // The basin: its floor (the main pool's shallow end, its slope and its
-  // deep end; the channel; the back pool), steps, side walls and a rounded
+  // deep end; the channel; the back pool), side walls and a rounded
   // nosing. Each piece of floor is flat or a single slope, its height at
   // each corner the floor's there, the main drains cut through it.
   const floorPiece = (
@@ -292,17 +324,6 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
     floorPiece(channel.minX, channel.maxX, channel.minZ, channel.maxZ);
     floorPiece(back.minX, back.maxX, back.minZ, back.maxZ);
   }
-  const main = POOL_RECTS[0];
-  for (const [from, to, level] of STEPS)
-    box(
-      basin,
-      to - from,
-      level - POOL_FLOOR,
-      main.maxZ - main.minZ,
-      (from + to) / 2,
-      (level + POOL_FLOOR) / 2,
-      (main.minZ + main.maxZ) / 2,
-    );
   // The walls go down to the deep end's floor (below the shallower floors
   // they are hidden).
   const sink = -DEEP_END.floor;
@@ -328,17 +349,141 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
       -sink / 2,
       alongX ? mz + out : mz,
     );
-    const nosing = new CylinderGeometry(0.05, 0.05, length, 12, 1);
-    if (alongX) nosing.rotateZ(Math.PI / 2);
-    else nosing.rotateX(Math.PI / 2);
-    add(tile, nosing.translate(mx, -0.05, mz));
   }
 
-  // The room's walls, inner faces on its bounds.
-  box(tile, width + 2 * wall, height, wall, 0, height / 2, minZ - wall / 2);
-  box(tile, width + 2 * wall, height, wall, 0, height / 2, maxZ + wall / 2);
-  box(tile, wall, height, depth, minX - wall / 2, height / 2, 0);
-  box(tile, wall, height, depth, maxX + wall / 2, height / 2, 0);
+  // PR_A has one real opening into a dry stair passage; dev11 retains its exit.
+  const exits = devPortals(
+    id,
+    { minX: minX * m, maxX: maxX * m, minZ: minZ * m, maxZ: maxZ * m },
+    m,
+  );
+  for (const side of ['north', 'south', 'west', 'east'] as const) {
+    const low = side === 'north' || side === 'south' ? minX : minZ;
+    const high = side === 'north' || side === 'south' ? maxX : maxZ;
+    const sections =
+      id === 'PR_A' && side === 'west'
+        ? [
+            { start: low, end: DRY_PASSAGE.nearZ, bottom: 0, top: height },
+            { start: DRY_PASSAGE.farZ, end: high, bottom: 0, top: height },
+            {
+              start: DRY_PASSAGE.nearZ,
+              end: DRY_PASSAGE.farZ,
+              bottom: 3.2,
+              top: height,
+            },
+          ]
+        : id === 'PR_A' && side === 'north'
+          ? [
+              // Either side of red_bendy_1's mouth; the piece round its
+              // half-round head is drawn below.
+              {
+                start: low,
+                end: redBendyJambs()[0] - 0.2,
+                bottom: 0,
+                top: height,
+              },
+              {
+                start: redBendyJambs()[1] + 0.2,
+                end: high,
+                bottom: 0,
+                top: height,
+              },
+            ]
+          : id === 'PR_A' && side === 'south'
+            ? [
+                // Either side of the arched corridor's mouth; the piece
+                // round its arch is drawn below.
+                {
+                  start: low,
+                  end: corridorJambs()[0] - 0.2,
+                  bottom: 0,
+                  top: height,
+                },
+                {
+                  start: corridorJambs()[1] + 0.2,
+                  end: high,
+                  bottom: 0,
+                  top: height,
+                },
+              ]
+            : [{ start: low, end: high, bottom: 0, top: height }];
+    for (const section of sections) {
+      const span = section.end - section.start;
+      const rise = section.top - section.bottom;
+      const mid = (section.start + section.end) / 2;
+      const y = (section.bottom + section.top) / 2;
+      if (side === 'north' || side === 'south')
+        box(
+          tile,
+          span,
+          rise,
+          wall,
+          mid,
+          y,
+          side === 'north' ? minZ - wall / 2 : maxZ + wall / 2,
+        );
+      else
+        box(
+          tile,
+          wall,
+          rise,
+          span,
+          side === 'west' ? minX - wall / 2 : maxX + wall / 2,
+          y,
+          mid,
+        );
+    }
+  }
+  if (id === 'PR_A') {
+    // The south wall round the arched corridor's mouth: its face in the
+    // wall's own plane, the arch cut through its thickness.
+    const [left, right] = corridorJambs();
+    add(
+      tile,
+      new ExtrudeGeometry(archedWallShape(left - 0.2, right + 0.2, height), {
+        depth: wall,
+        bevelEnabled: false,
+        curveSegments: 32,
+      }).translate(0, 0, maxZ),
+    );
+    // In the scene, not the hall's group: it stays drawn while the hall is
+    // hidden behind someone in the corridor looking away from it.
+    // red_bendy_1's mouth in the north wall, in the wall's own plane.
+    {
+      const [left, right] = redBendyJambs();
+      add(
+        tile,
+        new ExtrudeGeometry(
+          redBendyWallShape(left - 0.2, right + 0.2, height),
+          { depth: wall, bevelEnabled: false, curveSegments: 32 },
+        ).translate(0, 0, minZ - wall),
+      );
+    }
+    scene.add(createRedBendy(m));
+    scene.add(
+      createArchedCorridor(
+        m,
+        { ...look.walls, bump: look.bump },
+        { ...look.deck, bump: look.bump },
+      ),
+    );
+  }
+  if (id === 'PR_A') {
+    // Continue the tiled wall through its thickness, ending flush at the
+    // dry passage's side faces. The small overlap hides the joining seam.
+    const jambX = minX - wall / 2;
+    box(tile, wall + 0.012, 3.2, 0.035, jambX, 1.6, DRY_PASSAGE.nearZ + 0.0175);
+    box(tile, wall + 0.012, 3.2, 0.035, jambX, 1.6, DRY_PASSAGE.farZ - 0.0175);
+    box(
+      tile,
+      wall + 0.012,
+      0.035,
+      DRY_PASSAGE.farZ - DRY_PASSAGE.nearZ,
+      jambX,
+      3.2175,
+      (DRY_PASSAGE.nearZ + DRY_PASSAGE.farZ) / 2,
+    );
+  }
 
   // A coved junction where wall meets floor, as in a tiled pool hall.
   const cove = (length: number) => {
@@ -355,22 +500,53 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
     }).translate(0, 0, -length / 2);
   };
   // Along the north and south walls (shape x into the room), the east, and
-  // the west except at the door.
-  add(
-    tile,
-    cove(width)
-      .rotateY(-Math.PI / 2)
-      .translate(0, 0, minZ),
-  );
-  add(
-    tile,
-    cove(width)
-      .rotateY(Math.PI / 2)
-      .translate(0, 0, maxZ),
-  );
+  // the west except at openings.
+  const northCove = (from: number, to: number) =>
+    add(
+      tile,
+      cove(to - from)
+        .rotateY(-Math.PI / 2)
+        .translate((from + to) / 2, 0, minZ),
+    );
+  if (id === 'PR_A') {
+    northCove(minX, redBendyJambs()[0]);
+    northCove(redBendyJambs()[1], maxX);
+  } else northCove(minX, maxX);
+  const southCove = (from: number, to: number) =>
+    add(
+      tile,
+      cove(to - from)
+        .rotateY(Math.PI / 2)
+        .translate((from + to) / 2, 0, maxZ),
+    );
+  if (id === 'PR_A') {
+    southCove(minX, corridorJambs()[0]);
+    southCove(corridorJambs()[1], maxX);
+  } else southCove(minX, maxX);
   add(tile, cove(depth).rotateY(Math.PI).translate(maxX, 0, 0));
-  const westRun = maxZ - 2.2 - minZ;
-  add(tile, cove(westRun).translate(minX, 0, minZ + westRun / 2));
+  const westCove = (from: number, to: number) =>
+    add(tile, cove(to - from).translate(minX, 0, (from + to) / 2));
+  if (id === 'PR_A') {
+    westCove(minZ, DRY_PASSAGE.nearZ);
+    westCove(DRY_PASSAGE.farZ, maxZ);
+  } else westCove(minZ, maxZ - 2.2);
+
+  // The same rounded tile profile softens each upright room corner.
+  if (id === 'PR_A') {
+    for (const [x, z, turn] of [
+      [minX, maxZ, 0],
+      [maxX, maxZ, Math.PI / 2],
+      [maxX, minZ, Math.PI],
+      [minX, minZ, (3 * Math.PI) / 2],
+    ])
+      add(
+        tile,
+        cove(height)
+          .rotateX(-Math.PI / 2)
+          .rotateY(turn)
+          .translate(x, height / 2, z),
+      );
+  }
 
   // The arcade: a tiled wall with five round arches.
   const arcade = new Shape();
@@ -594,6 +770,12 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
   water.rotation.x = -Math.PI / 2;
   water.position.y = WATER_Y;
   room.add(water);
+  if (id === 'PR_A') {
+    // A ladder on the back pool's west side.
+    const ladder = createPoolLadder(-POOL_FLOOR);
+    ladder.position.set(BACK_LADDER.x, 0, BACK_LADDER.z);
+    room.add(ladder);
+  }
 
   // A discreet title card by the door.
   const card = t.printed(
@@ -608,13 +790,14 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
       c.font = `${h * 0.22}px ${SANS}`;
       c.fillText(DEV_ROOM_NAMES[id], w / 2, h * 0.38);
       c.font = `${h * 0.13}px ${SANS}`;
-      c.fillText('Turn LOOK on the lectern to compare', w / 2, h * 0.7);
+      if (id === 'dev11')
+        c.fillText('Turn LOOK on the lectern to compare', w / 2, h * 0.7);
     },
     512,
   );
   card.mesh.position.set(minX + 0.01, 2.0, 4.8);
   card.mesh.rotation.y = Math.PI / 2;
-  room.add(card.mesh);
+  if (id === 'dev11') room.add(card.mesh);
 
   // Light: every look's lights are built once and shown, hidden and
   // set by `apply` (below): area lights at the rooflights and glazing, a
@@ -742,20 +925,68 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
     maxZ: maxZ * m,
   };
   const walls = devWalls(bounds, m, height * m);
-  const solids: Footprint[] = poolRoomSolids().map((s) => ({
+  if (id === 'PR_A') {
+    walls.splice(2, 1);
+    // The south wall either side of the arched corridor's mouth.
+    const south = walls.splice(1, 1)[0];
+    const [left, right] = corridorJambs();
+    walls.push({ ...south, maxX: left * m }, { ...south, minX: right * m });
+    // And the north wall either side of red_bendy_1's.
+    const north = walls.splice(0, 1)[0];
+    const [bendyLeft, bendyRight] = redBendyJambs();
+    walls.push(
+      { ...north, maxX: bendyLeft * m },
+      { ...north, minX: bendyRight * m },
+    );
+    const edge = 0.15 * m;
+    for (const [a, b] of [
+      [minZ, DRY_PASSAGE.nearZ],
+      [DRY_PASSAGE.farZ, maxZ],
+    ])
+      walls.push({
+        minX: minX * m - edge,
+        maxX: minX * m + edge,
+        minZ: a * m - edge,
+        maxZ: b * m + edge,
+        bottom: 0,
+        top: height * m,
+      });
+    scene.add(createDryStairPassage(m));
+    scene.add(createRoundPinkRoom(m));
+    scene.add(createWhiteCorridor(m));
+    scene.add(createGreenRoom(m));
+  }
+  // The pool's edge is open at the ladder: the way out of the water, as
+  // well as in, wherever the walker ends up in it.
+  const solids: Footprint[] = cutOpenings(
+    poolRoomSolids(),
+    id === 'PR_A'
+      ? [
+          {
+            minX: BACK_LADDER.x - 0.3,
+            maxX: BACK_LADDER.x + 0.3,
+            minZ: BACK_LADDER.z - 0.35,
+            maxZ: BACK_LADDER.z + 0.35,
+          },
+        ]
+      : [],
+  ).map((s) => ({
     minX: s.minX * m,
     maxX: s.maxX * m,
     minZ: s.minZ * m,
     maxZ: s.maxZ * m,
   }));
-  const portals = createPortals(id, devPortals(id, bounds, m), 0, m);
+  const portals = createPortals(id, exits, 0, m);
   scene.add(portals.group);
 
   const raycaster = new Raycaster(),
     pointer = new Vector2();
   const useAt = (x: number, y: number) => {
     raycaster.setFromCamera(pointer.set(x, y), camera);
-    const hit = raycaster.intersectObjects([portals.group, lectern], true)[0];
+    const hit = raycaster.intersectObjects(
+      id === 'dev11' ? [portals.group, lectern] : [portals.group],
+      true,
+    )[0];
     if (!hit || hit.distance > 4 * m) return null;
     for (let o: Object3D | null = hit.object; o; o = o.parent) {
       const travel = portals.uses.get(o as Mesh);
@@ -773,21 +1004,55 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
     camera,
     metre: m,
     floorY: 0,
-    floorAt: (x, z) => poolFloorAt(x / m, z / m) * m,
+    floorAt: (x, z) =>
+      ((id === 'PR_A'
+        ? (dryPassageFloorAt(x / m, z / m) ??
+          roundRoomFloorAt(x / m, z / m) ??
+          archedFloorAt(x / m, z / m))
+        : null) ?? poolFloorAt(x / m, z / m)) * m,
     start: { x: 0, z: 0 },
-    solids: () => [...walls, ...solids],
+    solids: () => [
+      ...walls,
+      ...solids,
+      ...(id === 'PR_A'
+        ? [...dryPassageSolids(), ...roundRoomSolids()].map((s) => ({
+            minX: s.minX * m,
+            maxX: s.maxX * m,
+            minZ: s.minZ * m,
+            maxZ: s.maxZ * m,
+          }))
+        : []),
+      ...(id === 'PR_A'
+        ? [...archedCorridorSolids(), ...redBendySolids()].map((s) => ({
+            minX: s.minX * m,
+            maxX: s.maxX * m,
+            minZ: s.minZ * m,
+            maxZ: s.maxZ * m,
+          }))
+        : []),
+    ],
     use: (x, y) => useAt(x, y)?.(),
     aimed: () => Boolean(useAt(0, 0)),
   });
   const params = new URLSearchParams(location.search);
   const arrival = portals.arrival(params.get('from'));
-  const start = arrival ?? {
-    x: (minX + 2) * m,
-    z: (maxZ - 1.2) * m,
-    yaw: 1.0,
-    pitch: -0.05,
-  };
+  const start =
+    arrival ??
+    (id === 'PR_A'
+      ? { x: 2.5 * m, z: (maxZ - 1.25) * m, yaw: 0, pitch: -0.05 }
+      : {
+          x: (minX + 2) * m,
+          z: (maxZ - 1.2) * m,
+          yaw: 1.0,
+          pitch: -0.05,
+        });
   walk.place(start.x, start.z, start.yaw, start.pitch);
+  let activeZone:
+    | 'PR_A'
+    | 'CR_A_UP'
+    | 'CR_A_ARCH'
+    | 'CR_A_STEPS'
+    | 'red_bendy_1' = params.get('room') === 'CR_A_UP' ? 'CR_A_UP' : 'PR_A';
 
   // The frame: the scene, ambient occlusion, bloom, tone mapping, finish.
   const target = new WebGLRenderTarget(1, 1, {
@@ -861,7 +1126,7 @@ void main() {
   lectern.position.set(LECTERN.x, 0, LECTERN.z);
   // Its desk toward the door, the player behind it looking east.
   lectern.rotation.y = -Math.PI / 2;
-  room.add(lectern);
+  if (id === 'dev11') room.add(lectern);
   const steel = kitPaint(kit, '#3e4547');
   const column = new Mesh(new BoxGeometry(0.14, 0.95, 0.14), steel);
   column.position.y = 0.475;
@@ -916,12 +1181,13 @@ void main() {
     parts.add(knob);
     return knob;
   });
-  solids.push({
-    minX: (LECTERN.x - 0.45) * m,
-    maxX: (LECTERN.x + 0.45) * m,
-    minZ: (LECTERN.z - 0.725) * m,
-    maxZ: (LECTERN.z + 0.725) * m,
-  });
+  if (id === 'dev11')
+    solids.push({
+      minX: (LECTERN.x - 0.45) * m,
+      maxX: (LECTERN.x + 0.45) * m,
+      minZ: (LECTERN.z - 0.725) * m,
+      maxZ: (LECTERN.z + 0.725) * m,
+    });
 
   // Set the room to the lectern: its look, and each knob's quantity.
   // (The console can hold a look or knob: `poolRoom.look('sunlight')`.)
@@ -1064,27 +1330,29 @@ void main() {
     );
   };
   const copyOverlay = document.createElement('div');
-  copyOverlay.className = 'pool-settings-copy';
-  const copyButton = document.createElement('button');
-  copyButton.type = 'button';
-  copyButton.textContent = 'Copy settings';
-  const copyStatus = document.createElement('span');
-  copyStatus.setAttribute('role', 'status');
-  copyStatus.textContent = 'Esc releases the mouse';
-  copyOverlay.append(copyButton, copyStatus);
-  canvas.parentElement?.append(copyOverlay);
-  copyButton.addEventListener('click', async () => {
-    copyButton.disabled = true;
-    try {
-      await navigator.clipboard.writeText(settingsText());
-      copyStatus.textContent = 'Copied — paste into chat';
-    } catch {
-      copyStatus.textContent =
-        'Could not copy. Allow clipboard access and try again.';
-    } finally {
-      copyButton.disabled = false;
-    }
-  });
+  if (id === 'dev11') {
+    copyOverlay.className = 'pool-settings-copy';
+    copyOverlay.style.top = '112px';
+    const copyButton = document.createElement('button');
+    copyButton.type = 'button';
+    copyButton.textContent = 'Copy settings';
+    const copyStatus = document.createElement('span');
+    copyStatus.setAttribute('role', 'status');
+    copyOverlay.append(copyButton, copyStatus);
+    canvas.parentElement?.append(copyOverlay);
+    copyButton.addEventListener('click', async () => {
+      copyButton.disabled = true;
+      try {
+        await navigator.clipboard.writeText(settingsText());
+        copyStatus.textContent = 'Copied — paste into chat';
+      } catch {
+        copyStatus.textContent =
+          'Could not copy. Allow clipboard access and try again.';
+      } finally {
+        copyButton.disabled = false;
+      }
+    });
+  }
 
   // A development handle for the console: stand anywhere (metres), hold a
   // look or a knob, switch ingredients, read the frame's cost.
@@ -1139,10 +1407,26 @@ void main() {
     uniforms.time.value = time / 1000;
     film.uniforms.time.value = (time / 1000) % 100;
     walk.update(delta);
+    if (id === 'PR_A' && !walk.following) {
+      const nextZone =
+        archedZoneAt(walk.walker.x / m, walk.walker.z / m) ??
+        redBendyZoneAt(walk.walker.x / m, walk.walker.z / m) ??
+        (dryPassageFloorAt(walk.walker.x / m, walk.walker.z / m) === null
+          ? 'PR_A'
+          : 'CR_A_UP');
+      if (nextZone !== activeZone) {
+        activeZone = nextZone;
+        window.dispatchEvent(
+          new CustomEvent('pool-plant:room-zone', { detail: nextZone }),
+        );
+      }
+    }
     partAudio.listen(camera, m);
     portals.update(delta, walk.walker.x, walk.walker.z);
     parts.update(delta);
     apply();
+    room.visible = !dryOnly;
+    refraction.enabled = !dryOnly;
     composer.render(delta);
   });
 
@@ -1169,11 +1453,18 @@ void main() {
     room.traverse((o) => {
       if (o instanceof Mesh && o !== water) o.geometry.dispose();
     });
+    if (id === 'PR_A')
+      lectern.traverse((o) => {
+        if (o instanceof Mesh) o.geometry.dispose();
+      });
     disposeKit(kit, scene as unknown as Group);
     renderer.dispose();
     delete (window as unknown as { poolRoom?: unknown }).poolRoom;
   };
   return Object.assign(dispose, {
+    setDryOnly(enabled: boolean) {
+      dryOnly = enabled;
+    },
     enter(previous: string | null) {
       const pose = portals.arrival(previous);
       if (pose) walk.place(pose.x, pose.z, pose.yaw, pose.pitch);

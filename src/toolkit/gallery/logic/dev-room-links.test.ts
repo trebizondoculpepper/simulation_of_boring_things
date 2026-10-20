@@ -3,7 +3,6 @@ import {
   CHAIN,
   DEV_ROOM_COLOURS,
   DEV_ROOM_NAMES,
-  POOL_STYLE_ROOMS,
   ROOMS,
   devPortals,
   devWalls,
@@ -26,35 +25,21 @@ describe('the rooms', () => {
     }
   });
 
-  it('joins each pool room’s Authorised Personnel Only door to its plant room, and back', () => {
-    for (const id of POOL_STYLE_ROOMS) {
-      const staff = devPortals(id, bounds, 1).find(
-        (p) => p.to === 'plantrooms',
-      )!;
-      expect(staff.label).toBe('AUTHORISED PERSONNEL ONLY');
-      expect(
-        devPortals('plantrooms', bounds, 1).filter((p) => p.to === id),
-      ).toHaveLength(1);
-    }
-  });
-
-  it('joins the five pool rooms in a loop, each door back to the one it came from', () => {
-    for (const id of POOL_STYLE_ROOMS) {
-      const [back, on] = devPortals(id, bounds, 1);
-      expect(devPortals(back.to, bounds, 1)[1].to).toBe(id);
-      expect(devPortals(on.to, bounds, 1)[0].to).toBe(id);
-      expect(ROOMS).toContain(id);
-    }
-  });
-
   it('opens the security office off dev16, and nowhere else', () => {
     expect(devPortals('dev18', bounds, 1).map((p) => p.to)).toEqual(['dev16']);
     expect(CHAIN).not.toContain('dev18');
     expect(ROOMS).toContain('dev18');
   });
 
-  it('gives the leisure centre no portals: it is entered by its own doors', () => {
-    expect(devPortals('facility', bounds, 1)).toEqual([]);
+  it('keeps PR_A, its dry stair and round room distinct without doors', () => {
+    expect(devPortals('PR_A', bounds, 1)).toEqual([]);
+    expect(devPortals('CR_A_UP', bounds, 1)).toEqual([]);
+    expect(devPortals('CR_A_ROUND', bounds, 1)).toEqual([]);
+    expect(devPortals('CR_A_ARCH', bounds, 1)).toEqual([]);
+    expect(devPortals('CR_A_STEPS', bounds, 1)).toEqual([]);
+    expect(
+      ROOMS.filter((id) => id.startsWith('PR_') || id.startsWith('CR_')),
+    ).toEqual(['PR_A', 'CR_A_UP', 'CR_A_ROUND', 'CR_A_ARCH', 'CR_A_STEPS']);
   });
 
   it('gives every room a name and a portal colour', () => {

@@ -114,9 +114,10 @@ function fromSide(side: LoopSide) {
 }
 
 /**
- * The zones that can be seen from (x, z): from a side, the whole side,
- * its two corners and the end of each side round them (seen obliquely);
- * from a corner, both its sides and what can be seen from them. The side
+ * The zones that can be seen from (x, z): from a side's middle, the whole
+ * side, its two corners and the end of each side round them (seen
+ * obliquely); from a corner, or the end of a side next to it, both the
+ * corner's sides and what can be seen from them. The side
  * opposite is never seen. Off the corridor (in a doorway), the nearest.
  */
 export function visibleZones(x: number, z: number): Set<LoopZone> {
@@ -127,11 +128,19 @@ export function visibleZones(x: number, z: number): Set<LoopZone> {
       Math.max(-LOOP_OUTER, Math.min(LOOP_OUTER, z)),
     ) ??
     'north.middle';
-  if (zone.includes('.')) return fromSide(zone.split('.')[0] as LoopSide);
+  const [side, part] = zone.split('.') as [LoopSide, string | undefined];
+  if (part === 'middle') return fromSide(side);
+  // Near a corner (a side's end, or the corner itself), the side round it
+  // is seen far along: everything seen from either side of that corner.
+  const corner: LoopCorner = part
+    ? part === 'a'
+      ? LOOP_SIDES[side].a
+      : LOOP_SIDES[side].b
+    : (zone as LoopCorner);
   const seen = new Set<LoopZone>();
   for (const side of LOOP_SIDE_IDS) {
     const s = LOOP_SIDES[side];
-    if (s.a === zone || s.b === zone)
+    if (s.a === corner || s.b === corner)
       for (const each of fromSide(side)) seen.add(each);
   }
   return seen;

@@ -33,6 +33,7 @@ import {
 import type { Anchor } from '../game/courtyard-join';
 import { registerJoint } from '../toolkit/gallery/logic/door-joins';
 import { createDevCorridor } from '../scene/dev-corridor';
+import type { CorridorOptions } from '../scene/dev-corridor';
 import {
   devPortals,
   devWalls,
@@ -93,7 +94,16 @@ export const CORRIDOR_VIEWS: Record<
  * every other shut at once, silently, so only one is ever open. Its outer
  * doors still go to their rooms, each drawn on its own.
  */
-export function startDevCorridorRoom(canvas: HTMLCanvasElement) {
+export function startDevCorridorRoom(
+  canvas: HTMLCanvasElement,
+  {
+    id = 'dev_corridor',
+    ...options
+  }: CorridorOptions & {
+    id?: 'dev_corridor' | 'plant_corridor';
+  } = {},
+) {
+  const ceiling = options.ceiling ?? LOOP_CEILING;
   const m = METRE;
   const scene = new Scene();
   const renderer = createRenderer(canvas);
@@ -112,7 +122,7 @@ export function startDevCorridorRoom(canvas: HTMLCanvasElement) {
   const kit = createPanelKit();
   /** Where the player is, metres: set each frame, read by the doors. */
   const here = { x: 0, z: 0 };
-  const corridor = createDevCorridor(kit);
+  const corridor = createDevCorridor(kit, options);
   corridor.group.scale.setScalar(m);
   scene.add(corridor.group);
   // A few real lights, moved each frame to the battens nearest the player
@@ -128,7 +138,7 @@ export function startDevCorridorRoom(canvas: HTMLCanvasElement) {
     minZ: LOOP_OUTER_BOUNDS.minZ * m,
     maxZ: LOOP_OUTER_BOUNDS.maxZ * m,
   };
-  const outer = devWalls(bounds, m, LOOP_CEILING * m);
+  const outer = devWalls(bounds, m, ceiling * m);
 
   // ---- The courtyard, behind an inner door --------------------------------
   const courtyard = createDevCourtyardRoom(renderer, kit, m);
@@ -155,12 +165,7 @@ export function startDevCorridorRoom(canvas: HTMLCanvasElement) {
   };
   /** Which rooms are drawn this frame. */
   const drawn = { corridor: true, courtyard: false };
-  const portals = createPortals(
-    'dev_corridor',
-    devPortals('dev_corridor', bounds, m),
-    0,
-    m,
-  );
+  const portals = createPortals(id, devPortals(id, bounds, m), 0, m);
   scene.add(portals.group);
   const raycaster = new Raycaster();
   const pointer = new Vector2();
@@ -191,7 +196,10 @@ export function startDevCorridorRoom(canvas: HTMLCanvasElement) {
   };
   /** Where to stand having come from `previous`: in front of its door. */
   const arrival = (previous: string | null) => {
-    const door = corridor.doors.find((d) => d.room === previous);
+    // No room (a first visit) is not a store's door, whose room is none.
+    const door = previous
+      ? corridor.doors.find((d) => d.room === previous)
+      : undefined;
     if (!door) return null;
     const at = arrivalAt(door.door);
     return { ...at, x: at.x * m, z: at.z * m };
@@ -273,7 +281,7 @@ export function startDevCorridorRoom(canvas: HTMLCanvasElement) {
     lights.forEach((light, i) => {
       const f = near[i];
       light.intensity = f ? 3 * m * m : 0;
-      if (f) light.position.set(f.x * m, (LOOP_CEILING - 0.15) * m, f.z * m);
+      if (f) light.position.set(f.x * m, f.y * m, f.z * m);
     });
   };
 
@@ -298,7 +306,7 @@ export function startDevCorridorRoom(canvas: HTMLCanvasElement) {
     });
   const withdrawJoints = outerDoors.map((d) => {
     const way = doorway(d.door);
-    return registerJoint('dev_corridor', d.room, {
+    return registerJoint(id, d.room, {
       frame: { x: way.x * m, z: way.z * m, yaw: d.yaw },
       open: () => d.part.door.open,
       angle: () => d.part.door.angle,
@@ -342,12 +350,12 @@ export function startDevCorridorRoom(canvas: HTMLCanvasElement) {
       if (d.seeing) {
         if (aside <= 0.5 && was < 0 && out >= 0) {
           leaving = true;
-          enterDevRoom(d.room, 'dev_corridor', true);
+          enterDevRoom(d.room, id, true);
           return;
         }
       } else if (walkedThrough(d.door, x, z)) {
         leaving = true;
-        enterDevRoom(d.room, 'dev_corridor');
+        enterDevRoom(d.room, id);
         return;
       }
     }

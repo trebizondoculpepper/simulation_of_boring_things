@@ -63,6 +63,26 @@ export function openJoint(room: RoomId): RoomId | null {
   return null;
 }
 
+/** The room whose door from `room` is nearest (x, z), in `room`'s units, if it has any. */
+export function nearestJoint(
+  room: RoomId,
+  x: number,
+  z: number,
+): RoomId | null {
+  let best: RoomId | null = null;
+  let distance = Infinity;
+  for (const [k, joint] of joints) {
+    const [from, to] = k.split('>') as [RoomId, RoomId];
+    if (from !== room) continue;
+    const d = Math.hypot(joint.frame.x - x, joint.frame.z - z);
+    if (d < distance) {
+      distance = d;
+      best = to;
+    }
+  }
+  return best;
+}
+
 const turn = (yaw: number, x: number, z: number) => {
   const c = Math.cos(yaw);
   const s = Math.sin(yaw);

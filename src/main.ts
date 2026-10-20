@@ -2,6 +2,7 @@ import './styles/main.css';
 import { Plane, Vector3 } from 'three';
 import {
   EQUIPMENT_ROOMS,
+  DEV_ROOM_NAMES,
   ROOMS,
   resolveRoomId,
 } from './toolkit/gallery/logic/dev-room-links';
@@ -11,6 +12,7 @@ import type {
 } from './toolkit/gallery/logic/dev-room-links';
 import {
   jointOf,
+  nearestJoint,
   openJoint,
   throughDoor,
 } from './toolkit/gallery/logic/door-joins';
@@ -38,10 +40,59 @@ type RoomHandle = (() => void) & {
   enter?: (from: string | null, room: string) => void;
   suspend?: () => void;
   resume?: () => void;
+  setDryOnly?: (enabled: boolean) => void;
+  setVisual?: (enabled: boolean) => void;
 };
 const rooms = new Map<string, { root: HTMLElement; handle: RoomHandle }>();
 let current: string | undefined;
 let revision = 0;
+const positionOverlay = document.createElement('div');
+positionOverlay.className = 'pool-settings-copy';
+positionOverlay.classList.add('location-overlay');
+const roomName = document.createElement('span');
+const positionButton = document.createElement('button');
+positionButton.type = 'button';
+positionButton.textContent = '📍';
+positionButton.title = 'Copy a link to this view';
+positionButton.setAttribute('aria-label', 'Copy a link to this view');
+positionButton.className = 'location-pin-button';
+const positionStatus = document.createElement('span');
+positionStatus.setAttribute('role', 'status');
+positionOverlay.append(roomName, positionStatus);
+positionOverlay.hidden = true;
+document.body.append(positionOverlay);
+positionButton.addEventListener('click', async () => {
+  const id = resolveRoomId(new URLSearchParams(location.search).get('room'));
+  const surface = current ? surfaceOf(current) : null;
+  const control = surface ? firstPersonOn(surface) : null;
+  if (!id || !control) {
+    positionStatus.textContent = 'Position unavailable in this view';
+    return;
+  }
+  const { metre } = control;
+  const pose = control.pose();
+  const degrees = ((((pose.yaw * 180) / Math.PI) % 360) + 360) % 360;
+  const url = new URL(location.href);
+  url.search = new URLSearchParams({
+    room: id,
+    x: (pose.x / metre).toFixed(2),
+    y: (pose.y / metre).toFixed(2),
+    z: (pose.z / metre).toFixed(2),
+    yaw: degrees.toFixed(1),
+    pitch: ((pose.pitch * 180) / Math.PI).toFixed(1),
+    zoom: control.zoom.toFixed(3),
+  }).toString();
+  positionButton.disabled = true;
+  try {
+    await navigator.clipboard.writeText(url.href);
+    positionStatus.textContent = 'Link copied';
+  } catch {
+    positionStatus.textContent =
+      'Could not copy. Allow clipboard access and try again.';
+  } finally {
+    positionButton.disabled = false;
+  }
+});
 const resetEffects = async () => {
   const { ps1Uniforms } =
     await import('./toolkit/components/core/parts/ps1-material');
@@ -58,32 +109,38 @@ const resetEffects = async () => {
 const starter = async (
   room: RoomId,
 ): Promise<(canvas: HTMLCanvasElement) => RoomHandle> => {
-  if (room === 'facility') {
-    const { startFacilityWorld } = await import('./rendering/facility-world');
-    return (surface) => {
-      const hud = document.createElement('p');
-      hud.className = 'room-name';
-      hud.setAttribute('aria-live', 'polite');
-      surface.parentElement?.append(hud);
-      return startFacilityWorld(surface, hud);
-    };
+  if (room === 'CR_A_UP' || room === 'CR_A_ROUND') {
+    return (await import('./toolkit/gallery/rooms/dry-stair-room'))
+      .startDryStairRoom;
   }
-  if (room === 'pool_municipal')
-    return (await import('./rendering/pool-styles/municipal'))
-      .startMunicipalRoom;
-  if (room === 'pool_tunnel')
-    return (await import('./rendering/pool-styles/tunnel')).startTunnelRoom;
-  if (room === 'pool_reservoir')
-    return (await import('./rendering/pool-styles/reservoir'))
-      .startReservoirRoom;
-  if (room === 'pool_white')
-    return (await import('./rendering/pool-styles/white')).startWhiteRoom;
-  if (room === 'pool_atrium')
-    return (await import('./rendering/pool-styles/atrium')).startAtriumRoom;
-  if (room === 'plantrooms')
-    return (await import('./rendering/plant-warren')).startPlantWarren;
-  if (room === 'poolrooms')
-    return (await import('./rendering/poolrooms-world')).startPoolroomsWorld;
+  if (room === 'white_corridor_1')
+    return (await import('./toolkit/gallery/rooms/white-corridor-room'))
+      .startWhiteCorridorRoom;
+  if (room === 'green_room_1')
+    return (await import('./toolkit/gallery/rooms/white-corridor-room'))
+      .startGreenRoom;
+  if (room === 'red_bendy_1')
+    return (await import('./toolkit/gallery/rooms/red-bendy-room'))
+      .startRedBendyRoom;
+  if (room === 'CR_A_ARCH' || room === 'CR_A_STEPS')
+    return (await import('./toolkit/gallery/rooms/arched-rooms'))
+      .startArchedRooms;
+  if (room === 'PR_A') {
+    const { startPoolRoom } = await import('./toolkit/gallery/rooms/pool-room');
+    return (surface) => startPoolRoom(surface, 'PR_A');
+  }
+  if (room === 'shared_plant_layout')
+    return (await import('./rendering/shared-plant-layout'))
+      .startSharedPlantLayout;
+  if (room.startsWith('plant_fit_')) {
+    const { startPlantFitRoom } = await import('./rendering/plant-fit-room');
+    const side = Number(room.slice('plant_fit_'.length));
+    return (surface) => startPlantFitRoom(surface, side);
+  }
+  if (room === 'plant_corridor') {
+    return (await import('./rendering/plant-corridor-room'))
+      .startPlantCorridorRoom;
+  }
   if (room === 'dev_corridor' || room === 'dev_courtyard')
     // One world: the courtyard is walked into from the corridor.
     return (await import('./rendering/dev-corridor-room')).startDevCorridorRoom;
@@ -137,7 +194,13 @@ const starter = async (
 };
 /** The corridor and the courtyard are one world, kept as one. */
 const keyOf = (room: RoomId) =>
-  room === 'dev_courtyard' ? 'dev_corridor' : room;
+  room === 'dev_courtyard'
+    ? 'dev_corridor'
+    : room === 'CR_A_ROUND'
+      ? 'CR_A_UP'
+      : room === 'CR_A_STEPS'
+        ? 'CR_A_ARCH'
+        : room;
 /** Build `room` on a canvas of its own, hidden, if it is not built yet. */
 const mount = (
   room: RoomId,
@@ -189,6 +252,7 @@ const openRoom = async () => {
     if (document.pointerLockElement) document.exitPointerLock();
     window.dispatchEvent(new Event('blur'));
     stopSeeing();
+    stopDryPeek();
     if (current) {
       const old = rooms.get(current);
       old?.handle.suspend?.();
@@ -196,11 +260,12 @@ const openRoom = async () => {
     }
     current = undefined;
     app.hidden = true;
+    positionOverlay.hidden = true;
     directory.hidden = false;
     document.title = 'Pool Plant — Rooms';
     return;
   }
-  const room = resolveRoomId(params.get('room')) ?? 'facility';
+  const room = resolveRoomId(params.get('room')) ?? 'dev_corridor';
   const start = await starter(room);
   await resetEffects();
   if (ownRevision !== revision) return;
@@ -210,6 +275,7 @@ const openRoom = async () => {
   if (document.pointerLockElement) document.exitPointerLock();
   window.dispatchEvent(new Event('blur'));
   stopSeeing();
+  stopDryPeek();
   if (current) {
     const old = rooms.get(current)!;
     old.handle.suspend?.();
@@ -221,7 +287,33 @@ const openRoom = async () => {
   showOnTop(key);
   loaded.root.hidden = false;
   loaded.handle.enter?.(params.get('from'), room);
+  const surface = surfaceOf(key);
+  const control = surface ? firstPersonOn(surface) : null;
+  const number = (name: string) => {
+    const raw = params.get(name);
+    if (raw === null || raw.trim() === '') return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  };
+  const x = number('x'),
+    z = number('z');
+  if (control && x !== null && z !== null) {
+    const pose = control.pose();
+    const y = number('y');
+    const yaw = number('yaw'),
+      pitch = number('pitch');
+    control.place(
+      x * control.metre,
+      z * control.metre,
+      yaw === null ? pose.yaw : (yaw * Math.PI) / 180,
+      pitch === null ? pose.pitch : (pitch * Math.PI) / 180,
+      y === null ? undefined : y * control.metre,
+    );
+    const zoom = number('zoom');
+    if (zoom !== null) control.zoom = zoom;
+  }
   loaded.handle.resume?.();
+  if (peekBack(keyOf(room))) void startDryPeek().catch(showError);
 };
 // ---- Seeing through a doorway into another room --------------------------
 // Each room is drawn by its own renderer on its own canvas. While a door
@@ -239,6 +331,14 @@ const zOf = (key: string, z: string) => {
   if (entry) entry.root.style.zIndex = z;
 };
 const showOnTop = (key: string) => {
+  const id = resolveRoomId(new URLSearchParams(location.search).get('room'));
+  roomName.textContent = id ? DEV_ROOM_NAMES[id] : key;
+  positionStatus.textContent = '';
+  positionOverlay.hidden = false;
+  const movement = surfaceOf(key)?.parentElement?.querySelector(
+    '[aria-label="Movement"]',
+  );
+  (movement ?? positionOverlay).append(positionButton);
   for (const [id, entry] of rooms) {
     entry.root.hidden = id !== key;
     entry.root.style.zIndex = id === key ? '1' : '';
@@ -319,22 +419,34 @@ const startSeeing = (top: RoomId, under: RoomId) => {
   seeing = { top, under };
   return true;
 };
+/** Build `room`, hidden, if it is neither built nor being built; whether it is built now. */
+const ensureBuilt = (room: RoomId) => {
+  if (rooms.has(keyOf(room))) return true;
+  if (loading.has(room)) return false;
+  loading.add(room);
+  void starter(room)
+    .then((start) => mount(room, start))
+    .catch(showError)
+    .finally(() => loading.delete(room));
+  return false;
+};
 const checkDoors = () => {
   if (!current || app.hidden) return stopSeeing();
   const top = current as RoomId;
   const to = openJoint(top);
   if (seeing && (seeing.top !== top || seeing.under !== to)) stopSeeing();
-  if (!to || seeing) return;
-  if (!rooms.has(keyOf(to))) {
-    // Built the first time its door is opened; meanwhile, a dark lobby.
-    if (loading.has(to)) return;
-    loading.add(to);
-    void starter(to)
-      .then((start) => mount(to, start))
-      .catch(showError)
-      .finally(() => loading.delete(to));
+  if (seeing) return;
+  if (!to) {
+    // No door open: build the room behind the door nearest the walker, so
+    // that it is ready to be seen the moment that door opens.
+    const surface = surfaceOf(keyOf(top));
+    const eye = surface && firstPersonOn(surface)?.pose();
+    const nearest = eye && nearestJoint(top, eye.x, eye.z);
+    if (nearest) ensureBuilt(nearest);
     return;
   }
+  // Built the first time its door is opened, if not before; meanwhile, a dark lobby.
+  if (!ensureBuilt(to)) return;
   startSeeing(top, to);
 };
 const watchDoors = () => {
@@ -385,6 +497,146 @@ const travel = (event: Event) => {
 const popstate = () => {
   void openRoom().catch(showError);
 };
+/**
+ * The rooms off PR_A that draw it through their opening, by PR_A's own
+ * renderer following their walker: for each, whether a pose looks away
+ * from PR_A, so the hall's expensive geometry can be left out.
+ */
+const PEEKS: Partial<Record<string, (yaw: number) => boolean>> = {
+  // West of the hall, looking west.
+  CR_A_UP: (yaw) => Math.sin(yaw) <= 0,
+  // South of the hall, looking south.
+  CR_A_ARCH: (yaw) => Math.cos(yaw) <= 0,
+  // North of the hall, looking north.
+  red_bendy_1: (yaw) => Math.cos(yaw) >= 0,
+  // North of the round room, west of the hall: looking north.
+  white_corridor_1: (yaw) => Math.cos(yaw) >= 0,
+  green_room_1: (yaw) => Math.cos(yaw) >= 0,
+};
+const peekBack = (room: string) => PEEKS[room];
+/** The room the hall is being drawn from, while it is. */
+let dryPeek: string | null = null;
+const stopDryPeek = () => {
+  if (!dryPeek) return;
+  const from = dryPeek;
+  dryPeek = null;
+  const pool = surfaceOf('PR_A');
+  const stair = surfaceOf(from);
+  if (stair instanceof HTMLCanvasElement) stair.style.opacity = '1';
+  const poolDraw = pool && rendererOn(pool);
+  if (poolDraw) poolDraw.paused = false;
+  rooms.get('PR_A')?.handle.setDryOnly?.(false);
+  rooms.get(from)?.handle.setVisual?.(true);
+  const stairDraw = stair && rendererOn(stair);
+  if (stairDraw) stairDraw.after = null;
+  if (pool) firstPersonOn(pool)?.follow(null);
+  const poolRoot = rooms.get('PR_A')?.root;
+  if (poolRoot && current !== 'PR_A') poolRoot.hidden = true;
+};
+const startDryPeek = async () => {
+  const from = current;
+  const away = from && peekBack(from);
+  if (!from || !away) return;
+  const start = await starter('PR_A');
+  const pool = mount('PR_A', start);
+  if (current !== from) return;
+  const stairSurface = surfaceOf(from);
+  const poolSurface = surfaceOf('PR_A');
+  const stairWalk = stairSurface && firstPersonOn(stairSurface);
+  const poolWalk = poolSurface && firstPersonOn(poolSurface);
+  const stairDraw = stairSurface && rendererOn(stairSurface);
+  const poolDraw = poolSurface && rendererOn(poolSurface);
+  if (!stairWalk || !poolWalk || !stairDraw || !poolDraw) return;
+  pool.root.hidden = false;
+  pool.root.style.zIndex = '1';
+  pool.root.style.pointerEvents = 'none';
+  rooms.get(from)!.root.style.zIndex = '2';
+  if (stairSurface instanceof HTMLCanvasElement)
+    stairSurface.style.opacity = '0';
+  rooms.get(from)!.handle.setVisual?.(false);
+  poolWalk.follow(() => stairWalk.pose());
+  poolDraw.paused = true;
+  stairDraw.after = (time) => {
+    // One renderer draws the staircase on both sides of the threshold.
+    // Hide the expensive pool geometry only when looking away from PR_A.
+    pool.handle.setDryOnly?.(away(stairWalk.pose().yaw));
+    poolDraw.loop?.(time);
+  };
+  dryPeek = from;
+};
+let zoneTransferPending = false;
+window.addEventListener('pool-plant:room-zone', (event) => {
+  const id = (event as CustomEvent<RoomId>).detail;
+  if (
+    (id !== 'PR_A' &&
+      id !== 'CR_A_UP' &&
+      id !== 'CR_A_ROUND' &&
+      id !== 'CR_A_ARCH' &&
+      id !== 'CR_A_STEPS' &&
+      id !== 'red_bendy_1' &&
+      id !== 'white_corridor_1' &&
+      id !== 'green_room_1') ||
+    zoneTransferPending
+  )
+    return;
+  if (current === keyOf(id)) {
+    const url = new URL(location.href);
+    if (url.searchParams.get('room') !== id) {
+      url.searchParams.set('room', id);
+      history.replaceState(null, '', url);
+      // CR_A_UP and CR_A_ROUND use one mounted scene. showOnTop would hide
+      // PR_A's shared render canvas, leaving the transparent stair canvas
+      // with no image when the walker crosses this internal boundary.
+      roomName.textContent = DEV_ROOM_NAMES[id];
+      positionStatus.textContent = '';
+    }
+    return;
+  }
+  const control = current ? firstPersonOn(surfaceOf(current)!) : null;
+  const pose = control?.pose();
+  const zoom = control?.zoom;
+  const url = new URL(location.href);
+  url.searchParams.set('room', id);
+  if (control) {
+    const pose = control.pose();
+    const metre = control.metre;
+    url.searchParams.set('x', (pose.x / metre).toFixed(2));
+    url.searchParams.set('y', (pose.y / metre).toFixed(2));
+    url.searchParams.set('z', (pose.z / metre).toFixed(2));
+    url.searchParams.set(
+      'yaw',
+      (((pose.yaw * 180) / Math.PI + 360) % 360).toFixed(1),
+    );
+    url.searchParams.set('pitch', ((pose.pitch * 180) / Math.PI).toFixed(1));
+    url.searchParams.set('zoom', control.zoom.toFixed(3));
+  }
+  history.replaceState(null, '', url);
+  zoneTransferPending = true;
+  void starter(id)
+    .then((start) => {
+      stopDryPeek();
+      const loaded = mount(id, start);
+      const old = current ? rooms.get(current) : null;
+      old?.handle.suspend?.();
+      if (old) old.root.hidden = true;
+      current = keyOf(id);
+      showOnTop(current);
+      loaded.root.hidden = false;
+      loaded.handle.enter?.(null, id);
+      const nextSurface = surfaceOf(current);
+      const next = nextSurface ? firstPersonOn(nextSurface) : null;
+      if (next && pose) {
+        next.place(pose.x, pose.z, pose.yaw, pose.pitch, pose.y);
+        if (zoom !== undefined) next.zoom = zoom;
+      }
+      loaded.handle.resume?.();
+      if (peekBack(current)) void startDryPeek().catch(showError);
+    })
+    .catch(showError)
+    .finally(() => {
+      zoneTransferPending = false;
+    });
+});
 // Development only, binding no input: run `seconds` of the current room's
 // frames (where the browser is not drawing, as in a hidden tab) and give
 // the last as a PNG data URL.

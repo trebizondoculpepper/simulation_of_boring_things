@@ -60,15 +60,9 @@ describe('the poolrooms room', () => {
     expect(POOL_FLOOR + EYE_HEIGHT_METRES).toBeGreaterThan(WATER_Y + 0.5);
   });
 
-  it('steps down into the water at the west end no more than 0.3 m at a time', () => {
-    let level = poolFloorAt(-9.5, 1);
-    expect(level).toBe(0);
-    for (let x = -9.4; x < -7; x += 0.1) {
-      const next = poolFloorAt(x, 1);
-      expect(level - next).toBeLessThanOrEqual(0.3 + 1e-9);
-      level = next;
-    }
-    expect(level).toBe(POOL_FLOOR);
+  it('has a clear west edge without raised pool blocks', () => {
+    expect(poolFloorAt(-9.5, 1)).toBe(0);
+    expect(poolFloorAt(-8.75, 1)).toBe(POOL_FLOOR);
   });
 
   it('leads through the middle arch into the back pool', () => {
@@ -124,10 +118,10 @@ describe('the pool fittings', () => {
   const near = (a: readonly [number, number], b: readonly [number, number]) =>
     Math.hypot(a[0] - b[0], a[1] - b[1]);
 
-  it('sets the drains and inlets in the pool floor, clear of the steps', () => {
+  it('sets the drains and inlets in the pool floor', () => {
     for (const [x, z] of [...MAIN_DRAINS, ...FLOOR_INLETS]) {
       expect(inPool(x, z)).toBe(true);
-      // On a flat of the floor (shallow or deep), not a step or the slope.
+      // On a flat of the floor (shallow or deep), not the slope.
       const floor = poolFloorAt(x, z);
       expect(
         [POOL_FLOOR, DEEP_END.floor].some((f) => Math.abs(floor - f) < 1e-9),

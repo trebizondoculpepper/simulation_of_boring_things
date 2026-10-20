@@ -268,10 +268,10 @@ canvas {
 }
 
 .pool-settings-copy {
-  position: absolute;
+  position: fixed;
   top: 12px;
   right: 12px;
-  z-index: 10;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -300,4 +300,22 @@ canvas {
 .pool-settings-copy button:disabled {
   opacity: 0.65;
   cursor: wait;
+}
+.location-overlay {
+  right: auto;
+  left: max(12px, env(safe-area-inset-left));
+  max-width: min(420px, calc(100% - 24px));
+  padding: 4px 6px;
+}
+.location-pin-button {
+  min-width: 36px;
+  color: #e8e2cc;
+  background: #34453c;
+  border: 1px solid #baac80;
+  padding: 8px;
+  cursor: pointer;
+}
+.location-pin-button:focus-visible {
+  outline: 3px solid #d3ad55;
+  outline-offset: 2px;
 }

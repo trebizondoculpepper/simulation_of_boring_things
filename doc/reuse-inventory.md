@@ -1,5 +1,9 @@
 # Reuse inventory
 
+## Warehouse floor artwork (2026-10-20)
+
+Adapted the concrete texture drawing from `/Users/salimfadhley/workspace/encabulator/src/scene/warehouse-surfaces.ts` into `src/scene/warehouse-concrete-floor.ts`. The plant room uses only the source's warehouse floor artwork, scaled so its sealed slab joints retain the same six-metre spacing across the larger lower floor. The other warehouse materials were omitted.
+
 What has been copied from the Encabulator (`/Users/salimfadhley/workspace/encabulator`, commit `50b15de`), the owner's own project. Copied files are unchanged unless noted.
 
 | Source                                                                                                              | Destination           | Status  | Notes                                                                                                                                      |

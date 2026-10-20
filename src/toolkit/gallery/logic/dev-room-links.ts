@@ -1,8 +1,7 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
 
 /**
- * How the rooms join. The leisure centre (`facility`) is one connected
- * world of its own. The development rooms are separate rooms, each with a
+ * How the rooms join. The development rooms are separate rooms, each with a
  * single way out: a spring door back to dev_corridor, the corridor that
  * loops round a square and has a door to every other room
  * (`src/scene/dev-corridor.ts` gives its doors to `ROOMS` in order). The
@@ -44,27 +43,26 @@ export type EquipmentRoomId =
   | 'dev_control'
   | 'dev_ozone';
 export type DevRoomId = GalleryRoomId | EquipmentRoomId;
-/** The five pool rooms, one in each style (`doc/design/pool-styles.md`), joined in a loop. */
-export type PoolStyleRoomId =
-  | 'pool_municipal'
-  | 'pool_tunnel'
-  | 'pool_reservoir'
-  | 'pool_white'
-  | 'pool_atrium';
-export const POOL_STYLE_ROOMS: readonly PoolStyleRoomId[] = [
-  'pool_municipal',
-  'pool_tunnel',
-  'pool_reservoir',
-  'pool_white',
-  'pool_atrium',
-];
+/** The main plant room alone at each trial size, metres a side (`plant-fit-room.ts`). */
+export const PLANT_FIT_SIZES = [47, 42, 37] as const;
+export type PlantFitRoomId = `plant_fit_${(typeof PLANT_FIT_SIZES)[number]}`;
+export const PLANT_FIT_ROOMS: readonly PlantFitRoomId[] = PLANT_FIT_SIZES.map(
+  (n) => `plant_fit_${n}` as const,
+);
 export type RoomId =
   | DevRoomId
-  | 'facility'
   | 'dev_courtyard'
-  | 'poolrooms'
-  | 'plantrooms'
-  | PoolStyleRoomId;
+  | 'PR_A'
+  | 'CR_A_UP'
+  | 'CR_A_ROUND'
+  | 'CR_A_ARCH'
+  | 'CR_A_STEPS'
+  | 'red_bendy_1'
+  | 'white_corridor_1'
+  | 'green_room_1'
+  | 'plant_corridor'
+  | 'shared_plant_layout'
+  | PlantFitRoomId;
 export type PortalSide = 'north' | 'south' | 'east' | 'west';
 export interface Portal {
   to: RoomId;
@@ -114,53 +112,39 @@ export const DEV_ROOMS: readonly DevRoomId[] = [
   ...EQUIPMENT_ROOMS,
 ];
 
-/** Where along its south wall each pool room's Authorised Personnel Only door stands, metres. */
-export const STAFF_DOOR_AT: Record<PoolStyleRoomId, number> = {
-  pool_municipal: 0,
-  pool_tunnel: -1,
-  pool_reservoir: -14,
-  pool_white: 6,
-  pool_atrium: 0,
-};
-
-/**
- * The plant rooms' doors to the pool rooms: each in its attraction's
- * plant room's outer wall (`warren-plan.ts`), at its floor, metres.
- */
-export const PLANT_ROOM_DOORS: readonly {
-  to: PoolStyleRoomId;
-  side: PortalSide;
-  x: number;
-  z: number;
-  y: number;
-}[] = [
-  { to: 'pool_municipal', side: 'west', x: -35, z: 0, y: -5 },
-  { to: 'pool_reservoir', side: 'east', x: 12, z: -20, y: -6.5 },
-  { to: 'pool_atrium', side: 'east', x: 29, z: 0, y: -5 },
-  { to: 'pool_white', side: 'south', x: -9, z: 21, y: -5 },
-  { to: 'pool_tunnel', side: 'south', x: 8, z: 19, y: -5 },
-];
-
 /** The rooms whose way out is a door to dev_corridor. */
-export const CHAIN: readonly RoomId[] = DEV_ROOMS;
+export const CHAIN: readonly RoomId[] = DEV_ROOMS.filter(
+  (id) => id !== 'dev11',
+);
 
 /**
  * Every room with a URL of its own, in the order dev_corridor's doors
  * take them (the corridor and courtyard themselves are skipped).
  */
 export const ROOMS: readonly RoomId[] = [
-  'facility',
   ...DEV_ROOMS,
   // Reached through dev_corridor's courtyard doors, not by a portal.
   'dev_courtyard',
   // Reached through dev16, not from the corridor: its security office.
   'dev18',
-  // The pool rooms, a world of their own (`src/game/poolrooms-plan.ts`).
-  'poolrooms',
-  // The five styles of pool room, each opening into the next.
-  ...POOL_STYLE_ROOMS,
-  // The plant rooms behind them (`src/game/plant/warren-plan.ts`).
-  'plantrooms',
+  // The single playable pool room.
+  'PR_A',
+  'CR_A_UP',
+  'CR_A_ROUND',
+  // South of PR_A: an arched corridor, and the stepped room it opens into.
+  'CR_A_ARCH',
+  'CR_A_STEPS',
+  // North of PR_A's back hall: a red-tiled corridor, gently curving.
+  'red_bendy_1',
+  // North out of CR_A_ROUND: a short white corridor.
+  'white_corridor_1',
+  'green_room_1',
+  // The plant rooms' main corridor: the dev corridor again, taller, for
+  // the pipes and ducts overhead. Its doors open into nothing yet.
+  'plant_corridor',
+  'shared_plant_layout',
+  // The main plant room alone, at each size being compared.
+  ...PLANT_FIT_ROOMS,
 ];
 
 /** A room id from a URL, if it names one. */
@@ -169,14 +153,19 @@ export function resolveRoomId(id: string | null): RoomId | undefined {
 }
 
 export const DEV_ROOM_NAMES: Record<RoomId, string> = {
-  facility: 'LEISURE CENTRE',
-  poolrooms: 'THE POOL ROOMS',
-  plantrooms: 'THE PLANT ROOMS',
-  pool_municipal: 'THE MUNICIPAL INFINITE',
-  pool_tunnel: 'THE PORTHOLE TUNNEL',
-  pool_reservoir: 'THE RESERVOIR',
-  pool_white: 'THE WHITE ROOM',
-  pool_atrium: 'THE SLIDE ATRIUM',
+  PR_A: 'PR_A · POOLROOMS',
+  CR_A_UP: 'CR_A_UP · DRY STAIR PASSAGE',
+  CR_A_ROUND: 'CR_A_ROUND · PINK CIRCULAR ROOM',
+  CR_A_ARCH: 'CR_A_ARCH · ARCHED CORRIDOR',
+  CR_A_STEPS: 'CR_A_STEPS · STEPPED ROOM',
+  red_bendy_1: 'RED_BENDY_1 · RED CORRIDOR',
+  white_corridor_1: 'WHITE_CORRIDOR_1 · WHITE CORRIDOR',
+  green_room_1: 'GREEN_ROOM_1 · GREEN SKYLIGHT ROOM',
+  plant_corridor: 'PLANT CORRIDOR',
+  shared_plant_layout: 'SHARED PLANT LAYOUT',
+  plant_fit_47: 'MAIN PLANT ROOM · 47 M',
+  plant_fit_42: 'MAIN PLANT ROOM · 42 M',
+  plant_fit_37: 'MAIN PLANT ROOM · 37 M',
   dev0: 'DEV0 · CONTROLS AND DISPLAYS',
   dev1: 'DEV1 · RACKS',
   dev2: 'DEV2 · FIRE SAFETY',
@@ -210,14 +199,19 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
 };
 /** Each room's portal colour, so a portal says where it goes. */
 export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
-  facility: '#3aa7c9',
-  poolrooms: '#2f9fc4',
-  plantrooms: '#8a8f93',
-  pool_municipal: '#2f6b5a',
-  pool_tunnel: '#c9c19a',
-  pool_reservoir: '#1d2a30',
-  pool_white: '#e8eeec',
-  pool_atrium: '#d2453a',
+  PR_A: '#2f9fc4',
+  CR_A_UP: '#dfe7e5',
+  CR_A_ROUND: '#eab2bd',
+  CR_A_ARCH: '#dfe7e5',
+  CR_A_STEPS: '#dfe7e5',
+  red_bendy_1: '#b8322a',
+  white_corridor_1: '#f3f5f1',
+  green_room_1: '#174e42',
+  plant_corridor: '#8a8f93',
+  shared_plant_layout: '#8a8f93',
+  plant_fit_47: '#8a8f93',
+  plant_fit_42: '#8a8f93',
+  plant_fit_37: '#8a8f93',
   dev0: '#2fb3a5',
   dev1: '#3f7fe0',
   dev2: '#b8433a',
@@ -266,47 +260,12 @@ export function devPortals(
   bounds: Footprint,
   metre: number,
 ): Portal[] {
+  if (id === 'PR_A') return [];
   // The security office opens off dev16, whose camera it watches: its one
   // door is back into dev16, where dev16's is to the corridor.
-  // The pool rooms in their five styles, in a loop: each has a door back
-  // to the one before on its west wall and on to the next on its east.
-  const style = POOL_STYLE_ROOMS.indexOf(id as PoolStyleRoomId);
-  if (style >= 0) {
-    const n = POOL_STYLE_ROOMS.length;
-    const z = bounds.maxZ - 1.1 * metre;
-    return [
-      {
-        to: POOL_STYLE_ROOMS[(style + n - 1) % n],
-        side: 'west',
-        x: bounds.minX,
-        z,
-      },
-      {
-        to: POOL_STYLE_ROOMS[(style + 1) % n],
-        side: 'east',
-        x: bounds.maxX,
-        z,
-      },
-      // Its Authorised Personnel Only door, in its south wall, to its plant room.
-      {
-        to: 'plantrooms',
-        side: 'south',
-        x: STAFF_DOOR_AT[id as PoolStyleRoomId] * metre,
-        z: bounds.maxZ,
-        label: 'AUTHORISED PERSONNEL ONLY',
-      },
-    ];
-  }
-  // The plant rooms: a door from each attraction's plant room, through to
-  // its pool room's Authorised Personnel Only door.
-  if (id === 'plantrooms')
-    return PLANT_ROOM_DOORS.map((d) => ({
-      to: d.to,
-      side: d.side,
-      x: d.x * metre,
-      z: d.z * metre,
-      y: d.y * metre,
-    }));
+  // The plant corridor's doors open into nothing yet.
+  if (id === 'plant_corridor' || PLANT_FIT_ROOMS.includes(id as PlantFitRoomId))
+    return [];
   if (id === 'dev18')
     return [
       {

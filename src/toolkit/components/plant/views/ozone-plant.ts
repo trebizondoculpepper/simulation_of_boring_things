@@ -421,7 +421,9 @@ export function createAirDryer(kit: PanelKit): OzoneMachineView {
   const face = new Group();
   face.position.set(0, 1.05, 0.12);
   group.add(face);
-  t.box(face, t.paint('#c7cbc5', 0.5), 0.22, 0.42, 0.01, 0, 0, 0.005);
+  // Recess the face plate behind the readout and its legend to avoid
+  // coplanar fragments around the dark display window.
+  t.box(face, t.paint('#c7cbc5', 0.5), 0.22, 0.42, 0.01, 0, 0, -0.01);
   const dew = readout(kit, face, 'DEW POINT  °C', 0, 0.12, 3);
   const a = lamp(kit, parts, face, 'green', 'A DRYING', -0.05, 0.01);
   const b = lamp(kit, parts, face, 'green', 'B DRYING', 0.05, 0.01);

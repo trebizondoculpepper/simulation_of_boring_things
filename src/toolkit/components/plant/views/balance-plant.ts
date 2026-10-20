@@ -367,7 +367,9 @@ export function createBreakTank(kit: PanelKit) {
     }),
   );
   kit.materials.push(glass.material);
-  glass.position.set(-0.2, 0.95, front + 0.004);
+  // Keep the glazing clear of the water face: their previous coplanar
+  // surfaces fought for depth and made a checkerboard in the plant room.
+  glass.position.set(-0.2, 0.95, front + 0.012);
   group.add(glass);
   const overflow = 1.35;
   t.box(

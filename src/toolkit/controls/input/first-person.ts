@@ -625,6 +625,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
   const eyeY = () => currentFloorY + EYE_HEIGHT_METRES * metre;
   const controller = {
     walker,
+    metre,
     get floorY() {
       return currentFloorY;
     },
@@ -639,6 +640,14 @@ export function createFirstPerson(options: FirstPersonOptions) {
         pitch: walker.pitch,
         fov: camera.fov,
       };
+    },
+    /** Optical zoom relative to the room's normal field of view. */
+    get zoom() {
+      return walker.zoom;
+    },
+    set zoom(value: number) {
+      if (Number.isFinite(value))
+        walker.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
     },
     /**
      * Have another room drive this one's camera (`pose`, read each frame;

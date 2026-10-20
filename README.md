@@ -20,6 +20,10 @@ npm ci
 npm run dev   # http://127.0.0.1:5175/
 ```
 
+Use `?room=PR_A&x=2.5&z=7.75&yaw=0` to launch at a specific position and heading. Coordinates are metres; `y` sets camera height, while `yaw` and `pitch` are degrees. The Copy location button in each room copies the current coordinates and a shareable URL.
+
+When adding connected rooms, follow the [open-threshold rendering guide](doc/design/room-transition-rendering.md) so shared geometry keeps the same appearance as the player crosses between room IDs.
+
 The default reception view faces into the building. `?at=<room id>` starts in a given room (for example `?at=boiler`). In the browser console, `facility.goTo('pumps')` jumps to a room and `facility.rooms()` lists the ids.
 
 Walk with WASD, run with Shift, click to capture the mouse and look, Esc to free the cursor. Doors open as you approach and close after you leave. Touch and gamepad also work.

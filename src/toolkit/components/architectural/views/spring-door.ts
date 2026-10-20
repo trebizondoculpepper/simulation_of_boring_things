@@ -6,7 +6,8 @@ import { tools } from '../../core/views/fitting-tools';
 
 /** The leaf's width and height, and the frame's opening, metres. */
 export const SPRING_LEAF = { width: 0.926, height: 2.04, thickness: 0.044 };
-export const SPRING_OPENING = { width: 1.0, height: 2.1 };
+// A narrow rebate around the 926 × 2040 mm leaf, including its 10 mm floor gap.
+export const SPRING_OPENING = { width: 0.94, height: 2.06 };
 
 /**
  * A spring door, a placeholder after a common UK corridor door: a

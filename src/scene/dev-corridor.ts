@@ -1,17 +1,15 @@
+import { createBreezeBlockTextures } from './breeze-block-texture';
 import {
   BackSide,
   BoxGeometry,
-  CanvasTexture,
   DoubleSide,
   Group,
   Mesh,
   MeshBasicMaterial,
   NoBlending,
   PlaneGeometry,
-  RepeatWrapping,
   Shape,
   ShapeGeometry,
-  SRGBColorSpace,
 } from 'three';
 import type { Material, Object3D } from 'three';
 import {
@@ -50,6 +48,7 @@ import { mergeStatic } from '../toolkit/components/core/views/merge-static';
 import { architecturalPart } from '../toolkit/components/architectural/parts/architectural-parts';
 import { springDoor } from '../toolkit/components/architectural/parts/building-parts';
 import { SPRING_OPENING } from '../toolkit/components/architectural/views/spring-door';
+import { addWallBatten, createWallBattenMaterials } from './wall-batten';
 import {
   createBinTrolley,
   createCleaningShelves,
@@ -78,13 +77,22 @@ const WALL = 0.18;
  * end, clockwise: the training room, the dev rooms, the Rhombus, the Hall
  * and the levels; the doors left over are stores.
  */
+const LOOPED: readonly (RoomId | null)[] = [
+  // The leisure centre's door, before it was taken down: a store now, so
+  // that every other door still opens into the room it always did.
+  null,
+  ...ROOMS.filter(
+    (id) =>
+      id !== 'dev_corridor' &&
+      id !== 'dev_courtyard' &&
+      id !== 'plant_corridor' &&
+      id !== 'dev11' &&
+      !id.startsWith('plant_fit_'),
+  ),
+];
 export const LOOP_ROOMS: readonly (RoomId | null)[] = LOOP_DOORS.filter(
   (d) => d.wall === 'outer',
-).map(
-  (_, i) =>
-    ROOMS.filter((id) => id !== 'dev_corridor' && id !== 'dev_courtyard')[i] ??
-    null,
-);
+).map((_, i) => LOOPED[i] ?? null);
 
 /**
  * dev_corridor: the corridor that loops round a 50 m square
@@ -101,11 +109,41 @@ export const LOOP_ROOMS: readonly (RoomId | null)[] = LOOP_DOORS.filter(
  * Built in zones (`LOOP_ZONES`), each merged on its own, so that a zone
  * that cannot be seen is hidden whole. In metres; the room scales it.
  */
+export interface CorridorOpening {
+  side: LoopSide;
+  t: number;
+  width: number;
+  height: number;
+}
+
+export interface CorridorOptions {
+  /** Its height to the ceiling, metres. */
+  ceiling?: number;
+  /** The rooms its outer doors open into, in order (null for a store). */
+  rooms?: readonly (RoomId | null)[];
+  /** What a door into no room is labelled. */
+  spare?: string;
+  /**
+   * Wide openings in the outer wall, in place of the doors within them:
+   * centred `t` metres along `side`, `width` across, a lintel at `height`.
+   */
+  openings?: readonly CorridorOpening[];
+  /** Label for each door on the central wall. */
+  innerName?: string;
+}
+
 export function createDevCorridor(
   kit: PanelKit,
   // Every door opens away from the corridor, into its room or the
   // courtyard (as a room door should, never into an escape route): pushed
   // from the corridor, pulled from the other side.
+  {
+    ceiling = LOOP_CEILING,
+    rooms = LOOP_ROOMS,
+    spare = 'STORE',
+    openings = [],
+    innerName = 'COURTYARD',
+  }: CorridorOptions = {},
 ) {
   const group = new Group();
   group.name = 'dev_corridor';
@@ -158,37 +196,16 @@ export function createDevCorridor(
   kit.materials.push(mat.lobby, mat.hole);
   for (const m of [mat.teal, mat.magenta, mat.purple, mat.blue])
     m.side = DoubleSide;
-  // Mortar joints painted on a small repeating canvas, not one mesh a block.
-  const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 64;
-  const c = canvas.getContext('2d')!;
-  c.fillStyle = '#d8d9d2';
-  c.fillRect(0, 0, 128, 64);
-  c.strokeStyle = '#b9bdb7';
-  c.lineWidth = 2;
-  for (const y of [0, 32, 63]) {
-    c.beginPath();
-    c.moveTo(0, y);
-    c.lineTo(128, y);
-    c.stroke();
-  }
-  for (const [x, y1, y2] of [
-    [0, 0, 32],
-    [64, 0, 32],
-    [32, 32, 64],
-    [96, 32, 64],
-  ]) {
-    c.beginPath();
-    c.moveTo(x, y1);
-    c.lineTo(x, y2);
-    c.stroke();
-  }
-  const blocks = new CanvasTexture(canvas);
-  blocks.colorSpace = SRGBColorSpace;
-  blocks.wrapS = blocks.wrapT = RepeatWrapping;
-  kit.textures.push(blocks);
-  const blockwork = createPs1Material({ map: blocks, roughness: 0.88 });
+  // Painted breeze block on a small repeating tile, not one mesh a block:
+  // matt faces, smoother mortar, the joints struck as a small dent.
+  const blocks = createBreezeBlockTextures();
+  kit.textures.push(blocks.map, blocks.normalMap, blocks.roughnessMap);
+  const blockwork = createPs1Material({
+    map: blocks.map,
+    normalMap: blocks.normalMap,
+    roughnessMap: blocks.roughnessMap,
+    roughness: 1,
+  });
   kit.materials.push(blockwork);
 
   const box = (
@@ -231,7 +248,7 @@ export function createDevCorridor(
     from: number,
     to: number,
     bottom = 0,
-    top = LOOP_CEILING,
+    top = ceiling,
   ) => {
     const length = to - from;
     if (length <= 0.001) return;
@@ -252,17 +269,30 @@ export function createDevCorridor(
       along === 'x' ? at : middle,
     );
     parent.add(mesh);
-    if (bottom === 0)
-      box(
+    if (bottom === 0) {
+      // Stop the skirting before a wide loading-bay jamb. A cap ending on
+      // the opening plane protrudes into the passage and can flicker.
+      const opening =
+        along === 'x' && Math.abs(at - LOOP_OUTER) < 0.01
+          ? openings.find((o) => o.side === 'south')
+          : undefined;
+      const leftEdge = opening ? opening.t - opening.width / 2 : NaN;
+      const rightEdge = opening ? opening.t + opening.width / 2 : NaN;
+      const trimLeft = Math.abs(from - rightEdge) < 0.01 ? 0.1 : 0;
+      const trimRight = Math.abs(to - leftEdge) < 0.01 ? 0.1 : 0;
+      const baseLength = length - trimLeft - trimRight;
+      const base = box(
         parent,
         mat.base,
-        along === 'x' ? length : WALL + 0.02,
+        along === 'x' ? baseLength : WALL + 0.02,
         0.16,
-        along === 'x' ? WALL + 0.02 : length,
-        mesh.position.x,
+        along === 'x' ? WALL + 0.02 : baseLength,
+        mesh.position.x + (trimLeft - trimRight) / 2,
         0.08,
         mesh.position.z,
       );
+      if (trimLeft || trimRight) base.name = 'loading bay skirting end';
+    }
   };
   /** A right-angled painted triangle on a wall, its foot on the skirting. */
   const triangle = (
@@ -292,12 +322,27 @@ export function createDevCorridor(
     middle: [-LOOP_INNER + LOOP_END, LOOP_INNER - LOOP_END],
     b: [LOOP_INNER - LOOP_END, LOOP_INNER],
   };
-  /** Where along each side's outer wall the doors open, as gaps. */
-  const doorGaps = (side: LoopSide, wallOf: LoopDoor['wall']) =>
-    LOOP_DOORS.filter((d) => d.side === side && d.wall === wallOf).map((d) => [
+  /** Whether a door stands where an opening has taken its place. */
+  const replaced = (door: LoopDoor) =>
+    door.wall === 'outer' &&
+    openings.some(
+      (o) => o.side === door.side && Math.abs(door.t - o.t) < o.width / 2 + 0.6,
+    );
+  /** Where along each side's walls the doors and openings are, as gaps, each with its lintel's height. */
+  const doorGaps = (side: LoopSide, wallOf: LoopDoor['wall']) => [
+    ...LOOP_DOORS.filter(
+      (d) => d.side === side && d.wall === wallOf && !replaced(d),
+    ).map((d) => [
       d.t - SPRING_OPENING.width / 2 - 0.06,
       d.t + SPRING_OPENING.width / 2 + 0.06,
-    ]);
+      SPRING_OPENING.height + 0.06,
+    ]),
+    ...(wallOf === 'outer'
+      ? openings
+          .filter((o) => o.side === side)
+          .map((o) => [o.t - o.width / 2, o.t + o.width / 2, o.height])
+      : []),
+  ];
   /** A wall from `from` to `to`, leaving gaps for doors, lintels over them. */
   const wallWithGaps = (
     parent: Object3D,
@@ -308,12 +353,15 @@ export function createDevCorridor(
     gaps: number[][],
   ) => {
     let start = from;
-    for (const [g0, g1] of gaps
+    for (const [g0, g1, lintel] of gaps
       .filter(([g0, g1]) => g1 > from && g0 < to)
       .sort((p, q) => p[0] - q[0])) {
-      wall(parent, along, at, start, Math.max(start, g0));
-      wall(parent, along, at, g0, g1, SPRING_OPENING.height + 0.06);
-      start = g1;
+      // Clipped to this run: an opening may span two zones.
+      const a = Math.max(start, g0),
+        b = Math.min(to, g1);
+      wall(parent, along, at, start, a);
+      if (lintel < ceiling) wall(parent, along, at, a, b, lintel);
+      start = b;
     }
     wall(parent, along, at, start, to);
   };
@@ -330,7 +378,7 @@ export function createDevCorridor(
       const w = s.along === 'x' ? length : LOOP_OUTER - LOOP_INNER;
       const d = s.along === 'x' ? LOOP_OUTER - LOOP_INNER : length;
       box(still, mat.concrete, w, 0.12, d, cx, -0.06, cz);
-      box(still, mat.ceiling, w, 0.12, d, cx, LOOP_CEILING + 0.06, cz);
+      box(still, mat.ceiling, w, 0.12, d, cx, ceiling + 0.06, cz);
       const outerAt = s.at + outward * (LOOP_OUTER - LOOP_HALF);
       const innerAt = s.at - outward * (LOOP_HALF - LOOP_INNER);
       wallWithGaps(still, s.along, outerAt, t0, t1, doorGaps(side, 'outer'));
@@ -344,7 +392,7 @@ export function createDevCorridor(
         0.06,
         s.along === 'x' ? 0.3 : length,
         s.along === 'x' ? mid : trayAt,
-        LOOP_CEILING - 0.35,
+        ceiling - 0.35,
         s.along === 'x' ? trayAt : mid,
       );
     }
@@ -355,7 +403,7 @@ export function createDevCorridor(
     const sx = Math.sign(x);
     const sz = Math.sign(z);
     box(still, mat.concrete, width, 0.12, width, x, -0.06, z);
-    box(still, mat.ceiling, width, 0.12, width, x, LOOP_CEILING + 0.06, z);
+    box(still, mat.ceiling, width, 0.12, width, x, ceiling + 0.06, z);
     // The corner's two outer walls; its inner side is open to both sides.
     const [x0, x1] =
       sx < 0 ? [-LOOP_OUTER, -LOOP_INNER] : [LOOP_INNER, LOOP_OUTER];
@@ -457,22 +505,46 @@ export function createDevCorridor(
     }
   }
 
-  // ---- Fluorescent battens down the middle ------------------------------
+  // ---- Enclosed battens mounted above head height on both walls --------
+  const battenMaterials = createWallBattenMaterials();
+  kit.materials.push(...Object.values(battenMaterials));
+  const fittings: {
+    x: number;
+    z: number;
+    y: number;
+    side: LoopSide;
+    t: number;
+  }[] = [];
   for (const f of LOOP_FITTINGS) {
-    const zone = zoneOf(f.x, f.z).still;
     const s = LOOP_SIDES[f.side];
-    const [w, d] = s.along === 'x' ? [1.5, 0.12] : [0.12, 1.5];
-    box(zone, mat.housing, w, 0.07, d, f.x, LOOP_CEILING - 0.04, f.z);
-    box(
-      zone,
-      mat.tube,
-      w * 0.96 || 0.1,
-      0.012,
-      d * 0.96 || 0.1,
-      f.x,
-      LOOP_CEILING - 0.08,
-      f.z,
-    );
+    for (const wall of ['outer', 'inner'] as const) {
+      // Keep the whole luminaire on masonry beside a wide service opening.
+      const length = 1.35;
+      let station = f.t;
+      if (wall === 'outer') {
+        for (const opening of openings.filter((o) => o.side === f.side)) {
+          const edge = opening.width / 2;
+          if (Math.abs(station - opening.t) < edge + length / 2 + 0.15)
+            station =
+              opening.t +
+              Math.sign(station - opening.t || 1) * (edge + length / 2 + 0.2);
+        }
+      }
+      const face = (Math.sign(s.at) * (wall === 'outer' ? -1 : 1)) as -1 | 1;
+      const at =
+        s.at +
+        Math.sign(s.at) *
+          (wall === 'outer'
+            ? LOOP_OUTER - LOOP_HALF
+            : -(LOOP_HALF - LOOP_INNER));
+      const near = at + face * 0.12;
+      const x = s.along === 'x' ? station : near;
+      const z = s.along === 'x' ? near : station;
+      const y = Math.min(ceiling - 0.65, 2.7);
+      const zone = zoneOf(x, z).still;
+      addWallBatten(zone, battenMaterials, x, y, z, s.along, face);
+      fittings.push({ x, y, z, side: f.side, t: station });
+    }
   }
 
   // ---- Doors -------------------------------------------------------------
@@ -491,6 +563,11 @@ export function createDevCorridor(
   }[] = [];
   let outerIndex = 0;
   for (const door of LOOP_DOORS) {
+    if (replaced(door)) {
+      // Its room, if it had one, is skipped: the rest keep theirs.
+      outerIndex++;
+      continue;
+    }
     const s = LOOP_SIDES[door.side];
     const outward = Math.sign(s.at) * (door.wall === 'outer' ? 1 : -1);
     const faceAt =
@@ -503,13 +580,9 @@ export function createDevCorridor(
       s.along === 'x' ? door.t : s.at,
       s.along === 'x' ? s.at : door.t,
     );
-    const room = door.wall === 'outer' ? LOOP_ROOMS[outerIndex++] : null;
+    const room = door.wall === 'outer' ? (rooms[outerIndex++] ?? null) : null;
     const name =
-      door.wall === 'inner'
-        ? 'COURTYARD'
-        : room
-          ? DEV_ROOM_NAMES[room]
-          : 'STORE';
+      door.wall === 'inner' ? innerName : room ? DEV_ROOM_NAMES[room] : spare;
     const part = parts.add(
       springDoor(kit, {
         name: `${name} door`,
@@ -656,15 +729,21 @@ export function createDevCorridor(
   // ---- Merging: each zone's still things, on their own -------------------
   const batches: Mesh[] = [];
   for (const { still } of zones.values())
-    batches.push(...mergeStatic(still, Infinity, new Set(), { share: true }));
+    batches.push(
+      ...mergeStatic(still, Infinity, new Set(), {
+        share: true,
+        keepIf: (object) => object.name === 'loading bay skirting end',
+      }),
+    );
 
   return {
     group,
+    blockwork,
     parts,
     zones,
     doors,
     batches,
     /** The battens, for the room to put its few real lights by. */
-    fittings: LOOP_FITTINGS,
+    fittings,
   };
 }

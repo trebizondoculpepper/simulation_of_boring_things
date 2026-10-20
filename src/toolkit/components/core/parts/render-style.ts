@@ -54,13 +54,14 @@ export function rendererOn(canvas: HTMLCanvasElement) {
 }
 
 /** A WebGL renderer for a room (the Hall has its own, hall-pipeline.ts). */
-export function createRenderer(canvas: HTMLCanvasElement) {
+export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
   // A stencil buffer, for doorways that look into a space the room does
   // not build (a door's lobby, drawn only where the doorway is seen).
   const renderer = new WebGLRenderer({
     canvas,
     antialias: true,
     stencil: true,
+    alpha,
   });
   renderer.setPixelRatio(
     Math.min(globalThis.devicePixelRatio ?? 1, MAX_PIXEL_RATIO),

@@ -228,6 +228,9 @@ function spigot(
  * and extract fans. Three access panels are off to show the inside.
  * Ours is Mistral's.
  */
+/** How far the unit's end frames stand proud of its casing, metres: clear of the faces that end there. */
+const PROUD = 0.003;
+
 export function createPoolHallAhu(kit: PanelKit) {
   const t = plantTools(kit);
   const group = new Group();
@@ -274,11 +277,33 @@ export function createPoolHallAhu(kit: PanelKit) {
           D / 2 + 0.01,
         );
       }
-    // The section's frame profiles.
-    t.box(group, frame, 0.04, H, D + 0.01, x + 0.02, mid, 0);
+    // The section's frame profiles; the unit's end one stands proud
+    // (`PROUD`), so that the panels, decks and rails ending in its plane
+    // do not show through it.
+    if (x === -W / 2)
+      t.box(
+        group,
+        frame,
+        0.04 + PROUD,
+        H,
+        D + 0.01,
+        x + 0.02 - PROUD / 2,
+        mid,
+        0,
+      );
+    else t.box(group, frame, 0.04, H, D + 0.01, x + 0.02, mid, 0);
     x += w;
   }
-  t.box(group, frame, 0.04, H, D + 0.01, W / 2 - 0.02, mid, 0);
+  t.box(
+    group,
+    frame,
+    0.04 + PROUD,
+    H,
+    D + 0.01,
+    W / 2 - 0.02 + PROUD / 2,
+    mid,
+    0,
+  );
   for (const y of [base + 0.02, base + H - 0.02])
     t.box(group, frame, W, 0.04, D + 0.01, 0, y, 0);
   // Inside the open sections.

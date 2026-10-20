@@ -1,0 +1,13 @@
+# Shared plant layout study
+
+Created a separate, non-wired open-plane demo at `?room=shared_plant_layout` to test the footprint of central machinery without altering the existing plant room. It draws 34 shared items in nine outlined groups: utilities, boilers, electrical, chemicals, balance tanks, make-up water, backwash, air handling and controls. The model uses the existing plant exhibits where available and amber-labelled dimensional placeholders for missing intake, panel, UPS and BMS models. Attraction-specific circulation, filtration, UV, ozone, dosing and flume machinery are excluded.
+
+The layout uses one metre of nominal service clearance around each item and two metres between groups. Its current bounding rectangle is 44 × 52 m (2,288 m²); zone outlines sum to 1,518 m² and the machinery's own footprints to about 117 m². These figures measure this deliberately loose planar trial, not a final room requirement or engineered clearance schedule. The plane extends far beyond the study so its edge is not visible when walking.
+
+Initial browser preview showed enormous dark panels because sprite labels were scaled both locally and with the world. Corrected label scaling, limited the visibility of item labels by distance, and visually checked the revised scene in Chrome. Typecheck, build and targeted layout tests pass.
+
+Revised the study after walkthrough feedback. The electrical switch room is now beside the utilities intake, the engineer's office sits in the middle, and a chemical loading bay with separate acid and hypochlorite fill points abuts the store. Make-up water and backwash share one outlined service area. Six separate balance tanks remain, one per independent hydraulic circuit; each now uses a proportioned sectional model instead of an unevenly stretched main-pool model. The expanded study measures 52 × 53 m (2,756 m²), with 1,699 m² inside group outlines and about 121 m² of direct equipment footprint.
+
+Added a six-metre perimeter observation gantry and a 30-tread south-west stair. The walking floor rises along the stairs; overhead and stair-foot buttons give direct starting positions. Guardrail collision is applied only at upper walking height so the ground route beneath the gantry stays open. Distant detailed machines now swap to plain silhouettes, item labels appear only nearby, and light fog softens the horizon; this avoids flickering fine louvers without the cost of a full-screen blur pass.
+
+An eight-angle sprite impostor trial proved visually poor from the gantry and was reverted. A separate agent is developing a pre-rendered-side treatment for box-like machines; that pattern should replace the current plain distant silhouettes once available.

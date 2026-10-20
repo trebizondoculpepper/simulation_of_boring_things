@@ -113,7 +113,6 @@ describe('dev_corridor', () => {
     const corridor = createDevCorridor(createPanelKit());
     expect(corridor.doors).toHaveLength(LOOP_DOORS.length);
     const rooms = LOOP_ROOMS.filter(Boolean);
-    expect(rooms).toContain('facility');
     expect(rooms).toContain('dev0');
     expect(rooms).toContain('dev_pumps');
     expect(rooms).not.toContain('dev_corridor');

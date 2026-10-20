@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   inFront,
   jointOf,
+  nearestJoint,
   openJoint,
   registerJoint,
   throughDoor,
@@ -58,5 +59,27 @@ describe('a doorway between two rooms drawn apart', () => {
     expect(openJoint('dev1')).toBe('dev_corridor');
     withdraw();
     expect(jointOf('dev1', 'dev_corridor')).toBeNull();
+  });
+
+  it('knows which of a room’s doors is nearest the walker', () => {
+    const at = (frame: { x: number; z: number; yaw: number }): Joint => ({
+      frame,
+      open: () => false,
+      angle: () => 0,
+      swingTo() {},
+      opening: () => ({ minX: 0, maxX: 0, minZ: 0, maxZ: 0 }),
+      see() {},
+      peek() {},
+    });
+    const withdraw = [
+      registerJoint('dev_corridor', 'dev1', at({ x: 0, z: 0, yaw: 0 })),
+      registerJoint('dev_corridor', 'dev2', at({ x: 7, z: 0, yaw: 0 })),
+      // Another room's door, nearer still, is not this room's.
+      registerJoint('dev3', 'dev_corridor', at({ x: 5, z: 0, yaw: 0 })),
+    ];
+    expect(nearestJoint('dev_corridor', 1, 1)).toBe('dev1');
+    expect(nearestJoint('dev_corridor', 5, 0)).toBe('dev2');
+    expect(nearestJoint('dev4', 5, 0)).toBeNull();
+    for (const w of withdraw) w();
   });
 });

@@ -54,15 +54,24 @@ describe("dev_corridor's plan", () => {
   it('never shows the side opposite, and shows two sides from a corner', () => {
     for (const t of [-20, 0, 20]) {
       const seen = visibleZones(onSide('north', t).x, onSide('north', t).z);
-      expect([...seen].some((z) => z.startsWith('south'))).toBe(false);
-      expect(seen.has('se')).toBe(false);
-      expect(seen.has('sw')).toBe(false);
+      // Never the middle of the side opposite.
+      expect(seen.has('south.middle')).toBe(false);
       expect(seen.has('north.middle')).toBe(true);
-      // A stub of each side round the corners.
-      expect(seen.has('west.a')).toBe(true);
-      expect(seen.has('east.a')).toBe(true);
-      expect(seen.has('west.middle')).toBe(false);
     }
+    // From the middle of a side, nothing of the side opposite or its corners.
+    const mid = visibleZones(onSide('north', 0).x, onSide('north', 0).z);
+    expect([...mid].some((z) => z.startsWith('south'))).toBe(false);
+    expect(mid.has('se')).toBe(false);
+    expect(mid.has('sw')).toBe(false);
+    // From the middle of a side, a stub of each side round the corners.
+    const middle = visibleZones(onSide('north', 0).x, onSide('north', 0).z);
+    expect(middle.has('west.a')).toBe(true);
+    expect(middle.has('east.a')).toBe(true);
+    expect(middle.has('west.middle')).toBe(false);
+    // From a side's end, far along the side round the corner, as from it.
+    const end = visibleZones(onSide('north', -20).x, onSide('north', -20).z);
+    expect(end.has('west.middle')).toBe(true);
+    expect(end.has('east.middle')).toBe(false);
     const corner = visibleZones(-LOOP_HALF, -LOOP_HALF);
     expect(corner.has('north.middle')).toBe(true);
     expect(corner.has('west.middle')).toBe(true);
@@ -70,12 +79,12 @@ describe("dev_corridor's plan", () => {
     expect(corner.has('east.middle')).toBe(false);
   });
 
-  it('draws under half the corridor from a side, under three quarters from a corner', () => {
+  it('draws under half the corridor from a side’s middle, under three quarters near a corner', () => {
     for (let x = -26; x <= 26; x += 1)
       for (const z of [-25, 25]) {
         const zone = zoneAt(x, z);
         if (!zone) continue;
-        const limit = zone.includes('.') ? 0.5 : 0.75;
+        const limit = zone.endsWith('.middle') ? 0.5 : 0.75;
         expect(visibleZones(x, z).size).toBeLessThan(LOOP_ZONES.length * limit);
       }
   });

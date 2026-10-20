@@ -51,12 +51,6 @@ export const POOL_RECTS: readonly Footprint[] = [
   { minX: -4, maxX: 4, minZ: -8.4, maxZ: -4.4 },
 ];
 
-/** The steps into the main pool at its west end: x from, x to, tread level. */
-export const STEPS: readonly (readonly [number, number, number])[] = [
-  [-9, -8.5, -0.3],
-  [-8.5, -8, -0.6],
-];
-
 /** The arcade between the hall and the back hall. */
 export const ARCADE = {
   z: -4,
@@ -94,10 +88,9 @@ export function inPool(x: number, z: number) {
   );
 }
 
-/** The floor's level at (x, z): the deck, a step, or the pool's floor. */
+/** The floor's level at (x, z): the deck or the pool's floor. */
 export function poolFloorAt(x: number, z: number) {
   if (!inPool(x, z)) return 0;
-  for (const [from, to, level] of STEPS) if (x >= from && x < to) return level;
   return basinFloorAt(x, z);
 }
 
