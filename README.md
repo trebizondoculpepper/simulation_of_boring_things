@@ -31,3 +31,7 @@ Walk with WASD, run with Shift, click to capture the mouse and look, Esc to free
 ## Reused from the Encabulator
 
 The build tooling (Vite+, TypeScript 7, Oxlint, Oxfmt) and the first-person control scheme come from the neighbouring `encabulator` project; see `doc/reuse-inventory.md`.
+
+## Licence
+
+Pool Plant is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. It is distributed in the hope that it will be useful, but without any warranty; see `LICENSE` for the full terms. The recordings and textures it uses keep their own licences, listed in `CREDITS.md`.

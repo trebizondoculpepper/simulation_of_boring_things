@@ -68,6 +68,7 @@ export function createDoors() {
     parent.add(mesh);
   }
   for (const portal of PORTALS) {
+    if (portal.kind === 'open') continue;
     const doorway = new Group();
     doorway.name = portal.id;
     doorway.position.set(portal.x, portal.floorY, portal.z);

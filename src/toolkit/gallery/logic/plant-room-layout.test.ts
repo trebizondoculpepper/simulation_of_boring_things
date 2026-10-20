@@ -4,6 +4,7 @@ import {
   END_SPACE,
   HEADROOM,
   layoutPlantRoom,
+  WALL_FACE,
 } from './plant-room-layout';
 import type { ExhibitSize } from './plant-room-layout';
 
@@ -45,7 +46,10 @@ describe('a plant room layout', () => {
       floor(2, 1, 1),
       { w: 0.6, d: 0.3, h: 0.8, mount: 'wall', y: 1.6 },
     ]);
-    expect(layout.places[1]).toMatchObject({ z: layout.halfZ, y: 1.6 });
+    expect(layout.places[1]).toMatchObject({
+      z: layout.halfZ - WALL_FACE,
+      y: 1.6,
+    });
     expect(layout.places[1].yaw).toBeCloseTo(Math.PI);
     expect(layout.solids).toHaveLength(1);
   });

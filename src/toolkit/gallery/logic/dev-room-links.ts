@@ -22,6 +22,9 @@ export type GalleryRoomId =
   | 'dev7'
   | 'dev8'
   | 'dev9'
+  | 'dev10'
+  | 'dev11'
+  | 'dev12'
   | 'dev_corridor';
 /** One development room per pool plant room, each showing its equipment. */
 export type EquipmentRoomId =
@@ -67,6 +70,9 @@ export const DEV_ROOMS: readonly DevRoomId[] = [
   'dev7',
   'dev8',
   'dev9',
+  'dev10',
+  'dev11',
+  'dev12',
   'dev_corridor',
   ...EQUIPMENT_ROOMS,
 ];
@@ -102,6 +108,9 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev7: 'DEV7 · MACHINE TONES',
   dev8: 'DEV8 · BRANDS AND LOGOS',
   dev9: 'DEV9 · FIRES',
+  dev10: 'DEV10 · PIPEWORK, DUCTING AND RAILINGS',
+  dev11: 'DEV11 · POOLROOMS',
+  dev12: 'DEV12 · POOL FITTINGS',
   dev_corridor: 'DEV CORRIDOR',
   dev_courtyard: 'COURTYARD',
   dev_pumps: 'DEV · PUMPS AND FILTRATION',
@@ -126,6 +135,9 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev7: '#4f9bb3',
   dev8: '#c8a227',
   dev9: '#e0602a',
+  dev10: '#8a9a9e',
+  dev11: '#7fd3dc',
+  dev12: '#9fc6cc',
   dev_corridor: '#2d9ca0',
   dev_courtyard: '#7fa36a',
   dev_pumps: '#2f6fb0',

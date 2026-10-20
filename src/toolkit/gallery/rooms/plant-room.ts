@@ -37,8 +37,11 @@ import {
 import type { PlantExhibit } from './plant/exhibit';
 
 /** Each plant room's exhibits, loaded with the room. */
+/** The rooms laid out as exhibits: each equipment room, and dev10. */
+export type ExhibitRoomId = EquipmentRoomId | 'dev10' | 'dev12';
+
 const EXHIBITS: Record<
-  EquipmentRoomId,
+  ExhibitRoomId,
   () => Promise<{ EXHIBITS: readonly PlantExhibit[]; PURPOSE: string }>
 > = {
   dev_pumps: () => import('./plant/pumps'),
@@ -49,6 +52,8 @@ const EXHIBITS: Record<
   dev_air: () => import('./plant/air'),
   dev_electrical: () => import('./plant/electrical'),
   dev_control: () => import('./plant/control'),
+  dev10: () => import('./plant/services'),
+  dev12: () => import('./plant/pool-fittings'),
 };
 
 /**
@@ -61,7 +66,7 @@ const EXHIBITS: Record<
  */
 export function startEquipmentRoom(
   canvas: HTMLCanvasElement,
-  id: EquipmentRoomId,
+  id: ExhibitRoomId,
 ) {
   const m = METRE;
   const scene = new Scene();
@@ -232,6 +237,13 @@ export function startEquipmentRoom(
     aimed: () => Boolean(useAt(0, 0)),
   });
 
+  // A development handle for the console: stand anywhere, in metres.
+  (window as unknown as { exhibitRoom: unknown }).exhibitRoom = {
+    place(x: number, z: number, yaw = 0, pitch = 0) {
+      walk.place(x * m, z * m, yaw, pitch);
+    },
+  };
+
   void EXHIBITS[id]().then(({ EXHIBITS: exhibits, PURPOSE }) => {
     if (!disposed) build(exhibits, PURPOSE);
   });
@@ -272,6 +284,7 @@ export function startEquipmentRoom(
     disposeKit(kit, scene as unknown as Group);
     freeEnvironment();
     renderer.dispose();
+    delete (window as unknown as { exhibitRoom?: unknown }).exhibitRoom;
   };
   return Object.assign(dispose, {
     enter(previous: string | null) {

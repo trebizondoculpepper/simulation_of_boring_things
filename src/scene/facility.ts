@@ -13,6 +13,7 @@ import {
   DoubleSide,
   ExtrudeGeometry,
   Shape,
+  ShapeGeometry,
   PlaneGeometry,
   SpotLight,
   RepeatWrapping,
@@ -33,6 +34,14 @@ import {
 import type { RoomPlan, Side, Zone } from '../game/facility-plan';
 import { cardCentreY, cardHeight, cardWidth } from '../game/title-card';
 import { BASINS, cutBasins } from '../game/pool-layout';
+import {
+  LOWER_Y,
+  STAIRS,
+  STAIR_GOING,
+  STAIR_RISE,
+  STAIR_RISERS,
+} from '../game/facility-levels';
+import type { Stair } from '../game/facility-levels';
 import { ROOFLIGHTS, WINDOWS, cutWindows } from '../game/daylight-plan';
 import {
   BENCHES,
@@ -857,7 +866,7 @@ function addRoomLighting(model: Group, room: RoomPlan, cx: number, cz: number) {
 
 function serviceAccent(room: RoomPlan): keyof Finishes['accents'] {
   if (
-    ['pumps', 'balance-tank', 'lower-landing', 'upper-plant'].includes(room.id)
+    ['pumps', 'balance-tank', 'lower-corridor', 'upper-plant'].includes(room.id)
   )
     return 'water';
   if (['boiler', 'chemicals'].includes(room.id)) return 'heat';
@@ -897,21 +906,17 @@ function createRoomModel(
         box(0.42, 0.3, 50, x, room.height - 0.08, 25),
       );
   } else if (room.id === 'corridor') {
-    // The north side of this stretch is an open stairwell.
-    for (const [from, to, z0, z1] of [
-      [room.minX, 32, room.minZ, room.maxZ],
-      [32, 44, -2.45, room.maxZ],
-      [44, room.maxX, room.minZ, room.maxZ],
-    ])
+    // The floor is open above the stair's whole flight.
+    for (const piece of cutBasins(room, STAIR_OPENINGS))
       batches.add(
         finishes.floor.service,
         box(
-          to - from,
+          piece.maxX - piece.minX,
           SLAB,
-          z1 - z0,
-          (from + to) / 2,
+          piece.maxZ - piece.minZ,
+          (piece.minX + piece.maxX) / 2,
           -SLAB / 2,
-          (z0 + z1) / 2,
+          (piece.minZ + piece.maxZ) / 2,
         ),
       );
   } else {
@@ -934,6 +939,20 @@ function createRoomModel(
         ),
       );
     addRooflights(model, room, finishes);
+  } else if (room.id === 'lower-corridor') {
+    // Its ceiling is open where the stair goes up through the floor above.
+    for (const piece of cutBasins(room, STAIR_OPENINGS))
+      batches.add(
+        finishes.ceiling.service,
+        box(
+          piece.maxX - piece.minX,
+          SLAB,
+          piece.maxZ - piece.minZ,
+          (piece.minX + piece.maxX) / 2,
+          room.height + SLAB / 2,
+          (piece.minZ + piece.maxZ) / 2,
+        ),
+      );
   } else {
     batches.add(
       finishes.ceiling[room.zone],
@@ -1060,14 +1079,26 @@ function createRoomModel(
   }
   if (room.zone === 'service' && sx > 2) {
     // A high cable tray, as in Encabulator's underground service corridor.
-    batches.add(
-      finishes.cableTray,
-      box(sx - 0.6, 0.06, 0.28, cx, room.height - 0.35, room.minZ + 0.42),
-    );
-    batches.add(
-      finishes.cableTray,
-      box(sx - 0.6, 0.12, 0.025, cx, room.height - 0.27, room.minZ + 0.28),
-    );
+    // Downstairs it stops either side of the stair, clear of its headroom.
+    const runs: { from: number; to: number }[] = [];
+    let from = room.minX + 0.3;
+    if (room.id === 'lower-corridor')
+      for (const stair of STAIRS) {
+        runs.push({ from, to: stair.minX - 0.3 });
+        from = stair.maxX + 0.3;
+      }
+    runs.push({ from, to: room.maxX - 0.3 });
+    for (const { from, to } of runs) {
+      const mid = (from + to) / 2;
+      batches.add(
+        finishes.cableTray,
+        box(to - from, 0.06, 0.28, mid, room.height - 0.35, room.minZ + 0.42),
+      );
+      batches.add(
+        finishes.cableTray,
+        box(to - from, 0.12, 0.025, mid, room.height - 0.27, room.minZ + 0.28),
+      );
+    }
   }
   const card = createTitleCard(room, textures);
   card.position.x -= cx;
@@ -1163,69 +1194,184 @@ export function createFacility(rooms: readonly RoomPlan[] = ROOMS) {
   };
 }
 
-/** The stair is a separate architectural component between the two floors. */
-export function createServiceStair() {
+/** The openings in the ground floor over the stairs, plan metres. */
+const STAIR_OPENINGS = STAIRS.map((stair) => ({
+  minX: stair.minX,
+  maxX: stair.maxX,
+  minZ: -4,
+  maxZ: stair.maxZ,
+}));
+
+/**
+ * The stair between the service corridor and the lower corridor, a
+ * separate architectural component: a prefabricated galvanised steel
+ * straight flight (one of `STAIRS` in `facility-levels.ts`) on two channel
+ * stringers, with open grating treads and yellow nosings, a handrail each
+ * side, a guard rail round the opening upstairs, and mesh infill closing
+ * off the low space under its upper half downstairs. World metres.
+ */
+export function createServiceStair(stair: Stair) {
   const group = new Group();
-  group.name = 'service-stair';
-  const concrete = new MeshStandardMaterial({
-    color: '#a6a69d',
-    roughness: 0.85,
+  group.name = `service-stair:${stair.id}`;
+  const galvanised = new MeshStandardMaterial({
+    color: '#a9afae',
+    metalness: 0.6,
+    roughness: 0.42,
+  });
+  const grating = new MeshStandardMaterial({
+    color: '#7f8584',
+    metalness: 0.55,
+    roughness: 0.5,
+  });
+  const nosing = new MeshStandardMaterial({ color: '#e7c22c', roughness: 0.6 });
+  const mesh = new MeshStandardMaterial({
+    color: '#9aa09f',
+    metalness: 0.5,
+    roughness: 0.5,
+    transparent: true,
+    opacity: 0.55,
     side: DoubleSide,
   });
-  const stripe = new MeshStandardMaterial({ color: '#e4ce73', roughness: 0.7 });
-  const rail = new MeshStandardMaterial({
-    color: '#62777c',
-    metalness: 0.55,
-    roughness: 0.35,
-  });
-  // From the corridor at x=44 to the lower landing at x=32.
-  const ramp = new Mesh(new BoxGeometry(12, 0.12, 1.5), concrete);
-  ramp.rotation.z = Math.atan2(3, 12);
-  ramp.position.set(38, -1.5, -3.2);
-  group.add(ramp);
-  for (let i = 0; i <= 16; i++) {
-    const x = 44 - i * 0.75;
-    const y = (-i * 3) / 16 + 0.025;
-    const tread = new Mesh(new BoxGeometry(0.06, 0.025, 1.4), stripe);
-    tread.position.set(x, y, -3.2);
-    group.add(tread);
-  }
-  const wallFinish = new MeshStandardMaterial({
-    color: '#d2d1c9',
-    roughness: 0.9,
-  });
-  const profile = new Shape();
-  profile.moveTo(-6, -3);
-  profile.lineTo(6, 0);
-  profile.lineTo(6, 2.8);
-  profile.lineTo(-6, -0.2);
-  profile.closePath();
-  for (const z of [-4.05, -2.52]) {
-    const wall = new Mesh(
-      new ExtrudeGeometry(profile, { depth: 0.12, bevelEnabled: false }),
-      wallFinish,
+  const run = stair.maxX - stair.minX;
+  const pitch = Math.atan2(-LOWER_Y, run);
+  /** Height of the pitch line (the nosings) at x. */
+  const pitchY = (x: number) => LOWER_Y * ((stair.maxX - x) / run);
+  const slope = (
+    material: MeshStandardMaterial,
+    h: number,
+    d: number,
+    rise: number,
+    z: number,
+    from = stair.minX,
+    to = stair.maxX,
+  ) => {
+    const length = (to - from) / Math.cos(pitch);
+    const bar = new Mesh(new BoxGeometry(length, h, d), material);
+    bar.rotation.z = pitch;
+    const x = (from + to) / 2;
+    bar.position.set(x, pitchY(x) + rise, z);
+    group.add(bar);
+    return bar;
+  };
+  const block = (
+    material: MeshStandardMaterial,
+    w: number,
+    h: number,
+    d: number,
+    x: number,
+    y: number,
+    z: number,
+  ) => {
+    const piece = new Mesh(new BoxGeometry(w, h, d), material);
+    piece.position.set(x, y, z);
+    group.add(piece);
+    return piece;
+  };
+  const width = stair.maxZ - stair.minZ;
+  const midZ = (stair.minZ + stair.maxZ) / 2;
+  // Two 180 × 75 mm channel stringers, their tops just over the nosings.
+  for (const z of [stair.minZ + 0.0375, stair.maxZ - 0.0375])
+    slope(galvanised, 0.18, 0.075, 0.02, z);
+  // Fifteen grating treads, each with its yellow nosing at its front edge.
+  for (let k = 1; k < STAIR_RISERS; k++) {
+    const front = stair.minX + (k - 1) * STAIR_GOING;
+    const top = LOWER_Y + k * STAIR_RISE;
+    block(
+      grating,
+      STAIR_GOING + 0.02,
+      0.03,
+      width - 0.15,
+      front + STAIR_GOING / 2 - 0.01,
+      top - 0.015,
+      midZ,
     );
-    wall.position.set(38, 0, z);
-    group.add(wall);
-    const handrail = new Mesh(new BoxGeometry(12.36, 0.07, 0.07), rail);
-    handrail.rotation.z = Math.atan2(3, 12);
-    handrail.position.set(38, -0.6, z < -3 ? -3.88 : -2.54);
-    group.add(handrail);
+    block(nosing, 0.05, 0.032, width - 0.15, front + 0.015, top - 0.014, midZ);
   }
-  const stairCeiling = new Mesh(new BoxGeometry(12.36, 0.1, 1.65), wallFinish);
-  stairCeiling.rotation.z = Math.atan2(3, 12);
-  stairCeiling.position.set(38, 1.3, -3.2);
-  group.add(stairCeiling);
+  // Handrails 0.9 m over the pitch line: a post-and-rail balustrade on the
+  // open side, a wall rail on brackets on the other.
+  const tube = (
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    z: number,
+    r = 0.021,
+  ) => {
+    const dx = x1 - x0,
+      dy = y1 - y0;
+    const bar = new Mesh(
+      new CylinderGeometry(r, r, Math.hypot(dx, dy), 12),
+      galvanised,
+    );
+    bar.position.set((x0 + x1) / 2, (y0 + y1) / 2, z);
+    bar.rotation.z = Math.atan2(dy, dx) - Math.PI / 2;
+    group.add(bar);
+  };
+  const side = stair.maxZ - 0.0375;
+  tube(stair.minX, pitchY(stair.minX) + 0.9, stair.maxX, 0.9, side);
+  tube(stair.minX, pitchY(stair.minX) + 0.45, stair.maxX, 0.45, side, 0.0135);
+  for (let x = stair.minX + 0.1; x <= stair.maxX; x += run / 3)
+    tube(x, pitchY(x) + 0.08, x, pitchY(x) + 0.9, side);
+  const wallRail = stair.minZ + 0.07;
+  tube(stair.minX, pitchY(stair.minX) + 0.9, stair.maxX, 0.9, wallRail);
+  // Each handrail runs on level for 300 mm past the top and the foot.
+  const foot = pitchY(stair.minX) + 0.9;
+  for (const z of [side, wallRail]) {
+    tube(stair.maxX, 0.9, stair.maxX + 0.3, 0.9, z);
+    tube(stair.minX - 0.3, foot, stair.minX, foot, z);
+  }
+  // Upstairs, a 1.1 m guard rail with knee rail and kick plate round the
+  // opening's long side and its far end.
+  const guardZ = stair.maxZ + 0.04;
+  const endX = stair.minX - 0.04;
+  for (const y of [1.1, 0.55]) {
+    tube(endX, y, stair.maxX, y, guardZ);
+    const across = new Mesh(
+      new CylinderGeometry(0.021, 0.021, guardZ - stair.minZ, 12),
+      galvanised,
+    );
+    across.rotation.x = Math.PI / 2;
+    across.position.set(endX, y, (guardZ + stair.minZ) / 2);
+    group.add(across);
+  }
+  for (let x = endX; x <= stair.maxX + 0.01; x += run / 3)
+    tube(x, 0, x, 1.1, guardZ);
+  block(
+    galvanised,
+    run + 0.08,
+    0.1,
+    0.006,
+    (endX + stair.maxX) / 2,
+    0.05,
+    guardZ,
+  );
+  block(
+    galvanised,
+    0.006,
+    0.1,
+    guardZ - stair.minZ,
+    endX,
+    0.05,
+    (guardZ + stair.minZ) / 2,
+  );
+  // Downstairs, mesh infill closing off the space under the upper half.
+  const half = (stair.minX + stair.maxX) / 2;
+  const infill = new Shape();
+  infill.moveTo(half, LOWER_Y);
+  infill.lineTo(stair.maxX, LOWER_Y);
+  infill.lineTo(stair.maxX, -0.2);
+  infill.lineTo(half, pitchY(half) - 0.2);
+  infill.closePath();
+  const panel = new Mesh(new ShapeGeometry(infill), mesh);
+  panel.position.z = stair.maxZ;
+  group.add(panel);
   return {
     group,
     dispose() {
       group.traverse((o) => {
         if (o instanceof Mesh) o.geometry.dispose();
       });
-      concrete.dispose();
-      stripe.dispose();
-      rail.dispose();
-      wallFinish.dispose();
+      for (const m of [galvanised, grating, nosing, mesh]) m.dispose();
     },
   };
 }

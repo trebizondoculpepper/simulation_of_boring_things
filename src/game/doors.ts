@@ -11,24 +11,27 @@ export interface Portal {
   axis: 'x' | 'z';
   floorY: number;
   public: boolean;
-  kind: 'swing' | 'frosted-slide';
+  /** `open`: a stair or other way through with no door at all. */
+  kind: 'swing' | 'frosted-slide' | 'open';
 }
 
 export const PORTALS: readonly Portal[] = [
   ...DOORS.map((door, index): Portal => {
     const a = roomById(door.rooms[0]);
     const b = roomById(door.rooms[1]);
+    // The stair between the corridors: always open, so each corridor
+    // sees the other down or up the flight.
     if (door.stair)
       return {
         id: `door:${index}`,
         rooms: door.rooms,
-        x: 32,
-        z: door.at,
+        x: door.at,
+        z: -3.35,
         width: door.width,
-        axis: 'z' as const,
+        axis: 'x' as const,
         floorY: -3,
         public: false,
-        kind: 'swing',
+        kind: 'open',
       };
     const wall = sharedWall(a, b);
     if (!wall) throw new Error(`No wall for ${door.rooms.join(' / ')}`);
@@ -126,8 +129,7 @@ export function visibleRooms(
   for (const portal of PORTALS) {
     if (
       !portal.rooms.includes(current) ||
-      ((states.get(portal.id)?.open ?? 0) < 0.08 &&
-        portal.kind !== 'frosted-slide')
+      ((states.get(portal.id)?.open ?? 0) < 0.08 && portal.kind === 'swing')
     )
       continue;
     const other =

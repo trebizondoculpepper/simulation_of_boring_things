@@ -14,11 +14,17 @@ import {
 } from '../game/facility-plan';
 import type { Side } from '../game/facility-plan';
 import { createFacility, createServiceStair } from '../scene/facility';
+import { createFireSafety } from '../scene/fire-safety';
 import { createExterior } from '../scene/exterior';
 import { createDoors } from '../scene/doors';
 import { createSkyDome } from '../scene/sky-dome';
 import { SKIES } from '../game/skies';
-import { floorAt, STAIR } from '../game/facility-levels';
+import {
+  LOWER_STAIR_GUARDS,
+  STAIRS,
+  UPPER_STAIR_GUARDS,
+  floorAt,
+} from '../game/facility-levels';
 import {
   PORTALS,
   advanceDoor,
@@ -74,20 +80,21 @@ export function startFacilityWorld(
   const doorStates = new Map<string, DoorState>(
     PORTALS.map((portal) => [portal.id, { open: 0, hold: 0 }]),
   );
-  const stair = createServiceStair();
-  scene.add(stair.group);
-  const stairGuards = [
-    { minX: STAIR.minX, maxX: STAIR.maxX, minZ: -2.47, maxZ: -2.39 },
-    { minX: STAIR.minX, maxX: STAIR.maxX, minZ: -4.04, maxZ: -3.96 },
-  ];
+  const fireSafety = createFireSafety();
+  scene.add(fireSafety.group);
+  const stairs = STAIRS.map((s) => createServiceStair(s));
+  for (const stair of stairs) scene.add(stair.group);
   const upperWalls = [
     ...wallFootprints(ROOMS, DOORS, 0),
     ...BASINS,
     ...CHANGING_SOLIDS,
     ...RECEPTION_SOLIDS,
-    ...stairGuards,
+    ...UPPER_STAIR_GUARDS,
   ];
-  const lowerWalls = [...wallFootprints(ROOMS, DOORS, -3), ...stairGuards];
+  const lowerWalls = [
+    ...wallFootprints(ROOMS, DOORS, -3),
+    ...LOWER_STAIR_GUARDS,
+  ];
 
   const at = new URLSearchParams(location.search).get('at');
   const startRoom = at && ROOMS.some((r) => r.id === at) ? roomById(at) : null;
@@ -115,6 +122,7 @@ export function startFacilityWorld(
       ...(walk.floorY < -1.5 ? lowerWalls : upperWalls),
       ...PORTALS.filter(
         (portal) =>
+          portal.kind !== 'open' &&
           Math.abs(portal.floorY - walk.floorY) < 1.1 &&
           (doorStates.get(portal.id)?.open ?? 0) < 0.72,
       ).map(doorFootprint),
@@ -138,11 +146,14 @@ export function startFacilityWorld(
   let shown = '';
   const showRoom = () => {
     const room = roomAt(walk.walker.x, walk.walker.z, ROOMS, walk.floorY);
-    facility.show(visibleRooms(room?.id ?? 'outside', doorStates));
+    const visible = visibleRooms(room?.id ?? 'outside', doorStates);
+    facility.show(visible);
+    fireSafety.show(visible);
     exterior.shell.visible = !room;
-    stair.group.visible = Boolean(
-      room && (room.id === 'corridor' || room.id === 'lower-landing'),
-    );
+    for (const stair of stairs)
+      stair.group.visible = Boolean(
+        room && (room.id === 'corridor' || room.id === 'lower-corridor'),
+      );
     const title = room?.title ?? 'Outside';
     if (title !== shown) {
       shown = title;
@@ -168,6 +179,14 @@ export function startFacilityWorld(
         undefined,
         r.floorY ?? 0,
       );
+    },
+    /** Stand at a plan point, on the given floor, looking by yaw and pitch. */
+    place(x: number, z: number, yaw = 0, pitch = 0, floor = 0) {
+      walk.place(x, z, yaw, pitch, undefined, floor);
+    },
+    /** Show or hide the fire safety fittings, to measure what they cost. */
+    fireSafety(on: boolean) {
+      fireSafety.group.visible = on;
     },
     stats: () => ({ ...renderer.info.render }),
     loaded: () => facility.loaded(),
@@ -202,7 +221,8 @@ export function startFacilityWorld(
     walk.dispose();
     facility.dispose();
     doors.dispose();
-    stair.dispose();
+    for (const stair of stairs) stair.dispose();
+    fireSafety.dispose();
     exterior.dispose();
     sky.dispose();
     freeEnvironment();

@@ -34,6 +34,9 @@ export const END_SPACE = 3;
 export const HEADROOM = 1.5;
 export const MIN_HEIGHT = 4;
 
+/** How far the walls' inner faces stand in from the room's half depth, metres (half the wall thickness). */
+export const WALL_FACE = 0.15;
+
 export interface ExhibitPlace {
   /** The middle of its footprint on the floor (floor) or its back (wall). */
   x: number;
@@ -103,7 +106,12 @@ export function layoutPlantRoom(
     });
     return { x, z, y: 0, yaw: 0 };
   });
-  lay(wall, (s, x) => ({ x, z: halfZ, y: s.y ?? 1.5, yaw: Math.PI }));
+  lay(wall, (s, x) => ({
+    x,
+    z: halfZ - WALL_FACE,
+    y: s.y ?? 1.5,
+    yaw: Math.PI,
+  }));
   return {
     halfX,
     halfZ,

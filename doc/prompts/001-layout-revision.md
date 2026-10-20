@@ -2,6 +2,8 @@
 
 ## Briefing
 
+> **Superseded in part, 2026-10-20.** The owner chose a different stair: a lower service corridor beneath the upper one, joined by one prefabricated galvanised steel straight flight (`STAIR` in `src/game/facility-levels.ts`, `createServiceStair` in `src/scene/facility.ts`). Do not build the stair core described below. The other layout suggestions still stand.
+
 The owner has walked the current layout (`src/game/facility-plan.ts`, `src/game/facility-levels.ts`, `src/scene/facility.ts`) and finds the stairs the weakest part. The lower level is reached by a single straight flight laid along the north edge of the service corridor (`STAIR` in `facility-levels.ts`, x 32–44, descending 3 m westward). It reads as a ramp in a corridor, not as a building's stair.
 
 The owner wants instead **a vertical void filled with a metal staircase**: a stair core, a tall shaft running from the lowest plant level to the highest, with a steel stair climbing round its walls in flights and landings, so that from any landing you can look up and down through the open well past the other flights. It should feel like the plant stair of a real leisure centre: utilitarian, galvanised, a little echoing.

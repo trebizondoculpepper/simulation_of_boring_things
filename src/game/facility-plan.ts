@@ -109,7 +109,7 @@ export const ROOMS: readonly RoomPlan[] = [
     minZ: -4,
     maxZ: 0,
     height: 3,
-    card: 'west',
+    card: 'south',
   },
   {
     id: 'janitorial',
@@ -174,17 +174,17 @@ export const ROOMS: readonly RoomPlan[] = [
     card: 'north',
   },
   {
-    id: 'lower-landing',
-    title: 'Lower Plant Landing',
-    purpose: 'Access to the lower water treatment rooms',
+    id: 'lower-corridor',
+    title: 'Lower Service Corridor',
+    purpose: 'Plant access beneath the service corridor, by the stair',
     zone: 'service',
-    minX: 20,
-    maxX: 32,
+    minX: 0,
+    maxX: 96,
     minZ: -4,
     maxZ: 0,
     height: 2.7,
     floorY: -3,
-    card: 'south',
+    card: 'west',
   },
   {
     id: 'chemicals',
@@ -308,7 +308,8 @@ export const DOORS: readonly DoorPlan[] = [
   { rooms: ['staff', 'corridor'], at: 93.5, width: 1 },
   // Plant rooms off the north side of the corridor; plant gets double doors.
   { rooms: ['upper-plant', 'corridor'], at: 10, width: 2.4 },
-  { rooms: ['balance-tank', 'lower-landing'], at: 26, width: 1.8 },
+  { rooms: ['pumps', 'lower-corridor'], at: 10, width: 2.4 },
+  { rooms: ['balance-tank', 'lower-corridor'], at: 26, width: 1.8 },
   { rooms: ['chemicals', 'boiler'], at: -12, width: 1.8 },
   { rooms: ['boiler', 'corridor'], at: 47, width: 2.4 },
   { rooms: ['air-handling', 'corridor'], at: 62, width: 2.4 },
@@ -319,7 +320,20 @@ export const DOORS: readonly DoorPlan[] = [
   { rooms: ['control-centre', 'workshop'], at: 92, width: 1.2 },
   // Internal plant connections.
   { rooms: ['pumps', 'balance-tank'], at: -12, width: 1.8 },
-  { rooms: ['lower-landing', 'corridor'], at: -3.2, width: 1.4, stair: true },
+  // The stairs between the two corridors: open flights, no doors
+  // (`STAIRS` in facility-levels.ts; `at` is each flight's middle).
+  {
+    rooms: ['lower-corridor', 'corridor'],
+    at: 15.875,
+    width: 1.1,
+    stair: true,
+  },
+  {
+    rooms: ['lower-corridor', 'corridor'],
+    at: 88.475,
+    width: 1.1,
+    stair: true,
+  },
   { rooms: ['workshop', 'stores'], at: -16, width: 1.2 },
 ];
 
@@ -397,16 +411,8 @@ export function openingsOf(
     if (!door.rooms.includes(room.id)) continue;
     const otherId = door.rooms[0] === room.id ? door.rooms[1] : door.rooms[0];
     const other = roomById(otherId, rooms);
-    const wall = door.stair
-      ? room.id === 'lower-landing'
-        ? {
-            side: 'east' as Side,
-            line: room.maxX,
-            from: room.minZ,
-            to: room.maxZ,
-          }
-        : null
-      : sharedWall(room, other);
+    // A stair passes through the floor, not a wall.
+    const wall = door.stair ? null : sharedWall(room, other);
     if (!wall && door.stair) continue;
     if (!wall)
       throw new Error(`${door.rooms.join(' and ')} do not share a wall.`);

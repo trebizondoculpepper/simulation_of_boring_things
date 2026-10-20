@@ -56,19 +56,57 @@ export const FINISH = {
 } as const;
 
 /**
- * Pipe identification colours to BS 1710: a basic colour band, and for
- * some services a safety colour band between two basic ones.
+ * Pipe identification to BS 1710: a basic identification colour for the
+ * kind of fluid, painted in bands, and for some services a code
+ * indication, a band of another colour between two of the basic one.
+ * (Colours and codes as commonly published; to be checked against the
+ * standard before release.)
  */
-export const BS1710 = {
-  water: '#3e7d3c',
-  drinking: '#3a7ec2',
-  heating: '#c96b2a',
-  gas: '#e2b73b',
-  acid: '#8a5aa5',
-  air: '#7fb6d6',
-  drainage: '#1d1d1d',
-  fire: '#c4231c',
+export const BS1710_BASIC = {
+  water: '#3f7f3a',
+  steam: '#b6b9b7',
+  oils: '#6b4a2b',
+  gases: '#c99a2e',
+  acidsAlkalis: '#7b4f9d',
+  air: '#8fc3e3',
+  otherFluids: '#1c1c1c',
+  electrical: '#e07a1f',
+  fireFighting: '#c4231c',
 } as const;
+export const BS1710_CODE = {
+  blue: '#2b62ae',
+  white: '#f2f2ee',
+  crimson: '#9b1b30',
+  yellow: '#e5c43a',
+} as const;
+
+/** The services a pool plant carries, each as its basic colour and code band. */
+export const PIPE_SERVICES = [
+  { service: 'Pool water', basic: BS1710_BASIC.water, code: null },
+  {
+    service: 'Drinking water',
+    basic: BS1710_BASIC.water,
+    code: BS1710_CODE.blue,
+  },
+  {
+    service: 'Heating (LTHW)',
+    basic: BS1710_BASIC.water,
+    code: BS1710_CODE.crimson,
+  },
+  {
+    service: 'Hot water supply',
+    basic: BS1710_BASIC.water,
+    code: BS1710_CODE.white,
+  },
+  { service: 'Natural gas', basic: BS1710_BASIC.gases, code: null },
+  {
+    service: 'Sodium hypochlorite',
+    basic: BS1710_BASIC.acidsAlkalis,
+    code: null,
+  },
+  { service: 'Compressed air', basic: BS1710_BASIC.air, code: null },
+  { service: 'Drainage', basic: BS1710_BASIC.otherFluids, code: null },
+] as const;
 
 export function plantTools(kit: PanelKit) {
   const t = tools(kit);
