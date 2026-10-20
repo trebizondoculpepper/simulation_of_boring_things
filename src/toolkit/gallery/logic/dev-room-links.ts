@@ -44,7 +44,27 @@ export type EquipmentRoomId =
   | 'dev_control'
   | 'dev_ozone';
 export type DevRoomId = GalleryRoomId | EquipmentRoomId;
-export type RoomId = DevRoomId | 'facility' | 'dev_courtyard' | 'poolrooms';
+/** The five pool rooms, one in each style (`doc/design/pool-styles.md`), joined in a loop. */
+export type PoolStyleRoomId =
+  | 'pool_municipal'
+  | 'pool_tunnel'
+  | 'pool_reservoir'
+  | 'pool_white'
+  | 'pool_atrium';
+export const POOL_STYLE_ROOMS: readonly PoolStyleRoomId[] = [
+  'pool_municipal',
+  'pool_tunnel',
+  'pool_reservoir',
+  'pool_white',
+  'pool_atrium',
+];
+export type RoomId =
+  | DevRoomId
+  | 'facility'
+  | 'dev_courtyard'
+  | 'poolrooms'
+  | 'plantrooms'
+  | PoolStyleRoomId;
 export type PortalSide = 'north' | 'south' | 'east' | 'west';
 export interface Portal {
   to: RoomId;
@@ -52,6 +72,10 @@ export interface Portal {
   /** The middle of the patch, on the wall's centre line. */
   x: number;
   z: number;
+  /** Its floor, scene units, if not the room's (a plant room below ground). */
+  y?: number;
+  /** What its sign says, if not the name of the room it leads to. */
+  label?: string;
 }
 
 export const EQUIPMENT_ROOMS: readonly EquipmentRoomId[] = [
@@ -90,6 +114,33 @@ export const DEV_ROOMS: readonly DevRoomId[] = [
   ...EQUIPMENT_ROOMS,
 ];
 
+/** Where along its south wall each pool room's Authorised Personnel Only door stands, metres. */
+export const STAFF_DOOR_AT: Record<PoolStyleRoomId, number> = {
+  pool_municipal: 0,
+  pool_tunnel: -1,
+  pool_reservoir: -14,
+  pool_white: 6,
+  pool_atrium: 0,
+};
+
+/**
+ * The plant rooms' doors to the pool rooms: each in its attraction's
+ * plant room's outer wall (`warren-plan.ts`), at its floor, metres.
+ */
+export const PLANT_ROOM_DOORS: readonly {
+  to: PoolStyleRoomId;
+  side: PortalSide;
+  x: number;
+  z: number;
+  y: number;
+}[] = [
+  { to: 'pool_municipal', side: 'west', x: -35, z: 0, y: -5 },
+  { to: 'pool_reservoir', side: 'east', x: 12, z: -20, y: -6.5 },
+  { to: 'pool_atrium', side: 'east', x: 29, z: 0, y: -5 },
+  { to: 'pool_white', side: 'south', x: -9, z: 21, y: -5 },
+  { to: 'pool_tunnel', side: 'south', x: 8, z: 19, y: -5 },
+];
+
 /** The rooms whose way out is a door to dev_corridor. */
 export const CHAIN: readonly RoomId[] = DEV_ROOMS;
 
@@ -106,6 +157,10 @@ export const ROOMS: readonly RoomId[] = [
   'dev18',
   // The pool rooms, a world of their own (`src/game/poolrooms-plan.ts`).
   'poolrooms',
+  // The five styles of pool room, each opening into the next.
+  ...POOL_STYLE_ROOMS,
+  // The plant rooms behind them (`src/game/plant/warren-plan.ts`).
+  'plantrooms',
 ];
 
 /** A room id from a URL, if it names one. */
@@ -116,6 +171,12 @@ export function resolveRoomId(id: string | null): RoomId | undefined {
 export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   facility: 'LEISURE CENTRE',
   poolrooms: 'THE POOL ROOMS',
+  plantrooms: 'THE PLANT ROOMS',
+  pool_municipal: 'THE MUNICIPAL INFINITE',
+  pool_tunnel: 'THE PORTHOLE TUNNEL',
+  pool_reservoir: 'THE RESERVOIR',
+  pool_white: 'THE WHITE ROOM',
+  pool_atrium: 'THE SLIDE ATRIUM',
   dev0: 'DEV0 · CONTROLS AND DISPLAYS',
   dev1: 'DEV1 · RACKS',
   dev2: 'DEV2 · FIRE SAFETY',
@@ -151,6 +212,12 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
 export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   facility: '#3aa7c9',
   poolrooms: '#2f9fc4',
+  plantrooms: '#8a8f93',
+  pool_municipal: '#2f6b5a',
+  pool_tunnel: '#c9c19a',
+  pool_reservoir: '#1d2a30',
+  pool_white: '#e8eeec',
+  pool_atrium: '#d2453a',
   dev0: '#2fb3a5',
   dev1: '#3f7fe0',
   dev2: '#b8433a',
@@ -201,6 +268,45 @@ export function devPortals(
 ): Portal[] {
   // The security office opens off dev16, whose camera it watches: its one
   // door is back into dev16, where dev16's is to the corridor.
+  // The pool rooms in their five styles, in a loop: each has a door back
+  // to the one before on its west wall and on to the next on its east.
+  const style = POOL_STYLE_ROOMS.indexOf(id as PoolStyleRoomId);
+  if (style >= 0) {
+    const n = POOL_STYLE_ROOMS.length;
+    const z = bounds.maxZ - 1.1 * metre;
+    return [
+      {
+        to: POOL_STYLE_ROOMS[(style + n - 1) % n],
+        side: 'west',
+        x: bounds.minX,
+        z,
+      },
+      {
+        to: POOL_STYLE_ROOMS[(style + 1) % n],
+        side: 'east',
+        x: bounds.maxX,
+        z,
+      },
+      // Its Authorised Personnel Only door, in its south wall, to its plant room.
+      {
+        to: 'plantrooms',
+        side: 'south',
+        x: STAFF_DOOR_AT[id as PoolStyleRoomId] * metre,
+        z: bounds.maxZ,
+        label: 'AUTHORISED PERSONNEL ONLY',
+      },
+    ];
+  }
+  // The plant rooms: a door from each attraction's plant room, through to
+  // its pool room's Authorised Personnel Only door.
+  if (id === 'plantrooms')
+    return PLANT_ROOM_DOORS.map((d) => ({
+      to: d.to,
+      side: d.side,
+      x: d.x * metre,
+      z: d.z * metre,
+      y: d.y * metre,
+    }));
   if (id === 'dev18')
     return [
       {

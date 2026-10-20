@@ -19,6 +19,8 @@ export interface DoorFrame {
   x: number;
   z: number;
   yaw: number;
+  /** Its floor, if not 0: the doors of a doorway may stand at different heights. */
+  y?: number;
 }
 
 /** One room's side of a doorway to another. */
@@ -71,13 +73,14 @@ const turn = (yaw: number, x: number, z: number) => {
  * A point and heading carried through a doorway, from the room whose door
  * stands at `from` to the room whose door stands at `to`: the two doors
  * face each other, so what is in front of one is behind the other. `yaw`
- * as the controls have it (forward is (sin yaw, −cos yaw)); height and
- * pitch are unchanged.
+ * as the controls have it (forward is (sin yaw, −cos yaw)); pitch is
+ * unchanged, and height (`y`, if given) rises or falls by the difference
+ * between the two doors' floors.
  */
 export function throughDoor(
   from: DoorFrame,
   to: DoorFrame,
-  pose: { x: number; z: number; yaw: number },
+  pose: { x: number; z: number; yaw: number; y?: number },
 ) {
   const local = turn(-from.yaw, pose.x - from.x, pose.z - from.z);
   const at = turn(to.yaw, -local.x, -local.z);
@@ -87,6 +90,9 @@ export function throughDoor(
     x: to.x + at.x,
     z: to.z + at.z,
     yaw: Math.atan2(way.x, -way.z),
+    ...(pose.y === undefined
+      ? {}
+      : { y: pose.y + (to.y ?? 0) - (from.y ?? 0) }),
   };
 }
 

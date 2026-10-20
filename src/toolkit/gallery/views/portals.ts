@@ -162,7 +162,7 @@ export function createPortals(
     const frame = new Group();
     frame.position.set(
       portal.x + inward.x * face,
-      floorY,
+      portal.y ?? floorY,
       portal.z + inward.z * face,
     );
     // Planes face +z; turn each to face into the room.
@@ -277,6 +277,7 @@ export function createPortals(
         x: frame.position.x,
         z: frame.position.z,
         yaw: frame.rotation.y,
+        y: frame.position.y,
       };
       withdraw.push(
         registerJoint(from, portal.to, {
@@ -315,12 +316,16 @@ export function createPortals(
       );
     }
     // The name of the room it leads to over it, on that room's colour.
-    const sign = createMicroLabel(kit, DEV_ROOM_NAMES[portal.to], {
-      height: 0.075,
-      ink: '#101214',
-      plate: DEV_ROOM_COLOURS[portal.to],
-      maxWidth: 1.6,
-    });
+    const sign = createMicroLabel(
+      kit,
+      portal.label ?? DEV_ROOM_NAMES[portal.to],
+      {
+        height: 0.075,
+        ink: '#101214',
+        plate: portal.label ? '#f2f2ee' : DEV_ROOM_COLOURS[portal.to],
+        maxWidth: 1.6,
+      },
+    );
     sign.position.set(0, h + 0.32, 0.1);
     door.add(sign);
   }

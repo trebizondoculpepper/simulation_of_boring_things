@@ -79,6 +79,21 @@ Each step the model is evaluated in a fixed order, so every block sees consisten
 
 The network is solved for its steady state each step; the plant's slower processes (temperatures, levels, clogging, chemistry) change step by step around it.
 
+## How the plant rooms are arranged
+
+The plant rooms are a dense, three-dimensional warren behind the pool rooms, and their arrangement follows two axes, set down as rules in `src/game/plant/placement.ts` and checked by its tests (the result is tabled in `plant-inventory.md`).
+
+**Across, from the middle to the edge, by what a room serves.** A room whose services reach every attraction (the boiler house, the electrical switch room, the chemical store, the balance-tank hall, the control room) is central, the core of the warren. A room that serves one attraction (each attraction's own plant room) is peripheral, out at the edge beside its pool room, so that its pipes are short. A room that must reach the outside world (the loading bay for deliveries, the gas and mains water coming in, the air plant drawing fresh air) stands on the outer edge whatever it serves.
+
+**Down, from the roof to the basement, by physics.**
+
+- **Roof:** the air handling plant, which takes fresh air in and lets stale air out.
+- **Surface:** the loading bay, where deliveries arrive by road; the chemical store beside it, never in a basement, because chlorine is heavier than air and would pool there; the electrical switch room, kept above the wet plant, out of the way of leaks and floods; the gas intake and the make-up water's break tank, where those supplies come in; the control room and the office, where the staff work.
+- **Treatment, just below the pools:** each attraction's plant room, and the balance-tank hall, because pools overflow into their balance tanks by gravity (every tank lower than the water it collects), and the circulation pumps draw from the tanks at their own level; the service corridor that joins them.
+- **Basement:** the boiler house, whose heat rises to everything it serves and whose flue climbs past everything to the roof; and the backwash holding and drainage, lowest of all, because everything drains to it.
+
+Stairs and ladders join every level (ladders down into tanks and pits); a hoist or goods lift from the loading bay reaches every room that takes deliveries, so a replacement pump or ozone generator can be brought to where it is needed.
+
 ## 3. Principles for placing machinery
 
 1. **Start from the process, not the room.** The schematic decides the layout; rooms realise it.

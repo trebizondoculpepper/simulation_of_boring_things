@@ -32,6 +32,14 @@ The two are different dimensions, not coplanar universes. A doorway from one to 
 
 The pool rooms are simpler than the plant rooms (the owner, 2026-10-20). They are the outputs of the plant's system: what the pool rooms have is the water's level, temperature, cleanliness and the like, and nothing of the machinery that makes them so. In the model, a pool is a block at the end of the plant's connections whose inputs are the circulation's returns and whose state is the few things a swimmer would notice; the pool rooms show that state (the water's height at its edges, its clarity and colour, steam over warm water, the air's feel) and are otherwise free to be as strange as they like. The plant rooms are where it is all made and kept right.
 
+### A third realm: the roadways
+
+Beyond the loading bay lies a third realm, the roadways (the owner, 2026-10-20): an open network of massively interconnected roads leading to who knows where, to what other kinds of places. The loading bay is the boundary zone between the plant rooms and the roadways, as the Authorised Personnel Only doors are between the plant rooms and the pool rooms. The roadways are a whole other adventure, and this game does not go into them: from the docks they are only the white beyond the shutters, and what comes in from them (the deliveries) simply arrives.
+
+### A fourth realm: the oil fields
+
+All the energy comes from another realm, the oil fields (the owner, 2026-10-20): a land of nothing but gas derricks and nodding donkeys, pumping without end. Even in the pool rooms utilities cost money: the gas and the electricity that come into the utilities intake are bought from the oil fields, metered, and paid for, so that running the plant (every boiler firing, every pump turning, every light lit) has a price, and running it badly costs more. The oil fields, like the roadways, are seen only from their boundary; the game does not go there.
+
 ## What it means for the existing design
 
 The current pool design follows a real-world design by human architects: the hall's high windows and barrel rooflights, and the district layout, are adapted from the Sport England reference drawings (see [daylight from architect plans](../research/daylight-from-architect-plans.md) and [the pool district layout](../planning/pool-district-layout.md)). That realism is what the owner now finds too plain for the pool rooms.

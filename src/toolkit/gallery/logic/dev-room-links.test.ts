@@ -3,6 +3,7 @@ import {
   CHAIN,
   DEV_ROOM_COLOURS,
   DEV_ROOM_NAMES,
+  POOL_STYLE_ROOMS,
   ROOMS,
   devPortals,
   devWalls,
@@ -22,6 +23,27 @@ describe('the rooms', () => {
             ? ['dev_corridor', 'dev18']
             : ['dev_corridor'],
       );
+    }
+  });
+
+  it('joins each pool room’s Authorised Personnel Only door to its plant room, and back', () => {
+    for (const id of POOL_STYLE_ROOMS) {
+      const staff = devPortals(id, bounds, 1).find(
+        (p) => p.to === 'plantrooms',
+      )!;
+      expect(staff.label).toBe('AUTHORISED PERSONNEL ONLY');
+      expect(
+        devPortals('plantrooms', bounds, 1).filter((p) => p.to === id),
+      ).toHaveLength(1);
+    }
+  });
+
+  it('joins the five pool rooms in a loop, each door back to the one it came from', () => {
+    for (const id of POOL_STYLE_ROOMS) {
+      const [back, on] = devPortals(id, bounds, 1);
+      expect(devPortals(back.to, bounds, 1)[1].to).toBe(id);
+      expect(devPortals(on.to, bounds, 1)[0].to).toBe(id);
+      expect(ROOMS).toContain(id);
     }
   });
 

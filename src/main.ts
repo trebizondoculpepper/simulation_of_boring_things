@@ -68,6 +68,20 @@ const starter = async (
       return startFacilityWorld(surface, hud);
     };
   }
+  if (room === 'pool_municipal')
+    return (await import('./rendering/pool-styles/municipal'))
+      .startMunicipalRoom;
+  if (room === 'pool_tunnel')
+    return (await import('./rendering/pool-styles/tunnel')).startTunnelRoom;
+  if (room === 'pool_reservoir')
+    return (await import('./rendering/pool-styles/reservoir'))
+      .startReservoirRoom;
+  if (room === 'pool_white')
+    return (await import('./rendering/pool-styles/white')).startWhiteRoom;
+  if (room === 'pool_atrium')
+    return (await import('./rendering/pool-styles/atrium')).startAtriumRoom;
+  if (room === 'plantrooms')
+    return (await import('./rendering/plant-warren')).startPlantWarren;
   if (room === 'poolrooms')
     return (await import('./rendering/poolrooms-world')).startPoolroomsWorld;
   if (room === 'dev_corridor' || room === 'dev_courtyard')
@@ -348,7 +362,7 @@ const handOver = (to: RoomId, from: RoomId) => {
   showOnTop(keyOf(to));
   entry.handle.enter?.(from, to);
   // Where the walker was, as the doorway carries it, the door with it.
-  toWalk.place(there.x, there.z, there.yaw, eye.pitch, eye.y);
+  toWalk.place(there.x, there.z, there.yaw, eye.pitch, there.y ?? eye.y);
   far.swingTo(-angle);
   entry.handle.resume?.();
   // The room left behind is drawn underneath from the next frame.

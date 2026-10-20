@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 1220" width="850" height="1220" font-family="Helvetica, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#fafaf8"/>
+<text x="12" y="24" font-size="18" font-weight="bold" fill="#1f2a33">The plant rooms: roof level (+8 m)</text>
+<rect x="290.0" y="380.0" width="240.0" height="160.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="260.0" y="350.0" width="300.0" height="30.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="260.0" y="540.0" width="300.0" height="30.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="260.0" y="380.0" width="30.0" height="160.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="530.0" y="380.0" width="30.0" height="160.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="390.0" y="320.0" width="40.0" height="30.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="290.0" y="210.0" width="240.0" height="110.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="60.0" y="390.0" width="200.0" height="140.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="40.0" y="530.0" width="90.0" height="80.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="560.0" y="390.0" width="140.0" height="140.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="260.0" y="570.0" width="120.0" height="100.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="440.0" y="570.0" width="100.0" height="80.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="390.0" y="570.0" width="40.0" height="120.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="240.0" y="210.0" width="40.0" height="140.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="240.0" y="40.0" width="50.0" height="170.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="290.0" y="110.0" width="60.0" height="40.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="350.0" y="40.0" width="240.0" height="170.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="110.0" y="40.0" width="130.0" height="120.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="140.0" y="160.0" width="30.0" height="640.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="170.0" y="540.0" width="90.0" height="30.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="140.0" y="540.0" width="30.0" height="260.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="370.0" y="690.0" width="80.0" height="60.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="170.0" y="750.0" width="530.0" height="30.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="450.0" y="650.0" width="120.0" height="100.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="570.0" y="670.0" width="80.0" height="80.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="170.0" y="690.0" width="100.0" height="60.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="270.0" y="690.0" width="100.0" height="60.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="170.0" y="780.0" width="240.0" height="140.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="410.0" y="780.0" width="120.0" height="100.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="530.0" y="780.0" width="120.0" height="100.0" fill="none" stroke="#d9d9d4" stroke-dasharray="4 4"/>
+<rect x="650.0" y="780.0" width="40.0" height="140.0" fill="#e3e3df" stroke="#555a5e" stroke-width="2"/>
+<line x1="650.0" x2="690.0" y1="791.7" y2="791.7" stroke="#b3b3ae"/>
+<line x1="650.0" x2="690.0" y1="803.3" y2="803.3" stroke="#b3b3ae"/>
+<line x1="650.0" x2="690.0" y1="815.0" y2="815.0" stroke="#b3b3ae"/>
+<line x1="650.0" x2="690.0" y1="826.7" y2="826.7" stroke="#b3b3ae"/>
+<line x1="650.0" x2="690.0" y1="838.3" y2="838.3" stroke="#b3b3ae"/>
+<line x1="650.0" x2="690.0" y1="850.0" y2="850.0" stroke="#b3b3ae"/>
+<line x1="650.0" x2="690.0" y1="861.7" y2="861.7" stroke="#b3b3ae"/>
+<line x1="650.0" x2="690.0" y1="873.3" y2="873.3" stroke="#b3b3ae"/>
+<line x1="650.0" x2="690.0" y1="885.0" y2="885.0" stroke="#b3b3ae"/>
+<line x1="650.0" x2="690.0" y1="896.7" y2="896.7" stroke="#b3b3ae"/>
+<line x1="650.0" x2="690.0" y1="908.3" y2="908.3" stroke="#b3b3ae"/>
+<rect x="510.0" y="920.0" width="300.0" height="200.0" fill="#efefe9" stroke="#555a5e" stroke-width="2"/>
+<rect x="513.0" y="922.0" width="100.0" height="26.0" fill="#8f9aa1" stroke="#3d4448" stroke-width="1"><title>Air handling unit: The Municipal Infinite</title></rect>
+<rect x="698.0" y="922.0" width="100.0" height="26.0" fill="#8f9aa1" stroke="#3d4448" stroke-width="1"><title>Air handling unit: The Porthole Tunnel</title></rect>
+<rect x="513.0" y="952.0" width="100.0" height="26.0" fill="#8f9aa1" stroke="#3d4448" stroke-width="1"><title>Air handling unit: The Reservoir</title></rect>
+<rect x="618.0" y="952.0" width="100.0" height="26.0" fill="#8f9aa1" stroke="#3d4448" stroke-width="1"><title>Air handling unit: The White Room</title></rect>
+<rect x="513.0" y="982.0" width="100.0" height="26.0" fill="#8f9aa1" stroke="#3d4448" stroke-width="1"><title>Air handling unit: The Slide Atrium</title></rect>
+<rect x="690.0" y="780.0" width="10.0" height="140.0" fill="#4b5054"/>
+<line x1="690.0" y1="780.0" x2="700.0" y2="920.0" stroke="#f2c230" stroke-width="2"/>
+<line x1="695.0" y1="850.0" x2="695.0" y2="920.0" stroke="#c0392b" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+<line x1="695.0" y1="920.0" x2="563.0" y2="920.0" stroke="#c0392b" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+<line x1="563.0" y1="920.0" x2="563.0" y2="935.0" stroke="#c0392b" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+<line x1="695.0" y1="850.0" x2="695.0" y2="920.0" stroke="#7d8a8f" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+<line x1="695.0" y1="920.0" x2="563.0" y2="920.0" stroke="#7d8a8f" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+<line x1="563.0" y1="920.0" x2="563.0" y2="935.0" stroke="#7d8a8f" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+<text x="660.0" y="936.0" font-size="13.0" text-anchor="middle" fill="#1f2a33" font-weight="bold">Air handling plant</text>
+<text x="660.0" y="936.0 " dy="16" font-size="9" text-anchor="middle" fill="#5a6166">30 × 20 m · open · floor +8 m</text>
+<line x1="12" x2="36" y1="1196" y2="1196" stroke="#c0392b" stroke-width="4"/>
+<text x="42" y="1200" font-size="12" fill="#1f2a33">Heating hot water</text>
+<line x1="181" x2="205" y1="1196" y2="1196" stroke="#7d8a8f" stroke-width="4"/>
+<text x="211" y="1200" font-size="12" fill="#1f2a33">Power</text>
+<rect x="266" y="1190" width="12" height="12" fill="#4b5054"/><text x="284" y="1200" font-size="12" fill="#1f2a33">Riser or freight lift</text>
+</svg>
