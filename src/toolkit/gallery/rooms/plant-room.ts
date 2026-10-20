@@ -50,7 +50,8 @@ export type ExhibitRoomId =
   | 'dev13'
   | 'dev14'
   | 'dev15'
-  | 'dev17';
+  | 'dev17'
+  | 'dev18';
 
 const EXHIBITS: Record<
   ExhibitRoomId,
@@ -64,12 +65,14 @@ const EXHIBITS: Record<
   dev_air: () => import('./plant/air'),
   dev_electrical: () => import('./plant/electrical'),
   dev_control: () => import('./plant/control'),
+  dev_ozone: () => import('./plant/ozone'),
   dev10: () => import('./plant/services'),
   dev12: () => import('./plant/pool-fittings'),
   dev13: () => import('./plant/signage'),
   dev14: () => import('./plant/remote-button'),
   dev15: () => import('./plant/remote-lamp'),
   dev17: () => import('./plant/pool-edges'),
+  dev18: () => import('./plant/security-office'),
 };
 
 /**

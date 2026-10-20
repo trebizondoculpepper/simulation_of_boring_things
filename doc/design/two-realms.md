@@ -18,6 +18,20 @@ For example, two adjacent doors in the plant rooms could open onto two completel
 
 A doorway between the realms looks completely mundane: an "Authorised Personnel Only" door, like any other service door in a leisure centre. Nothing about it announces that it crosses between realms (the owner, 2026-10-20).
 
+## The game's concept, in the owner's words (2026-10-20)
+
+The pool rooms are one dimension: idealised, liminal pools that explorers are made to traverse and whose weirdness they experience. They are ethereal, abstract and bizarre, and push against what is architecturally plausible to create an uncanny effect.
+
+The plant rooms are their counterpart dimension, and everything the pool rooms are not: profoundly practical, rooted in the real physics of water, electricity, exhaust gases and natural gas.
+
+The two depend on each other. The pool rooms could not exist without the plant rooms, and the plant rooms would serve no purpose without the pool rooms. We, the players, are denizens of both, and it is our responsibility to tend the plant rooms so that the pool rooms can exist.
+
+The two are different dimensions, not coplanar universes. A doorway from one to the other can be in an unexpected place, and neither has to follow the other's geometry. That frees both from the ordinary rules of space packing: a space can be bigger on the inside, like the TARDIS, so an apparently tiny closet in the pool rooms can open onto a huge plant facility. Within each realm, geometry stays consistent; only the crossings between them are free.
+
+### The pool rooms are the plant's outputs
+
+The pool rooms are simpler than the plant rooms (the owner, 2026-10-20). They are the outputs of the plant's system: what the pool rooms have is the water's level, temperature, cleanliness and the like, and nothing of the machinery that makes them so. In the model, a pool is a block at the end of the plant's connections whose inputs are the circulation's returns and whose state is the few things a swimmer would notice; the pool rooms show that state (the water's height at its edges, its clarity and colour, steam over warm water, the air's feel) and are otherwise free to be as strange as they like. The plant rooms are where it is all made and kept right.
+
 ## What it means for the existing design
 
 The current pool design follows a real-world design by human architects: the hall's high windows and barrel rooflights, and the district layout, are adapted from the Sport England reference drawings (see [daylight from architect plans](../research/daylight-from-architect-plans.md) and [the pool district layout](../planning/pool-district-layout.md)). That realism is what the owner now finds too plain for the pool rooms.

@@ -24,6 +24,14 @@ The model is made of blocks (`src/game/sim/blocks.ts`). A block is one thing in 
 
 Every block has an address: the names from the root down, joined by `/` (`boilerHouse/B-501/controller`), and a field of its state after a `:` (`circulation/P-101/motor:running`). Everything outside the model binds to addresses: the boiler panel's display reads `boilerHouse/B-501/controller:display`, its RESET key writes `boilerHouse/B-501/controller:reset`, a gas valve's handle drives `gasHouse/isolator-1:open`. The model never knows what is bound to it, and one block can be bound to a dev-room exhibit, a plant-room machine and a control-room mimic at once.
 
+### Three layers: rooms, machines, components
+
+The owner's reading of it (2026-10-20): the plant has three layers. A room is a component full of machines (panels, processing machines, pumps, furnaces); each machine is an assembly of smaller, atomic components (buttons, gauges, lamps, valves). The same three layers run through both the model and the views. In the model, the ozone room's plant is a composite (`OZONE_PLANT`), its machines are blocks within it (the generator, the dryer), and a machine may itself be a composite of smaller blocks. In the views, a room lays out its exhibits, each machine view (`createOzoneGenerator`) is built of parts (`pushButton`, `createDialGauge`, `pilotLight`), and the room's logic (`ozone-room.ts`) binds the parts to the machines' ports. Nesting is allowed to go deeper where it helps, but these three are the layers a player meets.
+
+### The pools: the plant's outputs
+
+The pools are the simplest blocks in the model and the reason for all the others: their inputs are what the plant delivers (water returned at a flow, a temperature and a chemistry), and their state is what the pool rooms show, few things and plain ones: the water's level, its temperature, its cleanliness (clarity, free and combined chlorine, pH). Bathers and the weather act on them as loads. Everything else in the model exists to keep those few values right (`doc/design/two-realms.md`).
+
 ### Ports: what the rest of the world sees
 
 A block shows the world only its ports, never its insides. Each port carries a kind of exchange: water (its flow, pressure and temperature), gas, electricity, heat, or a signal (a demand, a fault, a reading). The rest of the model cares only about what crosses a block's ports: the plant does not care which state the boiler's controller is in, only what comes out of its flow port (how much water, how hot), how much gas goes in, and what its fault signal says. What happens inside is the block's own business, decided by its state and its children.

@@ -66,7 +66,9 @@ export type BrandMark =
   /** Three pilot lamps in a row, one lit: a tri-state indicator. */
   | 'triad'
   /** A happy pig's face in a warm glow. */
-  | 'pig';
+  | 'pig'
+  /** An ozone molecule: three atoms bent at its angle, a spark between. */
+  | 'trioxygen';
 
 /** Every brand's id: a part names its maker by one of these. */
 export type BrandId =
@@ -95,7 +97,8 @@ export type BrandId =
   | 'hamwarmy'
   | 'mistral'
   | 'poolguard'
-  | 'penfold';
+  | 'penfold'
+  | 'trioxa';
 
 export interface Brand {
   id: BrandId;
@@ -430,7 +433,7 @@ export const BRANDS: readonly Brand[] = [
     tagline: 'Every swimmer home safe',
     founded: 1988,
     country: 'United Kingdom',
-    makes: 'Poolside alarms, emergency stops and rescue equipment',
+    makes: 'Poolside alarms, CCTV, emergency stops and rescue equipment',
     promise: 'Watching the water when every second counts',
     mark: 'lifebuoy',
     colours: ['#e2462f', '#f7f4ee', '#1e1e1e'],
@@ -447,6 +450,19 @@ export const BRANDS: readonly Brand[] = [
     promise: 'Panels that tell you the truth about your plant',
     mark: 'triad',
     colours: ['#3d4f63', '#d6d9d6', '#16191c'],
+    type: 'sans',
+  },
+  {
+    id: 'trioxa',
+    name: 'Trioxa Ozone Systems',
+    wordmark: 'TRIOXA',
+    tagline: 'Oxygen, three times over',
+    founded: 1987,
+    country: 'United Kingdom',
+    makes: 'Ozone generators, air dryers, deozonisers and ozone monitors',
+    promise: 'Water polished by lightning, and not a whiff left behind',
+    mark: 'trioxygen',
+    colours: ['#4b5fc1', '#bfe3f2', '#121a3a'],
     type: 'sans',
   },
 ];

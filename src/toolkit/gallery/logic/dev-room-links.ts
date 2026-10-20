@@ -30,6 +30,7 @@ export type GalleryRoomId =
   | 'dev15'
   | 'dev16'
   | 'dev17'
+  | 'dev18'
   | 'dev_corridor';
 /** One development room per pool plant room, each showing its equipment. */
 export type EquipmentRoomId =
@@ -40,7 +41,8 @@ export type EquipmentRoomId =
   | 'dev_boiler'
   | 'dev_air'
   | 'dev_electrical'
-  | 'dev_control';
+  | 'dev_control'
+  | 'dev_ozone';
 export type DevRoomId = GalleryRoomId | EquipmentRoomId;
 export type RoomId = DevRoomId | 'facility' | 'dev_courtyard';
 export type PortalSide = 'north' | 'south' | 'east' | 'west';
@@ -61,6 +63,7 @@ export const EQUIPMENT_ROOMS: readonly EquipmentRoomId[] = [
   'dev_air',
   'dev_electrical',
   'dev_control',
+  'dev_ozone',
 ];
 
 /** The development rooms, in order. */
@@ -99,6 +102,8 @@ export const ROOMS: readonly RoomId[] = [
   ...DEV_ROOMS,
   // Reached through dev_corridor's courtyard doors, not by a portal.
   'dev_courtyard',
+  // Reached through dev16, not from the corridor: its security office.
+  'dev18',
 ];
 
 /** A room id from a URL, if it names one. */
@@ -126,6 +131,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev15: 'DEV15 · REMOTE LAMP',
   dev16: 'DEV16 · WATER PROTOTYPE',
   dev17: 'DEV17 · POOL EDGES',
+  dev18: 'DEV18 · SECURITY OFFICE',
   dev_corridor: 'DEV CORRIDOR',
   dev_courtyard: 'COURTYARD',
   dev_pumps: 'DEV · PUMPS AND FILTRATION',
@@ -136,6 +142,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev_air: 'DEV · AIR HANDLING',
   dev_electrical: 'DEV · ELECTRICAL',
   dev_control: 'DEV · CONTROL CENTRE',
+  dev_ozone: 'DEV · OZONE',
 };
 /** Each room's portal colour, so a portal says where it goes. */
 export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
@@ -158,6 +165,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev15: '#c98a3a',
   dev16: '#3ab0c9',
   dev17: '#7fb2c4',
+  dev18: '#8f8a6a',
   dev_corridor: '#2d9ca0',
   dev_courtyard: '#7fa36a',
   dev_pumps: '#2f6fb0',
@@ -168,6 +176,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev_air: '#6e9f7a',
   dev_electrical: '#d47f1f',
   dev_control: '#5c6f86',
+  dev_ozone: '#4b5fc1',
 };
 /** How thick a room's walls are, metres. */
 export const WALL_THICKNESS = 0.3;
@@ -186,6 +195,32 @@ export function devPortals(
   bounds: Footprint,
   metre: number,
 ): Portal[] {
+  // The security office opens off dev16, whose camera it watches: its one
+  // door is back into dev16, where dev16's is to the corridor.
+  if (id === 'dev18')
+    return [
+      {
+        to: 'dev16',
+        side: 'west',
+        x: bounds.minX,
+        z: bounds.maxZ - 1.1 * metre,
+      },
+    ];
+  if (id === 'dev16')
+    return [
+      {
+        to: 'dev_corridor',
+        side: 'west',
+        x: bounds.minX,
+        z: bounds.maxZ - 1.1 * metre,
+      },
+      {
+        to: 'dev18',
+        side: 'east',
+        x: bounds.maxX,
+        z: bounds.maxZ - 1.1 * metre,
+      },
+    ];
   if (!CHAIN.includes(id) || id === 'dev_corridor') return [];
   const to: RoomId = 'dev_corridor';
   // In dev3, in the north wall's corner, clear of the doors shown there.

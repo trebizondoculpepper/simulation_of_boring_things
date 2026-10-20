@@ -15,8 +15,20 @@ describe('the rooms', () => {
   it('lead every room in the chain back to dev_corridor, its hub', () => {
     for (const id of CHAIN) {
       const to = devPortals(id, bounds, 1).map((p) => p.to);
-      expect(to).toEqual(id === 'dev_corridor' ? [] : ['dev_corridor']);
+      expect(to).toEqual(
+        id === 'dev_corridor'
+          ? []
+          : id === 'dev16'
+            ? ['dev_corridor', 'dev18']
+            : ['dev_corridor'],
+      );
     }
+  });
+
+  it('opens the security office off dev16, and nowhere else', () => {
+    expect(devPortals('dev18', bounds, 1).map((p) => p.to)).toEqual(['dev16']);
+    expect(CHAIN).not.toContain('dev18');
+    expect(ROOMS).toContain('dev18');
   });
 
   it('gives the leisure centre no portals: it is entered by its own doors', () => {

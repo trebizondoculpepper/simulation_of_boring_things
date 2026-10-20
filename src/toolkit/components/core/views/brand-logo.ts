@@ -680,6 +680,48 @@ export function drawBrandMark(
       }
       break;
     }
+    case 'trioxygen': {
+      // An ozone molecule: three oxygen atoms bent at 117°, the bonds
+      // drawn, and a spark of the corona discharge that made it.
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      const half = (117 / 2) * (Math.PI / 180);
+      const bond = r * 0.52;
+      const atoms: [number, number][] = [
+        [-Math.sin(half) * bond, Math.cos(half) * bond * 0.9 - r * 0.15],
+        [0, -r * 0.15],
+        [Math.sin(half) * bond, Math.cos(half) * bond * 0.9 - r * 0.15],
+      ];
+      ctx.strokeStyle = second;
+      ctx.lineWidth = r * 0.1;
+      ctx.beginPath();
+      ctx.moveTo(...atoms[0]);
+      ctx.lineTo(...atoms[1]);
+      ctx.lineTo(...atoms[2]);
+      ctx.stroke();
+      for (const [ax, ay] of atoms) {
+        ctx.fillStyle = main;
+        ctx.beginPath();
+        ctx.arc(ax, ay, r * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff66';
+        ctx.beginPath();
+        ctx.arc(ax - r * 0.07, ay - r * 0.07, r * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // The spark: a zig-zag beneath, in the pale colour.
+      ctx.strokeStyle = second;
+      ctx.lineWidth = r * 0.07;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.45, r * 0.62);
+      ctx.lineTo(-r * 0.15, r * 0.48);
+      ctx.lineTo(r * 0.05, r * 0.7);
+      ctx.lineTo(r * 0.45, r * 0.5);
+      ctx.stroke();
+      break;
+    }
     case 'triad': {
       // A dark cubicle-grey bezel holding three pilot lamps, one lit.
       ctx.fillStyle = main;

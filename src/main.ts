@@ -104,7 +104,8 @@ const starter = async (
     room === 'dev13' ||
     room === 'dev14' ||
     room === 'dev15' ||
-    room === 'dev17'
+    room === 'dev17' ||
+    room === 'dev18'
   ) {
     const { startEquipmentRoom } =
       await import('./toolkit/gallery/rooms/plant-room');
@@ -150,6 +151,21 @@ const mount = (
 const surfaceOf = (key: string) =>
   rooms.get(key)?.root.querySelector('canvas') ?? null;
 
+/**
+ * A room asked for by another, which needs it running unseen: the
+ * security office's monitor, say, which watches dev16's camera. It is
+ * built hidden if it is not built yet, and runs what it must while
+ * nobody is in it (`pool-plant:run-room`, its detail the room's id).
+ */
+const runUnseen = async (room: RoomId) => {
+  if (rooms.has(keyOf(room))) return;
+  const start = await starter(room);
+  if (!rooms.has(keyOf(room))) mount(room, start);
+};
+window.addEventListener('pool-plant:run-room', (event) => {
+  const room = resolveRoomId((event as CustomEvent<string>).detail);
+  if (room) void runUnseen(room);
+});
 const openRoom = async () => {
   const ownRevision = ++revision;
   const params = new URLSearchParams(location.search);
