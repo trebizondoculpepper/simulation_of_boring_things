@@ -553,13 +553,13 @@ export function startPoolRoom(canvas: HTMLCanvasElement) {
   materials.push(lightGlow.material);
   room.add(fittings);
   mergeTree(fittings, () => false);
-  // The overflow grating, one textured mesh; strips along z sit a hair
-  // lower, so where two meet at an inside corner one cleanly covers.
+  // Every grating strip clears the tiles by at least 1 mm.
+  // Longitudinal strips sit another 1 mm higher to separate inside corners.
   const gratingParts = overflowStrips().map((strip) => {
     const alongX = strip.w >= strip.d;
     const g = gratingStrip(alongX ? strip.w : strip.d, OVERFLOW_WIDTH);
     if (!alongX) g.rotateY(Math.PI / 2);
-    return g.translate(strip.x, alongX ? 0 : -0.001, strip.z);
+    return g.translate(strip.x, alongX ? 0.002 : 0.001, strip.z);
   });
   const grating = new Mesh(
     mergeGeometries(gratingParts),
