@@ -15,7 +15,10 @@ import {
   STEPPED,
   createPoolEdge,
 } from '../../../components/pool/views/pool-edges';
-import type { PlantExhibit } from './exhibit';
+import { createPartSet, selector } from '../../../components/core/parts/parts';
+import { panelMakerMark } from '../../../components/core/views/panel-maker-mark';
+import { PENFOLD_GREY } from '../../../components/industrial-control/views/control-cubicle';
+import type { LiveExhibit, PlantExhibit } from './exhibit';
 
 /**
  * dev17: pool edges through the decades, each a full-size stepped run (an
@@ -53,7 +56,7 @@ const exhibit = (profile: EdgeProfile): PlantExhibit => ({
   title: `${profile.era}: ${profile.name.toLowerCase()}`,
   reference: `${REFERENCES[profile.id]}; a concave and a convex corner`,
   size: { w: 4.1, d: 3.3, h: 0.3, mount: 'floor', pit: PIT },
-  build(kit) {
+  build(kit): LiveExhibit {
     const uniforms = createPoolUniforms(METRE, -100, []);
     uniforms.caustics.value = uniforms.reflected.value = 0;
     const tile = createTileMaterial(uniforms);
@@ -69,7 +72,45 @@ const exhibit = (profile: EdgeProfile): PlantExhibit => ({
     lining.side = BackSide;
     const depth = SECTION.depth + SECTION.slab + 0.05;
     t.box(group, lining, 4.1, depth, 3.3, 0, -depth / 2, 0);
-    return group;
+    // The pool's level, set from a small Penfold stand on the deck: FULL
+    // (its overflow running) or DRAWN DOWN just below it.
+    const parts = createPartSet();
+    const stand = new Group();
+    stand.position.set(0.15, 0, 1.15);
+    group.add(stand);
+    const grey = t.paint(PENFOLD_GREY, 0.55);
+    t.box(stand, grey, 0.08, 0.95, 0.08, 0, 0.475, 0);
+    const head = new Group();
+    head.position.set(0, 1.0, 0.02);
+    head.rotation.x = -0.5;
+    stand.add(head);
+    t.box(head, grey, 0.22, 0.16, 0.06, 0, 0, -0.03);
+    const level = parts.add(
+      selector(kit, {
+        positions: 2,
+        initial: 1,
+        legend: 'DRAWN DOWN · FULL',
+        name: 'Pool level',
+      }),
+    );
+    level.object.position.set(0, -0.02, 0);
+    head.add(level.object);
+    panelMakerMark(kit, head, {
+      width: 0.22,
+      height: 0.16,
+      z: 0,
+      corner: 'bottom-right',
+      size: 0.01,
+      inset: 0.01,
+    });
+    return {
+      object: group,
+      parts,
+      update(delta) {
+        section.setFull(level.position.value === 1);
+        section.update(delta);
+      },
+    };
   },
 });
 

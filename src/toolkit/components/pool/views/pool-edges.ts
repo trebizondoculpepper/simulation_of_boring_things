@@ -3,8 +3,10 @@ import {
   DoubleSide,
   Group,
   Mesh,
+  MeshPhysicalMaterial,
   MeshStandardMaterial,
   RepeatWrapping,
+  Vector2,
 } from 'three';
 import type { Material } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -24,6 +26,9 @@ import { insetPolygon, trimPath } from '../logic/plan-path';
  */
 
 export type PlanPath = readonly (readonly [number, number])[];
+
+/** How far the pool is drawn down below its overflow when not full, metres. */
+export const DRAW_DOWN = 0.015;
 
 /** A straight run, 1.4 m, along −z. */
 export const STRAIGHT: PlanPath = [
@@ -81,12 +86,20 @@ export function createPoolEdge(
   // against, so the surfaces never share a plane and flicker.
   const clear = 0.001;
   const waterPath = trimPath(path, clear);
-  for (const w of profile.water) {
+  // The pool's water (the first shape) and any sheet spilling over its
+  // edge, which goes when the level drops.
+  const pool: Mesh[] = [];
+  const spilling: Mesh[] = [];
+  for (const [i, w] of profile.water.entries()) {
     const mesh = new Mesh(
       sweepProfile(insetPolygon(w, clear), waterPath),
       water,
     );
     mesh.renderOrder = 1;
+    mesh.userData.live = true;
+    if (i === 0) pool.push(mesh);
+    else if (Math.max(...w.map(([, y]) => y)) > profile.waterLevel - 0.02)
+      spilling.push(mesh);
     group.add(mesh);
   }
   const rect = (
@@ -102,6 +115,8 @@ export function createPoolEdge(
   ];
   const g = profile.grating;
   if (g) group.add(createGrating(kit, g, path));
+  const spill = profile.spill ? createSpill(kit, profile.spill, path) : null;
+  if (spill) group.add(spill.mesh);
   if (profile.marker)
     group.add(
       new Mesh(
@@ -119,7 +134,145 @@ export function createPoolEdge(
         twoSided(t.paint('#3a3d40', 0.8)),
       ),
     );
-  return group;
+  // How full the pool is: 1 brimming (its overflow running), 0 drawn
+  // down a little below the overflow, so the edge and grating are dry.
+  let full = 1,
+    target = 1;
+  return Object.assign(group, {
+    /** Fill the pool to its overflow, or draw it down below it. */
+    setFull(on: boolean) {
+      target = on ? 1 : 0;
+    },
+    /** Move the level and the overflow's glints on: call each frame. */
+    update(delta: number) {
+      full += (target - full) * Math.min(1, delta * 1.5);
+      for (const m of pool) m.position.y = (full - 1) * DRAW_DOWN;
+      for (const m of spilling) m.visible = full > 0.6;
+      spill?.update(delta, full);
+    },
+  });
+}
+
+/**
+ * The overflow at a deck-level edge: a film of water millimetres deep,
+ * sliding off the pool, over the edge tile and through the first slots of
+ * the grating. Too thin to see as water, it shows as glints: a clear,
+ * glossy strip whose ripple normal map scrolls outward from the pool, so
+ * the highlights run across the edge and vanish into the grating.
+ */
+function createSpill(
+  kit: PanelKit,
+  spill: NonNullable<EdgeProfile['spill']>,
+  path: PlanPath,
+) {
+  // A tileable ripple height field, as normals: a few crossing wavelets,
+  // the strongest running across the edge (the way the water goes).
+  const px = 128;
+  const height = (x: number, y: number) => {
+    const t = (2 * Math.PI) / px;
+    return (
+      Math.sin(t * (2 * x + 9 * y)) * 0.5 +
+      Math.sin(t * (-3 * x + 7 * y) + 1.3) * 0.35 +
+      Math.sin(t * (5 * x + 4 * y) + 2.1) * 0.2 +
+      Math.sin(t * (1 * x + 13 * y) + 0.4) * 0.15
+    );
+  };
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = px;
+  const c = canvas.getContext('2d');
+  if (!c) throw new Error('No 2D canvas context.');
+  const image = c.createImageData(px, px);
+  for (let y = 0; y < px; y++)
+    for (let x = 0; x < px; x++) {
+      const dx = (height(x + 1, y) - height(x - 1, y)) * 2,
+        dy = (height(x, y + 1) - height(x, y - 1)) * 2;
+      const l = Math.hypot(dx, dy, 1);
+      const i = (y * px + x) * 4;
+      image.data[i] = ((-dx / l) * 0.5 + 0.5) * 255;
+      image.data[i + 1] = ((-dy / l) * 0.5 + 0.5) * 255;
+      image.data[i + 2] = ((1 / l) * 0.5 + 0.5) * 255;
+      image.data[i + 3] = 255;
+    }
+  c.putImageData(image, 0, 0);
+  // Two layers of the ripples, after Valve's flow-map water (Vlachos,
+  // SIGGRAPH 2010) and the common two-scale trick for water leaving a
+  // ledge: a broad slow layer in the normal map and a fine fast one in the
+  // clearcoat's, sliding at different speeds so the pattern never repeats
+  // visibly. The water only ever runs one way here, so they scroll; no
+  // flow map is needed.
+  const layer = (along: number, across: number) => {
+    const texture = new CanvasTexture(canvas);
+    texture.wrapS = texture.wrapT = RepeatWrapping;
+    // UVs are metres: a tile `along` the edge and `across` it.
+    texture.repeat.set(1 / along, 1 / across);
+    kit.textures.push(texture);
+    return texture;
+  };
+  const broad = layer(0.3, 0.12);
+  const fine = layer(0.11, 0.045);
+  // The film's mask across the edge: in from the pool, thinning out into
+  // the grating where it has all fallen through.
+  const maskCanvas = document.createElement('canvas');
+  maskCanvas.width = 4;
+  maskCanvas.height = 64;
+  const mc = maskCanvas.getContext('2d');
+  if (!mc) throw new Error('No 2D canvas context.');
+  const fade = mc.createLinearGradient(0, 0, 0, 64);
+  fade.addColorStop(0, '#000');
+  fade.addColorStop(0.2, '#fff');
+  fade.addColorStop(0.55, '#fff');
+  fade.addColorStop(1, '#000');
+  mc.fillStyle = fade;
+  mc.fillRect(0, 0, 4, 64);
+  const mask = new CanvasTexture(maskCanvas);
+  // Across the film's width: v from spill.from to spill.to.
+  mask.repeat.set(1, 1 / (spill.to - spill.from));
+  mask.offset.set(0, -spill.from / (spill.to - spill.from));
+  kit.textures.push(mask);
+  const material = new MeshPhysicalMaterial({
+    color: '#bfe8ef',
+    roughness: 0.05,
+    metalness: 0,
+    normalMap: broad,
+    normalScale: new Vector2(1.4, 1.4),
+    clearcoat: 1,
+    clearcoatRoughness: 0.02,
+    clearcoatNormalMap: fine,
+    clearcoatNormalScale: new Vector2(0.8, 0.8),
+    alphaMap: mask,
+    transparent: true,
+    opacity: 0.35,
+    depthWrite: false,
+    side: DoubleSide,
+  });
+  kit.materials.push(material);
+  const film: Point[] = [
+    [spill.from, spill.y - 0.0005],
+    [spill.to, spill.y - 0.0005],
+    [spill.to, spill.y],
+    [spill.from, spill.y],
+  ];
+  const mesh = new Mesh(sweepProfile(film, path), material);
+  mesh.name = 'Overflow film';
+  mesh.renderOrder = 2;
+  mesh.userData.live = true;
+  /** How fast the film runs over the edge, metres a second. */
+  const speed = 0.12;
+  return {
+    mesh,
+    /** Run the ripples on; `full` (0 to 1) fades the film with the level. */
+    update(delta: number, full: number) {
+      // v is across the edge, out from the pool: the ripples run that way,
+      // the fine layer faster and slanting a little.
+      broad.offset.y -= (delta * speed * full) / 0.12;
+      broad.offset.x += delta * 0.02 * full;
+      fine.offset.y -= (delta * speed * 1.6 * full) / 0.045;
+      fine.offset.x -= delta * 0.05 * full;
+      const shown = Math.max(0, (full - 0.5) * 2);
+      material.opacity = 0.35 * shown;
+      mesh.visible = shown > 0.01;
+    },
+  };
 }
 
 /** The section's span across, metres: from the pool's far side to the deck's end. */

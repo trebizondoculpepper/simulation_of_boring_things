@@ -7,9 +7,10 @@
  * face (0) out under the deck (+), the pool to the left (−); y from the
  * deck's level (0), up. `solid` is the structure (wall, gutter, deck and
  * pool floor) as one outline; `water` the water's outlines (the pool and
- * whatever lies in the gutter: a shallow run along its bottom, always
- * well below the pool's level, since the gutter drains to the balance
- * tank); `grating` where a grating spans a channel.
+ * whatever lies in an open gutter: a shallow run along its bottom, well
+ * below the pool's level, since the gutter drains to the balance tank;
+ * none is modelled under a grating); `grating` where a grating spans a
+ * channel; `spill` where the overflow runs as a film over the edge.
  *
  * - **1940s, roll-out gutter.** The edge itself is the gutter: a rounded
  *   lip at the water line, a trough behind it formed in the coping, and
@@ -58,6 +59,12 @@ export interface EdgeProfile {
   };
   /** A strip of contrasting tile on the deck, x from and to. */
   marker?: { from: number; to: number; colour: string };
+  /**
+   * Where the pool's overflow runs as a film too thin to model, over the
+   * edge and into the grating: x from and to, and its level. It shows only
+   * as glints of ripples sliding outward and falling through the slots.
+   */
+  spill?: { from: number; to: number; y: number };
 }
 
 /** How deep the sections are cut, and how far back the deck runs. */
@@ -180,12 +187,6 @@ export const EDGE_PROFILES: readonly EdgeProfile[] = [
         [0.01, -0.016],
         [0, -0.03],
       ],
-      [
-        [0.13, -0.28],
-        [0.39, -0.28],
-        [0.39, -0.255],
-        [0.13, -0.255],
-      ],
     ],
     grating: {
       from: 0.1,
@@ -221,12 +222,6 @@ export const EDGE_PROFILES: readonly EdgeProfile[] = [
         [0.03, -0.004],
         [0, -0.004],
       ],
-      [
-        [0.05, -0.3],
-        [0.31, -0.3],
-        [0.31, -0.27],
-        [0.05, -0.27],
-      ],
     ],
     grating: {
       from: 0.03,
@@ -238,6 +233,7 @@ export const EDGE_PROFILES: readonly EdgeProfile[] = [
       colour: '#8f989b',
     },
     marker: { from: 0.33, to: 0.45, colour: '#1f3f6e' },
+    spill: { from: -0.04, to: 0.13, y: 0.0012 },
   },
 ];
 
