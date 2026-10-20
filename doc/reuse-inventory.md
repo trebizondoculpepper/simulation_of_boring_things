@@ -43,3 +43,15 @@ Copied from the Encabulator at commit `50b15de` with every module they import th
 Adapted: `src/toolkit/gallery/logic/dev-room-links.ts` lists this game's rooms instead of the Encabulator's (the corridor gives its doors to them in that order) and no longer reads the training room's plan; `src/main.ts` is the Encabulator's room router with this game's rooms, the leisure centre (`facility`) among them; `index.html` is its room directory. `src/toolkit/controls/input/first-person.ts` was not overwritten: this project's copy has a floor-height option added here.
 
 New, not copied: `src/toolkit/gallery/rooms/plant-room.ts`, `src/toolkit/gallery/logic/plant-room-layout.ts` and `src/toolkit/gallery/rooms/plant/` (the empty equipment development rooms `dev_pumps` to `dev_control`), and `src/toolkit/components/plant/views/plant-tools.ts` (pipework, flanges, valves and gauges, not yet used).
+
+## BBC Micro and Cub monitor (2026-10-20)
+
+Copied unchanged from the Encabulator at commit `50b15de`, at the owner's request, as the go-to display for simple information in the plant (a comically obsolete machine even for a control room of about 1999): `src/toolkit/components/industrial-control/views/bbc-micro.ts`, `cub-monitor.ts`, `bbc-disk-drive.ts`, `bbc-workstation.ts`, `crt-surface.ts` (and its test), `src/toolkit/components/industrial-control/logic/bbc-micro.ts` (and its test), `src/toolkit/components/architectural/views/workstation-power-box.ts` and `src/toolkit/components/site-dressing/views/office-chair.ts`. Their provenance (geometry originally from the owner's VX3 Simulator) is recorded in the Encabulator's `CREDITS.md`, Models section.
+
+## Teleprinter (2026-10-20)
+
+Copied from the Encabulator at commit `50b15de`, at the owner's request, as the control room's alarm printer (the VX3 Simulator's line printer with endless fanfold paper, always legible): `src/toolkit/components/industrial-control/views/teleprinter.ts`, `logic/printer-log.ts` and `logic/machine-parts.ts`, with their tests. Adapted: `teleprinterInMetres` added at the end of `teleprinter.ts`, to stand it at true size in a room built in metres (the Encabulator scales it by 2.5 world units, at about 9 units a metre). It replaces the dot-matrix printer first written for dev0's PERIOD INSTRUMENTS board.
+
+## Seven-segment decimal point (2026-10-20)
+
+Adapted `createSevenSegment` in `src/toolkit/components/core/views/eighties-controls.ts` (copied from the Encabulator): a `.` in the text now lights the decimal point of the digit before it instead of taking a blank digit, so readings like 29.2 and 0.72 read as they would on a real display.

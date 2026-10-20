@@ -26,6 +26,7 @@ import { SANS, tools } from '../../components/core/views/fitting-tools';
 import { mergeTree } from '../../components/core/views/merge-static';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { createFirstPerson } from '../../controls/input/first-person';
+import { knobDirection } from '../../controls/input/knob-turning';
 import {
   createPs1Material,
   ps1Uniforms,
@@ -34,7 +35,8 @@ import {
   createRenderer,
   useEnvironment,
 } from '../../components/core/parts/render-style';
-import type { PlantExhibit } from './plant/exhibit';
+import { isLive } from './plant/exhibit';
+import type { LiveExhibit, PlantExhibit } from './plant/exhibit';
 
 /** Each plant room's exhibits, loaded with the room. */
 /** The rooms laid out as exhibits: each equipment room, and dev10. */
@@ -95,6 +97,8 @@ export function startEquipmentRoom(
   let solids: Footprint[] = [];
   let portals: ReturnType<typeof createPortals> | null = null;
   let disposed = false;
+  /** The exhibits that work: updated each frame, their parts clickable. */
+  const live: LiveExhibit[] = [];
 
   /** Build the room's shell, door and exhibits to fit `exhibits`. */
   const build = (exhibits: readonly PlantExhibit[], purpose: string) => {
@@ -165,7 +169,9 @@ export function startEquipmentRoom(
       holder.name = `Exhibit: ${exhibit.title}`;
       holder.position.set(place.x, place.y, place.z);
       holder.rotation.y = place.yaw;
-      const model = exhibit.build(kit);
+      const built = exhibit.build(kit);
+      const model = isLive(built) ? built.object : built;
+      if (isLive(built)) live.push(built);
       holder.add(model);
       room.add(holder);
       mergeTree(model, (o) => o.userData.live === true);
@@ -219,10 +225,21 @@ export function startEquipmentRoom(
   const useAt = (x: number, y: number) => {
     if (!portals) return null;
     raycaster.setFromCamera(pointer.set(x, y), camera);
-    const hit = raycaster.intersectObject(portals.group, true)[0];
-    for (let o: Object3D | null = hit?.object ?? null; o; o = o.parent) {
+    const hit = raycaster.intersectObjects(
+      [portals.group, ...live.map((l) => l.object)],
+      true,
+    )[0];
+    if (!hit || hit.distance > 4 * m) return null;
+    for (let o: Object3D | null = hit.object; o; o = o.parent) {
       const use = portals.uses.get(o as Mesh);
       if (use) return use;
+      for (const exhibit of live) {
+        const work = exhibit.parts?.uses.get(o);
+        if (work) {
+          const at = o;
+          return () => work(knobDirection(at, hit.point, camera));
+        }
+      }
     }
     return null;
   };
@@ -272,6 +289,10 @@ export function startEquipmentRoom(
     walk.update(delta);
     partAudio.listen(camera, m);
     portals?.update(delta, walk.walker.x, walk.walker.z);
+    for (const exhibit of live) {
+      exhibit.parts?.update(delta);
+      exhibit.update?.(delta);
+    }
     renderer.render(scene, camera);
   });
 
@@ -281,6 +302,10 @@ export function startEquipmentRoom(
     observer.disconnect();
     walk.dispose();
     portals?.dispose();
+    for (const exhibit of live) {
+      exhibit.parts?.dispose();
+      exhibit.dispose?.();
+    }
     disposeKit(kit, scene as unknown as Group);
     freeEnvironment();
     renderer.dispose();

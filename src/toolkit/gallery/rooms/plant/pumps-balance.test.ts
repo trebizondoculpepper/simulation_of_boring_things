@@ -11,6 +11,7 @@ import {
   createPanelKit,
   disposeKit,
 } from '../../../components/core/views/eighties-controls';
+import { isLive } from './exhibit';
 import { EXHIBITS as PUMPS } from './pumps';
 import { EXHIBITS as BALANCE } from './balance';
 
@@ -48,7 +49,8 @@ describe.each([
     'builds %s inside its declared size',
     (_title, exhibit) => {
       const kit = createPanelKit();
-      const model = exhibit.build(kit);
+      const built = exhibit.build(kit);
+      const model = isLive(built) ? built.object : built;
       model.updateMatrixWorld(true);
       const box = new Box3().setFromObject(model);
       const { w, d, h, mount } = exhibit.size;

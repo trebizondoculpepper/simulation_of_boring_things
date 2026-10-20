@@ -35,6 +35,8 @@ import {
   createCabinetBoard,
   createControlsBoard,
   createDisplaysBoard,
+  createMimicTestBoard,
+  createPeriodBoard,
   createStudioBoard,
 } from './test-boards';
 import type { TestFitting } from './test-boards';
@@ -182,6 +184,21 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     maxX: half.x * m,
     minZ: 2.75 * m,
     maxZ: 5.65 * m,
+  });
+  // The period instruments (a control room of about 1999) on the west
+  // wall, facing east: tried here before the plant rooms use them.
+  const periodX = -half.x + 0.25;
+  place(createPeriodBoard(kit), periodX, 1.55, -3, Math.PI / 2, {
+    minX: -half.x * m,
+    maxX: (periodX + 0.6) * m,
+    minZ: -4.2 * m,
+    maxZ: -1.8 * m,
+  });
+  place(createMimicTestBoard(kit), periodX, 1.55, 0.6, Math.PI / 2, {
+    minX: -half.x * m,
+    maxX: (periodX + 0.6) * m,
+    minZ: -0.2 * m,
+    maxZ: 1.4 * m,
   });
   [...createMachineGallery(kit), ...createEmptyMachinePlinths(kit)].forEach(
     (plinth, i) => {

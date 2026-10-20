@@ -1,5 +1,6 @@
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
+import type { PartSet } from '../../../components/core/parts/parts';
 import type { ExhibitSize } from '../../logic/plant-room-layout';
 
 /**
@@ -19,5 +20,22 @@ export interface PlantExhibit {
   /** The product it is modelled on and its key size: "After … , 2.8 m dia." */
   reference: string;
   size: ExhibitSize;
-  build(kit: PanelKit): Object3D;
+  build(kit: PanelKit): Object3D | LiveExhibit;
 }
+
+/**
+ * A working exhibit: its model, the parts a player can work (each click
+ * routed by the room), and what it does each frame. Objects that change
+ * as it runs carry `userData.live = true` so the room does not merge them
+ * into still geometry.
+ */
+export interface LiveExhibit {
+  object: Object3D;
+  parts?: PartSet;
+  update?(delta: number): void;
+  dispose?(): void;
+}
+
+/** Whether `built` is a working exhibit rather than a bare model. */
+export const isLive = (built: Object3D | LiveExhibit): built is LiveExhibit =>
+  'object' in built && !('isObject3D' in built);

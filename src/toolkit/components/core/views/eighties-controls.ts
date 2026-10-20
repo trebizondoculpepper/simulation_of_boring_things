@@ -458,7 +458,16 @@ export function createSevenSegment(
   const readout: SevenSegment = {
     group,
     show(text) {
-      const value = text.padStart(digits).slice(-digits);
+      // A decimal point lights the point of the digit before it, taking
+      // no digit of its own, as on the real displays.
+      const cells: { char: string; point: boolean }[] = [];
+      for (const char of text) {
+        if (char === '.' && cells.length) cells[cells.length - 1].point = true;
+        else cells.push({ char, point: false });
+      }
+      while (cells.length < digits) cells.unshift({ char: ' ', point: false });
+      const shown = cells.slice(-digits);
+      const value = shown.map((c) => c.char + (c.point ? '.' : '')).join('');
       if (value === last) return;
       last = value;
       context.setTransform(1, 0, 0, 1, 0, 0);
@@ -466,11 +475,13 @@ export function createSevenSegment(
       context.fillRect(0, 0, w, h);
       // A slight italic slant, as the period's displays had.
       context.setTransform(1, 0, -0.1, 1, 6, 0);
-      for (let i = 0; i < digits; i++) {
-        const lit = SEGMENTS[value[i]] ?? '';
+      shown.forEach(({ char, point }, i) => {
+        const lit = SEGMENTS[char] ?? '';
         for (const s of 'abcdefg')
           segment(8 + i * cellW, 8, s, lit.includes(s));
-      }
+        context.fillStyle = point ? colour : '#2b0e0a';
+        context.fillRect(8 + i * cellW + 32, 8 + 50, 10, 10);
+      });
       texture.needsUpdate = true;
     },
   };

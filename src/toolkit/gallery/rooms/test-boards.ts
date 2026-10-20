@@ -43,6 +43,13 @@ import {
   createStackLight,
 } from '../../components/industrial-control/views/industrial-displays';
 import { createPanelMeter } from '../../components/industrial-control/views/panel-instruments';
+import {
+  createCircularChartRecorder,
+  createCrtMonitor,
+} from '../../components/industrial-control/views/period-instruments';
+import { teleprinterInMetres } from '../../components/industrial-control/views/teleprinter';
+import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
+import type { MimicSpec } from '../../components/industrial-control/logic/mimic';
 import { drawBootScreen } from '../../components/industrial-control/views/boot-screen';
 import {
   MCC_BLUE,
@@ -857,5 +864,236 @@ export function createCabinetBoard(kit: PanelKit): TestFitting {
   board.at(createDoorLeaf(0.3, 0.1, 0.03, plinthPaint), 0.66, -0.2);
   board.caption('WORN PLINTH', 0.66, -0.27);
 
+  return fitting(board, updates);
+}
+
+/** The supervisor's pages, as the period's building management showed them. */
+const SUPERVISOR_PAGES: readonly (readonly string[])[] = [
+  [
+    'QUORVANE IQ SUPERVISOR v3.21   20/10/99 07:42',
+    '=============================================',
+    'POOL PLANT - OUTSTATION 2       PAGE 1 OF 3',
+    '',
+    'PT  DESCRIPTION          VALUE  UNIT   STAT',
+    '01  MAIN POOL RETURN      29.2  DEG C  OK',
+    '02  LEARNER POOL RETURN   31.0  DEG C  OK',
+    '03  SPA RETURN            36.4  DEG C  OK',
+    '04  HALL AIR              30.1  DEG C  OK',
+    '05  HALL RH                 61  %      HI',
+    '',
+    'F2=NEXT PAGE  F10=LOG OFF  _',
+  ],
+  [
+    'QUORVANE IQ SUPERVISOR v3.21   20/10/99 07:42',
+    '=============================================',
+    'POOL PLANT - OUTSTATION 2       PAGE 2 OF 3',
+    '',
+    '06  CIRC FLOW P1           612  M3/H   OK',
+    '07  FILTER 2 DIFF PRESS   0.72  BAR    HI',
+    '08  BALANCE TANK LEVEL      64  %      OK',
+    '09  LTHW FLOW TEMP        78.5  DEG C  OK',
+    '',
+    'F2=NEXT PAGE  F10=LOG OFF  _',
+  ],
+  [
+    'QUORVANE IQ SUPERVISOR v3.21   20/10/99 07:42',
+    '=============================================',
+    'ALARM LOG                       PAGE 3 OF 3',
+    '',
+    '06:58  FILTER 2 HIGH DP      PUMP ROOM',
+    '07:05  HALL RH HIGH          AIR HANDLING',
+    '07:42  CL LOW 0.9            DOSING ROOM',
+    '',
+    '3 ALARMS  1 UNACCEPTED',
+    'F2=NEXT PAGE  F10=LOG OFF  _',
+  ],
+];
+
+/** The alarms the printer's test button prints, in turn. */
+const PRINTER_LINES: readonly string[] = [
+  'ALARM  FILTER 2 HIGH DP    PUMP ROOM',
+  'ALARM  HALL RH HIGH        AIR HANDLING',
+  'ACCEPT OPERATOR 3',
+  'ALARM  CL LOW 0.9          DOSING ROOM',
+  'NORMAL BAL TANK LEVEL',
+  'ALARM  BOILER 1 LOCKOUT    BOILER ROOM',
+];
+
+/**
+ * The PERIOD INSTRUMENTS board: the control room's instruments of about
+ * 1999, life size, tried here before the plant rooms use them. A beige CRT
+ * whose NEXT PAGE button steps the building management supervisor's
+ * pages; a circular chart recorder whose two pens follow the TEMP and RH
+ * knobs as the paper turns (fast, a turn a minute); and the alarm
+ * printer, a teleprinter on endless fanfold paper, which prints the next
+ * alarm each time PRINT is pressed.
+ */
+export function createPeriodBoard(kit: PanelKit): TestFitting {
+  const board = createBoard(kit, {
+    title: 'PERIOD INSTRUMENTS',
+    width: 2.2,
+    height: 0.95,
+    scale: 1,
+    captionScale: 1.2,
+  });
+  const updates: ((delta: number) => void)[] = [];
+  const shelf = createPs1Material({ color: '#6c7072' });
+  kit.materials.push(shelf);
+  for (const x of [-0.7, 0.72]) {
+    const ledge = new Mesh(new BoxGeometry(0.56, 0.02, 0.46), shelf);
+    ledge.position.set(x, -0.33, 0.23);
+    board.parts.add(ledge);
+  }
+  // The CRT and its page button.
+  const crt = createCrtMonitor(kit);
+  crt.group.position.set(-0.7, -0.32, 0.03);
+  board.parts.add(crt.group);
+  let page = 0;
+  crt.text(SUPERVISOR_PAGES[page]);
+  board.place(
+    pushButton(kit, {
+      colour: 'black',
+      legend: 'NEXT PAGE',
+      action: () => {
+        page = (page + 1) % SUPERVISOR_PAGES.length;
+        crt.text(SUPERVISOR_PAGES[page]);
+      },
+    }),
+    -0.35,
+    -0.2,
+  );
+  board.caption('CRT MONITOR, BMS SUPERVISOR', -0.7, 0.36, 0.012);
+  // The circular chart recorder and its two test knobs.
+  const recorder = createCircularChartRecorder(kit, { rate: 1 / 60 });
+  board.at(recorder.group, 0, 0.05);
+  const temp = board.place(
+    potentiometer(kit, { legend: 'TEMP', initial: 0.6 }),
+    -0.08,
+    -0.3,
+  );
+  const rh = board.place(
+    potentiometer(kit, { legend: 'RH', initial: 0.4 }),
+    0.08,
+    -0.3,
+  );
+  board.caption('CIRCULAR CHART RECORDER, 7 DAY', 0, 0.36, 0.012);
+  updates.push((delta) => {
+    recorder.set([temp.share.value, rh.share.value]);
+    recorder.update(delta);
+  });
+  // The alarm printer (the teleprinter, its fanfold paper falling to a
+  // pile on the floor) and its test button.
+  const printer = teleprinterInMetres('ALARM LOG', 1.55 - 0.32);
+  printer.group.position.set(0.72, -0.32, 0.25);
+  board.parts.add(printer.group);
+  updates.push((delta) => printer.update(delta, false));
+  let printed = 0;
+  board.place(
+    pushButton(kit, {
+      colour: 'green',
+      legend: 'PRINT',
+      action: () => {
+        const minute = String(42 + printed).padStart(2, '0');
+        printer.record(
+          `20/10/99 07:${minute} ${PRINTER_LINES[printed % PRINTER_LINES.length]}`,
+        );
+        printed++;
+      },
+    }),
+    0.36,
+    -0.2,
+  );
+  board.caption('ALARM PRINTER, FANFOLD', 0.72, 0.36, 0.012);
+  return fitting(board, updates);
+}
+
+/** The demonstration mimic: a tank, a pump, a heater and the return. */
+const DEMO_MIMIC: MimicSpec = {
+  title: 'MIMIC TEST CIRCUIT',
+  width: 1.2,
+  height: 0.62,
+  lines: [
+    {
+      colour: '#2f7d3a',
+      points: [
+        [-0.42, -0.05],
+        [-0.2, -0.05],
+        [-0.2, 0.12],
+        [0.42, 0.12],
+        [0.42, -0.05],
+        [0.3, -0.05],
+      ],
+    },
+  ],
+  shapes: [
+    { symbol: 'tank', at: [-0.42, -0.08], size: 0.1, label: 'TANK' },
+    { symbol: 'pump', at: [-0.05, 0.12], size: 0.07, label: 'PUMP' },
+    { symbol: 'hx', at: [0.25, 0.12], size: 0.07, label: 'HEATER' },
+  ],
+  lamps: [
+    { id: 'run', at: [-0.05, 0.22], colour: 'green', label: 'RUN' },
+    { id: 'hot', at: [0.25, 0.22], colour: 'amber', label: 'HEAT' },
+  ],
+  readouts: [
+    { id: 'pump', at: [-0.05, -0.04] },
+    { id: 'out', at: [0.42, -0.14] },
+  ],
+  modes: [
+    { id: 'flow', legend: 'FLOW' },
+    { id: 'temperature', legend: 'TEMP' },
+  ],
+};
+
+/**
+ * The MIMIC PANEL board: a small mimic, life size, tried here before the
+ * plant's boards use it. PUMP switches the pump (its RUN lamp lights),
+ * FLOW sets its flow, and the mimic's own FLOW and TEMP buttons change what
+ * its readouts show, their legends saying what; LAMP TEST lights it all.
+ */
+export function createMimicTestBoard(kit: PanelKit): TestFitting {
+  const board = createBoard(kit, {
+    title: 'MIMIC PANEL',
+    width: 1.5,
+    height: 0.95,
+    scale: 1,
+    captionScale: 1.2,
+  });
+  const updates: ((delta: number) => void)[] = [];
+  const mimic = createMimicBoard(kit, DEMO_MIMIC);
+  mimic.group.position.set(0, 0.06, 0);
+  board.parts.add(mimic.group);
+  for (const [object, use] of mimic.parts.uses) board.set.uses.set(object, use);
+  const pump = board.place(
+    selector(kit, { positions: 2, initial: 1, legend: 'PUMP' }),
+    -0.3,
+    -0.36,
+  );
+  const flow = board.place(
+    potentiometer(kit, { legend: 'FLOW', initial: 0.6 }),
+    0.3,
+    -0.36,
+  );
+  let temperature = 24;
+  updates.push((delta) => {
+    mimic.parts.update(delta);
+    const running = pump.position.value === 1;
+    const rate = running ? flow.share.value * 40 : 0;
+    temperature += ((running ? 34 : 24) - temperature) * delta * 0.1;
+    mimic.show({
+      lamps: { run: running, hot: running && temperature > 30 },
+      readouts: {
+        pump: { flow: { value: rate, unit: 'm3/h', name: 'PUMP', places: 1 } },
+        out: {
+          flow: { value: rate, unit: 'm3/h', name: 'RETURN', places: 1 },
+          temperature: {
+            value: temperature,
+            unit: 'C',
+            name: 'RETURN',
+            places: 1,
+          },
+        },
+      },
+    });
+  });
   return fitting(board, updates);
 }
