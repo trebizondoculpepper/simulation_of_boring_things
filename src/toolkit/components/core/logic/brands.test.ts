@@ -2,10 +2,19 @@ import { describe, expect, it } from 'vite-plus/test';
 import { BRANDS, brandById } from './brands';
 
 describe('the brands', () => {
-  it('are seventeen companies, each with an id and name of its own', () => {
-    expect(BRANDS).toHaveLength(17);
-    expect(new Set(BRANDS.map((b) => b.id)).size).toBe(17);
-    expect(new Set(BRANDS.map((b) => b.name)).size).toBe(17);
+  it('are twenty-five companies, each with an id and name of its own', () => {
+    expect(BRANDS).toHaveLength(25);
+    expect(new Set(BRANDS.map((b) => b.id)).size).toBe(25);
+    expect(new Set(BRANDS.map((b) => b.name)).size).toBe(25);
+  });
+
+  it('include the pool trade, each saying what good it does', () => {
+    const pool = BRANDS.slice(17);
+    expect(pool.map((b) => b.name)).toContain('Splashonomics');
+    for (const brand of pool) {
+      expect(brand.tagline.length).toBeGreaterThan(0);
+      expect(brand.promise.length).toBeGreaterThan(10);
+    }
   });
 
   it('keep the companies the two games have already named', () => {
@@ -26,7 +35,7 @@ describe('the brands', () => {
   });
 
   it('give each brand its own logo and three colours', () => {
-    expect(new Set(BRANDS.map((b) => b.mark)).size).toBe(17);
+    expect(new Set(BRANDS.map((b) => b.mark)).size).toBe(BRANDS.length);
     for (const brand of BRANDS) {
       expect(brand.colours).toHaveLength(3);
       for (const colour of brand.colours)

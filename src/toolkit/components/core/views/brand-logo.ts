@@ -1,5 +1,6 @@
 import type { CanvasTexture } from 'three';
 import type { Brand } from '../logic/brands';
+import { brandPalette } from '../logic/brand-palette';
 import { createCanvasTexture } from './screens';
 
 type Ctx = CanvasRenderingContext2D;
@@ -9,6 +10,9 @@ const SERIF = 'Georgia, "Times New Roman", serif';
 const SCRIPT = '"Snell Roundhand", "Brush Script MT", "Segoe Script", cursive';
 const SLAB = 'Rockwell, "Courier New", Georgia, serif';
 const FONTS = { sans: SANS, serif: SERIF, script: SCRIPT, slab: SLAB };
+
+/** The font family a brand sets its type in. */
+export const brandTypeface = (brand: Brand) => FONTS[brand.type];
 
 /** The initials of a name, up to two. */
 const initials = (name: string) =>
@@ -466,6 +470,241 @@ export function drawBrandMark(
       ctx.fillText(initials(brand.name)[0], 0, r * 0.02);
       break;
     }
+    case 'ledger': {
+      // A coin, a wave across its lower half, and a line rising out of it.
+      ctx.fillStyle = second;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.88, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = main;
+      ctx.beginPath();
+      ctx.moveTo(-r, r);
+      ctx.lineTo(-r, r * 0.2);
+      for (let i = 0; i <= 16; i++) {
+        const x = -r + (i / 16) * 2 * r;
+        ctx.lineTo(x, r * 0.2 + Math.sin((i / 16) * Math.PI * 4) * r * 0.1);
+      }
+      ctx.lineTo(r, r);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = r * 0.12;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.55, r * 0.05);
+      ctx.lineTo(-r * 0.15, -r * 0.2);
+      ctx.lineTo(r * 0.1, -r * 0.05);
+      ctx.lineTo(r * 0.55, -r * 0.55);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(r * 0.3, -r * 0.6);
+      ctx.lineTo(r * 0.6, -r * 0.6);
+      ctx.lineTo(r * 0.6, -r * 0.3);
+      ctx.stroke();
+      break;
+    }
+    case 'impeller': {
+      // Six curved vanes round a hub, in a ring.
+      ctx.strokeStyle = main;
+      ctx.lineWidth = r * 0.1;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.94, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = main;
+      for (let i = 0; i < 6; i++) {
+        ctx.save();
+        ctx.rotate((i / 6) * Math.PI * 2);
+        ctx.beginPath();
+        ctx.moveTo(r * 0.2, 0);
+        ctx.quadraticCurveTo(r * 0.55, -r * 0.05, r * 0.78, -r * 0.42);
+        ctx.quadraticCurveTo(r * 0.5, -r * 0.18, r * 0.18, -r * 0.14);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.fillStyle = second;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'ripple': {
+      // A drop above three spreading rings, seen a little from the side.
+      ctx.strokeStyle = main;
+      for (let i = 0; i < 3; i++) {
+        ctx.lineWidth = r * (0.1 - i * 0.025);
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          r * 0.45,
+          r * (0.35 + i * 0.3),
+          r * (0.12 + i * 0.1),
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+      }
+      ctx.fillStyle = main;
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.95);
+      ctx.bezierCurveTo(
+        r * 0.1,
+        -r * 0.7,
+        r * 0.32,
+        -r * 0.45,
+        r * 0.32,
+        -r * 0.28,
+      );
+      ctx.arc(0, -r * 0.28, r * 0.32, 0, Math.PI);
+      ctx.bezierCurveTo(-r * 0.32, -r * 0.45, -r * 0.1, -r * 0.7, 0, -r * 0.95);
+      ctx.fill();
+      break;
+    }
+    case 'bubbles': {
+      // Bubbles rising in a rounded square of water.
+      ctx.fillStyle = main;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.9, -r * 0.9, r * 1.8, r * 1.8, r * 0.5);
+      ctx.fill();
+      ctx.strokeStyle = second;
+      ctx.lineWidth = r * 0.07;
+      for (const [x, y, b] of [
+        [-0.35, 0.4, 0.22],
+        [0.15, 0.1, 0.17],
+        [-0.1, -0.3, 0.13],
+        [0.35, -0.5, 0.1],
+        [0.42, 0.45, 0.08],
+      ]) {
+        ctx.beginPath();
+        ctx.arc(x * r, y * r, b * r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'molecule': {
+      // Three balls joined by bonds: a hypochlorite ion, near enough.
+      const atoms: [number, number, number, string][] = [
+        [-0.45, 0.25, 0.32, main],
+        [0.35, 0.3, 0.26, second],
+        [0.0, -0.45, 0.24, main],
+      ];
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = r * 0.1;
+      ctx.beginPath();
+      ctx.moveTo(atoms[0][0] * r, atoms[0][1] * r);
+      ctx.lineTo(atoms[1][0] * r, atoms[1][1] * r);
+      ctx.moveTo(atoms[0][0] * r, atoms[0][1] * r);
+      ctx.lineTo(atoms[2][0] * r, atoms[2][1] * r);
+      ctx.stroke();
+      for (const [x, y, b, colour] of atoms) {
+        ctx.fillStyle = colour;
+        ctx.beginPath();
+        ctx.arc(x * r, y * r, b * r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = r * 0.05;
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'flame': {
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      const flame = (scale: number, colour: string) => {
+        ctx.fillStyle = colour;
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.75 * scale);
+        ctx.bezierCurveTo(
+          r * 0.55 * scale,
+          -r * 0.2 * scale,
+          r * 0.5 * scale,
+          r * 0.6 * scale,
+          0,
+          r * 0.65 * scale,
+        );
+        ctx.bezierCurveTo(
+          -r * 0.5 * scale,
+          r * 0.6 * scale,
+          -r * 0.55 * scale,
+          -r * 0.1 * scale,
+          -r * 0.1 * scale,
+          -r * 0.35 * scale,
+        );
+        ctx.quadraticCurveTo(
+          -r * 0.05 * scale,
+          -r * 0.55 * scale,
+          0,
+          -r * 0.75 * scale,
+        );
+        ctx.fill();
+      };
+      flame(1, main);
+      ctx.save();
+      ctx.translate(0, r * 0.18);
+      flame(0.55, second);
+      ctx.restore();
+      break;
+    }
+    case 'swirl': {
+      // Three curved strokes, a breath of air turning.
+      ctx.strokeStyle = main;
+      for (let i = 0; i < 3; i++) {
+        ctx.lineWidth = r * (0.16 - i * 0.03);
+        ctx.beginPath();
+        const y = -r * 0.45 + i * r * 0.45;
+        ctx.moveTo(-r * 0.85, y);
+        ctx.bezierCurveTo(
+          -r * 0.3,
+          y - r * 0.3,
+          r * 0.3,
+          y + r * 0.3,
+          r * 0.6,
+          y,
+        );
+        ctx.arc(
+          r * 0.6,
+          y - r * 0.18,
+          r * 0.18,
+          Math.PI / 2,
+          -Math.PI / 2,
+          true,
+        );
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'lifebuoy': {
+      // A ring in white and the brand's colour, four bands round it.
+      ctx.lineWidth = r * 0.38;
+      for (let i = 0; i < 8; i++) {
+        ctx.strokeStyle = i % 2 ? second : main;
+        ctx.lineCap = 'butt';
+        ctx.beginPath();
+        ctx.arc(
+          0,
+          0,
+          r * 0.72,
+          (i / 8) * Math.PI * 2 + Math.PI / 8,
+          ((i + 1) / 8) * Math.PI * 2 + Math.PI / 8,
+        );
+        ctx.stroke();
+      }
+      ctx.lineWidth = r * 0.04;
+      ctx.strokeStyle = ink;
+      for (const rr of [0.53, 0.91]) {
+        ctx.beginPath();
+        ctx.arc(0, 0, rr * r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      break;
+    }
   }
   ctx.restore();
 }
@@ -524,17 +763,31 @@ export function drawBrandSheet(ctx: Ctx, brand: Brand) {
     brand.promise,
   ];
   facts.forEach((line, i) => ctx.fillText(line, 500, 420 + i * 44, 660));
-  // The colours, as swatches with their codes.
-  brand.colours.forEach((colour, i) => {
-    const x = 90 + i * 220;
+  // The house palette, as swatches with their names and codes: the
+  // brand's three colours, then the highlight, tint, shade and casing
+  // worked out from them (`brand-palette.ts`).
+  const palette = brandPalette(brand);
+  const swatches: [string, string][] = [
+    ['Main', palette.main],
+    ['Second', palette.second],
+    ['Ink', palette.ink],
+    ['Highlight', palette.accent],
+    ['Tint', palette.tint],
+    ['Shade', palette.shade],
+    ['Casing', palette.casing],
+  ];
+  swatches.forEach(([name, colour], i) => {
+    const x = 60 + i * 96;
     ctx.fillStyle = colour;
-    ctx.fillRect(x, 610, 180, 110);
+    ctx.fillRect(x, 600, 84, 100);
     ctx.strokeStyle = '#cccccc';
     ctx.lineWidth = 2;
-    ctx.strokeRect(x, 610, 180, 110);
+    ctx.strokeRect(x, 600, 84, 100);
     ctx.fillStyle = '#555555';
-    ctx.font = `400 24px ${SANS}`;
-    ctx.fillText(colour.toUpperCase(), x, 752);
+    ctx.font = `600 17px ${SANS}`;
+    ctx.fillText(name, x, 724, 90);
+    ctx.font = `400 15px ${SANS}`;
+    ctx.fillText(colour.toUpperCase(), x, 746, 90);
   });
   // The logo as it goes on things, small, bottom right.
   ctx.save();

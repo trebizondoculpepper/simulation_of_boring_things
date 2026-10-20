@@ -56,6 +56,9 @@ const ALONG = [-9.6, -4.8, 0, 4.8, 9.6];
 // The north wall, clear of portals, takes one more.
 const NORTH = [-10, -6, -2, 2, 6, 10];
 const ENDS = [-4.5, -1.5, 1.5];
+const MIDDLE = [-7.2, -2.4, 2.4, 7.2];
+/** How far each face of a freestanding board stands off its middle. */
+const STAND_OFF = 0.03;
 const HANGS: Hang[] = [
   ...NORTH.map((x) => ({ x, z: FLOOR.minZ, facing: 0, off: WALL_OFF })),
   // The ends keep clear of the portals near their south corners.
@@ -74,6 +77,13 @@ const HANGS: Hang[] = [
     facing: Math.PI / 2,
     off: WALL_OFF,
   })),
+  // The pool trade's brands, on four freestanding double-sided boards
+  // down the middle of the room: their south faces west to east, then
+  // their north faces east to west.
+  ...MIDDLE.map((x) => ({ x, z: 0, facing: 0, off: STAND_OFF })),
+  ...[...MIDDLE]
+    .reverse()
+    .map((x) => ({ x, z: 0, facing: Math.PI, off: STAND_OFF })),
 ];
 
 /**
@@ -187,7 +197,30 @@ export function startBrandsRoom(canvas: HTMLCanvasElement) {
       0.025,
     );
     exhibit.add(number);
+    // A freestanding board's two posts, built once with its south face.
+    if (hang.off === STAND_OFF && hang.facing === 0)
+      for (const side of [-1, 1]) {
+        const post = new Mesh(
+          new BoxGeometry(0.06, PANEL.y + PANEL.h / 2, 0.12),
+          backing,
+        );
+        post.position.set(
+          side * (PANEL.w / 2 + 0.03),
+          (PANEL.y + PANEL.h / 2) / 2,
+          -STAND_OFF,
+        );
+        exhibit.add(post);
+        const foot = new Mesh(new BoxGeometry(0.1, 0.04, 0.6), backing);
+        foot.position.set(side * (PANEL.w / 2 + 0.03), 0.02, -STAND_OFF);
+        exhibit.add(foot);
+      }
   });
+  const stands: Footprint[] = MIDDLE.map((x) => ({
+    minX: (x - PANEL.w / 2 - 0.1) * m,
+    maxX: (x + PANEL.w / 2 + 0.1) * m,
+    minZ: -0.35 * m,
+    maxZ: 0.35 * m,
+  }));
 
   // ---- Walking --------------------------------------------------------------
   const portals = createPortals('dev8', devPortals('dev8', bounds, m), 0, m);
@@ -230,7 +263,7 @@ export function startBrandsRoom(canvas: HTMLCanvasElement) {
       views[params.get('view') ?? ''] ??
       portals.arrival(params.get('from')) ??
       views.room,
-    solids: () => outer,
+    solids: () => [...outer, ...stands],
     use: (x, y) => portalAt(x, y)?.(),
     aimed: () => Boolean(portalAt(0, 0)),
   });

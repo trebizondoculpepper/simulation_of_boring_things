@@ -5,7 +5,10 @@
  * Encabulator's parts); the last six fill the gaps (who builds the line-up,
  * its PLC and its drive, its meters and screens, its oil, and who runs the
  * training), and Warden, whose mark was already on the fire panel, makes
- * the fire safety equipment. All are our own invention. Each brand's logo is drawn from
+ * the fire safety equipment. The last eight are the swimming-pool trade's
+ * (Pool Plant's), though anyone may make anything: the money, the pumps,
+ * the fittings, the filters and lights, the chemicals, the boilers, the
+ * air and the alarms. All are our own invention. Each brand's logo is drawn from
  * its `mark` (`src/toolkit/components/core/views/brand-logo.ts`). Pure data.
  */
 
@@ -43,7 +46,23 @@ export type BrandMark =
   /** A laurel wreath. */
   | 'laurel'
   /** An initial knocked out of a rounded square tile. */
-  | 'tile';
+  | 'tile'
+  /** A coin with a wave across it and a rising line. */
+  | 'ledger'
+  /** A pump impeller's curved vanes in a ring. */
+  | 'impeller'
+  /** Concentric ripples spreading from a drop. */
+  | 'ripple'
+  /** Rising bubbles in a rounded square. */
+  | 'bubbles'
+  /** A molecule: balls joined by bonds. */
+  | 'molecule'
+  /** A flame in a circle. */
+  | 'flame'
+  /** A swirl of air in three curved strokes. */
+  | 'swirl'
+  /** A lifebuoy ring with its four bands. */
+  | 'lifebuoy';
 
 /** Every brand's id: a part names its maker by one of these. */
 export type BrandId =
@@ -63,7 +82,15 @@ export type BrandId =
   | 'kessler-moody'
   | 'oleander'
   | 'meridale'
-  | 'warden';
+  | 'warden'
+  | 'splashonomics'
+  | 'grundflow'
+  | 'certikind'
+  | 'lidoluxe'
+  | 'chlorella'
+  | 'hamwarmy'
+  | 'mistral'
+  | 'poolguard';
 
 export interface Brand {
   id: BrandId;
@@ -303,6 +330,106 @@ export const BRANDS: readonly Brand[] = [
     mark: 'tile',
     colours: ['#c4231c', '#f2c618', '#1a1a1a'],
     type: 'sans',
+  },
+  {
+    id: 'splashonomics',
+    name: 'Splashonomics',
+    tagline: 'Every drop accounted for',
+    founded: 1998,
+    country: 'United Kingdom',
+    makes: 'Pool operating-cost metering, software and audits',
+    promise: 'Making swimming pool accounting affordable',
+    mark: 'ledger',
+    colours: ['#1f8a8a', '#f0b429', '#0f2e33'],
+    type: 'sans',
+  },
+  {
+    id: 'grundflow',
+    name: 'Grundflow',
+    wordmark: 'GRUNDFLOW',
+    tagline: 'Keep it moving',
+    founded: 1947,
+    country: 'Denmark',
+    makes: 'Circulation pumps, drives and dosing pumps',
+    promise: 'Moving water quietly, so nobody has to think about it',
+    mark: 'impeller',
+    colours: ['#0b4f9c', '#7fb3e6', '#0a1a2e'],
+    type: 'sans',
+  },
+  {
+    id: 'certikind',
+    name: 'Certikind',
+    tagline: 'Fittings that fit',
+    founded: 1971,
+    country: 'United Kingdom',
+    makes: 'Pool fittings: drains, inlets, gratings, skimmers',
+    promise: 'Every fitting fits, and every swimmer is safe around it',
+    mark: 'ripple',
+    colours: ['#2b9fd6', '#d9eef8', '#12324a'],
+    type: 'serif',
+  },
+  {
+    id: 'lidoluxe',
+    name: 'Lidoluxe',
+    tagline: 'The glow beneath',
+    founded: 1983,
+    country: 'Spain',
+    makes: 'Sand filters, UV units and underwater lights',
+    promise: 'Crystal water that shines from within',
+    mark: 'bubbles',
+    colours: ['#00a3b4', '#ffe28a', '#063c44'],
+    type: 'script',
+  },
+  {
+    id: 'chlorella',
+    name: 'Chlorella Chemicals',
+    wordmark: 'Chlorella',
+    tagline: 'Clear water, clear conscience',
+    founded: 1956,
+    country: 'United Kingdom',
+    makes: 'Sodium hypochlorite, pH correction and test reagents',
+    promise: 'Safe, sparkling water for every swimmer, every day',
+    mark: 'molecule',
+    colours: ['#3f9b3a', '#cfe9b0', '#16301a'],
+    type: 'slab',
+  },
+  {
+    id: 'hamwarmy',
+    name: 'Hamwarmy Heating',
+    wordmark: 'HAMWARMY',
+    tagline: 'Warmth you can count on',
+    founded: 1914,
+    country: 'United Kingdom',
+    makes: 'Commercial boilers, calorifiers and pressurisation units',
+    promise: 'Keeping the water warm and the showers hot, winter after winter',
+    mark: 'flame',
+    colours: ['#d4501e', '#f6c04a', '#2a1508'],
+    type: 'slab',
+  },
+  {
+    id: 'mistral',
+    name: 'Mistral Air',
+    tagline: 'Breathe easy, poolside',
+    founded: 1979,
+    country: 'France',
+    makes: 'Pool hall air handling and dehumidification',
+    promise: 'Fresh, dry air and no misted windows',
+    mark: 'swirl',
+    colours: ['#5d7fa6', '#d6e2ee', '#1b2a3a'],
+    type: 'sans',
+  },
+  {
+    id: 'poolguard',
+    name: 'Poolguard Safety',
+    wordmark: 'POOLGUARD',
+    tagline: 'Every swimmer home safe',
+    founded: 1988,
+    country: 'United Kingdom',
+    makes: 'Poolside alarms, emergency stops and rescue equipment',
+    promise: 'Watching the water when every second counts',
+    mark: 'lifebuoy',
+    colours: ['#e2462f', '#f7f4ee', '#1e1e1e'],
+    type: 'slab',
   },
 ];
 
