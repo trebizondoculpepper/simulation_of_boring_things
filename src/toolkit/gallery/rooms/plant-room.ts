@@ -40,7 +40,7 @@ import type { LiveExhibit, PlantExhibit } from './plant/exhibit';
 
 /** Each plant room's exhibits, loaded with the room. */
 /** The rooms laid out as exhibits: each equipment room, and dev10. */
-export type ExhibitRoomId = EquipmentRoomId | 'dev10' | 'dev12';
+export type ExhibitRoomId = EquipmentRoomId | 'dev10' | 'dev12' | 'dev13';
 
 const EXHIBITS: Record<
   ExhibitRoomId,
@@ -56,6 +56,7 @@ const EXHIBITS: Record<
   dev_control: () => import('./plant/control'),
   dev10: () => import('./plant/services'),
   dev12: () => import('./plant/pool-fittings'),
+  dev13: () => import('./plant/signage'),
 };
 
 /**
@@ -174,7 +175,12 @@ export function startEquipmentRoom(
       if (isLive(built)) live.push(built);
       holder.add(model);
       room.add(holder);
-      mergeTree(model, (o) => o.userData.live === true);
+      // Still geometry is merged; what moves, and every piece a click
+      // works, is kept as it is.
+      const worked = new Set(
+        isLive(built) ? (built.parts?.uses.keys() ?? []) : [],
+      );
+      mergeTree(model, (o) => o.userData.live === true || worked.has(o));
       // Its caption on the wall behind it (floor equipment) or beneath it.
       const floor = exhibit.size.mount === 'floor';
       const caption = createMicroLabel(
@@ -259,6 +265,8 @@ export function startEquipmentRoom(
     place(x: number, z: number, yaw = 0, pitch = 0) {
       walk.place(x * m, z * m, yaw, pitch);
     },
+    /** Use whatever is at (x, y) on the screen (−1 to 1), as a click would. */
+    use: (x = 0, y = 0) => useAt(x, y)?.(),
   };
 
   void EXHIBITS[id]().then(({ EXHIBITS: exhibits, PURPOSE }) => {

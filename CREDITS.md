@@ -28,3 +28,9 @@ The program is licensed under the GNU General Public License, version 3 or later
 | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | `src/toolkit/components/fire/views/volumetric-fire.ts` and `src/toolkit/components/fire/assets/volumetric-fire/*.png` | Port of [ThreeVolumetricFire](https://github.com/Housz/ThreeVolumetricFire) by Housz (itself after yomotsu/VolumetricFire) | MIT; the licence notice is kept in the file. |
 | [three.js](https://threejs.org/) (dependency)                                                                         | three.js authors                                                                                                           | MIT                                          |
+
+## Fonts
+
+| Files                                                                                                            | Author and source                                                                                                     | Licence                                                        |
+| ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `src/toolkit/components/core/assets/fonts/PermanentMarker-Regular.ttf` (the handwriting on tape labels and tags) | Permanent Marker by Font Diner, from [Google Fonts](https://github.com/google/fonts/tree/main/apache/permanentmarker) | Apache License 2.0, in `PermanentMarker-LICENSE.txt` beside it |

@@ -1,4 +1,4 @@
-import { Group } from 'three';
+import { Group, Mesh, MeshBasicMaterial, TorusGeometry } from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { SANS } from '../../core/views/fitting-tools';
@@ -123,7 +123,11 @@ function steelFlanges(
  * connections and the flue spigot on top at the back, a condensate trap
  * below. Ours is Hamwarmy's.
  */
-export function createCondensingBoiler(kit: PanelKit, output = 300) {
+export function createCondensingBoiler(
+  kit: PanelKit,
+  output = 300,
+  panel?: Object3D,
+) {
   const t = plantTools(kit);
   const group = new Group();
   group.name = 'Condensing boiler';
@@ -139,30 +143,36 @@ export function createCondensingBoiler(kit: PanelKit, output = 300) {
   t.box(group, dark, W, 0.1, D, 0, H - 0.05, 0);
   for (const y of [0.55, 1.05])
     t.box(group, dark, W + 0.002, 0.004, D + 0.002, 0, y, 0);
-  // The control flap and its display, set into the front's top.
-  t.box(group, livery.main, 0.5, 0.18, 0.02, 0, H - 0.22, D / 2 + 0.005);
-  t.box(
-    group,
-    t.paint('#3b6b4a', 0.3),
-    0.12,
-    0.05,
-    0.004,
-    -0.12,
-    H - 0.21,
-    D / 2 + 0.016,
-  );
-  for (let i = 0; i < 4; i++)
-    t.cyl(
+  // The control panel, set into the front's top: the working one
+  // (`boiler-controls.ts`) when given, else a still likeness of it.
+  if (panel) {
+    panel.position.set(0, H - 0.22, D / 2);
+    group.add(panel);
+  } else {
+    t.box(group, livery.main, 0.5, 0.18, 0.02, 0, H - 0.22, D / 2 + 0.005);
+    t.box(
       group,
-      livery.accent,
-      0.011,
-      0.01,
-      0.04 + i * 0.045,
+      t.paint('#3b6b4a', 0.3),
+      0.12,
+      0.05,
+      0.004,
+      -0.12,
       H - 0.21,
-      D / 2 + 0.018,
-      'z',
-      12,
+      D / 2 + 0.016,
     );
+    for (let i = 0; i < 4; i++)
+      t.cyl(
+        group,
+        livery.accent,
+        0.011,
+        0.01,
+        0.04 + i * 0.045,
+        H - 0.21,
+        D / 2 + 0.018,
+        'z',
+        12,
+      );
+  }
   badge(kit, group, 'hamwarmy', [0, 0.9, D / 2 + 0.002], 0.05);
   // The rating plate on the side.
   nameplate(
@@ -211,7 +221,10 @@ export function createCondensingBoiler(kit: PanelKit, output = 300) {
  * run to the low-loss header, the gas manifold behind, and the condensate
  * drains to a tundish.
  */
-export function createBoilerCascade(kit: PanelKit) {
+export function createBoilerCascade(
+  kit: PanelKit,
+  live: { panels?: Object3D[]; isolators?: Object3D[] } = {},
+) {
   const t = plantTools(kit);
   const group = new Group();
   group.name = 'Boiler cascade';
@@ -231,7 +244,7 @@ export function createBoilerCascade(kit: PanelKit) {
   );
   const xs = [-(W + gap) / 2, (W + gap) / 2];
   xs.forEach((x, i) => {
-    const boiler = createCondensingBoiler(kit, 300);
+    const boiler = createCondensingBoiler(kit, 300, live.panels?.[i]);
     boiler.position.set(x, 0.1, 0.1);
     group.add(boiler);
     sign(
@@ -258,22 +271,23 @@ export function createBoilerCascade(kit: PanelKit) {
       0.125,
       24,
     );
-  t.rod(
-    group,
+  // The header along, a radiused bend, and the stack rising: the bend a
+  // quarter torus, so the two runs meet as the fabricated bend does.
+  const fr = 0.162,
+    bend = 0.32,
+    x0 = xs[0] - 0.3,
+    fz = back + 0.2;
+  t.rod(group, flue, [x0 + bend, fy, fz], [xs[1] + 0.3, fy, fz], fr, 28);
+  t.rod(group, flue, [x0, fy + bend, fz], [x0, 3.2, fz], fr, 28);
+  const elbow = new Mesh(
+    new TorusGeometry(bend, fr, 16, 20, Math.PI / 2),
     flue,
-    [xs[0] - 0.3, fy, back + 0.2],
-    [xs[1] + 0.3, fy, back + 0.2],
-    0.162,
-    28,
   );
-  t.rod(
-    group,
-    flue,
-    [xs[0] - 0.3, fy, back + 0.2],
-    [xs[0] - 0.3, 3.2, back + 0.2],
-    0.162,
-    28,
-  );
+  elbow.position.set(x0 + bend, fy + bend, fz);
+  elbow.rotation.z = Math.PI;
+  group.add(elbow);
+  // The header's closed far end.
+  t.cyl(group, flue, fr, 0.01, xs[1] + 0.3, fy, fz, 'x', 28);
   // Flow and return headers (DN80) behind, with BS 1710 LTHW bands.
   const green = t.paint(BS1710_BASIC.water, 0.5);
   const flowY = top + 0.22,
@@ -325,15 +339,34 @@ export function createBoilerCascade(kit: PanelKit) {
     STEEL_OD[50] / 2,
     14,
   );
-  for (const x of xs)
+  // Each boiler's gas drop: up from its connection, an isolating ball
+  // valve on the riser, then back to the manifold.
+  xs.forEach((x, i) => {
+    const gx = x + 0.2,
+      gz = back + 0.28;
     t.rod(
       group,
       gas,
-      [x + 0.2, top + 0.1, back + 0.28],
-      [x + 0.2, top + 0.46, back - 0.2],
+      [gx, top + 0.1, gz],
+      [gx, top + 0.46, gz],
       STEEL_OD[50] / 2 - 0.004,
       12,
     );
+    t.rod(
+      group,
+      gas,
+      [gx, top + 0.46, gz],
+      [gx, top + 0.46, back - 0.2],
+      STEEL_OD[50] / 2 - 0.004,
+      12,
+    );
+    const valve = live.isolators?.[i];
+    if (valve) {
+      valve.position.set(gx, top + 0.26, gz);
+      valve.rotation.set(0, 0, Math.PI / 2);
+      group.add(valve);
+    }
+  });
   // Condensate drains to a tundish.
   const pvc = t.paint('#e3e3df', 0.5);
   for (const x of xs)
@@ -826,7 +859,7 @@ export function createCalorifier(kit: PanelKit) {
  * VMR6 2" (165 mm installation length), which the gas proving and
  * emergency stop system closes. Ours by Trager-Feinstein and Warden.
  */
-export function createGasTrain(kit: PanelKit) {
+export function createGasTrain(kit: PanelKit, live: { ecv?: Object3D } = {}) {
   const t = plantTools(kit);
   const group = new Group();
   group.name = 'Gas train';
@@ -845,19 +878,26 @@ export function createGasTrain(kit: PanelKit) {
   t.rod(group, gas, [-1.0, y, z], [-0.55, y, z], r, 14);
   t.rod(group, gas, [-0.25, y, z], [1.0, y, z], r, 14);
   t.rod(group, gas, [1.0, y, z], [1.0, 1.6, z], r, 14);
-  // Emergency control valve with its yellow lever.
-  t.cyl(
-    group,
-    t.paint(FINISH.brass, 0.35, 0.7),
-    0.04,
-    0.12,
-    -1.0,
-    0.5,
-    z,
-    'y',
-    14,
-  );
-  t.box(group, t.paint('#e5c43a', 0.5), 0.02, 0.02, 0.2, -1.0, 0.56, z + 0.1);
+  // Emergency control valve with its yellow lever: the working ball
+  // valve when given.
+  if (live.ecv) {
+    live.ecv.position.set(-1.0, 0.5, z);
+    live.ecv.rotation.set(0, 0, Math.PI / 2);
+    group.add(live.ecv);
+  } else {
+    t.cyl(
+      group,
+      t.paint(FINISH.brass, 0.35, 0.7),
+      0.04,
+      0.12,
+      -1.0,
+      0.5,
+      z,
+      'y',
+      14,
+    );
+    t.box(group, t.paint('#e5c43a', 0.5), 0.02, 0.02, 0.2, -1.0, 0.56, z + 0.1);
+  }
   sign(
     t,
     group,
@@ -916,6 +956,20 @@ export function createGasTrain(kit: PanelKit) {
     z,
   );
   badge(kit, group, 'warden', [0.55, y + 0.12, z + 0.047], 0.02, '#e9e9e2');
+  // The coil's indicator: lit while the valve is held open.
+  const coilLamp = new MeshBasicMaterial({ color: '#5dff7a' });
+  kit.materials.push(coilLamp);
+  t.cyl(
+    group,
+    coilLamp,
+    0.008,
+    0.006,
+    0.55,
+    y + 0.15,
+    z + 0.047,
+    'z',
+    12,
+  ).userData.live = true;
   sign(
     t,
     group,
@@ -928,7 +982,12 @@ export function createGasTrain(kit: PanelKit) {
   sign(t, group, 'NATURAL GAS  →', [0.3, y + 0.3, -0.17], 0.36, 0.06, {
     ground: BS1710_BASIC.gases,
   });
-  return group;
+  return Object.assign(group, {
+    /** Show the safety shut-off valve open (lamp lit) or shut. */
+    setSsov(open: boolean) {
+      coilLamp.color.set(open ? '#5dff7a' : '#24331f');
+    },
+  });
 }
 
 // ---- Gas detection and the emergency stop ---------------------------------
@@ -941,7 +1000,10 @@ export function createGasTrain(kit: PanelKit) {
  * yellow box by the door that shuts the gas safety valve and stops the
  * boilers. Ours by Kessler-Moody and Hartwell & Bligh.
  */
-export function createGasSafetyBoard(kit: PanelKit) {
+export function createGasSafetyBoard(
+  kit: PanelKit,
+  live: { stop?: Object3D; test?: Object3D; reset?: Object3D } = {},
+) {
   const t = plantTools(kit);
   const group = new Group();
   group.name = 'Gas detection and emergency stop';
@@ -950,10 +1012,13 @@ export function createGasSafetyBoard(kit: PanelKit) {
   // The control panel.
   t.box(group, white, 0.145, 0.21, 0.046, -0.4, -0.25, 0.043);
   t.box(group, t.paint('#1d2022', 0.5), 0.09, 0.04, 0.004, -0.4, -0.2, 0.068);
-  for (const [i, c] of ['#58d07a', '#e5c43a', '#d8382f'].entries())
+  // Its lamps: healthy, fault, gas alarm. Live: `setLamps` drives them.
+  const lampMaterials = ['#58d07a', '#e5c43a', '#d8382f'].map((c, i) => {
+    const material = new MeshBasicMaterial({ color: c });
+    kit.materials.push(material);
     t.cyl(
       group,
-      t.paint(c, 0.3),
+      material,
       0.007,
       0.006,
       -0.44 + i * 0.04,
@@ -961,7 +1026,17 @@ export function createGasSafetyBoard(kit: PanelKit) {
       0.068,
       'z',
       10,
-    );
+    ).userData.live = true;
+    return { material, colour: c };
+  });
+  if (live.test) {
+    live.test.position.set(-0.4, -0.45, 0.02);
+    group.add(live.test);
+  }
+  if (live.reset) {
+    live.reset.position.set(-0.15, -0.45, 0.02);
+    group.add(live.reset);
+  }
   badge(kit, group, 'kessler-moody', [-0.4, -0.14, 0.068], 0.015);
   // The detector head, high, and its cable.
   t.box(group, white, 0.1, 0.12, 0.06, -0.4, 0.75, 0.05);
@@ -980,30 +1055,37 @@ export function createGasSafetyBoard(kit: PanelKit) {
   // Sounder beacon.
   t.cyl(group, t.paint('#d8382f', 0.4), 0.05, 0.07, 0.05, 0.75, 0.055, 'z', 20);
   t.cyl(group, t.paint('#f0a020', 0.25), 0.03, 0.03, 0.05, 0.75, 0.1, 'z', 16);
-  // The emergency stop: yellow box, red mushroom head, its label.
-  t.box(group, t.paint('#e5c43a', 0.45), 0.09, 0.09, 0.08, 0.45, -0.25, 0.06);
-  t.cyl(
-    group,
-    t.paint('#c42b23', 0.4),
-    0.02,
-    0.03,
-    0.45,
-    -0.25,
-    0.115,
-    'z',
-    16,
-  );
-  t.cyl(
-    group,
-    t.paint('#c42b23', 0.4),
-    0.032,
-    0.02,
-    0.45,
-    -0.25,
-    0.135,
-    'z',
-    20,
-  );
+  // The emergency stop: yellow box, red mushroom head, its label; the
+  // working mushroom stop when given.
+  if (live.stop) {
+    t.box(group, t.paint('#e5c43a', 0.45), 0.09, 0.09, 0.08, 0.45, -0.25, 0.06);
+    live.stop.position.set(0.45, -0.25, 0.1);
+    group.add(live.stop);
+  } else {
+    t.box(group, t.paint('#e5c43a', 0.45), 0.09, 0.09, 0.08, 0.45, -0.25, 0.06);
+    t.cyl(
+      group,
+      t.paint('#c42b23', 0.4),
+      0.02,
+      0.03,
+      0.45,
+      -0.25,
+      0.115,
+      'z',
+      16,
+    );
+    t.cyl(
+      group,
+      t.paint('#c42b23', 0.4),
+      0.032,
+      0.02,
+      0.45,
+      -0.25,
+      0.135,
+      'z',
+      20,
+    );
+  }
   badge(kit, group, 'hartwell-bligh', [0.45, -0.32, 0.101], 0.012);
   sign(
     t,
@@ -1015,5 +1097,13 @@ export function createGasSafetyBoard(kit: PanelKit) {
     { ground: '#c42b23', ink: '#ffffff' },
   );
   sign(t, group, 'GAS DETECTION', [-0.4, 0.0, 0.022], 0.24, 0.05);
-  return group;
+  return Object.assign(group, {
+    /** Light the panel's lamps: healthy, fault, gas detected. */
+    setLamps(healthy: boolean, fault: boolean, gas: boolean) {
+      const on = [healthy, fault, gas];
+      lampMaterials.forEach((l, i) =>
+        l.material.color.set(on[i] ? l.colour : '#2a2c2a'),
+      );
+    },
+  });
 }

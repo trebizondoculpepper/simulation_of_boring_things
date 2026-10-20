@@ -356,3 +356,115 @@ export function airState(p: PlantReading): MimicState {
     },
   };
 }
+
+// ---- The boiler house gas -------------------------------------------------
+
+export const GAS_MIMIC: MimicSpec = {
+  title: 'BOILER HOUSE — NATURAL GAS',
+  width: 1.8,
+  height: 1.0,
+  lines: [
+    {
+      colour: GAS,
+      points: [
+        pt(-0.82, -0.3),
+        pt(-0.62, -0.3),
+        pt(-0.62, 0.05),
+        pt(0.3, 0.05),
+      ],
+      width: 10,
+    },
+    {
+      colour: GAS,
+      points: [pt(0.3, 0.05), pt(0.3, 0.25), pt(0.55, 0.25)],
+      width: 8,
+    },
+    {
+      colour: GAS,
+      points: [pt(0.3, 0.05), pt(0.3, -0.15), pt(0.55, -0.15)],
+      width: 8,
+    },
+  ],
+  shapes: [
+    { symbol: 'valve', at: pt(-0.72, -0.3), size: 0.06, label: 'ECV' },
+    { symbol: 'tank', at: pt(-0.4, 0.05), size: 0.08, label: 'METER G25' },
+    { symbol: 'valve', at: pt(0.0, 0.05), size: 0.07, label: 'SSOV-701' },
+    { symbol: 'valve', at: pt(0.42, 0.25), size: 0.05, label: 'ISOL 1' },
+    { symbol: 'valve', at: pt(0.42, -0.15), size: 0.05, label: 'ISOL 2' },
+    { symbol: 'boiler', at: pt(0.68, 0.25), size: 0.11, label: 'B-501' },
+    { symbol: 'boiler', at: pt(0.68, -0.15), size: 0.11, label: 'B-502' },
+  ],
+  labels: [{ text: 'FROM STREET MAIN', at: pt(-0.7, -0.4) }],
+  lamps: [
+    { id: 'ecv-open', at: pt(-0.72, -0.2), colour: 'green', label: 'OPEN' },
+    { id: 'ssov-open', at: pt(-0.04, 0.16), colour: 'green', label: 'OPEN' },
+    { id: 'ssov-shut', at: pt(0.04, 0.16), colour: 'red', label: 'SHUT' },
+    { id: 'isol-1', at: pt(0.42, 0.33), colour: 'green' },
+    { id: 'isol-2', at: pt(0.42, -0.07), colour: 'green' },
+    { id: 'b1-fire', at: pt(0.82, 0.3), colour: 'amber', label: 'FIRE' },
+    { id: 'b1-lock', at: pt(0.82, 0.2), colour: 'red', label: 'LOCK' },
+    { id: 'b2-fire', at: pt(0.82, -0.1), colour: 'amber', label: 'FIRE' },
+    { id: 'b2-lock', at: pt(0.82, -0.2), colour: 'red', label: 'LOCK' },
+    {
+      id: 'gas-detected',
+      at: pt(-0.75, 0.3),
+      colour: 'red',
+      label: 'GAS DETECTED',
+    },
+    { id: 'stop', at: pt(-0.45, 0.3), colour: 'red', label: 'EMERGENCY STOP' },
+  ],
+  readouts: [
+    { id: 'meter', at: pt(-0.4, -0.18) },
+    { id: 'burners', at: pt(0.12, -0.25) },
+  ],
+  modes: [
+    { id: 'pressure', legend: 'PRESS' },
+    { id: 'flow', legend: 'FLOW' },
+  ],
+};
+
+/** What the gas mimic shows, from the gas house and its boilers. */
+export interface GasReading {
+  ecvOpen: boolean;
+  ssovOpen: boolean;
+  stopPressed: boolean;
+  gasDetected: boolean;
+  isolators: readonly boolean[];
+  boilers: readonly { firing: boolean; lockout: boolean; rate: number }[];
+  /** m³/h through the meter, and mbar at the meter and after the SSOV. */
+  flow: number;
+  supply: number;
+  burners: number;
+}
+
+export function gasState(g: GasReading): MimicState {
+  return {
+    lamps: {
+      'ecv-open': g.ecvOpen,
+      'ssov-open': g.ssovOpen,
+      'ssov-shut': !g.ssovOpen,
+      'isol-1': g.isolators[0] ?? false,
+      'isol-2': g.isolators[1] ?? false,
+      'b1-fire': g.boilers[0]?.firing ?? false,
+      'b1-lock': g.boilers[0]?.lockout ?? false,
+      'b2-fire': g.boilers[1]?.firing ?? false,
+      'b2-lock': g.boilers[1]?.lockout ?? false,
+      'gas-detected': g.gasDetected,
+      stop: g.stopPressed,
+    },
+    readouts: {
+      meter: {
+        pressure: r(g.supply, 'mbar', 'INLET', 1),
+        flow: r(g.flow, 'm3/h', 'METER', 1),
+      },
+      burners: {
+        pressure: r(g.burners, 'mbar', 'AFTER SSOV', 1),
+        flow: r(
+          g.boilers.reduce((n, b) => n + (b.firing ? b.rate * 300 : 0), 0),
+          'kW',
+          'FIRING',
+        ),
+      },
+    },
+  };
+}

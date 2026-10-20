@@ -1,6 +1,7 @@
 import { Group } from 'three';
 import type { Object3D } from 'three';
-import type { PlantExhibit } from './exhibit';
+import type { LiveExhibit, PlantExhibit } from './exhibit';
+import { plantAt } from '../../logic/control-room-demo';
 import {
   createAirBlower,
   createDrive,
@@ -32,7 +33,27 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     reference:
       'After Grundfos NK 150-315, 30 kW 4-pole; DN200/150; hair-and-lint strainers after AstralPool Aral Ø330',
     size: { w: 3.2, d: 2.4, h: 1.9, mount: 'floor' },
-    build: createPumpPair,
+    build(kit): LiveExhibit {
+      // The duty pump runs; the standby sits with its gauges at the
+      // suction's static head. Read from the plant (`control-room-demo`).
+      const pair = createPumpPair(kit);
+      const [duty, standby] = pair.pumps;
+      return {
+        object: pair,
+        update(delta) {
+          const plant = plantAt(performance.now() / 1000);
+          const worst = Math.max(...plant.filterDp);
+          duty.gauges.suction.set(0.18 - (plant.flow - 600) * 0.001);
+          duty.gauges.discharge.set(2.1 + 0.3 * (worst - 0.4));
+          standby.gauges.suction.set(0.22);
+          standby.gauges.discharge.set(0.22);
+          for (const pump of [duty, standby]) {
+            pump.gauges.suction.update(delta);
+            pump.gauges.discharge.update(delta);
+          }
+        },
+      };
+    },
   },
   {
     title: 'Pressure sand filter, main pool',

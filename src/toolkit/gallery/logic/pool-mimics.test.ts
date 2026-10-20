@@ -5,7 +5,9 @@ import {
   AIR_MIMIC,
   HEATING_MIMIC,
   MAIN_POOL_MIMIC,
+  GAS_MIMIC,
   airState,
+  gasState,
   heatingState,
   mainPoolState,
 } from './pool-mimics';
@@ -38,5 +40,34 @@ describe('the main pool mimic', () => {
         reading.filterDp[1] > 0.7,
       );
     }
+  });
+});
+
+describe('the gas mimic', () => {
+  const reading = {
+    ecvOpen: true,
+    ssovOpen: true,
+    stopPressed: false,
+    gasDetected: false,
+    isolators: [true, false],
+    boilers: [
+      { firing: true, lockout: false, rate: 0.6 },
+      { firing: false, lockout: true, rate: 0 },
+    ],
+    flow: 19,
+    supply: 20.6,
+    burners: 19.8,
+  };
+
+  it('fits its board, and drives every lamp and readout', () => {
+    expect(checkMimic(GAS_MIMIC, gasState(reading))).toEqual([]);
+  });
+
+  it('shows the safety valve shut, and a shut isolator dark', () => {
+    const shown = gasState({ ...reading, ssovOpen: false });
+    expect(shown.lamps['ssov-shut']).toBe(true);
+    expect(shown.lamps['ssov-open']).toBe(false);
+    expect(shown.lamps['isol-2']).toBe(false);
+    expect(shown.lamps['b2-lock']).toBe(true);
   });
 });

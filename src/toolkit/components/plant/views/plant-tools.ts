@@ -10,6 +10,11 @@ import {
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { SANS, tools } from '../../core/views/fitting-tools';
+import { createDialGauge } from '../../industrial-control/views/dial-gauge';
+import type {
+  DialGaugeView,
+  DialKind,
+} from '../../industrial-control/views/dial-gauge';
 
 /**
  * Shared drawing tools for building plant: pipework, flanges, valves,
@@ -308,81 +313,48 @@ export function plantTools(kit: PanelKit) {
    * A bourdon-tube pressure gauge on a short stem, `dia` across its dial
    * (100 mm by default), reading `max` bar, facing +z from `at`.
    */
+  /**
+   * A dial gauge (`createDialGauge`) at `at`, turned `yaw`: a pressure
+   * gauge on a bottom connection, or, in °C, a bimetal thermometer. It is
+   * live: drive it with the view this returns (`set`, `update`).
+   */
   const pressureGauge = (
     parent: Object3D,
     at: Point,
     {
       dia = 0.1,
+      min,
       max = 4,
       unit = 'bar',
       yaw = 0,
-    }: { dia?: number; max?: number; unit?: string; yaw?: number } = {},
-  ) => {
-    const group = new Group();
-    group.position.set(...at);
-    group.rotation.y = yaw;
-    parent.add(group);
-    const brass = paint(FINISH.brass, 0.35, 0.7);
-    const case_ = paint(FINISH.stainless, 0.3, 0.8);
-    rod(group, brass, [0, -dia * 0.9, 0], [0, -dia / 2, 0], 0.007);
-    t.cyl(group, case_, dia / 2 + 0.004, 0.035, 0, 0, 0, 'z', 32);
-    const face = t.printed(
+      kind,
+      legend,
+      red,
+    }: {
+      dia?: number;
+      min?: number;
+      max?: number;
+      unit?: string;
+      yaw?: number;
+      kind?: DialKind;
+      legend?: string;
+      red?: { from: number; to: number } | null;
+    } = {},
+  ): DialGaugeView => {
+    const gauge = createDialGauge(kit, {
       dia,
-      dia,
-      (c, w, h) => {
-        c.fillStyle = '#f7f7f2';
-        c.beginPath();
-        c.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2);
-        c.fill();
-        c.strokeStyle = '#1b1b1b';
-        c.fillStyle = '#1b1b1b';
-        c.textAlign = 'center';
-        c.textBaseline = 'middle';
-        const r = w * 0.4;
-        for (let i = 0; i <= max * 5; i++) {
-          const a = Math.PI * 0.75 + (i / (max * 5)) * Math.PI * 1.5;
-          const long = i % 5 === 0;
-          c.lineWidth = long ? w * 0.012 : w * 0.006;
-          c.beginPath();
-          c.moveTo(w / 2 + Math.cos(a) * r, h / 2 + Math.sin(a) * r);
-          c.lineTo(
-            w / 2 + Math.cos(a) * r * (long ? 0.85 : 0.92),
-            h / 2 + Math.sin(a) * r * (long ? 0.85 : 0.92),
-          );
-          c.stroke();
-          if (long) {
-            c.font = `${w * 0.08}px ${SANS}`;
-            c.fillText(
-              String(i / 5),
-              w / 2 + Math.cos(a) * r * 0.7,
-              h / 2 + Math.sin(a) * r * 0.7,
-            );
-          }
-        }
-        c.font = `${w * 0.07}px ${SANS}`;
-        c.fillText(unit, w / 2, h * 0.68);
-      },
-      256,
-    );
-    face.mesh.position.z = 0.0185;
-    group.add(face.mesh);
-    // The pointer, live so a reading can move it.
-    const needle = new Group();
-    needle.userData.live = true;
-    needle.position.z = 0.02;
-    t.box(
-      needle,
-      paint('#141414', 0.5),
-      0.003,
-      dia * 0.38,
-      0.001,
-      0,
-      dia * 0.17,
-      0,
-    );
-    needle.rotation.z = Math.PI * 0.75;
-    group.add(needle);
-    return { group, needle };
+      min,
+      max,
+      unit,
+      kind: kind ?? (unit.includes('°') ? 'thermometer' : 'pressure'),
+      entry: unit.includes('°') ? 'back' : 'bottom',
+      legend,
+      red,
+    });
+    gauge.group.position.set(...at);
+    gauge.group.rotation.y = yaw;
+    parent.add(gauge.group);
+    return gauge;
   };
 
   /** A concrete housekeeping plinth, `h` high (100 mm), its top at y = h. */

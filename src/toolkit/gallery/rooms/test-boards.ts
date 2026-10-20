@@ -49,6 +49,17 @@ import {
 } from '../../components/industrial-control/views/period-instruments';
 import { teleprinterInMetres } from '../../components/industrial-control/views/teleprinter';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
+import { createDialGauge } from '../../components/industrial-control/views/dial-gauge';
+import { createBoilerPanel } from '../../components/plant/views/boiler-controls';
+import {
+  illuminatedRocker,
+  membraneKey,
+} from '../../components/core/parts/small-parts';
+import {
+  newBoiler,
+  pressBoiler,
+  stepBoiler,
+} from '../../components/plant/logic/boiler-house';
 import type { MimicSpec } from '../../components/industrial-control/logic/mimic';
 import { drawBootScreen } from '../../components/industrial-control/views/boot-screen';
 import {
@@ -1096,4 +1107,150 @@ export function createMimicTestBoard(kit: PanelKit): TestFitting {
     });
   });
   return fitting(board, updates);
+}
+
+/**
+ * The GAUGES board: the plant's dial gauges, life size, each driven by
+ * the knob under it: a 100 mm pressure gauge (0 to 4 bar, red over 3.4),
+ * a compound gauge for a pump's suction (−1 to 1.5 bar), and a bimetal
+ * thermometer (0 to 120 °C). Tried here before the plant rooms use them.
+ */
+export function createGaugeTestBoard(kit: PanelKit): TestFitting {
+  const board = createBoard(kit, {
+    title: 'DIAL GAUGES',
+    width: 1.0,
+    height: 0.6,
+    scale: 1,
+    captionScale: 1.2,
+  });
+  const updates: ((delta: number) => void)[] = [];
+  const kinds: [Parameters<typeof createDialGauge>[1], string, number][] = [
+    [
+      {
+        kind: 'pressure',
+        max: 4,
+        red: { from: 3.4, to: 4 },
+        legend: 'DISCHARGE',
+        entry: 'back',
+      },
+      'PRESS',
+      0.5,
+    ],
+    [{ kind: 'compound', legend: 'SUCTION', entry: 'back' }, 'SUCTION', 0.45],
+    [{ kind: 'thermometer', max: 120, legend: 'LTHW FLOW' }, 'TEMP', 0.65],
+  ];
+  kinds.forEach(([options, legend, initial], i) => {
+    const x = -0.3 + i * 0.3;
+    const gauge = createDialGauge(kit, { ...options, dia: 0.1 });
+    gauge.group.position.set(x, 0.07, 0.04);
+    board.parts.add(gauge.group);
+    const knob = board.place(potentiometer(kit, { legend, initial }), x, -0.17);
+    const min = options?.min ?? (options?.kind === 'compound' ? -1 : 0);
+    const max = options?.max ?? (options?.kind === 'compound' ? 1.5 : 4);
+    updates.push((delta) => {
+      gauge.set(min + knob.share.value * (max - min));
+      gauge.update(delta);
+    });
+  });
+  return fitting(board, updates);
+}
+
+/**
+ * The BOILER CONTROLS board: a boiler's control panel, life size, wired
+ * to one boiler's controller (`boiler-house.ts`). DEMAND calls for heat;
+ * the boiler purges, lights and fires, its code display counting through
+ * the sequence. Turn GAS SUPPLY off and it loses its flame, retries and locks out, flashing its
+ * fault code until the gas is back and RESET is pressed.
+ */
+export function createBoilerControlsBoard(kit: PanelKit): TestFitting {
+  const board = createBoard(kit, {
+    title: 'BOILER CONTROLS',
+    width: 1.0,
+    height: 0.6,
+    scale: 1,
+    captionScale: 1.2,
+  });
+  const updates: ((delta: number) => void)[] = [];
+  let boiler = newBoiler();
+  let seconds = 0;
+  const panel = createBoilerPanel(
+    kit,
+    (key) => (boiler = pressBoiler(boiler, key)),
+  );
+  panel.group.position.set(0, 0.1, 0);
+  board.parts.add(panel.group);
+  for (const [object, use] of panel.parts.uses) board.set.uses.set(object, use);
+  // The gas supply, as a two-position lever (the gas isolating valve
+  // itself is plumbing: tried in the boiler room, not here).
+  const gas = board.place(
+    selector(kit, { positions: 2, initial: 1, legend: 'GAS SUPPLY' }),
+    -0.2,
+    -0.18,
+  );
+  const demand = board.place(
+    selector(kit, { positions: 2, initial: 1, legend: 'DEMAND' }),
+    0.28,
+    -0.18,
+  );
+  updates.push((delta) => {
+    seconds += delta;
+    boiler = stepBoiler(
+      boiler,
+      {
+        demand: demand.position.value === 1,
+        gas: gas.position.value === 1,
+        systemReturn: 60,
+        pressure: 2.2,
+      },
+      delta,
+    );
+    panel.show(boiler, seconds, delta);
+  });
+  return fitting(board, updates);
+}
+
+/**
+ * The SMALL CONTROLS board: an appliance panel's own controls, life size
+ * and twice life size, as boilers and controllers have them rather than
+ * control stations: membrane keys in their usual colours, and
+ * illuminated I/O rocker switches in red and green, each working on its
+ * own (`core/parts/small-parts.ts`).
+ */
+export function createSmallControlsBoard(kit: PanelKit): TestFitting {
+  const board = createBoard(kit, {
+    title: 'SMALL CONTROLS',
+    width: 0.62,
+    height: 0.4,
+    scale: 1,
+    captionScale: 1.2,
+  });
+  const keys: [string, string][] = [
+    ['MODE', '#2a2b2c'],
+    ['RESET', '#a8261d'],
+    ['MANUAL', '#5d4a1a'],
+    ['ENTER', '#2f5f9a'],
+  ];
+  keys.forEach(([legend, colour], i) => {
+    const key = board.place(
+      membraneKey(kit, { legend, colour }),
+      -0.2 + i * 0.13,
+      0.09,
+      2,
+    );
+    void key;
+  });
+  board.caption('MEMBRANE KEYS, TWICE LIFE SIZE', 0, 0.02, 0.008);
+  board.place(illuminatedRocker(kit, { name: 'Red rocker' }), -0.1, -0.09, 2);
+  board.place(
+    illuminatedRocker(kit, {
+      colour: '#5dff7a',
+      initial: false,
+      name: 'Green rocker',
+    }),
+    0.1,
+    -0.09,
+    2,
+  );
+  board.caption('ILLUMINATED I/O ROCKERS, TWICE LIFE SIZE', 0, -0.16, 0.008);
+  return fitting(board);
 }

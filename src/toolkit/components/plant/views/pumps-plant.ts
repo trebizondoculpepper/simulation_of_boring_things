@@ -214,13 +214,22 @@ export function createEndSuctionPump(kit: PanelKit, x0 = 0) {
     0.16,
     0.08,
   );
-  // Pressure gauges on suction and discharge.
-  t.pressureGauge(group, [vx - 0.32, shaftY + 0.25, 0.08], {
-    max: 2.5,
+  // Gauges on suction (a compound gauge: it can pull below atmospheric)
+  // and discharge, live: `gauges` drives them.
+  const suction = t.pressureGauge(group, [vx - 0.32, shaftY + 0.25, 0.08], {
+    kind: 'compound',
+    min: -1,
+    max: 1.5,
     dia: 0.1,
+    legend: 'SUCTION',
   });
-  t.pressureGauge(group, [vx, shaftY + 0.7, 0.24], { max: 4, dia: 0.1 });
-  return group;
+  const discharge = t.pressureGauge(group, [vx, shaftY + 0.7, 0.24], {
+    max: 4,
+    dia: 0.1,
+    legend: 'DISCHARGE',
+    red: { from: 3.4, to: 4 },
+  });
+  return Object.assign(group, { gauges: { suction, discharge } });
 }
 
 /**
@@ -280,6 +289,7 @@ export function createStrainer(kit: PanelKit) {
 export function createPumpPair(kit: PanelKit) {
   const t = plantTools(kit);
   const group = new Group();
+  const pumps: ReturnType<typeof createEndSuctionPump>[] = [];
   for (const [z, name] of [
     [-0.75, 'P-101A DUTY'],
     [0.75, 'P-101B STANDBY'],
@@ -287,7 +297,9 @@ export function createPumpPair(kit: PanelKit) {
     const set = new Group();
     set.position.z = z;
     group.add(set);
-    set.add(createEndSuctionPump(kit, 0.45));
+    const pump = createEndSuctionPump(kit, 0.45);
+    pumps.push(pump);
+    set.add(pump);
     const strainer = createStrainer(kit);
     strainer.position.x = -1.15;
     set.add(strainer);
@@ -314,7 +326,7 @@ export function createPumpPair(kit: PanelKit) {
     tag.mesh.position.set(-0.4, 0.3, 0.42);
     set.add(tag.mesh);
   }
-  return group;
+  return Object.assign(group, { pumps });
 }
 
 /**
