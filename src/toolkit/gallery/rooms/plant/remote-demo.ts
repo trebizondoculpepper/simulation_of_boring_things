@@ -6,6 +6,7 @@ import {
   createSevenSegment,
 } from '../../../components/core/views/eighties-controls';
 import { tools } from '../../../components/core/views/fitting-tools';
+import { panelMakerMark } from '../../../components/core/views/panel-maker-mark';
 import { createEngravedPlate } from '../../../components/core/views/plant-signs';
 import {
   createPartSet,
@@ -48,6 +49,12 @@ function station(kit: PanelKit, title: string, w: number, h: number) {
   });
   plate.position.set(0, h / 2 - 0.05, 0.002);
   face.add(plate);
+  panelMakerMark(kit, face, {
+    width: w,
+    height: h,
+    z: 0,
+    corner: 'bottom-right',
+  });
   return { object, face };
 }
 

@@ -34,3 +34,7 @@ The program is licensed under the GNU General Public License, version 3 or later
 | Files                                                                                                            | Author and source                                                                                                     | Licence                                                        |
 | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `src/toolkit/components/core/assets/fonts/PermanentMarker-Regular.ttf` (the handwriting on tape labels and tags) | Permanent Marker by Font Diner, from [Google Fonts](https://github.com/google/fonts/tree/main/apache/permanentmarker) | Apache License 2.0, in `PermanentMarker-LICENSE.txt` beside it |
+
+## Code
+
+- **ThreeJS Water**, by Yong Su (jeantimex), after Evan Wallace's WebGL Water: MIT licence. Copyright (c) 2011 Evan Wallace; modified work copyright (c) 2026 Yong Su. Vendored in `src/toolkit/vendor/threejs-water/` with its licence and a note of what was changed; used by dev16. Source: https://github.com/jeantimex/threejs-water

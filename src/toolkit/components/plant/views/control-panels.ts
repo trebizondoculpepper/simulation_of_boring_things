@@ -1,3 +1,4 @@
+import { panelMakerMark } from '../../core/views/panel-maker-mark';
 import { Group } from 'three';
 import type { Mesh, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -147,8 +148,15 @@ export function createAnnunciatorAssembly(
   t.cyl(group, horn, 0.05, 0.06, 0, 0.4, 0.06, 'z', 20);
   t.cyl(group, t.paint('#2a2b2c', 0.5), 0.03, 0.02, 0, 0.4, 0.1, 'z', 20);
   const badge = createBrandBadge(kit, 'warden', { height: 0.02 });
-  badge.position.set(0.3, -0.33, 0.1205);
+  badge.position.set(-0.3, -0.33, 0.1205);
   group.add(badge);
+  // Penfold built the assembly round Warden's annunciator.
+  panelMakerMark(kit, group, {
+    width: 0.86,
+    height: 0.7,
+    z: 0.12,
+    corner: 'bottom-right',
+  });
   let was = new Set<AlarmId>();
   view.update = (reading, seconds) => {
     now = seconds;
@@ -179,6 +187,7 @@ export function createRecorderPanel(kit: PanelKit): RecorderPanelView {
   const t = plantTools(kit);
   const group = new Group();
   t.box(group, t.paint('#7d8a86', 0.55), 1.3, 0.6, 0.06, 0, 0, 0.03);
+  panelMakerMark(kit, group, { width: 1.3, height: 0.6, z: 0.06 });
   const temps = createChartRecorder(kit, {
     pens: ['#c4211b', '#1c48b8', '#1b8a3c'],
     title: 'POOL TEMPS',
@@ -231,6 +240,7 @@ export function createReadoutBoard(kit: PanelKit): ReadoutBoardView {
   const livery = brandLivery(kit, 'kessler-moody');
   const group = new Group();
   t.box(group, livery.paint.casing, 1.3, 0.55, 0.05, 0, 0, 0.025);
+  panelMakerMark(kit, group, { width: 1.3, height: 0.55, z: 0.05 });
   const names = [
     'MAIN POOL °C',
     'LEARNER °C',

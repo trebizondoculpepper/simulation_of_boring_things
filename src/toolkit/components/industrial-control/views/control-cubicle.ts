@@ -6,6 +6,7 @@ import type { BrandId } from '../../core/logic/brands';
 import { createPartSet } from '../../core/parts/parts';
 import { SWING_HANDLE, swingHandle } from '../../core/parts/swing-handle';
 import { createEngravedPlate } from '../../core/views/plant-signs';
+import { panelMakerMark } from '../../core/views/panel-maker-mark';
 
 /**
  * A free-standing control cubicle, after the grey switchgear and control
@@ -143,10 +144,16 @@ export function createControlCubicle(
       0,
     );
     face.add(handle.object);
-    // The maker's badge, low on the door, clear of the mimic.
-    const badge = livery.badge(0.035);
-    badge.position.set(0, -leafH / 2 + 0.12, 0.001);
-    face.add(badge);
+    // The maker's mark, top right of the last door.
+    if (i === count - 1)
+      panelMakerMark(kit, face, {
+        width: leafW,
+        height: leafH,
+        z: 0,
+        maker,
+        size: 0.022,
+        inset: 0.04,
+      });
     doors.push({ face, width: leafW, height: leafH, handle });
   }
   // The fixed top panel, flush with the doors.

@@ -1,9 +1,17 @@
-import { Group, Mesh, MeshBasicMaterial, TorusGeometry } from 'three';
+import {
+  CylinderGeometry,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  SphereGeometry,
+  TorusGeometry,
+} from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { SANS } from '../../core/views/fitting-tools';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import { brandLivery } from '../../core/views/brand-livery';
+import { createStencilText } from '../../core/views/plant-signs';
 import type { BrandId } from '../../core/logic/brands';
 import { BS1710_BASIC, BS1710_CODE, FINISH, plantTools } from './plant-tools';
 import type { Point } from './plant-tools';
@@ -223,7 +231,12 @@ export function createCondensingBoiler(
  */
 export function createBoilerCascade(
   kit: PanelKit,
-  live: { panels?: Object3D[]; isolators?: Object3D[] } = {},
+  live: {
+    panels?: Object3D[];
+    isolators?: Object3D[];
+    /** Dial thermometers: each boiler's flue riser's, then the header's. */
+    flueGauges?: Object3D[];
+  } = {},
 ) {
   const t = plantTools(kit);
   const group = new Group();
@@ -259,35 +272,154 @@ export function createBoilerCascade(
   });
   const top = 0.1 + H;
   const back = 0.1 - D / 2;
-  // Common flue header (Ø300) above, rising at the left end.
+  // The common flue, after the cascade flue kits Remeha and Hamworthy
+  // supply. Each boiler's riser carries a non-return flap (a condensing
+  // boiler's fan pushes its gas out under pressure, which would otherwise
+  // drive it back down an idle boiler) and joins the header with a 45°
+  // swept branch, leaning the way the gas goes. The header rises 3°
+  // towards the stack, so condensate runs back to a drain and trap at its
+  // closed end, and widens once both boilers' gas is in it.
   const flue = t.paint(FINISH.stainless, 0.3, 0.8);
-  const fy = top + 0.5;
-  for (const x of xs)
-    t.rod(
+  const fz = back + 0.2;
+  const r1 = 0.14,
+    r2 = 0.17,
+    riser = 0.125,
+    lean = 0.18,
+    bend = 0.32;
+  const xEnd = xs[1] + 0.25;
+  const x0 = xs[0] - 0.75;
+  const xBend = x0 + bend;
+  const fall = Math.tan((3 * Math.PI) / 180);
+  const yLow = top + 0.62;
+  const headerY = (x: number) => yLow + (xEnd - x) * fall;
+  const joint = (x: number, y: number, r: number) => {
+    const ball = new Mesh(new SphereGeometry(r, 20, 12), flue);
+    ball.position.set(x, y, fz);
+    group.add(ball);
+  };
+  const black = t.paint('#1b1c1d', 0.5);
+  for (const x of xs) {
+    const xj = x - lean;
+    const yj = headerY(xj);
+    const knee = yj - lean;
+    t.rod(group, flue, [x, top + 0.14, fz], [x, knee, fz], riser, 24);
+    joint(x, knee, riser);
+    t.rod(group, flue, [x, knee, fz], [xj, yj, fz], riser, 24);
+    // The non-return flap: a wider body on the riser, its spindle arm
+    // and counterweight outside, a test point for the flue analyser.
+    const fy = top + 0.34;
+    t.cyl(group, flue, riser + 0.018, 0.14, x, fy, fz, 'y', 24);
+    t.box(group, black, 0.012, 0.012, 0.05, x + riser + 0.02, fy, fz + 0.02);
+    t.box(
       group,
-      flue,
-      [x, top + 0.14, back + 0.2],
-      [x, fy, back + 0.2],
-      0.125,
-      24,
+      black,
+      0.012,
+      0.07,
+      0.012,
+      x + riser + 0.02,
+      fy - 0.03,
+      fz + 0.045,
     );
-  // The header along, a radiused bend, and the stack rising: the bend a
-  // quarter torus, so the two runs meet as the fabricated bend does.
-  const fr = 0.162,
-    bend = 0.32,
-    x0 = xs[0] - 0.3,
-    fz = back + 0.2;
-  t.rod(group, flue, [x0 + bend, fy, fz], [xs[1] + 0.3, fy, fz], fr, 28);
-  t.rod(group, flue, [x0, fy + bend, fz], [x0, 3.2, fz], fr, 28);
-  const elbow = new Mesh(
-    new TorusGeometry(bend, fr, 16, 20, Math.PI / 2),
+    t.cyl(
+      group,
+      black,
+      0.016,
+      0.02,
+      x + riser + 0.02,
+      fy - 0.07,
+      fz + 0.045,
+      'z',
+      12,
+    );
+    t.cyl(
+      group,
+      t.paint('#b8913f', 0.35, 0.7),
+      0.007,
+      0.03,
+      x,
+      top + 0.48,
+      fz + riser + 0.012,
+      'z',
+      10,
+    );
+  }
+  // The header: Ø280 to where the first boiler joins, then a reducer to
+  // Ø340, the radiused bend and the stack.
+  const xJoin = xs[0] - lean;
+  const xGrow = xJoin - 0.06,
+    grow = 0.1;
+  t.rod(
+    group,
+    flue,
+    [xEnd, headerY(xEnd), fz],
+    [xGrow, headerY(xGrow), fz],
+    r1,
+    28,
+  );
+  const reducer = new Mesh(
+    new CylinderGeometry(r2, r1, grow, 28, 1, true),
     flue,
   );
-  elbow.position.set(x0 + bend, fy + bend, fz);
+  reducer.position.set(xGrow - grow / 2, headerY(xGrow - grow / 2), fz);
+  reducer.rotation.z = Math.PI / 2;
+  group.add(reducer);
+  const fy = headerY(xBend);
+  t.rod(
+    group,
+    flue,
+    [xGrow - grow, headerY(xGrow - grow), fz],
+    [xBend, fy, fz],
+    r2,
+    28,
+  );
+  t.rod(group, flue, [x0, fy + bend, fz], [x0, 3.2, fz], r2, 28);
+  const elbow = new Mesh(
+    new TorusGeometry(bend, r2, 16, 20, Math.PI / 2),
+    flue,
+  );
+  elbow.position.set(xBend, fy + bend, fz);
   elbow.rotation.z = Math.PI;
   group.add(elbow);
-  // The header's closed far end.
-  t.cyl(group, flue, fr, 0.01, xs[1] + 0.3, fy, fz, 'x', 28);
+  // The closed end, low, and its condensate drain: down through a trap to
+  // a tundish on the plinth.
+  t.cyl(group, flue, r1, 0.01, xEnd, yLow, fz, 'x', 28);
+  const pvcDrain = t.paint('#e3e3df', 0.5);
+  const xd = xEnd - 0.08;
+  t.rod(group, pvcDrain, [xd, yLow - r1 + 0.01, fz], [xd, 0.62, fz], 0.016, 10);
+  const trap = new Mesh(
+    new TorusGeometry(0.04, 0.016, 8, 16, Math.PI),
+    pvcDrain,
+  );
+  trap.position.set(xd + 0.04, 0.62, fz);
+  trap.rotation.z = Math.PI;
+  group.add(trap);
+  t.rod(
+    group,
+    pvcDrain,
+    [xd + 0.08, 0.62, fz],
+    [xd + 0.08, 0.3, fz],
+    0.016,
+    10,
+  );
+  t.cyl(group, pvcDrain, 0.045, 0.1, xd + 0.08, 0.25, fz, 'y', 16);
+  // A dial thermometer in a pocket on each riser, below its flap, and one
+  // on the header after both boilers have joined it.
+  const gauges = live.flueGauges ?? [];
+  xs.forEach((x, i) => {
+    const g = gauges[i];
+    if (!g) return;
+    g.position.set(x, top + 0.215, fz + riser + 0.03);
+    group.add(g);
+  });
+  if (gauges[2]) {
+    const xg = (xGrow - grow + xBend) / 2;
+    gauges[2].position.set(xg, headerY(xg), fz + r2 + 0.03);
+    group.add(gauges[2]);
+  }
+  // Stencilled on the header, where it is seen.
+  const word = createStencilText(kit, 'FLUE', { height: 0.07, drips: false });
+  word.position.set(xs[0] + 0.25, headerY(xs[0] + 0.25), fz + r1 + 0.004);
+  group.add(word);
   // Flow and return headers (DN80) behind, with BS 1710 LTHW bands.
   const green = t.paint(BS1710_BASIC.water, 0.5);
   const flowY = top + 0.22,
@@ -1086,7 +1218,7 @@ export function createGasSafetyBoard(
       20,
     );
   }
-  badge(kit, group, 'hartwell-bligh', [0.45, -0.32, 0.101], 0.012);
+  badge(kit, group, 'penfold', [0.45, -0.32, 0.101], 0.014);
   sign(
     t,
     group,

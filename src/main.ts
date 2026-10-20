@@ -94,6 +94,8 @@ const starter = async (
       .startBrandsRoom;
   if (room === 'dev9')
     return (await import('./toolkit/gallery/rooms/fires-room')).startFiresRoom;
+  if (room === 'dev16')
+    return (await import('./toolkit/gallery/rooms/water-room')).startWaterRoom;
   if (room === 'dev11')
     return (await import('./toolkit/gallery/rooms/pool-room')).startPoolRoom;
   if (
@@ -101,7 +103,8 @@ const starter = async (
     room === 'dev12' ||
     room === 'dev13' ||
     room === 'dev14' ||
-    room === 'dev15'
+    room === 'dev15' ||
+    room === 'dev17'
   ) {
     const { startEquipmentRoom } =
       await import('./toolkit/gallery/rooms/plant-room');

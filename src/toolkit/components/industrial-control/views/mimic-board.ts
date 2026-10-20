@@ -7,7 +7,7 @@ import {
   createSevenSegment,
 } from '../../core/views/eighties-controls';
 import { SANS } from '../../core/views/fitting-tools';
-import { createBrandBadge } from '../../core/views/brand-badge';
+import { panelMakerMark } from '../../core/views/panel-maker-mark';
 import { createPartSet, pushButton } from '../../core/parts/parts';
 import { plantTools } from '../../plant/views/plant-tools';
 import { createCharacterLcd } from './panel-instruments';
@@ -182,7 +182,7 @@ export function createMimicBoard(
   kit: PanelKit,
   spec: MimicSpec,
   {
-    maker = 'hartwell-bligh' as BrandId,
+    maker = 'penfold' as BrandId,
     press = () => {},
   }: {
     maker?: BrandId;
@@ -344,9 +344,14 @@ export function createMimicBoard(
   live(lampTest.object);
   group.add(lampTest.object);
   parts.add(lampTest);
-  const badge = createBrandBadge(kit, maker, { height: 0.026 });
-  badge.position.set(W / 2 - 0.18, -H / 2 + 0.04, 0.0425);
-  group.add(badge);
+  // The panel builder's mark, top right.
+  panelMakerMark(kit, group, {
+    width: W,
+    height: H,
+    z: z - 0.0005,
+    maker,
+    size: 0.024,
+  });
   return {
     group,
     parts,

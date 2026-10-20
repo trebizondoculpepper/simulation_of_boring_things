@@ -712,6 +712,98 @@ export function drawBrandMark(
       });
       break;
     }
+    case 'pig': {
+      // A warm glow in the brand's colours, rays round it.
+      ctx.fillStyle = second;
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a - 0.13) * r * 0.7, Math.sin(a - 0.13) * r * 0.7);
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        ctx.lineTo(Math.cos(a + 0.13) * r * 0.7, Math.sin(a + 0.13) * r * 0.7);
+        ctx.fill();
+      }
+      ctx.fillStyle = main;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.76, 0, Math.PI * 2);
+      ctx.fill();
+      // The pig: pink, round, its ears up.
+      const pink = '#f7a9a3';
+      const deep = '#e57f7b';
+      ctx.fillStyle = pink;
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = r * 0.035;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(side * r * 0.2, -r * 0.42);
+        ctx.lineTo(side * r * 0.52, -r * 0.66);
+        ctx.lineTo(side * r * 0.5, -r * 0.24);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.02, r * 0.54, r * 0.48, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // Rosy cheeks.
+      ctx.fillStyle = '#f0706a88';
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(
+          side * r * 0.33,
+          r * 0.14,
+          r * 0.1,
+          r * 0.07,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
+      // Eyes shut in a smile.
+      ctx.lineCap = 'round';
+      ctx.lineWidth = r * 0.045;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(
+          side * r * 0.2,
+          -r * 0.1,
+          r * 0.08,
+          Math.PI * 1.1,
+          Math.PI * 1.9,
+        );
+        ctx.stroke();
+      }
+      // The snout and its nostrils.
+      ctx.fillStyle = deep;
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.12, r * 0.19, r * 0.13, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = r * 0.03;
+      ctx.stroke();
+      ctx.fillStyle = ink;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(
+          side * r * 0.065,
+          r * 0.12,
+          r * 0.03,
+          r * 0.045,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
+      // A broad smile under the snout.
+      ctx.lineWidth = r * 0.04;
+      ctx.beginPath();
+      ctx.arc(0, r * 0.2, r * 0.2, Math.PI * 0.22, Math.PI * 0.78);
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+      break;
+    }
     case 'lifebuoy': {
       // A ring in white and the brand's colour, four bands round it.
       ctx.lineWidth = r * 0.38;

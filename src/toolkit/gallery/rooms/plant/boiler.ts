@@ -23,6 +23,17 @@ import type {
   BoilerState,
   GasHouse,
 } from '../../../components/plant/logic/boiler-house';
+import {
+  FLUE_HIGH,
+  boilersPermitted,
+  newCombustion,
+  resetCombustion,
+  setFan,
+  stepCombustion,
+} from '../../../components/plant/logic/combustion';
+import type { CombustionState } from '../../../components/plant/logic/combustion';
+import { createCombustionPanel } from '../../../components/plant/views/combustion-panel';
+import { createDialGauge } from '../../../components/industrial-control/views/dial-gauge';
 import { plantAt } from '../../logic/control-room-demo';
 import { GAS_MIMIC, gasState } from '../../logic/pool-mimics';
 import {
@@ -54,6 +65,13 @@ const house = {
   ecv: null as BallValveView | null,
   stopPushed: () => false,
   seconds: 0,
+  /** Flue temperatures, the combustion air fan and the room's CO. */
+  combustion: newCombustion(2) as CombustionState,
+  /**
+   * How fouled each boiler's heat exchanger is, 0 to 1: B-502's is due a
+   * clean, so its flue runs hotter than B-501's.
+   */
+  fouling: [0, 0.35],
 };
 
 // A development handle for the console: the boiler house's state.
@@ -84,8 +102,8 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Condensing boilers in cascade',
     reference:
-      'After 2 × Remeha Gas 220 Ace 300 kW (800 × 1662 × 657 mm), common flue',
-    size: { w: 2.4, d: 1.0, h: 3.2, mount: 'floor' },
+      'After 2 × Remeha Gas 220 Ace 300 kW (800 × 1662 × 657 mm); cascade flue header with 45° branches and non-return flaps',
+    size: { w: 3.0, d: 1.0, h: 3.2, mount: 'floor' },
     build(kit): LiveExhibit {
       const parts = createPartSet();
       const panels = house.boilers.map((_, i) => {
@@ -103,9 +121,21 @@ export const EXHIBITS: readonly PlantExhibit[] = [
         parts.add(valve);
         return valve;
       });
+      // Permanently installed flue thermometers, 0–120 °C.
+      const thermometers = ['B-501', 'B-502', 'HEADER'].map((legend) =>
+        createDialGauge(kit, {
+          kind: 'thermometer',
+          dia: 0.08,
+          min: 0,
+          max: 120,
+          red: { from: FLUE_HIGH, to: 120 },
+          legend,
+        }),
+      );
       const cascade = createBoilerCascade(kit, {
         panels: panels.map((p) => p.group),
         isolators: house.isolators.map((v) => v.object),
+        flueGauges: thermometers.map((g) => g.group),
       });
       return {
         object: cascade,
@@ -119,7 +149,10 @@ export const EXHIBITS: readonly PlantExhibit[] = [
             stepBoiler(
               b,
               {
-                demand: plant.boilersFiring && (i === 0 || lag),
+                demand:
+                  plant.boilersFiring &&
+                  (i === 0 || lag) &&
+                  boilersPermitted(house.combustion),
                 gas: gasTo(house.gas, i),
                 systemReturn: plant.lthw - 14,
                 pressure: 2.4,
@@ -130,6 +163,17 @@ export const EXHIBITS: readonly PlantExhibit[] = [
           panels.forEach((panel, i) =>
             panel.show(house.boilers[i], house.seconds, delta),
           );
+          house.combustion = stepCombustion(
+            house.combustion,
+            house.boilers,
+            house.fouling,
+            delta,
+          );
+          const c = house.combustion;
+          [...c.flues, c.header].forEach((v, i) => {
+            thermometers[i].set(v);
+            thermometers[i].update(delta);
+          });
         },
       };
     },
@@ -230,6 +274,23 @@ export const EXHIBITS: readonly PlantExhibit[] = [
             house.gas.gasDetected,
           );
         },
+      };
+    },
+  },
+  {
+    title: 'Combustion and ventilation panel',
+    reference:
+      'Penfold Controls wall panel: flue gas temperatures, combustion air fan proving, CO in ppm, the boilers’ interlock',
+    size: { w: 1.0, d: 0.25, h: 0.75, mount: 'wall', y: 1.5 },
+    build(kit): LiveExhibit {
+      const panel = createCombustionPanel(kit, {
+        setFan: (hoa) => (house.combustion = setFan(house.combustion, hoa)),
+        reset: () => (house.combustion = resetCombustion(house.combustion)),
+      });
+      return {
+        object: panel.group,
+        parts: panel.parts,
+        update: () => panel.show(house.combustion),
       };
     },
   },

@@ -64,7 +64,9 @@ export type BrandMark =
   /** A lifebuoy ring with its four bands. */
   | 'lifebuoy'
   /** Three pilot lamps in a row, one lit: a tri-state indicator. */
-  | 'triad';
+  | 'triad'
+  /** A happy pig's face in a warm glow. */
+  | 'pig';
 
 /** Every brand's id: a part names its maker by one of these. */
 export type BrandId =
@@ -405,7 +407,7 @@ export const BRANDS: readonly Brand[] = [
     country: 'United Kingdom',
     makes: 'Commercial boilers, calorifiers and pressurisation units',
     promise: 'Keeping the water warm and the showers hot, winter after winter',
-    mark: 'flame',
+    mark: 'pig',
     colours: ['#d4501e', '#f6c04a', '#2a1508'],
     type: 'slab',
   },
