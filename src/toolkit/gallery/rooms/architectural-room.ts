@@ -6,6 +6,7 @@ import {
   Mesh,
   PerspectiveCamera,
   PlaneGeometry,
+  PointLight,
   CanvasTexture,
   MeshBasicMaterial,
   SRGBColorSpace,
@@ -70,6 +71,16 @@ import {
 } from './catalogue-specimens';
 import type { SpecimenPlace } from './catalogue-specimens';
 import { createFirstPerson } from '../../controls/input/first-person';
+import {
+  addWallBatten,
+  createWallBattenMaterials,
+} from '../../../scene/wall-batten';
+import { createServiceCeiling } from '../../components/site-dressing/views/service-ceiling';
+import { createServiceMaterials } from '../../components/site-dressing/views/service-materials';
+import {
+  createServiceSpecimenTable,
+  specimenTableFootprint,
+} from '../../components/site-dressing/views/service-specimens';
 import {
   BS5266,
   checkEmergencyLighting,
@@ -138,6 +149,10 @@ const SPECIMENS = (
 );
 /** Ceiling fittings hang from a lowered raft at a room's usual height. */
 const RAFT = 2.9;
+/** The wall battens' height: above the boards, below the services. */
+const WALL_LIGHT_Y = 4.6;
+/** The services ceiling's specimen table, in the middle of the floor. */
+const TABLE = { x: 0, z: 1.5 };
 const FACE = WALL + 0.004;
 type Wall = 'east' | 'west';
 
@@ -175,10 +190,18 @@ export function startArchitecturalGalleryRoom(canvas: HTMLCanvasElement) {
   const floor = new Mesh(new PlaneGeometry(W, D), kitPaint(kit, '#5d5f5c'));
   floor.rotation.x = -Math.PI / 2;
   room.add(floor);
-  const ceiling = new Mesh(new PlaneGeometry(W, D), kitPaint(kit, '#e6e4de'));
-  ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.y = CEILING;
-  room.add(ceiling);
+  // An exposed services ceiling, generated (set decoration: `AGENTS.md`),
+  // and a table of its parts, one of each, to look at close up.
+  const serviceFinishes = createServiceMaterials();
+  room.add(
+    createServiceCeiling(
+      { ...FLOOR, deckY: CEILING },
+      { seed: 3, density: 1, materials: serviceFinishes },
+    ).group,
+  );
+  const table = createServiceSpecimenTable(serviceFinishes);
+  table.position.set(TABLE.x, 0, TABLE.z);
+  room.add(table);
   const bounds: Footprint = {
     minX: FLOOR.minX * m,
     maxX: FLOOR.maxX * m,
@@ -437,6 +460,44 @@ export function startArchitecturalGalleryRoom(canvas: HTMLCanvasElement) {
     }
     return part;
   });
+  // Sealed wall battens round the walls, as in the corridors, high up
+  // under the services: with the ceiling full of services, the room is
+  // lit from its walls. Each is on its lighting zone's circuit, and
+  // follows that zone's pendant batten, switch, sensor, tube and all.
+  const wallLights = [
+    ...[-6, -2, 2, 6].flatMap((z) => [
+      {
+        x: FLOOR.maxX - FACE - 0.05,
+        z,
+        along: 'z' as const,
+        face: -1 as const,
+      },
+      { x: FLOOR.minX + FACE + 0.05, z, along: 'z' as const, face: 1 as const },
+    ]),
+    ...[-9, -3, 3, 9].map((x) => ({
+      x,
+      z: FLOOR.maxZ - FACE - 0.05,
+      along: 'x' as const,
+      face: -1 as const,
+    })),
+  ].map(({ x, z, along, face }) => {
+    const zone = zoneOf(x);
+    const finishes = createWallBattenMaterials();
+    kit.materials.push(...Object.values(finishes));
+    addWallBatten(room, finishes, x, WALL_LIGHT_Y, z, along, face);
+    const glow = new PointLight('#f1f5ef', 0, 14 * m, 2);
+    const out = 0.45;
+    glow.position.set(
+      (x + (along === 'z' ? face * out : 0)) * m,
+      WALL_LIGHT_Y * m,
+      (z + (along === 'x' ? face * out : 0)) * m,
+    );
+    scene.add(glow);
+    const lamp = lamps.find(
+      (_, i) => zoneOf(GALLERY_LUMINAIRES[i].x) === zone,
+    )!;
+    return { finishes, glow, lamp };
+  });
   for (const f of GALLERY_EMERGENCY) {
     if (f.kind === 'downlight') {
       install('emergency', f.x, CEILING, f.z, {
@@ -592,6 +653,13 @@ export function startArchitecturalGalleryRoom(canvas: HTMLCanvasElement) {
   // In front of the self-closing doors, their closing side.
   views.closers = { x: 0, z: 2.6 * m, yaw: 0, pitch: 0.02 };
   const params = new URLSearchParams(location.search);
+  const tableArea = specimenTableFootprint(TABLE.x, TABLE.z);
+  const tableSolid: Footprint = {
+    minX: tableArea.minX * m,
+    maxX: tableArea.maxX * m,
+    minZ: tableArea.minZ * m,
+    maxZ: tableArea.maxZ * m,
+  };
   const walk = createFirstPerson({
     canvas,
     camera,
@@ -602,7 +670,7 @@ export function startArchitecturalGalleryRoom(canvas: HTMLCanvasElement) {
       views[params.get('view') ?? ''] ??
       portals.arrival(params.get('from')) ??
       views.room,
-    solids: () => [...outer, ...selfClosingSolids],
+    solids: () => [...outer, ...selfClosingSolids, tableSolid],
     use: (x, y) => portalAt(x, y)?.(),
     aimed: () => Boolean(portalAt(0, 0)),
   });
@@ -690,6 +758,11 @@ export function startArchitecturalGalleryRoom(canvas: HTMLCanvasElement) {
         Math.abs(x / m - dx) < 0.5 && Math.abs(z / m - SELF_CLOSING_Z) < 0.6,
       );
     parts.update(delta);
+    for (const { finishes, glow, lamp } of wallLights) {
+      const level = lamp.output();
+      glow.intensity = 3 * m * m * level;
+      finishes.diffuser.emissiveIntensity = 0.95 * level;
+    }
     // The light bounced about the room follows the room's own.
     const lit = lamps.reduce((sum, l) => sum + l.output(), 0) / lamps.length;
     const battery = L.emergencyLit.value ? 1 : 0;

@@ -40,6 +40,8 @@ export function startDonutPoolRoom(canvas: HTMLCanvasElement) {
   renderer.toneMappingExposure = look.exposure;
   renderer.setClearColor('#d8e1df', 0);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  // The sun through the skylights casts shadows: the beams' is a feature.
+  renderer.shadowMap.enabled = true;
   const camera = new PerspectiveCamera(68, 1, 0.05 * metre, 80 * metre);
   scene.add(new AmbientLight('#f4f7f5', 0.18));
   scene.add(new HemisphereLight('#e9f3f1', '#65716f', 0.45));

@@ -125,6 +125,9 @@ const starter = async (
   if (room === 'red_bendy_1')
     return (await import('./toolkit/gallery/rooms/red-bendy-room'))
       .startRedBendyRoom;
+  if (room === 'ceiling_lab')
+    return (await import('./toolkit/gallery/rooms/ceiling-lab-room'))
+      .startCeilingLabRoom;
   if (room === 'donut_pool_1')
     return (await import('./toolkit/gallery/rooms/donut-pool-room'))
       .startDonutPoolRoom;

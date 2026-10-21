@@ -16,6 +16,11 @@ import type { Object3D } from 'three';
 import { DEV_ROOM_NAMES, devPortals, devWalls } from '../logic/dev-room-links';
 import type { EquipmentRoomId } from '../logic/dev-room-links';
 import { layoutPlantRoom } from '../logic/plant-room-layout';
+import {
+  BEAM_DEPTH,
+  createServiceCeiling,
+} from '../../components/site-dressing/views/service-ceiling';
+import type { ServiceCeilingOptions } from '../../components/site-dressing/views/service-ceiling';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { METRE } from '../../components/core/logic/units';
 import { createPortals } from '../views/portals';
@@ -76,6 +81,21 @@ const EXHIBITS: Record<
 };
 
 /**
+ * Rooms with an exposed services ceiling over their exhibits (set
+ * decoration: `AGENTS.md`), and its settings. The open height under it is
+ * the room's usual height, at least `SERVICE_CLEAR`; the services, beams
+ * and deck go above that.
+ */
+const SERVICE_CEILINGS: Partial<Record<ExhibitRoomId, ServiceCeilingOptions>> =
+  {
+    dev_pumps: { seed: 11, acoustic: true },
+  };
+/** The least clear height under a services ceiling's lowest layer. */
+const SERVICE_CLEAR = 4;
+/** From the deck's underside down to the felt grid's underside. */
+const SERVICE_ZONE = BEAM_DEPTH + 1.45;
+
+/**
  * A plant development room: the equipment of one of the leisure centre's
  * plant rooms, each piece modelled at true size from a referenced product
  * and shown with its name and reference, in a plain concrete-and-blockwork
@@ -120,7 +140,14 @@ export function startEquipmentRoom(
   /** Build the room's shell, door and exhibits to fit `exhibits`. */
   const build = (exhibits: readonly PlantExhibit[], purpose: string) => {
     const layout = layoutPlantRoom(exhibits.map((e) => e.size));
-    const { halfX, halfZ, height } = layout;
+    const { halfX, halfZ } = layout;
+    const services = SERVICE_CEILINGS[id as ExhibitRoomId];
+    // Under a services ceiling, the walls and roof go up over the services.
+    const clear = services
+      ? Math.max(SERVICE_CLEAR, layout.height)
+      : layout.height;
+    const deckY = clear + SERVICE_ZONE;
+    const height = services ? deckY : layout.height;
     const slab = (
       w: number,
       h: number,
@@ -168,6 +195,13 @@ export function startEquipmentRoom(
       maxZ: halfZ * m,
     };
     const pieces = devWalls(bounds, m, height * m);
+    if (services)
+      room.add(
+        createServiceCeiling(
+          { minX: -halfX, maxX: halfX, minZ: -halfZ, maxZ: halfZ, deckY },
+          services,
+        ).group,
+      );
     walls = pieces;
     for (const w of pieces)
       slab(

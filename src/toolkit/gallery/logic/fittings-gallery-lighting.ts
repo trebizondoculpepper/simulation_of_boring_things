@@ -9,7 +9,13 @@ import type { EmergencyFitting } from '../../components/general-safety/logic/eme
  * products and their data are in `doc/research/emergency-lighting-parts.md`.
  */
 export const GALLERY_FLOOR = { minX: -12, maxX: 12, minZ: -9, maxZ: 9 };
-export const GALLERY_CEILING = 7;
+/**
+ * The underside of the deck: high, for the exposed services ceiling hung
+ * under it (`service-ceiling.ts`).
+ */
+export const GALLERY_CEILING = 9;
+/** The luminaires hang on long rods below the services, at this height. */
+export const GALLERY_LUMINAIRE_Y = 6.4;
 
 /** The room's luminaires (LED battens), hung below the ceiling, metres. */
 export const GALLERY_LUMINAIRES: readonly {
@@ -17,7 +23,7 @@ export const GALLERY_LUMINAIRES: readonly {
   y: number;
   z: number;
 }[] = [-8, 0, 8].flatMap((x) =>
-  [-4.5, 4.5].map((z) => ({ x, y: GALLERY_CEILING - 0.6, z })),
+  [-4.5, 4.5].map((z) => ({ x, y: GALLERY_LUMINAIRE_Y, z })),
 );
 
 /**
