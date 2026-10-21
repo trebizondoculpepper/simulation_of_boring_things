@@ -7,6 +7,7 @@ import {
   AmbientLight,
   BoxGeometry,
   DirectionalLight,
+  Group,
   Mesh,
   PerspectiveCamera,
   Raycaster,
@@ -45,6 +46,8 @@ import {
   createStudioBoard,
 } from './test-boards';
 import type { TestFitting } from './test-boards';
+import type { LiveExhibit, PlantExhibit } from './plant/exhibit';
+import { POOL_SIGN_POST, POOL_SIGN_WALL } from './plant/pool-sign-demo';
 import {
   createMachineGallery,
   createEmptyMachinePlinths,
@@ -234,6 +237,37 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     maxX: (periodX + 0.3) * m,
     minZ: 6.4 * m,
     maxZ: 6.8 * m,
+  });
+  // The poolside information sign, on trial here before dev13 and the
+  // pool halls: on the south wall, and on its post beside it, each with
+  // its development test panel.
+  const signFitting = (exhibit: PlantExhibit): TestFitting => {
+    const built = exhibit.build(kit) as LiveExhibit;
+    const group = new Group();
+    group.add(built.object);
+    return {
+      group,
+      parts: built.parts!,
+      update(_seconds, delta) {
+        built.parts?.update(delta);
+        built.update?.(delta);
+      },
+      dispose: () => built.parts?.dispose(),
+    };
+  };
+  const southFace = half.z - 0.15;
+  place(signFitting(POOL_SIGN_WALL), 6.6, 1.75, southFace, Math.PI, {
+    minX: 5.7 * m,
+    maxX: 7.5 * m,
+    minZ: (southFace - 0.2) * m,
+    maxZ: half.z * m,
+  });
+  const postZ = southFace - 1.1;
+  place(signFitting(POOL_SIGN_POST), 8.6, 0, postZ, Math.PI, {
+    minX: 7.85 * m,
+    maxX: 9.35 * m,
+    minZ: (postZ - 0.25) * m,
+    maxZ: (postZ + 0.25) * m,
   });
   [...createMachineGallery(kit), ...createEmptyMachinePlinths(kit)].forEach(
     (plinth, i) => {

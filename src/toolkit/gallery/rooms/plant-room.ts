@@ -262,6 +262,24 @@ export function startEquipmentRoom(
     }));
     const params = new URLSearchParams(location.search);
     const arrival = portals.arrival(params.get('from'));
+    // A position in the link (the position button's) wins: the room is
+    // built after main.ts has placed the walker there, so place it again.
+    const linked = (name: string) => {
+      const raw = params.get(name);
+      const value = raw === null || raw.trim() === '' ? NaN : Number(raw);
+      return Number.isFinite(value) ? value : null;
+    };
+    const [lx, ly, lz] = [linked('x'), linked('y'), linked('z')];
+    if (!arrival && lx !== null && lz !== null) {
+      walk.place(
+        lx * m,
+        lz * m,
+        ((linked('yaw') ?? 45) * Math.PI) / 180,
+        ((linked('pitch') ?? 0) * Math.PI) / 180,
+        ly === null ? undefined : ly * m,
+      );
+      return;
+    }
     const start = arrival ?? {
       x: (-halfX + 2.5) * m,
       z: (halfZ - 2) * m,

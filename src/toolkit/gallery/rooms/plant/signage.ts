@@ -31,6 +31,7 @@ import {
 import { createEndSuctionPump } from '../../../components/plant/views/pumps-plant';
 import { PIPE_SIZES } from '../../../components/plant/views/plant-tools';
 import type { PlantExhibit } from './exhibit';
+import { POOL_SIGN_POST, POOL_SIGN_WALL } from './pool-sign-demo';
 
 /**
  * dev13: signage and labels, from the formal to the casual: the brass
@@ -550,6 +551,9 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       return group;
     },
   },
+  // The poolside information sign, tried here and on dev0's boards.
+  POOL_SIGN_WALL,
+  POOL_SIGN_POST,
 ];
 
 /** For the room's test: a kit, so the exhibits can be built in tests. */

@@ -10,3 +10,6 @@ coverage/
 # Agent mailbox identity
 agent-mailbox.toml
 agent-inbox.toml
+
+# Downloaded reference photographs: other people's images, not ours to publish.
+reference/

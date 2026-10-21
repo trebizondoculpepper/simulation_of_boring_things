@@ -125,6 +125,9 @@ const starter = async (
   if (room === 'red_bendy_1')
     return (await import('./toolkit/gallery/rooms/red-bendy-room'))
       .startRedBendyRoom;
+  if (room === 'donut_pool_1')
+    return (await import('./toolkit/gallery/rooms/donut-pool-room'))
+      .startDonutPoolRoom;
   if (room === 'CR_A_ARCH' || room === 'CR_A_STEPS')
     return (await import('./toolkit/gallery/rooms/arched-rooms'))
       .startArchedRooms;

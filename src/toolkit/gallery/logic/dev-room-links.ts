@@ -61,6 +61,7 @@ export type RoomId =
   | 'white_corridor_1'
   | 'green_room_1'
   | 'CR_GREEN_STAIR'
+  | 'donut_pool_1'
   | 'plant_corridor'
   | 'shared_plant_layout'
   | PlantFitRoomId;
@@ -141,6 +142,8 @@ export const ROOMS: readonly RoomId[] = [
   'white_corridor_1',
   'green_room_1',
   'CR_GREEN_STAIR',
+  // A white room with a ring-shaped pool round a column; no doors yet.
+  'donut_pool_1',
   // The plant rooms' main corridor: the dev corridor again, taller, for
   // the pipes and ducts overhead. Its doors open into nothing yet.
   'plant_corridor',
@@ -164,6 +167,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   white_corridor_1: 'WHITE_CORRIDOR_1 · WHITE CORRIDOR',
   green_room_1: 'GREEN_ROOM_1 · GREEN SKYLIGHT ROOM',
   CR_GREEN_STAIR: 'CR_GREEN_STAIR · DIAMOND STAIR CORRIDOR',
+  donut_pool_1: 'DONUT_POOL_1 · RING POOL',
   plant_corridor: 'PLANT CORRIDOR',
   shared_plant_layout: 'SHARED PLANT LAYOUT',
   plant_fit_47: 'MAIN PLANT ROOM · 47 M',
@@ -211,6 +215,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   white_corridor_1: '#f3f5f1',
   green_room_1: '#174e42',
   CR_GREEN_STAIR: '#bdd9cc',
+  donut_pool_1: '#f3f5f1',
   plant_corridor: '#8a8f93',
   shared_plant_layout: '#8a8f93',
   plant_fit_47: '#8a8f93',
