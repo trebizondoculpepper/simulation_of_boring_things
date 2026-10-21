@@ -128,6 +128,7 @@ const starter = async (
     return (await import('./toolkit/gallery/rooms/pipes-n-dreams-room'))
       .startPipesRoom;
   if (
+    room === 'plant_room_tiny' ||
     room === 'plant_room_small' ||
     room === 'plant_room_medium' ||
     room === 'plant_room_large'
@@ -135,6 +136,7 @@ const starter = async (
     const { startPlantRoomShell } =
       await import('./toolkit/gallery/rooms/plant-room-shell-room');
     const size = room.replace('plant_room_', '') as
+      | 'tiny'
       | 'small'
       | 'medium'
       | 'large';
@@ -158,6 +160,22 @@ const starter = async (
       | 'pool_04';
     const size = POOL_HALLS[hall].plantDoor!.size;
     return (surface) => startPlantRoomShell(surface, size, hall);
+  }
+  if (room === 'wet_hall')
+    return (await import('./toolkit/gallery/rooms/shell-room')).startWetHall;
+  if (
+    room === 'boiler_house' ||
+    room === 'loading_bay' ||
+    room === 'hypo_store' ||
+    room === 'acid_store' ||
+    room === 'switch_room' ||
+    room === 'air_plant' ||
+    room === 'control_room' ||
+    room === 'engineers_office'
+  ) {
+    const { startShellRoom } =
+      await import('./toolkit/gallery/rooms/shell-room');
+    return (surface) => startShellRoom(surface, room);
   }
   if (room === 'main_corridor')
     return (await import('./toolkit/gallery/rooms/main-corridor-room'))

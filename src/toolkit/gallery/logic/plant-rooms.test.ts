@@ -9,7 +9,7 @@ import {
 import type { PlantRoomSize } from './plant-rooms';
 
 const sizes = Object.keys(PLANT_ROOM_SIZES) as PlantRoomSize[];
-const stairs = sizes;
+const stairs = sizes.filter((s) => !plantRoomPlan(s).stepFree);
 
 describe('the plant rooms', () => {
   it('fit their stair down the east wall in every size', () => {
@@ -120,5 +120,18 @@ describe('passing between a pool hall and its plant room', () => {
       expect(plantRoomFloorAt(plan, there.x, there.z)).toBe(0);
       expect(plantRoomFloorAt(plan, there.x, -plan.h + 0.3)).toBe(0);
     }
+  });
+});
+
+import { MAIN_CORRIDOR } from './main-corridor';
+
+describe('the tiny plant room', () => {
+  it('is one storey, entered on the level, as tall as the main corridor', () => {
+    const plan = plantRoomPlan('tiny');
+    expect(plan.side).toBe(5);
+    expect(plan.floor).toBe(0);
+    expect(plan.roof - plan.floor).toBe(MAIN_CORRIDOR.height);
+    expect(plantRoomFloorAt(plan, plan.door.x, -plan.h + 0.3)).toBe(0);
+    expect(plantRoomFloorAt(plan, 0, plan.h - 0.3)).toBe(0);
   });
 });

@@ -1,7 +1,11 @@
 import { Group } from 'three';
 import type { Object3D } from 'three';
 import { PUMP_PANEL_EXHIBIT } from './pump-panel';
-import { SPA_PACK_EXHIBIT, SPA_PARTS_EXHIBIT } from './spa-pack';
+import {
+  JACUZZI_PACK_EXHIBIT,
+  SPA_PACK_EXHIBIT,
+  SPA_PARTS_EXHIBIT,
+} from './spa-pack';
 import { createPumpDrive } from '../../../components/plant/parts/pump-drive';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import { plantAt } from '../../logic/control-room-demo';
@@ -148,5 +152,6 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   },
   PUMP_PANEL_EXHIBIT,
   SPA_PACK_EXHIBIT,
+  JACUZZI_PACK_EXHIBIT,
   SPA_PARTS_EXHIBIT,
 ];

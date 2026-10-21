@@ -58,9 +58,10 @@ export const ASSUME = {
   /**
    * Below this circulation, m³/h, a circuit gets a packaged spa set (pump,
    * cartridge filter, UV and heat exchanger on one skid) instead of pool
-   * plant.
+   * plant: a foot spa's, or a commercial spa's (the Jacuzzi's 28 m³/h),
+   * as such skids are sold to about 30 m³/h.
    */
-  packageBelow: 10,
+  packageBelow: 30,
   /** Standing room in front of a prefabricated plant cabinet's doors, m. */
   cabinetAccess: 1,
   /** Medium-rate sand filtration, m/h, and the filter sizes on offer, m. */
@@ -432,6 +433,27 @@ export function sizePlant(pools: readonly AttractionConfig[]): PlantSizing {
           h: 0.6,
           clearance: 0.4,
         });
+        // A spa's jet pump and air blower, in their own bay of its cabinet.
+        if (c.body.use === 'spa') {
+          machines.push({
+            kind: 'Spa jet pump',
+            name: n,
+            w: 0.8,
+            d: 0.35,
+            h: 0.45,
+            rating: '2.2 kW',
+            clearance: 0.1,
+          });
+          machines.push({
+            kind: 'Spa air blower',
+            name: n,
+            w: 0.45,
+            d: 0.4,
+            h: 0.4,
+            rating: '2.2 kW',
+            clearance: 0.1,
+          });
+        }
         continue;
       }
       // The pool's own balance tank: its water is never shared.

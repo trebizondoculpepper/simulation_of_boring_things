@@ -16,6 +16,7 @@ import { LOOP_INNER } from '../game/dev-corridor-plan';
 import { addWallBatten, createWallBattenMaterials } from './wall-batten';
 import { createWarehouseConcreteFloor } from './warehouse-concrete-floor';
 import { mergeStatic } from '../toolkit/components/core/views/merge-static';
+import { createIndustrialAccess } from '../toolkit/components/architectural/views/industrial-access';
 import {
   GANTRY_INNER,
   LOWER_FLOOR_Y,
@@ -130,23 +131,6 @@ export function createMainPlantRoom(blockwork: Material) {
     const mesh = new Mesh(new BoxGeometry(w, h, d), material);
     mesh.name = name;
     mesh.position.set(x, y, z);
-    group.add(mesh);
-  };
-  const gantrySlab = (x: number, z: number, w: number, d: number) => {
-    const geometry = new BoxGeometry(w, 0.22, d);
-    const positions = geometry.attributes.position;
-    const normals = geometry.attributes.normal;
-    const uv = geometry.attributes.uv;
-    for (let i = 0; i < uv.count; i++)
-      if (normals.getY(i) > 0.9)
-        uv.setXY(
-          i,
-          (x + positions.getX(i)) / 0.6,
-          (z + positions.getZ(i)) / 0.6,
-        );
-    const mesh = new Mesh(geometry, deck);
-    mesh.name = 'perimeter gantry';
-    mesh.position.set(x, -0.11, z);
     group.add(mesh);
   };
   const continuousWall = (along: 'x' | 'z', at: number) => {
@@ -278,6 +262,13 @@ export function createMainPlantRoom(blockwork: Material) {
   for (const f of MAIN_PLANT_WALL_FITTINGS)
     addWallBatten(group, battens, f.x, f.y, f.z, f.along, f.face);
   const width = LOOP_INNER - GANTRY_INNER;
+  const access = createIndustrialAccess({
+    deck,
+    steel,
+    rail: steel,
+    nosing: safety,
+    deckTile: 0.6,
+  });
   const railX = (
     name: string,
     material: MeshStandardMaterial,
@@ -293,202 +284,59 @@ export function createMainPlantRoom(blockwork: Material) {
     box(name, material, -GANTRY_INNER + left / 2, y, z, left, height, depth);
     box(name, material, gapX + gap + right / 2, y, z, right, height, depth);
   };
-  {
-    const level = 0;
-    // Steel edge girders and regularly spaced transverse joists support the
-    // deck, with brackets bearing back into the perimeter walls.
-    for (const sign of [-1, 1]) {
-      box(
-        'gantry edge girder',
-        steel,
-        0,
-        -0.38,
-        sign * GANTRY_INNER,
-        span,
-        0.32,
-        0.18,
-      );
-      box(
-        'gantry edge girder',
-        steel,
-        sign * GANTRY_INNER,
-        -0.38,
-        0,
-        0.18,
-        0.32,
-        span,
-      );
-      for (let t = -GANTRY_INNER + 2; t < GANTRY_INNER; t += 4) {
-        const at = (sign * (LOOP_INNER + GANTRY_INNER)) / 2;
-        box('gantry joist', steel, t, -0.3, at, 0.12, 0.2, width);
-        box('gantry joist', steel, at, -0.3, t, width, 0.2, 0.12);
-        box(
-          'wall bearing plate',
-          concrete,
-          t,
-          -0.58,
-          sign * (LOOP_INNER - 0.18),
-          0.32,
-          0.42,
-          0.12,
-        );
-        box(
-          'wall bearing plate',
-          concrete,
-          sign * (LOOP_INNER - 0.18),
-          -0.58,
-          t,
-          0.12,
-          0.42,
-          0.32,
-        );
-      }
-    }
-    for (const sign of [-1, 1]) {
-      const at = (sign * (LOOP_INNER + GANTRY_INNER)) / 2;
-      gantrySlab(0, at, span, width);
-      gantrySlab(at, 0, width, span);
-      const stair = PLANT_STAIRS.find((s) => Math.sign(s.startZ) === sign)!;
-      railX(
-        'pit edge marking',
-        safety,
-        level + 0.012,
-        sign * GANTRY_INNER,
-        0.024,
-        0.11,
-        stair.x,
-      );
-      box(
-        'pit edge marking',
-        safety,
-        sign * GANTRY_INNER,
-        level + 0.012,
-        0,
-        0.11,
-        0.024,
-        GANTRY_INNER * 2,
-      );
-      railX(
-        'handrail',
-        steel,
-        level + 1.05,
-        sign * GANTRY_INNER,
-        0.07,
-        0.07,
-        stair.x,
-      );
-      box(
-        'handrail',
-        steel,
-        sign * GANTRY_INNER,
-        level + 1.05,
-        0,
-        0.07,
-        0.07,
-        GANTRY_INNER * 2,
-      );
-      railX(
-        'midrail',
-        steel,
-        level + 0.53,
-        sign * GANTRY_INNER,
-        0.045,
-        0.045,
-        stair.x,
-      );
-      box(
-        'midrail',
-        steel,
-        sign * GANTRY_INNER,
-        level + 0.53,
-        0,
-        0.045,
-        0.045,
-        GANTRY_INNER * 2,
-      );
-      for (let t = -GANTRY_INNER; t <= GANTRY_INNER; t += 2.35) {
-        if (Math.abs(t - stair.x) > STAIR_WIDTH / 2 + 0.16)
-          box(
-            'rail upright',
-            steel,
-            t,
-            level + 0.55,
-            sign * GANTRY_INNER,
-            0.055,
-            1.1,
-            0.055,
-          );
-        box(
-          'rail upright',
-          steel,
-          sign * GANTRY_INNER,
-          level + 0.55,
-          t,
-          0.055,
-          1.1,
-          0.055,
-        );
-      }
-    }
+  // Two full-width runs and two side runs meet edge-to-edge. The side runs
+  // stop at the inner corners, so their walking surfaces never overlap.
+  for (const sign of [-1, 1] as const) {
+    const outer = (sign * (LOOP_INNER + GANTRY_INNER)) / 2;
+    access.deck({ x: 0, z: outer, width: span, depth: width, topY: 0 });
+    access.deck({ x: outer, z: 0, width, depth: 2 * GANTRY_INNER, topY: 0 });
+    const stair = PLANT_STAIRS.find((s) => Math.sign(s.startZ) === sign)!;
+    railX(
+      'pit edge marking',
+      safety,
+      0.012,
+      sign * GANTRY_INNER,
+      0.024,
+      0.11,
+      stair.x,
+    );
+    box(
+      'pit edge marking',
+      safety,
+      sign * GANTRY_INNER,
+      0.012,
+      0,
+      0.11,
+      0.024,
+      2 * GANTRY_INNER,
+    );
+    const gap = STAIR_WIDTH / 2 + 0.12;
+    for (const [a, b] of [
+      [-GANTRY_INNER, stair.x - gap],
+      [stair.x + gap, GANTRY_INNER],
+    ])
+      if (b > a)
+        access.rail({
+          from: [a, 0, sign * GANTRY_INNER],
+          to: [b, 0, sign * GANTRY_INNER],
+        });
+    access.rail({
+      from: [sign * GANTRY_INNER, 0, -GANTRY_INNER],
+      to: [sign * GANTRY_INNER, 0, GANTRY_INNER],
+    });
   }
-  for (const stair of PLANT_STAIRS) {
-    const stepRun = STAIR_RUN / STAIR_STEPS;
-    const stepRise = -LOWER_FLOOR_Y / STAIR_STEPS;
-    for (let i = 0; i < STAIR_STEPS; i++) {
-      // The final tread is a thin cap above the slab, never a zero-height box.
-      const top = Math.max(LOWER_FLOOR_Y + 0.012, -(i + 1) * stepRise);
-      const z = stair.startZ + stair.direction * (i + 0.5) * stepRun;
-      box(
-        `${stair.corner} stair tread`,
-        deck,
-        stair.x,
-        (LOWER_FLOOR_Y + top) / 2,
-        z,
-        STAIR_WIDTH,
-        top - LOWER_FLOOR_Y,
-        stepRun,
-      );
-      box(
-        `${stair.corner} stair nosing`,
-        safety,
-        stair.x,
-        top + 0.012,
-        z - stair.direction * stepRun * 0.42,
-        STAIR_WIDTH,
-        0.024,
-        0.055,
-      );
-    }
-    for (const side of [-1, 1]) {
-      const x = stair.x + side * (STAIR_WIDTH / 2 + 0.07);
-      const handrail = new Mesh(
-        new BoxGeometry(0.065, 0.065, Math.hypot(STAIR_RUN, -LOWER_FLOOR_Y)),
-        steel,
-      );
-      handrail.name = `${stair.corner} stair handrail`;
-      handrail.position.set(
-        x,
-        LOWER_FLOOR_Y / 2 + 1.05,
-        stair.startZ + (stair.direction * STAIR_RUN) / 2,
-      );
-      handrail.rotation.x =
-        stair.direction * Math.atan2(-LOWER_FLOOR_Y, STAIR_RUN);
-      group.add(handrail);
-      for (const along of [0.3, 2, 4, 5.8]) {
-        const top = (LOWER_FLOOR_Y * along) / STAIR_RUN + 1.05;
-        box(
-          `${stair.corner} stair post`,
-          steel,
-          x,
-          (top + LOWER_FLOOR_Y) / 2,
-          stair.startZ + stair.direction * along,
-          0.055,
-          top - LOWER_FLOOR_Y,
-          0.055,
-        );
-      }
-    }
-  }
+  for (const stair of PLANT_STAIRS)
+    access.stair({
+      x: stair.x,
+      z: stair.startZ,
+      topY: 0,
+      bottomY: LOWER_FLOOR_Y,
+      width: STAIR_WIDTH,
+      run: STAIR_RUN,
+      steps: STAIR_STEPS,
+      direction: stair.direction === 1 ? 'south' : 'north',
+    });
+  group.add(access.group);
   for (const x of [-LOOP_INNER + 1.1, LOOP_INNER - 1.1])
     for (const z of [-LOOP_INNER + 1.1, LOOP_INNER - 1.1])
       box('structural column', concrete, x, 2, z, 0.55, 10, 0.55);

@@ -26,6 +26,8 @@ import {
 import type { PlantDoorState } from '../logic/plant-door';
 import { doorFrame, kickPlate, pullHandle, pushPlate } from './door-hardware';
 import { cardReader } from './card-reader';
+import { createDoorWarningStickers } from '../views/door-warning-stickers';
+import type { DoorWarningSelection } from '../logic/door-warnings';
 
 /**
  * The equipment doors between plant rooms (Ironside): a pair of FD60
@@ -64,6 +66,7 @@ export interface EquipmentDoorsPart extends Part {
 export function equipmentDoors(
   kit: PanelKit,
   label = 'MAIN PLANT',
+  warnings: DoorWarningSelection = 'plant',
 ): EquipmentDoorsPart {
   const t = tools(kit);
   const a = beginPart(kit, 'equipment doors');
@@ -81,6 +84,7 @@ export function equipmentDoors(
     hold: () => void;
   }[] = [];
   const readers: ReturnType<typeof cardReader>[] = [];
+  const stickerTemplate = createDoorWarningStickers(kit, warnings);
   const leaves = ([-1, 1] as const).map((side) => {
     // Hung on its outer jamb, meeting its pair in the middle.
     const hinge = new Group();
@@ -107,6 +111,16 @@ export function equipmentDoors(
     kickPlate(t, hinge, steel, leafW, (toward * leafW) / 2);
     pushPlate(t, hinge, steel, meeting, 1.2, -thick, -1);
     kickPlate(t, hinge, steel, leafW, (toward * leafW) / 2, -thick, -1);
+    for (const back of [false, true]) {
+      const stickers = stickerTemplate.clone(true);
+      stickers.position.set(
+        (toward * leafW) / 2,
+        1.65,
+        back ? -thick - 0.005 : 0.005,
+      );
+      if (back) stickers.rotation.y = Math.PI;
+      hinge.add(stickers);
+    }
     // Its closer on the push side's head rail.
     t.box(hinge, dark, 0.3, 0.06, 0.05, toward * 0.3, h - 0.07, -thick - 0.025);
     let state: PlantDoorState = initialPlantDoor();

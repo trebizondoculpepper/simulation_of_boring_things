@@ -422,7 +422,7 @@ export const POOL_HALLS: Record<PoolHallId, PoolHallSpec> = {
     skylights: [],
     highWindows: { from: 1.8, to: 2.6, at: [0.6], width: 1.4 },
     // Its plant room, the small, through the west wall north of the channel.
-    plantDoor: { wall: 'west', z: -2.38, size: 'small' },
+    plantDoor: { wall: 'west', z: -2.38, size: 'tiny' },
     start: { x: 0, z: 3.8, yaw: 0 },
   },
 };

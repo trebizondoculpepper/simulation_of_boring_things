@@ -157,3 +157,32 @@ export function throughDoor(
 export function inFront(frame: DoorFrame, x: number, z: number) {
   return turn(-frame.yaw, x - frame.x, z - frame.z).z;
 }
+
+/**
+ * Two rooms joined by more than one doorway (the main corridor and the
+ * wet hall, by two): each registers one joint to the other, whose frame
+ * and door are those of the doorway in use, the one opened, numbered
+ * alike on both sides.
+ */
+const doorways = new Map<string, number>();
+const pair = (a: RoomId, b: RoomId) => [a, b].sort().join('|');
+
+/** The doorway in use between `a` and `b`: 0 until one is opened. */
+export const activeDoorway = (a: RoomId, b: RoomId) =>
+  doorways.get(pair(a, b)) ?? 0;
+
+/**
+ * Of a set of doorways between two rooms, numbered alike on both sides,
+ * which to use given which stand open: the one in use while it is open,
+ * else the first open, else the one in use. Pure.
+ */
+export function pickDoorway(active: number, open: readonly boolean[]) {
+  if (open[active]) return active;
+  const first = open.indexOf(true);
+  return first >= 0 ? first : active;
+}
+
+/** Use doorway `i` between `a` and `b`. */
+export const useDoorway = (a: RoomId, b: RoomId, i: number) => {
+  doorways.set(pair(a, b), i);
+};

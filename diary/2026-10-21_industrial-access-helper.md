@@ -1,0 +1,5 @@
+# Industrial access helper
+
+Added `createIndustrialAccess` in `src/toolkit/components/architectural/views/industrial-access.ts` as a reusable metre-scale builder for gantry decking, edge channels, joists, columns, guardrails, handrails, toe boards and stair flights. Replaced the hand-built landing and staircase in per-attraction plant rooms with the helper, preserving the existing `plantRoomPlan` walking dimensions. The plant stair has 18 rises and 17 visible treads because the lower floor supplies the final step. Replaced the older perimeter gantry and stair geometry in `src/scene/main-plant-room.ts` with the same helper, dividing its walking surface into non-overlapping runs and leaving openings at the two stair heads. This pass does not change ladders or walking logic.
+
+Inspected the Olympic plant room in the browser and walked up its new stair. Targeted plant-room and main-plant floor tests, lint and formatting passed. Full typecheck remains blocked by unrelated in-progress corridor and shell-room errors in the shared checkout.

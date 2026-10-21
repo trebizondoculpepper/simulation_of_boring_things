@@ -1,5 +1,6 @@
 import {
   ACESFilmicToneMapping,
+  Box3,
   AmbientLight,
   HemisphereLight,
   HalfFloatType,
@@ -93,7 +94,7 @@ import {
 import { createPartSet } from '../../components/core/parts/parts';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { knobDirection } from '../../controls/input/knob-turning';
-import { JACUZZI_PACK_EXHIBIT, SPA_PACK_EXHIBIT } from './plant/spa-pack';
+import { JACUZZI_PACK_EXHIBIT } from './plant/spa-pack';
 import { isLive } from './plant/exhibit';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
 import type { MimicSpec } from '../../components/industrial-control/logic/mimic';
@@ -137,14 +138,7 @@ export function startPlantRoomShell(
   parts.add(door);
   scene.add(rooms);
   const plan = plantRoomPlan(size);
-  const cabinetType =
-    hall === 'pool_02'
-      ? JACUZZI_PACK_EXHIBIT
-      : hall === 'pool_03'
-        ? JACUZZI_PACK_EXHIBIT
-        : hall === 'pool_04'
-          ? SPA_PACK_EXHIBIT
-          : null;
+  const cabinetType = hall === 'pool_03' ? JACUZZI_PACK_EXHIBIT : null;
   const builtCabinet = cabinetType?.build(kit);
   const cabinet = builtCabinet && isLive(builtCabinet) ? builtCabinet : null;
   const cabinetAt =
@@ -155,9 +149,7 @@ export function startPlantRoomShell(
     rooms.add(cabinet.object);
   }
   const jacuzziMimic =
-    hall === 'pool_03' || hall === 'pool_04'
-      ? createMimicBoard(kit, JACUZZI_MIMIC)
-      : null;
+    hall === 'pool_03' ? createMimicBoard(kit, JACUZZI_MIMIC) : null;
   if (jacuzziMimic) {
     jacuzziMimic.group.position.set(0, plan.floor + 1.8, -plan.h + 0.025);
     rooms.add(jacuzziMimic.group);
@@ -302,18 +294,16 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       southWay.beyond,
     ),
   ];
-  if (cabinetType) {
-    const { w, d } = cabinetType.size;
-    const halfX = (hall === 'pool_02' ? w : d) / 2;
-    const halfZ = (hall === 'pool_02' ? d : w) / 2;
-    walls.push(
-      toMetre({
-        minX: cabinetAt.x - halfX,
-        maxX: cabinetAt.x + halfX,
-        minZ: cabinetAt.z - halfZ,
-        maxZ: cabinetAt.z + halfZ,
-      }),
-    );
+  if (cabinet) {
+    // The cabinet's own body, its doors shut: walk up to it and open them.
+    rooms.updateMatrixWorld(true);
+    const box = new Box3().setFromObject(cabinet.object);
+    walls.push({
+      minX: box.min.x,
+      maxX: box.max.x,
+      minZ: box.min.z,
+      maxZ: box.max.z,
+    });
   }
   const walk = createFirstPerson({
     canvas,

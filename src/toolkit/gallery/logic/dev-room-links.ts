@@ -69,6 +69,16 @@ export type RoomId =
   | 'ceiling_lab'
   | 'corridor_lab'
   | 'main_corridor'
+  | 'wet_hall'
+  | 'boiler_house'
+  | 'loading_bay'
+  | 'hypo_store'
+  | 'acid_store'
+  | 'switch_room'
+  | 'air_plant'
+  | 'control_room'
+  | 'engineers_office'
+  | 'plant_room_tiny'
   | 'plant_room_small'
   | 'plant_room_medium'
   | 'plant_room_large'
@@ -169,8 +179,19 @@ export const ROOMS: readonly RoomId[] = [
   // The corridor kit: straights and turns, laid out as one run.
   'corridor_lab',
   // The per-attraction plant rooms' shells, in each size.
-  // The L-shaped plant corridor the plant rooms open off.
+  // The ring of plant corridor round the wet hall, every plant room off it.
   'main_corridor',
+  // The main plant's rooms off it, empty shells for now.
+  'wet_hall',
+  'boiler_house',
+  'loading_bay',
+  'hypo_store',
+  'acid_store',
+  'switch_room',
+  'air_plant',
+  'control_room',
+  'engineers_office',
+  'plant_room_tiny',
   'plant_room_small',
   'plant_room_medium',
   'plant_room_large',
@@ -212,9 +233,19 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   ceiling_lab: 'CEILING_LAB · SERVICES CEILING',
   corridor_lab: 'CORRIDOR_LAB · CORRIDOR KIT',
   main_corridor: 'MAIN CORRIDOR',
-  plant_room_small: 'PLANT ROOM · SMALL · 7 × 7 M',
-  plant_room_medium: 'PLANT ROOM · MEDIUM · 10 × 10 M',
-  plant_room_large: 'PLANT ROOM · LARGE · 20 × 20 M',
+  wet_hall: 'WET HALL · MAIN PLANT ROOM',
+  boiler_house: 'BOILER HOUSE',
+  loading_bay: 'LOADING BAY',
+  hypo_store: 'SODIUM HYPOCHLORITE STORE',
+  acid_store: 'ACID STORE',
+  switch_room: 'ELECTRICAL SWITCH ROOM',
+  air_plant: 'AIR HANDLING PLANT',
+  control_room: 'CONTROL ROOM',
+  engineers_office: 'ENGINEER’S OFFICE',
+  plant_room_tiny: 'PLANT ROOM · TINY · 5 × 5 M',
+  plant_room_small: 'PLANT ROOM · SMALL · 8 × 8 M',
+  plant_room_medium: 'PLANT ROOM · MEDIUM · 12 × 12 M',
+  plant_room_large: 'PLANT ROOM · LARGE · 22 × 22 M',
   plant_pool_01: 'PLANT ROOM 1 – LOUNGE POOL',
   plant_pool_02: 'PLANT ROOM 2 – OLYMPIC POOL',
   plant_pool_03: 'PLANT ROOM 3 – JACUZZI',
@@ -276,6 +307,16 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   ceiling_lab: '#8a8f93',
   corridor_lab: '#f3f5f1',
   main_corridor: '#6d7a6f',
+  wet_hall: '#6d7a6f',
+  boiler_house: '#6d7a6f',
+  loading_bay: '#6d7a6f',
+  hypo_store: '#6d7a6f',
+  acid_store: '#6d7a6f',
+  switch_room: '#6d7a6f',
+  air_plant: '#6d7a6f',
+  control_room: '#6d7a6f',
+  engineers_office: '#6d7a6f',
+  plant_room_tiny: '#6d7a6f',
   plant_room_small: '#6d7a6f',
   plant_room_medium: '#6d7a6f',
   plant_room_large: '#6d7a6f',

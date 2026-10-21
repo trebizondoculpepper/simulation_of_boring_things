@@ -16,6 +16,10 @@ import {
   createSpaPump,
   createSurgeVessel,
 } from '../../../components/plant/views/spa-pack-parts';
+import {
+  createAirBlower,
+  createJetPump,
+} from '../../../components/plant/views/pumps-plant';
 import { createDialGauge } from '../../../components/industrial-control/views/dial-gauge';
 import {
   createPartSet,
@@ -42,19 +46,32 @@ import {
  */
 
 const CABINET = { w: 1.7, d: 0.9, h: 2.1, wall: 0.03 } as const;
+/**
+ * The Jacuzzi's: the same set in a wider, deeper cabinet, with a bay at
+ * its right end for the spa's own jet pump and air blower, each switched
+ * from the panel and run only while the circulation is.
+ */
+const JACUZZI_CABINET = { w: 2.8, d: 1.0, h: 2.1, wall: 0.03 } as const;
+/** The jets' bay at the cabinet's right end, its width. */
+const JETS_BAY = 1.1;
 /** How far the doors swing open, radians. */
 const OPEN = 1.75;
 /** The filter's working pressure, bar. */
 const WORKING = 0.7;
 
-function buildSpaPack(kit: PanelKit, circuit = 'FOOT SPA'): LiveExhibit {
+function buildSpaPack(
+  kit: PanelKit,
+  circuit = 'FOOT SPA',
+  jets = false,
+): LiveExhibit {
   const t = plantTools(kit);
-  const c = CABINET;
+  const c = jets ? JACUZZI_CABINET : CABINET;
+  const leafW = c.w / 2 - 0.01;
   const object = new Group();
   object.name = 'Packaged spa set in its plant cabinet';
   // Centred on its footprint, the doors' swing included.
   const body = new Group();
-  body.position.z = -0.42;
+  body.position.z = -leafW / 2;
   object.add(body);
   const steel = t.paint('#d9ddd8', 0.5, 0.2);
   const dark = t.paint('#2f3436', 0.6);
@@ -90,8 +107,13 @@ function buildSpaPack(kit: PanelKit, circuit = 'FOOT SPA'): LiveExhibit {
       );
 
   // ---- Inside: the skid, its parts (`spa-pack-parts.ts`) -------------------
+  // The skid stands at the cabinet's left, leaving the jets' bay free.
+  const shell = body;
+  const skid = new Group();
+  skid.position.x = jets ? -JETS_BAY / 2 : 0;
+  shell.add(skid);
   const skidY = 0.16;
-  t.box(body, dark, 1.55, 0.06, 0.7, 0, skidY - 0.03, 0);
+  t.box(skid, dark, 1.55, 0.06, 0.7, 0, skidY - 0.03, 0);
   const backZ = -hd + c.wall;
   const set = <P extends { group: Group }>(
     part: P,
@@ -101,7 +123,7 @@ function buildSpaPack(kit: PanelKit, circuit = 'FOOT SPA'): LiveExhibit {
   ): P => {
     part.group.position.set(x, skidY, z);
     part.group.rotation.y = yaw;
-    body.add(part.group);
+    skid.add(part.group);
     return part;
   };
   // In the order the water goes, along the front: the surge vessel, its
@@ -138,7 +160,7 @@ function buildSpaPack(kit: PanelKit, circuit = 'FOOT SPA'): LiveExhibit {
     od = 0.05,
   ) => {
     const leaves = points[points.length - 1][2] === out;
-    body.add(
+    skid.add(
       createPipe(
         kind,
         od,
@@ -240,7 +262,7 @@ function buildSpaPack(kit: PanelKit, circuit = 'FOOT SPA'): LiveExhibit {
       plate: '#f2efe2',
     });
     label.position.set(x, y, z);
-    body.add(label);
+    skid.add(label);
   };
   const edge = 0.351;
   tag('SV1  SURGE VESSEL', -0.66, skidY - 0.03, edge);
@@ -250,8 +272,59 @@ function buildSpaPack(kit: PanelKit, circuit = 'FOOT SPA'): LiveExhibit {
   tag('HX1  HEAT EXCHANGER', 0.35, skidY + 0.42, -0.24);
   tag('DC1  DOSING CONTROLLER', -0.3, skidY + 0.95, backZ + 0.002);
 
+  // ---- The jets' bay: the jet pump and the air blower --------------------
+  const jetPump = jets ? createJetPump(kit) : null;
+  const blower = jets ? createAirBlower(kit) : null;
+  if (jetPump && blower) {
+    const jx = c.w / 2 - JETS_BAY / 2;
+    const base = 0.1;
+    jetPump.position.set(jx, base, 0.24);
+    blower.position.set(jx - 0.2, base, -0.06);
+    shell.add(jetPump, blower);
+    const back = {
+      at: [0, 0, -c.d / 2 + c.wall / 2] as const,
+      normal: [0, 0, 1] as const,
+      kind: 'grommet' as const,
+      thickness: c.wall,
+    };
+    const out = -c.d / 2 - 0.03;
+    const line = (points: [number, number, number][], od: number) =>
+      shell.add(
+        createPipe('pvc-pressure', od, points, {
+          laid: true,
+          through: [back],
+          ends: ['open', 'valve'],
+        }),
+      );
+    // The jets' suction from the spa, into the pump's strainer pot.
+    line(
+      [
+        [jx - 0.45, base + 0.35, 0.24],
+        [jx - 0.5, base + 0.35, 0.24],
+        [jx - 0.5, base + 0.35, out],
+      ],
+      0.09,
+    );
+    // Its discharge up and back out to the jets.
+    line(
+      [
+        [jx - 0.1, base + 0.7, 0.24],
+        [jx - 0.1, base + 1.25, 0.24],
+        [jx - 0.1, base + 1.25, out],
+      ],
+      0.09,
+    );
+    // The blower's air line, from its loop out to the spa's air ring.
+    line(
+      [
+        [jx + 0.2, base + 1.4, -0.1],
+        [jx + 0.2, base + 1.4, out],
+      ],
+      0.06,
+    );
+  }
+
   // ---- The doors ---------------------------------------------------------
-  const leafW = c.w / 2 - 0.01;
   const leaf = (side: -1 | 1) => {
     const hinge = new Group();
     hinge.position.set(side * (c.w / 2), 0.1, hd);
@@ -278,12 +351,15 @@ function buildSpaPack(kit: PanelKit, circuit = 'FOOT SPA'): LiveExhibit {
   const panel = new Group();
   panel.position.set(0, 1.2, 0.026);
   left.face.add(panel);
-  t.box(panel, t.paint('#c8ccc4', 0.55), 0.5, 0.44, 0.04, 0, 0, 0.02);
+  const panelW = jets ? 0.8 : 0.5;
+  // The common controls sit at its left; the jets' at its right.
+  const shift = jets ? -0.15 : 0;
+  t.box(panel, t.paint('#c8ccc4', 0.55), panelW, 0.44, 0.04, 0, 0, 0.02);
   const front = new Group();
   front.position.z = 0.041;
   panel.add(front);
   panelMakerMark(kit, front, {
-    width: 0.5,
+    width: panelW,
     height: 0.44,
     z: 0,
     corner: 'bottom-right',
@@ -297,7 +373,7 @@ function buildSpaPack(kit: PanelKit, circuit = 'FOOT SPA'): LiveExhibit {
       name: 'Spa set power',
     }),
   );
-  power.object.position.set(-0.15, 0.06, 0);
+  power.object.position.set(-0.15 + shift, 0.06, 0);
   power.object.scale.setScalar(0.8);
   front.add(power.object);
   const latches = ([left, right] as const).map((door, i) => {
@@ -334,7 +410,7 @@ function buildSpaPack(kit: PanelKit, circuit = 'FOOT SPA'): LiveExhibit {
         name: `Spa set ${legend.toLowerCase()} lamp`,
       }),
     );
-    lamp.object.position.set(0.02 + i * 0.1, 0.06, 0);
+    lamp.object.position.set(0.02 + shift + i * 0.1, 0.06, 0);
     lamp.object.scale.setScalar(0.8);
     front.add(lamp.object);
   });
@@ -344,8 +420,37 @@ function buildSpaPack(kit: PanelKit, circuit = 'FOOT SPA'): LiveExhibit {
     legend: 'FILTER bar',
     maker: 'kessler-moody',
   });
-  gauge.group.position.set(0.02, -0.11, 0.02);
+  gauge.group.position.set(0.02 + shift, -0.11, 0.02);
   front.add(gauge.group);
+  // The jets and the air, each on its own switch, interlocked with the
+  // circulation: neither runs unless the pump does.
+  if (jets)
+    (['JETS', 'AIR'] as const).map((legend, i) => {
+      const sw = parts.add(
+        selector(kit, {
+          positions: 2,
+          initial: 0,
+          legend,
+          name: `Spa set ${legend.toLowerCase()} switch`,
+        }),
+      );
+      sw.object.position.set(0.2, 0.06 - i * 0.17, 0);
+      sw.object.scale.setScalar(0.8);
+      front.add(sw.object);
+      const run = computed(() => running.value && sw.position.value === 1);
+      const lamp = parts.add(
+        pilotLight(kit, {
+          colour: 'green',
+          legend: `${legend} RUN`,
+          drive: run,
+          pushToTest: false,
+          name: `Spa set ${legend.toLowerCase()} run lamp`,
+        }),
+      );
+      lamp.object.position.set(0.32, 0.06 - i * 0.17, 0);
+      lamp.object.scale.setScalar(0.8);
+      front.add(lamp.object);
+    });
 
   // Everything here moves or changes: none of it is merged.
   object.traverse((o) => (o.userData.live = true));
@@ -383,9 +488,11 @@ export const SPA_PACK_EXHIBIT: PlantExhibit = {
 
 /** The same factory cabinet labeled for the Jacuzzi circuit. */
 export const JACUZZI_PACK_EXHIBIT: PlantExhibit = {
-  ...SPA_PACK_EXHIBIT,
   title: 'Packaged Jacuzzi plant cabinet',
-  build: (kit) => buildSpaPack(kit, 'JACUZZI'),
+  reference:
+    'For a spa circuit under 30 m³/h (the Jacuzzi, 28 m³/h): the packaged set, and a bay for its jet pump and air blower, each switched from the panel; 2.8 × 1.0 × 2.1 m cabinet',
+  size: { w: 3.2, d: 3.0, h: 2.2, mount: 'floor' },
+  build: (kit) => buildSpaPack(kit, 'JACUZZI', true),
 };
 
 /**

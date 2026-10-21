@@ -28,6 +28,7 @@ import { createMainCorridor } from '../views/main-corridor';
 import {
   corridorDoorBlock,
   corridorSolids,
+  corridorYaw,
   doorPlace,
   inCorridor,
   MAIN_CORRIDOR,
@@ -38,17 +39,23 @@ import {
 } from '../../components/core/views/eighties-controls';
 import { createPartSet } from '../../components/core/parts/parts';
 import { knobDirection } from '../../controls/input/knob-turning';
-import { registerJoint } from '../logic/door-joins';
+import {
+  activeDoorway,
+  pickDoorway,
+  registerJoint,
+  useDoorway,
+} from '../logic/door-joins';
+import type { Joint } from '../logic/door-joins';
 import { doorwayStops, overlaps } from '../logic/doorway';
 import { doorReaders } from '../../components/architectural/logic/card-reader';
 import { enterDevRoom } from '../logic/dev-room-links';
 import type { RoomId } from '../logic/dev-room-links';
 
 /**
- * main_corridor: the L-shaped plant corridor (`logic/main-corridor.ts`),
- * in its own scene: each plant room's equipment doors open off its outer
- * walls, seen through and walked through without a break; the wet hall's
- * doors, in its inner walls, are shut until the wet hall is built.
+ * main_corridor: the ring of plant corridor (`logic/main-corridor.ts`),
+ * in its own scene: every room of the plant opens off its outside walls,
+ * the wet hall off its inside walls, each pair of doors seen through and
+ * walked through without a break.
  */
 export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
   const metre = METRE;
@@ -94,66 +101,20 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
     minZ: s.minZ * metre,
     maxZ: s.maxZ * metre,
   });
-  // Each plant room's doors as a doorway the app sees through
-  // (`door-joins.ts`): open, the room is built and drawn beyond; walked
-  // through, the walker is handed over to it without a break.
-  const yawInto = {
-    north: 0,
-    south: Math.PI,
-    west: Math.PI / 2,
-    east: -Math.PI / 2,
-  } as const;
-  const links = doors
-    .filter((d) => d.door.to.startsWith('plant_'))
-    .map((d) => {
-      const p = doorPlace(d.door);
-      const to = d.door.to as RoomId;
-      const link = { ...d, p, to, seen: false };
-      const withdraw = registerJoint('main_corridor', to, {
-        frame: {
-          x: p.x * metre,
-          z: p.z * metre,
-          y: 0,
-          yaw: yawInto[d.door.wall],
-        },
-        onOpen: true,
-        open: () => d.part.open(),
-        angle: () => d.part.angle(),
-        swingTo: (a) => d.part.swingTo(a),
-        opening: () => {
-          const half = MAIN_CORRIDOR.opening / 2;
-          const x0 = p.x - p.into[0] * 2;
-          const z0 = p.z - p.into[1] * 2;
-          return toMetre({
-            minX: Math.min(p.x, x0) - (p.into[0] ? 0.1 : half),
-            maxX: Math.max(p.x, x0) + (p.into[0] ? 0.1 : half),
-            minZ: Math.min(p.z, z0) - (p.into[1] ? 0.1 : half),
-            maxZ: Math.max(p.z, z0) + (p.into[1] ? 0.1 : half),
-          });
-        },
-        see: (on) => {
-          link.seen = on;
-          d.lobby.visible = !on;
-        },
-        peek: (on) => d.part.showLeaves(!on),
-      });
-      // The same record the doorway's `see` marks: not a copy of it.
-      return Object.assign(link, {
-        withdraw,
-        block: toMetre(corridorDoorBlock(d.door)),
-      });
-    });
-  // The wet hall's doors stay shut to walking until it is built.
-  // Every doorway, metres: its leaves' place across the wall, a stop just
-  // beyond it, and its plant room's link if it has one.
+  // Each room's doors as a doorway the app sees through (`door-joins.ts`):
+  // open, the room is built and drawn beyond; walked through, the walker
+  // is handed over to it without a break. The wet hall's two pairs share
+  // one joint, its frame the pair in use.
   const ways = doors.map((d) => {
-    const leaf = corridorDoorBlock(d.door);
     const p = doorPlace(d.door);
+    const leaf = corridorDoorBlock(d.door);
     const t = MAIN_CORRIDOR.wall;
     const out = { x: -p.into[0] * (t + 0.15), z: -p.into[1] * (t + 0.15) };
     return {
-      part: d.part,
-      link: links.find((l) => l.door === d.door),
+      ...d,
+      p,
+      to: d.door.to as RoomId,
+      seen: false,
       leaf,
       beyond: {
         minX: leaf.minX + out.x,
@@ -162,6 +123,77 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
         maxZ: leaf.maxZ + out.z,
       },
     };
+  });
+  type Way = (typeof ways)[number];
+  const jointFor = (w: Way): Joint => ({
+    frame: {
+      x: w.p.x * metre,
+      z: w.p.z * metre,
+      y: 0,
+      yaw: corridorYaw(w.door),
+    },
+    onOpen: true,
+    open: () => w.part.open(),
+    angle: () => w.part.angle(),
+    swingTo: (a) => w.part.swingTo(a),
+    opening: () => {
+      const half = MAIN_CORRIDOR.opening / 2;
+      const x0 = w.p.x - w.p.into[0] * 2;
+      const z0 = w.p.z - w.p.into[1] * 2;
+      return toMetre({
+        minX: Math.min(w.p.x, x0) - (w.p.into[0] ? 0.1 : half),
+        maxX: Math.max(w.p.x, x0) + (w.p.into[0] ? 0.1 : half),
+        minZ: Math.min(w.p.z, z0) - (w.p.into[1] ? 0.1 : half),
+        maxZ: Math.max(w.p.z, z0) + (w.p.into[1] ? 0.1 : half),
+      });
+    },
+    see: (on) => {
+      w.seen = on;
+      w.lobby.visible = !on;
+    },
+    peek: (on) => w.part.showLeaves(!on),
+  });
+  const groups = [...new Set(ways.map((w) => w.to))].map((to) => ({
+    to,
+    ways: ways.filter((w) => w.to === to),
+  }));
+  const inUse = (g: (typeof groups)[number]) =>
+    g.ways.length === 1
+      ? g.ways[0]
+      : g.ways[activeDoorway('main_corridor', g.to)];
+  const withdrawals = groups.map((g) => {
+    if (g.ways.length === 1)
+      return registerJoint('main_corridor', g.to, jointFor(g.ways[0]));
+    const each = g.ways.map(jointFor);
+    const active = () => activeDoorway('main_corridor', g.to);
+    return registerJoint('main_corridor', g.to, {
+      get frame() {
+        return each[active()].frame;
+      },
+      onOpen: true,
+      open: () => {
+        const i = pickDoorway(
+          active(),
+          g.ways.map((w) => w.part.open()),
+        );
+        useDoorway('main_corridor', g.to, i);
+        return each[i].open();
+      },
+      angle: () => each[active()].angle(),
+      swingTo: (a) => each[active()].swingTo(a),
+      opening: () => each[active()].opening(),
+      see: (on) => {
+        for (const w of g.ways) {
+          w.seen = false;
+          w.lobby.visible = true;
+        }
+        each[active()].see(on);
+      },
+      peek: (on) => {
+        for (const e of each) e.peek(false);
+        each[active()].peek(on);
+      },
+    });
   });
   const inWay = (w: (typeof ways)[number]) =>
     overlaps(
@@ -244,7 +276,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
             {
               inside: inWay(w),
               shut: w.part.angle() < 0.6,
-              seen: w.link?.seen ?? false,
+              seen: w.seen,
             },
             w.leaf,
             w.beyond,
@@ -293,12 +325,13 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       const x = walk.walker.x / metre;
       const z = walk.walker.z / metre;
       if (!inCorridor(x, z))
-        for (const l of links) {
+        for (const g of groups) {
+          const l = inUse(g);
           const along = l.p.into[0] ? Math.abs(z - l.p.z) : Math.abs(x - l.p.x);
           const beyond = (l.p.x - x) * l.p.into[0] + (l.p.z - z) * l.p.into[1];
           if (l.seen && along < MAIN_CORRIDOR.opening / 2 && beyond > 0.05) {
             leaving = true;
-            enterDevRoom(l.to, 'main_corridor', true);
+            enterDevRoom(g.to, 'main_corridor', true);
             break;
           }
         }
@@ -313,7 +346,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       renderer.setAnimationLoop(null);
       observer.disconnect();
       composer.dispose();
-      for (const l of links) l.withdraw();
+      for (const w of withdrawals) w();
       parts.dispose();
       disposeKit(kit, rooms as never);
       walk.dispose();

@@ -12,6 +12,8 @@ import { tools } from '../../core/views/fitting-tools';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import { beginPart } from '../../core/parts/parts';
 import { cardReader } from './card-reader';
+import { createDoorWarningStickers } from '../views/door-warning-stickers';
+import type { DoorWarningSelection } from '../logic/door-warnings';
 import { doorFrame, kickPlate, pullHandle, pushPlate } from './door-hardware';
 import type { Part } from '../../core/parts/parts';
 import {
@@ -44,7 +46,10 @@ import {
  * from the plant room. Work either handle (or the leaf) to open it; it
  * closes itself.
  */
-export function plantRoomDoor(kit: PanelKit): Part & {
+export function plantRoomDoor(
+  kit: PanelKit,
+  warnings: DoorWarningSelection = 'plant',
+): Part & {
   angle: () => number;
   /** Stand it open at `angle` (handed over from the other side of its doorway). */
   swingTo: (angle: number) => void;
@@ -95,38 +100,9 @@ export function plantRoomDoor(kit: PanelKit): Part & {
   });
   plate.position.set(0, 1.72, 0);
   signs.add(plate);
-  const authorised = sign(0.24, 0.32, (c, cw, ch) => {
-    // A prohibition sign: a red ring and bar on white, its words under it.
-    c.fillStyle = '#ffffff';
-    c.fillRect(0, 0, cw, ch);
-    const r = cw * 0.34;
-    const cx = cw / 2;
-    const cy = r + cw * 0.08;
-    c.strokeStyle = '#d2232a';
-    c.lineWidth = r * 0.22;
-    c.beginPath();
-    c.arc(cx, cy, r, 0, Math.PI * 2);
-    c.stroke();
-    c.beginPath();
-    c.moveTo(cx - r * 0.7, cy - r * 0.7);
-    c.lineTo(cx + r * 0.7, cy + r * 0.7);
-    c.stroke();
-    // A walking figure, in black, under the bar.
-    c.fillStyle = '#111111';
-    c.beginPath();
-    c.arc(cx, cy - r * 0.45, r * 0.13, 0, Math.PI * 2);
-    c.fill();
-    c.fillRect(cx - r * 0.09, cy - r * 0.3, r * 0.18, r * 0.5);
-    c.fillRect(cx - r * 0.28, cy + r * 0.2, r * 0.14, r * 0.42);
-    c.fillRect(cx + r * 0.12, cy + r * 0.2, r * 0.14, r * 0.42);
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.font = `bold ${ch * 0.085}px Arial, Helvetica, sans-serif`;
-    c.fillText('Authorised', cx, ch * 0.78);
-    c.fillText('Personnel Only', cx, ch * 0.89);
-  });
-  authorised.position.set(0, 1.42, 0);
-  signs.add(authorised);
+  const stickers = createDoorWarningStickers(kit, warnings);
+  stickers.position.set(0, 1.45, 0.004);
+  signs.add(stickers);
   const keepShut = sign(0.2, 0.2, (c, cw, ch) => {
     // A mandatory sign: white words in a blue disc.
     c.fillStyle = '#1e5aa8';

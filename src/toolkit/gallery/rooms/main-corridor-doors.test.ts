@@ -10,7 +10,11 @@ import { BoxGeometry, Mesh, Vector3 } from 'three';
 import type { Object3D } from 'three';
 import { createPanelKit } from '../../components/core/views/eighties-controls';
 import { createMainCorridor } from '../views/main-corridor';
-import { doorPlace, MAIN_CORRIDOR } from '../logic/main-corridor';
+import {
+  CORRIDOR_DOORS,
+  doorPlace,
+  MAIN_CORRIDOR,
+} from '../logic/main-corridor';
 
 beforeEach(() => {
   vi.stubGlobal('document', {
@@ -39,7 +43,7 @@ describe('the main corridor’s doors', () => {
   it('give every pair a card reader on the corridor face, to the right of the doors', () => {
     const { group, doors } = createMainCorridor(1, createPanelKit());
     group.updateMatrixWorld(true);
-    expect(doors.length).toBe(6);
+    expect(doors.length).toBe(CORRIDOR_DOORS.length);
     for (const d of doors) {
       expect(d.part.readers.length, d.door.to).toBe(2);
       const p = doorPlace(d.door);

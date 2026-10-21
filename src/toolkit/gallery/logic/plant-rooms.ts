@@ -2,8 +2,9 @@ import type { Footprint } from '../../controls/logic/walk-collision';
 
 /**
  * The per-attraction plant rooms (`doc/plant-model.md`): each two storeys
- * high, in three sizes (small 7 m, medium 10 m, large 20 m square; the
- * large for the Olympic pool). Each is entered at deck level through the
+ * high, in three sizes (small 8 m, medium 12 m, large 22 m square; the
+ * large for the Olympic pool), and a tiny one, 5 m square and one storey,
+ * for a packaged set (the footbath's), entered on the level with no stair. Each is entered at deck level through the
  * plant room door in its south wall, toward the attraction it serves, onto
  * a steel landing, from which a steep steel industrial stair runs down its
  * east wall to the plant floor a storey below; its north wall, at the
@@ -13,7 +14,7 @@ import type { Footprint } from '../../controls/logic/walk-collision';
  * (and the landing) at y = 0, x east, z south.
  */
 
-export type PlantRoomSize = 'small' | 'medium' | 'large';
+export type PlantRoomSize = 'tiny' | 'small' | 'medium' | 'large';
 
 /** The plant room door's structural opening, its frame included, metres. */
 export const PLANT_DOORWAY = 0.926 + 2 * 0.05;
@@ -27,9 +28,10 @@ export const EQUIPMENT_OPENING = 1.8 + 2 * 0.06;
 export const PLANT_SILL = 0.25;
 
 export const PLANT_ROOM_SIZES: Record<PlantRoomSize, number> = {
-  small: 7,
-  medium: 10,
-  large: 20,
+  tiny: 5,
+  small: 8,
+  medium: 12,
+  large: 22,
 };
 
 export const PLANT_ROOM = {
@@ -51,6 +53,8 @@ export function plantRoomPlan(size: PlantRoomSize) {
   const side = PLANT_ROOM_SIZES[size];
   const h = side / 2;
   const P = PLANT_ROOM;
+  // The tiny room is one storey, its floor level with the deck: no stair.
+  const stepFree = size === 'tiny';
   const steps = Math.round(P.storey / P.stair.riser);
   const riser = P.storey / steps;
   // A tread for each riser but the last, which is the landing's edge.
@@ -74,8 +78,10 @@ export function plantRoomPlan(size: PlantRoomSize) {
   return {
     side,
     h,
-    floor: -P.storey,
-    roof: P.storey,
+    stepFree,
+    floor: stepFree ? 0 : -P.storey,
+    // The tiny room's one storey is as tall as the main corridor (7 m).
+    roof: stepFree ? 2 * P.storey : P.storey,
     landing,
     stair,
     // The pool side's door north, the main plant's south.
@@ -89,6 +95,7 @@ export type PlantRoomPlan = ReturnType<typeof plantRoomPlan>;
 /** The floor under the walker: the landing, a tread of the stair, or the plant floor. */
 export function plantRoomFloorAt(plan: PlantRoomPlan, x: number, z: number) {
   const { landing, stair } = plan;
+  if (plan.stepFree) return 0;
   // In the doorway, through the wall: level with the landing it opens onto.
   if (z <= landing.minZ && Math.abs(x - plan.door.x) <= PLANT_DOORWAY / 2 + 0.3)
     return 0;
@@ -134,6 +141,7 @@ export function plantRoomSolids(plan: PlantRoomPlan): Footprint[] {
     { minX: -h - t, maxX: -h, minZ: -h, maxZ: h },
     { minX: h, maxX: h + t, minZ: -h, maxZ: h },
   ];
+  if (plan.stepFree) return walls;
   return [
     ...walls,
     // The landing's west edge, and its south edge but for the stair.

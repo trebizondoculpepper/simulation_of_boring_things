@@ -13,6 +13,7 @@ import {
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createServiceCeiling } from '../../components/site-dressing/views/service-ceiling';
+import { createIndustrialAccess } from '../../components/architectural/views/industrial-access';
 import {
   addWallBatten,
   createWallBattenMaterials,
@@ -26,7 +27,7 @@ import type { EquipmentDoorsPart } from '../../components/architectural/parts/eq
 import { createBreezeBlockTextures } from '../../../scene/breeze-block-texture';
 import { createWarehouseConcreteFloor } from '../../../scene/warehouse-concrete-floor';
 import { createPs1Material } from '../../components/core/parts/ps1-material';
-import { PLANT_ROOM, plantRoomPlan } from '../logic/plant-rooms';
+import { PLANT_DOORWAY, PLANT_ROOM, plantRoomPlan } from '../logic/plant-rooms';
 import type { PlantRoomSize } from '../logic/plant-rooms';
 
 /**
@@ -80,22 +81,6 @@ export function createPlantRoomShell(
   // Studded rubber safety flooring on the landing and the treads: raised
   // round studs on a dark rubber sheet, for grip when wet.
   const rubber = studdedRubber(kit);
-  /** A box of rubber, its texture repeating every `STUD_TILE` metres. */
-  const rubberBox = (
-    sx: number,
-    sy: number,
-    sz: number,
-    x: number,
-    y: number,
-    z: number,
-  ) => {
-    const mesh = box(rubber, sx, sy, sz, x, y, z);
-    const uv = mesh.geometry.getAttribute('uv');
-    for (let i = 0; i < uv.count; i++)
-      uv.setXY(i, (uv.getX(i) * sx) / STUD_TILE, (uv.getY(i) * sz) / STUD_TILE);
-    uv.needsUpdate = true;
-    return mesh;
-  };
   const box = (
     m: Material,
     sx: number,
@@ -180,8 +165,19 @@ export function createPlantRoomShell(
   ])
     if (x1 > x0)
       box(dado, x1 - x0, 1.2, 0.01, (x0 + x1) / 2, floor + 0.6, h - 0.005);
+  // The north wall's, broken round the plant room door too where that
+  // door is on the plant floor (the tiny room's).
+  const doorLeft = plan.door.x - PLANT_DOORWAY / 2;
+  const doorRight = plan.door.x + PLANT_DOORWAY / 2;
+  for (const [x0, x1] of plan.stepFree
+    ? [
+        [-h, doorLeft],
+        [doorRight, h],
+      ]
+    : [[-h, h]])
+    if (x1 > x0)
+      box(dado, x1 - x0, 1.2, 0.01, (x0 + x1) / 2, floor + 0.6, -h + 0.005);
   for (const [sx, sz, x, z] of [
-    [2 * h, 0.01, 0, -h + 0.005],
     [0.01, 2 * h, -h + 0.005, 0],
     [0.01, 2 * h, h - 0.005, 0],
   ])
@@ -206,121 +202,44 @@ export function createPlantRoomShell(
   );
   lobby.name = 'plant door lobby';
 
-  // The landing: studded rubber on a steel frame, at deck level.
-  const lw = landing.maxX - landing.minX;
-  const ld = landing.maxZ - landing.minZ;
-  rubberBox(
-    lw,
-    0.04,
-    ld,
-    (landing.minX + landing.maxX) / 2,
-    -0.02,
-    (landing.minZ + landing.maxZ) / 2,
-  );
-  box(
-    galvanised,
-    lw,
-    0.15,
-    0.08,
-    (landing.minX + landing.maxX) / 2,
-    -0.115,
-    landing.maxZ - 0.04,
-  );
-  const supportCount = Math.max(1, Math.ceil(lw / 2.5));
-  for (let i = 0; i <= supportCount; i++) {
-    const x = landing.minX + 0.05 + ((lw - 0.1) * i) / supportCount;
-    for (const z of [landing.minZ + 0.05, landing.maxZ - 0.05])
-      box(galvanised, 0.08, -floor, 0.08, x, floor / 2, z);
-  }
-
-  // Handrails, galvanised and painted yellow: posts, a top rail at 1.1 m
-  // and a knee rail, round the landing's open edges and down the stair's
-  // open side (stopping a metre short of its foot, where it is stepped
-  // off sideways), and on the wall side of the stair.
-  const rail = (
-    x0: number,
-    y0: number,
-    z0: number,
-    x1: number,
-    y1: number,
-    z1: number,
-  ) => {
-    const length = Math.hypot(x1 - x0, y1 - y0, z1 - z0);
-    const bar = new Mesh(new BoxGeometry(0.04, 0.04, length), yellow);
-    bar.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
-    bar.lookAt(x1, y1, z1);
-    bar.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
-    const holder = new Group();
-    holder.add(bar);
-    group.add(holder);
-    return bar;
-  };
-  const guard = (
-    x0: number,
-    y0: number,
-    z0: number,
-    x1: number,
-    y1: number,
-    z1: number,
-  ) => {
-    for (const up of [1.1, 0.55]) rail(x0, y0 + up, z0, x1, y1 + up, z1);
-    const n = Math.max(1, Math.round(Math.hypot(x1 - x0, z1 - z0) / 1.2));
-    for (let i = 0; i <= n; i++) {
-      const f = i / n;
-      const x = x0 + (x1 - x0) * f;
-      const y = y0 + (y1 - y0) * f;
-      const z = z0 + (z1 - z0) * f;
-      box(yellow, 0.045, 1.1, 0.045, x, y + 0.55, z);
-    }
-  };
-  {
-    // The stair: rubber-clad treads on two steel stringers, a yellow nosing on
-    // each, down the east wall to the plant floor.
+  if (!plan.stepFree) {
+    const access = createIndustrialAccess({
+      deck: rubber,
+      steel: galvanised,
+      rail: yellow,
+      nosing: yellow,
+      deckTile: STUD_TILE,
+    });
+    access.deck({
+      x: (landing.minX + landing.maxX) / 2,
+      z: (landing.minZ + landing.maxZ) / 2,
+      width: landing.maxX - landing.minX,
+      depth: landing.maxZ - landing.minZ,
+      topY: 0,
+      supportBottom: floor,
+    });
     const sw = stair.maxX - stair.minX;
-    const sx = (stair.minX + stair.maxX) / 2;
-    for (let k = 1; k < stair.steps; k++) {
-      const y = -k * stair.riser;
-      const z = stair.top + (k - 0.5) * P.stair.going;
-      rubberBox(sw - 0.06, 0.035, P.stair.going, sx, y - 0.0175, z);
-      box(
-        yellow,
-        sw - 0.06,
-        0.036,
-        0.03,
-        sx,
-        y - 0.0175,
-        z + P.stair.going / 2 - 0.015,
-      );
-    }
-    const run = stair.bottom - stair.top;
-    const slope = Math.atan2(-floor, run);
-    const slant = Math.hypot(run, -floor);
-    for (const x of [stair.minX + 0.03, stair.maxX - 0.03]) {
-      const stringer = box(
-        galvanised,
-        0.06,
-        0.2,
-        slant,
-        x,
-        floor / 2 - 0.1,
-        (stair.top + stair.bottom) / 2,
-      );
-      stringer.rotation.x = slope;
-    }
-
-    guard(landing.minX, 0, landing.minZ + 0.05, landing.minX, 0, landing.maxZ);
-    guard(landing.minX, 0, landing.maxZ, stair.minX, 0, landing.maxZ);
-    const off = P.stair.offAt;
-    const yAtOff = floor + (off / run) * -floor;
-    guard(stair.minX, 0, stair.top, stair.minX, yAtOff, stair.bottom - off);
-    rail(
-      stair.maxX - 0.06,
-      0.9,
-      stair.top,
-      stair.maxX - 0.06,
-      floor + 0.9,
-      stair.bottom,
-    );
+    access.stair({
+      x: (stair.minX + stair.maxX) / 2,
+      z: stair.top,
+      topY: 0,
+      bottomY: floor,
+      width: sw,
+      run: stair.bottom - stair.top,
+      steps: stair.steps,
+      treads: stair.steps - 1,
+      direction: 'south',
+      openSideEnd: P.stair.offAt,
+    });
+    access.rail({
+      from: [landing.minX, 0, landing.minZ + 0.05],
+      to: [landing.minX, 0, landing.maxZ],
+    });
+    access.rail({
+      from: [landing.minX, 0, landing.maxZ],
+      to: [stair.minX, 0, landing.maxZ],
+    });
+    group.add(access.group);
   }
 
   // The equipment doors in the south wall, through to the main plant: the
@@ -350,13 +269,17 @@ export function createPlantRoomShell(
     c.fillText(name, w / 2, hh * 0.38, w * 0.94);
     c.font = `${hh * 0.2}px Arial, Helvetica, sans-serif`;
     c.fillText(
-      `${plan.side} × ${plan.side} m · two storeys`,
+      `${plan.side} × ${plan.side} m · ${plan.stepFree ? 'one storey' : 'two storeys'}`,
       w / 2,
       hh * 0.72,
       w * 0.94,
     );
   });
-  title.position.set(Math.min(0, plan.equipment.x - 2), 1.8, -h + 0.002);
+  title.position.set(
+    plan.stepFree ? -h + 1.1 : Math.min(0, plan.equipment.x - 2),
+    1.8,
+    -h + 0.002,
+  );
   group.add(title);
 
   // Light: LED battens high on the walls of each storey; the room lit by
@@ -366,7 +289,7 @@ export function createPlantRoomShell(
   kit.materials.push(...Object.values(battens));
   const along = Math.max(1, Math.round((2 * h) / 5));
   // Keep the upper row below the service ceiling's beams and pipework.
-  for (const y of [floor + 3.1, roof - 1.0])
+  for (const y of plan.stepFree ? [floor + 3.1] : [floor + 3.1, roof - 1.0])
     for (let i = 0; i < along; i++) {
       const at = -h + ((i + 0.5) * 2 * h) / along;
       const lowerSideLights = size === 'large' && y === floor + 3.1;
@@ -419,7 +342,7 @@ export function createPlantRoomShell(
     createServiceCeiling(
       { minX: -h, maxX: h, minZ: -h, maxZ: h, deckY: roof },
       {
-        seed: size === 'small' ? 11 : size === 'medium' ? 23 : 37,
+        seed: { tiny: 5, small: 11, medium: 23, large: 37 }[size],
         density: 0.85,
       },
     ).group,
