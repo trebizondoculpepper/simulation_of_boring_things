@@ -10,6 +10,44 @@ import {
 } from './pool-loop';
 
 describe('the pool loop', () => {
+  it('lays each leg as the owner specified it', () => {
+    expect(LOOP_LEGS[0].pieces).toEqual([
+      { kind: 'straight', length: 1 },
+      { kind: 'stairs', rise: -2 },
+      { kind: 'left' },
+      { kind: 'straight', length: 1 },
+      { kind: 'right' },
+      { kind: 'straight', length: 1 },
+    ]);
+    // The Olympic pool to the jacuzzi, and the jacuzzi to the footbath.
+    expect(LOOP_LEGS[1].pieces).toEqual([
+      { kind: 'straight', length: 4 },
+      { kind: 'stairs', rise: -2 },
+      { kind: 'straight', length: 4 },
+    ]);
+    expect(LOOP_LEGS[2].pieces).toEqual([
+      { kind: 'straight', length: 1 },
+      { kind: 'left' },
+      { kind: 'straight', length: 1 },
+      { kind: 'right' },
+      { kind: 'straight', length: 1 },
+    ]);
+    // The footbath to the viewing gallery.
+    expect(LOOP_LEGS[3].pieces).toEqual([
+      { kind: 'straight', length: 1 },
+      { kind: 'left' },
+      { kind: 'straight', length: 1 },
+      { kind: 'right' },
+      { kind: 'straight', length: 1 },
+    ]);
+    expect(LOOP_LEGS[4].pieces).toEqual([
+      { kind: 'straight', length: 1 },
+      { kind: 'left' },
+      { kind: 'right' },
+      { kind: 'stairs', rise: 2 },
+      { kind: 'straight', length: 1 },
+    ]);
+  });
   it('joins the rooms in a ring, through the Olympic pool twice', () => {
     expect(LOOP_LEGS.map((l) => l.from)).toEqual([
       'pool_01',
@@ -23,11 +61,20 @@ describe('the pool loop', () => {
     );
   });
 
-  it('never makes a corridor of two straights, and keeps it the same', () => {
+  it('makes each corridor a 1 m straight, a turn or flight, and a short straight', () => {
     for (let seed = 0; seed < 500; seed++) {
-      const [a, b] = legPieces(seed);
-      expect(a.kind === 'straight' && b.kind === 'straight').toBe(false);
+      const [a, b, c] = legPieces(seed);
+      expect(a).toEqual({ kind: 'straight', length: 1 });
+      expect(c).toEqual({ kind: 'straight', length: 1 });
+      expect(['left', 'right', 'stairs']).toContain(b.kind);
     }
+    // Every kind of middle turns up, stairs both ways.
+    const middles = new Set(
+      Array.from({ length: 200 }, (_, seed) =>
+        JSON.stringify(legPieces(seed)[1]),
+      ),
+    );
+    expect(middles.size).toBe(4);
     expect(legPieces(42)).toEqual(legPieces(42));
   });
 
@@ -204,9 +251,88 @@ describe('walking the pool loop', () => {
         expect(there.blocked(x, z), `into ${leg.to} at ${x}, ${z}`).toBe(false);
         const y =
           there.floor(x, z) - (there.arriving.start.y - here.leaving.start.y);
-        expect(Math.abs(y - last)).toBeLessThan(0.2);
+        // POOL-03's raised jacuzzi starts with a 0.3 m plinth step.
+        expect(Math.abs(y - last)).toBeLessThan(
+          leg.to === 'pool_03' ? 0.31 : 0.2,
+        );
         last = y;
       }
+    }
+  });
+});
+
+import { loopStep } from './pool-loop';
+
+describe('loading round the loop', () => {
+  /** A point `s` metres along a corridor copy's middle, from its start. */
+  const at = (copy: ReturnType<typeof roomCorridors>['leaving'], s: number) => {
+    const points = middle(copy);
+    return points[Math.min(points.length - 1, Math.round(s / 0.05))];
+  };
+
+  it('draws the room beyond whichever corridor the walker is in, and hands over in its far short straight', () => {
+    for (const leg of LOOP_LEGS) {
+      const { leaving } = roomCorridors(leg.from);
+      let state = { leaving: false, arriving: false };
+      const step = (s: number, seen = false) => {
+        const [x, z] = at(leaving, s);
+        const r = loopStep(leg.from, x, z, state, {
+          leaving: seen,
+          arriving: false,
+        });
+        state = r.state;
+        return r.handTo;
+      };
+      expect(step(0.3)).toBe(null);
+      expect(state).toEqual({ leaving: true, arriving: false });
+      // In the far short straight: handed over, but only once it is drawn.
+      expect(step(leaving.length - 0.3)).toBe(null);
+      expect(step(leaving.length - 0.3, true)).toBe(leg.to);
+    }
+  });
+
+  it('draws the next room in a room’s exit half, the last in its entry half, and holds across the middle', () => {
+    for (const room of [
+      'pool_01',
+      'pool_03',
+      'pool_04',
+      'pool_02_gallery',
+    ] as const) {
+      const { exit, entry } = joints(room);
+      const along = (t: number) => [
+        entry.x + (exit.x - entry.x) * t,
+        entry.z + (exit.z - entry.z) * t,
+      ];
+      let state = { leaving: false, arriving: false };
+      const step = (t: number) => {
+        const [x, z] = along(t);
+        state = loopStep(room, x, z, state, {
+          leaving: false,
+          arriving: false,
+        }).state;
+        return state;
+      };
+      expect(step(0.1)).toEqual({ leaving: false, arriving: true });
+      // Into the middle band from the entry side: still the last room.
+      expect(step(0.5)).toEqual({ leaving: false, arriving: true });
+      expect(step(0.9)).toEqual({ leaving: true, arriving: false });
+      expect(step(0.5)).toEqual({ leaving: true, arriving: false });
+    }
+  });
+
+  it('hands back to the last room in the arriving corridor’s far short straight', () => {
+    for (const leg of LOOP_LEGS) {
+      const { arriving } = roomCorridors(leg.to);
+      const [x, z] = at(arriving, 0.3);
+      const r = loopStep(
+        leg.to,
+        x,
+        z,
+        { leaving: false, arriving: true },
+        { leaving: false, arriving: true },
+      );
+      expect(r.handTo).toBe(leg.from);
+      expect(r.state.arriving).toBe(true);
     }
   });
 });

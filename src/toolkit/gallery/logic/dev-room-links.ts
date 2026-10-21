@@ -44,7 +44,7 @@ export type EquipmentRoomId =
   | 'dev_ozone';
 export type DevRoomId = GalleryRoomId | EquipmentRoomId;
 /** The main plant room alone at each trial size, metres a side (`plant-fit-room.ts`). */
-export const PLANT_FIT_SIZES = [47, 42, 37] as const;
+export const PLANT_FIT_SIZES = [47, 42, 40, 37] as const;
 export type PlantFitRoomId = `plant_fit_${(typeof PLANT_FIT_SIZES)[number]}`;
 export const PLANT_FIT_ROOMS: readonly PlantFitRoomId[] = PLANT_FIT_SIZES.map(
   (n) => `plant_fit_${n}` as const,
@@ -68,6 +68,14 @@ export type RoomId =
   | 'pool_02_gallery'
   | 'ceiling_lab'
   | 'corridor_lab'
+  | 'main_corridor'
+  | 'plant_room_small'
+  | 'plant_room_medium'
+  | 'plant_room_large'
+  | 'plant_pool_01'
+  | 'plant_pool_02'
+  | 'plant_pool_03'
+  | 'plant_pool_04'
   | 'pipes_n_dreams'
   | 'plant_corridor'
   | 'shared_plant_layout'
@@ -160,6 +168,17 @@ export const ROOMS: readonly RoomId[] = [
   'ceiling_lab',
   // The corridor kit: straights and turns, laid out as one run.
   'corridor_lab',
+  // The per-attraction plant rooms' shells, in each size.
+  // The L-shaped plant corridor the plant rooms open off.
+  'main_corridor',
+  'plant_room_small',
+  'plant_room_medium',
+  'plant_room_large',
+  // Each pool hall's own plant room, through its plant room door.
+  'plant_pool_01',
+  'plant_pool_02',
+  'plant_pool_03',
+  'plant_pool_04',
   // Every kind of pipe and duct the game knows, on stands.
   'pipes_n_dreams',
   // The plant rooms' main corridor: the dev corridor again, taller, for
@@ -192,11 +211,20 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   pool_02_gallery: 'POOL-02 · UNDERWATER GALLERY',
   ceiling_lab: 'CEILING_LAB · SERVICES CEILING',
   corridor_lab: 'CORRIDOR_LAB · CORRIDOR KIT',
+  main_corridor: 'MAIN CORRIDOR',
+  plant_room_small: 'PLANT ROOM · SMALL · 7 × 7 M',
+  plant_room_medium: 'PLANT ROOM · MEDIUM · 10 × 10 M',
+  plant_room_large: 'PLANT ROOM · LARGE · 20 × 20 M',
+  plant_pool_01: 'PLANT ROOM 1 – LOUNGE POOL',
+  plant_pool_02: 'PLANT ROOM 2 – OLYMPIC POOL',
+  plant_pool_03: 'PLANT ROOM 3 – JACUZZI',
+  plant_pool_04: 'PLANT ROOM 4 – FOOTBATH',
   pipes_n_dreams: "PIPES'N DREAMS · PIPING AND DUCTING",
   plant_corridor: 'PLANT CORRIDOR',
   shared_plant_layout: 'SHARED PLANT LAYOUT',
   plant_fit_47: 'MAIN PLANT ROOM · 47 M',
   plant_fit_42: 'MAIN PLANT ROOM · 42 M',
+  plant_fit_40: 'MAIN PLANT ROOM · 40 M',
   plant_fit_37: 'MAIN PLANT ROOM · 37 M',
   dev0: 'DEV0 · CONTROLS AND DISPLAYS',
   dev1: 'DEV1 · RACKS',
@@ -247,11 +275,20 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   pool_02_gallery: '#2fa3ad',
   ceiling_lab: '#8a8f93',
   corridor_lab: '#f3f5f1',
+  main_corridor: '#6d7a6f',
+  plant_room_small: '#6d7a6f',
+  plant_room_medium: '#6d7a6f',
+  plant_room_large: '#6d7a6f',
+  plant_pool_01: '#6d7a6f',
+  plant_pool_02: '#6d7a6f',
+  plant_pool_03: '#6d7a6f',
+  plant_pool_04: '#6d7a6f',
   pipes_n_dreams: '#8f3a22',
   plant_corridor: '#8a8f93',
   shared_plant_layout: '#8a8f93',
   plant_fit_47: '#8a8f93',
   plant_fit_42: '#8a8f93',
+  plant_fit_40: '#8a8f93',
   plant_fit_37: '#8a8f93',
   dev0: '#2fb3a5',
   dev1: '#3f7fe0',

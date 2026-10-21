@@ -47,7 +47,7 @@ const OPEN = 1.75;
 /** The filter's working pressure, bar. */
 const WORKING = 0.7;
 
-function buildSpaPack(kit: PanelKit): LiveExhibit {
+function buildSpaPack(kit: PanelKit, circuit = 'FOOT SPA'): LiveExhibit {
   const t = plantTools(kit);
   const c = CABINET;
   const object = new Group();
@@ -267,7 +267,7 @@ function buildSpaPack(kit: PanelKit): LiveExhibit {
   const badge = createBrandBadge(kit, 'lidoluxe', { height: 0.05 });
   badge.position.set(0, 1.78, 0.026);
   left.face.add(badge);
-  const plate = createMicroLabel(kit, 'PACKAGED SPA SET · FOOT SPA', {
+  const plate = createMicroLabel(kit, `PACKAGED SPA SET · ${circuit}`, {
     height: 0.018,
     ink: '#1d2125',
   });
@@ -379,6 +379,13 @@ export const SPA_PACK_EXHIBIT: PlantExhibit = {
     'For circuits under 10 m³/h (the foot spa): pump, cartridge filter, inline UV, plate heat exchanger and surge vessel on one skid, dosing on the back wall; 1.7 × 0.9 × 2.1 m cabinet',
   size: { w: 2.1, d: 1.9, h: 2.2, mount: 'floor' },
   build: buildSpaPack,
+};
+
+/** The same factory cabinet labeled for the Jacuzzi circuit. */
+export const JACUZZI_PACK_EXHIBIT: PlantExhibit = {
+  ...SPA_PACK_EXHIBIT,
+  title: 'Packaged Jacuzzi plant cabinet',
+  build: (kit) => buildSpaPack(kit, 'JACUZZI'),
 };
 
 /**

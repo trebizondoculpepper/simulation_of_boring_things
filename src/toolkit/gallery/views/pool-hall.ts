@@ -34,9 +34,11 @@ import {
   createMainDrain,
   createPoolLight,
   createWallInlet,
+  fittingMaterials,
 } from '../../components/pool/views/pool-fittings';
 import type { PoolFittingMaterials } from '../../components/pool/views/pool-fittings';
 import {
+  createCausticPatch,
   createLightShaft,
   createPoolUniforms,
   createTileMaterial,
@@ -56,13 +58,19 @@ import {
 } from '../../components/architectural/views/board-marked-concrete';
 import { rippleWater } from './round-room-light';
 import {
+  createCornerFillet,
   createCorridor,
   createCorridorRun,
 } from '../../components/architectural/views/corridor';
 import { pieceLength } from '../../components/architectural/logic/corridor-path';
 import { roomCorridors } from '../logic/pool-loop';
+import { PLANT_DOORWAY, PLANT_SILL } from '../logic/plant-rooms';
+
+/** The plant room door's frame head over the deck, metres. */
+const PLANT_DOOR_HEAD = 2.04 + 2 * 0.05;
 import type { LoopRoom } from '../logic/pool-loop';
 import { createPoolLadder } from './pool-ladder';
+import { createMetalGlobeLight } from '../../components/architectural/views/metal-globe-light';
 import {
   archSpan,
   CORRIDOR_SECTION,
@@ -154,6 +162,15 @@ export function createPoolHall(
     tile: s.tile.size,
   });
   tile.side = DoubleSide;
+  // The corridors are dry rooms: their tile is the hall's, but with no
+  // water to tint it or throw caustics on it, however low they go.
+  const dryUniforms = createPoolUniforms(metre, -100, []);
+  dryUniforms.caustics.value = dryUniforms.reflected.value = 0;
+  const dry = createTileMaterial(dryUniforms, {
+    colour: s.tile.colour,
+    tile: s.tile.size,
+  });
+  dry.side = DoubleSide;
   const add = (mesh: Mesh, name: string) => {
     mesh.name = name;
     group.add(mesh);
@@ -241,8 +258,10 @@ export function createPoolHall(
     s.basins.forEach((_, k) =>
       deck.holes.push(outline(new Path(), k, g.width)),
     );
-    // Over a gallery the deck is a slab, the corridor under it.
-    add(new Mesh(flat(deck, gallery ? -0.35 : bottom, 0), tile), 'deck');
+    // Over a gallery the deck is a slab, the corridor under it: its
+    // underside kept inside the corridor's ceiling (0.35 m down to 0.15),
+    // not level with its face, where the pool's wet tile would show.
+    add(new Mesh(flat(deck, gallery ? -0.3 : bottom, 0), tile), 'deck');
     s.basins.forEach((_, k) => {
       if (gallery && k === 0) {
         // The gutter's kerb but for its north side, which is the
@@ -261,8 +280,9 @@ export function createPoolHall(
             'gutter kerb',
           ).position.set((x0 + x1) / 2, (y0 - g.depth) / 2, (z0 + z1) / 2);
         strip(o.minX - w, o.maxX + w, o.maxZ, o.maxZ + w, bottom);
-        strip(o.minX - w, o.minX, o.minZ - w, o.maxZ, bottom);
-        strip(o.maxX, o.maxX + w, o.minZ - w, o.maxZ, bottom);
+        // The ends stop at the windowed wall, not in its face.
+        strip(o.minX - w, o.minX, o.minZ, o.maxZ, bottom);
+        strip(o.maxX, o.maxX + w, o.minZ, o.maxZ, bottom);
         strip(o.minX, o.maxX, o.minZ - w, o.minZ, gallery.floor + 2.5);
         return;
       }
@@ -946,6 +966,17 @@ export function createPoolHall(
       face.lineTo(-hz, tiled);
     }
     face.closePath();
+    // The west wall's lower part, cut for its plant room door.
+    if (!upper && s.plantDoor && (s.plantDoor.wall === 'east') === east)
+      face.holes.push(
+        rect(
+          new Path(),
+          s.plantDoor.z - PLANT_DOORWAY / 2,
+          s.plantDoor.z + PLANT_DOORWAY / 2,
+          PLANT_SILL,
+          PLANT_SILL + PLANT_DOOR_HEAD,
+        ),
+      );
     if (east && win)
       for (const z of win.at)
         if (win.from >= from && win.to <= (upper ? lowH : tiled))
@@ -966,7 +997,9 @@ export function createPoolHall(
       .translate(east ? hx + WALL : -hx, 0, 0);
     add(
       new Mesh(
-        upper ? inMetres(geometry, s.d, highH - tiled) : geometry,
+        // ExtrudeGeometry already writes the shape's metre coordinates to
+        // UV; multiplying by wall dimensions here made the map shimmer.
+        upper ? inMetres(geometry, 1, 1) : geometry,
         upper ? concrete : tile,
       ),
       upper ? 'wall concrete' : 'wall',
@@ -1069,7 +1102,9 @@ export function createPoolHall(
   });
   sun.shadow.bias = -0.0004;
   sun.shadow.normalBias = 0.02 * metre;
-  group.add(sun, sun.target);
+  // Only where it has a way in: a hall with no skylights or high windows
+  // (the jacuzzi) has no sun at all.
+  if (s.skylights.length || s.highWindows) group.add(sun, sun.target);
   for (const k of s.skylights)
     group.add(
       createLightShaft(
@@ -1085,6 +1120,33 @@ export function createPoolHall(
   uniforms.reflected.value = 0.28;
   const box = { minX: -hx, maxX: hx, minZ: -hz, maxZ: hz, floorY: 0 };
   addBoxRoomCoves(group, tile, { ...box, height: tiled });
+  // At each doorway's jambs, where the wall's fillet and the corridor's
+  // meet round an outside corner, a fillet turned round the corner.
+  for (const [z, starts] of [
+    [-hz, [0, -Math.PI / 2]],
+    [hz, [Math.PI / 2, Math.PI]],
+  ] as const)
+    starts.forEach((phi, i) => {
+      const corner = createCornerFillet(tile, phi);
+      corner.position.set(door + (i === 0 ? -gap : gap), 0, z);
+      group.add(corner);
+    });
+  // The west wall's fillet stops either side of its plant room door.
+  // Its doorway is raised on a sill over the cove, which runs on under it.
+  if (s.plantDoor) {
+    // A dark lobby beyond it, the plant room's own scene being separate.
+    add(
+      new Mesh(
+        new BoxGeometry(0.05, PLANT_DOOR_HEAD, PLANT_DOORWAY),
+        new MeshBasicMaterial({ color: '#0b0d0d' }),
+      ),
+      'plant door lobby',
+    ).position.set(
+      (s.plantDoor.wall === 'west' ? -1 : 1) * (hx + WALL + 0.6),
+      PLANT_SILL + PLANT_DOOR_HEAD / 2,
+      s.plantDoor.z,
+    );
+  }
   // The fillets along the north and south walls' feet stop at the doors.
   for (const [name, z, turnY] of [
     ['cove north wall', -hz, -Math.PI / 2],
@@ -1214,8 +1276,7 @@ export function createPoolHall(
     addTileEdgeTrim(group, tileTrimSteel(), { ...box, height: highH }, tiled);
   }
 
-  // Lights: rows of pendant fittings under the roof, each a disc lit
-  // from within and a light; fewer, brighter ones in the tall halls.
+  // The Olympic and jacuzzi halls use the same 3 m globe shade.
   const glow = new MeshStandardMaterial({
     color: '#fff6e8',
     emissive: '#ffe9c8',
@@ -1226,7 +1287,14 @@ export function createPoolHall(
     metalness: 0.5,
     roughness: 0.5,
   });
-  const [cols, rows] = s.w > 40 ? [4, 2] : s.w > 15 ? [3, 2] : [2, 1];
+  const [cols, rows] =
+    s.id === 'pool_03'
+      ? [1, 1]
+      : s.w > 40
+        ? [4, 2]
+        : s.w > 15
+          ? [3, 2]
+          : [2, 1];
   // Under a sloping roof they hang on longer wires, to the same height.
   const hang = s.h > 6 ? Math.min(lowH, 12) - 1.5 : s.h - 0.05;
   const power =
@@ -1237,24 +1305,37 @@ export function createPoolHall(
       const z = rows === 1 ? 0 : -hz + ((j + 0.5) * s.d) / rows;
       const ceiling = top(z);
       const size = s.h > 6 ? 0.35 : 0.15;
-      const fitting = new Mesh(
-        new CylinderGeometry(size, size * 1.15, 0.12, 32),
-        body,
-      );
-      fitting.position.set(x, hang + 0.06, z);
-      group.add(fitting);
-      const lens = new Mesh(
-        new CircleGeometry(size * 1.05, 32).rotateX(Math.PI / 2),
-        glow,
-      );
-      lens.position.set(x, hang - 0.001, z);
-      group.add(lens);
-      if (s.h > 6) {
-        const wire = new Mesh(
-          new CylinderGeometry(0.006, 0.006, ceiling - hang - 0.12, 6),
+      const globe = s.id === 'pool_02' || s.id === 'pool_03';
+      if (globe) {
+        const fixture = createMetalGlobeLight();
+        fixture.position.set(x, hang, z);
+        group.add(fixture);
+      } else {
+        const fitting = new Mesh(
+          new CylinderGeometry(size, size * 1.15, 0.12, 32),
           body,
         );
-        wire.position.set(x, (ceiling + hang + 0.12) / 2, z);
+        fitting.position.set(x, hang + 0.06, z);
+        group.add(fitting);
+        const lens = new Mesh(
+          new CircleGeometry(size * 1.05, 32).rotateX(Math.PI / 2),
+          glow,
+        );
+        lens.position.set(x, hang - 0.001, z);
+        group.add(lens);
+      }
+      if (s.h > 6) {
+        const bottom = hang + (globe ? 1.5 : 0.12);
+        const wire = new Mesh(
+          new CylinderGeometry(
+            0.006,
+            0.006,
+            Math.max(0.01, ceiling - bottom),
+            6,
+          ),
+          body,
+        );
+        wire.position.set(x, (ceiling + bottom) / 2, z);
         group.add(wire);
       }
       const light = new PointLight(
@@ -1264,15 +1345,19 @@ export function createPoolHall(
         2,
       );
       light.position.set(x, hang - 0.3, z);
-      group.add(light);
+      // Not seen from under the water, where, casting no shadows, they
+      // would shine through the deck into the gallery.
+      if (!underwater) group.add(light);
     }
 
   // The underwater viewing gallery, under the north deck: a corridor of
   // the game's section, its south wall the pool's, windowed; its ends
   // closed until corridors join it.
   if (gallery) {
-    const corridor = createCorridor(s.w, tile, {
+    const corridor = createCorridor(s.w, dry, {
       windows: {
+        // The pool's side of the windowed wall is the pool's wall, wet.
+        farFace: tile,
         at: gallery.windows.map((x) => x + hx),
         r: gallery.r,
         y: gallery.windowY - gallery.floor,
@@ -1285,7 +1370,7 @@ export function createPoolHall(
     if (loopRoom !== 'pool_02_gallery')
       for (const x of [-hx - WALL / 2, hx + WALL / 2])
         add(
-          new Mesh(new BoxGeometry(WALL, 2.9, 1.6), tile),
+          new Mesh(new BoxGeometry(WALL, 2.9, 1.6), dry),
           'gallery end',
         ).position.set(x, gallery.floor + 1.25, gallery.z);
     if (underwater) {
@@ -1304,8 +1389,48 @@ export function createPoolHall(
       volume.name = 'underwater volume';
       volume.position.set(b.x, WATER_Y - b.deep / 2, b.z);
       group.add(volume);
-      // Dim lamps along the gallery's ceiling, the windows the brighter.
-      for (const x of [-0.3, 0, 0.3].map((t) => t * s.w)) {
+      // The sunlit water's caustics, thrown through each window onto the
+      // wall facing it: there only, not on the window wall or round the
+      // windows, which the light through them never reaches.
+      for (const x of gallery.windows) {
+        const patch = createCausticPatch(uniforms, 1.7, 1.3);
+        patch.name = 'gallery caustics';
+        patch.position.set(x, gallery.windowY - 0.25, gallery.z - 0.6 + 0.004);
+        group.add(patch);
+      }
+      // Small floor drains down its middle, and small round lights in its
+      // ceiling, in dry fittings: the corridor is a dry room.
+      const dryFittings = fittingMaterials(kit);
+      const downlight = new MeshStandardMaterial({
+        color: '#fff6e8',
+        emissive: '#fff1dc',
+        emissiveIntensity: 1.5,
+      });
+      const rim = new MeshStandardMaterial({
+        color: '#c9cdcf',
+        metalness: 0.8,
+        roughness: 0.3,
+      });
+      for (let x = -hx + 2; x < hx - 1; x += 4) {
+        if (Math.round((x + hx) / 4) % 2 === 0) {
+          const drain = createDeckGully(ft, dryFittings);
+          drain.position.set(x, gallery.floor + 0.002, gallery.z);
+          group.add(drain);
+        }
+        const ring = new Mesh(new CylinderGeometry(0.09, 0.09, 0.02, 24), rim);
+        ring.position.set(x, gallery.floor + 2.49, gallery.z);
+        group.add(ring);
+        const lens = new Mesh(
+          new CircleGeometry(0.07, 24).rotateX(Math.PI / 2),
+          downlight,
+        );
+        lens.position.set(x, gallery.floor + 2.479, gallery.z);
+        group.add(lens);
+      }
+      // Keep each light source directly under one of the ceiling lenses.
+      // Three sources cover the run without a point light for every fitting.
+      for (const i of [3, 8, 13]) {
+        const x = -hx + 2 + 4 * i;
         const lamp = new PointLight(
           '#d8f0ff',
           0.6 * metre * metre,
@@ -1319,7 +1444,7 @@ export function createPoolHall(
   }
 
   // The loop's corridors from this room's way in and out (`pool-loop.ts`),
-  // each with a lamp in each piece.
+  // each with a lamp in its middle piece.
   if (loopRoom) {
     const { leaving, arriving } = roomCorridors(loopRoom);
     const panel = new MeshStandardMaterial({
@@ -1328,8 +1453,10 @@ export function createPoolHall(
       emissiveIntensity: 1.4,
     });
     for (const copy of [leaving, arriving]) {
-      group.add(createCorridorRun(copy.placed, tile));
+      group.add(createCorridorRun(copy.placed, dry));
       for (const p of copy.placed) {
+        // A lamp in each piece but the turns.
+        if (p.piece.kind === 'left' || p.piece.kind === 'right') continue;
         const along = pieceLength(p.piece) / 2;
         const y = p.y + (p.piece.kind === 'stairs' ? p.piece.rise / 2 : 0);
         const x = p.x + Math.cos(p.yaw) * along;
@@ -1360,7 +1487,7 @@ export function createPoolHall(
   group.traverse((o) => {
     if (!(o instanceof Mesh)) return;
     const light =
-      /water|glass/.test(o.name) ||
+      /water|glass|caustics/.test(o.name) ||
       o.material === skyGlass ||
       (o.material as { name?: string }).name === 'LightShaft';
     o.castShadow = !light;

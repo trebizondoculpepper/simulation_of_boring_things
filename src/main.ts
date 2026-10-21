@@ -12,6 +12,8 @@ import type {
 } from './toolkit/gallery/logic/dev-room-links';
 import {
   jointOf,
+  lazyNeighbours,
+  openDoorJoint,
   nearestJoint,
   openJoint,
   throughDoor,
@@ -125,6 +127,41 @@ const starter = async (
   if (room === 'pipes_n_dreams')
     return (await import('./toolkit/gallery/rooms/pipes-n-dreams-room'))
       .startPipesRoom;
+  if (
+    room === 'plant_room_small' ||
+    room === 'plant_room_medium' ||
+    room === 'plant_room_large'
+  ) {
+    const { startPlantRoomShell } =
+      await import('./toolkit/gallery/rooms/plant-room-shell-room');
+    const size = room.replace('plant_room_', '') as
+      | 'small'
+      | 'medium'
+      | 'large';
+    return (surface) => startPlantRoomShell(surface, size);
+  }
+  if (
+    room === 'plant_pool_01' ||
+    room === 'plant_pool_02' ||
+    room === 'plant_pool_03' ||
+    room === 'plant_pool_04'
+  ) {
+    // Each pool hall's own plant room, of the size its door says.
+    const [{ startPlantRoomShell }, { POOL_HALLS }] = await Promise.all([
+      import('./toolkit/gallery/rooms/plant-room-shell-room'),
+      import('./toolkit/gallery/logic/pool-halls'),
+    ]);
+    const hall = room.replace('plant_', '') as
+      | 'pool_01'
+      | 'pool_02'
+      | 'pool_03'
+      | 'pool_04';
+    const size = POOL_HALLS[hall].plantDoor!.size;
+    return (surface) => startPlantRoomShell(surface, size, hall);
+  }
+  if (room === 'main_corridor')
+    return (await import('./toolkit/gallery/rooms/main-corridor-room'))
+      .startMainCorridorRoom;
   if (room === 'corridor_lab')
     return (await import('./toolkit/gallery/rooms/corridor-lab-room'))
       .startCorridorLabRoom;
@@ -430,6 +467,20 @@ const stopSeeing = (hide = true) => {
     entry.root.style.pointerEvents = '';
   }
 };
+/** Rooms built for the pool loop's lazy joints, let go when not next door. */
+const lazilyBuilt = new Set<RoomId>();
+/**
+ * Let a room go that is neither shown nor drawn under the one shown: free
+ * its renderer and scene, to be built afresh if it is wanted again.
+ */
+const release = (room: RoomId) => {
+  const key = keyOf(room);
+  const entry = rooms.get(key);
+  if (!entry || key === current) return;
+  entry.handle();
+  entry.root.remove();
+  rooms.delete(key);
+};
 const startSeeing = (top: RoomId, under: RoomId) => {
   const topSurface = surfaceOf(keyOf(top));
   const underSurface = surfaceOf(keyOf(under));
@@ -488,6 +539,27 @@ const ensureBuilt = (room: RoomId) => {
 const checkDoors = () => {
   if (!current || app.hidden) return stopSeeing();
   const top = current as RoomId;
+  // The pool loop: both rooms either side of this one built, unseen; any
+  // built before that are no longer either side, let go.
+  // Through an open plant room door, that room is built and seen, and the
+  // loop's rooms either side let go.
+  const door = openDoorJoint(top);
+  const beside = door ? [door] : lazyNeighbours(top);
+  // This room too, once left, if it is one of the loop's.
+  if (beside.length || door) lazilyBuilt.add(top);
+  for (const room of beside) {
+    lazilyBuilt.add(room);
+    ensureBuilt(room);
+  }
+  for (const room of lazilyBuilt)
+    if (
+      keyOf(room) !== current &&
+      !beside.includes(room) &&
+      seeing?.under !== room
+    ) {
+      lazilyBuilt.delete(room);
+      release(room);
+    }
   const to = openJoint(top);
   if (seeing && (seeing.top !== top || seeing.under !== to)) stopSeeing();
   if (seeing) return;

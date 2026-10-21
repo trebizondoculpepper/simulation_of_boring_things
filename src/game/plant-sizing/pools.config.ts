@@ -103,8 +103,8 @@ export const POOLS: readonly AttractionConfig[] = [
     id: 'spa',
     name: 'Jacuzzi room',
     room: 'pool_03',
-    // 10 m × 8 m × 3 m.
-    hallAir: 240,
+    // 10 m × 8 m × 9 m.
+    hallAir: 720,
     bodies: [
       // A hot tub for eight: 2.4 m round, 0.9 m deep, a seat round it.
       {

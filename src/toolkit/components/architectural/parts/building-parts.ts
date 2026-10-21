@@ -761,9 +761,13 @@ export function accessDoor(
     e.emit(was ? 'off' : 'on');
   });
   let wasLocked = true;
+  let wasOpen = props.open.value;
   show(a, () => {
     const locked = props.locked.value;
-    view.set(locked, props.open.value, props.broken.value);
+    const open = props.open.value;
+    view.set(locked, open, props.broken.value);
+    if (open && !wasOpen) e.emit('press');
+    wasOpen = open;
     if (locked !== wasLocked) play(MAGLOCK, a.object);
     wasLocked = locked;
   });

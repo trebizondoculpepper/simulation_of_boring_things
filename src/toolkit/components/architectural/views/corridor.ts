@@ -37,6 +37,11 @@ export interface CorridorWindows {
   y: number;
   /** The windowed wall's thickness. */
   thick: number;
+  /**
+   * What its far face is finished in, if not the corridor's: a skin, the
+   * windows cut through it too (the pool's own wet tile, in the gallery).
+   */
+  farFace?: Material;
 }
 
 export function createCorridor(
@@ -91,6 +96,18 @@ export function createCorridor(
       material,
     );
     group.add(wallMesh);
+    if (windows.farFace) {
+      const skin = new Mesh(
+        new ExtrudeGeometry(face, {
+          depth: 0.004,
+          bevelEnabled: false,
+          curveSegments: 32,
+        }).translate(0, 0, hw + windows.thick - 0.002),
+        windows.farFace,
+      );
+      skin.name = 'corridor window wall far face';
+      group.add(skin);
+    }
     // Each window: thick glass, a stainless ring on the corridor's face.
     const glass = new MeshPhysicalMaterial({
       color: '#bfe9ea',
@@ -358,4 +375,25 @@ export function createCorridorRun(
     group.add(piece);
   }
   return group;
+}
+
+/**
+ * The fillet round the foot of a convex corner, where two walls' fillets
+ * meet at an outside corner (a doorway's jamb, a turn's inner corner):
+ * the cove's section turned a quarter about the corner's upright, from
+ * `phiStart` (a lathe's angle: x = r sin φ, z = r cos φ). At the origin,
+ * on the floor.
+ */
+export function createCornerFillet(material: Material, phiStart: number) {
+  const c = COVE_RADIUS;
+  const points = Array.from({ length: 9 }, (_, i) => {
+    const t = Math.PI + ((Math.PI / 2) * i) / 8;
+    return new Vector2(c + c * Math.cos(t), c + c * Math.sin(t));
+  }).reverse();
+  const mesh = new Mesh(
+    new LatheGeometry(points, 12, phiStart, Math.PI / 2),
+    material,
+  );
+  mesh.name = 'corner fillet';
+  return mesh;
 }

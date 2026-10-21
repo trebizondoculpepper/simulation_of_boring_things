@@ -68,7 +68,9 @@ export type BrandMark =
   /** A happy pig's face in a warm glow. */
   | 'pig'
   /** An ozone molecule: three atoms bent at its angle, a spark between. */
-  | 'trioxygen';
+  | 'trioxygen'
+  /** A door standing ajar in its frame, its hinge side heavy. */
+  | 'doorset';
 
 /** Every brand's id: a part names its maker by one of these. */
 export type BrandId =
@@ -98,7 +100,8 @@ export type BrandId =
   | 'mistral'
   | 'poolguard'
   | 'penfold'
-  | 'trioxa';
+  | 'trioxa'
+  | 'ironside';
 
 export interface Brand {
   id: BrandId;
@@ -464,6 +467,19 @@ export const BRANDS: readonly Brand[] = [
     mark: 'trioxygen',
     colours: ['#4b5fc1', '#bfe3f2', '#121a3a'],
     type: 'sans',
+  },
+  {
+    id: 'ironside',
+    name: 'Ironside Doorsets',
+    wordmark: 'IRONSIDE',
+    tagline: 'Shut, latched, and staying shut',
+    founded: 1961,
+    country: 'United Kingdom',
+    makes: 'Steel fire doorsets, door closers and coded locks',
+    promise: 'Doors that close themselves behind every careless hand',
+    mark: 'doorset',
+    colours: ['#5d6b5e', '#e3e1d6', '#1b1e1c'],
+    type: 'slab',
   },
 ];
 

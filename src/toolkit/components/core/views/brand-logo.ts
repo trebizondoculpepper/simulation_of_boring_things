@@ -296,6 +296,26 @@ export function drawBrandMark(
       }
       break;
     }
+    case 'doorset': {
+      // A heavy frame, and its leaf swung a little open on its hinge side.
+      ctx.fillStyle = ink;
+      ctx.fillRect(-r * 0.72, -r, r * 1.44, r * 2);
+      ctx.fillStyle = second;
+      ctx.fillRect(-r * 0.52, -r * 0.82, r * 1.04, r * 1.82);
+      ctx.fillStyle = main;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.52, -r * 0.82);
+      ctx.lineTo(r * 0.3, -r * 0.66);
+      ctx.lineTo(r * 0.3, r * 0.86);
+      ctx.lineTo(-r * 0.52, r * 1.0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = second;
+      ctx.beginPath();
+      ctx.arc(r * 0.14, r * 0.12, r * 0.07, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
     case 'switch': {
       ctx.fillStyle = main;
       ctx.beginPath();

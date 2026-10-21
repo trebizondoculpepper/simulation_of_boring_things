@@ -1045,8 +1045,8 @@ export function createAccessDoor(kit: PanelKit) {
     release: releaseFace.mesh,
     releaseKey,
     set(locked: boolean, open: boolean, broken: boolean) {
-      readerLamp.set(locked);
-      greenLamp.set(!locked);
+      readerLamp.set(locked && !open);
+      greenLamp.set(!locked || open);
       target = open ? -1.3 : 0;
       releaseFlag.visible = broken;
       releaseFace.mesh.position.z = broken ? 0.047 : 0.0505;

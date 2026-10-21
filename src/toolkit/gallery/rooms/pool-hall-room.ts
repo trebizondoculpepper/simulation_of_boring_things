@@ -1,10 +1,12 @@
 import {
   ACESFilmicToneMapping,
   AmbientLight,
+  Group,
   HemisphereLight,
   HalfFloatType,
   Mesh,
   PerspectiveCamera,
+  Raycaster,
   Scene,
   Vector2,
   WebGLRenderTarget,
@@ -16,25 +18,37 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { createRenderer } from '../../components/core/parts/render-style';
+import { partAudio } from '../../components/core/audio/part-audio';
 import { METRE } from '../../components/core/logic/units';
 import {
   createFirstPerson,
-  EYE_HEIGHT_METRES,
+  WALKER_RADIUS_METRES,
 } from '../../controls/input/first-person';
 import {
   corridorFloorAt,
   corridorFootprints,
 } from '../../components/architectural/logic/corridor-path';
 import {
-  carry,
-  HAND_OVER,
-  intoCorridor,
+  corridorEnds,
   LOOP_LEGS,
+  loopStep,
   roomCorridors,
 } from '../logic/pool-loop';
-import type { LoopRoom, Pose } from '../logic/pool-loop';
+import type { CorridorCopy, LoopRoom, LoopState } from '../logic/pool-loop';
+import { registerJoint } from '../logic/door-joins';
+import { doorwayStops, overlaps } from '../logic/doorway';
+import type { DoorFrame, Joint } from '../logic/door-joins';
+import type { RoomId } from '../logic/dev-room-links';
+import { enterDevRoom } from '../logic/dev-room-links';
 import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
 import { createPoolHall } from '../views/pool-hall';
+import { createPanelKit } from '../../components/core/views/eighties-controls';
+import { createPoolInfoSign } from '../../components/pool/views/pool-info-sign';
+import { createSignState } from '../../components/pool/logic/pool-info-sign';
+import { createPaceClock } from '../../components/pool/views/pace-clock';
+import { JACUZZI_EXHIBIT, JACUZZI_PLATE_EXHIBIT } from './plant/pool-amenities';
+import { plantRoomDoor } from '../../components/architectural/parts/plant-door';
+import { doorwayBlock, PLANT_DOORWAY, PLANT_SILL } from '../logic/plant-rooms';
 import {
   galleryPlan,
   hallFloorAt,
@@ -73,6 +87,68 @@ export function startPoolHallRoom(
     underwater: Boolean(gallery),
     loopRoom: gallery ? 'pool_02_gallery' : id,
   });
+  const poolsideKit = createPanelKit();
+  const poolside = !gallery
+    ? (() => {
+        const mounts =
+          id === 'pool_01'
+            ? [
+                { x: -spec.w / 2 + 0.012, z: 3.26, yaw: Math.PI / 2 },
+                { x: spec.w / 2 - 0.012, z: -6.53, yaw: -Math.PI / 2 },
+              ]
+            : id === 'pool_02'
+              ? [{ x: -spec.w / 2 + 0.012, z: -1.94, yaw: Math.PI / 2 }]
+              : id === 'pool_03'
+                ? [{ x: -spec.w / 2 + 0.012, z: 2.92, yaw: Math.PI / 2 }]
+                : [{ x: -1.15, z: spec.d / 2 - 0.012, yaw: Math.PI }];
+        const signs = mounts.map(({ x, z, yaw }, index) => {
+          const sign = createPoolInfoSign(poolsideKit, 'wall');
+          sign.object.name = `${spec.title} water quality sign ${index + 1}`;
+          sign.object.position.set(x, 2, z);
+          sign.object.rotation.y = yaw;
+          rooms.add(sign.object);
+          return sign;
+        });
+        const clock = id === 'pool_02' ? createPaceClock(2) : null;
+        if (clock) {
+          // Its case's back on the east wall.
+          clock.object.position.set(spec.w / 2 - 0.04 * 2 - 0.002, 7.5, -5.25);
+          clock.object.rotation.y = -Math.PI / 2;
+          rooms.add(clock.object);
+        }
+        const state = createSignState(
+          id === 'pool_02'
+            ? 'OLYMPIC POOL'
+            : id === 'pool_01'
+              ? 'LOUNGE POOL'
+              : id === 'pool_03'
+                ? 'JACUZZI'
+                : 'FOOTBATH',
+        );
+        return { signs, clock, state };
+      })()
+    : null;
+  const spaTub =
+    id === 'pool_03' && !gallery ? JACUZZI_EXHIBIT.build(poolsideKit) : null;
+  const spaPanel =
+    id === 'pool_03' && !gallery
+      ? JACUZZI_PLATE_EXHIBIT.build(poolsideKit)
+      : null;
+  if (spaTub && 'object' in spaTub) {
+    spaTub.object.position.x = -2.7;
+    rooms.add(spaTub.object);
+  }
+  if (spaPanel && 'object' in spaPanel) {
+    // Flat in the plinth's top deck, in its south-east corner, where the
+    // square deck stands clear of the round gutter: sunk flush, its top
+    // toward the tub, so it reads from outside it; clear of the doors.
+    const corner = new Group();
+    corner.position.set(-2.7 + 1.3, 0.9 - 0.026, 1.3);
+    corner.rotation.y = Math.PI / 4;
+    spaPanel.object.rotation.x = -Math.PI / 2;
+    corner.add(spaPanel.object);
+    rooms.add(corner);
+  }
   scene.add(rooms);
 
   const composer = new EffectComposer(
@@ -145,12 +221,74 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         ]
       : hallSolids(spec)),
     ...corridorFootprints(corridors),
+    // Closed at their far ends until the room beyond is seen through them:
+    // the walker waits there if it is not built yet.
+    ...corridorEnds(leaving, arriving),
   ].map((s) => ({
     minX: s.minX * metre,
     maxX: s.maxX * metre,
     minZ: s.minZ * metre,
     maxZ: s.maxZ * metre,
   }));
+  // The plant room door in the west wall, working, self-closing: through
+  // it, the walker is in its plant room's scene (`plant-room-shell-room.ts`).
+  const plantDoor =
+    spec.plantDoor && !gallery ? plantRoomDoor(poolsideKit) : null;
+  if (plantDoor && spec.plantDoor) {
+    const west = spec.plantDoor.wall === 'west';
+    plantDoor.object.position.set(
+      ((west ? -1 : 1) * spec.w) / 2,
+      PLANT_SILL,
+      spec.plantDoor.z,
+    );
+    // Its hall face toward the hall.
+    plantDoor.object.rotation.y = west ? Math.PI / 2 : -Math.PI / 2;
+    rooms.add(plantDoor.object);
+  }
+  // The plant room doorway, metres: its leaf's place across the wall, and
+  // a stop just beyond it.
+  const plantWay =
+    plantDoor && spec.plantDoor
+      ? (() => {
+          const west = spec.plantDoor.wall === 'west';
+          const leaf = doorwayBlock(spec.plantDoor.wall, {
+            x: ((west ? -1 : 1) * spec.w) / 2,
+            z: spec.plantDoor.z,
+          });
+          const out = west ? -0.3 : 0.3;
+          return {
+            leaf,
+            beyond: { ...leaf, minX: leaf.minX + out, maxX: leaf.maxX + out },
+          };
+        })()
+      : null;
+  const inPlantWay = () =>
+    Boolean(plantWay) &&
+    overlaps(
+      plantWay!.leaf,
+      walk.walker.x / metre,
+      walk.walker.z / metre,
+      WALKER_RADIUS_METRES,
+    );
+  const raycaster = new Raycaster();
+  const pointer = new Vector2();
+  const useSpaPanel = (x: number, y: number) => {
+    raycaster.setFromCamera(pointer.set(x, y), camera);
+    for (const [object, uses] of [
+      ...(spaPanel && 'object' in spaPanel && spaPanel.parts
+        ? ([[spaPanel.object, spaPanel.parts.uses]] as const)
+        : []),
+      ...(plantDoor ? ([[plantDoor.object, plantDoor.uses]] as const) : []),
+    ]) {
+      const hit = raycaster.intersectObject(object, true)[0];
+      if (!hit || hit.distance > 3 * metre) continue;
+      for (let o = hit.object; o; o = o.parent!) {
+        const use = uses.get(o);
+        if (use) return use();
+        if (o === object) break;
+      }
+    }
+  };
   const walk = createFirstPerson({
     canvas,
     camera,
@@ -168,8 +306,29 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       (corridorFloorAt(corridors, x / metre, z / metre) ??
         (gallery ? gallery.floor : hallFloorAt(spec, x / metre, z / metre))) *
       metre,
-    solids: () => walls,
-    use: () => {},
+    // The plant room doorway: its leaf while shut, but never where the
+    // walker stands; a stop just beyond until the plant room is seen.
+    solids: () =>
+      plantDoor && plantWay
+        ? [
+            ...walls,
+            ...doorwayStops(
+              {
+                inside: inPlantWay(),
+                shut: plantDoor.angle() < 0.6,
+                seen: plantSeen,
+              },
+              plantWay.leaf,
+              plantWay.beyond,
+            ).map((f) => ({
+              minX: f.minX * metre,
+              maxX: f.maxX * metre,
+              minZ: f.minZ * metre,
+              maxZ: f.maxZ * metre,
+            })),
+          ]
+        : walls,
+    use: useSpaPanel,
   });
   const resize = () => {
     const { width, height } = canvas.getBoundingClientRect();
@@ -183,63 +342,159 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   observer.observe(canvas);
   resize();
   let visual = true;
-  let hopping = false;
-  /** On to `room`, standing at `pose` in its copy of the corridor. */
-  const hop = (room: LoopRoom, pose: Pose) => {
-    hopping = true;
-    const there = roomCorridors(room);
-    const floor =
-      corridorFloorAt(
-        [...there.leaving.placed, ...there.arriving.placed],
-        pose.x,
-        pose.z,
-      ) ?? 0;
-    window.dispatchEvent(
-      new CustomEvent('pool-plant:coordinate-hop', {
-        detail: {
-          room,
-          x: pose.x,
-          y: floor + EYE_HEIGHT_METRES,
-          z: pose.z,
-          yaw: (pose.yaw * 180) / Math.PI,
-          pitch: (walk.walker.pitch * 180) / Math.PI,
-          zoom: walk.zoom,
-        },
-      }),
-    );
+  // The loop's corridors as doorways the app sees through (`door-joins.ts`):
+  // each opens in its middle piece, the room beyond built and drawn
+  // through its far end; in its far short straight, the walker is handed
+  // over. Lazy: loaded only while open, let go when closed.
+  let loading: LoopState = { leaving: false, arriving: false };
+  const seen = { leaving: false, arriving: false };
+  let handing = false;
+  let leavingForPlant = false;
+  const nextRoom = LOOP_LEGS[leaving.leg].to;
+  const lastRoom = LOOP_LEGS[arriving.leg].from;
+  // A corridor copy's start as a door frame: +z into the room the walker
+  // came from (back along a corridor leaving; along a corridor arriving).
+  const frameAt = (copy: CorridorCopy, back: boolean): DoorFrame => {
+    const [dx, dz] = [
+      [1, 0],
+      [0, -1],
+      [-1, 0],
+      [0, 1],
+    ][copy.start.heading];
+    const sign = back ? -1 : 1;
+    return {
+      x: copy.start.x * metre,
+      z: copy.start.z * metre,
+      y: copy.start.y * metre,
+      yaw: Math.atan2(sign * dx, sign * dz),
+    };
   };
+  const joint = (side: 'leaving' | 'arriving', frame: DoorFrame): Joint => ({
+    frame,
+    lazy: true,
+    open: () => loading[side],
+    angle: () => 0,
+    swingTo: () => {},
+    // No wall is cut: the corridor runs on, open.
+    opening: () => ({ minX: 1e9, maxX: 1e9, minZ: 1e9, maxZ: 1e9 }),
+    see: (on) => {
+      seen[side] = on;
+    },
+    peek: () => {},
+  });
+  // The plant room door, as a doorway the app sees through (`door-joins.ts`):
+  // open, its plant room is built and drawn beyond it; walked through, the
+  // walker is handed over to it without a break.
+  let plantSeen = false;
+  const plantRoom = spec.plantDoor ? (`plant_${spec.id}` as RoomId) : null;
+  const plantFrame: DoorFrame | null = spec.plantDoor
+    ? {
+        x: ((spec.plantDoor.wall === 'west' ? -1 : 1) * spec.w * metre) / 2,
+        z: spec.plantDoor.z * metre,
+        // The sill's height: the plant room's landing meets it level.
+        y: PLANT_SILL * metre,
+        yaw: spec.plantDoor.wall === 'west' ? Math.PI / 2 : -Math.PI / 2,
+      }
+    : null;
+  const lobby = rooms.getObjectByName('plant door lobby');
+  const withdraw = [
+    ...(plantDoor && plantRoom && plantFrame && !gallery
+      ? [
+          registerJoint(loopRoom as RoomId, plantRoom, {
+            frame: plantFrame,
+            onOpen: true,
+            open: () => plantDoor.angle() > 0.05,
+            angle: () => plantDoor.angle(),
+            swingTo: (a) => plantDoor.swingTo(a),
+            opening: () => {
+              const wx = plantFrame.x / metre;
+              const side = spec.plantDoor!.wall === 'west' ? -1 : 1;
+              const z = spec.plantDoor!.z;
+              return {
+                minX: (Math.min(wx, wx + side * 2) - 0.1) * metre,
+                maxX: (Math.max(wx, wx + side * 2) + 0.1) * metre,
+                minZ: (z - PLANT_DOORWAY / 2) * metre,
+                maxZ: (z + PLANT_DOORWAY / 2) * metre,
+              };
+            },
+            see: (on) => {
+              plantSeen = on;
+              if (lobby) lobby.visible = !on;
+            },
+            peek: (on) => plantDoor.showLeaf(!on),
+          }),
+        ]
+      : []),
+    registerJoint(loopRoom, nextRoom, joint('leaving', frameAt(leaving, true))),
+    registerJoint(
+      loopRoom,
+      lastRoom,
+      joint('arriving', frameAt(arriving, false)),
+    ),
+  ];
   let last = 0;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);
-    // A step into the corridor leaving hands the walker on to the next
-    // room; a step back out of the corridor arriving, to the last.
-    if (!hopping) {
+    partAudio.listen(camera, metre);
+    if (spaTub && 'object' in spaTub) spaTub.update?.(delta);
+    if (spaPanel && 'object' in spaPanel) spaPanel.parts?.update(delta);
+    plantDoor?.update(delta);
+    // It never closes on someone standing in its doorway.
+    if (plantDoor && inPlantWay()) plantDoor.holdOpen();
+    // Through the plant room door, once its room is seen beyond it: handed
+    // over to it, without a break.
+    if (
+      plantDoor &&
+      spec.plantDoor &&
+      plantRoom &&
+      plantSeen &&
+      !leavingForPlant &&
+      !walk.following
+    ) {
       const x = walk.walker.x / metre;
       const z = walk.walker.z / metre;
-      const pose = { x, z, y: 0, yaw: walk.walker.yaw };
-      const onward = intoCorridor(leaving, x, z);
-      const back = intoCorridor(arriving, x, z);
-      if (onward !== null && onward > HAND_OVER.onward && onward < 1.5)
-        hop(
-          LOOP_LEGS[leaving.leg].to,
-          carry(
-            pose,
-            leaving,
-            roomCorridors(LOOP_LEGS[leaving.leg].to).arriving,
-          ),
-        );
-      else if (back !== null && back < HAND_OVER.back && back > -1)
-        hop(
-          LOOP_LEGS[arriving.leg].from,
-          carry(
-            pose,
-            arriving,
-            roomCorridors(LOOP_LEGS[arriving.leg].from).leaving,
-          ),
-        );
+      if (
+        (spec.plantDoor.wall === 'west'
+          ? x < -spec.w / 2 - 0.05
+          : x > spec.w / 2 + 0.05) &&
+        Math.abs(z - spec.plantDoor.z) < PLANT_DOORWAY / 2
+      ) {
+        leavingForPlant = true;
+        enterDevRoom(plantRoom, loopRoom as RoomId, true);
+      }
+    }
+    if (poolside) {
+      const date = new Date();
+      const seconds =
+        date.getHours() * 3600 +
+        date.getMinutes() * 60 +
+        date.getSeconds() +
+        date.getMilliseconds() / 1000;
+      poolside.state.clock = seconds;
+      for (const sign of poolside.signs) {
+        sign.show(poolside.state, seconds);
+        sign.update(seconds);
+      }
+      poolside.clock?.update();
+    }
+    // Where the walker is in the loop's corridors: what to load, and when
+    // to hand over (`loopStep`). Not while it follows another room's eye.
+    if (!walk.following && !handing) {
+      const r = loopStep(
+        loopRoom,
+        walk.walker.x / metre,
+        walk.walker.z / metre,
+        loading,
+        seen,
+      );
+      loading = r.state;
+      if (r.handTo) {
+        handing = true;
+        enterDevRoom(r.handTo, loopRoom, true);
+      }
     }
     if (visual) {
       film.uniforms.time.value = (time / 1000) % 100;
@@ -249,9 +504,19 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   return Object.assign(
     () => {
       renderer.setAnimationLoop(null);
+      for (const w of withdraw) w();
       observer.disconnect();
       composer.dispose();
       walk.dispose();
+      poolside?.clock?.dispose();
+      if (spaTub && 'object' in spaTub) spaTub.dispose?.();
+      if (spaPanel && 'object' in spaPanel) {
+        spaPanel.parts?.dispose();
+        plantDoor?.dispose();
+        spaPanel.dispose?.();
+      }
+      for (const material of poolsideKit.materials) material.dispose();
+      for (const texture of poolsideKit.textures) texture.dispose();
       rooms.traverse((object) => {
         if (object instanceof Mesh) object.geometry.dispose();
       });
@@ -263,7 +528,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       },
       // Shown again (walked back into): ready to hand on once more.
       resume() {
-        hopping = false;
+        handing = false;
+        leavingForPlant = false;
       },
     },
   );

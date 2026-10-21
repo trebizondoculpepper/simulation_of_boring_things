@@ -1,4 +1,5 @@
 import {
+  alongCorridor,
   CORRIDOR_WIDTH,
   layoutCorridor,
   pieceLength,
@@ -17,7 +18,8 @@ import type { PoolHallId } from './pool-halls';
  * world makes no three-dimensional sense and does not try to (`AGENTS.md`):
  * each room is a block whose corridors are its own; walking along one
  * hands the walker on to the next room's scene, where the same corridor
- * carries on into it.
+ * carries on into it. Each corridor is a short straight, a turn or a
+ * flight of stairs, and a short straight (`legPieces`).
  *
  * Each corridor leaves a room by a door in its north wall and enters the
  * next by a door in its south, so a walker keeps going forward and, coming
@@ -47,8 +49,12 @@ function random(seed: number) {
   };
 }
 
-const CHOICES: readonly CorridorPiece[] = [
-  { kind: 'straight', length: 4 },
+/** The kit's straights: the long corridor, and the short one at each door. */
+export const LONG: CorridorPiece = { kind: 'straight', length: 4 };
+export const SHORT: CorridorPiece = { kind: 'straight', length: 1 };
+
+/** What the middle of a corridor may be. */
+const MIDDLES: readonly CorridorPiece[] = [
   { kind: 'left' },
   { kind: 'right' },
   { kind: 'stairs', rise: 2 },
@@ -56,17 +62,14 @@ const CHOICES: readonly CorridorPiece[] = [
 ];
 
 /**
- * Two pieces chosen at random, but never two straights; the same for the
- * same seed, so the world stays put.
+ * A corridor between two rooms: a short straight out of the door, one
+ * piece chosen at random (a left or right turn, or stairs up or down),
+ * and a short straight into the next door, so a corridor always meets a
+ * room square on. The same for the same seed, so the world stays put.
  */
 export function legPieces(seed: number): CorridorPiece[] {
   const next = random(seed);
-  const pick = () => CHOICES[Math.floor(next() * CHOICES.length)];
-  for (;;) {
-    const a = pick();
-    const b = pick();
-    if (a.kind !== 'straight' || b.kind !== 'straight') return [a, b];
-  }
+  return [SHORT, MIDDLES[Math.floor(next() * MIDDLES.length)], SHORT];
 }
 
 const ORDER: readonly LoopRoom[] = [
@@ -81,7 +84,36 @@ const ORDER: readonly LoopRoom[] = [
 export const LOOP_LEGS: readonly LoopLeg[] = ORDER.map((from, i) => ({
   from,
   to: ORDER[(i + 1) % ORDER.length],
-  pieces: legPieces(1997 + i * 31),
+  // The lounge-to-Olympic link descends; the jacuzzi-to-footbath link has
+  // a longer departure before its bend or flight.
+  pieces:
+    i === 0
+      ? [
+          SHORT,
+          { kind: 'stairs', rise: -2 },
+          { kind: 'left' },
+          SHORT,
+          { kind: 'right' },
+          SHORT,
+        ]
+      : i === 1
+        ? // The Olympic pool to the jacuzzi: long, down the stairs, long.
+          [LONG, { kind: 'stairs', rise: -2 }, LONG]
+        : i === 2
+          ? // The jacuzzi to the footbath: short, left, short, right, short.
+            [SHORT, { kind: 'left' }, SHORT, { kind: 'right' }, SHORT]
+          : i === 3
+            ? // The footbath to the gallery: short, left, short, right, short.
+              [SHORT, { kind: 'left' }, SHORT, { kind: 'right' }, SHORT]
+            : i === 4
+              ? [
+                  SHORT,
+                  { kind: 'left' },
+                  { kind: 'right' },
+                  { kind: 'stairs', rise: 2 },
+                  SHORT,
+                ]
+              : legPieces(2004 + i * 31),
 }));
 
 /** Where a room is joined: the doorway's middle, its floor, and facing out. */
@@ -195,6 +227,92 @@ export function carry(pose: Pose, a: CorridorCopy, b: CorridorCopy): Pose {
   };
 }
 
+/**
+ * Loading as the walker goes round (agreed with the owner, then revised
+ * so no doorway ever shows an unbuilt room): while in a room, both rooms
+ * either side of it in the loop are built, unseen. The one drawn, beyond
+ * the far end of its corridor, is the one on the walker's side of the
+ * room: the next room in its exit half, the last in its entry half, with
+ * a band across the middle where whichever is drawn stays drawn. In a
+ * corridor, the room at its far end is drawn. In a corridor's far short
+ * straight, once that room is drawn, the walker is handed over to it.
+ * Rooms are let go once they are no longer either side of the room the
+ * walker is in (`src/main.ts`).
+ */
+export const LOADING = {
+  /** Half the band across a room's middle where neither side takes over, metres. */
+  band: 1,
+} as const;
+
+/** Whether each of a room's corridors has the room beyond it drawn. */
+export interface LoopState {
+  leaving: boolean;
+  arriving: boolean;
+}
+
+/**
+ * How far toward its way out (+) or its way in (−) a point in a room is,
+ * from the room's middle along the line between them, metres.
+ */
+export function towardExit(room: LoopRoom, x: number, z: number) {
+  const { exit, entry } = joints(room);
+  const ux = exit.x - entry.x;
+  const uz = exit.z - entry.z;
+  const length = Math.hypot(ux, uz) || 1;
+  const mx = (exit.x + entry.x) / 2;
+  const mz = (exit.z + entry.z) / 2;
+  return ((x - mx) * ux + (z - mz) * uz) / length;
+}
+
+/**
+ * The next state of a room's two corridors with the walker at (x, z),
+ * and whether to hand over to the room beyond one of them: only once
+ * that room is drawn (`seen`), and the walker is in its far short
+ * straight. One side is drawn at a time.
+ */
+export function loopStep(
+  room: LoopRoom,
+  x: number,
+  z: number,
+  state: LoopState,
+  seen: { leaving: boolean; arriving: boolean },
+): { state: LoopState; handTo: LoopRoom | null } {
+  const { leaving, arriving } = roomCorridors(room);
+  // The straights at the far ends: the leaving corridor's last piece, and
+  // the arriving corridor's first (at the last room's door).
+  const outPieces = LOOP_LEGS[leaving.leg].pieces;
+  const farOut = pieceLength(outPieces[outPieces.length - 1]);
+  const farBack = pieceLength(LOOP_LEGS[arriving.leg].pieces[0]);
+  const out = alongCorridor(leaving.placed, x, z);
+  const back = alongCorridor(arriving.placed, x, z);
+  let nextState: LoopState;
+  if (out !== null) nextState = { leaving: true, arriving: false };
+  else if (back !== null) nextState = { leaving: false, arriving: true };
+  else {
+    const t = towardExit(room, x, z);
+    nextState =
+      t > LOADING.band
+        ? { leaving: true, arriving: false }
+        : t < -LOADING.band
+          ? { leaving: false, arriving: true }
+          : // In the middle band: as it was, or the way out if neither.
+            state.leaving || state.arriving
+            ? state
+            : { leaving: true, arriving: false };
+  }
+  let handTo: LoopRoom | null = null;
+  const fromDoor = back === null ? null : arriving.length - back;
+  if (out !== null && out > leaving.length - farOut && seen.leaving)
+    handTo = LOOP_LEGS[leaving.leg].to;
+  else if (
+    fromDoor !== null &&
+    fromDoor > arriving.length - farBack &&
+    seen.arriving
+  )
+    handTo = LOOP_LEGS[arriving.leg].from;
+  return { state: nextState, handTo };
+}
+
 /** How far along a corridor copy (from its start) a point is, if on its first piece. */
 export function intoCorridor(copy: CorridorCopy, x: number, z: number) {
   const h = copy.start.heading;
@@ -219,3 +337,35 @@ export function intoCorridor(copy: CorridorCopy, x: number, z: number) {
 // Short of a turn's middle (0.6 m in), so a corridor that turns at once
 // still hands over; the gap between the two keeps it from flickering.
 export const HAND_OVER = { onward: 0.45, back: 0.2 } as const;
+
+/**
+ * A cap across each corridor's far end, as a footprint: the leaving
+ * corridor's last end and the arriving corridor's first, where the walker
+ * stops until the room beyond is drawn (and is handed over before them).
+ */
+export function corridorEnds(leaving: CorridorCopy, arriving: CorridorCopy) {
+  const half = CORRIDOR_WIDTH / 2 + 0.2;
+  const dir = [
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+    [0, 1],
+  ] as const;
+  const leg = LOOP_LEGS[leaving.leg];
+  const { end } = layoutCorridor(leg.pieces, leaving.start);
+  const cap = (x: number, z: number, heading: number, outward: number) => {
+    const [dx, dz] = dir[heading];
+    const cx = x + dx * outward * 0.1;
+    const cz = z + dz * outward * 0.1;
+    return {
+      minX: cx - (dx ? 0.1 : half),
+      maxX: cx + (dx ? 0.1 : half),
+      minZ: cz - (dz ? 0.1 : half),
+      maxZ: cz + (dz ? 0.1 : half),
+    };
+  };
+  return [
+    cap(end.x, end.z, end.heading, 1),
+    cap(arriving.start.x, arriving.start.z, arriving.start.heading, -1),
+  ];
+}

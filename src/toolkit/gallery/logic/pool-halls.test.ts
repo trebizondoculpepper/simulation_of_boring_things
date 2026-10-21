@@ -30,7 +30,7 @@ describe('pool halls', () => {
     expect(hallFloorAt(olympic, 0, 0)).toBeCloseTo(WATER_Y - 2);
   });
 
-  it('gives the lounge pool its shelves and islands, and the jacuzzi its seat', () => {
+  it('gives the lounge pool its shelves and the jacuzzi its raised plinth', () => {
     const lounge = POOL_HALLS.pool_01;
     // In the water, on the shelf, and up on the island.
     expect(hallFloorAt(lounge, 0, -3)).toBeCloseTo(WATER_Y - 0.9);
@@ -43,8 +43,10 @@ describe('pool halls', () => {
     // The pinched waist: deck between its lobes.
     expect(hallFloorAt(lounge, 1.4, 4)).toBe(0);
     const jacuzzi = POOL_HALLS.pool_03;
-    expect(hallFloorAt(jacuzzi, 1.0, 0)).toBeCloseTo(WATER_Y - 0.45);
-    expect(hallFloorAt(jacuzzi, 0, 0)).toBeCloseTo(WATER_Y - 0.9);
+    expect(hallFloorAt(jacuzzi, -2.7, 0)).toBeCloseTo(0.9);
+    expect(hallFloorAt(jacuzzi, -0.95, 0)).toBeCloseTo(0.6);
+    expect(hallFloorAt(jacuzzi, -0.8, 0)).toBeCloseTo(0.3);
+    expect(hallFloorAt(jacuzzi, 0, 0)).toBe(0);
   });
 
   it('stands the lounge’s arch on the deck, its columns in the water, and sinks its well', () => {
@@ -105,7 +107,7 @@ describe('pool halls', () => {
   it('walls every hall in, and blocks the Olympic pool’s starting blocks', () => {
     for (const hall of Object.values(POOL_HALLS))
       expect(hallSolids(hall).length).toBeGreaterThanOrEqual(4);
-    expect(hallSolids(POOL_HALLS.pool_02).length).toBe(6 + 10 + 10 * 6);
+    expect(hallSolids(POOL_HALLS.pool_02).length).toBe(7 + 10 + 10 * 6);
   });
 
   it('puts each hall’s sun into its water, through its skylights or windows', () => {
@@ -120,8 +122,14 @@ describe('pool halls', () => {
           ),
         ),
       ];
-      const lit = through.some((at) => hallFloorAt(hall, at.x, at.z) < 0);
-      expect(lit, hall.id).toBe(true);
+      if (hall.id === 'pool_03') {
+        // The jacuzzi has no sunlight: no skylights, no high windows.
+        expect(hall.skylights).toEqual([]);
+        expect(hall.highWindows).toBeUndefined();
+      } else {
+        const lit = through.some((at) => hallFloorAt(hall, at.x, at.z) < 0);
+        expect(lit, hall.id).toBe(true);
+      }
       for (const k of hall.skylights) {
         expect(Math.abs(k.x) + k.size / 2).toBeLessThan(hall.w / 2);
         expect(Math.abs(k.z) + k.size / 2).toBeLessThan(hall.d / 2);

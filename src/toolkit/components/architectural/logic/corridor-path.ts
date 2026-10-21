@@ -191,3 +191,25 @@ export function corridorFloorAt(
   const foot = up ? p.y : p.y + p.piece.rise;
   return foot + climbed * riser;
 }
+
+/**
+ * How far along a laid-out corridor (x, z) is, from its start, metres:
+ * the lengths of the pieces before the one it is on, and how far into
+ * that one along its heading; null off the corridor.
+ */
+export function alongCorridor(
+  placed: readonly PlacedPiece[],
+  x: number,
+  z: number,
+): number | null {
+  const p = pieceAt(placed, x, z);
+  if (!p) return null;
+  let before = 0;
+  for (const q of placed) {
+    if (q === p) break;
+    before += pieceLength(q.piece);
+  }
+  const [dx, dz] = DIRECTION[p.heading];
+  const into = (x - p.x) * dx + (z - p.z) * dz;
+  return before + Math.min(pieceLength(p.piece), Math.max(0, into));
+}

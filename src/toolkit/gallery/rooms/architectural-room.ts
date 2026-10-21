@@ -98,6 +98,14 @@ import {
   GALLERY_SWITCH_BANKS,
 } from '../logic/fittings-gallery-lighting';
 import { pushButton, selector } from '../../components/core/parts/parts';
+import {
+  PLANT_DOOR_OPENING,
+  plantRoomDoor,
+} from '../../components/architectural/parts/plant-door';
+import {
+  EQUIPMENT_DOORS,
+  equipmentDoors,
+} from '../../components/architectural/parts/equipment-doors';
 import { detects } from '../../components/architectural/logic/presence-detector';
 import { createPartSet } from '../../components/core/parts/parts';
 import type { Part } from '../../components/core/parts/parts';
@@ -253,6 +261,55 @@ export function startArchitecturalGalleryRoom(canvas: HTMLCanvasElement) {
       kind === 'loadingdoor' ? 5.6 : 3.1,
       kind === 'loadingdoor' ? 4 : 1.8,
     );
+  }
+  // The plant room door, as fitted between every pool hall and its plant
+  // room (`plant-door.ts`): working, self-closing. A dark doorway behind
+  // it, where the wall is not cut.
+  {
+    const x = -5;
+    const recess = new Mesh(
+      new BoxGeometry(PLANT_DOOR_OPENING.w, PLANT_DOOR_OPENING.h, 0.01),
+      kitPaint(kit, '#0c0e0e', 0.9),
+    );
+    recess.position.set(x, PLANT_DOOR_OPENING.h / 2, 0.06);
+    north.add(recess);
+    const door = parts.add(plantRoomDoor(kit));
+    door.object.position.set(x, 0, 0.13);
+    north.add(door.object);
+    const caption = createCaption(
+      kit,
+      'PLANT ROOM DOOR · FD60 STEEL · 926 × 2040 LEAF · SELF-CLOSING',
+    );
+    caption.position.set(x, 2.45, 0.14);
+    north.add(caption);
+  }
+  // The equipment doors between plant rooms (`equipment-doors.ts`): the
+  // standard pair, working, each leaf self-closing; pulled from this side.
+  {
+    const x = 4.95;
+    const recess = new Mesh(
+      new BoxGeometry(
+        EQUIPMENT_DOORS.w + 2 * EQUIPMENT_DOORS.frame,
+        EQUIPMENT_DOORS.h + 2 * EQUIPMENT_DOORS.frame,
+        0.01,
+      ),
+      kitPaint(kit, '#0c0e0e', 0.9),
+    );
+    recess.position.set(
+      x,
+      (EQUIPMENT_DOORS.h + 2 * EQUIPMENT_DOORS.frame) / 2,
+      0.06,
+    );
+    north.add(recess);
+    const doors = parts.add(equipmentDoors(kit, 'MAIN PLANT'));
+    doors.object.position.set(x, 0, 0.13);
+    north.add(doors.object);
+    const caption = createCaption(
+      kit,
+      'EQUIPMENT DOORS · FD60 STEEL PAIR · 1800 × 2400 OPENING · SELF-CLOSING',
+    );
+    caption.position.set(x, 3.2, 0.14);
+    north.add(caption);
   }
   const numbered = showSpecimens(kit, room, parts, services, SPECIMENS, PLACES);
 

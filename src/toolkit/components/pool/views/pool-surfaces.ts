@@ -7,6 +7,7 @@ import {
   Float32BufferAttribute,
   Mesh,
   MeshPhysicalMaterial,
+  PlaneGeometry,
   ShaderMaterial,
   Vector4,
 } from 'three';
@@ -596,4 +597,53 @@ void main() {
   shaft.name = 'Light shaft';
   shaft.renderOrder = 2;
   return shaft;
+}
+
+/**
+ * A patch of caustic light thrown on a dry wall by sunlit water seen
+ * through a window, as on the back wall of an underwater gallery: the
+ * pools' caustic network, moving with their time, added in a soft-edged
+ * ellipse `w` × `h` metres. A plane facing +z at the origin; its network
+ * is laid in the wall's own world x and y, so neighbouring patches agree.
+ */
+export function createCausticPatch(
+  uniforms: PoolUniforms,
+  w: number,
+  h: number,
+  { colour = '#bff3f0', strength = 0.55 } = {},
+) {
+  const material = new ShaderMaterial({
+    name: 'CausticPatch',
+    transparent: true,
+    depthWrite: false,
+    blending: AdditiveBlending,
+    uniforms: {
+      poolTime: uniforms.time,
+      colour: { value: new Color(colour) },
+      strength: { value: strength },
+      metre: uniforms.metre,
+    },
+    vertexShader: /* glsl */ `
+varying vec2 vUv;
+varying vec3 vWorld;
+void main() {
+  vUv = uv;
+  vec4 world = modelMatrix * vec4(position, 1.0);
+  vWorld = world.xyz;
+  gl_Position = projectionMatrix * viewMatrix * world;
+}`,
+    fragmentShader: /* glsl */ `
+uniform float poolTime, strength, metre;
+uniform vec3 colour;
+varying vec2 vUv;
+varying vec3 vWorld;
+${COMMON}
+void main() {
+  vec2 c = vUv * 2.0 - 1.0;
+  float edge = 1.0 - smoothstep(0.45, 1.0, length(c));
+  float light = clamp(poolCaustics(vWorld.xy / metre, poolTime, 0.16), 0.0, 1.5);
+  gl_FragColor = vec4(colour * light * edge * strength, 1.0);
+}`,
+  });
+  return new Mesh(new PlaneGeometry(w, h), material);
 }

@@ -98,8 +98,8 @@ Stairs and ladders join every level (ladders down into tanks and pits); a hoist 
 
 Each attraction's own plant room (the lounge pool's, the Olympic pool's, the jacuzzi's, the footbath's) is roughly rectangular, as big as it needs to be, and laid out on the same north–south plan, so that every one of them can be designed to the same general layout:
 
-- **South end:** a door toward the attraction it serves; the pipes and services that run the attraction pass through the south wall.
-- **North end:** a door to the central facility, the shared plant at the core of the warren.
+- **North end:** the door from the attraction it serves, the plant room door, at deck level; the pipes and services that run the attraction pass through the north wall.
+- **South end:** the doors to the central facility, the shared plant at the core of the warren, at the plant floor.
 - **West wall first:** cabinets and machinery fill the west wall by default; equipment goes on the east wall only when more space is needed.
 
 This is recorded for when those rooms are modelled; none is built to it yet.

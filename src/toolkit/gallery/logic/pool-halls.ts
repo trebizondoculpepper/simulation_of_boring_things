@@ -1,4 +1,6 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
+import { PLANT_DOORWAY, PLANT_SILL } from './plant-rooms';
+import type { PlantRoomSize } from './plant-rooms';
 
 /**
  * The version-one pool halls, each a ticket of its own, each an entirely
@@ -221,6 +223,11 @@ export interface PoolHallSpec {
    * one in the south, each the corridors' section (`pool-loop.ts`).
    */
   doorX?: number;
+  /**
+   * The door to its own plant room, in its west wall (`plant-rooms.ts`):
+   * the doorway's middle along the wall, and the plant room's size.
+   */
+  plantDoor?: { wall: 'west' | 'east'; z: number; size: PlantRoomSize };
   /** Where the walker starts, and facing. */
   start: { x: number; z: number; yaw: number };
 }
@@ -315,6 +322,8 @@ export const POOL_HALLS: Record<PoolHallId, PoolHallSpec> = {
     ],
     // Three over the pool's north side: the sun lands across its water.
     skylights: [2.5, 7.5, 12.4].map((x) => ({ x, z: 2.5, size: 2.2 })),
+    // Its plant room, the medium, through the east wall.
+    plantDoor: { wall: 'east', z: -4.07, size: 'medium' },
     start: { x: -13, z: 3, yaw: 1.45 },
   },
   pool_02: {
@@ -358,6 +367,8 @@ export const POOL_HALLS: Record<PoolHallId, PoolHallSpec> = {
     highWindows: { from: 8, to: 10.5, at: [-15, -7.5, 0, 7.5, 15], width: 4 },
     // Its doors stand clear of the rows of columns.
     doorX: 5.5,
+    // Its plant room, the large, through the west wall by the south deck.
+    plantDoor: { wall: 'west', z: 15.5, size: 'large' },
     start: { x: -31, z: 18.5, yaw: Math.PI / 3 },
   },
   pool_03: {
@@ -366,27 +377,19 @@ export const POOL_HALLS: Record<PoolHallId, PoolHallSpec> = {
     title: 'Jacuzzi',
     w: 10,
     d: 8,
-    h: 3,
+    h: 9,
     tileTop: 3,
     tile: { colour: '#cfe1e5', size: 0.05 },
     gutter: { width: 0.2, depth: 0.15 },
-    basins: [
-      {
-        shape: 'round',
-        name: 'Jacuzzi',
-        x: 0,
-        z: 0,
-        r: 1.2,
-        depth: 0.9,
-        seat: { width: 0.45, below: 0.45 },
-      },
-    ],
+    // The raised, working plinth jacuzzi is placed by the room view.
+    basins: [],
     columns: [
       { x: -3.3, z: -2.4, r: 0.3 },
       { x: 3.3, z: -2.4, r: 0.3 },
     ],
-    // One, its light on the tub.
-    skylights: [{ x: 4, z: 1.2, size: 1.6 }],
+    skylights: [],
+    // Its plant room, a small one, through the east wall.
+    plantDoor: { wall: 'east', z: -1.23, size: 'small' },
     start: { x: -4.2, z: 3.2, yaw: Math.PI / 4 },
   },
   pool_04: {
@@ -418,6 +421,8 @@ export const POOL_HALLS: Record<PoolHallId, PoolHallSpec> = {
     // window in the east wall instead, its light across the channel.
     skylights: [],
     highWindows: { from: 1.8, to: 2.6, at: [0.6], width: 1.4 },
+    // Its plant room, the small, through the west wall north of the channel.
+    plantDoor: { wall: 'west', z: -2.38, size: 'small' },
     start: { x: 0, z: 3.8, yaw: 0 },
   },
 };
@@ -483,6 +488,19 @@ export function stepTop(b: RectBasin, k: number): number {
 
 /** The floor under the walker: a basin's, a bench's top, else the deck. */
 export function hallFloorAt(s: PoolHallSpec, x: number, z: number): number {
+  // On the sill of the plant room door, over the cove.
+  if (
+    s.plantDoor &&
+    (s.plantDoor.wall === 'west' ? x < -s.w / 2 + 0.3 : x > s.w / 2 - 0.3) &&
+    Math.abs(z - s.plantDoor.z) < PLANT_DOORWAY / 2
+  )
+    return PLANT_SILL;
+  if (s.id === 'pool_03') {
+    const edge = Math.max(Math.abs(x + 2.7), Math.abs(z));
+    if (edge <= 1.6) return 0.9;
+    if (edge <= 1.8) return 0.6;
+    if (edge <= 2) return 0.3;
+  }
   for (const b of s.basins) {
     const y = basinFloorAt(b, x, z);
     if (y !== null) return y;
@@ -506,8 +524,20 @@ export function hallSolids(s: PoolHallSpec): Footprint[] {
       { minX: -hx - t, maxX: door - gap, minZ, maxZ },
       { minX: door + gap, maxX: hx + t, minZ, maxZ },
     ]),
-    { minX: -hx - t, maxX: -hx, minZ: -hz, maxZ: hz },
-    { minX: hx, maxX: hx + t, minZ: -hz, maxZ: hz },
+    // The east and west walls, either side of any plant room door.
+    ...(
+      [
+        ['west', -hx - t, -hx],
+        ['east', hx, hx + t],
+      ] as const
+    ).flatMap(([wall, minX, maxX]) =>
+      s.plantDoor?.wall === wall
+        ? [
+            { minX, maxX, minZ: -hz, maxZ: s.plantDoor.z - PLANT_DOORWAY / 2 },
+            { minX, maxX, minZ: s.plantDoor.z + PLANT_DOORWAY / 2, maxZ: hz },
+          ]
+        : [{ minX, maxX, minZ: -hz, maxZ: hz }],
+    ),
   ];
   // Each arch's two piers.
   for (const a of s.arches ?? []) {

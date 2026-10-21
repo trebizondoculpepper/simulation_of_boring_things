@@ -368,9 +368,9 @@ const TUB = {
   below: 0.45,
   gutter: 0.2,
   /** The plinth: its top deck's half-width, and three steps down. */
-  deck: 1.8,
+  deck: 1.6,
   steps: 3,
-  going: 0.4,
+  going: 0.2,
 };
 
 /**

@@ -37,6 +37,18 @@ export interface Joint {
   see(on: boolean): void;
   /** This room is drawn under the other, seen through this door: hide its leaf. */
   peek(on: boolean): void;
+  /**
+   * Loaded only while it is open, and let go when it closes, rather than
+   * built ahead as the nearest door: the pool loop's corridors
+   * (`pool-loop.ts`).
+   */
+  lazy?: boolean;
+  /**
+   * Built only once its door is open, and let go once it shuts: a plant
+   * room door. While one is open, it is the door seen through, and the
+   * room's lazy neighbours are let go.
+   */
+  onOpen?: boolean;
 }
 
 const joints = new Map<string, Joint>();
@@ -54,11 +66,33 @@ export function jointOf(room: RoomId, to: RoomId) {
   return joints.get(key(room, to)) ?? null;
 }
 
-/** The room whose door from `room` is open, if any. */
-export function openJoint(room: RoomId): RoomId | null {
+/** The rooms beyond `room`'s lazy joints: its neighbours in the pool loop. */
+export function lazyNeighbours(room: RoomId): RoomId[] {
+  const out: RoomId[] = [];
   for (const [k, joint] of joints) {
     const [from, to] = k.split('>') as [RoomId, RoomId];
-    if (from === room && joint.open()) return to;
+    if (from === room && joint.lazy) out.push(to);
+  }
+  return out;
+}
+
+/** The room whose door from `room` is open, if any: a plant room door first. */
+export function openJoint(room: RoomId): RoomId | null {
+  let any: RoomId | null = null;
+  for (const [k, joint] of joints) {
+    const [from, to] = k.split('>') as [RoomId, RoomId];
+    if (from !== room || !joint.open()) continue;
+    if (joint.onOpen) return to;
+    any ??= to;
+  }
+  return any;
+}
+
+/** The room beyond `room`'s open plant room door, if one is open. */
+export function openDoorJoint(room: RoomId): RoomId | null {
+  for (const [k, joint] of joints) {
+    const [from, to] = k.split('>') as [RoomId, RoomId];
+    if (from === room && joint.onOpen && joint.open()) return to;
   }
   return null;
 }
@@ -73,7 +107,7 @@ export function nearestJoint(
   let distance = Infinity;
   for (const [k, joint] of joints) {
     const [from, to] = k.split('>') as [RoomId, RoomId];
-    if (from !== room) continue;
+    if (from !== room || joint.lazy || joint.onOpen) continue;
     const d = Math.hypot(joint.frame.x - x, joint.frame.z - z);
     if (d < distance) {
       distance = d;

@@ -98,6 +98,8 @@ export function createCorridorLab(metre: number) {
     emissiveIntensity: 1.4,
   });
   for (const p of placed) {
+    // No lamp in the turns.
+    if (p.piece.kind === 'left' || p.piece.kind === 'right') continue;
     const along = pieceLength(p.piece) / 2;
     const y = p.y + (p.piece.kind === 'stairs' ? p.piece.rise / 2 : 0);
     const x = p.x + Math.cos(p.yaw) * along;
