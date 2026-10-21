@@ -60,6 +60,7 @@ export type RoomId =
   | 'red_bendy_1'
   | 'white_corridor_1'
   | 'green_room_1'
+  | 'CR_GREEN_STAIR'
   | 'plant_corridor'
   | 'shared_plant_layout'
   | PlantFitRoomId;
@@ -139,6 +140,7 @@ export const ROOMS: readonly RoomId[] = [
   // North out of CR_A_ROUND: a short white corridor.
   'white_corridor_1',
   'green_room_1',
+  'CR_GREEN_STAIR',
   // The plant rooms' main corridor: the dev corridor again, taller, for
   // the pipes and ducts overhead. Its doors open into nothing yet.
   'plant_corridor',
@@ -161,6 +163,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   red_bendy_1: 'RED_BENDY_1 · RED CORRIDOR',
   white_corridor_1: 'WHITE_CORRIDOR_1 · WHITE CORRIDOR',
   green_room_1: 'GREEN_ROOM_1 · GREEN SKYLIGHT ROOM',
+  CR_GREEN_STAIR: 'CR_GREEN_STAIR · DIAMOND STAIR CORRIDOR',
   plant_corridor: 'PLANT CORRIDOR',
   shared_plant_layout: 'SHARED PLANT LAYOUT',
   plant_fit_47: 'MAIN PLANT ROOM · 47 M',
@@ -207,6 +210,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   red_bendy_1: '#b8322a',
   white_corridor_1: '#f3f5f1',
   green_room_1: '#174e42',
+  CR_GREEN_STAIR: '#bdd9cc',
   plant_corridor: '#8a8f93',
   shared_plant_layout: '#8a8f93',
   plant_fit_47: '#8a8f93',

@@ -21,11 +21,17 @@ import { createFirstPerson } from '../../controls/input/first-person';
 import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
 import {
   ARCHED_CORRIDOR,
+  ARCHED_LINK_Z,
+  ARCHED_ROOM,
   archedCorridorSolids,
   archedFloorAt,
   archedZoneAt,
   createArchedCorridor,
 } from '../views/arched-corridor';
+import {
+  DIAMOND_STAIR,
+  DIAMOND_STAIR_WEST_X,
+} from '../views/diamond-stair-corridor';
 
 type Zone = 'PR_A' | 'CR_A_ARCH' | 'CR_A_STEPS';
 
@@ -140,6 +146,25 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);
+    if (
+      walk.walker.x / metre >= ARCHED_ROOM.maxX + 0.86 &&
+      Math.abs(walk.walker.z / metre - ARCHED_LINK_Z) < 0.8
+    ) {
+      window.dispatchEvent(
+        new CustomEvent('pool-plant:coordinate-hop', {
+          detail: {
+            room: 'CR_GREEN_STAIR',
+            x: DIAMOND_STAIR_WEST_X + 0.2,
+            y: DIAMOND_STAIR.floorY + 1 + 1.82,
+            z: DIAMOND_STAIR.z,
+            yaw: 90,
+            pitch: 0,
+            zoom: walk.zoom,
+          },
+        }),
+      );
+      return;
+    }
     // Off the corridor's floor at its north end is back in the hall.
     const nextZone: Zone =
       archedZoneAt(walk.walker.x / metre, walk.walker.z / metre) ?? 'PR_A';

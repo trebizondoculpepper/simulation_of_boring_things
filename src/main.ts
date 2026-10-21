@@ -119,6 +119,9 @@ const starter = async (
   if (room === 'green_room_1')
     return (await import('./toolkit/gallery/rooms/white-corridor-room'))
       .startGreenRoom;
+  if (room === 'CR_GREEN_STAIR')
+    return (await import('./toolkit/gallery/rooms/white-corridor-room'))
+      .startDiamondStairRoom;
   if (room === 'red_bendy_1')
     return (await import('./toolkit/gallery/rooms/red-bendy-room'))
       .startRedBendyRoom;
@@ -314,7 +317,34 @@ const openRoom = async () => {
   }
   loaded.handle.resume?.();
   if (peekBack(keyOf(room))) void startDryPeek().catch(showError);
+  void preloadCluster().catch(showError);
 };
+window.addEventListener('pool-plant:coordinate-hop', (event) => {
+  const pose = (
+    event as CustomEvent<{
+      room: RoomId;
+      x: number;
+      y: number;
+      z: number;
+      yaw: number;
+      pitch: number;
+      zoom: number;
+    }>
+  ).detail;
+  if (!ROOMS.includes(pose.room)) return;
+  const url = new URL(location.href);
+  url.search = new URLSearchParams({
+    room: pose.room,
+    x: pose.x.toFixed(2),
+    y: pose.y.toFixed(2),
+    z: pose.z.toFixed(2),
+    yaw: pose.yaw.toFixed(1),
+    pitch: pose.pitch.toFixed(1),
+    zoom: pose.zoom.toFixed(3),
+  }).toString();
+  history.pushState(null, '', url);
+  void openRoom().catch(showError);
+});
 // ---- Seeing through a doorway into another room --------------------------
 // Each room is drawn by its own renderer on its own canvas. While a door
 // from the room shown to another room is open (`openJoint`), that room is
@@ -511,7 +541,6 @@ const PEEKS: Partial<Record<string, (yaw: number) => boolean>> = {
   red_bendy_1: (yaw) => Math.cos(yaw) >= 0,
   // North of the round room, west of the hall: looking north.
   white_corridor_1: (yaw) => Math.cos(yaw) >= 0,
-  green_room_1: (yaw) => Math.cos(yaw) >= 0,
 };
 const peekBack = (room: string) => PEEKS[room];
 /** The room the hall is being drawn from, while it is. */
@@ -564,6 +593,71 @@ const startDryPeek = async () => {
   };
   dryPeek = from;
 };
+// ---- Building the rooms round PR_A before they are walked into ----------
+// The rooms round PR_A are each a scene of their own, walked between across
+// thresholds (`pool-plant:room-zone`). Building one (its canvas, WebGL
+// context, scene and passes) and compiling its shaders on its first frame
+// took the best part of half a second, so crossing into a room for the
+// first time froze the walk. Instead, once the walker is in any of them,
+// the others are built here, hidden, one at a time when the page is idle,
+// and each draws a frame or two unseen so its shaders are compiled too.
+/** The rooms round PR_A, by the key each is built under (`keyOf`). */
+const PR_A_CLUSTER: readonly RoomId[] = [
+  'PR_A',
+  'CR_A_UP',
+  'CR_A_ARCH',
+  'red_bendy_1',
+  'white_corridor_1',
+  'green_room_1',
+  'CR_GREEN_STAIR',
+];
+const inCluster = (key: string | undefined) =>
+  PR_A_CLUSTER.some((room) => keyOf(room) === key);
+const idle = () =>
+  new Promise<void>((resolve) =>
+    'requestIdleCallback' in window
+      ? requestIdleCallback(() => resolve(), { timeout: 1500 })
+      : setTimeout(resolve, 300),
+  );
+const nextFrame = () =>
+  new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+/** Draw a hidden room's frames unseen for a moment, compiling its shaders. */
+const warm = async (key: string) => {
+  const loaded = rooms.get(key);
+  if (!loaded || !loaded.root.hidden) return;
+  const { root } = loaded;
+  root.style.visibility = 'hidden';
+  root.style.pointerEvents = 'none';
+  root.hidden = false;
+  await nextFrame();
+  await nextFrame();
+  await nextFrame();
+  root.style.visibility = '';
+  root.style.pointerEvents = '';
+  // Unless the walker has crossed into it meanwhile.
+  if (current !== key) root.hidden = true;
+};
+let preloading = false;
+const preloadCluster = async () => {
+  if (preloading) return;
+  preloading = true;
+  try {
+    for (const room of PR_A_CLUSTER) {
+      if (!inCluster(current)) return;
+      // PR_A is built by the dry stair's peek, when the walker is there.
+      if (rooms.has(keyOf(room))) continue;
+      await idle();
+      if (!inCluster(current) || rooms.has(keyOf(room))) continue;
+      const start = await starter(room);
+      if (rooms.has(keyOf(room))) continue;
+      mount(room, start);
+      await idle();
+      await warm(keyOf(room));
+    }
+  } finally {
+    preloading = false;
+  }
+};
 let zoneTransferPending = false;
 window.addEventListener('pool-plant:room-zone', (event) => {
   const id = (event as CustomEvent<RoomId>).detail;
@@ -575,7 +669,8 @@ window.addEventListener('pool-plant:room-zone', (event) => {
       id !== 'CR_A_STEPS' &&
       id !== 'red_bendy_1' &&
       id !== 'white_corridor_1' &&
-      id !== 'green_room_1') ||
+      id !== 'green_room_1' &&
+      id !== 'CR_GREEN_STAIR') ||
     zoneTransferPending
   )
     return;
@@ -631,6 +726,7 @@ window.addEventListener('pool-plant:room-zone', (event) => {
       }
       loaded.handle.resume?.();
       if (peekBack(current)) void startDryPeek().catch(showError);
+      void preloadCluster().catch(showError);
     })
     .catch(showError)
     .finally(() => {

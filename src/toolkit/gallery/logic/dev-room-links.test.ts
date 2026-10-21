@@ -39,7 +39,14 @@ describe('the rooms', () => {
     expect(devPortals('CR_A_STEPS', bounds, 1)).toEqual([]);
     expect(
       ROOMS.filter((id) => id.startsWith('PR_') || id.startsWith('CR_')),
-    ).toEqual(['PR_A', 'CR_A_UP', 'CR_A_ROUND', 'CR_A_ARCH', 'CR_A_STEPS']);
+    ).toEqual([
+      'PR_A',
+      'CR_A_UP',
+      'CR_A_ROUND',
+      'CR_A_ARCH',
+      'CR_A_STEPS',
+      'CR_GREEN_STAIR',
+    ]);
   });
 
   it('gives every room a name and a portal colour', () => {

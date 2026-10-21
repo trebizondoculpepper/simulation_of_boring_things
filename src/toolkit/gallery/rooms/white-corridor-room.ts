@@ -27,6 +27,14 @@ import {
   greenRoomZoneAt,
 } from '../views/green-room';
 import {
+  createDiamondStairCorridor,
+  DIAMOND_STAIR,
+  DIAMOND_STAIR_WEST_X,
+  diamondStairFloorAt,
+  diamondStairSolids,
+  diamondStairZoneAt,
+} from '../views/diamond-stair-corridor';
+import {
   createWhiteCorridor,
   WHITE_CORRIDOR,
   WHITE_CORRIDOR_START,
@@ -35,7 +43,11 @@ import {
   whiteCorridorZoneAt,
 } from '../views/white-corridor';
 
-type Zone = 'CR_A_ROUND' | 'white_corridor_1' | 'green_room_1';
+type Zone =
+  | 'CR_A_ROUND'
+  | 'white_corridor_1'
+  | 'green_room_1'
+  | 'CR_GREEN_STAIR';
 
 /**
  * white_corridor_1: the white corridor north out of CR_A_ROUND, in its
@@ -61,6 +73,7 @@ export function startWhiteCorridorRoom(
   const rooms = createWhiteCorridor(metre);
   rooms.add(createRoundPinkRoom(1));
   rooms.add(createGreenRoom(1));
+  rooms.add(createDiamondStairCorridor(1));
   scene.add(rooms);
 
   const composer = new EffectComposer(
@@ -109,7 +122,11 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   });
   composer.addPass(film);
 
-  const walls = [...whiteCorridorSolids(), ...greenRoomSolids()].map((s) => ({
+  const walls = [
+    ...whiteCorridorSolids(),
+    ...greenRoomSolids(),
+    ...diamondStairSolids(),
+  ].map((s) => ({
     minX: s.minX * metre,
     maxX: s.maxX * metre,
     minZ: s.minZ * metre,
@@ -122,15 +139,21 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     floorY: 0,
     // In the corridor, a step in from the hall, looking along it.
     start: {
-      x: WHITE_CORRIDOR.x * metre,
+      x:
+        (initialZone === 'CR_GREEN_STAIR'
+          ? DIAMOND_STAIR.eastX - 0.5
+          : WHITE_CORRIDOR.x) * metre,
       z:
-        (initialZone === 'green_room_1'
-          ? GREEN_ROOM.southZ - 2
-          : WHITE_CORRIDOR_START - 1) * metre,
+        (initialZone === 'CR_GREEN_STAIR'
+          ? DIAMOND_STAIR.z
+          : initialZone === 'green_room_1'
+            ? GREEN_ROOM.southZ - 2
+            : WHITE_CORRIDOR_START - 1) * metre,
       yaw: 0,
     },
     floorAt: (x, z) =>
-      (whiteCorridorFloorAt(x / metre, z / metre) ??
+      (diamondStairFloorAt(x / metre, z / metre) ??
+        whiteCorridorFloorAt(x / metre, z / metre) ??
         (greenRoomZoneAt(x / metre, z / metre)
           ? GREEN_ROOM.floorY
           : WHITE_CORRIDOR.floorY)) * metre,
@@ -156,8 +179,28 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);
+    if (
+      walk.walker.x / metre <= DIAMOND_STAIR_WEST_X + 0.06 &&
+      Math.abs(walk.walker.z / metre - DIAMOND_STAIR.z) < 0.8
+    ) {
+      window.dispatchEvent(
+        new CustomEvent('pool-plant:coordinate-hop', {
+          detail: {
+            room: 'CR_A_STEPS',
+            x: 3.1,
+            y: 0.82,
+            z: 24.54,
+            yaw: 270,
+            pitch: 0,
+            zoom: walk.zoom,
+          },
+        }),
+      );
+      return;
+    }
     // Out of its mouth is back in the round room.
     const nextZone: Zone =
+      diamondStairZoneAt(walk.walker.x / metre, walk.walker.z / metre) ??
       greenRoomZoneAt(walk.walker.x / metre, walk.walker.z / metre) ??
       whiteCorridorZoneAt(walk.walker.x / metre, walk.walker.z / metre) ??
       'CR_A_ROUND';
@@ -197,4 +240,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
 /** A separately mounted scene with its own renderer and walker. */
 export function startGreenRoom(canvas: HTMLCanvasElement) {
   return startWhiteCorridorRoom(canvas, 'green_room_1');
+}
+
+export function startDiamondStairRoom(canvas: HTMLCanvasElement) {
+  return startWhiteCorridorRoom(canvas, 'CR_GREEN_STAIR');
 }

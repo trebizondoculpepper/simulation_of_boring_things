@@ -1,11 +1,13 @@
 import {
   BoxGeometry,
+  BufferGeometry,
   CatmullRomCurve3,
   CircleGeometry,
   Color,
   CylinderGeometry,
   DoubleSide,
   ExtrudeGeometry,
+  Float32BufferAttribute,
   Group,
   Mesh,
   MeshBasicMaterial,
@@ -31,7 +33,7 @@ import type { Footprint } from '../../controls/logic/walk-collision';
 import { addSkylightSun, rippleWater } from './round-room-light';
 import { createPoolLadder } from './pool-ladder';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import type { BufferGeometry } from 'three';
+import { diamondOutline } from './diamond-stair-corridor';
 
 /**
  * A barrel-vaulted corridor running south from PR_A's south wall: 1.2 m
@@ -82,6 +84,8 @@ export const ARCHED_ROOM = {
 } as const;
 
 const r = ARCHED_ROOM;
+export const ARCHED_LINK_Z = 24.54;
+export const ARCHED_LINK_HALF = 1;
 const rise = -r.floor / r.steps;
 const stairTop = r.minZ + r.landing;
 const stairFoot = stairTop + r.steps * r.tread;
@@ -165,7 +169,30 @@ export function archedCorridorSolids(): Footprint[] {
     { minX: r.minX - w, maxX: r.minX, minZ: endZ, maxZ: stairFoot },
     { minX: e.minX - w, maxX: r.minX - w, minZ: e.minZ - w, maxZ: e.minZ },
     { minX: e.minX - w, maxX: e.minX, minZ: e.minZ - w, maxZ: e.maxZ + w },
-    { minX: r.maxX, maxX: r.maxX + w, minZ: endZ, maxZ: r.maxZ + w },
+    {
+      minX: r.maxX,
+      maxX: r.maxX + w,
+      minZ: endZ,
+      maxZ: ARCHED_LINK_Z - ARCHED_LINK_HALF,
+    },
+    {
+      minX: r.maxX,
+      maxX: r.maxX + w,
+      minZ: ARCHED_LINK_Z + ARCHED_LINK_HALF,
+      maxZ: r.maxZ + w,
+    },
+    {
+      minX: r.maxX,
+      maxX: r.maxX + 1.1,
+      minZ: ARCHED_LINK_Z - ARCHED_LINK_HALF - 0.2,
+      maxZ: ARCHED_LINK_Z - ARCHED_LINK_HALF,
+    },
+    {
+      minX: r.maxX,
+      maxX: r.maxX + 1.1,
+      minZ: ARCHED_LINK_Z + ARCHED_LINK_HALF,
+      maxZ: ARCHED_LINK_Z + ARCHED_LINK_HALF + 0.2,
+    },
     // The pool's edge, open at the ladder: the way in, and out.
     ...cutOpenings(
       [
@@ -213,6 +240,12 @@ export function archedCorridorSolids(): Footprint[] {
 export function archedFloorAt(x: number, z: number): number | null {
   const [left, right] = corridorJambs();
   if (x >= left && x <= right && z >= c.mouthZ && z < r.minZ) return 0;
+  if (
+    x >= r.maxX &&
+    x <= r.maxX + 1.1 &&
+    Math.abs(z - ARCHED_LINK_Z) <= ARCHED_LINK_HALF
+  )
+    return r.floor;
   // In the pool, wading on its floor.
   if (x > pool.minX && x < pool.maxX && z > pool.minZ && z < pool.maxZ)
     return pool.floor;
@@ -274,6 +307,7 @@ export function createArchedCorridor(
   // Only the pool's tiles are below its water: tinted, with caustics.
   const uniforms = createPoolUniforms(metre, pool.waterY, [pool]);
   const roomWall = createTileMaterial(uniforms, walls);
+  roomWall.side = DoubleSide;
   const roomFloor = createTileMaterial(uniforms, floor);
   const [left, right] = corridorJambs();
   const start = c.mouthZ + c.hallWall;
@@ -517,16 +551,218 @@ export function createArchedCorridor(
       e.minZ,
       e.maxZ,
     );
+  const holeHalf = 1.53;
   box(
     roomWall,
-    'arched room east wall',
+    'arched east wall north of diamond',
     r.maxX,
     r.maxX + w,
     r.floor,
     r.ceiling,
     endZ,
+    ARCHED_LINK_Z - holeHalf,
+  );
+  box(
+    roomWall,
+    'arched east wall south of diamond',
+    r.maxX,
+    r.maxX + w,
+    r.floor,
+    r.ceiling,
+    ARCHED_LINK_Z + holeHalf,
     r.maxZ,
   );
+  box(
+    roomWall,
+    'arched east wall diamond lintel',
+    r.maxX,
+    r.maxX + w,
+    r.floor + 3.68,
+    r.ceiling,
+    ARCHED_LINK_Z - holeHalf,
+    ARCHED_LINK_Z + holeHalf,
+  );
+  for (const side of [-1, 1]) {
+    for (const points of [
+      [
+        [1.0, 0],
+        [1.53, 0],
+        [1.53, 1.4],
+      ],
+      [
+        [1.53, 1.4],
+        [1.53, 3.68],
+        [0.46, 3.68],
+      ],
+    ]) {
+      const patch = new Shape();
+      patch.moveTo(side * points[0][0], points[0][1]);
+      for (const [u, v] of points.slice(1)) patch.lineTo(side * u, v);
+      patch.closePath();
+      add(
+        new Mesh(
+          new ShapeGeometry(patch)
+            .rotateY(Math.PI / 2)
+            .translate(r.maxX - 0.006, r.floor, ARCHED_LINK_Z),
+          roomWall,
+        ),
+        'diamond opening tile infill',
+      );
+    }
+  }
+  const stubShape = diamondOutline(new Shape(), 0.18) as Shape;
+  stubShape.holes.push(diamondOutline(new Path()) as Path);
+  add(
+    new Mesh(
+      new ExtrudeGeometry(stubShape, { depth: 1.05, bevelEnabled: false })
+        .rotateY(Math.PI / 2)
+        .translate(r.maxX, r.floor, ARCHED_LINK_Z),
+      roomWall,
+    ),
+    'diamond corridor landing toward green room',
+  );
+  for (const side of [-1, 1])
+    for (const [[u0, y0], [u1, y1]] of [
+      [
+        [1, 0],
+        [1.35, 1.4],
+      ],
+      [
+        [1.35, 1.4],
+        [0.28, 3.5],
+      ],
+    ]) {
+      const geometry = new BufferGeometry();
+      const x0 = r.maxX - 0.01,
+        x1 = r.maxX + 1.05;
+      const z0 = ARCHED_LINK_Z + side * u0,
+        z1 = ARCHED_LINK_Z + side * u1;
+      geometry.setAttribute(
+        'position',
+        new Float32BufferAttribute(
+          [
+            x0,
+            r.floor + y0,
+            z0,
+            x1,
+            r.floor + y0,
+            z0,
+            x0,
+            r.floor + y1,
+            z1,
+            x1,
+            r.floor + y1,
+            z1,
+          ],
+          3,
+        ),
+      );
+      geometry.setIndex([0, 1, 2, 2, 1, 3]);
+      geometry.computeVertexNormals();
+      add(new Mesh(geometry, roomWall), 'diamond landing inner tile');
+    }
+  // The rectangular opening leaves triangular reveals beside the lower
+  // diamond slopes. Give those reveals depth so the exterior cannot show
+  // through at grazing angles from the room or the landing.
+  for (const side of [-1, 1]) {
+    const z0 =
+      side < 0 ? ARCHED_LINK_Z - holeHalf : ARCHED_LINK_Z + ARCHED_LINK_HALF;
+    const z1 =
+      side < 0 ? ARCHED_LINK_Z - ARCHED_LINK_HALF : ARCHED_LINK_Z + holeHalf;
+    box(
+      roomWall,
+      'diamond landing solid lower reveal',
+      r.maxX + 0.015,
+      r.maxX + 1.035,
+      r.floor,
+      r.floor + 1.4,
+      z0,
+      z1,
+    );
+  }
+  box(
+    roomFloor,
+    'diamond return landing floor',
+    r.maxX,
+    r.maxX + 1.05,
+    r.floor - 0.12,
+    r.floor,
+    ARCHED_LINK_Z - ARCHED_LINK_HALF,
+    ARCHED_LINK_Z + ARCHED_LINK_HALF,
+  );
+  // A small, cheap view of the green room makes the doorway read as open.
+  // The scene handoff occurs inside the landing, before this preview can be
+  // entered, so both rooms retain their own coordinates and render budgets.
+  const previewUniforms = createPoolUniforms(metre, -100, []);
+  previewUniforms.caustics.value = 0;
+  previewUniforms.reflected.value = 0;
+  const previewTile = createTileMaterial(previewUniforms, {
+    colour: '#5b9a7e',
+    grout: '#2c634e',
+    roughness: [0.24, 0.42],
+    glaze: 0.26,
+  });
+  previewTile.side = DoubleSide;
+  const previewNear = r.maxX + 1.05;
+  const previewFar = previewNear + 4;
+  box(
+    previewTile,
+    'green room glimpse floor',
+    previewNear,
+    previewFar,
+    r.floor - 0.12,
+    r.floor,
+    ARCHED_LINK_Z - 3,
+    ARCHED_LINK_Z + 3,
+  );
+  box(
+    previewTile,
+    'green room glimpse north wall',
+    previewNear,
+    previewFar,
+    r.floor,
+    r.floor + 4,
+    ARCHED_LINK_Z - 3.1,
+    ARCHED_LINK_Z - 3,
+  );
+  box(
+    previewTile,
+    'green room glimpse south wall',
+    previewNear,
+    previewFar,
+    r.floor,
+    r.floor + 4,
+    ARCHED_LINK_Z + 3,
+    ARCHED_LINK_Z + 3.1,
+  );
+  box(
+    previewTile,
+    'green room glimpse far wall',
+    previewFar,
+    previewFar + 0.1,
+    r.floor,
+    r.floor + 4,
+    ARCHED_LINK_Z - 3,
+    ARCHED_LINK_Z + 3,
+  );
+  box(
+    previewTile,
+    'green room glimpse ceiling',
+    previewNear,
+    previewFar,
+    r.floor + 4,
+    r.floor + 4.1,
+    ARCHED_LINK_Z - 3,
+    ARCHED_LINK_Z + 3,
+  );
+  const previewLight = new PointLight(
+    '#dcf3e8',
+    8 * metre * metre,
+    7 * metre,
+    2,
+  );
+  previewLight.position.set(previewNear + 2, r.floor + 3.5, ARCHED_LINK_Z);
+  group.add(previewLight);
   // The ceiling, a slab with the skylight's round opening through it: a
   // shape in (x, z), laid flat and 0.2 m thick.
   const sky = r.skylight;
