@@ -1,4 +1,4 @@
-import { computed } from '@preact/signals-core';
+import { computed, signal } from '@preact/signals-core';
 import {
   AmbientLight,
   BoxGeometry,
@@ -21,6 +21,12 @@ import {
   machineTone,
 } from '../../components/sound/audio/machine-tones';
 import { partAudio } from '../../components/core/audio/part-audio';
+import {
+  SPA_BLOWER,
+  SPA_BUBBLES,
+  SPA_JETS,
+} from '../../components/pool/audio/spa-sounds';
+import { SPA } from '../../components/pool/logic/spa-controller';
 import { devPortals, devWalls } from '../logic/dev-room-links';
 import { METRE } from '../../components/core/logic/units';
 import type { Footprint } from '../../controls/logic/walk-collision';
@@ -50,7 +56,7 @@ import {
   useEnvironment,
 } from '../../components/core/parts/render-style';
 
-const FLOOR = { minX: -7, maxX: 7, minZ: -5, maxZ: 5 };
+const FLOOR = { minX: -7, maxX: 11, minZ: -5, maxZ: 5 };
 const CEILING = 3.2;
 /** How far the stands stand out from the walls, metres. */
 const OFF_WALL = 0.6;
@@ -66,12 +72,12 @@ const PLACES = [
     z: FLOOR.minZ + OFF_WALL,
     yaw: 0,
   })),
-  ...[-2, 0.8].map((z) => ({
+  ...[-1, 1.8].map((z) => ({
     x: FLOOR.maxX - OFF_WALL,
     z,
     yaw: -Math.PI / 2,
   })),
-  ...[3, 0, -3].map((x) => ({
+  ...[5, 2, -1].map((x) => ({
     x,
     z: FLOOR.maxZ - OFF_WALL,
     yaw: Math.PI,
@@ -82,6 +88,18 @@ const PLACES = [
     yaw: Math.PI / 2,
   })),
 ];
+/**
+ * The spa's sounds (`components/pool/audio/spa-sounds.ts`), on stands of
+ * their own at the north wall's east end, where the room was widened for
+ * them: the blower, whose bubbles follow it into the water a few seconds
+ * after it starts and die away a few seconds after it stops, as in the
+ * jacuzzi; and the jet pump, heard as from the plant room.
+ */
+const SPA_PLACES = [7.5, 9.6].map((x) => ({
+  x,
+  z: FLOOR.minZ + OFF_WALL,
+  yaw: 0,
+}));
 /** The SPEED knob's steps, and the rates they give: 0.5× to 2×. */
 const SPEED_STEPS = 8;
 const rateOf = (share: number) => 2 ** (share * 2 - 1);
@@ -96,7 +114,8 @@ const HALF = 0.2;
  * front, its name, a green RUN button that starts and stops its tone, and
  * a SPEED knob that plays it from half to twice its speed, its fan
  * spinning with it, so a tone can be heard as a bigger, slower machine or
- * a smaller, faster one before it is given to a part.
+ * a smaller, faster one before it is given to a part. At the north
+ * wall's east end, the spa's sounds, each with its RUN button.
  */
 export function startTonesRoom(canvas: HTMLCanvasElement) {
   const m = METRE;
@@ -310,6 +329,98 @@ export function startTonesRoom(canvas: HTMLCanvasElement) {
     scene.add(spot, spot.target);
     return { x, z, yaw, tone };
   });
+  // ---- The spa's sounds -----------------------------------------------------
+  const spaStands = (
+    [
+      [
+        'SPA BLOWER',
+        'Side-channel blower; its bubbles follow a few seconds behind',
+        true,
+      ],
+      [
+        'SPA JET PUMP',
+        'The jet pump, a distant whine through the plant room wall',
+        false,
+      ],
+    ] as const
+  ).map(([name, line, blower], i) => {
+    const { x, z, yaw } = SPA_PLACES[i];
+    const stand = new Group();
+    stand.position.set(x, 0, z);
+    stand.rotation.y = yaw;
+    room.add(stand);
+    const body = new Mesh(new BoxGeometry(0.34, 0.92, 0.3), casePaint);
+    body.position.y = 0.46;
+    stand.add(body);
+    const panel = new Group();
+    panel.position.set(0, 0.92 + 0.105, 0.0);
+    panel.rotation.x = -0.62;
+    stand.add(panel);
+    const plate = new Mesh(new BoxGeometry(0.34, 0.26, 0.02), panelPaint);
+    plate.position.z = -0.01;
+    panel.add(plate);
+    const title = createMicroLabel(
+      kit,
+      `${MACHINE_TONES.length + i + 1} · ${name}`,
+      {
+        height: 0.012,
+        ink: '#1c1d1e',
+        maxWidth: 0.3,
+      },
+    );
+    title.position.set(0, 0.095, 0.001);
+    panel.add(title);
+    const caption = createMicroLabel(kit, line, {
+      height: 0.0045,
+      ink: '#2a2c2e',
+      bold: false,
+      maxWidth: 0.31,
+    });
+    caption.position.set(0, 0.07, 0.001);
+    panel.add(caption);
+    const run = parts.add(
+      ledPushbutton(kit, {
+        colour: 'green',
+        legend: 'RUN',
+        name: `${name} RUN`,
+      }),
+    );
+    run.object.position.set(0, -0.03, 0);
+    panel.add(run.object);
+    const sound = beginPart(kit, `${name} sound`);
+    sound.object.position.set(0, 0.5, 0.16);
+    stand.add(sound.object);
+    sound.holdWhile(run.state, blower ? SPA_BLOWER : SPA_JETS);
+    if (blower) {
+      // The bubbles, lagging the blower as the jacuzzi's do.
+      const bubbling = signal(false);
+      let since = 0;
+      let was = false;
+      sound.updates.push((delta) => {
+        const on = run.state.value;
+        since = on === was ? since + delta : 0;
+        was = on;
+        if (on && since >= SPA.bubblesAfter) bubbling.value = true;
+        if (!on && since >= SPA.bubblesLinger) bubbling.value = false;
+      });
+      sound.holdWhile(bubbling, SPA_BUBBLES);
+    }
+    parts.add(sound.part());
+    runs.set(String(MACHINE_TONES.length + i + 1), {
+      run: () => run.uses.values().next().value?.(),
+      speed: () => {},
+    });
+    const spot = new SpotLight('#fff3e2', 12 * m * m, 0, 0.34, 0.6, 2);
+    spot.position.set(
+      (x + Math.sin(yaw) * 1.4) * m,
+      (CEILING - 0.1) * m,
+      (z + Math.cos(yaw) * 1.4) * m,
+    );
+    spot.target.position.set(x * m, 0.7 * m, z * m);
+    scene.add(spot, spot.target);
+    return { x, z, yaw };
+  });
+  stands.push(...(spaStands as typeof stands));
   room.updateMatrixWorld(true);
 
   // ---- Walking and working -----------------------------------------------

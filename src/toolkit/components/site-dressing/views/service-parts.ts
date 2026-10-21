@@ -12,9 +12,11 @@ import {
 } from 'three';
 import type { Material } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { channel, circle, headingAt, samplePath, sweep } from './service-sweep';
+import { channel, circle, samplePath, sweep } from './service-sweep';
 import type { Point } from './service-sweep';
 import type { ServiceMaterials } from './service-materials';
+import { nearestSize, putPipe } from '../../core/views/pipe-kinds';
+import type { PipeKindId } from '../../core/views/pipe-kinds';
 
 /**
  * The parts of an exposed services ceiling, each one on its own: a deck,
@@ -350,8 +352,32 @@ export function swirlDiffuser(
 
 // ---- Pipework ----------------------------------------------------------------
 
-/** A plain pipe run: `material` for its finish (pipe, conduit, sprinkler). */
+/**
+ * A run of pipe of `kind` (`pipe-kinds.ts`), level at `y` through the
+ * plan's `points`: drawn by the game's one pipe helper, with its kind's
+ * own joints and bends, at the nearest size the kind comes in.
+ */
 export const pipeRun = (
+  sink: PartSink,
+  kind: PipeKindId,
+  {
+    points,
+    y,
+    diameter,
+    colour,
+    lengths,
+  }: RunPart & { diameter: number; colour?: string; lengths?: number },
+) =>
+  putPipe(
+    sink,
+    kind,
+    nearestSize(kind, diameter),
+    points.map(([x, z]) => [x, y, z] as const),
+    { colour, lengths },
+  );
+
+/** A cable laid level at `y` through `points`, as a plain swept tube. */
+export const cableRun = (
   sink: PartSink,
   material: Material,
   {
@@ -365,40 +391,6 @@ export const pipeRun = (
     material,
     sweep(samplePath(points, bend), circle(diameter / 2, 12), y),
   );
-
-/** A grooved coupling on a pipe heading `t`: a red housing and two bolts. */
-export function groovedCoupling(
-  sink: PartSink,
-  m: ServiceMaterials,
-  x: number,
-  y: number,
-  z: number,
-  t: readonly [number, number],
-  diameter = 0.09,
-) {
-  const r = diameter / 2;
-  sink.put(
-    m.coupling,
-    turned(
-      new CylinderGeometry(r + 0.012, r + 0.012, 0.05, 14).rotateZ(Math.PI / 2),
-      t,
-      x,
-      y,
-      z,
-    ),
-  );
-  for (const side of [-1, 1])
-    sink.put(
-      m.brass,
-      turned(
-        new CylinderGeometry(0.006, 0.006, 0.05, 6),
-        t,
-        x,
-        y + side * (r + 0.015),
-        z,
-      ),
-    );
-}
 
 /** A pendent sprinkler head under a pipe whose centre is at `y`. */
 export function sprinklerHead(
@@ -419,8 +411,8 @@ export function sprinklerHead(
 }
 
 /**
- * Sprinkler pipe: red, with a grooved coupling every `couplingEvery` and
- * a pendent head at each of `heads`.
+ * Sprinkler pipe: the grooved fire main, its couplings every `lengths`,
+ * and a pendent head at each of `heads`.
  */
 export function sprinklerPipe(
   sink: PartSink,
@@ -429,19 +421,15 @@ export function sprinklerPipe(
     points,
     y,
     diameter = 0.09,
-    bend = 0.1,
-    couplingEvery = 3,
+    lengths,
     heads = [],
   }: RunPart & {
     diameter?: number;
-    bend?: number;
-    couplingEvery?: number;
+    lengths?: number;
     heads?: readonly Point[];
   },
 ) {
-  pipeRun(sink, m.sprinkler, { points, y, diameter, bend });
-  for (const [x, z] of alongRun(points, couplingEvery))
-    groovedCoupling(sink, m, x, y, z, headingAt(points, [x, z]), diameter);
+  pipeRun(sink, 'grooved-fire', { points, y, diameter, lengths });
   for (const [x, z] of heads) sprinklerHead(sink, m, x, y, z);
 }
 
@@ -554,7 +542,7 @@ export function detectorBatten(
     new BoxGeometry(maxX - minX, 0.041, 0.041).translate(mid, y - 0.0205, z),
   );
   // The cable clipped along its side.
-  pipeRun(sink, m.fireCable, {
+  cableRun(sink, m.fireCable, {
     points: [
       [minX, z + 0.03],
       [maxX, z + 0.03],
@@ -565,7 +553,7 @@ export function detectorBatten(
   for (const x of detectors) {
     smokeDetector(sink, m, x, y - 0.041, z);
     // The tails into the base, beside it.
-    pipeRun(sink, m.fireCable, {
+    cableRun(sink, m.fireCable, {
       points: [
         [x - 0.07, z + 0.03],
         [x - 0.03, z + 0.03],

@@ -20,19 +20,16 @@ import { METRE } from '../../components/core/logic/units';
 import { createFirstPerson } from '../../controls/input/first-person';
 import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
 import {
-  createRedBendy,
-  RED_BENDY,
-  redBendySolids,
-  redBendyZoneAt,
-} from '../views/red-bendy';
-
-type Zone = 'PR_A' | 'red_bendy_1';
+  corridorLabFloorAt,
+  corridorLabSolids,
+  createCorridorLab,
+} from '../views/corridor-lab';
 
 /**
- * red_bendy_1: the red-tiled corridor north of PR_A's back hall, in its
- * own scene. Walking back out into PR_A hands the walker on.
+ * corridor_lab: the corridor kit's pieces laid out as one run, in its own
+ * scene. It has no doors: it is reached by its URL.
  */
-export function startRedBendyRoom(canvas: HTMLCanvasElement) {
+export function startCorridorLabRoom(canvas: HTMLCanvasElement) {
   const metre = METRE;
   const scene = new Scene();
   scene.background = null;
@@ -45,7 +42,7 @@ export function startRedBendyRoom(canvas: HTMLCanvasElement) {
   const camera = new PerspectiveCamera(68, 1, 0.05 * metre, 80 * metre);
   scene.add(new AmbientLight('#f4f7f5', 0.18));
   scene.add(new HemisphereLight('#e9f3f1', '#65716f', 0.45));
-  const rooms = createRedBendy(metre);
+  const rooms = createCorridorLab(metre);
   scene.add(rooms);
 
   const composer = new EffectComposer(
@@ -94,7 +91,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   });
   composer.addPass(film);
 
-  const walls = redBendySolids().map((s) => ({
+  const walls = corridorLabSolids().map((s) => ({
     minX: s.minX * metre,
     maxX: s.maxX * metre,
     minZ: s.minZ * metre,
@@ -105,13 +102,9 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     camera,
     metre,
     floorY: 0,
-    // In the corridor, a step in from the hall, looking along it.
-    start: {
-      x: RED_BENDY.x * metre,
-      z: (RED_BENDY.mouthZ - 1) * metre,
-      yaw: 0,
-    },
-    floorAt: () => 0,
+    // At the run's start, looking along it.
+    start: { x: 0.8 * metre, z: 0, yaw: Math.PI / 2 },
+    floorAt: (x, z) => corridorLabFloorAt(x / metre, z / metre) * metre,
     solids: () => walls,
     use: () => {},
   });
@@ -126,7 +119,6 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
   resize();
-  let zone: Zone = 'red_bendy_1';
   let visual = true;
   let last = 0;
   renderer.setAnimationLoop((time) => {
@@ -134,15 +126,6 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);
-    // Out of its mouth is back in the hall.
-    const nextZone: Zone =
-      redBendyZoneAt(walk.walker.x / metre, walk.walker.z / metre) ?? 'PR_A';
-    if (nextZone !== zone) {
-      zone = nextZone;
-      window.dispatchEvent(
-        new CustomEvent('pool-plant:room-zone', { detail: nextZone }),
-      );
-    }
     if (visual) {
       film.uniforms.time.value = (time / 1000) % 100;
       composer.render(delta);
@@ -162,9 +145,6 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     {
       setVisual(enabled: boolean) {
         visual = enabled;
-      },
-      enter() {
-        zone = 'red_bendy_1';
       },
     },
   );

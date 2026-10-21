@@ -57,12 +57,18 @@ export type RoomId =
   | 'CR_A_ROUND'
   | 'CR_A_ARCH'
   | 'CR_A_STEPS'
-  | 'red_bendy_1'
   | 'white_corridor_1'
   | 'green_room_1'
   | 'CR_GREEN_STAIR'
   | 'donut_pool_1'
+  | 'pool_01'
+  | 'pool_02'
+  | 'pool_03'
+  | 'pool_04'
+  | 'pool_02_gallery'
   | 'ceiling_lab'
+  | 'corridor_lab'
+  | 'pipes_n_dreams'
   | 'plant_corridor'
   | 'shared_plant_layout'
   | PlantFitRoomId;
@@ -137,16 +143,25 @@ export const ROOMS: readonly RoomId[] = [
   // South of PR_A: an arched corridor, and the stepped room it opens into.
   'CR_A_ARCH',
   'CR_A_STEPS',
-  // North of PR_A's back hall: a red-tiled corridor, gently curving.
-  'red_bendy_1',
   // North out of CR_A_ROUND: a short white corridor.
   'white_corridor_1',
   'green_room_1',
   'CR_GREEN_STAIR',
   // A white room with a ring-shaped pool round a column; no doors yet.
   'donut_pool_1',
+  // The version-one pool halls, each its own ticket; no doors yet.
+  'pool_01',
+  'pool_02',
+  'pool_03',
+  'pool_04',
+  // The Olympic pool's underwater viewing gallery, under its north deck.
+  'pool_02_gallery',
   // A bare room under the procedural services ceiling, for trying seeds.
   'ceiling_lab',
+  // The corridor kit: straights and turns, laid out as one run.
+  'corridor_lab',
+  // Every kind of pipe and duct the game knows, on stands.
+  'pipes_n_dreams',
   // The plant rooms' main corridor: the dev corridor again, taller, for
   // the pipes and ducts overhead. Its doors open into nothing yet.
   'plant_corridor',
@@ -166,12 +181,18 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   CR_A_ROUND: 'CR_A_ROUND · PINK CIRCULAR ROOM',
   CR_A_ARCH: 'CR_A_ARCH · ARCHED CORRIDOR',
   CR_A_STEPS: 'CR_A_STEPS · STEPPED ROOM',
-  red_bendy_1: 'RED_BENDY_1 · RED CORRIDOR',
   white_corridor_1: 'WHITE_CORRIDOR_1 · WHITE CORRIDOR',
   green_room_1: 'GREEN_ROOM_1 · GREEN SKYLIGHT ROOM',
   CR_GREEN_STAIR: 'CR_GREEN_STAIR · DIAMOND STAIR CORRIDOR',
   donut_pool_1: 'DONUT_POOL_1 · RING POOL',
+  pool_01: 'POOL-01 · LOUNGE POOL',
+  pool_02: 'POOL-02 · OLYMPIC POOL',
+  pool_03: 'POOL-03 · JACUZZI',
+  pool_04: 'POOL-04 · FOOTBATH',
+  pool_02_gallery: 'POOL-02 · UNDERWATER GALLERY',
   ceiling_lab: 'CEILING_LAB · SERVICES CEILING',
+  corridor_lab: 'CORRIDOR_LAB · CORRIDOR KIT',
+  pipes_n_dreams: "PIPES'N DREAMS · PIPING AND DUCTING",
   plant_corridor: 'PLANT CORRIDOR',
   shared_plant_layout: 'SHARED PLANT LAYOUT',
   plant_fit_47: 'MAIN PLANT ROOM · 47 M',
@@ -215,12 +236,18 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   CR_A_ROUND: '#eab2bd',
   CR_A_ARCH: '#dfe7e5',
   CR_A_STEPS: '#dfe7e5',
-  red_bendy_1: '#b8322a',
   white_corridor_1: '#f3f5f1',
   green_room_1: '#174e42',
   CR_GREEN_STAIR: '#bdd9cc',
   donut_pool_1: '#f3f5f1',
+  pool_01: '#f3f5f1',
+  pool_02: '#f3f5f1',
+  pool_03: '#cfe1e5',
+  pool_04: '#f3f5f1',
+  pool_02_gallery: '#2fa3ad',
   ceiling_lab: '#8a8f93',
+  corridor_lab: '#f3f5f1',
+  pipes_n_dreams: '#8f3a22',
   plant_corridor: '#8a8f93',
   shared_plant_layout: '#8a8f93',
   plant_fit_47: '#8a8f93',

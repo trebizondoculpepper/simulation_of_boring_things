@@ -122,12 +122,31 @@ const starter = async (
   if (room === 'CR_GREEN_STAIR')
     return (await import('./toolkit/gallery/rooms/white-corridor-room'))
       .startDiamondStairRoom;
-  if (room === 'red_bendy_1')
-    return (await import('./toolkit/gallery/rooms/red-bendy-room'))
-      .startRedBendyRoom;
+  if (room === 'pipes_n_dreams')
+    return (await import('./toolkit/gallery/rooms/pipes-n-dreams-room'))
+      .startPipesRoom;
+  if (room === 'corridor_lab')
+    return (await import('./toolkit/gallery/rooms/corridor-lab-room'))
+      .startCorridorLabRoom;
   if (room === 'ceiling_lab')
     return (await import('./toolkit/gallery/rooms/ceiling-lab-room'))
       .startCeilingLabRoom;
+  if (
+    room === 'pool_01' ||
+    room === 'pool_02' ||
+    room === 'pool_03' ||
+    room === 'pool_04'
+  ) {
+    const { startPoolHallRoom } =
+      await import('./toolkit/gallery/rooms/pool-hall-room');
+    return (surface) => startPoolHallRoom(surface, room);
+  }
+  if (room === 'pool_02_gallery') {
+    const { startPoolHallRoom } =
+      await import('./toolkit/gallery/rooms/pool-hall-room');
+    return (surface) =>
+      startPoolHallRoom(surface, 'pool_02', { inGallery: true });
+  }
   if (room === 'donut_pool_1')
     return (await import('./toolkit/gallery/rooms/donut-pool-room'))
       .startDonutPoolRoom;
@@ -544,7 +563,6 @@ const PEEKS: Partial<Record<string, (yaw: number) => boolean>> = {
   // South of the hall, looking south.
   CR_A_ARCH: (yaw) => Math.cos(yaw) <= 0,
   // North of the hall, looking north.
-  red_bendy_1: (yaw) => Math.cos(yaw) >= 0,
   // North of the round room, west of the hall: looking north.
   white_corridor_1: (yaw) => Math.cos(yaw) >= 0,
 };
@@ -612,7 +630,6 @@ const PR_A_CLUSTER: readonly RoomId[] = [
   'PR_A',
   'CR_A_UP',
   'CR_A_ARCH',
-  'red_bendy_1',
   'white_corridor_1',
   'green_room_1',
   'CR_GREEN_STAIR',
@@ -673,7 +690,6 @@ window.addEventListener('pool-plant:room-zone', (event) => {
       id !== 'CR_A_ROUND' &&
       id !== 'CR_A_ARCH' &&
       id !== 'CR_A_STEPS' &&
-      id !== 'red_bendy_1' &&
       id !== 'white_corridor_1' &&
       id !== 'green_room_1' &&
       id !== 'CR_GREEN_STAIR') ||

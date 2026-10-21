@@ -14,6 +14,8 @@ import {
 import { isLive } from './exhibit';
 import { EXHIBITS as PUMPS } from './pumps';
 import { EXHIBITS as BALANCE } from './balance';
+import { EXHIBITS as POOL_FITTINGS } from './pool-fittings';
+import { JACUZZI_EXHIBIT, JACUZZI_PLATE_EXHIBIT } from './pool-amenities';
 
 beforeEach(() => {
   vi.stubGlobal('document', {
@@ -44,6 +46,7 @@ const SLACK = 0.15;
 describe.each([
   ['dev_pumps', PUMPS],
   ['dev_balance', BALANCE],
+  ['dev12', POOL_FITTINGS],
 ])('the %s exhibits', (_, exhibits) => {
   it.each(exhibits.map((e) => [e.title, e] as const))(
     'builds %s inside its declared size',
@@ -94,4 +97,36 @@ it('isolates and restores the pump drive supply with its rotary handle', () => {
   expect(handle.parent!.rotation.z).not.toBe(off);
   built.parts!.dispose();
   disposeKit(kit, built.object as never);
+});
+
+it('runs the jacuzzi from its plate on the wall: START, then STOP', () => {
+  const kit = createPanelKit();
+  const tub = JACUZZI_EXHIBIT.build(kit);
+  const plate = JACUZZI_PLATE_EXHIBIT.build(kit);
+  if (!isLive(tub) || !isLive(plate) || !plate.parts)
+    throw new Error('not live');
+  const press = (name: string) =>
+    [...plate.parts!.uses.entries()].find(([o]) => {
+      let p: typeof o | null = o;
+      while (p && !p.name.includes(name)) p = p.parent;
+      return Boolean(p);
+    })![1]();
+  const streams = () =>
+    tub.object
+      .getObjectsByProperty('type', 'Mesh')
+      .filter(
+        (o) =>
+          (o as { geometry?: { type: string } }).geometry?.type ===
+            'CylinderGeometry' && o.visible,
+      ).length;
+  tub.update?.(0.1);
+  const before = streams();
+  press('Spa start switch');
+  tub.update?.(0.1);
+  expect(streams()).toBeGreaterThan(before);
+  press('Spa stop switch');
+  tub.update?.(0.1);
+  expect(streams()).toBe(before);
+  disposeKit(kit, tub.object as never);
+  disposeKit(kit, plate.object as never);
 });

@@ -38,6 +38,7 @@ import {
   createDisplaysBoard,
   createBoilerControlsBoard,
   createSmallControlsBoard,
+  createWetControlsBoard,
   createSwingHandleBoard,
   createTriStateBoard,
   createGaugeTestBoard,
@@ -259,6 +260,13 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
   place(signFitting(POOL_SIGN_WALL), 6.6, 1.75, southFace, Math.PI, {
     minX: 5.7 * m,
     maxX: 7.5 * m,
+    minZ: (southFace - 0.2) * m,
+    maxZ: half.z * m,
+  });
+  // The wet controls, for spas and showers, beside the signs.
+  place(createWetControlsBoard(kit), 4.2, 1.55, southFace, Math.PI, {
+    minX: 3.8 * m,
+    maxX: 4.6 * m,
     minZ: (southFace - 0.2) * m,
     maxZ: half.z * m,
   });

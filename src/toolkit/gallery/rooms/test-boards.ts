@@ -82,6 +82,7 @@ import {
   studioSwitch,
 } from '../../components/core/parts/parts';
 import { STUDIO_LED_COLOURS } from '../../components/industrial-control/views/studio-controls';
+import { piezoButton } from '../../components/core/parts/wet-parts';
 import type {
   StudioCapColour,
   StudioLedColour,
@@ -1395,4 +1396,48 @@ export function createSwingHandleBoard(kit: PanelKit): TestFitting {
   return fitting(board, [
     () => lamp.color.set(handle.unlatched.value ? '#5dff7a' : '#2a2c2a'),
   ]);
+}
+
+/**
+ * The WET CONTROLS board: the stainless piezo switch used wherever a
+ * button is needed near water (a spa's deck, a shower, the poolside),
+ * twice life size. START lights its ring and keeps it lit, as a cycle
+ * running would, until STOP; LIGHT turns its own ring on and off; the
+ * others show the press with a flash of their rings.
+ */
+export function createWetControlsBoard(kit: PanelKit): TestFitting {
+  const board = createBoard(kit, {
+    title: 'WET CONTROLS',
+    width: 0.7,
+    height: 0.34,
+    scale: 1,
+    captionScale: 1.2,
+  });
+  const running = signal(false);
+  const light = signal(false);
+  const row = 0.04;
+  (
+    [
+      ['start', 'green', 'START', () => (running.value = true), running],
+      ['stop', 'red', 'STOP', () => (running.value = false), undefined],
+      ['light', 'white', 'LIGHT', () => (light.value = !light.value), light],
+      ['power', 'blue', 'POWER', undefined, undefined],
+      ['plus', 'amber', '+', undefined, undefined],
+      ['minus', 'amber', '-', undefined, undefined],
+    ] as const
+  ).forEach(([symbol, ring, legend, action, lit], i) =>
+    board.place(
+      piezoButton(kit, { symbol, ring, legend, action, lit }),
+      -0.25 + i * 0.1,
+      row,
+      2,
+    ),
+  );
+  board.caption(
+    'PIEZO SWITCHES, 316 STAINLESS, IP68, TWICE LIFE SIZE',
+    0,
+    -0.1,
+    0.008,
+  );
+  return fitting(board);
 }

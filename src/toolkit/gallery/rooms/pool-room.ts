@@ -19,13 +19,6 @@ import {
   corridorJambs,
   createArchedCorridor,
 } from '../views/arched-corridor';
-import {
-  createRedBendy,
-  redBendyJambs,
-  redBendySolids,
-  redBendyWallShape,
-  redBendyZoneAt,
-} from '../views/red-bendy';
 import { createWhiteCorridor } from '../views/white-corridor';
 import { createGreenRoom } from '../views/green-room';
 import { createPoolLadder } from '../views/pool-ladder';
@@ -372,41 +365,24 @@ export function startPoolRoom(
               top: height,
             },
           ]
-        : id === 'PR_A' && side === 'north'
+        : id === 'PR_A' && side === 'south'
           ? [
-              // Either side of red_bendy_1's mouth; the piece round its
-              // half-round head is drawn below.
+              // Either side of the arched corridor's mouth; the piece
+              // round its arch is drawn below.
               {
                 start: low,
-                end: redBendyJambs()[0] - 0.2,
+                end: corridorJambs()[0] - 0.2,
                 bottom: 0,
                 top: height,
               },
               {
-                start: redBendyJambs()[1] + 0.2,
+                start: corridorJambs()[1] + 0.2,
                 end: high,
                 bottom: 0,
                 top: height,
               },
             ]
-          : id === 'PR_A' && side === 'south'
-            ? [
-                // Either side of the arched corridor's mouth; the piece
-                // round its arch is drawn below.
-                {
-                  start: low,
-                  end: corridorJambs()[0] - 0.2,
-                  bottom: 0,
-                  top: height,
-                },
-                {
-                  start: corridorJambs()[1] + 0.2,
-                  end: high,
-                  bottom: 0,
-                  top: height,
-                },
-              ]
-            : [{ start: low, end: high, bottom: 0, top: height }];
+          : [{ start: low, end: high, bottom: 0, top: height }];
     for (const section of sections) {
       const span = section.end - section.start;
       const rise = section.top - section.bottom;
@@ -448,18 +424,6 @@ export function startPoolRoom(
     );
     // In the scene, not the hall's group: it stays drawn while the hall is
     // hidden behind someone in the corridor looking away from it.
-    // red_bendy_1's mouth in the north wall, in the wall's own plane.
-    {
-      const [left, right] = redBendyJambs();
-      add(
-        tile,
-        new ExtrudeGeometry(
-          redBendyWallShape(left - 0.2, right + 0.2, height),
-          { depth: wall, bevelEnabled: false, curveSegments: 32 },
-        ).translate(0, 0, minZ - wall),
-      );
-    }
-    scene.add(createRedBendy(m));
     scene.add(
       createArchedCorridor(
         m,
@@ -508,10 +472,7 @@ export function startPoolRoom(
         .rotateY(-Math.PI / 2)
         .translate((from + to) / 2, 0, minZ),
     );
-  if (id === 'PR_A') {
-    northCove(minX, redBendyJambs()[0]);
-    northCove(redBendyJambs()[1], maxX);
-  } else northCove(minX, maxX);
+  northCove(minX, maxX);
   const southCove = (from: number, to: number) =>
     add(
       tile,
@@ -931,13 +892,6 @@ export function startPoolRoom(
     const south = walls.splice(1, 1)[0];
     const [left, right] = corridorJambs();
     walls.push({ ...south, maxX: left * m }, { ...south, minX: right * m });
-    // And the north wall either side of red_bendy_1's.
-    const north = walls.splice(0, 1)[0];
-    const [bendyLeft, bendyRight] = redBendyJambs();
-    walls.push(
-      { ...north, maxX: bendyLeft * m },
-      { ...north, minX: bendyRight * m },
-    );
     const edge = 0.15 * m;
     for (const [a, b] of [
       [minZ, DRY_PASSAGE.nearZ],
@@ -1023,7 +977,7 @@ export function startPoolRoom(
           }))
         : []),
       ...(id === 'PR_A'
-        ? [...archedCorridorSolids(), ...redBendySolids()].map((s) => ({
+        ? archedCorridorSolids().map((s) => ({
             minX: s.minX * m,
             maxX: s.maxX * m,
             minZ: s.minZ * m,
@@ -1047,12 +1001,8 @@ export function startPoolRoom(
           pitch: -0.05,
         });
   walk.place(start.x, start.z, start.yaw, start.pitch);
-  let activeZone:
-    | 'PR_A'
-    | 'CR_A_UP'
-    | 'CR_A_ARCH'
-    | 'CR_A_STEPS'
-    | 'red_bendy_1' = params.get('room') === 'CR_A_UP' ? 'CR_A_UP' : 'PR_A';
+  let activeZone: 'PR_A' | 'CR_A_UP' | 'CR_A_ARCH' | 'CR_A_STEPS' =
+    params.get('room') === 'CR_A_UP' ? 'CR_A_UP' : 'PR_A';
 
   // The frame: the scene, ambient occlusion, bloom, tone mapping, finish.
   const target = new WebGLRenderTarget(1, 1, {
@@ -1410,7 +1360,6 @@ void main() {
     if (id === 'PR_A' && !walk.following) {
       const nextZone =
         archedZoneAt(walk.walker.x / m, walk.walker.z / m) ??
-        redBendyZoneAt(walk.walker.x / m, walk.walker.z / m) ??
         (dryPassageFloorAt(walk.walker.x / m, walk.walker.z / m) === null
           ? 'PR_A'
           : 'CR_A_UP');

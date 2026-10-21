@@ -17,7 +17,6 @@ import {
   cellularBeam,
   detectorBatten,
   flowArrow,
-  groovedCoupling,
   laggedDuct,
   metalDeck,
   pipeClip,
@@ -128,25 +127,26 @@ const SPECIMENS: readonly Specimen[] = [
       sprinklerPipe(s, m, {
         points: ell(),
         y: 0.3,
-        couplingEvery: 0.45,
+        lengths: 0.45,
         heads: [[0.12, 0.15]],
       }),
   },
   {
     label: 'Grooved coupling',
-    make: (s, m) => {
-      pipeRun(s, m.sprinkler, {
-        points: straight(0.2),
-        y: 0.05,
+    make: (s) => {
+      // Two short lengths, a coupling between them.
+      pipeRun(s, 'grooved-fire', {
+        points: straight(0.3),
+        y: 0.07,
         diameter: 0.09,
+        lengths: 0.3,
       });
-      groovedCoupling(s, m, 0, 0.05, 0, [1, 0]);
     },
   },
   {
     label: 'Sprinkler head',
     make: (s, m) => {
-      pipeRun(s, m.sprinkler, {
+      pipeRun(s, 'grooved-fire', {
         points: straight(0.15),
         y: 0.32,
         diameter: 0.09,
@@ -156,18 +156,18 @@ const SPECIMENS: readonly Specimen[] = [
   },
   {
     label: 'Pipe',
-    make: (s, m) =>
-      pipeRun(s, m.pipe, { points: ell(), y: 0.035, diameter: 0.07 }),
+    make: (s) =>
+      pipeRun(s, 'steel-screwed', {
+        points: ell(),
+        y: 0.035,
+        diameter: 0.07,
+        colour: '#9a4a2c',
+      }),
   },
   {
     label: 'Conduit',
-    make: (s, m) =>
-      pipeRun(s, m.conduit, {
-        points: ell(),
-        y: 0.015,
-        diameter: 0.03,
-        bend: 0.12,
-      }),
+    make: (s) =>
+      pipeRun(s, 'steel-screwed', { points: ell(), y: 0.015, diameter: 0.03 }),
   },
   {
     label: 'Strut trapeze',
@@ -184,7 +184,12 @@ const SPECIMENS: readonly Specimen[] = [
   {
     label: 'Pipe clip',
     make: (s, m) => {
-      pipeRun(s, m.pipe, { points: straight(0.3), y: 0.1, diameter: 0.07 });
+      pipeRun(s, 'steel-screwed', {
+        points: straight(0.3),
+        y: 0.1,
+        diameter: 0.07,
+        colour: '#9a4a2c',
+      });
       pipeClip(s, m, 0, 0.1, 0, [1, 0], 0.07, 0.55);
     },
   },

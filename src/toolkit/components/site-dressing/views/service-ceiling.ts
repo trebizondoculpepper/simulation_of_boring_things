@@ -166,15 +166,21 @@ export function createServiceCeiling(
           points,
           y,
           diameter: s.size,
-          bend: s.bend,
           heads: run.drops,
         });
         break;
       case 'pipe':
-        pipeRun(sink, m.pipe, { points, y, diameter: s.size, bend: s.bend });
+        // Oxide-painted screwed steel, as the brown pipe in the photographs.
+        pipeRun(sink, 'steel-screwed', {
+          points,
+          y,
+          diameter: s.size,
+          colour: '#9a4a2c',
+        });
         break;
       case 'conduit':
-        pipeRun(sink, m.conduit, { points, y, diameter: s.size, bend: s.bend });
+        // Galvanised steel conduit, screwed.
+        pipeRun(sink, 'steel-screwed', { points, y, diameter: s.size });
         break;
     }
     // Flow arrows on its underside, the way it flows: red over blue on

@@ -84,7 +84,7 @@ export const NEON_BUZZ: LoopRecipe = (context, out) => {
 export const MOTOR_HUM: LoopRecipe = machineTone('motor', signal(1), 0.06);
 
 /** A shared second of white noise, for hisses. */
-const noiseSource = (context: AudioContext) => {
+export const noiseSource = (context: AudioContext) => {
   const buffer = context.createBuffer(
     1,
     context.sampleRate,

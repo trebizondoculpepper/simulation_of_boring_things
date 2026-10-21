@@ -23,6 +23,7 @@ import {
   place,
 } from '../../../components/pool/views/pool-fittings';
 import type { PlantExhibit } from './exhibit';
+import { AMENITY_EXHIBITS } from './pool-amenities';
 
 /**
  * dev12: the pool fittings (`components/pool/views/pool-fittings.ts`),
@@ -31,7 +32,7 @@ import type { PlantExhibit } from './exhibit';
  * components are set into the pools in dev11.
  */
 export const PURPOSE =
-  'Drains, inlets, overflow, gullies and wall fittings, set in pool tile';
+  'Drains, inlets, overflow, gullies and wall fittings, set in pool tile; the shower, the footbath and the jacuzzi with its controller';
 
 type Tools = ReturnType<typeof plantTools>;
 
@@ -295,4 +296,5 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       return group;
     },
   },
+  ...AMENITY_EXHIBITS,
 ];
