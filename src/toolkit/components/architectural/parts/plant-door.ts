@@ -138,6 +138,11 @@ export function plantRoomDoor(
   // kick plate on this face too.
   pushPlate(t, hinge, steel, w - 0.09, 1.38, -thick, -1);
   kickPlate(t, hinge, steel, w, w / 2, -thick, -1);
+  const shoeWarning = createDoorWarningStickers(kit, ['shoe-coverings'], 0.42);
+  shoeWarning.name = 'plant side shoe covering warning';
+  shoeWarning.position.set(w / 2, 1.75, -thick - 0.006);
+  shoeWarning.rotation.y = Math.PI;
+  hinge.add(shoeWarning);
   const lever = new Group();
   lever.position.set(w - 0.09, 1.05, -thick);
   hinge.add(lever);

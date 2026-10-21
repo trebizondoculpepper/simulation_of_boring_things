@@ -11,7 +11,12 @@
  */
 
 /** Bumped whenever the world's shape changes; `save.ts` migrates older saves. */
-export const WORLD_VERSION = 1;
+import { newPlantServices } from './plant/services';
+import type { PlantServices, ServiceRoom, Utility } from './plant/services';
+import { newPools, stepPools } from './plant/pools';
+import type { PoolsState } from './plant/pools';
+
+export const WORLD_VERSION = 3;
 
 export interface World {
   /** Seconds the world has run. */
@@ -23,16 +28,25 @@ export interface World {
     /** How many times it has been switched on. */
     presses: number;
   };
+  plant: PlantServices;
+  pools: PoolsState;
 }
 
 export function newWorld(): World {
-  return { time: 0, demo: { on: false, presses: 0 } };
+  return {
+    time: 0,
+    demo: { on: false, presses: 0 },
+    plant: newPlantServices(),
+    pools: newPools(),
+  };
 }
 
 /** What a room may do to the world. */
 export type WorldAction =
   | { type: 'demo/set'; on: boolean }
-  | { type: 'demo/reset' };
+  | { type: 'demo/reset' }
+  | { type: 'plant/source'; utility: Utility; on: boolean }
+  | { type: 'plant/feeder'; room: ServiceRoom; on: boolean };
 
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
@@ -49,12 +63,36 @@ export function applyAction(world: World, action: WorldAction): World {
       return world.demo.on
         ? { ...world, demo: { ...world.demo, on: false } }
         : world;
+    case 'plant/source':
+      return world.plant.sources[action.utility] === action.on
+        ? world
+        : {
+            ...world,
+            plant: {
+              ...world.plant,
+              sources: { ...world.plant.sources, [action.utility]: action.on },
+            },
+          };
+    case 'plant/feeder':
+      return world.plant.feeders[action.room] === action.on
+        ? world
+        : {
+            ...world,
+            plant: {
+              ...world.plant,
+              feeders: { ...world.plant.feeders, [action.room]: action.on },
+            },
+          };
   }
 }
 
 /** The world `delta` seconds on. */
 export function stepWorld(world: World, delta: number): World {
-  return { ...world, time: world.time + delta };
+  return {
+    ...world,
+    time: world.time + delta,
+    pools: stepPools(world.pools, world.plant, delta),
+  };
 }
 
 /** The world's fixed time step, seconds. */

@@ -1,4 +1,11 @@
-import { Color, MeshStandardMaterial } from 'three';
+import {
+  Color,
+  CylinderGeometry,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  Vector3,
+} from 'three';
 import type { BufferGeometry, Material } from 'three';
 import type { Vec3 } from '../logic/pipe-route';
 import { createFlexHose, createPipeRun, putPipeRun } from './pipe-route';
@@ -272,6 +279,49 @@ export function createPipe(
   if (PIPE_KINDS[id].flexible && !options.laid)
     return createFlexHose(points, materials.pipe, od);
   return createPipeRun(points, materials, style(id, od, options));
+}
+
+/** A visible three-way fitting centred where a branch meets a straight main. */
+export function createPipeTee(
+  id: PipeKindId,
+  mainOd: number,
+  branchOd: number,
+  at: Vec3,
+  mainDirection: Vec3,
+  branchDirection: Vec3,
+) {
+  const main = new Vector3(...mainDirection).normalize();
+  const branch = new Vector3(...branchDirection).normalize();
+  if (Math.abs(main.dot(branch)) > 1e-6)
+    throw new Error('A pipe tee branch must be perpendicular to its main');
+  const materials = pipeKindMaterials(id);
+  const fitting = materials.cladding ?? materials.fitting ?? materials.pipe;
+  const group = new Group();
+  group.name = `Pipe tee (${id}, ${Math.round(mainOd * 1000)} × ${Math.round(branchOd * 1000)} mm)`;
+  group.position.set(...at);
+  const sleeve = (
+    od: number,
+    length: number,
+    direction: Vector3,
+    offset: number,
+  ) => {
+    const radius = od / 2 + (PIPE_KINDS[id].insulation?.thickness ?? 0);
+    const mesh = new Mesh(
+      new CylinderGeometry(
+        radius * 1.16,
+        radius * 1.16,
+        length,
+        od > 0.15 ? 24 : 16,
+      ),
+      fitting,
+    );
+    mesh.position.copy(direction).multiplyScalar(offset);
+    mesh.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), direction);
+    group.add(mesh);
+  };
+  sleeve(mainOd, mainOd * 2.2, main, 0);
+  sleeve(branchOd, branchOd * 1.1, branch, branchOd * 0.55);
+  return group;
 }
 
 /** The same run, put into a batch by material (a services ceiling's sink). */

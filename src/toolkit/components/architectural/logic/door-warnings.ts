@@ -6,7 +6,8 @@ export type DoorStickerId =
   | 'gas-equipment'
   | 'corrosive-chemicals'
   | 'keep-chemicals-apart'
-  | 'live-electrical';
+  | 'live-electrical'
+  | 'shoe-coverings';
 
 export type DoorWarningPreset = 'plant' | 'furnace' | 'chemical' | 'electrical';
 export type DoorWarningSelection = DoorWarningPreset | readonly DoorStickerId[];

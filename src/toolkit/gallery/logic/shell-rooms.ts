@@ -83,8 +83,10 @@ export const SHELL_ROOMS = {
   acid_store: {
     id: 'acid_store',
     title: 'ACID STORE',
-    w: 4,
-    d: 4.5,
+    // Larger than the sizing's 4 × 4.5 m: its extract, PPE cabinet and
+    // signs need wall of their own, clear of the pallet and the shower.
+    w: 5,
+    d: 5,
     height: 7,
     ceiling: 'services',
     doors: [{ wall: 'south', at: 0, to: 'loading_bay' }],
@@ -507,8 +509,15 @@ export function wetHallRails(): Footprint[] {
       maxZ: stair.bottom - 0.6,
     },
   ];
-  // The ramp's: along the first flight's open side, and the second's but
-  // for its foot, low enough to step off.
+  return [
+    ...STAIRED.flatMap((wall) => north.map((f) => fromNorth(wall, f))),
+    ...wetHallRampRails(),
+  ];
+}
+
+/** The ramp's two open-side guard runs, shared by collision and rendering. */
+export function wetHallRampRails(): Footprint[] {
+  const r = 0.05;
   const ramp = wetHallRamp();
   const R = wetHallRoom().w / 2;
   const rampRails: Footprint[] = [
@@ -525,10 +534,7 @@ export function wetHallRails(): Footprint[] {
       maxZ: R,
     },
   ];
-  return [
-    ...STAIRED.flatMap((wall) => north.map((f) => fromNorth(wall, f))),
-    ...rampRails,
-  ];
+  return rampRails;
 }
 
 /** Each entrance's landing and stair, turned to its wall, for the view. */

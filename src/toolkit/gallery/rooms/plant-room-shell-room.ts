@@ -1,6 +1,5 @@
 import {
   ACESFilmicToneMapping,
-  Box3,
   AmbientLight,
   HemisphereLight,
   HalfFloatType,
@@ -94,8 +93,9 @@ import {
 import { createPartSet } from '../../components/core/parts/parts';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { knobDirection } from '../../controls/input/knob-turning';
-import { JACUZZI_PACK_EXHIBIT } from './plant/spa-pack';
-import { isLive } from './plant/exhibit';
+import { createRoomEquipment } from '../views/room-equipment';
+import { cabinetServices } from '../views/cabinet-services';
+import { CEILING_ZONE } from '../logic/room-pipes';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
 import type { MimicSpec } from '../../components/industrial-control/logic/mimic';
 
@@ -138,16 +138,34 @@ export function startPlantRoomShell(
   parts.add(door);
   scene.add(rooms);
   const plan = plantRoomPlan(size);
-  const cabinetType = hall === 'pool_03' ? JACUZZI_PACK_EXHIBIT : null;
-  const builtCabinet = cabinetType?.build(kit);
-  const cabinet = builtCabinet && isLive(builtCabinet) ? builtCabinet : null;
-  const cabinetAt =
-    hall === 'pool_02' ? { x: 7.4, z: -7.6 } : { x: -1.2, z: 0 };
-  if (cabinet) {
-    cabinet.object.position.set(cabinetAt.x, plan.floor, cabinetAt.z);
-    cabinet.object.rotation.y = hall === 'pool_02' ? Math.PI : Math.PI / 2;
-    rooms.add(cabinet.object);
-  }
+  // A hall's plant room's machines, placed (`logic/room-equipment.ts`).
+  const machines = hall
+    ? createRoomEquipment(kit, `plant_${hall}`, plan.floor)
+    : null;
+  if (machines) rooms.add(machines.group);
+  // A packaged cabinet's services (`logic/cabinet-pipes.ts`): its pipes
+  // and conduit, each marked (BS 1710) and fitted where it passes through
+  // a wall; its drain's tundish and gully; and its isolator, which feeds
+  // it: switched off, the cabinet is dead.
+  const services = hall
+    ? cabinetServices(
+        kit,
+        `plant_${hall}`,
+        plan.floor,
+        plan.roof - plan.floor - CEILING_ZONE,
+      )
+    : null;
+  if (services) rooms.add(services.group);
+  const supply = machines
+    ? (() => {
+        let found: { value: boolean } | null = null;
+        machines.group.traverse((o) => {
+          if (o.userData.supply)
+            found = o.userData.supply as { value: boolean };
+        });
+        return found as { value: boolean } | null;
+      })()
+    : null;
   const jacuzziMimic =
     hall === 'pool_03' ? createMimicBoard(kit, JACUZZI_MIMIC) : null;
   if (jacuzziMimic) {
@@ -163,7 +181,8 @@ export function startPlantRoomShell(
     for (let o: Object3D | null = hit.object; o; o = o.parent) {
       const work =
         parts.uses.get(o) ??
-        cabinet?.parts?.uses.get(o) ??
+        machines?.useOf(o) ??
+        services?.uses.get(o) ??
         jacuzziMimic?.parts.uses.get(o);
       if (work) {
         const at = o;
@@ -294,17 +313,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       southWay.beyond,
     ),
   ];
-  if (cabinet) {
-    // The cabinet's own body, its doors shut: walk up to it and open them.
-    rooms.updateMatrixWorld(true);
-    const box = new Box3().setFromObject(cabinet.object);
-    walls.push({
-      minX: box.min.x,
-      maxX: box.max.x,
-      minZ: box.min.z,
-      maxZ: box.max.z,
-    });
-  }
+  // Its machines' footprints, to walk round.
+  if (machines) walls.push(...machines.solids.map(toMetre));
   const walk = createFirstPerson({
     canvas,
     camera,
@@ -416,8 +426,11 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       for (const reader of [door.reader, ...equipment.readers])
         reader.doorOpened(r.audible);
     wasOpen = r.was;
-    cabinet?.parts?.update(delta);
-    cabinet?.update?.(delta);
+    machines?.update(delta);
+    if (services) {
+      services.update(delta);
+      if (supply) supply.value = services.isolator?.on ?? true;
+    }
     jacuzziMimic?.parts.update(delta);
     jacuzziMimic?.show(JACUZZI_MIMIC_STATE);
     // Out through the equipment doors, once the corridor is seen beyond.
@@ -458,8 +471,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       withdraw();
       withdrawSouth();
       parts.dispose();
-      cabinet?.parts?.dispose();
-      cabinet?.dispose?.();
+      machines?.dispose();
       jacuzziMimic?.parts.dispose();
       disposeKit(kit, rooms as never);
       walk.dispose();

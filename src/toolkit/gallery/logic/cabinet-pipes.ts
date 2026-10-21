@@ -1,0 +1,428 @@
+import { layoutRoom } from './room-equipment';
+import type { Placed } from './room-equipment';
+
+/**
+ * The services of the rooms whose plant is one packaged cabinet: the
+ * footbath's spa set, and the jacuzzi's with its jets and air. The
+ * cabinet's own skid piping is part of the product; its connections are
+ * the valved stubs out through its back panel and the cable gland on its
+ * roof (`spa-pack.ts`), its ports. From each a run goes where it must:
+ * the spa's water (its return, its overflow into the surge vessel, the
+ * jets' suction and discharge, the air line) out through the north wall,
+ * toward the pool; the heating ring's flow and return, lagged, and the
+ * electricity, through the south, from the central plant; the drain down
+ * into a tundish on a floor gully, which takes it under the floor to the
+ * drainage. The electricity comes through a lockable isolator on the
+ * wall at the cabinet's left. Where a run passes through a wall it has a
+ * fire collar (plastic pipe) or a sleeve (metal), the plant room being a
+ * fire compartment. Pure: metres, the room's frame, its floor at y = 0.
+ */
+
+export type Vec3 = readonly [number, number, number];
+
+export type Service =
+  | 'pool water'
+  | 'air'
+  | 'heating flow'
+  | 'heating return'
+  | 'drainage'
+  | 'electrical';
+
+export type RunKind =
+  | 'pvc-pressure'
+  | 'pvc-drain'
+  | 'lagged-heating'
+  | 'steel-screwed';
+
+export interface CabinetPort {
+  name: string;
+  /** In the cabinet's frame: origin on the floor at its footprint's middle, front toward +z. */
+  at: Vec3;
+  /** Which way it points out of the cabinet. */
+  out: 'back' | 'up';
+  kind: RunKind;
+  od: number;
+  service: Service;
+  /** What its run's label says. */
+  label: string;
+  /** Where its run goes. */
+  to: 'pool' | 'plant' | 'drain' | 'isolator';
+}
+
+/** The cabinet's sizes, as `spa-pack.ts` has them. */
+function cabinet(jets: boolean) {
+  const w = jets ? 2.8 : 1.7;
+  const d = jets ? 1.0 : 0.9;
+  const leaf = w / 2 - 0.01;
+  return {
+    w,
+    d,
+    h: 2.1,
+    /** The body is set back by half a door leaf. */
+    bodyZ: -leaf / 2,
+    skidX: jets ? -1.1 / 2 : 0,
+    skidY: 0.16,
+  };
+}
+
+/**
+ * A cabinet's ports, where its back panel's stubs end and its roof's
+ * gland stands. The numbers are `spa-pack.ts`'s (its stubs' and its
+ * `SPA_DRAIN` and `spaGland`), carried through its frames;
+ * `cabinet-ports.test.ts` checks there is a stub or gland at each.
+ */
+export function cabinetPorts(jets: boolean): CabinetPort[] {
+  const c = cabinet(jets);
+  const back = c.bodyZ - c.d / 2 - 0.03;
+  const at = (x: number, y: number): Vec3 => [c.skidX + x, c.skidY + y, back];
+  const ports: CabinetPort[] = [
+    {
+      name: 'Return to the spa',
+      at: at(0.52, 0.08),
+      out: 'back',
+      kind: 'pvc-pressure',
+      od: 0.05,
+      service: 'pool water',
+      label: 'SPA RETURN',
+      to: 'pool',
+    },
+    {
+      name: 'Overflow from the spa',
+      at: at(-0.66, 1.0),
+      out: 'back',
+      kind: 'pvc-pressure',
+      od: 0.05,
+      service: 'pool water',
+      label: 'SPA OVERFLOW',
+      to: 'pool',
+    },
+    {
+      name: 'Heating flow',
+      at: at(0.315, 1.0),
+      out: 'back',
+      kind: 'lagged-heating',
+      od: 0.0337,
+      service: 'heating flow',
+      label: 'LTHW FLOW',
+      to: 'plant',
+    },
+    {
+      name: 'Heating return',
+      at: at(0.2, 1.1),
+      out: 'back',
+      kind: 'lagged-heating',
+      od: 0.0337,
+      service: 'heating return',
+      label: 'LTHW RETURN',
+      to: 'plant',
+    },
+    {
+      name: 'Drain to waste',
+      at: at(0.05, 0.05),
+      out: 'back',
+      kind: 'pvc-drain',
+      od: 0.05,
+      service: 'drainage',
+      label: 'DRAIN',
+      to: 'drain',
+    },
+    {
+      name: 'Electrical supply',
+      at: [-c.w / 2 + 0.1, c.h + 0.06, c.bodyZ - c.d / 2 + 0.15],
+      out: 'up',
+      kind: 'steel-screwed',
+      od: 0.025,
+      service: 'electrical',
+      label: '400 V SUPPLY',
+      to: 'isolator',
+    },
+  ];
+  if (jets) {
+    const jx = c.w / 2 - 1.1 / 2;
+    const base = 0.1;
+    ports.push(
+      {
+        name: 'Jets suction from the spa',
+        at: [jx - 0.5, base + 0.35, back],
+        out: 'back',
+        kind: 'pvc-pressure',
+        od: 0.09,
+        service: 'pool water',
+        label: 'JETS SUCTION',
+        to: 'pool',
+      },
+      {
+        name: 'Jets discharge to the spa',
+        at: [jx - 0.1, base + 1.25, back],
+        out: 'back',
+        kind: 'pvc-pressure',
+        od: 0.09,
+        service: 'pool water',
+        label: 'JETS DISCHARGE',
+        to: 'pool',
+      },
+      {
+        name: 'Air to the spa’s blower ring',
+        at: [jx + 0.2, base + 1.4, back],
+        out: 'back',
+        kind: 'pvc-pressure',
+        od: 0.06,
+        service: 'air',
+        label: 'BLOWER AIR',
+        to: 'pool',
+      },
+    );
+  }
+  return ports;
+}
+
+/** The cabinet's body (doors shut) in its own frame: its half-width, its back and front. */
+export function cabinetBody(jets: boolean) {
+  const c = cabinet(jets);
+  return {
+    half: c.w / 2,
+    back: c.bodyZ - c.d / 2,
+    front: c.bodyZ + c.d / 2,
+    h: c.h,
+  };
+}
+
+/** A point of the cabinet's frame in the room's, by its placing. */
+function inRoom(p: Placed, [x, y, z]: Vec3): Vec3 {
+  const c = Math.cos(p.yaw);
+  const s = Math.sin(p.yaw);
+  return [p.x + x * c + z * s, y, p.z - x * s + z * c];
+}
+
+/** The cabinet's body in the room, as a box. */
+export function cabinetBodyIn(p: Placed, jets: boolean) {
+  const b = cabinetBody(jets);
+  const corners = [
+    inRoom(p, [-b.half, 0, b.back]),
+    inRoom(p, [b.half, 0, b.front]),
+  ];
+  return {
+    min: [
+      Math.min(corners[0][0], corners[1][0]),
+      0,
+      Math.min(corners[0][2], corners[1][2]),
+    ] as Vec3,
+    max: [
+      Math.max(corners[0][0], corners[1][0]),
+      b.h,
+      Math.max(corners[0][2], corners[1][2]),
+    ] as Vec3,
+  };
+}
+
+/** A wall a run passes through, and what is fitted where it does. */
+export interface WallCrossing {
+  /** The middle of the wall's thickness where the run crosses it. */
+  at: Vec3;
+  /** Its normal, into the room. */
+  normal: Vec3;
+  thickness: number;
+  kind: 'fire-collar' | 'sleeve';
+}
+
+export interface CabinetRun {
+  name: string;
+  kind: RunKind;
+  od: number;
+  service: Service;
+  label: string;
+  points: Vec3[];
+  /** Where it passes through the room's walls. */
+  through: WallCrossing[];
+}
+
+/** The room's isolator: on the wall at the cabinet's left, a working rotary switch-disconnector. */
+export interface Isolator {
+  /** Its back's middle in the wall's face, and its turn (front into the room). */
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  /** Its box's size: wide, tall, deep. */
+  w: number;
+  h: number;
+  d: number;
+  /** Where its supply comes in at its top, and its feed to the cabinet leaves. */
+  supplyIn: Vec3;
+  feedOut: Vec3;
+}
+
+/** Out from a stub's valve and cap before a pipe turns, metres. */
+const CLEAR = 0.15;
+/** The lowest height a pool pipe crosses the room at, over the cabinet's top. */
+const LOWEST = 2.5;
+const STEP = 0.2;
+/** How much further out from the cabinet's back the heating's lane is. */
+const HEATING_LANE = 0.17;
+/** Over the head of a doorway (the equipment doors' 2.52 m) and clear of it. */
+export const ABOVE_DOORS = 2.8;
+/** The isolator's supply comes along the wall this high, over everything else. */
+const SUPPLY_LEVEL = 3.1;
+/** Its feed to the cabinet crosses over the cabinet's roof this high. */
+const FEED_LEVEL = 2.35;
+/** The walls' thickness. */
+const WALL = 0.2;
+/** The isolator's box (`createPowerIsolator`): about 115 × 160 × 105 mm. */
+const ISOLATOR = { w: 0.12, h: 0.17, d: 0.105, y: 1.5 } as const;
+
+const PLASTIC = new Set<RunKind>(['pvc-pressure', 'pvc-drain']);
+
+/** The room's cabinet, its placing, the way out of its back, and its wall's line in its frame. */
+function setting(room: string) {
+  const layout = layoutRoom(room);
+  const placed = layout?.placed.find((p) => p.item.key.endsWith('-pack'));
+  if (!layout || !placed) return null;
+  const jets = placed.item.key === 'jacuzzi-pack';
+  const outDir = inRoom({ ...placed, x: 0, z: 0 }, [0, 0, -1]);
+  const wallLocal = -(placed.item.d / 2 + (placed.item.back ?? 0));
+  return { layout, placed, jets, outDir, wallLocal, h: layout.box.d / 2 };
+}
+
+/** The isolator on the wall at the cabinet's left (its −x, as you face it). */
+export function cabinetIsolator(room: string): Isolator | null {
+  const s = setting(room);
+  if (!s) return null;
+  const { placed, outDir, wallLocal } = s;
+  const along = -(placed.item.w / 2) - 0.35;
+  const face = inRoom(placed, [along, 0, wallLocal]);
+  const into = [-outDir[0], 0, -outDir[2]] as const;
+  const centre: Vec3 = [
+    face[0] + into[0] * (ISOLATOR.d / 2),
+    ISOLATOR.y,
+    face[2] + into[2] * (ISOLATOR.d / 2),
+  ];
+  // Along the wall, toward the cabinet: its local +x in the room.
+  const toward = inRoom({ ...placed, x: 0, z: 0 }, [1, 0, 0]);
+  const top = ISOLATOR.y + ISOLATOR.h / 2 + 0.02;
+  return {
+    x: face[0],
+    z: face[2],
+    yaw: Math.atan2(into[0], into[2]),
+    ...ISOLATOR,
+    supplyIn: [centre[0] - toward[0] * 0.03, top, centre[2] - toward[2] * 0.03],
+    feedOut: [centre[0] + toward[0] * 0.03, top, centre[2] + toward[2] * 0.03],
+  };
+}
+
+/** Where the drain's tundish and floor gully stand: under its stub's turn. */
+export function cabinetGully(room: string): Vec3 | null {
+  const s = setting(room);
+  if (!s) return null;
+  const port = cabinetPorts(s.jets).find((p) => p.to === 'drain')!;
+  const at = inRoom(s.placed, port.at);
+  return [at[0] + s.outDir[0] * CLEAR, 0, at[2] + s.outDir[2] * CLEAR];
+}
+
+/** Through a north or south wall at its end: carried on to the wall's outer face, its fitting in the wall. */
+function throughWall(
+  points: Vec3[],
+  h: number,
+  kind: RunKind,
+): { points: Vec3[]; through: WallCrossing[] } {
+  const end = points[points.length - 1];
+  const side = Math.sign(end[2]);
+  if (Math.abs(Math.abs(end[2]) - h) > 1e-6) return { points, through: [] };
+  return {
+    points: [...points.slice(0, -1), [end[0], end[1], side * (h + WALL)]],
+    through: [
+      {
+        at: [end[0], end[1], side * (h + WALL / 2)],
+        normal: [0, 0, -side],
+        thickness: WALL,
+        kind: PLASTIC.has(kind) ? 'fire-collar' : 'sleeve',
+      },
+    ],
+  };
+}
+
+/**
+ * The cabinet's runs in `room` (`plant_pool_03`, `plant_pool_04`):
+ * - the spa's pipes out of their stubs, up behind the cabinet, each to its
+ *   own height, the further south the higher (so none crosses another's
+ *   riser), and north through the wall;
+ * - the heating, in a lane of its own further out, straight up above the
+ *   doors' height and south through the wall;
+ * - the drain straight down into its tundish;
+ * - the supply along the wall from the south, over everything, down into
+ *   the isolator; and the isolator's feed up over the cabinet's roof and
+ *   down into its gland.
+ */
+export function cabinetPipes(room: string): CabinetRun[] {
+  const s = setting(room);
+  if (!s) return [];
+  const { placed, jets, outDir, h } = s;
+  const ports = cabinetPorts(jets).map((port) => {
+    const at = inRoom(placed, port.at);
+    const off: Vec3 = [
+      at[0] + outDir[0] * CLEAR,
+      at[1],
+      at[2] + outDir[2] * CLEAR,
+    ];
+    return { port, at, off };
+  });
+  const runs: CabinetRun[] = [];
+  const add = (port: CabinetPort, points: Vec3[]) =>
+    runs.push({
+      name: port.name,
+      kind: port.kind,
+      od: port.od,
+      service: port.service,
+      label: port.label,
+      ...throughWall(points, h, port.kind),
+    });
+  // To the pool: north first, lowest.
+  ports
+    .filter((p) => p.port.to === 'pool')
+    .sort((a, b) => a.off[2] - b.off[2])
+    .forEach(({ port, at, off }, i) => {
+      const y = LOWEST + i * STEP;
+      add(port, [at, off, [off[0], y, off[2]], [off[0], y, -h]]);
+    });
+  // To the central plant.
+  ports
+    .filter((p) => p.port.to === 'plant')
+    .forEach(({ port, at }, i) => {
+      // A lane each, apart by more than their lagging (40 mm all round).
+      const reach = CLEAR + HEATING_LANE + i * 0.15;
+      const x = at[0] + outDir[0] * reach;
+      const z = at[2] + outDir[2] * reach;
+      const y = ABOVE_DOORS + i * 0.15;
+      add(port, [at, [x, at[1], z], [x, y, z], [x, y, h]]);
+    });
+  // The drain, down into its tundish (its rim at 0.12 m, an air gap over it).
+  for (const { port, at, off } of ports.filter((p) => p.port.to === 'drain'))
+    add(port, [at, off, [off[0], 0.17, off[2]]]);
+  // The supply, along the wall from the south and down into the isolator;
+  // the isolator's feed over the cabinet's roof and down into its gland.
+  const iso = cabinetIsolator(room)!;
+  const supply = ports.find((p) => p.port.to === 'isolator')!;
+  const [inX, inY, inZ] = iso.supplyIn;
+  add({ ...supply.port, name: 'Supply to the isolator' }, [
+    [inX, inY, inZ],
+    [inX, SUPPLY_LEVEL, inZ],
+    [inX, SUPPLY_LEVEL, h],
+  ]);
+  const g = supply.at;
+  const f = iso.feedOut;
+  // Along the wall to the gland's place along it, then out over the roof.
+  const toward = inRoom({ ...placed, x: 0, z: 0 }, [1, 0, 0]);
+  const turn: Vec3 =
+    Math.abs(toward[0]) > 0.5
+      ? [g[0], FEED_LEVEL, f[2]]
+      : [f[0], FEED_LEVEL, g[2]];
+  runs.push({
+    name: 'Isolator to the cabinet',
+    kind: supply.port.kind,
+    od: supply.port.od,
+    service: 'electrical',
+    label: 'CABINET SUPPLY',
+    points: [f, [f[0], FEED_LEVEL, f[2]], turn, [g[0], FEED_LEVEL, g[2]], g],
+    through: [],
+  });
+  return runs;
+}

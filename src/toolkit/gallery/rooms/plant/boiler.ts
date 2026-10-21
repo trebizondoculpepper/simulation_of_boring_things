@@ -24,7 +24,6 @@ import type {
   GasHouse,
 } from '../../../components/plant/logic/boiler-house';
 import {
-  FLUE_HIGH,
   boilersPermitted,
   newCombustion,
   resetCombustion,
@@ -33,7 +32,6 @@ import {
 } from '../../../components/plant/logic/combustion';
 import type { CombustionState } from '../../../components/plant/logic/combustion';
 import { createCombustionPanel } from '../../../components/plant/views/combustion-panel';
-import { createDialGauge } from '../../../components/industrial-control/views/dial-gauge';
 import { plantAt } from '../../logic/control-room-demo';
 import { GAS_MIMIC, gasState } from '../../logic/pool-mimics';
 import {
@@ -53,10 +51,9 @@ import {
  * the emergency stop, the gas detector and the gas mimic read and change
  * it. The heat demand comes from the plant's reading
  * (`control-room-demo.ts`): boiler 1 leads, boiler 2 follows when the
- * load is high. Closing a boiler's isolating valve, the emergency
- * control valve, or striking the emergency stop takes its gas away: the
- * boiler loses its flame, retries and locks out, until the gas is back
- * and its RESET is pressed (and, after a stop, the gas safety RESET).
+ * load is high. Closing the emergency control valve or striking the
+ * emergency stop takes the boilers' gas away: a boiler loses its flame,
+ * retries and locks out until the gas is back and RESET is pressed.
  */
 const house = {
   boilers: [newBoiler(), newBoiler()] as BoilerState[],
@@ -102,8 +99,8 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Condensing boilers in cascade',
     reference:
-      'After 2 × Remeha Gas 220 Ace 300 kW (800 × 1662 × 657 mm); cascade flue header with 45° branches and non-return flaps',
-    size: { w: 3.0, d: 1.0, h: 3.2, mount: 'floor' },
+      'After 2 × Remeha Gas 220 Ace 300 kW (800 × 1662 × 657 mm); top flue, LTHW and gas ports for room pipe routing',
+    size: { w: 2.2, d: 1.0, h: 1.9, mount: 'floor' },
     build(kit): LiveExhibit {
       const parts = createPartSet();
       const panels = house.boilers.map((_, i) => {
@@ -113,29 +110,8 @@ export const EXHIBITS: readonly PlantExhibit[] = [
         for (const [o, use] of panel.parts.uses) parts.uses.set(o, use);
         return panel;
       });
-      house.isolators = house.boilers.map((_, i) => {
-        const valve = createGasBallValve(kit, {
-          pipeRadius: 0.028,
-          name: `B-50${i + 1} gas isolating valve`,
-        });
-        parts.add(valve);
-        return valve;
-      });
-      // Permanently installed flue thermometers, 0–120 °C.
-      const thermometers = ['B-501', 'B-502', 'HEADER'].map((legend) =>
-        createDialGauge(kit, {
-          kind: 'thermometer',
-          dia: 0.08,
-          min: 0,
-          max: 120,
-          red: { from: FLUE_HIGH, to: 120 },
-          legend,
-        }),
-      );
       const cascade = createBoilerCascade(kit, {
         panels: panels.map((p) => p.group),
-        isolators: house.isolators.map((v) => v.object),
-        flueGauges: thermometers.map((g) => g.group),
       });
       return {
         object: cascade,
@@ -169,11 +145,6 @@ export const EXHIBITS: readonly PlantExhibit[] = [
             house.fouling,
             delta,
           );
-          const c = house.combustion;
-          [...c.flues, c.header].forEach((v, i) => {
-            thermometers[i].set(v);
-            thermometers[i].update(delta);
-          });
         },
       };
     },

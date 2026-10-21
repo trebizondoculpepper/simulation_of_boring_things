@@ -41,6 +41,8 @@ describe('a save', () => {
     expect(loaded.ok && loaded.world).toEqual({
       time: 40,
       demo: { on: true, presses: 0 },
+      plant: newWorld().plant,
+      pools: newWorld().pools,
     });
   });
 

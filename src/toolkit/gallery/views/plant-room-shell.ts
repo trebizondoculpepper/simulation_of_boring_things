@@ -19,6 +19,7 @@ import {
   createWallBattenMaterials,
 } from '../../../scene/wall-batten';
 import { plantRoomDoor } from '../../components/architectural/parts/plant-door';
+import { createShoeCoverDispenser } from '../../components/architectural/views/shoe-cover-dispenser';
 import {
   EQUIPMENT_DOORS,
   equipmentDoors,
@@ -190,6 +191,9 @@ export function createPlantRoomShell(
   door.object.position.set(plan.door.x, 0, -h - t);
   door.object.rotation.y = Math.PI;
   group.add(door.object);
+  const shoeCovers = createShoeCoverDispenser(kit);
+  shoeCovers.position.set(plan.door.x - 0.69, 1.35, -h + 0.09);
+  group.add(shoeCovers);
   // Beyond it, until its pool hall is seen through it, a dark lobby.
   const lobby = box(
     paint('#0b0d0d', 1),

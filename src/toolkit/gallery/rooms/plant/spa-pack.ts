@@ -1,4 +1,4 @@
-import { computed } from '@preact/signals-core';
+import { computed, signal } from '@preact/signals-core';
 import { Group } from 'three';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import { createPipe } from '../../../components/core/views/pipe-kinds';
@@ -54,6 +54,13 @@ const CABINET = { w: 1.7, d: 0.9, h: 2.1, wall: 0.03 } as const;
 const JACUZZI_CABINET = { w: 2.8, d: 1.0, h: 2.1, wall: 0.03 } as const;
 /** The jets' bay at the cabinet's right end, its width. */
 const JETS_BAY = 1.1;
+/** Its drain's stub, in the skid's frame (over the skid's top). */
+export const SPA_DRAIN = { x: 0.05, y: 0.05 } as const;
+/** Its supply gland on the roof, in the body's frame: at its left end, toward its back. */
+export const spaGland = (c: { w: number; d: number }) => ({
+  x: -c.w / 2 + 0.1,
+  z: -c.d / 2 + 0.15,
+});
 /** How far the doors swing open, radians. */
 const OPEN = 1.75;
 /** The filter's working pressure, bar. */
@@ -105,6 +112,20 @@ function buildSpaPack(
         1.7 + k * 0.05,
         0,
       );
+
+  // The supply's cable gland, on a gland plate on its roof at its left end
+  // (as you face it), toward the back.
+  const gland = spaGland(c);
+  t.box(body, dark, 0.14, 0.012, 0.14, gland.x, c.h + 0.006, gland.z);
+  t.cyl(
+    body,
+    t.paint('#3a3d3f', 0.5),
+    0.022,
+    0.05,
+    gland.x,
+    c.h + 0.037,
+    gland.z,
+  );
 
   // ---- Inside: the skid, its parts (`spa-pack-parts.ts`) -------------------
   // The skid stands at the cabinet's left, leaving the jets' bay free.
@@ -232,6 +253,16 @@ function buildSpaPack(
     ],
     'copper',
     0.022,
+  );
+  // Its drain to waste, low through the back panel, from under the skid's
+  // surge vessel and filter.
+  run(
+    [
+      [SPA_DRAIN.x, SPA_DRAIN.y, -0.05],
+      [SPA_DRAIN.x, SPA_DRAIN.y, out],
+    ],
+    'pvc-drain',
+    0.05,
   );
   // The dosing tubes, from each pump head's outlet down under the pumps,
   // back to the wall, along it and down to their injection points on the
@@ -391,14 +422,20 @@ function buildSpaPack(
     door.face.add(latch.object);
     return latch;
   });
-  const running = computed(() => power.position.value === 1);
+  // Its supply, through the isolator on the wall beside it: off, the
+  // whole panel is dead, its lamps dark and its pump stopped. The room
+  // sets it (`object.userData.supply`); on its own, it is always fed.
+  const supplied = signal(true);
+  object.userData.supply = supplied;
+  const running = computed(() => supplied.value && power.position.value === 1);
   const doorOpen = computed(() => latches.some((l) => l.open.value));
+  const doorLamp = computed(() => supplied.value && doorOpen.value);
   const uvOn = computed(() => running.value && !doorOpen.value);
   (
     [
       ['PUMP RUN', 'green', running],
       ['UV ON', 'blue', uvOn],
-      ['DOOR OPEN', 'amber', doorOpen],
+      ['DOOR OPEN', 'amber', doorLamp],
     ] as const
   ).forEach(([legend, colour, drive], i) => {
     const lamp = parts.add(

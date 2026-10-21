@@ -6,6 +6,11 @@ import { createBrandBadge } from '../../core/views/brand-badge';
 import { brandLivery } from '../../core/views/brand-livery';
 import type { BrandId } from '../../core/logic/brands';
 import { FINISH, PIPE_SIZES, plantTools } from './plant-tools';
+import {
+  PAIR_DISCHARGE_X,
+  PAIR_STRAINER_X,
+  PUMP_ALONG,
+} from '../logic/pump-pair';
 import type { DN, Point } from './plant-tools';
 
 /**
@@ -297,18 +302,20 @@ export function createPumpPair(kit: PanelKit) {
     const set = new Group();
     set.position.z = z;
     group.add(set);
-    const pump = createEndSuctionPump(kit, 0.45);
+    const pump = createEndSuctionPump(kit, PUMP_ALONG);
     pumps.push(pump);
     set.add(pump);
+    // The strainer hard up against the pump's suction flange.
     const strainer = createStrainer(kit);
-    strainer.position.x = -1.15;
+    strainer.position.x = PAIR_STRAINER_X;
     set.add(strainer);
-    // Isolating valve on the discharge, and a short riser.
+    // Isolating valve on the discharge, and a short riser, straight up off
+    // the pump's discharge nozzle.
     t.pipe(set, 150, [
-      [0.25, 1.28, 0.12],
-      [0.25, 1.75, 0.12],
+      [PAIR_DISCHARGE_X, 1.28, 0.12],
+      [PAIR_DISCHARGE_X, 1.75, 0.12],
     ]);
-    t.butterflyValve(set, 150, [0.25, 1.5, 0.12], 'y');
+    t.butterflyValve(set, 150, [PAIR_DISCHARGE_X, 1.5, 0.12], 'y');
     const tag = t.printed(
       0.3,
       0.06,
@@ -502,17 +509,16 @@ export function createSandFilter(
     'z',
     28,
   );
-  t.cyl(
-    group,
-    t.paint('#9fc1c9', 0.1),
-    0.1,
-    0.03,
-    -r * 0.45,
-    cy + 0.15,
-    zc + r * 0.88,
-    'z',
-    24,
-  );
+  // Seat the sight glass outside the curved shell at its offset position.
+  // A fixed fraction of the front radius buried most of the disc in the vessel.
+  const sightX = -r * 0.45;
+  const sightZ = Math.sqrt(r * r - sightX * sightX);
+  const sightMount = new Group();
+  sightMount.position.set(sightX, cy + 0.15, zc + sightZ);
+  sightMount.rotation.y = Math.atan2(sightX, sightZ);
+  group.add(sightMount);
+  t.cyl(sightMount, livery.paint.shade, 0.115, 0.025, 0, 0, 0.018, 'z', 24);
+  t.cyl(sightMount, t.paint('#9fc1c9', 0.1), 0.095, 0.01, 0, 0, 0.036, 'z', 24);
   // Air bleed pipe from the top down the face.
   t.rod(
     group,
@@ -528,33 +534,15 @@ export function createSandFilter(
     [r * 0.3, 1.0, face + 0.05],
     0.012,
   );
-  // Face piping: two manifolds (upper: inlet/backwash out; lower: outlet/backwash in) with valves.
-  const front = face + 0.32;
+  // The two gauges belong to the vessel. Its water nozzles and all pipework
+  // are placed from the shared machine-port data by the room.
   const s = PIPE_SIZES[dn];
   for (const y of [cy + shell / 2 - 0.15, base + 0.45]) {
-    // From the vessel's nozzle out to the manifold, then each way.
-    t.pipe(group, dn, [
-      [0, y, face - 0.05],
-      [0, y, front],
-    ]);
-    t.flanges(group, dn, [0, y, face + 0.06], 'z');
-    t.pipe(group, dn, [
-      [-r - 0.2, y, front],
-      [r + 0.2, y, front],
-    ]);
-    t.butterflyValve(group, dn, [-r * 0.55, y, front], 'x');
-    t.butterflyValve(group, dn, [r * 0.55, y, front], 'x');
-    t.pressureGauge(group, [0, y + s.od / 2 + 0.12, front + 0.02], {
+    t.pressureGauge(group, [0, y + s.od / 2 + 0.12, face + 0.04], {
       max: 4,
       dia: 0.1,
     });
   }
-  // The rinse-to-waste valve, low on the right.
-  t.pipe(group, 80, [
-    [r * 0.55, base + 0.45, front],
-    [r * 0.55, 0.2, front],
-  ]);
-  t.butterflyValve(group, 80, [r * 0.55, 0.32, front], 'y');
   badge(kit, group, 'lidoluxe', [0, cy + 0.45, face + 0.005], 0.08);
   nameplate(
     kit,

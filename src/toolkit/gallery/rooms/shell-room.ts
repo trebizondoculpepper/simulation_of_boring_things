@@ -49,7 +49,6 @@ import {
   shellDoorway,
   shellSolids,
   throughShellDoor,
-  WET_HALL,
   wetHallFloorAt,
   wetHallRails,
   wetHallRoom,
@@ -57,6 +56,7 @@ import {
 import type { ShellDoor, ShellRoomId } from '../logic/shell-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { createShellRoom, createWetHall } from '../views/shell-room';
+import { createRoomEquipment } from '../views/room-equipment';
 import type { EquipmentDoorsPart } from '../../components/architectural/parts/equipment-doors';
 import type { Group } from 'three';
 
@@ -156,6 +156,9 @@ function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
   const { group: rooms, doors } = cfg.build(metre, kit);
   for (const d of doors) parts.add(d.part);
   scene.add(rooms);
+  // Its machines, placed (`logic/room-equipment.ts`), on its floor.
+  const machines = createRoomEquipment(kit, cfg.self, cfg.floorAt(0, 0));
+  rooms.add(machines.group);
   const raycaster = new Raycaster();
   const pointer = new Vector2();
   const usableAt = (x: number, y: number) => {
@@ -163,7 +166,7 @@ function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
     const hit = raycaster.intersectObject(rooms, true)[0];
     if (!hit || hit.distance > 3 * metre) return null;
     for (let o: Object3D | null = hit.object; o; o = o.parent) {
-      const work = parts.uses.get(o);
+      const work = parts.uses.get(o) ?? machines.useOf(o);
       if (work) {
         const at = o;
         return () => work(knobDirection(at, hit.point, camera));
@@ -313,7 +316,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   });
   composer.addPass(film);
 
-  const walls = cfg.solids.map(toMetre);
+  const walls = [...cfg.solids, ...machines.solids].map(toMetre);
   const walk = createFirstPerson({
     canvas,
     camera,
@@ -366,6 +369,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     walk.update(delta);
     partAudio.listen(camera, metre);
     parts.update(delta);
+    machines.update(delta);
     // No pair closes on someone standing in its doorway.
     for (const w of ways) if (inWay(w)) w.part.holdOpen();
     const r = doorReaders(
@@ -399,6 +403,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       composer.dispose();
       for (const w of withdrawals) w();
       parts.dispose();
+      machines.dispose();
       disposeKit(kit, rooms as never);
       walk.dispose();
       rooms.traverse((object) => {
@@ -417,6 +422,3 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     },
   );
 }
-
-/** The wet hall's drop, for the corridor's doors into it. */
-export const WET_HALL_DROP = WET_HALL.drop;

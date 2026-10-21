@@ -35,7 +35,7 @@ import {
   WET_HALL_DOORS,
   wetHallEntrances,
   wetHallFloorAt,
-  wetHallRails,
+  wetHallRampRails,
   wetHallRamp,
 } from '../logic/shell-rooms';
 import type { ShellDoor, ShellWall } from '../logic/shell-rooms';
@@ -482,7 +482,7 @@ export function createWetHall(metre: number, kit: PanelKit) {
         [0, -0.12],
       ].map(([dx, dz]) => wetHallFloorAt(x + dx, z + dz)),
     );
-  for (const f of wetHallRails().slice(-2)) guardAlong(f);
+  for (const f of wetHallRampRails()) guardAlong(f);
   function guardAlong(f: Footprint) {
     const alongX = f.maxX - f.minX > f.maxZ - f.minZ;
     const x = (f.minX + f.maxX) / 2;

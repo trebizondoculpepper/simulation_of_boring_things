@@ -46,6 +46,8 @@ import { createPanelKit } from '../../components/core/views/eighties-controls';
 import { createPoolInfoSign } from '../../components/pool/views/pool-info-sign';
 import { createSignState } from '../../components/pool/logic/pool-info-sign';
 import { createPaceClock } from '../../components/pool/views/pace-clock';
+import { worldStore } from '../../save/world-store';
+import { serviceAvailable } from '../../../game/plant/services';
 import { JACUZZI_EXHIBIT, JACUZZI_PLATE_EXHIBIT } from './plant/pool-amenities';
 import { plantRoomDoor } from '../../components/architectural/parts/plant-door';
 import { doorwayBlock, PLANT_DOORWAY, PLANT_SILL } from '../logic/plant-rooms';
@@ -88,6 +90,7 @@ export function startPoolHallRoom(
     loopRoom: gallery ? 'pool_02_gallery' : id,
   });
   const poolsideKit = createPanelKit();
+  const world = worldStore('dev');
   const poolside = !gallery
     ? (() => {
         const mounts =
@@ -467,6 +470,29 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       }
     }
     if (poolside) {
+      const w = world.world.value;
+      const pool = w.pools[id];
+      const room = `plant_${id}` as const;
+      const flowing = pool.flow > 0.1;
+      poolside.state.power = serviceAvailable(w.plant, room, 'power');
+      const reading = (
+        field: 'water' | 'ph' | 'free' | 'redox' | 'air' | 'humidity',
+        value: number,
+      ) => {
+        if (flowing || field === 'air' || field === 'humidity')
+          poolside.state.readings[field] = { value, at: w.time };
+      };
+      reading('water', pool.temperature);
+      reading('ph', pool.ph);
+      reading('free', pool.freeChlorine);
+      reading('redox', pool.redox);
+      reading('air', pool.temperature - 1.5);
+      reading('humidity', serviceAvailable(w.plant, room, 'air') ? 55 : 68);
+      if (poolside.state.readings.combined.value === null)
+        poolside.state.readings.combined = {
+          value: pool.combinedChlorine,
+          at: w.time,
+        };
       const date = new Date();
       const seconds =
         date.getHours() * 3600 +
@@ -475,8 +501,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         date.getMilliseconds() / 1000;
       poolside.state.clock = seconds;
       for (const sign of poolside.signs) {
-        sign.show(poolside.state, seconds);
-        sign.update(seconds);
+        sign.show(poolside.state, w.time);
+        sign.update(w.time);
       }
       poolside.clock?.update();
     }

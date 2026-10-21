@@ -31,7 +31,10 @@ export interface SaveEnvelope {
  * version n world into a version n + 1 one. Empty until the world first
  * changes shape.
  */
-export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {};
+export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
+  1: (world) => world,
+  2: (world) => world,
+};
 
 export function serialiseWorld(world: World, savedAt: number): string {
   const envelope: SaveEnvelope = {

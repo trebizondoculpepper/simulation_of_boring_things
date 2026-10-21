@@ -81,7 +81,14 @@ export function plantRoomPlan(size: PlantRoomSize) {
     stepFree,
     floor: stepFree ? 0 : -P.storey,
     // The tiny room's one storey is as tall as the main corridor (7 m).
-    roof: stepFree ? 2 * P.storey : P.storey,
+    // The large and medium rooms' roofs are a metre higher (8 m in all):
+    // their pipework crosses over the filters, and over their gantries'
+    // headroom, under the services ceiling, which hangs 1.9 m below.
+    roof: stepFree
+      ? 2 * P.storey
+      : size === 'large' || size === 'medium'
+        ? P.storey + 1
+        : P.storey,
     landing,
     stair,
     // The pool side's door north, the main plant's south.

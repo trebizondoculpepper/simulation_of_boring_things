@@ -152,8 +152,14 @@ export function equipmentDoors(
     // The whole leaf and all on it (handle, push and kick plates) work it.
     for (const target of [hinge, leaf, pull]) a.uses.set(target, work);
     a.updates.push((delta) => {
+      const was = state.phase;
       const r = stepPlantDoor(state, delta);
       state = r.state;
+      // The last leaf opened sets the pair's closing time. An older leaf
+      // waits through this leaf's full hold, even if its own hold was
+      // nearly over or its closer had begun to sweep.
+      if (was === 'opening' && state.phase === 'held')
+        for (const other of controls) if (other.hinge !== hinge) other.hold();
       if (r.latchedNow) play(DOOR_SHUT(), a.object);
       // Each swings out toward +z, the pull side, about its own hinge.
       hinge.rotation.y = side * state.angle;

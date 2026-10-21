@@ -37,8 +37,8 @@ export const TRI_STATES = {
   ],
   /** A pump or fan: running, stopped, faulted. */
   motor: [
-    { colour: 'red', legend: 'RUN' },
-    { colour: 'green', legend: 'STOP' },
+    { colour: 'green', legend: 'RUN' },
+    { colour: 'red', legend: 'STOP' },
     { colour: 'amber', legend: 'FAULT' },
   ],
   /** A motorised valve: open, shut, or in travel or faulted. */

@@ -21,6 +21,7 @@ const WORDS: Record<DoorStickerId, readonly [string, string]> = {
   'corrosive-chemicals': ['CORROSIVE CHEMICALS', 'WEAR PROTECTION'],
   'keep-chemicals-apart': ['ACID + HYPOCHLORITE', 'KEEP APART'],
   'live-electrical': ['LIVE ELECTRICAL', 'EQUIPMENT'],
+  'shoe-coverings': ['WEAR SHOE COVERINGS', 'BEFORE ENTERING POOL'],
 };
 
 /** Separate, selectable vinyl stickers, facing +z, centred at their mounting point. */
