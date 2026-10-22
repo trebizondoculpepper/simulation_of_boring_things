@@ -93,7 +93,8 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
         ...room,
         floor: 0,
         roof: spec.height,
-        title: spec.title,
+        // The control room's walls are its mimics': no title card there.
+        title: id === 'control_room' ? null : spec.title,
         note: spec.note,
         seed: SEEDS[id],
       }),

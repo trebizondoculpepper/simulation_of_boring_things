@@ -332,7 +332,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   if (gallery && officeWay && officeDoor && officeReader) {
     officeDoor.object.position.set(
       officeWay.x,
-      gallery.floor,
+      officeWay.frame.y,
       officeWay.line - officeWay.wall,
     );
     officeDoor.object.rotation.y = Math.PI;
@@ -405,8 +405,12 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         },
     floorAt: (x, z) =>
       (corridorFloorAt(corridors, x / metre, z / metre) ??
-        (gallery ? gallery.floor : hallFloorAt(spec, x / metre, z / metre))) *
-      metre,
+        (gallery
+          ? // On the office door's sill, in its doorway.
+            officeWay && overlaps(officeWay.leaf, x / metre, z / metre, 0)
+            ? officeWay.frame.y
+            : gallery.floor
+          : hallFloorAt(spec, x / metre, z / metre))) * metre,
     // The plant room doorway: its leaf while shut, but never where the
     // walker stands; a stop just beyond until the plant room is seen.
     // So too the office's doorway.

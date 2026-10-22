@@ -21,7 +21,7 @@ import {
   POOL_HALLS,
   throughGalleryOfficeDoor,
 } from './pool-halls';
-import { PLANT_DOORWAY } from './plant-rooms';
+import { PLANT_DOORWAY, PLANT_SILL } from './plant-rooms';
 
 const blockedBy = (
   solids: ReturnType<typeof shellSolids>,
@@ -111,8 +111,9 @@ describe('the engineer’s office’s door to the underwater gallery', () => {
     expect(Math.sin(inside.yaw)).toBeCloseTo(0);
     // Forward is (sin yaw, −cos yaw): south, +z.
     expect(-Math.cos(inside.yaw)).toBeCloseTo(1);
-    // Down at the gallery's floor.
-    expect(inside.y).toBeCloseTo(1.6 + plan.floor);
+    // On the doorway's sill, over the gallery's fillet: its floor's
+    // level, the office's floor.
+    expect(inside.y).toBeCloseTo(1.6 + plan.floor + PLANT_SILL);
     // Not straight back out again.
     expect(throughGalleryOfficeDoor(way, inside.x, inside.z)).toBe(false);
   });
@@ -123,7 +124,8 @@ describe('the engineer’s office’s door to the underwater gallery', () => {
       x: way.x,
       z: way.line - way.wall - 0.1,
       yaw: 0,
-      y: plan.floor + 1.6,
+      // Standing on its sill.
+      y: plan.floor + PLANT_SILL + 1.6,
     };
     expect(throughGalleryOfficeDoor(way, pose.x, pose.z)).toBe(true);
     const inside = throughDoor(there, here, pose);

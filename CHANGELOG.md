@@ -4,6 +4,11 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Fixed
+
+- The underwater gallery's door to the engineer's office stands on a 0.25 m sill above the corridor's fillet, which now runs unbroken beneath it (the office's floor meets the sill, as plant rooms do).
+- The control room's air-handling mimic no longer runs into the corner, and its title card, hidden behind the mimics, is gone.
+
 ### Added
 
 - Pools can be drained down: each has drain-down and make-up valves in the world (`pool/drain-down`, `pool/make-up`); draining, its pumps take its water to the foul sewer at the site's consented 10 m³/h (shared with the backwash's discharge) down to its floor, and it closes to bathers once 15 cm down. Each hall's water shows the model's level: its surface, the tiles' waterline and caustics, the lane ropes and the gallery's view all go down as it drains, to a dry floor. The `drain-pool_0N` and `fill-pool_0N` scenarios (with `skip-N`) show it. Emptying one at a time: the Lounge about 14 hours, the Olympic about 11 days, the jacuzzi 18 minutes, the footbath 7.

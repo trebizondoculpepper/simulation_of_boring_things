@@ -1,3 +1,4 @@
+import { PLANT_SILL } from './plant-rooms';
 import { describe, expect, it } from 'vite-plus/test';
 import { POOLS } from '../../../game/plant-sizing/pools.config';
 import {
@@ -97,11 +98,11 @@ describe('pool halls', () => {
     // Between two windows, and clear of their caustics on the wall facing them.
     for (const x of plan.windows)
       expect(Math.abs(x - door.x)).toBeGreaterThan(door.opening / 2 + 0.85);
-    // Its frame faces into the gallery, at the gallery's floor.
+    // Its frame faces into the gallery, on its sill over the fillet.
     expect(door.frame).toEqual({
       x: door.x,
       z: door.line,
-      y: plan.floor,
+      y: plan.floor + PLANT_SILL,
       yaw: 0,
     });
     // The wall either side of it, and nowhere else open.

@@ -91,8 +91,8 @@ export interface ShellView {
   /** Its floor's level, and its roof's, over the doors' level (0). */
   floor: number;
   roof: number;
-  /** Its title card: name, and what it is for. */
-  title: string;
+  /** Its title card: name, and what it is for; none if `title` is null. */
+  title: string | null;
   note: string;
   seed: number;
 }
@@ -282,7 +282,7 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
           ? 'west'
           : 'east';
   const title = card(2.4, 0.6, [
-    v.title,
+    v.title ?? '',
     `${v.w + 2 * t} × ${v.d + 2 * t} m · ${v.note}`,
   ]);
   // Beside the door there, if that wall has one in its middle.
@@ -296,7 +296,7 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
     titleAt.inner.z + titleAt.into[1] * 0.01,
   );
   title.rotation.y = Math.atan2(titleAt.into[0], titleAt.into[1]);
-  group.add(title);
+  if (v.title !== null) group.add(title);
 
   // Light: LED battens round the walls, clear of the doors; a point light
   // for every 10 m or so of the room's length, at most three.

@@ -648,7 +648,8 @@ export function galleryOfficeDoor(g: {
     line,
     wall,
     opening: PLANT_DOORWAY,
-    frame: { x, z: line, y: g.floor, yaw: 0 },
+    // On its sill, over the corridor's fillet, as a plant room door is.
+    frame: { x, z: line, y: g.floor + PLANT_SILL, yaw: 0 },
     leaf,
     beyond: { ...leaf, minZ: leaf.minZ - 0.3, maxZ: leaf.maxZ - 0.3 },
     pieces: [

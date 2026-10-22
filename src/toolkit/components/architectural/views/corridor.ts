@@ -28,9 +28,11 @@ import type { PlacedPiece } from '../logic/corridor-path';
  * ends are open, to be joined. One wall may have round windows through
  * it (the Olympic pool's viewing gallery's, into the water): `windows`
  * on the +z wall, which is then `windows.thick` thick. The other (−z)
- * wall may have doorways through it to the floor (`doorways`: each one's
- * middle along x, its width and its height), its floor fillet stopping
- * either side of each, turned round the jambs' corners.
+ * wall may have doorways through it (`doorways`: each one's middle along
+ * x, its width and its height). A doorway down to the floor stops the
+ * floor fillet either side of it, turned round the jambs' corners; one on
+ * a sill at least the fillet's height (`sill`) has the wall under it, and
+ * the fillet runs on unbroken beneath.
  */
 export const CORRIDOR = { width: 1.2, height: 2.5, wall: 0.2 } as const;
 
@@ -51,7 +53,10 @@ export interface CorridorWindows {
 export interface CorridorDoorway {
   at: number;
   w: number;
+  /** Its head's height over the floor. */
   h: number;
+  /** Its sill's height over the floor; 0 (the default) down to the floor. */
+  sill?: number;
 }
 
 export function createCorridor(
@@ -99,7 +104,7 @@ export function createCorridor(
   runs.push([start, length]);
   for (const [a, b] of runs)
     box(material, b - a, height, wall, (a + b) / 2, height / 2, -hw - wall / 2);
-  for (const d of cuts)
+  for (const d of cuts) {
     box(
       material,
       d.w,
@@ -109,6 +114,10 @@ export function createCorridor(
       (height + d.h) / 2,
       -hw - wall / 2,
     );
+    // The wall under a raised doorway, up to its sill.
+    if (d.sill)
+      box(material, d.w, d.sill, wall, d.at, d.sill / 2, -hw - wall / 2);
+  }
   if (windows) {
     // The windowed wall, drawn in its own plane (x along, y up) and
     // pushed out to +z.
@@ -172,6 +181,16 @@ export function createCorridor(
   } else box(material, length, height, wall, mid, height / 2, hw + wall / 2);
   // The fillets, along all four junctions: turned, never mirrored.
   const r = COVE_RADIUS;
+  // The −z wall's foot is broken only by doorways down to the floor; over
+  // a sill as high as the fillet, it runs on under the doorway.
+  const floorCuts = cuts.filter((d) => (d.sill ?? 0) < r);
+  const footRuns: [number, number][] = [];
+  let from = 0;
+  for (const d of floorCuts) {
+    footRuns.push([from, d.at - d.w / 2]);
+    from = d.at + d.w / 2;
+  }
+  footRuns.push([from, length]);
   for (const [y, z, turn] of [
     [0, hw, 0],
     [0, -hw, Math.PI / 2],
@@ -179,7 +198,7 @@ export function createCorridor(
     [height, hw, -Math.PI / 2],
   ] as const) {
     // The −z wall's foot, only along its runs.
-    const along = y === 0 && z < 0 ? runs : ([[0, length]] as const);
+    const along = y === 0 && z < 0 ? footRuns : ([[0, length]] as const);
     for (const [a, b] of along) {
       if (b - a <= 0) continue;
       // The strip runs along z, its faces along +x and +y: laid along x it
@@ -195,8 +214,9 @@ export function createCorridor(
       group.add(fillet);
     }
   }
-  // At each doorway's jambs, the floor fillet turned round the corner.
-  for (const d of cuts)
+  // At each doorway's jambs down to the floor, the floor fillet turned
+  // round the corner.
+  for (const d of floorCuts)
     for (const [x, phi] of [
       [d.at - d.w / 2, 0],
       [d.at + d.w / 2, -Math.PI / 2],

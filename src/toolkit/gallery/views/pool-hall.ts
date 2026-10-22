@@ -1386,11 +1386,19 @@ export function createPoolHall(
       'office door lobby',
     ).position.set(
       office.x,
-      gallery.floor + PLANT_DOOR_HEAD / 2,
+      gallery.floor + PLANT_SILL + PLANT_DOOR_HEAD / 2,
       office.line - office.wall - 0.6,
     );
     const corridor = createCorridor(s.w, dry, {
-      doorways: [{ at: office.x + hx, w: office.opening, h: PLANT_DOOR_HEAD }],
+      // On its sill over the fillet, which runs on unbroken beneath it.
+      doorways: [
+        {
+          at: office.x + hx,
+          w: office.opening,
+          h: PLANT_SILL + PLANT_DOOR_HEAD,
+          sill: PLANT_SILL,
+        },
+      ],
       windows: {
         // The pool's side of the windowed wall is the pool's wall, wet.
         farFace: tile,
