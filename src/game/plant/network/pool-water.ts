@@ -19,155 +19,27 @@
  * settling bed to waste from the bottom, and the drain valve (WV1) empties
  * the vessel.
  *
- * Heads are metres above the pool deck; flows m³/h. Pure.
+ * Each plant room has its own make-up branch, by an isolating valve off
+ * the wet hall's make-up main, and its own drainage header, falling to the
+ * wet hall's drainage main (`wet-hall.ts`).
+ *
+ * Heights are metres above the wet hall's floor (`common.ts`); flows m³/h.
+ * Pure.
  */
 import { POOL_TARGET } from '../pools';
 import type { PoolId } from '../pools';
-import type {
-  Aspect,
-  Hydraulic,
-  Loss,
-  NodeClass,
-  NodeKind,
-  PlantLink,
-  PlantNode,
-  Service,
-  Status,
-} from './types';
-
-// ---- Placeholders: what is not yet modelled, and why --------------------------
-
-export const GAP = {
-  makeUp:
-    'make-up water not yet in the network: the break tank, booster set and make-up main (step 2)',
-  drainage:
-    'drainage not yet in the network: the backwash main and holding tank (step 2)',
-  heating:
-    'heating not yet in the network: the LTHW ring, boilers and pumps (step 3)',
-  chemicals:
-    'chemicals not yet in the network: the stores, dosing lines and pumps (step 5)',
-  chemistry:
-    'water chemistry not carried along the network: chlorine, pH, dosing control (step 5)',
-  ozone:
-    'ozone not yet in the network: generator output, injection and residual (step 5)',
-  uv: 'UV dose not modelled: lamp output against flow (step 5)',
-  electrics:
-    'electrics not yet in the network: supply, isolator and starter (step 6)',
-  levels:
-    'levels not yet stepped: tanks and pools hold fixed levels until the world runs the network',
-  weir: 'overflow over the pool’s edge needs its level stepped (weir flow)',
-  float: 'float valve follows its tank’s level, which is not yet stepped',
-  packaged:
-    'packaged set internals not yet modelled: modelled as one pump between its pool connections',
-} as const;
-
-const ph = (placeholder: string): Status => ({ placeholder });
-
-// ---- A small builder ---------------------------------------------------------
-
-/** The tag on a plate, from a proximal ID: `pl2.f3.bv2` is `PL2-F3-BV2`. */
-export const tagOf = (id: string) => id.toUpperCase().replaceAll('.', '-');
-
-export class NetworkBuilder {
-  readonly nodes: PlantNode[] = [];
-  readonly links: PlantLink[] = [];
-
-  node(n: {
-    id: string;
-    name: string;
-    kind: NodeKind;
-    class: NodeClass;
-    system: string;
-    room?: string;
-    ports: Record<string, Service>;
-    hydraulic?: Hydraulic;
-    normal?: PlantNode['normal'];
-    aspects?: Partial<Record<Aspect, Status>>;
-  }) {
-    const plated = n.class === 'equipment' || n.class === 'valve';
-    this.nodes.push({
-      aspects: {},
-      ...n,
-      ...(plated ? { tag: tagOf(n.id) } : {}),
-    });
-    return n.id;
-  }
-
-  link(
-    from: string,
-    to: string,
-    service: Service,
-    loss?: Loss,
-    aspects?: Partial<Record<Aspect, Status>>,
-  ) {
-    this.links.push({
-      id: `${from}>${to}`,
-      from,
-      to,
-      service,
-      ...(loss ? { loss } : {}),
-      ...(aspects ? { aspects } : {}),
-    });
-  }
-}
-
-// ---- The site's boundaries, placeholders for the systems still to build ------
-
-/** Where the site's systems not yet built begin and end, as placeholder boundaries. */
-export const SITE = {
-  makeUp: 'site.make-up',
-  drainage: 'site.drainage',
-  lthw: 'site.lthw',
-  hypochlorite: 'site.hypochlorite',
-  acid: 'site.acid',
-  power: 'site.power',
-} as const;
-
-/** Mains pressure at the make-up's float valves, and the drains' head, metres. */
-export const MAKE_UP_HEAD = 25;
-export const DRAIN_HEAD = -4;
-
-export function siteBoundaries(b: NetworkBuilder) {
-  const boundary = (
-    id: string,
-    name: string,
-    ports: Record<string, Service>,
-    gap: string,
-    hydraulic?: Hydraulic,
-  ) =>
-    b.node({
-      id,
-      name,
-      kind: 'boundary',
-      class: 'boundary',
-      system: 'site',
-      ports,
-      hydraulic,
-      aspects: { [hydraulic ? 'hydraulics' : 'internals']: ph(gap) },
-    });
-  boundary(SITE.makeUp, 'Make-up main', { out: 'make-up' }, GAP.makeUp, {
-    kind: 'reservoir',
-    level: MAKE_UP_HEAD,
-  });
-  boundary(SITE.drainage, 'Drainage', { in: 'drainage' }, GAP.drainage, {
-    kind: 'reservoir',
-    level: DRAIN_HEAD,
-  });
-  boundary(
-    SITE.lthw,
-    'LTHW heating ring',
-    { flow: 'heating', return: 'heating' },
-    GAP.heating,
-  );
-  boundary(
-    SITE.hypochlorite,
-    'Hypochlorite store',
-    { out: 'chemical' },
-    GAP.chemicals,
-  );
-  boundary(SITE.acid, 'Acid store', { out: 'chemical' }, GAP.chemicals);
-  boundary(SITE.power, 'Electrical supply', { out: 'power' }, GAP.electrics);
-}
+import {
+  BACKWASH_TANK_LEVEL,
+  BREAK_TANK_LEVEL,
+  GAP,
+  NetworkBuilder,
+  SITE,
+  WET_HALL,
+  deckOn,
+  ph,
+} from './common';
+import type { Loss, Service } from './types';
+import { BOOSTER } from './wet-hall';
 
 // ---- A large pool's circuit -----------------------------------------------------
 
@@ -180,8 +52,8 @@ export interface CircuitSpec {
   room: string;
   code: string;
   filters: number;
-  /** The balance tank's working level, metres above the deck. */
-  tankLevel: number;
+  /** The plant room's level in the building, from 0, the wet hall's. */
+  level: number;
   /** How fast the pool drains down to waste, m³/h. */
   drainDown: number;
 }
@@ -194,7 +66,7 @@ export const LARGE_POOLS: readonly CircuitSpec[] = [
     room: 'plant_pool_01',
     code: 'PL1',
     filters: 2,
-    tankLevel: -1.5,
+    level: 0,
     drainDown: 12,
   },
   {
@@ -204,7 +76,7 @@ export const LARGE_POOLS: readonly CircuitSpec[] = [
     room: 'plant_pool_02',
     code: 'PL2',
     filters: 5,
-    tankLevel: -1.5,
+    level: 1,
     drainDown: 60,
   },
 ];
@@ -256,7 +128,63 @@ function designHead(spec: CircuitSpec) {
     L.uv,
     L.returnMain,
   ];
-  return path.reduce((s, [m]) => s + m, 0) + (0 - spec.tankLevel);
+  return path.reduce((s, [m]) => s + m, 0) + TANK_BELOW_DECK;
+}
+
+/** A balance tank's working level below its pool's deck, metres. */
+export const TANK_BELOW_DECK = 1.5;
+
+/**
+ * A plant room's own make-up branch, by its isolating valve off the wet
+ * hall's make-up main, and its drainage header, falling to the wet hall's
+ * drainage main.
+ */
+function roomServices(
+  b: NetworkBuilder,
+  at: string,
+  system: string,
+  room: string,
+  name: string,
+) {
+  const makeUp = b.node({
+    id: `${at}.mu.iv1`,
+    name: `${name} make-up isolating valve`,
+    kind: 'valve',
+    class: 'valve',
+    system,
+    room,
+    ports: { a: 'make-up', b: 'make-up' },
+    hydraulic: {
+      kind: 'valve',
+      from: 'a',
+      to: 'b',
+      loss: [0.05, BOOSTER.flow],
+    },
+    normal: { open: true },
+    aspects: { hydraulics: 'modelled' },
+  });
+  b.link(`${WET_HALL.makeUpMain}.main`, `${makeUp}.a`, 'make-up', [
+    1,
+    BOOSTER.flow,
+  ]);
+  const drains = b.node({
+    id: `${at}.dr.header`,
+    name: `${name} plant room drainage header`,
+    kind: 'header',
+    class: 'pipework',
+    system,
+    room,
+    ports: { main: 'drainage' },
+    hydraulic: { kind: 'junction' },
+    aspects: { hydraulics: 'modelled' },
+  });
+  b.link(
+    `${drains}.main`,
+    `${WET_HALL.drainageMain}.main`,
+    'drainage',
+    [0.3, 100],
+  );
+  return { makeUp, drains };
 }
 
 export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
@@ -265,6 +193,9 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
   const L = losses(q, spec.filters);
   const at = code.toLowerCase();
   const id = (s: string) => `${at}.${s}`;
+  const deck = deckOn(spec.level);
+  const tankLevel = deck - TANK_BELOW_DECK;
+  const { makeUp, drains } = roomServices(b, at, system, room, name);
   const pipe = (from: string, to: string, loss: Loss = L.pipe) =>
     b.link(from, to, 'pool-water', loss);
 
@@ -280,7 +211,7 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
       overflow: 'pool-water',
       mainDrain: 'pool-water',
     },
-    hydraulic: { kind: 'reservoir', level: 0 },
+    hydraulic: { kind: 'reservoir', level: deck },
     aspects: {
       hydraulics: 'modelled',
       levels: ph(GAP.levels),
@@ -302,7 +233,7 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
       drain: 'drainage',
       sampleReturn: 'sample',
     },
-    hydraulic: { kind: 'reservoir', level: spec.tankLevel },
+    hydraulic: { kind: 'reservoir', level: tankLevel },
     aspects: { hydraulics: 'modelled', levels: ph(GAP.levels) },
   });
   b.link(`${pool}.overflow`, `${tank}.overflow`, 'pool-water', undefined, {
@@ -348,10 +279,10 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
     `${name} drain-down valve, to waste`,
     { a: 'pool-water', b: 'drainage' },
     false,
-    [-DRAIN_HEAD, spec.drainDown],
+    [deck - BACKWASH_TANK_LEVEL, spec.drainDown],
   );
   pipe(`${pool}.mainDrain`, `${ddv}.a`);
-  b.link(`${ddv}.b`, `${SITE.drainage}.in`, 'drainage');
+  b.link(`${ddv}.b`, `${drains}.main`, 'drainage');
 
   // The tank's make-up and drain.
   const lcv = valve(
@@ -359,20 +290,20 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
     `${name} balance tank float valve`,
     { a: 'make-up', b: 'make-up' },
     false,
-    [MAKE_UP_HEAD - spec.tankLevel, q / 10],
+    [BREAK_TANK_LEVEL + BOOSTER.head - tankLevel - 4, BOOSTER.flow / 2],
     'float-valve',
   );
-  b.link(`${SITE.makeUp}.out`, `${lcv}.a`, 'make-up');
+  b.link(`${makeUp}.b`, `${lcv}.a`, 'make-up');
   b.link(`${lcv}.b`, `${tank}.makeUp`, 'make-up');
   const tdv = valve(
     't1.wv1',
     `${name} balance tank drain valve`,
     { a: 'drainage', b: 'drainage' },
     false,
-    [spec.tankLevel - DRAIN_HEAD, q / 4],
+    [tankLevel - BACKWASH_TANK_LEVEL, q / 4],
   );
   b.link(`${tank}.drain`, `${tdv}.a`, 'drainage');
-  b.link(`${tdv}.b`, `${SITE.drainage}.in`, 'drainage');
+  b.link(`${tdv}.b`, `${drains}.main`, 'drainage');
 
   // Headers.
   const header = (key: string, label: string) =>
@@ -530,7 +461,7 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
     pipe(`${filter}.bottom`, `${rinse}.a`);
     pipe(`${filter}.bottom`, `${drain}.a`);
     for (const v of [bwOut, rinse, drain])
-      b.link(`${v}.b`, `${SITE.drainage}.in`, 'drainage');
+      b.link(`${v}.b`, `${drains}.main`, 'drainage');
   }
 
   // Ozone: the generator and its contact tank.
@@ -666,6 +597,7 @@ export const PACKAGED_POOLS = [
     name: 'Jacuzzi',
     room: 'plant_pool_03',
     code: 'PL3',
+    level: 2,
     label: 'Packaged Jacuzzi plant cabinet',
   },
   {
@@ -674,6 +606,7 @@ export const PACKAGED_POOLS = [
     name: 'Footbath',
     room: 'plant_pool_04',
     code: 'PL4',
+    level: 0,
     label: 'Packaged spa set, footbath',
   },
 ] as const;
@@ -686,6 +619,9 @@ export function packagedCircuit(
   spec: (typeof PACKAGED_POOLS)[number],
 ) {
   const { system, room, code, name } = spec;
+  const at = code.toLowerCase();
+  const deck = deckOn(spec.level);
+  const { makeUp, drains } = roomServices(b, at, system, room, name);
   const q = POOL_TARGET[spec.pool].flow;
   const pool = b.node({
     id: `${code.toLowerCase().replace('pl', 'ph')}.pool`,
@@ -694,7 +630,7 @@ export function packagedCircuit(
     class: 'water',
     system,
     ports: { outlet: 'pool-water', inlets: 'pool-water' },
-    hydraulic: { kind: 'reservoir', level: 0 },
+    hydraulic: { kind: 'reservoir', level: deck },
     aspects: {
       hydraulics: 'modelled',
       levels: ph(GAP.levels),
@@ -732,7 +668,7 @@ export function packagedCircuit(
   });
   b.link(`${pool}.outlet`, `${set}.suction`, 'pool-water', [SET_HEAD / 2, q]);
   b.link(`${set}.return`, `${pool}.inlets`, 'pool-water', [SET_HEAD / 2, q]);
-  b.link(`${SITE.makeUp}.out`, `${set}.makeUp`, 'make-up');
-  b.link(`${set}.drain`, `${SITE.drainage}.in`, 'drainage');
+  b.link(`${makeUp}.b`, `${set}.makeUp`, 'make-up');
+  b.link(`${set}.drain`, `${drains}.main`, 'drainage');
   b.link(`${SITE.power}.out`, `${set}.power`, 'power');
 }

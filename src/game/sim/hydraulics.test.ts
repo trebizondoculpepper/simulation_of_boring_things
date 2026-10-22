@@ -91,4 +91,58 @@ describe('the water network solver', () => {
     // It cannot lift 5 m with 3 m of shut-off head.
     expect(Math.abs(lift.flows.pump)).toBeLessThan(1e-3);
   });
+
+  it('settles a pump pushing through a chain of short joints and fittings', () => {
+    // The make-up booster as the plant network builds it: break tank,
+    // outlet valve, pump set, meter, mains and a float valve into a pool's
+    // balance tank, each fitting joined by a short run of pipe. With the
+    // Jacobian stepped by a share of the head this stalled short of balance.
+    const pipe = resistanceFor(0.02, 20);
+    const chain: [string, NetLink['kind'], number][] = [
+      ['tank>iv', 'resistance', pipe],
+      ['iv', 'resistance', 2.22e-4],
+      ['iv>header', 'resistance', 4.44e-4],
+      ['header>sv', 'resistance', pipe],
+      ['sv', 'resistance', 2.22e-4],
+      ['sv>pump', 'resistance', pipe],
+      ['pump', 'pump', 0],
+      ['pump>nrv', 'resistance', pipe],
+      ['nrv', 'check', 1.33e-3],
+      ['nrv>dv', 'resistance', pipe],
+      ['dv', 'resistance', 2.22e-4],
+      ['dv>header', 'resistance', pipe],
+      ['header>meter', 'resistance', pipe],
+      ['meter', 'resistance', 2.22e-3],
+      ['meter>mv', 'resistance', pipe],
+      ['mv', 'resistance', 2.22e-4],
+      ['mv>main', 'resistance', 4.44e-3],
+      ['main>branch', 'resistance', 4.44e-3],
+      ['branch', 'resistance', 2.22e-4],
+      ['branch>float', 'resistance', pipe],
+      ['float', 'resistance', 4.53e-1],
+      ['float>tank', 'resistance', pipe],
+    ];
+    const at = (i: number) =>
+      i === 0 ? 'from' : i === chain.length ? 'to' : `n${i}`;
+    const nodes: NetNode[] = [
+      { id: 'from', head: 1.5 },
+      { id: 'to', head: 2 },
+      ...chain.slice(1).map((_, i) => ({ id: at(i + 1) })),
+    ];
+    const links = chain.map(([id, kind, r], i): NetLink =>
+      kind === 'pump'
+        ? { id, kind, from: at(i), to: at(i + 1), shutoff: 39, k: 0.04 }
+        : {
+            id,
+            kind: kind as 'resistance' | 'check',
+            from: at(i),
+            to: at(i + 1),
+            r,
+          },
+    );
+    const s = solveNetwork(nodes, links);
+    expect(s.converged).toBe(true);
+    expect(s.flows.pump).toBeCloseTo(s.flows.float, 4);
+    expect(s.flows.pump).toBeGreaterThan(5);
+  });
 });

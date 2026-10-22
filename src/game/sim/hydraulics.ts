@@ -159,10 +159,13 @@ export function solveNetwork(
   let norm = Math.max(0, ...f.map(Math.abs));
   let converged = norm < tolerance;
   for (let it = 0; it < iterations && !converged; it++) {
-    // The Jacobian, by small differences: the networks here are small.
+    // The Jacobian, by small differences: the networks here are small. The
+    // step is a fixed tenth of a micrometre, not a share of the head: on a
+    // short joint, losing millimetres, a step scaled to a head tens of
+    // metres up spoils the estimate, and the solve stalls short of balance.
     const jac = free.map(() => free.map(() => 0));
     for (let c = 0; c < free.length; c++) {
-      const step = 1e-6 * Math.max(1, Math.abs(x[c]));
+      const step = 1e-7;
       const xs = [...x];
       xs[c] += step;
       const fs = residual(xs);

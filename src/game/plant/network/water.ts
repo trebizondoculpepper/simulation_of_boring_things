@@ -11,8 +11,12 @@ import type { NetworkState } from './state';
 import { WATER_SERVICES, isPlaceholder } from './types';
 import type { Loss, PlantNetwork } from './types';
 
-/** A short connection's loss, where a pipe declares none. */
-const JOINT: Loss = [0.01, 100];
+/**
+ * A pipe's loss where it declares none: a short run of service pipe, a
+ * few centimetres at the twenty or so m³/h of make-up or drainage. (Far
+ * less makes a chain of joints too stiff for the solver to settle.)
+ */
+const JOINT: Loss = [0.02, 20];
 const rOf = ([m, q]: Loss) => resistanceFor(m, q);
 
 /**
@@ -177,7 +181,7 @@ function prune(nodes: readonly NetNode[], links: readonly NetLink[]) {
     nodes.filter((n) => n.head !== undefined).map((n) => n.id),
   );
   let live = links.filter((l) => l.kind !== 'closed');
-  const pruned: { id: string; from: string }[] = [];
+  const pruned: { id: string; from: string; link: NetLink }[] = [];
   for (;;) {
     const degree = new Map<string, NetLink[]>();
     for (const l of live)
@@ -191,7 +195,7 @@ function prune(nodes: readonly NetNode[], links: readonly NetLink[]) {
     for (const [id, [l]] of leaves) {
       if (gone.has(l)) continue;
       gone.add(l);
-      pruned.push({ id, from: l.from === id ? l.to : l.from });
+      pruned.push({ id, from: l.from === id ? l.to : l.from, link: l });
     }
     live = live.filter((l) => !gone.has(l));
   }
@@ -219,9 +223,18 @@ export function solveWater(
     Object.assign(flows, s.flows);
     converged &&= s.converged;
   }
-  // A dead end stands at its neighbour's head; a section shut in on every
-  // side keeps the head of whatever shut it in.
-  for (const { id, from } of pruned) heads[id] ??= heads[from];
+  // A dead end stands at its neighbour's head, or, beyond a running pump
+  // with nowhere to deliver, at that head plus the pump's shut-off head;
+  // a section shut in on every side keeps the head of whatever shut it in.
+  for (const { id, from, link } of pruned) {
+    const lift =
+      link.kind === 'pump'
+        ? link.to === id
+          ? link.shutoff
+          : -link.shutoff
+        : 0;
+    heads[id] ??= heads[from] + lift;
+  }
   for (let pass = 0; pass < 3; pass++)
     for (const l of links)
       if (heads[l.from] === undefined && heads[l.to] !== undefined)

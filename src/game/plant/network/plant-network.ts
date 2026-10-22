@@ -3,20 +3,21 @@
  * (`doc/prompts/012-plant-network.md`): the pools' water circuits, with
  * placeholder boundaries for the systems still to come. Pure.
  */
+import { NetworkBuilder, siteBoundaries } from './common';
 import {
   LARGE_POOLS,
-  NetworkBuilder,
   PACKAGED_POOLS,
   largePoolCircuit,
   packagedCircuit,
-  siteBoundaries,
 } from './pool-water';
 import { SERIALS } from './serials';
+import { wetHall } from './wet-hall';
 import type { PlantNetwork, PlantNode } from './types';
 
 export function buildPlantNetwork(): PlantNetwork {
   const b = new NetworkBuilder();
   siteBoundaries(b);
+  wetHall(b);
   for (const spec of LARGE_POOLS) largePoolCircuit(b, spec);
   for (const spec of PACKAGED_POOLS) packagedCircuit(b, spec);
   return {

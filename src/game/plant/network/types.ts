@@ -59,6 +59,7 @@ export type NodeKind =
   | 'dosing-controller'
   | 'dosing-pump'
   | 'packaged-set'
+  | 'water-meter'
   | 'header'
   | 'injection-point'
   | 'sample-tapping'

@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- The water network solver no longer stalls short of balance on a chain of short pipes high above its datum: its Jacobian steps a fixed distance, not a share of the head.
 - Overhead chain-operated room valves now have one operator wheel on the valve spindle, without a second intersecting lever. Room-pipework valve tags sit on both clear sides of the body; two lounge backwash valves now sit on their assigned pipe runs.
 - Clicking the inside cover of an open packaged Jacuzzi or footbath cabinet door closes that same door.
 - Room-pipework valve controls now use their permanent installed asset IDs for saved actions and show their display tags beside the valves.
@@ -37,7 +38,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
-- The plant as one connected network, model first (`src/game/plant/network/`): the pools' water circuits, every machine and valve a node with its asset ID and tag, every pipe a link. Its water is solved, so valves and pumps change the flows: standby changeover, filter isolation, backwash, balance tank drain and pool drain-down all work on the model. What cannot yet be simulated is a placeholder, listed in `doc/reports/model-gaps.md` (59 to begin with).
+- The plant as one connected network, model first (`src/game/plant/network/`): the pools' water circuits, every machine and valve a node with its asset ID and tag, every pipe a link. Its water is solved, so valves and pumps change the flows: standby changeover, filter isolation, backwash, balance tank drain and pool drain-down all work on the model. Make-up (town main, break tank, booster set, meter, each plant room's branch) and drainage (each room's header, the drainage main, the backwash holding tank and its pump to the sewer) are in it too. Every node has a permanent serial number and a proximal ID (`pl2.f3.bv2`, its plate's tag in lowercase). What cannot yet be simulated is a placeholder, listed in `doc/reports/model-gaps.md`.
 - Inventory entries now show physical component type and brand in the web and PDF schedules. Known installed makers come from their models; plain room valves and unresolved assemblies are explicitly `unbranded`. All 13 room supply switch-fuses now have permanent catalogue IDs, visible tags and live feeder states.
 - An explicit installed equipment and valve register feeds the web inventory and the PDF manual. The schedule distinguishes simulated parts, saved controls whose circuit effect is pending, and placed equipment. The valve gap audit records the remaining machine-embedded controls.
 - Pools can be drained down: each has drain-down and make-up valves in the world (`pool/drain-down`, `pool/make-up`); draining, its pumps take its water to the foul sewer at the site's consented 10 m³/h (shared with the backwash's discharge) down to its floor, and it closes to bathers once 15 cm down. Each hall's water shows the model's level: its surface, the tiles' waterline and caustics, the lane ropes and the gallery's view all go down as it drains, to a dry floor. The `drain-pool_0N` and `fill-pool_0N` scenarios (with `skip-N`) show it. Emptying one at a time: the Lounge about 14 hours, the Olympic about 11 days, the jacuzzi 18 minutes, the footbath 7.

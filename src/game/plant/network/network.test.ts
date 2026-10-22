@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vite-plus/test';
 import { POOL_TARGET } from '../pools';
 import { modelGaps } from './gaps';
 import { PLANT_NETWORK, plantNode, plantNodeBySerial } from './plant-network';
-import { LARGE_POOLS, PACKAGED_POOLS, SITE } from './pool-water';
+import { SITE, deckOn } from './common';
+import { LARGE_POOLS, PACKAGED_POOLS } from './pool-water';
 import { normalState, withChanges } from './state';
 import { registerProblems } from './serial-register';
 import { RETIRED, SERIALS } from './serials';
@@ -41,16 +42,31 @@ describe('the plant network', () => {
     },
   );
 
-  it('sends every drain to the drainage', () => {
+  it('sends every drain to the backwash holding tank, and that to the sewer', () => {
     for (const n of net.nodes)
       for (const [port, service] of Object.entries(n.ports))
-        if (service === 'drainage' && n.id !== SITE.drainage)
+        if (service === 'drainage' && n.id !== 'wh.t2' && n.id !== SITE.sewer)
           expect(
-            reaches(net, `${n.id}.${port}`, `${SITE.drainage}.in`, [
-              'drainage',
-            ]),
+            reaches(net, `${n.id}.${port}`, 'wh.t2.inlet', ['drainage']) ||
+              reaches(net, `${n.id}.${port}`, `${SITE.sewer}.in`, ['drainage']),
             `${n.id}.${port}`,
           ).toBe(true);
+    expect(reaches(net, 'wh.t2.outlet', `${SITE.sewer}.in`, ['drainage'])).toBe(
+      true,
+    );
+  });
+
+  it('brings make-up from the town main to the break tank, and from it to every pool’s plant', () => {
+    expect(
+      reaches(net, `${SITE.townMain}.out`, 'wh.t1.inlet', ['make-up']),
+    ).toBe(true);
+    for (const end of [
+      'pl1.t1.makeUp',
+      'pl2.t1.makeUp',
+      'pl3.cab1.makeUp',
+      'pl4.cab1.makeUp',
+    ])
+      expect(reaches(net, 'wh.t1.outlet', end, ['make-up']), end).toBe(true);
   });
 
   it('gives every filter its five valves and a drain', () => {
@@ -191,6 +207,62 @@ describe('line-ups', () => {
   });
 });
 
+describe('make-up and drainage', () => {
+  const solve = (changes: Record<string, number | boolean>) =>
+    solveWater(net, withChanges(normal, changes));
+
+  it('tops up a balance tank through the booster set and the meter', () => {
+    const s = solve({ 'pl1.t1.lcv1': 1 });
+    const fill = s.through['pl1.t1.lcv1'];
+    expect(fill).toBeGreaterThan(3);
+    expect(s.through['wh.p1']).toBeCloseTo(fill, 3);
+    expect(s.through['wh.fm1']).toBeCloseTo(fill, 3);
+  });
+
+  it('reaches the highest pool’s plant, the jacuzzi’s on the top level', () => {
+    expect(base.head('pl3.mu.iv1', 'b')).toBeGreaterThan(deckOn(2) + 10);
+  });
+
+  it('tops up nothing with the booster set stopped, or the room’s branch valve shut', () => {
+    expect(
+      solve({ 'pl1.t1.lcv1': 1, 'wh.p1': false }).through['pl1.t1.lcv1'],
+    ).toBeCloseTo(0, 2);
+    expect(
+      solve({ 'pl1.t1.lcv1': 1, 'pl1.mu.iv1': 0 }).through['pl1.t1.lcv1'],
+    ).toBeCloseTo(0, 2);
+  });
+
+  it('changes over to the standby booster', () => {
+    const s = solve({ 'pl2.t1.lcv1': 1, 'wh.p1': false, 'wh.p2': true });
+    expect(s.through['wh.p2']).toBeGreaterThan(3);
+  });
+
+  it('refills the break tank from the town main, and not with its stop valve shut', () => {
+    expect(base.through['wh.t1.lcv1']).toBeGreaterThan(5);
+    expect(solve({ 'wh.mu.iv1': 0 }).through['wh.t1.lcv1']).toBeCloseTo(0, 2);
+  });
+
+  it('takes a backwash into the holding tank', () => {
+    const s = solve({
+      'pl2.f2.iv1': 0,
+      'pl2.f2.iv2': 0,
+      'pl2.f2.bv1': 1,
+      'pl2.f2.bv2': 1,
+    });
+    expect(s.pipe['wh.dr.main.main>wh.t2.inlet']).toBeCloseTo(
+      s.through['pl2.f2.bv2'],
+      3,
+    );
+  });
+
+  it('lifts the holding tank to the sewer, at about the consented rate, only with its pump running', () => {
+    expect(base.through['wh.p3']).toBeCloseTo(0, 2);
+    const s = solve({ 'wh.p3': true });
+    expect(s.through['wh.p3']).toBeGreaterThan(8);
+    expect(s.through['wh.p3']).toBeLessThan(12);
+  });
+});
+
 describe('the gaps', () => {
   it('are every placeholder, each with what is missing', () => {
     const gaps = modelGaps(net);
@@ -199,6 +271,6 @@ describe('the gaps', () => {
   });
 
   it('only shrink: filling a gap lowers this number, and nothing may raise it unseen', () => {
-    expect(modelGaps(net).length).toBeLessThanOrEqual(59);
+    expect(modelGaps(net).length).toBeLessThanOrEqual(65);
   });
 });
