@@ -1,0 +1,753 @@
+/**
+ * The pools' water circuits, as nodes and links of the plant network
+ * (`types.ts`), built from the inventory the plant rooms already hold
+ * (`doc/prompts/012-plant-network.md`, step zero).
+ *
+ * A large pool's circuit, in order (`doc/plant-model.md`): balance tank;
+ * suction header; duty and standby pump sets (suction valve, strainer,
+ * pump, non-return valve, discharge valve); discharge header, with the
+ * sample tapping; the sand filters in parallel; filtered header; ozone
+ * contact tank; heat exchanger; UV unit; hypochlorite and acid injection;
+ * the pool's inlets. The pool comes back to its tank over its overflow and
+ * through its main drain.
+ *
+ * Each filter is the classic five-valve nest: in service, water enters at
+ * the top through its inlet valve (IV1) and leaves the bottom through its
+ * outlet valve (IV2); to backwash, both are shut and the backwash supply
+ * (BV1) sends pumped water up through the bed from the bottom, out of the
+ * top through the backwash waste (BV2); the rinse valve (RNV1) runs the
+ * settling bed to waste from the bottom, and the drain valve (WV1) empties
+ * the vessel.
+ *
+ * Heads are metres above the pool deck; flows m³/h. Pure.
+ */
+import { POOL_TARGET } from '../pools';
+import type { PoolId } from '../pools';
+import type {
+  Aspect,
+  Hydraulic,
+  Loss,
+  NodeClass,
+  NodeKind,
+  PlantLink,
+  PlantNode,
+  Service,
+  Status,
+} from './types';
+
+// ---- Placeholders: what is not yet modelled, and why --------------------------
+
+export const GAP = {
+  makeUp:
+    'make-up water not yet in the network: the break tank, booster set and make-up main (step 2)',
+  drainage:
+    'drainage not yet in the network: the backwash main and holding tank (step 2)',
+  heating:
+    'heating not yet in the network: the LTHW ring, boilers and pumps (step 3)',
+  chemicals:
+    'chemicals not yet in the network: the stores, dosing lines and pumps (step 5)',
+  chemistry:
+    'water chemistry not carried along the network: chlorine, pH, dosing control (step 5)',
+  ozone:
+    'ozone not yet in the network: generator output, injection and residual (step 5)',
+  uv: 'UV dose not modelled: lamp output against flow (step 5)',
+  electrics:
+    'electrics not yet in the network: supply, isolator and starter (step 6)',
+  levels:
+    'levels not yet stepped: tanks and pools hold fixed levels until the world runs the network',
+  weir: 'overflow over the pool’s edge needs its level stepped (weir flow)',
+  float: 'float valve follows its tank’s level, which is not yet stepped',
+  packaged:
+    'packaged set internals not yet modelled: modelled as one pump between its pool connections',
+} as const;
+
+const ph = (placeholder: string): Status => ({ placeholder });
+
+// ---- A small builder ---------------------------------------------------------
+
+export class NetworkBuilder {
+  readonly nodes: PlantNode[] = [];
+  readonly links: PlantLink[] = [];
+
+  node(n: {
+    id: string;
+    tag?: string;
+    name: string;
+    kind: NodeKind;
+    class: NodeClass;
+    system: string;
+    room?: string;
+    ports: Record<string, Service>;
+    hydraulic?: Hydraulic;
+    normal?: PlantNode['normal'];
+    aspects?: Partial<Record<Aspect, Status>>;
+  }) {
+    this.nodes.push({ aspects: {}, ...n });
+    return n.id;
+  }
+
+  link(
+    from: string,
+    to: string,
+    service: Service,
+    loss?: Loss,
+    aspects?: Partial<Record<Aspect, Status>>,
+  ) {
+    this.links.push({
+      id: `${from}>${to}`,
+      from,
+      to,
+      service,
+      ...(loss ? { loss } : {}),
+      ...(aspects ? { aspects } : {}),
+    });
+  }
+}
+
+// ---- The site's boundaries, placeholders for the systems still to build ------
+
+/** Where the site's systems not yet built begin and end, as placeholder boundaries. */
+export const SITE = {
+  makeUp: 'site.make-up',
+  drainage: 'site.drainage',
+  lthw: 'site.lthw',
+  hypochlorite: 'site.hypochlorite',
+  acid: 'site.acid',
+  power: 'site.power',
+} as const;
+
+/** Mains pressure at the make-up's float valves, and the drains' head, metres. */
+export const MAKE_UP_HEAD = 25;
+export const DRAIN_HEAD = -4;
+
+export function siteBoundaries(b: NetworkBuilder) {
+  const boundary = (
+    id: string,
+    name: string,
+    ports: Record<string, Service>,
+    gap: string,
+    hydraulic?: Hydraulic,
+  ) =>
+    b.node({
+      id,
+      name,
+      kind: 'boundary',
+      class: 'boundary',
+      system: 'site',
+      ports,
+      hydraulic,
+      aspects: { [hydraulic ? 'hydraulics' : 'internals']: ph(gap) },
+    });
+  boundary(SITE.makeUp, 'Make-up main', { out: 'make-up' }, GAP.makeUp, {
+    kind: 'reservoir',
+    level: MAKE_UP_HEAD,
+  });
+  boundary(SITE.drainage, 'Drainage', { in: 'drainage' }, GAP.drainage, {
+    kind: 'reservoir',
+    level: DRAIN_HEAD,
+  });
+  boundary(
+    SITE.lthw,
+    'LTHW heating ring',
+    { flow: 'heating', return: 'heating' },
+    GAP.heating,
+  );
+  boundary(
+    SITE.hypochlorite,
+    'Hypochlorite store',
+    { out: 'chemical' },
+    GAP.chemicals,
+  );
+  boundary(SITE.acid, 'Acid store', { out: 'chemical' }, GAP.chemicals);
+  boundary(SITE.power, 'Electrical supply', { out: 'power' }, GAP.electrics);
+}
+
+// ---- A large pool's circuit -----------------------------------------------------
+
+export interface CircuitSpec {
+  /** The system's name in asset IDs: "olympic". */
+  system: string;
+  pool: PoolId;
+  name: string;
+  /** Its plant room, and the room's tag code. */
+  room: string;
+  code: string;
+  filters: number;
+  /** The balance tank's working level, metres above the deck. */
+  tankLevel: number;
+  /** How fast the pool drains down to waste, m³/h. */
+  drainDown: number;
+}
+
+export const LARGE_POOLS: readonly CircuitSpec[] = [
+  {
+    system: 'lounge',
+    pool: 'pool_01',
+    name: 'Lounge pool',
+    room: 'plant_pool_01',
+    code: 'PL1',
+    filters: 2,
+    tankLevel: -1.5,
+    drainDown: 12,
+  },
+  {
+    system: 'olympic',
+    pool: 'pool_02',
+    name: 'Olympic pool',
+    room: 'plant_pool_02',
+    code: 'PL2',
+    filters: 5,
+    tankLevel: -1.5,
+    drainDown: 60,
+  },
+];
+
+/**
+ * Each part's loss, metres at the flow it is designed to carry (`q` is the
+ * circuit's design flow, `n` its filters): typical of a pool circuit.
+ */
+const losses = (q: number, n: number) =>
+  ({
+    pipe: [0.02, q],
+    suctionMain: [0.3, q],
+    pumpValve: [0.05, q],
+    strainer: [0.4, q],
+    nonReturn: [0.3, q],
+    toHeader: [0.15, q],
+    filterValve: [0.05, q / n],
+    filter: [2.5, q / n],
+    filteredMain: [0.3, q],
+    contactTank: [0.5, q],
+    heatExchanger: [1.5, q],
+    uv: [0.4, q],
+    returnMain: [2.0, q],
+    // The main drains carry about a third of the return, by gravity.
+    mainDrain: [1.5, 0.3 * q],
+  }) satisfies Record<string, Loss>;
+
+/**
+ * The pump's design head: what the circuit loses at its design flow along
+ * the duty path, plus the lift from the tank to the pool.
+ */
+function designHead(spec: CircuitSpec) {
+  const L = losses(1, spec.filters);
+  const path = [
+    L.suctionMain,
+    L.pumpValve,
+    L.strainer,
+    L.nonReturn,
+    L.pumpValve,
+    L.toHeader,
+    L.filterValve,
+    L.filter,
+    L.filterValve,
+    L.filteredMain,
+    L.contactTank,
+    L.pipe,
+    L.heatExchanger,
+    L.pipe,
+    L.uv,
+    L.returnMain,
+  ];
+  return path.reduce((s, [m]) => s + m, 0) + (0 - spec.tankLevel);
+}
+
+export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
+  const { system, room, code, name } = spec;
+  const q = POOL_TARGET[spec.pool].flow;
+  const L = losses(q, spec.filters);
+  const id = (s: string) => `${system}.${s}`;
+  const tag = (s: string) => `${code}-${s}`;
+  const pipe = (from: string, to: string, loss: Loss = L.pipe) =>
+    b.link(from, to, 'pool-water', loss);
+
+  // The pool and its tank.
+  const pool = b.node({
+    id: id('pool'),
+    name,
+    kind: 'pool',
+    class: 'water',
+    system,
+    ports: {
+      inlets: 'pool-water',
+      overflow: 'pool-water',
+      mainDrain: 'pool-water',
+    },
+    hydraulic: { kind: 'reservoir', level: 0 },
+    aspects: {
+      hydraulics: 'modelled',
+      levels: ph(GAP.levels),
+      chemistry: ph(GAP.chemistry),
+    },
+  });
+  const tank = b.node({
+    id: id('balance-tank'),
+    tag: tag('T1'),
+    name: `${name} balance tank`,
+    kind: 'balance-tank',
+    class: 'equipment',
+    system,
+    room,
+    ports: {
+      overflow: 'pool-water',
+      mainDrain: 'pool-water',
+      suction: 'pool-water',
+      makeUp: 'make-up',
+      drain: 'drainage',
+      sampleReturn: 'sample',
+    },
+    hydraulic: { kind: 'reservoir', level: spec.tankLevel },
+    aspects: { hydraulics: 'modelled', levels: ph(GAP.levels) },
+  });
+  b.link(`${pool}.overflow`, `${tank}.overflow`, 'pool-water', undefined, {
+    hydraulics: ph(GAP.weir),
+  });
+
+  const valve = (
+    key: string,
+    t: string,
+    label: string,
+    ports: { a: Service; b: Service },
+    open: boolean,
+    loss: Loss,
+    kind: 'valve' | 'float-valve' = 'valve',
+  ) =>
+    b.node({
+      id: id(key),
+      tag: tag(t),
+      name: label,
+      kind,
+      class: 'valve',
+      system,
+      room,
+      ports,
+      hydraulic: { kind: 'valve', from: 'a', to: 'b', loss },
+      normal: { open },
+      aspects: {
+        hydraulics: 'modelled',
+        ...(kind === 'float-valve' ? { levels: ph(GAP.float) } : {}),
+      },
+    });
+
+  // The main drain, to the tank or, for drain-down, to waste.
+  const mdv = valve(
+    'pw.iv1',
+    'PW-IV1',
+    `${name} main drain valve`,
+    { a: 'pool-water', b: 'pool-water' },
+    true,
+    L.mainDrain,
+  );
+  pipe(`${pool}.mainDrain`, `${mdv}.a`);
+  pipe(`${mdv}.b`, `${tank}.mainDrain`);
+  const ddv = valve(
+    'pw.wv1',
+    'PW-WV1',
+    `${name} drain-down valve, to waste`,
+    { a: 'pool-water', b: 'drainage' },
+    false,
+    [-DRAIN_HEAD, spec.drainDown],
+  );
+  pipe(`${pool}.mainDrain`, `${ddv}.a`);
+  b.link(`${ddv}.b`, `${SITE.drainage}.in`, 'drainage');
+
+  // The tank's make-up and drain.
+  const lcv = valve(
+    'balance-tank.lcv1',
+    'T1-LCV1',
+    `${name} balance tank float valve`,
+    { a: 'make-up', b: 'make-up' },
+    false,
+    [MAKE_UP_HEAD - spec.tankLevel, q / 10],
+    'float-valve',
+  );
+  b.link(`${SITE.makeUp}.out`, `${lcv}.a`, 'make-up');
+  b.link(`${lcv}.b`, `${tank}.makeUp`, 'make-up');
+  const tdv = valve(
+    'balance-tank.wv1',
+    'T1-WV1',
+    `${name} balance tank drain valve`,
+    { a: 'drainage', b: 'drainage' },
+    false,
+    [spec.tankLevel - DRAIN_HEAD, q / 4],
+  );
+  b.link(`${tank}.drain`, `${tdv}.a`, 'drainage');
+  b.link(`${tdv}.b`, `${SITE.drainage}.in`, 'drainage');
+
+  // Headers.
+  const header = (key: string, label: string) =>
+    b.node({
+      id: id(`pw.${key}`),
+      name: `${name} ${label}`,
+      kind: 'header',
+      class: 'pipework',
+      system,
+      room,
+      ports: { main: 'pool-water' },
+      hydraulic: { kind: 'junction' },
+      aspects: { hydraulics: 'modelled' },
+    });
+  const suction = header('suction-header', 'pump suction header');
+  const discharge = header('discharge-header', 'pump discharge header');
+  const filtered = header('filtered-header', 'filtered water header');
+  pipe(`${tank}.suction`, `${suction}.main`, L.suctionMain);
+
+  // Duty and standby pump sets.
+  const head = designHead(spec);
+  for (const n of [1, 2]) {
+    const set = `pump${n}`;
+    const duty = n === 1;
+    const sv = valve(
+      `${set}.sv1`,
+      `P${n}-SV1`,
+      `${name} pump ${n} suction valve`,
+      { a: 'pool-water', b: 'pool-water' },
+      true,
+      L.pumpValve,
+    );
+    const strainer = b.node({
+      id: id(`${set}.str1`),
+      tag: tag(`P${n}-STR1`),
+      name: `${name} pump ${n} strainer`,
+      kind: 'strainer',
+      class: 'equipment',
+      system,
+      room,
+      ports: { in: 'pool-water', out: 'pool-water' },
+      hydraulic: {
+        kind: 'resistance',
+        from: 'in',
+        to: 'out',
+        loss: L.strainer,
+      },
+      aspects: { hydraulics: 'modelled' },
+    });
+    const pump = b.node({
+      id: id(set),
+      tag: tag(`P${n}`),
+      name: `${name} circulation pump ${n} (${duty ? 'duty' : 'standby'})`,
+      kind: 'pump',
+      class: 'equipment',
+      system,
+      room,
+      ports: { suction: 'pool-water', discharge: 'pool-water', power: 'power' },
+      hydraulic: {
+        kind: 'pump',
+        from: 'suction',
+        to: 'discharge',
+        head,
+        flow: q,
+        shutoff: head * 1.45,
+      },
+      normal: { running: duty },
+      aspects: { hydraulics: 'modelled', electrics: ph(GAP.electrics) },
+    });
+    const nrv = b.node({
+      id: id(`${set}.nrv1`),
+      tag: tag(`P${n}-NRV1`),
+      name: `${name} pump ${n} non-return valve`,
+      kind: 'non-return-valve',
+      class: 'valve',
+      system,
+      room,
+      ports: { in: 'pool-water', out: 'pool-water' },
+      hydraulic: { kind: 'check', from: 'in', to: 'out', loss: L.nonReturn },
+      aspects: { hydraulics: 'modelled' },
+    });
+    const dv = valve(
+      `${set}.dv1`,
+      `P${n}-DV1`,
+      `${name} pump ${n} discharge valve`,
+      { a: 'pool-water', b: 'pool-water' },
+      true,
+      L.pumpValve,
+    );
+    pipe(`${suction}.main`, `${sv}.a`);
+    pipe(`${sv}.b`, `${strainer}.in`);
+    pipe(`${strainer}.out`, `${pump}.suction`);
+    pipe(`${pump}.discharge`, `${nrv}.in`);
+    pipe(`${nrv}.out`, `${dv}.a`);
+    pipe(`${dv}.b`, `${discharge}.main`, L.toHeader);
+    b.link(`${SITE.power}.out`, `${pump}.power`, 'power');
+  }
+
+  // The sample tapping on the discharge header, to the dosing controller
+  // and back to the tank.
+  const tapping = b.node({
+    id: id('pw.sample-tapping'),
+    name: `${name} sample tapping`,
+    kind: 'sample-tapping',
+    class: 'pipework',
+    system,
+    room,
+    ports: { main: 'pool-water', sample: 'sample' },
+    aspects: { chemistry: ph(GAP.chemistry) },
+  });
+  pipe(`${discharge}.main`, `${tapping}.main`);
+
+  // The filters.
+  for (let n = 1; n <= spec.filters; n++) {
+    const f = `filter${n}`;
+    const filter = b.node({
+      id: id(f),
+      tag: tag(`F${n}`),
+      name: `${name} sand filter ${n}`,
+      kind: 'sand-filter',
+      class: 'equipment',
+      system,
+      room,
+      ports: { top: 'pool-water', bottom: 'pool-water' },
+      hydraulic: {
+        kind: 'resistance',
+        from: 'top',
+        to: 'bottom',
+        loss: L.filter,
+      },
+      aspects: { hydraulics: 'modelled', treatment: ph(GAP.chemistry) },
+    });
+    const fv = (
+      key: string,
+      t: string,
+      label: string,
+      ports: { a: Service; b: Service },
+      open: boolean,
+    ) =>
+      valve(
+        `${f}.${key}`,
+        `F${n}-${t}`,
+        `${name} filter ${n} ${label}`,
+        ports,
+        open,
+        L.filterValve,
+      );
+    const pw = { a: 'pool-water', b: 'pool-water' } as const;
+    const toWaste = { a: 'pool-water', b: 'drainage' } as const;
+    const inlet = fv('iv1', 'IV1', 'inlet valve', pw, true);
+    const outlet = fv('iv2', 'IV2', 'outlet valve', pw, true);
+    const bwIn = fv('bv1', 'BV1', 'backwash supply valve', pw, false);
+    const bwOut = fv('bv2', 'BV2', 'backwash waste valve', toWaste, false);
+    const rinse = fv('rnv1', 'RNV1', 'rinse valve, to waste', toWaste, false);
+    const drain = fv('wv1', 'WV1', 'drain valve, to waste', toWaste, false);
+    pipe(`${discharge}.main`, `${inlet}.a`);
+    pipe(`${inlet}.b`, `${filter}.top`);
+    pipe(`${filter}.bottom`, `${outlet}.a`);
+    pipe(`${outlet}.b`, `${filtered}.main`);
+    pipe(`${discharge}.main`, `${bwIn}.a`);
+    pipe(`${bwIn}.b`, `${filter}.bottom`);
+    pipe(`${filter}.top`, `${bwOut}.a`);
+    pipe(`${filter}.bottom`, `${rinse}.a`);
+    pipe(`${filter}.bottom`, `${drain}.a`);
+    for (const v of [bwOut, rinse, drain])
+      b.link(`${v}.b`, `${SITE.drainage}.in`, 'drainage');
+  }
+
+  // Ozone: the generator and its contact tank.
+  const generator = b.node({
+    id: id('ozone-generator'),
+    tag: tag('OZ1'),
+    name: `${name} ozone generator`,
+    kind: 'ozone-generator',
+    class: 'equipment',
+    system,
+    room,
+    ports: { ozone: 'ozone', power: 'power' },
+    aspects: { ozone: ph(GAP.ozone), electrics: ph(GAP.electrics) },
+  });
+  b.link(`${SITE.power}.out`, `${generator}.power`, 'power');
+  const contact = b.node({
+    id: id('contact-tank'),
+    tag: tag('T2'),
+    name: `${name} ozone contact tank`,
+    kind: 'contact-tank',
+    class: 'equipment',
+    system,
+    room,
+    ports: { inlet: 'pool-water', outlet: 'pool-water', ozone: 'ozone' },
+    hydraulic: {
+      kind: 'resistance',
+      from: 'inlet',
+      to: 'outlet',
+      loss: L.contactTank,
+    },
+    aspects: { hydraulics: 'modelled', ozone: ph(GAP.ozone) },
+  });
+  b.link(`${generator}.ozone`, `${contact}.ozone`, 'ozone');
+  pipe(`${filtered}.main`, `${contact}.inlet`, L.filteredMain);
+
+  // Heat exchanger, from the LTHW ring.
+  const hx = b.node({
+    id: id('hx'),
+    tag: tag('HX1'),
+    name: `${name} plate heat exchanger`,
+    kind: 'heat-exchanger',
+    class: 'equipment',
+    system,
+    room,
+    ports: {
+      poolIn: 'pool-water',
+      poolOut: 'pool-water',
+      primaryFlow: 'heating',
+      primaryReturn: 'heating',
+    },
+    hydraulic: {
+      kind: 'resistance',
+      from: 'poolIn',
+      to: 'poolOut',
+      loss: L.heatExchanger,
+    },
+    aspects: { hydraulics: 'modelled', heat: ph(GAP.heating) },
+  });
+  pipe(`${contact}.outlet`, `${hx}.poolIn`);
+  b.link(`${SITE.lthw}.flow`, `${hx}.primaryFlow`, 'heating');
+  b.link(`${hx}.primaryReturn`, `${SITE.lthw}.return`, 'heating');
+
+  // UV.
+  const uv = b.node({
+    id: id('uv'),
+    tag: tag('UV1'),
+    name: `${name} UV unit`,
+    kind: 'uv-unit',
+    class: 'equipment',
+    system,
+    room,
+    ports: { inlet: 'pool-water', outlet: 'pool-water', power: 'power' },
+    hydraulic: { kind: 'resistance', from: 'inlet', to: 'outlet', loss: L.uv },
+    aspects: {
+      hydraulics: 'modelled',
+      treatment: ph(GAP.uv),
+      electrics: ph(GAP.electrics),
+    },
+  });
+  pipe(`${hx}.poolOut`, `${uv}.inlet`);
+  b.link(`${SITE.power}.out`, `${uv}.power`, 'power');
+
+  // Dosing: the controller reads the sample and drives the two pumps,
+  // which inject on the return after the UV.
+  const controller = b.node({
+    id: id('dosing'),
+    tag: tag('DS1'),
+    name: `${name} dosing controller and sample cells`,
+    kind: 'dosing-controller',
+    class: 'equipment',
+    system,
+    room,
+    ports: { sample: 'sample', sampleReturn: 'sample' },
+    aspects: { chemistry: ph(GAP.chemistry) },
+  });
+  b.link(`${tapping}.sample`, `${controller}.sample`, 'sample');
+  b.link(`${controller}.sampleReturn`, `${tank}.sampleReturn`, 'sample');
+  let upstream = `${uv}.outlet`;
+  for (const [key, chem, store, t] of [
+    ['hypo', 'hypochlorite', SITE.hypochlorite, 'DS1-P1'],
+    ['acid', 'acid', SITE.acid, 'DS1-P2'],
+  ] as const) {
+    const pump = b.node({
+      id: id(`dosing.${key}-pump`),
+      tag: tag(t),
+      name: `${name} ${chem} dosing pump`,
+      kind: 'dosing-pump',
+      class: 'equipment',
+      system,
+      room,
+      ports: { supply: 'chemical', dose: 'chemical' },
+      aspects: { chemistry: ph(GAP.chemicals) },
+    });
+    const point = b.node({
+      id: id(`pw.${key}-injection`),
+      name: `${name} ${chem} injection point`,
+      kind: 'injection-point',
+      class: 'pipework',
+      system,
+      room,
+      ports: { main: 'pool-water', dose: 'chemical' },
+      hydraulic: { kind: 'junction' },
+      aspects: { hydraulics: 'modelled', chemistry: ph(GAP.chemistry) },
+    });
+    b.link(`${store}.out`, `${pump}.supply`, 'chemical');
+    b.link(`${pump}.dose`, `${point}.dose`, 'chemical');
+    pipe(upstream, `${point}.main`);
+    upstream = `${point}.main`;
+  }
+  pipe(upstream, `${pool}.inlets`, L.returnMain);
+}
+
+// ---- The packaged sets: the jacuzzi and the footbath ------------------------
+
+export const PACKAGED_POOLS = [
+  {
+    system: 'jacuzzi',
+    pool: 'pool_03' as PoolId,
+    name: 'Jacuzzi',
+    room: 'plant_pool_03',
+    code: 'PL3',
+    label: 'Packaged Jacuzzi plant cabinet',
+  },
+  {
+    system: 'footbath',
+    pool: 'pool_04' as PoolId,
+    name: 'Footbath',
+    room: 'plant_pool_04',
+    code: 'PL4',
+    label: 'Packaged spa set, footbath',
+  },
+] as const;
+
+/** The packaged set's head at its design flow, and its shut-off head, metres. */
+const SET_HEAD = 8;
+
+export function packagedCircuit(
+  b: NetworkBuilder,
+  spec: (typeof PACKAGED_POOLS)[number],
+) {
+  const { system, room, code, name } = spec;
+  const q = POOL_TARGET[spec.pool].flow;
+  const pool = b.node({
+    id: `${system}.pool`,
+    name,
+    kind: 'pool',
+    class: 'water',
+    system,
+    ports: { outlet: 'pool-water', inlets: 'pool-water' },
+    hydraulic: { kind: 'reservoir', level: 0 },
+    aspects: {
+      hydraulics: 'modelled',
+      levels: ph(GAP.levels),
+      chemistry: ph(GAP.chemistry),
+    },
+  });
+  const set = b.node({
+    id: `${system}.cab`,
+    tag: `${code}-CAB1`,
+    name: spec.label,
+    kind: 'packaged-set',
+    class: 'equipment',
+    system,
+    room,
+    ports: {
+      suction: 'pool-water',
+      return: 'pool-water',
+      makeUp: 'make-up',
+      drain: 'drainage',
+      power: 'power',
+    },
+    hydraulic: {
+      kind: 'pump',
+      from: 'suction',
+      to: 'return',
+      head: SET_HEAD,
+      flow: q,
+      shutoff: SET_HEAD * 1.45,
+    },
+    normal: { running: true },
+    aspects: {
+      hydraulics: 'modelled',
+      internals: ph(GAP.packaged),
+      electrics: ph(GAP.electrics),
+    },
+  });
+  b.link(`${pool}.outlet`, `${set}.suction`, 'pool-water', [SET_HEAD / 2, q]);
+  b.link(`${set}.return`, `${pool}.inlets`, 'pool-water', [SET_HEAD / 2, q]);
+  b.link(`${SITE.makeUp}.out`, `${set}.makeUp`, 'make-up');
+  b.link(`${set}.drain`, `${SITE.drainage}.in`, 'drainage');
+  b.link(`${SITE.power}.out`, `${set}.power`, 'power');
+}
