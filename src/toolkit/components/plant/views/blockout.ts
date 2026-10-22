@@ -82,7 +82,9 @@ export const TANK_LADDER = 0.7;
  * × `h`, with a caged ladder up its face to the roof hatch when it is
  * taller than a reach; or, `shape` 'vessel', an upright GRP vessel of
  * the largest diameter that fits, domed, on a plinth, as a contact tank
- * is. Each with its plate: its name and capacity.
+ * is. Each with its plate: its name and capacity. A sectional tank has a
+ * contents gauge on its face: a clear sight tube on brackets, its water
+ * column standing at the tank's level (`setLevel`, a share of full).
  */
 export function createTank(
   kit: PanelKit,
@@ -102,8 +104,12 @@ export function createTank(
     brand?: BrandId;
   },
 ) {
-  const group = new Group();
+  const group = new Group() as Group & {
+    /** Its contents, a share of full, on its sight gauge (sectional only). */
+    setLevel(share: number): void;
+  };
   group.name = `${label} (tank)`;
+  group.setLevel = () => {};
   if (shape === 'sectional') {
     const ny = Math.max(1, Math.floor(h - 0.35 + 1e-6));
     // Taller than a reach: a caged ladder up its face, in its footprint.
@@ -130,6 +136,53 @@ export function createTank(
       ladder.position.set(-nx / 2 + 0.45, 0, back + nz / 2 + 0.02);
       group.add(ladder);
     }
+    // The contents gauge: a clear tube at the face's right-hand edge, on
+    // brackets, its water column at the tank's level, a scale beside it.
+    const bottom = tank.lift + 0.08;
+    const span = tank.top - 0.08 - bottom;
+    const gx = nx / 2 - 0.09;
+    const gz = back + nz / 2 + 0.07;
+    const clearTube = new MeshStandardMaterial({
+      color: '#dfeff2',
+      transparent: true,
+      opacity: 0.35,
+      roughness: 0.1,
+    });
+    const water = new MeshStandardMaterial({
+      color: '#3b7fc4',
+      roughness: 0.3,
+    });
+    const steelBracket = new MeshStandardMaterial({
+      color: '#8d9396',
+      roughness: 0.5,
+      metalness: 0.5,
+    });
+    kit.materials.push(clearTube, water, steelBracket);
+    const tube = new Mesh(
+      new CylinderGeometry(0.018, 0.018, span, 14),
+      clearTube,
+    );
+    tube.position.set(gx, bottom + span / 2, gz);
+    group.add(tube);
+    for (const y of [bottom, bottom + span]) {
+      const bracket = new Mesh(new BoxGeometry(0.03, 0.03, 0.06), steelBracket);
+      bracket.position.set(gx, y, gz - 0.035);
+      group.add(bracket);
+    }
+    for (let k = 0; k <= 4; k++) {
+      const tick = new Mesh(new BoxGeometry(0.025, 0.004, 0.004), steelBracket);
+      tick.position.set(gx - 0.035, bottom + (span * k) / 4, gz);
+      group.add(tick);
+    }
+    const column = new Mesh(new CylinderGeometry(0.013, 0.013, 1, 12), water);
+    column.userData.live = true;
+    group.add(column);
+    group.setLevel = (share) => {
+      const h = Math.max(0.002, Math.min(1, share)) * span;
+      column.scale.y = h;
+      column.position.set(gx, bottom + h / 2, gz);
+    };
+    group.setLevel(0.65);
     return group;
   }
   // An upright vessel: its plinth, shell and dome, a manway on top.

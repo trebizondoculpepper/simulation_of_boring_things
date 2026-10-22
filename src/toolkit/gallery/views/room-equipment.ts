@@ -93,6 +93,7 @@ import { createOzoneGenerator } from '../../components/plant/views/ozone-plant';
 import { ozoneRoom } from '../../components/plant/logic/ozone-room';
 import type { Item, Placed } from '../logic/room-equipment';
 import type { PoolId } from '../../../game/plant/pools';
+import { WET_HALL_PLANT } from '../../../game/plant/wet-hall';
 import { pumpPairExhibit } from '../rooms/plant/pumps';
 import { pumpPanelExhibit } from '../rooms/plant/pump-panel';
 import { currentPlant } from '../rooms/plant/live-plant';
@@ -295,6 +296,22 @@ function modelFor(
       warning.position.set(f.nx / 2 - 0.3, 0.95, f.front + 0.003);
       tank.add(warning);
     }
+    // Its contents gauge at the world's level: a pool's balance tank, or
+    // the wet hall's break and backwash tanks.
+    const level = (): number | null => {
+      const w = worldStore('dev').world.value;
+      if (kind === 'balance-tank' && pool) return w.pools[pool].balance;
+      if (kind === 'break-tank')
+        return w.wetHall.breakTank / WET_HALL_PLANT.breakTank;
+      if (kind === 'backwash-tank')
+        return w.wetHall.backwashTank / WET_HALL_PLANT.backwashTank;
+      return null;
+    };
+    if (typeof window !== 'undefined' && level() !== null)
+      return {
+        object: tank,
+        update: () => tank.setLevel(level() ?? 0),
+      };
     return tank;
   }
   if (kind === 'sand-filter') {

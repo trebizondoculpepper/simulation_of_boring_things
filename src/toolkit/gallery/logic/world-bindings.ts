@@ -43,15 +43,17 @@ export const WORLD_BINDINGS: Readonly<Record<string, WorldBinding>> = {
   'jacuzzi-pack': world('its cabinet isolator; its circulation'),
   'spa-pack': world('its cabinet isolator and its named POWER switch'),
   'heat-exchanger': passive('plates in a frame: nothing switches or reads out'),
-  'balance-tank': todo('its pool’s balance-tank level, on a sight gauge'),
+  'balance-tank': world('its pool’s balance-tank level, on its sight gauge'),
   'sand-filter': todo('its inlet and outlet pressures from its pool’s flow'),
   'contact-tank': todo('its own room’s ozone plant, not the dev room’s'),
   // The wet hall.
   'booster-set': world('the wet hall: break tank, booster set'),
   'water-meter': world('the wet hall’s make-up meter'),
   'mimic-wet': world('the wet hall'),
-  'break-tank': todo('the wet hall’s break-tank level'),
-  'backwash-tank': todo('the wet hall’s backwash-tank level'),
+  'break-tank': world('the wet hall’s break-tank level, on its sight gauge'),
+  'backwash-tank': world(
+    'the wet hall’s backwash-tank level, on its sight gauge',
+  ),
   // The boiler house: its own model, fed by the world’s power and heat demand.
   'boiler-cascade': world(
     'the boiler house model: the world’s power and heat demand',

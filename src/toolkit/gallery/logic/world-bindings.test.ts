@@ -29,10 +29,7 @@ describe('the real plant rooms’ machines, wired to the world', () => {
     // Shrink this list as each is wired; never grow it.
     expect(UNWIRED).toEqual(
       [
-        'backwash-tank',
-        'balance-tank',
         'bms-outstation',
-        'break-tank',
         'calorifier',
         'central-battery',
         'contact-tank',
