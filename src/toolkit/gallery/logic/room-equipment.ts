@@ -929,8 +929,9 @@ export function roomEquipment(
           wall('mimic-heating', 'Mimic: heating', 2.1, 0.08, 1.2, 1.7, {
             walls: ['north', 'west', 'east'],
           }),
-          // Its board is 2.2 m (`air-mimic.ts`), and its frame round it.
-          wall('mimic-air', 'Mimic: air handling', 2.3, 0.08, 1.3, 1.7, {
+          // Its board is 2.2 m (`air-mimic.ts`), its frame round it, and
+          // 5 cm more clear of the corner.
+          wall('mimic-air', 'Mimic: air handling', 2.4, 0.08, 1.3, 1.7, {
             walls: ['north', 'west', 'east'],
           }),
           // On the west wall toward the operator's desk, in view of it,
