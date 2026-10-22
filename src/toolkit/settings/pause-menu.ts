@@ -1,0 +1,362 @@
+import { effect } from '@preact/signals-core';
+import { paused } from '../controls/logic/paused';
+import { RANGES, renderScale } from './logic/settings';
+import type { Settings } from './logic/settings';
+import { settings, updateSettings } from './settings-store';
+
+/**
+ * The pause menu (`doc/plans/title-screen.md`): tabs for the Game (resume,
+ * save, quit), Graphics, Audio and Controls, in the HUD's style, over the
+ * game, which pauses while it is open (`paused.ts`). Opened by Esc once the
+ * mouse is free (the first Esc is the browser's, freeing it), a gamepad's
+ * Start, or the gear among each room's view tools; Esc, Start, B or Resume
+ * close it. Tabs switch by click, Q and E, or the shoulder buttons; a
+ * gamepad's d-pad moves between controls, left and right change a slider,
+ * A works the one chosen. Settings are kept at once (`settings-store.ts`).
+ * Saving is Minecraft's: the world saves itself; Save is for reassurance.
+ */
+
+/** The gear, as an icon in the HUD's style. */
+export const GEAR_ICON = `<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+<path d="M13.4 3h5.2l.8 3.6 2.4 1 3.1-2 3.7 3.7-2 3.1 1 2.4 3.4.8v5.2l-3.6.8-1 2.4 2 3.1-3.7 3.7-3.1-2-2.4 1-.8 3.4h-5.2l-.8-3.6-2.4-1-3.1 2-3.7-3.7 2-3.1-1-2.4L3 18.6v-5.2l3.6-.8 1-2.4-2-3.1 3.7-3.7 3.1 2 2.4-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="16" cy="16" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/>
+</svg>`;
+
+/** What the Game tab does: the app's to supply. */
+export interface PauseMenuActions {
+  /** Save now; whether it was saved. */
+  save(): boolean;
+  /** Why the game cannot be saved here, if it says (another tab has it). */
+  why?: () => string | null;
+  /** Save, and go to the title screen. */
+  quitToTitle(): void;
+  /** Quit the program, where there is one to quit (a desktop build). */
+  quitToDesktop?: () => void;
+}
+
+const TABS = ['Game', 'Graphics', 'Audio', 'Controls'] as const;
+type Tab = (typeof TABS)[number];
+
+/** The controls, by keyboard and mouse and by gamepad (`first-person.ts`). */
+const BINDINGS: readonly [string, string, string][] = [
+  ['Walk', 'W A S D or arrows', 'Left stick'],
+  ['Run', 'Shift', 'Click the left stick'],
+  ['Look', 'Click, then move the mouse', 'Right stick'],
+  ['Use, pick up, drop', 'Click or E', 'A'],
+  ['Turn a knob down or up', 'Click its left or right half', 'LB or RB'],
+  ['Turn a held object', 'Hold X and move the mouse', 'Hold Y'],
+  ['Zoom', 'Wheel or pinch', 'LT or RT'],
+  ['Crouch, lower, stand', 'C or V', 'B'],
+  ['Torch', 'F', 'X'],
+  ['Eye height', 'Alt and the wheel', ''],
+  ['Free the mouse', 'Esc', ''],
+  ['This menu', 'Esc with the mouse free', 'Start'],
+];
+
+/** A gamepad's buttons (standard mapping) the menu uses. */
+const PAD = {
+  a: 0,
+  b: 1,
+  lb: 4,
+  rb: 5,
+  start: 9,
+  up: 12,
+  down: 13,
+  left: 14,
+  right: 15,
+};
+
+export function createPauseMenu(actions: PauseMenuActions) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'settings-backdrop';
+  backdrop.hidden = true;
+  const panel = document.createElement('div');
+  panel.className = 'settings-panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  panel.setAttribute('aria-label', 'Paused');
+  backdrop.append(panel);
+  const heading = document.createElement('h2');
+  heading.textContent = 'Paused';
+  panel.append(heading);
+
+  // The tabs, and a page for each.
+  const tabBar = document.createElement('div');
+  tabBar.className = 'menu-tabs';
+  tabBar.setAttribute('role', 'tablist');
+  panel.append(tabBar);
+  const pages = new Map<Tab, HTMLElement>();
+  const tabButtons = new Map<Tab, HTMLButtonElement>();
+  for (const tab of TABS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'menu-tab';
+    button.textContent = tab;
+    button.setAttribute('role', 'tab');
+    button.addEventListener('click', () => choose(tab));
+    tabBar.append(button);
+    tabButtons.set(tab, button);
+    const page = document.createElement('div');
+    page.className = 'menu-page';
+    page.setAttribute('role', 'tabpanel');
+    page.hidden = true;
+    panel.append(page);
+    pages.set(tab, page);
+  }
+  let current: Tab = 'Game';
+  const choose = (tab: Tab) => {
+    current = tab;
+    for (const t of TABS) {
+      pages.get(t)!.hidden = t !== tab;
+      tabButtons.get(t)!.setAttribute('aria-selected', String(t === tab));
+      tabButtons.get(t)!.classList.toggle('is-current', t === tab);
+    }
+    focusables()[0]?.focus();
+  };
+  const step = (by: number) =>
+    choose(TABS[(TABS.indexOf(current) + by + TABS.length) % TABS.length]);
+
+  // ---- Settings rows -------------------------------------------------------
+  const shows: ((s: Settings) => void)[] = [];
+  const row = (page: Tab, label: string, ...controls: HTMLElement[]) => {
+    const r = document.createElement('label');
+    r.className = 'settings-row';
+    const name = document.createElement('span');
+    name.className = 'settings-name';
+    name.textContent = label;
+    r.append(name, ...controls);
+    pages.get(page)!.append(r);
+  };
+  const slider = (
+    page: Tab,
+    key: keyof typeof RANGES,
+    label: string,
+    show: (v: number) => string,
+  ) => {
+    const input = document.createElement('input');
+    input.type = 'range';
+    const { min, max, step: by } = RANGES[key];
+    Object.assign(input, { min, max, step: by });
+    const out = document.createElement('output');
+    out.className = 'settings-readout';
+    input.addEventListener('input', () =>
+      updateSettings({ [key]: Number(input.value) } as Partial<Settings>),
+    );
+    row(page, label, input, out);
+    shows.push((s) => {
+      input.value = String(s[key]);
+      out.textContent = show(s[key]);
+    });
+  };
+  const checkbox = (
+    page: Tab,
+    key: 'invertY' | 'onScreenControls',
+    label: string,
+  ) => {
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.addEventListener('change', () =>
+      updateSettings({ [key]: input.checked }),
+    );
+    row(page, label, input);
+    shows.push((s) => {
+      input.checked = s[key];
+    });
+  };
+  const button = (page: Tab, text: string, action: () => void) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'settings-button menu-action';
+    b.textContent = text;
+    b.addEventListener('click', action);
+    pages.get(page)!.append(b);
+    return b;
+  };
+
+  // ---- Game ------------------------------------------------------------------
+  button('Game', 'Resume', () => close());
+  const saved = document.createElement('p');
+  saved.className = 'settings-note';
+  saved.setAttribute('role', 'status');
+  button('Game', 'Save', () => {
+    const time = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    saved.textContent = actions.save()
+      ? `Saved at ${time}. The game also saves itself as you play.`
+      : (actions.why?.() ?? 'The game could not be saved here.');
+  });
+  button('Game', 'Quit to Title', () => {
+    close();
+    actions.quitToTitle();
+  });
+  if (actions.quitToDesktop)
+    button('Game', 'Quit to Desktop', actions.quitToDesktop);
+  pages.get('Game')!.append(saved);
+
+  // ---- Graphics, Audio, Controls -------------------------------------------
+  slider('Graphics', 'renderLevel', 'Render quality', (v) =>
+    v === 0 ? '1:1' : `1:${(1 / renderScale(v)).toFixed(2)}`,
+  );
+  slider('Graphics', 'fov', 'Field of view', (v) => `${Math.round(v)}°`);
+  slider('Audio', 'volume', 'Master volume', (v) => `${Math.round(v * 100)}%`);
+  slider(
+    'Controls',
+    'sensitivity',
+    'Look sensitivity',
+    (v) => `${v.toFixed(2)}×`,
+  );
+  checkbox('Controls', 'invertY', 'Invert up and down');
+  checkbox('Controls', 'onScreenControls', 'On-screen controls');
+  const table = document.createElement('table');
+  table.className = 'menu-bindings';
+  table.innerHTML = `<thead><tr><th></th><th>Keyboard and mouse</th><th>Gamepad</th></tr></thead>`;
+  const body = document.createElement('tbody');
+  for (const [what, keys, pad] of BINDINGS) {
+    const tr = document.createElement('tr');
+    for (const text of [what, keys, pad]) {
+      const td = document.createElement('td');
+      td.textContent = text;
+      tr.append(td);
+    }
+    body.append(tr);
+  }
+  table.append(body);
+  pages.get('Controls')!.append(table);
+
+  // Every change shows at once: the readouts follow the sliders.
+  effect(() => {
+    const now = settings.value;
+    for (const s of shows) s(now);
+  });
+
+  // ---- Opening and closing -------------------------------------------------
+  let returnFocus: Element | null = null;
+  const isOpen = () => !backdrop.hidden;
+  const close = () => {
+    if (!isOpen()) return;
+    backdrop.hidden = true;
+    paused.value = false;
+    if (returnFocus instanceof HTMLElement) returnFocus.focus();
+  };
+  const open = (tab: Tab = 'Game') => {
+    if (isOpen()) return;
+    returnFocus = document.activeElement;
+    document.exitPointerLock?.();
+    saved.textContent = '';
+    paused.value = true;
+    backdrop.hidden = false;
+    choose(tab);
+  };
+  // A click outside the panel closes it too.
+  backdrop.addEventListener('click', (event) => {
+    if (event.target === backdrop) close();
+  });
+
+  // The keys. Closed: Esc with the mouse free opens it (with the mouse
+  // captured, the browser keeps that Esc to free it). Open: the game hears
+  // nothing (stopped here, on the window, before its listeners); Esc
+  // closes, Q and E switch tabs. The browser's own handling (Tab, arrows
+  // on a slider, Space on a box) still happens.
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      if (!isOpen()) {
+        if (
+          event.key === 'Escape' &&
+          !document.pointerLockElement &&
+          !(event.target instanceof HTMLInputElement)
+        ) {
+          event.preventDefault();
+          open();
+        }
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+      } else if (event.key === 'q' || event.key === 'Q') step(-1);
+      else if (event.key === 'e' || event.key === 'E') step(1);
+      event.stopImmediatePropagation();
+    },
+    true,
+  );
+  window.addEventListener(
+    'keyup',
+    (event) => {
+      if (isOpen()) event.stopImmediatePropagation();
+    },
+    true,
+  );
+
+  // The gamepad, polled each frame: Start toggles the menu; open, the
+  // d-pad (or left stick) moves between controls, left and right change a
+  // slider, A works the chosen control, B closes, LB and RB switch tabs.
+  function focusables(): HTMLElement[] {
+    return [
+      ...pages.get(current)!.querySelectorAll<HTMLElement>('input, button'),
+    ].filter((e) => !(e as HTMLButtonElement).disabled);
+  }
+  const moveFocus = (by: number) => {
+    const list = focusables();
+    if (!list.length) return;
+    const at = list.indexOf(document.activeElement as HTMLElement);
+    list[(at + by + list.length) % list.length].focus();
+  };
+  const nudge = (by: number) => {
+    const el = document.activeElement;
+    if (el instanceof HTMLInputElement && el.type === 'range') {
+      if (by > 0) el.stepUp();
+      else el.stepDown();
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  };
+  const was = new Set<number>();
+  let stickHeld = false;
+  const poll = () => {
+    requestAnimationFrame(poll);
+    const pad =
+      typeof navigator !== 'undefined' && navigator.getGamepads
+        ? [...navigator.getGamepads()].find((p) => p?.mapping === 'standard')
+        : undefined;
+    if (!pad) return;
+    const went = (i: number) => {
+      const down = pad.buttons[i]?.pressed === true;
+      const fresh = down && !was.has(i);
+      if (down) was.add(i);
+      else was.delete(i);
+      return fresh;
+    };
+    const presses = Object.fromEntries(
+      Object.entries(PAD).map(([name, i]) => [name, went(i)]),
+    ) as Record<keyof typeof PAD, boolean>;
+    if (presses.start) {
+      if (isOpen()) close();
+      else open();
+      return;
+    }
+    if (!isOpen()) return;
+    if (presses.b) return close();
+    if (presses.lb) step(-1);
+    if (presses.rb) step(1);
+    const stickY = pad.axes[1] ?? 0;
+    const stick = Math.abs(stickY) > 0.6 ? Math.sign(stickY) : 0;
+    if (presses.up || (stick < 0 && !stickHeld)) moveFocus(-1);
+    if (presses.down || (stick > 0 && !stickHeld)) moveFocus(1);
+    stickHeld = stick !== 0;
+    if (presses.left) nudge(-1);
+    if (presses.right) nudge(1);
+    if (presses.a) (document.activeElement as HTMLElement | null)?.click();
+  };
+  requestAnimationFrame(poll);
+
+  document.body.append(backdrop);
+  return {
+    open,
+    close,
+    get isOpen() {
+      return isOpen();
+    },
+  };
+}

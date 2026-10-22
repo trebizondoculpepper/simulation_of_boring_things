@@ -15,6 +15,7 @@ import { bindViewWheel } from './view-wheel';
 import { torch } from '../logic/torch';
 import { createTorchLight } from './torch';
 import { settings } from '../../settings/settings-store';
+import { paused } from '../logic/paused';
 
 /**
  * First-person walking, as in any PC shooter, with the same feel as the
@@ -679,6 +680,14 @@ export function createFirstPerson(options: FirstPersonOptions) {
         ? [...navigator.getGamepads()].find((p) => p?.mapping === 'standard')
         : undefined;
     if (!pad) return idle;
+    // Paused: the pad works the menu. Its buttons held now count as held,
+    // so one let go after the menu closes does nothing in the game.
+    if (paused.value) {
+      pad.buttons.forEach((b, i) =>
+        b.pressed ? pressed.add(i) : pressed.delete(i),
+      );
+      return idle;
+    }
     const axis = (i: number) => pad.axes[i] ?? 0;
     const button = (i: number) => pad.buttons[i]?.value ?? 0;
     const move = deadZone(axis(0), axis(1));
@@ -819,6 +828,11 @@ export function createFirstPerson(options: FirstPersonOptions) {
         }
         handling?.update(delta);
         return;
+      }
+      // Paused behind the menu: nothing held walks on.
+      if (paused.value) {
+        keys.clear();
+        tapped.clear();
       }
       const pad = readGamepad();
       const held = (...codes: string[]) =>

@@ -26,10 +26,7 @@ import {
 import { worldStore } from './toolkit/save/world-store';
 import { GAS_ZONE_IDS } from './game/plant/gas';
 import { versionLabel } from './game/version';
-import {
-  GEAR_ICON,
-  createSettingsPanel,
-} from './toolkit/settings/settings-panel';
+import { GEAR_ICON, createPauseMenu } from './toolkit/settings/pause-menu';
 import { settings } from './toolkit/settings/settings-store';
 import { effect } from '@preact/signals-core';
 import { partAudio } from './toolkit/components/core/audio/part-audio';
@@ -114,18 +111,28 @@ effect(() => {
   partAudio.setVolume(s.volume);
   document.body.classList.toggle('hide-onscreen-controls', !s.onScreenControls);
 });
-// The settings: the gear among each room's view tools opens them.
-const settingsPanel = createSettingsPanel();
+// The pause menu: Esc once the mouse is free, a gamepad's Start, or the
+// gear among each room's view tools. The world saves itself as it runs
+// (Minecraft's way); Save is for reassurance, and Quit to Title saves first.
+// Until the title screen exists, the title is the room list.
+const pauseMenu = createPauseMenu({
+  save: () => worldStore('dev').save(),
+  why: () => worldStore('dev').notice.value,
+  quitToTitle() {
+    worldStore('dev').save();
+    location.href = location.pathname;
+  },
+});
 const settingsButton = document.createElement('button');
 settingsButton.type = 'button';
 settingsButton.className = 'hud-button hud-settings';
 settingsButton.innerHTML = GEAR_ICON;
-settingsButton.title = 'Settings';
-settingsButton.setAttribute('aria-label', 'Settings');
+settingsButton.title = 'Menu (Esc)';
+settingsButton.setAttribute('aria-label', 'Menu');
 settingsButton.addEventListener('pointerdown', (event) =>
   event.stopPropagation(),
 );
-settingsButton.addEventListener('click', () => settingsPanel.open());
+settingsButton.addEventListener('click', () => pauseMenu.open());
 const positionStatus = document.createElement('span');
 positionStatus.setAttribute('role', 'status');
 positionOverlay.append(roomName, positionStatus);

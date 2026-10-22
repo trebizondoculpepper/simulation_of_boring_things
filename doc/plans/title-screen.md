@@ -36,7 +36,7 @@ Worked by mouse, keyboard (arrows and Enter) and gamepad alike: a Steam Deck req
 
 ## The pause menu
 
-Agreed with the owner on 2026-10-22: the settings panel becomes the game's pause menu, in the usual video-game form.
+Built 2026-10-22 (`src/toolkit/settings/pause-menu.ts`, the pause signal in `src/toolkit/controls/logic/paused.ts`); Quit to Title goes to the room list until the title screen exists. Agreed with the owner on 2026-10-22: the settings panel becomes the game's pause menu, in the usual video-game form.
 
 - **Opening it:** the first Esc is the browser's, freeing a captured mouse. Esc with the mouse free opens the menu at its Game tab, and Esc again closes it. A gamepad's Start opens and closes it in one press, and the gear among the view tools opens it for touch and mouse. Resume returns to the game, where the next click captures the mouse again (browsers will not recapture it for about a second after the player's Esc).
 - **Tabs:** Game, Graphics (render quality, field of view), Audio (master volume) and Controls (look sensitivity, invert, on-screen controls, and the key and button list, which the title screen's Instructions reuses). Switched by clicking, Q and E, or a gamepad's shoulder buttons.

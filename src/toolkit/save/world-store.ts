@@ -8,6 +8,7 @@ import {
   deserialiseWorld,
   serialiseWorld,
 } from '../../game/save';
+import { paused } from '../controls/logic/paused';
 
 /**
  * The world, kept and saved in the browser: one per save slot, shared by
@@ -34,8 +35,8 @@ export interface WorldStore {
   dispatch(action: WorldAction): void;
   /** A part's view of something in the world, tracked. */
   read<T>(pick: (world: World) => T): ReadonlySignal<T>;
-  /** Save now (if this tab holds the slot). */
-  save(): void;
+  /** Save now, if this tab holds the slot: whether it was saved. */
+  save(): boolean;
   /** Start again from a new world, discarding the save. */
   reset(): void;
   /** Anything the player should know: unsaved, or another tab has it. */
@@ -105,13 +106,15 @@ function openWorldStore(slot: string): WorldStore {
       return new Promise<void>((resolve) => (release = resolve));
     });
   const save = () => {
-    if (!s || !holder) return;
+    if (!s || !holder) return false;
     try {
       const last = s.getItem(key(slot));
       if (last) s.setItem(`${key(slot)}:previous`, last);
       s.setItem(key(slot), serialiseWorld(world.value, Date.now()));
+      return true;
     } catch {
       notice.value = 'The game could not be saved (storage is full).';
+      return false;
     }
   };
   // The clock: real time, in fixed steps. A hidden tab's timers slow to
@@ -122,6 +125,8 @@ function openWorldStore(slot: string): WorldStore {
     const now = Date.now();
     const elapsed = Math.min(CATCH_UP_LIMIT, Math.max(0, (now - last) / 1000));
     last = now;
+    // Paused behind the menu: the clock stands still (`paused.ts`).
+    if (paused.value) return;
     if (elapsed > 0) world.value = advance(world.value, elapsed);
     if (now - lastSave >= SAVE_EVERY) {
       lastSave = now;

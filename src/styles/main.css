@@ -489,9 +489,62 @@ canvas {
   font-size: 12px;
   opacity: 0.75;
 }
-.settings-done {
+.menu-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+  border-bottom: 2px solid var(--hud-amber);
+}
+.menu-tab {
+  padding: 6px 12px;
+  border: 2px solid transparent;
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  background: none;
+  color: var(--hud-amber);
+  font: bold 14px/1.2 monospace;
+  opacity: 0.6;
+  cursor: pointer;
+}
+.menu-tab.is-current {
+  border-color: var(--hud-amber);
+  background: var(--hud-grey);
+  opacity: 1;
+}
+.menu-tab:focus-visible,
+.menu-action:focus-visible {
+  outline: 2px solid #fff3c4;
+  outline-offset: 2px;
+}
+.menu-page[hidden] {
+  display: none;
+}
+.menu-action {
   display: block;
-  margin-left: auto;
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px;
+  font-size: 15px;
+  text-align: left;
+}
+.menu-bindings {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.menu-bindings th {
+  text-align: left;
+  font-weight: bold;
+  border-bottom: 1px solid #ffa00066;
+}
+.menu-bindings td,
+.menu-bindings th {
+  padding: 4px 6px 4px 0;
+  vertical-align: top;
+}
+.menu-bindings td:first-child {
+  opacity: 0.8;
 }
 /* Top left, under the room's name: the simulation's speed (not yet worked). */
 .hud-speed {
