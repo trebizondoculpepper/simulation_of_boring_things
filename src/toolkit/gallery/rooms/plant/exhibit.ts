@@ -2,6 +2,7 @@ import type { Object3D } from 'three';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
 import type { PartSet } from '../../../components/core/parts/parts';
 import type { ExhibitSize } from '../../logic/plant-room-layout';
+import type { BrandId } from '../../../components/core/logic/brands';
 
 /**
  * One piece of plant shown in a plant development room: a model built at
@@ -20,6 +21,8 @@ export interface PlantExhibit {
   /** The product it is modelled on and its key size: "After … , 2.8 m dia." */
   reference: string;
   size: ExhibitSize;
+  /** Its maker in the game's world (`brands.ts`), for schedules such as the manual's. */
+  maker?: BrandId;
   build(kit: PanelKit): Object3D | LiveExhibit;
 }
 

@@ -62,8 +62,22 @@ export interface StepResult<S> {
   sleep?: Sleep;
 }
 
+/**
+ * A block made of blocks (`composite.ts`), as drawn: its parts' kinds,
+ * its wiring inside, and which parts' ports are its own inputs and
+ * outputs. Kept on the kind so a schematic can be drawn from it.
+ */
+export interface CompositeShape {
+  blocks: Readonly<Record<string, { kind: { kind: string } }>>;
+  wires: Readonly<Record<string, string>>;
+  inputs: Readonly<Record<string, readonly string[]>>;
+  outputs: Readonly<Record<string, string>>;
+}
+
 export interface BlockKind<P extends object = object, S = unknown> {
   kind: string;
+  /** What it is made of, if it is a block of blocks. */
+  composite?: CompositeShape;
   inputs: readonly PortSpec[];
   outputs: readonly PortSpec[];
   /** Its parameters' defaults: fixed for a block once made. */

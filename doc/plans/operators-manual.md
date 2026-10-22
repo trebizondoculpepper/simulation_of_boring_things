@@ -2,7 +2,7 @@
 
 Every release of the game comes with a downloadable PDF: the Operation and Maintenance (O&M) manual for the leisure centre's plant, as the contractor who fitted out the building would have handed it to Ashworth Borough Council at completion. It is written inside the fiction, but every fact in it is generated from the game's own model, so it is always true of the build it ships with: move a cabinet, add a valve or change a pump and the next manual shows it.
 
-This is a plan only; nothing in it is built yet. Decisions still open are listed at the end.
+Progress (2026-10-22): phases 1 and 2 are built. `npm run manual` writes `build/manual/manual.pdf`: the cover, foreword, contents, an introduction and the boiler house pilot chapter, from `src/manual/` (the gathering logic in `logic/`, the typesetting in `latex/`) and `scripts/build-manual.test.ts` (the figures). Photographs and the release workflow are still to come. Decisions still open are listed at the end.
 
 ## Contents
 

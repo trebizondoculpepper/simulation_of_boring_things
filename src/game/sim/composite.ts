@@ -97,6 +97,7 @@ export function compose(spec: CompositeSpec): BlockKind<object, System> {
   };
   return {
     kind: spec.kind,
+    composite: spec,
     inputs: Object.keys(spec.inputs).map((name) => ({ name })),
     outputs: Object.keys(spec.outputs).map((name) => ({ name })),
     params: {},

@@ -1,4 +1,5 @@
 import type { PanelKit } from '../../core/views/eighties-controls';
+import { BOROUGH } from '../logic/borough';
 import { SANS } from '../../core/views/fitting-tools';
 import { plantTools } from '../../plant/views/plant-tools';
 import { SIGN_COLOURS, drawPictogram, fitLine } from './safety-signs';
@@ -221,20 +222,8 @@ function fitLeft(
   c.fillText(text, x, y);
 }
 
-/** The borough the centre belongs to, and its people, all fictional. */
-export const BOROUGH = {
-  council: 'Ashworth Borough Council',
-  service: 'Leisure and Culture Services',
-  insurer: 'Northgate Municipal Insurance plc',
-  policy: 'EL/ABC/0447219',
-  firstAiders: [
-    'R. Okafor  ext. 214',
-    'J. Pearce  ext. 226',
-    'S. Lindqvist  ext. 231',
-  ],
-  safetyRep: 'D. Marsh (Unison)  ext. 219',
-  manager: 'T. Hollis, Duty Manager  ext. 210',
-};
+// The borough the centre belongs to (`../logic/borough.ts`).
+export { BOROUGH };
 
 /**
  * The health and safety law poster every employer must show (Health and

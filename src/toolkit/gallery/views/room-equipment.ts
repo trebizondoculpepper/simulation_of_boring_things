@@ -143,6 +143,10 @@ const MODELS: Record<string, PlantExhibit> = {
   cctv: CONTROL[12],
 };
 
+/** The model a room's machine is drawn from, by its key's kind, if any. */
+export const exhibitFor = (kind: string): PlantExhibit | undefined =>
+  MODELS[kind];
+
 /** The tanks drawn at their size by the tank helper: sectional, or an upright vessel. */
 const TANKS: Record<string, 'sectional' | 'vessel'> = {
   'balance-tank': 'sectional',
