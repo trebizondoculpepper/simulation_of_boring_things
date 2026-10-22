@@ -102,10 +102,21 @@ export type Hydraulic =
       shutoff: number;
     };
 
+/**
+ * A node has two identities (the owner, 2026-10-22). Its **proximal ID**
+ * says what it is and where: `pl2.f3.bv2` is plant room 2, filter 3,
+ * backwash valve 2, and the tag on its plate is the same, written
+ * `PL2-F3-BV2`. It changes if the plant is rearranged. Its **serial
+ * number** is the order it was added to the plant, from the register in
+ * `serials.ts`, and never changes: what must survive a move (a save, a
+ * procedure) holds the serial.
+ */
 export interface PlantNode {
-  /** Its permanent asset ID: names its function, never changes (`doc/plans/part-naming.md`). */
+  /** Its proximal ID: what it is and where (`pl1.p2`). */
   id: string;
-  /** The tag on its plate: room, parent, part. Pipework, water and boundaries have none. */
+  /** Its serial number, from the register (`serials.ts`); never changes or is reused. */
+  serial?: number;
+  /** The tag on its plate, its proximal ID in capitals: `PL1-P2`. Only equipment and valves are plated. */
   tag?: string;
   name: string;
   kind: NodeKind;

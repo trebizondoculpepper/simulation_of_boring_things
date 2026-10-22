@@ -7,8 +7,10 @@ import { isPlaceholder } from './types';
 import type { Aspect, PlantNetwork } from './types';
 
 export interface Gap {
-  /** The node's asset ID or the pipe's link ID. */
+  /** The node's proximal ID or the pipe's link ID. */
   where: string;
+  /** The node's serial number; a pipe has none. */
+  serial?: number;
   /** What it is: the node's name, or the pipe's ends. */
   what: string;
   aspect: Aspect;
@@ -22,6 +24,7 @@ export function modelGaps(net: PlantNetwork): Gap[] {
       if (isPlaceholder(status))
         gaps.push({
           where: n.id,
+          serial: n.serial,
           what: n.name,
           aspect: aspect as Aspect,
           missing: status.placeholder,
@@ -63,7 +66,9 @@ export function gapsReport(net: PlantNetwork): string {
       '',
     );
     for (const g of group)
-      lines.push(`- \`${g.where}\`: ${g.what} (${g.aspect})`);
+      lines.push(
+        `- ${g.serial === undefined ? '' : `#${g.serial} `}\`${g.where}\`: ${g.what} (${g.aspect})`,
+      );
     lines.push('');
   }
   return lines.join('\n');

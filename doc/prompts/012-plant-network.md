@@ -54,7 +54,7 @@ Systems not yet built are placeholder boundaries in the meantime: for example, t
 - **The jacuzzi and footbath** are each one packaged-set node (an equivalent pump), their internals a placeholder for now.
 - **The overflow over the pool's edge** is a placeholder link (weir flow needs level dynamics, step 5). The pressurised side and the main drains are solved by `src/game/sim/hydraulics.ts`, with each connected circuit solved on its own.
 - **Not part of the water solve yet, each a placeholder:** chemical, sample, ozone, heating and power ports, which link to placeholder boundaries (the stores, the LTHW ring, the switch room).
-- **Asset IDs** name function (`olympic.filter3.bv2`), **tags** name place and kind (`PL2-F3-BV2`), each declared once.
+- **Two identities** (the owner, 2026-10-22): a **serial number**, the order a thing was added, permanent and never reused, recorded in an append-only register (`serials.ts`, new entries from `scripts/assign-serials.test.ts`), never computed from build order; and a **proximal ID**, what and where (`pl2.f3.bv2`), the plate's tag in lowercase (`PL2-F3-BV2`). The world's saved network state is keyed by serial (step 5).
 
 ## Rules
 

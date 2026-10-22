@@ -33,6 +33,8 @@ The review's main finding was that a name derived from room and position is an u
 
 ## 2. The asset ID
 
+**Superseded for the plant network (the owner, 2026-10-22).** Everything has two identities: a **serial number**, the order it was added to the plant (`#573`), permanent and never reused, kept in an append-only register (`src/game/plant/network/serials.ts`); and a **proximal ID**, what it is and where (`pl1.p2`, the second pump in plant room 1), which is the tag in lowercase and may change when the plant is rearranged. The serial replaces the function-named asset ID below; what must survive a move (saves, procedures, bindings) holds the serial.
+
 - Lowercase segments joined by dots: `[a-z][a-z0-9-]*`, for example `olympic.filter.f2.backwash-in`.
 - It names **function**, not place: the system, then subsystems, then the item. `footbath.makeup.iv` is the footbath system's make-up isolating valve wherever it stands.
 - Declared by hand in the installed-plant definition, once, and never reused, even after the thing is removed.

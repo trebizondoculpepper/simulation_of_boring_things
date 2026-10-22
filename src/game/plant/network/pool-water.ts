@@ -65,13 +65,15 @@ const ph = (placeholder: string): Status => ({ placeholder });
 
 // ---- A small builder ---------------------------------------------------------
 
+/** The tag on a plate, from a proximal ID: `pl2.f3.bv2` is `PL2-F3-BV2`. */
+export const tagOf = (id: string) => id.toUpperCase().replaceAll('.', '-');
+
 export class NetworkBuilder {
   readonly nodes: PlantNode[] = [];
   readonly links: PlantLink[] = [];
 
   node(n: {
     id: string;
-    tag?: string;
     name: string;
     kind: NodeKind;
     class: NodeClass;
@@ -82,7 +84,12 @@ export class NetworkBuilder {
     normal?: PlantNode['normal'];
     aspects?: Partial<Record<Aspect, Status>>;
   }) {
-    this.nodes.push({ aspects: {}, ...n });
+    const plated = n.class === 'equipment' || n.class === 'valve';
+    this.nodes.push({
+      aspects: {},
+      ...n,
+      ...(plated ? { tag: tagOf(n.id) } : {}),
+    });
     return n.id;
   }
 
@@ -256,14 +263,14 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
   const { system, room, code, name } = spec;
   const q = POOL_TARGET[spec.pool].flow;
   const L = losses(q, spec.filters);
-  const id = (s: string) => `${system}.${s}`;
-  const tag = (s: string) => `${code}-${s}`;
+  const at = code.toLowerCase();
+  const id = (s: string) => `${at}.${s}`;
   const pipe = (from: string, to: string, loss: Loss = L.pipe) =>
     b.link(from, to, 'pool-water', loss);
 
   // The pool and its tank.
   const pool = b.node({
-    id: id('pool'),
+    id: `${at.replace('pl', 'ph')}.pool`,
     name,
     kind: 'pool',
     class: 'water',
@@ -281,8 +288,7 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
     },
   });
   const tank = b.node({
-    id: id('balance-tank'),
-    tag: tag('T1'),
+    id: id('t1'),
     name: `${name} balance tank`,
     kind: 'balance-tank',
     class: 'equipment',
@@ -305,7 +311,6 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
 
   const valve = (
     key: string,
-    t: string,
     label: string,
     ports: { a: Service; b: Service },
     open: boolean,
@@ -314,7 +319,6 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
   ) =>
     b.node({
       id: id(key),
-      tag: tag(t),
       name: label,
       kind,
       class: 'valve',
@@ -332,7 +336,6 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
   // The main drain, to the tank or, for drain-down, to waste.
   const mdv = valve(
     'pw.iv1',
-    'PW-IV1',
     `${name} main drain valve`,
     { a: 'pool-water', b: 'pool-water' },
     true,
@@ -342,7 +345,6 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
   pipe(`${mdv}.b`, `${tank}.mainDrain`);
   const ddv = valve(
     'pw.wv1',
-    'PW-WV1',
     `${name} drain-down valve, to waste`,
     { a: 'pool-water', b: 'drainage' },
     false,
@@ -353,8 +355,7 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
 
   // The tank's make-up and drain.
   const lcv = valve(
-    'balance-tank.lcv1',
-    'T1-LCV1',
+    't1.lcv1',
     `${name} balance tank float valve`,
     { a: 'make-up', b: 'make-up' },
     false,
@@ -364,8 +365,7 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
   b.link(`${SITE.makeUp}.out`, `${lcv}.a`, 'make-up');
   b.link(`${lcv}.b`, `${tank}.makeUp`, 'make-up');
   const tdv = valve(
-    'balance-tank.wv1',
-    'T1-WV1',
+    't1.wv1',
     `${name} balance tank drain valve`,
     { a: 'drainage', b: 'drainage' },
     false,
@@ -395,11 +395,10 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
   // Duty and standby pump sets.
   const head = designHead(spec);
   for (const n of [1, 2]) {
-    const set = `pump${n}`;
+    const set = `p${n}`;
     const duty = n === 1;
     const sv = valve(
       `${set}.sv1`,
-      `P${n}-SV1`,
       `${name} pump ${n} suction valve`,
       { a: 'pool-water', b: 'pool-water' },
       true,
@@ -407,7 +406,6 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
     );
     const strainer = b.node({
       id: id(`${set}.str1`),
-      tag: tag(`P${n}-STR1`),
       name: `${name} pump ${n} strainer`,
       kind: 'strainer',
       class: 'equipment',
@@ -424,7 +422,6 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
     });
     const pump = b.node({
       id: id(set),
-      tag: tag(`P${n}`),
       name: `${name} circulation pump ${n} (${duty ? 'duty' : 'standby'})`,
       kind: 'pump',
       class: 'equipment',
@@ -444,7 +441,6 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
     });
     const nrv = b.node({
       id: id(`${set}.nrv1`),
-      tag: tag(`P${n}-NRV1`),
       name: `${name} pump ${n} non-return valve`,
       kind: 'non-return-valve',
       class: 'valve',
@@ -456,7 +452,6 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
     });
     const dv = valve(
       `${set}.dv1`,
-      `P${n}-DV1`,
       `${name} pump ${n} discharge valve`,
       { a: 'pool-water', b: 'pool-water' },
       true,
@@ -487,10 +482,9 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
 
   // The filters.
   for (let n = 1; n <= spec.filters; n++) {
-    const f = `filter${n}`;
+    const f = `f${n}`;
     const filter = b.node({
       id: id(f),
-      tag: tag(`F${n}`),
       name: `${name} sand filter ${n}`,
       kind: 'sand-filter',
       class: 'equipment',
@@ -507,14 +501,12 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
     });
     const fv = (
       key: string,
-      t: string,
       label: string,
       ports: { a: Service; b: Service },
       open: boolean,
     ) =>
       valve(
         `${f}.${key}`,
-        `F${n}-${t}`,
         `${name} filter ${n} ${label}`,
         ports,
         open,
@@ -522,12 +514,12 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
       );
     const pw = { a: 'pool-water', b: 'pool-water' } as const;
     const toWaste = { a: 'pool-water', b: 'drainage' } as const;
-    const inlet = fv('iv1', 'IV1', 'inlet valve', pw, true);
-    const outlet = fv('iv2', 'IV2', 'outlet valve', pw, true);
-    const bwIn = fv('bv1', 'BV1', 'backwash supply valve', pw, false);
-    const bwOut = fv('bv2', 'BV2', 'backwash waste valve', toWaste, false);
-    const rinse = fv('rnv1', 'RNV1', 'rinse valve, to waste', toWaste, false);
-    const drain = fv('wv1', 'WV1', 'drain valve, to waste', toWaste, false);
+    const inlet = fv('iv1', 'inlet valve', pw, true);
+    const outlet = fv('iv2', 'outlet valve', pw, true);
+    const bwIn = fv('bv1', 'backwash supply valve', pw, false);
+    const bwOut = fv('bv2', 'backwash waste valve', toWaste, false);
+    const rinse = fv('rnv1', 'rinse valve, to waste', toWaste, false);
+    const drain = fv('wv1', 'drain valve, to waste', toWaste, false);
     pipe(`${discharge}.main`, `${inlet}.a`);
     pipe(`${inlet}.b`, `${filter}.top`);
     pipe(`${filter}.bottom`, `${outlet}.a`);
@@ -543,8 +535,7 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
 
   // Ozone: the generator and its contact tank.
   const generator = b.node({
-    id: id('ozone-generator'),
-    tag: tag('OZ1'),
+    id: id('oz1'),
     name: `${name} ozone generator`,
     kind: 'ozone-generator',
     class: 'equipment',
@@ -555,8 +546,7 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
   });
   b.link(`${SITE.power}.out`, `${generator}.power`, 'power');
   const contact = b.node({
-    id: id('contact-tank'),
-    tag: tag('T2'),
+    id: id('t2'),
     name: `${name} ozone contact tank`,
     kind: 'contact-tank',
     class: 'equipment',
@@ -576,8 +566,7 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
 
   // Heat exchanger, from the LTHW ring.
   const hx = b.node({
-    id: id('hx'),
-    tag: tag('HX1'),
+    id: id('hx1'),
     name: `${name} plate heat exchanger`,
     kind: 'heat-exchanger',
     class: 'equipment',
@@ -603,8 +592,7 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
 
   // UV.
   const uv = b.node({
-    id: id('uv'),
-    tag: tag('UV1'),
+    id: id('uv1'),
     name: `${name} UV unit`,
     kind: 'uv-unit',
     class: 'equipment',
@@ -624,8 +612,7 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
   // Dosing: the controller reads the sample and drives the two pumps,
   // which inject on the return after the UV.
   const controller = b.node({
-    id: id('dosing'),
-    tag: tag('DS1'),
+    id: id('ds1'),
     name: `${name} dosing controller and sample cells`,
     kind: 'dosing-controller',
     class: 'equipment',
@@ -637,13 +624,12 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
   b.link(`${tapping}.sample`, `${controller}.sample`, 'sample');
   b.link(`${controller}.sampleReturn`, `${tank}.sampleReturn`, 'sample');
   let upstream = `${uv}.outlet`;
-  for (const [key, chem, store, t] of [
-    ['hypo', 'hypochlorite', SITE.hypochlorite, 'DS1-P1'],
-    ['acid', 'acid', SITE.acid, 'DS1-P2'],
+  for (const [key, chem, store, part] of [
+    ['hypo', 'hypochlorite', SITE.hypochlorite, 'p1'],
+    ['acid', 'acid', SITE.acid, 'p2'],
   ] as const) {
     const pump = b.node({
-      id: id(`dosing.${key}-pump`),
-      tag: tag(t),
+      id: id(`ds1.${part}`),
       name: `${name} ${chem} dosing pump`,
       kind: 'dosing-pump',
       class: 'equipment',
@@ -702,7 +688,7 @@ export function packagedCircuit(
   const { system, room, code, name } = spec;
   const q = POOL_TARGET[spec.pool].flow;
   const pool = b.node({
-    id: `${system}.pool`,
+    id: `${code.toLowerCase().replace('pl', 'ph')}.pool`,
     name,
     kind: 'pool',
     class: 'water',
@@ -716,8 +702,7 @@ export function packagedCircuit(
     },
   });
   const set = b.node({
-    id: `${system}.cab`,
-    tag: `${code}-CAB1`,
+    id: `${code.toLowerCase()}.cab1`,
     name: spec.label,
     kind: 'packaged-set',
     class: 'equipment',
