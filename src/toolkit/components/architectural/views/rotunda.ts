@@ -9,16 +9,14 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
-  PlaneGeometry,
   PointLight,
   RingGeometry,
   SRGBColorSpace,
-  TextureLoader,
   TorusGeometry,
   Vector2,
 } from 'three';
 import { METRE } from '../../core/logic/units';
-import type { Material, Texture } from 'three';
+import type { Material } from 'three';
 import { createPanelKit } from '../../core/views/eighties-controls';
 import { plantTools } from '../../plant/views/plant-tools';
 import {
@@ -27,6 +25,7 @@ import {
 } from '../../pool/views/pool-fittings';
 import { COVE_RADIUS } from './room-coves';
 import { createCorridor } from './corridor';
+import { createDisplayScreen, createSlideshow } from './display-screen';
 import {
   CORRIDOR_HEIGHT,
   CORRIDOR_WIDTH,
@@ -50,8 +49,8 @@ const PLASTER = '#ece9e2';
 /** Warm white, about 3000 K. */
 const WARM = '#ffd9a8';
 
-/** A 55-inch display stood portrait, metres. */
-export const PORTRAIT_DISPLAY = { w: 0.73, h: 1.26, d: 0.035, y: 1.5 } as const;
+/** The displays' middles, metres above the floor. */
+export const DISPLAY_HEIGHT = 1.5;
 
 /** The raised field's glow: brightest at the rim, fading inward. */
 function glowTexture() {
@@ -204,26 +203,21 @@ export function createRotunda(tiles?: Material, metre = METRE) {
     raised / 2,
     0,
   );
-  const bezel = new MeshStandardMaterial({ color: '#141516', roughness: 0.5 });
-  // Both screens show the same picture: the corridor posters' pool
-  // photographs (`public/posters`, without their lettering), a new one
-  // every `SLIDE_SECONDS`.
-  const slides = createSlideshow();
-  const glass = slides.material;
-  const { w, h, d, y } = PORTRAIT_DISPLAY;
+  // Both displays (`display-screen.ts`) show the same picture: the corridor
+  // posters' pool photographs (`public/posters`, without their lettering),
+  // a new one every `SLIDE_SECONDS`.
+  const slides = createSlideshow(
+    Array.from(
+      { length: POSTER_PHOTOS },
+      (_, i) => `posters/${String(i + 1).padStart(2, '0')}.jpg`,
+    ),
+    SLIDE_SECONDS,
+  );
   for (const side of [-1, 1]) {
-    const x = cx + side * (column / 2 + d / 2);
-    const display = new Group();
-    display.name = 'portrait display (off)';
-    const body = new Mesh(new BoxGeometry(d, h, w), bezel);
-    display.add(body);
-    // The picture on its face, toward the mouth.
-    const screen = new Mesh(new PlaneGeometry(w - 0.04, h - 0.04), glass);
-    screen.rotation.y = (side * Math.PI) / 2;
-    screen.position.x = side * (d / 2 + 0.001);
-    screen.onBeforeRender = slides.tick;
-    display.add(screen);
-    display.position.set(x, y, 0);
+    const display = createDisplayScreen('portrait', slides);
+    // Its back on the column's face toward a mouth, facing out.
+    display.position.set(cx + (side * column) / 2, DISPLAY_HEIGHT, 0);
+    display.rotation.y = (side * Math.PI) / 2;
     group.add(display);
   }
   // Small floor drains round the ring, between the mouths and the
@@ -245,49 +239,3 @@ export function createRotunda(tiles?: Material, metre = METRE) {
 export const POSTER_PHOTOS = 30;
 /** How long each picture stays on the displays, seconds. */
 export const SLIDE_SECONDS = 5;
-
-/**
- * The displays' picture: a self-lit screen whose image changes every
- * `SLIDE_SECONDS`, by the clock, as it is drawn; each photograph cropped
- * at its sides to fill the portrait screen. Loaded one ahead; those
- * passed are let go.
- */
-function createSlideshow() {
-  const material = new MeshBasicMaterial({ color: '#050607' });
-  if (typeof Image === 'undefined') return { material, tick: () => {} };
-  const loader = new TextureLoader();
-  const cache = new Map<number, Texture>();
-  const photo = (i: number) => {
-    let tex = cache.get(i);
-    if (!tex) {
-      tex = loader.load(`posters/${String(i + 1).padStart(2, '0')}.jpg`);
-      tex.colorSpace = SRGBColorSpace;
-      // 2 : 3 photographs on a 0.69 × 1.22 m screen: keep its middle.
-      const keep = 0.69 / 1.22 / (2 / 3);
-      tex.repeat.set(keep, 1);
-      tex.offset.set((1 - keep) / 2, 0);
-      cache.set(i, tex);
-    }
-    return tex;
-  };
-  let shown = -1;
-  const tick = () => {
-    const i =
-      Math.floor(performance.now() / 1000 / SLIDE_SECONDS) % POSTER_PHOTOS;
-    if (i === shown) return;
-    const next = photo(i);
-    // Until its photograph has come, the screen keeps the last one.
-    if (!next.image) return;
-    shown = i;
-    material.map = next;
-    material.color.set('#ffffff');
-    material.needsUpdate = true;
-    photo((i + 1) % POSTER_PHOTOS);
-    for (const [j, tex] of cache)
-      if (j !== i && j !== (i + 1) % POSTER_PHOTOS) {
-        tex.dispose();
-        cache.delete(j);
-      }
-  };
-  return { material, tick };
-}
