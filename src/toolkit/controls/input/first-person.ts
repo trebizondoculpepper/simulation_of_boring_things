@@ -40,6 +40,19 @@ import { createTorchLight } from './torch';
 
 export const EYE_HEIGHT_METRES = 1.8034;
 export const WALK_METRES_PER_SECOND = 2;
+/** An on-screen button held longer than this walks or turns on, ms. */
+const HOLD_MS = 250;
+/** A tap of an on-screen turn turns this far, and one held this fast. */
+const TAP_TURN_RADIANS = Math.PI / 12;
+const HUD_TURN_RADIANS_PER_SECOND = 1.6;
+/** The help line fades after this long, ms. */
+const HELP_FADE_MS = 60_000;
+/** The torch, as an icon: Half-Life's style, a torch and its beam. */
+const TORCH_ICON = `<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+<rect x="3" y="13" width="13" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+<path d="M16 11.5 L20 10 L20 23 L16 21.5 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+<path class="hud-torch-beam" d="M22 11 L30 6 M22 16.5 L30 16.5 M22 22 L30 27" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>`;
 export const RUN_METRES_PER_SECOND = 4.2;
 export const LOOK_RADIANS_PER_PIXEL = 0.0022;
 export const PITCH_LIMIT = 1.45;
@@ -276,41 +289,89 @@ export function createFirstPerson(options: FirstPersonOptions) {
   });
   canvas.parentElement?.appendChild(crosshair);
 
-  // The same small walking buttons as the lab, also usable without mouse capture.
+  // On-screen controls, for anyone without a keyboard (`.hud-button`, in
+  // Half-Life's style): at the bottom left, the steps as a pad, a turn
+  // either side of forward, and USE (E). A tap takes a step or a small
+  // turn; held, it walks or turns on.
   const movement = document.createElement('div');
   movement.setAttribute('role', 'group');
   movement.setAttribute('aria-label', 'Movement');
-  Object.assign(movement.style, {
-    position: 'absolute',
-    left: '12px',
-    bottom: '12px',
-    display: 'flex',
-    gap: '4px',
-    padding: '6px',
-    background: '#20302bdd',
-  });
-  for (const [caption, label, forward, right] of [
-    ['◀', 'Step left', 0, -1],
-    ['▲', 'Step forward', 1, 0],
-    ['▼', 'Step back', -1, 0],
-    ['▶', 'Step right', 0, 1],
-  ] as const) {
+  movement.className = 'hud-movement';
+  const pad = document.createElement('div');
+  pad.className = 'hud-pad';
+  movement.append(pad);
+  /** What the held on-screen buttons ask for: steps ahead and aside, turns. */
+  const pressing = { forward: 0, right: 0, turn: 0, since: 0 };
+  const hudButton = (caption: string, label: string, className = '') => {
     const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `hud-button ${className}`.trim();
     button.textContent = caption;
     button.setAttribute('aria-label', label);
-    Object.assign(button.style, {
-      color: '#e8e2cc',
-      background: '#34453c',
-      border: '1px solid #baac80',
-      padding: '8px',
-    });
-    button.addEventListener('click', () => {
-      nudge.forward += forward * 0.45 * metre;
-      nudge.right += right * 0.45 * metre;
-    });
-    movement.append(button);
+    button.title = label;
+    return button;
+  };
+  for (const [caption, label, forward, right, turn] of [
+    ['↶', 'Turn left', 0, 0, -1],
+    ['▲', 'Step forward', 1, 0, 0],
+    ['↷', 'Turn right', 0, 0, 1],
+    ['◀', 'Step left', 0, -1, 0],
+    ['▼', 'Step back', -1, 0, 0],
+    ['▶', 'Step right', 0, 1, 0],
+  ] as const) {
+    const button = hudButton(caption, label, turn ? 'hud-turn' : '');
+    const press = (event: PointerEvent) => {
+      event.stopPropagation();
+      button.setPointerCapture?.(event.pointerId);
+      Object.assign(pressing, {
+        forward,
+        right,
+        turn,
+        since: performance.now(),
+      });
+    };
+    const release = () => {
+      // A tap: one step, or a small turn.
+      if (performance.now() - pressing.since < HOLD_MS) {
+        nudge.forward += pressing.forward * 0.45 * metre;
+        nudge.right += pressing.right * 0.45 * metre;
+        walker.yaw += pressing.turn * TAP_TURN_RADIANS;
+      }
+      Object.assign(pressing, { forward: 0, right: 0, turn: 0, since: 0 });
+    };
+    button.addEventListener('pointerdown', press);
+    button.addEventListener('pointerup', release);
+    button.addEventListener('pointercancel', release);
+    pad.append(button);
   }
+  const useButton = hudButton('E', 'Use', 'hud-use');
+  useButton.addEventListener('pointerdown', (event) => event.stopPropagation());
+  useButton.addEventListener('click', () => use(0, 0));
+  movement.append(useButton);
   canvas.parentElement?.append(movement);
+  // The top right's tools (the app puts its view-link pin here too), and
+  // the torch, lit while it is on; a click switches it.
+  const tools = document.createElement('div');
+  tools.setAttribute('role', 'group');
+  tools.setAttribute('aria-label', 'View tools');
+  tools.className = 'hud-tools';
+  const torchIcon = hudButton('', 'Torch (F)', 'hud-torch');
+  torchIcon.innerHTML = TORCH_ICON;
+  torchIcon.addEventListener('pointerdown', (event) => event.stopPropagation());
+  torchIcon.addEventListener('click', () => torch.toggle());
+  tools.append(torchIcon);
+  canvas.parentElement?.append(tools);
+  // At the top left, under the room's name: the simulation's speed, how
+  // much of the world's time each moment of real time is. Not yet worked:
+  // it shows 1×, real time, and does nothing.
+  const speed = hudButton(
+    '▶▶ 1×',
+    'Simulation speed (not yet working)',
+    'hud-speed',
+  );
+  speed.setAttribute('aria-disabled', 'true');
+  speed.addEventListener('pointerdown', (event) => event.stopPropagation());
+  canvas.parentElement?.append(speed);
 
   // The mouse is captured on the app, not this room's canvas, so it stays
   // captured as one room hands over to another through a doorway; it is
@@ -334,13 +395,6 @@ export function createFirstPerson(options: FirstPersonOptions) {
     changeStance(walker);
   });
   container?.append(crouchButton);
-  const torchButton = document.createElement('button');
-  torchButton.type = 'button';
-  torchButton.className = 'touch-crouch';
-  torchButton.textContent = 'TORCH';
-  torchButton.style.left = '160px';
-  torchButton.addEventListener('click', () => torch.toggle());
-  container?.append(torchButton);
   const inspectButton = document.createElement('button');
   inspectButton.type = 'button';
   inspectButton.className = 'touch-crouch';
@@ -361,20 +415,23 @@ export function createFirstPerson(options: FirstPersonOptions) {
   help.setAttribute('aria-live', 'polite');
   container?.append(help);
   let input: InputMode | undefined;
-  // On a touch screen the help line covers the view, so it fades after a
-  // while; it comes back when the input changes or the room is entered.
+  // The help line fades after a minute (on a touch screen, where it
+  // covers the view, sooner); it comes back when the input changes or the
+  // room is entered.
   let fading: ReturnType<typeof setTimeout> | undefined;
   const showHelp = () => {
     help.classList.remove('is-faded');
     clearTimeout(fading);
-    if (input === 'touch')
-      fading = setTimeout(() => help.classList.add('is-faded'), 10_000);
+    fading = setTimeout(
+      () => help.classList.add('is-faded'),
+      input === 'touch' ? 10_000 : HELP_FADE_MS,
+    );
   };
   const setInput = (mode: InputMode) => {
     if (!container || input === mode) return;
     input = mode;
     container.dataset.input = mode;
-    movement.style.display = mode === 'mouse' ? 'flex' : 'none';
+    movement.style.display = mode === 'mouse' ? '' : 'none';
     help.textContent = controlsHelp(mode);
     showHelp();
     crosshair.hidden = !(
@@ -763,15 +820,22 @@ export function createFirstPerson(options: FirstPersonOptions) {
         codes.some((code) => keys.has(code) || tapped.has(code));
       // The keys and the walk stick add; the stick's push sets the pace.
       const still = holding ? 0 : 1;
+      // A held on-screen button, once held past a tap.
+      const hudHeld =
+        pressing.since && performance.now() - pressing.since >= HOLD_MS ? 1 : 0;
+      walker.yaw +=
+        still * hudHeld * pressing.turn * HUD_TURN_RADIANS_PER_SECOND * delta;
       const ahead =
         still *
-        ((held('KeyW', 'ArrowUp') ? 1 : 0) -
+        (hudHeld * pressing.forward +
+          (held('KeyW', 'ArrowUp') ? 1 : 0) -
           (held('KeyS', 'ArrowDown') ? 1 : 0) -
           (sticks?.move.y ?? 0) -
           pad.move.y);
       const aside =
         still *
-        ((held('KeyD', 'ArrowRight') ? 1 : 0) -
+        (hudHeld * pressing.right +
+          (held('KeyD', 'ArrowRight') ? 1 : 0) -
           (held('KeyA', 'ArrowLeft') ? 1 : 0) +
           (sticks?.move.x ?? 0) +
           pad.move.x);
@@ -875,6 +939,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
         camera.fov = fov;
         camera.updateProjectionMatrix();
       }
+      torchIcon.classList.toggle('is-lit', torch.on);
       torchLight.update(
         { x: walker.x, y, z: walker.z },
         { yaw: walker.yaw, pitch: walker.pitch },
@@ -940,7 +1005,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
       crosshair.remove();
       movement.remove();
       crouchButton.remove();
-      torchButton.remove();
+      tools.remove();
+      speed.remove();
       options.scene?.remove(torchLight.light, torchLight.target);
       inspectButton.remove();
       clearTimeout(fading);

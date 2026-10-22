@@ -445,10 +445,12 @@ const showOnTop = (key: string) => {
   roomName.textContent = id ? DEV_ROOM_NAMES[id] : key;
   positionStatus.textContent = '';
   positionOverlay.hidden = false;
-  const movement = surfaceOf(key)?.parentElement?.querySelector(
-    '[aria-label="Movement"]',
+  // The pin, at the top right with the room's other view tools.
+  const tools = surfaceOf(key)?.parentElement?.querySelector(
+    '[aria-label="View tools"]',
   );
-  (movement ?? positionOverlay).append(positionButton);
+  if (tools) tools.prepend(positionButton);
+  else positionOverlay.append(positionButton);
   for (const [id, entry] of rooms) {
     entry.root.hidden = id !== key;
     entry.root.style.zIndex = id === key ? '1' : '';

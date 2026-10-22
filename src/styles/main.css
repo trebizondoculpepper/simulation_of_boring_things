@@ -319,3 +319,129 @@ canvas {
   outline: 3px solid #d3ad55;
   outline-offset: 2px;
 }
+
+/* The on-screen controls, in the style of Half-Life's HUD: translucent
+   grey, amber outlines and amber symbols, glowing a little
+   (src/toolkit/controls/input/first-person.ts). */
+:root {
+  --hud-amber: #ffa000;
+  --hud-amber-glow: #ffa00099;
+  --hud-grey: #3a3c3e99;
+  --hud-grey-pressed: #5a5c5ecc;
+}
+.hud-button {
+  box-sizing: border-box;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid var(--hud-amber);
+  border-radius: 4px;
+  background: var(--hud-grey);
+  color: var(--hud-amber);
+  font: bold 20px/1 monospace;
+  text-shadow: 0 0 6px var(--hud-amber-glow);
+  box-shadow: 0 0 6px #ffa00033;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.hud-button:active {
+  background: var(--hud-grey-pressed);
+}
+.hud-button:focus-visible {
+  outline: 2px solid #fff3c4;
+  outline-offset: 2px;
+}
+/* Bottom left: the steps as a pad, a turn at each top corner, and USE. */
+.hud-movement {
+  position: absolute;
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.hud-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 46px);
+  grid-template-rows: repeat(2, 46px);
+  gap: 5px;
+}
+.hud-use {
+  width: 58px;
+  height: 58px;
+  font-size: 26px;
+}
+/* Top right: the view tools, the view-link pin and the torch. */
+.hud-tools {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  display: flex;
+  gap: 8px;
+}
+/* The room's view-link pin, in the same style. */
+.hud-tools > .location-pin-button {
+  box-sizing: border-box;
+  width: 46px;
+  height: 46px;
+  border: 2px solid var(--hud-amber);
+  border-radius: 4px;
+  background: var(--hud-grey);
+  filter: sepia(1) saturate(4) hue-rotate(-12deg);
+}
+/* The torch, lit while it is on. */
+.hud-torch {
+  opacity: 0.6;
+}
+.hud-torch .hud-torch-beam {
+  visibility: hidden;
+}
+.hud-torch.is-lit {
+  opacity: 1;
+  box-shadow: 0 0 10px var(--hud-amber-glow);
+}
+.hud-torch.is-lit .hud-torch-beam {
+  visibility: visible;
+}
+/* Top left, under the room's name: the simulation's speed (not yet worked). */
+.hud-speed {
+  position: absolute;
+  top: calc(max(12px, env(safe-area-inset-top)) + 40px);
+  left: max(12px, env(safe-area-inset-left));
+  width: auto;
+  padding: 0 10px;
+  font-size: 15px;
+  cursor: default;
+}
+/* The help line, at the foot, beside the on-screen controls, not under them. */
+[data-input='mouse'] > .controls-help {
+  left: 300px;
+  right: 12px;
+  transform: none;
+  width: auto;
+  max-width: none;
+  margin: 0 auto;
+}
+/* The room's name and the help line, in the HUD's amber on grey too. */
+.location-overlay {
+  border: 1px solid var(--hud-amber);
+  border-radius: 4px;
+  background: var(--hud-grey);
+  color: var(--hud-amber);
+  font: bold 13px/1.4 monospace;
+  text-shadow: 0 0 6px var(--hud-amber-glow);
+}
+.controls-help {
+  border: 1px solid #ffa00066;
+  border-radius: 4px;
+  background: var(--hud-grey);
+  color: var(--hud-amber);
+}
+/* The turns' arrows, larger than the steps', to read at a glance. */
+.hud-turn {
+  font-size: 30px;
+}

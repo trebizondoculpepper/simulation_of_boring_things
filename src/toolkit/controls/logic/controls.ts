@@ -69,7 +69,7 @@ export const CONTROL_SCHEME: Record<
   },
   torch: {
     mouse: 'F: torch',
-    touch: 'Torch button: torch',
+    touch: 'Torch icon: torch',
     gamepad: 'X: torch',
   },
   eye: {
