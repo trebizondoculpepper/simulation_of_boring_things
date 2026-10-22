@@ -54,9 +54,12 @@ export function createTorchLight(metre: number) {
 /**
  * The pattern the torch throws (`beamAt`), drawn once: a cheap torch's
  * uneven pool of light, warmer toward the edge as an incandescent bulb's
- * is. None without a page to draw on.
+ * is. Drawn once, the first time, and shared by every room's torch.
+ * None without a page to draw on.
  */
+let drawn: CanvasTexture | null = null;
 function beamTexture() {
+  if (drawn) return drawn;
   if (typeof document === 'undefined') return null;
   const size = 256;
   const canvas = document.createElement('canvas');
@@ -80,5 +83,6 @@ function beamTexture() {
   c.putImageData(image, 0, 0);
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
+  drawn = texture;
   return texture;
 }
