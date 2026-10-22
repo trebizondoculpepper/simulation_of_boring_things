@@ -12,6 +12,7 @@ import {
   PUMP_ALONG,
 } from '../logic/pump-pair';
 import type { DN, Point } from './plant-tools';
+import { dot } from '../../industrial-control/logic/font-5x7';
 
 /**
  * The pool circulation plant (dev_pumps), in metres, each machine at the
@@ -657,7 +658,8 @@ export function createUvUnit(kit: PanelKit) {
     1.3,
     0,
   );
-  const screen = t.printed(0.14, 0.06, () => {}, 128);
+  // Self-lit, as a VFD module is.
+  const screen = t.printed(0.14, 0.06, () => {}, 256, true);
   screen.mesh.position.set(0, 1.38, 0.101);
   panel.add(screen.mesh);
   let shown = '';
@@ -670,10 +672,30 @@ export function createUvUnit(kit: PanelKit) {
     const ch = c.canvas.height;
     c.fillStyle = '#10243a';
     c.fillRect(0, 0, cw, ch);
-    c.fillStyle = '#7fd4ff';
-    c.font = `${ch * 0.3}px monospace`;
-    c.fillText(lines[0], cw * 0.06, ch * 0.4);
-    c.fillText(lines[1], cw * 0.06, ch * 0.8);
+    // A dot-matrix module: each character a 5 × 7 grid of dots from the
+    // controller's character set (`font-5x7.ts`), the unlit dots faint.
+    const columns = 12;
+    const pitch = (cw - 16) / (columns * 6);
+    const rowHeight = pitch * 9;
+    const top = (ch - rowHeight * 2) / 2 + pitch;
+    lines.forEach((line, r) => {
+      for (let k = 0; k < columns; k++) {
+        const letter = line[k] ?? ' ';
+        const x0 = 8 + k * pitch * 6;
+        const y0 = top + r * rowHeight;
+        for (let dy = 0; dy < 7; dy++)
+          for (let dx = 0; dx < 5; dx++) {
+            c.fillStyle =
+              letter !== ' ' && dot(letter, dx, dy) ? '#7fd4ff' : '#152f45';
+            c.fillRect(
+              x0 + dx * pitch,
+              y0 + dy * pitch,
+              pitch * 0.8,
+              pitch * 0.8,
+            );
+          }
+      }
+    });
     screen.texture.needsUpdate = true;
   };
   // Its lamps: green LAMP ON, red UV FAIL (water flowing past an unlit lamp).
@@ -699,7 +721,7 @@ export function createUvUnit(kit: PanelKit) {
   badge(kit, panel, 'lidoluxe', [0.1, 1.17, 0.102], 0.03);
   screen.mesh.userData.live = true;
   group.show = ({ on, flowing }) => {
-    draw(on ? ['UV 87 W/m²', 'LAMP 6120 h'] : ['UV  0 W/m²', 'LAMP OFF']);
+    draw(on ? ['UV 87 W/m2', 'LAMP 6120 h'] : ['UV  0 W/m2', 'LAMP OFF']);
     green.emissiveIntensity = on ? 1.2 : 0;
     red.emissiveIntensity = flowing && !on ? 1.2 : 0;
   };
