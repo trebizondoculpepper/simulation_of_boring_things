@@ -44,7 +44,9 @@ export const WORLD_BINDINGS: Readonly<Record<string, WorldBinding>> = {
   'spa-pack': world('its cabinet isolator and its named POWER switch'),
   'heat-exchanger': passive('plates in a frame: nothing switches or reads out'),
   'balance-tank': world('its pool’s balance-tank level, on its sight gauge'),
-  'sand-filter': todo('its inlet and outlet pressures from its pool’s flow'),
+  'sand-filter': world(
+    'its inlet and outlet pressures, from its pool’s pumps and flow',
+  ),
   'contact-tank': todo('its own room’s ozone plant, not the dev room’s'),
   // The wet hall.
   'booster-set': world('the wet hall: break tank, booster set'),

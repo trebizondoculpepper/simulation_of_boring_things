@@ -39,7 +39,6 @@ describe('the real plant rooms’ machines, wired to the world', () => {
         'mcc',
         'pressurisation',
         'rotary-isolators',
-        'sand-filter',
       ].sort(),
     );
   });

@@ -451,7 +451,10 @@ export function createSandFilter(
   }: { dia: number; shell: number; dn: DN; label: string },
 ) {
   const t = plantTools(kit);
-  const group = new Group();
+  const group = new Group() as Group & {
+    /** Its inlet (top) and outlet (bottom) gauges, bar. */
+    show(s: { inlet: number; outlet: number }, delta: number): void;
+  };
   const livery = brandLivery(kit, 'lidoluxe');
   const glass = livery.paint.casing;
   const r = dia / 2;
@@ -537,12 +540,19 @@ export function createSandFilter(
   // The two gauges belong to the vessel. Its water nozzles and all pipework
   // are placed from the shared machine-port data by the room.
   const s = PIPE_SIZES[dn];
-  for (const y of [cy + shell / 2 - 0.15, base + 0.45]) {
-    t.pressureGauge(group, [0, y + s.od / 2 + 0.12, face + 0.04], {
-      max: 4,
-      dia: 0.1,
-    });
-  }
+  const [inletGauge, outletGauge] = [cy + shell / 2 - 0.15, base + 0.45].map(
+    (y) =>
+      t.pressureGauge(group, [0, y + s.od / 2 + 0.12, face + 0.04], {
+        max: 4,
+        dia: 0.1,
+      }),
+  );
+  group.show = ({ inlet, outlet }, delta) => {
+    inletGauge.set(inlet);
+    outletGauge.set(outlet);
+    inletGauge.update(delta);
+    outletGauge.update(delta);
+  };
   badge(kit, group, 'lidoluxe', [0, cy + 0.45, face + 0.005], 0.08);
   nameplate(
     kit,

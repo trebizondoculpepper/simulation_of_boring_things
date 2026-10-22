@@ -325,6 +325,20 @@ function modelFor(
     filter.position.z += 0.1;
     const holder = new Group();
     holder.add(filter);
+    // Its gauges at its pool's pressures: running, about 1.6 bar in and
+    // that less the filter's pressure difference out; stopped, the
+    // static head.
+    if (pool && typeof window !== 'undefined')
+      return {
+        object: holder,
+        update: (delta) => {
+          const r = currentPlant(pool);
+          const running = r.pumps.p1 || r.pumps.p2;
+          const dp = Math.max(...r.filterDp);
+          const inlet = running ? 1.6 : 0.2;
+          filter.show({ inlet, outlet: running ? inlet - dp : 0.2 }, delta);
+        },
+      };
     return holder;
   }
   const model = MODELS[kind];
