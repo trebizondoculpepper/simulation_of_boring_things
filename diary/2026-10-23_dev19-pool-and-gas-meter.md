@@ -1,0 +1,7 @@
+# Dev19 pool circuit and natural gas meter
+
+Expanded the isolated port-graph trial from a finite boiler rig into a small pool plant using the existing boiler, circulator, sand filter and plate heat exchanger views. The graph now includes a pool, balance tank, pool pump, treatment unit, three pool-side motorized water valves, mains gas, a distinct gas meter, mains electricity and fresh-water makeup. Required physical ports are checked for connection and medium/direction compatibility; control signals and commands use separate typed ports. The meter measures gas volume and live flow from simulated boiler consumption, and its visible readout and boiler mimic show the value. Pipe runs now use the shared pipe-kind helper.
+
+During the change an incomplete graph edit caused a Vite parse error and made dev19 unavailable. I repaired the declaration, completed the visual and route bindings, and opened the room in the browser to verify it loaded without console errors. The flow meter is visible at `?room=dev19&x=2.74&y=1.80&z=-1.70&yaw=0&pitch=-10&zoom=1.000`. The trial still has a simplified process model: water chemistry and filter fouling are demonstrations, and the reusable filter view's internal valve bank is not yet decomposed into child graph nodes.
+
+Validation: typecheck, lint, format check, full test suite and build passed. The room loaded in Chrome; the gas meter's live flow readout was visible. The trial is not yet part of the saved production world.

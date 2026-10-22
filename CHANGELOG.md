@@ -10,9 +10,11 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- Dev19 now opens with a small pool circuit, balance tank, pool pump, sand filter, treatment cabinet and plate heat exchanger alongside the boiler loop. The trial uses mains electricity and gas, graph-bound remote valves, a gas flow meter with flow and accumulated-volume readings, and the shared pipe helper for its visible services. This also repairs the temporary Vite parse error that prevented the room loading.
+
 - Dev19's pump sound now builds from a softer motor hum, casing vibration, fan and water noise instead of prominent pure tones. Its boiler starts with a blower and igniter, develops a layered flame and flue sound, then closes its gas valve while the blower winds down.
 
-- Dev19 uses a finite 0.04 kWh battery. The mimic shows remaining charge; the pump and boiler lose power at depletion, the pump sound winds down, and gas and water valves fail closed.
+- Dev19's pump and boiler react to power loss; the pump sound winds down and gas and water valves fail closed.
 
 - Dev19 uses motorized gas and water valves and a motorized boiler breaker in place of its manual devices. The mimic commands each one and shows its actual state. Its pump runs up and coasts down audibly with simulated power; the boiler has ignition, firing and shutdown sounds, and motorized devices sound when they actuate.
 
