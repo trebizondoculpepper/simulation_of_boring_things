@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   CAPACITY,
+  FULL_APPEAL,
+  poolAppeal,
   CLOSES,
   OPENS,
   TIMETABLE,
@@ -116,5 +118,71 @@ describe('the bathers', () => {
       seed = next;
     }
     expect(sum / 10000).toBeCloseTo(0.5, 1);
+  });
+});
+
+describe('what keeps bathers away', () => {
+  const good = {
+    temperature: 28,
+    target: 28,
+    ph: 7.4,
+    freeChlorine: 1.4,
+    combinedChlorine: 0.2,
+    circulating: true,
+    lit: true,
+    spa: false,
+  };
+
+  it('is nothing when the water is as it should be', () => {
+    expect(poolAppeal(good)).toBe(1);
+  });
+
+  it('closes a pool whose water is not circulating, is unsafe, is dark, or a spa over 40 °C', () => {
+    expect(poolAppeal({ ...good, circulating: false })).toBe(0);
+    expect(poolAppeal({ ...good, freeChlorine: 0.3 })).toBe(0);
+    expect(poolAppeal({ ...good, lit: false })).toBe(0);
+    expect(
+      poolAppeal({ ...good, spa: true, target: 37, temperature: 41 }),
+    ).toBe(0);
+  });
+
+  it('puts bathers off cold, hot, acid, alkaline, over-chlorinated or smelly water', () => {
+    for (const worse of [
+      { temperature: 24 },
+      { temperature: 32 },
+      { ph: 6.8 },
+      { ph: 7.9 },
+      { freeChlorine: 4 },
+      { combinedChlorine: 1 },
+    ]) {
+      const a = poolAppeal({ ...good, ...worse });
+      expect(a, JSON.stringify(worse)).toBeGreaterThan(0);
+      expect(a, JSON.stringify(worse)).toBeLessThan(0.7);
+    }
+    expect(poolAppeal({ ...good, temperature: 21 })).toBe(0);
+    expect(poolAppeal({ ...good, ph: 8.3 })).toBe(0);
+    expect(poolAppeal({ ...good, freeChlorine: 5 })).toBe(0);
+  });
+
+  it('clears a closed pool within minutes, and lets fewer in to a poor one', () => {
+    let s = newBathers(3);
+    const noon = 12 * 3600;
+    for (let t = 0; t < 2 * 3600; t += DT)
+      s = stepBathers(s, noon - 2 * 3600 + t, DT);
+    expect(s.pools.pool_02.now).toBeGreaterThan(20);
+    const closed = { ...FULL_APPEAL, pool_02: 0 };
+    let c = s;
+    for (let t = 0; t < 300; t += DT) c = stepBathers(c, noon + t, DT, closed);
+    expect(c.pools.pool_02.now).toBe(0);
+    const poor = { ...FULL_APPEAL, pool_02: 0.3 };
+    let p = s;
+    let q = s;
+    for (let t = 0; t < 3600; t += DT) {
+      p = stepBathers(p, noon + t, DT, poor);
+      q = stepBathers(q, noon + t, DT);
+    }
+    expect(p.pools.pool_02.today - s.pools.pool_02.today).toBeLessThan(
+      (q.pools.pool_02.today - s.pools.pool_02.today) * 0.6,
+    );
   });
 });

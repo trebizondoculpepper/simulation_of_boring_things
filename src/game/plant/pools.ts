@@ -33,7 +33,8 @@ export interface PoolWaterState {
 
 export type PoolsState = Record<PoolId, PoolWaterState>;
 
-const TARGET: Record<PoolId, { temp: number; flow: number }> = {
+/** Each pool's design temperature, °C, and circulation, m³/h. */
+export const POOL_TARGET: Record<PoolId, { temp: number; flow: number }> = {
   pool_01: { temp: 30, flow: 90 },
   pool_02: { temp: 28, flow: 620 },
   pool_03: { temp: 37, flow: 24 },
@@ -47,12 +48,12 @@ export function newPools(): PoolsState {
       {
         level: 0.015,
         balance: 0.68,
-        temperature: TARGET[id].temp,
+        temperature: POOL_TARGET[id].temp,
         ph: 7.4,
         freeChlorine: 1.4,
         combinedChlorine: 0.12,
         redox: 720,
-        flow: TARGET[id].flow,
+        flow: POOL_TARGET[id].flow,
         tripped: false,
       },
     ]),
@@ -220,7 +221,7 @@ export function stepPoolsWater(
     const acid = dosing && stock.acid;
     const flow = approach(
       old.flow,
-      circulation ? TARGET[id].flow : 0,
+      circulation ? POOL_TARGET[id].flow : 0,
       0.08,
       dt,
     );
@@ -256,7 +257,7 @@ export function stepPoolsWater(
     const level = water.level;
     const temperature = approach(
       old.temperature,
-      heat ? TARGET[id].temp : 20,
+      heat ? POOL_TARGET[id].temp : 20,
       heat ? 0.0006 : 0.00008,
       dt,
     );

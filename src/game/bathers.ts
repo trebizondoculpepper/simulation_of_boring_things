@@ -93,6 +93,9 @@ const USE: Record<Exclude<PoolId, 'pool_04'>, keyof typeof TIMETABLE> = {
   pool_03: 'spa',
 };
 
+/** A closed pool's bathers are cleared in about this long, seconds. */
+export const CLEAR_SECONDS = 60;
+
 /** A day's busyness is drawn between these, a share of the timetable's. */
 export const BUSY = { min: 0.7, max: 1.3 } as const;
 
@@ -190,6 +193,8 @@ export function stepBathers(
   s: BathersState,
   time: number,
   dt: number,
+  /** How much each pool is wanted now (`poolAppeal`). */
+  appeal: Record<PoolId, number> = FULL_APPEAL,
 ): BathersState {
   let seed = s.seed;
   let { busy, day } = s;
@@ -213,12 +218,17 @@ export function stepBathers(
   for (const id of POOL_IDS) {
     if (id === 'pool_04') continue;
     const p = pools[id];
-    // Arrivals at the rate that, with the stay, holds the usual numbers.
-    const target = usualShare(id, time) * busy * CAPACITY[id];
+    // Arrivals at the rate that, with the stay, holds the usual numbers,
+    // as many as want the pool now; a pool less wanted is left sooner,
+    // and a closed one cleared within a minute or two.
+    const wanted = appeal[id];
+    const target = usualShare(id, time) * busy * CAPACITY[id] * wanted;
     let arrived: number;
     [arrived, seed] = poisson((target / STAY[id]) * dt, seed);
+    const stay =
+      wanted <= 0 ? CLEAR_SECONDS : STAY[id] / (1 + 2 * (1 - wanted));
     let left: number;
-    [left, seed] = poisson((p.now / STAY[id]) * dt, seed);
+    [left, seed] = poisson((p.now / stay) * dt, seed);
     left = Math.min(left, p.now);
     const room = CAPACITY[id] - (p.now - left);
     const admitted = Math.min(arrived, room);
@@ -244,3 +254,74 @@ export function stepBathers(
   };
   return { pools, busy, day, seed };
 }
+
+/** What a pool is like now, as a bather finds it (`poolAppeal`). */
+export interface PoolConditions {
+  /** Its water's temperature, and what it should be, °C. */
+  temperature: number;
+  target: number;
+  ph: number;
+  /** Free and combined chlorine, mg/l. */
+  freeChlorine: number;
+  combinedChlorine: number;
+  /** Whether its water is circulating, treated and filtered. */
+  circulating: boolean;
+  /** Whether its hall can be seen in: its lights, or daylight. */
+  lit: boolean;
+  /** A spa (the jacuzzi): HSG282's hotter limit. */
+  spa: boolean;
+}
+
+/** 1 within `[lo, hi]`, falling straight to 0 at `lo - fall` and `hi + fall`. */
+const within = (
+  v: number,
+  lo: number,
+  hi: number,
+  fallLo: number,
+  fallHi = fallLo,
+) =>
+  v < lo
+    ? Math.max(0, 1 - (lo - v) / fallLo)
+    : v > hi
+      ? Math.max(0, 1 - (v - hi) / fallHi)
+      : 1;
+
+/**
+ * How much bathers want a pool now, 0 to 1: the share of its usual
+ * bathers who come, and how long they stay. 0 is closed: nobody is let
+ * in, and those in the water are cleared.
+ *
+ * - Closed if its water is not circulating (no treatment, no filtering),
+ *   if its hall is dark, or if its free chlorine is under 0.5 mg/l (the
+ *   water not safe: PWTAG's minimum for a pool; the duty manager closes
+ *   it), or a spa over 40 °C (HSG282).
+ * - Its temperature: as wanted within 1.5 °C of its target, nobody 6 °C
+ *   off, too cold or too hot.
+ * - pH: as wanted from 7.0 to 7.6 (PWTAG), nobody at 6.5 or 8.2, where
+ *   eyes sting.
+ * - Free chlorine: as wanted from 1 to 3 mg/l; less, uneasily; more,
+ *   irritating, and nobody at 5, where PWTAG says bathing must stop.
+ * - Combined chlorine, the chloramines that smell of "chlorine" and sting
+ *   the eyes: as wanted to 0.5 mg/l, nobody at 1.5.
+ *
+ * Each is a share; together they multiply. Pure.
+ */
+export function poolAppeal(c: PoolConditions): number {
+  if (!c.circulating || !c.lit) return 0;
+  if (c.freeChlorine < 0.5) return 0;
+  if (c.spa && c.temperature > 40) return 0;
+  return (
+    within(c.temperature, c.target - 1.5, c.target + 1.5, 4.5) *
+    within(c.ph, 7.0, 7.6, 0.5, 0.6) *
+    within(c.freeChlorine, 1, 3, 0.5, 2) *
+    within(c.combinedChlorine, 0, 0.5, 1, 1)
+  );
+}
+
+/** Every pool as wanted as ever. */
+export const FULL_APPEAL: Record<PoolId, number> = {
+  pool_01: 1,
+  pool_02: 1,
+  pool_03: 1,
+  pool_04: 1,
+};

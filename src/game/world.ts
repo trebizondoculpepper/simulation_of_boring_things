@@ -19,6 +19,8 @@ import type {
   Utility,
 } from './plant/services';
 import {
+  POOL_IDS,
+  POOL_TARGET,
   dosedVolumes,
   makeUpDemand,
   newPools,
@@ -31,8 +33,13 @@ import {
   stepWetHall,
 } from './plant/wet-hall';
 import type { WetHallState } from './plant/wet-hall';
-import { newBathers, stepBathers } from './bathers';
-import { newLighting } from './plant/lighting';
+import { newBathers, poolAppeal, stepBathers } from './bathers';
+import {
+  LIGHTING_ZONES,
+  newLighting,
+  zoneLit,
+  zoneOfRoom,
+} from './plant/lighting';
 import type { LightingState, LightingZoneId } from './plant/lighting';
 import { fullOff, fullOn, slowStartAt, slowStartBegin } from './plant/startup';
 import type { BathersState } from './bathers';
@@ -43,7 +50,7 @@ import {
   stepChemicalStores,
 } from './plant/chemicals';
 import type { Chemical, ChemicalStores } from './plant/chemicals';
-import type { PoolsState } from './plant/pools';
+import type { PoolId, PoolsState } from './plant/pools';
 
 export const WORLD_VERSION = 9;
 
@@ -219,7 +226,7 @@ export function stepWorld(world: World, delta: number): World {
     time: world.time + delta,
     pools: water.pools,
     wetHall: stepWetHall(world.wetHall, world.plant, water, delta),
-    bathers: stepBathers(world.bathers, world.time, delta),
+    bathers: stepBathers(world.bathers, world.time, delta, appealOf(world)),
     chemicals: stepChemicalStores(
       world.chemicals,
       dosedVolumes(world.pools, world.plant, stock),
@@ -244,4 +251,30 @@ export function advance(world: World, seconds: number, step = STEP): World {
     left -= d;
   }
   return w;
+}
+
+/** How much each pool is wanted now, as its bathers find it (`poolAppeal`). */
+export function appealOf(world: World): Record<PoolId, number> {
+  return Object.fromEntries(
+    POOL_IDS.map((id) => {
+      const p = world.pools[id];
+      const zone = zoneOfRoom(id);
+      return [
+        id,
+        poolAppeal({
+          temperature: p.temperature,
+          target: POOL_TARGET[id].temp,
+          ph: p.ph,
+          freeChlorine: p.freeChlorine,
+          combinedChlorine: p.combinedChlorine,
+          circulating: !p.tripped && p.flow > POOL_TARGET[id].flow / 2,
+          lit:
+            !zone ||
+            zoneLit(world.plant, world.lighting, zone) ||
+            LIGHTING_ZONES[zone].daylight,
+          spa: id === 'pool_03',
+        }),
+      ];
+    }),
+  ) as Record<PoolId, number>;
 }

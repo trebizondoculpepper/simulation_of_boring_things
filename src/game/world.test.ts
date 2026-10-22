@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { advance, applyAction, newWorld } from './world';
+import { advance, appealOf, applyAction, newWorld } from './world';
 import { roomRunning, serviceAvailable } from './plant/services';
 import { POOL_IDS } from './plant/pools';
 
@@ -86,6 +86,25 @@ describe('the main incoming switch off', () => {
     w = applyAction(w, { type: 'plant/source', utility: 'power', on: true });
     w = advance(w, 600, 10);
     for (const id of POOL_IDS) expect(w.pools[id].flow, id).toBeGreaterThan(5);
+  });
+});
+
+describe('the bathers and the water', () => {
+  it('come as usual while the plant runs, and stay away from a pool whose hypochlorite has run out', () => {
+    // A Tuesday: a day's normal running first.
+    let w = advance(newWorld(), 24 * 3600 + 8 * 3600, 10);
+    expect(appealOf(w).pool_01).toBe(1);
+    const before = w.bathers.pools.pool_01.total;
+    w = advance(w, 6 * 3600, 10);
+    const usual = w.bathers.pools.pool_01.total - before;
+    // The next day, with the hypochlorite gone from 08:00.
+    w = advance(w, 18 * 3600, 10);
+    w = { ...w, chemicals: { ...w.chemicals, hypochlorite: 0 } };
+    const from = w.bathers.pools.pool_01.total;
+    w = advance(w, 6 * 3600, 10);
+    expect(appealOf(w).pool_01).toBe(0);
+    expect(w.bathers.pools.pool_01.now).toBe(0);
+    expect(w.bathers.pools.pool_01.total - from).toBeLessThan(usual / 2);
   });
 });
 
