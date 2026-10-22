@@ -34,7 +34,9 @@ Walk with WASD, run with Shift, click to capture the mouse and look, Esc to free
 
 ## Versions and releases
 
-The game uses [semantic versioning](https://semver.org/): its version is the one in `package.json`, read by the game from `src/game/version.ts` (the title screen will show `versionLabel()`, marked as a development build on the dev server). Below 1.0.0 it is in development.
+The game uses [semantic versioning](https://semver.org/). Every build of `main` is its own version: CI (`.github/workflows/ci.yml`) takes the version in `package.json` and advances its patch by the number of commits since that version's tag, so with `package.json` at 0.1.0 and 74 commits since `v0.1.0`, the build is 0.1.74, and the next push 0.1.75. Nothing is committed back to `main`; the number comes from git. The game reads it in `src/game/version.ts` (falling back to `package.json`'s off CI), and the title screen shows it with the build's commit and date, marked as a development build on the dev server. Below 1.0.0 it is in development.
+
+The levels below say when to cut a release by hand, which moves `package.json` to a new MAJOR or MINOR (or a deliberate PATCH) and tags it; the per-build count then starts again from that tag.
 
 - **MAJOR:** a save that can no longer be carried forward (a migration dropped from `src/game/save.ts`), or a change that breaks how the game is played or packaged.
 - **MINOR:** new rooms, machines, systems or features, including a new save version with its migration (`WORLD_VERSION`, which counts the save's shape, not releases).

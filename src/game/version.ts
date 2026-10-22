@@ -1,10 +1,13 @@
 import { version } from '../../package.json';
 
 /**
- * The game's version, from `package.json`: semantic versioning
- * (https://semver.org), MAJOR.MINOR.PATCH with an optional pre-release
- * after a hyphen. Releases are git tags `vMAJOR.MINOR.PATCH` (README,
- * "Versions and releases"); the title screen shows `versionLabel()`.
+ * The game's version: semantic versioning (https://semver.org),
+ * MAJOR.MINOR.PATCH with an optional pre-release after a hyphen. Every
+ * build of main is its own version: CI takes `package.json`'s and advances
+ * its patch by the commits since that version's tag (its `VITE_VERSION`);
+ * anywhere else it is `package.json`'s. Releases are git tags
+ * `vMAJOR.MINOR.PATCH` (README, "Versions and releases"); the title screen
+ * shows `versionLabel()`.
  *
  * - MAJOR: a save that can no longer be carried forward (a dropped
  *   migration in `save.ts`), or a change that breaks how the game is
@@ -16,7 +19,7 @@ import { version } from '../../package.json';
  * Below 1.0.0 the game is in development, and a MINOR may break things.
  * Pure.
  */
-export const VERSION: string = version;
+export const VERSION: string = import.meta.env.VITE_VERSION || version;
 
 export interface SemVer {
   major: number;

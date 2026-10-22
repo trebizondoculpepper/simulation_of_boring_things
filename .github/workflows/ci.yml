@@ -20,12 +20,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # The whole history and its tags, to number the version.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
+      # Every build its own version: package.json's MAJOR.MINOR.PATCH, the
+      # patch advanced by the commits since that version's tag (README,
+      # "Versions and releases"). Nothing is committed back to main.
+      - name: Number the version
+        run: |
+          base="$(node -p "require('./package.json').version")"
+          if count="$(git rev-list --count "v${base}..HEAD" 2>/dev/null)"; then :; else
+            echo "::warning::No tag v${base}: the version is not advanced"
+            count=0
+          fi
+          IFS=. read -r major minor patch <<< "${base%%-*}"
+          version="${major}.${minor}.$((patch + count))"
+          echo "VITE_VERSION=${version}" >> "$GITHUB_ENV"
+          echo "Version ${version}"
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check
