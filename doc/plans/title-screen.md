@@ -39,3 +39,18 @@ Worked by mouse, keyboard (arrows and Enter) and gamepad alike: a Steam Deck req
 - **Save slots:** the game gets its own `game` save slot. Today every machine in the building is bound to the `dev` slot, which the dev rooms keep.
 - **Developer access:** the developer room list moves off the front page to `?dev`. Direct URLs (`?room=…`) still skip the title screen.
 - **Pausing:** the title screen is also where Esc or the gamepad's Start button returns to, once the game has a pause menu.
+
+## Stages
+
+Built in stages, each ending in a checkpoint the owner can see or try before the next begins. Each stage is committed and pushed on its own.
+
+1. **The screen itself.** The title, the four menu items and the version and build bottom right, over a plain dark background; the menu worked by mouse, arrow keys and Enter, and gamepad. New game and Continue do nothing yet. The developer room list moves to `?dev`, and `?room=…` links skip the title screen. CI passes `VITE_BUILD`. _Checkpoint: open the site and see the title screen._
+2. **Instructions.** The controls for keyboard and mouse, touch and gamepad, and what the player is there to do, with a way back to the title. _Checkpoint: read it._
+3. **Settings, saved.** The six settings as controls that remember their values per player, with a way back. Nothing in the game uses them yet. _Checkpoint: change them, reload, and see them kept._
+4. **Settings, applied.** Volume, look sensitivity and invert Y, field of view, graphics quality and the on-screen controls take effect in every room. Erase saved game waits for stage 6. _Checkpoint: change one and feel it in the game._
+5. **The game's own save.** A `game` save slot for the real game, separate from the dev rooms' `dev` slot, which every machine in the building is bound to today. No visible change. _Checkpoint: the dev rooms and the game no longer share a world._
+6. **New game.** A fresh world in the game slot, starting at a fixed spot in the footbath, asking first if a save would be overwritten. Erase saved game now works. _Checkpoint: start a new game and arrive in the footbath._
+7. **Continue.** The save records the player's room and position as well as the world; Continue puts the player back there, and is greyed out with no save. _Checkpoint: play, reload, continue, and be where you were._
+8. **One room behind the title.** The Olympic hall rendered behind the menu at a quarter of the resolution, blurred, from a fixed high camera. _Checkpoint: judge the look._
+9. **High camera paths for all six rooms.** A slow drift or arc through each, from above; each shot checked for faces modelled only to be seen from eye height, and either the model finished or the path changed. _Checkpoint: a still from each room._
+10. **The cycle.** The six rooms in turn, about 20 seconds each, cross-faded, the next one preloaded unseen so the change does not stutter. _Checkpoint: watch a full cycle._
