@@ -656,6 +656,11 @@ export interface CabinetOptions {
   feet?: 'plinth' | 'castors' | 'levellers';
   /** The door posed open. */
   doorOpen?: boolean;
+  /**
+   * How far its door may swing open, radians (by default 1.9, past
+   * square); less where a wall or a neighbour stands at its hinge side.
+   */
+  doorSwing?: number;
   /** A glass door's tint: blue-green, or dark smoked perspex. */
   glass?: 'tinted' | 'smoke';
 }
@@ -668,12 +673,14 @@ export interface CabinetView {
   /** Fit a unit with its bottom at rack unit `at`, counting from 1 at the bottom. */
   mount(unit: RackUnitView, at: number): void;
   /**
-   * Its door, for a part to work: the hinge to swing (open about -1.9),
-   * the swing handle and lock, the leaf's width and the height of its
-   * middle. Null without a door.
+   * Its door, for a part to work: the hinge to swing (open, by minus its
+   * `swing`), the swing handle and lock, the leaf's width and the height
+   * of its middle. Null without a door.
    */
   door: {
     hinge: Group;
+    /** How far it may swing open, radians. */
+    swing: number;
     handle: Object3D;
     lock: Object3D;
     width: number;
@@ -716,6 +723,7 @@ export function createRackCabinet(
     header = true,
     feet = 'levellers',
     doorOpen = false,
+    doorSwing = 1.9,
     glass: tint = 'tinted',
   } = options;
   const group = new Group();
@@ -969,9 +977,9 @@ export function createRackCabinet(
     );
     lock.rotation.x = Math.PI / 2;
     lock.name = 'Cabinet door lock';
-    doorParts = { hinge, handle, lock, width: w, middle: y };
+    doorParts = { hinge, swing: doorSwing, handle, lock, width: w, middle: y };
   }
-  hinge.rotation.y = doorOpen ? -1.9 : 0;
+  hinge.rotation.y = doorOpen ? -doorSwing : 0;
   return {
     group,
     units,

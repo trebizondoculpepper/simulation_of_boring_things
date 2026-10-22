@@ -9,7 +9,7 @@ import {
 import { Box3, Group } from 'three';
 import { createPanelKit } from '../../components/core/views/eighties-controls';
 import { EQUIPPED_ROOMS, layoutRoom } from '../logic/room-equipment';
-import { createRoomEquipment } from './room-equipment';
+import { SIMULATOR_DOOR_SWING, createRoomEquipment } from './room-equipment';
 
 beforeEach(() => {
   vi.stubGlobal('document', {
@@ -55,6 +55,42 @@ describe.each(EQUIPPED_ROOMS)('%s, as built', (room) => {
       expect(box.min.z, p.item.label).toBeGreaterThan(f.minZ - SLACK);
       expect(box.max.z, p.item.label).toBeLessThan(f.maxZ + SLACK);
     });
+    built.dispose();
+  });
+});
+
+describe('the engineer’s office’s scenario simulator', () => {
+  it('opens its door without the door going through a wall or into anything', () => {
+    const built = createRoomEquipment(createPanelKit(), 'engineers_office');
+    const group = built.group as Group;
+    const layout = layoutRoom('engineers_office')!;
+    const sim = layout.placed.find((p) => p.item.key === 'scenario-simulator')!;
+    // The door's hinge: the group its pull hangs on, swung fully open.
+    let hinge: Group | undefined;
+    group.traverse((o) => {
+      if (o.name === 'Scenario simulator door pull') hinge = o.parent as Group;
+    });
+    expect(hinge).toBeDefined();
+    hinge!.rotation.y = -SIMULATOR_DOOR_SWING;
+    group.updateMatrixWorld(true);
+    const box = new Box3().setFromObject(hinge!);
+    // Inside the room's walls…
+    const { w, d } = layout.box;
+    expect(box.min.x, 'west wall').toBeGreaterThan(-w / 2);
+    expect(box.max.x, 'east wall').toBeLessThan(w / 2);
+    expect(box.min.z, 'north wall').toBeGreaterThan(-d / 2);
+    expect(box.max.z, 'south wall').toBeLessThan(d / 2);
+    // …and clear of everything else in it.
+    for (const p of layout.placed) {
+      if (p === sim) continue;
+      const f = p.footprint;
+      const clash =
+        box.min.x < f.maxX &&
+        box.max.x > f.minX &&
+        box.min.z < f.maxZ &&
+        box.max.z > f.minZ;
+      expect(clash, p.item.label).toBe(false);
+    }
     built.dispose();
   });
 });

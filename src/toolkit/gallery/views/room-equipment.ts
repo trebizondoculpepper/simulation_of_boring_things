@@ -59,7 +59,7 @@ import {
   SPA_PACK_EXHIBIT,
 } from '../rooms/plant/spa-pack';
 import { PUMP_PANEL_EXHIBIT } from '../rooms/plant/pump-panel';
-import { layoutRoom } from '../logic/room-equipment';
+import { SIMULATOR_SPACE, layoutRoom } from '../logic/room-equipment';
 import { createRoomPipework } from './room-pipework';
 import { createRoomServices } from './room-services';
 import { ROOM_SERVICES } from '../../../game/plant/services';
@@ -237,8 +237,15 @@ function bindSupplies() {
  * does not so much switch the plant as carry its user, seamlessly, into
  * the reality where the plant is off, on, or coming up.
  * Its origin, under the middle of its front, set forward so that its
- * footprint's middle is the machine's.
+ * footprint's middle is the machine's, and to the right, so that its
+ * door, hinged on its left, swings within it.
  */
+/**
+ * Its door stops square (90°), so it needs only a little room on its
+ * hinge side, for its pull (`SIMULATOR_SPACE`, `room-equipment.ts`).
+ */
+export const SIMULATOR_DOOR_SWING = Math.PI / 2;
+
 function worldScenarioSimulator(kit: PanelKit): LiveExhibit {
   const store = typeof window === 'undefined' ? null : worldStore('dev');
   const scenarios: Scenarios = {
@@ -250,10 +257,12 @@ function worldScenarioSimulator(kit: PanelKit): LiveExhibit {
     },
     update() {},
   };
-  const sim = createScenarioSimulator(kit, scenarios);
+  const sim = createScenarioSimulator(kit, scenarios, SIMULATOR_DOOR_SWING);
   const object = new Group();
   object.name = 'Hyperplasc Scenario Simulator';
   sim.group.position.z = 0.9 / 2 - 0.07;
+  // To its space's right: the room on its left is its door's swing.
+  sim.group.position.x = (SIMULATOR_SPACE - 0.64) / 2;
   object.add(sim.group);
   return {
     object,

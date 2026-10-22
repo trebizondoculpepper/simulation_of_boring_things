@@ -46,6 +46,8 @@ That was a misreading: the owner meant the Encabulator's incoming supply isolato
 
 The owner asked for the Encabulator's Hyperplasc Scenario Simulator in the engineer's office, its panel cleared but for FULL OFF, FULL ON and SLOW START. Copied (`scenario-simulator.ts`, its dependencies already here and identical) and placed on the office's east wall. Its switches act on the whole plant through three new world actions (`src/game/plant/startup.ts`, `WORLD_VERSION` 8): FULL OFF opens the main switch and every feeder; FULL ON closes everything, isolators too, and resets the booster set; SLOW START closes the main switch and then each room's feeder in turn, five seconds apart, supplies first, held in the world so it carries on wherever the player goes, its lamp lit until done. The owner's fiction: the simulator comes from another timeline, draws its power from branching universes, and moves its user between realities; so it is never bound to the building's supply.
 
+The owner asked whether its door went through the wall when open. It did: hinged on the left and opening to 109°, its pull swung 0.21 m past the cabinet's side, and the cabinet stood 0.12 m from the north wall, so the open door was 10 cm into it. A test now opens the door in the built room and checks it against every wall and every other machine. At the owner's suggestion the rack cabinet's door now takes an allowed swing (`doorSwing`); the simulator's stops square, and its space on the floor allows 0.1 m on its hinge side for the pull.
+
 ## Next Steps
 
 - Make the pools' pumps' low-low trip latch, and drive the control room's annunciator from the world.

@@ -103,7 +103,12 @@ const GROUPS: readonly {
  * can be seen through the door but worked only with it open. Front faces
  * +z; metres; its origin on the floor under the middle of its front.
  */
-export function createScenarioSimulator(kit: PanelKit, scenarios: Scenarios) {
+export function createScenarioSimulator(
+  kit: PanelKit,
+  scenarios: Scenarios,
+  /** How far its door may swing open, radians (`createRackCabinet`). */
+  doorSwing?: number,
+) {
   const group = new Group();
   group.name = 'Hyperplasc Scenario Simulator';
   const parts = createPartSet();
@@ -116,6 +121,7 @@ export function createScenarioSimulator(kit: PanelKit, scenarios: Scenarios) {
     door: 'glass',
     glass: 'smoke',
     feet: 'levellers',
+    doorSwing,
   });
   group.add(cabinet.group);
   // The simulator's own equipment, round its control panel.
@@ -402,7 +408,7 @@ export function createScenarioSimulator(kit: PanelKit, scenarios: Scenarios) {
         selected = undefined;
         showStatus(['standing by', '']);
       }
-      const target = open.value ? -1.9 : 0;
+      const target = open.value ? -door.swing : 0;
       angle += (target - angle) * Math.min(1, delta * 6);
       if (Math.abs(angle - target) < 0.001) angle = target;
       door.hinge.rotation.y = angle;

@@ -914,11 +914,13 @@ export function roomEquipment(
           floor('desk', 'Engineer’s desk', 1.6, 0.8, 0.75, { back: 0 }),
           floor('filing', 'Filing and spares cabinets', 2, 0.6, 2, { back: 0 }),
           // The Encabulator's Hyperplasc Scenario Simulator: a 42U rack,
-          // its door and handle a little proud of its front.
+          // its door and handle a little proud of its front; and room on
+          // its hinge side (its left, from in front) for its open door's
+          // pull, so the door swings clear of any wall.
           floor(
             'scenario-simulator',
             'Hyperplasc Scenario Simulator',
-            0.64,
+            SIMULATOR_SPACE,
             0.9,
             2.05,
             { back: 0 },
@@ -928,6 +930,12 @@ export function roomEquipment(
   }
   return null;
 }
+
+/**
+ * The scenario simulator's width on the floor: its 0.64 m cabinet, and
+ * 0.1 m on its hinge side for its door, stopping square, and its pull.
+ */
+export const SIMULATOR_SPACE = 0.74;
 
 /** The rooms that have machines placed. */
 export const EQUIPPED_ROOMS = [
