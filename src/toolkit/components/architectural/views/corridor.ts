@@ -409,7 +409,7 @@ export function createCorridorRun(
               );
             })()
           : p.piece.kind === 'rotunda'
-            ? createRotunda()
+            ? createRotunda(material)
             : createCorridorTurn(p.piece.kind, material);
     piece.position.set(p.x, p.y, p.z);
     piece.rotation.y = p.yaw;

@@ -9,13 +9,22 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  PlaneGeometry,
   PointLight,
   RingGeometry,
   SRGBColorSpace,
+  TextureLoader,
   TorusGeometry,
   Vector2,
 } from 'three';
 import { METRE } from '../../core/logic/units';
+import type { Material, Texture } from 'three';
+import { createPanelKit } from '../../core/views/eighties-controls';
+import { plantTools } from '../../plant/views/plant-tools';
+import {
+  createDeckGully,
+  fittingMaterials,
+} from '../../pool/views/pool-fittings';
 import { COVE_RADIUS } from './room-coves';
 import { createCorridor } from './corridor';
 import {
@@ -27,20 +36,21 @@ import {
 /**
  * The rotunda (`logic/corridor-path.ts`): a round room on the corridor's
  * line, built heading +x from its entry at the origin. A neck of the
- * corridor's section, the room, and a neck out. Smooth white plaster, its
- * floor coved to its round wall. Its ceiling: a bulkhead round the edge
+ * corridor's section, the room, and a neck out. Tiled as the corridors
+ * are (or plain plaster), its floor coved to its round wall, with small
+ * floor drains round it. Its ceiling: a bulkhead round the edge
  * at the corridor's height, stepping up inside a lip to a raised field,
  * washed from the rim by warm-white LED strip hidden in the step (cove
  * lighting) and fading toward the middle. In its middle a square column,
- * a portrait display (off) on each face toward a mouth, alike, so the
- * room has no front or back.
+ * a portrait display on each face toward a mouth, alike, showing the
+ * same pool photographs in turn, so the room has no front or back.
  */
 
 const PLASTER = '#ece9e2';
 /** Warm white, about 3000 K. */
 const WARM = '#ffd9a8';
 
-/** A 55-inch display stood portrait, its glass black (off), metres. */
+/** A 55-inch display stood portrait, metres. */
 export const PORTRAIT_DISPLAY = { w: 0.73, h: 1.26, d: 0.035, y: 1.5 } as const;
 
 /** The raised field's glow: brightest at the rim, fading inward. */
@@ -69,18 +79,22 @@ function glowTexture() {
   return tex;
 }
 
-export function createRotunda(metre = METRE) {
+export function createRotunda(tiles?: Material, metre = METRE) {
   const group = new Group();
   group.name = 'rotunda';
   const { radius: R, neck, column, bulkhead, raised, lip } = ROTUNDA;
   const half = CORRIDOR_WIDTH / 2;
   const cx = neck + R;
-  const plaster = new MeshStandardMaterial({
-    color: PLASTER,
-    roughness: 0.92,
-    side: DoubleSide,
-  });
-  const floor = new MeshStandardMaterial({ color: '#cfccc4', roughness: 0.6 });
+  // Tiled as the corridors are (the run's own tile), or plain plaster.
+  const plaster =
+    tiles ??
+    new MeshStandardMaterial({
+      color: PLASTER,
+      roughness: 0.92,
+      side: DoubleSide,
+    });
+  const floor =
+    tiles ?? new MeshStandardMaterial({ color: '#cfccc4', roughness: 0.6 });
   const add = (mesh: Mesh, x: number, y: number, z: number) => {
     mesh.position.set(x, y, z);
     group.add(mesh);
@@ -191,11 +205,11 @@ export function createRotunda(metre = METRE) {
     0,
   );
   const bezel = new MeshStandardMaterial({ color: '#141516', roughness: 0.5 });
-  const glass = new MeshStandardMaterial({
-    color: '#050607',
-    roughness: 0.12,
-    metalness: 0.2,
-  });
+  // Both screens show the same picture: the corridor posters' pool
+  // photographs (`public/posters`, without their lettering), a new one
+  // every `SLIDE_SECONDS`.
+  const slides = createSlideshow();
+  const glass = slides.material;
   const { w, h, d, y } = PORTRAIT_DISPLAY;
   for (const side of [-1, 1]) {
     const x = cx + side * (column / 2 + d / 2);
@@ -203,11 +217,77 @@ export function createRotunda(metre = METRE) {
     display.name = 'portrait display (off)';
     const body = new Mesh(new BoxGeometry(d, h, w), bezel);
     display.add(body);
-    const screen = new Mesh(new BoxGeometry(0.002, h - 0.04, w - 0.04), glass);
+    // The picture on its face, toward the mouth.
+    const screen = new Mesh(new PlaneGeometry(w - 0.04, h - 0.04), glass);
+    screen.rotation.y = (side * Math.PI) / 2;
     screen.position.x = side * (d / 2 + 0.001);
+    screen.onBeforeRender = slides.tick;
     display.add(screen);
     display.position.set(x, y, 0);
     group.add(display);
   }
+  // Small floor drains round the ring, between the mouths and the
+  // column's corners: the deck gully's 150 mm stainless grating.
+  const kit = createPanelKit();
+  const fittings = fittingMaterials(kit);
+  const t = plantTools(kit);
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI / 4 + (i * Math.PI) / 2;
+    const gully = createDeckGully(t, fittings);
+    gully.position.set(cx + Math.cos(a) * 2.2, 0.002, Math.sin(a) * 2.2);
+    gully.rotation.y = -a;
+    group.add(gully);
+  }
   return group;
+}
+
+/** The poster photographs (`public/posters/01.jpg` to `30.jpg`). */
+export const POSTER_PHOTOS = 30;
+/** How long each picture stays on the displays, seconds. */
+export const SLIDE_SECONDS = 5;
+
+/**
+ * The displays' picture: a self-lit screen whose image changes every
+ * `SLIDE_SECONDS`, by the clock, as it is drawn; each photograph cropped
+ * at its sides to fill the portrait screen. Loaded one ahead; those
+ * passed are let go.
+ */
+function createSlideshow() {
+  const material = new MeshBasicMaterial({ color: '#050607' });
+  if (typeof Image === 'undefined') return { material, tick: () => {} };
+  const loader = new TextureLoader();
+  const cache = new Map<number, Texture>();
+  const photo = (i: number) => {
+    let tex = cache.get(i);
+    if (!tex) {
+      tex = loader.load(`posters/${String(i + 1).padStart(2, '0')}.jpg`);
+      tex.colorSpace = SRGBColorSpace;
+      // 2 : 3 photographs on a 0.69 × 1.22 m screen: keep its middle.
+      const keep = 0.69 / 1.22 / (2 / 3);
+      tex.repeat.set(keep, 1);
+      tex.offset.set((1 - keep) / 2, 0);
+      cache.set(i, tex);
+    }
+    return tex;
+  };
+  let shown = -1;
+  const tick = () => {
+    const i =
+      Math.floor(performance.now() / 1000 / SLIDE_SECONDS) % POSTER_PHOTOS;
+    if (i === shown) return;
+    const next = photo(i);
+    // Until its photograph has come, the screen keeps the last one.
+    if (!next.image) return;
+    shown = i;
+    material.map = next;
+    material.color.set('#ffffff');
+    material.needsUpdate = true;
+    photo((i + 1) % POSTER_PHOTOS);
+    for (const [j, tex] of cache)
+      if (j !== i && j !== (i + 1) % POSTER_PHOTOS) {
+        tex.dispose();
+        cache.delete(j);
+      }
+  };
+  return { material, tick };
 }
