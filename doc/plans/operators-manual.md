@@ -22,7 +22,7 @@ In the UK the contractor hands over an O&M manual at practical completion, and i
 
 - **Client:** Ashworth Borough Council, Leisure and Culture Services (the borough already named in the game's notices, `BOROUGH` in `safety-notices.ts`).
 - **Issued by:** Bramhall Fenwick Engineering Ltd, Building Services Engineers, est. 1958: a fictional mechanical and electrical contractor who designed and fitted out the pool plant in the existing building's shell. Its logo and house style are still to be designed, and it joins `brands.ts` like every other maker. (No real firm of that name was found, 2026-10-22.)
-- **Foreword:** the book opens with a foreword from a Fenwick of the firm, a chartered engineer, thanking the council for choosing Bramhall Fenwick for its pool and hoping it gives many years of productive use. The signatory's first name is still to be chosen: Hugh Fenwick, CEng, is a real British engineer, so the fiction must not use that name.
+- **Foreword:** the book opens with a foreword from Rowland Fenwick, CEng MIMechE, Engineering Director, thanking the council for choosing Bramhall Fenwick for its pool and hoping it gives many years of productive use. (Not Hugh Fenwick: a real British chartered engineer has that name.)
 - **Subcontractors credited in it:** Penfold Controls for the control panels and mimics, and the makers already in `brands.ts` for each machine.
 - **Dates:** the plant is of around 2000, so the manual's first issue is dated then. Each game release is a new revision of it, with a document control table on its second page listing the revisions; the amendment notes describe each release's changes in the fiction's terms (for example "Rev. F: chlorine gas detection added to the hypochlorite store"), written by hand at release time from the changelog.
 - **Look:** a contractor's document of the time: A4 portrait, a cover with the project title, contract number and the client's and contractor's names, a title block on every page (document number, revision, page of pages), numbered sections and paragraphs, and drawings with their own title blocks and drawing numbers. Plain and dense, not decorative.
@@ -31,7 +31,7 @@ In the UK the contractor hands over an O&M manual at practical completion, and i
 
 Sections in BSRIA's order, adapted to a pool plant:
 
-1. **Foreword** from the firm's chartered engineer (see above).
+1. **Foreword** from Rowland Fenwick, CEng MIMechE, Engineering Director (see above).
 2. **Contract particulars:** client, contractor, subcontractors and suppliers (from `brands.ts`), the document control table, and how to use the manual.
 3. **Description of the installation:** the complex and its pools (volumes, flows, temperatures, turnovers); the plant rooms and what each one does; a site plan; a system overview schematic of how water, heat, air, power and chemicals move between rooms.
 4. **Room by room**, one chapter per plant room (each pool's plant room, the wet hall, the boiler house, the air handling plant, the switch room, the hypochlorite and acid stores, the loading bay, the control room). Each chapter has:
@@ -111,7 +111,6 @@ Building TeX Live and rendering photographs in CI is slow, so the manual is buil
 
 ## Open decisions
 
-- The foreword's signatory: a Fenwick of the firm, with a first name other than Hugh, and his title and letters after his name.
 - Whether to install Graphviz (Homebrew locally, apt in CI) or render DOT with a JavaScript package instead, which is a new dependency either way.
 - Whether to draw plans by converting SVG (needs librsvg) or as TikZ from the generator.
 - Whether the photographs are rendered in CI at release time or locally and committed.
