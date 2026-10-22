@@ -28,7 +28,10 @@ import {
   equipmentDoors,
 } from '../../components/architectural/parts/equipment-doors';
 import type { EquipmentDoorsPart } from '../../components/architectural/parts/equipment-doors';
-import { createBreezeBlockTextures } from '../../../scene/breeze-block-texture';
+import {
+  createBreezeBlockTextures,
+  mapBlockwork,
+} from '../../../scene/breeze-block-texture';
 import { createWarehouseConcreteFloor } from '../../../scene/warehouse-concrete-floor';
 import { createPs1Material } from '../../components/core/parts/ps1-material';
 import { PLANT_DOORWAY, PLANT_ROOM, plantRoomPlan } from '../logic/plant-rooms';
@@ -109,16 +112,8 @@ export function createPlantRoomShell(
     z: number,
   ) => {
     const geometry = new BoxGeometry(sx, sy, sz);
-    const uv = geometry.attributes.uv;
-    // BoxGeometry writes four vertices per face: ±x, ±y, ±z.
-    for (let face = 0; face < 6; face++) {
-      const horizontal = face < 2 ? sz : sx;
-      const vertical = face < 2 || face >= 4 ? sy : sz;
-      for (let corner = 0; corner < 4; corner++) {
-        const i = face * 4 + corner;
-        uv.setXY(i, uv.getX(i) * horizontal, uv.getY(i) * (vertical / 0.4));
-      }
-    }
+    // Its blockwork on the room's one grid (`mapBlockwork`).
+    mapBlockwork(geometry, [x, y, z], floor);
     const mesh = new Mesh(geometry, block);
     mesh.position.set(x, y, z);
     group.add(mesh);

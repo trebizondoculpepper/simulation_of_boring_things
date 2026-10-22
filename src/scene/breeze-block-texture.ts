@@ -1,3 +1,4 @@
+import type { BufferGeometry } from 'three';
 import {
   DataTexture,
   LinearMipmapLinearFilter,
@@ -150,4 +151,31 @@ export function createBreezeBlockTextures(
     normalMap: texture(normal, false),
     roughnessMap: texture(rough, false),
   };
+}
+
+/**
+ * A box of blockwork's texture coordinates, mapped from where its faces
+ * are in the room rather than from its own corner: along a wall in
+ * metres, up it in 0.4 m courses from `floor`. So the pieces of one wall
+ * (either side of a door and over it) share one grid, their courses and
+ * joints running on unbroken. `at` is where the box's middle is.
+ */
+export function mapBlockwork(
+  geometry: BufferGeometry,
+  at: readonly [number, number, number],
+  floor = 0,
+) {
+  const uv = geometry.attributes.uv;
+  const position = geometry.attributes.position;
+  const normal = geometry.attributes.normal;
+  for (let i = 0; i < uv.count; i++) {
+    const x = position.getX(i) + at[0];
+    const y = position.getY(i) + at[1];
+    const z = position.getZ(i) + at[2];
+    if (Math.abs(normal.getX(i)) > 0.5) uv.setXY(i, z, (y - floor) / 0.4);
+    else if (Math.abs(normal.getZ(i)) > 0.5) uv.setXY(i, x, (y - floor) / 0.4);
+    else uv.setXY(i, x, z / 0.4);
+  }
+  uv.needsUpdate = true;
+  return geometry;
 }

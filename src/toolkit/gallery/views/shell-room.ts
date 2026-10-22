@@ -30,7 +30,10 @@ import {
   plantRoomDoor,
 } from '../../components/architectural/parts/plant-door';
 import type { DoorWarningSelection } from '../../components/architectural/logic/door-warnings';
-import { createBreezeBlockTextures } from '../../../scene/breeze-block-texture';
+import {
+  createBreezeBlockTextures,
+  mapBlockwork,
+} from '../../../scene/breeze-block-texture';
 import { createWarehouseConcreteFloor } from '../../../scene/warehouse-concrete-floor';
 import { createPs1Material } from '../../components/core/parts/ps1-material';
 import {
@@ -153,15 +156,9 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
     z: number,
   ) => {
     const geometry = new BoxGeometry(sx, sy, sz);
-    const uv = geometry.attributes.uv;
-    for (let face = 0; face < 6; face++) {
-      const horizontal = face < 2 ? sz : sx;
-      const vertical = face < 2 || face >= 4 ? sy : sz;
-      for (let corner = 0; corner < 4; corner++) {
-        const i = face * 4 + corner;
-        uv.setXY(i, uv.getX(i) * horizontal, uv.getY(i) * (vertical / 0.4));
-      }
-    }
+    // Its blockwork on the room's one grid (`mapBlockwork`), so the pieces
+    // round a doorway and over it line up.
+    mapBlockwork(geometry, [x, y, z], v.floor);
     const mesh = new Mesh(geometry, block);
     mesh.position.set(x, y, z);
     group.add(mesh);

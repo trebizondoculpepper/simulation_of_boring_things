@@ -11,6 +11,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 - The Olympic pool has one lane rope, the middle one, instead of one between every pair of lanes.
 - The short (1 m) corridor straights at the pool halls' doors have no ceiling lamps.
 - The corridor between the Jacuzzi and the footbath is now a short straight, the rotunda, and a short straight.
+- The blockwork over and round doorways lines up with the wall beside it: every wall piece's texture is mapped from where it is in the room (`mapBlockwork`), in the plant rooms and the other service rooms alike.
 - The switch-fuse opens: its door, hinged on its left and interlocked with its handle (it opens only at OFF, and the handle goes ON only with it shut), shows its incoming terminals, fuse base, three fuse carriers that pull out to change their fuses, and the neutral link; its internals are drawn only while the door is open. In every room, and on trial in dev0 and the electrical dev room.
 - Every room's supply is switched by a Voltara switch-fuse on the wall by its entrance (side handle, padlockable OFF, SUPPLY ON neon, ROOM SUPPLY legend), replacing a placeholder of plain blocks; its conduit now comes down into its gland. Modelled first in the electrical dev room.
 - Conduits end on the cable glands of the isolators they feed, instead of 2 cm above their boxes: the enclosures' sizes and glands are now one source (`enclosures.ts`) for their views and the routes to them.
