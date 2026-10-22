@@ -1,3 +1,5 @@
+import { sandFilterGeometry } from '../../components/plant/logic/sand-filter';
+import type { Nozzle } from '../../components/plant/logic/sand-filter';
 import type { Item, Placed } from './room-equipment';
 import { stackOf, stackPorts } from './air-plant';
 import {
@@ -70,29 +72,18 @@ export function machinePorts(item: Item): MachinePort[] {
     // in the middle; the drain, low on the right. Backwashing reverses the
     // flow through the same two, by the valves in the room's face
     // pipework. Staggered, so no nozzle's pipe crosses another's.
-    const dia = Number(arg);
-    const r = dia / 2;
-    const shell = dia * 0.57;
-    const cy = 0.3 + r * 0.35 + shell / 2;
-    const zc = -0.35 + 0.1;
-    // On the shell at `x`, the nozzle's flange 0.1 m proud of it; the
-    // low two either side of the service hatch (0.22 m in radius, low in
-    // the middle), clear of it.
-    const side = Math.min(0.45, r * 0.7);
-    const on = (x: number) => zc + Math.sqrt(r * r - x * x) + 0.1;
-    const od = r >= 1 ? 0.225 : 0.09;
-    const high = cy + shell / 2 - 0.15;
-    const low = cy - shell / 2 + 0.15;
+    // From the filter's one geometry (`sandFilterGeometry`), its flanges,
+    // the vessel stood 0.1 m forward of the model's own origin.
+    const g = sandFilterGeometry(Number(arg));
+    const at = (n: Nozzle): [number, number, number] => [
+      n.x,
+      n.y,
+      n.flange + 0.1,
+    ];
     return [
-      port(
-        'inlet',
-        [-r * 0.55, high, on(-r * 0.55)],
-        [0, 0, 1],
-        od,
-        'pool-water',
-      ),
-      port('outlet', [-side, low, on(-side)], [0, 0, 1], od, 'pool-water'),
-      port('drain', [side, low, on(side)], [0, 0, 1], 0.09, 'drain'),
+      port('inlet', at(g.inlet), [0, 0, 1], g.inlet.od, 'pool-water'),
+      port('outlet', at(g.outlet), [0, 0, 1], g.outlet.od, 'pool-water'),
+      port('drain', at(g.drain), [0, 0, 1], g.drain.od, 'drain'),
     ];
   }
   if (

@@ -1,3 +1,4 @@
+import { GAUGE, gaugeOnNozzle, sandFilterGeometry } from '../logic/sand-filter';
 import { Group, Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -544,9 +545,14 @@ export function createSandFilter(
   {
     dia,
     shell,
-    dn,
     label,
-  }: { dia: number; shell: number; dn: DN; label: string },
+  }: {
+    dia: number;
+    shell: number;
+    /** Its nozzles' bore: the room's pipework is sized by it. */
+    dn: DN;
+    label: string;
+  },
 ) {
   const t = plantTools(kit);
   const group = new Group() as Group & {
@@ -635,15 +641,45 @@ export function createSandFilter(
     [r * 0.3, 1.0, face + 0.05],
     0.012,
   );
-  // The two gauges belong to the vessel. Its water nozzles and all pipework
-  // are placed from the shared machine-port data by the room.
-  const s = PIPE_SIZES[dn];
-  const [inletGauge, outletGauge] = [cy + shell / 2 - 0.15, base + 0.45].map(
-    (y) =>
-      t.pressureGauge(group, [0, y + s.od / 2 + 0.12, face + 0.04], {
+  // The two gauges belong to the vessel, each on its own nozzle
+  // (`sandFilterGeometry`): a tapping and gauge cock rising from the
+  // nozzle's top, between the shell and its flange, the dial square to the
+  // shell. The nozzles' pipework is the room's.
+  const geometry = sandFilterGeometry(dia, shell);
+  const brass = t.paint('#b08d3c', 0.4, 0.7);
+  const [inletGauge, outletGauge] = [geometry.inlet, geometry.outlet].map(
+    (n) => {
+      const { at, yaw } = gaugeOnNozzle(n, r);
+      // The stem's foot, where the gauge's own ½" stem ends.
+      const stemX = at[0] - Math.sin(yaw) * 0.012;
+      const stemZ = at[2] - Math.cos(yaw) * 0.012;
+      const top = n.y + n.od / 2;
+      const foot = at[1] - GAUGE.dia / 2 - 0.05;
+      t.rod(
+        group,
+        brass,
+        [stemX, top - 0.01, stemZ],
+        [stemX, foot, stemZ],
+        0.007,
+      );
+      // The gauge cock on the tapping: its body and lever.
+      t.cyl(group, brass, 0.012, 0.025, stemX, (top + foot) / 2, stemZ, 'y', 8);
+      t.box(
+        group,
+        t.paint('#202020', 0.6),
+        0.04,
+        0.006,
+        0.006,
+        stemX + 0.02,
+        (top + foot) / 2,
+        stemZ,
+      );
+      return t.pressureGauge(group, [at[0], at[1], at[2]], {
         max: 4,
-        dia: 0.1,
-      }),
+        dia: GAUGE.dia,
+        yaw,
+      });
+    },
   );
   group.show = ({ inlet, outlet }, delta) => {
     inletGauge.set(inlet);
