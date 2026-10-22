@@ -38,6 +38,10 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   3: (world) => world,
   // 4 → 5: the dosing chemicals' stores, full (`fillDefaults` adds them).
   4: (world) => world,
+  // 5 → 6: the wet hall's tanks and booster set (`fillDefaults` adds them).
+  5: (world) => world,
+  // 6 → 7: the pools' bathers, none yet (`fillDefaults` adds them).
+  6: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

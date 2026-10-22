@@ -12,6 +12,7 @@ import {
   wetHallRoom,
 } from './shell-rooms';
 import type { ShellRoomId, ShellWall } from './shell-rooms';
+import { BOOSTER } from '../../components/plant/logic/booster-set';
 
 /**
  * Where each room's machines stand: the plant sizing's inventory
@@ -653,9 +654,9 @@ export function roomEquipment(
           floor(
             'booster-set',
             'Make-up booster set, duty and standby',
-            3.2,
-            2.4,
-            1.9,
+            BOOSTER.w,
+            BOOSTER.d,
+            BOOSTER.h,
           ),
           floor('water-meter', 'Make-up water meter', 1.6, 0.4, 1.2),
           floor(
@@ -663,7 +664,7 @@ export function roomEquipment(
             'Backwash holding tank',
             ...size(sectionalSize(4, 4, 2)),
           ),
-          wall('level-instruments', 'Level instruments', 1.2, 0.2, 1.6, 1.4),
+          wall('mimic-wet', 'Mimic: wet hall', 2.2, 0.08, 1.2, 1.6),
         ],
       };
     case 'boiler_house':
@@ -1015,6 +1016,28 @@ export const TANK_SURROUND = 0.8;
  * under the gantry. The middle of the room stays open for the pipework.
  */
 const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
+  // The wet hall: along its north wall, west to east, in the order the
+  // water goes: the break tank, the booster set, the meter; the mimic;
+  // then the backwash tank. Each faces the room, its back to the wall.
+  wet_hall: (box, items) => {
+    const at = (key: string) => items.find((i) => i.key === key)!;
+    const north = -box.d / 2;
+    const row = (key: string, x: number, gap: number) => {
+      const item = at(key);
+      return put(box, item, {
+        x,
+        z: north + gap + item.d / 2,
+        face: 'south',
+      });
+    };
+    return [
+      row('break-tank', -5.6, 0.6),
+      row('booster-set', -2.6, 0.4),
+      row('water-meter', -0.3, 0.4),
+      put(box, at('mimic-wet'), { wall: 'north', along: 2.0 }),
+      row('backwash-tank', 6.0, 0.6),
+    ];
+  },
   // The air plant: its stacks where `air-plant.ts` stands them, under
   // their gantries; the mimic on the south wall, west of the doorway.
   air_plant: (box, items) => [

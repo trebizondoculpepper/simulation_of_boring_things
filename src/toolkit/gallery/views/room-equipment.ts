@@ -33,6 +33,11 @@ import { EXHIBITS as PUMPS } from '../rooms/plant/pumps';
 import { EXHIBITS as OZONE } from '../rooms/plant/ozone';
 import { EXHIBITS as DOSING } from '../rooms/plant/dosing';
 import { EXHIBITS as BALANCE } from '../rooms/plant/balance';
+import {
+  createWetHallMimic,
+  createWorldBoosterSet,
+  createWorldWaterMeter,
+} from './wet-hall';
 import { EXHIBITS as BOILER } from '../rooms/plant/boiler';
 import { createLiveBoilerCascade } from '../rooms/plant/boiler';
 import { EXHIBITS as CHEMICALS } from '../rooms/plant/chemicals';
@@ -62,7 +67,6 @@ const MODELS: Record<string, PlantExhibit> = {
   'dosing-controller': DOSING[4],
   'hypo-pumps': DOSING[2],
   'acid-pump': DOSING[3],
-  'water-meter': BALANCE[2],
   'level-instruments': BALANCE[4],
   'boiler-cascade': BOILER[0],
   'low-loss-header': BOILER[1],
@@ -122,6 +126,10 @@ function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
   if (kind === 'boiler-cascade' && arg)
     return createLiveBoilerCascade(kit, (Number(arg) - 1) * 2);
   if (kind === 'mimic-air') return createAirMimic(kit);
+  // The wet hall's machines, bound to the world's wet hall.
+  if (kind === 'booster-set') return createWorldBoosterSet(kit);
+  if (kind === 'water-meter') return createWorldWaterMeter(kit);
+  if (kind === 'mimic-wet') return createWetHallMimic(kit);
   // The switch room's switchboard, its ways feeding the rooms in the world.
   if (kind === 'lv-switchboard') return createMainSwitchboard(kit, worldFeed());
   if (kind === 'ahu-stack') {

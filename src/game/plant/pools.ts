@@ -109,8 +109,8 @@ const clamp = (value: number, min: number, max: number) =>
 
 /**
  * Whether a pool's water is circulating, and so treated and dosed: its
- * room has power and water, one of its pumps' isolators is on, and its
- * pumps have not tripped.
+ * room has power, one of its pumps' isolators is on, and its pumps have
+ * not tripped. The pumps move the pool's own water: the mains has no say.
  */
 function circulating(
   old: PoolWaterState,
@@ -120,7 +120,6 @@ function circulating(
   const room = `plant_${id}` as ServiceRoom;
   return (
     serviceAvailable(plant, room, 'power') &&
-    serviceAvailable(plant, room, 'water') &&
     ISOLATED_BY[id].some((name) => plant.isolators[name]) &&
     !old.tripped
   );
@@ -166,12 +165,46 @@ export function stepPools(
   time = 0,
   /** Which dosing chemicals are in stock. */
   stock: ChemicalStock = ALL_STOCKED,
+  /**
+   * The share of each pool's make-up rate the wet hall's booster set
+   * gives (`wet-hall.ts`); by default, all of it while the wet hall has
+   * water, none without.
+   */
+  makeUp?: number,
 ): PoolsState {
+  return stepPoolsWater(pools, plant, dt, time, stock, makeUp).pools;
+}
+
+/** What the pools' float valves call for now, m³/h: each whose balance tank is below its float. */
+export function makeUpDemand(pools: PoolsState): number {
+  return POOL_IDS.reduce(
+    (sum, id) =>
+      sum + (pools[id].balance < WATER[id].float ? WATER[id].makeUpRate : 0),
+    0,
+  );
+}
+
+/**
+ * The pools `dt` seconds on (as `stepPools`), with the water they drew
+ * from the make-up main and backwashed to waste during the step, m³.
+ */
+export function stepPoolsWater(
+  pools: PoolsState,
+  plant: PlantServices,
+  dt: number,
+  time = 0,
+  stock: ChemicalStock = ALL_STOCKED,
+  makeUp?: number,
+): { pools: PoolsState; drawn: number; backwashed: number } {
+  const share =
+    makeUp ?? (serviceAvailable(plant, 'wet_hall', 'water') ? 1 : 0);
+  let drawn = 0;
+  let backwashed = 0;
   const next = {} as PoolsState;
   for (const id of POOL_IDS) {
     const room = `plant_${id}` as ServiceRoom;
     const old = pools[id];
-    // The pumps run if the room has power and water, and one of them, or
+    // The pumps run if the room has power, and one of them, or
     // the pool's cabinet, is not isolated; and not tripped.
     const circulation = circulating(old, plant, id);
     // UV and ozone, where they are isolated, break down the combined
@@ -185,7 +218,6 @@ export function stepPools(
     // Each chemical dosed only while its store has some.
     const hypochlorite = dosing && stock.hypochlorite;
     const acid = dosing && stock.acid;
-    const makeup = serviceAvailable(plant, 'wet_hall', 'water');
     const flow = approach(
       old.flow,
       circulation ? TARGET[id].flow : 0,
@@ -193,8 +225,8 @@ export function stepPools(
       dt,
     );
     // Its water: the tested balance of pool and tank (`water-balance.ts`),
-    // a step on, its make-up open while the wet hall supplies water.
-    const params = WATER[id];
+    // a step on, its make-up open at the share the booster set gives.
+    const params = { ...WATER[id], makeUpRate: WATER[id].makeUpRate * share };
     const water = stepWater(
       params,
       {
@@ -203,7 +235,7 @@ export function stepPools(
         tankVolume: old.balance * params.tank,
         pumps: circulation,
         tripped: old.tripped,
-        makeUpOpen: makeup,
+        makeUpOpen: share > 0,
         spilt: 0,
         backwashed: 0,
         evaporated: 0,
@@ -216,6 +248,8 @@ export function stepPools(
       // and a longer step overshoots it.
       Math.min(dt, 5) / 3600,
     );
+    drawn += water.madeUp;
+    backwashed += water.backwashed;
     // Tripped on low-low, the pumps restart once the tank has recovered.
     const balance = water.tankVolume / params.tank;
     const tripped = water.tripped && balance < params.float * 0.8;
@@ -261,5 +295,5 @@ export function stepPools(
       tripped,
     };
   }
-  return next;
+  return { pools: next, drawn, backwashed };
 }

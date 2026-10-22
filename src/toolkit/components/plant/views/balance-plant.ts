@@ -14,6 +14,7 @@ import type { BrandId } from '../../core/logic/brands';
 import { FINISH, plantTools } from './plant-tools';
 import type { DN, Point } from './plant-tools';
 import { createCagedLadder } from './railings';
+import { METER } from '../logic/booster-set';
 
 /**
  * The balance tank room's plant (dev_balance), in metres, each modelled
@@ -484,15 +485,23 @@ export function createBreakTank(kit: PanelKit) {
  * run of copper-grey steel pipe on stands.
  */
 export function createWaterMeter(kit: PanelKit) {
+  return createWaterMeterSet(kit).group;
+}
+
+/**
+ * The meter set, its register reading `show`'s cubic metres: six drums,
+ * whole cubic metres, rolling on as the water passes.
+ */
+export function createWaterMeterSet(kit: PanelKit, start = 48273) {
   const t = plantTools(kit);
   const group = new Group();
-  const y = 0.9;
+  const y = METER.y;
   t.pipe(
     group,
     50,
     [
-      [-0.75, y, 0],
-      [0.75, y, 0],
+      [-METER.half, y, 0],
+      [METER.half, y, 0],
     ],
     FINISH.steel,
   );
@@ -520,10 +529,9 @@ export function createWaterMeter(kit: PanelKit) {
   for (const x of [-0.1, 0.1])
     t.flanges(group, 50, [x, y, 0], 'x', livery.palette.main);
   t.cyl(group, blue, 0.07, 0.07, 0, y + 0.1, 0, 'y', 24);
-  const dial = t.printed(
-    0.12,
-    0.12,
-    (c, w, h) => {
+  const register =
+    (m3: number) => (c: CanvasRenderingContext2D, w: number, h: number) => {
+      c.clearRect(0, 0, w, h);
       c.fillStyle = '#f4f2e8';
       c.beginPath();
       c.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2);
@@ -533,16 +541,18 @@ export function createWaterMeter(kit: PanelKit) {
       c.fillStyle = '#f4f2e8';
       c.font = `bold ${h * 0.13}px monospace`;
       c.textAlign = 'center';
-      c.fillText('0 4 8 2 7 3', w / 2, h * 0.5);
+      const drums = String(Math.floor(m3) % 1e6).padStart(6, '0');
+      c.fillText(drums.split('').join(' '), w / 2, h * 0.5);
       c.fillStyle = '#111';
       c.font = `${h * 0.08}px ${SANS}`;
       c.fillText('m³', w / 2, h * 0.68);
-    },
-    256,
-  );
+    };
+  const dial = t.printed(0.12, 0.12, register(start), 256);
   dial.mesh.rotation.x = -Math.PI / 2;
   dial.mesh.position.set(0, y + 0.137, 0);
+  dial.mesh.userData.live = true;
   group.add(dial.mesh);
+  let shown = Math.floor(start);
   badge(kit, group, 'splashonomics', [0, y + 0.1, 0.071], 0.022);
   // Double check valve.
   t.cyl(
@@ -564,7 +574,18 @@ export function createWaterMeter(kit: PanelKit) {
       [x, y - 0.03, 0],
       0.02,
     );
-  return group;
+  return {
+    group,
+    /** The register at `start` plus `m3` passed. */
+    show(m3: number) {
+      const now = Math.floor(start + m3);
+      if (now === shown) return;
+      shown = now;
+      const c = dial.context;
+      register(now)(c, c.canvas.width, c.canvas.height);
+      dial.texture.needsUpdate = true;
+    },
+  };
 }
 
 /**

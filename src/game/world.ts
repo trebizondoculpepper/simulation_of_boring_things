@@ -18,7 +18,21 @@ import type {
   ServiceRoom,
   Utility,
 } from './plant/services';
-import { dosedVolumes, newPools, stepPools } from './plant/pools';
+import {
+  dosedVolumes,
+  makeUpDemand,
+  newPools,
+  stepPoolsWater,
+} from './plant/pools';
+import {
+  makeUpShare,
+  newWetHall,
+  resetBooster,
+  stepWetHall,
+} from './plant/wet-hall';
+import type { WetHallState } from './plant/wet-hall';
+import { newBathers, stepBathers } from './bathers';
+import type { BathersState } from './bathers';
 import {
   deliver,
   inStock,
@@ -28,7 +42,7 @@ import {
 import type { Chemical, ChemicalStores } from './plant/chemicals';
 import type { PoolsState } from './plant/pools';
 
-export const WORLD_VERSION = 5;
+export const WORLD_VERSION = 7;
 
 export interface World {
   /** Seconds the world has run. */
@@ -44,6 +58,10 @@ export interface World {
   pools: PoolsState;
   /** The dosing chemicals left in their stores, litres. */
   chemicals: ChemicalStores;
+  /** The wet hall's break tank, booster set, meter and backwash tank. */
+  wetHall: WetHallState;
+  /** The pools' unseen bathers (`bathers.ts`). */
+  bathers: BathersState;
 }
 
 export function newWorld(): World {
@@ -53,6 +71,8 @@ export function newWorld(): World {
     plant: newPlantServices(),
     pools: newPools(),
     chemicals: newChemicalStores(),
+    wetHall: newWetHall(),
+    bathers: newBathers(),
   };
 }
 
@@ -63,7 +83,8 @@ export type WorldAction =
   | { type: 'plant/source'; utility: Utility; on: boolean }
   | { type: 'plant/feeder'; room: ServiceRoom; on: boolean }
   | { type: 'plant/isolator'; name: IsolatorName; on: boolean }
-  | { type: 'plant/delivery'; chemical: Chemical; litres: number };
+  | { type: 'plant/delivery'; chemical: Chemical; litres: number }
+  | { type: 'plant/booster-reset' };
 
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
@@ -105,6 +126,10 @@ export function applyAction(world: World, action: WorldAction): World {
         ...world,
         chemicals: deliver(world.chemicals, action.chemical, action.litres),
       };
+    case 'plant/booster-reset': {
+      const wetHall = resetBooster(world.wetHall);
+      return wetHall === world.wetHall ? world : { ...world, wetHall };
+    }
     case 'plant/feeder':
       return world.plant.feeders[action.room] === action.on
         ? world
@@ -126,10 +151,26 @@ export function stepWorld(world: World, delta: number): World {
     hypochlorite: inStock(world.chemicals, 'hypochlorite'),
     acid: inStock(world.chemicals, 'acid'),
   };
+  // The make-up the booster set can give the pools' float valves calling.
+  const share = makeUpShare(
+    world.wetHall,
+    world.plant,
+    makeUpDemand(world.pools),
+  );
+  const water = stepPoolsWater(
+    world.pools,
+    world.plant,
+    delta,
+    world.time,
+    stock,
+    share,
+  );
   return {
     ...world,
     time: world.time + delta,
-    pools: stepPools(world.pools, world.plant, delta, world.time, stock),
+    pools: water.pools,
+    wetHall: stepWetHall(world.wetHall, world.plant, water, delta),
+    bathers: stepBathers(world.bathers, world.time, delta),
     chemicals: stepChemicalStores(
       world.chemicals,
       dosedVolumes(world.pools, world.plant, stock),

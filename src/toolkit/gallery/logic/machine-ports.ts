@@ -4,6 +4,7 @@ import {
   PAIR_DISCHARGE_X,
   PAIR_STRAINER_X,
 } from '../../components/plant/logic/pump-pair';
+import { BOOSTER, METER } from '../../components/plant/logic/booster-set';
 
 /** A physical connection on a machine, in its own metre frame. */
 export interface MachinePort {
@@ -35,6 +36,28 @@ const port = (
   od: number,
   service: MachinePort['service'],
 ): MachinePort => ({ name, at, outward, od, service });
+
+/**
+ * A sectional tank's frame, as the tank helper builds it (`createTank`):
+ * whole 1 m panels, set back by half its ladder's depth when it has one,
+ * their flanges 0.05 m proud; on bearers 0.25 m high.
+ */
+export function tankFrame(item: Pick<Item, 'w' | 'd' | 'h'>) {
+  const ny = Math.max(1, Math.floor(item.h - 0.35 + 1e-6));
+  const ladder = ny >= 2 ? 0.7 : 0;
+  const nx = Math.max(1, Math.floor(item.w - 0.1 + 1e-6));
+  const nz = Math.max(1, Math.floor(item.d - 0.2 - ladder + 1e-6));
+  const back = -ladder / 2;
+  return {
+    nx,
+    ny,
+    nz,
+    back,
+    front: back + nz / 2 + 0.05,
+    north: back - nz / 2 - 0.05,
+    top: 0.25 + ny + 0.05,
+  };
+}
 
 /** Connection positions are also used by the view to draw each nozzle. */
 export function machinePorts(item: Item): MachinePort[] {
@@ -77,17 +100,35 @@ export function machinePorts(item: Item): MachinePort[] {
     kind === 'break-tank' ||
     kind === 'backwash-tank'
   ) {
-    // The tank as the tank helper builds it (`createTank`): whole 1 m
-    // panels, set back by half its ladder's depth when it has one, their
-    // flanges 0.05 m proud; on bearers 0.25 m high.
-    const ny = Math.max(1, Math.floor(item.h - 0.35 + 1e-6));
-    const ladder = ny >= 2 ? 0.7 : 0;
-    const nx = Math.max(1, Math.floor(item.w - 0.1 + 1e-6));
-    const nz = Math.max(1, Math.floor(item.d - 0.2 - ladder + 1e-6));
-    const back = -ladder / 2;
-    const front = back + nz / 2 + 0.05;
-    const north = back - nz / 2 - 0.05;
-    const top = 0.25 + ny + 0.05;
+    const { nx, nz, back, front, north, top } = tankFrame(item);
+    const east = nx / 2 + 0.05;
+    if (kind === 'break-tank')
+      // The make-up's Category 5 break tank (`wet-hall.ts`): the main in
+      // through its roof to the float valve over the air gap; its outlet
+      // to the booster set low on its east end; its weir overflow, the
+      // warning pipe, high on its west end; its drain on its face.
+      return [
+        port('mainsIn', [nx / 2 - 0.6, top, back], [0, 1, 0], 0.067, 'make-up'),
+        port(
+          'outlet',
+          [east, 0.5, back + nz / 2 - 0.5],
+          [1, 0, 0],
+          0.089,
+          'make-up',
+        ),
+        port('overflow', [-east, top - 0.35, back], [-1, 0, 0], 0.11, 'drain'),
+        port('drain', [nx / 2 - 0.6, 0.35, front], [0, 0, 1], 0.09, 'drain'),
+      ];
+    if (kind === 'backwash-tank')
+      // The backwash holding tank: the backwash in through its roof; its
+      // submersible pump's discharge riser up through the roof beside it,
+      // to the foul sewer; its overflow high on its east end; its drain.
+      return [
+        port('inlet', [-nx / 4, top, back], [0, 1, 0], 0.16, 'drain'),
+        port('discharge', [nx / 4, top, back], [0, 1, 0], 0.076, 'drain'),
+        port('overflow', [east, top - 0.35, back], [1, 0, 0], 0.16, 'drain'),
+        port('drain', [nx / 2 - 0.6, 0.35, front], [0, 0, 1], 0.09, 'drain'),
+      ];
     return [
       // The pool's water in high on its back, under its roof.
       port(
@@ -370,6 +411,44 @@ export function machinePorts(item: Item): MachinePort[] {
       drawn: true,
     }));
   }
+  if (kind === 'booster-set')
+    // The make-up booster set (`createBoosterSet`): its suction manifold
+    // in at its west end, low across its front; its discharge manifold
+    // out at its east end, low across its back. Drawn by its model.
+    return [
+      {
+        ...port(
+          'suction',
+          [-BOOSTER.w / 2, BOOSTER.manifoldY, BOOSTER.suctionZ],
+          [-1, 0, 0],
+          0.089,
+          'make-up',
+        ),
+        drawn: true,
+      },
+      {
+        ...port(
+          'discharge',
+          [BOOSTER.w / 2, BOOSTER.manifoldY, BOOSTER.dischargeZ],
+          [1, 0, 0],
+          0.076,
+          'make-up',
+        ),
+        drawn: true,
+      },
+    ];
+  if (kind === 'water-meter')
+    // The meter set's run, flanged at both ends (`createWaterMeter`).
+    return (['inlet', 'outlet'] as const).map((name, i) => ({
+      ...port(
+        name,
+        [(i ? 1 : -1) * METER.half, METER.y, 0],
+        [i ? 1 : -1, 0, 0],
+        0.06,
+        'make-up',
+      ),
+      drawn: true,
+    }));
   if (kind === 'gas-train')
     // In from the floor at its left, out at the top of its right
     // (`createGasTrain`), DN50.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { advance, applyAction, newWorld } from './world';
 import { roomRunning, serviceAvailable } from './plant/services';
+import { POOL_IDS } from './plant/pools';
 
 describe('the world', () => {
   it('counts each time dev14’s button goes on, and dev15’s reset turns it off', () => {
@@ -61,6 +62,43 @@ describe('the world', () => {
   });
 });
 
+describe('the mains water off', () => {
+  it('runs the break tank down, trips the booster set, then the pools’ tanks run down until their pumps trip', () => {
+    // Two days' normal running, to midday.
+    let w = advance(newWorld(), 36 * 3600, 10);
+    expect(w.wetHall.boosterTripped).toBe(false);
+    expect(w.wetHall.meter).toBeGreaterThan(20);
+    w = applyAction(w, { type: 'plant/source', utility: 'water', on: false });
+    // The pools' pumps run on: they move the pools' own water.
+    w = advance(w, 3600, 10);
+    for (const id of POOL_IDS) expect(w.pools[id].flow, id).toBeGreaterThan(5);
+    // The break tank carries the pools until that night's backwash is made
+    // up, and then the booster set trips on its low level.
+    let boosterAt = -1;
+    const pumpsAt: Partial<Record<string, number>> = {};
+    for (let h = 2; h <= 14 * 24; h++) {
+      w = advance(w, 3600, 10);
+      if (boosterAt < 0 && w.wetHall.boosterTripped) boosterAt = h;
+      for (const id of POOL_IDS)
+        if (pumpsAt[id] === undefined && w.pools[id].tripped) pumpsAt[id] = h;
+    }
+    expect(boosterAt).toBeGreaterThan(6);
+    expect(boosterAt).toBeLessThan(24);
+    for (const id of POOL_IDS) {
+      expect(pumpsAt[id], id).toBeGreaterThan(boosterAt);
+      expect(w.pools[id].level, id).toBeLessThan(0);
+    }
+    // The main back, the booster set stays tripped until it is reset.
+    w = applyAction(w, { type: 'plant/source', utility: 'water', on: true });
+    w = advance(w, 3600, 10);
+    expect(w.wetHall.boosterTripped).toBe(true);
+    w = applyAction(w, { type: 'plant/booster-reset' });
+    expect(w.wetHall.boosterTripped).toBe(false);
+    w = advance(w, 36 * 3600, 10);
+    for (const id of POOL_IDS) expect(w.pools[id].level, id).toBeGreaterThan(0);
+  });
+});
+
 describe('the dosing chemicals in the world', () => {
   it('run down as the pools are dosed, and a dry acid store lets the pH rise', () => {
     let world = newWorld();
@@ -73,15 +111,27 @@ describe('the dosing chemicals in the world', () => {
     expect(world.pools.pool_02.ph).toBeGreaterThan(7.5);
   });
 
-  it('with the hypochlorite gone but the acid dosing, drives the pH down', () => {
+  it('with the hypochlorite gone but the acid dosing, drives every pool’s pH down, hour by hour', () => {
     let world = newWorld();
     world = {
       ...world,
       chemicals: { ...world.chemicals, hypochlorite: 0 },
     };
-    world = advance(world, 12 * 3600, 10);
-    expect(world.pools.pool_02.ph).toBeLessThan(7.2);
-    expect(world.pools.pool_02.freeChlorine).toBeLessThan(1.4);
+    for (let hour = 1; hour <= 12; hour++) {
+      const before = world.pools;
+      world = advance(world, 3600, 10);
+      for (const id of POOL_IDS)
+        expect(world.pools[id].ph, `${id}, hour ${hour}`).toBeLessThan(
+          before[id].ph,
+        );
+    }
+    for (const id of POOL_IDS) {
+      expect(world.pools[id].ph, id).toBeLessThan(6.6);
+      expect(world.pools[id].ph, id).toBeGreaterThanOrEqual(6.5);
+      expect(world.pools[id].freeChlorine, id).toBe(0);
+    }
+    // The acid store has gone on giving.
+    expect(world.chemicals.acid).toBeLessThan(1000);
   });
 
   it('is refilled by a delivery', () => {
