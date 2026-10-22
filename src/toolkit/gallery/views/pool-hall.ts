@@ -57,6 +57,7 @@ import {
   inMetres,
 } from '../../components/architectural/views/board-marked-concrete';
 import { rippleWater } from './round-room-light';
+import { laneRopeSway } from '../logic/lane-rope';
 import {
   createCornerFillet,
   createCorridor,
@@ -693,6 +694,8 @@ export function createPoolHall(
     const m = new Matrix4();
     const colour = new Color();
     let n = 0;
+    // Each float's place at rest, and how far along its rope it is.
+    const rest: { x: number; z: number; u: number }[] = [];
     for (const r of strung) {
       const z = o.minZ + (r * b.d) / (ropes + 1);
       const base =
@@ -705,6 +708,7 @@ export function createPoolHall(
         const x = o.minX + (i + 0.5) * disc;
         m.makeTranslation(x, WATER_Y + 0.01, z);
         beads.setMatrixAt(n, m);
+        rest.push({ x, z, u: (x - o.minX) / (o.maxX - o.minX) });
         const end = x - o.minX < 5 || o.maxX - x < 5;
         beads.setColorAt(n, colour.set(end ? '#d0302a' : base));
         n++;
@@ -713,6 +717,18 @@ export function createPoolHall(
     group.add(beads);
     // They float: as the pool is drained they go down with its water.
     floats.push(beads);
+    // And sway, slowly, as a plucked string (`lane-rope.ts`): each float
+    // moved across the pool by the standing wave at its place on the rope.
+    beads.userData.live = true;
+    beads.frustumCulled = false;
+    beads.onBeforeRender = () => {
+      const t = performance.now() / 1000;
+      rest.forEach((p, k) => {
+        m.makeTranslation(p.x, WATER_Y + 0.01, p.z + laneRopeSway(p.u, t));
+        beads.setMatrixAt(k, m);
+      });
+      beads.instanceMatrix.needsUpdate = true;
+    };
 
     // Starting blocks at the west end, behind the gutter: a white
     // platform tilted toward the water on a post, its lane's number on

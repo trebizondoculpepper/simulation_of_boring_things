@@ -7,6 +7,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 ### Fixed
 
 - The underwater gallery's door to the engineer's office stands on a 0.25 m sill above the corridor's fillet, which now runs unbroken beneath it (the office's floor meets the sill, as plant rooms do).
+- The Olympic pool's lane rope sways gently, as a plucked string in a slow standing wave (about 6 cm at its middle, a 7 s period), still at its hooks.
 - The Olympic pool has one lane rope, the middle one, instead of one between every pair of lanes.
 - The short (1 m) corridor straights at the pool halls' doors have no ceiling lamps.
 - The corridor between the Jacuzzi and the footbath is now a short straight, the rotunda, and a short straight.
