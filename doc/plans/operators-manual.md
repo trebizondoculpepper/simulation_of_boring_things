@@ -81,18 +81,20 @@ Text that cannot be derived (the descriptions of what a room is for, the procedu
 
 - **Schematics (Graphviz):** each system becomes a DOT graph from the model's blocks and connections, each node labelled with its tag and description and each edge with what it carries (water, gas, heat, power, chemical) in the colours the pipes use in the game. They are rendered by `@viz-js/viz` (Graphviz compiled to WebAssembly), a dev dependency the owner approved on 2026-10-22, pinned in `package-lock.json` so every machine and CI draw the same diagrams with nothing else to install. It writes SVG, converted to PDF with the plans.
 - **Plans:** the existing SVG plans (`plan-svg.ts`) and new per-room equipment plans drawn from `layoutRoom`, converted from SVG to PDF with `rsvg-convert` (librsvg), or drawn directly as TikZ by the generator.
-- **Photographs:** rendered from the game by a headless browser from a list of fixed camera positions (a shot list per room and per principal machine). Two problems from the work so far must be solved first: headless Chromium's virtual time draws very few frames, and textures load late. The fix is a photo mode in the game (a URL flag) that waits until the room and its textures have loaded, draws a set number of frames, and then signals that it is ready, so the capture is taken at the right moment rather than by a time budget. The world's state for the photos is fixed by a scenario (everything on and clear), so the pictures are the same each time.
+- **Photographs:** rendered from the published game (see [Releases](#releases)) by a headless browser from a list of fixed camera positions (a shot list per room and per principal machine). Two problems from the work so far must be solved first: headless Chromium's virtual time draws very few frames, and textures load late. The fix is a photo mode in the game (a URL flag) that waits until the room and its textures have loaded, draws a set number of frames, and then signals that it is ready, so the capture is taken at the right moment rather than by a time budget. The world's state for the photos is fixed by a scenario (everything on and clear), so the pictures are the same each time.
 
 ## Releases
 
 The repository has no releases yet; this plan introduces them.
 
 - **A release** is a git tag, `vMAJOR.MINOR.PATCH`, on `main`.
-- **A new workflow,** `.github/workflows/release.yml`, runs on such a tag: it checks and builds the game as CI does, installs TeX Live (LuaLaTeX), renders the photographs, builds the manual, and creates a GitHub Release with the PDF attached (and later the desktop builds from `doc/research/steam-and-desktop-release.md`).
-- **The manual is also published with the game:** the release build copies the PDF into `dist/`, so the deployed site and any packaged build carry it, with a "Download the operator's manual" link on the start screen. Later it could also be found inside the game, on the shelf in the engineer's office.
+- **The game is published first, then the manual is made** (the owner's decision, 2026-10-22). The release workflow, `.github/workflows/release.yml`, runs on such a tag in two stages:
+  1. **Publish the game:** check and build it as CI does, deploy it, and create the GitHub Release (later with the desktop builds from `doc/research/steam-and-desktop-release.md`). Nothing about the manual can hold the game back.
+  2. **Make the manual,** once the game is live: install TeX Live (LuaLaTeX), take the photographs from the published build itself (the very game the players have), gather the model from the tagged source, build the PDF and attach it to the same GitHub Release. If this stage fails, the game is already out and the manual can be rebuilt by rerunning the stage.
+- **Where players find it:** the release's PDF on GitHub, linked from the game's start screen ("Download the operator's manual") by the release's stable download address, so the site needs no rebuild once the manual is ready. Later it could also be found inside the game, on the shelf in the engineer's office.
 - **The manual's revision** is the release's version, shown in its document control table alongside the fiction's revision letter.
 
-Building TeX Live and rendering photographs in CI is slow, so the manual is built only for releases (and on demand with `workflow_dispatch`), not on every push.
+Building TeX Live and rendering photographs in CI is slow, so the manual is made only for releases (and on demand with `workflow_dispatch`, against the game as published), not on every push.
 
 ## Testing
 
@@ -106,7 +108,7 @@ Building TeX Live and rendering photographs in CI is slow, so the manual is buil
 2. **Pilot chapter: the boiler house.** Description, the gas train and heating circuit schematics, its equipment plan and schedule, supplies, gas emergency procedure and hearing protection. Review the look and the fiction on this one chapter before going further.
 3. **Every plant room**, and the description, operation, alarm and safety sections.
 4. **Photographs:** the game's photo mode and the shot list.
-5. **Release automation:** the release workflow, the PDF in `dist/`, and the link on the start screen.
+5. **Release automation:** the release workflow (the game published, then the manual made and attached), and the link on the start screen.
 6. **Polish:** index, glossary, cross-references between chapters and drawings, and the first tagged release.
 
 ## Open decisions
