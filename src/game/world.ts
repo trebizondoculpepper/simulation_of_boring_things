@@ -36,6 +36,7 @@ import {
 import type { WetHallState } from './plant/wet-hall';
 import { newBathers, poolAppeal, stepBathers } from './bathers';
 import { newLighting, zoneLit, zoneOfRoom } from './plant/lighting';
+import { AMBIENT } from './plant/thermal';
 import type { LightingState, LightingZoneId } from './plant/lighting';
 import { fullOff, fullOn, slowStartAt, slowStartBegin } from './plant/startup';
 import type { BathersState } from './bathers';
@@ -48,7 +49,7 @@ import {
 import type { Chemical, ChemicalStores } from './plant/chemicals';
 import type { PoolId, PoolsState } from './plant/pools';
 
-export const WORLD_VERSION = 10;
+export const WORLD_VERSION = 11;
 
 export interface World {
   /** Seconds the world has run. */
@@ -72,6 +73,8 @@ export interface World {
   startup: number;
   /** The lighting's switches: DB-LIGHTING and each zone's breaker (`lighting.ts`). */
   lighting: LightingState;
+  /** The outside's temperature, °C: everything unheated settles to it (`thermal.ts`). */
+  ambient: number;
 }
 
 export function newWorld(): World {
@@ -85,6 +88,7 @@ export function newWorld(): World {
     bathers: newBathers(),
     startup: -1,
     lighting: newLighting(),
+    ambient: AMBIENT,
   };
 }
 
@@ -100,6 +104,7 @@ export type WorldAction =
   | { type: 'plant/full-off' }
   | { type: 'plant/full-on' }
   | { type: 'plant/slow-start' }
+  | { type: 'weather/ambient'; celsius: number }
   | { type: 'lighting/supply'; on: boolean }
   | { type: 'lighting/zone'; zone: LightingZoneId; on: boolean };
 
@@ -143,6 +148,10 @@ export function applyAction(world: World, action: WorldAction): World {
         ...world,
         chemicals: deliver(world.chemicals, action.chemical, action.litres),
       };
+    case 'weather/ambient':
+      return world.ambient === action.celsius
+        ? world
+        : { ...world, ambient: action.celsius };
     case 'lighting/supply':
       return world.lighting.supply === action.on
         ? world
@@ -216,6 +225,7 @@ export function stepWorld(world: World, delta: number): World {
     world.time,
     stock,
     share,
+    world.ambient,
   );
   return {
     ...world,

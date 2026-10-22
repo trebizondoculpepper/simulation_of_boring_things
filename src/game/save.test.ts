@@ -48,6 +48,7 @@ describe('a save', () => {
       bathers: newWorld().bathers,
       startup: -1,
       lighting: newWorld().lighting,
+      ambient: newWorld().ambient,
     });
   });
 

@@ -48,6 +48,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   8: (world) => world,
   // 9 → 10: each pool hall's air temperature (`fillDefaults` adds it).
   9: (world) => world,
+  // 10 → 11: the outside's temperature, and each pool's heating (`fillDefaults` adds them).
+  10: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

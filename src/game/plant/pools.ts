@@ -5,6 +5,8 @@ import type { PoolWater } from '../water/water-balance';
 import { POOLS } from '../plant-sizing/pools.config';
 import { ASSUME, sizePlant } from '../plant-sizing/sizing';
 import { phTarget } from './chemicals';
+import { AMBIENT, stepThermal, thermalParams } from './thermal';
+import type { ThermalParams } from './thermal';
 import type { Chemical } from './chemicals';
 
 export type PoolId = 'pool_01' | 'pool_02' | 'pool_03' | 'pool_04';
@@ -31,6 +33,8 @@ export interface PoolWaterState {
   tripped: boolean;
   /** Its hall's air temperature, °C. */
   hallAir: number;
+  /** The heat its water's and its hall's heaters are giving now, kW (`thermal.ts`). */
+  heating: number;
 }
 
 export type PoolsState = Record<PoolId, PoolWaterState>;
@@ -47,8 +51,18 @@ export const HALL_AIR: Record<PoolId, number> = {
   pool_03: 30,
   pool_04: 28,
 };
-/** An unheated hall's air drifts toward this, °C. */
-export const UNHEATED_AIR = 18;
+/**
+ * Each pool hall, metres: length, breadth and mean height (the plant
+ * sizing's hall volumes): the lounge 28 × 20 under a 7 m roof; the
+ * Olympic 66 × 40 under a roof sloping from 9 to 23.6 m; the jacuzzi room
+ * 10 × 8 × 9; the footbath passage 4 × 9 × 3.
+ */
+const HALL_SHAPE: Record<PoolId, { w: number; d: number; h: number }> = {
+  pool_01: { w: 28, d: 20, h: 7 },
+  pool_02: { w: 66, d: 40, h: 16.3 },
+  pool_03: { w: 10, d: 8, h: 9 },
+  pool_04: { w: 4, d: 9, h: 3 },
+};
 
 /** Each pool's design temperature, °C, and circulation, m³/h. */
 export const POOL_TARGET: Record<PoolId, { temp: number; flow: number }> = {
@@ -73,6 +87,7 @@ export function newPools(): PoolsState {
         flow: POOL_TARGET[id].flow,
         tripped: false,
         hallAir: HALL_AIR[id],
+        heating: 0,
       },
     ]),
   ) as PoolsState;
@@ -120,6 +135,21 @@ const WATER: Record<PoolId, PoolWater> = (() => {
   }
   return out;
 })();
+
+/** Each pool and its hall's thermal parameters (`thermal.ts`). */
+const HEAT: Record<PoolId, ThermalParams> = Object.fromEntries(
+  POOL_IDS.map((id) => [
+    id,
+    thermalParams({
+      area: WATER[id].area,
+      volume: WATER[id].volume,
+      evaporation: WATER[id].evaporation,
+      hall: HALL_SHAPE[id],
+      water: POOL_TARGET[id].temp,
+      air: HALL_AIR[id],
+    }),
+  ]),
+) as Record<PoolId, ThermalParams>;
 
 const approach = (value: number, target: number, rate: number, dt: number) =>
   value + (target - value) * Math.min(1, rate * dt);
@@ -190,8 +220,10 @@ export function stepPools(
    * water, none without.
    */
   makeUp?: number,
+  /** The outside's temperature, °C. */
+  ambient = AMBIENT,
 ): PoolsState {
-  return stepPoolsWater(pools, plant, dt, time, stock, makeUp).pools;
+  return stepPoolsWater(pools, plant, dt, time, stock, makeUp, ambient).pools;
 }
 
 /** What the pools' float valves call for now, m³/h: each whose balance tank is below its float. */
@@ -214,6 +246,7 @@ export function stepPoolsWater(
   time = 0,
   stock: ChemicalStock = ALL_STOCKED,
   makeUp?: number,
+  ambient = AMBIENT,
 ): { pools: PoolsState; drawn: number; backwashed: number } {
   const share =
     makeUp ?? (serviceAvailable(plant, 'wet_hall', 'water') ? 1 : 0);
@@ -273,12 +306,6 @@ export function stepPoolsWater(
     const balance = water.tankVolume / params.tank;
     const tripped = water.tripped && balance < params.float * 0.8;
     const level = water.level;
-    const temperature = approach(
-      old.temperature,
-      heat ? POOL_TARGET[id].temp : 20,
-      heat ? 0.0006 : 0.00008,
-      dt,
-    );
     const freeChlorine = clamp(
       old.freeChlorine +
         (hypochlorite ? (1.4 - old.freeChlorine) * 0.001 : -0.0003) * dt,
@@ -302,24 +329,38 @@ export function stepPoolsWater(
       0,
       2,
     );
-    // The hall's air: held at its design temperature while its air
-    // handling and heating are on (the footbath passage has no air
-    // handling of its own), within the hour; without, cooling over hours.
-    const handled = (ROOM_SERVICES[room] as readonly string[]).includes('air')
-      ? serviceAvailable(plant, room, 'air')
-      : true;
-    const warmAir = handled && serviceAvailable(plant, room, 'heat');
-    const hallAir = approach(
-      old.hallAir,
-      warmAir ? HALL_AIR[id] : UNHEATED_AIR,
-      warmAir ? 1 / 3600 : 1 / (6 * 3600),
+    // The water's and the hall's heat (`thermal.ts`): the water heated
+    // while it circulates and the heating is on; the hall's air while its
+    // air handling and the heating are on (the footbath passage has no air
+    // handling of its own).
+    const hasAir = (ROOM_SERVICES[room] as readonly string[]).includes('air');
+    const handled = hasAir ? serviceAvailable(plant, room, 'air') : true;
+    const heatAir = handled && serviceAvailable(plant, room, 'heat');
+    const thermal = stepThermal(
+      { water: old.temperature, air: old.hallAir },
+      HEAT[id],
+      {
+        heatWater: heat,
+        heatAir,
+        ambient,
+        // Its air handling running; the footbath passage, which has none of
+        // its own, its extract while its room has power.
+        ventilated: hasAir
+          ? serviceAvailable(plant, room, 'air')
+          : serviceAvailable(plant, room, 'power'),
+        madeUp: water.madeUp,
+      },
       dt,
     );
+    const temperature = thermal.water;
+    const hallAir = thermal.air;
+    const heating = (thermal.waterHeat + thermal.airHeat) / 1000;
     next[id] = {
       level,
       balance,
       temperature,
       hallAir,
+      heating,
       ph,
       freeChlorine,
       combinedChlorine,
