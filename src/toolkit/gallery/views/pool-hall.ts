@@ -678,19 +678,22 @@ export function createPoolHall(
     // Lane ropes: wave-breaking discs on a wire between each pair of lanes,
     // green at the sides, yellow in the middle, blue between, and red for
     // the last 5 m at each end.
+    // Only one rope is strung, the middle one (yellow), between the lanes
+    // either side of the pool's middle; the others are off.
     const ropes = (b.lanes ?? 0) - 1;
+    const strung = [Math.ceil(ropes / 2)];
     const disc = 0.11;
     const perRope = Math.floor(b.w / disc);
     const beads = new InstancedMesh(
       new CylinderGeometry(0.06, 0.06, 0.09, 12).rotateZ(Math.PI / 2),
       new MeshStandardMaterial({ roughness: 0.45 }),
-      ropes * perRope,
+      strung.length * perRope,
     );
     beads.name = 'lane ropes';
     const m = new Matrix4();
     const colour = new Color();
     let n = 0;
-    for (let r = 1; r <= ropes; r++) {
+    for (const r of strung) {
       const z = o.minZ + (r * b.d) / (ropes + 1);
       const base =
         r === 1 || r === ropes
