@@ -123,6 +123,24 @@ Each step is a checkpoint, committed on its own.
    - the hardware is made after real channel strut and hangers (a maker from `brands.ts` where a label would show).
 4. **Every caller moved onto it,** in this order: the room services' conduits; the cabinet services, including the footbath make-up main; the room pipework, once the other agent has committed its changes there; then the exhibits. Remove the old opt-in `supportPipe` calls once covered.
 
+## Routing rules: what is routed, and what only runs to the room's envelope (the owner, 2026-10-22)
+
+Not every service has to be routed from machine to machine inside a room. Some run only to the room's envelope, where the plant model takes over: the drawing shows the visible half of a real connection, and the port graph knows where it goes next (`doc/reports/port-graph-architecture-review.md`).
+
+- **Magic:**
+  - **Smoke, exhaust and fumes:** a flue goes straight up, through the ceiling. A condensing boiler's condensate is a drain.
+  - **Water drainage and sewage:** a drain goes straight down, and ends a little above a floor gully, with a visible air gap.
+- **Semi-magic:**
+  - **Electricity:** a conduit sized for its current runs to the nearest wall, preferring the room's **supply wall**: the wall its power comes in by. The supply wall is the west wall unless a room overrides it, which it declares when the helper is started for it. It goes to the supply wall unless that is much further than the nearest wall. A machine's local isolator stays a real node beside it, and the conduit runs from the isolator.
+  - **Control:** a small conduit runs to the nearest wall, ending at a small junction box. A control network we do not route is imagined beyond it; the plant model keeps the logical signal (controller to starter, sensor to controller) as an unrouted connection.
+- **Routed in full:** pool water, make-up, heating, gas, chemicals, ozone, sample lines and air ducts, which join machines in the same room.
+
+Each medium declares how it is drawn: routed, or a stub with its direction (up, down, wall, or wall preferring the supply side). Supports follow the same rules as any run. The tests add:
+
+- a flue leaves vertically and reaches the ceiling unobstructed;
+- a drain falls and ends above floor level, over a gully;
+- an electrical or control stub ends on a wall, the supply wall when it is near enough, crossing no walkway below 2.1 m.
+
 ## Tests (the acceptance)
 
 Pure-logic tests, across every room that draws pipe (`ROOM_SERVICES`, the plant rooms, the cabinet rooms):
