@@ -37,6 +37,12 @@ export interface WorldStore {
   read<T>(pick: (world: World) => T): ReadonlySignal<T>;
   /** Save now, if this tab holds the slot: whether it was saved. */
   save(): boolean;
+  /**
+   * Whether this tab holds the slot and saves it. Another tab with the
+   * game open may hold it instead; this one then follows it, and does not
+   * save.
+   */
+  readonly holding: ReadonlySignal<boolean>;
   /** Start again from a new world, discarding the save. */
   reset(): void;
   /** Anything the player should know: unsaved, or another tab has it. */
@@ -93,7 +99,7 @@ function openWorldStore(slot: string): WorldStore {
   };
   const world = signal(load());
   // Whether this tab holds the slot. Without Web Locks, assume so.
-  let holder = !('locks' in navigator);
+  const holding = signal(!('locks' in navigator));
   let release: () => void = () => {};
   if ('locks' in navigator)
     void navigator.locks.request(key(slot), { ifAvailable: true }, (lock) => {
@@ -102,11 +108,11 @@ function openWorldStore(slot: string): WorldStore {
           'Pool Plant is open in another tab: this one follows it and does not save.';
         return;
       }
-      holder = true;
+      holding.value = true;
       return new Promise<void>((resolve) => (release = resolve));
     });
   const save = () => {
-    if (!s || !holder) return false;
+    if (!s || !holding.value) return false;
     try {
       const last = s.getItem(key(slot));
       if (last) s.setItem(`${key(slot)}:previous`, last);
@@ -144,7 +150,7 @@ function openWorldStore(slot: string): WorldStore {
   });
   // A follower tab takes up what the holder saves.
   window.addEventListener('storage', (event) => {
-    if (holder || event.key !== key(slot) || !event.newValue) return;
+    if (holding.value || event.key !== key(slot) || !event.newValue) return;
     const loaded = deserialiseWorld(event.newValue);
     if (loaded.ok) world.value = loaded.world;
   });
@@ -157,6 +163,7 @@ function openWorldStore(slot: string): WorldStore {
     },
     read: (pick) => computed(() => pick(world.value)),
     save,
+    holding,
     reset() {
       world.value = newWorld();
       save();

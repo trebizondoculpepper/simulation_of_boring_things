@@ -1,5 +1,6 @@
 import { effect } from '@preact/signals-core';
 import { paused } from '../controls/logic/paused';
+import type { Readable } from '../components/core/logic/world/components';
 import { RANGES, renderScale } from './logic/settings';
 import type { Settings } from './logic/settings';
 import { settings, updateSettings } from './settings-store';
@@ -26,8 +27,11 @@ export const GEAR_ICON = `<svg viewBox="0 0 32 32" width="26" height="26" aria-h
 export interface PauseMenuActions {
   /** Save now; whether it was saved. */
   save(): boolean;
-  /** Why the game cannot be saved here, if it says (another tab has it). */
-  why?: () => string | null;
+  /**
+   * Whether this tab saves the game: false while another tab has it open
+   * and this one only follows it, when Save is greyed out.
+   */
+  holding?: Readable<boolean>;
   /** Save, and go to the title screen. */
   quitToTitle(): void;
   /** Quit the program, where there is one to quit (a desktop build). */
@@ -178,14 +182,14 @@ export function createPauseMenu(actions: PauseMenuActions) {
   const saved = document.createElement('p');
   saved.className = 'settings-note';
   saved.setAttribute('role', 'status');
-  button('Game', 'Save', () => {
+  const saveButton = button('Game', 'Save', () => {
     const time = new Date().toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
     });
     saved.textContent = actions.save()
       ? `Saved at ${time}. The game also saves itself as you play.`
-      : (actions.why?.() ?? 'The game could not be saved here.');
+      : 'The game could not be saved here.';
   });
   button('Game', 'Quit to Title', () => {
     close();
@@ -193,7 +197,20 @@ export function createPauseMenu(actions: PauseMenuActions) {
   });
   if (actions.quitToDesktop)
     button('Game', 'Quit to Desktop', actions.quitToDesktop);
-  pages.get('Game')!.append(saved);
+  // A follower tab: Save greyed out, and why.
+  const follower = document.createElement('p');
+  follower.className = 'settings-note';
+  follower.textContent =
+    'The game is open in another tab, which saves it. This tab is a follower: it shows the same game but does not save.';
+  pages.get('Game')!.append(saved, follower);
+  effect(() => {
+    const holds = actions.holding?.value ?? true;
+    saveButton.disabled = !holds;
+    saveButton.title = holds
+      ? ''
+      : 'The game is open in another tab, which saves it';
+    follower.hidden = holds;
+  });
 
   // ---- Graphics, Audio, Controls -------------------------------------------
   slider('Graphics', 'renderLevel', 'Render quality', (v) =>

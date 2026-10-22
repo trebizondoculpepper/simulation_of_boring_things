@@ -117,7 +117,7 @@ effect(() => {
 // Until the title screen exists, the title is the room list.
 const pauseMenu = createPauseMenu({
   save: () => worldStore('dev').save(),
-  why: () => worldStore('dev').notice.value,
+  holding: worldStore('dev').holding,
   quitToTitle() {
     worldStore('dev').save();
     location.href = location.pathname;
