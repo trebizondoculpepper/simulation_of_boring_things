@@ -47,6 +47,8 @@ export interface Item {
   walls?: readonly Side[];
   /** Floor that may be walked over: a lorry's bay, painted. */
   walkable?: boolean;
+  /** A wall panel that may hang over a machine on the floor, clear of its top. */
+  over?: boolean;
 }
 
 export interface Placed {
@@ -82,6 +84,8 @@ export const GAP = 0.6;
 export const ACCESS = 0.9;
 /** Wall panels' gap between each other. */
 export const WALL_GAP = 0.3;
+/** How far a panel hung over a machine on the floor clears its top, metres. */
+export const HUNG_CLEAR = 0.05;
 
 const overlap = (a: Footprint, b: Footprint) =>
   a.minX < b.maxX - 1e-9 &&
@@ -249,6 +253,15 @@ export function packRoom(room: RoomBox, items: readonly Item[]) {
           return false;
         continue;
       }
+      // A panel hung clear above a machine on the floor (a board over a
+      // desk) does not meet it.
+      const [hung, stood] = wall ? [p, q] : [q, p];
+      if (
+        wall !== qWall &&
+        hung.item.over &&
+        hung.y - hung.item.h / 2 >= stood.item.h + HUNG_CLEAR - 1e-9
+      )
+        continue;
       // A walkable bay may be stood in front of, but not built on.
       if (q.item.walkable && !wall) {
         if (overlap(q.footprint, p.footprint)) return false;
@@ -917,11 +930,18 @@ export function roomEquipment(
           wall('mimic-air', 'Mimic: air handling', 2.3, 0.08, 1.3, 1.7, {
             walls: ['north', 'west', 'east'],
           }),
-          wall('annunciator', 'Alarm annunciator', 0.9, 0.2, 1.1, 1.65),
+          // On the wall behind the operator's desk, over its monitor, where
+          // the operator sees it.
+          wall('annunciator', 'Alarm annunciator', 0.9, 0.2, 1.1, 2.05, {
+            walls: ['west'],
+            over: true,
+          }),
           wall('chart-recorders', 'Chart recorders', 1.3, 0.2, 0.6, 1.5),
           wall('readout-board', 'Readout board', 1.3, 0.12, 0.55, 1.5),
           wall('bms-outstation', 'BMS outstation', 0.62, 0.75, 0.78, 1.4),
-          wall('fire-repeater', 'Fire alarm repeater', 0.34, 0.1, 0.26, 1.5),
+          wall('fire-repeater', 'Fire alarm repeater', 0.34, 0.1, 0.26, 1.5, {
+            walls: ['east'],
+          }),
           wall('cctv', 'CCTV monitor', 0.4, 0.42, 0.45, 1.8),
         ],
       };
