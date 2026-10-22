@@ -884,16 +884,25 @@ export function createVariableSpeedDrive(kit: PanelKit) {
  * switch at the top and twelve ways of three MCBs, one per phase, each
  * way's circuit chart beside it.
  */
-export function createDistributionBoard(kit: PanelKit) {
+export function createDistributionBoard(
+  kit: PanelKit,
+  tag = 'SR-DB3',
+): WorkingCabinet {
   const t = plantTools(kit);
   const group = new Group();
+  const parts = createPartSet();
   const L = brandLivery(kit, 'voltara');
   const white = L.paint.casing;
   const w = 0.465,
     h = 0.85,
     d = 0.1325;
-  t.box(group, white, w, h, d, 0, 0, d / 2);
-  t.box(group, L.paint.tint, w - 0.08, h - 0.1, 0.004, 0, -0.01, d + 0.001);
+  const wall = 0.012;
+  t.box(group, white, w, h, wall, 0, 0, wall / 2);
+  t.box(group, white, wall, h, d, -w / 2 + wall / 2, 0, d / 2);
+  t.box(group, white, wall, h, d, w / 2 - wall / 2, 0, d / 2);
+  t.box(group, white, w, wall, d, 0, h / 2 - wall / 2, d / 2);
+  t.box(group, white, w, wall, d, 0, -h / 2 + wall / 2, d / 2);
+  t.box(group, L.paint.tint, w - 0.08, h - 0.1, 0.004, 0, -0.01, 0.06);
   // The incomer: a 125 A switch disconnector.
   t.box(
     group,
@@ -903,7 +912,7 @@ export function createDistributionBoard(kit: PanelKit) {
     0.03,
     0,
     h / 2 - 0.12,
-    d + 0.015,
+    0.09,
   );
   t.box(
     group,
@@ -913,7 +922,7 @@ export function createDistributionBoard(kit: PanelKit) {
     0.02,
     0,
     h / 2 - 0.12,
-    d + 0.035,
+    0.115,
   );
   // The MCB rows: three single-pole devices (18 mm) per way.
   const mcb = t.paint('#f6f6f2', 0.4);
@@ -922,7 +931,7 @@ export function createDistributionBoard(kit: PanelKit) {
     const y = h / 2 - 0.22 - way * 0.045;
     for (let p = 0; p < 3; p++) {
       const x = (p - 1) * 0.019;
-      t.box(group, mcb, 0.0175, 0.04, 0.03, x, y, d + 0.015);
+      t.box(group, mcb, 0.0175, 0.04, 0.03, x, y, 0.09);
       t.box(
         group,
         toggle,
@@ -931,20 +940,10 @@ export function createDistributionBoard(kit: PanelKit) {
         0.012,
         x,
         y + (way === 9 && p === 1 ? -0.006 : 0.006),
-        d + 0.034,
+        0.115,
       );
     }
   }
-  legend(
-    t,
-    group,
-    'DB-POOL  12-WAY TPN 125 A',
-    0,
-    h / 2 - 0.04,
-    d + 0.02,
-    0.3,
-    0.03,
-  );
   // The circuit chart, inside the door.
   const chart = t.printed(
     0.12,
@@ -974,9 +973,10 @@ export function createDistributionBoard(kit: PanelKit) {
     },
     128,
   );
-  chart.mesh.position.set(0.15, -0.02, d + 0.003);
+  chart.mesh.position.set(0.15, -0.02, 0.085);
   group.add(chart.mesh);
-  // The glazed door, slightly open.
+  // The frame surrounds a real glazed aperture. A solid white slab behind
+  // the glass used to hide every device and the circuit chart.
   const glass = createPs1Material({
     color: '#cfe3e6',
     transparent: true,
@@ -985,13 +985,57 @@ export function createDistributionBoard(kit: PanelKit) {
   });
   kit.materials.push(glass);
   const leaf = new Group();
+  leaf.name = `${tag} distribution board door`;
   leaf.position.set(-w / 2, 0, d + 0.005);
-  leaf.rotation.y = -0.35;
-  t.box(leaf, white, w, h, 0.012, w / 2, 0, 0);
+  const rail = 0.035;
+  t.box(leaf, white, rail, h, 0.012, rail / 2, 0, 0);
+  t.box(leaf, white, rail, h, 0.012, w - rail / 2, 0, 0);
+  t.box(leaf, white, w - 2 * rail, rail, 0.012, w / 2, h / 2 - rail / 2, 0);
+  t.box(leaf, white, w - 2 * rail, rail, 0.012, w / 2, -h / 2 + rail / 2, 0);
   group.add(leaf);
-  t.box(leaf, glass, w - 0.08, h - 0.12, 0.014, w / 2, 0, 0.001);
-  badge(kit, group, 'voltara', 0, -h / 2 + 0.04, d + 0.002, 0.02);
-  return group;
+  t.box(leaf, glass, w - 2 * rail, h - 2 * rail, 0.004, w / 2, 0, 0);
+  legend(
+    t,
+    leaf,
+    `${tag}  DISTRIBUTION BOARD`,
+    w / 2,
+    h / 2 - 0.055,
+    0.01,
+    0.34,
+    0.032,
+  );
+  badge(kit, leaf, 'voltara', w / 2, -h / 2 + 0.055, 0.01, 0.02);
+  const latch = t.cyl(
+    leaf,
+    t.paint('#35383a', 0.4),
+    0.012,
+    0.012,
+    w - 0.045,
+    0,
+    0.016,
+    'z',
+    12,
+  );
+  let open = false;
+  const toggleDoor = () => {
+    open = !open;
+  };
+  leaf.traverse((o) => {
+    o.userData.live = true;
+    if (o !== leaf) parts.uses.set(o, toggleDoor);
+  });
+  parts.uses.set(latch, toggleDoor);
+  return {
+    object: group,
+    parts,
+    update(delta) {
+      const target = open ? -1.35 : 0;
+      leaf.rotation.y += (target - leaf.rotation.y) * Math.min(1, delta * 8);
+    },
+    dispose() {
+      parts.dispose();
+    },
+  };
 }
 
 /**

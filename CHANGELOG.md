@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- The switch room distribution board now has a visible circuit chart, an asset label, and an operable glazed door; the same board is available beside the switch-fuse in dev0. The strip-chart recorder's paper, pens, and glass have distinct depths to stop distant flicker.
 - The water network solver no longer stalls short of balance on a chain of short pipes high above its datum: its Jacobian steps a fixed distance, not a share of the head.
 - Overhead chain-operated room valves now have one operator wheel on the valve spindle, without a second intersecting lever. Room-pipework valve tags sit on both clear sides of the body; two lounge backwash valves now sit on their assigned pipe runs.
 - Clicking the inside cover of an open packaged Jacuzzi or footbath cabinet door closes that same door.

@@ -620,9 +620,14 @@ export function createChartRecorder(
   const pw = 0.13;
   const ph = 0.13;
   const py = 0.012;
+  // The paper used to sit just 0.2 mm above the bezel's front face. At a
+  // distance both surfaces quantised to the same depth and flickered.
+  const paperZ = 0.033;
+  const detailZ = 0.036;
+  const glassZ = 0.041;
   // The paper is lit by the recorder's own lamp: drawn unlit.
   const art = screen(kit, 160, 160);
-  add(group, new PlaneGeometry(pw, ph), art.material, 0, py, 0.0302);
+  add(group, new PlaneGeometry(pw, ph), art.material, 0, py, paperZ);
   const glass = createPs1Material({
     color: '#c9d4d6',
     transparent: true,
@@ -631,14 +636,14 @@ export function createChartRecorder(
   });
   glass.depthWrite = false;
   kit.materials.push(glass);
-  add(group, new PlaneGeometry(pw + 0.01, ph + 0.01), glass, 0, py, 0.033);
+  add(group, new PlaneGeometry(pw + 0.01, ph + 0.01), glass, 0, py, glassZ);
   // The scale strip and the pens riding over the top of the paper.
   const strip = createMicroLabel(kit, '0    25    50    75   100', {
     height: 0.0045,
     ink: '#202020',
     plate: '#e8e4d6',
   });
-  strip.position.set(0, py + ph / 2 - 0.006, 0.0312);
+  strip.position.set(0, py + ph / 2 - 0.006, detailZ);
   group.add(strip);
   const penMeshes = pens.map((colour) => {
     const pen = add(
@@ -647,7 +652,7 @@ export function createChartRecorder(
       kitPaint(kit, colour),
       0,
       py + ph / 2 - 0.02,
-      0.033,
+      0.037,
     );
     // The pens move: not to be merged with the still parts (`mergeStatic`).
     pen.userData.live = true;
@@ -657,14 +662,14 @@ export function createChartRecorder(
     height: 0.006,
     ink: '#c9cbcd',
   });
-  badge.position.set(-0.03, -height / 2 + 0.017, 0.0302);
+  badge.position.set(-0.03, -height / 2 + 0.017, paperZ);
   group.add(badge);
   const maker = createBrandBadge(kit, 'kessler-moody', {
     form: 'wordmark',
     height: 0.008,
     ink: '#9a9da0',
   });
-  maker.position.set(0, height / 2 - 0.011, 0.0302);
+  maker.position.set(0, height / 2 - 0.011, paperZ);
   group.add(maker);
   for (const dx of [0.035, 0.055, 0.075])
     add(

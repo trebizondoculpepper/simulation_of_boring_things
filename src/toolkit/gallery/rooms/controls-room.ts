@@ -2,6 +2,7 @@ import {
   createSwitchFuse,
   useSwitchFuse,
 } from '../../components/industrial-control/views/switch-fuse';
+import { createDistributionBoard } from '../../components/plant/views/electrical-switchgear';
 import { createPartSet } from '../../components/core/parts/parts';
 import { createRearFittingsBoard } from './rear-fittings-board';
 import {
@@ -303,6 +304,30 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
       maxZ: half.z * m,
     },
   );
+  // The same glazed, operable distribution board used in the switch room,
+  // with a development tag so its cabinet door can be tried here first.
+  const distributionBoard = createDistributionBoard(kit, 'DEV-DB1');
+  place(
+    {
+      group: distributionBoard.object,
+      parts: distributionBoard.parts,
+      update(_seconds, delta) {
+        distributionBoard.parts.update(delta);
+        distributionBoard.update(delta);
+      },
+      dispose: () => distributionBoard.dispose(),
+    },
+    1.65,
+    1.5,
+    half.z,
+    Math.PI,
+    {
+      minX: 1.35 * m,
+      maxX: 1.95 * m,
+      minZ: (half.z - 0.25) * m,
+      maxZ: half.z * m,
+    },
+  );
   const postZ = southFace - 1.1;
   place(signFitting(POOL_SIGN_POST), 8.6, 0, postZ, Math.PI, {
     minX: 7.85 * m,
@@ -420,6 +445,12 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
       yaw: Math.PI / 2,
       pitch: -0.1,
     },
+    switchgear: {
+      x: 1.65 * m,
+      z: 6.3 * m,
+      yaw: Math.PI,
+      pitch: -0.12,
+    },
     architecture: { x: -7.5 * m, z: -3.7 * m, yaw: -Math.PI / 2, pitch: 0 },
     empty: { x: 1 * m, z: 8 * m, yaw: 0, pitch: -0.5 },
     capacitor: { x: -5 * m, z: 7 * m, yaw: 0, pitch: -0.9 },
@@ -466,7 +497,7 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     useWhileHolding: (_object, x, y) => use(x, y),
   });
   const notes = document.createElement('div');
-  notes.textContent = `DEV0 · Controls and Displays: controls and displays on the north wall, machine components on ${MACHINE_GALLERY_LAYOUT.length} plinths, plus ${EMPTY_GALLERY_LAYOUT.length} temporarily empty exhibits · Portals: the training room west, dev1 east`;
+  notes.textContent = `DEV0 · Controls and Displays: controls and displays on the north wall, switch-fuse and distribution board on the south wall, machine components on ${MACHINE_GALLERY_LAYOUT.length} plinths, plus ${EMPTY_GALLERY_LAYOUT.length} temporarily empty exhibits · Portals: the training room west, dev1 east`;
   Object.assign(notes.style, {
     position: 'absolute',
     top: '12px',
