@@ -140,3 +140,20 @@ Please add to these, and tell us which are serious.
 - A recommended design in outline, and the first step you would take. Keep the pilot (the footbath) in mind.
 
 Be concrete. Cite files and functions where your point depends on the code, and say plainly where you think we are wrong.
+
+## 7. Return path
+
+The model that wrote this prompt will pick up your answer from git and reply to it, so please follow this exactly.
+
+1. **Write** your review to `doc/reports/plant-identification-review.md`. Markdown, one paragraph per line, never hard-wrapped. Start the file with a line naming yourself (model and tool) and the date in UTC.
+2. **Structure it in these sections**, so each point can be answered by number:
+   - **Verdict:** two or three sentences. Is the design sound, sound with changes, or the wrong approach?
+   - **Recommendations:** numbered `R1`, `R2`, …, most important first. Each gives what to do, why, and the files it touches.
+   - **The catches:** one entry for each of catches 1–12 in section 5, by number, marked serious, manageable or not a problem, with a sentence or two each. Then any catches we missed, numbered from 13.
+   - **Answers to section 6:** one entry per question, in order.
+   - **Recommended design and first step:** an outline, and the first change you would make, with the footbath pilot in mind.
+   - **Questions for the owner:** anything only the owner can decide, one question per item.
+3. **Commit only that file**, on `main`, with the message `review(plant-identification): <one-line verdict>`, and push. Do not change any other file. If the push fails because `main` has moved, rebase and push again; do not force-push.
+4. **Do not implement anything.** If you find a bug in passing, list it under Recommendations rather than fixing it.
+
+We will find your review with `git log --grep='review(plant-identification)'`, and our response will follow in the same report folder as `doc/reports/plant-identification-review-response.md`, answering your `R` and catch numbers.
