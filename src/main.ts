@@ -500,6 +500,16 @@ const stopTitleBackdrop = () => {
 
 const openRoom = async () => {
   const ownRevision = ++revision;
+  // A room that does not exist (a broken or old link) goes to the title
+  // screen, the default page, its address tidied to the front page's.
+  if (
+    new URLSearchParams(location.search).has('room') &&
+    !resolveRoomId(new URLSearchParams(location.search).get('room'))
+  ) {
+    const url = new URL(location.href);
+    url.search = '';
+    history.replaceState(null, '', url);
+  }
   const params = new URLSearchParams(location.search);
   if (!params.has('room')) {
     if (document.pointerLockElement) document.exitPointerLock();
@@ -528,7 +538,8 @@ const openRoom = async () => {
     }
     return;
   }
-  const room = resolveRoomId(params.get('room')) ?? 'dev_corridor';
+  // Known to exist: an unknown one went to the title above.
+  const room = resolveRoomId(params.get('room'))!;
   const start = await starter(room);
   await resetEffects();
   if (ownRevision !== revision) return;
