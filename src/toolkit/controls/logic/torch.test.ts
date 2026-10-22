@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { TORCH, angleBetween, followAim, torch } from './torch';
+import { TORCH, angleBetween, beamProfile, followAim, torch } from './torch';
 
 const frame = 1 / 60;
 
@@ -48,5 +48,21 @@ describe('the torch’s beam', () => {
     const was = torch.on;
     expect(torch.toggle()).toBe(!was);
     expect(torch.toggle()).toBe(was);
+  });
+});
+
+describe('the beam’s pool of light', () => {
+  it('is a filament torch’s: a darker middle, a bright core, a brighter ring, a fading halo, nothing past its rim', () => {
+    const at = (r: number) => beamProfile(r);
+    expect(at(0)).toBeLessThan(at(0.2));
+    const ring = Math.max(...[0.44, 0.46, 0.47, 0.48, 0.5].map(at));
+    expect(ring).toBeGreaterThan(at(0.3));
+    expect(at(0.75)).toBeLessThan(at(0.3));
+    expect(at(0.95)).toBeLessThan(at(0.75));
+    expect(at(1)).toBe(0);
+    for (let r = 0; r <= 1; r += 0.01) {
+      expect(at(r)).toBeGreaterThanOrEqual(0);
+      expect(at(r)).toBeLessThanOrEqual(1);
+    }
   });
 });

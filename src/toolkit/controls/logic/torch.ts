@@ -14,7 +14,7 @@ export const TORCH = {
   penumbra: 0.55,
   /** How far it reaches, metres, and its brightness (candela, at a metre). */
   range: 22,
-  intensity: 60,
+  intensity: 85,
   /** A warm white, an incandescent bulb's. */
   colour: '#fff0d4',
   /** Where it is held, from the eye, metres: to the right, below and ahead. */
@@ -60,3 +60,23 @@ export const torch = {
     return torch.on;
   },
 };
+
+/**
+ * How bright the beam's pool of light is at `r`, from its middle (0) to
+ * its rim (1), as an old filament torch with a pressed reflector throws
+ * it: a little dark in the very middle, where the bulb shades the
+ * reflector; a bright core round that; a brighter ring where the
+ * reflector's rim focuses; then a dim halo, fading out. Faint ripples
+ * from the reflector's pressing run through it. 0 to 1.
+ */
+export function beamProfile(r: number): number {
+  if (r >= 1) return 0;
+  const bump = (at: number, width: number) =>
+    Math.exp(-(((r - at) / width) ** 2));
+  const core = 0.56 + 0.16 * (1 - Math.exp(-((r / 0.09) ** 2)));
+  const body = r < 0.5 ? core : core * (1 - (r - 0.5) / 0.5) ** 0.6;
+  const ring = 0.28 * bump(0.47, 0.05);
+  const halo = 0.22 * (1 - r) * (r > 0.5 ? 1 : 0);
+  const ripple = 0.012 * Math.sin(r * 47) + 0.008 * Math.sin(r * 113 + 1.3);
+  return Math.max(0, Math.min(1, body + ring + halo + ripple));
+}
