@@ -19,6 +19,9 @@ import {
   throughDoor,
 } from './toolkit/gallery/logic/door-joins';
 import { firstPersonOn } from './toolkit/controls/input/first-person';
+import { paused } from './toolkit/controls/logic/paused';
+import { renderScale } from './toolkit/settings/logic/settings';
+import { METRE } from './toolkit/components/core/logic/units';
 import {
   inertClip,
   rendererOn,
@@ -27,6 +30,7 @@ import { worldStore } from './toolkit/save/world-store';
 import { GAS_ZONE_IDS } from './game/plant/gas';
 import { buildLine, versionLabel } from './game/version';
 import { createTitleScreen } from './toolkit/title/title-screen';
+import { OLYMPIC_ORBIT, orbitPose } from './toolkit/title/logic/title-orbit';
 import { GEAR_ICON, createPauseMenu } from './toolkit/settings/pause-menu';
 import { settings } from './toolkit/settings/settings-store';
 import { effect } from '@preact/signals-core';
@@ -431,6 +435,69 @@ window.addEventListener('pool-plant:run-room', (event) => {
   const room = resolveRoomId((event as CustomEvent<string>).detail);
   if (room) void runUnseen(room);
 });
+// ---- The title's backdrop -------------------------------------------------
+// Behind the title screen, a room of the game, live, seen from high up
+// where the player never goes, at a quarter of the resolution and blurred
+// (`doc/plans/title-screen.md`, stage 8: the Olympic hall). The camera
+// neither pans nor tilts: it makes a very slow partial orbit about the
+// room's middle, simple harmonic motion through an arc of 1° in all,
+// 10 seconds to a cycle, always looking at the middle, so the room turns
+// gently in depth (the owner's specification). The game is paused under
+// it, so the room takes no input and the world's clock stands still.
+const TITLE_ROOM: RoomId = 'pool_02';
+let titleBackdrop: { stop(): void } | null = null;
+const startTitleBackdrop = async () => {
+  if (titleBackdrop) return;
+  let stopped = false;
+  let finish = () => {};
+  titleBackdrop = {
+    stop() {
+      stopped = true;
+      finish();
+    },
+  };
+  const start = await starter(TITLE_ROOM);
+  if (stopped) return;
+  const entry = mount(TITLE_ROOM, start);
+  const surface = surfaceOf(keyOf(TITLE_ROOM));
+  const walk = surface && firstPersonOn(surface);
+  const draw = surface && rendererOn(surface);
+  if (!walk || !draw) return;
+  paused.value = true;
+  app.hidden = false;
+  entry.root.hidden = false;
+  entry.root.style.zIndex = '1';
+  entry.root.style.pointerEvents = 'none';
+  // A quarter of the resolution each way: the room's own, less the
+  // player's render quality, divided by four.
+  const full =
+    draw.renderer.getPixelRatio() / renderScale(settings.value.renderLevel);
+  draw.renderer.setPixelRatio(full / 4);
+  document.body.classList.add('on-title');
+  const t0 = performance.now();
+  let frame = 0;
+  const fly = (now: number) => {
+    frame = requestAnimationFrame(fly);
+    // The orbit's pose now (`title-orbit.ts`).
+    const p = orbitPose(OLYMPIC_ORBIT, (now - t0) / 1000);
+    walk.place(p.x * METRE, p.z * METRE, p.yaw, p.pitch, p.y * METRE);
+  };
+  frame = requestAnimationFrame(fly);
+  finish = () => {
+    cancelAnimationFrame(frame);
+    draw.renderer.setPixelRatio(full);
+    document.body.classList.remove('on-title');
+    paused.value = false;
+    entry.root.style.pointerEvents = '';
+    entry.root.style.zIndex = '';
+    if (current !== keyOf(TITLE_ROOM)) entry.root.hidden = true;
+  };
+};
+const stopTitleBackdrop = () => {
+  titleBackdrop?.stop();
+  titleBackdrop = null;
+};
+
 const openRoom = async () => {
   const ownRevision = ++revision;
   const params = new URLSearchParams(location.search);
@@ -450,12 +517,14 @@ const openRoom = async () => {
     // The developers' panel, the room list, at `?dev` (a tool, not part
     // of the game); otherwise the title screen.
     if (params.has('dev')) {
+      stopTitleBackdrop();
       titleScreen.hide();
       directory.hidden = false;
       document.title = 'The Pool — Dev panel';
     } else {
       directory.hidden = true;
       titleScreen.show();
+      void startTitleBackdrop().catch(showError);
     }
     return;
   }
@@ -464,6 +533,7 @@ const openRoom = async () => {
   await resetEffects();
   if (ownRevision !== revision) return;
   directory.hidden = true;
+  stopTitleBackdrop();
   titleScreen.hide();
   app.hidden = false;
   document.title = 'The Pool';

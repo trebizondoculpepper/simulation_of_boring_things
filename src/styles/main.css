@@ -696,3 +696,30 @@ canvas {
   font: 12px/1.2 monospace;
   opacity: 0.7;
 }
+
+/* Behind the title screen, a room of the game drawn at a quarter of the
+   resolution (src/main.ts, the title's backdrop): blurred, darkened a
+   little and scaled a touch so its softened edges do not show; its HUD
+   hidden; the title's gradient thinned to a vignette over it. */
+.on-title #app canvas {
+  filter: blur(3px) brightness(0.82) saturate(1.05);
+  transform: scale(1.04);
+}
+.on-title #app .hud-movement,
+.on-title #app .hud-tools,
+.on-title #app .hud-speed,
+.on-title #app .controls-help,
+.on-title #app .touch-crouch,
+.on-title #app .crosshair,
+.on-title .pool-settings-copy {
+  display: none;
+}
+.on-title .title-backdrop {
+  background: radial-gradient(
+    ellipse at 50% 40%,
+    #0000 0%,
+    #0000 40%,
+    #07141a99 85%,
+    #07141add 100%
+  );
+}
