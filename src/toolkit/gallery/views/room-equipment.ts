@@ -1,3 +1,5 @@
+import { roomSupports } from '../logic/room-supports';
+import { createSupports } from '../../components/plant/views/pipe-supports';
 import {
   Box3,
   Group,
@@ -793,6 +795,10 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
       ? createRoomServices(kit, room as ServiceRoom, floorY, drawnTops)
       : null;
   if (services) pipework.group.add(services.group);
+  // Every run's supports, the pipework's, the cabinet's services' and the
+  // conduits' alike, planned for the whole room (`room-supports.ts`).
+  const supports = roomSupports(room, { drawnTops });
+  if (supports) pipework.group.add(createSupports(kit, supports, floorY));
   // The switch room's cable ladder and its switchgear's trunking.
   if (room === 'switch_room') {
     const c = switchRoomContainment();

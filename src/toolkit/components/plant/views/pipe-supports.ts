@@ -1,63 +1,37 @@
 import {
+  BoxGeometry,
   CylinderGeometry,
   Group,
-  Mesh,
+  InstancedMesh,
+  Matrix4,
   MeshStandardMaterial,
+  Quaternion,
   TorusGeometry,
+  Vector3,
 } from 'three';
+import type { BufferGeometry } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
-
-export type Vec3 = readonly [number, number, number];
-
-/** Hangers this far apart along a level length, and none nearer its ends than this, metres. */
-export const SUPPORT_SPACING = 1.5;
-const FROM_END = 0.3;
-/** Under this over the floor, a run stands on pipe stands rather than hanging. */
-export const LOW = 2.0;
+import type { Support, SupportPlan, Vec3 } from '../logic/pipe-supports';
 
 /**
- * Where a run's hangers go: along each of its level lengths, evenly, at
- * most `SUPPORT_SPACING` apart, clear of its bends. Pure.
+ * A room's pipe and conduit supports, as planned (`logic/pipe-supports.ts`),
+ * drawn in galvanised steel: a split ring round each pipe (round its
+ * lagging, if lagged), and what holds it, made after real channel-strut
+ * hardware:
+ *
+ * - a hanger: an M10 drop rod up to a ceiling plate on the soffit (or under
+ *   a landing's deck);
+ * - a trapeze: a length of 41 × 41 mm channel under the pipes, on two drop
+ *   rods, each to its ceiling plate;
+ * - a wall bracket or clamp: a channel arm out from a base plate on the
+ *   wall;
+ * - a floor stand: a channel post on its base plate;
+ * - off a machine: a short channel arm to its frame.
+ *
+ * All drawn as instanced meshes, a few draw calls for a room's hundreds of
+ * supports. `floorY` lifts the room's floor-relative plan into place.
  */
-export function hangerPoints(
-  points: readonly Vec3[],
-): { at: Vec3; along: 'x' | 'z' }[] {
-  const out: { at: Vec3; along: 'x' | 'z' }[] = [];
-  for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1];
-    const b = points[i];
-    if (Math.abs(a[1] - b[1]) > 1e-6) continue;
-    const along = Math.abs(b[0] - a[0]) > Math.abs(b[2] - a[2]) ? 'x' : 'z';
-    const length = Math.abs(along === 'x' ? b[0] - a[0] : b[2] - a[2]);
-    if (length < 2 * FROM_END) continue;
-    const n = Math.max(1, Math.ceil((length - 2 * FROM_END) / SUPPORT_SPACING));
-    for (let k = 0; k <= n; k++) {
-      const s = FROM_END + ((length - 2 * FROM_END) * k) / n;
-      const t = s / length;
-      out.push({
-        at: [a[0] + (b[0] - a[0]) * t, a[1], a[2] + (b[2] - a[2]) * t],
-        along,
-      });
-    }
-  }
-  return out;
-}
-
-/**
- * The supports for a run of pipe (round its lagging, if lagged): on each
- * level length every 1.5 m a split ring round the pipe, on a clevis
- * hanger and its galvanised drop rod up to `ceilingY`; or, a run low
- * down, on a pipe stand from the floor.
- */
-export function supportPipe(
-  kit: PanelKit,
-  points: readonly Vec3[],
-  {
-    radius,
-    ceilingY,
-    floorY = 0,
-  }: { radius: number; ceilingY: number; floorY?: number },
-) {
+export function createSupports(kit: PanelKit, plan: SupportPlan, floorY = 0) {
   const group = new Group();
   group.name = 'pipe supports';
   const galv = new MeshStandardMaterial({
@@ -66,38 +40,152 @@ export function supportPipe(
     metalness: 0.6,
   });
   kit.materials.push(galv);
-  for (const { at, along } of hangerPoints(points)) {
-    const ring = new Mesh(
-      new TorusGeometry(radius + 0.008, 0.007, 6, 20),
-      galv,
+
+  const lift = (p: Vec3) => new Vector3(p[0], p[1] + floorY, p[2]);
+  const up = new Vector3(0, 1, 0);
+  const rods: Matrix4[] = [];
+  const channels: Matrix4[] = [];
+  const plates: Matrix4[] = [];
+  const rings: Matrix4[] = [];
+
+  /** A cylinder of `radius` from `a` to `b` (unit cylinder, scaled). */
+  const between = (list: Matrix4[], a: Vector3, b: Vector3, radius: number) => {
+    const d = b.clone().sub(a);
+    const length = d.length();
+    if (length < 1e-4) return;
+    const q = new Quaternion().setFromUnitVectors(up, d.normalize());
+    list.push(
+      new Matrix4().compose(
+        a.clone().add(b).multiplyScalar(0.5),
+        q,
+        new Vector3(radius, length, radius),
+      ),
     );
-    ring.position.set(...at);
-    ring.rotation.y = along === 'x' ? Math.PI / 2 : 0;
-    // Low down, on a pipe stand from the floor: a post, its base plate,
-    // the pipe in a clamp on its saddle.
-    if (at[1] - floorY < LOW) {
-      const bottom = at[1] - radius - 0.02;
-      if (bottom <= floorY) continue;
-      const post = new Mesh(
-        new CylinderGeometry(0.02, 0.02, bottom - floorY, 8),
-        galv,
-      );
-      post.position.set(at[0], (bottom + floorY) / 2, at[2]);
-      const plate = new Mesh(new CylinderGeometry(0.07, 0.07, 0.01, 12), galv);
-      plate.position.set(at[0], floorY + 0.005, at[2]);
-      group.add(post, plate, ring);
-      continue;
+  };
+  /** A 41 × 41 mm channel from `a` to `b`. */
+  const channel = (a: Vector3, b: Vector3) => {
+    const d = b.clone().sub(a);
+    const length = d.length();
+    if (length < 1e-4) return;
+    const q = new Quaternion().setFromUnitVectors(up, d.normalize());
+    channels.push(
+      new Matrix4().compose(
+        a.clone().add(b).multiplyScalar(0.5),
+        q,
+        new Vector3(0.041, length, 0.041),
+      ),
+    );
+  };
+  /** A square plate, `size` across, facing `normal`, at `at`. */
+  const plate = (at: Vector3, normal: Vector3, size = 0.1) => {
+    const q = new Quaternion().setFromUnitVectors(
+      up,
+      normal.clone().normalize(),
+    );
+    plates.push(new Matrix4().compose(at, q, new Vector3(size, 0.008, size)));
+  };
+  /** A split ring round the pipe at `s`, in the plane across its run. */
+  const ring = (s: Support) => {
+    const axis =
+      s.along === 'x'
+        ? new Vector3(1, 0, 0)
+        : s.along === 'z'
+          ? new Vector3(0, 0, 1)
+          : new Vector3(0, 1, 0);
+    // The unit torus lies in the xy plane, its axis along z.
+    const q = new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), axis);
+    const r = s.radius + 0.008;
+    rings.push(new Matrix4().compose(lift(s.at), q, new Vector3(r, r, r)));
+  };
+  /** From the pipe's surface toward `to`: where the member starts. */
+  const surface = (s: Support, to: Vector3) => {
+    const at = lift(s.at);
+    const d = to.clone().sub(at);
+    const n = d.length();
+    return n < 1e-6
+      ? at
+      : at.addScaledVector(d, Math.min(1, (s.radius + 0.01) / n));
+  };
+
+  const drawnTrapezes = new Set<number>();
+  for (const s of plan.supports) {
+    const to = lift(s.to);
+    switch (s.type) {
+      case 'in-duct':
+        // On the duct's bed, out of sight under its cover.
+        break;
+      case 'hanger': {
+        ring(s);
+        const top = surface(s, to);
+        between(rods, top, to, 0.005);
+        plate(to, new Vector3(0, -1, 0), 0.08);
+        break;
+      }
+      case 'trapeze': {
+        ring(s);
+        if (s.own) {
+          const [a, b] = s.own.map(lift);
+          channel(a, b);
+          for (const end of [a, b]) {
+            const fix = end.clone();
+            fix.y = plan.soffit + floorY;
+            between(rods, end, fix, 0.005);
+            plate(fix, new Vector3(0, -1, 0), 0.08);
+          }
+          // The pipe's saddle down to the channel.
+          between(rods, surface(s, to), to, 0.006);
+        } else if (s.trapeze !== undefined) {
+          between(rods, surface(s, to), to, 0.006);
+          if (!drawnTrapezes.has(s.trapeze)) {
+            drawnTrapezes.add(s.trapeze);
+            const t = plan.trapezes[s.trapeze];
+            const a = lift(t.from);
+            const b = lift(t.to);
+            channel(a, b);
+            for (const end of [a, b]) {
+              const fix = end.clone();
+              fix.y = t.top + floorY;
+              between(rods, end, fix, 0.005);
+              plate(fix, new Vector3(0, -1, 0), 0.08);
+            }
+          }
+        }
+        break;
+      }
+      case 'wall-bracket':
+      case 'wall-clamp':
+      case 'machine': {
+        ring(s);
+        channel(surface(s, to), to);
+        const normal = lift(s.at).sub(to);
+        if (normal.lengthSq() > 1e-8) plate(to, normal, 0.1);
+        break;
+      }
+      case 'floor-stand': {
+        ring(s);
+        channel(surface(s, to), to);
+        plate(to, up, 0.14);
+        break;
+      }
     }
-    const top = at[1] + radius + 0.02;
-    if (ceilingY <= top) continue;
-    const rod = new Mesh(
-      new CylinderGeometry(0.006, 0.006, ceilingY - top, 6),
-      galv,
-    );
-    rod.position.set(at[0], (ceilingY + top) / 2, at[2]);
-    const clevis = new Mesh(new CylinderGeometry(0.012, 0.012, 0.04, 8), galv);
-    clevis.position.set(at[0], top, at[2]);
-    group.add(rod, ring, clevis);
   }
+
+  const instanced = (
+    geometry: BufferGeometry,
+    list: Matrix4[],
+    name: string,
+  ) => {
+    if (!list.length) return;
+    const mesh = new InstancedMesh(geometry, galv, list.length);
+    list.forEach((m, i) => mesh.setMatrixAt(i, m));
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.name = name;
+    mesh.computeBoundingSphere();
+    group.add(mesh);
+  };
+  instanced(new CylinderGeometry(1, 1, 1, 6), rods, 'drop rods');
+  instanced(new BoxGeometry(1, 1, 1), channels, 'channel strut');
+  instanced(new BoxGeometry(1, 1, 1), plates, 'base and ceiling plates');
+  instanced(new TorusGeometry(1, 0.1, 6, 20), rings, 'pipe rings');
   return group;
 }

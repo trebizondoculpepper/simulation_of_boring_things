@@ -62,7 +62,11 @@ const onRun = (p: V, points: readonly V[]) =>
     );
   });
 
-export function roomSupportRuns(room: string): SupportRun[] {
+export function roomSupportRuns(
+  room: string,
+  /** Each placed machine's top as drawn (`roomServiceRoutes`), so the conduits' drops are those drawn. */
+  drawnTops: readonly (number | undefined)[] = [],
+): SupportRun[] {
   const runs: SupportRun[] = [];
   const tees = roomTees(room);
   for (const r of roomPipes(room))
@@ -93,7 +97,7 @@ export function roomSupportRuns(room: string): SupportRun[] {
       temperature: temperatureOf(room, r.service),
       conduit: r.service === 'electrical',
     });
-  for (const r of roomServiceRoutes(room))
+  for (const r of roomServiceRoutes(room, drawnTops))
     runs.push({
       name: r.name,
       kind: r.kind,
@@ -108,9 +112,12 @@ export function roomSupportRuns(room: string): SupportRun[] {
 /** The room's supports, every run planned, or null if it is not a room whose services are laid out. */
 export function roomSupports(
   room: string,
-  options: { supplyWall?: Side } = {},
+  {
+    supplyWall,
+    drawnTops = [],
+  }: { supplyWall?: Side; drawnTops?: readonly (number | undefined)[] } = {},
 ): SupportPlan | null {
-  const structure = roomStructure(room, options);
+  const structure = roomStructure(room, { supplyWall });
   if (!structure) return null;
-  return planSupports(roomSupportRuns(room), structure);
+  return planSupports(roomSupportRuns(room, drawnTops), structure);
 }

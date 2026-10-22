@@ -1,4 +1,3 @@
-import { roomStructure } from '../logic/room-structure';
 import {
   BoxGeometry,
   CylinderGeometry,
@@ -11,7 +10,6 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createMicroLabel } from '../../components/core/views/eighties-controls';
 import { createPipe, PIPE_KINDS } from '../../components/core/views/pipe-kinds';
 import { markPipe } from '../../components/plant/views/pipe-markers';
-import { supportPipe } from '../../components/plant/views/pipe-supports';
 import type { PipeService } from '../../components/plant/views/pipe-markers';
 import { worldStore } from '../../save/world-store';
 import type { IsolatorName } from '../../../game/plant/services';
@@ -55,8 +53,6 @@ const MARKED: Record<Service, PipeService> = {
 export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   const runs = cabinetPipes(room);
   if (!runs.length) return null;
-  // The underside of the services ceiling, over the floor (`roomStructure`).
-  const ceiling = roomStructure(room)?.ceilingZone ?? 5;
   const group = new Group();
   group.name = 'cabinet services';
   const uses = new Map<Object3D, () => void>();
@@ -84,15 +80,6 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
         text: run.label,
       }),
     );
-    // The heating's hangers, on drop rods from the ceiling.
-    if (run.kind === 'lagged-heating')
-      group.add(
-        supportPipe(kit, points, {
-          radius: run.od / 2 + lagging,
-          ceilingY: floorY + ceiling,
-          floorY,
-        }),
-      );
     if (run.valve) {
       const { id, at, axis } = run.valve;
       const description = identifiedPart(

@@ -1,4 +1,3 @@
-import { roomStructure } from '../logic/room-structure';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createMicroLabel } from '../../components/core/views/eighties-controls';
@@ -9,7 +8,6 @@ import {
   PIPE_KINDS,
 } from '../../components/core/views/pipe-kinds';
 import { markPipe } from '../../components/plant/views/pipe-markers';
-import { supportPipe } from '../../components/plant/views/pipe-supports';
 import type { PipeService } from '../../components/plant/views/pipe-markers';
 import { worldStore } from '../../save/world-store';
 import type { IsolatorName } from '../../../game/plant/services';
@@ -99,15 +97,6 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         }),
       );
     }
-    // The heating's hangers, on drop rods from the services ceiling.
-    if (r.kind === 'lagged-heating')
-      group.add(
-        supportPipe(kit, points, {
-          radius: r.od / 2 + (PIPE_KINDS[r.kind].insulation?.thickness ?? 0),
-          ceilingY: floorY + (roomStructure(room)?.ceilingZone ?? 6.1),
-          floorY,
-        }),
-      );
     for (const v of r.valves) group.add(valve(r, v));
   }
   for (const t of roomTees(room)) {

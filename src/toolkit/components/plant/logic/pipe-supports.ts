@@ -216,6 +216,8 @@ export interface Trapeze {
 }
 
 export interface SupportPlan {
+  /** The soffit its rods rise to. */
+  soffit: number;
   supports: Support[];
   trapezes: Trapeze[];
   problems: string[];
@@ -717,5 +719,5 @@ export function planSupports(
       o.to = lengthwise === 0 ? [line, y, at[2]] : [at[0], y, line];
     }
   }
-  return { supports, trapezes, problems };
+  return { soffit: structure.soffit, supports, trapezes, problems };
 }
