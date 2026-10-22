@@ -108,6 +108,27 @@ describe('the bathers and the water', () => {
   });
 });
 
+describe('the bathers and the halls', () => {
+  it('leave a hall whose lights are out, skylights or not', () => {
+    let w = advance(newWorld(), 24 * 3600 + 11 * 3600, 10);
+    expect(appealOf(w).pool_01).toBe(1);
+    expect(w.bathers.pools.pool_01.now).toBeGreaterThan(0);
+    w = applyAction(w, { type: 'lighting/zone', zone: 'lounge', on: false });
+    expect(appealOf(w).pool_01).toBe(0);
+    w = advance(w, 600, 10);
+    expect(w.bathers.pools.pool_01.now).toBe(0);
+  });
+
+  it('let a hall cool without its air handling, and fewer bathers come', () => {
+    let w = advance(newWorld(), 24 * 3600 + 8 * 3600, 10);
+    expect(w.pools.pool_02.hallAir).toBeCloseTo(29, 1);
+    w = applyAction(w, { type: 'plant/feeder', room: 'air_plant', on: false });
+    w = advance(w, 6 * 3600, 10);
+    expect(w.pools.pool_02.hallAir).toBeLessThan(25);
+    expect(appealOf(w).pool_02).toBeLessThan(0.5);
+  });
+});
+
 describe('the mains water off', () => {
   it('runs the break tank down, trips the booster set, then the pools’ tanks run down until their pumps trip', () => {
     // Two days' normal running, to midday.

@@ -19,6 +19,7 @@ import type {
   Utility,
 } from './plant/services';
 import {
+  HALL_AIR,
   POOL_IDS,
   POOL_TARGET,
   dosedVolumes,
@@ -34,12 +35,7 @@ import {
 } from './plant/wet-hall';
 import type { WetHallState } from './plant/wet-hall';
 import { newBathers, poolAppeal, stepBathers } from './bathers';
-import {
-  LIGHTING_ZONES,
-  newLighting,
-  zoneLit,
-  zoneOfRoom,
-} from './plant/lighting';
+import { newLighting, zoneLit, zoneOfRoom } from './plant/lighting';
 import type { LightingState, LightingZoneId } from './plant/lighting';
 import { fullOff, fullOn, slowStartAt, slowStartBegin } from './plant/startup';
 import type { BathersState } from './bathers';
@@ -52,7 +48,7 @@ import {
 import type { Chemical, ChemicalStores } from './plant/chemicals';
 import type { PoolId, PoolsState } from './plant/pools';
 
-export const WORLD_VERSION = 9;
+export const WORLD_VERSION = 10;
 
 export interface World {
   /** Seconds the world has run. */
@@ -268,10 +264,10 @@ export function appealOf(world: World): Record<PoolId, number> {
           freeChlorine: p.freeChlorine,
           combinedChlorine: p.combinedChlorine,
           circulating: !p.tripped && p.flow > POOL_TARGET[id].flow / 2,
-          lit:
-            !zone ||
-            zoneLit(world.plant, world.lighting, zone) ||
-            LIGHTING_ZONES[zone].daylight,
+          hallAir: p.hallAir,
+          hallTarget: HALL_AIR[id],
+          // Its lights on: daylight is not enough.
+          lit: !zone || zoneLit(world.plant, world.lighting, zone),
           spa: id === 'pool_03',
         }),
       ];

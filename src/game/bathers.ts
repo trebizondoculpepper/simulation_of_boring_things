@@ -266,7 +266,10 @@ export interface PoolConditions {
   combinedChlorine: number;
   /** Whether its water is circulating, treated and filtered. */
   circulating: boolean;
-  /** Whether its hall can be seen in: its lights, or daylight. */
+  /** Its hall's air temperature, and what it should be, °C. */
+  hallAir: number;
+  hallTarget: number;
+  /** Whether its hall's lights are on: nobody bathes in the dark, daylight or not. */
   lit: boolean;
   /** A spa (the jacuzzi): HSG282's hotter limit. */
   spa: boolean;
@@ -292,7 +295,8 @@ const within = (
  * in, and those in the water are cleared.
  *
  * - Closed if its water is not circulating (no treatment, no filtering),
- *   if its hall is dark, or if its free chlorine is under 0.5 mg/l (the
+ *   if its hall's lights are out (whatever the daylight: nobody is let in
+ *   to bathe unlit), or if its free chlorine is under 0.5 mg/l (the
  *   water not safe: PWTAG's minimum for a pool; the duty manager closes
  *   it), or a spa over 40 °C (HSG282).
  * - Its temperature: as wanted within 1.5 °C of its target, nobody 6 °C
@@ -303,6 +307,12 @@ const within = (
  *   irritating, and nobody at 5, where PWTAG says bathing must stop.
  * - Combined chlorine, the chloramines that smell of "chlorine" and sting
  *   the eyes: as wanted to 0.5 mg/l, nobody at 1.5.
+ * - The hall's air: as wanted within 2 °C of its design temperature;
+ *   nobody when it is 8 °C colder (bathers shiver getting out) or 6 °C
+ *   hotter (stifling).
+ *
+ * (To come, with the water's biology: its smells, musty, stagnant and
+ * worse, each another share.)
  *
  * Each is a share; together they multiply. Pure.
  */
@@ -314,7 +324,8 @@ export function poolAppeal(c: PoolConditions): number {
     within(c.temperature, c.target - 1.5, c.target + 1.5, 4.5) *
     within(c.ph, 7.0, 7.6, 0.5, 0.6) *
     within(c.freeChlorine, 1, 3, 0.5, 2) *
-    within(c.combinedChlorine, 0, 0.5, 1, 1)
+    within(c.combinedChlorine, 0, 0.5, 1, 1) *
+    within(c.hallAir, c.hallTarget - 2, c.hallTarget + 2, 6, 4)
   );
 }
 

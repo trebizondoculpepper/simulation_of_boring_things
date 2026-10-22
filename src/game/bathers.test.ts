@@ -128,6 +128,8 @@ describe('what keeps bathers away', () => {
     ph: 7.4,
     freeChlorine: 1.4,
     combinedChlorine: 0.2,
+    hallAir: 29,
+    hallTarget: 29,
     circulating: true,
     lit: true,
     spa: false,
@@ -154,6 +156,8 @@ describe('what keeps bathers away', () => {
       { ph: 7.9 },
       { freeChlorine: 4 },
       { combinedChlorine: 1 },
+      { hallAir: 25 },
+      { hallAir: 33 },
     ]) {
       const a = poolAppeal({ ...good, ...worse });
       expect(a, JSON.stringify(worse)).toBeGreaterThan(0);
@@ -162,6 +166,7 @@ describe('what keeps bathers away', () => {
     expect(poolAppeal({ ...good, temperature: 21 })).toBe(0);
     expect(poolAppeal({ ...good, ph: 8.3 })).toBe(0);
     expect(poolAppeal({ ...good, freeChlorine: 5 })).toBe(0);
+    expect(poolAppeal({ ...good, hallAir: 21 })).toBe(0);
   });
 
   it('clears a closed pool within minutes, and lets fewer in to a poor one', () => {

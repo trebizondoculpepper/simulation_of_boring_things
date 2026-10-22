@@ -1,4 +1,4 @@
-import { serviceAvailable } from './services';
+import { ROOM_SERVICES, serviceAvailable } from './services';
 import type { IsolatorName, PlantServices, ServiceRoom } from './services';
 import { stepWater } from '../water/water-balance';
 import type { PoolWater } from '../water/water-balance';
@@ -29,9 +29,26 @@ export interface PoolWaterState {
   flow: number;
   /** Whether its pumps have tripped on the tank's low-low level. */
   tripped: boolean;
+  /** Its hall's air temperature, °C. */
+  hallAir: number;
 }
 
 export type PoolsState = Record<PoolId, PoolWaterState>;
+
+/**
+ * Each pool hall's design air temperature, °C: a pool hall's about 1 °C
+ * over its water, to keep evaporation down (the lounge, the Olympic); a
+ * spa's room and the footbath passage kept comfortably warm, not at the
+ * spa water's 37 °C.
+ */
+export const HALL_AIR: Record<PoolId, number> = {
+  pool_01: 31,
+  pool_02: 29,
+  pool_03: 30,
+  pool_04: 28,
+};
+/** An unheated hall's air drifts toward this, °C. */
+export const UNHEATED_AIR = 18;
 
 /** Each pool's design temperature, °C, and circulation, m³/h. */
 export const POOL_TARGET: Record<PoolId, { temp: number; flow: number }> = {
@@ -55,6 +72,7 @@ export function newPools(): PoolsState {
         redox: 720,
         flow: POOL_TARGET[id].flow,
         tripped: false,
+        hallAir: HALL_AIR[id],
       },
     ]),
   ) as PoolsState;
@@ -284,10 +302,24 @@ export function stepPoolsWater(
       0,
       2,
     );
+    // The hall's air: held at its design temperature while its air
+    // handling and heating are on (the footbath passage has no air
+    // handling of its own), within the hour; without, cooling over hours.
+    const handled = (ROOM_SERVICES[room] as readonly string[]).includes('air')
+      ? serviceAvailable(plant, room, 'air')
+      : true;
+    const warmAir = handled && serviceAvailable(plant, room, 'heat');
+    const hallAir = approach(
+      old.hallAir,
+      warmAir ? HALL_AIR[id] : UNHEATED_AIR,
+      warmAir ? 1 / 3600 : 1 / (6 * 3600),
+      dt,
+    );
     next[id] = {
       level,
       balance,
       temperature,
+      hallAir,
       ph,
       freeChlorine,
       combinedChlorine,
