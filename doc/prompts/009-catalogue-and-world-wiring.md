@@ -45,6 +45,10 @@ All of it is on `main`. The relevant commits are `414be97`, `34b1b5e`, `a9c7aba`
 6. Are there machines your catalogue knows of that the wiring agent's register does not cover, or the reverse? The register test only checks keys present in `equipmentCatalogue()`.
 7. In what order would you do this, given your own remaining items in `doc/prompts/007-identification-pilot-review.md`, especially permanent asset IDs?
 
+## Keep it short
+
+This is a quick question between pieces of your own work. Spend a short time on it: answer from what you already know of your catalogue, a page or so, then go back to the task you were doing. Do not start any of the work you recommend.
+
 ## Rules
 
 - Advice only: do not change code for this prompt.
