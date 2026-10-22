@@ -18,7 +18,8 @@ import {
 } from '../../../components/core/parts/panel-indicators';
 import { createControlCubicle } from '../../../components/industrial-control/views/control-cubicle';
 import { createMimicBoard } from '../../../components/industrial-control/views/mimic-board';
-import { plantAt } from '../../logic/control-room-demo';
+import { currentPlant } from './live-plant';
+import type { PoolId } from '../../../../game/plant/pools';
 import type { PlantReading } from '../../logic/control-room-demo';
 import { MAIN_POOL_MIMIC, mainPoolState } from '../../logic/pool-mimics';
 import type { PumpsShown } from '../../logic/pool-mimics';
@@ -87,7 +88,8 @@ function ammeter(kit: PanelKit, parent: Group, x: number, y: number) {
   return digits;
 }
 
-export const PUMP_PANEL_EXHIBIT: PlantExhibit = {
+/** The filter pumps' local control panel, showing `pool`'s plant. */
+export const pumpPanelExhibit = (pool: PoolId = 'pool_02'): PlantExhibit => ({
   title: 'Local control panel: filter pumps',
   reference:
     'Penfold Controls cubicle (RAL 7035) after Benfield’s: the main pool mimic on its top panel; tri-state indicators, ammeters, HAND · OFF · AUTO and LOCAL · REMOTE below',
@@ -163,7 +165,7 @@ export const PUMP_PANEL_EXHIBIT: PlantExhibit = {
       object: group,
       parts,
       update(delta) {
-        const reading = plantAt(performance.now() / 1000);
+        const reading = currentPlant(pool);
         let c = { ...pumpControls.state, remote: where.position.value === 1 };
         for (const p of pumps) c = setHoa(c, p.id, p.hoa.position.value);
         pumpControls.state = c;
@@ -179,4 +181,7 @@ export const PUMP_PANEL_EXHIBIT: PlantExhibit = {
       },
     };
   },
-};
+});
+
+/** The main pool's, as the dev rooms show it. */
+export const PUMP_PANEL_EXHIBIT = pumpPanelExhibit();

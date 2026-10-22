@@ -1,3 +1,4 @@
+import { currentPlant } from './live-plant';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import {
   createBmsOutstation,
@@ -15,12 +16,7 @@ import {
   createRecorderPanel,
 } from '../../../components/plant/views/control-panels';
 import type { PrinterStandView } from '../../../components/plant/views/control-panels';
-import {
-  ALARM_TEXT,
-  gasAlarmIds,
-  plantAt,
-} from '../../logic/control-room-demo';
-import { worldStore } from '../../../save/world-store';
+import { ALARM_TEXT } from '../../logic/control-room-demo';
 import type { PlantReading } from '../../logic/control-room-demo';
 import {
   AIR_MIMIC,
@@ -38,21 +34,12 @@ export const PURPOSE =
   'Where problems show first: mimic, annunciator, recorders, readouts, POOLMON';
 
 /**
- * The plant as the control room sees it: a scripted reading
- * (`control-room-demo.ts`) until the plant is simulated, the same for
- * every instrument at the same moment.
+ * The plant as the control room sees it: the world's (`world-reading.ts`),
+ * the main pool's circuit, gas detection and all; the scripted loop only
+ * where there is no world. The same for every instrument at a moment.
  */
 const clock = () => performance.now() / 1000;
-const store = typeof window === 'undefined' ? null : worldStore('dev');
-const reading = (): PlantReading => {
-  const scripted = plantAt(clock());
-  // The gas detection is the world's, not the script's.
-  if (!store) return scripted;
-  return {
-    ...scripted,
-    alarms: [...scripted.alarms, ...gasAlarmIds(store.world.value)],
-  };
-};
+const reading = (): PlantReading => currentPlant('pool_02', clock());
 
 /** The time printed against each alarm, from the reading's clock. */
 const stamp = () => {

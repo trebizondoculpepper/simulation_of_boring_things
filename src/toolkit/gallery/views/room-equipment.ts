@@ -92,6 +92,9 @@ import type { IsolatorName, ServiceRoom } from '../../../game/plant/services';
 import { createOzoneGenerator } from '../../components/plant/views/ozone-plant';
 import { ozoneRoom } from '../../components/plant/logic/ozone-room';
 import type { Item, Placed } from '../logic/room-equipment';
+import type { PoolId } from '../../../game/plant/pools';
+import { pumpPairExhibit } from '../rooms/plant/pumps';
+import { pumpPanelExhibit } from '../rooms/plant/pump-panel';
 
 /** Each model the rooms' machines are, by its key in `logic/room-equipment.ts`. */
 const MODELS: Record<string, PlantExhibit> = {
@@ -165,8 +168,17 @@ const TANKS: Record<string, 'sectional' | 'vessel'> = {
  * space it takes, a sand filter at its diameter, a tank at its size, or a
  * placeholder.
  */
-function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
+function modelFor(
+  kit: PanelKit,
+  item: Item,
+  room = '',
+): Object3D | LiveExhibit | null {
   const [kind, arg] = item.key.split(':');
+  // A pool plant room's pumps and their panel: its own pool's, from the
+  // world (`live-plant.ts`).
+  const pool = /^plant_(pool_0[1-4])$/.exec(room)?.[1] as PoolId | undefined;
+  if (pool && kind === 'pump-pair') return pumpPairExhibit(pool).build(kit);
+  if (pool && kind === 'pump-panel') return pumpPanelExhibit(pool).build(kit);
   bindSupplies();
   if (kind === 'boiler-cascade' && arg)
     return createLiveBoilerCascade(kit, (Number(arg) - 1) * 2);
@@ -606,7 +618,7 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   // Each machine's top as drawn, for its power feed to meet.
   const drawnTops: (number | undefined)[] = [];
   for (const [i, p] of placed.entries()) {
-    const built = modelFor(kit, p.item);
+    const built = modelFor(kit, p.item, room);
     if (!built) continue;
     const object = isLive(built) ? built.object : built;
     if (isLive(built)) lives.push(built);

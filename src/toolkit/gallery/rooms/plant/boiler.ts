@@ -33,7 +33,7 @@ import {
 } from '../../../components/plant/logic/combustion';
 import type { CombustionState } from '../../../components/plant/logic/combustion';
 import { createCombustionPanel } from '../../../components/plant/views/combustion-panel';
-import { plantAt } from '../../logic/control-room-demo';
+import { currentPlant } from './live-plant';
 import { GAS_MIMIC, gasState } from '../../logic/pool-mimics';
 import {
   BOILER_HEAT_MIMIC,
@@ -136,7 +136,7 @@ export function createLiveBoilerCascade(
       if (first === 0) {
         house.seconds += delta;
         settle();
-        const plant = plantAt(performance.now() / 1000);
+        const plant = currentPlant();
         const lag = Math.sin(plant.t / 45) > 0;
         house.boilers = house.boilers.map((boiler, i) =>
           stepBoiler(

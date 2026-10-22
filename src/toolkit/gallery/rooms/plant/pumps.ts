@@ -17,7 +17,10 @@ import {
 } from './spa-pack';
 import { createPumpDrive } from '../../../components/plant/parts/pump-drive';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
-import { plantAt } from '../../logic/control-room-demo';
+import { currentPlant } from './live-plant';
+import { partAudio } from '../../../components/core/audio/part-audio';
+import { pumpSound } from '../../../components/plant/views/pump-sound';
+import type { PoolId } from '../../../../game/plant/pools';
 import {
   createAirBlower,
   createFlowMeter,
@@ -86,35 +89,57 @@ function filterWithFacePipes(
   return { object, parts };
 }
 
-/** The room's equipment, in the order it is shown. */
-export const EXHIBITS: readonly PlantExhibit[] = [
-  {
+/**
+ * The circulation pumps, duty and standby, showing `pool`'s plant: the
+ * pump the world runs is the one that runs here.
+ */
+export function pumpPairExhibit(pool: PoolId = 'pool_02'): PlantExhibit {
+  return {
     title: 'Circulation pumps, duty and standby',
     reference:
       'After Grundfos NK 150-315, 30 kW 4-pole; DN200/150; hair-and-lint strainers after AstralPool Aral Ø330',
     size: { w: 3.2, d: 2.4, h: 1.9, mount: 'floor' },
     build(kit): LiveExhibit {
-      // The duty pump runs; the standby sits with its gauges at the
-      // suction's static head. Read from the plant (`control-room-demo`).
+      // Whichever pump the plant runs (`live-plant.ts`): its gauges at
+      // their running pressures and its sound held at it, running up as it
+      // starts and coasting down as it stops; the other sits with its
+      // gauges at the suction's static head, silent.
       const pair = createPumpPair(kit);
-      const [duty, standby] = pair.pumps;
+      const sound = pumpSound();
+      const heard = [false, false];
       return {
         object: pair,
         update(delta) {
-          const plant = plantAt(performance.now() / 1000);
+          const plant = currentPlant(pool);
           const worst = Math.max(...plant.filterDp);
-          duty.gauges.suction.set(0.18 - (plant.flow - 600) * 0.001);
-          duty.gauges.discharge.set(2.1 + 0.3 * (worst - 0.4));
-          standby.gauges.suction.set(0.22);
-          standby.gauges.discharge.set(0.22);
-          for (const pump of [duty, standby]) {
+          const running = [plant.pumps.p1, plant.pumps.p2];
+          pair.pumps.forEach((pump, i) => {
+            if (running[i]) {
+              pump.gauges.suction.set(0.18 - (plant.flow - 600) * 0.001);
+              pump.gauges.discharge.set(2.1 + 0.3 * (worst - 0.4));
+            } else {
+              pump.gauges.suction.set(0.22);
+              pump.gauges.discharge.set(0.22);
+            }
             pump.gauges.suction.update(delta);
             pump.gauges.discharge.update(delta);
-          }
+            if (running[i] !== heard[i]) {
+              heard[i] = running[i];
+              partAudio.hold(pump, running[i] ? sound : null, pump);
+            }
+          });
+        },
+        dispose() {
+          for (const pump of pair.pumps) partAudio.hold(pump, null);
         },
       };
     },
-  },
+  };
+}
+
+/** The room's equipment, in the order it is shown. */
+export const EXHIBITS: readonly PlantExhibit[] = [
+  pumpPairExhibit(),
   {
     title: 'Pressure sand filter, main pool',
     reference:
