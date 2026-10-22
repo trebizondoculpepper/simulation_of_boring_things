@@ -34,6 +34,22 @@ Worked by mouse, keyboard (arrows and Enter) and gamepad alike: a Steam Deck req
 
 - **Instructions:** the controls for keyboard and mouse, touch and gamepad (from the HUD's help text), and a few lines on what the player is there to do.
 
+## The pause menu
+
+Agreed with the owner on 2026-10-22: the settings panel becomes the game's pause menu, in the usual video-game form.
+
+- **Opening it:** the first Esc is the browser's, freeing a captured mouse. Esc with the mouse free opens the menu at its Game tab, and Esc again closes it. A gamepad's Start opens and closes it in one press, and the gear among the view tools opens it for touch and mouse. Resume returns to the game, where the next click captures the mouse again (browsers will not recapture it for about a second after the player's Esc).
+- **Tabs:** Game, Graphics (render quality, field of view), Audio (master volume) and Controls (look sensitivity, invert, on-screen controls, and the key and button list, which the title screen's Instructions reuses). Switched by clicking, Q and E, or a gamepad's shoulder buttons.
+- **Saving is Minecraft's:** continuous autosave, no slots. The world saves itself every few seconds, on entering a room and on quitting; Continue on the title screen picks up where the player was. The Game tab has:
+  - Resume;
+  - Save, which saves at once, for reassurance;
+  - Quit to Title, which saves first;
+  - Quit to Desktop, only in a packaged desktop build.
+
+  No confirmation is needed, since nothing is ever unsaved.
+
+- **Pausing:** the world pauses while the menu is open, as Minecraft's single player does.
+
 ## Underneath
 
 - **Save slots:** the game gets its own `game` save slot. Today every machine in the building is bound to the `dev` slot, which the dev rooms keep.
