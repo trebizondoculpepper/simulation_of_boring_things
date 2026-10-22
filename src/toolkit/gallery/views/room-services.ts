@@ -1,4 +1,12 @@
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
+import {
+  BoxGeometry,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  QuadraticBezierCurve3,
+  TubeGeometry,
+  Vector3,
+} from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createPipe } from '../../components/core/views/pipe-kinds';
@@ -16,6 +24,8 @@ export function createRoomServices(
   kit: PanelKit,
   room: ServiceRoom,
   floorY = 0,
+  /** Each placed machine's top as drawn, metres over the floor (`roomServiceRoutes`). */
+  drawnTops: readonly (number | undefined)[] = [],
 ) {
   const group = new Group();
   group.name = `${room} services`;
@@ -26,7 +36,27 @@ export function createRoomServices(
   const lift = ([x, y, z]: readonly [number, number, number]) =>
     [x, floorY + y, z] as const;
 
-  for (const route of roomServiceRoutes(room)) {
+  let cableMat: MeshStandardMaterial | null = null;
+  const cableMaterial = () => {
+    if (!cableMat) {
+      cableMat = new MeshStandardMaterial({ color: '#2a2b2c', roughness: 0.7 });
+      kit.materials.push(cableMat);
+    }
+    return cableMat;
+  };
+  let boxMat: MeshStandardMaterial | null = null;
+  const boxMaterial = () => {
+    if (!boxMat) {
+      boxMat = new MeshStandardMaterial({
+        color: '#9da3a4',
+        metalness: 0.6,
+        roughness: 0.45,
+      });
+      kit.materials.push(boxMat);
+    }
+    return boxMat;
+  };
+  for (const route of roomServiceRoutes(room, drawnTops)) {
     const points = route.points
       .map(lift)
       .filter(
@@ -78,6 +108,32 @@ export function createRoomServices(
         duct.name = route.name;
         group.add(duct);
       }
+    } else if (route.kind === 'flex-cable') {
+      // A flexible cable from its outlet box, hanging in a slight curve
+      // down to the machine: the box on the wall at its top.
+      const [a, b] = [points[0], points[points.length - 1]];
+      const mid = new Vector3(
+        (a[0] + b[0]) / 2,
+        (a[1] + b[1]) / 2 - 0.06,
+        (a[2] + b[2]) / 2,
+      );
+      const curve = new QuadraticBezierCurve3(
+        new Vector3(...a),
+        mid,
+        new Vector3(...b),
+      );
+      const cable = new Mesh(
+        new TubeGeometry(curve, 16, route.od / 2, 8),
+        cableMaterial(),
+      );
+      cable.name = route.name;
+      const outlet = new Mesh(
+        new BoxGeometry(0.086, 0.086, 0.05),
+        boxMaterial(),
+      );
+      outlet.name = `${route.name} outlet box`;
+      outlet.position.set(a[0], a[1], a[2]);
+      group.add(cable, outlet);
     } else {
       // Dosing and sample tube clipped in square runs, not hung in curves.
       const pipe = createPipe(

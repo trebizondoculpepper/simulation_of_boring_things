@@ -1,4 +1,5 @@
 import {
+  Box3,
   Group,
   Mesh,
   MeshStandardMaterial,
@@ -535,7 +536,9 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   const lives: LiveExhibit[] = [];
   const solids: Footprint[] = [];
   const placed: Placed[] = layout?.placed ?? [];
-  for (const p of placed) {
+  // Each machine's top as drawn, for its power feed to meet.
+  const drawnTops: (number | undefined)[] = [];
+  for (const [i, p] of placed.entries()) {
     const built = modelFor(kit, p.item);
     if (!built) continue;
     const object = isLive(built) ? built.object : built;
@@ -545,6 +548,8 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
     object.rotation.y = p.yaw;
     object.name ||= p.item.label;
     group.add(object);
+    const bounds = new Box3().setFromObject(object);
+    if (!bounds.isEmpty()) drawnTops[i] = bounds.max.y - floorY;
     if (p.item.mount === 'floor' && !p.item.walkable) solids.push(p.footprint);
   }
   // The pipework between them (`room-pipework.ts`): its low runs more to
@@ -554,7 +559,7 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   solids.push(...pipework.solids);
   const services =
     room in ROOM_SERVICES
-      ? createRoomServices(kit, room as ServiceRoom, floorY)
+      ? createRoomServices(kit, room as ServiceRoom, floorY, drawnTops)
       : null;
   if (services) pipework.group.add(services.group);
   // The switch room's cable ladder and its switchgear's trunking.
