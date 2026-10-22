@@ -4,7 +4,9 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
-The game's first release, 0.1.0, is not yet cut. So far:
+## [0.1.0] - 2026-10-22
+
+The first release. It has no operator's manual yet: that comes in a later release (`doc/plans/operators-manual.md`).
 
 ### Added
 
@@ -19,3 +21,6 @@ The game's first release, 0.1.0, is not yet cut. So far:
 
 - Walking from one room to the next no longer recompiles every shader of the room arrived in.
 - The corridor posters load on the published site.
+
+[Unreleased]: https://github.com/trebizondoculpepper/simulation_of_boring_things/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/trebizondoculpepper/simulation_of_boring_things/releases/tag/v0.1.0
