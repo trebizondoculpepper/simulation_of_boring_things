@@ -22,29 +22,27 @@ Today:
 
 ## What real practice is
 
-Support spacing depends on the material and the bore, and is closer for plastic than metal. The UK figures below are commonly published and should be checked against their sources before they are fixed in code. Treat them as the starting table, kept in one place.
+Support spacing depends on the material, the bore and, for plastic, the temperature: the closer for plastic, for small bores and for hot water. A 20 cm spacing would be far too close for anything but small plastic tube; a span is judged against a table, not one figure. Researched 2026-10-22; the sources are listed at the end, and the figures marked _check_ should be confirmed against the source named before they are fixed in code. Keep the table in one place.
 
-| Material (what the game draws)                    | Size        | Horizontal                                        | Vertical               |
-| ------------------------------------------------- | ----------- | ------------------------------------------------- | ---------------------- |
-| Copper (`copper`)                                 | 15 mm       | 1.2 m                                             | 1.8 m                  |
-|                                                   | 22–28 mm    | 1.8 m                                             | 2.4 m                  |
-|                                                   | 35–54 mm    | 2.4–2.7 m                                         | 3.0 m                  |
-| Steel, screwed (`steel-screwed`, heating, gas)    | DN15        | 1.8 m                                             | 2.4 m                  |
-|                                                   | DN20–25     | 2.4 m                                             | 3.0 m                  |
-|                                                   | DN50        | 3.0 m                                             | 3.6 m                  |
-|                                                   | DN100       | 3.9 m                                             | 4.5 m                  |
-| PVC-U / ABS pressure (`pvc-pressure`, pool water) | 20–50 mm    | 0.6–1.0 m                                         | about twice horizontal |
-|                                                   | 75–160 mm   | 1.2–1.6 m                                         |                        |
-|                                                   |             | closer still when hot, or per the maker's table   |                        |
-| PVC-U drainage (`pvc-drain`)                      | 40–110 mm   | 0.5–1.1 m                                         | 1.2–2.0 m              |
-| Steel conduit (BS 7671 On-Site Guide)             | up to 16 mm | 0.75 m                                            | 1.0 m                  |
-|                                                   | 16–25 mm    | 1.75 m                                            | 2.0 m                  |
-|                                                   | 25–40 mm    | 2.0 m                                             | 2.25 m                 |
-| Rigid PVC conduit                                 | up to 16 mm | 0.75 m                                            | 1.0 m                  |
-|                                                   | 16–25 mm    | 1.5 m                                             | 1.75 m                 |
-|                                                   | 25–40 mm    | 1.75 m                                            | 2.0 m                  |
-| Chemical and sample tube (`chemical-tube`)        |             | clipped every 0.3–0.5 m, along a wall or tray     |                        |
-| Lagged heating (`lagged-heating`)                 |             | by the steel inside, the hanger round the lagging |                        |
+| What the game draws                               | Size            | Horizontal                                                | Vertical               | Source                                                                            |
+| ------------------------------------------------- | --------------- | --------------------------------------------------------- | ---------------------- | --------------------------------------------------------------------------------- |
+| Copper (`copper`)                                 | 15 and 22 mm    | 1.2 m                                                     | 1.8 m                  | UK Copper Board guidance, as quoted by UK trade guides                            |
+|                                                   | 28 mm           | 1.8 m                                                     | 2.4 m                  | _check_: Lawton Tubes' fixing data sheet                                          |
+|                                                   | 35–54 mm        | 2.4–2.7 m                                                 | 3.0 m                  | _check_: Lawton Tubes                                                             |
+| Steel, screwed (`steel-screwed`, heating, gas)    | 15 mm OD        | 1.5 m                                                     | 1.8 m                  | Engineering ToolBox's metric table                                                |
+|                                                   | 25–50 mm OD     | 2.4 m                                                     | 3.0 m                  | Engineering ToolBox                                                               |
+|                                                   | 100 mm OD       | 3.0 m                                                     | 3.6 m                  | Engineering ToolBox; _check_ against BESA's guidance (TG14), which may allow more |
+| PVC-U / ABS pressure (`pvc-pressure`, pool water) | DN100 at 20 °C  | 1.5 m                                                     | 3.0 m                  | Vinidex (AS/NZS 2032 basis)                                                       |
+|                                                   | 110 mm at 20 °C | about 2.0 m                                               |                        | Plastic Pipe Shop's table (by size and temperature)                               |
+|                                                   | smaller bores   | pro rata, closer                                          | about twice horizontal |                                                                                   |
+|                                                   | warm water      | horizontal spacing less 25 % for every 10 °C above 20 °C  |                        | Vinidex. Pool water runs at 28–37 °C, so take about 75–60 % of the 20 °C figure.  |
+| PVC-U drainage (`pvc-drain`)                      | 40–110 mm       | 0.5–1.1 m                                                 | 1.2–2.0 m              | _check_: the maker's soil and waste guide                                         |
+| Steel conduit (IET On-Site Guide, Table 4.12)     | up to 16 mm     | 0.75 m                                                    | 1.0 m                  | On-Site Guide, reproduced by TLC Direct                                           |
+|                                                   | 16–25 mm        | 1.75 m                                                    | 2.0 m                  |                                                                                   |
+|                                                   | 25–40 mm        | 2.0 m                                                     | 2.25 m                 |                                                                                   |
+| Rigid PVC conduit (same table)                    | up to 16 mm     | 0.75 m                                                    | 1.0 m                  | _check_ the larger sizes in the On-Site Guide                                     |
+| Chemical and sample tube (`chemical-tube`)        |                 | clipped every 0.3–0.5 m, along a wall or tray             |                        |                                                                                   |
+| Lagged heating (`lagged-heating`)                 |                 | as the steel inside it; the hanger goes round the lagging |                        |                                                                                   |
 
 Other practice to follow:
 
@@ -53,14 +51,57 @@ Other practice to follow:
 - **Along a wall:** brackets or saddles fixed to the wall (conduit on spacer-bar saddles), not rods from the ceiling.
 - **Low down:** pipe stands from the floor, as now.
 - **Vertical runs:** wall clamps at the vertical spacing.
+- **Pipe inside a machine:** the pipework inside a packaged machine (a skid, a cabinet) is carried by its frame, not by the building.
 
-A 20 cm spacing would be far too close for anything but small plastic tube; a span is judged against the table, not one figure.
+## What the code has now (found on 2026-10-22)
+
+Read these before designing; each is a trap for a naive implementation.
+
+1. **No single statement of where a room's structure is.** Every caller assumes its own heights:
+   - `room-pipes.ts` hangs everything to `INTO_CEILING = 8 - 1.9` (6.1 m). That is the bottom of the decorative services-ceiling zone in an 8 m room (`CEILING_ZONE = 1.9`), hard-coded for the large and medium plant rooms.
+   - `plant-room-shell-room.ts` passes the cabinet services `plan.roof - plan.floor - CEILING_ZONE`.
+   - `room-services.ts` assumes a roof of 7.2 m in the plant rooms and the wet hall, and 7 m elsewhere.
+   - The real heights live in `plantRoomPlan` (`src/toolkit/gallery/logic/plant-rooms.ts`): the tiny room is 7 m from floor to roof, the small 3.5 m, and the medium and large 8 m. The service rooms' heights live in `SHELL_ROOMS` (`shell-rooms.ts`, `height`).
+
+   So step 0 below is a room structure description that every caller takes from one place.
+
+2. **The services ceiling is set dressing,** with its own hangers (`site-dressing/logic/service-ceiling.ts`, `hangEvery` per system). Plant supports' rods may pass up through its zone to the soffit, as real rods pass among other services. Clash tests ignore it, but not the real plant.
+3. **The obstacles already exist:**
+   - `pipeObstacles` (`room-pipes.ts`) gives the low runs' footprints;
+   - `layoutRoom(room).placed` gives every machine's footprint and height;
+   - `box.keepClear` gives the doorways and stairs.
+
+   A rod or stand must not pass through any of these.
+
+4. **Six callers draw pipe with `createPipe`, of three sorts:**
+   - **building pipework:** `room-pipework.ts`, `cabinet-services.ts`, `room-services.ts` (the conduits). These need building supports.
+   - **pipe inside a machine:** `spa-pack.ts` (the cabinet's internal pipework) and `plant/pumps.ts` (0.7 m stubs on an exhibit). Their frame carries them, so the rule must let them count as supported by it.
+   - **an exhibit:** `pipes-n-dreams.ts`, the dev room's pipe gallery, which should show its supports as the building's are.
+5. **`supportPipe` silently drops supports:**
+   - when the rod would not fit (`if (ceilingY <= top) continue`);
+   - for level lengths under 0.6 m;
+   - for a low run whose stand would go below the floor.
+
+   None of these shows in a test. There is one test (`pipe-supports.test.ts`), for the 1.5 m spacing on one run.
+
+6. **Lagging** (`lagged-heating`) is drawn round the pipe by `pipe-kinds.ts`. The hanger must go round its outside (`radius` is passed as the pipe's radius plus lagging in `room-pipework.ts`, but not everywhere).
+7. **Another agent is changing `room-pipework.ts`** (the plant identification work) at the time of writing. Coordinate as the rules below say.
 
 ## What to build
 
-1. **One support table** in pure logic (for example `src/toolkit/components/plant/logic/pipe-supports.ts`, tested): the maximum horizontal and vertical spacing for each pipe kind and size, and the near-fitting distance (300 mm).
-2. **A pure support planner:** given a run's points, its kind and outside diameter (and lagging), and the room around it (the soffit's height, the floor's, its walls' faces, and anything a rod must not pass through), it returns a list of supports, each with:
-   - its type: hanger and rod, trapeze, wall bracket, wall clamp or floor stand;
+Each step is a checkpoint, committed on its own.
+
+0. **The room's structure, from one place:** a pure function, for example `roomStructure(room)` in `src/toolkit/gallery/logic/`. For any room that draws pipe it gives:
+   - its floor level and soffit (the roof slab's underside);
+   - the bottom of its services-ceiling zone;
+   - its walls' inner faces;
+   - its obstacles: low runs, machines, doorways and stairs.
+
+   It is built from `plantRoomPlan`, `SHELL_ROOMS` and `layoutRoom`. Replace `INTO_CEILING`, the 7.2 m and 7 m in `room-services.ts`, and the `ceiling` passed to the cabinet services with it.
+
+1. **One support table** in pure logic (for example `src/toolkit/components/plant/logic/pipe-supports.ts`, tested): the maximum horizontal and vertical spacing for each pipe kind and size from the table above, the warm-water reduction for plastic, and the near-fitting distance (300 mm).
+2. **A pure support planner:** given a run (its points, kind, outside diameter, lagging, its valves and tees, its temperature for plastic) and the room's structure, it returns its supports. Each has:
+   - its type: hanger and rod, trapeze, wall bracket, wall clamp, floor stand, or carried by a machine;
    - the point on the pipe;
    - the point where it meets the structure.
 
@@ -68,22 +109,27 @@ A 20 cm spacing would be far too close for anything but small plastic tube; a sp
    - supports go at most one spacing apart on every horizontal length, and at the vertical spacing on risers;
    - one goes within 300 mm of every bend, tee and valve;
    - a run within about 0.3 m of a wall is bracketed to the wall, out in the room it is hung from the soffit, and low down it stands on the floor;
-   - parallel runs close together share a trapeze.
-   - It **never silently skips**: if no support can be placed, it says so, and a test fails.
+   - parallel runs close together share a trapeze;
+   - a run marked as a machine's own pipework is carried by that machine.
+
+   It **never silently skips**: a span it cannot support is returned as a problem.
 
 3. **Supports drawn by the pipe helper itself,** so supporting is not opt-in:
-   - `createPipe` (or a single new entry point that every caller uses) takes the room's structure and draws the run's supports with it;
-   - the rods reach the real soffit, the roof slab above the services ceiling (`CEILING_ZONE` in `room-pipes.ts`), not a floating height, and end in a ceiling plate and anchor;
-   - wall brackets have a base plate on the wall;
-   - many supports are drawn as instanced meshes, so a plant room's hundreds of hangers stay cheap.
-4. **Every caller moved onto it:** the room pipework, cabinet services, room services (conduits), the dev exhibits that draw pipe, and the make-up main. Remove the old opt-in `supportPipe` calls once covered.
+   - `createPipe` (or one new entry point every caller uses) takes the room's structure, or the machine that carries the run, and draws the run's supports with it;
+   - rods reach the soffit and end in a ceiling plate and anchor;
+   - wall brackets and clamps have a base plate on the wall;
+   - stands have a base plate on the floor;
+   - all are drawn as instanced meshes, so a plant room's hundreds of supports stay cheap;
+   - the hardware is made after real channel strut and hangers (a maker from `brands.ts` where a label would show).
+4. **Every caller moved onto it,** in this order: the room services' conduits; the cabinet services, including the footbath make-up main; the room pipework, once the other agent has committed its changes there; then the exhibits. Remove the old opt-in `supportPipe` calls once covered.
 
 ## Tests (the acceptance)
 
 Pure-logic tests, across every room that draws pipe (`ROOM_SERVICES`, the plant rooms, the cabinet rooms):
 
 - **Spacing:** no horizontal length of any run goes longer than its kind's spacing between supports (or between a support and a run's end at a fitting or port), and every bend, tee and valve has a support within 300 mm. Do the same for risers at the vertical spacing.
-- **Structure:** every support ends on structure (the soffit, a wall face or the floor), and its rod does not pass through another run, a machine's box, or a doorway's clear height.
+- **Structure:** every support ends on structure (the soffit from `roomStructure`, a wall face or the floor) or on the machine that carries it, and its rod or stand does not pass through another run, a machine's box, or a doorway's or stair's clear space. The services ceiling is ignored.
+- **One source of heights:** no caller keeps its own ceiling or roof height (`INTO_CEILING` and the constants in `room-services.ts` are gone).
 - **Type:** a run along a wall is bracketed to it; one out in the room is hung; one low down stands.
 - **No silent skip:** the planner reports every span it could not support, and the test expects none.
 - **The table:** each kind and size has a spacing, and plastic is closer than metal of the same bore.
@@ -101,3 +147,10 @@ Then render a plant room (`?room=plant_pool_02`), a cabinet room (`?room=plant_p
 ## Return path
 
 Commit each step as `supports(<step>): <what changed>` and push; if the push fails because `main` moved, rebase and push again, never force-push. When done, or if you stop, write `doc/reports/pipe-supports-progress.md`. Start with a line naming yourself (model and tool) and the UTC date. Then give each step 1–4 and each test a line: done, partly done or not done, with commit hashes. Finish with any figure from the table you corrected, and its source. Commit it as `report(supports): <summary>`.
+
+## Sources
+
+- UK Copper Board figures as quoted in [BuildWiz: 22 mm copper pipe](https://www.buildwiz.uk/knowledge/materials/plumbing/copper-pipe-22mm), [BuildWiz: 15 mm copper pipe](https://www.buildwiz.uk/knowledge/materials/plumbing/copper-pipe-15mm) and [Screwfix community: pipe clip spacing](https://community.screwfix.com/threads/quick-pipe-clip-question.68343/); [Lawton Tubes: Fixing copper tube data sheet](https://lawtontubes.co.uk/wp-content/uploads/2021/06/Fixing-Copper-Tube.pdf) for the table to check.
+- [Engineering ToolBox: Steel pipes, supports](https://www.engineeringtoolbox.com/steel-pipe-supports-d_1071.html); [Engineering ToolBox: Copper tubes, supports](https://www.engineeringtoolbox.com/copper-tube-supports-d_1070.html).
+- [Vinidex: PVC above-ground installation](https://www.vinidex.com.au/technical-resources/pvc-above-ground-installation/) (spacing by DN, and the temperature reduction); [Plastic Pipe Shop: Pipe clip spacing](https://www.plasticpipeshop.co.uk/Pipe-Clip-Spacing_ep_52-1.html) (PVC and ABS, by size and temperature).
+- IET On-Site Guide, Table 4.12, as reproduced at [TLC Direct: Plastic and metal conduits](https://www.tlc-direct.co.uk/Book/4.5.1.htm).
