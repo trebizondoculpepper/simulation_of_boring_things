@@ -80,7 +80,7 @@ Text that cannot be derived (the descriptions of what a room is for, the procedu
 ## Figures
 
 - **Schematics (Graphviz):** each system becomes a DOT graph from the model's blocks and connections, each node labelled with its tag and description and each edge with what it carries (water, gas, heat, power, chemical) in the colours the pipes use in the game. They are rendered by `@viz-js/viz` (Graphviz compiled to WebAssembly), a dev dependency the owner approved on 2026-10-22, pinned in `package-lock.json` so every machine and CI draw the same diagrams with nothing else to install. It writes SVG, converted to PDF with the plans.
-- **Plans:** the existing SVG plans (`plan-svg.ts`) and new per-room equipment plans drawn from `layoutRoom`, converted from SVG to PDF with `rsvg-convert` (librsvg), or drawn directly as TikZ by the generator.
+- **Plans:** the existing SVG plans (`plan-svg.ts`) and new per-room equipment plans drawn from `layoutRoom`, drawn as SVG. Every SVG figure, plans and schematics alike, is turned into a vector PDF for LaTeX by headless Chrome's print-to-PDF, the same browser that takes the photographs, so nothing more is installed (the owner's decision, 2026-10-22).
 - **Photographs:** rendered from the published game (see [Releases](#releases)) by a headless browser from a list of fixed camera positions (a shot list per room and per principal machine). Two problems from the work so far must be solved first: headless Chromium's virtual time draws very few frames, and textures load late. The fix is a photo mode in the game (a URL flag) that waits until the room and its textures have loaded, draws a set number of frames, and then signals that it is ready, so the capture is taken at the right moment rather than by a time budget. The world's state for the photos is fixed by a scenario (everything on and clear), so the pictures are the same each time.
 
 ## Releases
@@ -113,6 +113,5 @@ Building TeX Live and rendering photographs in CI is slow, so the manual is made
 
 ## Open decisions
 
-- Whether to draw plans by converting SVG (needs librsvg) or as TikZ from the generator.
 - Whether the photographs are rendered in CI at release time or locally and committed.
 - The version scheme and when the first release is cut.
