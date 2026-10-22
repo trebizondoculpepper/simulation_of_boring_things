@@ -30,6 +30,9 @@ import {
   GEAR_ICON,
   createSettingsPanel,
 } from './toolkit/settings/settings-panel';
+import { settings } from './toolkit/settings/settings-store';
+import { effect } from '@preact/signals-core';
+import { partAudio } from './toolkit/components/core/audio/part-audio';
 
 // Which build this is, until the title screen shows it.
 console.info(`Pool Plant ${versionLabel()}`);
@@ -103,6 +106,14 @@ positionButton.textContent = '📍';
 positionButton.title = 'Copy a link to this view';
 positionButton.setAttribute('aria-label', 'Copy a link to this view');
 positionButton.className = 'location-pin-button';
+// The player's settings that are the app's to apply: the master volume,
+// and whether the on-screen controls are shown. (Look, field of view and
+// graphics quality are applied where they are used.)
+effect(() => {
+  const s = settings.value;
+  partAudio.setVolume(s.volume);
+  document.body.classList.toggle('hide-onscreen-controls', !s.onScreenControls);
+});
 // The settings: the gear among each room's view tools opens them.
 const settingsPanel = createSettingsPanel();
 const settingsButton = document.createElement('button');

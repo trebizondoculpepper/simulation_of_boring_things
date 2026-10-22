@@ -132,7 +132,7 @@ export function createSettingsPanel() {
   const note = document.createElement('p');
   note.className = 'settings-note';
   note.textContent =
-    'Your settings are kept in this browser. They do not yet change the game.';
+    'Your settings are kept in this browser. A change of graphics quality takes full effect in each room the next time it loads.';
   panel.append(note);
   const done = document.createElement('button');
   done.type = 'button';

@@ -407,6 +407,10 @@ canvas {
 .hud-torch.is-lit .hud-torch-beam {
   visibility: visible;
 }
+/* The player chose to hide the on-screen controls (settings). */
+.hide-onscreen-controls .hud-movement {
+  display: none;
+}
 /* The settings panel (src/toolkit/settings/settings-panel.ts): over the
    game, in the HUD's style. */
 .settings-backdrop {

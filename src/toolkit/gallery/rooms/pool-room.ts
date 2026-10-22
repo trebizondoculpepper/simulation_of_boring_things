@@ -65,7 +65,6 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { flowMapTexels } from '../../components/pool/logic/flow-map';
 import { POOL_FLOW_MAX, POOL_FLOW_RECT, poolFlowUv } from '../logic/pool-flow';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -142,7 +141,10 @@ import {
 import { SANS, tools } from '../../components/core/views/fitting-tools';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { createFirstPerson } from '../../controls/input/first-person';
-import { createRenderer } from '../../components/core/parts/render-style';
+import {
+  createComposer,
+  createRenderer,
+} from '../../components/core/parts/render-style';
 import {
   createPoolUniforms,
   createLightShaft,
@@ -1013,7 +1015,7 @@ export function startPoolRoom(
   });
   target.depthTexture = new DepthTexture(1, 1, UnsignedInt248Type);
   target.depthTexture.format = DepthStencilFormat;
-  const composer = new EffectComposer(renderer, target);
+  const composer = createComposer(renderer, target);
   composer.addPass(new RenderPass(scene, camera));
   const refraction = createPoolRefraction(camera, uniforms);
   composer.addPass(refraction);

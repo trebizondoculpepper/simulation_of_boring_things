@@ -13,7 +13,7 @@ export interface Settings {
   /** Look sensitivity, as a multiple of the usual; and whether up and down are swapped. */
   sensitivity: number;
   invertY: boolean;
-  /** The vertical field of view, degrees. */
+  /** The vertical field of view, degrees (52, the rooms' own, by default). */
   fov: number;
   /** Rendering resolution: low, medium or high. */
   quality: Quality;
@@ -25,7 +25,7 @@ export const DEFAULT_SETTINGS: Settings = {
   volume: 0.8,
   sensitivity: 1,
   invertY: false,
-  fov: 60,
+  fov: 52,
   quality: 'high',
   onScreenControls: true,
 };
@@ -34,7 +34,7 @@ export const DEFAULT_SETTINGS: Settings = {
 export const RANGES = {
   volume: { min: 0, max: 1, step: 0.05 },
   sensitivity: { min: 0.25, max: 3, step: 0.05 },
-  fov: { min: 50, max: 90, step: 1 },
+  fov: { min: 40, max: 90, step: 1 },
 } as const satisfies Partial<
   Record<keyof Settings, { min: number; max: number; step: number }>
 >;

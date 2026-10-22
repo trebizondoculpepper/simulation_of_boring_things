@@ -10,13 +10,15 @@ import {
   Vector2,
   WebGLRenderTarget,
 } from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { createRenderer } from '../../components/core/parts/render-style';
+import {
+  createComposer,
+  createRenderer,
+} from '../../components/core/parts/render-style';
 import { METRE } from '../../components/core/logic/units';
 import { createFirstPerson } from '../../controls/input/first-person';
 import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
@@ -64,7 +66,7 @@ export function startDryStairRoom(canvas: HTMLCanvasElement) {
   const greenRoom = createGreenRoom(metre);
   scene.add(greenRoom);
 
-  const composer = new EffectComposer(
+  const composer = createComposer(
     renderer,
     new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 4 }),
   );

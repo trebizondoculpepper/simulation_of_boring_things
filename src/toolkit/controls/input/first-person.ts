@@ -14,6 +14,7 @@ import { createTouchSticks } from './touch-sticks';
 import { bindViewWheel } from './view-wheel';
 import { torch } from '../logic/torch';
 import { createTorchLight } from './torch';
+import { settings } from '../../settings/settings-store';
 
 /**
  * First-person walking, as in any PC shooter, with the same feel as the
@@ -488,13 +489,17 @@ export function createFirstPerson(options: FirstPersonOptions) {
     setInput('mouse');
     if (holding) return;
     // Looking slows as the view zooms in, so small controls stay easy to aim at.
-    const rate = LOOK_RADIANS_PER_PIXEL / walker.zoom;
+    // And at the player's sensitivity, up and down swapped if they asked.
+    const { sensitivity, invertY } = settings.value;
+    const rate = (LOOK_RADIANS_PER_PIXEL * sensitivity) / walker.zoom;
     if (handling?.holding() && keys.has('KeyX')) {
       handling.rotate(event.movementX * rate, event.movementY * rate);
       return;
     }
     walker.yaw += event.movementX * rate;
-    walker.pitch = clampPitch(walker.pitch - event.movementY * rate);
+    walker.pitch = clampPitch(
+      walker.pitch - event.movementY * rate * (invertY ? -1 : 1),
+    );
   };
   const lockChange = () => {
     crosshair.hidden = !(
@@ -840,22 +845,34 @@ export function createFirstPerson(options: FirstPersonOptions) {
           (sticks?.move.x ?? 0) +
           pad.move.x);
       if (sticks && !holding) {
-        // The look stick turns the head, slower as the view zooms in.
-        const turn = (TOUCH_LOOK_RADIANS_PER_SECOND * delta) / walker.zoom;
+        // The look stick turns the head, slower as the view zooms in, at
+        // the player's sensitivity and the way up they chose.
+        const turn =
+          (TOUCH_LOOK_RADIANS_PER_SECOND * delta * settings.value.sensitivity) /
+          walker.zoom;
+        const upDown = settings.value.invertY ? -1 : 1;
         if (touchInspect && handling?.holding())
           handling.rotate(sticks.look.x * turn, sticks.look.y * turn * 0.75);
         else {
           walker.yaw += sticks.look.x * turn;
-          walker.pitch = clampPitch(walker.pitch - sticks.look.y * turn * 0.75);
+          walker.pitch = clampPitch(
+            walker.pitch - sticks.look.y * turn * 0.75 * upDown,
+          );
         }
       }
       if (!holding) {
-        const turn = (TOUCH_LOOK_RADIANS_PER_SECOND * delta) / walker.zoom;
+        // The gamepad's look stick, as the touch one.
+        const turn =
+          (TOUCH_LOOK_RADIANS_PER_SECOND * delta * settings.value.sensitivity) /
+          walker.zoom;
+        const upDown = settings.value.invertY ? -1 : 1;
         if (pad.inspect && handling?.holding())
           handling.rotate(pad.look.x * turn, pad.look.y * turn * 0.75);
         else {
           walker.yaw += pad.look.x * turn;
-          walker.pitch = clampPitch(walker.pitch - pad.look.y * turn * 0.75);
+          walker.pitch = clampPitch(
+            walker.pitch - pad.look.y * turn * 0.75 * upDown,
+          );
         }
         if (pad.zoom)
           walker.zoom = Math.max(
@@ -934,7 +951,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
         y + Math.sin(walker.pitch),
         walker.z - Math.cos(walker.yaw) * Math.cos(walker.pitch),
       );
-      const fov = (options.fov ?? 52) / walker.zoom;
+      // The room's own field of view if it set one, else the player's.
+      const fov = (options.fov ?? settings.value.fov) / walker.zoom;
       if (camera.fov !== fov) {
         camera.fov = fov;
         camera.updateProjectionMatrix();

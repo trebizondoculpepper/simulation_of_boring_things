@@ -70,6 +70,8 @@ let context: AudioContext | null = null;
 let master: GainNode | null = null;
 let noise: AudioBuffer | null = null;
 let muted = false;
+/** The player's master volume, 0 to 1 (their settings). */
+let volume = 1;
 /** Metres to scene units, from the room that listens. */
 let metre = 1;
 const buffers = new Map<string, Promise<AudioBuffer>>();
@@ -84,7 +86,7 @@ const start = () => {
   }
   context = new AudioContext();
   master = context.createGain();
-  master.gain.value = muted ? 0 : 1;
+  master.gain.value = muted ? 0 : volume;
   master.connect(context.destination);
   noise = context.createBuffer(1, context.sampleRate, context.sampleRate);
   const samples = noise.getChannelData(0);
@@ -321,7 +323,17 @@ export const partAudio = {
   setMuted(value: boolean) {
     muted = value;
     if (context && master)
-      master.gain.setTargetAtTime(value ? 0 : 1, context.currentTime, 0.03);
+      master.gain.setTargetAtTime(
+        value ? 0 : volume,
+        context.currentTime,
+        0.03,
+      );
+  },
+  /** The master volume, 0 to 1. */
+  setVolume(value: number) {
+    volume = Math.max(0, Math.min(1, value));
+    if (context && master && !muted)
+      master.gain.setTargetAtTime(volume, context.currentTime, 0.03);
   },
   muted: () => muted,
   /** Whether sound has started (after the first gesture). */

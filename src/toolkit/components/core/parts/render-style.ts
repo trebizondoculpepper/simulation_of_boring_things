@@ -8,8 +8,12 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three';
-import type { Scene } from 'three';
+import type { WebGLRenderTarget, Scene } from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { effect } from '@preact/signals-core';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { settings } from '../../../settings/settings-store';
+import { QUALITY_SCALE } from '../../../settings/logic/settings';
 
 /**
  * How the game is drawn: realistically, at the screen's own resolution
@@ -66,6 +70,30 @@ export function rendererOn(canvas: HTMLCanvasElement) {
  */
 export const inertClip = () => new Plane(new Vector3(0, 1, 0), 1e9);
 
+/** Each renderer's post-processing chains, to follow its pixel ratio. */
+const composers = new WeakMap<WebGLRenderer, Set<EffectComposer>>();
+
+/**
+ * A post-processing chain for a room's renderer: an EffectComposer that
+ * follows the renderer's pixel ratio, so a change of the player's
+ * graphics quality reaches it at once. Rooms make their composers here.
+ */
+export function createComposer(
+  renderer: WebGLRenderer,
+  target?: WebGLRenderTarget,
+) {
+  const composer = new EffectComposer(renderer, target);
+  let set = composers.get(renderer);
+  if (!set) composers.set(renderer, (set = new Set()));
+  set.add(composer);
+  const dispose = composer.dispose.bind(composer);
+  composer.dispose = () => {
+    set.delete(composer);
+    dispose();
+  };
+  return composer;
+}
+
 /** A WebGL renderer for a room (the Hall has its own, hall-pipeline.ts). */
 export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
   // A stencil buffer, for doorways that look into a space the room does
@@ -76,9 +104,33 @@ export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
     stencil: true,
     alpha,
   });
-  renderer.setPixelRatio(
-    Math.min(globalThis.devicePixelRatio ?? 1, MAX_PIXEL_RATIO),
-  );
+  // The player's graphics quality scales whatever ratio the room asks for
+  // (`settings.ts`), now and whenever the setting changes.
+  const setRatio = renderer.setPixelRatio.bind(renderer);
+  let wanted = Math.min(globalThis.devicePixelRatio ?? 1, MAX_PIXEL_RATIO);
+
+  // The room's post-processing chains follow its ratio (`createComposer`).
+  const follow = () => {
+    for (const composer of composers.get(renderer) ?? [])
+      composer.setPixelRatio(renderer.getPixelRatio());
+  };
+  renderer.setPixelRatio = (ratio: number) => {
+    wanted = ratio;
+    setRatio(ratio * QUALITY_SCALE[settings.value.quality]);
+    follow();
+  };
+  const stopQuality = effect(() => {
+    const scale = QUALITY_SCALE[settings.value.quality];
+    if (renderer.getPixelRatio() === wanted * scale) return;
+    setRatio(wanted * scale);
+    follow();
+  });
+  renderer.setPixelRatio(wanted);
+  const dispose = renderer.dispose.bind(renderer);
+  renderer.dispose = () => {
+    stopQuality();
+    dispose();
+  };
   // Neutral keeps the panels' paint colours and contrast as painted.
   renderer.toneMapping =
     tone === 'aces'
