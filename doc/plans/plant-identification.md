@@ -19,6 +19,13 @@ The owner's design, 2026-10-22, written up as a plan. It follows the research in
 - **Every component is one of three classes:** plant, non-plant or decorative. Only plant and non-plant components appear in the inventory.
 - **The model is the only source:** the room views, the valve charts, the look-at text, the manual and the tests all walk the same tree.
 
+**Automation varies by pool, on purpose.** The aim is a wide variety of pool-management experiences, so a player who has never been in a pool plant room gets a feel for what the job involves. Some systems are automated and some are worked by hand:
+
+- The Olympic pool (`PL2`) has some automation, for example an automatic backwash controller driving actuated valves on its filters.
+- The Lounge pool (`PL1`) is mostly manual: its backwash and other processes are carried out by hand at named valves.
+
+The same process can therefore exist in both forms in the same building. The object model treats a controller as one more component that works other components' parts, just as the player does.
+
 ## 2. Naming rules
 
 A full identifier is the room, then each parent down the tree, then the part, joined by hyphens: **`PL4-CAB1-RV3`** is plant room 4, cabinet 1, return valve 3.
