@@ -7,6 +7,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 ### Fixed
 
 - The underwater gallery's door to the engineer's office stands on a 0.25 m sill above the corridor's fillet, which now runs unbroken beneath it (the office's floor meets the sill, as plant rooms do).
+- Lever-operated butterfly valves no longer flicker where the lever meets the stem: the stem runs up into a round boss at the lever's head, so no faces coincide.
 - The MAIN PLANT sign over each pair of equipment doors stands above the concrete lintel instead of half behind it.
 - The Jacuzzi's and the footbath's packaged cabinets start in service, their POWER on, so switching off their isolators is seen to stop them; the Jacuzzi plant room's mimic shows the world's circulation, water temperature and flow instead of fixed values.
 - Electrical conduits in the rooms outside the pool plant are routed tidily: one distribution conduit round the walls on saddles, each panel's drop down the wall face into the top of the panel as drawn, chosen clear of the panels it would pass and of the other drops; a machine on the floor gets an outlet box on the wall above it and a flexible cable down to it.
