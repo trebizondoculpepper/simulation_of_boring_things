@@ -72,7 +72,7 @@ export function createCorridorPosters(kit: PanelKit): Group {
     const photo =
       typeof Image === 'undefined'
         ? new Texture()
-        : loader.load(`/posters/${String(poster + 1).padStart(2, '0')}.jpg`);
+        : loader.load(`posters/${String(poster + 1).padStart(2, '0')}.jpg`);
     photo.colorSpace = SRGBColorSpace;
     photo.anisotropy = 4;
     kit.textures.push(photo);
