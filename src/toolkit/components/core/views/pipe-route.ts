@@ -13,7 +13,15 @@ import {
 } from 'three';
 import type { Material } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { crossings, jointsAlong, planRoute } from '../logic/pipe-route';
+import {
+  JOINT_BEND,
+  JOINT_LENGTHS,
+  crossings,
+  jointFitting,
+  jointsAlong,
+  planRoute,
+} from '../logic/pipe-route';
+import type { PipeJoint } from '../logic/pipe-route';
 import type { Bend, Plane, Vec3 } from '../logic/pipe-route';
 
 /**
@@ -67,15 +75,7 @@ export interface Penetration extends Plane {
   thickness?: number;
 }
 
-export type PipeJoint =
-  | 'socket'
-  | 'flange'
-  | 'groove'
-  | 'thread'
-  | 'solder'
-  | 'weld'
-  | 'band'
-  | 'none';
+export type { PipeJoint };
 
 export interface PipeStyle {
   /** Outside diameter, m. */
@@ -115,26 +115,9 @@ export interface PipeMaterials {
 
 type Part = keyof PipeMaterials;
 
-const BEND: Record<PipeJoint, number> = {
-  socket: 0.9,
-  flange: 1.5,
-  groove: 1.0,
-  thread: 0.8,
-  solder: 1.0,
-  weld: 1.5,
-  band: 1.2,
-  none: 3,
-};
-const LENGTHS: Record<PipeJoint, number> = {
-  socket: 6,
-  flange: 6,
-  groove: 6,
-  thread: 6.4,
-  solder: 3,
-  weld: 6,
-  band: 1,
-  none: 0,
-};
+/** Bends and lengths by joint: the route logic's, so its clash checks see what is drawn. */
+const BEND = JOINT_BEND;
+const LENGTHS = JOINT_LENGTHS;
 
 const v3 = (a: Vec3) => new Vector3(a[0], a[1], a[2]);
 
@@ -239,7 +222,7 @@ export function pipeGeometries(points: readonly Vec3[], style: PipeStyle) {
         );
         break;
       case 'flange': {
-        const fr = Math.max(r * 1.9, r + 0.04);
+        const fr = jointFitting('flange', r).radius;
         const t = Math.max(0.012, od * 0.12);
         for (const side of [-1, 1])
           parts.fitting.push(

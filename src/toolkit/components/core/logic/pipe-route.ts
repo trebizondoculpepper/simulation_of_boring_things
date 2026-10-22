@@ -176,3 +176,295 @@ export function crossings(segments: readonly RouteSegment[], plane: Plane) {
   }
   return out;
 }
+
+// ---- Joints, and their fittings ---------------------------------------------
+
+/** How lengths of pipe are joined, and its fittings made (`views/pipe-route.ts` draws them). */
+export type PipeJoint =
+  | 'socket'
+  | 'flange'
+  | 'groove'
+  | 'thread'
+  | 'solder'
+  | 'weld'
+  | 'band'
+  | 'none';
+
+/** A bend's centre-line radius, in outside diameters, by joint. */
+export const JOINT_BEND: Record<PipeJoint, number> = {
+  socket: 0.9,
+  flange: 1.5,
+  groove: 1.0,
+  thread: 0.8,
+  solder: 1.0,
+  weld: 1.5,
+  band: 1.2,
+  none: 3,
+};
+
+/** The lengths pipe comes in, m, by joint: a joint between each. */
+export const JOINT_LENGTHS: Record<PipeJoint, number> = {
+  socket: 6,
+  flange: 6,
+  groove: 6,
+  thread: 6.4,
+  solder: 3,
+  weld: 6,
+  band: 1,
+  none: 0,
+};
+
+/**
+ * A joint's fitting, on a pipe of radius `r` (outside diameter `2r`): its
+ * outside radius, and its length along the pipe (a flanged joint's is its
+ * flange pair's). As the view draws it.
+ */
+export function jointFitting(joint: PipeJoint, r: number, end = false) {
+  const od = 2 * r;
+  switch (joint) {
+    case 'socket':
+      return { radius: r * 1.2, length: od * (end ? 0.7 : 1.4) };
+    case 'flange':
+      return {
+        radius: Math.max(r * 1.9, r + 0.04),
+        length: 2 * Math.max(0.012, od * 0.12),
+      };
+    case 'groove':
+      return { radius: r * 1.32, length: od * 0.5 };
+    case 'thread':
+      return { radius: r * 1.3, length: od * 0.9 };
+    case 'solder':
+      return { radius: r * 1.1, length: od * 0.8 };
+    case 'band':
+      return { radius: r * 1.05, length: od * 0.09 };
+    case 'weld':
+      return { radius: r * 1.04, length: od * 0.12 };
+    case 'none':
+      return { radius: r, length: 0 };
+  }
+}
+
+/** A pipe run as drawn: its points, size and joint system. */
+export interface DrawnRun {
+  name: string;
+  points: readonly Vec3[];
+  od: number;
+  joint: PipeJoint;
+  /** A bend's radius in outside diameters; its joint's if not given. */
+  bend?: number;
+  lengths?: number;
+  /** Lagging's thickness: the cladding is the run's outside. */
+  insulation?: number;
+}
+
+/** The run's segments, as the view bends them. */
+export function drawnSegments(run: DrawnRun) {
+  const lag = run.insulation ?? 0;
+  return planRoute(
+    run.points,
+    Math.max(run.bend ?? JOINT_BEND[run.joint], lag ? 1.5 : 0) *
+      (run.od + 2 * lag),
+  );
+}
+
+/** Each fitting along a run, where the view draws one: at each bend's ends, between lengths, and at its ends. */
+export function fittingsOf(run: DrawnRun) {
+  const r = run.od / 2;
+  const segments = drawnSegments(run);
+  const out: { at: Vec3; dir: Vec3; radius: number; length: number }[] = [];
+  const add = (at: Vec3, dir: Vec3, end: boolean) => {
+    const f = jointFitting(run.joint, r, end);
+    out.push({ at, dir, ...f });
+  };
+  if (run.joint === 'none') return out;
+  for (const s of segments)
+    if (s.kind === 'bend' && run.joint !== 'weld') {
+      add(s.start, s.in, true);
+      add(s.end, s.out, true);
+    }
+  for (const j of jointsAlong(
+    segments,
+    run.lengths ?? JOINT_LENGTHS[run.joint],
+  ))
+    add(j.at, j.dir, false);
+  return out;
+}
+
+/** The run's centre line as straight pieces, its bends cut into short chords. */
+function centreLine(segments: readonly RouteSegment[]) {
+  const pieces: [Vec3, Vec3][] = [];
+  for (const s of segments) {
+    if (s.kind === 'straight') {
+      pieces.push([s.from, s.to]);
+      continue;
+    }
+    const n = Math.max(2, Math.ceil(s.angle / (Math.PI / 16)));
+    const a = sub(s.start, s.centre);
+    const b = sub(s.end, s.centre);
+    let prev = s.start;
+    for (let k = 1; k <= n; k++) {
+      // Slerp between the two radii about the centre.
+      const t = k / n;
+      const w0 = Math.sin((1 - t) * s.angle) / Math.sin(s.angle);
+      const w1 = Math.sin(t * s.angle) / Math.sin(s.angle);
+      const p = add(s.centre, add(scale(a, w0), scale(b, w1)));
+      pieces.push([prev, p]);
+      prev = p;
+    }
+  }
+  return pieces;
+}
+
+/** The nearest points of two segments, and their distance. */
+function segmentDistance(p1: Vec3, q1: Vec3, p2: Vec3, q2: Vec3) {
+  const d1 = sub(q1, p1);
+  const d2 = sub(q2, p2);
+  const r = sub(p1, p2);
+  const a = dot(d1, d1);
+  const e = dot(d2, d2);
+  const f = dot(d2, r);
+  let s = 0;
+  let t = 0;
+  if (a <= 1e-12 && e <= 1e-12) {
+    s = 0;
+    t = 0;
+  } else if (a <= 1e-12) {
+    t = Math.min(1, Math.max(0, f / e));
+  } else {
+    const c = dot(d1, r);
+    if (e <= 1e-12) s = Math.min(1, Math.max(0, -c / a));
+    else {
+      const b = dot(d1, d2);
+      const den = a * e - b * b;
+      s = den > 1e-12 ? Math.min(1, Math.max(0, (b * f - c * e) / den)) : 0;
+      t = (b * s + f) / e;
+      if (t < 0) {
+        t = 0;
+        s = Math.min(1, Math.max(0, -c / a));
+      } else if (t > 1) {
+        t = 1;
+        s = Math.min(1, Math.max(0, (b - c) / a));
+      }
+    }
+  }
+  const c1 = add(p1, scale(d1, s));
+  const c2 = add(p2, scale(d2, t));
+  return { distance: length(sub(c1, c2)), on1: c1, on2: c2 };
+}
+
+export interface PipeClash {
+  /** The run whose fitting or pipe cuts into the other's. */
+  run: string;
+  other: string;
+  /** About where. */
+  at: Vec3;
+  what: 'fitting' | 'pipe';
+}
+
+/**
+ * Where runs cut into each other: one run's pipe through another's, or
+ * one's fitting (a flange, a socket, a coupling, all fatter than the
+ * pipe) into another's pipe or fitting. Runs meet on purpose where one
+ * ends on the other (a branch at its tee, two runs at one port): within
+ * `joinZone` of such a meeting nothing counts. `clearance` is the gap
+ * that must be left between surfaces, metres.
+ */
+export function pipeClashes(
+  runs: readonly DrawnRun[],
+  { clearance = 0.005, joinZone = 0.1 } = {},
+): PipeClash[] {
+  const drawn = runs.map((run) => {
+    const segments = drawnSegments(run);
+    const lag = run.insulation ?? 0;
+    return {
+      run,
+      outside: run.od / 2 + lag,
+      pieces: centreLine(segments),
+      fittings: fittingsOf(run).map((f) => ({
+        ...f,
+        radius: Math.max(f.radius, run.od / 2 + lag),
+      })),
+      ends: [run.points[0], run.points[run.points.length - 1]],
+    };
+  });
+  type D = (typeof drawn)[number];
+  const near = (p: Vec3, d: D, by: number) =>
+    d.pieces.some(([a, b]) => segmentDistance(p, p, a, b).distance <= by);
+  // Where two runs meet on purpose: an end of one on the other's centre
+  // line (or at the other's end).
+  const meetings = (x: D, y: D) => [
+    ...x.ends.filter((e) => near(e, y, y.outside + 0.02)),
+    ...y.ends.filter((e) => near(e, x, x.outside + 0.02)),
+  ];
+  const clashes: PipeClash[] = [];
+  for (let i = 0; i < drawn.length; i++)
+    for (let j = 0; j < drawn.length; j++) {
+      if (i === j) continue;
+      const x = drawn[i];
+      const y = drawn[j];
+      const meet = meetings(x, y);
+      const excused = (p: Vec3) =>
+        meet.some((m) => length(sub(p, m)) <= joinZone + x.outside + y.outside);
+      // Pipe through pipe: once for each pair.
+      if (i < j)
+        crossing: for (const [a, b] of x.pieces)
+          for (const [c, d] of y.pieces) {
+            const s = segmentDistance(a, b, c, d);
+            if (
+              s.distance < x.outside + y.outside + clearance - 1e-9 &&
+              !excused(s.on1)
+            ) {
+              clashes.push({
+                run: x.run.name,
+                other: y.run.name,
+                at: s.on1,
+                what: 'pipe',
+              });
+              break crossing;
+            }
+          }
+      // A fitting of x into y's pipe: a short fat cylinder against y's
+      // centre line.
+      for (const f of x.fittings) {
+        if (excused(f.at)) continue;
+        const half = f.length / 2;
+        const a = add(f.at, scale(f.dir, -half));
+        const b = add(f.at, scale(f.dir, half));
+        const hit = y.pieces.some(([c, d]) => {
+          // Sample y's piece near the fitting: radially and along its axis.
+          const s = segmentDistance(a, b, c, d);
+          if (s.distance >= f.radius + y.outside + clearance) return false;
+          const n = 24;
+          for (let k = 0; k <= n; k++) {
+            const p = add(c, scale(sub(d, c), k / n));
+            const rel = sub(p, f.at);
+            const axial = dot(rel, f.dir);
+            const radial = length(sub(rel, scale(f.dir, axial)));
+            if (
+              Math.abs(axial) < half + y.outside + clearance &&
+              radial < f.radius + y.outside + clearance
+            )
+              return true;
+          }
+          // A long piece passing close: test its nearest point too.
+          const rel = sub(s.on2, f.at);
+          const axial = dot(rel, f.dir);
+          const radial = length(sub(rel, scale(f.dir, axial)));
+          return (
+            Math.abs(axial) < half + y.outside + clearance &&
+            radial < f.radius + y.outside + clearance
+          );
+        });
+        if (hit) {
+          clashes.push({
+            run: x.run.name,
+            other: y.run.name,
+            at: f.at,
+            what: 'fitting',
+          });
+          break;
+        }
+      }
+    }
+  return clashes;
+}
