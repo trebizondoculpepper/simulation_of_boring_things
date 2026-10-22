@@ -8,6 +8,7 @@ import { instance } from '@viz-js/viz';
 import { exhibitFor } from '../src/toolkit/gallery/views/room-equipment';
 import { buildManual } from '../src/manual/logic/manual';
 import { renderManual } from '../src/manual/latex/render';
+import { SYMBOLS } from '../src/manual/logic/symbols';
 
 /**
  * Builds the operator's manual's sources from the game's model into
@@ -85,9 +86,21 @@ it.skipIf(!process.env.MANUAL)(
     const viz = await instance();
     const chrome = findChrome();
     for (const f of manual.figures) {
+      // Its symbols beside it, where its drawing refers to them.
+      const symbols =
+        f.kind === 'dot' ? (f.symbols ?? []).map((s) => SYMBOLS[s]) : [];
+      for (const s of symbols) writeFileSync(join(figures, s.file), s.svg);
       const svg =
         f.kind === 'dot'
-          ? viz.renderString(f.source, { format: 'svg', engine: 'dot' })
+          ? viz.renderString(f.source, {
+              format: 'svg',
+              engine: 'dot',
+              images: symbols.map((s) => ({
+                name: s.file,
+                width: `${s.width}pt`,
+                height: `${s.height}pt`,
+              })),
+            })
           : f.source;
       if (f.kind === 'dot')
         writeFileSync(join(figures, `${f.file}.dot`), f.source);

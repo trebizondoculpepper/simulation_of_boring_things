@@ -1,3 +1,5 @@
+import type { SymbolName } from './symbols';
+
 /**
  * The operator's manual as plain data (`doc/plans/operators-manual.md`):
  * its front matter, its chapters as blocks of text, tables, figures,
@@ -40,7 +42,13 @@ export interface Chapter {
 
 /** A figure to be drawn: Graphviz source, or an SVG drawing. */
 export type FigureSource =
-  | { file: string; kind: 'dot'; source: string }
+  | {
+      file: string;
+      kind: 'dot';
+      source: string;
+      /** The symbols it draws in, written beside it (`symbols.ts`). */
+      symbols?: readonly SymbolName[];
+    }
   | { file: string; kind: 'svg'; source: string };
 
 export interface Revision {

@@ -6,7 +6,8 @@ import { escapeLatex, renderManual } from '../latex/render';
 import { boilerHouseChapter } from './boiler-house';
 import { revisionFor } from './fiction';
 import { buildManual } from './manual';
-import { compositeDot, kindName, portName } from './schematic';
+import { compositeDot, kindName, portName, symbolsUsed } from './schematic';
+import { SYMBOLS } from './symbols';
 import { roomPlanSvg } from './room-plan';
 
 describe('the operator’s manual', () => {
@@ -45,6 +46,21 @@ describe('the operator’s manual', () => {
       expect(dot).toContain(`"${id}"`);
     expect(kindName('emergency-control-valve')).toBe('Emergency control valve');
     expect(portName('ecvOpen')).toBe('ecv open');
+  });
+
+  it('draws parts as their symbols, with square lines', () => {
+    const options = {
+      symbols: { ecv: 'manual-valve', ssov: 'solenoid-valve' } as const,
+    };
+    const dot = compositeDot('Gas house', GAS_HOUSE.composite!, options);
+    expect(dot).toContain('splines=ortho');
+    expect(dot).toContain(`image="${SYMBOLS['manual-valve'].file}"`);
+    expect(dot).toContain(`image="${SYMBOLS['solenoid-valve'].file}"`);
+    expect(symbolsUsed(options).sort()).toEqual([
+      'manual-valve',
+      'solenoid-valve',
+    ]);
+    for (const s of Object.values(SYMBOLS)) expect(s.svg).toMatch(/^<svg/);
   });
 
   it('draws a plan with a tag for every item and the room’s doorway', () => {

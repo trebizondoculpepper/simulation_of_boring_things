@@ -12,7 +12,8 @@ import type { DoorStickerId } from '../../toolkit/components/architectural/logic
 import { brandById } from '../../toolkit/components/core/logic/brands';
 import type { BrandId } from '../../toolkit/components/core/logic/brands';
 import type { Block, Chapter, FigureSource } from './document';
-import { compositeDot, kindName } from './schematic';
+import { compositeDot, kindName, symbolsUsed } from './schematic';
+import type { SchematicOptions } from './schematic';
 import { roomPlanSvg } from './room-plan';
 
 /**
@@ -52,6 +53,24 @@ const SIGN_WORDS: Record<DoorStickerId, string> = {
 };
 
 const mm = (m: number) => String(Math.round(m * 1000));
+
+/** The gas house's parts on its schematic: their tags and symbols. */
+const GAS_DRAWING: SchematicOptions = {
+  tags: {
+    ecv: 'ECV',
+    meter: 'GM-1',
+    ssov: 'SSOV-1',
+    detector: 'GD-1',
+    stop: 'ES-1',
+  },
+  symbols: {
+    ecv: 'manual-valve',
+    meter: 'meter',
+    ssov: 'solenoid-valve',
+    detector: 'gas-detector',
+    stop: 'emergency-stop',
+  },
+};
 
 /** Where an item stands, in words. */
 const location = (p: Placed) =>
@@ -111,15 +130,8 @@ export function boilerHouseChapter(
     {
       file: 'boiler-house-gas',
       kind: 'dot',
-      source: compositeDot('Gas house', GAS_HOUSE.composite!, {
-        tags: {
-          ecv: 'ECV',
-          meter: 'GM-1',
-          ssov: 'SSOV-1',
-          detector: 'GD-1',
-          stop: 'ES-1',
-        },
-      }),
+      source: compositeDot('Gas house', GAS_HOUSE.composite!, GAS_DRAWING),
+      symbols: symbolsUsed(GAS_DRAWING),
     },
   ];
 
