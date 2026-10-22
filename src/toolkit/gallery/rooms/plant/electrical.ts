@@ -1,6 +1,9 @@
 import type { PlantExhibit } from './exhibit';
 import { createPartSet } from '../../../components/core/parts/parts';
-import { createSwitchFuse } from '../../../components/industrial-control/views/switch-fuse';
+import {
+  createSwitchFuse,
+  useSwitchFuse,
+} from '../../../components/industrial-control/views/switch-fuse';
 import {
   createCableTray,
   createCentralBattery,
@@ -71,10 +74,11 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     size: { w: 0.3, d: 0.2, h: 0.4, mount: 'wall', y: 1.5 },
     maker: 'voltara',
     build(kit) {
-      // Working: its handle switches it, its neon lit while it is on.
+      // Working: its handle switches it, its door opens at OFF, its fuse
+      // carriers come out; its neon lit while power goes on through.
       const fuse = createSwitchFuse(kit, { legend: 'ROOM SUPPLY' });
       const parts = createPartSet();
-      fuse.handle.traverse((o) => parts.uses.set(o, () => fuse.toggle()));
+      useSwitchFuse(fuse, parts.uses);
       return {
         object: fuse.group,
         parts,

@@ -1,3 +1,8 @@
+import {
+  createSwitchFuse,
+  useSwitchFuse,
+} from '../../components/industrial-control/views/switch-fuse';
+import { createPartSet } from '../../components/core/parts/parts';
 import { createRearFittingsBoard } from './rear-fittings-board';
 import {
   createRenderer,
@@ -270,6 +275,34 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     minZ: (southFace - 0.2) * m,
     maxZ: half.z * m,
   });
+  // The switch-fuse, a room's supply, on the south wall: its door opens
+  // at OFF, and its fuses can be changed.
+  const switchFuse = createSwitchFuse(kit, { legend: 'DEV0 SUPPLY' });
+  const switchFuseParts = createPartSet();
+  useSwitchFuse(switchFuse, switchFuseParts.uses);
+  const switchFuseGroup = new Group();
+  switchFuseGroup.add(switchFuse.group);
+  place(
+    {
+      group: switchFuseGroup,
+      parts: switchFuseParts,
+      update(_seconds, delta) {
+        switchFuseParts.update(delta);
+        switchFuse.update(delta);
+      },
+      dispose: () => switchFuseParts.dispose(),
+    },
+    2.9,
+    1.5,
+    half.z,
+    Math.PI,
+    {
+      minX: 2.65 * m,
+      maxX: 3.15 * m,
+      minZ: (half.z - 0.3) * m,
+      maxZ: half.z * m,
+    },
+  );
   const postZ = southFace - 1.1;
   place(signFitting(POOL_SIGN_POST), 8.6, 0, postZ, Math.PI, {
     minX: 7.85 * m,

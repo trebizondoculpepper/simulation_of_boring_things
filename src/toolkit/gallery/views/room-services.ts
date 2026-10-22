@@ -16,7 +16,10 @@ import type { ServiceRoom } from '../../../game/plant/services';
 import { worldStore } from '../../save/world-store';
 import { layoutRoom, FEEDER_ISOLATOR } from '../logic/room-equipment';
 import { roomServiceRoutes } from '../logic/room-services';
-import { createSwitchFuse } from '../../components/industrial-control/views/switch-fuse';
+import {
+  createSwitchFuse,
+  useSwitchFuse,
+} from '../../components/industrial-control/views/switch-fuse';
 
 /** Room equipment's physical service runs, plus a local power isolator. The
  * isolator changes the saved feeder state; the lamp shows actual upstream
@@ -167,15 +170,15 @@ export function createRoomServices(
     fuse.group.rotation.y = Math.PI / 2;
     fuse.group.name = `${room} room supply switch-fuse`;
     group.add(fuse.group);
-    if (store) {
-      const toggle = () =>
-        store.dispatch({
-          type: 'plant/feeder',
-          room,
-          on: !store.world.value.plant.feeders[room],
-        });
-      fuse.handle.traverse((o) => uses.set(o, toggle));
-    }
+    // Its handle switches the room's feeder in the world, when the
+    // interlock lets it (not ON with the door open).
+    const handle = () => {
+      const outcome = fuse.work({ kind: 'handle' });
+      if (!outcome.refused)
+        store?.dispatch({ type: 'plant/feeder', room, on: fuse.on });
+    };
+    // Its door opens at OFF; behind it, its fuse carriers come out.
+    useSwitchFuse(fuse, uses, handle);
   }
   const update = (delta = 0) => {
     const plant = store?.world.value.plant ?? fallback.plant;
