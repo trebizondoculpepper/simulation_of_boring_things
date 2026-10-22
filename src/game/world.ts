@@ -64,8 +64,12 @@ import {
   setPartOn,
   setPartOpen,
 } from './plant/identification';
+import {
+  installedValveByCommandId,
+  newInstalledValveStates,
+} from './plant/installed-valves';
 
-export const WORLD_VERSION = 14;
+export const WORLD_VERSION = 15;
 
 export interface World {
   /** Seconds the world has run. */
@@ -95,6 +99,8 @@ export interface World {
   gas: GasZones;
   /** Named engineering blocks. Controls and the inventory resolve IDs here. */
   identifiedPlant: Block;
+  /** Installed pipework valve positions, keyed by permanent asset ID. */
+  installedValves: Record<string, boolean>;
 }
 
 export function newWorld(): World {
@@ -111,6 +117,7 @@ export function newWorld(): World {
     ambient: AMBIENT,
     gas: newGasZones(),
     identifiedPlant: newIdentifiedPlant(),
+    installedValves: newInstalledValveStates(),
   };
 }
 
@@ -181,6 +188,15 @@ export function applyAction(world: World, action: WorldAction): World {
         chemicals: deliver(world.chemicals, action.chemical, action.litres),
       };
     case 'plant/valve': {
+      const installed = installedValveByCommandId(action.id);
+      if (installed)
+        return {
+          ...world,
+          installedValves: {
+            ...world.installedValves,
+            [installed.assetId]: action.open,
+          },
+        };
       const identifiedPlant = setPartOpen(
         world.identifiedPlant,
         action.id,

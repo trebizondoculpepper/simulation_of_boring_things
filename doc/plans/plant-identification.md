@@ -2,6 +2,18 @@
 
 The owner's design, 2026-10-22, written up as a plan. It follows the research in `doc/research/plant-identification.md`, and supersedes its "one plant register" and `V-131` numbering.
 
+## Revised identity and wiring target
+
+The owner's later clarification makes this a 1:1 installation contract: each physical thing has one installed asset record; the room view, persistent simulation state where applicable, operator label and catalogue all refer to that same record. Containment gives readable paths such as `PL1.P1` for a pump, `PL1.P1.SUCTION` and `PL1.P1.DISCHARGE` for its water ports, or `PL1.CAB1.V_RET_1` for an integral return valve. A valve in a machine belongs beneath that machine; a valve on connecting pipework belongs beneath an explicitly named pipework asset.
+
+The readable path is a changeable display designation. Each installed asset also has an explicitly allocated permanent ID, which saves, connections and action targets use. Existing hyphenated tags remain aliases while they are migrated; moving or renaming a physical item must not silently replace it in a save. Kind definitions may declare candidate parts, but only parts selected on an installed instance enter its catalogue.
+
+The installation validator should reject a missing view/model binding for any operable control, an indicator without a model reading, and an unconnected required port. A port may instead have an explicit capped, spare or site-boundary termination. Each connection must agree on medium, direction and units. A labelled control is complete only when a World action changes its single state and the relevant simulated process responds. This lets authored instructions name controls precisely and lets the build detect disconnected plant before publication. The current footbath pilot and the remaining gaps are recorded in `doc/reports/plant-identification-gap-audit.md`.
+
+Identity and physical lettering are separate. Put the parent designation, such as `PL1.P1`, on a pump or cabinet. Its nearby ports can be lettered simply `SUCTION` and `DISCHARGE`, and an indicator can be lettered `RUN`, because their parent is visually clear. The catalogue retains their full paths (`PL1.P1.SUCTION`, `PL1.P1.DISCHARGE`, `PL1.P1.RUN_LAMP`) so instructions and validators can refer to them unambiguously. Each installed definition therefore records both its full display path and the shorter text actually printed at its location.
+
+The revised target above governs where the original object-model and work-order sections below still describe a tag-derived block tree. Those sections document the pilot's implementation, not the finished installation contract.
+
 ## Contents
 
 1. Principles
@@ -14,10 +26,10 @@ The owner's design, 2026-10-22, written up as a plan. It follows the research in
 ## 1. Principles
 
 - **Every valve, switch and control in the plant exists in the simulation model and can be worked.** Procedures such as a backwash or a drain-down are valve line-ups carried out on the model. They are not flags.
-- **Only a parent gets a tag.** Its parts inherit the parent's tag as a prefix and add a short local code. Each kind of parent declares its parts once, so every instance is indexed for free.
+- **Parts inherit a readable path from their installed parent.** The physical machine, its selected controls, indicators and ports each have a catalogue identity; the path is a display designation, not the permanent ID.
 - **Every name starts with its room,** so a tag says where to go.
 - **Every component is one of three classes:** plant, non-plant or decorative. Only plant and non-plant components appear in the inventory.
-- **The model is the only source:** the room views, the valve charts, the look-at text, the manual and the tests all walk the same tree.
+- **One installed definition is authoritative:** the room views, topology, valve charts, look-at text, manual and tests refer to the same installed asset IDs. A containment tree is one projection of that definition; cross-room connections form a graph.
 
 **Automation varies by pool, on purpose.** The aim is a wide variety of pool-management experiences, so a player who has never been in a pool plant room gets a feel for what the job involves. Some systems are automated and some are worked by hand:
 
@@ -28,7 +40,7 @@ The same process can therefore exist in both forms in the same building. The obj
 
 ## 2. Naming rules
 
-A full identifier is the room, then each parent down the tree, then the part, joined by hyphens: **`PL4-CAB1-RV3`** is plant room 4, cabinet 1, return valve 3.
+A displayed path begins with the room, then each installed parent and part: **`PL4.CAB1.V_RET_3`** is plant room 4, cabinet 1, return valve 3. The existing hyphenated form **`PL4-CAB1-RV3`** is a transitional alias. Neither is the permanent asset ID or save key.
 
 ### Room codes
 

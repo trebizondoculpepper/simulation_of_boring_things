@@ -1,5 +1,6 @@
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
+import { createMicroLabel } from '../../components/core/views/eighties-controls';
 import { createPartSet } from '../../components/core/parts/parts';
 import {
   createPipe,
@@ -17,10 +18,12 @@ import {
   createWaterButterflyValve,
 } from '../../components/plant/views/water-butterfly-valve';
 import { createGasBallValve } from '../../components/plant/views/gas-fittings';
+import { installedValveFor } from '../../../game/plant/installed-valves';
 import type { DN } from '../../components/plant/views/plant-tools';
 import { PIPE_SIZES } from '../../components/plant/views/plant-tools';
 import {
   CHAIN_TO,
+  REACH,
   ISOLATOR_Y,
   roomIsolators,
   standFootprint,
@@ -70,6 +73,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
   const group = new Group();
   group.name = 'pipework';
   const parts = createPartSet();
+  const store = typeof window === 'undefined' ? null : worldStore('dev');
   const lift = <T extends readonly [number, number, number]>([x, y, z]: T) =>
     [x, floorY + y, z] as const;
   for (const r of runs) {
@@ -105,7 +109,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
           floorY,
         }),
       );
-    for (const v of r.valves) group.add(valve(v));
+    for (const v of r.valves) group.add(valve(r, v));
   }
   for (const t of roomTees(room)) {
     const tee = createPipeTee(
@@ -119,12 +123,38 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     tee.name = t.name;
     group.add(tee);
   }
-  function valve(v: Valve) {
+  function valve(run: PipeRun, v: Valve) {
+    const installed = installedValveFor(room, run.name, v.name);
+    const binding = {
+      open: () =>
+        store?.world.value.installedValves[installed.assetId] ??
+        installed.normal === 'open',
+      set: (open: boolean) =>
+        store?.dispatch({ type: 'plant/valve', id: installed.assetId, open }),
+    };
+    const tag = createMicroLabel(kit, installed.tag, {
+      height: 0.018,
+      ink: '#19242a',
+      plate: '#f0ede3',
+    });
+    const sideX = -v.facing[2];
+    const sideZ = v.facing[0];
+    tag.position.set(
+      v.at[0] + sideX * 0.28,
+      floorY + v.at[1] + (v.at[1] > REACH ? -0.25 : 0.13),
+      v.at[2] + sideZ * 0.28,
+    );
+    tag.rotation.y = Math.atan2(-sideX, -sideZ);
+    group.add(tag);
     if (v.style === 'gas-ball') {
       // A lever ball valve, built along x with its lever up: stood on end
       // for a vertical pipe, its lever then turned to face the room.
       const gas = parts.add(
-        createGasBallValve(kit, { pipeRadius: v.od / 2, name: v.name }),
+        createGasBallValve(kit, {
+          pipeRadius: v.od / 2,
+          name: `${installed.tag} · ${v.name}`,
+          binding,
+        }),
       );
       const holder = new Group();
       holder.position.set(...lift(v.at));
@@ -142,7 +172,8 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         kit,
         dnFor(v.od),
         v.axis === 'y' ? 'y' : 'z',
-        v.name,
+        `${installed.tag} · ${v.name}`,
+        binding,
       ),
     );
     part.object.position.set(...lift(v.at));
@@ -208,7 +239,6 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     foot.position.set(x, floorY + 0.005, z);
     group.add(post, foot);
   }
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
   const switches = isolators.map((place) => {
     const isolator = createPowerIsolator(kit, {
       on: true,

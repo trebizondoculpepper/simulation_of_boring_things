@@ -1,8 +1,5 @@
 import { VERSION } from '../../game/version';
-import {
-  newIdentifiedPlant,
-  walkIdentified,
-} from '../../game/plant/identification';
+import { plantInventory } from '../../game/plant/equipment-catalogue';
 import { BOROUGH } from '../../toolkit/components/general-safety/logic/borough';
 import { boilerHouseChapter } from './boiler-house';
 import type { ExhibitInfo } from './boiler-house';
@@ -28,36 +25,40 @@ export function buildManual(
   version = VERSION,
 ): Manual {
   const boiler = boilerHouseChapter(exhibitFor);
-  const identified = walkIdentified(newIdentifiedPlant());
-  const footbath: Chapter = {
-    id: 'footbath-parts',
-    title: 'Footbath plant identification',
+  const identified = plantInventory();
+  const inventory: Chapter = {
+    id: 'plant-inventory',
+    title: 'Plant equipment inventory',
     blocks: [
       { kind: 'heading', text: 'Equipment and control schedule' },
       {
         kind: 'para',
-        text: 'The identifiers below are generated from the same component model used by the room controls and the web bill of parts. This pilot schedule covers PL4 only.',
+        text: 'This schedule covers the equipment placed in every equipped room. Model entries participate in the footbath simulation; saved controls have an operative handle and persistent position but still await a circuit connection; placed entries await model migration.',
       },
       {
         kind: 'table',
-        caption: 'PL4 bill of parts',
+        caption: 'Equipment and component schedule',
         columns: [
           { head: 'Identifier', width: 0.29 },
-          { head: 'Name', width: 0.17 },
-          { head: 'Purpose', width: 0.33 },
-          { head: 'Normal', width: 0.1 },
+          { head: 'Name', width: 0.21 },
+          { head: 'Purpose', width: 0.25 },
+          { head: 'Source', width: 0.14 },
         ],
         rows: identified.map((part) => [
           part.id,
           part.name,
           part.purpose,
-          part.normal ?? '—',
+          part.source === 'model'
+            ? 'Model'
+            : part.source === 'control'
+              ? 'Saved control'
+              : 'Placed',
         ]),
       },
       { kind: 'heading', text: 'Alphabetical index' },
       {
         kind: 'table',
-        caption: 'PL4 component index',
+        caption: 'Plant component index',
         columns: [
           { head: 'Name', width: 0.55 },
           { head: 'Identifier', width: 0.35 },
@@ -107,7 +108,7 @@ export function buildManual(
     revision: revisionFor(version),
     revisions: REVISIONS,
     foreword: FOREWORD,
-    chapters: [introduction, boiler.chapter, footbath],
+    chapters: [introduction, boiler.chapter, inventory],
     figures: boiler.figures,
   };
 }

@@ -22,7 +22,17 @@ export interface BallValveView extends Part {
  */
 export function createGasBallValve(
   kit: PanelKit,
-  { pipeRadius = 0.03, initial = true, name = 'Gas isolating valve' } = {},
+  {
+    pipeRadius = 0.03,
+    initial = true,
+    name = 'Gas isolating valve',
+    binding,
+  }: {
+    pipeRadius?: number;
+    initial?: boolean;
+    name?: string;
+    binding?: { open(): boolean; set(open: boolean): void };
+  } = {},
 ): BallValveView {
   const t = plantTools(kit);
   const a = beginPart(kit, name);
@@ -48,17 +58,18 @@ export function createGasBallValve(
   let open = initial;
   let angle = open ? 0 : -Math.PI / 2;
   a.uses.set(handle, () => {
-    open = !open;
+    if (binding) binding.set(!binding.open());
+    else open = !open;
   });
   a.updates.push((delta) => {
-    const target = open ? 0 : -Math.PI / 2;
+    const target = (binding?.open() ?? open) ? 0 : -Math.PI / 2;
     angle += (target - angle) * Math.min(1, delta * 8);
     lever.rotation.y = angle;
   });
   const part = a.part();
   return Object.assign(part, {
     get open() {
-      return open;
+      return binding?.open() ?? open;
     },
   });
 }

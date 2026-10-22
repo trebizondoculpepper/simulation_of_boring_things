@@ -23,6 +23,7 @@ import {
 import { createDialGauge } from '../../../components/industrial-control/views/dial-gauge';
 import {
   createPartSet,
+  doorBack,
   doorLatch,
   pilotLight,
   selector,
@@ -446,6 +447,27 @@ function buildSpaPack(
       0.026,
     );
     door.face.add(latch.object);
+    // The rear skin is a second way to work the same door. When the
+    // cabinet is open, clicking its inside closes the shared latch.
+    const back = parts.add(
+      doorBack(kit, {
+        shared: latch.door,
+        material: steel,
+        name: `Spa set cabinet ${i ? 'right' : 'left'} inside cover`,
+        layout: {
+          width: leafW - 0.006,
+          height: c.h - 0.136,
+          panWidth: leafW - 0.046,
+          panHeight: c.h - 0.176,
+          panX: 0,
+          flangeDepth: 0.002,
+          panDepth: 0.012,
+          opening: null,
+        },
+      }),
+    );
+    back.object.position.set(0, (c.h - 0.13) / 2, -0.002);
+    door.face.add(back.object);
     return latch;
   });
   // Its supply, through the isolator on the wall beside it: off, the

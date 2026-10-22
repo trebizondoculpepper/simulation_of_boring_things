@@ -1,0 +1,350 @@
+/** Permanent installation IDs and explicit display tags for placed equipment.
+ * A layout edit must update this register deliberately; it cannot renumber assets. */
+export const INSTALLED_ASSET_IDS: Readonly<
+  Record<string, { assetId: string; tag: string }>
+> = {
+  'plant_pool_01|balance-tank:3x2x2|Lounge pool balance tank': {
+    assetId: 'asset-0001',
+    tag: 'PL1-T1',
+  },
+  'plant_pool_01|pump-pair|Lounge pool circulation pumps, duty and standby, with strainers':
+    { assetId: 'asset-0002', tag: 'PL1-P1' },
+  'plant_pool_01|sand-filter:1.2|Lounge pool sand filter 1': {
+    assetId: 'asset-0003',
+    tag: 'PL1-F1',
+  },
+  'plant_pool_01|sand-filter:1.2|Lounge pool sand filter 2': {
+    assetId: 'asset-0004',
+    tag: 'PL1-F2',
+  },
+  'plant_pool_01|uv-unit|Lounge pool UV unit': {
+    assetId: 'asset-0005',
+    tag: 'PL1-UV1',
+  },
+  'plant_pool_01|pump-panel|Lounge pool local control panel': {
+    assetId: 'asset-0006',
+    tag: 'PL1-CP1',
+  },
+  'plant_pool_01|heat-exchanger|Lounge pool plate heat exchanger': {
+    assetId: 'asset-0007',
+    tag: 'PL1-HX1',
+  },
+  'plant_pool_01|ozone-generator:plant_pool_01|Lounge pool ozone generator': {
+    assetId: 'asset-0008',
+    tag: 'PL1-OZ1',
+  },
+  'plant_pool_01|contact-tank|Lounge pool ozone contact tank': {
+    assetId: 'asset-0009',
+    tag: 'PL1-T2',
+  },
+  'plant_pool_01|dosing-controller|Lounge pool dosing controller and sample cells':
+    { assetId: 'asset-0010', tag: 'PL1-CP2' },
+  'plant_pool_01|hypo-pumps|Lounge pool hypochlorite dosing pumps': {
+    assetId: 'asset-0011',
+    tag: 'PL1-DP1',
+  },
+  'plant_pool_01|acid-pump|Lounge pool acid dosing pump': {
+    assetId: 'asset-0012',
+    tag: 'PL1-DP2',
+  },
+  'plant_pool_02|balance-tank:9x8x3|Olympic pool balance tank': {
+    assetId: 'asset-0013',
+    tag: 'PL2-T1',
+  },
+  'plant_pool_02|pump-pair|Olympic pool circulation pumps, duty and standby, with strainers':
+    { assetId: 'asset-0014', tag: 'PL2-P1' },
+  'plant_pool_02|sand-filter:3|Olympic pool sand filter 1': {
+    assetId: 'asset-0015',
+    tag: 'PL2-F1',
+  },
+  'plant_pool_02|sand-filter:3|Olympic pool sand filter 2': {
+    assetId: 'asset-0016',
+    tag: 'PL2-F2',
+  },
+  'plant_pool_02|sand-filter:3|Olympic pool sand filter 3': {
+    assetId: 'asset-0017',
+    tag: 'PL2-F3',
+  },
+  'plant_pool_02|sand-filter:3|Olympic pool sand filter 4': {
+    assetId: 'asset-0018',
+    tag: 'PL2-F4',
+  },
+  'plant_pool_02|sand-filter:3|Olympic pool sand filter 5': {
+    assetId: 'asset-0019',
+    tag: 'PL2-F5',
+  },
+  'plant_pool_02|uv-unit|Olympic pool UV unit': {
+    assetId: 'asset-0020',
+    tag: 'PL2-UV1',
+  },
+  'plant_pool_02|pump-panel|Olympic pool local control panel': {
+    assetId: 'asset-0021',
+    tag: 'PL2-CP1',
+  },
+  'plant_pool_02|heat-exchanger|Olympic pool plate heat exchanger': {
+    assetId: 'asset-0022',
+    tag: 'PL2-HX1',
+  },
+  'plant_pool_02|ozone-generator:plant_pool_02|Olympic pool ozone generator': {
+    assetId: 'asset-0023',
+    tag: 'PL2-OZ1',
+  },
+  'plant_pool_02|contact-tank|Olympic pool ozone contact tank': {
+    assetId: 'asset-0024',
+    tag: 'PL2-T2',
+  },
+  'plant_pool_02|dosing-controller|Olympic pool dosing controller and sample cells':
+    { assetId: 'asset-0025', tag: 'PL2-CP2' },
+  'plant_pool_02|hypo-pumps|Olympic pool hypochlorite dosing pumps': {
+    assetId: 'asset-0026',
+    tag: 'PL2-DP1',
+  },
+  'plant_pool_02|acid-pump|Olympic pool acid dosing pump': {
+    assetId: 'asset-0027',
+    tag: 'PL2-DP2',
+  },
+  'plant_pool_03|jacuzzi-pack|Packaged Jacuzzi plant cabinet': {
+    assetId: 'asset-0028',
+    tag: 'PL3-CAB1',
+  },
+  'plant_pool_04|spa-pack|Packaged spa set, footbath': {
+    assetId: 'asset-0029',
+    tag: 'PL4-CAB1',
+  },
+  'wet_hall|break-tank|Make-up break tank (Category 5)': {
+    assetId: 'asset-0030',
+    tag: 'WH-T1',
+  },
+  'wet_hall|booster-set|Make-up booster set, duty and standby': {
+    assetId: 'asset-0031',
+    tag: 'WH-P1',
+  },
+  'wet_hall|water-meter|Make-up water meter': {
+    assetId: 'asset-0032',
+    tag: 'WH-G1',
+  },
+  'wet_hall|backwash-tank|Backwash holding tank': {
+    assetId: 'asset-0033',
+    tag: 'WH-T2',
+  },
+  'wet_hall|mimic-wet|Mimic: wet hall': {
+    assetId: 'asset-0034',
+    tag: 'WH-MP1',
+  },
+  'boiler_house|boiler-cascade:1|Condensing boilers, cascade 1': {
+    assetId: 'asset-0035',
+    tag: 'BH-B1',
+  },
+  'boiler_house|boiler-cascade:2|Condensing boilers, cascade 2': {
+    assetId: 'asset-0036',
+    tag: 'BH-B2',
+  },
+  'boiler_house|boiler-cascade:3|Condensing boilers, cascade 3': {
+    assetId: 'asset-0037',
+    tag: 'BH-B3',
+  },
+  'boiler_house|low-loss-header|Low-loss header': {
+    assetId: 'asset-0038',
+    tag: 'BH-HW1',
+  },
+  'boiler_house|lthw-pumps|Twin-head LTHW circulator': {
+    assetId: 'asset-0039',
+    tag: 'BH-P1',
+  },
+  'boiler_house|pressurisation|Pressurisation unit and expansion vessel': {
+    assetId: 'asset-0040',
+    tag: 'BH-T1',
+  },
+  'boiler_house|calorifier|Hot-water calorifier': {
+    assetId: 'asset-0041',
+    tag: 'BH-T2',
+  },
+  'boiler_house|gas-train|Gas train': { assetId: 'asset-0042', tag: 'BH-G1' },
+  'boiler_house|dosing-pot|Dosing pot': {
+    assetId: 'asset-0043',
+    tag: 'BH-DP1',
+  },
+  'boiler_house|gas-safety|Gas detection and emergency stop': {
+    assetId: 'asset-0044',
+    tag: 'BH-CP1',
+  },
+  'boiler_house|mimic-gas|Mimic: boiler house gas': {
+    assetId: 'asset-0045',
+    tag: 'BH-MP1',
+  },
+  'boiler_house|mimic-boiler-heat|Mimic: boiler status and heat output': {
+    assetId: 'asset-0046',
+    tag: 'BH-MP2',
+  },
+  'boiler_house|combustion-panel|Combustion and ventilation panel': {
+    assetId: 'asset-0047',
+    tag: 'BH-CP2',
+  },
+  'hypo_store|hypo-tank|Sodium hypochlorite bulk tank 1': {
+    assetId: 'asset-0048',
+    tag: 'HS-T1',
+  },
+  'hypo_store|hypo-tank|Sodium hypochlorite bulk tank 2': {
+    assetId: 'asset-0049',
+    tag: 'HS-T2',
+  },
+  'hypo_store|hypo-tank|Sodium hypochlorite bulk tank 3': {
+    assetId: 'asset-0050',
+    tag: 'HS-T3',
+  },
+  'hypo_store|safety-shower|Safety shower and eyewash': {
+    assetId: 'asset-0051',
+    tag: 'HS-FX1',
+  },
+  'hypo_store|spill-kit|Chemical spill kit': {
+    assetId: 'asset-0052',
+    tag: 'HS-FX2',
+  },
+  'hypo_store|ppe-cabinet|PPE cabinet': {
+    assetId: 'asset-0053',
+    tag: 'HS-FX3',
+  },
+  'hypo_store|store-extract:hypo_store|Extract and chlorine detection': {
+    assetId: 'asset-0054',
+    tag: 'HS-AHU1',
+  },
+  'acid_store|acid-ibc|Acid IBC on spill pallet': {
+    assetId: 'asset-0055',
+    tag: 'AS-T1',
+  },
+  'acid_store|safety-shower|Safety shower and eyewash': {
+    assetId: 'asset-0056',
+    tag: 'AS-FX1',
+  },
+  'acid_store|spill-kit|Chemical spill kit': {
+    assetId: 'asset-0057',
+    tag: 'AS-FX2',
+  },
+  'acid_store|ppe-cabinet|PPE cabinet': {
+    assetId: 'asset-0058',
+    tag: 'AS-FX3',
+  },
+  'acid_store|store-extract:acid_store|Extract and chlorine detection': {
+    assetId: 'asset-0059',
+    tag: 'AS-AHU1',
+  },
+  'loading_bay|tanker-stand|Tanker stand': {
+    assetId: 'asset-0060',
+    tag: 'LB-FX1',
+  },
+  'loading_bay|fill-cabinet|Delivery fill cabinet: hypochlorite': {
+    assetId: 'asset-0061',
+    tag: 'LB-CAB1',
+  },
+  'loading_bay|fill-cabinet|Delivery fill cabinet: acid': {
+    assetId: 'asset-0062',
+    tag: 'LB-CAB2',
+  },
+  'switch_room|lv-switchboard|LV main switchboard': {
+    assetId: 'asset-0063',
+    tag: 'SR-DB1',
+  },
+  'switch_room|mcc|Motor control centre': {
+    assetId: 'asset-0064',
+    tag: 'SR-CP1',
+  },
+  'switch_room|main-switch|Main incoming switch': {
+    assetId: 'asset-0065',
+    tag: 'SR-IS1',
+  },
+  'switch_room|central-battery|Emergency lighting central battery': {
+    assetId: 'asset-0066',
+    tag: 'SR-DB2',
+  },
+  'switch_room|distribution-board|Distribution board': {
+    assetId: 'asset-0067',
+    tag: 'SR-DB3',
+  },
+  'switch_room|rotary-isolators|Rotary isolators': {
+    assetId: 'asset-0068',
+    tag: 'SR-IS2',
+  },
+  'switch_room|lighting-board|Lighting distribution board DB-L1': {
+    assetId: 'asset-0069',
+    tag: 'SR-DB4',
+  },
+  'switch_room|generator-point|Generator connection point': {
+    assetId: 'asset-0070',
+    tag: 'SR-FX1',
+  },
+  'switch_room|earthing-terminal|Main earthing terminal': {
+    assetId: 'asset-0071',
+    tag: 'SR-FX2',
+  },
+  'air_plant|ahu-stack:AHU-802+AHU-803+AHU-804|Air handling units AHU-802, AHU-803, AHU-804: OLYMPIC POOL HALL':
+    { assetId: 'asset-0072', tag: 'AP-AHU1' },
+  'air_plant|ahu-stack:AHU-805+AHU-806+AHU-807|Air handling units AHU-805, AHU-806, AHU-807: OLYMPIC POOL HALL':
+    { assetId: 'asset-0073', tag: 'AP-AHU2' },
+  'air_plant|ahu-stack:AHU-808+AHU-809+AHU-810|Air handling units AHU-808, AHU-809, AHU-810: OLYMPIC POOL HALL':
+    { assetId: 'asset-0074', tag: 'AP-AHU3' },
+  'air_plant|ahu-stack:AHU-801|Air handling unit AHU-801: LOUNGE POOL HALL': {
+    assetId: 'asset-0075',
+    tag: 'AP-AHU4',
+  },
+  'air_plant|ahu-stack:AHU-811|Air handling unit AHU-811: JACUZZI ROOM': {
+    assetId: 'asset-0076',
+    tag: 'AP-AHU5',
+  },
+  'air_plant|ahu-stack:AHU-812|Air handling unit AHU-812: FOOTBATH PASSAGE': {
+    assetId: 'asset-0077',
+    tag: 'AP-AHU6',
+  },
+  'air_plant|mimic-air|Mimic: air handling plant': {
+    assetId: 'asset-0078',
+    tag: 'AP-MP1',
+  },
+  "control_room|operator-desk|Operator's desk, POOLMON": {
+    assetId: 'asset-0079',
+    tag: 'CR-FX1',
+  },
+  'control_room|alarm-printer|Alarm printer': {
+    assetId: 'asset-0080',
+    tag: 'CR-CP1',
+  },
+  'control_room|water-test-kit|Water-test kit': {
+    assetId: 'asset-0081',
+    tag: 'CR-FX2',
+  },
+  'control_room|mimic-pool|Mimic: main pool circuit': {
+    assetId: 'asset-0082',
+    tag: 'CR-MP1',
+  },
+  'control_room|mimic-heating|Mimic: heating': {
+    assetId: 'asset-0083',
+    tag: 'CR-MP2',
+  },
+  'control_room|mimic-air|Mimic: air handling': {
+    assetId: 'asset-0084',
+    tag: 'CR-MP3',
+  },
+  'control_room|annunciator|Alarm annunciator': {
+    assetId: 'asset-0085',
+    tag: 'CR-CP2',
+  },
+  'control_room|chart-recorders|Chart recorders': {
+    assetId: 'asset-0086',
+    tag: 'CR-CP3',
+  },
+  'control_room|readout-board|Readout board': {
+    assetId: 'asset-0087',
+    tag: 'CR-CP4',
+  },
+  'control_room|bms-outstation|BMS outstation': {
+    assetId: 'asset-0088',
+    tag: 'CR-CP5',
+  },
+  'control_room|fire-repeater|Fire alarm repeater': {
+    assetId: 'asset-0089',
+    tag: 'CR-CP6',
+  },
+  'control_room|cctv|CCTV monitor': { assetId: 'asset-0090', tag: 'CR-FX3' },
+  'engineers_office|scenario-simulator|Hyperplasc Scenario Simulator': {
+    assetId: 'asset-0091',
+    tag: 'EO-CP1',
+  },
+};

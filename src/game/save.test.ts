@@ -52,6 +52,7 @@ describe('a save', () => {
       ambient: newWorld().ambient,
       gas: newWorld().gas,
       identifiedPlant: newWorld().identifiedPlant,
+      installedValves: newWorld().installedValves,
     });
   });
 

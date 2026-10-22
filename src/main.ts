@@ -546,8 +546,12 @@ const openRoom = async () => {
       titleScreen.hide();
       directoryShell.hidden = true;
       directory.querySelector('.plant-manual')?.remove();
+      const manualWorld = worldStore('dev').world.value;
       directory.append(
-        renderPlantManual(worldStore('dev').world.value.identifiedPlant),
+        renderPlantManual(
+          manualWorld.identifiedPlant,
+          manualWorld.installedValves,
+        ),
       );
       directory.hidden = false;
       document.title = 'The Pool — Plant manual';

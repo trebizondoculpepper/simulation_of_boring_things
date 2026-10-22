@@ -1,9 +1,12 @@
 import type { Block } from '../../game/sim/blocks';
-import { walkIdentified } from '../../game/plant/identification';
+import { plantInventory } from '../../game/plant/equipment-catalogue';
 
 /** The operator's live bill of parts, generated from the saved model tree. */
-export function renderPlantManual(root: Block): HTMLElement {
-  const parts = walkIdentified(root);
+export function renderPlantManual(
+  root: Block,
+  valveStates?: Readonly<Record<string, boolean>>,
+): HTMLElement {
+  const parts = plantInventory(root, valveStates);
   const shell = document.createElement('div');
   shell.className = 'directory-shell plant-manual';
   const header = document.createElement('header');
@@ -15,7 +18,7 @@ export function renderPlantManual(root: Block): HTMLElement {
   title.textContent = 'Plant bill of parts';
   const intro = document.createElement('p');
   intro.textContent =
-    'Named equipment and controls in the live plant model. Room, parent and part codes form each identifier.';
+    'Installed equipment, separating simulated parts, saved controls awaiting circuit effects, and placed equipment awaiting model migration.';
   header.append(back, title, intro);
   shell.append(header);
 
@@ -32,6 +35,7 @@ export function renderPlantManual(root: Block): HTMLElement {
     'Purpose',
     'Normal',
     'Current',
+    'Source',
   ]) {
     const th = document.createElement('th');
     th.textContent = label;
@@ -62,6 +66,11 @@ export function renderPlantManual(root: Block): HTMLElement {
             ? 'On'
             : 'Off'
           : '—',
+      part.source === 'model'
+        ? 'Model'
+        : part.source === 'control'
+          ? 'Saved control; circuit pending'
+          : 'Placed equipment',
     ];
     for (const value of fields) {
       const cell = document.createElement('td');

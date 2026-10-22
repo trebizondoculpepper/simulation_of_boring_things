@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { exhibitFor } from '../../toolkit/gallery/views/room-equipment';
 import { layoutRoom } from '../../toolkit/gallery/logic/room-equipment';
 import { GAS_HOUSE } from '../../game/plant/gas-house';
-import {
-  newIdentifiedPlant,
-  walkIdentified,
-} from '../../game/plant/identification';
+import { plantInventory } from '../../game/plant/equipment-catalogue';
 import { escapeLatex, renderManual } from '../latex/render';
 import { boilerHouseChapter } from './boiler-house';
 import { revisionFor } from './fiction';
@@ -17,7 +14,7 @@ import { roomPlanSvg } from './room-plan';
 describe('the operator’s manual', () => {
   const manual = buildManual(exhibitFor);
   const boiler = boilerHouseChapter(exhibitFor);
-  const footbath = manual.chapters.find((c) => c.id === 'footbath-parts')!;
+  const inventory = manual.chapters.find((c) => c.id === 'plant-inventory')!;
   const schedule = boiler.chapter.blocks.find(
     (b) => b.kind === 'table' && b.caption === 'Boiler house equipment',
   );
@@ -37,16 +34,17 @@ describe('the operator’s manual', () => {
     );
   });
 
-  it('draws the PDF footbath schedule and index from the same identified model', () => {
-    const parts = walkIdentified(newIdentifiedPlant());
-    const schedule = footbath.blocks.find(
-      (b) => b.kind === 'table' && b.caption === 'PL4 bill of parts',
+  it('draws the PDF schedule and index from the same inventory as the web page', () => {
+    const parts = plantInventory();
+    const schedule = inventory.blocks.find(
+      (b) =>
+        b.kind === 'table' && b.caption === 'Equipment and component schedule',
     );
-    const index = footbath.blocks.find(
-      (b) => b.kind === 'table' && b.caption === 'PL4 component index',
+    const index = inventory.blocks.find(
+      (b) => b.kind === 'table' && b.caption === 'Plant component index',
     );
     if (schedule?.kind !== 'table' || index?.kind !== 'table')
-      throw new Error('missing footbath tables');
+      throw new Error('missing inventory tables');
     expect(schedule.rows.map((row) => row[0])).toEqual(parts.map((p) => p.id));
     expect(index.rows.map((row) => row[1]).sort()).toEqual(
       parts.map((p) => p.id).sort(),
