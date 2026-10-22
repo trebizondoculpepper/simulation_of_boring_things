@@ -33,6 +33,7 @@ import { partAudio } from '../../../components/core/audio/part-audio';
 import { createPipe } from '../../../components/core/views/pipe-kinds';
 import {
   demoLocalPortAnchor,
+  demoPipeSpec,
   demoServiceRoutes,
 } from '../../logic/port-graph-demo-routes';
 import type { PlantRoomLayout } from '../../logic/plant-room-layout';
@@ -45,6 +46,11 @@ import {
   createSevenSegment,
 } from '../../../components/core/views/eighties-controls';
 import { tools } from '../../../components/core/views/fitting-tools';
+import { createSignState } from '../../../components/pool/logic/pool-info-sign';
+import {
+  createPoolInfoSign,
+  markLive,
+} from '../../../components/pool/views/pool-info-sign';
 
 /** The same graph IDs address the model, all visible machines, and their ports. */
 const demo = createPortGraphDemo();
@@ -58,6 +64,7 @@ const visual: Record<DemoKind, { title: string; colour: string }> = {
   circulator: { title: 'Primary circulator', colour: '#3c8396' },
   'pool-pump': { title: 'Pool pump', colour: '#3c8396' },
   pool: { title: 'Small pool', colour: '#54a9b2' },
+  'pool-info-sign': { title: 'Pool water quality', colour: '#d9e4e2' },
   'balance-tank': { title: 'Balance tank', colour: '#728f90' },
   'sand-filter': { title: 'Pressure sand filter', colour: '#779ca0' },
   treatment: { title: 'Water treatment', colour: '#73a69c' },
@@ -262,6 +269,35 @@ function buildNode(
     throw new Error(`${id}: expected ${expectedKind}, found ${node.data.kind}`);
   if (node.data.kind === 'mimic' || node.data.kind === 'pool-mimic')
     return buildMimic(kit, id as 'demo.mimic' | 'demo.poolMimic');
+  if (node.data.kind === 'pool-info-sign') {
+    const sign = createPoolInfoSign(kit, 'post');
+    sign.object.userData.graphNodeId = id;
+    const state = createSignState('TRIAL POOL');
+    markLive(sign.object);
+    return {
+      object: sign.object,
+      update() {
+        const now = demo.state.seconds;
+        state.power = demo.state.mainsOn;
+        state.clock =
+          new Date().getHours() * 3600 +
+          new Date().getMinutes() * 60 +
+          new Date().getSeconds();
+        for (const [field, edgeId] of [
+          ['water', 'sign-pool-temperature'],
+          ['ph', 'sign-ph'],
+          ['free', 'sign-chlorine'],
+        ] as const) {
+          state.readings[field] = {
+            value: Number(demo.readMimic(edgeId)),
+            at: now,
+          };
+        }
+        sign.show(state, now);
+        sign.update(now);
+      },
+    };
+  }
   const { title, colour } = visual[node.data.kind];
   const t = tools(kit);
   const object = new Group();
@@ -395,6 +431,32 @@ function buildNode(
   );
   object.add(tag);
 
+  if (id in demo.state.remote) {
+    const override = parts.add(
+      pushButton(kit, {
+        colour: 'amber',
+        head: 'illuminated',
+        legend: 'LOCAL OVERRIDE',
+        name: `${id} local override`,
+        lamp: {
+          get value() {
+            return (
+              demo.state.mainsOn && demo.state.remote[id].localOverride !== null
+            );
+          },
+        },
+        action: () => demo.toggleLocalOverride(id),
+      }),
+    );
+    override.object.scale.setScalar(1.4);
+    override.object.position.set(
+      node.data.kind === 'remote-breaker' ? -0.12 : 0.17,
+      node.data.kind === 'remote-breaker' ? 0.66 : 1.0,
+      node.data.kind === 'remote-breaker' ? 0.19 : 0.23,
+    );
+    object.add(override.object);
+  }
+
   // Studs are the visual port twins, one for each declared graph port.
   for (const port of node.ports ?? []) {
     if (port.data.medium === 'heat' || port.data.medium === 'control') continue;
@@ -517,6 +579,7 @@ const dimensions: Record<DemoKind, { w: number; d: number; h: number }> = {
   circulator: { w: 2.2, d: 1, h: 1.6 },
   'pool-pump': { w: 2.2, d: 1, h: 1.6 },
   pool: { w: 3.3, d: 2.35, h: 0.9 },
+  'pool-info-sign': { w: 0.8, d: 0.6, h: 2.65 },
   'balance-tank': { w: 1.4, d: 1, h: 1.2 },
   'sand-filter': { w: 1.8, d: 1.8, h: 2.2 },
   treatment: { w: 0.9, d: 0.7, h: 1.5 },
@@ -550,33 +613,7 @@ export function buildRoomServices(
   const t = tools(kit);
   const group = new Group();
   for (const route of demoServiceRoutes(layout)) {
-    const primary = [
-      'primary-supply',
-      'primary-valve-to-pump',
-      'primary-pump-to-boiler',
-      'boiler-to-hx',
-      'hx-to-tank',
-    ].includes(route.edgeId);
-    const kind =
-      route.medium === 'gas'
-        ? 'steel-screwed'
-        : route.medium === 'water'
-          ? primary
-            ? 'lagged-heating'
-            : 'pvc-pressure'
-          : route.medium === 'flue'
-            ? 'flue'
-            : 'steel-screwed';
-    const od =
-      route.medium === 'gas'
-        ? 0.0483
-        : route.medium === 'water'
-          ? primary
-            ? 0.0483
-            : 0.075
-          : route.medium === 'flue'
-            ? 0.25
-            : 0.0269;
+    const { kind, od } = demoPipeSpec(route.edgeId, route.medium);
     const run = createPipe(kind, od, route.points, { ends: ['open', 'open'] });
     run.name = `Graph edge ${route.edgeId}`;
     run.userData.graphEdgeId = route.edgeId;

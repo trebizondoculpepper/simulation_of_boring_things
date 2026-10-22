@@ -14,6 +14,7 @@ export type DemoKind =
   | 'circulator'
   | 'pool-pump'
   | 'pool'
+  | 'pool-info-sign'
   | 'balance-tank'
   | 'sand-filter'
   | 'treatment'
@@ -101,6 +102,7 @@ export const demoKindRatings: Record<
   circulator: { electricalKW: 0.3, designFlowKgPerSecond: 0.5 },
   'pool-pump': { electricalKW: 1.1, designFlowKgPerSecond: 1.5 },
   pool: { waterKg: 6_000, heatCapacityKJPerKgK: 4.18, lossKWPerK: 0.065 },
+  'pool-info-sign': { electricalKW: 0.02 },
   'balance-tank': { capacityKg: 500, makeUpKgPerSecond: 0.02 },
   'sand-filter': { cleanDifferentialBar: 0.18 },
   treatment: { electricalKW: 0.08, targetChlorineMgL: 1.2, targetPH: 7.2 },
@@ -165,6 +167,12 @@ const ports: Record<DemoKind, readonly Port[]> = {
     control('temperature', 'out', '°C'),
     control('chlorine', 'out', 'mg/L'),
     control('ph', 'out', 'pH'),
+  ],
+  'pool-info-sign': [
+    physical('power', 'in', 'power'),
+    control('temperature', 'in', '°C'),
+    control('chlorine', 'in', 'mg/L'),
+    control('ph', 'in', 'pH'),
   ],
   'balance-tank': [
     physical('overflow', 'in', 'water'),
@@ -232,6 +240,7 @@ const ports: Record<DemoKind, readonly Port[]> = {
 };
 const installed = [
   ['demo.pool', 'pool'],
+  ['demo.poolSign', 'pool-info-sign'],
   ['demo.balance', 'balance-tank'],
   ['demo.poolPump', 'pool-pump'],
   ['demo.filter', 'sand-filter'],
@@ -374,6 +383,22 @@ export const demoGraph = createGraph({
     power('breaker-motor-power', 'demo.remotePower', 'motor-power'),
     power('boiler-mimic-power', 'demo.mimic'),
     power('pool-mimic-power', 'demo.poolMimic'),
+    power('pool-sign-power', 'demo.poolSign'),
+    signal(
+      'sign-pool-temperature',
+      'demo.pool',
+      'temperature',
+      'demo.poolSign',
+      'temperature',
+    ),
+    signal(
+      'sign-chlorine',
+      'demo.pool',
+      'chlorine',
+      'demo.poolSign',
+      'chlorine',
+    ),
+    signal('sign-ph', 'demo.pool', 'ph', 'demo.poolSign', 'ph'),
     signal(
       'signal-gas-used',
       'demo.gasMeter',
@@ -640,7 +665,10 @@ export interface DemoState {
   boilerKW: number;
   pumpA: number;
   poolPumpA: number;
-  remote: Record<string, { command: boolean; actual: boolean }>;
+  remote: Record<
+    string,
+    { command: boolean; actual: boolean; localOverride: boolean | null }
+  >;
   seconds: number;
   mainsOn: boolean;
   pumpOn: boolean;
@@ -689,7 +717,10 @@ export function createPortGraphDemo() {
     pumpA: 0,
     poolPumpA: 0,
     remote: Object.fromEntries(
-      remoteIds.map((id) => [id, { command: true, actual: true }]),
+      remoteIds.map((id) => [
+        id,
+        { command: true, actual: true, localOverride: null },
+      ]),
     ),
     seconds: 0,
     mainsOn: true,
@@ -723,7 +754,9 @@ export function createPortGraphDemo() {
       const e = demoGraph.edges.find(
         (item) =>
           item.id === edgeId &&
-          ['demo.mimic', 'demo.poolMimic'].includes(item.targetId),
+          ['demo.mimic', 'demo.poolMimic', 'demo.poolSign'].includes(
+            item.targetId,
+          ),
       );
       const source = demoGraph.nodes
         .find((node) => node.id === e?.sourceId)
@@ -758,10 +791,13 @@ export function createPortGraphDemo() {
         case 'signal-remote-power':
           return remote('demo.remotePower');
         case 'signal-pool-temperature':
+        case 'sign-pool-temperature':
           return state.poolC;
         case 'signal-chlorine':
+        case 'sign-chlorine':
           return state.poolChlorineMgL;
         case 'signal-ph':
+        case 'sign-ph':
           return state.poolPH;
         case 'signal-balance-level':
           return state.balanceKg / rating['balance-tank'].capacityKg;
@@ -802,6 +838,13 @@ export function createPortGraphDemo() {
       else if (e?.targetId === 'demo.poolPump') state.poolPumpOn = on;
       else if (e?.targetId && e.targetId in state.remote)
         state.remote[e.targetId].command = on;
+    },
+    /** Local two-position service override. A second press releases it to remote control. */
+    toggleLocalOverride(nodeId: string) {
+      const device = state.remote[nodeId];
+      if (!device) throw new Error(`${nodeId}: no local override`);
+      device.localOverride =
+        device.localOverride === null ? !device.command : null;
     },
     readControlPort(nodeId: 'demo.boiler', portName: 'temperature'): Celsius {
       const port = demoGraph.nodes
@@ -859,9 +902,11 @@ export function createPortGraphDemo() {
           id === 'demo.remotePower' ? 'motor-power' : 'actuator-power';
         const motor =
           powered && connected('demo.mains', 'feeder', id, motorPort);
+        const device = state.remote[id];
+        const desired = device.localOverride ?? device.command;
         if (id === 'demo.remotePower') {
-          if (motor) state.remote[id].actual = state.remote[id].command;
-        } else state.remote[id].actual = motor && state.remote[id].command;
+          if (motor) device.actual = desired;
+        } else device.actual = motor && desired;
       }
       const primaryRuns =
         powered &&
@@ -994,6 +1039,7 @@ export function createPortGraphDemo() {
             : 0) +
           rating.mimic.electricalKW +
           rating['pool-mimic'].electricalKW +
+          rating['pool-info-sign'].electricalKW +
           remoteIds.filter((id) => remote(id) && id !== 'demo.remotePower')
             .length *
             rating['remote-water-valve'].actuatorKW

@@ -7,6 +7,7 @@ import { createBrandBadge } from './brand-badge';
 import { brandTypeface, drawBrandMark, wordmarkFont } from './brand-logo';
 import type { PanelKit } from './eighties-controls';
 import { tools } from './fitting-tools';
+import { applyLabelFade } from './label-visibility';
 
 /**
  * A brand's livery for the things it makes: its house palette as paints,
@@ -103,6 +104,11 @@ export function brandLivery(kit: PanelKit, id: BrandId): BrandLivery {
         512,
       );
       plate.mesh.name = `Nameplate ${brand.name}`;
+      applyLabelFade(
+        plate.mesh,
+        plate.mesh.material as import('three').MeshStandardMaterial,
+        h / Math.max(3, lines.length + 1),
+      );
       return plate.mesh;
     },
   };

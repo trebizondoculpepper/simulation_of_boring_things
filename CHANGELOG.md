@@ -4,6 +4,15 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Added
+
+- Dev19's small pool now has a post-mounted water quality sign with live graph-bound temperature, pH and free chlorine readings. Each motorized shutoff and breaker also has a local override button.
+
+### Changed
+
+- Small component legends, maker badges and machine nameplates fade smoothly as their lettering shrinks below readable screen size, including when the player zooms out.
+- Dev19's routed physical services leave their declared graph ports square before the first bend.
+
 ### Documentation
 
 - Defined the visual, simulation and control component triplet, with an inventory-led migration path for the full component catalogue, shared identity, typed ports, saved state and build validation.

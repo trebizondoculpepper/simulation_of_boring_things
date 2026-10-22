@@ -15,6 +15,7 @@ import type {
 import { createPs1Material } from '../parts/ps1-material';
 import { drawButtonFinish } from './button-finish';
 import { createCanvasTexture } from './screens';
+import { applyLabelFade } from './label-visibility';
 
 /**
  * Panel hardware of the mid-1980s refit, for compact control panels: square
@@ -116,7 +117,7 @@ export function createMicroLabel(
   // surface is: unreadable in the dark, readable by a torch.
   const material = createPs1Material({
     map: texture,
-    transparent: !plate,
+    transparent: true,
     alphaTest: plate ? 0 : 0.35,
     roughness: 0.85,
   });
@@ -127,6 +128,7 @@ export function createMicroLabel(
     material,
   );
   mesh.name = `Label ${text}`;
+  applyLabelFade(mesh, material, height * fit);
   // Printed lettering is a decal: it never takes a click meant for the
   // control it labels (its sheet is larger than its letters).
   mesh.raycast = () => {};

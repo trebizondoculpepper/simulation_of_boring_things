@@ -6,6 +6,7 @@ import { createPs1Material } from '../parts/ps1-material';
 import { drawBrandMark, wordmarkFont } from './brand-logo';
 import type { PanelKit } from './eighties-controls';
 import { createCanvasTexture } from './screens';
+import { applyLabelFade } from './label-visibility';
 
 /**
  * A maker's mark on a device: the brand's logo (or just its name, or just
@@ -99,6 +100,7 @@ export function createBrandBadge(
   const mesh = new Mesh(new PlaneGeometry(width, height), material);
   mesh.name = `Badge ${brandById(id).name}`;
   mesh.userData.maker = id;
+  applyLabelFade(mesh, material, height, opacity);
   mesh.raycast = () => {};
   if (!plate) return mesh;
   // A nameplate: the badge on a thin plate a little larger than it.
@@ -110,6 +112,7 @@ export function createBrandBadge(
   );
   backing.name = `Nameplate ${brandById(id).name}`;
   backing.userData.maker = id;
+  applyLabelFade(backing, plateMaterial, height * 1.4);
   backing.raycast = () => {};
   mesh.position.z = 0.0004;
   backing.add(mesh);

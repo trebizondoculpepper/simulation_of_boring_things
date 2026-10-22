@@ -3,7 +3,12 @@ import {
   demoVisualBindings,
 } from '../../../game/plant/port-graph-demo';
 import type { DemoKind } from '../../../game/plant/port-graph-demo';
-import type { Vec3 } from '../../components/core/logic/pipe-route';
+import { withPortLeads } from '../../components/core/logic/pipe-route';
+import type {
+  PipeJoint,
+  PortEnd,
+  Vec3,
+} from '../../components/core/logic/pipe-route';
 import type { PlantRoomLayout } from './plant-room-layout';
 
 type Medium = 'gas' | 'water' | 'power' | 'flue';
@@ -11,6 +16,8 @@ export interface DemoRoute {
   edgeId: string;
   medium: Medium;
   points: Vec3[];
+  startPort: PortEnd;
+  endPort?: PortEnd;
 }
 
 /** Local connection positions in metres. Every physical port of a visible node is listed. */
@@ -38,6 +45,7 @@ const anchors: Partial<Record<DemoKind, Record<string, Vec3>>> = {
     power: [0.55, 0.8, 0.2],
   },
   pool: { inlet: [1.5, 0.48, 0], overflow: [-1.5, 0.68, 0] },
+  'pool-info-sign': { power: [0, 0.16, 0] },
   'balance-tank': {
     overflow: [-0.65, 0.65, 0],
     makeup: [-0.65, 0.95, 0],
@@ -74,6 +82,56 @@ const anchors: Partial<Record<DemoKind, Record<string, Vec3>>> = {
   'pool-mimic': { power: [0.85, 2.35, -0.1] },
 };
 
+/** Local outward normals. Inline devices expose their two connections on opposite ends. */
+const normals: Partial<Record<DemoKind, Record<string, Vec3>>> = {
+  'gas-main': { gas: [1, 0, 0] },
+  'gas-meter': { in: [-1, 0, 0], out: [1, 0, 0] },
+  mains: { feeder: [0, 1, 0] },
+  'makeup-main': { supply: [1, 0, 0] },
+  boiler: {
+    fuel: [1, 0, 0],
+    flue: [0, 1, 0],
+    'water-in': [1, 0, 0],
+    'water-out': [-1, 0, 0],
+    power: [1, 0, 0],
+  },
+  'water-tank': { supply: [1, 0, 0], return: [1, 0, 0] },
+  circulator: { suction: [-1, 0, 0], discharge: [0, 1, 0], power: [1, 0, 0] },
+  'pool-pump': { suction: [-1, 0, 0], discharge: [0, 1, 0], power: [1, 0, 0] },
+  pool: { inlet: [1, 0, 0], overflow: [-1, 0, 0] },
+  'pool-info-sign': { power: [1, 0, 0] },
+  'balance-tank': {
+    overflow: [-1, 0, 0],
+    makeup: [-1, 0, 0],
+    supply: [1, 0, 0],
+  },
+  'sand-filter': { in: [-1, 0, 0], out: [1, 0, 0] },
+  treatment: { in: [-1, 0, 0], out: [1, 0, 0], power: [0, 1, 0] },
+  'heat-exchanger': {
+    'primary-in': [-1, 0, 0],
+    'primary-out': [-1, 0, 0],
+    'pool-in': [-1, 0, 0],
+    'pool-out': [-1, 0, 0],
+  },
+  'remote-gas-valve': {
+    in: [-1, 0, 0],
+    out: [1, 0, 0],
+    'actuator-power': [0, 1, 0],
+  },
+  'remote-water-valve': {
+    in: [-1, 0, 0],
+    out: [1, 0, 0],
+    'actuator-power': [0, 1, 0],
+  },
+  'remote-breaker': {
+    in: [-1, 0, 0],
+    out: [1, 0, 0],
+    'motor-power': [0, 1, 0],
+  },
+  mimic: { power: [1, 0, 0] },
+  'pool-mimic': { power: [1, 0, 0] },
+};
+
 export function demoLocalPortAnchor(kind: DemoKind, port: string): Vec3 {
   const point = anchors[kind]?.[port];
   if (!point) throw new Error(`${kind}.${port}: missing model port anchor`);
@@ -98,6 +156,57 @@ export function demoPortPositions(layout: PlantRoomLayout) {
   return positions;
 }
 
+export function demoPortEnd(
+  layout: PlantRoomLayout,
+  nodeId: string,
+  port: string,
+  at: Vec3,
+): PortEnd {
+  const index = demoVisualBindings.findIndex(
+    (binding) => binding.nodeId === nodeId,
+  );
+  const binding = demoVisualBindings[index];
+  const place = layout.places[index];
+  const normal = normals[binding?.kind]?.[port];
+  if (!place || !normal)
+    throw new Error(`${nodeId}.${port}: missing port direction`);
+  const c = Math.cos(place.yaw);
+  const s = Math.sin(place.yaw);
+  return {
+    at,
+    outward: [
+      normal[0] * c + normal[2] * s,
+      normal[1],
+      -normal[0] * s + normal[2] * c,
+    ],
+  };
+}
+
+const primaryEdges = new Set([
+  'primary-supply',
+  'primary-valve-to-pump',
+  'primary-pump-to-boiler',
+  'boiler-to-hx',
+  'hx-to-tank',
+]);
+export function demoPipeSpec(
+  edgeId: string,
+  medium: Medium,
+): {
+  kind: 'steel-screwed' | 'lagged-heating' | 'pvc-pressure' | 'flue';
+  od: number;
+  joint: PipeJoint;
+} {
+  if (medium === 'gas')
+    return { kind: 'steel-screwed', od: 0.0483, joint: 'thread' };
+  if (medium === 'flue') return { kind: 'flue', od: 0.25, joint: 'band' };
+  if (medium === 'power')
+    return { kind: 'steel-screwed', od: 0.0269, joint: 'thread' };
+  return primaryEdges.has(edgeId)
+    ? { kind: 'lagged-heating', od: 0.0483, joint: 'flange' }
+    : { kind: 'pvc-pressure', od: 0.075, joint: 'socket' };
+}
+
 /** Physical routes derived only from typed graph edges and their visual port twins. */
 export function demoServiceRoutes(layout: PlantRoomLayout): DemoRoute[] {
   const positions = demoPortPositions(layout);
@@ -117,30 +226,56 @@ export function demoServiceRoutes(layout: PlantRoomLayout): DemoRoute[] {
     const kind = medium as Medium;
     const start = positions.get(`${edge.sourceId}.${edge.sourcePort}`);
     if (!start) throw new Error(`${edge.id}: source has no visual port`);
+    const startPort = demoPortEnd(
+      layout,
+      edge.sourceId,
+      edge.sourcePort!,
+      start,
+    );
+    const { od, joint } = demoPipeSpec(edge.id, kind);
     if (kind === 'flue') {
       routes.push({
         edgeId: edge.id,
         medium: kind,
-        points: [start, [start[0], laneY.flue, start[2]]],
+        points: withPortLeads(
+          [start, [start[0], laneY.flue, start[2]]],
+          od,
+          joint,
+          { start: startPort },
+        ),
+        startPort,
       });
       continue;
     }
     const finish = positions.get(`${edge.targetId}.${edge.targetPort}`);
     if (!finish) throw new Error(`${edge.id}: target has no visual port`);
+    const endPort = demoPortEnd(
+      layout,
+      edge.targetId,
+      edge.targetPort!,
+      finish,
+    );
     const index = count[kind]++;
     const y = Math.min(layout.height - 0.35, laneY[kind] + (index % 6) * 0.09);
     const z = -layout.halfZ + 0.38 + Math.floor(index / 6) * 0.18;
     routes.push({
       edgeId: edge.id,
       medium: kind,
-      points: [
-        start,
-        [start[0], y, start[2]],
-        [start[0], y, z],
-        [finish[0], y, z],
-        [finish[0], y, finish[2]],
-        finish,
-      ],
+      startPort,
+      endPort,
+      points: withPortLeads(
+        [
+          start,
+          [start[0], y, start[2]],
+          [start[0], y, z],
+          [finish[0], y, z],
+          [finish[0], y, finish[2]],
+          finish,
+        ],
+        od,
+        joint,
+        { start: startPort, end: endPort },
+      ),
     });
   }
   return routes;

@@ -55,6 +55,14 @@ describe('dev19 pool plant graph', () => {
     expect(demo.state.poolPumpA).toBeGreaterThan(0);
   });
 
+  it('feeds the post-mounted water quality sign through typed control edges', () => {
+    const demo = createPortGraphDemo();
+    demo.step(1);
+    expect(demo.readMimic('sign-pool-temperature')).toBe(demo.state.poolC);
+    expect(demo.readMimic('sign-chlorine')).toBe(demo.state.poolChlorineMgL);
+    expect(demo.readMimic('sign-ph')).toBe(demo.state.poolPH);
+  });
+
   it('mains loss stops pumps, closes safety valves, and stops meters', () => {
     const demo = createPortGraphDemo();
     demo.step(2);
@@ -72,6 +80,28 @@ describe('dev19 pool plant graph', () => {
     demo.command('demo.mains', 'toggle');
     demo.step(1);
     expect(demo.state.poolPumpA).toBeGreaterThan(0);
+  });
+
+  it('lets each motorized device override its remote command locally, then release it', () => {
+    const demo = createPortGraphDemo();
+    for (const [id, signal] of [
+      ['demo.remoteGas', 'signal-remote-gas'],
+      ['demo.remoteWater', 'signal-remote-water'],
+      ['demo.remoteSuction', 'signal-suction-valve'],
+      ['demo.remoteReturn', 'signal-return-valve'],
+      ['demo.remoteMakeup', 'signal-makeup-valve'],
+      ['demo.remotePower', 'signal-remote-power'],
+    ] as const) {
+      demo.toggleLocalOverride(id);
+      demo.step(1);
+      expect(demo.state.remote[id].localOverride).toBe(false);
+      expect(demo.readMimic(signal)).toBe(false);
+      demo.toggleLocalOverride(id);
+      demo.step(1);
+      expect(demo.state.remote[id].localOverride).toBeNull();
+      expect(demo.readMimic(signal)).toBe(true);
+    }
+    expect(() => demo.toggleLocalOverride('demo.boiler')).toThrow();
   });
 
   it('keeps typed boiler control ports and local panel behavior', () => {
