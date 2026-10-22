@@ -468,3 +468,116 @@ export function pipeClashes(
     }
   return clashes;
 }
+
+// ---- Leaving a port ---------------------------------------------------------
+
+/** A run's end at a port: where the port is, and the way it faces, out of its machine. */
+export interface PortEnd {
+  at: Vec3;
+  outward: Vec3;
+}
+
+/**
+ * How far a run must go straight out of a port before it may bend: past
+ * the joint's fitting at the port, and at least one and a half diameters.
+ */
+export function portLead(od: number, joint: PipeJoint) {
+  return Math.max(
+    1.5 * od,
+    jointFitting(joint, od / 2, true).length + od,
+    0.05,
+  );
+}
+
+/**
+ * The run's points, with a straight lead out of each port it starts or
+ * ends at, along the port's own direction, so that it leaves the port
+ * square and bends only beyond the lead. A run's first or last point must
+ * be its port's. The bend after a lead is the route's to make.
+ */
+export function withPortLeads(
+  points: readonly Vec3[],
+  od: number,
+  joint: PipeJoint,
+  { start, end }: { start?: PortEnd; end?: PortEnd },
+): Vec3[] {
+  const lead = portLead(od, joint) + JOINT_BEND[joint] * od;
+  const out: Vec3[] = [...points];
+  const step = (p: PortEnd) => add(p.at, scale(unit(p.outward), lead));
+  /**
+   * From the lead's end back to the run's next point, squared off: one
+   * axis at a time, the port's own axis last, so the turn off the lead
+   * is a right angle and does not eat into it.
+   */
+  const squared = (p: PortEnd, next: Vec3): Vec3[] => {
+    const l = step(p);
+    const n = unit(p.outward);
+    const axis = [0, 1, 2].find((k) => Math.abs(n[k]) > 1 - 1e-9);
+    if (axis === undefined) return [l];
+    const others = [0, 1, 2].filter((k) => k !== axis);
+    const q1 = [...l] as [number, number, number];
+    q1[others[0]] = next[others[0]];
+    const q2 = [...q1] as [number, number, number];
+    q2[others[1]] = next[others[1]];
+    return [l, q1, q2];
+  };
+  const along = (from: Vec3, to: Vec3, dir: Vec3) =>
+    length(sub(to, from)) > 1e-9 &&
+    dot(unit(sub(to, from)), unit(dir)) > 1 - 1e-6;
+  if (start) {
+    if (length(sub(out[0], start.at)) > 1e-6)
+      throw new Error('A run with a start port must begin at it');
+    // Already leaving square, far enough: leave it.
+    if (
+      !(
+        out.length > 1 &&
+        along(out[0], out[1], start.outward) &&
+        length(sub(out[1], out[0])) >= lead - 1e-9
+      )
+    )
+      out.splice(1, 0, ...squared(start, out[1] ?? step(start)));
+  }
+  if (end) {
+    const n = out.length - 1;
+    if (length(sub(out[n], end.at)) > 1e-6)
+      throw new Error('A run with an end port must finish at it');
+    if (
+      !(
+        n > 0 &&
+        along(out[n], out[n - 1], end.outward) &&
+        length(sub(out[n - 1], out[n])) >= lead - 1e-9
+      )
+    )
+      out.splice(n, 0, ...squared(end, out[n - 1] ?? step(end)).reverse());
+  }
+  return cleanRoute(out);
+}
+
+/**
+ * Whether a run leaves each of its ports square: its first straight
+ * runs along the port's direction for at least the port's lead before
+ * any bend.
+ */
+export function leavesPortsSquare(
+  run: DrawnRun,
+  { start, end }: { start?: PortEnd; end?: PortEnd },
+): boolean {
+  const segments = drawnSegments(run);
+  if (!segments.length) return false;
+  const lead = portLead(run.od, run.joint);
+  const check = (s: RouteSegment | undefined, p: PortEnd, first: boolean) => {
+    if (!s || s.kind !== 'straight') return false;
+    const from = first ? s.from : s.to;
+    const to = first ? s.to : s.from;
+    return (
+      length(sub(from, p.at)) < 1e-6 &&
+      dot(unit(sub(to, from)), unit(p.outward)) >
+        Math.cos((5 * Math.PI) / 180) &&
+      s.length >= lead - 1e-9
+    );
+  };
+  return (
+    (!start || check(segments[0], start, true)) &&
+    (!end || check(segments[segments.length - 1], end, false))
+  );
+}

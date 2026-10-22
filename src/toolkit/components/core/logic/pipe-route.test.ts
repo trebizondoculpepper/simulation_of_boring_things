@@ -6,9 +6,11 @@ import {
   planRoute,
   routeLength,
   jointFitting,
+  leavesPortsSquare,
   pipeClashes,
+  withPortLeads,
 } from './pipe-route';
-import type { DrawnRun } from './pipe-route';
+import type { DrawnRun, PortEnd, Vec3 } from './pipe-route';
 import type { Bend } from './pipe-route';
 
 describe('pipe routes', () => {
@@ -162,5 +164,43 @@ describe('pipes clashing', () => {
   it('sizes a flange at about twice its pipe', () => {
     expect(jointFitting('flange', 0.05).radius).toBeCloseTo(0.095, 6);
     expect(jointFitting('socket', 0.05).radius).toBeCloseTo(0.06, 6);
+  });
+});
+
+describe('leaving a port square', () => {
+  // The owner's case: an inline valve along x, its ports facing out along
+  // x, and a pipe dropped onto each port from above.
+  const valveIn: PortEnd = { at: [-0.2, 1, 0], outward: [-1, 0, 0] };
+  const valveOut: PortEnd = { at: [0.2, 1, 0], outward: [1, 0, 0] };
+  const dropped = (port: PortEnd): Vec3[] => [[port.at[0], 3, 0], port.at];
+  const run = (points: Vec3[]): DrawnRun => ({
+    name: 'r',
+    points,
+    od: 0.08,
+    joint: 'flange',
+  });
+
+  it('finds a pipe that meets the port from the side', () => {
+    expect(leavesPortsSquare(run(dropped(valveOut)), { end: valveOut })).toBe(
+      false,
+    );
+  });
+
+  it('puts in a straight lead along the port, then bends', () => {
+    const fixed = withPortLeads(dropped(valveOut), 0.08, 'flange', {
+      end: valveOut,
+    });
+    expect(leavesPortsSquare(run(fixed), { end: valveOut })).toBe(true);
+    const fixedIn = withPortLeads([valveIn.at, [-1, 1, 2]], 0.08, 'flange', {
+      start: valveIn,
+    });
+    expect(leavesPortsSquare(run(fixedIn), { start: valveIn })).toBe(true);
+  });
+
+  it('leaves a run that already leaves square alone', () => {
+    const square: Vec3[] = [valveOut.at, [2, 1, 0], [2, 3, 0]];
+    expect(withPortLeads(square, 0.08, 'flange', { start: valveOut })).toEqual(
+      square,
+    );
   });
 });
