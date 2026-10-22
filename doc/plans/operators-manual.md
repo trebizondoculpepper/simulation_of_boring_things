@@ -79,7 +79,7 @@ Text that cannot be derived (the descriptions of what a room is for, the procedu
 
 ## Figures
 
-- **Schematics (Graphviz):** each system becomes a DOT graph from the model's blocks and connections, each node labelled with its tag and description and each edge with what it carries (water, gas, heat, power, chemical) in the colours the pipes use in the game. Graphviz renders them to PDF for LaTeX. Graphviz is not installed yet (see the open decisions).
+- **Schematics (Graphviz):** each system becomes a DOT graph from the model's blocks and connections, each node labelled with its tag and description and each edge with what it carries (water, gas, heat, power, chemical) in the colours the pipes use in the game. They are rendered by `@viz-js/viz` (Graphviz compiled to WebAssembly), a dev dependency the owner approved on 2026-10-22, pinned in `package-lock.json` so every machine and CI draw the same diagrams with nothing else to install. It writes SVG, converted to PDF with the plans.
 - **Plans:** the existing SVG plans (`plan-svg.ts`) and new per-room equipment plans drawn from `layoutRoom`, converted from SVG to PDF with `rsvg-convert` (librsvg), or drawn directly as TikZ by the generator.
 - **Photographs:** rendered from the game by a headless browser from a list of fixed camera positions (a shot list per room and per principal machine). Two problems from the work so far must be solved first: headless Chromium's virtual time draws very few frames, and textures load late. The fix is a photo mode in the game (a URL flag) that waits until the room and its textures have loaded, draws a set number of frames, and then signals that it is ready, so the capture is taken at the right moment rather than by a time budget. The world's state for the photos is fixed by a scenario (everything on and clear), so the pictures are the same each time.
 
@@ -88,7 +88,7 @@ Text that cannot be derived (the descriptions of what a room is for, the procedu
 The repository has no releases yet; this plan introduces them.
 
 - **A release** is a git tag, `vMAJOR.MINOR.PATCH`, on `main`.
-- **A new workflow,** `.github/workflows/release.yml`, runs on such a tag: it checks and builds the game as CI does, installs TeX Live (LuaLaTeX) and Graphviz, renders the photographs, builds the manual, and creates a GitHub Release with the PDF attached (and later the desktop builds from `doc/research/steam-and-desktop-release.md`).
+- **A new workflow,** `.github/workflows/release.yml`, runs on such a tag: it checks and builds the game as CI does, installs TeX Live (LuaLaTeX), renders the photographs, builds the manual, and creates a GitHub Release with the PDF attached (and later the desktop builds from `doc/research/steam-and-desktop-release.md`).
 - **The manual is also published with the game:** the release build copies the PDF into `dist/`, so the deployed site and any packaged build carry it, with a "Download the operator's manual" link on the start screen. Later it could also be found inside the game, on the shelf in the engineer's office.
 - **The manual's revision** is the release's version, shown in its document control table alongside the fiction's revision letter.
 
@@ -111,7 +111,6 @@ Building TeX Live and rendering photographs in CI is slow, so the manual is buil
 
 ## Open decisions
 
-- Whether to install Graphviz (Homebrew locally, apt in CI) or render DOT with a JavaScript package instead, which is a new dependency either way.
 - Whether to draw plans by converting SVG (needs librsvg) or as TikZ from the generator.
 - Whether the photographs are rendered in CI at release time or locally and committed.
 - The version scheme and when the first release is cut.
