@@ -118,7 +118,7 @@ Not a general path-finder yet. Routes are planned per room, all of the room's li
 
 - Pure tests beside the logic (`vite-plus/test`):
   - every functional line in a migrated room resolves with no problems;
-  - a long line is widened where a short one of the same capacity is not: a 100 A feed of 80 m gets a larger cable than one of 10 m, and its voltage drop stays within 5%;
+  - a long line is widened where a short one of the same capacity is not: a 100 A feed of 200 m gets a larger cable than one of 10 m (25 mm² carries 100 A and loses only 3 % over 80 m, so upsizing starts at about 133 m), and its voltage drop stays within 5%;
   - it leaves its ports square, clashes with nothing, and has its supports and marking;
   - an explicit pipe is drawn exactly as before.
 - Before every commit run `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build`; commit only when all pass, verifying in a scratch copy when others' unfinished files break the shared checkout.

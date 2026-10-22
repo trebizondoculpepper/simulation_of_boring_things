@@ -75,6 +75,7 @@ export const PIPE_KINDS: Record<PipeKindId, PipeKind> = {
     metalness: 0,
     sizes: [
       0.032, 0.04, 0.05, 0.063, 0.075, 0.09, 0.11, 0.16, 0.2, 0.25, 0.315,
+      0.355, 0.4,
     ],
   },
   'pvc-drain': {
