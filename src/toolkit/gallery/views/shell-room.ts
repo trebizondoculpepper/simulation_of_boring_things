@@ -3,7 +3,6 @@ import {
   CanvasTexture,
   Group,
   Mesh,
-  MeshBasicMaterial,
   MeshStandardMaterial,
   PlaneGeometry,
   PointLight,
@@ -371,7 +370,8 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
     const map = new CanvasTexture(canvas);
     map.colorSpace = SRGBColorSpace;
     kit.textures.push(map);
-    const material = new MeshBasicMaterial({ map });
+    // Printed: lit as any surface is, dark in the dark.
+    const material = new MeshStandardMaterial({ map, roughness: 0.85 });
     kit.materials.push(material);
     return new Mesh(new PlaneGeometry(cw, ch), material);
   }

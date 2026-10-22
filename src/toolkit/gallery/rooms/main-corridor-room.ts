@@ -50,6 +50,7 @@ import { doorwayStops, overlaps } from '../logic/doorway';
 import { doorReaders } from '../../components/architectural/logic/card-reader';
 import { enterDevRoom } from '../logic/dev-room-links';
 import type { RoomId } from '../logic/dev-room-links';
+import { bindRoomLights } from '../views/room-lights';
 
 /**
  * main_corridor: the ring of plant corridor (`logic/main-corridor.ts`),
@@ -303,12 +304,15 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   let leaving = false;
   // Whether each pair stood open last frame: null on arrival.
   const wasOpen: (boolean | null)[] = doors.map(() => null);
+  // Its lights, the corridors' zone (`room-lights.ts`).
+  const roomLights = bindRoomLights(scene, 'corridors');
   let last = 0;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);
+    roomLights.update(delta);
     parts.update(delta);
     // No pair closes on someone standing in its doorway.
     for (const w of ways) if (inWay(w)) w.part.holdOpen();

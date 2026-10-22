@@ -32,6 +32,8 @@ import {
 } from './plant/wet-hall';
 import type { WetHallState } from './plant/wet-hall';
 import { newBathers, stepBathers } from './bathers';
+import { newLighting } from './plant/lighting';
+import type { LightingState, LightingZoneId } from './plant/lighting';
 import { fullOff, fullOn, slowStartAt, slowStartBegin } from './plant/startup';
 import type { BathersState } from './bathers';
 import {
@@ -43,7 +45,7 @@ import {
 import type { Chemical, ChemicalStores } from './plant/chemicals';
 import type { PoolsState } from './plant/pools';
 
-export const WORLD_VERSION = 8;
+export const WORLD_VERSION = 9;
 
 export interface World {
   /** Seconds the world has run. */
@@ -65,6 +67,8 @@ export interface World {
   bathers: BathersState;
   /** When SLOW START began, world seconds; -1 when none is under way. */
   startup: number;
+  /** The lighting's switches: DB-LIGHTING and each zone's breaker (`lighting.ts`). */
+  lighting: LightingState;
 }
 
 export function newWorld(): World {
@@ -77,6 +81,7 @@ export function newWorld(): World {
     wetHall: newWetHall(),
     bathers: newBathers(),
     startup: -1,
+    lighting: newLighting(),
   };
 }
 
@@ -91,7 +96,9 @@ export type WorldAction =
   | { type: 'plant/booster-reset' }
   | { type: 'plant/full-off' }
   | { type: 'plant/full-on' }
-  | { type: 'plant/slow-start' };
+  | { type: 'plant/slow-start' }
+  | { type: 'lighting/supply'; on: boolean }
+  | { type: 'lighting/zone'; zone: LightingZoneId; on: boolean };
 
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
@@ -133,6 +140,20 @@ export function applyAction(world: World, action: WorldAction): World {
         ...world,
         chemicals: deliver(world.chemicals, action.chemical, action.litres),
       };
+    case 'lighting/supply':
+      return world.lighting.supply === action.on
+        ? world
+        : { ...world, lighting: { ...world.lighting, supply: action.on } };
+    case 'lighting/zone':
+      return world.lighting.zones[action.zone] === action.on
+        ? world
+        : {
+            ...world,
+            lighting: {
+              ...world.lighting,
+              zones: { ...world.lighting.zones, [action.zone]: action.on },
+            },
+          };
     case 'plant/full-off':
       return { ...world, plant: fullOff(world.plant), startup: -1 };
     case 'plant/full-on':
@@ -140,6 +161,7 @@ export function applyAction(world: World, action: WorldAction): World {
         ...world,
         plant: fullOn(world.plant),
         wetHall: resetBooster(world.wetHall),
+        lighting: newLighting(),
         startup: -1,
       };
     case 'plant/slow-start':

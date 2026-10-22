@@ -2,9 +2,9 @@ import {
   CanvasTexture,
   Group,
   Mesh,
-  MeshBasicMaterial,
   PlaneGeometry,
   SRGBColorSpace,
+  MeshStandardMaterial,
 } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { doorWarningStickers } from '../logic/door-warnings';
@@ -79,7 +79,8 @@ export function createDoorWarningStickers(
     const map = new CanvasTexture(canvas);
     map.colorSpace = SRGBColorSpace;
     kit.textures.push(map);
-    const material = new MeshBasicMaterial({ map });
+    // Printed: lit as any surface is, dark in the dark.
+    const material = new MeshStandardMaterial({ map, roughness: 0.7 });
     kit.materials.push(material);
     const sticker = new Mesh(new PlaneGeometry(width, height), material);
     sticker.name = `warning sticker: ${id}`;

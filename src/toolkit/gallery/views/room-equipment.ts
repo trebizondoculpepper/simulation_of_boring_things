@@ -34,6 +34,13 @@ import { EXHIBITS as OZONE } from '../rooms/plant/ozone';
 import { EXHIBITS as DOSING } from '../rooms/plant/dosing';
 import { EXHIBITS as BALANCE } from '../rooms/plant/balance';
 import { createMainSwitch } from '../../components/plant/views/main-switch';
+import { createLightingBoard } from '../../components/plant/views/lighting-board';
+import {
+  LIGHTING_BOARD_WAYS,
+  LIGHTING_ZONES,
+  LIGHTING_ZONE_IDS,
+  lightingBoardLive,
+} from '../../../game/plant/lighting';
 import { createScenarioSimulator } from './scenario-simulator';
 import type { Scenarios } from './scenario-simulator';
 import { switchRoomContainment } from '../logic/cable-containment';
@@ -146,6 +153,8 @@ function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
   if (kind === 'lv-switchboard') return createMainSwitchboard(kit, worldFeed());
   // The engineer's scenario simulator, switching the whole plant.
   if (kind === 'scenario-simulator') return worldScenarioSimulator(kit);
+  // The lighting board, its ways the world's lighting zones.
+  if (kind === 'lighting-board') return worldLightingBoard(kit);
   // The main incoming switch, the whole site's supply in the world.
   if (kind === 'main-switch') return createMainSwitch(kit, mainsFeed());
   if (kind === 'ahu-stack') {
@@ -199,11 +208,16 @@ function worldFeed(): SwitchboardFeed | undefined {
   const store = worldStore('dev');
   return {
     on(legend) {
+      // DB-LIGHTING feeds the lighting board, DB-L1 (`lighting.ts`).
+      if (wayName(legend) === 'DB-LIGHTING')
+        return store.world.value.lighting.supply;
       const rooms = SWITCHBOARD_FEEDS[wayName(legend)];
       if (!rooms) return undefined;
       return rooms.every((r) => store.world.value.plant.feeders[r]);
     },
     set(legend, on) {
+      if (wayName(legend) === 'DB-LIGHTING')
+        store.dispatch({ type: 'lighting/supply', on });
       for (const room of SWITCHBOARD_FEEDS[wayName(legend)] ?? [])
         store.dispatch({ type: 'plant/feeder', room, on });
     },
@@ -270,6 +284,30 @@ function worldScenarioSimulator(kit: PanelKit): LiveExhibit {
     update: (delta) => sim.update(delta),
     dispose: () => sim.dispose(),
   };
+}
+
+/**
+ * The lighting board, DB-L1 (`lighting-board.ts`): its first eighteen
+ * ways the world's lighting zones, by their ways (`lighting.ts`); the
+ * rest spare.
+ */
+function worldLightingBoard(kit: PanelKit): LiveExhibit {
+  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const ways = Array.from({ length: LIGHTING_BOARD_WAYS }, (_, i) => {
+    const zone = LIGHTING_ZONE_IDS.find((z) => LIGHTING_ZONES[z].way === i + 1);
+    if (!zone) return null;
+    return {
+      legend: LIGHTING_ZONES[zone].name,
+      on: () => store?.world.value.lighting.zones[zone] ?? true,
+      set: (on: boolean) =>
+        store?.dispatch({ type: 'lighting/zone', zone, on }),
+    };
+  });
+  // Its rockers lit while DB-L1 has its supply.
+  return createLightingBoard(kit, ways, () => {
+    const w = store?.world.value;
+    return w ? lightingBoardLive(w.plant, w.lighting) : true;
+  });
 }
 
 /** The world's whole-site supply (`plant.sources.power`), for the main switch. */

@@ -2,9 +2,9 @@ import {
   CanvasTexture,
   Group,
   Mesh,
-  MeshBasicMaterial,
   PlaneGeometry,
   SRGBColorSpace,
+  MeshStandardMaterial,
 } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { kitPaint } from '../../core/views/eighties-controls';
@@ -202,7 +202,8 @@ export function equipmentDoors(
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
   kit.textures.push(texture);
-  const material = new MeshBasicMaterial({ map: texture });
+  // Printed: lit as any surface is, dark in the dark.
+  const material = new MeshStandardMaterial({ map: texture, roughness: 0.7 });
   kit.materials.push(material);
   const sign = new Mesh(new PlaneGeometry(0.9, 0.18), material);
   sign.position.set(0, h + 2 * f + 0.25, 0.003);

@@ -47,6 +47,7 @@ describe('a save', () => {
       wetHall: newWorld().wetHall,
       bathers: newWorld().bathers,
       startup: -1,
+      lighting: newWorld().lighting,
     });
   });
 

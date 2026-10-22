@@ -13,7 +13,7 @@ import {
 } from './shell-rooms';
 import type { ShellRoomId, ShellWall } from './shell-rooms';
 import { BOOSTER } from '../../components/plant/logic/booster-set';
-import { MAIN_SWITCH } from './switch-room';
+import { LIGHTING_BOARD, MAIN_SWITCH } from './switch-room';
 
 /**
  * Where each room's machines stand: the plant sizing's inventory
@@ -850,6 +850,18 @@ export function roomEquipment(
             1.5,
           ),
           wall('rotary-isolators', 'Rotary isolators', 1.2, 0.2, 0.6, 1.4),
+          // The lighting board, DB-L1: a way for each lighting zone.
+          wall(
+            'lighting-board',
+            'Lighting distribution board DB-L1',
+            LIGHTING_BOARD.w,
+            LIGHTING_BOARD.d,
+            LIGHTING_BOARD.h,
+            1.5,
+            // Clear of the room's feeder isolator on the west wall and its
+            // title card on the north.
+            { walls: ['east'] },
+          ),
           wall(
             'generator-point',
             'Generator connection point',

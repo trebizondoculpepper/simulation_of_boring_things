@@ -112,11 +112,14 @@ export function createMicroLabel(
   );
   texture.needsUpdate = true;
   kit.textures.push(texture);
-  // Cap height is about 0.72 of the font size.
-  const material = createPs1Material(
-    { map: texture, transparent: !plate, alphaTest: plate ? 0 : 0.35 },
-    true,
-  );
+  // Cap height is about 0.72 of the font size. Printed, so lit as any
+  // surface is: unreadable in the dark, readable by a torch.
+  const material = createPs1Material({
+    map: texture,
+    transparent: !plate,
+    alphaTest: plate ? 0 : 0.35,
+    roughness: 0.85,
+  });
   kit.materials.push(material);
   const fit = Math.min(1, maxWidth / (w * metresPerPixel));
   const mesh = new Mesh(

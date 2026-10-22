@@ -2,9 +2,13 @@ import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import type { Object3D } from 'three';
 
-/** A sealed wall batten after the proportions of Thorn's Aquaforce Pro. */
+/**
+ * A sealed wall batten after the proportions of Thorn's Aquaforce Pro:
+ * its diffuser marked as a light fitting's, to go out with its zone
+ * (`room-lights.ts`).
+ */
 export function createWallBattenMaterials() {
-  return {
+  const materials = {
     housing: new MeshStandardMaterial({
       color: '#d8ddda',
       metalness: 0.08,
@@ -27,6 +31,8 @@ export function createWallBattenMaterials() {
       roughness: 0.4,
     }),
   };
+  materials.diffuser.userData.lightFitting = true;
+  return materials;
 }
 
 export type WallBattenMaterials = ReturnType<typeof createWallBattenMaterials>;

@@ -3,7 +3,6 @@ import {
   CanvasTexture,
   Group,
   Mesh,
-  MeshBasicMaterial,
   MeshStandardMaterial,
   PlaneGeometry,
   PointLight,
@@ -343,7 +342,11 @@ export function createPlantRoomShell(
     const texture = new CanvasTexture(canvas);
     texture.colorSpace = SRGBColorSpace;
     kit.textures.push(texture);
-    const material = new MeshBasicMaterial({ map: texture });
+    // Printed: lit as any surface is, dark in the dark.
+    const material = new MeshStandardMaterial({
+      map: texture,
+      roughness: 0.85,
+    });
     kit.materials.push(material);
     return new Mesh(new PlaneGeometry(w, hh), material);
   }

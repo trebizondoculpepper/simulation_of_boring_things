@@ -61,6 +61,8 @@ import {
   POOL_HALLS,
 } from '../logic/pool-halls';
 import type { PoolHallId } from '../logic/pool-halls';
+import { bindRoomLights } from '../views/room-lights';
+import { zoneOfRoom } from '../../../game/plant/lighting';
 
 /**
  * A version-one pool hall (pool_01 to pool_04), in its own scene. None has
@@ -89,8 +91,14 @@ export function startPoolHallRoom(
   // The sun through the skylights casts shadows.
   renderer.shadowMap.enabled = true;
   const camera = new PerspectiveCamera(68, 1, 0.05 * metre, 140 * metre);
-  scene.add(new AmbientLight('#f4f7f5', 0.25));
-  scene.add(new HemisphereLight('#e9f3f1', '#65716f', 0.6));
+  // The general fill: in a hall with skylights, partly the daylight's
+  // bounce, which stays when its lights are out (`room-lights.ts`).
+  const daylit = spec.skylights.length > 0 ? 0.35 : 0;
+  const fill = new AmbientLight('#f4f7f5', 0.25);
+  const sky = new HemisphereLight('#e9f3f1', '#65716f', 0.6);
+  fill.userData.daylightShare = daylit;
+  sky.userData.daylightShare = daylit;
+  scene.add(fill, sky);
   const rooms = createPoolHall(spec, metre, {
     underwater: Boolean(gallery),
     loopRoom: gallery ? 'pool_02_gallery' : id,
@@ -532,6 +540,12 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       joint('arriving', frameAt(arriving, false)),
     ),
   ];
+  // Its lights, following their lighting zones (`room-lights.ts`): the
+  // gallery's the corridors'.
+  const roomLights = bindRoomLights(
+    scene,
+    gallery ? 'corridors' : zoneOfRoom(id),
+  );
   let last = 0;
   let officeWasOpen = false;
   renderer.setAnimationLoop((time) => {
@@ -539,6 +553,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);
+    roomLights.update(delta);
     partAudio.listen(camera, metre);
     if (spaTub && 'object' in spaTub) spaTub.update?.(delta);
     if (spaPanel && 'object' in spaPanel) spaPanel.parts?.update(delta);

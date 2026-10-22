@@ -3,7 +3,6 @@ import {
   CanvasTexture,
   Group,
   Mesh,
-  MeshBasicMaterial,
   MeshStandardMaterial,
   PlaneGeometry,
   SRGBColorSpace,
@@ -57,9 +56,10 @@ export function createCorridorPosters(kit: PanelKit): Group {
     photo.colorSpace = SRGBColorSpace;
     photo.anisotropy = 4;
     kit.textures.push(photo);
-    const photoMaterial = new MeshBasicMaterial({
+    // Printed: lit as any surface is, dark in the dark.
+    const photoMaterial = new MeshStandardMaterial({
       map: photo,
-      toneMapped: false,
+      roughness: 0.6,
     });
     kit.materials.push(photoMaterial);
     const image = new Mesh(
@@ -72,11 +72,11 @@ export function createCorridorPosters(kit: PanelKit): Group {
     if (typeof document !== 'undefined') {
       const words = lettering(POSTER_COPY[poster][0], POSTER_COPY[poster][1]);
       kit.textures.push(words);
-      const ink = new MeshBasicMaterial({
+      const ink = new MeshStandardMaterial({
         map: words,
         transparent: true,
         depthWrite: false,
-        toneMapped: false,
+        roughness: 0.6,
       });
       kit.materials.push(ink);
       const overlay = new Mesh(

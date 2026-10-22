@@ -50,3 +50,6 @@ export const MAIN_SWITCH = {
   h: 2.3,
   top: 1.45 + 1.276 / 2,
 } as const;
+
+/** The lighting distribution board, DB-L1, metres: wall-mounted. */
+export const LIGHTING_BOARD = { w: 0.72, h: 1.0, d: 0.14 } as const;

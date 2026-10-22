@@ -20,6 +20,13 @@ import {
 } from './toolkit/gallery/logic/door-joins';
 import { firstPersonOn } from './toolkit/controls/input/first-person';
 import { rendererOn } from './toolkit/components/core/parts/render-style';
+import { worldStore } from './toolkit/save/world-store';
+
+// A cold start (`?scenario=cold`): the whole plant off as the game starts,
+// FULL OFF, so every room is dark but for daylight, and the torch (F) the
+// only light.
+if (new URLSearchParams(location.search).get('scenario') === 'cold')
+  worldStore('dev').dispatch({ type: 'plant/full-off' });
 
 const canvas = document.querySelector<HTMLCanvasElement>('#scene');
 if (!canvas) throw new Error('Scene canvas is missing.');

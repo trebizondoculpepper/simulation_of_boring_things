@@ -95,6 +95,7 @@ import type {
   RectBasin,
   RoundBasin,
 } from '../logic/pool-halls';
+import { zoneOfRoom } from '../../../game/plant/lighting';
 
 /**
  * A version-one pool hall (`logic/pool-halls.ts`): a tiled hall, coved at
@@ -1089,6 +1090,8 @@ export function createPoolHall(
   const toward = new Vector3(SUN.x, SUN.y, SUN.z);
   const reach = Math.hypot(s.w, s.d) * 0.6;
   const sun = new DirectionalLight('#fff3dc', 5.5);
+  // Daylight: never switched with the lights (`room-lights.ts`).
+  sun.userData.daylight = true;
   sun.position.copy(toward).multiplyScalar(reach * 1.5);
   sun.target.position.set(0, 0, 0);
   sun.castShadow = true;
@@ -1283,6 +1286,10 @@ export function createPoolHall(
     emissive: '#ffe9c8',
     emissiveIntensity: 1.6,
   });
+  // The hall's own lights, on its own lighting zone (`room-lights.ts`).
+  const hallZone = zoneOfRoom(s.id);
+  glow.userData.lightFitting = true;
+  glow.userData.lightZone = hallZone;
   const body = new MeshStandardMaterial({
     color: '#3c4246',
     metalness: 0.5,
@@ -1346,6 +1353,7 @@ export function createPoolHall(
         2,
       );
       light.position.set(x, hang - 0.3, z);
+      light.userData.lightZone = hallZone;
       // Not seen from under the water, where, casting no shadows, they
       // would shine through the deck into the gallery.
       if (!underwater) group.add(light);
@@ -1422,6 +1430,9 @@ export function createPoolHall(
         emissive: '#fff1dc',
         emissiveIntensity: 1.5,
       });
+      // The gallery is a corridor: its lights the corridors' zone.
+      downlight.userData.lightFitting = true;
+      downlight.userData.lightZone = 'corridors';
       const rim = new MeshStandardMaterial({
         color: '#c9cdcf',
         metalness: 0.8,
@@ -1454,6 +1465,7 @@ export function createPoolHall(
           2,
         );
         lamp.position.set(x, gallery.floor + 2.3, gallery.z);
+        lamp.userData.lightZone = 'corridors';
         group.add(lamp);
       }
     }
@@ -1468,6 +1480,9 @@ export function createPoolHall(
       emissive: '#ffefd6',
       emissiveIntensity: 1.4,
     });
+    // The loop's corridors: the corridors' zone.
+    panel.userData.lightFitting = true;
+    panel.userData.lightZone = 'corridors';
     for (const copy of [leaving, arriving]) {
       group.add(createCorridorRun(copy.placed, dry));
       for (const p of copy.placed) {
@@ -1487,6 +1502,7 @@ export function createPoolHall(
           2,
         );
         light.position.set(x, y + 2.3, z);
+        light.userData.lightZone = 'corridors';
         group.add(light);
       }
     }
@@ -1526,7 +1542,12 @@ function canvasCard(
   texture.colorSpace = SRGBColorSpace;
   return new Mesh(
     new PlaneGeometry(w, h),
-    new MeshBasicMaterial({ map: texture, transparent: true }),
+    // Printed: lit as any surface is, dark in the dark.
+    new MeshStandardMaterial({
+      map: texture,
+      transparent: true,
+      roughness: 0.85,
+    }),
   );
 }
 

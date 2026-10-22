@@ -2,9 +2,9 @@ import {
   CanvasTexture,
   Group,
   Mesh,
-  MeshBasicMaterial,
   PlaneGeometry,
   SRGBColorSpace,
+  MeshStandardMaterial,
 } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { kitPaint } from '../../core/views/eighties-controls';
@@ -192,7 +192,11 @@ export function plantRoomDoor(
     texture.colorSpace = SRGBColorSpace;
     kit.textures.push(texture);
     // Clear where it is not drawn: a round sign is round.
-    const material = new MeshBasicMaterial({ map: texture, transparent: true });
+    const material = new MeshStandardMaterial({
+      map: texture,
+      transparent: true,
+      roughness: 0.7,
+    });
     kit.materials.push(material);
     return new Mesh(new PlaneGeometry(sw, sh), material);
   }

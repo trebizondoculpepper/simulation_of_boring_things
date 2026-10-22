@@ -98,6 +98,8 @@ import { cabinetServices } from '../views/cabinet-services';
 import { CEILING_ZONE } from '../logic/room-pipes';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
 import type { MimicSpec } from '../../components/industrial-control/logic/mimic';
+import { bindRoomLights } from '../views/room-lights';
+import { zoneOfRoom } from '../../../game/plant/lighting';
 
 /**
  * plant_room_small, _medium and _large: a per-attraction plant room's
@@ -407,12 +409,18 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         peek: (on) => door.showLeaf(!on),
       })
     : () => {};
+  // Its lights, following its lighting zone (`room-lights.ts`).
+  const roomLights = bindRoomLights(
+    scene,
+    hall ? zoneOfRoom(`plant_${hall}`) : undefined,
+  );
   let last = 0;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);
+    roomLights.update(delta);
     partAudio.listen(camera, metre);
     parts.update(delta);
     // A door never closes on someone standing in its doorway.

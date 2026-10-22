@@ -5,10 +5,10 @@ import {
   CylinderGeometry,
   Group,
   Mesh,
-  MeshBasicMaterial,
   PlaneGeometry,
   TubeGeometry,
   Vector3,
+  MeshStandardMaterial,
 } from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -103,7 +103,10 @@ export function createDoorHardware(
       plate: '#267d42',
     });
     kit.textures.push(art.texture);
-    const material = new MeshBasicMaterial({ map: art.texture });
+    const material = new MeshStandardMaterial({
+      map: art.texture,
+      roughness: 0.7,
+    });
     kit.materials.push(material);
     const label = new Mesh(new PlaneGeometry(0.5, 0.035), material);
     label.raycast = () => {};

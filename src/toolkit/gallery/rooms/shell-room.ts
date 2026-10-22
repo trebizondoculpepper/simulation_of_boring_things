@@ -60,6 +60,8 @@ import { createShellRoom, createWetHall } from '../views/shell-room';
 import { createRoomEquipment } from '../views/room-equipment';
 import type { EquipmentDoorsPart } from '../../components/architectural/parts/equipment-doors';
 import type { Group } from 'three';
+import { bindRoomLights } from '../views/room-lights';
+import { zoneOfRoom } from '../../../game/plant/lighting';
 
 const SEEDS: Record<ShellRoomId, number> = {
   boiler_house: 61,
@@ -382,12 +384,15 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   // Whether any door stood open last frame: null on arrival.
   let wasOpen: boolean | null = null;
   const readers = doors.flatMap((d) => d.part.readers);
+  // Its lights, following its lighting zone (`room-lights.ts`).
+  const roomLights = bindRoomLights(scene, zoneOfRoom(cfg.self));
   let last = 0;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);
+    roomLights.update(delta);
     partAudio.listen(camera, metre);
     parts.update(delta);
     machines.update(delta);
