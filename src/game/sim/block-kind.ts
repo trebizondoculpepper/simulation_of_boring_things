@@ -74,8 +74,20 @@ export interface CompositeShape {
   outputs: Readonly<Record<string, string>>;
 }
 
+/** The identity and operating instructions for a named child of a block kind. */
+export interface PartManifest {
+  code: string;
+  class: 'plant' | 'non-plant';
+  name: string;
+  purpose: string;
+  /** Required for a valve or switch; the block's initial state must agree. */
+  normal?: 'open' | 'closed' | 'on' | 'off';
+}
+
 export interface BlockKind<P extends object = object, S = unknown> {
   kind: string;
+  /** Children are declared once per kind, then identified by their parent path. */
+  parts?: readonly PartManifest[];
   /** What it is made of, if it is a block of blocks. */
   composite?: CompositeShape;
   inputs: readonly PortSpec[];

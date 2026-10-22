@@ -7,6 +7,7 @@ import {
   serialiseWorld,
 } from './save';
 import { applyAction, newWorld } from './world';
+import { FOOTBATH, partOpen } from './plant/identification';
 
 describe('a save', () => {
   it('brings back the world it saved', () => {
@@ -50,7 +51,34 @@ describe('a save', () => {
       lighting: newWorld().lighting,
       ambient: newWorld().ambient,
       gas: newWorld().gas,
+      identifiedPlant: newWorld().identifiedPlant,
     });
+  });
+
+  it('migrates an old footbath drain and make-up lineup to named valves', () => {
+    const { identifiedPlant: _oldTree, ...oldWorld } = newWorld();
+    const old = JSON.stringify({
+      format: 'pool-plant-save',
+      version: 13,
+      savedAt: 1,
+      world: {
+        ...oldWorld,
+        pools: {
+          ...oldWorld.pools,
+          pool_04: {
+            ...oldWorld.pools.pool_04,
+            drainDown: true,
+            makeUp: false,
+          },
+        },
+      },
+    });
+    const loaded = deserialiseWorld(old);
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    expect(partOpen(loaded.world.identifiedPlant, FOOTBATH.drain)).toBe(true);
+    expect(partOpen(loaded.world.identifiedPlant, FOOTBATH.return)).toBe(false);
+    expect(partOpen(loaded.world.identifiedPlant, FOOTBATH.makeUp)).toBe(false);
   });
 
   it('keeps a field only where its type matches', () => {

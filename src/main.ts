@@ -36,6 +36,7 @@ import { GEAR_ICON, createPauseMenu } from './toolkit/settings/pause-menu';
 import { settings } from './toolkit/settings/settings-store';
 import { effect } from '@preact/signals-core';
 import { partAudio } from './toolkit/components/core/audio/part-audio';
+import { renderPlantManual } from './toolkit/manual/plant-manual';
 
 // Which build this is, until the title screen shows it.
 console.info(`Pool Plant ${versionLabel()}`);
@@ -85,8 +86,11 @@ for (const scenario of scenarios) {
 const canvas = document.querySelector<HTMLCanvasElement>('#scene');
 if (!canvas) throw new Error('Scene canvas is missing.');
 const directory = document.querySelector<HTMLElement>('#room-index');
+const directoryShell =
+  directory?.querySelector<HTMLElement>('.directory-shell');
 const app = document.querySelector<HTMLElement>('#app');
-if (!directory || !app) throw new Error('Room page is incomplete.');
+if (!directory || !directoryShell || !app)
+  throw new Error('Room page is incomplete.');
 
 const showError = (error: unknown) => {
   const message = document.querySelector<HTMLParagraphElement>('#error');
@@ -537,13 +541,27 @@ const openRoom = async () => {
     positionOverlay.hidden = true;
     // The developers' panel, the room list, at `?dev` (a tool, not part
     // of the game); otherwise the title screen.
-    if (params.has('dev')) {
+    if (params.has('manual')) {
       stopTitleBackdrop();
       titleScreen.hide();
+      directoryShell.hidden = true;
+      directory.querySelector('.plant-manual')?.remove();
+      directory.append(
+        renderPlantManual(worldStore('dev').world.value.identifiedPlant),
+      );
+      directory.hidden = false;
+      document.title = 'The Pool — Plant manual';
+    } else if (params.has('dev')) {
+      stopTitleBackdrop();
+      titleScreen.hide();
+      directoryShell.hidden = false;
+      directory.querySelector('.plant-manual')?.remove();
       directory.hidden = false;
       document.title = 'The Pool — Dev panel';
     } else {
       directory.hidden = true;
+      directoryShell.hidden = false;
+      directory.querySelector('.plant-manual')?.remove();
       titleScreen.show();
       void startTitleBackdrop().catch(showError);
     }

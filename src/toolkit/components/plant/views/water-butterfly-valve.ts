@@ -9,23 +9,25 @@ export function createWaterButterflyValve(
   dn: DN,
   axis: 'x' | 'y' | 'z',
   name: string,
+  binding?: { open(): boolean; set(open: boolean): void },
 ) {
   const a = beginPart(kit, name);
   const lever = plantTools(kit).butterflyValve(a.object, dn, [0, 0, 0], axis);
   let open = true;
   let angle = 0;
   const toggle = () => {
-    open = !open;
+    if (binding) binding.set(!binding.open());
+    else open = !open;
   };
   lever.traverse((piece) => {
     if (piece !== lever) a.uses.set(piece, toggle);
   });
   a.updates.push((delta) => {
-    const target = open ? 0 : Math.PI / 2;
+    const target = (binding?.open() ?? open) ? 0 : Math.PI / 2;
     angle += (target - angle) * Math.min(1, delta * 8);
     lever.rotation.y = (axis === 'y' ? -Math.PI / 2 : 0) + angle;
   });
   return Object.defineProperty(a.part(), 'open', {
-    get: () => open,
+    get: () => binding?.open() ?? open,
   }) as ReturnType<typeof a.part> & { readonly open: boolean };
 }

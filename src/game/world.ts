@@ -56,8 +56,16 @@ import {
   stepGasZones,
 } from './plant/gas';
 import type { GasZoneAction, GasZoneId, GasZones } from './plant/gas';
+import type { Block } from './sim/blocks';
+import {
+  FOOTBATH,
+  footbathLineup,
+  newIdentifiedPlant,
+  setPartOn,
+  setPartOpen,
+} from './plant/identification';
 
-export const WORLD_VERSION = 13;
+export const WORLD_VERSION = 14;
 
 export interface World {
   /** Seconds the world has run. */
@@ -85,6 +93,8 @@ export interface World {
   ambient: number;
   /** The toxic gas detection's rooms: their air, detectors and leaks (`gas.ts`). */
   gas: GasZones;
+  /** Named engineering blocks. Controls and the inventory resolve IDs here. */
+  identifiedPlant: Block;
 }
 
 export function newWorld(): World {
@@ -100,6 +110,7 @@ export function newWorld(): World {
     lighting: newLighting(),
     ambient: AMBIENT,
     gas: newGasZones(),
+    identifiedPlant: newIdentifiedPlant(),
   };
 }
 
@@ -120,6 +131,8 @@ export type WorldAction =
   | { type: 'lighting/zone'; zone: LightingZoneId; on: boolean }
   | { type: 'gas/leak'; zone: GasZoneId; gramsPerHour: number }
   | { type: 'gas/act'; zone: GasZoneId; act: GasZoneAction }
+  | { type: 'plant/valve'; id: string; open: boolean }
+  | { type: 'plant/switch'; id: string; on: boolean }
   /** A pool's drain-down valves opened (to the sewer) or shut. */
   | { type: 'pool/drain-down'; pool: PoolId; open: boolean }
   /** A pool's make-up valve opened or shut. */
@@ -167,8 +180,39 @@ export function applyAction(world: World, action: WorldAction): World {
         ...world,
         chemicals: deliver(world.chemicals, action.chemical, action.litres),
       };
+    case 'plant/valve': {
+      const identifiedPlant = setPartOpen(
+        world.identifiedPlant,
+        action.id,
+        action.open,
+      );
+      return { ...world, identifiedPlant };
+    }
+    case 'plant/switch':
+      return {
+        ...world,
+        identifiedPlant: setPartOn(world.identifiedPlant, action.id, action.on),
+      };
     case 'pool/drain-down':
     case 'pool/make-up': {
+      if (action.pool === 'pool_04') {
+        // Older scenarios and saves still use these actions. Their footbath
+        // route now lives in the named valves, never in the pool flags.
+        const id =
+          action.type === 'pool/make-up' ? FOOTBATH.makeUp : FOOTBATH.drain;
+        let identifiedPlant = setPartOpen(
+          world.identifiedPlant,
+          id,
+          action.open,
+        );
+        if (action.type === 'pool/drain-down')
+          identifiedPlant = setPartOpen(
+            identifiedPlant,
+            FOOTBATH.return,
+            !action.open,
+          );
+        return { ...world, identifiedPlant };
+      }
       const key = action.type === 'pool/drain-down' ? 'drainDown' : 'makeUp';
       return world.pools[action.pool][key] === action.open
         ? world
@@ -277,6 +321,7 @@ export function stepWorld(world: World, delta: number): World {
       WET_HALL_PLANT.sewerConsent -
         (world.wetHall.discharging ? WET_HALL_PLANT.dischargeRate : 0),
     ),
+    footbathLineup(world.identifiedPlant),
   );
   return {
     ...world,

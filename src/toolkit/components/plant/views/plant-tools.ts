@@ -277,13 +277,14 @@ export function plantTools(kit: PanelKit) {
     const out: Point = axis === 'y' ? [0, 0, 1] : [0, 1, 0];
     const neckBase = s.flange * 0.42;
     const neckLength = Math.max(0.08, s.od * 0.6);
+    const handle = paint('#c42b23', 0.5);
     // The stem runs on 1 cm up into the lever's boss, so its end is inside
     // the lever, not in the plane of its underside (where the two faces
     // would fight for the same pixels).
     const stemEnd = neckBase + neckLength + 0.01;
     rod(
       group,
-      body,
+      handle,
       [out[0] * neckBase, out[1] * neckBase, out[2] * neckBase],
       [out[0] * stemEnd, out[1] * stemEnd, out[2] * stemEnd],
       0.022,
@@ -293,7 +294,6 @@ export function plantTools(kit: PanelKit) {
     const tip = neckBase + neckLength;
     lever.position.set(out[0] * tip, out[1] * tip, out[2] * tip);
     group.add(lever);
-    const handle = paint('#c42b23', 0.5);
     // The lever's head, round the stem's end: a boss wider than the stem,
     // reaching a little past the lever either way, so no face of it lies
     // in a face of the lever.

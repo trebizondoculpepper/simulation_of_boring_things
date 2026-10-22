@@ -723,3 +723,31 @@ canvas {
     #07141add 100%
   );
 }
+.plant-manual table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.88rem;
+}
+.plant-manual th,
+.plant-manual td {
+  border-bottom: 1px solid #5b6264;
+  padding: 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+.plant-manual th {
+  white-space: nowrap;
+}
+.plant-manual-index {
+  columns: 2;
+  line-height: 1.8;
+}
+@media (max-width: 700px) {
+  .plant-manual {
+    overflow-x: auto;
+  }
+  .plant-manual-index {
+    columns: 1;
+  }
+}

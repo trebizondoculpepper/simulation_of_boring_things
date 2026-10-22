@@ -22,6 +22,7 @@ export type Vec3 = readonly [number, number, number];
 
 export type Service =
   | 'pool water'
+  | 'make-up'
   | 'air'
   | 'heating flow'
   | 'heating return'
@@ -234,6 +235,8 @@ export interface CabinetRun {
   points: Vec3[];
   /** Where it passes through the room's walls. */
   through: WallCrossing[];
+  /** Named operating valve mounted on this pipe in the room. */
+  valve?: { id: string; at: Vec3; axis: 'x' | 'z' };
 }
 
 /** The room's isolator: on the wall at the cabinet's left, a working rotary switch-disconnector. */
@@ -409,6 +412,53 @@ export function cabinetPipes(room: string): CabinetRun[] {
   // The drain, down into its tundish (its rim at 0.12 m, an air gap over it).
   for (const { port, at, off } of ports.filter((p) => p.port.to === 'drain'))
     add(port, [at, off, [off[0], 0.17, off[2]]]);
+  if (room === 'plant_pool_04') {
+    const returnRun = runs.find((r) => r.name === 'Return to the spa');
+    const drainRun = runs.find((r) => r.name === 'Drain to waste');
+    for (const [run, id] of [
+      [returnRun, 'PL4-PW1-RV1'],
+      [drainRun, 'PL4-PW1-DV1'],
+    ] as const) {
+      if (!run) continue;
+      const a = run.points[0],
+        b = run.points[1];
+      run.valve = {
+        id,
+        at: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2],
+        axis: Math.abs(a[0] - b[0]) > Math.abs(a[2] - b[2]) ? 'x' : 'z',
+      };
+    }
+    // Fresh water enters along the east wall and continues to the pool.
+    // Its float valve is accessible at waist height near the room centre.
+    const x = s.layout.box.w / 2 - 0.35;
+    runs.push({
+      name: 'Footbath make-up main',
+      kind: 'pvc-pressure',
+      od: 0.05,
+      service: 'make-up',
+      label: 'FOOTBATH MAKE-UP',
+      points: [
+        [x, 1.25, h + WALL],
+        [x, 1.25, 0],
+        [x, 1.25, -h - WALL],
+      ],
+      through: [
+        {
+          at: [x, 1.25, h + WALL / 2],
+          normal: [0, 0, -1],
+          thickness: WALL,
+          kind: 'fire-collar',
+        },
+        {
+          at: [x, 1.25, -h - WALL / 2],
+          normal: [0, 0, 1],
+          thickness: WALL,
+          kind: 'fire-collar',
+        },
+      ],
+      valve: { id: 'PL4-MU1-LCV1', at: [x, 1.25, 0], axis: 'z' },
+    });
+  }
   // The supply, along the wall from the south and down into the isolator;
   // the isolator's feed over the cabinet's roof and down into its gland.
   const iso = cabinetIsolator(room)!;

@@ -1,5 +1,10 @@
 import { WORLD_VERSION, newWorld } from './world';
 import type { World } from './world';
+import {
+  FOOTBATH,
+  newIdentifiedPlant,
+  setPartOpen,
+} from './plant/identification';
 
 /**
  * The save format: the world in an envelope saying what it is, which
@@ -54,6 +59,22 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   11: (world) => world,
   // 12 → 13: each pool's drain-down (shut) and make-up (open) valves (`fillDefaults` adds them).
   12: (world) => world,
+  // 13 → 14: move the footbath's two legacy operating flags to its named valves.
+  13: (world) => {
+    if (!isRecord(world)) return world;
+    const pools = isRecord(world.pools) ? world.pools : {};
+    const footbath = isRecord(pools.pool_04) ? pools.pool_04 : {};
+    const drain = footbath.drainDown === true;
+    let identifiedPlant = newIdentifiedPlant();
+    identifiedPlant = setPartOpen(identifiedPlant, FOOTBATH.drain, drain);
+    identifiedPlant = setPartOpen(identifiedPlant, FOOTBATH.return, !drain);
+    identifiedPlant = setPartOpen(
+      identifiedPlant,
+      FOOTBATH.makeUp,
+      footbath.makeUp !== false,
+    );
+    return { ...world, identifiedPlant };
+  },
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

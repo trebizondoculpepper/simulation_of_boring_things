@@ -265,6 +265,12 @@ export function stepPoolsWater(
    * site's consent, less the backwash's discharge; shared among them.
    */
   sewer = 0,
+  footbath?: {
+    makeUpOpen: boolean;
+    draining: boolean;
+    returning: boolean;
+    powered: boolean;
+  },
 ): {
   pools: PoolsState;
   drawn: number;
@@ -279,16 +285,27 @@ export function stepPoolsWater(
   let drained = 0;
   // The pools draining down now, sharing what the sewer will take.
   const draining = POOL_IDS.filter(
-    (id) => pools[id].drainDown && circulating(pools[id], plant, id),
+    (id) =>
+      (id === 'pool_04' && footbath
+        ? footbath.draining
+        : pools[id].drainDown) &&
+      circulating(pools[id], plant, id) &&
+      (id !== 'pool_04' || !footbath || footbath.powered),
   );
   const drainRate = draining.length ? sewer / draining.length : 0;
   const next = {} as PoolsState;
   for (const id of POOL_IDS) {
     const room = `plant_${id}` as ServiceRoom;
     const old = pools[id];
+    const drainDown =
+      id === 'pool_04' && footbath ? footbath.draining : old.drainDown;
+    const makeUpOpen =
+      id === 'pool_04' && footbath ? footbath.makeUpOpen : old.makeUp;
     // The pumps run if the room has power, and one of them, or
     // the pool's cabinet, is not isolated; and not tripped.
-    const circulation = circulating(old, plant, id);
+    const circulation =
+      circulating(old, plant, id) &&
+      (id !== 'pool_04' || !footbath || footbath.powered);
     // UV and ozone, where they are isolated, break down the combined
     // chlorine (the chloramines) as the water passes.
     const uv =
@@ -303,7 +320,11 @@ export function stepPoolsWater(
     // Its treatment's flow: none while it is drained down to the sewer.
     const flow = approach(
       old.flow,
-      circulation && !old.drainDown ? POOL_TARGET[id].flow : 0,
+      circulation &&
+        !drainDown &&
+        (id !== 'pool_04' || !footbath || footbath.returning)
+        ? POOL_TARGET[id].flow
+        : 0,
       0.08,
       dt,
     );
@@ -316,11 +337,16 @@ export function stepPoolsWater(
         time: time / 3600,
         level: old.level,
         tankVolume: old.balance * params.tank,
-        pumps: circulation,
+        pumps:
+          circulation &&
+          (id !== 'pool_04' ||
+            !footbath ||
+            footbath.draining ||
+            footbath.returning),
         tripped: old.tripped,
         // Its make-up valve open, and the wet hall giving water.
-        makeUpOpen: share > 0 && old.makeUp,
-        drainDown: old.drainDown,
+        makeUpOpen: share > 0 && makeUpOpen,
+        drainDown,
         drainRate,
         drained: 0,
         spilt: 0,
@@ -403,8 +429,8 @@ export function stepPoolsWater(
       redox: clamp(620 + freeChlorine * 72 - (ph - 7.4) * 45, 0, 999),
       flow,
       tripped,
-      drainDown: old.drainDown,
-      makeUp: old.makeUp,
+      drainDown,
+      makeUp: makeUpOpen,
     };
   }
   return { pools: next, drawn, backwashed, drained };

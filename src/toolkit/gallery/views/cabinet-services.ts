@@ -7,6 +7,7 @@ import {
 } from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
+import { createMicroLabel } from '../../components/core/views/eighties-controls';
 import { createPipe, PIPE_KINDS } from '../../components/core/views/pipe-kinds';
 import { markPipe } from '../../components/plant/views/pipe-markers';
 import { supportPipe } from '../../components/plant/views/pipe-supports';
@@ -14,6 +15,12 @@ import type { PipeService } from '../../components/plant/views/pipe-markers';
 import { worldStore } from '../../save/world-store';
 import type { IsolatorName } from '../../../game/plant/services';
 import { createPowerIsolator } from '../../components/industrial-control/views/panel-switchgear';
+import { createWaterButterflyValve } from '../../components/plant/views/water-butterfly-valve';
+import {
+  partOpen,
+  identifiedPart,
+  newIdentifiedPlant,
+} from '../../../game/plant/identification';
 import {
   cabinetGully,
   cabinetIsolator,
@@ -24,6 +31,7 @@ import type { Service } from '../logic/cabinet-pipes';
 /** Each run's service, as its markings name it. */
 const MARKED: Record<Service, PipeService> = {
   'pool water': 'pool water',
+  'make-up': 'pool water',
   air: 'air',
   'heating flow': 'heating flow',
   'heating return': 'heating return',
@@ -50,6 +58,9 @@ export function cabinetServices(
   if (!runs.length) return null;
   const group = new Group();
   group.name = 'cabinet services';
+  const uses = new Map<Object3D, () => void>();
+  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const valveParts: ReturnType<typeof createWaterButterflyValve>[] = [];
   const lift = <T extends readonly [number, number, number]>([x, y, z]: T) =>
     [x, floorY + y, z] as const;
   for (const run of runs) {
@@ -81,6 +92,62 @@ export function cabinetServices(
           floorY,
         }),
       );
+    if (run.valve) {
+      const { id, at, axis } = run.valve;
+      const description = identifiedPart(
+        store?.world.value.identifiedPlant ??
+          // During server-side preview there is no browser store.
+          newIdentifiedPlant(),
+        id,
+      );
+      const valve = createWaterButterflyValve(
+        kit,
+        50,
+        axis === 'x' ? 'z' : axis,
+        `${id} · ${description?.name ?? 'Valve'}`,
+        {
+          open: () =>
+            store ? partOpen(store.world.value.identifiedPlant, id) : true,
+          set: (open) => store?.dispatch({ type: 'plant/valve', id, open }),
+        },
+      );
+      valve.object.position.set(...lift(at));
+      if (axis === 'x') valve.object.rotation.y = Math.PI / 2;
+      group.add(valve.object);
+      valveParts.push(valve);
+      for (const [piece, use] of valve.uses) uses.set(piece, () => use());
+      const legend = createMicroLabel(
+        kit,
+        `${id}\n${description?.name ?? 'VALVE'}`,
+        {
+          height: 0.018,
+          ink: '#19242a',
+          plate: '#f0ede3',
+        },
+      );
+      // Mount the plate beyond the lever's swing, on the aisle side of
+      // the pipe. On a high pipe the same plate sits below the valve.
+      if (at[1] > 2) {
+        legend.position.set(at[0], floorY + at[1] - 0.28, at[2]);
+      } else if (axis === 'z') {
+        const inward = at[0] >= 0 ? -1 : 1;
+        legend.position.set(
+          at[0] + inward * 0.34,
+          floorY + at[1] + 0.12,
+          at[2],
+        );
+        legend.rotation.y = (inward * Math.PI) / 2;
+      } else {
+        const inward = at[2] >= 0 ? -1 : 1;
+        legend.position.set(
+          at[0],
+          floorY + at[1] + 0.12,
+          at[2] + inward * 0.34,
+        );
+        legend.rotation.y = inward < 0 ? Math.PI : 0;
+      }
+      group.add(legend);
+    }
   }
   // The drain's floor gully, its grating flush with the floor, and the
   // tundish on it that the drain discharges into across an air gap.
@@ -110,8 +177,6 @@ export function cabinetServices(
   }
   // The isolator, its handle the switch.
   const place = cabinetIsolator(room);
-  const uses = new Map<Object3D, () => void>();
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
   const name: IsolatorName =
     room === 'plant_pool_03'
       ? 'Jacuzzi cabinet isolator'
@@ -144,6 +209,7 @@ export function cabinetServices(
       const on = store?.world.value.plant.isolators[name];
       if (isolator && on !== undefined && on !== isolator.on) isolator.set(on);
       isolator?.update(delta);
+      for (const valve of valveParts) valve.update(delta);
     },
   };
 }

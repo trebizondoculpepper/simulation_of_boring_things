@@ -27,6 +27,8 @@ import {
   pilotLight,
   selector,
 } from '../../../components/core/parts/parts';
+import { worldStore } from '../../../save/world-store';
+import { FOOTBATH, partOn } from '../../../../game/plant/identification';
 
 /**
  * A packaged spa set in its prefabricated plant cabinet: what the plant
@@ -398,10 +400,32 @@ function buildSpaPack(
     corner: 'bottom-right',
   });
   const parts = createPartSet();
+  const footbathStore =
+    inService && !jets && typeof window !== 'undefined'
+      ? worldStore('dev')
+      : null;
   const power = parts.add(
     selector(kit, {
       positions: 2,
       initial: inService ? 1 : 0,
+      bound: footbathStore
+        ? {
+            get value() {
+              return partOn(
+                footbathStore.world.value.identifiedPlant,
+                FOOTBATH.power,
+              )
+                ? 1
+                : 0;
+            },
+            set: (position) =>
+              footbathStore.dispatch({
+                type: 'plant/switch',
+                id: FOOTBATH.power,
+                on: position === 1,
+              }),
+          }
+        : undefined,
       legend: 'POWER',
       name: 'Spa set power',
     }),
