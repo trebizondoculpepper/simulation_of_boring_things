@@ -88,7 +88,9 @@ import { SIMULATOR_SPACE, layoutRoom } from '../logic/room-equipment';
 import { createRoomPipework } from './room-pipework';
 import { createRoomServices } from './room-services';
 import { ROOM_SERVICES } from '../../../game/plant/services';
-import type { ServiceRoom } from '../../../game/plant/services';
+import type { IsolatorName, ServiceRoom } from '../../../game/plant/services';
+import { createOzoneGenerator } from '../../components/plant/views/ozone-plant';
+import { ozoneRoom } from '../../components/plant/logic/ozone-room';
 import type { Item, Placed } from '../logic/room-equipment';
 
 /** Each model the rooms' machines are, by its key in `logic/room-equipment.ts`. */
@@ -192,7 +194,7 @@ function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
     return worldGasStation(kit, arg as GasZoneId);
   // An ozone generator with its room's ozone detection on its east end.
   if (kind === 'ozone-generator' && arg && arg in GAS_ZONES) {
-    const built = MODELS[kind].build(kit);
+    const built = worldOzoneGenerator(kit, arg as ServiceRoom);
     return withOzoneStation(kit, built, arg as GasZoneId, item);
   }
   // The chemical stores' tanks, their liquid at the world's stock.
@@ -523,6 +525,69 @@ function tankerStand(kit: PanelKit, item: Item) {
   line(item.w, lw, 0, -item.d / 2 + lw / 2);
   line(item.w, lw, 0, item.d / 2 - lw / 2);
   return group;
+}
+
+/**
+ * A plant room's ozone generator, installed and in service: an ozone plant
+ * of its own (`ozone-room.ts`), not the dev room's exhibit's, its MAINS
+ * ON and started. Its mains supply is the world's: its isolator on and its
+ * room powered. Lose either and it stops; fitted with auto-restart, as an
+ * installed one is, it starts again when its supply returns, if it was
+ * running (START and STOP on its panel say whether it should be).
+ */
+function worldOzoneGenerator(kit: PanelKit, room: ServiceRoom): LiveExhibit {
+  const isolator: IsolatorName =
+    room === 'plant_pool_01'
+      ? 'Lounge ozone generator isolator'
+      : 'Ozone generator isolator';
+  const plant = ozoneRoom();
+  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  let panel = false;
+  let fed = true;
+  let mains = false;
+  // Whether it should be running: in service from the start.
+  let wanted = true;
+  const sync = () => {
+    const on = panel && fed;
+    if (on === mains) return;
+    mains = on;
+    plant.generatorControls.mains(on);
+    // Auto-restart: back on, it starts again if it was running.
+    if (on && wanted) plant.generatorControls.start();
+  };
+  const view = createOzoneGenerator(
+    kit,
+    {
+      ...plant.generatorControls,
+      start: () => {
+        wanted = true;
+        plant.generatorControls.start();
+      },
+      stop: () => {
+        wanted = false;
+        plant.generatorControls.stop();
+      },
+      mains: (on) => {
+        panel = on;
+        sync();
+      },
+    },
+    { inService: true },
+  );
+  return {
+    object: view.group,
+    parts: view.parts,
+    update(delta) {
+      const w = store?.world.value;
+      fed = w
+        ? w.plant.isolators[isolator] !== false &&
+          serviceAvailable(w.plant, room, 'power')
+        : true;
+      sync();
+      plant.step(delta);
+      view.show(plant.shown(), delta);
+    },
+  };
 }
 
 /**

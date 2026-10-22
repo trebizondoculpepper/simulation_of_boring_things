@@ -167,6 +167,8 @@ export function createOzoneGenerator(
     mains: (on: boolean) => void;
     setpoint: (share: number) => void;
   },
+  /** Installed and in service: its MAINS switch ON from the start. */
+  { inService = false }: { inService?: boolean } = {},
 ): OzoneMachineView {
   const t = tools(kit);
   const W = 1.6,
@@ -276,7 +278,7 @@ export function createOzoneGenerator(
   const mains = parts.add(
     selector(kit, {
       positions: 2,
-      initial: 0,
+      initial: inService ? 1 : 0,
       legend: 'MAINS  OFF · ON',
       name: 'Ozone generator mains',
     }),

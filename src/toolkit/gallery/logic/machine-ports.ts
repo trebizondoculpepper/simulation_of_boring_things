@@ -231,7 +231,14 @@ export function machinePorts(item: Item): MachinePort[] {
   }
   if (kind === 'ozone-generator')
     return [
-      port('ozoneOut', [0, 1.6, item.d / 2], [0, 0, 1], 0.05, 'ozone'),
+      // Its ozone out of its top, at the end away from its power entry.
+      port(
+        'ozoneOut',
+        [-item.w / 2 + 0.3, item.h, 0],
+        [0, 1, 0],
+        0.05,
+        'ozone',
+      ),
       port('power', [item.w / 2 - 0.3, item.h, 0], [0, 1, 0], 0.0269, 'power'),
     ];
   if (kind === 'dosing-controller')
