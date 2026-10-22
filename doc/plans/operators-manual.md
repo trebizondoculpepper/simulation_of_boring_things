@@ -21,7 +21,8 @@ This is a plan only; nothing in it is built yet. Decisions still open are listed
 In the UK the contractor hands over an O&M manual at practical completion, and it becomes part of the building's Health and Safety File under the Construction (Design and Management) Regulations. BSRIA's guide BG 1/2007, _Handover, O&M Manuals and Project Feedback_, gives its usual structure, and the manual follows it so that it reads as the real thing.
 
 - **Client:** Ashworth Borough Council, Leisure and Culture Services (the borough already named in the game's notices, `BOROUGH` in `safety-notices.ts`).
-- **Issued by:** a fictional mechanical and electrical contractor who designed and fitted out the pool plant in the existing building's shell. Its name, logo and house style are to be invented (an open decision), and it joins `brands.ts` like every other maker.
+- **Issued by:** Bramhall Fenwick Engineering Ltd, Building Services Engineers, est. 1958: a fictional mechanical and electrical contractor who designed and fitted out the pool plant in the existing building's shell. Its logo and house style are still to be designed, and it joins `brands.ts` like every other maker. (No real firm of that name was found, 2026-10-22.)
+- **Foreword:** the book opens with a foreword from a Fenwick of the firm, a chartered engineer, thanking the council for choosing Bramhall Fenwick for its pool and hoping it gives many years of productive use. The signatory's first name is still to be chosen: Hugh Fenwick, CEng, is a real British engineer, so the fiction must not use that name.
 - **Subcontractors credited in it:** Penfold Controls for the control panels and mimics, and the makers already in `brands.ts` for each machine.
 - **Dates:** the plant is of around 2000, so the manual's first issue is dated then. Each game release is a new revision of it, with a document control table on its second page listing the revisions; the amendment notes describe each release's changes in the fiction's terms (for example "Rev. F: chlorine gas detection added to the hypochlorite store"), written by hand at release time from the changelog.
 - **Look:** a contractor's document of the time: A4 portrait, a cover with the project title, contract number and the client's and contractor's names, a title block on every page (document number, revision, page of pages), numbered sections and paragraphs, and drawings with their own title blocks and drawing numbers. Plain and dense, not decorative.
@@ -30,9 +31,10 @@ In the UK the contractor hands over an O&M manual at practical completion, and i
 
 Sections in BSRIA's order, adapted to a pool plant:
 
-1. **Contract particulars:** client, contractor, subcontractors and suppliers (from `brands.ts`), the document control table, and how to use the manual.
-2. **Description of the installation:** the complex and its pools (volumes, flows, temperatures, turnovers); the plant rooms and what each one does; a site plan; a system overview schematic of how water, heat, air, power and chemicals move between rooms.
-3. **Room by room**, one chapter per plant room (each pool's plant room, the wet hall, the boiler house, the air handling plant, the switch room, the hypochlorite and acid stores, the loading bay, the control room). Each chapter has:
+1. **Foreword** from the firm's chartered engineer (see above).
+2. **Contract particulars:** client, contractor, subcontractors and suppliers (from `brands.ts`), the document control table, and how to use the manual.
+3. **Description of the installation:** the complex and its pools (volumes, flows, temperatures, turnovers); the plant rooms and what each one does; a site plan; a system overview schematic of how water, heat, air, power and chemicals move between rooms.
+4. **Room by room**, one chapter per plant room (each pool's plant room, the wet hall, the boiler house, the air handling plant, the switch room, the hypochlorite and acid stores, the loading bay, the control room). Each chapter has:
    - its purpose, location, doors and access;
    - an equipment location plan with every item's tag;
    - a photograph of the room and of each principal machine;
@@ -40,12 +42,12 @@ Sections in BSRIA's order, adapted to a pool plant:
    - an equipment schedule: tag, description, maker, model reference, size and rating;
    - its supplies (which switchboard way and feeder isolator feed it, its lighting zone) and its gas detection, if any;
    - its hazards and the signs at its door.
-4. **Operation:** normal running and the controls, including the scenario simulator's FULL OFF, FULL ON and SLOW START, with the start order; switching each room on and off at its feeder and isolators; the lighting board; resetting the wet hall's booster set; chemical deliveries; the gas alarms (ACCEPT, RESET, purge); and the annunciator.
-5. **Alarm response:** every annunciator window, what raises it, the room to go to, and what to do there.
-6. **Maintenance:** what each machine needs and how often. The game models little maintenance yet, so this section starts short and grows with the game.
-7. **Health and safety:** residual risks under CDM, the COSHH data for the chemicals, confined spaces, permits to work, the gas emergency, chlorine and ozone releases, electric shock and chemical spillage procedures, hearing protection zones, and the register of signs by room.
-8. **Record drawings:** the plant level plans, the full schematics and the electrical single-line diagram, as numbered drawings.
-9. **Appendices:** the switchboard schedule, the lighting board's ways and zones, the design data (sizing totals, thermal design temperatures, ambient), a glossary and an index.
+5. **Operation:** normal running and the controls, including the scenario simulator's FULL OFF, FULL ON and SLOW START, with the start order; switching each room on and off at its feeder and isolators; the lighting board; resetting the wet hall's booster set; chemical deliveries; the gas alarms (ACCEPT, RESET, purge); and the annunciator.
+6. **Alarm response:** every annunciator window, what raises it, the room to go to, and what to do there.
+7. **Maintenance:** what each machine needs and how often. The game models little maintenance yet, so this section starts short and grows with the game.
+8. **Health and safety:** residual risks under CDM, the COSHH data for the chemicals, confined spaces, permits to work, the gas emergency, chlorine and ozone releases, electric shock and chemical spillage procedures, hearing protection zones, and the register of signs by room.
+9. **Record drawings:** the plant level plans, the full schematics and the electrical single-line diagram, as numbered drawings.
+10. **Appendices:** the switchboard schedule, the lighting board's ways and zones, the design data (sizing totals, thermal design temperatures, ambient), a glossary and an index.
 
 ## Where each part comes from
 
@@ -109,7 +111,7 @@ Building TeX Live and rendering photographs in CI is slow, so the manual is buil
 
 ## Open decisions
 
-- The fictional contractor's name and identity.
+- The foreword's signatory: a Fenwick of the firm, with a first name other than Hugh, and his title and letters after his name.
 - Whether to install Graphviz (Homebrew locally, apt in CI) or render DOT with a JavaScript package instead, which is a new dependency either way.
 - Whether to draw plans by converting SVG (needs librsvg) or as TikZ from the generator.
 - Whether the photographs are rendered in CI at release time or locally and committed.
