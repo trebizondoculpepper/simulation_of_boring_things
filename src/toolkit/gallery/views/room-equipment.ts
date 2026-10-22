@@ -93,7 +93,7 @@ import { createOzoneGenerator } from '../../components/plant/views/ozone-plant';
 import { ozoneRoom } from '../../components/plant/logic/ozone-room';
 import type { Item, Placed } from '../logic/room-equipment';
 import type { PoolId } from '../../../game/plant/pools';
-import { INTO_CEILING } from '../logic/room-pipes';
+import { roomStructure } from '../logic/room-structure';
 import { MONITOR_POST, ozoneMonitorPlace } from '../logic/ozone-monitor';
 import { createPipe } from '../../components/core/views/pipe-kinds';
 import { WET_HALL_PLANT } from '../../../game/plant/wet-hall';
@@ -564,7 +564,7 @@ function withOzoneStation(
   foot.position.set(postX, 0.005, postZ);
   const conduit = createPipe('steel-screwed', 0.0269, [
     [postX, postTop, postZ],
-    [postX, INTO_CEILING, postZ],
+    [postX, roomStructure(room)?.ceilingZone ?? postTop + 1, postZ],
   ]);
   conduit.name = 'Ozone detection supply';
   // Its own installation beside the generator, not part of it: the room

@@ -1,3 +1,4 @@
+import { roomStructure } from '../logic/room-structure';
 import {
   BoxGeometry,
   CylinderGeometry,
@@ -51,15 +52,11 @@ const MARKED: Record<Service, PipeService> = {
  * and the isolator, a working rotary switch-disconnector on the wall,
  * whose handle switches the cabinet's supply.
  */
-export function cabinetServices(
-  kit: PanelKit,
-  room: string,
-  floorY: number,
-  /** The underside of the services ceiling, over the floor. */
-  ceiling = 5,
-) {
+export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   const runs = cabinetPipes(room);
   if (!runs.length) return null;
+  // The underside of the services ceiling, over the floor (`roomStructure`).
+  const ceiling = roomStructure(room)?.ceilingZone ?? 5;
   const group = new Group();
   group.name = 'cabinet services';
   const uses = new Map<Object3D, () => void>();

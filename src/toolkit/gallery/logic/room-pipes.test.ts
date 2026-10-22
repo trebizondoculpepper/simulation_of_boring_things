@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vite-plus/test';
 import { layoutRoom } from './room-equipment';
 import { machinePorts, placedPort } from './machine-ports';
 import { plantRoomPlan } from './plant-rooms';
-import { CEILING_ZONE, CHAIN_TO, poolPlantPipework, REACH } from './room-pipes';
+import { CHAIN_TO, poolPlantPipework, REACH } from './room-pipes';
+import { CEILING_ZONE } from './room-structure';
 import type { PipeRun, Vec3 } from './room-pipes';
 
 /** The lagging round a heating pipe. */

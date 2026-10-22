@@ -7,6 +7,7 @@ import {
 } from '../../components/industrial-control/logic/enclosures';
 import type { Placed, Side } from './room-equipment';
 import { machinePorts, placedPort } from './machine-ports';
+import { roomStructure } from './room-structure';
 import type { PipeKindId } from '../../components/core/views/pipe-kinds';
 
 export type Point3 = readonly [number, number, number];
@@ -77,12 +78,11 @@ export function roomServiceRoutes(
   const topOf = (p: Placed, i: number) =>
     drawnTops[i] ?? (p.item.mount === 'floor' ? p.item.h : p.y + p.item.h / 2);
   const routes: ServiceRoute[] = [];
-  const roof = room.startsWith('plant_pool_')
-    ? 7.2
-    : room === 'wet_hall'
-      ? 7.2
-      : 7;
-  const y = roof - 1.1;
+  // High level: into the services ceiling's zone, or just under a plain
+  // ceiling's slab (`roomStructure`).
+  const structure = roomStructure(room);
+  if (!structure) return [];
+  const y = Math.min(structure.ceilingZone, structure.soffit - 0.15);
 
   // The room's supply: its switch-fuse on the west wall by the entrance
   // (`FEEDER_ISOLATOR`), its conduit down the wall into its gland from the

@@ -1,3 +1,4 @@
+import { roomStructure } from '../logic/room-structure';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createMicroLabel } from '../../components/core/views/eighties-controls';
@@ -26,7 +27,6 @@ import {
   ISOLATOR_Y,
   roomIsolators,
   standFootprint,
-  INTO_CEILING,
   pipeObstacles,
   roomChannels,
   roomPipes,
@@ -104,7 +104,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       group.add(
         supportPipe(kit, points, {
           radius: r.od / 2 + (PIPE_KINDS[r.kind].insulation?.thickness ?? 0),
-          ceilingY: floorY + INTO_CEILING,
+          ceilingY: floorY + (roomStructure(room)?.ceilingZone ?? 6.1),
           floorY,
         }),
       );

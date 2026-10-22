@@ -105,7 +105,6 @@ import { partAudio } from '../../components/core/audio/part-audio';
 import { knobDirection } from '../../controls/input/knob-turning';
 import { createRoomEquipment } from '../views/room-equipment';
 import { cabinetServices } from '../views/cabinet-services';
-import { CEILING_ZONE } from '../logic/room-pipes';
 import { worldStore } from '../../save/world-store';
 import { newWorld } from '../../../game/world';
 import { POOL_TARGET } from '../../../game/plant/pools';
@@ -166,12 +165,7 @@ export function startPlantRoomShell(
   // a wall; its drain's tundish and gully; and its isolator, which feeds
   // it: switched off, the cabinet is dead.
   const services = hall
-    ? cabinetServices(
-        kit,
-        `plant_${hall}`,
-        plan.floor,
-        plan.roof - plan.floor - CEILING_ZONE,
-      )
+    ? cabinetServices(kit, `plant_${hall}`, plan.floor)
     : null;
   if (services) rooms.add(services.group);
   const supply = machines

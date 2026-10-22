@@ -1,8 +1,8 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { layoutRoom } from './room-equipment';
+import { WET_HALL_SOFFIT, roomStructure } from './room-structure';
 import type { Placed } from './room-equipment';
 import { placedPort } from './machine-ports';
-import { WET_HALL } from './shell-rooms';
 import {
   POWER_ISOLATOR,
   glandTop,
@@ -125,12 +125,6 @@ export interface FloorChannel {
 export const PUMP_HEADER = 2.4;
 /** A duct's pipe runs this far under the floor. */
 export const DUCT_DEPTH = -0.45;
-/**
- * Into the services ceiling, under the 8 m roof: a run that ends here
- * goes on out of sight to wherever it comes from (the central plant).
- */
-export const INTO_CEILING = 8 - 1.9;
-
 /** The heights each service runs at, metres over the floor. */
 export const LEVELS = {
   ozone: 2.2,
@@ -148,9 +142,6 @@ export const LEVELS = {
   supply: 5.9,
   dosing: 2.4,
 } as const;
-
-/** Under the services ceiling: 1.9 m below the roof. */
-export const CEILING_ZONE = 1.9;
 
 /** The walls' thickness. */
 const WALL = 0.2;
@@ -241,6 +232,9 @@ export function poolPlantPipework(room: string): {
   stands: Vec3[];
 } {
   const layout = layoutRoom(room)!;
+  // Into the services ceiling (`roomStructure`): a run that ends here goes
+  // on out of sight to wherever it comes from (the central plant).
+  const INTO_CEILING = roomStructure(room)!.ceilingZone;
   const names = ROUTED[room];
   const h = layout.box.w / 2;
   const by = (end: string) =>
@@ -1649,8 +1643,8 @@ export function pipeObstacles(
   return out;
 }
 
-/** The wet hall's roof over its floor, m: half a storey down, under the corridor's roof. */
-export const WET_HALL_ROOF = WET_HALL.drop + WET_HALL.roof;
+/** The wet hall's roof over its floor, from its structure (`roomStructure`). */
+const WET_HALL_ROOF = WET_HALL_SOFFIT;
 
 /**
  * The wet hall's pipework (`src/game/plant/wet-hall.ts`), port to port:
