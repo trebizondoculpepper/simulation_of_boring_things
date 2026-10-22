@@ -7,6 +7,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 ### Fixed
 
 - The underwater gallery's door to the engineer's office stands on a 0.25 m sill above the corridor's fillet, which now runs unbroken beneath it (the office's floor meets the sill, as plant rooms do).
+- The corridor between the Jacuzzi and the footbath is now a short straight, the rotunda, and a short straight.
 - Every room's supply is switched by a Voltara switch-fuse on the wall by its entrance (side handle, padlockable OFF, SUPPLY ON neon, ROOM SUPPLY legend), replacing a placeholder of plain blocks; its conduit now comes down into its gland. Modelled first in the electrical dev room.
 - Conduits end on the cable glands of the isolators they feed, instead of 2 cm above their boxes: the enclosures' sizes and glands are now one source (`enclosures.ts`) for their views and the routes to them.
 - The footbath's make-up main runs overhead at 3.4 m, clear of head height and the equipment doorway, its valve worked from the floor by a chain wheel (shared now with the plant rooms' overhead valves).

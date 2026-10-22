@@ -100,8 +100,8 @@ export const LOOP_LEGS: readonly LoopLeg[] = ORDER.map((from, i) => ({
         ? // The Olympic pool to the jacuzzi: long, down the stairs, long.
           [LONG, { kind: 'stairs', rise: -2 }, LONG]
         : i === 2
-          ? // The jacuzzi to the footbath: short, left, short, right, short.
-            [SHORT, { kind: 'left' }, SHORT, { kind: 'right' }, SHORT]
+          ? // The jacuzzi to the footbath: short, the rotunda, short.
+            [SHORT, { kind: 'rotunda' }, SHORT]
           : i === 3
             ? // The footbath to the gallery: short, left, short, right, short.
               [SHORT, { kind: 'left' }, SHORT, { kind: 'right' }, SHORT]

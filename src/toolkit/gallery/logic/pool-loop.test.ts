@@ -27,9 +27,7 @@ describe('the pool loop', () => {
     ]);
     expect(LOOP_LEGS[2].pieces).toEqual([
       { kind: 'straight', length: 1 },
-      { kind: 'left' },
-      { kind: 'straight', length: 1 },
-      { kind: 'right' },
+      { kind: 'rotunda' },
       { kind: 'straight', length: 1 },
     ]);
     // The footbath to the viewing gallery.
@@ -129,6 +127,7 @@ import {
   corridorFloorAt,
   corridorFootprints,
   pieceLength,
+  ROTUNDA,
 } from '../../components/architectural/logic/corridor-path';
 import type { PlacedPiece } from '../../components/architectural/logic/corridor-path';
 import { galleryPlan, hallFloorAt, hallSolids, POOL_HALLS } from './pool-halls';
@@ -176,6 +175,25 @@ function middle(copy: CorridorCopy) {
     if (p.piece.kind === 'straight' || p.piece.kind === 'stairs') {
       const L = pieceLength(p.piece);
       corners.push([p.x + dx * L, p.z + dz * L]);
+    } else if (p.piece.kind === 'rotunda') {
+      // Round its column: aside before it, past it, back to the middle
+      // after it, and on out through the far neck.
+      const { neck, radius, column } = ROTUNDA;
+      const middleAt = neck + radius;
+      const aside = column / 2 + 0.8;
+      const clear = column / 2 + 0.6;
+      const [sx, sz] = DIR[(p.heading + 1) % 4];
+      const at = (along: number, side: number): [number, number] => [
+        p.x + dx * along + sx * side,
+        p.z + dz * along + sz * side,
+      ];
+      corners.push(
+        at(middleAt - clear, 0),
+        at(middleAt - clear, aside),
+        at(middleAt + clear, aside),
+        at(middleAt + clear, 0),
+        at(pieceLength(p.piece), 0),
+      );
     } else {
       corners.push([p.x + dx * 0.6, p.z + dz * 0.6]);
       const out = DIR[(p.heading + (p.piece.kind === 'left' ? 1 : 3)) % 4];
@@ -267,6 +285,12 @@ describe('loading round the loop', () => {
   /** A point `s` metres along a corridor copy's middle, from its start. */
   const at = (copy: ReturnType<typeof roomCorridors>['leaving'], s: number) => {
     const points = middle(copy);
+    // Counted from the nearer end: the walk round a rotunda's column is
+    // longer than the corridor.
+    if (s > copy.length / 2)
+      return points[
+        Math.max(0, points.length - 1 - Math.round((copy.length - s) / 0.05))
+      ];
     return points[Math.min(points.length - 1, Math.round(s / 0.05))];
   };
 
