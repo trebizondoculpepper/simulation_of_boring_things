@@ -19,6 +19,7 @@ import { SHELL_ROOMS, WET_HALL } from './shell-rooms';
 /** A box in the room: a machine, a doorway's clear space, a landing. */
 export interface Solid {
   name: string;
+  kind: 'machine' | 'clear' | 'landing';
   minX: number;
   maxX: number;
   minY: number;
@@ -97,10 +98,12 @@ heights.deck = (room: string): number | undefined => {
 
 const box = (
   name: string,
+  kind: Solid['kind'],
   f: Footprint,
   minY: number,
   maxY: number,
 ): Solid => ({
+  kind,
   name,
   minX: f.minX,
   maxX: f.maxX,
@@ -124,8 +127,14 @@ export function roomStructure(
   const { w, d, keepClear, solid } = layout.box;
   const machines = layout.placed.map((p) =>
     p.item.mount === 'floor'
-      ? box(p.item.label, p.footprint, 0, p.item.h)
-      : box(p.item.label, p.footprint, p.y - p.item.h / 2, p.y + p.item.h / 2),
+      ? box(p.item.label, 'machine', p.footprint, 0, p.item.h)
+      : box(
+          p.item.label,
+          'machine',
+          p.footprint,
+          p.y - p.item.h / 2,
+          p.y + p.item.h / 2,
+        ),
   );
   // A landing or stair stands as high as the deck it reaches, and its rail.
   const landing = (heights.deck(room) ?? 0) + 1.1;
@@ -139,8 +148,12 @@ export function roomStructure(
     supplyWall: supplyWall ?? SUPPLY_WALLS[room] ?? 'west',
     obstacles: [
       ...machines,
-      ...keepClear.map((f, i) => box(`clear space ${i + 1}`, f, 0, HEADROOM)),
-      ...solid.map((f, i) => box(`landing or stair ${i + 1}`, f, 0, landing)),
+      ...keepClear.map((f, i) =>
+        box(`clear space ${i + 1}`, 'clear', f, 0, HEADROOM),
+      ),
+      ...solid.map((f, i) =>
+        box(`landing or stair ${i + 1}`, 'landing', f, 0, landing),
+      ),
     ],
   };
 }
