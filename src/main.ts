@@ -28,6 +28,7 @@ import {
 } from './toolkit/components/core/parts/render-style';
 import { worldStore } from './toolkit/save/world-store';
 import { GAS_ZONE_IDS } from './game/plant/gas';
+import type { PoolId } from './game/plant/pools';
 import { buildLine, versionLabel } from './game/version';
 import { createTitleScreen } from './toolkit/title/title-screen';
 import { OLYMPIC_ORBIT, orbitPose } from './toolkit/title/logic/title-orbit';
@@ -63,6 +64,16 @@ for (const scenario of scenarios) {
       zone: 'plant_pool_02',
       gramsPerHour: 2,
     });
+  // `drain-pool_01`: a pool drained down (its make-up shut, its drain-down
+  // open), to the sewer at the consented rate; with `skip-…` to see it part
+  // drained or empty. `fill-pool_01` shuts the drain-down and opens the make-up.
+  const drain = /^(drain|fill)-(pool_0[1-4])$/.exec(scenario);
+  if (drain) {
+    const pool = drain[2] as PoolId;
+    const draining = drain[1] === 'drain';
+    world.dispatch({ type: 'pool/make-up', pool, open: !draining });
+    world.dispatch({ type: 'pool/drain-down', pool, open: draining });
+  }
   // `skip-600`: the world run on ten minutes at once.
   const skip = /^skip-(\d+)$/.exec(scenario);
   if (skip) world.dispatch({ type: 'time/skip', seconds: Number(skip[1]) });

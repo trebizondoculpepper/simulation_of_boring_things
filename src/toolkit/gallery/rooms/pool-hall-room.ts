@@ -72,6 +72,8 @@ import { bindRoomLights } from '../views/room-lights';
 import { zoneLit, zoneOfRoom } from '../../../game/plant/lighting';
 import type { PoolUniforms } from '../../components/pool/views/pool-surfaces';
 import { bindRoomPower, sitePowered } from '../views/room-power';
+import { poolDepth } from '../../../game/plant/pools';
+import type { PoolId } from '../../../game/plant/pools';
 
 /**
  * A version-one pool hall (pool_01 to pool_04), in its own scene. None has
@@ -613,11 +615,27 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     if (!hallZone || zoneLit(w.plant, w.lighting, hallZone)) return 1;
     return spec.skylights.length > 0 ? 0.35 : 0;
   };
+  // Its water at the world's level (`pools.ts`): the pool's drop below its
+  // lip as a share of its mean depth, over the hall's deepest floor, so a
+  // pool drained down shows empty. The gallery shows the Olympic pool's.
+  const waterOf = (gallery ? 'pool_02' : id) as PoolId;
+  let shownDrop = -1;
+  const showWater = () => {
+    const level = world.world.value.pools[waterOf].level;
+    const drop =
+      level >= 0
+        ? 0
+        : (-level / poolDepth(waterOf)) * (rooms.userData.waterDepth as number);
+    if (Math.abs(drop - shownDrop) < 0.0005) return;
+    shownDrop = drop;
+    (rooms.userData.setWaterDrop as (d: number) => void)(drop);
+  };
   let last = 0;
   let officeWasOpen = false;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
+    showWater();
     last = time;
     walk.update(delta);
     roomLights.update(delta);
@@ -627,10 +645,14 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       poolsFound = 0;
     }
     const k = poolLight();
+    // The hall's own water throws less light about as it drains away.
+    const hallUniforms = rooms.userData.poolUniforms as PoolUniforms;
+    const wet = rooms.userData.waterWet as number;
     for (const [u, base] of pools) {
+      const w = u === hallUniforms ? wet : 1;
       u.light.value = k;
-      u.caustics.value = base.caustics * k;
-      u.reflected.value = base.reflected * k;
+      u.caustics.value = base.caustics * k * w;
+      u.reflected.value = base.reflected * k * w;
     }
     partAudio.listen(camera, metre);
     if (spaTub && 'object' in spaTub) spaTub.update?.(delta);

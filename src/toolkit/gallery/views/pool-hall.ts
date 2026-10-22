@@ -24,7 +24,7 @@ import {
   SRGBColorSpace,
   Vector3,
 } from 'three';
-import type { BufferGeometry } from 'three';
+import type { BufferGeometry, Object3D } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createPanelKit } from '../../components/core/views/eighties-controls';
 import { plantTools } from '../../components/plant/views/plant-tools';
@@ -232,6 +232,9 @@ export function createPoolHall(
     0.2,
   );
   const bottom = WATER_Y - deepest - 0.1;
+  let underwaterVolume: { mesh: Mesh; deep: number } | null = null;
+  // What floats on the water (lane ropes), moved with its surface.
+  const floats: Object3D[] = [];
 
   // The deck, each basin's gutter cut out of it; under each grating a
   // kerb stands to the gutter's floor, its inner face the pool's wall.
@@ -705,6 +708,8 @@ export function createPoolHall(
       }
     }
     group.add(beads);
+    // They float: as the pool is drained they go down with its water.
+    floats.push(beads);
 
     // Starting blocks at the west end, behind the gutter: a white
     // platform tilted toward the water on a post, its lane's number on
@@ -880,6 +885,8 @@ export function createPoolHall(
     depthWrite: false,
     side: DoubleSide,
   });
+  // Each basin's water surface, to follow the pool's level (`setWaterDrop`).
+  const waters: Mesh[] = [];
   s.basins.forEach((b, k) => {
     const shape =
       b === span
@@ -903,6 +910,7 @@ export function createPoolHall(
     );
     water.position.y = WATER_Y;
     water.renderOrder = 1;
+    waters.push(water);
     rippleWater(water, uniforms);
     // A hot tub's water churns with its air.
     if (b.shape === 'round') {
@@ -1417,6 +1425,8 @@ export function createPoolHall(
       volume.name = 'underwater volume';
       volume.position.set(b.x, WATER_Y - b.deep / 2, b.z);
       group.add(volume);
+      // Drained, the volume shrinks to the water left in the pool.
+      underwaterVolume = { mesh: volume, deep: b.deep };
       // The sunlit water's caustics, thrown through each window onto the
       // wall facing it: there only, not on the window wall or round the
       // windows, which the light through them never reaches.
@@ -1535,6 +1545,42 @@ export function createPoolHall(
     o.castShadow = !light;
     o.receiveShadow = !light;
   });
+  /**
+   * The water's surface `drop` metres below brimming (0 brimming, the
+   * hall's deepest, `waterDepth`, empty): each basin's surface, the
+   * shaders' waterline (the tiles' tint and caustics below it) and, from
+   * the gallery, the water's volume. A basin's surface below its own floor
+   * is hidden by the floor; at the bottom it goes.
+   */
+  // Empty is the bottom of the deepest well, if a basin has one.
+  const empty = Math.max(
+    deepest,
+    ...s.basins.flatMap((b) =>
+      ('wells' in b ? (b.wells ?? []) : []).map((w) => w.depth),
+    ),
+  );
+  group.userData.waterDepth = empty;
+  // How wet the hall is: 1 with water in it, fading to 0 over its last
+  // 30 cm, for the light the water throws about (caustics, reflections).
+  group.userData.waterWet = 1;
+  group.userData.setWaterDrop = (drop: number) => {
+    const d = Math.min(Math.max(drop, 0), empty);
+    group.userData.waterWet = Math.min(1, Math.max(0, (empty - d) / 0.3));
+    const y = WATER_Y - d;
+    for (const water of waters) {
+      water.position.y = y;
+      water.visible = d < empty - 0.005;
+    }
+    uniforms.waterY.value = y;
+    for (const f of floats) f.position.y = y - WATER_Y;
+    if (underwaterVolume) {
+      const { mesh, deep } = underwaterVolume;
+      const left = Math.max(0.001, deep - d);
+      mesh.scale.y = left / deep;
+      mesh.position.y = WATER_Y - deep + left / 2;
+      mesh.visible = d < deep - 0.005;
+    }
+  };
   return group;
 }
 
