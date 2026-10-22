@@ -584,3 +584,91 @@ canvas {
 .hud-turn {
   font-size: 30px;
 }
+
+/* The title screen (src/toolkit/title/title-screen.ts): "Boring
+   Simulations Presents: The Pool" over the game's rooms (for now, a plain
+   deep-water dark), the main menu below, the build in the corner. */
+.title-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-rows: 1fr auto 1.2fr;
+  justify-items: center;
+  align-items: center;
+  color: #f2efe6;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+.title-screen[hidden] {
+  display: none;
+}
+.title-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    #1d4a55 0%,
+    #0f2a33 45%,
+    #07141a 100%
+  );
+}
+.title-head {
+  align-self: end;
+  text-align: center;
+  text-shadow: 0 2px 18px #000a;
+}
+.title-presents {
+  margin: 0 0 6px;
+  font-size: clamp(13px, 2vw, 18px);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.title-name {
+  margin: 0;
+  font-size: clamp(56px, 11vw, 120px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+.title-menu {
+  grid-row: 3;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(340px, calc(100vw - 32px));
+  margin-top: 4vh;
+}
+.title-item {
+  padding: 12px 18px;
+  border: 1px solid #f2efe655;
+  border-radius: 4px;
+  background: #0b1d24aa;
+  color: inherit;
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+.title-item:hover,
+.title-item:focus-visible {
+  border-color: #f2efe6;
+  background: #1f4a56cc;
+  outline: none;
+}
+.title-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.title-build {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  margin: 0;
+  font: 12px/1.2 monospace;
+  opacity: 0.7;
+}

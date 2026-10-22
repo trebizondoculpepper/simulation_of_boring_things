@@ -78,3 +78,18 @@ export function versionLabel(
 ): string {
   return `v${version}${development ? ' (development build)' : ''}`;
 }
+
+/**
+ * The version and build as the title screen's corner shows them:
+ * "v0.1.0 · build 3fe13af · 22 Oct 2026" from a build CI made (`build` is
+ * its `VITE_BUILD`: the commit's short hash and the date), or marked as a
+ * development build from the dev server.
+ */
+export function buildLine(
+  version = VERSION,
+  build: string | undefined = import.meta.env.VITE_BUILD,
+  development = import.meta.env.DEV,
+): string {
+  if (development) return `v${version} · development build`;
+  return build ? `v${version} · build ${build}` : `v${version}`;
+}

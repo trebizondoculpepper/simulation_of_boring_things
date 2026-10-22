@@ -4,6 +4,7 @@ import {
   VERSION,
   compareVersions,
   parseVersion,
+  buildLine,
   versionLabel,
 } from './version';
 
@@ -61,5 +62,13 @@ describe('the game’s version', () => {
   it('labels a development build as such on the title screen', () => {
     expect(versionLabel('0.3.1', false)).toBe('v0.3.1');
     expect(versionLabel('0.3.1', true)).toBe('v0.3.1 (development build)');
+  });
+
+  it('shows the build in the title screen’s corner', () => {
+    expect(buildLine('0.2.0', '3fe13af · 22 Oct 2026', false)).toBe(
+      'v0.2.0 · build 3fe13af · 22 Oct 2026',
+    );
+    expect(buildLine('0.2.0', undefined, false)).toBe('v0.2.0');
+    expect(buildLine('0.2.0', 'x', true)).toBe('v0.2.0 · development build');
   });
 });

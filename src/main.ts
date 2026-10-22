@@ -25,7 +25,8 @@ import {
 } from './toolkit/components/core/parts/render-style';
 import { worldStore } from './toolkit/save/world-store';
 import { GAS_ZONE_IDS } from './game/plant/gas';
-import { versionLabel } from './game/version';
+import { buildLine, versionLabel } from './game/version';
+import { createTitleScreen } from './toolkit/title/title-screen';
 import { GEAR_ICON, createPauseMenu } from './toolkit/settings/pause-menu';
 import { settings } from './toolkit/settings/settings-store';
 import { effect } from '@preact/signals-core';
@@ -120,8 +121,10 @@ const pauseMenu = createPauseMenu({
   holding: worldStore('dev').holding,
   quitToTitle() {
     worldStore('dev').save();
-    location.href = location.pathname;
+    goTo('');
   },
+  // Not on the title screen or the room list: only in a room.
+  canOpen: () => current !== undefined,
 });
 const settingsButton = document.createElement('button');
 settingsButton.type = 'button';
@@ -133,6 +136,30 @@ settingsButton.addEventListener('pointerdown', (event) =>
   event.stopPropagation(),
 );
 settingsButton.addEventListener('click', () => pauseMenu.open());
+
+/** Go to a page of the app (`?room=…`, `?dev`, or '' for the title) without reloading. */
+const goTo = (search: string) => {
+  const url = new URL(location.href);
+  url.search = search;
+  history.pushState(null, '', url);
+  void openRoom().catch(showError);
+};
+
+// The title screen (`doc/plans/title-screen.md`), the front page; the
+// developers' room list is at `?dev`. New game starts in the footbath (for
+// now in the shared world: the game's own save is stage 5); Continue
+// waits for that save. Settings and Instructions are the pause menu's
+// tabs, opened without its Game tab.
+const titleScreen = createTitleScreen({
+  newGame: () => goTo('?room=pool_04'),
+  continueGame: () => {},
+  canContinue: () => false,
+  noContinue: 'Continue arrives with the game’s own save',
+  settings: () => pauseMenu.open('Graphics', { inGame: false }),
+  instructions: () => pauseMenu.open('Controls', { inGame: false }),
+  covered: () => pauseMenu.isOpen,
+  build: buildLine(),
+});
 const positionStatus = document.createElement('span');
 positionStatus.setAttribute('role', 'status');
 positionOverlay.append(roomName, positionStatus);
@@ -419,8 +446,15 @@ const openRoom = async () => {
     current = undefined;
     app.hidden = true;
     positionOverlay.hidden = true;
-    directory.hidden = false;
-    document.title = 'Pool Plant — Rooms';
+    // The developers' room list at `?dev`; otherwise the title screen.
+    if (params.has('dev')) {
+      titleScreen.hide();
+      directory.hidden = false;
+      document.title = 'The Pool — Rooms';
+    } else {
+      directory.hidden = true;
+      titleScreen.show();
+    }
     return;
   }
   const room = resolveRoomId(params.get('room')) ?? 'dev_corridor';
@@ -428,8 +462,9 @@ const openRoom = async () => {
   await resetEffects();
   if (ownRevision !== revision) return;
   directory.hidden = true;
+  titleScreen.hide();
   app.hidden = false;
-  document.title = 'Pool Plant';
+  document.title = 'The Pool';
   if (document.pointerLockElement) document.exitPointerLock();
   window.dispatchEvent(new Event('blur'));
   stopSeeing();

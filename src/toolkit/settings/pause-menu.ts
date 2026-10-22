@@ -36,6 +36,8 @@ export interface PauseMenuActions {
   quitToTitle(): void;
   /** Quit the program, where there is one to quit (a desktop build). */
   quitToDesktop?: () => void;
+  /** Whether Esc and Start may open it now: only in a room, not on the title screen. */
+  canOpen?: () => boolean;
 }
 
 const TABS = ['Game', 'Graphics', 'Audio', 'Controls'] as const;
@@ -117,8 +119,10 @@ export function createPauseMenu(actions: PauseMenuActions) {
     }
     focusables()[0]?.focus();
   };
-  const step = (by: number) =>
-    choose(TABS[(TABS.indexOf(current) + by + TABS.length) % TABS.length]);
+  const step = (by: number) => {
+    const tabs = reachable();
+    choose(tabs[(tabs.indexOf(current) + by + tabs.length) % tabs.length]);
+  };
 
   // ---- Settings rows -------------------------------------------------------
   const shows: ((s: Settings) => void)[] = [];
@@ -257,15 +261,28 @@ export function createPauseMenu(actions: PauseMenuActions) {
     paused.value = false;
     if (returnFocus instanceof HTMLElement) returnFocus.focus();
   };
-  const open = (tab: Tab = 'Game') => {
+  /**
+   * Open it at `tab`. From the title screen (`inGame` false) it has no
+   * Game tab and pauses nothing: it is the title's Settings or
+   * Instructions.
+   */
+  const open = (tab: Tab = 'Game', { inGame = true } = {}) => {
     if (isOpen()) return;
     returnFocus = document.activeElement;
     document.exitPointerLock?.();
     saved.textContent = '';
-    paused.value = true;
+    tabButtons.get('Game')!.hidden = !inGame;
+    heading.textContent = inGame
+      ? 'Paused'
+      : tab === 'Controls'
+        ? 'Instructions'
+        : 'Settings';
+    panel.setAttribute('aria-label', heading.textContent);
+    paused.value = inGame;
     backdrop.hidden = false;
-    choose(tab);
+    choose(inGame || tab !== 'Game' ? tab : 'Graphics');
   };
+  const reachable = () => TABS.filter((t) => !tabButtons.get(t)!.hidden);
   // A click outside the panel closes it too.
   backdrop.addEventListener('click', (event) => {
     if (event.target === backdrop) close();
@@ -283,7 +300,8 @@ export function createPauseMenu(actions: PauseMenuActions) {
         if (
           event.key === 'Escape' &&
           !document.pointerLockElement &&
-          !(event.target instanceof HTMLInputElement)
+          !(event.target instanceof HTMLInputElement) &&
+          (actions.canOpen?.() ?? true)
         ) {
           event.preventDefault();
           open();
@@ -350,7 +368,7 @@ export function createPauseMenu(actions: PauseMenuActions) {
     ) as Record<keyof typeof PAD, boolean>;
     if (presses.start) {
       if (isOpen()) close();
-      else open();
+      else if (actions.canOpen?.() ?? true) open();
       return;
     }
     if (!isOpen()) return;

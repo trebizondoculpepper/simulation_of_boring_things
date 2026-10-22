@@ -30,6 +30,9 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm test
+      # The build's name on the title screen: the commit and the date.
+      - name: Name the build
+        run: echo "VITE_BUILD=$(git rev-parse --short HEAD) · $(date -u +'%-d %b %Y')" >> "$GITHUB_ENV"
       - run: npm run build
       # The built site, for the deploy job; only pushes to main deploy.
       - if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

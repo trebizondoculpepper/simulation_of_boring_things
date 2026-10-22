@@ -37,6 +37,8 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm test
+      - name: Name the build
+        run: echo "VITE_BUILD=$(git rev-parse --short HEAD) · $(date -u +'%-d %b %Y')" >> "$GITHUB_ENV"
       - run: npm run build
       # The release's notes are its changelog section; a pre-release
       # version (with a hyphen) is marked as one.
