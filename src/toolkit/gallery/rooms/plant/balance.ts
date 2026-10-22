@@ -8,6 +8,9 @@ import {
   createLevelInstruments,
   createWaterMeter,
 } from '../../../components/plant/views/balance-plant';
+import { createBoosterSet } from '../../../components/plant/views/booster-set';
+import { BOOSTER } from '../../../components/plant/logic/booster-set';
+import { createWetHallMimic } from '../../views/wet-hall';
 
 /** What this plant room is for, printed on its title card. */
 export const PURPOSE =
@@ -51,6 +54,20 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       'Sectional, 3 × 2 × 2 m; discharge pump after Grundfos SL1.50.65, 544 mm high',
     size: { w: 4.5, d: 2.6, h: 2.4, mount: 'floor' },
     build: (kit) => shifted(createBackwashTank(kit), 0.12, -0.1),
+  },
+  {
+    title: 'Make-up booster set',
+    reference:
+      'After the Grundfos Hydro Multi-E 2 CRE 5-9: two vertical multistage pumps, duty and standby, 1.6 × 1.0 m',
+    size: { w: BOOSTER.w, d: BOOSTER.d, h: BOOSTER.h, mount: 'floor' },
+    build: (kit) => createBoosterSet(kit),
+  },
+  {
+    title: 'Wet hall mimic',
+    reference:
+      'Penfold Controls mimic of the make-up and backwash, with the booster set’s RESET',
+    size: { w: 2.2, d: 0.08, h: 1.2, mount: 'wall', y: 1.6 },
+    build: (kit) => createWetHallMimic(kit, true),
   },
   {
     title: 'Level instruments',

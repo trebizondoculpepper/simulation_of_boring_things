@@ -53,6 +53,7 @@ const PIPED = [
   'plant_pool_02',
   'plant_pool_03',
   'plant_pool_04',
+  'wet_hall',
 ];
 
 /** Every mesh under `root`, with its world box. */

@@ -1033,7 +1033,8 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
     return [
       row('break-tank', -5.6, 0.6),
       row('booster-set', -2.6, 0.4),
-      row('water-meter', -0.3, 0.4),
+      // Its run in line with the booster set's discharge.
+      row('water-meter', -0.3, 0.38),
       put(box, at('mimic-wet'), { wall: 'north', along: 2.0 }),
       row('backwash-tank', 6.0, 0.6),
     ];

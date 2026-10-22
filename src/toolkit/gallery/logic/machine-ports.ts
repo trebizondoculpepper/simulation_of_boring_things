@@ -124,7 +124,8 @@ export function machinePorts(item: Item): MachinePort[] {
       // submersible pump's discharge riser up through the roof beside it,
       // to the foul sewer; its overflow high on its east end; its drain.
       return [
-        port('inlet', [-nx / 4, top, back], [0, 1, 0], 0.16, 'drain'),
+        // Clear of its ladder's cage, at its west end.
+        port('inlet', [0, top, back], [0, 1, 0], 0.16, 'drain'),
         port('discharge', [nx / 4, top, back], [0, 1, 0], 0.076, 'drain'),
         port('overflow', [east, top - 0.35, back], [1, 0, 0], 0.16, 'drain'),
         port('drain', [nx / 2 - 0.6, 0.35, front], [0, 0, 1], 0.09, 'drain'),

@@ -2,6 +2,7 @@ import type { Footprint } from '../../controls/logic/walk-collision';
 import { layoutRoom } from './room-equipment';
 import type { Placed } from './room-equipment';
 import { placedPort } from './machine-ports';
+import { WET_HALL } from './shell-rooms';
 
 /**
  * The pipework of the Olympic pool's plant room, port to port: each run
@@ -1055,6 +1056,7 @@ export function poolPlantPipework(room: string): {
 /** The pipework of a room, if it has any laid out yet. */
 export function roomPipes(room: string): PipeRun[] {
   if (room === 'boiler_house') return boilerHousePipework().runs;
+  if (room === 'wet_hall') return wetHallPipework().runs;
   return room in ROUTED ? poolPlantPipework(room).runs : [];
 }
 
@@ -1081,6 +1083,7 @@ export function roomChannels(room: string): FloorChannel[] {
 /** The explicit three-way fittings of a room. */
 export function roomTees(room: string): PipeTee[] {
   if (room === 'boiler_house') return boilerHousePipework().tees;
+  if (room === 'wet_hall') return [];
   return room in ROUTED ? poolPlantPipework(room).tees : [];
 }
 
@@ -1636,4 +1639,231 @@ export function pipeObstacles(
       });
     }
   return out;
+}
+
+/** The wet hall's roof over its floor, m: half a storey down, under the corridor's roof. */
+export const WET_HALL_ROOF = WET_HALL.drop + WET_HALL.roof;
+
+/**
+ * The wet hall's pipework (`src/game/plant/wet-hall.ts`), port to port:
+ *
+ * - the town main down through the roof to the break tank's float valve,
+ *   by its stop valve (chain-worked, over the tank);
+ * - the break tank's outlet to the booster set's suction, isolated;
+ * - the booster set's discharge up to the meter, and on from the meter up
+ *   through the roof: the make-up main to the pool plant rooms, isolated;
+ * - the backwash main down through the roof into the holding tank, and
+ *   its discharge pump's riser over the tank's front and down to the foul
+ *   sewer under the floor, isolated;
+ * - each tank's overflow and drain down into the floor's drainage.
+ *
+ * Copper for the water, PVC for the waste. Pure: metres, the room's
+ * frame, its floor at y = 0.
+ */
+export function wetHallPipework(): { runs: PipeRun[] } {
+  const layout = layoutRoom('wet_hall')!;
+  const find = (key: string) => layout.placed.find((p) => p.item.key === key)!;
+  const at = (key: string, name: string) => placedPort(find(key), name).at;
+  const runs: PipeRun[] = [];
+  const roof = (x: number, z: number): WallCrossing => ({
+    at: [x, WET_HALL_ROOF, z],
+    normal: [0, 1, 0],
+    thickness: 0.3,
+    kind: 'sleeve',
+  });
+  const valve = (
+    name: string,
+    where: Vec3,
+    axis: Valve['axis'],
+    od: number,
+    facing: Vec3,
+    operator: Valve['operator'] = 'lever',
+  ): Valve => ({ at: where, axis, name, od, operator, facing });
+  const tank = find('break-tank').item.label;
+  const booster = find('booster-set').item.label;
+  const meter = find('water-meter').item.label;
+  const holding = find('backwash-tank').item.label;
+
+  // ---- Make-up ------------------------------------------------------------
+  // The main comes down in front of the tank, over the floor, where its
+  // stop valve's chain hangs to hand, and crosses over the tank's roof.
+  const mains = at('break-tank', 'mainsIn');
+  const mainsZ = find('break-tank').footprint.maxZ + 0.3;
+  const mainsY = mains[1] + 0.5;
+  runs.push({
+    name: 'Town main to the break tank',
+    kind: 'copper',
+    od: 0.067,
+    points: [
+      [...mains],
+      [mains[0], mainsY, mains[2]],
+      [mains[0], mainsY, mainsZ],
+      [mains[0], WET_HALL_ROOF, mainsZ],
+    ],
+    joins: [tank],
+    service: 'make-up',
+    label: 'MAINS COLD WATER',
+    through: [roof(mains[0], mainsZ)],
+    valves: [
+      valve(
+        'Town main stop valve',
+        [mains[0], mainsY + 0.5, mainsZ],
+        'y',
+        0.067,
+        [0, 0, 1],
+        'chain',
+      ),
+    ],
+  });
+  const out = at('break-tank', 'outlet');
+  const suction = at('booster-set', 'suction');
+  const sx = (out[0] + suction[0]) / 2;
+  runs.push({
+    name: 'Break tank to the booster set',
+    kind: 'copper',
+    od: 0.089,
+    points: [
+      [...out],
+      [sx, out[1], out[2]],
+      [sx, out[1], suction[2]],
+      [sx, suction[1], suction[2]],
+      [...suction],
+    ],
+    joins: [tank, booster],
+    service: 'make-up',
+    label: 'BREAK TANK OUTLET',
+    through: [],
+    valves: [
+      valve(
+        'Break tank outlet valve',
+        [sx, out[1], (out[2] + suction[2]) / 2],
+        'z',
+        0.089,
+        [1, 0, 0],
+      ),
+    ],
+  });
+  const discharge = at('booster-set', 'discharge');
+  const inlet = at('water-meter', 'inlet');
+  const dx = (discharge[0] + inlet[0]) / 2;
+  runs.push({
+    name: 'Booster set to the meter',
+    kind: 'copper',
+    od: 0.076,
+    points: [
+      [...discharge],
+      [dx, discharge[1], discharge[2]],
+      [dx, inlet[1], discharge[2]],
+      [...inlet],
+    ],
+    joins: [booster, meter],
+    service: 'make-up',
+    label: 'MAKE-UP',
+    through: [],
+    valves: [],
+  });
+  const outlet = at('water-meter', 'outlet');
+  const mx = outlet[0] + 0.3;
+  runs.push({
+    name: 'Make-up main to the pool plant rooms',
+    kind: 'copper',
+    od: 0.076,
+    points: [
+      [...outlet],
+      [mx, outlet[1], outlet[2]],
+      [mx, WET_HALL_ROOF, outlet[2]],
+    ],
+    joins: [meter],
+    service: 'make-up',
+    label: 'MAKE-UP MAIN',
+    through: [roof(mx, outlet[2])],
+    valves: [
+      valve('Make-up main valve', [mx, 1.5, outlet[2]], 'y', 0.076, [0, 0, 1]),
+    ],
+  });
+
+  // ---- Backwash -----------------------------------------------------------
+  const bw = at('backwash-tank', 'inlet');
+  runs.push({
+    name: 'Backwash main to the holding tank',
+    kind: 'pvc-drain',
+    od: 0.16,
+    points: [[bw[0], WET_HALL_ROOF, bw[2]], [...bw]],
+    joins: [holding],
+    service: 'drainage',
+    label: 'BACKWASH',
+    through: [roof(bw[0], bw[2])],
+    valves: [],
+  });
+  const riser = at('backwash-tank', 'discharge');
+  const front = find('backwash-tank').footprint.maxZ + 0.4;
+  const over = riser[1] + 0.5;
+  runs.push({
+    name: 'Backwash discharge to the sewer',
+    kind: 'pvc-pressure',
+    od: 0.076,
+    points: [
+      [...riser],
+      [riser[0], over, riser[2]],
+      [riser[0], over, front],
+      [riser[0], 0, front],
+    ],
+    joins: [holding],
+    service: 'drainage',
+    label: 'BACKWASH TO SEWER',
+    through: [],
+    valves: [
+      valve(
+        'Backwash discharge valve',
+        [riser[0], 1.2, front],
+        'y',
+        0.076,
+        [0, 0, 1],
+      ),
+    ],
+  });
+
+  // ---- Overflows and drains, into the floor -----------------------------
+  for (const [key, label] of [
+    ['break-tank', 'Break tank'],
+    ['backwash-tank', 'Backwash tank'],
+  ] as const) {
+    const machine = find(key).item.label;
+    const o = placedPort(find(key), 'overflow');
+    const ox = o.at[0] + o.outward[0] * 0.3;
+    runs.push({
+      name: `${label} overflow`,
+      kind: 'pvc-drain',
+      od: o.od,
+      points: [[...o.at], [ox, o.at[1], o.at[2]], [ox, 0, o.at[2]]],
+      joins: [machine],
+      service: 'drainage',
+      label: 'OVERFLOW',
+      through: [],
+      valves: [],
+    });
+    // Each drain out past the tank's front (its ladder), its valve there.
+    const d = placedPort(find(key), 'drain');
+    const dz = find(key).footprint.maxZ + 0.15;
+    runs.push({
+      name: `${label} drain`,
+      kind: 'pvc-drain',
+      od: d.od,
+      points: [[...d.at], [d.at[0], d.at[1], dz], [d.at[0], 0, dz]],
+      joins: [machine],
+      service: 'drainage',
+      label: 'DRAIN',
+      through: [],
+      valves: [
+        valve(
+          `${label} drain valve`,
+          [d.at[0], d.at[1], dz - 0.2],
+          'z',
+          d.od,
+          [1, 0, 0],
+        ),
+      ],
+    });
+  }
+  return { runs };
 }

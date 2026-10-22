@@ -30,8 +30,11 @@ Model first, then the machines. The wet hall became a block in the world with it
 - A simulated week of bathers gives 260 to 500 lounge visits a day and 1,800 to 2,600 Olympic, near the research's figures; the jacuzzi is often full in the evenings.
 - Lesson: an experiment run before a test is written finds model errors that a test written to the model would have enshrined (the pumps' dependence on mains water).
 
+## Afterwards: the wet hall piped
+
+The wet hall is now piped port to port (`wetHallPipework` in `room-pipes.ts`) and is in both connection tests: the town main down in front of the break tank and over its roof by a chain-worked stop valve, the outlet to the booster set, the booster to the meter, the make-up main up into the roof, the backwash main down into the holding tank, its discharge riser over the tank's front to the sewer, and each tank's overflow and drain into the floor. The valve-reach test pushed the drain valves out past the tanks' ladders and the main's stop valve over open floor. The booster set and the wet hall mimic are also in the balance development room, running on their own.
+
 ## Next Steps
 
-- Pipe the wet hall port to port, add it to the connection tests, and show the booster set and mimic in the balance development room.
 - Make the pools' pumps' low-low trip latch, and drive the control room's annunciator from the world.
 - Feed the bathers into the water's chemistry: chlorine demand, nitrogen, particles, then urine and faecal incidents; fix the redox reading.

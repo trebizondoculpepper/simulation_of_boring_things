@@ -16,8 +16,9 @@ import type { WetHallReading } from '../logic/wet-hall-mimic';
  * make-up meter's register and the wet hall's mimic all read it, and the
  * booster set's RESET, on its controller or on the mimic, resets it.
  */
-function wetHallWorld() {
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+function wetHallWorld(standalone = false) {
+  const store =
+    standalone || typeof window === 'undefined' ? null : worldStore('dev');
   const world = () => store?.world.value;
   return {
     reading(): WetHallReading {
@@ -71,9 +72,12 @@ export function createWorldWaterMeter(kit: PanelKit) {
   };
 }
 
-/** The wet hall's mimic, by Penfold Controls. */
-export function createWetHallMimic(kit: PanelKit) {
-  const w = wetHallWorld();
+/**
+ * The wet hall's mimic, by Penfold Controls; `standalone` (a development
+ * room), showing a wet hall at rest rather than the world's.
+ */
+export function createWetHallMimic(kit: PanelKit, standalone = false) {
+  const w = wetHallWorld(standalone);
   const board = createMimicBoard(kit, wetHallMimicSpec, {
     press: (id) => {
       if (id === 'booster-reset') w.reset();

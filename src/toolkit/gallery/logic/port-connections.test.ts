@@ -117,6 +117,7 @@ const PIPED = [
   'plant_pool_02',
   'plant_pool_03',
   'plant_pool_04',
+  'wet_hall',
 ];
 
 describe.each(PIPED)('%s: every port connected', (room) => {
