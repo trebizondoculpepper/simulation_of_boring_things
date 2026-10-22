@@ -31,6 +31,7 @@ import {
 import { createEndSuctionPump } from '../../../components/plant/views/pumps-plant';
 import { PIPE_SIZES } from '../../../components/plant/views/plant-tools';
 import type { PlantExhibit } from './exhibit';
+import { SAFETY_EXHIBITS } from './safety-signage';
 import { POOL_SIGN_POST, POOL_SIGN_WALL } from './pool-sign-demo';
 
 /**
@@ -554,6 +555,8 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   // The poolside information sign, tried here and on dev0's boards.
   POOL_SIGN_WALL,
   POOL_SIGN_POST,
+  // The building's modern safety signs and notices (`safety-signage.ts`).
+  ...SAFETY_EXHIBITS,
 ];
 
 /** For the room's test: a kit, so the exhibits can be built in tests. */
