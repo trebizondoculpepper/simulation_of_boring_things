@@ -228,11 +228,14 @@ export function createBoilerCascade(
   kit: PanelKit,
   live: {
     panels?: Object3D[];
+    /** The first of its two boilers' numbers in the house (B-501 is 1). */
+    first?: number;
   } = {},
 ) {
   const t = plantTools(kit);
   const group = new Group();
   group.name = 'Boiler cascade';
+  const first = live.first ?? 1;
   const gap = 0.25,
     W = 0.8,
     D = 0.657,
@@ -255,7 +258,7 @@ export function createBoilerCascade(
     sign(
       t,
       group,
-      `B-50${i + 1}`,
+      `B-50${first + i}`,
       [x, 0.1 + H - 0.4, 0.1 + D / 2 + 0.003],
       0.14,
       0.05,

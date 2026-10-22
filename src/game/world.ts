@@ -12,11 +12,16 @@
 
 /** Bumped whenever the world's shape changes; `save.ts` migrates older saves. */
 import { newPlantServices } from './plant/services';
-import type { PlantServices, ServiceRoom, Utility } from './plant/services';
+import type {
+  IsolatorName,
+  PlantServices,
+  ServiceRoom,
+  Utility,
+} from './plant/services';
 import { newPools, stepPools } from './plant/pools';
 import type { PoolsState } from './plant/pools';
 
-export const WORLD_VERSION = 3;
+export const WORLD_VERSION = 4;
 
 export interface World {
   /** Seconds the world has run. */
@@ -46,7 +51,8 @@ export type WorldAction =
   | { type: 'demo/set'; on: boolean }
   | { type: 'demo/reset' }
   | { type: 'plant/source'; utility: Utility; on: boolean }
-  | { type: 'plant/feeder'; room: ServiceRoom; on: boolean };
+  | { type: 'plant/feeder'; room: ServiceRoom; on: boolean }
+  | { type: 'plant/isolator'; name: IsolatorName; on: boolean };
 
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
@@ -73,6 +79,16 @@ export function applyAction(world: World, action: WorldAction): World {
               sources: { ...world.plant.sources, [action.utility]: action.on },
             },
           };
+    case 'plant/isolator':
+      return world.plant.isolators[action.name] === action.on
+        ? world
+        : {
+            ...world,
+            plant: {
+              ...world.plant,
+              isolators: { ...world.plant.isolators, [action.name]: action.on },
+            },
+          };
     case 'plant/feeder':
       return world.plant.feeders[action.room] === action.on
         ? world
@@ -91,7 +107,7 @@ export function stepWorld(world: World, delta: number): World {
   return {
     ...world,
     time: world.time + delta,
-    pools: stepPools(world.pools, world.plant, delta),
+    pools: stepPools(world.pools, world.plant, delta, world.time),
   };
 }
 

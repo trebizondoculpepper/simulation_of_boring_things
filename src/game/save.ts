@@ -34,6 +34,8 @@ export interface SaveEnvelope {
 export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   1: (world) => world,
   2: (world) => world,
+  // 3 → 4: the machines' isolators, all on (`fillDefaults` adds them).
+  3: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

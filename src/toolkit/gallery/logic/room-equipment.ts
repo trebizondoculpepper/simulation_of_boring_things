@@ -672,7 +672,7 @@ export function roomEquipment(
           // Six boilers in three cascades: five the sizing's, one more.
           ...[1, 2, 3].map((i) =>
             floor(
-              'boiler-cascade',
+              `boiler-cascade:${i}`,
               `Condensing boilers, cascade ${i}`,
               3,
               1,
@@ -709,6 +709,14 @@ export function roomEquipment(
             1.5,
           ),
           wall('mimic-gas', 'Mimic: boiler house gas', 1.9, 0.08, 1.1, 1.7),
+          wall(
+            'mimic-boiler-heat',
+            'Mimic: boiler status and heat output',
+            2.5,
+            0.08,
+            1.9,
+            1.85,
+          ),
         ],
       };
     case 'hypo_store':
@@ -1020,6 +1028,122 @@ export const TANK_SURROUND = 0.8;
  * under the gantry. The middle of the room stays open for the pipework.
  */
 const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
+  // The lounge's plant room (medium, 12 m): as the Olympic's, but its
+  // gantry and stair take the north-east corner. The tank in the north-west,
+  // a walkway all round it; the pumps off its face; the two filters on the
+  // south wall west of the doors, their backwash short to the drainage;
+  // east of the doors the heat exchanger by the heating ring and the
+  // dosing pumps where their lines come in; the panel and the dosing
+  // controller on the east wall south of the stair's foot; the contact
+  // tank and the ozone generator along the north, east of the tank; the
+  // UV in the middle, clear of the gantry.
+  plant_pool_01: (box, items) => {
+    const h = box.w / 2;
+    const at = (label: string) => items.find((i) => i.label.endsWith(label))!;
+    const north = -h + (box.pipes.north ?? 0);
+    const south = h - (box.pipes.south ?? 0);
+    const s = TANK_SURROUND;
+    const out: Placed[] = [];
+    const tank = at('balance tank');
+    const tx0 = -h + s;
+    const tz0 = north + s;
+    out.push(
+      put(box, tank, {
+        x: tx0 + tank.w / 2,
+        z: tz0 + tank.d / 2,
+        face: 'south',
+      }),
+    );
+    const tankSouth = tz0 + tank.d;
+    const tankEast = tx0 + tank.w;
+    const pumps = at('circulation pumps, duty and standby, with strainers');
+    out.push(
+      put(box, pumps, {
+        x: -h + s + pumps.w / 2,
+        z: tankSouth + ACCESS + pumps.d / 2,
+        face: 'south',
+      }),
+    );
+    const filters = items.filter((i) => i.key.startsWith('sand-filter'));
+    const f = filters[0];
+    const door = Math.min(
+      ...box.keepClear.filter((k) => k.maxZ >= h - 1e-9).map((k) => k.minX),
+    );
+    filters.forEach((item, i) =>
+      out.push(
+        put(box, item, {
+          x: door - f.w / 2 - i * (f.w + 0.6),
+          z: south - 0.6 - f.d / 2,
+          face: 'north',
+        }),
+      ),
+    );
+    const doorEast = Math.max(
+      ...box.keepClear.filter((k) => k.maxZ >= h - 1e-9).map((k) => k.maxX),
+    );
+    const phe = at('plate heat exchanger');
+    out.push(
+      put(box, phe, {
+        x: doorEast + 0.6 + phe.w / 2,
+        z: south - 0.6 - phe.d / 2,
+        face: 'north',
+      }),
+    );
+    let x = doorEast + 0.6 + phe.w + 0.6;
+    const hypo = at('hypochlorite dosing pumps');
+    out.push(put(box, hypo, { wall: 'south', along: x + hypo.w / 2 }));
+    // The east wall south of the stair's foot.
+    const foot = Math.max(
+      ...box.keepClear
+        .filter((k) => k.maxX >= h - 1e-9 && k.maxZ < h - 2)
+        .map((k) => k.maxZ),
+    );
+    const controller = at('dosing controller and sample cells');
+    out.push(
+      put(box, controller, {
+        wall: 'east',
+        along: foot + 0.3 + controller.w / 2,
+      }),
+    );
+    // The acid pump beside it, clear of the heating at the south.
+    const acid = at('acid dosing pump');
+    out.push(
+      put(box, acid, {
+        wall: 'east',
+        along: foot + 0.3 + controller.w + WALL_GAP + acid.w / 2,
+      }),
+    );
+    const panel = at('local control panel');
+    out.push(
+      put(box, panel, {
+        x: h - panel.d / 2,
+        z: south - 0.3 - panel.w / 2,
+        face: 'west',
+      }),
+    );
+    // The north row, east of the tank, short of the gantry.
+    x = tankEast + s;
+    for (const label of ['ozone contact tank', 'ozone generator']) {
+      const item = at(label);
+      out.push(
+        put(box, item, {
+          x: x + item.w / 2,
+          z: north + item.d / 2,
+          face: 'south',
+        }),
+      );
+      x += item.w + 0.6;
+    }
+    const uv = at('UV unit');
+    out.push(
+      put(box, uv, {
+        x: tankEast + s + uv.w / 2 + 1.2,
+        z: tankSouth + ACCESS + 0.3 + uv.d / 2,
+        face: 'south',
+      }),
+    );
+    return out;
+  },
   // The footbath's cabinet against the tiny room's west wall, facing east,
   // its services' lanes behind it, clear of both doors.
   plant_pool_04: (box, items) => {

@@ -23,6 +23,7 @@ import { EXHIBITS as OZONE } from '../rooms/plant/ozone';
 import { EXHIBITS as DOSING } from '../rooms/plant/dosing';
 import { EXHIBITS as BALANCE } from '../rooms/plant/balance';
 import { EXHIBITS as BOILER } from '../rooms/plant/boiler';
+import { createLiveBoilerCascade } from '../rooms/plant/boiler';
 import { EXHIBITS as CHEMICALS } from '../rooms/plant/chemicals';
 import { EXHIBITS as ELECTRICAL } from '../rooms/plant/electrical';
 import { EXHIBITS as CONTROL } from '../rooms/plant/control';
@@ -62,6 +63,7 @@ const MODELS: Record<string, PlantExhibit> = {
   'gas-safety': BOILER[7],
   'combustion-panel': BOILER[8],
   'mimic-gas': BOILER[9],
+  'mimic-boiler-heat': BOILER[10],
   'hypo-tank': CHEMICALS[0],
   'acid-ibc': CHEMICALS[1],
   'spill-kit': CHEMICALS[2],
@@ -106,6 +108,8 @@ const TANKS: Record<string, 'sectional' | 'vessel'> = {
  */
 function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
   const [kind, arg] = item.key.split(':');
+  if (kind === 'boiler-cascade' && arg)
+    return createLiveBoilerCascade(kit, (Number(arg) - 1) * 2);
   if (kind === 'tanker-stand') return tankerStand(kit, item);
   // The lounge's contact tank is the ozone room's own model.
   if (kind === 'contact-tank' && item.w <= OZONE[3].size.w + 0.05)
@@ -155,6 +159,7 @@ function drawPortNozzles(kit: PanelKit, item: Item) {
   });
   kit.materials.push(body, flange);
   for (const port of machinePorts(item)) {
+    if (port.drawn) continue;
     const dir = new Vector3(...port.outward);
     const end = new Vector3(...port.at);
     const q = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), dir);

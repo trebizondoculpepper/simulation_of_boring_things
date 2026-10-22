@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   CORRIDOR_DOORS,
+  CORRIDOR_QUADRANTS,
   corridorSolids,
+  dadoPieces,
   corridorYaw,
   doorPlace,
   inCorridor,
@@ -197,5 +199,27 @@ describe('passing between the main corridor and the rooms off it', () => {
       expect(f.x + C.side / 2).toBeCloseTo(p.x);
       expect(f.z + C.side / 2).toBeCloseTo(p.z);
     });
+  });
+});
+
+describe('the corridor’s quadrant colours', () => {
+  it('gives each quadrant its own colour, green in the north-west', () => {
+    const colours = Object.values(CORRIDOR_QUADRANTS);
+    expect(new Set(colours).size).toBe(4);
+    expect(CORRIDOR_QUADRANTS['north-west']).toBe('#6d7a6f');
+  });
+
+  it('cuts every wall’s dado at the ring’s middle, each piece in its own quadrant', () => {
+    const S = MAIN_CORRIDOR.side;
+    const north = dadoPieces('north', 0, S);
+    expect(north.map((p) => p.quadrant)).toEqual(['north-west', 'north-east']);
+    expect(north[0].b).toBe(S / 2);
+    expect(dadoPieces('east', 0, S).map((p) => p.quadrant)).toEqual([
+      'north-east',
+      'south-east',
+    ]);
+    expect(dadoPieces('inner-south', MAIN_CORRIDOR.width, S / 2)).toEqual([
+      { a: MAIN_CORRIDOR.width, b: S / 2, quadrant: 'south-west' },
+    ]);
   });
 });

@@ -11,6 +11,8 @@ import { createPipe, PIPE_KINDS } from '../../components/core/views/pipe-kinds';
 import { markPipe } from '../../components/plant/views/pipe-markers';
 import { supportPipe } from '../../components/plant/views/pipe-supports';
 import type { PipeService } from '../../components/plant/views/pipe-markers';
+import { worldStore } from '../../save/world-store';
+import type { IsolatorName } from '../../../game/plant/services';
 import { createPowerIsolator } from '../../components/industrial-control/views/panel-switchgear';
 import {
   cabinetGully,
@@ -109,6 +111,11 @@ export function cabinetServices(
   // The isolator, its handle the switch.
   const place = cabinetIsolator(room);
   const uses = new Map<Object3D, () => void>();
+  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const name: IsolatorName =
+    room === 'plant_pool_03'
+      ? 'Jacuzzi cabinet isolator'
+      : 'Footbath cabinet isolator';
   const isolator = place
     ? createPowerIsolator(kit, {
         on: true,
@@ -121,7 +128,11 @@ export function cabinetServices(
     isolator.group.rotation.y = place.yaw;
     isolator.group.name = 'Cabinet isolator';
     group.add(isolator.group);
-    const toggle = () => isolator.toggle();
+    // Switched here, it is switched in the world: the cabinet's pool stops.
+    const toggle = () => {
+      isolator.toggle();
+      store?.dispatch({ type: 'plant/isolator', name, on: isolator.on });
+    };
     isolator.handle.traverse((o) => uses.set(o, toggle));
   }
   return {
@@ -129,6 +140,9 @@ export function cabinetServices(
     isolator,
     uses,
     update(delta: number) {
+      // As the world has it, switched here or anywhere.
+      const on = store?.world.value.plant.isolators[name];
+      if (isolator && on !== undefined && on !== isolator.on) isolator.set(on);
       isolator?.update(delta);
     },
   };

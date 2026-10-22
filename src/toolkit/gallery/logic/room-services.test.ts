@@ -9,7 +9,16 @@ describe('current plant-room service connections', () => {
       const layout = layoutRoom(room)!;
       const routes = roomServiceRoutes(room);
       expect(layout.failed, room).toHaveLength(0);
-      if (['plant_pool_02', 'plant_pool_03', 'plant_pool_04'].includes(room)) {
+      // The pool plant rooms' feeds are routed port to port elsewhere
+      // (`room-pipes.ts`, `cabinet-pipes.ts`).
+      if (
+        [
+          'plant_pool_01',
+          'plant_pool_02',
+          'plant_pool_03',
+          'plant_pool_04',
+        ].includes(room)
+      ) {
         expect(
           routes.filter((r) => r.utility === 'power'),
           room,
@@ -37,11 +46,10 @@ describe('current plant-room service connections', () => {
     }
   });
 
-  it('terminates the lounge fluid pipes at declared machine ports', () => {
-    const routes = roomServiceRoutes('plant_pool_01');
-    expect(routes.some((r) => r.utility === 'water')).toBe(true);
-    expect(routes.some((r) => r.utility === 'heat')).toBe(true);
-    expect(routes.some((r) => r.utility === 'chemical')).toBe(true);
+  it('leaves the lounge’s plant room to its port-to-port routing', () => {
+    // Its pipework, as the Olympic's, is `room-pipes.ts`'s; every port's
+    // connection is checked in `port-connections.test.ts`.
+    expect(roomServiceRoutes('plant_pool_01')).toEqual([]);
   });
 
   it('runs air ducts from each air handler toward both side walls', () => {

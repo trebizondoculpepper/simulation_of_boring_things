@@ -35,6 +35,10 @@ import { createCombustionPanel } from '../../../components/plant/views/combustio
 import { plantAt } from '../../logic/control-room-demo';
 import { GAS_MIMIC, gasState } from '../../logic/pool-mimics';
 import {
+  BOILER_HEAT_MIMIC,
+  boilerHeatState,
+} from '../../logic/boiler-heat-mimic';
+import {
   createBoilerCascade,
   createCalorifier,
   createDosingPot,
@@ -56,19 +60,19 @@ import {
  * retries and locks out until the gas is back and RESET is pressed.
  */
 const house = {
-  boilers: [newBoiler(), newBoiler()] as BoilerState[],
-  gas: newGasHouse(2) as GasHouse,
+  boilers: Array.from({ length: 6 }, () => newBoiler()) as BoilerState[],
+  gas: newGasHouse(6) as GasHouse,
   isolators: [] as BallValveView[],
   ecv: null as BallValveView | null,
   stopPushed: () => false,
   seconds: 0,
   /** Flue temperatures, the combustion air fan and the room's CO. */
-  combustion: newCombustion(2) as CombustionState,
+  combustion: newCombustion(6) as CombustionState,
   /**
    * How fouled each boiler's heat exchanger is, 0 to 1: B-502's is due a
    * clean, so its flue runs hotter than B-501's.
    */
-  fouling: [0, 0.35],
+  fouling: [0, 0.35, 0.1, 0.25, 0.15, 0.3],
 };
 
 // A development handle for the console: the boiler house's state.
@@ -91,6 +95,65 @@ const settle = () => {
 export const PURPOSE =
   'Boilers, low-loss header, heating pumps, pressurisation and gas safety';
 
+/** A physical pair of controllers in one of the room's three cascades. */
+export function createLiveBoilerCascade(
+  kit: Parameters<PlantExhibit['build']>[0],
+  first: number,
+): LiveExhibit {
+  const parts = createPartSet();
+  const panels = [0, 1].map((offset) => {
+    const i = first + offset;
+    const panel = createBoilerPanel(kit, (key) => {
+      house.boilers[i] = pressBoiler(house.boilers[i], key);
+    });
+    for (const [o, use] of panel.parts.uses) parts.uses.set(o, use);
+    return panel;
+  });
+  const cascade = createBoilerCascade(kit, {
+    panels: panels.map((panel) => panel.group),
+    first: first + 1,
+  });
+  return {
+    object: cascade,
+    parts,
+    update(delta) {
+      // One cascade advances the shared model once; each physical pair
+      // displays only its own boiler controllers.
+      if (first === 0) {
+        house.seconds += delta;
+        settle();
+        const plant = plantAt(performance.now() / 1000);
+        const lag = Math.sin(plant.t / 45) > 0;
+        house.boilers = house.boilers.map((boiler, i) =>
+          stepBoiler(
+            boiler,
+            {
+              demand:
+                plant.boilersFiring &&
+                i < 5 &&
+                (i === 0 || lag) &&
+                boilersPermitted(house.combustion),
+              gas: gasTo(house.gas, i),
+              systemReturn: plant.lthw - 14,
+              pressure: 2.4,
+            },
+            delta,
+          ),
+        );
+        house.combustion = stepCombustion(
+          house.combustion,
+          house.boilers,
+          house.fouling,
+          delta,
+        );
+      }
+      panels.forEach((panel, offset) =>
+        panel.show(house.boilers[first + offset], house.seconds, delta),
+      );
+    },
+  };
+}
+
 /**
  * The room's equipment, in the order it is shown: each after a real
  * product (`doc/research/plant-products-boiler-air.md`).
@@ -101,53 +164,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     reference:
       'After 2 × Remeha Gas 220 Ace 300 kW (800 × 1662 × 657 mm); top flue, LTHW and gas ports for room pipe routing',
     size: { w: 2.2, d: 1.0, h: 1.9, mount: 'floor' },
-    build(kit): LiveExhibit {
-      const parts = createPartSet();
-      const panels = house.boilers.map((_, i) => {
-        const panel = createBoilerPanel(kit, (key) => {
-          house.boilers[i] = pressBoiler(house.boilers[i], key);
-        });
-        for (const [o, use] of panel.parts.uses) parts.uses.set(o, use);
-        return panel;
-      });
-      const cascade = createBoilerCascade(kit, {
-        panels: panels.map((p) => p.group),
-      });
-      return {
-        object: cascade,
-        parts,
-        update(delta) {
-          house.seconds += delta;
-          settle();
-          const plant = plantAt(performance.now() / 1000);
-          const lag = Math.sin(plant.t / 45) > 0;
-          house.boilers = house.boilers.map((b, i) =>
-            stepBoiler(
-              b,
-              {
-                demand:
-                  plant.boilersFiring &&
-                  (i === 0 || lag) &&
-                  boilersPermitted(house.combustion),
-                gas: gasTo(house.gas, i),
-                systemReturn: plant.lthw - 14,
-                pressure: 2.4,
-              },
-              delta,
-            ),
-          );
-          panels.forEach((panel, i) =>
-            panel.show(house.boilers[i], house.seconds, delta),
-          );
-          house.combustion = stepCombustion(
-            house.combustion,
-            house.boilers,
-            house.fouling,
-            delta,
-          );
-        },
-      };
-    },
+    build: (kit) => createLiveBoilerCascade(kit, 0),
   },
   {
     title: 'Low-loss header',
@@ -302,6 +319,26 @@ export const EXHIBITS: readonly PlantExhibit[] = [
             }),
           );
         },
+      };
+    },
+  },
+  {
+    title: 'Mimic: boiler status and heat output',
+    reference:
+      'Hard-wired boiler cascade mimic: ready, firing and fault indications; estimated output in kW per 300 kW boiler and total',
+    size: {
+      w: BOILER_HEAT_MIMIC.width + 0.1,
+      d: 0.08,
+      h: BOILER_HEAT_MIMIC.height + 0.1,
+      mount: 'wall',
+      y: 1.7,
+    },
+    build(kit): LiveExhibit {
+      const board = createMimicBoard(kit, BOILER_HEAT_MIMIC);
+      return {
+        object: board.group,
+        parts: board.parts,
+        update: () => board.show(boilerHeatState(house.boilers)),
       };
     },
   },

@@ -26,19 +26,22 @@ import {
   CORRIDOR_DOORS,
   CORRIDOR_WALLS,
   corridorWalls,
+  CORRIDOR_QUADRANTS,
+  dadoPieces,
   doorPlace,
   MAIN_CORRIDOR,
   wallPieces,
 } from '../logic/main-corridor';
-import type { CorridorDoor } from '../logic/main-corridor';
+import type { CorridorDoor, CorridorQuadrant } from '../logic/main-corridor';
 import { signTo, warningsFor } from './shell-room';
 import { createCorridorPosters } from './corridor-posters';
 import type { RoomId } from '../logic/dev-room-links';
 
 /**
  * The main corridor (`logic/main-corridor.ts`): a ring of painted blockwork
- * with a green dado, a grey epoxy floor, two storeys high under a
- * generated services ceiling, lit by sealed wall battens; in its walls,
+ * with a dado coloured by quadrant (green, pink, blue, grey, to find one's
+ * way by), a grey epoxy floor, two storeys high under a generated services
+ * ceiling, lit by sealed wall battens; in its walls,
  * the standard equipment doors (`equipment-doors.ts`), pushed open from
  * the corridor into the rooms beyond, each with its sign over it on the
  * corridor side. Metres, scaled by `metre`.
@@ -54,7 +57,9 @@ export function createMainCorridor(metre: number, kit: PanelKit) {
     return m;
   };
   const block = paint('#d4d5cf');
-  const dado = paint('#6d7a6f');
+  const dados = {} as Record<CorridorQuadrant, Material>;
+  for (const q of Object.keys(CORRIDOR_QUADRANTS) as CorridorQuadrant[])
+    dados[q] = paint(CORRIDOR_QUADRANTS[q]);
   const epoxy = paint('#7c8482', 0.55);
   const dark = paint('#0b0d0d', 1);
   const box = (
@@ -120,7 +125,9 @@ export function createMainCorridor(metre: number, kit: PanelKit) {
         : box(m, depth, y1 - y0, b - a, at, (y0 + y1) / 2, (a + b) / 2);
     for (const [a, b] of wallPieces(wall)) {
       along(a, b, 0, H, block);
-      along(Math.max(a, from), Math.min(b, to), 0, 1.2, dado, 0.01, face);
+      // The dado, its colour the quadrant's, changing at the ring's middle.
+      for (const piece of dadoPieces(wall, Math.max(a, from), Math.min(b, to)))
+        along(piece.a, piece.b, 0, 1.2, dados[piece.quadrant], 0.01, face);
     }
     for (const d of CORRIDOR_DOORS.filter((d) => d.wall === wall))
       along(d.at - half, d.at + half, openingH, H, block);

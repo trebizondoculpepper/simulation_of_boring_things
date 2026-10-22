@@ -1,3 +1,4 @@
+import { dot } from '../logic/font-5x7';
 import {
   BoxGeometry,
   Color,
@@ -255,21 +256,20 @@ export function createMessageDisplay(
     const c = art.context;
     c.fillStyle = '#030807';
     c.fillRect(0, 0, c.canvas.width, c.canvas.height);
-    c.font = `bold 24px "Courier New", monospace`;
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
+    // Each character a 5 × 7 grid of glowing dots, from the controller's
+    // character set (`../logic/font-5x7.ts`); the unlit dots show faintly
+    // through the window.
     for (let r = 0; r < 2; r++)
       for (let k = 0; k < columns; k++) {
-        const x = 6 + k * cw + cw / 2;
-        const y = 5 + r * ch + ch / 2;
-        // The unlit dot cells show faintly through the window.
-        c.fillStyle = '#0b1f1c';
-        c.fillRect(x - 7, y - 11, 14, 22);
-        const letter = on ? (lines[r] ?? '')[k] : undefined;
-        if (letter && letter !== ' ') {
-          c.fillStyle = '#62f2e0';
-          c.fillText(letter, x, y + 1);
-        }
+        const x0 = 6 + k * cw + 2;
+        const y0 = 5 + r * ch + 2;
+        const letter = on ? ((lines[r] ?? '')[k] ?? ' ') : ' ';
+        for (let dy = 0; dy < 7; dy++)
+          for (let dx = 0; dx < 5; dx++) {
+            const lit = letter !== ' ' && dot(letter, dx, dy);
+            c.fillStyle = lit ? '#62f2e0' : '#0b1f1c';
+            c.fillRect(x0 + dx * 2.9, y0 + dy * 3.7, 2.4, 3.1);
+          }
       }
     art.texture.needsUpdate = true;
   };

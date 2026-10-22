@@ -198,3 +198,52 @@ export const corridorYaw = (d: CorridorDoor) => {
   const { into } = doorPlace(d);
   return Math.atan2(into[0], into[1]);
 };
+
+/**
+ * The ring's four quadrants, each with its own dado colour so a walker
+ * knows where they are: clockwise from the north-west, green (the
+ * corridor's first colour), pink, blue and grey.
+ */
+export const CORRIDOR_QUADRANTS = {
+  'north-west': '#6d7a6f',
+  'north-east': '#b5838d',
+  'south-east': '#5b7897',
+  'south-west': '#76797b',
+} as const;
+export type CorridorQuadrant = keyof typeof CORRIDOR_QUADRANTS;
+
+/** Which quadrant a point of the ring is in, split at its middle. */
+export function corridorQuadrant(x: number, z: number): CorridorQuadrant {
+  const half = C.side / 2;
+  return `${z < half ? 'north' : 'south'}-${x < half ? 'west' : 'east'}`;
+}
+
+/**
+ * A wall's dado from `a` to `b` along it, cut where it crosses the ring's
+ * middle, each piece with its quadrant.
+ */
+export function dadoPieces(
+  wall: CorridorWall,
+  a: number,
+  b: number,
+): { a: number; b: number; quadrant: CorridorQuadrant }[] {
+  const { line, alongX } = corridorWalls()[wall];
+  const half = C.side / 2;
+  const cuts =
+    a < half && half < b
+      ? [
+          [a, half],
+          [half, b],
+        ]
+      : [[a, b]];
+  return cuts.map(([p, q]) => {
+    const mid = (p + q) / 2;
+    return {
+      a: p,
+      b: q,
+      quadrant: alongX
+        ? corridorQuadrant(mid, line)
+        : corridorQuadrant(line, mid),
+    };
+  });
+}

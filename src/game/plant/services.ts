@@ -38,10 +38,31 @@ export const UTILITIES: readonly Utility[] = [
   'chemical',
 ];
 
+/**
+ * The machines' local isolators (lockable rotary switch-disconnectors
+ * beside each, `room-pipes.ts` and `cabinet-pipes.ts`), by name: switched
+ * off, the machine has no power whatever its room's feeder.
+ */
+export const ISOLATORS = [
+  'P-101A isolator',
+  'P-101B isolator',
+  'UV unit isolator',
+  'Ozone generator isolator',
+  'Jacuzzi cabinet isolator',
+  'Footbath cabinet isolator',
+  'P-201A isolator',
+  'P-201B isolator',
+  'Lounge UV unit isolator',
+  'Lounge ozone generator isolator',
+] as const;
+export type IsolatorName = (typeof ISOLATORS)[number];
+
 export interface PlantServices {
   sources: Record<Utility, boolean>;
   /** A room's electrical feeder; a source room can lose its own supply. */
   feeders: Record<ServiceRoom, boolean>;
+  /** Each machine's isolator: on, or locked off. */
+  isolators: Record<IsolatorName, boolean>;
 }
 
 export function newPlantServices(): PlantServices {
@@ -56,6 +77,9 @@ export function newPlantServices(): PlantServices {
     feeders: Object.fromEntries(
       Object.keys(ROOM_SERVICES).map((room) => [room, true]),
     ) as Record<ServiceRoom, boolean>,
+    isolators: Object.fromEntries(
+      ISOLATORS.map((name) => [name, true]),
+    ) as Record<IsolatorName, boolean>,
   };
 }
 

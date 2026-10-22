@@ -23,6 +23,7 @@ import {
 import { createBrandBadge } from '../../core/views/brand-badge';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createCanvasTexture } from '../../core/views/screens';
+import { dot } from '../logic/font-5x7';
 
 /**
  * Indicators and displays for the 1980s panels: a rectangular moving-coil
@@ -413,17 +414,25 @@ export interface TextDisplay {
 }
 
 /**
- * A reflective character LCD of `columns` by `rows` 5x7 cells: grey-green
- * glass, dark characters, behind a black bezel. It shows nothing when off.
+ * A character LCD module after the HD44780-driven STN modules of the
+ * period (the Hitachi LM044L is 20 × 4): `columns` by `rows` cells, each
+ * a 5 × 8 grid of dots, the characters drawn dot by dot from the
+ * controller's 5 × 7 character set (`../logic/font-5x7.ts`). Grey-green
+ * glass with dark dots behind a black bezel; with `backlight`, a
+ * yellow-green LED backlight glows through it. Unlit dots show faintly,
+ * as on the real glass. It shows nothing when off.
  */
 export function createCharacterLcd(
   kit: PanelKit,
-  { columns = 16, rows = 2, cell = 0.0032 } = {},
+  { columns = 16, rows = 2, cell = 0.0032, backlight = false } = {},
 ): TextDisplay {
   const group = new Group();
+  // The cell's pitch in base units: 12 wide, 18 high, 4 of margin; the
+  // canvas draws them `S` times over so each dot is sharp.
   const cw = 12;
   const ch = 18;
-  const art = createCanvasTexture(columns * cw + 8, rows * ch + 8);
+  const S = 4;
+  const art = createCanvasTexture((columns * cw + 8) * S, (rows * ch + 8) * S);
   const width = (columns * cw + 8) * (cell / cw) * 1.6;
   const height = (rows * ch + 8) * (cell / cw) * 1.6;
   add(
@@ -434,34 +443,43 @@ export function createCharacterLcd(
     0,
     0.002,
   );
-  const face = printed(kit, art.texture);
+  const face = printed(kit, art.texture, backlight);
   add(group, new PlaneGeometry(width, height), face, 0, 0, 0.0042);
+  const glass = backlight
+    ? {
+        lit: '#b9d34a',
+        dark: '#6f7d3a',
+        ink: '#1d2a0c',
+        ghost: 'rgba(40,60,10,0.10)',
+      }
+    : {
+        lit: '#a8b874',
+        dark: '#7d8566',
+        ink: '#1f2914',
+        ghost: 'rgba(40,52,24,0.10)',
+      };
   let last = '';
   const show = (lines: string[], on = true) => {
     const key = `${on}${lines.join('|')}`;
     if (key === last) return;
     last = key;
     const c = art.context;
-    c.fillStyle = on ? '#a8b874' : '#7d8566';
+    c.fillStyle = on ? glass.lit : glass.dark;
     c.fillRect(0, 0, c.canvas.width, c.canvas.height);
+    const pitch = 2 * S;
+    const size = 1.7 * S;
     for (let r = 0; r < rows; r++)
       for (let k = 0; k < columns; k++) {
-        const x = 4 + k * cw;
-        const y = 4 + r * ch;
-        // Each cell's faint dot grid shows even when blank.
-        c.fillStyle = on ? 'rgba(40,52,24,0.12)' : 'rgba(40,52,24,0.06)';
-        c.fillRect(x + 1, y + 1, cw - 2, ch - 2);
+        const x0 = (4 + k * cw + 1) * S;
+        const y0 = (4 + r * ch + 1) * S;
+        const character = on ? (lines[r]?.[k] ?? ' ') : ' ';
+        for (let dy = 0; dy < 8; dy++)
+          for (let dx = 0; dx < 5; dx++) {
+            const lit = dy < 7 && character !== ' ' && dot(character, dx, dy);
+            c.fillStyle = lit ? glass.ink : glass.ghost;
+            c.fillRect(x0 + dx * pitch, y0 + dy * pitch, size, size);
+          }
       }
-    if (on) {
-      c.fillStyle = '#1f2914';
-      c.font = 'bold 15px "Courier New", monospace';
-      c.textBaseline = 'middle';
-      c.textAlign = 'center';
-      lines.slice(0, rows).forEach((line, r) => {
-        for (let k = 0; k < Math.min(columns, line.length); k++)
-          c.fillText(line[k], 4 + k * cw + cw / 2, 4 + r * ch + ch / 2 + 1);
-      });
-    }
     art.texture.needsUpdate = true;
   };
   show([], false);

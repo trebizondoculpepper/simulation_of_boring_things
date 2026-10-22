@@ -34,7 +34,9 @@ export type Service =
   | 'ozone'
   | 'electrical'
   | 'hypochlorite'
-  | 'sample';
+  | 'sample'
+  | 'gas'
+  | 'flue';
 
 export interface Valve {
   /** Its middle, on its run, and the run's axis there. */
@@ -47,6 +49,8 @@ export interface Valve {
    * wheel, its chain hanging to `CHAIN_TO` over the floor.
    */
   operator: 'lever' | 'chain';
+  /** A water butterfly valve (the default), or a gas lever ball valve. */
+  style?: 'butterfly' | 'gas-ball';
   /**
    * The way it faces in plan, away from its machine: its lever, open,
    * along a level pipe that way; its neck and lever, on a vertical pipe,
@@ -76,7 +80,8 @@ export interface PipeRun {
     | 'copper'
     | 'chemical-tube'
     | 'stainless'
-    | 'steel-screwed';
+    | 'steel-screwed'
+    | 'flue';
   od: number;
   points: Vec3[];
   /** The machines and runs at its ends (tees), which it may meet. */
@@ -218,14 +223,28 @@ export const ISOLATOR_Y = 1.5;
 const ISOLATOR_BOX = { h: 0.17, d: 0.105 };
 
 /** The room's runs and floor channels. */
-export function olympicPipework(): {
+/** The pool plant rooms routed here: each one's pumps' tag, and its isolators' names. */
+const ROUTED: Record<string, { pumps: string; prefix: string }> = {
+  plant_pool_01: { pumps: 'P-201', prefix: 'Lounge ' },
+  plant_pool_02: { pumps: 'P-101', prefix: '' },
+};
+
+/** The Olympic pool's plant room's pipework. */
+export const olympicPipework = () => poolPlantPipework('plant_pool_02');
+
+/**
+ * A pool plant room's pipework (the lounge's, the Olympic's): the same
+ * circuit, laid to its own machines' places.
+ */
+export function poolPlantPipework(room: string): {
   runs: PipeRun[];
   channels: FloorChannel[];
   tees: PipeTee[];
   isolators: IsolatorPlace[];
   stands: Vec3[];
 } {
-  const layout = layoutRoom('plant_pool_02')!;
+  const layout = layoutRoom(room)!;
+  const names = ROUTED[room];
   const h = layout.box.w / 2;
   const by = (end: string) =>
     layout.placed.find((p) => p.item.label.endsWith(end))!;
@@ -324,6 +343,15 @@ export function olympicPipework(): {
     service: 'pool water',
     label: 'SUCTION',
   });
+  tees.push({
+    name: 'Pump suction header tee',
+    kind: 'pvc-pressure',
+    at: rise,
+    mainOd: inA.od,
+    branchOd: main,
+    mainDirection: [0, 0, 1],
+    branchDirection: [0, -1, 0],
+  });
   run({
     name: 'Pump suction header',
     kind: 'pvc-pressure',
@@ -354,9 +382,18 @@ export function olympicPipework(): {
       [outB.at[0], PUMP_HEADER, outB.at[2]],
       outB.at,
     ],
-    joins: [pumps.item.label, 'Filter inlet header'],
+    joins: [pumps.item.label, 'Pump discharge main'],
     service: 'pool water',
     label: 'DISCHARGE',
+  });
+  tees.push({
+    name: 'Pump discharge header tee',
+    kind: 'pvc-pressure',
+    at: [outA.at[0], PUMP_HEADER, (outA.at[2] + outB.at[2]) / 2],
+    mainOd: outA.od,
+    branchOd: main,
+    mainDirection: [0, 0, 1],
+    branchDirection: [0, 1, 0],
   });
   const discharge = {
     at: [outA.at[0], PUMP_HEADER, (outA.at[2] + outB.at[2]) / 2] as Vec3,
@@ -378,43 +415,107 @@ export function olympicPipework(): {
   const east = faces.filter((x) => x.dir[0] < -0.5);
   // The lines the headers run along in front of the filters' faces.
   const OUT_LINE = 0.35;
-  const IN_LINE = 0.8;
+  // The inlet line (and the floor channel under it) far enough out that
+  // the channel stands clear of every filter's footprint.
+  const IN_LINE = Math.max(
+    0.8,
+    ...faces.map(({ f, outlet, dir }) =>
+      dir[2] < -0.5
+        ? outlet.at[2] - f.footprint.minZ + 0.2
+        : dir[0] < -0.5
+          ? outlet.at[0] - f.footprint.minX + 0.2
+          : 0,
+    ),
+  );
   // Measured from the vessels' fronts: their outlets, in the middle.
   const lineZ = (line: number) => south[0].outlet.at[2] - line;
-  const lineX = (line: number) => east[0].outlet.at[0] - line;
+  const lineX = (line: number) =>
+    east.length ? east[0].outlet.at[0] - line : 0;
   // The inlet header: up from the pumps, south to the south row's line,
-  // east along it, north along the east column's.
+  // along it each way to its filters, and north along the east column's
+  // line if there is one.
   const inSouthZ = lineZ(IN_LINE);
   const inEastX = lineX(IN_LINE);
-  const northmost = Math.min(...east.map((x) => x.inlet.at[2]));
-  const inletHeader = run({
-    name: 'Filter inlet header',
+  const southInlets = south.map((x) => x.inlet.at[0]);
+  const junction: Vec3 = [discharge.at[0], L.filterIn, inSouthZ];
+  run({
+    name: 'Pump discharge main',
     kind: 'pvc-pressure',
     od: main,
     points: [
       discharge.at,
       [discharge.at[0], L.filterIn, discharge.at[2]],
-      [discharge.at[0], L.filterIn, inSouthZ],
-      [inEastX, L.filterIn, inSouthZ],
-      [inEastX, L.filterIn, northmost],
+      junction,
     ],
-    joins: ['Pump discharge header'],
+    joins: [
+      'Pump discharge header',
+      'Filter inlet header',
+      'Filter inlet header, west',
+    ],
     service: 'pool water',
     label: 'TO FILTERS',
   });
+  const westmostIn = Math.min(...southInlets);
+  if (westmostIn < junction[0] - 1e-6)
+    run({
+      name: 'Filter inlet header, west',
+      kind: 'pvc-pressure',
+      od: main,
+      points: [junction, [westmostIn, L.filterIn, inSouthZ]],
+      joins: ['Pump discharge main', 'Filter inlet header'],
+      service: 'pool water',
+      label: 'TO FILTERS',
+    });
+  const northmost = east.length
+    ? Math.min(...east.map((x) => x.inlet.at[2]))
+    : 0;
+  const inletHeader = run({
+    name: 'Filter inlet header',
+    kind: 'pvc-pressure',
+    od: main,
+    points: east.length
+      ? [
+          junction,
+          [inEastX, L.filterIn, inSouthZ],
+          [inEastX, L.filterIn, northmost],
+        ]
+      : [junction, [Math.max(...southInlets), L.filterIn, inSouthZ]],
+    joins: ['Pump discharge main', 'Filter inlet header, west'],
+    service: 'pool water',
+    label: 'TO FILTERS',
+  });
+  if (westmostIn < junction[0] - 1e-6)
+    tees.push({
+      name: 'Filter inlet header junction tee',
+      kind: 'pvc-pressure',
+      at: junction,
+      mainOd: main,
+      branchOd: main,
+      mainDirection: [1, 0, 0],
+      branchDirection: [0, 0, Math.sign(discharge.at[2] - inSouthZ)],
+    });
   const outSouthZ = lineZ(OUT_LINE);
   const outEastX = lineX(OUT_LINE);
+  const pheBranchX = out(port(phe, 'poolIn'), 0.6)[0];
   const westmost = Math.min(...south.map((x) => x.outlet.at[0]));
-  const outNorthmost = Math.min(...east.map((x) => x.outlet.at[2]));
+  const eastmost = Math.max(...south.map((x) => x.outlet.at[0]), pheBranchX);
+  const outNorthmost = east.length
+    ? Math.min(...east.map((x) => x.outlet.at[2]))
+    : 0;
   const outletHeader = run({
     name: 'Filter outlet header',
     kind: 'pvc-pressure',
     od: main,
-    points: [
-      [westmost, L.filterOut, outSouthZ],
-      [outEastX, L.filterOut, outSouthZ],
-      [outEastX, L.filterOut, outNorthmost],
-    ],
+    points: east.length
+      ? [
+          [westmost, L.filterOut, outSouthZ],
+          [outEastX, L.filterOut, outSouthZ],
+          [outEastX, L.filterOut, outNorthmost],
+        ]
+      : [
+          [westmost, L.filterOut, outSouthZ],
+          [eastmost, L.filterOut, outSouthZ],
+        ],
     joins: [],
     service: 'pool water',
     label: 'FILTERED',
@@ -422,32 +523,48 @@ export function olympicPipework(): {
   // The floor channels: along each row's front, under the inlet header's
   // line, and on to the south wall's drainage.
   channels.push({
-    from: [Math.min(...south.map((x) => x.inlet.at[0])) - 0.4, 0, inSouthZ],
-    to: [Math.max(...south.map((x) => x.drain.at[0])) + 0.4, 0, inSouthZ],
+    from: [
+      Math.min(
+        ...south.map((x) => x.inlet.at[0], ...south.map((y) => y.drain.at[0])),
+      ) - 0.4,
+      0,
+      inSouthZ,
+    ],
+    to: [
+      Math.max(
+        ...south.map((x) => x.drain.at[0]),
+        ...south.map((y) => y.inlet.at[0]),
+      ) + 0.4,
+      0,
+      inSouthZ,
+    ],
     width: 0.3,
   });
-  // Through the gap between the two filters of the south row.
-  const gapX = (south[0].f.footprint.maxX + south[1].f.footprint.minX) / 2;
+  // Through the gap between two filters of the south row.
+  const byX = [...south].sort((a, b) => a.f.x - b.f.x);
+  const gapX = (byX[0].f.footprint.maxX + byX[1].f.footprint.minX) / 2;
   channels.push({ from: [gapX, 0, inSouthZ], to: [gapX, 0, h], width: 0.3 });
-  const eastZs = east.flatMap((x) => [x.inlet.at[2], x.drain.at[2]]);
-  const cornerX = h - 0.4;
-  const cornerZ = Math.max(...east.map((x) => x.f.footprint.maxZ)) + 0.4;
-  channels.push({
-    from: [inEastX, 0, Math.min(...eastZs) - 0.4],
-    to: [inEastX, 0, cornerZ],
-    width: 0.3,
-  });
-  // South-east, past the last filter, to the south wall by the corner.
-  channels.push({
-    from: [inEastX, 0, cornerZ],
-    to: [cornerX, 0, cornerZ],
-    width: 0.3,
-  });
-  channels.push({
-    from: [cornerX, 0, cornerZ],
-    to: [cornerX, 0, h],
-    width: 0.3,
-  });
+  if (east.length) {
+    const eastZs = east.flatMap((x) => [x.inlet.at[2], x.drain.at[2]]);
+    const cornerX = h - 0.4;
+    const cornerZ = Math.max(...east.map((x) => x.f.footprint.maxZ)) + 0.4;
+    channels.push({
+      from: [inEastX, 0, Math.min(...eastZs) - 0.4],
+      to: [inEastX, 0, cornerZ],
+      width: 0.3,
+    });
+    // South-east, past the last filter, to the south wall by the corner.
+    channels.push({
+      from: [inEastX, 0, cornerZ],
+      to: [cornerX, 0, cornerZ],
+      width: 0.3,
+    });
+    channels.push({
+      from: [cornerX, 0, cornerZ],
+      to: [cornerX, 0, h],
+      width: 0.3,
+    });
+  }
 
   faces.forEach(({ f, inlet, outlet, drain, dir }, i) => {
     const n = i + 1;
@@ -469,12 +586,42 @@ export function olympicPipework(): {
       mainDirection: dir[2] < -0.5 ? [1, 0, 0] : [0, 0, 1],
       branchDirection: [0, -1, 0],
     });
+    // The drop from the header, the branch to the nozzle, and the waste
+    // below them, meeting in a tee: the drop and the waste one straight
+    // main, the branch off it.
+    run({
+      name: `Filter ${n} inlet drop`,
+      kind: 'pvc-pressure',
+      od: inlet.od,
+      points: [[inTee[0], L.filterIn, inTee[2]], inTee],
+      joins: [
+        inletHeader.name,
+        'Filter inlet header, west',
+        `Filter ${n} inlet`,
+        `Filter ${n} backwash waste`,
+      ],
+      service: 'pool water',
+      label: `F${n} INLET`,
+    });
+    tees.push({
+      name: `Filter ${n} inlet tee`,
+      kind: 'pvc-pressure',
+      at: inTee,
+      mainOd: inlet.od,
+      branchOd: inlet.od,
+      mainDirection: [0, 1, 0],
+      branchDirection: [-dir[0], 0, -dir[2]],
+    });
     run({
       name: `Filter ${n} inlet`,
       kind: 'pvc-pressure',
       od: inlet.od,
-      points: [[inTee[0], L.filterIn, inTee[2]], inTee, inlet.at],
-      joins: [f.item.label, inletHeader.name, `Filter ${n} backwash waste`],
+      points: [inTee, inlet.at],
+      joins: [
+        f.item.label,
+        `Filter ${n} inlet drop`,
+        `Filter ${n} backwash waste`,
+      ],
       service: 'pool water',
       label: `F${n} INLET`,
       valves: [
@@ -494,7 +641,7 @@ export function olympicPipework(): {
       kind: 'pvc-pressure',
       od: inlet.od,
       points: [inTee, [inTee[0], 0.05, inTee[2]]],
-      joins: [`Filter ${n} inlet`],
+      joins: [`Filter ${n} inlet`, `Filter ${n} inlet drop`],
       service: 'drainage',
       label: `F${n} WASTE`,
       valves: [
@@ -754,7 +901,7 @@ export function olympicPipework(): {
     ...(['A', 'B'] as const).map((k) => ({
       machine: pumps,
       port: `power${k}`,
-      name: `P-101${k} isolator`,
+      name: `${names.pumps}${k} isolator`,
       stand: [pf.maxX + 0.4, port(pumps, `power${k}`).at[2]] as [
         number,
         number,
@@ -765,7 +912,7 @@ export function olympicPipework(): {
     {
       machine: uv,
       port: 'power',
-      name: 'UV unit isolator',
+      name: `${names.prefix}UV unit isolator`,
       stand: [uvF.minX + 0.15, uvF.maxZ + 1.1],
       facing: [0, 0, 1],
       feed: 2.2,
@@ -773,7 +920,7 @@ export function olympicPipework(): {
     {
       machine: generator,
       port: 'power',
-      name: 'Ozone generator isolator',
+      name: `${names.prefix}${names.prefix ? 'ozone' : 'Ozone'} generator isolator`,
       stand: [genF.maxX - 0.2, genF.maxZ + 1.0],
       facing: [0, 0, 1],
       feed: 2.0,
@@ -898,13 +1045,14 @@ export function olympicPipework(): {
 
 /** The pipework of a room, if it has any laid out yet. */
 export function roomPipes(room: string): PipeRun[] {
-  return room === 'plant_pool_02' ? olympicPipework().runs : [];
+  if (room === 'boiler_house') return boilerHousePipework().runs;
+  return room in ROUTED ? poolPlantPipework(room).runs : [];
 }
 
 /** The isolators of a room, and their stands' feet. */
 export function roomIsolators(room: string) {
-  return room === 'plant_pool_02'
-    ? olympicPipework()
+  return room in ROUTED
+    ? poolPlantPipework(room)
     : { isolators: [] as IsolatorPlace[], stands: [] as Vec3[] };
 }
 
@@ -918,12 +1066,203 @@ export const standFootprint = ([x, , z]: Vec3): Footprint => ({
 
 /** The floor channels of a room. */
 export function roomChannels(room: string): FloorChannel[] {
-  return room === 'plant_pool_02' ? olympicPipework().channels : [];
+  return room in ROUTED ? poolPlantPipework(room).channels : [];
 }
 
 /** The explicit three-way fittings of a room. */
 export function roomTees(room: string): PipeTee[] {
-  return room === 'plant_pool_02' ? olympicPipework().tees : [];
+  if (room === 'boiler_house') return boilerHousePipework().tees;
+  return room in ROUTED ? poolPlantPipework(room).tees : [];
+}
+
+/** The boiler house's roof over its floor, m (`shell-rooms.ts`). */
+export const BOILER_ROOF = 7;
+/** The flues' collectors over the boilers, and the gas header over them. */
+export const FLUE_COLLECTOR = 2.6;
+export const GAS_HEADER = 3.0;
+/** The gas drops' level lengths, and their valves under them, within reach. */
+const GAS_DROP = 2.2;
+const GAS_VALVE = 1.98;
+
+/**
+ * The boiler house's pipework, so far its flues and its gas.
+ *
+ * The flues: each cascade of two boilers shares one flue, as a cascade
+ * kit does. Each boiler's spigot rises to a collector over the pair,
+ * and from the collector's middle a twin-wall stack (Ø350) goes straight
+ * up through the roof.
+ *
+ * The gas: the supply comes up out of the ground into the gas train
+ * (meter, filter, safety shut-off valve) on the east wall. From its
+ * outlet a DN80 main rises to a header over the boilers, along the west
+ * wall, its ends capped just past the last drops. A DN50 drop goes down
+ * to each boiler, with a lever ball valve within reach to isolate it.
+ */
+export function boilerHousePipework(): { runs: PipeRun[]; tees: PipeTee[] } {
+  const layout = layoutRoom('boiler_house')!;
+  const runs: PipeRun[] = [];
+  const tees: PipeTee[] = [];
+  const add = (
+    r: Omit<PipeRun, 'through' | 'valves'> &
+      Partial<Pick<PipeRun, 'through' | 'valves'>>,
+  ) => {
+    const full: PipeRun = { through: [], valves: [], ...r };
+    runs.push(full);
+    return full;
+  };
+  const cascades = layout.placed
+    .filter((p) => p.item.key.startsWith('boiler-cascade'))
+    .sort((a, b) => a.z - b.z);
+  const train = layout.placed.find((p) => p.item.key === 'gas-train')!;
+
+  // ---- Flues: one per cascade -------------------------------------------
+  cascades.forEach((c, i) => {
+    const n = i + 1;
+    const a = placedPort(c, 'flueA').at;
+    const b = placedPort(c, 'flueB').at;
+    const x = a[0];
+    const mid: Vec3 = [x, FLUE_COLLECTOR, (a[2] + b[2]) / 2];
+    for (const [k, p] of [
+      ['A', a],
+      ['B', b],
+    ] as const)
+      add({
+        name: `Cascade ${n} flue connector ${k}`,
+        kind: 'flue',
+        od: 0.25,
+        points: [[...p], [x, FLUE_COLLECTOR, p[2]], mid],
+        joins: [c.item.label, `Cascade ${n} flue stack`],
+        service: 'flue',
+        label: 'FLUE',
+      });
+    add({
+      name: `Cascade ${n} flue stack`,
+      kind: 'flue',
+      od: 0.35,
+      points: [mid, [x, BOILER_ROOF, mid[2]]],
+      joins: [`Cascade ${n} flue connector A`, `Cascade ${n} flue connector B`],
+      service: 'flue',
+      label: 'FLUE',
+      // Out through the roof in its weathered sleeve.
+      through: [
+        {
+          at: [x, BOILER_ROOF, mid[2]],
+          normal: [0, 1, 0],
+          thickness: 0.3,
+          kind: 'sleeve',
+        },
+      ],
+    });
+    tees.push({
+      name: `Cascade ${n} flue tee`,
+      kind: 'flue',
+      at: mid,
+      mainOd: 0.25,
+      branchOd: 0.35,
+      mainDirection: [0, 0, 1],
+      branchDirection: [0, 1, 0],
+    });
+  });
+
+  // ---- Gas --------------------------------------------------------------
+  const gasPorts = cascades.flatMap((c, i) =>
+    (['A', 'B'] as const).map((k) => ({
+      // The boilers' tags: B-501 and B-502 in the first cascade, on to B-506.
+      name: `B-50${i * 2 + (k === 'A' ? 1 : 2)}`,
+      cascade: c,
+      at: placedPort(c, `gas${k}`).at,
+    })),
+  );
+  // The header half a metre out from the boilers' gas spigots, clear of
+  // their flues.
+  const gx = Math.max(...gasPorts.map((g) => g.at[0])) + 0.5;
+  const inlet = placedPort(train, 'inlet').at;
+  const outlet = placedPort(train, 'outlet').at;
+  add({
+    name: 'Gas service',
+    kind: 'steel-screwed',
+    od: 0.0603,
+    points: [[...inlet], [inlet[0], DUCT_DEPTH, inlet[2]]],
+    joins: [train.item.label],
+    service: 'gas',
+    label: 'NATURAL GAS',
+  });
+  const zs = [...gasPorts.map((g) => g.at[2]), outlet[2]];
+  const z0 = Math.min(...zs) - 0.15;
+  const z1 = Math.max(...zs) + 0.15;
+  add({
+    name: 'Gas header',
+    kind: 'steel-screwed',
+    od: 0.0889,
+    points: [
+      [gx, GAS_HEADER, z0],
+      [gx, GAS_HEADER, z1],
+    ],
+    joins: ['Gas main', ...gasPorts.map((g) => `${g.name} gas drop`)],
+    service: 'gas',
+    label: 'NATURAL GAS',
+  });
+  add({
+    name: 'Gas main',
+    kind: 'steel-screwed',
+    od: 0.0889,
+    points: [
+      [...outlet],
+      [outlet[0], GAS_HEADER, outlet[2]],
+      [gx, GAS_HEADER, outlet[2]],
+    ],
+    joins: [train.item.label, 'Gas header'],
+    service: 'gas',
+    label: 'NATURAL GAS',
+  });
+  tees.push({
+    name: 'Gas main tee',
+    kind: 'steel-screwed',
+    at: [gx, GAS_HEADER, outlet[2]],
+    mainOd: 0.0889,
+    branchOd: 0.0889,
+    mainDirection: [0, 0, 1],
+    branchDirection: [Math.sign(outlet[0] - gx), 0, 0],
+  });
+  for (const g of gasPorts) {
+    const [px, py, pz] = g.at;
+    add({
+      name: `${g.name} gas drop`,
+      kind: 'steel-screwed',
+      od: 0.0603,
+      points: [
+        [gx, GAS_HEADER, pz],
+        [gx, GAS_DROP, pz],
+        [px, GAS_DROP, pz],
+        [px, py, pz],
+      ],
+      joins: ['Gas header', g.cascade.item.label],
+      service: 'gas',
+      label: 'GAS',
+      valves: [
+        {
+          at: [px, GAS_VALVE, pz],
+          axis: 'y',
+          name: `${g.name} gas isolating valve`,
+          od: 0.0603,
+          operator: 'lever',
+          style: 'gas-ball',
+          // Its lever toward the room, away from the wall.
+          facing: [1, 0, 0],
+        },
+      ],
+    });
+    tees.push({
+      name: `${g.name} gas header tee`,
+      kind: 'steel-screwed',
+      at: [gx, GAS_HEADER, pz],
+      mainOd: 0.0889,
+      branchOd: 0.0603,
+      mainDirection: [0, 0, 1],
+      branchDirection: [0, -1, 0],
+    });
+  }
+  return { runs, tees };
 }
 
 /** The low parts of a room's pipework, under a walker's head, as footprints to walk round. */

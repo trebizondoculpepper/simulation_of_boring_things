@@ -16,8 +16,11 @@ import {
 import { markPipe } from '../../components/plant/views/pipe-markers';
 import { supportPipe } from '../../components/plant/views/pipe-supports';
 import type { PipeService } from '../../components/plant/views/pipe-markers';
+import { worldStore } from '../../save/world-store';
+import type { IsolatorName } from '../../../game/plant/services';
 import { createPowerIsolator } from '../../components/industrial-control/views/panel-switchgear';
 import { createWaterButterflyValve } from '../../components/plant/views/water-butterfly-valve';
+import { createGasBallValve } from '../../components/plant/views/gas-fittings';
 import type { DN } from '../../components/plant/views/plant-tools';
 import { PIPE_SIZES } from '../../components/plant/views/plant-tools';
 import {
@@ -34,7 +37,8 @@ import {
 import type { PipeRun, Valve } from '../logic/room-pipes';
 
 /** Each run's service, as its markings name it. */
-const MARKED: Record<PipeRun['service'], PipeService> = {
+/** Each service's bands; a flue carries none, only its own label plate. */
+const MARKED: Record<PipeRun['service'], PipeService | null> = {
   'pool water': 'pool water',
   'heating flow': 'heating flow',
   'heating return': 'heating return',
@@ -44,6 +48,8 @@ const MARKED: Record<PipeRun['service'], PipeService> = {
   electrical: 'electrical',
   hypochlorite: 'hypochlorite',
   sample: 'pool water',
+  gas: 'gas',
+  flue: null,
 };
 
 /** The nominal bore nearest a pipe's outside diameter. */
@@ -82,12 +88,13 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     });
     pipe.name = r.name;
     group.add(pipe);
-    if (r.od >= 0.02) {
+    const marked = MARKED[r.service];
+    if (r.od >= 0.02 && marked) {
       const lagging = PIPE_KINDS[r.kind].insulation?.thickness ?? 0;
       group.add(
         markPipe(kit, points, {
           radius: r.od / 2 + lagging,
-          service: MARKED[r.service],
+          service: marked,
           text: r.label,
         }),
       );
@@ -116,6 +123,21 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     group.add(tee);
   }
   function valve(v: Valve) {
+    if (v.style === 'gas-ball') {
+      // A lever ball valve, built along x with its lever up: stood on end
+      // for a vertical pipe, its lever then turned to face the room.
+      const gas = parts.add(
+        createGasBallValve(kit, { pipeRadius: v.od / 2, name: v.name }),
+      );
+      const holder = new Group();
+      holder.position.set(...lift(v.at));
+      if (v.axis === 'y') {
+        gas.object.rotation.z = Math.PI / 2;
+        holder.rotation.y = Math.atan2(v.facing[2], -v.facing[0]);
+      } else holder.rotation.y = v.axis === 'z' ? Math.PI / 2 : 0;
+      holder.add(gas.object);
+      return holder;
+    }
     const part = parts.add(
       // Built along its own z (or upright), then turned to face away
       // from its machine, so its lever never swings into it.
@@ -204,6 +226,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     foot.position.set(x, floorY + 0.005, z);
     group.add(post, foot);
   }
+  const store = typeof window === 'undefined' ? null : worldStore('dev');
   const switches = isolators.map((place) => {
     const isolator = createPowerIsolator(kit, {
       on: true,
@@ -220,9 +243,15 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     isolator.group.rotation.y = Math.atan2(place.facing[0], place.facing[2]);
     isolator.group.name = place.name;
     group.add(isolator.group);
-    const toggle = () => isolator.toggle();
+    // Switched here, it is switched in the world (`world.ts`): its
+    // machine stops, and so, if it was the last, does its pool's water.
+    const name = place.name as IsolatorName;
+    const toggle = () => {
+      isolator.toggle();
+      store?.dispatch({ type: 'plant/isolator', name, on: isolator.on });
+    };
     isolator.handle.traverse((o) => parts.uses.set(o, toggle));
-    return isolator;
+    return { isolator, name };
   });
   return {
     group,
@@ -231,7 +260,12 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     uses: parts.uses,
     update(delta: number) {
       parts.update(delta);
-      for (const s of switches) s.update(delta);
+      for (const { isolator, name } of switches) {
+        // As the world has it, switched here or anywhere.
+        const on = store?.world.value.plant.isolators[name];
+        if (on !== undefined && on !== isolator.on) isolator.set(on);
+        isolator.update(delta);
+      }
     },
     dispose() {
       parts.dispose();

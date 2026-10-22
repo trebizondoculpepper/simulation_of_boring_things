@@ -45,7 +45,14 @@ export function roomServiceRoutes(room: string): ServiceRoute[] {
   const south = box.d / 2;
 
   // These rooms already have individually authored cabinet/plant feeders.
-  if (!['plant_pool_02', 'plant_pool_03', 'plant_pool_04'].includes(room)) {
+  if (
+    ![
+      'plant_pool_01',
+      'plant_pool_02',
+      'plant_pool_03',
+      'plant_pool_04',
+    ].includes(room)
+  ) {
     routes.push({
       name: `${room} distribution conduit`,
       utility: 'power',
@@ -63,96 +70,39 @@ export function roomServiceRoutes(room: string): ServiceRoute[] {
       // The switch room's cabinets carry hundreds of amps: heavy trunking,
       // below, not a conduit.
       if (room === 'switch_room' && SWITCHGEAR.has(p.item.key)) continue;
-      const power = machinePorts(p.item).find(
+      // Every power port of it (a pump pair has one a motor); a machine
+      // with none, at its top.
+      const powers = machinePorts(p.item).filter(
         (port) => port.service === 'power',
       );
-      const at: Point3 = power
-        ? placedPort(p, power.name).at
+      const ats: Point3[] = powers.length
+        ? powers.map((port) => placedPort(p, port.name).at)
         : [
-            p.x,
-            p.item.mount === 'floor'
-              ? p.item.h + 0.08
-              : p.y + p.item.h / 2 + 0.08,
-            p.z,
+            [
+              p.x,
+              p.item.mount === 'floor'
+                ? p.item.h + 0.08
+                : p.y + p.item.h / 2 + 0.08,
+              p.z,
+            ],
           ];
-      // Each machine has its own short metal conduit. On a wall panel the
-      // cable enters at its top, with no tube through its front face.
-      routes.push({
-        name: `${p.item.label} power feed ${i + 1}`,
-        utility: 'power',
-        kind: 'steel-screwed',
-        od: 0.0269,
-        points: [at, [at[0], y, at[2]], [at[0], y, north]],
-        to: p.item.key,
-      });
+      // Each has its own short metal conduit. On a wall panel the cable
+      // enters at its top, with no tube through its front face.
+      ats.forEach((at, k) =>
+        routes.push({
+          name: `${p.item.label} power feed ${i + 1}${ats.length > 1 ? `.${k + 1}` : ''}`,
+          utility: 'power',
+          kind: 'steel-screwed',
+          od: 0.0269,
+          points: [at, [at[0], y, at[2]], [at[0], y, north]],
+          to: p.item.key,
+        }),
+      );
     }
   }
 
-  // The lounge's process equipment has real port data. Keep different
-  // media at different heights so crossings do not accidentally join.
-  if (room === 'plant_pool_01') {
-    const lane: Record<string, number> = {
-      // North to the pool over the gantry: clear of a head on its deck
-      // (3.5 m up, 2.1 m headroom) and under the services ceiling.
-      'pool-water': 5.75,
-      drain: 3.8,
-      'make-up': 5.0,
-      heating: 5.4,
-      ozone: 3.2,
-      sample: 2.5,
-      chemical: 2.8,
-    };
-    const utility: Record<string, Utility> = {
-      'pool-water': 'water',
-      drain: 'water',
-      'make-up': 'water',
-      heating: 'heat',
-      ozone: 'air',
-      sample: 'water',
-      chemical: 'chemical',
-    };
-    const kind: Record<string, PipeKindId> = {
-      'pool-water': 'pvc-pressure',
-      drain: 'pvc-drain',
-      'make-up': 'copper',
-      heating: 'lagged-heating',
-      ozone: 'stainless',
-      sample: 'chemical-tube',
-      chemical: 'chemical-tube',
-    };
-    for (const p of placed)
-      for (const port of machinePorts(p.item)) {
-        if (port.service === 'power') continue;
-        const at = placedPort(p, port.name);
-        const destZ = port.service === 'pool-water' ? -box.d / 2 : south;
-        const height = lane[port.service];
-        const lead: Point3 = [
-          at.at[0] + at.outward[0] * 0.25,
-          at.at[1] + at.outward[1] * 0.25,
-          at.at[2] + at.outward[2] * 0.25,
-        ];
-        // Seat the room riser into the factory valve neck, removing the
-        // daylight gap visible above the lounge pump pair.
-        const first: Point3 =
-          p.item.key === 'pump-pair' && port.name.startsWith('discharge')
-            ? [at.at[0], at.at[1] - 0.16, at.at[2]]
-            : at.at;
-        routes.push({
-          name: `${p.item.label} ${port.name}`,
-          utility: utility[port.service],
-          kind: kind[port.service],
-          od: port.od,
-          points: [
-            first,
-            at.at,
-            lead,
-            [lead[0], height, lead[2]],
-            [lead[0], height, destZ],
-          ],
-          to: p.item.key,
-        });
-      }
-  }
+  // The pool plant rooms' process pipework is routed port to port in
+  // `room-pipes.ts`.
 
   if (room === 'switch_room') {
     // Each cabinet, flush to its wall, its 300 mm cable trunking up off its

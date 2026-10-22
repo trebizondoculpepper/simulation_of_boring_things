@@ -61,3 +61,30 @@ The owner wanted every room's machines placed, with room to walk to and reach th
 - The lounge plant room laid out by hand and piped like the Olympic.
 - The water balance in the world state, so the make-up valve in the wet hall drives it.
 - The independent review, `doc/prompts/004-machine-ports-check.md`.
+
+## Later the same day: every port connected, checked
+
+- **Everything connected to everything.** `port-connections.test.ts` takes every port of every machine in the four piped pool plant rooms (95 of them) and checks that some run ends exactly on it, of the right kind of pipe for its service, leaving within 5° of the port's direction. Unpiped rooms' ports are listed rather than failed: only the wet hall's two tanks remain.
+- **Visual compliance.** `views/visual-connections.test.ts` builds each piped room's Three.js scene and probes just outside each port for a drawn pipe, conduit or duct, and just inside it for the machine's nozzle. It found the lounge tank's suction drawn with no pipe.
+- **The lounge plant room** is now laid out by hand and routed by the same router as the Olympic (`poolPlantPipework`), with its own isolators (P-201A/B, lounge UV and ozone) in the world state. The room-services lounge routing is retired.
+- **Isolators** in the rooms and on the cabinets now dispatch to the world and follow it.
+- **Water model** sub-steps are now 5 s. A small pool's level settles on its weir in seconds, though it takes most of an hour to fill.
+
+The next steps are:
+
+- chemical stocks that run out (hypochlorite and acid), with pH falling when acid is dosed without hypochlorite;
+- fixed values for what is taken as reliable (three-phase supply, gas pressure).
+
+Biology waits on research, which is in hand.
+
+## Later still: the switch room and the boiler house
+
+- **Switch room cabinets** are working parts now:
+  - the switchboard's breakers are red-and-yellow rotary handles, and its meters read the ways switched on;
+  - the motor control centre has isolators, HAND-OFF-AUTO, START, STOP and RESET, pilot lights and emergency stops, with starter logic in `electrical-room.ts`;
+  - the central battery has pilot lights, test buttons and a 20 × 4 LCD.
+- **Labels** now name the plant we have: P-101A/B on the drives, P-201A/B, P-501A/B and the make-up booster on the starters, and the building's own boards on the switchboard's ways. Boilers are tagged B-501 to B-506 across the three cascades.
+- **LCDs** draw a real 5 × 7 dot font (`font-5x7.ts`, after the HD44780's character set), as does the ozone generator's message display.
+- **Boiler house:** one flue per cascade, straight up through the roof; a gas header from the gas train, with a ball valve on each boiler's drop. These are in the port-connection and visual checks, with `boiler-pipes.test.ts`.
+
+Next: the boilers' flow and return to the low-loss header, and the rest of the boiler house; the engineers' office door into the viewing gallery.

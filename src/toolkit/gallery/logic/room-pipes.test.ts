@@ -2,12 +2,9 @@ import { describe, expect, it } from 'vite-plus/test';
 import { layoutRoom } from './room-equipment';
 import { machinePorts, placedPort } from './machine-ports';
 import { plantRoomPlan } from './plant-rooms';
-import { CEILING_ZONE, CHAIN_TO, olympicPipework, REACH } from './room-pipes';
+import { CEILING_ZONE, CHAIN_TO, poolPlantPipework, REACH } from './room-pipes';
 import type { PipeRun, Vec3 } from './room-pipes';
 
-const layout = layoutRoom('plant_pool_02')!;
-const { runs, channels, tees } = olympicPipework();
-const plan = plantRoomPlan('large');
 /** The lagging round a heating pipe. */
 const pad = (r: PipeRun) => r.od / 2 + (r.kind === 'lagged-heating' ? 0.04 : 0);
 
@@ -32,24 +29,48 @@ const meet = (
 const near = (a: Vec3, b: Vec3) =>
   [0, 1, 2].every((k) => Math.abs(a[k] - b[k]) < 1e-3);
 
-describe('the Olympic plant room’s pipework', () => {
+describe.each([
+  ['plant_pool_01', 'medium'],
+  ['plant_pool_02', 'large'],
+] as const)('%s’s pipework', (room, size) => {
+  const layout = layoutRoom(room)!;
+  const { runs, channels, tees } = poolPlantPipework(room);
+  const plan = plantRoomPlan(size);
+  const filterCount = layout.placed.filter((p) =>
+    p.item.key.startsWith('sand-filter'),
+  ).length;
+
   it('fits each filter header branch with a tee at the shared centreline', () => {
     const headers = runs.filter(
       (r) => r.name.startsWith('Filter ') && r.name.includes('header'),
     );
     expect(tees.length).toBeGreaterThan(0);
-    for (const tee of tees) {
-      const header = headers.find(
-        (r) =>
-          r.name ===
-          (tee.name.includes('inlet')
+    for (const tee of tees.filter(
+      (t) => / header tee$/.test(t.name) && t.name.startsWith('Filter '),
+    )) {
+      // The inlet header may run both ways from its junction.
+      const onIt = headers.filter((r) =>
+        r.name.startsWith(
+          tee.name.includes('inlet')
             ? 'Filter inlet header'
-            : 'Filter outlet header'),
+            : 'Filter outlet header',
+        ),
       );
-      expect(header, tee.name).toBeDefined();
+      expect(onIt.length, tee.name).toBeGreaterThan(0);
+      const header = onIt.find(
+        (r) =>
+          r.points.some((p) => near(p, tee.at)) ||
+          lengths(r).some(({ a, b }) =>
+            [0, 1, 2].every(
+              (k) =>
+                tee.at[k] >= Math.min(a[k], b[k]) - 1e-3 &&
+                tee.at[k] <= Math.max(a[k], b[k]) + 1e-3,
+            ),
+          ),
+      );
       expect(
-        header!.points.some((p) => near(p, tee.at)) ||
-          lengths(header!).some(({ a, b }) =>
+        !!header ||
+          lengths(onIt[0]).some(({ a, b }) =>
             [0, 1, 2].every(
               (k) =>
                 tee.at[k] >= Math.min(a[k], b[k]) - 1e-3 &&
@@ -176,7 +197,7 @@ describe('the Olympic plant room’s pipework', () => {
 
   it('gives every filter its inlet, outlet, backwash and drain valves, each worked from the floor', () => {
     const valves = runs.flatMap((r) => r.valves);
-    for (let n = 1; n <= 5; n++)
+    for (let n = 1; n <= filterCount; n++)
       for (const kind of ['inlet', 'outlet', 'backwash', 'drain'])
         expect(
           valves.some((v) => v.name === `F${n} ${kind} valve`),
@@ -190,5 +211,27 @@ describe('the Olympic plant room’s pipework', () => {
       ).toBeLessThanOrEqual(REACH);
     for (const v of valves.filter((v) => v.at[1] > REACH))
       expect(v.operator, v.name).toBe('chain');
+  });
+
+  it('puts every tee where three of its runs meet: two along its main, one along its branch', () => {
+    const on = (t: Vec3, r: PipeRun) =>
+      r.points.some((p) => near(p, t)) ||
+      lengths(r).some(({ a, b }) =>
+        [0, 1, 2].every(
+          (k) =>
+            t[k] >= Math.min(a[k], b[k]) - 1e-3 &&
+            t[k] <= Math.max(a[k], b[k]) + 1e-3,
+        ),
+      );
+    for (const tee of tees) {
+      const meeting = runs.filter((r) => on(tee.at, r));
+      expect(meeting.length, tee.name).toBeGreaterThanOrEqual(2);
+      expect(
+        tee.mainDirection[0] * tee.branchDirection[0] +
+          tee.mainDirection[1] * tee.branchDirection[1] +
+          tee.mainDirection[2] * tee.branchDirection[2],
+        tee.name,
+      ).toBe(0);
+    }
   });
 });

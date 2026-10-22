@@ -21,7 +21,8 @@ export type PipeService =
   | 'air'
   | 'electrical'
   | 'hypochlorite'
-  | 'acid';
+  | 'acid'
+  | 'gas';
 
 /** Each service's basic colour and code band. */
 const COLOURS: Record<PipeService, { basic: string; code: string | null }> = {
@@ -33,6 +34,7 @@ const COLOURS: Record<PipeService, { basic: string; code: string | null }> = {
   electrical: { basic: BS1710_BASIC.electrical, code: null },
   hypochlorite: { basic: BS1710_BASIC.acidsAlkalis, code: null },
   acid: { basic: BS1710_BASIC.acidsAlkalis, code: BS1710_CODE.yellow },
+  gas: { basic: BS1710_BASIC.gases, code: null },
 };
 
 /** Bands this far in from each end, and at most this far apart, metres. */

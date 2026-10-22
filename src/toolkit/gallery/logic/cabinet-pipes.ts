@@ -283,6 +283,18 @@ function setting(room: string) {
   return { layout, placed, jets, outDir, wallLocal, h: layout.box.d / 2 };
 }
 
+/** The cabinet's ports in the room: each one's place, and the way out of it. */
+export function cabinetPortsInRoom(room: string) {
+  const s = setting(room);
+  if (!s) return [];
+  const up: Vec3 = [0, 1, 0];
+  return cabinetPorts(s.jets).map((port) => ({
+    ...port,
+    at: inRoom(s.placed, port.at),
+    outward: port.out === 'up' ? up : s.outDir,
+  }));
+}
+
 /** The isolator on the wall at the cabinet's left (its −x, as you face it). */
 export function cabinetIsolator(room: string): Isolator | null {
   const s = setting(room);

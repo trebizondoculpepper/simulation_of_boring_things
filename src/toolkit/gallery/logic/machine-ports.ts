@@ -18,7 +18,11 @@ export interface MachinePort {
     | 'ozone'
     | 'sample'
     | 'chemical'
-    | 'power';
+    | 'power'
+    | 'gas'
+    | 'flue';
+  /** Its machine's model draws this connection itself, so no nozzle is added. */
+  drawn?: boolean;
 }
 
 const port = (
@@ -215,6 +219,56 @@ export function machinePorts(item: Item): MachinePort[] {
     ];
   if (kind === 'pump-panel')
     return [port('supply', [0, item.h, 0], [0, 1, 0], 0.05, 'power')];
+  if (kind === 'boiler-cascade') {
+    // Two condensing boilers on a plinth (`createBoilerCascade`): each a
+    // body 0.8 × 0.657 × 1.662 m standing 0.1 m up and 0.1 m forward,
+    // 0.25 m apart, its connections on top at the back (the model's own):
+    // the flue spigot (Ø250) and the gas (R2), A on the left, B on the right.
+    const W = 0.8,
+      D = 0.657,
+      H = 1.662;
+    const back = 0.1 - D / 2;
+    return (
+      [
+        ['A', -(W + 0.25) / 2],
+        ['B', (W + 0.25) / 2],
+      ] as const
+    ).flatMap(([k, x]) => [
+      {
+        ...port(
+          `flue${k}`,
+          [x, 0.1 + H + 0.14, back + 0.2],
+          [0, 1, 0],
+          0.25,
+          'flue',
+        ),
+        drawn: true,
+      },
+      {
+        ...port(
+          `gas${k}`,
+          [x + 0.2, 0.1 + H + 0.1, back + 0.28],
+          [0, 1, 0],
+          0.0603,
+          'gas',
+        ),
+        drawn: true,
+      },
+    ]);
+  }
+  if (kind === 'gas-train')
+    // In from the floor at its left, out at the top of its right
+    // (`createGasTrain`), DN50.
+    return [
+      {
+        ...port('inlet', [-1.0, 0, 0], [0, -1, 0], 0.0603, 'gas'),
+        drawn: true,
+      },
+      {
+        ...port('outlet', [1.0, 1.6, 0], [0, 1, 0], 0.0603, 'gas'),
+        drawn: true,
+      },
+    ];
   return [];
 }
 
