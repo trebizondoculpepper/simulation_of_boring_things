@@ -93,6 +93,9 @@ import { createOzoneGenerator } from '../../components/plant/views/ozone-plant';
 import { ozoneRoom } from '../../components/plant/logic/ozone-room';
 import type { Item, Placed } from '../logic/room-equipment';
 import type { PoolId } from '../../../game/plant/pools';
+import { INTO_CEILING } from '../logic/room-pipes';
+import { MONITOR_POST, ozoneMonitorPlace } from '../logic/ozone-monitor';
+import { createPipe } from '../../components/core/views/pipe-kinds';
 import { WET_HALL_PLANT } from '../../../game/plant/wet-hall';
 import { pumpPairExhibit } from '../rooms/plant/pumps';
 import { pumpPanelExhibit } from '../rooms/plant/pump-panel';
@@ -248,7 +251,7 @@ function modelFor(
   // An ozone generator with its room's ozone detection on its east end.
   if (kind === 'ozone-generator' && arg && arg in GAS_ZONES) {
     const built = worldOzoneGenerator(kit, arg as ServiceRoom);
-    return withOzoneStation(kit, built, arg as GasZoneId, item);
+    return withOzoneStation(kit, built, arg as GasZoneId, item, room);
   }
   // The chemical stores' tanks, their liquid at the world's stock.
   if (kind === 'hypo-tank' || kind === 'acid-ibc') {
@@ -501,6 +504,7 @@ function withOzoneStation(
   built: Object3D | LiveExhibit,
   zone: GasZoneId,
   item: Item,
+  room = '',
 ): LiveExhibit {
   const generator = isLive(built) ? built : { object: built };
   const station = createGasStation(
@@ -515,10 +519,41 @@ function withOzoneStation(
     gasBinding(zone),
     generator.parts,
   );
-  station.object.position.set(item.w / 2 + 0.002, 0, 0);
-  station.object.rotation.y = Math.PI / 2;
+  // On its own galvanised post beside the generator's east end, facing
+  // the room as the generator does: its detector low (ozone is heavier
+  // than air), its beacon at the top, its supply in conduit from the post
+  // up to the services ceiling, as the room's isolators' are.
+  // Off whichever end is clear of the room's pipework (`ozone-monitor.ts`).
+  const postX = ozoneMonitorPlace(room)?.x ?? item.w / 2 + 0.3;
+  const postZ = -0.03;
+  const postTop = item.h + 0.05;
+  station.object.position.set(postX, 0, 0.02);
+  const galv = new MeshStandardMaterial({
+    color: '#a9aeae',
+    roughness: 0.45,
+    metalness: 0.6,
+  });
+  kit.materials.push(galv);
+  const post = new Mesh(new BoxGeometry(0.041, postTop, 0.041), galv);
+  post.position.set(postX, postTop / 2, postZ);
+  const foot = new Mesh(new BoxGeometry(0.2, 0.01, 0.2), galv);
+  foot.position.set(postX, 0.005, postZ);
+  const conduit = createPipe('steel-screwed', 0.0269, [
+    [postX, postTop, postZ],
+    [postX, INTO_CEILING, postZ],
+  ]);
+  conduit.name = 'Ozone detection supply';
+  // Its own installation beside the generator, not part of it: the room
+  // takes it out into its installed services (`installedBeside`).
+  const monitor = new Group();
+  monitor.name = 'Ozone monitor';
+  monitor.add(station.object, post, foot, conduit);
   const object = new Group();
-  object.add(generator.object, station.object);
+  object.add(generator.object, monitor);
+  object.userData.installedBeside = {
+    object: monitor,
+    post: { x: postX, z: postZ, size: MONITOR_POST },
+  };
   return {
     object,
     // The generator's parts, with the station's added (or the station's).
@@ -688,6 +723,7 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   const placed: Placed[] = layout?.placed ?? [];
   // Each machine's top as drawn, for its power feed to meet.
   const drawnTops: (number | undefined)[] = [];
+  const besides: Object3D[] = [];
   for (const [i, p] of placed.entries()) {
     const built = modelFor(kit, p.item, room);
     if (!built) continue;
@@ -698,7 +734,27 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
     object.rotation.y = p.yaw;
     object.name ||= p.item.label;
     group.add(object);
+    // What stands beside a machine but is not part of it (an ozone
+    // monitor on its post): moved out into the room's installations, in
+    // place, and its post a solid to walk round.
+    const beside = object.userData.installedBeside as
+      | { object: Object3D; post: { x: number; z: number; size: number } }
+      | undefined;
+    if (beside) {
+      object.updateMatrixWorld(true);
+      besides.push(beside.object);
+      const c = Math.cos(p.yaw);
+      const s = Math.sin(p.yaw);
+      const x = p.x + beside.post.x * c + beside.post.z * s;
+      const z = p.z - beside.post.x * s + beside.post.z * c;
+      const h = beside.post.size / 2;
+      solids.push({ minX: x - h, maxX: x + h, minZ: z - h, maxZ: z + h });
+    }
+    // The machine's own top, without what stands beside it.
+    const besideParent = beside?.object.parent;
+    if (beside) besideParent?.remove(beside.object);
     const bounds = new Box3().setFromObject(object);
+    if (beside) besideParent?.add(beside.object);
     if (!bounds.isEmpty()) drawnTops[i] = bounds.max.y - floorY;
     if (p.item.mount === 'floor' && !p.item.walkable) solids.push(p.footprint);
   }
@@ -706,6 +762,7 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   // walk round, its valves more to work.
   const pipework = createRoomPipework(kit, room, floorY);
   group.add(pipework.group);
+  for (const b of besides) pipework.group.attach(b);
   solids.push(...pipework.solids);
   const services =
     room in ROOM_SERVICES
