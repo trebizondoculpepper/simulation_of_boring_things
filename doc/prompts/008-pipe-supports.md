@@ -134,12 +134,14 @@ Not every service has to be routed from machine to machine inside a room. Some r
   - **Electricity:** a conduit sized for its current runs to the nearest wall, preferring the room's **supply wall**: the wall its power comes in by. The supply wall is the west wall unless a room overrides it, which it declares when the helper is started for it. It goes to the supply wall unless that is much further than the nearest wall. A machine's local isolator stays a real node beside it, and the conduit runs from the isolator.
   - **Control:** a small conduit runs to the nearest wall, ending at a small junction box. A control network we do not route is imagined beyond it; the plant model keeps the logical signal (controller to starter, sensor to controller) as an unrouted connection.
 - **Routed in full:** pool water, make-up, heating, gas, chemicals, ozone, sample lines and air ducts, which join machines in the same room.
+- **One supply of each kind per room:** each routed service enters a room once, in each direction, and branches inside it from a header. One acid feed, one hypochlorite feed, one make-up, one LTHW flow-and-return pair. A run never leaves into the ceiling and comes back down elsewhere in the same room. The magic and semi-magic stubs (flues, drains, power, control) are exempt; a room's flues may each have their own stack. Found on 2026-10-22: the pool plant rooms' dosing and sample lines rise into the services ceiling and drop back at their injection and sampling points (the runs named "… its point"), and the acid lines are labelled with the service `hypochlorite`.
 
 Each medium declares how it is drawn: routed, or a stub with its direction (up, down, wall, or wall preferring the supply side). Supports follow the same rules as any run. The tests add:
 
 - a flue leaves vertically and reaches the ceiling unobstructed;
 - a drain falls and ends above floor level, over a gully;
-- an electrical or control stub ends on a wall, the supply wall when it is near enough, crossing no walkway below 2.1 m.
+- an electrical or control stub ends on a wall, the supply wall when it is near enough, crossing no walkway below 2.1 m;
+- no routed service enters a room more than once in each direction.
 
 ## Tests (the acceptance)
 
