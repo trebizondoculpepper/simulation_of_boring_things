@@ -1,8 +1,8 @@
 import { CORRIDOR_DOORS, CORRIDOR_WALLS, corridorWalls } from './main-corridor';
 import type { CorridorWall } from './main-corridor';
 
-/** An A3 (297 × 420 mm) campaign, printed at life size in the plant corridor. */
-export const A3_POSTER = { width: 0.297, height: 0.42, centreY: 1.6 } as const;
+/** An A1 (594 × 841 mm) campaign, printed at life size in the plant corridor. */
+export const A1_POSTER = { width: 0.594, height: 0.841, centreY: 1.72 } as const;
 
 export const POSTER_COPY = [
   ['THE DEEP END', 'Your out of office is underwater'],

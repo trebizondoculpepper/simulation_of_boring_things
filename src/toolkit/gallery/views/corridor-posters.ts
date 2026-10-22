@@ -12,7 +12,7 @@ import {
 } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import {
-  A3_POSTER,
+  A1_POSTER,
   POSTER_COPY,
   corridorPosterPlacements,
 } from '../logic/corridor-posters';
@@ -21,7 +21,7 @@ import { corridorWalls } from '../logic/main-corridor';
 /** Thirty original pool campaigns, framed on the corridor's wall faces. */
 export function createCorridorPosters(kit: PanelKit): Group {
   const group = new Group();
-  group.name = 'A3 swimming poster gallery';
+  group.name = 'A1 swimming poster gallery';
   const frame = new MeshStandardMaterial({
     color: '#1c2628',
     roughness: 0.43,
@@ -35,18 +35,18 @@ export function createCorridorPosters(kit: PanelKit): Group {
   corridorPosterPlacements().forEach(({ wall, at, poster }) => {
     const { line, into, alongX } = walls[wall];
     const framed = new Group();
-    framed.name = `A3 poster ${String(poster + 1).padStart(2, '0')}: ${POSTER_COPY[poster][0]}`;
+    framed.name = `A1 poster ${String(poster + 1).padStart(2, '0')}: ${POSTER_COPY[poster][0]}`;
     framed.position.set(
       alongX ? at : line + into[0] * 0.035,
-      A3_POSTER.centreY,
+      A1_POSTER.centreY,
       alongX ? line + into[1] * 0.035 : at,
     );
     framed.rotation.y = Math.atan2(into[0], into[1]);
 
-    const rim = new Mesh(new BoxGeometry(0.345, 0.468, 0.032), frame);
+    const rim = new Mesh(new BoxGeometry(0.65, 0.897, 0.032), frame);
     rim.position.z = 0.012;
     framed.add(rim);
-    const paperMount = new Mesh(new BoxGeometry(0.313, 0.436, 0.004), mount);
+    const paperMount = new Mesh(new BoxGeometry(0.618, 0.865, 0.004), mount);
     paperMount.position.z = 0.03;
     framed.add(paperMount);
 
@@ -63,7 +63,7 @@ export function createCorridorPosters(kit: PanelKit): Group {
     });
     kit.materials.push(photoMaterial);
     const image = new Mesh(
-      new PlaneGeometry(A3_POSTER.width, A3_POSTER.height),
+      new PlaneGeometry(A1_POSTER.width, A1_POSTER.height),
       photoMaterial,
     );
     image.position.z = 0.033;
@@ -80,7 +80,7 @@ export function createCorridorPosters(kit: PanelKit): Group {
       });
       kit.materials.push(ink);
       const overlay = new Mesh(
-        new PlaneGeometry(A3_POSTER.width, A3_POSTER.height),
+        new PlaneGeometry(A1_POSTER.width, A1_POSTER.height),
         ink,
       );
       overlay.position.z = 0.034;

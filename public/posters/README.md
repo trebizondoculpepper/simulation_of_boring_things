@@ -1,7 +1,7 @@
 # Pool People poster artwork
 
 Thirty original generated images for the main plant corridor. Each is presented
-as an A3 portrait print at a 1.6 m centre height. The game adds the fictional
+as an A1 portrait print at a 1.72 m centre height. The game adds the fictional
 "POOL PEOPLE" masthead, headlines, and subtitles separately so the copy remains
 crisp on the wall.
 
