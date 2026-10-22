@@ -7,8 +7,9 @@ import {
   TorusGeometry,
 } from 'three';
 import { kitGlow } from '../../core/views/eighties-controls';
+import { createSafetySign } from './safety-signs';
 import type { PanelKit } from '../../core/views/eighties-controls';
-import { PLATE_WHITE, SANS, tools } from '../../core/views/fitting-tools';
+import { PLATE_WHITE, tools } from '../../core/views/fitting-tools';
 
 /**
  * Views of general safety fittings: the emergency lighting test key switch,
@@ -296,35 +297,15 @@ export function createWarningSign(
   w = 0.3,
   h = 0.2,
 ) {
-  const t = tools(kit);
-  const sign = t.printed(
+  // A modern warning sign (`safety-signs.ts`): electricity's for a
+  // voltage, the general one otherwise.
+  const electrical = lines.some((l) => /VOLT/i.test(l));
+  return createSafetySign(
+    kit,
+    [electrical ? 'electricity' : 'general'],
+    lines,
+    'landscape',
     w,
     h,
-    (c, cw, ch) => {
-      c.fillStyle = '#f2c618';
-      c.fillRect(0, 0, cw, ch);
-      c.strokeStyle = '#151515';
-      c.lineWidth = ch * 0.05;
-      c.strokeRect(ch * 0.05, ch * 0.05, cw - ch * 0.1, ch - ch * 0.1);
-      c.fillStyle = '#151515';
-      c.textAlign = 'center';
-      c.textBaseline = 'middle';
-      const size = (ch * 0.7) / lines.length;
-      lines.forEach((line, i) => {
-        // Each line as large as it can be, within the border.
-        let px = i === 0 ? size * 1.15 : size * 0.8;
-        c.font = `bold ${px}px ${SANS}`;
-        const width = c.measureText(line).width;
-        if (width > cw * 0.86) px *= (cw * 0.86) / width;
-        c.font = `bold ${px}px ${SANS}`;
-        c.fillText(
-          line,
-          cw / 2,
-          ch * 0.5 + (i - (lines.length - 1) / 2) * size * 1.05,
-        );
-      });
-    },
-    384,
   );
-  return sign.mesh;
 }

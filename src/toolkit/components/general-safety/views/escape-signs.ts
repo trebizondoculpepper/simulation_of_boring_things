@@ -1,4 +1,5 @@
 import { Group } from 'three';
+import { createSafetySign } from './safety-signs';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { SANS, tools } from '../../core/views/fitting-tools';
 
@@ -145,57 +146,34 @@ export function createEscapeSign(
   return group;
 }
 
-/** FIRE DOOR KEEP SHUT, 150 mm square, on a door's face. */
+/** FIRE DOOR KEEP SHUT (`safety-signs.ts`), 150 × 200 mm, on a door's face. */
 export function createFireDoorSign(kit: PanelKit) {
-  const t = tools(kit);
-  const face = t.printed(
-    0.15,
-    0.15,
-    (c, w, h) => {
-      c.fillStyle = '#ffffff';
-      c.fillRect(0, 0, w, h);
-      c.fillStyle = '#1f5fae';
-      c.beginPath();
-      c.arc(w / 2, h / 2, w * 0.47, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = '#ffffff';
-      c.textAlign = 'center';
-      c.textBaseline = 'middle';
-      c.font = `bold ${h * 0.12}px ${SANS}`;
-      ['FIRE DOOR', 'KEEP', 'SHUT'].forEach((line, i) =>
-        c.fillText(line, w / 2, h * (0.34 + i * 0.16)),
-      );
-    },
-    256,
-  );
-  face.mesh.position.z = 0.002;
   const group = new Group();
-  group.add(face.mesh);
+  const sign = createSafetySign(
+    kit,
+    ['door-shut'],
+    ['FIRE DOOR', 'KEEP SHUT'],
+    'portrait',
+    0.15,
+    0.2,
+  );
+  sign.position.z = 0.002;
+  group.add(sign);
   return group;
 }
 
-/** FIRST AID (E003): a white cross on green, 200 × 250 mm. */
+/** FIRST AID (`safety-signs.ts`, E003): 200 × 250 mm. */
 export function createFirstAidSign(kit: PanelKit) {
-  const t = tools(kit);
-  const face = t.printed(
+  const group = new Group();
+  const sign = createSafetySign(
+    kit,
+    ['first-aid'],
+    ['First aid'],
+    'portrait',
     0.2,
     0.25,
-    (c, w, h) => {
-      c.fillStyle = GREEN;
-      c.fillRect(0, 0, w, h);
-      c.fillStyle = '#ffffff';
-      const u = w / 10;
-      c.fillRect(u * 4, u * 1.5, u * 2, u * 6);
-      c.fillRect(u * 2, u * 3.5, u * 6, u * 2);
-      c.font = `bold ${h * 0.11}px ${SANS}`;
-      c.textAlign = 'center';
-      c.fillText('FIRST AID', w / 2, h * 0.9);
-    },
-    256,
   );
-  face.mesh.position.z = 0.003;
-  const group = new Group();
-  t.box(group, t.paint('#f4f3ee', 0.4), 0.21, 0.26, 0.004, 0, 0, 0.001);
-  group.add(face.mesh);
+  sign.position.z = 0.003;
+  group.add(sign);
   return group;
 }

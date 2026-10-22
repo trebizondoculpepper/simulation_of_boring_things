@@ -69,3 +69,34 @@ export function corridorPosterPlacements(): PosterPlacement[] {
     }));
   });
 }
+
+/** A fire point's board (`safety-signage.ts`), and its clearance from a poster's middle. */
+export const FIRE_POINT = { width: 0.7, centreY: 1.5, clear: 0.75 } as const;
+
+/**
+ * The corridor's fire points (a call point's and an extinguisher's signs
+ * over the fire action notice), on alternate faces: each midway between
+ * two of its posters, where there is room clear of them and of doors.
+ */
+export function corridorFirePoints(): { wall: CorridorWall; at: number }[] {
+  const posters = corridorPosterPlacements();
+  return CORRIDOR_WALLS.flatMap((wall, index) => {
+    if (index % 2) return [];
+    const doors = CORRIDOR_DOORS.filter((d) => d.wall === wall).map(
+      (d) => d.at,
+    );
+    const ats = posters
+      .filter((p) => p.wall === wall)
+      .map((p) => p.at)
+      .sort((a, b) => a - b);
+    for (let i = 0; i + 1 < ats.length; i++) {
+      const at = (ats[i] + ats[i + 1]) / 2;
+      if (
+        ats.every((p) => Math.abs(p - at) >= FIRE_POINT.clear) &&
+        doors.every((d) => Math.abs(d - at) > 1.55)
+      )
+        return [{ wall, at }];
+    }
+    return [];
+  });
+}

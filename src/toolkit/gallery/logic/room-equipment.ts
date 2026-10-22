@@ -14,6 +14,7 @@ import {
 import type { ShellRoomId, ShellWall } from './shell-rooms';
 import { BOOSTER } from '../../components/plant/logic/booster-set';
 import { LIGHTING_BOARD, MAIN_SWITCH } from './switch-room';
+import { ROOM_SIGNS, SIGN_ITEMS } from './building-signs';
 
 /**
  * Where each room's machines stand: the plant sizing's inventory
@@ -968,8 +969,36 @@ export const EQUIPPED_ROOMS = [
 
 /** A room's machines, placed. */
 export function layoutRoom(room: string) {
-  const r = roomEquipment(room);
-  if (!r) return null;
+  const found = roomEquipment(room);
+  if (!found) return null;
+  // Its notices and signs, laid out with its machines (`building-signs.ts`).
+  const r = {
+    ...found,
+    items: [
+      ...found.items,
+      ...(ROOM_SIGNS[room] ?? []).map((id) => {
+        const s = SIGN_ITEMS[id];
+        // By preference on the wall with the room's way in, where everyone
+        // passes; else the next wall round.
+        const door = (
+          SHELL_ROOMS as Record<string, { doors?: readonly { wall: Side }[] }>
+        )[room]?.doors?.[0]?.wall;
+        // Never on the wall facing the door, which has the room's title card.
+        const opposite: Record<Side, Side> = {
+          north: 'south',
+          south: 'north',
+          east: 'west',
+          west: 'east',
+        };
+        const sides: readonly Side[] = ['west', 'south', 'north', 'east'];
+        return wall(`sign:${id}`, s.label, s.w, 0.03, s.h, s.y, {
+          walls: door
+            ? [door, ...sides.filter((x) => x !== door && x !== opposite[door])]
+            : sides,
+        });
+      }),
+    ],
+  };
   const fixed = FIXED[room]?.(r.box, r.items);
   return {
     ...r,

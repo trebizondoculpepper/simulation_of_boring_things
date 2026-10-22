@@ -13,8 +13,11 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import {
   A1_POSTER,
   POSTER_COPY,
+  FIRE_POINT,
+  corridorFirePoints,
   corridorPosterPlacements,
 } from '../logic/corridor-posters';
+import { SAFETY_EXHIBITS } from '../rooms/plant/safety-signage';
 import { corridorWalls } from '../logic/main-corridor';
 
 /** Thirty original pool campaigns, framed on the corridor's wall faces. */
@@ -30,6 +33,23 @@ export function createCorridorPosters(kit: PanelKit): Group {
   kit.materials.push(frame, mount);
   const loader = new TextureLoader();
   const walls = corridorWalls();
+
+  // The fire points, between the posters.
+  const firePoint = SAFETY_EXHIBITS.find((e) => e.title === 'Fire point');
+  if (firePoint)
+    corridorFirePoints().forEach(({ wall, at }) => {
+      const { line, into, alongX } = walls[wall];
+      const built = firePoint.build(kit);
+      const point = 'object' in built ? built.object : built;
+      point.name = `fire point: ${wall}`;
+      point.position.set(
+        alongX ? at : line + into[0] * 0.005,
+        FIRE_POINT.centreY,
+        alongX ? line + into[1] * 0.005 : at,
+      );
+      point.rotation.y = Math.atan2(into[0], into[1]);
+      group.add(point);
+    });
 
   corridorPosterPlacements().forEach(({ wall, at, poster }) => {
     const { line, into, alongX } = walls[wall];

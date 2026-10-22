@@ -55,6 +55,7 @@ export function warningsFor(room: string): DoorWarningSelection {
   if (room === 'boiler_house') return 'furnace';
   if (room === 'hypo_store' || room === 'acid_store') return 'chemical';
   if (room === 'switch_room') return 'electrical';
+  if (room === 'air_plant') return 'noisy-plant';
   if (room === 'control_room' || room === 'engineers_office')
     return ['authorised'];
   return 'plant';

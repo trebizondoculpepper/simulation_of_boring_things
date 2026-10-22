@@ -6,6 +6,7 @@ import {
   SRGBColorSpace,
   MeshStandardMaterial,
 } from 'three';
+import { createSafetySign } from '../../general-safety/views/safety-signs';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { kitPaint } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
@@ -51,7 +52,8 @@ import {
  */
 export function plantRoomDoor(
   kit: PanelKit,
-  warnings: DoorWarningSelection = 'plant',
+  // Its own round FIRE DOOR KEEP SHUT is below them, so not repeated.
+  warnings: DoorWarningSelection = ['authorised', 'moving-machinery'],
   plate = 'PLANT ROOM',
 ): Part & {
   angle: () => number;
@@ -107,20 +109,16 @@ export function plantRoomDoor(
   const stickers = createDoorWarningStickers(kit, warnings);
   stickers.position.set(0, 1.45, 0.004);
   signs.add(stickers);
-  const keepShut = sign(0.2, 0.2, (c, cw, ch) => {
-    // A mandatory sign: white words in a blue disc.
-    c.fillStyle = '#1e5aa8';
-    c.beginPath();
-    c.arc(cw / 2, ch / 2, cw / 2 - 2, 0, Math.PI * 2);
-    c.fill();
-    c.fillStyle = '#ffffff';
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.font = `bold ${ch * 0.14}px Arial, Helvetica, sans-serif`;
-    c.fillText('FIRE DOOR', cw / 2, ch * 0.38);
-    c.fillText('KEEP', cw / 2, ch * 0.54);
-    c.fillText('SHUT', cw / 2, ch * 0.7);
-  });
+  // FIRE DOOR KEEP SHUT, modern (`safety-signs.ts`).
+  const keepShut = createSafetySign(
+    kit,
+    ['door-shut'],
+    ['FIRE DOOR', 'KEEP SHUT'],
+    'portrait',
+    0.15,
+    0.2,
+  );
+  keepShut.position.z = 0.003;
   keepShut.position.set(0, 1.12, 0);
   signs.add(keepShut);
   const badge = createBrandBadge(kit, 'ironside', { height: 0.03 });

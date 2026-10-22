@@ -44,6 +44,11 @@ import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
 import { createPoolHall } from '../views/pool-hall';
 import { createPanelKit } from '../../components/core/views/eighties-controls';
 import { createPoolInfoSign } from '../../components/pool/views/pool-info-sign';
+import {
+  createPoolRules,
+  createSpaRules,
+} from '../../components/general-safety/views/safety-notices';
+import { createSafetySign } from '../../components/general-safety/views/safety-signs';
 import { createSignState } from '../../components/pool/logic/pool-info-sign';
 import { createPaceClock } from '../../components/pool/views/pace-clock';
 import { worldStore } from '../../save/world-store';
@@ -128,6 +133,36 @@ export function startPoolHallRoom(
           rooms.add(sign.object);
           return sign;
         });
+        // Beside the first water quality sign, the pool's rules (the spa's
+        // in the jacuzzi room) and, by a pool, its no diving sign.
+        if (id !== 'pool_04') {
+          const { x, z, yaw } = mounts[0];
+          const rules = new Group();
+          rules.name = `${spec.title} rules`;
+          const board =
+            id === 'pool_03'
+              ? createSpaRules(poolsideKit)
+              : createPoolRules(
+                  poolsideKit,
+                  id === 'pool_02' ? 'Olympic Pool' : 'Lounge Pool',
+                );
+          board.position.set(0.75, 0, 0.004);
+          rules.add(board);
+          if (id !== 'pool_03') {
+            const noDiving = createSafetySign(
+              poolsideKit,
+              ['no-diving'],
+              ['NO DIVING'],
+            );
+            noDiving.position.set(1.3, 0.1, 0.004);
+            rules.add(noDiving);
+          }
+          // Along the wall, away from the sign: local +x is the sign's left
+          // as seen from the poolside, so turn it to face the room.
+          rules.position.set(x, 1.6, z);
+          rules.rotation.y = yaw;
+          rooms.add(rules);
+        }
         const clock = id === 'pool_02' ? createPaceClock(2) : null;
         if (clock) {
           // Its case's back on the east wall.

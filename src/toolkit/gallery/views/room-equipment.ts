@@ -15,7 +15,7 @@ import {
   createTank,
 } from '../../components/plant/views/blockout';
 import { createSandFilter } from '../../components/plant/views/pumps-plant';
-import { machinePorts } from '../logic/machine-ports';
+import { machinePorts, tankFrame } from '../logic/machine-ports';
 import { isLive } from '../rooms/plant/exhibit';
 import { worldStore } from '../../save/world-store';
 import { SWITCHBOARD_FEEDS, wayName } from '../logic/switch-room';
@@ -42,6 +42,9 @@ import {
   lightingBoardLive,
 } from '../../../game/plant/lighting';
 import { createScenarioSimulator } from './scenario-simulator';
+import { createBuildingSign } from './building-signs';
+import { createSafetySign } from '../../components/general-safety/views/safety-signs';
+import type { SignItemId } from '../logic/building-signs';
 import type { Scenarios } from './scenario-simulator';
 import { switchRoomContainment } from '../logic/cable-containment';
 import { createContainment } from './cable-containment';
@@ -151,6 +154,20 @@ function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
   if (kind === 'mimic-wet') return createWetHallMimic(kit);
   // The switch room's switchboard, its ways feeding the rooms in the world.
   if (kind === 'lv-switchboard') return createMainSwitchboard(kit, worldFeed());
+  // The gas train, its gas emergency notice above it by its valve.
+  if (kind === 'gas-train') {
+    const train = MODELS['gas-train'];
+    if (train && train.size.w <= item.w + 0.05) {
+      const built = train.build(kit);
+      const object = isLive(built) ? built.object : built;
+      const notice = createBuildingSign(kit, 'gas-emergency');
+      notice.position.set(-item.w / 2 + 0.2, 1.95, -item.d / 2 + 0.02);
+      object.add(notice);
+      return built;
+    }
+  }
+  // A room's notice or sign (`building-signs.ts`).
+  if (kind === 'sign' && arg) return createBuildingSign(kit, arg as SignItemId);
   // The engineer's scenario simulator, switching the whole plant.
   if (kind === 'scenario-simulator') return worldScenarioSimulator(kit);
   // The lighting board, its ways the world's lighting zones.
@@ -165,14 +182,28 @@ function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
   // The lounge's contact tank is the ozone room's own model.
   if (kind === 'contact-tank' && item.w <= OZONE[3].size.w + 0.05)
     return OZONE[3].build(kit);
-  if (TANKS[kind])
-    return createTank(kit, {
+  if (TANKS[kind]) {
+    const tank = createTank(kit, {
       w: item.w,
       d: item.d,
       h: item.h,
       label: item.label.toUpperCase(),
       shape: TANKS[kind],
     });
+    // A sectional tank is a confined space: its warning on its face, away
+    // from its ladder, under its name plate.
+    if (TANKS[kind] === 'sectional') {
+      const f = tankFrame(item);
+      const warning = createSafetySign(
+        kit,
+        ['confined'],
+        ['DANGER', 'Confined space', 'Entry by permit only'],
+      );
+      warning.position.set(f.nx / 2 - 0.3, 0.95, f.front + 0.003);
+      tank.add(warning);
+    }
+    return tank;
+  }
   if (kind === 'sand-filter') {
     const dia = Number(arg);
     const filter = createSandFilter(kit, {

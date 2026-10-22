@@ -1,5 +1,7 @@
 import type { plantTools } from './plant-tools';
 import { SANS } from '../../core/views/fitting-tools';
+import { drawPictogram } from '../../general-safety/views/safety-signs';
+import type { Pictogram } from '../../general-safety/views/safety-signs';
 
 /**
  * The signs a pool's chemical store and dosing room carry, drawn on
@@ -15,6 +17,13 @@ type Ctx = CanvasRenderingContext2D;
 
 export type GhsKind = 'corrosive' | 'environment' | 'exclamation' | 'oxidiser';
 export type MandatoryKind = 'gloves' | 'visor' | 'apron' | 'boots';
+/** Each mandatory kind's modern pictogram (`safety-signs.ts`). */
+const MANDATORY_PICTOGRAM: Record<MandatoryKind, Pictogram> = {
+  gloves: 'gloves',
+  visor: 'face-shield',
+  apron: 'apron',
+  boots: 'boots',
+};
 export type EmergencyKind = 'shower' | 'eyewash';
 
 /** A GHS pictogram centred at (x, y), `s` across corner to corner. */
@@ -98,94 +107,6 @@ export function drawGhs(
   c.restore();
 }
 
-/** A blue mandatory sign's symbol, white, in a circle at (x, y), radius r. */
-function drawMandatory(
-  c: Ctx,
-  x: number,
-  y: number,
-  r: number,
-  kind: MandatoryKind,
-) {
-  c.save();
-  c.translate(x, y);
-  c.fillStyle = '#1d5fa8';
-  c.beginPath();
-  c.arc(0, 0, r, 0, Math.PI * 2);
-  c.fill();
-  c.fillStyle = '#ffffff';
-  const u = r / 5;
-  if (kind === 'gloves') {
-    // A gauntlet: palm, fingers, thumb, cuff.
-    c.fillRect(-1.6 * u, -0.6 * u, 3.2 * u, 2.4 * u);
-    for (let i = 0; i < 4; i++)
-      c.fillRect((-1.5 + i * 0.8) * u, -2.6 * u, 0.6 * u, 2.2 * u);
-    c.fillRect(1.7 * u, -0.4 * u, 1.1 * u, 0.6 * u);
-    c.fillRect(-1.9 * u, 1.9 * u, 3.8 * u, 1.4 * u);
-  } else if (kind === 'visor') {
-    // A head in profile behind a face shield.
-    c.beginPath();
-    c.arc(-0.5 * u, 0, 2 * u, 0, Math.PI * 2);
-    c.fill();
-    c.fillStyle = '#1d5fa8';
-    c.fillRect(1.2 * u, -2.6 * u, 0.5 * u, 4.8 * u);
-    c.fillStyle = '#ffffff';
-    c.fillRect(1.9 * u, -2.8 * u, 0.4 * u, 5.2 * u);
-  } else if (kind === 'apron') {
-    c.beginPath();
-    c.moveTo(-1.2 * u, -3 * u);
-    c.lineTo(1.2 * u, -3 * u);
-    c.lineTo(1.4 * u, -1.2 * u);
-    c.lineTo(2.2 * u, -1 * u);
-    c.lineTo(2 * u, 3.2 * u);
-    c.lineTo(-2 * u, 3.2 * u);
-    c.lineTo(-2.2 * u, -1 * u);
-    c.lineTo(-1.4 * u, -1.2 * u);
-    c.closePath();
-    c.fill();
-  } else {
-    c.fillRect(-1.6 * u, -3 * u, 1.6 * u, 4.6 * u);
-    c.fillRect(-1.6 * u, 1 * u, 3.6 * u, 1.6 * u);
-  }
-  c.restore();
-}
-
-/** A green emergency sign's symbol, white, in a square at (x, y), side s. */
-function drawEmergency(
-  c: Ctx,
-  x: number,
-  y: number,
-  s: number,
-  kind: EmergencyKind,
-) {
-  c.save();
-  c.translate(x, y);
-  c.fillStyle = '#0a8a3e';
-  c.fillRect(-s / 2, -s / 2, s, s);
-  c.fillStyle = '#ffffff';
-  const u = s / 10;
-  if (kind === 'shower') {
-    // A shower head over a standing figure, drops between.
-    c.fillRect(-2.5 * u, -4 * u, 5 * u, 0.6 * u);
-    for (let i = 0; i < 5; i++)
-      c.fillRect((-2 + i) * u, -3 * u, 0.3 * u, 0.9 * u);
-    c.beginPath();
-    c.arc(0, -1.2 * u, 0.8 * u, 0, Math.PI * 2);
-    c.fill();
-    c.fillRect(-0.9 * u, -0.3 * u, 1.8 * u, 2.6 * u);
-    c.fillRect(-0.8 * u, 2.3 * u, 0.6 * u, 1.8 * u);
-    c.fillRect(0.2 * u, 2.3 * u, 0.6 * u, 1.8 * u);
-  } else {
-    // A face bent over two rising jets.
-    c.beginPath();
-    c.arc(-0.5 * u, -1.5 * u, 2 * u, 0, Math.PI * 2);
-    c.fill();
-    c.fillRect(-2.5 * u, 2.5 * u, 5 * u, 1 * u);
-    c.fillRect(-1.6 * u, 0.8 * u, 0.4 * u, 1.7 * u);
-    c.fillRect(1.2 * u, 0.8 * u, 0.4 * u, 1.7 * u);
-  }
-  c.restore();
-}
-
 /** Fit `text` in `width` at up to `size` pixels, bold. */
 function fitText(
   c: Ctx,
@@ -264,12 +185,12 @@ export function createMandatorySign(
       c.fillRect(0, 0, cw, ch);
       const r = Math.min(ch * 0.3, (cw * 0.9) / kinds.length / 2.2);
       kinds.forEach((kind, i) =>
-        drawMandatory(
+        drawPictogram(
           c,
+          MANDATORY_PICTOGRAM[kind],
           cw / 2 + (i - (kinds.length - 1) / 2) * r * 2.3,
           ch * 0.38,
-          r,
-          kind,
+          r * 2,
         ),
       );
       c.fillStyle = '#1d5fa8';
@@ -297,7 +218,7 @@ export function createEmergencySign(
     (c, cw, ch) => {
       c.fillStyle = '#0a8a3e';
       c.fillRect(0, 0, cw, ch);
-      drawEmergency(c, ch * 0.5, ch * 0.5, ch * 0.86, kind);
+      drawPictogram(c, kind, ch * 0.5, ch * 0.5, ch * 0.86);
       c.fillStyle = '#ffffff';
       c.textAlign = 'center';
       c.textBaseline = 'middle';

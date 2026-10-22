@@ -6,11 +6,23 @@ describe('door warning sticker selection', () => {
     expect(doorWarningStickers('plant')).toEqual([
       'authorised',
       'moving-machinery',
-      'hot-surfaces',
+      'fire-door',
     ]);
-    expect(doorWarningStickers('furnace')).toContain('gas-equipment');
+    expect(doorWarningStickers('furnace')).toContain('no-flames');
+    expect(doorWarningStickers('furnace')).toContain('ear-protection');
+    expect(doorWarningStickers('noisy-plant')).toContain('ear-protection');
     expect(doorWarningStickers('chemical')).toContain('keep-chemicals-apart');
+    expect(doorWarningStickers('chemical')).toContain('chemical-ppe');
     expect(doorWarningStickers('electrical')).toContain('live-electrical');
+    // Every plant room's door is a fire door, and says so.
+    for (const preset of [
+      'plant',
+      'furnace',
+      'chemical',
+      'electrical',
+      'noisy-plant',
+    ] as const)
+      expect(doorWarningStickers(preset), preset).toContain('fire-door');
   });
 
   it('allows a door to select its own stickers or none', () => {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   A1_POSTER,
+  FIRE_POINT,
+  corridorFirePoints,
   POSTER_COPY,
   corridorPosterPlacements,
 } from './corridor-posters';
@@ -28,5 +30,16 @@ describe('the main corridor poster gallery', () => {
       for (let i = 1; i < along.length; i++)
         expect(along[i] - along[i - 1]).toBeGreaterThan(0.65);
     }
+  });
+});
+
+describe('the corridor’s fire points', () => {
+  it('has one on alternate faces, clear of the posters and the doors', () => {
+    const points = corridorFirePoints();
+    expect(points.length).toBeGreaterThanOrEqual(3);
+    const posters = corridorPosterPlacements();
+    for (const p of points)
+      for (const q of posters.filter((q) => q.wall === p.wall))
+        expect(Math.abs(q.at - p.at)).toBeGreaterThanOrEqual(FIRE_POINT.clear);
   });
 });
