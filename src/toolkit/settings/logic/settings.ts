@@ -5,8 +5,6 @@
  * missing, old or tampered value falls back to its default. Pure.
  */
 
-export type Quality = 'low' | 'medium' | 'high';
-
 export interface Settings {
   /** Master volume, 0 to 1. */
   volume: number;
@@ -15,8 +13,8 @@ export interface Settings {
   invertY: boolean;
   /** The vertical field of view, degrees (52, the rooms' own, by default). */
   fov: number;
-  /** Rendering resolution: low, medium or high. */
-  quality: Quality;
+  /** Render quality: 0 draws at full resolution, each step up fewer pixels (`renderScale`). */
+  renderLevel: number;
   /** Whether the on-screen controls are shown. */
   onScreenControls: boolean;
 }
@@ -26,7 +24,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sensitivity: 1,
   invertY: false,
   fov: 52,
-  quality: 'high',
+  renderLevel: 0,
   onScreenControls: true,
 };
 
@@ -35,18 +33,18 @@ export const RANGES = {
   volume: { min: 0, max: 1, step: 0.05 },
   sensitivity: { min: 0.25, max: 3, step: 0.05 },
   fov: { min: 40, max: 90, step: 1 },
+  renderLevel: { min: 0, max: 10, step: 1 },
 } as const satisfies Partial<
   Record<keyof Settings, { min: number; max: number; step: number }>
 >;
 
-export const QUALITIES: readonly Quality[] = ['low', 'medium', 'high'];
-
-/** The share of the full pixel ratio each quality renders at. */
-export const QUALITY_SCALE: Record<Quality, number> = {
-  low: 0.5,
-  medium: 0.75,
-  high: 1,
-};
+/**
+ * The share of a room's full resolution (its pixel ratio) the render
+ * quality draws at, along each side: 1 / ln(e + level). Level 0 is 1:1;
+ * each step lowers it, quickly at first and then more gently (level 6
+ * draws 0.46 of each side, about a fifth of the pixels).
+ */
+export const renderScale = (level: number) => 1 / Math.log(Math.E + level);
 
 const clamp = (v: number, { min, max }: { min: number; max: number }) =>
   Math.min(max, Math.max(min, v));
@@ -68,9 +66,8 @@ export function cleanSettings(stored: unknown): Settings {
     sensitivity: num('sensitivity'),
     invertY: bool('invertY'),
     fov: num('fov'),
-    quality: QUALITIES.includes(s.quality as Quality)
-      ? (s.quality as Quality)
-      : DEFAULT_SETTINGS.quality,
+    // Whole steps only. (An older save's low/medium/high falls back to 0.)
+    renderLevel: Math.round(num('renderLevel')),
     onScreenControls: bool('onScreenControls'),
   };
 }

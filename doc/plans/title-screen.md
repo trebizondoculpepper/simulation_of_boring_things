@@ -26,7 +26,7 @@ Worked by mouse, keyboard (arrows and Enter) and gamepad alike: a Steam Deck req
   - master volume;
   - look sensitivity, with invert Y;
   - field of view;
-  - graphics quality (rendering resolution);
+  - render quality: a slider from 0 to 10 drawing each side at 1 / ln(e + level) of the room's full resolution, so 0 is 1:1 and each step draws fewer pixels (the owner's formula, shifted by e so that 0 gives 1:1);
   - show or hide the on-screen controls;
   - erase the saved game, after a confirmation.
 

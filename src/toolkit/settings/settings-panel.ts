@@ -1,5 +1,6 @@
-import { QUALITIES, RANGES } from './logic/settings';
-import type { Quality, Settings } from './logic/settings';
+import { effect } from '@preact/signals-core';
+import { RANGES, renderScale } from './logic/settings';
+import type { Settings } from './logic/settings';
 import { settings, updateSettings } from './settings-store';
 
 /**
@@ -15,12 +16,6 @@ export const GEAR_ICON = `<svg viewBox="0 0 32 32" width="26" height="26" aria-h
 <path d="M13.4 3h5.2l.8 3.6 2.4 1 3.1-2 3.7 3.7-2 3.1 1 2.4 3.4.8v5.2l-3.6.8-1 2.4 2 3.1-3.7 3.7-3.1-2-2.4 1-.8 3.4h-5.2l-.8-3.6-2.4-1-3.1 2-3.7-3.7 2-3.1-1-2.4L3 18.6v-5.2l3.6-.8 1-2.4-2-3.1 3.7-3.7 3.1 2 2.4-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
 <circle cx="16" cy="16" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/>
 </svg>`;
-
-const QUALITY_NAMES: Record<Quality, string> = {
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
-};
 
 export function createSettingsPanel() {
   const backdrop = document.createElement('div');
@@ -86,32 +81,12 @@ export function createSettingsPanel() {
     checkbox('invertY', 'Invert up and down'),
     slider('fov', 'Field of view', (v) => `${Math.round(v)}°`),
   ];
-  // Graphics quality: three choices side by side.
-  const qualities = document.createElement('div');
-  qualities.className = 'settings-choices';
-  qualities.setAttribute('role', 'radiogroup');
-  const qualityInputs = QUALITIES.map((q) => {
-    const choice = document.createElement('label');
-    const input = document.createElement('input');
-    input.type = 'radio';
-    input.name = 'settings-quality';
-    input.value = q;
-    input.addEventListener('change', () => updateSettings({ quality: q }));
-    choice.append(input, document.createTextNode(QUALITY_NAMES[q]));
-    qualities.append(choice);
-    return input;
-  });
-  const qualityRow = document.createElement('div');
-  qualityRow.className = 'settings-row';
-  const qualityName = document.createElement('span');
-  qualityName.className = 'settings-name';
-  qualityName.textContent = 'Graphics quality';
-  qualityRow.append(qualityName, qualities);
-  panel.append(qualityRow);
-  shows.push((s) => {
-    for (const input of qualityInputs)
-      input.checked = input.value === s.quality;
-  });
+  // Render quality: 0 is 1:1; each step draws fewer pixels.
+  shows.push(
+    slider('renderLevel', 'Render quality', (v) =>
+      v === 0 ? '1:1' : `1:${(1 / renderScale(v)).toFixed(2)}`,
+    ),
+  );
   shows.push(checkbox('onScreenControls', 'On-screen controls'));
 
   // Erase saved game: waits for the game's own save (stage 6).
@@ -131,8 +106,7 @@ export function createSettingsPanel() {
 
   const note = document.createElement('p');
   note.className = 'settings-note';
-  note.textContent =
-    'Your settings are kept in this browser. A change of graphics quality takes full effect in each room the next time it loads.';
+  note.textContent = 'Your settings are kept in this browser.';
   panel.append(note);
   const done = document.createElement('button');
   done.type = 'button';
@@ -143,6 +117,11 @@ export function createSettingsPanel() {
   const show = () => {
     for (const s of shows) s(settings.value);
   };
+  // Every change shows at once: the readouts follow the sliders.
+  effect(() => {
+    const now = settings.value;
+    for (const s of shows) s(now);
+  });
   let returnFocus: Element | null = null;
   const close = () => {
     if (backdrop.hidden) return;

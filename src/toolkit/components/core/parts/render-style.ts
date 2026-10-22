@@ -13,7 +13,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { effect } from '@preact/signals-core';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { settings } from '../../../settings/settings-store';
-import { QUALITY_SCALE } from '../../../settings/logic/settings';
+import { renderScale } from '../../../settings/logic/settings';
 
 /**
  * How the game is drawn: realistically, at the screen's own resolution
@@ -116,11 +116,11 @@ export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
   };
   renderer.setPixelRatio = (ratio: number) => {
     wanted = ratio;
-    setRatio(ratio * QUALITY_SCALE[settings.value.quality]);
+    setRatio(ratio * renderScale(settings.value.renderLevel));
     follow();
   };
   const stopQuality = effect(() => {
-    const scale = QUALITY_SCALE[settings.value.quality];
+    const scale = renderScale(settings.value.renderLevel);
     if (renderer.getPixelRatio() === wanted * scale) return;
     setRatio(wanted * scale);
     follow();

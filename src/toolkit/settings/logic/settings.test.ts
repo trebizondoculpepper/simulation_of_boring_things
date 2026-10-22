@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { DEFAULT_SETTINGS, RANGES, cleanSettings } from './settings';
+import {
+  DEFAULT_SETTINGS,
+  RANGES,
+  cleanSettings,
+  renderScale,
+} from './settings';
 
 describe('the player’s settings', () => {
   it('fall back to their defaults when nothing was stored', () => {
@@ -13,7 +18,7 @@ describe('the player’s settings', () => {
       sensitivity: 1.5,
       invertY: true,
       fov: 75,
-      quality: 'low',
+      renderLevel: 6,
       onScreenControls: false,
     };
     expect(cleanSettings(mine)).toEqual(mine);
@@ -24,13 +29,20 @@ describe('the player’s settings', () => {
       volume: 7,
       sensitivity: -1,
       fov: Number.NaN,
-      quality: 'ultra',
+      renderLevel: 2.6,
       invertY: 'yes',
     });
     expect(s.volume).toBe(RANGES.volume.max);
     expect(s.sensitivity).toBe(RANGES.sensitivity.min);
     expect(s.fov).toBe(DEFAULT_SETTINGS.fov);
-    expect(s.quality).toBe(DEFAULT_SETTINGS.quality);
+    expect(s.renderLevel).toBe(3);
     expect(s.invertY).toBe(DEFAULT_SETTINGS.invertY);
+  });
+
+  it('render at 1:1 at level 0, lower at each step, as 1 / ln(e + level)', () => {
+    expect(renderScale(0)).toBeCloseTo(1, 12);
+    expect(renderScale(6)).toBeCloseTo(0.4619, 3);
+    for (let n = 1; n <= RANGES.renderLevel.max; n++)
+      expect(renderScale(n)).toBeLessThan(renderScale(n - 1));
   });
 });
