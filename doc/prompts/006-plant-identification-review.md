@@ -6,6 +6,18 @@ You are being asked for a technical review, as a computer scientist, of a modell
 
 The game is only playable and meaningful if the player can work the plant the way a real operator does, and if the game can tell them how in the same terms a real operator's manual would. Today it cannot.
 
+**The game's objective sets the scope.** A player should be able to do almost anything expected of a real pool plant manager. That means any conceivable process, not just a few scripted ones. For example:
+
+- draining a pool, and refilling it;
+- disinfecting: setting up and adjusting dosing, superchlorinating after a contamination incident;
+- diagnosing a fault from the gauges, alarms and mimics, then walking to the right machine;
+- isolating a machine safely for maintenance;
+- changing over from the duty pump to the standby, and priming a pump;
+- shutting down a faulty boiler and running on the others;
+- backwashing a filter.
+
+Each of these is a sequence of operations on specific components. So every component involved must exist in the model, be workable, and be clearly labelled, so that a procedure, a manual or an alarm can name it, and the player can find it. This objective is our main justification for the design below: the identification system is not documentation for its own sake, it is what makes open-ended operation possible. The design should therefore be judged on whether it supports processes we have not thought of yet, not only on draining and backwashing.
+
 - **Procedures need named things.** A real operator's manual says "close PL4-MU-IV1, open PL4-PW-DV1, start PL4-CAB1-P1". Our draining runbook would otherwise have to say "the grey lever on the pipe behind the cabinet, second from the left", which is torturous and ambiguous.
 - **Procedures need the things to exist in the simulation.** A backwash or a drain-down is a sequence of valves set in order, the "line-up". If a valve exists only as geometry, or only as a single flag in the model, the procedure cannot be carried out or tested. At present, draining a pool is one boolean per pool (`pool/drain-down`) with no valves behind it, and a backwash is a fixed daily volume subtracted from the water balance.
 - **Everything the player can see as engineering must be real.** A project rule: every engineering item is a working component modelled on a real product, which has state, can be driven and shows its state. Many valves break this rule today.
@@ -88,6 +100,7 @@ The owner's design, written up in `doc/plans/plant-identification.md`, with back
 
 ## 4. Why we think this is the right approach
 
+- **It serves the game's objective.** Open-ended operation (draining, disinfecting, diagnosing, isolating, changing pumps over, shutting down a boiler) needs every component to be real, workable and nameable. A uniform part tree gives every process the same vocabulary, so a new procedure needs no new machinery.
 - **It matches how real plants are identified.** Hierarchical, location-first designations are what operators use, and a tag tells you where to walk.
 - **Naming scales with the number of kinds, not instances.** A cabinet kind is described once.
 - **The model stays the single source of truth.** Views bind to addresses and hold none of the model, as the existing architecture already intends (`doc/plant-model.md`). The manual, the charts and the game cannot disagree.
@@ -113,6 +126,7 @@ Please add to these, and tell us which are serious.
 
 ## 6. What we would like from you
 
+- Does the design support open-ended operation: processes we have not listed, composed from the same parts and actions? What would stop it?
 - Is a hierarchical, kind-declared part tree with a recursive walk the right core abstraction? Compare it with alternatives you consider credible: an entity-component system with an identity component; a graph database of assets and connections (as in an asset-management system or an ISO 15926 or CFIHOS style data model); separate function, product and location trees as in IEC 81346; or a P&ID-first model where the schematic is the source and both the simulation and the 3D views are generated from it.
 - How should the simulation be structured so valve line-ups are real: hydraulic network, lumped tanks, or a hybrid? Where should the boundary be, and how should it be stepped for a frame-rate game with time skips of hours?
 - How would you unify or bridge the three existing model layers?
