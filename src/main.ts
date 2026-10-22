@@ -21,12 +21,39 @@ import {
 import { firstPersonOn } from './toolkit/controls/input/first-person';
 import { rendererOn } from './toolkit/components/core/parts/render-style';
 import { worldStore } from './toolkit/save/world-store';
+import { GAS_ZONE_IDS } from './game/plant/gas';
 
-// A cold start (`?scenario=cold`): the whole plant off as the game starts,
+// Scenarios, several at once (`?scenario=cold,ozone-leak`). A cold start
+// (`cold`): the whole plant off as the game starts,
 // FULL OFF, so every room is dark but for daylight, and the torch (F) the
 // only light.
-if (new URLSearchParams(location.search).get('scenario') === 'cold')
-  worldStore('dev').dispatch({ type: 'plant/full-off' });
+const scenarios = (new URLSearchParams(location.search).get('scenario') ?? '')
+  .split(',')
+  .filter(Boolean);
+for (const scenario of scenarios) {
+  const world = worldStore('dev');
+  if (scenario === 'cold') world.dispatch({ type: 'plant/full-off' });
+  // Gas leaks, for trying the gas detection (`game/plant/gas.ts`): acid
+  // delivered into the hypochlorite, a weeping hypochlorite fitting, and
+  // a leaking ozone generator in the Olympic pool's plant room. `?scenario=
+  // gas-clear` stops them, though the air takes its time to clear.
+  if (scenario === 'misdelivery')
+    world.dispatch({ type: 'gas/act', zone: 'hypo_store', act: 'misdeliver' });
+  if (scenario === 'chlorine-leak')
+    world.dispatch({ type: 'gas/leak', zone: 'hypo_store', gramsPerHour: 2 });
+  if (scenario === 'ozone-leak')
+    world.dispatch({
+      type: 'gas/leak',
+      zone: 'plant_pool_02',
+      gramsPerHour: 2,
+    });
+  // `skip-600`: the world run on ten minutes at once.
+  const skip = /^skip-(\d+)$/.exec(scenario);
+  if (skip) world.dispatch({ type: 'time/skip', seconds: Number(skip[1]) });
+  if (scenario === 'gas-clear')
+    for (const zone of GAS_ZONE_IDS)
+      world.dispatch({ type: 'gas/leak', zone, gramsPerHour: 0 });
+}
 
 const canvas = document.querySelector<HTMLCanvasElement>('#scene');
 if (!canvas) throw new Error('Scene canvas is missing.');

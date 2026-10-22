@@ -6,7 +6,7 @@ import { newWorld } from '../../../game/world';
 import { serviceAvailable } from '../../../game/plant/services';
 import type { ServiceRoom, Utility } from '../../../game/plant/services';
 import { worldStore } from '../../save/world-store';
-import { layoutRoom } from '../logic/room-equipment';
+import { layoutRoom, FEEDER_ISOLATOR } from '../logic/room-equipment';
 import { roomServiceRoutes } from '../logic/room-services';
 
 /** Room equipment's physical service runs, plus a local power isolator. The
@@ -96,8 +96,9 @@ export function createRoomServices(
     // This is kept beside the entrance, above the operator's reach and clear
     // of the equipment door's swing. A genuine feeder status, not a fake
     // fixed green light.
+    // Its space is kept clear by the layout (`feederIsolatorSpace`).
     const x = -layout.box.w / 2 + 0.15;
-    const z = layout.box.d / 2 - 1.1;
+    const z = layout.box.d / 2 - FEEDER_ISOLATOR.fromSouth;
     const body = new MeshStandardMaterial({
       color: '#d4d5ce',
       roughness: 0.55,
@@ -113,7 +114,7 @@ export function createRoomServices(
     });
     kit.materials.push(body, lampMaterial, leverMaterial);
     const box = new Mesh(new BoxGeometry(0.12, 0.28, 0.22), body);
-    box.position.set(x, floorY + 1.5, z);
+    box.position.set(x, floorY + FEEDER_ISOLATOR.y, z);
     box.name = `${room} feeder isolator`;
     const lever = new Mesh(new BoxGeometry(0.08, 0.09, 0.035), leverMaterial);
     lever.position.set(x + 0.08, floorY + 1.48, z);

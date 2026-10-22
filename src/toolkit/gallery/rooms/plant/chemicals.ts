@@ -8,7 +8,11 @@ import {
   createSpillKit,
   createStoreSigns,
   createStoreVentilation,
+  STORE_DETECTION,
 } from '../../../components/plant/views/chemicals-storage';
+import { createGasZone } from '../../../components/general-safety/parts/gas-parts';
+import { CHLORINE } from '../../../components/general-safety/logic/gas-detection';
+import { createGasStation } from '../../views/gas-station';
 import type { PlantExhibit } from './exhibit';
 
 /** What this plant room is for, printed on its title card. */
@@ -69,9 +73,23 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Extract and chlorine detection',
     reference:
-      'After Vent-Axia ACM150 in-line fan and Crowcon Xgard Type 1 Cl₂ detector',
+      'After Vent-Axia ACM150 in-line fan, Crowcon Xgard Bright Cl₂ detector and Klaxon Sonos sounder-beacon; working, on its own air',
     size: { w: 1.0, d: 0.3, h: 2.2, mount: 'wall', y: 1.25 },
-    build: createStoreVentilation,
+    build: (kit) => {
+      // Its own store's air, for trying the alarm: `devChemicals.gas`.
+      const zone = createGasZone(CHLORINE);
+      if (typeof window !== 'undefined')
+        (window as unknown as { devChemicals: unknown }).devChemicals = {
+          gas: zone,
+        };
+      const station = createGasStation(
+        kit,
+        createStoreVentilation(kit),
+        STORE_DETECTION,
+        { ...zone, lens: 'amber' },
+      );
+      return { ...station, update: (delta) => zone.step(delta) };
+    },
   },
   {
     title: 'Store signs',

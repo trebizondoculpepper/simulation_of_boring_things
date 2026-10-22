@@ -81,14 +81,17 @@ export function gasBeacon(
   return a.part();
 }
 
-/** A fixed gas detector, showing its zone's reading and alarms. */
-export function gasDetector(kit: PanelKit, zone: GasZone): Part {
-  const a = beginPart(kit, `${zone.params.gas} detector`);
-  const view = createGasDetector(kit, zone.params.gas, zone.params.range);
+/** A fixed gas detector, showing a room's reading and alarms. */
+export function gasDetector(
+  kit: PanelKit,
+  props: { params: GasParams; state: Readable<GasState> },
+): Part {
+  const a = beginPart(kit, `${props.params.gas} detector`);
+  const view = createGasDetector(kit, props.params.gas, props.params.range);
   a.object.add(view.group);
   show(a, () => {
-    const s = zone.state.value;
-    view.show(gasDisplay(zone.params, s), s.a1, s.a2);
+    const s = props.state.value;
+    view.show(gasDisplay(props.params, s), s.a1, s.a2);
   });
   a.updates.push(view.update);
   return a.part();

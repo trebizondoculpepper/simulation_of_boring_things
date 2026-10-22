@@ -105,10 +105,10 @@ export function createAnnunciatorAssembly(
 ): AnnunciatorAssemblyView {
   const t = plantTools(kit);
   const group = new Group();
-  t.box(group, t.paint('#3b3f42', 0.5), 0.86, 0.7, 0.12, 0, 0, 0.06);
+  t.box(group, t.paint('#3b3f42', 0.5), 0.86, 0.84, 0.12, 0, 0, 0.06);
   const labels = ANNUNCIATOR_ALARMS.map((id) => ALARM_TEXT[id].window);
   const panel = createAnnunciatorPanel(kit, labels, { columns: 6, cell: 0.12 });
-  panel.group.position.set(0, 0.06, 0.12);
+  panel.group.position.set(0, 0.08, 0.12);
   panel.group.traverse((o) => (o.userData.live = true));
   group.add(panel.group);
   const logic = createAnnunciator(labels.length, { manualReset: true });
@@ -126,7 +126,7 @@ export function createAnnunciatorAssembly(
     action: () => void,
   ) => {
     const part = pushButton(kit, { colour, legend, action });
-    part.object.position.set(x, -0.27, 0.12);
+    part.object.position.set(x, -0.335, 0.12);
     part.object.traverse((o) => (o.userData.live = true));
     group.add(part.object);
     parts.add(part);
@@ -145,15 +145,15 @@ export function createAnnunciatorAssembly(
   button('LAMP TEST', 'white', 0.09, () => (testUntil = now + 2));
   button('MUTE', 'red', 0.27, () => view.onEvent('accept', null));
   const horn = t.paint('#c8261c', 0.45);
-  t.cyl(group, horn, 0.05, 0.06, 0, 0.4, 0.06, 'z', 20);
-  t.cyl(group, t.paint('#2a2b2c', 0.5), 0.03, 0.02, 0, 0.4, 0.1, 'z', 20);
+  t.cyl(group, horn, 0.05, 0.06, 0, 0.47, 0.06, 'z', 20);
+  t.cyl(group, t.paint('#2a2b2c', 0.5), 0.03, 0.02, 0, 0.47, 0.1, 'z', 20);
   const badge = createBrandBadge(kit, 'warden', { height: 0.02 });
-  badge.position.set(-0.3, -0.33, 0.1205);
+  badge.position.set(-0.3, -0.395, 0.1205);
   group.add(badge);
   // Penfold built the assembly round Warden's annunciator.
   panelMakerMark(kit, group, {
     width: 0.86,
-    height: 0.7,
+    height: 0.84,
     z: 0.12,
     corner: 'bottom-right',
   });

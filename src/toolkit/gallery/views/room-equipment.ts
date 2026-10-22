@@ -18,6 +18,20 @@ import { createSandFilter } from '../../components/plant/views/pumps-plant';
 import { machinePorts, tankFrame } from '../logic/machine-ports';
 import { isLive } from '../rooms/plant/exhibit';
 import { worldStore } from '../../save/world-store';
+import { computed } from '@preact/signals-core';
+import { createGasStation } from './gas-station';
+import { GAS_ZONES } from '../../../game/plant/gas';
+import type { GasZoneId } from '../../../game/plant/gas';
+import { STORE_CAPACITY } from '../../../game/plant/chemicals';
+import type { Chemical } from '../../../game/plant/chemicals';
+import {
+  OZONE as OZONE_GAS,
+  newGasState,
+} from '../../components/general-safety/logic/gas-detection';
+import {
+  STORE_DETECTION,
+  createStoreVentilation,
+} from '../../components/plant/views/chemicals-storage';
 import { SWITCHBOARD_FEEDS, wayName } from '../logic/switch-room';
 import { createMainSwitchboard } from '../../components/plant/views/electrical-switchgear';
 import type { SwitchboardFeed } from '../../components/plant/views/electrical-switchgear';
@@ -165,6 +179,24 @@ function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
       object.add(notice);
       return built;
     }
+  }
+  // A room's gas detection, bound to the world's (`game/plant/gas.ts`).
+  if (kind === 'store-extract' && arg)
+    return worldGasStation(kit, arg as GasZoneId);
+  // An ozone generator with its room's ozone detection on its east end.
+  if (kind === 'ozone-generator' && arg && arg in GAS_ZONES) {
+    const built = MODELS[kind].build(kit);
+    return withOzoneStation(kit, built, arg as GasZoneId, item);
+  }
+  // The chemical stores' tanks, their liquid at the world's stock.
+  if (kind === 'hypo-tank' || kind === 'acid-ibc') {
+    const built = MODELS[kind].build(kit);
+    if (!isLive(built) && 'setLevel' in built)
+      return worldTankLevel(
+        built as Object3D & { setLevel(level: number): void },
+        kind === 'hypo-tank' ? 'hypochlorite' : 'acid',
+      );
+    return built;
   }
   // A room's notice or sign (`building-signs.ts`).
   if (kind === 'sign' && arg) return createBuildingSign(kit, arg as SignItemId);
@@ -341,6 +373,86 @@ function worldLightingBoard(kit: PanelKit): LiveExhibit {
     const w = store?.world.value;
     return w ? lightingBoardLive(w.plant, w.lighting) : true;
   });
+}
+
+/** A room's gas detection, bound to the world's gas there. */
+function gasBinding(zone: GasZoneId) {
+  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const clear = newGasState();
+  return {
+    params: GAS_ZONES[zone],
+    state: computed(() => store?.world.value.gas[zone].state ?? clear),
+    lens:
+      GAS_ZONES[zone] === OZONE_GAS ? ('blue' as const) : ('amber' as const),
+    accept: () => store?.dispatch({ type: 'gas/act', zone, act: 'accept' }),
+    reset: () => store?.dispatch({ type: 'gas/act', zone, act: 'reset' }),
+  };
+}
+
+/** A chemical store's extract and its gas detection station (`gas-station.ts`). */
+function worldGasStation(kit: PanelKit, zone: GasZoneId): LiveExhibit {
+  return createGasStation(
+    kit,
+    createStoreVentilation(kit),
+    STORE_DETECTION,
+    gasBinding(zone),
+  );
+}
+
+/**
+ * An ozone generator with its room's ozone detection on its east end,
+ * facing east: the detector low (ozone is heavier than air), the
+ * sounder-beacon on top, ACCEPT and RESET at hand height.
+ */
+function withOzoneStation(
+  kit: PanelKit,
+  built: Object3D | LiveExhibit,
+  zone: GasZoneId,
+  item: Item,
+): LiveExhibit {
+  const generator = isLive(built) ? built : { object: built };
+  const station = createGasStation(
+    kit,
+    null,
+    {
+      detector: [0, 0.45, 0],
+      beacon: [0, item.h - 0.15, 0],
+      accept: [-0.1, 1.3, 0],
+      reset: [0.1, 1.3, 0],
+    },
+    gasBinding(zone),
+    generator.parts,
+  );
+  station.object.position.set(item.w / 2 + 0.002, 0, 0);
+  station.object.rotation.y = Math.PI / 2;
+  const object = new Group();
+  object.add(generator.object, station.object);
+  return {
+    object,
+    // The generator's parts, with the station's added (or the station's).
+    parts: generator.parts ?? station.parts,
+    update: (delta) => generator.update?.(delta),
+    dispose: () => generator.dispose?.(),
+  };
+}
+
+/** A chemical tank whose liquid stands at the world's stock of it. */
+function worldTankLevel(
+  tank: Object3D & { setLevel(level: number): void },
+  chemical: Chemical,
+): LiveExhibit {
+  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  let shown = -1;
+  const update = () => {
+    const litres = store?.world.value.chemicals[chemical];
+    if (litres === undefined) return;
+    const level = litres / STORE_CAPACITY[chemical];
+    if (Math.abs(level - shown) < 1e-4) return;
+    shown = level;
+    tank.setLevel(level);
+  };
+  update();
+  return { object: tank, update };
 }
 
 /** The world's whole-site supply (`plant.sources.power`), for the main switch. */

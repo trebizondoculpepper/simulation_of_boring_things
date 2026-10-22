@@ -15,7 +15,12 @@ import {
   createRecorderPanel,
 } from '../../../components/plant/views/control-panels';
 import type { PrinterStandView } from '../../../components/plant/views/control-panels';
-import { ALARM_TEXT, plantAt } from '../../logic/control-room-demo';
+import {
+  ALARM_TEXT,
+  gasAlarmIds,
+  plantAt,
+} from '../../logic/control-room-demo';
+import { worldStore } from '../../../save/world-store';
 import type { PlantReading } from '../../logic/control-room-demo';
 import {
   AIR_MIMIC,
@@ -38,7 +43,16 @@ export const PURPOSE =
  * every instrument at the same moment.
  */
 const clock = () => performance.now() / 1000;
-const reading = (): PlantReading => plantAt(clock());
+const store = typeof window === 'undefined' ? null : worldStore('dev');
+const reading = (): PlantReading => {
+  const scripted = plantAt(clock());
+  // The gas detection is the world's, not the script's.
+  if (!store) return scripted;
+  return {
+    ...scripted,
+    alarms: [...scripted.alarms, ...gasAlarmIds(store.world.value)],
+  };
+};
 
 /** The time printed against each alarm, from the reading's clock. */
 const stamp = () => {
@@ -152,8 +166,8 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Alarm annunciator',
     reference:
-      '24 windows, ISA sequence M: flashes until ACCEPT, steady until RESET; LAMP TEST',
-    size: { w: 0.9, d: 0.2, h: 0.95, mount: 'wall', y: 1.65 },
+      '30 windows, ISA sequence M: flashes until ACCEPT, steady until RESET; LAMP TEST; the gas windows from the gas detection',
+    size: { w: 0.9, d: 0.2, h: 1.1, mount: 'wall', y: 1.65 },
     build(kit): LiveExhibit {
       const annunciator = createAnnunciatorAssembly(kit);
       annunciator.onEvent = (event, alarm) => {

@@ -48,8 +48,15 @@ import {
 } from './plant/chemicals';
 import type { Chemical, ChemicalStores } from './plant/chemicals';
 import type { PoolId, PoolsState } from './plant/pools';
+import {
+  actOnGasZone,
+  newGasZones,
+  setGasLeak,
+  stepGasZones,
+} from './plant/gas';
+import type { GasZoneAction, GasZoneId, GasZones } from './plant/gas';
 
-export const WORLD_VERSION = 11;
+export const WORLD_VERSION = 12;
 
 export interface World {
   /** Seconds the world has run. */
@@ -75,6 +82,8 @@ export interface World {
   lighting: LightingState;
   /** The outside's temperature, °C: everything unheated settles to it (`thermal.ts`). */
   ambient: number;
+  /** The toxic gas detection's rooms: their air, detectors and leaks (`gas.ts`). */
+  gas: GasZones;
 }
 
 export function newWorld(): World {
@@ -89,6 +98,7 @@ export function newWorld(): World {
     startup: -1,
     lighting: newLighting(),
     ambient: AMBIENT,
+    gas: newGasZones(),
   };
 }
 
@@ -106,7 +116,11 @@ export type WorldAction =
   | { type: 'plant/slow-start' }
   | { type: 'weather/ambient'; celsius: number }
   | { type: 'lighting/supply'; on: boolean }
-  | { type: 'lighting/zone'; zone: LightingZoneId; on: boolean };
+  | { type: 'lighting/zone'; zone: LightingZoneId; on: boolean }
+  | { type: 'gas/leak'; zone: GasZoneId; gramsPerHour: number }
+  | { type: 'gas/act'; zone: GasZoneId; act: GasZoneAction }
+  /** The world run on at once, a second at a time: for trying things out. */
+  | { type: 'time/skip'; seconds: number };
 
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
@@ -148,6 +162,16 @@ export function applyAction(world: World, action: WorldAction): World {
         ...world,
         chemicals: deliver(world.chemicals, action.chemical, action.litres),
       };
+    case 'time/skip':
+      return action.seconds > 0 ? advance(world, action.seconds, 1) : world;
+    case 'gas/leak': {
+      const gas = setGasLeak(world.gas, action.zone, action.gramsPerHour);
+      return gas === world.gas ? world : { ...world, gas };
+    }
+    case 'gas/act': {
+      const gas = actOnGasZone(world.gas, action.zone, action.act);
+      return gas === world.gas ? world : { ...world, gas };
+    }
     case 'weather/ambient':
       return world.ambient === action.celsius
         ? world
@@ -233,6 +257,7 @@ export function stepWorld(world: World, delta: number): World {
     pools: water.pools,
     wetHall: stepWetHall(world.wetHall, world.plant, water, delta),
     bathers: stepBathers(world.bathers, world.time, delta, appealOf(world)),
+    gas: stepGasZones(world.gas, world.plant, delta),
     chemicals: stepChemicalStores(
       world.chemicals,
       dosedVolumes(world.pools, world.plant, stock),

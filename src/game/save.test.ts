@@ -49,6 +49,7 @@ describe('a save', () => {
       startup: -1,
       lighting: newWorld().lighting,
       ambient: newWorld().ambient,
+      gas: newWorld().gas,
     });
   });
 

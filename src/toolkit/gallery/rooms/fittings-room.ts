@@ -559,7 +559,7 @@ export function startFittingsRoom(canvas: HTMLCanvasElement) {
     room.add(box);
     const alarms = computed(() => zoneAlarms(zone));
     fit(
-      gasDetector(kit, zone),
+      gasDetector(kit, { params: zone.params, state: zone.state }),
       'north',
       x + 1.6,
       0.45,

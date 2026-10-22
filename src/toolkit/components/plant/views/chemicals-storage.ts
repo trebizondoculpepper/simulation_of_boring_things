@@ -35,6 +35,39 @@ type Tools = ReturnType<typeof plantTools>;
 /** Hypochlorite is marked yellow, acid red, on tanks, pipes and couplings. */
 export const CHEMICAL_COLOUR = { hypochlorite: '#e8c21c', acid: '#c42b23' };
 
+/** Each chemical as it looks through a tank's wall: hypochlorite pale greenish yellow, the acid straw. */
+export const LIQUID_COLOUR = { hypochlorite: '#cfd66a', acid: '#d8bf72' };
+
+/**
+ * A tank's natural polyethylene, which lets its contents show through as
+ * a shadow with a line at the top: translucent white, drawn after what is
+ * inside it.
+ */
+function translucent(t: Tools) {
+  const m = t.paint('#eeeee6', 0.5) as MeshStandardMaterial;
+  m.transparent = true;
+  m.opacity = 0.42;
+  m.depthWrite = false;
+  return m;
+}
+
+/**
+ * The liquid inside a tank, a `shape` mesh scaled up from its floor at
+ * `y0` to `level` (0 to 1) of `height`; it is live, so the room does not
+ * merge it.
+ */
+function liquid(mesh: Mesh, y0: number, height: number) {
+  mesh.userData.live = true;
+  mesh.renderOrder = 0;
+  const set = (level: number) => {
+    const share = Math.min(1, Math.max(0, level));
+    mesh.visible = share > 0.002;
+    mesh.scale.y = Math.max(share, 0.002);
+    mesh.position.y = y0 + (height * mesh.scale.y) / 2;
+  };
+  return set;
+}
+
 /** Lay `mesh` at `at`, facing +z (turned `yaw`), and add it to `parent`. */
 function put(parent: Object3D, mesh: Object3D, at: Point, yaw = 0) {
   mesh.position.set(...at);
@@ -91,17 +124,39 @@ export function createBundedTank(
 ) {
   const t = plantTools(kit);
   const group = new Group();
-  const black = t.paint('#1c1e1f', 0.6);
-  // The bund: its floor and open wall.
+  // Natural PE-HD, translucent: its contents show as a line on its side.
+  const shell = translucent(t);
+  const black = shell;
   t.cyl(group, t.paint('#2a2d2f', 0.7), bundR, 0.02, 0, 0.01, 0, 'y', 48);
   ring(t, group, '#2a2d2f', bundR, bundH, bundH / 2);
   // The tank on the bund's floor, its top a shallow cone to the manway.
   const base = 0.03;
   const wall = h - 0.12;
-  t.cyl(group, black, r, wall, 0, base + wall / 2, 0, 'y', 40);
+  const body = t.cyl(group, black, r, wall, 0, base + wall / 2, 0, 'y', 40);
+  body.renderOrder = 1;
   const shoulder = new Mesh(new CylinderGeometry(0.22, r, 0.12, 40), black);
   shoulder.position.y = base + wall + 0.06;
+  shoulder.renderOrder = 1;
   group.add(shoulder);
+  // The liquid in it, up to its contents' level.
+  const contents = t.cyl(
+    group,
+    t.paint(
+      chemical.includes('HYPO')
+        ? LIQUID_COLOUR.hypochlorite
+        : LIQUID_COLOUR.acid,
+      0.25,
+    ),
+    r - 0.012,
+    wall,
+    0,
+    base,
+    0,
+    'y',
+    40,
+  );
+  const setLevel = liquid(contents, base + 0.005, wall - 0.01);
+  setLevel(0.7);
   const top = base + h;
   t.cyl(group, t.paint('#3a3d3f', 0.5), 0.2, 0.05, 0, top + 0.025, 0, 'y', 32);
   // Fill line (DN50) up out of the top and back to the wall's fill point.
@@ -164,22 +219,25 @@ export function createBundedTank(
     0.008,
     8,
   );
-  // A contents gauge (a float and pointer on a scale) and the label.
+  // A graduated scale moulded on its side, read against the liquid's line.
   const gauge = t.printed(
-    0.07,
-    h * 0.75,
+    0.05,
+    wall - 0.01,
     (c, cw, ch) => {
-      c.fillStyle = '#f1f1ec';
-      c.fillRect(0, 0, cw, ch);
       c.fillStyle = '#1f2b31';
       for (let i = 0; i <= 10; i++)
-        c.fillRect(cw * 0.55, (ch * i) / 10, cw * 0.45, ch * 0.004);
-      c.fillStyle = colour;
-      c.fillRect(0, ch * 0.42, cw * 0.5, ch * 0.02);
+        c.fillRect(
+          0,
+          ch - 2 - ((ch - 4) * i) / 10,
+          cw * (i % 5 ? 0.4 : 0.8),
+          3,
+        );
     },
     64,
   ).mesh;
-  put(group, gauge, [-r * 0.55, base + h * 0.45, r * 0.84], -0.6);
+  (gauge.material as MeshStandardMaterial).transparent = true;
+  gauge.renderOrder = 2;
+  put(group, gauge, [-r * 0.6, base + wall / 2, r * 0.81], -0.62);
   put(
     group,
     createHazardLabel(
@@ -212,15 +270,11 @@ export function createBundedTank(
   const maker = brandLivery(kit, 'chlorella');
   put(
     group,
-    maker.nameplate(
-      ['PE-HD dosing tank, black (UV)', 'Bund 110 %'],
-      0.16,
-      0.09,
-    ),
+    maker.nameplate(['PE-HD dosing tank, natural', 'Bund 110 %'], 0.16, 0.09),
     [0.3, base + 0.35, r * 0.85],
     0.55,
   );
-  return group;
+  return Object.assign(group, { setLevel });
 }
 
 /**
@@ -260,7 +314,30 @@ export function createIbcOnSpillPallet(kit: PanelKit) {
   ibc.position.set(-0.3, H, 0);
   group.add(ibc);
   t.box(ibc, t.paint('#3a3c3d', 0.7), 1.2, 0.15, 1.0, 0, 0.075, 0);
-  t.box(ibc, t.paint('#e9ecea', 0.35), 1.12, 0.96, 0.94, 0, 0.15 + 0.48, 0);
+  // Its bottle, translucent PE-HD, the acid showing through to its level.
+  const bottle = t.box(
+    ibc,
+    translucent(t),
+    1.12,
+    0.96,
+    0.94,
+    0,
+    0.15 + 0.48,
+    0,
+  );
+  bottle.renderOrder = 1;
+  const acid = t.box(
+    ibc,
+    t.paint(LIQUID_COLOUR.acid, 0.25),
+    1.1,
+    0.93,
+    0.92,
+    0,
+    0.16,
+    0,
+  );
+  const setLevel = liquid(acid, 0.165, 0.93);
+  setLevel(0.7);
   const cage = t.paint(FINISH.galvanised, 0.4, 0.6);
   for (const x of [-0.58, -0.29, 0, 0.29, 0.58])
     for (const z of [-0.49, 0.49])
@@ -326,7 +403,7 @@ export function createIbcOnSpillPallet(kit: PanelKit) {
     ),
     [0.35, 0.35, 0.505],
   );
-  return group;
+  return Object.assign(group, { setLevel });
 }
 
 /**
@@ -697,10 +774,17 @@ export function createPpeCabinet(kit: PanelKit) {
  * air, so the extract draws from a grille near the floor through a
  * Ø150 mm duct to an in-line fan and out; a chlorine detector watches
  * the low air and sounds a beacon over the door. After the Vent-Axia
- * ACM150 in-line fan (350 × 256 × 200 mm, 522 m³/h) and the Crowcon
- * Xgard Type 1 detector for Cl₂ (156 × 166 × 111 mm). The origin is the
- * middle of the exhibit, 1.1 m above its lowest point.
+ * ACM150 in-line fan (350 × 256 × 200 mm, 522 m³/h). The detector and
+ * beacon are working parts (`general-safety/parts/gas-parts.ts`), placed
+ * at `STORE_DETECTION`. The origin is the middle of the exhibit, 1.1 m
+ * above its lowest point.
  */
+export const STORE_DETECTION = {
+  detector: [0.3, -1.1 + 0.45, 0],
+  beacon: [0.3, 0.85, 0],
+  accept: [0.17, 0.22, 0],
+  reset: [0.43, 0.22, 0],
+} as const satisfies Record<string, Point>;
 export function createStoreVentilation(kit: PanelKit) {
   const t = plantTools(kit);
   const group = new Group();
@@ -742,19 +826,8 @@ export function createStoreVentilation(kit: PanelKit) {
     [-0.3, 0.3, 0.205],
   );
   put(group, fan.badge(0.025), [-0.3, 0.55, 0.25]);
-  // The chlorine detector, low, sensor pointing down.
-  const det = new Group();
-  det.position.set(0.3, lo + 0.55, 0);
-  group.add(det);
-  const detector = brandLivery(kit, 'warden');
-  t.box(det, detector.paint.casing, 0.156, 0.166, 0.111, 0, 0, 0.0555);
-  t.cyl(det, t.paint('#9a9fa2', 0.4, 0.5), 0.03, 0.06, 0, -0.11, 0.06, 'y', 20);
-  t.cyl(det, t.paint('#3a7d3f', 0.4), 0.006, 0.004, 0.05, 0.05, 0.112, 'z', 12);
-  put(det, createTag(t, 'GD-801\nCl₂ 0–5 ppm', 0.14), [0, 0.03, 0.112]);
-  put(det, detector.badge(0.02), [0, -0.05, 0.112]);
-  // The beacon and sounder over the door, and its warning.
-  t.box(group, t.paint('#d9dad6', 0.5), 0.12, 0.1, 0.08, 0.3, 0.75, 0.04);
-  t.cyl(group, t.paint('#d48a1a', 0.3), 0.045, 0.1, 0.3, 0.85, 0.05, 'y', 20);
+  // The chlorine detector, low, and the sounder-beacon over the door are
+  // working parts, added where these points say (`STORE_DETECTION`).
   put(
     group,
     createNotice(t, 0.36, 0.18, [

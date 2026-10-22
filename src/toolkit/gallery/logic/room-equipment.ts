@@ -516,6 +516,7 @@ const wall = (
 
 /** A pool plant room's machines: its own circuit, in the order the water goes. */
 function poolPlant(
+  room: string,
   name: string,
   tank: { nx: number; nz: number; ny: number },
   filters: { count: number; dia: number },
@@ -555,7 +556,8 @@ function poolPlant(
       walls: ['south', 'west', 'east'],
     }),
     floor('heat-exchanger', `${name} plate heat exchanger`, 1.5, 0.7, 1.2),
-    floor('ozone-generator', `${name} ozone generator`, 1.6, 0.5, 1.95),
+    // Its room's ozone detection is on it (`ozone-generator:<room>`).
+    floor(`ozone-generator:${room}`, `${name} ozone generator`, 1.6, 0.5, 1.95),
     floor(
       'contact-tank',
       `${name} ozone contact tank`,
@@ -594,6 +596,7 @@ export function roomEquipment(
       return {
         box: plant('pool_01'),
         items: poolPlant(
+          'plant_pool_01',
           'Lounge pool',
           { nx: 3, nz: 2, ny: 2 },
           { count: 2, dia: 1.2 },
@@ -605,6 +608,7 @@ export function roomEquipment(
       return {
         box: plant('pool_02'),
         items: poolPlant(
+          'plant_pool_02',
           'Olympic pool',
           // 216 m³ for the sizing's 200, three panels tall: as tall as it
           // may be, its top below the pool's deck a storey up, so the
@@ -746,7 +750,7 @@ export function roomEquipment(
           floor('spill-kit', 'Chemical spill kit', 0.65, 0.75, 1, { back: 0 }),
           wall('ppe-cabinet', 'PPE cabinet', 0.6, 0.35, 1.25, 1.3),
           wall(
-            'store-extract',
+            `store-extract:${room}`,
             'Extract and chlorine detection',
             1,
             0.3,
@@ -769,7 +773,7 @@ export function roomEquipment(
           floor('spill-kit', 'Chemical spill kit', 0.65, 0.75, 1, { back: 0 }),
           wall('ppe-cabinet', 'PPE cabinet', 0.6, 0.35, 1.25, 1.3),
           wall(
-            'store-extract',
+            `store-extract:${room}`,
             'Extract and chlorine detection',
             1,
             0.3,
@@ -912,7 +916,7 @@ export function roomEquipment(
           wall('mimic-air', 'Mimic: air handling', 2.1, 0.08, 1.2, 1.7, {
             walls: ['north', 'west', 'east'],
           }),
-          wall('annunciator', 'Alarm annunciator', 0.9, 0.2, 0.95, 1.65),
+          wall('annunciator', 'Alarm annunciator', 0.9, 0.2, 1.1, 1.65),
           wall('chart-recorders', 'Chart recorders', 1.3, 0.2, 0.6, 1.5),
           wall('readout-board', 'Readout board', 1.3, 0.12, 0.55, 1.5),
           wall('bms-outstation', 'BMS outstation', 0.62, 0.75, 0.78, 1.4),
@@ -968,12 +972,32 @@ export const EQUIPPED_ROOMS = [
 ] as const;
 
 /** A room's machines, placed. */
+/** Where every equipped room's feeder isolator hangs, on its west wall, m. */
+export const FEEDER_ISOLATOR = { fromSouth: 1.1, y: 1.5 } as const;
+
+/** The wall space the feeder isolator takes, kept clear of other things. */
+export function feederIsolatorSpace(box: RoomBox): Footprint {
+  const z = box.d / 2 - FEEDER_ISOLATOR.fromSouth;
+  return {
+    minX: -box.w / 2,
+    maxX: -box.w / 2 + 0.25,
+    minZ: z - 0.2,
+    maxZ: z + 0.2,
+  };
+}
+
 export function layoutRoom(room: string) {
   const found = roomEquipment(room);
   if (!found) return null;
   // Its notices and signs, laid out with its machines (`building-signs.ts`).
   const r = {
     ...found,
+    // The room's feeder isolator is on its west wall by the entrance
+    // (`views/room-services.ts`, `FEEDER_ISOLATOR`): nothing goes there.
+    box: {
+      ...found.box,
+      keepClear: [...found.box.keepClear, feederIsolatorSpace(found.box)],
+    },
     items: [
       ...found.items,
       ...(ROOM_SIGNS[room] ?? []).map((id) => {

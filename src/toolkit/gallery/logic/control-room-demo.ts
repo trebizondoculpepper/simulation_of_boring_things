@@ -1,3 +1,13 @@
+import type { World } from '../../../game/world';
+import {
+  GAS_ZONE_IDS,
+  extractRunning,
+  gasAlarmsOf,
+} from '../../../game/plant/gas';
+import {
+  CHLORINE,
+  OZONE,
+} from '../../components/general-safety/logic/gas-detection';
 /**
  * A scripted state of the pool plant for the control room's development
  * room (dev_control), so that its instruments have something real to show
@@ -69,6 +79,12 @@ export const ANNUNCIATOR_ALARMS = [
   'gen-running',
   'backwash-high',
   'makeup-running',
+  'chlorine-high',
+  'ozone-gas',
+  'ozone-high',
+  'gas-purge',
+  'extract-fail',
+  'spare',
 ] as const;
 export type AlarmId = (typeof ANNUNCIATOR_ALARMS)[number];
 
@@ -98,7 +114,40 @@ export const ALARM_TEXT: Record<AlarmId, { window: string; room: string }> = {
   'gen-running': { window: 'GEN\nRUNNING', room: 'SWITCH ROOM' },
   'backwash-high': { window: 'BACKWASH\nTANK HIGH', room: 'BALANCE TANKS' },
   'makeup-running': { window: 'MAKE-UP\nRUNNING', room: 'BALANCE TANKS' },
+  'chlorine-high': { window: 'CHLORINE\nGAS HIGH', room: 'CHEMICAL STORE' },
+  'ozone-gas': { window: 'OZONE\nGAS', room: 'POOL PLANT ROOM' },
+  'ozone-high': { window: 'OZONE\nGAS HIGH', room: 'POOL PLANT ROOM' },
+  'gas-purge': { window: 'GAS EXTRACT\nPURGING', room: 'GAS ROOMS' },
+  'extract-fail': { window: 'GAS EXTRACT\nNO SUPPLY', room: 'GAS ROOMS' },
+  spare: { window: 'SPARE', room: 'NONE (SPARE WAY)' },
 };
+
+/**
+ * The annunciator's gas windows, from the world's gas detection
+ * (`game/plant/gas.ts`): each gas's low and high alarms in any of its
+ * rooms, an extract purging, and an extract without its supplies in a
+ * room with gas in its air.
+ */
+export function gasAlarmIds(world: World): AlarmId[] {
+  const ids: AlarmId[] = [];
+  const cl = gasAlarmsOf(world.gas, CHLORINE);
+  const o3 = gasAlarmsOf(world.gas, OZONE);
+  if (cl.a1) ids.push('chlorine-gas');
+  if (cl.a2) ids.push('chlorine-high');
+  if (o3.a1) ids.push('ozone-gas');
+  if (o3.a2) ids.push('ozone-high');
+  const zones = GAS_ZONE_IDS.map((id) => ({ id, ...world.gas[id] }));
+  if (zones.some((z) => z.state.a2 && extractRunning(world.plant, z.id)))
+    ids.push('gas-purge');
+  if (
+    zones.some(
+      (z) =>
+        (z.leak > 0 || z.state.conc > 0) && !extractRunning(world.plant, z.id),
+    )
+  )
+    ids.push('extract-fail');
+  return ids;
+}
 
 /** How long the scripted loop runs before it repeats, seconds. */
 export const DEMO_LOOP = 240;

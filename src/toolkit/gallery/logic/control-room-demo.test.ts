@@ -5,8 +5,10 @@ import {
   CHLORINE_LOW,
   DEMO_LOOP,
   FILTER_DP_LIMIT,
+  gasAlarmIds,
   plantAt,
 } from './control-room-demo';
+import { advance, applyAction, newWorld } from '../../../game/world';
 
 describe('the control room demonstration', () => {
   it('repeats every loop', () => {
@@ -39,7 +41,7 @@ describe('the control room demonstration', () => {
       expect(ALARM_TEXT[alarm].window.length).toBeGreaterThan(0);
       expect(ALARM_TEXT[alarm].room.length).toBeGreaterThan(0);
     }
-    expect(ANNUNCIATOR_ALARMS).toHaveLength(24);
+    expect(ANNUNCIATOR_ALARMS).toHaveLength(30);
   });
 
   it('keeps readings in their instruments’ ranges', () => {
@@ -51,5 +53,33 @@ describe('the control room demonstration', () => {
       expect(r.ph).toBeGreaterThan(7);
       expect(r.ph).toBeLessThan(7.6);
     }
+  });
+});
+
+describe('the annunciator’s gas windows', () => {
+  it('come from the world’s gas detection', () => {
+    expect(gasAlarmIds(newWorld())).toEqual([]);
+    let w = applyAction(newWorld(), {
+      type: 'gas/act',
+      zone: 'hypo_store',
+      act: 'misdeliver',
+    });
+    w = advance(w, 300, 1);
+    expect(gasAlarmIds(w)).toEqual([
+      'chlorine-gas',
+      'chlorine-high',
+      'gas-purge',
+    ]);
+    w = applyAction(w, {
+      type: 'gas/leak',
+      zone: 'plant_pool_01',
+      gramsPerHour: 2,
+    });
+    w = applyAction(w, {
+      type: 'plant/feeder',
+      room: 'plant_pool_01',
+      on: false,
+    });
+    expect(gasAlarmIds(w)).toContain('extract-fail');
   });
 });
