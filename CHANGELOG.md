@@ -10,6 +10,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- The circulation pumps' orange coupling guard no longer cuts into the motor: volute, bearing bracket, coupling guard (now perforated, on two legs from the base deck), the motor's smooth drive-end shield, finned frame and fan cowl now follow one another along the shaft, laid out and checked by `end-suction-pump.ts`; the motor stands on pedestals and its terminal box on a boss.
 - Dev19 now opens with a small pool circuit, balance tank, pool pump, sand filter, treatment cabinet and plate heat exchanger alongside the boiler loop. The trial uses mains electricity and gas, graph-bound remote valves, a gas flow meter with flow and accumulated-volume readings, and the shared pipe helper for its visible services. This also repairs the temporary Vite parse error that prevented the room loading.
 
 - Dev19's pump sound now builds from a softer motor hum, casing vibration, fan and water noise instead of prominent pure tones. Its boiler starts with a blower and igniter, develops a layered flame and flue sound, then closes its gas valve while the blower winds down.

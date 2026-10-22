@@ -13,6 +13,18 @@ import {
 } from '../logic/pump-pair';
 import type { DN, Point } from './plant-tools';
 import { dot } from '../../industrial-control/logic/font-5x7';
+import {
+  FIN_DEPTH,
+  MOTOR_RADIUS,
+  PUMP_DECK_TOP,
+  PUMP_SET_LENGTH,
+  PUMP_SHAFT_Y,
+  endSuctionPumpLayout,
+} from '../logic/end-suction-pump';
+import type {
+  EndSuctionPumpLayout,
+  ShaftSpan,
+} from '../logic/end-suction-pump';
 
 /**
  * The pool circulation plant (dev_pumps), in metres, each machine at the
@@ -73,61 +85,134 @@ function fins(
 
 /**
  * An IEC foot-mounted induction motor along x, shaft toward −x, its
- * shaft centre at `y`: frame, fins, fan cowl, terminal box and feet.
+ * shaft centre at `y`, laid out by `endSuctionPumpLayout`: the smooth
+ * drive-end shield, the finned frame with its terminal box and feet, and
+ * the fan cowl, each starting where the last ends.
  */
 function motor(
   t: Tools,
   parent: Object3D,
-  {
-    x,
-    y,
-    z,
-    r,
-    length,
-  }: { x: number; y: number; z: number; r: number; length: number },
+  { y, z, r, p }: { y: number; z: number; r: number; p: EndSuctionPumpLayout },
   paint: Material,
   cowl: Material,
 ) {
-  t.cyl(parent, paint, r, length, x, y, z, 'x', 28);
-  fins(t, parent, paint, r, x - length / 2 + 0.06, x + length / 2 - 0.12, y, z);
-  // Drive-end shield and the fan cowl behind.
-  t.cyl(parent, paint, r * 0.92, 0.04, x - length / 2 - 0.02, y, z, 'x', 28);
-  t.cyl(parent, cowl, r * 1.02, 0.16, x + length / 2 + 0.08, y, z, 'x', 28);
+  const mid = (s: ShaftSpan) => (s.x0 + s.x1) / 2;
+  const len = (s: ShaftSpan) => s.x1 - s.x0;
+  // The drive-end shield, smooth (no fins), where the coupling guard meets
+  // it.
+  t.cyl(parent, paint, r, len(p.shield), mid(p.shield), y, z, 'x', 28);
+  // The finned frame.
+  t.cyl(parent, paint, r, len(p.frame), mid(p.frame), y, z, 'x', 28);
+  for (let x = p.fins.x0; x <= p.fins.x1 + 1e-9; x += 0.05)
+    t.cyl(parent, paint, r + FIN_DEPTH, 0.012, x, y, z, 'x', 24);
+  // The fan cowl behind, its grille at the end.
+  t.cyl(parent, cowl, r * 1.02, len(p.cowl), mid(p.cowl), y, z, 'x', 28);
   t.cyl(
     parent,
     t.paint('#141a1f', 0.7),
     r * 0.8,
     0.005,
-    x + length / 2 + 0.162,
+    p.cowl.x1 + 0.0025,
     y,
     z,
     'x',
     28,
   );
-  // Terminal box on top, cable gland on its side.
-  t.box(parent, paint, 0.2, 0.12, 0.2, x - 0.05, y + r + 0.05, z);
+  // Terminal box on its cast boss on top of the frame (the boss interrupts
+  // the fins), cable gland on its side.
+  const tx = p.frame.x0 + len(p.frame) * 0.36;
+  const boss = 0.05 + FIN_DEPTH;
+  t.box(parent, paint, 0.16, boss, 0.16, tx, y + r + FIN_DEPTH - boss / 2, z);
+  t.box(parent, paint, 0.2, 0.12, 0.2, tx, y + r + FIN_DEPTH + 0.06, z);
   t.cyl(
     parent,
     t.paint('#2b2b2b', 0.6),
     0.018,
     0.04,
-    x - 0.05,
-    y + r + 0.05,
+    tx,
+    y + r + FIN_DEPTH + 0.06,
     z + 0.12,
     'z',
     12,
   );
-  // Feet.
-  for (const fx of [x - length / 2 + 0.12, x + length / 2 - 0.12])
+  // Feet, cast on the frame, bolted down on fabricated pedestals (in the
+  // base frame's colour) that bring the motor up to the pump's shaft height.
+  const footTop = y - r * 0.5;
+  const footBottom = y - r - 0.03;
+  for (const fx of [p.frame.x0 + 0.06, p.frame.x1 - 0.06]) {
     t.box(
       parent,
       paint,
       0.1,
-      y - r * 0.5,
+      footTop - footBottom,
       r * 1.6,
       fx,
-      (y - r * 0.5) / 2 + 0.0,
+      (footTop + footBottom) / 2,
       z,
+    );
+    t.box(
+      parent,
+      cowl,
+      0.14,
+      footBottom - PUMP_DECK_TOP,
+      r * 1.8,
+      fx,
+      (footBottom + PUMP_DECK_TOP) / 2,
+      z,
+    );
+  }
+}
+
+/**
+ * The coupling guard, sheet steel in the maker's accent colour, spanning
+ * the gap from the bearing bracket to the motor's drive-end shield round
+ * the coupling (`endSuctionPumpLayout`): a box of side `2 · half`,
+ * perforated on its faces, on two legs from the deck.
+ */
+function couplingGuard(
+  t: Tools,
+  parent: Object3D,
+  { y, z, p }: { y: number; z: number; p: EndSuctionPumpLayout },
+  paint: Material,
+) {
+  const { guard, guardHalf: h } = p;
+  const len = guard.x1 - guard.x0;
+  const mid = (guard.x0 + guard.x1) / 2;
+  t.box(parent, paint, len, 2 * h, 2 * h, mid, y, z);
+  // Perforations: rows of dark slots on the front, back and top.
+  const hole = t.paint('#1b1b1b', 0.8);
+  const cols = 5;
+  const rows = [-0.5, 0, 0.5];
+  const pitch = len / (cols + 1);
+  for (let i = 1; i <= cols; i++) {
+    const x = guard.x0 + i * pitch;
+    for (const k of rows) {
+      for (const s of [-1, 1])
+        t.box(
+          parent,
+          hole,
+          0.014,
+          0.03,
+          0.002,
+          x,
+          y + k * h,
+          z + s * (h + 0.001),
+        );
+      t.box(parent, hole, 0.014, 0.002, 0.03, x, y + h + 0.001, z + k * h);
+    }
+  }
+  // Two legs (folded straps) down to the base frame's deck.
+  const legH = y - h - PUMP_DECK_TOP;
+  for (const s of [-1, 1])
+    t.box(
+      parent,
+      paint,
+      0.04,
+      legH,
+      0.04,
+      mid,
+      PUMP_DECK_TOP + legH / 2,
+      z + s * (h - 0.03),
     );
 }
 
@@ -159,15 +244,16 @@ export function createEndSuctionPump(kit: PanelKit, x0 = 0) {
   const livery = brandLivery(kit, 'grundflow');
   const base = livery.paint.shade;
   const iron = livery.paint.casing;
-  const L = 1.9;
+  const L = PUMP_SET_LENGTH;
+  const p = endSuctionPumpLayout();
   // Base frame: two channels and a deck plate, grouted to a plinth.
   t.box(group, t.paint(FINISH.concrete, 0.85), L + 0.2, 0.1, 0.8, 0, 0.05, 0);
   for (const z of [-0.25, 0.25]) t.box(group, base, L, 0.12, 0.08, 0, 0.16, z);
   t.box(group, base, L, 0.012, 0.58, 0, 0.226, 0);
-  const shaftY = 0.68;
+  const shaftY = PUMP_SHAFT_Y;
   // The volute, at the suction end, its axis along x.
-  const vx = -L / 2 + 0.38;
-  t.cyl(group, iron, 0.36, 0.26, vx, shaftY, 0, 'x', 36);
+  const vx = (p.volute.x0 + p.volute.x1) / 2;
+  t.cyl(group, iron, 0.36, p.volute.x1 - p.volute.x0, vx, shaftY, 0, 'x', 36);
   t.cyl(group, iron, 0.3, 0.06, vx - 0.16, shaftY, 0, 'x', 32);
   // Casing foot.
   t.box(
@@ -199,14 +285,25 @@ export function createEndSuctionPump(kit: PanelKit, x0 = 0) {
     [vx, shaftY + 0.58, 0.12],
     'y',
   );
-  // Bearing bracket and coupling guard.
-  t.cyl(group, iron, 0.12, 0.36, vx + 0.31, shaftY, 0, 'x', 24);
-  t.box(group, livery.paint.accent, 0.3, 0.3, 0.3, vx + 0.64, shaftY, 0);
+  // Bearing bracket, coupling guard and motor, each ending where the next
+  // begins (`endSuctionPumpLayout`).
+  t.cyl(
+    group,
+    iron,
+    0.12,
+    p.bracket.x1 - p.bracket.x0,
+    (p.bracket.x0 + p.bracket.x1) / 2,
+    shaftY,
+    0,
+    'x',
+    24,
+  );
+  couplingGuard(t, group, { y: shaftY, z: 0, p }, livery.paint.accent);
   // The motor (frame 200L): shaft height to the base deck.
   motor(
     t,
     group,
-    { x: L / 2 - 0.5, y: shaftY, z: 0, r: 0.2, length: 0.62 },
+    { y: shaftY, z: 0, r: MOTOR_RADIUS, p },
     livery.paint.main,
     livery.paint.shade,
   );
@@ -215,7 +312,7 @@ export function createEndSuctionPump(kit: PanelKit, x0 = 0) {
     kit,
     group,
     'grundflow',
-    [L / 2 - 0.55, shaftY + 0.08, 0.205],
+    [L / 2 - 0.55, shaftY + 0.08, MOTOR_RADIUS + FIN_DEPTH + 0.003],
     ['NKC 150-315  30 kW  1475 min⁻¹', 'Q 300 m³/h  H 18 m', 'DN200/150  PN10'],
     0.16,
     0.08,
