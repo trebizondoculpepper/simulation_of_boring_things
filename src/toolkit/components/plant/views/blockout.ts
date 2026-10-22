@@ -56,6 +56,8 @@ function labelCard(kit: PanelKit, text: string, w: number, h: number) {
   map.colorSpace = SRGBColorSpace;
   kit.textures.push(map);
   const material = new MeshBasicMaterial({ map });
+  // A placeholder's own label, left as it is with the power off.
+  material.userData.unpowered = true;
   kit.materials.push(material);
   return new Mesh(new PlaneGeometry(w, h), material);
 }

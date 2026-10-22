@@ -274,6 +274,8 @@ function worldScenarioSimulator(kit: PanelKit): LiveExhibit {
   const sim = createScenarioSimulator(kit, scenarios, SIMULATOR_DOOR_SWING);
   const object = new Group();
   object.name = 'Hyperplasc Scenario Simulator';
+  // Powered from other universes: it stays lit whatever this one's supply.
+  object.userData.ownPower = true;
   sim.group.position.z = 0.9 / 2 - 0.07;
   // To its space's right: the room on its left is its door's swing.
   sim.group.position.x = (SIMULATOR_SPACE - 0.64) / 2;

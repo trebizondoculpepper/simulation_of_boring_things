@@ -100,6 +100,8 @@ import { createMimicBoard } from '../../components/industrial-control/views/mimi
 import type { MimicSpec } from '../../components/industrial-control/logic/mimic';
 import { bindRoomLights } from '../views/room-lights';
 import { zoneOfRoom } from '../../../game/plant/lighting';
+import { bindRoomPower, roomPowered } from '../views/room-power';
+import type { ServiceRoom } from '../../../game/plant/services';
 
 /**
  * plant_room_small, _medium and _large: a per-attraction plant room's
@@ -414,6 +416,10 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     scene,
     hall ? zoneOfRoom(`plant_${hall}`) : undefined,
   );
+  // Its equipment's lamps and displays, dark without its power.
+  const roomPower = hall
+    ? bindRoomPower(scene, roomPowered(`plant_${hall}` as ServiceRoom))
+    : null;
   let last = 0;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
@@ -467,6 +473,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         enterDevRoom(hall, self, true);
       }
     }
+    // Last, after every machine has set its lamps: dark without power.
+    roomPower?.update(delta);
     if (visual) {
       film.uniforms.time.value = (time / 1000) % 100;
       composer.render(delta);

@@ -81,7 +81,8 @@ export function createTeleprinter(title = 'OPERATOR ACTION LOG') {
     parent = group,
   ) => {
     textures.push(texture);
-    const finish = createPs1Material({ map: texture }, true);
+    // Printed: lit as any surface is (Pool Plant: dark in the dark).
+    const finish = createPs1Material({ map: texture });
     materials.push(finish);
     const item = new Mesh(new PlaneGeometry(width, height), finish);
     item.position.set(x, y, z);
@@ -170,10 +171,11 @@ export function createTeleprinter(title = 'OPERATOR ACTION LOG') {
   const log = createPrinterLog();
   const printed = paperFace(title);
   textures.push(printed.texture);
-  const paperMaterial = createPs1Material(
-    { map: printed.texture, side: DoubleSide },
-    true,
-  );
+  // Paper: lit as any surface is (Pool Plant: dark in the dark).
+  const paperMaterial = createPs1Material({
+    map: printed.texture,
+    side: DoubleSide,
+  });
   materials.push(paperMaterial);
   const segments = 32;
   const columns = 8;

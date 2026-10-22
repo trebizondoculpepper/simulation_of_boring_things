@@ -62,7 +62,9 @@ import {
 } from '../logic/pool-halls';
 import type { PoolHallId } from '../logic/pool-halls';
 import { bindRoomLights } from '../views/room-lights';
-import { zoneOfRoom } from '../../../game/plant/lighting';
+import { zoneLit, zoneOfRoom } from '../../../game/plant/lighting';
+import type { PoolUniforms } from '../../components/pool/views/pool-surfaces';
+import { bindRoomPower, sitePowered } from '../views/room-power';
 
 /**
  * A version-one pool hall (pool_01 to pool_04), in its own scene. None has
@@ -546,6 +548,34 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     scene,
     gallery ? 'corridors' : zoneOfRoom(id),
   );
+  // The pool's own light (its water, caustics and lamps' glow), the
+  // hall's: full while its lights are on; its daylight's share, or none,
+  // while they are out.
+  // Every pool's uniforms in the scene (the hall's, a spa's), each with
+  // its caustics' and reflection's own strengths.
+  const pools = new Map<
+    PoolUniforms,
+    { caustics: number; reflected: number }
+  >();
+  let poolsFound = Infinity;
+  const findPools = () =>
+    scene.traverse((o) => {
+      const u = o.userData.poolUniforms as PoolUniforms | undefined;
+      if (u && !pools.has(u))
+        pools.set(u, {
+          caustics: u.caustics.value,
+          reflected: u.reflected.value,
+        });
+    });
+  const hallZone = zoneOfRoom(id);
+  // Its signs', clock's and readers' lamps and displays, dark without the
+  // site's power.
+  const roomPower = bindRoomPower(scene, sitePowered());
+  const poolLight = () => {
+    const w = world.world.value;
+    if (!hallZone || zoneLit(w.plant, w.lighting, hallZone)) return 1;
+    return spec.skylights.length > 0 ? 0.35 : 0;
+  };
   let last = 0;
   let officeWasOpen = false;
   renderer.setAnimationLoop((time) => {
@@ -554,6 +584,17 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     last = time;
     walk.update(delta);
     roomLights.update(delta);
+    poolsFound += delta;
+    if (poolsFound > 2) {
+      findPools();
+      poolsFound = 0;
+    }
+    const k = poolLight();
+    for (const [u, base] of pools) {
+      u.light.value = k;
+      u.caustics.value = base.caustics * k;
+      u.reflected.value = base.reflected * k;
+    }
     partAudio.listen(camera, metre);
     if (spaTub && 'object' in spaTub) spaTub.update?.(delta);
     if (spaPanel && 'object' in spaPanel) spaPanel.parts?.update(delta);
@@ -659,6 +700,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         enterDevRoom(r.handTo, loopRoom, true);
       }
     }
+    // Last, after every machine has set its lamps: dark without power.
+    roomPower.update(delta);
     if (visual) {
       film.uniforms.time.value = (time / 1000) % 100;
       composer.render(delta);

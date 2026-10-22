@@ -51,6 +51,7 @@ import { doorReaders } from '../../components/architectural/logic/card-reader';
 import { enterDevRoom } from '../logic/dev-room-links';
 import type { RoomId } from '../logic/dev-room-links';
 import { bindRoomLights } from '../views/room-lights';
+import { bindRoomPower, sitePowered } from '../views/room-power';
 
 /**
  * main_corridor: the ring of plant corridor (`logic/main-corridor.ts`),
@@ -306,6 +307,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   const wasOpen: (boolean | null)[] = doors.map(() => null);
   // Its lights, the corridors' zone (`room-lights.ts`).
   const roomLights = bindRoomLights(scene, 'corridors');
+  // Its readers' lamps, dark without the site's power.
+  const roomPower = bindRoomPower(scene, sitePowered());
   let last = 0;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
@@ -341,6 +344,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
           }
         }
     }
+    // Last, after every machine has set its lamps: dark without power.
+    roomPower.update(delta);
     if (visual) {
       film.uniforms.time.value = (time / 1000) % 100;
       composer.render(delta);

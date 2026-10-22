@@ -159,6 +159,8 @@ export function createPoolHall(
     };
   });
   const uniforms = createPoolUniforms(metre, WATER_Y, bounds);
+  // For the room, to dim the pool with the hall's lights (`room-lights.ts`).
+  group.userData.poolUniforms = uniforms;
   const tile = createTileMaterial(uniforms, {
     colour: s.tile.colour,
     tile: s.tile.size,
@@ -1049,6 +1051,8 @@ export function createPoolHall(
     color: '#f4f8ff',
     side: DoubleSide,
   });
+  // Daylight: never dimmed with the power or the lights (`room-power.ts`).
+  skyGlass.userData.daylight = true;
   const mullion = new MeshStandardMaterial({
     color: '#d9dcd8',
     metalness: 0.4,

@@ -22,6 +22,7 @@ export function createPoolLightGlow(
       waterY: uniforms.waterY,
       time: uniforms.time,
       strength: { value: 1 },
+      poolLight: uniforms.light,
     },
     vertexShader: /* glsl */ `
 varying vec2 vUv;
@@ -40,7 +41,7 @@ void main() {
     fragmentShader: /* glsl */ `
 varying vec2 vUv;
 varying float vHeight;
-uniform float waterY, time, strength;
+uniform float waterY, time, strength, poolLight;
 void main() {
   vec2 p = (vUv - 0.5) * 2.0;
   float r2 = dot(p, p);
@@ -51,7 +52,7 @@ void main() {
   // Fine, slow variation suggests suspended matter without sparkling dots.
   float dust = 0.97 + 0.03 * sin(p.x * 41.0 + time * 0.3)
     * sin(p.y * 37.0 - time * 0.2);
-  gl_FragColor = vec4(vec3(0.62, 0.88, 1.0) * haze * dust * strength * submerged, 1.0);
+  gl_FragColor = vec4(vec3(0.62, 0.88, 1.0) * haze * dust * strength * submerged * poolLight, 1.0);
 }`,
   });
   const glow = new InstancedMesh(

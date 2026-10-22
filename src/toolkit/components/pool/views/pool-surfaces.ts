@@ -69,6 +69,12 @@ export interface PoolUniforms {
   flowMaxSpeed: IUniform<number>;
   flowPeriod: IUniform<number>;
   flowOn: IUniform<number>;
+  /**
+   * How much light the hall has, 0 to 1: everything the pool draws for
+   * itself (the water, the caustics, its lamps' glow) scaled by it, so a
+   * hall with its lights out is dark (`room-lights.ts`).
+   */
+  light: IUniform<number>;
 }
 
 export function createPoolUniforms(
@@ -97,6 +103,7 @@ export function createPoolUniforms(
     flowMaxSpeed: { value: 0 },
     flowPeriod: { value: 1 },
     flowOn: { value: 0 },
+    light: { value: 1 },
   };
 }
 
@@ -436,6 +443,7 @@ export function createPoolWater(
     uniforms: {
       room: { value: room },
       colour: { value: new Color('#3fb6c4') },
+      poolLight: uniforms.light,
       poolTime: uniforms.time,
       rippleSize: uniforms.rippleSize,
       rippleSpeed: uniforms.rippleSpeed,
@@ -479,6 +487,7 @@ varying vec3 vWorld;
 #include <common>
 #include <logdepthbuf_pars_fragment>
 ${POOL_RIPPLE_GLSL}
+uniform float poolLight;
 void main() {
   #include <logdepthbuf_fragment>
   vec3 p = vWorld / poolMetre;
@@ -512,6 +521,8 @@ void main() {
   float body = mix(0.1, 0.3, 1.0 - facing);
   float alpha = fresnel + (1.0 - fresnel) * body;
   vec3 c = (reflected * fresnel + colour * body * (1.0 - fresnel)) / max(alpha, 1e-3);
+  // No more light than the hall has.
+  c *= poolLight;
   gl_FragColor = vec4(c, alpha);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -618,6 +629,7 @@ export function createCausticPatch(
     depthWrite: false,
     blending: AdditiveBlending,
     uniforms: {
+      poolLight: uniforms.light,
       poolTime: uniforms.time,
       colour: { value: new Color(colour) },
       strength: { value: strength },
@@ -633,7 +645,7 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * world;
 }`,
     fragmentShader: /* glsl */ `
-uniform float poolTime, strength, metre;
+uniform float poolTime, strength, metre, poolLight;
 uniform vec3 colour;
 varying vec2 vUv;
 varying vec3 vWorld;
@@ -642,7 +654,7 @@ void main() {
   vec2 c = vUv * 2.0 - 1.0;
   float edge = 1.0 - smoothstep(0.45, 1.0, length(c));
   float light = clamp(poolCaustics(vWorld.xy / metre, poolTime, 0.16), 0.0, 1.5);
-  gl_FragColor = vec4(colour * light * edge * strength, 1.0);
+  gl_FragColor = vec4(colour * light * edge * strength * poolLight, 1.0);
 }`,
   });
   return new Mesh(new PlaneGeometry(w, h), material);

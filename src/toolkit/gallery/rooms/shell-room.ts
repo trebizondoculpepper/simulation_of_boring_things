@@ -62,6 +62,8 @@ import type { EquipmentDoorsPart } from '../../components/architectural/parts/eq
 import type { Group } from 'three';
 import { bindRoomLights } from '../views/room-lights';
 import { zoneOfRoom } from '../../../game/plant/lighting';
+import { bindRoomPower, roomPowered } from '../views/room-power';
+import type { ServiceRoom } from '../../../game/plant/services';
 
 const SEEDS: Record<ShellRoomId, number> = {
   boiler_house: 61,
@@ -386,6 +388,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   const readers = doors.flatMap((d) => d.part.readers);
   // Its lights, following its lighting zone (`room-lights.ts`).
   const roomLights = bindRoomLights(scene, zoneOfRoom(cfg.self));
+  // Its equipment's lamps and displays, dark without its power.
+  const roomPower = bindRoomPower(scene, roomPowered(cfg.self as ServiceRoom));
   let last = 0;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
@@ -417,6 +421,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         }
       }
     }
+    // Last, after every machine has set its lamps: dark without power.
+    roomPower.update(delta);
     if (visual) {
       film.uniforms.time.value = (time / 1000) % 100;
       composer.render(delta);

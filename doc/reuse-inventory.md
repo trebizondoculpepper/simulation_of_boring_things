@@ -54,7 +54,7 @@ Copied unchanged from the Encabulator at commit `50b15de`, at the owner's reques
 
 ## Teleprinter (2026-10-20)
 
-Copied from the Encabulator at commit `50b15de`, at the owner's request, as the control room's alarm printer (the VX3 Simulator's line printer with endless fanfold paper, always legible): `src/toolkit/components/industrial-control/views/teleprinter.ts`, `logic/printer-log.ts` and `logic/machine-parts.ts`, with their tests. Adapted: `teleprinterInMetres` added at the end of `teleprinter.ts`, to stand it at true size in a room built in metres (the Encabulator scales it by 2.5 world units, at about 9 units a metre). It replaces the dot-matrix printer first written for dev0's PERIOD INSTRUMENTS board.
+Copied from the Encabulator at commit `50b15de`, at the owner's request, as the control room's alarm printer (the VX3 Simulator's line printer with endless fanfold paper, always legible): `src/toolkit/components/industrial-control/views/teleprinter.ts`, `logic/printer-log.ts` and `logic/machine-parts.ts`, with their tests. Adapted: `teleprinterInMetres` added at the end of `teleprinter.ts`, to stand it at true size in a room built in metres (the Encabulator scales it by 2.5 world units, at about 9 units a metre). It replaces the dot-matrix printer first written for dev0's PERIOD INSTRUMENTS board. Adapted again (2026-10-22): its paper and printed labels are lit materials rather than unlit, so that they are dark when the room is dark and readable by torchlight.
 
 ## Seven-segment decimal point (2026-10-20)
 

@@ -395,6 +395,8 @@ function buildJacuzzi(kit: PanelKit): LiveExhibit {
   const uniforms = createPoolUniforms(METRE, surface, [
     { minX: -TUB.r, maxX: TUB.r, minZ: -TUB.r, maxZ: TUB.r },
   ]);
+  // For the room, to dim its water with the room's lights (`room-lights.ts`).
+  object.userData.poolUniforms = uniforms;
   const tile = createTileMaterial(uniforms, { colour: '#cfe1e5', tile: 0.05 });
   tile.side = DoubleSide;
   kit.materials.push(tile);
