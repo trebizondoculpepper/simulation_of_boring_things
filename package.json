@@ -12,7 +12,10 @@
     "test:watch": "vp test",
     "build": "npm run typecheck && vp build",
     "preview": "vp preview --host 127.0.0.1",
-    "check": "vp check"
+    "check": "vp check",
+    "release:patch": "npm version patch -m \"Release v%s\"",
+    "release:minor": "npm version minor -m \"Release v%s\"",
+    "release:major": "npm version major -m \"Release v%s\""
   },
   "type": "module",
   "dependencies": {

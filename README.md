@@ -32,6 +32,20 @@ Walk with WASD, run with Shift, click to capture the mouse and look, Esc to free
 
 `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build`. CI (`.github/workflows/ci.yml`) runs the same five and deploys the build to GitHub Pages.
 
+## Versions and releases
+
+The game uses [semantic versioning](https://semver.org/): its version is the one in `package.json`, read by the game from `src/game/version.ts` (the title screen will show `versionLabel()`, marked as a development build on the dev server). Below 1.0.0 it is in development.
+
+- **MAJOR:** a save that can no longer be carried forward (a migration dropped from `src/game/save.ts`), or a change that breaks how the game is played or packaged.
+- **MINOR:** new rooms, machines, systems or features, including a new save version with its migration (`WORLD_VERSION`, which counts the save's shape, not releases).
+- **PATCH:** fixes, performance and wording only.
+
+Every change goes under Unreleased in `CHANGELOG.md` as it is made. To release, on a clean, up-to-date `main`:
+
+1. In `CHANGELOG.md`, rename Unreleased to the new version and date (`## [0.2.0] - 2026-11-01`), add a fresh empty Unreleased above it, and commit.
+2. Run `npm run release:patch`, `release:minor` or `release:major`: it bumps `package.json` and `package-lock.json`, commits "Release vX.Y.Z" and tags `vX.Y.Z`.
+3. Push with `git push --follow-tags`. The Release workflow (`.github/workflows/release.yml`) checks that the tag matches `package.json` and has its changelog section, runs the checks and publishes a GitHub release with that section as its notes. CI deploys the site from `main` as usual.
+
 ## Reused from the Encabulator
 
 The build tooling (Vite+, TypeScript 7, Oxlint, Oxfmt) and the first-person control scheme come from the neighbouring `encabulator` project; see `doc/reuse-inventory.md`.

@@ -24,6 +24,7 @@
 - All input goes through the one control scheme in `src/toolkit/controls/` (copied from the Encabulator). Rooms do not bind their own keys or gestures.
 - `src/game/` and every `logic/` folder are pure logic with no DOM or Three.js, tested beside them (`*.test.ts`, importing from `vite-plus/test`).
 - Before committing, run `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build`. CI runs the same and, on a push to `main`, deploys to GitHub Pages. Vite's `base: './'` keeps asset paths relative; keep links relative too.
+- Versions follow semantic versioning (README, "Versions and releases"): the version lives in `package.json` and `src/game/version.ts` reads it. Add every notable change under Unreleased in `CHANGELOG.md` as you make it. Never cut a release (tag) without the owner asking.
 - Markdown is one paragraph per line, never hard-wrapped.
 - Record significant sessions in `diary/`.
 - Never commit `agent-mailbox.toml` or `agent-inbox.toml`.

@@ -25,6 +25,10 @@ import {
 } from './toolkit/components/core/parts/render-style';
 import { worldStore } from './toolkit/save/world-store';
 import { GAS_ZONE_IDS } from './game/plant/gas';
+import { versionLabel } from './game/version';
+
+// Which build this is, until the title screen shows it.
+console.info(`Pool Plant ${versionLabel()}`);
 
 // Scenarios, several at once (`?scenario=cold,ozone-leak`). A cold start
 // (`cold`): the whole plant off as the game starts,
