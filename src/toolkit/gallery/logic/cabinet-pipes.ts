@@ -1,5 +1,9 @@
 import { layoutRoom } from './room-equipment';
 import type { Placed } from './room-equipment';
+import {
+  POWER_ISOLATOR,
+  glandTop,
+} from '../../components/industrial-control/logic/enclosures';
 
 /**
  * The services of the rooms whose plant is one packaged cabinet: the
@@ -278,8 +282,13 @@ const SUPPLY_LEVEL = 3.1;
 const FEED_LEVEL = 2.35;
 /** The walls' thickness. */
 const WALL = 0.2;
-/** The isolator's box (`createPowerIsolator`): about 115 × 160 × 105 mm. */
-const ISOLATOR = { w: 0.12, h: 0.17, d: 0.105, y: 1.5 } as const;
+/** The isolator's box (`createPowerIsolator`, `POWER_ISOLATOR`), its middle this high. */
+const ISOLATOR = {
+  w: POWER_ISOLATOR.w,
+  h: POWER_ISOLATOR.h,
+  d: POWER_ISOLATOR.d,
+  y: 1.5,
+} as const;
 
 const PLASTIC = new Set<RunKind>(['pvc-pressure', 'pvc-drain']);
 
@@ -314,21 +323,25 @@ export function cabinetIsolator(room: string): Isolator | null {
   const along = -(placed.item.w / 2) - 0.35;
   const face = inRoom(placed, [along, 0, wallLocal]);
   const into = [-outDir[0], 0, -outDir[2]] as const;
+  // Its glands' line, out from the wall.
+  const g = POWER_ISOLATOR.glands;
   const centre: Vec3 = [
-    face[0] + into[0] * (ISOLATOR.d / 2),
+    face[0] + into[0] * g.z,
     ISOLATOR.y,
-    face[2] + into[2] * (ISOLATOR.d / 2),
+    face[2] + into[2] * g.z,
   ];
   // Along the wall, toward the cabinet: its local +x in the room.
   const toward = inRoom({ ...placed, x: 0, z: 0 }, [1, 0, 0]);
-  const top = ISOLATOR.y + ISOLATOR.h / 2 + 0.02;
+  // Its conduits end on its glands' tops.
+  const top = ISOLATOR.y + glandTop(POWER_ISOLATOR);
+  const [gIn, gOut] = [g.x[0], g.x[1]];
   return {
     x: face[0],
     z: face[2],
     yaw: Math.atan2(into[0], into[2]),
     ...ISOLATOR,
-    supplyIn: [centre[0] - toward[0] * 0.03, top, centre[2] - toward[2] * 0.03],
-    feedOut: [centre[0] + toward[0] * 0.03, top, centre[2] + toward[2] * 0.03],
+    supplyIn: [centre[0] + toward[0] * gIn, top, centre[2] + toward[2] * gIn],
+    feedOut: [centre[0] + toward[0] * gOut, top, centre[2] + toward[2] * gOut],
   };
 }
 

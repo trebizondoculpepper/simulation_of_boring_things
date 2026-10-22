@@ -1,4 +1,6 @@
 import type { PlantExhibit } from './exhibit';
+import { createPartSet } from '../../../components/core/parts/parts';
+import { createSwitchFuse } from '../../../components/industrial-control/views/switch-fuse';
 import {
   createCableTray,
   createCentralBattery,
@@ -61,6 +63,24 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     reference: 'After Eaton P3 enclosed switch-disconnectors, 20–100 A',
     size: { w: 1.2, d: 0.2, h: 0.6, mount: 'wall', y: 1.4 },
     build: createIsolatorBoard,
+  },
+  {
+    title: 'Switch-fuse, room supply',
+    reference:
+      'After MEM Memshield and Crabtree TP&N 63 A switch-fuses of around 2000, 200 × 300 × 150 mm: side handle, padlockable OFF, SUPPLY ON neon',
+    size: { w: 0.3, d: 0.2, h: 0.4, mount: 'wall', y: 1.5 },
+    maker: 'voltara',
+    build(kit) {
+      // Working: its handle switches it, its neon lit while it is on.
+      const fuse = createSwitchFuse(kit, { legend: 'ROOM SUPPLY' });
+      const parts = createPartSet();
+      fuse.handle.traverse((o) => parts.uses.set(o, () => fuse.toggle()));
+      return {
+        object: fuse.group,
+        parts,
+        update: (delta) => fuse.update(delta),
+      };
+    },
   },
   {
     title: 'Generator connection point',

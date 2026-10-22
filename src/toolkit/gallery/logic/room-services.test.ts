@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { ROOM_SERVICES } from '../../../game/plant/services';
-import { layoutRoom } from './room-equipment';
+import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
+import {
+  SWITCH_FUSE,
+  glandTop,
+} from '../../components/industrial-control/logic/enclosures';
 import type { Side } from './room-equipment';
 import {
   DROP_GAP,
@@ -25,10 +29,11 @@ describe('current plant-room service connections', () => {
           'plant_pool_04',
         ].includes(room)
       ) {
+        // But for the room's own supply, into its switch-fuse.
         expect(
-          routes.filter((r) => r.utility === 'power'),
+          routes.filter((r) => r.utility === 'power').map((r) => r.to),
           room,
-        ).toHaveLength(0);
+        ).toEqual(['feeder']);
       } else {
         expect(
           routes.some((r) => r.name.includes('distribution conduit')),
@@ -55,7 +60,29 @@ describe('current plant-room service connections', () => {
   it('leaves the lounge’s plant room to its port-to-port routing', () => {
     // Its pipework, as the Olympic's, is `room-pipes.ts`'s; every port's
     // connection is checked in `port-connections.test.ts`.
-    expect(roomServiceRoutes('plant_pool_01')).toEqual([]);
+    // Only the room's supply is routed here.
+    expect(roomServiceRoutes('plant_pool_01').map((r) => r.to)).toEqual([
+      'feeder',
+    ]);
+  });
+
+  it('brings every room’s supply down into its switch-fuse’s gland', () => {
+    for (const room of Object.keys(ROOM_SERVICES)) {
+      const { box } = layoutRoom(room)!;
+      const supply = roomServiceRoutes(room).find((r) => r.to === 'feeder')!;
+      const end = supply.points[supply.points.length - 1];
+      // Over the gland: on the west wall's line at its depth, along the
+      // wall at the switch-fuse's middle, on the gland's top.
+      expect(end[0], room).toBeCloseTo(-box.w / 2 + SWITCH_FUSE.glands.z, 6);
+      expect(end[2], room).toBeCloseTo(
+        box.d / 2 - FEEDER_ISOLATOR.fromSouth,
+        6,
+      );
+      expect(end[1], room).toBeCloseTo(
+        FEEDER_ISOLATOR.y + glandTop(SWITCH_FUSE),
+        6,
+      );
+    }
   });
 
   // The rooms whose power is routed here, not port to port.

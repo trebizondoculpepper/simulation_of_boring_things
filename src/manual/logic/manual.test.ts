@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vite-plus/test';
 import { exhibitFor } from '../../toolkit/gallery/views/room-equipment';
 import { layoutRoom } from '../../toolkit/gallery/logic/room-equipment';
 import { GAS_HOUSE } from '../../game/plant/gas-house';
-import { newIdentifiedPlant, walkIdentified } from '../../game/plant/identification';
+import {
+  newIdentifiedPlant,
+  walkIdentified,
+} from '../../game/plant/identification';
 import { escapeLatex, renderManual } from '../latex/render';
 import { boilerHouseChapter } from './boiler-house';
 import { revisionFor } from './fiction';

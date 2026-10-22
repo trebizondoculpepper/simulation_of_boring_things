@@ -17,6 +17,7 @@ import {
 } from '../../core/views/eighties-controls';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createCanvasTexture } from '../../core/views/screens';
+import { POWER_ISOLATOR } from '../logic/enclosures';
 
 /**
  * Switchgear for the 1980s panels, one part per function: knobs of four
@@ -757,8 +758,7 @@ export function createPowerIsolator(
   { on = false, rating = '4P  32A', maker = 'GENERIC' } = {},
 ): PowerIsolator {
   const group = new Group();
-  const w = 0.115;
-  const h = 0.16;
+  const { w, h } = POWER_ISOLATOR;
   add(
     group,
     new BoxGeometry(w + 0.004, h + 0.004, 0.028),
@@ -891,6 +891,20 @@ export function createPowerIsolator(
     0.006,
     0.0224,
   );
+  // Its supply and feed glands on its top, where the conduits enter
+  // (`POWER_ISOLATOR.glands`).
+  const brass = kitPaint(kit, '#b08d3a');
+  for (const x of POWER_ISOLATOR.glands.x) {
+    const gland = add(
+      group,
+      new CylinderGeometry(0.011, 0.013, POWER_ISOLATOR.glands.h, 6),
+      brass,
+      x,
+      POWER_ISOLATOR.h / 2 + POWER_ISOLATOR.glands.h / 2,
+      POWER_ISOLATOR.glands.z,
+    );
+    gland.name = 'isolator gland';
+  }
   let isOn = on;
   drawWindow(isOn);
   const swing = eased(

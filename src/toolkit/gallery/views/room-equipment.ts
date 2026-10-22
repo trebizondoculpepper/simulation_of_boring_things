@@ -592,7 +592,7 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
         live.update?.(delta);
       }
       pipework.update(delta);
-      services?.update();
+      services?.update(delta);
     },
     dispose() {
       for (const live of lives) {

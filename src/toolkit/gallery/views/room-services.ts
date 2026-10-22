@@ -12,10 +12,11 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createPipe } from '../../components/core/views/pipe-kinds';
 import { newWorld } from '../../../game/world';
 import { serviceAvailable } from '../../../game/plant/services';
-import type { ServiceRoom, Utility } from '../../../game/plant/services';
+import type { ServiceRoom } from '../../../game/plant/services';
 import { worldStore } from '../../save/world-store';
 import { layoutRoom, FEEDER_ISOLATOR } from '../logic/room-equipment';
 import { roomServiceRoutes } from '../logic/room-services';
+import { createSwitchFuse } from '../../components/industrial-control/views/switch-fuse';
 
 /** Room equipment's physical service runs, plus a local power isolator. The
  * isolator changes the saved feeder state; the lamp shows actual upstream
@@ -32,7 +33,6 @@ export function createRoomServices(
   const store = typeof window === 'undefined' ? null : worldStore('dev');
   const fallback = newWorld();
   const uses = new Map<Object3D, () => void>();
-  const status: { material: MeshStandardMaterial; utility: Utility }[] = [];
   const lift = ([x, y, z]: readonly [number, number, number]) =>
     [x, floorY + y, z] as const;
 
@@ -148,37 +148,25 @@ export function createRoomServices(
   }
 
   const layout = layoutRoom(room);
-  if (layout) {
-    // This is kept beside the entrance, above the operator's reach and clear
-    // of the equipment door's swing. A genuine feeder status, not a fake
-    // fixed green light.
-    // Its space is kept clear by the layout (`feederIsolatorSpace`).
-    const x = -layout.box.w / 2 + 0.15;
-    const z = layout.box.d / 2 - FEEDER_ISOLATOR.fromSouth;
-    const body = new MeshStandardMaterial({
-      color: '#d4d5ce',
-      roughness: 0.55,
-    });
-    const lampMaterial = new MeshStandardMaterial({
-      color: '#1b6738',
-      emissive: '#1b6738',
-      emissiveIntensity: 0.5,
-    });
-    const leverMaterial = new MeshStandardMaterial({
-      color: '#20292c',
-      roughness: 0.45,
-    });
-    kit.materials.push(body, lampMaterial, leverMaterial);
-    const box = new Mesh(new BoxGeometry(0.12, 0.28, 0.22), body);
-    box.position.set(x, floorY + FEEDER_ISOLATOR.y, z);
-    box.name = `${room} feeder isolator`;
-    const lever = new Mesh(new BoxGeometry(0.08, 0.09, 0.035), leverMaterial);
-    lever.position.set(x + 0.08, floorY + 1.48, z);
-    lever.name = `${room} feeder handle`;
-    const lamp = new Mesh(new BoxGeometry(0.02, 0.055, 0.055), lampMaterial);
-    lamp.position.set(x + 0.071, floorY + 1.58, z);
-    group.add(box, lever, lamp);
-    status.push({ material: lampMaterial, utility: 'power' });
+  // The room's supply: Voltara's switch-fuse on the west wall by the
+  // entrance, its back on the wall, facing into the room; its space kept
+  // clear by the layout (`feederIsolatorSpace`), its conduit routed into
+  // its gland (`roomServiceRoutes`). Switched here, it switches the room's
+  // feeder in the world; its neon shows whether power reaches the room.
+  const fuse = layout
+    ? createSwitchFuse(kit, {
+        on: (store?.world.value ?? fallback).plant.feeders[room] ?? true,
+      })
+    : null;
+  if (layout && fuse) {
+    fuse.group.position.set(
+      -layout.box.w / 2,
+      floorY + FEEDER_ISOLATOR.y,
+      layout.box.d / 2 - FEEDER_ISOLATOR.fromSouth,
+    );
+    fuse.group.rotation.y = Math.PI / 2;
+    fuse.group.name = `${room} room supply switch-fuse`;
+    group.add(fuse.group);
     if (store) {
       const toggle = () =>
         store.dispatch({
@@ -186,16 +174,17 @@ export function createRoomServices(
           room,
           on: !store.world.value.plant.feeders[room],
         });
-      uses.set(box, toggle);
-      uses.set(lever, toggle);
+      fuse.handle.traverse((o) => uses.set(o, toggle));
     }
   }
-  const update = () => {
+  const update = (delta = 0) => {
     const plant = store?.world.value.plant ?? fallback.plant;
-    for (const light of status) {
-      const on = serviceAvailable(plant, room, light.utility);
-      light.material.color.set(on ? '#1b6738' : '#962a20');
-      light.material.emissive.set(on ? '#1b6738' : '#962a20');
+    if (fuse) {
+      // As the world has it, switched here or anywhere.
+      const on = plant.feeders[room];
+      if (on !== undefined && on !== fuse.on) fuse.set(on);
+      fuse.setSupplied(serviceAvailable(plant, room, 'power'));
+      fuse.update(delta);
     }
   };
   update();

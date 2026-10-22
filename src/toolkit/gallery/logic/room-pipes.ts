@@ -3,6 +3,10 @@ import { layoutRoom } from './room-equipment';
 import type { Placed } from './room-equipment';
 import { placedPort } from './machine-ports';
 import { WET_HALL } from './shell-rooms';
+import {
+  POWER_ISOLATOR,
+  glandTop,
+} from '../../components/industrial-control/logic/enclosures';
 
 /**
  * The pipework of the Olympic pool's plant room, port to port: each run
@@ -213,7 +217,7 @@ export interface IsolatorPlace {
 
 /** An isolator's box (`createPowerIsolator`): about 115 × 160 × 105 mm, its middle this high. */
 export const ISOLATOR_Y = 1.5;
-const ISOLATOR_BOX = { h: 0.17, d: 0.105 };
+const ISOLATOR_BOX = { h: POWER_ISOLATOR.h, d: POWER_ISOLATOR.d };
 
 /** The room's runs and floor channels. */
 /** The pool plant rooms routed here: each one's pumps' tag, and its isolators' names. */
@@ -931,18 +935,20 @@ export function poolPlantPipework(room: string): {
       ISOLATOR_Y,
       sz + p.facing[2] * (0.03 + ISOLATOR_BOX.d / 2),
     ];
-    const top = ISOLATOR_Y + ISOLATOR_BOX.h / 2 + 0.02;
-    // Its two glands side by side across its face.
+    // Its conduits end on its two glands' tops, side by side across it
+    // (`POWER_ISOLATOR.glands`; its middle is at their depth).
+    const top = ISOLATOR_Y + glandTop(POWER_ISOLATOR);
     const across: Vec3 = [p.facing[2], 0, -p.facing[0]];
+    const [gIn, gOut] = POWER_ISOLATOR.glands.x;
     const supplyIn: Vec3 = [
-      at[0] - across[0] * 0.03,
+      at[0] + across[0] * gIn,
       top,
-      at[2] - across[2] * 0.03,
+      at[2] + across[2] * gIn,
     ];
     const feedOut: Vec3 = [
-      at[0] + across[0] * 0.03,
+      at[0] + across[0] * gOut,
       top,
-      at[2] + across[2] * 0.03,
+      at[2] + across[2] * gOut,
     ];
     isolators.push({ name: p.name, at, facing: p.facing, supplyIn, feedOut });
     stands.push([sx, 0, sz]);

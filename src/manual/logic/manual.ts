@@ -1,5 +1,8 @@
 import { VERSION } from '../../game/version';
-import { newIdentifiedPlant, walkIdentified } from '../../game/plant/identification';
+import {
+  newIdentifiedPlant,
+  walkIdentified,
+} from '../../game/plant/identification';
 import { BOROUGH } from '../../toolkit/components/general-safety/logic/borough';
 import { boilerHouseChapter } from './boiler-house';
 import type { ExhibitInfo } from './boiler-house';
@@ -60,7 +63,9 @@ export function buildManual(
           { head: 'Identifier', width: 0.35 },
         ],
         rows: [...identified]
-          .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+          .sort(
+            (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
+          )
           .map((part) => [part.name, part.id]),
       },
     ],

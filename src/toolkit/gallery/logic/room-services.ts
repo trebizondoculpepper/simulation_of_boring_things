@@ -1,6 +1,10 @@
 import { ROOM_SERVICES } from '../../../game/plant/services';
 import type { ServiceRoom, Utility } from '../../../game/plant/services';
-import { layoutRoom } from './room-equipment';
+import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
+import {
+  SWITCH_FUSE,
+  glandTop,
+} from '../../components/industrial-control/logic/enclosures';
 import type { Placed, Side } from './room-equipment';
 import { machinePorts, placedPort } from './machine-ports';
 import type { PipeKindId } from '../../components/core/views/pipe-kinds';
@@ -80,6 +84,29 @@ export function roomServiceRoutes(
       : 7;
   const y = roof - 1.1;
 
+  // The room's supply: its switch-fuse on the west wall by the entrance
+  // (`FEEDER_ISOLATOR`), its conduit down the wall into its gland from the
+  // distribution conduit (or, in a pool plant room, which has none, from
+  // the services ceiling at the same height).
+  const feederS = box.d / 2 - FEEDER_ISOLATOR.fromSouth;
+  routes.push({
+    name: `${room} room supply`,
+    utility: 'power',
+    kind: 'steel-screwed',
+    od: 0.0337,
+    points: [
+      onWall(box, 'west', feederS, y, STANDOFF),
+      onWall(
+        box,
+        'west',
+        feederS,
+        FEEDER_ISOLATOR.y + glandTop(SWITCH_FUSE),
+        STANDOFF,
+      ),
+    ],
+    to: 'feeder',
+  });
+
   // These rooms already have individually authored cabinet/plant feeders.
   if (
     ![
@@ -121,11 +148,20 @@ export function roomServiceRoutes(
           y1: topOf(p, i),
         };
       });
+    // The room's switch-fuse hangs on the west wall too.
+    panels.push({
+      i: -1,
+      side: 'west',
+      s0: feederS - SWITCH_FUSE.w / 2,
+      s1: feederS + SWITCH_FUSE.w / 2,
+      y0: FEEDER_ISOLATOR.y - SWITCH_FUSE.h / 2,
+      y1: FEEDER_ISOLATOR.y + SWITCH_FUSE.h / 2,
+    });
     const used: Record<Side, number[]> = {
       north: [],
       south: [],
       east: [],
-      west: [],
+      west: [feederS],
     };
     // The place along its wall for a drop from the conduit down to `low`,
     // nearest `centre` within [lo, hi]: clear of every other panel it

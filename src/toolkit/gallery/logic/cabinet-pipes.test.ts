@@ -1,3 +1,7 @@
+import {
+  POWER_ISOLATOR,
+  glandTop,
+} from '../../components/industrial-control/logic/enclosures';
 import { describe, expect, it } from 'vite-plus/test';
 import {
   cabinetBodyIn,
@@ -124,6 +128,17 @@ describe.each([
     const feed = named('Isolator to the cabinet');
     expect(near(supply.points[0], iso.supplyIn)).toBe(true);
     expect(near(feed.points[0], iso.feedOut)).toBe(true);
+    // Both on its glands' tops, so no gap between conduit and box; as far
+    // apart as its glands.
+    for (const at of [iso.supplyIn, iso.feedOut])
+      expect(at[1]).toBeCloseTo(iso.y + glandTop(POWER_ISOLATOR), 6);
+    const [g0, g1] = POWER_ISOLATOR.glands.x;
+    expect(
+      Math.hypot(
+        iso.supplyIn[0] - iso.feedOut[0],
+        iso.supplyIn[2] - iso.feedOut[2],
+      ),
+    ).toBeCloseTo(g1 - g0, 6);
     const gland = cabinetPorts(jets).find((p) => p.to === 'isolator')!;
     const end = feed.points[feed.points.length - 1];
     expect(end[1]).toBeCloseTo(gland.at[1]);
