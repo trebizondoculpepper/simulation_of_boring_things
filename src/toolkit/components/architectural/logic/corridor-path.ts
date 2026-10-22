@@ -20,7 +20,26 @@ export type CorridorPiece =
   | { kind: 'straight'; length: number }
   | { kind: 'left' }
   | { kind: 'right' }
-  | { kind: 'stairs'; rise: number };
+  | { kind: 'stairs'; rise: number }
+  | { kind: 'rotunda' };
+
+/**
+ * The rotunda: a round room on the corridor's line, entered and left
+ * through short necks of the corridor's own section on opposite sides,
+ * with a square column in its middle broad enough that no one can see
+ * from one mouth through the other, and a cove-lit raised ceiling.
+ * Metres: its radius, each neck's length, the column's side; the
+ * bulkhead round its edge at the corridor's height, the raised ceiling
+ * inside its lip, and the lip's radius.
+ */
+export const ROTUNDA = {
+  radius: 3.5,
+  neck: 2,
+  column: 1.5,
+  bulkhead: 2.5,
+  raised: 2.85,
+  lip: 3,
+} as const;
 
 /** A flight's steps: as near 170 mm risers as fit, on 280 mm goings. */
 export const STAIR = { riser: 0.17, going: 0.28 } as const;
@@ -41,7 +60,9 @@ export const pieceLength = (piece: CorridorPiece) =>
     ? piece.length
     : piece.kind === 'stairs'
       ? flight(piece.rise).length
-      : CORRIDOR_WIDTH;
+      : piece.kind === 'rotunda'
+        ? 2 * ROTUNDA.neck + 2 * ROTUNDA.radius
+        : CORRIDOR_WIDTH;
 
 /** Headings: 0 east (+x), 1 north (−z), 2 west (−x), 3 south (+z). */
 export type Heading = 0 | 1 | 2 | 3;
@@ -79,7 +100,11 @@ export function layoutCorridor(
   for (const piece of pieces) {
     placed.push({ piece, x, z, y, heading, yaw: headingYaw(heading) });
     const [dx, dz] = DIRECTION[heading];
-    if (piece.kind === 'straight' || piece.kind === 'stairs') {
+    if (
+      piece.kind === 'straight' ||
+      piece.kind === 'stairs' ||
+      piece.kind === 'rotunda'
+    ) {
       const length = pieceLength(piece);
       x += dx * length;
       z += dz * length;
@@ -133,6 +158,10 @@ export function corridorFootprints(
   const w = CORRIDOR_WALL;
   const out: Footprint[] = [];
   for (const p of placed) {
+    if (p.piece.kind === 'rotunda') {
+      out.push(...rotundaFootprints(p));
+      continue;
+    }
     if (p.piece.kind === 'straight' || p.piece.kind === 'stairs') {
       const L = pieceLength(p.piece);
       out.push(placeBox(p, [0, L], [-half - w, -half]));
@@ -152,11 +181,55 @@ export function corridorFootprints(
   return out;
 }
 
+/**
+ * A rotunda's walls as footprints: its necks' side walls, its round wall
+ * as short straight lengths (leaving its two mouths open), and its
+ * column. In its own frame its middle is a neck and a radius along.
+ */
+export function rotundaFootprints(p: PlacedPiece): Footprint[] {
+  const { radius: R, neck, column } = ROTUNDA;
+  const half = CORRIDOR_WIDTH / 2;
+  const w = CORRIDOR_WALL;
+  const cx = neck + R;
+  // Each neck runs a little into the round wall, to meet it.
+  const into = R - Math.sqrt(R * R - half * half) + 0.05;
+  const out: Footprint[] = [];
+  for (const [a, b] of [
+    [0, neck + into],
+    [neck + 2 * R - into, 2 * neck + 2 * R],
+  ] as const) {
+    out.push(placeBox(p, [a, b], [-half - w, -half]));
+    out.push(placeBox(p, [a, b], [half, half + w]));
+  }
+  // The round wall, in lengths a twentieth of a quarter long, skipping the
+  // mouths (on the heading's line, at 0 and π about the middle).
+  const mouth = Math.asin(half / R) + 0.02;
+  const n = 80;
+  for (let i = 0; i < n; i++) {
+    const t = ((i + 0.5) / n) * Math.PI * 2;
+    const off = Math.min(
+      Math.abs(t - Math.PI),
+      Math.abs(t),
+      Math.abs(t - 2 * Math.PI),
+    );
+    if (off < mouth) continue;
+    const r = R + w / 2;
+    const a = cx + Math.cos(t) * r;
+    const b = Math.sin(t) * r;
+    const s = (Math.PI * R) / n + 0.02;
+    out.push(placeBox(p, [a - s, a + s], [b - s, b + s]));
+  }
+  const c = column / 2;
+  out.push(placeBox(p, [cx - c, cx + c], [-c, c]));
+  return out;
+}
+
 /** The piece whose floor (x, z) is on, if any. */
 function pieceAt(placed: readonly PlacedPiece[], x: number, z: number) {
   const half = CORRIDOR_WIDTH / 2;
   return placed.find((p) => {
-    const f = placeBox(p, [0, pieceLength(p.piece)], [-half, half]);
+    const across = p.piece.kind === 'rotunda' ? ROTUNDA.radius : half;
+    const f = placeBox(p, [0, pieceLength(p.piece)], [-across, across]);
     return x >= f.minX && x <= f.maxX && z >= f.minZ && z <= f.maxZ;
   });
 }

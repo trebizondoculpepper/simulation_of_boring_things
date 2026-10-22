@@ -1491,7 +1491,13 @@ export function createPoolHall(
       group.add(createCorridorRun(copy.placed, dry));
       for (const p of copy.placed) {
         // A lamp in each piece but the turns.
-        if (p.piece.kind === 'left' || p.piece.kind === 'right') continue;
+        if (
+          p.piece.kind === 'left' ||
+          p.piece.kind === 'right' ||
+          // The rotunda is lit by its own cove.
+          p.piece.kind === 'rotunda'
+        )
+          continue;
         const along = pieceLength(p.piece) / 2;
         const y = p.y + (p.piece.kind === 'stairs' ? p.piece.rise / 2 : 0);
         const x = p.x + Math.cos(p.yaw) * along;

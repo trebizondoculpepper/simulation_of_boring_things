@@ -26,7 +26,7 @@ import { METRE } from '../../components/core/logic/units';
 /**
  * corridor_lab: the corridor kit (`components/architectural/views/
  * corridor.ts`), laid out as one run from a list of pieces, to walk: a
- * straight, a left turn, a straight, a right turn, a flight up, a right
+ * straight, the rotunda (`rotunda.ts`) and another straight, a left turn, a straight, a right turn, a flight up, a right
  * turn, a left turn, a flight down (the same flight, met from its head)
  * and a last straight, with straights between; both ends closed.
  * Every corridor in the game is made of these pieces. Metres; the run
@@ -34,6 +34,8 @@ import { METRE } from '../../components/core/logic/units';
  */
 export const CORRIDOR_LAB_PIECES: readonly CorridorPiece[] = [
   { kind: 'straight', length: 6 },
+  { kind: 'rotunda' },
+  { kind: 'straight', length: 3 },
   { kind: 'left' },
   { kind: 'straight', length: 4 },
   { kind: 'right' },
@@ -99,7 +101,13 @@ export function createCorridorLab(metre: number) {
   });
   for (const p of placed) {
     // No lamp in the turns.
-    if (p.piece.kind === 'left' || p.piece.kind === 'right') continue;
+    if (
+      p.piece.kind === 'left' ||
+      p.piece.kind === 'right' ||
+      // The rotunda is lit by its own cove.
+      p.piece.kind === 'rotunda'
+    )
+      continue;
     const along = pieceLength(p.piece) / 2;
     const y = p.y + (p.piece.kind === 'stairs' ? p.piece.rise / 2 : 0);
     const x = p.x + Math.cos(p.yaw) * along;

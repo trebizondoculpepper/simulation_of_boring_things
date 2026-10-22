@@ -16,6 +16,7 @@ import {
 } from 'three';
 import type { Material } from 'three';
 import { COVE_RADIUS, coveStrip } from './room-coves';
+import { createRotunda } from './rotunda';
 import { flight, pieceLength, STAIR } from '../logic/corridor-path';
 import type { PlacedPiece } from '../logic/corridor-path';
 
@@ -407,7 +408,9 @@ export function createCorridorRun(
                 material,
               );
             })()
-          : createCorridorTurn(p.piece.kind, material);
+          : p.piece.kind === 'rotunda'
+            ? createRotunda()
+            : createCorridorTurn(p.piece.kind, material);
     piece.position.set(p.x, p.y, p.z);
     piece.rotation.y = p.yaw;
     // A flight down is the flight up, met from its head: turned round, its
