@@ -42,6 +42,10 @@ The owner then found that wall box far too small for something that switches off
 
 That was a misreading: the owner meant the Encabulator's incoming supply isolator itself, the box with the heavy-throw switch, which I had dismissed as no bigger than my wall box. It is now copied across (`incoming-isolator.ts`, with a small options argument) and stands on its posts on the east wall, its handle the whole site's supply; the cubicle is gone. Decorative trunking now runs from its side into the motor control centre beside it, as the Encabulator's fed its line-up, and from the motor control centre's top along the north wall and down into the main switchboard. Lesson: when the owner names a thing by where it is ("the leftmost box"), take them at their word rather than second-guess it on size.
 
+## Afterwards: the Hyperplasc Scenario Simulator
+
+The owner asked for the Encabulator's Hyperplasc Scenario Simulator in the engineer's office, its panel cleared but for FULL OFF, FULL ON and SLOW START. Copied (`scenario-simulator.ts`, its dependencies already here and identical) and placed on the office's east wall. Its switches act on the whole plant through three new world actions (`src/game/plant/startup.ts`, `WORLD_VERSION` 8): FULL OFF opens the main switch and every feeder; FULL ON closes everything, isolators too, and resets the booster set; SLOW START closes the main switch and then each room's feeder in turn, five seconds apart, supplies first, held in the world so it carries on wherever the player goes, its lamp lit until done. The owner's fiction: the simulator comes from another timeline, draws its power from branching universes, and moves its user between realities; so it is never bound to the building's supply.
+
 ## Next Steps
 
 - Make the pools' pumps' low-low trip latch, and drive the control room's annunciator from the world.

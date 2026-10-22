@@ -46,6 +46,7 @@ describe('a save', () => {
       chemicals: newWorld().chemicals,
       wetHall: newWorld().wetHall,
       bathers: newWorld().bathers,
+      startup: -1,
     });
   });
 

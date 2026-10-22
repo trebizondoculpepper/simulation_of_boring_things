@@ -32,6 +32,7 @@ import {
 } from './plant/wet-hall';
 import type { WetHallState } from './plant/wet-hall';
 import { newBathers, stepBathers } from './bathers';
+import { fullOff, fullOn, slowStartAt, slowStartBegin } from './plant/startup';
 import type { BathersState } from './bathers';
 import {
   deliver,
@@ -42,7 +43,7 @@ import {
 import type { Chemical, ChemicalStores } from './plant/chemicals';
 import type { PoolsState } from './plant/pools';
 
-export const WORLD_VERSION = 7;
+export const WORLD_VERSION = 8;
 
 export interface World {
   /** Seconds the world has run. */
@@ -62,6 +63,8 @@ export interface World {
   wetHall: WetHallState;
   /** The pools' unseen bathers (`bathers.ts`). */
   bathers: BathersState;
+  /** When SLOW START began, world seconds; -1 when none is under way. */
+  startup: number;
 }
 
 export function newWorld(): World {
@@ -73,6 +76,7 @@ export function newWorld(): World {
     chemicals: newChemicalStores(),
     wetHall: newWetHall(),
     bathers: newBathers(),
+    startup: -1,
   };
 }
 
@@ -84,7 +88,10 @@ export type WorldAction =
   | { type: 'plant/feeder'; room: ServiceRoom; on: boolean }
   | { type: 'plant/isolator'; name: IsolatorName; on: boolean }
   | { type: 'plant/delivery'; chemical: Chemical; litres: number }
-  | { type: 'plant/booster-reset' };
+  | { type: 'plant/booster-reset' }
+  | { type: 'plant/full-off' }
+  | { type: 'plant/full-on' }
+  | { type: 'plant/slow-start' };
 
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
@@ -126,6 +133,21 @@ export function applyAction(world: World, action: WorldAction): World {
         ...world,
         chemicals: deliver(world.chemicals, action.chemical, action.litres),
       };
+    case 'plant/full-off':
+      return { ...world, plant: fullOff(world.plant), startup: -1 };
+    case 'plant/full-on':
+      return {
+        ...world,
+        plant: fullOn(world.plant),
+        wetHall: resetBooster(world.wetHall),
+        startup: -1,
+      };
+    case 'plant/slow-start':
+      return {
+        ...world,
+        plant: slowStartBegin(world.plant),
+        startup: world.time,
+      };
     case 'plant/booster-reset': {
       const wetHall = resetBooster(world.wetHall);
       return wetHall === world.wetHall ? world : { ...world, wetHall };
@@ -145,6 +167,11 @@ export function applyAction(world: World, action: WorldAction): World {
 
 /** The world `delta` seconds on. */
 export function stepWorld(world: World, delta: number): World {
+  // SLOW START, closing the feeders in turn as it goes.
+  if (world.startup >= 0) {
+    const s = slowStartAt(world.plant, world.time - world.startup);
+    world = { ...world, plant: s.plant, startup: s.done ? -1 : world.startup };
+  }
   // What the stores have, as the step begins; the pools dose from it, and
   // the stores give what was dosed.
   const stock = {

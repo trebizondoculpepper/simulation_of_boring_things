@@ -913,6 +913,16 @@ export function roomEquipment(
         items: [
           floor('desk', 'Engineer’s desk', 1.6, 0.8, 0.75, { back: 0 }),
           floor('filing', 'Filing and spares cabinets', 2, 0.6, 2, { back: 0 }),
+          // The Encabulator's Hyperplasc Scenario Simulator: a 42U rack,
+          // its door and handle a little proud of its front.
+          floor(
+            'scenario-simulator',
+            'Hyperplasc Scenario Simulator',
+            0.64,
+            0.9,
+            2.05,
+            { back: 0 },
+          ),
         ],
       };
   }

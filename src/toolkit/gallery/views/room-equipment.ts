@@ -34,6 +34,8 @@ import { EXHIBITS as OZONE } from '../rooms/plant/ozone';
 import { EXHIBITS as DOSING } from '../rooms/plant/dosing';
 import { EXHIBITS as BALANCE } from '../rooms/plant/balance';
 import { createMainSwitch } from '../../components/plant/views/main-switch';
+import { createScenarioSimulator } from './scenario-simulator';
+import type { Scenarios } from './scenario-simulator';
 import { switchRoomContainment } from '../logic/cable-containment';
 import { createContainment } from './cable-containment';
 import type { MainsFeed } from '../../components/plant/views/main-switch';
@@ -142,6 +144,8 @@ function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
   if (kind === 'mimic-wet') return createWetHallMimic(kit);
   // The switch room's switchboard, its ways feeding the rooms in the world.
   if (kind === 'lv-switchboard') return createMainSwitchboard(kit, worldFeed());
+  // The engineer's scenario simulator, switching the whole plant.
+  if (kind === 'scenario-simulator') return worldScenarioSimulator(kit);
   // The main incoming switch, the whole site's supply in the world.
   if (kind === 'main-switch') return createMainSwitch(kit, mainsFeed());
   if (kind === 'ahu-stack') {
@@ -221,6 +225,42 @@ function bindSupplies() {
   );
   airHouse.supply = () =>
     serviceAvailable(store.world.value.plant, 'air_plant', 'power');
+}
+
+/**
+ * The Hyperplasc Scenario Simulator (`scenario-simulator.ts`), its FULL
+ * OFF, FULL ON and SLOW START the whole plant's (`plant/startup.ts`).
+ *
+ * In the fiction it is a machine from another timeline: it draws its
+ * power from branching universes, not from this building, so it is never
+ * bound to the world's supply and works with the main switch off; and it
+ * does not so much switch the plant as carry its user, seamlessly, into
+ * the reality where the plant is off, on, or coming up.
+ * Its origin, under the middle of its front, set forward so that its
+ * footprint's middle is the machine's.
+ */
+function worldScenarioSimulator(kit: PanelKit): LiveExhibit {
+  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const scenarios: Scenarios = {
+    fullOff: () => store?.dispatch({ type: 'plant/full-off' }),
+    fullOn: () => store?.dispatch({ type: 'plant/full-on' }),
+    slowStart: () => store?.dispatch({ type: 'plant/slow-start' }),
+    get starting() {
+      return (store?.world.value.startup ?? -1) >= 0;
+    },
+    update() {},
+  };
+  const sim = createScenarioSimulator(kit, scenarios);
+  const object = new Group();
+  object.name = 'Hyperplasc Scenario Simulator';
+  sim.group.position.z = 0.9 / 2 - 0.07;
+  object.add(sim.group);
+  return {
+    object,
+    parts: sim.parts,
+    update: (delta) => sim.update(delta),
+    dispose: () => sim.dispose(),
+  };
 }
 
 /** The world's whole-site supply (`plant.sources.power`), for the main switch. */
