@@ -46,15 +46,29 @@ interface LineRequest {
   to: PortEnd | 'envelope' | 'bus'; // another port; or, by the routing rules, the room's envelope
   // (flue up, drain down) or the room's power or control bus
   flow?: 'forward' | 'reverse' | 'both';
+  /** Optional: the line's whole length, metres, where it runs on beyond the room (a feed from the switch room). */
+  length?: number;
   name?: string;
 }
 ```
 
-"Distance" comes out of the two ends: the helper routes between them and reports the length. A caller never gives points for a functional line. If a route must go a certain way, the room's corridors and walls decide it, as `doc/plant-model.md` says.
+**Distance (the owner, 2026-10-23)** is an optional input, because a long line loses more and may need to be wider:
+
+- **Power:** voltage drop grows with current and length. BS 7671 allows about 3% for lighting and 5% for other circuits, so a long feed needs a larger cable, and so a larger conduit.
+- **Water:** friction loss grows with flow and length. A long main is widened to keep its loss, and the pump head it costs, within an allowance.
+- **Gas:** the pressure drop from the meter to an appliance is limited to about 1 mbar, so a long gas run is widened.
+
+A line routed port to port in the room knows its own length. A stub to the envelope, or a branch to the bus, runs on out of the room, and only the caller (in time, the plant network) knows its whole length, which it passes as `length`. The helper uses `length` if given, else the routed length. A caller never gives points for a functional line. If a route must go a certain way, the room's corridors and walls decide it, as `doc/plant-model.md` says.
 
 **What the helper decides, in order:**
 
-1. **Material and size** from the commodity and capacity (prompt 015's table): bore from flow at `sizing.ts`'s velocities (`dnFor`); conduit from current, after the On-Site Guide.
+1. **Material and size** from the commodity and capacity (prompt 015's table): bore from flow at `sizing.ts`'s velocities (`dnFor`); conduit from current, after the On-Site Guide. Then the size is **checked against the line's length**, and widened a size at a time until the loss is within the allowance:
+   - **power:** voltage drop by the cable's mV/A/m, after BS 7671 Appendix 4;
+   - **water:** friction loss by Hazen–Williams or Darcy, against an allowance per line (for example 0.5 m of head on a pool main);
+   - **gas:** pressure drop at most 1 mbar, meter to appliance.
+
+   The resolved line records its loss and the allowance it met. Since the length comes after the route, the route is planned at the first size, and if the line is widened it is checked again for clashes.
+
 2. **The route:**
    - by the commodity's rule (prompt 008): routed in full, port to port; a stub to the envelope (flue up, drain down to a gully with an air gap); or a branch to the room's bus (power, control);
    - a straight lead out of each port along its direction (`withPortLeads`);
@@ -104,6 +118,7 @@ Not a general path-finder yet. Routes are planned per room, all of the room's li
 
 - Pure tests beside the logic (`vite-plus/test`):
   - every functional line in a migrated room resolves with no problems;
+  - a long line is widened where a short one of the same capacity is not: a 100 A feed of 80 m gets a larger cable than one of 10 m, and its voltage drop stays within 5%;
   - it leaves its ports square, clashes with nothing, and has its supports and marking;
   - an explicit pipe is drawn exactly as before.
 - Before every commit run `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build`; commit only when all pass, verifying in a scratch copy when others' unfinished files break the shared checkout.
