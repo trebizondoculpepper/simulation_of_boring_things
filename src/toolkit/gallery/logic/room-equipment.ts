@@ -86,6 +86,8 @@ export const ACCESS = 0.9;
 export const WALL_GAP = 0.3;
 /** How far a panel hung over a machine on the floor clears its top, metres. */
 export const HUNG_CLEAR = 0.05;
+/** The deepest machine a panel may hang over, its controls reached across it, metres. */
+export const REACH_OVER = 0.6;
 
 const overlap = (a: Footprint, b: Footprint) =>
   a.minX < b.maxX - 1e-9 &&
@@ -259,6 +261,7 @@ export function packRoom(room: RoomBox, items: readonly Item[]) {
       if (
         wall !== qWall &&
         hung.item.over &&
+        stood.item.d <= REACH_OVER &&
         hung.y - hung.item.h / 2 >= stood.item.h + HUNG_CLEAR - 1e-9
       )
         continue;
@@ -930,9 +933,10 @@ export function roomEquipment(
           wall('mimic-air', 'Mimic: air handling', 2.3, 0.08, 1.3, 1.7, {
             walls: ['north', 'west', 'east'],
           }),
-          // On the wall behind the operator's desk, over its monitor, where
-          // the operator sees it.
-          wall('annunciator', 'Alarm annunciator', 0.9, 0.2, 1.1, 2.05, {
+          // On the west wall toward the operator's desk, in view of it,
+          // over the water-test kit, across which its ACCEPT and RESET are
+          // in reach (not over the desk, 1.9 m deep, out of reach).
+          wall('annunciator', 'Alarm annunciator', 0.9, 0.2, 1.1, 1.75, {
             walls: ['west'],
             over: true,
           }),

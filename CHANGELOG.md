@@ -7,7 +7,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 ### Fixed
 
 - The underwater gallery's door to the engineer's office stands on a 0.25 m sill above the corridor's fillet, which now runs unbroken beneath it (the office's floor meets the sill, as plant rooms do).
-- The control room's alarm annunciator hangs on the wall behind the operator's desk, over its monitor, where the operator sees it (a wall panel may now hang clear above a machine on the floor).
+- The control room's alarm annunciator hangs on the west wall toward the operator's desk, beside the pool mimic and over the water-test kit, in view and within reach (a wall panel marked `over` may now hang clear above a machine shallow enough to reach across).
 - The control room's air-handling mimic no longer runs into the corner, and its title card, hidden behind the mimics, is gone.
 
 ### Added
