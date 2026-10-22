@@ -43,8 +43,18 @@ export const FED_ROOMS = (Object.keys(ROOM_SERVICES) as ServiceRoom[]).filter(
  * OFF (green, open) lamps as UK switchgear has them, and the voltmeter
  * on its outgoing side.
  */
-/** The main switch's enclosure, metres: wall-mounted. */
-export const MAIN_SWITCH = { w: 0.7, h: 1.1, d: 0.32 } as const;
+/**
+ * The main incoming switchboard, metres: one full-height section of the
+ * Encabulator's line-up (CENTERLINE 2100: 90 in high and 20 in deep), on
+ * its 0.1 m base channel, 0.8 m wide for its 1600 A switch.
+ */
+export const MAIN_SWITCH = {
+  w: 0.8,
+  d: 0.508,
+  plinth: 0.1,
+  body: 2.286,
+  wireway: 0.1524,
+} as const;
 
 export function mainSwitchShows(on: boolean) {
   return {

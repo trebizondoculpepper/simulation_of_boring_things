@@ -53,7 +53,7 @@ const OFF_WALL = 0.4;
 
 /** Each piece of switchgear's trunking: its width, by the current it carries. */
 const RISERS: Record<string, { width: number; depth: number }> = {
-  'main-switch': { width: 0.3, depth: 0.15 },
+  'main-switch': { width: 0.6, depth: 0.2 },
   'lv-switchboard': { width: 0.6, depth: 0.2 },
   mcc: { width: 0.45, depth: 0.15 },
   'central-battery': { width: 0.2, depth: 0.1 },
@@ -122,16 +122,40 @@ export function switchRoomContainment(): {
       to: [x, y, z],
       facing,
     });
-    // The supply company's cable, up out of the floor into the main switch.
-    if (p.item.key === 'main-switch')
-      runs.push({
-        name: 'Incoming supply',
-        kind: 'trunking',
-        ...size,
-        from: [x, 0, z],
-        to: [x, p.y - p.item.h / 2, z],
-        facing,
-      });
+    // The supply company's cables, up out of the floor beside the main
+    // switch and in at its foot, in heavy trunking along its wall.
+    if (p.item.key === 'main-switch') {
+      const incoming = { width: 0.4, depth: 0.15 };
+      const along: readonly [number, number] = [-bz, bx];
+      const side = p.item.w / 2 + incoming.width / 2 + 0.05;
+      const wx = p.x + bx * (p.item.d / 2 - incoming.depth / 2);
+      const wz = p.z + bz * (p.item.d / 2 - incoming.depth / 2);
+      const sx = wx - along[0] * side;
+      const sz = wz - along[1] * side;
+      const at = 0.4;
+      runs.push(
+        {
+          name: 'Incoming supply',
+          kind: 'trunking',
+          ...incoming,
+          from: [sx, 0, sz],
+          to: [sx, at, sz],
+          facing,
+        },
+        {
+          name: 'Incoming supply, into the main switch',
+          kind: 'trunking',
+          width: incoming.depth,
+          depth: incoming.width / 2,
+          from: [sx, at, sz],
+          to: [
+            wx - (along[0] * p.item.w) / 2,
+            at,
+            wz - (along[1] * p.item.w) / 2,
+          ],
+        },
+      );
+    }
   }
   return { runs, entries };
 }

@@ -824,15 +824,14 @@ export function roomEquipment(
             back: 0,
             walls: ['east', 'west'],
           }),
-          // The whole site's supply, by the door, where it is found first.
-          wall(
+          // The whole site's supply, where it is found first.
+          floor(
             'main-switch',
-            'Main incoming switch',
+            'Main incoming switchboard',
             MAIN_SWITCH.w,
             MAIN_SWITCH.d,
-            MAIN_SWITCH.h,
-            1.0,
-            { walls: ['east'] },
+            MAIN_SWITCH.plinth + MAIN_SWITCH.body,
+            { back: 0, walls: ['east'] },
           ),
           floor(
             'central-battery',

@@ -22,11 +22,26 @@ describe('the switch room’s containment', () => {
     expect(layout.placed.some((p) => p.item.key === 'main-switch')).toBe(true);
   });
 
-  it('brings the incoming supply up out of the floor into the main switch', () => {
+  it('brings the incoming supply up out of the floor and in at the main switch’s foot', () => {
     const incoming = runs.find((r) => r.name === 'Incoming supply')!;
     expect(incoming.from[1]).toBe(0);
+    const into = runs.find(
+      (r) => r.name === 'Incoming supply, into the main switch',
+    )!;
+    expect(into.from).toEqual(incoming.to);
     const sw = layout.placed.find((p) => p.item.key === 'main-switch')!;
-    expect(incoming.to[1]).toBeCloseTo(sw.y - sw.item.h / 2, 6);
+    // It ends on the switch's side.
+    const f = sw.footprint;
+    const [x, , z] = into.to;
+    const onSide =
+      (Math.abs(z - f.minZ) < 1e-6 || Math.abs(z - f.maxZ) < 1e-6) &&
+      x >= f.minX - 1e-6 &&
+      x <= f.maxX + 1e-6;
+    const onEnd =
+      (Math.abs(x - f.minX) < 1e-6 || Math.abs(x - f.maxX) < 1e-6) &&
+      z >= f.minZ - 1e-6 &&
+      z <= f.maxZ + 1e-6;
+    expect(onSide || onEnd).toBe(true);
   });
 
   it('runs trunking from each piece of switchgear’s top up to the ladder, the board’s the widest', () => {

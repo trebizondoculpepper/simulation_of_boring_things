@@ -59,3 +59,7 @@ Copied from the Encabulator at commit `50b15de`, at the owner's request, as the 
 ## Seven-segment decimal point (2026-10-20)
 
 Adapted `createSevenSegment` in `src/toolkit/components/core/views/eighties-controls.ts` (copied from the Encabulator): a `.` in the text now lights the decimal point of the digit before it instead of taking a blank digit, so readings like 29.2 and 0.72 read as they would on a real display.
+
+## Main incoming switchboard (2026-10-22)
+
+Adapted from the Encabulator at commit `50b15de`, at the owner's request: the switch room's main incoming switchboard (`src/toolkit/components/plant/views/main-switch.ts`) is built as the leftmost section of `src/scene/retro-encabulator-mcc.ts`, its MAIN INCOMING section. Kept: the CENTERLINE 2100 envelope (2.286 m high, 0.508 m deep, 0.1524 m wireways), the worn pale-blue steel on a kicked base channel, the top trim, the wireway covers with their maker's plaque, the vertical wireway, and the three units behind fixed covers with their fittings (the incoming line voltmeters, the big red operating handle, the power monitor, DANGER label, interlock key switch and louvres). Changed: one section only, 0.8 m wide; 400 V 50 Hz for the UK; the handle bound to the world's whole-site supply; SUPPLY, ON (red) and OFF (green) lamps added on the DISTRIBUTION unit; Voltara's plaque instead of Neumann Dynamik's; the Kirk key relabelled TRAPPED KEY INTERLOCK. No source file was copied: the section's construction was rewritten from it, using fittings this project already has.
