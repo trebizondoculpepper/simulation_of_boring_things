@@ -19,7 +19,10 @@ import {
   throughDoor,
 } from './toolkit/gallery/logic/door-joins';
 import { firstPersonOn } from './toolkit/controls/input/first-person';
-import { rendererOn } from './toolkit/components/core/parts/render-style';
+import {
+  inertClip,
+  rendererOn,
+} from './toolkit/components/core/parts/render-style';
 import { worldStore } from './toolkit/save/world-store';
 import { GAS_ZONE_IDS } from './game/plant/gas';
 
@@ -510,7 +513,8 @@ const stopSeeing = (hide = true) => {
   const underDraw = underSurface && rendererOn(underSurface);
   if (underDraw) {
     underDraw.paused = false;
-    underDraw.renderer.clippingPlanes = [];
+    // Back to the plane that clips nothing: never none, so no recompile.
+    underDraw.renderer.clippingPlanes = [inertClip()];
   }
   const underWalk = underSurface && firstPersonOn(underSurface);
   underWalk?.follow(null);

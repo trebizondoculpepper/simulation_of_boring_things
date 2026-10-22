@@ -4,6 +4,8 @@ import {
   NeutralToneMapping,
   PCFSoftShadowMap,
   PMREMGenerator,
+  Plane,
+  Vector3,
   WebGLRenderer,
 } from 'three';
 import type { Scene } from 'three';
@@ -53,6 +55,17 @@ export function rendererOn(canvas: HTMLCanvasElement) {
   return renderers.get(canvas) ?? null;
 }
 
+/**
+ * A clipping plane that clips nothing: everything is far on its kept
+ * side. Every room renderer always has exactly one clipping plane, this
+ * one or a doorway's (`src/main.ts`), because three.js compiles a
+ * different shader for each count of planes: were a room drawn through a
+ * doorway with one plane and then on its own with none, every material
+ * in it would be compiled again at the hand-over, a stall of up to
+ * seconds (`doc/reports/room-transition-performance.md`).
+ */
+export const inertClip = () => new Plane(new Vector3(0, 1, 0), 1e9);
+
 /** A WebGL renderer for a room (the Hall has its own, hall-pipeline.ts). */
 export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
   // A stencil buffer, for doorways that look into a space the room does
@@ -75,6 +88,7 @@ export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
         : NeutralToneMapping;
   renderer.toneMappingExposure = exposure;
   renderer.shadowMap.type = PCFSoftShadowMap;
+  renderer.clippingPlanes = [inertClip()];
   const entry: RoomRenderer = {
     renderer,
     loop: null,

@@ -78,3 +78,7 @@ In order of value for effort.
 5. **Make the periodic scans cheaper.** Scan once after a room is built and again only when something marks the scene changed, or stagger the three scans so they do not fall in the same frame.
 
 A larger change, not recommended now, would be one WebGL context shared by every room, so compiled programs and uploaded textures are shared; it would change how rooms are drawn and composed with each other and touches every room.
+
+## Update, 2026-10-22: fix 1 applied
+
+Every room renderer now starts with one clipping plane that clips nothing (`inertClip` in `src/toolkit/components/core/parts/render-style.ts`), and `stopSeeing` in `src/main.ts` puts that plane back instead of clearing the list, so the number of planes never changes at a hand-over. Measured with the same driver on the M3 Max, walking the loop from pool_01 for 70 s: the arriving room's shader count stayed flat at each hand-over (pool_02 44 to 44, pool_03 34 to 34, pool_02_gallery 42 to 42; pool_04 28 to 31), against 44 to 73, 34 to 65 and 42 to 78 before. The hand-over frames took 40 to 125 ms. The frames that remain long, 175 to 300 ms, come as each next room is first seen through its doorway: cause 2 above, still to fix.
