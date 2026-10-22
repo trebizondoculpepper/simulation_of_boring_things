@@ -31,6 +31,12 @@ export const WET_HALL_PLANT = {
   resetAbove: 0.3,
   /** The backwash holding tank, m³ (the sizing's 29.5 m³). */
   backwashTank: 29.5,
+  /**
+   * The site's consent to discharge to the foul sewer, m³/h, from the
+   * sewerage undertaker: the backwash's discharge and any pool draining
+   * down share it.
+   */
+  sewerConsent: 10,
   /** Its discharge to sewer: the consented rate; on above one share, off below another. */
   dischargeRate: 10,
   dischargeOn: 0.4,

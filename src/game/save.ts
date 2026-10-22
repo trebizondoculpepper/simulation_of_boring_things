@@ -52,6 +52,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   10: (world) => world,
   // 11 → 12: the toxic gas detection's rooms, clear (`fillDefaults` adds them).
   11: (world) => world,
+  // 12 → 13: each pool's drain-down (shut) and make-up (open) valves (`fillDefaults` adds them).
+  12: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

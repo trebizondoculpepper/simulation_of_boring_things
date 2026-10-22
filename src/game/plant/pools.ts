@@ -35,6 +35,10 @@ export interface PoolWaterState {
   hallAir: number;
   /** The heat its water's and its hall's heaters are giving now, kW (`thermal.ts`). */
   heating: number;
+  /** Whether it is being drained down to the sewer (its drain-down valves open). */
+  drainDown: boolean;
+  /** Whether its make-up valve is open, to take water from the wet hall. */
+  makeUp: boolean;
 }
 
 export type PoolsState = Record<PoolId, PoolWaterState>;
@@ -88,6 +92,8 @@ export function newPools(): PoolsState {
         tripped: false,
         hallAir: HALL_AIR[id],
         heating: 0,
+        drainDown: false,
+        makeUp: true,
       },
     ]),
   ) as PoolsState;
@@ -131,10 +137,17 @@ const WATER: Record<PoolId, PoolWater> = (() => {
       float: 0.68,
       lowLow: 0.1,
       backwash: c.body.volume * ASSUME.dilutionPerDay,
+      depth: c.body.volume / c.body.area,
     };
   }
   return out;
 })();
+
+/** Each pool's mean depth, m: empty with its surface this far below its lip. */
+export const poolDepth = (id: PoolId) => WATER[id].depth;
+/** Each pool's volume brimming, m³, and its surface's area, m². */
+export const poolVolume = (id: PoolId) => WATER[id].volume;
+export const poolArea = (id: PoolId) => WATER[id].area;
 
 /** Each pool and its hall's thermal parameters (`thermal.ts`). */
 const HEAT: Record<PoolId, ThermalParams> = Object.fromEntries(
@@ -247,11 +260,28 @@ export function stepPoolsWater(
   stock: ChemicalStock = ALL_STOCKED,
   makeUp?: number,
   ambient = AMBIENT,
-): { pools: PoolsState; drawn: number; backwashed: number } {
+  /**
+   * What the sewer will take from pools draining down now, m³/h: the
+   * site's consent, less the backwash's discharge; shared among them.
+   */
+  sewer = 0,
+): {
+  pools: PoolsState;
+  drawn: number;
+  backwashed: number;
+  /** Pumped to the sewer by pools draining down, m³. */
+  drained: number;
+} {
   const share =
     makeUp ?? (serviceAvailable(plant, 'wet_hall', 'water') ? 1 : 0);
   let drawn = 0;
   let backwashed = 0;
+  let drained = 0;
+  // The pools draining down now, sharing what the sewer will take.
+  const draining = POOL_IDS.filter(
+    (id) => pools[id].drainDown && circulating(pools[id], plant, id),
+  );
+  const drainRate = draining.length ? sewer / draining.length : 0;
   const next = {} as PoolsState;
   for (const id of POOL_IDS) {
     const room = `plant_${id}` as ServiceRoom;
@@ -270,9 +300,10 @@ export function stepPoolsWater(
     // Each chemical dosed only while its store has some.
     const hypochlorite = dosing && stock.hypochlorite;
     const acid = dosing && stock.acid;
+    // Its treatment's flow: none while it is drained down to the sewer.
     const flow = approach(
       old.flow,
-      circulation ? POOL_TARGET[id].flow : 0,
+      circulation && !old.drainDown ? POOL_TARGET[id].flow : 0,
       0.08,
       dt,
     );
@@ -287,7 +318,11 @@ export function stepPoolsWater(
         tankVolume: old.balance * params.tank,
         pumps: circulation,
         tripped: old.tripped,
-        makeUpOpen: share > 0,
+        // Its make-up valve open, and the wet hall giving water.
+        makeUpOpen: share > 0 && old.makeUp,
+        drainDown: old.drainDown,
+        drainRate,
+        drained: 0,
         spilt: 0,
         backwashed: 0,
         evaporated: 0,
@@ -302,6 +337,7 @@ export function stepPoolsWater(
     );
     drawn += water.madeUp;
     backwashed += water.backwashed;
+    drained += water.drained;
     // Tripped on low-low, the pumps restart once the tank has recovered.
     const balance = water.tankVolume / params.tank;
     const tripped = water.tripped && balance < params.float * 0.8;
@@ -367,7 +403,9 @@ export function stepPoolsWater(
       redox: clamp(620 + freeChlorine * 72 - (ph - 7.4) * 45, 0, 999),
       flow,
       tripped,
+      drainDown: old.drainDown,
+      makeUp: old.makeUp,
     };
   }
-  return { pools: next, drawn, backwashed };
+  return { pools: next, drawn, backwashed, drained };
 }

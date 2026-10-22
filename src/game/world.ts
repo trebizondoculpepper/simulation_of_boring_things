@@ -28,6 +28,7 @@ import {
   stepPoolsWater,
 } from './plant/pools';
 import {
+  WET_HALL_PLANT,
   makeUpShare,
   newWetHall,
   resetBooster,
@@ -56,7 +57,7 @@ import {
 } from './plant/gas';
 import type { GasZoneAction, GasZoneId, GasZones } from './plant/gas';
 
-export const WORLD_VERSION = 12;
+export const WORLD_VERSION = 13;
 
 export interface World {
   /** Seconds the world has run. */
@@ -119,6 +120,10 @@ export type WorldAction =
   | { type: 'lighting/zone'; zone: LightingZoneId; on: boolean }
   | { type: 'gas/leak'; zone: GasZoneId; gramsPerHour: number }
   | { type: 'gas/act'; zone: GasZoneId; act: GasZoneAction }
+  /** A pool's drain-down valves opened (to the sewer) or shut. */
+  | { type: 'pool/drain-down'; pool: PoolId; open: boolean }
+  /** A pool's make-up valve opened or shut. */
+  | { type: 'pool/make-up'; pool: PoolId; open: boolean }
   /** The world run on at once, a second at a time: for trying things out. */
   | { type: 'time/skip'; seconds: number };
 
@@ -162,6 +167,22 @@ export function applyAction(world: World, action: WorldAction): World {
         ...world,
         chemicals: deliver(world.chemicals, action.chemical, action.litres),
       };
+    case 'pool/drain-down':
+    case 'pool/make-up': {
+      const key = action.type === 'pool/drain-down' ? 'drainDown' : 'makeUp';
+      return world.pools[action.pool][key] === action.open
+        ? world
+        : {
+            ...world,
+            pools: {
+              ...world.pools,
+              [action.pool]: {
+                ...world.pools[action.pool],
+                [key]: action.open,
+              },
+            },
+          };
+    }
     case 'time/skip':
       return action.seconds > 0 ? advance(world, action.seconds, 1) : world;
     case 'gas/leak': {
@@ -250,6 +271,12 @@ export function stepWorld(world: World, delta: number): World {
     stock,
     share,
     world.ambient,
+    // The sewer's consent, less the backwash's discharge while it runs.
+    Math.max(
+      0,
+      WET_HALL_PLANT.sewerConsent -
+        (world.wetHall.discharging ? WET_HALL_PLANT.dischargeRate : 0),
+    ),
   );
   return {
     ...world,
@@ -298,7 +325,10 @@ export function appealOf(world: World): Record<PoolId, number> {
           ph: p.ph,
           freeChlorine: p.freeChlorine,
           combinedChlorine: p.combinedChlorine,
-          circulating: !p.tripped && p.flow > POOL_TARGET[id].flow / 2,
+          // Circulating, and full: a pool more than 15 cm down (being
+          // drained, or emptied) is closed.
+          circulating:
+            !p.tripped && p.flow > POOL_TARGET[id].flow / 2 && p.level > -0.15,
           hallAir: p.hallAir,
           hallTarget: HALL_AIR[id],
           // Its lights on: daylight is not enough.

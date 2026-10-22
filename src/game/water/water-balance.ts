@@ -17,6 +17,13 @@
  * above the tank's; and if the tank fills, it overflows to waste. So a
  * pool can lose water a long way faster than it evaporates.
  *
+ * To empty a pool it is drained down: its pumps' suction is valved to its
+ * main drains and their delivery to the foul sewer, so the pool is pumped
+ * out, no longer refilled, at the rate the sewerage undertaker's consent
+ * allows (`drainRate`), down to its floor (the pool taken as a prism of its
+ * mean depth, its volume over its area). Its balance tank sits apart
+ * meanwhile, topped up by the make-up if that is left open.
+ *
  * Heights are metres from the pool's overflow edge (its lip), up; flows
  * are m³/h; time is hours.
  */
@@ -46,6 +53,8 @@ export interface PoolWater {
   lowLow: number;
   /** Backwashed to waste each day, m³. */
   backwash: number;
+  /** Its mean depth, m: empty with its surface this far below the lip. */
+  depth: number;
 }
 
 export interface WaterState {
@@ -59,6 +68,11 @@ export interface WaterState {
   tripped: boolean;
   /** Whether the make-up valve is open. */
   makeUpOpen: boolean;
+  /** Whether it is being drained down to the sewer, and at what rate it may be, m³/h. */
+  drainDown: boolean;
+  drainRate: number;
+  /** Pumped to the sewer by draining down so far, m³. */
+  drained: number;
   /** Water lost to waste so far, by overflow, backwash; and evaporated, m³. */
   spilt: number;
   backwashed: number;
@@ -76,6 +90,9 @@ export function startingWater(p: PoolWater): WaterState {
     pumps: true,
     tripped: false,
     makeUpOpen: true,
+    drainDown: false,
+    drainRate: 0,
+    drained: 0,
     spilt: 0,
     backwashed: 0,
     evaporated: 0,
@@ -89,7 +106,12 @@ export const tankSurface = (p: PoolWater, s: WaterState) =>
 
 /** The flows now, m³/h. */
 export function flows(p: PoolWater, s: WaterState) {
-  const circulation = s.pumps ? p.flow : 0;
+  const empty = s.level <= -p.depth + 1e-9;
+  // Draining down: the pumps take the pool's water to the sewer instead of
+  // round to it again, at the consented rate, until it is empty.
+  const drainingDown = s.drainDown && s.pumps;
+  const toSewer = drainingDown && !empty ? Math.min(s.drainRate, p.flow) : 0;
+  const circulation = s.pumps && !s.drainDown ? p.flow : 0;
   // Over the lip: a weir, its flow as the head over it to the power 1.5,
   // carrying the circulation's share not taken by the main drains.
   const weir = (p.flow * (1 - p.mainDrainShare)) / p.weirHead ** 1.5;
@@ -98,21 +120,25 @@ export function flows(p: PoolWater, s: WaterState) {
   // gravity alone, as the root of the head between the pool's surface and
   // the tank's, once they stop.
   const head = s.level - tankSurface(p, s);
-  const mainDrains = s.pumps
-    ? p.flow * p.mainDrainShare
-    : head > 0
-      ? p.flow *
-        p.mainDrainShare *
-        Math.sqrt(head / (p.tankBelow + p.tankDepth))
-      : 0;
+  // Draining down, the main drains are valved to the pumps, not the tank.
+  const mainDrains = s.drainDown
+    ? 0
+    : s.pumps
+      ? p.flow * p.mainDrainShare
+      : head > 0 && !empty
+        ? p.flow *
+          p.mainDrainShare *
+          Math.sqrt(head / (p.tankBelow + p.tankDepth))
+        : 0;
   const makeUp =
     s.makeUpOpen && s.tankVolume < p.tank * p.float ? p.makeUpRate : 0;
   return {
     circulation,
     overflow,
     mainDrains,
-    evaporation: p.evaporation,
+    evaporation: empty ? 0 : p.evaporation,
     makeUp,
+    toSewer,
   };
 }
 
@@ -127,7 +153,15 @@ export function stepWater(
   const steps = Math.round(hours / dt);
   for (let i = 0; i < steps; i++) {
     const f = flows(p, s);
-    const poolIn = f.circulation - f.overflow - f.mainDrains - f.evaporation;
+    const poolIn =
+      f.circulation - f.overflow - f.mainDrains - f.evaporation - f.toSewer;
+    // Not below its floor: what would have taken it lower was not there.
+    let level = s.level + (poolIn * dt) / p.area;
+    let drainedNow = f.toSewer * dt;
+    if (level < -p.depth) {
+      drainedNow = Math.max(0, drainedNow - (-p.depth - level) * p.area);
+      level = -p.depth;
+    }
     let tank =
       s.tankVolume +
       (f.overflow + f.mainDrains - f.circulation + f.makeUp) * dt;
@@ -145,11 +179,13 @@ export function stepWater(
       backwashed += out;
     }
     tank = Math.max(0, tank);
-    const tripped = s.tripped || tank < p.tank * p.lowLow;
+    // Draining down, the pumps draw from the pool, not the tank: no trip.
+    const tripped = s.tripped || (!s.drainDown && tank < p.tank * p.lowLow);
     s = {
       ...s,
       time,
-      level: s.level + (poolIn * dt) / p.area,
+      level,
+      drained: s.drained + drainedNow,
       tankVolume: tank,
       pumps: s.pumps && !tripped,
       tripped,

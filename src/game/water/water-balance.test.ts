@@ -22,6 +22,7 @@ const pools: PoolWater[] = sizePlant(POOLS)
     float: 0.5,
     lowLow: 0.1,
     backwash: c.body.volume * ASSUME.dilutionPerDay,
+    depth: c.body.volume / c.body.area,
   }));
 const olympic = pools.find((p) => p.name === 'Olympic pool')!;
 
