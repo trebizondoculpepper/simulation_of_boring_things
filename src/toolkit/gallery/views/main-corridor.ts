@@ -32,6 +32,7 @@ import {
 } from '../logic/main-corridor';
 import type { CorridorDoor } from '../logic/main-corridor';
 import { signTo, warningsFor } from './shell-room';
+import { createCorridorPosters } from './corridor-posters';
 import type { RoomId } from '../logic/dev-room-links';
 
 /**
@@ -274,6 +275,8 @@ export function createMainCorridor(metre: number, kit: PanelKit) {
   title.position.set(0.005, 3.0, w / 2);
   title.rotation.y = Math.PI / 2;
   group.add(title);
+
+  group.add(createCorridorPosters(kit));
 
   function card(cw: number, ch: number, text: string) {
     const canvas = document.createElement('canvas');
