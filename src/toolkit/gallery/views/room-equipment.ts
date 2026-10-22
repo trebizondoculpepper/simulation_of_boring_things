@@ -17,6 +17,13 @@ import {
 import { createSandFilter } from '../../components/plant/views/pumps-plant';
 import { machinePorts } from '../logic/machine-ports';
 import { isLive } from '../rooms/plant/exhibit';
+import { airBox, gantries, STACK_FRAME, stackOf } from '../logic/air-plant';
+import {
+  createAirMimic,
+  createAirPlantStructure,
+  gantryColumnFeet,
+} from './air-plant';
+import { createAhuStack } from '../../components/plant/views/pool-ahu';
 import type { LiveExhibit, PlantExhibit } from '../rooms/plant/exhibit';
 import { EXHIBITS as PUMPS } from '../rooms/plant/pumps';
 import { EXHIBITS as OZONE } from '../rooms/plant/ozone';
@@ -110,6 +117,11 @@ function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
   const [kind, arg] = item.key.split(':');
   if (kind === 'boiler-cascade' && arg)
     return createLiveBoilerCascade(kit, (Number(arg) - 1) * 2);
+  if (kind === 'mimic-air') return createAirMimic(kit);
+  if (kind === 'ahu-stack') {
+    const stack = stackOf(item.key);
+    if (stack) return createAhuStack(kit, stack.units, STACK_FRAME);
+  }
   if (kind === 'tanker-stand') return tankerStand(kit, item);
   // The lounge's contact tank is the ozone room's own model.
   if (kind === 'contact-tank' && item.w <= OZONE[3].size.w + 0.05)
@@ -236,6 +248,12 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
       ? createRoomServices(kit, room as ServiceRoom, floorY)
       : null;
   if (services) pipework.group.add(services.group);
+  // The air plant's ductwork, gantries and stair (`air-plant.ts`).
+  if (room === 'air_plant') {
+    const structure = createAirPlantStructure(kit, placed, floorY);
+    pipework.group.add(structure);
+    solids.push(...gantryColumnFeet(gantries(airBox())));
+  }
   return {
     group,
     solids,

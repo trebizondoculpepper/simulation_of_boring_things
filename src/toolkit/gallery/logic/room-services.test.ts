@@ -51,13 +51,4 @@ describe('current plant-room service connections', () => {
     // connection is checked in `port-connections.test.ts`.
     expect(roomServiceRoutes('plant_pool_01')).toEqual([]);
   });
-
-  it('runs air ducts from each air handler toward both side walls', () => {
-    const layout = layoutRoom('air_plant')!;
-    const ahus = layout.placed.filter((p) => p.item.key === 'ahu').length;
-    const ducts = roomServiceRoutes('air_plant').filter(
-      (r) => r.kind === 'rectangular-duct',
-    );
-    expect(ducts).toHaveLength(ahus * 2);
-  });
 });

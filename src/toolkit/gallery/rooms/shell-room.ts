@@ -54,6 +54,7 @@ import {
   wetHallRoom,
 } from '../logic/shell-rooms';
 import type { ShellDoor, ShellRoomId } from '../logic/shell-rooms';
+import { airFloorAt, airBox, gantries, levelSolids } from '../logic/air-plant';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { createShellRoom, createWetHall } from '../views/shell-room';
 import { createRoomEquipment } from '../views/room-equipment';
@@ -71,6 +72,9 @@ const SEEDS: Record<ShellRoomId, number> = {
   engineers_office: 97,
 };
 
+/** The air plant's gantries and stair (`logic/air-plant.ts`). */
+const airSurfaces = gantries(airBox());
+
 /** One of the main plant's empty rooms (`logic/shell-rooms.ts`), in its own scene. */
 export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
   const spec = SHELL_ROOMS[id];
@@ -87,7 +91,14 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
         note: spec.note,
         seed: SEEDS[id],
       }),
-    floorAt: () => 0,
+    // The air plant's gantries and stair: walked on, or under, by the
+    // height one comes from; their handrails only up on them.
+    floorAt:
+      id === 'air_plant'
+        ? (x, z, previous) => airFloorAt(airSurfaces, x, z, previous)
+        : () => 0,
+    levelSolids:
+      id === 'air_plant' ? (y) => levelSolids(airSurfaces, y) : undefined,
     solids: shellSolids(room),
     // Just inside its first door, looking into the room.
     start: (() => {
@@ -125,7 +136,10 @@ interface ShellConfig {
     group: Group;
     doors: { door: ShellDoor; part: EquipmentDoorsPart; lobby: Group }[];
   };
-  floorAt: (x: number, z: number) => number;
+  /** The floor at (x, z), come from height `previous`: where floors stack, the one walked on. */
+  floorAt: (x: number, z: number, previous: number) => number;
+  /** What else stops a walker standing at height `y`: a gantry's handrails. */
+  levelSolids?: (y: number) => Footprint[];
   solids: Footprint[];
   start: { x: number; z: number; yaw: number };
 }
@@ -157,7 +171,7 @@ function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
   for (const d of doors) parts.add(d.part);
   scene.add(rooms);
   // Its machines, placed (`logic/room-equipment.ts`), on its floor.
-  const machines = createRoomEquipment(kit, cfg.self, cfg.floorAt(0, 0));
+  const machines = createRoomEquipment(kit, cfg.self, cfg.floorAt(0, 0, 0));
   rooms.add(machines.group);
   const raycaster = new Raycaster();
   const pointer = new Vector2();
@@ -317,21 +331,27 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   composer.addPass(film);
 
   const walls = [...cfg.solids, ...machines.solids].map(toMetre);
+  // The height of the floor the walker stands on, metres: up on a gantry, or not.
+  let standing = cfg.floorAt(cfg.start.x, cfg.start.z, 0);
   const walk = createFirstPerson({
     canvas,
     camera,
     metre,
-    floorY: cfg.floorAt(cfg.start.x, cfg.start.z) * metre,
+    floorY: cfg.floorAt(cfg.start.x, cfg.start.z, 0) * metre,
     start: {
       x: cfg.start.x * metre,
       z: cfg.start.z * metre,
       yaw: cfg.start.yaw,
     },
-    floorAt: (x, z) => cfg.floorAt(x / metre, z / metre) * metre,
+    floorAt: (x, z, previous) => {
+      standing = cfg.floorAt(x / metre, z / metre, previous / metre);
+      return standing * metre;
+    },
     // Each doorway: its leaves while shut, but never where the walker
     // stands; a stop just beyond until the room there is seen.
     solids: () => [
       ...walls,
+      ...(cfg.levelSolids?.(standing) ?? []).map(toMetre),
       ...ways
         .flatMap((w) =>
           doorwayStops(

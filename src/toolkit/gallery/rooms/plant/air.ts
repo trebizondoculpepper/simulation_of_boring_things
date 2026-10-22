@@ -1,8 +1,11 @@
-import type { PlantExhibit } from './exhibit';
+import type { LiveExhibit, PlantExhibit } from './exhibit';
+import { createAhuStack } from '../../../components/plant/views/pool-ahu';
+import { DANX_XWPS } from '../../../../game/plant-sizing/ahu-range';
+
+const ahuSize = (model: string) => DANX_XWPS.find((s) => s.model === model)!;
 import {
   createAttenuator,
   createExtractFan,
-  createPoolHallAhu,
   createWeatherLouvre,
 } from '../../../components/plant/views/air-handling';
 
@@ -18,9 +21,35 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Pool hall air handling unit',
     reference:
-      'After Dantherm DanX 3/6 XWPS: plate HX and heat pump, 4135 × 1960 × 880 mm',
-    size: { w: 4.6, d: 1.4, h: 2.8, mount: 'floor' },
-    build: createPoolHallAhu,
+      'After Dantherm DanX 9/18 XWPS: plate HX and heat pump, 4660 × 2250 × 1800 mm, 20,000 m³/h; working controller',
+    size: { w: 5.2, d: 2.4, h: 2.4, mount: 'floor' },
+    build: (kit): LiveExhibit =>
+      createAhuStack(kit, [
+        {
+          tag: 'AHU-DEV1',
+          serves: 'DEVELOPMENT',
+          hall: 'dev',
+          size: ahuSize('9/18'),
+          airflow: 19200,
+        },
+      ]),
+  },
+  {
+    title: 'Air handling units, stacked',
+    reference:
+      'Two DanX 2/4 XWPS (3665 × 1660 × 880 mm) on a steel frame, as the air plant stacks them',
+    size: { w: 4.2, d: 1.5, h: 3.6, mount: 'floor' },
+    build: (kit): LiveExhibit =>
+      createAhuStack(
+        kit,
+        ['AHU-DEV2', 'AHU-DEV3'].map((tag) => ({
+          tag,
+          serves: 'DEVELOPMENT',
+          hall: 'dev',
+          size: ahuSize('2/4'),
+          airflow: 3000,
+        })),
+      ),
   },
   {
     title: 'Splitter attenuator',

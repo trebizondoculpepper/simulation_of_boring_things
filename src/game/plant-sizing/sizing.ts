@@ -1,3 +1,4 @@
+import { ahuSizeFor, ductSize, STACKED_MAX } from './ahu-range';
 import type {
   AttractionConfig,
   WaterBodyConfig,
@@ -89,8 +90,12 @@ export const ASSUME = {
   dryingPerM3: 0.0048,
   /** The least air changes an hour in a hall. */
   airChanges: 4,
-  /** Air handling units' largest size, m³/h, and their duct face speed, m/s. */
-  ahuMax: 30000,
+  /**
+   * Air handling units' largest size, m³/h: the DanX XWPS 9/18's greatest
+   * airflow, the largest the air plant stacks (`ahu-range.ts`); and their
+   * duct face speed, m/s.
+   */
+  ahuMax: STACKED_MAX.max,
   ahuFaceSpeed: 2.5,
   /** Heat recovery on the air handling, and the winter outdoor design, °C. */
   heatRecovery: 0.6,
@@ -251,12 +256,18 @@ export function sizeHall(
   };
 }
 
-/** An air handling unit's casing for `airflow` m³/h. */
+/**
+ * An air handling unit's casing for `airflow` m³/h: the DanX XWPS size
+ * that carries it (`ahu-range.ts`), with its ducts' connections at its
+ * ends, as the air plant stands them.
+ */
 export function ahuCasing(airflow: number) {
-  const face = airflow / 3600 / ASSUME.ahuFaceSpeed;
-  const w = Math.max(0.9, Math.sqrt(face * 1.6));
-  const h = Math.max(0.9, face / w) + 0.4;
-  return { w: 5 + airflow / 6000, d: w + 0.3, h };
+  const size = ahuSizeFor(airflow);
+  return {
+    w: size.length + 2 * (0.25 + ductSize(size).w),
+    d: size.depth,
+    h: size.height,
+  };
 }
 
 export interface PlantRoom {

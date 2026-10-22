@@ -67,7 +67,8 @@ type Parts = ReturnType<typeof createPartSet>;
 
 /**
  * A working cabinet: its model, the parts a player works, and what it
- * does each frame (the shape of a gallery's working exhibit).
+ * does each frame (the shape of a gallery's working exhibit). The room
+ * updates its parts; `update` does the rest.
  */
 export interface WorkingCabinet {
   object: Group;
@@ -489,7 +490,6 @@ export function createMainSwitchboard(kit: PanelKit): WorkingCabinet {
     object: group,
     parts,
     update(delta) {
-      parts.update(delta);
       const amps = breakers.reduce(
         (sum, b) => sum + (b.on.value ? b.amps : 0),
         0,
@@ -749,7 +749,6 @@ export function createMotorControlCentre(kit: PanelKit): WorkingCabinet {
     object: group,
     parts,
     update(delta) {
-      parts.update(delta);
       for (const st of starters) {
         st.state = stepStarter(
           st.state,
@@ -1285,7 +1284,6 @@ export function createCentralBattery(kit: PanelKit): WorkingCabinet {
     object: group,
     parts,
     update(delta) {
-      parts.update(delta);
       battery = stepCentralBattery(battery, delta);
       const lit = batteryLamps(battery);
       lamps.mains.value = lit.mains;

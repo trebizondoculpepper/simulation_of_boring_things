@@ -1,3 +1,4 @@
+import { placeStacks } from './air-plant';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { plantRoomPlan, PLANT_ROOM } from './plant-rooms';
 import type { PlantRoomSize } from './plant-rooms';
@@ -860,27 +861,10 @@ export function roomEquipment(
       return {
         box: shellRoomBox('air_plant'),
         items: [
-          // Each unit's footprint is the sizing's, its model the room's
-          // standard unit: the Olympic's would be twice as long.
-          floor('ahu', 'Air handling unit: lounge pool hall', 7.7, 2, 2.8, {
-            walls: ['west', 'east'],
-          }),
-          ...[1, 2, 3, 4, 5, 6].map((i) =>
-            floor(
-              'ahu',
-              `Air handling unit: Olympic pool hall ${i}`,
-              9.8,
-              2.6,
-              2.8,
-              { walls: ['west', 'east'] },
-            ),
-          ),
-          floor('ahu', 'Air handling unit: jacuzzi room', 5.5, 1.4, 2.8, {
-            walls: ['west', 'east'],
-          }),
-          floor('ahu', 'Air handling unit: footbath passage', 5.1, 1.4, 2.8, {
-            walls: ['west', 'east'],
-          }),
+          // The halls' air handling units, stacked (`air-plant.ts`).
+          ...placeStacks(shellRoomBox('air_plant')).map((p) => p.item),
+          // Their mimic and control panel, on the floor's level, by the door.
+          wall('mimic-air', 'Mimic: air handling plant', 2.3, 0.08, 1.3, 1.6),
         ],
       };
     case 'control_room':
@@ -1031,6 +1015,25 @@ export const TANK_SURROUND = 0.8;
  * under the gantry. The middle of the room stays open for the pipework.
  */
 const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
+  // The air plant: its stacks where `air-plant.ts` stands them, under
+  // their gantries; the mimic on the south wall, west of the doorway.
+  air_plant: (box, items) => [
+    ...placeStacks(box).map(({ item, at }) =>
+      put(
+        box,
+        items.find((i) => i.key === item.key)!,
+        at,
+      ),
+    ),
+    put(
+      box,
+      items.find((i) => i.key === 'mimic-air')!,
+      {
+        wall: 'south',
+        along: box.keepClear[0].minX - 0.25 - 2.3 / 2,
+      },
+    ),
+  ],
   // The lounge's plant room (medium, 12 m): as the Olympic's, but its
   // gantry and stair take the north-east corner. The tank in the north-west,
   // a walkway all round it; the pumps off its face; the two filters on the

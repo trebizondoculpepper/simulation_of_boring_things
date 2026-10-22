@@ -114,7 +114,9 @@ export const SHELL_ROOMS = {
     title: 'AIR HANDLING PLANT',
     w: 17.5,
     d: 28,
-    height: 7,
+    // Tall enough for the Olympic's units three high, with gantries to
+    // their upper two (`air-plant.ts`); its floor as the others'.
+    height: 10,
     ceiling: 'services',
     doors: [corridor()],
     note: 'nine air handling units, for every hall',

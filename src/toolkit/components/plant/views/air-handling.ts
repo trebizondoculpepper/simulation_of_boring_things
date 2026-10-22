@@ -18,7 +18,7 @@ import type { Point } from './plant-tools';
 
 type Tools = ReturnType<typeof plantTools>;
 
-function badge(
+export function badge(
   kit: PanelKit,
   parent: Object3D,
   id: BrandId,
@@ -33,7 +33,7 @@ function badge(
 }
 
 /** A maker's nameplate in its livery, facing +z at `at`. */
-function nameplate(
+export function nameplate(
   kit: PanelKit,
   parent: Object3D,
   id: BrandId,
@@ -48,7 +48,7 @@ function nameplate(
   return mesh;
 }
 
-function sign(
+export function sign(
   t: Tools,
   parent: Object3D,
   text: string,

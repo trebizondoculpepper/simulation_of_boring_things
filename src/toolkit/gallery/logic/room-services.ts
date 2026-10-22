@@ -128,28 +128,6 @@ export function roomServiceRoutes(room: string): ServiceRoute[] {
     }
   }
 
-  if (room === 'air_plant') {
-    // An AHU's four spigots are built into its model; the paired supply
-    // and extract duct corridors leave the east and west sides of the room.
-    for (const [i, p] of placed.entries()) {
-      if (p.item.key !== 'ahu') continue;
-      const top = Math.min(p.item.h + 0.35, y - 0.25);
-      for (const side of [-1, 1] as const) {
-        const wallX = side < 0 ? -box.w / 2 : box.w / 2;
-        routes.push({
-          name: `${p.item.label} ${side < 0 ? 'extract' : 'supply'} duct ${i + 1}`,
-          utility: 'air',
-          kind: 'rectangular-duct',
-          od: 0.5,
-          points: [
-            [p.x, top, p.z + side * 0.35],
-            [wallX, top, p.z + side * 0.35],
-          ],
-          to: p.item.key,
-        });
-      }
-    }
-  }
   return routes.filter((r) => r.points.every((p) => p.every(Number.isFinite)));
 }
 

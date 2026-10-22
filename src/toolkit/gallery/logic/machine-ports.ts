@@ -1,4 +1,5 @@
 import type { Item, Placed } from './room-equipment';
+import { stackOf, stackPorts } from './air-plant';
 import {
   PAIR_DISCHARGE_X,
   PAIR_STRAINER_X,
@@ -21,7 +22,8 @@ export interface MachinePort {
     | 'power'
     | 'gas'
     | 'flue'
-    | 'hot-water';
+    | 'hot-water'
+    | 'air';
   /** Its machine's model draws this connection itself, so no nozzle is added. */
   drawn?: boolean;
 }
@@ -358,6 +360,15 @@ export function machinePorts(item: Item): MachinePort[] {
         drawn: true,
       },
     ];
+  }
+  if (kind === 'ahu-stack') {
+    // A stack of air handling units (`air-plant.ts`): four duct spigots
+    // on each unit's ends, drawn by its model.
+    const stack = stackOf(item.key);
+    return (stack ? stackPorts(stack) : []).map((p) => ({
+      ...port(p.name, p.at, p.outward, p.w, 'air'),
+      drawn: true,
+    }));
   }
   if (kind === 'gas-train')
     // In from the floor at its left, out at the top of its right

@@ -47,6 +47,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 const PIPED = [
+  'air_plant',
   'boiler_house',
   'plant_pool_01',
   'plant_pool_02',
@@ -67,7 +68,8 @@ function meshes(root: Object3D) {
 
 /** The pipework's groups in a built room: the routed runs, the services, a cabinet's. */
 const isPipework = (o: Object3D) =>
-  ['pipework', 'cabinet services'].includes(o.name) || /services/i.test(o.name);
+  ['pipework', 'cabinet services'].includes(o.name) ||
+  /services|ductwork/i.test(o.name);
 
 describe.each(PIPED)('%s, as drawn', (room) => {
   const built = () => {

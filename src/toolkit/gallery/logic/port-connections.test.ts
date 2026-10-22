@@ -5,6 +5,7 @@ import type { MachinePort } from './machine-ports';
 import { roomPipes } from './room-pipes';
 import { roomServiceRoutes } from './room-services';
 import { cabinetPipes, cabinetPortsInRoom } from './cabinet-pipes';
+import { airBox, airDucts } from './air-plant';
 
 /**
  * Every machine's every port, connected: some run ends exactly on it, of
@@ -34,6 +35,7 @@ const KINDS: Record<MachinePort['service'], readonly string[]> = {
   gas: ['steel-screwed'],
   flue: ['flue'],
   'hot-water': ['copper'],
+  air: ['duct'],
 };
 
 /** Within this angle of the port's direction, its run leaves it. */
@@ -47,6 +49,14 @@ function runsIn(room: string): AnyRun[] {
     ...roomPipes(room),
     ...cabinetPipes(room),
     ...roomServiceRoutes(room).filter((r) => r.kind !== 'rectangular-duct'),
+    // The air plant's ducts (`air-plant.ts`).
+    ...(room === 'air_plant'
+      ? airDucts(layoutRoom(room)!.placed, airBox()).map((d) => ({
+          name: d.name,
+          kind: 'duct',
+          points: d.points,
+        }))
+      : []),
   ];
 }
 
@@ -101,6 +111,7 @@ function portsIn(room: string) {
 
 /** The rooms whose pipework is laid out, so every port must be connected. */
 const PIPED = [
+  'air_plant',
   'boiler_house',
   'plant_pool_01',
   'plant_pool_02',
