@@ -1,4 +1,5 @@
 import { VERSION } from '../../game/version';
+import { newIdentifiedPlant, walkIdentified } from '../../game/plant/identification';
 import { BOROUGH } from '../../toolkit/components/general-safety/logic/borough';
 import { boilerHouseChapter } from './boiler-house';
 import type { ExhibitInfo } from './boiler-house';
@@ -24,6 +25,46 @@ export function buildManual(
   version = VERSION,
 ): Manual {
   const boiler = boilerHouseChapter(exhibitFor);
+  const identified = walkIdentified(newIdentifiedPlant());
+  const footbath: Chapter = {
+    id: 'footbath-parts',
+    title: 'Footbath plant identification',
+    blocks: [
+      { kind: 'heading', text: 'Equipment and control schedule' },
+      {
+        kind: 'para',
+        text: 'The identifiers below are generated from the same component model used by the room controls and the web bill of parts. This pilot schedule covers PL4 only.',
+      },
+      {
+        kind: 'table',
+        caption: 'PL4 bill of parts',
+        columns: [
+          { head: 'Identifier', width: 0.29 },
+          { head: 'Name', width: 0.17 },
+          { head: 'Purpose', width: 0.33 },
+          { head: 'Normal', width: 0.1 },
+        ],
+        rows: identified.map((part) => [
+          part.id,
+          part.name,
+          part.purpose,
+          part.normal ?? '—',
+        ]),
+      },
+      { kind: 'heading', text: 'Alphabetical index' },
+      {
+        kind: 'table',
+        caption: 'PL4 component index',
+        columns: [
+          { head: 'Name', width: 0.55 },
+          { head: 'Identifier', width: 0.35 },
+        ],
+        rows: [...identified]
+          .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+          .map((part) => [part.name, part.id]),
+      },
+    ],
+  };
   const introduction: Chapter = {
     id: 'introduction',
     title: 'Introduction',
@@ -61,7 +102,7 @@ export function buildManual(
     revision: revisionFor(version),
     revisions: REVISIONS,
     foreword: FOREWORD,
-    chapters: [introduction, boiler.chapter],
+    chapters: [introduction, boiler.chapter, footbath],
     figures: boiler.figures,
   };
 }

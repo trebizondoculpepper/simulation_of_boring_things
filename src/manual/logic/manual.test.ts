@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { exhibitFor } from '../../toolkit/gallery/views/room-equipment';
 import { layoutRoom } from '../../toolkit/gallery/logic/room-equipment';
 import { GAS_HOUSE } from '../../game/plant/gas-house';
+import { newIdentifiedPlant, walkIdentified } from '../../game/plant/identification';
 import { escapeLatex, renderManual } from '../latex/render';
 import { boilerHouseChapter } from './boiler-house';
 import { revisionFor } from './fiction';
@@ -13,6 +14,7 @@ import { roomPlanSvg } from './room-plan';
 describe('the operator’s manual', () => {
   const manual = buildManual(exhibitFor);
   const boiler = boilerHouseChapter(exhibitFor);
+  const footbath = manual.chapters.find((c) => c.id === 'footbath-parts')!;
   const schedule = boiler.chapter.blocks.find(
     (b) => b.kind === 'table' && b.caption === 'Boiler house equipment',
   );
@@ -29,6 +31,22 @@ describe('the operator’s manual', () => {
       expect(row[2], row[1]).not.toMatch(/site-built/);
     expect(schedule.rows.map((r) => r[1])).toEqual(
       placed.map((p) => p.item.label),
+    );
+  });
+
+  it('draws the PDF footbath schedule and index from the same identified model', () => {
+    const parts = walkIdentified(newIdentifiedPlant());
+    const schedule = footbath.blocks.find(
+      (b) => b.kind === 'table' && b.caption === 'PL4 bill of parts',
+    );
+    const index = footbath.blocks.find(
+      (b) => b.kind === 'table' && b.caption === 'PL4 component index',
+    );
+    if (schedule?.kind !== 'table' || index?.kind !== 'table')
+      throw new Error('missing footbath tables');
+    expect(schedule.rows.map((row) => row[0])).toEqual(parts.map((p) => p.id));
+    expect(index.rows.map((row) => row[1]).sort()).toEqual(
+      parts.map((p) => p.id).sort(),
     );
   });
 
