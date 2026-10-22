@@ -28,6 +28,7 @@ import { doorFrame, kickPlate, pullHandle, pushPlate } from './door-hardware';
 import { cardReader } from './card-reader';
 import { createDoorWarningStickers } from '../views/door-warning-stickers';
 import type { DoorWarningSelection } from '../logic/door-warnings';
+import { CONCRETE_LINTEL } from '../views/concrete-lintel';
 
 /**
  * The equipment doors between plant rooms (Ironside): a pair of FD60
@@ -206,7 +207,9 @@ export function equipmentDoors(
   const material = new MeshStandardMaterial({ map: texture, roughness: 0.7 });
   kit.materials.push(material);
   const sign = new Mesh(new PlaneGeometry(0.9, 0.18), material);
-  sign.position.set(0, h + 2 * f + 0.25, 0.003);
+  // Above the concrete lintel over the opening (`concrete-lintel.ts`),
+  // clear of it by 4 cm, not behind it.
+  sign.position.set(0, h + 2 * f + CONCRETE_LINTEL.height + 0.04 + 0.09, 0.003);
   a.object.add(sign);
   const badge = createBrandBadge(kit, 'ironside', { height: 0.03 });
   badge.position.set(0, h + f * 1.5, 0.002);
