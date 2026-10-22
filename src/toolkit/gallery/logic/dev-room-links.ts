@@ -259,7 +259,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   plant_fit_37: 'MAIN PLANT ROOM · 37 M',
   dev0: 'DEV0 · CONTROLS AND DISPLAYS',
   dev1: 'DEV1 · RACKS',
-  dev2: 'DEV2 · FIRE SAFETY',
+  dev2: 'DEV2 · SAFETY SYSTEMS',
   dev3: 'DEV3 · BUILDING FITTINGS',
   dev4: 'DEV4 · REPAIR WORKSHOP',
   dev5: 'DEV5 · PUTTING THINGS IN THE BIN',

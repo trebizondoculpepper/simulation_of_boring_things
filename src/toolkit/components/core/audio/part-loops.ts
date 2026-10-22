@@ -2,6 +2,8 @@ import { signal } from '@preact/signals-core';
 import { machineTone } from '../../sound/audio/machine-tones';
 import { recordedLoop } from './recorded-loop';
 import { renderFireAlarm } from '../../fire/audio/fire-alarm';
+import { renderGasAlarm } from '../../general-safety/audio/gas-alarms';
+import type { GasAlarmKind } from '../../general-safety/audio/gas-alarms';
 import type { LoopRecipe } from './part-audio';
 
 /**
@@ -20,6 +22,8 @@ import type { LoopRecipe } from './part-audio';
  * - `FIRE_SOUNDER`: the fire alarm, the VX3 Simulator's synthesised
  *   sounders (`fire-alarm.ts`): a pulsing piezo, a two-note buzzer and a
  *   far sweep;
+ * - `CHLORINE_SOUNDER`, `OZONE_SOUNDER`: the gas alarms, invented
+ *   (`gas-alarms.ts`) so as not to sound like any real alarm;
  * - `ALARM_BUZZER`: an accessible toilet's emergency alarm, a pulsing
  *   buzz;
  * - `EXTRACT_FAN`: a small extractor fan's whirr;
@@ -118,6 +122,37 @@ export const FIRE_SOUNDER: LoopRecipe = (context, out) => {
   source.start();
   return [source];
 };
+
+/** The gas alarms' loops (`general-safety/audio/gas-alarms.ts`), rendered once for each audio context. */
+const gasLoops = new WeakMap<
+  BaseAudioContext,
+  Partial<Record<GasAlarmKind, AudioBuffer>>
+>();
+const gasSounder =
+  (kind: GasAlarmKind): LoopRecipe =>
+  (context, out) => {
+    const loops = gasLoops.get(context) ?? {};
+    gasLoops.set(context, loops);
+    let buffer = loops[kind];
+    if (!buffer) {
+      const samples = renderGasAlarm(kind, context.sampleRate);
+      buffer = context.createBuffer(1, samples.length, context.sampleRate);
+      buffer.getChannelData(0).set(samples);
+      loops[kind] = buffer;
+    }
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    const gain = context.createGain();
+    gain.gain.value = 0.12;
+    source.connect(gain).connect(out);
+    source.start();
+    return [source];
+  };
+/** The chlorine alarm: three bleeps and a falling growl. */
+export const CHLORINE_SOUNDER = gasSounder('chlorine');
+/** The ozone alarm: rising chirps and a trembling bleep. */
+export const OZONE_SOUNDER = gasSounder('ozone');
 
 export const ALARM_BUZZER: LoopRecipe = (context, out) => {
   const osc = context.createOscillator();

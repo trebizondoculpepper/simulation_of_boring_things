@@ -15,7 +15,7 @@ import {
   Vector2,
 } from 'three';
 import type { BufferGeometry, Material, Object3D } from 'three';
-import { computed } from '@preact/signals-core';
+import { computed, effect, signal } from '@preact/signals-core';
 import { partAudio } from '../../components/core/audio/part-audio';
 import {
   FIRE_SEAT,
@@ -62,7 +62,20 @@ import { createFirstPerson } from '../../controls/input/first-person';
 import {
   createPartSet,
   ledPushbutton,
+  pilotLight,
+  pushButton,
 } from '../../components/core/parts/parts';
+import {
+  createGasZone,
+  gasBeacon,
+  gasDetector,
+  zoneAlarms,
+} from '../../components/general-safety/parts/gas-parts';
+import {
+  CHLORINE,
+  OZONE,
+} from '../../components/general-safety/logic/gas-detection';
+import { createGasSourcePlaceholder } from '../../components/general-safety/views/gas-detection';
 import type { Part } from '../../components/core/parts/parts';
 import { ps1Uniforms } from '../../components/core/parts/ps1-material';
 import {
@@ -97,6 +110,10 @@ type Wall = 'north' | 'south' | 'east' | 'west';
  * reader, push-to-exit, an emergency door release and an intercom). The
  * room's own lights are the model's: switch them off and it is dark but
  * for the exit sign and whatever else is lit.
+ *
+ * Now dev2, Safety Systems: fire, emergency lighting, and on the north
+ * wall's east half toxic gas detection, chlorine and ozone, each with a
+ * placeholder box that gives off its gas (`gas-parts.ts`).
  */
 export function startFittingsRoom(canvas: HTMLCanvasElement) {
   const m = METRE;
@@ -513,6 +530,139 @@ export function startFittingsRoom(canvas: HTMLCanvasElement) {
     2.2,
   );
 
+  // ---- North wall: toxic gas detection -----------------------------------
+  // A chlorine store's and an ozone room's gas detection, each a detector
+  // low on the wall (both gases are heavier than air), a sounder-beacon
+  // over it, its ACCEPT and RESET, and the extract fan it purges with;
+  // beside each, a placeholder box the buttons make give off gas: the
+  // chlorine one a weeping fitting or a tanker's acid put into the
+  // hypochlorite, the ozone one a leaking generator.
+  board('GAS DETECTION (SIMULATED)', 'north', 6, 9.6);
+  const chlorine = createGasZone(CHLORINE);
+  const ozone = createGasZone(OZONE);
+  const zones = [chlorine, ozone];
+  const bind = (s: { value: boolean }) => ({
+    get value() {
+      return s.value;
+    },
+    set(v: boolean) {
+      s.value = v;
+    },
+  });
+  const sources = [
+    { zone: chlorine, x: 2.3, name: 'CHLORINE SOURCE', lens: 'amber' as const },
+    { zone: ozone, x: 7.3, name: 'OZONE SOURCE', lens: 'blue' as const },
+  ];
+  for (const { zone, x, name, lens } of sources) {
+    const box = createGasSourcePlaceholder(kit, name);
+    box.position.set(x, 0, BOUNDS.minZ + FACE + 0.3);
+    room.add(box);
+    const alarms = computed(() => zoneAlarms(zone));
+    fit(
+      gasDetector(kit, zone),
+      'north',
+      x + 1.6,
+      0.45,
+      `${zone.params.gas} DETECTOR`,
+      0.2,
+    );
+    fit(
+      gasBeacon(kit, {
+        lens,
+        flashing: computed(() => alarms.value.beacon),
+        sounding: computed(() => alarms.value.sounder),
+      }),
+      'north',
+      x + 1.6,
+      2.2,
+    );
+    fit(
+      pushButton(kit, {
+        colour: 'yellow',
+        legend: 'ACCEPT',
+        action: zone.accept,
+      }),
+      'north',
+      x + 1.35,
+      1.35,
+    );
+    fit(
+      pushButton(kit, { colour: 'blue', legend: 'RESET', action: zone.reset }),
+      'north',
+      x + 1.85,
+      1.35,
+    );
+    fit(
+      ledPushbutton(kit, {
+        colour: 'green',
+        legend: 'EXTRACT FAN',
+        bound: bind(zone.fan),
+      }),
+      'north',
+      x + 2.55,
+      1.35,
+    );
+    fit(
+      pilotLight(kit, {
+        colour: 'amber',
+        legend: 'PURGE',
+        drive: computed(() => zone.fan.value && zone.state.value.a2),
+      }),
+      'north',
+      x + 2.55,
+      1.05,
+    );
+  }
+  // The sources' own buttons, on the wall beside each box.
+  const weeping = signal(false);
+  const stopWeep = effect(() => {
+    chlorine.leak.value = weeping.value ? 2 : 0;
+  });
+  fit(
+    ledPushbutton(kit, {
+      colour: 'yellow',
+      legend: 'WEEPING FITTING',
+      bound: bind(weeping),
+    }),
+    'north',
+    1.2,
+    1.5,
+  );
+  fit(
+    pushButton(kit, {
+      colour: 'red',
+      legend: 'ACID INTO HYPO',
+      action: chlorine.misdeliver,
+    }),
+    'north',
+    1.2,
+    1.15,
+  );
+  const leaking = signal(false);
+  const stopLeak = effect(() => {
+    ozone.leak.value = leaking.value ? 2 : 0;
+  });
+  fit(
+    ledPushbutton(kit, {
+      colour: 'yellow',
+      legend: 'GENERATOR LEAK',
+      bound: bind(leaking),
+    }),
+    'north',
+    6.2,
+    1.5,
+  );
+
+  // `?leak=chlorine,ozone` starts those leaks at once (for trying the
+  // alarms, and for screenshots): a mis-delivery and a leaking generator.
+  const leaks =
+    new URLSearchParams(location.search).get('leak')?.split(',') ?? [];
+  if (leaks.includes('chlorine')) chlorine.misdeliver();
+  if (leaks.includes('ozone')) leaking.value = true;
+  // `?gasAfter=s` runs the gas zones on that many seconds first.
+  const after = Number(new URLSearchParams(location.search).get('gasAfter'));
+  if (after > 0) for (const zone of zones) zone.step(after);
+
   // ---- West wall: the door released in a fire ---------------------------
   // The maglocked door unlocks in a fire, and its green emergency door
   // release is an escape device, so it stays here with the fire system.
@@ -591,6 +741,7 @@ export function startFittingsRoom(canvas: HTMLCanvasElement) {
   > = {
     overview: { x: 0, z: 5 * m, yaw: 0, pitch: 0.05 },
     lighting: { x: -6 * m, z: -4.5 * m, yaw: 0, pitch: 0.15 },
+    gas: { x: 5.5 * m, z: -3.2 * m, yaw: 0, pitch: 0.05 },
     fire: { x: 8 * m, z: -2.5 * m, yaw: Math.PI / 2, pitch: 0.05 },
     bin: {
       // From one side, so the pedestal does not hide the bin.
@@ -618,6 +769,8 @@ export function startFittingsRoom(canvas: HTMLCanvasElement) {
       ...[
         { x: FIRE_SEAT.x, z: FIRE_SEAT.z, r: 0.2 },
         { x: FIRE_SEAT.x - 1.5, z: FIRE_SEAT.z, r: 0.22 },
+        { x: 2.3, z: BOUNDS.minZ + 0.45, r: 0.45 },
+        { x: 7.3, z: BOUNDS.minZ + 0.45, r: 0.45 },
       ].map(({ x, z, r }) => ({
         minX: (x - r) * m,
         maxX: (x + r) * m,
@@ -651,6 +804,8 @@ export function startFittingsRoom(canvas: HTMLCanvasElement) {
       walk.place(x * m, z * m, yaw, pitch);
     },
     parts: () => [...parts.uses.keys()].map((o) => o.name).filter(Boolean),
+    /** The gas zones: `gas.chlorine.misdeliver()`, `gas.ozone.leak.value = 2`. */
+    gas: { chlorine, ozone },
   };
 
   // ---- Each frame --------------------------------------------------------
@@ -672,6 +827,7 @@ export function startFittingsRoom(canvas: HTMLCanvasElement) {
       seen = { x, z, yaw };
     }
     model.tick(delta);
+    for (const zone of zones) zone.step(delta);
     parts.update(delta);
     const level = L.roomLight.value;
     panel.color.setScalar(0.12 + 0.88 * level);
@@ -694,6 +850,8 @@ export function startFittingsRoom(canvas: HTMLCanvasElement) {
     walk.dispose();
     portals.dispose();
     parts.dispose();
+    stopWeep();
+    stopLeak();
     disposeKit(kit, scene as unknown as Group);
     freeEnvironment();
     renderer.dispose();
