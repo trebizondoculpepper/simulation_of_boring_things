@@ -1,4 +1,10 @@
-import { CylinderGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
+import {
+  BoxGeometry,
+  CylinderGeometry,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+} from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { SANS } from '../../core/views/fitting-tools';
@@ -37,23 +43,46 @@ function lcd(
   back = '#1c3a2a',
   ink = '#9ff0b8',
 ) {
-  return t.printed(
-    w,
-    h,
-    (c, cw, ch) => {
-      c.fillStyle = back;
-      c.fillRect(0, 0, cw, ch);
-      c.fillStyle = ink;
-      c.textBaseline = 'middle';
-      const step = ch / lines.length;
-      lines.forEach((line, i) => {
-        c.font = `bold ${step * 0.62}px ${SANS}`;
-        c.fillText(line, cw * 0.06, step * (i + 0.5), cw * 0.9);
-      });
-    },
-    256,
-    true,
-  ).mesh;
+  return liveLcd(t, w, h, lines, back, ink).mesh;
+}
+
+/** An LCD whose lines can be changed (`show`), redrawn only when they do. */
+function liveLcd(
+  t: Tools,
+  w: number,
+  h: number,
+  lines: readonly string[],
+  back = '#1c3a2a',
+  ink = '#9ff0b8',
+) {
+  const screen = t.printed(w, h, () => {}, 256, true);
+  let shown = '';
+  const show = (now: readonly string[]) => {
+    const key = now.join('\n');
+    if (key === shown) return;
+    shown = key;
+    const c = screen.context;
+    const cw = c.canvas.width;
+    const ch = c.canvas.height;
+    c.fillStyle = back;
+    c.fillRect(0, 0, cw, ch);
+    c.fillStyle = ink;
+    c.textBaseline = 'middle';
+    const step = ch / now.length;
+    now.forEach((line, i) => {
+      c.font = `bold ${step * 0.62}px ${SANS}`;
+      c.fillText(line, cw * 0.06, step * (i + 0.5), cw * 0.9);
+    });
+    screen.texture.needsUpdate = true;
+  };
+  show(lines);
+  return { mesh: screen.mesh, show };
+}
+
+/** What a dosing pump shows: whether it is dosing, and at what rate, l/h. */
+export interface DosingPumpState {
+  running: boolean;
+  rate: number;
 }
 
 /** A clear plastic material, for sample cells and calibration pots. */
@@ -76,15 +105,30 @@ function clear(kit: PanelKit, tint = '#d8eef2', opacity = 0.35) {
  */
 export function createSolenoidPump(kit: PanelKit, label: string) {
   const t = plantTools(kit);
-  const group = new Group();
+  const group = new Group() as Group & {
+    /** Its LCD and run lamp as it doses, or stands. */
+    show(s: DosingPumpState): void;
+  };
   const maker = brandLivery(kit, 'grundflow');
   const body = maker.paint.casing;
   const lightGrey = maker.paint.main;
   t.box(group, maker.paint.shade, 0.2, 0.02, 0.13, 0.02, 0.01, 0);
   t.box(group, body, 0.2, 0.15, 0.11, 0.03, 0.095, 0);
   t.box(group, lightGrey, 0.2, 0.02, 0.112, 0.03, 0.18, 0);
-  // The control panel on the front: LCD, keys, stroke-length knob.
-  put(group, lcd(t, 0.06, 0.03, [label, '1.24 l/h']), [0.06, 0.12, 0.0555]);
+  // The control panel on the front: LCD, keys, stroke-length knob, and
+  // its run lamp, which flashes with each stroke.
+  const screen = liveLcd(t, 0.06, 0.03, [label, 'STOP']);
+  put(group, screen.mesh, [0.06, 0.12, 0.0555]);
+  const runLit = new MeshStandardMaterial({
+    color: '#2bd65a',
+    emissive: '#2bd65a',
+    emissiveIntensity: 0,
+  });
+  kit.materials.push(runLit);
+  const runLamp = new Mesh(new BoxGeometry(0.008, 0.008, 0.003), runLit);
+  runLamp.position.set(0.0, 0.105, 0.0565);
+  runLamp.userData.live = true;
+  group.add(runLamp);
   for (const x of [0.0, 0.02, 0.04])
     t.box(group, lightGrey, 0.014, 0.012, 0.004, x + 0.04, 0.085, 0.057);
   t.cyl(group, maker.paint.accent, 0.018, 0.012, 0.11, 0.135, 0.058, 'z', 20);
@@ -105,6 +149,13 @@ export function createSolenoidPump(kit: PanelKit, label: string) {
     10,
   );
   put(group, maker.badge(0.012), [0.05, 0.16, 0.0558]);
+  group.userData.live = true;
+  group.show = ({ running, rate }) => {
+    screen.show([label, running ? `${rate.toFixed(2)} l/h` : 'STOP']);
+    // A stroke a second or so, the lamp lit for each.
+    const now = typeof performance === 'undefined' ? 0 : performance.now();
+    runLit.emissiveIntensity = running && now % 900 < 180 ? 1.6 : 0;
+  };
   return group;
 }
 
@@ -116,18 +167,18 @@ export function createSolenoidPump(kit: PanelKit, label: string) {
  */
 export function createDigitalPump(kit: PanelKit, label: string) {
   const t = plantTools(kit);
-  const group = new Group();
+  const group = new Group() as Group & {
+    /** Its display as it doses, or stands. */
+    show(s: DosingPumpState): void;
+  };
   const maker = brandLivery(kit, 'grundflow');
   const grey = maker.paint.casing;
   t.box(group, maker.paint.shade, 0.196, 0.012, 0.17, 0, 0.006, 0);
   t.box(group, grey, 0.15, 0.24, 0.17, 0.02, 0.132, -0.01);
   // The control cube with its display and click wheel.
   t.box(group, maker.paint.main, 0.11, 0.11, 0.05, 0.03, 0.17, 0.095);
-  put(
-    group,
-    lcd(t, 0.07, 0.04, [label, '3.10 l/h'], '#10283a', '#9fd8ff'),
-    [0.03, 0.19, 0.121],
-  );
+  const screen = liveLcd(t, 0.07, 0.04, [label, 'STOP'], '#10283a', '#9fd8ff');
+  put(group, screen.mesh, [0.03, 0.19, 0.121]);
   t.cyl(group, maker.paint.accent, 0.018, 0.012, 0.03, 0.14, 0.123, 'z', 20);
   // The dosing head and valves.
   const pp = t.paint('#c9cbc6', 0.45);
@@ -135,6 +186,9 @@ export function createDigitalPump(kit: PanelKit, label: string) {
   t.cyl(group, pp, 0.012, 0.04, -0.075, 0.07, 0, 'y', 12);
   t.cyl(group, pp, 0.012, 0.04, -0.075, 0.19, 0, 'y', 12);
   put(group, maker.badge(0.012), [0.03, 0.235, 0.121]);
+  group.userData.live = true;
+  group.show = ({ running, rate }) =>
+    screen.show([label, running ? `${rate.toFixed(2)} l/h` : 'STOP']);
   return group;
 }
 
@@ -158,7 +212,11 @@ function tube(
  */
 export function createHypochloriteBoard(kit: PanelKit) {
   const t = plantTools(kit);
-  const group = new Group();
+  const group = new Group() as Group & {
+    /** Its duty pump dosing, or both standing; the standby stands. */
+    show(s: DosingPumpState): void;
+  };
+  const pumps: ReturnType<typeof createSolenoidPump>[] = [];
   const board = t.paint('#ecece6', 0.7);
   t.box(group, board, 1.2, 1.0, 0.02, 0, 0, 0.01);
   // The bunded shelf.
@@ -169,7 +227,9 @@ export function createHypochloriteBoard(kit: PanelKit) {
     [-0.25, 'DP-101A DUTY'],
     [0.25, 'DP-101B STANDBY'],
   ] as const) {
-    put(group, createSolenoidPump(kit, name.slice(0, 7)), [x, -0.24, 0.13]);
+    const pump = createSolenoidPump(kit, name.slice(0, 7));
+    pumps.push(pump);
+    put(group, pump, [x, -0.24, 0.13]);
     put(group, createTag(t, name, 0.18), [x, -0.36, 0.021]);
     // Suction down and out of the board's foot; discharge up to the header.
     tube(t, group, [
@@ -223,6 +283,11 @@ export function createHypochloriteBoard(kit: PanelKit) {
   );
   put(group, createTag(t, 'FROM BULK TANK ↓', 0.2), [0.0, -0.45, 0.021]);
   put(group, createTag(t, 'TO INJECTION ↑', 0.18), [0.38, 0.32, 0.021]);
+  group.userData.live = true;
+  group.show = (state) => {
+    pumps[0].show(state);
+    pumps[1].show({ running: false, rate: 0 });
+  };
   return group;
 }
 
@@ -232,12 +297,16 @@ export function createHypochloriteBoard(kit: PanelKit) {
  */
 export function createAcidBoard(kit: PanelKit) {
   const t = plantTools(kit);
-  const group = new Group();
+  const group = new Group() as Group & {
+    /** Its pump dosing, or standing. */
+    show(s: DosingPumpState): void;
+  };
   t.box(group, t.paint('#ecece6', 0.7), 0.7, 0.8, 0.02, 0, 0, 0.01);
   const tray = t.paint('#2a2d2f', 0.6);
   t.box(group, tray, 0.5, 0.02, 0.28, 0, -0.2, 0.16);
   t.box(group, tray, 0.5, 0.05, 0.01, 0, -0.175, 0.3);
-  put(group, createDigitalPump(kit, 'DP-102'), [0.03, -0.19, 0.14]);
+  const pump = createDigitalPump(kit, 'DP-102');
+  put(group, pump, [0.03, -0.19, 0.14]);
   tube(
     t,
     group,
@@ -269,6 +338,8 @@ export function createAcidBoard(kit: PanelKit) {
     [0, 0.33, 0.021],
   );
   put(group, createTag(t, 'DP-102', 0.12), [0.03, -0.3, 0.021]);
+  group.userData.live = true;
+  group.show = (state) => pump.show(state);
   return group;
 }
 
@@ -281,48 +352,71 @@ export function createAcidBoard(kit: PanelKit) {
  * tundish. After the ProMinent DULCOMARIN 3 and its DGMa bypass
  * armature. Wall exhibit, 1.0 × 1.4 m board.
  */
+/** What the water quality controller shows. */
+export interface WaterReading {
+  freeChlorine: number;
+  combinedChlorine: number;
+  ph: number;
+  redox: number;
+  temperature: number;
+}
+
 export function createControllerPanel(kit: PanelKit) {
   const t = plantTools(kit);
-  const group = new Group();
+  const group = new Group() as Group & {
+    /** Its screen, reading the water in its sample cells. */
+    show(s: WaterReading): void;
+  };
   t.box(group, t.paint('#c9ccc8', 0.7), 1.0, 1.4, 0.02, 0, 0, 0.01);
   // The controller.
   const meter = brandLivery(kit, 'kessler-moody');
   t.box(group, meter.paint.casing, 0.43, 0.29, 0.15, 0, 0.45, 0.095);
   t.box(group, meter.paint.main, 0.43, 0.03, 0.152, 0, 0.58, 0.095);
-  put(
-    group,
-    t.printed(
-      0.155,
-      0.09,
-      (c, cw, ch) => {
-        c.fillStyle = '#0f2230';
-        c.fillRect(0, 0, cw, ch);
-        const rows: [string, string, string][] = [
-          ['Free Cl', '1.32', 'mg/l'],
-          ['Comb. Cl', '0.18', 'mg/l'],
-          ['pH', '7.32', ''],
-          ['Redox', '762', 'mV'],
-          ['Temp', '29.6', '°C'],
-        ];
-        rows.forEach(([name, value, unit], i) => {
-          const y = ch * (0.13 + i * 0.18);
-          c.fillStyle = '#7fb8d8';
-          c.font = `${ch * 0.11}px ${SANS}`;
-          c.textBaseline = 'middle';
-          c.fillText(name, cw * 0.05, y);
-          c.fillStyle = '#ffffff';
-          c.font = `bold ${ch * 0.13}px ${SANS}`;
-          c.fillText(value, cw * 0.5, y);
-          c.fillStyle = '#7fb8d8';
-          c.font = `${ch * 0.09}px ${SANS}`;
-          c.fillText(unit, cw * 0.8, y);
-        });
-      },
-      256,
-      true,
-    ).mesh,
-    [-0.07, 0.46, 0.171],
-  );
+  // Its screen: redrawn as the readings change, at their displayed places.
+  const screen = t.printed(0.155, 0.09, () => {}, 256, true);
+  put(group, screen.mesh, [-0.07, 0.46, 0.171]);
+  let shown = '';
+  const draw = (rows: [string, string, string][]) => {
+    const key = rows.map((r) => r[1]).join('|');
+    if (key === shown) return;
+    shown = key;
+    const c = screen.context;
+    const cw = c.canvas.width;
+    const ch = c.canvas.height;
+    c.fillStyle = '#0f2230';
+    c.fillRect(0, 0, cw, ch);
+    rows.forEach(([name, value, unit], i) => {
+      const y = ch * (0.13 + i * 0.18);
+      c.fillStyle = '#7fb8d8';
+      c.font = `${ch * 0.11}px ${SANS}`;
+      c.textBaseline = 'middle';
+      c.fillText(name, cw * 0.05, y);
+      c.fillStyle = '#ffffff';
+      c.font = `bold ${ch * 0.13}px ${SANS}`;
+      c.fillText(value, cw * 0.5, y);
+      c.fillStyle = '#7fb8d8';
+      c.font = `${ch * 0.09}px ${SANS}`;
+      c.fillText(unit, cw * 0.8, y);
+    });
+    screen.texture.needsUpdate = true;
+  };
+  group.userData.live = true;
+  group.show = (w) =>
+    draw([
+      ['Free Cl', w.freeChlorine.toFixed(2), 'mg/l'],
+      ['Comb. Cl', w.combinedChlorine.toFixed(2), 'mg/l'],
+      ['pH', w.ph.toFixed(2), ''],
+      ['Redox', w.redox.toFixed(0), 'mV'],
+      ['Temp', w.temperature.toFixed(1), '°C'],
+    ]);
+  // Until it is shown the water, a typical pool's.
+  group.show({
+    freeChlorine: 1.32,
+    combinedChlorine: 0.18,
+    ph: 7.32,
+    redox: 762,
+    temperature: 29.6,
+  });
   put(group, meter.badge(0.02), [0.12, 0.535, 0.171]);
   put(
     group,

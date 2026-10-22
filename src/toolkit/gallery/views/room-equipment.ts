@@ -95,6 +95,13 @@ import type { Item, Placed } from '../logic/room-equipment';
 import type { PoolId } from '../../../game/plant/pools';
 import { pumpPairExhibit } from '../rooms/plant/pumps';
 import { pumpPanelExhibit } from '../rooms/plant/pump-panel';
+import { currentPlant } from '../rooms/plant/live-plant';
+import {
+  createAcidBoard,
+  createControllerPanel,
+  createHypochloriteBoard,
+} from '../../components/plant/views/dosing-equipment';
+import { createUvUnit } from '../../components/plant/views/pumps-plant';
 
 /** Each model the rooms' machines are, by its key in `logic/room-equipment.ts`. */
 const MODELS: Record<string, PlantExhibit> = {
@@ -179,6 +186,39 @@ function modelFor(
   const pool = /^plant_(pool_0[1-4])$/.exec(room)?.[1] as PoolId | undefined;
   if (pool && kind === 'pump-pair') return pumpPairExhibit(pool).build(kit);
   if (pool && kind === 'pump-panel') return pumpPanelExhibit(pool).build(kit);
+  // Its dosing and UV, showing its pool's water as the world has it.
+  if (pool) {
+    const world = () => worldStore('dev').world.value;
+    const live = <S>(
+      object: Object3D & { show(s: S): void },
+      read: () => S,
+    ): LiveExhibit =>
+      typeof window === 'undefined'
+        ? { object }
+        : { object, update: () => object.show(read()) };
+    // Dosing while its pool is dosed and its chemical's store holds some.
+    const dosing = (chemical: 'hypochlorite' | 'acid', rate: number) => () => ({
+      running: currentPlant(pool).dosing && world().chemicals[chemical] > 0,
+      rate,
+    });
+    if (kind === 'dosing-controller')
+      return live(createControllerPanel(kit), () => world().pools[pool]);
+    if (kind === 'hypo-pumps')
+      return live(createHypochloriteBoard(kit), dosing('hypochlorite', 1.24));
+    if (kind === 'acid-pump')
+      return live(createAcidBoard(kit), dosing('acid', 0.62));
+    if (kind === 'uv-unit') {
+      // As its exhibit stands it, 0.3 m back.
+      const uv = createUvUnit(kit);
+      uv.position.z -= 0.3;
+      const holder = new Group();
+      holder.add(uv);
+      return live(Object.assign(holder, { show: uv.show }), () => {
+        const r = currentPlant(pool);
+        return { on: r.uvOn, flowing: r.flow > 1 };
+      });
+    }
+  }
   bindSupplies();
   if (kind === 'boiler-cascade' && arg)
     return createLiveBoilerCascade(kit, (Number(arg) - 1) * 2);

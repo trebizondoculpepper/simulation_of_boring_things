@@ -1,4 +1,4 @@
-import { Group, Mesh, SphereGeometry } from 'three';
+import { Group, Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { SANS } from '../../core/views/fitting-tools';
@@ -564,7 +564,10 @@ export function createSandFilter(
  */
 export function createUvUnit(kit: PanelKit) {
   const t = plantTools(kit);
-  const group = new Group();
+  const group = new Group() as Group & {
+    /** Its lamp on (water flowing) or off, its screen and lamps showing it. */
+    show(s: { on: boolean; flowing: boolean }): void;
+  };
   const ss = t.paint(FINISH.stainless, 0.25, 0.85);
   const y = 0.8,
     L = 1.1;
@@ -644,34 +647,53 @@ export function createUvUnit(kit: PanelKit) {
     1.3,
     0,
   );
-  const screen = t.printed(
-    0.14,
-    0.06,
-    (c, cw, ch) => {
-      c.fillStyle = '#10243a';
-      c.fillRect(0, 0, cw, ch);
-      c.fillStyle = '#7fd4ff';
-      c.font = `${ch * 0.3}px monospace`;
-      c.fillText('UV 87 W/m²', cw * 0.06, ch * 0.4);
-      c.fillText('LAMP 6120 h', cw * 0.06, ch * 0.8);
-    },
-    128,
-  );
+  const screen = t.printed(0.14, 0.06, () => {}, 128);
   screen.mesh.position.set(0, 1.38, 0.101);
   panel.add(screen.mesh);
-  t.cyl(panel, t.paint('#3fbf4f', 0.3), 0.012, 0.01, -0.1, 1.2, 0.101, 'z', 12);
-  t.cyl(
-    panel,
-    t.paint('#c42b23', 0.3),
-    0.012,
-    0.01,
-    -0.06,
-    1.2,
-    0.101,
-    'z',
-    12,
-  );
+  let shown = '';
+  const draw = (lines: [string, string]) => {
+    const key = lines.join('|');
+    if (key === shown) return;
+    shown = key;
+    const c = screen.context;
+    const cw = c.canvas.width;
+    const ch = c.canvas.height;
+    c.fillStyle = '#10243a';
+    c.fillRect(0, 0, cw, ch);
+    c.fillStyle = '#7fd4ff';
+    c.font = `${ch * 0.3}px monospace`;
+    c.fillText(lines[0], cw * 0.06, ch * 0.4);
+    c.fillText(lines[1], cw * 0.06, ch * 0.8);
+    screen.texture.needsUpdate = true;
+  };
+  // Its lamps: green LAMP ON, red UV FAIL (water flowing past an unlit lamp).
+  const lampLit = (colour: string) => {
+    const m = new MeshStandardMaterial({
+      color: colour,
+      emissive: colour,
+      emissiveIntensity: 0,
+      roughness: 0.3,
+    });
+    kit.materials.push(m);
+    return m;
+  };
+  const green = lampLit('#3fbf4f');
+  const red = lampLit('#c42b23');
+  for (const [m, x] of [
+    [green, -0.1],
+    [red, -0.06],
+  ] as const) {
+    const lamp = t.cyl(panel, m, 0.012, 0.01, x, 1.2, 0.101, 'z', 12);
+    lamp.userData.live = true;
+  }
   badge(kit, panel, 'lidoluxe', [0.1, 1.17, 0.102], 0.03);
+  screen.mesh.userData.live = true;
+  group.show = ({ on, flowing }) => {
+    draw(on ? ['UV 87 W/m²', 'LAMP 6120 h'] : ['UV  0 W/m²', 'LAMP OFF']);
+    green.emissiveIntensity = on ? 1.2 : 0;
+    red.emissiveIntensity = flowing && !on ? 1.2 : 0;
+  };
+  group.show({ on: true, flowing: true });
   return group;
 }
 

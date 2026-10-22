@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- Overhead chain-operated room valves now have one operator wheel on the valve spindle, without a second intersecting lever. Room-pipework valve tags sit on both clear sides of the body; two lounge backwash valves now sit on their assigned pipe runs.
 - Clicking the inside cover of an open packaged Jacuzzi or footbath cabinet door closes that same door.
 - Room-pipework valve controls now use their permanent installed asset IDs for saved actions and show their display tags beside the valves.
 - The underwater gallery's door to the engineer's office stands on a 0.25 m sill above the corridor's fillet, which now runs unbroken beneath it (the office's floor meets the sill, as plant rooms do).
@@ -14,6 +15,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 - The short (1 m) corridor straights at the pool halls' doors have no ceiling lamps.
 - The corridor between the Jacuzzi and the footbath is now a short straight, the rotunda, and a short straight.
 - The plant rooms' pumps, their local control panels, the boiler house's cascade and every control room instrument show the world's plant (`world-reading.ts`): the pump the world runs is the one that runs, on its isolators, its room's power and its trips; flows, levels, temperatures, chlorine, pH, currents and the annunciator's alarms are the world's. They had shown a scripted loop. Where there is no world (tests), the loop remains.
+- The pool plant rooms' dosing controllers show their pool's free and combined chlorine, pH, redox and temperature; the hypochlorite and acid dosing pumps run (their LCDs and stroke lamps) while their pool is dosed and their store holds some; the UV unit's screen and lamps show its lamp on, or off, and UV FAIL with water flowing past an unlit lamp.
+- A register of how every catalogued machine meets the world (`world-bindings.ts`), tested against the plant catalogue: each is wired, passive (with why) or still to do, a list that may only shrink.
 - The circulation pumps are heard: a synthesised four-pole pump set (its motor's 100 Hz hum, its shaft's rumble, its impeller's blade-pass note, fan and water noise) held at whichever pump runs, rising as it runs up and falling as it coasts down.
 - The plant rooms' ozone generators are in service: each has its own ozone plant, its MAINS on and started, its supply its isolator and its room's power in the world, restarting by itself when its supply returns (it had been the dev room's exhibit, off). Its ozone line leaves from its top, not through its front.
 - The blockwork over and round doorways lines up with the wall beside it: every wall piece's texture is mapped from where it is in the room (`mapBlockwork`), in the plant rooms and the other service rooms alike.
