@@ -94,31 +94,49 @@ export function pumpSound(p: PumpSet = CIRCULATION_PUMP): LoopRecipe {
       { node: fan, hz: 900, gain: fanGain, level: 0.22 },
       { node: flow, hz: 260, gain: flowGain, level: 0.35 },
     ];
+    // Set `param` along `values` from `at`: a curve where the browser will
+    // take one over what it is doing (a run-up cut short by a stop), else a
+    // smooth approach to the curve's end, so a change never throws.
+    const along = (
+      param: AudioParam,
+      values: Float32Array,
+      at: number,
+      seconds: number,
+    ) => {
+      try {
+        if (param.cancelAndHoldAtTime) param.cancelAndHoldAtTime(at);
+        else param.cancelScheduledValues(at);
+        param.setValueCurveAtTime(values, at + 0.005, seconds);
+      } catch {
+        param.cancelScheduledValues(at);
+        param.setTargetAtTime(values[values.length - 1], at, seconds / 3);
+      }
+    };
     // Run it along a curve of its speed from `at`, up or down.
     const drive = (at: number, seconds: number, running: boolean) => {
       for (const t of turning) {
-        t.osc.frequency.cancelScheduledValues(at);
-        t.osc.frequency.setValueCurveAtTime(
+        along(
+          t.osc.frequency,
           curve(seconds, running, (s) => t.hz * Math.max(0.04, s)),
           at,
           seconds,
         );
-        t.gain.gain.cancelScheduledValues(at);
-        t.gain.gain.setValueCurveAtTime(
+        along(
+          t.gain.gain,
           curve(seconds, running, (s) => t.level * s * s),
           at,
           seconds,
         );
       }
       for (const f of filters) {
-        f.node.frequency.cancelScheduledValues(at);
-        f.node.frequency.setValueCurveAtTime(
+        along(
+          f.node.frequency,
           curve(seconds, running, (s) => f.hz * Math.max(0.1, s)),
           at,
           seconds,
         );
-        f.gain.gain.cancelScheduledValues(at);
-        f.gain.gain.setValueCurveAtTime(
+        along(
+          f.gain.gain,
           curve(seconds, running, (s) => f.level * s * s),
           at,
           seconds,

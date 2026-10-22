@@ -76,6 +76,12 @@ let volume = 1;
 let metre = 1;
 const buffers = new Map<string, Promise<AudioBuffer>>();
 const holds = new Map<object, { stop(): void; update(): void }>();
+/**
+ * Holds asked for before the player's first gesture let audio start (a
+ * pump already running as its room is entered): kept, and begun the moment
+ * it does, unless let go first.
+ */
+const waiting = new Map<object, { recipe: LoopRecipe; from?: Object3D }>();
 const position = new Vector3();
 const facing = new Vector3();
 
@@ -91,6 +97,11 @@ const start = () => {
   noise = context.createBuffer(1, context.sampleRate, context.sampleRate);
   const samples = noise.getChannelData(0);
   for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
+  // What was asked to sound before now, sounding.
+  const asked = [...waiting];
+  waiting.clear();
+  for (const [owner, { recipe, from }] of asked)
+    partAudio.hold(owner, recipe, from);
 };
 let listening = false;
 const awaitGesture = () => {
@@ -260,7 +271,13 @@ export const partAudio = {
     awaitGesture();
     holds.get(owner)?.stop();
     holds.delete(owner);
-    if (!recipe || !context || !master) return;
+    waiting.delete(owner);
+    if (!recipe) return;
+    // No audio yet: kept until the player's first gesture starts it.
+    if (!context || !master) {
+      waiting.set(owner, { recipe, from });
+      return;
+    }
     const ctx = context;
     const gain = ctx.createGain();
     gain.gain.value = 0;
