@@ -36,31 +36,17 @@ export const FED_ROOMS = (Object.keys(ROOM_SERVICES) as ServiceRoom[]).filter(
 );
 
 /**
- * The main incoming switch-disconnector, between the supply company's
- * cut-out and the main switchboard: the whole site's supply
- * (`plant.sources.power`). What it shows: the incoming supply's lamp
- * (the supply company's side, always live), its ON (red, closed) and
- * OFF (green, open) lamps as UK switchgear has them, and the voltmeter
- * on its outgoing side.
- */
-/**
- * The main incoming switchboard, metres: one full-height section of the
- * Encabulator's line-up (CENTERLINE 2100: 90 in high and 20 in deep), on
- * its 0.1 m base channel, 0.8 m wide for its 1600 A switch.
+ * The main incoming switch: the whole site's supply
+ * (`plant.sources.power`), between the supply company's cut-out and the
+ * main switchboard. The Encabulator's incoming supply isolator, after the
+ * Square D HU365 (`incoming-isolator.ts`): its steel box, 1.28 m high,
+ * on two unistrut posts from the floor, the supply rising into its foot
+ * in trunking; its footprint, posts to handle, metres; the top of its
+ * box, where the outgoing trunking leaves for the cable ladder.
  */
 export const MAIN_SWITCH = {
-  w: 0.8,
-  d: 0.508,
-  plinth: 0.1,
-  body: 2.286,
-  wireway: 0.1524,
+  w: 0.76,
+  d: 0.45,
+  h: 2.3,
+  top: 1.45 + 1.276 / 2,
 } as const;
-
-export function mainSwitchShows(on: boolean) {
-  return {
-    supply: true,
-    on,
-    off: !on,
-    volts: on ? 400 : 0,
-  };
-}

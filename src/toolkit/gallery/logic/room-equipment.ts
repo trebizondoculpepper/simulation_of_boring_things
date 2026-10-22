@@ -827,10 +827,10 @@ export function roomEquipment(
           // The whole site's supply, where it is found first.
           floor(
             'main-switch',
-            'Main incoming switchboard',
+            'Main incoming switch',
             MAIN_SWITCH.w,
             MAIN_SWITCH.d,
-            MAIN_SWITCH.plinth + MAIN_SWITCH.body,
+            MAIN_SWITCH.h,
             { back: 0, walls: ['east'] },
           ),
           floor(

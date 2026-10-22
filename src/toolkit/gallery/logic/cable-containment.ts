@@ -1,6 +1,7 @@
 import { CORRIDOR_DOORS, MAIN_CORRIDOR } from './main-corridor';
 import { layoutRoom } from './room-equipment';
 import type { Placed } from './room-equipment';
+import { MAIN_SWITCH } from './switch-room';
 
 /**
  * The electrical supply's containment, from the switch room to every
@@ -8,8 +9,8 @@ import type { Placed } from './room-equipment';
  * ladder at high level, and steel trunking rising to it from each piece
  * of switchgear.
  *
- * - In the switch room, the incoming supply comes up out of the floor in
- *   its trunking into the main incoming switch; trunking rises from the
+ * - In the switch room (the incoming supply rising out of the floor into
+ *   the main incoming switch in the switch's own trunking), trunking rises from the
  *   switch, the main switchboard, the motor control centre and the
  *   emergency lighting battery, each the width its cables need, to a
  *   ladder round the room, which leaves over the door for the corridor.
@@ -112,7 +113,14 @@ export function switchRoomContainment(): {
       p.item.mount === 'wall' ? -size.depth / 2 : p.item.d / 2 - size.depth / 2;
     const x = p.x + bx * back;
     const z = p.z + bz * back;
-    const top = p.item.mount === 'wall' ? p.y + p.item.h / 2 : p.item.h;
+    // The main switch's from the top of its box, on its posts; the rest
+    // from their tops. (Its supply rises into its foot in its own trunking.)
+    const top =
+      p.item.key === 'main-switch'
+        ? MAIN_SWITCH.top
+        : p.item.mount === 'wall'
+          ? p.y + p.item.h / 2
+          : p.item.h;
     const facing = Math.abs(bx) > Math.abs(bz) ? 'x' : 'z';
     runs.push({
       name: `${p.item.label} trunking`,
@@ -122,40 +130,55 @@ export function switchRoomContainment(): {
       to: [x, y, z],
       facing,
     });
-    // The supply company's cables, up out of the floor beside the main
-    // switch and in at its foot, in heavy trunking along its wall.
-    if (p.item.key === 'main-switch') {
-      const incoming = { width: 0.4, depth: 0.15 };
-      const along: readonly [number, number] = [-bz, bx];
-      const side = p.item.w / 2 + incoming.width / 2 + 0.05;
-      const wx = p.x + bx * (p.item.d / 2 - incoming.depth / 2);
-      const wz = p.z + bz * (p.item.d / 2 - incoming.depth / 2);
-      const sx = wx - along[0] * side;
-      const sz = wz - along[1] * side;
-      const at = 0.4;
-      runs.push(
-        {
-          name: 'Incoming supply',
-          kind: 'trunking',
-          ...incoming,
-          from: [sx, 0, sz],
-          to: [sx, at, sz],
-          facing,
-        },
-        {
-          name: 'Incoming supply, into the main switch',
-          kind: 'trunking',
-          width: incoming.depth,
-          depth: incoming.width / 2,
-          from: [sx, at, sz],
-          to: [
-            wx - (along[0] * p.item.w) / 2,
-            at,
-            wz - (along[1] * p.item.w) / 2,
-          ],
-        },
-      );
-    }
+  }
+  // Trunking between the cabinets: from the main switch's side across to
+  // the motor control centre beside it, as the Encabulator's isolator feeds
+  // its line-up; and from the motor control centre's top along the north
+  // wall and down into the main switchboard's.
+  const find = (key: string) => placed.find((p) => p.item.key === key);
+  const sw = find('main-switch');
+  const mcc = find('mcc');
+  const board = find('lv-switchboard');
+  if (sw && mcc) {
+    const [bx, bz] = backOf(sw);
+    const x = sw.x + bx * (sw.item.d / 2 - 0.15);
+    const z = sw.z + bz * (sw.item.d / 2 - 0.15);
+    const toward = Math.sign(mcc.z - sw.z);
+    const y = MAIN_SWITCH.top - 0.14;
+    runs.push({
+      name: 'Trunking, main switch to the motor control centre',
+      kind: 'trunking',
+      width: 0.15,
+      depth: 0.15,
+      from: [x, y, z + (toward * sw.item.w) / 2 - toward * 0.13],
+      to: [x, y, toward > 0 ? mcc.footprint.minZ : mcc.footprint.maxZ],
+    });
+  }
+  if (mcc && board) {
+    const y = 2.6;
+    const north = -hd + 0.1;
+    const ends = [mcc, board].map((p) => {
+      const [bx] = backOf(p);
+      return { x: p.x + bx * (p.item.d / 2 - 0.12), top: p.item.h };
+    });
+    runs.push({
+      name: 'Trunking, motor control centre to the main switchboard',
+      kind: 'trunking',
+      width: 0.3,
+      depth: 0.15,
+      from: [ends[0].x, y, north],
+      to: [ends[1].x, y, north],
+    });
+    for (const [i, e] of ends.entries())
+      runs.push({
+        name: `Trunking, down into the ${i ? 'main switchboard' : 'motor control centre'}`,
+        kind: 'trunking',
+        width: 0.3,
+        depth: 0.15,
+        from: [e.x, e.top, north],
+        to: [e.x, y, north],
+        facing: 'z',
+      });
   }
   return { runs, entries };
 }

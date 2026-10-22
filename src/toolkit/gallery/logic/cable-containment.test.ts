@@ -22,28 +22,6 @@ describe('the switch room’s containment', () => {
     expect(layout.placed.some((p) => p.item.key === 'main-switch')).toBe(true);
   });
 
-  it('brings the incoming supply up out of the floor and in at the main switch’s foot', () => {
-    const incoming = runs.find((r) => r.name === 'Incoming supply')!;
-    expect(incoming.from[1]).toBe(0);
-    const into = runs.find(
-      (r) => r.name === 'Incoming supply, into the main switch',
-    )!;
-    expect(into.from).toEqual(incoming.to);
-    const sw = layout.placed.find((p) => p.item.key === 'main-switch')!;
-    // It ends on the switch's side.
-    const f = sw.footprint;
-    const [x, , z] = into.to;
-    const onSide =
-      (Math.abs(z - f.minZ) < 1e-6 || Math.abs(z - f.maxZ) < 1e-6) &&
-      x >= f.minX - 1e-6 &&
-      x <= f.maxX + 1e-6;
-    const onEnd =
-      (Math.abs(x - f.minX) < 1e-6 || Math.abs(x - f.maxX) < 1e-6) &&
-      z >= f.minZ - 1e-6 &&
-      z <= f.maxZ + 1e-6;
-    expect(onSide || onEnd).toBe(true);
-  });
-
   it('runs trunking from each piece of switchgear’s top up to the ladder, the board’s the widest', () => {
     for (const key of [
       'main-switch',
@@ -76,6 +54,31 @@ describe('the switch room’s containment', () => {
     const width = (label: string) =>
       runs.find((r) => r.name === `${label} trunking`)!.width;
     expect(width('LV main switchboard')).toBeGreaterThanOrEqual(0.6);
+  });
+
+  it('joins the main switch to the motor control centre, and that to the main switchboard, in trunking', () => {
+    for (const name of [
+      'Trunking, main switch to the motor control centre',
+      'Trunking, motor control centre to the main switchboard',
+      'Trunking, down into the motor control centre',
+      'Trunking, down into the main switchboard',
+    ])
+      expect(
+        runs.some((r) => r.name === name),
+        name,
+      ).toBe(true);
+    // Into the motor control centre's end, and onto its and the board's tops.
+    const mcc = layout.placed.find((p) => p.item.key === 'mcc')!;
+    const across = runs.find((r) =>
+      r.name.endsWith('to the motor control centre'),
+    )!;
+    const z = across.to[2];
+    expect(
+      Math.abs(z - mcc.footprint.minZ) < 1e-6 ||
+        Math.abs(z - mcc.footprint.maxZ) < 1e-6,
+    ).toBe(true);
+    for (const r of runs.filter((q) => q.name.startsWith('Trunking, down')))
+      expect(r.from[1]).toBe(2);
   });
 
   it('carries the sub-mains out over the door, above its head', () => {
