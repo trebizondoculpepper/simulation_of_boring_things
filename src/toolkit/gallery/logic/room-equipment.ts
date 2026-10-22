@@ -700,14 +700,6 @@ export function roomEquipment(
             1.8,
             1.6,
           ),
-          wall(
-            'combustion-panel',
-            'Combustion and ventilation panel',
-            1,
-            0.25,
-            0.75,
-            1.5,
-          ),
           wall('mimic-gas', 'Mimic: boiler house gas', 1.9, 0.08, 1.1, 1.7),
           wall(
             'mimic-boiler-heat',
@@ -716,6 +708,17 @@ export function roomEquipment(
             0.08,
             1.9,
             1.85,
+          ),
+          // On the east wall to the right of the boiler mimic (the owner's
+          // place for it), so the boiler house's instruments read as one.
+          wall(
+            'combustion-panel',
+            'Combustion and ventilation panel',
+            1,
+            0.25,
+            0.75,
+            1.5,
+            { walls: ['east'] },
           ),
         ],
       };

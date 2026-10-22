@@ -26,13 +26,14 @@ const KINDS: Record<MachinePort['service'], readonly string[]> = {
   'pool-water': ['pvc-pressure'],
   drain: ['pvc-drain', 'pvc-pressure'],
   'make-up': ['copper'],
-  heating: ['lagged-heating'],
+  heating: ['lagged-heating', 'copper'],
   ozone: ['stainless'],
   sample: ['chemical-tube'],
   chemical: ['chemical-tube'],
   power: ['steel-screwed'],
   gas: ['steel-screwed'],
   flue: ['flue'],
+  'hot-water': ['copper'],
 };
 
 /** Within this angle of the port's direction, its run leaves it. */

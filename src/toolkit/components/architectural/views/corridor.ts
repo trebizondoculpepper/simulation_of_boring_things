@@ -26,7 +26,10 @@ import type { PlacedPiece } from '../logic/corridor-path';
  * y = 0, its middle on z = 0; its walls `WALL` thick outside that. Its
  * ends are open, to be joined. One wall may have round windows through
  * it (the Olympic pool's viewing gallery's, into the water): `windows`
- * on the +z wall, which is then `windows.thick` thick.
+ * on the +z wall, which is then `windows.thick` thick. The other (−z)
+ * wall may have doorways through it to the floor (`doorways`: each one's
+ * middle along x, its width and its height), its floor fillet stopping
+ * either side of each, turned round the jambs' corners.
  */
 export const CORRIDOR = { width: 1.2, height: 2.5, wall: 0.2 } as const;
 
@@ -44,13 +47,24 @@ export interface CorridorWindows {
   farFace?: Material;
 }
 
+export interface CorridorDoorway {
+  at: number;
+  w: number;
+  h: number;
+}
+
 export function createCorridor(
   length: number,
   material: Material,
   {
     windows,
     ceiling = material,
-  }: { windows?: CorridorWindows; ceiling?: Material } = {},
+    doorways = [],
+  }: {
+    windows?: CorridorWindows;
+    ceiling?: Material;
+    doorways?: readonly CorridorDoorway[];
+  } = {},
 ) {
   const group = new Group();
   group.name = 'corridor';
@@ -73,7 +87,27 @@ export function createCorridor(
   const mid = length / 2;
   box(material, length, wall, width + 2 * wall, mid, -wall / 2, 0);
   box(ceiling, length, wall, width + 2 * wall, mid, height + wall / 2, 0);
-  box(material, length, height, wall, mid, height / 2, -hw - wall / 2);
+  // The −z wall, in runs between its doorways, a head over each.
+  const cuts = [...doorways].sort((a, b) => a.at - b.at);
+  const runs: [number, number][] = [];
+  let start = 0;
+  for (const d of cuts) {
+    runs.push([start, d.at - d.w / 2]);
+    start = d.at + d.w / 2;
+  }
+  runs.push([start, length]);
+  for (const [a, b] of runs)
+    box(material, b - a, height, wall, (a + b) / 2, height / 2, -hw - wall / 2);
+  for (const d of cuts)
+    box(
+      material,
+      d.w,
+      height - d.h,
+      wall,
+      d.at,
+      (height + d.h) / 2,
+      -hw - wall / 2,
+    );
   if (windows) {
     // The windowed wall, drawn in its own plane (x along, y up) and
     // pushed out to +z.
@@ -143,18 +177,33 @@ export function createCorridor(
     [height, -hw, Math.PI],
     [height, hw, -Math.PI / 2],
   ] as const) {
-    // The strip runs along z, its faces along +x and +y: laid along x it
-    // fits the +z wall's foot; turned about x, each other junction.
-    const fillet = new Mesh(
-      coveStrip(length, r)
-        .rotateY(Math.PI / 2)
-        .rotateX(turn)
-        .translate(mid, y, z),
-      material,
-    );
-    fillet.name = 'corridor fillet';
-    group.add(fillet);
+    // The −z wall's foot, only along its runs.
+    const along = y === 0 && z < 0 ? runs : ([[0, length]] as const);
+    for (const [a, b] of along) {
+      if (b - a <= 0) continue;
+      // The strip runs along z, its faces along +x and +y: laid along x it
+      // fits the +z wall's foot; turned about x, each other junction.
+      const fillet = new Mesh(
+        coveStrip(b - a, r)
+          .rotateY(Math.PI / 2)
+          .rotateX(turn)
+          .translate((a + b) / 2, y, z),
+        material,
+      );
+      fillet.name = 'corridor fillet';
+      group.add(fillet);
+    }
   }
+  // At each doorway's jambs, the floor fillet turned round the corner.
+  for (const d of cuts)
+    for (const [x, phi] of [
+      [d.at - d.w / 2, 0],
+      [d.at + d.w / 2, -Math.PI / 2],
+    ] as const) {
+      const corner = createCornerFillet(material, phi);
+      corner.position.set(x, 0, -hw);
+      group.add(corner);
+    }
   return group;
 }
 

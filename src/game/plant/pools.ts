@@ -4,6 +4,8 @@ import { stepWater } from '../water/water-balance';
 import type { PoolWater } from '../water/water-balance';
 import { POOLS } from '../plant-sizing/pools.config';
 import { ASSUME, sizePlant } from '../plant-sizing/sizing';
+import { phTarget } from './chemicals';
+import type { Chemical } from './chemicals';
 
 export type PoolId = 'pool_01' | 'pool_02' | 'pool_03' | 'pool_04';
 export const POOL_IDS: readonly PoolId[] = [
@@ -105,6 +107,53 @@ const approach = (value: number, target: number, rate: number, dt: number) =>
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
 
+/**
+ * Whether a pool's water is circulating, and so treated and dosed: its
+ * room has power and water, one of its pumps' isolators is on, and its
+ * pumps have not tripped.
+ */
+function circulating(
+  old: PoolWaterState,
+  plant: PlantServices,
+  id: PoolId,
+): boolean {
+  const room = `plant_${id}` as ServiceRoom;
+  return (
+    serviceAvailable(plant, room, 'power') &&
+    serviceAvailable(plant, room, 'water') &&
+    ISOLATED_BY[id].some((name) => plant.isolators[name]) &&
+    !old.tripped
+  );
+}
+
+/** Whether each chemical is to be had: its store not run dry. */
+export type ChemicalStock = Record<Chemical, boolean>;
+const ALL_STOCKED: ChemicalStock = { hypochlorite: true, acid: true };
+
+/**
+ * The water being dosed with each chemical, m³: every pool whose water
+ * circulates and whose room has its chemical feed, while the chemical is
+ * in stock. The stores are drawn on by it (`chemicals.ts`).
+ */
+export function dosedVolumes(
+  pools: PoolsState,
+  plant: PlantServices,
+  stock: ChemicalStock = ALL_STOCKED,
+): Record<Chemical, number> {
+  const out = { hypochlorite: 0, acid: 0 };
+  for (const id of POOL_IDS) {
+    const room = `plant_${id}` as ServiceRoom;
+    if (
+      !circulating(pools[id], plant, id) ||
+      !serviceAvailable(plant, room, 'chemical')
+    )
+      continue;
+    if (stock.hypochlorite) out.hypochlorite += WATER[id].volume;
+    if (stock.acid) out.acid += WATER[id].volume;
+  }
+  return out;
+}
+
 /** A deliberately compact operating model: each pool is a separate water
  * circuit, fed by its plant room and the shared make-up, boiler, air and
  * chemical services. Loss of a feeder affects both its flow and readings.
@@ -115,6 +164,8 @@ export function stepPools(
   dt: number,
   /** The world's time, seconds: for the filters' daily backwash. */
   time = 0,
+  /** Which dosing chemicals are in stock. */
+  stock: ChemicalStock = ALL_STOCKED,
 ): PoolsState {
   const next = {} as PoolsState;
   for (const id of POOL_IDS) {
@@ -122,11 +173,7 @@ export function stepPools(
     const old = pools[id];
     // The pumps run if the room has power and water, and one of them, or
     // the pool's cabinet, is not isolated; and not tripped.
-    const pumpsFed =
-      serviceAvailable(plant, room, 'power') &&
-      serviceAvailable(plant, room, 'water') &&
-      ISOLATED_BY[id].some((name) => plant.isolators[name]);
-    const circulation = pumpsFed && !old.tripped;
+    const circulation = circulating(old, plant, id);
     // UV and ozone, where they are isolated, break down the combined
     // chlorine (the chloramines) as the water passes.
     const uv =
@@ -135,6 +182,9 @@ export function stepPools(
         TREATED_BY[id]!.some((name) => plant.isolators[name]));
     const heat = circulation && serviceAvailable(plant, room, 'heat');
     const dosing = circulation && serviceAvailable(plant, room, 'chemical');
+    // Each chemical dosed only while its store has some.
+    const hypochlorite = dosing && stock.hypochlorite;
+    const acid = dosing && stock.acid;
     const makeup = serviceAvailable(plant, 'wet_hall', 'water');
     const flow = approach(
       old.flow,
@@ -178,12 +228,19 @@ export function stepPools(
     );
     const freeChlorine = clamp(
       old.freeChlorine +
-        (dosing ? (1.4 - old.freeChlorine) * 0.001 : -0.0003) * dt,
+        (hypochlorite ? (1.4 - old.freeChlorine) * 0.001 : -0.0003) * dt,
       0,
       5,
     );
+    // Held at 7.4 by both chemicals; pushed down by acid alone, up by
+    // hypochlorite alone, over hours; drifting up slowly with neither.
     const ph = clamp(
-      old.ph + (dosing ? (7.4 - old.ph) * 0.001 : 0.00006) * dt,
+      approach(
+        old.ph,
+        phTarget(hypochlorite, acid),
+        hypochlorite && acid ? 0.001 : hypochlorite || acid ? 0.0001 : 0.00003,
+        dt,
+      ),
       6,
       9,
     );

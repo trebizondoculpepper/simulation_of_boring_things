@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   SHELL_ROOMS,
+  SHELL_WALL,
   shellDoorPlace,
+  shellOpening,
   shellSolids,
+  throughShellDoor,
   WET_HALL,
   wetHallFloorAt,
   wetHallRails,
@@ -11,6 +14,14 @@ import {
 } from './shell-rooms';
 import type { ShellRoomId } from './shell-rooms';
 import { throughDoor } from './door-joins';
+import {
+  CORRIDOR_SECTION,
+  galleryOfficeDoor,
+  galleryPlan,
+  POOL_HALLS,
+  throughGalleryOfficeDoor,
+} from './pool-halls';
+import { PLANT_DOORWAY } from './plant-rooms';
 
 const blockedBy = (
   solids: ReturnType<typeof shellSolids>,
@@ -62,6 +73,70 @@ describe('the shell rooms', () => {
       expect(back.x).toBeCloseTo(pose.x);
       expect(back.z).toBeCloseTo(pose.z);
     }
+  });
+});
+
+describe('the engineer’s office’s door to the underwater gallery', () => {
+  const office = SHELL_ROOMS.engineers_office;
+  const door = office.doors.find((d) => d.to === 'pool_02_gallery')!;
+  const plan = galleryPlan(POOL_HALLS.pool_02)!;
+  const way = galleryOfficeDoor(plan);
+  const here = shellDoorPlace(office, door).frame;
+  const there = way.frame;
+
+  it('is a single leaf in the middle of the office’s east wall, as wide as the gallery’s', () => {
+    expect(door.wall).toBe('east');
+    expect(door.at).toBe(0);
+    expect(shellOpening(door)).toBe(PLANT_DOORWAY);
+    expect(shellOpening(door)).toBe(way.opening);
+    // The two rooms share the one wall: each as thick as the other.
+    expect(SHELL_WALL).toBe(CORRIDOR_SECTION.wall);
+    // Its frame on the wall's outer face, facing west into the office.
+    expect(here.x).toBeCloseTo(office.w / 2 + SHELL_WALL);
+    expect(here.z).toBeCloseTo(0);
+    expect(here.yaw).toBeCloseTo(-Math.PI / 2);
+    // Still entered first from the main corridor.
+    expect(office.doors[0].to).toBe('main_corridor');
+  });
+
+  it('leads from the office into the gallery’s middle, facing the windows', () => {
+    // Walking east through the doorway, just past the office's wall.
+    const pose = { x: here.x + 0.3, z: 0, yaw: Math.PI / 2, y: 1.6 };
+    expect(throughShellDoor(office, door, pose.x, pose.z)).toBe(true);
+    const inside = throughDoor(here, there, pose);
+    // In the gallery, by its middle, facing south to the windows.
+    expect(inside.x).toBeCloseTo(way.x);
+    expect(inside.z).toBeGreaterThan(way.line);
+    expect(inside.z).toBeLessThan(plan.z + CORRIDOR_SECTION.width / 2);
+    expect(Math.sin(inside.yaw)).toBeCloseTo(0);
+    // Forward is (sin yaw, −cos yaw): south, +z.
+    expect(-Math.cos(inside.yaw)).toBeCloseTo(1);
+    // Down at the gallery's floor.
+    expect(inside.y).toBeCloseTo(1.6 + plan.floor);
+    // Not straight back out again.
+    expect(throughGalleryOfficeDoor(way, inside.x, inside.z)).toBe(false);
+  });
+
+  it('leads from the gallery back into the office, facing into it', () => {
+    // Walking north through the doorway, just past the gallery's wall.
+    const pose = {
+      x: way.x,
+      z: way.line - way.wall - 0.1,
+      yaw: 0,
+      y: plan.floor + 1.6,
+    };
+    expect(throughGalleryOfficeDoor(way, pose.x, pose.z)).toBe(true);
+    const inside = throughDoor(there, here, pose);
+    expect(Math.abs(inside.x)).toBeLessThan(office.w / 2);
+    expect(inside.z).toBeCloseTo(0);
+    // Facing west, into the office, on its floor.
+    expect(Math.sin(inside.yaw)).toBeCloseTo(-1);
+    expect(inside.y).toBeCloseTo(1.6);
+    expect(throughShellDoor(office, door, inside.x, inside.z)).toBe(false);
+    // And back again to where it was.
+    const back = throughDoor(here, there, inside);
+    expect(back.x).toBeCloseTo(pose.x);
+    expect(back.z).toBeCloseTo(pose.z);
   });
 });
 

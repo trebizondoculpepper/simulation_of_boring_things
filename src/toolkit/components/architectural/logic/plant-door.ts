@@ -4,10 +4,8 @@
  * self-closing, by an overhead closer, and opens from either side: the
  * card reader beside it is there to be seen, not worked. Pure.
  *
- * The closer, as such closers are adjusted: the leaf is held open while
- * someone is passing, then swings shut at the sweep speed, slows over the
- * last few degrees, and is pulled through them into its latch by the
- * latch action, with the latch's click.
+ * The leaf is held open while someone is passing, then eases into its
+ * closing sweep and slows again before the latch clicks shut.
  */
 
 /** The doorset: a standard UK fire-door leaf, and its steel frame. */
@@ -17,10 +15,8 @@ export const PLANT_DOOR = {
   /** How far it opens, radians (90 degrees), and how long it is held there. */
   open: Math.PI / 2,
   held: 2.5,
-  /** The closer's sweep, radians a second; its latch action below `latchFrom`. */
+  /** Average closing speed, radians a second. */
   sweep: 0.35,
-  latch: 1.4,
-  latchFrom: 0.17,
   /** How fast it opens when pulled or pushed, radians a second. */
   opening: 2.2,
 } as const;
@@ -33,6 +29,9 @@ export interface PlantDoorState {
   phase: 'shut' | 'opening' | 'held' | 'closing';
   /** Seconds left of the current phase's hold. */
   timer: number;
+  /** Angle and elapsed time when this closing sweep began. */
+  closeFrom: number;
+  closeElapsed: number;
 }
 
 export const initialPlantDoor = (): PlantDoorState => ({
@@ -40,6 +39,8 @@ export const initialPlantDoor = (): PlantDoorState => ({
   latched: true,
   phase: 'shut',
   timer: 0,
+  closeFrom: 0,
+  closeElapsed: 0,
 });
 
 /** The handle worked, from either side: it opens, or, open, is caught and held again. */
@@ -48,6 +49,8 @@ export const workDoor = (s: PlantDoorState): PlantDoorState => ({
   latched: false,
   phase: 'opening',
   timer: 0,
+  closeFrom: 0,
+  closeElapsed: 0,
 });
 
 /** The door `dt` seconds on, and whether it latched shut in that time. */
@@ -71,18 +74,30 @@ export function stepPlantDoor(
   if (s.phase === 'held') {
     const timer = s.timer - dt;
     return {
-      state: { ...s, timer, phase: timer <= 0 ? 'closing' : 'held' },
+      state: {
+        ...s,
+        timer,
+        phase: timer <= 0 ? 'closing' : 'held',
+        closeFrom: timer <= 0 ? s.angle : s.closeFrom,
+        closeElapsed: timer <= 0 ? 0 : s.closeElapsed,
+      },
       latchedNow: false,
     };
   }
   if (s.phase === 'closing') {
-    const speed = s.angle > D.latchFrom ? D.sweep : D.latch;
-    const angle = Math.max(0, s.angle - speed * dt);
+    const from = s.closeFrom || s.angle;
+    const elapsed = s.closeElapsed + Math.max(0, dt);
+    const duration = Math.max(0.4, from / D.sweep);
+    const t = Math.min(1, elapsed / duration);
+    const eased = t * t * (3 - 2 * t);
+    const angle = from * (1 - eased);
     const shut = angle <= 0;
     return {
       state: {
         ...s,
         angle,
+        closeFrom: from,
+        closeElapsed: elapsed,
         latched: shut,
         phase: shut ? 'shut' : 'closing',
       },
@@ -98,5 +113,12 @@ export function stepPlantDoor(
  */
 export function holdDoorOpen(s: PlantDoorState): PlantDoorState {
   if (s.angle <= 0.05 || s.phase === 'opening') return s;
-  return { ...s, latched: false, phase: 'held', timer: PLANT_DOOR.held };
+  return {
+    ...s,
+    latched: false,
+    phase: 'held',
+    timer: PLANT_DOOR.held,
+    closeFrom: 0,
+    closeElapsed: 0,
+  };
 }

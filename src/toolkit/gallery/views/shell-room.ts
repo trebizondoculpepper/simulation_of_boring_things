@@ -14,6 +14,10 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createServiceCeiling } from '../../components/site-dressing/views/service-ceiling';
 import { createIndustrialAccess } from '../../components/architectural/views/industrial-access';
 import {
+  addConcreteLintel,
+  CONCRETE_LINTEL,
+} from '../../components/architectural/views/concrete-lintel';
+import {
   addWallBatten,
   createWallBattenMaterials,
 } from '../../../scene/wall-batten';
@@ -22,14 +26,18 @@ import {
   equipmentDoors,
 } from '../../components/architectural/parts/equipment-doors';
 import type { EquipmentDoorsPart } from '../../components/architectural/parts/equipment-doors';
+import {
+  PLANT_DOOR_OPENING,
+  plantRoomDoor,
+} from '../../components/architectural/parts/plant-door';
 import type { DoorWarningSelection } from '../../components/architectural/logic/door-warnings';
 import { createBreezeBlockTextures } from '../../../scene/breeze-block-texture';
 import { createWarehouseConcreteFloor } from '../../../scene/warehouse-concrete-floor';
 import { createPs1Material } from '../../components/core/parts/ps1-material';
 import {
-  SHELL_OPENING,
   SHELL_WALL,
   shellDoorPlace,
+  shellOpening,
   shellWallPieces,
   WET_HALL,
   WET_HALL_DOORS,
@@ -51,6 +59,22 @@ export function warningsFor(room: string): DoorWarningSelection {
   if (room === 'control_room' || room === 'engineers_office')
     return ['authorised'];
   return 'plant';
+}
+
+/**
+ * A single leaf where a pair would not fit the room beyond: the plant room
+ * door's doorset (`plant-door.ts`), pulled open from in here as the pairs
+ * are, its nameplate the room beyond's name, its card reader on this side;
+ * worked as a pair is.
+ */
+function singleDoor(kit: PanelKit, to: RoomId): EquipmentDoorsPart {
+  const door = plantRoomDoor(kit, [], signTo(to).replace(/^.* · /, ''));
+  return {
+    ...door,
+    open: () => door.angle() > 0.05,
+    showLeaves: (on) => door.showLeaf(on),
+    readers: [door.reader],
+  };
 }
 
 /** What a door's sign says: the room beyond's name. */
@@ -147,6 +171,9 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
   const hw = v.w / 2;
   const hd = v.d / 2;
   const openingH = EQUIPMENT_DOORS.h + 2 * EQUIPMENT_DOORS.frame;
+  /** A doorway's head: a pair's, or a single leaf's. */
+  const headOf = (d: ShellDoor) =>
+    d.kind === 'single' ? PLANT_DOOR_OPENING.h : openingH;
   // The floor, and the roof.
   box(concrete, v.w, 0.1, v.d, 0, v.floor - 0.05, 0);
   wallBox(v.w + 2 * t, 0.3, v.d + 2 * t, 0, v.roof + 0.15, 0);
@@ -194,9 +221,19 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
       );
     }
     for (const d of v.doors.filter((d) => d.wall === wall)) {
-      const a = d.at - SHELL_OPENING / 2;
-      const b = d.at + SHELL_OPENING / 2;
-      span(a, b, openingH, v.roof);
+      const a = d.at - shellOpening(d) / 2;
+      const b = d.at + shellOpening(d) / 2;
+      span(a, b, headOf(d) + CONCRETE_LINTEL.height, v.roof);
+      addConcreteLintel(
+        group,
+        kit,
+        shellOpening(d),
+        t,
+        alongX ? d.at : at,
+        headOf(d),
+        alongX ? at : d.at,
+        alongX,
+      );
       if (v.floor < 0) {
         span(a, b, v.floor, 0);
         span(a, b, v.floor, v.floor + 1.2, dado, 0.01, face);
@@ -210,7 +247,10 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
   const doors = v.doors.map((door) => {
     const p = shellDoorPlace(v, door);
     const yaw = Math.atan2(p.into[0], p.into[1]);
-    const part = equipmentDoors(kit, signTo(door.to), warningsFor(door.to));
+    const part =
+      door.kind === 'single'
+        ? singleDoor(kit, door.to)
+        : equipmentDoors(kit, signTo(door.to), warningsFor(door.to));
     part.object.position.set(p.inner.x, 0, p.inner.z);
     part.object.rotation.y = yaw;
     group.add(part.object);
@@ -218,11 +258,12 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
     lobby.position.set(p.outer.x, 0, p.outer.z);
     lobby.rotation.y = yaw;
     group.add(lobby);
-    box(dark, SHELL_OPENING, openingH, 0.05, 0, openingH / 2, -0.9, lobby);
+    const h = headOf(door);
+    box(dark, shellOpening(door), h, 0.05, 0, h / 2, -0.9, lobby);
     const sign = card(1.8, 0.24, [signTo(door.to)]);
     sign.position.set(
       p.inner.x + p.into[0] * 0.01,
-      openingH + 0.35,
+      h + 0.35,
       p.inner.z + p.into[1] * 0.01,
     );
     sign.rotation.y = yaw;

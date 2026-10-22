@@ -21,6 +21,9 @@ const inside = (f: Footprint, x: number, z: number, by = 0) =>
  * machine (but a walkable bay) and of the solid floor, by its radius; and
  * which of those cells it can reach from the room's way in.
  */
+/** How far from where one stands a hand reaches, in plan: shoulder and arm. */
+const REACH_ARM = 0.8;
+
 function walkable(
   box: RoomBox,
   placed: Placed[],
@@ -152,6 +155,29 @@ describe.each(EQUIPPED_ROOMS)('%s', (room) => {
       ).toBe(true);
     for (const p of placed)
       expect(reaches(p.access), `${p.item.label} out of reach`).toBe(true);
+  });
+
+  it('puts every valve within an arm’s reach of somewhere to stand', () => {
+    const { box, placed } = layout;
+    const reaches = walkable(box, placed, [
+      ...pipeObstacles(roomPipes(room)),
+      ...roomIsolators(room).stands.map(standFootprint),
+    ]);
+    // Standing (the middle of one's body) within REACH_ARM of it in plan:
+    // a lever, or a chain wheel's chain, comes to hand.
+    const out = roomPipes(room)
+      .flatMap((r) => r.valves)
+      .filter(
+        (v) =>
+          !reaches({
+            minX: v.at[0] - REACH_ARM,
+            maxX: v.at[0] + REACH_ARM,
+            minZ: v.at[2] - REACH_ARM,
+            maxZ: v.at[2] + REACH_ARM,
+          }),
+      )
+      .map((v) => `${v.name} at ${v.at.map((n) => n.toFixed(2)).join(', ')}`);
+    expect(out, 'out of reach').toEqual([]);
   });
 
   it('hangs every panel within reach, between knee and head height', () => {

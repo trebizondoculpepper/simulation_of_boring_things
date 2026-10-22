@@ -43,10 +43,10 @@ import { doorReaders } from '../../components/architectural/logic/card-reader';
 import { enterDevRoom } from '../logic/dev-room-links';
 import type { RoomId } from '../logic/dev-room-links';
 import {
-  SHELL_OPENING,
   SHELL_ROOMS,
   shellDoorPlace,
   shellDoorway,
+  shellOpening,
   shellSolids,
   throughShellDoor,
   wetHallFloorAt,
@@ -209,7 +209,7 @@ function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
     swingTo: (a) => w.part.swingTo(a),
     opening: () => {
       const { outer, into, alongX } = w.place;
-      const half = SHELL_OPENING / 2;
+      const half = shellOpening(w.door) / 2;
       const x0 = outer.x - into[0] * 2;
       const z0 = outer.z - into[1] * 2;
       const x1 = outer.x + into[0] * 0.4;

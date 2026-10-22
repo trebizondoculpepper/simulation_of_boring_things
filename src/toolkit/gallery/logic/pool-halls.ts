@@ -584,8 +584,8 @@ export function archSpan(a: { z0: number; z1: number }) {
   return { left: a.z0 + 1, right: a.z1 - 1 };
 }
 
-/** The corridor's width and height (`components/architectural/views/corridor.ts`). */
-export const CORRIDOR_SECTION = { width: 1.2, height: 2.5 } as const;
+/** The corridor's width, height and walls' thickness (`components/architectural/views/corridor.ts`). */
+export const CORRIDOR_SECTION = { width: 1.2, height: 2.5, wall: 0.2 } as const;
 
 /**
  * Where a hall's underwater gallery runs: along its first basin's north
@@ -614,6 +614,59 @@ export function galleryPlan(s: PoolHallSpec) {
     windowY: y,
     r: g.r,
   };
+}
+
+/**
+ * The door from a gallery to the engineer's office (`shell-rooms.ts`): in
+ * the middle of its length, in its north wall, opposite the windows; a
+ * single leaf, the plant room door's doorset, its opening to the floor.
+ * `line` is the wall's face in the gallery, `wall` its thickness behind
+ * it. Its frame for `door-joins.ts` is on that face, +z into the gallery,
+ * at the gallery's floor: there it meets the office's frame, on its east
+ * wall's outer face, so the two rooms share the one wall. `leaf` is the
+ * leaf's place across the wall, `beyond` a stop just past it
+ * (`doorway.ts`); `pieces` are the north wall's runs either side of it.
+ */
+export function galleryOfficeDoor(g: {
+  x0: number;
+  x1: number;
+  z: number;
+  floor: number;
+}) {
+  const x = (g.x0 + g.x1) / 2;
+  const line = g.z - CORRIDOR_SECTION.width / 2;
+  const wall = CORRIDOR_SECTION.wall;
+  const half = PLANT_DOORWAY / 2;
+  const leaf: Footprint = {
+    minX: x - half,
+    maxX: x + half,
+    minZ: line - wall,
+    maxZ: line,
+  };
+  return {
+    x,
+    line,
+    wall,
+    opening: PLANT_DOORWAY,
+    frame: { x, z: line, y: g.floor, yaw: 0 },
+    leaf,
+    beyond: { ...leaf, minZ: leaf.minZ - 0.3, maxZ: leaf.maxZ - 0.3 },
+    pieces: [
+      [g.x0, x - half],
+      [x + half, g.x1],
+    ] as [number, number][],
+  };
+}
+
+/** Whether (x, z) has gone out of the gallery through its office door: past the wall, within the opening. */
+export function throughGalleryOfficeDoor(
+  door: ReturnType<typeof galleryOfficeDoor>,
+  x: number,
+  z: number,
+) {
+  return (
+    z < door.line - door.wall - 0.05 && Math.abs(x - door.x) < door.opening / 2
+  );
 }
 
 /** Each lane's middle across a racing basin, north to south. */

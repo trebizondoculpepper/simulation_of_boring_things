@@ -18,10 +18,17 @@ import type {
   ServiceRoom,
   Utility,
 } from './plant/services';
-import { newPools, stepPools } from './plant/pools';
+import { dosedVolumes, newPools, stepPools } from './plant/pools';
+import {
+  deliver,
+  inStock,
+  newChemicalStores,
+  stepChemicalStores,
+} from './plant/chemicals';
+import type { Chemical, ChemicalStores } from './plant/chemicals';
 import type { PoolsState } from './plant/pools';
 
-export const WORLD_VERSION = 4;
+export const WORLD_VERSION = 5;
 
 export interface World {
   /** Seconds the world has run. */
@@ -35,6 +42,8 @@ export interface World {
   };
   plant: PlantServices;
   pools: PoolsState;
+  /** The dosing chemicals left in their stores, litres. */
+  chemicals: ChemicalStores;
 }
 
 export function newWorld(): World {
@@ -43,6 +52,7 @@ export function newWorld(): World {
     demo: { on: false, presses: 0 },
     plant: newPlantServices(),
     pools: newPools(),
+    chemicals: newChemicalStores(),
   };
 }
 
@@ -52,7 +62,8 @@ export type WorldAction =
   | { type: 'demo/reset' }
   | { type: 'plant/source'; utility: Utility; on: boolean }
   | { type: 'plant/feeder'; room: ServiceRoom; on: boolean }
-  | { type: 'plant/isolator'; name: IsolatorName; on: boolean };
+  | { type: 'plant/isolator'; name: IsolatorName; on: boolean }
+  | { type: 'plant/delivery'; chemical: Chemical; litres: number };
 
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
@@ -89,6 +100,11 @@ export function applyAction(world: World, action: WorldAction): World {
               isolators: { ...world.plant.isolators, [action.name]: action.on },
             },
           };
+    case 'plant/delivery':
+      return {
+        ...world,
+        chemicals: deliver(world.chemicals, action.chemical, action.litres),
+      };
     case 'plant/feeder':
       return world.plant.feeders[action.room] === action.on
         ? world
@@ -104,10 +120,21 @@ export function applyAction(world: World, action: WorldAction): World {
 
 /** The world `delta` seconds on. */
 export function stepWorld(world: World, delta: number): World {
+  // What the stores have, as the step begins; the pools dose from it, and
+  // the stores give what was dosed.
+  const stock = {
+    hypochlorite: inStock(world.chemicals, 'hypochlorite'),
+    acid: inStock(world.chemicals, 'acid'),
+  };
   return {
     ...world,
     time: world.time + delta,
-    pools: stepPools(world.pools, world.plant, delta, world.time),
+    pools: stepPools(world.pools, world.plant, delta, world.time, stock),
+    chemicals: stepChemicalStores(
+      world.chemicals,
+      dosedVolumes(world.pools, world.plant, stock),
+      delta,
+    ),
   };
 }
 

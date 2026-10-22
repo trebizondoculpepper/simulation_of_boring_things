@@ -136,6 +136,8 @@ export function equipmentDoors(
                 latched: false,
                 phase: 'closing',
                 timer: 0,
+                closeFrom: open,
+                closeElapsed: 0,
               }
             : initialPlantDoor();
       },

@@ -14,13 +14,15 @@ const cascades = layout.placed.filter((p) =>
   p.item.key.startsWith('boiler-cascade'),
 );
 
+/** A pipe's outside radius, its lagging included. */
+const pad = (r: PipeRun) => r.od / 2 + (r.kind === 'lagged-heating' ? 0.04 : 0);
 /** Each straight length of a run, as a box its pipe's thickness round it. */
 const boxes = (r: PipeRun) =>
   r.points.slice(1).map((b, i) => {
     const a = r.points[i];
     return [0, 1, 2].map((k) => [
-      Math.min(a[k], b[k]) - r.od / 2,
-      Math.max(a[k], b[k]) + r.od / 2,
+      Math.min(a[k], b[k]) - pad(r),
+      Math.max(a[k], b[k]) + pad(r),
     ]);
   });
 const overlap = (p: number[][], q: number[][]) =>
@@ -88,18 +90,19 @@ describe('the boiler house’s flues and gas', () => {
       }
   });
 
-  it('keeps everything overhead, but where it comes down onto a machine', () => {
-    // The flue spigots and gas cocks stand on the boilers' tops, and the
-    // gas train's outlet on its frame: low there, but over the machine.
+  it('keeps everything overhead, but where it comes down to a machine', () => {
+    // The flue spigots and gas cocks stand on the boilers' tops, the gas
+    // train's outlet on its frame, and the heating comes down to the
+    // header, the circulator and the calorifier, beside them.
     const machines = layout.placed.map((p) => p.footprint);
     for (const o of pipeObstacles(runs.filter((r) => r.name !== 'Gas service')))
       expect(
         machines.some(
           (m) =>
-            o.minX >= m.minX - 0.2 &&
-            o.maxX <= m.maxX + 0.2 &&
-            o.minZ >= m.minZ - 0.2 &&
-            o.maxZ <= m.maxZ + 0.2,
+            o.minX >= m.minX - 0.8 &&
+            o.maxX <= m.maxX + 0.8 &&
+            o.minZ >= m.minZ - 0.8 &&
+            o.maxZ <= m.maxZ + 0.8,
         ),
         JSON.stringify(o),
       ).toBe(true);

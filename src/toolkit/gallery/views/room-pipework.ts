@@ -50,6 +50,7 @@ const MARKED: Record<PipeRun['service'], PipeService | null> = {
   sample: 'pool water',
   gas: 'gas',
   flue: null,
+  'hot water': 'pool water',
 };
 
 /** The nominal bore nearest a pipe's outside diameter. */

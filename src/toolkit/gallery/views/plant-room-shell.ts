@@ -15,6 +15,10 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createServiceCeiling } from '../../components/site-dressing/views/service-ceiling';
 import { createIndustrialAccess } from '../../components/architectural/views/industrial-access';
 import {
+  addConcreteLintel,
+  CONCRETE_LINTEL,
+} from '../../components/architectural/views/concrete-lintel';
+import {
   addWallBatten,
   createWallBattenMaterials,
 } from '../../../scene/wall-batten';
@@ -141,7 +145,9 @@ export function createPlantRoomShell(
     const right = x1 - (doorX + doorW / 2);
     wallBox(left, height, t, x0 + left / 2, (floor + roof) / 2, z);
     wallBox(right, height, t, x1 - right / 2, (floor + roof) / 2, z);
-    wallBox(doorW, roof - doorTop, t, doorX, (doorTop + roof) / 2, z);
+    const headerBottom = doorTop + CONCRETE_LINTEL.height;
+    wallBox(doorW, roof - headerBottom, t, doorX, (headerBottom + roof) / 2, z);
+    addConcreteLintel(group, kit, doorW, t, doorX, doorTop, z);
     if (doorBottom > floor)
       wallBox(doorW, doorBottom - floor, t, doorX, (floor + doorBottom) / 2, z);
   };

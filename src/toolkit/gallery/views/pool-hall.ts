@@ -75,6 +75,7 @@ import {
   archSpan,
   CORRIDOR_SECTION,
   freeOutline,
+  galleryOfficeDoor,
   galleryPlan,
   hallFloorAt,
   insideOutline,
@@ -1352,9 +1353,24 @@ export function createPoolHall(
 
   // The underwater viewing gallery, under the north deck: a corridor of
   // the game's section, its south wall the pool's, windowed; its ends
-  // closed until corridors join it.
+  // closed until corridors join it; in the middle of its north wall, the
+  // doorway to the engineer's office, a dark lobby beyond it until the
+  // office is seen through it.
   if (gallery) {
+    const office = galleryOfficeDoor(gallery);
+    add(
+      new Mesh(
+        new BoxGeometry(office.opening, PLANT_DOOR_HEAD, 0.05),
+        new MeshBasicMaterial({ color: '#0b0d0d' }),
+      ),
+      'office door lobby',
+    ).position.set(
+      office.x,
+      gallery.floor + PLANT_DOOR_HEAD / 2,
+      office.line - office.wall - 0.6,
+    );
     const corridor = createCorridor(s.w, dry, {
+      doorways: [{ at: office.x + hx, w: office.opening, h: PLANT_DOOR_HEAD }],
       windows: {
         // The pool's side of the windowed wall is the pool's wall, wet.
         farFace: tile,

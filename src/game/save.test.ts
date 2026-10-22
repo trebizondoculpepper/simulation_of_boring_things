@@ -43,6 +43,7 @@ describe('a save', () => {
       demo: { on: true, presses: 0 },
       plant: newWorld().plant,
       pools: newWorld().pools,
+      chemicals: newWorld().chemicals,
     });
   });
 

@@ -1,6 +1,7 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
 import type { RoomId } from './dev-room-links';
 import { MAIN_CORRIDOR } from './main-corridor';
+import { PLANT_DOORWAY } from './plant-rooms';
 
 /**
  * The main plant's rooms off the main corridor (`main-corridor.ts`), and
@@ -20,6 +21,12 @@ export interface ShellDoor {
   /** Along the wall from the room's middle: x for the north and south walls, z for the others. */
   at: number;
   to: RoomId;
+  /**
+   * What hangs in it: a pair of equipment doors (the default), or a single
+   * leaf, the plant room door's doorset (`plant-door.ts`), where a pair
+   * would not fit the room beyond (the underwater gallery, 2.5 m tall).
+   */
+  kind?: 'pair' | 'single';
 }
 
 export interface ShellSpec {
@@ -129,7 +136,14 @@ export const SHELL_ROOMS = {
     d: 6,
     height: 7,
     ceiling: 'services',
-    doors: [corridor()],
+    // Its east door, a single leaf, into the middle of the Olympic pool's
+    // underwater gallery, opposite its windows: the pool loop's gallery
+    // makes no three-dimensional sense, so the doorway's joint alone
+    // makes the two rooms neighbours.
+    doors: [
+      corridor(),
+      { wall: 'east', at: 0, to: 'pool_02_gallery', kind: 'single' },
+    ],
     note: 'the engineer’s desk, filing and spares',
   },
 } as const satisfies Record<string, ShellSpec>;
@@ -140,6 +154,10 @@ export type ShellRoomId = keyof typeof SHELL_ROOMS;
 export const SHELL_WALL = MAIN_CORRIDOR.wall;
 /** Each doorway's structural opening: a pair of equipment doors. */
 export const SHELL_OPENING = MAIN_CORRIDOR.opening;
+
+/** A doorway's structural opening, by what hangs in it. */
+export const shellOpening = (door: { kind?: 'pair' | 'single' }) =>
+  door.kind === 'single' ? PLANT_DOORWAY : SHELL_OPENING;
 
 /** A rectangle's walls: each's line, extent, and the way into the room. */
 function rectWalls(w: number, d: number) {
@@ -191,27 +209,28 @@ function across(
     : { minX: p, maxX: q, minZ: a, maxZ: b };
 }
 
+/** A doorway's place on its wall, and what hangs in it. */
+type ShellDoorway = { wall: ShellWall; at: number; kind?: 'pair' | 'single' };
+
 /** A wall's solid pieces along it, split round its doorways, its ends closing the corners. */
 export function shellWallPieces(
   room: {
     w: number;
     d: number;
-    doors: readonly { wall: ShellWall; at: number }[];
+    doors: readonly ShellDoorway[];
   },
   wall: ShellWall,
-  opening = SHELL_OPENING,
 ): [number, number][] {
   const { half } = rectWalls(room.w, room.d)[wall];
   const t = SHELL_WALL;
   const cuts = room.doors
     .filter((d) => d.wall === wall)
-    .map((d) => d.at)
-    .sort((a, b) => a - b);
+    .sort((a, b) => a.at - b.at);
   let start = -half - t;
   const pieces: [number, number][] = [];
-  for (const at of cuts) {
-    pieces.push([start, at - opening / 2]);
-    start = at + opening / 2;
+  for (const d of cuts) {
+    pieces.push([start, d.at - shellOpening(d) / 2]);
+    start = d.at + shellOpening(d) / 2;
   }
   pieces.push([start, half + t]);
   return pieces;
@@ -221,7 +240,7 @@ export function shellWallPieces(
 export function shellSolids(room: {
   w: number;
   d: number;
-  doors: readonly { wall: ShellWall; at: number }[];
+  doors: readonly ShellDoorway[];
 }): Footprint[] {
   return (['north', 'east', 'south', 'west'] as const).flatMap((wall) =>
     shellWallPieces(room, wall).map(([a, b]) => across(room, wall, a, b)),
@@ -234,13 +253,13 @@ export function shellSolids(room: {
  */
 export function shellDoorway(
   room: { w: number; d: number },
-  door: { wall: ShellWall; at: number },
+  door: ShellDoorway,
 ) {
   const leaf = across(
     room,
     door.wall,
-    door.at - SHELL_OPENING / 2,
-    door.at + SHELL_OPENING / 2,
+    door.at - shellOpening(door) / 2,
+    door.at + shellOpening(door) / 2,
   );
   const { into } = shellDoorPlace(room, door);
   const out = 0.3;
@@ -258,14 +277,14 @@ export function shellDoorway(
 /** Whether (x, z) has gone out through a doorway: past its outer face, within its opening. */
 export function throughShellDoor(
   room: { w: number; d: number },
-  door: { wall: ShellWall; at: number },
+  door: ShellDoorway,
   x: number,
   z: number,
 ) {
   const { outer, into, alongX } = shellDoorPlace(room, door);
   const beyond = (outer.x - x) * into[0] + (outer.z - z) * into[1];
   const along = alongX ? Math.abs(x - outer.x) : Math.abs(z - outer.z);
-  return beyond > 0.05 && along < SHELL_OPENING / 2;
+  return beyond > 0.05 && along < shellOpening(door) / 2;
 }
 
 // ---- The wet hall ----------------------------------------------------------

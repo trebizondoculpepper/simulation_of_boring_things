@@ -50,10 +50,13 @@ import { worldStore } from '../../save/world-store';
 import { serviceAvailable } from '../../../game/plant/services';
 import { JACUZZI_EXHIBIT, JACUZZI_PLATE_EXHIBIT } from './plant/pool-amenities';
 import { plantRoomDoor } from '../../components/architectural/parts/plant-door';
+import { cardReader } from '../../components/architectural/parts/card-reader';
 import { doorwayBlock, PLANT_DOORWAY, PLANT_SILL } from '../logic/plant-rooms';
 import {
+  galleryOfficeDoor,
   galleryPlan,
   hallFloorAt,
+  throughGalleryOfficeDoor,
   hallSolids,
   POOL_HALLS,
 } from '../logic/pool-halls';
@@ -69,8 +72,11 @@ export function startPoolHallRoom(
   { inGallery = false }: { inGallery?: boolean } = {},
 ) {
   const spec = POOL_HALLS[id];
-  // In the underwater gallery (pool_02_gallery) the walker is kept to it.
+  // In the underwater gallery (pool_02_gallery) the walker is kept to it,
+  // but for the door in the middle of its north wall to the engineer's
+  // office.
   const gallery = inGallery ? galleryPlan(spec) : null;
+  const officeWay = gallery ? galleryOfficeDoor(gallery) : null;
   const metre = METRE;
   const scene = new Scene();
   scene.background = null;
@@ -208,13 +214,14 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   const walls = [
     ...(gallery
       ? [
-          // The gallery's long walls; its ends open onto the corridors.
-          {
-            minX: gallery.x0,
-            maxX: gallery.x1,
+          // The gallery's long walls; its ends open onto the corridors,
+          // its north wall onto the office's door.
+          ...officeWay!.pieces.map(([minX, maxX]) => ({
+            minX,
+            maxX,
             minZ: gallery.z - half - 1,
             maxZ: gallery.z - half,
-          },
+          })),
           {
             minX: gallery.x0,
             maxX: gallery.x1,
@@ -265,6 +272,43 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
           };
         })()
       : null;
+  // The door to the engineer's office (`shell-rooms.ts`): the same single
+  // leaf as its side of the doorway, pulled open from the office, so here
+  // its push side, at the wall's far face, turned toward the office; a
+  // card reader on this side of the wall, by its latch.
+  const officeDoor = officeWay
+    ? plantRoomDoor(poolsideKit, [], 'UNDERWATER GALLERY')
+    : null;
+  const officeReader = officeWay ? cardReader(poolsideKit) : null;
+  if (gallery && officeWay && officeDoor && officeReader) {
+    officeDoor.object.position.set(
+      officeWay.x,
+      gallery.floor,
+      officeWay.line - officeWay.wall,
+    );
+    officeDoor.object.rotation.y = Math.PI;
+    // Its push side's shoe covering warning is for those going poolside
+    // from a plant room: not for this door.
+    const shoes = officeDoor.object.getObjectByName(
+      'plant side shoe covering warning',
+    );
+    if (shoes) shoes.visible = false;
+    rooms.add(officeDoor.object);
+    officeReader.object.position.set(
+      officeWay.x - (officeWay.opening / 2 + 0.16),
+      gallery.floor + 1.1,
+      officeWay.line,
+    );
+    rooms.add(officeReader.object);
+  }
+  const inOfficeWay = () =>
+    Boolean(officeWay) &&
+    overlaps(
+      officeWay!.leaf,
+      walk.walker.x / metre,
+      walk.walker.z / metre,
+      WALKER_RADIUS_METRES,
+    );
   const inPlantWay = () =>
     Boolean(plantWay) &&
     overlaps(
@@ -282,6 +326,10 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         ? ([[spaPanel.object, spaPanel.parts.uses]] as const)
         : []),
       ...(plantDoor ? ([[plantDoor.object, plantDoor.uses]] as const) : []),
+      ...(officeDoor ? ([[officeDoor.object, officeDoor.uses]] as const) : []),
+      ...(officeReader
+        ? ([[officeReader.object, officeReader.uses]] as const)
+        : []),
     ]) {
       const hit = raycaster.intersectObject(object, true)[0];
       if (!hit || hit.distance > 3 * metre) continue;
@@ -311,11 +359,12 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       metre,
     // The plant room doorway: its leaf while shut, but never where the
     // walker stands; a stop just beyond until the plant room is seen.
-    solids: () =>
-      plantDoor && plantWay
-        ? [
-            ...walls,
-            ...doorwayStops(
+    // So too the office's doorway.
+    solids: () => [
+      ...walls,
+      ...[
+        ...(plantDoor && plantWay
+          ? doorwayStops(
               {
                 inside: inPlantWay(),
                 shut: plantDoor.angle() < 0.6,
@@ -323,14 +372,26 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
               },
               plantWay.leaf,
               plantWay.beyond,
-            ).map((f) => ({
-              minX: f.minX * metre,
-              maxX: f.maxX * metre,
-              minZ: f.minZ * metre,
-              maxZ: f.maxZ * metre,
-            })),
-          ]
-        : walls,
+            )
+          : []),
+        ...(officeDoor && officeWay
+          ? doorwayStops(
+              {
+                inside: inOfficeWay(),
+                shut: officeDoor.angle() < 0.6,
+                seen: officeSeen,
+              },
+              officeWay.leaf,
+              officeWay.beyond,
+            )
+          : []),
+      ].map((f) => ({
+        minX: f.minX * metre,
+        maxX: f.maxX * metre,
+        minZ: f.minZ * metre,
+        maxZ: f.maxZ * metre,
+      })),
+    ],
     use: useSpaPanel,
   });
   const resize = () => {
@@ -400,6 +461,13 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       }
     : null;
   const lobby = rooms.getObjectByName('plant door lobby');
+  // The office's door, as a doorway the app sees through, as the plant
+  // room door is: its frame on the wall's face here, at the gallery's
+  // floor, where the office's frame (on its east wall's outer face) meets
+  // it, so the two rooms share the one wall.
+  let officeSeen = false;
+  let leavingForOffice = false;
+  const officeLobby = rooms.getObjectByName('office door lobby');
   const withdraw = [
     ...(plantDoor && plantRoom && plantFrame && !gallery
       ? [
@@ -428,6 +496,34 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
           }),
         ]
       : []),
+    ...(officeDoor && officeWay
+      ? [
+          registerJoint('pool_02_gallery', 'engineers_office', {
+            frame: {
+              x: officeWay.frame.x * metre,
+              z: officeWay.frame.z * metre,
+              y: officeWay.frame.y * metre,
+              yaw: officeWay.frame.yaw,
+            },
+            onOpen: true,
+            open: () => officeDoor.angle() > 0.05,
+            angle: () => officeDoor.angle(),
+            swingTo: (a) => officeDoor.swingTo(a),
+            // Through the wall, and on a little way beyond it.
+            opening: () => ({
+              minX: (officeWay.x - officeWay.opening / 2) * metre,
+              maxX: (officeWay.x + officeWay.opening / 2) * metre,
+              minZ: (officeWay.line - officeWay.wall - 2) * metre,
+              maxZ: (officeWay.line + 0.4) * metre,
+            }),
+            see: (on) => {
+              officeSeen = on;
+              if (officeLobby) officeLobby.visible = !on;
+            },
+            peek: (on) => officeDoor.showLeaf(!on),
+          }),
+        ]
+      : []),
     registerJoint(loopRoom, nextRoom, joint('leaving', frameAt(leaving, true))),
     registerJoint(
       loopRoom,
@@ -436,6 +532,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     ),
   ];
   let last = 0;
+  let officeWasOpen = false;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
@@ -445,6 +542,30 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     if (spaTub && 'object' in spaTub) spaTub.update?.(delta);
     if (spaPanel && 'object' in spaPanel) spaPanel.parts?.update(delta);
     plantDoor?.update(delta);
+    officeDoor?.update(delta);
+    officeReader?.update(delta);
+    // Present a card, or open it from either side: the reader shows green.
+    if (officeDoor && officeReader) {
+      const open = officeDoor.angle() > 0.05;
+      if (open && !officeWasOpen) officeReader.doorOpened(true);
+      officeWasOpen = open;
+    }
+    if (officeDoor && inOfficeWay()) officeDoor.holdOpen();
+    // Through the office's door, once the office is seen beyond it.
+    if (
+      officeWay &&
+      officeSeen &&
+      !leavingForOffice &&
+      !walk.following &&
+      throughGalleryOfficeDoor(
+        officeWay,
+        walk.walker.x / metre,
+        walk.walker.z / metre,
+      )
+    ) {
+      leavingForOffice = true;
+      enterDevRoom('engineers_office', 'pool_02_gallery', true);
+    }
     // It never closes on someone standing in its doorway.
     if (plantDoor && inPlantWay()) plantDoor.holdOpen();
     // Through the plant room door, once its room is seen beyond it: handed
@@ -541,6 +662,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         plantDoor?.dispose();
         spaPanel.dispose?.();
       }
+      officeDoor?.dispose();
+      officeReader?.dispose();
       for (const material of poolsideKit.materials) material.dispose();
       for (const texture of poolsideKit.textures) texture.dispose();
       rooms.traverse((object) => {
@@ -556,6 +679,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       resume() {
         handing = false;
         leavingForPlant = false;
+        leavingForOffice = false;
       },
     },
   );

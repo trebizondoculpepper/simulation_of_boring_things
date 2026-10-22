@@ -116,6 +116,38 @@ describe.each(PIPED)('%s, as drawn', (room) => {
     expect(missing).toEqual([]);
   });
 
+  it('declares a port at every connection a machine’s model draws', () => {
+    // A model may draw its own connections (a boiler's spigots, named
+    // "Flow port" and so on): each must be a declared port, or nothing
+    // checks that a pipe reaches it.
+    const group = built();
+    group.updateMatrixWorld(true);
+    const declared = ports();
+    const missing: string[] = [];
+    group.children
+      .filter((o) => !isPipework(o))
+      .forEach((machine) =>
+        machine.traverse((o) => {
+          if (!(o instanceof Mesh) || !/ port$/i.test(o.name)) return;
+          // The port is at the connector's end, on its box.
+          const box = new Box3().setFromObject(o);
+          const centre = box.getCenter(new Vector3());
+          if (
+            !declared.some(
+              (p) => box.distanceToPoint(new Vector3(...p.at)) < 0.01,
+            )
+          )
+            missing.push(
+              `${o.name} at ${centre
+                .toArray()
+                .map((v) => v.toFixed(2))
+                .join(', ')}`,
+            );
+        }),
+      );
+    expect(missing).toEqual([]);
+  });
+
   it('draws a nozzle or stub on the machine at every port', () => {
     const group = built();
     const machines = group.children

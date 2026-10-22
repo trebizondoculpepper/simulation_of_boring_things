@@ -8,6 +8,8 @@ import {
   POOL_HALLS,
   sunLands,
   galleryPlan,
+  galleryOfficeDoor,
+  throughGalleryOfficeDoor,
   CORRIDOR_SECTION,
   archSpan,
   roofAt,
@@ -82,6 +84,36 @@ describe('pool halls', () => {
     // And seen standing in the corridor: within a head's height.
     expect(Math.abs(plan.floor + 1.6 - plan.windowY)).toBeLessThan(0.5);
     for (const x of plan.windows) expect(Math.abs(x)).toBeLessThan(25 - plan.r);
+  });
+
+  it('opens the gallery onto the engineer’s office in the middle of its north wall, opposite the windows', () => {
+    const plan = galleryPlan(POOL_HALLS.pool_02)!;
+    const door = galleryOfficeDoor(plan);
+    // Midway along the gallery, in its north wall (the windows are south).
+    expect(door.x).toBeCloseTo((plan.x0 + plan.x1) / 2);
+    expect(door.line).toBeCloseTo(plan.z - CORRIDOR_SECTION.width / 2);
+    expect(door.leaf.maxZ).toBeCloseTo(door.line);
+    expect(door.leaf.minZ).toBeCloseTo(door.line - CORRIDOR_SECTION.wall);
+    // Between two windows, and clear of their caustics on the wall facing them.
+    for (const x of plan.windows)
+      expect(Math.abs(x - door.x)).toBeGreaterThan(door.opening / 2 + 0.85);
+    // Its frame faces into the gallery, at the gallery's floor.
+    expect(door.frame).toEqual({
+      x: door.x,
+      z: door.line,
+      y: plan.floor,
+      yaw: 0,
+    });
+    // The wall either side of it, and nowhere else open.
+    expect(door.pieces[0]).toEqual([plan.x0, door.x - door.opening / 2]);
+    expect(door.pieces[1]).toEqual([door.x + door.opening / 2, plan.x1]);
+    // Out through it only past the wall, and only within its opening.
+    expect(throughGalleryOfficeDoor(door, door.x, plan.z)).toBe(false);
+    expect(throughGalleryOfficeDoor(door, door.x, door.line - 0.1)).toBe(false);
+    expect(throughGalleryOfficeDoor(door, door.x, door.line - 0.3)).toBe(true);
+    expect(throughGalleryOfficeDoor(door, door.x + 1, door.line - 0.3)).toBe(
+      false,
+    );
   });
 
   it('slopes the Olympic hall’s roof at 20 degrees across its short side', () => {

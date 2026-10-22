@@ -60,3 +60,38 @@ describe('the world', () => {
     expect(later.pools.pool_02.flow).toBeGreaterThan(600);
   });
 });
+
+describe('the dosing chemicals in the world', () => {
+  it('run down as the pools are dosed, and a dry acid store lets the pH rise', () => {
+    let world = newWorld();
+    world = { ...world, chemicals: { ...world.chemicals, acid: 0.001 } };
+    world = advance(world, 3600, 10);
+    expect(world.chemicals.acid).toBe(0);
+    expect(world.chemicals.hypochlorite).toBeLessThan(12000);
+    // Twelve hours with hypochlorite alone: the pH has crept up.
+    world = advance(world, 12 * 3600, 10);
+    expect(world.pools.pool_02.ph).toBeGreaterThan(7.5);
+  });
+
+  it('with the hypochlorite gone but the acid dosing, drives the pH down', () => {
+    let world = newWorld();
+    world = {
+      ...world,
+      chemicals: { ...world.chemicals, hypochlorite: 0 },
+    };
+    world = advance(world, 12 * 3600, 10);
+    expect(world.pools.pool_02.ph).toBeLessThan(7.2);
+    expect(world.pools.pool_02.freeChlorine).toBeLessThan(1.4);
+  });
+
+  it('is refilled by a delivery', () => {
+    let world = newWorld();
+    world = { ...world, chemicals: { hypochlorite: 0, acid: 0 } };
+    world = applyAction(world, {
+      type: 'plant/delivery',
+      chemical: 'acid',
+      litres: 1000,
+    });
+    expect(world.chemicals.acid).toBe(1000);
+  });
+});

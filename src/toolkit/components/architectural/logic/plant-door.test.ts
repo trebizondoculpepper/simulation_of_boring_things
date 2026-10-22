@@ -22,18 +22,35 @@ describe('the plant room door', () => {
     expect(workDoor(initialPlantDoor()).latched).toBe(false);
   });
 
-  it('opens, is held, then closes itself and latches, slowly then quickly', () => {
+  it('opens, is held, then closes itself and latches', () => {
     let s = workDoor(initialPlantDoor());
     s = run(s, 1).s;
     expect(s.angle).toBeCloseTo(PLANT_DOOR.open);
     expect(s.phase).toBe('held');
-    // Through the sweep, slowly; the last few degrees quickly.
     s = run(s, PLANT_DOOR.held + 1).s;
     expect(s.phase).toBe('closing');
-    expect(s.angle).toBeGreaterThan(PLANT_DOOR.latchFrom);
+    expect(s.angle).toBeGreaterThan(0);
     const { s: shut, latched } = run(s, 10);
     expect(latched).toBe(true);
     expect(shut).toMatchObject({ angle: 0, latched: true, phase: 'shut' });
+  });
+
+  it('accelerates after release and decelerates before closing', () => {
+    let s: PlantDoorState = {
+      ...initialPlantDoor(),
+      angle: PLANT_DOOR.open,
+      phase: 'closing' as const,
+      closeFrom: PLANT_DOOR.open,
+    };
+    const changes: number[] = [];
+    for (let i = 0; i < 90; i++) {
+      const next = stepPlantDoor(s, 0.05).state;
+      changes.push(s.angle - next.angle);
+      s = next;
+    }
+    expect(changes[0]).toBeLessThan(changes[30]);
+    expect(changes[89]).toBeLessThan(changes[30]);
+    expect(s.phase).toBe('shut');
   });
 });
 

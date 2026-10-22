@@ -45,10 +45,14 @@ import {
  * left (seen from the hall) and swings out into the hall, the way of escape
  * from the plant room. Work either handle (or the leaf) to open it; it
  * closes itself.
+ *
+ * The same doorset serves a staff room off a public space (the engineer's
+ * office off the underwater gallery): `plate` is then that room's name.
  */
 export function plantRoomDoor(
   kit: PanelKit,
   warnings: DoorWarningSelection = 'plant',
+  plate = 'PLANT ROOM',
 ): Part & {
   angle: () => number;
   /** Stand it open at `angle` (handed over from the other side of its doorway). */
@@ -89,17 +93,17 @@ export function plantRoomDoor(
   const signs = new Group();
   signs.position.set(w / 2, 0, 0.002);
   hinge.add(signs);
-  const plate = sign(0.42, 0.11, (c, cw, ch) => {
+  const nameplate = sign(0.42, 0.11, (c, cw, ch) => {
     c.fillStyle = '#f4f2ea';
     c.fillRect(0, 0, cw, ch);
     c.fillStyle = '#16191a';
     c.font = `bold ${ch * 0.55}px Arial, Helvetica, sans-serif`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    c.fillText('PLANT ROOM', cw / 2, ch * 0.54, cw * 0.92);
+    c.fillText(plate, cw / 2, ch * 0.54, cw * 0.92);
   });
-  plate.position.set(0, 1.72, 0);
-  signs.add(plate);
+  nameplate.position.set(0, 1.72, 0);
+  signs.add(nameplate);
   const stickers = createDoorWarningStickers(kit, warnings);
   stickers.position.set(0, 1.45, 0.004);
   signs.add(stickers);
@@ -210,6 +214,8 @@ export function plantRoomDoor(
               latched: false,
               phase: 'closing',
               timer: 0,
+              closeFrom: open,
+              closeElapsed: 0,
             }
           : initialPlantDoor();
     },

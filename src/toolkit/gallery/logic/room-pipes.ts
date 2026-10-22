@@ -36,7 +36,8 @@ export type Service =
   | 'hypochlorite'
   | 'sample'
   | 'gas'
-  | 'flue';
+  | 'flue'
+  | 'hot water';
 
 export interface Valve {
   /** Its middle, on its run, and the run's axis there. */
@@ -195,15 +196,6 @@ const out = (p: { at: Vec3; outward: Vec3 }, length: number): V => [
   p.at[1] + p.outward[1] * length,
   p.at[2] + p.outward[2] * length,
 ];
-const axisOf = (a: Vec3, b: Vec3): 'x' | 'y' | 'z' =>
-  Math.abs(a[0] - b[0]) > 1e-9 ? 'x' : Math.abs(a[1] - b[1]) > 1e-9 ? 'y' : 'z';
-/** A point `s` metres along from `a` toward `b`. */
-const toward = (a: Vec3, b: Vec3, s: number): Vec3 => {
-  const d = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
-  return [0, 1, 2].map(
-    (k) => a[k] + ((b[k] - a[k]) * s) / d,
-  ) as unknown as Vec3;
-};
 
 /**
  * A lockable rotary isolator beside a machine (BS 7671, for locking it off
@@ -602,6 +594,18 @@ export function poolPlantPipework(room: string): {
       ],
       service: 'pool water',
       label: `F${n} INLET`,
+      // The inlet's isolating valve, on the drop above the backwash tee,
+      // so that shut it parts the filter (and its waste) from the header:
+      // backwashing one filter never drains the others' feed.
+      valves: [
+        {
+          at: [inTee[0], inTee[1] + 0.35, inTee[2]],
+          axis: 'y',
+          name: `F${n} inlet valve`,
+          facing: dir,
+          od: inlet.od,
+        },
+      ],
     });
     tees.push({
       name: `Filter ${n} inlet tee`,
@@ -624,16 +628,6 @@ export function poolPlantPipework(room: string): {
       ],
       service: 'pool water',
       label: `F${n} INLET`,
-      valves: [
-        {
-          // Far enough out that its chain hangs clear of the vessel.
-          at: toward(inlet.at, inTee, 0.5),
-          axis: axisOf(inlet.at, inTee),
-          name: `F${n} inlet valve`,
-          facing: dir,
-          od: inlet.od,
-        },
-      ],
     });
     // The backwash waste: down from the inlet branch's corner into the channel.
     run({
@@ -695,8 +689,10 @@ export function poolPlantPipework(room: string): {
       label: `F${n} DRAIN`,
       valves: [
         {
-          at: toward(drain.at, drainEnd, 0.25),
-          axis: axisOf(drain.at, drainEnd),
+          // On the drop at the front, beside the backwash valve, where it
+          // is reached from the floor in front of the filter.
+          at: [drainEnd[0], Math.min(0.4, drain.at[1] - 0.15), drainEnd[2]],
+          axis: 'y',
           name: `F${n} drain valve`,
           facing: dir,
           od: drain.od,
@@ -1017,9 +1013,22 @@ export function poolPlantPipework(room: string): {
   }
 
   // ---- The balance tank's drain, through its valve into the floor ----------
+  // Out under the tank's ladder to just beyond it, then straight down,
+  // so it barely enters the walkway round the tank; its valve on the
+  // drop, reached from the walkway.
   {
     const d = port(tank, 'drain');
-    const s = out(d, 0.35);
+    const f = tank.footprint;
+    const [ox, , oz] = d.outward;
+    const beyond =
+      ox > 0.5
+        ? f.maxX - d.at[0]
+        : ox < -0.5
+          ? d.at[0] - f.minX
+          : oz > 0.5
+            ? f.maxZ - d.at[2]
+            : d.at[2] - f.minZ;
+    const s = out(d, Math.max(0.12, beyond + 0.1));
     run({
       name: 'Balance tank drain to waste',
       kind: 'pvc-drain',
@@ -1030,8 +1039,8 @@ export function poolPlantPipework(room: string): {
       label: 'DRAIN',
       valves: [
         {
-          at: toward(d.at, s, 0.15),
-          axis: axisOf(d.at, s),
+          at: [s[0], Math.max(0.12, d.at[1] - 0.18), s[2]],
+          axis: 'y',
           name: 'Balance tank drain valve',
           od: d.od,
           facing: d.outward,
@@ -1085,7 +1094,7 @@ const GAS_DROP = 2.2;
 const GAS_VALVE = 1.98;
 
 /**
- * The boiler house's pipework, so far its flues and its gas.
+ * The boiler house's pipework: its flues, its gas, and its heating water.
  *
  * The flues: each cascade of two boilers shares one flue, as a cascade
  * kit does. Each boiler's spigot rises to a collector over the pair,
@@ -1097,6 +1106,17 @@ const GAS_VALVE = 1.98;
  * outlet a DN80 main rises to a header over the boilers, along the west
  * wall, its ends capped just past the last drops. A DN50 drop goes down
  * to each boiler, with a lever ball valve within reach to isolate it.
+ *
+ * The heating (LTHW): each boiler's flow and return rise into a flow
+ * header and a return header behind the boilers, which run south along
+ * the west wall to the low-loss header's boiler side. From its system
+ * side the flow goes over the doorway to the twin-head circulator, whose
+ * discharge rises to a tee: one way out through the south wall to the
+ * building, the other north to the calorifier's coil. The return main
+ * comes back from the coil and, joined by the building's return through
+ * the south wall and the pressurisation unit's fill, to the low-loss
+ * header. The calorifier's cold feed comes down from the services
+ * ceiling, and its hot water and secondary return go up into it.
  */
 export function boilerHousePipework(): { runs: PipeRun[]; tees: PipeTee[] } {
   const layout = layoutRoom('boiler_house')!;
@@ -1262,6 +1282,336 @@ export function boilerHousePipework(): { runs: PipeRun[]; tees: PipeTee[] } {
       branchDirection: [0, -1, 0],
     });
   }
+
+  // ---- Heating water (LTHW) and the calorifier -------------------------
+  const lagged = 'lagged-heating' as const;
+  const main = 0.0889;
+  const find = (key: string) => layout.placed.find((p) => p.item.key === key)!;
+  const llh = find('low-loss-header');
+  const pump = find('lthw-pumps');
+  const press = find('pressurisation');
+  const cal = find('calorifier');
+  const at = (p: (typeof layout.placed)[number], name: string) =>
+    placedPort(p, name).at;
+  const tee = (
+    name: string,
+    where: Vec3,
+    mainDirection: Vec3,
+    branchDirection: Vec3,
+    branchOd: number,
+  ) =>
+    tees.push({
+      name,
+      kind: lagged,
+      at: where,
+      mainOd: main,
+      branchOd,
+      mainDirection,
+      branchDirection,
+    });
+  const boilers = cascades.flatMap((c, i) =>
+    (['A', 'B'] as const).map((k) => ({
+      tag: `B-50${i * 2 + (k === 'A' ? 1 : 2)}`,
+      cascade: c,
+      flow: at(c, `flow${k}`),
+      ret: at(c, `return${k}`),
+    })),
+  );
+  // The two headers behind the boilers, clear of their flues: the flow
+  // above, the return lower and nearer the wall.
+  const px = boilers[0].flow[0];
+  const FLOW_X = px - 0.34;
+  const FLOW_Y = 2.3;
+  const RETURN_X = px - 0.64;
+  const RETURN_Y = 2.1;
+  const north =
+    Math.min(...boilers.flatMap((b) => [b.flow[2], b.ret[2]])) - 0.15;
+  const bf = at(llh, 'boilerFlow');
+  const br = at(llh, 'boilerReturn');
+  const sf = at(llh, 'systemFlow');
+  const sr = at(llh, 'systemReturn');
+  add({
+    name: 'Boiler flow header',
+    kind: lagged,
+    od: main,
+    points: [
+      [FLOW_X, FLOW_Y, north],
+      [FLOW_X, FLOW_Y, bf[2] - 0.4],
+      [bf[0], FLOW_Y, bf[2] - 0.4],
+      [bf[0], bf[1], bf[2] - 0.4],
+      [...bf],
+    ],
+    joins: [llh.item.label, ...boilers.map((b) => `${b.tag} flow`)],
+    service: 'heating flow',
+    label: 'LTHW FLOW',
+  });
+  add({
+    name: 'Boiler return header',
+    kind: lagged,
+    od: main,
+    points: [
+      [RETURN_X, RETURN_Y, north],
+      [RETURN_X, RETURN_Y, br[2] - 0.6],
+      [br[0], RETURN_Y, br[2] - 0.6],
+      [br[0], br[1], br[2] - 0.6],
+      [...br],
+    ],
+    joins: [llh.item.label, ...boilers.map((b) => `${b.tag} return`)],
+    service: 'heating return',
+    label: 'LTHW RETURN',
+  });
+  for (const b of boilers) {
+    add({
+      name: `${b.tag} flow`,
+      kind: lagged,
+      od: 0.0761,
+      points: [
+        [...b.flow],
+        [b.flow[0], FLOW_Y, b.flow[2]],
+        [FLOW_X, FLOW_Y, b.flow[2]],
+      ],
+      joins: [b.cascade.item.label, 'Boiler flow header'],
+      service: 'heating flow',
+      label: 'LTHW FLOW',
+    });
+    tee(
+      `${b.tag} flow tee`,
+      [FLOW_X, FLOW_Y, b.flow[2]],
+      [0, 0, 1],
+      [1, 0, 0],
+      0.0761,
+    );
+    add({
+      name: `${b.tag} return`,
+      kind: lagged,
+      od: 0.0761,
+      points: [
+        [...b.ret],
+        [b.ret[0], RETURN_Y, b.ret[2]],
+        [RETURN_X, RETURN_Y, b.ret[2]],
+      ],
+      joins: [b.cascade.item.label, 'Boiler return header'],
+      service: 'heating return',
+      label: 'LTHW RETURN',
+    });
+    tee(
+      `${b.tag} return tee`,
+      [RETURN_X, RETURN_Y, b.ret[2]],
+      [0, 0, 1],
+      [1, 0, 0],
+      0.0761,
+    );
+  }
+  // The system side: over the doorway to the circulator, which lifts the
+  // flow to a tee under the services ceiling.
+  const OVER_DOOR = 3.4;
+  const suction = at(pump, 'suction');
+  const discharge = at(pump, 'discharge');
+  const pumpLane =
+    suction[0] + 0.4 * Math.sign(placedPort(pump, 'suction').outward[0]);
+  add({
+    name: 'LTHW system flow',
+    kind: lagged,
+    od: main,
+    points: [
+      [...sf],
+      [sf[0], sf[1], sf[2] + 0.37],
+      [sf[0], OVER_DOOR, sf[2] + 0.37],
+      [pumpLane, OVER_DOOR, sf[2] + 0.37],
+      [pumpLane, OVER_DOOR, suction[2]],
+      [pumpLane, suction[1], suction[2]],
+      [...suction],
+    ],
+    joins: [llh.item.label, pump.item.label],
+    service: 'heating flow',
+    label: 'LTHW FLOW',
+  });
+  const FLOW_MAIN = 3.8;
+  const riserX = discharge[0] - 0.05;
+  const split: Vec3 = [riserX, FLOW_MAIN, discharge[2]];
+  const south = 12.5 / 2;
+  add({
+    name: 'LTHW flow riser',
+    kind: lagged,
+    od: 0.0761,
+    points: [[...discharge], [riserX, discharge[1], discharge[2]], split],
+    joins: [
+      pump.item.label,
+      'LTHW flow to building',
+      'Calorifier primary flow',
+    ],
+    service: 'heating flow',
+    label: 'LTHW FLOW',
+    valves: [
+      {
+        at: [riserX, 1.5, discharge[2]],
+        axis: 'y',
+        name: 'LTHW flow isolating valve',
+        od: 0.0761,
+        operator: 'lever',
+        facing: [1, 0, 0],
+      },
+    ],
+  });
+  add({
+    name: 'LTHW flow to building',
+    kind: lagged,
+    od: main,
+    points: [split, [riserX, FLOW_MAIN, south]],
+    joins: ['LTHW flow riser', 'Calorifier primary flow'],
+    service: 'heating flow',
+    label: 'LTHW FLOW',
+    through: [
+      {
+        at: [riserX, FLOW_MAIN, south],
+        normal: [0, 0, 1],
+        thickness: 0.2,
+        kind: 'sleeve',
+      },
+    ],
+  });
+  tee('LTHW flow tee', split, [0, 0, 1], [0, -1, 0], 0.0761);
+  const cf = at(cal, 'primaryFlow');
+  const cr = at(cal, 'primaryReturn');
+  const coilLane = cf[0] + 0.4;
+  add({
+    name: 'Calorifier primary flow',
+    kind: lagged,
+    od: 0.0603,
+    points: [
+      split,
+      [riserX, FLOW_MAIN, cf[2] + 0.75],
+      [coilLane, FLOW_MAIN, cf[2] + 0.75],
+      [coilLane, FLOW_MAIN, cf[2]],
+      [coilLane, cf[1], cf[2]],
+      [...cf],
+    ],
+    joins: ['LTHW flow riser', 'LTHW flow to building', cal.item.label],
+    service: 'heating flow',
+    label: 'LTHW FLOW',
+  });
+  // The return main: from the coil, south over the circulator, along the
+  // south wall to the low-loss header.
+  const RETURN_MAIN = 3.2;
+  const returnLane = cr[0] + 0.2;
+  const alongSouth = south - 0.2;
+  const returnMain: Vec3[] = [
+    [...cr],
+    [returnLane, cr[1], cr[2]],
+    [returnLane, cr[1], cr[2] + 0.7],
+    [returnLane, RETURN_MAIN, cr[2] + 0.7],
+    [returnLane, RETURN_MAIN, alongSouth],
+    [sr[0], RETURN_MAIN, alongSouth],
+    [sr[0], sr[1], alongSouth],
+    [...sr],
+  ];
+  add({
+    name: 'LTHW return main',
+    kind: lagged,
+    od: main,
+    points: returnMain,
+    joins: [
+      cal.item.label,
+      llh.item.label,
+      'LTHW return from building',
+      'Pressurisation fill',
+    ],
+    service: 'heating return',
+    label: 'LTHW RETURN',
+  });
+  const backX = -1.8;
+  add({
+    name: 'LTHW return from building',
+    kind: lagged,
+    od: main,
+    points: [
+      [backX, RETURN_MAIN, south],
+      [backX, RETURN_MAIN, alongSouth],
+    ],
+    joins: ['LTHW return main'],
+    service: 'heating return',
+    label: 'LTHW RETURN',
+    through: [
+      {
+        at: [backX, RETURN_MAIN, south],
+        normal: [0, 0, 1],
+        thickness: 0.2,
+        kind: 'sleeve',
+      },
+    ],
+  });
+  tee(
+    'LTHW return tee',
+    [backX, RETURN_MAIN, alongSouth],
+    [1, 0, 0],
+    [0, 0, 1],
+    main,
+  );
+  const fill = at(press, 'system');
+  const fillZ = cr[2] + 1.25;
+  add({
+    name: 'Pressurisation fill',
+    kind: 'copper',
+    od: 0.022,
+    points: [
+      [...fill],
+      [fill[0], 2.7, fill[2]],
+      [fill[0], 2.7, fillZ],
+      [returnLane, 2.7, fillZ],
+      [returnLane, RETURN_MAIN, fillZ],
+    ],
+    joins: [press.item.label, 'LTHW return main'],
+    service: 'heating return',
+    label: 'LTHW FILL',
+  });
+  tee(
+    'Pressurisation tee',
+    [returnLane, RETURN_MAIN, fillZ],
+    [0, 0, 1],
+    [0, -1, 0],
+    0.022,
+  );
+  // The calorifier's own water: the cold feed down from the services
+  // ceiling, the hot water and its secondary return up into it.
+  const CEILING = BOILER_ROOF - 1.9 + 0.5;
+  const cold = at(cal, 'coldFeed');
+  const hot = at(cal, 'hotFlow');
+  const secondary = at(cal, 'secondaryReturn');
+  add({
+    name: 'Calorifier cold feed',
+    kind: 'copper',
+    od: 0.054,
+    points: [
+      [...cold],
+      [cold[0] - 0.3, cold[1], cold[2]],
+      [cold[0] - 0.3, CEILING, cold[2]],
+    ],
+    joins: [cal.item.label],
+    service: 'make-up',
+    label: 'COLD FEED',
+  });
+  add({
+    name: 'Hot water flow',
+    kind: 'copper',
+    od: 0.054,
+    points: [[...hot], [hot[0], CEILING, hot[2]]],
+    joins: [cal.item.label],
+    service: 'hot water',
+    label: 'HWS FLOW',
+  });
+  add({
+    name: 'Hot water secondary return',
+    kind: 'copper',
+    od: 0.034,
+    points: [
+      [...secondary],
+      [secondary[0] - 0.15, secondary[1], secondary[2]],
+      [secondary[0] - 0.15, CEILING, secondary[2]],
+    ],
+    joins: [cal.item.label],
+    service: 'hot water',
+    label: 'HWS RETURN',
+  });
   return { runs, tees };
 }
 

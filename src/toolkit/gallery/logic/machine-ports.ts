@@ -20,7 +20,8 @@ export interface MachinePort {
     | 'chemical'
     | 'power'
     | 'gas'
-    | 'flue';
+    | 'flue'
+    | 'hot-water';
   /** Its machine's model draws this connection itself, so no nozzle is added. */
   drawn?: boolean;
 }
@@ -167,26 +168,23 @@ export function machinePorts(item: Item): MachinePort[] {
       port('primaryReturn', [x, 0.22, -0.12], [-1, 0, 0], 0.114, 'heating'),
     ];
   }
-  if (kind === 'contact-tank')
+  if (kind === 'contact-tank') {
     // All on its front, toward the room: in low left, out high right, the
-    // ozone's injector in the middle.
+    // ozone's injector in the middle. Up to 2 m it is the ozone room's own
+    // contact tank, flat-fronted; larger, an upright round vessel
+    // (`createTank`, Ø = the smaller side less 0.1 m), each nozzle set on
+    // its curved shell, 0.1 m proud of it.
+    const round = item.w > 2.05;
+    const r = (Math.min(item.w, item.d) - 0.1) / 2;
+    const front = (x: number) =>
+      round ? Math.sqrt(r * r - x * x) + 0.1 : item.d / 2;
+    const side = round ? r * 0.5 : item.w * 0.25;
     return [
-      port(
-        'inlet',
-        [-item.w * 0.25, 0.6, item.d / 2],
-        [0, 0, 1],
-        0.16,
-        'pool-water',
-      ),
-      port(
-        'outlet',
-        [item.w * 0.25, 2.4, item.d / 2],
-        [0, 0, 1],
-        0.16,
-        'pool-water',
-      ),
-      port('ozone', [0, 1.0, item.d / 2], [0, 0, 1], 0.05, 'ozone'),
+      port('inlet', [-side, 0.6, front(-side)], [0, 0, 1], 0.16, 'pool-water'),
+      port('outlet', [side, 2.4, front(side)], [0, 0, 1], 0.16, 'pool-water'),
+      port('ozone', [0, 1.0, front(0)], [0, 0, 1], 0.05, 'ozone'),
     ];
+  }
   if (kind === 'ozone-generator')
     return [
       port('ozoneOut', [0, 1.6, item.d / 2], [0, 0, 1], 0.05, 'ozone'),
@@ -244,6 +242,27 @@ export function machinePorts(item: Item): MachinePort[] {
         ),
         drawn: true,
       },
+      // The LTHW flow and return (DN65), either side of the flue.
+      {
+        ...port(
+          `flow${k}`,
+          [x - 0.27, 0.1 + H + 0.12, back + 0.12],
+          [0, 1, 0],
+          0.0761,
+          'heating',
+        ),
+        drawn: true,
+      },
+      {
+        ...port(
+          `return${k}`,
+          [x + 0.27, 0.1 + H + 0.12, back + 0.12],
+          [0, 1, 0],
+          0.0761,
+          'heating',
+        ),
+        drawn: true,
+      },
       {
         ...port(
           `gas${k}`,
@@ -255,6 +274,90 @@ export function machinePorts(item: Item): MachinePort[] {
         drawn: true,
       },
     ]);
+  }
+  if (kind === 'low-loss-header') {
+    // A vertical DN200 header (`createLowLossHeader`), its DN80 flanges
+    // 0.32 m out each side: the boilers' flow (high) and return (low) on
+    // +x, the system's on -x.
+    const out = 0.2191 / 2 + 0.32;
+    const flange = (name: string, side: 1 | -1, y: number) => ({
+      ...port(name, [side * out, y, 0], [side, 0, 0], 0.0889, 'heating'),
+      drawn: true,
+    });
+    return [
+      flange('boilerFlow', 1, 1.3),
+      flange('boilerReturn', 1, 0.65),
+      flange('systemFlow', -1, 1.3),
+      flange('systemReturn', -1, 0.65),
+    ];
+  }
+  if (kind === 'lthw-pumps')
+    // The twin-head circulator's run of DN65 (`createTwinHeadPump`): in at
+    // -x, out at +x, 0.75 m up.
+    return [
+      {
+        ...port('suction', [-0.75, 0.75, 0], [-1, 0, 0], 0.0761, 'heating'),
+        drawn: true,
+      },
+      {
+        ...port('discharge', [0.75, 0.75, 0], [1, 0, 0], 0.0761, 'heating'),
+        drawn: true,
+      },
+    ];
+  if (kind === 'pressurisation')
+    // The pressurisation unit's copper fill to the system, up at its side.
+    return [
+      {
+        ...port('system', [0.55, 1.5, 0], [0, 1, 0], 0.022, 'heating'),
+        drawn: true,
+      },
+    ];
+  if (kind === 'calorifier') {
+    // `createCalorifier`: Ø1000, 1.85 m tall. The LTHW coil's flanged
+    // flow and return on +x; the cold feed and secondary return on -x;
+    // the hot draw-off on top.
+    const R = 0.5,
+      H = 1.85;
+    return [
+      {
+        ...port(
+          'primaryFlow',
+          [R + 0.3, 0.85, 0],
+          [1, 0, 0],
+          0.0603,
+          'heating',
+        ),
+        drawn: true,
+      },
+      {
+        ...port(
+          'primaryReturn',
+          [R + 0.3, 0.55, 0],
+          [1, 0, 0],
+          0.0603,
+          'heating',
+        ),
+        drawn: true,
+      },
+      {
+        ...port('coldFeed', [-R - 0.3, 0.4, 0], [-1, 0, 0], 0.054, 'make-up'),
+        drawn: true,
+      },
+      {
+        ...port('hotFlow', [0, H + 0.4, 0], [0, 1, 0], 0.054, 'hot-water'),
+        drawn: true,
+      },
+      {
+        ...port(
+          'secondaryReturn',
+          [-R - 0.3, 1.2, 0],
+          [-1, 0, 0],
+          0.034,
+          'hot-water',
+        ),
+        drawn: true,
+      },
+    ];
   }
   if (kind === 'gas-train')
     // In from the floor at its left, out at the top of its right

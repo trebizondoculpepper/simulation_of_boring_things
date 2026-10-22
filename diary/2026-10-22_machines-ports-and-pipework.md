@@ -88,3 +88,24 @@ Biology waits on research, which is in hand.
 - **Boiler house:** one flue per cascade, straight up through the roof; a gas header from the gas train, with a ball valve on each boiler's drop. These are in the port-connection and visual checks, with `boiler-pipes.test.ts`.
 
 Next: the boilers' flow and return to the low-loss header, and the rest of the boiler house; the engineers' office door into the viewing gallery.
+
+## The boiler house's heating, the review's fixes, and chemical stocks
+
+- **The boilers' green connectors** (LTHW flow and return) were drawn by the boiler model but never declared as ports, so no test knew of them. A new visual test finds every connector a model draws (each mesh named "… port") and requires a declared port on it; it caught all twelve at once.
+- **The boiler house's heating** is now piped:
+  - flow and return headers behind the boilers, to the low-loss header;
+  - its system side over the doorway to the twin-head circulator;
+  - a tee taking the flow out through the south wall to the building and north to the calorifier's coil;
+  - the return main, joined by the building's return and the pressurisation fill;
+  - the calorifier's cold feed, hot water and secondary return to the services ceiling.
+- **The combustion and ventilation panel** moved to the east wall, right of the boiler mimic.
+- **Fixes from the independent review:**
+  - each filter's inlet valve now sits on the drop above the backwash tee, so backwashing one filter cannot drain the inlet header;
+  - the Olympic contact tank's nozzles sit on its round shell;
+  - the development room's sand filters have their face pipework and working valves back, generated from their ports.
+- **Chemical stocks** (`src/game/plant/chemicals.ts`) are world state (version 5):
+  - 12,000 l of hypochlorite and a 1,000 l acid IBC, drawn down by each pool's dosing;
+  - a dry store stops that chemical's dosing;
+  - pH heads for 7.4 with both chemicals, falls with acid alone and rises with hypochlorite alone;
+  - a delivery action refills a store.
+- **Fixed supplies** (`SUPPLIES`): 400 V three-phase at 50 Hz, and gas at 21 mbar.
