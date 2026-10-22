@@ -25,6 +25,12 @@ import {
 } from '../../pool/views/pool-fittings';
 import { COVE_RADIUS } from './room-coves';
 import { createCorridor } from './corridor';
+import { effect, signal } from '@preact/signals-core';
+import { createPartSet } from '../../core/parts/parts';
+import { fusedSpur } from '../parts/fused-spur';
+
+/** A set of working parts, as a room keeps them (`core/parts/parts.ts`). */
+type PartSet = ReturnType<typeof createPartSet>;
 import { createDisplayScreen, createSlideshow } from './display-screen';
 import {
   CORRIDOR_HEIGHT,
@@ -51,6 +57,8 @@ const WARM = '#ffd9a8';
 
 /** The displays' middles, metres above the floor. */
 export const DISPLAY_HEIGHT = 1.5;
+/** Each display's fused spur, above it: its middle, metres up (the display's top is at 2.13). */
+export const SPUR_HEIGHT = 2.3;
 
 /** The raised field's glow: brightest at the rim, fading inward. */
 function glowTexture() {
@@ -78,9 +86,15 @@ function glowTexture() {
   return tex;
 }
 
-export function createRotunda(tiles?: Material, metre = METRE) {
+export function createRotunda(
+  tiles?: Material,
+  metre = METRE,
+  /** Where its working parts go (its spurs), for the room to work and update. */
+  parts: PartSet = createPartSet(),
+) {
   const group = new Group();
   group.name = 'rotunda';
+  const kit = createPanelKit();
   const { radius: R, neck, column, bulkhead, raised, lip } = ROTUNDA;
   const half = CORRIDOR_WIDTH / 2;
   const cx = neck + R;
@@ -213,16 +227,37 @@ export function createRotunda(tiles?: Material, metre = METRE) {
     ),
     SLIDE_SECONDS,
   );
+  // Each display fed from its own switched fused spur, mounted above it,
+  // out of the public's easy reach but within staff's; its neon lit while
+  // the display has power. A click on the rocker switches the display.
   for (const side of [-1, 1]) {
+    const face = new Group();
+    // On the column's face toward a mouth, facing out.
+    face.position.set(cx + (side * column) / 2, 0, 0);
+    face.rotation.y = (side * Math.PI) / 2;
+    group.add(face);
     const display = createDisplayScreen('portrait', slides);
-    // Its back on the column's face toward a mouth, facing out.
-    display.position.set(cx + (side * column) / 2, DISPLAY_HEIGHT, 0);
-    display.rotation.y = (side * Math.PI) / 2;
-    group.add(display);
+    display.group.position.y = DISPLAY_HEIGHT;
+    face.add(display.group);
+    const on = signal(true);
+    const spur = parts.add(
+      fusedSpur(kit, {
+        legend: 'DISPLAY',
+        bound: {
+          get value() {
+            return on.value;
+          },
+          set: (v: boolean) => (on.value = v),
+        },
+        live: on,
+      }),
+    );
+    spur.object.position.y = SPUR_HEIGHT;
+    face.add(spur.object);
+    effect(() => display.setPowered(on.value));
   }
   // Small floor drains round the ring, between the mouths and the
   // column's corners: the deck gully's 150 mm stainless grating.
-  const kit = createPanelKit();
   const fittings = fittingMaterials(kit);
   const t = plantTools(kit);
   for (let i = 0; i < 4; i++) {

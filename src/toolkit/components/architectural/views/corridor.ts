@@ -391,6 +391,8 @@ export function createCorridorStairs(
 export function createCorridorRun(
   placed: readonly PlacedPiece[],
   material: Material,
+  /** Where pieces with working parts (the rotunda's spurs) put them. */
+  parts?: Parameters<typeof createRotunda>[2],
 ) {
   const group = new Group();
   group.name = 'corridor run';
@@ -409,7 +411,7 @@ export function createCorridorRun(
               );
             })()
           : p.piece.kind === 'rotunda'
-            ? createRotunda(material)
+            ? createRotunda(material, undefined, parts)
             : createCorridorTurn(p.piece.kind, material);
     piece.position.set(p.x, p.y, p.z);
     piece.rotation.y = p.yaw;

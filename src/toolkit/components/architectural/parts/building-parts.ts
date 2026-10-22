@@ -24,7 +24,6 @@ import {
   createDistributionBoard,
   createExtractorFan,
   createFloorBox,
-  createFusedSpur,
   createGridSwitchPlate,
   createIntercom,
   createOccupancySensor,
@@ -494,23 +493,8 @@ export function twinSocket(
   return a.part();
 }
 
-/** A switched fused spur, its neon lit while it is live. */
-export function fusedSpur(
-  kit: PanelKit,
-  props: { bound: Binding<boolean>; live: Readable<boolean> },
-): Part {
-  const a = beginPart(kit, 'fused spur');
-  const view = createFusedSpur(kit);
-  a.object.add(view.group);
-  const e = emitter();
-  a.voice(e, { on: ROCKER, off: ROCKER });
-  a.uses.set(view.rocker, () => {
-    props.bound.set(!props.bound.value);
-    e.emit(props.bound.value ? 'on' : 'off');
-  });
-  show(a, () => view.set(props.bound.value, props.live.value));
-  return a.part();
-}
+// The switched fused spur's part is its own (`fused-spur.ts`).
+export { fusedSpur } from './fused-spur';
 
 /** A floor box whose lid a click opens and shuts. */
 export function floorBox(kit: PanelKit): Part {

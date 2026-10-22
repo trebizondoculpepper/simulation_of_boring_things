@@ -5,10 +5,13 @@ import {
   HalfFloatType,
   Mesh,
   PerspectiveCamera,
+  Raycaster,
   Scene,
   Vector2,
   WebGLRenderTarget,
 } from 'three';
+import type { Object3D } from 'three';
+import { createPartSet } from '../../components/core/parts/parts';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -44,7 +47,9 @@ export function startCorridorLabRoom(canvas: HTMLCanvasElement) {
   const camera = new PerspectiveCamera(68, 1, 0.05 * metre, 80 * metre);
   scene.add(new AmbientLight('#f4f7f5', 0.18));
   scene.add(new HemisphereLight('#e9f3f1', '#65716f', 0.45));
-  const rooms = createCorridorLab(metre);
+  // The run's working parts (the rotunda's spurs), clicked and updated here.
+  const parts = createPartSet();
+  const rooms = createCorridorLab(metre, parts);
   scene.add(rooms);
 
   const composer = createComposer(
@@ -99,6 +104,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     minZ: s.minZ * metre,
     maxZ: s.maxZ * metre,
   }));
+  const raycaster = new Raycaster();
+  const pointer = new Vector2();
   const walk = createFirstPerson({
     scene,
     canvas,
@@ -109,7 +116,16 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     start: { x: 0.8 * metre, z: 0, yaw: Math.PI / 2 },
     floorAt: (x, z) => corridorLabFloorAt(x / metre, z / metre) * metre,
     solids: () => walls,
-    use: () => {},
+    // A click works the part looked at, within reach.
+    use: (x, y) => {
+      raycaster.setFromCamera(pointer.set(x, y), camera);
+      const hit = raycaster.intersectObject(rooms, true)[0];
+      if (!hit || hit.distance > 3 * metre) return;
+      for (let o: Object3D | null = hit.object; o; o = o.parent) {
+        const work = parts.uses.get(o);
+        if (work) return work();
+      }
+    },
   });
   const resize = () => {
     const { width, height } = canvas.getBoundingClientRect();
@@ -129,6 +145,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);
+    parts.update(delta);
     if (visual) {
       film.uniforms.time.value = (time / 1000) % 100;
       composer.render(delta);
@@ -140,6 +157,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       observer.disconnect();
       composer.dispose();
       walk.dispose();
+      parts.dispose();
       rooms.traverse((object) => {
         if (object instanceof Mesh) object.geometry.dispose();
       });

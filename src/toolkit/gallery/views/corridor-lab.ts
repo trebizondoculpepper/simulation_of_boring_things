@@ -17,6 +17,7 @@ import {
 } from '../../components/architectural/logic/corridor-path';
 import type { CorridorPiece } from '../../components/architectural/logic/corridor-path';
 import { createCorridorRun } from '../../components/architectural/views/corridor';
+import { createPartSet } from '../../components/core/parts/parts';
 import {
   createPoolUniforms,
   createTileMaterial,
@@ -74,7 +75,11 @@ export function corridorLabSolids(): Footprint[] {
   ];
 }
 
-export function createCorridorLab(metre: number) {
+export function createCorridorLab(
+  metre: number,
+  /** Where the run's working parts go (the rotunda's spurs). */
+  parts = createPartSet(),
+) {
   const group = new Group();
   group.name = 'corridor_lab';
   group.scale.setScalar(metre);
@@ -83,7 +88,7 @@ export function createCorridorLab(metre: number) {
   const tile = createTileMaterial(uniforms);
   tile.side = DoubleSide;
   const { placed, end } = lab();
-  group.add(createCorridorRun(placed, tile));
+  group.add(createCorridorRun(placed, tile, parts));
   // The two ends, closed: the run ends heading east at both.
   for (const x of [-CORRIDOR_WALL / 2, end.x + CORRIDOR_WALL / 2]) {
     const cap = new Mesh(

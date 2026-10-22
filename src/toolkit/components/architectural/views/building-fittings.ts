@@ -387,45 +387,8 @@ export function createTwinSocket(
   return { group, sides };
 }
 
-/** A switched fused spur: its switch, fuse carrier and neon. */
-export function createFusedSpur(kit: PanelKit) {
-  const t = tools(kit);
-  const group = new Group();
-  t.box(group, t.paint(PLATE_WHITE, 0.35), 0.086, 0.086, 0.01, 0, 0, 0.005);
-  const pivot = new Group();
-  pivot.position.set(0.018, 0.016, 0.01);
-  group.add(pivot);
-  const rocker = t.box(
-    pivot,
-    t.paint('#ecebe4', 0.3),
-    0.016,
-    0.026,
-    0.006,
-    0,
-    0,
-    0.003,
-  );
-  t.box(
-    group,
-    t.paint('#e3e2da', 0.3),
-    0.022,
-    0.03,
-    0.006,
-    -0.018,
-    0.012,
-    0.013,
-  );
-  t.label(group, 'FUSE', -0.018, -0.008, 0.0105, 0.004);
-  const neon = t.led(group, '#ff4a2a', 0.004, 0.018, -0.025, 0.011);
-  return {
-    group,
-    rocker,
-    set(on: boolean, live: boolean) {
-      pivot.rotation.x = on ? -0.15 : 0.15;
-      neon.set(live);
-    },
-  };
-}
+// The switched fused spur is a component of its own (`fused-spur.ts`).
+export { createFusedSpur } from './fused-spur';
 
 /** A flip-lid floor box flush in the floor, facing up; `set` it open. */
 export function createFloorBox(kit: PanelKit) {

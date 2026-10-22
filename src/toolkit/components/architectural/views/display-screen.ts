@@ -9,7 +9,7 @@ import {
   SRGBColorSpace,
   TextureLoader,
 } from 'three';
-import type { Texture } from 'three';
+import type { Material, Texture } from 'three';
 import {
   DISPLAY_55,
   cropToFill,
@@ -23,8 +23,9 @@ import type { Orientation } from '../logic/display-screen';
  * A wall-hung 55-inch display (`../logic/display-screen.ts`), facing +z,
  * its back on the wall at z = 0 and its middle at its origin: a slim
  * black case, its picture self-lit, and a small red status lamp in its
- * bottom right-hand corner. It shows a slideshow if given one, else it is
- * black (off).
+ * bottom right-hand corner, lit while it has power. It shows a slideshow
+ * if given one, else it is black; `setPowered(false)` puts out its
+ * picture and its lamp (its spur switched off).
  */
 export function createDisplayScreen(
   orientation: Orientation = 'portrait',
@@ -41,14 +42,15 @@ export function createDisplayScreen(
   body.position.z = depth / 2;
   group.add(body);
   const picture = pictureSize(orientation);
+  // Off, its glass is black and a little glossy.
+  const dark = new MeshStandardMaterial({
+    color: '#050607',
+    roughness: 0.12,
+    metalness: 0.2,
+  });
   const screen = new Mesh(
     new PlaneGeometry(picture.w, picture.h),
-    slideshow?.material ??
-      new MeshStandardMaterial({
-        color: '#050607',
-        roughness: 0.12,
-        metalness: 0.2,
-      }),
+    slideshow?.material ?? dark,
   );
   screen.name = 'display picture';
   screen.position.z = depth + 0.001;
@@ -56,15 +58,28 @@ export function createDisplayScreen(
   if (slideshow) screen.onBeforeRender = slideshow.tick;
   group.add(screen);
   // The status lamp: a red pinpoint in the bezel's bottom right corner.
-  const lamp = new Mesh(
+  const lampOn = new MeshBasicMaterial({ color: '#ff2a1a' });
+  const lampOff = new MeshStandardMaterial({
+    color: '#3a0d0a',
+    roughness: 0.4,
+  });
+  const lamp = new Mesh<CylinderGeometry, Material>(
     new CylinderGeometry(0.003, 0.003, 0.002, 12),
-    new MeshBasicMaterial({ color: '#ff2a1a' }),
+    lampOn,
   );
+  lamp.userData.live = true;
   lamp.name = 'display status lamp';
   lamp.rotation.x = Math.PI / 2;
   lamp.position.set(w / 2 - bezel / 2, -h / 2 + bezel / 2, depth + 0.001);
   group.add(lamp);
-  return group;
+  return {
+    group,
+    setPowered(on: boolean) {
+      screen.material = on ? (slideshow?.material ?? dark) : dark;
+      screen.onBeforeRender = on && slideshow ? slideshow.tick : () => {};
+      lamp.material = on ? lampOn : lampOff;
+    },
+  };
 }
 
 /** A run of pictures shown on one or more displays, all alike. */
