@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { TORCH, angleBetween, beamProfile, followAim, torch } from './torch';
+import {
+  TORCH,
+  angleBetween,
+  beamAt,
+  beamProfile,
+  followAim,
+  torch,
+} from './torch';
 
 const frame = 1 / 60;
 
@@ -64,5 +71,24 @@ describe('the beam’s pool of light', () => {
       expect(at(r)).toBeGreaterThanOrEqual(0);
       expect(at(r)).toBeLessThanOrEqual(1);
     }
+  });
+});
+
+describe('a cheap torch’s pool of light', () => {
+  it('is uneven: brighter to one side, and not the same all the way round', () => {
+    const round = (r: number) =>
+      Array.from({ length: 36 }, (_, k) => {
+        const a = (k / 36) * Math.PI * 2;
+        return beamAt(r * Math.cos(a), r * Math.sin(a));
+      });
+    for (const r of [0.3, 0.5, 0.7]) {
+      const ring = round(r);
+      expect(Math.max(...ring) - Math.min(...ring), `at ${r}`).toBeGreaterThan(
+        0.08,
+      );
+    }
+    // Lit across its middle, dark past its rim.
+    expect(beamAt(0.2, 0.1)).toBeGreaterThan(0.4);
+    expect(beamAt(0.8, 0.8)).toBe(0);
   });
 });

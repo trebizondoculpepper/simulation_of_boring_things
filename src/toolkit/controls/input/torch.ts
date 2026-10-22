@@ -1,5 +1,5 @@
 import { CanvasTexture, Object3D, SRGBColorSpace, SpotLight } from 'three';
-import { TORCH, beamProfile, followAim, torch } from '../logic/torch';
+import { TORCH, beamAt, followAim, torch } from '../logic/torch';
 import type { Aim } from '../logic/torch';
 
 /**
@@ -52,10 +52,9 @@ export function createTorchLight(metre: number) {
 }
 
 /**
- * The pattern the torch throws (`beamProfile`), drawn once: its pool of
- * light by radius, warmer toward the edge as an incandescent bulb's is,
- * with a few faint streaks from an imperfect reflector. None without a
- * page to draw on.
+ * The pattern the torch throws (`beamAt`), drawn once: a cheap torch's
+ * uneven pool of light, warmer toward the edge as an incandescent bulb's
+ * is. None without a page to draw on.
  */
 function beamTexture() {
   if (typeof document === 'undefined') return null;
@@ -65,33 +64,13 @@ function beamTexture() {
   const c = canvas.getContext('2d');
   if (!c || typeof c.createImageData !== 'function') return null;
   const image = c.createImageData(size, size);
-  // The same streaks every time: a seeded generator.
-  let seed = 11;
-  const random = () => {
-    seed = (seed * 16807) % 2147483647;
-    return seed / 2147483647;
-  };
-  const streaks = Array.from({ length: 9 }, () => ({
-    angle: random() * Math.PI * 2,
-    width: 0.02 + random() * 0.05,
-    depth: (random() - 0.4) * 0.12,
-  }));
   for (let j = 0; j < size; j++)
     for (let i = 0; i < size; i++) {
-      const x = (i + 0.5) / size - 0.5;
-      const y = (j + 0.5) / size - 0.5;
-      const r = Math.hypot(x, y) * 2;
-      const a = Math.atan2(y, x);
-      let v = beamProfile(r);
-      for (const s of streaks) {
-        const d = Math.abs(
-          ((a - s.angle + Math.PI * 3) % (Math.PI * 2)) - Math.PI,
-        );
-        v *= 1 + s.depth * Math.exp(-((d / s.width) ** 2)) * Math.min(1, r * 2);
-      }
-      v = Math.max(0, Math.min(1, v));
+      const x = ((i + 0.5) / size) * 2 - 1;
+      const y = ((j + 0.5) / size) * 2 - 1;
+      const v = beamAt(x, y);
       // Warmer, yellower toward the rim.
-      const warm = Math.min(1, r * 1.2);
+      const warm = Math.min(1, Math.hypot(x, y) * 1.2);
       const k = (j * size + i) * 4;
       image.data[k] = 255 * v;
       image.data[k + 1] = 255 * v * (1 - 0.1 * warm);

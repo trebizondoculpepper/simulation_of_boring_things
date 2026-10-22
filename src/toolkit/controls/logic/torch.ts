@@ -63,20 +63,48 @@ export const torch = {
 
 /**
  * How bright the beam's pool of light is at `r`, from its middle (0) to
- * its rim (1), as an old filament torch with a pressed reflector throws
- * it: a little dark in the very middle, where the bulb shades the
- * reflector; a bright core round that; a brighter ring where the
- * reflector's rim focuses; then a dim halo, fading out. Faint ripples
- * from the reflector's pressing run through it. 0 to 1.
+ * its rim (1), on average round it: a little dark in the very middle,
+ * where the bulb shades the reflector; a bright core round that; a
+ * brighter ring where the reflector's rim focuses; then a dim halo,
+ * fading out. 0 to 1.
  */
-export function beamProfile(r: number): number {
+export function beamProfile(r: number, ringAt = 0.47): number {
   if (r >= 1) return 0;
-  const bump = (at: number, width: number) =>
-    Math.exp(-(((r - at) / width) ** 2));
   const core = 0.56 + 0.16 * (1 - Math.exp(-((r / 0.09) ** 2)));
   const body = r < 0.5 ? core : core * (1 - (r - 0.5) / 0.5) ** 0.6;
-  const ring = 0.28 * bump(0.47, 0.05);
+  const ring = 0.22 * Math.exp(-(((r - ringAt) / 0.07) ** 2));
   const halo = 0.22 * (1 - r) * (r > 0.5 ? 1 : 0);
-  const ripple = 0.012 * Math.sin(r * 47) + 0.008 * Math.sin(r * 113 + 1.3);
-  return Math.max(0, Math.min(1, body + ring + halo + ripple));
+  return Math.max(0, Math.min(1, body + ring + halo));
 }
+
+/**
+ * A cheap torch's pool of light at (x, y), each from -1 to 1 across it:
+ * not a perfect circle. Its bulb sits a little off centre in its
+ * reflector, so the pool is brighter to one side and its ring out of
+ * round; dents in the reflector leave soft blotches. Always the same
+ * torch. 0 to 1.
+ */
+export function beamAt(x: number, y: number): number {
+  const r = Math.hypot(x, y);
+  if (r >= 1) return 0;
+  const a = Math.atan2(y, x);
+  // The ring wanders in and out round the pool.
+  const ringAt =
+    0.47 + 0.045 * Math.sin(2 * a + 0.7) + 0.025 * Math.sin(3 * a + 2.1);
+  // Brighter toward one side, as from a bulb off centre.
+  const lean = 1 + 0.2 * r * Math.cos(a - 0.9);
+  let v = beamProfile(r, ringAt) * lean;
+  // Soft blotches from a dented reflector.
+  for (const [bx, by, size, depth] of BLOTCHES)
+    v *= 1 + depth * Math.exp(-(((x - bx) ** 2 + (y - by) ** 2) / size ** 2));
+  return Math.max(0, Math.min(1, v));
+}
+
+/** The reflector's dents: where, how big, and how much lighter or darker. */
+const BLOTCHES: readonly (readonly [number, number, number, number])[] = [
+  [0.35, -0.2, 0.22, 0.14],
+  [-0.4, 0.25, 0.25, -0.16],
+  [0.1, 0.55, 0.18, 0.1],
+  [-0.15, -0.5, 0.2, -0.12],
+  [0.6, 0.3, 0.15, -0.1],
+];
