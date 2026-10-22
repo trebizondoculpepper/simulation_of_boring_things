@@ -113,5 +113,4 @@ Building TeX Live and rendering photographs in CI is slow, so the manual is made
 
 ## Open decisions
 
-- Whether the photographs are rendered in CI at release time or locally and committed.
 - The version scheme and when the first release is cut.
