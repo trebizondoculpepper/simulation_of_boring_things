@@ -70,6 +70,8 @@ function buildSpaPack(
   kit: PanelKit,
   circuit = 'FOOT SPA',
   jets = false,
+  /** Its POWER on from the start: installed and in service, not an exhibit. */
+  inService = false,
 ): LiveExhibit {
   const t = plantTools(kit);
   const c = jets ? JACUZZI_CABINET : CABINET;
@@ -399,7 +401,7 @@ function buildSpaPack(
   const power = parts.add(
     selector(kit, {
       positions: 2,
-      initial: 0,
+      initial: inService ? 1 : 0,
       legend: 'POWER',
       name: 'Spa set power',
     }),
@@ -520,7 +522,13 @@ export const SPA_PACK_EXHIBIT: PlantExhibit = {
   reference:
     'For circuits under 10 m³/h (the foot spa): pump, cartridge filter, inline UV, plate heat exchanger and surge vessel on one skid, dosing on the back wall; 1.7 × 0.9 × 2.1 m cabinet',
   size: { w: 2.1, d: 1.9, h: 2.2, mount: 'floor' },
-  build: buildSpaPack,
+  build: (kit) => buildSpaPack(kit),
+};
+
+/** The footbath's cabinet as installed in its plant room: in service, its POWER on. */
+export const SPA_PACK_IN_SERVICE: PlantExhibit = {
+  ...SPA_PACK_EXHIBIT,
+  build: (kit) => buildSpaPack(kit, 'FOOT SPA', false, true),
 };
 
 /** The same factory cabinet labeled for the Jacuzzi circuit. */
@@ -530,6 +538,12 @@ export const JACUZZI_PACK_EXHIBIT: PlantExhibit = {
     'For a spa circuit under 30 m³/h (the Jacuzzi, 28 m³/h): the packaged set, and a bay for its jet pump and air blower, each switched from the panel; 2.8 × 1.0 × 2.1 m cabinet',
   size: { w: 3.2, d: 3.0, h: 2.2, mount: 'floor' },
   build: (kit) => buildSpaPack(kit, 'JACUZZI', true),
+};
+
+/** The Jacuzzi's cabinet as installed in its plant room: in service, its POWER on. */
+export const JACUZZI_PACK_IN_SERVICE: PlantExhibit = {
+  ...JACUZZI_PACK_EXHIBIT,
+  build: (kit) => buildSpaPack(kit, 'JACUZZI', true, true),
 };
 
 /**

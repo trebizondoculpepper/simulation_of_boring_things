@@ -80,8 +80,8 @@ import { EXHIBITS as CHEMICALS } from '../rooms/plant/chemicals';
 import { EXHIBITS as ELECTRICAL } from '../rooms/plant/electrical';
 import { EXHIBITS as CONTROL } from '../rooms/plant/control';
 import {
-  JACUZZI_PACK_EXHIBIT,
-  SPA_PACK_EXHIBIT,
+  JACUZZI_PACK_IN_SERVICE,
+  SPA_PACK_IN_SERVICE,
 } from '../rooms/plant/spa-pack';
 import { PUMP_PANEL_EXHIBIT } from '../rooms/plant/pump-panel';
 import { SIMULATOR_SPACE, layoutRoom } from '../logic/room-equipment';
@@ -97,8 +97,10 @@ const MODELS: Record<string, PlantExhibit> = {
   'uv-unit': PUMPS[4],
   'heat-exchanger': PUMPS[5],
   'pump-panel': PUMP_PANEL_EXHIBIT,
-  'jacuzzi-pack': JACUZZI_PACK_EXHIBIT,
-  'spa-pack': SPA_PACK_EXHIBIT,
+  // In their plant rooms, in service: their POWER on, so their isolators
+  // are seen to stop them.
+  'jacuzzi-pack': JACUZZI_PACK_IN_SERVICE,
+  'spa-pack': SPA_PACK_IN_SERVICE,
   'ozone-generator': OZONE[0],
   'dosing-controller': DOSING[4],
   'hypo-pumps': DOSING[2],

@@ -79,15 +79,23 @@ const JACUZZI_MIMIC: MimicSpec = {
   ],
 };
 
-const JACUZZI_MIMIC_STATE = {
-  lamps: { pump: false, uv: false },
-  readouts: {
-    water: {
-      temp: { value: 37, unit: '°C', name: 'WATER', places: 1 },
-      flow: { value: 0, unit: 'm³/h', name: 'RETURN', places: 0 },
+/**
+ * The Jacuzzi mimic's lamps and readout, as the world has its water
+ * (`pools.ts`): its pump and UV lit while it circulates, its water's
+ * temperature and its return flow.
+ */
+function jacuzziMimicState(pool: PoolWaterState) {
+  const circulating = !pool.tripped && pool.flow > POOL_TARGET.pool_03.flow / 2;
+  return {
+    lamps: { pump: circulating, uv: circulating },
+    readouts: {
+      water: {
+        temp: { value: pool.temperature, unit: '°C', name: 'WATER', places: 1 },
+        flow: { value: pool.flow, unit: 'm³/h', name: 'RETURN', places: 0 },
+      },
     },
-  },
-};
+  };
+}
 import {
   createPanelKit,
   disposeKit,
@@ -98,6 +106,10 @@ import { knobDirection } from '../../controls/input/knob-turning';
 import { createRoomEquipment } from '../views/room-equipment';
 import { cabinetServices } from '../views/cabinet-services';
 import { CEILING_ZONE } from '../logic/room-pipes';
+import { worldStore } from '../../save/world-store';
+import { newWorld } from '../../../game/world';
+import { POOL_TARGET } from '../../../game/plant/pools';
+import type { PoolWaterState } from '../../../game/plant/pools';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
 import type { MimicSpec } from '../../components/industrial-control/logic/mimic';
 import { bindRoomLights } from '../views/room-lights';
@@ -174,6 +186,7 @@ export function startPlantRoomShell(
     : null;
   const jacuzziMimic =
     hall === 'pool_03' ? createMimicBoard(kit, JACUZZI_MIMIC) : null;
+  const mimicStore = jacuzziMimic ? worldStore('dev') : null;
   if (jacuzziMimic) {
     jacuzziMimic.group.position.set(0, plan.floor + 1.8, -plan.h + 0.025);
     rooms.add(jacuzziMimic.group);
@@ -449,7 +462,12 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       if (supply) supply.value = services.isolator?.on ?? true;
     }
     jacuzziMimic?.parts.update(delta);
-    jacuzziMimic?.show(JACUZZI_MIMIC_STATE);
+    if (jacuzziMimic)
+      jacuzziMimic.show(
+        jacuzziMimicState(
+          (mimicStore?.world.value ?? newWorld()).pools.pool_03,
+        ),
+      );
     // Out through the equipment doors, once the corridor is seen beyond.
     if (hall && corridorSeen && !leavingSouth && !walk.following) {
       const x = walk.walker.x / metre;

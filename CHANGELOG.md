@@ -7,6 +7,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 ### Fixed
 
 - The underwater gallery's door to the engineer's office stands on a 0.25 m sill above the corridor's fillet, which now runs unbroken beneath it (the office's floor meets the sill, as plant rooms do).
+- The Jacuzzi's and the footbath's packaged cabinets start in service, their POWER on, so switching off their isolators is seen to stop them; the Jacuzzi plant room's mimic shows the world's circulation, water temperature and flow instead of fixed values.
 - Electrical conduits in the rooms outside the pool plant are routed tidily: one distribution conduit round the walls on saddles, each panel's drop down the wall face into the top of the panel as drawn, chosen clear of the panels it would pass and of the other drops; a machine on the floor gets an outlet box on the wall above it and a flexible cable down to it.
 - The control room's alarm annunciator hangs on the west wall toward the operator's desk, beside the pool mimic and over the water-test kit, in view and within reach (a wall panel marked `over` may now hang clear above a machine shallow enough to reach across).
 - The control room's air-handling mimic no longer runs into the corner, and its title card, hidden behind the mimics, is gone.
