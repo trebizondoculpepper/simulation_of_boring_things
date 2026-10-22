@@ -125,6 +125,7 @@ const pauseMenu = createPauseMenu({
   },
   // Not on the title screen or the room list: only in a room.
   canOpen: () => current !== undefined,
+  devPanel: () => goTo('?dev'),
 });
 const settingsButton = document.createElement('button');
 settingsButton.type = 'button';

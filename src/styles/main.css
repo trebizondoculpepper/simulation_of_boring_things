@@ -489,6 +489,30 @@ canvas {
   font-size: 12px;
   opacity: 0.75;
 }
+.menu-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.menu-wrench {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #ffa00066;
+  border-radius: 4px;
+  background: none;
+  color: var(--hud-amber);
+  opacity: 0.7;
+  cursor: pointer;
+}
+.menu-wrench:hover,
+.menu-wrench:focus-visible {
+  opacity: 1;
+  border-color: var(--hud-amber);
+  outline: none;
+}
 .menu-tabs {
   display: flex;
   gap: 4px;

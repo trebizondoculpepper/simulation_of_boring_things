@@ -23,6 +23,11 @@ export const GEAR_ICON = `<svg viewBox="0 0 32 32" width="26" height="26" aria-h
 <circle cx="16" cy="16" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/>
 </svg>`;
 
+/** A wrench, as an icon in the HUD's style: the developers' panel. */
+const WRENCH_ICON = `<svg viewBox="0 0 32 32" width="20" height="20" aria-hidden="true">
+<path d="M21.5 4.5a6.5 6.5 0 0 0-6.2 8.4L5.6 22.6a2.6 2.6 0 0 0 3.7 3.7l9.7-9.7a6.5 6.5 0 0 0 8.4-6.2c0-.9-.2-1.8-.5-2.6l-3.8 3.8-3.4-.9-.9-3.4 3.8-3.8c-.8-.3-1.7-.5-2.6-.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg>`;
+
 /** What the Game tab does: the app's to supply. */
 export interface PauseMenuActions {
   /** Save now; whether it was saved. */
@@ -36,6 +41,8 @@ export interface PauseMenuActions {
   quitToTitle(): void;
   /** Quit the program, where there is one to quit (a desktop build). */
   quitToDesktop?: () => void;
+  /** Open the developers' panel (`?dev`), from the wrench in the corner. */
+  devPanel?: () => void;
   /** Whether Esc and Start may open it now: only in a room, not on the title screen. */
   canOpen?: () => boolean;
 }
@@ -84,7 +91,24 @@ export function createPauseMenu(actions: PauseMenuActions) {
   backdrop.append(panel);
   const heading = document.createElement('h2');
   heading.textContent = 'Paused';
-  panel.append(heading);
+  const top = document.createElement('div');
+  top.className = 'menu-top';
+  top.append(heading);
+  // The wrench: the developers' panel, a tool rather than part of the game.
+  if (actions.devPanel) {
+    const wrench = document.createElement('button');
+    wrench.type = 'button';
+    wrench.className = 'menu-wrench';
+    wrench.innerHTML = WRENCH_ICON;
+    wrench.title = 'Developer panel';
+    wrench.setAttribute('aria-label', 'Developer panel');
+    wrench.addEventListener('click', () => {
+      close();
+      actions.devPanel?.();
+    });
+    top.append(wrench);
+  }
+  panel.append(top);
 
   // The tabs, and a page for each.
   const tabBar = document.createElement('div');
