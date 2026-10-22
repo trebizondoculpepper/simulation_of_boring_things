@@ -954,6 +954,7 @@ export function startPoolRoom(
     return null;
   };
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre: m,

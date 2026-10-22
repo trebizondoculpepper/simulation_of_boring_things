@@ -718,6 +718,7 @@ export function startArchitecturalGalleryRoom(canvas: HTMLCanvasElement) {
     maxZ: tableArea.maxZ * m,
   };
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre: m,

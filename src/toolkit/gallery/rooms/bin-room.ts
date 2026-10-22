@@ -288,6 +288,7 @@ export function startBinRoom(canvas: HTMLCanvasElement) {
   }
   const params = new URLSearchParams(location.search);
   const walk = createFirstPerson({
+    scene,
     nearbyTargetFeedback: tossing.targetFeedback,
     canvas,
     camera,

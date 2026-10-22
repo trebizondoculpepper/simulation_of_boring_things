@@ -12,6 +12,8 @@ import type { InputMode } from '../logic/controls';
 import { turningKnobs } from './knob-turning';
 import { createTouchSticks } from './touch-sticks';
 import { bindViewWheel } from './view-wheel';
+import { torch } from '../logic/torch';
+import { createTorchLight } from './torch';
 
 /**
  * First-person walking, as in any PC shooter, with the same feel as the
@@ -166,6 +168,8 @@ export interface FirstPersonOptions {
   reducedMotion?: () => boolean;
   /** Field of view in degrees at zoom 1. */
   fov?: number;
+  /** The room's scene, to hold the torch's light (`torch.ts`). */
+  scene?: Object3D;
 }
 
 /** Where the eye is and how it looks, to drive another room's camera. */
@@ -193,8 +197,18 @@ export function firstPersonOn(canvas: HTMLCanvasElement) {
   return controllers.get(canvas) ?? null;
 }
 
+// A page asked for with `?torch=on` starts with the torch lit.
+if (
+  typeof location !== 'undefined' &&
+  new URLSearchParams(location.search).get('torch') === 'on'
+)
+  torch.on = true;
+
 export function createFirstPerson(options: FirstPersonOptions) {
   const { canvas, camera, metre, floorY } = options;
+  // The torch's light, in this room's scene, lit while the torch is on.
+  const torchLight = createTorchLight(metre);
+  options.scene?.add(torchLight.light, torchLight.target);
   const handling = options.objects
     ? createObjectHandling(
         options.objects,
@@ -320,6 +334,13 @@ export function createFirstPerson(options: FirstPersonOptions) {
     changeStance(walker);
   });
   container?.append(crouchButton);
+  const torchButton = document.createElement('button');
+  torchButton.type = 'button';
+  torchButton.className = 'touch-crouch';
+  torchButton.textContent = 'TORCH';
+  torchButton.style.left = '160px';
+  torchButton.addEventListener('click', () => torch.toggle());
+  container?.append(torchButton);
   const inspectButton = document.createElement('button');
   inspectButton.type = 'button';
   inspectButton.className = 'touch-crouch';
@@ -394,6 +415,10 @@ export function createFirstPerson(options: FirstPersonOptions) {
     if (event.code === 'KeyC') changeStance(walker);
     if (event.code === 'KeyV') changeStance(walker, true);
     if (event.code === 'KeyE') use(0, 0);
+    if (event.code === 'KeyF') {
+      setInput('mouse');
+      torch.toggle();
+    }
   };
   const keyup = (event: KeyboardEvent) => keys.delete(event.code);
   const forget = () => {
@@ -616,6 +641,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     if (went(PAD.crouch)) {
       changeStance(walker);
     }
+    if (went(PAD.torch)) torch.toggle();
     // A click of the walk stick runs until the stick comes back to centre.
     if (went(PAD.run)) padRun = true;
     if (!Math.hypot(move.x, move.y)) padRun = false;
@@ -716,6 +742,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
         // Another room's eye: no walking, no looking, no crosshair.
         const eye = following();
         crosshair.hidden = true;
+        // The torch is the room in front's, where the player is.
+        torchLight.light.intensity = 0;
         if (!eye) return;
         camera.position.set(eye.x, eye.y, eye.z);
         camera.lookAt(
@@ -847,6 +875,11 @@ export function createFirstPerson(options: FirstPersonOptions) {
         camera.fov = fov;
         camera.updateProjectionMatrix();
       }
+      torchLight.update(
+        { x: walker.x, y, z: walker.z },
+        { yaw: walker.yaw, pitch: walker.pitch },
+        delta,
+      );
       handling?.update(delta);
       const cursorAim = input === 'mouse' && !locked();
       crosshair.hidden = !(
@@ -907,6 +940,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
       crosshair.remove();
       movement.remove();
       crouchButton.remove();
+      torchButton.remove();
+      options.scene?.remove(torchLight.light, torchLight.target);
       inspectButton.remove();
       clearTimeout(fading);
       help.remove();

@@ -341,6 +341,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     }
   };
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre,

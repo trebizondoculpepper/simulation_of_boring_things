@@ -604,6 +604,7 @@ export function startFittingsRoom(canvas: HTMLCanvasElement) {
   };
   const params = new URLSearchParams(location.search);
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre: m,

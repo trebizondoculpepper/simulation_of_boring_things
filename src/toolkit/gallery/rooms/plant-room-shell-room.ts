@@ -316,6 +316,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   // Its machines' footprints, to walk round.
   if (machines) walls.push(...machines.solids.map(toMetre));
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre,

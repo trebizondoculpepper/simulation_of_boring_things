@@ -18,6 +18,7 @@ export type ControlAction =
   | 'knob'
   | 'zoom'
   | 'crouch'
+  | 'torch'
   | 'eye'
   | 'release';
 
@@ -66,6 +67,11 @@ export const CONTROL_SCHEME: Record<
     touch: 'Crouch button: crouch',
     gamepad: 'B: crouch',
   },
+  torch: {
+    mouse: 'F: torch',
+    touch: 'Torch button: torch',
+    gamepad: 'X: torch',
+  },
   eye: {
     mouse: 'Alt+wheel: eye height',
     touch: null,
@@ -87,6 +93,7 @@ const ORDER: readonly ControlAction[] = [
   'knob',
   'zoom',
   'crouch',
+  'torch',
   'eye',
   'release',
 ];
@@ -125,6 +132,7 @@ export function deadZone(x: number, y: number, zone = GAMEPAD_DEAD_ZONE) {
 export const PAD = {
   use: 0,
   crouch: 1,
+  torch: 2,
   knobDown: 4,
   knobUp: 5,
   zoomOut: 6,

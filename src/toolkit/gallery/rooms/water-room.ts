@@ -350,6 +350,7 @@ export function startWaterRoom(canvas: HTMLCanvasElement) {
       water.addDrop(u, v, 0.04, 0.03, POOL.halfWidth, POOL.halfLength);
   };
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre: m,

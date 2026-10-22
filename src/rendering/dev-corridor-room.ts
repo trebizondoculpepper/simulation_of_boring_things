@@ -234,6 +234,7 @@ export function startDevCorridorRoom(
       ? (yardPose(name) ?? yardPose('start')!)
       : pose(name);
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre: m,

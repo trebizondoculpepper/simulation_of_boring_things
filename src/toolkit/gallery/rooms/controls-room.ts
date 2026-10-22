@@ -408,6 +408,7 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
   const params = new URLSearchParams(location.search);
   const startView = views[params.get('view') ?? ''];
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre: m,

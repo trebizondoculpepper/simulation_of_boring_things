@@ -1446,6 +1446,7 @@ export function startPoolroomsWorld(canvas: HTMLCanvasElement) {
     ...furnitureSolids,
   ];
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre: m,

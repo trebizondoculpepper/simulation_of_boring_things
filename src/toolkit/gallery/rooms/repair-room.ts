@@ -635,6 +635,7 @@ export function startRepairRoom(canvas: HTMLCanvasElement) {
   };
   const params = new URLSearchParams(location.search);
   const walk = createFirstPerson({
+    scene,
     nearbyTargetFeedback: tossing.targetFeedback,
     divert: tossing.divert,
     canvas,

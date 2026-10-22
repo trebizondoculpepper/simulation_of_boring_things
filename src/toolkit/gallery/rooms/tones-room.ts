@@ -469,6 +469,7 @@ export function startTonesRoom(canvas: HTMLCanvasElement) {
     );
   const params = new URLSearchParams(location.search);
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre: m,

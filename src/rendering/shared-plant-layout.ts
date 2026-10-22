@@ -410,6 +410,7 @@ export function startSharedPlantLayout(canvas: HTMLCanvasElement) {
   root.append(hud);
   const upperSolids = [...solids, ...elevatedBarriers];
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre: METRE,

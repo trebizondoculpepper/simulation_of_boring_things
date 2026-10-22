@@ -334,6 +334,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   // The height of the floor the walker stands on, metres: up on a gantry, or not.
   let standing = cfg.floorAt(cfg.start.x, cfg.start.z, 0);
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre,

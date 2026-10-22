@@ -347,6 +347,7 @@ export function startEquipmentRoom(
     return null;
   };
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre: m,

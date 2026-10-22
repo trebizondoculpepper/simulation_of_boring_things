@@ -311,6 +311,7 @@ export function startPlantCorridorRoom(canvas: HTMLCanvasElement) {
     views[(name ?? 'start') as keyof typeof views] ?? views.start;
   const start = pose(new URLSearchParams(location.search).get('view'));
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre: m,

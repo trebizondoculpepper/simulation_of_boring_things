@@ -471,6 +471,7 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
   const pointer = new Vector2();
   const params = new URLSearchParams(location.search);
   const walk = createFirstPerson({
+    scene,
     canvas,
     camera,
     metre: m,

@@ -6,6 +6,7 @@ How inputs work. This is the one control scheme every room in every game built o
 
 - **The input scheme**: what each input does, for keyboard and mouse, trackpad, touch (dual stick) and gamepad, and the help line that follows the last input used. A new thing a player must be able to do is added here, for every input and every room at once, or not at all. No room or component binds a key, button, gesture or stick of its own.
 - **Moving the player**: walking, running, looking, zoom, crouch and eye height, and holding the player still while a scene plays.
+- **The torch**: the player's own light, held in the right hand as Half-Life's flashlight is, switched on and off by its one control in every room and kept on from room to room, its beam easing after the eye a moment late.
 - **Collision**: walkable footprints, sliding along walls, solid things that cannot be walked through.
 - **What a use means**: the click, E, tap or A that uses whatever is aimed at, and knob-turning (a use on a knob's left or right half, or a gamepad's LB and RB, turns it down or up). Components ask which way to turn (`knobDirection`); they never read an input themselves.
 - **Carrying**: picking up, holding, dropping and letting go, the fall and settling of a dropped object (its drop profile: shape, bounce, friction, roll), and the state of a carried object (installed, held, falling, settled). A component only says that it is portable and how it falls.
@@ -31,4 +32,5 @@ How inputs work. This is the one control scheme every room in every game built o
 - `input/first-person.ts`: the scheme implemented once, for every room.
 - `input/object-handling.ts`: picking up, carrying and dropping, with the fall simulated.
 - `input/knob-turning.ts`: which way a use turns a knob.
+- `logic/torch.ts`, `input/torch.ts`: the torch, its beam's lag, and its light in a room's scene.
 - `input/touch-sticks.ts`: the on-screen thumbsticks and CROUCH button for touch.

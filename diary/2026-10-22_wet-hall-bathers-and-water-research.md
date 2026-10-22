@@ -52,3 +52,7 @@ The owner asked whether its door went through the wall when open. It did: hinged
 
 - Make the pools' pumps' low-low trip latch, and drive the control room's annunciator from the world.
 - Feed the bathers into the water's chemistry: chlorine demand, nitrogen, particles, then urine and faecal incidents; fix the redox reading.
+
+## Afterwards: the torch
+
+The owner wants to be able to cold start the whole facility in total darkness (main power off, emergency battery flat, no signage at all), lit only by a torch like Half-Life's: held by the player, its beam going roughly where they look but a small, noticeable moment late. The lights are not yet modelled (every room's lamps are always on), so the torch came first. It is part of the one control scheme (`src/toolkit/controls`): F, the gamepad's X, or a TORCH button on touch, the same in every room, its state kept from room to room. Its beam is a warm spotlight held low in the right hand, easing after the eye with a 0.07 s time constant (`logic/torch.ts`, tested: still mostly behind after one frame of a quick turn, half caught up within a tenth of a second, never overshooting, turning the short way round). Its light stays in each room's scene and is dimmed to nothing when off, so switching it never makes the renderer rebuild every material. Every room now passes its scene to the shared first-person controller to hold it. `?torch=on` starts a page with it lit, for renders.
