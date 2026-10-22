@@ -34,3 +34,23 @@ export const wayName = (legend: string) => legend.replace(/ \d+ A$/, '');
 export const FED_ROOMS = (Object.keys(ROOM_SERVICES) as ServiceRoom[]).filter(
   (r) => r !== 'switch_room',
 );
+
+/**
+ * The main incoming switch-disconnector, between the supply company's
+ * cut-out and the main switchboard: the whole site's supply
+ * (`plant.sources.power`). What it shows: the incoming supply's lamp
+ * (the supply company's side, always live), its ON (red, closed) and
+ * OFF (green, open) lamps as UK switchgear has them, and the voltmeter
+ * on its outgoing side.
+ */
+/** The main switch's enclosure, metres: wall-mounted. */
+export const MAIN_SWITCH = { w: 0.7, h: 1.1, d: 0.32 } as const;
+
+export function mainSwitchShows(on: boolean) {
+  return {
+    supply: true,
+    on,
+    off: !on,
+    volts: on ? 400 : 0,
+  };
+}

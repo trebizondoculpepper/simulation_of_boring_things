@@ -62,6 +62,33 @@ describe('the world', () => {
   });
 });
 
+describe('the main incoming switch off', () => {
+  it('takes every service from every room, stops every pool and the booster set, and gives them back', () => {
+    let w = advance(newWorld(), 10 * 3600, 10);
+    w = applyAction(w, { type: 'plant/source', utility: 'power', on: false });
+    for (const room of Object.keys(
+      w.plant.feeders,
+    ) as (keyof typeof w.plant.feeders)[])
+      for (const utility of [
+        'power',
+        'water',
+        'heat',
+        'air',
+        'chemical',
+      ] as const)
+        expect(
+          serviceAvailable(w.plant, room, utility),
+          `${room} ${utility}`,
+        ).toBe(false);
+    w = advance(w, 600, 10);
+    for (const id of POOL_IDS) expect(w.pools[id].flow, id).toBeLessThan(1);
+    expect(w.wetHall.boosterRunning).toBe(false);
+    w = applyAction(w, { type: 'plant/source', utility: 'power', on: true });
+    w = advance(w, 600, 10);
+    for (const id of POOL_IDS) expect(w.pools[id].flow, id).toBeGreaterThan(5);
+  });
+});
+
 describe('the mains water off', () => {
   it('runs the break tank down, trips the booster set, then the pools’ tanks run down until their pumps trip', () => {
     // Two days' normal running, to midday.

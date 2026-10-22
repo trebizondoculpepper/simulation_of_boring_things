@@ -33,13 +33,22 @@ import { EXHIBITS as PUMPS } from '../rooms/plant/pumps';
 import { EXHIBITS as OZONE } from '../rooms/plant/ozone';
 import { EXHIBITS as DOSING } from '../rooms/plant/dosing';
 import { EXHIBITS as BALANCE } from '../rooms/plant/balance';
+import { createMainSwitch } from '../../components/plant/views/main-switch';
+import { switchRoomContainment } from '../logic/cable-containment';
+import { createContainment } from './cable-containment';
+import type { MainsFeed } from '../../components/plant/views/main-switch';
 import {
   createWetHallMimic,
   createWorldBoosterSet,
   createWorldWaterMeter,
 } from './wet-hall';
 import { EXHIBITS as BOILER } from '../rooms/plant/boiler';
-import { createLiveBoilerCascade } from '../rooms/plant/boiler';
+import {
+  bindBoilerSupply,
+  createLiveBoilerCascade,
+} from '../rooms/plant/boiler';
+import { airHouse } from '../../components/plant/views/pool-ahu';
+import { serviceAvailable } from '../../../game/plant/services';
 import { EXHIBITS as CHEMICALS } from '../rooms/plant/chemicals';
 import { EXHIBITS as ELECTRICAL } from '../rooms/plant/electrical';
 import { EXHIBITS as CONTROL } from '../rooms/plant/control';
@@ -123,6 +132,7 @@ const TANKS: Record<string, 'sectional' | 'vessel'> = {
  */
 function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
   const [kind, arg] = item.key.split(':');
+  bindSupplies();
   if (kind === 'boiler-cascade' && arg)
     return createLiveBoilerCascade(kit, (Number(arg) - 1) * 2);
   if (kind === 'mimic-air') return createAirMimic(kit);
@@ -132,6 +142,8 @@ function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
   if (kind === 'mimic-wet') return createWetHallMimic(kit);
   // The switch room's switchboard, its ways feeding the rooms in the world.
   if (kind === 'lv-switchboard') return createMainSwitchboard(kit, worldFeed());
+  // The main incoming switch, the whole site's supply in the world.
+  if (kind === 'main-switch') return createMainSwitch(kit, mainsFeed());
   if (kind === 'ahu-stack') {
     const stack = stackOf(item.key);
     if (stack) return createAhuStack(kit, stack.units, STACK_FRAME);
@@ -191,6 +203,33 @@ function worldFeed(): SwitchboardFeed | undefined {
       for (const room of SWITCHBOARD_FEEDS[wayName(legend)] ?? [])
         store.dispatch({ type: 'plant/feeder', room, on });
     },
+  };
+}
+
+/**
+ * The machines that keep their own state, the boilers and the air
+ * handling units, bound to their rooms' supply in the world: off when
+ * the room's feeder is, or the whole site's main switch.
+ */
+let suppliesBound = false;
+function bindSupplies() {
+  if (suppliesBound || typeof window === 'undefined') return;
+  suppliesBound = true;
+  const store = worldStore('dev');
+  bindBoilerSupply(() =>
+    serviceAvailable(store.world.value.plant, 'boiler_house', 'power'),
+  );
+  airHouse.supply = () =>
+    serviceAvailable(store.world.value.plant, 'air_plant', 'power');
+}
+
+/** The world's whole-site supply (`plant.sources.power`), for the main switch. */
+function mainsFeed(): MainsFeed | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const store = worldStore('dev');
+  return {
+    on: () => store.world.value.plant.sources.power,
+    set: (on) => store.dispatch({ type: 'plant/source', utility: 'power', on }),
   };
 }
 
@@ -282,6 +321,11 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
       ? createRoomServices(kit, room as ServiceRoom, floorY)
       : null;
   if (services) pipework.group.add(services.group);
+  // The switch room's cable ladder and its switchgear's trunking.
+  if (room === 'switch_room') {
+    const c = switchRoomContainment();
+    pipework.group.add(createContainment(kit, c.runs, c.entries, 7, floorY));
+  }
   // The air plant's ductwork, gantries and stair (`air-plant.ts`).
   if (room === 'air_plant') {
     const structure = createAirPlantStructure(kit, placed, floorY);

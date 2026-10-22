@@ -13,6 +13,8 @@ import {
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createServiceCeiling } from '../../components/site-dressing/views/service-ceiling';
+import { corridorContainment } from '../logic/cable-containment';
+import { createContainment } from './cable-containment';
 import {
   EQUIPMENT_DOORS,
   equipmentDoors,
@@ -161,6 +163,9 @@ export function createMainCorridor(metre: number, kit: PanelKit) {
     return { door: d, part, lobby };
   });
 
+  // The cable ladder from the switch room round the ring, into every room.
+  const cables = corridorContainment();
+  group.add(createContainment(kit, cables.runs, cables.entries, H));
   // The services ceiling over each side, and the wall battens and lights.
   strips.forEach(([minX, maxX, minZ, maxZ], i) =>
     group.add(

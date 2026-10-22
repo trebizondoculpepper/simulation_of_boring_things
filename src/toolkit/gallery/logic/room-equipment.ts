@@ -13,6 +13,7 @@ import {
 } from './shell-rooms';
 import type { ShellRoomId, ShellWall } from './shell-rooms';
 import { BOOSTER } from '../../components/plant/logic/booster-set';
+import { MAIN_SWITCH } from './switch-room';
 
 /**
  * Where each room's machines stand: the plant sizing's inventory
@@ -823,6 +824,16 @@ export function roomEquipment(
             back: 0,
             walls: ['east', 'west'],
           }),
+          // The whole site's supply, by the door, where it is found first.
+          wall(
+            'main-switch',
+            'Main incoming switch',
+            MAIN_SWITCH.w,
+            MAIN_SWITCH.d,
+            MAIN_SWITCH.h,
+            1.0,
+            { walls: ['east'] },
+          ),
           floor(
             'central-battery',
             'Emergency lighting central battery',

@@ -63,6 +63,8 @@ export const airHouse = {
   occupied: new Map<string, boolean>(),
   hall: new Map<string, string>(),
   airflow: new Map<string, number>(),
+  /** The air plant's electrical supply: on, unless bound to the world's. */
+  supply: () => true,
   last: -1,
 };
 
@@ -91,7 +93,8 @@ export function advanceAirPlant(now: number) {
       stepAhu(
         s,
         {
-          isolatorOn: airHouse.isolator.get(tag)?.() ?? true,
+          isolatorOn:
+            airHouse.supply() && (airHouse.isolator.get(tag)?.() ?? true),
           mode: airHouse.mode.get(tag)?.() ?? 'auto',
           demand: airHouse.occupied.get(airHouse.hall.get(tag) ?? '') ?? true,
         },

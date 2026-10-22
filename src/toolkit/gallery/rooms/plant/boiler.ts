@@ -66,6 +66,8 @@ const house = {
   isolators: [] as BallValveView[],
   ecv: null as BallValveView | null,
   stopPushed: () => false,
+  /** The boiler house's electrical supply: on, unless bound to the world's. */
+  powered: () => true,
   seconds: 0,
   /** Flue temperatures, the combustion air fan and the room's CO. */
   combustion: newCombustion(6) as CombustionState,
@@ -97,6 +99,11 @@ export const PURPOSE =
   'Boilers, low-loss header, heating pumps, pressurisation and gas safety';
 
 /** A physical pair of controllers in one of the room's three cascades. */
+/** Bind the boiler house's supply, as the leisure centre's world has it. */
+export function bindBoilerSupply(powered: () => boolean) {
+  house.powered = powered;
+}
+
 export function createLiveBoilerCascade(
   kit: Parameters<PlantExhibit['build']>[0],
   first: number,
@@ -143,6 +150,7 @@ export function createLiveBoilerCascade(
               gas: gasTo(house.gas, i),
               systemReturn: plant.lthw - 14,
               pressure: 2.4,
+              powered: house.powered(),
             },
             delta,
           ),

@@ -67,8 +67,8 @@ export function roomServiceRoutes(room: string): ServiceRoute[] {
     });
     for (const [i, p] of placed.entries()) {
       if (!active(p.item.key)) continue;
-      // The switch room's cabinets carry hundreds of amps: heavy trunking,
-      // below, not a conduit.
+      // The switch room's cabinets carry hundreds of amps: heavy trunking
+      // to the cable ladder (`cable-containment.ts`), not a conduit.
       if (room === 'switch_room' && SWITCHGEAR.has(p.item.key)) continue;
       // Every power port of it (a pump pair has one a motor); a machine
       // with none, at its top.
@@ -104,29 +104,8 @@ export function roomServiceRoutes(room: string): ServiceRoute[] {
   // The pool plant rooms' process pipework is routed port to port in
   // `room-pipes.ts`.
 
-  if (room === 'switch_room') {
-    // Each cabinet, flush to its wall, its 300 mm cable trunking up off its
-    // top and into the nearest of the east, west and south walls, where
-    // the cables go on out of sight to the rooms they feed.
-    for (const p of placed) {
-      if (!SWITCHGEAR.has(p.item.key)) continue;
-      const top = p.item.h;
-      const level = top + 0.45;
-      const walls = [
-        { d: p.x - -box.w / 2, to: [-box.w / 2, level, p.z] as Point3 },
-        { d: box.w / 2 - p.x, to: [box.w / 2, level, p.z] as Point3 },
-        { d: box.d / 2 - p.z, to: [p.x, level, box.d / 2] as Point3 },
-      ].sort((a, b) => a.d - b.d);
-      routes.push({
-        name: `${p.item.label} trunking`,
-        utility: 'power',
-        kind: 'rectangular-duct',
-        od: 0.3,
-        points: [[p.x, top, p.z], [p.x, level, p.z], walls[0].to],
-        to: p.item.key,
-      });
-    }
-  }
+  // The switch room's switchgear rises in trunking to its cable ladder
+  // (`cable-containment.ts`).
 
   return routes.filter((r) => r.points.every((p) => p.every(Number.isFinite)));
 }

@@ -104,6 +104,8 @@ export interface BoilerInputs {
   systemReturn: number;
   /** The system pressure, bar. */
   pressure: number;
+  /** Whether its electrical supply is on (by default, it is). */
+  powered?: boolean;
 }
 
 /** Step `boiler` on by `delta` seconds. Returns a new state. */
@@ -123,6 +125,12 @@ export function stepBoiler(
   };
   const wanted =
     b.on && b.lockout === null && (inputs.demand || b.forcing !== 'auto');
+  // Without power nothing runs: no fan, no ignition, no flame.
+  if (inputs.powered === false) {
+    b.rate = 0;
+    if (b.code !== 0) to(0);
+    return b;
+  }
   if (!b.on || b.lockout) {
     b.rate = 0;
     if (b.code !== 0 && b.code !== 9) to(0);

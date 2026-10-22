@@ -37,6 +37,18 @@ const run = (
 };
 
 describe('a boiler’s controller', () => {
+  it('goes out without power, and fires again once it is back', () => {
+    const firing = run(newBoiler(), {}, PURGE_SECONDS + IGNITION_SECONDS + 5);
+    expect(firing.rate).toBeGreaterThan(0);
+    const dark = run(firing, { powered: false }, 5);
+    expect(dark.rate).toBe(0);
+    expect(dark.code).toBe(0);
+    expect(dark.on).toBe(true);
+    expect(
+      run(dark, {}, PURGE_SECONDS + IGNITION_SECONDS + 5).rate,
+    ).toBeGreaterThan(0);
+  });
+
   it('waits in standby with no demand', () => {
     expect(run(newBoiler(), { demand: false }, 30).code).toBe(0);
   });

@@ -34,6 +34,10 @@ Model first, then the machines. The wet hall became a block in the world with it
 
 The wet hall is now piped port to port (`wetHallPipework` in `room-pipes.ts`) and is in both connection tests: the town main down in front of the break tank and over its roof by a chain-worked stop valve, the outlet to the booster set, the booster to the meter, the make-up main up into the roof, the backwash main down into the holding tank, its discharge riser over the tank's front to the sewer, and each tank's overflow and drain into the floor. The valve-reach test pushed the drain valves out past the tanks' ladders and the main's stop valve over open floor. The booster set and the wet hall mimic are also in the balance development room, running on their own.
 
+## Afterwards: the supply from the switch room, and a main switch
+
+The owner found the switch room's trunking far too small and asked for the supply to be seen going from the switch room everywhere, and for a master isolator that switches off the whole world. The 300 mm stubs into the nearest wall became steel trunking rising from each piece of switchgear (the board's 600 mm wide) to a 600 mm heavy-duty cable ladder at 4.4 m round the switch room, out over its door, and round the main corridor's ring under its outside walls, turning into every room's door, the wet hall's across the corridor (`cable-containment.ts`, logic and view, tested). A main incoming switch-disconnector after the ABB OT1600 (Voltara's) hangs by the switch room's door, the incoming supply rising out of the floor into it: its red-on-yellow rotary handle is bound to the world's `plant.sources.power`, with SUPPLY, ON (red) and OFF (green) lamps and a voltmeter. Off, no room has any service, every pool stops, the booster set stops; the boilers (a new `powered` input) and the air handling units (`airHouse.supply`), which keep their own state, are now bound to their rooms' supply too. Lighting and the panels' own displays do not yet go dark.
+
 ## Next Steps
 
 - Make the pools' pumps' low-low trip latch, and drive the control room's annunciator from the world.
