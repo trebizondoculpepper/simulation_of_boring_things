@@ -446,11 +446,12 @@ const openRoom = async () => {
     current = undefined;
     app.hidden = true;
     positionOverlay.hidden = true;
-    // The developers' room list at `?dev`; otherwise the title screen.
+    // The developers' panel, the room list, at `?dev` (a tool, not part
+    // of the game); otherwise the title screen.
     if (params.has('dev')) {
       titleScreen.hide();
       directory.hidden = false;
-      document.title = 'The Pool — Rooms';
+      document.title = 'The Pool — Dev panel';
     } else {
       directory.hidden = true;
       titleScreen.show();
