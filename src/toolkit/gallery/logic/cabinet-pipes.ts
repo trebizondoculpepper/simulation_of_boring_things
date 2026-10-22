@@ -236,7 +236,13 @@ export interface CabinetRun {
   /** Where it passes through the room's walls. */
   through: WallCrossing[];
   /** Named operating valve mounted on this pipe in the room. */
-  valve?: { id: string; at: Vec3; axis: 'x' | 'z' };
+  valve?: {
+    id: string;
+    at: Vec3;
+    axis: 'x' | 'z';
+    /** Its lever, or, out of reach overhead, a chain wheel (`CHAIN_TO`). */
+    operator?: 'lever' | 'chain';
+  };
 }
 
 /** The room's isolator: on the wall at the cabinet's left, a working rotary switch-disconnector. */
@@ -264,6 +270,8 @@ const STEP = 0.2;
 const HEATING_LANE = 0.17;
 /** Over the head of a doorway (the equipment doors' 2.52 m) and clear of it. */
 export const ABOVE_DOORS = 2.8;
+/** The footbath's make-up main runs this high, above the plant lanes. */
+export const MAKE_UP_LEVEL = 3.4;
 /** The isolator's supply comes along the wall this high, over everything else. */
 const SUPPLY_LEVEL = 3.1;
 /** Its feed to the cabinet crosses over the cabinet's roof this high. */
@@ -428,9 +436,11 @@ export function cabinetPipes(room: string): CabinetRun[] {
         axis: Math.abs(a[0] - b[0]) > Math.abs(a[2] - b[2]) ? 'x' : 'z',
       };
     }
-    // Fresh water enters along the east wall and continues to the pool.
-    // Its float valve is accessible at waist height near the room centre.
+    // Fresh water enters along the east wall and continues to the pool,
+    // overhead, above every other lane (`MAKE_UP_LEVEL`); its valve worked
+    // from the floor by a chain wheel, its chain hanging within reach.
     const x = s.layout.box.w / 2 - 0.35;
+    const y = MAKE_UP_LEVEL;
     runs.push({
       name: 'Footbath make-up main',
       kind: 'pvc-pressure',
@@ -438,25 +448,30 @@ export function cabinetPipes(room: string): CabinetRun[] {
       service: 'make-up',
       label: 'FOOTBATH MAKE-UP',
       points: [
-        [x, 1.25, h + WALL],
-        [x, 1.25, 0],
-        [x, 1.25, -h - WALL],
+        [x, y, h + WALL],
+        [x, y, 0],
+        [x, y, -h - WALL],
       ],
       through: [
         {
-          at: [x, 1.25, h + WALL / 2],
+          at: [x, y, h + WALL / 2],
           normal: [0, 0, -1],
           thickness: WALL,
           kind: 'fire-collar',
         },
         {
-          at: [x, 1.25, -h - WALL / 2],
+          at: [x, y, -h - WALL / 2],
           normal: [0, 0, 1],
           thickness: WALL,
           kind: 'fire-collar',
         },
       ],
-      valve: { id: 'PL4-MU1-LCV1', at: [x, 1.25, 0], axis: 'z' },
+      valve: {
+        id: 'PL4-MU1-LCV1',
+        at: [x, y, 0],
+        axis: 'z',
+        operator: 'chain',
+      },
     });
   }
   // The supply, along the wall from the south and down into the isolator;

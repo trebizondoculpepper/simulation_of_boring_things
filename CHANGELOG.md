@@ -7,6 +7,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 ### Fixed
 
 - The underwater gallery's door to the engineer's office stands on a 0.25 m sill above the corridor's fillet, which now runs unbroken beneath it (the office's floor meets the sill, as plant rooms do).
+- The footbath's make-up main runs overhead at 3.4 m, clear of head height and the equipment doorway, its valve worked from the floor by a chain wheel (shared now with the plant rooms' overhead valves).
 - Lever-operated butterfly valves no longer flicker where the lever meets the stem: the stem runs up into a round boss at the lever's head, so no faces coincide.
 - The MAIN PLANT sign over each pair of equipment doors stands above the concrete lintel instead of half behind it.
 - The Jacuzzi's and the footbath's packaged cabinets start in service, their POWER on, so switching off their isolators is seen to stop them; the Jacuzzi plant room's mimic shows the world's circulation, water temperature and flow instead of fixed values.

@@ -1,11 +1,4 @@
-import {
-  BoxGeometry,
-  CylinderGeometry,
-  Group,
-  Mesh,
-  MeshStandardMaterial,
-  TorusGeometry,
-} from 'three';
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createPartSet } from '../../components/core/parts/parts';
 import {
@@ -19,7 +12,10 @@ import type { PipeService } from '../../components/plant/views/pipe-markers';
 import { worldStore } from '../../save/world-store';
 import type { IsolatorName } from '../../../game/plant/services';
 import { createPowerIsolator } from '../../components/industrial-control/views/panel-switchgear';
-import { createWaterButterflyValve } from '../../components/plant/views/water-butterfly-valve';
+import {
+  addChainWheel,
+  createWaterButterflyValve,
+} from '../../components/plant/views/water-butterfly-valve';
 import { createGasBallValve } from '../../components/plant/views/gas-fittings';
 import type { DN } from '../../components/plant/views/plant-tools';
 import { PIPE_SIZES } from '../../components/plant/views/plant-tools';
@@ -155,28 +151,13 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     // Out of reach overhead: a chain wheel on its spindle, its endless
     // chain hanging to within reach; pulling the chain works it.
     const use = [...part.uses.values()][0];
-    const red = new MeshStandardMaterial({ color: '#b22a22', roughness: 0.5 });
-    const chainSteel = new MeshStandardMaterial({
-      color: '#8a8f92',
-      roughness: 0.4,
-      metalness: 0.7,
-    });
-    kit.materials.push(red, chainSteel);
-    const r = v.od / 2 + 0.12;
-    const wheel = new Mesh(new TorusGeometry(0.15, 0.012, 8, 24), red);
-    wheel.position.set(0, r, 0);
-    part.object.add(wheel);
-    const drop = v.at[1] + r - CHAIN_TO;
-    for (const side of [-1, 1]) {
-      const chain = new Mesh(
-        new CylinderGeometry(0.006, 0.006, drop, 6),
-        chainSteel,
-      );
-      chain.position.set(side * 0.15, r - drop / 2, 0);
-      chain.name = `${v.name} chain`;
-      part.object.add(chain);
+    for (const chain of addChainWheel(kit, part.object, {
+      od: v.od,
+      at: v.at[1],
+      chainTo: CHAIN_TO,
+      name: v.name,
+    }))
       if (use) parts.uses.set(chain, use);
-    }
     return part.object;
   }
   // The floor channels: grated, or covered with chequer plate.

@@ -39,8 +39,11 @@ describe.each([
   it('connects every one of the cabinet’s ports: water, heating, drain and electricity', () => {
     const ports = cabinetPorts(jets);
     expect(ports.length).toBe(jets ? 9 : 6);
-    // Each port's run, and the supply to the isolator besides.
-    expect(runs.length).toBe(ports.length + 1);
+    // Each port's run, and the supply to the isolator besides; and in the
+    // footbath's room its make-up main, passing through.
+    expect(runs.length).toBe(
+      ports.length + 1 + (room === 'plant_pool_04' ? 1 : 0),
+    );
     for (const kind of [
       'pool water',
       'heating flow',

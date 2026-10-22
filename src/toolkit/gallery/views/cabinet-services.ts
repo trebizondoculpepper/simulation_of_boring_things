@@ -15,7 +15,10 @@ import type { PipeService } from '../../components/plant/views/pipe-markers';
 import { worldStore } from '../../save/world-store';
 import type { IsolatorName } from '../../../game/plant/services';
 import { createPowerIsolator } from '../../components/industrial-control/views/panel-switchgear';
-import { createWaterButterflyValve } from '../../components/plant/views/water-butterfly-valve';
+import {
+  addChainWheel,
+  createWaterButterflyValve,
+} from '../../components/plant/views/water-butterfly-valve';
 import {
   partOpen,
   identifiedPart,
@@ -27,6 +30,7 @@ import {
   cabinetPipes,
 } from '../logic/cabinet-pipes';
 import type { Service } from '../logic/cabinet-pipes';
+import { CHAIN_TO } from '../logic/room-pipes';
 
 /** Each run's service, as its markings name it. */
 const MARKED: Record<Service, PipeService> = {
@@ -116,6 +120,17 @@ export function cabinetServices(
       group.add(valve.object);
       valveParts.push(valve);
       for (const [piece, use] of valve.uses) uses.set(piece, () => use());
+      // Overhead, out of reach: worked by its chain from the floor.
+      if (run.valve.operator === 'chain') {
+        const use = [...valve.uses.values()][0];
+        for (const chain of addChainWheel(kit, valve.object, {
+          od: run.od,
+          at: at[1],
+          chainTo: CHAIN_TO,
+          name: id,
+        }))
+          if (use) uses.set(chain, () => use());
+      }
       const legend = createMicroLabel(
         kit,
         `${id}\n${description?.name ?? 'VALVE'}`,
