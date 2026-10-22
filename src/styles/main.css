@@ -407,6 +407,99 @@ canvas {
 .hud-torch.is-lit .hud-torch-beam {
   visibility: visible;
 }
+/* The settings panel (src/toolkit/settings/settings-panel.ts): over the
+   game, in the HUD's style. */
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: #0008;
+}
+.settings-backdrop[hidden] {
+  display: none;
+}
+.settings-panel {
+  box-sizing: border-box;
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 18px 20px;
+  border: 2px solid var(--hud-amber);
+  border-radius: 6px;
+  background: #1e2022ee;
+  color: var(--hud-amber);
+  font: 15px/1.4 monospace;
+  text-shadow: 0 0 6px var(--hud-amber-glow);
+  box-shadow: 0 0 18px #ffa00033;
+}
+.settings-panel h2 {
+  margin: 0 0 14px;
+  font-size: 20px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.settings-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid #ffa00033;
+}
+.settings-name {
+  grid-column: 1;
+}
+.settings-row input[type='range'] {
+  width: 150px;
+  accent-color: var(--hud-amber);
+}
+.settings-row input[type='checkbox'],
+.settings-row input[type='radio'] {
+  accent-color: var(--hud-amber);
+}
+.settings-readout {
+  min-width: 4.5em;
+  text-align: right;
+}
+.settings-choices {
+  display: flex;
+  gap: 10px;
+}
+.settings-choices label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+.settings-button {
+  padding: 6px 14px;
+  border: 2px solid var(--hud-amber);
+  border-radius: 4px;
+  background: var(--hud-grey);
+  color: var(--hud-amber);
+  font: bold 14px/1.2 monospace;
+  cursor: pointer;
+}
+.settings-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.settings-button:focus-visible,
+.settings-panel input:focus-visible {
+  outline: 2px solid #fff3c4;
+  outline-offset: 2px;
+}
+.settings-note {
+  margin: 12px 0;
+  font-size: 12px;
+  opacity: 0.75;
+}
+.settings-done {
+  display: block;
+  margin-left: auto;
+}
 /* Top left, under the room's name: the simulation's speed (not yet worked). */
 .hud-speed {
   position: absolute;

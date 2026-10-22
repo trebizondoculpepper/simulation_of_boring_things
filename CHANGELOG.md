@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- A settings panel, opened by the gear among each room's view tools: master volume, look sensitivity and invert, field of view, graphics quality, on-screen controls (kept in the browser; not yet applied to the game).
 - The operator's manual, generated from the game's model (`npm run manual`): a LuaLaTeX PDF in the fiction's voice, from Bramhall Fenwick Engineering to Ashworth Borough Council, with Rowland Fenwick's foreword and a first chapter on the boiler house (its equipment plan and schedule, boiler settings, gas house schematic, supplies, start-up, gas emergency and signs).
 
 ## [0.1.0] - 2026-10-22

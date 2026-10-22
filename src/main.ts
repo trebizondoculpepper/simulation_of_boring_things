@@ -26,6 +26,10 @@ import {
 import { worldStore } from './toolkit/save/world-store';
 import { GAS_ZONE_IDS } from './game/plant/gas';
 import { versionLabel } from './game/version';
+import {
+  GEAR_ICON,
+  createSettingsPanel,
+} from './toolkit/settings/settings-panel';
 
 // Which build this is, until the title screen shows it.
 console.info(`Pool Plant ${versionLabel()}`);
@@ -99,6 +103,18 @@ positionButton.textContent = '📍';
 positionButton.title = 'Copy a link to this view';
 positionButton.setAttribute('aria-label', 'Copy a link to this view');
 positionButton.className = 'location-pin-button';
+// The settings: the gear among each room's view tools opens them.
+const settingsPanel = createSettingsPanel();
+const settingsButton = document.createElement('button');
+settingsButton.type = 'button';
+settingsButton.className = 'hud-button hud-settings';
+settingsButton.innerHTML = GEAR_ICON;
+settingsButton.title = 'Settings';
+settingsButton.setAttribute('aria-label', 'Settings');
+settingsButton.addEventListener('pointerdown', (event) =>
+  event.stopPropagation(),
+);
+settingsButton.addEventListener('click', () => settingsPanel.open());
 const positionStatus = document.createElement('span');
 positionStatus.setAttribute('role', 'status');
 positionOverlay.append(roomName, positionStatus);
@@ -490,8 +506,10 @@ const showOnTop = (key: string) => {
   const tools = surfaceOf(key)?.parentElement?.querySelector(
     '[aria-label="View tools"]',
   );
-  if (tools) tools.prepend(positionButton);
-  else positionOverlay.append(positionButton);
+  if (tools) {
+    tools.prepend(positionButton);
+    tools.append(settingsButton);
+  } else positionOverlay.append(positionButton, settingsButton);
   for (const [id, entry] of rooms) {
     entry.root.hidden = id !== key;
     entry.root.style.zIndex = id === key ? '1' : '';
