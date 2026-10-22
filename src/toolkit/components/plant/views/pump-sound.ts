@@ -13,12 +13,9 @@ import type { PumpSet } from '../logic/pump-sound';
 /**
  * A centrifugal pump set's sound while it runs (`../logic/pump-sound.ts`
  * for its numbers), synthesised, to hold at the pump
- * (`partAudio.hold`): its motor's iron humming at 100 Hz and its
- * harmonics, as long as it is energised; its shaft's low rumble; its
- * impeller's blade-pass note; and the broadband noise of its cooling fan
- * and its water. Started, the turning layers rise in pitch and loudness
- * as it runs up; stopped, the hum cuts out at once and the rest coasts
- * down, falling, and it is let go when it has.
+ * (`partAudio.hold`): a restrained motor hum and impeller note under
+ * textured bearing, fan and water noise. All turning layers run up and
+ * coast down with shaft speed; the magnetic hum dies as power is lost.
  */
 export function pumpSound(p: PumpSet = CIRCULATION_PUMP): LoopRecipe {
   return (context, out) => {
@@ -37,15 +34,16 @@ export function pumpSound(p: PumpSet = CIRCULATION_PUMP): LoopRecipe {
         map(pumpSpeed(p, (i / (n - 1)) * seconds, running)),
       );
     };
-    // The iron's hum: energised from the start, at full loudness.
+    // The iron hum builds as the motor energises, rather than switching
+    // in at full volume before the shaft has moved.
     const humGain = context.createGain();
-    humGain.gain.value = 1;
+    humGain.gain.setValueAtTime(0.0001, start);
+    humGain.gain.exponentialRampToValueAtTime(0.45, start + p.runUp * 0.4);
     humGain.connect(master);
     const hum = (
       [
-        [humHz(p), 0.32, 'sine'],
-        [2 * humHz(p), 0.12, 'triangle'],
-        [3 * humHz(p), 0.05, 'sine'],
+        [humHz(p), 0.2, 'sine'],
+        [2 * humHz(p), 0.035, 'sine'],
       ] as const
     ).map(([hz, level, type]) => {
       const osc = context.createOscillator();
@@ -65,14 +63,15 @@ export function pumpSound(p: PumpSet = CIRCULATION_PUMP): LoopRecipe {
       level: number;
     }[] = (
       [
-        [shaftHz(p), 0.3, 'sine'],
-        [bladePassHz(p), 0.16, 'triangle'],
-        [2 * bladePassHz(p), 0.04, 'sine'],
+        [shaftHz(p), 0.12, 'sine'],
+        [bladePassHz(p), 0.07, 'sine'],
       ] as const
     ).map(([hz, level, type]) => {
       const osc = context.createOscillator();
       osc.type = type;
       const gain = context.createGain();
+      gain.gain.value = 0;
+      osc.frequency.value = hz * 0.04;
       osc.connect(gain).connect(master);
       osc.start(start);
       return { osc, hz, gain, level };
@@ -84,15 +83,28 @@ export function pumpSound(p: PumpSet = CIRCULATION_PUMP): LoopRecipe {
     fan.type = 'bandpass';
     fan.Q.value = 0.7;
     const fanGain = context.createGain();
+    fanGain.gain.value = 0;
     const flow = context.createBiquadFilter();
     flow.type = 'lowpass';
     const flowGain = context.createGain();
+    flowGain.gain.value = 0;
     noise.connect(fan).connect(fanGain).connect(master);
     noise.connect(flow).connect(flowGain).connect(master);
     noise.start(start);
+    // A second, independent source gives the casing a rough mechanical
+    // texture. It avoids the pure electronic note made by oscillators alone.
+    const bearings = noiseSource(context);
+    const casing = context.createBiquadFilter();
+    casing.type = 'bandpass';
+    casing.Q.value = 0.45;
+    const casingGain = context.createGain();
+    casingGain.gain.value = 0;
+    bearings.connect(casing).connect(casingGain).connect(master);
+    bearings.start(start);
     const filters = [
-      { node: fan, hz: 900, gain: fanGain, level: 0.22 },
-      { node: flow, hz: 260, gain: flowGain, level: 0.35 },
+      { node: fan, hz: 1100, gain: fanGain, level: 0.37 },
+      { node: flow, hz: 330, gain: flowGain, level: 0.48 },
+      { node: casing, hz: 480, gain: casingGain, level: 0.27 },
     ];
     // Set `param` along `values` from `at`: a curve where the browser will
     // take one over what it is doing (a run-up cut short by a stop), else a
@@ -144,14 +156,16 @@ export function pumpSound(p: PumpSet = CIRCULATION_PUMP): LoopRecipe {
       }
     };
     drive(start, p.runUp, true);
-    const sources = [...hum, ...turning.map((t) => t.osc), noise];
+    const sources = [...hum, ...turning.map((t) => t.osc), noise, bearings];
     // Stopped: the hum cut, the rest coasting down, then let go.
     return [
       {
         release: p.coastDown,
         stop(end?: number) {
           const now = context.currentTime;
-          humGain.gain.cancelScheduledValues(now);
+          if (humGain.gain.cancelAndHoldAtTime)
+            humGain.gain.cancelAndHoldAtTime(now);
+          else humGain.gain.cancelScheduledValues(now);
           humGain.gain.setTargetAtTime(0, now, 0.05);
           drive(now, p.coastDown, false);
           for (const s of sources) s.stop(end ?? now + p.coastDown);

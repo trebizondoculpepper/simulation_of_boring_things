@@ -1,0 +1,34 @@
+# Prompt: review the port graph as the world's equipment contract
+
+You are an independent reviewer. Do not implement a migration. Read `AGENTS.md`, `doc/research/port-graph-physical-quantities.md`, `doc/prompts/013-minimal-multidomain-plant.md`, and `src/game/plant/network/port-graph-spike.test.ts`. Inspect the existing plant network, machine port definitions, visual bindings, world state, catalogue, and their tests. Check the library's actual API and limitations against the proposal; distinguish facts in the code from desired future behavior.
+
+## Decision to review
+
+Would a typed port graph make a better central contract for this game's installed world than the current combination of network, world simulation, catalogue, and visual placement? The graph should describe installed identity and topology. A separate simulation computes live values; visuals and controls bind to those IDs. Consider an incremental adoption path that preserves current gameplay and saved worlds. A favorable review must explain what the graph package contributes, what TypeScript can enforce, what requires runtime validation, and what must remain outside the graph.
+
+## Required outcomes
+
+1. Every nondecorative installed visual component has one stable graph identity and one catalogue entry. Every graph node that should be visible is placed exactly once in the appropriate room, unless deliberately virtual or hidden. Flag unbound visuals, duplicate bindings, and orphan graph nodes. Include pumps, valves, cabinets, pools, buttons, switches, lights, displays, sensors, alarms, doors, and instruments; identify which are graph nodes and which are child parts of a parent node.
+2. Every functional port drawn on a machine maps to one declared graph port with a stable ID. Every declared required port has a physical or signal connection, or an explicit documented exception. A model's port schema should be derived from its machine kind so the node cannot silently omit a required port. Handle machine internals with hierarchical IDs such as `PL1.CAB1.V_RET_1` and `PL1.P1.SUCTION` without printing full IDs on every small part.
+3. Connections have typed endpoints, roles, direction policy, cardinality, service or medium, and rated limits. Invalid connections must be rejected: suction-to-suction, pool water to acid, power to a signal input, or a source connected to a sink of the wrong voltage. Examine whether direction means allowed installation, normal flow, or instantaneous signed flow, since real water or current may reverse. TypeScript should catch invalid authored definitions when possible; runtime validation must catch data-loaded or dynamically constructed graphs.
+4. Nodes can be grouped by room and system without using room membership as electrical or hydraulic connectivity. Moves between rooms must preserve permanent identity and saved state. External supplies and sinks are explicit boundary nodes: gas and fresh-water mains, electrical supply, sewer, flue stack, and outside air. A finite store must be a stateful storage node, not an infinite source.
+5. The schema knows each line's domain and service and separates its design rating from its live state. For example, an electrical feeder needs voltage, AC phase/frequency, conductor or circuit identity, and a current limit such as 400 A; a gas line needs medium, design mass-flow capacity such as 10 g/h if appropriate, pressure range, and unit. Verify dimensional compatibility, connection capacity, and any necessary return path or reference. Live voltage, current, pressure, signed flow, temperature, composition, power, and accumulated energy should have stable addresses in the world simulation, not be mistaken for ratings in graph metadata.
+6. Controls and displays have explicit causal links. A button or switch issues a command to a named target; a light, gauge, or display reads a named simulation value or alarm. Check that operating a visual control affects the same component represented by the graph and that rendered indicators follow the world's resulting state. Include power, control signals, measurements, alarms, mechanical and thermal connections where relevant; do not force them all into one undifferentiated edge type.
+7. Topology and simulation remain distinct. A valid graph does not prove conservation, pressure solution, energy balance, correct interlocks, or safe operation. Propose the minimum independent tests for topology, visual/catalogue one-to-one mapping, required port completeness, behavior, and save migration. Account for graph size, indexed queries, serialization, stable IDs, and the cost of running validation during development versus at runtime.
+
+## Questions to answer
+
+- What is the correct unit of identity for a composite cabinet: one parent node with child control nodes, or one node per interactive part? How should parent-child ownership, ports, and labels be represented?
+- Do `@statelyai/graph` ports, `parentId`, metadata, and issue checks adequately support the contract, or would a smaller project-owned schema be clearer? Identify missing operations or constraints with evidence from the package API.
+- Can the existing plant network and world state be adapted incrementally, or would using this graph as the sole source of installed topology require a breaking migration? Name the first narrow production slice.
+- What additional invariants are needed for uniqueness, connection cardinality, component ratings, electrical return/reference, fluid mixing, control-to-target binding, and instrument-to-reading binding?
+- Which authored mistakes can TypeScript reject at compile time, and which require a runtime validator? Provide a small concrete example of each. Do not claim that plain string media values alone create compile-time safety.
+- Does the small gas/boiler/water/electrical experiment in prompt 013 fairly test the architecture? Suggest the smallest change that would expose a weakness without turning it into a whole-plant rewrite.
+
+## Deliverable
+
+Write `doc/reports/port-graph-architecture-review.md` with: a concise verdict (adopt, adapt, or reject for now); a table mapping each required outcome to current code, gap, and proposed check; prioritized findings with file references; a proposed TypeScript contract sketch; the smallest migration slice and rollback path; and a few specific acceptance tests. Mark library behavior that you verified separately from inference. Make suggestions freely and identify any requirement that should be changed. Do not edit the production model during this review.
+
+## Return path
+
+Return the report path, verdict, three most consequential findings, and exact proposed edits to prompt 013. Review prompt 014 first; run prompt 013 only after its scope has been adjusted in light of this review. The dev-room trial may be inspected as evidence, but neither prompt authorizes a production migration.

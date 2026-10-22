@@ -16,6 +16,7 @@ import type { Object3D } from 'three';
 import { DEV_ROOM_NAMES, devPortals, devWalls } from '../logic/dev-room-links';
 import type { EquipmentRoomId } from '../logic/dev-room-links';
 import { layoutPlantRoom } from '../logic/plant-room-layout';
+import type { PlantRoomLayout } from '../logic/plant-room-layout';
 import {
   BEAM_DEPTH,
   createServiceCeiling,
@@ -30,6 +31,7 @@ import {
   disposeKit,
   kitPaint,
 } from '../../components/core/views/eighties-controls';
+import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { SANS, tools } from '../../components/core/views/fitting-tools';
 import { mergeTree } from '../../components/core/views/merge-static';
 import { partAudio } from '../../components/core/audio/part-audio';
@@ -56,11 +58,16 @@ export type ExhibitRoomId =
   | 'dev14'
   | 'dev15'
   | 'dev17'
-  | 'dev18';
+  | 'dev18'
+  | 'dev19';
 
 const EXHIBITS: Record<
   ExhibitRoomId,
-  () => Promise<{ EXHIBITS: readonly PlantExhibit[]; PURPOSE: string }>
+  () => Promise<{
+    EXHIBITS: readonly PlantExhibit[];
+    PURPOSE: string;
+    buildRoomServices?: (kit: PanelKit, layout: PlantRoomLayout) => Group;
+  }>
 > = {
   dev_pumps: () => import('./plant/pumps'),
   dev_balance: () => import('./plant/balance'),
@@ -78,6 +85,7 @@ const EXHIBITS: Record<
   dev15: () => import('./plant/remote-lamp'),
   dev17: () => import('./plant/pool-edges'),
   dev18: () => import('./plant/security-office'),
+  dev19: () => import('./plant/port-graph-demo'),
 };
 
 /**
@@ -138,8 +146,26 @@ export function startEquipmentRoom(
   const live: LiveExhibit[] = [];
 
   /** Build the room's shell, door and exhibits to fit `exhibits`. */
-  const build = (exhibits: readonly PlantExhibit[], purpose: string) => {
+  const build = (
+    exhibits: readonly PlantExhibit[],
+    purpose: string,
+    buildRoomServices?: (kit: PanelKit, layout: PlantRoomLayout) => Group,
+  ) => {
     const layout = layoutPlantRoom(exhibits.map((e) => e.size));
+    if (id === 'dev19') {
+      const mimicIndex = exhibits.findIndex((exhibit) =>
+        exhibit.reference.startsWith('demo.mimic'),
+      );
+      if (mimicIndex >= 0) {
+        layout.places[mimicIndex] = { x: 3.75, y: 0, z: -0.65, yaw: 0 };
+        layout.solids[mimicIndex] = {
+          minX: 2.625,
+          maxX: 4.875,
+          minZ: -0.95,
+          maxZ: -0.35,
+        };
+      }
+    }
     const { halfX, halfZ } = layout;
     const services = SERVICE_CEILINGS[id as ExhibitRoomId];
     // Under a services ceiling, the walls and roof go up over the services.
@@ -288,6 +314,7 @@ export function startEquipmentRoom(
       }
       room.add(caption);
     });
+    if (buildRoomServices) room.add(buildRoomServices(kit, layout));
     solids = layout.solids.map((s) => ({
       minX: s.minX * m,
       maxX: s.maxX * m,
@@ -315,10 +342,10 @@ export function startEquipmentRoom(
       return;
     }
     const start = arrival ?? {
-      x: (-halfX + 2.5) * m,
-      z: (halfZ - 2) * m,
-      yaw: Math.PI / 4,
-      pitch: 0,
+      x: (id === 'dev19' ? -11.05 : -halfX + 2.5) * m,
+      z: (id === 'dev19' ? 3.68 : halfZ - 2) * m,
+      yaw: id === 'dev19' ? (38.9 * Math.PI) / 180 : Math.PI / 4,
+      pitch: id === 'dev19' ? (-8.8 * Math.PI) / 180 : 0,
     };
     walk.place(start.x, start.z, start.yaw, start.pitch);
   };
@@ -367,9 +394,11 @@ export function startEquipmentRoom(
     use: (x = 0, y = 0) => useAt(x, y)?.(),
   };
 
-  void EXHIBITS[id]().then(({ EXHIBITS: exhibits, PURPOSE }) => {
-    if (!disposed) build(exhibits, PURPOSE);
-  });
+  void EXHIBITS[id]().then(
+    ({ EXHIBITS: exhibits, PURPOSE, buildRoomServices }) => {
+      if (!disposed) build(exhibits, PURPOSE, buildRoomServices);
+    },
+  );
 
   const resize = () => {
     const { width, height } = canvas.getBoundingClientRect();

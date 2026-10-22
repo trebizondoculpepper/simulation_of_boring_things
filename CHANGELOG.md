@@ -4,7 +4,21 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Documentation
+
+- Defined the visual, simulation and control component triplet, with an inventory-led migration path for the full component catalogue, shared identity, typed ports, saved state and build validation.
+
 ### Fixed
+
+- Dev19's pump sound now builds from a softer motor hum, casing vibration, fan and water noise instead of prominent pure tones. Its boiler starts with a blower and igniter, develops a layered flame and flue sound, then closes its gas valve while the blower winds down.
+
+- Dev19 uses a finite 0.04 kWh battery. The mimic shows remaining charge; the pump and boiler lose power at depletion, the pump sound winds down, and gas and water valves fail closed.
+
+- Dev19 uses motorized gas and water valves and a motorized boiler breaker in place of its manual devices. The mimic commands each one and shows its actual state. Its pump runs up and coasts down audibly with simulated power; the boiler has ignition, firing and shutdown sounds, and motorized devices sound when they actuate.
+
+- Dev19 has a Penfold Controls mini-plant mimic at the requested viewpoint. Its eleven readings and five commands use typed graph control edges; a trunked run marks the shared ceiling data bus.
+
+- Dev19's boiler uses its working control panel: its keys and knob change a separate control state, and its screen, lamps and gauge show readings from the port-graph simulation. The boiler graph node now declares optional typed temperature and setpoint control ports, with read/write validation.
 
 - The switch room distribution board now has a visible circuit chart, an asset label, and an operable glazed door; the same board is available beside the switch-fuse in dev0. The strip-chart recorder's paper, pens, and glass have distinct depths to stop distant flicker.
 - The water network solver no longer stalls short of balance on a chain of short pipes high above its datum: its Jacobian steps a fixed distance, not a share of the head.
@@ -39,6 +53,9 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- A port-graph feasibility trial with typed equipment and boundary ports, room and brand metadata, and validation examples; research notes distinguish installed ratings from live electrical, fluid, and heat quantities, with a prompt for a minimal coupled plant prototype.
+- An independent review prompt for using a typed port graph as the installed-world contract, including visual and catalogue identity, child controls, port completeness, boundary nodes, line ratings, and simulation bindings.
+- A walkable dev19 port-graph demo with visible fuel store, boiler, tank, pump, and electrical supply bound to simulation nodes and ports. Its controls affect finite fuel, water temperature, and accumulated electrical energy; invisible air and flue boundaries keep the topology explicit.
 - Every build of `main` is its own version: CI advances `package.json`'s patch by the commits since its tag (0.1.0 and 74 commits on is 0.1.74), shown on the title screen. Nothing is committed back to `main`.
 - The plant as one connected network, model first (`src/game/plant/network/`): the pools' water circuits, every machine and valve a node with its asset ID and tag, every pipe a link. Its water is solved, so valves and pumps change the flows: standby changeover, filter isolation, backwash, balance tank drain and pool drain-down all work on the model. Make-up (town main, break tank, booster set, meter, each plant room's branch) and drainage (each room's header, the drainage main, the backwash holding tank and its pump to the sewer) are in it too. Every node has a permanent serial number and a proximal ID (`pl2.f3.bv2`, its plate's tag in lowercase). What cannot yet be simulated is a placeholder, listed in `doc/reports/model-gaps.md`.
 - Inventory entries now show physical component type and brand in the web and PDF schedules. Known installed makers come from their models; plain room valves and unresolved assemblies are explicitly `unbranded`. All 13 room supply switch-fuses now have permanent catalogue IDs, visible tags and live feeder states.
