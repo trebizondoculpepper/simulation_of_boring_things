@@ -1508,12 +1508,14 @@ export function createPoolHall(
     for (const copy of [leaving, arriving]) {
       group.add(createCorridorRun(copy.placed, dry));
       for (const p of copy.placed) {
-        // A lamp in each piece but the turns.
+        // A lamp in each piece but the turns and the short straights.
         if (
           p.piece.kind === 'left' ||
           p.piece.kind === 'right' ||
           // The rotunda is lit by its own cove.
-          p.piece.kind === 'rotunda'
+          p.piece.kind === 'rotunda' ||
+          // Nor the short straights at the doors (1 m): unlit.
+          (p.piece.kind === 'straight' && p.piece.length <= 1)
         )
           continue;
         const along = pieceLength(p.piece) / 2;
