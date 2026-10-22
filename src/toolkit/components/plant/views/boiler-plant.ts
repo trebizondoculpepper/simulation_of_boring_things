@@ -1,4 +1,4 @@
-import { Group, MeshBasicMaterial } from 'three';
+import { Group, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { SANS } from '../../core/views/fitting-tools';
@@ -405,8 +405,15 @@ export function createLowLossHeader(kit: PanelKit) {
  */
 export function createTwinHeadPump(kit: PanelKit) {
   const t = plantTools(kit);
-  const group = new Group();
+  const group = new Group() as Group & {
+    /** Its duty head running (its display lit) or both standing. */
+    show(running: boolean): void;
+    /** Its duty head, where its sound comes from. */
+    duty: Object3D;
+  };
   group.name = 'Twin-head circulator';
+  const displays: MeshStandardMaterial[] = [];
+  const heads: Object3D[] = [];
   const y = 0.75;
   const green = t.paint(BS1710_BASIC.water, 0.5);
   const iron = t.paint('#3a3f45', 0.5, 0.3);
@@ -451,16 +458,17 @@ export function createTwinHeadPump(kit: PanelKit) {
     group.add(unit);
     t.cyl(unit, head, 0.085, 0.24, 0, 0, side * 0.12, 'z', 24);
     t.box(unit, box, 0.17, 0.16, 0.06, 0, 0.11, side * 0.16);
-    const lit = t.box(
-      unit,
-      t.paint('#58d07a', 0.3),
-      0.06,
-      0.03,
-      0.004,
-      0,
-      0.13,
-      side * 0.193,
-    );
+    const display = new MeshStandardMaterial({
+      color: '#1d3a28',
+      emissive: '#58d07a',
+      emissiveIntensity: 0,
+      roughness: 0.3,
+    });
+    kit.materials.push(display);
+    displays.push(display);
+    heads.push(unit);
+    const lit = t.box(unit, display, 0.06, 0.03, 0.004, 0, 0.13, side * 0.193);
+    lit.userData.live = true;
     lit.rotation.y = side > 0 ? 0 : Math.PI;
     if (side > 0) badge(kit, unit, 'grundflow', [0, 0.06, 0.193], 0.03);
   }
@@ -476,6 +484,13 @@ export function createTwinHeadPump(kit: PanelKit) {
   sign(t, group, 'P-501A/B  LTHW', [0, y + 0.42, 0], 0.2, 0.05, {
     ground: '#f2d23a',
   });
+  // Its duty head the second (facing the room), its standby the first.
+  group.duty = heads[1];
+  group.show = (running) => {
+    displays[1].emissiveIntensity = running ? 1.2 : 0;
+    displays[0].emissiveIntensity = 0;
+  };
+  group.show(true);
   return group;
 }
 

@@ -9,6 +9,10 @@ import { newPlantServices } from '../../../game/plant/services';
 import { worldStore } from '../../save/world-store';
 import { wetHallMimicSpec, wetHallMimicState } from '../logic/wet-hall-mimic';
 import type { WetHallReading } from '../logic/wet-hall-mimic';
+import type { LiveExhibit } from '../rooms/plant/exhibit';
+import { partAudio } from '../../components/core/audio/part-audio';
+import { pumpSound } from '../../components/plant/views/pump-sound';
+import { BOOSTER_PUMP } from '../../components/plant/logic/pump-sound';
 
 /**
  * The wet hall's working machines, bound to the world's wet hall
@@ -57,7 +61,26 @@ export function createWorldBoosterSet(kit: PanelKit) {
     },
     reset: () => w.reset(),
   };
-  return createBoosterSet(kit, feed);
+  // Heard while it runs: its pump's sound held at it.
+  const set = createBoosterSet(kit, feed);
+  const sound = pumpSound(BOOSTER_PUMP);
+  let heard = false;
+  const live: LiveExhibit = {
+    ...set,
+    update(delta: number) {
+      set.update?.(delta);
+      const running = feed.read().running;
+      if (running !== heard) {
+        heard = running;
+        partAudio.hold(set, running ? sound : null, set.object);
+      }
+    },
+    dispose() {
+      partAudio.hold(set, null);
+      set.dispose?.();
+    },
+  };
+  return live;
 }
 
 /** The make-up meter, its register counting the world's make-up. */

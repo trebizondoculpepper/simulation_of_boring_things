@@ -35,7 +35,6 @@ describe('the real plant rooms’ machines, wired to the world', () => {
         'contact-tank',
         'distribution-board',
         'fire-repeater',
-        'lthw-pumps',
         'mcc',
         'pressurisation',
         'rotary-isolators',

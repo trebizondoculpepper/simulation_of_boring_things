@@ -77,3 +77,31 @@ export function pumpSpeed(p: PumpSet, t: number, running: boolean) {
   const k = Math.min(1, Math.max(0, t / p.coastDown));
   return (1 - k) * (1 - k);
 }
+
+/**
+ * A heating circulator, after a twin-head wet-rotor set of about 1.5 kW:
+ * a small two-pole motor, quiet, quick to run up and to stop.
+ */
+export const HEATING_CIRCULATOR: PumpSet = {
+  mains: 50,
+  poles: 2,
+  slip: 0.05,
+  vanes: 7,
+  kW: 1.5,
+  runUp: 1.5,
+  coastDown: 2.5,
+};
+
+/**
+ * A make-up booster set's pump, after a 3 kW multistage vertical pump: a
+ * two-pole motor, started direct on line, quick to run up and stop.
+ */
+export const BOOSTER_PUMP: PumpSet = {
+  mains: 50,
+  poles: 2,
+  slip: 0.04,
+  vanes: 6,
+  kW: 3,
+  runUp: 0.8,
+  coastDown: 2,
+};

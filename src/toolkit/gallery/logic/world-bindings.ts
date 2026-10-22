@@ -65,8 +65,8 @@ export const WORLD_BINDINGS: Readonly<Record<string, WorldBinding>> = {
   'combustion-panel': world('the boiler house model’s combustion'),
   'mimic-gas': world('the boiler house model'),
   'mimic-boiler-heat': world('the boiler house model'),
-  'lthw-pumps': todo(
-    'the heating circuit running: run lamps, its pumps’ sound',
+  'lthw-pumps': world(
+    'the heating circuit running: its duty head’s display and sound',
   ),
   pressurisation: todo('the heating circuit’s pressure'),
   calorifier: todo('its stored water’s temperature'),

@@ -106,6 +106,10 @@ import {
   createHypochloriteBoard,
 } from '../../components/plant/views/dosing-equipment';
 import { createUvUnit } from '../../components/plant/views/pumps-plant';
+import { createTwinHeadPump } from '../../components/plant/views/boiler-plant';
+import { pumpSound } from '../../components/plant/views/pump-sound';
+import { HEATING_CIRCULATOR } from '../../components/plant/logic/pump-sound';
+import { partAudio } from '../../components/core/audio/part-audio';
 
 /** Each model the rooms' machines are, by its key in `logic/room-equipment.ts`. */
 const MODELS: Record<string, PlantExhibit> = {
@@ -190,6 +194,26 @@ function modelFor(
   const pool = /^plant_(pool_0[1-4])$/.exec(room)?.[1] as PoolId | undefined;
   if (pool && kind === 'pump-pair') return pumpPairExhibit(pool).build(kit);
   if (pool && kind === 'pump-panel') return pumpPanelExhibit(pool).build(kit);
+  // The boiler house's LTHW circulator: running while the heating circuit
+  // is up, its duty head lit and heard.
+  if (kind === 'lthw-pumps' && typeof window !== 'undefined') {
+    const pump = createTwinHeadPump(kit);
+    const sound = pumpSound(HEATING_CIRCULATOR);
+    let heard = false;
+    return {
+      object: pump,
+      update: () => {
+        const w = worldStore('dev').world.value;
+        const running = serviceAvailable(w.plant, 'plant_pool_02', 'heat');
+        pump.show(running);
+        if (running !== heard) {
+          heard = running;
+          partAudio.hold(pump, running ? sound : null, pump.duty);
+        }
+      },
+      dispose: () => partAudio.hold(pump, null),
+    };
+  }
   // Its dosing and UV, showing its pool's water as the world has it.
   if (pool) {
     const world = () => worldStore('dev').world.value;
