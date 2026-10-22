@@ -109,3 +109,16 @@ Next: the boilers' flow and return to the low-loss header, and the rest of the b
   - pH heads for 7.4 with both chemicals, falls with acid alone and rises with hypochlorite alone;
   - a delivery action refills a store.
 - **Fixed supplies** (`SUPPLIES`): 400 V three-phase at 50 Hz, and gas at 21 mbar.
+
+## Overnight: valves within reach, the air plant, the boiler controller and the switchboard
+
+- **Every valve reachable.** A test now requires every valve to be within an arm's reach (0.8 m in plan) of somewhere to stand. The filters' drain valves moved onto their drops; the balance tanks' drains run out beyond their ladders before dropping, their valves on the drop.
+- **The air plant** is rebuilt round the real Dantherm DanX XWPS range (its data sheet's sizes: 2/4 to 16/32).
+  - The largest unit stacked is the 9/18, so the Olympic hall takes nine and the sizing's largest unit is now 20,000 m³/h.
+  - The units are working machines: dampers, fans, a heat pump on humidity, and filters that load and trip, each with its controller.
+  - The Olympic's stand three high under two gantries and a stair, in a room made 10 m tall. The walker passes under a gantry or walks on it, by the height it came from, and handrails stop only those up on it.
+  - Every duct leaves a unit's end and turns into the wall behind, so none crosses another.
+  - Merging each unit's still parts was needed for the room to draw at all in the headless renderer.
+- **The air plant's mimic and control panel** by the door shows every unit's lamps and each hall's air. Each hall's OCCUPIED and UNOCCUPIED buttons are its time programme, which the units follow in AUTO.
+- **The boiler controller**: − and + now set the flow temperature from any display, and a FLOW °C knob does the same; the two agree, as one setpoint.
+- **The switchboard's breakers** are bound to the world's feeders (`switch-room.ts`): switching DB-OLYMPIC off cuts the Olympic plant room's power, and so its pumps.

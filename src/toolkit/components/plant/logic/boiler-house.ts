@@ -219,12 +219,11 @@ export function pressBoiler(boiler: BoilerState, key: BoilerKey): BoilerState {
       b.mode = DISPLAY_MODES[(i + 1) % DISPLAY_MODES.length];
       break;
     }
+    // − and + set the flow temperature from any display, showing it.
     case 'plus':
-      if (b.mode === 'setpoint') b.setpoint = Math.min(90, b.setpoint + 1);
-      break;
+      return setBoilerSetpoint(b, b.setpoint + 1);
     case 'minus':
-      if (b.mode === 'setpoint') b.setpoint = Math.max(40, b.setpoint - 1);
-      break;
+      return setBoilerSetpoint(b, b.setpoint - 1);
     case 'store':
       b.mode = 'status';
       break;
@@ -245,6 +244,22 @@ export function pressBoiler(boiler: BoilerState, key: BoilerKey): BoilerState {
       break;
   }
   return b;
+}
+
+/** The flow temperature it fires to, °C, from 40 to 90, shown as it is set. */
+export const SETPOINT_RANGE = { min: 40, max: 90 } as const;
+
+export function setBoilerSetpoint(
+  boiler: BoilerState,
+  celsius: number,
+): BoilerState {
+  return {
+    ...boiler,
+    setpoint: Math.round(
+      Math.max(SETPOINT_RANGE.min, Math.min(SETPOINT_RANGE.max, celsius)),
+    ),
+    mode: 'setpoint',
+  };
 }
 
 /**

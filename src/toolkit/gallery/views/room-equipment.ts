@@ -17,6 +17,10 @@ import {
 import { createSandFilter } from '../../components/plant/views/pumps-plant';
 import { machinePorts } from '../logic/machine-ports';
 import { isLive } from '../rooms/plant/exhibit';
+import { worldStore } from '../../save/world-store';
+import { SWITCHBOARD_FEEDS, wayName } from '../logic/switch-room';
+import { createMainSwitchboard } from '../../components/plant/views/electrical-switchgear';
+import type { SwitchboardFeed } from '../../components/plant/views/electrical-switchgear';
 import { airBox, gantries, STACK_FRAME, stackOf } from '../logic/air-plant';
 import {
   createAirMimic,
@@ -118,6 +122,8 @@ function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
   if (kind === 'boiler-cascade' && arg)
     return createLiveBoilerCascade(kit, (Number(arg) - 1) * 2);
   if (kind === 'mimic-air') return createAirMimic(kit);
+  // The switch room's switchboard, its ways feeding the rooms in the world.
+  if (kind === 'lv-switchboard') return createMainSwitchboard(kit, worldFeed());
   if (kind === 'ahu-stack') {
     const stack = stackOf(item.key);
     if (stack) return createAhuStack(kit, stack.units, STACK_FRAME);
@@ -158,6 +164,26 @@ function modelFor(kit: PanelKit, item: Item): Object3D | LiveExhibit | null {
     label: item.label.toUpperCase(),
     mount: item.mount,
   });
+}
+
+/**
+ * The main switchboard's ways bound to the world's feeders
+ * (`switch-room.ts`): a way is on while every room it feeds is.
+ */
+function worldFeed(): SwitchboardFeed | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const store = worldStore('dev');
+  return {
+    on(legend) {
+      const rooms = SWITCHBOARD_FEEDS[wayName(legend)];
+      if (!rooms) return undefined;
+      return rooms.every((r) => store.world.value.plant.feeders[r]);
+    },
+    set(legend, on) {
+      for (const room of SWITCHBOARD_FEEDS[wayName(legend)] ?? [])
+        store.dispatch({ type: 'plant/feeder', room, on });
+    },
+  };
 }
 
 /** The flange and short welded stub specified by a machine's port data. */

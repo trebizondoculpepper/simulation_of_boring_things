@@ -5,12 +5,16 @@ import {
   createMicroLabel,
   createSevenSegment,
 } from '../../core/views/eighties-controls';
-import { createPartSet } from '../../core/parts/parts';
+import { createPartSet, potentiometer } from '../../core/parts/parts';
 import { illuminatedRocker, membraneKey } from '../../core/parts/small-parts';
 import { brandLivery } from '../../core/views/brand-livery';
 import { createDialGauge } from '../../industrial-control/views/dial-gauge';
 import type { DialGaugeView } from '../../industrial-control/views/dial-gauge';
-import { boilerDisplay, boilerLamps } from '../logic/boiler-house';
+import {
+  boilerDisplay,
+  boilerLamps,
+  SETPOINT_RANGE,
+} from '../logic/boiler-house';
 import type { BoilerKey, BoilerState } from '../logic/boiler-house';
 import { plantTools } from './plant-tools';
 
@@ -20,8 +24,8 @@ import { plantTools } from './plant-tools';
  * an on/off switch), in Hamwarmy's livery: a four-digit red LED display
  * showing the status code and flow temperature or a flashing fault code,
  * four LEDs (burner, lockout, pump, manual), membrane keys for MODE, STEP,
- * − and +, STORE, RESET and MANUAL, an illuminated rocker switch and a
- * 63 mm water pressure gauge. Its keys and switch are the shared small
+ * − and +, STORE, RESET and MANUAL, a flow temperature knob, an
+ * illuminated rocker switch and a 63 mm water pressure gauge. Its keys and switch are the shared small
  * parts (`core/parts/small-parts.ts`). In metres, facing +z.
  */
 
@@ -39,6 +43,8 @@ export interface BoilerPanelView {
 export function createBoilerPanel(
   kit: PanelKit,
   press: (key: BoilerKey) => void,
+  /** The flow temperature knob turned to `celsius`. */
+  setSetpoint: (celsius: number) => void = () => {},
 ): BoilerPanelView {
   const t = plantTools(kit);
   const livery = brandLivery(kit, 'hamwarmy');
@@ -115,6 +121,24 @@ export function createBoilerPanel(
   power.object.position.set(0.19, -0.05, 0.02);
   group.add(power.object);
   parts.add(power);
+  // The flow temperature knob, 40 to 90 °C in degrees: it and − and +
+  // set one setpoint, so the knob shows the boiler's, however set.
+  let setpoint = 80;
+  const knob = potentiometer(kit, {
+    steps: SETPOINT_RANGE.max - SETPOINT_RANGE.min,
+    legend: 'FLOW °C',
+    name: 'Boiler flow temperature knob',
+    bound: {
+      get value() {
+        return setpoint - SETPOINT_RANGE.min;
+      },
+      set: (position: number) => setSetpoint(SETPOINT_RANGE.min + position),
+    },
+  });
+  knob.object.position.set(0.125, -0.05, 0.02);
+  knob.object.scale.setScalar(0.6);
+  group.add(knob.object);
+  parts.add(knob);
   // The system's water pressure gauge, 63 mm.
   const gauge: DialGaugeView = createDialGauge(kit, {
     dia: 0.063,
@@ -131,6 +155,7 @@ export function createBoilerPanel(
     parts,
     show(boiler, seconds, delta) {
       lit = boiler.on;
+      setpoint = boiler.setpoint;
       display.show(boilerDisplay(boiler, seconds));
       const on = boilerLamps(boiler);
       const states = [

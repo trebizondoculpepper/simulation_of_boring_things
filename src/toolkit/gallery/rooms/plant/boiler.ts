@@ -15,6 +15,7 @@ import {
   newBoiler,
   newGasHouse,
   pressBoiler,
+  setBoilerSetpoint,
   resetGasHouse,
   settleGasHouse,
   stepBoiler,
@@ -103,9 +104,15 @@ export function createLiveBoilerCascade(
   const parts = createPartSet();
   const panels = [0, 1].map((offset) => {
     const i = first + offset;
-    const panel = createBoilerPanel(kit, (key) => {
-      house.boilers[i] = pressBoiler(house.boilers[i], key);
-    });
+    const panel = createBoilerPanel(
+      kit,
+      (key) => {
+        house.boilers[i] = pressBoiler(house.boilers[i], key);
+      },
+      (celsius) => {
+        house.boilers[i] = setBoilerSetpoint(house.boilers[i], celsius);
+      },
+    );
     for (const [o, use] of panel.parts.uses) parts.uses.set(o, use);
     return panel;
   });

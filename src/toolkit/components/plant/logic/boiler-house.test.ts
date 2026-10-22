@@ -11,6 +11,7 @@ import {
   newBoiler,
   newGasHouse,
   pressBoiler,
+  setBoilerSetpoint,
   resetGasHouse,
   settleGasHouse,
   stepBoiler,
@@ -93,6 +94,23 @@ describe('a boiler’s controller', () => {
     );
     expect(b.mode).toBe('setpoint');
     expect(pressBoiler(b, 'plus').setpoint).toBe(b.setpoint + 1);
+  });
+
+  it('sets its flow temperature with − and + from any display, between 40 and 90 °C', () => {
+    const b = pressBoiler(newBoiler(), 'plus');
+    expect(b.setpoint).toBe(81);
+    expect(boilerDisplay(b, 0)).toMatch(/^S 81$/);
+    let low = newBoiler();
+    for (let i = 0; i < 60; i++) low = pressBoiler(low, 'minus');
+    expect(low.setpoint).toBe(40);
+    expect(setBoilerSetpoint(newBoiler(), 120).setpoint).toBe(90);
+  });
+
+  it('fires to the flow temperature it is set to', () => {
+    const cool = run(setBoilerSetpoint(newBoiler(), 50), {}, 600);
+    const hot = run(setBoilerSetpoint(newBoiler(), 85), {}, 600);
+    expect(hot.rate).toBeGreaterThan(cool.rate);
+    expect(hot.flow).toBeGreaterThan(cool.flow);
   });
 
   it('is switched off by its switch and shows nothing', () => {

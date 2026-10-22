@@ -58,6 +58,7 @@ import {
 import {
   newBoiler,
   pressBoiler,
+  setBoilerSetpoint,
   stepBoiler,
 } from '../../components/plant/logic/boiler-house';
 import type { MimicSpec } from '../../components/industrial-control/logic/mimic';
@@ -1184,6 +1185,7 @@ export function createBoilerControlsBoard(kit: PanelKit): TestFitting {
   const panel = createBoilerPanel(
     kit,
     (key) => (boiler = pressBoiler(boiler, key)),
+    (celsius) => (boiler = setBoilerSetpoint(boiler, celsius)),
   );
   panel.group.position.set(0, 0.1, 0);
   board.parts.add(panel.group);

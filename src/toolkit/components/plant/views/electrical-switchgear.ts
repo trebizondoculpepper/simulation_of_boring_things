@@ -295,6 +295,16 @@ function acbFront(t: Tools, parent: Object3D, x: number, y: number, z: number) {
  * (`disconnectHandle`, rotary), with the breaker's rating legend over it.
  * A spare way stands OFF.
  */
+/**
+ * Where a switchboard's breakers are bound to the world: each way, by its
+ * legend, on or off there; `undefined` for a way the world does not know,
+ * which keeps its own position.
+ */
+export interface SwitchboardFeed {
+  on(legend: string): boolean | undefined;
+  set(legend: string, on: boolean): void;
+}
+
 function mccbDoor(
   kit: PanelKit,
   t: Tools,
@@ -307,14 +317,26 @@ function mccbDoor(
   face: number,
   name: string,
   parts: Parts,
+  feed?: SwitchboardFeed,
 ) {
   door(t, parent, paint, w, h, x, y, face);
+  // Bound, it shows and sets its way in the world; tripped counts as off.
+  const bound =
+    feed && feed.on(name) !== undefined
+      ? {
+          get value() {
+            return feed.on(name) ? ('on' as const) : ('off' as const);
+          },
+          set: (p: 'on' | 'off' | 'tripped') => feed.set(name, p === 'on'),
+        }
+      : undefined;
   const handle = mount(
     parts,
     parent,
     disconnectHandle(kit, {
       style: 'rotary',
       initial: name.startsWith('SPARE') ? 'off' : 'on',
+      bound,
       name: `MSB-1 ${name} breaker`,
     }),
     x,
@@ -331,7 +353,11 @@ function mccbDoor(
  * circuit breaker, 1600 A), two sections of outgoing MCCBs, metering and
  * the bus section's cable chamber.
  */
-export function createMainSwitchboard(kit: PanelKit): WorkingCabinet {
+export function createMainSwitchboard(
+  kit: PanelKit,
+  /** The world its ways feed, if bound (`switch-room.ts`). */
+  feed?: SwitchboardFeed,
+): WorkingCabinet {
   const t = plantTools(kit);
   const group = new Group();
   const parts = createPartSet();
@@ -401,6 +427,7 @@ export function createMainSwitchboard(kit: PanelKit): WorkingCabinet {
           face,
           name,
           parts,
+          feed,
         );
         // What the way draws, on average: about 40 % of its rating.
         breakers.push({
