@@ -6,7 +6,10 @@
 
 - The three footbath service valves (`PL4-PW1-RV1`, `PL4-PW1-DV1`, `PL4-MU1-LCV1`) have visible controls and labels. Their positions are saved in `World.identifiedPlant`; return, drain and make-up positions affect the footbath water model. The cabinet power switch also has a World binding.
 - The 43 valves authored in `roomPipes` for PL1, PL2, the wet hall and boiler house have explicit permanent asset IDs and display tags in `installed-valves.ts`. Their scene controls and web inventory read the same saved position in `World.installedValves`. The view sends the permanent ID as its command target; the display tag is an alias.
+- `installed-valves.test.ts` now checks each of those 43 IDs against exactly one authored valve, an actual segment of its named pipe run, exactly one catalogue row and one World position/action. The new route assertion exposed two lounge backwash valves above their waste drops; their placement is corrected. `port-connections.test.ts` checks that machine nozzles meet compatible visual routes in the seven piped rooms, but those route tests are not a typed simulation topology.
 - Placed equipment has an explicit asset ID and display tag register, independent of layout order. The web and PDF schedules use that register and identify entries that still await circuit migration.
+- Inventory rows expose `kind` and `brand` separately from broad `class: plant`. Maker values are assigned only where the installed model identifies them; otherwise the row says `unbranded`. The Warden ozone-in-air detector attached to each Trioxa generator is a distinct instrument and still needs its own child identity rather than inheriting the generator's brand or asset ID.
+- All 13 installed Voltara room supply switch-fuses now have permanent IDs, physical legends and their own inventory rows (`kind: switch-fuse`). The web inventory reads each feeder's World state; an ID-by-ID test verifies its row and action binding.
 
 ## Gaps that must remain visible
 
@@ -16,6 +19,7 @@
 - Development-room sand-filter face valves in `gallery/rooms/plant/pumps.ts` are local demonstration controls. Keep them outside the installed catalogue, with a clear exhibit namespace.
 - The footbath block tree still uses the displayed tag as its state address. Its installed controls need permanent IDs and a save migration before changing tags or moving assets. Do not create a second copy of their position in `installedValves`.
 - The current placed-equipment register is a catalogue of parent objects. It does not prove that every lever, gauge or switch inside each parent is catalogued or simulated.
+- There is therefore no passing whole-facility test yet for the requested one-to-one physical object, catalogue, simulation and connection contract. The 43-valve assertions cover identity and geometric attachment, not process effect; the machine-port tests cover drawn route endpoints, not complete electrical, hydraulic and control connectivity for every installed child.
 
 ## Required validation for the 1:1 rule
 

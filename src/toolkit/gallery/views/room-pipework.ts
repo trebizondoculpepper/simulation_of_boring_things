@@ -23,7 +23,6 @@ import type { DN } from '../../components/plant/views/plant-tools';
 import { PIPE_SIZES } from '../../components/plant/views/plant-tools';
 import {
   CHAIN_TO,
-  REACH,
   ISOLATOR_Y,
   roomIsolators,
   standFootprint,
@@ -132,20 +131,37 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       set: (open: boolean) =>
         store?.dispatch({ type: 'plant/valve', id: installed.assetId, open }),
     };
-    const tag = createMicroLabel(kit, installed.tag, {
-      height: 0.018,
-      ink: '#19242a',
-      plate: '#f0ede3',
-    });
-    const sideX = -v.facing[2];
-    const sideZ = v.facing[0];
-    tag.position.set(
-      v.at[0] + sideX * 0.28,
-      floorY + v.at[1] + (v.at[1] > REACH ? -0.25 : 0.13),
-      v.at[2] + sideZ * 0.28,
-    );
-    tag.rotation.y = Math.atan2(-sideX, -sideZ);
-    group.add(tag);
+    // Put the same designation on the two free sides of the valve body.
+    // A single label offset from the pipe looked suspended in space, and
+    // its text faced the pipe from the aisle side. These lie against the
+    // blue wafer, clear of the pipe axis and the operating handle.
+    const radial =
+      v.axis === 'x'
+        ? ([0, 1] as const)
+        : v.axis === 'z'
+          ? ([1, 0] as const)
+          : ([-v.facing[2], v.facing[0]] as const);
+    const length = Math.hypot(...radial);
+    const radius =
+      v.style === 'gas-ball'
+        ? (v.od / 2) * 1.35
+        : PIPE_SIZES[dnFor(v.od)].flange * 0.42;
+    for (const side of [-1, 1]) {
+      const nx = (radial[0] / length) * side;
+      const nz = (radial[1] / length) * side;
+      const tag = createMicroLabel(kit, installed.tag, {
+        height: 0.018,
+        ink: '#19242a',
+        plate: '#f0ede3',
+      });
+      tag.position.set(
+        v.at[0] + nx * (radius + 0.003),
+        floorY + v.at[1],
+        v.at[2] + nz * (radius + 0.003),
+      );
+      tag.rotation.y = Math.atan2(nx, nz);
+      group.add(tag);
+    }
     if (v.style === 'gas-ball') {
       // A lever ball valve, built along x with its lever up: stood on end
       // for a vertical pipe, its lever then turned to face the room.
@@ -174,6 +190,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         v.axis === 'y' ? 'y' : 'z',
         `${installed.tag} · ${v.name}`,
         binding,
+        v.operator,
       ),
     );
     part.object.position.set(...lift(v.at));
@@ -183,7 +200,8 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     // chain hanging to within reach; pulling the chain works it.
     const use = [...part.uses.values()][0];
     for (const chain of addChainWheel(kit, part.object, {
-      od: v.od,
+      dn: dnFor(v.od),
+      axis: v.axis,
       at: v.at[1],
       chainTo: CHAIN_TO,
       name: v.name,

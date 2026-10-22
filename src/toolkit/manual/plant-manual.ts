@@ -1,12 +1,15 @@
 import type { Block } from '../../game/sim/blocks';
+import type { ServiceRoom } from '../../game/plant/services';
 import { plantInventory } from '../../game/plant/equipment-catalogue';
+import { brandById } from '../components/core/logic/brands';
 
 /** The operator's live bill of parts, generated from the saved model tree. */
 export function renderPlantManual(
   root: Block,
   valveStates?: Readonly<Record<string, boolean>>,
+  feederStates?: Readonly<Record<ServiceRoom, boolean>>,
 ): HTMLElement {
-  const parts = plantInventory(root, valveStates);
+  const parts = plantInventory(root, valveStates, feederStates);
   const shell = document.createElement('div');
   shell.className = 'directory-shell plant-manual';
   const header = document.createElement('header');
@@ -31,6 +34,8 @@ export function renderPlantManual(
   for (const label of [
     'Identifier',
     'Name',
+    'Type',
+    'Brand',
     'Class',
     'Purpose',
     'Normal',
@@ -50,6 +55,8 @@ export function renderPlantManual(
     const fields = [
       part.id,
       `${'　'.repeat(part.depth)}${part.name}`,
+      part.kind,
+      part.brand === 'unbranded' ? 'Unbranded' : brandById(part.brand).name,
       part.class,
       part.purpose,
       part.normal ?? '—',

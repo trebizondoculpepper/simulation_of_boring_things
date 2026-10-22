@@ -114,6 +114,7 @@ export function cabinetServices(
             store ? partOpen(store.world.value.identifiedPlant, id) : true,
           set: (open) => store?.dispatch({ type: 'plant/valve', id, open }),
         },
+        run.valve.operator,
       );
       valve.object.position.set(...lift(at));
       if (axis === 'x') valve.object.rotation.y = Math.PI / 2;
@@ -124,7 +125,8 @@ export function cabinetServices(
       if (run.valve.operator === 'chain') {
         const use = [...valve.uses.values()][0];
         for (const chain of addChainWheel(kit, valve.object, {
-          od: run.od,
+          dn: 50,
+          axis: axis === 'x' ? 'z' : axis,
           at: at[1],
           chainTo: CHAIN_TO,
           name: id,

@@ -55,4 +55,55 @@ describe('installed pipework valves', () => {
       )?.state,
     ).toEqual({ open: false });
   });
+
+  it('attaches every registered valve to exactly one authored route and catalogue entry', () => {
+    const world = newWorld();
+    const inventory = plantInventory(
+      world.identifiedPlant,
+      world.installedValves,
+    );
+    const authored = ROOMS.flatMap((room) =>
+      roomPipes(room).flatMap((run) =>
+        run.valves.map((valve) => ({ room, run, valve })),
+      ),
+    );
+    const offRoute: string[] = [];
+    for (const [key, installed] of Object.entries(INSTALLED_VALVES)) {
+      const matches = authored.filter(
+        ({ room, run, valve }) => `${room}|${run.name}|${valve.name}` === key,
+      );
+      expect(matches, key).toHaveLength(1);
+      const { run, valve } = matches[0];
+      const onRoute = run.points.slice(1).some((end, index) => {
+        const start = run.points[index];
+        return [0, 1, 2].every((coordinate) => {
+          const low = Math.min(start[coordinate], end[coordinate]) - 1e-3;
+          const high = Math.max(start[coordinate], end[coordinate]) + 1e-3;
+          return valve.at[coordinate] >= low && valve.at[coordinate] <= high;
+        });
+      });
+      if (!onRoute) offRoute.push(key);
+      expect(
+        inventory.filter(
+          (entry) =>
+            entry.assetId === installed.assetId && entry.id === installed.tag,
+        ),
+        `${key} has one inventory row`,
+      ).toHaveLength(1);
+      expect(world.installedValves[installed.assetId]).toBe(
+        installed.normal === 'open',
+      );
+      const toggled = applyAction(world, {
+        type: 'plant/valve',
+        id: installed.assetId,
+        open: installed.normal !== 'open',
+      });
+      expect(toggled.installedValves[installed.assetId]).toBe(
+        installed.normal !== 'open',
+      );
+    }
+    expect(offRoute, 'valves drawn away from their assigned pipe runs').toEqual(
+      [],
+    );
+  });
 });

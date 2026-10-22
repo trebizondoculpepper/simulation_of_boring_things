@@ -7,6 +7,10 @@ import type { Block } from '../sim/blocks';
 import { newIdentifiedPlant, walkIdentified } from './identification';
 import { INSTALLED_ASSET_IDS } from './installed-asset-ids';
 import { INSTALLED_VALVES, newInstalledValveStates } from './installed-valves';
+import { ROOM_SWITCH_FUSES } from './installed-feeders';
+import { newPlantServices } from './services';
+import type { ServiceRoom } from './services';
+import type { BrandId } from '../../toolkit/components/core/logic/brands';
 
 /** Room codes are fixed, so an equipment tag keeps its location in its name. */
 export const EQUIPMENT_ROOM_CODES = {
@@ -30,6 +34,8 @@ interface EquipmentKind {
   code: string;
   class: Classification;
   purpose: string;
+  /** Maker printed on the installed unit, when its model specifies one. */
+  brand?: BrandId;
 }
 
 /** Every key used by roomEquipment is classified here, including excluded scenery. */
@@ -43,11 +49,13 @@ const KINDS: Record<string, EquipmentKind> = {
     code: 'P',
     class: 'plant',
     purpose: 'Circulates pool water with a duty and standby pump.',
+    brand: 'grundflow',
   },
   'sand-filter': {
     code: 'F',
     class: 'plant',
     purpose: 'Removes suspended solids from circulating pool water.',
+    brand: 'lidoluxe',
   },
   'uv-unit': {
     code: 'UV',
@@ -68,6 +76,7 @@ const KINDS: Record<string, EquipmentKind> = {
     code: 'OZ',
     class: 'plant',
     purpose: 'Generates ozone for water treatment.',
+    brand: 'trioxa',
   },
   'contact-tank': {
     code: 'T',
@@ -108,6 +117,7 @@ const KINDS: Record<string, EquipmentKind> = {
     code: 'P',
     class: 'plant',
     purpose: 'Pressurises make-up water with duty and standby pumps.',
+    brand: 'grundflow',
   },
   'water-meter': {
     code: 'G',
@@ -128,6 +138,7 @@ const KINDS: Record<string, EquipmentKind> = {
     code: 'B',
     class: 'plant',
     purpose: 'Produces heat for the shared low-temperature heating circuit.',
+    brand: 'hamwarmy',
   },
   'low-loss-header': {
     code: 'HW',
@@ -228,6 +239,7 @@ const KINDS: Record<string, EquipmentKind> = {
     code: 'DB',
     class: 'plant',
     purpose: 'Distributes the incoming low-voltage supply.',
+    brand: 'voltara',
   },
   mcc: {
     code: 'CP',
@@ -238,6 +250,7 @@ const KINDS: Record<string, EquipmentKind> = {
     code: 'IS',
     class: 'plant',
     purpose: 'Isolates the incoming electrical supply.',
+    brand: 'voltara',
   },
   'central-battery': {
     code: 'DB',
@@ -248,16 +261,19 @@ const KINDS: Record<string, EquipmentKind> = {
     code: 'DB',
     class: 'plant',
     purpose: 'Distributes power to final circuits.',
+    brand: 'voltara',
   },
   'rotary-isolators': {
     code: 'IS',
     class: 'plant',
     purpose: 'Locally isolates plant electrical circuits.',
+    brand: 'voltara',
   },
   'lighting-board': {
     code: 'DB',
     class: 'plant',
     purpose: 'Distributes and protects lighting-zone circuits.',
+    brand: 'voltara',
   },
   'generator-point': {
     code: 'FX',
@@ -357,6 +373,8 @@ export interface CataloguedEquipment {
   room: string;
   key: string;
   name: string;
+  kind: string;
+  brand: BrandId | 'unbranded';
   class: Exclude<Classification, 'decorative'>;
   purpose: string;
 }
@@ -365,6 +383,9 @@ export interface InventoryEntry {
   assetId?: string;
   id: string;
   name: string;
+  /** Physical component family, separate from the broad plant classification. */
+  kind: string;
+  brand: BrandId | 'unbranded';
   class: 'plant' | 'non-plant';
   purpose: string;
   normal?: string;
@@ -378,6 +399,7 @@ const ROOM_NAMES: Record<string, string> = {
   plant_pool_01: 'Lounge pool plant room',
   plant_pool_02: 'Olympic pool plant room',
   plant_pool_03: 'Jacuzzi plant room',
+  plant_pool_04: 'Footbath plant room',
   wet_hall: 'Wet hall',
   boiler_house: 'Boiler house',
   hypo_store: 'Hypochlorite store',
@@ -426,6 +448,8 @@ export function catalogueItems(
       room,
       key: item.key,
       name: item.label,
+      kind: key,
+      brand: kind.brand ?? 'unbranded',
       class: kind.class,
       purpose: kind.purpose,
     });
@@ -437,10 +461,14 @@ export function catalogueItems(
 export function plantInventory(
   root: Block = newIdentifiedPlant(),
   valveStates: Readonly<Record<string, boolean>> = newInstalledValveStates(),
+  feederStates: Readonly<Record<ServiceRoom, boolean>> = newPlantServices()
+    .feeders,
 ): InventoryEntry[] {
   const model: InventoryEntry[] = walkIdentified(root).map((part) => ({
     id: part.id,
     name: part.name,
+    kind: part.kind,
+    brand: 'unbranded',
     class: part.class,
     purpose: part.purpose,
     normal: part.normal,
@@ -456,6 +484,8 @@ export function plantInventory(
   ).map((room) => ({
     id: EQUIPMENT_ROOM_CODES[room],
     name: ROOM_NAMES[room],
+    kind: 'plant-room',
+    brand: 'unbranded',
     class: 'plant',
     purpose: `Houses the catalogued equipment of ${ROOM_NAMES[room].toLowerCase()}.`,
     depth: 0,
@@ -468,14 +498,33 @@ export function plantInventory(
       assetId: part.assetId,
       id: part.id,
       name: part.name,
+      kind: part.kind,
+      brand: part.brand,
       class: part.class,
       purpose: part.purpose,
       depth: 1,
       source: 'placement',
     })),
+    ...Object.entries(ROOM_SWITCH_FUSES).map(
+      ([room, switchFuse]): InventoryEntry => ({
+        assetId: switchFuse.assetId,
+        id: switchFuse.tag,
+        name: `${ROOM_NAMES[room]} supply switch-fuse`,
+        kind: 'switch-fuse',
+        brand: 'voltara',
+        class: 'plant',
+        purpose: 'Isolates and fuses the electrical supply to this room.',
+        normal: 'on',
+        state: { on: feederStates[room as ServiceRoom] },
+        depth: 1,
+        source: 'model',
+      }),
+    ),
     {
       id: 'WH-MU1',
       name: 'Wet hall make-up pipework',
+      kind: 'pipework',
+      brand: 'unbranded',
       class: 'plant',
       purpose: 'Carries incoming and boosted make-up water.',
       depth: 1,
@@ -484,6 +533,8 @@ export function plantInventory(
     {
       id: 'WH-DR1',
       name: 'Wet hall discharge pipework',
+      kind: 'pipework',
+      brand: 'unbranded',
       class: 'plant',
       purpose: 'Carries backwash and tank drainage to waste.',
       depth: 1,
@@ -495,6 +546,8 @@ export function plantInventory(
         assetId: valve.assetId,
         id: valve.tag,
         name,
+        kind: /gas/i.test(name) ? 'gas-ball-valve' : 'butterfly-valve',
+        brand: 'unbranded',
         class: 'plant',
         purpose: /backwash/i.test(name)
           ? 'Opens the filter backwash or discharge route.'

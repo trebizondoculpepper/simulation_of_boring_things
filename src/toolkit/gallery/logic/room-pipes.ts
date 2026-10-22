@@ -645,7 +645,9 @@ export function poolPlantPipework(room: string): {
       label: `F${n} WASTE`,
       valves: [
         {
-          at: [inTee[0], 1.1, inTee[2]],
+          // Small-room filter nozzles can sit below 1.1 m. Keep the valve
+          // between the tee and floor channel, on the actual waste drop.
+          at: [inTee[0], Math.min(1.1, (inTee[1] + 0.05) / 2), inTee[2]],
           axis: 'y',
           name: `F${n} backwash valve`,
           facing: dir,

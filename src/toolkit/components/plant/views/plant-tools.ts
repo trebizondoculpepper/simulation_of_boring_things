@@ -253,6 +253,7 @@ export function plantTools(kit: PanelKit) {
     dn: DN,
     at: Point,
     axis: 'x' | 'y' | 'z',
+    operator: 'lever' | 'chain' = 'lever',
   ) => {
     const s = PIPE_SIZES[dn];
     const group = new Group();
@@ -299,16 +300,19 @@ export function plantTools(kit: PanelKit) {
     // in a face of the lever.
     t.cyl(lever, handle, 0.027, 0.03, 0, 0.01, 0, 'y', 20);
     const leverLength = Math.min(0.45, 0.18 + s.od * 0.9);
-    t.box(
-      lever,
-      handle,
-      0.03,
-      0.02,
-      leverLength,
-      0,
-      0.01,
-      leverLength / 2 - 0.03,
-    );
+    // A chain-operated valve has a wheel on this spindle instead. Drawing
+    // the lever as well made two red operators appear to intersect overhead.
+    if (operator === 'lever')
+      t.box(
+        lever,
+        handle,
+        0.03,
+        0.02,
+        leverLength,
+        0,
+        0.01,
+        leverLength / 2 - 0.03,
+      );
     if (axis === 'y') lever.rotation.x = -Math.PI / 2;
     return lever;
   };

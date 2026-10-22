@@ -11,6 +11,7 @@ import type { Object3D } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createPipe } from '../../components/core/views/pipe-kinds';
 import { newWorld } from '../../../game/world';
+import { ROOM_SWITCH_FUSES } from '../../../game/plant/installed-feeders';
 import { serviceAvailable } from '../../../game/plant/services';
 import type { ServiceRoom } from '../../../game/plant/services';
 import { worldStore } from '../../save/world-store';
@@ -159,6 +160,7 @@ export function createRoomServices(
   const fuse = layout
     ? createSwitchFuse(kit, {
         on: (store?.world.value ?? fallback).plant.feeders[room] ?? true,
+        legend: `${ROOM_SWITCH_FUSES[room].tag} SUPPLY`,
       })
     : null;
   if (layout && fuse) {
@@ -169,6 +171,7 @@ export function createRoomServices(
     );
     fuse.group.rotation.y = Math.PI / 2;
     fuse.group.name = `${room} room supply switch-fuse`;
+    fuse.group.userData.assetId = ROOM_SWITCH_FUSES[room].assetId;
     group.add(fuse.group);
     // Its handle switches the room's feeder in the world, when the
     // interlock lets it (not ON with the door open).

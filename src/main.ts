@@ -551,6 +551,7 @@ const openRoom = async () => {
         renderPlantManual(
           manualWorld.identifiedPlant,
           manualWorld.installedValves,
+          manualWorld.plant.feeders,
         ),
       );
       directory.hidden = false;

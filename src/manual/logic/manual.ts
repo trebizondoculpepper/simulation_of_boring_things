@@ -1,5 +1,6 @@
 import { VERSION } from '../../game/version';
 import { plantInventory } from '../../game/plant/equipment-catalogue';
+import { brandById } from '../../toolkit/components/core/logic/brands';
 import { BOROUGH } from '../../toolkit/components/general-safety/logic/borough';
 import { boilerHouseChapter } from './boiler-house';
 import type { ExhibitInfo } from './boiler-house';
@@ -39,14 +40,18 @@ export function buildManual(
         kind: 'table',
         caption: 'Equipment and component schedule',
         columns: [
-          { head: 'Identifier', width: 0.29 },
-          { head: 'Name', width: 0.21 },
-          { head: 'Purpose', width: 0.25 },
-          { head: 'Source', width: 0.14 },
+          { head: 'Identifier', width: 0.17 },
+          { head: 'Name', width: 0.15 },
+          { head: 'Type', width: 0.12 },
+          { head: 'Brand', width: 0.11 },
+          { head: 'Purpose', width: 0.2 },
+          { head: 'Source', width: 0.08 },
         ],
         rows: identified.map((part) => [
           part.id,
           part.name,
+          part.kind,
+          part.brand === 'unbranded' ? 'Unbranded' : brandById(part.brand).name,
           part.purpose,
           part.source === 'model'
             ? 'Model'
