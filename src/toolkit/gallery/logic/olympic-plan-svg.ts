@@ -75,14 +75,22 @@ export function olympicPlanSvg(): string {
       'fill="none" stroke="#c9a227" stroke-width="1.5" stroke-dasharray="5 4"',
     );
   rect(room.landing, 'fill="url(#hatch)" stroke="#8a8f93"');
+  rect(room.gantry, 'fill="url(#hatch)" stroke="#8a8f93"');
+  turned(
+    (room.gantry.minX + room.gantry.maxX) / 2 + 0.1,
+    room.gantry.minZ + 3.4,
+    'CANTILEVERED GANTRY ABOVE (NO LEGS)',
+    90,
+    'font-size="10" text-anchor="middle" fill="#55595c"',
+  );
   text(
-    (room.landing.minX + room.landing.maxX) / 2,
+    (room.landing.minX + room.landing.maxX) / 2 - 0.5,
     room.landing.minZ + 0.45,
     'LANDING ABOVE',
     'font-size="11" text-anchor="middle" fill="#55595c"',
   );
   text(
-    (room.landing.minX + room.landing.maxX) / 2,
+    (room.landing.minX + room.landing.maxX) / 2 - 0.5,
     room.landing.minZ + 0.85,
     '(deck level, +3.5 m)',
     'font-size="10" text-anchor="middle" fill="#55595c"',
@@ -378,7 +386,8 @@ export function olympicPlanSvg(): string {
         `<rect x="${M + k * S}" y="${sy}" width="${S}" height="8" fill="#1b2326"/>`,
     ),
     `<text x="${M}" y="${sy + 24}" font-size="11">0</text><text x="${M + 5 * S}" y="${sy + 24}" font-size="11" text-anchor="middle">5 m</text>`,
-    `<text x="${M + 6 * S}" y="${sy + 8}" font-size="12" fill="#55595c">Dashed outline: space kept clear (inside the doors, at the stair's foot). Hatched: the landing above. Shaded: maintenance access.</text>`,
+    `<text x="${M + 6 * S}" y="${sy + 8}" font-size="12" fill="#55595c">Dashed outline: space kept clear (inside the doors, at the stair's foot). Shaded: maintenance access.</text>`,
+    `<text x="${M + 6 * S}" y="${sy + 26}" font-size="12" fill="#55595c">Hatched: the landing and the east gantry above at deck level (+3.5 m), cantilevered from the walls on brackets, no legs.</text>`,
     '</svg>',
   );
   return out.join('\n');

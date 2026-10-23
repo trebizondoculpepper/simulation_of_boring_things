@@ -83,8 +83,23 @@ const DOOR_CLEAR = { across: 2.6, into: 1.6 } as const;
 
 const P = PLANT_ROOM;
 const steps = Math.round(P.storey / P.stair.riser);
-/** The landing at deck level in the south-east corner, the pool door onto it. */
+/**
+ * The landing at deck level in the south-east corner, the pool door onto it.
+ * It and the gantry are cantilevered from the walls on steel brackets (the
+ * owner, 2026-10-23): no legs, so the plant floor under them is clear; the
+ * walls they hang from (east and south) are built to carry them.
+ */
 const LANDING = { minX: hx - 3, maxX: hx, minZ: hz - 2.4, maxZ: hz } as const;
+/** The gantry along the east wall at deck level, from the landing to the north wall: a viewing walkway over the plant. */
+export const GANTRY_WIDTH = 1.2;
+const GANTRY = {
+  minX: hx - GANTRY_WIDTH,
+  maxX: hx,
+  minZ: -hz,
+  maxZ: LANDING.minZ,
+} as const;
+/** The underside of the landing and gantry over the plant floor, metres: a storey less their depth. */
+export const DECK_SOFFIT = PLANT_ROOM.storey - 0.15;
 /** The stair: down from the landing's west edge, along the south wall, heading west. */
 const STAIR = {
   minX: LANDING.minX - (steps - 1) * P.stair.going,
@@ -127,6 +142,8 @@ export const olympicRoomPlan = () => ({
   halfX: hx,
   halfZ: hz,
   landing: LANDING,
+  gantry: GANTRY,
+  cantilevered: true,
   stair: STAIR,
   doors: DOORS,
 });
@@ -188,16 +205,17 @@ const against = (
 
 export function olympicPlan(): PlanItem[] {
   const out: PlanItem[] = [];
-  // The battery: five filters along the north wall, facing south, the line centred.
+  // The battery: five filters along the north wall, facing south, from
+  // 0.3 m off the west wall, so the line ends clear of the east gantry
+  // overhead (the filters stand taller than its deck).
   const f = SIZE.filter;
-  const line = 5 * f.w + 4 * FILTER_GAP;
   for (let i = 0; i < 5; i++)
     out.push(
       item(
         `filter-${i + 1}`,
         `Sand filter ${i + 1}`,
         f,
-        against('north', -line / 2 + f.w / 2 + i * (f.w + FILTER_GAP), f),
+        against('north', -hx + 0.3 + f.w / 2 + i * (f.w + FILTER_GAP), f),
       ),
     );
   // The pumps against the west wall, just south of the balance tank doors' clear space.

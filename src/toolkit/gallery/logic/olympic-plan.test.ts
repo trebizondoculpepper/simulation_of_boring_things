@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  DECK_SOFFIT,
   FILTER_GAP,
+  GANTRY_WIDTH,
   OLYMPIC_ROOM,
   accessOf,
   footprintOf,
@@ -85,6 +87,20 @@ describe('the Olympic plant room, in plan', () => {
     expect(main.at + main.width / 2).toBeLessThanOrEqual(room.landing.maxX);
     expect(PLANT_ROOM.storey).toBeGreaterThan(2.46 + 0.3);
     expect(tank.wall).toBe('west');
+  });
+
+  it('carries a cantilevered gantry along the east wall at deck level, from the landing to the north wall, nothing under it taller than its soffit', () => {
+    const g = room.gantry;
+    expect(room.cantilevered).toBe(true);
+    expect(g.maxX).toBe(hx);
+    expect(g.maxX - g.minX).toBeCloseTo(GANTRY_WIDTH, 9);
+    expect(g.minZ).toBe(-hz);
+    expect(g.maxZ).toBe(room.landing.minZ);
+    for (const i of items)
+      if (overlap(footprintOf(i), g))
+        expect(i.h, `${i.key} under the gantry`).toBeLessThan(
+          DECK_SOFFIT - 0.3,
+        );
   });
 
   it('runs the stair down from the landing along the south wall, heading west', () => {
