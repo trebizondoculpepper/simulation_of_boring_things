@@ -2,7 +2,7 @@
 
 Written by Claude (Opus 5.5, Claude Code), 2026-10-23, one of eight test scenarios the owner asked for (each proving a piece of modelling the Olympic pool's redo will need). Read `AGENTS.md`, then the scenarios already built: Dev21 (sources to sinks, `source-sink-plumbing.ts`), Dev22 (battery-backed pump, `battery-pump-rig.ts`), Dev23 (gravity drain, `jacuzzi-drain.ts`).
 
-**Status:** Built, 2026-10-23: Dev25 (`?room=dev25`), filling from mains pressure. Logic in `src/game/plant/tank-tee.ts` and `src/toolkit/gallery/logic/tank-fill-drain.ts`, tested; seen filling and draining through the one port in the room. Open: whether the fill should come instead from an unpressurised source through a small pump (asked of the owner).
+**Status:** Done, 2026-10-23: Dev25 (`?room=dev25`), filling from mains pressure. Logic in `src/game/plant/tank-tee.ts` and `src/toolkit/gallery/logic/tank-fill-drain.ts`, tested; seen filling and draining through the one port in the room. The owner kept the mains-fed fill (2026-10-23); a pump from an unpressurised source remains a possible variation.
 
 ## The scenario (revised by the owner, 2026-10-23)
 
