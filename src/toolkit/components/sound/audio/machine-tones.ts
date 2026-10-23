@@ -27,7 +27,8 @@ export type MachineToneId =
   | 'drive-fan'
   | 'turbine'
   | 'worn-fan'
-  | 'gear-motor';
+  | 'gear-motor'
+  | 'drain-gurgle';
 
 export interface MachineTone {
   id: MachineToneId;
@@ -65,6 +66,14 @@ export const MACHINE_TONES: readonly MachineTone[] = [
     // A small motor and its gearbox: up to speed in a breath, stopped by
     // its load almost at once, and silent at rest.
     spin: { up: 0.35, down: 0.25, floor: 0.12 },
+  },
+  {
+    id: 'drain-gurgle',
+    name: 'DRAIN GURGLE',
+    caption:
+      'Water running from a drain-down pipe into a tundish and away down its gully',
+    // Not a machine: it fades in as the water arrives and out as it stops.
+    spin: { up: 0.4, down: 1.2, floor: 1 },
   },
   {
     id: 'cabinet-fan',
@@ -407,6 +416,46 @@ const RECIPES: Record<MachineToneId, (t: Tools) => Float32Array> = {
       [body, 0.05],
       [grind, 0.08],
     ]);
+  },
+  'drain-gurgle': (t) => {
+    // Water falling into a tundish and down a trapped gully (the owner,
+    // 2026-10-23, for the foot spa's drain-down): bubbles bursting and
+    // ringing as they are dragged under, each a short, rising tone that
+    // dies away (a bubble's own note, its pitch by its size); every so
+    // often a deep glug as the trap gulps air; and the splash and
+    // trickle of the falling water under them.
+    const bubbles = new Float32Array(t.n);
+    const bubble = (at: number, f: number, decay: number, level: number) =>
+      t.event(bubbles, at, decay * 6, (s) => {
+        // Rising as the bubble closes: its phase is the chirp's integral.
+        const phase = 2 * Math.PI * f * (s + (0.35 * s * s) / decay);
+        return level * Math.sin(phase) * Math.exp(-s / decay);
+      });
+    const seconds = TONE_LOOP_SECONDS;
+    // Small bubbles, many and quick.
+    for (let k = 0; k < seconds * 18; k++)
+      bubble(
+        t.random() * seconds,
+        280 * Math.pow(3.2, t.random()),
+        0.012 + t.random() * 0.03,
+        0.25 + t.random() * 0.5,
+      );
+    // The trap's glugs: deep, and fewer.
+    for (let k = 0; k < seconds * 1.6; k++)
+      bubble(
+        t.random() * seconds,
+        110 + t.random() * 90,
+        0.05 + t.random() * 0.05,
+        0.9 + t.random() * 0.4,
+      );
+    const splash = t.noise(2200, 0.6);
+    const trickle = t.noise(650, 1.1);
+    const swell = t.wander(0.35, [0.5, 1.25, 2]);
+    return mix(t.n, [
+      [bubbles, 1],
+      [splash, 0.16],
+      [trickle, 0.12],
+    ]).map((v, i) => v * swell[i]);
   },
   'cabinet-fan': (t) =>
     fan(t, { rev: 45, blades: 7, air: 750, airQ: 0.6, tone: 0.28 }),

@@ -4,6 +4,7 @@ import {
   MOTOR_STROKE,
   motorDetune,
   motorRate,
+  motorStroke,
   motorLimits,
   motorRunning,
   newMotorisedValve,
@@ -64,5 +65,16 @@ describe('its motor’s pitch', () => {
 
   it('plays its tone that much faster or slower', () => {
     expect(MOTOR_HZ * motorRate(2)).toBeCloseTo(MOTOR_HZ + motorDetune(2), 9);
+  });
+});
+
+describe('its stroke', () => {
+  it('takes a little longer or shorter than the standard, each of a room’s valves its own', () => {
+    const strokes = Array.from({ length: 12 }, (_, i) => motorStroke(i));
+    expect(new Set(strokes).size).toBe(12);
+    for (const s of strokes) {
+      expect(s).toBeGreaterThanOrEqual(MOTOR_STROKE * 0.9 - 1e-9);
+      expect(s).toBeLessThanOrEqual(MOTOR_STROKE * 1.1 + 1e-9);
+    }
   });
 });

@@ -36,11 +36,13 @@ import {
   motorLimits,
   motorRate,
   motorRunning,
+  motorStroke,
   newMotorisedValve,
   stepMotorisedValve,
 } from '../../components/plant/logic/motorised-valve';
 import { signal } from '@preact/signals-core';
 import { partAudio } from '../../components/core/audio/part-audio';
+import { footbathDischarging } from '../../../game/plant/footbath-discharge';
 import { machineTone } from '../../components/sound/audio/machine-tones';
 import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
 import { createValveControlPanel } from '../../components/plant/views/valve-control-panel';
@@ -159,11 +161,14 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
         let travel = newMotorisedValve(binding.open());
         // Each motor its own few hertz off the others.
         const pitch = signal(motorRate(motorStops.length));
+        // And its own time to turn.
+        const stroke = motorStroke(motorStops.length);
         let running = false;
         motorLamps.push((delta) => {
           travel = stepMotorisedValve(
             { ...travel, command: binding.open() },
             delta,
+            stroke,
           );
           const moving = motorRunning(travel);
           motor.show(motorLimits(travel).open, moving);
@@ -261,6 +266,9 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     group.add(panel.group);
     for (const [piece, use] of panel.parts.uses) uses.set(piece, () => use());
   }
+  // The foot spa's drain-down, heard running into its tundish.
+  let drainMouth: Mesh | null = null;
+  let gurgling = false;
   // The drain's floor gully, its grating flush with the floor, and the
   // tundish on it that the drain discharges into across an air gap.
   const gully = cabinetGully(room);
@@ -283,6 +291,8 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       steel,
     );
     tundish.position.set(gully[0], floorY + 0.07, gully[2]);
+    tundish.name = 'Drain tundish';
+    drainMouth = tundish;
     const tail = new Mesh(new CylinderGeometry(0.02, 0.02, 0.03, 12), steel);
     tail.position.set(gully[0], floorY + 0.015, gully[2]);
     group.add(grating, tundish, tail);
@@ -316,9 +326,10 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     group,
     isolator,
     uses,
-    /** Silence any valve motor still running. */
+    /** Silence any valve motor still running, and the drain. */
     dispose() {
       for (const stop of motorStops) stop();
+      if (drainMouth) partAudio.hold(drainMouth, null);
     },
     update(delta: number) {
       // As the world has it, switched here or anywhere.
@@ -327,6 +338,23 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       isolator?.update(delta);
       for (const valve of valveParts) valve.update(delta);
       for (const lamp of motorLamps) lamp(delta);
+      // Gurgling while the foot spa's water runs away down it.
+      if (drainMouth && store && room === 'plant_pool_04') {
+        const w = store.world.value;
+        const running = footbathDischarging(
+          w.identifiedPlant,
+          w.pools.pool_04,
+          w.plant.isolators[name] ?? true,
+        );
+        if (running !== gurgling) {
+          gurgling = running;
+          partAudio.hold(
+            drainMouth,
+            running ? machineTone('drain-gurgle', signal(1), 0.3) : null,
+            drainMouth,
+          );
+        }
+      }
       panel?.update(delta);
     },
   };

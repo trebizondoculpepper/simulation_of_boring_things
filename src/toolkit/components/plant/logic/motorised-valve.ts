@@ -67,3 +67,20 @@ export const motorDetune = (index: number) =>
 
 /** The rate its motor's tone is played at, for its detuning. */
 export const motorRate = (index: number) => 1 + motorDetune(index) / MOTOR_HZ;
+
+/**
+ * Nor quite as quick (the owner, 2026-10-23): each valve's full stroke a
+ * little longer or shorter than `MOTOR_STROKE`, within 10 %, by its place
+ * in its room, as worn gearboxes and stiff balls make them; seconds.
+ */
+const STROKE_SPREAD = [
+  0.04, -0.07, 0.09, -0.03, 0.06, -0.09, 0.02, -0.05, 0.1, -0.1, 0.07, -0.01,
+];
+
+export const motorStroke = (index: number) =>
+  MOTOR_STROKE *
+  (1 +
+    STROKE_SPREAD[
+      ((index % STROKE_SPREAD.length) + STROKE_SPREAD.length) %
+        STROKE_SPREAD.length
+    ]);
