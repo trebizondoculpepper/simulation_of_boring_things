@@ -699,3 +699,24 @@ export function ledText(value: number, digits: number) {
   const decimals = Math.max(0, Math.min(3, digits - whole));
   return value.toFixed(decimals);
 }
+
+/**
+ * What a source's or sink's dot-matrix display shows (a 16 × 2 character
+ * LCD): what it reads on the first line, its value and unit on the second,
+ * right-aligned. Its controller's character set has no ³, so cubic metres
+ * read m^3 (the owner, 2026-10-23); an endless source reads
+ * UNLIMITED.
+ */
+export function lcdLines(t: ExperimentalTerminal, columns = 16): string[] {
+  const { unit, medium } = SUBSTANCES[t.spec.substance];
+  const shown = (medium === 'power' ? 'kWh' : unit).replace('³', '^3');
+  const value = t.value();
+  const second =
+    value === Infinity
+      ? 'UNLIMITED'
+      : `${value.toFixed(value >= 1e6 ? 0 : 3)} ${shown}`;
+  return [
+    (t.role === 'source' ? 'REMAINING' : 'CONTENTS').padEnd(columns),
+    second.padStart(columns).slice(-columns),
+  ];
+}

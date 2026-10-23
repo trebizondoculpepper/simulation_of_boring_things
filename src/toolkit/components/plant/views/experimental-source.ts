@@ -1,17 +1,15 @@
 import { CylinderGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
-import {
-  createMicroLabel,
-  createSevenSegment,
-} from '../../core/views/eighties-controls';
+import { createMicroLabel } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { createCanvasTexture } from '../../core/views/screens';
 import {
   SOURCE_SHAPE,
   SUBSTANCES,
-  ledText,
+  lcdLines,
   ratingLines,
 } from '../../../../game/plant/experimental-source';
+import { createCharacterLcd } from '../../industrial-control/views/panel-instruments';
 import type { ExperimentalTerminal } from '../../../../game/plant/experimental-source';
 
 /** Arc and heights of the lettering painted on the cylinder's front, radians and metres. */
@@ -130,7 +128,7 @@ function paintedLettering(
  * is drawn where the model puts it: an upright steel stud across its top
  * for each typed output or input, ending at its port, and a cable gland on
  * its back for its control
- * port, whose value an LED readout on the front shows (-oo- if infinite).
+ * port, whose value, with its unit, a backlit dot-matrix display on the front (and back) shows (-oo- if infinite).
  * It has no switch: a valve starts and stops what flows. `update`
  * refreshes the readout.
  */
@@ -140,7 +138,7 @@ export function createExperimentalSourceView(
 ) {
   const t = tools(kit);
   const group = new Group();
-  const { colour, bands, label, unit } = SUBSTANCES[terminal.spec.substance];
+  const { colour, bands, label } = SUBSTANCES[terminal.spec.substance];
   const role = terminal.role;
   group.name = `Experimental ${role}: ${label}`;
   const body = t.paint(colour, 0.55);
@@ -212,36 +210,31 @@ export function createExperimentalSourceView(
     tag.position.set(p.at[0], p.at[1] + 0.05, p.at[2] + 0.05);
     group.add(tag);
   }
-  // The control port's value, shown on the front and again on the back.
+  // The control port's value, with its unit, on a backlit dot-matrix
+  // display (a 16 × 2 character LCD), front and back.
   const y = 0.3;
-  const readouts = [0, Math.PI].map((turn) => {
+  const displays = [0, Math.PI].map((turn) => {
     const face = new Group();
     face.rotation.y = turn;
     group.add(face);
-    t.box(face, grey, 0.16, 0.08, 0.03, 0, y, r + 0.012);
-    const readout = createSevenSegment(kit, 5, { digitHeight: 0.022 });
-    readout.group.position.set(0, y, r + 0.03);
-    face.add(readout.group);
-    const unitTag = createMicroLabel(
-      kit,
-      `${role === 'source' ? 'REMAINING' : 'CONTENTS'}  ${unit}`,
-      { height: 0.011, ink: '#ecf1ed', plate: '#283237', maxWidth: 0.16 },
-    );
-    unitTag.position.set(0, y - 0.06, r + 0.03);
-    face.add(unitTag);
-    return readout;
+    t.box(face, grey, 0.27, 0.085, 0.04, 0, y, r + 0.006);
+    const lcd = createCharacterLcd(kit, {
+      columns: 16,
+      rows: 2,
+      cell: 0.0092,
+      backlight: true,
+    });
+    lcd.group.position.set(0, y, r + 0.027);
+    face.add(lcd.group);
+    return lcd;
   });
   let shown = '';
   const update = () => {
-    // An endless source's infinity as -oo-; a sink shows what it holds,
-    // from nothing.
-    const text =
-      terminal.role === 'source' && terminal.endless
-        ? '-oo-'
-        : ledText(terminal.value(), 5);
-    if (text === shown) return;
-    shown = text;
-    for (const readout of readouts) readout.show(text);
+    const lines = lcdLines(terminal);
+    const key = lines.join('|');
+    if (key === shown) return;
+    shown = key;
+    for (const lcd of displays) lcd.show(lines);
   };
   update();
   return { group, update };

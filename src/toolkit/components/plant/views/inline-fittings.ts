@@ -36,6 +36,8 @@ export interface InlineFittingSpec {
   heating?: boolean;
   /** For a chain wheel: how far down the chain hangs, metres. */
   drop?: number;
+  /** A power isolator's rating, as on its face; 3P 20A unless given. */
+  rating?: string;
 }
 
 /** What a fitting is bound to: its node's state in the simulation. */
@@ -83,7 +85,7 @@ export function createInlineFitting(
   if (f.kind === 'power-isolator') {
     const isolator = createPowerIsolator(kit, {
       on: open(),
-      rating: '3P  20A',
+      rating: f.rating ?? '3P  20A',
       maker: 'VOLTARA',
     });
     // Its back to the conduit, which runs up behind it.
