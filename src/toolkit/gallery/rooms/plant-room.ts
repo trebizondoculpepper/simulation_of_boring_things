@@ -17,9 +17,18 @@ import { DEV_ROOM_NAMES, devPortals, devWalls } from '../logic/dev-room-links';
 import type { EquipmentRoomId } from '../logic/dev-room-links';
 import {
   layoutPlantRoom,
-  layoutSquarePlantRoom,
+  layoutSizedPlantRoom,
 } from '../logic/plant-room-layout';
-import type { PlantRoomLayout } from '../logic/plant-room-layout';
+import type {
+  PlantRoomLayout,
+  SizedPlantRoomLayout,
+} from '../logic/plant-room-layout';
+import { regionFloorAt, regionSolids } from '../logic/room-regions';
+import { createRoomRegions } from '../views/room-regions';
+import {
+  demoPlaceItems,
+  demoPlaceLinks,
+} from '../logic/port-graph-demo-routes';
 import {
   BEAM_DEPTH,
   createServiceCeiling,
@@ -50,14 +59,6 @@ import {
 } from '../../components/core/parts/render-style';
 import { isLive } from './plant/exhibit';
 import type { LiveExhibit, PlantExhibit } from './plant/exhibit';
-import {
-  demoGraph,
-  demoVisualBindings,
-} from '../../../game/plant/port-graph-demo';
-import {
-  adjacencyLinks,
-  physicalAdjacencyMatrix,
-} from '../../../game/plant/port-adjacency';
 
 /** Each plant room's exhibits, loaded with the room. */
 /** The rooms laid out as exhibits: each equipment room, and dev10. */
@@ -151,6 +152,10 @@ export function startEquipmentRoom(
 
   let walls: Footprint[] = [];
   let solids: Footprint[] = [];
+  /** A room laid out by its layers, with its gantry, if it is one. */
+  let sized: SizedPlantRoomLayout | null = null;
+  /** The walker's floor height, metres: on the floor, the stair or the gantry. */
+  let standing = 0;
   let portals: ReturnType<typeof createPortals> | null = null;
   let disposed = false;
   /** The exhibits that work: updated each frame, their parts clickable. */
@@ -163,19 +168,16 @@ export function startEquipmentRoom(
     buildRoomServices?: (kit: PanelKit, layout: PlantRoomLayout) => Group,
   ) => {
     const sizes = exhibits.map((e) => e.size);
-    const links =
+    // Dev19 tries the room's layers (`doc/prompts/017-room-sizer-gantries-placement.md`):
+    // sized for its machines, two storeys with a gantry, placed in bands.
+    sized =
       id === 'dev19'
-        ? adjacencyLinks(
-            physicalAdjacencyMatrix(
-              demoGraph,
-              demoVisualBindings.map((binding) => binding.nodeId),
-            ),
-          )
-        : [];
-    const layout =
-      id === 'dev19'
-        ? layoutSquarePlantRoom(sizes, links)
-        : layoutPlantRoom(sizes);
+        ? layoutSizedPlantRoom(sizes, {
+            items: demoPlaceItems(),
+            links: demoPlaceLinks(),
+          })
+        : null;
+    const layout = sized ?? layoutPlantRoom(sizes);
     const { halfX, halfZ } = layout;
     const services = SERVICE_CEILINGS[id as ExhibitRoomId];
     // Under a services ceiling, the walls and roof go up over the services.
@@ -239,6 +241,8 @@ export function startEquipmentRoom(
         ).group,
       );
     walls = pieces;
+    if (sized)
+      room.add(createRoomRegions(kit, sized.room, sized.regions, sized.gantry));
     for (const w of pieces)
       slab(
         (w.maxX - w.minX) / m,
@@ -308,7 +312,15 @@ export function startEquipmentRoom(
           maxWidth: Math.max(1.6, exhibit.size.w),
         },
       );
-      if (floor) {
+      if (sized) {
+        // Over the machine, facing the way it faces.
+        caption.position.set(
+          place.x,
+          Math.min(exhibit.size.h + 0.35, height - 0.35),
+          place.z,
+        );
+        caption.rotation.y = place.yaw;
+      } else if (floor) {
         caption.position.set(
           place.x,
           Math.min(exhibit.size.h + 0.45, height - 0.35),
@@ -352,10 +364,10 @@ export function startEquipmentRoom(
       return;
     }
     const start = arrival ?? {
-      x: (id === 'dev19' ? 0 : -halfX + 2.5) * m,
-      z: (id === 'dev19' ? 0 : halfZ - 2) * m,
-      yaw: id === 'dev19' ? 0 : Math.PI / 4,
-      pitch: id === 'dev19' ? -0.08 : 0,
+      x: (-halfX + 2.5) * m,
+      z: (halfZ - 2) * m,
+      yaw: Math.PI / 4,
+      pitch: 0,
     };
     walk.place(start.x, start.z, start.yaw, start.pitch);
   };
@@ -390,7 +402,25 @@ export function startEquipmentRoom(
     metre: m,
     floorY: 0,
     start: { x: 0, z: 0 },
-    solids: () => [...walls, ...solids],
+    floorAt: (x, z, previous) => {
+      standing = sized
+        ? regionFloorAt(sized.room, sized.gantry, x / m, z / m, previous / m)
+        : 0;
+      return standing * m;
+    },
+    // Up the stair or on the gantry, its rails; on the floor, the machines too.
+    solids: () => [
+      ...walls,
+      ...(standing < 0.5 ? solids : []),
+      ...(sized
+        ? regionSolids(sized.room, sized.gantry, standing).map((f) => ({
+            minX: f.minX * m,
+            maxX: f.maxX * m,
+            minZ: f.minZ * m,
+            maxZ: f.maxZ * m,
+          }))
+        : []),
+    ],
     use: (x, y) => useAt(x, y)?.(),
     aimed: () => Boolean(useAt(0, 0)),
   });

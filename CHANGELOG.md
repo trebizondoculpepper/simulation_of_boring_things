@@ -6,6 +6,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- A plant room can now be laid out by layers (`doc/prompts/017-room-sizer-gantries-placement.md`). A room sizer sets its width, length and height from what it holds; a regions helper reserves its door approach and, from two storeys up, an observation gantry and a stair against one wall, where no pipe may run; and a placement helper stands the machines in bands, backs to the walls or back to back in an island, all facing a ring walkway. The big tanks go in corners, panels and signs on walls, and pumps and vessels freestanding.
+- Dev19 is the first room laid out this way: 13 × 13 m and 8 m tall instead of 20 × 20 × 4 m, with a walkable stair and gantry, yellow walkway lines and the pipe-free space shown faintly. Its piped machines stand much closer together. Its pipes are still routed by the old lanes, pending the new plumber.
 - Dev19's physical port graph now produces a weighted machine adjacency matrix for compact placement. The pool mimic has a temperature target and a heating switch that commands the boiler and primary circulator.
 - Dev19's small pool now has a post-mounted water quality sign with live graph-bound temperature, pH and free chlorine readings. Each motorized shutoff and breaker also has a local override button.
 

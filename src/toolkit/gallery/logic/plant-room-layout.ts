@@ -1,4 +1,9 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
+import { placeMachines } from './machine-placement';
+import type { Band, PlaceItem, PlaceLink } from './machine-placement';
+import { reserveRegions } from './room-regions';
+import type { Gantry, Region, RegionOptions, RegionRoom } from './room-regions';
+import { sizeRoom } from './room-sizer';
 
 /**
  * How a plant development room lays out its exhibits, in metres: floor
@@ -225,4 +230,87 @@ export function layoutSquarePlantRoom(
     places,
     solids,
   };
+}
+
+/**
+ * A development plant room laid out by the room's layers
+ * (`doc/prompts/017-room-sizer-gantries-placement.md`): sized for its
+ * exhibits (`sizeRoom`), its regions reserved (`reserveRegions`: the door's
+ * approach and, two storeys up, a gantry and its stair), then its machines
+ * placed round them (`placeMachines`). If they will not all fit, the room
+ * grows a step and they are placed again.
+ */
+export interface SizedPlantRoomLayout extends PlantRoomLayout {
+  regions: Region[];
+  /** The bands the machines stand in. */
+  bands: Band[];
+  gantry: Gantry | null;
+  room: RegionRoom;
+  /** How the room was sized and laid out, and what could not be done. */
+  reasons: string[];
+  problems: string[];
+  /** The placed machines' weighted link length, metres. */
+  linkLength: number;
+}
+
+export function layoutSizedPlantRoom(
+  sizes: readonly ExhibitSize[],
+  {
+    items = [],
+    links = [],
+    gantry = 'auto',
+    storeys = 2,
+    seed = 1,
+  }: {
+    /** What placement needs beyond the sizes, by exhibit: walls, ports, a rising flue. */
+    items?: readonly Partial<PlaceItem>[];
+    links?: readonly PlaceLink[];
+    gantry?: RegionOptions['gantry'];
+    storeys?: number;
+    seed?: number;
+  } = {},
+): SizedPlantRoomLayout {
+  const place: PlaceItem[] = sizes.map((s, i) => ({
+    key: String(i),
+    w: s.w,
+    d: s.d,
+    h: s.h,
+    ...items[i],
+  }));
+  const tries = [0, 0.1, 0.2, 0.3, 0.45, 0.6];
+  let result: SizedPlantRoomLayout | null = null;
+  for (const grow of tries) {
+    const size = sizeRoom(place, {
+      storeys,
+      gantry: gantry !== 'never',
+      grow,
+    });
+    const room: RegionRoom = {
+      w: size.w,
+      d: size.d,
+      h: size.h,
+      // The dev rooms' one door: west wall, 1.1 m from its south end.
+      doors: [{ side: 'west', at: size.d / 2 - 1.1, width: 1, height: 2.1 }],
+    };
+    const reserved = reserveRegions(room, { gantry });
+    const placed = placeMachines(room, reserved.regions, place, links, {
+      seed,
+    });
+    result = {
+      halfX: room.w / 2,
+      halfZ: room.d / 2,
+      height: room.h,
+      places: placed.placed.map((p) => ({ x: p.x, z: p.z, y: 0, yaw: p.yaw })),
+      solids: placed.placed.map((p) => p.footprint),
+      regions: [...reserved.regions, ...placed.walkways],
+      bands: placed.bands,
+      gantry: reserved.gantry,
+      room,
+      reasons: [...size.reasons, `machines placed from ${placed.pattern}`],
+      problems: [...reserved.problems, ...placed.problems],
+      linkLength: placed.length,
+    };
+    if (!placed.problems.length) break;
+  }
+  return result!;
 }

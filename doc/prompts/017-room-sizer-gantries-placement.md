@@ -23,6 +23,15 @@ The owner's rule for the experiment: if the room is more than two storeys tall, 
 
 The point of the experiment is to see whether blocking out regions of a room works as a general mechanism. Gantries are the first kind of reserved region, and not the last.
 
+## The owner's rulings as the work went on (2026-10-23)
+
+- **A two-storey plant room is normal.** The sizer makes rooms two storeys (8 m) by default, and the gantry appears from two storeys up, not only above two.
+- **Where machines belong.** Each machine has a `site`. The big tanks (balance tanks, the heating water tank) go in corners, placed first, biggest first. Mimics, control panels and signs go against walls. Pumps and process vessels are freestanding where they can be; this is a preference that a much shorter pipe run may outweigh.
+- **Bands round a ring walkway** (Claude's design, which the owner liked). Placement fills bands: one along each wall, backs to the wall, and an island of two bands back to back down the middle, all facing a ring walkway. The layout is tidy by construction and every machine faces a walkway.
+- **Concentric buses.** With a ring layout, the power and control buses are concentric too: an outer ring on the walls for the wall bands, and an inner ring at high level over the walkway for the island. The walkway only bars runs below 2.1 m.
+  - **A power bus is sized for the total load it carries:** the sum of its connected currents, by the plumber's cable rules.
+  - **A control bus is always small, however much hangs off it**, because it is a ring network that scales.
+
 ## The design
 
 All four are pure logic in `logic/` folders, tested with `vite-plus/test`, with no Three.js. The view only draws what they return.

@@ -10,6 +10,7 @@ import type {
   Vec3,
 } from '../../components/core/logic/pipe-route';
 import type { PlantRoomLayout } from './plant-room-layout';
+import type { PlaceItem, PlaceLink } from './machine-placement';
 import { choosePipe } from '../../components/core/logic/plumber';
 import type { PipeRequest } from '../../components/core/logic/plumber';
 import { PIPE_KINDS } from '../../components/core/views/pipe-kinds';
@@ -307,4 +308,77 @@ export function demoServiceRoutes(layout: PlantRoomLayout): DemoRoute[] {
     });
   }
   return routes;
+}
+
+/**
+ * Where each kind belongs (the owner, 2026-10-23): the big tanks in
+ * corners, panels and signs on walls, pumps and process vessels
+ * freestanding. The inline valves go wherever their pipes take them.
+ */
+const SITES: Partial<Record<DemoKind, PlaceItem['site']>> = {
+  pool: 'corner',
+  'balance-tank': 'corner',
+  'water-tank': 'corner',
+  mimic: 'wall',
+  'pool-mimic': 'wall',
+  'pool-info-sign': 'wall',
+  'remote-breaker': 'wall',
+  'gas-meter': 'wall',
+  circulator: 'free',
+  'pool-pump': 'free',
+  'sand-filter': 'free',
+  'heat-exchanger': 'free',
+  treatment: 'free',
+  boiler: 'free',
+};
+
+/**
+ * What placement needs to know of each exhibit, in `demoVisualBindings`'
+ * order: its ports, the incoming supplies on the supply wall (west), and
+ * the boiler's rising flue.
+ */
+export function demoPlaceItems(): Partial<PlaceItem>[] {
+  return demoVisualBindings.map(({ kind }) => ({
+    ports: Object.fromEntries(
+      Object.entries(anchors[kind] ?? {}).map(([port, at]) => [
+        port,
+        { at, out: normals[kind]?.[port] ?? [0, 1, 0] },
+      ]),
+    ),
+    ...(kind === 'gas-main' || kind === 'mains' || kind === 'makeup-main'
+      ? { walls: ['west' as const] }
+      : {}),
+    ...(kind === 'boiler' ? { clearAbove: true } : {}),
+    ...(SITES[kind] ? { site: SITES[kind] } : {}),
+  }));
+}
+
+/**
+ * The links that pull machines together: the graph's pipes, weighted by
+ * their outside diameter (lagging included) against 25 mm. Power and
+ * control go to the room's buses and the flue to the roof, so they do not
+ * pull.
+ */
+export function demoPlaceLinks(): PlaceLink[] {
+  const at = new Map(demoVisualBindings.map(({ nodeId }, i) => [nodeId, i]));
+  const links: PlaceLink[] = [];
+  for (const edge of demoGraph.edges) {
+    const source = demoGraph.nodes.find((node) => node.id === edge.sourceId)!;
+    const medium = source.ports?.find((port) => port.name === edge.sourcePort)
+      ?.data.medium;
+    if (medium !== 'gas' && medium !== 'water') continue;
+    const a = at.get(edge.sourceId);
+    const b = at.get(edge.targetId);
+    if (a === undefined || b === undefined) continue;
+    const { kind, od } = demoPipeSpec(edge.id, medium);
+    const lagging = PIPE_KINDS[kind].insulation?.thickness ?? 0;
+    links.push({
+      a: String(a),
+      aPort: edge.sourcePort,
+      b: String(b),
+      bPort: edge.targetPort,
+      weight: (od + 2 * lagging) / 0.025,
+    });
+  }
+  return links;
 }
