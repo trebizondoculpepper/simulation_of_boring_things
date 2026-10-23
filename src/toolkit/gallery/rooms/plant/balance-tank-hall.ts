@@ -549,6 +549,11 @@ export function buildHall(
     update: (delta) => {
       for (const u of updates) u(delta);
     },
+    // The pouring water's sound stops with the room.
+    dispose: () => {
+      makeupFall.dispose();
+      for (const f of falls) f.dispose();
+    },
   };
 }
 

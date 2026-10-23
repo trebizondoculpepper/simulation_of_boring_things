@@ -255,6 +255,7 @@ export function startTankHall(canvas: HTMLCanvasElement) {
       withdraw();
       walk.dispose();
       hall.parts?.dispose();
+      hall.dispose?.();
       disposeKit(kit, scene as unknown as Group);
       freeEnvironment();
       renderer.dispose();
