@@ -2,7 +2,7 @@
 
 Written by Claude (Opus 5.5, Claude Code), 2026-10-23, one of eight test scenarios the owner asked for (each proving a piece of modelling the Olympic pool's redo will need). Read `AGENTS.md`, then the scenarios already built: Dev21 (sources to sinks, `source-sink-plumbing.ts`), Dev22 (battery-backed pump, `battery-pump-rig.ts`), Dev23 (gravity drain, `jacuzzi-drain.ts`).
 
-**Status:** Not started.
+**Status:** Done, 2026-10-23: Dev24 (`?room=dev24`). Logic in `src/game/plant/duty-standby.ts` and `src/toolkit/gallery/logic/duty-standby-rig.ts`, tested; seen working in the room (pump 1's isolator off: P1 FAULT and DUTY FAIL lit, pump 2 running, the flow kept at 300 m³/h).
 
 ## The scenario
 

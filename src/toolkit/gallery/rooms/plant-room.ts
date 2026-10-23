@@ -86,7 +86,8 @@ export type ExhibitRoomId =
   | 'dev20'
   | 'dev21'
   | 'dev22'
-  | 'dev23';
+  | 'dev23'
+  | 'dev24';
 
 const EXHIBITS: Record<
   ExhibitRoomId,
@@ -127,6 +128,7 @@ const EXHIBITS: Record<
   dev21: () => import('./plant/source-sink'),
   dev22: () => import('./plant/battery-pump'),
   dev23: () => import('./plant/jacuzzi-drain'),
+  dev24: () => import('./plant/duty-standby'),
 };
 
 /**

@@ -25,7 +25,7 @@ import { routeVoxelLines } from '../../components/core/logic/voxel-router';
 import type { RouterLine } from '../../components/core/logic/voxel-router';
 import type { PipeJoint, Vec3 } from '../../components/core/logic/pipe-route';
 import type { PlantRoomLayout } from './plant-room-layout';
-import { pointAlong } from './source-sink-plumbing';
+import { placeRigFittings } from './rig-fittings';
 
 /**
  * The battery-backed pump rig (Dev22; the owner, 2026-10-23): an endless
@@ -361,42 +361,12 @@ export function plumbBatteryPumpRig(): BatteryPumpRig {
       continue;
     }
     lines.push({ id: l.id, medium: l.medium as 'power' | 'water', points });
-    const length = points
-      .slice(1)
-      .reduce(
-        (sum, p, k) =>
-          sum +
-          Math.hypot(
-            p[0] - points[k][0],
-            p[1] - points[k][1],
-            p[2] - points[k][2],
-          ),
-        0,
-      );
-    const list = expansion.along.get(l.id) ?? [];
-    list.forEach((f, k) => {
-      // At the end it serves, if a person can reach it there (several at
-      // one end one after another); else at the line's other end.
-      const step = k * 0.4;
-      const ends =
-        f.end === 'source'
-          ? [OFFSET + step, length - OFFSET]
-          : [length - OFFSET - step, OFFSET];
-      const spot =
-        ends
-          .map((d) => pointAlong(points, d))
-          .find((p) => p.at[1] >= REACH[0] && p.at[1] <= REACH[1]) ??
-        pointAlong(points, ends[0]);
-      fittings.push({
-        id: f.id,
-        kind: f.kind,
-        medium: f.medium,
-        normally: f.normally,
-        edge: l.id,
-        at: round3(spot.at),
-        along: round3(spot.along),
-      });
-    });
+    fittings.push(
+      ...placeRigFittings(l.id, points, expansion.along.get(l.id) ?? [], {
+        offset: OFFSET,
+        reach: REACH,
+      }),
+    );
   }
   return { layout, expansion, lines, fittings, problems };
 }
