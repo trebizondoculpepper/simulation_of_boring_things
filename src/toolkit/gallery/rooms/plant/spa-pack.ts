@@ -29,6 +29,8 @@ import {
   selector,
 } from '../../../components/core/parts/parts';
 import { worldStore } from '../../../save/world-store';
+import { partAudio } from '../../../components/core/audio/part-audio';
+import { machineTone } from '../../../components/sound/audio/machine-tones';
 import { FOOTBATH, partOn } from '../../../../game/plant/identification';
 
 /**
@@ -478,6 +480,14 @@ function buildSpaPack(
   object.userData.supply = supplied;
   const running = computed(() => supplied.value && power.position.value === 1);
   const doorOpen = computed(() => latches.some((l) => l.open.value));
+  // Its pump's motor, heard while it runs (the owner, 2026-10-23): quiet
+  // through its closed doors, about 10 dB louder with either one open.
+  const hum = machineTone(
+    'motor',
+    signal(1),
+    computed(() => (doorOpen.value ? 0.07 : 0.022)),
+  );
+  let humming = false;
   const doorLamp = computed(() => supplied.value && doorOpen.value);
   const uvOn = computed(() => running.value && !doorOpen.value);
   (
@@ -552,6 +562,10 @@ function buildSpaPack(
       left.hinge.rotation.y = -swing[0];
       right.hinge.rotation.y = swing[1];
       const on = running.value;
+      if (on !== humming) {
+        humming = on;
+        partAudio.hold(pump.group, on ? hum : null, pump.group);
+      }
       pump.update(delta, on);
       filter.update(delta, on ? WORKING : 0);
       uv.update(delta, uvOn.value);
@@ -560,6 +574,11 @@ function buildSpaPack(
       dosing.update(delta, on, 1.8, 7.3);
       gauge.set(on ? WORKING : 0);
       gauge.update(delta);
+    },
+    // Its motor's sound stops with its room.
+    dispose: () => {
+      humming = false;
+      partAudio.hold(pump.group, null);
     },
   };
 }
