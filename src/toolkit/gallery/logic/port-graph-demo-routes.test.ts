@@ -17,8 +17,10 @@ import {
 import {
   demoLineRequest,
   demoPipeSpec,
+  ADOPTED_RULES,
   demoPlaceItems,
   demoPlaceLinks,
+  demoPlumbing,
   demoServiceRoutes,
 } from './port-graph-demo-routes';
 
@@ -112,5 +114,39 @@ describe('dev19 laid out by its layers', () => {
         0,
       );
     expect(length(layout.places)).toBeLessThan(0.75 * length(old.places));
+  });
+});
+
+describe('dev19 plumbed by the adopted rules', () => {
+  const layout = layoutSizedPlantRoom(
+    EXHIBITS.map((exhibit) => exhibit.size),
+    { items: demoPlaceItems(), links: demoPlaceLinks() },
+  );
+  const plumbing = demoPlumbing(layout, ADOPTED_RULES);
+
+  it('sets every fitting where someone can reach it, leaving none out', () => {
+    expect(plumbing.problems).toEqual([]);
+    expect(plumbing.devices.every((d) => d.reachable)).toBe(true);
+  });
+
+  it('isolates the boiler beyond its breaker, and puts no non-return valve on a single pump', () => {
+    const ids = plumbing.devices.map((d) => d.id);
+    expect(ids).toContain('demo.boiler.power.isolator');
+    expect(ids.some((id) => id.endsWith('.nrv'))).toBe(false);
+    expect(ids).toContain('demo.poolPump.suction.iso');
+    expect(ids).toContain('demo.poolPump.discharge.iso');
+  });
+
+  it('sets the remote valves into their lines, not on the floor', () => {
+    for (const id of ['demo.remoteSuction', 'demo.remoteReturn']) {
+      const i = demoVisualBindings.findIndex((b) => b.nodeId === id);
+      expect(plumbing.places[i].inline).toBe(true);
+      expect(plumbing.places[i].y).toBeGreaterThan(0.4);
+    }
+  });
+
+  it('terminates the flue at the ceiling, straight above the boiler', () => {
+    expect(plumbing.terminals).toHaveLength(1);
+    expect(plumbing.terminals[0].at[1]).toBe(layout.height);
   });
 });

@@ -39,7 +39,7 @@ import {
   demoLocalPortAnchor,
   demoLineRequest,
   demoPlumbing,
-  CLAUDE_RULES,
+  ADOPTED_RULES,
   demoValveGeometry,
 } from '../../logic/port-graph-demo-routes';
 import type { PlantRoomLayout } from '../../logic/plant-room-layout';
@@ -680,7 +680,7 @@ export const EXHIBITS: readonly PlantExhibit[] = demoVisualBindings.map(
 export const buildRoomServices = (
   kit: Parameters<PlantExhibit['build']>[0],
   layout: PlantRoomLayout,
-) => buildPlumbedServices(kit, layout, CLAUDE_RULES);
+) => buildPlumbedServices(kit, layout, ADOPTED_RULES);
 
 /** The room's services, plumbed by one set of rules (`PlumbingRules`). */
 export function buildPlumbedServices(

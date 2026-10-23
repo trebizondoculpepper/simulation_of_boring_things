@@ -522,6 +522,12 @@ export interface PlumbingRules {
   powerIsolators: 'supply-feeds' | 'every-device';
   reach: 'height' | 'height-and-standing';
   unreachable: 'place-anyway' | 'report';
+  /**
+   * How a line leaves a machine: up to the overhead lanes at once, or first
+   * along a straight at the port's height, if that is within reach, long
+   * enough for the fittings that belong at that end.
+   */
+  routing: 'lanes' | 'reachable-ends';
 }
 export const CLAUDE_RULES: PlumbingRules = {
   name: "Claude's rules",
@@ -529,6 +535,7 @@ export const CLAUDE_RULES: PlumbingRules = {
   powerIsolators: 'supply-feeds',
   reach: 'height',
   unreachable: 'place-anyway',
+  routing: 'lanes',
 };
 export const CODEX_RULES: PlumbingRules = {
   name: "Codex's rules",
@@ -536,6 +543,16 @@ export const CODEX_RULES: PlumbingRules = {
   powerIsolators: 'every-device',
   reach: 'height-and-standing',
   unreachable: 'report',
+  routing: 'lanes',
+};
+/**
+ * The rules adopted for Dev19 (the owner, 2026-10-23): Codex's, with each
+ * line leaving its machine on a reachable straight for its fittings.
+ */
+export const ADOPTED_RULES: PlumbingRules = {
+  ...CODEX_RULES,
+  name: "Codex's rules, with reachable ends",
+  routing: 'reachable-ends',
 };
 
 /** The plumber's expansion of Dev19 (`plumbing-expansion.ts`). */
@@ -670,14 +687,21 @@ export function demoPlumbing(
         z > f.minZ - 0.15 &&
         z < f.maxZ + 0.15,
     );
+  // Within arm's reach (0.8 m) of clear floor, and clear of every
+  // fitting already set into another line.
+  const set: Vec3[] = [];
+  const crowded = (at: Vec3) =>
+    set.some(
+      (p) => Math.hypot(p[0] - at[0], p[1] - at[1], p[2] - at[2]) < 0.25,
+    );
   const standing = (at: Vec3) =>
-    rules.reach === 'height' ||
-    [
-      [0.5, 0],
-      [-0.5, 0],
-      [0, 0.5],
-      [0, -0.5],
-    ].some(([dx, dz]) => clear(at[0] + dx, at[2] + dz));
+    !crowded(at) &&
+    (rules.reach === 'height' ||
+      [0.3, 0.55, 0.8].some((d) =>
+        Array.from({ length: 8 }, (_, k) => (k * Math.PI) / 4).some((a) =>
+          clear(at[0] + d * Math.cos(a), at[2] + d * Math.sin(a)),
+        ),
+      ));
   const places = [...layout.places];
   const indexOf = new Map(demoVisualBindings.map((b, i) => [b.nodeId, i]));
   const runs: PlumbedRun[] = [];
@@ -694,7 +718,24 @@ export function demoPlumbing(
     flue: layout.height - 0.1,
   };
   const lines = demoLines();
-  const route = (line: DemoLine, at: PlantRoomLayout) => {
+  const REACH: readonly [number, number] = [0.5, 1.8];
+  /** How far a line runs straight out of its port first: `ext` metres, if its port faces level and is within reach. */
+  const reachEnd = (end: PortEnd, ext: number): Vec3 | null =>
+    ext > 0 &&
+    Math.abs(end.outward[1]) < 0.5 &&
+    end.at[1] >= REACH[0] &&
+    end.at[1] <= REACH[1]
+      ? [
+          end.at[0] + end.outward[0] * ext,
+          end.at[1],
+          end.at[2] + end.outward[2] * ext,
+        ]
+      : null;
+  const route = (
+    line: DemoLine,
+    at: PlantRoomLayout,
+    ext: { start: number; end: number } = { start: 0, end: 0 },
+  ) => {
     const positions = demoPortPositions(at);
     const start = positions.get(`${line.from.id}.${line.from.port}`);
     if (!start)
@@ -742,13 +783,20 @@ export function demoPlumbing(
       laneY[line.medium] + (index % 6) * 0.09,
     );
     const z = -layout.halfZ + 0.38 + Math.floor(index / 6) * 0.18;
+    // Out of each port along a reachable straight first, where wanted.
+    const a = reachEnd(startPort, ext.start);
+    const b = reachEnd(endPort, ext.end);
+    const from = a ?? start;
+    const to = b ?? finish;
     const points = withPortLeads(
       [
         start,
-        [start[0], y, start[2]],
-        [start[0], y, z],
-        [finish[0], y, z],
-        [finish[0], y, finish[2]],
+        ...(a ? [a] : []),
+        [from[0], y, from[2]],
+        [from[0], y, z],
+        [to[0], y, z],
+        [to[0], y, to[2]],
+        ...(b ? [b] : []),
         finish,
       ],
       od,
@@ -758,18 +806,7 @@ export function demoPlumbing(
     return { points, startPort, endPort, od };
   };
   const plumb = (line: DemoLine, at: PlantRoomLayout) => {
-    const r = route(line, at);
-    if (line.medium === 'flue') {
-      runs.push({
-        id: line.edges[0],
-        edgeId: line.edges[0],
-        medium: line.medium,
-        points: r.points,
-        startPort: r.startPort,
-        endPort: r.endPort,
-      });
-      return;
-    }
+    const { od: lineOd } = demoPipeSpec(line.edges[0], line.medium);
     // The line's inline devices: its fittings by the ends they serve, and
     // its designed valves, near its start.
     const fittings = line.edges.flatMap((e) => expansion.along.get(e) ?? []);
@@ -799,13 +836,39 @@ export function demoPlumbing(
         w.id,
         inlineLength(
           w.kind,
-          r.od,
+          lineOd,
           w.kind === 'remote-valve'
             ? demoValveGeometry(w.id, kindOf(w.id)).length
             : undefined,
         ),
       ]),
     );
+    // Room at each end for its fittings: their lengths, a gap each, and
+    // the port's lead and the bend's fitting.
+    const room = (near: 'start' | 'end') => {
+      const at = wanted.filter((w) => w.near === near);
+      return at.length
+        ? at.reduce((sum, w) => sum + lengths.get(w.id)! + 0.08, 0.45)
+        : 0;
+    };
+    const r = route(
+      line,
+      at,
+      rules.routing === 'reachable-ends'
+        ? { start: room('start'), end: room('end') }
+        : { start: 0, end: 0 },
+    );
+    if (line.medium === 'flue') {
+      runs.push({
+        id: line.edges[0],
+        edgeId: line.edges[0],
+        medium: line.medium,
+        points: r.points,
+        startPort: r.startPort,
+        endPort: r.endPort,
+      });
+      return;
+    }
     const { spots, problems: missed } = placeInline(
       r.points,
       wanted.map((w) => ({
@@ -831,6 +894,8 @@ export function demoPlumbing(
           .map((spot) => `${spot.id}: left out, nowhere reachable to fit it`),
       );
     spots.splice(0, spots.length, ...kept);
+    // What later lines must keep clear of.
+    set.push(...spots.map((spot) => spot.at));
     const pieces = splitAt(r.points, spots, lengths);
     pieces.forEach((points, k) =>
       runs.push({

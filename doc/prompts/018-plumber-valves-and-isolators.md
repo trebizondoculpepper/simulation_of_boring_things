@@ -14,7 +14,34 @@ Valves and isolators sit in the pipes and cables, not on the floor. When Dev19 t
   - all automatic.
 - **Power isolators follow the same rule.** They are almost never part of the main plan. Each is something that interrupts a device's drop up to the power bus.
 
-## What there is now (checked 2026-10-23)
+## Revision: Codex's review and the Dev19 experiment (2026-10-23)
+
+Codex reviewed the first version of this prompt (read-only, 12 findings). The owner then had both rule sets built side by side: Dev19b (`?room=dev19b`) with Codex's rules on the old overhead lanes, and Dev19 with the rules below (commit a2dbf66 and after). **This section overrides anything below that disagrees with it.**
+
+**The rules adopted** (`ADOPTED_RULES` in `src/toolkit/gallery/logic/port-graph-demo-routes.ts`):
+
+- **Non-return valves only where the circuit needs one,** not on every pump's discharge. Dev19's pumps are single pumps with flooded suction, so none needs one. Where one is needed, the usual order on a discharge is pump, non-return valve, isolating valve (Grundfos's guidance).
+- **Power isolators follow the powered equipment, not the feed.** Every powered device that is not itself switchgear gets an isolator in its last feed, wherever that feed comes from, so the boiler beyond its motor breaker has one too.
+- **BS 7671, stated correctly.** An isolator for mechanical maintenance must be suitable, clearly identified and securable in the off position (lockable), unless it stays under the worker's own control. "Within sight of the device" is our design preference, not the regulation's requirement (IET, Wiring Matters, March 2023).
+- **Reach is from somewhere to stand.** A fitting is reachable if its operating height is between 0.5 and 1.8 m and there is clear floor (not a machine, not within 0.3 m of a wall) within arm's reach, 0.8 m. It must also be clear of fittings already set into other lines.
+- **Out of reach means reported, not installed.** A fitting that cannot be set where someone can reach it is reported as a problem and not drawn. A designed valve (Dev19's remote valves) is still drawn, and reported.
+- **Reachable ends.** A line leaves a machine first along a straight at the port's height, when that height is within reach, long enough for the fittings at that end. Only then does it climb to the overhead lanes. This is what lets every isolator in Dev19 be reached; Dev19b, on the old lanes, loses its pool mimic's isolator.
+
+**Magic terminals** (the owner, 2026-10-23). A line is never left unterminated. Where it goes out of the room (a flue or vent through the roof, a drain to a gully), it ends at a magic terminal. The terminal is a node of the model whose port the plumber works out: the point where the line's most direct route meets the ceiling (or, for a drain, the floor at a gully). Reaching it terminates the line, and the plumber checks that route against the reserved regions, reporting any crossing. Dev19's stack is a ceiling terminal (`MAGIC_TERMINALS`), drawn as a roof collar. The power and control buses are the same idea for cables.
+
+**Codex's other findings, to settle as the work goes on:**
+
+- **Expansion is a deterministic derivation from the base graph only.** It must reject its own output as input (detect generated fittings), not merely be repeatable.
+- **Identities can collide** if two links share one port. Validate one connection per isolated port, or add a discriminator; detect collisions. Dev19's `demo.*` fittings do not enter the permanent serial register (`serials.ts` holds plant IDs only).
+- **The state owner.** Dev19's simulation owns its own `DemoState`, not `World`. The fittings' states belong there first, with read and command functions and defaults. Moving them to `World` needs a `WORLD_VERSION` bump and a migration.
+- **An adapter between Dev19's graph and the expansion,** in both directions. Kinds live in `node.data.kind` and media on ports; the adapter generates port definitions for the fittings and validates the expanded graph.
+- **Orientation is product-specific.** Belimo's actuators may sit on their side but never upside down. Choose a permitted orientation that clears the neighbouring services.
+- **Removal envelopes.** Reserve each device's face-to-face length and the space to remove it, not just its length.
+- **Bend clearance.** `JOINT_LENGTHS` are stock pipe lengths, not bend clearances. Use the bend and joint fitting geometry from `pipe-route.ts`.
+- **A non-return valve model exists:** a dual-plate check valve, drawn in `pipework.ts` (around line 288). What is missing is a reusable inline component.
+- **Drains and vents** (prompt 017) are deferred to the next stage of this work, with the floor terminal.
+
+## What there was at the start (checked 2026-10-23, before the revision)
 
 - **Dev19's graph** (`src/game/plant/port-graph-demo.ts`, the other agent's model; leave its topology as it is): 24 nodes, built with `@statelyai/graph`. Ports are typed by medium: gas, flue, water, power, heat, control.
   - Its five remote valves (`remote-water-valve`, `remote-gas-valve`) and its motor breaker (`remote-breaker`) are designed nodes, with state and commands in the hand-written simulation (`createPortGraphDemo`).
@@ -25,7 +52,7 @@ Valves and isolators sit in the pipes and cables, not on the floor. When Dev19 t
   - a lever or chain butterfly valve for DN50 and up (`createWaterButterflyValve`);
   - a real-size rotary power isolator, about 115 × 160 × 105 mm (`createPowerIsolator`, `panel-switchgear.ts`).
 
-  There is no non-return valve model.
+  (Codex: a dual-plate check valve is already drawn in `pipework.ts`.)
 
 - **Routes:** Dev19's routes are still the old lanes (`demoServiceRoutes`): out of each port, up to a lane at 2.15–3.65 m, along, and down. The new router (prompt 016 step 3) is not written yet.
 - **A first draft of the expansion** is in `src/game/plant/plumbing-expansion.ts`. It is untested and uncommitted. It is described below.
@@ -97,7 +124,7 @@ A device's power drop runs from the power bus down to its terminal box. The isol
 
 - at a reachable height (1.2 to 1.6 m), on the wall or a stand next to the device;
 - or on the device's own frame if it has one;
-- within sight of the device, as BS 7671 expects for switching off for mechanical maintenance.
+- within sight of the device, by preference. BS 7671 asks that it be suitable, clearly identified and lockable off; see the revision above.
 
 It is drawn with `createPowerIsolator`, real size, and interrupts the conduit: bus, conduit, isolator, conduit, device.
 

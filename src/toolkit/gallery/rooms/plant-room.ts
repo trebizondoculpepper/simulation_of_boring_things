@@ -29,7 +29,7 @@ import {
   demoPlaceItems,
   demoPlaceLinks,
   demoPlumbing,
-  CLAUDE_RULES,
+  ADOPTED_RULES,
   CODEX_RULES,
 } from '../logic/port-graph-demo-routes';
 import {
@@ -189,7 +189,7 @@ export function startEquipmentRoom(
         ...sized,
         places: demoPlumbing(
           sized,
-          id === 'dev19b' ? CODEX_RULES : CLAUDE_RULES,
+          id === 'dev19b' ? CODEX_RULES : ADOPTED_RULES,
         ).places,
       };
     const layout = sized ?? layoutPlantRoom(sizes);

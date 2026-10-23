@@ -5,13 +5,14 @@ import { EXHIBITS, buildPlumbedServices } from './port-graph-demo';
 
 /**
  * Dev19b: Dev19's machines, laid out the same way, plumbed by Codex's
- * rules from its review of prompt 018 (`CODEX_RULES`), to compare with
- * Dev19's (the owner, 2026-10-23).
+ * rules from its review of prompt 018 (`CODEX_RULES`) on the old overhead
+ * lanes, to compare with Dev19, which adopted those rules and leaves each
+ * machine on a reachable straight for its fittings (the owner, 2026-10-23).
  */
 export { EXHIBITS };
 
 export const PURPOSE =
-  "Dev19 plumbed by Codex's rules: non-return valves only where needed, an isolator for every powered device, and a fitting only where someone can stand to reach it";
+  "Dev19 plumbed by Codex's rules on the old lanes, straight up from each port: a fitting only where someone can stand to reach it, so several are left out";
 
 export const buildRoomServices = (
   kit: Parameters<PlantExhibit['build']>[0],
