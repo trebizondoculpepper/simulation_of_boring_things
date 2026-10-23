@@ -6,25 +6,38 @@ import {
   SUBSTANCES,
   createExperimentalSource,
 } from '../../../../game/plant/experimental-source';
-import type { ExperimentalSourceSpec } from '../../../../game/plant/experimental-source';
+import type {
+  ExperimentalSourceSpec,
+  Substance,
+} from '../../../../game/plant/experimental-source';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
   'Experimental sources: placeholders for any substance, with typed outputs and a readout of what is left';
 
-/** The sources shown: some endless, some finite. */
-const SOURCES: ExperimentalSourceSpec[] = [
-  { id: 'exp.chlorine', substance: 'chlorine', outputs: 1, quantity: 25 },
-  {
-    id: 'exp.hypochlorite',
-    substance: 'hypochlorite',
-    outputs: 2,
-    quantity: 200,
-  },
-  { id: 'exp.ozone', substance: 'ozone', outputs: 1 },
-  { id: 'exp.poolWater', substance: 'pool-water', outputs: 2 },
-  { id: 'exp.power', substance: 'power-400v', outputs: 3 },
-];
+/**
+ * The sources shown: one of every substance, some finite, some endless,
+ * with one to three outputs.
+ */
+const SHOWN: Partial<
+  Record<Substance, Omit<ExperimentalSourceSpec, 'id' | 'substance'>>
+> = {
+  chlorine: { quantity: 25 },
+  hypochlorite: { outputs: 2, quantity: 200 },
+  'pool-water': { outputs: 2 },
+  'dirty-water': { quantity: 12 },
+  'heating-oil': { quantity: 2500 },
+  'power-400v': { outputs: 3 },
+  'power-230v': { outputs: 2 },
+};
+const SOURCES: ExperimentalSourceSpec[] = (
+  Object.keys(SUBSTANCES) as Substance[]
+).map((substance) => ({
+  id: `exp.${substance}`,
+  substance,
+  outputs: 1,
+  ...SHOWN[substance],
+}));
 
 export const EXHIBITS: readonly PlantExhibit[] = SOURCES.map((spec) => ({
   title: `Experimental source: ${SUBSTANCES[spec.substance].label.toLowerCase()}`,

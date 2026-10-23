@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   SOURCE_SHAPE,
+  SUBSTANCES,
   canSupply,
   createExperimentalSource,
 } from './experimental-source';
@@ -59,6 +60,20 @@ describe('experimental sources', () => {
     const controls = s.ports.filter((p) => p.data.medium === 'control');
     expect(controls.map((p) => p.name)).toEqual(['remaining']);
     expect(controls[0].data.control?.access).toBe('read');
+  });
+
+  it('makes a source of every commodity, each output typed by its medium and substance', () => {
+    for (const substance of Object.keys(
+      SUBSTANCES,
+    ) as (keyof typeof SUBSTANCES)[]) {
+      const s = createExperimentalSource({ id: `t.${substance}`, substance });
+      expect(s.ports[0].data).toMatchObject({
+        medium: SUBSTANCES[substance].medium,
+        substance,
+      });
+    }
+    expect(SUBSTANCES['dirty-water'].medium).toBe('water');
+    expect(SUBSTANCES['power-230v'].medium).toBe('power');
   });
 
   it('runs down as it is drawn from, and delivers nothing once empty', () => {

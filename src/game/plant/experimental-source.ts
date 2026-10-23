@@ -19,29 +19,43 @@
  * Pure.
  */
 
-/** What an experimental source can supply. */
+/** What an experimental source can supply: every fluid, gas and power commodity of the plant. */
 export type Substance =
+  // Waters.
   | 'pool-water'
   | 'mains-water'
+  | 'dirty-water'
   | 'lthw'
+  | 'dhw'
+  | 'chilled-water'
+  // Gases.
   | 'natural-gas'
+  | 'lpg'
   | 'chlorine'
+  | 'ozone'
+  | 'carbon-dioxide'
+  | 'compressed-air'
+  // Dosing chemicals.
   | 'hypochlorite'
   | 'acid'
-  | 'ozone'
-  | 'compressed-air'
+  | 'sodium-bicarbonate'
+  | 'flocculant'
+  // Liquid fuels.
+  | 'heating-oil'
+  | 'diesel'
+  // Power.
   | 'power-400v'
-  | 'power-230v';
+  | 'power-230v'
+  | 'power-110v'
+  | 'power-24v-dc';
+
+/** What kind of port carries a substance. */
+export type SourceMedium = 'water' | 'gas' | 'chemical' | 'oil' | 'power';
 
 /** Each substance's medium (what kind of port carries it), its unit, and its colour on the cylinder. */
 export const SUBSTANCES: Record<
   Substance,
-  {
-    medium: 'water' | 'gas' | 'chemical' | 'power';
-    unit: string;
-    colour: string;
-    label: string;
-  }
+  { medium: SourceMedium; unit: string; colour: string; label: string }
 > = {
   'pool-water': {
     medium: 'water',
@@ -55,14 +69,50 @@ export const SUBSTANCES: Record<
     colour: '#3c8f4a',
     label: 'MAINS WATER',
   },
+  // Backwash and waste water, to drain.
+  'dirty-water': {
+    medium: 'water',
+    unit: 'm³',
+    colour: '#6f5f45',
+    label: 'DIRTY WATER',
+  },
+  // Low-temperature hot water: the heating.
   lthw: { medium: 'water', unit: 'm³', colour: '#b5402f', label: 'LTHW' },
+  // Domestic hot water: showers and taps.
+  dhw: {
+    medium: 'water',
+    unit: 'm³',
+    colour: '#d0705a',
+    label: 'DOMESTIC HOT WATER',
+  },
+  'chilled-water': {
+    medium: 'water',
+    unit: 'm³',
+    colour: '#5aa6c8',
+    label: 'CHILLED WATER',
+  },
   'natural-gas': {
     medium: 'gas',
     unit: 'm³',
     colour: '#d9b23a',
     label: 'NATURAL GAS',
   },
+  lpg: { medium: 'gas', unit: 'kg', colour: '#c98a2e', label: 'LPG' },
   chlorine: { medium: 'gas', unit: 'kg', colour: '#c9d23c', label: 'CHLORINE' },
+  ozone: { medium: 'gas', unit: 'g', colour: '#8fc7e6', label: 'OZONE' },
+  // For pH correction, dosed into the pool water.
+  'carbon-dioxide': {
+    medium: 'gas',
+    unit: 'kg',
+    colour: '#8d9599',
+    label: 'CARBON DIOXIDE',
+  },
+  'compressed-air': {
+    medium: 'gas',
+    unit: 'm³',
+    colour: '#9fc3d6',
+    label: 'COMPRESSED AIR',
+  },
   hypochlorite: {
     medium: 'chemical',
     unit: 'l',
@@ -70,26 +120,65 @@ export const SUBSTANCES: Record<
     label: 'HYPOCHLORITE',
   },
   acid: { medium: 'chemical', unit: 'l', colour: '#6d3f8f', label: 'ACID' },
-  ozone: { medium: 'gas', unit: 'g', colour: '#8fc7e6', label: 'OZONE' },
-  'compressed-air': {
-    medium: 'gas',
-    unit: 'm³',
-    colour: '#9fc3d6',
-    label: 'COMPRESSED AIR',
+  // Raises alkalinity.
+  'sodium-bicarbonate': {
+    medium: 'chemical',
+    unit: 'l',
+    colour: '#b9a6c9',
+    label: 'SODIUM BICARBONATE',
   },
+  // Polyaluminium chloride, ahead of the filters.
+  flocculant: {
+    medium: 'chemical',
+    unit: 'l',
+    colour: '#a07ab8',
+    label: 'FLOCCULANT',
+  },
+  'heating-oil': {
+    medium: 'oil',
+    unit: 'l',
+    colour: '#5a3b26',
+    label: 'HEATING OIL',
+  },
+  // For the standby generator.
+  diesel: { medium: 'oil', unit: 'l', colour: '#3f3a2e', label: 'DIESEL' },
   'power-400v': {
     medium: 'power',
     unit: 'kWh',
     colour: '#e07a22',
     label: '400 V 3-PH',
   },
+  // UK mains, single phase: 230 V nominal (BS 7671), often called 240 V.
   'power-230v': {
     medium: 'power',
     unit: 'kWh',
     colour: '#e8953e',
-    label: '230 V',
+    label: '230 V 1-PH',
+  },
+  // Reduced low voltage for portable tools, centre-tapped to earth.
+  'power-110v': {
+    medium: 'power',
+    unit: 'kWh',
+    colour: '#e6c229',
+    label: '110 V CTE',
+  },
+  // Control supplies.
+  'power-24v-dc': {
+    medium: 'power',
+    unit: 'kWh',
+    colour: '#c9b07a',
+    label: '24 V DC',
   },
 };
+
+export interface ExperimentalSourceSpec {
+  id: string;
+  substance: Substance;
+  /** How many outputs it has (each typed by its substance). */
+  outputs?: number;
+  /** How much it starts with, in its substance's unit; Infinity for an endless supply. */
+  quantity?: number;
+}
 
 type Vec3 = [number, number, number];
 
@@ -111,15 +200,6 @@ export const SOURCE_SHAPE = {
 export const outputAngle = (k: number, n: number) =>
   Math.PI + (n === 1 ? 0 : (k / (n - 1) - 0.5) * Math.PI * 0.8);
 
-export interface ExperimentalSourceSpec {
-  id: string;
-  substance: Substance;
-  /** How many outputs it has (each typed by its substance). */
-  outputs?: number;
-  /** How much it starts with, in its substance's unit; Infinity for an endless supply. */
-  quantity?: number;
-}
-
 /** A port of an experimental source, as the port graph takes it. */
 export interface SourcePort {
   name: string;
@@ -128,7 +208,7 @@ export interface SourcePort {
   at: Vec3;
   out: Vec3;
   data: {
-    medium: 'water' | 'gas' | 'chemical' | 'power' | 'control';
+    medium: SourceMedium | 'control';
     substance?: Substance;
     required: boolean;
     /** A control port's reading: a number in `unit`, read only, which may be infinite. */
