@@ -190,12 +190,12 @@ describe.each(EQUIPPED_ROOMS)('%s', (room) => {
   });
 });
 
-import { PLANT_ROOM } from './plant-rooms';
+import { PLANT_ROOM, plantRoomPlan } from './plant-rooms';
 import { roomEquipment } from './room-equipment';
 
 describe('the balance tanks', () => {
   it('stand below their pools’ decks, so the overflow falls to them', () => {
-    for (const room of ['plant_pool_01', 'plant_pool_02']) {
+    for (const room of ['plant_pool_01']) {
       const tank = roomEquipment(room)!.items.find((i) =>
         i.key.startsWith('balance-tank'),
       )!;
@@ -204,71 +204,32 @@ describe('the balance tanks', () => {
   });
 });
 
-import { TANK_SURROUND } from './room-equipment';
-
-describe('the Olympic plant room', () => {
-  const layout = layoutRoom('plant_pool_02')!;
-  const tank = layout.placed.find((p) =>
-    p.item.key.startsWith('balance-tank'),
-  )!;
-
-  it('leaves a walkway all round its balance tank, its flanges within reach', () => {
-    const reaches = walkable(
-      layout.box,
-      layout.placed,
-      pipeObstacles(roomPipes('plant_pool_02')),
-    );
-    const f = tank.footprint;
-    const s = TANK_SURROUND;
-    // A strip along each side, and the walker able to stand in it along
-    // most of that side's length.
-    const sides = {
-      north: { minX: f.minX, maxX: f.maxX, minZ: f.minZ - s, maxZ: f.minZ },
-      south: { minX: f.minX, maxX: f.maxX, minZ: f.maxZ, maxZ: f.maxZ + s },
-      west: { minX: f.minX - s, maxX: f.minX, minZ: f.minZ, maxZ: f.maxZ },
-      east: { minX: f.maxX, maxX: f.maxX + s, minZ: f.minZ, maxZ: f.maxZ },
-    };
-    for (const [side, strip] of Object.entries(sides)) {
-      const along = side === 'north' || side === 'south';
-      const n = 6;
-      for (let i = 0; i <= n; i++) {
-        const t = 0.1 + (0.8 * i) / n;
-        const spot = along
-          ? {
-              ...strip,
-              minX: strip.minX + t * (strip.maxX - strip.minX) - 0.15,
-              maxX: strip.minX + t * (strip.maxX - strip.minX) + 0.15,
-            }
-          : {
-              ...strip,
-              minZ: strip.minZ + t * (strip.maxZ - strip.minZ) - 0.15,
-              maxZ: strip.minZ + t * (strip.maxZ - strip.minZ) + 0.15,
-            };
-        expect(
-          reaches(spot),
-          `the tank's ${side} side, ${Math.round(t * 100)}% along`,
-        ).toBe(true);
-      }
-    }
+describe('the Olympic plant room, cleared for its redo', () => {
+  it('is an empty large hall: no machines, no pipework yet', () => {
+    const layout = layoutRoom('plant_pool_02')!;
+    expect(layout.placed).toHaveLength(0);
+    expect(roomPipes('plant_pool_02')).toHaveLength(0);
+    expect(layout.box.w).toBe(22);
   });
 
-  it('keeps the water’s order, and the central services by the south wall', () => {
-    const z = (label: string) =>
-      layout.placed.find((p) => p.item.label.endsWith(label))!.z;
-    expect(z('balance tank')).toBeLessThan(
-      z('circulation pumps, duty and standby, with strainers'),
-    );
+  it('has its three doorways: the pool north, the balance tank hall west, the main plant south', () => {
+    const plan = plantRoomPlan('large', { tankHall: true });
+    expect(plan.door.z).toBe(-plan.h);
+    expect(plan.equipment.z).toBe(plan.h);
+    expect(plan.tankDoor?.x).toBe(-plan.h);
+    // At the north end of the west wall, clear of the landing above.
+    expect(plan.tankDoor!.z).toBeLessThan(0);
+    expect(plan.tankDoor!.z - 0.96).toBeGreaterThan(plan.landing.maxZ);
+    // Kept clear inside it, as the equipment doors are.
+    const box = roomEquipment('plant_pool_02')!.box;
     expect(
-      z('circulation pumps, duty and standby, with strainers'),
-    ).toBeLessThan(z('sand filter 1'));
-    expect(z('UV unit')).toBeLessThan(0);
-    expect(z('ozone contact tank')).toBeLessThan(0);
-    // What the central plant supplies, by the south wall it comes through.
-    for (const label of [
-      'plate heat exchanger',
-      'local control panel',
-      'acid dosing pump',
-    ])
-      expect(z(label), label).toBeGreaterThan(layout.box.d / 2 - 3);
+      box.keepClear.some(
+        (k) => k.minX === -plan.h && k.minZ < plan.tankDoor!.z,
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps no west doors in the other large rooms (the retired room, the template)', () => {
+    expect(plantRoomPlan('large').tankDoor).toBeNull();
   });
 });

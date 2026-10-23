@@ -53,12 +53,16 @@ export function createPlantRoomShell(
   kit: PanelKit,
   /** Its title: "PLANT ROOM 4 – FOOTBATH"; the size's, for a template. */
   name = `PLANT ROOM · ${size.toUpperCase()}`,
+  /** A room whose balance tank is in a hall of its own (`plantRoomPlan`). */
+  { tankHall = false }: { tankHall?: boolean } = {},
 ): {
   group: Group;
   door: ReturnType<typeof plantRoomDoor>;
   equipment: EquipmentDoorsPart;
+  /** The doors to the balance tank hall, if it has them. */
+  tankDoors: EquipmentDoorsPart | null;
 } {
-  const plan = plantRoomPlan(size);
+  const plan = plantRoomPlan(size, { tankHall });
   const { h, floor, roof, landing, stair } = plan;
   const P = PLANT_ROOM;
   const t = P.wall;
@@ -123,8 +127,26 @@ export function createPlantRoomShell(
   // The plant floor, and the roof.
   box(concrete, 2 * h, 0.1, 2 * h, 0, floor - 0.05, 0);
   wallBox(2 * h + 2 * t, 0.3, 2 * h + 2 * t, 0, roof + 0.15, 0);
-  // The walls: east and west whole, north and south round their doors.
-  wallBox(t, height, 2 * h, -h - t / 2, (floor + roof) / 2, 0);
+  // The walls: the east whole, the west whole or round the balance tank
+  // hall's doors, north and south round their doors.
+  const opening = EQUIPMENT_DOORS.w + 2 * EQUIPMENT_DOORS.frame;
+  const doorTop = floor + EQUIPMENT_DOORS.h + 2 * EQUIPMENT_DOORS.frame;
+  if (plan.tankDoor) {
+    const z0 = plan.tankDoor.z - opening / 2;
+    const z1 = plan.tankDoor.z + opening / 2;
+    const x = -h - t / 2;
+    wallBox(t, height, z0 + h, x, (floor + roof) / 2, (z0 - h) / 2);
+    wallBox(t, height, h - z1, x, (floor + roof) / 2, (z1 + h) / 2);
+    const headerBottom = doorTop + CONCRETE_LINTEL.height;
+    wallBox(
+      t,
+      roof - headerBottom,
+      opening,
+      x,
+      (headerBottom + roof) / 2,
+      plan.tankDoor.z,
+    );
+  } else wallBox(t, height, 2 * h, -h - t / 2, (floor + roof) / 2, 0);
   wallBox(t, height, 2 * h, h + t / 2, (floor + roof) / 2, 0);
   const wallWithDoor = (
     z: number,
@@ -179,7 +201,22 @@ export function createPlantRoomShell(
     if (x1 > x0)
       box(dado, x1 - x0, 1.2, 0.01, (x0 + x1) / 2, floor + 0.6, -h + 0.005);
   for (const [sx, sz, x, z] of [
-    [0.01, 2 * h, -h + 0.005, 0],
+    ...(plan.tankDoor
+      ? [
+          [
+            0.01,
+            plan.tankDoor.z - opening / 2 + h,
+            -h + 0.005,
+            (plan.tankDoor.z - opening / 2 - h) / 2,
+          ],
+          [
+            0.01,
+            h - plan.tankDoor.z - opening / 2,
+            -h + 0.005,
+            (plan.tankDoor.z + opening / 2 + h) / 2,
+          ],
+        ]
+      : [[0.01, 2 * h, -h + 0.005, 0]]),
     [0.01, 2 * h, h - 0.005, 0],
   ])
     box(dado, sx, 1.2, sz, x, floor + 0.6, z);
@@ -263,6 +300,25 @@ export function createPlantRoomShell(
     h + t + 0.9,
   );
   equipmentLobby.name = 'equipment lobby';
+  // The balance tank hall's doors in the west wall, the same pair, pulled
+  // open from in here; beyond them, until the hall is built, a dark lobby.
+  let tankDoors: EquipmentDoorsPart | null = null;
+  if (plan.tankDoor) {
+    tankDoors = equipmentDoors(kit, 'BALANCE TANK');
+    tankDoors.object.position.set(-h, floor, plan.tankDoor.z);
+    tankDoors.object.rotation.y = Math.PI / 2;
+    group.add(tankDoors.object);
+    const tankLobby = box(
+      paint('#0b0d0d', 1),
+      0.05,
+      doorTop - floor,
+      opening,
+      -h - t - 0.9,
+      (floor + doorTop) / 2,
+      plan.tankDoor.z,
+    );
+    tankLobby.name = 'balance tank lobby';
+  }
   const title = card(1.6, 0.36, (c, w, hh) => {
     c.fillStyle = '#f4f2ea';
     c.fillRect(0, 0, w, hh);
@@ -359,6 +415,7 @@ export function createPlantRoomShell(
     group,
     door,
     equipment,
+    tankDoors,
   };
 }
 

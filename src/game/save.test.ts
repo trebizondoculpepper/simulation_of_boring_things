@@ -56,6 +56,24 @@ describe('a save', () => {
     });
   });
 
+  it('drops the states of valves no longer installed (the Olympic plant room, cleared for its redo)', () => {
+    const world = newWorld();
+    const old = JSON.stringify({
+      format: 'pool-plant-save',
+      version: 15,
+      savedAt: 5,
+      // valve-0010 was the Olympic's filter 1 inlet valve (PL2-F1-IV1).
+      world: {
+        ...world,
+        installedValves: { ...world.installedValves, 'valve-0010': false },
+      },
+    });
+    const loaded = deserialiseWorld(old);
+    expect(loaded.ok && loaded.world.installedValves).toEqual(
+      world.installedValves,
+    );
+  });
+
   it('migrates an old footbath drain and make-up lineup to named valves', () => {
     const { identifiedPlant: _oldTree, ...oldWorld } = newWorld();
     const old = JSON.stringify({

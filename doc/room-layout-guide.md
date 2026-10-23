@@ -145,6 +145,8 @@ A plant room can be retired: its machine layout and its pipes and ducts frozen a
 
 - `retired0`: the Olympic pool's plant room (`plant_pool_02`), 2026-10-23: 15 machines (among them five 3 m filters, a 216 m³ balance tank and a 3.45 m contact tank) and 59 pipe and duct runs.
 
+The live Olympic plant room has since been cleared for its redo by the pipeline (prompt 033): an empty large hall with doors north (the pool), west (the balance tank hall, Dev28) and south (the main plant). Its walls' roles, which every line follows, are in that prompt: pool north, main plant south, balance tank west, power and control east.
+
 ## 8. Known problems and open work
 
 - **The router cannot leave a port inside a machine's bounding box** except by its lead: give such ports a lead long enough to clear the box's padding (Dev24's pump power feeds need 0.8 m). Prompt 021 is where to improve this.

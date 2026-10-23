@@ -36,7 +36,7 @@ describe('installed pipework valves', () => {
 
   it('keeps the valve position in world state by asset ID and exposes it in the inventory', () => {
     const installed = installedValveFor(
-      'plant_pool_02',
+      'plant_pool_01',
       'Filter 1 inlet drop',
       'F1 inlet valve',
     );

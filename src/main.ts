@@ -281,7 +281,11 @@ const starter = async (
       | 'pool_03'
       | 'pool_04';
     const size = POOL_HALLS[hall].plantDoor!.size;
-    return (surface) => startPlantRoomShell(surface, size, hall);
+    // The Olympic's balance tank is in a hall of its own, through its west doors.
+    return (surface) =>
+      startPlantRoomShell(surface, size, hall, {
+        tankHall: hall === 'pool_02',
+      });
   }
   if (room === 'retired0') {
     // The Olympic pool's plant room as it was on 2026-10-23, frozen as a
@@ -292,7 +296,10 @@ const starter = async (
     ]);
     const size = POOL_HALLS.pool_02.plantDoor!.size;
     return (surface) =>
-      startPlantRoomShell(surface, size, 'pool_02', 'retired0');
+      startPlantRoomShell(surface, size, 'pool_02', {
+        equipment: 'retired0',
+        title: 'RETIRED0 · RETIRED: THE OLYMPIC POOL PLANT ROOM',
+      });
   }
   if (room === 'wet_hall')
     return (await import('./toolkit/gallery/rooms/shell-room')).startWetHall;

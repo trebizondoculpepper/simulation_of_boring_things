@@ -4,7 +4,7 @@ import { pipeObstacles, roomPipes } from './room-pipes';
 import { MONITOR_POST, ozoneMonitorPlace } from './ozone-monitor';
 
 describe('a plant room’s ozone monitor', () => {
-  for (const room of ['plant_pool_01', 'plant_pool_02']) {
+  for (const room of ['plant_pool_01']) {
     it(`stands on its own post by ${room}’s generator, clear of its pipework`, () => {
       const place = ozoneMonitorPlace(room);
       expect(place).not.toBeNull();

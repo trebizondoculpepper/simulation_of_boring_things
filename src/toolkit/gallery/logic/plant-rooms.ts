@@ -48,8 +48,17 @@ export const PLANT_ROOM = {
   equipment: { w: 1.8, h: 2.4 },
 } as const;
 
-/** A plant room of `size`: its plan, the landing's, the stair's and the doors'. */
-export function plantRoomPlan(size: PlantRoomSize) {
+/**
+ * A plant room of `size`: its plan, the landing's, the stair's and the doors'.
+ * `tankHall`: a large room whose balance tank is in a hall of its own beside
+ * it (the Olympic's, from 2026-10-23, `doc/prompts/033-olympic-plant-redo.md`)
+ * has the equipment doors to it in its west wall, at the north end of the
+ * plant floor.
+ */
+export function plantRoomPlan(
+  size: PlantRoomSize,
+  { tankHall = false }: { tankHall?: boolean } = {},
+) {
   const side = PLANT_ROOM_SIZES[size];
   const h = side / 2;
   const P = PLANT_ROOM;
@@ -94,6 +103,11 @@ export function plantRoomPlan(size: PlantRoomSize) {
     // The pool side's door north, the main plant's south.
     door: { x: h - P.doorIn, z: -h },
     equipment: { x: 0, z: h, ...P.equipment },
+    // Just south of the landing above, clear of what is kept out under it.
+    tankDoor:
+      tankHall && size === 'large'
+        ? { x: -h, z: landing.maxZ + 0.3 + EQUIPMENT_OPENING / 2 }
+        : null,
   };
 }
 
@@ -145,7 +159,23 @@ export function plantRoomSolids(plan: PlantRoomPlan): Footprint[] {
     { minX: dx + PLANT_DOORWAY / 2, maxX: h + t, minZ: -h - t, maxZ: -h },
     { minX: -h - t, maxX: ex - EQUIPMENT_OPENING / 2, minZ: h, maxZ: h + t },
     { minX: ex + EQUIPMENT_OPENING / 2, maxX: h + t, minZ: h, maxZ: h + t },
-    { minX: -h - t, maxX: -h, minZ: -h, maxZ: h },
+    // The west wall, either side of the balance tank hall's doors if it has them.
+    ...(plan.tankDoor
+      ? [
+          {
+            minX: -h - t,
+            maxX: -h,
+            minZ: -h,
+            maxZ: plan.tankDoor.z - EQUIPMENT_OPENING / 2,
+          },
+          {
+            minX: -h - t,
+            maxX: -h,
+            minZ: plan.tankDoor.z + EQUIPMENT_OPENING / 2,
+            maxZ: h,
+          },
+        ]
+      : [{ minX: -h - t, maxX: -h, minZ: -h, maxZ: h }]),
     { minX: h, maxX: h + t, minZ: -h, maxZ: h },
   ];
   if (plan.stepFree) return walls;

@@ -350,8 +350,11 @@ export function packRoom(room: RoomBox, items: readonly Item[]) {
 // ---- The rooms ---------------------------------------------------------
 
 /** A plant room's box: its stair and landing kept out of, the pipe zones north and south. */
-export function plantRoomBox(size: PlantRoomSize): RoomBox {
-  const p = plantRoomPlan(size);
+export function plantRoomBox(
+  size: PlantRoomSize,
+  options: { tankHall?: boolean } = {},
+): RoomBox {
+  const p = plantRoomPlan(size, options);
   const h = p.h;
   const pipes = { north: 0.5, south: 0.5 };
   const doorway = (x: number, z0: number, z1: number, half: number) => ({
@@ -362,6 +365,14 @@ export function plantRoomBox(size: PlantRoomSize): RoomBox {
   });
   // Inside the equipment doors, their leaves' swing and a trolley's turn.
   const keepClear: Footprint[] = [doorway(p.equipment.x, h, h - 1.6, 1.3)];
+  // Inside the balance tank hall's doors, the same (west wall).
+  if (p.tankDoor)
+    keepClear.push({
+      minX: -h,
+      maxX: -h + 1.6,
+      minZ: p.tankDoor.z - 1.3,
+      maxZ: p.tankDoor.z + 1.3,
+    });
   const solid: Footprint[] = [];
   if (p.stepFree) keepClear.push(doorway(p.door.x, -h, -h + 1.4, 0.8));
   else {
@@ -621,19 +632,13 @@ export function roomEquipment(
         ),
       };
     case 'plant_pool_02':
-      // Olympic: a 216 m³ tank, 5 × 3 m filters, a 3.45 m contact tank.
+      // Olympic: cleared for its redo (the owner, 2026-10-23,
+      // `doc/prompts/033-olympic-plant-redo.md`): an empty large hall, its
+      // balance tank now in a hall of its own through its west doors. The
+      // room as it was is kept as `retired0`.
       return {
-        box: plant('pool_02'),
-        items: poolPlant(
-          'plant_pool_02',
-          'Olympic pool',
-          // 216 m³ for the sizing's 200, three panels tall: as tall as it
-          // may be, its top below the pool's deck a storey up, so the
-          // overflow still falls to it.
-          { nx: 9, nz: 8, ny: 3 },
-          { count: 5, dia: 3 },
-          3.45,
-        ),
+        box: plantRoomBox('large', { tankHall: true }),
+        items: [],
       };
     case 'plant_pool_03':
       return {
@@ -1125,21 +1130,8 @@ export const TANK_SURROUND = 0.8;
  * The rooms laid out by hand, where the order of the water decides more
  * than packing does.
  *
- * The Olympic pool's plant room. Only the pool's own water crosses the
- * north wall, over the viewing gantry: the overflow and main drains in,
- * the return out. Everything the central plant supplies or takes away
- * crosses the south, by the equipment doors: the heating water, the
- * make-up, the backwash and drainage, the electricity, the dosing
- * chemicals. So: the balance tank in the north-west, under the pool's
- * pipes coming in, a walkway all round it for its flanges' bolts; the
- * pumps off its face; the filters two along the south wall, west of the
- * doors, and three down the east, their backwash short drops to the
- * drainage main; the heat exchanger on the south wall beside the heating
- * ring; the local control panel, with the circulation's mimic, beside
- * the doors, where the supply comes in and where everyone comes in; the
- * dosing in the south-east corner, where its chemical lines arrive; and
- * the last stages before the return (ozone contact, UV) along the north,
- * under the gantry. The middle of the room stays open for the pipework.
+ * (The Olympic pool's plant room was laid out here by hand until its redo,
+ * 2026-10-23; that room is kept as `retired0`.)
  */
 const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
   // The wet hall: along its north wall, west to east, in the order the
@@ -1312,108 +1304,6 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
         face: 'east',
       }),
     ];
-  },
-  plant_pool_02: (box, items) => {
-    const h = box.w / 2;
-    // The floor's north edge: the gantry's rail above, the floor cut off under it.
-    const north = box.solid.find(
-      (b) => b.minX <= -h + 1e-6 && b.maxX >= h - 1e-6,
-    )!.maxZ;
-    const south = h - (box.pipes.south ?? 0);
-    const door = Math.max(
-      ...box.keepClear.filter((k) => k.maxZ >= h - 1e-9).map((k) => k.maxX),
-    );
-    const foot = Math.max(
-      ...box.keepClear
-        .filter((k) => k.maxX >= h - 1e-9 && k.maxZ < 0)
-        .map((k) => k.maxZ),
-    );
-    const at = (label: string) => items.find((i) => i.label.endsWith(label))!;
-    const filters = items.filter((i) => i.key.startsWith('sand-filter'));
-    const f = filters[0];
-    const s = TANK_SURROUND;
-    const out: Placed[] = [];
-    // The balance tank, a walkway all round it.
-    const tank = at('balance tank');
-    const tx0 = -h + s;
-    const tz0 = north + s;
-    out.push(
-      put(box, tank, {
-        x: tx0 + tank.w / 2,
-        z: tz0 + tank.d / 2,
-        face: 'south',
-      }),
-    );
-    const tankEast = tx0 + tank.w;
-    const tankSouth = tz0 + tank.d;
-    // The pumps off its face, at its west end.
-    const pumps = at('circulation pumps, duty and standby, with strainers');
-    out.push(
-      put(box, pumps, {
-        x: -h + 0.8 + pumps.w / 2,
-        z: tankSouth + ACCESS + 0.6 + pumps.d / 2,
-        face: 'south',
-      }),
-    );
-    // Two filters on the south wall, west of the doors.
-    const fz = south - 0.6 - f.d / 2;
-    [-h + 0.8 + f.w / 2, -h + 0.8 + f.w * 1.5 + 0.6].forEach((x, i) =>
-      out.push(put(box, filters[i], { x, z: fz, face: 'north' })),
-    );
-    // Three down the east wall, from the stair's foot.
-    const fx = h - 0.6 - f.d / 2;
-    for (let i = 0; i < 3; i++)
-      out.push(
-        put(box, filters[2 + i], {
-          x: fx,
-          z: foot + 0.4 + f.w / 2 + i * (f.w + 0.6),
-          face: 'west',
-        }),
-      );
-    // On the south wall east of the doors: the heat exchanger by the
-    // heating ring, then the local control panel.
-    const phe = at('plate heat exchanger');
-    const panel = at('local control panel');
-    let x = door + 0.6;
-    for (const item of [phe, panel]) {
-      out.push(
-        put(box, item, {
-          x: x + item.w / 2,
-          z: south - 0.6 - item.d / 2,
-          face: 'north',
-        }),
-      );
-      x += item.w + 0.6;
-    }
-    // The last stages along the north, under the gantry, east of the tank.
-    x = tankEast + s;
-    for (const label of ['ozone contact tank', 'ozone generator', 'UV unit']) {
-      const item = at(label);
-      out.push(
-        put(box, item, {
-          x: x + item.w / 2,
-          z: north + item.d / 2,
-          face: 'south',
-        }),
-      );
-      x += item.w + 0.6;
-    }
-    // The dosing in the south-east corner, where its lines come in: the
-    // controller and the hypochlorite pumps on the east wall, the acid
-    // pump on the south.
-    const lastFilter = foot + 0.4 + 3 * f.w + 2 * 0.6;
-    let z = lastFilter + 0.5;
-    for (const label of [
-      'dosing controller and sample cells',
-      'hypochlorite dosing pumps',
-    ]) {
-      const item = at(label);
-      out.push(put(box, item, { wall: 'east', along: z + item.w / 2 }));
-      z += item.w + WALL_GAP;
-    }
-    const acid = at('acid dosing pump');
-    out.push(put(box, acid, { wall: 'south', along: h - 0.8 - acid.w / 2 }));
-    return out;
   },
 };
 

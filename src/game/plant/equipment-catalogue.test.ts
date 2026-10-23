@@ -21,6 +21,11 @@ describe('placed equipment catalogue', () => {
     for (const room of EQUIPPED_ROOMS) {
       const items = roomEquipment(room)!.items;
       const numbered = parts.filter((p) => p.room === room);
+      // A room cleared for its redo (the Olympic's) numbers nothing yet.
+      if (!items.length) {
+        expect(numbered).toHaveLength(0);
+        continue;
+      }
       expect(numbered.length).toBeGreaterThan(0);
       expect(numbered.length).toBeLessThanOrEqual(items.length);
       for (const part of numbered) {
@@ -51,13 +56,13 @@ describe('placed equipment catalogue', () => {
       if (part.brand !== 'unbranded')
         expect(brandById(part.brand).id).toBe(part.brand);
     }
-    expect(all.find((part) => part.id === 'PL2-F2-IV1')?.kind).toBe(
+    expect(all.find((part) => part.id === 'PL1-F2-IV1')?.kind).toBe(
       'butterfly-valve',
     );
-    expect(all.find((part) => part.id === 'PL2-F2-IV1')?.brand).toBe(
+    expect(all.find((part) => part.id === 'PL1-F2-IV1')?.brand).toBe(
       'unbranded',
     );
-    expect(all.find((part) => part.id === 'PL2-F2')?.brand).toBe('lidoluxe');
+    expect(all.find((part) => part.id === 'PL1-F2')?.brand).toBe('lidoluxe');
   });
 
   it('gives each working room switch-fuse one catalogue ID and one feeder state', () => {

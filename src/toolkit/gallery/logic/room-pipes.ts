@@ -215,11 +215,7 @@ const ISOLATOR_BOX = { h: POWER_ISOLATOR.h, d: POWER_ISOLATOR.d };
 /** The pool plant rooms routed here: each one's pumps' tag, and its isolators' names. */
 const ROUTED: Record<string, { pumps: string; prefix: string }> = {
   plant_pool_01: { pumps: 'P-201', prefix: 'Lounge ' },
-  plant_pool_02: { pumps: 'P-101', prefix: '' },
 };
-
-/** The Olympic pool's plant room's pipework. */
-export const olympicPipework = () => poolPlantPipework('plant_pool_02');
 
 /**
  * A pool plant room's pipework (the lounge's, the Olympic's): the same

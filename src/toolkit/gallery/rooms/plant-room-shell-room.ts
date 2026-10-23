@@ -126,11 +126,22 @@ export function startPlantRoomShell(
   size: PlantRoomSize,
   /** The pool hall this one is the plant room of, if any; the size's template otherwise. */
   hall?: PlantHall,
-  /**
-   * A retired room to fill it with in place of the hall's own (`retired-rooms.ts`):
-   * its frozen machine layout and pipes, in the hall's plant room's shell.
-   */
-  retired?: string,
+  {
+    equipment,
+    title,
+    tankHall = false,
+  }: {
+    /**
+     * The room to fill it with in place of the hall's own: a retired room
+     * (`retired-rooms.ts`, its frozen layout and pipes), or a room laid out
+     * for it to try (Dev29, the Olympic's redo).
+     */
+    equipment?: string;
+    /** Its title on the wall, in place of the hall's plant room's. */
+    title?: string;
+    /** Its balance tank in a hall of its own, through doors in its west wall. */
+    tankHall?: boolean;
+  } = {},
 ) {
   const metre = METRE;
   const scene = new Scene();
@@ -148,21 +159,23 @@ export function startPlantRoomShell(
   const parts = createPartSet();
   // Each hall's plant room is numbered as its hall is: plant room 4 is
   // POOL-04's, the footbath's.
-  const name = retired
-    ? `${retired.toUpperCase()} · RETIRED: THE ${POOL_HALLS[hall!].title.toUpperCase()} PLANT ROOM`
-    : hall
+  const name =
+    title ??
+    (hall
       ? `PLANT ROOM ${Number(hall.slice(-2))} – ${POOL_HALLS[hall].title.toUpperCase()}`
-      : undefined;
-  const equipmentRoom = retired ?? (hall ? `plant_${hall}` : undefined);
+      : undefined);
+  const equipmentRoom = equipment ?? (hall ? `plant_${hall}` : undefined);
   const {
     group: rooms,
     door,
-    equipment,
-  } = createPlantRoomShell(size, metre, kit, name);
-  parts.add(equipment);
+    equipment: equipmentDoors,
+    tankDoors,
+  } = createPlantRoomShell(size, metre, kit, name, { tankHall });
+  parts.add(equipmentDoors);
+  if (tankDoors) parts.add(tankDoors);
   parts.add(door);
   scene.add(rooms);
-  const plan = plantRoomPlan(size);
+  const plan = plantRoomPlan(size, { tankHall });
   // A hall's plant room's machines, placed (`logic/room-equipment.ts`).
   const machines = hall
     ? createRoomEquipment(kit, equipmentRoom!, plan.floor)
@@ -307,6 +320,23 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     plan.h + PLANT_ROOM.wall,
     0.3,
   );
+  // The balance tank hall's doors, in the west wall: nothing beyond them yet.
+  const westWay = plan.tankDoor
+    ? {
+        leaf: {
+          minX: -plan.h - PLANT_ROOM.wall,
+          maxX: -plan.h,
+          minZ: plan.tankDoor.z - EQUIPMENT_OPENING / 2,
+          maxZ: plan.tankDoor.z + EQUIPMENT_OPENING / 2,
+        },
+        beyond: {
+          minX: -plan.h - PLANT_ROOM.wall - 0.3,
+          maxX: -plan.h - PLANT_ROOM.wall,
+          minZ: plan.tankDoor.z - EQUIPMENT_OPENING / 2,
+          maxZ: plan.tankDoor.z + EQUIPMENT_OPENING / 2,
+        },
+      }
+    : null;
   const inWay = (w: typeof northWay) =>
     overlaps(
       w.leaf,
@@ -327,12 +357,23 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     ...doorwayStops(
       {
         inside: inWay(southWay),
-        shut: !hall || equipment.angle() < 0.6,
+        shut: !hall || equipmentDoors.angle() < 0.6,
         seen: Boolean(hall) && corridorSeen,
       },
       southWay.leaf,
       southWay.beyond,
     ),
+    ...(westWay && tankDoors
+      ? doorwayStops(
+          {
+            inside: inWay(westWay),
+            shut: tankDoors.angle() < 0.6,
+            seen: false,
+          },
+          westWay.leaf,
+          westWay.beyond,
+        )
+      : []),
   ];
   // Its machines' footprints, to walk round.
   if (machines) walls.push(...machines.solids.map(toMetre));
@@ -390,9 +431,9 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
           yaw: Math.PI,
         },
         onOpen: true,
-        open: () => equipment.open(),
-        angle: () => equipment.angle(),
-        swingTo: (a) => equipment.swingTo(a),
+        open: () => equipmentDoors.open(),
+        angle: () => equipmentDoors.angle(),
+        swingTo: (a) => equipmentDoors.swingTo(a),
         opening: () => ({
           minX: (plan.equipment.x - EQUIPMENT_OPENING / 2) * metre,
           maxX: (plan.equipment.x + EQUIPMENT_OPENING / 2) * metre,
@@ -403,7 +444,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
           corridorSeen = on;
           if (corridorLobby) corridorLobby.visible = !on;
         },
-        peek: (on) => equipment.showLeaves(!on),
+        peek: (on) => equipmentDoors.showLeaves(!on),
       })
     : () => {};
   const lobby = rooms.getObjectByName('plant door lobby');
@@ -448,14 +489,18 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     parts.update(delta);
     // A door never closes on someone standing in its doorway.
     if (inWay(northWay)) door.holdOpen();
-    if (inWay(southWay)) equipment.holdOpen();
+    if (inWay(southWay)) equipmentDoors.holdOpen();
+    if (westWay && tankDoors && inWay(westWay)) tankDoors.holdOpen();
     // Every card reader in the room shows green while either pair of its
     // doors stands open (beeping as it goes green).
     // They beep only when a door is opened while the walker is here, not
     // when it arrives with a door already open (handed over through it).
-    const r = doorReaders(wasOpen, door.angle() > 0.05 || equipment.open());
+    const r = doorReaders(
+      wasOpen,
+      door.angle() > 0.05 || equipmentDoors.open(),
+    );
     if (r.light)
-      for (const reader of [door.reader, ...equipment.readers])
+      for (const reader of [door.reader, ...equipmentDoors.readers])
         reader.doorOpened(r.audible);
     wasOpen = r.was;
     machines?.update(delta);

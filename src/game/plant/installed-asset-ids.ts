@@ -47,62 +47,6 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0012',
     tag: 'PL1-DP2',
   },
-  'plant_pool_02|balance-tank:9x8x3|Olympic pool balance tank': {
-    assetId: 'asset-0013',
-    tag: 'PL2-T1',
-  },
-  'plant_pool_02|pump-pair|Olympic pool circulation pumps, duty and standby, with strainers':
-    { assetId: 'asset-0014', tag: 'PL2-P1' },
-  'plant_pool_02|sand-filter:3|Olympic pool sand filter 1': {
-    assetId: 'asset-0015',
-    tag: 'PL2-F1',
-  },
-  'plant_pool_02|sand-filter:3|Olympic pool sand filter 2': {
-    assetId: 'asset-0016',
-    tag: 'PL2-F2',
-  },
-  'plant_pool_02|sand-filter:3|Olympic pool sand filter 3': {
-    assetId: 'asset-0017',
-    tag: 'PL2-F3',
-  },
-  'plant_pool_02|sand-filter:3|Olympic pool sand filter 4': {
-    assetId: 'asset-0018',
-    tag: 'PL2-F4',
-  },
-  'plant_pool_02|sand-filter:3|Olympic pool sand filter 5': {
-    assetId: 'asset-0019',
-    tag: 'PL2-F5',
-  },
-  'plant_pool_02|uv-unit|Olympic pool UV unit': {
-    assetId: 'asset-0020',
-    tag: 'PL2-UV1',
-  },
-  'plant_pool_02|pump-panel|Olympic pool local control panel': {
-    assetId: 'asset-0021',
-    tag: 'PL2-CP1',
-  },
-  'plant_pool_02|heat-exchanger|Olympic pool plate heat exchanger': {
-    assetId: 'asset-0022',
-    tag: 'PL2-HX1',
-  },
-  'plant_pool_02|ozone-generator:plant_pool_02|Olympic pool ozone generator': {
-    assetId: 'asset-0023',
-    tag: 'PL2-OZ1',
-  },
-  'plant_pool_02|contact-tank|Olympic pool ozone contact tank': {
-    assetId: 'asset-0024',
-    tag: 'PL2-T2',
-  },
-  'plant_pool_02|dosing-controller|Olympic pool dosing controller and sample cells':
-    { assetId: 'asset-0025', tag: 'PL2-CP2' },
-  'plant_pool_02|hypo-pumps|Olympic pool hypochlorite dosing pumps': {
-    assetId: 'asset-0026',
-    tag: 'PL2-DP1',
-  },
-  'plant_pool_02|acid-pump|Olympic pool acid dosing pump': {
-    assetId: 'asset-0027',
-    tag: 'PL2-DP2',
-  },
   'plant_pool_03|jacuzzi-pack|Packaged Jacuzzi plant cabinet': {
     assetId: 'asset-0028',
     tag: 'PL3-CAB1',
