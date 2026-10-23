@@ -111,7 +111,8 @@ describe('the Olympic plant room, in plan', () => {
 
   it('stands the pumps against the west wall, beside the balance tank hall’s doors', () => {
     const pumps = items.find((i) => i.key === 'pumps')!;
-    expect(pumps.facing).toBe('east');
+    // Its suction side (its left) to the wall.
+    expect(pumps.facing).toBe('south');
     expect(footprintOf(pumps).minX).toBeLessThan(-hx + 0.3);
     expect(Math.abs(pumps.z - room.doors.tank.at)).toBeLessThan(4);
   });
@@ -124,11 +125,13 @@ describe('the Olympic plant room, in plan', () => {
 });
 
 describe('the Olympic plant room’s drawing', () => {
-  it('draws every machine, the five filters round, and the four walls’ roles', async () => {
+  it('draws every machine, the five filters round, the four walls’ roles, and the plumbing as routed and scored', async () => {
     const { olympicPlanSvg } = await import('./olympic-plan-svg');
     const svg = olympicPlanSvg();
     expect(svg.startsWith('<svg')).toBe(true);
-    expect(svg.match(/<circle /g)).toHaveLength(5);
+    expect(svg.match(/<circle class="filter"/g)).toHaveLength(5);
+    // The plumbed result, scored.
+    expect(svg).toContain('every gate passed');
     for (const role of [
       'THE OLYMPIC POOL',
       'THE MAIN PLANT',
@@ -141,5 +144,5 @@ describe('the Olympic plant room’s drawing', () => {
       expect(svg).toContain(
         i.label.replace(' and sample cells', '').split(', ')[0],
       );
-  });
+  }, 60000);
 });

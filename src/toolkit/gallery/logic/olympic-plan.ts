@@ -17,8 +17,8 @@ import { EQUIPMENT_OPENING, PLANT_DOORWAY, PLANT_ROOM } from './plant-rooms';
  *
  * The pumps stand against the west wall beside those doors, their suctions
  * short through it; the treatment (ozone contact, UV) in the middle; the
- * heat exchanger and the dosing on the south wall, where the heating and
- * the chemicals come from the main plant; the panel on the east wall,
+ * heat exchanger by its side-stream's stubs on the battery's outlet header;
+ * the dosing on the south wall, where the chemicals come from the main plant; the panel on the east wall,
  * where power and control come in. Pure; metres, the room's middle at
  * x = z = 0, x east, z south.
  */
@@ -37,6 +37,8 @@ export interface PlanItem {
   z: number;
   facing: Facing;
   mount: 'floor' | 'wall';
+  /** For wall equipment, the height of its fixing, metres. */
+  y?: number;
 }
 
 export interface PlanDoor {
@@ -67,6 +69,13 @@ const SIZE = {
   hypo: { w: 1.2, d: 0.3, h: 1.0 },
   acid: { w: 0.7, d: 0.35, h: 0.8 },
 } as const;
+
+/** The dosing's fixing heights on the wall (as the room's equipment has them). */
+const WALL_HEIGHT: Record<string, number> = {
+  controller: 1.35,
+  hypo: 1.3,
+  acid: 1.3,
+};
 
 /** Maintenance access in front of each machine, metres. */
 export const PLAN_ACCESS = 0.8;
@@ -218,16 +227,18 @@ export function olympicPlan(): PlanItem[] {
         against('north', -hx + 0.3 + f.w / 2 + i * (f.w + FILTER_GAP), f),
       ),
     );
-  // The pumps against the west wall, just south of the balance tank doors' clear space.
+  // The pumps against the west wall, just south of the balance tank doors'
+  // clear space: the pair's suctions leave its left side (`machinePorts`),
+  // so it stands facing south with that side to the wall, each suction a
+  // short straight through it into the balance tank hall.
   const p = SIZE.pumps;
   const tank = DOORS.tank;
   out.push(
-    item(
-      'pumps',
-      'Circulation pumps, duty and standby',
-      p,
-      against('west', tank.at + DOOR_CLEAR.across / 2 + 0.3 + p.w / 2, p),
-    ),
+    item('pumps', 'Circulation pumps, duty and standby', p, {
+      x: -hx + OFF_WALL + p.w / 2,
+      z: tank.at + DOOR_CLEAR.across / 2 + 0.3 + p.d / 2,
+      facing: 'south',
+    }),
   );
   // The middle band, south of the battery's walkway: the contact tank, the UV.
   const band = -hz + BATTERY;
@@ -251,32 +262,34 @@ export function olympicPlan(): PlanItem[] {
       against('east', pz + pn.w / 2 + 0.4 + g.w / 2, g),
     ),
   );
-  // On the south wall, west of the stair's foot: the heat exchanger by the heating; the dosing where the chemicals come in.
+  // The heat exchanger just south of the battery's walkway, between filters 2 and 3, by its side-stream's stubs on the outlet header (the owner, 2026-10-23); its heating comes from the main plant to it.
   const x = SIZE.exchanger;
-  const foot = STAIR.minX - 1.2;
+  const between = -hx + 0.3 + 2 * SIZE.filter.w + 1.5 * FILTER_GAP;
   out.push(
-    item(
-      'exchanger',
-      'Heat exchanger',
-      x,
-      against('south', foot - 0.6 - x.w / 2, x, 0.5),
-    ),
+    item('exchanger', 'Heat exchanger', x, {
+      x: between,
+      z: band + 0.35 + x.d / 2,
+      facing: 'north',
+    }),
   );
-  let at = foot - 0.6 - x.w - 1.2;
+  // The dosing on the south wall, west of the stair's foot, where the chemicals come in.
+  const foot = STAIR.minX - 1.2;
+  let at = foot - 0.6;
   for (const [key, label, size] of [
     ['controller', 'Dosing controller and sample cells', SIZE.controller],
     ['hypo', 'Hypochlorite dosing pumps', SIZE.hypo],
     ['acid', 'Acid dosing pump', SIZE.acid],
   ] as const) {
-    out.push(
-      item(
+    out.push({
+      ...item(
         key,
         label,
         size,
         against('south', at - size.w / 2, size, 0),
         'wall',
       ),
-    );
+      y: WALL_HEIGHT[key],
+    });
     at -= size.w + 0.4;
   }
   return out;

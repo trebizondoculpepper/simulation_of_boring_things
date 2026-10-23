@@ -9,6 +9,8 @@ import {
   olympicRoomPlan,
 } from './olympic-plan';
 import type { PlanDoor } from './olympic-plan';
+import { plumbOlympic, scoreOlympic } from './olympic-plumbing';
+import type { OlympicRun } from './olympic-plumbing';
 
 /**
  * The Olympic plant room's plan (`olympic-plan.ts`) as an SVG drawing, for
@@ -18,11 +20,26 @@ import type { PlanDoor } from './olympic-plan';
  * lines' ways, coloured by what they carry. Pure: a string.
  */
 
+/** A run's colour on the drawing, by what it carries. */
+function colourOf(r: OlympicRun): { colour: string; dash?: string } {
+  const n = `${r.line} ${r.name}`;
+  if (r.kind === 'pvc-drain') return { colour: '#6d4c41', dash: '8 4' };
+  if (r.kind === 'lagged-heating') return { colour: '#c62828' };
+  if (r.kind === 'copper') return { colour: '#4fc3f7' };
+  if (r.kind === 'chemical-tube') return { colour: '#8e24aa' };
+  if (r.kind === 'stainless') return { colour: '#90a4ae' };
+  if (r.medium === 'power') return { colour: '#ef6c00' };
+  if (
+    /suction|discharge|battery\.inlet|\.inlet|Inlet header|manifold/.test(n) &&
+    !/contact/.test(n)
+  )
+    return { colour: '#1565c0' };
+  return { colour: '#00897b' };
+}
+
 /** Pixels a metre, and the margin round the room. */
 const S = 40;
 const M = 110;
-
-type Line = { colour: string; dash?: string; points: [number, number][] };
 
 export function olympicPlanSvg(): string {
   const items = olympicPlan();
@@ -32,7 +49,7 @@ export function olympicPlanSvg(): string {
   const X = (x: number) => M + (x + hx) * S;
   const Z = (z: number) => M + (z + hz) * S;
   const W = OLYMPIC_ROOM.w * S + 2 * M;
-  const H = OLYMPIC_ROOM.d * S + 2 * M + 190;
+  const H = OLYMPIC_ROOM.d * S + 2 * M + 200;
   const out: string[] = [];
   const rect = (f: Footprint, style: string) =>
     out.push(
@@ -55,7 +72,7 @@ export function olympicPlanSvg(): string {
     `<defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#b8bcc0" stroke-width="2"/></pattern>`,
     `<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs>`,
     `<rect width="100%" height="100%" fill="#fbfaf6"/>`,
-    `<text x="20" y="32" font-size="20" font-weight="bold" fill="#1b2326">PLANT ROOM 2 – OLYMPIC POOL · PROPOSED PLAN, 22 × 14 m (prompt 033)</text>`,
+    `<text x="20" y="32" font-size="20" font-weight="bold" fill="#1b2326">PLANT ROOM 2 – OLYMPIC POOL · PLUMBED PLAN, 22 × 14 m (prompt 033)</text>`,
     `<text x="${W - 20}" y="32" font-size="18" text-anchor="end" font-weight="bold">N ↑</text>`,
   );
   // A metre grid.
@@ -184,7 +201,7 @@ export function olympicPlanSvg(): string {
     if (i.key.startsWith('filter')) {
       rect(f, 'fill="none" stroke="#9aa0a4" stroke-dasharray="2 3"');
       out.push(
-        `<circle cx="${X(i.x)}" cy="${Z(i.z - 0.1)}" r="${1.5 * S}" fill="#cfd8dc" stroke="#37474f" stroke-width="2"/>`,
+        `<circle class="filter" cx="${X(i.x)}" cy="${Z(i.z - 0.1)}" r="${1.5 * S}" fill="#cfd8dc" stroke="#37474f" stroke-width="2"/>`,
       );
     } else
       rect(
@@ -224,161 +241,57 @@ export function olympicPlanSvg(): string {
     }
   }
 
-  // The main lines' ways, schematic, in plan.
-  const by = (k: string) => footprintOf(items.find((i) => i.key === k)!);
-  const mid = (f: Footprint) =>
-    [(f.minX + f.maxX) / 2, (f.minZ + f.maxZ) / 2] as const;
-  const pumps = by('pumps');
-  const contact = by('contact');
-  const uv = by('uv');
-  const hxr = by('exchanger');
-  const panel = by('panel');
-  const hypo = by('hypo');
-  const [, pz] = mid(pumps);
-  const headerIn = front + 0.15;
-  const headerOut = front + 0.45;
-  const gap = (a: number, b: number) =>
-    (footprintOf(filters[a]).maxX + footprintOf(filters[b]).minX) / 2;
-  const out1 = -hz - 0.6;
-  const south = hz + 0.6;
-  const lines: Line[] = [
-    // Suctions from the balance tank, through the west wall.
-    {
-      colour: '#1565c0',
-      points: [
-        [-hx - 0.6, pz - 0.7],
-        [pumps.minX + 0.3, pz - 0.7],
-      ],
-    },
-    {
-      colour: '#1565c0',
-      points: [
-        [-hx - 0.6, pz + 0.7],
-        [pumps.minX + 0.3, pz + 0.7],
-      ],
-    },
-    // Discharge north to the inlet header's west end.
-    {
-      colour: '#1565c0',
-      points: [
-        [pumps.maxX, pz],
-        [pumps.maxX + 0.5, pz],
-        [pumps.maxX + 0.5, headerIn],
-      ],
-    },
-    // Filtered water from the outlet header's east end to the contact tank (ozone injected).
-    {
-      colour: '#00897b',
-      points: [
-        [hx1 - 0.3, headerOut],
-        [hx1 - 0.3, mid(contact)[1]],
-        [contact.maxX, mid(contact)[1]],
-      ],
-    },
-    // Contact tank to the heat exchanger, to the UV, and out north to the pool at high level.
-    {
-      colour: '#00897b',
-      points: [
-        [mid(contact)[0], contact.maxZ],
-        [mid(contact)[0], hz - 2.6],
-        [mid(hxr)[0], hz - 2.6],
-        [mid(hxr)[0], hxr.minZ],
-      ],
-    },
-    {
-      colour: '#00897b',
-      points: [
-        [hxr.minX, mid(hxr)[1]],
-        [mid(uv)[0], mid(hxr)[1]],
-        [mid(uv)[0], uv.maxZ],
-      ],
-    },
-    {
-      colour: '#00897b',
-      dash: '10 5',
-      points: [
-        [mid(uv)[0], uv.minZ],
-        [mid(uv)[0], front + HEADERS + 0.8],
-        [gap(2, 3), front + HEADERS + 0.8],
-        [gap(2, 3), out1],
-      ],
-    },
-    // Backwash and drainage south to the main plant, in a floor channel.
-    {
-      colour: '#6d4c41',
-      dash: '8 4',
-      points: [
-        [gap(0, 1), front + HEADERS],
-        [gap(0, 1), south],
-      ],
-    },
-    // Heating flow and return from the main plant.
-    {
-      colour: '#c62828',
-      points: [
-        [hxr.minX + 0.3, south],
-        [hxr.minX + 0.3, hxr.maxZ],
-      ],
-    },
-    {
-      colour: '#c62828',
-      points: [
-        [hxr.maxX - 0.3, south],
-        [hxr.maxX - 0.3, hxr.maxZ],
-      ],
-    },
-    // Make-up from the main plant to the balance tank, at high level.
-    {
-      colour: '#4fc3f7',
-      dash: '10 5',
-      points: [
-        [-5.2, south],
-        [-5.2, hz - 1.0],
-        [-hx - 0.6, hz - 1.0],
-      ],
-    },
-    // Chemicals in from the main plant to the dosing.
-    {
-      colour: '#8e24aa',
-      points: [
-        [mid(hypo)[0], south],
-        [mid(hypo)[0], hypo.maxZ],
-      ],
-    },
-    // Power and control in by the east wall, to the panel.
-    {
-      colour: '#ef6c00',
-      points: [
-        [hx + 0.6, mid(panel)[1]],
-        [panel.maxX, mid(panel)[1]],
-      ],
-    },
-  ];
-  for (const l of lines)
+  // The pipes as plumbed and routed (`olympic-plumbing.ts`), each at its size, in its service's colour; the fittings on them.
+  const plumbed = plumbOlympic();
+  const score = scoreOlympic(plumbed);
+  const ordered = [...plumbed.runs].sort((a, b) => b.od - a.od);
+  for (const r of ordered) {
+    const c = colourOf(r);
+    const width = Math.max(2, r.od * S);
     out.push(
-      `<polyline points="${l.points.map(([x, z]) => `${X(x)},${Z(z)}`).join(' ')}" fill="none" stroke="${l.colour}" stroke-width="4" stroke-linejoin="round"${l.dash ? ` stroke-dasharray="${l.dash}"` : ''} marker-end="url(#arrow)" opacity="0.85"/>`,
+      `<polyline points="${r.points.map(([x, , z]) => `${X(x)},${Z(z)}`).join(' ')}" fill="none" stroke="${c.colour}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round"${c.dash ? ` stroke-dasharray="${c.dash}"` : ''} opacity="0.8"/>`,
     );
+  }
+  for (const f of plumbed.fittings) {
+    const fill =
+      f.kind === 'power-isolator'
+        ? '#ef6c00'
+        : f.kind === 'non-return-valve'
+          ? '#1b2326'
+          : '#2e7d32';
+    out.push(
+      `<circle cx="${X(f.at[0])}" cy="${Z(f.at[2])}" r="5" fill="${fill}" stroke="#ffffff" stroke-width="1.5"/>`,
+    );
+  }
+  out.push(
+    `<text x="20" y="56" font-size="13" fill="#2e7d32">Plumbed and routed: ${plumbed.runs.length} runs (${plumbed.runs.filter((r) => r.by === 'router').length} by the router), ${plumbed.fittings.length} fittings. Score ${score.total.toFixed(1)}, ${score.passes ? 'every gate passed' : `failing ${score.gates.length} gates`}.</text>`,
+  );
 
   // A key and a scale.
   const ky = Z(hz) + 110;
   const key: [string, string, string?][] = [
     ['#1565c0', 'Pool water to the filters'],
     ['#00897b', 'Filtered and treated water, back to the pool'],
-    ['#6d4c41', 'Backwash and drainage (floor channel)', '8 4'],
+    ['#6d4c41', 'Drainage: backwash, the pool overflow and main drain', '8 4'],
     ['#c62828', 'Heating flow and return'],
-    ['#4fc3f7', 'Make-up to the balance tank (high level)', '10 5'],
+    ['#4fc3f7', 'Make-up to the balance tank'],
     ['#8e24aa', 'Dosing chemicals'],
-    ['#ef6c00', 'Power and control'],
+    ['#90a4ae', 'Ozone'],
+    ['#ef6c00', 'Power'],
+    [
+      '#2e7d32',
+      '● valve (solenoid)  ● non-return (black)  ● isolator (orange)',
+    ],
   ];
   key.forEach(([c, label, dash], k) => {
-    const x = M + (k % 3) * 330;
-    const y = ky + Math.floor(k / 3) * 26;
+    const x = M - 80 + (k % 3) * 350;
+    const y = ky + Math.floor(k / 3) * 24;
     out.push(
       `<line x1="${x}" y1="${y}" x2="${x + 34}" y2="${y}" stroke="${c}" stroke-width="4"${dash ? ` stroke-dasharray="${dash}"` : ''}/>`,
       `<text x="${x + 42}" y="${y + 4}" font-size="12" fill="#1b2326">${label}</text>`,
     );
   });
-  const sy = ky + 90;
+  const sy = ky + 84;
   out.push(
     `<rect x="${M}" y="${sy}" width="${5 * S}" height="8" fill="none" stroke="#1b2326"/>`,
     ...[0, 2, 4].map(
