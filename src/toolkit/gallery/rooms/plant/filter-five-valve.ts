@@ -36,7 +36,6 @@ import { tools } from '../../../components/core/views/fitting-tools';
 import { createMicroLabel } from '../../../components/core/views/eighties-controls';
 import { createSightGlass } from '../../../components/plant/views/sight-glass';
 import type { GlassInputs } from '../../../components/plant/logic/sight-glass';
-import { BIG_FILTER } from '../../../../game/plant/five-valve-filter';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
@@ -60,17 +59,6 @@ const TITLES: Record<FiveItem, [string, string]> = {
   gully: ['Floor gully', 'backwash and rinse to waste'],
   panel: ['Backwash control panel', 'Penfold: the five valves together'],
 };
-
-/** What the filter's sight glass shows, from the rig's readings. */
-const glassInputs = (
-  r: ReturnType<FiveValveModel['readings']>,
-): GlassInputs => ({
-  mode: !r.supplyOn || r.mode === 'off' ? 'stopped' : r.mode,
-  dirt: r.dirt / BIG_FILTER.dirtRef,
-  channelling: 0,
-  murk:
-    r.mode === 'backwash' && r.supplyOn ? Math.min(1, r.wasteDirt / 400) : 0,
-});
 
 const sink = createExperimentalSink({
   id: 'fv.sink',
@@ -168,7 +156,7 @@ const build =
       update: (delta) => {
         const r = m().readings();
         filter.show({ inlet: r.topBar, outlet: r.bottomBar }, delta);
-        filter.showGlass(glassInputs(r), delta);
+        filter.showGlass(r.glass, delta);
       },
     };
   };

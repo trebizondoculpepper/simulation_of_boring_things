@@ -1,3 +1,9 @@
+import {
+  bedGlass,
+  dirtFromDp,
+  newBedLook,
+  stepBedLook,
+} from '../../../components/plant/logic/filter-bed';
 import { Group } from 'three';
 import type { PlantExhibit, LiveExhibit } from './exhibit';
 import {
@@ -472,11 +478,19 @@ function buildNode(
       label: 'DEMO FILTER',
     });
     object.add(filter);
-    mechanicalUpdate = (delta) =>
-      filter.show(
-        { inlet: 1.3, outlet: 1.3 - demo.state.filterDifferentialBar },
+    // Its bed's clock since it was last washed, for its sight glass.
+    let look = newBedLook();
+    mechanicalUpdate = (delta) => {
+      const dp = demo.state.filterDifferentialBar;
+      filter.show({ inlet: 1.3, outlet: 1.3 - dp }, delta);
+      // Water down through its bed while there is a pressure across it.
+      const bedFlow = dp > 0.02 ? 20 : 0;
+      look = stepBedLook(look, bedFlow, delta);
+      filter.showGlass(
+        bedGlass(look, { bedFlow, dirt: dirtFromDp(dp, 0.25) }),
         delta,
       );
+    };
   } else if (node.data.kind === 'heat-exchanger') {
     // The pool heat exchanger, as its chosen variant
     // (`shell-tube-exchanger.ts`): shell-and-tube on its plinth, or a plate

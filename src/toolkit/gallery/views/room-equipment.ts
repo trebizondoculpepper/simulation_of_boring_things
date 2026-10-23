@@ -1,3 +1,9 @@
+import {
+  bedGlass,
+  dirtFromDp,
+  newBedLook,
+  stepBedLook,
+} from '../../components/plant/logic/filter-bed';
 import { controlBus } from '../logic/control-bus';
 import { roomSupports } from '../logic/room-supports';
 import { createSupports } from '../../components/plant/views/pipe-supports';
@@ -358,7 +364,9 @@ function modelFor(
     // Its gauges at its pool's pressures: running, about 1.6 bar in and
     // that less the filter's pressure difference out; stopped, the
     // static head.
-    if (pool && typeof window !== 'undefined')
+    if (pool && typeof window !== 'undefined') {
+      // Its bed's clock since it was last washed, for its sight glass.
+      let look = newBedLook();
       return {
         object: holder,
         update: (delta) => {
@@ -367,8 +375,16 @@ function modelFor(
           const dp = Math.max(...r.filterDp);
           const inlet = running ? 1.6 : 0.2;
           filter.show({ inlet, outlet: running ? inlet - dp : 0.2 }, delta);
+          // Down through its bed while the circulation runs.
+          const bedFlow = running ? r.flow / Math.max(1, r.filterDp.length) : 0;
+          look = stepBedLook(look, bedFlow, delta);
+          filter.showGlass(
+            bedGlass(look, { bedFlow, dirt: dirtFromDp(dp, 0.25) }),
+            delta,
+          );
         },
       };
+    }
     return holder;
   }
   const model = MODELS[kind];

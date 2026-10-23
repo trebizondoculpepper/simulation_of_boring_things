@@ -47,6 +47,16 @@ describe('a five-valve filter', () => {
     expect(s.opening).toEqual({ v1: 0, v2: 0, v3: 1, v4: 1, v5: 0 });
   });
 
+  it('shows no flow anywhere while the valves travel with the supply off', () => {
+    let s = setMode(newFiveValve(), 'backwash');
+    for (let t = 0; t < TRAVEL - 1; t++) {
+      s = stepFiveValve(s, 1);
+      const f = fiveValveFlows(s);
+      expect(Object.values(f.valve)).toEqual([0, 0, 0, 0, 0]);
+      expect(f.bed).toBe(0);
+    }
+  });
+
   it('backwashes up through the bed, in by V3 and out by V4, washing the dirt out', () => {
     let s = run(setMode(newFiveValve(), 'backwash'), TRAVEL + 1);
     const f = fiveValveFlows(s);

@@ -1,4 +1,5 @@
 import {
+  BIG_FILTER,
   MODES,
   PATTERN,
   VALVES,
@@ -16,6 +17,12 @@ import type {
   ValveName,
 } from '../../../game/plant/five-valve-filter';
 import { sandFilterGeometry } from '../../components/plant/logic/sand-filter';
+import {
+  bedGlass,
+  newBedLook,
+  stepBedLook,
+} from '../../components/plant/logic/filter-bed';
+import type { BedLook } from '../../components/plant/logic/filter-bed';
 import type { Vec3 } from '../../components/core/logic/pipe-route';
 import type { PlantRoomLayout } from './plant-room-layout';
 import { GULLY, WASTE } from './jacuzzi-drain';
@@ -176,6 +183,9 @@ export const FIVE_PIPE = { od: 0.2 } as const;
 /** The rig working, and what its panel shows. */
 export function createFiveValveModel() {
   let state: FiveValveState = newFiveValve();
+  // Its bed's clock since it was last washed (`filter-bed.ts`): ten days,
+  // so it starts dirty and pitted, due a backwash.
+  let look: BedLook = newBedLook(10 * 86400);
   return {
     mode: () => state.mode,
     setMode: (mode: FilterMode) => {
@@ -189,6 +199,7 @@ export function createFiveValveModel() {
     },
     step(dt: number) {
       state = stepFiveValve(state, dt);
+      look = stepBedLook(look, fiveValveFlows(state).bed, dt);
     },
     readings() {
       const f = fiveValveFlows(state);
@@ -200,6 +211,12 @@ export function createFiveValveModel() {
         supplyOn: supplyOn(state),
         supplyWanted: state.supplyWanted,
         dirt: state.dirt,
+        /** What the sight glass shows of the bed. */
+        glass: bedGlass(look, {
+          bedFlow: f.bed,
+          dirt: state.dirt / BIG_FILTER.dirtRef,
+          murk: f.bed < -1 ? Math.min(1, f.wasteDirt / 400) : undefined,
+        }),
         /** A backwash is due: the bed's pressure drop past 0.5 bar in service. */
         backwashDue: state.mode === 'service' && f.bedBar > 0.5,
       };

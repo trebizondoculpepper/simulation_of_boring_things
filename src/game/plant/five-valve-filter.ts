@@ -151,6 +151,18 @@ const valveLink = (
 
 export function fiveValveFlows(s: FiveValveState): FiveValveFlows {
   const on = supplyOn(s);
+  // With the supply off nothing drives any water: no flow anywhere (and
+  // the solver, given a network with no head across it, is not asked).
+  if (!on)
+    return {
+      valve: { v1: 0, v2: 0, v3: 0, v4: 0, v5: 0 },
+      bed: 0,
+      supply: 0,
+      topBar: 0,
+      bottomBar: 0,
+      bedBar: 0,
+      wasteDirt: 0,
+    };
   const lifted = s.opening.v3 > 0.5 && s.opening.v4 > 0.5;
   const bedR =
     BIG_FILTER.bed * (1 + (lifted ? 0.2 : 1) * (s.dirt / BIG_FILTER.dirtRef));

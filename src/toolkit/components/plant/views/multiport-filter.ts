@@ -1,3 +1,5 @@
+import { createSightGlass } from './sight-glass';
+import type { GlassInputs } from '../logic/sight-glass';
 import { Group } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
@@ -71,6 +73,10 @@ export function createMultiportFilter(kit: PanelKit) {
     dia: 0.07,
     legend: 'FILTER',
   });
+  // A small sight glass on the vessel's face, at the top of its bed.
+  const glass = createSightGlass(kit, { radius: 0.045, seed: 3 });
+  glass.group.position.set(0, 0.95, r + 0.002);
+  group.add(glass.group);
   let at: MultiportPosition | null = null;
   return {
     group,
@@ -86,6 +92,10 @@ export function createMultiportFilter(kit: PanelKit) {
       }
       gauge.set(gaugeBar);
       gauge.update(delta);
+    },
+    /** Its sight glass's view of the bed (`filter-bed.ts`'s `bedGlass`). */
+    showGlass(inputs: GlassInputs, delta: number) {
+      glass.update(inputs, delta);
     },
   };
 }

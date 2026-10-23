@@ -6,6 +6,11 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Every sand filter's sight glass is live, driven by a shared bed model (`plant/logic/filter-bed.ts`): the bed's dirt (from the water it is exposed to, or from its pressure difference where that is all a model gives), its pitting as a function of the time since it was last washed, and which way the water goes through it (down, filtering; up, lifted). It needs to know nothing of backwashing: water coming up through it is a wash and starts its clock again. Fitted to the plant rooms' filters, Dev19's, Dev26's Olympic filter (which starts ten days unwashed, dirty and pitted) and the small multiport filter.
+
+### Fixed
+
+- Dev26's flowmeters showed spurious flows while its valves changed over with the supply off: with no head across the network, the solver's unconverged flows leaked through. With the supply off there is now no flow at all.
 - A sand filter's sight glass is now a reusable component (`plant/logic/sight-glass.ts`, `plant/views/sight-glass.ts`): a two-dimensional view through the round window at the top of the bed, for filters of any size. It is modelled on what operators look for:
   - in service, clear water over a flat bed, its top crust darkening and thickening with the dirt it holds;
   - left too long, the fouled surface channels into valleys with a ridge at the wall;
