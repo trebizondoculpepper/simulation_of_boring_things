@@ -17,6 +17,7 @@ import {
 import {
   createEndSuctionPump,
   createSandFilter,
+  createPlateHeatExchanger,
 } from '../../../components/plant/views/pumps-plant';
 import { pumpSound } from '../../../components/plant/views/pump-sound';
 import {
@@ -32,7 +33,9 @@ import { createLine } from '../../../components/plant/views/pipe-line';
 import { createShellTubeExchanger } from '../../../components/plant/views/shell-tube-exchanger';
 import {
   ON_PLINTH,
+  PLATE,
   SHELL_TUBE,
+  exchangerPlacing,
 } from '../../../components/plant/logic/shell-tube-exchanger';
 import {
   createInlineFitting,
@@ -42,6 +45,7 @@ import {
   demoLocalPortAnchor,
   demoLineRequest,
   demoPlumbing,
+  exchangerVariantOf,
   ADOPTED_RULES,
   demoValveGeometry,
 } from '../../logic/port-graph-demo-routes';
@@ -474,23 +478,45 @@ function buildNode(
         delta,
       );
   } else if (node.data.kind === 'heat-exchanger') {
-    // A shell-and-tube pool heat exchanger on its concrete plinth
-    // (`shell-tube-exchanger.ts`).
-    const exchanger = createShellTubeExchanger(kit);
-    exchanger.position.y = ON_PLINTH.axis;
-    object.add(exchanger);
-    const top = ON_PLINTH.axis - SHELL_TUBE.feetBelow;
-    t.box(
-      object,
-      t.paint('#b9b6ad', 0.85),
-      ON_PLINTH.plinth.w,
-      top,
-      ON_PLINTH.plinth.d,
-      0,
-      top / 2,
-      0,
-    );
-    inline = true;
+    // The pool heat exchanger, as its chosen variant
+    // (`shell-tube-exchanger.ts`): shell-and-tube on its plinth, or a plate
+    // exchanger on the floor or on a plinth.
+    const variant = exchangerVariantOf(id, model);
+    const concrete = t.paint('#b9b6ad', 0.85);
+    if (variant === 'shell-tube-plinth') {
+      const exchanger = createShellTubeExchanger(kit);
+      exchanger.position.y = ON_PLINTH.axis;
+      object.add(exchanger);
+      const top = ON_PLINTH.axis - SHELL_TUBE.feetBelow;
+      t.box(
+        object,
+        concrete,
+        ON_PLINTH.plinth.w,
+        top,
+        ON_PLINTH.plinth.d,
+        0,
+        top / 2,
+        0,
+      );
+      inline = true;
+    } else {
+      const lift = variant === 'plate-plinth' ? PLATE.plinth : 0;
+      const plate = createPlateHeatExchanger(kit);
+      // Its frame plate's face at `PLATE.face`.
+      plate.position.set(PLATE.face + 0.03, lift, 0);
+      object.add(plate);
+      if (lift)
+        t.box(
+          object,
+          concrete,
+          PLATE.length,
+          lift,
+          PLATE.width + 0.1,
+          PLATE.face + PLATE.length / 2,
+          lift / 2,
+          0,
+        );
+    }
   } else if (node.data.kind === 'balance-tank') {
     t.box(object, body, 1.25, 0.95, 0.85, 0, 0.52, 0);
     t.box(object, silver, 1.28, 0.04, 0.88, 0, 1.02, 0);
@@ -572,7 +598,7 @@ function buildNode(
   // Studs are the visual port twins, one for each declared graph port.
   for (const port of node.ports ?? []) {
     if (port.data.medium === 'heat' || port.data.medium === 'control') continue;
-    const [x, y, z] = demoLocalPortAnchor(id, node.data.kind, port.name);
+    const [x, y, z] = demoLocalPortAnchor(id, node.data.kind, port.name, model);
     // Small on a device in a line, which is itself small.
     const stud =
       valveOverride || inline
@@ -713,7 +739,13 @@ const dimensions: Record<DemoKind, { w: number; d: number; h: number }> = {
 };
 
 /** An exhibit's size: a remote valve's from its real geometry, the rest from the table. */
-function exhibitSize(id: string, kind: DemoKind) {
+function exhibitSize(
+  id: string,
+  kind: DemoKind,
+  plant: DemoModel = BASE_MODEL,
+) {
+  if (kind === 'heat-exchanger')
+    return exchangerPlacing(exchangerVariantOf(id, plant)).size;
   return kind === 'remote-gas-valve' || kind === 'remote-water-valve'
     ? demoValveGeometry(id, kind).size
     : dimensions[kind];
@@ -726,7 +758,7 @@ export function exhibitsFor(plant: DemoModel): readonly PlantExhibit[] {
     return {
       title: visual[node.data.kind].title,
       reference: `${id} · ${node.ports?.length ?? 0} graph ports · ${node.data.kind}`,
-      size: { ...exhibitSize(id, kind), mount: 'floor' as const },
+      size: { ...exhibitSize(id, kind, plant), mount: 'floor' as const },
       build: (kit) => buildNode(id, kind, kit),
     };
   });

@@ -14,7 +14,24 @@ export interface DemoModel {
   name: string;
   graph: typeof demoGraph;
   bindings: readonly { nodeId: string; kind: DemoKind }[];
+  /**
+   * The variant each component is built as, by node, where its kind has
+   * variants (the owner, 2026-10-23): for the heat exchanger,
+   * `shell-tube-plinth`, `plate-floor` or `plate-plinth`.
+   */
+  variants?: Readonly<Record<string, string>>;
 }
+
+/** A model with a component built as another of its variants. */
+export const withVariant = (
+  model: DemoModel,
+  nodeId: string,
+  variant: string,
+): DemoModel => ({
+  ...model,
+  name: `${model.name}, ${nodeId} as ${variant}`,
+  variants: { ...model.variants, [nodeId]: variant },
+});
 
 export const BASE_MODEL: DemoModel = {
   name: 'dev19',

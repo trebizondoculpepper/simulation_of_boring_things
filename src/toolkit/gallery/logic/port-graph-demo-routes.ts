@@ -17,10 +17,11 @@ import { routeVoxelLines } from '../../components/core/logic/voxel-router';
 import type { DrawnRun } from '../../components/core/logic/pipe-route';
 import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
 import {
-  ON_PLINTH,
   SHELL_TUBE,
-  shellTubePorts,
+  exchangerPlacing,
+  exchangerPorts,
 } from '../../components/plant/logic/shell-tube-exchanger';
+import type { ExchangerVariant } from '../../components/plant/logic/shell-tube-exchanger';
 import { BASE_MODEL } from '../../../game/plant/demo-variants';
 import type { DemoModel } from '../../../game/plant/demo-variants';
 import { runEntersRegion } from './room-regions';
@@ -185,12 +186,22 @@ export function demoValveGeometry(nodeId: string, kind: DemoKind) {
 }
 
 /** A node's visible ports in its own frame: where, and which way each faces. */
+/** The variant a node is built as (`DemoModel.variants`), or its kind's first. */
+export function exchangerVariantOf(
+  nodeId: string,
+  model: DemoModel = BASE_MODEL,
+): ExchangerVariant {
+  return (model.variants?.[nodeId] as ExchangerVariant) ?? 'shell-tube-plinth';
+}
+
 export function demoPorts(
   nodeId: string,
   kind: DemoKind,
+  model: DemoModel = BASE_MODEL,
 ): Record<string, { at: Vec3; out: Vec3 }> {
   if (isValve(kind)) return demoValveGeometry(nodeId, kind).ports;
-  if (kind === 'heat-exchanger') return shellTubePorts(ON_PLINTH.axis);
+  if (kind === 'heat-exchanger')
+    return exchangerPorts(exchangerVariantOf(nodeId, model));
   return Object.fromEntries(
     Object.entries(anchors[kind] ?? {}).map(([port, at]) => [
       port,
@@ -203,8 +214,9 @@ export function demoLocalPortAnchor(
   nodeId: string,
   kind: DemoKind,
   port: string,
+  model: DemoModel = BASE_MODEL,
 ): Vec3 {
-  const point = demoPorts(nodeId, kind)[port]?.at;
+  const point = demoPorts(nodeId, kind, model)[port]?.at;
   if (!point) throw new Error(`${kind}.${port}: missing model port anchor`);
   return point;
 }
@@ -217,7 +229,7 @@ export function demoPortPositions(
   model.bindings.forEach(({ nodeId, kind }, i) => {
     const place = layout.places[i];
     if (!place) throw new Error(`${nodeId}: no exhibit placement`);
-    for (const [port, { at }] of Object.entries(demoPorts(nodeId, kind)))
+    for (const [port, { at }] of Object.entries(demoPorts(nodeId, kind, model)))
       positions.set(`${nodeId}.${port}`, toRoom(place, at));
   });
   return positions;
@@ -236,7 +248,7 @@ export function demoPortEnd(
   const binding = model.bindings[index];
   const place = layout.places[index];
   const normal = binding
-    ? demoPorts(nodeId, binding.kind)[port]?.out
+    ? demoPorts(nodeId, binding.kind, model)[port]?.out
     : undefined;
   if (!place || !normal)
     throw new Error(`${nodeId}.${port}: missing port direction`);
@@ -415,8 +427,6 @@ const SITES: Partial<Record<DemoKind, PlaceItem['site']>> = {
 const WITHDRAWAL: Partial<Record<DemoKind, PlaceItem['withdrawal']>> = {
   'pool-pump': { right: 0.6 },
   circulator: { right: 0.6 },
-  // Its tube stack drawn out of its pool-water inlet's end.
-  'heat-exchanger': { left: ON_PLINTH.withdrawal },
   'sand-filter': { top: 1 },
 };
 
@@ -429,13 +439,15 @@ export function demoPlaceItems(
   model: DemoModel = BASE_MODEL,
 ): Partial<PlaceItem>[] {
   return model.bindings.map(({ nodeId, kind }) => ({
-    ports: demoPorts(nodeId, kind),
+    ports: demoPorts(nodeId, kind, model),
     ...(kind === 'gas-main' || kind === 'mains' || kind === 'makeup-main'
       ? { walls: ['west' as const] }
       : {}),
     // Nothing over what must connect straight up: the boiler's flue, the
     // heat exchanger's heating branches on top.
-    ...(kind === 'boiler' || kind === 'heat-exchanger'
+    ...(kind === 'boiler' ||
+    (kind === 'heat-exchanger' &&
+      exchangerPlacing(exchangerVariantOf(nodeId, model)).clearAbove)
       ? { clearAbove: true }
       : {}),
     ...(SITES[kind] ? { site: SITES[kind] } : {}),
@@ -446,7 +458,14 @@ export function demoPlaceItems(
     // Room to take parts out (process layout practice): a pump's motor
     // drawn off its +x end, a plate exchanger's pack opened at its +x end,
     // a filter's internals lifted out of its top.
-    ...(WITHDRAWAL[kind] ? { withdrawal: WITHDRAWAL[kind] } : {}),
+    ...(kind === 'heat-exchanger'
+      ? {
+          withdrawal: exchangerPlacing(exchangerVariantOf(nodeId, model))
+            .withdrawal,
+        }
+      : WITHDRAWAL[kind]
+        ? { withdrawal: WITHDRAWAL[kind] }
+        : {}),
   }));
 }
 

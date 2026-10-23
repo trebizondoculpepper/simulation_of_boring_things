@@ -69,3 +69,76 @@ export function shellTubePorts(
     },
   };
 }
+
+/**
+ * The pool heat exchanger's variants (the owner, 2026-10-23: components
+ * have variants, and ports near the floor limit routing):
+ *
+ * - `shell-tube-plinth`: the shell-and-tube exchanger on its plinth, pool
+ *   water through its ends at 0.9 m, heating on top;
+ * - `plate-floor`: a gasketed plate exchanger on the floor, all four ports
+ *   on its fixed frame at the frame's corners (heating on one side, pool
+ *   water on the other, counterflow), so its movable end opens without
+ *   breaking a pipe;
+ * - `plate-plinth`: the same on a 0.3 m plinth, its low ports lifted.
+ */
+export type ExchangerVariant =
+  | 'shell-tube-plinth'
+  | 'plate-floor'
+  | 'plate-plinth';
+export const EXCHANGER_VARIANTS: readonly ExchangerVariant[] = [
+  'shell-tube-plinth',
+  'plate-floor',
+  'plate-plinth',
+];
+
+/** The plate exchanger: its frame plate's outer face, metres from its middle, and its corners' ports. */
+export const PLATE = {
+  /** Overall, frame plate to end support; width; height. */
+  length: 1.1,
+  width: 0.47,
+  height: 1.084,
+  /** The fixed frame's outer face, from its middle (−x). */
+  face: -0.56,
+  /** The ports' corners: up from the floor, and out from the middle. */
+  low: 0.2,
+  high: 0.88,
+  side: 0.15,
+  /** Room for its movable end to open, at +x. */
+  opening: 0.8,
+  /** A plinth lifting it. */
+  plinth: 0.3,
+} as const;
+
+/** A variant's ports, in its own frame (the floor at y = 0). */
+export function exchangerPorts(variant: ExchangerVariant) {
+  if (variant === 'shell-tube-plinth') return shellTubePorts(ON_PLINTH.axis);
+  const lift = variant === 'plate-plinth' ? PLATE.plinth : 0;
+  const at = (y: number, z: number) => ({
+    at: [PLATE.face, lift + y, z] as Vec3,
+    out: [-1, 0, 0] as Vec3,
+  });
+  return {
+    // Heating down one side, pool water up the other: counterflow.
+    'primary-in': at(PLATE.high, -PLATE.side),
+    'primary-out': at(PLATE.low, -PLATE.side),
+    'pool-in': at(PLATE.low, PLATE.side),
+    'pool-out': at(PLATE.high, PLATE.side),
+  };
+}
+
+/** What a variant takes on the floor, and what it asks of placement. */
+export function exchangerPlacing(variant: ExchangerVariant) {
+  if (variant === 'shell-tube-plinth')
+    return {
+      size: ON_PLINTH.size,
+      withdrawal: { left: ON_PLINTH.withdrawal },
+      clearAbove: true,
+    };
+  const lift = variant === 'plate-plinth' ? PLATE.plinth : 0;
+  return {
+    size: { w: PLATE.length + 0.1, d: 0.6, h: PLATE.height + lift },
+    withdrawal: { right: PLATE.opening },
+    clearAbove: false,
+  };
+}

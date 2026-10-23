@@ -28,6 +28,8 @@ import { scoreRoom } from './room-scorer';
 import { scorePlacement } from './placement-scorer';
 import type { PlaceItem } from './machine-placement';
 import { sizeRoom } from './room-sizer';
+import { BASE_MODEL } from '../../../game/plant/demo-variants';
+import type { DemoModel } from '../../../game/plant/demo-variants';
 import { pricePerMetre } from '../../components/core/logic/pipe-costs';
 import type { Score } from './room-scorer';
 
@@ -49,8 +51,11 @@ function price(edgeId: string, medium: string) {
 }
 
 /** The floor the sizer says Dev19's machines need (its valves sit in lines), m². */
-function minimumArea(sizes: readonly ExhibitSize[]) {
-  const items = demoPlaceItems();
+function minimumArea(
+  sizes: readonly ExhibitSize[],
+  model: DemoModel = BASE_MODEL,
+) {
+  const items = demoPlaceItems(model);
   const size = sizeRoom(sizes.filter((_, i) => !items[i]?.inline));
   return size.w * size.d;
 }
@@ -65,8 +70,9 @@ export function scorePlumbedDev19(
   sizes: readonly ExhibitSize[],
   layout: PlantRoomLayout & { regions?: Region[]; problems?: string[] },
   rules: PlumbingRules,
+  model: DemoModel = BASE_MODEL,
 ): Score {
-  const plumbing = demoPlumbing(layout, rules);
+  const plumbing = demoPlumbing(layout, rules, model);
   const fittings = plumbing.devices.filter((d) => d.kind !== 'remote-valve');
   const byLine = new Map<string, Vec3[][]>();
   for (const run of plumbing.runs)
@@ -76,7 +82,7 @@ export function scorePlumbedDev19(
     w: layout.halfX * 2,
     d: layout.halfZ * 2,
     h: layout.height,
-    minimumArea: minimumArea(sizes),
+    minimumArea: minimumArea(sizes, model),
     machines: layout.solids.filter((f) => f.maxX > f.minX),
     unreachableAccess: unreachable(layout.problems),
     runs: plumbing.runs.map((r) => {
@@ -158,10 +164,11 @@ export function dev19Candidate(
   sizes: readonly ExhibitSize[],
   seed: number,
   practice = true,
+  model: DemoModel = BASE_MODEL,
 ) {
   return layoutSizedPlantRoom(sizes, {
-    items: demoPlaceItems(),
-    links: demoPlaceLinks(),
+    items: demoPlaceItems(model),
+    links: demoPlaceLinks(model),
     seed,
     practice,
   });
@@ -172,8 +179,9 @@ export function scoreDev19Placement(
   name: string,
   sizes: readonly ExhibitSize[],
   layout: ReturnType<typeof layoutSizedPlantRoom>,
+  model: DemoModel = BASE_MODEL,
 ): Score {
-  const extra = demoPlaceItems();
+  const extra = demoPlaceItems(model);
   const items: PlaceItem[] = sizes.map((s, i) => ({
     key: String(i),
     w: s.w,
@@ -181,17 +189,17 @@ export function scoreDev19Placement(
     h: s.h,
     ...extra[i],
   }));
-  const lines = demoLines().filter(
+  const lines = demoLines(model).filter(
     (l) => l.medium === 'gas' || l.medium === 'water',
   );
-  const links = demoPlaceLinks().map((l, k) => {
+  const links = demoPlaceLinks(model).map((l, k) => {
     const { kind, od } = demoPipeSpec(
       lines[k]?.edges[0] ?? '',
       lines[k]?.medium ?? 'water',
     );
     return { ...l, perMetre: pricePerMetre(kind, od) };
   });
-  return scorePlacement(name, layout, items, links, minimumArea(sizes));
+  return scorePlacement(name, layout, items, links, minimumArea(sizes, model));
 }
 
 /**
@@ -204,15 +212,20 @@ export function scoreDev19(
   sizes: readonly ExhibitSize[],
   layout: ReturnType<typeof layoutSizedPlantRoom>,
   rules: PlumbingRules,
+  model: DemoModel = BASE_MODEL,
 ): Score {
-  const room = scorePlumbedDev19(name, sizes, layout, rules);
-  const placement = scoreDev19Placement(name, sizes, layout);
+  const room = scorePlumbedDev19(name, sizes, layout, rules, model);
+  const placement = scoreDev19Placement(name, sizes, layout, model);
   const dimensions = [
     ...room.dimensions,
     ...placement.dimensions.filter((d) =>
-      ['sites', 'batteries', 'process order', 'short suctions'].includes(
-        d.name,
-      ),
+      [
+        'sites',
+        'batteries',
+        'process order',
+        'short suctions',
+        'port heights',
+      ].includes(d.name),
     ),
   ];
   const weights = dimensions.reduce((sum, d) => sum + d.weight, 0);

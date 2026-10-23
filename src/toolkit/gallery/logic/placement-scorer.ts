@@ -217,6 +217,37 @@ export function scorePlacement(
       });
   }
 
+  // Port heights (the owner, 2026-10-23: ports close to the ground limit
+  // routing): each link's two ports, by its pipe's price, scored 1 at a
+  // working height (0.5 to 1.8 m), nothing below 0.3 m, between in between,
+  // and a little less up high.
+  {
+    const good = (h: number) =>
+      h < 0.3 ? 0 : h < 0.5 ? (h - 0.3) / 0.2 : h <= 1.8 ? 1 : 0.8;
+    let sum = 0;
+    let all = 0;
+    let low = 0;
+    for (const l of links)
+      for (const [key, port] of [
+        [l.a, l.aPort],
+        [l.b, l.bPort],
+      ] as const) {
+        const i = index.get(key);
+        const p = i === undefined || !port ? undefined : items[i].ports?.[port];
+        if (!p) continue;
+        sum += good(p.at[1]) * l.perMetre;
+        all += l.perMetre;
+        if (p.at[1] < 0.3) low++;
+      }
+    if (all)
+      dimensions.push({
+        name: 'port heights',
+        score: sum / all,
+        weight: 6,
+        why: `${low} port${low === 1 ? '' : 's'} below 0.3 m; by price, ${Math.round((100 * sum) / all)} % at a working height`,
+      });
+  }
+
   // Estimated pipework: each link's square length, lead to lead (the sum
   // of its x, y and z distances: pipes run square, never on a diagonal),
   // at its pipe's price, against every link at 1.5 m.
