@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   FILTER_GAP,
+  OLYMPIC_ROOM,
   accessOf,
   footprintOf,
-  olympicBox,
+  keptClear,
   olympicPlan,
   olympicRoomPlan,
+  solids,
 } from './olympic-plan';
+import { PLANT_ROOM } from './plant-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
 
 const overlap = (a: Footprint, b: Footprint) =>
@@ -17,18 +20,29 @@ const overlap = (a: Footprint, b: Footprint) =>
 
 describe('the Olympic plant room, in plan', () => {
   const items = olympicPlan();
-  const box = olympicBox();
-  const h = box.w / 2;
+  const room = olympicRoomPlan();
+  const hx = room.halfX;
+  const hz = room.halfZ;
 
-  it('keeps every machine inside the walls, clear of the doors, the landing and the stair', () => {
+  it('is 22 × 14 m inside', () => {
+    expect(OLYMPIC_ROOM).toEqual({ w: 22, d: 14 });
+  });
+
+  it('keeps every machine inside the walls, clear of the doors’ spaces, the stair and its foot', () => {
     for (const i of items) {
       const f = footprintOf(i);
-      expect(f.minX, i.key).toBeGreaterThanOrEqual(-h);
-      expect(f.maxX, i.key).toBeLessThanOrEqual(h);
-      expect(f.minZ, i.key).toBeGreaterThanOrEqual(-h);
-      expect(f.maxZ, i.key).toBeLessThanOrEqual(h);
-      for (const k of [...box.keepClear, ...box.solid])
+      expect(f.minX, i.key).toBeGreaterThanOrEqual(-hx);
+      expect(f.maxX, i.key).toBeLessThanOrEqual(hx);
+      expect(f.minZ, i.key).toBeGreaterThanOrEqual(-hz);
+      expect(f.maxZ, i.key).toBeLessThanOrEqual(hz);
+      for (const k of [...keptClear(), ...solids()])
         expect(overlap(f, k), `${i.key} in a kept space`).toBe(false);
+      if (i.mount === 'floor')
+        for (const k of [...keptClear(), ...solids()])
+          expect(
+            overlap(accessOf(i), k),
+            `${i.key}’s access in a kept space`,
+          ).toBe(false);
     }
   });
 
@@ -57,25 +71,39 @@ describe('the Olympic plant room, in plan', () => {
       expect(
         footprintOf(filters[k]).minX - footprintOf(filters[k - 1]).maxX,
       ).toBeCloseTo(FILTER_GAP, 9);
-    // Their backs at the landing's edge.
-    expect(footprintOf(filters[0]).minZ).toBeCloseTo(
-      olympicRoomPlan().landing.maxZ + 0.05,
-      9,
-    );
+    expect(footprintOf(filters[0]).minZ).toBeCloseTo(-hz + 0.2, 9);
+  });
+
+  it('puts the pool door in the east wall onto the landing, the main plant’s doors in the south wall under it, the balance tank’s in the west', () => {
+    const { pool, main, tank } = room.doors;
+    expect(pool.wall).toBe('east');
+    expect(pool.at).toBeGreaterThan(room.landing.minZ);
+    expect(pool.at).toBeLessThan(room.landing.maxZ);
+    expect(main.wall).toBe('south');
+    // The whole opening under the landing, which is a storey up, over the 2.46 m doors.
+    expect(main.at - main.width / 2).toBeGreaterThanOrEqual(room.landing.minX);
+    expect(main.at + main.width / 2).toBeLessThanOrEqual(room.landing.maxX);
+    expect(PLANT_ROOM.storey).toBeGreaterThan(2.46 + 0.3);
+    expect(tank.wall).toBe('west');
+  });
+
+  it('runs the stair down from the landing along the south wall, heading west', () => {
+    expect(room.stair.maxX).toBe(room.landing.minX);
+    expect(room.stair.maxZ).toBe(hz);
+    expect(room.stair.minX).toBeLessThan(room.stair.maxX - 3);
   });
 
   it('stands the pumps against the west wall, beside the balance tank hall’s doors', () => {
     const pumps = items.find((i) => i.key === 'pumps')!;
-    const f = footprintOf(pumps);
     expect(pumps.facing).toBe('east');
-    expect(f.minX).toBeLessThan(-h + 0.3);
-    expect(Math.abs(pumps.z - olympicRoomPlan().tankDoor!.z)).toBeLessThan(4);
+    expect(footprintOf(pumps).minX).toBeLessThan(-hx + 0.3);
+    expect(Math.abs(pumps.z - room.doors.tank.at)).toBeLessThan(4);
   });
 
   it('keeps the panel on the east wall, where power and control come in', () => {
     const panel = items.find((i) => i.key === 'panel')!;
     expect(panel.facing).toBe('west');
-    expect(footprintOf(panel).maxX).toBeGreaterThan(h - 0.3);
+    expect(footprintOf(panel).maxX).toBeGreaterThan(hx - 0.3);
   });
 });
 
