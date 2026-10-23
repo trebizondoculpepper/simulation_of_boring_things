@@ -1,4 +1,8 @@
 import {
+  createBreezeBlockTextures,
+  mapBlockwork,
+} from '../../../scene/breeze-block-texture';
+import {
   AmbientLight,
   DirectionalLight,
   ExtrudeGeometry,
@@ -90,7 +94,18 @@ export type ExhibitRoomId =
   | 'dev24'
   | 'dev25'
   | 'dev26'
-  | 'dev27';
+  | 'dev27'
+  | 'dev28';
+
+/** A room's own finish (`FINISH` in its module). */
+export interface RoomFinish {
+  wall?: string;
+  floor?: string | null;
+  /** Breeze-block walls, as the plant rooms have. */
+  blockwork?: boolean;
+  /** Lit by its own fittings: the room's general light only a little fill. */
+  ownLights?: boolean;
+}
 
 const EXHIBITS: Record<
   ExhibitRoomId,
@@ -105,6 +120,10 @@ const EXHIBITS: Record<
     prepareRoom?: (layout: PlantRoomLayout) => void;
     /** Its own layout, in place of the usual rows (Dev21's sources facing their sinks). */
     layoutRoom?: (sizes: readonly ExhibitSize[]) => PlantRoomLayout;
+    /** Its finish: its walls' colour, and its floor's (null: none, as over Dev28's tank, where the room draws its own gantry). */
+    FINISH?: RoomFinish;
+    /** Where the walker starts, metres, when it does not come through the door. */
+    START?: { x: number; z: number; yaw: number };
   }>
 > = {
   dev_pumps: () => import('./plant/pumps'),
@@ -135,6 +154,7 @@ const EXHIBITS: Record<
   dev25: () => import('./plant/tank-fill-drain'),
   dev26: () => import('./plant/filter-five-valve'),
   dev27: () => import('./plant/pool-heating'),
+  dev28: () => import('./plant/balance-tank-hall'),
 };
 
 /**
@@ -170,10 +190,9 @@ export function startEquipmentRoom(
   const freeEnvironment = useEnvironment(renderer, scene, 0.4);
   renderer.setClearColor('#262a2b');
   const camera = new PerspectiveCamera(60, 1, 0.05, 80 * m);
-  scene.add(
-    new AmbientLight('#f2f4f0', 0.7),
-    new HemisphereLight('#f6f6f0', '#5d5f58', 0.6),
-  );
+  const ambient = new AmbientLight('#f2f4f0', 0.7);
+  const sky = new HemisphereLight('#f6f6f0', '#5d5f58', 0.6);
+  scene.add(ambient, sky);
   const key = new DirectionalLight('#fffdf6', 1.4);
   key.position.set(-6 * m, 10 * m, 8 * m);
   scene.add(key);
@@ -208,7 +227,30 @@ export function startEquipmentRoom(
     ) => Group | LiveExhibit,
     prepareRoom?: (layout: PlantRoomLayout) => void,
     layoutRoom?: (sizes: readonly ExhibitSize[]) => PlantRoomLayout,
+    finish?: RoomFinish,
+    startAt?: { x: number; z: number; yaw: number },
   ) => {
+    if (finish?.wall) wallPaint.color.set(finish.wall);
+    // A room lit by its own fittings: the general light turned down to a little fill.
+    if (finish?.ownLights) {
+      ambient.intensity = 0.12;
+      sky.intensity = 0.2;
+      key.intensity = 0;
+    }
+    // Its walls of breeze blocks, as the plant rooms' are.
+    let blockwork: ReturnType<typeof createPs1Material> | null = null;
+    if (finish?.blockwork) {
+      const blocks = createBreezeBlockTextures();
+      kit.textures.push(blocks.map, blocks.normalMap, blocks.roughnessMap);
+      blockwork = createPs1Material({
+        map: blocks.map,
+        normalMap: blocks.normalMap,
+        roughnessMap: blocks.roughnessMap,
+        roughness: 1,
+      });
+      kit.materials.push(blockwork);
+    }
+    if (finish?.floor) floorPaint.color.set(finish.floor);
     const sizes = exhibits.map((e) => e.size);
     // Dev19 tries the room's layers (`doc/prompts/017-room-sizer-gantries-placement.md`):
     // sized for its machines, two storeys with a gantry, placed in bands.
@@ -290,7 +332,7 @@ export function startEquipmentRoom(
     });
     floorGeometry.rotateX(-Math.PI / 2);
     floorGeometry.translate(0, -0.1, 0);
-    room.add(new Mesh(floorGeometry, floorPaint));
+    if (finish?.floor !== null) room.add(new Mesh(floorGeometry, floorPaint));
     slab(2 * halfX, 0.1, 2 * halfZ, 0, height + 0.05, 0);
     const bounds: Footprint = {
       minX: -halfX * m,
@@ -309,15 +351,21 @@ export function startEquipmentRoom(
     walls = pieces;
     if (sized)
       room.add(createRoomRegions(kit, sized.room, sized.regions, sized.gantry));
-    for (const w of pieces)
-      slab(
-        (w.maxX - w.minX) / m,
-        (w.top - w.bottom) / m,
-        (w.maxZ - w.minZ) / m,
+    for (const w of pieces) {
+      const at = [
         (w.minX + w.maxX) / 2 / m,
         (w.bottom + w.top) / 2 / m,
         (w.minZ + w.maxZ) / 2 / m,
+      ] as const;
+      const piece = slab(
+        (w.maxX - w.minX) / m,
+        (w.top - w.bottom) / m,
+        (w.maxZ - w.minZ) / m,
+        ...at,
+        blockwork ?? wallPaint,
       );
+      if (blockwork) mapBlockwork(piece.geometry, at);
+    }
     // A painted dado stripe round the walls, as plant rooms are marked.
     for (const z of [-halfZ + 0.16, halfZ - 0.16])
       slab(2 * halfX - 0.4, 0.15, 0.01, 0, 1.2, z, stripePaint);
@@ -451,12 +499,16 @@ export function startEquipmentRoom(
       );
       return;
     }
-    const start = arrival ?? {
-      x: (-halfX + 2.5) * m,
-      z: (halfZ - 2) * m,
-      yaw: Math.PI / 4,
-      pitch: 0,
-    };
+    const start =
+      arrival ??
+      (startAt
+        ? { x: startAt.x * m, z: startAt.z * m, yaw: startAt.yaw, pitch: 0 }
+        : {
+            x: (-halfX + 2.5) * m,
+            z: (halfZ - 2) * m,
+            yaw: Math.PI / 4,
+            pitch: 0,
+          });
     walk.place(start.x, start.z, start.yaw, start.pitch);
   };
 
@@ -529,9 +581,19 @@ export function startEquipmentRoom(
       buildRoomServices,
       prepareRoom,
       layoutRoom,
+      FINISH,
+      START,
     }) => {
       if (!disposed)
-        build(exhibits, PURPOSE, buildRoomServices, prepareRoom, layoutRoom);
+        build(
+          exhibits,
+          PURPOSE,
+          buildRoomServices,
+          prepareRoom,
+          layoutRoom,
+          FINISH,
+          START,
+        );
     },
   );
 

@@ -1,3 +1,4 @@
+import { createPs1Material } from '../../core/parts/ps1-material';
 import { RepeatWrapping, SRGBColorSpace, TextureLoader, Vector2 } from 'three';
 import type { BufferGeometry, Texture } from 'three';
 import { createTileMaterial } from '../../pool/views/pool-surfaces';
@@ -74,6 +75,24 @@ diffuseColor.rgb *= 0.88 + 0.22 * concreteVariation;`,
     );
   };
   material.needsUpdate = true;
+  return material;
+}
+
+/**
+ * The same concrete for a room with no pool water in it (a tank's, a plant
+ * room's): the maps on a plain lit material, without the water's light.
+ * Its geometry wants UVs in metres too (`inMetres`).
+ */
+export function plainBoardMarkedConcrete(tint = '#ffffff') {
+  const { colour, normal, rough } = concreteMaps();
+  const material = createPs1Material({
+    color: tint,
+    map: colour,
+    normalMap: normal,
+    roughnessMap: rough,
+    roughness: 1,
+    normalScale: new Vector2(1.2, 1.2),
+  });
   return material;
 }
 

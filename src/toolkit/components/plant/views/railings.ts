@@ -170,6 +170,37 @@ function patternMaterial(
 }
 
 /**
+ * A deck of open steel grating (30 × 30 mm mesh, galvanised), `w` × `d`
+ * metres, lying flat with its top at y = 0: what shows through its mesh
+ * is whatever is below it.
+ */
+export function createGratingDeck(kit: PanelKit, w: number, d: number) {
+  const { material } = patternMaterial(
+    (c, s) => {
+      c.clearRect(0, 0, s, s);
+      c.fillStyle = '#a9afae';
+      const bars = 10;
+      for (let i = 0; i < bars; i++) {
+        c.fillRect((i / bars) * s, 0, s * 0.05, s);
+        c.fillRect(0, (i / bars) * s, s, s * 0.03);
+      }
+    },
+    0.3,
+    0.45,
+    0.6,
+    kit.materials,
+  );
+  const geometry = new PlaneGeometry(w, d);
+  const uv = geometry.getAttribute('uv');
+  for (let i = 0; i < uv.count; i++)
+    uv.setXY(i, uv.getX(i) * w, uv.getY(i) * d);
+  const deck = new Mesh(geometry, material);
+  deck.rotation.x = -Math.PI / 2;
+  deck.name = 'Steel grating';
+  return deck;
+}
+
+/**
  * Three 1 m square surface samples on low stands: open steel grating
  * (30 × 30 mm mesh), steel chequer plate, and GRP grating.
  */

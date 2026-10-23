@@ -1,0 +1,13 @@
+# 032: The Olympic balance tank hall (Dev28)
+
+Status: built as Dev28 (2026-10-23); not yet in the leisure centre.
+
+The owner, comparing layouts for the Olympic plant room against `retired0`: take the balance tank out of the plant room into a hall of its own beside it, a cast concrete tank that can be as deep as it needs to be, entered at the plant floor's level. Modelled first as a dev room, at the Olympic tank's real size: "not tiled, just cast concrete … you enter onto a gantry, you look down, and it's just a pool of water, and there's a gantry for observation around the edge, and perhaps some safety features like a life preserver and a stainless steel ladder."
+
+Then (the owner): "minimise the amount of machinery in the balance tank hall and put it in the adjacent plant room", with wall lights as elsewhere, the lower walls cast concrete and the upper our breeze blocks. So the hall holds only what must be in the tank, and a 3 m bay of the adjacent plant room, behind a blockwork partition with a doorway onto the gantry, holds its panel and its make-up valve; the suctions go west through the partition to the pumps.
+
+What it is: a 9 × 6 m tank, 4.5 m deep below a galvanised grating gantry cantilevered off its walls on three sides (1.6 m at the door, 1 m along the long walls), open to its rim along the east wall where its stainless ladder goes down through a gate in the rail. 216 m³ to its weir at 4.0 m. The pool's two 315 mm overflow returns fall in from the soffit; mains make-up from a solenoid valve in the bay to a Type AA air gap; a 200 mm weir to drain; two 315 mm pump suctions low in the partition wall, below LOW LOW. Sealed LED wall battens light it, as the plant rooms are lit. In the tank: a staff gauge, an ultrasonic level transmitter, three tethered float switches (LSH, LSL, LSL-LL). In the bay: a Penfold panel (level and volume, flows in and out, a lamp for each float and state, MAKE-UP OFF/AUTO/HAND, pumps START/STOP, and a test rig's BATHER LOAD selector), a lifebuoy and its throw line, and DEEP WATER and CONFINED SPACE signs.
+
+Its model (`src/game/plant/balance-tank.ts`): bathers displace water over the pool's edge into the tank and, leaving, are made good from it by the pumps; stopped pumps let the channels drain back (6 m³), started ones fill them again; make-up on a level band; the weir spills; LOW LOW trips the pumps, which will not restart until the tank is above LOW.
+
+Next: decide whether the Olympic plant room takes this hall (a variant to score against `retired0`), and whether the tank should be deeper still for more surge capacity.
