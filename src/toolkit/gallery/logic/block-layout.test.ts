@@ -33,5 +33,10 @@ describe('a room with four identical filters', () => {
     expect(r.score.passes).toBe(true);
     expect(r.makeUp.get('sand-filter')).toHaveLength(1);
     expect(r.tried.length).toBe(6);
+    // A pre-assembled block's own pipework, made in the shop, costs less
+    // than the same filters' run on site one by one.
+    const square = r.tried.find((t) => t.makeUp.endsWith('2×2'))!;
+    const singles = r.tried.find((t) => t.makeUp.endsWith('1 + 1 + 1 + 1'))!;
+    expect(square.groupPipework).toBeLessThan(singles.groupPipework);
   }, 120000);
 });

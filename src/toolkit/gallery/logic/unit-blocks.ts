@@ -72,7 +72,16 @@ export interface Assembly {
   members: Map<string, BlockMember[]>;
   /** The make-up chosen for each group. */
   makeUp: Map<string, MakeUp>;
+  /**
+   * What each block's own pipework costs, £ (the owner, 2026-10-23: a
+   * pre-assembled block includes its pipes and valves): for each of its
+   * connections, a header along the block and a short branch to each unit.
+   */
+  internal: Map<string, number>;
 }
+
+/** How long a unit's branch off its block's header is, metres. */
+export const BRANCH = 0.8;
 
 /**
  * Assemble `items` with each named group made up as `choice` says: each
@@ -193,7 +202,32 @@ export function assemble(
     ...l,
     weight: l.weight * Math.sqrt(count),
   }));
-  return { items: out, links: links2, members, makeUp: new Map(choice) };
+  // Each block's own pipework: per connection, its header the block's
+  // width, at the header's price, and a branch to each unit at the unit's.
+  const internal = new Map<string, number>();
+  for (const l of merged.values()) {
+    const block =
+      members.has(l.a) && members.get(l.a)!.length > 1
+        ? l.a
+        : members.has(l.b) && members.get(l.b)!.length > 1
+          ? l.b
+          : null;
+    if (!block) continue;
+    const it = out.find((x) => x.key === block)!;
+    const branch = l.weight * 25;
+    const header = branch * Math.sqrt(l.count);
+    internal.set(
+      block,
+      (internal.get(block) ?? 0) + it.w * header + l.count * BRANCH * branch,
+    );
+  }
+  return {
+    items: out,
+    links: links2,
+    members,
+    makeUp: new Map(choice),
+    internal,
+  };
 }
 
 /** A block's units' places, from the block's: each offset in its frame, a flipped one turned half round. */

@@ -20,7 +20,7 @@ const LEAD = 0.5;
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 
 /** A port's lead end, in the room. */
-function leadOf(
+export function leadOf(
   item: PlaceItem,
   place: { x: number; z: number; yaw: number },
   port?: string,
@@ -45,6 +45,12 @@ export function scorePlacement(
   minimumArea: number,
   /** Each group of parallel units: how many units, made up into how many blocks. */
   makeUp: ReadonlyMap<string, { units: number; blocks: number }> = new Map(),
+  /**
+   * The pipework's estimated cost, £, if the caller knows it better (a
+   * layout of pre-assembled blocks, each with its own pipework). The
+   * baseline stays the plan's links at 1.5 m, whatever the make-up.
+   */
+  pipework?: number,
 ): Score {
   const gates: string[] = [];
   const dimensions: Dimension[] = [];
@@ -160,8 +166,9 @@ export function scorePlacement(
     });
   }
 
-  // Estimated pipework: each link's square length, lead to lead, at its
-  // pipe's price, against every link at 1.5 m.
+  // Estimated pipework: each link's square length, lead to lead (the sum
+  // of its x, y and z distances: pipes run square, never on a diagonal),
+  // at its pipe's price, against every link at 1.5 m.
   let cost = 0;
   let near = 0;
   for (const l of links) {
@@ -177,6 +184,7 @@ export function scorePlacement(
     cost += length * l.perMetre;
     near += 1.5 * l.perMetre;
   }
+  if (pipework !== undefined) cost = pipework;
   dimensions.push({
     name: 'pipework estimate',
     score: cost > 0 ? clamp(near / cost) : 1,
