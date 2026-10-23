@@ -119,6 +119,9 @@ These came from the owner while the pipeline was built; keep to them.
 - Detectors: a chlorine detector near its source, on a wall, on the control bus; an ozone detector as far as allowed from its source; both near the floor, on a wall if one can be reached, else on a post (prompt 022, not built yet).
 - The room handed to the simulation is fully bound: the expanded graph is the graph the simulation runs.
 
+- Acid and hypochlorite lines never run over a walkway: they come in through a wall and stay against it, laid by rule, low, in containment; dosing is done where they are, so the main they dose passes them (the Olympic's dosing spool). (The owner, 2026-10-23.)
+- Valves may be solenoid-operated (on a main, a solenoid pilot on a pneumatic actuator); a machine's local isolator is worked by hand and must be within reach; power comes from a busbar ring round the walls by short drops, each behind a fused tap-off. (The owner, 2026-10-23.)
+
 ## 6. The experiment rigs (Dev21 to Dev26)
 
 After the pipeline, the owner asked for small experiments, each proving a piece of modelling the Olympic pool's redo will need. They use the same pieces by hand, which makes them good worked examples. Each is a pure logic file beside its tests, and a room module that draws and drives it.

@@ -196,6 +196,9 @@ const CHANNEL = -0.3;
 export const BUSBAR = { y: 5.75, off: 0.3, od: 0.15 } as const;
 /** A tap-off box hangs this far under the busbar, its drop leaving its foot. */
 const TAP = 0.3;
+/** The dosing spool's line in from the south wall, and the height the chemical lines come in at. */
+const SPOOL_OFF = 0.7;
+const CHEMICAL_IN = 2.2;
 /** How far a dosing quill or a sample tapping stands off its main's surface, metres. */
 const QUILL = 0.08;
 /** The lines the router lays first: they have least room. */
@@ -402,6 +405,48 @@ export function plumbOlympic(): OlympicPlumbing {
     [-hx - 0.3, 1.2 - 0.04, corner.z],
   ]);
 
+  // ---- The dosing spool and the chemical lines, along the south wall --------
+  // Acid and hypochlorite never run over a walkway (the owner, 2026-10-23):
+  // they come in from the main plant through the south wall and stay
+  // against it, laid by rule, low, in containment. So the return main's
+  // first length, from the UV's outlet, is a spool along the wall just in
+  // front of the dosing pumps, at the UV's outlet height, and each pump
+  // doses onto it by a quill on its top, a short drop below the pump.
+  const uvOut = port('uv', 'outlet');
+  const spoolZ = round(hz - SPOOL_OFF);
+  const turnX = round(uvOut.at[0] + 0.5);
+  const doseX = ['acid', 'hypo'].map((k) => port(k, 'dose').at[0]);
+  const spoolEnd = round(Math.max(...doseX) + 0.6);
+  rule('Dosing spool', 'uv-to-pool', 'water', uvOut.od, [
+    uvOut.at,
+    [turnX, uvOut.at[1], uvOut.at[2]],
+    [turnX, uvOut.at[1], spoolZ],
+    [spoolEnd, uvOut.at[1], spoolZ],
+  ]);
+  const quillY = round(uvOut.at[1] + uvOut.od / 2 + QUILL);
+  for (const k of ['hypo', 'acid'] as const) {
+    const dose = port(k, 'dose');
+    rule(
+      `${k === 'hypo' ? 'Hypochlorite' : 'Acid'} dose line`,
+      `${k}-dose`,
+      'chemical',
+      0.012,
+      [dose.at, [dose.at[0], dose.at[1], spoolZ], [dose.at[0], quillY, spoolZ]],
+    );
+    const supply = port(k, 'supply');
+    rule(
+      `${k === 'hypo' ? 'Hypochlorite' : 'Acid'} supply line`,
+      `${k}-supply`,
+      'chemical',
+      0.012,
+      [
+        [supply.at[0], CHEMICAL_IN, hz + 0.3],
+        [supply.at[0], CHEMICAL_IN, supply.at[2]],
+        supply.at,
+      ],
+    );
+  }
+
   // ---- The busbar ring, round the walls, fed from the east ------------------
   const B = BUSBAR;
   const bx = hx - B.off;
@@ -524,7 +569,11 @@ export function plumbOlympic(): OlympicPlumbing {
       id: 'uv-to-pool',
       pipe: 'water',
       od: 0.225,
-      start: end(port('uv', 'outlet')),
+      // On from the dosing spool's end along the south wall.
+      start: {
+        at: [spoolEnd, uvOut.at[1], spoolZ] as Vec3,
+        outward: [1, 0, 0] as Vec3,
+      },
       end: wall('north', gap(1, 2), 4.6),
     },
     {
@@ -561,20 +610,6 @@ export function plumbOlympic(): OlympicPlumbing {
       od: 0.054,
       start: wall('south', -5.2, 3.0),
       end: wall('west', 5.6, 3.0),
-    },
-    {
-      id: 'hypo-supply',
-      pipe: 'chemical',
-      od: 0.012,
-      start: wall('south', port('hypo', 'supply').at[0], 2.2),
-      end: end(port('hypo', 'supply')),
-    },
-    {
-      id: 'acid-supply',
-      pipe: 'chemical',
-      od: 0.012,
-      start: wall('south', port('acid', 'supply').at[0], 2.2),
-      end: end(port('acid', 'supply')),
     },
     {
       id: 'ozone',
@@ -681,6 +716,7 @@ export function plumbOlympic(): OlympicPlumbing {
   });
   // The fixed runs the router keeps clear of, each stopped short where a routed line joins it.
   const joins = new Set([
+    'Dosing spool',
     'Outlet header',
     'HX side-stream flow stub',
     'HX side-stream return stub',
@@ -689,7 +725,10 @@ export function plumbOlympic(): OlympicPlumbing {
     name: r.name,
     // The header's end fitting (a flange) and the main's need more room than a stub's.
     points: joins.has(r.name)
-      ? trimEnd(r.points, r.name === 'Outlet header' ? 0.6 : 0.2)
+      ? trimEnd(
+          r.points,
+          r.name === 'Outlet header' || r.name === 'Dosing spool' ? 0.6 : 0.2,
+        )
       : r.points,
     od: r.od,
     joint: r.joint,
@@ -731,57 +770,12 @@ export function plumbOlympic(): OlympicPlumbing {
     });
   }
 
-  // ---- The second pass: lines that tee into routed mains ----------------
-  // The dosing pumps' lines to their injection quills on top of the return
-  // main, just after the UV (chlorine and pH dosed after the ozone stage,
-  // which would destroy chlorine); the sample line from a tapping on the
-  // pump discharge manifold, before the filters and any dosing, to the
-  // dosing controller's cells (`doc/plant-model.md`). Routed clear of
-  // everything laid so far.
-  const returnMain = runs.find((r) => r.name === 'uv-to-pool');
+  // ---- The second pass: the sample line, teeing into a routed main ---------
+  // From a tapping on the pump discharge manifold, before the filters and
+  // any dosing, to the dosing controller's cells (`doc/plant-model.md`):
+  // pool water, so it may run overhead. Routed clear of everything laid.
   const manifold = runs.find((r) => r.name === 'Pump discharge manifold')!;
   const second: Want[] = [];
-  if (returnMain) {
-    // On top of the main's first level stretch long enough for both quills, `t` along it.
-    const pts = returnMain.points;
-    const k = Math.max(
-      1,
-      pts.findIndex(
-        (p, i) =>
-          i > 0 &&
-          Math.abs(p[1] - pts[i - 1][1]) < 1e-6 &&
-          Math.hypot(p[0] - pts[i - 1][0], p[2] - pts[i - 1][2]) >= 1.2,
-      ),
-    );
-    const quill = (t: number) => {
-      const a = pts[k - 1];
-      const b = pts[k];
-      return {
-        at: r3([
-          a[0] + (b[0] - a[0]) * t,
-          a[1] + returnMain.od / 2 + QUILL,
-          a[2] + (b[2] - a[2]) * t,
-        ]),
-        outward: [0, 1, 0] as Vec3,
-      };
-    };
-    second.push(
-      {
-        id: 'hypo-dose',
-        pipe: 'chemical',
-        od: 0.012,
-        start: end(port('hypo', 'dose')),
-        end: quill(0.35),
-      },
-      {
-        id: 'acid-dose',
-        pipe: 'chemical',
-        od: 0.012,
-        start: end(port('acid', 'dose')),
-        end: quill(0.65),
-      },
-    );
-  }
   // The tapping: on top of the manifold's run north.
   const tapping = {
     at: r3([
@@ -793,7 +787,7 @@ export function plumbOlympic(): OlympicPlumbing {
   };
   second.push({
     id: 'sample',
-    pipe: 'chemical',
+    pipe: 'water',
     od: 0.012,
     start: tapping,
     end: end(port('controller', 'sample')),

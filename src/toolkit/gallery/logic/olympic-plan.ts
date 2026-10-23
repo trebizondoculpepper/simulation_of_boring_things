@@ -77,6 +77,9 @@ const WALL_HEIGHT: Record<string, number> = {
   acid: 1.3,
 };
 
+/** The UV unit's middle along the south wall, metres. */
+const UV_X = -3.4;
+
 /** Maintenance access in front of each machine, metres. */
 export const PLAN_ACCESS = 0.8;
 /** Between the filters' outlines, metres. */
@@ -247,8 +250,19 @@ export function olympicPlan(): PlanItem[] {
   out.push(
     item('contact', 'Ozone contact tank', c, { x: 4.6, z: cz, facing: 'west' }),
   );
+  // The UV unit by the south wall, west of the dosing, so the return main
+  // leaving it passes the dosing pumps along the wall, where the chemicals
+  // are dosed into it: acid and hypochlorite lines never run over a
+  // walkway (the owner, 2026-10-23). It faces the wall, its access
+  // between, its outlet toward the dosing.
   const u = SIZE.uv;
-  out.push(item('uv', 'UV unit', u, { x: 0.4, z: cz, facing: 'east' }));
+  out.push(
+    item('uv', 'UV unit', u, {
+      x: UV_X,
+      z: hz - PLAN_ACCESS - u.d / 2,
+      facing: 'south',
+    }),
+  );
   // On the east wall, south of the battery's walkway: the panel, then the ozone generator.
   const pn = SIZE.panel;
   const pz = band + 0.2 + pn.w / 2;

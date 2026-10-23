@@ -11,27 +11,28 @@ describe('the Olympic plant room, plumbed and routed', () => {
 
   it('routes every line and leaves nothing unplumbed', () => {
     expect(plumbed.problems).toEqual([]);
-    expect(plumbed.runs.filter((r) => r.by === 'router')).toHaveLength(15);
+    expect(plumbed.runs.filter((r) => r.by === 'router')).toHaveLength(11);
   });
 
-  it('doses the chemicals onto the return main by quills after the UV, and samples the water off the pump manifold before the filters', () => {
-    const main = run('uv-to-pool');
-    for (const id of ['hypo-dose', 'acid-dose']) {
-      const end = run(id).points.at(-1)!;
-      // On top of the return main, a quill's height over it.
-      const onMain = main.points.some((p, k) => {
-        if (!k) return false;
-        const a = main.points[k - 1];
-        const within = (v: number, x: number, y: number) =>
-          v >= Math.min(x, y) - 1e-6 && v <= Math.max(x, y) + 1e-6;
-        return (
-          within(end[0], a[0], p[0]) &&
-          within(end[2], a[2], p[2]) &&
-          Math.abs(a[1] - p[1]) < 1e-6 &&
-          end[1] > p[1]
-        );
-      });
-      expect(onMain, id).toBe(true);
+  it('never runs acid or hypochlorite over a walkway: they stay against the south wall, where they come in', () => {
+    const chemical = plumbed.runs.filter((r) => r.kind === 'chemical-tube');
+    expect(chemical.map((r) => r.line).sort()).toEqual([
+      'acid-dose',
+      'acid-supply',
+      'hypo-dose',
+      'hypo-supply',
+    ]);
+    for (const r of chemical)
+      for (const p of r.points) expect(p[2], r.name).toBeGreaterThan(hz - 0.8);
+  });
+
+  it('doses onto the return main’s spool along the wall by quills on its top, and samples the water off the pump manifold before the filters', () => {
+    const spool = run('Dosing spool');
+    const along = spool.points.at(-1)!;
+    for (const id of ['Hypochlorite dose line', 'Acid dose line']) {
+      const quill = run(id).points.at(-1)!;
+      expect(quill[2]).toBeCloseTo(along[2], 6);
+      expect(quill[1]).toBeGreaterThan(along[1] + spool.od / 2);
     }
     const manifold = run('Pump discharge manifold');
     expect(run('sample').points[0][0]).toBeCloseTo(manifold.points[0][0], 6);
