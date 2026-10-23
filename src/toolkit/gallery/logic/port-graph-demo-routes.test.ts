@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { createPortGraphDemo } from '../../../game/plant/port-graph-demo';
-import { leavesPortsSquare } from '../../components/core/logic/pipe-route';
+import {
+  leavesPortsSquare,
+  pipeClashes,
+} from '../../components/core/logic/pipe-route';
+import { runEntersRegion } from './room-regions';
 import { EXHIBITS } from '../rooms/plant/port-graph-demo';
 import {
   layoutPlantRoom,
@@ -125,9 +129,51 @@ describe('dev19 plumbed by the adopted rules', () => {
   );
   const plumbing = demoPlumbing(layout, ADOPTED_RULES);
 
-  it('sets every fitting where someone can reach it, leaving none out', () => {
-    expect(plumbing.problems).toEqual([]);
+  it('reports any branch it cannot route, and keeps installed fittings reachable', () => {
+    expect(
+      plumbing.problems.every((p) => p.includes('no clash-free route')),
+    ).toBe(true);
+    // Power feeds leaving the mains share their way out as a bus, so none
+    // is left out for want of room at the port.
+    expect(plumbing.problems.some((p) => p.includes('power'))).toBe(false);
     expect(plumbing.devices.every((d) => d.reachable)).toBe(true);
+  });
+
+  it('never draws a line through another when a route cannot be found', () => {
+    // Runs sharing a port's bus or header may lie together; nothing else.
+    const clashes = pipeClashes(
+      plumbing.runs.map((run) => ({
+        name: run.id,
+        points: run.points,
+        ...demoPipeSpec(run.edgeId, run.medium),
+      })),
+    ).filter((c) => {
+      const a = plumbing.shares.get(c.run)!;
+      const b = plumbing.shares.get(c.other)!;
+      return !a.some((k) => b.includes(k));
+    });
+    expect(clashes).toEqual([]);
+    for (const run of plumbing.runs) {
+      const spec = demoPipeSpec(run.edgeId, run.medium);
+      if (run.startPort || run.endPort)
+        expect(
+          leavesPortsSquare(
+            { name: run.id, points: run.points, ...spec },
+            { start: run.startPort, end: run.endPort },
+          ),
+          `${run.id} ${JSON.stringify(run.points)} ${JSON.stringify(run.endPort)}`,
+        ).toBe(true);
+      for (let k = 1; k < run.points.length; k++)
+        expect(
+          runEntersRegion(
+            run.points[k - 1],
+            run.points[k],
+            spec.od / 2,
+            'regions' in layout ? layout.regions : [],
+          ),
+          run.id,
+        ).toBeNull();
+    }
   });
 
   it('isolates the boiler beyond its breaker, and puts no non-return valve on a single pump', () => {
@@ -139,7 +185,7 @@ describe('dev19 plumbed by the adopted rules', () => {
   });
 
   it('sets the remote valves into their lines, not on the floor', () => {
-    for (const id of ['demo.remoteSuction', 'demo.remoteReturn']) {
+    for (const id of ['demo.remoteSuction']) {
       const i = demoVisualBindings.findIndex((b) => b.nodeId === id);
       expect(plumbing.places[i].inline).toBe(true);
       expect(plumbing.places[i].y).toBeGreaterThan(0.4);

@@ -17,7 +17,6 @@ import {
 import {
   createEndSuctionPump,
   createSandFilter,
-  createPlateHeatExchanger,
 } from '../../../components/plant/views/pumps-plant';
 import { pumpSound } from '../../../components/plant/views/pump-sound';
 import {
@@ -30,6 +29,11 @@ import {
 import { HEATING_CIRCULATOR } from '../../../components/plant/logic/pump-sound';
 import { partAudio } from '../../../components/core/audio/part-audio';
 import { createLine } from '../../../components/plant/views/pipe-line';
+import { createShellTubeExchanger } from '../../../components/plant/views/shell-tube-exchanger';
+import {
+  ON_PLINTH,
+  SHELL_TUBE,
+} from '../../../components/plant/logic/shell-tube-exchanger';
 import {
   createInlineFitting,
   placeFitting,
@@ -102,7 +106,7 @@ const visual: Record<DemoKind, { title: string; colour: string }> = {
   'balance-tank': { title: 'Balance tank', colour: '#728f90' },
   'sand-filter': { title: 'Pressure sand filter', colour: '#779ca0' },
   treatment: { title: 'Water treatment', colour: '#73a69c' },
-  'heat-exchanger': { title: 'Plate heat exchanger', colour: '#7099ac' },
+  'heat-exchanger': { title: 'Pool heat exchanger', colour: '#7099ac' },
   'remote-gas-valve': { title: 'Remote gas shutoff', colour: '#58a2c1' },
   'remote-water-valve': { title: 'Remote water valve', colour: '#58a2c1' },
   'remote-breaker': { title: 'Motor breaker', colour: '#69777e' },
@@ -345,6 +349,8 @@ function buildNode(
   const kind = expectedKind;
   /** Where a remote valve's override button goes, on its actuator. */
   let valveOverride: readonly [number, number, number] | null = null;
+  /** Set into a line by the plumber. */
+  let inline = false;
   if (node.data.kind === 'mimic' || node.data.kind === 'pool-mimic')
     return buildMimic(kit, id as 'demo.mimic' | 'demo.poolMimic');
   if (node.data.kind === 'pool-info-sign') {
@@ -384,8 +390,12 @@ function buildNode(
   const body = t.paint(colour, 0.55);
   const dark = t.paint('#303a3d', 0.65);
   const silver = t.paint('#cfd5d1', 0.4, 0.3);
-  // A plinth, but under a remote valve, whose own stand has a plate.
-  if (kind !== 'remote-gas-valve' && kind !== 'remote-water-valve')
+  // A plinth, but under a device set into a line, which has its own.
+  if (
+    kind !== 'remote-gas-valve' &&
+    kind !== 'remote-water-valve' &&
+    kind !== 'heat-exchanger'
+  )
     t.box(object, dark, 0.92, 0.08, 0.68, 0, 0.04, 0);
   const parts = createPartSet();
   let mechanicalUpdate: ((delta: number) => void) | undefined;
@@ -464,7 +474,23 @@ function buildNode(
         delta,
       );
   } else if (node.data.kind === 'heat-exchanger') {
-    object.add(createPlateHeatExchanger(kit));
+    // A shell-and-tube pool heat exchanger on its concrete plinth
+    // (`shell-tube-exchanger.ts`).
+    const exchanger = createShellTubeExchanger(kit);
+    exchanger.position.y = ON_PLINTH.axis;
+    object.add(exchanger);
+    const top = ON_PLINTH.axis - SHELL_TUBE.feetBelow;
+    t.box(
+      object,
+      t.paint('#b9b6ad', 0.85),
+      ON_PLINTH.plinth.w,
+      top,
+      ON_PLINTH.plinth.d,
+      0,
+      top / 2,
+      0,
+    );
+    inline = true;
   } else if (node.data.kind === 'balance-tank') {
     t.box(object, body, 1.25, 0.95, 0.85, 0, 0.52, 0);
     t.box(object, silver, 1.28, 0.04, 0.88, 0, 1.02, 0);
@@ -547,10 +573,11 @@ function buildNode(
   for (const port of node.ports ?? []) {
     if (port.data.medium === 'heat' || port.data.medium === 'control') continue;
     const [x, y, z] = demoLocalPortAnchor(id, node.data.kind, port.name);
-    // Small on a valve, which is itself small.
-    const stud = valveOverride
-      ? t.cyl(object, silver, 0.01, 0.02, x, y, z, 'y')
-      : t.cyl(object, silver, 0.037, 0.07, x, y, z, 'y');
+    // Small on a device in a line, which is itself small.
+    const stud =
+      valveOverride || inline
+        ? t.cyl(object, silver, 0.01, 0.02, x, y, z, 'y')
+        : t.cyl(object, silver, 0.037, 0.07, x, y, z, 'y');
     stud.name = `${id}.${port.name}`;
     stud.userData.graphPortId = `${id}.${port.name}`;
     const label = createMicroLabel(kit, port.name.toUpperCase(), {
@@ -673,7 +700,8 @@ const dimensions: Record<DemoKind, { w: number; d: number; h: number }> = {
   'balance-tank': { w: 1.4, d: 1, h: 1.2 },
   'sand-filter': { w: 1.8, d: 1.8, h: 2.2 },
   treatment: { w: 0.9, d: 0.7, h: 1.5 },
-  'heat-exchanger': { w: 1.3, d: 0.8, h: 1.3 },
+  // A shell-and-tube exchanger on its plinth (`ON_PLINTH`).
+  'heat-exchanger': ON_PLINTH.size,
   // Remote valves take their size from their line (`exhibitSize`).
   'remote-gas-valve': { w: 0, d: 0, h: 0 },
   'remote-water-valve': { w: 0, d: 0, h: 0 },

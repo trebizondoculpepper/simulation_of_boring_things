@@ -84,6 +84,7 @@ export function scorePlumbedDev19(
       return { name: r.id, points: r.points, od, joint };
     }),
     runPrices: plumbing.runs.map((r) => price(r.edgeId, r.medium)),
+    shares: plumbing.shares,
     ends: [...byLine.values()].map(
       (pieces) => [pieces[0][0], pieces.at(-1)!.at(-1)!] as const,
     ),
@@ -145,10 +146,10 @@ export function scoreMorningDev19(sizes: readonly ExhibitSize[]): Score {
 }
 
 /**
- * The seed Dev19c uses: the best of seeds 1 to 16 by `searchDev19`, with
- * the process layout rules (2026-10-23: 74.1, against 72.2 for the best
- * layout before them). The search takes some seconds, so it is run
- * offline and its winner kept here.
+ * The seed Dev19c uses: the best of seeds 1 to 16 by `searchDev19` that
+ * passes every gate (2026-10-23, with the clash-free router: 84, every
+ * line routed with no clash and every fitting within reach). The search
+ * takes some seconds, so it is run offline and its winner kept here.
  */
 export const DEV19C_SEED = 9;
 

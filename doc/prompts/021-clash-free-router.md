@@ -13,9 +13,9 @@ Every riser climbs through the lanes below it, and x-runs cross z-runs at the sa
 
 ## The design (Claude's first draft: review and improve it)
 
-1. **A voxel reservation grid.** The room is divided into cells of 0.1 m. At 13 × 13 × 8 m that is 1.35 million cells, so a `Uint8Array` of about 1.4 MB, or a `Uint16Array` of about 2.7 MB with a cost per cell.
-   - The obstacles are marked first: the machines' boxes, the walls, and the reserved regions that forbid runs (`room-regions.ts`, and placement's walkways below 2.1 m).
-   - Each routed run then marks its cells, padded by its outside radius, any insulation, its largest fitting (`fittingsOf`, `jointFitting`) and a clearance of 25 mm.
+1. **A voxel search grid, with a continuous final check.** A 0.1 m cell is useful for finding routes but cannot establish a 25 mm gap: occupancy must conservatively cover every cell touched by a swept pipe or fitting, and `pipeClashes` plus exact region intersection must check the final polylines. Grid size and memory are bounded by the actual room, with an explicit failure if a route cannot fit.
+   - Mark only regions whose `forbids.runs` is true, the room envelope, and machine volumes with known height. `layout.solids` are floor footprints, not 3D machine boxes; do not silently treat them as full-height obstacles. Permit only the lead belonging to a machine to start inside that machine's envelope.
+   - Reserve full assembled lines before splitting around inline devices; pieces of one line meet intentionally. Account for insulation and joint fittings using the drawing helper's geometry, and use the checker's 5 mm clearance unless a larger design clearance is explicitly required.
 2. **A height for each direction**, the standard pipe-rack rule:
    - east–west runs on one set of levels, north–south runs on another;
    - a change of direction changes level at its bend;
@@ -23,21 +23,21 @@ Every riser climbs through the lanes below it, and x-runs cross z-runs at the sa
 
    The router may prefer this as a cost, not require it, if that routes better.
 
-3. _*A path search (A*) on the grid_* from each port's lead (`withPortLeads`, `portLead`) to the other's:
+3. _*A path search (A*) on the grid_* between fixed, square port leads (`withPortLeads`, `portLead`):
    - orthogonal moves only;
    - a cost per bend;
    - the cost per metre from the line's price (`pipe-costs.ts`);
    - only through free cells, the pipe's radius checked against obstacles grown by it.
 
-   Keep it fast by searching only within the line's bounding box plus a margin, and by moving in straight runs between bends.
+   Keep it fast with a bounded search region, but expand that region or report failure rather than assume that a route outside the first box does not exist. Every candidate is rechecked after `withPortLeads`, bend rounding and fitting placement.
 
 4. **Order:** the hardest to move first. Flues and lagged heating first, then pool mains, gas, copper and small bore, then conduits.
-5. **Rip-up and reroute** (negotiated congestion):
+5. **Rip-up and reroute** (negotiated congestion), with a deterministic retry limit:
    - a line that cannot route may remove the earlier lines blocking it;
    - those cells' costs rise, and the removed lines route again;
    - repeat, up to a limit.
 
-   What still cannot be routed is reported as a problem, never drawn through something.
+   Recheck every affected line after a retry. What still cannot be routed is reported as a problem and omitted, never drawn through something. This applies to the flue and its ceiling terminal too.
 
 6. **Keep what exists working:**
    - the reachable-end straights and the inline fittings (`placeInline`, `splitAt`): fittings must still land on reachable straights;
@@ -46,7 +46,7 @@ Every riser climbs through the lanes below it, and x-runs cross z-runs at the sa
 
    The router replaces only the overhead lanes between the ends.
 
-7. **Proof:** `pipeClashes` over every run must find no clash, and the scorer's clash gate must pass for Dev19 (`?room=dev19`), Dev19c and Dev19d.
+7. **Proof:** `pipeClashes` over the final split runs must find no clash, while every line still leaves its ports square, all fitted devices remain reachable, and no run enters a reserved region. Compare the same room layout and plumbing rules before and after for Dev19 (`?room=dev19`), Dev19c and Dev19d. Record scorer gate failures separately from the numeric score.
 
 ## What to build
 

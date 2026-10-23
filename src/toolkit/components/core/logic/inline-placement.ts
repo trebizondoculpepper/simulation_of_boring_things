@@ -15,6 +15,8 @@ export interface InlineDevice {
   length: number;
   /** The end of the line it belongs near. */
   near: 'start' | 'end';
+  /** Only on a level straight (a heat exchanger on its feet). */
+  level?: boolean;
 }
 
 export interface InlineSpot {
@@ -132,6 +134,7 @@ export function placeInline(
     const order = fromStart ? windows : [...windows].reverse();
     for (const w of order) {
       if (w.to - w.from < d.length) continue;
+      if (d.level && Math.abs(w.b[1] - w.a[1]) > 1e-6) continue;
       // Slide along the window, from the end it is entered at, in small
       // steps, to the first free and (by preference) reachable position.
       const step = 0.02;

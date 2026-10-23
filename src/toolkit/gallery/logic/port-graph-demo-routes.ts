@@ -1,6 +1,7 @@
 import { demoGraph } from '../../../game/plant/port-graph-demo';
 import type { DemoKind } from '../../../game/plant/port-graph-demo';
 import { withPortLeads } from '../../components/core/logic/pipe-route';
+import { pipeClashes } from '../../components/core/logic/pipe-route';
 import type {
   PipeJoint,
   PortEnd,
@@ -12,7 +13,14 @@ import { choosePipe } from '../../components/core/logic/plumber';
 import type { PipeRequest } from '../../components/core/logic/plumber';
 import { PIPE_KINDS } from '../../components/core/views/pipe-kinds';
 import { pricePerMetre } from '../../components/core/logic/pipe-costs';
+import { routeVoxelLines } from '../../components/core/logic/voxel-router';
+import type { DrawnRun } from '../../components/core/logic/pipe-route';
 import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
+import {
+  ON_PLINTH,
+  SHELL_TUBE,
+  shellTubePorts,
+} from '../../components/plant/logic/shell-tube-exchanger';
 import { BASE_MODEL } from '../../../game/plant/demo-variants';
 import type { DemoModel } from '../../../game/plant/demo-variants';
 import { runEntersRegion } from './room-regions';
@@ -139,6 +147,18 @@ const normals: Partial<Record<DemoKind, Record<string, Vec3>>> = {
 const isValve = (kind: DemoKind) =>
   kind === 'remote-gas-valve' || kind === 'remote-water-valve';
 
+/**
+ * Devices the plumber sets into a line rather than placement onto the
+ * floor: the remote valves. Each line passes through by an entry port and
+ * an exit port. (The shell-and-tube heat exchanger, though the pool water
+ * passes straight through it, stands on its own plinth and is placed.)
+ */
+const isInline = (kind: DemoKind) => isValve(kind);
+const THROUGH: Partial<Record<DemoKind, readonly [string, string]>> = {
+  'remote-gas-valve': ['in', 'out'],
+  'remote-water-valve': ['in', 'out'],
+};
+
 /** The outside diameter of the line a remote valve sits in, metres. */
 export function demoValveOd(nodeId: string): number {
   for (const edge of demoGraph.edges) {
@@ -170,6 +190,7 @@ export function demoPorts(
   kind: DemoKind,
 ): Record<string, { at: Vec3; out: Vec3 }> {
   if (isValve(kind)) return demoValveGeometry(nodeId, kind).ports;
+  if (kind === 'heat-exchanger') return shellTubePorts(ON_PLINTH.axis);
   return Object.fromEntries(
     Object.entries(anchors[kind] ?? {}).map(([port, at]) => [
       port,
@@ -394,7 +415,8 @@ const SITES: Partial<Record<DemoKind, PlaceItem['site']>> = {
 const WITHDRAWAL: Partial<Record<DemoKind, PlaceItem['withdrawal']>> = {
   'pool-pump': { right: 0.6 },
   circulator: { right: 0.6 },
-  'heat-exchanger': { right: 0.8 },
+  // Its tube stack drawn out of its pool-water inlet's end.
+  'heat-exchanger': { left: ON_PLINTH.withdrawal },
   'sand-filter': { top: 1 },
 };
 
@@ -411,10 +433,14 @@ export function demoPlaceItems(
     ...(kind === 'gas-main' || kind === 'mains' || kind === 'makeup-main'
       ? { walls: ['west' as const] }
       : {}),
-    ...(kind === 'boiler' ? { clearAbove: true } : {}),
+    // Nothing over what must connect straight up: the boiler's flue, the
+    // heat exchanger's heating branches on top.
+    ...(kind === 'boiler' || kind === 'heat-exchanger'
+      ? { clearAbove: true }
+      : {}),
     ...(SITES[kind] ? { site: SITES[kind] } : {}),
     // The remote valves sit in their lines: the plumber places them.
-    ...(isValve(kind) ? { inline: true } : {}),
+    ...(isInline(kind) ? { inline: true } : {}),
     // Machines of a kind stand together as a battery.
     group: kind,
     // Room to take parts out (process layout practice): a pump's motor
@@ -507,7 +533,8 @@ export function demoLines(model: DemoModel = BASE_MODEL): DemoLine[] {
       medium !== 'flue'
     )
       continue;
-    if (isValve(kindOf(edge.sourceId, graph)) && edge.sourcePort === 'out')
+    const sourceKind = kindOf(edge.sourceId, graph);
+    if (isInline(sourceKind) && edge.sourcePort === THROUGH[sourceKind]?.[1])
       continue;
     const line: DemoLine = {
       medium,
@@ -517,10 +544,14 @@ export function demoLines(model: DemoModel = BASE_MODEL): DemoLine[] {
       through: [],
     };
     // On through each valve set into the line.
-    while (isValve(kindOf(line.to.id, graph)) && line.to.port === 'in') {
+    while (
+      isInline(kindOf(line.to.id, graph)) &&
+      line.to.port === THROUGH[kindOf(line.to.id, graph)]?.[0]
+    ) {
       const valve = line.to.id;
+      const exit = THROUGH[kindOf(valve, graph)]![1];
       const next = graph.edges.find(
-        (e) => e.sourceId === valve && e.sourcePort === 'out',
+        (e) => e.sourceId === valve && e.sourcePort === exit,
       );
       if (!next) break;
       line.through.push(valve);
@@ -559,7 +590,7 @@ export interface PlumbingRules {
    * along a straight at the port's height, if that is within reach, long
    * enough for the fittings that belong at that end.
    */
-  routing: 'lanes' | 'reachable-ends';
+  routing: 'lanes' | 'reachable-ends' | 'voxel';
 }
 export const CLAUDE_RULES: PlumbingRules = {
   name: "Claude's rules",
@@ -584,7 +615,7 @@ export const CODEX_RULES: PlumbingRules = {
 export const ADOPTED_RULES: PlumbingRules = {
   ...CODEX_RULES,
   name: "Codex's rules, with reachable ends",
-  routing: 'reachable-ends',
+  routing: 'voxel',
 };
 
 /** The plumber's expansion of Dev19 (`plumbing-expansion.ts`). */
@@ -749,6 +780,28 @@ export function demoPlumbing(
   const terminals: { id: string; kind: MagicTerminal; at: Vec3; od: number }[] =
     [];
   const problems: string[] = [];
+  const routed: DrawnRun[] = [];
+  /**
+   * Each routed line's group: the port it leaves from. Lines leaving one
+   * port share their way out, as a bus (power feeds from the mains) or a
+   * header (a pump feeding a battery of filters), so they need not keep
+   * clear of each other; everything else must.
+   */
+  const groupOf = new Map<string, readonly [string, string]>();
+  const ends = (line: DemoLine) =>
+    [
+      `from ${line.from.id}.${line.from.port}`,
+      `to ${line.to.id}.${line.to.port}`,
+    ] as const;
+  // Those leaving the same port, or arriving at the same port (a header on
+  // the way in, as filters' outlets joining at the treatment cabinet).
+  const others = (line: DemoLine) => {
+    const [a, b] = ends(line);
+    return routed.filter((r) => {
+      const g = groupOf.get(r.name);
+      return !g || (g[0] !== a && g[1] !== b);
+    });
+  };
   /** Fittings that could not be set where anyone can reach them: not installed. */
   const leftOut = new Set<string>();
   const count: Record<Medium, number> = { gas: 0, water: 0, power: 0, flue: 0 };
@@ -794,24 +847,71 @@ export function demoPlumbing(
     // terminates the line. The route is checked, not assumed, clear.
     const magic = MAGIC_TERMINALS[kindOf(line.to.id, model.graph)];
     if (magic === 'ceiling') {
-      const top: Vec3 = [start[0], layout.height, start[2]];
-      const endPort: PortEnd = { at: top, outward: [0, -1, 0] };
-      const points = withPortLeads([start, top], od, joint, {
-        start: startPort,
-        end: endPort,
-      });
-      for (let k = 1; k < points.length; k++) {
-        const hit = runEntersRegion(
-          points[k - 1],
-          points[k],
-          od / 2,
-          regionsOf(at),
+      const offsets: readonly [number, number][] = [
+        [0, 0],
+        [0.5, 0],
+        [-0.5, 0],
+        [0, 0.5],
+        [0, -0.5],
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ];
+      let selected: {
+        points: Vec3[];
+        top: Vec3;
+        endPort: PortEnd;
+        check: DrawnRun;
+      } | null = null;
+      for (const [dx, dz] of offsets) {
+        const top: Vec3 = [start[0] + dx, layout.height, start[2] + dz];
+        const endPort: PortEnd = { at: top, outward: [0, -1, 0] };
+        const points = withPortLeads(
+          dx || dz
+            ? [
+                start,
+                [
+                  start[0],
+                  Math.min(layout.height - 0.5, start[1] + 1),
+                  start[2],
+                ],
+                [top[0], Math.min(layout.height - 0.5, start[1] + 1), top[2]],
+                top,
+              ]
+            : [start, top],
+          od,
+          joint,
+          { start: startPort, end: endPort },
         );
-        if (hit)
-          problems.push(
-            `${line.edges[0]}: its way up to the ceiling crosses ${hit.name}`,
-          );
+        if (
+          points.some(
+            (p) =>
+              Math.abs(p[0]) + od / 2 >= layout.halfX ||
+              Math.abs(p[2]) + od / 2 >= layout.halfZ,
+          )
+        )
+          continue;
+        if (
+          points
+            .slice(1)
+            .some((p, k) =>
+              runEntersRegion(points[k], p, od / 2, regionsOf(at)),
+            )
+        )
+          continue;
+        const check: DrawnRun = { name: line.edges[0], points, od, joint };
+        if (routed.some((other) => pipeClashes([other, check]).length))
+          continue;
+        selected = { points, top, endPort, check };
+        break;
       }
+      if (!selected) {
+        problems.push(`${line.edges[0]}: no clash-free route to the ceiling`);
+        return null;
+      }
+      const { points, top, endPort, check } = selected;
+      routed.push(check);
       terminals.push({
         id: `${line.to.id}.${line.to.port}`,
         kind: magic,
@@ -824,6 +924,40 @@ export function demoPlumbing(
     if (!finish)
       throw new Error(`${line.edges[0]}: its end has no visual port`);
     const endPort = demoPortEnd(at, line.to.id, line.to.port, finish, model);
+    if (rules.routing === 'voxel') {
+      const result = routeVoxelLines(
+        {
+          halfX: at.halfX,
+          halfZ: at.halfZ,
+          height: at.height,
+          regions: regionsOf(at),
+        },
+        [
+          {
+            id: line.edges[0],
+            start: startPort,
+            end: endPort,
+            od,
+            joint,
+            price: pricePerMetre(
+              demoPipeSpec(line.edges[0], line.medium).kind,
+              od,
+            ),
+            startStraight: ext.start,
+            endStraight: ext.end,
+          },
+        ],
+        others(line),
+      );
+      const points = result.routes.get(line.edges[0]);
+      if (!points) {
+        problems.push(...result.problems);
+        return null;
+      }
+      routed.push({ name: line.edges[0], points, od, joint });
+      groupOf.set(line.edges[0], ends(line));
+      return { points, startPort, endPort, od };
+    }
     const index = count[line.medium]++;
     const y = Math.min(
       layout.height - 0.35,
@@ -881,10 +1015,13 @@ export function demoPlumbing(
           kind: f.kind as PlumbedDevice['kind'],
           near: 'start' as const,
         })),
+      // The designed devices in the line: its valves, its heat exchanger
+      // (level, on a plinth).
       ...line.through.map((id) => ({
         id,
         kind: 'remote-valve' as const,
         near: 'start' as const,
+        level: kindOf(id, model.graph) === 'heat-exchanger',
       })),
       ...fittings
         .filter((f) => f.serves !== line.from.id)
@@ -901,7 +1038,9 @@ export function demoPlumbing(
           w.kind,
           lineOd,
           w.kind === 'remote-valve'
-            ? demoValveGeometry(w.id, kindOf(w.id, model.graph)).length
+            ? kindOf(w.id, model.graph) === 'heat-exchanger'
+              ? SHELL_TUBE.length
+              : demoValveGeometry(w.id, kindOf(w.id, model.graph)).length
             : undefined,
         ),
       ]),
@@ -917,10 +1056,11 @@ export function demoPlumbing(
     const r = route(
       line,
       at,
-      rules.routing === 'reachable-ends'
+      rules.routing === 'reachable-ends' || rules.routing === 'voxel'
         ? { start: room('start'), end: room('end') }
         : { start: 0, end: 0 },
     );
+    if (!r) return;
     if (line.medium === 'flue') {
       runs.push({
         id: line.edges[0],
@@ -938,6 +1078,7 @@ export function demoPlumbing(
         id: w.id,
         length: lengths.get(w.id)!,
         near: w.near,
+        level: (w as { level?: boolean }).level ?? false,
       })),
       // Past each port's lead, and each bend's fitting.
       { ends: 0.25, bends: 0.12, standing },
@@ -987,7 +1128,12 @@ export function demoPlumbing(
           along: spot.along,
           reachable: spot.reachable,
           edgeId: line.edges[0],
-          operator: line.medium === 'gas' ? 'solenoid' : 'motor',
+          operator:
+            kindOf(w.id, model.graph) === 'heat-exchanger'
+              ? 'self'
+              : line.medium === 'gas'
+                ? 'solenoid'
+                : 'motor',
         });
         continue;
       }
@@ -1006,11 +1152,25 @@ export function demoPlumbing(
     }
   };
   // Pipes first, which places the valves; then power and flue, which reach them.
-  for (const line of lines)
-    if (line.medium === 'gas' || line.medium === 'water') plumb(line, layout);
+  // Lines through inline devices first, which places them; then the rest
+  // of the pipes, which may end at them (the heating flow and return to the
+  // heat exchanger's top).
+  // The flue first: it must rise straight through the roof.
+  for (const line of lines) if (line.medium === 'flue') plumb(line, layout);
+  // The hardest to move first: dearest a metre (lagged heating), then down.
+  const dearness = (l: DemoLine) => {
+    const { kind, od } = demoPipeSpec(l.edges[0], l.medium);
+    return pricePerMetre(kind, od);
+  };
+  const pipes = lines
+    .filter((l) => l.medium === 'gas' || l.medium === 'water')
+    .sort((a, b) => dearness(b) - dearness(a));
+  for (const line of pipes) if (line.through.length) plumb(line, layout);
+  const throughPlaced = { ...layout, places };
+  for (const line of pipes)
+    if (!line.through.length) plumb(line, throughPlaced);
   const placed = { ...layout, places };
-  for (const line of lines)
-    if (line.medium === 'power' || line.medium === 'flue') plumb(line, placed);
+  for (const line of lines) if (line.medium === 'power') plumb(line, placed);
   // What the plumber installed, as the graph the room runs (prompt 018,
   // "The bound room"): the plan with its installed fittings as nodes.
   for (const id of problems.flatMap(
@@ -1022,5 +1182,12 @@ export function demoPlumbing(
     model.graph,
   );
   problems.push(...plumbedGraphIssues(graph));
-  return { places, runs, devices, terminals, problems, graph };
+  // Which runs share a port's bus or header, by run.
+  const shares = new Map(
+    runs.map((r) => {
+      const line = lines.find((l) => l.edges[0] === r.edgeId);
+      return [r.id, line ? [...ends(line)] : [r.id]] as const;
+    }),
+  );
+  return { places, runs, devices, terminals, problems, graph, shares };
 }

@@ -45,6 +45,11 @@ export interface ScoredRoom {
   unreachableAccess: number;
   /** The runs of pipe and conduit, as drawn. */
   runs: readonly DrawnRun[];
+  /**
+   * Runs that share a port's bus or header, by run name: they may lie
+   * together, so overlaps between them are not clashes.
+   */
+  shares?: ReadonlyMap<string, readonly string[]>;
   /** What each run costs a metre, installed, £ (`pipe-costs.ts`). */
   runPrices: readonly number[];
   /** Each line's two ends, for its shortest square length. */
@@ -107,7 +112,11 @@ export function scoreRoom(room: ScoredRoom): Score {
   });
 
   // Physical clashes and reserved regions.
-  const clashes = pipeClashes(room.runs).length;
+  const clashes = pipeClashes(room.runs).filter((c) => {
+    const a = room.shares?.get(c.run);
+    const b = room.shares?.get(c.other);
+    return !(a && b && a.some((k) => b.includes(k)));
+  }).length;
   if (clashes) gates.push(`${clashes} places where runs cut into each other`);
   let intrusions = 0;
   for (const run of room.runs)
