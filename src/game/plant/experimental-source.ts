@@ -338,7 +338,8 @@ type Vec3 = [number, number, number];
 export const SOURCE_SHAPE = {
   radius: 0.25,
   height: 1.1,
-  outputs: 0.85,
+  // Low enough to leave the lettering, front and back, clear, and still at a working height.
+  outputs: 0.5,
   stud: 0.08,
   gland: 0.04,
 } as const;

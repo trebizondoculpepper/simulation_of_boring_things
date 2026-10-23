@@ -162,8 +162,11 @@ export function createExperimentalSourceView(
       32,
     ),
   );
-  // Its lettering, painted on its front.
-  group.add(paintedLettering(kit, terminal, r, inkFor(colour)));
+  // Its lettering, painted on its front and again on its back.
+  const front = paintedLettering(kit, terminal, r, inkFor(colour));
+  const back = front.clone();
+  back.rotation.y = Math.PI;
+  group.add(front, back);
   for (const p of terminal.ports) {
     const id = `${terminal.spec.id}.${p.name}`;
     const [ox, oy, oz] = p.out;
