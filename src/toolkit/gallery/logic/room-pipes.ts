@@ -255,7 +255,8 @@ export function poolPlantPipework(room: string): {
   // on out of sight to wherever it comes from (the central plant).
   const INTO_CEILING = roomStructure(room)!.ceilingZone;
   const names = ROUTED[room];
-  const h = layout.box.w / 2;
+  const hx = layout.box.w / 2;
+  const hz = layout.box.d / 2;
   const by = (end: string) =>
     layout.placed.find((p) => p.item.label.endsWith(end))!;
   const port = (p: Placed, name: string) => placedPort(p, name);
@@ -285,10 +286,10 @@ export function poolPlantPipework(room: string): {
     for (const i of [0, points.length - 1]) {
       const p = points[i];
       const side = Math.sign(p[2]);
-      if (Math.abs(Math.abs(p[2]) - h) > 1e-6) continue;
-      points[i] = [p[0], p[1], side * (h + WALL)];
+      if (Math.abs(Math.abs(p[2]) - hz) > 1e-6) continue;
+      points[i] = [p[0], p[1], side * (hz + WALL)];
       through.push({
-        at: [p[0], p[1], side * (h + WALL / 2)],
+        at: [p[0], p[1], side * (hz + WALL / 2)],
         normal: [0, 0, -side],
         thickness: WALL,
         kind: PLASTIC.has(r.kind) ? 'fire-collar' : 'sleeve',
@@ -317,7 +318,7 @@ export function poolPlantPipework(room: string): {
           : 'Main drains to the balance tank',
       kind: 'pvc-pressure',
       od: p.od,
-      points: [[p.at[0], p.at[1], -h], p.at],
+      points: [[p.at[0], p.at[1], -hz], p.at],
       joins: [tank.item.label],
       service: 'pool water',
       label: name === 'overflow' ? 'FROM OVERFLOW' : 'FROM MAIN DRAINS',
@@ -553,10 +554,10 @@ export function poolPlantPipework(room: string): {
   // Through the gap between two filters of the south row.
   const byX = [...south].sort((a, b) => a.f.x - b.f.x);
   const gapX = (byX[0].f.footprint.maxX + byX[1].f.footprint.minX) / 2;
-  channels.push({ from: [gapX, 0, inSouthZ], to: [gapX, 0, h], width: 0.3 });
+  channels.push({ from: [gapX, 0, inSouthZ], to: [gapX, 0, hz], width: 0.3 });
   if (east.length) {
     const eastZs = east.flatMap((x) => [x.inlet.at[2], x.drain.at[2]]);
-    const cornerX = h - 0.4;
+    const cornerX = hx - 0.4;
     const cornerZ = Math.max(...east.map((x) => x.f.footprint.maxZ)) + 0.4;
     channels.push({
       from: [inEastX, 0, Math.min(...eastZs) - 0.4],
@@ -571,7 +572,7 @@ export function poolPlantPipework(room: string): {
     });
     channels.push({
       from: [cornerX, 0, cornerZ],
-      to: [cornerX, 0, h],
+      to: [cornerX, 0, hz],
       width: 0.3,
     });
   }
@@ -786,7 +787,7 @@ export function poolPlantPipework(room: string): {
       uvOut.at,
       uvOut1,
       [uvOut1[0], L.toPool, uvOut1[2]],
-      [uvOut1[0], L.toPool, -h],
+      [uvOut1[0], L.toPool, -hz],
     ],
     joins: [uv.item.label],
     service: 'pool water',
@@ -823,7 +824,7 @@ export function poolPlantPipework(room: string): {
           : 'Heating return from the heat exchanger',
       kind: 'lagged-heating',
       od: 0.114,
-      points: [[s[0], s[1], h], s, p.at],
+      points: [[s[0], s[1], hz], s, p.at],
       joins: [phe.item.label],
       service,
       label: service === 'heating flow' ? 'LTHW FLOW' : 'LTHW RETURN',

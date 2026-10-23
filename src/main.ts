@@ -288,7 +288,11 @@ const starter = async (
         ? (
             await import('./toolkit/gallery/logic/olympic-plan')
           ).olympicShellPlan()
-        : undefined;
+        : hall === 'pool_01'
+          ? (
+              await import('./toolkit/gallery/logic/lounge-plant-plan')
+            ).loungeShellPlan()
+          : undefined;
     return (surface) =>
       startPlantRoomShell(surface, size, hall, plan ? { plan } : {});
   }

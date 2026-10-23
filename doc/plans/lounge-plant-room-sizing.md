@@ -1,6 +1,6 @@
 # Lounge pool plant room: sizing study
 
-Status: sizing only, 2026-10-23. No shell, machine placement or pipework has been changed. The next stage follows `doc/room-layout-guide.md`: reserve the real door, gantry and stair regions, place the machines, route the services and score each candidate before selecting a size.
+Status: the 12 × 11 × 8 m first trial is built, 2026-10-23. The shell, machine placement bounds, stair and pipe wall endpoints now use the same rectangle; all twelve machine access points and every valve are reachable in the layout tests. This is a trial of the existing hand-placed plant, not a search result from the new placement and voxel-routing pipeline. That pipeline's full clash-free scoring gate remains for a later iteration.
 
 ## Boundaries and inventory
 
@@ -20,4 +20,4 @@ Use **12 × 11 × 8 m** for the first placement and routing trial: 132 m², twel
 
 The generic `reserveRegions` calculation reports no abstract fit problem for 12 × 10 m with north and south doors and an east-wall gantry. Its automatic stair orientation, however, puts the stair foot across the north door approach. The actual plan must connect the north pool doorway to the upper landing and run the stair away from it, as the current room does. A zero-problem result from the generic reserver is therefore only a dimensional check, not placement approval.
 
-The size is provisional until all machines and their withdrawal/access envelopes fit, every doorway and the stair are walkable, all process and supply lines route with the specified north/south wall roles, and the room scorer passes every gate. If 12 × 10 m fails, score 12 × 11 m before considering the existing 12 × 12 m.
+The 12 × 11 m room is now the live first trial. Its equipment and pipework stay within the smaller shell and the north/south wall roles are retained. The old hand-routed filter inlets still cross their outlets in two places, so the full scorer would fail its no-clash gate; this trial is not yet an optimized final layout. The 12 × 10 m candidate still requires a separate placement and routing trial.

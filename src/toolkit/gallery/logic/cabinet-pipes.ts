@@ -244,6 +244,8 @@ export interface CabinetRun {
     id: string;
     at: Vec3;
     axis: 'x' | 'y' | 'z';
+    /** Turn the operator around a vertical run to face the clear aisle. */
+    facing?: number;
     /** Its lever, or, out of reach overhead, a chain wheel (`CHAIN_TO`). */
     operator?: 'lever' | 'chain';
     /** Its axis may be its rise's. */
@@ -268,6 +270,8 @@ export interface Isolator {
 
 /** Out from a stub's valve and cap before a pipe turns, metres. */
 const CLEAR = 0.15;
+/** Space for the drain valve and its lever before the pipe drops to its gully. */
+const FOOTBATH_DRAIN_REACH = 0.5;
 /** The lowest height a pool pipe crosses the room at, over the cabinet's top. */
 const LOWEST = 2.5;
 const STEP = 0.2;
@@ -357,7 +361,8 @@ export function cabinetGully(room: string, trial?: Placed): Vec3 | null {
   if (!s) return null;
   const port = cabinetPorts(s.jets).find((p) => p.to === 'drain')!;
   const at = inRoom(s.placed, port.at);
-  return [at[0] + s.outDir[0] * CLEAR, 0, at[2] + s.outDir[2] * CLEAR];
+  const reach = room === 'plant_pool_04' ? FOOTBATH_DRAIN_REACH : CLEAR;
+  return [at[0] + s.outDir[0] * reach, 0, at[2] + s.outDir[2] * reach];
 }
 
 /** Through a north or south wall at its end: carried on to the wall's outer face, its fitting in the wall. */
@@ -495,20 +500,35 @@ export function cabinetPipes(
   runs.forEach((run, i) => {
     const at = riserValve(run.points, i);
     if (!at) return;
+    // The footbath's two close heating rises need their operators on the
+    // outside faces. Lift the flow operator above the return's lever.
+    const footbathFlow =
+      room === 'plant_pool_04' && run.name === 'Heating flow';
+    const clearAt: Vec3 = footbathFlow
+      ? [at[0], Math.min(run.points[2][1] - 0.3, at[1] + 0.4), at[2]]
+      : at;
     run.valve =
       room === 'plant_pool_04' && run.name === 'Return to the spa'
-        ? { id: 'PL4-PW1-RV1', at, axis: 'y' }
+        ? { id: 'PL4-PW1-RV1', at: clearAt, axis: 'y' }
         : {
             id: `${run.name} valve`,
-            at,
+            at: clearAt,
             axis: 'y',
+            ...(footbathFlow ? { facing: Math.PI / 2 } : {}),
             installed: true,
             name: `${run.name} valve`,
           };
   });
   // The drain, down into its tundish (its rim at 0.12 m, an air gap over it).
-  for (const { port, at, off } of ports.filter((p) => p.port.to === 'drain'))
-    add(port, [at, off, [off[0], 0.17, off[2]]]);
+  for (const { port, at } of ports.filter((p) => p.port.to === 'drain')) {
+    const reach = room === 'plant_pool_04' ? FOOTBATH_DRAIN_REACH : CLEAR;
+    const out: Vec3 = [
+      at[0] + outDir[0] * reach,
+      at[1],
+      at[2] + outDir[2] * reach,
+    ];
+    add(port, [at, out, [out[0], 0.17, out[2]]]);
+  }
   if (room === 'plant_pool_04') {
     const returnRun = runs.find((r) => r.name === 'Return to the spa');
     const drainRun = runs.find((r) => r.name === 'Drain to waste');

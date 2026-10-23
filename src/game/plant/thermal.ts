@@ -131,6 +131,8 @@ export interface ThermalInputs {
   ventilated: boolean;
   /** Cold make-up mixed into the water this step, m³ (at the ambient). */
   madeUp: number;
+  /** The water's thermostat's setting, °C, where someone has set it; its design temperature otherwise. */
+  waterSet?: number;
 }
 
 /** A thermostat's output, W: full this far under its setting (`band`), none at it. */
@@ -160,7 +162,7 @@ export function stepThermal(
   let airHeat = 0;
   for (let i = 0; i < n; i++) {
     const qWater = inputs.heatWater
-      ? thermostat(p.waterHeater, p.water, water)
+      ? thermostat(p.waterHeater, inputs.waterSet ?? p.water, water)
       : 0;
     const qAir = inputs.heatAir ? thermostat(p.airHeater, p.air, air) : 0;
     const humidity = inputs.ventilated

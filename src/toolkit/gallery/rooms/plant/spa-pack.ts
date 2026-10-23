@@ -32,7 +32,13 @@ import { worldStore } from '../../../save/world-store';
 import { partAudio } from '../../../components/core/audio/part-audio';
 import { machineTone } from '../../../components/sound/audio/machine-tones';
 import { doorGain } from '../../../components/core/logic/door-attenuation';
-import { FOOTBATH, partOn } from '../../../../game/plant/identification';
+import {
+  FOOTBATH,
+  footbathLineup,
+  partOn,
+} from '../../../../game/plant/identification';
+import { createCabinetMimic } from '../../../components/plant/views/cabinet-mimic';
+import { clampSetpoint } from '../../../../game/world';
 
 /**
  * A packaged spa set in its prefabricated plant cabinet: what the plant
@@ -394,7 +400,9 @@ function buildSpaPack(
   const panelW = jets ? 0.8 : 0.5;
   // The common controls sit at its left; the jets' at its right.
   const shift = jets ? -0.15 : 0;
-  t.box(panel, t.paint('#c8ccc4', 0.55), panelW, 0.44, 0.04, 0, 0, 0.02);
+  // Taller than its controls: its own mimic along the top (the owner,
+  // 2026-10-23: a set this small has no board of its own).
+  t.box(panel, t.paint('#c8ccc4', 0.55), panelW, 0.72, 0.04, 0, 0.14, 0.02);
   const front = new Group();
   front.position.z = 0.041;
   panel.add(front);
@@ -405,6 +413,23 @@ function buildSpaPack(
     corner: 'bottom-right',
   });
   const parts = createPartSet();
+  const pool = jets ? 'pool_03' : 'pool_04';
+  const store =
+    inService && typeof window !== 'undefined' ? worldStore('dev') : null;
+  // Its thermostat's setting: the world's pool's, or, an exhibit, its own.
+  let ownSet = jets ? 37 : 34;
+  const setting = () => store?.world.value.pools[pool].setpoint ?? ownSet;
+  const mimic = createCabinetMimic(kit, {
+    drainAndMakeUp: !jets,
+    parts,
+    onSet: (step) => {
+      const celsius = clampSetpoint(setting() + step);
+      if (store) store.dispatch({ type: 'pool/setpoint', pool, celsius });
+      else ownSet = celsius;
+    },
+  });
+  mimic.group.position.set(shift, 0.355, 0.001);
+  front.add(mimic.group);
   const footbathStore =
     inService && !jets && typeof window !== 'undefined'
       ? worldStore('dev')
@@ -577,6 +602,19 @@ function buildSpaPack(
       dosing.update(delta, on, 1.8, 7.3);
       gauge.set(on ? WORKING : 0);
       gauge.update(delta);
+      // Its mimic, as the world has its water (an exhibit: as if in service).
+      const w = store?.world.value;
+      const lineup = w && !jets ? footbathLineup(w.identifiedPlant) : null;
+      mimic.show({
+        pump: on,
+        uv: uvOn.value,
+        heat: on && (w ? w.pools[pool].heating > 0.05 : true),
+        drain: lineup?.draining ?? false,
+        makeUp: lineup?.makeUpOpen ?? false,
+        waterC: !supplied.value ? null : w ? w.pools[pool].temperature : ownSet,
+        setC: setting(),
+      });
+      mimic.update(delta);
     },
     // Its motor's sound stops with its room.
     dispose: () => {

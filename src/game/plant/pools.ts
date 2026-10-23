@@ -38,6 +38,8 @@ export interface PoolWaterState {
   heating: number;
   /** Whether it is being drained down to the sewer (its drain-down valves open). */
   drainDown: boolean;
+  /** Its water's thermostat's setting, °C: its design temperature until someone sets it (`pool/setpoint`). */
+  setpoint: number;
   /** Whether its make-up valve is open, to take water from the wet hall. */
   makeUp: boolean;
 }
@@ -86,6 +88,7 @@ export function newPools(): PoolsState {
         // The Olympic's tank at its working depth (Dev28's start, 3.1 m), the others' at their floats.
         balance: id === 'pool_02' ? 3.1 / BALANCE_TANK.weir : 0.68,
         temperature: POOL_TARGET[id].temp,
+        setpoint: POOL_TARGET[id].temp,
         ph: 7.4,
         freeChlorine: 1.4,
         combinedChlorine: 0.12,
@@ -461,6 +464,7 @@ export function stepPoolsWater(
           ? serviceAvailable(plant, room, 'air')
           : serviceAvailable(plant, room, 'power'),
         madeUp: water.madeUp,
+        waterSet: old.setpoint ?? POOL_TARGET[id].temp,
       },
       dt,
     );
@@ -481,6 +485,7 @@ export function stepPoolsWater(
       tripped,
       drainDown,
       makeUp: makeUpOpen,
+      setpoint: old.setpoint ?? POOL_TARGET[id].temp,
     };
   }
   return { pools: next, drawn, backwashed, drained };

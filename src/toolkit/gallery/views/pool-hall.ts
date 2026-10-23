@@ -492,12 +492,36 @@ export function createPoolHall(
     const o = bounds[k];
     const fall = (b.deep - b.shallow) / b.w;
     // The floor, falling from west to east.
-    const floor = new PlaneGeometry(b.w, b.d, 1, 1).rotateX(-Math.PI / 2);
-    const p = floor.getAttribute('position');
-    for (let i = 0; i < p.count; i++)
-      p.setY(i, WATER_Y - rectDepth(b, b.x + p.getX(i)));
-    floor.translate(b.x, 0, b.z);
-    floor.computeVertexNormals();
+    const footbath = Boolean(b.spans && b.deep < 0.4);
+    const drainXs = [b.x - 1.1, b.x + 1.1];
+    const drainSize = 0.3;
+    const floor = footbath
+      ? (() => {
+          // Cut the two drain sumps through the tile instead of drawing
+          // grilles over an unbroken floor, which hid their dark slots.
+          const shape = rect(new Shape(), o.minX, o.maxX, o.minZ, o.maxZ);
+          for (const x of drainXs)
+            shape.holes.push(
+              rect(
+                new Path(),
+                x - drainSize / 2,
+                x + drainSize / 2,
+                b.z - drainSize / 2,
+                b.z + drainSize / 2,
+              ),
+            );
+          return new ShapeGeometry(shape)
+            .rotateX(-Math.PI / 2)
+            .translate(0, WATER_Y - b.deep, 0);
+        })()
+      : new PlaneGeometry(b.w, b.d, 1, 1).rotateX(-Math.PI / 2);
+    if (!footbath) {
+      const p = floor.getAttribute('position');
+      for (let i = 0; i < p.count; i++)
+        p.setY(i, WATER_Y - rectDepth(b, b.x + p.getX(i)));
+      floor.translate(b.x, 0, b.z);
+      floor.computeVertexNormals();
+    }
     add(new Mesh(floor, tile), `${b.name} floor`);
     // Gratings round all four sides, the corners squared off; a channel
     // from wall to wall has them only along its two edges.
@@ -564,7 +588,14 @@ export function createPoolHall(
     };
     // Too shallow for lights, ladders or a grid of inlets.
     const small = b.deep < 0.4;
-    if (small) {
+    if (footbath) {
+      for (const x of drainXs)
+        onFloor(
+          createMainDrain(ft, kinds, { size: drainSize, body: true }),
+          x,
+          b.z,
+        );
+    } else if (small) {
       const drain = createMainDrain(ft, kinds);
       drain.scale.setScalar(0.5);
       onFloor(drain, b.x, b.z);

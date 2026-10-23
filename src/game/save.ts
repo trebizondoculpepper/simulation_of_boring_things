@@ -81,6 +81,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   15: (world) => world,
   // 16 → 17: the Olympic's balance tank's make-up, in AUTO (`fillDefaults` adds it).
   16: (world) => world,
+  // 17 → 18: each pool's thermostat, at its design temperature (`fillDefaults` adds it).
+  17: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

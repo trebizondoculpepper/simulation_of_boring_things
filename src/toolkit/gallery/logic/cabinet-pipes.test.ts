@@ -101,6 +101,31 @@ describe.each([
     expect(end[1]).toBeLessThan(0.25);
   });
 
+  if (room === 'plant_pool_04') {
+    it('keeps the draw-down valve clear of the cabinet back', () => {
+      const drain = named('Drain to waste');
+      const valve = drain.valve!;
+      const body = cabinetBodyIn(cabinet, jets);
+      expect(valve.id).toBe('PL4-PW1-DV1');
+      // The valve's flanges and lever need more than the old 150 mm stub.
+      expect(
+        Math.hypot(
+          valve.at[0] - drain.points[0][0],
+          valve.at[2] - drain.points[0][2],
+        ),
+      ).toBeGreaterThan(0.2);
+      expect(valve.at[0]).toBeLessThan(body.min[0] - 0.1);
+    });
+
+    it('lifts the heating-flow operator and faces it away from the return rise', () => {
+      const flow = named('Heating flow');
+      const other = named('Heating return');
+      expect(flow.valve!.at[1]).toBeGreaterThan(other.valve!.at[1]);
+      expect(flow.valve!.facing).toBe(Math.PI / 2);
+      expect(flow.valve!.at[0]).toBeGreaterThan(other.valve!.at[0]);
+    });
+  }
+
   it('feeds the cabinet through an isolator on the wall at its left', () => {
     const iso = cabinetIsolator(room)!;
     // On the wall the cabinet backs onto, beyond its left end as you face it.

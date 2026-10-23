@@ -18,6 +18,7 @@ import type { ShellRoomId, ShellWall } from './shell-rooms';
 import { BOOSTER } from '../../components/plant/logic/booster-set';
 import { LIGHTING_BOARD, MAIN_SWITCH } from './switch-room';
 import { ROOM_SIGNS, SIGN_ITEMS } from './building-signs';
+import { loungeRoomBox } from './lounge-plant-plan';
 
 /**
  * Where each room's machines stand: the plant sizing's inventory
@@ -630,7 +631,7 @@ export function roomEquipment(
     case 'plant_pool_01':
       // Lounge: 11.1 m³ tank, 2 × 1.2 m filters (the sizing's plant).
       return {
-        box: plant('pool_01'),
+        box: loungeRoomBox(),
         items: poolPlant(
           'plant_pool_01',
           'Lounge pool',
@@ -1234,9 +1235,10 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
   // UV in the middle, clear of the gantry.
   plant_pool_01: (box, items) => {
     const h = box.w / 2;
+    const hz = box.d / 2;
     const at = (label: string) => items.find((i) => i.label.endsWith(label))!;
-    const north = -h + (box.pipes.north ?? 0);
-    const south = h - (box.pipes.south ?? 0);
+    const north = -hz + (box.pipes.north ?? 0);
+    const south = hz - (box.pipes.south ?? 0);
     const s = TANK_SURROUND;
     const out: Placed[] = [];
     const tank = at('balance tank');
@@ -1262,19 +1264,19 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
     const filters = items.filter((i) => i.key.startsWith('sand-filter'));
     const f = filters[0];
     const door = Math.min(
-      ...box.keepClear.filter((k) => k.maxZ >= h - 1e-9).map((k) => k.minX),
+      ...box.keepClear.filter((k) => k.maxZ >= hz - 1e-9).map((k) => k.minX),
     );
     filters.forEach((item, i) =>
       out.push(
         put(box, item, {
           x: door - f.w / 2 - i * (f.w + 0.6),
-          z: south - 0.6 - f.d / 2,
+          z: south - f.d / 2,
           face: 'north',
         }),
       ),
     );
     const doorEast = Math.max(
-      ...box.keepClear.filter((k) => k.maxZ >= h - 1e-9).map((k) => k.maxX),
+      ...box.keepClear.filter((k) => k.maxZ >= hz - 1e-9).map((k) => k.maxX),
     );
     const phe = at('plate heat exchanger');
     out.push(
@@ -1286,11 +1288,12 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
     );
     let x = doorEast + 0.6 + phe.w + 0.6;
     const hypo = at('hypochlorite dosing pumps');
-    out.push(put(box, hypo, { wall: 'south', along: x + hypo.w / 2 }));
+    const hypoPlaced = put(box, hypo, { wall: 'south', along: x + hypo.w / 2 });
+    out.push(hypoPlaced);
     // The east wall south of the stair's foot.
     const foot = Math.max(
       ...box.keepClear
-        .filter((k) => k.maxX >= h - 1e-9 && k.maxZ < h - 2)
+        .filter((k) => k.maxX >= h - 1e-9 && k.maxZ < hz - 2)
         .map((k) => k.maxZ),
     );
     const controller = at('dosing controller and sample cells');
@@ -1300,12 +1303,13 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
         along: foot + 0.3 + controller.w / 2,
       }),
     );
-    // The acid pump beside it, clear of the heating at the south.
+    // Keep the acid pump with the other dosing supply on the south wall,
+    // clear of the control panel on the east wall and its vertical conduit.
     const acid = at('acid dosing pump');
     out.push(
       put(box, acid, {
-        wall: 'east',
-        along: foot + 0.3 + controller.w + WALL_GAP + acid.w / 2,
+        wall: 'south',
+        along: hypoPlaced.footprint.minX - WALL_GAP - acid.w / 2,
       }),
     );
     const panel = at('local control panel');

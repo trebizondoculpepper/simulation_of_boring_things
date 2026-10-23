@@ -1,0 +1,5 @@
+# Lounge plant trial and footbath drains — 2026-10-23
+
+The lounge plant sizing study found 116.4 m² of calculated floor need. I built the 12 × 11 × 8 m first trial in place of its 12 × 12 m shell, keeping the pool approach on the north wall, the shared plant doors south, and the stair running away from the pool landing. The shell, machine placement and pipe exits now agree on the same rectangle. Existing tests confirm equipment clearance, walking access and valve reach. The two old filter inlet/outlet clashes remain, so this is not yet a score-gate-passing optimized layout.
+
+In Plant Room 4, the draw-down valve had been centred in a 150 mm drain stub, leaving its body in the cabinet. Its stub now extends 500 mm into the rear service space, moving the valve and tundish away from the cabinet. The heating-flow valve is lifted and its operator turned toward the free side of its rise, away from the heating return. In the footbath itself, two anti-vortex floor drains now sit in actual openings in the tiled floor, 2.2 m apart, so the dark sumps can be seen through their grilles.

@@ -82,7 +82,15 @@ import { makeUpCalls, newOlympicTank } from './plant/olympic-tank';
 import type { OlympicTankState } from './plant/olympic-tank';
 import type { MakeupMode } from './plant/balance-tank';
 
-export const WORLD_VERSION = 17;
+export const WORLD_VERSION = 18;
+
+/** A pool thermostat's range, °C, set in half degrees. */
+export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
+export const clampSetpoint = (celsius: number) =>
+  Math.min(
+    SETPOINT_RANGE.max,
+    Math.max(SETPOINT_RANGE.min, Math.round(celsius * 2) / 2),
+  );
 
 export interface World {
   /** Seconds the world has run. */
@@ -165,6 +173,8 @@ export type WorldAction =
   | { type: 'pool/drain-down'; pool: PoolId; open: boolean }
   /** A pool's make-up valve opened or shut. */
   | { type: 'pool/make-up'; pool: PoolId; open: boolean }
+  /** A pool's water's thermostat set, °C (kept within its range). */
+  | { type: 'pool/setpoint'; pool: PoolId; celsius: number }
   /** The world run on at once, a second at a time: for trying things out. */
   | { type: 'time/skip'; seconds: number };
 
@@ -237,6 +247,18 @@ export function applyAction(world: World, action: WorldAction): World {
         ...world,
         identifiedPlant: setPartOn(world.identifiedPlant, action.id, action.on),
       };
+    case 'pool/setpoint': {
+      const celsius = clampSetpoint(action.celsius);
+      return world.pools[action.pool].setpoint === celsius
+        ? world
+        : {
+            ...world,
+            pools: {
+              ...world.pools,
+              [action.pool]: { ...world.pools[action.pool], setpoint: celsius },
+            },
+          };
+    }
     case 'pool/drain-down':
     case 'pool/make-up': {
       if (action.pool === 'pool_04') {
