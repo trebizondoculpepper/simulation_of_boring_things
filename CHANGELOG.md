@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- `doc/room-layout-guide.md`: one guide for agents to the room-layout pipeline (sizer, regions, placement, blocks and variants, plumber, router, scorer, bound room), with a recipe for improving a room's layout, the owner's rulings, the experiment rigs, and the known problems. `AGENTS.md` points to it.
 - Every sand filter's sight glass is live, driven by a shared bed model (`plant/logic/filter-bed.ts`): the bed's dirt (from the water it is exposed to, or from its pressure difference where that is all a model gives), its pitting as a function of the time since it was last washed, and which way the water goes through it (down, filtering; up, lifted). It needs to know nothing of backwashing: water coming up through it is a wash and starts its clock again. Fitted to the plant rooms' filters, Dev19's, Dev26's Olympic filter (which starts ten days unwashed, dirty and pitted) and the small multiport filter.
 
 ### Fixed
