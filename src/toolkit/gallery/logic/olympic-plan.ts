@@ -255,21 +255,17 @@ export function olympicPlan(): PlanItem[] {
       facing: 'south',
     }),
   );
-  // The balance tank's panel on the west wall just south of the pumps,
-  // beside the tank hall's doors: its level, its floats, its make-up and
-  // the pumps' START and STOP, worked where the tank is.
+  // The balance tank's panel on the west wall just north of the tank
+  // hall's doors, clear of their clear space, by the battery's walkway
+  // (the owner, 2026-10-23): its level, its floats, its make-up and the
+  // pumps' START and STOP, worked beside the doors to the tank.
   const tp = SIZE.tankPanel;
   out.push({
     ...item(
       'tankPanel',
       'Balance tank panel',
       tp,
-      against(
-        'west',
-        tank.at + DOOR_CLEAR.across / 2 + 0.3 + p.d + 0.6 + tp.w / 2,
-        tp,
-        0,
-      ),
+      against('west', tank.at - DOOR_CLEAR.across / 2 - 0.15 - tp.w / 2, tp, 0),
       'wall',
     ),
     y: WALL_HEIGHT.tankPanel,

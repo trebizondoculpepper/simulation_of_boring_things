@@ -60,7 +60,9 @@ export function startTankHall(canvas: HTMLCanvasElement) {
   const scene = new Scene();
   const renderer = createRenderer(canvas);
   const freeEnvironment = useEnvironment(renderer, scene, 0.4);
-  renderer.setClearColor('#262a2b');
+  // Clear, not opaque: through its open doors the plant room, drawn
+  // underneath (`main.ts`), must show where this room draws nothing.
+  renderer.setClearColor('#262a2b', 0);
   const camera = new PerspectiveCamera(60, 1, 0.05, 80 * m);
   // A little fill: the hall is lit by its own fittings.
   scene.add(
