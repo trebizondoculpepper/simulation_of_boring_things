@@ -2,7 +2,21 @@
 
 A first-person engineering game set in a leisure centre: walk the public pool hall and the plant rooms behind its staff doors, and keep the pools running. The design brief is `/Users/salimfadhley/Downloads/Pool-Plant-Project-Brief.md`.
 
-Play it at https://trebizondoculpepper.github.io/simulation_of_boring_things/. Every push to `main` that passes CI is deployed there.
+**[Play it here](https://trebizondoculpepper.github.io/simulation_of_boring_things/).** Every push to `main` that passes CI is deployed there.
+
+The development rooms can be opened directly, among them the modelling demonstrations:
+
+- [Dev19: a plant room laid out, plumbed and scored by the room-layout pipeline](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev19)
+- [Dev20: experimental sources and sinks of every substance](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev20)
+- [Dev21: each source plumbed to its sink, valves closed](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev21)
+- [Dev22: a pump on a battery-backed supply](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev22)
+- [Dev23: draining a jacuzzi by gravity](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev23)
+- [Dev24: duty and standby pumps](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev24)
+- [Dev25: a tank filled and drained through one port](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev25)
+- [Dev26: an Olympic filter on its five-valve battery](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev26)
+- [Dev27: heat exchange from a gas boiler, with its mimic board](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev27)
+
+The room-layout pipeline is described in [`doc/room-layout-guide.md`](doc/room-layout-guide.md), and the test scenarios in [`doc/prompts/scenarios.md`](doc/prompts/scenarios.md).
 
 ## Current state
 
