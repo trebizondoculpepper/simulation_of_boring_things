@@ -292,10 +292,15 @@ const ISOLATOR = {
 
 const PLASTIC = new Set<RunKind>(['pvc-pressure', 'pvc-drain']);
 
-/** The room's cabinet, its placing, the way out of its back, and its wall's line in its frame. */
-function setting(room: string) {
+/**
+ * The room's cabinet, its placing, the way out of its back, and its wall's
+ * line in its frame; `trial`, a placing to try in place of the room's own
+ * (to compare where the cabinet might stand).
+ */
+function setting(room: string, trial?: Placed) {
   const layout = layoutRoom(room);
-  const placed = layout?.placed.find((p) => p.item.key.endsWith('-pack'));
+  const placed =
+    trial ?? layout?.placed.find((p) => p.item.key.endsWith('-pack'));
   if (!layout || !placed) return null;
   const jets = placed.item.key === 'jacuzzi-pack';
   const outDir = inRoom({ ...placed, x: 0, z: 0 }, [0, 0, -1]);
@@ -304,8 +309,8 @@ function setting(room: string) {
 }
 
 /** The cabinet's ports in the room: each one's place, and the way out of it. */
-export function cabinetPortsInRoom(room: string) {
-  const s = setting(room);
+export function cabinetPortsInRoom(room: string, trial?: Placed) {
+  const s = setting(room, trial);
   if (!s) return [];
   const up: Vec3 = [0, 1, 0];
   return cabinetPorts(s.jets).map((port) => ({
@@ -316,8 +321,8 @@ export function cabinetPortsInRoom(room: string) {
 }
 
 /** The isolator on the wall at the cabinet's left (its −x, as you face it). */
-export function cabinetIsolator(room: string): Isolator | null {
-  const s = setting(room);
+export function cabinetIsolator(room: string, trial?: Placed): Isolator | null {
+  const s = setting(room, trial);
   if (!s) return null;
   const { placed, outDir, wallLocal } = s;
   const along = -(placed.item.w / 2) - 0.35;
@@ -346,8 +351,8 @@ export function cabinetIsolator(room: string): Isolator | null {
 }
 
 /** Where the drain's tundish and floor gully stand: under its stub's turn. */
-export function cabinetGully(room: string): Vec3 | null {
-  const s = setting(room);
+export function cabinetGully(room: string, trial?: Placed): Vec3 | null {
+  const s = setting(room, trial);
   if (!s) return null;
   const port = cabinetPorts(s.jets).find((p) => p.to === 'drain')!;
   const at = inRoom(s.placed, port.at);
@@ -388,8 +393,8 @@ function throughWall(
  *   the isolator; and the isolator's feed up over the cabinet's roof and
  *   down into its gland.
  */
-export function cabinetPipes(room: string): CabinetRun[] {
-  const s = setting(room);
+export function cabinetPipes(room: string, trial?: Placed): CabinetRun[] {
+  const s = setting(room, trial);
   if (!s) return [];
   const { placed, jets, outDir, h } = s;
   const ports = cabinetPorts(jets).map((port) => {
@@ -489,7 +494,7 @@ export function cabinetPipes(room: string): CabinetRun[] {
   }
   // The supply, along the wall from the south and down into the isolator;
   // the isolator's feed over the cabinet's roof and down into its gland.
-  const iso = cabinetIsolator(room)!;
+  const iso = cabinetIsolator(room, trial)!;
   const supply = ports.find((p) => p.port.to === 'isolator')!;
   const [inX, inY, inZ] = iso.supplyIn;
   add({ ...supply.port, name: 'Supply to the isolator' }, [

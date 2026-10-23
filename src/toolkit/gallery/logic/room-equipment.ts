@@ -671,8 +671,12 @@ export function roomEquipment(
       return {
         box: plant('pool_04'),
         items: [
+          // 0.9 m off its wall (the owner, 2026-10-23): room behind it to
+          // work the valves on its back stubs. Of every place along the
+          // room's walls that keeps the doors clear, this is where its
+          // services cost least (`cabinetPipes`'s trial placings).
           floor('spa-pack', 'Packaged spa set, footbath', 2.1, 1.9, 2.2, {
-            back: 0.6,
+            back: 0.9,
           }),
         ],
       };
