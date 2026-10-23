@@ -650,7 +650,8 @@ export function roomEquipment(
     case 'plant_pool_03':
       return {
         // In front of its mimic board, in the middle of the north wall. Its
-        // cabinet stands 0.6 m off its wall: the services' lanes behind it.
+        // cabinet stands 0.9 m off its wall (the owner, 2026-10-23): the
+        // services' lanes behind it, and room to work its back stubs' valves.
         box: (() => {
           const b = plant('pool_03');
           b.keepClear.push({
@@ -663,7 +664,7 @@ export function roomEquipment(
         })(),
         items: [
           floor('jacuzzi-pack', 'Packaged Jacuzzi plant cabinet', 3.2, 3, 2.2, {
-            back: 0.6,
+            back: 0.9,
           }),
         ],
       };
@@ -1337,6 +1338,21 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
       }),
     );
     return out;
+  },
+  // The Jacuzzi's cabinet against the west wall, facing east, 0.65 m south
+  // of the room's middle: of every place along the walls that keeps the
+  // doors and the mimic's floor clear, where its services cost least
+  // (`cabinetPipes`'s trial placings, 2026-10-23).
+  plant_pool_03: (box, items) => {
+    const cabinet = items.find((i) => i.key === 'jacuzzi-pack')!;
+    const back = cabinet.back ?? 0;
+    return [
+      put(box, cabinet, {
+        x: -box.w / 2 + back + cabinet.d / 2,
+        z: 0.65,
+        face: 'east',
+      }),
+    ];
   },
   // The footbath's cabinet against the tiny room's west wall, facing east,
   // its services' lanes behind it, clear of both doors.
