@@ -15,6 +15,21 @@ import { choosePipe } from '../../components/core/logic/plumber';
 import type { PipeRequest } from '../../components/core/logic/plumber';
 import { PIPE_KINDS } from '../../components/core/views/pipe-kinds';
 import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
+import { runEntersRegion } from './room-regions';
+import type { Region } from './room-regions';
+import {
+  placeInline,
+  splitAt,
+} from '../../components/core/logic/inline-placement';
+import {
+  expandForPlumbing,
+  operatorFor,
+} from '../../../game/plant/plumbing-expansion';
+import type {
+  Actuation,
+  FittingKind,
+  Operator,
+} from '../../../game/plant/plumbing-expansion';
 
 type Medium = 'gas' | 'water' | 'power' | 'flue';
 export interface DemoRoute {
@@ -137,9 +152,11 @@ export function demoValveOd(nodeId: string): number {
 
 /** A remote valve's geometry, at the size of its line (`remote-valve.ts`). */
 export function demoValveGeometry(nodeId: string, kind: DemoKind) {
+  // In its line, its middle on the pipe's axis.
   return remoteValveGeometry(
     kind === 'remote-gas-valve' ? 'gas' : 'water',
     demoValveOd(nodeId),
+    0,
   );
 }
 
@@ -172,16 +189,8 @@ export function demoPortPositions(layout: PlantRoomLayout) {
   demoVisualBindings.forEach(({ nodeId, kind }, i) => {
     const place = layout.places[i];
     if (!place) throw new Error(`${nodeId}: no exhibit placement`);
-    for (const [port, { at }] of Object.entries(demoPorts(nodeId, kind))) {
-      const [x, y, z] = at;
-      const c = Math.cos(place.yaw);
-      const s = Math.sin(place.yaw);
-      positions.set(`${nodeId}.${port}`, [
-        place.x + x * c + z * s,
-        place.y + y,
-        place.z - x * s + z * c,
-      ]);
-    }
+    for (const [port, { at }] of Object.entries(demoPorts(nodeId, kind)))
+      positions.set(`${nodeId}.${port}`, toRoom(place, at));
   });
   return positions;
 }
@@ -202,16 +211,29 @@ export function demoPortEnd(
     : undefined;
   if (!place || !normal)
     throw new Error(`${nodeId}.${port}: missing port direction`);
+  return { at, outward: turnToRoom(place, normal) };
+}
+
+/** A direction in an exhibit's own frame, in the room's: its tilt (about z), then its yaw. */
+export function turnToRoom(
+  place: { yaw: number; tilt?: number },
+  [x, y, z]: Vec3,
+): Vec3 {
+  const t = place.tilt ?? 0;
+  const tx = x * Math.cos(t) - y * Math.sin(t);
+  const ty = x * Math.sin(t) + y * Math.cos(t);
   const c = Math.cos(place.yaw);
   const s = Math.sin(place.yaw);
-  return {
-    at,
-    outward: [
-      normal[0] * c + normal[2] * s,
-      normal[1],
-      -normal[0] * s + normal[2] * c,
-    ],
-  };
+  return [tx * c + z * s, ty, -tx * s + z * c];
+}
+
+/** A point in an exhibit's own frame, in the room's. */
+export function toRoom(
+  place: { x: number; y: number; z: number; yaw: number; tilt?: number },
+  local: Vec3,
+): Vec3 {
+  const [dx, dy, dz] = turnToRoom(place, local);
+  return [place.x + dx, place.y + dy, place.z + dz];
 }
 
 const primaryEdges = new Set([
@@ -373,6 +395,8 @@ export function demoPlaceItems(): Partial<PlaceItem>[] {
       : {}),
     ...(kind === 'boiler' ? { clearAbove: true } : {}),
     ...(SITES[kind] ? { site: SITES[kind] } : {}),
+    // The remote valves sit in their lines: the plumber places them.
+    ...(isValve(kind) ? { inline: true } : {}),
   }));
 }
 
@@ -385,23 +409,476 @@ export function demoPlaceItems(): Partial<PlaceItem>[] {
 export function demoPlaceLinks(): PlaceLink[] {
   const at = new Map(demoVisualBindings.map(({ nodeId }, i) => [nodeId, i]));
   const links: PlaceLink[] = [];
-  for (const edge of demoGraph.edges) {
-    const source = demoGraph.nodes.find((node) => node.id === edge.sourceId)!;
-    const medium = source.ports?.find((port) => port.name === edge.sourcePort)
-      ?.data.medium;
-    if (medium !== 'gas' && medium !== 'water') continue;
-    const a = at.get(edge.sourceId);
-    const b = at.get(edge.targetId);
+  // Machine to machine, through any valve in the line.
+  for (const line of demoLines()) {
+    if (line.medium !== 'gas' && line.medium !== 'water') continue;
+    const a = at.get(line.from.id);
+    const b = at.get(line.to.id);
     if (a === undefined || b === undefined) continue;
-    const { kind, od } = demoPipeSpec(edge.id, medium);
+    const { kind, od } = demoPipeSpec(line.edges[0], line.medium);
     const lagging = PIPE_KINDS[kind].insulation?.thickness ?? 0;
     links.push({
       a: String(a),
-      aPort: edge.sourcePort,
+      aPort: line.from.port,
       b: String(b),
-      bPort: edge.targetPort,
+      bPort: line.to.port,
       weight: (od + 2 * lagging) / 0.025,
     });
   }
   return links;
+}
+
+// ---- The plumber: lines, their fittings, and where they go ---------------------------
+
+/** A line: machine port to machine port, through any valves set into it. */
+export interface DemoLine {
+  medium: Medium;
+  /** Its base links, in order. */
+  edges: string[];
+  from: { id: string; port: string };
+  to: { id: string; port: string };
+  /** The designed valves it passes through, in order. */
+  through: string[];
+}
+
+const mediumOf = (edge: (typeof demoGraph.edges)[number]) =>
+  demoGraph.nodes
+    .find((node) => node.id === edge.sourceId)
+    ?.ports?.find((port) => port.name === edge.sourcePort)?.data.medium;
+const kindOf = (id: string) =>
+  demoGraph.nodes.find((node) => node.id === id)?.data.kind as DemoKind;
+
+/**
+ * Magic terminals (the owner, 2026-10-23, after prompt 008's magic flues
+ * and drains): nodes of the model whose ports the plumber works out from
+ * the line that reaches them. A line to one is terminated where its most
+ * direct route meets the ceiling (a flue's or a vent's) or the floor (a
+ * drain's, at a gully). Dev19's stack is the ceiling's.
+ */
+export type MagicTerminal = 'ceiling' | 'floor';
+export const MAGIC_TERMINALS: Partial<Record<DemoKind, MagicTerminal>> = {
+  stack: 'ceiling',
+};
+
+/** A layout's reserved regions, if it has them. */
+const regionsOf = (layout: PlantRoomLayout): readonly Region[] =>
+  'regions' in layout ? (layout as { regions: Region[] }).regions : [];
+
+/** Dev19's lines, each base link once. */
+export function demoLines(): DemoLine[] {
+  const lines: DemoLine[] = [];
+  for (const edge of demoGraph.edges) {
+    const medium = mediumOf(edge);
+    if (
+      medium !== 'gas' &&
+      medium !== 'water' &&
+      medium !== 'power' &&
+      medium !== 'flue'
+    )
+      continue;
+    if (isValve(kindOf(edge.sourceId)) && edge.sourcePort === 'out') continue;
+    const line: DemoLine = {
+      medium,
+      edges: [edge.id],
+      from: { id: edge.sourceId, port: edge.sourcePort! },
+      to: { id: edge.targetId, port: edge.targetPort! },
+      through: [],
+    };
+    // On through each valve set into the line.
+    while (isValve(kindOf(line.to.id)) && line.to.port === 'in') {
+      const valve = line.to.id;
+      const next = demoGraph.edges.find(
+        (e) => e.sourceId === valve && e.sourcePort === 'out',
+      );
+      if (!next) break;
+      line.through.push(valve);
+      line.edges.push(next.id);
+      line.to = { id: next.targetId, port: next.targetPort! };
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+
+/**
+ * Two sets of plumbing rules, to compare (the owner, 2026-10-23): Claude's
+ * first (Dev19), and Codex's, from its review of prompt 018 (Dev19b):
+ *
+ * - **Non-return valves:** Claude's on every pump's discharge; Codex's only
+ *   where the circuit needs one. Dev19's pumps are single pumps with a
+ *   flooded suction, so none does.
+ * - **Power isolators:** Claude's in each feed straight from the supply;
+ *   Codex's in the last feed to every powered device, so the boiler beyond
+ *   its motor breaker has one too.
+ * - **Reach:** Claude's by height alone; Codex's by height and a place to
+ *   stand: clear floor beside it, not a machine or a wall.
+ * - **Out of reach:** Claude's sets a fitting there anyway and reports it;
+ *   Codex's reports it and leaves it out rather than draw one nobody can
+ *   use.
+ */
+export interface PlumbingRules {
+  name: string;
+  nonReturn: 'every-pump' | 'where-needed';
+  powerIsolators: 'supply-feeds' | 'every-device';
+  reach: 'height' | 'height-and-standing';
+  unreachable: 'place-anyway' | 'report';
+}
+export const CLAUDE_RULES: PlumbingRules = {
+  name: "Claude's rules",
+  nonReturn: 'every-pump',
+  powerIsolators: 'supply-feeds',
+  reach: 'height',
+  unreachable: 'place-anyway',
+};
+export const CODEX_RULES: PlumbingRules = {
+  name: "Codex's rules",
+  nonReturn: 'where-needed',
+  powerIsolators: 'every-device',
+  reach: 'height-and-standing',
+  unreachable: 'report',
+};
+
+/** The plumber's expansion of Dev19 (`plumbing-expansion.ts`). */
+export function demoExpansion(rules: PlumbingRules = CLAUDE_RULES) {
+  return expandForPlumbing(
+    demoGraph.nodes.map((n) => ({ id: n.id, kind: n.data.kind })),
+    demoGraph.edges.flatMap((e) => {
+      const medium = mediumOf(e);
+      return medium
+        ? [
+            {
+              id: e.id,
+              sourceId: e.sourceId,
+              sourcePort: e.sourcePort!,
+              targetId: e.targetId,
+              targetPort: e.targetPort!,
+              medium,
+            },
+          ]
+        : [];
+    }),
+    {
+      isolate: new Set([
+        'pool-pump',
+        'circulator',
+        'sand-filter',
+        'heat-exchanger',
+      ]),
+      pumps: new Set(['pool-pump', 'circulator']),
+      switchgear: new Set(['remote-breaker']),
+      supplies: new Set(['mains']),
+      nonReturn:
+        rules.nonReturn === 'every-pump'
+          ? new Set(['pool-pump', 'circulator'])
+          : new Set(),
+      powerIsolators: rules.powerIsolators,
+    },
+  );
+}
+
+/** How Dev19's valves are worked: by hand within reach, by motor beyond it. */
+export const DEMO_ACTUATION: Actuation = 'automatic-where-hard-to-reach';
+
+export interface PlumbedRun {
+  id: string;
+  /** The base link whose pipe it is. */
+  edgeId: string;
+  medium: Medium;
+  points: Vec3[];
+  startPort?: PortEnd;
+  endPort?: PortEnd;
+}
+
+export interface PlumbedDevice {
+  id: string;
+  /** The base link of the line it is set into. */
+  edgeId: string;
+  kind: FittingKind | 'remote-valve';
+  medium: Medium;
+  /** The pipe's outside diameter there. */
+  od: number;
+  at: Vec3;
+  along: Vec3;
+  reachable: boolean;
+  operator: Operator;
+}
+
+/** How long each inline device is along its pipe, metres. */
+function inlineLength(kind: PlumbedDevice['kind'], od: number, valve?: number) {
+  if (kind === 'remote-valve') return valve ?? 0.12;
+  if (kind === 'non-return-valve') return Math.max(0.07, 2 * od + 0.02);
+  if (kind === 'power-isolator') return 0.16;
+  return Math.max(0.06, 1.4 * od);
+}
+
+/** A designed valve's place, set into its line at `at`, its pipe running `along`. */
+function inlinePlace(at: Vec3, along: Vec3) {
+  const [dx, dy, dz] = along;
+  // Its actuator into the room, away from the walls.
+  const r = Math.hypot(at[0], at[2]) || 1;
+  const [ix, iz] = [-at[0] / r, -at[2] / r];
+  if (dy > 0.5)
+    return {
+      x: at[0],
+      y: at[1],
+      z: at[2],
+      tilt: Math.PI / 2,
+      yaw: Math.atan2(iz, -ix),
+      inline: true,
+    };
+  if (dy < -0.5)
+    return {
+      x: at[0],
+      y: at[1],
+      z: at[2],
+      tilt: -Math.PI / 2,
+      yaw: Math.atan2(-iz, ix),
+      inline: true,
+    };
+  return {
+    x: at[0],
+    y: at[1],
+    z: at[2],
+    tilt: 0,
+    yaw: Math.atan2(-dz, dx),
+    inline: true,
+  };
+}
+
+/**
+ * Dev19 plumbed: each line routed machine to machine (the old lanes, until
+ * the new router lands), the plumber's fittings and the designed valves set
+ * into it where a person can reach them, and the runs split between them;
+ * then the power feeds, to wherever the valves' actuators ended up, each
+ * with its isolator on its drop. The designed valves' places come back in
+ * `places`, for the room to stand them in.
+ */
+export function demoPlumbing(
+  layout: PlantRoomLayout,
+  rules: PlumbingRules = CLAUDE_RULES,
+) {
+  const expansion = demoExpansion(rules);
+  // Somewhere to stand within arm's reach: clear floor, not a machine or a wall.
+  const feet = layout.solids.filter((f) => f.maxX > f.minX);
+  const clear = (x: number, z: number) =>
+    Math.abs(x) < layout.halfX - 0.3 &&
+    Math.abs(z) < layout.halfZ - 0.3 &&
+    !feet.some(
+      (f) =>
+        x > f.minX - 0.15 &&
+        x < f.maxX + 0.15 &&
+        z > f.minZ - 0.15 &&
+        z < f.maxZ + 0.15,
+    );
+  const standing = (at: Vec3) =>
+    rules.reach === 'height' ||
+    [
+      [0.5, 0],
+      [-0.5, 0],
+      [0, 0.5],
+      [0, -0.5],
+    ].some(([dx, dz]) => clear(at[0] + dx, at[2] + dz));
+  const places = [...layout.places];
+  const indexOf = new Map(demoVisualBindings.map((b, i) => [b.nodeId, i]));
+  const runs: PlumbedRun[] = [];
+  const devices: PlumbedDevice[] = [];
+  /** Where lines met their magic terminals. */
+  const terminals: { id: string; kind: MagicTerminal; at: Vec3; od: number }[] =
+    [];
+  const problems: string[] = [];
+  const count: Record<Medium, number> = { gas: 0, water: 0, power: 0, flue: 0 };
+  const laneY: Record<Medium, number> = {
+    gas: 2.15,
+    water: 2.55,
+    power: 3.25,
+    flue: layout.height - 0.1,
+  };
+  const lines = demoLines();
+  const route = (line: DemoLine, at: PlantRoomLayout) => {
+    const positions = demoPortPositions(at);
+    const start = positions.get(`${line.from.id}.${line.from.port}`);
+    if (!start)
+      throw new Error(`${line.edges[0]}: its start has no visual port`);
+    const startPort = demoPortEnd(at, line.from.id, line.from.port, start);
+    const { od, joint } = demoPipeSpec(line.edges[0], line.medium);
+    // A magic terminal (the owner, 2026-10-23): its port is where the most
+    // direct route from the line's start meets the ceiling, and reaching it
+    // terminates the line. The route is checked, not assumed, clear.
+    const magic = MAGIC_TERMINALS[kindOf(line.to.id)];
+    if (magic === 'ceiling') {
+      const top: Vec3 = [start[0], layout.height, start[2]];
+      const endPort: PortEnd = { at: top, outward: [0, -1, 0] };
+      const points = withPortLeads([start, top], od, joint, {
+        start: startPort,
+        end: endPort,
+      });
+      for (let k = 1; k < points.length; k++) {
+        const hit = runEntersRegion(
+          points[k - 1],
+          points[k],
+          od / 2,
+          regionsOf(at),
+        );
+        if (hit)
+          problems.push(
+            `${line.edges[0]}: its way up to the ceiling crosses ${hit.name}`,
+          );
+      }
+      terminals.push({
+        id: `${line.to.id}.${line.to.port}`,
+        kind: magic,
+        at: top,
+        od,
+      });
+      return { points, startPort, endPort, od };
+    }
+    const finish = positions.get(`${line.to.id}.${line.to.port}`);
+    if (!finish)
+      throw new Error(`${line.edges[0]}: its end has no visual port`);
+    const endPort = demoPortEnd(at, line.to.id, line.to.port, finish);
+    const index = count[line.medium]++;
+    const y = Math.min(
+      layout.height - 0.35,
+      laneY[line.medium] + (index % 6) * 0.09,
+    );
+    const z = -layout.halfZ + 0.38 + Math.floor(index / 6) * 0.18;
+    const points = withPortLeads(
+      [
+        start,
+        [start[0], y, start[2]],
+        [start[0], y, z],
+        [finish[0], y, z],
+        [finish[0], y, finish[2]],
+        finish,
+      ],
+      od,
+      joint,
+      { start: startPort, end: endPort },
+    );
+    return { points, startPort, endPort, od };
+  };
+  const plumb = (line: DemoLine, at: PlantRoomLayout) => {
+    const r = route(line, at);
+    if (line.medium === 'flue') {
+      runs.push({
+        id: line.edges[0],
+        edgeId: line.edges[0],
+        medium: line.medium,
+        points: r.points,
+        startPort: r.startPort,
+        endPort: r.endPort,
+      });
+      return;
+    }
+    // The line's inline devices: its fittings by the ends they serve, and
+    // its designed valves, near its start.
+    const fittings = line.edges.flatMap((e) => expansion.along.get(e) ?? []);
+    const wanted = [
+      ...fittings
+        .filter((f) => f.serves === line.from.id)
+        .map((f) => ({
+          id: f.id,
+          kind: f.kind as PlumbedDevice['kind'],
+          near: 'start' as const,
+        })),
+      ...line.through.map((id) => ({
+        id,
+        kind: 'remote-valve' as const,
+        near: 'start' as const,
+      })),
+      ...fittings
+        .filter((f) => f.serves !== line.from.id)
+        .map((f) => ({
+          id: f.id,
+          kind: f.kind as PlumbedDevice['kind'],
+          near: 'end' as const,
+        })),
+    ];
+    const lengths = new Map(
+      wanted.map((w) => [
+        w.id,
+        inlineLength(
+          w.kind,
+          r.od,
+          w.kind === 'remote-valve'
+            ? demoValveGeometry(w.id, kindOf(w.id)).length
+            : undefined,
+        ),
+      ]),
+    );
+    const { spots, problems: missed } = placeInline(
+      r.points,
+      wanted.map((w) => ({
+        id: w.id,
+        length: lengths.get(w.id)!,
+        near: w.near,
+      })),
+      // Past each port's lead, and each bend's fitting.
+      { ends: 0.25, bends: 0.12, standing },
+    );
+    problems.push(...missed);
+    // Codex's rule: a fitting nobody can reach is reported, not installed.
+    const kept = spots.filter(
+      (spot) =>
+        rules.unreachable === 'place-anyway' ||
+        spot.reachable ||
+        line.through.includes(spot.id),
+    );
+    if (kept.length < spots.length)
+      problems.push(
+        ...spots
+          .filter((spot) => !kept.includes(spot))
+          .map((spot) => `${spot.id}: left out, nowhere reachable to fit it`),
+      );
+    spots.splice(0, spots.length, ...kept);
+    const pieces = splitAt(r.points, spots, lengths);
+    pieces.forEach((points, k) =>
+      runs.push({
+        id: `${line.edges[0]}#${k}`,
+        edgeId: line.edges[0],
+        medium: line.medium,
+        points,
+        startPort: k === 0 ? r.startPort : undefined,
+        endPort: k === pieces.length - 1 ? r.endPort : undefined,
+      }),
+    );
+    for (const spot of spots) {
+      const w = wanted.find((x) => x.id === spot.id)!;
+      if (w.kind === 'remote-valve') {
+        const i = indexOf.get(w.id)!;
+        places[i] = inlinePlace(spot.at, spot.along);
+        devices.push({
+          id: w.id,
+          kind: w.kind,
+          medium: line.medium,
+          od: r.od,
+          at: spot.at,
+          along: spot.along,
+          reachable: spot.reachable,
+          edgeId: line.edges[0],
+          operator: line.medium === 'gas' ? 'solenoid' : 'motor',
+        });
+        continue;
+      }
+      const f = fittings.find((x) => x.id === w.id)!;
+      devices.push({
+        id: w.id,
+        kind: w.kind,
+        medium: line.medium,
+        od: r.od,
+        at: spot.at,
+        along: spot.along,
+        reachable: spot.reachable,
+        edgeId: line.edges[0],
+        operator: operatorFor(f, spot.reachable, DEMO_ACTUATION),
+      });
+    }
+  };
+  // Pipes first, which places the valves; then power and flue, which reach them.
+  for (const line of lines)
+    if (line.medium === 'gas' || line.medium === 'water') plumb(line, layout);
+  const placed = { ...layout, places };
+  for (const line of lines)
+    if (line.medium === 'power' || line.medium === 'flue') plumb(line, placed);
+  return { places, runs, devices, terminals, problems };
 }

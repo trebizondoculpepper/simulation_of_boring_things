@@ -28,6 +28,9 @@ import { createRoomRegions } from '../views/room-regions';
 import {
   demoPlaceItems,
   demoPlaceLinks,
+  demoPlumbing,
+  CLAUDE_RULES,
+  CODEX_RULES,
 } from '../logic/port-graph-demo-routes';
 import {
   BEAM_DEPTH,
@@ -71,7 +74,8 @@ export type ExhibitRoomId =
   | 'dev15'
   | 'dev17'
   | 'dev18'
-  | 'dev19';
+  | 'dev19'
+  | 'dev19b';
 
 const EXHIBITS: Record<
   ExhibitRoomId,
@@ -98,6 +102,7 @@ const EXHIBITS: Record<
   dev17: () => import('./plant/pool-edges'),
   dev18: () => import('./plant/security-office'),
   dev19: () => import('./plant/port-graph-demo'),
+  dev19b: () => import('./plant/port-graph-demo-b'),
 };
 
 /**
@@ -170,13 +175,23 @@ export function startEquipmentRoom(
     const sizes = exhibits.map((e) => e.size);
     // Dev19 tries the room's layers (`doc/prompts/017-room-sizer-gantries-placement.md`):
     // sized for its machines, two storeys with a gantry, placed in bands.
+    // Dev19b is the same room plumbed by Codex's rules, to compare.
     sized =
-      id === 'dev19'
+      id === 'dev19' || id === 'dev19b'
         ? layoutSizedPlantRoom(sizes, {
             items: demoPlaceItems(),
             links: demoPlaceLinks(),
           })
         : null;
+    // The plumber sets the valves into their lines.
+    if (sized)
+      sized = {
+        ...sized,
+        places: demoPlumbing(
+          sized,
+          id === 'dev19b' ? CODEX_RULES : CLAUDE_RULES,
+        ).places,
+      };
     const layout = sized ?? layoutPlantRoom(sizes);
     const { halfX, halfZ } = layout;
     const services = SERVICE_CEILINGS[id as ExhibitRoomId];
@@ -288,7 +303,7 @@ export function startEquipmentRoom(
       const holder = new Group();
       holder.name = `Exhibit: ${exhibit.title}`;
       holder.position.set(place.x, place.y, place.z);
-      holder.rotation.y = place.yaw;
+      holder.rotation.set(0, place.yaw, place.tilt ?? 0);
       const built = exhibit.build(kit);
       const model = isLive(built) ? built.object : built;
       if (isLive(built)) live.push(built);
@@ -313,10 +328,13 @@ export function startEquipmentRoom(
         },
       );
       if (sized) {
-        // Over the machine, facing the way it faces.
+        // Over the machine, facing the way it faces; over a valve in its
+        // line, just above it.
         caption.position.set(
           place.x,
-          Math.min(exhibit.size.h + 0.35, height - 0.35),
+          place.inline
+            ? place.y + 0.3
+            : Math.min(exhibit.size.h + 0.35, height - 0.35),
           place.z,
         );
         caption.rotation.y = place.yaw;
@@ -337,12 +355,14 @@ export function startEquipmentRoom(
       room.add(caption);
     });
     if (buildRoomServices) room.add(buildRoomServices(kit, layout));
-    solids = layout.solids.map((s) => ({
-      minX: s.minX * m,
-      maxX: s.maxX * m,
-      minZ: s.minZ * m,
-      maxZ: s.maxZ * m,
-    }));
+    solids = layout.solids
+      .filter((s) => s.maxX > s.minX && s.maxZ > s.minZ)
+      .map((s) => ({
+        minX: s.minX * m,
+        maxX: s.maxX * m,
+        minZ: s.minZ * m,
+        maxZ: s.maxZ * m,
+      }));
     const params = new URLSearchParams(location.search);
     const arrival = portals.arrival(params.get('from'));
     // A position in the link (the position button's) wins: the room is

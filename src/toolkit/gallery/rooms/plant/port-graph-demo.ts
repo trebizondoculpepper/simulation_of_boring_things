@@ -32,12 +32,18 @@ import { HEATING_CIRCULATOR } from '../../../components/plant/logic/pump-sound';
 import { partAudio } from '../../../components/core/audio/part-audio';
 import { createLine } from '../../../components/plant/views/pipe-line';
 import {
+  createInlineFitting,
+  placeFitting,
+} from '../../../components/plant/views/inline-fittings';
+import {
   demoLocalPortAnchor,
   demoLineRequest,
+  demoPlumbing,
+  CLAUDE_RULES,
   demoValveGeometry,
-  demoServiceRoutes,
 } from '../../logic/port-graph-demo-routes';
 import type { PlantRoomLayout } from '../../logic/plant-room-layout';
+import type { PlumbingRules } from '../../logic/port-graph-demo-routes';
 import {
   createPartSet,
   pushButton,
@@ -449,7 +455,10 @@ function buildNode(
     node.data.kind === 'remote-water-valve'
   ) {
     // At its real size, on its line's bore (`remote-valve.ts`).
-    const actuator = createRemoteValve(kit, demoValveGeometry(id, kind));
+    // Set into its line by the plumber: its pipe carries it.
+    const actuator = createRemoteValve(kit, demoValveGeometry(id, kind), {
+      stand: false,
+    });
     valveOverride = actuator.override;
     object.add(actuator.group);
     mechanicalUpdate = () => actuator.show(demo.state.remote[id].actual);
@@ -668,21 +677,69 @@ export const EXHIBITS: readonly PlantExhibit[] = demoVisualBindings.map(
 );
 
 /** Every drawn service run is generated from a graph edge and visual port anchors. */
-export function buildRoomServices(
+export const buildRoomServices = (
   kit: Parameters<PlantExhibit['build']>[0],
   layout: PlantRoomLayout,
+) => buildPlumbedServices(kit, layout, CLAUDE_RULES);
+
+/** The room's services, plumbed by one set of rules (`PlumbingRules`). */
+export function buildPlumbedServices(
+  kit: Parameters<PlantExhibit['build']>[0],
+  layout: PlantRoomLayout,
+  rules: PlumbingRules,
 ) {
   const t = tools(kit);
   const group = new Group();
-  for (const route of demoServiceRoutes(layout)) {
+  // The plumber's lines (`doc/prompts/018-plumber-valves-and-isolators.md`):
+  // each split at the valves and isolators set into it.
+  const plumbing = demoPlumbing(layout, rules);
+  for (const route of plumbing.runs) {
     const request = demoLineRequest(route.edgeId, route.medium);
     const { group: run } = createLine(kit, request, route.points, {
       ends: ['open', 'open'],
       colour: route.medium === 'gas' ? '#c7a642' : undefined,
     });
-    run.name = `Graph edge ${route.edgeId}`;
+    run.name = `Graph edge ${route.id}`;
     run.userData.graphEdgeId = route.edgeId;
     group.add(run);
+  }
+  // Each magic terminal: where a flue meets the ceiling, its roof collar.
+  const collar = t.paint('#9ea3a3', 0.45, 0.6);
+  for (const terminal of plumbing.terminals) {
+    const [x, y, z] = terminal.at;
+    const ring = t.cyl(
+      group,
+      collar,
+      terminal.od / 2 + 0.06,
+      0.06,
+      x,
+      y - 0.03,
+      z,
+      'y',
+      24,
+    );
+    ring.name = `Roof terminal: ${terminal.id}`;
+  }
+  for (const device of plumbing.devices) {
+    if (device.kind === 'remote-valve') continue; // an exhibit of its own
+    const fitting = createInlineFitting(kit, {
+      kind: device.kind,
+      medium: device.medium,
+      operator: device.operator,
+      od: device.od,
+      heating:
+        device.medium === 'water' &&
+        demoLineRequest(device.edgeId, 'water').commodity === 'lthw',
+      drop: Math.max(0.3, device.at[1] - 1),
+    });
+    fitting.name = `${fitting.name}: ${device.id}`;
+    fitting.userData.plumbedId = device.id;
+    group.add(
+      placeFitting(fitting, device.kind, device.at, device.along, [
+        -device.at[0],
+        -device.at[2],
+      ]),
+    );
   }
   // Control edges share an abstract bus. The trunk only shows the connection;
   // individual signal wires do not need to snake around the physical services.

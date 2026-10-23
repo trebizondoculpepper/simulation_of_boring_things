@@ -10,7 +10,11 @@ import type { RemoteValveGeometry } from '../logic/remote-valve';
  * a solenoid safety shut-off with its coil on top (gas), on a channel floor
  * stand. A lamp on the head shows open (green) or shut (red).
  */
-export function createRemoteValve(kit: PanelKit, g: RemoteValveGeometry) {
+export function createRemoteValve(
+  kit: PanelKit,
+  g: RemoteValveGeometry,
+  { stand = true }: { stand?: boolean } = {},
+) {
   const t = tools(kit);
   const group = new Group();
   group.name =
@@ -24,18 +28,21 @@ export function createRemoteValve(kit: PanelKit, g: RemoteValveGeometry) {
   const galv = t.paint('#a9aeae', 0.45, 0.6);
   const { axis, length, body } = g;
 
-  // The stand: a channel post on its plate, up to the body.
-  t.box(group, galv, 0.16, 0.01, 0.16, 0, 0.005, 0);
-  t.box(
-    group,
-    galv,
-    0.041,
-    axis - body / 2,
-    0.041,
-    0,
-    (axis - body / 2) / 2,
-    0,
-  );
+  // The stand: a channel post on its plate, up to the body; none for a
+  // valve set into its line, which its pipe carries.
+  if (stand) {
+    t.box(group, galv, 0.16, 0.01, 0.16, 0, 0.005, 0);
+    t.box(
+      group,
+      galv,
+      0.041,
+      axis - body / 2,
+      0.041,
+      0,
+      (axis - body / 2) / 2,
+      0,
+    );
+  }
 
   if (g.medium === 'water') {
     // Hexagon ends, threaded onto the pipe, and the ball's housing.

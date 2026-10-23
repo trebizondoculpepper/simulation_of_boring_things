@@ -57,6 +57,8 @@ export interface PlaceItem {
   clearAbove?: boolean;
   /** Its ports: where, in its own frame (yaw 0), and which way each faces. */
   ports?: Readonly<Record<string, { at: Vec3; out: Vec3 }>>;
+  /** Set into a line (a valve): left out of the room's layout, for the plumber. */
+  inline?: boolean;
 }
 
 export interface PlaceLink {

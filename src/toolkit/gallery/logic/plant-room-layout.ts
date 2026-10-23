@@ -56,6 +56,13 @@ export interface ExhibitPlace {
   y: number;
   /** Turn about y: 0 faces south (+z), π faces north. */
   yaw: number;
+  /**
+   * A turn about its own z before the yaw, for a device set into a run of
+   * pipe: π/2 stands its x (the pipe's way through it) upright.
+   */
+  tilt?: number;
+  /** Set into a line by the plumber, not standing on the floor. */
+  inline?: boolean;
 }
 
 export interface PlantRoomLayout {
@@ -270,13 +277,16 @@ export function layoutSizedPlantRoom(
     seed?: number;
   } = {},
 ): SizedPlantRoomLayout {
-  const place: PlaceItem[] = sizes.map((s, i) => ({
+  const all: PlaceItem[] = sizes.map((s, i) => ({
     key: String(i),
     w: s.w,
     d: s.d,
     h: s.h,
     ...items[i],
   }));
+  // What sits in a line (a valve) is the plumber's to place, later: the
+  // room is sized and laid out without it.
+  const place = all.filter((item) => !item.inline);
   // Grow a little at a time; at each size, a few seeds before growing.
   const tries = [0, 0.1, 0.2, 0.3, 0.45, 0.6];
   let result: SizedPlantRoomLayout | null = null;
@@ -307,8 +317,22 @@ export function layoutSizedPlantRoom(
       halfX: room.w / 2,
       halfZ: room.d / 2,
       height: room.h,
-      places: placed.placed.map((p) => ({ x: p.x, z: p.z, y: 0, yaw: p.yaw })),
-      solids: placed.placed.map((p) => p.footprint),
+      places: all.map((item) => {
+        const p = placed.placed.find((q) => q.key === item.key);
+        return p
+          ? { x: p.x, z: p.z, y: 0, yaw: p.yaw }
+          : { x: 0, z: 0, y: 0, yaw: 0, inline: true };
+      }),
+      // Index for index with the exhibits; nothing, for one in a line.
+      solids: all.map(
+        (item) =>
+          placed.placed.find((q) => q.key === item.key)?.footprint ?? {
+            minX: 0,
+            maxX: 0,
+            minZ: 0,
+            maxZ: 0,
+          },
+      ),
       regions: [...reserved.regions, ...placed.walkways],
       bands: placed.bands,
       gantry: reserved.gantry,
