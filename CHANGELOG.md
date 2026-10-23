@@ -6,10 +6,12 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Dev19's physical port graph now produces a weighted machine adjacency matrix for compact placement. The pool mimic has a temperature target and a heating switch that commands the boiler and primary circulator.
 - Dev19's small pool now has a post-mounted water quality sign with live graph-bound temperature, pH and free chlorine readings. Each motorized shutoff and breaker also has a local override button.
 
 ### Changed
 
+- Dev19 now occupies a 20 m square, 4 m high room with equipment on all four walls. Its graph service runs use the commodity-based pipe helper, including yellow gas lines, heating pipework, pool and mains water, power conduit and twin-wall flue. Small graph port labels face the player.
 - Small component legends, maker badges and machine nameplates fade smoothly as their lettering shrinks below readable screen size, including when the player zooms out.
 - Dev19's routed physical services leave their declared graph ports square before the first bend.
 

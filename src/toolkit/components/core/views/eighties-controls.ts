@@ -5,6 +5,7 @@ import {
   Group,
   Mesh,
   PlaneGeometry,
+  Quaternion,
 } from 'three';
 import type {
   BufferGeometry,
@@ -83,6 +84,7 @@ export function createMicroLabel(
     font = PANEL_FONT,
     width = 0,
     maxWidth = Infinity,
+    faceCamera = false,
   } = {},
 ) {
   const px = 16;
@@ -129,6 +131,26 @@ export function createMicroLabel(
   );
   mesh.name = `Label ${text}`;
   applyLabelFade(mesh, material, height * fit);
+  if (faceCamera) {
+    const cameraRotation = new Quaternion();
+    const parentRotation = new Quaternion();
+    const fade = mesh.onBeforeRender;
+    mesh.frustumCulled = false;
+    mesh.onBeforeRender = (
+      renderer,
+      scene,
+      camera,
+      geometry,
+      material,
+      group,
+    ) => {
+      camera.getWorldQuaternion(cameraRotation);
+      mesh.parent?.getWorldQuaternion(parentRotation);
+      mesh.quaternion.copy(parentRotation.invert().multiply(cameraRotation));
+      mesh.updateMatrixWorld();
+      fade.call(mesh, renderer, scene, camera, geometry, material, group);
+    };
+  }
   // Printed lettering is a decal: it never takes a click meant for the
   // control it labels (its sheet is larger than its letters).
   mesh.raycast = () => {};

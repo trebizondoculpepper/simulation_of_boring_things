@@ -126,3 +126,103 @@ export function layoutPlantRoom(
     solids,
   };
 }
+
+/** Square development plant with machines on four walls and connected neighbours nearby. */
+export function layoutSquarePlantRoom(
+  sizes: readonly ExhibitSize[],
+  links: readonly (readonly [number, number, number])[] = [],
+): PlantRoomLayout {
+  const quarter = Math.floor(sizes.length / 4);
+  const counts = [
+    quarter,
+    Math.ceil(sizes.length / 4),
+    quarter,
+    sizes.length - 2 * quarter - Math.ceil(sizes.length / 4),
+  ];
+  const rowLength = (row: readonly number[]) =>
+    row.reduce((sum, index) => sum + sizes[index].w, 0) +
+    Math.max(0, row.length - 1) * EXHIBIT_GAP;
+  const rowsOf = (order: readonly number[]) => {
+    let cursor = 0;
+    return counts.map((count) => {
+      const row = order.slice(cursor, cursor + count);
+      cursor += count;
+      return row;
+    });
+  };
+  const side = 20;
+  const half = side / 2;
+  const arrange = (order: readonly number[]) => {
+    const places: ExhibitPlace[] = Array(sizes.length);
+    const solids: Footprint[] = Array(sizes.length);
+    const rows = rowsOf(order);
+    rows.forEach((row, bank) => {
+      let along = -rowLength(row) / 2;
+      for (const index of row) {
+        const size = sizes[index];
+        const middle = along + size.w / 2;
+        const inset = half - BACK_CLEARANCE - size.d / 2;
+        const [x, z, yaw] =
+          bank === 0
+            ? [middle, -inset, 0]
+            : bank === 1
+              ? [inset, middle, -Math.PI / 2]
+              : bank === 2
+                ? [-middle, inset, Math.PI]
+                : [-inset, -middle, Math.PI / 2];
+        places[index] = { x, y: 0, z, yaw };
+        const halfW = bank % 2 === 0 ? size.w / 2 : size.d / 2;
+        const halfD = bank % 2 === 0 ? size.d / 2 : size.w / 2;
+        solids[index] = {
+          minX: x - halfW,
+          maxX: x + halfW,
+          minZ: z - halfD,
+          maxZ: z + halfD,
+        };
+        along += size.w + EXHIBIT_GAP;
+      }
+    });
+    return { rows, places, solids };
+  };
+  const score = (order: readonly number[]) => {
+    const { rows, places } = arrange(order);
+    const overflow = rows.reduce(
+      (sum, row) => sum + Math.max(0, rowLength(row) - (side - 3)) ** 2 * 1000,
+      0,
+    );
+    return (
+      overflow +
+      links.reduce(
+        (sum, [a, b, weight]) =>
+          sum +
+          weight *
+            Math.hypot(places[a].x - places[b].x, places[a].z - places[b].z),
+        0,
+      )
+    );
+  };
+  const order = sizes.map((_, index) => index);
+  let best = score(order);
+  for (let pass = 0; pass < 8; pass++) {
+    let improved = false;
+    for (let a = 0; a < order.length - 1; a++) {
+      for (let b = a + 1; b < order.length; b++) {
+        [order[a], order[b]] = [order[b], order[a]];
+        const next = score(order);
+        if (next + 0.001 < best) {
+          best = next;
+          improved = true;
+        } else [order[a], order[b]] = [order[b], order[a]];
+      }
+    }
+    if (!improved) break;
+  }
+  const { places, solids } = arrange(order);
+  return {
+    halfX: half,
+    halfZ: half,
+    height: 4,
+    places,
+    solids,
+  };
+}

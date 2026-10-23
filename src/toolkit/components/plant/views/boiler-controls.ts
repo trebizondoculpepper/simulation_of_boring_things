@@ -1,4 +1,5 @@
 import { Group, MeshBasicMaterial } from 'three';
+import { signal } from '@preact/signals-core';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import {
@@ -123,16 +124,19 @@ export function createBoilerPanel(
   parts.add(power);
   // The flow temperature knob, 40 to 90 °C in degrees: it and − and +
   // set one setpoint, so the knob shows the boiler's, however set.
-  let setpoint = 80;
+  const setpoint = signal(80);
   const knob = potentiometer(kit, {
     steps: SETPOINT_RANGE.max - SETPOINT_RANGE.min,
     legend: 'FLOW °C',
     name: 'Boiler flow temperature knob',
     bound: {
       get value() {
-        return setpoint - SETPOINT_RANGE.min;
+        return setpoint.value - SETPOINT_RANGE.min;
       },
-      set: (position: number) => setSetpoint(SETPOINT_RANGE.min + position),
+      set: (position: number) => {
+        setpoint.value = SETPOINT_RANGE.min + position;
+        setSetpoint(setpoint.value);
+      },
     },
   });
   knob.object.position.set(0.125, -0.05, 0.02);
@@ -155,7 +159,7 @@ export function createBoilerPanel(
     parts,
     show(boiler, seconds, delta) {
       lit = boiler.on;
-      setpoint = boiler.setpoint;
+      setpoint.value = boiler.setpoint;
       display.show(boilerDisplay(boiler, seconds));
       const on = boilerLamps(boiler);
       const states = [

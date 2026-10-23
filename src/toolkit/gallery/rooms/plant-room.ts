@@ -15,7 +15,10 @@ import {
 import type { Object3D } from 'three';
 import { DEV_ROOM_NAMES, devPortals, devWalls } from '../logic/dev-room-links';
 import type { EquipmentRoomId } from '../logic/dev-room-links';
-import { layoutPlantRoom } from '../logic/plant-room-layout';
+import {
+  layoutPlantRoom,
+  layoutSquarePlantRoom,
+} from '../logic/plant-room-layout';
 import type { PlantRoomLayout } from '../logic/plant-room-layout';
 import {
   BEAM_DEPTH,
@@ -47,6 +50,14 @@ import {
 } from '../../components/core/parts/render-style';
 import { isLive } from './plant/exhibit';
 import type { LiveExhibit, PlantExhibit } from './plant/exhibit';
+import {
+  demoGraph,
+  demoVisualBindings,
+} from '../../../game/plant/port-graph-demo';
+import {
+  adjacencyLinks,
+  physicalAdjacencyMatrix,
+} from '../../../game/plant/port-adjacency';
 
 /** Each plant room's exhibits, loaded with the room. */
 /** The rooms laid out as exhibits: each equipment room, and dev10. */
@@ -151,21 +162,20 @@ export function startEquipmentRoom(
     purpose: string,
     buildRoomServices?: (kit: PanelKit, layout: PlantRoomLayout) => Group,
   ) => {
-    const layout = layoutPlantRoom(exhibits.map((e) => e.size));
-    if (id === 'dev19') {
-      const mimicIndex = exhibits.findIndex((exhibit) =>
-        exhibit.reference.startsWith('demo.mimic'),
-      );
-      if (mimicIndex >= 0) {
-        layout.places[mimicIndex] = { x: 3.75, y: 0, z: -0.65, yaw: 0 };
-        layout.solids[mimicIndex] = {
-          minX: 2.625,
-          maxX: 4.875,
-          minZ: -0.95,
-          maxZ: -0.35,
-        };
-      }
-    }
+    const sizes = exhibits.map((e) => e.size);
+    const links =
+      id === 'dev19'
+        ? adjacencyLinks(
+            physicalAdjacencyMatrix(
+              demoGraph,
+              demoVisualBindings.map((binding) => binding.nodeId),
+            ),
+          )
+        : [];
+    const layout =
+      id === 'dev19'
+        ? layoutSquarePlantRoom(sizes, links)
+        : layoutPlantRoom(sizes);
     const { halfX, halfZ } = layout;
     const services = SERVICE_CEILINGS[id as ExhibitRoomId];
     // Under a services ceiling, the walls and roof go up over the services.
@@ -342,10 +352,10 @@ export function startEquipmentRoom(
       return;
     }
     const start = arrival ?? {
-      x: (id === 'dev19' ? -11.05 : -halfX + 2.5) * m,
-      z: (id === 'dev19' ? 3.68 : halfZ - 2) * m,
-      yaw: id === 'dev19' ? (38.9 * Math.PI) / 180 : Math.PI / 4,
-      pitch: id === 'dev19' ? (-8.8 * Math.PI) / 180 : 0,
+      x: (id === 'dev19' ? 0 : -halfX + 2.5) * m,
+      z: (id === 'dev19' ? 0 : halfZ - 2) * m,
+      yaw: id === 'dev19' ? 0 : Math.PI / 4,
+      pitch: id === 'dev19' ? -0.08 : 0,
     };
     walk.place(start.x, start.z, start.yaw, start.pitch);
   };

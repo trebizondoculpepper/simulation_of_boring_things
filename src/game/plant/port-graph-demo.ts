@@ -165,6 +165,8 @@ const ports: Record<DemoKind, readonly Port[]> = {
     physical('overflow', 'out', 'water'),
     physical('loss', 'out', 'heat'),
     control('temperature', 'out', '°C'),
+    control('target', 'out', '°C'),
+    control('setpoint', 'in', '°C'),
     control('chlorine', 'out', 'mg/L'),
     control('ph', 'out', 'pH'),
   ],
@@ -221,6 +223,10 @@ const ports: Record<DemoKind, readonly Port[]> = {
   'pool-mimic': [
     physical('power', 'in', 'power'),
     control('pool-temperature', 'in', '°C'),
+    control('pool-target', 'in', '°C'),
+    control('pool-target-command', 'out', '°C'),
+    control('boiler-command', 'out', 'state', 'boolean'),
+    control('primary-pump-command', 'out', 'state', 'boolean'),
     control('chlorine', 'in', 'mg/L'),
     control('ph', 'in', 'pH'),
     control('balance-level', 'in', 'm'),
@@ -512,6 +518,34 @@ export const demoGraph = createGraph({
       'pool-temperature',
     ),
     signal(
+      'signal-pool-target',
+      'demo.pool',
+      'target',
+      'demo.poolMimic',
+      'pool-target',
+    ),
+    command(
+      'command-pool-target',
+      'demo.poolMimic',
+      'pool-target-command',
+      'demo.pool',
+      'setpoint',
+    ),
+    command(
+      'command-pool-heat-boiler',
+      'demo.poolMimic',
+      'boiler-command',
+      'demo.boiler',
+      'on-command',
+    ),
+    command(
+      'command-pool-heat-pump',
+      'demo.poolMimic',
+      'primary-pump-command',
+      'demo.pump',
+      'on-command',
+    ),
+    signal(
       'signal-chlorine',
       'demo.pool',
       'chlorine',
@@ -649,6 +683,7 @@ export interface DemoState {
   gasCubicMetresPerHour: number;
   tankC: number;
   poolC: number;
+  poolSetpointC: number;
   poolChlorineMgL: number;
   poolPH: number;
   balanceKg: number;
@@ -700,6 +735,7 @@ export function createPortGraphDemo() {
     gasCubicMetresPerHour: 0,
     tankC: 42,
     poolC: 26,
+    poolSetpointC: 28,
     poolChlorineMgL: 1.2,
     poolPH: 7.2,
     balanceKg: 350,
@@ -793,6 +829,8 @@ export function createPortGraphDemo() {
         case 'signal-pool-temperature':
         case 'sign-pool-temperature':
           return state.poolC;
+        case 'signal-pool-target':
+          return state.poolSetpointC;
         case 'signal-chlorine':
         case 'sign-chlorine':
           return state.poolChlorineMgL;
@@ -838,6 +876,25 @@ export function createPortGraphDemo() {
       else if (e?.targetId === 'demo.poolPump') state.poolPumpOn = on;
       else if (e?.targetId && e.targetId in state.remote)
         state.remote[e.targetId].command = on;
+    },
+    setPoolSetpoint(celsius: number) {
+      const e = demoGraph.edges.find(
+        (edge) => edge.id === 'command-pool-target',
+      );
+      const target = demoGraph.nodes
+        .find((node) => node.id === e?.targetId)
+        ?.ports?.find((port) => port.name === e?.targetPort);
+      if (
+        target?.data.control?.access !== 'write' ||
+        target.data.control.unit !== '°C'
+      )
+        throw new Error('Pool temperature target is not connected');
+      if (!Number.isFinite(celsius))
+        throw new Error('Invalid pool temperature target');
+      state.poolSetpointC = Math.max(
+        20,
+        Math.min(40, Math.round(celsius * 2) / 2),
+      );
     },
     /** Local two-position service override. A second press releases it to remote control. */
     toggleLocalOverride(nodeId: string) {
@@ -945,7 +1002,8 @@ export function createPortGraphDemo() {
             : !remote('demo.remoteGas')
               ? 'gas-isolated'
               : state.boilerControl.state.forcing === 'auto' &&
-                  state.tankC >= state.boilerControl.state.setpoint
+                  (state.poolC >= state.poolSetpointC ||
+                    state.tankC >= state.boilerControl.state.setpoint)
                 ? 'standby'
                 : 'firing';
       const fuelKg =

@@ -10,6 +10,9 @@ import type {
   Vec3,
 } from '../../components/core/logic/pipe-route';
 import type { PlantRoomLayout } from './plant-room-layout';
+import { choosePipe } from '../../components/core/logic/plumber';
+import type { PipeRequest } from '../../components/core/logic/plumber';
+import { PIPE_KINDS } from '../../components/core/views/pipe-kinds';
 
 type Medium = 'gas' | 'water' | 'power' | 'flue';
 export interface DemoRoute {
@@ -193,18 +196,43 @@ export function demoPipeSpec(
   edgeId: string,
   medium: Medium,
 ): {
-  kind: 'steel-screwed' | 'lagged-heating' | 'pvc-pressure' | 'flue';
+  kind: ReturnType<typeof choosePipe>['kind'];
   od: number;
   joint: PipeJoint;
 } {
-  if (medium === 'gas')
-    return { kind: 'steel-screwed', od: 0.0483, joint: 'thread' };
-  if (medium === 'flue') return { kind: 'flue', od: 0.25, joint: 'band' };
+  const choice = choosePipe(demoLineRequest(edgeId, medium));
+  return {
+    kind: choice.kind,
+    od: choice.od,
+    joint: PIPE_KINDS[choice.kind].joint,
+  };
+}
+
+/** Nominal capacities for the trial plant; the helper selects material and bore. */
+export function demoLineRequest(edgeId: string, medium: Medium): PipeRequest {
+  const length = 40; // Allow for the route through the room, including its leads.
+  if (medium === 'gas') return { commodity: 'natural-gas', flow: 1.6, length };
+  if (medium === 'flue') return { commodity: 'flue-gas', power: 15, length };
   if (medium === 'power')
-    return { kind: 'steel-screwed', od: 0.0269, joint: 'thread' };
-  return primaryEdges.has(edgeId)
-    ? { kind: 'lagged-heating', od: 0.0483, joint: 'flange' }
-    : { kind: 'pvc-pressure', od: 0.075, joint: 'socket' };
+    return {
+      commodity: 'ac-230v',
+      current: edgeId === 'boiler-feed' ? 32 : 10,
+      length,
+    };
+  if (primaryEdges.has(edgeId)) return { commodity: 'lthw', flow: 1.8, length };
+  if (edgeId.startsWith('makeup-'))
+    return { commodity: 'mains-water', flow: 0.072, length };
+  return {
+    commodity: 'pool-water',
+    flow: 5.4,
+    length,
+    role:
+      edgeId === 'pool-overflow' ||
+      edgeId === 'balance-supply' ||
+      edgeId === 'pool-suction'
+        ? 'suction'
+        : 'pressure',
+  };
 }
 
 /** Physical routes derived only from typed graph edges and their visual port twins. */

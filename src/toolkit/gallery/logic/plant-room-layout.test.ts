@@ -4,8 +4,18 @@ import {
   END_SPACE,
   HEADROOM,
   layoutPlantRoom,
+  layoutSquarePlantRoom,
   WALL_FACE,
 } from './plant-room-layout';
+import {
+  demoGraph,
+  demoVisualBindings,
+} from '../../../game/plant/port-graph-demo';
+import {
+  adjacencyLinks,
+  physicalAdjacencyMatrix,
+} from '../../../game/plant/port-adjacency';
+import { EXHIBITS } from '../rooms/plant/port-graph-demo';
 import type { ExhibitSize } from './plant-room-layout';
 
 const floor = (w: number, d: number, h: number): ExhibitSize => ({
@@ -59,5 +69,27 @@ describe('a plant room layout', () => {
       Array.from({ length: 8 }, () => floor(3, 2, 2)),
     );
     expect(2 * layout.halfX).toBeGreaterThanOrEqual(8 * 3 + 2 * END_SPACE);
+  });
+
+  it('fits the coupled trial machines on four sides of a 20 m square', () => {
+    const links = adjacencyLinks(
+      physicalAdjacencyMatrix(
+        demoGraph,
+        demoVisualBindings.map((binding) => binding.nodeId),
+      ),
+    );
+    const layout = layoutSquarePlantRoom(
+      EXHIBITS.map((exhibit) => exhibit.size),
+      links,
+    );
+    expect(layout.halfX).toBe(10);
+    expect(layout.halfZ).toBe(10);
+    expect(layout.height).toBe(4);
+    for (const solid of layout.solids) {
+      expect(solid.minX).toBeGreaterThan(-10);
+      expect(solid.maxX).toBeLessThan(10);
+      expect(solid.minZ).toBeGreaterThan(-10);
+      expect(solid.maxZ).toBeLessThan(10);
+    }
   });
 });

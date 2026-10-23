@@ -37,6 +37,22 @@ describe('dev19 pool plant graph', () => {
     expect(demo.poolLedgerErrorKWh()).toBeCloseTo(0, 8);
   });
 
+  it('heats and then cools the pool using commands on the pool mimic', () => {
+    const demo = createPortGraphDemo();
+    const before = demo.state.poolC;
+    demo.setPoolSetpoint(30);
+    expect(demo.readMimic('signal-pool-target')).toBe(30);
+    demo.step(120);
+    expect(demo.state.poolC).toBeGreaterThan(before);
+    const warm = demo.state.poolC;
+    demo.commandMimic('command-pool-heat-boiler', false);
+    demo.commandMimic('command-pool-heat-pump', false);
+    demo.step(120);
+    expect(demo.state.boilerKW).toBe(0);
+    expect(demo.state.poolC).toBeLessThan(warm);
+    expect(demo.state.poolFlowKgPerSecond).toBeGreaterThan(0);
+  });
+
   it('pool valve and pump commands interrupt filtration and dosing', () => {
     const demo = createPortGraphDemo();
     demo.step(1);

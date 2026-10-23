@@ -30,10 +30,10 @@ import {
 } from '../../../components/plant/views/plant-switch-sound';
 import { HEATING_CIRCULATOR } from '../../../components/plant/logic/pump-sound';
 import { partAudio } from '../../../components/core/audio/part-audio';
-import { createPipe } from '../../../components/core/views/pipe-kinds';
+import { createLine } from '../../../components/plant/views/pipe-line';
 import {
   demoLocalPortAnchor,
-  demoPipeSpec,
+  demoLineRequest,
   demoServiceRoutes,
 } from '../../logic/port-graph-demo-routes';
 import type { PlantRoomLayout } from '../../logic/plant-room-layout';
@@ -161,6 +161,7 @@ function buildMimic(
         ] as const)
       : ([
           ['POOL TEMP', 'signal-pool-temperature', 'C', 1],
+          ['POOL TARGET', 'signal-pool-target', 'C', 1],
           ['CHLORINE', 'signal-chlorine', 'mg/L', 2],
           ['POOL PH', 'signal-ph', 'pH', 2],
           ['BALANCE', 'signal-balance-level', 'FULL', 2],
@@ -172,7 +173,7 @@ function buildMimic(
           ['MAKEUP', 'signal-makeup-valve', 'OPEN', 0],
         ] as const);
   const readouts = signals.map(([legend, edgeId, unit, decimals], i) => {
-    const y = 2.21 - i * 0.16;
+    const y = 2.21 - i * (id === 'demo.poolMimic' ? 0.145 : 0.16);
     const label = createMicroLabel(kit, legend, {
       height: 0.025,
       ink: '#243b42',
@@ -203,9 +204,9 @@ function buildMimic(
           [9, 'command-remote-power', 'demo.remotePower', 'POWER'],
         ] as const)
       : ([
-          [7, 'command-suction-valve', 'demo.remoteSuction', 'SUCTION'],
-          [8, 'command-return-valve', 'demo.remoteReturn', 'RETURN'],
-          [9, 'command-makeup-valve', 'demo.remoteMakeup', 'MAKEUP'],
+          [8, 'command-suction-valve', 'demo.remoteSuction', 'SUCTION'],
+          [9, 'command-return-valve', 'demo.remoteReturn', 'RETURN'],
+          [10, 'command-makeup-valve', 'demo.remoteMakeup', 'MAKEUP'],
         ] as const);
   for (const [row, edgeId, nodeId, legend] of valveCommands) {
     const button = parts.add(
@@ -217,7 +218,11 @@ function buildMimic(
           demo.commandMimic(edgeId, !demo.state.remote[nodeId].command),
       }),
     );
-    button.object.position.set(-0.93, 2.21 - row * 0.16, 0.15);
+    button.object.position.set(
+      -0.93,
+      2.21 - row * (id === 'demo.poolMimic' ? 0.145 : 0.16),
+      0.15,
+    );
     object.add(button.object);
   }
   const machineCommands =
@@ -236,9 +241,45 @@ function buildMimic(
         action: () => demo.commandMimic(edgeId, !demo.state[stateKey]),
       }),
     );
-    button.object.position.set(i === 0 ? -0.55 : 0.55, 0.3, 0.15);
+    button.object.position.set(
+      i === 0 ? -0.55 : 0.55,
+      id === 'demo.poolMimic' ? 0.16 : 0.3,
+      0.15,
+    );
     object.add(button.object);
   });
+  if (id === 'demo.poolMimic') {
+    const heatButton = parts.add(
+      pushButton(kit, {
+        colour: 'green',
+        legend: 'POOL HEAT ON/OFF',
+        name: 'Pool heating control',
+        action: () => {
+          const on = !(demo.state.boilerOn && demo.state.pumpOn);
+          demo.commandMimic('command-pool-heat-boiler', on);
+          demo.commandMimic('command-pool-heat-pump', on);
+        },
+      }),
+    );
+    heatButton.object.position.set(0.55, 0.16, 0.15);
+    object.add(heatButton.object);
+    for (const [direction, x, legend] of [
+      [-1, -0.15, 'TARGET −'],
+      [1, 0.15, 'TARGET +'],
+    ] as const) {
+      const button = parts.add(
+        pushButton(kit, {
+          colour: 'blue',
+          legend,
+          name: `Pool target ${legend}`,
+          action: () =>
+            demo.setPoolSetpoint(demo.state.poolSetpointC + direction * 0.5),
+        }),
+      );
+      button.object.position.set(x, 0.39, 0.15);
+      object.add(button.object);
+    }
+  }
   return {
     object,
     parts,
@@ -469,6 +510,7 @@ function buildNode(
       ink: '#ecf1ed',
       plate: '#283237',
       maxWidth: 0.15,
+      faceCamera: true,
     });
     label.position.set(x, y + 0.07, z + 0.06);
     object.add(label);
@@ -613,8 +655,11 @@ export function buildRoomServices(
   const t = tools(kit);
   const group = new Group();
   for (const route of demoServiceRoutes(layout)) {
-    const { kind, od } = demoPipeSpec(route.edgeId, route.medium);
-    const run = createPipe(kind, od, route.points, { ends: ['open', 'open'] });
+    const request = demoLineRequest(route.edgeId, route.medium);
+    const { group: run } = createLine(kit, request, route.points, {
+      ends: ['open', 'open'],
+      colour: route.medium === 'gas' ? '#c7a642' : undefined,
+    });
     run.name = `Graph edge ${route.edgeId}`;
     run.userData.graphEdgeId = route.edgeId;
     group.add(run);
