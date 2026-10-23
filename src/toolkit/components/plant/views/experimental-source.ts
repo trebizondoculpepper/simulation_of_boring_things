@@ -222,17 +222,19 @@ export function createExperimentalSourceView(
   group.add(readout.group);
   const unitTag = createMicroLabel(
     kit,
-    `${role === 'source' ? 'REMAINING' : 'CAPACITY'}  ${unit}`,
+    `${role === 'source' ? 'REMAINING' : 'CONTENTS'}  ${unit}`,
     { height: 0.011, ink: '#ecf1ed', plate: '#283237', maxWidth: 0.16 },
   );
   unitTag.position.set(0, y - 0.06, r + 0.03);
   group.add(unitTag);
   let shown = '';
   const update = () => {
-    // LED digits have no point: whole units, and infinity as -oo-.
-    const text = terminal.endless
-      ? '-oo-'
-      : String(Math.round(terminal.value()));
+    // LED digits have no point: whole units, and an endless source's
+    // infinity as -oo-. A sink shows what it holds, from nothing.
+    const text =
+      terminal.role === 'source' && terminal.endless
+        ? '-oo-'
+        : String(Math.round(terminal.value()));
     if (text === shown) return;
     shown = text;
     readout.show(text);

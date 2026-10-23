@@ -112,7 +112,7 @@ describe('experimental sources', () => {
     expect(d.ports.map((p) => [p.name, p.direction])).toEqual([
       ['in-1', 'in'],
       ['in-2', 'in'],
-      ['capacity', 'out'],
+      ['contents', 'out'],
     ]);
     expect(d.ports[2].data.control).toMatchObject({
       access: 'read',
@@ -128,7 +128,10 @@ describe('experimental sources', () => {
       substance: 'dirty-water',
     });
     expect(open.endless).toBe(true);
-    expect(open.reading()).toBe('∞');
+    // No limit, but it starts empty, and counts what it takes.
+    expect(open.reading()).toBe('0.00');
+    expect(open.value()).toBe(0);
+    expect(open.space()).toBe(Infinity);
     expect(open.rateFrom(2)).toBe(60);
     expect(open.accept(1e6, 60)).toBeCloseTo(1, 6);
     expect(canAccept(open, 'water', 'dirty-water')).toBe(true);
@@ -142,6 +145,7 @@ describe('experimental sources', () => {
       ),
     ).toEqual([
       'SUBSTANCE  MAINS WATER',
+      'CAPACITY  UNLIMITED',
       'MAX FLOW  5 m³/h',
       'RESISTANCE  0.3 bar/(m³/h)',
       'SUPPLY PRESSURE  3 bar',
@@ -153,6 +157,7 @@ describe('experimental sources', () => {
       ),
     ).toEqual([
       'SUBSTANCE  230 V 1-PH',
+      'CAPACITY  UNLIMITED',
       'MAX FLOW  7.4 kW',
       'RESISTANCE  3.57 Ω',
       'SUPPLY VOLTAGE  230 V',
@@ -160,8 +165,26 @@ describe('experimental sources', () => {
     expect(
       ratingLines(
         createExperimentalSink({ id: 't', substance: 'dirty-water' }),
-      )[3],
+      )[4],
     ).toBe('BACK PRESSURE  0 bar');
+    expect(
+      ratingLines(
+        createExperimentalSink({
+          id: 't',
+          substance: 'dirty-water',
+          capacity: 30,
+        }),
+      )[1],
+    ).toBe('CAPACITY  30 m³');
+    expect(
+      ratingLines(
+        createExperimentalSource({
+          id: 't',
+          substance: 'chlorine',
+          quantity: 25,
+        }),
+      )[1],
+    ).toBe('CAPACITY  25 kg');
   });
 
   it('runs down as it is drawn from, and delivers nothing once empty', () => {

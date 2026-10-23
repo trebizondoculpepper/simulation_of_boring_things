@@ -533,9 +533,9 @@ export function canSupply(
  *
  * - **Typed inputs:** `in-1`, `in-2`… each taking one substance, in its
  *   substance's medium.
- * - **A control port, `capacity`:** reports the room it has left, a number
- *   in its substance's unit, which may be infinite. Like a source's, it
- *   only reports: there is no switch.
+ * - **A control port, `contents`:** reports what it holds, a number in its
+ *   substance's unit, starting at nothing, even for a sink with no limit.
+ *   Like a source's, it only reports: there is no switch.
  * - **Taking:** what is delivered to it fills it, up to its capacity; a
  *   full sink takes nothing more.
  */
@@ -559,7 +559,7 @@ export interface ExperimentalSink {
   spec: Required<
     Omit<ExperimentalSinkSpec, 'potential' | 'maxRate' | 'resistance'>
   >;
-  /** Its ports: `in-1`, `in-2`… typed by its substance, and `capacity`. */
+  /** Its ports: `in-1`, `in-2`… typed by its substance, and `contents`. */
   ports: SourcePort[];
   /** The room it has left, in its unit; Infinity if it has no limit. */
   space(): number;
@@ -573,7 +573,7 @@ export interface ExperimentalSink {
   /** Deliver up to `amount` over `dt` seconds, never faster than its maximum rate; returns what it took. */
   accept(amount: number, dt: number): number;
   reading(): string;
-  /** Its control port's value: the room it has left. */
+  /** Its control port's value: what it holds. */
   value(): number;
 }
 
@@ -597,11 +597,12 @@ export function createExperimentalSink(
       full.substance,
       full.inputs,
       'in',
-      'capacity',
-      full.capacity === Infinity,
+      'contents',
+      // What it holds is never infinite, whatever its capacity.
+      false,
     ),
     space,
-    value: space,
+    value: () => taken,
     received: () => taken,
     endless: full.capacity === Infinity,
     flow: model,
@@ -613,7 +614,7 @@ export function createExperimentalSink(
       taken += took;
       return took;
     },
-    reading: () => show(space()),
+    reading: () => show(taken),
   };
 }
 
@@ -639,7 +640,8 @@ const sig = (v: number) => {
 
 /**
  * The rating plate lettered on a source or sink: its substance, its
- * maximum flow, its internal resistance and the potential it works at,
+ * capacity (what a source starts with, what a sink can hold), its maximum
+ * flow, its internal resistance and the potential it works at,
  * each in its own units. A fluid's resistance is in its pressure unit per
  * unit an hour of flow (bar/(m³/h)); power's in ohms, at its nominal
  * voltage (a kilowatt being 1000/V amps).
@@ -649,8 +651,11 @@ export function ratingLines(t: ExperimentalTerminal): string[] {
   const { maxRate, resistance, potential, potentialUnit } = t.flow;
   const power = medium === 'power';
   const nominal = FLOWS[t.spec.substance].potential;
+  const capacity = (q: number) =>
+    q === Infinity ? 'UNLIMITED' : `${sig(q)} ${power ? 'kWh' : unit}`;
   return [
     `SUBSTANCE  ${label}`,
+    `CAPACITY  ${t.role === 'source' ? capacity(t.spec.quantity) : capacity(t.spec.capacity)}`,
     `MAX FLOW  ${sig(maxRate)} ${power ? 'kW' : `${unit}/h`}`,
     power
       ? `RESISTANCE  ${sig((resistance * nominal) / 1000)} Ω`
