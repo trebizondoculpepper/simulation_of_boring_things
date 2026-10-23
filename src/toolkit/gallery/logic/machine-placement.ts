@@ -69,6 +69,14 @@ export interface PlaceItem {
    * the island's two faces, each row facing a walkway.
    */
   bothFaces?: boolean;
+  /**
+   * Space kept clear to take a part out for maintenance (after
+   * Nandagopal's *Practical Process Plant Layout and Piping Design*: room
+   * to remove exchanger bundles and plates, and rotating equipment's
+   * casings and drives), metres: beside its own −x end (`left`) or +x end
+   * (`right`), and over its top (`top`, to lift internals out).
+   */
+  withdrawal?: { left?: number; right?: number; top?: number };
 }
 
 export interface PlaceLink {
@@ -78,6 +86,11 @@ export interface PlaceLink {
   bPort?: string;
   /** What joining them costs per metre: the pipe's size, or 1. */
   weight: number;
+  /**
+   * A pump's suction line (`b` is the pump): kept short, as process
+   * layout asks, so its pull counts double.
+   */
+  suction?: boolean;
 }
 
 export interface Placement {
@@ -112,6 +125,12 @@ export interface PlaceOptions {
   iterations?: number;
   /** The main walkways' clear width, metres. */
   walkway?: number;
+  /**
+   * Whether to follow the process layout rules (short suctions, process
+   * order, withdrawal space); off only to compare with layouts made before
+   * them.
+   */
+  practice?: boolean;
 }
 
 export interface PlaceResult {
@@ -130,6 +149,11 @@ export interface PlaceResult {
 const WALKER = 0.45;
 /** How far out of its port a lead runs before the pipe may turn, metres. */
 const LEAD = 0.5;
+/** A pump's suction counts this many times its discharge, to keep it short. */
+export const SUCTION = 2;
+/** What going against the process's way round costs, per metre of arc. */
+export const SEQUENCE = 0.5;
+
 /** The main walkways round the bands, metres (the corridors' width). */
 export const MAIN_WALKWAY = 1.2;
 
@@ -343,7 +367,12 @@ export function placeMachines(
   regions: readonly Region[],
   items: readonly PlaceItem[],
   links: readonly PlaceLink[],
-  { seed = 1, iterations = 6000, walkway = MAIN_WALKWAY }: PlaceOptions = {},
+  {
+    seed = 1,
+    iterations = 6000,
+    walkway = MAIN_WALKWAY,
+    practice = true,
+  }: PlaceOptions = {},
 ): PlaceResult {
   const n = items.length;
   const hw = room.w / 2;
@@ -405,7 +434,10 @@ export function placeMachines(
       const b = bands[k];
       const out: [number, number][] = [];
       const consider = [
-        ...keepOut.filter((r) => r.min[1] < item.h && r.max[1] > 0),
+        ...keepOut.filter(
+          (r) =>
+            r.min[1] < item.h + (item.withdrawal?.top ?? 0) && r.max[1] > 0,
+        ),
         ...(item.clearAbove ? noRuns.filter((r) => r.max[1] > item.h) : []),
       ];
       for (const r of consider) {
@@ -445,6 +477,20 @@ export function placeMachines(
         for (const [rank, i] of members.entries()) {
           const item = items[i];
           let at = cursor + s.pad[i];
+          // Its withdrawal space beside it, in the band's order: before
+          // and after it along the band.
+          const r0 = turnFacing(b.facing);
+          const ownX = [
+            [1, 0],
+            [0, -1],
+            [-1, 0],
+            [0, 1],
+          ][r0];
+          const forward = ownX[0] * b.along[0] + ownX[1] * b.along[1] > 0;
+          const out = practice ? item.withdrawal : undefined;
+          const before = (forward ? out?.left : out?.right) ?? 0;
+          const after = (forward ? out?.right : out?.left) ?? 0;
+          const span = before + item.w + after;
           // The last in a band, if it belongs in a corner, goes right to
           // the band's end, into its corner.
           if (
@@ -452,20 +498,20 @@ export function placeMachines(
             members.length > 1 &&
             item.site === 'corner'
           )
-            at = Math.max(at, b.length - item.w - MACHINE_GAP / 2);
+            at = Math.max(at, b.length - span - MACHINE_GAP / 2);
           // Past anything it may not stand in.
           for (let moved = true; moved;) {
             moved = false;
             for (const [lo, hi] of [...blocked(k, i), ...(across.get(k) ?? [])])
               if (
                 at < hi + MACHINE_GAP / 2 &&
-                at + item.w > lo - MACHINE_GAP / 2
+                at + span > lo - MACHINE_GAP / 2
               ) {
                 at = hi + MACHINE_GAP / 2;
                 moved = true;
               }
           }
-          const mid = at + item.w / 2;
+          const mid = at + before + item.w / 2;
           // Across the island, centred on its spine; else its back to the band's back.
           const back = item.bothFaces ? 0 : MACHINE_GAP / 2 + item.d / 2;
           if (item.bothFaces)
@@ -489,16 +535,16 @@ export function placeMachines(
               minZ: z - hz,
               maxZ: z + hz,
             },
-            over: Math.max(0, at + item.w + MACHINE_GAP / 2 - b.length),
+            over: Math.max(0, at + span + MACHINE_GAP / 2 - b.length),
             fromEnd: Math.max(
               0,
               Math.min(
                 at - MACHINE_GAP / 2,
-                b.length - (at + item.w + MACHINE_GAP / 2),
+                b.length - (at + span + MACHINE_GAP / 2),
               ),
             ),
           };
-          cursor = at + item.w + MACHINE_GAP;
+          cursor = at + span + MACHINE_GAP;
         }
       }
       return laid;
@@ -530,11 +576,33 @@ export function placeMachines(
         const b = leadOf(laid, l.j, l.bPort);
         total +=
           l.weight *
+          (l.suction && practice ? SUCTION : 1) *
           (Math.abs(a[0] - b[0]) +
             Math.abs(a[1] - b[1]) +
             Math.abs(a[2] - b[2]));
       }
       return total;
+    };
+    /**
+     * Process order (Nandagopal: sequence equipment according to the
+     * PFD): each link runs from source to target, and the process should
+     * go one way round the room. Each link's turn about the room's middle,
+     * source to target, against the way most of them go, costs as its arc.
+     */
+    const backwards = (laid: Laid[]) => {
+      let clockwise = 0;
+      let anticlockwise = 0;
+      const radius = (hw + hd) / 2;
+      for (const l of pulls) {
+        const a = Math.atan2(laid[l.i].z, laid[l.i].x);
+        const b = Math.atan2(laid[l.j].z, laid[l.j].x);
+        let turn = b - a;
+        while (turn > Math.PI) turn -= 2 * Math.PI;
+        while (turn <= -Math.PI) turn += 2 * Math.PI;
+        if (turn < 0) clockwise += -turn * radius * l.weight;
+        else anticlockwise += turn * radius * l.weight;
+      }
+      return Math.min(clockwise, anticlockwise);
     };
     /** Broken rules, metres or m², with each machine's share. */
     const breaches = (laid: Laid[], blame?: number[]) => {
@@ -570,7 +638,10 @@ export function placeMachines(
           add(j, v / 2);
         }
         for (const r of keepOut)
-          if (r.min[1] < items[i].h && r.max[1] > 0)
+          if (
+            r.min[1] < items[i].h + (items[i].withdrawal?.top ?? 0) &&
+            r.max[1] > 0
+          )
             add(i, overlapArea(laid[i].footprint, plan(r)));
         if (items[i].clearAbove)
           for (const r of noRuns)
@@ -618,7 +689,11 @@ export function placeMachines(
         if (items[i].site === 'free' && bands[laid[i].k].wall !== undefined)
           preference += AGAINST_WALL;
       return (
-        linkLength(laid) + BREACH * breaches(laid) + preference + scattering(s)
+        linkLength(laid) +
+        BREACH * breaches(laid) +
+        preference +
+        scattering(s) +
+        (practice ? SEQUENCE * backwards(laid) : 0)
       );
     };
 

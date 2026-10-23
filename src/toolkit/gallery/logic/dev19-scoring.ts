@@ -146,17 +146,23 @@ export function scoreMorningDev19(sizes: readonly ExhibitSize[]): Score {
 
 /**
  * The seed Dev19c uses: the best of seeds 1 to 16 by `searchDev19`, with
- * the pipework priced (2026-10-23: 71.7, against 71.3 for seed 1). The
- * search takes some seconds, so it is run offline and its winner kept here.
+ * the process layout rules (2026-10-23: 74.1, against 72.2 for the best
+ * layout before them). The search takes some seconds, so it is run
+ * offline and its winner kept here.
  */
-export const DEV19C_SEED = 2;
+export const DEV19C_SEED = 9;
 
 /** Dev19 laid out with a given placement seed, plumbed by the adopted rules. */
-export function dev19Candidate(sizes: readonly ExhibitSize[], seed: number) {
+export function dev19Candidate(
+  sizes: readonly ExhibitSize[],
+  seed: number,
+  practice = true,
+) {
   return layoutSizedPlantRoom(sizes, {
     items: demoPlaceItems(),
     links: demoPlaceLinks(),
     seed,
+    practice,
   });
 }
 
@@ -202,8 +208,10 @@ export function scoreDev19(
   const placement = scoreDev19Placement(name, sizes, layout);
   const dimensions = [
     ...room.dimensions,
-    ...placement.dimensions.filter(
-      (d) => d.name === 'sites' || d.name === 'batteries',
+    ...placement.dimensions.filter((d) =>
+      ['sites', 'batteries', 'process order', 'short suctions'].includes(
+        d.name,
+      ),
     ),
   ];
   const weights = dimensions.reduce((sum, d) => sum + d.weight, 0);

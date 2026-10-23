@@ -387,6 +387,14 @@ const SITES: Partial<Record<DemoKind, PlaceItem['site']>> = {
   boiler: 'free',
 };
 
+/** Withdrawal space by kind, metres (estimates, after the machines' arrangement). */
+const WITHDRAWAL: Partial<Record<DemoKind, PlaceItem['withdrawal']>> = {
+  'pool-pump': { right: 0.6 },
+  circulator: { right: 0.6 },
+  'heat-exchanger': { right: 0.8 },
+  'sand-filter': { top: 1 },
+};
+
 /**
  * What placement needs to know of each exhibit, in `demoVisualBindings`'
  * order: its ports, the incoming supplies on the supply wall (west), and
@@ -404,6 +412,10 @@ export function demoPlaceItems(): Partial<PlaceItem>[] {
     ...(isValve(kind) ? { inline: true } : {}),
     // Machines of a kind stand together as a battery.
     group: kind,
+    // Room to take parts out (process layout practice): a pump's motor
+    // drawn off its +x end, a plate exchanger's pack opened at its +x end,
+    // a filter's internals lifted out of its top.
+    ...(WITHDRAWAL[kind] ? { withdrawal: WITHDRAWAL[kind] } : {}),
   }));
 }
 
@@ -431,6 +443,8 @@ export function demoPlaceLinks(): PlaceLink[] {
       b: String(b),
       bPort: line.to.port,
       weight: pricePerMetre(kind, od) / 25,
+      // A pump's suction, kept short.
+      ...(line.to.port === 'suction' ? { suction: true } : {}),
     });
   }
   return links;

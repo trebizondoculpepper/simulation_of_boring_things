@@ -166,6 +166,57 @@ export function scorePlacement(
     });
   }
 
+  // Process order (Nandagopal: sequence equipment according to the PFD):
+  // the share of the process's links, by their pipe's price, that go the
+  // way most of them go round the room.
+  {
+    let cw = 0;
+    let ccw = 0;
+    for (const l of links) {
+      const a = index.get(l.a);
+      const b = index.get(l.b);
+      if (a === undefined || b === undefined) continue;
+      const pa = layout.places[a];
+      const pb = layout.places[b];
+      let turn = Math.atan2(pb.z, pb.x) - Math.atan2(pa.z, pa.x);
+      while (turn > Math.PI) turn -= 2 * Math.PI;
+      while (turn <= -Math.PI) turn += 2 * Math.PI;
+      if (turn < 0) cw += -turn * l.perMetre;
+      else ccw += turn * l.perMetre;
+    }
+    const all = cw + ccw;
+    dimensions.push({
+      name: 'process order',
+      score: all ? Math.max(cw, ccw) / all : 1,
+      weight: 6,
+      why: `${all ? Math.round((100 * Math.max(cw, ccw)) / all) : 100} % of the process, by its pipes' price, goes one way round the room`,
+    });
+  }
+
+  // Short pump suctions (process layout: minimise suction piping).
+  {
+    const suctions = links.filter((l) => l.suction);
+    let length = 0;
+    for (const l of suctions) {
+      const a = index.get(l.a);
+      const b = index.get(l.b);
+      if (a === undefined || b === undefined) continue;
+      const pa = leadOf(items[a], layout.places[a], l.aPort);
+      const pb = leadOf(items[b], layout.places[b], l.bPort);
+      length +=
+        Math.abs(pa[0] - pb[0]) +
+        Math.abs(pa[1] - pb[1]) +
+        Math.abs(pa[2] - pb[2]);
+    }
+    if (suctions.length)
+      dimensions.push({
+        name: 'short suctions',
+        score: length > 0 ? clamp((1.5 * suctions.length) / length) : 1,
+        weight: 6,
+        why: `${suctions.length} pump suctions, ${length.toFixed(1)} m in all, against 1.5 m each`,
+      });
+  }
+
   // Estimated pipework: each link's square length, lead to lead (the sum
   // of its x, y and z distances: pipes run square, never on a diagonal),
   // at its pipe's price, against every link at 1.5 m.

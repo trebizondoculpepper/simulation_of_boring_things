@@ -269,6 +269,7 @@ export function layoutSizedPlantRoom(
     gantry = 'auto',
     storeys = 2,
     seed = 1,
+    practice = true,
   }: {
     /** What placement needs beyond the sizes, by exhibit: walls, ports, a rising flue. */
     items?: readonly Partial<PlaceItem>[];
@@ -276,6 +277,8 @@ export function layoutSizedPlantRoom(
     gantry?: RegionOptions['gantry'];
     storeys?: number;
     seed?: number;
+    /** Follow the process layout rules (`PlaceOptions.practice`). */
+    practice?: boolean;
   } = {},
 ): SizedPlantRoomLayout {
   const all: PlaceItem[] = sizes.map((s, i) => ({
@@ -306,11 +309,15 @@ export function layoutSizedPlantRoom(
     };
     const reserved = reserveRegions(room, { gantry });
     // A seed, and another only while it breaks a rule.
-    let placed = placeMachines(room, reserved.regions, place, links, { seed });
+    let placed = placeMachines(room, reserved.regions, place, links, {
+      seed,
+      practice,
+    });
     for (const s of [seed + 1, seed + 2]) {
       if (!placed.problems.length) break;
       const next = placeMachines(room, reserved.regions, place, links, {
         seed: s,
+        practice,
       });
       if (next.problems.length < placed.problems.length) placed = next;
     }

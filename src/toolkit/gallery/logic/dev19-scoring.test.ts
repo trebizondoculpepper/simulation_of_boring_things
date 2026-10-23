@@ -4,6 +4,7 @@ import {
   DEV19C_SEED,
   dev19Candidate,
   scoreMorningDev19,
+  scoreDev19,
   scorePlumbedDev19,
 } from './dev19-scoring';
 import { ADOPTED_RULES } from './port-graph-demo-routes';
@@ -38,4 +39,26 @@ describe('dev19 scored', () => {
     );
     expect(chosen.total).toBeGreaterThanOrEqual(first.total);
   }, 60000);
+});
+
+describe('the process layout rules', () => {
+  const sizes = EXHIBITS.map((e) => e.size);
+  it('make Dev19c go one way round, and score above its best layout without them', () => {
+    const before = scoreDev19(
+      'before',
+      sizes,
+      dev19Candidate(sizes, 2, false),
+      ADOPTED_RULES,
+    );
+    const after = scoreDev19(
+      'after',
+      sizes,
+      dev19Candidate(sizes, DEV19C_SEED),
+      ADOPTED_RULES,
+    );
+    const order = (s: typeof after) =>
+      s.dimensions.find((d) => d.name === 'process order')!.score;
+    expect(order(after)).toBeGreaterThan(order(before));
+    expect(after.total).toBeGreaterThan(before.total);
+  }, 120000);
 });

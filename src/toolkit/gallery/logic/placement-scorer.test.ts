@@ -12,6 +12,8 @@ describe('the placement scorer', () => {
       'access',
       'sites',
       'batteries',
+      'process order',
+      'short suctions',
       'pipework estimate',
       'room area',
     ]);

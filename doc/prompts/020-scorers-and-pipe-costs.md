@@ -45,6 +45,14 @@ Identical units that work in parallel (filters, duty and standby pumps) stand to
 - **Fewer placements is better, at the placement level.** The placement scorer rewards a group made up in fewer blocks. Placement tries each candidate make-up, and the placement scorer picks.
 - **Headers** are added by the plumber's expansion where it finds identical units in parallel, the way it adds isolators: an inlet and an outlet header, each unit on a short branch with its isolators, and the header routed along the battery like a bus.
 
+### Process layout practice (the owner, 2026-10-23)
+
+From N. S. Nandagopal's _Practical Process Plant Layout and Piping Design_ (IDC Technologies, Rev 5.1, 2009), three rules for placement, each measured by the placement scorer:
+
+- **Process order:** sequence equipment according to the process flow diagram. Each link runs source to target, and the process goes one way round the room; going against the way most of it goes costs as its arc.
+- **Short pump suctions:** a suction link's pull counts double.
+- **Withdrawal space:** room to take parts out beside a machine (a pump's motor, a plate exchanger's pack) or over it (a filter's internals). It is kept in the band packing, so no neighbour stands in it.
+
 ## Order of work
 
 1. `pipe-costs.ts`, tested: dearer by size; steel above PVC; lagged above bare.
