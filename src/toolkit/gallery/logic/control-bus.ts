@@ -1,17 +1,18 @@
 import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
 import type { Placed, Side } from './room-equipment';
 import { roomStructure } from './room-structure';
+import { PLANT_ROOM } from './plant-rooms';
 import type { Containment } from './cable-containment';
 import type { Point3, ServiceRoute } from './room-services';
 
 /**
  * A room's control bus (the owner, 2026-10-23): one run of compartmented
  * steel trunking, carrying the control and instrument devices' signal and
- * small-power cables in separate compartments, at high level just above
- * everything on the walls. Every control device sends a short conduit to
- * the nearest point of it, instead of a line of its own across the room;
- * where devices are on more than one wall the bus is a ring round the
- * room. It enters the room once, rising into the services ceiling at the
+ * small-power cables in separate compartments, in a ring right round the
+ * room just above door level (the owner's rule: typically above the
+ * doors), higher only where a panel stands taller. Every control device
+ * sends a short conduit to the nearest point of it, instead of a line of
+ * its own across the room. It enters the room once, rising into the services ceiling at the
  * supply wall: beyond that a control network we do not route is imagined
  * (`doc/prompts/008-pipe-supports.md`). Pure: metres, the room's middle at
  * x = z = 0, its floor at y = 0.
@@ -25,9 +26,14 @@ export const isControlDevice = (key: string) =>
 
 /** The trunking: 100 × 50 mm, its back on the wall. */
 export const BUS = { width: 0.1, depth: 0.05 } as const;
-/** It runs this far over the tallest thing on the walls, and never lower than this over the floor (door heads). */
+/**
+ * Door level: the tallest doors, the equipment doors, 2.4 m high
+ * (`plant-rooms.ts`), with their frame's head. The bus runs this far over
+ * it, and over the tallest thing on the walls.
+ */
+export const DOOR_HEAD = PLANT_ROOM.equipment.h + 0.1;
 const OVER = 0.15;
-const LOWEST = 2.65;
+const LOWEST = DOOR_HEAD + OVER;
 /** Its middle stands this far off the wall's face. */
 const OFF = BUS.depth / 2 + 0.005;
 /** A device's conduit to it. */
@@ -85,15 +91,10 @@ export function controlBus(room: string): ControlBus | null {
     side === 'west' || side === 'east' ? z : x;
   const half = (side: Side) => (side === 'west' || side === 'east' ? hd : hw);
 
-  // The walls it runs on: those with devices against them.
-  const walled = devices.filter((p) => p.side !== 'island');
-  const sides = new Set<Side>(walled.map((p) => p.side as Side));
-  if (!sides.size) sides.add(structure.supplyWall);
-  const ring = sides.size >= 2;
   const trunking: Containment[] = [];
-  /** The bus's lengths along each wall it is on: [from, to] along the wall. */
+  /** The bus's lengths along each wall: [from, to] along the wall. */
   const spans = new Map<Side, [number, number]>();
-  if (ring) {
+  {
     // Round the room, just off every wall.
     const corner = (sx: number, sz: number): Point3 => [
       sx * (hw - OFF),
@@ -117,36 +118,11 @@ export function controlBus(room: string): ControlBus | null {
       });
       spans.set(side, [-half(side) + OFF, half(side) - OFF]);
     });
-  } else {
-    const side = [...sides][0];
-    const ss = devices.map((p) =>
-      p.side === 'island' ? along(side, p.x, p.z) : along(side, p.x, p.z),
-    );
-    const ws = devices.map((p) => p.item.w / 2);
-    const lo = Math.max(
-      -half(side) + OFF,
-      Math.min(...ss.map((s, i) => s - ws[i])) - 0.3,
-    );
-    const hi = Math.min(
-      half(side) - OFF,
-      Math.max(...ss.map((s, i) => s + ws[i])) + 0.3,
-    );
-    trunking.push({
-      name: `Control bus, ${side} wall`,
-      kind: 'trunking',
-      width: BUS.width,
-      depth: BUS.depth,
-      from: onWall(side, lo, y),
-      to: onWall(side, hi, y),
-    });
-    spans.set(side, [lo, hi]);
   }
 
-  // Its one way in: up into the services ceiling on the supply wall (or
-  // the bus's wall nearest it), clear of the room supply's own conduit.
-  const entryWall = spans.has(structure.supplyWall)
-    ? structure.supplyWall
-    : [...spans.keys()][0];
+  // Its one way in: up into the services ceiling on the supply wall,
+  // clear of the room supply's own conduit.
+  const entryWall = structure.supplyWall;
   const [lo, hi] = spans.get(entryWall)!;
   const feeder =
     entryWall === 'west' ? hd - FEEDER_ISOLATOR.fromSouth : (lo + hi) / 2;

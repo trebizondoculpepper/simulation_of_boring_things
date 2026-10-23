@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { controlBus, isControlDevice } from './control-bus';
+import { DOOR_HEAD, controlBus, isControlDevice } from './control-bus';
 import { layoutRoom } from './room-equipment';
 import { roomServiceRoutes } from './room-services';
 import { roomStructure } from './room-structure';
@@ -93,13 +93,15 @@ describe('a room’s control bus', () => {
       );
     });
 
-    it('rings the room where its devices are on more than one wall', () => {
-      const walls = new Set(
-        placed
-          .filter((p) => isControlDevice(p.item.key) && p.side !== 'island')
-          .map((p) => p.side),
+    it('rings the room just above door level, or over a taller panel', () => {
+      expect(lengths).toHaveLength(4);
+      const wallTop = Math.max(
+        0,
+        ...placed
+          .filter((p) => p.item.mount === 'wall')
+          .map((p) => p.y + p.item.h / 2),
       );
-      expect(lengths.length).toBe(walls.size >= 2 ? 4 : 1);
+      expect(bus.y).toBeCloseTo(Math.max(DOOR_HEAD, wallTop) + 0.15, 6);
     });
   });
 });
