@@ -254,11 +254,13 @@ export function olympicPlanSvg(): string {
   }
   for (const f of plumbed.fittings) {
     const fill =
-      f.kind === 'power-isolator'
-        ? '#ef6c00'
-        : f.kind === 'non-return-valve'
-          ? '#1b2326'
-          : '#2e7d32';
+      f.kind === 'fused-tap-off'
+        ? '#bf360c'
+        : f.kind === 'power-isolator'
+          ? '#ef6c00'
+          : f.kind === 'non-return-valve'
+            ? '#1b2326'
+            : '#2e7d32';
     out.push(
       `<circle cx="${X(f.at[0])}" cy="${Z(f.at[2])}" r="5" fill="${fill}" stroke="#ffffff" stroke-width="1.5"/>`,
     );
@@ -277,11 +279,8 @@ export function olympicPlanSvg(): string {
     ['#4fc3f7', 'Make-up to the balance tank'],
     ['#8e24aa', 'Dosing chemicals'],
     ['#90a4ae', 'Ozone'],
-    ['#ef6c00', 'Power'],
-    [
-      '#2e7d32',
-      '● valve (solenoid)  ● non-return (black)  ● isolator (orange)',
-    ],
+    ['#ef6c00', 'Power: the busbar ring round the walls (5.75 m), its drops'],
+    ['#2e7d32', '● valve  ● non-return  ● isolator  ● fused tap-off'],
   ];
   key.forEach(([c, label, dash], k) => {
     const x = M - 80 + (k % 3) * 350;

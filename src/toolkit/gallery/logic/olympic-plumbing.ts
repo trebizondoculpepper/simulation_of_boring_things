@@ -87,7 +87,7 @@ export interface OlympicRun {
 
 export interface OlympicFitting {
   id: string;
-  kind: FittingKind | 'regulating-valve';
+  kind: FittingKind | 'regulating-valve' | 'fused-tap-off';
   line: string;
   at: Vec3;
   along: Vec3;
@@ -95,9 +95,10 @@ export interface OlympicFitting {
   /**
    * How it is worked: a valve by its solenoid, from the panel (a direct
    * solenoid valve on a small line, a solenoid pilot on a pneumatic
-   * actuator on a main), a power isolator by hand.
+   * actuator on a main); a machine's local isolator by hand; a fused
+   * tap-off on the busbar overhead by an operating pole from the floor.
    */
-  operator: 'solenoid' | 'hand';
+  operator: 'solenoid' | 'hand' | 'pole';
   /** Whether it can be worked: from the panel, or by a person standing on the floor. */
   reachable: boolean;
 }
@@ -185,15 +186,18 @@ const MANIFOLD_Y = 2.9;
 const STUB_TOP = 2.4;
 /** The floor channel's depth below the floor. */
 const CHANNEL = -0.3;
-/** Power comes in by the east wall under the east gantry's soffit (3.35 m), clear of its headroom. */
-const POWER_Y = 3.0;
+/**
+ * The busbar ring (the owner, 2026-10-23): a plug-in busbar trunking run
+ * round the room's walls, fed from the east wall, each machine fed by a
+ * short drop from a tap-off on it. High, over the stair's and the east
+ * gantry's headroom (5.6 m) and under the services ceiling (6 m); a little
+ * in from the walls. Its trunking is about 150 mm square.
+ */
+export const BUSBAR = { y: 5.75, off: 0.3, od: 0.15 } as const;
+/** A tap-off box hangs this far under the busbar, its drop leaving its foot. */
+const TAP = 0.3;
 /** The lines the router lays first: they have least room. */
-const FIRST = new Set([
-  'battery-to-contact',
-  'hx-return',
-  'power-pump-A',
-  'power-pump-B',
-]);
+const FIRST = new Set(['battery-to-contact', 'hx-return']);
 /** A line ending at a wall ends this far inside its face, at its sleeve. */
 const SLEEVE = 0.15;
 /** Where a person can reach a fitting from the floor, metres. */
@@ -396,6 +400,71 @@ export function plumbOlympic(): OlympicPlumbing {
     [-hx - 0.3, 1.2 - 0.04, corner.z],
   ]);
 
+  // ---- The busbar ring, round the walls, fed from the east ------------------
+  const B = BUSBAR;
+  const bx = hx - B.off;
+  const bz = hz - B.off;
+  rule('Busbar ring', 'bus', 'power', B.od, [
+    [bx, B.y, 0],
+    [bx, B.y, -bz],
+    [-bx, B.y, -bz],
+    [-bx, B.y, bz],
+    [bx, B.y, bz],
+    [bx, B.y, 0],
+  ]);
+  rule('Busbar feed', 'bus', 'power', B.od, [
+    [hx + 0.3, B.y, 0.6],
+    [bx, B.y, 0.6],
+  ]);
+  /** A tap-off on the ring's run along `side`, at `a` along it, its drop leaving straight down. */
+  const tap = (side: 'north' | 'south' | 'east' | 'west', a: number) => ({
+    at: (side === 'north'
+      ? [a, B.y - TAP, -bz]
+      : side === 'south'
+        ? [a, B.y - TAP, bz]
+        : side === 'west'
+          ? [-bx, B.y - TAP, a]
+          : [bx, B.y - TAP, a]) as Vec3,
+    outward: [0, -1, 0] as Vec3,
+  });
+
+  // The drops by the walls, laid by rule: from its tap-off straight down
+  // the wall, then across over the machine and down onto its power port.
+  // (The east wall's pass the gantry's deck where it meets the wall, in a
+  // sleeve.) The UV's, in the room's middle, is routed.
+  const drop = (
+    line: string,
+    side: 'east' | 'west',
+    p: RoomPort,
+    across: number,
+    od: number,
+  ) => {
+    const x = side === 'east' ? bx : -bx;
+    rule(`Busbar drop to ${p.machine} (${p.name})`, line, 'power', od, [
+      [x, B.y - B.od / 2, p.at[2]],
+      [x, across, p.at[2]],
+      [p.at[0], across, p.at[2]],
+      p.at,
+    ]);
+  };
+  drop(
+    'power-panel',
+    'east',
+    port('panel', 'supply'),
+    port('panel', 'supply').at[1] + 0.45,
+    0.05,
+  );
+  drop(
+    'power-generator',
+    'east',
+    port('generator', 'power'),
+    port('generator', 'power').at[1] + 0.45,
+    0.0269,
+  );
+  // The pumps': across at 2.3 m, under the manifold over their discharge risers.
+  drop('power-pump-A', 'west', port('pumps', 'powerA'), 2.3, 0.0269);
+  drop('power-pump-B', 'west', port('pumps', 'powerB'), 2.3, 0.0269);
+
   // ---- The routed lines -------------------------------------------------
   const wall = (
     side: 'north' | 'south' | 'east' | 'west',
@@ -513,32 +582,12 @@ export function plumbOlympic(): OlympicPlumbing {
       end: end(port('contact', 'ozone')),
     },
     {
-      id: 'power-panel',
-      pipe: 'power',
-      od: 0.05,
-      start: wall('east', port('panel', 'supply').at[2] - 0.6, POWER_Y),
-      end: end(port('panel', 'supply')),
-    },
-    ...(['A', 'B'] as const).map((s, k) => ({
-      id: `power-pump-${s}`,
-      pipe: 'power' as const,
-      od: 0.0269,
-      start: wall('east', -0.3 + k * 0.25, POWER_Y + 0.1),
-      end: end(port('pumps', `power${s}`)),
-    })),
-    {
       id: 'power-uv',
       pipe: 'power',
       od: 0.0269,
-      start: wall('east', 0.6, POWER_Y + 0.1),
+      // From the ring's south run, over it: the UV stands in the room's middle.
+      start: tap('south', port('uv', 'power').at[0]),
       end: end(port('uv', 'power')),
-    },
-    {
-      id: 'power-generator',
-      pipe: 'power',
-      od: 0.0269,
-      start: wall('east', port('generator', 'power').at[2] + 0.3, POWER_Y),
-      end: end(port('generator', 'power')),
     },
   ];
 
@@ -562,7 +611,15 @@ export function plumbOlympic(): OlympicPlumbing {
       forbids: { machines, runs: true },
     });
   region('landing', 'gantry', room.landing, DECK_SOFFIT, deck + head, false);
-  region('east gantry', 'gantry', room.gantry, DECK_SOFFIT, deck + head, false);
+  // The east gantry's walkway: services rise in the strip against the wall behind it.
+  region(
+    'east gantry',
+    'gantry',
+    { ...room.gantry, maxX: room.gantry.maxX - 0.35 },
+    DECK_SOFFIT,
+    deck + head,
+    false,
+  );
   region(
     'stair',
     'stair',
@@ -767,7 +824,12 @@ export function plumbOlympic(): OlympicPlumbing {
     list.forEach((f, k) => {
       const d = Math.min(L - 0.1, 0.35 + k * 0.4);
       const fromEnd = f.end === 'source' ? d : L - d;
-      const p = along(run.points, Math.max(0.05, fromEnd));
+      // A power isolator is the machine's local isolator, on its drop by
+      // the machine at a hand's height, not at the tap-off overhead.
+      const p =
+        f.kind === 'power-isolator'
+          ? (withinReach(run.points) ?? along(run.points, L - 0.4))
+          : along(run.points, Math.max(0.05, fromEnd));
       fittings.push({
         id: f.id,
         kind: f.kind,
@@ -785,6 +847,24 @@ export function plumbOlympic(): OlympicPlumbing {
       });
     });
   }
+  // Each drop's fused tap-off on the busbar, protecting its cable (the
+  // owner, 2026-10-23); worked from the floor with an operating pole. Its
+  // machine's local isolator is the plumber's power isolator at a hand's
+  // height on the drop; the panel and the ozone generator have their own
+  // incoming isolators on their fronts, as such cabinets do.
+  for (const r of runs.filter(
+    (x) => x.medium === 'power' && x.line.startsWith('power-'),
+  ))
+    fittings.push({
+      id: `${r.line}.tap-off`,
+      kind: 'fused-tap-off',
+      line: r.line,
+      at: r.points[0],
+      along: [0, -1, 0],
+      normally: 'closed',
+      operator: 'pole',
+      reachable: r.points[0][1] <= 6,
+    });
   // The regulating valve in the outlet header, between the side-stream's stubs.
   fittings.push({
     id: 'battery.outlet.regulating',
@@ -815,6 +895,25 @@ export function plumbOlympic(): OlympicPlumbing {
     problems.push(`clash: ${a} / ${b}`);
   }
   return { items, ports, runs, fittings, expansion, regions, problems };
+}
+
+/** The point nearest its far end at which a run passes a hand's height (1.5 m), if it does. */
+function withinReach(points: readonly Vec3[]) {
+  const hand = 1.5;
+  for (let k = points.length - 1; k > 0; k--) {
+    const a = points[k - 1];
+    const b = points[k];
+    if ((a[1] - hand) * (b[1] - hand) > 0) continue;
+    if (a[1] === b[1]) return { at: r3(b), along: r3([0, 0, 1]) };
+    const t = (hand - a[1]) / (b[1] - a[1]);
+    const at = r3([a[0] + (b[0] - a[0]) * t, hand, a[2] + (b[2] - a[2]) * t]);
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) || 1;
+    return {
+      at,
+      along: r3([(b[0] - a[0]) / l, (b[1] - a[1]) / l, (b[2] - a[2]) / l]),
+    };
+  }
+  return null;
 }
 
 /** A polyline stopped `d` metres short of its end. */
@@ -871,7 +970,11 @@ export function scoreOlympic(plumbed = plumbOlympic()): Score {
       .map((o) => o.name);
     if (together.length) shares.set(r.name, together);
   }
-  const wanted = plumbed.expansion.fittings.length + 1;
+  // The plumber's fittings, the regulating valve, and a fused tap-off for every drop.
+  const wanted =
+    plumbed.expansion.fittings.length +
+    1 +
+    plumbed.fittings.filter((f) => f.kind === 'fused-tap-off').length;
   return scoreRoom({
     name: 'Olympic plant room, 22 × 14 m',
     w: room.halfX * 2,

@@ -11,7 +11,7 @@ describe('the Olympic plant room, plumbed and routed', () => {
 
   it('routes every line and leaves nothing unplumbed', () => {
     expect(plumbed.problems).toEqual([]);
-    expect(plumbed.runs.filter((r) => r.by === 'router')).toHaveLength(16);
+    expect(plumbed.runs.filter((r) => r.by === 'router')).toHaveLength(12);
   });
 
   it('passes every gate of the scorer', () => {
@@ -54,22 +54,54 @@ describe('the Olympic plant room, plumbed and routed', () => {
     expect(end('heating-flow')[0][2]).toBeGreaterThan(hz - 0.2);
     expect(end('make-up')[0][2]).toBeGreaterThan(hz - 0.2);
     expect(end('make-up').at(-1)![0]).toBeLessThan(-hx + 0.2);
-    for (const id of [
+    // Power: the busbar fed through the east wall.
+    expect(end('Busbar feed')[0][0]).toBeGreaterThan(hx);
+  });
+
+  it('works every valve by its solenoid from the panel, every local isolator by hand within reach, every tap-off by its pole', () => {
+    for (const f of plumbed.fittings) {
+      expect(f.operator).toBe(
+        f.kind === 'power-isolator'
+          ? 'hand'
+          : f.kind === 'fused-tap-off'
+            ? 'pole'
+            : 'solenoid',
+      );
+      expect(f.reachable, f.id).toBe(true);
+    }
+  });
+
+  it('feeds every machine by a short drop from the busbar ring round the walls, each drop behind a fused tap-off', () => {
+    const ring = run('Busbar ring');
+    expect(ring.points[0]).toEqual(ring.points.at(-1));
+    for (const p of ring.points) expect(p[1]).toBeGreaterThan(5.6);
+    const drops = plumbed.runs.filter(
+      (r) => r.medium === 'power' && r.line.startsWith('power-'),
+    );
+    expect(drops.map((r) => r.line).sort()).toEqual([
+      'power-generator',
       'power-panel',
       'power-pump-A',
       'power-pump-B',
       'power-uv',
-      'power-generator',
-    ])
-      expect(end(id)[0][0]).toBeGreaterThan(hx - 0.2);
-  });
-
-  it('works every valve by its solenoid from the panel, and every power isolator by hand within reach', () => {
-    for (const f of plumbed.fittings) {
-      expect(f.operator).toBe(
-        f.kind === 'power-isolator' ? 'hand' : 'solenoid',
-      );
-      expect(f.reachable, f.id).toBe(true);
+    ]);
+    const length = (pts: readonly (readonly number[])[]) =>
+      pts
+        .slice(1)
+        .reduce(
+          (a, q, k) =>
+            a +
+            Math.hypot(q[0] - pts[k][0], q[1] - pts[k][1], q[2] - pts[k][2]),
+          0,
+        );
+    for (const d of drops) {
+      expect(length(d.points), d.line).toBeLessThan(11);
+      expect(
+        plumbed.fittings.some(
+          (f) => f.kind === 'fused-tap-off' && f.line === d.line,
+        ),
+        d.line,
+      ).toBe(true);
     }
   });
 });
