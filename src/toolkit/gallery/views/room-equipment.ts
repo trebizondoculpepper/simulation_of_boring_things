@@ -110,6 +110,7 @@ import { WET_HALL_PLANT } from '../../../game/plant/wet-hall';
 import { pumpPairExhibit } from '../rooms/plant/pumps';
 import { pumpPanelExhibit } from '../rooms/plant/pump-panel';
 import { currentPlant } from '../rooms/plant/live-plant';
+import { cabinetBodyIn } from '../logic/cabinet-pipes';
 import { createBalanceTankPanel } from '../../components/plant/views/balance-tank-panel';
 import { volumeOf } from '../../../game/plant/balance-tank';
 import {
@@ -842,7 +843,19 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
     const bounds = new Box3().setFromObject(object);
     if (beside) besideParent?.add(beside.object);
     if (!bounds.isEmpty()) drawnTops[i] = bounds.max.y - floorY;
-    if (p.item.mount === 'floor' && !p.item.walkable) solids.push(p.footprint);
+    // A packaged cabinet stops the walker at its body, not at its layout
+    // envelope (which keeps its doors' swing and its services' lanes clear):
+    // so one can step up to its doors.
+    if (p.item.key.endsWith('-pack')) {
+      const body = cabinetBodyIn(p, p.item.key === 'jacuzzi-pack');
+      solids.push({
+        minX: body.min[0],
+        maxX: body.max[0],
+        minZ: body.min[2],
+        maxZ: body.max[2],
+      });
+    } else if (p.item.mount === 'floor' && !p.item.walkable)
+      solids.push(p.footprint);
   }
   // The pipework between them (`room-pipework.ts`): its low runs more to
   // walk round, its valves more to work.

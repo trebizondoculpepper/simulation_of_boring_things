@@ -37,6 +37,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- A packaged cabinet (the footbath's, the Jacuzzi's) stops the walker at its body, not at its layout envelope, which had kept one about a metre short of its doors (the owner, 2026-10-23).
 - Seven-segment LED readouts (`createSevenSegment`, on every mimic and many panels) drawn as LED digits (the owner, 2026-10-23): segments with pointed ends and a hair's gap between them, a glow round the lit ones, the dark ones faintly there, at four times the resolution, so close up they no longer read as blocks of pixels.
 - From the tank hall, the Olympic plant room is seen through its open doors again: the hall's canvas cleared opaque, hiding the room drawn under it. The balance tank panel moved to the plant room's west wall just north of the tank hall's doors (the owner, 2026-10-23).
 - Dev26's flowmeters showed spurious flows while its valves changed over with the supply off: with no head across the network, the solver's unconverged flows leaked through. With the supply off there is now no flow at all.
