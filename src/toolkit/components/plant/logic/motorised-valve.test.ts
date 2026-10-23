@@ -59,7 +59,7 @@ describe('its motor’s pitch', () => {
     expect(new Set(hz).size).toBe(12);
     for (const d of hz) {
       expect(Math.abs(d)).toBeGreaterThan(0.5);
-      expect(Math.abs(d)).toBeLessThanOrEqual(6);
+      expect(Math.abs(d)).toBeLessThanOrEqual(10);
     }
   });
 

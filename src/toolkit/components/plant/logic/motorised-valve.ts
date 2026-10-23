@@ -55,12 +55,13 @@ export const motorLimits = (s: MotorisedValveState) => ({
 export const MOTOR_HZ = 271;
 
 /**
- * No two motors quite alike (the owner, 2026-10-23): each valve's motor a
- * few hertz off the recorded whine, so several running together are each
- * heard apart. Fixed by its place in its room, so one valve always sounds
- * the same, and no two of the first dozen share a pitch; Hz.
+ * No two motors quite alike (the owner, 2026-10-23): each valve's motor
+ * off the recorded whine by up to 10 Hz either way (2026-10-24), so
+ * several running together are each heard apart. Fixed by its place in
+ * its room, so one valve always sounds the same, and no two of the first
+ * dozen share a pitch; Hz.
  */
-const DETUNE = [1, -2.5, 4, -4.5, 2.5, -1, 5.5, -3.5, 3, -5.5, 6, -6];
+const DETUNE = [1.5, -4, 6.5, -7.5, 4, -1.5, 9, -6, 5, -9, 10, -10];
 
 export const motorDetune = (index: number) =>
   DETUNE[((index % DETUNE.length) + DETUNE.length) % DETUNE.length];

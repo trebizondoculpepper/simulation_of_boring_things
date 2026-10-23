@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The valve motors' pitch spread is widened to ±10 Hz of the 271 Hz whine (from ±6 Hz), so they are more easily told apart.
 - Every knob turns down or up by which half of it is clicked, in every room: the pool halls, the racks, architectural and corridor-lab rooms and the dev and plant corridors gave their knobs no direction, so they could only turn up. A test now fails any walkable room that works parts without asking `knobDirection`.
 - The foot spa's drain-down is heard: while its water runs to drain (`footbathDischarging`: lined up to drain, pumped, not tripped, water left), a gurgle plays at its tundish over the floor gully in the plant room. It is a new machine tone, `drain-gurgle`, synthesised from bubbles: many small rising notes as the water drags air under, the trap's occasional deep glug, and the splash and trickle of the falling water.
 - Each motorised valve takes its own time to turn (`motorStroke`), within 10 % of the 6 s standard, by its place in its room.
