@@ -12,4 +12,5 @@ The owner, 2026-10-23: the room looks finished, but its parts follow different m
 - [ ] **4. Fittings implied but not drawn:** the pumps' non-return valves; each machine's local power isolator; the busbar's fused tap-offs.
 - [ ] **5. Safety:** the chlorine and ozone gas detectors (prompt 022); the warning signs on the tank hall doors (from the background agent's research).
 - [ ] **7. Later, not now: the wet hall's tanks as built** (prompt 036): the break tank stays GRP; the backwash holding tank and the Lounge pool's balance tank in cast concrete.
+- [ ] **8. Later, not now: sound between rooms** (prompt 037): a room is heard through an open door, by how far it stands open (full above about 20 % open, about −20 dB at 5 %, silent and its sounds stopped when shut), not by which room the player is in.
 - [ ] **6. Housekeeping:** the diary entry for 2026-10-23; the room-name overlay after a hand-over through a door; the stray `retired0` git tag (remove if the owner wishes).
