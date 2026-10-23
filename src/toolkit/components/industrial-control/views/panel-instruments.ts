@@ -598,6 +598,74 @@ export function createLedMatrix(
   };
 }
 
+/**
+ * A high-resolution single-line dot-matrix display: blue dots on black,
+ * after the graphic OLED and VFD modules of today (a 192 × 16 dot panel of
+ * the Noritake or Newhaven sort), so its text is drawn in a proper
+ * typeface, not a 5 × 7 character set: m³ reads m³. The line is set in
+ * the typeface on a dot-sized grid, and each dot lit wherever the type
+ * covers it; unlit dots show faintly. `width` sets its size; its height
+ * follows the panel's 12 : 1.
+ */
+export function createDotMatrixLine(
+  kit: PanelKit,
+  { dotsWide = 192, dotsHigh = 16, width = 0.24, colour = '#4fb4ff' } = {},
+): TextDisplay {
+  const group = new Group();
+  const px = 6;
+  const art = createCanvasTexture(dotsWide * px, dotsHigh * px);
+  const height = (width * dotsHigh) / dotsWide;
+  add(
+    group,
+    new BoxGeometry(width + 0.01, height + 0.01, 0.004),
+    kitPaint(kit, '#0a0b0d'),
+    0,
+    0,
+    0.002,
+  );
+  add(
+    group,
+    new PlaneGeometry(width, height),
+    printed(kit, art.texture, true),
+    0,
+    0,
+    0.0042,
+  );
+  // The type, set at one pixel a dot, read back to light the dots.
+  const type = document.createElement('canvas');
+  type.width = dotsWide;
+  type.height = dotsHigh;
+  const t = type.getContext('2d', { willReadFrequently: true })!;
+  let last = '';
+  const show = (lines: string[], on = true) => {
+    const text = lines[0] ?? '';
+    const key = `${on}${text}`;
+    if (key === last) return;
+    last = key;
+    t.clearRect(0, 0, dotsWide, dotsHigh);
+    t.fillStyle = '#fff';
+    t.font = `bold ${dotsHigh - 3}px Helvetica, Arial, sans-serif`;
+    t.textAlign = 'right';
+    t.textBaseline = 'middle';
+    if (on) t.fillText(text, dotsWide - 2, dotsHigh / 2 + 1);
+    const cover = t.getImageData(0, 0, dotsWide, dotsHigh).data;
+    const c = art.context;
+    c.fillStyle = '#020408';
+    c.fillRect(0, 0, dotsWide * px, dotsHigh * px);
+    for (let y = 0; y < dotsHigh; y++)
+      for (let x = 0; x < dotsWide; x++) {
+        const lit = cover[(y * dotsWide + x) * 4 + 3] > 110;
+        c.fillStyle = lit ? colour : '#0b1622';
+        c.beginPath();
+        c.arc(x * px + px / 2, y * px + px / 2, px * 0.4, 0, Math.PI * 2);
+        c.fill();
+      }
+    art.texture.needsUpdate = true;
+  };
+  show([], false);
+  return { group, show };
+}
+
 export interface JewelLamp {
   group: Group;
   set(on: boolean): void;
