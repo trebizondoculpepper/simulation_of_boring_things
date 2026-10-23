@@ -20,7 +20,10 @@ import {
 } from '../../components/plant/views/water-butterfly-valve';
 import { createGasBallValve } from '../../components/plant/views/gas-fittings';
 import { installedValveFor } from '../../../game/plant/installed-valves';
-import { olympicMeterReadings } from '../../../game/plant/olympic-battery';
+import {
+  olympicFlowsOf,
+  olympicMeterReadings,
+} from '../../../game/plant/olympic-battery';
 import {
   createInlineFitting,
   placeFitting,
@@ -135,20 +138,11 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     tee.name = t.name;
     group.add(tee);
   }
-  // What the room's flowmeters read, as the world now stands: worked out once each time it changes.
-  let readingsFor: unknown = null;
-  let lastReadings: Record<string, number> = {};
-  function readings() {
+  // What the room's flowmeters read, as the world now stands (the battery's model keeps its own cache).
+  function readings(): Record<string, number> {
     const world = store?.world.value;
-    if (!world) return lastReadings;
-    if (world.installedValves !== readingsFor) {
-      readingsFor = world.installedValves;
-      lastReadings =
-        room === 'plant_pool_02'
-          ? olympicMeterReadings(world.installedValves)
-          : {};
-    }
-    return lastReadings;
+    if (!world || room !== 'plant_pool_02') return {};
+    return olympicMeterReadings(olympicFlowsOf(world));
   }
   function valve(run: PipeRun, v: Valve) {
     // A retired room's valves are the room's it was taken from.

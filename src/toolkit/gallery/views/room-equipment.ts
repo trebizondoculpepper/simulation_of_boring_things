@@ -110,6 +110,8 @@ import { WET_HALL_PLANT } from '../../../game/plant/wet-hall';
 import { pumpPairExhibit } from '../rooms/plant/pumps';
 import { pumpPanelExhibit } from '../rooms/plant/pump-panel';
 import { currentPlant } from '../rooms/plant/live-plant';
+import { olympicFlowsOf } from '../../../game/plant/olympic-battery';
+import { BIG_FILTER } from '../../../game/plant/five-valve-filter';
 import {
   createAcidBoard,
   createControllerPanel,
@@ -365,6 +367,36 @@ function modelFor(
     // Its gauges at its pool's pressures: running, about 1.6 bar in and
     // that less the filter's pressure difference out; stopped, the
     // static head.
+    // One of the Olympic's battery: its own bed, as the world's battery has
+    // it (`olympic-battery.ts`): its gauges at the top and bottom of its
+    // bed, its sight glass from the water through it and its dirt.
+    const olympic = /^Olympic pool sand filter (\d)$/.exec(item.label);
+    if (pool === 'pool_02' && olympic && typeof window !== 'undefined') {
+      const n = Number(olympic[1]) - 1;
+      let look = newBedLook();
+      return {
+        object: holder,
+        update: (delta) => {
+          const w = worldStore('dev').world.value;
+          const flows = olympicFlowsOf(w);
+          const f = flows.filters[n];
+          filter.show(
+            flows.pumping
+              ? { inlet: f.topBar, outlet: f.bottomBar }
+              : { inlet: 0.2, outlet: 0.2 },
+            delta,
+          );
+          look = stepBedLook(look, f.bed, delta);
+          filter.showGlass(
+            bedGlass(look, {
+              bedFlow: f.bed,
+              dirt: w.olympic.dirt[n] / BIG_FILTER.dirtRef,
+            }),
+            delta,
+          );
+        },
+      };
+    }
     if (pool && typeof window !== 'undefined') {
       // Its bed's clock since it was last washed, for its sight glass.
       let look = newBedLook();

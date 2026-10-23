@@ -163,6 +163,8 @@ export function faceFlows(
   opening: Readonly<Record<ValveName, number>>,
   dirt: number,
   on: boolean,
+  /** The pumps' discharge, m: a battery's share of its pumps. */
+  supplyHead: number = BIG_FILTER.supplyHead,
 ): FiveValveFlows {
   const s = { opening, dirt };
   // With the supply off nothing drives any water: no flow anywhere (and
@@ -181,7 +183,7 @@ export function faceFlows(
   const bedR =
     BIG_FILTER.bed * (1 + (lifted ? 0.2 : 1) * (s.dirt / BIG_FILTER.dirtRef));
   const nodes: NetNode[] = [
-    { id: 'pump', head: BIG_FILTER.supplyHead },
+    { id: 'pump', head: supplyHead },
     { id: 'supply' },
     { id: 'top' },
     { id: 'bottom' },

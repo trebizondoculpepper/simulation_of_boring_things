@@ -4,6 +4,7 @@ import type { PoolId } from '../../../game/plant/pools';
 import { serviceAvailable } from '../../../game/plant/services';
 import type { IsolatorName, ServiceRoom } from '../../../game/plant/services';
 import { WET_HALL_PLANT } from '../../../game/plant/wet-hall';
+import { olympicFlowsOf } from '../../../game/plant/olympic-battery';
 import {
   CHLORINE_LOW,
   FILTER_DP_LIMIT,
@@ -21,7 +22,8 @@ import type { AlarmId, PlantReading } from './control-room-demo';
  * pump otherwise; one runs while the pool circulates (`pools.ts`: its
  * room powered, an isolator on, not tripped). What the world does not yet
  * model is drawn from what it does: the filters' pressure differences, as
- * clean filters', rising with the square of the flow; the hall's humidity,
+ * clean filters', rising with the square of the flow (the Olympic's from
+ * its battery's beds); the hall's humidity,
  * held while its air handling runs and climbing when it does not.
  */
 
@@ -50,7 +52,12 @@ export function plantReadingOf(world: World, pool: PoolId = 'pool_02') {
   const p1 = circulating && aOn;
   const p2 = circulating && !aOn && bOn;
   const share = Math.min(1.2, water.flow / POOL_TARGET[pool].flow);
-  const filterDp = CLEAN_DP.map((dp) => dp * share * share);
+  // The Olympic's five beds as its battery has them (`olympic-battery.ts`);
+  // the others' as clean filters', rising with the square of the flow.
+  const filterDp =
+    pool === 'pool_02'
+      ? olympicFlowsOf(world).filters.map((f) => f.bedBar)
+      : CLEAN_DP.map((dp) => dp * share * share);
   const uvIsolator = UV[pool];
   const uvOn = circulating && (uvIsolator ? plant.isolators[uvIsolator] : true);
   const dosing = circulating && serviceAvailable(plant, room, 'chemical');

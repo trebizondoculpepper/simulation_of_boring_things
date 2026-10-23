@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { advance, appealOf, applyAction, newWorld } from './world';
 import { roomRunning, serviceAvailable } from './plant/services';
-import { POOL_IDS } from './plant/pools';
+import { POOL_IDS, POOL_TARGET } from './plant/pools';
 
 describe('the world', () => {
   it('counts each time dev14’s button goes on, and dev15’s reset turns it off', () => {
@@ -134,13 +134,15 @@ describe('the mains water off', () => {
     // Two days' normal running, to midday.
     let w = advance(newWorld(), 36 * 3600, 10);
     expect(w.wetHall.boosterTripped).toBe(false);
-    expect(w.wetHall.meter).toBeGreaterThan(20);
+    expect(w.wetHall.meter).toBeGreaterThan(2);
     w = applyAction(w, { type: 'plant/source', utility: 'water', on: false });
     // The pools' pumps run on: they move the pools' own water.
     w = advance(w, 3600, 10);
     for (const id of POOL_IDS) expect(w.pools[id].flow, id).toBeGreaterThan(5);
-    // The break tank carries the pools until that night's backwash is made
-    // up, and then the booster set trips on its low level.
+    // The break tank carries the pools until their backwashes and
+    // evaporation are made up, and then the booster set trips on its low
+    // level. (The Olympic backwashes only when its valves are worked, so
+    // it draws on the make-up for its evaporation alone.)
     let boosterAt = -1;
     const pumpsAt: Partial<Record<string, number>> = {};
     for (let h = 2; h <= 14 * 24; h++) {
@@ -150,11 +152,15 @@ describe('the mains water off', () => {
         if (pumpsAt[id] === undefined && w.pools[id].tripped) pumpsAt[id] = h;
     }
     expect(boosterAt).toBeGreaterThan(6);
-    expect(boosterAt).toBeLessThan(24);
-    for (const id of POOL_IDS) {
+    expect(boosterAt).toBeLessThan(72);
+    for (const id of POOL_IDS.filter((p) => p !== 'pool_02')) {
       expect(pumpsAt[id], id).toBeGreaterThan(boosterAt);
       expect(w.pools[id].level, id).toBeLessThan(0);
     }
+    // The Olympic, never backwashed, holds its water but chokes: its beds
+    // foul, and its circulation falls.
+    expect(pumpsAt.pool_02).toBeUndefined();
+    expect(w.pools.pool_02.flow).toBeLessThan(POOL_TARGET.pool_02.flow * 0.85);
     // The main back, the booster set stays tripped until it is reset.
     w = applyAction(w, { type: 'plant/source', utility: 'water', on: true });
     w = advance(w, 3600, 10);

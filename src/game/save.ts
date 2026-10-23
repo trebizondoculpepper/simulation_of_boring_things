@@ -77,6 +77,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   },
   // 14 → 15: installed room-pipework valves, keyed by permanent asset ID.
   14: (world) => world,
+  // 15 → 16: the Olympic's filter beds, mid-season (`fillDefaults` adds them).
+  15: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

@@ -68,8 +68,17 @@ import {
   installedValveByCommandId,
   newInstalledValveStates,
 } from './plant/installed-valves';
+import {
+  newOlympicBattery,
+  olympicBatteryFlows,
+  stepOlympicBattery,
+} from './plant/olympic-battery';
+import type {
+  BatteryFlows,
+  OlympicBatteryState,
+} from './plant/olympic-battery';
 
-export const WORLD_VERSION = 15;
+export const WORLD_VERSION = 16;
 
 export interface World {
   /** Seconds the world has run. */
@@ -101,6 +110,8 @@ export interface World {
   identifiedPlant: Block;
   /** Installed pipework valve positions, keyed by permanent asset ID. */
   installedValves: Record<string, boolean>;
+  /** The Olympic's filter battery: each bed's dirt (`olympic-battery.ts`). */
+  olympic: OlympicBatteryState;
 }
 
 export function newWorld(): World {
@@ -118,6 +129,7 @@ export function newWorld(): World {
     gas: newGasZones(),
     identifiedPlant: newIdentifiedPlant(),
     installedValves: newInstalledValveStates(),
+    olympic: newOlympicBattery(),
   };
 }
 
@@ -323,6 +335,7 @@ export function stepWorld(world: World, delta: number): World {
     world.plant,
     makeUpDemand(world.pools),
   );
+  let battery: BatteryFlows | null = null;
   const water = stepPoolsWater(
     world.pools,
     world.plant,
@@ -338,11 +351,23 @@ export function stepWorld(world: World, delta: number): World {
         (world.wetHall.discharging ? WET_HALL_PLANT.dischargeRate : 0),
     ),
     footbathLineup(world.identifiedPlant),
+    // The Olympic's circulation, as its battery's valves and beds give it.
+    (running) => {
+      battery = olympicBatteryFlows(
+        world.installedValves,
+        world.olympic,
+        running,
+      );
+      return battery;
+    },
   );
   return {
     ...world,
     time: world.time + delta,
     pools: water.pools,
+    olympic: battery
+      ? stepOlympicBattery(world.olympic, battery, delta)
+      : world.olympic,
     wetHall: stepWetHall(world.wetHall, world.plant, water, delta),
     bathers: stepBathers(world.bathers, world.time, delta, appealOf(world)),
     gas: stepGasZones(world.gas, world.plant, delta),

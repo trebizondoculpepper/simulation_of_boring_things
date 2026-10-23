@@ -174,7 +174,7 @@ const clamp = (value: number, min: number, max: number) =>
  * room has power, one of its pumps' isolators is on, and its pumps have
  * not tripped. The pumps move the pool's own water: the mains has no say.
  */
-function circulating(
+export function circulating(
   old: PoolWaterState,
   plant: PlantServices,
   id: PoolId,
@@ -271,6 +271,12 @@ export function stepPoolsWater(
     returning: boolean;
     powered: boolean;
   },
+  /**
+   * The Olympic's circulation by its own plant's model (`olympic-battery.ts`),
+   * given whether its pumps run: what reaches the pool, and what goes to
+   * waste, m³/h. Without it, its design flow and a day's backwash.
+   */
+  olympic?: (running: boolean) => { toPool: number; toWaste: number },
 ): {
   pools: PoolsState;
   drawn: number;
@@ -312,6 +318,8 @@ export function stepPoolsWater(
       circulation &&
       (!(id in TREATED_BY) ||
         TREATED_BY[id]!.some((name) => plant.isolators[name]));
+    // The Olympic's battery, if its model is given: what its valves let through.
+    const battery = id === 'pool_02' && olympic ? olympic(circulation) : null;
     const heat = circulation && serviceAvailable(plant, room, 'heat');
     const dosing = circulation && serviceAvailable(plant, room, 'chemical');
     // Each chemical dosed only while its store has some.
@@ -323,7 +331,7 @@ export function stepPoolsWater(
       circulation &&
         !drainDown &&
         (id !== 'pool_04' || !footbath || footbath.returning)
-        ? POOL_TARGET[id].flow
+        ? (battery?.toPool ?? POOL_TARGET[id].flow)
         : 0,
       0.08,
       dt,
@@ -353,6 +361,9 @@ export function stepPoolsWater(
         backwashed: 0,
         evaporated: 0,
         madeUp: 0,
+        ...(battery
+          ? { pumpFlow: battery.toPool, toWaste: battery.toWaste }
+          : {}),
       },
       dt / 3600,
       // Sub-steps of at most 5 s. Not that a small pool fills fast (the

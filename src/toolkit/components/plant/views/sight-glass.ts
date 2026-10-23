@@ -165,7 +165,8 @@ export function createSightGlass(
       c.lineTo(px, 0);
       c.closePath();
       c.clip();
-      c.fillStyle = `rgba(${MURK.join(',')},${0.55 * state.murk})`;
+      // Thick enough to read as pale brown against the black.
+      c.fillStyle = `rgba(${MURK.join(',')},${0.9 * state.murk})`;
       c.fillRect(0, 0, px, px);
       c.restore();
     }

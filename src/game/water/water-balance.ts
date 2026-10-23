@@ -79,6 +79,18 @@ export interface WaterState {
   evaporated: number;
   /** Fresh water taken in, m³. */
   madeUp: number;
+  /**
+   * What the pumps deliver to the pool while they run, m³/h, where a
+   * plant's own model says (the Olympic's battery, `olympic-battery.ts`);
+   * the pool's design flow otherwise.
+   */
+  pumpFlow?: number;
+  /**
+   * What the plant sends to waste now, m³/h (a backwash, as its valves
+   * have it), drawn from the tank; given, it stands in for the day's
+   * backwash at midnight.
+   */
+  toWaste?: number;
 }
 
 /** A pool brimming, its tank at its float, its pumps running, its make-up open. */
@@ -111,7 +123,8 @@ export function flows(p: PoolWater, s: WaterState) {
   // round to it again, at the consented rate, until it is empty.
   const drainingDown = s.drainDown && s.pumps;
   const toSewer = drainingDown && !empty ? Math.min(s.drainRate, p.flow) : 0;
-  const circulation = s.pumps && !s.drainDown ? p.flow : 0;
+  const pumped = s.pumpFlow ?? p.flow;
+  const circulation = s.pumps && !s.drainDown ? pumped : 0;
   // Over the lip: a weir, its flow as the head over it to the power 1.5,
   // carrying the circulation's share not taken by the main drains.
   const weir = (p.flow * (1 - p.mainDrainShare)) / p.weirHead ** 1.5;
@@ -124,7 +137,7 @@ export function flows(p: PoolWater, s: WaterState) {
   const mainDrains = s.drainDown
     ? 0
     : s.pumps
-      ? p.flow * p.mainDrainShare
+      ? pumped * p.mainDrainShare
       : head > 0 && !empty
         ? p.flow *
           p.mainDrainShare *
@@ -173,7 +186,12 @@ export function stepWater(
     let backwashed = s.backwashed;
     const day = Math.floor(s.time / 24);
     const time = s.time + dt;
-    if (s.pumps && Math.floor(time / 24) > day) {
+    if (s.toWaste !== undefined) {
+      // To waste as the plant's valves send it, while the pumps run.
+      const out = s.pumps ? Math.min(s.toWaste * dt, tank) : 0;
+      tank -= out;
+      backwashed += out;
+    } else if (s.pumps && Math.floor(time / 24) > day) {
       const out = Math.min(p.backwash, tank);
       tank -= out;
       backwashed += out;
