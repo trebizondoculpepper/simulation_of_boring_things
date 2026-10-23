@@ -148,8 +148,9 @@ export function createRemoteValve(
     group,
     /** Where a local override button goes: on the head's end over the stem. */
     override: [0, (y0 + y1) / 2, z1 + 0.004] as const,
-    show(open: boolean) {
-      lamp.color.set(open ? '#50d879' : '#d24a38');
+    /** Its lamp: green open, red shut, amber while its motor drives it between. */
+    show(open: boolean, moving = false) {
+      lamp.color.set(moving ? '#f0a830' : open ? '#50d879' : '#d24a38');
     },
   };
 }

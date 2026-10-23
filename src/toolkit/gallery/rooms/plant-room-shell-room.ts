@@ -622,6 +622,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       parts.dispose();
       machines?.dispose();
       jacuzziMimic?.parts.dispose();
+      services?.dispose();
       disposeKit(kit, rooms as never);
       walk.dispose();
       rooms.traverse((object) => {

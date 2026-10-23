@@ -32,6 +32,15 @@ import type { Service } from '../logic/cabinet-pipes';
 import { CHAIN_TO } from '../logic/room-pipes';
 import { cabinetValvePanel } from '../logic/cabinet-pipes';
 import { createRemoteValve } from '../../components/plant/views/remote-actuators';
+import {
+  motorLimits,
+  motorRunning,
+  newMotorisedValve,
+  stepMotorisedValve,
+} from '../../components/plant/logic/motorised-valve';
+import { signal } from '@preact/signals-core';
+import { partAudio } from '../../components/core/audio/part-audio';
+import { machineTone } from '../../components/sound/audio/machine-tones';
 import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
 import { createValveControlPanel } from '../../components/plant/views/valve-control-panel';
 import type { PanelValve } from '../../components/plant/views/valve-control-panel';
@@ -65,7 +74,8 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   const store = typeof window === 'undefined' ? null : worldStore('dev');
   const valveParts: ReturnType<typeof createWaterButterflyValve>[] = [];
   // The motorised valves: each one's lamp, and its row on the room's panel.
-  const motorLamps: (() => void)[] = [];
+  const motorLamps: ((delta: number) => void)[] = [];
+  const motorStops: (() => void)[] = [];
   const panelValves: PanelValve[] = [];
   const lift = <T extends readonly [number, number, number]>([x, y, z]: T) =>
     [x, floorY + y, z] as const;
@@ -142,7 +152,28 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
         }
         mount.add(motor.group);
         group.add(mount);
-        motorLamps.push(() => motor.show(binding.open()));
+        // It travels to where the world commands over its stroke, its gear
+        // motor heard running up as it sets off, steady as it moves, and
+        // running down as it arrives (`gear-motor`).
+        let travel = newMotorisedValve(binding.open());
+        let running = false;
+        motorLamps.push((delta) => {
+          travel = stepMotorisedValve(
+            { ...travel, command: binding.open() },
+            delta,
+          );
+          const moving = motorRunning(travel);
+          motor.show(motorLimits(travel).open, moving);
+          if (moving !== running) {
+            running = moving;
+            partAudio.hold(
+              motor.group,
+              moving ? machineTone('gear-motor', signal(1), 0.12) : null,
+              motor.group,
+            );
+          }
+        });
+        motorStops.push(() => partAudio.hold(motor.group, null));
         panelValves.push({
           tag: id,
           legend: (description?.name ?? 'Valve').toUpperCase(),
@@ -282,13 +313,17 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     group,
     isolator,
     uses,
+    /** Silence any valve motor still running. */
+    dispose() {
+      for (const stop of motorStops) stop();
+    },
     update(delta: number) {
       // As the world has it, switched here or anywhere.
       const on = store?.world.value.plant.isolators[name];
       if (isolator && on !== undefined && on !== isolator.on) isolator.set(on);
       isolator?.update(delta);
       for (const valve of valveParts) valve.update(delta);
-      for (const lamp of motorLamps) lamp();
+      for (const lamp of motorLamps) lamp(delta);
       panel?.update(delta);
     },
   };

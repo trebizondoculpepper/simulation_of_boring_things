@@ -26,7 +26,8 @@ export type MachineToneId =
   | 'coolant'
   | 'drive-fan'
   | 'turbine'
-  | 'worn-fan';
+  | 'worn-fan'
+  | 'gear-motor';
 
 export interface MachineTone {
   id: MachineToneId;
@@ -55,6 +56,15 @@ export const MACHINE_TONES: readonly MachineTone[] = [
     name: 'MOTOR HUM',
     caption: 'An induction motor running, a little rough',
     spin: { up: 2, down: 5, floor: 0.08 },
+  },
+  {
+    id: 'gear-motor',
+    name: 'GEAR MOTOR',
+    caption:
+      'A small geared actuator motor: a whine on 271 Hz and its gears, quick to run up and stop',
+    // A small motor and its gearbox: up to speed in a breath, stopped by
+    // its load almost at once, and silent at rest.
+    spin: { up: 0.35, down: 0.25, floor: 0.12 },
   },
   {
     id: 'cabinet-fan',
@@ -337,6 +347,65 @@ const RECIPES: Record<MachineToneId, (t: Tools) => Float32Array> = {
       [rotor, 0.3],
       [slot, 0.25],
       [fanAir, 0.12],
+    ]);
+  },
+  'gear-motor': (t) => {
+    // Resynthesised from a recording of a small DC gear motor running
+    // free (the owner, 2026-10-23, for the valves' actuators): a whine on
+    // 271 Hz whose fifth harmonic, 1354 Hz, is the loudest, then its
+    // third, eighth and fourth; every partial swelling once a turn of the
+    // geared shaft, 271 / 11 Hz, so it carries sidebands; a slower gear
+    // stage under it (148, 188 and 376 Hz); and the brushes' hiss, 4 to
+    // 8 kHz. Levels as measured, relative to the fifth harmonic.
+    const f0 = 271;
+    const whine = t.partials(
+      (
+        [
+          [1, 0.03],
+          [2, 0.032],
+          [3, 0.3],
+          [4, 0.145],
+          [5, 1],
+          [6, 0.061],
+          [7, 0.079],
+          [8, 0.195],
+          [9, 0.025],
+          [10, 0.021],
+          [13, 0.038],
+          [14, 0.048],
+        ] as const
+      ).map(([k, level]) => [f0 * k, level] as [number, number]),
+      new Float32Array(t.n),
+    );
+    const turn = t.partials(
+      [
+        [f0 / 11, 0.5],
+        [(2 * f0) / 11, 0.12],
+      ],
+      new Float32Array(t.n),
+    );
+    for (let i = 0; i < t.n; i++) whine[i] *= 1 + turn[i];
+    const gears = t.partials(
+      [
+        [148, 0.15],
+        [188, 0.18],
+        [376, 0.125],
+      ],
+      new Float32Array(t.n),
+    );
+    // The brushes' hiss is much of what it sounds like: loud, and up into
+    // the highest octave; under the whine, the gearbox's own rough noise.
+    const brushes = t.noise(5500, 0.8);
+    const fizz = t.noise(11000, 0.8);
+    const body = t.noise(1400, 1.2);
+    const grind = t.noise(350, 0.9);
+    return mix(t.n, [
+      [whine, 1],
+      [gears, 1],
+      [brushes, 1.1],
+      [fizz, 0.7],
+      [body, 0.05],
+      [grind, 0.08],
     ]);
   },
   'cabinet-fan': (t) =>
