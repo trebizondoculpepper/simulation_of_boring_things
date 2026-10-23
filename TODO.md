@@ -20,6 +20,7 @@ The owner's priority: the Olympic is the hardest of the pools, and once it works
 
 - [ ] **The wet hall's tanks as built** ([036](doc/prompts/036-wet-hall-tanks.md)): the break tank stays sectional GRP; the backwash holding tank and the Lounge pool's balance tank in cast concrete.
 - [ ] **Sound between rooms** ([037](doc/prompts/037-sound-between-rooms.md)): a room is heard through an open door by how far it stands open (full above about 20 % open, about −20 dB at 5 %, silent and its sounds stopped when shut), not by which room the player is in.
+- [ ] **Noclip, a free camera** ([038](doc/prompts/038-noclip-camera.md)): toggled on the escape screen; flying freely in three directions (Space up, Shift down, Ctrl faster, as Minecraft's), through everything in the room but kept within its walls, floor and ceiling; with a readout of the camera's place and a way to copy its address, to set up the shots for the title's attract sequence.
 - [ ] **The other pools on the Olympic's pattern:** each pool's circulation, filters and balance tank driven by its own plant's valves and model, as the Olympic's now are, once the Olympic works.
 
 ## Test scenarios ([scenarios](doc/prompts/scenarios.md))
