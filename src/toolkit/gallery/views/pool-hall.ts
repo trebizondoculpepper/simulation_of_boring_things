@@ -159,7 +159,15 @@ export function createPoolHall(
       maxZ: Math.max(...zs),
     };
   });
-  const uniforms = createPoolUniforms(metre, WATER_Y, bounds);
+  // Full, a footbath's surface stands just below its grilles, whose bars
+  // hang 25 mm under the deck (the owner, 2026-10-23); a pool's at
+  // `WATER_Y`, brimming at its gutter.
+  const fullY = s.basins.some(
+    (b) => b.shape === 'rect' && b.spans && b.deep < 0.4,
+  )
+    ? -0.03
+    : WATER_Y;
+  const uniforms = createPoolUniforms(metre, fullY, bounds);
   // For the room, to dim the pool with the hall's lights (`room-lights.ts`).
   group.userData.poolUniforms = uniforms;
   const tile = createTileMaterial(uniforms, {
@@ -236,6 +244,14 @@ export function createPoolHall(
   let underwaterVolume: { mesh: Mesh; deep: number } | null = null;
   // What floats on the water (lane ropes), moved with its surface.
   const floats: Object3D[] = [];
+  /** Each wall inlet, its centre and the way it faces, by its basin's name. */
+  const wallInlets: {
+    x: number;
+    y: number;
+    z: number;
+    yaw: number;
+    basin: string;
+  }[] = [];
 
   // The deck, each basin's gutter cut out of it; under each grating a
   // kerb stands to the gutter's floor, its inner face the pool's wall.
@@ -619,7 +635,10 @@ export function createPoolHall(
     }
     // Wall inlets along the long walls, and underwater lights between,
     // each facing into the water.
-    const jetY = WATER_Y - Math.min(0.45, b.shallow / 2);
+    // The footbath's 3 cm lower than half its depth (the owner,
+    // 2026-10-23), well under its surface.
+    const jetY =
+      WATER_Y - Math.min(0.45, b.shallow / 2) - (footbath ? 0.03 : 0);
     const lightY = WATER_Y - Math.min(0.8, b.shallow * 0.6);
     const spacing = small ? 0.6 : b.w > 30 ? 5 : 2.5;
     for (const [z, yaw, ledgeSide] of [
@@ -646,6 +665,14 @@ export function createPoolHall(
         );
         jet.rotation.y = yaw;
         group.add(jet);
+        // Where each is, for what comes out of it (`inlet-streams.ts`).
+        wallInlets.push({
+          x: jet.position.x,
+          y: jet.position.y,
+          z: jet.position.z,
+          yaw,
+          basin: b.name,
+        });
         if (!small && x + spacing / 2 < o.maxX && !onLedge) {
           const lamp = createPoolLight(ft, kinds);
           lamp.position.set(x + spacing / 2, lightY, z);
@@ -958,7 +985,7 @@ export function createPoolHall(
       ),
       `${b.name} water`,
     );
-    water.position.y = WATER_Y;
+    water.position.y = fullY;
     water.renderOrder = 1;
     waters.push(water);
     rippleWater(water, uniforms);
@@ -1612,24 +1639,31 @@ export function createPoolHall(
    * the gallery, the water's volume. A basin's surface below its own floor
    * is hidden by the floor; at the bottom it goes.
    */
-  // Empty is the bottom of the deepest well, if a basin has one.
+  // Empty is the bottom of the deepest basin, or of its deepest well if
+  // it has one: the basins' own depths, not `deepest`, which is never
+  // under 0.2 m for the slab's sake (a shallow footbath, 0.15 m, would
+  // otherwise show empty a quarter of the way up).
   const empty = Math.max(
-    deepest,
+    ...s.basins.map((b) => (b.shape === 'rect' ? b.deep : b.depth)),
     ...s.basins.flatMap((b) =>
       ('wells' in b ? (b.wells ?? []) : []).map((w) => w.depth),
     ),
   );
-  group.userData.waterDepth = empty;
+  // From full down to the bottom.
+  const fullDepth = empty - (WATER_Y - fullY);
+  group.userData.waterDepth = fullDepth;
+  group.userData.waterFullY = fullY;
+  group.userData.wallInlets = wallInlets;
   // How wet the hall is: 1 with water in it, fading to 0 over its last
   // 30 cm, for the light the water throws about (caustics, reflections).
   group.userData.waterWet = 1;
   group.userData.setWaterDrop = (drop: number) => {
-    const d = Math.min(Math.max(drop, 0), empty);
-    group.userData.waterWet = Math.min(1, Math.max(0, (empty - d) / 0.3));
-    const y = WATER_Y - d;
+    const d = Math.min(Math.max(drop, 0), fullDepth);
+    group.userData.waterWet = Math.min(1, Math.max(0, (fullDepth - d) / 0.3));
+    const y = fullY - d;
     for (const water of waters) {
       water.position.y = y;
-      water.visible = d < empty - 0.005;
+      water.visible = d < fullDepth - 0.005;
     }
     uniforms.waterY.value = y;
     for (const f of floats) f.position.y = y - WATER_Y;

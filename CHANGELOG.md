@@ -6,6 +6,9 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Dev33 · Footbath Water Level (`?room=dev33`): the footbath hall on its own, its neighbours not wired in, with a Penfold panel on its west wall whose LEVEL knob sets its water from empty to full in 5 % steps, an LED readout showing the per cent.
+- The foot spa's make-up seen coming in ([041](doc/prompts/041-footspa-makeup-jets.md)): while fresh water is entering it (make-up valve open, its float calling, the wet hall able to supply), a thin clear stream from each south-wall inlet arcs down to the surface with small rings spreading where it lands; with the nozzles under water, only the rings (`inlet-streams.ts`, `footbathMakeUpEntering`). Its nozzles are 3 cm lower, and full now stands just below the grilles, 3 cm under the deck.
+- A shallow pool's water no longer shows empty early: empty is its own floor, not the hall's 0.2 m minimum depth, so the footbath's bottom quarter is no longer hidden under its tiles.
 - The valve motors' pitch spread is widened to ±10 Hz of the 271 Hz whine (from ±6 Hz), so they are more easily told apart.
 - Every knob turns down or up by which half of it is clicked, in every room: the pool halls, the racks, architectural and corridor-lab rooms and the dev and plant corridors gave their knobs no direction, so they could only turn up. A test now fails any walkable room that works parts without asking `knobDirection`.
 - The foot spa's drain-down is heard: while its water runs to drain (`footbathDischarging`: lined up to drain, pumped, not tripped, water left), a gurgle plays at its tundish over the floor gully in the plant room. It is a new machine tone, `drain-gurgle`, synthesised from bubbles: many small rising notes as the water drags air under, the trap's occasional deep glug, and the splash and trickle of the falling water.

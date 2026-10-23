@@ -382,6 +382,13 @@ const starter = async (
     return (await import('./rendering/dev-corridor-room')).startDevCorridorRoom;
   if (room === 'dev1')
     return (await import('./toolkit/gallery/rooms/racks-room')).startRacksRoom;
+  if (room === 'dev33') {
+    // The footbath, on its own, its water's level set by hand.
+    const { startPoolHallRoom } =
+      await import('./toolkit/gallery/rooms/pool-hall-room');
+    return (surface) =>
+      startPoolHallRoom(surface, 'pool_04', { devRoom: 'dev33' });
+  }
   if (room === 'dev31')
     return (await import('./rendering/effects-playground-room'))
       .startEffectsPlaygroundRoom;

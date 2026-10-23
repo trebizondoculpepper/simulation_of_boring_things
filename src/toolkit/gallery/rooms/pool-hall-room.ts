@@ -68,7 +68,11 @@ import {
   POOL_HALLS,
 } from '../logic/pool-halls';
 import type { PoolHallId } from '../logic/pool-halls';
+import { createInletStreams } from '../views/inlet-streams';
+import { createWaterLevelPanel } from '../views/water-level-panel';
 import { knobDirection } from '../../controls/input/knob-turning';
+import type { Inlet } from '../views/inlet-streams';
+import { footbathMakeUpEntering } from '../../../game/plant/footbath-makeup';
 import { bindRoomLights } from '../views/room-lights';
 import { zoneLit, zoneOfRoom } from '../../../game/plant/lighting';
 import type { PoolUniforms } from '../../components/pool/views/pool-surfaces';
@@ -83,7 +87,19 @@ import type { PoolId } from '../../../game/plant/pools';
 export function startPoolHallRoom(
   canvas: HTMLCanvasElement,
   id: PoolHallId,
-  { inGallery = false }: { inGallery?: boolean } = {},
+  {
+    inGallery = false,
+    devRoom,
+  }: {
+    inGallery?: boolean;
+    /**
+     * Shown as this development room (the owner, 2026-10-24, dev33: the
+     * footbath cloned): its neighbours not wired in, so no way out is
+     * joined to another room, and its water's level set by a panel on its
+     * wall instead of the world's.
+     */
+    devRoom?: RoomId;
+  } = {},
 ) {
   const spec = POOL_HALLS[id];
   // In the underwater gallery (pool_02_gallery) the walker is kept to it,
@@ -376,6 +392,9 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         ? ([[spaPanel.object, spaPanel.parts.uses]] as const)
         : []),
       ...(plantDoor ? ([[plantDoor.object, plantDoor.uses]] as const) : []),
+      ...(levelPanel
+        ? ([[levelPanel.group, levelPanel.parts.uses]] as const)
+        : []),
       ...(officeDoor ? ([[officeDoor.object, officeDoor.uses]] as const) : []),
       ...(officeReader
         ? ([[officeReader.object, officeReader.uses]] as const)
@@ -524,69 +543,75 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   let officeSeen = false;
   let leavingForOffice = false;
   const officeLobby = rooms.getObjectByName('office door lobby');
-  const withdraw = [
-    ...(plantDoor && plantRoom && plantFrame && !gallery
-      ? [
-          registerJoint(loopRoom as RoomId, plantRoom, {
-            frame: plantFrame,
-            onOpen: true,
-            open: () => plantDoor.angle() > 0.05,
-            angle: () => plantDoor.angle(),
-            swingTo: (a) => plantDoor.swingTo(a),
-            opening: () => {
-              const wx = plantFrame.x / metre;
-              const side = spec.plantDoor!.wall === 'west' ? -1 : 1;
-              const z = spec.plantDoor!.z;
-              return {
-                minX: (Math.min(wx, wx + side * 2) - 0.1) * metre,
-                maxX: (Math.max(wx, wx + side * 2) + 0.1) * metre,
-                minZ: (z - PLANT_DOORWAY / 2) * metre,
-                maxZ: (z + PLANT_DOORWAY / 2) * metre,
-              };
-            },
-            see: (on) => {
-              plantSeen = on;
-              if (lobby) lobby.visible = !on;
-            },
-            peek: (on) => plantDoor.showLeaf(!on),
-          }),
-        ]
-      : []),
-    ...(officeDoor && officeWay
-      ? [
-          registerJoint('pool_02_gallery', 'engineers_office', {
-            frame: {
-              x: officeWay.frame.x * metre,
-              z: officeWay.frame.z * metre,
-              y: officeWay.frame.y * metre,
-              yaw: officeWay.frame.yaw,
-            },
-            onOpen: true,
-            open: () => officeDoor.angle() > 0.05,
-            angle: () => officeDoor.angle(),
-            swingTo: (a) => officeDoor.swingTo(a),
-            // Through the wall, and on a little way beyond it.
-            opening: () => ({
-              minX: (officeWay.x - officeWay.opening / 2) * metre,
-              maxX: (officeWay.x + officeWay.opening / 2) * metre,
-              minZ: (officeWay.line - officeWay.wall - 2) * metre,
-              maxZ: (officeWay.line + 0.4) * metre,
-            }),
-            see: (on) => {
-              officeSeen = on;
-              if (officeLobby) officeLobby.visible = !on;
-            },
-            peek: (on) => officeDoor.showLeaf(!on),
-          }),
-        ]
-      : []),
-    registerJoint(loopRoom, nextRoom, joint('leaving', frameAt(leaving, true))),
-    registerJoint(
-      loopRoom,
-      lastRoom,
-      joint('arriving', frameAt(arriving, false)),
-    ),
-  ];
+  const withdraw = devRoom
+    ? []
+    : [
+        ...(plantDoor && plantRoom && plantFrame && !gallery
+          ? [
+              registerJoint(loopRoom as RoomId, plantRoom, {
+                frame: plantFrame,
+                onOpen: true,
+                open: () => plantDoor.angle() > 0.05,
+                angle: () => plantDoor.angle(),
+                swingTo: (a) => plantDoor.swingTo(a),
+                opening: () => {
+                  const wx = plantFrame.x / metre;
+                  const side = spec.plantDoor!.wall === 'west' ? -1 : 1;
+                  const z = spec.plantDoor!.z;
+                  return {
+                    minX: (Math.min(wx, wx + side * 2) - 0.1) * metre,
+                    maxX: (Math.max(wx, wx + side * 2) + 0.1) * metre,
+                    minZ: (z - PLANT_DOORWAY / 2) * metre,
+                    maxZ: (z + PLANT_DOORWAY / 2) * metre,
+                  };
+                },
+                see: (on) => {
+                  plantSeen = on;
+                  if (lobby) lobby.visible = !on;
+                },
+                peek: (on) => plantDoor.showLeaf(!on),
+              }),
+            ]
+          : []),
+        ...(officeDoor && officeWay
+          ? [
+              registerJoint('pool_02_gallery', 'engineers_office', {
+                frame: {
+                  x: officeWay.frame.x * metre,
+                  z: officeWay.frame.z * metre,
+                  y: officeWay.frame.y * metre,
+                  yaw: officeWay.frame.yaw,
+                },
+                onOpen: true,
+                open: () => officeDoor.angle() > 0.05,
+                angle: () => officeDoor.angle(),
+                swingTo: (a) => officeDoor.swingTo(a),
+                // Through the wall, and on a little way beyond it.
+                opening: () => ({
+                  minX: (officeWay.x - officeWay.opening / 2) * metre,
+                  maxX: (officeWay.x + officeWay.opening / 2) * metre,
+                  minZ: (officeWay.line - officeWay.wall - 2) * metre,
+                  maxZ: (officeWay.line + 0.4) * metre,
+                }),
+                see: (on) => {
+                  officeSeen = on;
+                  if (officeLobby) officeLobby.visible = !on;
+                },
+                peek: (on) => officeDoor.showLeaf(!on),
+              }),
+            ]
+          : []),
+        registerJoint(
+          loopRoom,
+          nextRoom,
+          joint('leaving', frameAt(leaving, true)),
+        ),
+        registerJoint(
+          loopRoom,
+          lastRoom,
+          joint('arriving', frameAt(arriving, false)),
+        ),
+      ];
   // Its lights, following their lighting zones (`room-lights.ts`): the
   // gallery's the corridors'.
   const roomLights = bindRoomLights(
@@ -628,20 +653,56 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   let shownDrop = -1;
   const showWater = () => {
     const level = world.world.value.pools[waterOf].level;
-    const drop =
-      level >= 0
+    const depth = rooms.userData.waterDepth as number;
+    const drop = levelPanel
+      ? (1 - levelPanel.share.value) * depth
+      : level >= 0
         ? 0
-        : (-level / poolDepth(waterOf)) * (rooms.userData.waterDepth as number);
+        : (-level / poolDepth(waterOf)) * depth;
     if (Math.abs(drop - shownDrop) < 0.0005) return;
     shownDrop = drop;
     (rooms.userData.setWaterDrop as (d: number) => void)(drop);
   };
+  // The foot spa's make-up, seen coming in (`doc/prompts/041-footspa-
+  // makeup-jets.md`): at every one of its channel's south-wall inlets
+  // (the owner, 2026-10-23: a stream for each), while fresh water is
+  // actually entering it.
+  const makeUpStreams =
+    id === 'pool_04' && !gallery
+      ? (() => {
+          const south = (
+            (rooms.userData.wallInlets ?? []) as (Inlet & { basin: string })[]
+          )
+            .filter((i) => i.basin === 'Footbath' && i.z > 0)
+            .sort((a, b) => a.x - b.x);
+          const streams = createInletStreams(south);
+          rooms.add(streams.group);
+          return streams;
+        })()
+      : null;
+  // A development room's own level, set by hand on its west wall, south
+  // of the channel (`water-level-panel.ts`).
+  const levelPanel = devRoom
+    ? createWaterLevelPanel(poolsideKit, 'WATER LEVEL')
+    : null;
+  if (levelPanel) {
+    levelPanel.group.position.set(-spec.w / 2 + 0.005, 1.4, 1.6);
+    levelPanel.group.rotation.y = Math.PI / 2;
+    rooms.add(levelPanel.group);
+  }
   let last = 0;
   let officeWasOpen = false;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
+    levelPanel?.update(delta);
     showWater();
+    makeUpStreams?.update(delta, {
+      // Not in a development room: its water is not the world's.
+      filling: !devRoom && footbathMakeUpEntering(world.world.value),
+      surfaceY: (rooms.userData.waterFullY as number) - Math.max(0, shownDrop),
+      wet: rooms.userData.waterWet as number,
+    });
     last = time;
     walk.update(delta);
     roomLights.update(delta);
@@ -751,7 +812,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     }
     // Where the walker is in the loop's corridors: what to load, and when
     // to hand over (`loopStep`). Not while it follows another room's eye.
-    if (!walk.following && !handing) {
+    if (!devRoom && !walk.following && !handing) {
       const r = loopStep(
         loopRoom,
         walk.walker.x / metre,
@@ -778,6 +839,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       for (const w of withdraw) w();
       observer.disconnect();
       composer.dispose();
+      makeUpStreams?.dispose();
+      levelPanel?.dispose();
       walk.dispose();
       poolside?.clock?.dispose();
       if (spaTub && 'object' in spaTub) spaTub.dispose?.();

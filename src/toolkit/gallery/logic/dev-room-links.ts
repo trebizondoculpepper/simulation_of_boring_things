@@ -46,6 +46,7 @@ export type GalleryRoomId =
   | 'dev29'
   | 'dev30'
   | 'dev31'
+  | 'dev33'
   | 'retired0'
   | 'dev_corridor';
 /** One development room per pool plant room, each showing its equipment. */
@@ -200,6 +201,9 @@ export const ROOMS: readonly RoomId[] = [
   // By its URL only: the effects playground, effects and hallucinations
   // together (from the Encabulator's dev1 and dev2).
   'dev31',
+  // By its URL only: the footbath cloned, its neighbours not wired in, its
+  // water's level set by a panel on its wall.
+  'dev33',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   // The single playable pool room.
@@ -343,6 +347,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev29: 'DEV29 · SOLENOID VALVES',
   dev30: 'DEV30 · LIGHTING STYLES',
   dev31: 'DEV31 · EFFECTS PLAYGROUND',
+  dev33: 'DEV33 · FOOTBATH WATER LEVEL',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   dev_corridor: 'DEV CORRIDOR',
   dev_courtyard: 'COURTYARD',
@@ -435,6 +440,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev29: '#8c7d6a',
   dev30: '#d9a441',
   dev31: '#8a4fd0',
+  dev33: '#5fa3c8',
   retired0: '#6d7a6f',
   dev_corridor: '#2d9ca0',
   dev_courtyard: '#7fa36a',
