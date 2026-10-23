@@ -115,6 +115,12 @@ describe.each([
         ),
       ).toBeGreaterThan(0.2);
       expect(valve.at[0]).toBeLessThan(body.min[0] - 0.1);
+      // On this west-facing stub, the handle must point away from the
+      // cabinet's pipe stand and toward the drain's downpipe.
+      const handleX =
+        valve.at[0] + Math.sin(valve.facing ?? Math.PI / 2) * 0.25;
+      expect(handleX).toBeLessThan(valve.at[0]);
+      expect(handleX).toBeGreaterThan(-layout.box.w / 2 + 0.1);
     });
 
     it('lifts the heating-flow operator and faces it away from the return rise', () => {

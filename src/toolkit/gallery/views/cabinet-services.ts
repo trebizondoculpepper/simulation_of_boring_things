@@ -122,7 +122,8 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
         run.valve.operator,
       );
       valve.object.position.set(...lift(at));
-      if (axis === 'x') valve.object.rotation.y = Math.PI / 2;
+      if (axis === 'x')
+        valve.object.rotation.y = run.valve.facing ?? Math.PI / 2;
       if (axis === 'y') valve.object.rotation.y = run.valve.facing ?? 0;
       group.add(valve.object);
       valveParts.push(valve);

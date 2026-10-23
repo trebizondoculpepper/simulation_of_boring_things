@@ -542,6 +542,9 @@ export function cabinetPipes(
         id,
         at: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2],
         axis: Math.abs(a[0] - b[0]) > Math.abs(a[2] - b[2]) ? 'x' : 'z',
+        // The default points back through the nearby pipe stand. Point the
+        // lever toward the gully instead, with room to work it from behind.
+        facing: -Math.PI / 2,
       };
     }
     // Fresh water enters along the east wall and continues to the pool,

@@ -41,6 +41,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- Turn the footbath plant's draw-down valve lever toward its gully so its open position clears the nearby pipe stand.
 - In the footbath plant room, move the draw-down valve off the cabinet's short drain stub and turn and lift the heating-flow valve clear of the neighbouring return rise.
 - A packaged cabinet (the footbath's, the Jacuzzi's) stops the walker at its body, not at its layout envelope, which had kept one about a metre short of its doors (the owner, 2026-10-23).
 - Seven-segment LED readouts (`createSevenSegment`, on every mimic and many panels) drawn as LED digits (the owner, 2026-10-23): segments with pointed ends and a hair's gap between them, a glow round the lit ones, the dark ones faintly there, at four times the resolution, so close up they no longer read as blocks of pixels.
