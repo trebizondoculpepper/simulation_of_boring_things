@@ -1,4 +1,4 @@
-import { GAUGE, gaugeOnNozzle, sandFilterGeometry } from '../logic/sand-filter';
+import { GAUGE, gaugeBosses } from '../logic/sand-filter';
 import { Group, Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -641,46 +641,48 @@ export function createSandFilter(
     [r * 0.3, 1.0, face + 0.05],
     0.012,
   );
-  // The two gauges belong to the vessel, each on its own nozzle
-  // (`sandFilterGeometry`): a tapping and gauge cock rising from the
-  // nozzle's top, between the shell and its flange, the dial square to the
-  // shell. The nozzles' pipework is the room's.
-  const geometry = sandFilterGeometry(dia, shell);
+  // The two gauges, each on a boss in the vessel's wall
+  // (`gaugeBosses`): a reinforcing pad on the shell, a ½" nipple standing
+  // square out of it, the gauge cock and its lever, and the gauge on its
+  // back connection, facing out. The inlet's high over the bed, the
+  // outlet's low at the underdrain.
   const brass = t.paint('#b08d3c', 0.4, 0.7);
-  const [inletGauge, outletGauge] = [geometry.inlet, geometry.outlet].map(
-    (n) => {
-      const { at, yaw } = gaugeOnNozzle(n, r);
-      // The stem's foot, where the gauge's own ½" stem ends.
-      const stemX = at[0] - Math.sin(yaw) * 0.012;
-      const stemZ = at[2] - Math.cos(yaw) * 0.012;
-      const top = n.y + n.od / 2;
-      const foot = at[1] - GAUGE.dia / 2 - 0.05;
-      t.rod(
-        group,
-        brass,
-        [stemX, top - 0.01, stemZ],
-        [stemX, foot, stemZ],
-        0.007,
-      );
-      // The gauge cock on the tapping: its body and lever.
-      t.cyl(group, brass, 0.012, 0.025, stemX, (top + foot) / 2, stemZ, 'y', 8);
-      t.box(
-        group,
-        t.paint('#202020', 0.6),
-        0.04,
-        0.006,
-        0.006,
-        stemX + 0.02,
-        (top + foot) / 2,
-        stemZ,
-      );
-      return t.pressureGauge(group, [at[0], at[1], at[2]], {
-        max: 4,
-        dia: GAUGE.dia,
-        yaw,
-      });
-    },
-  );
+  const bosses = gaugeBosses(dia, shell);
+  const [inletGauge, outletGauge] = [bosses.inlet, bosses.outlet].map((b) => {
+    const mount = new Group();
+    mount.position.set(b.on[0], b.on[1], b.on[2]);
+    mount.rotation.y = b.yaw;
+    group.add(mount);
+    // In the mount's frame, +z is straight out of the shell.
+    t.cyl(mount, livery.paint.shade, GAUGE.pad, 0.012, 0, 0, 0.004, 'z', 20);
+    t.cyl(mount, brass, 0.011, GAUGE.nipple, 0, 0, GAUGE.nipple / 2, 'z', 10);
+    t.cyl(
+      mount,
+      brass,
+      0.014,
+      GAUGE.cock,
+      0,
+      0,
+      GAUGE.nipple + GAUGE.cock / 2,
+      'z',
+      8,
+    );
+    t.box(
+      mount,
+      t.paint('#202020', 0.6),
+      0.006,
+      0.045,
+      0.006,
+      0.016,
+      -0.018,
+      GAUGE.nipple + GAUGE.cock / 2,
+    );
+    return t.pressureGauge(mount, [0, 0, GAUGE.off], {
+      max: 4,
+      dia: GAUGE.dia,
+      entry: 'back',
+    });
+  });
   group.show = ({ inlet, outlet }, delta) => {
     inletGauge.set(inlet);
     outletGauge.set(outlet);

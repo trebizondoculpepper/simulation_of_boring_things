@@ -336,6 +336,7 @@ export function plantTools(kit: PanelKit) {
       unit = 'bar',
       yaw = 0,
       kind,
+      entry,
       legend,
       red,
     }: {
@@ -345,6 +346,8 @@ export function plantTools(kit: PanelKit) {
       unit?: string;
       yaw?: number;
       kind?: DialKind;
+      /** Its connection: below (the usual) or behind, into a boss it faces out from. */
+      entry?: 'bottom' | 'back';
       legend?: string;
       red?: { from: number; to: number } | null;
     } = {},
@@ -355,7 +358,7 @@ export function plantTools(kit: PanelKit) {
       max,
       unit,
       kind: kind ?? (unit.includes('°') ? 'thermometer' : 'pressure'),
-      entry: unit.includes('°') ? 'back' : 'bottom',
+      entry: entry ?? (unit.includes('°') ? 'back' : 'bottom'),
       legend,
       red,
     });

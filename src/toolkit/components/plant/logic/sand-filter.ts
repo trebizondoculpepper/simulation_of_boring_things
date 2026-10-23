@@ -54,22 +54,60 @@ export function sandFilterGeometry(dia: number, shell = dia * 0.57) {
   };
 }
 
-/** The gauge on a nozzle: how far its dial stands off the shell, and how far its centre is over the nozzle's top. */
-export const GAUGE = { off: 0.045, over: 0.16, dia: 0.1 } as const;
+/**
+ * A gauge's boss: a ½" BSP socket in the vessel's wall on a reinforcing
+ * pad, a nipple standing square out of the shell, the gauge cock on it, and
+ * the gauge on that by its back connection, facing out. How far each
+ * stands off the shell, and the dial's size.
+ */
+export const GAUGE = {
+  pad: 0.045,
+  nipple: 0.03,
+  cock: 0.025,
+  /** The gauge's centre off the shell: past its cock, by its back stem. */
+  off: 0.12,
+  dia: 0.1,
+} as const;
+
+/** Where a gauge's boss is: its point on the shell, the way the shell faces there (a turn about y), and the gauge's centre. */
+export interface GaugeBoss {
+  on: readonly [number, number, number];
+  yaw: number;
+  at: readonly [number, number, number];
+}
+
+/** The sight glass at the bed's top: its middle and radius (`views/pumps-plant.ts`). */
+export const SIGHT_GLASS = {
+  across: 0.45,
+  above: 0.15,
+  radius: 0.115,
+} as const;
 
 /**
- * Where a nozzle's gauge goes: its centre, and its turn about y so it
- * faces square off the curved shell (a gauge facing straight ahead would
- * sink its edge into a big vessel's curve).
+ * The filter's two gauge bosses, in the vessel's wall: the inlet's high in
+ * the freeboard over the bed, beside the inlet nozzle on its outer side
+ * (below it is the sight glass); the outlet's low at the underdrain,
+ * straight over the outlet nozzle, clear of the service hatch.
  */
-export function gaugeOnNozzle(n: Nozzle, r: number) {
-  const yaw = Math.atan2(n.x, Math.sqrt(r * r - n.x * n.x));
+export function gaugeBosses(dia: number, shell = dia * 0.57) {
+  const g = sandFilterGeometry(dia, shell);
+  const boss = (x: number, y: number): GaugeBoss => {
+    const z = Math.sqrt(g.r * g.r - x * x);
+    const yaw = Math.atan2(x, z);
+    const on = [x, y, FILTER_CENTRE_Z + z] as const;
+    return {
+      on,
+      yaw,
+      at: [
+        on[0] + Math.sin(yaw) * GAUGE.off,
+        y,
+        on[2] + Math.cos(yaw) * GAUGE.off,
+      ],
+    };
+  };
+  const { inlet, outlet } = g;
   return {
-    at: [
-      n.x + Math.sin(yaw) * GAUGE.off,
-      n.y + n.od / 2 + GAUGE.over,
-      n.shell + Math.cos(yaw) * GAUGE.off,
-    ] as const,
-    yaw,
+    inlet: boss(inlet.x - (inlet.od / 2 + 0.11), inlet.y),
+    outlet: boss(outlet.x, outlet.y + outlet.od / 2 + 0.13),
   };
 }
