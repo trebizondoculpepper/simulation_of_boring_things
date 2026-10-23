@@ -12,8 +12,12 @@ import {
 import { createCharacterLcd } from '../../industrial-control/views/panel-instruments';
 import type { ExperimentalTerminal } from '../../../../game/plant/experimental-source';
 
-/** Arc and heights of the lettering painted on the cylinder's front, radians and metres. */
-const LETTERING = { arc: 1.7, bottom: 0.58, top: 1.06 } as const;
+/**
+ * Arc and heights of the lettering, set below the display near the top
+ * (the owner, 2026-10-23); the positions in `paintedLettering` are given
+ * as before and dropped by `drop`.
+ */
+const LETTERING = { arc: 1.7, bottom: 0.45, top: 0.93, drop: 0.13 } as const;
 
 /** Ink that reads on `body`: near-black on a light colour, near-white on a dark one. */
 function inkFor(body: string) {
@@ -48,7 +52,7 @@ function paintedLettering(
   c.fillStyle = ink;
   c.textAlign = 'center';
   c.textBaseline = 'middle';
-  const yAt = (metres: number) => (top - metres) * scale;
+  const yAt = (metres: number) => (top - (metres - LETTERING.drop)) * scale;
   const cx = W / 2;
   // The symbol.
   const role = terminal.role;
@@ -156,7 +160,7 @@ export function createExperimentalSourceView(
       r + 0.002,
       bandH,
       0,
-      0.53 - k * bandH,
+      0.4 - k * bandH,
       0,
       'y',
       32,
@@ -212,7 +216,8 @@ export function createExperimentalSourceView(
   }
   // The control port's value, with its unit, on a backlit dot-matrix
   // display (a 16 × 2 character LCD), front and back.
-  const y = 0.3;
+  // Near the top of the cylinder, where it is read standing.
+  const y = 1.0;
   const displays = [0, Math.PI].map((turn) => {
     const face = new Group();
     face.rotation.y = turn;
