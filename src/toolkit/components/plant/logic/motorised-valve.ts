@@ -50,3 +50,20 @@ export const motorLimits = (s: MotorisedValveState) => ({
   open: s.position >= 1,
   shut: s.position <= 0,
 });
+
+/** The gear motor's whine, Hz, as recorded (`gear-motor` in `machine-tones.ts`). */
+export const MOTOR_HZ = 271;
+
+/**
+ * No two motors quite alike (the owner, 2026-10-23): each valve's motor a
+ * few hertz off the recorded whine, so several running together are each
+ * heard apart. Fixed by its place in its room, so one valve always sounds
+ * the same, and no two of the first dozen share a pitch; Hz.
+ */
+const DETUNE = [1, -2.5, 4, -4.5, 2.5, -1, 5.5, -3.5, 3, -5.5, 6, -6];
+
+export const motorDetune = (index: number) =>
+  DETUNE[((index % DETUNE.length) + DETUNE.length) % DETUNE.length];
+
+/** The rate its motor's tone is played at, for its detuning. */
+export const motorRate = (index: number) => 1 + motorDetune(index) / MOTOR_HZ;

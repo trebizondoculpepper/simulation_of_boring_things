@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  MOTOR_HZ,
   MOTOR_STROKE,
+  motorDetune,
+  motorRate,
   motorLimits,
   motorRunning,
   newMotorisedValve,
@@ -46,5 +49,20 @@ describe('a motorised ball valve', () => {
     s = run({ ...s, command: true }, MOTOR_STROKE / 3 + 0.2);
     expect(s.position).toBe(1);
     expect(motorRunning(s)).toBe(false);
+  });
+});
+
+describe('its motor’s pitch', () => {
+  it('is a few hertz off the recorded whine, different for each of a room’s valves', () => {
+    const hz = Array.from({ length: 12 }, (_, i) => motorDetune(i));
+    expect(new Set(hz).size).toBe(12);
+    for (const d of hz) {
+      expect(Math.abs(d)).toBeGreaterThan(0.5);
+      expect(Math.abs(d)).toBeLessThanOrEqual(6);
+    }
+  });
+
+  it('plays its tone that much faster or slower', () => {
+    expect(MOTOR_HZ * motorRate(2)).toBeCloseTo(MOTOR_HZ + motorDetune(2), 9);
   });
 });

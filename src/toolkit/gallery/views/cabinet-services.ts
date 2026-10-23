@@ -34,6 +34,7 @@ import { cabinetValvePanel } from '../logic/cabinet-pipes';
 import { createRemoteValve } from '../../components/plant/views/remote-actuators';
 import {
   motorLimits,
+  motorRate,
   motorRunning,
   newMotorisedValve,
   stepMotorisedValve,
@@ -156,6 +157,8 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
         // motor heard running up as it sets off, steady as it moves, and
         // running down as it arrives (`gear-motor`).
         let travel = newMotorisedValve(binding.open());
+        // Each motor its own few hertz off the others.
+        const pitch = signal(motorRate(motorStops.length));
         let running = false;
         motorLamps.push((delta) => {
           travel = stepMotorisedValve(
@@ -168,7 +171,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
             running = moving;
             partAudio.hold(
               motor.group,
-              moving ? machineTone('gear-motor', signal(1), 0.12) : null,
+              moving ? machineTone('gear-motor', pitch, 0.12) : null,
               motor.group,
             );
           }
