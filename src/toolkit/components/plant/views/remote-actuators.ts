@@ -2,43 +2,145 @@ import { Group, MeshBasicMaterial } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
+import type { RemoteValveGeometry } from '../logic/remote-valve';
 
-/** Trial motor actuators: physical service body, separate powered head and position feedback. */
-export function createRemoteValve(kit: PanelKit, medium: 'gas' | 'water') {
+/**
+ * A remotely operated valve at its real size (`logic/remote-valve.ts`): a
+ * threaded ball valve with a small rotary actuator on its stem (water), or
+ * a solenoid safety shut-off with its coil on top (gas), on a channel floor
+ * stand. A lamp on the head shows open (green) or shut (red).
+ */
+export function createRemoteValve(kit: PanelKit, g: RemoteValveGeometry) {
   const t = tools(kit);
   const group = new Group();
   group.name =
-    medium === 'gas'
-      ? 'Brass gas safety shutoff with motor head'
-      : 'Brass motorized water valve';
+    g.medium === 'gas'
+      ? 'Gas safety shut-off, solenoid'
+      : `Motorised ball valve, ${g.actuator}`;
   const brass = t.paint('#ad8b4d', 0.48, 0.55);
-  const blue = t.paint(medium === 'gas' ? '#4c92ba' : '#51a5c4', 0.6);
+  const cast = t.paint('#8c9599', 0.55, 0.45);
+  const head = t.paint(g.medium === 'gas' ? '#2a2f31' : '#51a5c4', 0.6);
   const dark = t.paint('#25343a', 0.5);
-  t.cyl(group, brass, 0.12, 0.52, 0, 0.74, 0, 'x', 16);
-  for (const x of [-0.25, 0.25])
-    t.cyl(group, brass, 0.17, 0.06, x, 0.74, 0, 'x', 16);
-  t.cyl(group, dark, 0.09, 0.09, 0, 0.9, 0, 'y', 12);
-  t.box(group, blue, 0.48, 0.28, 0.37, 0, 1.12, 0);
-  t.box(group, blue, 0.33, 0.09, 0.29, 0, 1.3, 0);
-  t.cyl(group, dark, 0.035, 0.07, 0, 1.15, -0.22, 'z', 12);
+  const galv = t.paint('#a9aeae', 0.45, 0.6);
+  const { axis, length, body } = g;
+
+  // The stand: a channel post on its plate, up to the body.
+  t.box(group, galv, 0.16, 0.01, 0.16, 0, 0.005, 0);
+  t.box(
+    group,
+    galv,
+    0.041,
+    axis - body / 2,
+    0.041,
+    0,
+    (axis - body / 2) / 2,
+    0,
+  );
+
+  if (g.medium === 'water') {
+    // Hexagon ends, threaded onto the pipe, and the ball's housing.
+    for (const x of [-1, 1])
+      t.cyl(
+        group,
+        brass,
+        g.od * 0.68,
+        length * 0.22,
+        x * length * 0.39,
+        axis,
+        0,
+        'x',
+        6,
+      );
+    t.cyl(group, brass, body / 2, length * 0.6, 0, axis, 0, 'x', 16);
+    // The stem and the actuator's bracket.
+    const base = g.head.min[1];
+    t.cyl(group, dark, 0.009, base - axis, 0, (axis + base) / 2, 0, 'y', 8);
+    t.box(group, galv, 0.05, 0.006, 0.05, 0, base - 0.003, 0);
+  } else {
+    // A cast body, square in section, with hexagon ends.
+    t.box(group, cast, length * 0.7, body, body, 0, axis, 0);
+    for (const x of [-1, 1])
+      t.cyl(
+        group,
+        cast,
+        g.od * 0.68,
+        length * 0.15,
+        x * length * 0.425,
+        axis,
+        0,
+        'x',
+        6,
+      );
+  }
+
+  // The actuator or coil.
+  const [x0, y0, z0] = g.head.min;
+  const [x1, y1, z1] = g.head.max;
+  if (g.head.shape === 'box')
+    t.box(
+      group,
+      head,
+      x1 - x0,
+      y1 - y0,
+      z1 - z0,
+      (x0 + x1) / 2,
+      (y0 + y1) / 2,
+      (z0 + z1) / 2,
+    );
+  else t.cyl(group, head, (x1 - x0) / 2, y1 - y0, 0, (y0 + y1) / 2, 0, 'y', 16);
+  // Its cable gland (a plug, on a coil), and a stub of cable.
+  const [gx, gy, gz] = g.gland.at;
+  if (g.medium === 'gas')
+    t.box(
+      group,
+      cast,
+      0.03,
+      0.032,
+      g.gland.length,
+      gx,
+      gy,
+      gz - g.gland.length / 2,
+    );
+  else
+    t.cyl(
+      group,
+      dark,
+      0.008,
+      g.gland.length,
+      gx,
+      gy,
+      gz - g.gland.length / 2,
+      'z',
+      8,
+    );
+
   const maker = createMicroLabel(
     kit,
-    medium === 'gas' ? 'GAS-SAFE  NC' : 'AQUAVOLT  2-WAY',
-    {
-      height: 0.018,
-      ink: '#f5f6ed',
-      plate: '#25343a',
-      maxWidth: 0.35,
-    },
+    g.medium === 'gas' ? 'GAS-SAFE NC' : 'AQUAVOLT',
+    { height: 0.008, ink: '#f5f6ed', plate: '#25343a', maxWidth: 0.06 },
   );
-  maker.position.set(0, 1.13, 0.195);
+  // On the head's side, facing the way the valve faces (+x).
+  maker.position.set(x1 + 0.001, (y0 + y1) / 2, (z0 + z1) / 2);
+  maker.rotation.y = Math.PI / 2;
   group.add(maker);
   const lamp = new MeshBasicMaterial({ color: '#7c2520' });
   kit.materials.push(lamp);
-  const indicator = t.cyl(group, lamp, 0.018, 0.006, 0.16, 1.27, 0.19, 'z', 12);
+  const indicator = t.cyl(
+    group,
+    lamp,
+    0.008,
+    0.004,
+    0,
+    y1 + 0.002,
+    (z0 + z1) / 2,
+    'y',
+    12,
+  );
   indicator.userData.live = true;
   return {
     group,
+    /** Where a local override button goes: on the head's end over the stem. */
+    override: [0, (y0 + y1) / 2, z1 + 0.004] as const,
     show(open: boolean) {
       lamp.color.set(open ? '#50d879' : '#d24a38');
     },

@@ -34,6 +34,7 @@ import { createLine } from '../../../components/plant/views/pipe-line';
 import {
   demoLocalPortAnchor,
   demoLineRequest,
+  demoValveGeometry,
   demoServiceRoutes,
 } from '../../logic/port-graph-demo-routes';
 import type { PlantRoomLayout } from '../../logic/plant-room-layout';
@@ -308,6 +309,9 @@ function buildNode(
   if (!node) throw new Error(`Visual has no graph node: ${id}`);
   if (node.data.kind !== expectedKind)
     throw new Error(`${id}: expected ${expectedKind}, found ${node.data.kind}`);
+  const kind = expectedKind;
+  /** Where a remote valve's override button goes, on its actuator. */
+  let valveOverride: readonly [number, number, number] | null = null;
   if (node.data.kind === 'mimic' || node.data.kind === 'pool-mimic')
     return buildMimic(kit, id as 'demo.mimic' | 'demo.poolMimic');
   if (node.data.kind === 'pool-info-sign') {
@@ -347,7 +351,9 @@ function buildNode(
   const body = t.paint(colour, 0.55);
   const dark = t.paint('#303a3d', 0.65);
   const silver = t.paint('#cfd5d1', 0.4, 0.3);
-  t.box(object, dark, 0.92, 0.08, 0.68, 0, 0.04, 0);
+  // A plinth, but under a remote valve, whose own stand has a plate.
+  if (kind !== 'remote-gas-valve' && kind !== 'remote-water-valve')
+    t.box(object, dark, 0.92, 0.08, 0.68, 0, 0.04, 0);
   const parts = createPartSet();
   let mechanicalUpdate: ((delta: number) => void) | undefined;
   const pumpLoop =
@@ -442,12 +448,9 @@ function buildNode(
     node.data.kind === 'remote-gas-valve' ||
     node.data.kind === 'remote-water-valve'
   ) {
-    t.box(object, dark, 0.53, 0.08, 0.4, 0, 0.04, 0);
-    t.box(object, dark, 0.06, 0.66, 0.06, 0, 0.37, 0);
-    const actuator = createRemoteValve(
-      kit,
-      node.data.kind === 'remote-gas-valve' ? 'gas' : 'water',
-    );
+    // At its real size, on its line's bore (`remote-valve.ts`).
+    const actuator = createRemoteValve(kit, demoValveGeometry(id, kind));
+    valveOverride = actuator.override;
     object.add(actuator.group);
     mechanicalUpdate = () => actuator.show(demo.state.remote[id].actual);
   } else if (node.data.kind === 'remote-breaker') {
@@ -467,7 +470,11 @@ function buildNode(
   });
   tag.position.set(
     0,
-    node.data.kind === 'boiler' || node.data.kind === 'water-tank' ? 2.15 : 1.5,
+    node.data.kind === 'boiler' || node.data.kind === 'water-tank'
+      ? 2.15
+      : valveOverride
+        ? exhibitSize(id, kind).h + 0.12
+        : 1.5,
     0.04,
   );
   object.add(tag);
@@ -489,20 +496,25 @@ function buildNode(
         action: () => demo.toggleLocalOverride(id),
       }),
     );
-    override.object.scale.setScalar(1.4);
-    override.object.position.set(
-      node.data.kind === 'remote-breaker' ? -0.12 : 0.17,
-      node.data.kind === 'remote-breaker' ? 0.66 : 1.0,
-      node.data.kind === 'remote-breaker' ? 0.19 : 0.23,
-    );
+    if (valveOverride) {
+      // The actuator's own manual override, on its end over the stem.
+      override.object.scale.setScalar(0.45);
+      override.object.position.set(...valveOverride);
+    } else {
+      override.object.scale.setScalar(1.4);
+      override.object.position.set(-0.12, 0.66, 0.19);
+    }
     object.add(override.object);
   }
 
   // Studs are the visual port twins, one for each declared graph port.
   for (const port of node.ports ?? []) {
     if (port.data.medium === 'heat' || port.data.medium === 'control') continue;
-    const [x, y, z] = demoLocalPortAnchor(node.data.kind, port.name);
-    const stud = t.cyl(object, silver, 0.037, 0.07, x, y, z, 'y');
+    const [x, y, z] = demoLocalPortAnchor(id, node.data.kind, port.name);
+    // Small on a valve, which is itself small.
+    const stud = valveOverride
+      ? t.cyl(object, silver, 0.01, 0.02, x, y, z, 'y')
+      : t.cyl(object, silver, 0.037, 0.07, x, y, z, 'y');
     stud.name = `${id}.${port.name}`;
     stud.userData.graphPortId = `${id}.${port.name}`;
     const label = createMicroLabel(kit, port.name.toUpperCase(), {
@@ -626,8 +638,9 @@ const dimensions: Record<DemoKind, { w: number; d: number; h: number }> = {
   'sand-filter': { w: 1.8, d: 1.8, h: 2.2 },
   treatment: { w: 0.9, d: 0.7, h: 1.5 },
   'heat-exchanger': { w: 1.3, d: 0.8, h: 1.3 },
-  'remote-gas-valve': { w: 0.72, d: 0.55, h: 1.45 },
-  'remote-water-valve': { w: 0.72, d: 0.55, h: 1.45 },
+  // Remote valves take their size from their line (`exhibitSize`).
+  'remote-gas-valve': { w: 0, d: 0, h: 0 },
+  'remote-water-valve': { w: 0, d: 0, h: 0 },
   'remote-breaker': { w: 0.64, d: 0.5, h: 1.4 },
   mimic: { w: 2.25, d: 0.6, h: 2.6 },
   'pool-mimic': { w: 2.25, d: 0.6, h: 2.6 },
@@ -635,13 +648,20 @@ const dimensions: Record<DemoKind, { w: number; d: number; h: number }> = {
   stack: { w: 0, d: 0, h: 0 },
 };
 
+/** An exhibit's size: a remote valve's from its real geometry, the rest from the table. */
+function exhibitSize(id: string, kind: DemoKind) {
+  return kind === 'remote-gas-valve' || kind === 'remote-water-valve'
+    ? demoValveGeometry(id, kind).size
+    : dimensions[kind];
+}
+
 export const EXHIBITS: readonly PlantExhibit[] = demoVisualBindings.map(
   ({ nodeId: id, kind }) => {
     const node = demoGraph.nodes.find((item) => item.id === id)!;
     return {
       title: visual[node.data.kind].title,
       reference: `${id} · ${node.ports?.length ?? 0} graph ports · ${node.data.kind}`,
-      size: { ...dimensions[kind], mount: 'floor' as const },
+      size: { ...exhibitSize(id, kind), mount: 'floor' as const },
       build: (kit) => buildNode(id, kind, kit),
     };
   },

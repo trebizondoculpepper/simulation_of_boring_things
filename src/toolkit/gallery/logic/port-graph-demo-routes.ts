@@ -14,6 +14,7 @@ import type { PlaceItem, PlaceLink } from './machine-placement';
 import { choosePipe } from '../../components/core/logic/plumber';
 import type { PipeRequest } from '../../components/core/logic/plumber';
 import { PIPE_KINDS } from '../../components/core/views/pipe-kinds';
+import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
 
 type Medium = 'gas' | 'water' | 'power' | 'flue';
 export interface DemoRoute {
@@ -67,16 +68,6 @@ const anchors: Partial<Record<DemoKind, Record<string, Vec3>>> = {
     'pool-in': [-0.22, 0.88, 0.12],
     'pool-out': [-0.22, 0.22, 0.12],
   },
-  'remote-gas-valve': {
-    in: [-0.28, 0.74, 0],
-    out: [0.28, 0.74, 0],
-    'actuator-power': [0, 1.16, -0.22],
-  },
-  'remote-water-valve': {
-    in: [-0.28, 0.74, 0],
-    out: [0.28, 0.74, 0],
-    'actuator-power': [0, 1.16, -0.22],
-  },
   'remote-breaker': {
     in: [-0.23, 0.88, 0],
     out: [0.23, 0.88, 0],
@@ -117,16 +108,6 @@ const normals: Partial<Record<DemoKind, Record<string, Vec3>>> = {
     'pool-in': [-1, 0, 0],
     'pool-out': [-1, 0, 0],
   },
-  'remote-gas-valve': {
-    in: [-1, 0, 0],
-    out: [1, 0, 0],
-    'actuator-power': [0, 1, 0],
-  },
-  'remote-water-valve': {
-    in: [-1, 0, 0],
-    out: [1, 0, 0],
-    'actuator-power': [0, 1, 0],
-  },
   'remote-breaker': {
     in: [-1, 0, 0],
     out: [1, 0, 0],
@@ -136,8 +117,52 @@ const normals: Partial<Record<DemoKind, Record<string, Vec3>>> = {
   'pool-mimic': { power: [1, 0, 0] },
 };
 
-export function demoLocalPortAnchor(kind: DemoKind, port: string): Vec3 {
-  const point = anchors[kind]?.[port];
+const isValve = (kind: DemoKind) =>
+  kind === 'remote-gas-valve' || kind === 'remote-water-valve';
+
+/** The outside diameter of the line a remote valve sits in, metres. */
+export function demoValveOd(nodeId: string): number {
+  for (const edge of demoGraph.edges) {
+    if (edge.sourceId !== nodeId && edge.targetId !== nodeId) continue;
+    const port = edge.sourceId === nodeId ? edge.sourcePort : edge.targetPort;
+    if (port !== 'in' && port !== 'out') continue;
+    const source = demoGraph.nodes.find((node) => node.id === edge.sourceId)!;
+    const medium = source.ports?.find((p) => p.name === edge.sourcePort)?.data
+      .medium;
+    if (medium === 'gas' || medium === 'water')
+      return demoPipeSpec(edge.id, medium).od;
+  }
+  return 0.05;
+}
+
+/** A remote valve's geometry, at the size of its line (`remote-valve.ts`). */
+export function demoValveGeometry(nodeId: string, kind: DemoKind) {
+  return remoteValveGeometry(
+    kind === 'remote-gas-valve' ? 'gas' : 'water',
+    demoValveOd(nodeId),
+  );
+}
+
+/** A node's visible ports in its own frame: where, and which way each faces. */
+export function demoPorts(
+  nodeId: string,
+  kind: DemoKind,
+): Record<string, { at: Vec3; out: Vec3 }> {
+  if (isValve(kind)) return demoValveGeometry(nodeId, kind).ports;
+  return Object.fromEntries(
+    Object.entries(anchors[kind] ?? {}).map(([port, at]) => [
+      port,
+      { at, out: normals[kind]?.[port] ?? [0, 1, 0] },
+    ]),
+  );
+}
+
+export function demoLocalPortAnchor(
+  nodeId: string,
+  kind: DemoKind,
+  port: string,
+): Vec3 {
+  const point = demoPorts(nodeId, kind)[port]?.at;
   if (!point) throw new Error(`${kind}.${port}: missing model port anchor`);
   return point;
 }
@@ -147,7 +172,8 @@ export function demoPortPositions(layout: PlantRoomLayout) {
   demoVisualBindings.forEach(({ nodeId, kind }, i) => {
     const place = layout.places[i];
     if (!place) throw new Error(`${nodeId}: no exhibit placement`);
-    for (const [port, [x, y, z]] of Object.entries(anchors[kind] ?? {})) {
+    for (const [port, { at }] of Object.entries(demoPorts(nodeId, kind))) {
+      const [x, y, z] = at;
       const c = Math.cos(place.yaw);
       const s = Math.sin(place.yaw);
       positions.set(`${nodeId}.${port}`, [
@@ -171,7 +197,9 @@ export function demoPortEnd(
   );
   const binding = demoVisualBindings[index];
   const place = layout.places[index];
-  const normal = normals[binding?.kind]?.[port];
+  const normal = binding
+    ? demoPorts(nodeId, binding.kind)[port]?.out
+    : undefined;
   if (!place || !normal)
     throw new Error(`${nodeId}.${port}: missing port direction`);
   const c = Math.cos(place.yaw);
@@ -338,13 +366,8 @@ const SITES: Partial<Record<DemoKind, PlaceItem['site']>> = {
  * the boiler's rising flue.
  */
 export function demoPlaceItems(): Partial<PlaceItem>[] {
-  return demoVisualBindings.map(({ kind }) => ({
-    ports: Object.fromEntries(
-      Object.entries(anchors[kind] ?? {}).map(([port, at]) => [
-        port,
-        { at, out: normals[kind]?.[port] ?? [0, 1, 0] },
-      ]),
-    ),
+  return demoVisualBindings.map(({ nodeId, kind }) => ({
+    ports: demoPorts(nodeId, kind),
     ...(kind === 'gas-main' || kind === 'mains' || kind === 'makeup-main'
       ? { walls: ['west' as const] }
       : {}),

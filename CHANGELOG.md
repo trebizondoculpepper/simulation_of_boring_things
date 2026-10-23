@@ -23,6 +23,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- The remote-operated valves in Dev19 were drawn about four times too big. They are now ordinary ball valves sized to their own line, each with a small rotary actuator on its stem at the size of Belimo's 5 Nm and 20 Nm actuators (118 × 71 × 85 mm and 141 × 93 × 86 mm, from Belimo's datasheets). The gas shut-off is a solenoid valve with its coil on top. Each stands on a small channel stand, with its manual override on the actuator. Dev19 was laid out again with them and is now 12.5 × 12.5 m.
 - The circulation pumps' orange coupling guard no longer cuts into the motor: volute, bearing bracket, coupling guard (now perforated, on two legs from the base deck), the motor's smooth drive-end shield, finned frame and fan cowl now follow one another along the shaft, laid out and checked by `end-suction-pump.ts`; the motor stands on pedestals and its terminal box on a boss.
 - Dev19 now opens with a small pool circuit, balance tank, pool pump, sand filter, treatment cabinet and plate heat exchanger alongside the boiler loop. The trial uses mains electricity and gas, graph-bound remote valves, a gas flow meter with flow and accumulated-volume readings, and the shared pipe helper for its visible services. This also repairs the temporary Vite parse error that prevented the room loading.
 

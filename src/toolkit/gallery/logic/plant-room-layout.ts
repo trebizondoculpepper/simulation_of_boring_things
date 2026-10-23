@@ -277,6 +277,7 @@ export function layoutSizedPlantRoom(
     h: s.h,
     ...items[i],
   }));
+  // Grow a little at a time; at each size, a few seeds before growing.
   const tries = [0, 0.1, 0.2, 0.3, 0.45, 0.6];
   let result: SizedPlantRoomLayout | null = null;
   for (const grow of tries) {
@@ -293,9 +294,15 @@ export function layoutSizedPlantRoom(
       doors: [{ side: 'west', at: size.d / 2 - 1.1, width: 1, height: 2.1 }],
     };
     const reserved = reserveRegions(room, { gantry });
-    const placed = placeMachines(room, reserved.regions, place, links, {
-      seed,
-    });
+    // A seed, and another only while it breaks a rule.
+    let placed = placeMachines(room, reserved.regions, place, links, { seed });
+    for (const s of [seed + 1, seed + 2]) {
+      if (!placed.problems.length) break;
+      const next = placeMachines(room, reserved.regions, place, links, {
+        seed: s,
+      });
+      if (next.problems.length < placed.problems.length) placed = next;
+    }
     result = {
       halfX: room.w / 2,
       halfZ: room.d / 2,

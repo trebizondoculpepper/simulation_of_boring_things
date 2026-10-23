@@ -415,9 +415,17 @@ export function placeMachines(
         for (let i = 0; i < n; i++) if (s.band[i] === k) members.push(i);
         members.sort((a, c) => s.order[a] - s.order[c]);
         let cursor = MACHINE_GAP / 2;
-        for (const i of members) {
+        for (const [rank, i] of members.entries()) {
           const item = items[i];
           let at = cursor + s.pad[i];
+          // The last in a band, if it belongs in a corner, goes right to
+          // the band's end, into its corner.
+          if (
+            rank === members.length - 1 &&
+            members.length > 1 &&
+            item.site === 'corner'
+          )
+            at = Math.max(at, b.length - item.w - MACHINE_GAP / 2);
           // Past anything it may not stand in.
           for (let moved = true; moved;) {
             moved = false;
