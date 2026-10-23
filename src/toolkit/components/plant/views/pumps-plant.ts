@@ -1,3 +1,5 @@
+import { createSightGlass } from './sight-glass';
+import type { GlassInputs } from '../logic/sight-glass';
 import { GAUGE, gaugeBosses } from '../logic/sand-filter';
 import { Group, Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
 import type { Material, Object3D } from 'three';
@@ -558,6 +560,8 @@ export function createSandFilter(
   const group = new Group() as Group & {
     /** Its inlet (top) and outlet (bottom) gauges, bar. */
     show(s: { inlet: number; outlet: number }, delta: number): void;
+    /** Its sight glass's view of the bed, as the filter's state has it. */
+    showGlass(inputs: GlassInputs, delta: number): void;
   };
   const livery = brandLivery(kit, 'lidoluxe');
   const glass = livery.paint.casing;
@@ -625,7 +629,10 @@ export function createSandFilter(
   sightMount.rotation.y = Math.atan2(sightX, sightZ);
   group.add(sightMount);
   t.cyl(sightMount, livery.paint.shade, 0.115, 0.025, 0, 0, 0.018, 'z', 24);
-  t.cyl(sightMount, t.paint('#9fc1c9', 0.1), 0.095, 0.01, 0, 0, 0.036, 'z', 24);
+  // The glass itself: a view of the bed's top, live (`sight-glass.ts`).
+  const sightGlass = createSightGlass(kit, { radius: 0.095 });
+  sightGlass.group.position.z = 0.032;
+  sightMount.add(sightGlass.group);
   // Air bleed pipe from the top down the face.
   t.rod(
     group,
@@ -683,6 +690,7 @@ export function createSandFilter(
       entry: 'back',
     });
   });
+  group.showGlass = (inputs, delta) => sightGlass.update(inputs, delta);
   group.show = ({ inlet, outlet }, delta) => {
     inletGauge.set(inlet);
     outletGauge.set(outlet);

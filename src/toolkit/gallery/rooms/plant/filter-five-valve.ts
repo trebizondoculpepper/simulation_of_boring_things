@@ -32,6 +32,11 @@ import {
 } from '../../logic/five-valve-rig';
 import type { FiveItem, FiveValveModel } from '../../logic/five-valve-rig';
 import type { Vec3 } from '../../../components/core/logic/pipe-route';
+import { tools } from '../../../components/core/views/fitting-tools';
+import { createMicroLabel } from '../../../components/core/views/eighties-controls';
+import { createSightGlass } from '../../../components/plant/views/sight-glass';
+import type { GlassInputs } from '../../../components/plant/logic/sight-glass';
+import { BIG_FILTER } from '../../../../game/plant/five-valve-filter';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
@@ -55,6 +60,17 @@ const TITLES: Record<FiveItem, [string, string]> = {
   gully: ['Floor gully', 'backwash and rinse to waste'],
   panel: ['Backwash control panel', 'Penfold: the five valves together'],
 };
+
+/** What the filter's sight glass shows, from the rig's readings. */
+const glassInputs = (
+  r: ReturnType<FiveValveModel['readings']>,
+): GlassInputs => ({
+  mode: !r.supplyOn || r.mode === 'off' ? 'stopped' : r.mode,
+  dirt: r.dirt / BIG_FILTER.dirtRef,
+  channelling: 0,
+  murk:
+    r.mode === 'backwash' && r.supplyOn ? Math.min(1, r.wasteDirt / 400) : 0,
+});
 
 const sink = createExperimentalSink({
   id: 'fv.sink',
@@ -152,6 +168,7 @@ const build =
       update: (delta) => {
         const r = m().readings();
         filter.show({ inlet: r.topBar, outlet: r.bottomBar }, delta);
+        filter.showGlass(glassInputs(r), delta);
       },
     };
   };
@@ -213,16 +230,93 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
     object.add(meter.group);
     return meter;
   });
+  // A board of sight glasses, each held in one state, to compare.
+  const board = sightGlassBoard(kit);
+  board.group.position.set(4.4, 0, -4.1);
+  object.add(board.group);
   return {
     object,
     parts,
     update: (delta) => {
+      board.update(delta);
       m.step(delta);
       const r = m.readings();
       meters.forEach((meter, k) =>
         meter.show(r.valve[VALVES[k]], VALVE_ROLE[VALVES[k]]),
       );
       sink.accept((Math.max(0, r.valve.v2) * delta) / 3600, delta);
+    },
+  };
+}
+
+/** The states the board shows, the backwash one cycling through a whole backwash. */
+const BOARD: { label: string; inputs: (t: number) => GlassInputs }[] = [
+  {
+    label: 'CLEAN',
+    inputs: () => ({ mode: 'service', dirt: 0, channelling: 0, murk: 0 }),
+  },
+  {
+    label: 'DIRTY',
+    inputs: () => ({ mode: 'service', dirt: 1.8, channelling: 0, murk: 0 }),
+  },
+  {
+    label: 'CHANNELLED',
+    inputs: () => ({ mode: 'service', dirt: 1.8, channelling: 1, murk: 0 }),
+  },
+  {
+    // 3 s stopped, then a 30 s backwash clearing as it goes, round again.
+    label: 'BACKWASH',
+    inputs: (t) => {
+      const k = t % 33;
+      return k < 3
+        ? { mode: 'stopped', dirt: 1.5, channelling: 0, murk: 0 }
+        : {
+            mode: 'backwash',
+            dirt: 1.5,
+            channelling: 0,
+            murk: Math.max(0, 1 - (k - 3) / 25),
+          };
+    },
+  },
+  {
+    label: 'RINSE',
+    inputs: () => ({ mode: 'rinse', dirt: 0, channelling: 0, murk: 0.15 }),
+  },
+];
+
+function sightGlassBoard(kit: PanelKit) {
+  const t = tools(kit);
+  const group = new Group();
+  group.name = 'Sight glass states';
+  t.box(group, t.paint('#9aa0a2', 0.5, 0.4), 0.05, 1.6, 0.05, -0.9, 0.8, 0);
+  t.box(group, t.paint('#9aa0a2', 0.5, 0.4), 0.05, 1.6, 0.05, 0.9, 0.8, 0);
+  t.box(group, t.paint('#e8e8e2', 0.7), 2.0, 0.55, 0.03, 0, 1.55, 0);
+  const title = createMicroLabel(kit, 'SIGHT GLASS: WHAT YOU SEE', {
+    height: 0.035,
+    ink: '#1d2326',
+    maxWidth: 1.6,
+  });
+  title.position.set(0, 1.76, 0.02);
+  group.add(title);
+  const glasses = BOARD.map((b, k) => {
+    const g = createSightGlass(kit, { radius: 0.15, seed: 11 + k });
+    g.group.position.set(-0.76 + k * 0.38, 1.52, 0.02);
+    group.add(g.group);
+    const label = createMicroLabel(kit, b.label, {
+      height: 0.025,
+      ink: '#1d2326',
+      maxWidth: 0.34,
+    });
+    label.position.set(-0.76 + k * 0.38, 1.33, 0.02);
+    group.add(label);
+    return g;
+  });
+  let time = 0;
+  return {
+    group,
+    update(dt: number) {
+      time += dt;
+      glasses.forEach((g, k) => g.update(BOARD[k].inputs(time), dt));
     },
   };
 }
