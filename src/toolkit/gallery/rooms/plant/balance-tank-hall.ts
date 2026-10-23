@@ -1,3 +1,4 @@
+import { createPartSet } from '../../../components/core/parts/parts';
 import { BoxGeometry, Group, Mesh, PlaneGeometry, PointLight } from 'three';
 import { METRE } from '../../../components/core/logic/units';
 import {
@@ -85,7 +86,17 @@ export function prepareRoom() {
 
 const MODES: MakeupMode[] = ['off', 'auto', 'hand'];
 
-function buildHall(kit: PanelKit): LiveExhibit {
+/**
+ * The hall, drawn and working. `bay`: with Dev28's bay of the adjacent
+ * plant room behind its partition (its floor, its panel, its make-up
+ * valve); without it, the building's hall (`tank-hall-room.ts`),
+ * entered from the Olympic plant room itself through the partition's
+ * doors, which it hands back for that doorway's joint.
+ */
+export function buildHall(
+  kit: PanelKit,
+  { bay = true }: { bay?: boolean } = {},
+): LiveExhibit & { doors: ReturnType<typeof equipmentDoors> } {
   const object = new Group();
   object.name = 'Balance tank hall';
   const t = tools(kit);
@@ -264,7 +275,19 @@ function buildHall(kit: PanelKit): LiveExhibit {
     p.name = `Overflow return ${i + 1}`;
     object.add(p);
   }
-  object.add(createPipe('copper', HALL_PIPES.makeup.od, runs.makeup));
+  // Without the bay, the make-up comes through the partition from the plant room beyond.
+  object.add(
+    createPipe(
+      'copper',
+      HALL_PIPES.makeup.od,
+      bay
+        ? runs.makeup
+        : [
+            [TANK.minX - PARTITION / 2, runs.makeup[3][1], runs.makeup[3][2]],
+            ...runs.makeup.slice(4),
+          ],
+    ),
+  );
   object.add(createPipe('pvc-drain', HALL_PIPES.weir.od, runs.weir));
   // The weir's bellmouth, its rim the weir.
   const pvc = t.paint('#4a4e52', 0.5);
@@ -290,15 +313,17 @@ function buildHall(kit: PanelKit): LiveExhibit {
       r[0][2],
     );
   }
-  const valve = createSolenoidValve(kit, HALL_PIPES.makeup.od);
-  // In the bay, on the main's rise.
-  valve.group.rotation.y = Math.PI / 2;
-  valve.group.position.set(
-    SPOTS.makeup.bayX,
-    SPOTS.makeup.valve,
-    TANK.minZ + 0.25,
-  );
-  object.add(valve.group);
+  // In the bay, on the main's rise (the building's is in the plant room).
+  const valve = bay ? createSolenoidValve(kit, HALL_PIPES.makeup.od) : null;
+  if (valve) {
+    valve.group.rotation.y = Math.PI / 2;
+    valve.group.position.set(
+      SPOTS.makeup.bayX,
+      SPOTS.makeup.valve,
+      TANK.minZ + 0.25,
+    );
+    object.add(valve.group);
+  }
   // The water falling from them.
   const falls = runs.returns.map((r) => {
     const f = createFallingWater(kit, HALL_PIPES.returns.od / 2 - 0.02);
@@ -358,41 +383,49 @@ function buildHall(kit: PanelKit): LiveExhibit {
     return f;
   });
 
-  // In the bay: the panel, on its north wall.
-  const panel = createBalanceTankPanel(kit, {
-    level: () => state.level,
-    volume: () => volumeOf(state.level),
-    inflow: () => state.inflow + state.makeup,
-    outflow: () => state.outflow + state.spill,
-    bathers: () => state.bathers,
-    lamps: () => {
-      const f = floats(state);
-      return {
-        high: f.high,
-        overflowing: state.spill > 0.5,
-        makeup: state.makeupOpen,
-        low: f.low,
-        lowLow: f.lowLow || state.pumps === 'tripped',
-        running: state.pumps === 'run',
-      };
-    },
-    makeup: () => MODES.indexOf(state.makeupMode) as 0 | 1 | 2,
-    setMakeup: (mode) => {
-      state = pressBalanceTank(state, { type: 'makeup', mode: MODES[mode] });
-    },
-    session: () => state.session,
-    setSession: (to) => {
-      state = pressBalanceTank(state, { type: 'session', to });
-    },
-    start: () => {
-      state = pressBalanceTank(state, { type: 'start' });
-    },
-    stop: () => {
-      state = pressBalanceTank(state, { type: 'stop' });
-    },
-  });
-  panel.group.position.set(SPOTS.panel.x, SPOTS.panel.y, TANK.minZ);
-  object.add(panel.group);
+  // In the bay: the panel, on its north wall (the building's is in the plant room).
+  const panel = !bay
+    ? null
+    : createBalanceTankPanel(kit, {
+        level: () => state.level,
+        volume: () => volumeOf(state.level),
+        inflow: () => state.inflow + state.makeup,
+        outflow: () => state.outflow + state.spill,
+        bathers: () => state.bathers,
+        lamps: () => {
+          const f = floats(state);
+          return {
+            high: f.high,
+            overflowing: state.spill > 0.5,
+            makeup: state.makeupOpen,
+            low: f.low,
+            lowLow: f.lowLow || state.pumps === 'tripped',
+            running: state.pumps === 'run',
+          };
+        },
+        makeup: () => MODES.indexOf(state.makeupMode) as 0 | 1 | 2,
+        setMakeup: (mode) => {
+          state = pressBalanceTank(state, {
+            type: 'makeup',
+            mode: MODES[mode],
+          });
+        },
+        session: () => state.session,
+        setSession: (to) => {
+          state = pressBalanceTank(state, { type: 'session', to });
+        },
+        start: () => {
+          state = pressBalanceTank(state, { type: 'start' });
+        },
+        stop: () => {
+          state = pressBalanceTank(state, { type: 'stop' });
+        },
+      });
+  if (panel) {
+    panel.group.position.set(SPOTS.panel.x, SPOTS.panel.y, TANK.minZ);
+    object.add(panel.group);
+  }
+  const parts = panel?.parts ?? createPartSet();
   // In the hall: the lifebuoy on the partition, beside the doorway onto the gantry.
   const lifebuoy = createLifebuoy(kit);
   lifebuoy.rotation.y = Math.PI / 2;
@@ -400,16 +433,17 @@ function buildHall(kit: PanelKit): LiveExhibit {
   object.add(lifebuoy);
 
   // The bay: its floor, and the blockwork partition with its doorway onto the gantry.
-  t.box(
-    object,
-    t.paint('#8f8e88', 0.8),
-    BAY_FLOOR.maxX - BAY_FLOOR.minX + PARTITION,
-    0.15,
-    W,
-    (BAY_FLOOR.minX + TANK.minX) / 2,
-    -0.075,
-    0,
-  );
+  if (bay)
+    t.box(
+      object,
+      t.paint('#8f8e88', 0.8),
+      BAY_FLOOR.maxX - BAY_FLOOR.minX + PARTITION,
+      0.15,
+      W,
+      (BAY_FLOOR.minX + TANK.minX) / 2,
+      -0.075,
+      0,
+    );
   const blocks = createBreezeBlockTextures();
   kit.textures.push(blocks.map, blocks.normalMap, blocks.roughnessMap);
   const block = createPs1Material({
@@ -438,7 +472,7 @@ function buildHall(kit: PanelKit): LiveExhibit {
   doors.object.rotation.y = -Math.PI / 2;
   doors.object.position.set(TANK.minX - PARTITION, 0, DOORWAY.z);
   object.add(doors.object);
-  panel.parts.add(doors);
+  parts.add(doors);
   const leaves: Footprint = {
     minX: TANK.minX - PARTITION - 0.05,
     maxX: TANK.minX + 0.05,
@@ -450,12 +484,17 @@ function buildHall(kit: PanelKit): LiveExhibit {
   const battens = createWallBattenMaterials();
   kit.materials.push(...Object.values(battens));
   const inZ = TANK.maxZ - 0.05;
-  for (const x of [BAY_FLOOR.minX + 1.5, mid - 3, mid, mid + 3]) {
+  for (const x of [
+    ...(bay ? [BAY_FLOOR.minX + 1.5] : []),
+    mid - 3,
+    mid,
+    mid + 3,
+  ]) {
     addWallBatten(object, battens, x, 2.7, -inZ, 'x', 1);
     addWallBatten(object, battens, x, 2.7, inZ, 'x', -1);
   }
   for (const x of [
-    (BAY_FLOOR.minX + BAY_FLOOR.maxX) / 2,
+    ...(bay ? [(BAY_FLOOR.minX + BAY_FLOOR.maxX) / 2] : []),
     mid - 2.2,
     mid + 2.2,
   ]) {
@@ -476,17 +515,18 @@ function buildHall(kit: PanelKit): LiveExhibit {
     }
     makeupFall.set(state.makeupOpen ? 1 : 0, SPOTS.makeup.end - y);
     makeupFall.update(delta);
-    valve.setOpen(state.makeupOpen);
+    valve?.setOpen(state.makeupOpen);
     transmitter.show(state.level);
     for (const f of switches) {
       f.setWater(y - hang);
       f.update(delta);
     }
-    panel.update();
+    panel?.update();
   });
   return {
     object,
-    parts: panel.parts,
+    parts,
+    doors,
     // The doors bar the doorway while shut, and are held open while the walker stands in it.
     solids: (walker) => {
       const inside = overlaps(leaves, walker.x, walker.z, 0.35);
@@ -509,6 +549,6 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     reference:
       '9 × 6 m, 4.5 m deep; weir at 4.0 m; Trager-Feinstein level instruments, Penfold panel',
     size: { w: 9, d: 6, h: 1, mount: 'floor', pit: OPENING_OUTLINE },
-    build: buildHall,
+    build: (kit) => buildHall(kit),
   },
 ];

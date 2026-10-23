@@ -361,7 +361,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
           {
             inside: inWay(westWay),
             shut: tankDoors.angle() < 0.6,
-            seen: false,
+            seen: tankHallSeen,
           },
           westWay.leaf,
           westWay.beyond,
@@ -430,6 +430,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   // The equipment doors, a doorway to the main corridor (a hall's plant
   // room only), seen through and walked through without a break.
   let corridorSeen = false;
+  let tankHallSeen = false;
+  let leavingWest = false;
   let leavingSouth = false;
   /** A doorway's outer face, as a join's frame: +z into this room. */
   const outer = (w: typeof northWay, y: number) => {
@@ -507,6 +509,27 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         peek: (on) => door.showLeaf(!on),
       })
     : () => {};
+  // The balance tank hall's doors: the Olympic's, a doorway to its hall
+  // (`tank-hall-room.ts`), seen through and walked through.
+  const balanceHall: RoomId | null =
+    hall === 'pool_02' && westWay && tankDoors ? 'tank_hall' : null;
+  const tankLobby = rooms.getObjectByName('balance tank lobby');
+  const withdrawWest =
+    balanceHall && westWay && tankDoors
+      ? registerJoint(self, balanceHall, {
+          frame: outer(westWay, plan.floor),
+          onOpen: true,
+          open: () => tankDoors.open(),
+          angle: () => tankDoors.angle(),
+          swingTo: (a) => tankDoors.swingTo(a),
+          opening: () => reach(westWay, plan.tankDoor!),
+          see: (on) => {
+            tankHallSeen = on;
+            if (tankLobby) tankLobby.visible = !on;
+          },
+          peek: (on) => tankDoors.showLeaves(!on),
+        })
+      : () => {};
   // Its lights, following its lighting zone (`room-lights.ts`).
   const roomLights = bindRoomLights(
     scene,
@@ -560,6 +583,19 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         enterDevRoom('main_corridor', self, true);
       }
     }
+    // Out through the balance tank hall's doors, once the hall is seen beyond.
+    if (
+      balanceHall &&
+      westWay &&
+      tankHallSeen &&
+      !leavingWest &&
+      !walk.following
+    ) {
+      if (outThrough(westWay, plan.tankDoor!)) {
+        leavingWest = true;
+        enterDevRoom(balanceHall, self, true);
+      }
+    }
     // Out through the plant room door, once its pool hall is seen beyond
     // it: handed over to it, without a break.
     if (hall && hallSeen && !leaving && !walk.following) {
@@ -582,6 +618,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       composer.dispose();
       withdraw();
       withdrawSouth();
+      withdrawWest();
       parts.dispose();
       machines?.dispose();
       jacuzziMimic?.parts.dispose();
@@ -597,6 +634,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         leaving = false;
         wasOpen = null;
         leavingSouth = false;
+        leavingWest = false;
       },
       setVisual(enabled: boolean) {
         visual = enabled;

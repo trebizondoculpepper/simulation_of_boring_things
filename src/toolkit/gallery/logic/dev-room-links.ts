@@ -100,6 +100,7 @@ export type RoomId =
   | 'plant_pool_02'
   | 'plant_pool_03'
   | 'plant_pool_04'
+  | 'tank_hall'
   | 'pipes_n_dreams'
   | 'plant_corridor'
   | 'shared_plant_layout'
@@ -289,6 +290,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   plant_pool_02: 'PLANT ROOM 2 – OLYMPIC POOL',
   plant_pool_03: 'PLANT ROOM 3 – JACUZZI',
   plant_pool_04: 'PLANT ROOM 4 – FOOTBATH',
+  tank_hall: 'TANK HALL – OLYMPIC POOL',
   pipes_n_dreams: "PIPES'N DREAMS · PIPING AND DUCTING",
   plant_corridor: 'PLANT CORRIDOR',
   shared_plant_layout: 'SHARED PLANT LAYOUT',
@@ -377,6 +379,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   plant_pool_02: '#6d7a6f',
   plant_pool_03: '#6d7a6f',
   plant_pool_04: '#6d7a6f',
+  tank_hall: '#7d8a8c',
   pipes_n_dreams: '#8f3a22',
   plant_corridor: '#8a8f93',
   shared_plant_layout: '#8a8f93',

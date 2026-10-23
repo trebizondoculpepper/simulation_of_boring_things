@@ -292,6 +292,10 @@ const starter = async (
     return (surface) =>
       startPlantRoomShell(surface, size, hall, plan ? { plan } : {});
   }
+  if (room === 'tank_hall')
+    // The Olympic's balance tank hall, through its plant room's west doors.
+    return (await import('./toolkit/gallery/rooms/tank-hall-room'))
+      .startTankHall;
   if (room === 'retired0') {
     // The Olympic pool's plant room as it was on 2026-10-23, frozen as a
     // reference: its shell, with its retired layout and pipes.
