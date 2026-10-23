@@ -1,6 +1,6 @@
 # 033: The Olympic plant room's redo
 
-Status: stage 1 (the empty building) done 2026-10-23; stages 2 and 3 to do.
+Status: stage 1 (the empty building) done 2026-10-23; stage 2 begun with a 2D plan (`src/toolkit/gallery/logic/olympic-plan.ts`, drawn as `doc/plans/olympic-plant-room.svg` by `olympic-plan-svg.ts`); stage 3 to do.
 
 The owner, 2026-10-23, once the balance tank had its own hall (Dev28, prompt 032): keep the large plant room, clear it out, and reinstall what the new equipment needs, laid out with the pipeline (sizer, placement, plumber, router, scorer: `doc/room-layout-guide.md`). The original room was laid out by hand two days before those tools existed; it is kept as `retired0`, so it need not be compared or preserved.
 
