@@ -38,7 +38,8 @@ import {
   partOn,
 } from '../../../../game/plant/identification';
 import { createCabinetMimic } from '../../../components/plant/views/cabinet-mimic';
-import { clampSetpoint } from '../../../../game/world';
+import { clampSetpoint, footbathFilling } from '../../../../game/world';
+import { footbathPumpStarved } from '../../../../game/plant/pools';
 
 /**
  * A packaged spa set in its prefabricated plant cabinet: what the plant
@@ -78,18 +79,35 @@ const OPEN = 1.75;
 /** The filter's working pressure, bar. */
 const WORKING = 0.7;
 
+/** Supplies a development cabinet from a separate, port-connected trial. */
+export interface SpaPackDemoBinding {
+  state(): {
+    litres: number;
+    celsius: number;
+    setpoint: number;
+    powerOn: boolean;
+    filling: boolean;
+    draining: boolean;
+    fillOpen: boolean;
+  };
+  setPower(on: boolean): void;
+  setSetpoint(celsius: number): void;
+}
+
 function buildSpaPack(
   kit: PanelKit,
   circuit = 'FOOT SPA',
   jets = false,
   /** Its POWER on from the start: installed and in service, not an exhibit. */
   inService = false,
+  external?: SpaPackDemoBinding,
 ): LiveExhibit {
   const t = plantTools(kit);
   const c = jets ? JACUZZI_CABINET : CABINET;
   const leafW = c.w / 2 - 0.01;
   const object = new Group();
   object.name = 'Packaged spa set in its plant cabinet';
+  if (external) object.userData.graphNodeId = 'demo.cabinet';
   // Centred on its footprint, the doors' swing included.
   const body = new Group();
   body.position.z = -leafW / 2;
@@ -418,13 +436,17 @@ function buildSpaPack(
     inService && typeof window !== 'undefined' ? worldStore('dev') : null;
   // Its thermostat's setting: the world's pool's, or, an exhibit, its own.
   let ownSet = jets ? 37 : 34;
-  const setting = () => store?.world.value.pools[pool].setpoint ?? ownSet;
+  const setting = () =>
+    external?.state().setpoint ??
+    store?.world.value.pools[pool].setpoint ??
+    ownSet;
   const mimic = createCabinetMimic(kit, {
     drainAndMakeUp: !jets,
     parts,
     onSet: (step) => {
       const celsius = clampSetpoint(setting() + step);
-      if (store) store.dispatch({ type: 'pool/setpoint', pool, celsius });
+      if (external) external.setSetpoint(celsius);
+      else if (store) store.dispatch({ type: 'pool/setpoint', pool, celsius });
       else ownSet = celsius;
     },
   });
@@ -438,24 +460,31 @@ function buildSpaPack(
     selector(kit, {
       positions: 2,
       initial: inService ? 1 : 0,
-      bound: footbathStore
+      bound: external
         ? {
             get value() {
-              return partOn(
-                footbathStore.world.value.identifiedPlant,
-                FOOTBATH.power,
-              )
-                ? 1
-                : 0;
+              return external.state().powerOn ? 1 : 0;
             },
-            set: (position) =>
-              footbathStore.dispatch({
-                type: 'plant/switch',
-                id: FOOTBATH.power,
-                on: position === 1,
-              }),
+            set: (position: number) => external.setPower(position === 1),
           }
-        : undefined,
+        : footbathStore
+          ? {
+              get value() {
+                return partOn(
+                  footbathStore.world.value.identifiedPlant,
+                  FOOTBATH.power,
+                )
+                  ? 1
+                  : 0;
+              },
+              set: (position) =>
+                footbathStore.dispatch({
+                  type: 'plant/switch',
+                  id: FOOTBATH.power,
+                  on: position === 1,
+                }),
+            }
+          : undefined,
       legend: 'POWER',
       name: 'Spa set power',
     }),
@@ -504,7 +533,22 @@ function buildSpaPack(
   // sets it (`object.userData.supply`); on its own, it is always fed.
   const supplied = signal(true);
   object.userData.supply = supplied;
-  const running = computed(() => supplied.value && power.position.value === 1);
+  const trialLowWater = signal(false);
+  const lowWater = computed(() => {
+    if (external) return trialLowWater.value;
+    const w = store?.world.value;
+    return (
+      !!w &&
+      !jets &&
+      footbathPumpStarved(
+        w.pools.pool_04,
+        footbathLineup(w.identifiedPlant).draining,
+      )
+    );
+  });
+  const running = computed(
+    () => supplied.value && power.position.value === 1 && !lowWater.value,
+  );
   const doorOpen = computed(() => latches.some((l) => l.open.value));
   // Its pump's motor, heard while it runs (the owner, 2026-10-23): at full
   // volume while either door is open more than about 20 degrees, fading
@@ -535,6 +579,20 @@ function buildSpaPack(
     lamp.object.scale.setScalar(0.8);
     front.add(lamp.object);
   });
+  if (!jets) {
+    const fault = parts.add(
+      pilotLight(kit, {
+        colour: 'red',
+        legend: 'LOW WATER',
+        drive: lowWater,
+        pushToTest: false,
+        name: 'Foot spa cabinet low-water cutout lamp',
+      }),
+    );
+    fault.object.position.set(-0.15, -0.11, 0);
+    fault.object.scale.setScalar(0.8);
+    front.add(fault.object);
+  }
   const gauge = createDialGauge(kit, {
     dia: 0.09,
     max: 2.5,
@@ -580,6 +638,7 @@ function buildSpaPack(
     object,
     parts,
     update(delta) {
+      if (external) trialLowWater.value = external.state().litres < 60;
       const ease = Math.min(1, delta * 4);
       swing = latches.map(
         (l, i) => swing[i] + ((l.open.value ? OPEN : 0) - swing[i]) * ease,
@@ -604,14 +663,18 @@ function buildSpaPack(
       gauge.update(delta);
       // Its mimic, as the world has its water (an exhibit: as if in service).
       const w = store?.world.value;
+      const trial = external?.state();
       const lineup = w && !jets ? footbathLineup(w.identifiedPlant) : null;
       mimic.show({
         pump: on,
         uv: uvOn.value,
         heat: on && (w ? w.pools[pool].heating > 0.05 : true),
-        drain: lineup?.draining ?? false,
-        makeUp: lineup?.makeUpOpen ?? false,
-        waterC: !supplied.value ? null : w ? w.pools[pool].temperature : ownSet,
+        drain: trial?.draining ?? (!!lineup?.draining && on),
+        filling: trial?.filling ?? (!!w && !jets && footbathFilling(w)),
+        makeUp: trial?.fillOpen ?? lineup?.makeUpOpen ?? false,
+        waterC: !supplied.value
+          ? null
+          : (trial?.celsius ?? (w ? w.pools[pool].temperature : ownSet)),
         setC: setting(),
       });
       mimic.update(delta);
@@ -621,6 +684,18 @@ function buildSpaPack(
       humming = false;
       partAudio.hold(pump.group, null);
     },
+  };
+}
+
+export function spaPackDemoExhibit(binding: SpaPackDemoBinding): PlantExhibit {
+  return {
+    graphNodeId: 'demo.cabinet',
+    title: 'Lidoluxe foot spa treatment cabinet',
+    reference:
+      'The same working cabinet used by the installed foot spa, connected to the ideal pool trial',
+    size: { w: 2.1, d: 1.9, h: 2.2, mount: 'floor' },
+    maker: 'lidoluxe',
+    build: (kit) => buildSpaPack(kit, 'IDEAL FOOT SPA', false, false, binding),
   };
 }
 

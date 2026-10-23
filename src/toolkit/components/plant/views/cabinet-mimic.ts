@@ -28,8 +28,10 @@ export interface CabinetMimicState {
   uv: boolean;
   /** Heat called for: the heat exchanger's primary on. */
   heat: boolean;
-  /** The drain open, the make-up filling (the foot spa's; none on a set without them). */
+  /** The drain running and make-up valve open (the foot spa's). */
   drain?: boolean;
+  /** Fresh make-up water is actually flowing into the foot spa. */
+  filling?: boolean;
   makeUp?: boolean;
   /** The water's temperature, °C; nothing while the panel is unpowered. */
   waterC: number | null;
@@ -185,6 +187,36 @@ export function createCabinetMimic(
         }
       : {}),
   };
+  // The circuit LEDs are useful close up, but drain-down must be obvious
+  // from the aisle. These larger annunciators sit below the printed mimic.
+  const statusLeds = drainAndMakeUp
+    ? (() => {
+        t.box(
+          group,
+          t.paint('#424a49', 0.65),
+          width,
+          0.065,
+          0.008,
+          0,
+          -0.16,
+          0.001,
+        );
+        const drain = t.led(group, '#ff3b24', 0.012, -0.2, -0.16, 0.008);
+        const makeUp = t.led(group, '#4aa8ff', 0.012, 0.02, -0.16, 0.008);
+        for (const [label, x] of [
+          ['DRAINING', -0.125],
+          ['FILLING', 0.12],
+        ] as const) {
+          const mark = createMicroLabel(kit, label, {
+            height: 0.012,
+            ink: '#f1f3ed',
+          });
+          mark.position.set(x, -0.16, 0.006);
+          group.add(mark);
+        }
+        return { drain, makeUp };
+      })()
+    : null;
   // The water's temperature: an LED readout, its legend on Dymo tape.
   const readout = createSevenSegment(kit, 3, { digitHeight: 0.022 });
   readout.group.position.set(width / 2 - 0.07, 0.02, 0.002);
@@ -196,13 +228,12 @@ export function createCabinetMimic(
   // The thermostat: ▲ and ▼ beside the readout, and its SET lamp.
   let shownFor = 0;
   const press = (step: number) => {
-    // The first press only shows the setting; the next ones change it.
-    if (shownFor > 0) onSet?.(step);
+    onSet?.(step);
     shownFor = SET_SHOWN;
   };
   for (const [legend, step, y] of [
-    ['▲', 0.5, 0.032],
-    ['▼', -0.5, 0.004],
+    ['+', 0.5, 0.032],
+    ['−', -0.5, 0.004],
   ] as const) {
     const button = parts.add(
       pushButton(kit, {
@@ -212,10 +243,10 @@ export function createCabinetMimic(
       }),
     );
     button.object.position.set(width / 2 - 0.018, y, 0.002);
-    button.object.scale.setScalar(0.55);
+    button.object.scale.setScalar(0.7);
     group.add(button.object);
     const mark = createMicroLabel(kit, legend, {
-      height: 0.009,
+      height: 0.015,
       ink: '#1b1f20',
     });
     mark.position.set(width / 2 - 0.034, y, 0.002);
@@ -239,20 +270,17 @@ export function createCabinetMimic(
     show(s: CabinetMimicState) {
       const setting = shownFor > 0 && s.waterC !== null;
       setLamp.set(setting);
-      if (setting) {
-        readout.show(s.setC.toFixed(1));
-        leds.pump.set(s.pump);
-        leds.uv.set(s.uv);
-        leds.heat.set(s.heat);
-        leds.drain?.set(!!s.drain);
-        leds.makeUp?.set(!!s.makeUp);
-        return;
-      }
       leds.pump.set(s.pump);
       leds.uv.set(s.uv);
       leds.heat.set(s.heat);
       leds.drain?.set(!!s.drain);
       leds.makeUp?.set(!!s.makeUp);
+      statusLeds?.drain.set(!!s.drain);
+      statusLeds?.makeUp.set(!!s.filling);
+      if (setting) {
+        readout.show(s.setC.toFixed(1));
+        return;
+      }
       readout.show(s.waterC === null ? '' : s.waterC.toFixed(1));
     },
   };

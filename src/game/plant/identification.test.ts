@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { advance, applyAction, newWorld } from '../world';
+import { advance, applyAction, footbathFilling, newWorld } from '../world';
 import { read } from '../sim/blocks';
-import { poolDepth } from './pools';
+import { footbathPumpStarved, poolDepth } from './pools';
 import { cabinetPipes } from '../../toolkit/gallery/logic/cabinet-pipes';
 import {
   FOOTBATH,
@@ -13,6 +13,48 @@ import {
 } from './identification';
 
 describe('plant identification pilot', () => {
+  it('cuts the foot spa pump out on low water and permits refill after changing the line-up', () => {
+    const ready = newWorld().pools.pool_04;
+    expect(footbathPumpStarved(ready, false)).toBe(false);
+    expect(footbathPumpStarved({ ...ready, tripped: true }, false)).toBe(true);
+    const empty = { ...ready, level: -poolDepth('pool_04') };
+    expect(footbathPumpStarved(empty, true)).toBe(true);
+    expect(footbathPumpStarved(empty, false)).toBe(false);
+  });
+
+  it('reports filling only with an open valve, a float call and booster supply', () => {
+    const ready = advance(newWorld(), 600, 10);
+    const low = {
+      ...ready,
+      pools: {
+        ...ready.pools,
+        pool_04: { ...ready.pools.pool_04, balance: 0.1 },
+      },
+    };
+    expect(footbathFilling(low)).toBe(true);
+    expect(
+      footbathFilling({
+        ...low,
+        wetHall: { ...low.wetHall, boosterTripped: true },
+      }),
+    ).toBe(false);
+    expect(
+      footbathFilling({
+        ...low,
+        pools: { ...low.pools, pool_04: { ...low.pools.pool_04, balance: 1 } },
+      }),
+    ).toBe(false);
+    expect(
+      footbathFilling(
+        applyAction(low, {
+          type: 'plant/valve',
+          id: FOOTBATH.makeUp,
+          open: false,
+        }),
+      ),
+    ).toBe(false);
+  });
+
   it('walks the declared tree with unique, documented IDs and normal states', () => {
     const root = newIdentifiedPlant();
     const parts = walkIdentified(root);

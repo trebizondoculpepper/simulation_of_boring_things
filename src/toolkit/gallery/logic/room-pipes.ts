@@ -432,9 +432,9 @@ export function poolPlantPipework(room: string): {
     0.8,
     ...faces.map(({ f, outlet, dir }) =>
       dir[2] < -0.5
-        ? outlet.at[2] - f.footprint.minZ + 0.2
+        ? outlet.at[2] - f.footprint.minZ + 0.3
         : dir[0] < -0.5
-          ? outlet.at[0] - f.footprint.minX + 0.2
+          ? outlet.at[0] - f.footprint.minX + 0.3
           : 0,
     ),
   );
@@ -670,7 +670,22 @@ export function poolPlantPipework(room: string): {
       ],
     });
     // The outlet: out of the nozzle, up into the outlet header.
-    const outTee = line(outlet.at, OUT_LINE);
+    const outletLine = line(outlet.at, OUT_LINE);
+    const outletStub = line(
+      outlet.at,
+      dir[2] < -0.5
+        ? outlet.at[2] - f.footprint.minZ + 0.2
+        : dir[0] < -0.5
+          ? outlet.at[0] - f.footprint.minX + 0.2
+          : OUT_LINE,
+    );
+    // The lounge filters put the two nozzle axes only 90 mm apart. Move
+    // the outlet rise sideways before taking it up to the high header so
+    // its outside diameter clears the inlet branch beside it.
+    const outTee: Vec3 =
+      dir[2] < -0.5
+        ? [f.footprint.maxX + 0.15, outletLine[1], outletLine[2]]
+        : outletLine;
     tees.push({
       name: `Filter ${n} outlet header tee`,
       kind: 'pvc-pressure',
@@ -684,7 +699,13 @@ export function poolPlantPipework(room: string): {
       name: `Filter ${n} outlet`,
       kind: 'pvc-pressure',
       od: outlet.od,
-      points: [outlet.at, outTee, [outTee[0], L.filterOut, outTee[2]]],
+      points: [
+        outlet.at,
+        outletStub,
+        [outTee[0], outletStub[1], outletStub[2]],
+        outTee,
+        [outTee[0], L.filterOut, outTee[2]],
+      ],
       joins: [f.item.label, outletHeader.name],
       service: 'pool water',
       label: `F${n} OUTLET`,

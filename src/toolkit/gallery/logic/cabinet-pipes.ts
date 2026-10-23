@@ -373,7 +373,7 @@ export function cabinetValvePanel(room: string, trial?: Placed) {
   const z = 0.5;
   return {
     x,
-    y: 1.45,
+    y: 1.72,
     z,
     yaw: -Math.PI / 2,
   };
@@ -539,6 +539,7 @@ export function cabinetPipes(
             at: clearAt,
             axis: 'y',
             ...(footbathFlow ? { facing: Math.PI / 2 } : {}),
+            ...(room === 'plant_pool_04' ? { operator: 'motor' as const } : {}),
             installed: true,
             name: `${run.name} valve`,
           };

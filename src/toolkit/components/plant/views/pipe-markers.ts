@@ -116,9 +116,18 @@ export function markPipe(
     // Face the side of the run, read along it.
     plate.rotation.y = Math.abs(dir[0]) > 0.5 ? 0 : Math.PI / 2;
     group.add(plate);
-    // And the same on the far side.
-    const back = plate.clone();
-    back.rotation.y += Math.PI;
+    // The far side is read in the opposite direction along the pipe.
+    const back = createEngravedPlate(
+      kit,
+      [`${text}  ${arrow === '→' ? '←' : '→'}`],
+      {
+        colour: 'white',
+        width: Math.min(0.6, Math.max(0.3, text.length * 0.035)),
+        height: 0.07,
+      },
+    );
+    back.position.copy(plate.position);
+    back.rotation.y = plate.rotation.y + Math.PI;
     group.add(back);
   }
   return group;

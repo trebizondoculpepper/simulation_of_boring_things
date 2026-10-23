@@ -168,6 +168,18 @@ export const olympicTankLevel = (balance: number) =>
 
 /** Each pool's mean depth, m: empty with its surface this far below its lip. */
 export const poolDepth = (id: PoolId) => WATER[id].depth;
+
+/** The foot spa cabinet's low-water cutout: tank low-low, or an empty bath while pumping to drain. */
+export const footbathPumpStarved = (
+  pool: Pick<PoolWaterState, 'level' | 'tripped'>,
+  draining: boolean,
+) => pool.tripped || (draining && pool.level <= -poolDepth('pool_04') + 0.001);
+
+/** Whether this pool's balance tank float is calling for fresh water. */
+export const poolMakeUpCalling = (
+  id: PoolId,
+  pool: Pick<PoolWaterState, 'balance'>,
+) => pool.balance < WATER[id].float;
 /** Each pool's volume brimming, m³, and its surface's area, m². */
 export const poolVolume = (id: PoolId) => WATER[id].volume;
 export const poolArea = (id: PoolId) => WATER[id].area;
@@ -274,7 +286,7 @@ export function makeUpDemand(
   return POOL_IDS.reduce(
     (sum, id) =>
       sum +
-      ((calling[id] ?? pools[id].balance < WATER[id].float)
+      ((calling[id] ?? poolMakeUpCalling(id, pools[id]))
         ? WATER[id].makeUpRate
         : 0),
     0,
@@ -334,6 +346,9 @@ export function stepPoolsWater(
         ? footbath.draining
         : pools[id].drainDown) &&
       circulating(pools[id], plant, id) &&
+      (id !== 'pool_04' ||
+        !footbath ||
+        !footbathPumpStarved(pools[id], footbath.draining)) &&
       (id !== 'pool_04' || !footbath || footbath.powered),
   );
   const drainRate = draining.length ? sewer / draining.length : 0;
@@ -349,6 +364,9 @@ export function stepPoolsWater(
     // the pool's cabinet, is not isolated; and not tripped.
     const circulation =
       circulating(old, plant, id) &&
+      (id !== 'pool_04' ||
+        !footbath ||
+        !footbathPumpStarved(old, footbath.draining)) &&
       (id !== 'pool_04' || !footbath || footbath.powered);
     // UV and ozone, where they are isolated, break down the combined
     // chlorine (the chloramines) as the water passes.

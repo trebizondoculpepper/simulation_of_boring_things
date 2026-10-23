@@ -26,6 +26,7 @@ import {
   makeUpDemand,
   newPools,
   olympicTankLevel,
+  poolMakeUpCalling,
   stepPoolsWater,
 } from './plant/pools';
 import {
@@ -352,6 +353,23 @@ export function applyAction(world: World, action: WorldAction): World {
             },
           };
   }
+}
+
+/** Water actually entering the foot spa through its open make-up valve. */
+export function footbathFilling(world: World): boolean {
+  if (!footbathLineup(world.identifiedPlant).makeUpOpen) return false;
+  if (!poolMakeUpCalling('pool_04', world.pools.pool_04)) return false;
+  const calling = makeUpCalls(
+    world.olympicTank,
+    olympicTankLevel(world.pools.pool_02.balance),
+  );
+  return (
+    makeUpShare(
+      world.wetHall,
+      world.plant,
+      makeUpDemand(world.pools, { pool_02: calling }),
+    ) > 0
+  );
 }
 
 /** The world `delta` seconds on. */

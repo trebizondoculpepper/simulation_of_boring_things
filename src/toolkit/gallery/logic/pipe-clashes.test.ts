@@ -40,13 +40,11 @@ function drawnRuns(room: string): DrawnRun[] {
 
 /**
  * The clashes found when the check was written (2026-10-23), room by
- * room: the lounge's filter inlets through their outlets; the cabinet
- * rooms' heating flow against its return, and the isolator's supply
+ * room: the cabinet rooms' heating flow against its return, and the isolator's supply
  * against the room supply; the air plant's power feeds laid one along
  * another. Each may only fall.
  */
 const KNOWN: Partial<Record<string, number>> = {
-  plant_pool_01: 2,
   plant_pool_03: 3,
   plant_pool_04: 3,
   air_plant: 10,

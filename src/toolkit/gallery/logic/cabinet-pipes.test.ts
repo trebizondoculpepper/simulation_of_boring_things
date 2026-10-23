@@ -102,6 +102,15 @@ describe.each([
   });
 
   if (room === 'plant_pool_04') {
+    it('uses motor operators on every fitted valve', () => {
+      expect(runs.filter((run) => run.valve).length).toBeGreaterThan(3);
+      expect(
+        runs
+          .filter((run) => run.valve)
+          .every((run) => run.valve!.operator === 'motor'),
+      ).toBe(true);
+    });
+
     it('keeps the draw-down valve clear of the cabinet back', () => {
       const drain = named('Drain to waste');
       const valve = drain.valve!;

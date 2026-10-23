@@ -17,6 +17,8 @@ import type { Footprint } from '../../../controls/logic/walk-collision';
  * enclose the model, so the room can lay it out and keep walkers out of it.
  */
 export interface PlantExhibit {
+  /** Optional graph identity for a bound working exhibit; a visible trial can audit 1:1 coverage. */
+  graphNodeId?: string;
   /** What it is, as an engineer would name it: "Pressure sand filter". */
   title: string;
   /** The product it is modelled on and its key size: "After … , 2.8 m dia." */

@@ -1,6 +1,6 @@
 # Lounge pool plant room: sizing study
 
-Status: the 12 × 11 × 8 m first trial is built, 2026-10-23. The shell, machine placement bounds, stair and pipe wall endpoints now use the same rectangle; all twelve machine access points and every valve are reachable in the layout tests. This is a trial of the existing hand-placed plant, not a search result from the new placement and voxel-routing pipeline. That pipeline's full clash-free scoring gate remains for a later iteration.
+Status: the 12 × 11 × 8 m first trial is built, 2026-10-23. The shell, machine placement bounds, stair and pipe wall endpoints use the same rectangle; all twelve machine access points and every valve are reachable, and the filter inlet and outlet routes now pass the zero-clash check. This is a trial of the existing hand-placed plant, not a search result from the new placement and voxel-routing pipeline. That pipeline's full scoring gate remains for a later iteration.
 
 ## Boundaries and inventory
 
@@ -20,4 +20,4 @@ Use **12 × 11 × 8 m** for the first placement and routing trial: 132 m², twel
 
 The generic `reserveRegions` calculation reports no abstract fit problem for 12 × 10 m with north and south doors and an east-wall gantry. Its automatic stair orientation, however, puts the stair foot across the north door approach. The actual plan must connect the north pool doorway to the upper landing and run the stair away from it, as the current room does. A zero-problem result from the generic reserver is therefore only a dimensional check, not placement approval.
 
-The 12 × 11 m room is now the live first trial. Its equipment and pipework stay within the smaller shell and the north/south wall roles are retained. The old hand-routed filter inlets still cross their outlets in two places, so the full scorer would fail its no-clash gate; this trial is not yet an optimized final layout. The 12 × 10 m candidate still requires a separate placement and routing trial.
+The 12 × 11 m room is the live first trial. Its equipment and pipework stay within the shell and the north/south wall roles are retained. Each sand-filter outlet now reaches the free side of its vessel before rising, clearing its inlet; the route check finds no clashes in this room. A direct 12 × 10 m shell trial failed: the pump's service point and five filter valves became unreachable, an outlet crossed a filter, and a floor channel cut through the pump set. Its contents need a new placement and route plan before that smaller shell can be used.
