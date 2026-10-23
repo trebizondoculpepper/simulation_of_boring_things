@@ -8,6 +8,7 @@ import {
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { brandLivery } from '../../core/views/brand-livery';
+import { IBC } from '../logic/ibc';
 import { FINISH, plantTools } from './plant-tools';
 import type { Point } from './plant-tools';
 import {
@@ -91,6 +92,74 @@ function ring(
   mesh.position.y = y;
   parent.add(mesh);
   return mesh;
+}
+
+/**
+ * A standard 1000 L IBC (1200 × 1000 × 1160 mm): a translucent PE-HD
+ * bottle on its pallet base in a galvanised cage, its liquid showing
+ * through to its level (`setLevel`, 0 to 1), and its bottom outlet, a
+ * DN50 butterfly valve with its lever in `handle`'s colour. `setOpen`
+ * turns the lever (up, across the pipe, shut; along it, open); `lever` is
+ * what a click works. Its own frame: its base on the floor at y = 0, the
+ * outlet toward +x.
+ */
+export function createIbc(
+  kit: PanelKit,
+  { liquid: colour, handle }: { liquid: string; handle: string },
+) {
+  const t = plantTools(kit);
+  const ibc = new Group();
+  t.box(ibc, t.paint('#3a3c3d', 0.7), 1.2, 0.15, 1.0, 0, 0.075, 0);
+  // Its bottle, translucent PE-HD, the liquid showing through to its level.
+  const bottle = t.box(
+    ibc,
+    translucent(t),
+    1.12,
+    0.96,
+    0.94,
+    0,
+    0.15 + 0.48,
+    0,
+  );
+  bottle.renderOrder = 1;
+  const contents = t.box(
+    ibc,
+    t.paint(colour, 0.25),
+    1.1,
+    0.93,
+    0.92,
+    0,
+    0.16,
+    0,
+  );
+  const setLevel = liquid(contents, IBC.floor, IBC.depth);
+  setLevel(0.7);
+  const cage = t.paint(FINISH.galvanised, 0.4, 0.6);
+  for (const x of [-0.58, -0.29, 0, 0.29, 0.58])
+    for (const z of [-0.49, 0.49])
+      t.rod(ibc, cage, [x, 0.15, z], [x, 1.16, z], 0.01, 8);
+  for (const z of [-0.33, 0, 0.33])
+    for (const x of [-0.59, 0.59])
+      t.rod(ibc, cage, [x, 0.15, z], [x, 1.16, z], 0.01, 8);
+  for (const y of [0.15, 0.48, 0.82, 1.16]) {
+    for (const z of [-0.49, 0.49])
+      t.rod(ibc, cage, [-0.59, y, z], [0.59, y, z], 0.01, 8);
+    for (const x of [-0.59, 0.59])
+      t.rod(ibc, cage, [x, y, -0.49], [x, y, 0.49], 0.01, 8);
+  }
+  t.cyl(ibc, t.paint('#d0d2cf', 0.4), 0.08, 0.04, 0, 1.13, 0, 'y', 24);
+  // The bottom outlet: a DN50 butterfly valve, its lever on a pivot.
+  t.cyl(ibc, t.paint('#d0d2cf', 0.4), 0.035, 0.1, 0.62, 0.22, 0, 'x', 16);
+  const lever = new Group();
+  lever.position.set(0.66, 0.25, 0);
+  ibc.add(lever);
+  t.box(lever, t.paint(handle, 0.5), 0.02, 0.08, 0.02, 0, 0.04, 0);
+  lever.userData.live = true;
+  const setOpen = (open: boolean) => {
+    // Open, the lever lies along the pipe.
+    lever.rotation.z = open ? -Math.PI / 2 : 0;
+  };
+  return { group: ibc, setLevel, setOpen, lever };
 }
 
 /**
@@ -310,60 +379,12 @@ export function createIbcOnSpillPallet(kit: PanelKit) {
       -W / 2 + 0.1 + i * 0.065,
     );
   // The IBC at the back of the pallet, its tap over the dispensing area.
-  const ibc = new Group();
+  const { group: ibc, setLevel } = createIbc(kit, {
+    liquid: LIQUID_COLOUR.acid,
+    handle: CHEMICAL_COLOUR.acid,
+  });
   ibc.position.set(-0.3, H, 0);
   group.add(ibc);
-  t.box(ibc, t.paint('#3a3c3d', 0.7), 1.2, 0.15, 1.0, 0, 0.075, 0);
-  // Its bottle, translucent PE-HD, the acid showing through to its level.
-  const bottle = t.box(
-    ibc,
-    translucent(t),
-    1.12,
-    0.96,
-    0.94,
-    0,
-    0.15 + 0.48,
-    0,
-  );
-  bottle.renderOrder = 1;
-  const acid = t.box(
-    ibc,
-    t.paint(LIQUID_COLOUR.acid, 0.25),
-    1.1,
-    0.93,
-    0.92,
-    0,
-    0.16,
-    0,
-  );
-  const setLevel = liquid(acid, 0.165, 0.93);
-  setLevel(0.7);
-  const cage = t.paint(FINISH.galvanised, 0.4, 0.6);
-  for (const x of [-0.58, -0.29, 0, 0.29, 0.58])
-    for (const z of [-0.49, 0.49])
-      t.rod(ibc, cage, [x, 0.15, z], [x, 1.16, z], 0.01, 8);
-  for (const z of [-0.33, 0, 0.33])
-    for (const x of [-0.59, 0.59])
-      t.rod(ibc, cage, [x, 0.15, z], [x, 1.16, z], 0.01, 8);
-  for (const y of [0.15, 0.48, 0.82, 1.16]) {
-    for (const z of [-0.49, 0.49])
-      t.rod(ibc, cage, [-0.59, y, z], [0.59, y, z], 0.01, 8);
-    for (const x of [-0.59, 0.59])
-      t.rod(ibc, cage, [x, y, -0.49], [x, y, 0.49], 0.01, 8);
-  }
-  t.cyl(ibc, t.paint('#d0d2cf', 0.4), 0.08, 0.04, 0, 1.13, 0, 'y', 24);
-  // The bottom outlet: a DN50 butterfly valve, red handle.
-  t.cyl(ibc, t.paint('#d0d2cf', 0.4), 0.035, 0.1, 0.62, 0.22, 0, 'x', 16);
-  t.box(
-    ibc,
-    t.paint(CHEMICAL_COLOUR.acid, 0.5),
-    0.02,
-    0.08,
-    0.02,
-    0.66,
-    0.29,
-    0,
-  );
   put(
     ibc,
     createHazardLabel(
