@@ -43,6 +43,7 @@ export type GalleryRoomId =
   | 'dev26'
   | 'dev27'
   | 'dev28'
+  | 'dev29'
   | 'retired0'
   | 'dev_corridor';
 /** One development room per pool plant room, each showing its equipment. */
@@ -192,6 +193,7 @@ export const ROOMS: readonly RoomId[] = [
   // By its URL only: heat exchange from a gas boiler (scenario 4).
   'dev27',
   'dev28',
+  'dev29',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   // The single playable pool room.
@@ -240,6 +242,8 @@ export const ROOMS: readonly RoomId[] = [
   'plant_pool_02',
   'plant_pool_03',
   'plant_pool_04',
+  // The Olympic's balance tank hall, through its plant room's west doors.
+  'tank_hall',
   // Every kind of pipe and duct the game knows, on stands.
   'pipes_n_dreams',
   // The plant rooms' main corridor: the dev corridor again, taller, for
@@ -330,6 +334,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev26: 'DEV26 · FILTER BACKWASH',
   dev27: 'DEV27 · HEAT EXCHANGE',
   dev28: 'DEV28 · BALANCE TANK HALL',
+  dev29: 'DEV29 · SOLENOID VALVES',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   dev_corridor: 'DEV CORRIDOR',
   dev_courtyard: 'COURTYARD',
@@ -419,6 +424,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev26: '#a9b08f',
   dev27: '#b08f8f',
   dev28: '#7d8a8c',
+  dev29: '#8c7d6a',
   retired0: '#6d7a6f',
   dev_corridor: '#2d9ca0',
   dev_courtyard: '#7fa36a',
