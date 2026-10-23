@@ -57,6 +57,15 @@ export function createFloorGully(
   stream.visible = false;
   return {
     group,
+    /** How dirty the water falling into it is, 0 (clear) to 1 (brown with backwash). */
+    setTint(dirt: number) {
+      const d = Math.min(1, Math.max(0, dirt));
+      water.color.setRGB(
+        0.62 + (0.45 - 0.62) * d,
+        0.78 + (0.36 - 0.78) * d,
+        0.86 + (0.22 - 0.86) * d,
+      );
+    },
     /** The flow falling into it, litres a second. */
     setFlow(litres: number) {
       stream.visible = litres > 0.01;

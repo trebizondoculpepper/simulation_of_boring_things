@@ -2,7 +2,7 @@
 
 Written by Claude (Opus 5.5, Claude Code), 2026-10-23, one of eight test scenarios the owner asked for (each proving a piece of modelling the Olympic pool's redo will need). Read `AGENTS.md`, then the scenarios already built: Dev21 (sources to sinks, `source-sink-plumbing.ts`), Dev22 (battery-backed pump, `battery-pump-rig.ts`), Dev23 (gravity drain, `jacuzzi-drain.ts`).
 
-**Status:** Not started.
+**Status:** Done (the simple setup), 2026-10-23: Dev26 (`?room=dev26`), a small filter with a top-mount multiport valve (FILTER, BACKWASH, RINSE, CLOSED). Logic in `src/game/plant/multiport-filter.ts` and `src/toolkit/gallery/logic/filter-backwash.ts`, tested; seen in the room (a dirty bed at 0.54 bar, the lever turned under flow caught, the backwash running brown to the gully). The five-valve battery of a commercial filter remains a further step.
 
 ## The scenario
 

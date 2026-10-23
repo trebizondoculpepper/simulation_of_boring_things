@@ -6,7 +6,7 @@ The owner's eight test scenarios (2026-10-23), each proving a piece of modelling
 |---|---|---|---|
 | 1 | Duty and standby pumps | [024](024-scenario-duty-standby-pumps.md) | Done (Dev24) |
 | 2 | Filling and draining a tank through one port | [025](025-scenario-tank-fill-float.md) | Done (Dev25) |
-| 3 | Backwashing a sand filter | [026](026-scenario-filter-backwash.md) | Not started |
+| 3 | Backwashing a sand filter | [026](026-scenario-filter-backwash.md) | Done, simple setup (Dev26) |
 | 4 | Heat exchange | [027](027-scenario-heat-exchange.md) | Not started |
 | 5 | Chemical dosing with a measurement loop | [028](028-scenario-chemical-dosing.md) | Not started |
 | 6 | Gas leak and detection | [023](023-gas-leaks.md) | Not started |

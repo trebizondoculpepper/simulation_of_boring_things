@@ -40,6 +40,7 @@ export type GalleryRoomId =
   | 'dev23'
   | 'dev24'
   | 'dev25'
+  | 'dev26'
   | 'dev_corridor';
 /** One development room per pool plant room, each showing its equipment. */
 export type EquipmentRoomId =
@@ -182,6 +183,8 @@ export const ROOMS: readonly RoomId[] = [
   'dev24',
   // By its URL only: a tank filled and drained through one port (scenario 2).
   'dev25',
+  // By its URL only: backwashing a sand filter (scenario 3).
+  'dev26',
   // The single playable pool room.
   'PR_A',
   'CR_A_UP',
@@ -314,6 +317,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev23: 'DEV23 · DRAINING A JACUZZI',
   dev24: 'DEV24 · DUTY AND STANDBY',
   dev25: 'DEV25 · ONE-PORT TANK',
+  dev26: 'DEV26 · FILTER BACKWASH',
   dev_corridor: 'DEV CORRIDOR',
   dev_courtyard: 'COURTYARD',
   dev_pumps: 'DEV · PUMPS AND FILTRATION',
@@ -398,6 +402,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev23: '#8fb0a9',
   dev24: '#b09a8f',
   dev25: '#8f9fb0',
+  dev26: '#a9b08f',
   dev_corridor: '#2d9ca0',
   dev_courtyard: '#7fa36a',
   dev_pumps: '#2f6fb0',

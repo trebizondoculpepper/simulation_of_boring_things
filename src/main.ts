@@ -393,7 +393,8 @@ const starter = async (
     room === 'dev22' ||
     room === 'dev23' ||
     room === 'dev24' ||
-    room === 'dev25'
+    room === 'dev25' ||
+    room === 'dev26'
   ) {
     const { startEquipmentRoom } =
       await import('./toolkit/gallery/rooms/plant-room');
