@@ -82,7 +82,12 @@ const EXHIBITS: Record<
   () => Promise<{
     EXHIBITS: readonly PlantExhibit[];
     PURPOSE: string;
-    buildRoomServices?: (kit: PanelKit, layout: PlantRoomLayout) => Group;
+    buildRoomServices?: (
+      kit: PanelKit,
+      layout: PlantRoomLayout,
+    ) => Group | LiveExhibit;
+    /** Bind the room's model to its layout before its exhibits are built (Dev19's plumbed graph). */
+    prepareRoom?: (layout: PlantRoomLayout) => void;
   }>
 > = {
   dev_pumps: () => import('./plant/pumps'),
@@ -170,7 +175,11 @@ export function startEquipmentRoom(
   const build = (
     exhibits: readonly PlantExhibit[],
     purpose: string,
-    buildRoomServices?: (kit: PanelKit, layout: PlantRoomLayout) => Group,
+    buildRoomServices?: (
+      kit: PanelKit,
+      layout: PlantRoomLayout,
+    ) => Group | LiveExhibit,
+    prepareRoom?: (layout: PlantRoomLayout) => void,
   ) => {
     const sizes = exhibits.map((e) => e.size);
     // Dev19 tries the room's layers (`doc/prompts/017-room-sizer-gantries-placement.md`):
@@ -193,6 +202,7 @@ export function startEquipmentRoom(
         ).places,
       };
     const layout = sized ?? layoutPlantRoom(sizes);
+    prepareRoom?.(layout);
     const { halfX, halfZ } = layout;
     const services = SERVICE_CEILINGS[id as ExhibitRoomId];
     // Under a services ceiling, the walls and roof go up over the services.
@@ -354,7 +364,14 @@ export function startEquipmentRoom(
       }
       room.add(caption);
     });
-    if (buildRoomServices) room.add(buildRoomServices(kit, layout));
+    if (buildRoomServices) {
+      // Its services may work too (Dev19's valves and isolators).
+      const services = buildRoomServices(kit, layout);
+      if (isLive(services)) {
+        live.push(services);
+        room.add(services.object);
+      } else room.add(services);
+    }
     solids = layout.solids
       .filter((s) => s.maxX > s.minX && s.maxZ > s.minZ)
       .map((s) => ({
@@ -455,8 +472,8 @@ export function startEquipmentRoom(
   };
 
   void EXHIBITS[id]().then(
-    ({ EXHIBITS: exhibits, PURPOSE, buildRoomServices }) => {
-      if (!disposed) build(exhibits, PURPOSE, buildRoomServices);
+    ({ EXHIBITS: exhibits, PURPOSE, buildRoomServices, prepareRoom }) => {
+      if (!disposed) build(exhibits, PURPOSE, buildRoomServices, prepareRoom);
     },
   );
 

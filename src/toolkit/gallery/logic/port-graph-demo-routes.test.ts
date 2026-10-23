@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
+import { createPortGraphDemo } from '../../../game/plant/port-graph-demo';
 import { leavesPortsSquare } from '../../components/core/logic/pipe-route';
 import { EXHIBITS } from '../rooms/plant/port-graph-demo';
 import {
@@ -148,5 +149,43 @@ describe('dev19 plumbed by the adopted rules', () => {
   it('terminates the flue at the ceiling, straight above the boiler', () => {
     expect(plumbing.terminals).toHaveLength(1);
     expect(plumbing.terminals[0].at[1]).toBe(layout.height);
+  });
+});
+
+describe('dev19 runs on the graph the plumber installed', () => {
+  const layout = layoutSizedPlantRoom(
+    EXHIBITS.map((exhibit) => exhibit.size),
+    { items: demoPlaceItems(), links: demoPlaceLinks() },
+  );
+  const plumbing = demoPlumbing(layout, ADOPTED_RULES);
+
+  it('holds every installed fitting as a node, wired into its line', () => {
+    const ids = new Set(plumbing.graph.nodes.map((n) => n.id));
+    for (const d of plumbing.devices)
+      if (d.kind !== 'remote-valve') expect(ids.has(d.id), d.id).toBe(true);
+    expect(
+      plumbing.graph.edges.some(
+        (e) => e.targetId === 'demo.poolPump.suction.iso',
+      ),
+    ).toBe(true);
+  });
+
+  it('stops the pool circulating when the pump\u2019s suction isolator is shut, and runs again when opened', () => {
+    const demo = createPortGraphDemo(plumbing.graph);
+    demo.step(2);
+    expect(demo.state.poolFlowKgPerSecond).toBeGreaterThan(0);
+    demo.setFitting('demo.poolPump.suction.iso', false);
+    demo.step(2);
+    expect(demo.state.poolFlowKgPerSecond).toBe(0);
+    demo.setFitting('demo.poolPump.suction.iso', true);
+    demo.step(2);
+    expect(demo.state.poolFlowKgPerSecond).toBeGreaterThan(0);
+  });
+
+  it('cuts the boiler\u2019s power at its own isolator, beyond the breaker', () => {
+    const demo = createPortGraphDemo(plumbing.graph);
+    demo.setFitting('demo.boiler.power.isolator', false);
+    demo.step(2);
+    expect(demo.state.boilerMode).toBe('unpowered');
   });
 });

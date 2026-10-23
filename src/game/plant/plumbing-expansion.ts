@@ -83,6 +83,11 @@ export interface ExpandOptions {
    * that feed comes from (beyond a breaker too).
    */
   powerIsolators?: 'supply-feeds' | 'every-device';
+  /**
+   * Fittings the plumber could not set anywhere reachable: not installed,
+   * so not in the expanded graph.
+   */
+  omit?: ReadonlySet<string>;
 }
 
 export interface Expansion {
@@ -113,6 +118,7 @@ export function expandForPlumbing(
     supplies = new Set(),
     nonReturn = pumps,
     powerIsolators = 'supply-feeds',
+    omit = new Set(),
   }: ExpandOptions,
 ): Expansion {
   const kindOf = new Map(nodes.map((n) => [n.id, n.kind]));
@@ -163,11 +169,15 @@ export function expandForPlumbing(
       if (fed && !switchgear.has(target))
         atTarget.push(add(e, 'target', 'power-isolator'));
     }
-    const list = [...atSource, ...atTarget.reverse()];
+    const list = [...atSource, ...atTarget.reverse()].filter(
+      (f) => !omit.has(f.id),
+    );
     if (list.length) along.set(e.id, list);
   }
 
   // The expanded graph: each link with fittings split at each of them.
+  const installed = fittings.filter((f) => !omit.has(f.id));
+  fittings.splice(0, fittings.length, ...installed);
   const outNodes: PlumbNode[] = [
     ...nodes,
     ...fittings.map((f) => ({ id: f.id, kind: f.kind })),

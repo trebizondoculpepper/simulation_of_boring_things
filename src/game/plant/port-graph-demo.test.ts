@@ -5,9 +5,138 @@ import {
   demoGraphProblems,
   demoVisualBindings,
 } from './port-graph-demo';
+import type { DemoGraphLike } from './port-graph-demo';
 import { celsius, gramsPerHour } from './control-quantity';
 
+function expandedGraph(nonReturn = false): DemoGraphLike {
+  const nodes: DemoGraphLike['nodes'][number][] = [...demoGraph.nodes];
+  const edges: DemoGraphLike['edges'][number][] = [];
+  const fittings: Record<string, { id: string; kind: string }[]> = {
+    'pool-suction': [
+      { id: 'demo.poolPump.suction.iso', kind: 'isolating-valve' },
+    ],
+    'pool-pump-to-filter': [
+      ...(nonReturn
+        ? [{ id: 'demo.poolPump.discharge.nrv', kind: 'non-return-valve' }]
+        : []),
+      { id: 'demo.poolPump.discharge.iso', kind: 'isolating-valve' },
+    ],
+    'pool-pump-power': [
+      { id: 'demo.poolPump.power.isolator', kind: 'power-isolator' },
+    ],
+    'breaker-to-boiler': [
+      { id: 'demo.boiler.power.isolator', kind: 'power-isolator' },
+    ],
+  };
+  for (const edge of demoGraph.edges) {
+    const inline = fittings[edge.id];
+    if (!inline) {
+      edges.push(edge);
+      continue;
+    }
+    const medium = nodes
+      .find((node) => node.id === edge.sourceId)!
+      .ports?.find((port) => port.name === edge.sourcePort)?.data.medium;
+    let sourceId = edge.sourceId;
+    let sourcePort = edge.sourcePort;
+    inline.forEach(({ id, kind }, index) => {
+      nodes.push({
+        id,
+        data: { kind },
+        ports: [
+          { name: 'in', data: { medium } },
+          { name: 'out', data: { medium } },
+        ],
+      });
+      edges.push({
+        id: `${edge.id}#${index}`,
+        sourceId,
+        sourcePort,
+        targetId: id,
+        targetPort: 'in',
+      });
+      sourceId = id;
+      sourcePort = 'out';
+    });
+    edges.push({
+      id: `${edge.id}#${inline.length}`,
+      sourceId,
+      sourcePort,
+      targetId: edge.targetId,
+      targetPort: edge.targetPort,
+    });
+  }
+  return { nodes, edges };
+}
+
 describe('dev19 pool plant graph', () => {
+  it('runs identically on open expanded lines', () => {
+    const base = createPortGraphDemo();
+    const expanded = createPortGraphDemo(expandedGraph());
+    base.step(120);
+    expanded.step(120);
+    expect(expanded.state.poolFlowKgPerSecond).toBe(
+      base.state.poolFlowKgPerSecond,
+    );
+    expect(expanded.state.poolPumpA).toBe(base.state.poolPumpA);
+    expect(expanded.state.boilerMode).toBe(base.state.boilerMode);
+    expect(expanded.state.boilerKW).toBe(base.state.boilerKW);
+    expect(expanded.state.poolC).toBe(base.state.poolC);
+    expect(expanded.state.electricKWh).toBe(base.state.electricKWh);
+    expect(Object.keys(expanded.state.fittings)).toHaveLength(4);
+    expect(base.state.fittings).toEqual({});
+  });
+
+  it('stops circulation when the suction valve is shut', () => {
+    const demo = createPortGraphDemo(expandedGraph());
+    demo.setFitting('demo.poolPump.suction.iso', false);
+    expect(demo.fittingOpen('demo.poolPump.suction.iso')).toBe(false);
+    expect(
+      demo.connected('demo.remoteSuction', 'out', 'demo.poolPump', 'suction'),
+    ).toBe(false);
+    demo.step(1);
+    expect(demo.state.poolFlowKgPerSecond).toBe(0);
+    demo.toggleFitting('demo.poolPump.suction.iso');
+    demo.step(1);
+    expect(demo.state.poolFlowKgPerSecond).toBeGreaterThan(0);
+    expect(() => demo.setFitting('missing', false)).toThrow();
+    expect(() => demo.toggleFitting('missing')).toThrow();
+    expect(() => demo.fittingOpen('missing')).toThrow();
+  });
+
+  it('stops the pool pump when its power isolator is off', () => {
+    const demo = createPortGraphDemo(expandedGraph());
+    demo.setFitting('demo.poolPump.power.isolator', false);
+    demo.step(1);
+    expect(demo.state.poolPumpA).toBe(0);
+    expect(demo.state.poolFlowKgPerSecond).toBe(0);
+  });
+
+  it('reports the boiler unpowered when its isolator is off', () => {
+    const demo = createPortGraphDemo(expandedGraph());
+    demo.setFitting('demo.boiler.power.isolator', false);
+    demo.step(1);
+    expect(demo.state.boilerMode).toBe('unpowered');
+    expect(demo.state.boilerKW).toBe(0);
+    expect(demo.state.boilerControl.state.on).toBe(true);
+  });
+
+  it('passes a non-return valve only in the forward direction', () => {
+    const demo = createPortGraphDemo(expandedGraph(true));
+    expect(
+      demo.connected('demo.poolPump', 'discharge', 'demo.filter', 'in'),
+    ).toBe(true);
+    expect(
+      demo.connected('demo.filter', 'in', 'demo.poolPump', 'discharge'),
+    ).toBe(false);
+    demo.step(1);
+    expect(demo.state.poolFlowKgPerSecond).toBeGreaterThan(0);
+    demo.setFitting('demo.poolPump.discharge.iso', false);
+    expect(
+      demo.connected('demo.poolPump', 'discharge', 'demo.filter', 'in'),
+    ).toBe(false);
+  });
+
   it('twins every visible node and connects every required typed port', () => {
     expect(demoGraphProblems()).toEqual([]);
     const visible = demoGraph.nodes.filter((node) => node.data.visible);

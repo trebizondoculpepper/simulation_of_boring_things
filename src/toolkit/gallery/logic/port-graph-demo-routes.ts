@@ -25,6 +25,10 @@ import {
   expandForPlumbing,
   operatorFor,
 } from '../../../game/plant/plumbing-expansion';
+import {
+  plumbedDemoGraph,
+  plumbedGraphIssues,
+} from '../../../game/plant/plumbed-demo-graph';
 import type {
   Actuation,
   FittingKind,
@@ -556,7 +560,10 @@ export const ADOPTED_RULES: PlumbingRules = {
 };
 
 /** The plumber's expansion of Dev19 (`plumbing-expansion.ts`). */
-export function demoExpansion(rules: PlumbingRules = CLAUDE_RULES) {
+export function demoExpansion(
+  rules: PlumbingRules = CLAUDE_RULES,
+  omit: ReadonlySet<string> = new Set(),
+) {
   return expandForPlumbing(
     demoGraph.nodes.map((n) => ({ id: n.id, kind: n.data.kind })),
     demoGraph.edges.flatMap((e) => {
@@ -589,6 +596,7 @@ export function demoExpansion(rules: PlumbingRules = CLAUDE_RULES) {
           ? new Set(['pool-pump', 'circulator'])
           : new Set(),
       powerIsolators: rules.powerIsolators,
+      omit,
     },
   );
 }
@@ -710,6 +718,8 @@ export function demoPlumbing(
   const terminals: { id: string; kind: MagicTerminal; at: Vec3; od: number }[] =
     [];
   const problems: string[] = [];
+  /** Fittings that could not be set where anyone can reach them: not installed. */
+  const leftOut = new Set<string>();
   const count: Record<Medium, number> = { gas: 0, water: 0, power: 0, flue: 0 };
   const laneY: Record<Medium, number> = {
     gas: 2.15,
@@ -887,6 +897,9 @@ export function demoPlumbing(
         spot.reachable ||
         line.through.includes(spot.id),
     );
+    for (const spot of spots)
+      if (!kept.includes(spot) && !line.through.includes(spot.id))
+        leftOut.add(spot.id);
     if (kept.length < spots.length)
       problems.push(
         ...spots
@@ -945,5 +958,13 @@ export function demoPlumbing(
   const placed = { ...layout, places };
   for (const line of lines)
     if (line.medium === 'power' || line.medium === 'flue') plumb(line, placed);
-  return { places, runs, devices, terminals, problems };
+  // What the plumber installed, as the graph the room runs (prompt 018,
+  // "The bound room"): the plan with its installed fittings as nodes.
+  for (const id of problems.flatMap(
+    (p) => p.match(/^(\S+): no straight/)?.[1] ?? [],
+  ))
+    leftOut.add(id);
+  const graph = plumbedDemoGraph(demoExpansion(rules, leftOut));
+  problems.push(...plumbedGraphIssues(graph));
+  return { places, runs, devices, terminals, problems, graph };
 }

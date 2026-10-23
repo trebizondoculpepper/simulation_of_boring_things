@@ -633,6 +633,27 @@ export const demoGraph = createGraph({
   ],
 });
 
+export interface DemoGraphLike {
+  nodes: readonly {
+    id: string;
+    data: { kind: string };
+    ports?: readonly {
+      name: string;
+      data: {
+        medium?: string;
+        control?: { access: string; valueType: string; unit: string };
+      };
+    }[];
+  }[];
+  edges: readonly {
+    id: string;
+    sourceId: string;
+    sourcePort?: string;
+    targetId: string;
+    targetPort?: string;
+  }[];
+}
+
 export function demoGraphProblems(): string[] {
   const problems = getGraphIssues(demoGraph).map((issue) => issue.message);
   const nodes = new Map(demoGraph.nodes.map((node) => [node.id, node]));
@@ -677,6 +698,7 @@ export const demoVisualBindings: readonly Extract<
   .map(([nodeId, kind]) => ({ role: 'functional' as const, nodeId, kind }));
 
 export interface DemoState {
+  fittings: Record<string, { open: boolean }>;
   gasKg: number;
   gasKgPerSecond: number;
   gasCubicMetres: number;
@@ -727,8 +749,15 @@ const remoteIds = [
   'demo.remoteMakeup',
 ] as const;
 
-export function createPortGraphDemo() {
+export function createPortGraphDemo(graph: DemoGraphLike = demoGraph) {
   const state: DemoState = {
+    fittings: Object.fromEntries(
+      graph.nodes
+        .filter((node) =>
+          ['isolating-valve', 'power-isolator'].includes(node.data.kind),
+        )
+        .map((node) => [node.id, { open: true }]),
+    ),
     gasKg: 0,
     gasKgPerSecond: 0,
     gasCubicMetres: 0,
@@ -774,30 +803,67 @@ export function createPortGraphDemo() {
     (tank.waterKg * tank.heatCapacityKJPerKgK * state.tankC) / 3600;
   const initialPoolKWh =
     (pool.waterKg * pool.heatCapacityKJPerKgK * state.poolC) / 3600;
-  const connected = (a: string, ap: string, b: string, bp: string) =>
-    demoGraph.edges.some(
-      (e) =>
-        e.sourceId === a &&
-        e.sourcePort === ap &&
-        e.targetId === b &&
-        e.targetPort === bp,
-    );
+  const nodes = new Map(graph.nodes.map((node) => [node.id, node]));
+  const edgesBySource = new Map<string, DemoGraphLike['edges'][number][]>();
+  for (const edge of graph.edges) {
+    const key = `${edge.sourceId}\0${edge.sourcePort}`;
+    const outgoing = edgesBySource.get(key) ?? [];
+    outgoing.push(edge);
+    edgesBySource.set(key, outgoing);
+  }
+  const connected = (a: string, ap: string, b: string, bp: string) => {
+    const pending = [`${a}\0${ap}`];
+    const visited = new Set<string>();
+    while (pending.length) {
+      const key = pending.pop()!;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      for (const edge of edgesBySource.get(key) ?? []) {
+        if (edge.targetId === b && edge.targetPort === bp) return true;
+        const kind = nodes.get(edge.targetId)?.data.kind;
+        if (
+          edge.targetPort === 'in' &&
+          (kind === 'non-return-valve' ||
+            ((kind === 'isolating-valve' || kind === 'power-isolator') &&
+              state.fittings[edge.targetId]?.open))
+        )
+          pending.push(`${edge.targetId}\0out`);
+      }
+    }
+    return false;
+  };
+  const fitting = (id: string) => {
+    const item = state.fittings[id];
+    if (!item) throw new Error(`${id}: unknown fitting`);
+    return item;
+  };
   const remote = (id: string) => state.remote[id].actual;
   return {
-    graph: demoGraph,
+    graph,
     state,
+    connected,
+    setFitting(id: string, open: boolean) {
+      fitting(id).open = open;
+    },
+    toggleFitting(id: string) {
+      const item = fitting(id);
+      item.open = !item.open;
+    },
+    fittingOpen(id: string) {
+      return fitting(id).open;
+    },
     readMimic(edgeId: string): number | boolean {
-      const e = demoGraph.edges.find(
+      const e = graph.edges.find(
         (item) =>
           item.id === edgeId &&
           ['demo.mimic', 'demo.poolMimic', 'demo.poolSign'].includes(
             item.targetId,
           ),
       );
-      const source = demoGraph.nodes
+      const source = graph.nodes
         .find((node) => node.id === e?.sourceId)
         ?.ports?.find((p) => p.name === e?.sourcePort);
-      const target = demoGraph.nodes
+      const target = graph.nodes
         .find((node) => node.id === e?.targetId)
         ?.ports?.find((p) => p.name === e?.targetPort);
       if (
@@ -856,12 +922,12 @@ export function createPortGraphDemo() {
       }
     },
     commandMimic(edgeId: string, on: boolean) {
-      const e = demoGraph.edges.find(
+      const e = graph.edges.find(
         (item) =>
           item.id === edgeId &&
           ['demo.mimic', 'demo.poolMimic'].includes(item.sourceId),
       );
-      const target = demoGraph.nodes
+      const target = graph.nodes
         .find((node) => node.id === e?.targetId)
         ?.ports?.find((p) => p.name === e?.targetPort);
       if (
@@ -878,10 +944,8 @@ export function createPortGraphDemo() {
         state.remote[e.targetId].command = on;
     },
     setPoolSetpoint(celsius: number) {
-      const e = demoGraph.edges.find(
-        (edge) => edge.id === 'command-pool-target',
-      );
-      const target = demoGraph.nodes
+      const e = graph.edges.find((edge) => edge.id === 'command-pool-target');
+      const target = graph.nodes
         .find((node) => node.id === e?.targetId)
         ?.ports?.find((port) => port.name === e?.targetPort);
       if (
@@ -904,7 +968,7 @@ export function createPortGraphDemo() {
         device.localOverride === null ? !device.command : null;
     },
     readControlPort(nodeId: 'demo.boiler', portName: 'temperature'): Celsius {
-      const port = demoGraph.nodes
+      const port = graph.nodes
         .find((node) => node.id === nodeId)
         ?.ports?.find((p) => p.name === portName);
       if (port?.data.control?.access !== 'read')
@@ -916,7 +980,7 @@ export function createPortGraphDemo() {
       portName: 'setpoint',
       value: Celsius,
     ) {
-      const port = demoGraph.nodes
+      const port = graph.nodes
         .find((node) => node.id === nodeId)
         ?.ports?.find((p) => p.name === portName);
       if (port?.data.control?.access !== 'write')
@@ -938,8 +1002,7 @@ export function createPortGraphDemo() {
       state.boilerControl.setSetpoint(value);
     },
     command(nodeId: string, action: 'toggle') {
-      const kind = demoGraph.nodes.find((node) => node.id === nodeId)?.data
-        .kind;
+      const kind = graph.nodes.find((node) => node.id === nodeId)?.data.kind;
       if (kind === 'mains') state.mainsOn = !state.mainsOn;
       else if (kind === 'boiler') this.pressBoiler('power');
       else if (kind === 'circulator') state.pumpOn = !state.pumpOn;
@@ -968,16 +1031,20 @@ export function createPortGraphDemo() {
       const primaryRuns =
         powered &&
         state.pumpOn &&
+        connected('demo.mains', 'feeder', 'demo.pump', 'power') &&
         remote('demo.remoteWater') &&
         connected('demo.tank', 'supply', 'demo.remoteWater', 'in') &&
         connected('demo.remoteWater', 'out', 'demo.pump', 'suction');
       const poolRuns =
         powered &&
         state.poolPumpOn &&
+        connected('demo.mains', 'feeder', 'demo.poolPump', 'power') &&
         remote('demo.remoteSuction') &&
         remote('demo.remoteReturn') &&
         state.balanceKg > 20 &&
         connected('demo.pool', 'overflow', 'demo.balance', 'overflow') &&
+        connected('demo.balance', 'supply', 'demo.remoteSuction', 'in') &&
+        connected('demo.remoteSuction', 'out', 'demo.poolPump', 'suction') &&
         connected('demo.poolPump', 'discharge', 'demo.filter', 'in') &&
         connected('demo.filter', 'out', 'demo.treatment', 'in') &&
         connected('demo.treatment', 'out', 'demo.hx', 'pool-in') &&
@@ -993,9 +1060,14 @@ export function createPortGraphDemo() {
       state.filterDifferentialBar = poolRuns
         ? rating['sand-filter'].cleanDifferentialBar + state.filterLoad * 0.5
         : 0;
+      const boilerPowered =
+        powered &&
+        remote('demo.remotePower') &&
+        connected('demo.mains', 'feeder', 'demo.remotePower', 'in') &&
+        connected('demo.remotePower', 'out', 'demo.boiler', 'power');
       state.boilerMode = !state.boilerOn
         ? 'off'
-        : !powered || !remote('demo.remotePower')
+        : !boilerPowered
           ? 'unpowered'
           : !primaryRuns
             ? 'no-flow'
@@ -1054,7 +1126,8 @@ export function createPortGraphDemo() {
         powered &&
         remote('demo.remoteMakeup') &&
         state.balanceKg < 350 &&
-        connected('demo.makeup', 'supply', 'demo.remoteMakeup', 'in')
+        connected('demo.makeup', 'supply', 'demo.remoteMakeup', 'in') &&
+        connected('demo.remoteMakeup', 'out', 'demo.balance', 'makeup')
           ? rating['balance-tank'].makeUpKgPerSecond * dt
           : 0;
       state.balanceKg = Math.max(
@@ -1092,9 +1165,7 @@ export function createPortGraphDemo() {
         ? (primaryRuns ? rating.circulator.electricalKW : 0) +
           (poolRuns ? rating['pool-pump'].electricalKW : 0) +
           (state.dosing ? rating.treatment.electricalKW : 0) +
-          (state.boilerOn && remote('demo.remotePower')
-            ? rating.boiler.controlsKW
-            : 0) +
+          (state.boilerOn && boilerPowered ? rating.boiler.controlsKW : 0) +
           rating.mimic.electricalKW +
           rating['pool-mimic'].electricalKW +
           rating['pool-info-sign'].electricalKW +
@@ -1104,7 +1175,7 @@ export function createPortGraphDemo() {
         : 0;
       state.electricKWh += (powerKW * dt) / 3600;
       state.boilerControl.showPhysical({
-        powered: powered && remote('demo.remotePower'),
+        powered: boilerPowered,
         firing: state.boilerKW > 0,
         flowing: state.pumpA > 0,
         waterC: state.tankC,

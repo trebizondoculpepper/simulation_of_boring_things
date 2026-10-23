@@ -60,7 +60,26 @@ import {
 } from '../../../components/pool/views/pool-info-sign';
 
 /** The same graph IDs address the model, all visible machines, and their ports. */
-const demo = createPortGraphDemo();
+/**
+ * The simulation the room runs: on the plan until the room is laid out,
+ * then on the plumber's graph, with every fitting it installed as a node
+ * of its own (`prepareRoom`; `doc/prompts/018-plumber-valves-and-isolators.md`,
+ * "The bound room").
+ */
+let demo = createPortGraphDemo();
+let plumbed: {
+  layout: PlantRoomLayout;
+  plumbing: ReturnType<typeof demoPlumbing>;
+} | null = null;
+
+/** Plumb the laid-out room and run the simulation on what was installed. */
+export function prepareRoomWith(layout: PlantRoomLayout, rules: PlumbingRules) {
+  const plumbing = demoPlumbing(layout, rules);
+  plumbed = { layout, plumbing };
+  demo = createPortGraphDemo(plumbing.graph);
+}
+export const prepareRoom = (layout: PlantRoomLayout) =>
+  prepareRoomWith(layout, ADOPTED_RULES);
 const visual: Record<DemoKind, { title: string; colour: string }> = {
   'gas-main': { title: 'Mains gas', colour: '#b9a458' },
   'gas-meter': { title: 'Natural gas flow meter', colour: '#c9c8bb' },
@@ -680,19 +699,22 @@ export const EXHIBITS: readonly PlantExhibit[] = demoVisualBindings.map(
 export const buildRoomServices = (
   kit: Parameters<PlantExhibit['build']>[0],
   layout: PlantRoomLayout,
-) => buildPlumbedServices(kit, layout, ADOPTED_RULES);
+): LiveExhibit => buildPlumbedServices(kit, layout, ADOPTED_RULES);
 
 /** The room's services, plumbed by one set of rules (`PlumbingRules`). */
 export function buildPlumbedServices(
   kit: Parameters<PlantExhibit['build']>[0],
   layout: PlantRoomLayout,
   rules: PlumbingRules,
-) {
+): LiveExhibit {
   const t = tools(kit);
   const group = new Group();
   // The plumber's lines (`doc/prompts/018-plumber-valves-and-isolators.md`):
   // each split at the valves and isolators set into it.
-  const plumbing = demoPlumbing(layout, rules);
+  const plumbing =
+    plumbed?.layout === layout ? plumbed.plumbing : demoPlumbing(layout, rules);
+  // Each fitting a working part, bound to its node in the simulation.
+  const fittingParts = createPartSet();
   for (const route of plumbing.runs) {
     const request = demoLineRequest(route.edgeId, route.medium);
     const { group: run } = createLine(kit, request, route.points, {
@@ -722,20 +744,31 @@ export function buildPlumbedServices(
   }
   for (const device of plumbing.devices) {
     if (device.kind === 'remote-valve') continue; // an exhibit of its own
-    const fitting = createInlineFitting(kit, {
-      kind: device.kind,
-      medium: device.medium,
-      operator: device.operator,
-      od: device.od,
-      heating:
-        device.medium === 'water' &&
-        demoLineRequest(device.edgeId, 'water').commodity === 'lthw',
-      drop: Math.max(0.3, device.at[1] - 1),
-    });
-    fitting.name = `${fitting.name}: ${device.id}`;
-    fitting.userData.plumbedId = device.id;
+    const fitting = createInlineFitting(
+      kit,
+      {
+        kind: device.kind,
+        medium: device.medium,
+        operator: device.operator,
+        od: device.od,
+        heating:
+          device.medium === 'water' &&
+          demoLineRequest(device.edgeId, 'water').commodity === 'lthw',
+        drop: Math.max(0.3, device.at[1] - 1),
+      },
+      // Bound to its node: a valve open or shut, an isolator on or off.
+      device.kind === 'non-return-valve'
+        ? undefined
+        : {
+            open: () => demo.fittingOpen(device.id),
+            set: (open) => demo.setFitting(device.id, open),
+          },
+    );
+    fittingParts.add(fitting);
+    fitting.object.name = `${fitting.object.name}: ${device.id}`;
+    fitting.object.userData.plumbedId = device.id;
     group.add(
-      placeFitting(fitting, device.kind, device.at, device.along, [
+      placeFitting(fitting.object, device.kind, device.at, device.along, [
         -device.at[0],
         -device.at[2],
       ]),
@@ -799,5 +832,10 @@ export function buildPlumbedServices(
     );
     drop.userData.controlNodeId = nodeId;
   }
-  return group;
+  const services: LiveExhibit = {
+    object: group,
+    parts: fittingParts,
+    update: (delta) => fittingParts.update(delta),
+  };
+  return services;
 }

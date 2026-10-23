@@ -1,7 +1,11 @@
 import type { PlantExhibit } from './exhibit';
 import { CODEX_RULES } from '../../logic/port-graph-demo-routes';
 import type { PlantRoomLayout } from '../../logic/plant-room-layout';
-import { EXHIBITS, buildPlumbedServices } from './port-graph-demo';
+import {
+  EXHIBITS,
+  buildPlumbedServices,
+  prepareRoomWith,
+} from './port-graph-demo';
 
 /**
  * Dev19b: Dev19's machines, laid out the same way, plumbed by Codex's
@@ -18,3 +22,6 @@ export const buildRoomServices = (
   kit: Parameters<PlantExhibit['build']>[0],
   layout: PlantRoomLayout,
 ) => buildPlumbedServices(kit, layout, CODEX_RULES);
+
+export const prepareRoom = (layout: PlantRoomLayout) =>
+  prepareRoomWith(layout, CODEX_RULES);
