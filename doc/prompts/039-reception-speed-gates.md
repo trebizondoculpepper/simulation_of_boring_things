@@ -27,7 +27,7 @@ The owner wants them free-flow: no card, they open as the walker passes. The lan
 
 - Its sensing and motion pure, tested logic (a state: the wings' positions, opening and closing, the lane's direction, who is in the lane), as the doors' are; the view only shows it.
 - Its own maker in `brands.ts`, its mark on the cabinet.
-- A newer item than the plant's 2000: the forty-years rule allows it, but its era is worth a thought when it is modelled.
+- A modern item, welcome as one: the game is set in the present day, its technology spanning the 1980s to the late 2020s for the variety of its interfaces (`AGENTS.md`).
 - Modelled in a dev room first, then fitted to the reception.
 
 ## Order of work
