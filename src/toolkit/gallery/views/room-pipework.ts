@@ -1,3 +1,4 @@
+import { retiredFrom } from '../logic/retired-rooms';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createMicroLabel } from '../../components/core/views/eighties-controls';
@@ -112,7 +113,12 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     group.add(tee);
   }
   function valve(run: PipeRun, v: Valve) {
-    const installed = installedValveFor(room, run.name, v.name);
+    // A retired room's valves are the room's it was taken from.
+    const installed = installedValveFor(
+      retiredFrom(room) ?? room,
+      run.name,
+      v.name,
+    );
     const binding = {
       open: () =>
         store?.world.value.installedValves[installed.assetId] ??

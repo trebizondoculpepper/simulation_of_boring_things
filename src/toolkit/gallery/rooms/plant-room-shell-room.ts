@@ -126,6 +126,11 @@ export function startPlantRoomShell(
   size: PlantRoomSize,
   /** The pool hall this one is the plant room of, if any; the size's template otherwise. */
   hall?: PlantHall,
+  /**
+   * A retired room to fill it with in place of the hall's own (`retired-rooms.ts`):
+   * its frozen machine layout and pipes, in the hall's plant room's shell.
+   */
+  retired?: string,
 ) {
   const metre = METRE;
   const scene = new Scene();
@@ -143,9 +148,12 @@ export function startPlantRoomShell(
   const parts = createPartSet();
   // Each hall's plant room is numbered as its hall is: plant room 4 is
   // POOL-04's, the footbath's.
-  const name = hall
-    ? `PLANT ROOM ${Number(hall.slice(-2))} – ${POOL_HALLS[hall].title.toUpperCase()}`
-    : undefined;
+  const name = retired
+    ? `${retired.toUpperCase()} · RETIRED: THE ${POOL_HALLS[hall!].title.toUpperCase()} PLANT ROOM`
+    : hall
+      ? `PLANT ROOM ${Number(hall.slice(-2))} – ${POOL_HALLS[hall].title.toUpperCase()}`
+      : undefined;
+  const equipmentRoom = retired ?? (hall ? `plant_${hall}` : undefined);
   const {
     group: rooms,
     door,
@@ -157,7 +165,7 @@ export function startPlantRoomShell(
   const plan = plantRoomPlan(size);
   // A hall's plant room's machines, placed (`logic/room-equipment.ts`).
   const machines = hall
-    ? createRoomEquipment(kit, `plant_${hall}`, plan.floor)
+    ? createRoomEquipment(kit, equipmentRoom!, plan.floor)
     : null;
   if (machines) rooms.add(machines.group);
   // A packaged cabinet's services (`logic/cabinet-pipes.ts`): its pipes
@@ -165,7 +173,7 @@ export function startPlantRoomShell(
   // a wall; its drain's tundish and gully; and its isolator, which feeds
   // it: switched off, the cabinet is dead.
   const services = hall
-    ? cabinetServices(kit, `plant_${hall}`, plan.floor)
+    ? cabinetServices(kit, equipmentRoom!, plan.floor)
     : null;
   if (services) rooms.add(services.group);
   const supply = machines

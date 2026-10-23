@@ -283,6 +283,17 @@ const starter = async (
     const size = POOL_HALLS[hall].plantDoor!.size;
     return (surface) => startPlantRoomShell(surface, size, hall);
   }
+  if (room === 'retired0') {
+    // The Olympic pool's plant room as it was on 2026-10-23, frozen as a
+    // reference: its shell, with its retired layout and pipes.
+    const [{ startPlantRoomShell }, { POOL_HALLS }] = await Promise.all([
+      import('./toolkit/gallery/rooms/plant-room-shell-room'),
+      import('./toolkit/gallery/logic/pool-halls'),
+    ]);
+    const size = POOL_HALLS.pool_02.plantDoor!.size;
+    return (surface) =>
+      startPlantRoomShell(surface, size, 'pool_02', 'retired0');
+  }
   if (room === 'wet_hall')
     return (await import('./toolkit/gallery/rooms/shell-room')).startWetHall;
   if (

@@ -1,3 +1,4 @@
+import { retiredLayout } from './retired-rooms';
 import { placeStacks } from './air-plant';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { plantRoomPlan, PLANT_ROOM } from './plant-rooms';
@@ -1012,7 +1013,13 @@ export function feederIsolatorSpace(box: RoomBox): Footprint {
   };
 }
 
+/** A room's machines, placed: a retired room's frozen layout (`retired-rooms.ts`), or its own, laid out now. */
 export function layoutRoom(room: string) {
+  return retiredLayout(room) ?? layoutRoomLive(room);
+}
+
+/** A room's machines, placed by its generator. */
+export function layoutRoomLive(room: string) {
   const found = roomEquipment(room);
   if (!found) return null;
   // Its notices and signs, laid out with its machines (`building-signs.ts`).

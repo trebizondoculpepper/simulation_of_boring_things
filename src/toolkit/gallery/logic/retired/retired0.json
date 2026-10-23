@@ -1,0 +1,1798 @@
+{
+  "note": "The Olympic pool plant room (plant_pool_02) as it was laid out on 2026-10-23, frozen as a reference (retired0): its machines placed and its pipes and ducts. Generated from layoutRoom and roomPipes; do not edit by hand.",
+  "from": "plant_pool_02",
+  "layout": {
+    "box": {
+      "w": 22,
+      "d": 22,
+      "keepClear": [
+        {
+          "minX": -1.3,
+          "maxX": 1.3,
+          "minZ": 9.4,
+          "maxZ": 11
+        },
+        {
+          "minX": 9.7,
+          "maxX": 11,
+          "minZ": -6.128,
+          "maxZ": -4.928
+        },
+        {
+          "minX": -11,
+          "maxX": -10.75,
+          "minZ": 9.700000000000001,
+          "maxZ": 10.1
+        }
+      ],
+      "solid": [
+        {
+          "minX": -11.05,
+          "maxX": 11,
+          "minZ": -11,
+          "maxZ": -9.75
+        },
+        {
+          "minX": 9.95,
+          "maxX": 11,
+          "minZ": -9.8,
+          "maxZ": -6.128
+        }
+      ],
+      "pipes": {
+        "north": 0.5,
+        "south": 0.5
+      },
+      "entry": {
+        "x": 0,
+        "z": 10.4
+      }
+    },
+    "items": [
+      {
+        "key": "balance-tank:9x8x3",
+        "label": "Olympic pool balance tank",
+        "w": 9.1,
+        "d": 8.899999999999999,
+        "h": 3.35,
+        "mount": "floor",
+        "back": 0.6
+      },
+      {
+        "key": "pump-pair",
+        "label": "Olympic pool circulation pumps, duty and standby, with strainers",
+        "w": 3.2,
+        "d": 2.4,
+        "h": 1.9,
+        "mount": "floor",
+        "back": 0.6
+      },
+      {
+        "key": "sand-filter:3",
+        "label": "Olympic pool sand filter 1",
+        "w": 3.6,
+        "d": 3.8,
+        "h": 3.55,
+        "mount": "floor",
+        "back": 0.6
+      },
+      {
+        "key": "sand-filter:3",
+        "label": "Olympic pool sand filter 2",
+        "w": 3.6,
+        "d": 3.8,
+        "h": 3.55,
+        "mount": "floor",
+        "back": 0.6
+      },
+      {
+        "key": "sand-filter:3",
+        "label": "Olympic pool sand filter 3",
+        "w": 3.6,
+        "d": 3.8,
+        "h": 3.55,
+        "mount": "floor",
+        "back": 0.6
+      },
+      {
+        "key": "sand-filter:3",
+        "label": "Olympic pool sand filter 4",
+        "w": 3.6,
+        "d": 3.8,
+        "h": 3.55,
+        "mount": "floor",
+        "back": 0.6
+      },
+      {
+        "key": "sand-filter:3",
+        "label": "Olympic pool sand filter 5",
+        "w": 3.6,
+        "d": 3.8,
+        "h": 3.55,
+        "mount": "floor",
+        "back": 0.6
+      },
+      {
+        "key": "uv-unit",
+        "label": "Olympic pool UV unit",
+        "w": 1.7,
+        "d": 1.6,
+        "h": 1.7,
+        "mount": "floor",
+        "back": 0.6
+      },
+      {
+        "key": "pump-panel",
+        "label": "Olympic pool local control panel",
+        "w": 2.7,
+        "d": 0.6,
+        "h": 2.45,
+        "mount": "floor",
+        "back": 0.6,
+        "walls": ["south", "west", "east"]
+      },
+      {
+        "key": "heat-exchanger",
+        "label": "Olympic pool plate heat exchanger",
+        "w": 1.5,
+        "d": 0.7,
+        "h": 1.2,
+        "mount": "floor",
+        "back": 0.6
+      },
+      {
+        "key": "ozone-generator:plant_pool_02",
+        "label": "Olympic pool ozone generator",
+        "w": 1.6,
+        "d": 0.5,
+        "h": 1.95,
+        "mount": "floor",
+        "back": 0.6
+      },
+      {
+        "key": "contact-tank",
+        "label": "Olympic pool ozone contact tank",
+        "w": 3.45,
+        "d": 3.45,
+        "h": 3.05,
+        "mount": "floor",
+        "back": 0.6
+      },
+      {
+        "key": "dosing-controller",
+        "label": "Olympic pool dosing controller and sample cells",
+        "w": 1,
+        "d": 0.25,
+        "h": 1.4,
+        "y": 1.35,
+        "mount": "wall",
+        "walls": ["east", "west"]
+      },
+      {
+        "key": "hypo-pumps",
+        "label": "Olympic pool hypochlorite dosing pumps",
+        "w": 1.2,
+        "d": 0.3,
+        "h": 1,
+        "y": 1.3,
+        "mount": "wall",
+        "walls": ["east", "west"]
+      },
+      {
+        "key": "acid-pump",
+        "label": "Olympic pool acid dosing pump",
+        "w": 0.7,
+        "d": 0.35,
+        "h": 0.8,
+        "y": 1.3,
+        "mount": "wall",
+        "walls": ["east", "west"]
+      }
+    ],
+    "placed": [
+      {
+        "item": {
+          "key": "balance-tank:9x8x3",
+          "label": "Olympic pool balance tank",
+          "w": 9.1,
+          "d": 8.899999999999999,
+          "h": 3.35,
+          "mount": "floor",
+          "back": 0.6
+        },
+        "x": -5.6499999999999995,
+        "z": -4.5,
+        "y": 0,
+        "yaw": 0,
+        "footprint": {
+          "minX": -10.2,
+          "maxX": -1.0999999999999996,
+          "minZ": -8.95,
+          "maxZ": -0.05000000000000071
+        },
+        "access": {
+          "minX": -10.2,
+          "maxX": -1.0999999999999996,
+          "minZ": -0.05000000000000071,
+          "maxZ": 0.8499999999999993
+        },
+        "side": "island"
+      },
+      {
+        "item": {
+          "key": "pump-pair",
+          "label": "Olympic pool circulation pumps, duty and standby, with strainers",
+          "w": 3.2,
+          "d": 2.4,
+          "h": 1.9,
+          "mount": "floor",
+          "back": 0.6
+        },
+        "x": -8.6,
+        "z": 2.6499999999999995,
+        "y": 0,
+        "yaw": 0,
+        "footprint": {
+          "minX": -10.2,
+          "maxX": -7,
+          "minZ": 1.4499999999999995,
+          "maxZ": 3.8499999999999996
+        },
+        "access": {
+          "minX": -10.2,
+          "maxX": -7,
+          "minZ": 3.8499999999999996,
+          "maxZ": 4.75
+        },
+        "side": "island"
+      },
+      {
+        "item": {
+          "key": "sand-filter:3",
+          "label": "Olympic pool sand filter 1",
+          "w": 3.6,
+          "d": 3.8,
+          "h": 3.55,
+          "mount": "floor",
+          "back": 0.6
+        },
+        "x": -8.399999999999999,
+        "z": 8,
+        "y": 0,
+        "yaw": 3.141592653589793,
+        "footprint": {
+          "minX": -10.2,
+          "maxX": -6.599999999999999,
+          "minZ": 6.1,
+          "maxZ": 9.9
+        },
+        "access": {
+          "minX": -10.2,
+          "maxX": -6.599999999999999,
+          "minZ": 5.199999999999999,
+          "maxZ": 6.1
+        },
+        "side": "island"
+      },
+      {
+        "item": {
+          "key": "sand-filter:3",
+          "label": "Olympic pool sand filter 2",
+          "w": 3.6,
+          "d": 3.8,
+          "h": 3.55,
+          "mount": "floor",
+          "back": 0.6
+        },
+        "x": -4.199999999999999,
+        "z": 8,
+        "y": 0,
+        "yaw": 3.141592653589793,
+        "footprint": {
+          "minX": -5.999999999999999,
+          "maxX": -2.3999999999999995,
+          "minZ": 6.1,
+          "maxZ": 9.9
+        },
+        "access": {
+          "minX": -5.999999999999999,
+          "maxX": -2.3999999999999995,
+          "minZ": 5.199999999999999,
+          "maxZ": 6.1
+        },
+        "side": "island"
+      },
+      {
+        "item": {
+          "key": "sand-filter:3",
+          "label": "Olympic pool sand filter 3",
+          "w": 3.6,
+          "d": 3.8,
+          "h": 3.55,
+          "mount": "floor",
+          "back": 0.6
+        },
+        "x": 8.5,
+        "z": -2.7279999999999998,
+        "y": 0,
+        "yaw": -1.5707963267948966,
+        "footprint": {
+          "minX": 6.6,
+          "maxX": 10.4,
+          "minZ": -4.528,
+          "maxZ": -0.9279999999999997
+        },
+        "access": {
+          "minX": 5.699999999999999,
+          "maxX": 6.6,
+          "minZ": -4.528,
+          "maxZ": -0.9279999999999997
+        },
+        "side": "island"
+      },
+      {
+        "item": {
+          "key": "sand-filter:3",
+          "label": "Olympic pool sand filter 4",
+          "w": 3.6,
+          "d": 3.8,
+          "h": 3.55,
+          "mount": "floor",
+          "back": 0.6
+        },
+        "x": 8.5,
+        "z": 1.4720000000000004,
+        "y": 0,
+        "yaw": -1.5707963267948966,
+        "footprint": {
+          "minX": 6.6,
+          "maxX": 10.4,
+          "minZ": -0.3279999999999996,
+          "maxZ": 3.2720000000000002
+        },
+        "access": {
+          "minX": 5.699999999999999,
+          "maxX": 6.6,
+          "minZ": -0.3279999999999996,
+          "maxZ": 3.2720000000000002
+        },
+        "side": "island"
+      },
+      {
+        "item": {
+          "key": "sand-filter:3",
+          "label": "Olympic pool sand filter 5",
+          "w": 3.6,
+          "d": 3.8,
+          "h": 3.55,
+          "mount": "floor",
+          "back": 0.6
+        },
+        "x": 8.5,
+        "z": 5.672000000000001,
+        "y": 0,
+        "yaw": -1.5707963267948966,
+        "footprint": {
+          "minX": 6.6,
+          "maxX": 10.4,
+          "minZ": 3.8720000000000008,
+          "maxZ": 7.472
+        },
+        "access": {
+          "minX": 5.699999999999999,
+          "maxX": 6.6,
+          "minZ": 3.8720000000000008,
+          "maxZ": 7.472
+        },
+        "side": "island"
+      },
+      {
+        "item": {
+          "key": "heat-exchanger",
+          "label": "Olympic pool plate heat exchanger",
+          "w": 1.5,
+          "d": 0.7,
+          "h": 1.2,
+          "mount": "floor",
+          "back": 0.6
+        },
+        "x": 2.65,
+        "z": 9.55,
+        "y": 0,
+        "yaw": 3.141592653589793,
+        "footprint": {
+          "minX": 1.9,
+          "maxX": 3.4,
+          "minZ": 9.200000000000001,
+          "maxZ": 9.9
+        },
+        "access": {
+          "minX": 1.9,
+          "maxX": 3.4,
+          "minZ": 8.3,
+          "maxZ": 9.200000000000001
+        },
+        "side": "island"
+      },
+      {
+        "item": {
+          "key": "pump-panel",
+          "label": "Olympic pool local control panel",
+          "w": 2.7,
+          "d": 0.6,
+          "h": 2.45,
+          "mount": "floor",
+          "back": 0.6,
+          "walls": ["south", "west", "east"]
+        },
+        "x": 5.35,
+        "z": 9.6,
+        "y": 0,
+        "yaw": 3.141592653589793,
+        "footprint": {
+          "minX": 3.9999999999999996,
+          "maxX": 6.699999999999999,
+          "minZ": 9.299999999999999,
+          "maxZ": 9.9
+        },
+        "access": {
+          "minX": 3.9999999999999996,
+          "maxX": 6.699999999999999,
+          "minZ": 8.399999999999999,
+          "maxZ": 9.299999999999999
+        },
+        "side": "island"
+      },
+      {
+        "item": {
+          "key": "contact-tank",
+          "label": "Olympic pool ozone contact tank",
+          "w": 3.45,
+          "d": 3.45,
+          "h": 3.05,
+          "mount": "floor",
+          "back": 0.6
+        },
+        "x": 1.4250000000000005,
+        "z": -8.025,
+        "y": 0,
+        "yaw": 0,
+        "footprint": {
+          "minX": -0.2999999999999996,
+          "maxX": 3.1500000000000004,
+          "minZ": -9.75,
+          "maxZ": -6.300000000000001
+        },
+        "access": {
+          "minX": -0.2999999999999996,
+          "maxX": 3.1500000000000004,
+          "minZ": -6.300000000000001,
+          "maxZ": -5.4
+        },
+        "side": "island"
+      },
+      {
+        "item": {
+          "key": "ozone-generator:plant_pool_02",
+          "label": "Olympic pool ozone generator",
+          "w": 1.6,
+          "d": 0.5,
+          "h": 1.95,
+          "mount": "floor",
+          "back": 0.6
+        },
+        "x": 4.55,
+        "z": -9.5,
+        "y": 0,
+        "yaw": 0,
+        "footprint": {
+          "minX": 3.75,
+          "maxX": 5.35,
+          "minZ": -9.75,
+          "maxZ": -9.25
+        },
+        "access": {
+          "minX": 3.75,
+          "maxX": 5.35,
+          "minZ": -9.25,
+          "maxZ": -8.35
+        },
+        "side": "island"
+      },
+      {
+        "item": {
+          "key": "uv-unit",
+          "label": "Olympic pool UV unit",
+          "w": 1.7,
+          "d": 1.6,
+          "h": 1.7,
+          "mount": "floor",
+          "back": 0.6
+        },
+        "x": 6.8,
+        "z": -8.95,
+        "y": 0,
+        "yaw": 0,
+        "footprint": {
+          "minX": 5.95,
+          "maxX": 7.6499999999999995,
+          "minZ": -9.75,
+          "maxZ": -8.149999999999999
+        },
+        "access": {
+          "minX": 5.95,
+          "maxX": 7.6499999999999995,
+          "minZ": -8.149999999999999,
+          "maxZ": -7.249999999999998
+        },
+        "side": "island"
+      },
+      {
+        "item": {
+          "key": "dosing-controller",
+          "label": "Olympic pool dosing controller and sample cells",
+          "w": 1,
+          "d": 0.25,
+          "h": 1.4,
+          "y": 1.35,
+          "mount": "wall",
+          "walls": ["east", "west"]
+        },
+        "x": 11,
+        "z": 8.472000000000001,
+        "y": 1.35,
+        "yaw": -1.5707963267948966,
+        "footprint": {
+          "minX": 10.75,
+          "maxX": 11,
+          "minZ": 7.972000000000001,
+          "maxZ": 8.972000000000001
+        },
+        "access": {
+          "minX": 9.85,
+          "maxX": 10.75,
+          "minZ": 7.972000000000001,
+          "maxZ": 8.972000000000001
+        },
+        "side": "east"
+      },
+      {
+        "item": {
+          "key": "hypo-pumps",
+          "label": "Olympic pool hypochlorite dosing pumps",
+          "w": 1.2,
+          "d": 0.3,
+          "h": 1,
+          "y": 1.3,
+          "mount": "wall",
+          "walls": ["east", "west"]
+        },
+        "x": 11,
+        "z": 9.872000000000002,
+        "y": 1.3,
+        "yaw": -1.5707963267948966,
+        "footprint": {
+          "minX": 10.7,
+          "maxX": 11,
+          "minZ": 9.272000000000002,
+          "maxZ": 10.472000000000001
+        },
+        "access": {
+          "minX": 9.799999999999999,
+          "maxX": 10.7,
+          "minZ": 9.272000000000002,
+          "maxZ": 10.472000000000001
+        },
+        "side": "east"
+      },
+      {
+        "item": {
+          "key": "acid-pump",
+          "label": "Olympic pool acid dosing pump",
+          "w": 0.7,
+          "d": 0.35,
+          "h": 0.8,
+          "y": 1.3,
+          "mount": "wall",
+          "walls": ["east", "west"]
+        },
+        "x": 9.85,
+        "z": 11,
+        "y": 1.3,
+        "yaw": 3.141592653589793,
+        "footprint": {
+          "minX": 9.5,
+          "maxX": 10.2,
+          "minZ": 10.65,
+          "maxZ": 11
+        },
+        "access": {
+          "minX": 9.45,
+          "maxX": 10.25,
+          "minZ": 9.75,
+          "maxZ": 10.65
+        },
+        "side": "south"
+      }
+    ],
+    "failed": []
+  },
+  "pipes": [
+    {
+      "through": [
+        {
+          "at": [-7.8999999999999995, 3, -11.1],
+          "normal": [0, 0, 1],
+          "thickness": 0.2,
+          "kind": "fire-collar"
+        }
+      ],
+      "name": "Overflow channel to the balance tank",
+      "kind": "pvc-pressure",
+      "od": 0.355,
+      "points": [
+        [-7.8999999999999995, 3, -11.2],
+        [-7.8999999999999995, 3, -8.899999999999999]
+      ],
+      "joins": ["Olympic pool balance tank"],
+      "service": "pool water",
+      "label": "FROM OVERFLOW",
+      "valves": []
+    },
+    {
+      "through": [
+        {
+          "at": [-3.3999999999999995, 3, -11.1],
+          "normal": [0, 0, 1],
+          "thickness": 0.2,
+          "kind": "fire-collar"
+        }
+      ],
+      "name": "Main drains to the balance tank",
+      "kind": "pvc-pressure",
+      "od": 0.355,
+      "points": [
+        [-3.3999999999999995, 3, -11.2],
+        [-3.3999999999999995, 3, -8.899999999999999]
+      ],
+      "joins": ["Olympic pool balance tank"],
+      "service": "pool water",
+      "label": "FROM MAIN DRAINS",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Suction main, balance tank to the pumps",
+      "kind": "pvc-pressure",
+      "od": 0.355,
+      "points": [
+        [-8.649999999999999, 0.25, -1.2000000000000002],
+        [-8.649999999999999, -0.45, -1.2000000000000002],
+        [-10.469999999999999, -0.45, -1.2000000000000002],
+        [-10.469999999999999, -0.45, 2.6499999999999995],
+        [-10.469999999999999, 0.53, 2.6499999999999995]
+      ],
+      "joins": ["Olympic pool balance tank", "Pump suction header"],
+      "service": "pool water",
+      "label": "SUCTION",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Pump suction header",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [-9.87, 0.53, 1.8999999999999995],
+        [-10.469999999999999, 0.53, 1.8999999999999995],
+        [-10.469999999999999, 0.53, 3.3999999999999995],
+        [-9.87, 0.53, 3.3999999999999995]
+      ],
+      "joins": [
+        "Olympic pool circulation pumps, duty and standby, with strainers",
+        "Suction main, balance tank to the pumps"
+      ],
+      "service": "pool water",
+      "label": "SUCTION",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Pump discharge header",
+      "kind": "pvc-pressure",
+      "od": 0.16,
+      "points": [
+        [-8.719999999999999, 1.75, 2.0199999999999996],
+        [-8.719999999999999, 2.4, 2.0199999999999996],
+        [-8.719999999999999, 2.4, 3.5199999999999996],
+        [-8.719999999999999, 1.75, 3.5199999999999996]
+      ],
+      "joins": [
+        "Olympic pool circulation pumps, duty and standby, with strainers",
+        "Pump discharge main"
+      ],
+      "service": "pool water",
+      "label": "DISCHARGE",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Pump discharge main",
+      "kind": "pvc-pressure",
+      "od": 0.355,
+      "points": [
+        [-8.719999999999999, 2.4, 2.7699999999999996],
+        [-8.719999999999999, 4, 2.7699999999999996],
+        [-8.719999999999999, 4, 5.8999999999999995]
+      ],
+      "joins": [
+        "Pump discharge header",
+        "Filter inlet header",
+        "Filter inlet header, west"
+      ],
+      "service": "pool water",
+      "label": "TO FILTERS",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Filter inlet header",
+      "kind": "pvc-pressure",
+      "od": 0.355,
+      "points": [
+        [-8.719999999999999, 4, 5.8999999999999995],
+        [6.3999999999999995, 4, 5.8999999999999995],
+        [6.3999999999999995, 4, -3.553]
+      ],
+      "joins": ["Pump discharge main", "Filter inlet header, west"],
+      "service": "pool water",
+      "label": "TO FILTERS",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Filter outlet header",
+      "kind": "pvc-pressure",
+      "od": 0.355,
+      "points": [
+        [-7.949999999999998, 4.6, 6.369091197874582],
+        [6.869091197874582, 4.6, 6.369091197874582],
+        [6.869091197874582, 4.6, -3.178]
+      ],
+      "joins": [],
+      "service": "pool water",
+      "label": "FILTERED",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Filter 1 inlet drop",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [-7.574999999999998, 4, 5.8999999999999995],
+        [-7.574999999999998, 2.3850000000000002, 5.8999999999999995]
+      ],
+      "joins": [
+        "Filter inlet header",
+        "Filter inlet header, west",
+        "Filter 1 inlet",
+        "Filter 1 backwash waste"
+      ],
+      "service": "pool water",
+      "label": "F1 INLET",
+      "valves": [
+        {
+          "at": [-7.574999999999998, 2.7350000000000003, 5.8999999999999995],
+          "axis": "y",
+          "name": "F1 inlet valve",
+          "facing": [1.2246467991473532e-16, 0, -1],
+          "od": 0.225,
+          "operator": "chain"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 1 inlet",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [-7.574999999999998, 2.3850000000000002, 5.8999999999999995],
+        [-7.574999999999998, 2.3850000000000002, 6.897253018363245]
+      ],
+      "joins": [
+        "Olympic pool sand filter 1",
+        "Filter 1 inlet drop",
+        "Filter 1 backwash waste"
+      ],
+      "service": "pool water",
+      "label": "F1 INLET",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Filter 1 backwash waste",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [-7.574999999999998, 2.3850000000000002, 5.8999999999999995],
+        [-7.574999999999998, 0.05, 5.8999999999999995]
+      ],
+      "joins": ["Filter 1 inlet", "Filter 1 inlet drop"],
+      "service": "drainage",
+      "label": "F1 WASTE",
+      "valves": [
+        {
+          "at": [-7.574999999999998, 1.1, 5.8999999999999995],
+          "axis": "y",
+          "name": "F1 backwash valve",
+          "facing": [1.2246467991473532e-16, 0, -1],
+          "od": 0.225,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 1 outlet",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [-7.949999999999998, 0.975, 6.719091197874581],
+        [-7.949999999999998, 0.975, 6.369091197874582],
+        [-7.949999999999998, 4.6, 6.369091197874582]
+      ],
+      "joins": ["Olympic pool sand filter 1", "Filter outlet header"],
+      "service": "pool water",
+      "label": "F1 OUTLET",
+      "valves": [
+        {
+          "at": [-7.949999999999998, 1.3, 6.369091197874582],
+          "axis": "y",
+          "name": "F1 outlet valve",
+          "facing": [1.2246467991473532e-16, 0, -1],
+          "od": 0.225,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 1 drain",
+      "kind": "pvc-drain",
+      "od": 0.09,
+      "points": [
+        [-8.849999999999998, 0.975, 6.719091197874581],
+        [-8.849999999999998, 0.975, 5.8999999999999995],
+        [-8.849999999999998, 0.05, 5.8999999999999995]
+      ],
+      "joins": ["Olympic pool sand filter 1"],
+      "service": "drainage",
+      "label": "F1 DRAIN",
+      "valves": [
+        {
+          "at": [-8.849999999999998, 0.4, 5.8999999999999995],
+          "axis": "y",
+          "name": "F1 drain valve",
+          "facing": [1.2246467991473532e-16, 0, -1],
+          "od": 0.09,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 2 inlet drop",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [-3.374999999999999, 4, 5.8999999999999995],
+        [-3.374999999999999, 2.3850000000000002, 5.8999999999999995]
+      ],
+      "joins": [
+        "Filter inlet header",
+        "Filter inlet header, west",
+        "Filter 2 inlet",
+        "Filter 2 backwash waste"
+      ],
+      "service": "pool water",
+      "label": "F2 INLET",
+      "valves": [
+        {
+          "at": [-3.374999999999999, 2.7350000000000003, 5.8999999999999995],
+          "axis": "y",
+          "name": "F2 inlet valve",
+          "facing": [1.2246467991473532e-16, 0, -1],
+          "od": 0.225,
+          "operator": "chain"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 2 inlet",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [-3.374999999999999, 2.3850000000000002, 5.8999999999999995],
+        [-3.374999999999999, 2.3850000000000002, 6.897253018363245]
+      ],
+      "joins": [
+        "Olympic pool sand filter 2",
+        "Filter 2 inlet drop",
+        "Filter 2 backwash waste"
+      ],
+      "service": "pool water",
+      "label": "F2 INLET",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Filter 2 backwash waste",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [-3.374999999999999, 2.3850000000000002, 5.8999999999999995],
+        [-3.374999999999999, 0.05, 5.8999999999999995]
+      ],
+      "joins": ["Filter 2 inlet", "Filter 2 inlet drop"],
+      "service": "drainage",
+      "label": "F2 WASTE",
+      "valves": [
+        {
+          "at": [-3.374999999999999, 1.1, 5.8999999999999995],
+          "axis": "y",
+          "name": "F2 backwash valve",
+          "facing": [1.2246467991473532e-16, 0, -1],
+          "od": 0.225,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 2 outlet",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [-3.749999999999999, 0.975, 6.719091197874581],
+        [-3.749999999999999, 0.975, 6.369091197874582],
+        [-3.749999999999999, 4.6, 6.369091197874582]
+      ],
+      "joins": ["Olympic pool sand filter 2", "Filter outlet header"],
+      "service": "pool water",
+      "label": "F2 OUTLET",
+      "valves": [
+        {
+          "at": [-3.749999999999999, 1.3, 6.369091197874582],
+          "axis": "y",
+          "name": "F2 outlet valve",
+          "facing": [1.2246467991473532e-16, 0, -1],
+          "od": 0.225,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 2 drain",
+      "kind": "pvc-drain",
+      "od": 0.09,
+      "points": [
+        [-4.6499999999999995, 0.975, 6.719091197874581],
+        [-4.6499999999999995, 0.975, 5.8999999999999995],
+        [-4.6499999999999995, 0.05, 5.8999999999999995]
+      ],
+      "joins": ["Olympic pool sand filter 2"],
+      "service": "drainage",
+      "label": "F2 DRAIN",
+      "valves": [
+        {
+          "at": [-4.6499999999999995, 0.4, 5.8999999999999995],
+          "axis": "y",
+          "name": "F2 drain valve",
+          "facing": [1.2246467991473532e-16, 0, -1],
+          "od": 0.09,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 3 inlet drop",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [6.3999999999999995, 4, -3.553],
+        [6.3999999999999995, 2.3850000000000002, -3.553]
+      ],
+      "joins": [
+        "Filter inlet header",
+        "Filter inlet header, west",
+        "Filter 3 inlet",
+        "Filter 3 backwash waste"
+      ],
+      "service": "pool water",
+      "label": "F3 INLET",
+      "valves": [
+        {
+          "at": [6.3999999999999995, 2.7350000000000003, -3.553],
+          "axis": "y",
+          "name": "F3 inlet valve",
+          "facing": [-1, 0, 6.123233995736766e-17],
+          "od": 0.225,
+          "operator": "chain"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 3 inlet",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [6.3999999999999995, 2.3850000000000002, -3.553],
+        [7.397253018363245, 2.3850000000000002, -3.553]
+      ],
+      "joins": [
+        "Olympic pool sand filter 3",
+        "Filter 3 inlet drop",
+        "Filter 3 backwash waste"
+      ],
+      "service": "pool water",
+      "label": "F3 INLET",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Filter 3 backwash waste",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [6.3999999999999995, 2.3850000000000002, -3.553],
+        [6.3999999999999995, 0.05, -3.553]
+      ],
+      "joins": ["Filter 3 inlet", "Filter 3 inlet drop"],
+      "service": "drainage",
+      "label": "F3 WASTE",
+      "valves": [
+        {
+          "at": [6.3999999999999995, 1.1, -3.553],
+          "axis": "y",
+          "name": "F3 backwash valve",
+          "facing": [-1, 0, 6.123233995736766e-17],
+          "od": 0.225,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 3 outlet",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [7.219091197874581, 0.975, -3.178],
+        [6.869091197874582, 0.975, -3.178],
+        [6.869091197874582, 4.6, -3.178]
+      ],
+      "joins": ["Olympic pool sand filter 3", "Filter outlet header"],
+      "service": "pool water",
+      "label": "F3 OUTLET",
+      "valves": [
+        {
+          "at": [6.869091197874582, 1.3, -3.178],
+          "axis": "y",
+          "name": "F3 outlet valve",
+          "facing": [-1, 0, 6.123233995736766e-17],
+          "od": 0.225,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 3 drain",
+      "kind": "pvc-drain",
+      "od": 0.09,
+      "points": [
+        [7.219091197874581, 0.975, -2.2779999999999996],
+        [6.3999999999999995, 0.975, -2.2779999999999996],
+        [6.3999999999999995, 0.05, -2.2779999999999996]
+      ],
+      "joins": ["Olympic pool sand filter 3"],
+      "service": "drainage",
+      "label": "F3 DRAIN",
+      "valves": [
+        {
+          "at": [6.3999999999999995, 0.4, -2.2779999999999996],
+          "axis": "y",
+          "name": "F3 drain valve",
+          "facing": [-1, 0, 6.123233995736766e-17],
+          "od": 0.09,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 4 inlet drop",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [6.3999999999999995, 4, 0.6470000000000005],
+        [6.3999999999999995, 2.3850000000000002, 0.6470000000000005]
+      ],
+      "joins": [
+        "Filter inlet header",
+        "Filter inlet header, west",
+        "Filter 4 inlet",
+        "Filter 4 backwash waste"
+      ],
+      "service": "pool water",
+      "label": "F4 INLET",
+      "valves": [
+        {
+          "at": [6.3999999999999995, 2.7350000000000003, 0.6470000000000005],
+          "axis": "y",
+          "name": "F4 inlet valve",
+          "facing": [-1, 0, 6.123233995736766e-17],
+          "od": 0.225,
+          "operator": "chain"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 4 inlet",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [6.3999999999999995, 2.3850000000000002, 0.6470000000000005],
+        [7.397253018363245, 2.3850000000000002, 0.6470000000000005]
+      ],
+      "joins": [
+        "Olympic pool sand filter 4",
+        "Filter 4 inlet drop",
+        "Filter 4 backwash waste"
+      ],
+      "service": "pool water",
+      "label": "F4 INLET",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Filter 4 backwash waste",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [6.3999999999999995, 2.3850000000000002, 0.6470000000000005],
+        [6.3999999999999995, 0.05, 0.6470000000000005]
+      ],
+      "joins": ["Filter 4 inlet", "Filter 4 inlet drop"],
+      "service": "drainage",
+      "label": "F4 WASTE",
+      "valves": [
+        {
+          "at": [6.3999999999999995, 1.1, 0.6470000000000005],
+          "axis": "y",
+          "name": "F4 backwash valve",
+          "facing": [-1, 0, 6.123233995736766e-17],
+          "od": 0.225,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 4 outlet",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [7.219091197874581, 0.975, 1.0220000000000005],
+        [6.869091197874582, 0.975, 1.0220000000000005],
+        [6.869091197874582, 4.6, 1.0220000000000005]
+      ],
+      "joins": ["Olympic pool sand filter 4", "Filter outlet header"],
+      "service": "pool water",
+      "label": "F4 OUTLET",
+      "valves": [
+        {
+          "at": [6.869091197874582, 1.3, 1.0220000000000005],
+          "axis": "y",
+          "name": "F4 outlet valve",
+          "facing": [-1, 0, 6.123233995736766e-17],
+          "od": 0.225,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 4 drain",
+      "kind": "pvc-drain",
+      "od": 0.09,
+      "points": [
+        [7.219091197874581, 0.975, 1.9220000000000006],
+        [6.3999999999999995, 0.975, 1.9220000000000006],
+        [6.3999999999999995, 0.05, 1.9220000000000006]
+      ],
+      "joins": ["Olympic pool sand filter 4"],
+      "service": "drainage",
+      "label": "F4 DRAIN",
+      "valves": [
+        {
+          "at": [6.3999999999999995, 0.4, 1.9220000000000006],
+          "axis": "y",
+          "name": "F4 drain valve",
+          "facing": [-1, 0, 6.123233995736766e-17],
+          "od": 0.09,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 5 inlet drop",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [6.3999999999999995, 4, 4.847],
+        [6.3999999999999995, 2.3850000000000002, 4.847]
+      ],
+      "joins": [
+        "Filter inlet header",
+        "Filter inlet header, west",
+        "Filter 5 inlet",
+        "Filter 5 backwash waste"
+      ],
+      "service": "pool water",
+      "label": "F5 INLET",
+      "valves": [
+        {
+          "at": [6.3999999999999995, 2.7350000000000003, 4.847],
+          "axis": "y",
+          "name": "F5 inlet valve",
+          "facing": [-1, 0, 6.123233995736766e-17],
+          "od": 0.225,
+          "operator": "chain"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 5 inlet",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [6.3999999999999995, 2.3850000000000002, 4.847],
+        [7.397253018363245, 2.3850000000000002, 4.847]
+      ],
+      "joins": [
+        "Olympic pool sand filter 5",
+        "Filter 5 inlet drop",
+        "Filter 5 backwash waste"
+      ],
+      "service": "pool water",
+      "label": "F5 INLET",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Filter 5 backwash waste",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [6.3999999999999995, 2.3850000000000002, 4.847],
+        [6.3999999999999995, 0.05, 4.847]
+      ],
+      "joins": ["Filter 5 inlet", "Filter 5 inlet drop"],
+      "service": "drainage",
+      "label": "F5 WASTE",
+      "valves": [
+        {
+          "at": [6.3999999999999995, 1.1, 4.847],
+          "axis": "y",
+          "name": "F5 backwash valve",
+          "facing": [-1, 0, 6.123233995736766e-17],
+          "od": 0.225,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 5 outlet",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [7.219091197874581, 0.975, 5.222],
+        [6.869091197874582, 0.975, 5.222],
+        [6.869091197874582, 4.6, 5.222]
+      ],
+      "joins": ["Olympic pool sand filter 5", "Filter outlet header"],
+      "service": "pool water",
+      "label": "F5 OUTLET",
+      "valves": [
+        {
+          "at": [6.869091197874582, 1.3, 5.222],
+          "axis": "y",
+          "name": "F5 outlet valve",
+          "facing": [-1, 0, 6.123233995736766e-17],
+          "od": 0.225,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filter 5 drain",
+      "kind": "pvc-drain",
+      "od": 0.09,
+      "points": [
+        [7.219091197874581, 0.975, 6.122000000000001],
+        [6.3999999999999995, 0.975, 6.122000000000001],
+        [6.3999999999999995, 0.05, 6.122000000000001]
+      ],
+      "joins": ["Olympic pool sand filter 5"],
+      "service": "drainage",
+      "label": "F5 DRAIN",
+      "valves": [
+        {
+          "at": [6.3999999999999995, 0.4, 6.122000000000001],
+          "axis": "y",
+          "name": "F5 drain valve",
+          "facing": [-1, 0, 6.123233995736766e-17],
+          "od": 0.09,
+          "operator": "lever"
+        }
+      ]
+    },
+    {
+      "through": [],
+      "name": "Filtered main to the heat exchanger",
+      "kind": "pvc-pressure",
+      "od": 0.11,
+      "points": [
+        [3.87, 4.6, 6.369091197874582],
+        [3.87, 4.6, 9.430000000000001],
+        [3.87, 0.22, 9.430000000000001],
+        [3.27, 0.22, 9.430000000000001]
+      ],
+      "joins": ["Olympic pool plate heat exchanger", "Filter outlet header"],
+      "service": "pool water",
+      "label": "TO HEAT EXCHANGER",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Heat exchanger to the ozone contact tank",
+      "kind": "pvc-pressure",
+      "od": 0.11,
+      "points": [
+        [3.27, 0.884, 9.430000000000001],
+        [3.52, 0.884, 9.430000000000001],
+        [3.52, 5.2, 9.430000000000001],
+        [3.52, 5.2, -6.174407448661065],
+        [0.5875000000000005, 5.2, -6.174407448661065],
+        [0.5875000000000005, 0.6, -6.174407448661065],
+        [0.5875000000000005, 0.6, -6.474407448661065]
+      ],
+      "joins": [
+        "Olympic pool plate heat exchanger",
+        "Olympic pool ozone contact tank",
+        "Hypochlorite to the heated main",
+        "Sample line from the heated main"
+      ],
+      "service": "pool water",
+      "label": "HEATED",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Contact tank to the UV unit",
+      "kind": "pvc-pressure",
+      "od": 0.16,
+      "points": [
+        [2.2625000000000006, 2.4, -6.474407448661065],
+        [2.2625000000000006, 2.4, -6.174407448661065],
+        [2.2625000000000006, 3.4, -6.174407448661065],
+        [5.7, 3.4, -6.174407448661065],
+        [5.7, 3.4, -9.25],
+        [5.7, 0.8, -9.25],
+        [6, 0.8, -9.25]
+      ],
+      "joins": ["Olympic pool ozone contact tank", "Olympic pool UV unit"],
+      "service": "pool water",
+      "label": "TO UV",
+      "valves": []
+    },
+    {
+      "through": [
+        {
+          "at": [7.8999999999999995, 2.6, -11.1],
+          "normal": [0, 0, 1],
+          "thickness": 0.2,
+          "kind": "fire-collar"
+        }
+      ],
+      "name": "Return main to the pool’s inlets",
+      "kind": "pvc-pressure",
+      "od": 0.225,
+      "points": [
+        [7.6, 0.8, -9.25],
+        [7.8999999999999995, 0.8, -9.25],
+        [7.8999999999999995, 2.6, -9.25],
+        [7.8999999999999995, 2.6, -11.2]
+      ],
+      "joins": ["Olympic pool UV unit"],
+      "service": "pool water",
+      "label": "TO POOL",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Ozone to the contact tank",
+      "kind": "stainless",
+      "od": 0.05,
+      "points": [
+        [4.05, 1.95, -9.5],
+        [4.05, 2.2, -9.5],
+        [4.05, 2.2, -5.75],
+        [1.4250000000000005, 2.2, -5.75],
+        [1.4250000000000005, 1, -5.75],
+        [1.4250000000000005, 1, -6.25]
+      ],
+      "joins": [
+        "Olympic pool ozone generator",
+        "Olympic pool ozone contact tank"
+      ],
+      "service": "ozone",
+      "label": "OZONE",
+      "valves": []
+    },
+    {
+      "through": [
+        {
+          "at": [3.87, 0.884, 11.1],
+          "normal": [0, 0, -1],
+          "thickness": 0.2,
+          "kind": "sleeve"
+        }
+      ],
+      "name": "Heating flow to the heat exchanger",
+      "kind": "lagged-heating",
+      "od": 0.114,
+      "points": [
+        [3.87, 0.884, 11.2],
+        [3.87, 0.884, 9.67],
+        [3.27, 0.884, 9.67]
+      ],
+      "joins": ["Olympic pool plate heat exchanger"],
+      "service": "heating flow",
+      "label": "LTHW FLOW",
+      "valves": []
+    },
+    {
+      "through": [
+        {
+          "at": [3.52, 0.22, 11.1],
+          "normal": [0, 0, -1],
+          "thickness": 0.2,
+          "kind": "sleeve"
+        }
+      ],
+      "name": "Heating return from the heat exchanger",
+      "kind": "lagged-heating",
+      "od": 0.114,
+      "points": [
+        [3.52, 0.22, 11.2],
+        [3.52, 0.22, 9.67],
+        [3.27, 0.22, 9.67]
+      ],
+      "joins": ["Olympic pool plate heat exchanger"],
+      "service": "heating return",
+      "label": "LTHW RETURN",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Make-up water to the balance tank",
+      "kind": "copper",
+      "od": 0.054,
+      "points": [
+        [-2.1499999999999995, 6.1, -4.85],
+        [-2.1499999999999995, 3.3, -4.85]
+      ],
+      "joins": ["Olympic pool balance tank"],
+      "service": "make-up",
+      "label": "MAKE-UP",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Control panel supply",
+      "kind": "steel-screwed",
+      "od": 0.05,
+      "points": [
+        [5.35, 2.45, 9.6],
+        [5.35, 6.1, 9.6]
+      ],
+      "joins": ["Olympic pool local control panel"],
+      "service": "electrical",
+      "label": "400 V SUPPLY",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Hypochlorite to the heated main",
+      "kind": "chemical-tube",
+      "od": 0.012,
+      "points": [
+        [10.7, 1.3, 9.872000000000002],
+        [10.6, 1.3, 9.872000000000002],
+        [10.6, 6.1, 9.872000000000002]
+      ],
+      "joins": ["Olympic pool hypochlorite dosing pumps"],
+      "service": "hypochlorite",
+      "label": "HYPOCHLORITE",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Hypochlorite to the heated main, its point",
+      "kind": "chemical-tube",
+      "od": 0.012,
+      "points": [
+        [3.52, 6.1, 9.63],
+        [3.52, 2.4, 9.63],
+        [3.52, 2.4, 9.430000000000001]
+      ],
+      "joins": ["Heat exchanger to the ozone contact tank"],
+      "service": "hypochlorite",
+      "label": "HYPOCHLORITE",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Sample line from the heated main",
+      "kind": "chemical-tube",
+      "od": 0.012,
+      "points": [
+        [10.75, 1.35, 8.472000000000001],
+        [10.65, 1.35, 8.472000000000001],
+        [10.65, 6.1, 8.472000000000001]
+      ],
+      "joins": ["Olympic pool dosing controller and sample cells"],
+      "service": "sample",
+      "label": "SAMPLE",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Sample line from the heated main, its point",
+      "kind": "chemical-tube",
+      "od": 0.012,
+      "points": [
+        [3.52, 6.1, 9.680000000000001],
+        [3.52, 2.25, 9.680000000000001],
+        [3.52, 2.25, 9.430000000000001]
+      ],
+      "joins": ["Heat exchanger to the ozone contact tank"],
+      "service": "sample",
+      "label": "SAMPLE",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "P-101A isolator: supply",
+      "kind": "steel-screwed",
+      "od": 0.0269,
+      "points": [
+        [-6.5175, 6.1, 1.9299999999999995],
+        [-6.5175, 1.596, 1.9299999999999995]
+      ],
+      "joins": [],
+      "service": "electrical",
+      "label": "400 V",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "P-101A isolator: feed",
+      "kind": "steel-screwed",
+      "od": 0.0269,
+      "points": [
+        [-6.5175, 1.596, 1.8699999999999994],
+        [-6.5175, 2.2, 1.8699999999999994],
+        [-7.699999999999999, 2.2, 1.8699999999999994],
+        [-7.699999999999999, 2.2, 1.8999999999999995],
+        [-7.699999999999999, 0.98, 1.8999999999999995]
+      ],
+      "joins": [
+        "Olympic pool circulation pumps, duty and standby, with strainers"
+      ],
+      "service": "electrical",
+      "label": "FEED",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "P-101B isolator: supply",
+      "kind": "steel-screwed",
+      "od": 0.0269,
+      "points": [
+        [-6.5175, 6.1, 3.4299999999999993],
+        [-6.5175, 1.596, 3.4299999999999993]
+      ],
+      "joins": [],
+      "service": "electrical",
+      "label": "400 V",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "P-101B isolator: feed",
+      "kind": "steel-screwed",
+      "od": 0.0269,
+      "points": [
+        [-6.5175, 1.596, 3.3699999999999997],
+        [-6.5175, 2.2, 3.3699999999999997],
+        [-7.699999999999999, 2.2, 3.3699999999999997],
+        [-7.699999999999999, 2.2, 3.3999999999999995],
+        [-7.699999999999999, 0.98, 3.3999999999999995]
+      ],
+      "joins": [
+        "Olympic pool circulation pumps, duty and standby, with strainers"
+      ],
+      "service": "electrical",
+      "label": "FEED",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "UV unit isolator: supply",
+      "kind": "steel-screwed",
+      "od": 0.0269,
+      "points": [
+        [6.07, 6.1, -6.967499999999999],
+        [6.07, 1.596, -6.967499999999999]
+      ],
+      "joins": [],
+      "service": "electrical",
+      "label": "400 V",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "UV unit isolator: feed",
+      "kind": "steel-screwed",
+      "od": 0.0269,
+      "points": [
+        [6.130000000000001, 1.596, -6.967499999999999],
+        [6.130000000000001, 2.2, -6.967499999999999],
+        [6.130000000000001, 2.2, -8.649999999999999],
+        [7, 2.2, -8.649999999999999],
+        [7, 1.45, -8.649999999999999]
+      ],
+      "joins": ["Olympic pool UV unit"],
+      "service": "electrical",
+      "label": "FEED",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Ozone generator isolator: supply",
+      "kind": "steel-screwed",
+      "od": 0.0269,
+      "points": [
+        [5.119999999999999, 6.1, -8.1675],
+        [5.119999999999999, 1.596, -8.1675]
+      ],
+      "joins": [],
+      "service": "electrical",
+      "label": "400 V",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Ozone generator isolator: feed",
+      "kind": "steel-screwed",
+      "od": 0.0269,
+      "points": [
+        [5.18, 1.596, -8.1675],
+        [5.18, 2, -8.1675],
+        [5.18, 2, -9.5],
+        [5.05, 2, -9.5],
+        [5.05, 1.95, -9.5]
+      ],
+      "joins": ["Olympic pool ozone generator"],
+      "service": "electrical",
+      "label": "FEED",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Hypochlorite from the store",
+      "kind": "chemical-tube",
+      "od": 0.012,
+      "points": [
+        [10.85, 6.1, 10.172000000000002],
+        [10.85, 1.8, 10.172000000000002]
+      ],
+      "joins": ["Olympic pool hypochlorite dosing pumps"],
+      "service": "hypochlorite",
+      "label": "HYPOCHLORITE",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Acid from the store",
+      "kind": "chemical-tube",
+      "od": 0.012,
+      "points": [
+        [9.7, 6.1, 10.825],
+        [9.7, 1.7000000000000002, 10.825]
+      ],
+      "joins": ["Olympic pool acid dosing pump"],
+      "service": "hypochlorite",
+      "label": "ACID",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Acid to the heated main",
+      "kind": "chemical-tube",
+      "od": 0.012,
+      "points": [
+        [9.85, 1.3, 10.65],
+        [9.85, 1.3, 10.55],
+        [9.85, 6.1, 10.55]
+      ],
+      "joins": ["Olympic pool acid dosing pump"],
+      "service": "hypochlorite",
+      "label": "ACID",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Acid to the heated main, its point",
+      "kind": "chemical-tube",
+      "od": 0.012,
+      "points": [
+        [3.52, 6.1, 9.730000000000002],
+        [3.52, 2.1, 9.730000000000002],
+        [3.52, 2.1, 9.430000000000001]
+      ],
+      "joins": ["Heat exchanger to the ozone contact tank"],
+      "service": "hypochlorite",
+      "label": "ACID",
+      "valves": []
+    },
+    {
+      "through": [],
+      "name": "Balance tank drain to waste",
+      "kind": "pvc-drain",
+      "od": 0.09,
+      "points": [
+        [-1.7499999999999996, 0.35, -0.8000000000000003],
+        [-1.7499999999999996, 0.35, 0.04999999999999927],
+        [-1.7499999999999996, -0.45, 0.04999999999999927]
+      ],
+      "joins": ["Olympic pool balance tank"],
+      "service": "drainage",
+      "label": "DRAIN",
+      "valves": [
+        {
+          "at": [-1.7499999999999996, 0.16999999999999998, 0.04999999999999927],
+          "axis": "y",
+          "name": "Balance tank drain valve",
+          "od": 0.09,
+          "facing": [0, 0, 1],
+          "operator": "lever"
+        }
+      ]
+    }
+  ]
+}

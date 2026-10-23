@@ -139,6 +139,12 @@ Shared helpers: `src/toolkit/gallery/logic/rig-fittings.ts` (`placeRigFittings`:
 - A click works a part only on its working piece (a valve's lever, a selector's knob), within reach; the first click on the canvas may only take its focus.
 - To register a new dev room: its id in `src/toolkit/gallery/logic/dev-room-links.ts` (type, name, colour, and `ROOMS`), its module in `src/toolkit/gallery/rooms/plant-room.ts`, and its id in the list in `src/main.ts`.
 
+## 7a. Retired rooms: references for variants
+
+A plant room can be retired: its machine layout and its pipes and ducts frozen as a reference, so alternative versions of its plant can be planned and compared against it (the owner, 2026-10-23). `src/toolkit/gallery/logic/retired-rooms.ts` lists them; each is a snapshot in `src/toolkit/gallery/logic/retired/<id>.json`, generated from `layoutRoomLive` and `roomPipes` on the day, and drawn in its source room's shell at `?room=<id>`. `layoutRoom` and `roomPipes` read a retired room from its snapshot, so no change to the generators moves it; lookups that need the live plant (the installed valves) go to the room it was taken from (`retiredFrom`). The git tag of the same name marks the code as it was.
+
+- `retired0`: the Olympic pool's plant room (`plant_pool_02`), 2026-10-23: 15 machines (among them five 3 m filters, a 216 m³ balance tank and a 3.45 m contact tank) and 59 pipe and duct runs.
+
 ## 8. Known problems and open work
 
 - **The router cannot leave a port inside a machine's bounding box** except by its lead: give such ports a lead long enough to clear the box's padding (Dev24's pump power feeds need 0.8 m). Prompt 021 is where to improve this.

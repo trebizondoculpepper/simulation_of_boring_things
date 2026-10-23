@@ -1,3 +1,4 @@
+import { retiredPipes } from './retired-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { layoutRoom } from './room-equipment';
 import { WET_HALL_SOFFIT, roomStructure } from './room-structure';
@@ -1057,6 +1058,9 @@ export function poolPlantPipework(room: string): {
 
 /** The pipework of a room, if it has any laid out yet. */
 export function roomPipes(room: string): PipeRun[] {
+  // A retired room's pipes and ducts are frozen (`retired-rooms.ts`).
+  const retired = retiredPipes(room);
+  if (retired) return retired;
   if (room === 'boiler_house') return boilerHousePipework().runs;
   if (room === 'wet_hall') return wetHallPipework().runs;
   return room in ROUTED ? poolPlantPipework(room).runs : [];
