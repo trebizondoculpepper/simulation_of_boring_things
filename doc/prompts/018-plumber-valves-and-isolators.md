@@ -41,6 +41,33 @@ Codex reviewed the first version of this prompt (read-only, 12 findings). The ow
 - **A non-return valve model exists:** a dual-plate check valve, drawn in `pipework.ts` (around line 288). What is missing is a reusable inline component.
 - **Drains and vents** (prompt 017) are deferred to the next stage of this work, with the floor terminal.
 
+## The bound room: the expanded graph is the graph (the owner, 2026-10-23)
+
+The fittings the plumber adds are real nodes of the port graph, bound to the controls drawn for them. **The plumber hands the next stage a room in a fully bound state, and the graph the game runs is the expanded graph.**
+
+1. **Sizer, regions and placement** work on the base graph's machines.
+2. **The plumber** expands the graph, routes the lines and sets the fittings. It returns a bound room:
+   - the expanded graph, built and validated like the base one, with each added fitting given ports `in` and `out` in its line's medium;
+   - each node's place: machines from placement, inline devices from their routes;
+   - each node's visual part, and its controls (lever, handle, actuator) bound to that node's state.
+
+   A fitting the plumber leaves out (out of reach) is not in the expanded graph.
+
+3. **The simulation is created from the bound room's graph.** Flow and power pass through each node by what it is:
+   - an isolating valve passes when open;
+   - a power isolator passes when on;
+   - a non-return valve passes one way;
+   - a remote valve passes when its actuator has it open.
+
+   "Is A connected to B" becomes "can A reach B along the line, through nodes that are all passing", not "is there a direct edge".
+
+**Consequences for Dev19:**
+
+- `createPortGraphDemo` takes the graph it runs, instead of closing over the module's `demoGraph`, and is created when the room is built, after plumbing, not when the module loads. Its `connected(a, ap, b, bp)` becomes a walk along the expanded graph through passing nodes.
+- The fittings' states live in `DemoState`, keyed by node identity, all open and on by default, with a command to set each one.
+- The base `demoGraph` stays the designed plan, and the expansion never edits it.
+- **Dev19's graph and simulation are the other agent's** (GPT-6 Codex). This change to `src/game/plant/port-graph-demo.ts` is made by Claude at the owner's direction. Its topology and behaviour are otherwise unchanged, and its existing tests must keep passing. The mailbox was not configured for this session, so this prompt is the notice.
+
 ## What there was at the start (checked 2026-10-23, before the revision)
 
 - **Dev19's graph** (`src/game/plant/port-graph-demo.ts`, the other agent's model; leave its topology as it is): 24 nodes, built with `@statelyai/graph`. Ports are typed by medium: gas, flue, water, power, heat, control.
