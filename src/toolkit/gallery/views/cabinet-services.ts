@@ -350,7 +350,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
           gurgling = running;
           partAudio.hold(
             drainMouth,
-            running ? machineTone('drain-gurgle', signal(1), 0.3) : null,
+            running ? machineTone('drain-gurgle', signal(1), 0.08) : null,
             drainMouth,
           );
         }
