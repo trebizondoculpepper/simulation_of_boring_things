@@ -8,6 +8,7 @@ import {
 import type { Placed, Side } from './room-equipment';
 import { machinePorts, placedPort } from './machine-ports';
 import { roomStructure } from './room-structure';
+import { controlBus, isControlDevice } from './control-bus';
 import type { PipeKindId } from '../../components/core/views/pipe-kinds';
 
 export type Point3 = readonly [number, number, number];
@@ -200,6 +201,9 @@ export function roomServiceRoutes(
     };
     for (const [i, p] of placed.entries()) {
       if (!active(p.item.key)) continue;
+      // Control devices take their power and signals from the room's
+      // control bus (`control-bus.ts`), not a feed of their own.
+      if (isControlDevice(p.item.key)) continue;
       // The switch room's cabinets carry hundreds of amps: heavy trunking
       // to the cable ladder (`cable-containment.ts`), not a conduit.
       if (room === 'switch_room' && SWITCHGEAR.has(p.item.key)) continue;
@@ -275,6 +279,10 @@ export function roomServiceRoutes(
       });
     }
   }
+
+  // The control devices' conduits, each to the nearest point of the
+  // room's control bus.
+  routes.push(...(controlBus(room)?.stubs ?? []));
 
   // The pool plant rooms' process pipework is routed port to port in
   // `room-pipes.ts`.

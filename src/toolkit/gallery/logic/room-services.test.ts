@@ -1,3 +1,4 @@
+import { isControlDevice } from './control-bus';
 import { describe, expect, it } from 'vite-plus/test';
 import { ROOM_SERVICES } from '../../../game/plant/services';
 import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
@@ -109,8 +110,13 @@ describe('current plant-room service connections', () => {
       const main = routes.find((r) => r.name.includes('distribution conduit'))!;
       const level = main.points[0][1];
       for (const p of main.points) expect(wallOf(box, p), room).toBeDefined();
+      // Control devices are fed from the control bus (`control-bus.test.ts`).
       for (const r of routes.filter(
-        (r) => r.utility === 'power' && r.kind !== 'flex-cable' && r !== main,
+        (r) =>
+          r.utility === 'power' &&
+          r.kind !== 'flex-cable' &&
+          r !== main &&
+          !isControlDevice(r.to),
       )) {
         // Its first point on the main: at its height, on a wall's saddles.
         expect(r.points[0][1], r.name).toBeCloseTo(level, 6);
@@ -166,7 +172,7 @@ describe('current plant-room service connections', () => {
       const { placed } = layoutRoom(room)!;
       const routes = roomServiceRoutes(room);
       for (const p of placed) {
-        if (p.item.mount !== 'wall') continue;
+        if (p.item.mount !== 'wall' || isControlDevice(p.item.key)) continue;
         const feed = routes.find(
           (r) => r.to === p.item.key && r.kind !== 'flex-cable',
         );

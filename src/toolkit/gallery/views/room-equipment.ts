@@ -1,3 +1,4 @@
+import { controlBus } from '../logic/control-bus';
 import { roomSupports } from '../logic/room-supports';
 import { createSupports } from '../../components/plant/views/pipe-supports';
 import {
@@ -799,6 +800,15 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   // conduits' alike, planned for the whole room (`room-supports.ts`).
   const supports = roomSupports(room, { drawnTops });
   if (supports) pipework.group.add(createSupports(kit, supports, floorY));
+  // The control bus: compartmented trunking round the room above its
+  // panels, rising into the ceiling at the supply wall (`control-bus.ts`).
+  const bus = controlBus(room);
+  if (bus) {
+    const soffit = roomStructure(room)?.soffit ?? 7;
+    pipework.group.add(
+      createContainment(kit, bus.trunking, [], soffit, floorY),
+    );
+  }
   // The switch room's cable ladder and its switchgear's trunking.
   if (room === 'switch_room') {
     const c = switchRoomContainment();
