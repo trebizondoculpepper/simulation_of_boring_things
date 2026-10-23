@@ -20,10 +20,10 @@
  * filter's state asks, each at its own rate, so one state blends into the
  * next instead of jumping. Pure.
  *
- * What is seen of it (the owner, 2026-10-23): the vessel has no light in
- * it, so the glass is black but for the murk of a backwash, a pale brown
- * (`views/sight-glass.ts`); the bed's other quantities are kept for
- * whatever may light it.
+ * What is seen of it (the owner, 2026-10-23): the window is fitted with
+ * the bed's surface at rest across its middle, sand below and water over
+ * it; the water is black in a vessel with no light of its own, but for
+ * the pale brown murk of a backwash (`views/sight-glass.ts`).
  */
 
 export type GlassMode = 'stopped' | 'service' | 'backwash' | 'rinse';
@@ -56,8 +56,8 @@ export interface GlassState {
   washing: number;
 }
 
-/** The bed's surface at rest, and lifted in a backwash. */
-export const BED_REST = 0.42;
+/** The bed's surface at rest (across the window's middle, as it is fitted), and lifted in a backwash. */
+export const BED_REST = 0.5;
 export const BED_LIFTED = 0.66;
 
 export const newGlass = (): GlassState => ({
