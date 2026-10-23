@@ -21,6 +21,19 @@ describe('the Olympic plant room, plumbed and routed', () => {
   const hz = room.halfZ;
   const run = (name: string) => plumbed.runs.find((r) => r.name === name)!;
 
+  it('faces the first filter’s backwash-out override toward the accessible south aisle', () => {
+    const valve = plumbed.fittings.find(
+      (f) => f.id === 'filter-1.backwashOut.iso',
+    );
+    expect(valve?.facing).toEqual([0, 0, 1]);
+    expect(valve?.operator).toBe('solenoid');
+    const drawn = olympicRoom()
+      .runs.flatMap((r) => r.valves)
+      .find((v) => v.name === 'F1 backwash out valve');
+    expect(drawn?.facing).toEqual([0, 0, 1]);
+    expect(drawn?.axis).toBe('y');
+  });
+
   it('routes every line and leaves nothing unplumbed', () => {
     expect(plumbed.problems).toEqual([]);
     expect(plumbed.runs.filter((r) => r.by === 'router')).toHaveLength(10);

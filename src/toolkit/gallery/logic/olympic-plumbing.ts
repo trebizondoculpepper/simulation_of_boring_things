@@ -1239,10 +1239,15 @@ export function plumbOlympic(
         // Worked as the options say: by hand within reach, by a chain
         // wheel out of it, or automatically, from the panels.
         operator: workedBy(f, p.at),
-        // With five valves, a backwash-out valve's actuator away west, clear
-        // of the sight glass; a rinse valve's and a drain's east, under the hatch and clear of the rinse drop.
+        // The first filter's backwash-out actuator faces the south aisle;
+        // west would put its manual override against the room wall.
+        // The other backwash-out actuators stay clear of their sight glasses.
         ...(five && name === 'backwash out'
-          ? { facing: [-1, 0, 0] as Vec3 }
+          ? {
+              facing: (run.name.startsWith('Filter 1 ')
+                ? [0, 0, 1]
+                : [-1, 0, 0]) as Vec3,
+            }
           : five && (name === 'drain' || name === 'rinse')
             ? { facing: [1, 0, 0] as Vec3 }
             : {}),

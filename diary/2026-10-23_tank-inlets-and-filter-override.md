@@ -1,0 +1,5 @@
+# Tank inlet labels and filter valve access
+
+The tank hall's three visible discharges are two independent Olympic pool overflow returns and the mains make-up supply, whose outlet has a Type AA air gap. Each drop now has a pipe-mounted identification plate on its north and south sides at gantry viewing height. The identification data live beside the pipe geometry in the hall's pure layout module, so tests can check that the plates identify the actual drops.
+
+PL2-F1-V4, the first Olympic sand filter's backwash-out valve, had its actuator explicitly turned west into the nearby wall. Its placement now faces the south aisle. The shared upright actuated butterfly valve also had its assembly rotated about the wrong axis, leaving its local override directed down; turning the assembly sideways about its vertical drawing plane keeps the override horizontal. Focused tests cover the drawn valve orientation and operation, and the hall's pipe identities. The full typecheck, lint, format, test, and build checks passed.

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { BALANCE_TANK, volumeOf } from '../../../game/plant/balance-tank';
 import {
   HALL,
+  HALL_INLET_LABELS,
   PARTITION,
   SPOTS,
   START,
@@ -22,6 +23,20 @@ describe('the balance tank hall', () => {
     expect(heightOf(BALANCE_TANK.depth)).toBe(0);
     for (const r of hallPipes().returns)
       expect(r.at(-1)![1]).toBeGreaterThan(heightOf(BALANCE_TANK.weir));
+  });
+
+  it('identifies both pool overflow drops and the mains make-up at their actual pipes', () => {
+    const runs = hallPipes();
+    expect(HALL_INLET_LABELS.map((label) => label.lines[0])).toEqual([
+      'POOL OVERFLOW 1',
+      'POOL OVERFLOW 2',
+      'MAINS MAKE-UP',
+    ]);
+    for (const [index, label] of HALL_INLET_LABELS.entries()) {
+      const run = index < 2 ? runs.returns[index] : runs.makeup;
+      expect(label.at[0]).toBe(run.at(-1)![0]);
+      expect(label.at[2]).toBe(run.at(-1)![2]);
+    }
   });
 
   it('feeds its make-up through an air gap above the weir (Type AA: at least 20 mm)', () => {

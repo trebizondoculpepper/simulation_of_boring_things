@@ -43,7 +43,9 @@ export function createActuatedButterflyValve(
   const neckTop = s.flange * 0.42 + Math.max(0.08, s.od * 0.6);
   // The actuator's assembly, built up +y, turned to face out of a vertical pipe.
   const head = new Group();
-  if (axis === 'y') head.rotation.x = Math.PI / 2;
+  // On an upright pipe swing the actuator sideways without tilting its
+  // front-facing solenoid override toward the floor.
+  if (axis === 'y') head.rotation.z = -Math.PI / 2;
   a.object.add(head);
   const L = Math.min(0.6, Math.max(0.16, s.od * 1.5));
   const H = Math.min(0.2, Math.max(0.07, s.od * 0.45));

@@ -13,6 +13,7 @@ import type { LiveExhibit, PlantExhibit } from './exhibit';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
 import { createPs1Material } from '../../../components/core/parts/ps1-material';
 import { createPipe } from '../../../components/core/views/pipe-kinds';
+import { createEngravedPlate } from '../../../components/core/views/plant-signs';
 import { tools } from '../../../components/core/views/fitting-tools';
 import {
   inMetres,
@@ -51,6 +52,7 @@ import {
   GATE,
   HALL,
   HALL_PIPES,
+  HALL_INLET_LABELS,
   LADDER,
   OPENING,
   OPENING_OUTLINE,
@@ -292,6 +294,37 @@ export function buildHall(
           ],
     ),
   );
+  // Each discharge is identified on its vertical drop, where it can be read
+  // from either side of the gantry. The plates sit on a collar, not in mid-air.
+  for (const inlet of HALL_INLET_LABELS) {
+    const marker = new Group();
+    marker.name = `${inlet.id} pipe identification`;
+    marker.position.set(...inlet.at);
+    const radius = inlet.od / 2;
+    const width = inlet.id === 'mains-make-up' ? 0.46 : 0.56;
+    t.cyl(marker, steel, radius + 0.012, 0.032, 0, 0, 0, 'y', 20);
+    for (const side of [-1, 1]) {
+      t.box(
+        marker,
+        steel,
+        width + 0.016,
+        0.132,
+        0.012,
+        0,
+        0,
+        side * (radius + 0.018),
+      );
+      const plate = createEngravedPlate(kit, inlet.lines, {
+        colour: 'white',
+        width,
+        height: 0.12,
+      });
+      plate.position.z = side * (radius + 0.028);
+      if (side < 0) plate.rotation.y = Math.PI;
+      marker.add(plate);
+    }
+    object.add(marker);
+  }
   object.add(createPipe('pvc-drain', HALL_PIPES.weir.od, runs.weir));
   // The weir's bellmouth, its rim the weir.
   const pvc = t.paint('#4a4e52', 0.5);

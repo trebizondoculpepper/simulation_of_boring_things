@@ -143,6 +143,22 @@ export const HALL_PIPES = {
   suction: { od: 0.315 },
 } as const;
 
+/** Identification on the three pipes which discharge visibly into the tank. */
+export const HALL_INLET_LABELS = [
+  ...SPOTS.returns.map((r, i) => ({
+    id: `olympic-overflow-${i + 1}`,
+    lines: [`POOL OVERFLOW ${i + 1}`, 'OLYMPIC POOL'],
+    at: [r.x, 1.35, r.z] as Vec3,
+    od: HALL_PIPES.returns.od,
+  })),
+  {
+    id: 'mains-make-up',
+    lines: ['MAINS MAKE-UP', 'TYPE AA AIR GAP'],
+    at: [SPOTS.makeup.x, 1.35, SPOTS.makeup.z] as Vec3,
+    od: HALL_PIPES.makeup.od,
+  },
+] as const;
+
 /** The opening, as the floor cuts it out (x, z). */
 export const OPENING_OUTLINE: readonly (readonly [number, number])[] = [
   [OPENING.minX, OPENING.minZ],
