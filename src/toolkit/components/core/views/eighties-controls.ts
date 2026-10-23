@@ -442,7 +442,10 @@ export function createSevenSegment(
   const cellH = 64;
   const w = cellW * digits + 16;
   const h = cellH + 16;
-  const { context, texture } = createCanvasTexture(w, h);
+  // Drawn four times over, so each segment's pointed ends and its glow are
+  // smooth up close: an LED digit, not a block of pixels.
+  const S = 4;
+  const { context, texture } = createCanvasTexture(w * S, h * S);
   kit.textures.push(texture);
   const group = new Group();
   const scale = digitHeight / (cellH - 16);
@@ -466,8 +469,9 @@ export function createSevenSegment(
   const window = new Mesh(new PlaneGeometry(w * scale, h * scale), material);
   window.position.z = frame.position.z + 0.003 / 2 + 0.001;
   group.add(window);
+  // A segment: a bar with pointed ends, a hair's gap from its neighbours,
+  // lit with a glow round it, or dark but faintly there, as an LED digit's.
   const segment = (x: number, y: number, which: string, on: boolean) => {
-    context.fillStyle = on ? colour : '#2b0e0a';
     const t = 6;
     const l = 22;
     const at: Record<string, [number, number, number, number]> = {
@@ -480,7 +484,31 @@ export function createSevenSegment(
       g: [x + 8, y + 7 + l, l, t],
     };
     const [sx, sy, sw, sh] = at[which];
-    context.fillRect(sx, sy, sw, sh);
+    const gap = 0.9;
+    context.beginPath();
+    if (sw > sh) {
+      const m = sy + sh / 2;
+      context.moveTo(sx + gap, m);
+      context.lineTo(sx + gap + sh / 2, sy);
+      context.lineTo(sx + sw - gap - sh / 2, sy);
+      context.lineTo(sx + sw - gap, m);
+      context.lineTo(sx + sw - gap - sh / 2, sy + sh);
+      context.lineTo(sx + gap + sh / 2, sy + sh);
+    } else {
+      const m = sx + sw / 2;
+      context.moveTo(m, sy + gap);
+      context.lineTo(sx + sw, sy + gap + sw / 2);
+      context.lineTo(sx + sw, sy + sh - gap - sw / 2);
+      context.lineTo(m, sy + sh - gap);
+      context.lineTo(sx, sy + sh - gap - sw / 2);
+      context.lineTo(sx, sy + gap + sw / 2);
+    }
+    context.closePath();
+    context.fillStyle = on ? colour : '#2a0d09';
+    context.shadowColor = on ? colour : 'transparent';
+    context.shadowBlur = on ? 5 * S : 0;
+    context.fill();
+    context.shadowBlur = 0;
   };
   let last = '';
   const readout: SevenSegment = {
@@ -498,17 +526,22 @@ export function createSevenSegment(
       const value = shown.map((c) => c.char + (c.point ? '.' : '')).join('');
       if (value === last) return;
       last = value;
-      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.setTransform(S, 0, 0, S, 0, 0);
       context.fillStyle = '#120807';
       context.fillRect(0, 0, w, h);
       // A slight italic slant, as the period's displays had.
-      context.setTransform(1, 0, -0.1, 1, 6, 0);
+      context.setTransform(S, 0, -0.1 * S, S, 6 * S, 0);
       shown.forEach(({ char, point }, i) => {
         const lit = SEGMENTS[char] ?? '';
         for (const s of 'abcdefg')
           segment(8 + i * cellW, 8, s, lit.includes(s));
-        context.fillStyle = point ? colour : '#2b0e0a';
-        context.fillRect(8 + i * cellW + 32, 8 + 50, 10, 10);
+        context.fillStyle = point ? colour : '#2a0d09';
+        context.shadowColor = point ? colour : 'transparent';
+        context.shadowBlur = point ? 5 * S : 0;
+        context.beginPath();
+        context.arc(8 + i * cellW + 36, 8 + 54, 3.5, 0, Math.PI * 2);
+        context.fill();
+        context.shadowBlur = 0;
       });
       texture.needsUpdate = true;
     },
