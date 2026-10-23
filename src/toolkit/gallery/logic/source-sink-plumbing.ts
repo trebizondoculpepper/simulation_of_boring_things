@@ -3,6 +3,7 @@ import {
   SUBSTANCES,
   createExperimentalSink,
   createExperimentalSource,
+  transfer,
 } from '../../../game/plant/experimental-source';
 import type {
   SourceMedium,
@@ -38,6 +39,18 @@ import type { PlantRoomLayout } from './plant-room-layout';
  * walkway, by the voxel router; each fitting placed on its line's straight
  * lead from its port. Pure.
  */
+
+/** Dev21's finite sources and sinks, so some visibly run down or fill; the rest are unlimited. */
+export const DEV21_QUANTITY: Partial<Record<Substance, number>> = {
+  chlorine: 25,
+  hypochlorite: 200,
+  'heating-oil': 2500,
+};
+export const DEV21_CAPACITY: Partial<Record<Substance, number>> = {
+  'dirty-water': 30,
+  hypochlorite: 50,
+  'heating-oil': 1200,
+};
 
 /** Centre to centre along a row, metres. */
 export const PAIR_SPACING = 1.1;
@@ -315,4 +328,94 @@ export function plumbSourceSinkRoom(
     }
   });
   return { layout, expansion, lines, fittings, walkway, problems };
+}
+
+/**
+ * The room's working model, apart from what draws it: its sources and
+ * sinks, each fitting's state (as the plumber left it), and each line's
+ * flow. `step` moves each line's substance for `dt` seconds wherever both
+ * its fittings are open, and remembers the rate it flowed at.
+ */
+export function createSourceSinkModel(
+  plumbed: SourceSinkPlumbing,
+  {
+    quantity = {},
+    capacity = {},
+  }: {
+    quantity?: Partial<Record<Substance, number>>;
+    capacity?: Partial<Record<Substance, number>>;
+  } = {},
+) {
+  const substances = plumbed.lines.map((l) => l.substance);
+  const sources = new Map(
+    substances.map((s) => [
+      s,
+      createExperimentalSource({
+        id: sourceId(s),
+        substance: s,
+        ...(quantity[s] !== undefined ? { quantity: quantity[s] } : {}),
+      }),
+    ]),
+  );
+  const sinks = new Map(
+    substances.map((s) => [
+      s,
+      createExperimentalSink({
+        id: sinkId(s),
+        substance: s,
+        ...(capacity[s] !== undefined ? { capacity: capacity[s] } : {}),
+      }),
+    ]),
+  );
+  const open = new Map(
+    plumbed.fittings.map((f) => [f.id, f.normally === 'open']),
+  );
+  const fittingsOf = new Map(
+    plumbed.lines.map((l) => [
+      l.substance,
+      plumbed.fittings.filter((f) => f.edge === l.edge).map((f) => f.id),
+    ]),
+  );
+  const rates = new Map<Substance, number>(substances.map((s) => [s, 0]));
+  return {
+    sources,
+    sinks,
+    /** A fitting's state. */
+    isOpen: (id: string) => open.get(id) ?? false,
+    setOpen: (id: string, value: boolean) => {
+      if (open.has(id)) open.set(id, value);
+    },
+    /** A line's fittings, source end first. */
+    fittingsOf: (s: Substance) => fittingsOf.get(s) ?? [],
+    /** Whether a line is open end to end. */
+    lineOpen: (s: Substance) =>
+      (fittingsOf.get(s) ?? []).every((id) => open.get(id)),
+    /** The rate a line flowed at in the last step, its unit an hour. */
+    rate: (s: Substance) => rates.get(s) ?? 0,
+    step(dt: number) {
+      for (const s of substances)
+        rates.set(
+          s,
+          transfer(sources.get(s)!, sinks.get(s)!, this.lineOpen(s), dt),
+        );
+    },
+  };
+}
+
+export type SourceSinkModel = ReturnType<typeof createSourceSinkModel>;
+
+/**
+ * What a line should carry with both its fittings open, from first
+ * principles: the source's potential over the sink's back pressure,
+ * through both internal resistances in series, capped by the lower of
+ * their maximum rates. Its unit an hour.
+ */
+export function expectedRate(model: SourceSinkModel, s: Substance) {
+  const a = model.sources.get(s)!.flow;
+  const b = model.sinks.get(s)!.flow;
+  return Math.min(
+    a.maxRate,
+    b.maxRate,
+    Math.max(0, a.potential - b.potential) / (a.resistance + b.resistance),
+  );
 }

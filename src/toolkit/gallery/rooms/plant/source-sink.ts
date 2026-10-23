@@ -12,9 +12,6 @@ import { createExperimentalSourceView } from '../../../components/plant/views/ex
 import {
   SOURCE_SHAPE,
   SUBSTANCES,
-  createExperimentalSink,
-  createExperimentalSource,
-  transfer,
 } from '../../../../game/plant/experimental-source';
 import type {
   ExperimentalSink,
@@ -22,47 +19,27 @@ import type {
   Substance,
 } from '../../../../game/plant/experimental-source';
 import {
+  DEV21_CAPACITY,
+  DEV21_QUANTITY,
+  createSourceSinkModel,
   plumbSourceSinkRoom,
   sinkId,
   sourceId,
 } from '../../logic/source-sink-plumbing';
-import type { SourceSinkPlumbing } from '../../logic/source-sink-plumbing';
+import type {
+  SourceSinkModel,
+  SourceSinkPlumbing,
+} from '../../logic/source-sink-plumbing';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
   'Source to sink: each experimental source plumbed to its sink by the plumber, a valve at each end, all closed. Open both and it flows.';
 
-/** Some sources and sinks a little different from the rest: finite, so they visibly run down or fill. */
-const QUANTITY: Partial<Record<Substance, number>> = {
-  chlorine: 25,
-  hypochlorite: 200,
-  'heating-oil': 2500,
-};
-const CAPACITY: Partial<Record<Substance, number>> = {
-  'dirty-water': 30,
-  hypochlorite: 50,
-  'heating-oil': 1200,
-};
-
 const SUBSTANCE_LIST = Object.keys(SUBSTANCES) as Substance[];
 
-/** The room's model: its sources and sinks, made afresh each time the room is built. */
-let sources = new Map<Substance, ExperimentalSource>();
-let sinks = new Map<Substance, ExperimentalSink>();
+/** The room's working model (`source-sink-plumbing.ts`), made afresh each time the room is built. */
 let plumbing: SourceSinkPlumbing | null = null;
-
-const makeSource = (s: Substance) =>
-  createExperimentalSource({
-    id: sourceId(s),
-    substance: s,
-    ...(QUANTITY[s] !== undefined ? { quantity: QUANTITY[s] } : {}),
-  });
-const makeSink = (s: Substance) =>
-  createExperimentalSink({
-    id: sinkId(s),
-    substance: s,
-    ...(CAPACITY[s] !== undefined ? { capacity: CAPACITY[s] } : {}),
-  });
+let model: SourceSinkModel | null = null;
 
 /** Its own layout: the sources along the north wall, their sinks facing them on the south. */
 export function layoutRoom() {
@@ -72,8 +49,11 @@ export function layoutRoom() {
 
 /** Make the room's sources and sinks before its exhibits are built. */
 export function prepareRoom() {
-  sources = new Map(SUBSTANCE_LIST.map((s) => [s, makeSource(s)]));
-  sinks = new Map(SUBSTANCE_LIST.map((s) => [s, makeSink(s)]));
+  plumbing ??= plumbSourceSinkRoom(SUBSTANCE_LIST);
+  model = createSourceSinkModel(plumbing, {
+    quantity: DEV21_QUANTITY,
+    capacity: DEV21_CAPACITY,
+  });
 }
 
 const size = {
@@ -104,14 +84,14 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     terminalExhibit(
       `Source: ${SUBSTANCES[s].label.toLowerCase()}`,
       sourceId(s),
-      () => sources.get(s)!,
+      () => model!.sources.get(s)!,
     ),
   ),
   ...SUBSTANCE_LIST.map((s) =>
     terminalExhibit(
       `Sink: ${SUBSTANCES[s].label.toLowerCase()}`,
       sinkId(s),
-      () => sinks.get(s)!,
+      () => model!.sinks.get(s)!,
     ),
   ),
 ];
@@ -127,9 +107,7 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
   object.name = 'Source-to-sink plumbing';
   const parts = createPartSet();
   const plumbed = plumbing ?? plumbSourceSinkRoom(SUBSTANCE_LIST);
-  const open = new Map(
-    plumbed.fittings.map((f) => [f.id, f.normally === 'open']),
-  );
+  const working = model ?? createSourceSinkModel(plumbed);
   for (const line of plumbed.lines) {
     const pipe = createPipe(line.pipe as PipeKindId, line.od, line.points, {
       colour: SUBSTANCES[line.substance].colour,
@@ -149,8 +127,8 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
           od: line.od,
         },
         {
-          open: () => open.get(f.id) ?? false,
-          set: (v) => open.set(f.id, v),
+          open: () => working.isOpen(f.id),
+          set: (v) => working.setOpen(f.id, v),
         },
       ),
     );
@@ -159,28 +137,9 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
     part.object.name = f.id;
     object.add(part.object);
   }
-  // Which fittings each line has, source end first.
-  const lineFittings = new Map(
-    plumbed.lines.map((l) => [
-      l.substance,
-      plumbed.fittings.filter((f) => f.edge === l.edge).map((f) => f.id),
-    ]),
-  );
   return {
     object,
     parts,
-    update(delta) {
-      for (const [s, ids] of lineFittings) {
-        const source = sources.get(s);
-        const sink = sinks.get(s);
-        if (!source || !sink) continue;
-        transfer(
-          source,
-          sink,
-          ids.every((id) => open.get(id)),
-          delta,
-        );
-      }
-    },
+    update: (delta) => working.step(delta),
   };
 }
