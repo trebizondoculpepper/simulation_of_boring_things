@@ -95,8 +95,20 @@ const MODES: MakeupMode[] = ['off', 'auto', 'hand'];
  */
 export function buildHall(
   kit: PanelKit,
-  { bay = true }: { bay?: boolean } = {},
+  {
+    bay = true,
+    source,
+  }: {
+    bay?: boolean;
+    /**
+     * Where its water comes from: the world's Olympic tank, read each
+     * frame (`tank-hall-room.ts`); without it, the exhibit's own tank,
+     * stepped here.
+     */
+    source?: () => BalanceTankState;
+  } = {},
 ): LiveExhibit & { doors: ReturnType<typeof equipmentDoors> } {
+  if (source) state = source();
   const object = new Group();
   object.name = 'Balance tank hall';
   const t = tools(kit);
@@ -504,7 +516,7 @@ export function buildHall(
   }
 
   updates.push((delta) => {
-    state = stepBalanceTank(state, delta);
+    state = source ? source() : stepBalanceTank(state, delta);
     time += delta;
     const y = waterY();
     water.position.y = y + 0.006 * Math.sin(time * 0.9);

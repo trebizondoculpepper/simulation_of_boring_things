@@ -79,6 +79,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   14: (world) => world,
   // 15 → 16: the Olympic's filter beds, mid-season (`fillDefaults` adds them).
   15: (world) => world,
+  // 16 → 17: the Olympic's balance tank's make-up, in AUTO (`fillDefaults` adds it).
+  16: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

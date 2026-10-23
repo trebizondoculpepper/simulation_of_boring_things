@@ -54,6 +54,7 @@ describe('a save', () => {
       identifiedPlant: newWorld().identifiedPlant,
       installedValves: newWorld().installedValves,
       olympic: newWorld().olympic,
+      olympicTank: newWorld().olympicTank,
     });
   });
 

@@ -25,6 +25,7 @@ import {
   dosedVolumes,
   makeUpDemand,
   newPools,
+  olympicTankLevel,
   stepPoolsWater,
 } from './plant/pools';
 import {
@@ -77,8 +78,11 @@ import type {
   BatteryFlows,
   OlympicBatteryState,
 } from './plant/olympic-battery';
+import { makeUpCalls, newOlympicTank } from './plant/olympic-tank';
+import type { OlympicTankState } from './plant/olympic-tank';
+import type { MakeupMode } from './plant/balance-tank';
 
-export const WORLD_VERSION = 16;
+export const WORLD_VERSION = 17;
 
 export interface World {
   /** Seconds the world has run. */
@@ -112,6 +116,8 @@ export interface World {
   installedValves: Record<string, boolean>;
   /** The Olympic's filter battery: each bed's dirt (`olympic-battery.ts`). */
   olympic: OlympicBatteryState;
+  /** The Olympic's balance tank's controls: its make-up (`olympic-tank.ts`). */
+  olympicTank: OlympicTankState;
 }
 
 export function newWorld(): World {
@@ -130,6 +136,7 @@ export function newWorld(): World {
     identifiedPlant: newIdentifiedPlant(),
     installedValves: newInstalledValveStates(),
     olympic: newOlympicBattery(),
+    olympicTank: newOlympicTank(),
   };
 }
 
@@ -152,6 +159,8 @@ export type WorldAction =
   | { type: 'gas/act'; zone: GasZoneId; act: GasZoneAction }
   | { type: 'plant/valve'; id: string; open: boolean }
   | { type: 'plant/switch'; id: string; on: boolean }
+  /** The Olympic's balance tank's make-up selector turned. */
+  | { type: 'olympic/makeup'; mode: MakeupMode }
   /** A pool's drain-down valves opened (to the sewer) or shut. */
   | { type: 'pool/drain-down'; pool: PoolId; open: boolean }
   /** A pool's make-up valve opened or shut. */
@@ -216,6 +225,13 @@ export function applyAction(world: World, action: WorldAction): World {
       );
       return { ...world, identifiedPlant };
     }
+    case 'olympic/makeup':
+      return world.olympicTank.makeup === action.mode
+        ? world
+        : {
+            ...world,
+            olympicTank: { ...world.olympicTank, makeup: action.mode },
+          };
     case 'plant/switch':
       return {
         ...world,
@@ -329,13 +345,18 @@ export function stepWorld(world: World, delta: number): World {
     hypochlorite: inStock(world.chemicals, 'hypochlorite'),
     acid: inStock(world.chemicals, 'acid'),
   };
-  // The make-up the booster set can give the pools' float valves calling.
+  // The Olympic's make-up, on its band at the tank's depth as the step begins.
+  const calling = makeUpCalls(
+    world.olympicTank,
+    olympicTankLevel(world.pools.pool_02.balance),
+  ); // The make-up the booster set can give the pools' float valves calling.
   const share = makeUpShare(
     world.wetHall,
     world.plant,
-    makeUpDemand(world.pools),
+    makeUpDemand(world.pools, { pool_02: calling }),
   );
   let battery: BatteryFlows | null = null;
+
   const water = stepPoolsWater(
     world.pools,
     world.plant,
@@ -358,7 +379,11 @@ export function stepWorld(world: World, delta: number): World {
         world.olympic,
         running,
       );
-      return battery;
+      return {
+        toPool: battery.toPool,
+        toWaste: battery.toWaste,
+        makeUpCalling: calling,
+      };
     },
   );
   return {
@@ -368,6 +393,10 @@ export function stepWorld(world: World, delta: number): World {
     olympic: battery
       ? stepOlympicBattery(world.olympic, battery, delta)
       : world.olympic,
+    olympicTank:
+      world.olympicTank.open === calling
+        ? world.olympicTank
+        : { ...world.olympicTank, open: calling },
     wetHall: stepWetHall(world.wetHall, world.plant, water, delta),
     bathers: stepBathers(world.bathers, world.time, delta, appealOf(world)),
     gas: stepGasZones(world.gas, world.plant, delta),

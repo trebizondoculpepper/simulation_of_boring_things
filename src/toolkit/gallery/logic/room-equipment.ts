@@ -1148,9 +1148,17 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
       if (!item) return [];
       if (p.mount === 'wall')
         return [
+          // Its back on the wall it faces away from, along that wall.
           put(box, item, {
-            wall: p.facing === 'north' ? 'south' : 'north',
-            along: p.x,
+            wall: (
+              {
+                north: 'south',
+                south: 'north',
+                east: 'west',
+                west: 'east',
+              } as const
+            )[p.facing],
+            along: p.facing === 'east' || p.facing === 'west' ? p.z : p.x,
           }),
         ];
       const placed = put(box, item, { x: p.x, z: p.z, face: p.facing });

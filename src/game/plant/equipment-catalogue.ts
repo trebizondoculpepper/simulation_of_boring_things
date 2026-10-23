@@ -67,6 +67,12 @@ const KINDS: Record<string, EquipmentKind> = {
     class: 'plant',
     purpose: 'Controls and indicates the local circulation plant.',
   },
+  'balance-tank-panel': {
+    code: 'CP',
+    class: 'plant',
+    purpose:
+      'Indicates the balance tank’s level and floats, and switches its make-up and the pumps.',
+  },
   'heat-exchanger': {
     code: 'HX',
     class: 'plant',

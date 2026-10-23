@@ -31,6 +31,9 @@ export const WORLD_BINDINGS: Readonly<Record<string, WorldBinding>> = {
   'pump-panel': world(
     'its pool’s pumps and flow, on its tri-state lamps and ammeters',
   ),
+  'balance-tank-panel': world(
+    'the Olympic’s tank: its depth, floats, make-up selector and filler, and its pumps’ isolators',
+  ),
   'ozone-generator': world(
     'its isolator and its room’s power; its own ozone plant',
   ),

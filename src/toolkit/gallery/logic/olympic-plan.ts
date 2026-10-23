@@ -74,10 +74,13 @@ const SIZE = {
   controller: { w: 1.0, d: 0.25, h: 1.4 },
   hypo: { w: 1.2, d: 0.3, h: 1.0 },
   acid: { w: 0.7, d: 0.35, h: 0.8 },
+  // Dev28's Penfold balance tank panel (`BALANCE_PANEL`).
+  tankPanel: { w: 0.8, d: 0.25, h: 0.9 },
 } as const;
 
 /** The dosing's fixing heights on the wall (as the room's equipment has them). */
 const WALL_HEIGHT: Record<string, number> = {
+  tankPanel: 1.45,
   controller: 1.35,
   hypo: 1.3,
   acid: 1.3,
@@ -252,6 +255,25 @@ export function olympicPlan(): PlanItem[] {
       facing: 'south',
     }),
   );
+  // The balance tank's panel on the west wall just south of the pumps,
+  // beside the tank hall's doors: its level, its floats, its make-up and
+  // the pumps' START and STOP, worked where the tank is.
+  const tp = SIZE.tankPanel;
+  out.push({
+    ...item(
+      'tankPanel',
+      'Balance tank panel',
+      tp,
+      against(
+        'west',
+        tank.at + DOOR_CLEAR.across / 2 + 0.3 + p.d + 0.6 + tp.w / 2,
+        tp,
+        0,
+      ),
+      'wall',
+    ),
+    y: WALL_HEIGHT.tankPanel,
+  });
   // The middle band, south of the battery's walkway: the contact tank, the UV.
   const band = -hz + BATTERY;
   const c = SIZE.contact;

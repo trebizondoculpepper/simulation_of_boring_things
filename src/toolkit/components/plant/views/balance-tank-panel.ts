@@ -34,7 +34,8 @@ export interface BalancePanelIO {
   volume(): number;
   inflow(): number;
   outflow(): number;
-  bathers(): number;
+  /** The test rig's bather load: its readout and selector, Dev28's only (the building's panel has neither). */
+  bathers?(): number;
   lamps(): {
     high: boolean;
     overflowing: boolean;
@@ -45,8 +46,8 @@ export interface BalancePanelIO {
   };
   makeup(): 0 | 1 | 2;
   setMakeup(mode: 0 | 1 | 2): void;
-  session(): number;
-  setSession(session: number): void;
+  session?(): number;
+  setSession?(session: number): void;
   start(): void;
   stop(): void;
 }
@@ -173,33 +174,45 @@ export function createBalanceTankPanel(kit: PanelKit, io: BalancePanelIO) {
     0.26,
     -0.1,
   );
-  // The test rig's section, ruled off below.
-  t.box(face, t.paint('#f2c230', 0.6), W - 0.08, 0.006, 0.002, 0, -0.22, 0.001);
+  // The test rig's section, ruled off below: Dev28's only.
+  const rig = io.session && io.setSession && io.bathers;
+  if (rig)
+    t.box(
+      face,
+      t.paint('#f2c230', 0.6),
+      W - 0.08,
+      0.006,
+      0.002,
+      0,
+      -0.22,
+      0.001,
+    );
   const test = createMicroLabel(kit, 'TEST RIG  ·  POOL BATHER LOAD', {
     height: 0.016,
     ink: '#1d2326',
     maxWidth: 0.5,
   });
   test.position.set(0, -0.25, 0.004);
-  face.add(test);
-  place(
-    parts.add(
-      selector(kit, {
-        positions: 4,
-        legend: 'CLOSED · QUIET · PUBLIC · GALA',
-        name: 'Bather load selector',
-        bound: {
-          get value() {
-            return io.session();
+  if (rig) face.add(test);
+  if (rig)
+    place(
+      parts.add(
+        selector(kit, {
+          positions: 4,
+          legend: 'CLOSED · QUIET · PUBLIC · GALA',
+          name: 'Bather load selector',
+          bound: {
+            get value() {
+              return io.session!();
+            },
+            set: (v: number) => io.setSession!(Math.round(v)),
           },
-          set: (v: number) => io.setSession(Math.round(v)),
-        },
-      }),
-    ),
-    -0.15,
-    -0.35,
-  );
-  const bathers = readout('BATHERS', 0.18, -0.33);
+        }),
+      ),
+      -0.15,
+      -0.35,
+    );
+  const bathers = rig ? readout('BATHERS', 0.18, -0.33) : null;
   let shown = '';
   return {
     group,
@@ -210,13 +223,13 @@ export function createBalanceTankPanel(kit: PanelKit, io: BalancePanelIO) {
         `LEVEL${`${io.level().toFixed(2)} m`.padStart(11)}`,
         `VOLUME${`${io.volume().toFixed(0)} m3`.padStart(10)}`,
       ];
-      const key = `${lines.join('|')}|${Math.round(io.inflow())}|${Math.round(io.outflow())}|${Math.round(io.bathers())}`;
+      const key = `${lines.join('|')}|${Math.round(io.inflow())}|${Math.round(io.outflow())}|${Math.round(io.bathers?.() ?? 0)}`;
       if (key === shown) return;
       shown = key;
       lcd.show(lines);
       inflow.show(String(Math.round(io.inflow())));
       outflow.show(String(Math.round(io.outflow())));
-      bathers.show(String(Math.round(io.bathers())));
+      bathers?.show(String(Math.round(io.bathers?.() ?? 0)));
     },
   };
 }

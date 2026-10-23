@@ -5,6 +5,7 @@ import type { PoolWater } from '../water/water-balance';
 import { POOLS } from '../plant-sizing/pools.config';
 import { ASSUME, sizePlant } from '../plant-sizing/sizing';
 import { phTarget } from './chemicals';
+import { BALANCE_TANK, volumeOf } from './balance-tank';
 import { AMBIENT, stepThermal, thermalParams } from './thermal';
 import type { ThermalParams } from './thermal';
 import type { Chemical } from './chemicals';
@@ -82,7 +83,8 @@ export function newPools(): PoolsState {
       id,
       {
         level: 0.015,
-        balance: 0.68,
+        // The Olympic's tank at its working depth (Dev28's start, 3.1 m), the others' at their floats.
+        balance: id === 'pool_02' ? 3.1 / BALANCE_TANK.weir : 0.68,
         temperature: POOL_TARGET[id].temp,
         ph: 7.4,
         freeChlorine: 1.4,
@@ -140,8 +142,26 @@ const WATER: Record<PoolId, PoolWater> = (() => {
       depth: c.body.volume / c.body.area,
     };
   }
+  // The Olympic's tank as built (Dev28, `balance-tank.ts`): cast concrete,
+  // its weir at 4.0 m, the plant floor over it a storey below the deck; its
+  // make-up the 30 m³/h of its 54 mm feed, switched by its own level band
+  // (`world.ts`); LOW LOW at 1.0 m.
+  const T = BALANCE_TANK;
+  out.pool_02 = {
+    ...out.pool_02,
+    tank: volumeOf(T.weir),
+    tankDepth: T.weir,
+    tankBelow: T.weir,
+    makeUpRate: T.makeup,
+    float: T.makeupOn / T.weir,
+    lowLow: T.lowLow / T.weir,
+  };
   return out;
 })();
+
+/** The Olympic's tank's water depth, m, from its balance (its share of the water to the weir). */
+export const olympicTankLevel = (balance: number) =>
+  balance * BALANCE_TANK.weir;
 
 /** Each pool's mean depth, m: empty with its surface this far below its lip. */
 export const poolDepth = (id: PoolId) => WATER[id].depth;
@@ -239,11 +259,21 @@ export function stepPools(
   return stepPoolsWater(pools, plant, dt, time, stock, makeUp, ambient).pools;
 }
 
-/** What the pools' float valves call for now, m³/h: each whose balance tank is below its float. */
-export function makeUpDemand(pools: PoolsState): number {
+/**
+ * What the pools' make-ups call for now, m³/h: each whose balance tank is
+ * below its float, or, where a pool's own control says (`calling`: the
+ * Olympic's), as it says.
+ */
+export function makeUpDemand(
+  pools: PoolsState,
+  calling: Partial<Record<PoolId, boolean>> = {},
+): number {
   return POOL_IDS.reduce(
     (sum, id) =>
-      sum + (pools[id].balance < WATER[id].float ? WATER[id].makeUpRate : 0),
+      sum +
+      ((calling[id] ?? pools[id].balance < WATER[id].float)
+        ? WATER[id].makeUpRate
+        : 0),
     0,
   );
 }
@@ -276,7 +306,12 @@ export function stepPoolsWater(
    * given whether its pumps run: what reaches the pool, and what goes to
    * waste, m³/h. Without it, its design flow and a day's backwash.
    */
-  olympic?: (running: boolean) => { toPool: number; toWaste: number },
+  olympic?: (running: boolean) => {
+    toPool: number;
+    toWaste: number;
+    /** Whether its make-up control calls for water. */
+    makeUpCalling: boolean;
+  },
 ): {
   pools: PoolsState;
   drawn: number;
@@ -362,7 +397,11 @@ export function stepPoolsWater(
         evaporated: 0,
         madeUp: 0,
         ...(battery
-          ? { pumpFlow: battery.toPool, toWaste: battery.toWaste }
+          ? {
+              pumpFlow: battery.toPool,
+              toWaste: battery.toWaste,
+              makeUpCalling: battery.makeUpCalling,
+            }
           : {}),
       },
       dt / 3600,

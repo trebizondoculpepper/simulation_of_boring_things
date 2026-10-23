@@ -91,6 +91,11 @@ export interface WaterState {
    * backwash at midnight.
    */
   toWaste?: number;
+  /**
+   * Whether a plant's own make-up control calls for water now (the
+   * Olympic's level switch band, or its HAND), in place of the float.
+   */
+  makeUpCalling?: boolean;
 }
 
 /** A pool brimming, its tank at its float, its pumps running, its make-up open. */
@@ -144,7 +149,9 @@ export function flows(p: PoolWater, s: WaterState) {
           Math.sqrt(head / (p.tankBelow + p.tankDepth))
         : 0;
   const makeUp =
-    s.makeUpOpen && s.tankVolume < p.tank * p.float ? p.makeUpRate : 0;
+    s.makeUpOpen && (s.makeUpCalling ?? s.tankVolume < p.tank * p.float)
+      ? p.makeUpRate
+      : 0;
   return {
     circulation,
     overflow,

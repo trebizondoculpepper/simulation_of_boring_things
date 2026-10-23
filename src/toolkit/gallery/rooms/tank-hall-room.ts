@@ -42,6 +42,8 @@ import {
   TANK,
 } from '../logic/balance-tank-hall';
 import { buildHall, prepareRoom } from './plant/balance-tank-hall';
+import { worldStore } from '../../save/world-store';
+import { olympicTankView } from '../../../game/plant/olympic-tank';
 
 /**
  * The Olympic pool's balance tank hall, in the building (prompt 033): the
@@ -72,7 +74,12 @@ export function startTankHall(canvas: HTMLCanvasElement) {
 
   // The hall's tank, gantry, pipes, instruments and doors.
   prepareRoom();
-  const hall = buildHall(kit, { bay: false });
+  // Its water the world's: the Olympic's tank, as the plant runs it.
+  const store = worldStore('dev');
+  const hall = buildHall(kit, {
+    bay: false,
+    source: () => olympicTankView(store.world.value),
+  });
   room.add(hall.object);
 
   // Its upper walls, blockwork, round the tank above the gantry, and its soffit.

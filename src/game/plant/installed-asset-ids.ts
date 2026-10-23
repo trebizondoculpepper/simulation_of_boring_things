@@ -349,4 +349,8 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0105',
     tag: 'PL2-DP2',
   },
+  'plant_pool_02|balance-tank-panel|Olympic pool balance tank panel': {
+    assetId: 'asset-0106',
+    tag: 'PL2-CP3',
+  },
 };

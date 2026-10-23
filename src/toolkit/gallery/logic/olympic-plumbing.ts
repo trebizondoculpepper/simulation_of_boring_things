@@ -160,6 +160,7 @@ const ITEM: Record<string, { key: string }> = {
   controller: { key: 'dosing-controller' },
   hypo: { key: 'hypo-pumps' },
   acid: { key: 'acid-pump' },
+  tankPanel: { key: 'balance-tank-panel' },
 };
 const itemOf = (p: PlanItem): Item => ({
   key: p.key.startsWith('filter') ? 'sand-filter:3' : ITEM[p.key].key,

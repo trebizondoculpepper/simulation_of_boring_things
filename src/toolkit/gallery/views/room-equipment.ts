@@ -110,6 +110,13 @@ import { WET_HALL_PLANT } from '../../../game/plant/wet-hall';
 import { pumpPairExhibit } from '../rooms/plant/pumps';
 import { pumpPanelExhibit } from '../rooms/plant/pump-panel';
 import { currentPlant } from '../rooms/plant/live-plant';
+import { createBalanceTankPanel } from '../../components/plant/views/balance-tank-panel';
+import { volumeOf } from '../../../game/plant/balance-tank';
+import {
+  MAKEUP_MODES,
+  olympicTankView,
+  tankFloats,
+} from '../../../game/plant/olympic-tank';
 import { olympicFlowsOf } from '../../../game/plant/olympic-battery';
 import { BIG_FILTER } from '../../../game/plant/five-valve-filter';
 import {
@@ -206,6 +213,9 @@ function modelFor(
   const pool = /^plant_(pool_0[1-4])$/.exec(room)?.[1] as PoolId | undefined;
   if (pool && kind === 'pump-pair') return pumpPairExhibit(pool).build(kit);
   if (pool && kind === 'pump-panel') return pumpPanelExhibit(pool).build(kit);
+  // The Olympic's balance tank panel, worked on the world's tank.
+  if (kind === 'balance-tank-panel' && typeof window !== 'undefined')
+    return worldBalanceTankPanel(kit);
   // The boiler house's LTHW circulator: running while the heating circuit
   // is up, its duty head lit and heard.
   if (kind === 'lthw-pumps' && typeof window !== 'undefined') {
@@ -901,6 +911,59 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
         live.dispose?.();
       }
       pipework.dispose();
+    },
+  };
+}
+
+/**
+ * The Olympic's balance tank panel in its plant room (Dev28's Penfold
+ * panel, without the test rig's bather load), on the world's tank
+ * (`olympic-tank.ts`): its depth, volume and flows, its float switches'
+ * lamps, its make-up selector (OFF, AUTO, HAND), and the pumps' START and
+ * STOP, which the world has as the pumps' isolators (STOP takes both out,
+ * START puts the duty pump in).
+ */
+function worldBalanceTankPanel(kit: PanelKit): LiveExhibit {
+  const store = worldStore('dev');
+  const view = () => olympicTankView(store.world.value);
+  const panel = createBalanceTankPanel(kit, {
+    level: () => view().level,
+    volume: () => volumeOf(view().level),
+    inflow: () => view().inflow + view().makeup,
+    outflow: () => view().outflow + view().spill,
+    lamps: () => {
+      const v = view();
+      const f = tankFloats(v.level);
+      return {
+        high: f.high,
+        overflowing: v.spill > 0.5,
+        makeup: v.makeupOpen,
+        low: f.low,
+        lowLow: f.lowLow || v.pumps === 'tripped',
+        running: v.pumps === 'run',
+      };
+    },
+    makeup: () =>
+      MAKEUP_MODES.indexOf(store.world.value.olympicTank.makeup) as 0 | 1 | 2,
+    setMakeup: (mode) =>
+      store.dispatch({ type: 'olympic/makeup', mode: MAKEUP_MODES[mode] }),
+    start: () =>
+      store.dispatch({
+        type: 'plant/isolator',
+        name: 'P-101A isolator',
+        on: true,
+      }),
+    stop: () => {
+      for (const name of ['P-101A isolator', 'P-101B isolator'] as const)
+        store.dispatch({ type: 'plant/isolator', name, on: false });
+    },
+  });
+  return {
+    object: panel.group,
+    parts: panel.parts,
+    update: (delta) => {
+      panel.parts.update(delta);
+      panel.update();
     },
   };
 }
