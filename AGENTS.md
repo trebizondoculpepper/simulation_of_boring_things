@@ -28,6 +28,6 @@
 - Versions follow semantic versioning (README, "Versions and releases"): every build of `main` gets its own version, CI advancing `package.json`'s patch by the commits since its tag; `src/game/version.ts` reads it. Never commit version bumps to `main` by hand except in a release. Add every notable change under Unreleased in `CHANGELOG.md` as you make it. Never cut a release (tag) without the owner asking.
 - Markdown is one paragraph per line, never hard-wrapped.
 - Record significant sessions in `diary/`.
-- `TODO.md` in the root is the project's one to-do list: every task not yet finished and every item for future delivery goes there, ticked off with its date and commit when done.
+- `TODO.md` in the root is the project's one to-do list: every task not yet finished and every item for future delivery goes there, under the section of its kind (gameplay, architectural, lighting, plant features and the rest), ticked off with its date and commit when done.
 - Never commit `agent-mailbox.toml` or `agent-inbox.toml`.
 - Ask the owner one question at a time.

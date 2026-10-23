@@ -1,6 +1,6 @@
 # To do
 
-The project's one to-do list (the owner, 2026-10-23): every task not yet finished, and every item for future delivery, is recorded here. Each item links the prompt that describes it, where there is one. Tick an item off when it is done, with the date and the commit; add new items as they come up.
+The project's one to-do list (the owner, 2026-10-23): every task not yet finished, and every item for future delivery, is recorded here. Each item links the prompt that describes it, where there is one. Tick an item off when it is done, with the date and the commit; add new items as they come up, each under the section of its kind.
 
 ## Now: the Olympic plant room, working (prompt 035)
 
@@ -18,11 +18,25 @@ The owner's priority: the Olympic is the hardest of the pools, and once it works
 
 ## Later, not now
 
-- [ ] **The wet hall's tanks as built** ([036](doc/prompts/036-wet-hall-tanks.md)): the break tank stays sectional GRP; the backwash holding tank and the Lounge pool's balance tank in cast concrete.
+Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and the plant.
+
+### Gameplay features
+
 - [ ] **Sound between rooms** ([037](doc/prompts/037-sound-between-rooms.md)): a room is heard through an open door by how far it stands open (full above about 20 % open, about −20 dB at 5 %, silent and its sounds stopped when shut), not by which room the player is in.
 - [ ] **Noclip, a free camera** ([038](doc/prompts/038-noclip-camera.md)): toggled on the escape screen; flying freely in three directions (Space up, Shift down, Ctrl faster, as Minecraft's), through everything in the room but kept within its walls, floor and ceiling; with a readout of the camera's place and a way to copy its address, to set up the shots for the title's attract sequence.
+
+### Architectural features
+
 - [ ] **The reception, the changing village and the showers, put back as new sections** (the owner, 2026-10-23), with the reception's **speed gates** ([039](doc/prompts/039-reception-speed-gates.md), reference photographs in `doc/research/reception-turnstiles/`): glass swing-wing turnstiles, free-flow, opening as the walker passes through; their appearance and their motion modelled in a dev room first.
-- [ ] **A direct/indirect "halo" ceiling panel** ([040](doc/prompts/040-direct-indirect-panel.md), photograph in `doc/research/lighting/`): a suspended LED panel lighting the room through its diffuser and washing the ceiling round it, for the modern public spaces; and, seen beside it, a ceiling dome CCTV camera as a possible later item.
+- [ ] **A ceiling dome CCTV camera** (seen beside the halo panel in `doc/research/lighting/01-direct-indirect-halo-panel.jpg`; [040](doc/prompts/040-direct-indirect-panel.md)): a possible later item, under a fictional maker.
+
+### Lighting features
+
+- [ ] **A direct/indirect "halo" ceiling panel** ([040](doc/prompts/040-direct-indirect-panel.md), photograph in `doc/research/lighting/`): a suspended LED panel lighting the room through its diffuser and washing the ceiling round it, for the modern public spaces.
+
+### Plant features
+
+- [ ] **The wet hall's tanks as built** ([036](doc/prompts/036-wet-hall-tanks.md)): the break tank stays sectional GRP; the backwash holding tank and the Lounge pool's balance tank in cast concrete.
 - [ ] **The other pools on the Olympic's pattern:** each pool's circulation, filters and balance tank driven by its own plant's valves and model, as the Olympic's now are, once the Olympic works.
 
 ## Test scenarios ([scenarios](doc/prompts/scenarios.md))
