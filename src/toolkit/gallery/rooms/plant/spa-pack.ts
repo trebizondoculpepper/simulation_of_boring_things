@@ -31,6 +31,7 @@ import {
 import { worldStore } from '../../../save/world-store';
 import { partAudio } from '../../../components/core/audio/part-audio';
 import { machineTone } from '../../../components/sound/audio/machine-tones';
+import { doorGain } from '../../../components/core/logic/door-attenuation';
 import { FOOTBATH, partOn } from '../../../../game/plant/identification';
 
 /**
@@ -480,13 +481,12 @@ function buildSpaPack(
   object.userData.supply = supplied;
   const running = computed(() => supplied.value && power.position.value === 1);
   const doorOpen = computed(() => latches.some((l) => l.open.value));
-  // Its pump's motor, heard while it runs (the owner, 2026-10-23): quiet
-  // through its closed doors, about 10 dB louder with either one open.
-  const hum = machineTone(
-    'motor',
-    signal(1),
-    computed(() => (doorOpen.value ? 0.07 : 0.022)),
-  );
+  // Its pump's motor, heard while it runs (the owner, 2026-10-23): at full
+  // volume while either door is open more than about 20 degrees, fading
+  // to 20 dB down as the last one shuts (`doorGain`).
+  const HUM = 0.07;
+  const humLevel = signal(HUM * doorGain(0));
+  const hum = machineTone('motor', signal(1), humLevel);
   let humming = false;
   const doorLamp = computed(() => supplied.value && doorOpen.value);
   const uvOn = computed(() => running.value && !doorOpen.value);
@@ -561,6 +561,9 @@ function buildSpaPack(
       );
       left.hinge.rotation.y = -swing[0];
       right.hinge.rotation.y = swing[1];
+      // Heard by the wider-open door.
+      humLevel.value =
+        HUM * doorGain((Math.max(swing[0], swing[1]) * 180) / Math.PI);
       const on = running.value;
       if (on !== humming) {
         humming = on;
