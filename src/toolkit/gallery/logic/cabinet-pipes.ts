@@ -246,8 +246,12 @@ export interface CabinetRun {
     axis: 'x' | 'y' | 'z';
     /** Turn the operator around a vertical run to face the clear aisle. */
     facing?: number;
-    /** Its lever, or, out of reach overhead, a chain wheel (`CHAIN_TO`). */
-    operator?: 'lever' | 'chain';
+    /**
+     * Its lever, or, out of reach overhead, a chain wheel (`CHAIN_TO`); or
+     * a motorised ball valve worked from the room's valve panel
+     * (`cabinetValvePanel`).
+     */
+    operator?: 'lever' | 'chain' | 'motor';
     /** Its axis may be its rise's. */
   } & ({ installed?: false } | { installed: true; name: string });
 }
@@ -352,6 +356,26 @@ export function cabinetIsolator(room: string, trial?: Placed): Isolator | null {
     ...ISOLATOR,
     supplyIn: [centre[0] + toward[0] * gIn, top, centre[2] + toward[2] * gIn],
     feedOut: [centre[0] + toward[0] * gOut, top, centre[2] + toward[2] * gOut],
+  };
+}
+
+/**
+ * The foot spa's valve panel (the owner, 2026-10-23: its valves motorised,
+ * worked from a small panel on the east wall): its back on the wall, at
+ * eye height, south of the pool door (the floor before it is kept clear
+ * in `room-equipment.ts`).
+ */
+export function cabinetValvePanel(room: string, trial?: Placed) {
+  if (room !== 'plant_pool_04') return null;
+  const s = setting(room, trial);
+  if (!s) return null;
+  const x = s.layout.box.w / 2;
+  const z = 0.5;
+  return {
+    x,
+    y: 1.45,
+    z,
+    yaw: -Math.PI / 2,
   };
 }
 
@@ -509,7 +533,7 @@ export function cabinetPipes(
       : at;
     run.valve =
       room === 'plant_pool_04' && run.name === 'Return to the spa'
-        ? { id: 'PL4-PW1-RV1', at: clearAt, axis: 'y' }
+        ? { id: 'PL4-PW1-RV1', at: clearAt, axis: 'y', operator: 'motor' }
         : {
             id: `${run.name} valve`,
             at: clearAt,
@@ -545,11 +569,12 @@ export function cabinetPipes(
         // The default points back through the nearby pipe stand. Point the
         // lever toward the gully instead, with room to work it from behind.
         facing: -Math.PI / 2,
+        operator: 'motor',
       };
     }
     // Fresh water enters along the east wall and continues to the pool,
-    // overhead, above every other lane (`MAKE_UP_LEVEL`); its valve worked
-    // from the floor by a chain wheel, its chain hanging within reach.
+    // overhead, above every other lane (`MAKE_UP_LEVEL`); its valve
+    // motorised, worked from the panel below it.
     const x = s.layout.box.w / 2 - 0.35;
     const y = MAKE_UP_LEVEL;
     runs.push({
@@ -581,7 +606,7 @@ export function cabinetPipes(
         id: 'PL4-MU1-LCV1',
         at: [x, y, 0],
         axis: 'z',
-        operator: 'chain',
+        operator: 'motor',
       },
     });
   }

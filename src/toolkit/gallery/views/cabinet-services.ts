@@ -30,6 +30,11 @@ import {
 } from '../logic/cabinet-pipes';
 import type { Service } from '../logic/cabinet-pipes';
 import { CHAIN_TO } from '../logic/room-pipes';
+import { cabinetValvePanel } from '../logic/cabinet-pipes';
+import { createRemoteValve } from '../../components/plant/views/remote-actuators';
+import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
+import { createValveControlPanel } from '../../components/plant/views/valve-control-panel';
+import type { PanelValve } from '../../components/plant/views/valve-control-panel';
 import { installedValveFor } from '../../../game/plant/installed-valves';
 
 /** Each run's service, as its markings name it. */
@@ -59,6 +64,9 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   const uses = new Map<Object3D, () => void>();
   const store = typeof window === 'undefined' ? null : worldStore('dev');
   const valveParts: ReturnType<typeof createWaterButterflyValve>[] = [];
+  // The motorised valves: each one's lamp, and its row on the room's panel.
+  const motorLamps: (() => void)[] = [];
+  const panelValves: PanelValve[] = [];
   const lift = <T extends readonly [number, number, number]>([x, y, z]: T) =>
     [x, floorY + y, z] as const;
   for (const run of runs) {
@@ -97,48 +105,82 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
               newIdentifiedPlant(),
             id,
           );
-      const valve = createWaterButterflyValve(
-        kit,
-        50,
-        axis === 'x' ? 'z' : axis,
-        `${id} · ${description?.name ?? 'Valve'}`,
-        installed
-          ? {
-              open: () =>
-                store?.world.value.installedValves[installed.assetId] ??
-                installed.normal === 'open',
-              set: (open) =>
-                store?.dispatch({
-                  type: 'plant/valve',
-                  id: installed.assetId,
-                  open,
-                }),
-            }
-          : {
-              open: () =>
-                store ? partOpen(store.world.value.identifiedPlant, id) : true,
-              set: (open) => store?.dispatch({ type: 'plant/valve', id, open }),
-            },
-        run.valve.operator,
-      );
-      valve.object.position.set(...lift(at));
-      if (axis === 'x')
-        valve.object.rotation.y = run.valve.facing ?? Math.PI / 2;
-      if (axis === 'y') valve.object.rotation.y = run.valve.facing ?? 0;
-      group.add(valve.object);
-      valveParts.push(valve);
-      for (const [piece, use] of valve.uses) uses.set(piece, () => use());
-      // Overhead, out of reach: worked by its chain from the floor.
-      if (run.valve.operator === 'chain') {
-        const use = [...valve.uses.values()][0];
-        for (const chain of addChainWheel(kit, valve.object, {
-          dn: 50,
-          axis: axis === 'x' ? 'z' : axis,
-          at: at[1],
-          chainTo: CHAIN_TO,
-          name: id,
-        }))
-          if (use) uses.set(chain, () => use());
+      const binding = installed
+        ? {
+            open: () =>
+              store?.world.value.installedValves[installed.assetId] ??
+              installed.normal === 'open',
+            set: (open: boolean) =>
+              store?.dispatch({
+                type: 'plant/valve',
+                id: installed.assetId,
+                open,
+              }),
+          }
+        : {
+            open: () =>
+              store ? partOpen(store.world.value.identifiedPlant, id) : true,
+            set: (open: boolean) =>
+              store?.dispatch({ type: 'plant/valve', id, open }),
+          };
+      if (run.valve.operator === 'motor') {
+        // A motorised ball valve, its actuator up (out of a riser, turned
+        // aside), its lamp as its limit switches find it; worked from the
+        // room's valve panel, not by hand.
+        const motor = createRemoteValve(
+          kit,
+          remoteValveGeometry('water', run.od, 0),
+          { stand: false },
+        );
+        motor.group.name = `${id} · ${description?.name ?? 'Valve'}`;
+        const mount = new Group();
+        mount.position.set(...lift(at));
+        if (axis === 'z') mount.rotation.y = Math.PI / 2;
+        if (axis === 'y') {
+          mount.rotation.y = run.valve.facing ?? 0;
+          motor.group.rotation.z = Math.PI / 2;
+        }
+        mount.add(motor.group);
+        group.add(mount);
+        motorLamps.push(() => motor.show(binding.open()));
+        panelValves.push({
+          tag: id,
+          legend: (description?.name ?? 'Valve').toUpperCase(),
+          open: binding.open,
+          set: binding.set,
+        });
+      }
+      const valve =
+        run.valve.operator === 'motor'
+          ? null
+          : createWaterButterflyValve(
+              kit,
+              50,
+              axis === 'x' ? 'z' : axis,
+              `${id} · ${description?.name ?? 'Valve'}`,
+              binding,
+              run.valve.operator,
+            );
+      if (valve) {
+        valve.object.position.set(...lift(at));
+        if (axis === 'x')
+          valve.object.rotation.y = run.valve.facing ?? Math.PI / 2;
+        if (axis === 'y') valve.object.rotation.y = run.valve.facing ?? 0;
+        group.add(valve.object);
+        valveParts.push(valve);
+        for (const [piece, use] of valve.uses) uses.set(piece, () => use());
+        // Overhead, out of reach: worked by its chain from the floor.
+        if (run.valve.operator === 'chain') {
+          const use = [...valve.uses.values()][0];
+          for (const chain of addChainWheel(kit, valve.object, {
+            dn: 50,
+            axis: axis === 'x' ? 'z' : axis,
+            at: at[1],
+            chainTo: CHAIN_TO,
+            name: id,
+          }))
+            if (use) uses.set(chain, () => use());
+        }
       }
       const legend = createMicroLabel(
         kit,
@@ -172,6 +214,18 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       }
       group.add(legend);
     }
+  }
+  // The motorised valves' panel, on its wall.
+  const panelAt = cabinetValvePanel(room);
+  const panel =
+    panelAt && panelValves.length
+      ? createValveControlPanel(kit, 'FOOT SPA VALVES', panelValves)
+      : null;
+  if (panel && panelAt) {
+    panel.group.position.set(panelAt.x, floorY + panelAt.y, panelAt.z);
+    panel.group.rotation.y = panelAt.yaw;
+    group.add(panel.group);
+    for (const [piece, use] of panel.parts.uses) uses.set(piece, () => use());
   }
   // The drain's floor gully, its grating flush with the floor, and the
   // tundish on it that the drain discharges into across an air gap.
@@ -234,6 +288,8 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       if (isolator && on !== undefined && on !== isolator.on) isolator.set(on);
       isolator?.update(delta);
       for (const valve of valveParts) valve.update(delta);
+      for (const lamp of motorLamps) lamp();
+      panel?.update(delta);
     },
   };
 }

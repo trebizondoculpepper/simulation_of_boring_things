@@ -671,7 +671,17 @@ export function roomEquipment(
       };
     case 'plant_pool_04':
       return {
-        box: plant('pool_04'),
+        // In front of its valve panel on the east wall (`cabinetValvePanel`).
+        box: (() => {
+          const b = plant('pool_04');
+          b.keepClear.push({
+            minX: b.w / 2 - 1,
+            maxX: b.w / 2,
+            minZ: 0,
+            maxZ: 1,
+          });
+          return b;
+        })(),
         items: [
           // 0.9 m off its wall (the owner, 2026-10-23): room behind it to
           // work the valves on its back stubs. Of every place along the
