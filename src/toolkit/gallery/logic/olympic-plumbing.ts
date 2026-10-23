@@ -1375,7 +1375,8 @@ export function olympicRoom() {
             axis,
             name: v.name,
             od: r.od,
-            operator: f.at[1] > 2.0 ? 'chain' : 'lever',
+            // Solenoid-operated, worked from the panel (the owner, 2026-10-23).
+            operator: 'solenoid',
             // Its lever away from the wall it is nearest, into the room.
             facing:
               axis === 'x'

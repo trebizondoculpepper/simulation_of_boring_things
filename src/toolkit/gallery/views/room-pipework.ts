@@ -1,3 +1,4 @@
+import { createActuatedButterflyValve } from '../../components/plant/views/actuated-butterfly-valve';
 import { retiredFrom } from '../logic/retired-rooms';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -176,6 +177,22 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       } else holder.rotation.y = v.axis === 'z' ? Math.PI / 2 : 0;
       holder.add(gas.object);
       return holder;
+    }
+    if (v.operator === 'solenoid') {
+      // Solenoid-operated: its actuator up (or out of a vertical pipe),
+      // turned to face away from its machine.
+      const actuated = parts.add(
+        createActuatedButterflyValve(
+          kit,
+          dnFor(v.od),
+          v.axis === 'y' ? 'y' : 'z',
+          `${installed.tag} · ${v.name}`,
+          binding,
+        ),
+      );
+      actuated.object.position.set(...lift(v.at));
+      actuated.object.rotation.y = Math.atan2(v.facing[0], v.facing[2]);
+      return actuated.object;
     }
     const part = parts.add(
       // Built along its own z (or upright), then turned to face away

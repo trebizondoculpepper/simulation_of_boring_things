@@ -1,6 +1,6 @@
 # 033: The Olympic plant room's redo
 
-Status: stages 1 to 3 done 2026-10-23: the room is installed in the game, 22 × 14 m, plumbed by the pipeline. The tank hall (`tank_hall`, `rooms/tank-hall-room.ts`) is joined to it through its west doors. Still to come: solenoid actuators drawn on its valves (a new component, modelled in a dev room first), its non-return valves, power isolators and tap-offs drawn, and the chlorine and ozone detectors (prompt 022).
+Status: stages 1 to 3 done 2026-10-23: the room is installed in the game, 22 × 14 m, plumbed by the pipeline. The tank hall (`tank_hall`, `rooms/tank-hall-room.ts`) is joined to it through its west doors. Its valves are solenoid-operated (modelled in Dev29 first). Scored against the morning's room by the same rules (`olympic-comparison.ts`): 89.2 passing every gate against 89.8 failing one, in 308 m² rather than 484. Still to come: its non-return valves, power isolators and tap-offs drawn, and the chlorine and ozone detectors (prompt 022).
 
 The owner, 2026-10-23, once the balance tank had its own hall (Dev28, prompt 032): keep the large plant room, clear it out, and reinstall what the new equipment needs, laid out with the pipeline (sizer, placement, plumber, router, scorer: `doc/room-layout-guide.md`). The original room was laid out by hand two days before those tools existed; it is kept as `retired0`, so it need not be compared or preserved.
 

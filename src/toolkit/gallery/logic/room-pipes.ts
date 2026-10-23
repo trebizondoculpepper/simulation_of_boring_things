@@ -55,9 +55,11 @@ export interface Valve {
   od: number;
   /**
    * How it is worked: by its lever, or, out of reach overhead, by a chain
-   * wheel, its chain hanging to `CHAIN_TO` over the floor.
+   * wheel, its chain hanging to `CHAIN_TO` over the floor; or by its
+   * solenoid, from its panel, on a spring-return pneumatic actuator
+   * (`actuated-butterfly-valve.ts`), its manual override by hand.
    */
-  operator: 'lever' | 'chain';
+  operator: 'lever' | 'chain' | 'solenoid';
   /** A water butterfly valve (the default), or a gas lever ball valve. */
   style?: 'butterfly' | 'gas-ball';
   /**
