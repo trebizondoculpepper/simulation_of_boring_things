@@ -552,6 +552,18 @@ export function startEquipmentRoom(
     solids: () => [
       ...walls,
       ...(standing < 0.5 ? solids : []),
+      // What the exhibits put in the way as they work (a shut door).
+      ...live
+        .flatMap(
+          (l) =>
+            l.solids?.({ x: walk.walker.x / m, z: walk.walker.z / m }) ?? [],
+        )
+        .map((f) => ({
+          minX: f.minX * m,
+          maxX: f.maxX * m,
+          minZ: f.minZ * m,
+          maxZ: f.maxZ * m,
+        })),
       ...(sized
         ? regionSolids(sized.room, sized.gantry, standing).map((f) => ({
             minX: f.minX * m,

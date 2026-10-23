@@ -60,6 +60,9 @@ import {
   layoutBalanceHall,
 } from '../../logic/balance-tank-hall';
 import type { RoomFinish } from '../plant-room';
+import type { Footprint } from '../../../controls/logic/walk-collision';
+import { doorwayStops, overlaps } from '../../logic/doorway';
+import { equipmentDoors } from '../../../components/architectural/parts/equipment-doors';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
@@ -430,28 +433,18 @@ function buildHall(kit: PanelKit): LiveExhibit {
   wall(TANK.minZ, d0, 0, HALL.height);
   wall(d1, TANK.maxZ, 0, HALL.height);
   wall(d0, d1, DOORWAY.height, HALL.height);
-  // A steel frame round the doorway.
-  for (const z of [d0, d1])
-    t.box(
-      object,
-      steel,
-      PARTITION + 0.02,
-      DOORWAY.height,
-      0.05,
-      px,
-      DOORWAY.height / 2,
-      z,
-    );
-  t.box(
-    object,
-    steel,
-    PARTITION + 0.02,
-    0.05,
-    DOORWAY.width,
-    px,
-    DOORWAY.height,
-    DOORWAY.z,
-  );
+  // The doorway's doors: the equipment doors, as between every plant room, pulled open from the bay.
+  const doors = equipmentDoors(kit, 'BALANCE TANK');
+  doors.object.rotation.y = -Math.PI / 2;
+  doors.object.position.set(TANK.minX - PARTITION, 0, DOORWAY.z);
+  object.add(doors.object);
+  panel.parts.add(doors);
+  const leaves: Footprint = {
+    minX: TANK.minX - PARTITION - 0.05,
+    maxX: TANK.minX + 0.05,
+    minZ: d0,
+    maxZ: d1,
+  };
 
   // Light: sealed LED battens high on the walls, as the plant rooms have, a few lamps lighting the room.
   const battens = createWallBattenMaterials();
@@ -494,6 +487,16 @@ function buildHall(kit: PanelKit): LiveExhibit {
   return {
     object,
     parts: panel.parts,
+    // The doors bar the doorway while shut, and are held open while the walker stands in it.
+    solids: (walker) => {
+      const inside = overlaps(leaves, walker.x, walker.z, 0.35);
+      if (inside) doors.holdOpen();
+      return doorwayStops(
+        { inside, shut: doors.angle() < 0.6, seen: true },
+        leaves,
+        leaves,
+      );
+    },
     update: (delta) => {
       for (const u of updates) u(delta);
     },

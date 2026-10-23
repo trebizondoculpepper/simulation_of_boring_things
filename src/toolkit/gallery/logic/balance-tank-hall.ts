@@ -2,6 +2,7 @@ import { BALANCE_TANK } from '../../../game/plant/balance-tank';
 import type { Vec3 } from '../../components/core/logic/pipe-route';
 import type { PlantRoomLayout } from './plant-room-layout';
 import { WALL_THICKNESS } from './dev-room-links';
+import { EQUIPMENT_OPENING } from './plant-rooms';
 
 /**
  * The Olympic pool's balance tank hall (Dev28, `doc/prompts/032-balance-tank-hall.md`):
@@ -18,9 +19,14 @@ import { WALL_THICKNESS } from './dev-room-links';
 const T = BALANCE_TANK;
 /** The plant bay at the west end: the adjacent plant room's side, a dry floor at the gantry's level. */
 export const BAY = 3;
-/** The blockwork partition between the bay and the tank, and its doorway onto the gantry. */
+/** The blockwork partition between the bay and the tank, and its doorway onto the gantry: the equipment doors, as between every plant room. */
 export const PARTITION = 0.2;
-export const DOORWAY = { z: -0.4, width: 1.0, height: 2.1 } as const;
+export const DOORWAY = {
+  z: 0,
+  width: EQUIPMENT_OPENING,
+  // The doors' 2.4 m leaves under their 60 mm frame (`equipment-doors.ts`).
+  height: 2.46,
+} as const;
 /** The hall: its walls on these bounds, its soffit under the pool's surround. */
 export const HALL = {
   halfX: (BAY + PARTITION + T.length) / 2 + WALL_THICKNESS / 2,
@@ -79,7 +85,7 @@ export const SPOTS = {
     end: heightOf(T.weir) + 0.35,
     valve: 1.6,
     bayX: BAY_FLOOR.maxX - 0.15,
-    high: 2.7,
+    high: 2.95,
   },
   /** The weir to drain, out of the east wall. */
   weir: { z: -1.0 },
@@ -93,7 +99,7 @@ export const SPOTS = {
   floats: { x: OPENING.minX + 1.4, z: OPENING.minZ + 0.25 },
   /** In the bay: the panel on its north wall; the lifebuoy in the hall, by the doorway. */
   panel: { x: (BAY_FLOOR.minX + BAY_FLOOR.maxX) / 2, y: 1.45 },
-  lifebuoy: { z: DOORWAY.z - 1.3, y: 1.5 },
+  lifebuoy: { z: DOORWAY.z - DOORWAY.width / 2 - 0.6, y: 1.5 },
 } as const;
 
 /** The pipes' centrelines. */

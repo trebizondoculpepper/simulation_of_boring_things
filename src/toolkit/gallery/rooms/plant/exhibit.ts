@@ -3,6 +3,7 @@ import type { PanelKit } from '../../../components/core/views/eighties-controls'
 import type { PartSet } from '../../../components/core/parts/parts';
 import type { ExhibitSize } from '../../logic/plant-room-layout';
 import type { BrandId } from '../../../components/core/logic/brands';
+import type { Footprint } from '../../../controls/logic/walk-collision';
 
 /**
  * One piece of plant shown in a plant development room: a model built at
@@ -37,6 +38,11 @@ export interface LiveExhibit {
   parts?: PartSet;
   update?(delta: number): void;
   dispose?(): void;
+  /**
+   * What bars the walker's way as it works, in metres in the room's frame,
+   * for where the walker stands (a door's leaves while shut).
+   */
+  solids?(walker: { x: number; z: number }): Footprint[];
 }
 
 /** Whether `built` is a working exhibit rather than a bare model. */
