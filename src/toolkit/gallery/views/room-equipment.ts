@@ -1,3 +1,4 @@
+import { olympicRoom } from '../logic/olympic-plumbing';
 import {
   bedGlass,
   dirtFromDp,
@@ -823,6 +824,13 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
     const soffit = roomStructure(room)?.soffit ?? 7;
     pipework.group.add(
       createContainment(kit, bus.trunking, [], soffit, floorY),
+    );
+  }
+  // The Olympic's busbar ring round its walls (`olympic-plumbing.ts`).
+  if (room === 'plant_pool_02') {
+    const soffit = roomStructure(room)?.soffit ?? 8;
+    pipework.group.add(
+      createContainment(kit, olympicRoom().busbar, [], soffit, floorY),
     );
   }
   // The switch room's cable ladder and its switchgear's trunking.

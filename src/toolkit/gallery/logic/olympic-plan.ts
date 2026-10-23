@@ -1,5 +1,11 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
-import { EQUIPMENT_OPENING, PLANT_DOORWAY, PLANT_ROOM } from './plant-rooms';
+import {
+  EQUIPMENT_OPENING,
+  PLANT_DOORWAY,
+  PLANT_ROOM,
+  plantRoomPlan,
+} from './plant-rooms';
+import type { ShellPlan } from './shell-plan';
 
 /**
  * The Olympic plant room's redo, in plan (prompt 033, stage 2): where each
@@ -77,6 +83,8 @@ const WALL_HEIGHT: Record<string, number> = {
   acid: 1.3,
 };
 
+/** The gap behind the pump pair, along the west wall, metres. */
+const PUMP_BACK = 0.8;
 /** The UV unit's middle along the south wall, metres. */
 const UV_X = -3.4;
 
@@ -238,7 +246,8 @@ export function olympicPlan(): PlanItem[] {
   const tank = DOORS.tank;
   out.push(
     item('pumps', 'Circulation pumps, duty and standby', p, {
-      x: -hx + OFF_WALL + p.w / 2,
+      // A maintenance gap behind it along the wall, to work its suction valves from.
+      x: -hx + OFF_WALL + PUMP_BACK + p.w / 2,
       z: tank.at + DOOR_CLEAR.across / 2 + 0.3 + p.d / 2,
       facing: 'south',
     }),
@@ -330,4 +339,79 @@ export function accessOf(i: PlanItem, depth = PLAN_ACCESS): Footprint {
     case 'west':
       return { ...f, minX: f.minX - depth, maxX: f.minX };
   }
+}
+
+/**
+ * The room's shell, for the shell's view, walking and doorways
+ * (`shell-plan.ts`): the landing and the east gantry its decks, hung from
+ * the walls; the stair down the south wall heading west; the pool door
+ * east, the main plant's doors south under the landing, the balance tank
+ * hall's west; its rails along the decks' open edges.
+ */
+export function olympicShellPlan(): ShellPlan {
+  const large = plantRoomPlan('large');
+  const L = LANDING;
+  const G = olympicRoomPlan().gantry;
+  const S = STAIR;
+  return {
+    hx,
+    hz,
+    stepFree: false,
+    floor: large.floor,
+    roof: large.roof,
+    decks: [L, G],
+    cantilevered: true,
+    rails: [
+      // The gantry's open (west) edge, from the north wall to the landing.
+      [
+        [G.minX, -hz],
+        [G.minX, L.minZ],
+      ],
+      // The landing's open edges: north, from the gantry; west, to the stair's top.
+      [
+        [L.minX, L.minZ],
+        [G.minX, L.minZ],
+      ],
+      [
+        [L.minX, L.minZ],
+        [L.minX, S.minZ],
+      ],
+    ],
+    stair: {
+      minX: S.minX,
+      maxX: S.maxX,
+      minZ: S.minZ,
+      maxZ: S.maxZ,
+      steps: S.steps,
+      riser: PLANT_ROOM.storey / S.steps,
+      heading: 'west',
+      top: S.maxX,
+      bottom: S.minX,
+      offAt: PLANT_ROOM.stair.offAt,
+      openSide: [
+        [S.maxX, S.minZ],
+        [S.minX, S.minZ],
+      ],
+    },
+    door: { wall: 'east', at: DOORS.pool.at, width: DOORS.pool.width },
+    equipment: { wall: 'south', at: DOORS.main.at, width: DOORS.main.width },
+    tankDoor: { wall: 'west', at: DOORS.tank.at, width: DOORS.tank.width },
+    // On the west wall, seen from the gantry and the floor alike.
+    title: { wall: 'west', at: -hz + 3.2, y: 1.8 },
+    label: `${OLYMPIC_ROOM.w} × ${OLYMPIC_ROOM.d} m · two storeys`,
+    seed: 37,
+    lamps: 2,
+  };
+}
+
+/** The room's box for its machines' layout: kept clear inside its doors and at the stair's foot; the stair solid. */
+export function olympicRoomBox() {
+  return {
+    w: OLYMPIC_ROOM.w,
+    d: OLYMPIC_ROOM.d,
+    keepClear: keptClear(),
+    solid: solids(),
+    pipes: {},
+    entry: { x: DOORS.main.at, z: hz - 0.6 },
+  };
 }

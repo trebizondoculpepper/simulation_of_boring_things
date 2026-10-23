@@ -34,27 +34,26 @@ import {
 } from '../../../scene/breeze-block-texture';
 import { createWarehouseConcreteFloor } from '../../../scene/warehouse-concrete-floor';
 import { createPs1Material } from '../../components/core/parts/ps1-material';
-import { PLANT_DOORWAY, PLANT_ROOM, plantRoomPlan } from '../logic/plant-rooms';
-import type { PlantRoomSize } from '../logic/plant-rooms';
+import { PLANT_ROOM } from '../logic/plant-rooms';
+import { wallFrame, yawToward } from '../logic/shell-plan';
+import type { ShellDoorway, ShellPlan } from '../logic/shell-plan';
 
 /**
- * A per-attraction plant room's shell (`logic/plant-rooms.ts`): painted
- * blockwork walls two storeys high, a concrete plant floor a storey
- * below the deck, the plant room door in the south wall at deck level
- * onto a landing of studded rubber, a steep steel stair with yellow
- * nosings and handrails down the east wall, and in the south wall at the
- * plant floor, the double equipment doors through to the central plant.
- * Bare, for now: its machinery, west wall first, comes later. Metres;
- * the deck at y = 0.
+ * A plant room's shell, drawn from its plan (`logic/shell-plan.ts`):
+ * painted blockwork walls two storeys high, a concrete plant floor a
+ * storey below the deck, the plant room door at deck level onto its decks
+ * of studded rubber (a landing, a gantry; carried on posts, or hung from
+ * the walls), a steep steel stair with yellow nosings and handrails down
+ * to the plant floor, and on the plant floor the double equipment doors
+ * through to the central plant (and, if it has one, to its balance tank
+ * hall). Metres; the deck at y = 0.
  */
 export function createPlantRoomShell(
-  size: PlantRoomSize,
+  plan: ShellPlan,
   metre: number,
   kit: PanelKit,
-  /** Its title: "PLANT ROOM 4 – FOOTBATH"; the size's, for a template. */
-  name = `PLANT ROOM · ${size.toUpperCase()}`,
-  /** A room whose balance tank is in a hall of its own (`plantRoomPlan`). */
-  { tankHall = false }: { tankHall?: boolean } = {},
+  /** Its title: "PLANT ROOM 4 – FOOTBATH". */
+  name: string,
 ): {
   group: Group;
   door: ReturnType<typeof plantRoomDoor>;
@@ -62,12 +61,11 @@ export function createPlantRoomShell(
   /** The doors to the balance tank hall, if it has them. */
   tankDoors: EquipmentDoorsPart | null;
 } {
-  const plan = plantRoomPlan(size, { tankHall });
-  const { h, floor, roof, landing, stair } = plan;
+  const { hx, hz, floor, roof, stair } = plan;
   const P = PLANT_ROOM;
   const t = P.wall;
   const group = new Group();
-  group.name = `plant room (${size})`;
+  group.name = `plant room (${plan.label})`;
   group.scale.setScalar(metre);
   const paint = (color: string, roughness = 0.85, metalness = 0) => {
     const m = new MeshStandardMaterial({ color, roughness, metalness });
@@ -84,12 +82,12 @@ export function createPlantRoomShell(
   });
   kit.materials.push(block);
   const dado = paint('#6d7a6f');
-  const concrete = createWarehouseConcreteFloor(2 * h);
+  const concrete = createWarehouseConcreteFloor(2 * Math.max(hx, hz));
   kit.materials.push(concrete);
   if (concrete.map) kit.textures.push(concrete.map);
   const galvanised = paint('#a9aeae', 0.45, 0.6);
   const yellow = paint('#e3b51f', 0.5);
-  // Studded rubber safety flooring on the landing and the treads: raised
+  // Studded rubber safety flooring on the decks and the treads: raised
   // round studs on a dark rubber sheet, for grip when wet.
   const rubber = studdedRubber(kit);
   const box = (
@@ -123,125 +121,149 @@ export function createPlantRoomShell(
     group.add(mesh);
     return mesh;
   };
-  const height = roof - floor;
   // The plant floor, and the roof.
-  box(concrete, 2 * h, 0.1, 2 * h, 0, floor - 0.05, 0);
-  wallBox(2 * h + 2 * t, 0.3, 2 * h + 2 * t, 0, roof + 0.15, 0);
-  // The walls: the east whole, the west whole or round the balance tank
-  // hall's doors, north and south round their doors.
-  const opening = EQUIPMENT_DOORS.w + 2 * EQUIPMENT_DOORS.frame;
-  const doorTop = floor + EQUIPMENT_DOORS.h + 2 * EQUIPMENT_DOORS.frame;
-  if (plan.tankDoor) {
-    const z0 = plan.tankDoor.z - opening / 2;
-    const z1 = plan.tankDoor.z + opening / 2;
-    const x = -h - t / 2;
-    wallBox(t, height, z0 + h, x, (floor + roof) / 2, (z0 - h) / 2);
-    wallBox(t, height, h - z1, x, (floor + roof) / 2, (z1 + h) / 2);
-    const headerBottom = doorTop + CONCRETE_LINTEL.height;
-    wallBox(
-      t,
-      roof - headerBottom,
-      opening,
-      x,
-      (headerBottom + roof) / 2,
-      plan.tankDoor.z,
-    );
-  } else wallBox(t, height, 2 * h, -h - t / 2, (floor + roof) / 2, 0);
-  wallBox(t, height, 2 * h, h + t / 2, (floor + roof) / 2, 0);
-  const wallWithDoor = (
-    z: number,
-    doorX: number,
-    doorW: number,
-    doorBottom: number,
-    doorTop: number,
-  ) => {
-    const x0 = -h - t;
-    const x1 = h + t;
-    const left = doorX - doorW / 2 - x0;
-    const right = x1 - (doorX + doorW / 2);
-    wallBox(left, height, t, x0 + left / 2, (floor + roof) / 2, z);
-    wallBox(right, height, t, x1 - right / 2, (floor + roof) / 2, z);
-    const headerBottom = doorTop + CONCRETE_LINTEL.height;
-    wallBox(doorW, roof - headerBottom, t, doorX, (headerBottom + roof) / 2, z);
-    addConcreteLintel(group, kit, doorW, t, doorX, doorTop, z);
-    if (doorBottom > floor)
-      wallBox(doorW, doorBottom - floor, t, doorX, (floor + doorBottom) / 2, z);
-  };
+  box(concrete, 2 * hx, 0.1, 2 * hz, 0, floor - 0.05, 0);
+  wallBox(2 * hx + 2 * t, 0.3, 2 * hz + 2 * t, 0, roof + 0.15, 0);
+
+  // The walls, each round its doorways: the plant room door at deck level
+  // (on the floor in a step-free room); the equipment doors on the floor.
+  const eqTop = floor + EQUIPMENT_DOORS.h + 2 * EQUIPMENT_DOORS.frame;
   const doorW = 0.926 + 0.1;
-  wallWithDoor(-h - t / 2, plan.door.x, doorW, 0, 2.14);
-  wallWithDoor(
-    h + t / 2,
-    plan.equipment.x,
-    EQUIPMENT_DOORS.w + 2 * EQUIPMENT_DOORS.frame,
-    floor,
-    floor + EQUIPMENT_DOORS.h + 2 * EQUIPMENT_DOORS.frame,
-  );
-  // A painted dado round the plant floor, interrupted by the equipment
-  // doorway so the stripe cannot cover its lower half.
-  const equipmentLeft =
-    plan.equipment.x - EQUIPMENT_DOORS.w / 2 - EQUIPMENT_DOORS.frame;
-  const equipmentRight =
-    plan.equipment.x + EQUIPMENT_DOORS.w / 2 + EQUIPMENT_DOORS.frame;
-  for (const [x0, x1] of [
-    [-h, equipmentLeft],
-    [equipmentRight, h],
-  ])
-    if (x1 > x0)
-      box(dado, x1 - x0, 1.2, 0.01, (x0 + x1) / 2, floor + 0.6, h - 0.005);
-  // The north wall's, broken round the plant room door too where that
-  // door is on the plant floor (the tiny room's).
-  const doorLeft = plan.door.x - PLANT_DOORWAY / 2;
-  const doorRight = plan.door.x + PLANT_DOORWAY / 2;
-  for (const [x0, x1] of plan.stepFree
-    ? [
-        [-h, doorLeft],
-        [doorRight, h],
-      ]
-    : [[-h, h]])
-    if (x1 > x0)
-      box(dado, x1 - x0, 1.2, 0.01, (x0 + x1) / 2, floor + 0.6, -h + 0.005);
-  for (const [sx, sz, x, z] of [
+  const openings: {
+    d: ShellDoorway;
+    width: number;
+    bottom: number;
+    top: number;
+    lintel: boolean;
+  }[] = [
+    { d: plan.door, width: doorW, bottom: 0, top: 2.14, lintel: true },
+    {
+      d: plan.equipment,
+      width: plan.equipment.width,
+      bottom: floor,
+      top: eqTop,
+      lintel: true,
+    },
     ...(plan.tankDoor
       ? [
-          [
-            0.01,
-            plan.tankDoor.z - opening / 2 + h,
-            -h + 0.005,
-            (plan.tankDoor.z - opening / 2 - h) / 2,
-          ],
-          [
-            0.01,
-            h - plan.tankDoor.z - opening / 2,
-            -h + 0.005,
-            (plan.tankDoor.z + opening / 2 + h) / 2,
-          ],
+          {
+            d: plan.tankDoor,
+            width: plan.tankDoor.width,
+            bottom: floor,
+            top: eqTop,
+            lintel: false,
+          },
         ]
-      : [[0.01, 2 * h, -h + 0.005, 0]]),
-    [0.01, 2 * h, h - 0.005, 0],
-  ])
-    box(dado, sx, 1.2, sz, x, floor + 0.6, z);
+      : []),
+  ];
+  for (const wall of ['north', 'south', 'east', 'west'] as const) {
+    const across = wall === 'north' || wall === 'south';
+    const half = across ? hx : hz;
+    const line =
+      wall === 'north'
+        ? -hz - t / 2
+        : wall === 'south'
+          ? hz + t / 2
+          : wall === 'west'
+            ? -hx - t / 2
+            : hx + t / 2;
+    // A piece of this wall from a to b along it, from y0 to y1.
+    const piece = (a: number, b: number, y0: number, y1: number) => {
+      if (b - a <= 1e-6 || y1 - y0 <= 1e-6) return;
+      const mid = (a + b) / 2;
+      if (across) wallBox(b - a, y1 - y0, t, mid, (y0 + y1) / 2, line);
+      else wallBox(t, y1 - y0, b - a, line, (y0 + y1) / 2, mid);
+    };
+    const here = openings
+      .filter((o) => o.d.wall === wall)
+      .sort((a, b) => a.d.at - b.d.at);
+    let from = -half - t;
+    for (const o of here) {
+      const a = o.d.at - o.width / 2;
+      const b = o.d.at + o.width / 2;
+      piece(from, a, floor, roof);
+      const headerBottom = o.top + CONCRETE_LINTEL.height;
+      piece(a, b, headerBottom, roof);
+      if (o.lintel)
+        addConcreteLintel(
+          group,
+          kit,
+          o.width,
+          t,
+          across ? o.d.at : line,
+          o.top,
+          across ? line : o.d.at,
+          across,
+        );
+      else piece(a, b, o.top, headerBottom);
+      if (o.bottom > floor) piece(a, b, floor, o.bottom);
+      from = b;
+    }
+    piece(from, half + t, floor, roof);
+    // A painted dado round the plant floor, broken by its floor-level doorways.
+    const breaks = here
+      .filter((o) => o.bottom <= floor + 1e-6)
+      .map((o) => [o.d.at - o.width / 2, o.d.at + o.width / 2] as const);
+    let d0 = -half;
+    const face =
+      wall === 'north'
+        ? -hz + 0.005
+        : wall === 'south'
+          ? hz - 0.005
+          : wall === 'west'
+            ? -hx + 0.005
+            : hx - 0.005;
+    for (const [a, b] of [...breaks, [half, half] as const]) {
+      if (a > d0) {
+        if (across)
+          box(dado, a - d0, 1.2, 0.01, (a + d0) / 2, floor + 0.6, face);
+        else box(dado, 0.01, 1.2, a - d0, face, floor + 0.6, (a + d0) / 2);
+      }
+      d0 = b;
+    }
+  }
 
-  // The plant room door, at deck level in the south wall: its hall face
-  // outward (+z), its leaf swinging out into the hall.
+  // A dark lobby beyond a doorway, until the room there is seen through it.
+  const lobbyBeyond = (
+    d: ShellDoorway,
+    width: number,
+    h: number,
+    y: number,
+    name: string,
+  ) => {
+    const f = wallFrame(plan, d.wall, d.at);
+    const across = d.wall === 'north' || d.wall === 'south';
+    const mesh = box(
+      paint('#0b0d0d', 1),
+      across ? width : 0.05,
+      h,
+      across ? 0.05 : width,
+      f.x + f.out[0] * (t + 0.9),
+      y,
+      f.z + f.out[1] * (t + 0.9),
+    );
+    mesh.name = name;
+  };
+
+  // The plant room door, at deck level: its hall face outward, its leaf
+  // swinging out into the hall.
   const door = plantRoomDoor(kit);
-  // Its hall face out, north.
-  door.object.position.set(plan.door.x, 0, -h - t);
-  door.object.rotation.y = Math.PI;
+  const df = wallFrame(plan, plan.door.wall, plan.door.at);
+  const inward = [-df.out[0], -df.out[1]] as const;
+  const doorYaw = yawToward(df.out);
+  door.object.position.set(df.x + df.out[0] * t, 0, df.z + df.out[1] * t);
+  door.object.rotation.y = doorYaw;
   group.add(door.object);
+  // Beside it inside, the shoe covers, on the side its leaf hangs.
   const shoeCovers = createShoeCoverDispenser(kit);
-  shoeCovers.position.set(plan.door.x - 0.69, 1.35, -h + 0.09);
-  group.add(shoeCovers);
-  // Beyond it, until its pool hall is seen through it, a dark lobby.
-  const lobby = box(
-    paint('#0b0d0d', 1),
-    doorW,
-    2.2,
-    0.05,
-    plan.door.x,
-    1.1,
-    -h - t - 0.9,
+  shoeCovers.position.set(
+    df.x + Math.cos(doorYaw) * 0.69 + inward[0] * 0.09,
+    1.35,
+    df.z - Math.sin(doorYaw) * 0.69 + inward[1] * 0.09,
   );
-  lobby.name = 'plant door lobby';
+  shoeCovers.rotation.y = yawToward(inward);
+  group.add(shoeCovers);
+  lobbyBeyond(plan.door, doorW, 2.2, 1.1, 'plant door lobby');
 
   if (!plan.stepFree) {
     const access = createIndustrialAccess({
@@ -251,74 +273,53 @@ export function createPlantRoomShell(
       nosing: yellow,
       deckTile: STUD_TILE,
     });
-    access.deck({
-      x: (landing.minX + landing.maxX) / 2,
-      z: (landing.minZ + landing.maxZ) / 2,
-      width: landing.maxX - landing.minX,
-      depth: landing.maxZ - landing.minZ,
-      topY: 0,
-      supportBottom: floor,
-    });
-    const sw = stair.maxX - stair.minX;
-    access.stair({
-      x: (stair.minX + stair.maxX) / 2,
-      z: stair.top,
-      topY: 0,
-      bottomY: floor,
-      width: sw,
-      run: stair.bottom - stair.top,
-      steps: stair.steps,
-      treads: stair.steps - 1,
-      direction: 'south',
-      openSideEnd: P.stair.offAt,
-    });
-    access.rail({
-      from: [landing.minX, 0, landing.minZ + 0.05],
-      to: [landing.minX, 0, landing.maxZ],
-    });
-    access.rail({
-      from: [landing.minX, 0, landing.maxZ],
-      to: [stair.minX, 0, landing.maxZ],
-    });
+    for (const deck of plan.decks)
+      access.deck({
+        x: (deck.minX + deck.maxX) / 2,
+        z: (deck.minZ + deck.maxZ) / 2,
+        width: deck.maxX - deck.minX,
+        depth: deck.maxZ - deck.minZ,
+        topY: 0,
+        // Hung from the walls: no posts down to the plant floor.
+        ...(plan.cantilevered ? {} : { supportBottom: floor }),
+      });
+    if (stair) {
+      const southward = stair.heading === 'south' || stair.heading === 'north';
+      access.stair({
+        x: southward ? (stair.minX + stair.maxX) / 2 : stair.top,
+        z: southward ? stair.top : (stair.minZ + stair.maxZ) / 2,
+        topY: 0,
+        bottomY: floor,
+        width: southward ? stair.maxX - stair.minX : stair.maxZ - stair.minZ,
+        run: Math.abs(stair.bottom - stair.top),
+        steps: stair.steps,
+        treads: stair.steps - 1,
+        direction: stair.heading,
+        openSideEnd: stair.offAt,
+      });
+    }
+    for (const [[x0, z0], [x1, z1]] of plan.rails)
+      access.rail({ from: [x0, 0, z0], to: [x1, 0, z1] });
     group.add(access.group);
   }
 
-  // The equipment doors in the south wall, through to the main plant: the
-  // standard pair (`equipment-doors.ts`), pulled open from in here.
-  const equipment = equipmentDoors(kit, 'MAIN PLANT');
-  equipment.object.position.set(plan.equipment.x, floor, h);
-  equipment.object.rotation.y = Math.PI;
-  group.add(equipment.object);
-  // Beyond them, until the main corridor is seen through them, a dark lobby.
-  const equipmentLobby = box(
-    paint('#0b0d0d', 1),
-    EQUIPMENT_DOORS.w + 2 * EQUIPMENT_DOORS.frame,
-    EQUIPMENT_DOORS.h + 2 * EQUIPMENT_DOORS.frame,
-    0.05,
-    plan.equipment.x,
-    floor + (EQUIPMENT_DOORS.h + 2 * EQUIPMENT_DOORS.frame) / 2,
-    h + t + 0.9,
-  );
-  equipmentLobby.name = 'equipment lobby';
-  // The balance tank hall's doors in the west wall, the same pair, pulled
-  // open from in here; beyond them, until the hall is built, a dark lobby.
-  let tankDoors: EquipmentDoorsPart | null = null;
-  if (plan.tankDoor) {
-    tankDoors = equipmentDoors(kit, 'BALANCE TANK');
-    tankDoors.object.position.set(-h, floor, plan.tankDoor.z);
-    tankDoors.object.rotation.y = Math.PI / 2;
-    group.add(tankDoors.object);
-    const tankLobby = box(
-      paint('#0b0d0d', 1),
-      0.05,
-      doorTop - floor,
-      opening,
-      -h - t - 0.9,
-      (floor + doorTop) / 2,
-      plan.tankDoor.z,
-    );
-    tankLobby.name = 'balance tank lobby';
-  }
+  // The equipment doors through to the main plant: the standard pair
+  // (`equipment-doors.ts`), pulled open from in here.
+  const placeDoors = (d: ShellDoorway, label: string, lobby: string) => {
+    const f = wallFrame(plan, d.wall, d.at);
+    const part = equipmentDoors(kit, label);
+    part.object.position.set(f.x, floor, f.z);
+    part.object.rotation.y = yawToward([-f.out[0], -f.out[1]]);
+    group.add(part.object);
+    lobbyBeyond(d, d.width, eqTop - floor, (floor + eqTop) / 2, lobby);
+    return part;
+  };
+  const equipment = placeDoors(plan.equipment, 'MAIN PLANT', 'equipment lobby');
+  // The balance tank hall's doors, the same pair; beyond them, until the hall is built, a dark lobby.
+  const tankDoors = plan.tankDoor
+    ? placeDoors(plan.tankDoor, 'BALANCE TANK', 'balance tank lobby')
+    : null;
+
   const title = card(1.6, 0.36, (c, w, hh) => {
     c.fillStyle = '#f4f2ea';
     c.fillRect(0, 0, w, hh);
@@ -328,57 +329,58 @@ export function createPlantRoomShell(
     c.textBaseline = 'middle';
     c.fillText(name, w / 2, hh * 0.38, w * 0.94);
     c.font = `${hh * 0.2}px Arial, Helvetica, sans-serif`;
-    c.fillText(
-      `${plan.side} × ${plan.side} m · ${plan.stepFree ? 'one storey' : 'two storeys'}`,
-      w / 2,
-      hh * 0.72,
-      w * 0.94,
-    );
+    c.fillText(plan.label, w / 2, hh * 0.72, w * 0.94);
   });
+  const tf = wallFrame(plan, plan.title.wall, plan.title.at);
   title.position.set(
-    plan.stepFree ? -h + 1.1 : Math.min(0, plan.equipment.x - 2),
-    1.8,
-    -h + 0.002,
+    tf.x - tf.out[0] * 0.002,
+    plan.title.y,
+    tf.z - tf.out[1] * 0.002,
   );
+  title.rotation.y = yawToward([-tf.out[0], -tf.out[1]]);
   group.add(title);
 
   // Light: LED battens high on the walls of each storey; the room lit by
-  // a few point lights only, one a storey (two in the large room), each
-  // costing every pixel.
+  // a few point lights only, `lamps` a storey, each costing every pixel.
   const battens = createWallBattenMaterials();
   kit.materials.push(...Object.values(battens));
-  const along = Math.max(1, Math.round((2 * h) / 5));
-  // Keep the upper row below the service ceiling's beams and pipework.
-  for (const y of plan.stepFree ? [floor + 3.1] : [floor + 3.1, roof - 1.0])
+  const alongX = Math.max(1, Math.round((2 * hx) / 5));
+  const alongZ = Math.max(1, Math.round((2 * hz) / 5));
+  // By the stair, a fitting on its wall would crowd it.
+  const byStair = (wall: 'east' | 'west', z: number) =>
+    !!stair &&
+    (wall === 'east' ? stair.maxX >= hx - 0.05 : stair.minX <= -hx + 0.05) &&
+    z >= stair.minZ - 1 &&
+    z <= stair.maxZ + 1;
+  for (const y of plan.stepFree ? [floor + 3.1] : [floor + 3.1, roof - 1.0]) {
+    // The lower row of a room lit by two lamps a storey runs along the west and east walls.
+    const sides = plan.lamps > 1 && y === floor + 3.1;
+    const along = sides ? alongZ : alongX;
     for (let i = 0; i < along; i++) {
-      const at = -h + ((i + 0.5) * 2 * h) / along;
-      const lowerSideLights = size === 'large' && y === floor + 3.1;
-      // The large room's lower row runs along the west and east walls;
-      // its upper row stays on the north and south walls.
-      if (lowerSideLights) {
-        addWallBatten(group, battens, -h + 0.05, y, at, 'z', 1);
-        // The northmost east-wall fitting crowds the stair in the large room.
-        if (i > 0) addWallBatten(group, battens, h - 0.05, y, at, 'z', -1);
+      if (sides) {
+        const at = -hz + ((i + 0.5) * 2 * hz) / along;
+        addWallBatten(group, battens, -hx + 0.05, y, at, 'z', 1);
+        if (!byStair('east', at))
+          addWallBatten(group, battens, hx - 0.05, y, at, 'z', -1);
       } else {
-        addWallBatten(group, battens, at, y, -h + 0.05, 'x', 1);
-        addWallBatten(group, battens, at, y, h - 0.05, 'x', -1);
+        const at = -hx + ((i + 0.5) * 2 * hx) / along;
+        addWallBatten(group, battens, at, y, -hz + 0.05, 'x', 1);
+        addWallBatten(group, battens, at, y, hz - 0.05, 'x', -1);
       }
-      // One light a storey, two in the large room's.
-      if (i % Math.max(1, Math.round(along / (size === 'large' ? 2 : 1))) !== 0)
-        continue;
+      if (i % Math.max(1, Math.round(along / plan.lamps)) !== 0) continue;
+      const at = sides
+        ? -hz + ((i + 0.5) * 2 * hz) / along
+        : -hx + ((i + 0.5) * 2 * hx) / along;
       const light = new PointLight(
         '#f2f4ee',
-        (size === 'large' ? 6 : 3) * metre * metre,
-        (plan.side + 4) * metre,
+        (plan.lamps > 1 ? 6 : 3) * metre * metre,
+        (2 * Math.max(hx, hz) + 4) * metre,
         2,
       );
-      light.position.set(
-        lowerSideLights ? 0 : at,
-        y - 0.3,
-        lowerSideLights ? at : 0,
-      );
+      light.position.set(sides ? 0 : at, y - 0.3, sides ? at : 0);
       group.add(light);
     }
+  }
 
   function card(
     w: number,
@@ -404,11 +406,8 @@ export function createPlantRoomShell(
   // Overhead, under the roof, a generated services ceiling.
   group.add(
     createServiceCeiling(
-      { minX: -h, maxX: h, minZ: -h, maxZ: h, deckY: roof },
-      {
-        seed: { tiny: 5, small: 11, medium: 23, large: 37 }[size],
-        density: 0.85,
-      },
+      { minX: -hx, maxX: hx, minZ: -hz, maxZ: hz, deckY: roof },
+      { seed: plan.seed, density: 0.85 },
     ).group,
   );
   return {

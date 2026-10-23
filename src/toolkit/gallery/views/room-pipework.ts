@@ -44,6 +44,7 @@ const MARKED: Record<PipeRun['service'], PipeService | null> = {
   ozone: 'air',
   electrical: 'electrical',
   hypochlorite: 'hypochlorite',
+  acid: 'acid',
   sample: 'pool water',
   gas: 'gas',
   flue: null,

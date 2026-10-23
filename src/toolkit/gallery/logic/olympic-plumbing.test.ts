@@ -11,11 +11,13 @@ describe('the Olympic plant room, plumbed and routed', () => {
 
   it('routes every line and leaves nothing unplumbed', () => {
     expect(plumbed.problems).toEqual([]);
-    expect(plumbed.runs.filter((r) => r.by === 'router')).toHaveLength(11);
+    expect(plumbed.runs.filter((r) => r.by === 'router')).toHaveLength(10);
   });
 
   it('never runs acid or hypochlorite over a walkway: they stay against the south wall, where they come in', () => {
-    const chemical = plumbed.runs.filter((r) => r.kind === 'chemical-tube');
+    const chemical = plumbed.runs.filter(
+      (r) => r.line.startsWith('acid') || r.line.startsWith('hypo'),
+    );
     expect(chemical.map((r) => r.line).sort()).toEqual([
       'acid-dose',
       'acid-supply',
@@ -34,8 +36,12 @@ describe('the Olympic plant room, plumbed and routed', () => {
       expect(quill[2]).toBeCloseTo(along[2], 6);
       expect(quill[1]).toBeGreaterThan(along[1] + spool.od / 2);
     }
-    const manifold = run('Pump discharge manifold');
-    expect(run('sample').points[0][0]).toBeCloseTo(manifold.points[0][0], 6);
+    // Off pump B's discharge, before the filters.
+    const discharge = run('Discharge B');
+    expect(run('Sample line').points[0][2]).toBeCloseTo(
+      discharge.points[1][2],
+      6,
+    );
   });
 
   it('passes every gate of the scorer', () => {
@@ -50,7 +56,8 @@ describe('the Olympic plant room, plumbed and routed', () => {
       const r = run(`Suction ${s}`);
       expect(r.points).toHaveLength(2);
       expect(r.points[0][0]).toBeLessThan(-hx);
-      expect(Math.abs(r.points[1][0] - r.points[0][0])).toBeLessThan(1);
+      // Through the wall and across the maintenance gap behind the pumps.
+      expect(Math.abs(r.points[1][0] - r.points[0][0])).toBeLessThan(2);
     }
   });
 

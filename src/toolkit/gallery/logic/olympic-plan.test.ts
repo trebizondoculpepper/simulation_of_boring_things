@@ -113,7 +113,9 @@ describe('the Olympic plant room, in plan', () => {
     const pumps = items.find((i) => i.key === 'pumps')!;
     // Its suction side (its left) to the wall.
     expect(pumps.facing).toBe('south');
-    expect(footprintOf(pumps).minX).toBeLessThan(-hx + 0.3);
+    // Off the wall by a maintenance gap, to reach its suction valves.
+    expect(footprintOf(pumps).minX).toBeLessThan(-hx + 1.1);
+    expect(footprintOf(pumps).minX).toBeGreaterThan(-hx + 0.9);
     expect(Math.abs(pumps.z - room.doors.tank.at)).toBeLessThan(4);
   });
 

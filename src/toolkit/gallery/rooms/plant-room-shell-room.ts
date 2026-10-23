@@ -27,14 +27,17 @@ import {
 } from '../../controls/input/first-person';
 import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
 import { createPlantRoomShell } from '../views/plant-room-shell';
+import { PLANT_ROOM } from '../logic/plant-rooms';
 import {
-  EQUIPMENT_OPENING,
-  PLANT_DOORWAY,
-  PLANT_ROOM,
-  plantRoomFloorAt,
-  plantRoomPlan,
-  plantRoomSolids,
-} from '../logic/plant-rooms';
+  aloft,
+  shellFloorAt,
+  shellPlan,
+  shellSolids,
+  wallFrame,
+  yawToward,
+} from '../logic/shell-plan';
+import type { ShellDoorway, ShellPlan } from '../logic/shell-plan';
+import type { Footprint } from '../../controls/logic/walk-collision';
 import { registerJoint } from '../logic/door-joins';
 import { doorwayStops, overlaps } from '../logic/doorway';
 import { doorReaders } from '../../components/architectural/logic/card-reader';
@@ -130,20 +133,24 @@ export function startPlantRoomShell(
     equipment,
     title,
     tankHall = false,
+    plan: ownPlan,
   }: {
     /**
      * The room to fill it with in place of the hall's own: a retired room
-     * (`retired-rooms.ts`, its frozen layout and pipes), or a room laid out
-     * for it to try (Dev29, the Olympic's redo).
+     * (`retired-rooms.ts`, its frozen layout and pipes).
      */
     equipment?: string;
     /** Its title on the wall, in place of the hall's plant room's. */
     title?: string;
     /** Its balance tank in a hall of its own, through doors in its west wall. */
     tankHall?: boolean;
+    /** Its own shell, in place of its size's template (the Olympic's, `olympic-plan.ts`). */
+    plan?: ShellPlan;
   } = {},
 ) {
   const metre = METRE;
+  // Its shell: its own, or its size's template.
+  const plan = ownPlan ?? shellPlan(size, { tankHall });
   const scene = new Scene();
   scene.background = null;
   const renderer = createRenderer(canvas, true);
@@ -170,12 +177,16 @@ export function startPlantRoomShell(
     door,
     equipment: equipmentDoors,
     tankDoors,
-  } = createPlantRoomShell(size, metre, kit, name, { tankHall });
+  } = createPlantRoomShell(
+    plan,
+    metre,
+    kit,
+    name ?? `PLANT ROOM · ${size.toUpperCase()}`,
+  );
   parts.add(equipmentDoors);
   if (tankDoors) parts.add(tankDoors);
   parts.add(door);
   scene.add(rooms);
-  const plan = plantRoomPlan(size, { tankHall });
   // A hall's plant room's machines, placed (`logic/room-equipment.ts`).
   const machines = hall
     ? createRoomEquipment(kit, equipmentRoom!, plan.floor)
@@ -203,7 +214,7 @@ export function startPlantRoomShell(
     hall === 'pool_03' ? createMimicBoard(kit, JACUZZI_MIMIC) : null;
   const mimicStore = jacuzziMimic ? worldStore('dev') : null;
   if (jacuzziMimic) {
-    jacuzziMimic.group.position.set(0, plan.floor + 1.8, -plan.h + 0.025);
+    jacuzziMimic.group.position.set(0, plan.floor + 1.8, -plan.hz + 0.025);
     rooms.add(jacuzziMimic.group);
   }
   const raycaster = new Raycaster();
@@ -283,60 +294,42 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     minZ: s.minZ * metre,
     maxZ: s.maxZ * metre,
   });
-  const walls = plantRoomSolids(plan).map(toMetre);
-  // The two doorways, through the north and south walls: each its leaf's
-  // place, across the wall, and a stop just beyond it (metres).
-  const way = (
-    x: number,
-    half: number,
-    z0: number,
-    z1: number,
-    out: number,
-  ) => ({
-    leaf: {
-      minX: x - half,
-      maxX: x + half,
-      minZ: Math.min(z0, z1),
-      maxZ: Math.max(z0, z1),
-    },
-    beyond: {
-      minX: x - half,
-      maxX: x + half,
-      minZ: Math.min(z1, z1 + out),
-      maxZ: Math.max(z1, z1 + out),
-    },
-  });
-  const northWay = way(
-    plan.door.x,
-    PLANT_DOORWAY / 2,
-    -plan.h,
-    -plan.h - PLANT_ROOM.wall,
-    -0.3,
-  );
-  const southWay = way(
-    plan.equipment.x,
-    EQUIPMENT_OPENING / 2,
-    plan.h,
-    plan.h + PLANT_ROOM.wall,
-    0.3,
-  );
-  // The balance tank hall's doors, in the west wall: nothing beyond them yet.
-  const westWay = plan.tankDoor
-    ? {
-        leaf: {
-          minX: -plan.h - PLANT_ROOM.wall,
-          maxX: -plan.h,
-          minZ: plan.tankDoor.z - EQUIPMENT_OPENING / 2,
-          maxZ: plan.tankDoor.z + EQUIPMENT_OPENING / 2,
-        },
-        beyond: {
-          minX: -plan.h - PLANT_ROOM.wall - 0.3,
-          maxX: -plan.h - PLANT_ROOM.wall,
-          minZ: plan.tankDoor.z - EQUIPMENT_OPENING / 2,
-          maxZ: plan.tankDoor.z + EQUIPMENT_OPENING / 2,
-        },
-      }
-    : null;
+  // Each doorway, through its wall: its leaf's place, across the wall, and
+  // a stop just beyond it (metres).
+  const wayOf = (d: ShellDoorway) => {
+    const f = wallFrame(plan, d.wall, d.at);
+    const t = PLANT_ROOM.wall;
+    const across = d.wall === 'north' || d.wall === 'south';
+    const span = (a: number, b: number) =>
+      [Math.min(a, b), Math.max(a, b)] as const;
+    const box = (n0: number, n1: number) => {
+      const [a, b] = span(n0, n1);
+      return across
+        ? {
+            minX: d.at - d.width / 2,
+            maxX: d.at + d.width / 2,
+            minZ: f.z + f.out[1] * a,
+            maxZ: f.z + f.out[1] * b,
+          }
+        : {
+            minX: f.x + f.out[0] * a,
+            maxX: f.x + f.out[0] * b,
+            minZ: d.at - d.width / 2,
+            maxZ: d.at + d.width / 2,
+          };
+    };
+    const tidy = (b: Footprint): Footprint => ({
+      minX: Math.min(b.minX, b.maxX),
+      maxX: Math.max(b.minX, b.maxX),
+      minZ: Math.min(b.minZ, b.maxZ),
+      maxZ: Math.max(b.minZ, b.maxZ),
+    });
+    return { leaf: tidy(box(0, t)), beyond: tidy(box(t, t + 0.3)), frame: f };
+  };
+  const northWay = wayOf(plan.door);
+  const southWay = wayOf(plan.equipment);
+  // The balance tank hall's doors: nothing beyond them yet.
+  const westWay = plan.tankDoor ? wayOf(plan.tankDoor) : null;
   const inWay = (w: typeof northWay) =>
     overlaps(
       w.leaf,
@@ -375,26 +368,44 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         )
       : []),
   ];
-  // Its machines' footprints, to walk round.
-  if (machines) walls.push(...machines.solids.map(toMetre));
+  // The walls (and the decks' rails, the stair) for the level the walker
+  // is on; on the plant floor, its machines' footprints too.
+  const wallsUp = shellSolids(plan, true).map(toMetre);
+  const wallsDown = [
+    ...shellSolids(plan, false),
+    ...(machines?.solids ?? []),
+  ].map(toMetre);
+  /** The walker's floor's height, metres. */
+  let standing = 0;
+  // On its deck, just inside the plant room door, looking into the room.
+  const inward = [-northWay.frame.out[0], -northWay.frame.out[1]] as const;
   const walk = createFirstPerson({
     scene,
     canvas,
     camera,
     metre,
     floorY: 0,
-    // On the landing, just inside the door, looking into the room.
     start: {
-      x: plan.door.x * metre,
-      z: -(plan.h - 0.6) * metre,
-      // Facing south, into the room.
-      yaw: Math.PI,
+      x: (northWay.frame.x + inward[0] * 0.6) * metre,
+      z: (northWay.frame.z + inward[1] * 0.6) * metre,
+      // Facing into the room (forward is (sin yaw, −cos yaw)).
+      yaw: Math.atan2(inward[0], -inward[1]),
     },
-    floorAt: (x, z) => plantRoomFloorAt(plan, x / metre, z / metre) * metre,
-    // The door's leaf while near shut; and, with no hall beyond, always.
+    floorAt: (x, z, previous) => {
+      standing = shellFloorAt(
+        plan,
+        x / metre,
+        z / metre,
+        (previous ?? 0) / metre,
+      );
+      return standing * metre;
+    },
     // Each doorway: its leaf while shut, but never where the walker
     // stands; a stop just beyond until the room there is seen.
-    solids: () => [...walls, ...stops().map(toMetre)],
+    solids: () => [
+      ...(aloft(plan, standing) ? wallsUp : wallsDown),
+      ...stops().map(toMetre),
+    ],
     use: (x, y) => usableAt(x, y)?.(),
     aimed: () => Boolean(usableAt(0, 0)),
   });
@@ -420,26 +431,59 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   // room only), seen through and walked through without a break.
   let corridorSeen = false;
   let leavingSouth = false;
-  const southFace = (plan.h + PLANT_ROOM.wall) * metre;
+  /** A doorway's outer face, as a join's frame: +z into this room. */
+  const outer = (w: typeof northWay, y: number) => {
+    const t = PLANT_ROOM.wall;
+    const f = w.frame;
+    return {
+      x: (f.x + f.out[0] * t) * metre,
+      z: (f.z + f.out[1] * t) * metre,
+      y: y * metre,
+      yaw: yawToward([-f.out[0], -f.out[1]]),
+    };
+  };
+  /** The space a join looks through: across its doorway, 2 m out, 0.4 m in. */
+  const reach = (w: typeof northWay, d: ShellDoorway) => {
+    const f = w.frame;
+    const t = PLANT_ROOM.wall;
+    const across = d.wall === 'north' || d.wall === 'south';
+    // From 0.4 m inside its outer face to 2 m beyond it.
+    const n0 = f.out[across ? 1 : 0] * (t - 0.4);
+    const n1 = f.out[across ? 1 : 0] * (t + 2);
+    const lo = Math.min(n0, n1);
+    const hi = Math.max(n0, n1);
+    return across
+      ? {
+          minX: (d.at - d.width / 2) * metre,
+          maxX: (d.at + d.width / 2) * metre,
+          minZ: (f.z + lo) * metre,
+          maxZ: (f.z + hi) * metre,
+        }
+      : {
+          minX: (f.x + lo) * metre,
+          maxX: (f.x + hi) * metre,
+          minZ: (d.at - d.width / 2) * metre,
+          maxZ: (d.at + d.width / 2) * metre,
+        };
+  };
+  /** Whether the walker has gone out through a doorway, past its outer face. */
+  const outThrough = (w: typeof northWay, d: ShellDoorway) => {
+    const f = w.frame;
+    const x = walk.walker.x / metre;
+    const z = walk.walker.z / metre;
+    const out = (x - f.x) * f.out[0] + (z - f.z) * f.out[1];
+    const across = (x - f.x) * f.along[0] + (z - f.z) * f.along[1];
+    return out > PLANT_ROOM.wall + 0.05 && Math.abs(across) < d.width / 2;
+  };
   const corridorLobby = rooms.getObjectByName('equipment lobby');
   const withdrawSouth = hall
     ? registerJoint(self, 'main_corridor', {
-        frame: {
-          x: plan.equipment.x * metre,
-          z: southFace,
-          y: plan.floor * metre,
-          yaw: Math.PI,
-        },
+        frame: outer(southWay, plan.floor),
         onOpen: true,
         open: () => equipmentDoors.open(),
         angle: () => equipmentDoors.angle(),
         swingTo: (a) => equipmentDoors.swingTo(a),
-        opening: () => ({
-          minX: (plan.equipment.x - EQUIPMENT_OPENING / 2) * metre,
-          maxX: (plan.equipment.x + EQUIPMENT_OPENING / 2) * metre,
-          minZ: southFace - 0.4 * metre,
-          maxZ: southFace + 2 * metre,
-        }),
+        opening: () => reach(southWay, plan.equipment),
         see: (on) => {
           corridorSeen = on;
           if (corridorLobby) corridorLobby.visible = !on;
@@ -448,20 +492,14 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       })
     : () => {};
   const lobby = rooms.getObjectByName('plant door lobby');
-  const outFace = (plan.h + PLANT_ROOM.wall) * metre;
   const withdraw = hall
     ? registerJoint(self, hall, {
-        frame: { x: plan.door.x * metre, z: -outFace, y: 0, yaw: 0 },
+        frame: outer(northWay, 0),
         onOpen: true,
         open: () => door.angle() > 0.05,
         angle: () => door.angle(),
         swingTo: (a) => door.swingTo(a),
-        opening: () => ({
-          minX: (plan.door.x - PLANT_DOORWAY / 2) * metre,
-          maxX: (plan.door.x + PLANT_DOORWAY / 2) * metre,
-          minZ: -outFace - 2 * metre,
-          maxZ: -outFace + 0.4 * metre,
-        }),
+        opening: () => reach(northWay, plan.door),
         see: (on) => {
           hallSeen = on;
           if (lobby) lobby.visible = !on;
@@ -517,12 +555,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       );
     // Out through the equipment doors, once the corridor is seen beyond.
     if (hall && corridorSeen && !leavingSouth && !walk.following) {
-      const x = walk.walker.x / metre;
-      const z = walk.walker.z / metre;
-      if (
-        z > plan.h + PLANT_ROOM.wall + 0.05 &&
-        Math.abs(x - plan.equipment.x) < EQUIPMENT_OPENING / 2
-      ) {
+      if (outThrough(southWay, plan.equipment)) {
         leavingSouth = true;
         enterDevRoom('main_corridor', self, true);
       }
@@ -530,12 +563,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     // Out through the plant room door, once its pool hall is seen beyond
     // it: handed over to it, without a break.
     if (hall && hallSeen && !leaving && !walk.following) {
-      const x = walk.walker.x / metre;
-      const z = walk.walker.z / metre;
-      if (
-        z < -(plan.h + PLANT_ROOM.wall + 0.05) &&
-        Math.abs(x - plan.door.x) < PLANT_DOORWAY / 2
-      ) {
+      if (outThrough(northWay, plan.door)) {
         leaving = true;
         enterDevRoom(hall, self, true);
       }

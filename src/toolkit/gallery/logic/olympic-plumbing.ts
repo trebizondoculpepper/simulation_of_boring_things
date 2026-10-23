@@ -18,6 +18,9 @@ import type {
 import { machinePorts } from './machine-ports';
 import type { MachinePort } from './machine-ports';
 import type { Item } from './room-equipment';
+import type { PipeRun, Valve, WallCrossing } from './room-pipes';
+import type { Containment } from './cable-containment';
+import { PLANT_ROOM } from './plant-rooms';
 import { sizeRoom } from './room-sizer';
 import { scoreRoom } from './room-scorer';
 import type { Score } from './room-scorer';
@@ -89,6 +92,8 @@ export interface OlympicFitting {
   id: string;
   kind: FittingKind | 'regulating-valve' | 'fused-tap-off';
   line: string;
+  /** The run it is set on. */
+  run: string;
   at: Vec3;
   along: Vec3;
   normally: 'open' | 'closed';
@@ -158,12 +163,17 @@ export function olympicPorts(items = olympicPlan()): RoomPort[] {
   return items.flatMap((p) => {
     const yaw = YAW[p.facing];
     const y0 = p.mount === 'wall' ? (p.y ?? 0) : 0;
+    // Wall equipment's frame is the middle of its back, in the wall's face (`Placed`).
+    const forward = turn([0, 0, 1], yaw);
+    const back = p.mount === 'wall' ? p.d / 2 : 0;
+    const ox = p.x - forward[0] * back;
+    const oz = p.z - forward[2] * back;
     return machinePorts(itemOf(p)).map((q) => {
       const t = turn(q.at, yaw);
       return {
         machine: p.key,
         name: q.name,
-        at: [round(p.x + t[0]), round(y0 + t[1]), round(p.z + t[2])] as Vec3,
+        at: [round(ox + t[0]), round(y0 + t[1]), round(oz + t[2])] as Vec3,
         outward: turn(q.outward, yaw),
         od: q.od,
         service: q.service,
@@ -177,13 +187,19 @@ export const MAIN = 0.355;
 /** How high the battery's headers run: the inlet at the filters' inlets, the outlet at their outlets, the backwash below. */
 const HEADER = {
   inlet: { z: 0.15 },
-  outlet: { z: 0.4 },
-  drain: { z: 0.15, y: 0.45 },
+  // Overhead, so the battery's face is clear to stand at.
+  outlet: { z: 0.65, y: 2.85 },
 } as const;
-/** The pump manifold's height: over the balance tank doors' clear space (2.6 m). */
-const MANIFOLD_Y = 2.9;
-/** The side-stream stubs rise out of the outlet header to here, over the battery's walkway. */
-const STUB_TOP = 2.4;
+/** The battery's outlet risers and backwash drops stand this far inside the filters' footprints' fronts, just clear of the vessels. */
+const RISE = 0.2;
+/** The backwash header's trench under the floor along the battery's front: its pipe's height. */
+const TRENCH_Y = -0.2;
+/** The pump manifold's height: over the balance tank doors' clear space (2.6 m) and the battery's outlet header. */
+const MANIFOLD_Y = 3.4;
+/** The pump discharges' run across the pair's top, just over it (1.9 m). */
+const ACROSS_Y = 2.05;
+/** The side-stream stubs rise out of the outlet header to here. */
+const STUB_TOP = 3.3;
 /** The floor channel's depth below the floor. */
 const CHANNEL = -0.3;
 /**
@@ -201,6 +217,10 @@ const SPOOL_OFF = 0.7;
 const CHEMICAL_IN = 2.2;
 /** How far a dosing quill or a sample tapping stands off its main's surface, metres. */
 const QUILL = 0.08;
+/** The open floor's cells, and how near a machine or a wall a run may still be low, metres. */
+const OPEN_FLOOR = { cell: 1, near: 1.0, wall: 0.9 } as const;
+/** The sample line's height along the south wall, over headroom, under the heating's entries. */
+const SAMPLE_Y = 2.35;
 /** The lines the router lays first: they have least room. */
 const FIRST = new Set(['battery-to-contact', 'hx-return']);
 /** A line ending at a wall ends this far inside its face, at its sleeve. */
@@ -211,6 +231,8 @@ const REACH = { low: 0.2, high: 2.1 } as const;
 const pipeOf: Record<string, { kind: Kind; joint: PipeJoint; medium: Medium }> =
   {
     water: { kind: 'pvc-pressure', joint: 'socket', medium: 'water' },
+    // A sample line: pool water, in small chemical-grade tube.
+    sample: { kind: 'chemical-tube', joint: 'socket', medium: 'water' },
     drain: { kind: 'pvc-drain', joint: 'socket', medium: 'water' },
     heating: { kind: 'lagged-heating', joint: 'flange', medium: 'water' },
     makeup: { kind: 'copper', joint: 'socket', medium: 'water' },
@@ -259,6 +281,8 @@ export interface OlympicPlumbing {
   problems: string[];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export let dbgFirst: any = null;
 export function plumbOlympic(): OlympicPlumbing {
   const items = olympicPlan();
   const room = olympicRoomPlan();
@@ -304,16 +328,24 @@ export function plumbOlympic(): OlympicPlumbing {
   const front = footprintOf(filters[0]).maxZ;
   const inletZ = front + HEADER.inlet.z;
   const outletZ = front + HEADER.outlet.z;
-  const drainZ = front + HEADER.drain.z;
+  // Within the filters' footprints, just in front of the vessels: clear of the strip where one stands.
+  const riseZ = round(front - RISE);
+  const drainZ = riseZ;
   const inletY = fp[0].inlet.at[1];
-  const outletY = fp[0].outlet.at[1];
+  const outletY = HEADER.outlet.y;
   const dA = port('pumps', 'dischargeA');
   const dB = port('pumps', 'dischargeB');
-  const mx = dA.at[0];
+  // Each discharge up off its pump and east across the pair's top, its
+  // valves beyond the pair's east side, within reach from the floor there,
+  // then up to the manifold, which runs north to the battery.
+  const pumpsItem = items.find((i) => i.key === 'pumps')!;
+  const mx = round(footprintOf(pumpsItem).maxX + 0.3);
   for (const d of [dA, dB])
     rule(`Discharge ${d.name.slice(-1)}`, `pumps.${d.name}`, 'water', d.od, [
       d.at,
-      [d.at[0], MANIFOLD_Y, d.at[2]],
+      [d.at[0], ACROSS_Y, d.at[2]],
+      [mx, ACROSS_Y, d.at[2]],
+      [mx, MANIFOLD_Y, d.at[2]],
     ]);
   rule('Pump discharge manifold', 'battery.inlet', 'water', MAIN, [
     [mx, MANIFOLD_Y, Math.max(dA.at[2], dB.at[2])],
@@ -328,6 +360,13 @@ export function plumbOlympic(): OlympicPlumbing {
     [inletX0, inletY, inletZ],
     [Math.max(...xs('inlet')), inletY, inletZ],
   ]);
+  // The backwash trench falls 1 in 100 from each end to its drop between filters 1 and 2.
+  const filterGap = (a: number, b: number) =>
+    (footprintOf(filters[a]).maxX + footprintOf(filters[b]).minX) / 2;
+  const dropX = filterGap(0, 1);
+  const farthest = Math.max(...fp.map((f) => Math.abs(f.drain.at[0] - dropX)));
+  const trenchLow = TRENCH_Y - farthest * 0.01;
+  const trenchAt = (x: number) => round(trenchLow + Math.abs(x - dropX) * 0.01);
   fp.forEach((f, i) => {
     rule(
       `Filter ${i + 1} inlet`,
@@ -336,13 +375,20 @@ export function plumbOlympic(): OlympicPlumbing {
       f.inlet.od,
       [f.inlet.at, [f.inlet.at[0], inletY, inletZ]],
     );
+    // Up from its nozzle, just in front of the vessel, to the header overhead.
     rule(
       `Filter ${i + 1} outlet`,
       `filter-${i + 1}.outlet`,
       'water',
       f.outlet.od,
-      [f.outlet.at, [f.outlet.at[0], outletY, outletZ]],
+      [
+        f.outlet.at,
+        [f.outlet.at[0], f.outlet.at[1], riseZ],
+        [f.outlet.at[0], outletY, riseZ],
+        [f.outlet.at[0], outletY, outletZ],
+      ],
     );
+    // Down from its nozzle into the trench.
     rule(
       `Filter ${i + 1} backwash`,
       `filter-${i + 1}.drain`,
@@ -350,8 +396,8 @@ export function plumbOlympic(): OlympicPlumbing {
       f.drain.od,
       [
         f.drain.at,
-        [f.drain.at[0], f.drain.at[1], drainZ],
-        [f.drain.at[0], HEADER.drain.y, drainZ],
+        [f.drain.at[0], f.drain.at[1], riseZ],
+        [f.drain.at[0], trenchAt(f.drain.at[0]), riseZ],
       ],
     );
   });
@@ -374,22 +420,23 @@ export function plumbOlympic(): OlympicPlumbing {
       [x, outletY, outletZ],
       [x, STUB_TOP, outletZ],
     ]);
-  // The backwash header, falling 1 in 100 each way to its drop into the floor channel between filters 1 and 2.
-  const dropX = gap(0, 1);
+  // The backwash header, in its covered trench under the floor along the
+  // battery's front, falling 1 in 100 each way to the floor channel
+  // between filters 1 and 2, which runs south to the main plant.
   const dx = xs('drain');
-  const fall = (x: number) => HEADER.drain.y - Math.abs(x - dropX) * 0.01;
   rule('Backwash header, west', 'battery.drain', 'drain', 0.16, [
-    [Math.min(...dx), fall(Math.min(...dx)), drainZ],
-    [dropX, fall(dropX) + 0.0, drainZ],
+    [Math.min(...dx), trenchAt(Math.min(...dx)), drainZ],
+    [dropX, trenchLow, drainZ],
   ]);
   rule('Backwash header, east', 'battery.drain', 'drain', 0.16, [
-    [Math.max(...dx), HEADER.drain.y, drainZ],
-    [dropX, fall(dropX), drainZ],
+    [Math.max(...dx), trenchAt(Math.max(...dx)), drainZ],
+    [dropX, trenchLow, drainZ],
   ]);
+  const low = trenchLow;
   rule('Backwash drop and floor channel', 'battery.drain', 'drain', 0.16, [
-    [dropX, fall(dropX), drainZ],
-    [dropX, CHANNEL, drainZ],
-    [dropX, CHANNEL - (hz - drainZ) / 100, hz + 0.3],
+    [dropX, low, drainZ],
+    [dropX, Math.min(low, CHANNEL), drainZ],
+    [dropX, Math.min(low, CHANNEL) - (hz - drainZ) / 100, hz + 0.3],
   ]);
 
   // ---- The pool's overflow and main drain, by gravity, across the north-west corner ----
@@ -699,6 +746,39 @@ export function plumbOlympic(): OlympicPlumbing {
         ],
         forbids: { machines: true, runs: false },
       });
+  // The open floor (the owner, 2026-10-23): no run crosses it below
+  // headroom. A run may be low only near the machine it serves or near a
+  // wall; elsewhere, a metre's cell of floor reserves its headroom.
+  // A cell any part of which comes within `near` of a machine is near it.
+  const nearMachine = (x0: number, z0: number, x1: number, z1: number) =>
+    items.some((i) => {
+      const f = footprintOf(i);
+      return (
+        x1 > f.minX - OPEN_FLOOR.near &&
+        x0 < f.maxX + OPEN_FLOOR.near &&
+        z1 > f.minZ - OPEN_FLOOR.near &&
+        z0 < f.maxZ + OPEN_FLOOR.near
+      );
+    });
+  for (let x = -hx; x < hx - 1e-9; x += OPEN_FLOOR.cell)
+    for (let z = -hz; z < hz - 1e-9; z += OPEN_FLOOR.cell) {
+      const cx = x + OPEN_FLOOR.cell / 2;
+      const cz = z + OPEN_FLOOR.cell / 2;
+      const c = OPEN_FLOOR.cell;
+      const byWall =
+        x < -hx + OPEN_FLOOR.wall ||
+        x + c > hx - OPEN_FLOOR.wall ||
+        z < -hz + OPEN_FLOOR.wall ||
+        z + c > hz - OPEN_FLOOR.wall;
+      if (byWall || nearMachine(x, z, x + c, z + c)) continue;
+      regions.push({
+        name: `open floor ${cx.toFixed(1)},${cz.toFixed(1)}`,
+        kind: 'walkway',
+        min: [x, 0, z],
+        max: [x + OPEN_FLOOR.cell, head, z + OPEN_FLOOR.cell],
+        forbids: { machines: false, runs: true },
+      });
+    }
   const routerRegions: RouterRegion[] = regions
     .filter((r) => r.forbids.runs)
     .map((r) => ({
@@ -748,6 +828,17 @@ export function plumbOlympic(): OlympicPlumbing {
     // A pump's power port is inside its casing's box: a lead long enough to clear it (as Dev24's).
     endStraight: w.id.startsWith('power-pump') ? 1.0 : 0.45,
   }));
+  dbgFirst = {
+    room: {
+      halfX: hx,
+      halfZ: hz,
+      height: 6.0,
+      regions: routerRegions,
+      obstacles,
+    },
+    lines,
+    fixed,
+  };
   const routed = routeVoxelLines(
     { halfX: hx, halfZ: hz, height: 6.0, regions: routerRegions, obstacles },
     lines,
@@ -770,62 +861,25 @@ export function plumbOlympic(): OlympicPlumbing {
     });
   }
 
-  // ---- The second pass: the sample line, teeing into a routed main ---------
-  // From a tapping on the pump discharge manifold, before the filters and
-  // any dosing, to the dosing controller's cells (`doc/plant-model.md`):
-  // pool water, so it may run overhead. Routed clear of everything laid.
-  const manifold = runs.find((r) => r.name === 'Pump discharge manifold')!;
-  const second: Want[] = [];
-  // The tapping: on top of the manifold's run north.
-  const tapping = {
-    at: r3([
-      manifold.points[0][0],
-      manifold.points[0][1] + MAIN / 2 + QUILL,
-      0.6,
-    ]),
-    outward: [0, 1, 0] as Vec3,
-  };
-  second.push({
-    id: 'sample',
-    pipe: 'water',
-    od: 0.012,
-    start: tapping,
-    end: end(port('controller', 'sample')),
-  });
-  const routedSecond = routeVoxelLines(
-    { halfX: hx, halfZ: hz, height: 6.0, regions: routerRegions, obstacles },
-    second.map((w) => ({
-      id: w.id,
-      start: w.start,
-      end: w.end,
-      od: w.od,
-      joint: pipeOf[w.pipe].joint,
-      price: pricePerMetre(pipeOf[w.pipe].kind, w.od),
-      startStraight: 0.3,
-      endStraight: 0.15,
-    })),
-    runs.map((r) => ({
-      name: r.name,
-      points: r.points,
-      od: r.od,
-      joint: r.joint,
-    })),
-  );
-  problems.push(...routedSecond.problems);
-  for (const w of second) {
-    const points = routedSecond.routes.get(w.id);
-    if (!points) {
-      problems.push(`${w.id}: not routed`);
-      continue;
-    }
-    runs.push({
-      name: w.id,
-      line: w.id,
-      ...pipeOf[w.pipe],
-      od: w.od,
-      points,
-      by: 'router',
-    });
+  // ---- The sample line, laid by rule along the south wall ------------------
+  // From a tapping on top of pump B's discharge, before the filters and any
+  // dosing (`doc/plant-model.md`), up over headroom, south to the wall and
+  // along it to the dosing controller's cells: held by the wall all the way.
+  {
+    const b = runs.find((r) => r.name === 'Discharge B')!;
+    const across = b.points[1];
+    const tapX = round(b.points[2][0] - 0.5);
+    const sample = port('controller', 'sample');
+    const wallZ = round(hz - 0.35);
+    const topY = round(across[1] + b.od / 2 + QUILL);
+    rule('Sample line', 'sample', 'sample', 0.012, [
+      [tapX, topY, across[2]],
+      [tapX, SAMPLE_Y, across[2]],
+      [tapX, SAMPLE_Y, wallZ],
+      [sample.at[0], SAMPLE_Y, wallZ],
+      [sample.at[0], sample.at[1], wallZ],
+      sample.at,
+    ]);
   }
 
   // ---- The plumber: the fittings the schematic implies -------------------
@@ -909,7 +963,56 @@ export function plumbOlympic(): OlympicPlumbing {
       : lineId.endsWith('.inlet') || lineId.startsWith('pumps')
         ? runs.find((r) => r.name === 'Pump discharge manifold')
         : undefined);
-  for (const [lineId, list] of expansion.along) {
+  // Fittings the schematic gives a shared port, set where the room has them:
+  // each pump of the pair its own non-return and isolating valve on its own
+  // discharge riser; the contact tank's inlet valve on the main into it.
+  for (const s of ['A', 'B'] as const) {
+    const riser = runs.find((r) => r.name === `Discharge ${s}`)!;
+    // On its run across, just beyond the pair's east side.
+    const before = len(riser.points.slice(0, 3));
+    for (const [kind, back] of [
+      ['non-return-valve', 0.75],
+      ['isolating-valve', 0.4],
+    ] as const) {
+      const p = along(riser.points, before - back);
+      fittings.push({
+        id: `pumps.discharge${s}.${kind === 'non-return-valve' ? 'nrv' : 'iso'}`,
+        kind,
+        line: `pumps.discharge${s}`,
+        run: riser.name,
+        at: p.at,
+        along: p.along,
+        normally: 'open',
+        operator: 'solenoid',
+        reachable: true,
+      });
+    }
+  }
+  const shared = (id: string) =>
+    id.startsWith('pumps.discharge.') || id === 'contact.inlet.iso';
+  {
+    const main = runs.find((r) => r.name === 'battery-to-contact');
+    const f = [...expansion.along.values()]
+      .flat()
+      .find((x) => x.id === 'contact.inlet.iso');
+    if (main && f) {
+      const p = along(main.points, len(main.points) - 0.7);
+      fittings.push({
+        id: f.id,
+        kind: f.kind,
+        line: 'battery-to-contact',
+        run: main.name,
+        at: p.at,
+        along: p.along,
+        normally: f.normally,
+        operator: 'solenoid',
+        reachable: true,
+      });
+    }
+  }
+  for (const [lineId, all] of expansion.along) {
+    const list = all.filter((f) => !shared(f.id));
+    if (!list.length) continue;
     const run =
       runFor(lineId) ??
       (lineId.startsWith('tank.suction')
@@ -922,7 +1025,15 @@ export function plumbOlympic(): OlympicPlumbing {
     const L = len(run.points);
     list.forEach((f, k) => {
       const d = Math.min(L - 0.1, 0.35 + k * 0.4);
-      const fromEnd = f.end === 'source' ? d : L - d;
+      // A filter's branch valves at the branch's header end, by the battery's
+      // walkway, where its face is worked from; the rest by their ports.
+      const fromEnd = /^Filter \d backwash$/.test(run.name)
+        ? len(run.points.slice(0, 2)) + (run.points[1][1] - 0.6)
+        : /^Filter \d /.test(run.name)
+          ? L - 0.3
+          : f.end === 'source'
+            ? d
+            : L - d;
       // A power isolator is the machine's local isolator, on its drop by
       // the machine at a hand's height, not at the tap-off overhead.
       const p =
@@ -933,6 +1044,7 @@ export function plumbOlympic(): OlympicPlumbing {
         id: f.id,
         kind: f.kind,
         line: lineId,
+        run: run.name,
         at: p.at,
         along: p.along,
         normally: f.normally,
@@ -958,6 +1070,7 @@ export function plumbOlympic(): OlympicPlumbing {
       id: `${r.line}.tap-off`,
       kind: 'fused-tap-off',
       line: r.line,
+      run: r.name,
       at: r.points[0],
       along: [0, -1, 0],
       normally: 'closed',
@@ -969,6 +1082,7 @@ export function plumbOlympic(): OlympicPlumbing {
     id: 'battery.outlet.regulating',
     kind: 'regulating-valve',
     line: 'battery.outlet',
+    run: 'Outlet header',
     at: [round((hxFlowX + hxReturnX) / 2), outletY, round(outletZ)],
     along: [1, 0, 0],
     normally: 'open',
@@ -1107,4 +1221,213 @@ export function scoreOlympic(plumbed = plumbOlympic()): Score {
       reachable: fittings.filter((f) => f.reachable).length,
     },
   });
+}
+
+// ---- The room as the game draws it (prompt 033, stage 3) ---------------
+
+/** The room's machines, as the room's equipment has them: labelled as its own. */
+export function olympicItems(): Item[] {
+  return olympicPlan().map((p) => {
+    const item = itemOf(p);
+    return {
+      ...item,
+      label: `Olympic pool ${p.label.charAt(0).toLowerCase()}${p.label.slice(1)}`,
+    };
+  });
+}
+
+/** Each drawn valve's name and its tag's machine code, by its fitting. */
+function valveName(id: string): { name: string; code: string } | null {
+  const filter = /^filter-(\d)\.(inlet|outlet|drain)\.iso$/.exec(id);
+  if (filter)
+    return {
+      name: `F${filter[1]} ${filter[2] === 'drain' ? 'backwash' : filter[2]} valve`,
+      code: `F${filter[1]}`,
+    };
+  const table: Record<string, [string, string]> = {
+    'pumps.suctionA.iso': ['Pump A suction valve', 'P1'],
+    'pumps.suctionB.iso': ['Pump B suction valve', 'P1'],
+    'pumps.dischargeA.iso': ['Pump A discharge valve', 'P1'],
+    'pumps.dischargeB.iso': ['Pump B discharge valve', 'P1'],
+    'contact.inlet.iso': ['Contact tank inlet valve', 'T2'],
+    'contact.outlet.iso': ['Contact tank outlet valve', 'T2'],
+    'uv.inlet.iso': ['UV inlet valve', 'UV1'],
+    'uv.outlet.iso': ['UV outlet valve', 'UV1'],
+    'exchanger.poolIn.iso': ['HX pool flow valve', 'HX1'],
+    'exchanger.poolOut.iso': ['HX pool return valve', 'HX1'],
+    'exchanger.primaryFlow.iso': ['HX primary flow valve', 'HX1'],
+    'exchanger.primaryReturn.iso': ['HX primary return valve', 'HX1'],
+    'battery.outlet.regulating': ['Side-stream regulating valve', 'F'],
+  };
+  const t = table[id];
+  return t ? { name: t[0], code: t[1] } : null;
+}
+
+/** A valve's normal state: a filter's backwash valve shut, the rest open. */
+export const valveNormally = (name: string): 'open' | 'closed' =>
+  / backwash valve$/.test(name) ? 'closed' : 'open';
+
+const serviceOf = (r: OlympicRun): PipeRun['service'] =>
+  r.kind === 'pvc-drain'
+    ? 'drainage'
+    : r.kind === 'lagged-heating'
+      ? r.line === 'heating-return'
+        ? 'heating return'
+        : 'heating flow'
+      : r.kind === 'copper'
+        ? 'make-up'
+        : r.line === 'sample'
+          ? 'sample'
+          : r.kind === 'chemical-tube'
+            ? r.line.startsWith('acid')
+              ? 'acid'
+              : 'hypochlorite'
+            : r.kind === 'stainless'
+              ? 'ozone'
+              : r.medium === 'power'
+                ? 'electrical'
+                : r.line === 'sample'
+                  ? 'sample'
+                  : 'pool water';
+
+const LABEL: Record<PipeRun['service'], string> = {
+  'pool water': 'POOL WATER',
+  'heating flow': 'LTHW FLOW',
+  'heating return': 'LTHW RETURN',
+  drainage: 'DRAINAGE',
+  'make-up': 'MAKE-UP',
+  ozone: 'OZONE',
+  electrical: 'POWER',
+  hypochlorite: 'SODIUM HYPOCHLORITE',
+  acid: 'ACID',
+  sample: 'SAMPLE',
+  gas: 'GAS',
+  flue: 'FLUE',
+  'hot water': 'HOT WATER',
+};
+
+let cached: { runs: PipeRun[]; busbar: Containment[] } | null = null;
+
+/** The room's runs, as the game draws them, and its busbar trunking: plumbed once. */
+export function olympicRoom() {
+  if (cached) return cached;
+  const plumbed = plumbOlympic();
+  const room = olympicRoomPlan();
+  const t = PLANT_ROOM.wall;
+  const busbar: Containment[] = [];
+  const runs: PipeRun[] = [];
+  for (const r of plumbed.runs) {
+    if (r.name === 'Busbar ring' || r.name === 'Busbar feed') {
+      r.points.slice(1).forEach((p, k) =>
+        busbar.push({
+          name: `${r.name} ${k + 1}`,
+          kind: 'trunking',
+          width: BUSBAR.od,
+          depth: BUSBAR.od,
+          from: r.points[k],
+          to: p,
+        }),
+      );
+      continue;
+    }
+    // Where it crosses a wall's plane: a sleeve through it.
+    const through: WallCrossing[] = [];
+    for (const [k, p] of r.points.entries()) {
+      if (!k) continue;
+      const a = r.points[k - 1];
+      for (const [axis, half, normal] of [
+        [0, room.halfX, [1, 0, 0]],
+        [0, -room.halfX, [-1, 0, 0]],
+        [2, room.halfZ, [0, 0, 1]],
+        [2, -room.halfZ, [0, 0, -1]],
+      ] as const) {
+        const lo = Math.min(a[axis], p[axis]);
+        const hi = Math.max(a[axis], p[axis]);
+        if (
+          lo < half + Math.sign(half) * t * 0.5 &&
+          hi > half + Math.sign(half) * t * 0.5 &&
+          lo !== hi
+        ) {
+          const at = [...a] as [number, number, number];
+          at[axis] = half + Math.sign(half) * (t / 2);
+          through.push({ at, normal, thickness: t, kind: 'sleeve' });
+        }
+      }
+    }
+    const valves: Valve[] = plumbed.fittings
+      .filter(
+        (f) =>
+          f.run === r.name &&
+          (f.kind === 'isolating-valve' || f.kind === 'regulating-valve'),
+      )
+      .flatMap((f) => {
+        const v = valveName(f.id);
+        if (!v) return [];
+        const axis =
+          Math.abs(f.along[1]) > 0.5
+            ? 'y'
+            : Math.abs(f.along[0]) > 0.5
+              ? 'x'
+              : 'z';
+        return [
+          {
+            at: f.at,
+            axis,
+            name: v.name,
+            od: r.od,
+            operator: f.at[1] > 2.0 ? 'chain' : 'lever',
+            // Its lever away from the wall it is nearest, into the room.
+            facing:
+              axis === 'x'
+                ? [0, 0, f.at[2] > 0 ? -1 : 1]
+                : [f.at[0] > 0 ? -1 : 1, 0, 0],
+          } satisfies Valve,
+        ];
+      });
+    runs.push({
+      name: r.name,
+      kind: r.kind,
+      od: r.od,
+      points: r.points,
+      joins: [],
+      service: serviceOf(r),
+      label: LABEL[serviceOf(r)],
+      through,
+      valves,
+    });
+  }
+  cached = { runs, busbar };
+  return cached;
+}
+
+/** Each drawn valve's permanent identity's tag, as `installed-valves.ts` registers it. */
+export function olympicValveTags(): {
+  run: string;
+  name: string;
+  tag: string;
+  normal: 'open' | 'closed';
+}[] {
+  const seen = new Map<string, number>();
+  return olympicRoom().runs.flatMap((r) =>
+    r.valves.map((v) => {
+      const code = valveName(
+        plumbOlympic().fittings.find(
+          (f) => f.run === r.name && valveName(f.id)?.name === v.name,
+        )!.id,
+      )!.code;
+      const kind = / regulating /.test(v.name)
+        ? 'RV'
+        : / backwash /.test(v.name)
+          ? 'BV'
+          : 'IV';
+      const n = (seen.get(code + kind) ?? 0) + 1;
+      seen.set(code + kind, n);
+      return {
+        run: r.name,
+        name: v.name,
+        tag: `PL2-${code}-${kind}${n}`,
+        normal: valveNormally(v.name),
+      };
+    }),
+  );
 }

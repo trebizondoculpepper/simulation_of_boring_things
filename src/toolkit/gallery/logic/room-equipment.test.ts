@@ -190,7 +190,7 @@ describe.each(EQUIPPED_ROOMS)('%s', (room) => {
   });
 });
 
-import { NORTH_BATTERY, PLANT_ROOM, plantRoomPlan } from './plant-rooms';
+import { PLANT_ROOM, plantRoomPlan } from './plant-rooms';
 import { roomEquipment } from './room-equipment';
 
 describe('the balance tanks', () => {
@@ -204,34 +204,15 @@ describe('the balance tanks', () => {
   });
 });
 
-describe('the Olympic plant room, cleared for its redo', () => {
-  it('is an empty large hall: no machines, no pipework yet', () => {
+describe('the Olympic plant room, redone (prompt 033)', () => {
+  it('stands its fourteen machines as its plan has them, in a room of 22 × 14 m, plumbed', () => {
     const layout = layoutRoom('plant_pool_02')!;
-    expect(layout.placed).toHaveLength(0);
-    expect(roomPipes('plant_pool_02')).toHaveLength(0);
-    expect(layout.box.w).toBe(22);
+    expect(layout.placed).toHaveLength(14);
+    expect([layout.box.w, layout.box.d]).toEqual([22, 14]);
+    expect(roomPipes('plant_pool_02').length).toBeGreaterThan(40);
   });
 
-  it('has its three doorways: the pool north, the balance tank hall west, the main plant south', () => {
-    const plan = plantRoomPlan('large', { tankHall: true });
-    expect(plan.door.z).toBe(-plan.h);
-    expect(plan.equipment.z).toBe(plan.h);
-    expect(plan.tankDoor?.x).toBe(-plan.h);
-    // In the north half of the west wall, south of the filter battery's strip along the north.
-    expect(plan.tankDoor!.z).toBeLessThan(0);
-    expect(plan.tankDoor!.z - 1.3).toBeGreaterThanOrEqual(
-      plan.landing.maxZ + NORTH_BATTERY - 1e-9,
-    );
-    // Kept clear inside it, as the equipment doors are.
-    const box = roomEquipment('plant_pool_02')!.box;
-    expect(
-      box.keepClear.some(
-        (k) => k.minX === -plan.h && k.minZ < plan.tankDoor!.z,
-      ),
-    ).toBe(true);
-  });
-
-  it('keeps no west doors in the other large rooms (the retired room, the template)', () => {
+  it('keeps the square template rooms without balance tank doors', () => {
     expect(plantRoomPlan('large').tankDoor).toBeNull();
   });
 });

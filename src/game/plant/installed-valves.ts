@@ -113,6 +113,147 @@ export const INSTALLED_VALVES: Readonly<
     tag: 'BH-HW1-IV1',
     normal: 'open',
   },
+  // The Olympic pool's plant room, redone by the pipeline (prompt 033, 2026-10-23).
+  'plant_pool_02|Suction A|Pump A suction valve': {
+    assetId: 'valve-0044',
+    tag: 'PL2-P1-IV1',
+    normal: 'open',
+  },
+  'plant_pool_02|Suction B|Pump B suction valve': {
+    assetId: 'valve-0045',
+    tag: 'PL2-P1-IV2',
+    normal: 'open',
+  },
+  'plant_pool_02|Discharge A|Pump A discharge valve': {
+    assetId: 'valve-0046',
+    tag: 'PL2-P1-IV3',
+    normal: 'open',
+  },
+  'plant_pool_02|Discharge B|Pump B discharge valve': {
+    assetId: 'valve-0047',
+    tag: 'PL2-P1-IV4',
+    normal: 'open',
+  },
+  'plant_pool_02|Filter 1 inlet|F1 inlet valve': {
+    assetId: 'valve-0048',
+    tag: 'PL2-F1-IV1',
+    normal: 'open',
+  },
+  'plant_pool_02|Filter 1 outlet|F1 outlet valve': {
+    assetId: 'valve-0049',
+    tag: 'PL2-F1-IV2',
+    normal: 'open',
+  },
+  'plant_pool_02|Filter 1 backwash|F1 backwash valve': {
+    assetId: 'valve-0050',
+    tag: 'PL2-F1-BV1',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 2 inlet|F2 inlet valve': {
+    assetId: 'valve-0051',
+    tag: 'PL2-F2-IV1',
+    normal: 'open',
+  },
+  'plant_pool_02|Filter 2 outlet|F2 outlet valve': {
+    assetId: 'valve-0052',
+    tag: 'PL2-F2-IV2',
+    normal: 'open',
+  },
+  'plant_pool_02|Filter 2 backwash|F2 backwash valve': {
+    assetId: 'valve-0053',
+    tag: 'PL2-F2-BV1',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 3 inlet|F3 inlet valve': {
+    assetId: 'valve-0054',
+    tag: 'PL2-F3-IV1',
+    normal: 'open',
+  },
+  'plant_pool_02|Filter 3 outlet|F3 outlet valve': {
+    assetId: 'valve-0055',
+    tag: 'PL2-F3-IV2',
+    normal: 'open',
+  },
+  'plant_pool_02|Filter 3 backwash|F3 backwash valve': {
+    assetId: 'valve-0056',
+    tag: 'PL2-F3-BV1',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 4 inlet|F4 inlet valve': {
+    assetId: 'valve-0057',
+    tag: 'PL2-F4-IV1',
+    normal: 'open',
+  },
+  'plant_pool_02|Filter 4 outlet|F4 outlet valve': {
+    assetId: 'valve-0058',
+    tag: 'PL2-F4-IV2',
+    normal: 'open',
+  },
+  'plant_pool_02|Filter 4 backwash|F4 backwash valve': {
+    assetId: 'valve-0059',
+    tag: 'PL2-F4-BV1',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 5 inlet|F5 inlet valve': {
+    assetId: 'valve-0060',
+    tag: 'PL2-F5-IV1',
+    normal: 'open',
+  },
+  'plant_pool_02|Filter 5 outlet|F5 outlet valve': {
+    assetId: 'valve-0061',
+    tag: 'PL2-F5-IV2',
+    normal: 'open',
+  },
+  'plant_pool_02|Filter 5 backwash|F5 backwash valve': {
+    assetId: 'valve-0062',
+    tag: 'PL2-F5-BV1',
+    normal: 'closed',
+  },
+  'plant_pool_02|Outlet header|Side-stream regulating valve': {
+    assetId: 'valve-0063',
+    tag: 'PL2-F-RV1',
+    normal: 'open',
+  },
+  'plant_pool_02|Dosing spool|UV outlet valve': {
+    assetId: 'valve-0064',
+    tag: 'PL2-UV1-IV1',
+    normal: 'open',
+  },
+  'plant_pool_02|battery-to-contact|Contact tank inlet valve': {
+    assetId: 'valve-0065',
+    tag: 'PL2-T2-IV1',
+    normal: 'open',
+  },
+  'plant_pool_02|contact-to-uv|Contact tank outlet valve': {
+    assetId: 'valve-0066',
+    tag: 'PL2-T2-IV2',
+    normal: 'open',
+  },
+  'plant_pool_02|contact-to-uv|UV inlet valve': {
+    assetId: 'valve-0067',
+    tag: 'PL2-UV1-IV2',
+    normal: 'open',
+  },
+  'plant_pool_02|hx-flow|HX pool flow valve': {
+    assetId: 'valve-0068',
+    tag: 'PL2-HX1-IV1',
+    normal: 'open',
+  },
+  'plant_pool_02|hx-return|HX pool return valve': {
+    assetId: 'valve-0069',
+    tag: 'PL2-HX1-IV2',
+    normal: 'open',
+  },
+  'plant_pool_02|heating-flow|HX primary flow valve': {
+    assetId: 'valve-0070',
+    tag: 'PL2-HX1-IV3',
+    normal: 'open',
+  },
+  'plant_pool_02|heating-return|HX primary return valve': {
+    assetId: 'valve-0071',
+    tag: 'PL2-HX1-IV4',
+    normal: 'open',
+  },
 };
 
 export interface InstalledValve {

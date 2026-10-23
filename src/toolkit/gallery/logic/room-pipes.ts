@@ -1,3 +1,4 @@
+import { olympicRoom } from './olympic-plumbing';
 import { retiredPipes } from './retired-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { layoutRoom } from './room-equipment';
@@ -40,6 +41,7 @@ export type Service =
   | 'ozone'
   | 'electrical'
   | 'hypochlorite'
+  | 'acid'
   | 'sample'
   | 'gas'
   | 'flue'
@@ -1054,6 +1056,8 @@ export function poolPlantPipework(room: string): {
 
 /** The pipework of a room, if it has any laid out yet. */
 export function roomPipes(room: string): PipeRun[] {
+  // The Olympic's, plumbed and routed by the pipeline (prompt 033).
+  if (room === 'plant_pool_02') return olympicRoom().runs;
   // A retired room's pipes and ducts are frozen (`retired-rooms.ts`).
   const retired = retiredPipes(room);
   if (retired) return retired;

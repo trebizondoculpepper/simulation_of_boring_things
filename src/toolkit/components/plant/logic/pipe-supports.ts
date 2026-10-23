@@ -635,7 +635,9 @@ export function planSupports(
         const at = add(a, scale(sub(b, a), s / L));
         let placed = holdAt(at, piece);
         // Blocked: shift it a little along the pipe, either way.
-        const most = fixed ? FIXED_SHIFT : FILL_SHIFT;
+        // A filling support may move only by the slack its spacing left
+        // (on a small pipe, less than FILL_SHIFT), so no gap outgrows it.
+        const most = fixed ? FIXED_SHIFT : Math.min(FILL_SHIFT, gap - fill);
         for (let k = 1; !placed && k * 0.05 <= most + 1e-9; k++)
           for (const sign of [1, -1]) {
             const t = s + sign * k * 0.05;

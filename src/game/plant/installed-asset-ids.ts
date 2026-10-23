@@ -291,4 +291,62 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0091',
     tag: 'EO-CP1',
   },
+  // The Olympic pool's plant room, redone by the pipeline (prompt 033, 2026-10-23).
+  'plant_pool_02|sand-filter:3|Olympic pool sand filter 1': {
+    assetId: 'asset-0092',
+    tag: 'PL2-F1',
+  },
+  'plant_pool_02|sand-filter:3|Olympic pool sand filter 2': {
+    assetId: 'asset-0093',
+    tag: 'PL2-F2',
+  },
+  'plant_pool_02|sand-filter:3|Olympic pool sand filter 3': {
+    assetId: 'asset-0094',
+    tag: 'PL2-F3',
+  },
+  'plant_pool_02|sand-filter:3|Olympic pool sand filter 4': {
+    assetId: 'asset-0095',
+    tag: 'PL2-F4',
+  },
+  'plant_pool_02|sand-filter:3|Olympic pool sand filter 5': {
+    assetId: 'asset-0096',
+    tag: 'PL2-F5',
+  },
+  'plant_pool_02|pump-pair|Olympic pool circulation pumps, duty and standby': {
+    assetId: 'asset-0097',
+    tag: 'PL2-P1',
+  },
+  'plant_pool_02|contact-tank|Olympic pool ozone contact tank': {
+    assetId: 'asset-0098',
+    tag: 'PL2-T2',
+  },
+  'plant_pool_02|uv-unit|Olympic pool uV unit': {
+    assetId: 'asset-0099',
+    tag: 'PL2-UV1',
+  },
+  'plant_pool_02|pump-panel|Olympic pool local control panel': {
+    assetId: 'asset-0100',
+    tag: 'PL2-CP1',
+  },
+  'plant_pool_02|ozone-generator:plant_pool_02|Olympic pool ozone generator': {
+    assetId: 'asset-0101',
+    tag: 'PL2-OZ1',
+  },
+  'plant_pool_02|heat-exchanger|Olympic pool heat exchanger': {
+    assetId: 'asset-0102',
+    tag: 'PL2-HX1',
+  },
+  'plant_pool_02|dosing-controller|Olympic pool dosing controller and sample cells':
+    {
+      assetId: 'asset-0103',
+      tag: 'PL2-CP2',
+    },
+  'plant_pool_02|hypo-pumps|Olympic pool hypochlorite dosing pumps': {
+    assetId: 'asset-0104',
+    tag: 'PL2-DP1',
+  },
+  'plant_pool_02|acid-pump|Olympic pool acid dosing pump': {
+    assetId: 'asset-0105',
+    tag: 'PL2-DP2',
+  },
 };

@@ -1,3 +1,5 @@
+import { HEADERS, olympicPlan, olympicRoomBox } from './olympic-plan';
+import { olympicItems } from './olympic-plumbing';
 import { retiredLayout } from './retired-rooms';
 import { placeStacks } from './air-plant';
 import type { Footprint } from '../../controls/logic/walk-collision';
@@ -636,10 +638,9 @@ export function roomEquipment(
       // `doc/prompts/033-olympic-plant-redo.md`): an empty large hall, its
       // balance tank now in a hall of its own through its west doors. The
       // room as it was is kept as `retired0`.
-      return {
-        box: plantRoomBox('large', { tankHall: true }),
-        items: [],
-      };
+      // Laid out by the owner's plan (`olympic-plan.ts`), plumbed by the
+      // pipeline (`olympic-plumbing.ts`): 22 × 14 m.
+      return { box: olympicRoomBox(), items: olympicItems() };
     case 'plant_pool_03':
       return {
         // In front of its mimic board, in the middle of the north wall. Its
@@ -1134,6 +1135,33 @@ export const TANK_SURROUND = 0.8;
  * 2026-10-23; that room is kept as `retired0`.)
  */
 const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
+  // The Olympic's: where its plan stands each machine (`olympic-plan.ts`).
+  plant_pool_02: (box, items) =>
+    olympicPlan().flatMap((p, i) => {
+      const item = items[i];
+      if (!item) return [];
+      if (p.mount === 'wall')
+        return [
+          put(box, item, {
+            wall: p.facing === 'north' ? 'south' : 'north',
+            along: p.x,
+          }),
+        ];
+      const placed = put(box, item, { x: p.x, z: p.z, face: p.facing });
+      // A filter is worked from the battery's walkway, beyond its headers.
+      return [
+        p.key.startsWith('filter')
+          ? {
+              ...placed,
+              access: {
+                ...placed.access,
+                minZ: placed.access.minZ + HEADERS,
+                maxZ: placed.access.maxZ + HEADERS,
+              },
+            }
+          : placed,
+      ];
+    }),
   // The wet hall: along its north wall, west to east, in the order the
   // water goes: the break tank, the booster set, the meter; the mimic;
   // then the backwash tank. Each faces the room, its back to the wall.

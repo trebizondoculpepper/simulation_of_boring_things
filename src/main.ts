@@ -281,11 +281,16 @@ const starter = async (
       | 'pool_03'
       | 'pool_04';
     const size = POOL_HALLS[hall].plantDoor!.size;
-    // The Olympic's balance tank is in a hall of its own, through its west doors.
+    // The Olympic's own shell (22 × 14 m, prompt 033): its balance tank in a
+    // hall of its own, through its west doors.
+    const plan =
+      hall === 'pool_02'
+        ? (
+            await import('./toolkit/gallery/logic/olympic-plan')
+          ).olympicShellPlan()
+        : undefined;
     return (surface) =>
-      startPlantRoomShell(surface, size, hall, {
-        tankHall: hall === 'pool_02',
-      });
+      startPlantRoomShell(surface, size, hall, plan ? { plan } : {});
   }
   if (room === 'retired0') {
     // The Olympic pool's plant room as it was on 2026-10-23, frozen as a
