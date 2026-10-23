@@ -68,6 +68,7 @@ import {
   POOL_HALLS,
 } from '../logic/pool-halls';
 import type { PoolHallId } from '../logic/pool-halls';
+import { knobDirection } from '../../controls/input/knob-turning';
 import { bindRoomLights } from '../views/room-lights';
 import { zoneLit, zoneOfRoom } from '../../../game/plant/lighting';
 import type { PoolUniforms } from '../../components/pool/views/pool-surfaces';
@@ -383,8 +384,9 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       const hit = raycaster.intersectObject(object, true)[0];
       if (!hit || hit.distance > 3 * metre) continue;
       for (let o = hit.object; o; o = o.parent!) {
-        const use = uses.get(o);
-        if (use) return use();
+        const use = uses.get(o) as ((direction?: number) => void) | undefined;
+        // A knob turns down or up by which half of it is clicked.
+        if (use) return use(knobDirection(o, hit.point, camera));
         if (o === object) break;
       }
     }

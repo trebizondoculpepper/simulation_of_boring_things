@@ -29,6 +29,7 @@ import {
   corridorLabSolids,
   createCorridorLab,
 } from '../views/corridor-lab';
+import { knobDirection } from '../../controls/input/knob-turning';
 
 /**
  * corridor_lab: the corridor kit's pieces laid out as one run, in its own
@@ -123,7 +124,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       if (!hit || hit.distance > 3 * metre) return;
       for (let o: Object3D | null = hit.object; o; o = o.parent) {
         const work = parts.uses.get(o);
-        if (work) return work();
+        // A knob turns down or up by which half of it is clicked.
+        if (work) return work(knobDirection(o, hit.point, camera));
       }
     },
   });

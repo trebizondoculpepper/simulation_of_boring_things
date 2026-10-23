@@ -54,6 +54,7 @@ import {
   createRenderer,
   useEnvironment,
 } from '../toolkit/components/core/parts/render-style';
+import { knobDirection } from '../toolkit/controls/input/knob-turning';
 
 /** How many real lights light the corridor: the battens nearest in view. */
 export const CORRIDOR_LIGHTS = 6;
@@ -190,7 +191,13 @@ export function startDevCorridorRoom(
         portals.uses.get(o as Mesh) ??
         corridor.parts.uses.get(o) ??
         courtyard.parts.uses.get(o);
-      if (use) return use;
+      // A knob turns down or up by which half of it is clicked.
+      const at = o;
+      if (use)
+        return () =>
+          (use as (direction?: number) => void)(
+            knobDirection(at, hit.point, camera),
+          );
     }
     return null;
   };

@@ -65,6 +65,7 @@ import {
   createRenderer,
   useEnvironment,
 } from '../toolkit/components/core/parts/render-style';
+import { knobDirection } from '../toolkit/controls/input/knob-turning';
 
 const PLANT_CORRIDOR_CEILING = 4;
 
@@ -274,7 +275,9 @@ export function startPlantCorridorRoom(canvas: HTMLCanvasElement) {
     if (!hit || hit.distance > 4 * m) return null;
     for (let p: Object3D | null = hit.object; p; p = p.parent) {
       const use = corridor.parts.uses.get(p);
-      if (use) return use;
+      // A knob turns down or up by which half of it is clicked.
+      const at = p;
+      if (use) return () => use(knobDirection(at, hit.point, camera));
     }
     return null;
   };

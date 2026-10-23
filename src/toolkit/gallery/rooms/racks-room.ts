@@ -49,6 +49,7 @@ import {
   createPs1Material,
   ps1Uniforms,
 } from '../../components/core/parts/ps1-material';
+import { knobDirection } from '../../controls/input/knob-turning';
 
 /** A unit to fit, and the rack unit its bottom sits at. */
 type Fit = [at: number, options: RackUnitOptions];
@@ -491,7 +492,8 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
       }
       for (let o: Object3D | null = hit.object; o; o = o.parent) {
         const work = parts.uses.get(o);
-        if (work) return work();
+        // A knob turns down or up by which half of it is clicked.
+        if (work) return work(knobDirection(o, hit.point, camera));
       }
     },
   });

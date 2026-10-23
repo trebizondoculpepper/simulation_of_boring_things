@@ -114,6 +114,7 @@ import {
   createRenderer,
   useEnvironment,
 } from '../../components/core/parts/render-style';
+import { knobDirection } from '../../controls/input/knob-turning';
 
 const FLOOR = GALLERY_FLOOR;
 const CEILING = GALLERY_CEILING;
@@ -692,7 +693,13 @@ export function startArchitecturalGalleryRoom(canvas: HTMLCanvasElement) {
     if (!hit) return null;
     for (let o: Object3D | null = hit.object; o; o = o.parent) {
       const use = portals.uses.get(o as Mesh) ?? parts.uses.get(o);
-      if (use) return use;
+      // A knob turns down or up by which half of it is clicked.
+      const at = o;
+      if (use)
+        return () =>
+          (use as (direction?: number) => void)(
+            knobDirection(at, hit.point, camera),
+          );
     }
     return null;
   };
