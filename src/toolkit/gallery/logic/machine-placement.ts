@@ -64,6 +64,11 @@ export interface PlaceItem {
    * group stand together, as a battery, side by side in one band.
    */
   group?: string;
+  /**
+   * A block of two rows back to back (`unit-blocks.ts`): it stands across
+   * the island's two faces, each row facing a walkway.
+   */
+  bothFaces?: boolean;
 }
 
 export interface PlaceLink {
@@ -354,7 +359,10 @@ export function placeMachines(
         l.i !== undefined && l.j !== undefined && l.i !== l.j,
     );
   // The bands' depth: the deepest machine with the gap at its back.
-  const depth = Math.max(...items.map((i) => i.d)) + MACHINE_GAP / 2;
+  // A block across the island needs only half its depth in each face.
+  const depth =
+    Math.max(...items.map((i) => (i.bothFaces ? i.d / 2 : i.d))) +
+    MACHINE_GAP / 2;
 
   interface Laid {
     x: number;
@@ -377,14 +385,19 @@ export function placeMachines(
       bands
         .map((_, k) => k)
         .filter((k) =>
-          item.walls?.length
-            ? bands[k].wall !== undefined && item.walls.includes(bands[k].wall!)
-            : item.site === 'corner'
-              ? // Only the bands that run the room's whole width end in its corners.
-                bands[k].wall === 'north' || bands[k].wall === 'south'
-              : item.site === 'wall'
-                ? bands[k].wall !== undefined
-                : true,
+          item.bothFaces
+            ? // Across the island: in its first face, the second kept clear.
+              bands[k].name === 'island, north face' ||
+              bands[k].name === 'island, west face'
+            : item.walls?.length
+              ? bands[k].wall !== undefined &&
+                item.walls.includes(bands[k].wall!)
+              : item.site === 'corner'
+                ? // Only the bands that run the room's whole width end in its corners.
+                  bands[k].wall === 'north' || bands[k].wall === 'south'
+                : item.site === 'wall'
+                  ? bands[k].wall !== undefined
+                  : true,
         ),
     );
     /** The stretches along each band a machine of height `h` may not stand in: [from, to] along it. */
@@ -414,8 +427,15 @@ export function placeMachines(
       return v;
     };
 
+    // A block across the island with no island to stand in may stand in
+    // any band, but breaks a rule there.
+    allowed.forEach((list, i) => {
+      if (!list.length) allowed[i] = bands.map((_, k) => k);
+    });
     const lay = (s: State): Laid[] => {
       const laid: Laid[] = Array(n);
+      /** Stretches of the island's second face taken by blocks across both. */
+      const across = new Map<number, [number, number][]>();
       for (let k = 0; k < bands.length; k++) {
         const b = bands[k];
         const members = [];
@@ -436,7 +456,7 @@ export function placeMachines(
           // Past anything it may not stand in.
           for (let moved = true; moved;) {
             moved = false;
-            for (const [lo, hi] of blocked(k, i))
+            for (const [lo, hi] of [...blocked(k, i), ...(across.get(k) ?? [])])
               if (
                 at < hi + MACHINE_GAP / 2 &&
                 at + item.w > lo - MACHINE_GAP / 2
@@ -446,7 +466,13 @@ export function placeMachines(
               }
           }
           const mid = at + item.w / 2;
-          const back = MACHINE_GAP / 2 + item.d / 2;
+          // Across the island, centred on its spine; else its back to the band's back.
+          const back = item.bothFaces ? 0 : MACHINE_GAP / 2 + item.d / 2;
+          if (item.bothFaces)
+            across.set(k + 1, [
+              ...(across.get(k + 1) ?? []),
+              [b.length - at - item.w, b.length - at],
+            ]);
           const x = b.from[0] + b.along[0] * mid + b.facing[0] * back;
           const z = b.from[1] + b.along[1] * mid + b.facing[1] * back;
           const r = turnFacing(b.facing);
@@ -525,9 +551,16 @@ export function placeMachines(
         // Deeper than its band: out into the walkway.
         add(
           i,
-          Math.max(0, items[i].d + MACHINE_GAP / 2 - bands[laid[i].k].depth) *
-            items[i].w,
+          Math.max(
+            0,
+            (items[i].bothFaces
+              ? items[i].d / 2
+              : items[i].d + MACHINE_GAP / 2) - bands[laid[i].k].depth,
+          ) * items[i].w,
         );
+        // A block across the island, not in the island.
+        if (items[i].bothFaces && bands[laid[i].k].wall !== undefined)
+          add(i, items[i].w * items[i].d);
         for (let j = i + 1; j < n; j++) {
           const v = overlapArea(
             grow(laid[i].footprint, MACHINE_GAP / 2 - 1e-6),

@@ -32,6 +32,19 @@ The search can then place many candidates, keep the best few by the placement sc
 
 An approximate installed cost per metre: materials, supports and fixing, and labour. Each kind has a price at a reference size and grows with size. These are working estimates for comparing designs, not quotations, and the table says so. Conduit carrying cables is priced as conduit plus cable, not as screwed pipe. Lagged pipe is its steel plus its insulation. Fittings (valves, isolators) have a price each.
 
+### Parallel units: pre-assembled blocks and shared headers (the owner, 2026-10-23)
+
+Identical units that work in parallel (filters, duty and standby pumps) stand together because they share a function, and so share headers: one inlet manifold feeds them all, one outlet manifold collects from them. Filters do not connect to filters, so a placement pulled only by links scatters them. Two parts:
+
+- **Pre-assembled candidate blocks.** Before placement, each group of identical parallel units is made up into candidate blocks that reach its number. For four: a row of 4, a 2 × 2 square, two pairs, a row of 3 and a single, a pair and two singles, or four singles.
+  - A row stands in any band, every unit facing the walkway.
+  - A square is two rows back to back, so it stands only in the island, across both its faces, so that each row faces a walkway. In a wall band its back row would face the wall.
+
+  Each block is one item for placement, as wide as its units and their gaps, with their ports. After placement it expands back into its units' places, so a block is side by side and aligned by construction.
+
+- **Fewer placements is better, at the placement level.** The placement scorer rewards a group made up in fewer blocks. Placement tries each candidate make-up, and the placement scorer picks.
+- **Headers** are added by the plumber's expansion where it finds identical units in parallel, the way it adds isolators: an inlet and an outlet header, each unit on a short branch with its isolators, and the header routed along the battery like a bus.
+
 ## Order of work
 
 1. `pipe-costs.ts`, tested: dearer by size; steel above PVC; lagged above bare.

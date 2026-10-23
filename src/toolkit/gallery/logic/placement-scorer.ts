@@ -43,6 +43,8 @@ export function scorePlacement(
   items: readonly PlaceItem[],
   links: readonly PricedLink[],
   minimumArea: number,
+  /** Each group of parallel units: how many units, made up into how many blocks. */
+  makeUp: ReadonlyMap<string, { units: number; blocks: number }> = new Map(),
 ): Score {
   const gates: string[] = [];
   const dimensions: Dimension[] = [];
@@ -102,6 +104,61 @@ export function scorePlacement(
       ? `${together} of ${batteries.length} groups of like machines in one band`
       : 'no machines alike',
   });
+
+  // Fewer placements (the owner, 2026-10-23): a group of parallel units
+  // made up in fewer blocks is better.
+  if (makeUp.size) {
+    const groups = [...makeUp.values()];
+    const score =
+      groups.reduce((sum, g) => sum + 1 / Math.max(1, g.blocks), 0) /
+      groups.length;
+    dimensions.push({
+      name: 'fewer placements',
+      score,
+      weight: 6,
+      why: groups
+        .map(
+          (g) =>
+            `${g.units} units in ${g.blocks} block${g.blocks === 1 ? '' : 's'}`,
+        )
+        .join('; '),
+    });
+  }
+
+  // Groups beside what they serve (the owner, 2026-10-23): a bonus, as
+  // for a single machine, for each thing a group of like machines is piped
+  // to standing within 4 m of it.
+  if (batteries.length) {
+    let near = 0;
+    let all = 0;
+    for (const members of batteries) {
+      const ids = new Set(members.map((m) => m.item.key));
+      const served = new Set<number>();
+      for (const l of links) {
+        if (ids.has(l.a) && !ids.has(l.b)) served.add(index.get(l.b)!);
+        if (ids.has(l.b) && !ids.has(l.a)) served.add(index.get(l.a)!);
+      }
+      for (const j of served) {
+        if (j === undefined) continue;
+        all++;
+        const p = layout.places[j];
+        const d = Math.min(
+          ...members.map(
+            (m) =>
+              Math.abs(layout.places[m.i].x - p.x) +
+              Math.abs(layout.places[m.i].z - p.z),
+          ),
+        );
+        if (d <= 4) near++;
+      }
+    }
+    dimensions.push({
+      name: 'groups by what they serve',
+      score: all ? near / all : 1,
+      weight: 6,
+      why: `${near} of ${all} things groups are piped to stand within 4 m of them`,
+    });
+  }
 
   // Estimated pipework: each link's square length, lead to lead, at its
   // pipe's price, against every link at 1.5 m.
