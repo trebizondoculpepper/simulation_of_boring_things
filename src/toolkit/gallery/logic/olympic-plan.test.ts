@@ -92,7 +92,10 @@ describe('the Olympic plant room’s drawing', () => {
       'POWER AND CONTROL',
     ])
       expect(svg).toContain(role);
+    // Each by its name (the dosing controller's shortened to fit).
     for (const i of olympicPlan())
-      expect(svg).toContain(i.label.split(', ')[0]);
+      expect(svg).toContain(
+        i.label.replace(' and sample cells', '').split(', ')[0],
+      );
   });
 });
