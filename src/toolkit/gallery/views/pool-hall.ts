@@ -1643,12 +1643,16 @@ export function createPoolHall(
   // it has one: the basins' own depths, not `deepest`, which is never
   // under 0.2 m for the slab's sake (a shallow footbath, 0.15 m, would
   // otherwise show empty a quarter of the way up).
-  const empty = Math.max(
+  // A hall with no basins of its own (the jacuzzi's, whose spa is built
+  // apart) keeps `deepest`: the maximum of nothing is -Infinity, which
+  // would put its waterline, and its shaders, at infinity.
+  const basinDepths = [
     ...s.basins.map((b) => (b.shape === 'rect' ? b.deep : b.depth)),
     ...s.basins.flatMap((b) =>
       ('wells' in b ? (b.wells ?? []) : []).map((w) => w.depth),
     ),
-  );
+  ];
+  const empty = basinDepths.length ? Math.max(...basinDepths) : deepest;
   // From full down to the bottom.
   const fullDepth = empty - (WATER_Y - fullY);
   group.userData.waterDepth = fullDepth;
