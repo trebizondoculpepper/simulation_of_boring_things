@@ -1,11 +1,12 @@
 import {
   AdditiveBlending,
   Color,
+  DoubleSide,
   Mesh,
   MeshBasicMaterial,
   PlaneGeometry,
 } from 'three';
-import type { Texture } from 'three';
+import type { BufferGeometry, Texture } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createCanvasTexture } from '../../core/views/screens';
 
@@ -22,9 +23,14 @@ import { createCanvasTexture } from '../../core/views/screens';
  * - `scallop`: a grazing uplight's cone up a wall, a hot spot at its foot;
  * - `band`: the soft glow either side of a linear slot;
  * - `fall`: a band bright at one edge and fading across (a cove's wall
- *   above its ledge; a luminous ceiling's walls below it).
+ *   above its ledge; a luminous ceiling's walls below it);
+ * - `pool`: a round pool of light, a downlight's or a pendant's on the
+ *   floor beneath it, soft-edged.
+ *
+ * A wash lies on a flat plane, or on any surface given (a curved wall's,
+ * a round column's), its pattern across that surface's own uv.
  */
-export type WashShape = 'halo' | 'edges' | 'scallop' | 'band' | 'fall';
+export type WashShape = 'halo' | 'edges' | 'scallop' | 'band' | 'fall' | 'pool';
 
 const SIZE = {
   halo: [128, 96],
@@ -32,6 +38,7 @@ const SIZE = {
   scallop: [64, 128],
   band: [64, 16],
   fall: [16, 64],
+  pool: [64, 64],
 } as const;
 
 /** A wash's pattern, `inner` the share of a halo's plane its panel covers. */
@@ -67,6 +74,9 @@ export function washTexture(
           Math.exp(-across * across * 2.2) *
           (0.35 + 0.65 * Math.exp(-up * 2.2));
         b *= 1 - Math.min(1, Math.max(0, up - 0.75) / 0.25);
+      } else if (shape === 'pool') {
+        const d = Math.hypot(u - 0.5, v - 0.5) / 0.5;
+        b = Math.exp(-d * d * 3) * (1 - Math.min(1, d));
       } else if (shape === 'band') {
         const across = (u - 0.5) / 0.18;
         b = Math.exp(-across * across);
@@ -96,7 +106,16 @@ export function createWash(
   w: number,
   h: number,
   colour = '#fff1d6',
-  { inner, strength = 1 }: { inner?: number; strength?: number } = {},
+  {
+    inner,
+    strength = 1,
+    geometry,
+  }: {
+    inner?: number;
+    strength?: number;
+    /** A surface of its own to lie on, in place of a `w` by `h` plane. */
+    geometry?: BufferGeometry;
+  } = {},
 ) {
   const material = new MeshBasicMaterial({
     map: washTexture(kit, shape, inner),
@@ -105,9 +124,11 @@ export function createWash(
     blending: AdditiveBlending,
     depthWrite: false,
     opacity: 0,
+    // A curved surface's wash seen from inside it.
+    side: DoubleSide,
   });
   kit.materials.push(material);
-  const mesh = new Mesh(new PlaneGeometry(w, h), material);
+  const mesh = new Mesh(geometry ?? new PlaneGeometry(w, h), material);
   mesh.userData.live = true;
   mesh.renderOrder = 1;
   return {

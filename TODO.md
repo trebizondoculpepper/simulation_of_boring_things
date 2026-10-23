@@ -32,7 +32,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Lighting features
 
-- [x] **Dev30, lighting styles** (done 2026-10-23): a dev room of six booths, each lit one way: the halo panel, cove lighting, wall grazing, a shadow-gap slot, a fibre-optic starlight ceiling and a luminous ceiling. Next for it: more styles, and fitting the chosen ones to the rooms.
+- [x] **Dev30, lighting styles** (done 2026-10-23): a dev room of six booths, each lit one way: the halo panel, cove lighting, wall grazing, a shadow-gap slot, a fibre-optic starlight ceiling and a luminous ceiling. Its second six (2026-10-23): downlights and wall-washers, globe pendants, up/down wall cylinders, tile lights and bulkheads on a tiled wall, neon and a curved grazer on a curved tiled wall, curved sconces on a round column. Next for it: more styles, and fitting the chosen ones to the rooms.
 - [ ] **A direct/indirect "halo" ceiling panel** ([040](doc/prompts/040-direct-indirect-panel.md), photograph in `doc/research/lighting/`): a suspended LED panel lighting the room through its diffuser and washing the ceiling round it, for the modern public spaces.
 
 ### Plant features
