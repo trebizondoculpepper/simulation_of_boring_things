@@ -196,6 +196,8 @@ const CHANNEL = -0.3;
 export const BUSBAR = { y: 5.75, off: 0.3, od: 0.15 } as const;
 /** A tap-off box hangs this far under the busbar, its drop leaving its foot. */
 const TAP = 0.3;
+/** How far a dosing quill or a sample tapping stands off its main's surface, metres. */
+const QUILL = 0.08;
 /** The lines the router lays first: they have least room. */
 const FIRST = new Set(['battery-to-contact', 'hx-return']);
 /** A line ending at a wall ends this far inside its face, at its sleeve. */
@@ -715,6 +717,109 @@ export function plumbOlympic(): OlympicPlumbing {
   problems.push(...routed.problems);
   for (const w of wants) {
     const points = routed.routes.get(w.id);
+    if (!points) {
+      problems.push(`${w.id}: not routed`);
+      continue;
+    }
+    runs.push({
+      name: w.id,
+      line: w.id,
+      ...pipeOf[w.pipe],
+      od: w.od,
+      points,
+      by: 'router',
+    });
+  }
+
+  // ---- The second pass: lines that tee into routed mains ----------------
+  // The dosing pumps' lines to their injection quills on top of the return
+  // main, just after the UV (chlorine and pH dosed after the ozone stage,
+  // which would destroy chlorine); the sample line from a tapping on the
+  // pump discharge manifold, before the filters and any dosing, to the
+  // dosing controller's cells (`doc/plant-model.md`). Routed clear of
+  // everything laid so far.
+  const returnMain = runs.find((r) => r.name === 'uv-to-pool');
+  const manifold = runs.find((r) => r.name === 'Pump discharge manifold')!;
+  const second: Want[] = [];
+  if (returnMain) {
+    // On top of the main's first level stretch long enough for both quills, `t` along it.
+    const pts = returnMain.points;
+    const k = Math.max(
+      1,
+      pts.findIndex(
+        (p, i) =>
+          i > 0 &&
+          Math.abs(p[1] - pts[i - 1][1]) < 1e-6 &&
+          Math.hypot(p[0] - pts[i - 1][0], p[2] - pts[i - 1][2]) >= 1.2,
+      ),
+    );
+    const quill = (t: number) => {
+      const a = pts[k - 1];
+      const b = pts[k];
+      return {
+        at: r3([
+          a[0] + (b[0] - a[0]) * t,
+          a[1] + returnMain.od / 2 + QUILL,
+          a[2] + (b[2] - a[2]) * t,
+        ]),
+        outward: [0, 1, 0] as Vec3,
+      };
+    };
+    second.push(
+      {
+        id: 'hypo-dose',
+        pipe: 'chemical',
+        od: 0.012,
+        start: end(port('hypo', 'dose')),
+        end: quill(0.35),
+      },
+      {
+        id: 'acid-dose',
+        pipe: 'chemical',
+        od: 0.012,
+        start: end(port('acid', 'dose')),
+        end: quill(0.65),
+      },
+    );
+  }
+  // The tapping: on top of the manifold's run north.
+  const tapping = {
+    at: r3([
+      manifold.points[0][0],
+      manifold.points[0][1] + MAIN / 2 + QUILL,
+      0.6,
+    ]),
+    outward: [0, 1, 0] as Vec3,
+  };
+  second.push({
+    id: 'sample',
+    pipe: 'chemical',
+    od: 0.012,
+    start: tapping,
+    end: end(port('controller', 'sample')),
+  });
+  const routedSecond = routeVoxelLines(
+    { halfX: hx, halfZ: hz, height: 6.0, regions: routerRegions, obstacles },
+    second.map((w) => ({
+      id: w.id,
+      start: w.start,
+      end: w.end,
+      od: w.od,
+      joint: pipeOf[w.pipe].joint,
+      price: pricePerMetre(pipeOf[w.pipe].kind, w.od),
+      startStraight: 0.3,
+      endStraight: 0.15,
+    })),
+    runs.map((r) => ({
+      name: r.name,
+      points: r.points,
+      od: r.od,
+      joint: r.joint,
+    })),
+  );
+  problems.push(...routedSecond.problems);
+  for (const w of second) {
+    const points = routedSecond.routes.get(w.id);
     if (!points) {
       problems.push(`${w.id}: not routed`);
       continue;

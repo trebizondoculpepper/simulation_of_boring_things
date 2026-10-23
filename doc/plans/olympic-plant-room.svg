@@ -176,6 +176,9 @@
 <polyline points="578,658 578,658 578,419 578,419" fill="none" stroke="#ef6c00" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.8"/>
 <polyline points="559.12,664 559.12,646 559.12,646 559.12,658 559.12,658" fill="none" stroke="#8e24aa" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.8"/>
 <polyline points="511.12,664 511.12,646 511.12,646 511.12,656 511.12,656" fill="none" stroke="#8e24aa" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.8"/>
+<polyline points="571.12,652 571.12,640 571.12,640 571.12,371.6 516.2,371.6 516.2,371.6" fill="none" stroke="#8e24aa" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.8"/>
+<polyline points="517.12,649 517.12,382.44 517.12,382.44 483.8,382.44 483.8,371.6 483.8,371.6" fill="none" stroke="#8e24aa" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.8"/>
+<polyline points="177.2,414 177.2,414 631.12,414 631.12,649 631.12,649 631.12,655" fill="none" stroke="#8e24aa" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.8"/>
 <circle cx="117.19999999999999" cy="476" r="5" fill="#2e7d32" stroke="#ffffff" stroke-width="1.5"/>
 <circle cx="117.19999999999999" cy="536" r="5" fill="#2e7d32" stroke="#ffffff" stroke-width="1.5"/>
 <circle cx="161" cy="252.108" r="5" fill="#1b2326" stroke="#ffffff" stroke-width="1.5"/>
@@ -212,7 +215,7 @@
 <circle cx="122.00000000000003" cy="536" r="5" fill="#bf360c" stroke="#ffffff" stroke-width="1.5"/>
 <circle cx="578" cy="658" r="5" fill="#bf360c" stroke="#ffffff" stroke-width="1.5"/>
 <circle cx="446" cy="286" r="5" fill="#2e7d32" stroke="#ffffff" stroke-width="1.5"/>
-<text x="20" y="56" font-size="13" fill="#2e7d32">Plumbed and routed: 47 runs (12 by the router), 36 fittings. Score 76.1, every gate passed.</text>
+<text x="20" y="56" font-size="13" fill="#2e7d32">Plumbed and routed: 50 runs (15 by the router), 36 fittings. Score 76.3, every gate passed.</text>
 <line x1="30" y1="780" x2="64" y2="780" stroke="#1565c0" stroke-width="4"/>
 <text x="72" y="784" font-size="12" fill="#1b2326">Pool water to the filters</text>
 <line x1="380" y1="780" x2="414" y2="780" stroke="#00897b" stroke-width="4"/>
