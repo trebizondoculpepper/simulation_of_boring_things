@@ -114,6 +114,30 @@ describe('the plumber expands the plan with its fittings', () => {
   });
 });
 
+describe('flowmeters, an option', () => {
+  it('fits none unless asked', () => {
+    const x = expandForPlumbing(nodes, edges, options);
+    expect(x.fittings.some((f) => f.kind === 'flowmeter')).toBe(false);
+  });
+
+  it('puts one on each named port’s line, on the line’s side of its isolating valve', () => {
+    const x = expandForPlumbing(nodes, edges, {
+      ...options,
+      flowmeters: new Set(['pool-pump.discharge', 'sand-filter.in']),
+    });
+    expect(x.along.get('delivery')!.map((f) => f.id)).toEqual([
+      'pump.discharge.nrv',
+      'pump.discharge.iso',
+      'pump.discharge.meter',
+      'filter.in.meter',
+      'filter.in.iso',
+    ]);
+    expect(x.along.get('suction')!.map((f) => f.id)).toEqual([
+      'pump.suction.iso',
+    ]);
+  });
+});
+
 describe('how a valve is worked', () => {
   const iso = { kind: 'isolating-valve' as const, medium: 'water' as const };
   it('follows the option and the reach', () => {
@@ -126,6 +150,26 @@ describe('how a valve is worked', () => {
       'motor',
     );
     expect(operatorFor(iso, true, 'all-automatic')).toBe('motor');
+  });
+  it('drives an automatic valve by the actuator asked for', () => {
+    expect(
+      operatorFor(iso, true, 'all-automatic', { actuator: 'solenoid' }),
+    ).toBe('solenoid');
+    expect(
+      operatorFor(iso, false, 'automatic-where-hard-to-reach', {
+        actuator: 'solenoid',
+      }),
+    ).toBe('solenoid');
+    expect(
+      operatorFor(iso, false, 'prefer-manual', { actuator: 'solenoid' }),
+    ).toBe('chain');
+    expect(
+      operatorFor(
+        { kind: 'flowmeter', medium: 'water' },
+        true,
+        'all-automatic',
+      ),
+    ).toBe('none');
   });
   it('keeps what is fixed by purpose', () => {
     expect(

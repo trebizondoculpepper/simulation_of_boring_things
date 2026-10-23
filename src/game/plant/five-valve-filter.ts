@@ -150,7 +150,21 @@ const valveLink = (
       };
 
 export function fiveValveFlows(s: FiveValveState): FiveValveFlows {
-  const on = supplyOn(s);
+  return faceFlows(s.opening, s.dirt, supplyOn(s));
+}
+
+/**
+ * The flows through one filter's face from its valves' openings alone, the
+ * supply on or off: as a battery has them whose valves are each commanded
+ * on their own (the Olympic's, from its panels), with no controller
+ * holding the supply off while they move.
+ */
+export function faceFlows(
+  opening: Readonly<Record<ValveName, number>>,
+  dirt: number,
+  on: boolean,
+): FiveValveFlows {
+  const s = { opening, dirt };
   // With the supply off nothing drives any water: no flow anywhere (and
   // the solver, given a network with no head across it, is not asked).
   if (!on)

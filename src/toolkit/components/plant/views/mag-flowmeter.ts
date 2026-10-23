@@ -10,11 +10,12 @@ import { createCharacterLcd } from '../../industrial-control/views/panel-instrum
  * showing its tag and the flow, m³/h, with an arrow for its direction
  * (→ along its own positive way, ← back). Drawn along x through its
  * origin, its head up and its display toward +z (`placeFitting` turns it
- * into its pipe).
+ * into its pipe); or, `onEnd`, its display on the head's end, as one on
+ * an upright pipe is turned to face the room, its text up the pipe.
  */
 export function createMagFlowmeter(
   kit: PanelKit,
-  { od, tag }: { od: number; tag: string },
+  { od, tag, onEnd = false }: { od: number; tag: string; onEnd?: boolean },
 ) {
   const t = plantTools(kit);
   const group = new Group();
@@ -36,7 +37,11 @@ export function createMagFlowmeter(
     cell: 0.0072,
     backlight: true,
   });
-  lcd.group.position.set(0, headY + 0.01, 0.052);
+  if (onEnd) {
+    // Face up out of the head's end, its text running up the pipe (+x).
+    lcd.group.position.set(0, headY + 0.071, 0);
+    lcd.group.rotation.set(-Math.PI / 2, -Math.PI / 2, 0, 'YXZ');
+  } else lcd.group.position.set(0, headY + 0.01, 0.052);
   group.add(lcd.group);
   const mark = createMicroLabel(kit, 'KESSLER-MOODY', {
     height: 0.009,

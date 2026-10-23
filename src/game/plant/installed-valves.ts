@@ -136,77 +136,152 @@ export const INSTALLED_VALVES: Readonly<
   },
   'plant_pool_02|Filter 1 inlet|F1 inlet valve': {
     assetId: 'valve-0048',
-    tag: 'PL2-F1-IV1',
+    tag: 'PL2-F1-V1',
     normal: 'open',
   },
   'plant_pool_02|Filter 1 outlet|F1 outlet valve': {
     assetId: 'valve-0049',
-    tag: 'PL2-F1-IV2',
+    tag: 'PL2-F1-V2',
     normal: 'open',
   },
-  'plant_pool_02|Filter 1 backwash|F1 backwash valve': {
+  'plant_pool_02|Filter 1 backwash in|F1 backwash in valve': {
+    assetId: 'valve-0072',
+    tag: 'PL2-F1-V3',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 1 backwash out|F1 backwash out valve': {
+    assetId: 'valve-0073',
+    tag: 'PL2-F1-V4',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 1 rinse|F1 rinse valve': {
+    assetId: 'valve-0074',
+    tag: 'PL2-F1-V5',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 1 drain|F1 drain valve': {
     assetId: 'valve-0050',
-    tag: 'PL2-F1-BV1',
+    tag: 'PL2-F1-DV1',
     normal: 'closed',
   },
   'plant_pool_02|Filter 2 inlet|F2 inlet valve': {
     assetId: 'valve-0051',
-    tag: 'PL2-F2-IV1',
+    tag: 'PL2-F2-V1',
     normal: 'open',
   },
   'plant_pool_02|Filter 2 outlet|F2 outlet valve': {
     assetId: 'valve-0052',
-    tag: 'PL2-F2-IV2',
+    tag: 'PL2-F2-V2',
     normal: 'open',
   },
-  'plant_pool_02|Filter 2 backwash|F2 backwash valve': {
+  'plant_pool_02|Filter 2 backwash in|F2 backwash in valve': {
+    assetId: 'valve-0075',
+    tag: 'PL2-F2-V3',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 2 backwash out|F2 backwash out valve': {
+    assetId: 'valve-0076',
+    tag: 'PL2-F2-V4',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 2 rinse|F2 rinse valve': {
+    assetId: 'valve-0077',
+    tag: 'PL2-F2-V5',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 2 drain|F2 drain valve': {
     assetId: 'valve-0053',
-    tag: 'PL2-F2-BV1',
+    tag: 'PL2-F2-DV1',
     normal: 'closed',
   },
   'plant_pool_02|Filter 3 inlet|F3 inlet valve': {
     assetId: 'valve-0054',
-    tag: 'PL2-F3-IV1',
+    tag: 'PL2-F3-V1',
     normal: 'open',
   },
   'plant_pool_02|Filter 3 outlet|F3 outlet valve': {
     assetId: 'valve-0055',
-    tag: 'PL2-F3-IV2',
+    tag: 'PL2-F3-V2',
     normal: 'open',
   },
-  'plant_pool_02|Filter 3 backwash|F3 backwash valve': {
+  'plant_pool_02|Filter 3 backwash in|F3 backwash in valve': {
+    assetId: 'valve-0078',
+    tag: 'PL2-F3-V3',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 3 backwash out|F3 backwash out valve': {
+    assetId: 'valve-0079',
+    tag: 'PL2-F3-V4',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 3 rinse|F3 rinse valve': {
+    assetId: 'valve-0080',
+    tag: 'PL2-F3-V5',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 3 drain|F3 drain valve': {
     assetId: 'valve-0056',
-    tag: 'PL2-F3-BV1',
+    tag: 'PL2-F3-DV1',
     normal: 'closed',
   },
   'plant_pool_02|Filter 4 inlet|F4 inlet valve': {
     assetId: 'valve-0057',
-    tag: 'PL2-F4-IV1',
+    tag: 'PL2-F4-V1',
     normal: 'open',
   },
   'plant_pool_02|Filter 4 outlet|F4 outlet valve': {
     assetId: 'valve-0058',
-    tag: 'PL2-F4-IV2',
+    tag: 'PL2-F4-V2',
     normal: 'open',
   },
-  'plant_pool_02|Filter 4 backwash|F4 backwash valve': {
+  'plant_pool_02|Filter 4 backwash in|F4 backwash in valve': {
+    assetId: 'valve-0081',
+    tag: 'PL2-F4-V3',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 4 backwash out|F4 backwash out valve': {
+    assetId: 'valve-0082',
+    tag: 'PL2-F4-V4',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 4 rinse|F4 rinse valve': {
+    assetId: 'valve-0083',
+    tag: 'PL2-F4-V5',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 4 drain|F4 drain valve': {
     assetId: 'valve-0059',
-    tag: 'PL2-F4-BV1',
+    tag: 'PL2-F4-DV1',
     normal: 'closed',
   },
   'plant_pool_02|Filter 5 inlet|F5 inlet valve': {
     assetId: 'valve-0060',
-    tag: 'PL2-F5-IV1',
+    tag: 'PL2-F5-V1',
     normal: 'open',
   },
   'plant_pool_02|Filter 5 outlet|F5 outlet valve': {
     assetId: 'valve-0061',
-    tag: 'PL2-F5-IV2',
+    tag: 'PL2-F5-V2',
     normal: 'open',
   },
-  'plant_pool_02|Filter 5 backwash|F5 backwash valve': {
+  'plant_pool_02|Filter 5 backwash in|F5 backwash in valve': {
+    assetId: 'valve-0084',
+    tag: 'PL2-F5-V3',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 5 backwash out|F5 backwash out valve': {
+    assetId: 'valve-0085',
+    tag: 'PL2-F5-V4',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 5 rinse|F5 rinse valve': {
+    assetId: 'valve-0086',
+    tag: 'PL2-F5-V5',
+    normal: 'closed',
+  },
+  'plant_pool_02|Filter 5 drain|F5 drain valve': {
     assetId: 'valve-0062',
-    tag: 'PL2-F5-BV1',
+    tag: 'PL2-F5-DV1',
     normal: 'closed',
   },
   'plant_pool_02|Outlet header|Side-stream regulating valve': {

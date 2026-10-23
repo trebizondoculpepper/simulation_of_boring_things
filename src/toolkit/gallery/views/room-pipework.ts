@@ -20,6 +20,11 @@ import {
 } from '../../components/plant/views/water-butterfly-valve';
 import { createGasBallValve } from '../../components/plant/views/gas-fittings';
 import { installedValveFor } from '../../../game/plant/installed-valves';
+import { olympicMeterReadings } from '../../../game/plant/olympic-battery';
+import {
+  createInlineFitting,
+  placeFitting,
+} from '../../components/plant/views/inline-fittings';
 import type { DN } from '../../components/plant/views/plant-tools';
 import { PIPE_SIZES } from '../../components/plant/views/plant-tools';
 import {
@@ -101,6 +106,22 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       );
     }
     for (const v of r.valves) group.add(valve(r, v));
+    for (const m of r.meters ?? []) {
+      const meter = parts.add(
+        createInlineFitting(kit, {
+          kind: 'flowmeter',
+          medium: 'water',
+          operator: 'none',
+          od: m.od,
+          tag: m.tag,
+          role: m.role,
+          upright: Math.abs(m.along[1]) > 0.5,
+          flow: () => readings()[m.reads] ?? 0,
+        }),
+      );
+      placeFitting(meter.object, 'flowmeter', lift(m.at), m.along, m.inward);
+      group.add(meter.object);
+    }
   }
   for (const t of roomTees(room)) {
     const tee = createPipeTee(
@@ -113,6 +134,21 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     );
     tee.name = t.name;
     group.add(tee);
+  }
+  // What the room's flowmeters read, as the world now stands: worked out once each time it changes.
+  let readingsFor: unknown = null;
+  let lastReadings: Record<string, number> = {};
+  function readings() {
+    const world = store?.world.value;
+    if (!world) return lastReadings;
+    if (world.installedValves !== readingsFor) {
+      readingsFor = world.installedValves;
+      lastReadings =
+        room === 'plant_pool_02'
+          ? olympicMeterReadings(world.installedValves)
+          : {};
+    }
+    return lastReadings;
   }
   function valve(run: PipeRun, v: Valve) {
     // A retired room's valves are the room's it was taken from.
@@ -177,6 +213,28 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       } else holder.rotation.y = v.axis === 'z' ? Math.PI / 2 : 0;
       holder.add(gas.object);
       return holder;
+    }
+    if (v.operator === 'motor') {
+      // An electric actuator on its valve, worked from its panel.
+      const motor = parts.add(
+        createInlineFitting(
+          kit,
+          {
+            kind: 'isolating-valve',
+            medium: 'water',
+            operator: 'motor',
+            od: v.od,
+          },
+          binding,
+        ),
+      );
+      return placeFitting(
+        motor.object,
+        'isolating-valve',
+        lift(v.at),
+        v.axis === 'x' ? [1, 0, 0] : v.axis === 'y' ? [0, 1, 0] : [0, 0, 1],
+        [v.facing[0], v.facing[2]],
+      );
     }
     if (v.operator === 'solenoid') {
       // Solenoid-operated: its actuator up (or out of a vertical pipe),

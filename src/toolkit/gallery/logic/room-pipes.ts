@@ -57,9 +57,10 @@ export interface Valve {
    * How it is worked: by its lever, or, out of reach overhead, by a chain
    * wheel, its chain hanging to `CHAIN_TO` over the floor; or by its
    * solenoid, from its panel, on a spring-return pneumatic actuator
-   * (`actuated-butterfly-valve.ts`), its manual override by hand.
+   * (`actuated-butterfly-valve.ts`), its manual override by hand; or by
+   * an electric actuator (`remote-actuators.ts`).
    */
-  operator: 'lever' | 'chain' | 'solenoid';
+  operator: 'lever' | 'chain' | 'solenoid' | 'motor';
   /** A water butterfly valve (the default), or a gas lever ball valve. */
   style?: 'butterfly' | 'gas-ball';
   /**
@@ -68,6 +69,21 @@ export interface Valve {
    * toward that side.
    */
   facing: Vec3;
+}
+
+/** An electromagnetic flowmeter set into a run (`mag-flowmeter.ts`). */
+export interface Meter {
+  /** Its middle, on its run, and the run's way there (its positive flow). */
+  at: Vec3;
+  along: Vec3;
+  od: number;
+  tag: string;
+  /** What it measures, as its display shows it. */
+  role: string;
+  /** What it reads, in its room's flows (`olympic-battery.ts`). */
+  reads: string;
+  /** On an upright run, the way its head faces in plan. */
+  inward: readonly [number, number];
 }
 
 /** Over this, a valve's lever is out of reach from the floor, metres. */
@@ -101,6 +117,8 @@ export interface PipeRun {
   label: string;
   through: WallCrossing[];
   valves: Valve[];
+  /** Its flowmeters, if any. */
+  meters?: Meter[];
 }
 
 /** A three-way fitting between a continuous main and a perpendicular branch. */

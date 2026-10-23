@@ -8,9 +8,15 @@ import type {
   RouterRegion,
 } from '../../components/core/logic/voxel-router';
 import { pricePerMetre } from '../../components/core/logic/pipe-costs';
-import { expandForPlumbing } from '../../../game/plant/plumbing-expansion';
+import {
+  expandForPlumbing,
+  operatorFor,
+} from '../../../game/plant/plumbing-expansion';
 import type {
+  Actuation,
+  Actuator,
   Expansion,
+  Operator,
   FittingKind,
   PlumbEdge,
   PlumbMedium,
@@ -18,7 +24,7 @@ import type {
 import { machinePorts } from './machine-ports';
 import type { MachinePort } from './machine-ports';
 import type { Item } from './room-equipment';
-import type { PipeRun, Valve, WallCrossing } from './room-pipes';
+import type { Meter, PipeRun, Valve, WallCrossing } from './room-pipes';
 import type { Containment } from './cable-containment';
 import { PLANT_ROOM } from './plant-rooms';
 import { sizeRoom } from './room-sizer';
@@ -48,7 +54,8 @@ import type { PlanItem } from './olympic-plan';
  *   the west wall into the balance tank hall; its discharge rising to a
  *   manifold that runs north to the battery;
  * - the battery block: the inlet, outlet and backwash headers along its
- *   front with every filter's branches, and two stubs on the outlet
+ *   front with every filter's branches (its face's five valves, or three:
+ *   an option), and two stubs on the outlet
  *   header for the heat exchanger's side-stream, a regulating valve in the
  *   header between them;
  * - the drainage: the backwash header falling to a floor channel that runs
@@ -62,8 +69,40 @@ import type { PlanItem } from './olympic-plan';
  * water to the contact tank, the UV and back to the pool; the heat
  * exchanger's side-stream and its heating; the make-up; the chemicals;
  * the ozone; power to every device. The plumber (`expandForPlumbing`) sets
- * the fittings into every line; the scorer scores the room. Pure.
+ * the fittings into every line, by the room's options (`OlympicOptions`):
+ * how its valves are worked, each filter's face, where its flowmeters go;
+ * the scorer scores the room. Pure.
  */
+
+/** The plumber's choices for the room (the owner, 2026-10-23). */
+export interface OlympicOptions {
+  /** How the valves are worked: by hand, by hand where reachable, or all automatic (`operatorFor`). */
+  actuation: Actuation;
+  /** What drives an automatic valve. */
+  actuator: Actuator;
+  /**
+   * Each filter's face: three valves (inlet, outlet, a backwash to waste
+   * from its drain), or the five-valve battery (Dev26, `five-valve-filter.ts`):
+   * V1 inlet, V2 outlet, V3 backwash in, V4 backwash out, V5 rinse, its
+   * drain beside them.
+   */
+  filterValves: 3 | 5;
+  /** Where flowmeters go, as the plumber's `<kind>.<port>`s: none, or some. */
+  flowmeters: ReadonlySet<string>;
+}
+
+/**
+ * The room as built: every valve solenoid-operated, worked from its panels;
+ * the five-valve battery; a flowmeter on each filter's outlet riser
+ * (reading service up it, a backwash down it) and on the pumps' common
+ * discharge.
+ */
+export const OLYMPIC: OlympicOptions = {
+  actuation: 'all-automatic',
+  actuator: 'solenoid',
+  filterValves: 5,
+  flowmeters: new Set(['filter.outlet', 'pumps.discharge']),
+};
 
 type Medium = PlumbMedium;
 type Kind =
@@ -91,6 +130,8 @@ export interface OlympicRun {
 export interface OlympicFitting {
   id: string;
   kind: FittingKind | 'regulating-valve' | 'fused-tap-off';
+  /** A valve's actuator's (or a vertical valve's neck's) way in plan, when not the room's default. */
+  facing?: Vec3;
   line: string;
   /** The run it is set on. */
   run: string;
@@ -103,7 +144,7 @@ export interface OlympicFitting {
    * actuator on a main); a machine's local isolator by hand; a fused
    * tap-off on the busbar overhead by an operating pole from the floor.
    */
-  operator: 'solenoid' | 'hand' | 'pole';
+  operator: Operator | 'pole';
   /** Whether it can be worked: from the panel, or by a person standing on the floor. */
   reachable: boolean;
 }
@@ -188,18 +229,36 @@ export const MAIN = 0.355;
 const HEADER = {
   inlet: { z: 0.15 },
   // Overhead, so the battery's face is clear to stand at.
-  outlet: { z: 0.65, y: 2.85 },
+  // High enough over the inlet header that a valve's actuator on a filter's
+  // backwash-in branch, under it, stands clear.
+  outlet: { z: 0.65, y: 3.15 },
 } as const;
 /** The battery's outlet risers and backwash drops stand this far inside the filters' footprints' fronts, just clear of the vessels. */
 const RISE = 0.2;
 /** The backwash header's trench under the floor along the battery's front: its pipe's height. */
 const TRENCH_Y = -0.2;
 /** The pump manifold's height: over the balance tank doors' clear space (2.6 m) and the battery's outlet header. */
-const MANIFOLD_Y = 3.4;
+const MANIFOLD_Y = 3.7;
 /** The pump discharges' run across the pair's top, just over it (1.9 m). */
 const ACROSS_Y = 2.05;
 /** The side-stream stubs rise out of the outlet header to here. */
-const STUB_TOP = 3.3;
+const STUB_TOP = 3.6;
+/**
+ * A five-valve face's heights: the outlet riser's flowmeter; the
+ * backwash-out valve on its drop; the rinse valve on its drop under the
+ * riser's foot, below the service hatch.
+ */
+const METER_Y = 1.3;
+const BACKWASH_OUT_Y = 1.6;
+const RINSE_VALVE_Y = 0.5;
+/**
+ * The backwash-out drop stands this far west of the inlet nozzle, so the
+ * vessel's sight glass, between the inlet and outlet nozzles, stays in
+ * view (the owner, 2026-10-23: no pipe over a window).
+ */
+const BACKWASH_OUT_OFF = 0.2;
+/** The backwash header and its channel, sized for a filter's backwash to waste (about 210 m³/h): DN300. */
+const WASTE = 0.315;
 /** The floor channel's depth below the floor. */
 const CHANNEL = -0.3;
 /**
@@ -281,9 +340,10 @@ export interface OlympicPlumbing {
   problems: string[];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export let dbgFirst: any = null;
-export function plumbOlympic(): OlympicPlumbing {
+export function plumbOlympic(
+  options: OlympicOptions = OLYMPIC,
+): OlympicPlumbing {
+  const five = options.filterValves === 5;
   const items = olympicPlan();
   const room = olympicRoomPlan();
   const hx = room.halfX;
@@ -356,15 +416,23 @@ export function plumbOlympic(): OlympicPlumbing {
   // ---- The battery block ----------------------------------------------
   const xs = (k: 'inlet' | 'outlet' | 'drain') => fp.map((f) => f[k].at[0]);
   const inletX0 = Math.min(mx, ...xs('inlet'));
+  // As far east as the last filter's backwash-in branch, with five valves.
+  const inletX1 = Math.max(...xs('inlet'), ...(five ? xs('outlet') : []));
   rule('Inlet header', 'battery.inlet', 'water', MAIN, [
     [inletX0, inletY, inletZ],
-    [Math.max(...xs('inlet')), inletY, inletZ],
+    [inletX1, inletY, inletZ],
   ]);
   // The backwash trench falls 1 in 100 from each end to its drop between filters 1 and 2.
   const filterGap = (a: number, b: number) =>
     (footprintOf(filters[a]).maxX + footprintOf(filters[b]).minX) / 2;
   const dropX = filterGap(0, 1);
-  const farthest = Math.max(...fp.map((f) => Math.abs(f.drain.at[0] - dropX)));
+  // Every drop into the trench: the drains, and with five valves the backwash-out and rinse drops.
+  const dropXs = fp.flatMap((f) =>
+    five
+      ? [f.inlet.at[0] - BACKWASH_OUT_OFF, f.outlet.at[0], f.drain.at[0]]
+      : [f.drain.at[0]],
+  );
+  const farthest = Math.max(...dropXs.map((x) => Math.abs(x - dropX)));
   const trenchLow = TRENCH_Y - farthest * 0.01;
   const trenchAt = (x: number) => round(trenchLow + Math.abs(x - dropX) * 0.01);
   fp.forEach((f, i) => {
@@ -388,9 +456,51 @@ export function plumbOlympic(): OlympicPlumbing {
         [f.outlet.at[0], outletY, outletZ],
       ],
     );
-    // Down from its nozzle into the trench.
+    if (five) {
+      // V3, backwash in: from the inlet header back under the outlet's
+      // top to the underdrain's riser.
+      rule(
+        `Filter ${i + 1} backwash in`,
+        `filter-${i + 1}.backwashIn`,
+        'water',
+        f.outlet.od,
+        [
+          [f.outlet.at[0], inletY, inletZ],
+          [f.outlet.at[0], inletY, riseZ],
+        ],
+      );
+      // V4, backwash out: from the top distributor's branch, just in front
+      // of the vessel, a little west, clear of the sight glass, and down
+      // into the trench.
+      const bx = f.inlet.at[0] - BACKWASH_OUT_OFF;
+      rule(
+        `Filter ${i + 1} backwash out`,
+        `filter-${i + 1}.backwashOut`,
+        'drain',
+        f.inlet.od,
+        [
+          [f.inlet.at[0], inletY, riseZ],
+          [bx, inletY, riseZ],
+          [bx, trenchAt(bx), riseZ],
+        ],
+      );
+      // V5, rinse: straight down from the underdrain riser's foot into the
+      // trench, below the service hatch.
+      rule(
+        `Filter ${i + 1} rinse`,
+        `filter-${i + 1}.rinse`,
+        'drain',
+        f.outlet.od,
+        [
+          [f.outlet.at[0], f.outlet.at[1], riseZ],
+          [f.outlet.at[0], trenchAt(f.outlet.at[0]), riseZ],
+        ],
+      );
+    }
+    // Down from its nozzle into the trench: its backwash with three
+    // valves; with five, the vessel's drain, to empty it.
     rule(
-      `Filter ${i + 1} backwash`,
+      `Filter ${i + 1} ${five ? 'drain' : 'backwash'}`,
       `filter-${i + 1}.drain`,
       'drain',
       f.drain.od,
@@ -423,17 +533,18 @@ export function plumbOlympic(): OlympicPlumbing {
   // The backwash header, in its covered trench under the floor along the
   // battery's front, falling 1 in 100 each way to the floor channel
   // between filters 1 and 2, which runs south to the main plant.
-  const dx = xs('drain');
-  rule('Backwash header, west', 'battery.drain', 'drain', 0.16, [
+  const dx = dropXs;
+  const waste = five ? WASTE : 0.16;
+  rule('Backwash header, west', 'battery.drain', 'drain', waste, [
     [Math.min(...dx), trenchAt(Math.min(...dx)), drainZ],
     [dropX, trenchLow, drainZ],
   ]);
-  rule('Backwash header, east', 'battery.drain', 'drain', 0.16, [
+  rule('Backwash header, east', 'battery.drain', 'drain', waste, [
     [Math.max(...dx), trenchAt(Math.max(...dx)), drainZ],
     [dropX, trenchLow, drainZ],
   ]);
   const low = trenchLow;
-  rule('Backwash drop and floor channel', 'battery.drain', 'drain', 0.16, [
+  rule('Backwash drop and floor channel', 'battery.drain', 'drain', waste, [
     [dropX, low, drainZ],
     [dropX, Math.min(low, CHANNEL), drainZ],
     [dropX, Math.min(low, CHANNEL) - (hz - drainZ) / 100, hz + 0.3],
@@ -828,17 +939,6 @@ export function plumbOlympic(): OlympicPlumbing {
     // A pump's power port is inside its casing's box: a lead long enough to clear it (as Dev24's).
     endStraight: w.id.startsWith('power-pump') ? 1.0 : 0.45,
   }));
-  dbgFirst = {
-    room: {
-      halfX: hx,
-      halfZ: hz,
-      height: 6.0,
-      regions: routerRegions,
-      obstacles,
-    },
-    lines,
-    fixed,
-  };
   const routed = routeVoxelLines(
     { halfX: hx, halfZ: hz, height: 6.0, regions: routerRegions, obstacles },
     lines,
@@ -919,6 +1019,35 @@ export function plumbOlympic(): OlympicPlumbing {
     ...filters.map((f) =>
       edge(`${f.key}.drain`, f.key, 'drain', 'main-plant', 'drain', 'water'),
     ),
+    // The five-valve face's other three: backwash in from the pumps, backwash out and rinse to waste.
+    ...(five
+      ? filters.flatMap((f) => [
+          edge(
+            `${f.key}.backwashIn`,
+            'pumps',
+            'discharge',
+            f.key,
+            'backwashIn',
+            'water',
+          ),
+          edge(
+            `${f.key}.backwashOut`,
+            f.key,
+            'backwashOut',
+            'main-plant',
+            'drain',
+            'water',
+          ),
+          edge(
+            `${f.key}.rinse`,
+            f.key,
+            'rinse',
+            'main-plant',
+            'drain',
+            'water',
+          ),
+        ])
+      : []),
     edge('contact-to-uv', 'contact', 'outlet', 'uv', 'inlet', 'water'),
     edge('uv-to-pool', 'uv', 'outlet', 'pool', 'return', 'water'),
     edge('hx-flow', 'contact', 'inlet', 'exchanger', 'poolIn', 'water'),
@@ -952,7 +1081,21 @@ export function plumbOlympic(): OlympicPlumbing {
     discharge: 'discharge',
     isolateMedia: new Set<Medium>(['water', 'power']),
     powerIsolators: 'supply-feeds',
+    flowmeters: options.flowmeters,
   });
+  // How each is worked, by the options and whether it can be reached from the floor.
+  const workedBy = (
+    f: { kind: FittingKind; medium: PlumbMedium },
+    at: Vec3,
+  ): Operator =>
+    operatorFor(
+      f,
+      at[1] >= REACH.low && at[1] <= REACH.high,
+      options.actuation,
+      {
+        actuator: options.actuator,
+      },
+    );
 
   // Each fitting on the run that carries its line: at its end by the port it serves.
   const fittings: OlympicFitting[] = [];
@@ -983,7 +1126,29 @@ export function plumbOlympic(): OlympicPlumbing {
         at: p.at,
         along: p.along,
         normally: 'open',
-        operator: 'solenoid',
+        operator: workedBy({ kind, medium: 'water' }, p.at),
+        reachable: true,
+      });
+    }
+  }
+  // The pumps' common discharge's flowmeter, on the manifold's drop to the battery.
+  {
+    const f = expansion.fittings.find((x) => x.id === 'pumps.discharge.meter');
+    const main = runs.find((r) => r.name === 'Pump discharge manifold');
+    if (f && main) {
+      const p = along(
+        main.points,
+        len(main.points) - (MANIFOLD_Y - inletY) / 2,
+      );
+      fittings.push({
+        id: f.id,
+        kind: f.kind,
+        line: 'battery.inlet',
+        run: main.name,
+        at: p.at,
+        along: p.along,
+        normally: 'open',
+        operator: 'none',
         reachable: true,
       });
     }
@@ -1005,7 +1170,7 @@ export function plumbOlympic(): OlympicPlumbing {
         at: p.at,
         along: p.along,
         normally: f.normally,
-        operator: 'solenoid',
+        operator: workedBy(f, p.at),
         reachable: true,
       });
     }
@@ -1027,13 +1192,27 @@ export function plumbOlympic(): OlympicPlumbing {
       const d = Math.min(L - 0.1, 0.35 + k * 0.4);
       // A filter's branch valves at the branch's header end, by the battery's
       // walkway, where its face is worked from; the rest by their ports.
-      const fromEnd = /^Filter \d backwash$/.test(run.name)
-        ? len(run.points.slice(0, 2)) + (run.points[1][1] - 0.6)
-        : /^Filter \d /.test(run.name)
-          ? L - 0.3
-          : f.end === 'source'
-            ? d
-            : L - d;
+      const name = run.name.replace(/^Filter \d /, '');
+      const filterRun = /^Filter \d /.test(run.name);
+      const fromEnd = !filterRun
+        ? f.end === 'source'
+          ? d
+          : L - d
+        : f.kind === 'flowmeter'
+          ? // On the outlet riser, under its backwash-in branch: it reads service (up) and backwash (down).
+            len(run.points.slice(0, 2)) + (METER_Y - run.points[1][1])
+          : name === 'backwash' || name === 'drain'
+            ? len(run.points.slice(0, 2)) + (run.points[1][1] - 0.6)
+            : name === 'inlet' && five
+              ? // Between the backwash-out branch and the header.
+                L - 0.15
+              : name === 'backwash in'
+                ? L / 2
+                : name === 'backwash out'
+                  ? BACKWASH_OUT_OFF + (inletY - BACKWASH_OUT_Y)
+                  : name === 'rinse'
+                    ? run.points[0][1] - RINSE_VALVE_Y
+                    : L - 0.3;
       // A power isolator is the machine's local isolator, on its drop by
       // the machine at a hand's height, not at the tap-off overhead.
       const p =
@@ -1048,12 +1227,18 @@ export function plumbOlympic(): OlympicPlumbing {
         at: p.at,
         along: p.along,
         normally: f.normally,
-        // Every valve is solenoid-operated, worked from the panel (the
-        // owner, 2026-10-23): its height does not matter. A power
-        // isolator is worked by hand, so must be within reach.
-        operator: f.kind === 'power-isolator' ? 'hand' : 'solenoid',
+        // Worked as the options say: by hand within reach, by a chain
+        // wheel out of it, or automatically, from the panels.
+        operator: workedBy(f, p.at),
+        // With five valves, a backwash-out valve's actuator away west, clear
+        // of the sight glass; a rinse valve's and a drain's east, under the hatch and clear of the rinse drop.
+        ...(five && name === 'backwash out'
+          ? { facing: [-1, 0, 0] as Vec3 }
+          : five && (name === 'drain' || name === 'rinse')
+            ? { facing: [1, 0, 0] as Vec3 }
+            : {}),
         reachable:
-          f.kind !== 'power-isolator' ||
+          (f.kind !== 'power-isolator' && workedBy(f, p.at) !== 'hand') ||
           (p.at[1] >= REACH.low && p.at[1] <= REACH.high),
       });
     });
@@ -1086,7 +1271,11 @@ export function plumbOlympic(): OlympicPlumbing {
     at: [round((hxFlowX + hxReturnX) / 2), outletY, round(outletZ)],
     along: [1, 0, 0],
     normally: 'open',
-    operator: 'solenoid',
+    operator: workedBy({ kind: 'isolating-valve', medium: 'water' }, [
+      0,
+      outletY,
+      0,
+    ]),
     reachable: true,
   });
 
@@ -1159,6 +1348,11 @@ function sameFamily(a: OlympicRun, b: OlympicRun) {
   const fa = family(a);
   const fb = family(b);
   if (fa === fb) return true;
+  // A five-valve face's backwash-out and rinse drops leave the battery's pipework for the trench.
+  const toWaste = (r: OlympicRun) =>
+    /^filter-\d\.(backwashOut|rinse)$/.test(r.line);
+  if ((toWaste(a) && fb === 'drain') || (toWaste(b) && fa === 'drain'))
+    return true;
   // The side-stream's routed lines start at their stubs on the outlet header; the treatment line at its east end.
   const meets = new Set(['hx-flow', 'hx-return', 'battery-to-contact']);
   return (
@@ -1237,13 +1431,32 @@ export function olympicItems(): Item[] {
 }
 
 /** Each drawn valve's name and its tag's machine code, by its fitting. */
-function valveName(id: string): { name: string; code: string } | null {
-  const filter = /^filter-(\d)\.(inlet|outlet|drain)\.iso$/.exec(id);
-  if (filter)
-    return {
-      name: `F${filter[1]} ${filter[2] === 'drain' ? 'backwash' : filter[2]} valve`,
-      code: `F${filter[1]}`,
+function valveName(
+  id: string,
+  five = OLYMPIC.filterValves === 5,
+): { name: string; code: string; tag?: string } | null {
+  const filter =
+    /^filter-(\d)\.(inlet|outlet|drain|backwashIn|backwashOut|rinse)\.iso$/.exec(
+      id,
+    );
+  if (filter) {
+    const n = filter[1];
+    // With five valves, each its V-number on the battery (Dev26's), and the vessel's drain beside them.
+    const face: Record<string, [string, string]> = {
+      inlet: ['inlet', 'V1'],
+      outlet: ['outlet', 'V2'],
+      backwashIn: ['backwash in', 'V3'],
+      backwashOut: ['backwash out', 'V4'],
+      rinse: ['rinse', 'V5'],
+      drain: [five ? 'drain' : 'backwash', 'DV1'],
     };
+    const [role, v] = face[filter[2]];
+    return {
+      name: `F${n} ${role} valve`,
+      code: `F${n}`,
+      ...(five ? { tag: `PL2-F${n}-${v}` } : {}),
+    };
+  }
   const table: Record<string, [string, string]> = {
     'pumps.suctionA.iso': ['Pump A suction valve', 'P1'],
     'pumps.suctionB.iso': ['Pump B suction valve', 'P1'],
@@ -1263,9 +1476,35 @@ function valveName(id: string): { name: string; code: string } | null {
   return t ? { name: t[0], code: t[1] } : null;
 }
 
-/** A valve's normal state: a filter's backwash valve shut, the rest open. */
+/** A valve's normal state: a filter's backwash, rinse and drain valves shut (it is in service), the rest open. */
 export const valveNormally = (name: string): 'open' | 'closed' =>
-  / backwash valve$/.test(name) ? 'closed' : 'open';
+  / (backwash|backwash in|backwash out|rinse|drain) valve$/.test(name)
+    ? 'closed'
+    : 'open';
+
+/** How a valve the plumber worked is drawn. */
+const DRAWN: Partial<Record<Operator, Valve['operator']>> = {
+  hand: 'lever',
+  chain: 'chain',
+  solenoid: 'solenoid',
+  motor: 'motor',
+};
+
+/** Each flowmeter's tag, and what it reads, by its fitting. */
+function meterName(
+  id: string,
+): { tag: string; role: string; reads: string } | null {
+  const filter = /^filter-(\d)\.outlet\.meter$/.exec(id);
+  if (filter)
+    return {
+      tag: `PL2-F${filter[1]}-FT1`,
+      role: 'OUTLET',
+      reads: `filter-${filter[1]}`,
+    };
+  if (id === 'pumps.discharge.meter')
+    return { tag: 'PL2-P1-FT1', role: 'DISCHARGE', reads: 'pumps' };
+  return null;
+}
 
 const serviceOf = (r: OlympicRun): PipeRun['service'] =>
   r.kind === 'pvc-drain'
@@ -1307,11 +1546,14 @@ const LABEL: Record<PipeRun['service'], string> = {
 };
 
 let cached: { runs: PipeRun[]; busbar: Containment[] } | null = null;
+let plumbedOnce: OlympicPlumbing | null = null;
+/** The room as built (`OLYMPIC`), plumbed once. */
+const built = () => (plumbedOnce ??= plumbOlympic());
 
 /** The room's runs, as the game draws them, and its busbar trunking: plumbed once. */
 export function olympicRoom() {
   if (cached) return cached;
-  const plumbed = plumbOlympic();
+  const plumbed = built();
   const room = olympicRoomPlan();
   const t = PLANT_ROOM.wall;
   const busbar: Containment[] = [];
@@ -1354,6 +1596,24 @@ export function olympicRoom() {
         }
       }
     }
+    const axisOf = (along: Vec3) =>
+      Math.abs(along[1]) > 0.5 ? 'y' : Math.abs(along[0]) > 0.5 ? 'x' : 'z';
+    const meters: Meter[] = plumbed.fittings
+      .filter((f) => f.run === r.name && f.kind === 'flowmeter')
+      .flatMap((f) => {
+        const m = meterName(f.id);
+        if (!m) return [];
+        return [
+          {
+            ...m,
+            at: f.at,
+            along: f.along,
+            od: r.od,
+            // Its display toward the room's middle.
+            inward: [0, f.at[2] > 0 ? -1 : 1] as const,
+          } satisfies Meter,
+        ];
+      });
     const valves: Valve[] = plumbed.fittings
       .filter(
         (f) =>
@@ -1362,26 +1622,23 @@ export function olympicRoom() {
       )
       .flatMap((f) => {
         const v = valveName(f.id);
-        if (!v) return [];
-        const axis =
-          Math.abs(f.along[1]) > 0.5
-            ? 'y'
-            : Math.abs(f.along[0]) > 0.5
-              ? 'x'
-              : 'z';
+        const operator = f.operator === 'pole' ? undefined : DRAWN[f.operator];
+        if (!v || !operator) return [];
+        const axis = axisOf(f.along);
         return [
           {
             at: f.at,
             axis,
             name: v.name,
             od: r.od,
-            // Solenoid-operated, worked from the panel (the owner, 2026-10-23).
-            operator: 'solenoid',
-            // Its lever away from the wall it is nearest, into the room.
+            // As the plumber's options have it worked.
+            operator,
+            // Its lever away from the wall it is nearest, into the room, unless the plumber turned it.
             facing:
-              axis === 'x'
+              f.facing ??
+              (axis === 'x'
                 ? [0, 0, f.at[2] > 0 ? -1 : 1]
-                : [f.at[0] > 0 ? -1 : 1, 0, 0],
+                : [f.at[0] > 0 ? -1 : 1, 0, 0]),
           } satisfies Valve,
         ];
       });
@@ -1395,6 +1652,7 @@ export function olympicRoom() {
       label: LABEL[serviceOf(r)],
       through,
       valves,
+      ...(meters.length ? { meters } : {}),
     });
   }
   cached = { runs, busbar };
@@ -1411,11 +1669,19 @@ export function olympicValveTags(): {
   const seen = new Map<string, number>();
   return olympicRoom().runs.flatMap((r) =>
     r.valves.map((v) => {
-      const code = valveName(
-        plumbOlympic().fittings.find(
+      const named = valveName(
+        built().fittings.find(
           (f) => f.run === r.name && valveName(f.id)?.name === v.name,
         )!.id,
-      )!.code;
+      )!;
+      const code = named.code;
+      if (named.tag)
+        return {
+          run: r.name,
+          name: v.name,
+          tag: named.tag,
+          normal: valveNormally(v.name),
+        };
       const kind = / regulating /.test(v.name)
         ? 'RV'
         : / backwash /.test(v.name)

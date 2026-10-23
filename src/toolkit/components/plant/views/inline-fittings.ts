@@ -6,6 +6,7 @@ import { tools } from '../../core/views/fitting-tools';
 import { createPowerIsolator } from '../../industrial-control/views/panel-switchgear';
 import { remoteValveGeometry } from '../logic/remote-valve';
 import { createRemoteValve } from './remote-actuators';
+import { createMagFlowmeter } from './mag-flowmeter';
 
 /**
  * The fittings the plumber sets into a line
@@ -19,18 +20,21 @@ import { createRemoteValve } from './remote-actuators';
  *   for one out of reach;
  * - a motorised valve (`remote-valve.ts`), with no stand;
  * - a non-return valve: a cast body with its flow arrow;
- * - a rotary power isolator on a conduit drop.
+ * - a rotary power isolator on a conduit drop;
+ * - an electromagnetic flowmeter (`mag-flowmeter.ts`), its display
+ *   showing what flows through it.
  */
 export type InlineFittingKind =
   | 'isolating-valve'
   | 'non-return-valve'
   | 'power-isolator'
-  | 'remote-valve';
+  | 'remote-valve'
+  | 'flowmeter';
 
 export interface InlineFittingSpec {
   kind: InlineFittingKind;
   medium: string;
-  operator: 'hand' | 'chain' | 'motor' | 'self' | 'solenoid';
+  operator: 'hand' | 'chain' | 'motor' | 'self' | 'solenoid' | 'none';
   od: number;
   /** Lagged heating? Its lever is red. */
   heating?: boolean;
@@ -38,6 +42,13 @@ export interface InlineFittingSpec {
   drop?: number;
   /** A power isolator's rating, as on its face; 3P 20A unless given. */
   rating?: string;
+  /** A flowmeter's tag and what it reads, as its display shows them. */
+  tag?: string;
+  /** A flowmeter on an upright pipe: its display on its head's end, toward the room. */
+  upright?: boolean;
+  role?: string;
+  /** A flowmeter's reading, m³/h, signed along its pipe's way (none: nothing flowing). */
+  flow?: () => number;
 }
 
 /** What a fitting is bound to: its node's state in the simulation. */
@@ -62,15 +73,17 @@ export function createInlineFitting(
   const iron = t.paint('#3b4245', 0.6, 0.4);
   const r = f.od / 2;
   const name =
-    f.kind === 'power-isolator'
-      ? 'Power isolator'
-      : f.kind === 'non-return-valve'
-        ? 'Non-return valve'
-        : f.operator === 'chain'
-          ? 'Isolating valve, chain wheel'
-          : f.operator === 'motor' || f.operator === 'solenoid'
-            ? 'Motorised isolating valve'
-            : 'Isolating valve';
+    f.kind === 'flowmeter'
+      ? 'Flowmeter'
+      : f.kind === 'power-isolator'
+        ? 'Power isolator'
+        : f.kind === 'non-return-valve'
+          ? 'Non-return valve'
+          : f.operator === 'chain'
+            ? 'Isolating valve, chain wheel'
+            : f.operator === 'motor' || f.operator === 'solenoid'
+              ? 'Motorised isolating valve'
+              : 'Isolating valve';
   const a = beginPart(kit, name);
   const group = a.object;
   let fallback = true;
@@ -82,6 +95,18 @@ export function createInlineFitting(
   const clickable = (object: Object3D) =>
     object.traverse((piece) => a.uses.set(piece, toggle));
 
+  if (f.kind === 'flowmeter') {
+    // An instrument: nothing to work, only its reading to show.
+    const meter = createMagFlowmeter(kit, {
+      od: f.od,
+      tag: f.tag ?? 'FT',
+      onEnd: f.upright ?? false,
+    });
+    group.add(meter.group);
+    meter.group.traverse((o) => (o.userData.live = true));
+    a.updates.push(() => meter.show(f.flow?.() ?? 0, f.role ?? 'FLOW'));
+    return a.part();
+  }
   if (f.kind === 'power-isolator') {
     const isolator = createPowerIsolator(kit, {
       on: open(),

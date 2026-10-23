@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { MAIN, plumbOlympic, scoreOlympic } from './olympic-plumbing';
-import { olympicRoomPlan } from './olympic-plan';
+import {
+  MAIN,
+  OLYMPIC,
+  olympicRoom,
+  olympicValveTags,
+  plumbOlympic,
+  scoreOlympic,
+} from './olympic-plumbing';
+import { footprintOf, olympicPlan, olympicRoomPlan } from './olympic-plan';
+import {
+  SIGHT_GLASS,
+  sandFilterGeometry,
+} from '../../components/plant/logic/sand-filter';
 
 describe('the Olympic plant room, plumbed and routed', () => {
   const plumbed = plumbOlympic();
@@ -96,7 +107,11 @@ describe('the Olympic plant room, plumbed and routed', () => {
           ? 'hand'
           : f.kind === 'fused-tap-off'
             ? 'pole'
-            : 'solenoid',
+            : f.kind === 'non-return-valve'
+              ? 'self'
+              : f.kind === 'flowmeter'
+                ? 'none'
+                : 'solenoid',
       );
       expect(f.reachable, f.id).toBe(true);
     }
@@ -134,5 +149,144 @@ describe('the Olympic plant room, plumbed and routed', () => {
         d.line,
       ).toBe(true);
     }
+  });
+});
+
+describe('the battery’s five-valve faces and flowmeters', () => {
+  const plumbed = plumbOlympic();
+  const filterValves = (n: number) =>
+    plumbed.fittings
+      .filter(
+        (f) => f.id.startsWith(`filter-${n}.`) && f.kind === 'isolating-valve',
+      )
+      .map((f) => f.id.split('.')[1])
+      .sort();
+
+  it('gives every filter its five valves and its drain', () => {
+    for (let n = 1; n <= 5; n++)
+      expect(filterValves(n)).toEqual(
+        [
+          'backwashIn',
+          'backwashOut',
+          'drain',
+          'inlet',
+          'outlet',
+          'rinse',
+        ].sort(),
+      );
+  });
+
+  it('tags them by their places on the face, shut but for V1 and V2 in service', () => {
+    const tags = olympicValveTags().filter((t) => t.tag.startsWith('PL2-F1-'));
+    expect(Object.fromEntries(tags.map((t) => [t.tag, t.normal]))).toEqual({
+      'PL2-F1-V1': 'open',
+      'PL2-F1-V2': 'open',
+      'PL2-F1-V3': 'closed',
+      'PL2-F1-V4': 'closed',
+      'PL2-F1-V5': 'closed',
+      'PL2-F1-DV1': 'closed',
+    });
+  });
+
+  it('meters each filter’s outlet riser, under its backwash-in branch, and the pumps’ discharge', () => {
+    const meters = olympicRoom().runs.flatMap((r) =>
+      (r.meters ?? []).map((m) => ({ run: r.name, ...m })),
+    );
+    expect(meters.map((m) => m.tag).sort()).toEqual([
+      'PL2-F1-FT1',
+      'PL2-F2-FT1',
+      'PL2-F3-FT1',
+      'PL2-F4-FT1',
+      'PL2-F5-FT1',
+      'PL2-P1-FT1',
+    ]);
+    for (const m of meters.filter((x) => x.tag !== 'PL2-P1-FT1')) {
+      expect(m.run).toMatch(/^Filter \d outlet$/);
+      const into = plumbed.runs.find(
+        (r) => r.name === m.run.replace('outlet', 'backwash in'),
+      )!;
+      const rinse = plumbed.runs.find(
+        (r) => r.name === m.run.replace('outlet', 'rinse'),
+      )!;
+      expect(m.at[1]).toBeLessThan(into.points[0][1]);
+      expect(m.at[1]).toBeGreaterThan(rinse.points[0][1]);
+    }
+  });
+});
+
+describe('the plumber’s options', () => {
+  it('fits no flowmeters when asked for none', () => {
+    const none = plumbOlympic({ ...OLYMPIC, flowmeters: new Set() });
+    expect(none.fittings.some((f) => f.kind === 'flowmeter')).toBe(false);
+  });
+
+  it('keeps the three-valve face as an option', () => {
+    const three = plumbOlympic({ ...OLYMPIC, filterValves: 3 });
+    expect(three.runs.some((r) => / rinse$/.test(r.name))).toBe(false);
+    expect(
+      three.fittings.filter(
+        (f) => f.id.startsWith('filter-1.') && f.kind === 'isolating-valve',
+      ),
+    ).toHaveLength(3);
+  });
+
+  it('works the valves by hand, or a chain wheel out of reach, when asked', () => {
+    const manual = plumbOlympic({ ...OLYMPIC, actuation: 'prefer-manual' });
+    const valves = manual.fittings.filter((f) => f.kind === 'isolating-valve');
+    expect(new Set(valves.map((f) => f.operator))).toEqual(
+      new Set(['hand', 'chain']),
+    );
+    for (const f of valves)
+      expect(f.operator).toBe(
+        f.at[1] > 2.1 || f.at[1] < 0.2 ? 'chain' : 'hand',
+      );
+  });
+});
+
+describe('the filters’ windows', () => {
+  const plumbed = plumbOlympic();
+  // Each filter's sight glass and service hatch, on its face, in the room.
+  const g = sandFilterGeometry(3);
+  const windows = olympicPlan()
+    .filter((i) => i.key.startsWith('filter'))
+    .flatMap((f) => {
+      const front = footprintOf(f).maxZ;
+      return [
+        {
+          what: `${f.key} sight glass`,
+          x: f.x - g.r * SIGHT_GLASS.across,
+          y: g.cy + SIGHT_GLASS.above,
+          // The glass itself, inside its bezel (`pumps-plant.ts`): what one looks through.
+          radius: SIGHT_GLASS.radius - 0.02,
+          front,
+        },
+        {
+          what: `${f.key} service hatch`,
+          x: f.x,
+          y: g.hatch.y,
+          radius: g.hatch.radius,
+          front,
+        },
+      ];
+    });
+
+  it('runs no pipe in front of any filter’s sight glass or service hatch (the owner, 2026-10-23)', () => {
+    const hidden: string[] = [];
+    for (const r of plumbed.runs)
+      for (let k = 1; k < r.points.length; k++) {
+        const a = r.points[k - 1];
+        const b = r.points[k];
+        for (let t = 0; t <= 1; t += 0.02) {
+          const p = [0, 1, 2].map((i) => a[i] + (b[i] - a[i]) * t);
+          for (const w of windows) {
+            // In front of the vessel, between its face and the walkway.
+            if (p[2] < w.front - 1.2 || p[2] > w.front + 1.0) continue;
+            const clear = w.radius + r.od / 2;
+            if (Math.abs(p[0] - w.x) < clear && Math.abs(p[1] - w.y) < clear)
+              hidden.push(`${r.name} over ${w.what}`);
+          }
+        }
+      }
+    expect([...new Set(hidden)]).toEqual([]);
   });
 });

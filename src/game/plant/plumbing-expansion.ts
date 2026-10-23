@@ -49,7 +49,8 @@ export interface PlumbEdge {
 export type FittingKind =
   | 'isolating-valve'
   | 'non-return-valve'
-  | 'power-isolator';
+  | 'power-isolator'
+  | 'flowmeter';
 
 export interface Fitting {
   /** From the network: `<node>.<port>.<what>`. */
@@ -100,6 +101,14 @@ export interface ExpandOptions {
   isolateMedia?: ReadonlySet<PlumbMedium>;
   /** The state every fitting is left in: open by default, or all closed (the owner, 2026-10-23). */
   normally?: 'open' | 'closed';
+  /**
+   * Where flowmeters go (the owner, 2026-10-23): the ports, as
+   * `<node kind>.<port>`, whose water links each take a flowmeter, on the
+   * line's side of the port's isolating valve (so shutting the valve
+   * isolates the machine, not the meter); it reads whatever flows through
+   * the port, either way. None by default.
+   */
+  flowmeters?: ReadonlySet<string>;
 }
 
 export interface Expansion {
@@ -122,6 +131,7 @@ const FITTING_SUFFIX: Record<FittingKind, string> = {
   'isolating-valve': 'iso',
   'non-return-valve': 'nrv',
   'power-isolator': 'isolator',
+  flowmeter: 'meter',
 };
 
 /** Each fitting's two ports: in from the source's side, out toward the target's. */
@@ -141,6 +151,7 @@ export function expandForPlumbing(
     omit = new Set(),
     isolateMedia = new Set<PlumbMedium>(['water']),
     normally = 'open',
+    flowmeters = new Set(),
   }: ExpandOptions,
 ): Expansion {
   const kindOf = new Map(nodes.map((n) => [n.id, n.kind]));
@@ -183,6 +194,13 @@ export function expandForPlumbing(
       }
       if (isolate.has(target))
         atTarget.push(add(e, 'target', 'isolating-valve'));
+    }
+    if (e.medium !== 'power') {
+      // A flowmeter by the port, on the line's side of its isolating valve.
+      const source = `${kindOf.get(e.sourceId) ?? ''}.${e.sourcePort}`;
+      const target = `${kindOf.get(e.targetId) ?? ''}.${e.targetPort}`;
+      if (flowmeters.has(source)) atSource.push(add(e, 'source', 'flowmeter'));
+      if (flowmeters.has(target)) atTarget.push(add(e, 'target', 'flowmeter'));
     }
     if (e.medium === 'power' && isolateMedia.has('power')) {
       // An isolator at each end the rules isolate.
@@ -369,7 +387,16 @@ export type Actuation =
   | 'automatic-where-hard-to-reach'
   | 'all-automatic';
 
-export type Operator = 'hand' | 'chain' | 'motor' | 'self' | 'solenoid';
+export type Operator =
+  | 'hand'
+  | 'chain'
+  | 'motor'
+  | 'self'
+  | 'solenoid'
+  | 'none';
+
+/** What drives an automatic valve: an electric motor, or a solenoid-piloted pneumatic actuator (`actuated-valve.ts`). */
+export type Actuator = 'motor' | 'solenoid';
 
 /**
  * How a fitting is worked, by the option and whether a person can reach it
@@ -381,16 +408,21 @@ export function operatorFor(
   f: Pick<Fitting, 'kind' | 'medium'>,
   reachable: boolean,
   option: Actuation,
-  { safetyShutOff = false }: { safetyShutOff?: boolean } = {},
+  {
+    safetyShutOff = false,
+    actuator = 'motor',
+  }: { safetyShutOff?: boolean; actuator?: Actuator } = {},
 ): Operator {
+  // A flowmeter is an instrument: nothing works it.
+  if (f.kind === 'flowmeter') return 'none';
   if (f.kind === 'non-return-valve') return 'self';
   if (f.kind === 'power-isolator') return 'hand';
   if (f.medium === 'gas' && safetyShutOff) return 'solenoid';
   switch (option) {
     case 'all-automatic':
-      return 'motor';
+      return actuator;
     case 'automatic-where-hard-to-reach':
-      return reachable ? 'hand' : 'motor';
+      return reachable ? 'hand' : actuator;
     case 'prefer-manual':
       // Out of reach, a chain wheel lets it be worked from the floor.
       return reachable ? 'hand' : 'chain';
