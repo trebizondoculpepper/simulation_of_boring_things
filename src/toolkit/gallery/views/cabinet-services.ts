@@ -30,6 +30,7 @@ import {
 } from '../logic/cabinet-pipes';
 import type { Service } from '../logic/cabinet-pipes';
 import { CHAIN_TO } from '../logic/room-pipes';
+import { installedValveFor } from '../../../game/plant/installed-valves';
 
 /** Each run's service, as its markings name it. */
 const MARKED: Record<Service, PipeService> = {
@@ -81,23 +82,43 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       }),
     );
     if (run.valve) {
-      const { id, at, axis } = run.valve;
-      const description = identifiedPart(
-        store?.world.value.identifiedPlant ??
-          // During server-side preview there is no browser store.
-          newIdentifiedPlant(),
-        id,
-      );
+      const { at, axis } = run.valve;
+      // A registered pipework valve (`installed-valves.ts`), its state the
+      // world's by its asset ID; or a named part of the identified plant.
+      const installed = run.valve.installed
+        ? installedValveFor(room, run.name, run.valve.name)
+        : null;
+      const id = installed ? installed.tag : run.valve.id;
+      const description = installed
+        ? { name: run.valve.installed ? run.valve.name : '' }
+        : identifiedPart(
+            store?.world.value.identifiedPlant ??
+              // During server-side preview there is no browser store.
+              newIdentifiedPlant(),
+            id,
+          );
       const valve = createWaterButterflyValve(
         kit,
         50,
         axis === 'x' ? 'z' : axis,
         `${id} · ${description?.name ?? 'Valve'}`,
-        {
-          open: () =>
-            store ? partOpen(store.world.value.identifiedPlant, id) : true,
-          set: (open) => store?.dispatch({ type: 'plant/valve', id, open }),
-        },
+        installed
+          ? {
+              open: () =>
+                store?.world.value.installedValves[installed.assetId] ??
+                installed.normal === 'open',
+              set: (open) =>
+                store?.dispatch({
+                  type: 'plant/valve',
+                  id: installed.assetId,
+                  open,
+                }),
+            }
+          : {
+              open: () =>
+                store ? partOpen(store.world.value.identifiedPlant, id) : true,
+              set: (open) => store?.dispatch({ type: 'plant/valve', id, open }),
+            },
         run.valve.operator,
       );
       valve.object.position.set(...lift(at));

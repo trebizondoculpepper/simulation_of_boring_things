@@ -29,8 +29,9 @@ describe('plant identification pilot', () => {
   });
 
   it('binds every pilot pipe valve to one model part', () => {
+    // The named parts; the rest of its valves are registered pipework valves (`installed-valves.ts`).
     const ids = cabinetPipes('plant_pool_04').flatMap((run) =>
-      run.valve ? [run.valve.id] : [],
+      run.valve && !run.valve.installed ? [run.valve.id] : [],
     );
     expect(ids.sort()).toEqual(
       [FOOTBATH.return, FOOTBATH.drain, FOOTBATH.makeUp].sort(),

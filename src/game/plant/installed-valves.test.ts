@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { roomPipes } from '../../toolkit/gallery/logic/room-pipes';
+import { cabinetPipes } from '../../toolkit/gallery/logic/cabinet-pipes';
 import { applyAction, newWorld } from '../world';
 import {
   INSTALLED_VALVES,
@@ -18,6 +19,14 @@ describe('installed pipework valves', () => {
       for (const run of roomPipes(room))
         for (const valve of run.valves) {
           const installed = installedValveFor(room, run.name, valve.name);
+          expect(seen.has(installed.assetId)).toBe(false);
+          seen.add(installed.assetId);
+        }
+    // And the packaged cabinets' rooms' valves on their runs' rises.
+    for (const room of ['plant_pool_03', 'plant_pool_04'])
+      for (const run of cabinetPipes(room))
+        if (run.valve?.installed) {
+          const installed = installedValveFor(room, run.name, run.valve.name);
           expect(seen.has(installed.assetId)).toBe(false);
           seen.add(installed.assetId);
         }
@@ -62,11 +71,21 @@ describe('installed pipework valves', () => {
       world.identifiedPlant,
       world.installedValves,
     );
-    const authored = ROOMS.flatMap((room) =>
-      roomPipes(room).flatMap((run) =>
-        run.valves.map((valve) => ({ room, run, valve })),
+    const authored = [
+      ...ROOMS.flatMap((room) =>
+        roomPipes(room).flatMap((run) =>
+          run.valves.map((valve) => ({ room, run, valve })),
+        ),
       ),
-    );
+      // The packaged cabinets' rooms' valves, up their runs' rises.
+      ...['plant_pool_03', 'plant_pool_04'].flatMap((room) =>
+        cabinetPipes(room).flatMap((run) =>
+          run.valve?.installed
+            ? [{ room, run, valve: { name: run.valve.name, at: run.valve.at } }]
+            : [],
+        ),
+      ),
+    ];
     const offRoute: string[] = [];
     for (const [key, installed] of Object.entries(INSTALLED_VALVES)) {
       const matches = authored.filter(

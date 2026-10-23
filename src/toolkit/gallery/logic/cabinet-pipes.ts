@@ -243,10 +243,11 @@ export interface CabinetRun {
   valve?: {
     id: string;
     at: Vec3;
-    axis: 'x' | 'z';
+    axis: 'x' | 'y' | 'z';
     /** Its lever, or, out of reach overhead, a chain wheel (`CHAIN_TO`). */
     operator?: 'lever' | 'chain';
-  };
+    /** Its axis may be its rise's. */
+  } & ({ installed?: false } | { installed: true; name: string });
 }
 
 /** The room's isolator: on the wall at the cabinet's left, a working rotary switch-disconnector. */
@@ -393,7 +394,61 @@ function throughWall(
  *   the isolator; and the isolator's feed up over the cabinet's roof and
  *   down into its gland.
  */
-export function cabinetPipes(room: string, trial?: Placed): CabinetRun[] {
+/**
+ * The heights the cabinet's runs cross the room at: the spa's lowest
+ * (each next one `poolStep` higher, the further south the higher) and the
+ * heating's (each next `plantStep` higher). Each room's own, from a search
+ * of what is cheapest and still clears head height, the doors, the
+ * cabinet and every other run (`CABINET_LEVELS`).
+ */
+export interface CabinetLevels {
+  pool: number;
+  poolStep: number;
+  plant: number;
+  plantStep: number;
+}
+
+/** The levels the rules first gave every cabinet room. */
+export const RULE_LEVELS: CabinetLevels = {
+  pool: LOWEST,
+  poolStep: STEP,
+  plant: ABOVE_DOORS,
+  plantStep: 0.15,
+};
+
+/**
+ * Each room's levels, searched (the owner, 2026-10-23): the lowest that
+ * keep every run's level lengths over head height, clear of the doors,
+ * the cabinet and each other, and of the room's building services.
+ */
+export const CABINET_LEVELS: Record<string, CabinetLevels> = {
+  // About 7 % cheaper than the rules' levels in each room (2026-10-23).
+  plant_pool_03: { pool: 2.2, poolStep: 0.12, plant: 2.2, plantStep: 0.25 },
+  plant_pool_04: { pool: 2.2, poolStep: 0.12, plant: 2.2, plantStep: 0.25 },
+};
+
+/**
+ * A water run's isolating valve, on the vertical rise behind the cabinet
+ * (the owner, 2026-10-23: not on the stub's short first length, where it
+ * met the elbow): at a hand's height, clear of the elbows at both ends,
+ * each next one up its own rise staggered so no two valves meet.
+ */
+function riserValve(points: Vec3[], index: number): Vec3 | null {
+  const [a, b] = [points[1], points[2]];
+  if (!a || !b || Math.abs(a[0] - b[0]) > 1e-6 || Math.abs(a[2] - b[2]) > 1e-6)
+    return null;
+  const lo = Math.min(a[1], b[1]) + 0.3;
+  const hi = Math.max(a[1], b[1]) - 0.3;
+  if (hi < lo) return null;
+  const y = Math.min(hi, Math.max(lo, 1.0 + (index % 4) * 0.22));
+  return [a[0], y, a[2]];
+}
+
+export function cabinetPipes(
+  room: string,
+  trial?: Placed,
+  levels: CabinetLevels = CABINET_LEVELS[room] ?? RULE_LEVELS,
+): CabinetRun[] {
   const s = setting(room, trial);
   if (!s) return [];
   const { placed, jets, outDir, h } = s;
@@ -421,7 +476,7 @@ export function cabinetPipes(room: string, trial?: Placed): CabinetRun[] {
     .filter((p) => p.port.to === 'pool')
     .sort((a, b) => a.off[2] - b.off[2])
     .forEach(({ port, at, off }, i) => {
-      const y = LOWEST + i * STEP;
+      const y = levels.pool + i * levels.poolStep;
       add(port, [at, off, [off[0], y, off[2]], [off[0], y, -h]]);
     });
   // To the central plant.
@@ -432,19 +487,34 @@ export function cabinetPipes(room: string, trial?: Placed): CabinetRun[] {
       const reach = CLEAR + HEATING_LANE + i * 0.15;
       const x = at[0] + outDir[0] * reach;
       const z = at[2] + outDir[2] * reach;
-      const y = ABOVE_DOORS + i * 0.15;
+      const y = levels.plant + i * levels.plantStep;
       add(port, [at, [x, at[1], z], [x, y, z], [x, y, h]]);
     });
+  // Each water run's isolating valve, up its rise behind the cabinet; the
+  // footbath's return is the world's named valve, the rest installed ones.
+  runs.forEach((run, i) => {
+    const at = riserValve(run.points, i);
+    if (!at) return;
+    run.valve =
+      room === 'plant_pool_04' && run.name === 'Return to the spa'
+        ? { id: 'PL4-PW1-RV1', at, axis: 'y' }
+        : {
+            id: `${run.name} valve`,
+            at,
+            axis: 'y',
+            installed: true,
+            name: `${run.name} valve`,
+          };
+  });
   // The drain, down into its tundish (its rim at 0.12 m, an air gap over it).
   for (const { port, at, off } of ports.filter((p) => p.port.to === 'drain'))
     add(port, [at, off, [off[0], 0.17, off[2]]]);
   if (room === 'plant_pool_04') {
     const returnRun = runs.find((r) => r.name === 'Return to the spa');
     const drainRun = runs.find((r) => r.name === 'Drain to waste');
-    for (const [run, id] of [
-      [returnRun, 'PL4-PW1-RV1'],
-      [drainRun, 'PL4-PW1-DV1'],
-    ] as const) {
+    // The drain's valve on its one short length (its return's is up its rise).
+    void returnRun;
+    for (const [run, id] of [[drainRun, 'PL4-PW1-DV1']] as const) {
       if (!run) continue;
       const a = run.points[0],
         b = run.points[1];

@@ -329,6 +329,58 @@ export const INSTALLED_VALVES: Readonly<
     tag: 'PL2-HX1-IV4',
     normal: 'open',
   },
+  // The packaged cabinets' rooms: each water run's isolating valve, up its rise behind the cabinet (2026-10-23).
+  'plant_pool_03|Air to the spa’s blower ring|Air to the spa’s blower ring valve':
+    {
+      assetId: 'valve-0087',
+      tag: 'PL3-JZ1-IV7',
+      normal: 'open',
+    },
+  'plant_pool_03|Jets discharge to the spa|Jets discharge to the spa valve': {
+    assetId: 'valve-0088',
+    tag: 'PL3-JZ1-IV6',
+    normal: 'open',
+  },
+  'plant_pool_03|Jets suction from the spa|Jets suction from the spa valve': {
+    assetId: 'valve-0089',
+    tag: 'PL3-JZ1-IV5',
+    normal: 'open',
+  },
+  'plant_pool_03|Return to the spa|Return to the spa valve': {
+    assetId: 'valve-0090',
+    tag: 'PL3-JZ1-IV1',
+    normal: 'open',
+  },
+  'plant_pool_03|Overflow from the spa|Overflow from the spa valve': {
+    assetId: 'valve-0091',
+    tag: 'PL3-JZ1-IV2',
+    normal: 'open',
+  },
+  'plant_pool_03|Heating flow|Heating flow valve': {
+    assetId: 'valve-0092',
+    tag: 'PL3-JZ1-IV3',
+    normal: 'open',
+  },
+  'plant_pool_03|Heating return|Heating return valve': {
+    assetId: 'valve-0093',
+    tag: 'PL3-JZ1-IV4',
+    normal: 'open',
+  },
+  'plant_pool_04|Overflow from the spa|Overflow from the spa valve': {
+    assetId: 'valve-0094',
+    tag: 'PL4-PW1-IV2',
+    normal: 'open',
+  },
+  'plant_pool_04|Heating flow|Heating flow valve': {
+    assetId: 'valve-0095',
+    tag: 'PL4-PW1-IV3',
+    normal: 'open',
+  },
+  'plant_pool_04|Heating return|Heating return valve': {
+    assetId: 'valve-0096',
+    tag: 'PL4-PW1-IV4',
+    normal: 'open',
+  },
 };
 
 export interface InstalledValve {

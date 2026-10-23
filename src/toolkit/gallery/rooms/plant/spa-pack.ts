@@ -176,8 +176,10 @@ function buildSpaPack(
   };
   /**
    * Out through the back panel and a little beyond, where each connection
-   * ends in its isolating valve, capped: the unit as it arrives on site,
-   * ready to be connected to the spa and the heating ring.
+   * ends, plain, ready to be connected to the spa and the heating ring; its
+   * isolating valve is the room's, up the pipe's rise behind the cabinet
+   * (`cabinet-pipes.ts`), clear of the elbow at the stub (the owner,
+   * 2026-10-23).
    */
   const out = -hd - 0.03;
   const run = (
@@ -185,7 +187,6 @@ function buildSpaPack(
     kind: PipeKindId = 'pvc-pressure',
     od = 0.05,
   ) => {
-    const leaves = points[points.length - 1][2] === out;
     skid.add(
       createPipe(
         kind,
@@ -194,7 +195,7 @@ function buildSpaPack(
         {
           laid: true,
           through: [backPanel],
-          ends: ['open', leaves ? 'valve' : 'open'],
+          ends: ['open', 'open'],
         },
       ),
     );
@@ -329,7 +330,7 @@ function buildSpaPack(
         createPipe('pvc-pressure', od, points, {
           laid: true,
           through: [back],
-          ends: ['open', 'valve'],
+          ends: ['open', 'open'],
         }),
       );
     // The jets' suction from the spa, into the pump's strainer pot.
