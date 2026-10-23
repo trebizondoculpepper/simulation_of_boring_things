@@ -701,14 +701,22 @@ export function ledText(value: number, digits: number) {
 }
 
 /**
- * The single line its high-resolution dot-matrix display shows (the
- * owner, 2026-10-23): what it reads, its value and its unit, in a proper
- * typeface (so m³), or UNLIMITED for an endless source.
+ * What a source's or sink's dot-matrix display shows (a 16 × 2 character
+ * LCD): what it reads on the first line, its value and unit on the second,
+ * right-aligned. Its controller's character set has no ³, so cubic metres
+ * read m^3 (the owner, 2026-10-23); an endless source reads
+ * UNLIMITED.
  */
-export function displayLine(t: ExperimentalTerminal): string {
+export function lcdLines(t: ExperimentalTerminal, columns = 16): string[] {
   const { unit, medium } = SUBSTANCES[t.spec.substance];
+  const shown = (medium === 'power' ? 'kWh' : unit).replace('³', '^3');
   const value = t.value();
-  const what = t.role === 'source' ? 'REMAINING' : 'CONTENTS';
-  if (value === Infinity) return `${what}  UNLIMITED`;
-  return `${what}  ${value.toFixed(value >= 1e6 ? 0 : 3)} ${medium === 'power' ? 'kWh' : unit}`;
+  const second =
+    value === Infinity
+      ? 'UNLIMITED'
+      : `${value.toFixed(value >= 1e6 ? 0 : 3)} ${shown}`;
+  return [
+    (t.role === 'source' ? 'REMAINING' : 'CONTENTS').padEnd(columns),
+    second.padStart(columns).slice(-columns),
+  ];
 }

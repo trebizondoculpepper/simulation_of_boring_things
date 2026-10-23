@@ -6,10 +6,10 @@ import { createCanvasTexture } from '../../core/views/screens';
 import {
   SOURCE_SHAPE,
   SUBSTANCES,
-  displayLine,
+  lcdLines,
   ratingLines,
 } from '../../../../game/plant/experimental-source';
-import { createDotMatrixLine } from '../../industrial-control/views/panel-instruments';
+import { createCharacterLcd } from '../../industrial-control/views/panel-instruments';
 import type { ExperimentalTerminal } from '../../../../game/plant/experimental-source';
 
 /** Arc and heights of the lettering painted on the cylinder's front, radians and metres. */
@@ -128,7 +128,7 @@ function paintedLettering(
  * is drawn where the model puts it: an upright steel stud across its top
  * for each typed output or input, ending at its port, and a cable gland on
  * its back for its control
- * port, whose value, with its unit, a blue-on-black single-line dot-matrix display on the front (and back) shows (-oo- if infinite).
+ * port, whose value, with its unit, a backlit dot-matrix display on the front (and back) shows (-oo- if infinite).
  * It has no switch: a valve starts and stops what flows. `update`
  * refreshes the readout.
  */
@@ -210,25 +210,31 @@ export function createExperimentalSourceView(
     tag.position.set(p.at[0], p.at[1] + 0.05, p.at[2] + 0.05);
     group.add(tag);
   }
-  // The control port's value, with its unit, on a high-resolution
-  // single-line dot-matrix display, blue on black, front and back.
+  // The control port's value, with its unit, on a backlit dot-matrix
+  // display (a 16 × 2 character LCD), front and back.
   const y = 0.3;
   const displays = [0, Math.PI].map((turn) => {
     const face = new Group();
     face.rotation.y = turn;
     group.add(face);
-    t.box(face, grey, 0.27, 0.05, 0.04, 0, y, r + 0.006);
-    const display = createDotMatrixLine(kit, { width: 0.24 });
-    display.group.position.set(0, y, r + 0.027);
-    face.add(display.group);
-    return display;
+    t.box(face, grey, 0.27, 0.085, 0.04, 0, y, r + 0.006);
+    const lcd = createCharacterLcd(kit, {
+      columns: 16,
+      rows: 2,
+      cell: 0.0092,
+      backlight: true,
+    });
+    lcd.group.position.set(0, y, r + 0.027);
+    face.add(lcd.group);
+    return lcd;
   });
   let shown = '';
   const update = () => {
-    const line = displayLine(terminal);
-    if (line === shown) return;
-    shown = line;
-    for (const d of displays) d.show([line]);
+    const lines = lcdLines(terminal);
+    const key = lines.join('|');
+    if (key === shown) return;
+    shown = key;
+    for (const lcd of displays) lcd.show(lines);
   };
   update();
   return { group, update };

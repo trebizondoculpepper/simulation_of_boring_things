@@ -6,7 +6,7 @@ import {
   canSupply,
   createExperimentalSink,
   createExperimentalSource,
-  displayLine,
+  lcdLines,
   ledText,
   ratingLines,
   transfer,
@@ -227,17 +227,24 @@ describe('experimental sources', () => {
     expect(ledText(123456, 5)).toBe('123456');
   });
 
-  it('shows one line on its blue dot-matrix display: what, value and unit', () => {
+  it('shows its value and unit on its dot-matrix display', () => {
     expect(
-      displayLine(
-        createExperimentalSink({ id: 't', substance: 'mains-water' }),
+      lcdLines(
+        createExperimentalSource({
+          id: 't',
+          substance: 'chlorine',
+          quantity: 25,
+        }),
       ),
-    ).toBe('CONTENTS  0.000 m³');
+    ).toEqual(['REMAINING       ', '       25.000 kg']);
     expect(
-      displayLine(
+      lcdLines(createExperimentalSink({ id: 't', substance: 'mains-water' })),
+    ).toEqual(['CONTENTS        ', '       0.000 m^3']);
+    expect(
+      lcdLines(
         createExperimentalSource({ id: 't', substance: 'power-230v' }),
-      ),
-    ).toBe('REMAINING  UNLIMITED');
+      )[1],
+    ).toBe('       UNLIMITED');
   });
 
   it('runs down as it is drawn from, and delivers nothing once empty', () => {
