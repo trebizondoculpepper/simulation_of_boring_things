@@ -293,7 +293,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev19b: "DEV19B · CODEX'S PLUMBING",
   dev19c: 'DEV19C · SCORED AND SEARCHED',
   dev19d: 'DEV19D · THREE FILTERS',
-  dev20: 'DEV20 · EXPERIMENTAL SOURCES',
+  dev20: 'DEV20 · SOURCES AND SINKS',
   dev_corridor: 'DEV CORRIDOR',
   dev_courtyard: 'COURTYARD',
   dev_pumps: 'DEV · PUMPS AND FILTRATION',

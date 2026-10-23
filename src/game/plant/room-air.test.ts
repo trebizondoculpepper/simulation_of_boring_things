@@ -59,7 +59,7 @@ describe('a leak through a vent', () => {
     const far = createGasDetector(DETECTOR_LEVELS.ozone);
     const step = (seconds: number, open: boolean) => {
       for (let t = 0; t < seconds; t++) {
-        vent.step(1, open, (g) => source.draw(g), air);
+        vent.step(1, open, (g) => source.draw(g, 1), air);
         air.step(1);
         near.sense(toPpm('ozone', air.sample('ozone', [1.5, 0.4, 0])), 1);
         far.sense(toPpm('ozone', air.sample('ozone', [5, 0.4, 0])), 1);

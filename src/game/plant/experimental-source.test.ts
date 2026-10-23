@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   SOURCE_SHAPE,
   SUBSTANCES,
+  canAccept,
   canSupply,
+  createExperimentalSink,
   createExperimentalSource,
+  ratingLines,
 } from './experimental-source';
 
 describe('experimental sources', () => {
@@ -76,23 +79,110 @@ describe('experimental sources', () => {
     expect(SUBSTANCES['power-230v'].medium).toBe('power');
   });
 
+  it('never flows at infinite speed: its rate is the potential over its resistance, capped', () => {
+    const s = createExperimentalSource({
+      id: 't',
+      substance: 'power-230v',
+    });
+    expect(s.flow.potentialUnit).toBe('V');
+    // Into a dead short, only its maximum.
+    expect(s.rateInto(0)).toBe(7.4);
+    // Into something near its own potential, much less; at it, nothing.
+    expect(s.rateInto(229)).toBeCloseTo(1 / s.flow.resistance, 6);
+    expect(s.rateInto(230)).toBe(0);
+    // A second's draw is capped at its rate.
+    expect(s.draw(1000, 1)).toBeCloseTo(7.4 / 3600, 9);
+    expect(() =>
+      createExperimentalSource({
+        id: 't',
+        substance: 'acid',
+        maxRate: Infinity,
+      }),
+    ).toThrow();
+  });
+
+  it('has sinks to match, typed, with a capacity that may be infinite', () => {
+    const d = createExperimentalSink({
+      id: 'drain',
+      substance: 'dirty-water',
+      inputs: 2,
+      capacity: 10,
+    });
+    expect(d.role).toBe('sink');
+    expect(d.ports.map((p) => [p.name, p.direction])).toEqual([
+      ['in-1', 'in'],
+      ['in-2', 'in'],
+      ['capacity', 'out'],
+    ]);
+    expect(d.ports[2].data.control).toMatchObject({
+      access: 'read',
+      infinite: false,
+    });
+    expect(d.accept(4, 3600)).toBe(4);
+    expect(d.space()).toBe(6);
+    expect(d.accept(100, 3600)).toBe(6);
+    expect(d.accept(1, 3600)).toBe(0);
+    // Its rate too: 60 m³/h, from 2 bar into its 0 bar, through its resistance.
+    const open = createExperimentalSink({
+      id: 'grid',
+      substance: 'dirty-water',
+    });
+    expect(open.endless).toBe(true);
+    expect(open.reading()).toBe('∞');
+    expect(open.rateFrom(2)).toBe(60);
+    expect(open.accept(1e6, 60)).toBeCloseTo(1, 6);
+    expect(canAccept(open, 'water', 'dirty-water')).toBe(true);
+    expect(canAccept(open, 'water', 'pool-water')).toBe(false);
+  });
+
+  it('letters a rating plate in each medium’s own units', () => {
+    expect(
+      ratingLines(
+        createExperimentalSource({ id: 't', substance: 'mains-water' }),
+      ),
+    ).toEqual([
+      'SUBSTANCE  MAINS WATER',
+      'MAX FLOW  5 m³/h',
+      'RESISTANCE  0.3 bar/(m³/h)',
+      'SUPPLY PRESSURE  3 bar',
+    ]);
+    // Power: kilowatts, and ohms (32 A dropping half of 230 V: 3.57 Ω).
+    expect(
+      ratingLines(
+        createExperimentalSource({ id: 't', substance: 'power-230v' }),
+      ),
+    ).toEqual([
+      'SUBSTANCE  230 V 1-PH',
+      'MAX FLOW  7.4 kW',
+      'RESISTANCE  3.57 Ω',
+      'SUPPLY VOLTAGE  230 V',
+    ]);
+    expect(
+      ratingLines(
+        createExperimentalSink({ id: 't', substance: 'dirty-water' }),
+      )[3],
+    ).toBe('BACK PRESSURE  0 bar');
+  });
+
   it('runs down as it is drawn from, and delivers nothing once empty', () => {
     const s = createExperimentalSource({
       id: 't',
       substance: 'hypochlorite',
       quantity: 10,
     });
-    expect(s.draw(4)).toBe(4);
+    // An hour at a time, so its rate (10 l/h) does not hold it back.
+    expect(s.draw(4, 3600)).toBe(4);
     expect(s.remaining()).toBe(6);
-    expect(s.draw(10)).toBe(6);
+    expect(s.draw(10, 3600)).toBe(6);
     expect(s.remaining()).toBe(0);
-    expect(s.draw(1)).toBe(0);
+    expect(s.draw(1, 3600)).toBe(0);
   });
 
   it('can be endless, and says so', () => {
     const s = createExperimentalSource({ id: 't', substance: 'mains-water' });
     expect(s.endless).toBe(true);
-    expect(s.draw(1e6)).toBe(1e6);
+    // Endless, but never faster than its rate: 5 m³/h over a day.
+    expect(s.draw(1e6, 86400)).toBeCloseTo(120, 6);
     expect(s.remaining()).toBe(Infinity);
     expect(s.reading()).toBe('∞');
   });
