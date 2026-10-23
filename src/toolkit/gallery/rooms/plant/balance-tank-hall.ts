@@ -28,6 +28,7 @@ import { createUltrasonicLevel } from '../../../components/plant/views/ultrasoni
 import { createStaffGauge } from '../../../components/plant/views/staff-gauge';
 import { createSolenoidValve } from '../../../components/plant/views/solenoid-valve';
 import { createFallingWater } from '../../../components/plant/views/falling-water';
+import { createDisturbedWater } from '../../../components/plant/views/disturbed-water';
 import { createBalanceTankPanel } from '../../../components/plant/views/balance-tank-panel';
 import { createLifebuoy } from '../../../components/general-safety/views/lifebuoy';
 import { createSafetySign } from '../../../components/general-safety/views/safety-signs';
@@ -144,19 +145,10 @@ export function buildHall(
   floor.position.set(mid, TANK.floor, 0);
   object.add(floor);
 
-  // The water.
-  const waterPaint = createPs1Material({
-    color: '#173f43',
-    transparent: true,
-    opacity: 0.9,
-    roughness: 0.08,
-    metalness: 0.1,
-  });
-  kit.materials.push(waterPaint);
-  const water = new Mesh(new PlaneGeometry(L, W), waterPaint);
-  water.rotation.x = -Math.PI / 2;
+  // The water, stirred white where the filler and the returns pour into it, calm further off.
+  const surface = createDisturbedWater(kit, { w: L, d: W });
+  const water = surface.mesh;
   water.position.x = mid;
-  water.userData.live = true;
   object.add(water);
   let time = 0;
   const waterY = () => heightOf(state.level);
@@ -527,6 +519,11 @@ export function buildHall(
     }
     makeupFall.set(state.makeupOpen ? 1 : 0, SPOTS.makeup.end - y);
     makeupFall.update(delta);
+    // The water stirred where each lands: the filler's churns a small patch; a return's, a wider one.
+    surface.setSource(0, makeupFall.foot, makeupFall.share(), 1.6);
+    for (const [i, f] of falls.entries())
+      surface.setSource(i + 1, f.foot, f.share(), 4);
+    surface.update(delta);
     valve?.setOpen(state.makeupOpen);
     transmitter.show(state.level);
     for (const f of switches) {
