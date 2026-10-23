@@ -20,6 +20,7 @@ import {
   layoutSizedPlantRoom,
 } from '../logic/plant-room-layout';
 import type {
+  ExhibitSize,
   PlantRoomLayout,
   SizedPlantRoomLayout,
 } from '../logic/plant-room-layout';
@@ -82,7 +83,8 @@ export type ExhibitRoomId =
   | 'dev19b'
   | 'dev19c'
   | 'dev19d'
-  | 'dev20';
+  | 'dev20'
+  | 'dev21';
 
 const EXHIBITS: Record<
   ExhibitRoomId,
@@ -95,6 +97,8 @@ const EXHIBITS: Record<
     ) => Group | LiveExhibit;
     /** Bind the room's model to its layout before its exhibits are built (Dev19's plumbed graph). */
     prepareRoom?: (layout: PlantRoomLayout) => void;
+    /** Its own layout, in place of the usual rows (Dev21's sources facing their sinks). */
+    layoutRoom?: (sizes: readonly ExhibitSize[]) => PlantRoomLayout;
   }>
 > = {
   dev_pumps: () => import('./plant/pumps'),
@@ -118,6 +122,7 @@ const EXHIBITS: Record<
   dev19c: () => import('./plant/port-graph-demo-c'),
   dev19d: () => import('./plant/port-graph-demo-d'),
   dev20: () => import('./plant/experimental-sources'),
+  dev21: () => import('./plant/source-sink'),
 };
 
 /**
@@ -190,6 +195,7 @@ export function startEquipmentRoom(
       layout: PlantRoomLayout,
     ) => Group | LiveExhibit,
     prepareRoom?: (layout: PlantRoomLayout) => void,
+    layoutRoom?: (sizes: readonly ExhibitSize[]) => PlantRoomLayout,
   ) => {
     const sizes = exhibits.map((e) => e.size);
     // Dev19 tries the room's layers (`doc/prompts/017-room-sizer-gantries-placement.md`):
@@ -224,7 +230,7 @@ export function startEquipmentRoom(
           id === 'dev19d' ? DEV19D_MODEL : BASE_MODEL,
         ).places,
       };
-    const layout = sized ?? layoutPlantRoom(sizes);
+    const layout = sized ?? layoutRoom?.(sizes) ?? layoutPlantRoom(sizes);
     prepareRoom?.(layout);
     const { halfX, halfZ } = layout;
     const services = SERVICE_CEILINGS[id as ExhibitRoomId];
@@ -360,7 +366,17 @@ export function startEquipmentRoom(
           maxWidth: Math.max(1.6, exhibit.size.w),
         },
       );
-      if (sized) {
+      if (layoutRoom) {
+        // On the wall behind it, facing into the room, clear of what
+        // rises from its top.
+        const north = place.z < 0;
+        caption.position.set(
+          place.x,
+          Math.min(exhibit.size.h + 0.6, height - 0.35),
+          north ? -halfZ + 0.17 : halfZ - 0.17,
+        );
+        caption.rotation.y = north ? 0 : Math.PI;
+      } else if (sized) {
         // Over the machine, facing the way it faces; over a valve in its
         // line, just above it.
         caption.position.set(
@@ -495,8 +511,15 @@ export function startEquipmentRoom(
   };
 
   void EXHIBITS[id]().then(
-    ({ EXHIBITS: exhibits, PURPOSE, buildRoomServices, prepareRoom }) => {
-      if (!disposed) build(exhibits, PURPOSE, buildRoomServices, prepareRoom);
+    ({
+      EXHIBITS: exhibits,
+      PURPOSE,
+      buildRoomServices,
+      prepareRoom,
+      layoutRoom,
+    }) => {
+      if (!disposed)
+        build(exhibits, PURPOSE, buildRoomServices, prepareRoom, layoutRoom);
     },
   );
 

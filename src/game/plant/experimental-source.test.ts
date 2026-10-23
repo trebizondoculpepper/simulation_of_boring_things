@@ -6,7 +6,9 @@ import {
   canSupply,
   createExperimentalSink,
   createExperimentalSource,
+  ledText,
   ratingLines,
+  transfer,
 } from './experimental-source';
 
 describe('experimental sources', () => {
@@ -31,30 +33,27 @@ describe('experimental sources', () => {
     expect(s.reading()).toBe('25.0');
   });
 
-  it('places every port precisely: outputs proud of the cylinder facing out, the control port on top facing up', () => {
+  it('places every port precisely: fluid ports up from the top centre, the control port on the back', () => {
     const s = createExperimentalSource({
       id: 't',
       substance: 'power-400v',
       outputs: 3,
     });
-    const reach = SOURCE_SHAPE.radius + SOURCE_SHAPE.stud;
     const outputs = s.ports.filter((p) => p.data.medium !== 'control');
-    expect(outputs).toHaveLength(3);
-    for (const p of outputs) {
-      expect(Math.hypot(p.at[0], p.at[2])).toBeCloseTo(reach, 3);
-      expect(p.at[1]).toBe(SOURCE_SHAPE.outputs);
-      // Facing straight out from the axis, and toward the back (−z).
-      expect(p.out[0] * p.at[2] - p.out[2] * p.at[0]).toBeCloseTo(0, 3);
-      expect(p.out[2]).toBeLessThan(0);
-    }
-    expect(new Set(outputs.map((p) => p.at.join())).size).toBe(3);
+    // 1.18 m: the stud's end, 80 mm above the 1.1 m top.
+    expect(outputs.map((p) => p.at)).toEqual([
+      [-SOURCE_SHAPE.pitch, 1.18, 0],
+      [0, 1.18, 0],
+      [SOURCE_SHAPE.pitch, 1.18, 0],
+    ]);
+    for (const p of outputs) expect(p.out).toEqual([0, 1, 0]);
     const control = s.ports.find((p) => p.name === 'remaining')!;
     expect(control.at).toEqual([
       0,
-      SOURCE_SHAPE.height + SOURCE_SHAPE.gland,
-      0,
+      SOURCE_SHAPE.control,
+      -(SOURCE_SHAPE.radius + SOURCE_SHAPE.gland),
     ]);
-    expect(control.out).toEqual([0, 1, 0]);
+    expect(control.out).toEqual([0, 0, -1]);
     expect(control.data.control?.infinite).toBe(true);
   });
 
@@ -185,6 +184,46 @@ describe('experimental sources', () => {
         }),
       )[1],
     ).toBe('CAPACITY  25 kg');
+  });
+
+  it('transfers from a source to its sink only through an open line, at a bounded rate', () => {
+    const source = createExperimentalSource({
+      id: 's',
+      substance: 'mains-water',
+      quantity: 1,
+    });
+    const sink = createExperimentalSink({ id: 'k', substance: 'mains-water' });
+    expect(transfer(source, sink, false, 60)).toBe(0);
+    expect(source.remaining()).toBe(1);
+    // 3 bar over 0.3 + 0.025 bar/(m³/h): capped at the source's 5 m³/h.
+    const rate = transfer(source, sink, true, 60);
+    expect(rate).toBeCloseTo(5, 6);
+    expect(sink.received()).toBeCloseTo(5 / 60, 6);
+    expect(source.remaining() + sink.received()).toBeCloseTo(1, 9);
+    // Until the source runs dry.
+    for (let t = 0; t < 30; t++) transfer(source, sink, true, 60);
+    expect(source.remaining()).toBe(0);
+    expect(sink.received()).toBeCloseTo(1, 9);
+    expect(transfer(source, sink, true, 60)).toBe(0);
+  });
+
+  it('stops when the sink is full', () => {
+    const source = createExperimentalSource({ id: 's', substance: 'acid' });
+    const sink = createExperimentalSink({
+      id: 'k',
+      substance: 'acid',
+      capacity: 2,
+    });
+    for (let t = 0; t < 10; t++) transfer(source, sink, true, 3600);
+    expect(sink.received()).toBe(2);
+    expect(transfer(source, sink, true, 60)).toBe(0);
+  });
+
+  it('fits a value to its LED digits with as many decimals as fit', () => {
+    expect(ledText(25, 5)).toBe('25.000');
+    expect(ledText(0, 5)).toBe('0.000');
+    expect(ledText(2500, 5)).toBe('2500.0');
+    expect(ledText(123456, 5)).toBe('123456');
   });
 
   it('runs down as it is drawn from, and delivers nothing once empty', () => {

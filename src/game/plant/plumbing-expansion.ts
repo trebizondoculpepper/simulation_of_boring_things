@@ -25,6 +25,8 @@
 export type PlumbMedium =
   | 'gas'
   | 'water'
+  | 'chemical'
+  | 'oil'
   | 'power'
   | 'flue'
   | 'heat'
@@ -59,6 +61,8 @@ export interface Fitting {
   serves: string;
   end: 'source' | 'target';
   medium: PlumbMedium;
+  /** The state the plumber leaves it in: open, unless the rules say closed. */
+  normally: 'open' | 'closed';
 }
 
 export interface ExpandOptions {
@@ -88,6 +92,14 @@ export interface ExpandOptions {
    * so not in the expanded graph.
    */
   omit?: ReadonlySet<string>;
+  /**
+   * Which media's links are isolated at each end that `isolate` names:
+   * water only, by default. With power among them, each isolated end of a
+   * power link takes a power isolator.
+   */
+  isolateMedia?: ReadonlySet<PlumbMedium>;
+  /** The state every fitting is left in: open by default, or all closed (the owner, 2026-10-23). */
+  normally?: 'open' | 'closed';
 }
 
 export interface Expansion {
@@ -127,6 +139,8 @@ export function expandForPlumbing(
     nonReturn = pumps,
     powerIsolators = 'supply-feeds',
     omit = new Set(),
+    isolateMedia = new Set<PlumbMedium>(['water']),
+    normally = 'open',
   }: ExpandOptions,
 ): Expansion {
   const kindOf = new Map(nodes.map((n) => [n.id, n.kind]));
@@ -146,6 +160,7 @@ export function expandForPlumbing(
       serves,
       end,
       medium: e.medium,
+      normally,
     };
     fittings.push(f);
     return f;
@@ -153,7 +168,7 @@ export function expandForPlumbing(
   for (const e of edges) {
     const atSource: Fitting[] = [];
     const atTarget: Fitting[] = [];
-    if (e.medium === 'water') {
+    if (e.medium !== 'power' && isolateMedia.has(e.medium)) {
       const source = kindOf.get(e.sourceId) ?? '';
       const target = kindOf.get(e.targetId) ?? '';
       if (isolate.has(source)) {
@@ -169,7 +184,13 @@ export function expandForPlumbing(
       if (isolate.has(target))
         atTarget.push(add(e, 'target', 'isolating-valve'));
     }
-    if (e.medium === 'power') {
+    if (e.medium === 'power' && isolateMedia.has('power')) {
+      // An isolator at each end the rules isolate.
+      if (isolate.has(kindOf.get(e.sourceId) ?? ''))
+        atSource.push(add(e, 'source', 'power-isolator'));
+      if (isolate.has(kindOf.get(e.targetId) ?? ''))
+        atTarget.push(add(e, 'target', 'power-isolator'));
+    } else if (e.medium === 'power') {
       const source = kindOf.get(e.sourceId) ?? '';
       const target = kindOf.get(e.targetId) ?? '';
       // A feed from a supply to a device that is not itself switchgear.

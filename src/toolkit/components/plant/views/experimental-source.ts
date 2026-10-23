@@ -9,6 +9,7 @@ import { createCanvasTexture } from '../../core/views/screens';
 import {
   SOURCE_SHAPE,
   SUBSTANCES,
+  ledText,
   ratingLines,
 } from '../../../../game/plant/experimental-source';
 import type { ExperimentalTerminal } from '../../../../game/plant/experimental-source';
@@ -126,8 +127,9 @@ function paintedLettering(
  * in its substance's basic identification colour (BS 1710; power banded
  * in its IEC 60309 voltage colour), with its code bands round it, and
  * its symbol, name and rating lettered straight onto its front. Each port
- * is drawn where the model puts it: a steel stud for each typed output or
- * input, ending at its port, and a cable gland on top for its control
+ * is drawn where the model puts it: an upright steel stud across its top
+ * for each typed output or input, ending at its port, and a cable gland on
+ * its back for its control
  * port, whose value an LED readout on the front shows (-oo- if infinite).
  * It has no switch: a valve starts and stops what flows. `update`
  * refreshes the readout.
@@ -169,39 +171,35 @@ export function createExperimentalSourceView(
   group.add(front, back);
   for (const p of terminal.ports) {
     const id = `${terminal.spec.id}.${p.name}`;
-    const [ox, oy, oz] = p.out;
     if (p.data.medium === 'control') {
-      // A cable gland, its top at the port.
+      // A cable gland on the back, its end at the port.
       const g = t.cyl(
         group,
         grey,
         0.018,
         gland,
         p.at[0],
-        p.at[1] - gland / 2,
-        p.at[2],
-        'y',
+        p.at[1],
+        p.at[2] + gland / 2,
+        'z',
         12,
       );
       g.name = id;
       g.userData.graphPortId = id;
       continue;
     }
-    // A stud from the cylinder's skin out to the port, along its facing.
+    // An upright stud on the top, its end at the port.
     const stud = t.cyl(
       group,
       steel,
       0.03,
       length,
-      p.at[0] - (ox * length) / 2,
-      p.at[1] - (oy * length) / 2,
-      p.at[2] - (oz * length) / 2,
+      p.at[0],
+      p.at[1] - length / 2,
+      p.at[2],
       'y',
       12,
     );
-    // Laid along its facing: tipped onto z, then turned round y.
-    stud.rotation.order = 'YXZ';
-    stud.rotation.set(Math.PI / 2, Math.atan2(ox, oz), 0);
     stud.name = id;
     stud.userData.graphPortId = id;
     const tag = createMicroLabel(kit, p.name.toUpperCase(), {
@@ -211,33 +209,39 @@ export function createExperimentalSourceView(
       maxWidth: 0.1,
       faceCamera: true,
     });
-    tag.position.set(p.at[0], p.at[1] + 0.07, p.at[2]);
+    tag.position.set(p.at[0], p.at[1] + 0.05, p.at[2] + 0.05);
     group.add(tag);
   }
-  // The control port's value, shown on the front.
+  // The control port's value, shown on the front and again on the back.
   const y = 0.3;
-  t.box(group, grey, 0.16, 0.08, 0.03, 0, y, r + 0.012);
-  const readout = createSevenSegment(kit, 5, { digitHeight: 0.022 });
-  readout.group.position.set(0, y, r + 0.03);
-  group.add(readout.group);
-  const unitTag = createMicroLabel(
-    kit,
-    `${role === 'source' ? 'REMAINING' : 'CONTENTS'}  ${unit}`,
-    { height: 0.011, ink: '#ecf1ed', plate: '#283237', maxWidth: 0.16 },
-  );
-  unitTag.position.set(0, y - 0.06, r + 0.03);
-  group.add(unitTag);
+  const readouts = [0, Math.PI].map((turn) => {
+    const face = new Group();
+    face.rotation.y = turn;
+    group.add(face);
+    t.box(face, grey, 0.16, 0.08, 0.03, 0, y, r + 0.012);
+    const readout = createSevenSegment(kit, 5, { digitHeight: 0.022 });
+    readout.group.position.set(0, y, r + 0.03);
+    face.add(readout.group);
+    const unitTag = createMicroLabel(
+      kit,
+      `${role === 'source' ? 'REMAINING' : 'CONTENTS'}  ${unit}`,
+      { height: 0.011, ink: '#ecf1ed', plate: '#283237', maxWidth: 0.16 },
+    );
+    unitTag.position.set(0, y - 0.06, r + 0.03);
+    face.add(unitTag);
+    return readout;
+  });
   let shown = '';
   const update = () => {
-    // LED digits have no point: whole units, and an endless source's
-    // infinity as -oo-. A sink shows what it holds, from nothing.
+    // An endless source's infinity as -oo-; a sink shows what it holds,
+    // from nothing.
     const text =
       terminal.role === 'source' && terminal.endless
         ? '-oo-'
-        : String(Math.round(terminal.value()));
+        : ledText(terminal.value(), 5);
     if (text === shown) return;
     shown = text;
-    readout.show(text);
+    for (const readout of readouts) readout.show(text);
   };
   update();
   return { group, update };

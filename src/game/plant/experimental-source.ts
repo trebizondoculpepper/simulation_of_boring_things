@@ -331,22 +331,24 @@ type Vec3 = [number, number, number];
 
 /**
  * Its shape, metres, in its own frame: a cylinder standing on the floor
- * (y = 0) round the y axis, its band and readout facing +z. Its outputs
- * are studs round its back half at `outputs` high, each `stud` long; its
- * control port is a cable gland on the middle of its top, `gland` high.
+ * (y = 0) round the y axis, its front (lettering and readout) facing +z.
+ * Its outputs or inputs (the owner, 2026-10-23) are upright studs across
+ * the middle of its top, `pitch` apart along x, each `stud` tall; its
+ * control port is a cable gland on its back (−z), `control` high and
+ * `gland` proud.
  */
 export const SOURCE_SHAPE = {
   radius: 0.25,
   height: 1.1,
-  // Low enough to leave the lettering, front and back, clear, and still at a working height.
-  outputs: 0.5,
   stud: 0.08,
+  pitch: 0.12,
+  control: 0.45,
   gland: 0.04,
 } as const;
 
-/** Where output `k` of `n` faces, radians round y from +z: spread over the back. */
-export const outputAngle = (k: number, n: number) =>
-  Math.PI + (n === 1 ? 0 : (k / (n - 1) - 0.5) * Math.PI * 0.8);
+/** Where stud `k` of `n` stands across the top, metres along x from its middle. */
+export const studOffset = (k: number, n: number) =>
+  (k - (n - 1) / 2) * SOURCE_SHAPE.pitch;
 
 /** A port of an experimental source or sink, as the port graph takes it. */
 export interface SourcePort {
@@ -402,25 +404,22 @@ function terminalPorts(
 ): SourcePort[] {
   const { medium, unit } = SUBSTANCES[substance];
   const round = (v: number) => Math.round(v * 1e4) / 1e4;
-  const { radius: r, height: h, outputs: y, stud, gland } = SOURCE_SHAPE;
+  const { radius: r, height: h, stud, gland } = SOURCE_SHAPE;
   return [
-    ...Array.from({ length: count }, (_, k): SourcePort => {
-      const a = outputAngle(k, count);
-      const dir: Vec3 = [round(Math.sin(a)), 0, round(Math.cos(a))];
-      return {
-        name: `${direction}-${k + 1}`,
-        direction,
-        // The stud's end, standing `stud` proud of the cylinder.
-        at: [round(dir[0] * (r + stud)), y, round(dir[2] * (r + stud))],
-        out: dir,
-        data: { medium, substance, required: false },
-      };
-    }),
+    ...Array.from({ length: count }, (_, k): SourcePort => ({
+      name: `${direction}-${k + 1}`,
+      direction,
+      // The stud's end, standing `stud` up from the top, pointing up.
+      at: [round(studOffset(k, count)), round(h + stud), 0],
+      out: [0, 1, 0],
+      data: { medium, substance, required: false },
+    })),
     {
       name: control,
       direction: 'out',
-      at: [0, h + gland, 0],
-      out: [0, 1, 0],
+      // A gland on the back, facing back.
+      at: [0, SOURCE_SHAPE.control, -(r + gland)],
+      out: [0, 0, -1],
       data: {
         medium: 'control',
         required: false,
@@ -662,4 +661,41 @@ export function ratingLines(t: ExperimentalTerminal): string[] {
       : `RESISTANCE  ${sig(resistance)} ${potentialUnit}/(${unit}/h)`,
     `${t.role === 'source' ? 'SUPPLY' : 'BACK'} ${power ? 'VOLTAGE' : 'PRESSURE'}  ${sig(potential)} ${potentialUnit}`,
   ];
+}
+
+/**
+ * Move a substance from `source` to `sink` for `dt` seconds through a line
+ * that is `open` (both its valves): at the potential difference over the
+ * two internal resistances in series, never more than either's maximum
+ * rate, and only what the source has and the sink has room for. Returns
+ * the rate it flowed at, its unit an hour.
+ */
+export function transfer(
+  source: ExperimentalSource,
+  sink: ExperimentalSink,
+  open: boolean,
+  dt: number,
+) {
+  if (!open || !(dt > 0) || source.remaining() <= 0 || sink.space() <= 0)
+    return 0;
+  const difference = source.flow.potential - sink.flow.potential;
+  const rate = Math.min(
+    source.flow.maxRate,
+    sink.flow.maxRate,
+    Math.max(0, difference) / (source.flow.resistance + sink.flow.resistance),
+  );
+  const amount = Math.min((rate * dt) / 3600, source.remaining(), sink.space());
+  const given = source.draw(amount, dt);
+  const took = sink.accept(given, dt);
+  return (took * 3600) / dt;
+}
+
+/**
+ * A value for `digits` LED digits, with as many decimals as fit (up to
+ * three), its point taking no digit of its own: 25 as 25.000, 0 as 0.000.
+ */
+export function ledText(value: number, digits: number) {
+  const whole = Math.max(1, Math.floor(Math.abs(value)).toString().length);
+  const decimals = Math.max(0, Math.min(3, digits - whole));
+  return value.toFixed(decimals);
 }
