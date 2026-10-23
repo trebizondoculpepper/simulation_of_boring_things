@@ -38,6 +38,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 ### Plant features
 
 - [ ] **The wet hall's tanks as built** ([036](doc/prompts/036-wet-hall-tanks.md)): the break tank stays sectional GRP; the backwash holding tank and the Lounge pool's balance tank in cast concrete.
+- [ ] **The foot spa cabinet's pump protection and gravity drain** (the owner, 2026-10-23; after the other editor's uncommitted `pools.ts`/`world.ts`/`spa-pack.ts` work lands): its feeder (PL4-PW1-IV2, on the overflow from the spa) read by the water model; the pump trips on dry running within seconds of the feeder shutting, or when pumping the bath empty, and the trip latches (the low-level trip too, which now clears itself) until a RESET on the cabinet panel, beside a PUMP TRIP lamp, clears it once its cause has gone. The drain-down runs by gravity (the plant floor 3.5 m below the deck) whenever the feeder and drain valve are open and there is water, pump or no pump, faster when pumped with the return shut; the drain gurgle (`footbathDischarging`) follows that, with no pump in its condition.
 - [ ] **The other pools on the Olympic's pattern:** each pool's circulation, filters and balance tank driven by its own plant's valves and model, as the Olympic's now are, once the Olympic works.
 
 ## Test scenarios ([scenarios](doc/prompts/scenarios.md))
