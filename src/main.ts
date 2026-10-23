@@ -382,6 +382,9 @@ const starter = async (
     return (await import('./rendering/dev-corridor-room')).startDevCorridorRoom;
   if (room === 'dev1')
     return (await import('./toolkit/gallery/rooms/racks-room')).startRacksRoom;
+  if (room === 'dev31')
+    return (await import('./rendering/effects-playground-room'))
+      .startEffectsPlaygroundRoom;
   if (room === 'dev2')
     return (await import('./toolkit/gallery/rooms/fittings-room'))
       .startFittingsRoom;
