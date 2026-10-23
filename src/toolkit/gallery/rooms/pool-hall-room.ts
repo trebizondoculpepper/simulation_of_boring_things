@@ -6,9 +6,11 @@ import {
   HalfFloatType,
   Mesh,
   PerspectiveCamera,
+  Plane,
   Raycaster,
   Scene,
   Vector2,
+  Vector3,
   WebGLRenderTarget,
 } from 'three';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -596,6 +598,19 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
                 see: (on) => {
                   officeSeen = on;
                   if (officeLobby) officeLobby.visible = !on;
+                  // Nothing of this scene beyond the gallery's north wall
+                  // while the office is seen through its door: the north
+                  // deck's solid block, below the pool's waterline (and
+                  // so with its caustics), fills the office's space here
+                  // and would hide its ceiling.
+                  renderer.clippingPlanes = on
+                    ? [
+                        new Plane(
+                          new Vector3(0, 0, 1),
+                          -(officeWay.line - officeWay.wall - 0.02) * metre,
+                        ),
+                      ]
+                    : [];
                 },
                 peek: (on) => officeDoor.showLeaf(!on),
               }),
