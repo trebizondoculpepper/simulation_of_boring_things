@@ -84,6 +84,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Documentation
 
+- Sized a two-storey lounge pool plant hall from its current inventory and the room-layout pipeline: 116.4 m² calculated floor, a 12 × 11 × 8 m first trial envelope, and a 12 × 10 × 8 m compact candidate to prove by placement and routing (`doc/plans/lounge-plant-room-sizing.md`).
 - Defined the visual, simulation and control component triplet, with an inventory-led migration path for the full component catalogue, shared identity, typed ports, saved state and build validation.
 
 ### Fixed
