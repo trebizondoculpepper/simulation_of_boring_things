@@ -132,7 +132,7 @@ const EXHIBITS: Record<
   dev23: () => import('./plant/jacuzzi-drain'),
   dev24: () => import('./plant/duty-standby'),
   dev25: () => import('./plant/tank-fill-drain'),
-  dev26: () => import('./plant/filter-backwash'),
+  dev26: () => import('./plant/filter-five-valve'),
 };
 
 /**
