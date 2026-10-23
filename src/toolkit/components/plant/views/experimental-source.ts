@@ -1,4 +1,4 @@
-import { Group, Mesh, MeshStandardMaterial, PlaneGeometry } from 'three';
+import { CylinderGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import {
   createMicroLabel,
@@ -13,72 +13,119 @@ import {
 } from '../../../../game/plant/experimental-source';
 import type { ExperimentalTerminal } from '../../../../game/plant/experimental-source';
 
+/** Arc and heights of the lettering painted on the cylinder's front, radians and metres. */
+const LETTERING = { arc: 1.7, bottom: 0.58, top: 1.06 } as const;
+
+/** Ink that reads on `body`: near-black on a light colour, near-white on a dark one. */
+function inkFor(body: string) {
+  const n = parseInt(body.slice(1), 16);
+  const [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255].map((c) => c / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45 ? '#141414' : '#f4f4ef';
+}
+
 /**
- * The source or sink symbol: a ring with an arrow leaving it (a source)
- * or an arrow entering it to a dot (a sink), and the word under it, black
- * on a white plate. `size` is its side, metres.
+ * The lettering painted straight onto the cylinder's front, as a stencil
+ * would put it: the source or sink symbol (a ring with an arrow leaving it,
+ * or an arrow entering it to a dot) and its word, EXPERIMENTAL SOURCE (or
+ * SINK) and the substance, and the rating lines. One transparent texture
+ * on a curved skin a hair off the body, so it follows the curve.
  */
-function terminalSymbol(kit: PanelKit, role: 'source' | 'sink', size: number) {
-  const px = 256;
-  const { context: c, texture } = createCanvasTexture(px, px);
+function paintedLettering(
+  kit: PanelKit,
+  terminal: ExperimentalTerminal,
+  radius: number,
+  ink: string,
+) {
+  const { arc, bottom, top } = LETTERING;
+  const width = radius * arc;
+  const height = top - bottom;
+  const scale = 1400; // pixels a metre
+  const W = Math.round(width * scale);
+  const H = Math.round(height * scale);
+  const { context: c, texture } = createCanvasTexture(W, H);
   kit.textures.push(texture);
-  c.fillStyle = '#f4f4ef';
-  c.fillRect(0, 0, px, px);
-  c.strokeStyle = '#111';
-  c.fillStyle = '#111';
-  c.lineWidth = 12;
-  c.strokeRect(6, 6, px - 12, px - 12);
-  const cx = px / 2;
-  const cy = 100;
-  const ring = 44;
+  c.clearRect(0, 0, W, H);
+  c.strokeStyle = ink;
+  c.fillStyle = ink;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  const yAt = (metres: number) => (top - metres) * scale;
+  const cx = W / 2;
+  // The symbol.
+  const role = terminal.role;
+  const sy = yAt(0.985);
+  const ring = 0.03 * scale;
+  c.lineWidth = 0.006 * scale;
   c.beginPath();
-  c.arc(cx, cy, ring, 0, Math.PI * 2);
+  c.arc(cx, sy, ring, 0, Math.PI * 2);
   c.stroke();
-  const arrow = (x0: number, y0: number, x1: number, y1: number) => {
+  const dot = () => {
     c.beginPath();
-    c.moveTo(x0, y0);
-    c.lineTo(x1, y1);
+    c.arc(cx, sy, 0.007 * scale, 0, Math.PI * 2);
+    c.fill();
+  };
+  const arrow = (x0: number, x1: number) => {
+    c.beginPath();
+    c.moveTo(x0, sy);
+    c.lineTo(x1, sy);
     c.stroke();
-    const a = Math.atan2(y1 - y0, x1 - x0);
+    const head = 0.017 * scale;
+    const d = Math.sign(x1 - x0);
     c.beginPath();
-    c.moveTo(x1, y1);
-    c.lineTo(x1 - 26 * Math.cos(a - 0.45), y1 - 26 * Math.sin(a - 0.45));
-    c.lineTo(x1 - 26 * Math.cos(a + 0.45), y1 - 26 * Math.sin(a + 0.45));
+    c.moveTo(x1, sy);
+    c.lineTo(x1 - d * head, sy - head * 0.5);
+    c.lineTo(x1 - d * head, sy + head * 0.5);
     c.closePath();
     c.fill();
   };
-  if (role === 'source') {
-    // From the middle, out through the ring.
-    c.beginPath();
-    c.arc(cx, cy, 10, 0, Math.PI * 2);
-    c.fill();
-    arrow(cx, cy, cx + 96, cy);
-  } else {
-    // From outside, in through the ring, to its middle.
-    arrow(cx - 100, cy, cx - 12, cy);
-    c.beginPath();
-    c.arc(cx, cy, 10, 0, Math.PI * 2);
-    c.fill();
-  }
-  c.font = 'bold 44px Helvetica, Arial, sans-serif';
-  c.textAlign = 'center';
-  c.textBaseline = 'middle';
-  c.fillText(role === 'source' ? 'SOURCE' : 'SINK', cx, 208);
-  texture.needsUpdate = true;
-  const mesh = new Mesh(
-    new PlaneGeometry(size, size),
-    new MeshStandardMaterial({ map: texture, roughness: 0.7 }),
+  dot();
+  if (role === 'source') arrow(cx, cx + 0.065 * scale);
+  else arrow(cx - 0.07 * scale, cx - 0.009 * scale);
+  const font = (metres: number, weight = 'bold') =>
+    `${weight} ${Math.round(metres * scale)}px Helvetica, Arial, sans-serif`;
+  c.font = font(0.019);
+  c.fillText(role === 'source' ? 'SOURCE' : 'SINK', cx, yAt(0.935));
+  // Its name.
+  const { label } = SUBSTANCES[terminal.spec.substance];
+  c.font = font(0.024);
+  c.fillText(`EXPERIMENTAL ${role.toUpperCase()}`, cx, yAt(0.875));
+  c.fillText(label, cx, yAt(0.845));
+  // Its rating.
+  c.font = font(0.021, 'normal');
+  ratingLines(terminal).forEach((line, k) =>
+    c.fillText(line, cx, yAt(0.795 - k * 0.03)),
   );
-  mesh.name = role === 'source' ? 'Source symbol' : 'Sink symbol';
-  return mesh;
+  texture.needsUpdate = true;
+  const skin = new Mesh(
+    new CylinderGeometry(
+      radius + 0.0015,
+      radius + 0.0015,
+      height,
+      32,
+      1,
+      true,
+      -arc / 2,
+      arc,
+    ),
+    new MeshStandardMaterial({
+      map: texture,
+      transparent: true,
+      roughness: 0.6,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+    }),
+  );
+  skin.position.y = bottom + height / 2;
+  skin.name = `Lettering: experimental ${role}, ${label}`;
+  return skin;
 }
 
 /**
  * An experimental source or sink, always drawn the same way so that it
  * reads as a placeholder (`game/plant/experimental-source.ts`): a cylinder
  * in its substance's basic identification colour (BS 1710; power banded
- * in its IEC 60309 voltage colour), with its code bands round it, a plate
- * naming it, and the source or sink symbol on top of its front. Each port
+ * in its IEC 60309 voltage colour), with its code bands round it, and
+ * its symbol, name and rating lettered straight onto its front. Each port
  * is drawn where the model puts it: a steel stud for each typed output or
  * input, ending at its port, and a cable gland on top for its control
  * port, whose value an LED readout on the front shows (-oo- if infinite).
@@ -95,7 +142,6 @@ export function createExperimentalSourceView(
   const role = terminal.role;
   group.name = `Experimental ${role}: ${label}`;
   const body = t.paint(colour, 0.55);
-  const plate = t.paint('#1d2326', 0.6);
   const grey = t.paint('#3a3f42', 0.6);
   const steel = t.paint('#c9cfcf', 0.4, 0.5);
   const { radius: r, height: h, stud: length, gland } = SOURCE_SHAPE;
@@ -116,37 +162,8 @@ export function createExperimentalSourceView(
       32,
     ),
   );
-  // Its name plate, front (+z).
-  t.box(group, plate, 0.34, 0.07, 0.006, 0, 0.83, r + 0.003);
-  const name = createMicroLabel(
-    kit,
-    `EXPERIMENTAL ${role.toUpperCase()}\n${label}`,
-    { height: 0.022, ink: '#f2f2ec', maxWidth: 0.32 },
-  );
-  name.position.set(0, 0.83, r + 0.008);
-  group.add(name);
-  // Its rating plate: substance, maximum flow, resistance, potential.
-  t.box(
-    group,
-    t.paint('#d9dcd6', 0.5, 0.3),
-    0.36,
-    0.14,
-    0.006,
-    0,
-    0.69,
-    r + 0.003,
-  );
-  const rating = createMicroLabel(kit, ratingLines(terminal).join('\n'), {
-    height: 0.016,
-    ink: '#1d2326',
-    maxWidth: 0.34,
-  });
-  rating.position.set(0, 0.69, r + 0.008);
-  group.add(rating);
-  // The source or sink symbol, above it.
-  const symbol = terminalSymbol(kit, role, 0.15);
-  symbol.position.set(0, 0.97, r + 0.004);
-  group.add(symbol);
+  // Its lettering, painted on its front.
+  group.add(paintedLettering(kit, terminal, r, inkFor(colour)));
   for (const p of terminal.ports) {
     const id = `${terminal.spec.id}.${p.name}`;
     const [ox, oy, oz] = p.out;
