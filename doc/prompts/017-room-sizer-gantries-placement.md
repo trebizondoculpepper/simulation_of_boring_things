@@ -109,13 +109,39 @@ Prompt 016 as written, with these additions:
 - power and control go to the room's bus (`control-bus.ts`), not one conduit each from the supply;
 - the flue rises through the roof.
 
+#### The plumber adds the valves (the owner, 2026-10-23)
+
+Sizing, reserving and placing are done without the valves, which sit in the pipework and take no floor space. The plumber then adds them:
+
+1. **The base graph** holds the machines and links as designed. A designed valve (Dev19's remote valves) stays a node, marked as belonging in a line, so placement skips it.
+2. **Expansion.** The plumber applies the valve rules, inserting new nodes into the port graph and wiring them in, each affected link split in two:
+   - an isolating valve each side of every pump, filter, heat exchanger and strainer;
+   - a non-return valve on each pump's discharge;
+   - drain points at low points and vents at high points.
+3. **Routing**, then each valve, added or designed, set at a reachable point on its route: near what it serves, on a straight with room for its fittings, between about 0.5 and 1.8 m above the floor or reachable from the gantry, its actuator never under the pipe and with room to lift it off, and a support within 0.3 m.
+4. **The simulation runs on the expanded graph**: isolators can be shut and add a little loss.
+
+Three conditions:
+
+- **The expanded graph is derived, never edited:** built fresh from the base graph each time, so running it twice adds no duplicate valves.
+- **Valve identities come from the network, not from position** (for example `dev19.pool-pump.suction.iso`), with serials looked up in the register by that identity, so a relayout keeps each valve's identity and saved state.
+- **Failures are reported:** a valve with no reachable straight is a problem, not a valve put somewhere silly.
+
+**How valves are worked: an option of the plumber** (the owner, 2026-10-23):
+
+- `prefer-manual`: hand valves wherever a person can reach them. A valve that cannot be reached from a floor or gantry is motorised (or chain-operated, if a chain wheel suits).
+- `automatic-where-hard-to-reach`: hand valves within reach; motorised wherever reaching it needs a ladder or a gantry.
+- `all-automatic`: every isolating and control valve motorised.
+
+Whatever the option, some valves are fixed by their purpose: a gas safety shut-off is always automatic (a solenoid), and a non-return valve works itself. The option is set per room or per attraction, so the plant's automation varies as the owner wants (Olympic partly automatic, Lounge mostly manual). Every motorised valve gets a stub to its room's nearest power and control bus.
+
 ## The order of work
 
 1. `Region` and `reserveRegions` (walkways and doors; the gantry and stair), tested. Draw the regions in Dev19 as translucent boxes, for the owner to check.
 2. `sizeRoom`, tested against Dev19's contents: about 10 × 10 m, not 20 × 20 m.
 3. `placeMachines`, tested: no overlaps, every hard rule holds, and Dev19's weighted link length well below today's.
 4. Dev19 runs sizer → regions → placement, with `gantry: 'always'` as a toggle to compare. A before-and-after plan from above, with the regions, goes to the owner.
-5. The plumber routes Dev19 (prompt 016 step 3), clear of the regions: no clashes, no runs above a stair or a walkway, supports planned.
+5. The plumber in Dev19: first take the remote valves out of placement and add the rule valves to a derived graph (tested: idempotent, stable identities, the actuation option); then route (prompt 016 step 3) clear of the regions, with no clashes, no runs above a stair or a walkway, and supports planned; then set the valves on their routes.
 6. Only then, and only if the owner asks, apply the helpers to other development rooms or report on the real plant rooms. Real rooms' sizes stay as the facility plan has them until the owner decides.
 
 ## Who is doing what
