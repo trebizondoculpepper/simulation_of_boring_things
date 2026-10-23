@@ -11,4 +11,5 @@ The owner, 2026-10-23: the room looks finished, but its parts follow different m
 - [ ] **3. The mimic wall** (prompt 034). Four Penfold tiles (treatment, filter battery, circulation, electrical), each tried on dev0's boards first; built twice, local under the east gantry and remote in the new control room (which is to be built); the Olympic's heat exchanger branch on the existing heating board.
 - [ ] **4. Fittings implied but not drawn:** the pumps' non-return valves; each machine's local power isolator; the busbar's fused tap-offs.
 - [ ] **5. Safety:** the chlorine and ozone gas detectors (prompt 022); the warning signs on the tank hall doors (from the background agent's research).
+- [ ] **7. Later, not now: the wet hall's tanks as built** (prompt 036): the break tank stays GRP; the backwash holding tank and the Lounge pool's balance tank in cast concrete.
 - [ ] **6. Housekeeping:** the diary entry for 2026-10-23; the room-name overlay after a hand-over through a door; the stray `retired0` git tag (remove if the owner wishes).
