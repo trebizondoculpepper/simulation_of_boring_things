@@ -163,6 +163,8 @@ const ITEM: Record<string, { key: string }> = {
 };
 const itemOf = (p: PlanItem): Item => ({
   key: p.key.startsWith('filter') ? 'sand-filter:3' : ITEM[p.key].key,
+  // The filters' nozzles radial, each pipe into its vessel square to its shell (the owner, 2026-10-23).
+  ...(p.key.startsWith('filter') ? { nozzles: 'radial' as const } : {}),
   label: p.label,
   w: p.w,
   d: p.d,
@@ -380,16 +382,29 @@ export function plumbOlympic(
   }
   // Each discharge up to the manifold, which runs north to the battery.
   const filters = items.filter((i) => i.key.startsWith('filter'));
-  const fp = filters.map((f) => ({
-    inlet: port(f.key, 'inlet'),
-    outlet: port(f.key, 'outlet'),
-    drain: port(f.key, 'drain'),
-  }));
   const front = footprintOf(filters[0]).maxZ;
   const inletZ = front + HEADER.inlet.z;
   const outletZ = front + HEADER.outlet.z;
   // Within the filters' footprints, just in front of the vessels: clear of the strip where one stands.
   const riseZ = round(front - RISE);
+  // Where each nozzle's pipe meets the face pipework's plane: straight out
+  // of a square nozzle; along a radial one's radius, its pipe pointing at
+  // the vessel's axis until it turns onto the room's square lines.
+  const foot = (p: RoomPort): Vec3 => {
+    const t = p.outward[2] > 1e-6 ? (riseZ - p.at[2]) / p.outward[2] : 0;
+    return r3([p.at[0] + p.outward[0] * t, p.at[1], riseZ]);
+  };
+  const fp = filters.map((f) => {
+    const inlet = port(f.key, 'inlet');
+    const outlet = port(f.key, 'outlet');
+    const drain = port(f.key, 'drain');
+    return {
+      inlet,
+      outlet,
+      drain,
+      feet: { inlet: foot(inlet), outlet: foot(outlet), drain: foot(drain) },
+    };
+  });
   const drainZ = riseZ;
   const inletY = fp[0].inlet.at[1];
   const outletY = HEADER.outlet.y;
@@ -414,7 +429,7 @@ export function plumbOlympic(
   ]);
 
   // ---- The battery block ----------------------------------------------
-  const xs = (k: 'inlet' | 'outlet' | 'drain') => fp.map((f) => f[k].at[0]);
+  const xs = (k: 'inlet' | 'outlet' | 'drain') => fp.map((f) => f.feet[k][0]);
   const inletX0 = Math.min(mx, ...xs('inlet'));
   // As far east as the last filter's backwash-in branch, with five valves.
   const inletX1 = Math.max(...xs('inlet'), ...(five ? xs('outlet') : []));
@@ -429,8 +444,8 @@ export function plumbOlympic(
   // Every drop into the trench: the drains, and with five valves the backwash-out and rinse drops.
   const dropXs = fp.flatMap((f) =>
     five
-      ? [f.inlet.at[0] - BACKWASH_OUT_OFF, f.outlet.at[0], f.drain.at[0]]
-      : [f.drain.at[0]],
+      ? [f.feet.inlet[0] - BACKWASH_OUT_OFF, f.feet.outlet[0], f.feet.drain[0]]
+      : [f.feet.drain[0]],
   );
   const farthest = Math.max(...dropXs.map((x) => Math.abs(x - dropX)));
   const trenchLow = TRENCH_Y - farthest * 0.01;
@@ -441,7 +456,7 @@ export function plumbOlympic(
       `filter-${i + 1}.inlet`,
       'water',
       f.inlet.od,
-      [f.inlet.at, [f.inlet.at[0], inletY, inletZ]],
+      [f.inlet.at, f.feet.inlet, [f.feet.inlet[0], inletY, inletZ]],
     );
     // Up from its nozzle, just in front of the vessel, to the header overhead.
     rule(
@@ -451,9 +466,9 @@ export function plumbOlympic(
       f.outlet.od,
       [
         f.outlet.at,
-        [f.outlet.at[0], f.outlet.at[1], riseZ],
-        [f.outlet.at[0], outletY, riseZ],
-        [f.outlet.at[0], outletY, outletZ],
+        f.feet.outlet,
+        [f.feet.outlet[0], outletY, riseZ],
+        [f.feet.outlet[0], outletY, outletZ],
       ],
     );
     if (five) {
@@ -465,24 +480,20 @@ export function plumbOlympic(
         'water',
         f.outlet.od,
         [
-          [f.outlet.at[0], inletY, inletZ],
-          [f.outlet.at[0], inletY, riseZ],
+          [f.feet.outlet[0], inletY, inletZ],
+          [f.feet.outlet[0], inletY, riseZ],
         ],
       );
       // V4, backwash out: from the top distributor's branch, just in front
       // of the vessel, a little west, clear of the sight glass, and down
       // into the trench.
-      const bx = f.inlet.at[0] - BACKWASH_OUT_OFF;
+      const bx = f.feet.inlet[0] - BACKWASH_OUT_OFF;
       rule(
         `Filter ${i + 1} backwash out`,
         `filter-${i + 1}.backwashOut`,
         'drain',
         f.inlet.od,
-        [
-          [f.inlet.at[0], inletY, riseZ],
-          [bx, inletY, riseZ],
-          [bx, trenchAt(bx), riseZ],
-        ],
+        [f.feet.inlet, [bx, inletY, riseZ], [bx, trenchAt(bx), riseZ]],
       );
       // V5, rinse: straight down from the underdrain riser's foot into the
       // trench, below the service hatch.
@@ -491,10 +502,7 @@ export function plumbOlympic(
         `filter-${i + 1}.rinse`,
         'drain',
         f.outlet.od,
-        [
-          [f.outlet.at[0], f.outlet.at[1], riseZ],
-          [f.outlet.at[0], trenchAt(f.outlet.at[0]), riseZ],
-        ],
+        [f.feet.outlet, [f.feet.outlet[0], trenchAt(f.feet.outlet[0]), riseZ]],
       );
     }
     // Down from its nozzle into the trench: its backwash with three
@@ -506,8 +514,8 @@ export function plumbOlympic(
       f.drain.od,
       [
         f.drain.at,
-        [f.drain.at[0], f.drain.at[1], riseZ],
-        [f.drain.at[0], trenchAt(f.drain.at[0]), riseZ],
+        f.feet.drain,
+        [f.feet.drain[0], trenchAt(f.feet.drain[0]), riseZ],
       ],
     );
   });

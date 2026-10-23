@@ -30,7 +30,10 @@ export function createMagFlowmeter(
   // Its converter on a neck.
   t.cyl(group, grey, 0.025, 0.08, 0, r * 1.12 + 0.04, 0, 'y', 12);
   const headY = r * 1.12 + 0.16;
-  t.box(group, grey, 0.22, 0.14, 0.1, 0, headY, 0);
+  // Its long side under its display: along the pipe, or, with the display
+  // on its end, across it.
+  if (onEnd) t.box(group, grey, 0.1, 0.14, 0.22, 0, headY, 0);
+  else t.box(group, grey, 0.22, 0.14, 0.1, 0, headY, 0);
   const lcd = createCharacterLcd(kit, {
     columns: 16,
     rows: 2,
@@ -48,7 +51,11 @@ export function createMagFlowmeter(
     ink: '#2d3438',
     maxWidth: 0.15,
   });
-  mark.position.set(0, headY - 0.055, 0.052);
+  if (onEnd) {
+    // Under the display on the end, across the head.
+    mark.position.set(-0.035, headY + 0.071, 0);
+    mark.rotation.set(-Math.PI / 2, -Math.PI / 2, 0, 'YXZ');
+  } else mark.position.set(0, headY - 0.055, 0.052);
   group.add(mark);
   let shown = '';
   return {

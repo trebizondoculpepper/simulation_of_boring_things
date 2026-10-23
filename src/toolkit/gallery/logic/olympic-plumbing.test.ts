@@ -9,6 +9,7 @@ import {
 } from './olympic-plumbing';
 import { footprintOf, olympicPlan, olympicRoomPlan } from './olympic-plan';
 import {
+  FILTER_CENTRE_Z,
   SIGHT_GLASS,
   sandFilterGeometry,
 } from '../../components/plant/logic/sand-filter';
@@ -245,32 +246,37 @@ describe('the plumber’s options', () => {
 
 describe('the filters’ windows', () => {
   const plumbed = plumbOlympic();
-  // Each filter's sight glass and service hatch, on its face, in the room.
+  // Each filter's sight glass and service hatch, on its shell, in the room,
+  // and the way each faces (normal to the shell): a window is looked into
+  // along its normal.
   const g = sandFilterGeometry(3);
   const windows = olympicPlan()
     .filter((i) => i.key.startsWith('filter'))
     .flatMap((f) => {
-      const front = footprintOf(f).maxZ;
+      // The vessel's axis in the room (the model stands it 0.1 m forward).
+      const cz = footprintOf(f).maxZ - f.d / 2 + FILTER_CENTRE_Z + 0.1;
+      const on = (x: number, y: number, radius: number, what: string) => {
+        const z = Math.sqrt(g.r * g.r - x * x);
+        return {
+          what: `${f.key} ${what}`,
+          at: [f.x + x, y, cz + z],
+          normal: [x / g.r, 0, z / g.r],
+          radius,
+        };
+      };
       return [
-        {
-          what: `${f.key} sight glass`,
-          x: f.x - g.r * SIGHT_GLASS.across,
-          y: g.cy + SIGHT_GLASS.above,
-          // The glass itself, inside its bezel (`pumps-plant.ts`): what one looks through.
-          radius: SIGHT_GLASS.radius - 0.02,
-          front,
-        },
-        {
-          what: `${f.key} service hatch`,
-          x: f.x,
-          y: g.hatch.y,
-          radius: g.hatch.radius,
-          front,
-        },
+        // The glass itself, inside its bezel (`pumps-plant.ts`): what one looks through.
+        on(
+          -g.r * SIGHT_GLASS.across,
+          g.cy + SIGHT_GLASS.above,
+          SIGHT_GLASS.radius - 0.02,
+          'sight glass',
+        ),
+        on(0, g.hatch.y, g.hatch.radius, 'service hatch'),
       ];
     });
 
-  it('runs no pipe in front of any filter’s sight glass or service hatch (the owner, 2026-10-23)', () => {
+  it('runs no pipe in front of any filter’s sight glass or service hatch, seen square on (the owner, 2026-10-23)', () => {
     const hidden: string[] = [];
     for (const r of plumbed.runs)
       for (let k = 1; k < r.points.length; k++) {
@@ -279,10 +285,15 @@ describe('the filters’ windows', () => {
         for (let t = 0; t <= 1; t += 0.02) {
           const p = [0, 1, 2].map((i) => a[i] + (b[i] - a[i]) * t);
           for (const w of windows) {
-            // In front of the vessel, between its face and the walkway.
-            if (p[2] < w.front - 1.2 || p[2] > w.front + 1.0) continue;
-            const clear = w.radius + r.od / 2;
-            if (Math.abs(p[0] - w.x) < clear && Math.abs(p[1] - w.y) < clear)
+            const d = p.map((v, i) => v - w.at[i]);
+            const ahead =
+              d[0] * w.normal[0] + d[1] * w.normal[1] + d[2] * w.normal[2];
+            // Between the window and someone standing a couple of metres off it.
+            if (ahead <= 0 || ahead > 2) continue;
+            const side = Math.hypot(
+              ...d.map((v, i) => v - ahead * w.normal[i]),
+            );
+            if (side < w.radius + r.od / 2)
               hidden.push(`${r.name} over ${w.what}`);
           }
         }

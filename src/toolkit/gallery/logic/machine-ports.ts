@@ -1,4 +1,8 @@
-import { sandFilterGeometry } from '../../components/plant/logic/sand-filter';
+import {
+  FILTER_CENTRE_Z,
+  NOZZLE_REACH,
+  sandFilterGeometry,
+} from '../../components/plant/logic/sand-filter';
 import type { Nozzle } from '../../components/plant/logic/sand-filter';
 import type { Item, Placed } from './room-equipment';
 import { stackOf, stackPorts } from './air-plant';
@@ -75,15 +79,24 @@ export function machinePorts(item: Item): MachinePort[] {
     // From the filter's one geometry (`sandFilterGeometry`), its flanges,
     // the vessel stood 0.1 m forward of the model's own origin.
     const g = sandFilterGeometry(Number(arg));
-    const at = (n: Nozzle): [number, number, number] => [
-      n.x,
-      n.y,
-      n.flange + 0.1,
-    ];
+    // Radial: each nozzle normal to the shell where it leaves it, its
+    // flange as far out along that radius as a square one's stands.
+    const radial = item.nozzles === 'radial';
+    const out = (n: Nozzle): [number, number, number] => {
+      if (!radial) return [0, 0, 1];
+      const z = Math.sqrt(g.r * g.r - n.x * n.x);
+      return [n.x / g.r, 0, z / g.r];
+    };
+    const at = (n: Nozzle): [number, number, number] => {
+      if (!radial) return [n.x, n.y, n.flange + 0.1];
+      const [ux, , uz] = out(n);
+      const reach = g.r + NOZZLE_REACH;
+      return [ux * reach, n.y, FILTER_CENTRE_Z + uz * reach + 0.1];
+    };
     return [
-      port('inlet', at(g.inlet), [0, 0, 1], g.inlet.od, 'pool-water'),
-      port('outlet', at(g.outlet), [0, 0, 1], g.outlet.od, 'pool-water'),
-      port('drain', at(g.drain), [0, 0, 1], g.drain.od, 'drain'),
+      port('inlet', at(g.inlet), out(g.inlet), g.inlet.od, 'pool-water'),
+      port('outlet', at(g.outlet), out(g.outlet), g.outlet.od, 'pool-water'),
+      port('drain', at(g.drain), out(g.drain), g.drain.od, 'drain'),
     ];
   }
   if (

@@ -52,6 +52,12 @@ export interface Item {
   walkable?: boolean;
   /** A wall panel that may hang over a machine on the floor, clear of its top. */
   over?: boolean;
+  /**
+   * A vessel's nozzles: standing square out of its front (the default), or
+   * radial, each normal to the shell where it leaves it, pointing at the
+   * vessel's axis (the owner, 2026-10-23).
+   */
+  nozzles?: 'square' | 'radial';
 }
 
 export interface Placed {
