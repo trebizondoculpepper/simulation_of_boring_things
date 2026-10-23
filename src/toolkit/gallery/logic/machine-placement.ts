@@ -59,6 +59,11 @@ export interface PlaceItem {
   ports?: Readonly<Record<string, { at: Vec3; out: Vec3 }>>;
   /** Set into a line (a valve): left out of the room's layout, for the plumber. */
   inline?: boolean;
+  /**
+   * Machines of the same kind (the owner, 2026-10-23): those sharing a
+   * group stand together, as a battery, side by side in one band.
+   */
+  group?: string;
 }
 
 export interface PlaceLink {
@@ -544,13 +549,44 @@ export function placeMachines(
     const BREACH = 400;
     /** What a freestanding machine against a wall costs, as metres of pipe. */
     const AGAINST_WALL = 4;
+    /** What splitting a battery costs: across bands, and with another machine between two of it. */
+    const SPLIT_BAND = 30;
+    const BETWEEN = 8;
+    const groups = new Map<string, number[]>();
+    items.forEach((item, i) => {
+      if (item.group)
+        groups.set(item.group, [...(groups.get(item.group) ?? []), i]);
+    });
+    const batteries = [...groups.values()].filter((g) => g.length > 1);
+    /** How broken up the batteries are. */
+    const scattering = (s: State) => {
+      let cost = 0;
+      for (const members of batteries) {
+        const bandsUsed = new Set(members.map((i) => s.band[i]));
+        cost += (bandsUsed.size - 1) * SPLIT_BAND;
+        for (const k of bandsUsed) {
+          const inBand = [...Array(n).keys()]
+            .filter((i) => s.band[i] === k)
+            .sort((a, b) => s.order[a] - s.order[b]);
+          const at = inBand
+            .map((i, rank) => (members.includes(i) ? rank : -1))
+            .filter((rank) => rank >= 0);
+          // The others standing between the first of it and the last.
+          if (at.length > 1)
+            cost += (at.at(-1)! - at[0] + 1 - at.length) * BETWEEN;
+        }
+      }
+      return cost;
+    };
     const cost = (s: State) => {
       const laid = lay(s);
       let preference = 0;
       for (let i = 0; i < n; i++)
         if (items[i].site === 'free' && bands[laid[i].k].wall !== undefined)
           preference += AGAINST_WALL;
-      return linkLength(laid) + BREACH * breaches(laid) + preference;
+      return (
+        linkLength(laid) + BREACH * breaches(laid) + preference + scattering(s)
+      );
     };
 
     const rand = random(seed * 104729 + (pattern === 'ring' ? 1 : 2));

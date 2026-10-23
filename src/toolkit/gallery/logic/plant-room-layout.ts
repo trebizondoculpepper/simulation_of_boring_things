@@ -249,8 +249,9 @@ export function layoutSquarePlantRoom(
  */
 export interface SizedPlantRoomLayout extends PlantRoomLayout {
   regions: Region[];
-  /** The bands the machines stand in. */
+  /** The bands the machines stand in, and the band each exhibit stands in (none for one in a line). */
   bands: Band[];
+  bandOf: (string | null)[];
   gantry: Gantry | null;
   room: RegionRoom;
   /** How the room was sized and laid out, and what could not be done. */
@@ -335,6 +336,9 @@ export function layoutSizedPlantRoom(
       ),
       regions: [...reserved.regions, ...placed.walkways],
       bands: placed.bands,
+      bandOf: all.map(
+        (item) => placed.placed.find((q) => q.key === item.key)?.band ?? null,
+      ),
       gantry: reserved.gantry,
       room,
       reasons: [...size.reasons, `machines placed from ${placed.pattern}`],

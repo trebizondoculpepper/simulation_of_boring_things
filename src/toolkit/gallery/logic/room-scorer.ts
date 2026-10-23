@@ -45,8 +45,12 @@ export interface ScoredRoom {
   unreachableAccess: number;
   /** The runs of pipe and conduit, as drawn. */
   runs: readonly DrawnRun[];
+  /** What each run costs a metre, installed, £ (`pipe-costs.ts`). */
+  runPrices: readonly number[];
   /** Each line's two ends, for its shortest square length. */
   ends: readonly (readonly [Vec3, Vec3])[];
+  /** What each line's pipe costs a metre, £. */
+  endPrices: readonly number[];
   regions: readonly Region[];
   /** The fittings the rules want, those installed, and of those how many can be reached. */
   fittings: { wanted: number; installed: number; reachable: number };
@@ -129,22 +133,25 @@ export function scoreRoom(room: ScoredRoom): Score {
     why: `${clashes} clashes over ${links} lines`,
   });
 
-  // Route economy (provisional): run length against each line's shortest
-  // square length.
-  const length = room.runs.reduce((sum, r) => sum + runLength(r.points), 0);
-  const shortest = room.ends.reduce(
-    (sum, [a, b]) =>
+  // What the pipework costs (the owner, 2026-10-23: the cheaper the
+  // better, not merely the shorter): each run at its price a metre,
+  // against the same pipes run the shortest square way, end to end.
+  const cost = room.runs.reduce(
+    (sum, r, i) => sum + runLength(r.points) * (room.runPrices[i] ?? 0),
+    0,
+  );
+  const cheapest = room.ends.reduce(
+    (sum, [a, b], i) =>
       sum +
-      Math.abs(a[0] - b[0]) +
-      Math.abs(a[1] - b[1]) +
-      Math.abs(a[2] - b[2]),
+      (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2])) *
+        (room.endPrices[i] ?? 0),
     0,
   );
   dimensions.push({
-    name: 'route economy',
-    score: shortest ? 1 / (1 + Math.max(0, length / shortest - 1)) : 1,
-    weight: 10,
-    why: `${length.toFixed(0)} m of run against ${shortest.toFixed(0)} m end to end (provisional: old lanes)`,
+    name: 'pipework cost',
+    score: cost > 0 ? clamp(cheapest / cost) : 1,
+    weight: 12,
+    why: `£${Math.round(cost).toLocaleString('en-GB')} of pipe and conduit, against £${Math.round(cheapest).toLocaleString('en-GB')} for the same run straight (estimates; old lanes)`,
   });
 
   // The room's area against what its contents need.

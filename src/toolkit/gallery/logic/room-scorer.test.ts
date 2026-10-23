@@ -10,6 +10,8 @@ const room = (over: Partial<ScoredRoom> = {}): ScoredRoom => ({
   minimumArea: 100,
   machines: [{ minX: -1, maxX: 1, minZ: -1, maxZ: 1 }],
   unreachableAccess: 0,
+  runPrices: [24],
+  endPrices: [24],
   runs: [
     {
       name: 'a',

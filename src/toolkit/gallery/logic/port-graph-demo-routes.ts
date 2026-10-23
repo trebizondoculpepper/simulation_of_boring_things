@@ -14,6 +14,7 @@ import type { PlaceItem, PlaceLink } from './machine-placement';
 import { choosePipe } from '../../components/core/logic/plumber';
 import type { PipeRequest } from '../../components/core/logic/plumber';
 import { PIPE_KINDS } from '../../components/core/views/pipe-kinds';
+import { pricePerMetre } from '../../components/core/logic/pipe-costs';
 import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
 import { runEntersRegion } from './room-regions';
 import type { Region } from './room-regions';
@@ -401,6 +402,8 @@ export function demoPlaceItems(): Partial<PlaceItem>[] {
     ...(SITES[kind] ? { site: SITES[kind] } : {}),
     // The remote valves sit in their lines: the plumber places them.
     ...(isValve(kind) ? { inline: true } : {}),
+    // Machines of a kind stand together as a battery.
+    group: kind,
   }));
 }
 
@@ -419,14 +422,15 @@ export function demoPlaceLinks(): PlaceLink[] {
     const a = at.get(line.from.id);
     const b = at.get(line.to.id);
     if (a === undefined || b === undefined) continue;
+    // Pulled together by what their pipe costs a metre (prompt 020), in
+    // units of £25 a metre.
     const { kind, od } = demoPipeSpec(line.edges[0], line.medium);
-    const lagging = PIPE_KINDS[kind].insulation?.thickness ?? 0;
     links.push({
       a: String(a),
       aPort: line.from.port,
       b: String(b),
       bPort: line.to.port,
-      weight: (od + 2 * lagging) / 0.025,
+      weight: pricePerMetre(kind, od) / 25,
     });
   }
   return links;
