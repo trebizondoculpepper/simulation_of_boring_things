@@ -448,6 +448,32 @@ export function drawBrandMark(
       ctx.stroke();
       break;
     }
+    case 'shade': {
+      // A pendant shade, and the cone of light it throws.
+      ctx.fillStyle = second;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.22, -r * 0.2);
+      ctx.lineTo(r * 0.22, -r * 0.2);
+      ctx.lineTo(r * 0.85, r * 0.95);
+      ctx.lineTo(-r * 0.85, r * 0.95);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = r * 0.07;
+      ctx.beginPath();
+      ctx.moveTo(0, -r);
+      ctx.lineTo(0, -r * 0.55);
+      ctx.stroke();
+      ctx.fillStyle = main;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.2, -r * 0.55);
+      ctx.lineTo(r * 0.2, -r * 0.55);
+      ctx.lineTo(r * 0.5, -r * 0.18);
+      ctx.lineTo(-r * 0.5, -r * 0.18);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
     case 'tile': {
       ctx.fillStyle = main;
       ctx.beginPath();

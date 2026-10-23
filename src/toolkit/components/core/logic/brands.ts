@@ -70,7 +70,9 @@ export type BrandMark =
   /** An ozone molecule: three atoms bent at its angle, a spark between. */
   | 'trioxygen'
   /** A door standing ajar in its frame, its hinge side heavy. */
-  | 'doorset';
+  | 'doorset'
+  /** A pendant shade throwing a cone of light. */
+  | 'shade';
 
 /** Every brand's id: a part names its maker by one of these. */
 export type BrandId =
@@ -101,7 +103,8 @@ export type BrandId =
   | 'poolguard'
   | 'penfold'
   | 'trioxa'
-  | 'ironside';
+  | 'ironside'
+  | 'lumenhaus';
 
 export interface Brand {
   id: BrandId;
@@ -480,6 +483,19 @@ export const BRANDS: readonly Brand[] = [
     mark: 'doorset',
     colours: ['#5d6b5e', '#e3e1d6', '#1b1e1c'],
     type: 'slab',
+  },
+  {
+    id: 'lumenhaus',
+    name: 'Lumenhaus',
+    tagline: 'Light as architecture',
+    founded: 1979,
+    country: 'Germany',
+    makes:
+      'Architectural lighting: halo panels, cove and slot lights, grazers, luminous ceilings and fibre-optic starlight',
+    promise: 'Rooms remembered for the way they were lit',
+    mark: 'shade',
+    colours: ['#d9a441', '#f6ecd2', '#24201a'],
+    type: 'sans',
   },
 ];
 

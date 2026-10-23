@@ -44,6 +44,7 @@ export type GalleryRoomId =
   | 'dev27'
   | 'dev28'
   | 'dev29'
+  | 'dev30'
   | 'retired0'
   | 'dev_corridor';
 /** One development room per pool plant room, each showing its equipment. */
@@ -194,6 +195,7 @@ export const ROOMS: readonly RoomId[] = [
   'dev27',
   'dev28',
   'dev29',
+  'dev30',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   // The single playable pool room.
@@ -335,6 +337,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev27: 'DEV27 · HEAT EXCHANGE',
   dev28: 'DEV28 · BALANCE TANK HALL',
   dev29: 'DEV29 · SOLENOID VALVES',
+  dev30: 'DEV30 · LIGHTING STYLES',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   dev_corridor: 'DEV CORRIDOR',
   dev_courtyard: 'COURTYARD',
@@ -425,6 +428,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev27: '#b08f8f',
   dev28: '#7d8a8c',
   dev29: '#8c7d6a',
+  dev30: '#d9a441',
   retired0: '#6d7a6f',
   dev_corridor: '#2d9ca0',
   dev_courtyard: '#7fa36a',
