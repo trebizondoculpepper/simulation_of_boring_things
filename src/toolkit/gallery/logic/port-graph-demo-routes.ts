@@ -793,9 +793,25 @@ export function demoPlumbing(
       laneY[line.medium] + (index % 6) * 0.09,
     );
     const z = -layout.halfZ + 0.38 + Math.floor(index / 6) * 0.18;
-    // Out of each port along a reachable straight first, where wanted.
-    const a = reachEnd(startPort, ext.start);
-    const b = reachEnd(endPort, ext.end);
+    // Out of each port along a reachable straight first, where wanted,
+    // but never out into a walkway: shortened until the straight and the
+    // rise at its end keep out of every reserved region.
+    const clearEnd = (end: PortEnd, want: number) => {
+      for (let e = want; e > 0.05; e *= 0.7) {
+        const p = reachEnd(end, e);
+        if (!p) return null;
+        const top: Vec3 = [p[0], laneY[line.medium], p[2]];
+        const regions = regionsOf(at);
+        if (
+          !runEntersRegion(end.at, p, od / 2, regions) &&
+          !runEntersRegion(p, top, od / 2, regions)
+        )
+          return p;
+      }
+      return null;
+    };
+    const a = clearEnd(startPort, ext.start);
+    const b = clearEnd(endPort, ext.end);
     const from = a ?? start;
     const to = b ?? finish;
     const points = withPortLeads(

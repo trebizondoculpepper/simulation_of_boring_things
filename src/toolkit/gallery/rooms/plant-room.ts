@@ -25,6 +25,7 @@ import type {
 } from '../logic/plant-room-layout';
 import { regionFloorAt, regionSolids } from '../logic/room-regions';
 import { createRoomRegions } from '../views/room-regions';
+import { DEV19C_SEED } from '../logic/dev19-scoring';
 import {
   demoPlaceItems,
   demoPlaceLinks,
@@ -75,7 +76,8 @@ export type ExhibitRoomId =
   | 'dev17'
   | 'dev18'
   | 'dev19'
-  | 'dev19b';
+  | 'dev19b'
+  | 'dev19c';
 
 const EXHIBITS: Record<
   ExhibitRoomId,
@@ -108,6 +110,7 @@ const EXHIBITS: Record<
   dev18: () => import('./plant/security-office'),
   dev19: () => import('./plant/port-graph-demo'),
   dev19b: () => import('./plant/port-graph-demo-b'),
+  dev19c: () => import('./plant/port-graph-demo-c'),
 };
 
 /**
@@ -186,10 +189,12 @@ export function startEquipmentRoom(
     // sized for its machines, two storeys with a gantry, placed in bands.
     // Dev19b is the same room plumbed by Codex's rules, to compare.
     sized =
-      id === 'dev19' || id === 'dev19b'
+      id === 'dev19' || id === 'dev19b' || id === 'dev19c'
         ? layoutSizedPlantRoom(sizes, {
             items: demoPlaceItems(),
             links: demoPlaceLinks(),
+            // Dev19c: the best seed of a scored search (`dev19-scoring.ts`).
+            seed: id === 'dev19c' ? DEV19C_SEED : 1,
           })
         : null;
     // The plumber sets the valves into their lines.

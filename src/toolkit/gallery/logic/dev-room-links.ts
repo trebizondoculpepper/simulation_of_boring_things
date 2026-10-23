@@ -32,6 +32,7 @@ export type GalleryRoomId =
   | 'dev18'
   | 'dev19'
   | 'dev19b'
+  | 'dev19c'
   | 'dev_corridor';
 /** One development room per pool plant room, each showing its equipment. */
 export type EquipmentRoomId =
@@ -157,8 +158,10 @@ export const ROOMS: readonly RoomId[] = [
   'dev_courtyard',
   // Reached through dev16, not from the corridor: its security office.
   'dev18',
-  // By its URL only: Dev19 plumbed by Codex's rules, to compare.
+  // By its URL only: Dev19 plumbed by Codex's rules, and the best of a
+  // scored search, to compare.
   'dev19b',
+  'dev19c',
   // The single playable pool room.
   'PR_A',
   'CR_A_UP',
@@ -283,6 +286,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev18: 'DEV18 · SECURITY OFFICE',
   dev19: 'DEV19 · PORT GRAPH TRIAL',
   dev19b: "DEV19B · CODEX'S PLUMBING",
+  dev19c: 'DEV19C · SCORED AND SEARCHED',
   dev_corridor: 'DEV CORRIDOR',
   dev_courtyard: 'COURTYARD',
   dev_pumps: 'DEV · PUMPS AND FILTRATION',
@@ -359,6 +363,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev18: '#8f8a6a',
   dev19: '#73a79b',
   dev19b: '#7b9fb3',
+  dev19c: '#8aa37b',
   dev_corridor: '#2d9ca0',
   dev_courtyard: '#7fa36a',
   dev_pumps: '#2f6fb0',
