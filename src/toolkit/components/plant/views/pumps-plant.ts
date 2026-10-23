@@ -609,17 +609,30 @@ export function createSandFilter(
     'z',
     28,
   );
-  t.cyl(
-    group,
-    t.paint('#aab2b4', 0.4, 0.5),
-    0.2,
-    0.02,
-    0,
-    cy - shell / 2 + 0.35,
-    face + 0.025,
-    'z',
-    28,
-  );
+  // Its cover: a galvanised blank flange on a ring of studs and nuts,
+  // with a lifting handle across it, as a filter's manway has.
+  const hatchY = cy - shell / 2 + 0.35;
+  const cover = t.paint('#aab2b4', 0.4, 0.5);
+  t.cyl(group, cover, 0.2, 0.02, 0, hatchY, face + 0.025, 'z', 28);
+  const nut = t.paint('#5b6164', 0.45, 0.6);
+  for (let k = 0; k < 12; k++) {
+    const a = (k / 12) * Math.PI * 2;
+    t.cyl(
+      group,
+      nut,
+      0.014,
+      0.018,
+      Math.cos(a) * 0.175,
+      hatchY + Math.sin(a) * 0.175,
+      face + 0.044,
+      'z',
+      6,
+    );
+  }
+  // The handle: two feet and a bar across, standing off the cover.
+  for (const x of [-0.08, 0.08])
+    t.cyl(group, steel, 0.008, 0.05, x, hatchY, face + 0.06, 'z', 8);
+  t.cyl(group, steel, 0.009, 0.18, 0, hatchY, face + 0.085, 'x', 8);
   // Seat the sight glass outside the curved shell at its offset position.
   // A fixed fraction of the front radius buried most of the disc in the vessel.
   const sightX = -r * 0.45;

@@ -37,7 +37,8 @@ export function createMagFlowmeter(
   const lcd = createCharacterLcd(kit, {
     columns: 16,
     rows: 2,
-    cell: 0.0072,
+    // About 100 by 30 mm, as a converter's display is: well inside its head.
+    cell: 0.0036,
     backlight: true,
   });
   if (onEnd) {

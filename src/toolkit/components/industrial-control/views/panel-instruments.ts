@@ -23,6 +23,10 @@ import {
 import { createBrandBadge } from '../../core/views/brand-badge';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createCanvasTexture } from '../../core/views/screens';
+import {
+  labelOpacity,
+  projectedLabelHeight,
+} from '../../core/views/label-visibility';
 import { dot } from '../logic/font-5x7';
 
 /**
@@ -444,7 +448,14 @@ export function createCharacterLcd(
     0.002,
   );
   const face = printed(kit, art.texture, backlight);
-  add(group, new PlaneGeometry(width, height), face, 0, 0, 0.0042);
+  const faceMesh = add(
+    group,
+    new PlaneGeometry(width, height),
+    face,
+    0,
+    0,
+    0.0042,
+  );
   const glass = backlight
     ? {
         lit: '#b9d34a',
@@ -458,8 +469,30 @@ export function createCharacterLcd(
         ink: '#1f2914',
         ghost: 'rgba(40,52,24,0.10)',
       };
+  // Its characters are drawn only while they are big enough on screen to
+  // read, by the printed labels' rule (`labelOpacity`): further off it
+  // shows its glass alone, and redraws nothing as its reading changes.
+  const charHeight = 14 * (cell / cw) * 1.6;
+  let legible = false;
+  let wanted: { lines: string[]; on: boolean } = { lines: [], on: false };
+  faceMesh.userData.live = true;
+  faceMesh.onBeforeRender = (renderer, _scene, camera) => {
+    const now =
+      labelOpacity(
+        projectedLabelHeight(faceMesh, camera, renderer, charHeight),
+      ) > 0;
+    if (now === legible) return;
+    legible = now;
+    draw();
+  };
   let last = '';
   const show = (lines: string[], on = true) => {
+    wanted = { lines, on };
+    draw();
+  };
+  const draw = () => {
+    const { on } = wanted;
+    const lines = legible ? wanted.lines : [];
     const key = `${on}${lines.join('|')}`;
     if (key === last) return;
     last = key;
