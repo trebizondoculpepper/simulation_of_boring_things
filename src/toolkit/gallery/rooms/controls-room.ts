@@ -60,9 +60,11 @@ import {
   createEmptyMachinePlinths,
   ALL_GALLERY_LAYOUT,
   EMPTY_GALLERY_LAYOUT,
+  PLANT_GALLERY_LAYOUT,
   MACHINE_GALLERY_LAYOUT,
   MACHINE_PLINTH_WIDTH,
 } from './machine-gallery';
+import { createPlantPlinths } from './plant-gallery';
 
 /**
  * Dev0, Controls and Displays: the kinds of controls, displays and working
@@ -335,18 +337,20 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     minZ: (postZ - 0.25) * m,
     maxZ: (postZ + 0.25) * m,
   });
-  [...createMachineGallery(kit), ...createEmptyMachinePlinths(kit)].forEach(
-    (plinth, i) => {
-      const { x, z } = ALL_GALLERY_LAYOUT[i];
-      const reach = MACHINE_PLINTH_WIDTH / 2 + 0.15;
-      place(plinth, x, 0, z, 0, {
-        minX: (x - reach) * m,
-        maxX: (x + reach) * m,
-        minZ: (z - reach) * m,
-        maxZ: (z + reach) * m,
-      });
-    },
-  );
+  [
+    ...createMachineGallery(kit),
+    ...createPlantPlinths(kit),
+    ...createEmptyMachinePlinths(kit),
+  ].forEach((plinth, i) => {
+    const { x, z } = ALL_GALLERY_LAYOUT[i];
+    const reach = MACHINE_PLINTH_WIDTH / 2 + 0.15;
+    place(plinth, x, 0, z, 0, {
+      minX: (x - reach) * m,
+      maxX: (x + reach) * m,
+      minZ: (z - reach) * m,
+      maxZ: (z + reach) * m,
+    });
+  });
 
   // What was worked, and what it did.
   const log = document.createElement('ol');
@@ -497,7 +501,7 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     useWhileHolding: (_object, x, y) => use(x, y),
   });
   const notes = document.createElement('div');
-  notes.textContent = `DEV0 · Controls and Displays: controls and displays on the north wall, switch-fuse and distribution board on the south wall, machine components on ${MACHINE_GALLERY_LAYOUT.length} plinths, plus ${EMPTY_GALLERY_LAYOUT.length} temporarily empty exhibits · Portals: the training room west, dev1 east`;
+  notes.textContent = `DEV0 · Controls and Displays: controls and displays on the north wall, switch-fuse and distribution board on the south wall, machine components on ${MACHINE_GALLERY_LAYOUT.length} plinths and plant fittings on ${PLANT_GALLERY_LAYOUT.length}, plus ${EMPTY_GALLERY_LAYOUT.length} temporarily empty exhibits · Portals: the training room west, dev1 east`;
   Object.assign(notes.style, {
     position: 'absolute',
     top: '12px',

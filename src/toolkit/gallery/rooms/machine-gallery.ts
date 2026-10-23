@@ -21,6 +21,7 @@ import {
 } from '../../components/core/parts/parts';
 import type { Part } from '../../components/core/parts/parts';
 import type { TestFitting } from './test-boards';
+import { PLANT_EXHIBITS } from './plant-gallery';
 
 export const MACHINE_PLINTH_WIDTH = 0.9;
 /** Six plinths per row, with full walking aisles between rows. */
@@ -209,19 +210,24 @@ export function createMachineGallery(kit: PanelKit): TestFitting[] {
   });
 }
 
+/** The gallery's places after the machine parts', six to a row. */
+const placeAt = (index: number) => ({
+  x: ((index % 6) - 2.5) * 2,
+  z: -2.8 + Math.floor(index / 6) * 3,
+});
+/** The plant fittings' plinths (`plant-gallery.ts`), next after the machine parts. */
+export const PLANT_GALLERY_LAYOUT = PLANT_EXHIBITS.map((_, i) =>
+  placeAt(MACHINE_COMPONENTS.length + i),
+);
+const FILLED = MACHINE_COMPONENTS.length + PLANT_EXHIBITS.length;
 /** Complete the last row, leaving museum-style service placeholders. */
 export const EMPTY_GALLERY_LAYOUT = Array.from(
-  {
-    length:
-      Math.ceil(MACHINE_COMPONENTS.length / 6) * 6 - MACHINE_COMPONENTS.length,
-  },
-  (_, offset) => {
-    const index = MACHINE_COMPONENTS.length + offset;
-    return { x: ((index % 6) - 2.5) * 2, z: -2.8 + Math.floor(index / 6) * 3 };
-  },
+  { length: Math.ceil(FILLED / 6) * 6 - FILLED },
+  (_, offset) => placeAt(FILLED + offset),
 );
 export const ALL_GALLERY_LAYOUT = [
   ...MACHINE_GALLERY_LAYOUT,
+  ...PLANT_GALLERY_LAYOUT,
   ...EMPTY_GALLERY_LAYOUT,
 ];
 
