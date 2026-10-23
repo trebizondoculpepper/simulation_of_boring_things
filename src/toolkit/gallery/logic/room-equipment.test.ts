@@ -190,7 +190,7 @@ describe.each(EQUIPPED_ROOMS)('%s', (room) => {
   });
 });
 
-import { PLANT_ROOM, plantRoomPlan } from './plant-rooms';
+import { NORTH_BATTERY, PLANT_ROOM, plantRoomPlan } from './plant-rooms';
 import { roomEquipment } from './room-equipment';
 
 describe('the balance tanks', () => {
@@ -217,9 +217,11 @@ describe('the Olympic plant room, cleared for its redo', () => {
     expect(plan.door.z).toBe(-plan.h);
     expect(plan.equipment.z).toBe(plan.h);
     expect(plan.tankDoor?.x).toBe(-plan.h);
-    // At the north end of the west wall, clear of the landing above.
+    // In the north half of the west wall, south of the filter battery's strip along the north.
     expect(plan.tankDoor!.z).toBeLessThan(0);
-    expect(plan.tankDoor!.z - 0.96).toBeGreaterThan(plan.landing.maxZ);
+    expect(plan.tankDoor!.z - 1.3).toBeGreaterThanOrEqual(
+      plan.landing.maxZ + NORTH_BATTERY - 1e-9,
+    );
     // Kept clear inside it, as the equipment doors are.
     const box = roomEquipment('plant_pool_02')!.box;
     expect(

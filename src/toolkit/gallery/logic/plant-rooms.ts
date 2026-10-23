@@ -26,6 +26,12 @@ export const EQUIPMENT_OPENING = 1.8 + 2 * 0.06;
  * as a plant room door often has, a bund against spills.
  */
 export const PLANT_SILL = 0.25;
+/**
+ * The depth along the north wall, south of the landing, kept for a battery
+ * of large filters in a line (3 m vessels, 3.8 m with their face pipework),
+ * metres: the large room's balance tank doors open south of it.
+ */
+export const NORTH_BATTERY = 3.9;
 
 export const PLANT_ROOM_SIZES: Record<PlantRoomSize, number> = {
   tiny: 5,
@@ -103,10 +109,12 @@ export function plantRoomPlan(
     // The pool side's door north, the main plant's south.
     door: { x: h - P.doorIn, z: -h },
     equipment: { x: 0, z: h, ...P.equipment },
-    // Just south of the landing above, clear of what is kept out under it.
+    // In the north half of the west wall, just south of a battery of
+    // large filters along the north wall (the owner, 2026-10-23), the
+    // space kept clear inside the doors (1.3 m each way) clear of it.
     tankDoor:
       tankHall && size === 'large'
-        ? { x: -h, z: landing.maxZ + 0.3 + EQUIPMENT_OPENING / 2 }
+        ? { x: -h, z: landing.maxZ + NORTH_BATTERY + 1.3 }
         : null,
   };
 }
