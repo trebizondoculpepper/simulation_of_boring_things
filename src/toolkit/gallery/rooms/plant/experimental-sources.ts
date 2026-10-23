@@ -1,14 +1,8 @@
 import { Group } from 'three';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
-import {
-  createPartSet,
-  pushButton,
-} from '../../../components/core/parts/parts';
+import { createExperimentalSourceView } from '../../../components/plant/views/experimental-source';
 import {
   SOURCE_SHAPE,
-  createExperimentalSourceView,
-} from '../../../components/plant/views/experimental-source';
-import {
   SUBSTANCES,
   createExperimentalSource,
 } from '../../../../game/plant/experimental-source';
@@ -18,7 +12,7 @@ import type { ExperimentalSourceSpec } from '../../../../game/plant/experimental
 export const PURPOSE =
   'Experimental sources: placeholders for any substance, with typed outputs and a readout of what is left';
 
-/** The sources shown: some endless, some that run down when drawn from. */
+/** The sources shown: some endless, some finite. */
 const SOURCES: ExperimentalSourceSpec[] = [
   { id: 'exp.chlorine', substance: 'chlorine', outputs: 1, quantity: 25 },
   {
@@ -42,35 +36,11 @@ export const EXHIBITS: readonly PlantExhibit[] = SOURCES.map((spec) => ({
     mount: 'floor' as const,
   },
   build(kit): LiveExhibit {
+    // No switch: a valve downstream starts and stops its supply.
     const source = createExperimentalSource(spec);
     const view = createExperimentalSourceView(kit, source);
     const object = new Group();
     object.add(view.group);
-    const parts = createPartSet();
-    // A finite source can be drawn from here, a tenth of its start at a press.
-    if (!source.endless) {
-      const draw = parts.add(
-        pushButton(kit, {
-          colour: 'black',
-          legend: 'DRAW',
-          name: `Draw from ${spec.id}`,
-          action: () => source.draw(source.spec.quantity / 10),
-        }),
-      );
-      draw.object.position.set(
-        0.18,
-        SOURCE_SHAPE.height * 0.4,
-        SOURCE_SHAPE.radius + 0.02,
-      );
-      object.add(draw.object);
-    }
-    return {
-      object,
-      parts,
-      update: (delta) => {
-        parts.update(delta);
-        view.update();
-      },
-    };
+    return { object, update: () => view.update() };
   },
 }));

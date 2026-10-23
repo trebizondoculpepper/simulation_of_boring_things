@@ -5,24 +5,21 @@ import {
   createSevenSegment,
 } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
-import { SUBSTANCES } from '../../../../game/plant/experimental-source';
+import {
+  SOURCE_SHAPE,
+  SUBSTANCES,
+} from '../../../../game/plant/experimental-source';
 import type { ExperimentalSource } from '../../../../game/plant/experimental-source';
-
-/** An experimental source's cylinder: radius, height, and where its outputs stand, metres. */
-export const SOURCE_SHAPE = {
-  radius: 0.25,
-  height: 1.1,
-  outputs: 0.85,
-} as const;
 
 /**
  * An experimental source, always drawn the same way so that it reads as a
  * placeholder (`game/plant/experimental-source.ts`): a cylinder in its
  * substance's colour with a white band reading EXPERIMENTAL and what it
- * holds, a stud for each typed output round its side, and its `remaining`
- * control port: a small box with an LED readout of what is left (∞ for an
- * endless supply). `update` refreshes the readout. Its own frame: standing
- * on the floor, its outputs toward −z and round.
+ * holds. Each port is drawn where the model puts it: a steel stud for each
+ * typed output, ending at its port, and a cable gland on top for its
+ * `remaining` control port, whose value an LED readout on the front shows
+ * (-oo- for an endless supply). It has no switch: a valve downstream
+ * starts and stops its supply. `update` refreshes the readout.
  */
 export function createExperimentalSourceView(
   kit: PanelKit,
@@ -36,7 +33,7 @@ export function createExperimentalSourceView(
   const white = t.paint('#f2f2ec', 0.6);
   const grey = t.paint('#3a3f42', 0.6);
   const steel = t.paint('#c9cfcf', 0.4, 0.5);
-  const { radius: r, height: h } = SOURCE_SHAPE;
+  const { radius: r, height: h, stud: length, gland } = SOURCE_SHAPE;
   t.cyl(group, body, r, h, 0, h / 2, 0, 'y', 32);
   t.cyl(group, body, r * 0.98, 0.02, 0, h + 0.01, 0, 'y', 32);
   // Its band, front (+z).
@@ -48,41 +45,54 @@ export function createExperimentalSourceView(
   });
   band.position.set(0, h * 0.62, r + 0.004);
   group.add(band);
-  // Its outputs, round the back half of the cylinder.
-  const n = source.spec.outputs;
-  source.ports
-    .filter((p) => p.name.startsWith('out-'))
-    .forEach((p, k) => {
-      const a = Math.PI + (n === 1 ? 0 : (k / (n - 1) - 0.5) * Math.PI * 0.8);
-      const x = Math.sin(a) * (r + 0.04);
-      const z = Math.cos(a) * (r + 0.04);
-      const stud = t.cyl(
+  for (const p of source.ports) {
+    const id = `${source.spec.id}.${p.name}`;
+    const [ox, oy, oz] = p.out;
+    if (p.data.medium === 'control') {
+      // A cable gland, its top at the port.
+      const g = t.cyl(
         group,
-        steel,
-        0.03,
-        0.08,
-        x,
-        SOURCE_SHAPE.outputs,
-        z,
+        grey,
+        0.018,
+        gland,
+        p.at[0],
+        p.at[1] - gland / 2,
+        p.at[2],
         'y',
         12,
       );
-      // Pointing straight out from the cylinder: tipped onto z, then turned to `a`.
-      stud.rotation.order = 'YXZ';
-      stud.rotation.set(Math.PI / 2, a, 0);
-      stud.name = `${source.spec.id}.${p.name}`;
-      stud.userData.graphPortId = `${source.spec.id}.${p.name}`;
-      const tag = createMicroLabel(kit, p.name.toUpperCase(), {
-        height: 0.012,
-        ink: '#ecf1ed',
-        plate: '#283237',
-        maxWidth: 0.1,
-        faceCamera: true,
-      });
-      tag.position.set(x, SOURCE_SHAPE.outputs + 0.07, z);
-      group.add(tag);
+      g.name = id;
+      g.userData.graphPortId = id;
+      continue;
+    }
+    // A stud from the cylinder's skin out to the port, along its facing.
+    const stud = t.cyl(
+      group,
+      steel,
+      0.03,
+      length,
+      p.at[0] - (ox * length) / 2,
+      p.at[1] - (oy * length) / 2,
+      p.at[2] - (oz * length) / 2,
+      'y',
+      12,
+    );
+    // Laid along its facing: tipped onto z, then turned round y.
+    stud.rotation.order = 'YXZ';
+    stud.rotation.set(Math.PI / 2, Math.atan2(ox, oz), 0);
+    stud.name = id;
+    stud.userData.graphPortId = id;
+    const tag = createMicroLabel(kit, p.name.toUpperCase(), {
+      height: 0.012,
+      ink: '#ecf1ed',
+      plate: '#283237',
+      maxWidth: 0.1,
+      faceCamera: true,
     });
-  // Its control port, `remaining`: a box on the front with its readout.
+    tag.position.set(p.at[0], p.at[1] + 0.07, p.at[2]);
+    group.add(tag);
+  }
+  // The `remaining` port's value, shown on the front.
   t.box(group, grey, 0.16, 0.08, 0.03, 0, h * 0.4, r + 0.012);
   const readout = createSevenSegment(kit, 5, { digitHeight: 0.022 });
   readout.group.position.set(0, h * 0.4, r + 0.03);

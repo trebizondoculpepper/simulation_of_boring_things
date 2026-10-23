@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { canSupply, createExperimentalSource } from './experimental-source';
+import {
+  SOURCE_SHAPE,
+  canSupply,
+  createExperimentalSource,
+} from './experimental-source';
 
 describe('experimental sources', () => {
   it('has typed outputs, as many as asked, and a control port reporting what is left', () => {
@@ -18,8 +22,43 @@ describe('experimental sources', () => {
       valueType: 'number',
       unit: 'kg',
       access: 'read',
+      infinite: false,
     });
     expect(s.reading()).toBe('25.0');
+  });
+
+  it('places every port precisely: outputs proud of the cylinder facing out, the control port on top facing up', () => {
+    const s = createExperimentalSource({
+      id: 't',
+      substance: 'power-400v',
+      outputs: 3,
+    });
+    const reach = SOURCE_SHAPE.radius + SOURCE_SHAPE.stud;
+    const outputs = s.ports.filter((p) => p.data.medium !== 'control');
+    expect(outputs).toHaveLength(3);
+    for (const p of outputs) {
+      expect(Math.hypot(p.at[0], p.at[2])).toBeCloseTo(reach, 3);
+      expect(p.at[1]).toBe(SOURCE_SHAPE.outputs);
+      // Facing straight out from the axis, and toward the back (−z).
+      expect(p.out[0] * p.at[2] - p.out[2] * p.at[0]).toBeCloseTo(0, 3);
+      expect(p.out[2]).toBeLessThan(0);
+    }
+    expect(new Set(outputs.map((p) => p.at.join())).size).toBe(3);
+    const control = s.ports.find((p) => p.name === 'remaining')!;
+    expect(control.at).toEqual([
+      0,
+      SOURCE_SHAPE.height + SOURCE_SHAPE.gland,
+      0,
+    ]);
+    expect(control.out).toEqual([0, 1, 0]);
+    expect(control.data.control?.infinite).toBe(true);
+  });
+
+  it('has one control port, which only reports: no switch', () => {
+    const s = createExperimentalSource({ id: 't', substance: 'ozone' });
+    const controls = s.ports.filter((p) => p.data.medium === 'control');
+    expect(controls.map((p) => p.name)).toEqual(['remaining']);
+    expect(controls[0].data.control?.access).toBe('read');
   });
 
   it('runs down as it is drawn from, and delivers nothing once empty', () => {

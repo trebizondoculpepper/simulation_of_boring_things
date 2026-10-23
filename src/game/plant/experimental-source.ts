@@ -7,10 +7,14 @@
  *
  * - **Typed outputs:** each output port carries one substance, in that
  *   substance's medium, so it can only be joined to what takes it.
- * - **A control port, `remaining`:** reports the quantity left, which may
- *   be infinite.
- * - **Drawing from it:** reduces what is left, and never below nothing; a
- *   source that is empty delivers nothing.
+ * - **A control port, `remaining`:** reports the quantity left, a number
+ *   in the substance's unit, which may be infinite. It is its only control
+ *   port, and it only reports: a source has no switch, since starting and
+ *   stopping a supply is a valve's job.
+ * - **Drawing from it:** what is downstream takes reduces what is left,
+ *   never below nothing; a source that is empty delivers nothing.
+ * - **Precise ports:** each port has its place and its outward direction
+ *   in the source's own frame (`SOURCE_SHAPE`), which its view draws.
  *
  * Pure.
  */
@@ -87,6 +91,26 @@ export const SUBSTANCES: Record<
   },
 };
 
+type Vec3 = [number, number, number];
+
+/**
+ * Its shape, metres, in its own frame: a cylinder standing on the floor
+ * (y = 0) round the y axis, its band and readout facing +z. Its outputs
+ * are studs round its back half at `outputs` high, each `stud` long; its
+ * control port is a cable gland on the middle of its top, `gland` high.
+ */
+export const SOURCE_SHAPE = {
+  radius: 0.25,
+  height: 1.1,
+  outputs: 0.85,
+  stud: 0.08,
+  gland: 0.04,
+} as const;
+
+/** Where output `k` of `n` faces, radians round y from +z: spread over the back. */
+export const outputAngle = (k: number, n: number) =>
+  Math.PI + (n === 1 ? 0 : (k / (n - 1) - 0.5) * Math.PI * 0.8);
+
 export interface ExperimentalSourceSpec {
   id: string;
   substance: Substance;
@@ -100,11 +124,20 @@ export interface ExperimentalSourceSpec {
 export interface SourcePort {
   name: string;
   direction: 'out';
+  /** Its connection point, and the way it faces, in the source's frame. */
+  at: Vec3;
+  out: Vec3;
   data: {
     medium: 'water' | 'gas' | 'chemical' | 'power' | 'control';
     substance?: Substance;
     required: boolean;
-    control?: { valueType: 'number'; unit: string; access: 'read' };
+    /** A control port's reading: a number in `unit`, read only, which may be infinite. */
+    control?: {
+      valueType: 'number';
+      unit: string;
+      access: 'read';
+      infinite: boolean;
+    };
   };
 }
 
@@ -112,7 +145,7 @@ export interface ExperimentalSource {
   spec: Required<ExperimentalSourceSpec>;
   /** Its ports: `out-1`, `out-2`… typed by its substance, and `remaining`. */
   ports: SourcePort[];
-  /** What is left, in its unit; Infinity if endless. */
+  /** What is left, in its unit; Infinity if endless: the `remaining` port's value. */
   remaining(): number;
   /** Whether it is endless. */
   readonly endless: boolean;
@@ -138,19 +171,35 @@ export function createExperimentalSource(
     throw new Error(`${spec.id}: a quantity cannot be negative`);
   const { medium, unit } = SUBSTANCES[full.substance];
   let left = full.quantity;
+  const round = (v: number) => Math.round(v * 1e4) / 1e4;
+  const { radius: r, height: h, outputs: y, stud, gland } = SOURCE_SHAPE;
   const ports: SourcePort[] = [
-    ...Array.from({ length: full.outputs }, (_, k) => ({
-      name: `out-${k + 1}`,
-      direction: 'out' as const,
-      data: { medium, substance: full.substance, required: false },
-    })),
+    ...Array.from({ length: full.outputs }, (_, k): SourcePort => {
+      const a = outputAngle(k, full.outputs);
+      const dir: Vec3 = [round(Math.sin(a)), 0, round(Math.cos(a))];
+      return {
+        name: `out-${k + 1}`,
+        direction: 'out',
+        // The stud's end, standing `stud` proud of the cylinder.
+        at: [round(dir[0] * (r + stud)), y, round(dir[2] * (r + stud))],
+        out: dir,
+        data: { medium, substance: full.substance, required: false },
+      };
+    }),
     {
       name: 'remaining',
       direction: 'out',
+      at: [0, h + gland, 0],
+      out: [0, 1, 0],
       data: {
         medium: 'control',
         required: false,
-        control: { valueType: 'number', unit, access: 'read' },
+        control: {
+          valueType: 'number',
+          unit,
+          access: 'read',
+          infinite: full.quantity === Infinity,
+        },
       },
     },
   ];
