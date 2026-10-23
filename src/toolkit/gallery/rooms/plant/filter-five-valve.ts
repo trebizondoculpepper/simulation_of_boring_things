@@ -268,7 +268,8 @@ const BOARD: { label: string; inputs: (t: number) => GlassInputs }[] = [
   },
   {
     label: 'RINSE',
-    inputs: () => ({ mode: 'rinse', dirt: 0, channelling: 0, murk: 0.15 }),
+    // Clear by now: only a backwash clouds the glass (the owner, 2026-10-23).
+    inputs: () => ({ mode: 'rinse', dirt: 0, channelling: 0, murk: 0 }),
   },
 ];
 

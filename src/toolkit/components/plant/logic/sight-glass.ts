@@ -19,6 +19,11 @@
  * `stepSightGlass` moves each of the picture's quantities toward what the
  * filter's state asks, each at its own rate, so one state blends into the
  * next instead of jumping. Pure.
+ *
+ * What is seen of it (the owner, 2026-10-23): the vessel has no light in
+ * it, so the glass is black but for the murk of a backwash, a pale brown
+ * (`views/sight-glass.ts`); the bed's other quantities are kept for
+ * whatever may light it.
  */
 
 export type GlassMode = 'stopped' | 'service' | 'backwash' | 'rinse';
