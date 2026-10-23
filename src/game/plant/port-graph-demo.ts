@@ -824,6 +824,7 @@ export function createPortGraphDemo(graph: DemoGraphLike = demoGraph) {
         if (
           edge.targetPort === 'in' &&
           (kind === 'non-return-valve' ||
+            kind === 'header' ||
             ((kind === 'isolating-valve' || kind === 'power-isolator') &&
               state.fittings[edge.targetId]?.open))
         )

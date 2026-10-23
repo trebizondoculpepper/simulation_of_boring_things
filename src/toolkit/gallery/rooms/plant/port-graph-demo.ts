@@ -2,7 +2,6 @@ import { Group } from 'three';
 import type { PlantExhibit, LiveExhibit } from './exhibit';
 import {
   createPortGraphDemo,
-  demoGraph,
   demoVisualBindings,
 } from '../../../../game/plant/port-graph-demo';
 import type { DemoKind } from '../../../../game/plant/port-graph-demo';
@@ -44,6 +43,8 @@ import {
 } from '../../logic/port-graph-demo-routes';
 import type { PlantRoomLayout } from '../../logic/plant-room-layout';
 import type { PlumbingRules } from '../../logic/port-graph-demo-routes';
+import { BASE_MODEL } from '../../../../game/plant/demo-variants';
+import type { DemoModel } from '../../../../game/plant/demo-variants';
 import {
   createPartSet,
   pushButton,
@@ -67,14 +68,21 @@ import {
  * "The bound room").
  */
 let demo = createPortGraphDemo();
+/** The plant the room shows: Dev19's, or a variant (`demo-variants.ts`). */
+let model: DemoModel = BASE_MODEL;
 let plumbed: {
   layout: PlantRoomLayout;
   plumbing: ReturnType<typeof demoPlumbing>;
 } | null = null;
 
 /** Plumb the laid-out room and run the simulation on what was installed. */
-export function prepareRoomWith(layout: PlantRoomLayout, rules: PlumbingRules) {
-  const plumbing = demoPlumbing(layout, rules);
+export function prepareRoomWith(
+  layout: PlantRoomLayout,
+  rules: PlumbingRules,
+  plant: DemoModel = BASE_MODEL,
+) {
+  model = plant;
+  const plumbing = demoPlumbing(layout, rules, plant);
   plumbed = { layout, plumbing };
   demo = createPortGraphDemo(plumbing.graph);
 }
@@ -330,7 +338,7 @@ function buildNode(
   expectedKind: DemoKind,
   kit: Parameters<PlantExhibit['build']>[0],
 ): LiveExhibit {
-  const node = demoGraph.nodes.find((item) => item.id === id);
+  const node = model.graph.nodes.find((item) => item.id === id);
   if (!node) throw new Error(`Visual has no graph node: ${id}`);
   if (node.data.kind !== expectedKind)
     throw new Error(`${id}: expected ${expectedKind}, found ${node.data.kind}`);
@@ -683,17 +691,20 @@ function exhibitSize(id: string, kind: DemoKind) {
     : dimensions[kind];
 }
 
-export const EXHIBITS: readonly PlantExhibit[] = demoVisualBindings.map(
-  ({ nodeId: id, kind }) => {
-    const node = demoGraph.nodes.find((item) => item.id === id)!;
+/** A plant's exhibits, one for each of its visible nodes. */
+export function exhibitsFor(plant: DemoModel): readonly PlantExhibit[] {
+  return plant.bindings.map(({ nodeId: id, kind }) => {
+    const node = plant.graph.nodes.find((item) => item.id === id)!;
     return {
       title: visual[node.data.kind].title,
       reference: `${id} · ${node.ports?.length ?? 0} graph ports · ${node.data.kind}`,
       size: { ...exhibitSize(id, kind), mount: 'floor' as const },
       build: (kit) => buildNode(id, kind, kit),
     };
-  },
-);
+  });
+}
+
+export const EXHIBITS: readonly PlantExhibit[] = exhibitsFor(BASE_MODEL);
 
 /** Every drawn service run is generated from a graph edge and visual port anchors. */
 export const buildRoomServices = (
@@ -706,13 +717,16 @@ export function buildPlumbedServices(
   kit: Parameters<PlantExhibit['build']>[0],
   layout: PlantRoomLayout,
   rules: PlumbingRules,
+  plant: DemoModel = BASE_MODEL,
 ): LiveExhibit {
   const t = tools(kit);
   const group = new Group();
   // The plumber's lines (`doc/prompts/018-plumber-valves-and-isolators.md`):
   // each split at the valves and isolators set into it.
   const plumbing =
-    plumbed?.layout === layout ? plumbed.plumbing : demoPlumbing(layout, rules);
+    plumbed?.layout === layout
+      ? plumbed.plumbing
+      : demoPlumbing(layout, rules, plant);
   // Each fitting a working part, bound to its node in the simulation.
   const fittingParts = createPartSet();
   for (const route of plumbing.runs) {
@@ -777,8 +791,8 @@ export function buildPlumbedServices(
   // Control edges share an abstract bus. The trunk only shows the connection;
   // individual signal wires do not need to snake around the physical services.
   const controlNodes = new Set<string>();
-  for (const edge of demoGraph.edges) {
-    const source = demoGraph.nodes.find((node) => node.id === edge.sourceId);
+  for (const edge of plant.graph.edges) {
+    const source = plant.graph.nodes.find((node) => node.id === edge.sourceId);
     if (
       source?.ports?.find((port) => port.name === edge.sourcePort)?.data
         .medium !== 'control'
@@ -790,7 +804,7 @@ export function buildPlumbedServices(
   const wire = t.paint('#45555d', 0.5);
   const busY = layout.height - 0.18;
   const busZ = -layout.halfZ + 0.22;
-  const drops = demoVisualBindings.flatMap(({ nodeId }, i) =>
+  const drops = plant.bindings.flatMap(({ nodeId }, i) =>
     controlNodes.has(nodeId) ? [{ nodeId, place: layout.places[i] }] : [],
   );
   const left = Math.min(...drops.map(({ place }) => place.x));

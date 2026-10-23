@@ -94,8 +94,16 @@ export interface Expansion {
   nodes: PlumbNode[];
   edges: PlumbEdge[];
   fittings: Fitting[];
-  /** Each base link's fittings, in order from its source to its target. */
+  /** Each base link's fittings, in order from its source to its target (a shared port's on the first of its links only). */
   along: Map<string, Fitting[]>;
+  /** Headers after (or before) ports several links share. */
+  headers: {
+    id: string;
+    serves: string;
+    port: string;
+    end: 'source' | 'target';
+    medium: PlumbMedium;
+  }[];
 }
 
 const FITTING_SUFFIX: Record<FittingKind, string> = {
@@ -175,22 +183,97 @@ export function expandForPlumbing(
     if (list.length) along.set(e.id, list);
   }
 
-  // The expanded graph: each link with fittings split at each of them.
-  const installed = fittings.filter((f) => !omit.has(f.id));
-  fittings.splice(0, fittings.length, ...installed);
+  // Ports several links share (a pump's discharge feeding a battery of
+  // filters): their fittings are installed once, on the common pipe, and a
+  // header follows them that the links branch from (the owner,
+  // 2026-10-23). Identities stay one per port.
+  const shared = new Map<
+    string,
+    {
+      header: string;
+      chain: Fitting[];
+      end: 'source' | 'target';
+      at: { id: string; port: string };
+    }
+  >();
+  const sharedOf = (e: PlumbEdge, end: 'source' | 'target') =>
+    shared.get(
+      end === 'source'
+        ? `${e.sourceId}.${e.sourcePort}.source`
+        : `${e.targetId}.${e.targetPort}.target`,
+    );
+  {
+    const users = new Map<string, PlumbEdge[]>();
+    for (const e of edges)
+      for (const f of along.get(e.id) ?? []) {
+        const key = `${f.id}|${f.end}`;
+        if (!users.has(key)) users.set(key, []);
+        if (!users.get(key)!.includes(e)) users.get(key)!.push(e);
+      }
+    for (const [key, list] of users) {
+      if (list.length < 2) continue;
+      const f = (along.get(list[0].id) ?? []).find(
+        (x) => `${x.id}|${x.end}` === key,
+      )!;
+      const port = f.end === 'source' ? list[0].sourcePort : list[0].targetPort;
+      const id = `${f.serves}.${port}.${f.end}`;
+      const entry = shared.get(id) ?? {
+        header: `${f.serves}.${port}.header`,
+        chain: [],
+        end: f.end,
+        at: { id: f.serves, port },
+      };
+      if (!entry.chain.some((x) => x.id === f.id)) entry.chain.push(f);
+      shared.set(id, entry);
+    }
+  }
+  // Each fitting once.
+  const unique = new Map<string, Fitting>();
+  for (const f of fittings)
+    if (!omit.has(f.id) && !unique.has(f.id)) unique.set(f.id, f);
+  fittings.splice(0, fittings.length, ...unique.values());
+  // For drawing: the shared fittings on the first of their links only.
+  const drawn = new Set<string>();
+  for (const e of edges) {
+    const list = along.get(e.id);
+    if (!list) continue;
+    const kept = list.filter((f) => {
+      const isShared = [...shared.values()].some((s) =>
+        s.chain.some((x) => x.id === f.id),
+      );
+      if (!isShared) return true;
+      if (drawn.has(f.id)) return false;
+      drawn.add(f.id);
+      return true;
+    });
+    if (kept.length) along.set(e.id, kept);
+    else along.delete(e.id);
+  }
+
+  // The expanded graph: each link split at its own fittings, starting
+  // from (or ending at) its shared port's header.
   const outNodes: PlumbNode[] = [
     ...nodes,
     ...fittings.map((f) => ({ id: f.id, kind: f.kind })),
+    ...[...shared.values()].map((s) => ({ id: s.header, kind: 'header' })),
   ];
   const outEdges: PlumbEdge[] = [];
   for (const e of edges) {
-    const list = along.get(e.id);
-    if (!list) {
+    const fromShared = sharedOf(e, 'source');
+    const toShared = sharedOf(e, 'target');
+    const own = (along.get(e.id) ?? []).filter(
+      (f) =>
+        !fromShared?.chain.some((x) => x.id === f.id) &&
+        !toShared?.chain.some((x) => x.id === f.id),
+    );
+    if (!own.length && !fromShared && !toShared) {
       outEdges.push(e);
       continue;
     }
-    let from = { id: e.sourceId, port: e.sourcePort };
-    list.forEach((f, k) => {
+    let from = fromShared
+      ? { id: fromShared.header, port: FITTING_PORTS.out as string }
+      : { id: e.sourceId, port: e.sourcePort };
+    own.forEach((f, k) => {
       outEdges.push({
         id: `${e.id}#${k}`,
         sourceId: from.id,
@@ -201,16 +284,60 @@ export function expandForPlumbing(
       });
       from = { id: f.id, port: FITTING_PORTS.out };
     });
+    const to = toShared
+      ? { id: toShared.header, port: FITTING_PORTS.in as string }
+      : { id: e.targetId, port: e.targetPort };
     outEdges.push({
-      id: `${e.id}#${list.length}`,
+      id: `${e.id}#${own.length}`,
       sourceId: from.id,
       sourcePort: from.port,
-      targetId: e.targetId,
-      targetPort: e.targetPort,
+      targetId: to.id,
+      targetPort: to.port,
       medium: e.medium,
     });
   }
-  return { nodes: outNodes, edges: outEdges, fittings, along };
+  // Each shared port's common pipe: port, its fittings, header (or the
+  // other way, into a shared target).
+  for (const s of shared.values()) {
+    const medium = s.chain[0].medium;
+    const stops =
+      s.end === 'source'
+        ? [
+            s.at,
+            ...s.chain.map((f) => ({ id: f.id, port: '' })),
+            { id: s.header, port: '' },
+          ]
+        : [
+            { id: s.header, port: '' },
+            ...s.chain.map((f) => ({ id: f.id, port: '' })),
+            s.at,
+          ];
+    for (let k = 1; k < stops.length; k++) {
+      const a = stops[k - 1];
+      const b = stops[k];
+      outEdges.push({
+        id: `${s.header}#${k - 1}`,
+        sourceId: a.id,
+        sourcePort: a.port || FITTING_PORTS.out,
+        targetId: b.id,
+        targetPort: b.port || FITTING_PORTS.in,
+        medium,
+      });
+    }
+  }
+  return {
+    nodes: outNodes,
+    edges: outEdges,
+    fittings,
+    along,
+    headers: [...shared.values()].map((s) => ({
+      id: s.header,
+      serves: s.at.id,
+      port: s.at.port,
+      end: s.end,
+      medium: s.chain[0].medium,
+    })),
+  };
 }
 
 // ---- How a valve is worked ----------------------------------------------------------

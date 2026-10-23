@@ -1,7 +1,4 @@
-import {
-  demoGraph,
-  demoVisualBindings,
-} from '../../../game/plant/port-graph-demo';
+import { demoGraph } from '../../../game/plant/port-graph-demo';
 import type { DemoKind } from '../../../game/plant/port-graph-demo';
 import { withPortLeads } from '../../components/core/logic/pipe-route';
 import type {
@@ -16,6 +13,8 @@ import type { PipeRequest } from '../../components/core/logic/plumber';
 import { PIPE_KINDS } from '../../components/core/views/pipe-kinds';
 import { pricePerMetre } from '../../components/core/logic/pipe-costs';
 import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
+import { BASE_MODEL } from '../../../game/plant/demo-variants';
+import type { DemoModel } from '../../../game/plant/demo-variants';
 import { runEntersRegion } from './room-regions';
 import type { Region } from './room-regions';
 import {
@@ -189,9 +188,12 @@ export function demoLocalPortAnchor(
   return point;
 }
 
-export function demoPortPositions(layout: PlantRoomLayout) {
+export function demoPortPositions(
+  layout: PlantRoomLayout,
+  model: DemoModel = BASE_MODEL,
+) {
   const positions = new Map<string, Vec3>();
-  demoVisualBindings.forEach(({ nodeId, kind }, i) => {
+  model.bindings.forEach(({ nodeId, kind }, i) => {
     const place = layout.places[i];
     if (!place) throw new Error(`${nodeId}: no exhibit placement`);
     for (const [port, { at }] of Object.entries(demoPorts(nodeId, kind)))
@@ -205,11 +207,12 @@ export function demoPortEnd(
   nodeId: string,
   port: string,
   at: Vec3,
+  model: DemoModel = BASE_MODEL,
 ): PortEnd {
-  const index = demoVisualBindings.findIndex(
+  const index = model.bindings.findIndex(
     (binding) => binding.nodeId === nodeId,
   );
-  const binding = demoVisualBindings[index];
+  const binding = model.bindings[index];
   const place = layout.places[index];
   const normal = binding
     ? demoPorts(nodeId, binding.kind)[port]?.out
@@ -400,8 +403,10 @@ const WITHDRAWAL: Partial<Record<DemoKind, PlaceItem['withdrawal']>> = {
  * order: its ports, the incoming supplies on the supply wall (west), and
  * the boiler's rising flue.
  */
-export function demoPlaceItems(): Partial<PlaceItem>[] {
-  return demoVisualBindings.map(({ nodeId, kind }) => ({
+export function demoPlaceItems(
+  model: DemoModel = BASE_MODEL,
+): Partial<PlaceItem>[] {
+  return model.bindings.map(({ nodeId, kind }) => ({
     ports: demoPorts(nodeId, kind),
     ...(kind === 'gas-main' || kind === 'mains' || kind === 'makeup-main'
       ? { walls: ['west' as const] }
@@ -425,11 +430,11 @@ export function demoPlaceItems(): Partial<PlaceItem>[] {
  * control go to the room's buses and the flue to the roof, so they do not
  * pull.
  */
-export function demoPlaceLinks(): PlaceLink[] {
-  const at = new Map(demoVisualBindings.map(({ nodeId }, i) => [nodeId, i]));
+export function demoPlaceLinks(model: DemoModel = BASE_MODEL): PlaceLink[] {
+  const at = new Map(model.bindings.map(({ nodeId }, i) => [nodeId, i]));
   const links: PlaceLink[] = [];
   // Machine to machine, through any valve in the line.
-  for (const line of demoLines()) {
+  for (const line of demoLines(model)) {
     if (line.medium !== 'gas' && line.medium !== 'water') continue;
     const a = at.get(line.from.id);
     const b = at.get(line.to.id);
@@ -463,12 +468,15 @@ export interface DemoLine {
   through: string[];
 }
 
-const mediumOf = (edge: (typeof demoGraph.edges)[number]) =>
-  demoGraph.nodes
+const mediumOf = (
+  edge: (typeof demoGraph.edges)[number],
+  graph: DemoModel['graph'] = demoGraph,
+) =>
+  graph.nodes
     .find((node) => node.id === edge.sourceId)
     ?.ports?.find((port) => port.name === edge.sourcePort)?.data.medium;
-const kindOf = (id: string) =>
-  demoGraph.nodes.find((node) => node.id === id)?.data.kind as DemoKind;
+const kindOf = (id: string, graph: DemoModel['graph'] = demoGraph) =>
+  graph.nodes.find((node) => node.id === id)?.data.kind as DemoKind;
 
 /**
  * Magic terminals (the owner, 2026-10-23, after prompt 008's magic flues
@@ -487,10 +495,11 @@ const regionsOf = (layout: PlantRoomLayout): readonly Region[] =>
   'regions' in layout ? (layout as { regions: Region[] }).regions : [];
 
 /** Dev19's lines, each base link once. */
-export function demoLines(): DemoLine[] {
+export function demoLines(model: DemoModel = BASE_MODEL): DemoLine[] {
+  const { graph } = model;
   const lines: DemoLine[] = [];
-  for (const edge of demoGraph.edges) {
-    const medium = mediumOf(edge);
+  for (const edge of graph.edges) {
+    const medium = mediumOf(edge, graph);
     if (
       medium !== 'gas' &&
       medium !== 'water' &&
@@ -498,7 +507,8 @@ export function demoLines(): DemoLine[] {
       medium !== 'flue'
     )
       continue;
-    if (isValve(kindOf(edge.sourceId)) && edge.sourcePort === 'out') continue;
+    if (isValve(kindOf(edge.sourceId, graph)) && edge.sourcePort === 'out')
+      continue;
     const line: DemoLine = {
       medium,
       edges: [edge.id],
@@ -507,9 +517,9 @@ export function demoLines(): DemoLine[] {
       through: [],
     };
     // On through each valve set into the line.
-    while (isValve(kindOf(line.to.id)) && line.to.port === 'in') {
+    while (isValve(kindOf(line.to.id, graph)) && line.to.port === 'in') {
       const valve = line.to.id;
-      const next = demoGraph.edges.find(
+      const next = graph.edges.find(
         (e) => e.sourceId === valve && e.sourcePort === 'out',
       );
       if (!next) break;
@@ -581,11 +591,13 @@ export const ADOPTED_RULES: PlumbingRules = {
 export function demoExpansion(
   rules: PlumbingRules = CLAUDE_RULES,
   omit: ReadonlySet<string> = new Set(),
+  model: DemoModel = BASE_MODEL,
 ) {
+  const { graph } = model;
   return expandForPlumbing(
-    demoGraph.nodes.map((n) => ({ id: n.id, kind: n.data.kind })),
-    demoGraph.edges.flatMap((e) => {
-      const medium = mediumOf(e);
+    graph.nodes.map((n) => ({ id: n.id, kind: n.data.kind })),
+    graph.edges.flatMap((e) => {
+      const medium = mediumOf(e, graph);
       return medium
         ? [
             {
@@ -699,8 +711,9 @@ function inlinePlace(at: Vec3, along: Vec3) {
 export function demoPlumbing(
   layout: PlantRoomLayout,
   rules: PlumbingRules = CLAUDE_RULES,
+  model: DemoModel = BASE_MODEL,
 ) {
-  const expansion = demoExpansion(rules);
+  const expansion = demoExpansion(rules, new Set(), model);
   // Somewhere to stand within arm's reach: clear floor, not a machine or a wall.
   const feet = layout.solids.filter((f) => f.maxX > f.minX);
   const clear = (x: number, z: number) =>
@@ -729,7 +742,7 @@ export function demoPlumbing(
         ),
       ));
   const places = [...layout.places];
-  const indexOf = new Map(demoVisualBindings.map((b, i) => [b.nodeId, i]));
+  const indexOf = new Map(model.bindings.map((b, i) => [b.nodeId, i]));
   const runs: PlumbedRun[] = [];
   const devices: PlumbedDevice[] = [];
   /** Where lines met their magic terminals. */
@@ -745,7 +758,7 @@ export function demoPlumbing(
     power: 3.25,
     flue: layout.height - 0.1,
   };
-  const lines = demoLines();
+  const lines = demoLines(model);
   const REACH: readonly [number, number] = [0.5, 1.8];
   /** How far a line runs straight out of its port first: `ext` metres, if its port faces level and is within reach. */
   const reachEnd = (end: PortEnd, ext: number): Vec3 | null =>
@@ -764,16 +777,22 @@ export function demoPlumbing(
     at: PlantRoomLayout,
     ext: { start: number; end: number } = { start: 0, end: 0 },
   ) => {
-    const positions = demoPortPositions(at);
+    const positions = demoPortPositions(at, model);
     const start = positions.get(`${line.from.id}.${line.from.port}`);
     if (!start)
       throw new Error(`${line.edges[0]}: its start has no visual port`);
-    const startPort = demoPortEnd(at, line.from.id, line.from.port, start);
+    const startPort = demoPortEnd(
+      at,
+      line.from.id,
+      line.from.port,
+      start,
+      model,
+    );
     const { od, joint } = demoPipeSpec(line.edges[0], line.medium);
     // A magic terminal (the owner, 2026-10-23): its port is where the most
     // direct route from the line's start meets the ceiling, and reaching it
     // terminates the line. The route is checked, not assumed, clear.
-    const magic = MAGIC_TERMINALS[kindOf(line.to.id)];
+    const magic = MAGIC_TERMINALS[kindOf(line.to.id, model.graph)];
     if (magic === 'ceiling') {
       const top: Vec3 = [start[0], layout.height, start[2]];
       const endPort: PortEnd = { at: top, outward: [0, -1, 0] };
@@ -804,7 +823,7 @@ export function demoPlumbing(
     const finish = positions.get(`${line.to.id}.${line.to.port}`);
     if (!finish)
       throw new Error(`${line.edges[0]}: its end has no visual port`);
-    const endPort = demoPortEnd(at, line.to.id, line.to.port, finish);
+    const endPort = demoPortEnd(at, line.to.id, line.to.port, finish, model);
     const index = count[line.medium]++;
     const y = Math.min(
       layout.height - 0.35,
@@ -882,7 +901,7 @@ export function demoPlumbing(
           w.kind,
           lineOd,
           w.kind === 'remote-valve'
-            ? demoValveGeometry(w.id, kindOf(w.id)).length
+            ? demoValveGeometry(w.id, kindOf(w.id, model.graph)).length
             : undefined,
         ),
       ]),
@@ -998,7 +1017,10 @@ export function demoPlumbing(
     (p) => p.match(/^(\S+): no straight/)?.[1] ?? [],
   ))
     leftOut.add(id);
-  const graph = plumbedDemoGraph(demoExpansion(rules, leftOut));
+  const graph = plumbedDemoGraph(
+    demoExpansion(rules, leftOut, model),
+    model.graph,
+  );
   problems.push(...plumbedGraphIssues(graph));
   return { places, runs, devices, terminals, problems, graph };
 }

@@ -300,12 +300,27 @@ export function layoutSizedPlantRoom(
       gantry: gantry !== 'never',
       grow,
     });
+    // Room for the longest freestanding item (a block of parallel units)
+    // to stand in the island: its length, a band and a walkway each side.
+    const longest = Math.max(
+      0,
+      ...place.filter((p) => p.site === 'free' || p.bothFaces).map((p) => p.w),
+    );
+    const deepest = Math.max(
+      0,
+      ...place.map((p) => (p.bothFaces ? p.d / 2 : p.d)),
+    );
+    const least =
+      Math.ceil(2 * (longest + 2 * (deepest + 0.3 + 1.2) + 0.6)) / 2;
+    const side = (v: number) => (longest > 0 ? Math.max(v, least) : v);
     const room: RegionRoom = {
-      w: size.w,
-      d: size.d,
+      w: side(size.w),
+      d: side(size.d),
       h: size.h,
       // The dev rooms' one door: west wall, 1.1 m from its south end.
-      doors: [{ side: 'west', at: size.d / 2 - 1.1, width: 1, height: 2.1 }],
+      doors: [
+        { side: 'west', at: side(size.d) / 2 - 1.1, width: 1, height: 2.1 },
+      ],
     };
     const reserved = reserveRegions(room, { gantry });
     // A seed, and another only while it breaks a rule.

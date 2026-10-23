@@ -26,6 +26,9 @@ import type {
 import { regionFloorAt, regionSolids } from '../logic/room-regions';
 import { createRoomRegions } from '../views/room-regions';
 import { DEV19C_SEED } from '../logic/dev19-scoring';
+import { layoutWithBlocks } from '../logic/block-layout';
+import { sizeRoom } from '../logic/room-sizer';
+import { BASE_MODEL, DEV19D_MODEL } from '../../../game/plant/demo-variants';
 import {
   demoPlaceItems,
   demoPlaceLinks,
@@ -77,7 +80,8 @@ export type ExhibitRoomId =
   | 'dev18'
   | 'dev19'
   | 'dev19b'
-  | 'dev19c';
+  | 'dev19c'
+  | 'dev19d';
 
 const EXHIBITS: Record<
   ExhibitRoomId,
@@ -111,6 +115,7 @@ const EXHIBITS: Record<
   dev19: () => import('./plant/port-graph-demo'),
   dev19b: () => import('./plant/port-graph-demo-b'),
   dev19c: () => import('./plant/port-graph-demo-c'),
+  dev19d: () => import('./plant/port-graph-demo-d'),
 };
 
 /**
@@ -197,6 +202,16 @@ export function startEquipmentRoom(
             seed: id === 'dev19c' ? DEV19C_SEED : 1,
           })
         : null;
+    // Dev19d: three filters, pre-assembled into blocks (`block-layout.ts`).
+    if (id === 'dev19d') {
+      const items = demoPlaceItems(DEV19D_MODEL);
+      const size = sizeRoom(sizes.filter((_, i) => !items[i]?.inline));
+      sized = layoutWithBlocks(sizes, {
+        items,
+        links: demoPlaceLinks(DEV19D_MODEL),
+        minimumArea: size.w * size.d,
+      }).layout;
+    }
     // The plumber sets the valves into their lines.
     if (sized)
       sized = {
@@ -204,6 +219,7 @@ export function startEquipmentRoom(
         places: demoPlumbing(
           sized,
           id === 'dev19b' ? CODEX_RULES : ADOPTED_RULES,
+          id === 'dev19d' ? DEV19D_MODEL : BASE_MODEL,
         ).places,
       };
     const layout = sized ?? layoutPlantRoom(sizes);

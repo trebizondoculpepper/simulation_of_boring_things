@@ -6,6 +6,10 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Dev19d (`?room=dev19d`): Dev19's plant with three sand filters in parallel (`demo-variants.ts`), made by every stage.
+  - **Blocks:** the filters are pre-assembled into candidate blocks, and a row of three in the island wins. The sizer now leaves room for the longest freestanding block to stand in the island.
+  - **Headers:** where several lines share a port, such as the pool pump's discharge feeding all three filters, the plumber installs its fittings once on the common pipe, with a header node after them that the lines branch from. Flow passes through headers.
+  - **Graph:** each fitting keeps one identity, and the plant runs on the plumbed graph. Shutting the pump's one discharge isolator stops all three filters.
 - Placement follows three rules of process plant layout, from N. S. Nandagopal's _Practical Process Plant Layout and Piping Design_ (IDC Technologies, 2009):
   - **Process order:** equipment follows the process flow diagram, the process going one way round the room.
   - **Short pump suctions:** a suction counts double, so each pump stands by the tank it draws from.

@@ -31,7 +31,10 @@ interface PlumbedNode {
   ports?: { name: string; direction: 'in' | 'out'; data: PlumbedPortData }[];
 }
 
-export function plumbedDemoGraph(expansion: Expansion) {
+export function plumbedDemoGraph(
+  expansion: Expansion,
+  base: typeof demoGraph = demoGraph,
+) {
   const fittingNodes: PlumbedNode[] = expansion.fittings.map((f) => ({
     id: f.id,
     data: {
@@ -50,7 +53,7 @@ export function plumbedDemoGraph(expansion: Expansion) {
   }));
   const graph = createGraph({
     nodes: [
-      ...demoGraph.nodes.map((n): PlumbedNode => ({
+      ...base.nodes.map((n): PlumbedNode => ({
         id: n.id,
         data: n.data,
         ports: n.ports?.map((p) => ({
@@ -60,10 +63,26 @@ export function plumbedDemoGraph(expansion: Expansion) {
         })),
       })),
       ...fittingNodes,
+      // Headers after ports several links share.
+      ...expansion.headers.map((h): PlumbedNode => ({
+        id: h.id,
+        data: {
+          kind: 'header',
+          room: 'dev19',
+          brand: 'trial',
+          visible: true,
+          serves: h.serves,
+        },
+        ports: (['in', 'out'] as const).map((name) => ({
+          name,
+          direction: name,
+          data: { medium: h.medium, required: true },
+        })),
+      })),
     ],
     edges: [
       // Links with no fittings keep their own; split ones go through them.
-      ...demoGraph.edges.filter((e) => !expansion.along.has(e.id)),
+      ...base.edges.filter((e) => !expansion.along.has(e.id)),
       ...expansion.edges
         .filter((e) => e.id.includes('#'))
         .map((e) => ({
