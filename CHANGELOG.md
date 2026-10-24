@@ -76,6 +76,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- The jacuzzi's drain gurgle in its pool hall now comes from the plant room door, a metre up, and has fallen off over the 8.2 m from the tundish behind the cabinet (about 17 dB), so it is always louder by the tundish than in the hall; with the door shut it loses 30 dB more. Before, the hall heard it from nowhere in particular at full level whenever the door stood open.
 - The jacuzzi's and foot spa's cabinet doors have louvred vents outside, near their tops and feet, matching the vents of their inside covers, which had none to meet; the PACKAGED SPA SET plate moved down clear of the top vent.
 - The live jacuzzi water surface now follows the world's fill quantity, narrowing below its seat, disappearing when empty and showing filling streams as it refills. Its private development-room fill controls remain independent.
 - Jacuzzi music now fades along both connecting corridors, including the Olympic stairs and rotunda approach, reaching the amplifier's nominal level in the last metre before the hall. One continuous programme survives room handovers without distance/cone attenuation inside the jacuzzi. The hall hears the plant drain at −30 dB with the door shut, opening smoothly to full transmission. Jacuzzi, footbath and Dev23 drain sounds share the same synthesized gurgle.

@@ -2,6 +2,8 @@ import { alongCorridor } from '../../components/architectural/logic/corridor-pat
 import { joints, roomCorridors } from './pool-loop';
 import type { LoopRoom } from './pool-loop';
 import { POOL_HALLS } from './pool-halls';
+import { shellPlan } from './shell-plan';
+import { cabinetGully } from './cabinet-pipes';
 
 const copies = new Map(
   (['pool_02', 'pool_03', 'pool_04'] as const).map((room) => [
@@ -56,3 +58,20 @@ export const jacuzziApproachGain = (room: string, x: number, z: number) =>
 /** The closed plant-room door removes 30 dB; a clearly open door removes none. */
 export const jacuzziDrainDoorGain = (angle: number) =>
   10 ** ((-30 * (1 - smooth(angle / 0.35))) / 20);
+
+/**
+ * How far the jacuzzi's drain tundish, behind its cabinet, is from the
+ * plant room door to its hall, metres: the gurgle's way out to the hall.
+ */
+export const JACUZZI_DRAIN_TO_DOOR = (() => {
+  const plan = shellPlan(POOL_HALLS.pool_03.plantDoor!.size);
+  const [x, , z] = cabinetGully('plant_pool_03')!;
+  return Math.hypot(x - plan.door.at, z + plan.hz);
+})();
+
+/**
+ * The gurgle's share left at the door, falling off inversely with
+ * distance as every placed sound does (`part-audio.ts`, 1.2 m reference):
+ * well below what is heard standing at the tundish.
+ */
+export const JACUZZI_DRAIN_AT_DOOR = Math.min(1, 1.2 / JACUZZI_DRAIN_TO_DOOR);
