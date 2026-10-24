@@ -31,6 +31,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Gameplay features
 
+- [ ] **Smooth stairs** ([055](doc/prompts/055-stair-camera-smoothing.md)): the camera's height glides up and down each step, Quake/Half-Life/Source style (a fixed 3.81 m/s chase, lagging at most 0.46 m, reset on placement, ladders and noclip), instead of snapping a riser at a time; the walker's floor stays exact.
 - [ ] **Other music zones:** independent music for the lazy pool and footbath, with the Olympic pool initially silent. The reusable source/amplifier components and four-zone model exist; only the jacuzzi has tracks and an installed cabinet so far. Assign other zones their own programmes without reusing the jacuzzi's owner-supplied tracks.
 - [ ] **Sound between rooms** ([037](doc/prompts/037-sound-between-rooms.md)): a room is heard through an open door by how far it stands open (full above about 20 % open, about −20 dB at 5 %, silent and its sounds stopped when shut), not by which room the player is in.
 
