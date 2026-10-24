@@ -848,14 +848,23 @@ export const STEP = 0.1;
 
 /**
  * The world `seconds` on, in fixed steps, as when catching up on the time
- * the game was closed or its tab hidden.
+ * the game was closed or its tab hidden. `onStep`, if given, sees the
+ * world before and after each step (the event log's watchers, which would
+ * miss a trip and its reset within one call otherwise).
  */
-export function advance(world: World, seconds: number, step = STEP): World {
+export function advance(
+  world: World,
+  seconds: number,
+  step = STEP,
+  onStep?: (before: World, after: World) => void,
+): World {
   let w = world;
   let left = seconds;
   while (left > 1e-9) {
     const d = Math.min(step, left);
-    w = stepWorld(w, d);
+    const next = stepWorld(w, d);
+    onStep?.(w, next);
+    w = next;
     left -= d;
   }
   return w;

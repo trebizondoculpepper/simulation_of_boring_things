@@ -19,6 +19,10 @@ import { torch } from '../logic/torch';
 import { createTorchLight } from './torch';
 import { settings } from '../../settings/settings-store';
 import { paused } from '../logic/paused';
+import { consoleOpen } from '../logic/console-open';
+
+/** Whether the walker is to take no input: paused, or the console down. */
+const inputHeld = () => paused.value || consoleOpen.value;
 
 /**
  * First-person walking, as in any PC shooter, with the same feel as the
@@ -248,7 +252,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
       )
     : null;
   const use = (x: number, y: number) => {
-    if (noclip.value || paused.value) return;
+    if (noclip.value || inputHeld()) return;
     const carried = handling?.heldObject();
     if (carried && options.useWhileHolding?.(carried, x, y)) return;
     if (attachedLadder) return;
@@ -822,7 +826,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     if (!pad) return idle;
     // Paused: the pad works the menu. Its buttons held now count as held,
     // so one let go after the menu closes does nothing in the game.
-    if (paused.value) {
+    if (inputHeld()) {
       pad.buttons.forEach((b, i) =>
         b.pressed ? pressed.add(i) : pressed.delete(i),
       );
@@ -1025,8 +1029,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
         : attachedLadder
           ? help.textContent
           : controlsHelp(input ?? 'mouse');
-      // Paused behind the menu: nothing held walks on.
-      if (paused.value) {
+      // Paused behind the menu, or the console down: nothing held walks on.
+      if (inputHeld()) {
         keys.clear();
         tapped.clear();
         sticks?.reset();
@@ -1037,7 +1041,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
       const held = (...codes: string[]) =>
         codes.some((code) => keys.has(code) || tapped.has(code));
       // The keys and the walk stick add; the stick's push sets the pace.
-      const still = holding || paused.value ? 0 : 1;
+      const still = holding || inputHeld() ? 0 : 1;
       // A held on-screen button, once held past a tap.
       const hudHeld =
         pressing.since && performance.now() - pressing.since >= HOLD_MS ? 1 : 0;

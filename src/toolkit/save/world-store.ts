@@ -8,7 +8,11 @@ import {
   deserialiseWorld,
   serialiseWorld,
 } from '../../game/save';
-import { paused } from '../controls/logic/paused';
+import { clockStopped, paused } from '../controls/logic/paused';
+import { appendEvents } from '../../game/events/game-event';
+import type { GameEvent } from '../../game/events/game-event';
+import { describeAction } from '../../game/events/describe-action';
+import { diffWorld } from '../../game/events/watchers';
 
 /**
  * The world, kept and saved in the browser: one per save slot, shared by
@@ -32,7 +36,16 @@ import { paused } from '../controls/logic/paused';
 
 export interface WorldStore {
   readonly world: ReadonlySignal<World>;
-  dispatch(action: WorldAction): void;
+  /** Do `action` to the world, logged as done by `by` (the player's hand unless said). */
+  dispatch(action: WorldAction, by?: 'you' | 'console'): void;
+  /**
+   * The event log (`doc/prompts/058-developer-console.md`): a line for each
+   * action and for each thing the plant did by itself, the newest last,
+   * for this page only, never saved.
+   */
+  readonly events: ReadonlySignal<readonly GameEvent[]>;
+  /** Add lines of one's own to the log (the console's commands). */
+  log(...events: GameEvent[]): void;
   /** A part's view of something in the world, tracked. */
   read<T>(pick: (world: World) => T): ReadonlySignal<T>;
   /** Save now, if this tab holds the slot: whether it was saved. */
@@ -105,10 +118,20 @@ export function createScenarioStore(start: World) {
   const notice = signal<string | null>(null);
   let timer: ReturnType<typeof setInterval> | null = null;
   let last = 0;
+  const events = signal<readonly GameEvent[]>([]);
   const store: WorldStore & { run(on: boolean): void; stop(): void } = {
     world,
-    dispatch(action) {
-      world.value = applyAction(world.value, action);
+    // Its own log, which nothing shows: never the player's.
+    dispatch(action, by) {
+      const before = world.value;
+      world.value = applyAction(before, action);
+      events.value = appendEvents(events.value, [
+        describeAction(before, action, world.value, by),
+      ]);
+    },
+    events,
+    log(...more) {
+      events.value = appendEvents(events.value, more);
     },
     read: (pick) => computed(() => pick(world.value)),
     save: () => false,
@@ -159,6 +182,7 @@ function openWorldStore(slot: string): WorldStore {
     return advance(loaded.world, catchUpSeconds(loaded.savedAt, Date.now()));
   };
   const world = signal(load());
+  const events = signal<readonly GameEvent[]>([]);
   // Whether this tab holds the slot. Without Web Locks, assume so.
   const holding = signal(!('locks' in navigator));
   let release: () => void = () => {};
@@ -192,9 +216,15 @@ function openWorldStore(slot: string): WorldStore {
     const now = Date.now();
     const elapsed = Math.min(CATCH_UP_LIMIT, Math.max(0, (now - last) / 1000));
     last = now;
-    // Paused behind the menu: the clock stands still (`paused.ts`).
-    if (paused.value) return;
-    if (elapsed > 0) world.value = advance(world.value, elapsed);
+    // Paused behind the menu, or by the console: the clock stands still (`paused.ts`).
+    if (paused.value || clockStopped.value) return;
+    if (elapsed > 0) {
+      const found: GameEvent[] = [];
+      world.value = advance(world.value, elapsed, STEP, (before, after) =>
+        found.push(...diffWorld(before, after)),
+      );
+      events.value = appendEvents(events.value, found);
+    }
     if (now - lastSave >= SAVE_EVERY) {
       lastSave = now;
       save();
@@ -213,14 +243,34 @@ function openWorldStore(slot: string): WorldStore {
   window.addEventListener('storage', (event) => {
     if (holding.value || event.key !== key(slot) || !event.newValue) return;
     const loaded = deserialiseWorld(event.newValue);
-    if (loaded.ok) world.value = loaded.world;
+    if (!loaded.ok) return;
+    world.value = loaded.world;
+    // Said in the log, since it can undo what was done here.
+    events.value = appendEvents(events.value, [
+      {
+        time: loaded.world.time,
+        kind: 'system',
+        severity: 'notice',
+        subject: 'SAVE',
+        text: 'world taken up from the game open in another tab (it holds the save; changes made here are lost)',
+      },
+    ]);
   });
   return {
     world,
-    dispatch(action) {
-      world.value = applyAction(world.value, action);
+    dispatch(action, by) {
+      const before = world.value;
+      world.value = applyAction(before, action);
+      events.value = appendEvents(events.value, [
+        describeAction(before, action, world.value, by),
+        ...diffWorld(before, world.value),
+      ]);
       // Saved at once: an action is what a player would mind losing.
       save();
+    },
+    events,
+    log(...more) {
+      events.value = appendEvents(events.value, more);
     },
     read: (pick) => computed(() => pick(world.value)),
     save,

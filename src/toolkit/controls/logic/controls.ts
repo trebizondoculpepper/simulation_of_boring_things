@@ -20,6 +20,7 @@ export type ControlAction =
   | 'crouch'
   | 'torch'
   | 'eye'
+  | 'console'
   | 'release';
 
 /** Each action's binding on each input, or null where it has none. */
@@ -77,6 +78,11 @@ export const CONTROL_SCHEME: Record<
     touch: null,
     gamepad: null,
   },
+  console: {
+    mouse: '` (left of 1): console',
+    touch: null,
+    gamepad: null,
+  },
   release: {
     mouse: 'Esc: cursor',
     touch: null,
@@ -95,6 +101,7 @@ const ORDER: readonly ControlAction[] = [
   'crouch',
   'torch',
   'eye',
+  'console',
   'release',
 ];
 
@@ -141,3 +148,16 @@ export const PAD = {
   zoomIn: 7,
   run: 10,
 } as const;
+
+/**
+ * Whether a key brings the console down or puts it away
+ * (`doc/prompts/058-developer-console.md`): the key left of 1, whatever it
+ * is labelled (` and ¬ on a UK PC, § and ± on a UK Mac), named by its
+ * place. Safari on an Apple ISO keyboard has been reported to swap that
+ * key's code with the one beside left Shift, so that one counts too when
+ * it types what the key left of 1 would.
+ */
+export function isConsoleKey(code: string, key: string) {
+  if (code === 'Backquote') return true;
+  return code === 'IntlBackslash' && ['`', '§', '±', '¬'].includes(key);
+}

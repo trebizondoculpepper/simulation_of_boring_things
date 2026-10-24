@@ -22,7 +22,9 @@ import {
   throughDoor,
 } from './toolkit/gallery/logic/door-joins';
 import { firstPersonOn } from './toolkit/controls/input/first-person';
-import { paused } from './toolkit/controls/logic/paused';
+import { clockStopped, paused } from './toolkit/controls/logic/paused';
+import { createConsole } from './toolkit/console/console-view';
+import { consoleOpen } from './toolkit/controls/logic/console-open';
 import { noclip } from './toolkit/controls/logic/noclip';
 import { renderScale } from './toolkit/settings/logic/settings';
 import { METRE } from './toolkit/components/core/logic/units';
@@ -196,8 +198,9 @@ const pauseMenu = createPauseMenu({
     saveGame();
     goTo('');
   },
-  // Not on the title screen or the room list: only in a room.
-  canOpen: () => current !== undefined,
+  // Not on the title screen or the room list: only in a room; and not
+  // while the console is down (its Esc is the console's).
+  canOpen: () => current !== undefined && !consoleOpen.value,
   devPanel: () => goTo('?dev'),
   noclip,
   setNoclip(on) {
@@ -268,14 +271,12 @@ positionStatus.setAttribute('role', 'status');
 positionOverlay.append(roomName, positionStatus);
 positionOverlay.hidden = true;
 document.body.append(positionOverlay);
-const copyCameraLocation = async () => {
+/** The link to the view now, or null where there is none. */
+const cameraLink = (): string | null => {
   const id = resolveRoomId(new URLSearchParams(location.search).get('room'));
   const surface = current ? surfaceOf(current) : null;
   const control = surface ? firstPersonOn(surface) : null;
-  if (!id || !control) {
-    positionStatus.textContent = 'Position unavailable in this view';
-    return;
-  }
+  if (!id || !control) return null;
   const { metre } = control;
   const pose = control.pose();
   const degrees = ((((pose.yaw * 180) / Math.PI) % 360) + 360) % 360;
@@ -292,9 +293,17 @@ const copyCameraLocation = async () => {
   // A rolled view's roll, degrees clockwise; a level one says nothing.
   const roll = ((control.roll * 180) / Math.PI).toFixed(1);
   if (Number(roll) !== 0) url.searchParams.set('roll', roll);
+  return url.href;
+};
+const copyCameraLocation = async () => {
+  const link = cameraLink();
+  if (!link) {
+    positionStatus.textContent = 'Position unavailable in this view';
+    return;
+  }
   positionButton.disabled = true;
   try {
-    await navigator.clipboard.writeText(url.href);
+    await navigator.clipboard.writeText(link);
     positionStatus.textContent = 'Link copied';
   } catch {
     positionStatus.textContent =
@@ -304,6 +313,55 @@ const copyCameraLocation = async () => {
   }
 };
 positionButton.addEventListener('click', copyCameraLocation);
+// The console (`doc/prompts/058-developer-console.md`): the key left of 1
+// drops it down in a room; it shows the player's world's log and works the
+// player's world and the app, never an attract world.
+createConsole({
+  host: {
+    world: () => worldStore('dev').world.value,
+    dispatch: (action) => worldStore('dev').dispatch(action, 'console'),
+    events: () => worldStore('dev').events.value,
+    log: (event) => worldStore('dev').log(event),
+    rooms: () => ROOMS.map((id) => ({ id, name: DEV_ROOM_NAMES[id] })),
+    currentRoom: () =>
+      current
+        ? (resolveRoomId(new URLSearchParams(location.search).get('room')) ??
+          null)
+        : null,
+    goto: (id) => goTo(`?${new URLSearchParams({ room: id })}`),
+    noclip(on) {
+      if (on !== undefined && on !== noclip.value) {
+        if (on) rememberPlayer();
+        noclip.value = on;
+        if (on) {
+          stopSeeing();
+          stopDryPeek();
+        }
+      }
+      return noclip.value;
+    },
+    torch(on) {
+      if (on !== undefined) torch.on = on;
+      return torch.on;
+    },
+    paused(on) {
+      if (on !== undefined) clockStopped.value = on;
+      return clockStopped.value;
+    },
+    cameraLink,
+    download(name, text) {
+      const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
+    build: () => buildLine(),
+  },
+  events: worldStore('dev').events,
+  canOpen: () => current !== undefined && !pauseMenu.isOpen,
+});
 const resetEffects = async () => {
   const { ps1Uniforms } =
     await import('./toolkit/components/core/parts/ps1-material');

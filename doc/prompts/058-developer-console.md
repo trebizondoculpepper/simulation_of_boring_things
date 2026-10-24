@@ -1,6 +1,6 @@
 # 058: Developer console
 
-Status: the owner chose B, mostly, on 2026-10-24, without recording or replay; stage 1 (below, "Stage 1: what is built first") under way. The three proposals researched before the choice follow it, from minimal to ambitious.
+Status: the owner chose B, mostly, on 2026-10-24, without recording or replay. Stage 1 (below, "Stage 1: what is built first") was built 2026-10-25: `src/game/events/` (the log, `describeAction`, the watchers), `src/toolkit/console/` (the command line, the commands, the drop-down), `isConsoleKey` and `consoleOpen` in the controls, and the host in `src/main.ts`. Its `pause` stops only the world's clock (`clockStopped` in `paused.ts`), so the player can still walk about. Later stages are still to come. The three proposals researched before the choice follow it, from minimal to ambitious.
 
 ## The owner's choice (2026-10-24)
 
