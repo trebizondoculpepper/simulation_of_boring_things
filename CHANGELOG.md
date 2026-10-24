@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Dev35's jacuzzi water lab has a TUB EFFECTS panel (the owner, 2026-10-24): its water's level from empty to full in 5 % steps, with an LED readout, and illuminated JETS, LIGHT and BUBBLES buttons, each pressed on and off, setting the tub directly past its controller. The tub's water falls inside its wall and then its seat's ring as the level drops; its jets stream only under water, and its bubbles rise only from sources under water, up to the surface.
 - Pool ladders now mount with Use at either end. Forward climbs and back descends without requiring a particular view angle; reaching the deck or pool floor returns to normal walking. PR_A and the pool hall, donut pool and arched pool ladders use the shared control scheme.
 - The nearest closed-door room's code is prefetched before opening. Scene construction waits until the door opens, and an already visited nearest room stays cached when its door closes.
 

@@ -1,4 +1,5 @@
 import { computed, signal } from '@preact/signals-core';
+import type { ReadonlySignal } from '@preact/signals-core';
 import { serviceAvailable } from '../../../../game/plant/services';
 import {
   CylinderGeometry,
@@ -358,10 +359,23 @@ export const FOOTBATH_EXHIBIT: PlantExhibit = {
  * it each frame (and starts it afresh when built), and the control plate
  * on the wall, whose switches act on it.
  */
-const createSpaState = () => ({
+/**
+ * A development room's direct control of the tub's effects (dev35's
+ * effects panel): its water's level, 0 empty to 1 full, and its jets,
+ * bubbles and light each on or off, past the spa's controller.
+ */
+export interface SpaEffects {
+  level: ReadonlySignal<number>;
+  jets: ReadonlySignal<boolean>;
+  bubbles: ReadonlySignal<boolean>;
+  light: ReadonlySignal<boolean>;
+}
+
+const createSpaState = (effects?: SpaEffects) => ({
   state: initialSpa(36.5, 37),
   running: signal(false),
   light: signal(false),
+  effects,
 });
 const spa = createSpaState();
 
@@ -423,6 +437,8 @@ function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
   const object = new Group();
   object.name = 'Jacuzzi on its plinth';
   const surface = TUB.rim - 0.015;
+  /** The tub's tiled floor, over its plinth's base. */
+  const TUB_FLOOR = 0.005;
   const uniforms = createPoolUniforms(METRE, surface, [
     { minX: -TUB.r, maxX: TUB.r, minZ: -TUB.r, maxZ: TUB.r },
   ]);
@@ -471,8 +487,8 @@ function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
     new Mesh(
       new LatheGeometry(
         [
-          [0, 0.005],
-          [inner, 0.005],
+          [0, TUB_FLOOR],
+          [inner, TUB_FLOOR],
           [inner, seatTop],
           [TUB.r, seatTop],
           [TUB.r, gutterBed],
@@ -580,16 +596,22 @@ function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
     speed: 0.8 + Math.random() * 0.6,
   }));
   const matrix = new Matrix4();
-  const showBubbles = (time: number) => {
+  const showBubbles = (time: number, top = surface) => {
     seeds.forEach((q, i) => {
-      const rise = (q.phase + (time * q.speed) / (surface - q.from)) % 1;
+      // A source out of the water gives no bubbles.
+      if (q.from >= top) {
+        matrix.makeScale(0, 0, 0);
+        bubbles.setMatrixAt(i, matrix);
+        return;
+      }
+      const rise = (q.phase + (time * q.speed) / (top - q.from)) % 1;
       const k = 0.6 + rise * 1.2;
       const wobble = Math.sin(time * 9 + i) * 0.01;
       matrix
         .makeScale(k, k, k)
         .setPosition(
           Math.cos(q.a) * (q.r + wobble),
-          q.from + rise * (surface - q.from),
+          q.from + rise * (top - q.from),
           Math.sin(q.a) * (q.r + wobble),
         );
       bubbles.setMatrixAt(i, matrix);
@@ -643,7 +665,27 @@ function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
           air: runs.air ? JACUZZI_CYCLE : 0,
         };
       }
+      // A development room's effects, set directly.
+      const fx = spaState.effects;
+      if (fx)
+        spaState.state = {
+          ...spaState.state,
+          jets: fx.jets.value ? JACUZZI_CYCLE : 0,
+          air: fx.bubbles.value ? JACUZZI_CYCLE : 0,
+          light: fx.light.value,
+        };
       const state = (spaState.state = stepSpa(spaState.state, delta));
+      // Its water's level: full at the deck, down to its floor. Over the
+      // gutter while full, inside the wall above the seat, inside the
+      // seat's ring below it; none when empty.
+      const level = fx ? Math.max(0, Math.min(1, fx.level.value)) : 1;
+      const waterY = TUB_FLOOR + level * (surface - TUB_FLOOR);
+      const wet = level > 0.004;
+      water.visible = wet;
+      water.position.y = waterY;
+      const across = level >= 0.999 ? outer : waterY > seatTop ? TUB.r : inner;
+      water.scale.set(across / outer, 1, across / outer);
+      uniforms.waterY.value = wet ? waterY : -10;
       for (const sound of sounds) {
         const on = sound.when();
         if (on !== sound.on) {
@@ -656,11 +698,12 @@ function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
       spaState.light.value =
         state.light && (spaState !== spa || jacuzziPowered.value);
       for (const j of jets) {
-        j.visible = state.jets > 0;
+        // Only under water: above it, a jet's stream is not a plume.
+        j.visible = state.jets > 0 && waterY > j.position.y + 0.06;
         if (j.visible) j.scale.z = 0.85 + 0.15 * Math.sin(time * 23 + j.id);
       }
-      bubbles.visible = state.bubbling;
-      if (bubbles.visible) showBubbles(time);
+      bubbles.visible = state.bubbling && wet;
+      if (bubbles.visible) showBubbles(time, waterY);
       const churn = (state.jets > 0 ? 1.2 : 0) + (state.bubbling ? 1.6 : 0);
       waterMaterial.normalScale.set(0.7 + churn, 0.7 + churn);
       glow.intensity = spaState.light.value ? 1.2 : 0;
@@ -782,8 +825,8 @@ export const AMENITY_EXHIBITS: readonly PlantExhibit[] = [
 ];
 
 /** A fresh tub and control plate using the same components, with private state. */
-export function createJacuzziDemo(kit: PanelKit) {
-  const state = createSpaState();
+export function createJacuzziDemo(kit: PanelKit, effects?: SpaEffects) {
+  const state = createSpaState(effects);
   return {
     tub: buildJacuzzi(kit, state),
     plate: buildJacuzziPlate(kit, state),

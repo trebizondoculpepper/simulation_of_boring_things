@@ -28,6 +28,10 @@ import { createPoolHall } from '../views/pool-hall';
 import { POOL_HALLS, hallFloorAt, hallSolids } from '../logic/pool-halls';
 import { POOL_LOOKS, DEFAULT_POOL_LOOK } from '../logic/pool-looks';
 import { createJacuzziDemo } from './plant/pool-amenities';
+import {
+  createSpaEffectsPanel,
+  mountSpaEffectsOnPost,
+} from '../views/spa-effects-panel';
 
 /** Dev35: the existing jacuzzi and its room, with a private, unsaved controller. */
 export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
@@ -48,9 +52,16 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
   scene.add(new HemisphereLight('#e9f3f1', '#65716f', 0.6));
   // Reuse the hall geometry and both jacuzzi components, not copied geometry.
   const hall = createPoolHall(spec, metre);
-  const { tub, plate } = createJacuzziDemo(kit);
+  // Its effects panel (the owner, 2026-10-24): the water's level in 5 %
+  // steps, and the jets, light and bubbles each on or off, set directly.
+  const effects = createSpaEffectsPanel(kit, 'TUB EFFECTS');
+  const { tub, plate } = createJacuzziDemo(kit, effects.effects);
+  // The low post sits south of the plinth: the controls and water stay in
+  // the same view as the walker operates LEVEL, JETS, LIGHT and BUBBLES.
+  const effectsPost = mountSpaEffectsOnPost(kit, effects.group);
+  effectsPost.position.set(-3.65, 0, 2.55);
   const devWindow = window as unknown as { jacuzziWater?: unknown };
-  devWindow.jacuzziWater = { tub, plate };
+  devWindow.jacuzziWater = { tub, plate, effects };
   tub.object.position.x = -2.7;
   hall.add(tub.object);
   const corner = new Group();
@@ -59,6 +70,7 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
   plate.object.rotation.x = -Math.PI / 2;
   corner.add(plate.object);
   hall.add(corner);
+  hall.add(effectsPost);
   scene.add(hall);
   const composer = createComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
@@ -100,7 +112,7 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
     const hit = raycaster.intersectObject(hall, true)[0];
     if (!hit || hit.distance > 3 * metre) return null;
     for (let o = hit.object; o; o = o.parent!) {
-      const use = plate.parts?.uses.get(o);
+      const use = plate.parts?.uses.get(o) ?? effects.parts.uses.get(o);
       if (use) return () => use(knobDirection(o, hit.point, camera));
       if (o === hall) break;
     }
@@ -145,6 +157,7 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
     walk.update(delta);
     tub.update?.(delta);
     plate.parts?.update(delta);
+    effects.update(delta);
     partAudio.listen(camera, metre);
     composer.render(delta);
   });
@@ -154,6 +167,7 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
     walk.dispose();
     tub.dispose?.();
     plate.parts?.dispose();
+    effects.dispose();
     plate.dispose?.();
     for (const pass of composer.passes) pass.dispose();
     composer.dispose();
