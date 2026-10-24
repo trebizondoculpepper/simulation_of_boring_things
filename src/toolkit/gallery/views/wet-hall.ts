@@ -6,7 +6,7 @@ import { createWaterMeterSet } from '../../components/plant/views/balance-plant'
 import { serviceAvailable } from '../../../game/plant/services';
 import { WET_HALL_PLANT, newWetHall } from '../../../game/plant/wet-hall';
 import { newPlantServices } from '../../../game/plant/services';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 import { wetHallMimicSpec, wetHallMimicState } from '../logic/wet-hall-mimic';
 import type { WetHallReading } from '../logic/wet-hall-mimic';
 import type { LiveExhibit } from '../rooms/plant/exhibit';
@@ -22,7 +22,7 @@ import { BOOSTER_PUMP } from '../../components/plant/logic/pump-sound';
  */
 function wetHallWorld(standalone = false) {
   const store =
-    standalone || typeof window === 'undefined' ? null : worldStore('dev');
+    standalone || typeof window === 'undefined' ? null : roomWorld();
   const world = () => store?.world.value;
   return {
     reading(): WetHallReading {

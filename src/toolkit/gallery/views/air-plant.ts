@@ -10,7 +10,7 @@ import type { AirReading } from '../logic/air-mimic';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
 import { hallRhOf, unitState } from '../../../game/plant/air-handling';
 import type { AirHall } from '../../../game/plant/air-handling';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 import { ahuLamps } from '../../components/plant/logic/pool-ahu';
 import { mergeStatic } from '../../components/core/views/merge-static';
 import { createStairStructure } from './stair-run';
@@ -141,7 +141,7 @@ export function createAirPlantStructure(
  */
 export function createAirMimic(kit: PanelKit) {
   // The world, where there is a page to keep it (not in tests).
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const store = typeof window === 'undefined' ? null : roomWorld();
   const board = createMimicBoard(kit, airMimicSpec(), {
     press: (id) => {
       const [hall, what] = id.split('-');

@@ -14,7 +14,7 @@ import {
   pushButton,
 } from '../../../components/core/parts/parts';
 import { PENFOLD_GREY } from '../../../components/industrial-control/views/control-cubicle';
-import { worldStore } from '../../../save/world-store';
+import { roomWorld } from '../../../save/world-store';
 
 /**
  * dev14 and dev15: the world state at work across rooms. dev14 has a
@@ -27,7 +27,7 @@ import { worldStore } from '../../../save/world-store';
  */
 
 /** The dev rooms' world: one save slot for all of them. */
-const world = () => worldStore('dev');
+const world = () => roomWorld();
 
 /**
  * A small grey Penfold control station on the wall, `w` × `h`: `object`

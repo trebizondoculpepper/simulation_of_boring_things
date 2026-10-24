@@ -5,7 +5,7 @@ import {
   stepZoneMusic,
 } from '../../../game/plant/music';
 import { serviceAvailable } from '../../../game/plant/services';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 import {
   ACESFilmicToneMapping,
   AmbientLight,
@@ -179,7 +179,7 @@ export function startMusicEffectsRoom(canvas: HTMLCanvasElement) {
       }),
     install: (kit) => {
       const state = signal(newZoneMusic());
-      const store = worldStore('dev');
+      const store = roomWorld();
       const powered = store.read((w) =>
         serviceAvailable(w.plant, 'plant_pool_03', 'power'),
       );

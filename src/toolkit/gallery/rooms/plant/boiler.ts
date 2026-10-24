@@ -49,7 +49,7 @@ import {
   createTwinHeadPump,
 } from '../../../components/plant/views/boiler-plant';
 import { gasBeacon } from '../../../components/general-safety/parts/gas-parts';
-import { worldStore } from '../../../save/world-store';
+import { roomWorld } from '../../../save/world-store';
 import {
   actOnBoilerGas,
   newBoilerGas,
@@ -98,7 +98,7 @@ if (typeof window !== 'undefined')
   (window as unknown as { boilerHouse: unknown }).boilerHouse = house;
 
 /** The world, where there is a page to keep it (not in tests). */
-const store = () => (typeof window === 'undefined' ? null : worldStore('dev'));
+const store = () => (typeof window === 'undefined' ? null : roomWorld());
 /** The gas safety where there is no world (no page): the room's own. */
 const ownGas = signal<BoilerGasState>(newBoilerGas());
 /** The boiler house's gas safety, as the world has it. */

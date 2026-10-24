@@ -13,7 +13,7 @@ import {
 } from '../../components/core/views/pipe-kinds';
 import { markPipe } from '../../components/plant/views/pipe-markers';
 import type { PipeService } from '../../components/plant/views/pipe-markers';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 import type { IsolatorName } from '../../../game/plant/services';
 import { serviceAvailable } from '../../../game/plant/services';
 import { createPowerIsolator } from '../../components/industrial-control/views/panel-switchgear';
@@ -85,7 +85,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
   const group = new Group();
   group.name = 'pipework';
   const parts = createPartSet();
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const store = typeof window === 'undefined' ? null : roomWorld();
   const lift = <T extends readonly [number, number, number]>([x, y, z]: T) =>
     [x, floorY + y, z] as const;
   for (const r of runs) {

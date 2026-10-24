@@ -10,12 +10,12 @@ import {
   selector,
 } from '../../components/core/parts/parts';
 import { PENFOLD_GREY } from '../../components/industrial-control/views/control-cubicle';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 import { serviceAvailable } from '../../../game/plant/services';
 
 /** Remote illuminator controls, mounted in the Jacuzzi plant room. */
 export function createJacuzziFibreControl(kit: PanelKit) {
-  const store = worldStore('dev');
+  const store = roomWorld();
   const state = () => store.world.value.jacuzziFibreIlluminator;
   const t = tools(kit);
   const group = new Group();

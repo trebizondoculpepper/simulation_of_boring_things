@@ -62,7 +62,7 @@ import {
 import { createSafetySign } from '../../components/general-safety/views/safety-signs';
 import { createSignState } from '../../components/pool/logic/pool-info-sign';
 import { createPaceClock } from '../../components/pool/views/pace-clock';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 import { createJacuzziFibreWall } from '../../components/architectural/views/jacuzzi-fibre-wall';
 import { serviceAvailable } from '../../../game/plant/services';
 import {
@@ -146,7 +146,7 @@ export function startPoolHallRoom(
     loopRoom: gallery ? 'pool_02_gallery' : id,
   });
   const poolsideKit = createPanelKit();
-  const world = worldStore('dev');
+  const world = roomWorld();
   const fibreWall =
     id === 'pool_03'
       ? createJacuzziFibreWall(spec.w, spec.d, spec.tileTop, spec.h)

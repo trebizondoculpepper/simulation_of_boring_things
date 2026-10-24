@@ -28,7 +28,7 @@ import {
 import { createSandFilter } from '../../components/plant/views/pumps-plant';
 import { machinePorts, tankFrame } from '../logic/machine-ports';
 import { isLive } from '../rooms/plant/exhibit';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 import { computed } from '@preact/signals-core';
 import { createGasStation } from './gas-station';
 import { GAS_ZONES } from '../../../game/plant/gas';
@@ -225,7 +225,7 @@ function modelFor(
     return {
       object: pump,
       update: () => {
-        const w = worldStore('dev').world.value;
+        const w = roomWorld().world.value;
         const running = serviceAvailable(w.plant, 'plant_pool_02', 'heat');
         pump.show(running);
         if (running !== heard) {
@@ -238,7 +238,7 @@ function modelFor(
   }
   // Its dosing and UV, showing its pool's water as the world has it.
   if (pool) {
-    const world = () => worldStore('dev').world.value;
+    const world = () => roomWorld().world.value;
     const live = <S>(
       object: Object3D & { show(s: S): void },
       read: () => S,
@@ -348,7 +348,7 @@ function modelFor(
     // Its contents gauge at the world's level: a pool's balance tank, or
     // the wet hall's break and backwash tanks.
     const level = (): number | null => {
-      const w = worldStore('dev').world.value;
+      const w = roomWorld().world.value;
       if (kind === 'balance-tank' && pool) return w.pools[pool].balance;
       if (kind === 'break-tank')
         return w.wetHall.breakTank / WET_HALL_PLANT.breakTank;
@@ -388,7 +388,7 @@ function modelFor(
       return {
         object: holder,
         update: (delta) => {
-          const w = worldStore('dev').world.value;
+          const w = roomWorld().world.value;
           const flows = olympicFlowsOf(w);
           const f = flows.filters[n];
           filter.show(
@@ -450,7 +450,7 @@ function modelFor(
  */
 function worldFeed(): SwitchboardFeed | undefined {
   if (typeof window === 'undefined') return undefined;
-  const store = worldStore('dev');
+  const store = roomWorld();
   return {
     on(legend) {
       // DB-LIGHTING feeds the lighting board, DB-L1 (`lighting.ts`).
@@ -479,7 +479,7 @@ let suppliesBound = false;
 function bindSupplies() {
   if (suppliesBound || typeof window === 'undefined') return;
   suppliesBound = true;
-  const store = worldStore('dev');
+  const store = roomWorld();
   bindBoilerSupply(() =>
     serviceAvailable(store.world.value.plant, 'boiler_house', 'power'),
   );
@@ -505,7 +505,7 @@ function bindSupplies() {
 export const SIMULATOR_DOOR_SWING = Math.PI / 2;
 
 function worldScenarioSimulator(kit: PanelKit): LiveExhibit {
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const store = typeof window === 'undefined' ? null : roomWorld();
   const scenarios: Scenarios = {
     fullOff: () => store?.dispatch({ type: 'plant/full-off' }),
     fullOn: () => store?.dispatch({ type: 'plant/full-on' }),
@@ -538,7 +538,7 @@ function worldScenarioSimulator(kit: PanelKit): LiveExhibit {
  * rest spare.
  */
 function worldLightingBoard(kit: PanelKit): LiveExhibit {
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const store = typeof window === 'undefined' ? null : roomWorld();
   const ways = Array.from({ length: LIGHTING_BOARD_WAYS }, (_, i) => {
     const zone = LIGHTING_ZONE_IDS.find((z) => LIGHTING_ZONES[z].way === i + 1);
     if (!zone) return null;
@@ -558,7 +558,7 @@ function worldLightingBoard(kit: PanelKit): LiveExhibit {
 
 /** A room's gas detection, bound to the world's gas there. */
 function gasBinding(zone: GasZoneId) {
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const store = typeof window === 'undefined' ? null : roomWorld();
   const clear = newGasState();
   return {
     params: GAS_ZONES[zone],
@@ -654,7 +654,7 @@ function worldTankLevel(
   tank: Object3D & { setLevel(level: number): void },
   chemical: Chemical,
 ): LiveExhibit {
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const store = typeof window === 'undefined' ? null : roomWorld();
   let shown = -1;
   const update = () => {
     const litres = store?.world.value.chemicals[chemical];
@@ -671,7 +671,7 @@ function worldTankLevel(
 /** The world's whole-site supply (`plant.sources.power`), for the main switch. */
 function mainsFeed(): MainsFeed | undefined {
   if (typeof window === 'undefined') return undefined;
-  const store = worldStore('dev');
+  const store = roomWorld();
   return {
     on: () => store.world.value.plant.sources.power,
     set: (on) => store.dispatch({ type: 'plant/source', utility: 'power', on }),
@@ -748,7 +748,7 @@ function worldOzoneGenerator(kit: PanelKit, room: ServiceRoom): LiveExhibit {
       ? 'Lounge ozone generator isolator'
       : 'Ozone generator isolator';
   const plant = ozoneRoom();
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const store = typeof window === 'undefined' ? null : roomWorld();
   let panel = false;
   let fed = true;
   let mains = false;
@@ -943,7 +943,7 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
  * START puts the duty pump in).
  */
 function worldBalanceTankPanel(kit: PanelKit): LiveExhibit {
-  const store = worldStore('dev');
+  const store = roomWorld();
   const view = () => olympicTankView(store.world.value);
   const panel = createBalanceTankPanel(kit, {
     level: () => view().level,

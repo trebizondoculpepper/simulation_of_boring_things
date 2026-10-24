@@ -14,7 +14,7 @@ import { newWorld } from '../../../game/world';
 import { ROOM_SWITCH_FUSES } from '../../../game/plant/installed-feeders';
 import { serviceAvailable } from '../../../game/plant/services';
 import type { ServiceRoom } from '../../../game/plant/services';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 import { layoutRoom, FEEDER_ISOLATOR } from '../logic/room-equipment';
 import { roomServiceRoutes } from '../logic/room-services';
 import {
@@ -34,7 +34,7 @@ export function createRoomServices(
 ) {
   const group = new Group();
   group.name = `${room} services`;
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const store = typeof window === 'undefined' ? null : roomWorld();
   const fallback = newWorld();
   const uses = new Map<Object3D, () => void>();
   const lift = ([x, y, z]: readonly [number, number, number]) =>

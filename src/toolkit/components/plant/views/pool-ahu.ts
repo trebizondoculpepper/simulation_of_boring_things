@@ -34,7 +34,7 @@ import {
   inWorld,
   unitState,
 } from '../../../../game/plant/air-handling';
-import { worldStore } from '../../../save/world-store';
+import { roomWorld } from '../../../save/world-store';
 import { ductSize } from '../../../../game/plant-sizing/ahu-range';
 import type { AhuSize } from '../../../../game/plant-sizing/ahu-range';
 
@@ -129,7 +129,7 @@ interface UnitSource {
 
 /** One of the building's units, in the world. */
 function worldUnit(tag: string): UnitSource {
-  const store = worldStore('dev');
+  const store = roomWorld();
   const world = () => store.world.value;
   const act = (
     action: Parameters<typeof store.dispatch>[0] & { type: 'air/unit' },

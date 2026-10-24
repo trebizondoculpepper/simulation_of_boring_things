@@ -20,7 +20,7 @@ import {
 } from 'three';
 import type { Object3D } from 'three';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
-import { worldStore } from '../../../save/world-store';
+import { roomWorld } from '../../../save/world-store';
 import { jacuzziPlate, jacuzziRuns } from '../../../../game/world';
 import { poolDepth } from '../../../../game/plant/pools';
 import { jacuzziVisualVolume } from '../../logic/jacuzzi-water-level';
@@ -400,8 +400,7 @@ const spa = createSpaState();
  * are its (`game/plant/jacuzzi.ts`), worked from this plate and from its
  * cabinet in the plant room alike, and the tub shows them.
  */
-const jacuzziWorld = () =>
-  typeof window === 'undefined' ? null : worldStore('dev');
+const jacuzziWorld = () => (typeof window === 'undefined' ? null : roomWorld());
 const jacuzziAct = (action: JacuzziAction) =>
   jacuzziWorld()?.dispatch({ type: 'jacuzzi', action });
 

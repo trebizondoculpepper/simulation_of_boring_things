@@ -61,7 +61,7 @@ import { partAudio } from '../../components/core/audio/part-audio';
 import { knobDirection } from '../../controls/input/knob-turning';
 import { createRoomEquipment } from '../views/room-equipment';
 import { cabinetServices } from '../views/cabinet-services';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 import { newWorld } from '../../../game/world';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
 import { JACUZZI_MIMIC, jacuzziMimicState } from '../logic/jacuzzi-mimic';
@@ -169,7 +169,7 @@ export function startPlantRoomShell(
     : () => true;
   const jacuzziMimic =
     hall === 'pool_03' ? createMimicBoard(kit, JACUZZI_MIMIC) : null;
-  const mimicStore = jacuzziMimic ? worldStore('dev') : null;
+  const mimicStore = jacuzziMimic ? roomWorld() : null;
   const fibreControl =
     hall === 'pool_03' ? createJacuzziFibreControl(kit) : null;
   if (jacuzziMimic) {

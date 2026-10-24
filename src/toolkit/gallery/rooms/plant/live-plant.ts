@@ -1,4 +1,4 @@
-import { worldStore } from '../../../save/world-store';
+import { roomWorld } from '../../../save/world-store';
 import type { PoolId } from '../../../../game/plant/pools';
 import { plantAt } from '../../logic/control-room-demo';
 import type { PlantReading } from '../../logic/control-room-demo';
@@ -14,5 +14,5 @@ export function currentPlant(
   seconds = typeof performance === 'undefined' ? 0 : performance.now() / 1000,
 ): PlantReading {
   if (typeof window === 'undefined') return plantAt(seconds);
-  return plantReadingOf(worldStore('dev').world.value, pool);
+  return plantReadingOf(roomWorld().world.value, pool);
 }

@@ -3,7 +3,7 @@ import type { Material, Object3D } from 'three';
 import { zoneLit } from '../../../game/plant/lighting';
 import type { LightingZoneId } from '../../../game/plant/lighting';
 import { newWorld } from '../../../game/world';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 
 /**
  * A room's electric lights, following their zones' state in the world
@@ -27,7 +27,7 @@ export function bindRoomLights(
   scene: Object3D,
   zone: LightingZoneId | undefined,
 ) {
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const store = typeof window === 'undefined' ? null : roomWorld();
   const fallback = newWorld();
   type Dimmed = { zone: LightingZoneId; base: number; share: number };
   const lights = new Map<Light, Dimmed>();

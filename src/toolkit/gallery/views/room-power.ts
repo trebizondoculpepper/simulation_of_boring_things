@@ -2,7 +2,7 @@ import { Mesh, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import type { Material, Object3D } from 'three';
 import { serviceAvailable } from '../../../game/plant/services';
 import type { ServiceRoom } from '../../../game/plant/services';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 
 /**
  * A room's powered equipment going dark with its supply: every lamp, LED,
@@ -106,7 +106,7 @@ export function bindRoomPower(root: Object3D, powered: () => boolean) {
 
 /** Whether a plant room has power in the world: its feeder, and the site's supply. */
 export function roomPowered(room: ServiceRoom) {
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const store = typeof window === 'undefined' ? null : roomWorld();
   return () => {
     const w = store?.world.value;
     return w ? serviceAvailable(w.plant, room, 'power') : true;
@@ -115,7 +115,7 @@ export function roomPowered(room: ServiceRoom) {
 
 /** Whether the site has power: the main switch, and the switch room's supply (the halls and corridors). */
 export function sitePowered() {
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const store = typeof window === 'undefined' ? null : roomWorld();
   return () => {
     const w = store?.world.value;
     return w ? w.plant.sources.power && w.plant.feeders.switch_room : true;

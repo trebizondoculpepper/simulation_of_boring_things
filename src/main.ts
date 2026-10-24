@@ -30,7 +30,13 @@ import {
   inertClip,
   rendererOn,
 } from './toolkit/components/core/parts/render-style';
-import { worldStore } from './toolkit/save/world-store';
+import {
+  createScenarioStore,
+  setRoomWorld,
+  worldStore,
+} from './toolkit/save/world-store';
+import { attractScenario } from './game/attract-scenarios';
+import { torch } from './toolkit/controls/logic/torch';
 import { createGameSession } from './toolkit/save/game-session';
 import { GAS_ZONE_IDS } from './game/plant/gas';
 import type { PoolId } from './game/plant/pools';
@@ -610,7 +616,9 @@ window.addEventListener('pool-plant:run-room', (event) => {
 // playing on. The game is paused under it, so its rooms take no input,
 // the world's clock stands still and nothing of the player's changes.
 // Rooms it builds for itself it lets go again as it moves on, and when
-// the title is left.
+// the title is left. Its rooms are its own, built on canvases of their
+// own and each on its shot's world (`attract-scenarios.ts`), prepared
+// for it, never the player's: the player's rooms and save are untouched.
 const titleVeil = document.createElement('div');
 titleVeil.className = 'attract-veil';
 titleVeil.hidden = true;
@@ -621,60 +629,71 @@ const startTitleBackdrop = async () => {
   let stopped = false;
   let frame = 0;
   let state = newAttract();
-  /** The room on screen now. */
+  /**
+   * The shot on screen now: its room, built for the attract sequence on
+   * a canvas of its own (never one of the player's rooms), and the world
+   * it reads, its scenario afresh (`attract-scenarios.ts`).
+   */
   let shown: {
     room: RoomId;
-    entry: NonNullable<ReturnType<typeof rooms.get>>;
+    root: HTMLElement;
+    handle: RoomHandle;
     walk: NonNullable<ReturnType<typeof firstPersonOn>>;
-    draw: NonNullable<ReturnType<typeof rendererOn>>;
-    full: number;
+    store: ReturnType<typeof createScenarioStore>;
   } | null = null;
   /** The shot whose room is built and on screen, and when it may be seen. */
   let builtFor = -1;
   let seenFrom = 0;
   let building = false;
-  /** Rooms the sequence built itself, to let go of again. */
-  const own = new Set<RoomId>();
-  const letGo = (room: RoomId) => {
-    if (!own.has(room)) return;
-    own.delete(room);
-    if (keyOf(room) !== current) release(room);
-  };
-  const hide = () => {
+  // The player's torch, put back as it was when the title is left.
+  const playerTorch = torch.on;
+  /** Let the shot on screen go: its room, its renderer, its world. */
+  const letGo = () => {
     if (!shown) return;
-    shown.draw.renderer.setPixelRatio(shown.full);
-    shown.entry.root.style.pointerEvents = '';
-    shown.entry.root.style.zIndex = '';
-    if (current !== keyOf(shown.room)) shown.entry.root.hidden = true;
-    letGo(shown.room);
+    shown.store.stop();
+    shown.handle();
+    shown.root.remove();
     shown = null;
+    setRoomWorld(null);
   };
-  /** Build the shot's room (if it is not built), and put it on screen, black. */
+  /** Build the shot's room on its own world, and put it on screen, black. */
   const present = async (index: number) => {
     const shot = ATTRACT_SHOTS[index];
     const room = resolveRoomId(shot.room);
     if (!room) return;
     const start = await starter(room);
     if (stopped) return;
-    const built = rooms.has(keyOf(room));
-    if (shown && shown.room !== room) hide();
-    const entry = mount(room, start);
-    if (!built) own.add(room);
-    const surface = surfaceOf(keyOf(room));
-    const walk = surface && firstPersonOn(surface);
-    const draw = surface && rendererOn(surface);
+    letGo();
+    // Its world: its scenario, afresh, running while it is seen; and the
+    // room built now reads it, not the player's.
+    const store = createScenarioStore(attractScenario(shot.scenario));
+    setRoomWorld(store);
+    const root = document.createElement('section');
+    root.setAttribute('aria-label', `Attract shot ${shot.id}`);
+    Object.assign(root.style, {
+      position: 'absolute',
+      inset: '0',
+      zIndex: '1',
+      pointerEvents: 'none',
+    });
+    const surface = canvas.cloneNode() as HTMLCanvasElement;
+    surface.id = `attract-${shot.id}`;
+    surface.hidden = false;
+    surface.style.display = 'block';
+    canvas.parentElement!.append(root);
+    root.append(surface);
+    const handle = start(surface);
+    const walk = firstPersonOn(surface);
+    const draw = rendererOn(surface);
     if (!walk || !draw) return;
-    if (!shown) {
-      entry.root.hidden = false;
-      entry.root.style.zIndex = '1';
-      entry.root.style.pointerEvents = 'none';
-      // A quarter of the resolution each way: the room's own, less the
-      // player's render quality, divided by four.
-      const full =
-        draw.renderer.getPixelRatio() / renderScale(settings.value.renderLevel);
-      draw.renderer.setPixelRatio(full / 4);
-      shown = { room, entry, walk, draw, full };
-    }
+    // A quarter of the resolution each way: the room's own, less the
+    // player's render quality, divided by four.
+    const full =
+      draw.renderer.getPixelRatio() / renderScale(settings.value.renderLevel);
+    draw.renderer.setPixelRatio(full / 4);
+    shown = { room, root, handle, walk, store };
+    torch.on = !!shot.torch;
+    store.run(true);
     const p = orbitPose(shot.orbit, 0);
     walk.place(p.x * METRE, p.z * METRE, p.yaw, p.pitch, p.y * METRE);
     builtFor = index;
@@ -687,9 +706,9 @@ const startTitleBackdrop = async () => {
       cancelAnimationFrame(frame);
       titleVeil.hidden = true;
       document.body.classList.remove('on-title');
+      letGo();
+      torch.on = playerTorch;
       paused.value = false;
-      hide();
-      for (const room of [...own]) letGo(room);
     },
   };
   paused.value = true;

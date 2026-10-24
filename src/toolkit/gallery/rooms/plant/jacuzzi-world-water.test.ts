@@ -10,7 +10,10 @@ import { JACUZZI_EXHIBIT } from './pool-amenities';
 import { isLive } from './exhibit';
 
 const store = { world: signal(newWorld()), dispatch: vi.fn() };
-vi.mock('../../../save/world-store', () => ({ worldStore: () => store }));
+vi.mock('../../../save/world-store', () => ({
+  worldStore: () => store,
+  roomWorld: () => store,
+}));
 beforeEach(() => {
   store.world.value = newWorld();
   vi.stubGlobal('window', { addEventListener: vi.fn() });

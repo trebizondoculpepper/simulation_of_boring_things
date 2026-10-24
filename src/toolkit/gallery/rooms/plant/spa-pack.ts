@@ -35,7 +35,7 @@ import {
   pushButton,
   selector,
 } from '../../../components/core/parts/parts';
-import { worldStore } from '../../../save/world-store';
+import { worldStore, roomWorld } from '../../../save/world-store';
 import { partAudio } from '../../../components/core/audio/part-audio';
 import { machineTone } from '../../../components/sound/audio/machine-tones';
 import { doorGain } from '../../../components/core/logic/door-attenuation';
@@ -612,8 +612,7 @@ export function buildSpaPack(
   });
   const parts = createPartSet();
   const pool = jets ? 'pool_03' : 'pool_04';
-  const store =
-    inService && typeof window !== 'undefined' ? worldStore('dev') : null;
+  const store = inService && typeof window !== 'undefined' ? roomWorld() : null;
   // Its thermostat's setting: the world's pool's, or, an exhibit, its own.
   let ownSet = jets ? 37 : 34;
   // The jacuzzi's: its controller in the world (`jacuzzi-cabinet.ts`),
@@ -642,9 +641,7 @@ export function buildSpaPack(
   mimic.group.position.set(shift, 0.355, 0.001);
   front.add(mimic.group);
   const footbathStore =
-    inService && !jets && typeof window !== 'undefined'
-      ? worldStore('dev')
-      : null;
+    inService && !jets && typeof window !== 'undefined' ? roomWorld() : null;
   const power = parts.add(
     selector(kit, {
       positions: 2,

@@ -28,7 +28,7 @@ import {
   loungeValveMimicState,
 } from '../../logic/lounge-valve-mimic';
 import { LOUNGE_VALVES } from '../../../../game/plant/lounge-valves';
-import { worldStore } from '../../../save/world-store';
+import { roomWorld } from '../../../save/world-store';
 import type { PumpsShown } from '../../logic/pool-mimics';
 import { MOTORS, POOL_MOTORS } from '../../../../game/plant/motor-starters';
 import type {
@@ -51,7 +51,7 @@ type PumpId = (typeof PUMP_IDS)[number];
 const MODES: readonly StarterMode[] = ['hand', 'off', 'auto'];
 
 /** The world, where there is a page to keep it (not in tests). */
-const store = () => (typeof window === 'undefined' ? null : worldStore('dev'));
+const store = () => (typeof window === 'undefined' ? null : roomWorld());
 
 /** A pool's pumps' starters, duty (p1) then standby (p2); none for a pool without them. */
 const tagsOf = (pool: PoolId): Partial<Record<PumpId, MotorTag>> => {

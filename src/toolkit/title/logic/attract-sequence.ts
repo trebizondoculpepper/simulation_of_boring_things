@@ -1,4 +1,5 @@
 import type { TitleOrbit } from './title-orbit';
+import type { AttractScenarioId } from '../../../game/attract-scenarios';
 import { OLYMPIC_ORBIT } from './title-orbit';
 
 /**
@@ -16,6 +17,13 @@ export interface AttractShot {
   room: string;
   /** Its camera move: an orbit (`title-orbit.ts`); authored paths later. */
   orbit: TitleOrbit;
+  /**
+   * The world it shows (`attract-scenarios.ts`): one prepared for the
+   * attract sequence, never the player's, afresh each time it plays.
+   */
+  scenario: AttractScenarioId;
+  /** The camera's torch lit (a lights-out scenario's). */
+  torch?: boolean;
   /** Seconds it is seen, between its fades. */
   seconds: number;
 }
@@ -31,6 +39,7 @@ export const ATTRACT_SHOTS: readonly AttractShot[] = [
     id: 'olympic-orbit',
     room: 'pool_02',
     orbit: { ...OLYMPIC_ORBIT, arc: 20, period: 80 },
+    scenario: 'normal',
     seconds: 20,
   },
   {
@@ -45,6 +54,7 @@ export const ATTRACT_SHOTS: readonly AttractShot[] = [
       arc: 30,
       period: 60,
     },
+    scenario: 'normal',
     seconds: 20,
   },
   {
@@ -58,6 +68,7 @@ export const ATTRACT_SHOTS: readonly AttractShot[] = [
       arc: 40,
       period: 60,
     },
+    scenario: 'normal',
     seconds: 20,
   },
 ];

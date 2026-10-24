@@ -77,6 +77,67 @@ export function worldStore(slot: string): WorldStore {
   return store;
 }
 
+/**
+ * The world a room reads and works: the player's (the dev rooms' save
+ * slot), or, while one is set (`setRoomWorld`), another, such as the
+ * title's attract sequence's scenario (`doc/prompts/054-title-attract-sequence.md`).
+ * Rooms take their world from here, never from a save slot by name, so a
+ * room built for the attract sequence reads and acts on the attract
+ * sequence's world, and the player's never sees it.
+ */
+let roomOverride: WorldStore | null = null;
+export function roomWorld(): WorldStore {
+  return roomOverride ?? worldStore('dev');
+}
+/** Rooms' world from now on: `store`, or, with null, the player's again. */
+export function setRoomWorld(store: WorldStore | null) {
+  roomOverride = store;
+}
+
+/**
+ * A world held in memory only, from `start`: never loaded, never saved,
+ * held by no tab, its clock its own (run while `running` is set), so it
+ * runs while the game is paused behind the title. The attract sequence's.
+ */
+export function createScenarioStore(start: World) {
+  const world = signal(start);
+  const holding = signal(false);
+  const notice = signal<string | null>(null);
+  let timer: ReturnType<typeof setInterval> | null = null;
+  let last = 0;
+  const store: WorldStore & { run(on: boolean): void; stop(): void } = {
+    world,
+    dispatch(action) {
+      world.value = applyAction(world.value, action);
+    },
+    read: (pick) => computed(() => pick(world.value)),
+    save: () => false,
+    holding,
+    reset() {
+      world.value = start;
+    },
+    notice,
+    run(on) {
+      if (on && !timer) {
+        last = Date.now();
+        timer = setInterval(() => {
+          const now = Date.now();
+          const elapsed = Math.min(1, Math.max(0, (now - last) / 1000));
+          last = now;
+          if (elapsed > 0) world.value = advance(world.value, elapsed);
+        }, STEP * 1000);
+      } else if (!on && timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    },
+    stop() {
+      store.run(false);
+    },
+  };
+  return store;
+}
+
 function openWorldStore(slot: string): WorldStore {
   const s = storage();
   const notice = signal<string | null>(

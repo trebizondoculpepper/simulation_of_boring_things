@@ -2,7 +2,7 @@ import { computed, signal } from '@preact/signals-core';
 import { beginPart } from '../../components/core/parts/parts';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { drainGurgle } from '../../components/plant/audio/drain';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 import { jacuzziDischarging } from '../../../game/world';
 import type { Object3D } from 'three';
 import {
@@ -18,7 +18,7 @@ import {
  */
 export function createJacuzziDrainAudio(kit: PanelKit, from: Object3D) {
   const a = beginPart(kit, 'Jacuzzi drain through plant door');
-  const store = worldStore('dev');
+  const store = roomWorld();
   const angle = signal(0);
   const draining = store.read(jacuzziDischarging);
   const level = computed(

@@ -11,7 +11,7 @@ import { createMicroLabel } from '../../components/core/views/eighties-controls'
 import { createPipe, PIPE_KINDS } from '../../components/core/views/pipe-kinds';
 import { markPipe } from '../../components/plant/views/pipe-markers';
 import type { PipeService } from '../../components/plant/views/pipe-markers';
-import { worldStore } from '../../save/world-store';
+import { roomWorld } from '../../save/world-store';
 import type { IsolatorName, ServiceRoom } from '../../../game/plant/services';
 import { serviceAvailable } from '../../../game/plant/services';
 import { createPowerIsolator } from '../../components/industrial-control/views/panel-switchgear';
@@ -91,7 +91,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   const group = new Group();
   group.name = 'cabinet services';
   const uses = new Map<Object3D, () => void>();
-  const store = typeof window === 'undefined' ? null : worldStore('dev');
+  const store = typeof window === 'undefined' ? null : roomWorld();
   const valveParts: ReturnType<typeof createWaterButterflyValve>[] = [];
   // The motorised valves: each one's lamp, and its row on the room's panel.
   const motorLamps: ((delta: number) => void)[] = [];
