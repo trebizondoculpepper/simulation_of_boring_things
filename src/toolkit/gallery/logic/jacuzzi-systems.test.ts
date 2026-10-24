@@ -5,6 +5,7 @@ import {
   jacuzziCabinetPanel,
   jacuzziFlow,
   jacuzziPlate,
+  jacuzziPlumbing,
   jacuzziRuns,
   newWorld,
   pressJacuzziPlate,
@@ -12,7 +13,8 @@ import {
 import type { World } from '../../../game/world';
 import { JACUZZI_VALVES } from '../../../game/plant/jacuzzi';
 import { NO_FLOW_TRIP } from '../../../game/plant/jacuzzi-cabinet';
-import { dosedVolumes } from '../../../game/plant/pools';
+import { dosedVolumes, poolVolume } from '../../../game/plant/pools';
+import { JACUZZI_BALANCE_TANK } from '../../../game/plant/spa-balance-tank';
 import { jacuzziMimicState } from './jacuzzi-mimic';
 
 /**
@@ -42,7 +44,10 @@ describe('the jacuzzi cabinet, with its valve panel and its mimic', () => {
       dosing: true,
       noFlow: false,
     });
-    expect(panel.lines![1].trim()).toBe('RUNNING  UV ON');
+    expect(panel.messages).toEqual([
+      'RUNNING  UV ON',
+      `TANK ${Math.round(start.pools.pool_03.balance * 100)}%`,
+    ]);
     expect(jacuzziMimicState(start).lamps).toEqual({ pump: true, uv: true });
   });
 
@@ -109,7 +114,10 @@ describe('the jacuzzi cabinet, with its valve panel and its mimic', () => {
       flowing: false,
       noFlow: true,
     });
-    expect(panel.messages).toEqual(['TRIP: TANK LOW']);
+    expect(panel.messages).toEqual([
+      'TRIP: TANK LOW',
+      expect.stringMatching(/^TANK \d+% FILLING$/),
+    ]);
     expect(jacuzziMimicState(w).lamps).toEqual({ pump: false, uv: false });
     expect(dosed(w)).toBeLessThan(dosed(start));
     // Not latched: its valves are open, so no no-flow trip.
@@ -223,5 +231,54 @@ describe('the jacuzzi cabinet, with the waterproof wall plate by the tub', () =>
     w = pressJacuzziPlate(w, 'start');
     expect(jacuzziRuns(w)).toEqual({ jets: false, air: true });
     expect(jacuzziCabinetPanel(w).flowing).toBe(true);
+  });
+});
+
+describe('the jacuzzi cabinet, with its external balance tank', () => {
+  it('is plumbed to the external tank, not its own surge vessel', () => {
+    const plumbing = jacuzziPlumbing(start);
+    expect(plumbing.tank).toBe('external');
+  });
+
+  it('starts with the tank at its float, room above for every seat taken', () => {
+    const t = JACUZZI_BALANCE_TANK;
+    expect(start.pools.pool_03.balance).toBeCloseTo(t.float, 1);
+    expect((1 - start.pools.pool_03.balance) * t.volume).toBeGreaterThan(
+      t.allowances.bathers,
+    );
+    expect(t.volume / poolVolume('pool_03')).toBeGreaterThan(0.35);
+  });
+
+  it('holds its level through a day’s running, the make-up keeping it at its float', () => {
+    const w = advance(start, 24 * 3600, 10);
+    expect(w.pools.pool_03.tripped).toBe(false);
+    expect(w.pools.pool_03.balance).toBeGreaterThan(
+      JACUZZI_BALANCE_TANK.lowLow,
+    );
+    expect(jacuzziCabinetPanel(w).flowing).toBe(true);
+  });
+
+  it('takes the tub’s gutter water back when the pump stops, and gives it out again when it restarts', () => {
+    const off = advance(
+      applyAction(start, {
+        type: 'jacuzzi/cabinet',
+        action: { act: 'power', on: false },
+      }),
+      120,
+      1,
+    );
+    expect(off.pools.pool_03.balance).toBeGreaterThan(
+      start.pools.pool_03.balance,
+    );
+    const on = advance(
+      applyAction(off, {
+        type: 'jacuzzi/cabinet',
+        action: { act: 'power', on: true },
+      }),
+      300,
+      1,
+    );
+    expect(on.pools.pool_03.balance).toBeLessThan(off.pools.pool_03.balance);
+    expect(on.pools.pool_03.tripped).toBe(false);
   });
 });

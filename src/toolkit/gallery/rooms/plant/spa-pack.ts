@@ -52,6 +52,7 @@ import {
   jacuzziRuns,
 } from '../../../../game/world';
 import { footbathPumpStarved } from '../../../../game/plant/pools';
+import { DISCONNECTED_VESSEL } from '../../../../game/plant/jacuzzi-cabinet';
 
 /**
  * A packaged spa set in its prefabricated plant cabinet: what the plant
@@ -897,7 +898,9 @@ function buildSpaPack(
       pump.update(delta, on);
       filter.update(delta, moving ? WORKING : 0);
       uv.update(delta, uvOn.value);
-      vessel.update(delta, moving);
+      // The jacuzzi's is plumbed to its external balance tank: its own
+      // surge vessel disconnected, empty (`cabinetTanks`).
+      vessel.update(delta, moving, jets ? DISCONNECTED_VESSEL.fill : undefined);
       exchanger.update();
       dosing.update(delta, moving, 1.8, 7.3);
       gauge.set(moving ? WORKING : 0);

@@ -6,6 +6,7 @@ import { POOLS } from '../plant-sizing/pools.config';
 import { ASSUME, sizePlant } from '../plant-sizing/sizing';
 import { phTarget } from './chemicals';
 import { BALANCE_TANK, volumeOf } from './balance-tank';
+import { JACUZZI_BALANCE_TANK } from './spa-balance-tank';
 import { AMBIENT, stepThermal, thermalParams } from './thermal';
 import type { ThermalParams } from './thermal';
 import type { Chemical } from './chemicals';
@@ -91,7 +92,12 @@ export function newPools(): PoolsState {
       {
         level: 0.015,
         // The Olympic's tank at its working depth (Dev28's start, 3.1 m), the others' at their floats.
-        balance: id === 'pool_02' ? 3.1 / BALANCE_TANK.weir : 0.68,
+        balance:
+          id === 'pool_02'
+            ? 3.1 / BALANCE_TANK.weir
+            : id === 'pool_03'
+              ? JACUZZI_BALANCE_TANK.float
+              : 0.68,
         temperature: POOL_TARGET[id].temp,
         setpoint: POOL_TARGET[id].temp,
         ph: 7.4,
@@ -151,6 +157,17 @@ const WATER: Record<PoolId, PoolWater> = (() => {
       depth: c.body.volume / c.body.area,
     };
   }
+  // The jacuzzi's balance tank, sized for a spa by what it must absorb
+  // (`spa-balance-tank.ts`): a GRP cylinder beside its cabinet, its float
+  // low enough for eight bathers' surge, its low-low below its reserve.
+  const J = JACUZZI_BALANCE_TANK;
+  out.pool_03 = {
+    ...out.pool_03,
+    tank: J.volume,
+    tankDepth: J.depth,
+    float: J.float,
+    lowLow: J.lowLow,
+  };
   // The Olympic's tank as built (Dev28, `balance-tank.ts`): cast concrete,
   // its weir at 4.0 m, the plant floor over it a storey below the deck; its
   // make-up the 30 m³/h of its 54 mm feed, switched by its own level band

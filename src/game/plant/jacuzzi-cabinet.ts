@@ -1,3 +1,5 @@
+import type { BalanceTankReading } from './spa-balance-tank';
+
 /**
  * The jacuzzi's treatment cabinet's controller, in the world (the owner,
  * 2026-10-24): its POWER switch, its circulation pump's no-flow trip, and
@@ -48,23 +50,69 @@ export type JacuzziCabinetAction =
   /** Its RESET pressed: clears a trip once there is a way through. */
   | { act: 'reset' };
 
-/** What it is given: power to it, and a way through its valves. */
+/**
+ * What it is given: power to it, a way through its valves, and the
+ * balance tank it draws from, outside it (`spa-balance-tank.ts`; for
+ * trying it alone, `IDEAL_BALANCE_TANK`).
+ */
 export interface JacuzziCabinetInputs {
   /** Its room's power and its isolator, both on. */
   supplied: boolean;
   /** Its overflow and return valves both open (`jacuzziPaths`). */
   path: boolean;
+  /** Its balance tank. */
+  tank: BalanceTankReading;
 }
 
-/** Whether its pump's motor runs: supplied, switched on, not tripped. */
-export const jacuzziPumpCalled = (c: JacuzziCabinetState, supplied: boolean) =>
-  supplied && c.power && c.trip === '';
+/**
+ * Whether its pump's motor runs: supplied, switched on, not tripped, and
+ * its tank not at low-low (TRIP: TANK LOW, which clears itself as the
+ * tank recovers).
+ */
+export const jacuzziPumpCalled = (
+  c: JacuzziCabinetState,
+  inputs: JacuzziCabinetInputs,
+) => inputs.supplied && c.power && c.trip === '' && !inputs.tank.low;
+
+/**
+ * Where a packaged spa cabinet's pump draws from (the owner, 2026-10-24):
+ * its own small surge vessel inside it, or an external balance tank
+ * beside it, never both. With an external tank its surge vessel is
+ * disconnected, empty, reading 0 %; with its own vessel there is no
+ * external tank to give it. The type makes the two exclusive.
+ */
+export type CabinetPlumbing =
+  | { tank: 'internal' }
+  | { tank: 'external'; external: BalanceTankReading };
+
+/** Its own surge vessel, inside it, m³: about 35 L. */
+export const SURGE_VESSEL_VOLUME = 0.035;
+
+/** A disconnected surge vessel: empty, never low, never filling. */
+export const DISCONNECTED_VESSEL: BalanceTankReading = {
+  fill: 0,
+  low: false,
+  filling: false,
+};
+
+/**
+ * The tank its pump draws from, and what its own surge vessel reads,
+ * given its plumbing and its vessel's own reading.
+ */
+export function cabinetTanks(
+  plumbing: CabinetPlumbing,
+  vessel: BalanceTankReading,
+): { draws: BalanceTankReading; vessel: BalanceTankReading } {
+  return plumbing.tank === 'external'
+    ? { draws: plumbing.external, vessel: DISCONNECTED_VESSEL }
+    : { draws: vessel, vessel };
+}
 
 /** Whether its water moves: the pump running, with a way through. */
 export const jacuzziWaterFlowing = (
   c: JacuzziCabinetState,
   inputs: JacuzziCabinetInputs,
-) => jacuzziPumpCalled(c, inputs.supplied) && inputs.path;
+) => jacuzziPumpCalled(c, inputs) && inputs.path;
 
 export function actOnJacuzziCabinet(
   c: JacuzziCabinetState,
@@ -83,7 +131,7 @@ export function stepJacuzziCabinet(
   inputs: JacuzziCabinetInputs,
   dt: number,
 ): JacuzziCabinetState {
-  if (!jacuzziPumpCalled(c, inputs.supplied) || inputs.path)
+  if (!jacuzziPumpCalled(c, inputs) || inputs.path)
     return c.noFlow === 0 ? c : { ...c, noFlow: 0 };
   const noFlow = c.noFlow + dt;
   return noFlow >= NO_FLOW_TRIP
@@ -102,8 +150,8 @@ export interface JacuzziDisplayInputs {
   setC: number;
   /** Heat reaching its heat exchanger: the heat service and both valves. */
   heatSupply: boolean;
-  /** Its balance tank at its low-low level, its pumps held off. */
-  tankLow: boolean;
+  /** Its balance tank. */
+  tank: BalanceTankReading;
   /** Its drain open. */
   draining: boolean;
   /** Either of its doors open, its UV held off. */
@@ -129,18 +177,22 @@ export function jacuzziCabinetDisplay(d: JacuzziDisplayInputs): {
   const messages: string[] = [];
   if (d.cabinet.trip === 'no-flow')
     messages.push('TRIP: NO FLOW', 'CHECK VALVES+RST');
-  if (d.tankLow) messages.push('TRIP: TANK LOW');
+  if (d.tank.low) messages.push('TRIP: TANK LOW');
   // Heat wanted but not coming: the heat service off, or a valve shut.
   const wantsHeat = d.waterC < d.setC - 0.2;
   if (d.flowing && wantsHeat && !d.heatSupply) messages.push('NO HEAT');
   if (d.waterC < d.setC - TEMP_LOW_BAND) messages.push('TEMP LOW');
   if (d.draining) messages.push('DRAINING');
-  if (d.cabinet.trip === '' && !d.tankLow) {
+  if (d.cabinet.trip === '' && !d.tank.low) {
     if (!d.cabinet.power) messages.push('STOPPED');
     else if (d.flowing)
       messages.push(d.doorOpen ? 'RUNNING  UV OFF' : 'RUNNING  UV ON');
     else messages.push('NO FLOW');
   }
+  // Its tank, always: how full, and whether its make-up is filling it.
+  messages.push(
+    `TANK ${Math.round(d.tank.fill * 100)}%${d.tank.filling ? ' FILLING' : ''}`,
+  );
   const shown =
     messages[Math.floor(d.time / MESSAGE_SECONDS) % messages.length] ?? '';
   return {

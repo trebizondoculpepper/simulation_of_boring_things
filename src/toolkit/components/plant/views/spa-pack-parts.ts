@@ -297,9 +297,15 @@ export function createSurgeVessel(kit: PanelKit) {
   show();
   return {
     group,
-    /** Its level, 0 to 1: lower while the pump draws it, refilling when off. */
-    update(delta: number, running: boolean) {
-      level += ((running ? 0.45 : 0.75) - level) * Math.min(1, delta * 0.5);
+    /**
+     * Its level, 0 to 1: lower while the pump draws it, refilling when
+     * off; or, given `fill`, that (a vessel disconnected from its pump,
+     * the cabinet plumbed to an external tank, empty at 0).
+     */
+    update(delta: number, running: boolean, fill?: number) {
+      level =
+        fill ??
+        level + ((running ? 0.45 : 0.75) - level) * Math.min(1, delta * 0.5);
       show();
     },
   };

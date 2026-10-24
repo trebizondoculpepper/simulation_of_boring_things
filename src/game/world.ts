@@ -119,7 +119,9 @@ import {
 import type { JacuzziAction, JacuzziState } from './plant/jacuzzi';
 import { jacuzziPaths } from './plant/jacuzzi';
 import {
+  DISCONNECTED_VESSEL,
   actOnJacuzziCabinet,
+  cabinetTanks,
   jacuzziCabinetDisplay,
   jacuzziPumpCalled,
   jacuzziWaterFlowing,
@@ -127,6 +129,7 @@ import {
   stepJacuzziCabinet,
 } from './plant/jacuzzi-cabinet';
 import type {
+  CabinetPlumbing,
   JacuzziCabinetAction,
   JacuzziCabinetInputs,
   JacuzziCabinetState,
@@ -704,14 +707,39 @@ export function stepWorld(world: World, delta: number): World {
 
 /**
  * What the jacuzzi's cabinet is given: power (its room's and its
- * isolator) and a way through its overflow and return valves.
+ * isolator), a way through its overflow and return valves, and the
+ * tank its pump draws from: its external balance tank (`jacuzziPlumbing`).
  */
-export const jacuzziCabinetInputs = (world: World): JacuzziCabinetInputs => ({
-  supplied:
-    serviceAvailable(world.plant, 'plant_pool_03', 'power') &&
-    world.plant.isolators['Jacuzzi cabinet isolator'],
-  path: jacuzziPaths(world.installedValves).circulation,
-});
+export const jacuzziCabinetInputs = (world: World): JacuzziCabinetInputs => {
+  return {
+    supplied:
+      serviceAvailable(world.plant, 'plant_pool_03', 'power') &&
+      world.plant.isolators['Jacuzzi cabinet isolator'],
+    path: jacuzziPaths(world.installedValves).circulation,
+    // Plumbed to its external balance tank; its own vessel disconnected.
+    tank: cabinetTanks(jacuzziPlumbing(world), DISCONNECTED_VESSEL).draws,
+  };
+};
+
+/**
+ * The jacuzzi cabinet's plumbing: to its external balance tank
+ * (`spa-balance-tank.ts`), as the water balance has it: how full, at
+ * low-low, and its make-up filling it.
+ */
+export const jacuzziPlumbing = (world: World): CabinetPlumbing => {
+  const pool = world.pools.pool_03;
+  return {
+    tank: 'external',
+    external: {
+      fill: pool.balance,
+      low: pool.tripped,
+      filling:
+        pool.makeUp &&
+        poolMakeUpCalling('pool_03', pool) &&
+        serviceAvailable(world.plant, 'wet_hall', 'water'),
+    },
+  };
+};
 
 /** The jacuzzi's water moving, and heat reaching it, as its cabinet allows. */
 export const jacuzziFlow = (world: World): JacuzziCirculation => ({
@@ -738,8 +766,8 @@ export function jacuzziCabinetPanel(world: World, doorOpen = false) {
   // Its balance tank at low-low (its water supply cut off and the tank
   // run down): the pump stopped, TRIP: TANK LOW, until the tank recovers,
   // when it restarts itself (`water-balance.ts`).
-  const pumpRun = jacuzziPumpCalled(cabinet, inputs.supplied) && !pool.tripped;
-  const flowing = jacuzziWaterFlowing(cabinet, inputs) && !pool.tripped;
+  const pumpRun = jacuzziPumpCalled(cabinet, inputs);
+  const flowing = jacuzziWaterFlowing(cabinet, inputs);
   return {
     supplied: inputs.supplied,
     pumpRun,
@@ -756,7 +784,7 @@ export function jacuzziCabinetPanel(world: World, doorOpen = false) {
       waterC: pool.temperature,
       setC: pool.setpoint,
       heatSupply: jacuzziFlow(world).heat,
-      tankLow: pool.tripped,
+      tank: inputs.tank,
       draining: jacuzziDischarging(world),
       doorOpen,
       time: world.time,

@@ -60,6 +60,9 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Wiring the plant rooms' machines to the world
 
+- [ ] **The jacuzzi's balance tank** ([056](doc/prompts/056-jacuzzi-balance-tank.md), the owner, 2026-10-24): a deck-level spa cannot work without one.
+  - [ ] **Stage 1, the model:** a spa balance tank sized by its allowances (1.3 m³ for the jacuzzi); the cabinet's controller given its tank as an input, tested against an ideal tank and then the world's.
+  - [ ] **Stage 2, installed:** a GRP balance tank component beside the cabinet, the gutter into it, the pump's suction from it, its make-up and overflow, all replumbed by the plumber; its sight gauge showing the world's level.
 - [ ] **The Olympic's busbar by the pipe helper, and its tap-offs drawn** (the owner, 2026-10-24: busbars always by the plumber and pipe helper, every part a component): its busbar ring is laid by a hand-written rule and drawn as containment, and its fused tap-offs exist only in its plumbing logic and plan; lay it as `busbar-trunking` and hang a tap-off unit (`createBusbarTapOff`, fused and pole-worked) at each drop, each switching its machine's supply in the world.
 - [ ] **Fully operational: the wiring audit's work** ([audit](doc/reports/wiring-audit-2026-10-24.md), the owner, 2026-10-24), in this order:
   - [ ] **The wiring register made true, and quick fixes** ([045](doc/prompts/045-wiring-register-and-quick-fixes.md)): the register's false `world` entries corrected; the Olympic balance tank panel's START/STOP to the starters; the Olympic's UV and ozone isolators drawn; the poolside sign, the lounge's dosing tags, the pump gauges, the air mimic's lamps, the readout amps and the desk's labels from the world.
