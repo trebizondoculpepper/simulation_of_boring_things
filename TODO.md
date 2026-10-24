@@ -60,6 +60,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Wiring the plant rooms' machines to the world
 
+- [ ] **Heat lost from the jacuzzi's balance tank** ([057](doc/prompts/057-balance-tank-thermal-losses.md), the owner, 2026-10-24): until then the tank is ideal, a finite quantity of water with no losses. Model its wall and lid losses to the plant room, insulated (foam GRP) and bare, so the jacuzzi's heating carries them and the insulation is worth having; draw the insulated tank to match.
 - [x] **The jacuzzi's balance tank** (done 2026-10-24; [056](doc/prompts/056-jacuzzi-balance-tank.md), the owner, 2026-10-24): a deck-level spa cannot work without one.
   - [x] **Stage 1, the model:** (done 2026-10-24, 1305a28) a spa balance tank sized by its allowances (1.3 m³ for the jacuzzi); the cabinet's controller given its tank as an input, tested against an ideal tank and then the world's.
   - [x] **Stage 2, installed:** (done 2026-10-24) a GRP balance tank component beside the cabinet, the gutter into it, the pump's suction from it, its make-up and overflow, all replumbed by the plumber; its sight gauge showing the world's level.
