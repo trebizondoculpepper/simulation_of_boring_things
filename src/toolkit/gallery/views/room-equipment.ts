@@ -912,6 +912,10 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
       }
       return pipework.uses.get(o) ?? services?.uses.get(o);
     },
+    setAudible(on: boolean) {
+      for (const live of lives) live.parts?.setAudible(on);
+      pipework.setAudible(on);
+    },
     update(delta: number) {
       for (const live of lives) {
         live.parts?.update(delta);

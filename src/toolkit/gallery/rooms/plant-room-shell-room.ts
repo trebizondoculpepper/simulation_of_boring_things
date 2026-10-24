@@ -1,3 +1,8 @@
+import { createZoneMusicRack } from '../../components/sound/parts/zone-music-rack';
+import { createMusicThroughWall } from '../../components/sound/parts/music-speaker';
+import { JACUZZI_MUSIC } from '../audio/jacuzzi-music';
+import { bindJacuzziMusic } from '../views/jacuzzi-music';
+import { JACUZZI_MUSIC_CABINET } from '../logic/jacuzzi-music';
 import {
   ACESFilmicToneMapping,
   AmbientLight,
@@ -226,8 +231,19 @@ export function startPlantRoomShell(
     rooms.add(jacuzziMimic.group);
   }
   if (fibreControl) {
-    fibreControl.group.position.set(-1.25, plan.floor + 1.8, -plan.hz + 0.025);
+    fibreControl.group.position.set(-1.9, plan.floor + 1.8, -plan.hz + 0.025);
     rooms.add(fibreControl.group);
+  }
+  if (hall === 'pool_03') {
+    const c = JACUZZI_MUSIC_CABINET;
+    const music = parts.add(
+      createZoneMusicRack(kit, bindJacuzziMusic(), JACUZZI_MUSIC, false),
+    );
+    music.object.position.set(c.x, plan.floor + c.bottom, c.z);
+    music.object.rotation.y = c.yaw;
+    rooms.add(music.object);
+    // And the music itself, faintly, through the wall from the hall.
+    parts.add(createMusicThroughWall(kit, bindJacuzziMusic(), JACUZZI_MUSIC));
   }
   const raycaster = new Raycaster();
   const pointer = new Vector2();
@@ -387,6 +403,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   const wallsDown = [
     ...shellSolids(plan, false),
     ...(machines?.solids ?? []),
+    ...(hall === 'pool_03' ? [JACUZZI_MUSIC_CABINET.footprint] : []),
   ].map(toMetre);
   /** The walker's floor's height, metres. */
   let standing = 0;
@@ -557,6 +574,9 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     : null;
   let last = 0;
   renderer.setAnimationLoop((time) => {
+    parts.setAudible(!canvas.parentElement?.hidden && !walk.following);
+    machines?.setAudible(!canvas.parentElement?.hidden && !walk.following);
+    services?.setAudible(!canvas.parentElement?.hidden && !walk.following);
     if (canvas.parentElement?.hidden) return;
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;

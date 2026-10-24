@@ -1,4 +1,5 @@
 import { computed, signal } from '@preact/signals-core';
+import { createLouvres } from '../../../components/industrial-control/views/cabinet-fittings';
 import { Group } from 'three';
 import type { Object3D } from 'three';
 import type { ReadonlySignal } from '@preact/signals-core';
@@ -511,6 +512,21 @@ function buildSpaPack(
     face.position.x = -side * (leafW / 2);
     hinge.add(face);
     t.box(face, steel, leafW, c.h - 0.13, 0.025, 0, (c.h - 0.13) / 2, 0.0125);
+    // Its vents, through the door: louvres outside matching those of its
+    // inside cover (`createDoorRearCover`), near its top and its foot.
+    const pan = c.h - 0.176;
+    const ventH = Math.min(0.072, pan * 0.22);
+    const ventW = Math.min(0.24, leafW - 0.086);
+    for (const k of [-1, 1]) {
+      const vent = createLouvres(kit, ventW, ventH, steel);
+      vent.name = 'Spa set cabinet door vent';
+      vent.position.set(
+        0,
+        (c.h - 0.13) / 2 + k * (pan / 2 - ventH / 2 - 0.018),
+        0.0255,
+      );
+      face.add(vent);
+    }
     return { hinge, face };
   };
   const left = leaf(-1);
@@ -522,7 +538,7 @@ function buildSpaPack(
     height: 0.018,
     ink: '#1d2125',
   });
-  plate.position.set(0, 1.86, 0.026);
+  plate.position.set(0, 1.78, 0.026);
   right.face.add(plate);
 
   // ---- The control panel, on the left door -------------------------------
@@ -780,7 +796,7 @@ function buildSpaPack(
                   computed(() => 0.11 * doors.value),
                 )
               : machineTone(
-                  'blower',
+                  'side-channel',
                   signal(1),
                   computed(() => 0.09 * doors.value),
                 ),

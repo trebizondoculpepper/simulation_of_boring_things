@@ -1,4 +1,6 @@
 import { Group } from 'three';
+import { signal } from '@preact/signals-core';
+import { drainGurgle } from '../../../components/plant/audio/drain';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
 import { beginPart, createPartSet } from '../../../components/core/parts/parts';
@@ -52,7 +54,21 @@ const build =
         drop: GULLY.airGap,
       });
       object.add(gully.group);
-      return { object, update: () => gully.setFlow(m().readings().flow) };
+      const flowing = signal(false);
+      const sound = beginPart(kit, 'Drain demonstration gully');
+      object.add(sound.object);
+      sound.holdWhile(flowing, drainGurgle(), gully.group);
+      const parts = createPartSet();
+      parts.add(sound.part());
+      return {
+        object,
+        parts,
+        update: () => {
+          const flow = m().readings().flow;
+          gully.setFlow(flow);
+          flowing.value = flow > 0.01;
+        },
+      };
     }
     const t = tools(kit);
     // The plinth, concrete.

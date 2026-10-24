@@ -48,6 +48,7 @@ import { partAudio } from '../../components/core/audio/part-audio';
 import { footbathDischarging } from '../../../game/plant/footbath-discharge';
 import { jacuzziDischarging } from '../../../game/world';
 import { machineTone } from '../../components/sound/audio/machine-tones';
+import { drainGurgle } from '../../components/plant/audio/drain';
 import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
 import { createValveControlPanel } from '../../components/plant/views/valve-control-panel';
 import type { PanelValve } from '../../components/plant/views/valve-control-panel';
@@ -83,6 +84,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   // The motorised valves: each one's lamp, and its row on the room's panel.
   const motorLamps: ((delta: number) => void)[] = [];
   const motorStops: (() => void)[] = [];
+  let audible = false;
   const panelValves: PanelValve[] = [];
   const lift = <T extends readonly [number, number, number]>([x, y, z]: T) =>
     [x, floorY + y, z] as const;
@@ -199,16 +201,20 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
           );
           const moving = motorRunning(travel);
           motor.show(motorLimits(travel).open, moving);
-          if (moving !== running) {
-            running = moving;
+          const sounding = audible && moving;
+          if (sounding !== running) {
+            running = sounding;
             partAudio.hold(
               motor.group,
-              moving ? machineTone('gear-motor', pitch, 0.12) : null,
+              sounding ? machineTone('gear-motor', pitch, 0.12) : null,
               motor.group,
             );
           }
         });
-        motorStops.push(() => partAudio.hold(motor.group, null));
+        motorStops.push(() => {
+          running = false;
+          partAudio.hold(motor.group, null);
+        });
         panelValves.push({
           tag: id,
           legend: (description?.name ?? 'Valve').toUpperCase(),
@@ -374,6 +380,15 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     group,
     isolator,
     uses,
+    setAudible(on: boolean) {
+      if (on === audible) return;
+      audible = on;
+      if (!on) {
+        for (const stop of motorStops) stop();
+        if (drainMouth) partAudio.hold(drainMouth, null);
+        gurgling = false;
+      }
+    },
     /** Silence any valve motor still running, and the drain. */
     dispose() {
       for (const stop of motorStops) stop();
@@ -390,18 +405,19 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       if (drainMouth && store) {
         const w = store.world.value;
         const running =
-          room === 'plant_pool_03'
+          audible &&
+          (room === 'plant_pool_03'
             ? jacuzziDischarging(w)
             : footbathDischarging(
                 w.identifiedPlant,
                 w.pools.pool_04,
                 w.plant.isolators[name] ?? true,
-              );
+              ));
         if (running !== gurgling) {
           gurgling = running;
           partAudio.hold(
             drainMouth,
-            running ? machineTone('drain-gurgle', signal(1), 0.08) : null,
+            running ? drainGurgle() : null,
             drainMouth,
           );
         }

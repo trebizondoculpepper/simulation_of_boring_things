@@ -19,7 +19,12 @@ export function newLoungeValvePositions(): Record<string, number> {
   );
 }
 
-/** Actual travel and spring return live in the world, so both the local mimic and the valve agree. */
+/**
+ * Actual travel and spring return live in the world, so both the local
+ * mimic and the valve agree. Their actuators are electric, spring-return
+ * (the owner, 2026-10-24): driven while powered and commanded, sprung shut
+ * when their room loses power. They need no air.
+ */
 export function stepLoungeValves(
   positions: Readonly<Record<string, number>>,
   commands: Readonly<Record<string, boolean>>,
@@ -27,12 +32,10 @@ export function stepLoungeValves(
   dt: number,
 ): Record<string, number> {
   const power = serviceAvailable(plant, 'plant_pool_01', 'power');
-  const air = serviceAvailable(plant, 'plant_pool_01', 'air');
   const next: Record<string, number> = {};
   for (const { assetId, normal } of LOUNGE_VALVES) {
     const current = positions[assetId] ?? (normal === 'open' ? 1 : 0);
-    const target =
-      power && air && (commands[assetId] ?? normal === 'open') ? 1 : 0;
+    const target = power && (commands[assetId] ?? normal === 'open') ? 1 : 0;
     const travel = Math.max(0, dt) / STROKE;
     next[assetId] =
       target > current

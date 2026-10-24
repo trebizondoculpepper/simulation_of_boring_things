@@ -9,6 +9,12 @@ import {
 import { Quaternion, Vector3 } from 'three';
 import { createPanelKit } from '../../core/views/eighties-controls';
 import { createActuatedButterflyValve } from './actuated-butterfly-valve';
+import { partAudio } from '../../core/audio/part-audio';
+import {
+  PNEUMATIC_STROKE,
+  SOLENOID_CLICK,
+  VALVE_STOP,
+} from '../audio/actuated-valve';
 
 beforeEach(() => {
   vi.stubGlobal('document', {
@@ -25,9 +31,70 @@ beforeEach(() => {
     },
   });
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe('actuated butterfly valve', () => {
+  it('sounds remote commands and travel, stops at the limit, and stays silent on hidden-room resync', () => {
+    const hold = vi.spyOn(partAudio, 'hold').mockImplementation(() => {});
+    const play = vi.spyOn(partAudio, 'play').mockImplementation(() => () => {});
+    let open = true;
+    let position = 1;
+    let power = true;
+    const valve = createActuatedButterflyValve(
+      createPanelKit(),
+      100,
+      'z',
+      'Lounge filter valve',
+      {
+        open: () => open,
+        position: () => position,
+        power: () => power,
+        set: (value) => {
+          open = value;
+        },
+      },
+    );
+    valve.update(0.1);
+    expect(play).not.toHaveBeenCalled();
+    open = false;
+    valve.update(0.1);
+    expect(play).toHaveBeenCalledWith(SOLENOID_CLICK, expect.anything());
+    expect(hold).toHaveBeenLastCalledWith(
+      expect.anything(),
+      PNEUMATIC_STROKE,
+      expect.anything(),
+    );
+    position = 0.5;
+    valve.update(0.1);
+    position = 0;
+    valve.update(0.1);
+    expect(play).toHaveBeenLastCalledWith(VALVE_STOP, expect.anything());
+    expect(hold).toHaveBeenLastCalledWith(
+      expect.anything(),
+      null,
+      expect.anything(),
+    );
+    valve.setAudible(false);
+    open = true;
+    position = 1;
+    valve.setAudible(true);
+    play.mockClear();
+    valve.update(0.1);
+    expect(play).not.toHaveBeenCalled();
+    power = false;
+    valve.update(0.1);
+    expect(play).toHaveBeenCalledWith(SOLENOID_CLICK, expect.anything());
+    expect(hold).toHaveBeenLastCalledWith(
+      expect.anything(),
+      PNEUMATIC_STROKE,
+      expect.anything(),
+    );
+    valve.dispose();
+    expect(hold).toHaveBeenLastCalledWith(expect.anything(), null);
+  });
   it('keeps an upright pipe’s override facing horizontally and operable', () => {
     const valve = createActuatedButterflyValve(
       createPanelKit(),

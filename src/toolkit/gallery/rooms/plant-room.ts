@@ -98,7 +98,8 @@ export type ExhibitRoomId =
   | 'dev28'
   | 'dev29'
   | 'dev30'
-  | 'dev32';
+  | 'dev32'
+  | 'dev37';
 
 /** A room's own finish (`FINISH` in its module). */
 export interface RoomFinish {
@@ -161,6 +162,7 @@ const EXHIBITS: Record<
   dev29: () => import('./plant/solenoid-valves'),
   dev30: () => import('./plant/lighting-styles'),
   dev32: () => import('./plant/ideal-foot-spa'),
+  dev37: () => import('./plant/valve-test-rig'),
 };
 
 /**
@@ -629,6 +631,8 @@ export function startEquipmentRoom(
 
   let last = 0;
   renderer.setAnimationLoop((time) => {
+    for (const exhibit of live)
+      exhibit.parts?.setAudible(!canvas.parentElement?.hidden);
     if (canvas.parentElement?.hidden) {
       last = 0;
       return;

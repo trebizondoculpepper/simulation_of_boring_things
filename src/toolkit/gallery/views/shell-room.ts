@@ -98,6 +98,8 @@ export interface ShellView {
   title: string | null;
   note: string;
   seed: number;
+  /** Plain offices and listening rooms have no exposed overhead services. */
+  services?: boolean;
 }
 
 /**
@@ -336,12 +338,13 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
     group.add(light);
   }
   // Overhead, under the roof, a generated services ceiling.
-  group.add(
-    createServiceCeiling(
-      { minX: -hw, maxX: hw, minZ: -hd, maxZ: hd, deckY: v.roof },
-      { seed: v.seed, density: 0.85 },
-    ).group,
-  );
+  if (v.services !== false)
+    group.add(
+      createServiceCeiling(
+        { minX: -hw, maxX: hw, minZ: -hd, maxZ: hd, deckY: v.roof },
+        { seed: v.seed, density: 0.85 },
+      ).group,
+    );
 
   function card(cw: number, ch: number, text: string[]) {
     const canvas = document.createElement('canvas');

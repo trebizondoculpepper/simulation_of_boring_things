@@ -1,3 +1,8 @@
+import { createJacuzziDrainAudio } from '../views/jacuzzi-drain-audio';
+import { jacuzziSpeakerMounts } from '../logic/jacuzzi-music';
+import { createMusicSpeakerPair } from '../../components/sound/parts/music-speaker';
+import { JACUZZI_MUSIC } from '../audio/jacuzzi-music';
+import { bindJacuzziMusic } from '../views/jacuzzi-music';
 import {
   ACESFilmicToneMapping,
   AmbientLight,
@@ -145,6 +150,20 @@ export function startPoolHallRoom(
       ? createJacuzziFibreWall(spec.w, spec.d, spec.tileTop, spec.h)
       : null;
   if (fibreWall) rooms.add(fibreWall.group);
+  const musicSpeaker =
+    id === 'pool_03' && !gallery && !devRoom
+      ? createMusicSpeakerPair(
+          poolsideKit,
+          bindJacuzziMusic(),
+          JACUZZI_MUSIC,
+          jacuzziSpeakerMounts(),
+          metre,
+          true,
+        )
+      : null;
+  if (musicSpeaker) {
+    rooms.add(musicSpeaker.object);
+  }
   const poolside = !gallery
     ? (() => {
         const mounts =
@@ -724,9 +743,16 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     levelPanel.group.rotation.y = Math.PI / 2;
     rooms.add(levelPanel.group);
   }
+  const drainAudio =
+    id === 'pool_03' && !gallery && !devRoom
+      ? createJacuzziDrainAudio(poolsideKit)
+      : null;
   let last = 0;
   let officeWasOpen = false;
   renderer.setAnimationLoop((time) => {
+    musicSpeaker?.setAudible(!canvas.parentElement?.hidden && !walk.following);
+    drainAudio?.setAudible(!canvas.parentElement?.hidden && !walk.following);
+    drainAudio?.setDoorAngle(plantDoor?.angle() ?? 0);
     if (canvas.parentElement?.hidden) return;
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     levelPanel?.update(delta);
@@ -882,6 +908,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       for (const w of withdraw) w();
       observer.disconnect();
       composer.dispose();
+      musicSpeaker?.dispose();
+      drainAudio?.dispose();
       makeUpStreams?.dispose();
       levelPanel?.dispose();
       fibreWall?.dispose();

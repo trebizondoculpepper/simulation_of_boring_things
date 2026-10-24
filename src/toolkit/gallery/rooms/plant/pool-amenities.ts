@@ -23,6 +23,8 @@ import type { Object3D } from 'three';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import { worldStore } from '../../../save/world-store';
 import { jacuzziRuns } from '../../../../game/world';
+import { poolDepth } from '../../../../game/plant/pools';
+import { jacuzziVisualVolume } from '../../logic/jacuzzi-water-level';
 import {
   JACUZZI_CYCLE,
   JACUZZI_LEVEL_SWITCH,
@@ -616,6 +618,7 @@ function buildJacuzzi(
     }),
   );
   water.position.y = surface;
+  water.name = 'Jacuzzi water surface';
   water.renderOrder = 1;
   object.add(water);
   // The water coming in through the jets while the tub fills: an arc from
@@ -676,6 +679,7 @@ function buildJacuzzi(
   spaState.waterVolumeM3 = capacity;
 
   let time = 0;
+  let fillingUntil = 0;
   object.traverse((o) => (o.userData.live = true));
   // Its sounds, each held while its part runs: the blower from under the
   // deck, the jet pump's distant whine, and the bubbles from the water,
@@ -711,6 +715,7 @@ function buildJacuzzi(
       // A development room's fill knob is a target: the tub fills through
       // its jets, or drains, toward it.
       const fx = spaState.effects;
+      const world = spaState === spa ? jacuzziWorld()?.world.value : undefined;
       let filling = false;
       if (fx) {
         const target =
@@ -722,6 +727,15 @@ function buildJacuzzi(
           Math.abs(gap) <= step
             ? target
             : spaState.waterVolumeM3 + Math.sign(gap) * step;
+      } else if (world) {
+        const volume = jacuzziVisualVolume(
+          world.pools.pool_03.level,
+          poolDepth('pool_03'),
+          capacity,
+        );
+        if (volume > spaState.waterVolumeM3 + 1e-9) fillingUntil = time + 0.2;
+        spaState.waterVolumeM3 = volume;
+        filling = time < fillingUntil;
       }
       const waterVolume = spaState.waterVolumeM3;
       const percentFull = steppedTubPercentFull(fillProfile, waterVolume);
@@ -736,7 +750,6 @@ function buildJacuzzi(
         if (fx.bubbles.peek()) fx.bubbles.value = false;
       }
       // The jets and air as the world runs them, whoever started them.
-      const world = spaState === spa ? jacuzziWorld()?.world.value : undefined;
       if (world) {
         const runs = jacuzziRuns(world);
         spaState.state = {

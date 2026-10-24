@@ -77,12 +77,12 @@ const PLACES = [
     z,
     yaw: -Math.PI / 2,
   })),
-  ...[5, 2, -1].map((x) => ({
+  ...[8, 5, 2, -1, -4].map((x) => ({
     x,
     z: FLOOR.maxZ - OFF_WALL,
     yaw: Math.PI,
   })),
-  ...[0.8, -2].map((z) => ({
+  ...[0.8, -2, -3.8].map((z) => ({
     x: FLOOR.minX + OFF_WALL,
     z,
     yaw: Math.PI / 2,

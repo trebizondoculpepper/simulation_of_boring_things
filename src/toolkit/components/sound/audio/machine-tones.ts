@@ -19,6 +19,7 @@ export type MachineToneId =
   | 'cabinet-fan'
   | 'fan-tray'
   | 'blower'
+  | 'side-channel'
   | 'transformer'
   | 'motor'
   | 'pump'
@@ -98,6 +99,15 @@ export const MACHINE_TONES: readonly MachineTone[] = [
     name: 'BLOWER',
     caption: 'A squirrel-cage blower: rumble and whoosh',
     spin: { up: 4, down: 9, floor: 0.05 },
+  },
+  {
+    id: 'side-channel',
+    name: 'SIDE-CHANNEL BLOWER',
+    caption:
+      'A regenerative air blower, as under a spa: a hard, high siren over a hiss of air',
+    // A light impeller on a two-pole motor: up to speed in a couple of
+    // seconds, and a long, falling wail as it coasts down.
+    spin: { up: 1.8, down: 6, floor: 0.06 },
   },
   {
     id: 'worn-fan',
@@ -418,44 +428,131 @@ const RECIPES: Record<MachineToneId, (t: Tools) => Float32Array> = {
     ]);
   },
   'drain-gurgle': (t) => {
-    // Water falling into a tundish and down a trapped gully (the owner,
-    // 2026-10-23, for the foot spa's drain-down): bubbles bursting and
-    // ringing as they are dragged under, each a short, rising tone that
-    // dies away (a bubble's own note, its pitch by its size); every so
-    // often a deep glug as the trap gulps air; and the splash and
-    // trickle of the falling water under them.
-    const bubbles = new Float32Array(t.n);
-    const bubble = (at: number, f: number, decay: number, level: number) =>
-      t.event(bubbles, at, decay * 6, (s) => {
-        // Rising as the bubble closes: its phase is the chirp's integral.
+    // Water going down a drain (the owner, 2026-10-24), resynthesised from
+    // a recording's spectrum: four layers, each pulsing about five times a
+    // second, never evenly. A heaving rumble under 230 Hz (its peak near
+    // 170 Hz); the glugs, a resonance wandering 480 to 1,020 Hz and the
+    // loudest of them; a sparkle of drops and small bubbles at 1.8 to
+    // 3.2 kHz; and a fizz to 6 kHz, with almost nothing above. Their
+    // levels are the recording's: the glugs at 0 dB, the sparkle -2, the
+    // rumble -6 and the fizz -7.
+    const seconds = TONE_LOOP_SECONDS;
+    /** An envelope of `rate` swells a second, each up in `rise` and dying over `decay`, on a `floor`. */
+    const bursts = (
+      rate: number,
+      rise: number,
+      decay: number,
+      floor: number,
+    ) => {
+      const env = new Float32Array(t.n).fill(floor);
+      for (let k = 0; k < seconds * rate; k++) {
+        const level = 0.4 + t.random() * 0.8;
+        t.event(
+          env,
+          t.random() * seconds,
+          rise + decay * 5,
+          (s) =>
+            level *
+            Math.min(1, s / rise) *
+            Math.exp(-Math.max(0, s - rise) / decay),
+        );
+      }
+      return env;
+    };
+    /** A bubble's ring: a short tone rising as it closes, dying away. */
+    const bubble = (
+      into: Float32Array,
+      at: number,
+      f: number,
+      decay: number,
+      level: number,
+    ) =>
+      t.event(into, at, decay * 6, (s) => {
         const phase = 2 * Math.PI * f * (s + (0.35 * s * s) / decay);
         return level * Math.sin(phase) * Math.exp(-s / decay);
       });
-    const seconds = TONE_LOOP_SECONDS;
-    // Small bubbles, many and quick.
-    for (let k = 0; k < seconds * 18; k++)
+    /** `layer` shaped by `env`, scaled to an RMS of 1. */
+    const shaped = (layer: Float32Array, env: Float32Array) => {
+      const out = layer.map((v, i) => v * env[i]);
+      const scale = 1 / t.rms(out);
+      return out.map((v) => v * scale);
+    };
+
+    // The rumble: low noise, heaving slowly and pulsing.
+    const heave = t.wander(0.5, [0.25, 0.5]);
+    const pulse = bursts(5, 0.02, 0.09, 0.35);
+    const rumble = shaped(
+      mix(t.n, [
+        [t.noise(170, 1.2), 1],
+        [t.noise(110, 0.8), 0.6],
+      ]),
+      pulse.map((v, i) => v * heave[i]),
+    );
+
+    // The glugs: narrow resonances across 500 Hz to 1 kHz, each sounding
+    // by turns, so the note wanders; and the gulps' own rising notes.
+    const glugs = new Float32Array(t.n);
+    for (const f of [500, 590, 700, 830, 1000]) {
+      const ring = t.noise(f, 7);
+      const env = bursts(1.1, 0.015, 0.07, 0.05);
+      for (let i = 0; i < t.n; i++) glugs[i] += ring[i] * env[i];
+    }
+    const gulps = new Float32Array(t.n);
+    for (let k = 0; k < seconds * 5; k++)
       bubble(
+        gulps,
         t.random() * seconds,
-        280 * Math.pow(3.2, t.random()),
-        0.012 + t.random() * 0.03,
+        480 * Math.pow(2.1, t.random()),
+        0.03 + t.random() * 0.04,
+        0.5 + t.random() * 0.5,
+      );
+    const glug = shaped(
+      mix(t.n, [
+        [glugs, 1],
+        [gulps, 0.9],
+      ]),
+      t.wander(0.3, [0.5, 1.25]),
+    );
+
+    // The sparkle: many small, quick bubbles and drops over a bright wash.
+    const drops = new Float32Array(t.n);
+    for (let k = 0; k < seconds * 40; k++)
+      bubble(
+        drops,
+        t.random() * seconds,
+        1600 * Math.pow(1.6, t.random()),
+        0.006 + t.random() * 0.016,
         0.25 + t.random() * 0.5,
       );
-    // The trap's glugs: deep, and fewer.
-    for (let k = 0; k < seconds * 1.6; k++)
-      bubble(
-        t.random() * seconds,
-        110 + t.random() * 90,
-        0.05 + t.random() * 0.05,
-        0.9 + t.random() * 0.4,
-      );
-    const splash = t.noise(2200, 0.6);
-    const trickle = t.noise(650, 1.1);
-    const swell = t.wander(0.35, [0.5, 1.25, 2]);
-    return mix(t.n, [
-      [bubbles, 1],
-      [splash, 0.16],
-      [trickle, 0.12],
-    ]).map((v, i) => v * swell[i]);
+    const sparkle = shaped(
+      mix(t.n, [
+        [drops, 1],
+        [t.noise(2300, 1.2).map((v) => v * 0.1), 1],
+      ]),
+      bursts(6, 0.005, 0.04, 0.55),
+    );
+
+    // The fizz, in the same pulses, and nothing much above it.
+    const fizz = shaped(t.noise(4500, 0.9), bursts(6, 0.003, 0.03, 0.55));
+
+    // Through a steep low-pass, falling from 5 kHz, as the recording does
+    // there: four poles, run round the loop twice, so it starts as it
+    // ends, with no seam.
+    const all = mix(t.n, [
+      [glug, 1],
+      [sparkle, 1],
+      [rumble, 0.67],
+      [fizz, 0.6],
+    ]);
+    const k = 1 - Math.exp((-2 * Math.PI * 8000) / (t.n / seconds));
+    const y = [0, 0, 0, 0];
+    for (let pass = 0; pass < 2; pass++)
+      for (let i = 0; i < t.n; i++) {
+        let v = all[i];
+        for (let j = 0; j < 4; j++) v = y[j] += k * (v - y[j]);
+        if (pass === 1) all[i] = v;
+      }
+    return all;
   },
   'cabinet-fan': (t) =>
     fan(t, { rev: 45, blades: 7, air: 750, airQ: 0.6, tone: 0.28 }),
@@ -520,6 +617,38 @@ const RECIPES: Record<MachineToneId, (t: Tools) => Float32Array> = {
       [rumble, 0.45],
       [whoosh.map((v, i) => v * swell[i]), 0.35],
       [blades, 0.3],
+    ]);
+  },
+  'side-channel': (t) => {
+    // A side-channel (regenerative) blower: a 40-blade impeller on a
+    // two-pole motor at 3450 rpm. Its blade-pass, 2300 Hz, is a hard
+    // siren, roughened by the turning rotor; the air hisses high through
+    // its channel and silencers; little low end, but the motor's hum.
+    const rev = 57.5;
+    const siren = t.partials(
+      [
+        [40 * rev, 0.5],
+        [40 * rev - rev, 0.12],
+        [40 * rev + rev, 0.12],
+        [80 * rev, 0.18],
+      ],
+      new Float32Array(t.n),
+    );
+    const flutter = t.wander(0.15, [rev / 8, rev / 4]);
+    const hiss = t.noise(3200, 0.8);
+    const breath = t.noise(1400, 0.5);
+    const hum = t.partials(
+      [
+        [120, 0.3],
+        [rev, 0.12],
+      ],
+      new Float32Array(t.n),
+    );
+    return mix(t.n, [
+      [siren.map((v, i) => v * flutter[i]), 0.45],
+      [hiss, 0.3],
+      [breath, 0.12],
+      [hum, 0.12],
     ]);
   },
   'worn-fan': (t) => {

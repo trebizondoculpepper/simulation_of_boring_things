@@ -159,18 +159,18 @@ export function beginPart(kit: PanelKit, name: string) {
         for (const listener of listeners) listener(event, name);
       });
     },
-    /** Hold `recipe` from `from` for as long as `when` is true. */
+    /** Hold `recipe` while `when` is true; null lets a recipe place its own outputs. */
     holdWhile(
       when: Readable<boolean>,
       recipe: LoopRecipe,
-      from: Object3D = object,
+      from: Object3D | null = object,
     ) {
       const owner = {};
       const stop = effect(() =>
         partAudio.hold(
           owner,
           when.value && audible.value ? recipe : null,
-          from,
+          from ?? undefined,
         ),
       );
       disposers.push(() => {

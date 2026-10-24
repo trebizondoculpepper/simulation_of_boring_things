@@ -50,6 +50,8 @@ export type GalleryRoomId =
   | 'dev33'
   | 'dev34'
   | 'dev35'
+  | 'dev36'
+  | 'dev37'
   | 'retired0'
   | 'dev_corridor';
 /** One development room per pool plant room, each showing its equipment. */
@@ -99,6 +101,7 @@ export type RoomId =
   | 'air_plant'
   | 'control_room'
   | 'engineers_office'
+  | 'duty_managers_office'
   | 'plant_room_tiny'
   | 'plant_room_small'
   | 'plant_room_medium'
@@ -212,6 +215,9 @@ export const ROOMS: readonly RoomId[] = [
   // floor to its top deck.
   'dev34',
   'dev35',
+  'dev36',
+  // By its URL only: a valve test rig, for valves and their sounds.
+  'dev37',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   // The single playable pool room.
@@ -251,6 +257,7 @@ export const ROOMS: readonly RoomId[] = [
   'air_plant',
   'control_room',
   'engineers_office',
+  'duty_managers_office',
   'plant_room_tiny',
   'plant_room_small',
   'plant_room_medium',
@@ -304,6 +311,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   air_plant: 'AIR HANDLING PLANT',
   control_room: 'CONTROL ROOM',
   engineers_office: 'ENGINEER’S OFFICE',
+  duty_managers_office: 'DUTY MANAGER’S OFFICE',
   plant_room_tiny: 'PLANT ROOM · TINY · 5 × 5 M',
   plant_room_small: 'PLANT ROOM · SMALL · 8 × 8 M',
   plant_room_medium: 'PLANT ROOM · MEDIUM · 12 × 12 M',
@@ -359,6 +367,8 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev33: 'DEV33 · FOOTBATH WATER LEVEL',
   dev34: 'DEV34 · STAIR TOWER',
   dev35: 'DEV35 · JACUZZI WATER LAB',
+  dev36: 'DEV36 · MUSIC EFFECTS LAB',
+  dev37: 'DEV37 · VALVE TEST RIG',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   dev_corridor: 'DEV CORRIDOR',
   dev_courtyard: 'COURTYARD',
@@ -400,6 +410,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   air_plant: '#6d7a6f',
   control_room: '#6d7a6f',
   engineers_office: '#6d7a6f',
+  duty_managers_office: '#7e8975',
   plant_room_tiny: '#6d7a6f',
   plant_room_small: '#6d7a6f',
   plant_room_medium: '#6d7a6f',
@@ -455,6 +466,8 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev33: '#5fa3c8',
   dev34: '#c88a3a',
   dev35: '#80b9c8',
+  dev36: '#9baeb8',
+  dev37: '#7f8f6a',
   retired0: '#6d7a6f',
   dev_corridor: '#2d9ca0',
   dev_courtyard: '#7fa36a',

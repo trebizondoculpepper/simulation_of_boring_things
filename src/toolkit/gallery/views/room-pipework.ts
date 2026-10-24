@@ -281,6 +281,9 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
           v.axis === 'y' ? 'y' : 'z',
           `${installed.tag} · ${v.name}`,
           binding,
+          // Plant Room 1's are electric, spring-return (the owner,
+          // 2026-10-24); the Olympic room's stay on air.
+          { drive: room === 'plant_pool_01' ? 'electric' : 'pneumatic' },
         ),
       );
       actuated.object.position.set(...lift(v.at));
@@ -394,6 +397,9 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     switches,
     solids: [...pipeObstacles(runs), ...stands.map(standFootprint)],
     uses: parts.uses,
+    setAudible(on: boolean) {
+      parts.setAudible(on);
+    },
     update(delta: number) {
       parts.update(delta);
       for (const { isolator, name } of switches) {

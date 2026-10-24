@@ -1,3 +1,5 @@
+import { actOnZoneMusic, newZoneMusic, stepZoneMusic } from './plant/music';
+import type { ZoneMusicState, ZoneMusicAction } from './plant/music';
 /**
  * The game's one world state: everything that carries on whichever room
  * the player is in, and is saved (`save.ts`). Plain data (numbers,
@@ -137,7 +139,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 24;
+export const WORLD_VERSION = 25;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -193,6 +195,7 @@ export interface World {
   jacuzziFibreIlluminator: FibreIlluminatorState;
   /** The boiler house's gas safety: ECV, emergency stop, detector and SSOV (`boiler-gas.ts`). */
   boilerGas: BoilerGasState;
+  music: ZoneMusicState;
 }
 
 export function newWorld(): World {
@@ -218,6 +221,7 @@ export function newWorld(): World {
     jacuzzi: newJacuzzi(),
     jacuzziFibreIlluminator: newFibreIlluminator(),
     boilerGas: newBoilerGas(),
+    music: newZoneMusic(),
   };
 }
 
@@ -262,7 +266,8 @@ export type WorldAction =
   | { type: 'jacuzzi'; action: JacuzziAction }
   | { type: 'jacuzzi/fibre-illuminator'; action: FibreIlluminatorAction }
   /** The boiler house's gas safety worked: its emergency stop, GAS RESET, ECV or detector TEST. */
-  | { type: 'boiler-gas'; action: BoilerGasAction };
+  | { type: 'boiler-gas'; action: BoilerGasAction }
+  | { type: 'music'; action: ZoneMusicAction };
 
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
@@ -388,6 +393,8 @@ export function applyAction(world: World, action: WorldAction): World {
       const motors = actOnStarter(world.motors, action.tag, action.action);
       return motors === world.motors ? world : { ...world, motors };
     }
+    case 'music':
+      return { ...world, music: actOnZoneMusic(world.music, action.action) };
     case 'jacuzzi':
       return {
         ...world,
@@ -616,6 +623,11 @@ export function stepWorld(world: World, delta: number): World {
   return {
     ...world,
     time: world.time + delta,
+    music: stepZoneMusic(
+      world.music,
+      delta,
+      serviceAvailable(world.plant, 'plant_pool_03', 'power'),
+    ),
     pools: water.pools,
     airHandling,
     motors,

@@ -1,3 +1,5 @@
+import { createJacuzziAmbience } from './toolkit/gallery/views/jacuzzi-ambience';
+import { jacuzziApproachGain } from './toolkit/gallery/logic/jacuzzi-acoustics';
 import './styles/main.css';
 import { createRoomModuleCache } from './toolkit/gallery/logic/room-module-cache';
 import { Plane, Vector3 } from 'three';
@@ -390,6 +392,12 @@ const importStarter = async (
     return (surface) =>
       startPoolHallRoom(surface, 'pool_04', { devRoom: 'dev33' });
   }
+  if (room === 'duty_managers_office')
+    return (await import('./toolkit/gallery/rooms/shell-room'))
+      .startDutyManagersOffice;
+  if (room === 'dev36')
+    return (await import('./toolkit/gallery/rooms/shell-room'))
+      .startMusicEffectsRoom;
   if (room === 'dev35')
     return (await import('./toolkit/gallery/rooms/jacuzzi-water-room'))
       .startJacuzziWaterRoom;
@@ -447,7 +455,8 @@ const importStarter = async (
     room === 'dev28' ||
     room === 'dev29' ||
     room === 'dev30' ||
-    room === 'dev32'
+    room === 'dev32' ||
+    room === 'dev37'
   ) {
     const { startEquipmentRoom } =
       await import('./toolkit/gallery/rooms/plant-room');
@@ -901,9 +910,17 @@ const checkDoors = () => {
   if (!ensureBuilt(to)) return;
   startSeeing(top, to);
 };
+const jacuzziAmbience = createJacuzziAmbience();
 const watchDoors = () => {
   requestAnimationFrame(watchDoors);
   checkDoors();
+  const surface = current && surfaceOf(current);
+  const pose = surface && firstPersonOn(surface)?.pose();
+  jacuzziAmbience.setGain(
+    current && pose && !app.hidden
+      ? jacuzziApproachGain(current, pose.x / METRE, pose.z / METRE)
+      : 0,
+  );
 };
 requestAnimationFrame(watchDoors);
 /** Walked through from `from` into `to`, seen through: hand over at once. */
@@ -1204,6 +1221,7 @@ void openRoom().catch(showError);
 if (import.meta.hot)
   import.meta.hot.dispose(() => {
     revision++;
+    jacuzziAmbience.dispose();
     for (const entry of rooms.values()) {
       entry.handle();
       entry.root.remove();

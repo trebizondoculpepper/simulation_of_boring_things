@@ -657,8 +657,9 @@ export function roomEquipment(
         box: (() => {
           const b = plant('pool_03');
           b.keepClear.push({
-            minX: -1.6,
-            maxX: 1.6,
+            // The 1.2 m mimic's working width; the music rack now sits to its left.
+            minX: -0.7,
+            maxX: 0.7,
             minZ: -b.d / 2,
             maxZ: -b.d / 2 + 1.5,
           });

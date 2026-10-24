@@ -1,3 +1,11 @@
+import { computed, signal } from '@preact/signals-core';
+import {
+  actOnZoneMusic,
+  newZoneMusic,
+  stepZoneMusic,
+} from '../../../game/plant/music';
+import { serviceAvailable } from '../../../game/plant/services';
+import { worldStore } from '../../save/world-store';
 import {
   ACESFilmicToneMapping,
   AmbientLight,
@@ -31,6 +39,9 @@ import {
   createPanelKit,
   disposeKit,
 } from '../../components/core/views/eighties-controls';
+import { createZoneMusicRack } from '../../components/sound/parts/zone-music-rack';
+import { JACUZZI_MUSIC } from '../audio/jacuzzi-music';
+import type { Part } from '../../components/core/parts/parts';
 import { createPartSet } from '../../components/core/parts/parts';
 import { knobDirection } from '../../controls/input/knob-turning';
 import {
@@ -125,6 +136,87 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
   });
 }
 
+/** The planned duty manager's office, listed by URL until its doors are placed. */
+export function startDutyManagersOffice(canvas: HTMLCanvasElement) {
+  const room = { w: 8, d: 8, doors: [] as ShellDoor[] };
+  return runShell(canvas, {
+    self: 'duty_managers_office',
+    room,
+    powered: () => true,
+    build: (metre, kit) =>
+      createShellRoom(metre, kit, {
+        ...room,
+        floor: 0,
+        roof: 2.7,
+        title: 'DUTY MANAGER’S OFFICE',
+        services: false,
+        note: 'Duty manager’s desk, logbook and test kit',
+        seed: 101,
+      }),
+    floorAt: () => 0,
+    solids: shellSolids(room),
+    start: { x: 0, z: 3, yaw: 0 },
+  });
+}
+
+/** A standalone music-effects lab, using the jacuzzi plant room’s rack components. */
+export function startMusicEffectsRoom(canvas: HTMLCanvasElement) {
+  const room = { w: 6, d: 6, doors: [] as ShellDoor[] };
+  return runShell(canvas, {
+    self: 'dev36',
+    room,
+    powered: () => true,
+    build: (metre, kit) =>
+      createShellRoom(metre, kit, {
+        ...room,
+        floor: 0,
+        roof: 3,
+        title: 'DEV36 · MUSIC EFFECTS',
+        services: false,
+        note: 'Jacuzzi music: 1U source, NEXT track, 3U amplifier, ON/OFF and VOLUME.',
+        seed: 36,
+      }),
+    install: (kit) => {
+      const state = signal(newZoneMusic());
+      const store = worldStore('dev');
+      const powered = store.read((w) =>
+        serviceAvailable(w.plant, 'plant_pool_03', 'power'),
+      );
+      const act = (action: Parameters<typeof actOnZoneMusic>[1]) => {
+        state.value = actOnZoneMusic(state.value, action);
+      };
+      const rack = createZoneMusicRack(
+        kit,
+        {
+          source: computed(() => state.value.zones.jacuzzi.source),
+          amplifier: computed(() => state.value.zones.jacuzzi.amplifier),
+          powered,
+          skip: () => act({ type: 'skip', zone: 'jacuzzi' }),
+          toggle: () => act({ type: 'toggle', zone: 'jacuzzi' }),
+          volume: (volume) => act({ type: 'volume', zone: 'jacuzzi', volume }),
+        },
+        JACUZZI_MUSIC,
+      );
+      rack.object.position.set(0, 1.05, -2.5);
+      return [
+        {
+          ...rack,
+          update(delta: number) {
+            state.value = stepZoneMusic(state.value, delta, powered.value);
+            rack.update(delta);
+          },
+        },
+      ];
+    },
+    floorAt: () => 0,
+    solids: [
+      ...shellSolids(room),
+      { minX: -0.35, maxX: 0.35, minZ: -3, maxZ: -2.4 },
+    ],
+    start: { x: 0, z: -1.85, yaw: 0, pitch: -0.2 },
+  });
+}
+
 /**
  * The stair test room (dev34): a wide room four storeys tall, a deck at
  * each upper storey along its west wall and the stair helper's stair
@@ -185,6 +277,7 @@ export function startWetHall(canvas: HTMLCanvasElement) {
 
 interface ShellConfig {
   self: RoomId;
+  install?: (kit: ReturnType<typeof createPanelKit>) => Part[];
   room: { w: number; d: number; doors: readonly ShellDoor[] };
   build: (
     metre: number,
@@ -198,7 +291,7 @@ interface ShellConfig {
   /** What else stops a walker standing at height `y`: a gantry's handrails. */
   levelSolids?: (y: number) => Footprint[];
   solids: Footprint[];
-  start: { x: number; z: number; yaw: number };
+  start: { x: number; z: number; yaw: number; pitch?: number };
   /** Whether its lamps and displays have power: by default, its own room's supply. */
   powered?: () => boolean;
 }
@@ -228,6 +321,10 @@ function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
   const parts = createPartSet();
   const { group: rooms, doors } = cfg.build(metre, kit);
   for (const d of doors) parts.add(d.part);
+  for (const part of cfg.install?.(kit) ?? []) {
+    parts.add(part);
+    rooms.add(part.object);
+  }
   scene.add(rooms);
   // Its machines, placed (`logic/room-equipment.ts`), on its floor.
   const machines = createRoomEquipment(kit, cfg.self, cfg.floorAt(0, 0, 0));
@@ -402,6 +499,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       x: cfg.start.x * metre,
       z: cfg.start.z * metre,
       yaw: cfg.start.yaw,
+      pitch: cfg.start.pitch,
     },
     floorAt: (x, z, previous) => {
       standing = cfg.floorAt(x / metre, z / metre, previous / metre);
@@ -450,6 +548,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   );
   let last = 0;
   renderer.setAnimationLoop((time) => {
+    parts.setAudible(!canvas.parentElement?.hidden && !walk.following);
+    machines.setAudible(!canvas.parentElement?.hidden && !walk.following);
     if (canvas.parentElement?.hidden) return;
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;

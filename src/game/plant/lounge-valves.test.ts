@@ -30,7 +30,7 @@ describe('lounge pool solenoid valves', () => {
     }
   });
 
-  it('travels to shut, blocks its filter path, and springs shut without air', () => {
+  it('travels to shut, blocks its filter path, and springs shut without power, not air', () => {
     let w = newWorld();
     expect(loungeValveFlows(w.loungeValvePositions, true).toPool).toBe(90);
     w = applyAction(w, { type: 'plant/valve', id: 'valve-0003', open: false });
@@ -39,7 +39,16 @@ describe('lounge pool solenoid valves', () => {
     w = stepWorld(w, 2);
     expect(w.loungeValvePositions['valve-0003']).toBe(0);
     expect(loungeValveFlows(w.loungeValvePositions, true).toPool).toBe(45);
+    // Electric actuators: losing the compressed air leaves them be.
     w = applyAction(w, { type: 'plant/source', utility: 'air', on: false });
+    w = stepWorld(w, 4);
+    expect(w.loungeValvePositions['valve-0001']).toBe(1);
+    // Losing their room's power, their springs shut them.
+    w = applyAction(w, {
+      type: 'plant/feeder',
+      room: 'plant_pool_01',
+      on: false,
+    });
     w = stepWorld(w, 4);
     expect(w.loungeValvePositions['valve-0001']).toBe(0);
     expect(loungeValveFlows(w.loungeValvePositions, true).toPool).toBe(0);
