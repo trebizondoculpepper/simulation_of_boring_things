@@ -36,7 +36,14 @@ import { GAS_ZONE_IDS } from './game/plant/gas';
 import type { PoolId } from './game/plant/pools';
 import { buildLine, versionLabel } from './game/version';
 import { createTitleScreen } from './toolkit/title/title-screen';
-import { OLYMPIC_ORBIT, orbitPose } from './toolkit/title/logic/title-orbit';
+import { orbitPose } from './toolkit/title/logic/title-orbit';
+import {
+  ATTRACT_SHOTS,
+  attractBlack,
+  newAttract,
+  nextShot,
+  stepAttract,
+} from './toolkit/title/logic/attract-sequence';
 import { GEAR_ICON, createPauseMenu } from './toolkit/settings/pause-menu';
 import { settings } from './toolkit/settings/settings-store';
 import { effect } from '@preact/signals-core';
@@ -593,63 +600,129 @@ window.addEventListener('pool-plant:run-room', (event) => {
   const room = resolveRoomId((event as CustomEvent<string>).detail);
   if (room) void runUnseen(room);
 });
-// ---- The title's backdrop -------------------------------------------------
-// Behind the title screen, a room of the game, live, seen from high up
-// where the player never goes, at a quarter of the resolution and blurred
-// (`doc/plans/title-screen.md`, stage 8: the Olympic hall). The camera
-// neither pans nor tilts: it makes a very slow partial orbit about the
-// room's middle, simple harmonic motion through an arc of 1° in all,
-// 10 seconds to a cycle, always looking at the middle, so the room turns
-// gently in depth (the owner's specification). The game is paused under
-// it, so the room takes no input and the world's clock stands still.
-const TITLE_ROOM: RoomId = 'pool_02';
+// ---- The title's backdrop: its attract sequence ---------------------------
+// Behind the title screen, rooms of the game, live, seen from where the
+// player never goes, at a quarter of the resolution and blurred
+// (`doc/plans/title-screen.md`), one shot after another
+// (`doc/prompts/054-title-attract-sequence.md`, `attract-sequence.ts`):
+// each a slow orbit in its room, fading to black, held black while the
+// next room is built, and fading in on it; round and round, the theme
+// playing on. The game is paused under it, so its rooms take no input,
+// the world's clock stands still and nothing of the player's changes.
+// Rooms it builds for itself it lets go again as it moves on, and when
+// the title is left.
+const titleVeil = document.createElement('div');
+titleVeil.className = 'attract-veil';
+titleVeil.hidden = true;
+document.body.append(titleVeil);
 let titleBackdrop: { stop(): void } | null = null;
 const startTitleBackdrop = async () => {
   if (titleBackdrop) return;
   let stopped = false;
-  let finish = () => {};
+  let frame = 0;
+  let state = newAttract();
+  /** The room on screen now. */
+  let shown: {
+    room: RoomId;
+    entry: NonNullable<ReturnType<typeof rooms.get>>;
+    walk: NonNullable<ReturnType<typeof firstPersonOn>>;
+    draw: NonNullable<ReturnType<typeof rendererOn>>;
+    full: number;
+  } | null = null;
+  /** The shot whose room is built and on screen, and when it may be seen. */
+  let builtFor = -1;
+  let seenFrom = 0;
+  let building = false;
+  /** Rooms the sequence built itself, to let go of again. */
+  const own = new Set<RoomId>();
+  const letGo = (room: RoomId) => {
+    if (!own.has(room)) return;
+    own.delete(room);
+    if (keyOf(room) !== current) release(room);
+  };
+  const hide = () => {
+    if (!shown) return;
+    shown.draw.renderer.setPixelRatio(shown.full);
+    shown.entry.root.style.pointerEvents = '';
+    shown.entry.root.style.zIndex = '';
+    if (current !== keyOf(shown.room)) shown.entry.root.hidden = true;
+    letGo(shown.room);
+    shown = null;
+  };
+  /** Build the shot's room (if it is not built), and put it on screen, black. */
+  const present = async (index: number) => {
+    const shot = ATTRACT_SHOTS[index];
+    const room = resolveRoomId(shot.room);
+    if (!room) return;
+    const start = await starter(room);
+    if (stopped) return;
+    const built = rooms.has(keyOf(room));
+    if (shown && shown.room !== room) hide();
+    const entry = mount(room, start);
+    if (!built) own.add(room);
+    const surface = surfaceOf(keyOf(room));
+    const walk = surface && firstPersonOn(surface);
+    const draw = surface && rendererOn(surface);
+    if (!walk || !draw) return;
+    if (!shown) {
+      entry.root.hidden = false;
+      entry.root.style.zIndex = '1';
+      entry.root.style.pointerEvents = 'none';
+      // A quarter of the resolution each way: the room's own, less the
+      // player's render quality, divided by four.
+      const full =
+        draw.renderer.getPixelRatio() / renderScale(settings.value.renderLevel);
+      draw.renderer.setPixelRatio(full / 4);
+      shown = { room, entry, walk, draw, full };
+    }
+    const p = orbitPose(shot.orbit, 0);
+    walk.place(p.x * METRE, p.z * METRE, p.yaw, p.pitch, p.y * METRE);
+    builtFor = index;
+    // A few frames drawn behind the black before it fades in.
+    seenFrom = performance.now() + 250;
+  };
   titleBackdrop = {
     stop() {
       stopped = true;
-      finish();
+      cancelAnimationFrame(frame);
+      titleVeil.hidden = true;
+      document.body.classList.remove('on-title');
+      paused.value = false;
+      hide();
+      for (const room of [...own]) letGo(room);
     },
   };
-  const start = await starter(TITLE_ROOM);
-  if (stopped) return;
-  const entry = mount(TITLE_ROOM, start);
-  const surface = surfaceOf(keyOf(TITLE_ROOM));
-  const walk = surface && firstPersonOn(surface);
-  const draw = surface && rendererOn(surface);
-  if (!walk || !draw) return;
   paused.value = true;
   app.hidden = false;
-  entry.root.hidden = false;
-  entry.root.style.zIndex = '1';
-  entry.root.style.pointerEvents = 'none';
-  // A quarter of the resolution each way: the room's own, less the
-  // player's render quality, divided by four.
-  const full =
-    draw.renderer.getPixelRatio() / renderScale(settings.value.renderLevel);
-  draw.renderer.setPixelRatio(full / 4);
   document.body.classList.add('on-title');
-  const t0 = performance.now();
-  let frame = 0;
+  titleVeil.hidden = false;
+  titleVeil.style.opacity = '1';
+  let last = performance.now();
   const fly = (now: number) => {
     frame = requestAnimationFrame(fly);
-    // The orbit's pose now (`title-orbit.ts`).
-    const p = orbitPose(OLYMPIC_ORBIT, (now - t0) / 1000);
-    walk.place(p.x * METRE, p.z * METRE, p.yaw, p.pitch, p.y * METRE);
+    const dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    // Black, and the shot to come not built: build it.
+    if (state.phase === 'black' && builtFor !== state.shot && !building) {
+      building = true;
+      void present(state.shot)
+        .catch(showError)
+        .finally(() => (building = false));
+    }
+    const ready = builtFor === state.shot && now >= seenFrom;
+    state = stepAttract(state, dt, ATTRACT_SHOTS, ready);
+    titleVeil.style.opacity = String(attractBlack(state));
+    // Its room's code fetched while this shot shows, so it builds sooner.
+    if (state.phase === 'showing' && state.t < dt)
+      void starter(
+        resolveRoomId(ATTRACT_SHOTS[nextShot(state, ATTRACT_SHOTS)].room)!,
+      ).catch(() => {});
+    if (shown && state.phase !== 'black' && builtFor === state.shot) {
+      const p = orbitPose(ATTRACT_SHOTS[state.shot].orbit, state.shotTime);
+      shown.walk.place(p.x * METRE, p.z * METRE, p.yaw, p.pitch, p.y * METRE);
+    }
   };
   frame = requestAnimationFrame(fly);
-  finish = () => {
-    cancelAnimationFrame(frame);
-    draw.renderer.setPixelRatio(full);
-    document.body.classList.remove('on-title');
-    paused.value = false;
-    entry.root.style.pointerEvents = '';
-    entry.root.style.zIndex = '';
-    if (current !== keyOf(TITLE_ROOM)) entry.root.hidden = true;
-  };
 };
 const stopTitleBackdrop = () => {
   titleBackdrop?.stop();

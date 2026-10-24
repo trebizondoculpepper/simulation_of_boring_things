@@ -1,6 +1,6 @@
 # 054: Title attract sequence
 
-Status: specified 2026-10-24; implement after noclip (038). The owner asked for prompts and TODO entries first, then noclip only.
+Status: specified 2026-10-24; under way. The sequence runs (`src/toolkit/title/logic/attract-sequence.ts`, `src/main.ts`): three placeholder orbits in three rooms (the owner, 2026-10-24: pick three orbits from different rooms, to be changed later), fades through black, the player's world paused under it. Still to do, as `TODO.md` lists: authored shots, each shot's own scenario, and background preparation of the next scene.
 
 ## Purpose
 

@@ -758,6 +758,18 @@ canvas {
 .on-title .pool-settings-copy {
   display: none;
 }
+/* The attract sequence's fades to black between its shots (src/main.ts):
+   over the room, under the title screen. */
+.attract-veil {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  pointer-events: none;
+  z-index: 5;
+}
+.attract-veil[hidden] {
+  display: none;
+}
 .on-title .title-backdrop {
   background: radial-gradient(
     ellipse at 50% 40%,

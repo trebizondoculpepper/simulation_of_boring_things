@@ -6,6 +6,10 @@ The project's one to-do list (the owner, 2026-10-23): every task not yet finishe
 
 - [x] **Noclip for framing camera shots** ([038](doc/prompts/038-noclip-camera.md), done 2026-10-24, `bfc8521`): Esc-menu toggle, free flight through equipment, room bounds, keyboard/touch/gamepad controls, live coordinates and camera-link copying. Preserve the normal walking/Continue position.
 - [ ] **Title attract sequence** ([054](doc/prompts/054-title-attract-sequence.md), specified 2026-10-24): after noclip, independently staged world scenarios and authored camera moves, next-scene background preparation and fades through black, with uninterrupted theme music and no changes to the player's simulation.
+  - [x] **The sequence itself** (done 2026-10-24): shots in rooms of the game, each an orbit (`attract-sequence.ts`), faded through black, held black until the next room is built, round and round behind the title menu with the theme playing on; the game paused under it, so the player's world neither runs nor saves; the rooms it builds let go as it moves on and when the title is left. Three placeholder orbits for now (the Olympic hall, the lounge, the jacuzzi), the owner to replace them.
+  - [ ] **Authored shots from noclip views:** timed camera paths (presets copied from noclip links, smooth movement, shortest-arc turns) in place of the placeholder orbits.
+  - [ ] **Each shot's own scenario:** an attract world of its own per shot, independent of the player's save (today the rooms show the player's world, paused: a drained tub in the player's save shows drained).
+  - [ ] **The next scene prepared in the background:** built and drawn before its turn rather than during the black, with frame gaps measured; loading failures recovered with a fallback shot.
 
 ## Now: the Olympic plant room, working (prompt 035)
 
