@@ -1,4 +1,5 @@
 import './styles/main.css';
+import { createRoomModuleCache } from './toolkit/gallery/logic/room-module-cache';
 import { Plane, Vector3 } from 'three';
 import {
   EQUIPMENT_ROOMS,
@@ -108,8 +109,6 @@ type RoomHandle = (() => void) & {
   suspend?: () => void;
   resume?: () => void;
   setDryOnly?: (enabled: boolean) => void;
-  /** Prepare a hidden scene and its effects without advancing its simulation. */
-  prepare?: (width: number, height: number) => Promise<void>;
   setVisual?: (enabled: boolean) => void;
 };
 const rooms = new Map<string, { root: HTMLElement; handle: RoomHandle }>();
@@ -232,7 +231,7 @@ const resetEffects = async () => {
   ps1Uniforms.linearTarget.value = 0;
 };
 /** The function that starts `room`, loaded on demand. */
-const starter = async (
+const importStarter = async (
   room: RoomId,
 ): Promise<(canvas: HTMLCanvasElement) => RoomHandle> => {
   if (room === 'CR_A_UP' || room === 'CR_A_ROUND') {
@@ -462,6 +461,7 @@ const starter = async (
   return (await import('./toolkit/gallery/rooms/controls-room'))
     .startControlsRoom;
 };
+const starter = createRoomModuleCache(importStarter);
 /** The corridor and the courtyard are one world, kept as one. */
 const keyOf = (room: RoomId) =>
   room === 'dev_courtyard'
@@ -784,7 +784,6 @@ const stopSeeing = (hide = true) => {
 };
 /** Rooms built for the pool loop's lazy joints, let go when not next door. */
 const lazilyBuilt = new Set<RoomId>();
-const preparedRooms = new Set<string>();
 /**
  * Let a room go that is neither shown nor drawn under the one shown: free
  * its renderer and scene, to be built afresh if it is wanted again.
@@ -794,7 +793,6 @@ const release = (room: RoomId) => {
   const entry = rooms.get(key);
   if (!entry || key === current) return;
   entry.handle();
-  preparedRooms.delete(key);
   entry.root.remove();
   rooms.delete(key);
 };
@@ -842,60 +840,51 @@ const startSeeing = (top: RoomId, under: RoomId) => {
   seeing = { top, under };
   return true;
 };
-/** One closed-door neighbour retained in addition to the loop's neighbours. */
-let preparedNeighbour: RoomId | null = null;
-/** Build and, for a closed-door neighbour, prepare it while there is walking time. */
-const ensureBuilt = (room: RoomId, prepare = false) => {
+/** The closest closed-door room's code is fetched without mounting its scene. */
+let prefetchedNeighbour: RoomId | null = null;
+/** Construct only rooms that the existing loop or an open doorway needs. */
+const ensureBuilt = (room: RoomId) => {
   const key = keyOf(room);
-  const loaded = rooms.get(key);
-  if (loaded && (!prepare || !loaded.handle.prepare || preparedRooms.has(key)))
-    return !loading.has(room);
+  if (rooms.has(key)) return !loading.has(room);
   if (loading.has(room)) return false;
   loading.add(room);
-  void (async () => {
-    let entry = loaded;
-    if (!entry) {
-      const start = await starter(room);
-      if (prepare) {
-        await idle();
-        // The walker may have left while the module was loading.
-        if (preparedNeighbour !== room && current !== key) return;
-      }
-      entry = mount(room, start);
-    }
-    if (prepare && entry.handle.prepare && current !== keyOf(room)) {
-      await idle();
-      if (preparedNeighbour !== room || current === keyOf(room)) return;
-      const rect = current && surfaceOf(current)?.getBoundingClientRect();
-      if (rect && rect.width && rect.height) {
-        await entry.handle.prepare(rect.width, rect.height);
-        preparedRooms.add(key);
-      }
-    }
-  })()
+  void starter(room)
+    .then((start) => {
+      if (!rooms.has(key)) mount(room, start);
+    })
     .catch(showError)
     .finally(() => loading.delete(room));
   return false;
 };
 const checkDoors = () => {
   if (!current || app.hidden) {
-    preparedNeighbour = null;
+    prefetchedNeighbour = null;
     return stopSeeing();
   }
   const top = current as RoomId;
   const surface = surfaceOf(keyOf(top));
   const eye = surface && firstPersonOn(surface)?.pose();
   const door = openDoorJoint(top);
-  // Plant doors participate before opening. Keep just the nearest one;
-  // an open door takes priority, and existing loop preparation stays intact.
-  preparedNeighbour = door ?? (eye ? nearestJoint(top, eye.x, eye.z) : null);
+  // Import code ahead of the nearest closed door. An idle callback cannot
+  // make synchronous scene construction or a first composer render nonblocking.
+  const nearest = eye ? nearestJoint(top, eye.x, eye.z) : null;
+  if (!door && nearest && nearest !== prefetchedNeighbour) {
+    // Speculative failures stay quiet; the cache retries on an actual request.
+    void starter(nearest).catch(() => {});
+  }
+  prefetchedNeighbour = door ? null : nearest;
   const beside = new Set(lazyNeighbours(top));
-  if (preparedNeighbour) beside.add(preparedNeighbour);
-  if (beside.size) lazilyBuilt.add(top);
   for (const room of beside) {
     lazilyBuilt.add(room);
-    ensureBuilt(room, room === preparedNeighbour && !door);
+    ensureBuilt(room);
   }
+  // Keep an already visited nearest room cached, without building a new one.
+  if (nearest) beside.add(nearest);
+  if (door) {
+    beside.add(door);
+    lazilyBuilt.add(door);
+  }
+  if (beside.size) lazilyBuilt.add(top);
   for (const room of lazilyBuilt)
     if (
       keyOf(room) !== current &&

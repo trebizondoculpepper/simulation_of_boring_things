@@ -44,7 +44,7 @@ export interface Joint {
   lazy?: boolean;
   /**
    * A plant-room door, prioritized for the doorway view while open.
-   * Its room can be prepared while this is the nearest closed door.
+   * Its code can be prefetched while this is the nearest closed door.
    */
   onOpen?: boolean;
 }

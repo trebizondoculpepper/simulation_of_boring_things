@@ -22,7 +22,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Performance
 
-- [ ] **Follow up nearest-room preparation:** measure approach-time hitches and memory after the nearest-door loader and plant-scene warm-up change, tune incremental preparation, then reduce Olympic static draw calls and profile the ozone-generator view factory. Measurements, priorities and acceptance checks: [plant-room loading report, 2026-10-24](doc/reports/plant-room-load-performance-2026-10-24.md).
+- [ ] **Incremental room preparation:** nearest-door prefetch now imports code only, because speculative synchronous scene construction and first-frame effects caused pauses during play. Split expensive builders into bounded jobs (moving pure layout work to workers where useful), make GPU upload/effect preparation incremental, and measure frame gaps before restoring background scene preparation. Also reduce Olympic static draw calls and profile the ozone-generator view factory. Measurements, priorities and acceptance checks: [plant-room loading report, 2026-10-24](doc/reports/plant-room-load-performance-2026-10-24.md).
 
 ### Gameplay features
 
