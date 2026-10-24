@@ -52,58 +52,6 @@ import type { RoomId } from '../logic/dev-room-links';
 import type { PlantRoomSize } from '../logic/plant-rooms';
 type PlantHall = 'pool_01' | 'pool_02' | 'pool_03' | 'pool_04';
 
-const JACUZZI_MIMIC: MimicSpec = {
-  title: 'JACUZZI · WATER CIRCUIT',
-  width: 1.2,
-  height: 0.72,
-  lines: [
-    {
-      colour: '#2f7d3a',
-      points: [
-        [-0.43, 0.16],
-        [-0.33, 0.16],
-        [-0.33, -0.08],
-        [0.37, -0.08],
-        [0.37, 0.16],
-        [-0.43, 0.16],
-      ],
-    },
-  ],
-  shapes: [
-    { symbol: 'pool', at: [-0.38, 0.18], size: 0.08, label: 'SPA' },
-    { symbol: 'pump', at: [-0.19, -0.08], size: 0.055, label: 'PUMP' },
-    { symbol: 'filter', at: [0.01, -0.08], size: 0.055, label: 'FILTER' },
-    { symbol: 'uv', at: [0.18, -0.08], size: 0.05, label: 'UV' },
-    { symbol: 'hx', at: [0.37, -0.08], size: 0.055, label: 'HEAT' },
-  ],
-  lamps: [
-    { id: 'pump', at: [-0.19, 0.04], colour: 'green', label: 'RUN' },
-    { id: 'uv', at: [0.18, 0.04], colour: 'green', label: 'ON' },
-  ],
-  readouts: [{ id: 'water', at: [0.16, 0.19] }],
-  modes: [
-    { id: 'temp', legend: 'TEMP' },
-    { id: 'flow', legend: 'FLOW' },
-  ],
-};
-
-/**
- * The Jacuzzi mimic's lamps and readout, as the world has its water
- * (`pools.ts`): its pump and UV lit while it circulates, its water's
- * temperature and its return flow.
- */
-function jacuzziMimicState(pool: PoolWaterState) {
-  const circulating = !pool.tripped && pool.flow > POOL_TARGET.pool_03.flow / 2;
-  return {
-    lamps: { pump: circulating, uv: circulating },
-    readouts: {
-      water: {
-        temp: { value: pool.temperature, unit: '°C', name: 'WATER', places: 1 },
-        flow: { value: pool.flow, unit: 'm³/h', name: 'RETURN', places: 0 },
-      },
-    },
-  };
-}
 import {
   createPanelKit,
   disposeKit,
@@ -115,11 +63,9 @@ import { createRoomEquipment } from '../views/room-equipment';
 import { cabinetServices } from '../views/cabinet-services';
 import { worldStore } from '../../save/world-store';
 import { newWorld } from '../../../game/world';
-import { POOL_TARGET } from '../../../game/plant/pools';
-import type { PoolWaterState } from '../../../game/plant/pools';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
+import { JACUZZI_MIMIC, jacuzziMimicState } from '../logic/jacuzzi-mimic';
 import { createJacuzziFibreControl } from '../views/jacuzzi-fibre-control';
-import type { MimicSpec } from '../../components/industrial-control/logic/mimic';
 import { bindRoomLights } from '../views/room-lights';
 import { zoneOfRoom } from '../../../game/plant/lighting';
 import { bindRoomPower, roomPowered } from '../views/room-power';
@@ -619,9 +565,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     fibreControl?.parts.update(delta);
     if (jacuzziMimic)
       jacuzziMimic.show(
-        jacuzziMimicState(
-          (mimicStore?.world.value ?? newWorld()).pools.pool_03,
-        ),
+        jacuzziMimicState(mimicStore?.world.value ?? newWorld()),
       );
     // Out through the equipment doors, once the corridor is seen beyond.
     if (hall && corridorSeen && !leavingSouth && !walk.following) {

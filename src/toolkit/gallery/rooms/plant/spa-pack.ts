@@ -48,9 +48,9 @@ import { createCabinetMimic } from '../../../components/plant/views/cabinet-mimi
 import {
   clampSetpoint,
   footbathFilling,
+  jacuzziCabinetPanel,
   jacuzziRuns,
 } from '../../../../game/world';
-import { jacuzziPaths } from '../../../../game/plant/jacuzzi';
 import { footbathPumpStarved } from '../../../../game/plant/pools';
 
 /**
@@ -571,8 +571,15 @@ function buildSpaPack(
     external?.state().setpoint ??
     store?.world.value.pools[pool].setpoint ??
     ownSet;
+  // The jacuzzi's, in service: its controller in the world (`jacuzzi-cabinet.ts`).
+  const jacuzziStore = jets && store ? store : null;
+  const panelNow = (doorOpen = false) =>
+    jacuzziStore
+      ? jacuzziCabinetPanel(jacuzziStore.world.value, doorOpen)
+      : null;
   const mimic = createCabinetMimic(kit, {
     drainAndMakeUp: !jets,
+    display: jets ? 'lcd' : 'led',
     parts,
     onSet: (step) => {
       const celsius = clampSetpoint(setting() + step);
@@ -598,24 +605,35 @@ function buildSpaPack(
             },
             set: (position: number) => external.setPower(position === 1),
           }
-        : footbathStore
+        : jacuzziStore
           ? {
               get value() {
-                return partOn(
-                  footbathStore.world.value.identifiedPlant,
-                  FOOTBATH.power,
-                )
-                  ? 1
-                  : 0;
+                return jacuzziStore.world.value.jacuzziCabinet.power ? 1 : 0;
               },
-              set: (position) =>
-                footbathStore.dispatch({
-                  type: 'plant/switch',
-                  id: FOOTBATH.power,
-                  on: position === 1,
+              set: (position: number) =>
+                jacuzziStore.dispatch({
+                  type: 'jacuzzi/cabinet',
+                  action: { act: 'power', on: position === 1 },
                 }),
             }
-          : undefined,
+          : footbathStore
+            ? {
+                get value() {
+                  return partOn(
+                    footbathStore.world.value.identifiedPlant,
+                    FOOTBATH.power,
+                  )
+                    ? 1
+                    : 0;
+                },
+                set: (position) =>
+                  footbathStore.dispatch({
+                    type: 'plant/switch',
+                    id: FOOTBATH.power,
+                    on: position === 1,
+                  }),
+              }
+            : undefined,
       legend: 'POWER',
       name: 'Spa set power',
     }),
@@ -665,24 +683,34 @@ function buildSpaPack(
   const supplied = signal(true);
   object.userData.supply = supplied;
   const trialLowWater = signal(false);
-  // Its pump's cutout: the foot spa's on low water; the jacuzzi's on its
-  // flow switch, with no way through its overflow and return valves
-  // (`jacuzziPaths`). Either stops the pump, and its dosing with it.
+  // Its pump's cutout: the foot spa's on low water; the jacuzzi's its
+  // no-flow trip, latched in the world until RESET (`jacuzzi-cabinet.ts`).
   const lowWater = computed(() => {
     if (external) return trialLowWater.value;
     const w = store?.world.value;
     if (!w) return false;
     return jets
-      ? !jacuzziPaths(w.installedValves).circulation
+      ? w.jacuzziCabinet.trip !== ''
       : footbathPumpStarved(
           w.pools.pool_04,
           footbathLineup(w.identifiedPlant).draining,
         );
   });
-  const running = computed(
-    () => supplied.value && power.position.value === 1 && !lowWater.value,
-  );
   const doorOpen = computed(() => latches.some((l) => l.open.value));
+  // The jacuzzi's panel, as its controller has it.
+  const jacuzziPanel = computed(() => panelNow(doorOpen.value));
+  // Its pump's motor: running dead-headed, too, until it trips.
+  const running = computed(() =>
+    jacuzziPanel.value
+      ? supplied.value && jacuzziPanel.value.pumpRun
+      : supplied.value && power.position.value === 1 && !lowWater.value,
+  );
+  // Its water moving through the filter, the UV and the dosing.
+  const flowing = computed(() =>
+    jacuzziPanel.value
+      ? supplied.value && jacuzziPanel.value.flowing
+      : running.value,
+  );
   // Its pump's motor, heard while it runs (the owner, 2026-10-23): at full
   // volume while either door is open more than about 20 degrees, fading
   // to 15 dB down as the last one shuts (`doorGain`). The jacuzzi's jet
@@ -701,7 +729,7 @@ function buildSpaPack(
     on: boolean;
   }[] = [];
   const doorLamp = computed(() => supplied.value && doorOpen.value);
-  const uvOn = computed(() => running.value && !doorOpen.value);
+  const uvOn = computed(() => flowing.value && !doorOpen.value);
   (
     [
       ['PUMP RUN', 'green', running],
@@ -727,7 +755,11 @@ function buildSpaPack(
       pilotLight(kit, {
         colour: 'red',
         legend: jets ? 'NO FLOW' : 'LOW WATER',
-        drive: computed(() => supplied.value && lowWater.value),
+        drive: computed(() =>
+          jacuzziPanel.value
+            ? supplied.value && jacuzziPanel.value.noFlow
+            : supplied.value && lowWater.value,
+        ),
         pushToTest: false,
         name: jets
           ? 'Jacuzzi cabinet no-flow cutout lamp'
@@ -737,6 +769,26 @@ function buildSpaPack(
     fault.object.position.set(-0.15, -0.11, 0);
     fault.object.scale.setScalar(0.8);
     front.add(fault.object);
+  }
+  // The jacuzzi's RESET, beside its NO FLOW lamp: clears a no-flow trip
+  // once there is a way through again; dead without power.
+  if (jets) {
+    const reset = parts.add(
+      pushButton(kit, {
+        colour: 'black',
+        power: supplied,
+        legend: 'RESET',
+        name: 'Jacuzzi cabinet reset button',
+        action: () =>
+          jacuzziStore?.dispatch({
+            type: 'jacuzzi/cabinet',
+            action: { act: 'reset' },
+          }),
+      }),
+    );
+    reset.object.position.set(-0.05, -0.11, 0);
+    reset.object.scale.setScalar(0.8);
+    front.add(reset.object);
   }
   const gauge = createDialGauge(kit, {
     dia: 0.09,
@@ -841,13 +893,14 @@ function buildSpaPack(
         humming = on;
         partAudio.hold(pump.group, on ? hum : null, pump.group);
       }
+      const moving = flowing.value;
       pump.update(delta, on);
-      filter.update(delta, on ? WORKING : 0);
+      filter.update(delta, moving ? WORKING : 0);
       uv.update(delta, uvOn.value);
-      vessel.update(delta, on);
+      vessel.update(delta, moving);
       exchanger.update();
-      dosing.update(delta, on, 1.8, 7.3);
-      gauge.set(on ? WORKING : 0);
+      dosing.update(delta, moving, 1.8, 7.3);
+      gauge.set(moving ? WORKING : 0);
       gauge.update(delta);
       // Its mimic, as the world has its water (an exhibit: as if in service).
       const w = store?.world.value;
@@ -856,7 +909,7 @@ function buildSpaPack(
       mimic.show({
         pump: on,
         uv: uvOn.value,
-        heat: on && (w ? w.pools[pool].heating > 0.05 : true),
+        heat: flowing.value && (w ? w.pools[pool].heating > 0.05 : true),
         drain: trial?.draining ?? (!!lineup?.draining && on),
         filling: trial?.filling ?? (!!w && !jets && footbathFilling(w)),
         makeUp: trial?.fillOpen ?? lineup?.makeUpOpen ?? false,
@@ -864,6 +917,21 @@ function buildSpaPack(
           ? null
           : (trial?.celsius ?? (w ? w.pools[pool].temperature : ownSet)),
         setC: setting(),
+        ...(jets
+          ? {
+              lines:
+                supplied.value && jacuzziPanel.value
+                  ? jacuzziPanel.value.lines
+                  : supplied.value
+                    ? ([
+                        `${ownSet.toFixed(1)}C  SET ${ownSet.toFixed(1)}`.padEnd(
+                          16,
+                        ),
+                        (on ? 'RUNNING  UV ON' : 'STOPPED').padEnd(16),
+                      ] as const)
+                    : null,
+            }
+          : {}),
       });
       mimic.update(delta);
     },

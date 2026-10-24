@@ -97,6 +97,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   23: (world) => world,
   // 24 → 25: music transports and amplifiers; initially silent.
   24: (world) => world,
+  // 25 → 26: the jacuzzi's cabinet, on and not tripped (`fillDefaults` adds it).
+  25: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

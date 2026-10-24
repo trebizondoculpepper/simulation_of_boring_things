@@ -59,6 +59,7 @@ describe('a save', () => {
       airHandling: newWorld().airHandling,
       motors: newWorld().motors,
       jacuzzi: newWorld().jacuzzi,
+      jacuzziCabinet: newWorld().jacuzziCabinet,
       jacuzziFibreIlluminator: newWorld().jacuzziFibreIlluminator,
       boilerGas: newWorld().boilerGas,
       music: newWorld().music,

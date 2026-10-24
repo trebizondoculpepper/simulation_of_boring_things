@@ -1,6 +1,5 @@
 import { computed, signal } from '@preact/signals-core';
 import type { ReadonlySignal, Signal } from '@preact/signals-core';
-import { serviceAvailable } from '../../../../game/plant/services';
 import {
   CylinderGeometry,
   DoubleSide,
@@ -22,7 +21,7 @@ import {
 import type { Object3D } from 'three';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import { worldStore } from '../../../save/world-store';
-import { jacuzziRuns } from '../../../../game/world';
+import { jacuzziPlate, jacuzziRuns } from '../../../../game/world';
 import { poolDepth } from '../../../../game/plant/pools';
 import { jacuzziVisualVolume } from '../../logic/jacuzzi-water-level';
 import {
@@ -414,11 +413,12 @@ const jacuzziAct = (action: JacuzziAction) =>
  */
 const jacuzziPowered = computed(() => {
   const w = jacuzziWorld()?.world.value;
-  return (
-    !w ||
-    (serviceAvailable(w.plant, 'plant_pool_03', 'power') &&
-      w.plant.isolators['Jacuzzi cabinet isolator'])
-  );
+  return !w || jacuzziPlate(w).powered;
+});
+/** Its START ring: lit while the world's jets or air run. */
+const jacuzziStartLit = computed(() => {
+  const w = jacuzziWorld()?.world.value;
+  return w ? jacuzziPlate(w).startLit : spa.running.value;
 });
 
 // ---- The jacuzzi, on its stepped plinth -------------------------------------
@@ -869,7 +869,7 @@ function buildJacuzziPlate(kit: PanelKit, spaState = spa): LiveExhibit {
           spaState === spa && jacuzziWorld()
             ? jacuzziAct({ act: 'start' })
             : (spaState.state = startCycle(spaState.state)),
-        spaState.running,
+        spaState === spa ? jacuzziStartLit : spaState.running,
       ],
       [
         'stop',

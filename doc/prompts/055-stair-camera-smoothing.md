@@ -10,12 +10,12 @@ Walking up or down stairs is jerky: the walker's floor height (`floorAt` in `src
 
 The physics origin snaps up a step instantly (Half-Life's `PM_StepMove`, step size 18 units). The view keeps its own remembered floor height (`oldz` in Quake's and Half-Life's `V_CalcRefdef`; `m_flOldPlayerZ` in Source's `CBasePlayer::SmoothViewOnStairs`) that chases the true one at a fixed rate and is never allowed to lag by more than a set amount; the camera is drawn at the remembered height plus the eye height. It is a linear rate limit, not exponential easing: predictable and cheap.
 
-| | Quake | Half-Life | Source |
-|---|---|---|---|
-| Rate | 80 units/s (2.03 m/s) | 150 units/s (3.81 m/s) | 150 units/s (3.81 m/s) |
-| Most lag | 12 units (0.30 m) | 18 units (0.46 m) | 18 units (0.46 m) |
-| Direction | up only | up only | up and down |
-| Not applied | in the air | in the air | in the air, on moving ground (lifts), while the view offset changes (crouching), with `smoothstairs 0` |
+|             | Quake                 | Half-Life              | Source                                                                                                 |
+| ----------- | --------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| Rate        | 80 units/s (2.03 m/s) | 150 units/s (3.81 m/s) | 150 units/s (3.81 m/s)                                                                                 |
+| Most lag    | 12 units (0.30 m)     | 18 units (0.46 m)      | 18 units (0.46 m)                                                                                      |
+| Direction   | up only               | up only                | up and down                                                                                            |
+| Not applied | in the air            | in the air             | in the air, on moving ground (lifts), while the view offset changes (crouching), with `smoothstairs 0` |
 
 One unit is about an inch (0.0254 m). Source's sources: `src/game/shared/baseplayer_shared.cpp` in `ValveSoftware/source-sdk-2013`; Half-Life's `cl_dll/view.cpp` in `ValveSoftware/halflife`; Quake's `WinQuake/view.c` in `id-Software/Quake`.
 

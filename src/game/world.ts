@@ -117,6 +117,21 @@ import {
   stepJacuzzi,
 } from './plant/jacuzzi';
 import type { JacuzziAction, JacuzziState } from './plant/jacuzzi';
+import { jacuzziPaths } from './plant/jacuzzi';
+import {
+  actOnJacuzziCabinet,
+  jacuzziCabinetDisplay,
+  jacuzziPumpCalled,
+  jacuzziWaterFlowing,
+  newJacuzziCabinet,
+  stepJacuzziCabinet,
+} from './plant/jacuzzi-cabinet';
+import type {
+  JacuzziCabinetAction,
+  JacuzziCabinetInputs,
+  JacuzziCabinetState,
+} from './plant/jacuzzi-cabinet';
+import type { JacuzziCirculation } from './plant/pools';
 import {
   newFibreIlluminator,
   setFibreIlluminator,
@@ -139,7 +154,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 25;
+export const WORLD_VERSION = 26;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -191,6 +206,8 @@ export interface World {
   motors: MotorsState;
   /** The jacuzzi's jets and air (`jacuzzi.ts`). */
   jacuzzi: JacuzziState;
+  /** The jacuzzi's treatment cabinet: its POWER and its trip (`jacuzzi-cabinet.ts`). */
+  jacuzziCabinet: JacuzziCabinetState;
   /** The Jacuzzi concrete wall's remote fibre illuminator. */
   jacuzziFibreIlluminator: FibreIlluminatorState;
   /** The boiler house's gas safety: ECV, emergency stop, detector and SSOV (`boiler-gas.ts`). */
@@ -219,6 +236,7 @@ export function newWorld(): World {
     airHandling: newAirHandling(),
     motors: newMotors(),
     jacuzzi: newJacuzzi(),
+    jacuzziCabinet: newJacuzziCabinet(),
     jacuzziFibreIlluminator: newFibreIlluminator(),
     boilerGas: newBoilerGas(),
     music: newZoneMusic(),
@@ -264,6 +282,8 @@ export type WorldAction =
   | { type: 'motor/stop'; pool: StartedPool; stopped: boolean }
   /** The jacuzzi's jets and air worked, from its cabinet or its wall plate. */
   | { type: 'jacuzzi'; action: JacuzziAction }
+  /** The jacuzzi's cabinet's POWER switch turned, or its RESET pressed. */
+  | { type: 'jacuzzi/cabinet'; action: JacuzziCabinetAction }
   | { type: 'jacuzzi/fibre-illuminator'; action: FibreIlluminatorAction }
   /** The boiler house's gas safety worked: its emergency stop, GAS RESET, ECV or detector TEST. */
   | { type: 'boiler-gas'; action: BoilerGasAction }
@@ -405,6 +425,16 @@ export function applyAction(world: World, action: WorldAction): World {
           jacuzziFull(world.pools.pool_03.level),
         ),
       };
+    case 'jacuzzi/cabinet': {
+      const jacuzziCabinet = actOnJacuzziCabinet(
+        world.jacuzziCabinet,
+        action.action,
+        jacuzziCabinetInputs(world).path,
+      );
+      return jacuzziCabinet === world.jacuzziCabinet
+        ? world
+        : { ...world, jacuzziCabinet };
+    }
     case 'jacuzzi/fibre-illuminator':
       return {
         ...world,
@@ -587,6 +617,13 @@ export function stepWorld(world: World, delta: number): World {
     delta,
   );
 
+  // The jacuzzi's cabinet: its pump's no-flow timer, and its trip.
+  const jacuzziCabinet = stepJacuzziCabinet(
+    world.jacuzziCabinet,
+    jacuzziCabinetInputs(world),
+    delta,
+  );
+  const jacuzzi = jacuzziFlow({ ...world, jacuzziCabinet });
   // The heating, as the boilers' gas allows: none with the SSOV or ECV shut.
   const water = stepPoolsWater(
     world.pools,
@@ -619,7 +656,7 @@ export function stepWorld(world: World, delta: number): World {
     (running) => loungeValveFlows(loungeValvePositions, running),
     hallHandling(airHandling),
     motors,
-    world.installedValves,
+    jacuzzi,
   );
   return {
     ...world,
@@ -637,6 +674,7 @@ export function stepWorld(world: World, delta: number): World {
       world.time + delta,
       jacuzziFull(water.pools.pool_03.level),
     ),
+    jacuzziCabinet,
     boilerGas: stepBoilerGas(world.boilerGas, delta),
     loungeValvePositions,
     olympic: battery
@@ -657,7 +695,7 @@ export function stepWorld(world: World, delta: number): World {
         stock,
         loungeValveFlows(loungeValvePositions, true).toPool > 0,
         motors,
-        world.installedValves,
+        jacuzzi,
       ),
       delta,
     ),
@@ -665,8 +703,88 @@ export function stepWorld(world: World, delta: number): World {
 }
 
 /**
- * Whether the jacuzzi's circulation pump runs: power, its cabinet's
- * isolator, and a way through its overflow and return valves.
+ * What the jacuzzi's cabinet is given: power (its room's and its
+ * isolator) and a way through its overflow and return valves.
+ */
+export const jacuzziCabinetInputs = (world: World): JacuzziCabinetInputs => ({
+  supplied:
+    serviceAvailable(world.plant, 'plant_pool_03', 'power') &&
+    world.plant.isolators['Jacuzzi cabinet isolator'],
+  path: jacuzziPaths(world.installedValves).circulation,
+});
+
+/** The jacuzzi's water moving, and heat reaching it, as its cabinet allows. */
+export const jacuzziFlow = (world: World): JacuzziCirculation => ({
+  flowing: jacuzziWaterFlowing(
+    world.jacuzziCabinet,
+    jacuzziCabinetInputs(world),
+  ),
+  heat:
+    serviceAvailable(world.plant, 'plant_pool_03', 'heat') &&
+    jacuzziPaths(world.installedValves).heating,
+});
+
+/**
+ * What the jacuzzi's cabinet's panel shows, as the world has it: PUMP RUN
+ * (its motor running, dead-headed or not), its water moving, its UV and
+ * dosing (only with water moving, the UV with its doors shut), its NO
+ * FLOW lamp (tripped, or running with no way through), and its display's
+ * two lines (`jacuzziCabinetDisplay`). Dark, all of it, without power.
+ */
+export function jacuzziCabinetPanel(world: World, doorOpen = false) {
+  const inputs = jacuzziCabinetInputs(world);
+  const cabinet = world.jacuzziCabinet;
+  const pool = world.pools.pool_03;
+  // Its balance tank at low-low (its water supply cut off and the tank
+  // run down): the pump stopped, TRIP: TANK LOW, until the tank recovers,
+  // when it restarts itself (`water-balance.ts`).
+  const pumpRun = jacuzziPumpCalled(cabinet, inputs.supplied) && !pool.tripped;
+  const flowing = jacuzziWaterFlowing(cabinet, inputs) && !pool.tripped;
+  return {
+    supplied: inputs.supplied,
+    pumpRun,
+    flowing,
+    uv: flowing && !doorOpen,
+    dosing: flowing,
+    noFlow:
+      inputs.supplied &&
+      (cabinet.trip !== '' || pool.tripped || (pumpRun && !inputs.path)),
+    ...jacuzziCabinetDisplay({
+      cabinet,
+      supplied: inputs.supplied,
+      flowing,
+      waterC: pool.temperature,
+      setC: pool.setpoint,
+      heatSupply: jacuzziFlow(world).heat,
+      tankLow: pool.tripped,
+      draining: jacuzziDischarging(world),
+      doorOpen,
+      time: world.time,
+    }),
+  };
+}
+
+/**
+ * The jacuzzi's waterproof wall plate by the tub (`JACUZZI_PLATE_EXHIBIT`):
+ * live while its cabinet is supplied (its room's power and its isolator),
+ * dead otherwise, a press doing nothing and no ring lit. Its START ring is
+ * lit while the jets or the air run.
+ */
+export const jacuzziPlate = (world: World) => {
+  const powered = jacuzziCabinetInputs(world).supplied;
+  const runs = jacuzziRuns(world);
+  return { powered, startLit: powered && (runs.jets || runs.air) };
+};
+
+/** A press on the wall plate: START or STOP, if it is live. */
+export const pressJacuzziPlate = (world: World, button: 'start' | 'stop') =>
+  jacuzziPlate(world).powered
+    ? applyAction(world, { type: 'jacuzzi', action: { act: button } })
+    : world;
+
+/**
+ * Whether the jacuzzi's water circulates: its cabinet supplied, on, not
+ * tripped, with a way through its overflow and return valves.
  */
 export const jacuzziCirculating = (world: World) =>
   circulating(
@@ -674,7 +792,7 @@ export const jacuzziCirculating = (world: World) =>
     world.plant,
     'pool_03',
     world.motors,
-    world.installedValves,
+    jacuzziFlow(world),
   );
 
 /** What of the jacuzzi's jets and air runs: called for, while it circulates, each with its valves open. */

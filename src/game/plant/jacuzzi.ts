@@ -82,6 +82,8 @@ export const JACUZZI_VALVES = {
   jetsSuction: 'valve-0089',
   jetsDischarge: 'valve-0088',
   air: 'valve-0087',
+  heatingFlow: 'valve-0092',
+  heatingReturn: 'valve-0093',
 } as const;
 
 /**
@@ -100,6 +102,8 @@ export function jacuzziPaths(valves?: Record<string, boolean>) {
     circulation: open('overflow') && open('return'),
     jets: open('jetsSuction') && open('jetsDischarge'),
     air: open('air'),
+    /** The heating's primary through its heat exchanger. */
+    heating: open('heatingFlow') && open('heatingReturn'),
   };
 }
 

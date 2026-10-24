@@ -4,6 +4,7 @@ import {
   applyAction,
   jacuzziCirculating,
   jacuzziDischarging,
+  jacuzziFlow,
   jacuzziRuns,
   newWorld,
 } from '../world';
@@ -104,14 +105,8 @@ describe('the jacuzzi’s jets and air', () => {
     expect(jacuzziCirculating(w)).toBe(false);
     expect(jacuzziRuns(w)).toEqual({ jets: false, air: false });
     const dosed = (x: World) =>
-      dosedVolumes(
-        x.pools,
-        x.plant,
-        undefined,
-        true,
-        x.motors,
-        x.installedValves,
-      ).hypochlorite;
+      dosedVolumes(x.pools, x.plant, undefined, true, x.motors, jacuzziFlow(x))
+        .hypochlorite;
     expect(dosed(w)).toBeLessThan(dosed(start));
     // Either one shut is enough.
     expect(jacuzziCirculating(shut(start, 'overflow'))).toBe(false);

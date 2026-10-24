@@ -12,7 +12,6 @@ import type { Chemical } from './chemicals';
 import { stepHallRh } from './air-handling';
 import { poolPumping } from './motor-starters';
 import type { MotorsState } from './motor-starters';
-import { jacuzziPaths } from './jacuzzi';
 
 export type PoolId = 'pool_01' | 'pool_02' | 'pool_03' | 'pool_04';
 export const POOL_IDS: readonly PoolId[] = [
@@ -226,10 +225,10 @@ export function circulating(
    */
   motors?: MotorsState,
   /**
-   * The installed valves' states (`installed-valves.ts`): the jacuzzi's
-   * pump stops with its suction or its return shut (`jacuzziPaths`).
+   * The jacuzzi's cabinet (`jacuzzi-cabinet.ts`): its water moving, its
+   * pump called for with a way through its valves, and heat reaching it.
    */
-  valves?: Record<string, boolean>,
+  jacuzzi?: JacuzziCirculation,
 ): boolean {
   const room = `plant_${id}` as ServiceRoom;
   const pumping = motors ? poolPumping(motors, id) : undefined;
@@ -237,8 +236,16 @@ export function circulating(
     serviceAvailable(plant, room, 'power') &&
     (pumping ?? ISOLATED_BY[id].some((name) => plant.isolators[name])) &&
     !old.tripped &&
-    (id !== 'pool_03' || jacuzziPaths(valves).circulation)
+    (id !== 'pool_03' || !jacuzzi || jacuzzi.flowing)
   );
+}
+
+/** The jacuzzi's cabinet, as the pools are told it (`jacuzzi-cabinet.ts`). */
+export interface JacuzziCirculation {
+  /** Its water moving: its pump running with a way through its valves. */
+  flowing: boolean;
+  /** Heat reaching its heat exchanger through its heating valves. */
+  heat: boolean;
 }
 
 /** Whether each chemical is to be had: its store not run dry. */
@@ -256,13 +263,13 @@ export function dosedVolumes(
   stock: ChemicalStock = ALL_STOCKED,
   loungeMoving = true,
   motors?: MotorsState,
-  valves?: Record<string, boolean>,
+  jacuzzi?: JacuzziCirculation,
 ): Record<Chemical, number> {
   const out = { hypochlorite: 0, acid: 0 };
   for (const id of POOL_IDS) {
     const room = `plant_${id}` as ServiceRoom;
     if (
-      !circulating(pools[id], plant, id, motors, valves) ||
+      !circulating(pools[id], plant, id, motors, jacuzzi) ||
       (id === 'pool_01' && !loungeMoving) ||
       !serviceAvailable(plant, room, 'chemical')
     )
@@ -361,8 +368,8 @@ export function stepPoolsWater(
   air?: Record<PoolId, { share: number; drying: number }>,
   /** The motors' starters, this step's (`motor-starters.ts`). */
   motors?: MotorsState,
-  /** The installed valves' states, for the jacuzzi's (`jacuzziPaths`). */
-  valves?: Record<string, boolean>,
+  /** The jacuzzi's cabinet, its water moving and its heat (`jacuzzi-cabinet.ts`). */
+  jacuzzi?: JacuzziCirculation,
 ): {
   pools: PoolsState;
   drawn: number;
@@ -400,7 +407,7 @@ export function stepPoolsWater(
     // The pumps run if the room has power, and one of them, or
     // the pool's cabinet, is not isolated; and not tripped.
     const circulation =
-      circulating(old, plant, id, motors, valves) &&
+      circulating(old, plant, id, motors, jacuzzi) &&
       (id !== 'pool_04' ||
         !footbath ||
         !footbathPumpStarved(old, footbath.draining)) &&
@@ -416,7 +423,11 @@ export function stepPoolsWater(
       (!(id in TREATED_BY) ||
         TREATED_BY[id]!.some((name) => plant.isolators[name]));
     const heat =
-      circulation && loungeMoving && serviceAvailable(plant, room, 'heat');
+      circulation &&
+      loungeMoving &&
+      serviceAvailable(plant, room, 'heat') &&
+      // The jacuzzi's heat exchanger, through its heating valves.
+      (id !== 'pool_03' || !jacuzzi || jacuzzi.heat);
     const dosing =
       circulation && loungeMoving && serviceAvailable(plant, room, 'chemical');
     // Each chemical dosed only while its store has some.

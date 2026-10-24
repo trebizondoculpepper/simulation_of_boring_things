@@ -10,6 +10,7 @@ import { createCanvasTexture } from '../../core/views/screens';
 import { SANS } from '../../core/views/fitting-tools';
 import { createDymoLabel } from '../../core/views/hand-labels';
 import { plantTools } from './plant-tools';
+import { createCharacterLcd } from '../../industrial-control/views/panel-instruments';
 
 /**
  * A packaged spa set's own mimic (the owner, 2026-10-23: the foot spa is
@@ -21,7 +22,11 @@ import { plantTools } from './plant-tools';
  * on Dymo tape; and its thermostat: ▲ and ▼ beside the readout, which
  * show its setting (its SET lamp lit) and step it by half a degree, the
  * readout going back to the water a few seconds after the last press.
- * `width` by 0.24 m, facing +z, its middle at the origin.
+ * With `display: 'lcd'` (the jacuzzi's, the owner, 2026-10-24) the
+ * readout is a backlit 16 × 2 character display instead, showing the
+ * controller's two lines (`lines`): its temperatures, its state, its
+ * trips and warnings. `width` by 0.24 m, facing +z, its middle at the
+ * origin.
  */
 export interface CabinetMimicState {
   pump: boolean;
@@ -37,6 +42,8 @@ export interface CabinetMimicState {
   waterC: number | null;
   /** Its thermostat's setting, °C. */
   setC: number;
+  /** With an LCD: its two lines, or nothing while it has no power. */
+  lines?: readonly [string, string] | null;
 }
 
 /** How long the readout shows the setting after the last press, s. */
@@ -49,9 +56,12 @@ export function createCabinetMimic(
     drainAndMakeUp = true,
     onSet,
     parts = createPartSet(),
+    display = 'led',
   }: {
     width?: number;
     drainAndMakeUp?: boolean;
+    /** Its readout: a three-digit LED (the foot spa's) or a 16 × 2 LCD. */
+    display?: 'led' | 'lcd';
     /** Its ▲ or ▼ pressed: the setting stepped by `step`, °C. */
     onSet?: (step: number) => void;
     /** The panel's parts its buttons join, to be worked with the rest. */
@@ -218,13 +228,27 @@ export function createCabinetMimic(
       })()
     : null;
   // The water's temperature: an LED readout, its legend on Dymo tape.
-  const readout = createSevenSegment(kit, 3, { digitHeight: 0.022 });
-  readout.group.position.set(width / 2 - 0.07, 0.02, 0.002);
-  readout.group.traverse((o) => (o.userData.live = true));
-  group.add(readout.group);
-  const tape = createDymoLabel(kit, 'WATER °C', { seed: 9 });
-  tape.position.set(width / 2 - 0.07, -0.025, 0.003);
+  // Or, the jacuzzi's, a 16 × 2 character LCD in its place.
+  const lcd =
+    display === 'lcd'
+      ? createCharacterLcd(kit, {
+          columns: 16,
+          rows: 2,
+          cell: 0.0032,
+          backlight: true,
+        })
+      : null;
+  const readout = lcd
+    ? null
+    : createSevenSegment(kit, 3, { digitHeight: 0.022 });
+  const shown = lcd ?? readout!;
+  shown.group.position.set(width / 2 - (lcd ? 0.09 : 0.07), 0.02, 0.002);
+  shown.group.traverse((o) => (o.userData.live = true));
+  group.add(shown.group);
+  const tape = createDymoLabel(kit, lcd ? 'STATUS' : 'WATER °C', { seed: 9 });
+  tape.position.set(width / 2 - (lcd ? 0.09 : 0.07), -0.025, 0.003);
   group.add(tape);
+  let lastLines = '';
   // The thermostat: ▲ and ▼ beside the readout, and its SET lamp.
   let shownFor = 0;
   const press = (step: number) => {
@@ -277,11 +301,24 @@ export function createCabinetMimic(
       leds.makeUp?.set(!!s.makeUp);
       statusLeds?.drain.set(!!s.drain);
       statusLeds?.makeUp.set(!!s.filling);
-      if (setting) {
-        readout.show(s.setC.toFixed(1));
+      if (lcd) {
+        const lines = s.lines
+          ? setting
+            ? [`SET ${s.setC.toFixed(1)}C`.padEnd(16), s.lines[1]]
+            : [...s.lines]
+          : null;
+        const key = lines ? lines.join('|') : '';
+        if (key !== lastLines) {
+          lastLines = key;
+          lcd.show(lines ?? ['', ''], !!lines);
+        }
         return;
       }
-      readout.show(s.waterC === null ? '' : s.waterC.toFixed(1));
+      if (setting) {
+        readout!.show(s.setC.toFixed(1));
+        return;
+      }
+      readout!.show(s.waterC === null ? '' : s.waterC.toFixed(1));
     },
   };
 }
