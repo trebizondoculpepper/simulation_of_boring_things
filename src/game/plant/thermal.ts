@@ -129,6 +129,10 @@ export interface ThermalInputs {
   ambient: number;
   /** Whether the hall's air handling is running: dried, or still and nearly saturated. */
   ventilated: boolean;
+  /** The hall's relative humidity, 0 to 1, where it is modelled (`air-handling.ts`): in place of `ventilated`'s. */
+  humidity?: number;
+  /** The share of the hall's air heating running, 0 to 1 (its units' airflow): all of it by default. */
+  airShare?: number;
   /** Cold make-up mixed into the water this step, m³ (at the ambient). */
   madeUp: number;
   /** The water's thermostat's setting, °C, where someone has set it; its design temperature otherwise. */
@@ -164,10 +168,12 @@ export function stepThermal(
     const qWater = inputs.heatWater
       ? thermostat(p.waterHeater, inputs.waterSet ?? p.water, water)
       : 0;
-    const qAir = inputs.heatAir ? thermostat(p.airHeater, p.air, air) : 0;
-    const humidity = inputs.ventilated
-      ? THERMAL.humidity
-      : THERMAL.stillHumidity;
+    const qAir = inputs.heatAir
+      ? thermostat(p.airHeater * (inputs.airShare ?? 1), p.air, air)
+      : 0;
+    const humidity =
+      inputs.humidity ??
+      (inputs.ventilated ? THERMAL.humidity : THERMAL.stillHumidity);
     const drive = Math.max(0, saturation(water) - humidity * saturation(air));
     const toAir = p.surface * (water - air);
     const waterLoss =

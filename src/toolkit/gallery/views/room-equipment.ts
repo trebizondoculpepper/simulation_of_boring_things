@@ -84,7 +84,6 @@ import {
   bindBoilerSupply,
   createLiveBoilerCascade,
 } from '../rooms/plant/boiler';
-import { airHouse } from '../../components/plant/views/pool-ahu';
 import { serviceAvailable } from '../../../game/plant/services';
 import { EXHIBITS as CHEMICALS } from '../rooms/plant/chemicals';
 import { EXHIBITS as ELECTRICAL } from '../rooms/plant/electrical';
@@ -471,9 +470,10 @@ function worldFeed(): SwitchboardFeed | undefined {
 }
 
 /**
- * The machines that keep their own state, the boilers and the air
- * handling units, bound to their rooms' supply in the world: off when
- * the room's feeder is, or the whole site's main switch.
+ * The machines that keep their own state, the boilers, bound to their
+ * room's supply in the world: off when the room's feeder is, or the
+ * whole site's main switch. (The air handling units are the world's own,
+ * fed from the air plant's supply there.)
  */
 let suppliesBound = false;
 function bindSupplies() {
@@ -483,8 +483,6 @@ function bindSupplies() {
   bindBoilerSupply(() =>
     serviceAvailable(store.world.value.plant, 'boiler_house', 'power'),
   );
-  airHouse.supply = () =>
-    serviceAvailable(store.world.value.plant, 'air_plant', 'power');
 }
 
 /**

@@ -1,6 +1,4 @@
-import { POOLS } from '../../../game/plant-sizing/pools.config';
-import { sizePlant } from '../../../game/plant-sizing/sizing';
-import { ahuSizeFor, ductSize } from '../../../game/plant-sizing/ahu-range';
+import { ductSize } from '../../../game/plant-sizing/ahu-range';
 import type { AhuSize } from '../../../game/plant-sizing/ahu-range';
 import type { Item, Placed, RoomBox } from './room-equipment';
 import { shellRoomBox } from './room-equipment';
@@ -21,52 +19,10 @@ import type { Surface } from './stair-run';
  * height, and turn into the wall behind, so none crosses another.
  */
 
-export type AirHall = 'lounge' | 'olympic' | 'jacuzzi' | 'footbath';
-
-export interface AirUnit {
-  /** Its tag: AHU-801 and on. */
-  tag: string;
-  hall: AirHall;
-  /** What it serves, for its plates. */
-  serves: string;
-  size: AhuSize;
-  /** Its design airflow, m³/h. */
-  airflow: number;
-}
-
-const HALL_OF: Record<string, AirHall> = {
-  pool_01: 'lounge',
-  pool_02: 'olympic',
-  pool_03: 'jacuzzi',
-  pool_04: 'footbath',
-};
-const SERVES: Record<AirHall, string> = {
-  lounge: 'LOUNGE POOL HALL',
-  olympic: 'OLYMPIC POOL HALL',
-  jacuzzi: 'JACUZZI ROOM',
-  footbath: 'FOOTBATH PASSAGE',
-};
-
-/** Every unit, from the plant sizing: each hall's airflow over its units, each the size to carry it. */
-export const AIR_UNITS: readonly AirUnit[] = (() => {
-  const halls = sizePlant(POOLS).halls;
-  const order: AirHall[] = ['lounge', 'olympic', 'jacuzzi', 'footbath'];
-  const units: AirUnit[] = [];
-  for (const hall of order) {
-    const h = halls.find((x) => HALL_OF[x.attraction.room] === hall);
-    if (!h) continue;
-    const each = h.airflow / h.units;
-    for (let i = 0; i < h.units; i++)
-      units.push({
-        tag: `AHU-${801 + units.length}`,
-        hall,
-        serves: h.units > 1 ? `${SERVES[hall]} ${i + 1}` : SERVES[hall],
-        size: ahuSizeFor(each),
-        airflow: Math.round(each),
-      });
-  }
-  return units;
-})();
+export { AIR_UNITS } from '../../../game/plant/air-handling';
+export type { AirHall, AirUnit } from '../../../game/plant/air-handling';
+import { AIR_UNITS } from '../../../game/plant/air-handling';
+import type { AirUnit } from '../../../game/plant/air-handling';
 
 /** The steel frame between a stack's units, metres. */
 export const STACK_FRAME = 0.15;

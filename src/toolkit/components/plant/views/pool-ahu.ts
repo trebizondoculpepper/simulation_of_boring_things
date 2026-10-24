@@ -25,6 +25,16 @@ import {
   stepAhu,
 } from '../logic/pool-ahu';
 import type { AhuMode, AhuState } from '../logic/pool-ahu';
+import type {
+  Binding,
+  HandlePosition,
+} from '../../core/logic/world/components';
+import {
+  hallRhOf,
+  inWorld,
+  unitState,
+} from '../../../../game/plant/air-handling';
+import { worldStore } from '../../../save/world-store';
 import { ductSize } from '../../../../game/plant-sizing/ahu-range';
 import type { AhuSize } from '../../../../game/plant-sizing/ahu-range';
 
@@ -37,9 +47,11 @@ import type { AhuSize } from '../../../../game/plant-sizing/ahu-range';
  * HEAT PUMP, FILTER and FAULT lamps, a filter pressure gauge and a 16 × 2
  * display. Ours are Mistral's.
  *
- * Every unit's state is kept in one place (`airHouse`), stepped once a
- * frame whoever asks first, so the stacks and the air plant's mimic show
- * the same plant.
+ * The building's units live in the world (`game/plant/air-handling.ts`),
+ * saved and run whichever room the player is in: their controllers show
+ * it and work it, and they move, heat and dry their halls' air. A dev
+ * room's exhibit, not one of the building's, is kept here instead
+ * (`airHouse`), stepped once a frame whoever asks first.
  */
 
 type Tools = ReturnType<typeof plantTools>;
@@ -54,7 +66,7 @@ export interface AirUnitSpec {
   airflow: number;
 }
 
-/** The air plant's units, their controls, and what each hall's programme asks. */
+/** A dev room's units, their controls, and what each hall's programme asks: not the building's, which are the world's. */
 export const airHouse = {
   units: new Map<string, AhuState>(),
   isolator: new Map<string, () => boolean>(),
@@ -63,7 +75,7 @@ export const airHouse = {
   occupied: new Map<string, boolean>(),
   hall: new Map<string, string>(),
   airflow: new Map<string, number>(),
-  /** The air plant's electrical supply: on, unless bound to the world's. */
+  /** Their electrical supply: always on. */
   supply: () => true,
   last: -1,
 };
@@ -102,6 +114,87 @@ export function advanceAirPlant(now: number) {
       ),
     );
 }
+
+const MODES: readonly AhuMode[] = ['hand', 'off', 'auto'];
+
+/** Where a unit's state is, and how its controller works it. */
+interface UnitSource {
+  state(): AhuState;
+  /** HAND-OFF-AUTO, by position: 0 HAND, 1 OFF, 2 AUTO. */
+  mode: Binding<number>;
+  isolator: Binding<HandlePosition>;
+  reset(): void;
+  filters(): void;
+}
+
+/** One of the building's units, in the world. */
+function worldUnit(tag: string): UnitSource {
+  const store = worldStore('dev');
+  const world = () => store.world.value;
+  const act = (
+    action: Parameters<typeof store.dispatch>[0] & { type: 'air/unit' },
+  ) => store.dispatch(action);
+  return {
+    state: () => unitState(world().airHandling, tag, hallRhOf(world().pools)),
+    mode: {
+      get value() {
+        return MODES.indexOf(world().airHandling.units[tag].mode);
+      },
+      set: (i) =>
+        act({ type: 'air/unit', tag, action: { act: 'mode', mode: MODES[i] } }),
+    },
+    isolator: {
+      get value(): HandlePosition {
+        return world().airHandling.units[tag].isolator ? 'on' : 'off';
+      },
+      set: (p) =>
+        act({
+          type: 'air/unit',
+          tag,
+          action: { act: 'isolator', on: p === 'on' },
+        }),
+    },
+    reset: () => act({ type: 'air/unit', tag, action: { act: 'reset' } }),
+    filters: () => act({ type: 'air/unit', tag, action: { act: 'filters' } }),
+  };
+}
+
+/** A dev room's exhibit, kept here (`airHouse`). */
+function localUnit(u: AirUnitSpec): UnitSource {
+  registerAirUnit(u);
+  const mode = signal(2);
+  const isolator = signal<HandlePosition>('on');
+  airHouse.isolator.set(u.tag, () => isolator.value === 'on');
+  airHouse.mode.set(u.tag, () => MODES[mode.value]);
+  return {
+    state() {
+      advanceAirPlant(performance.now() / 1000);
+      return airHouse.units.get(u.tag)!;
+    },
+    mode: {
+      get value() {
+        return mode.value;
+      },
+      set: (i) => (mode.value = i),
+    },
+    isolator: {
+      get value() {
+        return isolator.value;
+      },
+      set: (p) => (isolator.value = p),
+    },
+    reset: () =>
+      airHouse.units.set(u.tag, resetAhu(airHouse.units.get(u.tag)!)),
+    filters: () =>
+      airHouse.units.set(u.tag, changeFilters(airHouse.units.get(u.tag)!)),
+  };
+}
+
+/** A unit's source: the world's, if it is one of the building's. */
+const unitSource = (u: AirUnitSpec) =>
+  inWorld(u.tag) && typeof window !== 'undefined'
+    ? worldUnit(u.tag)
+    : localUnit(u);
 
 /** The share of a unit's length each of its sections takes, west to east. */
 const SECTIONS = [
@@ -309,6 +402,7 @@ function createAhuController(
   kit: PanelKit,
   u: AirUnitSpec,
   parts: ReturnType<typeof createPartSet>,
+  src: UnitSource,
 ) {
   const t = plantTools(kit);
   const group = new Group();
@@ -363,10 +457,11 @@ function createAhuController(
       0.07,
     ),
   );
-  const hoa = mount(
+  mount(
     selector(kit, {
       positions: 3,
       initial: 2,
+      bound: src.mode,
       legend: 'HAND · OFF · AUTO',
       name: `${u.tag} HAND OFF AUTO`,
     }),
@@ -378,8 +473,7 @@ function createAhuController(
       colour: 'blue',
       legend: 'RESET',
       name: `${u.tag} RESET`,
-      action: () =>
-        airHouse.units.set(u.tag, resetAhu(airHouse.units.get(u.tag)!)),
+      action: src.reset,
     }),
     -0.02,
     -0.08,
@@ -389,16 +483,16 @@ function createAhuController(
       colour: 'black',
       legend: 'FILTERS CHANGED',
       name: `${u.tag} FILTERS CHANGED`,
-      action: () =>
-        airHouse.units.set(u.tag, changeFilters(airHouse.units.get(u.tag)!)),
+      action: src.filters,
     }),
     0.1,
     -0.08,
   );
-  const isolator = mount(
+  mount(
     disconnectHandle(kit, {
       style: 'rotary',
       initial: 'on',
+      bound: src.isolator,
       name: `${u.tag} isolator`,
     }),
     0.15,
@@ -414,11 +508,6 @@ function createAhuController(
   gauge.group.position.set(-0.13, -0.21, z);
   gauge.group.traverse((o) => (o.userData.live = true));
   group.add(gauge.group);
-  airHouse.isolator.set(u.tag, () => isolator.on.value);
-  airHouse.mode.set(
-    u.tag,
-    () => (['hand', 'off', 'auto'] as const)[hoa.position.value],
-  );
   return {
     group,
     show(s: AhuState, delta: number) {
@@ -465,13 +554,13 @@ export function createAhuStack(
   object.name = `Air handling stack ${units.map((u) => u.tag).join(' ')}`;
   const parts = createPartSet();
   const built = units.map((u, k) => {
-    registerAirUnit(u);
+    const src = unitSource(u);
     const y = k * (u.size.height + frame);
     if (k > 0) stackFrame(t, object, u.size, y - frame, frame);
     const unit = createAhuUnit(kit, u);
     unit.group.position.y = y;
     object.add(unit.group);
-    const controller = createAhuController(kit, u, parts);
+    const controller = createAhuController(kit, u, parts, src);
     // On its front, near its east end, at a hand's height over its floor.
     controller.group.position.set(
       u.size.length / 2 - 0.55,
@@ -479,15 +568,14 @@ export function createAhuStack(
       u.size.depth / 2,
     );
     object.add(controller.group);
-    return { u, unit, controller };
+    return { u, unit, controller, src };
   });
   return {
     object,
     parts,
     update(delta: number) {
-      advanceAirPlant(performance.now() / 1000);
       for (const b of built) {
-        const s = airHouse.units.get(b.u.tag)!;
+        const s = b.src.state();
         b.unit.turn(s.speed, delta);
         b.controller.show(s, delta);
       }

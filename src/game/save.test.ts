@@ -56,6 +56,7 @@ describe('a save', () => {
       loungeValvePositions: newWorld().loungeValvePositions,
       olympic: newWorld().olympic,
       olympicTank: newWorld().olympicTank,
+      airHandling: newWorld().airHandling,
     });
   });
 

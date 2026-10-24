@@ -11,7 +11,7 @@
  */
 
 /** Bumped whenever the world's shape changes; `save.ts` migrates older saves. */
-import { newPlantServices } from './plant/services';
+import { newPlantServices, serviceAvailable } from './plant/services';
 import {
   loungeValveFlows,
   newLoungeValvePositions,
@@ -87,8 +87,20 @@ import type {
 import { makeUpCalls, newOlympicTank } from './plant/olympic-tank';
 import type { OlympicTankState } from './plant/olympic-tank';
 import type { MakeupMode } from './plant/balance-tank';
+import {
+  actOnUnit,
+  hallHandling,
+  hallRhOf,
+  newAirHandling,
+  stepAirHandling,
+} from './plant/air-handling';
+import type {
+  AirHall,
+  AirHandlingState,
+  AirUnitAction,
+} from './plant/air-handling';
 
-export const WORLD_VERSION = 19;
+export const WORLD_VERSION = 20;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -134,6 +146,8 @@ export interface World {
   olympic: OlympicBatteryState;
   /** The Olympic's balance tank's controls: its make-up (`olympic-tank.ts`). */
   olympicTank: OlympicTankState;
+  /** The pool halls' air handling units and the halls' time programmes (`air-handling.ts`). */
+  airHandling: AirHandlingState;
 }
 
 export function newWorld(): World {
@@ -154,6 +168,7 @@ export function newWorld(): World {
     loungeValvePositions: newLoungeValvePositions(),
     olympic: newOlympicBattery(),
     olympicTank: newOlympicTank(),
+    airHandling: newAirHandling(),
   };
 }
 
@@ -185,7 +200,11 @@ export type WorldAction =
   /** A pool's water's thermostat set, °C (kept within its range). */
   | { type: 'pool/setpoint'; pool: PoolId; celsius: number }
   /** The world run on at once, a second at a time: for trying things out. */
-  | { type: 'time/skip'; seconds: number };
+  | { type: 'time/skip'; seconds: number }
+  /** An air handling unit's controls worked, on its controller. */
+  | { type: 'air/unit'; tag: string; action: AirUnitAction }
+  /** A hall's time programme set, on the air plant's mimic: occupied, so its units run in AUTO. */
+  | { type: 'air/occupied'; hall: AirHall; on: boolean };
 
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
@@ -302,6 +321,24 @@ export function applyAction(world: World, action: WorldAction): World {
             },
           };
     }
+    case 'air/unit':
+      return {
+        ...world,
+        airHandling: actOnUnit(world.airHandling, action.tag, action.action),
+      };
+    case 'air/occupied':
+      return world.airHandling.occupied[action.hall] === action.on
+        ? world
+        : {
+            ...world,
+            airHandling: {
+              ...world.airHandling,
+              occupied: {
+                ...world.airHandling.occupied,
+                [action.hall]: action.on,
+              },
+            },
+          };
     case 'time/skip':
       return action.seconds > 0 ? advance(world, action.seconds, 1) : world;
     case 'gas/leak': {
@@ -410,6 +447,14 @@ export function stepWorld(world: World, delta: number): World {
     makeUpDemand(world.pools, { pool_02: calling }),
   );
   let battery: BatteryFlows | null = null;
+  // The air handling units, on the air plant's supply, each at its hall's
+  // humidity as the step begins.
+  const airHandling = stepAirHandling(
+    world.airHandling,
+    hallRhOf(world.pools),
+    serviceAvailable(world.plant, 'air_plant', 'power'),
+    delta,
+  );
 
   const water = stepPoolsWater(
     world.pools,
@@ -440,11 +485,13 @@ export function stepWorld(world: World, delta: number): World {
       };
     },
     (running) => loungeValveFlows(loungeValvePositions, running),
+    hallHandling(airHandling),
   );
   return {
     ...world,
     time: world.time + delta,
     pools: water.pools,
+    airHandling,
     loungeValvePositions,
     olympic: battery
       ? stepOlympicBattery(world.olympic, battery, delta)

@@ -85,6 +85,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   17: (world) => world,
   // 18 → 19: actual positions of the lounge filter solenoid valves.
   18: (world) => world,
+  // 19 → 20: the air handling units, running, and each hall's humidity (`fillDefaults` adds them).
+  19: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

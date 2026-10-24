@@ -8,11 +8,9 @@ import { AIR_UNITS } from '../logic/air-plant';
 import { airMimicSpec, airMimicState } from '../logic/air-mimic';
 import type { AirReading } from '../logic/air-mimic';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
-import {
-  advanceAirPlant,
-  airHouse,
-  registerAirUnit,
-} from '../../components/plant/views/pool-ahu';
+import { hallRhOf, unitState } from '../../../game/plant/air-handling';
+import type { AirHall } from '../../../game/plant/air-handling';
+import { worldStore } from '../../save/world-store';
 import { ahuLamps } from '../../components/plant/logic/pool-ahu';
 import { mergeStatic } from '../../components/core/views/merge-static';
 import { createStairStructure } from './stair-run';
@@ -137,35 +135,40 @@ export function createAirPlantStructure(
 /**
  * The air plant's mimic and control panel (`logic/air-mimic.ts`), by
  * Penfold Controls: every unit's lamps and each hall's air, live from
- * the air plant (`airHouse`); each hall's OCCUPIED and UNOCCUPIED
- * buttons set its time programme, which its units follow in AUTO.
+ * the world (`game/plant/air-handling.ts`); each hall's OCCUPIED and
+ * UNOCCUPIED buttons set its time programme, which its units follow in
+ * AUTO.
  */
 export function createAirMimic(kit: PanelKit) {
-  for (const u of AIR_UNITS) registerAirUnit(u);
+  // The world, where there is a page to keep it (not in tests).
+  const store = typeof window === 'undefined' ? null : worldStore('dev');
   const board = createMimicBoard(kit, airMimicSpec(), {
     press: (id) => {
       const [hall, what] = id.split('-');
       if (what === 'on' || what === 'off')
-        airHouse.occupied.set(hall, what === 'on');
+        store?.dispatch({
+          type: 'air/occupied',
+          hall: hall as AirHall,
+          on: what === 'on',
+        });
     },
   });
   return {
     object: board.group,
     parts: board.parts,
     update() {
-      advanceAirPlant(performance.now() / 1000);
+      if (!store) return;
+      const world = store.world.value;
+      const rh = hallRhOf(world.pools);
       const units: AirReading['units'] = Object.fromEntries(
         AIR_UNITS.map((u) => {
-          const s = airHouse.units.get(u.tag)!;
+          const s = unitState(world.airHandling, u.tag, rh);
           const l = ahuLamps(s);
           return [u.tag, { ...l, speed: s.speed, hallRh: s.hallRh }];
         }),
       );
       board.show(
-        airMimicState({
-          units,
-          occupied: Object.fromEntries(airHouse.occupied),
-        }),
+        airMimicState({ units, occupied: world.airHandling.occupied }),
       );
     },
   };

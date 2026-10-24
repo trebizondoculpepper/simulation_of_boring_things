@@ -9,6 +9,7 @@ import { BALANCE_TANK, volumeOf } from './balance-tank';
 import { AMBIENT, stepThermal, thermalParams } from './thermal';
 import type { ThermalParams } from './thermal';
 import type { Chemical } from './chemicals';
+import { stepHallRh } from './air-handling';
 
 export type PoolId = 'pool_01' | 'pool_02' | 'pool_03' | 'pool_04';
 export const POOL_IDS: readonly PoolId[] = [
@@ -34,6 +35,8 @@ export interface PoolWaterState {
   tripped: boolean;
   /** Its hall's air temperature, °C. */
   hallAir: number;
+  /** Its hall's relative humidity, %, as its air handling units hold it (`air-handling.ts`). */
+  hallRh: number;
   /** The heat its water's and its hall's heaters are giving now, kW (`thermal.ts`). */
   heating: number;
   /** Whether it is being drained down to the sewer (its drain-down valves open). */
@@ -96,6 +99,7 @@ export function newPools(): PoolsState {
         flow: POOL_TARGET[id].flow,
         tripped: false,
         hallAir: HALL_AIR[id],
+        hallRh: 58,
         heating: 0,
         drainDown: false,
         makeUp: true,
@@ -331,6 +335,13 @@ export function stepPoolsWater(
   },
   /** The lounge filter battery's return and waste, from its valve positions. */
   lounge?: (running: boolean) => { toPool: number; toWaste: number },
+  /**
+   * What each hall's air handling units do (`air-handling.ts`): the share
+   * of its design airflow moving, and of it dried. Without it, a hall is
+   * ventilated whenever its room's air service is available, as before
+   * the units were in the world, and its humidity stands.
+   */
+  air?: Record<PoolId, { share: number; drying: number }>,
 ): {
   pools: PoolsState;
   drawn: number;
@@ -479,11 +490,18 @@ export function stepPoolsWater(
     );
     // The water's and the hall's heat (`thermal.ts`): the water heated
     // while it circulates and the heating is on; the hall's air while its
-    // air handling and the heating are on (the footbath passage has no air
-    // handling of its own).
+    // air handling and the heating are on, by its units' coils in
+    // proportion to the airflow they move. Its humidity follows its units
+    // (`air-handling.ts`): dried, or left to the pool's evaporation.
     const hasAir = (ROOM_SERVICES[room] as readonly string[]).includes('air');
     const handled = hasAir ? serviceAvailable(plant, room, 'air') : true;
-    const heatAir = handled && serviceAvailable(plant, room, 'heat');
+    const units = air?.[id];
+    const airShare = units ? (handled ? units.share : 0) : 1;
+    const heatAir =
+      handled && airShare > 0.01 && serviceAvailable(plant, room, 'heat');
+    const hallRh = units
+      ? stepHallRh(old.hallRh, handled ? units : { share: 0, drying: 0 }, dt)
+      : old.hallRh;
     const thermal = stepThermal(
       { water: old.temperature, air: old.hallAir },
       HEAT[id],
@@ -496,6 +514,7 @@ export function stepPoolsWater(
         ventilated: hasAir
           ? serviceAvailable(plant, room, 'air')
           : serviceAvailable(plant, room, 'power'),
+        ...(units ? { humidity: hallRh / 100, airShare } : {}),
         madeUp: water.madeUp,
         waterSet: old.setpoint ?? POOL_TARGET[id].temp,
       },
@@ -509,6 +528,7 @@ export function stepPoolsWater(
       balance,
       temperature,
       hallAir,
+      hallRh,
       heating,
       ph,
       freeChlorine,
