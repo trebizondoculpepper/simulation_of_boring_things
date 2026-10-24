@@ -10,14 +10,14 @@ The jacuzzi is deck-level: its water spills over its rim into a gutter, and the 
 
 A spa's balance tank is sized from what it must absorb, not as a share of its volume as a pool's is (5–10 %). From the PWTAG code of practice as summarised by Pool & Spa News (about 80 L displaced per bather), with every seat taken, since a spa is often full:
 
-| Allowance | Jacuzzi (8 seats, 4.5 m², 28 m³/h) |
-|---|---|
-| Bathers, 8 × 80 L | 0.64 m³ |
-| Water in transit (gutter and pipes, draining back when the pump stops) | 0.13 m³ |
-| Lift from the air and jets, 20 mm over the surface | 0.09 m³ |
-| Working reserve, 30 s of the pump's flow | 0.24 m³ |
-| Total | 1.10 m³ |
-| With a 10 % margin, to the next 0.1 m³ | 1.3 m³ (about 45 % of the spa's 2.8 m³) |
+| Allowance                                                              | Jacuzzi (8 seats, 4.5 m², 28 m³/h)      |
+| ---------------------------------------------------------------------- | --------------------------------------- |
+| Bathers, 8 × 80 L                                                      | 0.64 m³                                 |
+| Water in transit (gutter and pipes, draining back when the pump stops) | 0.13 m³                                 |
+| Lift from the air and jets, 20 mm over the surface                     | 0.09 m³                                 |
+| Working reserve, 30 s of the pump's flow                               | 0.24 m³                                 |
+| Total                                                                  | 1.10 m³                                 |
+| With a 10 % margin, to the next 0.1 m³                                 | 1.3 m³ (about 45 % of the spa's 2.8 m³) |
 
 The make-up float holds the tank low enough that the bathers' surge and the air's lift fit above it, and the low-low cutout leaves the working reserve below it.
 
