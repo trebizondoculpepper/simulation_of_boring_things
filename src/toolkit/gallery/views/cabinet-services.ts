@@ -270,7 +270,11 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   const panelAt = cabinetValvePanel(room);
   const panel =
     panelAt && panelValves.length
-      ? createValveControlPanel(kit, 'FOOT SPA VALVES', panelValves)
+      ? createValveControlPanel(
+          kit,
+          room === 'plant_pool_03' ? 'JACUZZI VALVES' : 'FOOT SPA VALVES',
+          panelValves,
+        )
       : null;
   if (panel && panelAt) {
     panel.group.position.set(panelAt.x, floorY + panelAt.y, panelAt.z);

@@ -11,6 +11,7 @@ import {
   cabinetIsolator,
   cabinetPipes,
   cabinetPorts,
+  cabinetValvePanel,
 } from './cabinet-pipes';
 import type { CabinetRun, Vec3 } from './cabinet-pipes';
 import { feederIsolatorSpace, layoutRoom } from './room-equipment';
@@ -129,16 +130,25 @@ describe.each([
     expect(end[1]).toBeLessThan(0.25);
   });
 
-  if (room === 'plant_pool_04') {
-    it('uses motor operators on every fitted valve', () => {
-      expect(runs.filter((run) => run.valve).length).toBeGreaterThan(3);
-      expect(
-        runs
-          .filter((run) => run.valve)
-          .every((run) => run.valve!.operator === 'motor'),
-      ).toBe(true);
-    });
+  it('uses motor operators on every fitted valve, worked from a panel on a wall', () => {
+    expect(runs.filter((run) => run.valve).length).toBeGreaterThan(3);
+    expect(
+      runs
+        .filter((run) => run.valve)
+        .every((run) => run.valve!.operator === 'motor'),
+    ).toBe(true);
+    // Its panel on a wall's face, at eye height.
+    const panel = cabinetValvePanel(room)!;
+    const half = layout.box.w / 2;
+    expect(
+      Math.abs(Math.abs(panel.x) - half) < 1e-6 ||
+        Math.abs(Math.abs(panel.z) - h) < 1e-6,
+    ).toBe(true);
+    expect(panel.y).toBeGreaterThan(1.4);
+    expect(panel.y).toBeLessThan(1.9);
+  });
 
+  if (room === 'plant_pool_04') {
     it('keeps the draw-down valve clear of the cabinet back', () => {
       const drain = named('Drain to waste');
       const valve = drain.valve!;

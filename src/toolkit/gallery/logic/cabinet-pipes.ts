@@ -446,16 +446,22 @@ export function cabinetIsolator(room: string, trial?: Placed): Isolator | null {
   };
 }
 
+/** The rooms whose cabinet's valves are motorised, worked from a panel. */
+const MOTORISED = new Set(['plant_pool_03', 'plant_pool_04']);
+
 /**
- * The foot spa's valve panel (the owner, 2026-10-23: its valves motorised,
- * worked from a small panel on the east wall): its back on the wall, at
- * eye height, south of the pool door (the floor before it is kept clear
- * in `room-equipment.ts`).
+ * The cabinet's valve panel, its back on a wall at eye height: the foot
+ * spa's (the owner, 2026-10-23: its valves motorised, worked from a small
+ * panel on the east wall) south of the pool door; the jacuzzi's (the
+ * owner, 2026-10-24: like the foot spa's, too hard to work by hand in so
+ * tight a room) on the north wall, beside its mimic.
  */
 export function cabinetValvePanel(room: string, trial?: Placed) {
-  if (room !== 'plant_pool_04') return null;
+  if (!MOTORISED.has(room)) return null;
   const s = setting(room, trial);
   if (!s) return null;
+  // Right of the mimic (1.2 m wide, at the wall's middle), a hand's gap off.
+  if (room === 'plant_pool_03') return { x: 1.16, y: 1.72, z: -s.h, yaw: 0 };
   const x = s.layout.box.w / 2;
   const z = 0.5;
   return {
@@ -627,7 +633,7 @@ export function cabinetPipes(
             at: clearAt,
             axis: 'y',
             ...(footbathFlow ? { facing: Math.PI / 2 } : {}),
-            ...(room === 'plant_pool_04' ? { operator: 'motor' as const } : {}),
+            ...(MOTORISED.has(room) ? { operator: 'motor' as const } : {}),
             installed: true,
             name: `${run.name} valve`,
           };
