@@ -409,13 +409,16 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     use: (x, y) => usableAt(x, y)?.(),
     aimed: () => Boolean(usableAt(0, 0)),
   });
-  const resize = () => {
-    const { width, height } = canvas.getBoundingClientRect();
+  const resizeTo = (width: number, height: number) => {
     if (!width || !height) return;
     renderer.setSize(Math.round(width), Math.round(height), false);
     composer.setSize(Math.round(width), Math.round(height));
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
+  };
+  const resize = () => {
+    const { width, height } = canvas.getBoundingClientRect();
+    resizeTo(width, height);
   };
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
@@ -611,8 +614,10 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       composer.render(delta);
     }
   });
+  let disposed = false;
   return Object.assign(
     () => {
+      disposed = true;
       renderer.setAnimationLoop(null);
       observer.disconnect();
       composer.dispose();
@@ -631,6 +636,25 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       renderer.dispose();
     },
     {
+      async prepare(width: number, height: number) {
+        if (disposed || !canvas.parentElement?.hidden) return;
+        resizeTo(width, height);
+        camera.updateMatrixWorld();
+        // Match the linear HDR target used by the composer when compiling.
+        const previousTarget = renderer.getRenderTarget();
+        let compiled: Promise<unknown>;
+        try {
+          renderer.setRenderTarget(composer.readBuffer);
+          compiled = renderer.compileAsync(scene, camera);
+        } finally {
+          renderer.setRenderTarget(previousTarget);
+        }
+        await compiled;
+        if (disposed || !canvas.parentElement?.hidden) return;
+        // Also allocate/upload the targets and prepare AO, bloom and output.
+        // Do not run the room's frame loop, controls, sounds or simulation.
+        composer.render(0);
+      },
       resume() {
         leaving = false;
         wasOpen = null;

@@ -8,16 +8,19 @@
  *   beneath them; a second to the cycle.
  * - Ozone: four quick rising chirps, then a trembling held bleep; 0.8 s
  *   to the cycle.
+ * - Methane (the boiler house's natural gas): two slow growling sweeps
+ *   falling away, then one short rising chirp; 1.2 s to the cycle.
  *
  * Pure: `gasAlarmAt` says what sounds at a moment, `renderGasAlarm` the
  * samples of a seamless loop.
  */
 
-export type GasAlarmKind = 'chlorine' | 'ozone';
+export type GasAlarmKind = 'chlorine' | 'ozone' | 'methane';
 
 export const GAS_ALARM_CYCLE: Record<GasAlarmKind, number> = {
   chlorine: 1,
   ozone: 0.8,
+  methane: 1.2,
 };
 /** The rendered loop: four whole cycles. */
 export const GAS_ALARM_CYCLES = 4;
@@ -50,6 +53,18 @@ export function gasAlarmAt(kind: GasAlarmKind, t: number): Sounding {
       const share = (c - 0.36) / 0.42;
       return { hz: 1500 * (900 / 1500) ** share, level, voice: 'growl' };
     }
+    return SILENT;
+  }
+  if (kind === 'methane') {
+    for (let n = 0; n < 2; n++) {
+      const from = n * 0.4;
+      const level = gate(c, from, from + 0.3, 0.01);
+      if (level)
+        return { hz: 1100 - ((c - from) / 0.3) * 400, level, voice: 'growl' };
+    }
+    const level = gate(c, 0.85, 0.95);
+    if (level)
+      return { hz: 1400 + ((c - 0.85) / 0.1) * 600, level, voice: 'chirp' };
     return SILENT;
   }
   for (let n = 0; n < 4; n++) {

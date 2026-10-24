@@ -357,11 +357,12 @@ export const FOOTBATH_EXHIBIT: PlantExhibit = {
  * it each frame (and starts it afresh when built), and the control plate
  * on the wall, whose switches act on it.
  */
-const spa = {
+const createSpaState = () => ({
   state: initialSpa(36.5, 37),
   running: signal(false),
   light: signal(false),
-};
+});
+const spa = createSpaState();
 
 /**
  * The world, where there is a page to keep it: the jacuzzi's jets and air
@@ -400,7 +401,7 @@ const TUB = {
  * treads, and here is on the room's wall. The heating and the
  * circulation are the plant's (`spa-controller.ts`), unseen.
  */
-function buildJacuzzi(kit: PanelKit): LiveExhibit {
+function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
   const t = plantTools(kit);
   const m = fittingMaterials(kit);
   const object = new Group();
@@ -582,7 +583,7 @@ function buildJacuzzi(kit: PanelKit): LiveExhibit {
 
   // The spa's state, shared with its control plate on the wall: a new
   // tub starts it afresh.
-  spa.state = initialSpa(36.5, 37);
+  spaState.state = initialSpa(36.5, 37);
 
   let time = 0;
   object.traverse((o) => (o.userData.live = true));
@@ -594,19 +595,19 @@ function buildJacuzzi(kit: PanelKit): LiveExhibit {
       recipe: SPA_BLOWER,
       on: false,
       from: lamp,
-      when: () => spa.state.air > 0,
+      when: () => spaState.state.air > 0,
     },
     {
       recipe: SPA_JETS,
       on: false,
       from: water,
-      when: () => spa.state.jets > 0,
+      when: () => spaState.state.jets > 0,
     },
     {
       recipe: SPA_BUBBLES,
       on: false,
       from: water,
-      when: () => spa.state.bubbling,
+      when: () => spaState.state.bubbling,
     },
   ];
   return {
@@ -617,16 +618,16 @@ function buildJacuzzi(kit: PanelKit): LiveExhibit {
     update(delta) {
       time += delta;
       // The jets and air as the world runs them, whoever started them.
-      const world = jacuzziWorld()?.world.value;
+      const world = spaState === spa ? jacuzziWorld()?.world.value : undefined;
       if (world) {
         const runs = jacuzziRuns(world);
-        spa.state = {
-          ...spa.state,
+        spaState.state = {
+          ...spaState.state,
           jets: runs.jets ? JACUZZI_CYCLE : 0,
           air: runs.air ? JACUZZI_CYCLE : 0,
         };
       }
-      const state = (spa.state = stepSpa(spa.state, delta));
+      const state = (spaState.state = stepSpa(spaState.state, delta));
       for (const sound of sounds) {
         const on = sound.when();
         if (on !== sound.on) {
@@ -634,8 +635,8 @@ function buildJacuzzi(kit: PanelKit): LiveExhibit {
           partAudio.hold(sound, on ? sound.recipe : null, sound.from);
         }
       }
-      spa.running.value = state.jets > 0 || state.air > 0;
-      spa.light.value = state.light;
+      spaState.running.value = state.jets > 0 || state.air > 0;
+      spaState.light.value = state.light;
       for (const j of jets) {
         j.visible = state.jets > 0;
         if (j.visible) j.scale.z = 0.85 + 0.15 * Math.sin(time * 23 + j.id);
@@ -665,7 +666,7 @@ export const JACUZZI_EXHIBIT: PlantExhibit = {
  * minutes again); STOP stops them at once, and is the spa's emergency
  * stop; LIGHT switches the underwater light on and off.
  */
-function buildJacuzziPlate(kit: PanelKit): LiveExhibit {
+function buildJacuzziPlate(kit: PanelKit, spaState = spa): LiveExhibit {
   const t = plantTools(kit);
   const object = new Group();
   object.name = 'Jacuzzi control plate';
@@ -699,27 +700,27 @@ function buildJacuzziPlate(kit: PanelKit): LiveExhibit {
         'green',
         'START',
         () =>
-          jacuzziWorld()
+          spaState === spa && jacuzziWorld()
             ? jacuzziAct({ act: 'start' })
-            : (spa.state = startCycle(spa.state)),
-        spa.running,
+            : (spaState.state = startCycle(spaState.state)),
+        spaState.running,
       ],
       [
         'stop',
         'red',
         'STOP',
         () =>
-          jacuzziWorld()
+          spaState === spa && jacuzziWorld()
             ? jacuzziAct({ act: 'stop' })
-            : (spa.state = stopCycle(spa.state)),
+            : (spaState.state = stopCycle(spaState.state)),
         undefined,
       ],
       [
         'light',
         'white',
         'LIGHT',
-        () => (spa.state = pressLight(spa.state)),
-        spa.light,
+        () => (spaState.state = pressLight(spaState.state)),
+        spaState.light,
       ],
     ] as const
   ).forEach(([symbol, ring, legend, action, lit], i) => {
@@ -754,3 +755,12 @@ export const AMENITY_EXHIBITS: readonly PlantExhibit[] = [
   FOOTBATH_EXHIBIT,
   JACUZZI_EXHIBIT,
 ];
+
+/** A fresh tub and control plate using the same components, with private state. */
+export function createJacuzziDemo(kit: PanelKit) {
+  const state = createSpaState();
+  return {
+    tub: buildJacuzzi(kit, state),
+    plate: buildJacuzziPlate(kit, state),
+  };
+}

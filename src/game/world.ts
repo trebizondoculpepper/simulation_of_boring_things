@@ -113,6 +113,13 @@ import {
   stepJacuzzi,
 } from './plant/jacuzzi';
 import type { JacuzziAction, JacuzziState } from './plant/jacuzzi';
+import {
+  actOnBoilerGas,
+  heatingPlant,
+  newBoilerGas,
+  stepBoilerGas,
+} from './plant/boiler-gas';
+import type { BoilerGasAction, BoilerGasState } from './plant/boiler-gas';
 import type {
   MotorsState,
   MotorTag,
@@ -120,7 +127,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 22;
+export const WORLD_VERSION = 23;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -172,6 +179,8 @@ export interface World {
   motors: MotorsState;
   /** The jacuzzi's jets and air (`jacuzzi.ts`). */
   jacuzzi: JacuzziState;
+  /** The boiler house's gas safety: ECV, emergency stop, detector and SSOV (`boiler-gas.ts`). */
+  boilerGas: BoilerGasState;
 }
 
 export function newWorld(): World {
@@ -195,6 +204,7 @@ export function newWorld(): World {
     airHandling: newAirHandling(),
     motors: newMotors(),
     jacuzzi: newJacuzzi(),
+    boilerGas: newBoilerGas(),
   };
 }
 
@@ -236,7 +246,9 @@ export type WorldAction =
   /** A motor panel's emergency stop struck in, or released. */
   | { type: 'motor/stop'; pool: StartedPool; stopped: boolean }
   /** The jacuzzi's jets and air worked, from its cabinet or its wall plate. */
-  | { type: 'jacuzzi'; action: JacuzziAction };
+  | { type: 'jacuzzi'; action: JacuzziAction }
+  /** The boiler house's gas safety worked: its emergency stop, GAS RESET, ECV or detector TEST. */
+  | { type: 'boiler-gas'; action: BoilerGasAction };
 
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
@@ -367,6 +379,10 @@ export function applyAction(world: World, action: WorldAction): World {
         ...world,
         jacuzzi: actOnJacuzzi(world.jacuzzi, action.action, world.time),
       };
+    case 'boiler-gas': {
+      const boilerGas = actOnBoilerGas(world.boilerGas, action.action);
+      return boilerGas === world.boilerGas ? world : { ...world, boilerGas };
+    }
     case 'motor/stop':
       return world.motors.stopped[action.pool] === action.stopped
         ? world
@@ -537,9 +553,10 @@ export function stepWorld(world: World, delta: number): World {
     delta,
   );
 
+  // The heating, as the boilers' gas allows: none with the SSOV or ECV shut.
   const water = stepPoolsWater(
     world.pools,
-    world.plant,
+    heatingPlant(world.plant, world.boilerGas),
     delta,
     world.time,
     stock,
@@ -576,6 +593,7 @@ export function stepWorld(world: World, delta: number): World {
     airHandling,
     motors,
     jacuzzi: stepJacuzzi(world.jacuzzi, world.time + delta),
+    boilerGas: stepBoilerGas(world.boilerGas, delta),
     loungeValvePositions,
     olympic: battery
       ? stepOlympicBattery(world.olympic, battery, delta)

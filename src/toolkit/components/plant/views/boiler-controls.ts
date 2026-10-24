@@ -34,7 +34,13 @@ export interface BoilerPanelView {
   group: Group;
   parts: ReturnType<typeof createPartSet>;
   /** Show the boiler's state; call each frame with the time. */
-  show(boiler: BoilerState, seconds: number, delta: number): void;
+  /** Show `boiler`; `gas` false when no gas reaches its inlet (its display says GAS). */
+  show(
+    boiler: BoilerState,
+    seconds: number,
+    delta: number,
+    gas?: boolean,
+  ): void;
 }
 
 /**
@@ -157,10 +163,10 @@ export function createBoilerPanel(
   return {
     group,
     parts,
-    show(boiler, seconds, delta) {
+    show(boiler, seconds, delta, gas = true) {
       lit = boiler.on;
       setpoint.value = boiler.setpoint;
-      display.show(boilerDisplay(boiler, seconds));
+      display.show(boilerDisplay(boiler, seconds, gas));
       const on = boilerLamps(boiler);
       const states = [
         on.burner,

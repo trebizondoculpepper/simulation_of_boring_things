@@ -1,4 +1,11 @@
-import { Group, MeshBasicMaterial, MeshStandardMaterial } from 'three';
+import {
+  CylinderGeometry,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  PlaneGeometry,
+} from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { SANS } from '../../core/views/fitting-tools';
@@ -48,6 +55,50 @@ function badge(
   mesh.rotation.y = yaw;
   parent.add(mesh);
   return mesh;
+}
+
+/**
+ * A flat label (a badge, nameplate or printed sign, and whatever plate it
+ * is printed on) rebuilt as part of a cylinder's surface: wrapped round
+ * the upright axis at (`ax`, `az`) at `radius`, centred on the bearing of
+ * where it was placed, its print following the curve, so it lies on the
+ * shell rather than standing off it as a flat card.
+ */
+function wrapOnto(
+  label: Object3D,
+  [ax, az]: readonly [number, number],
+  radius: number,
+) {
+  const bearing = Math.atan2(label.position.x - ax, label.position.z - az);
+  label.position.set(ax, label.position.y, az);
+  label.rotation.set(0, 0, 0);
+  // The label, and anything laid on it (a badge on its plate), each a
+  // little proud of the one under it.
+  const wrap = (part: Object3D, r: number) => {
+    if (part instanceof Mesh && part.geometry instanceof PlaneGeometry) {
+      const { width, height } = part.geometry.parameters;
+      const old = part.geometry;
+      part.geometry = new CylinderGeometry(
+        r,
+        r,
+        height,
+        Math.max(4, Math.ceil((width / r) * 12)),
+        1,
+        true,
+        bearing - width / (2 * r),
+        width / r,
+      );
+      old.dispose();
+    }
+    for (const child of part.children) {
+      const lift = child.position.z;
+      child.position.set(0, child.position.y, 0);
+      child.rotation.set(0, 0, 0);
+      wrap(child, r + lift);
+    }
+  };
+  wrap(label, radius);
+  return label;
 }
 
 /** A maker's nameplate in its livery, facing +z at `at`. */
@@ -373,23 +424,25 @@ export function createLowLossHeader(kit: PanelKit) {
     'y',
     20,
   );
-  sign(
-    t,
-    group,
-    'LOW LOSS HEADER\nLLH-501',
-    [0, top - 0.6, r + 0.002],
-    0.2,
-    0.08,
-    { ground: '#f2d23a' },
+  wrapOnto(
+    sign(t, group, 'LOW LOSS HEADER\nLLH-501', [0, top - 0.6, r], 0.2, 0.08, {
+      ground: '#f2d23a',
+    }),
+    [0, 0],
+    r + 0.002,
   );
-  nameplate(
-    kit,
-    group,
-    'gorskiy',
-    [0, bottom + 0.45, r + 0.002],
-    ['LLH 200/1000', 'PN6  110 °C', 'max 45 m³/h'],
-    0.16,
-    0.09,
+  wrapOnto(
+    nameplate(
+      kit,
+      group,
+      'gorskiy',
+      [0, bottom + 0.45, r],
+      ['LLH 200/1000', 'PN6  110 °C', 'max 45 m³/h'],
+      0.16,
+      0.09,
+    ),
+    [0, 0],
+    r + 0.002,
   );
   return group;
 }
@@ -481,7 +534,8 @@ export function createTwinHeadPump(kit: PanelKit) {
     0.16,
     0.07,
   );
-  sign(t, group, 'P-501A/B  LTHW', [0, y + 0.42, 0], 0.2, 0.05, {
+  // Its tag on the run's front, between the volute and the left valve.
+  sign(t, group, 'P-501A/B  LTHW', [-0.29, y, od / 2 + 0.003], 0.14, 0.035, {
     ground: '#f2d23a',
   });
   // Its duty head the second (facing the room), its standby the first.
@@ -530,15 +584,23 @@ export function createPressurisation(kit: PanelKit) {
   dome.scale.set(1, 1, 1);
   t.cyl(vessel, grey, R * 0.9, 0.06, 0, H - 0.01, 0, 'y', 32);
   t.cyl(vessel, grey, R * 0.98, 0.18, 0, 0.27, 0, 'y', 32);
-  badge(kit, vessel, 'hamwarmy', [0, 0.85, R + 0.003], 0.06);
-  nameplate(
-    kit,
-    vessel,
-    'hamwarmy',
-    [0, 0.55, R + 0.003],
-    ['G 300  300 l  PN6', 'pre-charge 1.5 bar', '-10 … 70 °C'],
-    0.14,
-    0.07,
+  wrapOnto(
+    badge(kit, vessel, 'hamwarmy', [0, 0.85, R], 0.06),
+    [0, 0],
+    R + 0.003,
+  );
+  wrapOnto(
+    nameplate(
+      kit,
+      vessel,
+      'hamwarmy',
+      [0, 0.55, R],
+      ['G 300  300 l  PN6', 'pre-charge 1.5 bar', '-10 … 70 °C'],
+      0.14,
+      0.07,
+    ),
+    [0, 0],
+    R + 0.003,
   );
   // The pressurisation unit on its stand.
   const unit = new Group();
@@ -555,13 +617,14 @@ export function createPressurisation(kit: PanelKit) {
   const copper = t.paint('#b87333', 0.35, 0.8);
   t.rod(group, copper, [0.55, 0.52, 0], [0.55, 1.5, 0], 0.011, 10);
   t.rod(group, copper, [0.3, 0.55, 0], [-0.35, 0.12, 0], 0.011, 10);
+  // Its label on its cabinet's front, between the badge and the display.
   sign(
     t,
-    group,
+    unit,
     'PRESSURISATION UNIT\nSET 1.5 bar',
-    [0.42, 1.3, 0.14],
-    0.24,
-    0.07,
+    [0, 0.73, 0.137],
+    0.2,
+    0.06,
   );
   return group;
 }
@@ -633,8 +696,16 @@ export function createDosingPot(kit: PanelKit) {
     t.cyl(group, brass, 0.018, 0.05, side * 0.2, y, z, 'x', 10);
   }
   t.cyl(group, brass, 0.016, 0.05, 0, -0.5, z, 'y', 10);
-  badge(kit, group, 'gorskiy', [0, 0.05, z + R + 0.002], 0.03, '#e9e9e2');
-  sign(t, group, 'INHIBITOR DOSING', [0, -0.1, z + R + 0.002], 0.15, 0.04);
+  wrapOnto(
+    badge(kit, group, 'gorskiy', [0, 0.05, z + R], 0.03, '#e9e9e2'),
+    [0, z],
+    R + 0.002,
+  );
+  wrapOnto(
+    sign(t, group, 'INHIBITOR DOSING', [0, -0.1, z + R], 0.15, 0.04),
+    [0, z],
+    R + 0.002,
+  );
   return group;
 }
 
@@ -747,19 +818,31 @@ export function createCalorifier(kit: PanelKit) {
     unit: '°C',
     yaw: -0.5,
   });
-  badge(kit, group, 'hamwarmy', [0, 1.25, R + 0.003], 0.08);
-  nameplate(
-    kit,
-    group,
-    'hamwarmy',
-    [0.22, 1.0, R * 0.95],
-    ['CAL 1000  1000 l  6 bar', 'coil 120 kW  80/60 °C', 'store 60 °C'],
-    0.15,
-    0.08,
-  ).rotation.y = 0.45;
-  sign(t, group, 'CAL-601  DHW', [0, 1.6, R + 0.003], 0.2, 0.06, {
-    ground: '#f2d23a',
-  });
+  wrapOnto(
+    badge(kit, group, 'hamwarmy', [0, 1.25, R], 0.08),
+    [0, 0],
+    R + 0.003,
+  );
+  wrapOnto(
+    nameplate(
+      kit,
+      group,
+      'hamwarmy',
+      [0.22, 1.0, R * 0.95],
+      ['CAL 1000  1000 l  6 bar', 'coil 120 kW  80/60 °C', 'store 60 °C'],
+      0.15,
+      0.08,
+    ),
+    [0, 0],
+    R + 0.003,
+  );
+  wrapOnto(
+    sign(t, group, 'CAL-601  DHW', [0, 1.6, R], 0.2, 0.06, {
+      ground: '#f2d23a',
+    }),
+    [0, 0],
+    R + 0.003,
+  );
   return group;
 }
 
@@ -816,7 +899,8 @@ export function createGasTrain(kit: PanelKit, live: { ecv?: Object3D } = {}) {
     t,
     group,
     'GAS EMERGENCY\nCONTROL VALVE',
-    [-0.85, 0.3, z + 0.05],
+    // On the frame's lower rail, by the valve.
+    [-0.75, 0.45, -0.2 + 0.0215],
     0.2,
     0.07,
     { ground: '#e5c43a' },
@@ -888,12 +972,14 @@ export function createGasTrain(kit: PanelKit, live: { ecv?: Object3D } = {}) {
     t,
     group,
     'SSOV-701\nGAS SAFETY VALVE',
-    [0.55, y - 0.15, z + 0.05],
-    0.18,
-    0.06,
+    // On the valve body's face.
+    [0.55, y, z + 0.0505],
+    0.15,
+    0.05,
   );
   // BS 1710 identification and flow arrow.
-  sign(t, group, 'NATURAL GAS  →', [0.3, y + 0.3, -0.17], 0.36, 0.06, {
+  // On the frame's top rail.
+  sign(t, group, 'NATURAL GAS  →', [0.3, 1.55, -0.2 + 0.0215], 0.36, 0.05, {
     ground: BS1710_BASIC.gases,
   });
   return Object.assign(group, {
@@ -916,7 +1002,13 @@ export function createGasTrain(kit: PanelKit, live: { ecv?: Object3D } = {}) {
  */
 export function createGasSafetyBoard(
   kit: PanelKit,
-  live: { stop?: Object3D; test?: Object3D; reset?: Object3D } = {},
+  live: {
+    stop?: Object3D;
+    test?: Object3D;
+    reset?: Object3D;
+    /** The working sounder-beacon, in place of the painted one. */
+    beacon?: Object3D;
+  } = {},
 ) {
   const t = plantTools(kit);
   const group = new Group();
@@ -966,9 +1058,16 @@ export function createGasSafetyBoard(
     14,
   );
   t.box(group, t.paint('#9aa1a6', 0.5), 0.02, 0.85, 0.015, -0.33, 0.25, 0.028);
-  // Sounder beacon.
-  t.cyl(group, t.paint('#d8382f', 0.4), 0.05, 0.07, 0.05, 0.75, 0.055, 'z', 20);
-  t.cyl(group, t.paint('#f0a020', 0.25), 0.03, 0.03, 0.05, 0.75, 0.1, 'z', 16);
+  // Sounder beacon: the working one when given.
+  if (live.beacon) {
+    live.beacon.position.set(0.05, 0.75, 0.02);
+    group.add(live.beacon);
+  } else {
+    const red = t.paint('#d8382f', 0.4);
+    const amber = t.paint('#f0a020', 0.25);
+    t.cyl(group, red, 0.05, 0.07, 0.05, 0.75, 0.055, 'z', 20);
+    t.cyl(group, amber, 0.03, 0.03, 0.05, 0.75, 0.1, 'z', 16);
+  }
   // The emergency stop: yellow box, red mushroom head, its label; the
   // working mushroom stop when given.
   if (live.stop) {

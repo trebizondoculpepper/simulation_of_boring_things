@@ -15,7 +15,11 @@ import { isLive } from './exhibit';
 import { EXHIBITS as PUMPS } from './pumps';
 import { EXHIBITS as BALANCE } from './balance';
 import { EXHIBITS as POOL_FITTINGS } from './pool-fittings';
-import { JACUZZI_EXHIBIT, JACUZZI_PLATE_EXHIBIT } from './pool-amenities';
+import {
+  createJacuzziDemo,
+  JACUZZI_EXHIBIT,
+  JACUZZI_PLATE_EXHIBIT,
+} from './pool-amenities';
 
 beforeEach(() => {
   vi.stubGlobal('document', {
@@ -129,4 +133,41 @@ it('runs the jacuzzi from its plate on the wall: START, then STOP', () => {
   expect(streams()).toBe(before);
   disposeKit(kit, tub.object as never);
   disposeKit(kit, plate.object as never);
+});
+
+it('keeps prototype jacuzzi controllers independent from each other', () => {
+  const kit = createPanelKit();
+  const first = createJacuzziDemo(kit);
+  const second = createJacuzziDemo(kit);
+  const pressLight = (demo: typeof first) => {
+    const use = [...demo.plate.parts!.uses.entries()].find(([o]) => {
+      let p: typeof o | null = o;
+      while (p && p.name !== 'Spa light switch') p = p.parent;
+      return Boolean(p);
+    })![1];
+    use();
+    demo.tub.update?.(0);
+  };
+  first.tub.update?.(0);
+  second.tub.update?.(0);
+  const light = (demo: typeof first) =>
+    (
+      demo.tub.object.getObjectsByProperty(
+        'type',
+        'PointLight',
+      )[0] as import('three').PointLight
+    ).intensity;
+  pressLight(first);
+  expect(light(first)).toBeGreaterThan(0);
+  expect(light(second)).toBe(0);
+  pressLight(second);
+  pressLight(first);
+  expect(light(first)).toBe(0);
+  expect(light(second)).toBeGreaterThan(0);
+  for (const demo of [first, second]) {
+    demo.tub.dispose?.();
+    demo.plate.parts?.dispose();
+    disposeKit(kit, demo.tub.object as never);
+    disposeKit(kit, demo.plate.object as never);
+  }
 });

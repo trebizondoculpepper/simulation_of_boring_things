@@ -95,6 +95,10 @@ export function plantReadingOf(world: World, pool: PoolId = 'pool_02') {
     alarms.push('backwash-high');
   if (world.wetHall.boosterRunning) alarms.push('makeup-running');
   alarms.push(...gasAlarmIds(world));
+  // The boiler house's gas safety (`boiler-gas.ts`): its methane detector,
+  // and its safety shut-off valve tripped shut, the boilers without gas.
+  if (world.boilerGas.gasDetected) alarms.push('gas-detected');
+  if (!world.boilerGas.ssovOpen) alarms.push('boiler-lockout');
   const amps = (on: boolean, full: number) => (on ? full * share : 0);
   const reading: PlantReading = {
     t: world.time,

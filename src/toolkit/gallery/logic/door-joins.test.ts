@@ -83,3 +83,28 @@ describe('a doorway between two rooms drawn apart', () => {
     for (const w of withdraw) w();
   });
 });
+
+it('prepares the nearest closed plant door while excluding automatic loop joints', () => {
+  const at = (x: number, extra: Partial<Joint> = {}): Joint => ({
+    frame: { x, z: 0, yaw: 0 },
+    open: () => false,
+    angle: () => 0,
+    swingTo() {},
+    opening: () => ({ minX: 0, maxX: 0, minZ: 0, maxZ: 0 }),
+    see() {},
+    peek() {},
+    ...extra,
+  });
+  const withdraw = [
+    registerJoint('dev_corridor', 'plant_pool_01', at(2, { onOpen: true })),
+    registerJoint('dev_corridor', 'plant_pool_02', at(8, { onOpen: true })),
+    registerJoint('dev_corridor', 'pool_01', at(0, { lazy: true })),
+  ];
+  try {
+    expect(nearestJoint('dev_corridor', 0, 0)).toBe('plant_pool_01');
+    expect(openJoint('dev_corridor')).toBeNull();
+    expect(nearestJoint('dev_corridor', 7, 0)).toBe('plant_pool_02');
+  } finally {
+    for (const remove of withdraw) remove();
+  }
+});

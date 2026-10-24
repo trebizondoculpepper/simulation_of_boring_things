@@ -64,6 +64,33 @@ export function onWall(
 /** The switch room's cabinets, fed by heavy trunking rather than conduit. */
 const SWITCHGEAR = new Set(['lv-switchboard', 'mcc', 'central-battery']);
 
+/** A run's points without its zero-length steps, or points it runs straight on through. */
+function dedupe(points: Point3[]) {
+  const out: Point3[] = [];
+  for (const q of points) {
+    const last = out[out.length - 1];
+    if (
+      last &&
+      Math.hypot(q[0] - last[0], q[1] - last[1], q[2] - last[2]) < 1e-6
+    )
+      continue;
+    const before = out[out.length - 2];
+    if (before && last) {
+      const a = [0, 1, 2].map((k) => last[k] - before[k]);
+      const b = [0, 1, 2].map((k) => q[k] - last[k]);
+      const cross = Math.hypot(
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+      );
+      if (cross < 1e-9 && a[0] * b[0] + a[1] * b[1] + a[2] * b[2] > 0)
+        out.pop();
+    }
+    out.push(q);
+  }
+  return out;
+}
+
 export function roomServiceRoutes(
   room: string,
   /**
@@ -227,17 +254,25 @@ export function roomServiceRoutes(
       const feed = (k: number, n: number) =>
         `${p.item.label} power feed ${i + 1}${n > 1 ? `.${k + 1}` : ''}`;
       const top = topOf(p, i);
+      const powers = machinePorts(p.item).filter(
+        (port) => port.service === 'power',
+      );
       if (p.side === 'island') {
-        // Out in the room: a drop from over it, branched off the north run.
-        const at: Point3 = [p.x, top, p.z];
-        routes.push({
-          name: feed(0, 1),
-          utility: 'power',
-          kind: 'steel-screwed',
-          od: 0.0269,
-          points: [onWall(box, 'north', p.x, y, o), [p.x, y, p.z], at],
-          to: p.item.key,
-        });
+        // Out in the room: a drop from over it, branched off the north run,
+        // into each of its power ports, or the middle of its top.
+        const ats: Point3[] = powers.length
+          ? powers.map((port) => placedPort(p, port.name).at)
+          : [[p.x, top, p.z]];
+        ats.forEach((at, k) =>
+          routes.push({
+            name: feed(k, ats.length),
+            utility: 'power',
+            kind: 'steel-screwed',
+            od: 0.0269,
+            points: [onWall(box, 'north', at[0], y, o), [at[0], y, at[2]], at],
+            to: p.item.key,
+          }),
+        );
         continue;
       }
       const side = p.side as Side;
@@ -257,42 +292,67 @@ export function roomServiceRoutes(
         });
         continue;
       }
-      // A machine on the floor by the wall: its power ports, or one at its
-      // top. Down the wall behind it to an outlet box over it, and from the
-      // box a flexible cable down to it.
-      const powers = machinePorts(p.item).filter(
-        (port) => port.service === 'power',
-      );
+      // A machine on the floor by the wall, with power ports: down the wall
+      // behind it, out square to each port, and into it along its own
+      // direction (over it for a port facing up, level for one facing the
+      // wall).
+      if (powers.length) {
+        powers.forEach((port, k) => {
+          const { at, outward } = placedPort(p, port.name);
+          const lead: Point3 =
+            outward[1] > 0.5
+              ? [at[0], at[1] + OUTLET_ABOVE, at[2]]
+              : [at[0] + outward[0] * 0.1, at[1], at[2] + outward[2] * 0.1];
+          const s = dropAt(
+            side,
+            alongWall(side, lead[0], lead[2]),
+            lo,
+            hi,
+            lead[1],
+            i,
+          );
+          const square: Point3 =
+            side === 'west' || side === 'east'
+              ? [lead[0], lead[1], s]
+              : [s, lead[1], lead[2]];
+          routes.push({
+            name: feed(k, powers.length),
+            utility: 'power',
+            kind: 'steel-screwed',
+            od: 0.0269,
+            points: dedupe([
+              onWall(box, side, s, y, o),
+              onWall(box, side, s, lead[1], o),
+              square,
+              lead,
+              at,
+            ]),
+            to: p.item.key,
+          });
+        });
+        continue;
+      }
+      // Without them: down the wall behind it to an outlet box over it, and
+      // from the box a flexible cable down to it.
       const back = (p.item.back ?? 0) + 0.15;
-      const ats: Point3[] = powers.length
-        ? powers.map((port) => placedPort(p, port.name).at)
-        : [onWall(box, side, c, top, back)];
-      ats.forEach((at, k) => {
-        const s = dropAt(
-          side,
-          alongWall(side, at[0], at[2]),
-          lo,
-          hi,
-          at[1] + OUTLET_ABOVE,
-          i,
-        );
-        const outlet = onWall(box, side, s, at[1] + OUTLET_ABOVE, o);
-        routes.push({
-          name: feed(k, ats.length),
-          utility: 'power',
-          kind: 'steel-screwed',
-          od: 0.0269,
-          points: [onWall(box, side, s, y, o), outlet],
-          to: p.item.key,
-        });
-        routes.push({
-          name: `${feed(k, ats.length)} cable`,
-          utility: 'power',
-          kind: 'flex-cable',
-          od: 0.012,
-          points: [outlet, at],
-          to: p.item.key,
-        });
+      const at = onWall(box, side, c, top, back);
+      const s = dropAt(side, c, lo, hi, at[1] + OUTLET_ABOVE, i);
+      const outlet = onWall(box, side, s, at[1] + OUTLET_ABOVE, o);
+      routes.push({
+        name: feed(0, 1),
+        utility: 'power',
+        kind: 'steel-screwed',
+        od: 0.0269,
+        points: [onWall(box, side, s, y, o), outlet],
+        to: p.item.key,
+      });
+      routes.push({
+        name: `${feed(0, 1)} cable`,
+        utility: 'power',
+        kind: 'flex-cable',
+        od: 0.012,
+        points: [outlet, at],
+        to: p.item.key,
       });
     }
   }

@@ -63,8 +63,12 @@ export const WORLD_BINDINGS: Readonly<Record<string, WorldBinding>> = {
   'boiler-cascade': world(
     'the boiler house model: the world’s power and heat demand',
   ),
-  'gas-train': world('the boiler house model’s gas train'),
-  'gas-safety': world('the boiler house model’s gas detection'),
+  'gas-train': world(
+    'the world’s boiler gas safety: its ECV and SSOV (`boiler-gas.ts`)',
+  ),
+  'gas-safety': world(
+    'the world’s boiler gas safety: emergency stop, detector, GAS RESET',
+  ),
   'combustion-panel': world('the boiler house model’s combustion'),
   'mimic-gas': world('the boiler house model'),
   'mimic-boiler-heat': world('the boiler house model'),

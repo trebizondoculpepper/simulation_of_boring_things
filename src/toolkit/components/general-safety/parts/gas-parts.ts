@@ -5,7 +5,11 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import { beginPart } from '../../core/parts/parts';
 import type { Part } from '../../core/parts/parts';
 import { show } from '../../core/parts/building-part-tools';
-import { CHLORINE_SOUNDER, OZONE_SOUNDER } from '../../core/audio/part-loops';
+import {
+  CHLORINE_SOUNDER,
+  METHANE_SOUNDER,
+  OZONE_SOUNDER,
+} from '../../core/audio/part-loops';
 import {
   accept,
   gasAlarms,
@@ -58,7 +62,11 @@ export function createGasZone(params: GasParams) {
 }
 export type GasZone = ReturnType<typeof createGasZone>;
 
-const SOUNDERS = { amber: CHLORINE_SOUNDER, blue: OZONE_SOUNDER } as const;
+const SOUNDERS = {
+  amber: CHLORINE_SOUNDER,
+  blue: OZONE_SOUNDER,
+  red: METHANE_SOUNDER,
+} as const;
 
 /**
  * A gas sounder-beacon: it flashes while an alarm is latched and sounds

@@ -22,7 +22,7 @@ import type { LoopRecipe } from './part-audio';
  * - `FIRE_SOUNDER`: the fire alarm, the VX3 Simulator's synthesised
  *   sounders (`fire-alarm.ts`): a pulsing piezo, a two-note buzzer and a
  *   far sweep;
- * - `CHLORINE_SOUNDER`, `OZONE_SOUNDER`: the gas alarms, invented
+ * - `CHLORINE_SOUNDER`, `OZONE_SOUNDER`, `METHANE_SOUNDER`: the gas alarms, invented
  *   (`gas-alarms.ts`) so as not to sound like any real alarm;
  * - `ALARM_BUZZER`: an accessible toilet's emergency alarm, a pulsing
  *   buzz;
@@ -153,6 +153,8 @@ const gasSounder =
 export const CHLORINE_SOUNDER = gasSounder('chlorine');
 /** The ozone alarm: rising chirps and a trembling bleep. */
 export const OZONE_SOUNDER = gasSounder('ozone');
+/** The boiler house's gas alarm: two falling sweeps and a rising chirp. */
+export const METHANE_SOUNDER = gasSounder('methane');
 
 export const ALARM_BUZZER: LoopRecipe = (context, out) => {
   const osc = context.createOscillator();

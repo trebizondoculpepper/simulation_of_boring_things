@@ -10,8 +10,12 @@ import { createBrandBadge } from '../../core/views/brand-badge';
  * detector low on its wall. Drawing only (`../logic/gas-detection.ts`).
  */
 
-/** A beacon's lens colour: amber for chlorine, blue for ozone. */
-export const BEACON_LENS = { amber: '#ffa21f', blue: '#3f8cff' } as const;
+/** A beacon's lens colour: amber for chlorine, blue for ozone, red for the boiler house's gas. */
+export const BEACON_LENS = {
+  amber: '#ffa21f',
+  blue: '#3f8cff',
+  red: '#ff3b2a',
+} as const;
 export type BeaconLens = keyof typeof BEACON_LENS;
 
 /**

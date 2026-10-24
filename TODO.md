@@ -20,6 +20,10 @@ The owner's priority: the Olympic is the hardest of the pools, and once it works
 
 Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and the plant.
 
+### Performance
+
+- [ ] **Follow up nearest-room preparation:** measure approach-time hitches and memory after the nearest-door loader and plant-scene warm-up change, tune incremental preparation, then reduce Olympic static draw calls and profile the ozone-generator view factory. Measurements, priorities and acceptance checks: [plant-room loading report, 2026-10-24](doc/reports/plant-room-load-performance-2026-10-24.md).
+
 ### Gameplay features
 
 - [ ] **Sound between rooms** ([037](doc/prompts/037-sound-between-rooms.md)): a room is heard through an open door by how far it stands open (full above about 20 % open, about −20 dB at 5 %, silent and its sounds stopped when shut), not by which room the player is in.

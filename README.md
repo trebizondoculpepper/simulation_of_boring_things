@@ -10,6 +10,7 @@ The development rooms can be opened directly, among them the modelling demonstra
 - [Dev20: experimental sources and sinks of every substance](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev20)
 - [Dev21: each source plumbed to its sink, valves closed](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev21)
 - [Dev22: a pump on a battery-backed supply](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev22)
+- [Dev35: isolated jacuzzi water-effects prototype](?room=dev35)
 - [Dev23: draining a jacuzzi by gravity](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev23)
 - [Dev24: duty and standby pumps](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev24)
 - [Dev25: a tank filled and drained through one port](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev25)

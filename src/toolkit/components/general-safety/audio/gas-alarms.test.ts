@@ -22,8 +22,18 @@ describe('the gas alarms’ sounders', () => {
     expect(gasAlarmAt('ozone', 0.75).level).toBe(0);
   });
 
+  it('sweeps down twice, then chirps upward, for methane', () => {
+    const early = gasAlarmAt('methane', 0.05);
+    const late = gasAlarmAt('methane', 0.25);
+    expect(early.voice).toBe('growl');
+    expect(late.hz).toBeLessThan(early.hz);
+    expect(gasAlarmAt('methane', 0.45).voice).toBe('growl');
+    expect(gasAlarmAt('methane', 0.9).voice).toBe('chirp');
+    expect(gasAlarmAt('methane', 1.1).level).toBe(0);
+  });
+
   it('renders a loop that starts and ends silent, so it joins cleanly', () => {
-    for (const kind of ['chlorine', 'ozone'] as const) {
+    for (const kind of ['chlorine', 'ozone', 'methane'] as const) {
       const samples = renderGasAlarm(kind, 8000);
       expect(samples.length).toBe(Math.round(GAS_ALARM_CYCLE[kind] * 4 * 8000));
       expect(Math.abs(samples[0])).toBeLessThan(0.01);

@@ -1195,8 +1195,9 @@ const GAS_VALVE = 1.98;
  * building, the other north to the calorifier's coil. The return main
  * comes back from the coil and, joined by the building's return through
  * the south wall and the pressurisation unit's fill, to the low-loss
- * header. The calorifier's cold feed comes down from the services
- * ceiling, and its hot water and secondary return go up into it.
+ * header. The calorifier's cold feed comes in through the south wall
+ * from the building, and its hot water and secondary return go out the
+ * same way, the three side by side over the heating mains.
  */
 export function boilerHousePipework(): { runs: PipeRun[]; tees: PipeTee[] } {
   const layout = layoutRoom('boiler_house')!;
@@ -1651,46 +1652,67 @@ export function boilerHousePipework(): { runs: PipeRun[]; tees: PipeTee[] } {
     [0, -1, 0],
     0.022,
   );
-  // The calorifier's own water: the cold feed down from the services
-  // ceiling, the hot water and its secondary return up into it.
-  const CEILING = BOILER_ROOF - 1.9 + 0.5;
+  // The calorifier's own water: the cold feed in from the building, the
+  // hot water and its secondary return out to it. The three rise beside
+  // the calorifier and run south together over the heating mains, out
+  // through the south wall in their sleeves as the heating's do.
+  const DHW_MAIN = 4.4;
   const cold = at(cal, 'coldFeed');
   const hot = at(cal, 'hotFlow');
   const secondary = at(cal, 'secondaryReturn');
+  const outSouth = (x: number): WallCrossing => ({
+    at: [x, DHW_MAIN, south],
+    normal: [0, 0, 1],
+    thickness: 0.2,
+    kind: 'sleeve',
+  });
+  const coldX = cold[0] - 0.3;
+  const secondaryX = secondary[0] - 0.15;
+  const hotX = secondaryX + 0.15;
   add({
     name: 'Calorifier cold feed',
     kind: 'copper',
     od: 0.054,
     points: [
+      [coldX, DHW_MAIN, south],
+      [coldX, DHW_MAIN, cold[2]],
+      [coldX, cold[1], cold[2]],
       [...cold],
-      [cold[0] - 0.3, cold[1], cold[2]],
-      [cold[0] - 0.3, CEILING, cold[2]],
     ],
     joins: [cal.item.label],
     service: 'make-up',
     label: 'COLD FEED',
+    through: [outSouth(coldX)],
   });
   add({
     name: 'Hot water flow',
     kind: 'copper',
     od: 0.054,
-    points: [[...hot], [hot[0], CEILING, hot[2]]],
+    points: [
+      [...hot],
+      [hot[0], DHW_MAIN, hot[2]],
+      [hotX, DHW_MAIN, hot[2]],
+      [hotX, DHW_MAIN, south],
+    ],
     joins: [cal.item.label],
     service: 'hot water',
     label: 'HWS FLOW',
+    through: [outSouth(hotX)],
   });
   add({
     name: 'Hot water secondary return',
     kind: 'copper',
     od: 0.034,
     points: [
+      [secondaryX, DHW_MAIN, south],
+      [secondaryX, DHW_MAIN, secondary[2]],
+      [secondaryX, secondary[1], secondary[2]],
       [...secondary],
-      [secondary[0] - 0.15, secondary[1], secondary[2]],
-      [secondary[0] - 0.15, CEILING, secondary[2]],
     ],
     joins: [cal.item.label],
     service: 'hot water',
     label: 'HWS RETURN',
+    through: [outSouth(secondaryX)],
   });
   return { runs, tees };
 }

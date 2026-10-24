@@ -274,9 +274,16 @@ export function setBoilerSetpoint(
  * What the four-digit code display shows: the status digit and the flow
  * temperature ("3 78") in status mode; a letter and a value in the other
  * modes ("r 61" return, "P2.4" pressure, "H 64" firing rate, "S 80"
- * setpoint); and on lockout its fault code, flashing ("E 02").
+ * setpoint); and on lockout its fault code, flashing ("E 02"). With no
+ * gas at its inlet (`gas` false: its gas pressure switch open, the safety
+ * shut-off valve or a valve upstream shut) it says so even while idle,
+ * "6A5 " (GAS) alternating with what it would show, a second each.
  */
-export function boilerDisplay(boiler: BoilerState, seconds: number) {
+export function boilerDisplay(
+  boiler: BoilerState,
+  seconds: number,
+  gas = true,
+) {
   if (!boiler.on) return '    ';
   if (boiler.lockout) {
     const shown = Math.floor(seconds * 2) % 2 === 0;
@@ -284,6 +291,7 @@ export function boilerDisplay(boiler: BoilerState, seconds: number) {
       ? `E ${String(FAULTS[boiler.lockout]).padStart(2, '0')}`
       : '    ';
   }
+  if (!gas && Math.floor(seconds) % 2 === 0) return GAS_LOW_DISPLAY;
   const two = (v: number) =>
     String(Math.round(Math.max(0, Math.min(99, v)))).padStart(2, ' ');
   switch (boiler.mode) {
@@ -301,6 +309,9 @@ export function boilerDisplay(boiler: BoilerState, seconds: number) {
       return `S ${two(boiler.setpoint)}`;
   }
 }
+
+/** What the display shows for no gas at the boiler's inlet: GAS, as seven segments can. */
+export const GAS_LOW_DISPLAY = '6A5 ';
 
 /** Its indicator LEDs. */
 export function boilerLamps(boiler: BoilerState) {

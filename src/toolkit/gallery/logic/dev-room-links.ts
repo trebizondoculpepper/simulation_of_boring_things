@@ -49,6 +49,7 @@ export type GalleryRoomId =
   | 'dev32'
   | 'dev33'
   | 'dev34'
+  | 'dev35'
   | 'retired0'
   | 'dev_corridor';
 /** One development room per pool plant room, each showing its equipment. */
@@ -210,6 +211,7 @@ export const ROOMS: readonly RoomId[] = [
   // By its URL only: a four-storey room, the stair helper's stair from its
   // floor to its top deck.
   'dev34',
+  'dev35',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   // The single playable pool room.
@@ -356,6 +358,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev32: 'DEV32 · IDEAL FOOT SPA',
   dev33: 'DEV33 · FOOTBATH WATER LEVEL',
   dev34: 'DEV34 · STAIR TOWER',
+  dev35: 'DEV35 · JACUZZI WATER LAB',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   dev_corridor: 'DEV CORRIDOR',
   dev_courtyard: 'COURTYARD',
@@ -451,6 +454,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev32: '#69aeb7',
   dev33: '#5fa3c8',
   dev34: '#c88a3a',
+  dev35: '#80b9c8',
   retired0: '#6d7a6f',
   dev_corridor: '#2d9ca0',
   dev_courtyard: '#7fa36a',

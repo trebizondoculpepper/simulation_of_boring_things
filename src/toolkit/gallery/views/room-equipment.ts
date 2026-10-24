@@ -698,7 +698,10 @@ function drawPortNozzles(kit: PanelKit, item: Item) {
       body,
     );
     stub.name = `nozzle ${port.name}`;
-    stub.position.copy(end).addScaledVector(dir, -0.06);
+    // Its stub's face a little inside its flange's, and the flange's a
+    // little inside the port, where the pipe or conduit ends, so no two
+    // faces lie in one plane.
+    stub.position.copy(end).addScaledVector(dir, -0.066);
     stub.quaternion.copy(q);
     group.add(stub);
     const rim = new Mesh(
@@ -706,7 +709,7 @@ function drawPortNozzles(kit: PanelKit, item: Item) {
       flange,
     );
     rim.name = `flange ${port.name}`;
-    rim.position.copy(end).addScaledVector(dir, -0.011);
+    rim.position.copy(end).addScaledVector(dir, -0.014);
     rim.quaternion.copy(q);
     group.add(rim);
   }

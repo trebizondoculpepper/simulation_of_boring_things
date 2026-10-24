@@ -1,0 +1,421 @@
+{
+  "commit": "fdbe3dc",
+  "hardware": "Apple M5, Chrome, ANGLE Metal",
+  "method": "Temporary performance.now instrumentation; production preview on port 5176; instrumentation removed from source afterward.",
+  "samples": {
+    "production_jacuzzi_direct": [
+      {
+        "timestamp": "2026-10-24T12:31:33.016Z",
+        "message": "[room-perf] gpu ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:33.322Z",
+        "message": "[room-perf] plant-stage pool_03 renderer 1584.4"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:33.383Z",
+        "message": "[room-perf] plant-stage pool_03 shell 61.7"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:33.384Z",
+        "message": "[room-perf] equipment-stage plant_pool_03 layout 0.3"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:33.398Z",
+        "message": "[room-perf] equipment-stage plant_pool_03 machines 13.7"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:33.398Z",
+        "message": "[room-perf] equipment-stage plant_pool_03 pipes 0.1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:33.399Z",
+        "message": "[room-perf] equipment-stage plant_pool_03 services 1.6"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:33.402Z",
+        "message": "[room-perf] equipment-stage plant_pool_03 supports 2.7"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:33.402Z",
+        "message": "[room-perf] plant-stage pool_03 equipment 18.9"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:33.407Z",
+        "message": "[room-perf] plant-stage pool_03 cabinet-services 5.1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:33.422Z",
+        "message": "[room-perf] build plant_pool_03 1685.0"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:35.438Z",
+        "message": "[room-perf] draw Room plant_pool_03 1901.2 newPrograms 11 programs 11 geometries 74 textures 16 calls 83 triangles 57478"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:35.755Z",
+        "message": "[room-perf] draw Room plant_pool_03 316.1 newPrograms 2 programs 13 geometries 74 textures 18 calls 83 triangles 57478"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:35.921Z",
+        "message": "[room-perf] draw Room plant_pool_03 165.3 newPrograms 1 programs 14 geometries 75 textures 20 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:36.083Z",
+        "message": "[room-perf] draw Room plant_pool_03 162.2 newPrograms 1 programs 15 geometries 75 textures 22 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:36.237Z",
+        "message": "[room-perf] draw Room plant_pool_03 154.1 newPrograms 1 programs 16 geometries 75 textures 23 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:36.359Z",
+        "message": "[room-perf] draw Room plant_pool_03 121.5 newPrograms 1 programs 17 geometries 75 textures 23 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:36.521Z",
+        "message": "[room-perf] draw Room plant_pool_03 161.4 newPrograms 1 programs 18 geometries 75 textures 24 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:36.678Z",
+        "message": "[room-perf] draw Room plant_pool_03 157.5 newPrograms 1 programs 19 geometries 75 textures 25 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:36.844Z",
+        "message": "[room-perf] draw Room plant_pool_03 165.2 newPrograms 1 programs 20 geometries 75 textures 27 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:36.998Z",
+        "message": "[room-perf] draw Room plant_pool_03 153.2 newPrograms 1 programs 21 geometries 75 textures 29 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:37.137Z",
+        "message": "[room-perf] draw Room plant_pool_03 139.2 newPrograms 1 programs 22 geometries 75 textures 31 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:37.291Z",
+        "message": "[room-perf] draw Room plant_pool_03 153.5 newPrograms 1 programs 23 geometries 75 textures 33 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:37.448Z",
+        "message": "[room-perf] draw Room plant_pool_03 157.0 newPrograms 1 programs 24 geometries 75 textures 34 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:37.608Z",
+        "message": "[room-perf] draw Room plant_pool_03 160.3 newPrograms 1 programs 25 geometries 75 textures 34 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:37.744Z",
+        "message": "[room-perf] draw Room plant_pool_03 135.2 newPrograms 1 programs 26 geometries 75 textures 34 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:37.899Z",
+        "message": "[room-perf] composer pool_03 4468.5"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:37.899Z",
+        "message": "[room-perf] frame Room plant_pool_03 4471.2"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:38.234Z",
+        "message": "[room-perf] composer pool_03 4.6"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:38.249Z",
+        "message": "[room-perf] composer pool_03 2.8"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:38.252Z",
+        "message": "[room-perf] composer pool_03 5.5"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:38.268Z",
+        "message": "[room-perf] composer pool_03 8.1"
+      },
+      {
+        "timestamp": "2026-10-24T12:31:38.376Z",
+        "message": "[room-perf] composer pool_03 5.2"
+      }
+    ],
+    "production_olympic_direct": [
+      {
+        "timestamp": "2026-10-24T12:31:33.016Z",
+        "message": "[room-perf] gpu ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:04.403Z",
+        "message": "[room-perf] gpu ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:04.405Z",
+        "message": "[room-perf] plant-stage pool_02 renderer 562.3"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:04.522Z",
+        "message": "[room-perf] plant-stage pool_02 shell 116.5"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:04.522Z",
+        "message": "[room-perf] equipment-stage plant_pool_02 layout 0.5"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:05.329Z",
+        "message": "[room-perf] model plant_pool_02 Olympic pool ozone generator 767.5"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:05.341Z",
+        "message": "[room-perf] equipment-stage plant_pool_02 machines 818.3"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:05.422Z",
+        "message": "[room-perf] equipment-stage plant_pool_02 pipes 80.9"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:05.425Z",
+        "message": "[room-perf] equipment-stage plant_pool_02 services 3.2"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:05.441Z",
+        "message": "[room-perf] equipment-stage plant_pool_02 supports 15.7"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:05.443Z",
+        "message": "[room-perf] plant-stage pool_02 equipment 921.5"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:05.444Z",
+        "message": "[room-perf] plant-stage pool_02 cabinet-services 0.1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:05.475Z",
+        "message": "[room-perf] build plant_pool_02 1631.9"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:08.687Z",
+        "message": "[room-perf] draw Room plant_pool_02 3007.5 newPrograms 20 programs 20 geometries 1628 textures 127 calls 1637 triangles 358652"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:08.990Z",
+        "message": "[room-perf] draw Room plant_pool_02 301.9 newPrograms 2 programs 22 geometries 1628 textures 129 calls 1637 triangles 358652"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:09.142Z",
+        "message": "[room-perf] draw Room plant_pool_02 151.8 newPrograms 1 programs 23 geometries 1629 textures 131 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:09.296Z",
+        "message": "[room-perf] draw Room plant_pool_02 153.6 newPrograms 1 programs 24 geometries 1629 textures 133 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:09.447Z",
+        "message": "[room-perf] draw Room plant_pool_02 151.1 newPrograms 1 programs 25 geometries 1629 textures 134 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:09.599Z",
+        "message": "[room-perf] draw Room plant_pool_02 151.4 newPrograms 1 programs 26 geometries 1629 textures 134 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:09.751Z",
+        "message": "[room-perf] draw Room plant_pool_02 151.8 newPrograms 1 programs 27 geometries 1629 textures 135 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:09.903Z",
+        "message": "[room-perf] draw Room plant_pool_02 152.2 newPrograms 1 programs 28 geometries 1629 textures 136 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:10.052Z",
+        "message": "[room-perf] draw Room plant_pool_02 148.7 newPrograms 1 programs 29 geometries 1629 textures 138 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:10.204Z",
+        "message": "[room-perf] draw Room plant_pool_02 152.2 newPrograms 1 programs 30 geometries 1629 textures 140 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:10.354Z",
+        "message": "[room-perf] draw Room plant_pool_02 149.6 newPrograms 1 programs 31 geometries 1629 textures 142 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:10.506Z",
+        "message": "[room-perf] draw Room plant_pool_02 151.6 newPrograms 1 programs 32 geometries 1629 textures 144 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:10.654Z",
+        "message": "[room-perf] draw Room plant_pool_02 147.6 newPrograms 1 programs 33 geometries 1629 textures 145 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:10.806Z",
+        "message": "[room-perf] draw Room plant_pool_02 151.5 newPrograms 1 programs 34 geometries 1629 textures 145 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:10.956Z",
+        "message": "[room-perf] draw Room plant_pool_02 150.0 newPrograms 1 programs 35 geometries 1629 textures 145 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:11.108Z",
+        "message": "[room-perf] composer pool_02 5593.1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:11.108Z",
+        "message": "[room-perf] frame Room plant_pool_02 5608.6"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:11.545Z",
+        "message": "[room-perf] composer pool_02 120.4"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:11.617Z",
+        "message": "[room-perf] composer pool_02 62.2"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:11.683Z",
+        "message": "[room-perf] composer pool_02 58.6"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:11.750Z",
+        "message": "[room-perf] composer pool_02 64.1"
+      },
+      {
+        "timestamp": "2026-10-24T12:32:11.811Z",
+        "message": "[room-perf] composer pool_02 56.9"
+      }
+    ],
+    "production_jacuzzi_door": [
+      {
+        "timestamp": "2026-10-24T12:33:59.929Z",
+        "message": "[room-perf] import plant_pool_03 50.0"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:00.084Z",
+        "message": "[room-perf] gpu ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:00.086Z",
+        "message": "[room-perf] plant-stage pool_03 renderer 156.8"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:00.198Z",
+        "message": "[room-perf] plant-stage pool_03 shell 110.6"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:00.198Z",
+        "message": "[room-perf] equipment-stage plant_pool_03 layout 0.2"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:00.219Z",
+        "message": "[room-perf] equipment-stage plant_pool_03 machines 21.2"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:00.219Z",
+        "message": "[room-perf] equipment-stage plant_pool_03 pipes 0.0"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:00.223Z",
+        "message": "[room-perf] equipment-stage plant_pool_03 services 4.2"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:00.227Z",
+        "message": "[room-perf] equipment-stage plant_pool_03 supports 3.6"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:00.227Z",
+        "message": "[room-perf] plant-stage pool_03 equipment 29.6"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:00.240Z",
+        "message": "[room-perf] plant-stage pool_03 cabinet-services 12.7"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:00.244Z",
+        "message": "[room-perf] build plant_pool_03 314.7"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:03.022Z",
+        "message": "[room-perf] draw Room plant_pool_03 2549.6 newPrograms 14 programs 14 geometries 145 textures 20 calls 154 triangles 81280"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:03.389Z",
+        "message": "[room-perf] draw Room plant_pool_03 366.2 newPrograms 2 programs 16 geometries 145 textures 22 calls 154 triangles 81280"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:03.576Z",
+        "message": "[room-perf] draw Room plant_pool_03 186.5 newPrograms 1 programs 17 geometries 146 textures 24 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:03.765Z",
+        "message": "[room-perf] draw Room plant_pool_03 188.3 newPrograms 1 programs 18 geometries 146 textures 26 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:03.958Z",
+        "message": "[room-perf] draw Room plant_pool_03 193.4 newPrograms 1 programs 19 geometries 146 textures 27 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:04.147Z",
+        "message": "[room-perf] draw Room plant_pool_03 188.6 newPrograms 1 programs 20 geometries 146 textures 27 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:04.335Z",
+        "message": "[room-perf] draw Room plant_pool_03 188.3 newPrograms 1 programs 21 geometries 146 textures 28 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:04.527Z",
+        "message": "[room-perf] draw Room plant_pool_03 191.1 newPrograms 1 programs 22 geometries 146 textures 29 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:04.717Z",
+        "message": "[room-perf] draw Room plant_pool_03 190.1 newPrograms 1 programs 23 geometries 146 textures 31 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:04.906Z",
+        "message": "[room-perf] draw Room plant_pool_03 188.4 newPrograms 1 programs 24 geometries 146 textures 33 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:05.095Z",
+        "message": "[room-perf] draw Room plant_pool_03 188.1 newPrograms 1 programs 25 geometries 146 textures 35 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:05.285Z",
+        "message": "[room-perf] draw Room plant_pool_03 189.8 newPrograms 1 programs 26 geometries 146 textures 37 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:05.473Z",
+        "message": "[room-perf] draw Room plant_pool_03 187.4 newPrograms 1 programs 27 geometries 146 textures 38 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:05.664Z",
+        "message": "[room-perf] draw Room plant_pool_03 190.9 newPrograms 1 programs 28 geometries 146 textures 38 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:05.853Z",
+        "message": "[room-perf] draw Room plant_pool_03 188.7 newPrograms 1 programs 29 geometries 146 textures 38 calls 1 triangles 1"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:06.042Z",
+        "message": "[room-perf] composer pool_03 5722.4"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:07.576Z",
+        "message": "[room-perf] composer pool_03 1139.3"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:07.592Z",
+        "message": "[room-perf] composer pool_03 5.7"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:07.620Z",
+        "message": "[room-perf] composer pool_03 4.2"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:07.620Z",
+        "message": "[room-perf] composer pool_03 5.9"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:07.915Z",
+        "message": "[room-perf] composer pool_03 5.6"
+      },
+      {
+        "timestamp": "2026-10-24T12:34:16.433Z",
+        "message": "[room-perf] gpu ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)"
+      }
+    ]
+  }
+}

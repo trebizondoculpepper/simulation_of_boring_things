@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  GAS_LOW_DISPLAY,
   IGNITION_SECONDS,
   LOW_PRESSURE,
   MAX_TRIES,
@@ -128,6 +129,13 @@ describe('a boiler’s controller', () => {
   it('is switched off by its switch and shows nothing', () => {
     const off = pressBoiler(newBoiler(), 'power');
     expect(boilerDisplay(run(off, {}, 5), 0)).toBe('    ');
+  });
+
+  it('says GAS on its display, idle or not, while no gas reaches it', () => {
+    const idle = newBoiler();
+    expect(boilerDisplay(idle, 0, false)).toBe(GAS_LOW_DISPLAY);
+    expect(boilerDisplay(idle, 1, false)).toBe(boilerDisplay(idle, 1));
+    expect(boilerDisplay(idle, 0)).not.toBe(GAS_LOW_DISPLAY);
   });
 });
 

@@ -328,6 +328,8 @@ export function machinePorts(item: Item): MachinePort[] {
         ),
         drawn: true,
       },
+      // Its power, by a gland in its back, under the connections on top.
+      port(`power${k}`, [x - 0.1, 1.4, back], [0, 0, -1], 0.0269, 'power'),
     ]);
   }
   if (kind === 'low-loss-header') {
@@ -358,14 +360,20 @@ export function machinePorts(item: Item): MachinePort[] {
         ...port('discharge', [0.75, 0.75, 0], [1, 0, 0], 0.0761, 'heating'),
         drawn: true,
       },
+      // Each head's power into the top of its control box, the heads
+      // tilted out to either side.
+      port('powerA', [0, 0.84, -0.23], [0, 1, 0], 0.0269, 'power'),
+      port('powerB', [0, 0.84, 0.23], [0, 1, 0], 0.0269, 'power'),
     ];
   if (kind === 'pressurisation')
-    // The pressurisation unit's copper fill to the system, up at its side.
+    // The pressurisation unit's copper fill to the system, up at its side,
+    // and its power into the top of its cabinet (`createPressurisation`).
     return [
       {
         ...port('system', [0.55, 1.5, 0], [0, 1, 0], 0.022, 'heating'),
         drawn: true,
       },
+      port('power', [0.32, 1.004, 0], [0, 1, 0], 0.0269, 'power'),
     ];
   if (kind === 'calorifier') {
     // `createCalorifier`: Ø1000, 1.85 m tall. The LTHW coil's flanged

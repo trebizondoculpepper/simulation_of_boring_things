@@ -44,4 +44,34 @@ describe('the plant as the world has it', () => {
     expect(r.pumps.p1).toBe(true);
     expect(r.flow).toBeCloseTo(running.pools.pool_01.flow, 6);
   });
+
+  it('has the boilers not firing, and the gas windows lit, with the boiler house’s SSOV shut', () => {
+    const warm = advance(
+      applyAction(newWorld(), {
+        type: 'pool/setpoint',
+        pool: 'pool_02',
+        celsius: 40,
+      }),
+      30,
+      1,
+    );
+    expect(plantReadingOf(warm).boilersFiring).toBe(true);
+    expect(plantReadingOf(warm).alarms).not.toContain('boiler-lockout');
+    const stopped = advance(
+      applyAction(warm, {
+        type: 'boiler-gas',
+        action: { act: 'stop', pressed: true },
+      }),
+      10,
+      1,
+    );
+    const r = plantReadingOf(stopped);
+    expect(r.boilersFiring).toBe(false);
+    expect(r.alarms).toContain('boiler-lockout');
+    const tested = applyAction(newWorld(), {
+      type: 'boiler-gas',
+      action: { act: 'test' },
+    });
+    expect(plantReadingOf(tested).alarms).toContain('gas-detected');
+  });
 });

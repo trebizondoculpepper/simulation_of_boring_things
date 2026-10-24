@@ -108,6 +108,8 @@ type RoomHandle = (() => void) & {
   suspend?: () => void;
   resume?: () => void;
   setDryOnly?: (enabled: boolean) => void;
+  /** Prepare a hidden scene and its effects without advancing its simulation. */
+  prepare?: (width: number, height: number) => Promise<void>;
   setVisual?: (enabled: boolean) => void;
 };
 const rooms = new Map<string, { root: HTMLElement; handle: RoomHandle }>();
@@ -389,6 +391,9 @@ const starter = async (
     return (surface) =>
       startPoolHallRoom(surface, 'pool_04', { devRoom: 'dev33' });
   }
+  if (room === 'dev35')
+    return (await import('./toolkit/gallery/rooms/jacuzzi-water-room'))
+      .startJacuzziWaterRoom;
   if (room === 'dev34')
     return (await import('./toolkit/gallery/rooms/shell-room'))
       .startStairTowerRoom;
@@ -779,6 +784,7 @@ const stopSeeing = (hide = true) => {
 };
 /** Rooms built for the pool loop's lazy joints, let go when not next door. */
 const lazilyBuilt = new Set<RoomId>();
+const preparedRooms = new Set<string>();
 /**
  * Let a room go that is neither shown nor drawn under the one shown: free
  * its renderer and scene, to be built afresh if it is wanted again.
@@ -788,6 +794,7 @@ const release = (room: RoomId) => {
   const entry = rooms.get(key);
   if (!entry || key === current) return;
   entry.handle();
+  preparedRooms.delete(key);
   entry.root.remove();
   rooms.delete(key);
 };
@@ -835,54 +842,73 @@ const startSeeing = (top: RoomId, under: RoomId) => {
   seeing = { top, under };
   return true;
 };
-/** Build `room`, hidden, if it is neither built nor being built; whether it is built now. */
-const ensureBuilt = (room: RoomId) => {
-  if (rooms.has(keyOf(room))) return true;
+/** One closed-door neighbour retained in addition to the loop's neighbours. */
+let preparedNeighbour: RoomId | null = null;
+/** Build and, for a closed-door neighbour, prepare it while there is walking time. */
+const ensureBuilt = (room: RoomId, prepare = false) => {
+  const key = keyOf(room);
+  const loaded = rooms.get(key);
+  if (loaded && (!prepare || !loaded.handle.prepare || preparedRooms.has(key)))
+    return !loading.has(room);
   if (loading.has(room)) return false;
   loading.add(room);
-  void starter(room)
-    .then((start) => mount(room, start))
+  void (async () => {
+    let entry = loaded;
+    if (!entry) {
+      const start = await starter(room);
+      if (prepare) {
+        await idle();
+        // The walker may have left while the module was loading.
+        if (preparedNeighbour !== room && current !== key) return;
+      }
+      entry = mount(room, start);
+    }
+    if (prepare && entry.handle.prepare && current !== keyOf(room)) {
+      await idle();
+      if (preparedNeighbour !== room || current === keyOf(room)) return;
+      const rect = current && surfaceOf(current)?.getBoundingClientRect();
+      if (rect && rect.width && rect.height) {
+        await entry.handle.prepare(rect.width, rect.height);
+        preparedRooms.add(key);
+      }
+    }
+  })()
     .catch(showError)
     .finally(() => loading.delete(room));
   return false;
 };
 const checkDoors = () => {
-  if (!current || app.hidden) return stopSeeing();
+  if (!current || app.hidden) {
+    preparedNeighbour = null;
+    return stopSeeing();
+  }
   const top = current as RoomId;
-  // The pool loop: both rooms either side of this one built, unseen; any
-  // built before that are no longer either side, let go.
-  // Through an open plant room door, that room is built and seen, and the
-  // loop's rooms either side let go.
+  const surface = surfaceOf(keyOf(top));
+  const eye = surface && firstPersonOn(surface)?.pose();
   const door = openDoorJoint(top);
-  const beside = door ? [door] : lazyNeighbours(top);
-  // This room too, once left, if it is one of the loop's.
-  if (beside.length || door) lazilyBuilt.add(top);
+  // Plant doors participate before opening. Keep just the nearest one;
+  // an open door takes priority, and existing loop preparation stays intact.
+  preparedNeighbour = door ?? (eye ? nearestJoint(top, eye.x, eye.z) : null);
+  const beside = new Set(lazyNeighbours(top));
+  if (preparedNeighbour) beside.add(preparedNeighbour);
+  if (beside.size) lazilyBuilt.add(top);
   for (const room of beside) {
     lazilyBuilt.add(room);
-    ensureBuilt(room);
+    ensureBuilt(room, room === preparedNeighbour && !door);
   }
   for (const room of lazilyBuilt)
     if (
       keyOf(room) !== current &&
-      !beside.includes(room) &&
-      seeing?.under !== room
+      !beside.has(room) &&
+      seeing?.under !== room &&
+      !loading.has(room)
     ) {
       lazilyBuilt.delete(room);
       release(room);
     }
   const to = openJoint(top);
   if (seeing && (seeing.top !== top || seeing.under !== to)) stopSeeing();
-  if (seeing) return;
-  if (!to) {
-    // No door open: build the room behind the door nearest the walker, so
-    // that it is ready to be seen the moment that door opens.
-    const surface = surfaceOf(keyOf(top));
-    const eye = surface && firstPersonOn(surface)?.pose();
-    const nearest = eye && nearestJoint(top, eye.x, eye.z);
-    if (nearest) ensureBuilt(nearest);
-    return;
-  }
-  // Built the first time its door is opened, if not before; meanwhile, a dark lobby.
+  if (seeing || !to) return;
   if (!ensureBuilt(to)) return;
   startSeeing(top, to);
 };

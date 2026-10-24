@@ -1,3 +1,4 @@
+import { computed, signal } from '@preact/signals-core';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import {
   createPartSet,
@@ -16,8 +17,6 @@ import {
   newGasHouse,
   pressBoiler,
   setBoilerSetpoint,
-  resetGasHouse,
-  settleGasHouse,
   stepBoiler,
 } from '../../../components/plant/logic/boiler-house';
 import type {
@@ -49,6 +48,17 @@ import {
   createPressurisation,
   createTwinHeadPump,
 } from '../../../components/plant/views/boiler-plant';
+import { gasBeacon } from '../../../components/general-safety/parts/gas-parts';
+import { worldStore } from '../../../save/world-store';
+import {
+  actOnBoilerGas,
+  newBoilerGas,
+  stepBoilerGas,
+} from '../../../../game/plant/boiler-gas';
+import type {
+  BoilerGasAction,
+  BoilerGasState,
+} from '../../../../game/plant/boiler-gas';
 
 /**
  * The boiler house, working: two boilers' controllers and the gas they
@@ -59,13 +69,18 @@ import {
  * load is high. Closing the emergency control valve or striking the
  * emergency stop takes the boilers' gas away: a boiler loses its flame,
  * retries and locks out until the gas is back and RESET is pressed.
+ *
+ * The gas safety itself (the ECV, the emergency stop, the detector and
+ * the SSOV) is the world's (`game/plant/boiler-gas.ts`): it survives a
+ * reload, the control room sees it, and with the SSOV shut the world's
+ * pools get no heat. Here it is shown and worked; the boilers'
+ * controllers and their isolators stay the room's.
  */
 const house = {
   boilers: Array.from({ length: 6 }, () => newBoiler()) as BoilerState[],
   gas: newGasHouse(6) as GasHouse,
   isolators: [] as BallValveView[],
   ecv: null as BallValveView | null,
-  stopPushed: () => false,
   /** The boiler house's electrical supply: on, unless bound to the world's. */
   powered: () => true,
   seconds: 0,
@@ -82,16 +97,32 @@ const house = {
 if (typeof window !== 'undefined')
   (window as unknown as { boilerHouse: unknown }).boilerHouse = house;
 
-/** Bring the gas house up to date with its valves and stop. */
+/** The world, where there is a page to keep it (not in tests). */
+const store = () => (typeof window === 'undefined' ? null : worldStore('dev'));
+/** The gas safety where there is no world (no page): the room's own. */
+const ownGas = signal<BoilerGasState>(newBoilerGas());
+/** The boiler house's gas safety, as the world has it. */
+const gasSafety = (): BoilerGasState =>
+  store()?.world.value.boilerGas ?? ownGas.value;
+/** Work the gas safety: in the world, else the room's own. */
+const actOnGas = (action: BoilerGasAction) => {
+  const world = store();
+  if (world) world.dispatch({ type: 'boiler-gas', action });
+  else ownGas.value = actOnBoilerGas(ownGas.value, action);
+};
+
+/** Bring the gas house up to date with the world's gas safety and the isolators. */
 const settle = () => {
-  house.gas = settleGasHouse({
-    ...house.gas,
-    ecvOpen: house.ecv?.open ?? true,
-    stopPressed: house.stopPushed(),
+  const g = gasSafety();
+  house.gas = {
+    ecvOpen: g.ecvOpen,
+    stopPressed: g.stopPressed,
+    gasDetected: g.gasDetected,
+    ssovOpen: g.ssovOpen,
     isolators: house.isolators.length
       ? house.isolators.map((v) => v.open)
       : house.gas.isolators,
-  });
+  };
 };
 
 /** What this plant room is for, printed on its title card. */
@@ -162,8 +193,14 @@ export function createLiveBoilerCascade(
           delta,
         );
       }
+      // Each display says GAS while no gas reaches its boiler, firing or not.
       panels.forEach((panel, offset) =>
-        panel.show(house.boilers[first + offset], house.seconds, delta),
+        panel.show(
+          house.boilers[first + offset],
+          house.seconds,
+          delta,
+          gasTo(house.gas, first + offset),
+        ),
       );
     },
   };
@@ -222,13 +259,20 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       house.ecv = createGasBallValve(kit, {
         pipeRadius: 0.03,
         name: 'Gas emergency control valve',
+        binding: {
+          open: () => gasSafety().ecvOpen,
+          set: (open) => actOnGas({ act: 'ecv', open }),
+        },
       });
       parts.add(house.ecv);
       const train = createGasTrain(kit, { ecv: house.ecv.object });
       return {
         object: train,
         parts,
-        update: () => train.setSsov(house.gas.ssovOpen),
+        update: () => {
+          settle();
+          train.setSsov(house.gas.ssovOpen);
+        },
       };
     },
   },
@@ -246,43 +290,67 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     size: { w: 1.4, d: 0.15, h: 1.8, mount: 'wall', y: 1.6 },
     build(kit): LiveExhibit {
       const parts = createPartSet();
+      // The stop, struck in, shuts the SSOV until it is pulled out and
+      // GAS RESET pressed: the world's (`boiler-gas.ts`).
       const stop = parts.add(
-        mushroomStop(kit, { name: 'Boiler house emergency stop' }),
+        mushroomStop(kit, {
+          name: 'Boiler house emergency stop',
+          bound: {
+            get value() {
+              return gasSafety().stopPressed;
+            },
+            set: (pressed: boolean) => actOnGas({ act: 'stop', pressed }),
+          },
+        }),
       );
-      house.stopPushed = () => stop.pushed.value;
-      // TEST simulates a leak at the detector head; RESET reopens the
-      // gas safety valve once all is well.
-      let testing = 0;
+      // TEST simulates a leak at the detector head; GAS RESET reopens the
+      // gas safety valve once all is well, and does nothing otherwise.
       const test = parts.add(
         pushButton(kit, {
           colour: 'black',
           legend: 'TEST',
-          action: () => (testing = 8),
+          action: () => actOnGas({ act: 'test' }),
         }),
       );
       const reset = parts.add(
         pushButton(kit, {
           colour: 'green',
           legend: 'GAS RESET',
-          action: () => (house.gas = resetGasHouse(house.gas)),
+          action: () => actOnGas({ act: 'reset' }),
         }),
+      );
+      // The sounder-beacon: flashing and sounding while the stop is in
+      // or gas is detected.
+      const alarm = computed(() => {
+        const g = gasSafety();
+        return g.stopPressed || g.gasDetected;
+      });
+      const beacon = parts.add(
+        gasBeacon(kit, { lens: 'red', flashing: alarm, sounding: alarm }),
       );
       const board = createGasSafetyBoard(kit, {
         stop: stop.object,
         test: test.object,
         reset: reset.object,
+        beacon: beacon.object,
       });
+      let seconds = 0;
       return {
         object: board,
         parts,
         update(delta) {
-          testing = Math.max(0, testing - delta);
-          house.gas = { ...house.gas, gasDetected: testing > 0 };
+          seconds += delta;
+          // With no world the room runs its own detector's TEST.
+          if (!store()) ownGas.value = stepBoilerGas(ownGas.value, delta);
           settle();
+          const g = house.gas;
+          const flash = Math.floor(seconds * 2) % 2 === 0;
+          // Healthy; fault (the SSOV shut), flashing while the stop is
+          // in; gas detected.
           board.setLamps(
-            !house.gas.gasDetected && !house.gas.stopPressed,
-            !house.gas.ssovOpen,
-            house.gas.gasDetected,
+            !g.gasDetected && !g.stopPressed && g.ssovOpen,
+            !g.ssovOpen && (!g.stopPressed || flash),
+            g.gasDetected,
           );
         },
       };

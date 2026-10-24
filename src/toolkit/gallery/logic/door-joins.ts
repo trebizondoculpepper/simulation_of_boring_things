@@ -38,15 +38,13 @@ export interface Joint {
   /** This room is drawn under the other, seen through this door: hide its leaf. */
   peek(on: boolean): void;
   /**
-   * Loaded only while it is open, and let go when it closes, rather than
-   * built ahead as the nearest door: the pool loop's corridors
-   * (`pool-loop.ts`).
+   * A pool-loop neighbour, prepared by the loop's own policy rather than
+   * competing to be the nearest closed door (`pool-loop.ts`).
    */
   lazy?: boolean;
   /**
-   * Built only once its door is open, and let go once it shuts: a plant
-   * room door. While one is open, it is the door seen through, and the
-   * room's lazy neighbours are let go.
+   * A plant-room door, prioritized for the doorway view while open.
+   * Its room can be prepared while this is the nearest closed door.
    */
   onOpen?: boolean;
 }
@@ -107,7 +105,7 @@ export function nearestJoint(
   let distance = Infinity;
   for (const [k, joint] of joints) {
     const [from, to] = k.split('>') as [RoomId, RoomId];
-    if (from !== room || joint.lazy || joint.onOpen) continue;
+    if (from !== room || joint.lazy) continue;
     const d = Math.hypot(joint.frame.x - x, joint.frame.z - z);
     if (d < distance) {
       distance = d;
