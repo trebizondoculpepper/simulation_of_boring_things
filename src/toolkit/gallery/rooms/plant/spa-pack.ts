@@ -740,6 +740,8 @@ function buildSpaPack(
           colour: 'green',
           head: 'illuminated',
           lamp: lit,
+          // Dead with the cabinet's supply off: a press does nothing.
+          power: supplied,
           legend,
           name: `Spa set ${legend.toLowerCase()} button`,
           action: () =>

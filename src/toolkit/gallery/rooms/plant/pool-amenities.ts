@@ -1,4 +1,5 @@
-import { signal } from '@preact/signals-core';
+import { computed, signal } from '@preact/signals-core';
+import { serviceAvailable } from '../../../../game/plant/services';
 import {
   CylinderGeometry,
   DoubleSide,
@@ -374,6 +375,21 @@ const jacuzziWorld = () =>
 const jacuzziAct = (action: JacuzziAction) =>
   jacuzziWorld()?.dispatch({ type: 'jacuzzi', action });
 
+/**
+ * Whether power reaches the jacuzzi's controls: its plant room's supply
+ * (its switch-fuse, the switchboard's way, the site's main switch) and its
+ * cabinet's isolator. Off, the plate's switches are dead and their rings
+ * dark, and the tub's light is out. On its own, an exhibit, always.
+ */
+const jacuzziPowered = computed(() => {
+  const w = jacuzziWorld()?.world.value;
+  return (
+    !w ||
+    (serviceAvailable(w.plant, 'plant_pool_03', 'power') &&
+      w.plant.isolators['Jacuzzi cabinet isolator'])
+  );
+});
+
 // ---- The jacuzzi, on its stepped plinth -------------------------------------
 
 const TUB = {
@@ -636,7 +652,9 @@ function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
         }
       }
       spaState.running.value = state.jets > 0 || state.air > 0;
-      spaState.light.value = state.light;
+      // The building's jacuzzi's light is out while it has no power.
+      spaState.light.value =
+        state.light && (spaState !== spa || jacuzziPowered.value);
       for (const j of jets) {
         j.visible = state.jets > 0;
         if (j.visible) j.scale.z = 0.85 + 0.15 * Math.sin(time * 23 + j.id);
@@ -645,7 +663,7 @@ function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
       if (bubbles.visible) showBubbles(time);
       const churn = (state.jets > 0 ? 1.2 : 0) + (state.bubbling ? 1.6 : 0);
       waterMaterial.normalScale.set(0.7 + churn, 0.7 + churn);
-      glow.intensity = state.light ? 1.2 : 0;
+      glow.intensity = spaState.light.value ? 1.2 : 0;
     },
   };
 }
@@ -729,8 +747,15 @@ function buildJacuzziPlate(kit: PanelKit, spaState = spa): LiveExhibit {
         symbol,
         ring,
         legend,
-        action,
-        lit,
+        // Dead without power: a press does nothing, no ring lights.
+        action: () => {
+          if (spaState !== spa || jacuzziPowered.value) action();
+        },
+        lit:
+          lit &&
+          computed(
+            () => (spaState !== spa || jacuzziPowered.value) && lit.value,
+          ),
         name: `Spa ${legend.toLowerCase()} switch`,
       }),
     );

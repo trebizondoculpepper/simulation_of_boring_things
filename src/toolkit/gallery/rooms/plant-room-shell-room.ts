@@ -210,6 +210,11 @@ export function startPlantRoomShell(
         return found as { value: boolean } | null;
       })()
     : null;
+  // Whether power reaches the cabinet's isolator: its room's switch-fuse,
+  // the switchboard's way and the site's main switch (`room-power.ts`).
+  const roomLive = equipmentRoom
+    ? roomPowered(equipmentRoom as ServiceRoom)
+    : () => true;
   const jacuzziMimic =
     hall === 'pool_03' ? createMimicBoard(kit, JACUZZI_MIMIC) : null;
   const mimicStore = jacuzziMimic ? worldStore('dev') : null;
@@ -570,7 +575,9 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     machines?.update(delta);
     if (services) {
       services.update(delta);
-      if (supply) supply.value = services.isolator?.on ?? true;
+      // Fed only while its isolator is on and power reaches it: off at
+      // either, its pump, its dosing pumps and its hum stop.
+      if (supply) supply.value = (services.isolator?.on ?? true) && roomLive();
     }
     jacuzziMimic?.parts.update(delta);
     if (jacuzziMimic)
