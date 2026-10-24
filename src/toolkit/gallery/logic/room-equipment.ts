@@ -1158,6 +1158,52 @@ export const TANK_SURROUND = 0.8;
  * 2026-10-23; that room is kept as `retired0`.)
  */
 const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
+  // The boiler house (the owner, 2026-10-24: re-planned): the cascades
+  // along the west wall, the low-loss header at their south end, the twin
+  // circulator east of the door; the calorifier and the pressurisation
+  // unit, which the search had put in the far corners, brought together
+  // in the south-east by the circulator, so the heating's flow and
+  // return run short and in order;
+  // the gas train where the gas comes in, the north-east; the panels on
+  // the east wall in the owner's order.
+  boiler_house: (box, items) => {
+    const at = (key: string) => items.find((i) => i.key === key)!;
+    const onWall = (p: Placed, side: Side): Placed => ({ ...p, side });
+    return [
+      // Those standing against a wall are fed down it (`room-services.ts`).
+      ...[1, 2, 3].map((n, i) =>
+        onWall(
+          put(box, at(`boiler-cascade:${n}`), {
+            x: -2.9,
+            z: -4.75 + i * 3.6,
+            face: 'east',
+          }),
+          'west',
+        ),
+      ),
+      onWall(
+        put(box, at('low-loss-header'), { x: -3.15, z: 5.05, face: 'east' }),
+        'west',
+      ),
+      onWall(
+        put(box, at('lthw-pumps'), { x: 2.2, z: 5.25, face: 'north' }),
+        'south',
+      ),
+      // The calorifier's coil on its east side, toward the circulator;
+      // the pressurisation unit just north of it, its fill to the return.
+      put(box, at('calorifier'), { x: 1.4, z: 2.0, face: 'south' }),
+      put(box, at('pressurisation'), { x: 1.4, z: 0.0, face: 'north' }),
+      onWall(
+        put(box, at('gas-train'), { x: 3.4, z: -5.15, face: 'west' }),
+        'east',
+      ),
+      put(box, at('dosing-pot'), { wall: 'south', along: -2.45 }),
+      put(box, at('gas-safety'), { wall: 'east', along: -3.35 }),
+      put(box, at('mimic-gas'), { wall: 'east', along: -1.4 }),
+      put(box, at('mimic-boiler-heat'), { wall: 'east', along: 1.1 }),
+      put(box, at('combustion-panel'), { wall: 'east', along: 3.15 }),
+    ];
+  },
   // The Olympic's: where its plan stands each machine (`olympic-plan.ts`).
   plant_pool_02: (box, items) =>
     olympicPlan().flatMap((p, i) => {
