@@ -4,9 +4,11 @@
  * pool's is, as a share of the water (5 to 10 %), since in a spa the
  * bathers displace a large share of a small body of water. Pure.
  *
- * Its make-up float holds it low enough that the bathers' surge and the
- * air's lift fit above; its low-low cutout leaves the water in transit and
- * the pump's working reserve below the float.
+ * Its make-up float holds it, while the pump runs, low enough that
+ * everything that can come back to it fits above: every seat's surge, the
+ * air's lift, and the gutter's and pipes' water draining back when the
+ * pump stops. Its low-low cutout leaves the pump's working reserve below
+ * the float.
  */
 
 /** Water displaced by one bather, m³ (PWTAG, as Pool & Spa News gives it). */
@@ -45,14 +47,15 @@ export function spaTankAllowances(s: SpaForTank) {
 
 /**
  * Its tank: the allowances with the margin, to the next 0.1 m³; its float
- * (the fill share the make-up holds) with the surge's room above it, and
- * its low-low with the transit and the reserve between them.
+ * (the fill share the make-up holds while the pump runs) with room above
+ * for the surge, the lift and the water draining back, and its low-low
+ * the reserve below it.
  */
 export function sizeSpaTank(s: SpaForTank) {
   const a = spaTankAllowances(s);
   const volume = Math.ceil(a.total * (1 + MARGIN) * 10 - 1e-9) / 10;
-  const float = (volume - a.bathers - a.lift) / volume;
-  const lowLow = float - (a.transit + a.reserve) / volume;
+  const float = (volume - a.bathers - a.lift - a.transit) / volume;
+  const lowLow = float - a.reserve / volume;
   return { volume, float, lowLow, allowances: a };
 }
 

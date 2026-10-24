@@ -309,13 +309,61 @@ export interface SpaPackDemoBinding {
   setSetpoint(celsius: number): void;
 }
 
-function buildSpaPack(
+/**
+ * What drives the jacuzzi's cabinet: its controller and its water, from
+ * the world (`jacuzziWorldBinding`) or from a trial (`jacuzzi-trial.ts`).
+ */
+export interface JacuzziCabinetBinding {
+  /** Its panel now (`jacuzziCabinetPanel`, `trialPanel`). */
+  panel(doorOpen: boolean): ReturnType<typeof jacuzziCabinetPanel>;
+  power(): boolean;
+  setPower(on: boolean): void;
+  reset(): void;
+  /** What runs of its jets and air, and a press on either's button. */
+  runs(): { jets: boolean; air: boolean };
+  toggle(what: 'jets' | 'air'): void;
+  waterC(): number;
+  setpoint(): number;
+  setSetpoint(celsius: number): void;
+  /** Heat going into its water. */
+  heating(): boolean;
+}
+
+/** The jacuzzi's cabinet as the world has it. */
+export function jacuzziWorldBinding(
+  store: ReturnType<typeof worldStore>,
+): JacuzziCabinetBinding {
+  const w = () => store.world.value;
+  return {
+    panel: (doorOpen) => jacuzziCabinetPanel(w(), doorOpen),
+    power: () => w().jacuzziCabinet.power,
+    setPower: (on) =>
+      store.dispatch({
+        type: 'jacuzzi/cabinet',
+        action: { act: 'power', on },
+      }),
+    reset: () =>
+      store.dispatch({ type: 'jacuzzi/cabinet', action: { act: 'reset' } }),
+    runs: () => jacuzziRuns(w()),
+    toggle: (what) =>
+      store.dispatch({ type: 'jacuzzi', action: { act: 'toggle', what } }),
+    waterC: () => w().pools.pool_03.temperature,
+    setpoint: () => w().pools.pool_03.setpoint,
+    setSetpoint: (celsius) =>
+      store.dispatch({ type: 'pool/setpoint', pool: 'pool_03', celsius }),
+    heating: () => w().pools.pool_03.heating > 0.05,
+  };
+}
+
+export function buildSpaPack(
   kit: PanelKit,
   circuit = 'FOOT SPA',
   jets = false,
   /** Its POWER on from the start: installed and in service, not an exhibit. */
   inService = false,
   external?: SpaPackDemoBinding,
+  /** The jacuzzi's: what drives it, if not the world (a trial). */
+  jacuzziBinding?: JacuzziCabinetBinding,
 ): LiveExhibit {
   const t = plantTools(kit);
   const c = jets ? JACUZZI_CABINET : CABINET;
@@ -568,23 +616,25 @@ function buildSpaPack(
     inService && typeof window !== 'undefined' ? worldStore('dev') : null;
   // Its thermostat's setting: the world's pool's, or, an exhibit, its own.
   let ownSet = jets ? 37 : 34;
+  // The jacuzzi's: its controller in the world (`jacuzzi-cabinet.ts`),
+  // or a trial's.
+  const jz = jets
+    ? (jacuzziBinding ?? (store ? jacuzziWorldBinding(store) : null))
+    : null;
   const setting = () =>
+    jz?.setpoint() ??
     external?.state().setpoint ??
     store?.world.value.pools[pool].setpoint ??
     ownSet;
-  // The jacuzzi's, in service: its controller in the world (`jacuzzi-cabinet.ts`).
-  const jacuzziStore = jets && store ? store : null;
-  const panelNow = (doorOpen = false) =>
-    jacuzziStore
-      ? jacuzziCabinetPanel(jacuzziStore.world.value, doorOpen)
-      : null;
+  const panelNow = (doorOpen = false) => jz?.panel(doorOpen) ?? null;
   const mimic = createCabinetMimic(kit, {
     drainAndMakeUp: !jets,
     display: jets ? 'lcd' : 'led',
     parts,
     onSet: (step) => {
       const celsius = clampSetpoint(setting() + step);
-      if (external) external.setSetpoint(celsius);
+      if (jz) jz.setSetpoint(celsius);
+      else if (external) external.setSetpoint(celsius);
       else if (store) store.dispatch({ type: 'pool/setpoint', pool, celsius });
       else ownSet = celsius;
     },
@@ -606,16 +656,12 @@ function buildSpaPack(
             },
             set: (position: number) => external.setPower(position === 1),
           }
-        : jacuzziStore
+        : jz
           ? {
               get value() {
-                return jacuzziStore.world.value.jacuzziCabinet.power ? 1 : 0;
+                return jz.power() ? 1 : 0;
               },
-              set: (position: number) =>
-                jacuzziStore.dispatch({
-                  type: 'jacuzzi/cabinet',
-                  action: { act: 'power', on: position === 1 },
-                }),
+              set: (position: number) => jz.setPower(position === 1),
             }
           : footbathStore
             ? {
@@ -767,7 +813,7 @@ function buildSpaPack(
           : 'Foot spa cabinet low-water cutout lamp',
       }),
     );
-    fault.object.position.set(-0.15, -0.11, 0);
+    fault.object.position.set(jets ? -0.03 : -0.15, -0.11, 0);
     fault.object.scale.setScalar(0.8);
     front.add(fault.object);
   }
@@ -780,14 +826,10 @@ function buildSpaPack(
         power: supplied,
         legend: 'RESET',
         name: 'Jacuzzi cabinet reset button',
-        action: () =>
-          jacuzziStore?.dispatch({
-            type: 'jacuzzi/cabinet',
-            action: { act: 'reset' },
-          }),
+        action: () => jz?.reset(),
       }),
     );
-    reset.object.position.set(-0.05, -0.11, 0);
+    reset.object.position.set(0.07, -0.11, 0);
     reset.object.scale.setScalar(0.8);
     front.add(reset.object);
   }
@@ -807,8 +849,6 @@ function buildSpaPack(
   // here and from the plate by the tub alike, so the lamp follows the world
   // whichever started it; an exhibit keeps its own.
   if (jets) {
-    const world =
-      inService && typeof window !== 'undefined' ? worldStore('dev') : null;
     (
       [
         ['JETS', 'jets'],
@@ -817,9 +857,7 @@ function buildSpaPack(
     ).forEach(([legend, what], i) => {
       const own = signal(false);
       const lit = computed(() =>
-        world
-          ? jacuzziRuns(world.world.value)[what]
-          : running.value && own.value,
+        jz ? jz.runs()[what] : running.value && own.value,
       );
       const button = parts.add(
         pushButton(kit, {
@@ -830,13 +868,7 @@ function buildSpaPack(
           power: supplied,
           legend,
           name: `Spa set ${legend.toLowerCase()} button`,
-          action: () =>
-            world
-              ? world.dispatch({
-                  type: 'jacuzzi',
-                  action: { act: 'toggle', what },
-                })
-              : (own.value = !own.value),
+          action: () => (jz ? jz.toggle(what) : (own.value = !own.value)),
         }),
       );
       // Heard while it runs: the jet pump's motor, the blower's whine.
@@ -912,13 +944,17 @@ function buildSpaPack(
       mimic.show({
         pump: on,
         uv: uvOn.value,
-        heat: flowing.value && (w ? w.pools[pool].heating > 0.05 : true),
+        heat:
+          flowing.value &&
+          (jz ? jz.heating() : w ? w.pools[pool].heating > 0.05 : true),
         drain: trial?.draining ?? (!!lineup?.draining && on),
         filling: trial?.filling ?? (!!w && !jets && footbathFilling(w)),
         makeUp: trial?.fillOpen ?? lineup?.makeUpOpen ?? false,
         waterC: !supplied.value
           ? null
-          : (trial?.celsius ?? (w ? w.pools[pool].temperature : ownSet)),
+          : (jz?.waterC() ??
+            trial?.celsius ??
+            (w ? w.pools[pool].temperature : ownSet)),
         setC: setting(),
         ...(jets
           ? {

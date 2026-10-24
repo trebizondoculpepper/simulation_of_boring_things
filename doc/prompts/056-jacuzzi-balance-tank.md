@@ -24,7 +24,7 @@ The make-up float holds the tank low enough that the bathers' surge and the air'
 ## Stage 1: the model, with an ideal tank
 
 - A pure sizing module for a spa's balance tank (allowances above), and the jacuzzi's tank from it: 1.3 m³, a GRP cylinder 1.1 m across and 1.55 m tall, its float and low-low levels set by the allowances. The world's water balance uses it for `pool_03`.
-- The cabinet's controller (`jacuzzi-cabinet.ts`) is given the tank it draws from as an input: its fill, whether it is at low-low (the pump held off, TRIP: TANK LOW, restarting by itself as it recovers) and whether its make-up is filling it. Its display shows the tank's fill (TANK 44%, FILLING).
+- The cabinet's controller (`jacuzzi-cabinet.ts`) is given the tank it draws from as an input: its fill, whether it is at low-low (the pump held off, TRIP: TANK LOW, restarting by itself as it recovers) and whether its make-up is filling it. Its display shows the tank's fill (TANK 34%, FILLING).
 - An ideal balance tank (always at its working level, never low) for testing the cabinet alone. Every cabinet test runs against the ideal tank first; the world's tests then run it against the real one.
 - Tests: the sizing (the surge fits above the float, the reserve below it); the cabinet with the ideal tank (every existing behaviour); with a tank run low (trips, restarts, display); and the world's (`jacuzzi-systems.test.ts`).
 

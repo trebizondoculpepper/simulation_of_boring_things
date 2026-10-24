@@ -22,20 +22,18 @@ describe('a spa’s balance tank', () => {
     expect(share).toBeLessThan(0.6);
   });
 
-  it('has room above its float for every seat taken and the air’s lift', () => {
+  it('has room above its float for every seat taken, the air’s lift and the water draining back', () => {
     const t = JACUZZI_BALANCE_TANK;
     const room = (1 - t.float) * t.volume;
     expect(room).toBeGreaterThanOrEqual(
-      t.allowances.bathers + t.allowances.lift - 1e-9,
+      t.allowances.bathers + t.allowances.lift + t.allowances.transit - 1e-9,
     );
   });
 
-  it('keeps the water in transit and its reserve between its float and its low-low', () => {
+  it('keeps the pump’s reserve between its float and its low-low', () => {
     const t = JACUZZI_BALANCE_TANK;
     expect(t.lowLow).toBeGreaterThan(0.05);
-    expect((t.float - t.lowLow) * t.volume).toBeCloseTo(
-      t.allowances.transit + t.allowances.reserve,
-    );
+    expect((t.float - t.lowLow) * t.volume).toBeCloseTo(t.allowances.reserve);
   });
 
   it('fits its cylinder, 1.1 m across, with freeboard', () => {

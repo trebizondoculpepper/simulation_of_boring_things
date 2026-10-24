@@ -52,6 +52,7 @@ export type GalleryRoomId =
   | 'dev35'
   | 'dev36'
   | 'dev37'
+  | 'dev38'
   | 'retired0'
   | 'dev_corridor';
 /** One development room per pool plant room, each showing its equipment. */
@@ -218,6 +219,9 @@ export const ROOMS: readonly RoomId[] = [
   'dev36',
   // By its URL only: a valve test rig, for valves and their sounds.
   'dev37',
+  // By its URL only: the jacuzzi's cabinet on trial, with an ideal spa,
+  // balance tank and sources, and a test panel.
+  'dev38',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   // The single playable pool room.
@@ -369,6 +373,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev35: 'DEV35 · JACUZZI WATER LAB',
   dev36: 'DEV36 · MUSIC EFFECTS LAB',
   dev37: 'DEV37 · VALVE TEST RIG',
+  dev38: 'DEV38 · JACUZZI CABINET TRIAL',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   dev_corridor: 'DEV CORRIDOR',
   dev_courtyard: 'COURTYARD',
@@ -468,6 +473,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev35: '#80b9c8',
   dev36: '#9baeb8',
   dev37: '#7f8f6a',
+  dev38: '#6f9aa8',
   retired0: '#6d7a6f',
   dev_corridor: '#2d9ca0',
   dev_courtyard: '#7fa36a',

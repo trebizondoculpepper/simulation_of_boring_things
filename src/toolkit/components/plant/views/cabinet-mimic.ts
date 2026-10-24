@@ -234,7 +234,7 @@ export function createCabinetMimic(
       ? createCharacterLcd(kit, {
           columns: 16,
           rows: 2,
-          cell: 0.0032,
+          cell: 0.0044,
           backlight: true,
         })
       : null;
@@ -242,11 +242,19 @@ export function createCabinetMimic(
     ? null
     : createSevenSegment(kit, 3, { digitHeight: 0.022 });
   const shown = lcd ?? readout!;
-  shown.group.position.set(width / 2 - (lcd ? 0.09 : 0.07), 0.02, 0.002);
+  shown.group.position.set(
+    width / 2 - (lcd ? 0.1 : 0.07),
+    lcd ? 0.012 : 0.02,
+    0.002,
+  );
   shown.group.traverse((o) => (o.userData.live = true));
   group.add(shown.group);
   const tape = createDymoLabel(kit, lcd ? 'STATUS' : 'WATER °C', { seed: 9 });
-  tape.position.set(width / 2 - (lcd ? 0.09 : 0.07), -0.025, 0.003);
+  tape.position.set(
+    width / 2 - (lcd ? 0.1 : 0.07),
+    lcd ? -0.03 : -0.025,
+    0.003,
+  );
   group.add(tape);
   let lastLines = '';
   // The thermostat: ▲ and ▼ beside the readout, and its SET lamp.
