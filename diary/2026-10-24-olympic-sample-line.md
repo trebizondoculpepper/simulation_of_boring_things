@@ -1,0 +1,9 @@
+# Olympic sample-line connection
+
+The owner reported a chemical-looking tube ending in mid-air beside PL2-P1-IV4. Tracing the tag identifies Pump B's discharge isolation valve; the nearby small chemical-grade tube actually carries sample water to the chemistry controller. Its route started 80 mm above the discharge pipe's outer surface, allowing for a tapping fitting that the view does not draw. Extended the tube into the main so its visible end joins the pipe, preserving its sampling location before filtration and dosing.
+
+Added a regression check against the drawn room's sample route: its tapping lies within the discharge branch, at the main's centre height and depth, and rises above the pipe surface. All 19 Olympic plumbing tests pass, including the room's routing and scoring gates.
+
+Following the owner's feedback, the connection now has a passive bolted clamp saddle around the 160 mm main, a threaded reducing boss and a small hexagonal compression gland around the 12 mm sample tube. This models the pressure connection rather than depicting the tube poking directly into the pipe. The assembly is based on the construction of [GF's PP threaded clamp saddles](https://assets.georgfischer.com/is/content/georgfischerag/6Z27lPX9xpdf?filename=gfps-datasheet-PP+Clamp+saddle+with+female+threaded+single+outlet-1946105), with simplified dimensions. No unbound working valve was added.
+
+The owner also supplied a view of Pump B's riser meeting the 355 mm manifold at its flat end. Continued the full-size manifold around a swept elbow, shortened the 160 mm riser and joined the two straight ends with a 350 mm long socketed concentric reducer. Added a reusable reducer view and explicit reducer geometry to the Olympic layout, with regression coverage for matching endpoint positions and diameters. Inspected the corrected junction in the browser at the owner's supplied viewpoint. The plant's hydraulic topology is unchanged.

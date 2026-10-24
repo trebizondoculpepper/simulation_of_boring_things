@@ -311,6 +311,46 @@ export function createPipe(
   return createPipeRun(points, materials, style(id, od, options));
 }
 
+/** A straight concentric transition, socketed onto two different pipe sizes. */
+export function createPipeReducer(
+  id: PipeKindId,
+  from: Vec3,
+  to: Vec3,
+  fromOd: number,
+  toOd: number,
+) {
+  const a = new Vector3(...from);
+  const b = new Vector3(...to);
+  const direction = b.clone().sub(a);
+  const materials = pipeKindMaterials(id);
+  const material = materials.fitting ?? materials.pipe;
+  const group = new Group();
+  const mesh = new Mesh(
+    new CylinderGeometry(toOd / 2, fromOd / 2, direction.length(), 24),
+    material,
+  );
+  group.name = `Concentric reducer ${Math.round(fromOd * 1000)} × ${Math.round(toOd * 1000)} mm`;
+  mesh.position.copy(a).add(b).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(
+    new Vector3(0, 1, 0),
+    direction.normalize(),
+  );
+  group.add(mesh);
+  for (const [at, od] of [
+    [a, fromOd],
+    [b, toOd],
+  ] as const) {
+    const socket = new Mesh(
+      new CylinderGeometry(od * 0.56, od * 0.56, od * 0.25, 24),
+      material,
+    );
+    socket.position.copy(at);
+    socket.quaternion.copy(mesh.quaternion);
+    group.add(socket);
+  }
+  return group;
+}
+
 /** A visible three-way fitting centred where a branch meets a straight main. */
 export function createPipeTee(
   id: PipeKindId,

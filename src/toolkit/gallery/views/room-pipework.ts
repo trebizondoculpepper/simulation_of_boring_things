@@ -1,4 +1,5 @@
 import { createActuatedButterflyValve } from '../../components/plant/views/actuated-butterfly-valve';
+import { createSampleTakeoff } from '../../components/plant/views/sample-takeoff';
 import { retiredFrom } from '../logic/retired-rooms';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -6,6 +7,7 @@ import { createMicroLabel } from '../../components/core/views/eighties-controls'
 import { createPartSet } from '../../components/core/parts/parts';
 import {
   createPipe,
+  createPipeReducer,
   createPipeTee,
   PIPE_KINDS,
 } from '../../components/core/views/pipe-kinds';
@@ -42,6 +44,7 @@ import {
   roomTees,
 } from '../logic/room-pipes';
 import type { PipeRun, Valve } from '../logic/room-pipes';
+import { olympicRoom } from '../logic/olympic-plumbing';
 
 /** Each run's service, as its markings name it. */
 /** Each service's bands; a flue carries none, only its own label plate. */
@@ -98,6 +101,17 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     });
     pipe.name = r.name;
     group.add(pipe);
+    if (
+      (retiredFrom(room) ?? room) === 'plant_pool_02' &&
+      r.name === 'Sample line'
+    ) {
+      const main = runs.find((run) => run.name === 'Discharge B');
+      if (main) {
+        const takeoff = createSampleTakeoff(kit, main.od, r.od);
+        takeoff.position.set(...lift(r.points[0]));
+        group.add(takeoff);
+      }
+    }
     const marked = MARKED[r.service];
     if (r.od >= 0.02 && marked) {
       const lagging = PIPE_KINDS[r.kind].insulation?.thickness ?? 0;
@@ -126,6 +140,18 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       placeFitting(meter.object, 'flowmeter', lift(m.at), m.along, m.inward);
       group.add(meter.object);
     }
+  }
+  if ((retiredFrom(room) ?? room) === 'plant_pool_02') {
+    for (const r of olympicRoom().reducers)
+      group.add(
+        createPipeReducer(
+          'pvc-pressure',
+          lift(r.from),
+          lift(r.to),
+          r.fromOd,
+          r.toOd,
+        ),
+      );
   }
   for (const t of roomTees(room)) {
     const tee = createPipeTee(

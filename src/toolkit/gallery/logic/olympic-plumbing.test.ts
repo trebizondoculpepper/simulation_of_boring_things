@@ -76,6 +76,34 @@ describe('the Olympic plant room, plumbed and routed', () => {
     expect(score.total).toBeGreaterThan(75);
   });
 
+  it('joins pump B to a full-bore manifold elbow through a straight reducer', () => {
+    const reducer = plumbed.reducers[0];
+    expect(reducer.from).toEqual(run('Discharge B').points.at(-1));
+    expect(reducer.to).toEqual(run('Pump discharge manifold').points[0]);
+    expect(reducer.fromOd).toBe(run('Discharge B').od);
+    expect(reducer.toOd).toBe(MAIN);
+    expect(reducer.to[1] - reducer.from[1]).toBeCloseTo(0.35, 6);
+    const [heel, corner, along] = run('Pump discharge manifold').points;
+    expect(heel[0]).toBe(corner[0]);
+    expect(heel[2]).toBe(corner[2]);
+    expect(corner[1] - heel[1]).toBeGreaterThan(MAIN);
+    expect(along[1]).toBe(corner[1]);
+    expect(along[2]).toBeLessThan(corner[2]);
+    expect(olympicRoom().reducers).toEqual(plumbed.reducers);
+  });
+
+  it('connects the drawn sample tube to pump B’s discharge without an air gap', () => {
+    const discharge = run('Discharge B');
+    const [from, to] = discharge.points.slice(1, 3);
+    const sample = olympicRoom().runs.find((r) => r.name === 'Sample line')!;
+    const tap = sample.points[0];
+    expect(tap[0]).toBeGreaterThan(Math.min(from[0], to[0]));
+    expect(tap[0]).toBeLessThan(Math.max(from[0], to[0]));
+    expect(tap[1]).toBeCloseTo(from[1], 6);
+    expect(tap[2]).toBeCloseTo(from[2], 6);
+    expect(sample.points[1][1]).toBeGreaterThan(from[1] + discharge.od / 2);
+  });
+
   it('draws the pumps’ suctions short and straight through the west wall from the balance tank', () => {
     for (const s of ['A', 'B']) {
       const r = run(`Suction ${s}`);

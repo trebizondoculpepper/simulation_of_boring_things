@@ -277,7 +277,7 @@ const TAP = 0.3;
 /** The dosing spool's line in from the south wall, and the height the chemical lines come in at. */
 const SPOOL_OFF = 0.7;
 const CHEMICAL_IN = 2.2;
-/** How far a dosing quill or a sample tapping stands off its main's surface, metres. */
+/** How far a dosing quill stands off its main's surface, metres. */
 const QUILL = 0.08;
 /** The open floor's cells, and how near a machine or a wall a run may still be low, metres. */
 const OPEN_FLOOR = { cell: 1, near: 1.0, wall: 0.9 } as const;
@@ -341,6 +341,7 @@ export interface OlympicPlumbing {
   expansion: Expansion;
   regions: Region[];
   problems: string[];
+  reducers: { from: Vec3; to: Vec3; fromOd: number; toOd: number }[];
 }
 
 export function plumbOlympic(
@@ -416,15 +417,25 @@ export function plumbOlympic(
   // then up to the manifold, which runs north to the battery.
   const pumpsItem = items.find((i) => i.key === 'pumps')!;
   const mx = round(footprintOf(pumpsItem).maxX + 0.3);
+  // The manifold's terminal elbow is full bore. Reduce on its vertical leg,
+  // with straight sockets either side, rather than ending a large pipe on a
+  // small riser's centreline and leaving an exposed flat face.
+  const heelZ = Math.max(dA.at[2], dB.at[2]);
+  const reducerTop: Vec3 = [mx, round(MANIFOLD_Y - 0.6), heelZ];
+  const reducerBottom: Vec3 = [mx, round(MANIFOLD_Y - 0.95), heelZ];
+  const reducers = [
+    { from: reducerBottom, to: reducerTop, fromOd: dB.od, toOd: MAIN },
+  ];
   for (const d of [dA, dB])
     rule(`Discharge ${d.name.slice(-1)}`, `pumps.${d.name}`, 'water', d.od, [
       d.at,
       [d.at[0], ACROSS_Y, d.at[2]],
       [mx, ACROSS_Y, d.at[2]],
-      [mx, MANIFOLD_Y, d.at[2]],
+      d === dB ? reducerBottom : [mx, MANIFOLD_Y, d.at[2]],
     ]);
   rule('Pump discharge manifold', 'battery.inlet', 'water', MAIN, [
-    [mx, MANIFOLD_Y, Math.max(dA.at[2], dB.at[2])],
+    reducerTop,
+    [mx, MANIFOLD_Y, heelZ],
     [mx, MANIFOLD_Y, inletZ],
     [mx, inletY, inletZ],
   ]);
@@ -980,9 +991,10 @@ export function plumbOlympic(
     const tapX = round(b.points[2][0] - 0.5);
     const sample = port('controller', 'sample');
     const wallZ = round(hz - 0.35);
-    const topY = round(across[1] + b.od / 2 + QUILL);
+    // Start inside the main so the drawn tube meets its surface. There is no
+    // separate sample-tapping fitting to bridge a stand-off above the pipe.
     rule('Sample line', 'sample', 'sample', 0.012, [
-      [tapX, topY, across[2]],
+      [tapX, across[1], across[2]],
       [tapX, SAMPLE_Y, across[2]],
       [tapX, SAMPLE_Y, wallZ],
       [sample.at[0], SAMPLE_Y, wallZ],
@@ -1310,7 +1322,16 @@ export function plumbOlympic(
     if (ra && rb && sameFamily(ra, rb)) continue;
     problems.push(`clash: ${a} / ${b}`);
   }
-  return { items, ports, runs, fittings, expansion, regions, problems };
+  return {
+    items,
+    ports,
+    runs,
+    fittings,
+    expansion,
+    regions,
+    problems,
+    reducers,
+  };
 }
 
 /** The point nearest its far end at which a run passes a hand's height (1.5 m), if it does. */
@@ -1559,7 +1580,11 @@ const LABEL: Record<PipeRun['service'], string> = {
   'hot water': 'HOT WATER',
 };
 
-let cached: { runs: PipeRun[]; busbar: Containment[] } | null = null;
+let cached: {
+  runs: PipeRun[];
+  busbar: Containment[];
+  reducers: OlympicPlumbing['reducers'];
+} | null = null;
 let plumbedOnce: OlympicPlumbing | null = null;
 /** The room as built (`OLYMPIC`), plumbed once. */
 const built = () => (plumbedOnce ??= plumbOlympic());
@@ -1669,7 +1694,7 @@ export function olympicRoom() {
       ...(meters.length ? { meters } : {}),
     });
   }
-  cached = { runs, busbar };
+  cached = { runs, busbar, reducers: plumbed.reducers };
   return cached;
 }
 
