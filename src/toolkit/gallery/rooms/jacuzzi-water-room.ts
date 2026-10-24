@@ -25,6 +25,8 @@ import { partAudio } from '../../components/core/audio/part-audio';
 import { createFirstPerson } from '../../controls/input/first-person';
 import { knobDirection } from '../../controls/input/knob-turning';
 import { createPoolHall } from '../views/pool-hall';
+import { createJacuzziFibreWall } from '../../components/architectural/views/jacuzzi-fibre-wall';
+import { newFibreIlluminator } from '../../../game/plant/fibre-illuminator';
 import { POOL_HALLS, hallFloorAt, hallSolids } from '../logic/pool-halls';
 import { POOL_LOOKS, DEFAULT_POOL_LOOK } from '../logic/pool-looks';
 import { createJacuzziDemo } from './plant/pool-amenities';
@@ -52,6 +54,14 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
   scene.add(new HemisphereLight('#e9f3f1', '#65716f', 0.6));
   // Reuse the hall geometry and both jacuzzi components, not copied geometry.
   const hall = createPoolHall(spec, metre);
+  const fibreWall = createJacuzziFibreWall(
+    spec.w,
+    spec.d,
+    spec.tileTop,
+    spec.h,
+  );
+  hall.add(fibreWall.group);
+  const fibreState = newFibreIlluminator();
   // Its effects panel (the owner, 2026-10-24): the water's level in 5 %
   // steps, and the jets, light and bubbles each on or off, set directly.
   const effects = createSpaEffectsPanel(kit, 'TUB EFFECTS');
@@ -169,6 +179,7 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
     tub.update?.(delta);
     plate.parts?.update(delta);
     effects.update(delta);
+    fibreWall.update(time / 1000, fibreState);
     partAudio.listen(camera, metre);
     composer.render(delta);
   });
@@ -179,6 +190,7 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
     tub.dispose?.();
     plate.parts?.dispose();
     effects.dispose();
+    fibreWall.dispose();
     plate.dispose?.();
     for (const pass of composer.passes) pass.dispose();
     composer.dispose();

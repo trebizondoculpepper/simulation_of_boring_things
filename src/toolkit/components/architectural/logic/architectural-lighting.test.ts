@@ -3,6 +3,8 @@ import {
   DIMMER_OFF,
   dimmerOutput,
   fadeToward,
+  fibreRainbowHue,
+  fibreWheelSparkle,
   twinkle,
   wheelColour,
 } from './architectural-lighting';
@@ -54,6 +56,29 @@ describe('a fibre-optic starlight ceiling', () => {
     for (const c of [...c0, ...c1]) {
       expect(c).toBeGreaterThanOrEqual(0.55);
       expect(c).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+describe('a bright fibre illuminator wheel', () => {
+  it('holds points bright while stopped and makes deep, separate flashes while turning', () => {
+    expect(fibreWheelSparkle(4, 2, false)).toBe(1);
+    const samples = Array.from({ length: 300 }, (_, n) =>
+      fibreWheelSparkle(4, n * 0.05, true),
+    );
+    expect(Math.min(...samples)).toBeLessThan(0.13);
+    expect(Math.max(...samples)).toBeGreaterThan(0.98);
+    expect(fibreWheelSparkle(4, 1, true)).not.toBe(
+      fibreWheelSparkle(5, 1, true),
+    );
+  });
+
+  it('spreads rainbow colours between fibres and turns them slowly', () => {
+    expect(fibreRainbowHue(0, 0)).not.toBe(fibreRainbowHue(1, 0));
+    expect(fibreRainbowHue(1, 0)).not.toBe(fibreRainbowHue(1, 3));
+    for (let i = 0; i < 20; i++) {
+      expect(fibreRainbowHue(i, 2)).toBeGreaterThanOrEqual(0);
+      expect(fibreRainbowHue(i, 2)).toBeLessThan(1);
     }
   });
 });

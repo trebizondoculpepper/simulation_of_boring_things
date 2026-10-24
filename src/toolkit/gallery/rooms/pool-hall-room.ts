@@ -57,6 +57,7 @@ import { createSafetySign } from '../../components/general-safety/views/safety-s
 import { createSignState } from '../../components/pool/logic/pool-info-sign';
 import { createPaceClock } from '../../components/pool/views/pace-clock';
 import { worldStore } from '../../save/world-store';
+import { createJacuzziFibreWall } from '../../components/architectural/views/jacuzzi-fibre-wall';
 import { serviceAvailable } from '../../../game/plant/services';
 import {
   buildWallBackedJacuzzi,
@@ -139,6 +140,11 @@ export function startPoolHallRoom(
   });
   const poolsideKit = createPanelKit();
   const world = worldStore('dev');
+  const fibreWall =
+    id === 'pool_03'
+      ? createJacuzziFibreWall(spec.w, spec.d, spec.tileTop, spec.h)
+      : null;
+  if (fibreWall) rooms.add(fibreWall.group);
   const poolside = !gallery
     ? (() => {
         const mounts =
@@ -734,6 +740,15 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     last = time;
     walk.update(delta);
     roomLights.update(delta);
+    if (fibreWall) {
+      const state = world.world.value;
+      fibreWall.update(time / 1000, {
+        ...state.jacuzziFibreIlluminator,
+        on:
+          state.jacuzziFibreIlluminator.on &&
+          serviceAvailable(state.plant, 'plant_pool_03', 'power'),
+      });
+    }
     poolsFound += delta;
     if (poolsFound > 2) {
       findPools();
@@ -869,6 +884,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       composer.dispose();
       makeUpStreams?.dispose();
       levelPanel?.dispose();
+      fibreWall?.dispose();
       walk.dispose();
       poolside?.clock?.dispose();
       if (spaTub && 'object' in spaTub) spaTub.dispose?.();

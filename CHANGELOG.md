@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The Jacuzzi's upper bare-concrete walls now have flush fibre-optic pinpoints. A Penfold box beside its plant-room water mimic controls the saved illuminator: on/off with a running lamp, brightness, 0–10 twinkle speed (0 is steady), and white/rainbow colour. Dev30's fibre booth also has a white/rainbow selector and a brighter, sharper twinkle.
 - Dev30 has a fibre-optic concrete wall booth: 88 warm-white pinpoints flush with a raw board-marked wall, scattered irregularly and driven by its Lumenhaus dimmer and a twinkle-wheel selector.
 - The jacuzzi's simulated water quantity now drives percent full and visible height through a reusable basin profile. Its two tapered basins meet at the seat: about 20 % of the water reaches the seat, and the other 80 % fills the wider upper basin. Dev35's FILL % control runs from empty to full; the water surface stays continuous in height as it widens over the step.
 - The jacuzzi fills through its jets: while water comes in, each jet out of the water throws a gentle arc that lands on the seat (water below the seat) or on the surface, with rings where it meets water; once the water covers a jet, its arc is gone. Dev35's FILL % knob is now a target the tub fills or drains toward, quickly enough to watch.

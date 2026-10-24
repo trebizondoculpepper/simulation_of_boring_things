@@ -116,6 +116,14 @@ import {
 } from './plant/jacuzzi';
 import type { JacuzziAction, JacuzziState } from './plant/jacuzzi';
 import {
+  newFibreIlluminator,
+  setFibreIlluminator,
+} from './plant/fibre-illuminator';
+import type {
+  FibreIlluminatorAction,
+  FibreIlluminatorState,
+} from './plant/fibre-illuminator';
+import {
   actOnBoilerGas,
   heatingPlant,
   newBoilerGas,
@@ -129,7 +137,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 23;
+export const WORLD_VERSION = 24;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -181,6 +189,8 @@ export interface World {
   motors: MotorsState;
   /** The jacuzzi's jets and air (`jacuzzi.ts`). */
   jacuzzi: JacuzziState;
+  /** The Jacuzzi concrete wall's remote fibre illuminator. */
+  jacuzziFibreIlluminator: FibreIlluminatorState;
   /** The boiler house's gas safety: ECV, emergency stop, detector and SSOV (`boiler-gas.ts`). */
   boilerGas: BoilerGasState;
 }
@@ -206,6 +216,7 @@ export function newWorld(): World {
     airHandling: newAirHandling(),
     motors: newMotors(),
     jacuzzi: newJacuzzi(),
+    jacuzziFibreIlluminator: newFibreIlluminator(),
     boilerGas: newBoilerGas(),
   };
 }
@@ -249,6 +260,7 @@ export type WorldAction =
   | { type: 'motor/stop'; pool: StartedPool; stopped: boolean }
   /** The jacuzzi's jets and air worked, from its cabinet or its wall plate. */
   | { type: 'jacuzzi'; action: JacuzziAction }
+  | { type: 'jacuzzi/fibre-illuminator'; action: FibreIlluminatorAction }
   /** The boiler house's gas safety worked: its emergency stop, GAS RESET, ECV or detector TEST. */
   | { type: 'boiler-gas'; action: BoilerGasAction };
 
@@ -384,6 +396,14 @@ export function applyAction(world: World, action: WorldAction): World {
           action.action,
           world.time,
           jacuzziFull(world.pools.pool_03.level),
+        ),
+      };
+    case 'jacuzzi/fibre-illuminator':
+      return {
+        ...world,
+        jacuzziFibreIlluminator: setFibreIlluminator(
+          world.jacuzziFibreIlluminator,
+          action.action,
         ),
       };
     case 'boiler-gas': {

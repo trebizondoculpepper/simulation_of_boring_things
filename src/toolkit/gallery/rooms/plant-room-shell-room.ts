@@ -113,6 +113,7 @@ import { newWorld } from '../../../game/world';
 import { POOL_TARGET } from '../../../game/plant/pools';
 import type { PoolWaterState } from '../../../game/plant/pools';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
+import { createJacuzziFibreControl } from '../views/jacuzzi-fibre-control';
 import type { MimicSpec } from '../../components/industrial-control/logic/mimic';
 import { bindRoomLights } from '../views/room-lights';
 import { zoneOfRoom } from '../../../game/plant/lighting';
@@ -218,9 +219,15 @@ export function startPlantRoomShell(
   const jacuzziMimic =
     hall === 'pool_03' ? createMimicBoard(kit, JACUZZI_MIMIC) : null;
   const mimicStore = jacuzziMimic ? worldStore('dev') : null;
+  const fibreControl =
+    hall === 'pool_03' ? createJacuzziFibreControl(kit) : null;
   if (jacuzziMimic) {
     jacuzziMimic.group.position.set(0, plan.floor + 1.8, -plan.hz + 0.025);
     rooms.add(jacuzziMimic.group);
+  }
+  if (fibreControl) {
+    fibreControl.group.position.set(-1.25, plan.floor + 1.8, -plan.hz + 0.025);
+    rooms.add(fibreControl.group);
   }
   const raycaster = new Raycaster();
   const pointer = new Vector2();
@@ -233,6 +240,7 @@ export function startPlantRoomShell(
         parts.uses.get(o) ??
         machines?.useOf(o) ??
         services?.uses.get(o) ??
+        fibreControl?.parts.uses.get(o) ??
         jacuzziMimic?.parts.uses.get(o);
       if (work) {
         const at = o;
@@ -580,6 +588,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       if (supply) supply.value = (services.isolator?.on ?? true) && roomLive();
     }
     jacuzziMimic?.parts.update(delta);
+    fibreControl?.parts.update(delta);
     if (jacuzziMimic)
       jacuzziMimic.show(
         jacuzziMimicState(
@@ -632,6 +641,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       parts.dispose();
       machines?.dispose();
       jacuzziMimic?.parts.dispose();
+      fibreControl?.parts.dispose();
       services?.dispose();
       disposeKit(kit, rooms as never);
       walk.dispose();

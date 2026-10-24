@@ -59,6 +59,7 @@ describe('a save', () => {
       airHandling: newWorld().airHandling,
       motors: newWorld().motors,
       jacuzzi: newWorld().jacuzzi,
+      jacuzziFibreIlluminator: newWorld().jacuzziFibreIlluminator,
       boilerGas: newWorld().boilerGas,
     });
   });

@@ -4,6 +4,27 @@ import { roomRunning, serviceAvailable } from './plant/services';
 import { POOL_IDS, POOL_TARGET } from './plant/pools';
 
 describe('the world', () => {
+  it('carries the Jacuzzi fibre illuminator controls between rooms', () => {
+    let w = newWorld();
+    w = applyAction(w, {
+      type: 'jacuzzi/fibre-illuminator',
+      action: { control: 'rainbow', value: true },
+    });
+    w = applyAction(w, {
+      type: 'jacuzzi/fibre-illuminator',
+      action: { control: 'twinkleSpeed', value: 0 },
+    });
+    w = applyAction(w, {
+      type: 'jacuzzi/fibre-illuminator',
+      action: { control: 'brightness', value: 0.6 },
+    });
+    expect(w.jacuzziFibreIlluminator).toEqual({
+      on: true,
+      brightness: 0.6,
+      twinkleSpeed: 0,
+      rainbow: true,
+    });
+  });
   it('counts each time dev14’s button goes on, and dev15’s reset turns it off', () => {
     let w = applyAction(newWorld(), { type: 'demo/set', on: true });
     expect(w.demo).toEqual({ on: true, presses: 1 });

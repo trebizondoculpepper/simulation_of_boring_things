@@ -42,6 +42,25 @@ export function twinkle(i: number, time: number, wheel: boolean): number {
   return 0.25 + 0.75 * Math.max(0, Math.min(1, v));
 }
 
+/** A perforated illuminator wheel: mostly dim, with brief bright passes for each fibre. */
+export function fibreWheelSparkle(
+  i: number,
+  time: number,
+  wheel: boolean,
+): number {
+  if (!wheel) return 1;
+  const a = Math.sin(i * 12.9898) * 43758.5453;
+  const phase = (a - Math.floor(a)) * Math.PI * 2;
+  const speed = 4.2 + ((i * 7) % 9) * 0.55;
+  const opening = 0.5 + 0.5 * Math.sin(time * speed + phase);
+  return 0.12 + 0.88 * opening ** 5;
+}
+
+/** Separate rainbow phases along the fibre bundle, drifting slowly as the colour wheel turns. */
+export function fibreRainbowHue(i: number, time: number): number {
+  return (i * 0.61803398875 + time * 0.035) % 1;
+}
+
 /**
  * The colour wheel's colour at `time`, as red, green and blue shares:
  * white with it out; turning, a slow round of soft colours, as a
