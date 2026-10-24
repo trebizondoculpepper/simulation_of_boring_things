@@ -1,14 +1,20 @@
 import { Group, MeshBasicMaterial } from 'three';
+import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
+import { createBrandBadge } from '../../core/views/brand-badge';
 import type { RemoteValveGeometry } from '../logic/remote-valve';
 
 /**
  * A remotely operated valve at its real size (`logic/remote-valve.ts`): a
  * threaded ball valve with a small rotary actuator on its stem (water), or
  * a solenoid safety shut-off with its coil on top (gas), on a channel floor
- * stand. A lamp on the head shows open (green) or shut (red).
+ * stand. The water valve's actuator is the plant's one kind (the owner,
+ * 2026-10-24), as the actuated butterfly valves have it: a spring-return
+ * electric actuator by Grundflow in a grey housing, its domed position
+ * indicator on top turning a quarter with the ball, its power lamp and red
+ * override on its end. The gas valve's lamp shows open (green) or shut (red).
  */
 export function createRemoteValve(
   kit: PanelKit,
@@ -23,7 +29,10 @@ export function createRemoteValve(
       : `Motorised ball valve, ${g.actuator}`;
   const brass = t.paint('#ad8b4d', 0.48, 0.55);
   const cast = t.paint('#8c9599', 0.55, 0.45);
-  const head = t.paint(g.medium === 'gas' ? '#2a2f31' : '#51a5c4', 0.6);
+  const head =
+    g.medium === 'gas'
+      ? t.paint('#2a2f31', 0.6)
+      : t.paint('#6f7a82', 0.45, 0.35);
   const dark = t.paint('#25343a', 0.5);
   const galv = t.paint('#a9aeae', 0.45, 0.6);
   const { axis, length, body } = g;
@@ -121,36 +130,112 @@ export function createRemoteValve(
       8,
     );
 
-  const maker = createMicroLabel(
-    kit,
-    g.medium === 'gas' ? 'GAS-SAFE NC' : 'AQUAVOLT',
-    { height: 0.008, ink: '#f5f6ed', plate: '#25343a', maxWidth: 0.06 },
-  );
-  // On the head's side, facing the way the valve faces (+x).
+  const water = g.medium === 'water';
+  // The gas valve's maker's plate on its coil's side; the actuator's badge
+  // on its housing's side, facing the way the valve faces (+x).
+  const maker = water
+    ? createBrandBadge(kit, 'grundflow', {
+        height: Math.min(0.016, (y1 - y0) * 0.3),
+        maxWidth: (z1 - z0) * 0.85,
+      })
+    : createMicroLabel(kit, 'GAS-SAFE NC', {
+        height: 0.008,
+        ink: '#f5f6ed',
+        plate: '#25343a',
+        maxWidth: 0.06,
+      });
   maker.position.set(x1 + 0.001, (y0 + y1) / 2, (z0 + z1) / 2);
   maker.rotation.y = Math.PI / 2;
   group.add(maker);
-  const lamp = new MeshBasicMaterial({ color: '#7c2520' });
+  const lamp = new MeshBasicMaterial({ color: water ? '#1d2a1f' : '#7c2520' });
   kit.materials.push(lamp);
-  const indicator = t.cyl(
-    group,
-    lamp,
-    0.008,
-    0.004,
-    0,
-    y1 + 0.002,
-    (z0 + z1) / 2,
-    'y',
-    12,
-  );
+  const cx = (x0 + x1) / 2;
+  const cz = (z0 + z1) / 2;
+  const span = Math.min(x1 - x0, z1 - z0);
+  // The actuator's dome and its pointer, turning a quarter with the ball;
+  // the gas valve's lamp on its coil's top.
+  const pointer = new Group();
+  let overrideButton: Object3D | null = null;
+  if (water) {
+    t.box(
+      group,
+      t.paint('#59636a', 0.5, 0.3),
+      (x1 - x0) * 0.94,
+      0.006,
+      (z1 - z0) * 0.94,
+      cx,
+      y1 + 0.003,
+      cz,
+    );
+    pointer.position.set(cx, y1 + 0.006, cz);
+    pointer.userData.live = true;
+    group.add(pointer);
+    t.cyl(
+      pointer,
+      t.paint('#d8dcdf', 0.2, 0.1),
+      span * 0.3,
+      0.012,
+      0,
+      0.006,
+      0,
+      'y',
+      16,
+    );
+    t.box(
+      pointer,
+      t.paint('#f2c230', 0.4),
+      span * 0.5,
+      0.004,
+      span * 0.09,
+      0,
+      0.013,
+      0,
+    );
+    // Its power lamp and red override, on its end over the stem.
+    overrideButton = t.cyl(
+      group,
+      t.paint('#c42b23', 0.5),
+      0.006,
+      0.006,
+      cx,
+      (y0 + y1) / 2 - (y1 - y0) * 0.15,
+      z1 + 0.003,
+      'z',
+      12,
+    );
+  }
+  const indicator = water
+    ? t.cyl(
+        group,
+        lamp,
+        0.0035,
+        0.003,
+        cx + span * 0.25,
+        (y0 + y1) / 2 + (y1 - y0) * 0.2,
+        z1 + 0.0015,
+        'z',
+        10,
+      )
+    : t.cyl(group, lamp, 0.008, 0.004, 0, y1 + 0.002, cz, 'y', 12);
   indicator.userData.live = true;
   return {
     group,
     /** Where a local override button goes: on the head's end over the stem. */
     override: [0, (y0 + y1) / 2, z1 + 0.004] as const,
-    /** Its lamp: green open, red shut, amber while its motor drives it between. */
-    show(open: boolean, moving = false) {
-      lamp.color.set(moving ? '#f0a830' : open ? '#50d879' : '#d24a38');
+    /** The actuator's red override, drawn there (none on a gas valve). */
+    overrideButton,
+    /**
+     * What it shows. The gas valve's lamp: green open, red shut, amber
+     * while it moves. The actuator: its pointer at `position` (0 shut, 1
+     * open; open or shut if not given), its power lamp lit while `powered`.
+     */
+    show(open: boolean, moving = false, position?: number, powered = true) {
+      if (!water) {
+        lamp.color.set(moving ? '#f0a830' : open ? '#50d879' : '#d24a38');
+        return;
+      }
+      pointer.rotation.y = (1 - (position ?? (open ? 1 : 0))) * (Math.PI / 2);
+      lamp.color.set(powered ? '#3cdc5a' : '#1d2a1f');
     },
   };
 }

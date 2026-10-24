@@ -10,6 +10,7 @@ import {
   newMotorisedValve,
   stepMotorisedValve,
 } from './motorised-valve';
+import type { MotorisedValveState } from './motorised-valve';
 
 /** Step it `seconds` in tenths of a second. */
 const run = (
@@ -50,6 +51,17 @@ describe('a motorised ball valve', () => {
     s = run({ ...s, command: true }, MOTOR_STROKE / 3 + 0.2);
     expect(s.position).toBe(1);
     expect(motorRunning(s)).toBe(false);
+  });
+
+  it('loses its power: its spring shuts it, and it opens again only when powered', () => {
+    let s: MotorisedValveState = { ...newMotorisedValve(true), power: false };
+    expect(motorRunning(s)).toBe(true);
+    s = run(s, MOTOR_STROKE + 0.5);
+    expect(s.position).toBe(0);
+    expect(motorLimits(s)).toEqual({ open: false, shut: true });
+    expect(s.command).toBe(true);
+    s = run({ ...s, power: true }, MOTOR_STROKE + 0.5);
+    expect(s.position).toBe(1);
   });
 });
 

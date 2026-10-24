@@ -39,6 +39,8 @@ export interface BadgeOptions {
   plate?: string;
   /** How much it shows, 0 to 1: a printed mark is often faint. */
   opacity?: number;
+  /** The most it may be wide, metres: a smaller face shrinks it to fit. */
+  maxWidth?: number;
 }
 
 const PX = 256;
@@ -83,9 +85,18 @@ function drawing(id: BrandId, form: BadgeForm, ink: string | undefined) {
 export function createBrandBadge(
   kit: PanelKit,
   id: BrandId,
-  { form = 'logo', height = 0.01, ink, plate, opacity = 1 }: BadgeOptions = {},
+  {
+    form = 'logo',
+    height: asked = 0.01,
+    ink,
+    plate,
+    opacity = 1,
+    maxWidth = Infinity,
+  }: BadgeOptions = {},
 ) {
   const { texture, aspect } = drawing(id, form, ink);
+  // As tall as asked, unless that would make it (and its plate) too wide.
+  const height = Math.min(asked, maxWidth / (aspect + (plate ? 0.5 : 0)));
   const material = createPs1Material({
     map: texture,
     transparent: true,

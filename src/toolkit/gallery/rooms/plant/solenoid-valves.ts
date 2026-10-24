@@ -27,11 +27,11 @@ import type { ActuatedValveState } from '../../../components/plant/logic/actuate
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
-  'Solenoid-operated valves, as the Olympic plant room has them: a butterfly valve on a spring-return pneumatic actuator, piloted by a solenoid; and a direct solenoid valve. Command each open or shut, cut its power or its air, and watch it fail safe, shut.';
+  'Actuated valves, as the plant rooms have them: a butterfly valve on a spring-return electric actuator; and a direct solenoid valve. Command each open or shut, cut its power, and watch it fail safe, shut.';
 
 /**
  * A test station by Penfold Controls on its pedestal, for one valve: its
- * COMMAND selector (SHUT, OPEN), its POWER and AIR selectors (OFF, ON), and
+ * COMMAND selector (SHUT, OPEN), its POWER selector (OFF, ON), and
  * its lamps: ENERGISED, OPEN, SHUT (from the valve's limit switches). Its
  * own frame: on the floor, its face toward +z.
  */
@@ -43,8 +43,6 @@ function testStation(
     setCommand: (open: boolean) => void;
     power: () => boolean;
     setPower: (on: boolean) => void;
-    air: () => boolean;
-    setAir: (on: boolean) => void;
     lamps: () => { energised: boolean; open: boolean; shut: boolean };
   },
   /** The rig's parts, which its controls join. */
@@ -94,6 +92,7 @@ function testStation(
       0.05,
     );
   }
+  const seen = signal(0);
   const two = (
     legend: string,
     get: () => boolean,
@@ -106,24 +105,36 @@ function testStation(
           positions: 2,
           legend,
           name: legend,
+          // Read through `seen`, so the selector (which reads its
+          // binding through a computed) wakes when the rig's state moves.
           bound: {
             get value() {
+              void seen.value;
               return get() ? 1 : 0;
             },
-            set: (v: number) => set(v >= 0.5),
+            set: (v: number) => {
+              set(v >= 0.5);
+              seen.value++;
+            },
           },
         }),
       ),
       x,
       -0.09,
     );
-  two('COMMAND  SHUT · OPEN', io.command, io.setCommand, -0.13);
-  two('POWER  OFF · ON', io.power, io.setPower, 0);
-  two('AIR  OFF · ON', io.air, io.setAir, 0.13);
+  two('COMMAND  SHUT · OPEN', io.command, io.setCommand, -0.07);
+  two('POWER  OFF · ON', io.power, io.setPower, 0.07);
+  let last = '';
   return {
     group,
     update() {
       for (const [drive, on] of lamps) drive.value = on();
+      // Moved some other way (its override): wake the selectors.
+      const now = `${io.command()}${io.power()}`;
+      if (now !== last) {
+        last = now;
+        seen.value++;
+      }
     },
   };
 }
@@ -171,6 +182,10 @@ function rig(
     let solenoid: ReturnType<typeof createSolenoidValve> | null = null;
     if (direct) {
       solenoid = createSolenoidValve(kit, od);
+      // Its manual override works it by hand, as COMMAND does.
+      parts.uses.set(solenoid.overrideButton, () => {
+        state = { ...state, command: !state.command };
+      });
       solenoid.group.position.set(0, at, 0);
       if (!vertical) solenoid.group.rotation.z = Math.PI / 2;
       object.add(solenoid.group);
@@ -198,15 +213,9 @@ function rig(
         setPower: (on) => {
           state = { ...state, power: on };
         },
-        air: () => state.air,
-        setAir: (on) => {
-          state = { ...state, air: on };
-        },
-        lamps: () => {
-          // A direct solenoid valve needs no air: it opens on its coil alone.
-          const s = direct ? { ...state, air: true } : state;
-          return { energised: energised(s), ...limits(s) };
-        },
+        // Neither needs air: the actuator is electric, the solenoid valve
+        // opens on its coil alone.
+        lamps: () => ({ energised: energised(state), ...limits(state) }),
       },
       parts,
     );
@@ -217,9 +226,8 @@ function rig(
       object,
       parts,
       update: (delta) => {
-        const s = direct ? { ...state, air: true } : state;
-        state = { ...stepActuatedValve(s, delta, stroke), air: state.air };
-        actuated?.setSupplies(state.power, state.air);
+        state = stepActuatedValve({ ...state, air: true }, delta, stroke);
+        actuated?.setSupplies(state.power, true);
         solenoid?.setOpen(energised(state));
         station.update();
       },
@@ -229,15 +237,15 @@ function rig(
 
 export const EXHIBITS: readonly PlantExhibit[] = [
   {
-    title: 'Solenoid-operated butterfly valve, DN300',
+    title: 'Actuated butterfly valve, DN300',
     reference:
-      'On a spring-return pneumatic actuator with a NAMUR solenoid pilot and limit switch box: the Olympic main’s',
+      'On a spring-return electric actuator, its position indicator on top: the Olympic main’s',
     size: { w: 2.4, d: 1.4, h: 2.0, mount: 'floor' },
     maker: 'grundflow',
     build: rig(300, 'pvc-pressure', false, 'V1 · DN300 ACTUATED'),
   },
   {
-    title: 'Solenoid-operated butterfly valve, DN150',
+    title: 'Actuated butterfly valve, DN150',
     reference: 'On a vertical pipe, as on a pump’s discharge riser',
     size: { w: 1.6, d: 1.4, h: 2.7, mount: 'floor' },
     maker: 'grundflow',

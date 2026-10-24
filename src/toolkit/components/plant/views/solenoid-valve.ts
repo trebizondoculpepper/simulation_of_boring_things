@@ -8,7 +8,8 @@ import { FINISH, plantTools } from './plant-tools';
  * forged brass body screwed into its line, a servo-assisted diaphragm
  * opened by the black encapsulated coil above it, and on the coil its
  * DIN 43650 plug, whose LED lights while the coil is energised. It opens
- * on power and shuts when the power goes.
+ * on power and shuts when the power goes. On the body's side its manual
+ * override, a red slotted knob (`overrideButton`), for its owner to bind.
  *
  * Its own frame: its pipe along y through the origin, the coil toward +z.
  */
@@ -49,8 +50,22 @@ export function createSolenoidValve(kit: PanelKit, od = 0.054) {
   const badge = createBrandBadge(kit, 'grundflow', { height: od * 0.25 });
   badge.position.set(0, -od * 0.35, od * 2.31);
   group.add(badge);
+  // Its manual override, on the body's side.
+  const overrideButton = t.cyl(
+    group,
+    t.paint('#c42b23', 0.5),
+    od * 0.28,
+    od * 0.25,
+    od * 0.92,
+    -od * 0.3,
+    0,
+    'x',
+    12,
+  );
   return {
     group,
+    /** Its manual override knob, pressed to work it by hand. */
+    overrideButton,
     setOpen(open: boolean) {
       led.set(open);
     },

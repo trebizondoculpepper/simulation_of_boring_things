@@ -463,6 +463,15 @@ export function buildHall(
     object.add(panel.group);
   }
   const parts = panel?.parts ?? createPartSet();
+  // The make-up solenoid valve's manual override: held open by hand
+  // (HAND), or given back to its level control (AUTO).
+  if (valve)
+    parts.uses.set(valve.overrideButton, () => {
+      state = pressBalanceTank(state, {
+        type: 'makeup',
+        mode: state.makeupMode === 'hand' ? 'auto' : 'hand',
+      });
+    });
   // In the hall: the lifebuoy on the partition, beside the doorway onto the gantry.
   const lifebuoy = createLifebuoy(kit);
   lifebuoy.rotation.y = Math.PI / 2;

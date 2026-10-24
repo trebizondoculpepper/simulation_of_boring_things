@@ -23,15 +23,17 @@ import {
 } from '../logic/actuated-valve';
 
 /**
- * A solenoid-operated butterfly valve by Grundflow (`logic/actuated-valve.ts`),
- * after a wafer butterfly valve on a spring-return rack-and-pinion
- * pneumatic actuator with a NAMUR solenoid pilot and a limit switch box:
- * the valve's body between its flanges as the room's lever valves have it
- * (`plantTools.butterflyValve`); on its stem a yoke, the actuator's
- * anodised body with its end caps (its springs inside), on top the switch
- * box with its yellow visual indicator turning a quarter as the disc does;
- * on the actuator's side the solenoid valve, its coil and DIN plug (its
- * lamp lit while energised), its red manual override, and its air line.
+ * An actuated butterfly valve by Grundflow (`logic/actuated-valve.ts`): the
+ * valve's body between its flanges as the room's lever valves have it
+ * (`plantTools.butterflyValve`), and on its stem its drive. Every plant
+ * valve is driven electrically (the owner, 2026-10-24): a spring-return
+ * quarter-turn electric actuator, its motor heard running up, steady and
+ * down, a relay's click and the end stop's thud, its spring shutting it
+ * when its power goes. Still to hand, `drive: 'pneumatic'`: a spring-return
+ * rack-and-pinion pneumatic actuator with a NAMUR solenoid pilot and a
+ * limit switch box (its anodised body and end caps, the switch box with
+ * its yellow indicator, the solenoid's coil, DIN plug, lamp, red override
+ * and air line), its cylinder heard exhausting.
  *
  * Driven by `binding` (the world's state of the valve: open or shut, as
  * the panel commands); its override, pressed, toggles it, as a fitter
@@ -51,9 +53,9 @@ export function createActuatedButterflyValve(
     air?(): boolean;
   },
   {
-    drive = 'pneumatic',
+    drive = 'electric',
   }: {
-    /** How it is driven: by air, piloted by its solenoid, or by an electric motor. */
+    /** How it is driven: by an electric motor (every plant valve, the owner, 2026-10-24), or by air, piloted by its solenoid. */
     drive?: 'pneumatic' | 'electric';
   } = {},
 ) {
@@ -277,10 +279,15 @@ export function createActuatedButterflyValve(
       0.004,
       8,
     );
+    // Its badge across the front left of its lamp and override, as large
+    // as fits there.
+    const left = -W / 2 + 0.006;
+    const right = W * 0.28 - 0.018;
     const badge = createBrandBadge(kit, 'grundflow', {
       height: Math.min(0.03, D * 0.22),
+      maxWidth: right - left,
     });
-    badge.position.set(-W * 0.15, mid, front + 0.001);
+    badge.position.set((left + right) / 2, mid, front + 0.001);
     head.add(badge);
     return { indicator, lamp, override, pilot: head };
   };

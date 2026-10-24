@@ -13,7 +13,17 @@ export interface MotorisedValveState {
   position: number;
   /** The panel's command: open. */
   command: boolean;
+  /**
+   * Whether its actuator has power: without it, its spring drives it shut
+   * whatever it is commanded (spring-return, as every actuated valve is,
+   * the owner, 2026-10-24). Powered unless said otherwise.
+   */
+  power?: boolean;
 }
+
+/** Where it is going: open if powered and commanded open, otherwise shut. */
+export const motorGoal = (s: MotorisedValveState) =>
+  (s.power ?? true) && s.command ? 1 : 0;
 
 /**
  * A full stroke, seconds. Belimo's own small actuators take 35 to 90 s;
@@ -32,7 +42,7 @@ export function stepMotorisedValve(
   stroke = MOTOR_STROKE,
 ): MotorisedValveState {
   if (!(dt > 0)) return s;
-  const goal = s.command ? 1 : 0;
+  const goal = motorGoal(s);
   const step = dt / stroke;
   const position =
     goal > s.position
@@ -41,9 +51,9 @@ export function stepMotorisedValve(
   return position === s.position ? s : { ...s, position };
 }
 
-/** Whether its motor is running: commanded somewhere it has not reached. */
+/** Whether it is moving: driven by its motor, or sprung shut, somewhere it has not reached. */
 export const motorRunning = (s: MotorisedValveState) =>
-  s.position !== (s.command ? 1 : 0);
+  s.position !== motorGoal(s);
 
 /** What its limit switches say. */
 export const motorLimits = (s: MotorisedValveState) => ({

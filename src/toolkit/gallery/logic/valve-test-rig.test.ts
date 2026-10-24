@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  BALL_RIG,
+  BYPASS,
   SEAL,
   createValveTestRig,
   rigLcdLines,
@@ -12,6 +14,38 @@ const run = (rig: ReturnType<typeof createValveTestRig>, seconds: number) => {
 };
 
 describe('valve test rig', () => {
+  it('has a ball valve line of its own: smaller, slower, and failing shut the same', () => {
+    const rig = createValveTestRig({ id: 'ball', ...BALL_RIG });
+    expect(rig.stroke).toBe(BALL_RIG.stroke);
+    rig.setCommand(true);
+    run(rig, BALL_RIG.stroke + 0.5);
+    expect(rig.readings().open).toBe(true);
+    expect(rig.readings().flow).toBeCloseTo(BALL_RIG.maxRate, 3);
+    rig.setSupply(false);
+    run(rig, BALL_RIG.stroke + 0.5);
+    expect(rig.readings().shut).toBe(true);
+    expect(rig.readings().flow).toBe(0);
+  });
+
+  it('passes its bypass solenoid valve’s flow alongside the butterfly’s, and snaps it shut when the power goes', () => {
+    const rig = createValveTestRig({ bypass: BYPASS.maxRate });
+    rig.setSolenoidCommand(true);
+    rig.step(0.1);
+    expect(rig.readings().solenoidOpen).toBe(true);
+    expect(rig.readings().flow).toBeCloseTo(BYPASS.maxRate, 3);
+    rig.setCommand(true);
+    run(rig, rig.stroke + 0.5);
+    expect(rig.readings().flow).toBeCloseTo(20, 3);
+    rig.setCommand(false);
+    run(rig, rig.stroke + 0.5);
+    expect(rig.readings().flow).toBeCloseTo(BYPASS.maxRate, 3);
+    rig.setSupply(false);
+    rig.step(0.1);
+    expect(rig.readings().solenoidOpen).toBe(false);
+    expect(rig.readings().flow).toBe(0);
+    expect(rig.solenoidCommand()).toBe(true);
+  });
+
   it('flows in proportion to the opening, and not at all shut', () => {
     expect(valveFlow(0, 20)).toBe(0);
     expect(valveFlow(SEAL, 20)).toBe(0);

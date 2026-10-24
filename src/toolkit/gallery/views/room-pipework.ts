@@ -192,10 +192,6 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         room !== 'plant_pool_01' ||
         !store ||
         serviceAvailable(store.world.value.plant, 'plant_pool_01', 'power'),
-      air: () =>
-        room !== 'plant_pool_01' ||
-        !store ||
-        serviceAvailable(store.world.value.plant, 'plant_pool_01', 'air'),
       set: (open: boolean) =>
         store?.dispatch({ type: 'plant/valve', id: installed.assetId, open }),
     };
@@ -281,9 +277,6 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
           v.axis === 'y' ? 'y' : 'z',
           `${installed.tag} · ${v.name}`,
           binding,
-          // Plant Room 1's are electric, spring-return (the owner,
-          // 2026-10-24); the Olympic room's stay on air.
-          { drive: room === 'plant_pool_01' ? 'electric' : 'pneumatic' },
         ),
       );
       actuated.object.position.set(...lift(v.at));

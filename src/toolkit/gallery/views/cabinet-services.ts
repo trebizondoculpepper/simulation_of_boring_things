@@ -12,7 +12,8 @@ import { createPipe, PIPE_KINDS } from '../../components/core/views/pipe-kinds';
 import { markPipe } from '../../components/plant/views/pipe-markers';
 import type { PipeService } from '../../components/plant/views/pipe-markers';
 import { worldStore } from '../../save/world-store';
-import type { IsolatorName } from '../../../game/plant/services';
+import type { IsolatorName, ServiceRoom } from '../../../game/plant/services';
+import { serviceAvailable } from '../../../game/plant/services';
 import { createPowerIsolator } from '../../components/industrial-control/views/panel-switchgear';
 import {
   addChainWheel,
@@ -36,6 +37,7 @@ import { CHAIN_TO } from '../logic/room-pipes';
 import { cabinetValvePanel } from '../logic/cabinet-pipes';
 import { createRemoteValve } from '../../components/plant/views/remote-actuators';
 import {
+  motorGoal,
   motorLimits,
   motorRate,
   motorRunning,
@@ -45,6 +47,10 @@ import {
 } from '../../components/plant/logic/motorised-valve';
 import { signal } from '@preact/signals-core';
 import { partAudio } from '../../components/core/audio/part-audio';
+import {
+  RELAY_CLICK,
+  VALVE_STOP,
+} from '../../components/plant/audio/actuated-valve';
 import { footbathDischarging } from '../../../game/plant/footbath-discharge';
 import { jacuzziDischarging } from '../../../game/world';
 import { machineTone } from '../../components/sound/audio/machine-tones';
@@ -188,25 +194,44 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
         }
         mount.add(motor.group);
         group.add(mount);
+        // Its red override, pressed, works it by hand, as the panel would.
+        if (motor.overrideButton)
+          uses.set(motor.overrideButton, () => binding.set(!binding.open()));
         // It travels to where the world commands over its stroke, its gear
         // motor heard running up as it sets off, steady as it moves, and
         // running down as it arrives (`gear-motor`).
         let travel = newMotorisedValve(binding.open());
         // Each motor its own few hertz off the others.
-        const pitch = signal(motorRate(motorStops.length));
+        const index = motorStops.length;
+        const pitch = signal(motorRate(index));
         // And its own time to turn.
         const stroke = motorStroke(motorStops.length);
         let running = false;
+        // Spring-return: without its room's power it is sprung shut.
+        const powered = () =>
+          !store ||
+          serviceAvailable(
+            store.world.value.plant,
+            room as ServiceRoom,
+            'power',
+          );
         motorLamps.push((delta) => {
+          const power = powered();
           travel = stepMotorisedValve(
-            { ...travel, command: binding.open() },
+            { ...travel, command: binding.open(), power },
             delta,
             stroke,
           );
           const moving = motorRunning(travel);
-          motor.show(motorLimits(travel).open, moving);
+          motor.show(motorLimits(travel).open, moving, travel.position, power);
+          // A little lower unwinding shut than driving open.
+          pitch.value = motorRate(index) * (motorGoal(travel) ? 1 : 0.9);
           const sounding = audible && moving;
           if (sounding !== running) {
+            // As the actuated valves (`actuated-butterfly-valve.ts`): its
+            // relay clicks as it sets off, its end stop thuds as it arrives.
+            if (audible)
+              partAudio.play(sounding ? RELAY_CLICK : VALVE_STOP, motor.group);
             running = sounding;
             partAudio.hold(
               motor.group,

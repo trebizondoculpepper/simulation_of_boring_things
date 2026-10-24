@@ -11,20 +11,39 @@ import {
   target,
 } from '../../components/plant/logic/actuated-valve';
 import type { ActuatedValveState } from '../../components/plant/logic/actuated-valve';
+import { MOTOR_STROKE } from '../../components/plant/logic/motorised-valve';
 
 /**
- * Dev37's valve test rig (the owner, 2026-10-24: "a new room to test out
- * valves and their sounds"): an ideal mains-water source piped to an
- * ideal sink through one DN80 butterfly valve on a spring-return electric
- * actuator. Its Penfold panel commands it OPEN or SHUT; a throw switch,
- * its supply isolator, cuts its power, and its spring drives it shut. The
+ * Dev37's valve test rigs (the owner, 2026-10-24: "a new room to test out
+ * valves and their sounds"), one of each kind of actuated valve: an ideal
+ * mains-water source piped to an ideal sink through a valve on a
+ * spring-return electric actuator, a DN80 butterfly valve on one line
+ * (`RIG`) and a 35 mm ball valve on the other (`BALL_RIG`). Each line's
+ * Penfold panel commands its valve OPEN or SHUT; a throw switch, its
+ * supply isolator, cuts its power, and its spring drives it shut. The
  * panel keeps its command on its own supply, so with power back the valve
  * does what the panel last asked. Water flows in proportion to how far the
- * disc stands open, none at the shut limit. Pure; seconds, m³/h.
+ * valve stands open, none at the shut limit. Pure; seconds, m³/h.
  */
 
-/** The rig's pipe and valve: DN80, 90 mm outside (`PIPE_SIZES[80].od`). */
-export const RIG = { dn: 80, od: 0.09 } as const;
+/** The butterfly valve's line: DN80, 90 mm outside (`PIPE_SIZES[80].od`), 20 m³/h wide open. */
+export const RIG = { dn: 80, od: 0.09, maxRate: 20 } as const;
+
+/** The ball valve's line: 35 mm copper, 3 m³/h wide open; its stroke a motorised ball valve's (`MOTOR_STROKE`). */
+export const BALL_RIG = {
+  od: 0.035,
+  maxRate: 3,
+  stroke: MOTOR_STROKE,
+} as const;
+
+/**
+ * The direct solenoid valve on the butterfly line's bypass (the owner,
+ * 2026-10-24: "a solenoid valve in parallel with the spring butterfly
+ * valve"): 54 mm, passing 4 m³/h of the line's flow when open. Normally
+ * closed: it opens the moment its coil is energised, powered and commanded
+ * open, and snaps shut when either goes.
+ */
+export const BYPASS = { od: 0.054, maxRate: 4 } as const;
 
 /** Below this opening its seat seals: the shut limit (`limits`). */
 export const SEAL = 0.02;
@@ -33,21 +52,40 @@ export const SEAL = 0.02;
 export const valveFlow = (position: number, full: number) =>
   position <= SEAL ? 0 : full * Math.min(1, position);
 
-export function createValveTestRig() {
+export function createValveTestRig({
+  id = 'rig',
+  od = RIG.od,
+  maxRate = RIG.maxRate,
+  stroke = strokeTime(od),
+  bypass,
+}: {
+  id?: string;
+  /** Its pipe's outside diameter, metres. */
+  od?: number;
+  /** Its source's most, m³/h. */
+  maxRate?: number;
+  /** Its valve's full stroke, seconds. */
+  stroke?: number;
+  /** A solenoid valve in parallel with its valve, passing this most, m³/h; none if not given. */
+  bypass?: number;
+} = {}) {
   const source = createExperimentalSource({
-    id: 'rig.source',
+    id: `${id}.source`,
     substance: 'mains-water',
-    maxRate: 20,
+    maxRate,
   });
   const sink = createExperimentalSink({
-    id: 'rig.sink',
+    id: `${id}.sink`,
     substance: 'mains-water',
-    maxRate: 30,
+    maxRate: maxRate * 1.5,
   });
   // An electric drive needs no air.
   let valve: ActuatedValveState = { ...newActuatedValve(false), air: true };
   let flow = 0;
-  const stroke = strokeTime(RIG.od);
+  let solenoidCommand = false;
+  /** The bypass's solenoid valve: open while its coil is energised. */
+  const solenoidOpen = () =>
+    bypass !== undefined && valve.power && solenoidCommand;
   /** The line's flow wide open: the pressure across the two resistances in series, up to either's most. */
   const fullFlow = () =>
     source.remaining() > 0 && sink.space() > 0
@@ -74,10 +112,26 @@ export function createValveTestRig() {
       valve = { ...valve, power: on };
     },
     position: () => valve.position,
+    /** Whether it has a bypass solenoid valve. */
+    hasBypass: bypass !== undefined,
+    /** The bypass solenoid valve's command, and whether it stands open. */
+    solenoidCommand: () => solenoidCommand,
+    setSolenoidCommand(open: boolean) {
+      solenoidCommand = open;
+    },
+    solenoidOpen,
     step(dt: number) {
       if (!(dt > 0)) return;
       valve = stepActuatedValve(valve, dt, stroke);
-      const amount = (valveFlow(valve.position, fullFlow()) * dt) / 3600;
+      // The two in parallel: each its share of the line's flow, together
+      // no more than the line passes.
+      const full = fullFlow();
+      const share = Math.min(
+        1,
+        valveFlow(valve.position, 1) +
+          (solenoidOpen() ? (bypass ?? 0) / maxRate : 0),
+      );
+      const amount = (full * share * dt) / 3600;
       const took = sink.accept(source.draw(amount, dt), dt);
       flow = (took * 3600) / dt;
     },
@@ -92,6 +146,7 @@ export function createValveTestRig() {
         received: sink.received(),
         supply: valve.power,
         command: valve.command,
+        solenoidOpen: solenoidOpen(),
       };
     },
   };
