@@ -99,10 +99,37 @@ describe('the jacuzzi cabinet on trial, its valves worked', () => {
     expect(trialPanel(t).flowing).toBe(true);
   });
 
-  it('trips on no flow with its overflow shut, the gutter backing up but not over the deck', () => {
-    const t = runJacuzziTrial(act(steady, valve('overflow', false)), 60);
+  it('trips on no flow with its suction from the tank shut', () => {
+    const t = runJacuzziTrial(
+      act(steady, valve('suction', false)),
+      NO_FLOW_TRIP + 1,
+    );
     expect(t.cabinet.trip).toBe('no-flow');
-    expect(t.flooded).toBe(0);
+  });
+
+  it('with its overflow shut, backs the gutter up over the deck while the pump runs the tank down to TANK LOW', () => {
+    let t = act(steady, valve('overflow', false), {
+      act: 'source',
+      source: 'water',
+      on: false,
+    });
+    t = runJacuzziTrial(t, 120);
+    expect(t.flooded).toBeGreaterThan(0.05);
+    expect(t.tankLow).toBe(true);
+    expect(trialPanel(t).messages[0]).toBe('TRIP: TANK LOW');
+    // Not the latched no-flow trip: its suction and return are open.
+    expect(t.cabinet.trip).toBe('');
+    // Reopened, the gutter drains back, the tank recovers, and it runs again.
+    t = runJacuzziTrial(
+      act(t, valve('overflow', true), {
+        act: 'source',
+        source: 'water',
+        on: true,
+      }),
+      600,
+    );
+    expect(t.tankLow).toBe(false);
+    expect(trialPanel(t).flowing).toBe(true);
   });
 
   it('keeps the jets off with their own valves shut, the cabinet running on', () => {

@@ -34,7 +34,9 @@ import { createBusbarTapOff } from '../../components/industrial-control/views/bu
 import { BUSBAR_TAP_OFF } from '../../components/industrial-control/logic/enclosures';
 import type { Service } from '../logic/cabinet-pipes';
 import { CHAIN_TO } from '../logic/room-pipes';
-import { cabinetValvePanel } from '../logic/cabinet-pipes';
+import { cabinetBalanceTank, cabinetValvePanel } from '../logic/cabinet-pipes';
+import { createSpaBalanceTank } from '../../components/plant/views/spa-balance-tank';
+import { JACUZZI_BALANCE_TANK } from '../../../game/plant/spa-balance-tank';
 import { createRemoteValve } from '../../components/plant/views/remote-actuators';
 import {
   motorGoal,
@@ -340,31 +342,47 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   let drainFall: ReturnType<typeof createFallingWater> | null = null;
   // The drain's floor gully, its grating flush with the floor, and the
   // tundish on it that the drain discharges into across an air gap.
-  const gully = cabinetGully(room);
-  if (gully) {
-    const iron = new MeshStandardMaterial({
-      color: '#2a2c2d',
-      roughness: 0.7,
-      metalness: 0.3,
-    });
-    const steel = new MeshStandardMaterial({
-      color: '#b9bec0',
-      roughness: 0.35,
-      metalness: 0.7,
-    });
-    kit.materials.push(iron, steel);
+  const iron = new MeshStandardMaterial({
+    color: '#2a2c2d',
+    roughness: 0.7,
+    metalness: 0.3,
+  });
+  const steel = new MeshStandardMaterial({
+    color: '#b9bec0',
+    roughness: 0.35,
+    metalness: 0.7,
+  });
+  kit.materials.push(iron, steel);
+  /** A floor gully, its grating flush, and the tundish on it. */
+  const tundishOnGully = ([x, , z]: readonly [number, number, number]) => {
     const grating = new Mesh(new BoxGeometry(0.3, 0.01, 0.3), iron);
-    grating.position.set(gully[0], floorY + 0.005, gully[2]);
+    grating.position.set(x, floorY + 0.005, z);
     const tundish = new Mesh(
       new CylinderGeometry(0.07, 0.025, 0.1, 20, 1, true),
       steel,
     );
-    tundish.position.set(gully[0], floorY + 0.07, gully[2]);
+    tundish.position.set(x, floorY + 0.07, z);
     tundish.name = 'Drain tundish';
-    drainMouth = tundish;
     const tail = new Mesh(new CylinderGeometry(0.02, 0.02, 0.03, 12), steel);
-    tail.position.set(gully[0], floorY + 0.015, gully[2]);
+    tail.position.set(x, floorY + 0.015, z);
     group.add(grating, tundish, tail);
+    return tundish;
+  };
+  // The jacuzzi's balance tank, north of its cabinet, its gauge reading
+  // the world's level, its overflow's own tundish and gully.
+  const tankAt = cabinetBalanceTank(room);
+  const tank = tankAt
+    ? createSpaBalanceTank(kit, { ...JACUZZI_BALANCE_TANK, tag: 'PL3-BT1' })
+    : null;
+  if (tank && tankAt) {
+    tank.group.position.set(tankAt.x, floorY, tankAt.z);
+    group.add(tank.group);
+    tundishOnGully(tankAt.gully);
+  }
+  const gully = cabinetGully(room);
+  if (gully) {
+    const tundish = tundishOnGully(gully);
+    drainMouth = tundish;
     // The pipe ends at 0.17 m (`cabinet-pipes.ts`); the water lands a
     // little way down inside the tundish, under its rim at 0.12 m.
     drainFall = createFallingWater(kit, DRAIN_STREAM);
@@ -418,6 +436,8 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     group,
     isolator,
     uses,
+    /** What stands on its floor for the walker: the balance tank. */
+    solids: tankAt ? [tankAt.footprint] : [],
     setAudible(on: boolean) {
       if (on === audible) return;
       audible = on;
@@ -435,6 +455,10 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       drainFall?.dispose();
     },
     update(delta: number) {
+      // Its balance tank's gauge, at the world's level.
+      tank?.setLevel(
+        store?.world.value.pools.pool_03.balance ?? JACUZZI_BALANCE_TANK.float,
+      );
       // As the world has it, switched here or anywhere.
       const on = store?.world.value.plant.isolators[name];
       if (isolator && on !== undefined && on !== isolator.on) isolator.set(on);

@@ -1,6 +1,6 @@
 # 056: The jacuzzi's balance tank
 
-Status: specified 2026-10-24. Stage 1 done (1305a28); stage 2 not started.
+Status: specified 2026-10-24. Stage 1 done (1305a28), stage 2 done 2026-10-24; a trial room, dev38, tests the cabinet with an ideal spa, tank and sources.
 
 ## Purpose
 

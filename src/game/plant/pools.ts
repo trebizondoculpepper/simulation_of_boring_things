@@ -263,6 +263,8 @@ export interface JacuzziCirculation {
   flowing: boolean;
   /** Heat reaching its heat exchanger through its heating valves. */
   heat: boolean;
+  /** Its gutter's way to the balance tank shut: the overflow spills. */
+  overflowShut?: boolean;
 }
 
 /** Whether each chemical is to be had: its store not run dry. */
@@ -481,7 +483,9 @@ export function stepPoolsWater(
         makeUpOpen: share > 0 && makeUpOpen,
         drainDown,
         drainRate,
-        ...(id === 'pool_03' ? { gravityDrain: true } : {}),
+        ...(id === 'pool_03'
+          ? { gravityDrain: true, overflowShut: !!jacuzzi?.overflowShut }
+          : {}),
         drained: 0,
         spilt: 0,
         backwashed: 0,

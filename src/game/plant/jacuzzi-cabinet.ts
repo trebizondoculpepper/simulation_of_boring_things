@@ -10,7 +10,7 @@ import type { BalanceTankReading } from './spa-balance-tank';
  *
  * The pump is called for while the cabinet is supplied (its room's power
  * and its isolator) and switched on, and not tripped. With no way through
- * its valves (its overflow or its return shut, `jacuzziPaths`) it runs
+ * its valves (its suction or its return shut, `jacuzziPaths`) it runs
  * dead-headed, PUMP RUN lit and nothing moving; after `NO_FLOW_TRIP`
  * seconds of that its flow switch trips it, and it stays tripped, dark,
  * until RESET is pressed with a way through again. A valve passing
@@ -58,7 +58,7 @@ export type JacuzziCabinetAction =
 export interface JacuzziCabinetInputs {
   /** Its room's power and its isolator, both on. */
   supplied: boolean;
-  /** Its overflow and return valves both open (`jacuzziPaths`). */
+  /** Its suction and return valves both open (`jacuzziPaths`). */
   path: boolean;
   /** Its balance tank. */
   tank: BalanceTankReading;

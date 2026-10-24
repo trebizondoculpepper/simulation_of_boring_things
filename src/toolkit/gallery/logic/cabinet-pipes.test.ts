@@ -47,10 +47,12 @@ describe.each([
     const ports = cabinetPorts(jets);
     expect(ports.length).toBe(jets ? 9 : 6);
     // Each port's run; the busbar, and the links from its tap-off to the
-    // switch-fuse and from the switch-fuse to the isolator besides; and in
-    // the footbath's room its make-up main, passing through.
+    // switch-fuse and from the switch-fuse to the isolator besides; in
+    // the footbath's room its make-up main, passing through; in the
+    // jacuzzi's, its balance tank's: the spa's overflow into it, its
+    // make-up and its own overflow.
     expect(runs.length).toBe(
-      ports.length + 3 + (room === 'plant_pool_04' ? 1 : 0),
+      ports.length + 3 + (room === 'plant_pool_04' ? 1 : 3),
     );
     for (const kind of [
       'pool water',
@@ -77,8 +79,12 @@ describe.each([
   it('takes the spa’s water out north, and the heating in from the south, each through the wall in its fitting', () => {
     for (const r of runs) {
       const end = r.points[r.points.length - 1];
+      // The pump's suction ends at its balance tank, in the room.
+      if (r.name === 'Suction from the balance tank') continue;
       const out = r.service === 'pool water' || r.service === 'air';
-      const south = r.service.startsWith('heating');
+      const south =
+        r.service.startsWith('heating') ||
+        r.name === 'Make-up to the balance tank';
       if (!out && !south) continue;
       // Through the wall to its outer face, 0.2 m beyond the inner.
       expect(end[2], r.name).toBeCloseTo(out ? -(h + 0.2) : h + 0.2);
@@ -269,6 +275,9 @@ describe.each([
         if (Math.abs(a[1] - b[1]) > 1e-9) continue;
         // But for a stub's first length, out of its panel at its port.
         if (near(a, r.points[0])) continue;
+        // And the jacuzzi's suction from its balance tank, low along the
+        // wall as a flooded suction must be (`SUCTION_LEVEL`).
+        if (r.name === 'Suction from the balance tank') continue;
         expect(a[1], r.name).toBeGreaterThanOrEqual(2.2);
       }
   });

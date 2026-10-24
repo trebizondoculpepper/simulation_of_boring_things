@@ -349,6 +349,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   const wallsDown = [
     ...shellSolids(plan, false),
     ...(machines?.solids ?? []),
+    ...(services?.solids ?? []),
     ...(hall === 'pool_03' ? [JACUZZI_MUSIC_CABINET.footprint] : []),
   ].map(toMetre);
   /** The walker's floor's height, metres. */

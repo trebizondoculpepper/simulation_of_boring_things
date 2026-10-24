@@ -70,6 +70,7 @@ export const TRIAL = {
 } as const;
 
 export type TrialValve =
+  | 'suction'
   | 'overflow'
   | 'return'
   | 'heatingFlow'
@@ -85,6 +86,7 @@ export const TRIAL_VALVES: readonly {
   tag: string;
   legend: string;
 }[] = [
+  { id: 'suction', tag: 'IV8', legend: 'SUCTION FROM TANK' },
   { id: 'overflow', tag: 'IV2', legend: 'OVERFLOW FROM SPA' },
   { id: 'return', tag: 'IV1', legend: 'RETURN TO SPA' },
   { id: 'heatingFlow', tag: 'IV3', legend: 'HEATING FLOW' },
@@ -125,6 +127,7 @@ export function newJacuzziTrial(): JacuzziTrial {
   return {
     cabinet: newJacuzziCabinet(),
     valves: {
+      suction: true,
       overflow: true,
       return: true,
       heatingFlow: true,
@@ -168,7 +171,7 @@ const makingUp = (t: JacuzziTrial) =>
 export function trialInputs(t: JacuzziTrial): JacuzziCabinetInputs {
   return {
     supplied: t.power,
-    path: t.valves.overflow && t.valves.return,
+    path: t.valves.suction && t.valves.return,
     tank: cabinetTanks(
       {
         tank: 'external',

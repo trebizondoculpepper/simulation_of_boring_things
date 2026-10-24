@@ -79,6 +79,7 @@ export const stepJacuzzi = (
 export const JACUZZI_VALVES = {
   return: 'valve-0090',
   overflow: 'valve-0091',
+  suction: 'valve-0100',
   jetsSuction: 'valve-0089',
   jetsDischarge: 'valve-0088',
   air: 'valve-0087',
@@ -88,7 +89,9 @@ export const JACUZZI_VALVES = {
 
 /**
  * Which of its machines have a way through their valves: the circulation
- * pump draws from the spa's overflow and returns to the spa, the jet pump
+ * pump draws from the balance tank (its suction) and returns to the spa;
+ * the spa's overflow drains to the tank (shut, its gutter backs up and
+ * spills over the deck while the tank runs down); the jet pump
  * from its suction to its discharge, the blower to its ring. With either
  * of a pump's valves shut, its flow switch stops it (the owner,
  * 2026-10-24: all shut but the drain, the pump and its dosing stop). The
@@ -99,7 +102,9 @@ export function jacuzziPaths(valves?: Record<string, boolean>) {
   const open = (k: keyof typeof JACUZZI_VALVES) =>
     valves?.[JACUZZI_VALVES[k]] ?? true;
   return {
-    circulation: open('overflow') && open('return'),
+    circulation: open('suction') && open('return'),
+    /** The gutter's way to the balance tank. */
+    overflow: open('overflow'),
     jets: open('jetsSuction') && open('jetsDischarge'),
     air: open('air'),
     /** The heating's primary through its heat exchanger. */

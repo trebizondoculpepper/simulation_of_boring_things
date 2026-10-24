@@ -80,9 +80,29 @@ describe('the jacuzzi cabinet, with its valve panel and its mimic', () => {
     expect(later.pools.pool_03.flow).toBeLessThan(1);
   });
 
-  it('trips out with its overflow (its suction) shut', () => {
-    const w = advance(valve(start, 'overflow', false), NO_FLOW_TRIP + 1, 0.5);
+  it('trips out with its suction from the balance tank shut', () => {
+    const w = advance(valve(start, 'suction', false), NO_FLOW_TRIP + 1, 0.5);
     expect(w.jacuzziCabinet.trip).toBe('no-flow');
+  });
+
+  it('with its overflow shut, spills the gutter over the deck and runs its tank down until TANK LOW', () => {
+    let w = valve(start, 'overflow', false);
+    w = applyAction(w, { type: 'pool/make-up', pool: 'pool_03', open: false });
+    const spilt = (x: World) => x.pools.pool_03.level;
+    let lowSeen = false;
+    // It trips on TANK LOW, the spa's floor drains refill the tank by
+    // gravity, it restarts, and round again: never the latched trip.
+    for (let i = 0; i < 120; i++) {
+      w = advance(w, 1, 1);
+      if (w.pools.pool_03.tripped) {
+        lowSeen = true;
+        expect(jacuzziCabinetPanel(w).messages[0]).toBe('TRIP: TANK LOW');
+      }
+      expect(w.jacuzziCabinet.trip).toBe('');
+    }
+    expect(lowSeen).toBe(true);
+    // The spa's water lost over the deck: its level below its lip.
+    expect(spilt(w)).toBeLessThan(0);
   });
 
   it('stays tripped once the valve reopens, until RESET; RESET with it still shut does nothing', () => {

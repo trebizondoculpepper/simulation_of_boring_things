@@ -1,4 +1,5 @@
 import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
+import { JACUZZI_BALANCE_TANK } from '../../../game/plant/spa-balance-tank';
 import { choosePipe } from '../../components/core/logic/plumber';
 import type { Placed } from './room-equipment';
 import {
@@ -56,7 +57,7 @@ export interface CabinetPort {
   /** What its run's label says. */
   label: string;
   /** Where its run goes. */
-  to: 'pool' | 'plant' | 'drain' | 'isolator';
+  to: 'pool' | 'plant' | 'drain' | 'isolator' | 'tank';
   /** Which way it flows: out of the cabinet along its run, or in. */
   flow: 'out' | 'in';
 }
@@ -156,6 +157,16 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
     },
   ];
   if (jets) {
+    // The jacuzzi's cabinet is plumbed to an external balance tank
+    // (`spa-balance-tank.ts`; the owner, 2026-10-24): its overflow stub is
+    // its pump's suction from the tank; the spa's overflow goes to the tank.
+    const overflow = ports.findIndex((p) => p.name === 'Overflow from the spa');
+    ports[overflow] = {
+      ...ports[overflow],
+      name: 'Suction from the balance tank',
+      label: 'TANK SUCTION',
+      to: 'tank',
+    };
     const jx = c.w / 2 - 1.1 / 2;
     const base = 0.1;
     ports.push(
@@ -472,6 +483,51 @@ export function cabinetValvePanel(room: string, trial?: Placed) {
   };
 }
 
+/**
+ * The jacuzzi's balance tank (`JACUZZI_BALANCE_TANK`): standing north of
+ * its cabinet in the room's north-west corner, clear of the walls and the
+ * cabinet's runs; its nozzles, in the room: its suction outlet low on its
+ * south side, toward the cabinet; the spa's overflow in through its lid;
+ * its make-up's float valve on its lid; its overflow out high on its
+ * north side, down into a tundish on a floor gully of its own.
+ */
+export function cabinetBalanceTank(room: string) {
+  if (room !== 'plant_pool_03') return null;
+  const t = JACUZZI_BALANCE_TANK;
+  const x = -3.2;
+  const z = -2.3;
+  const r = t.diameter / 2;
+  const top = t.height;
+  return {
+    x,
+    z,
+    r,
+    height: top,
+    /** Where it stands, for the walker. */
+    footprint: { minX: x - r, maxX: x + r, minZ: z - r, maxZ: z + r },
+    /** Its suction outlet, low on its west side, toward the wall. */
+    suction: [x - r, 0.3, z] as Vec3,
+    overflowIn: [x - 0.25, top, z - 0.25] as Vec3,
+    makeUp: [x - 0.4, top, z + 0.2] as Vec3,
+    overflowOut: [x, top - 0.12, z - r] as Vec3,
+    /** Its overflow's tundish and gully, beyond its north side. */
+    gully: [x, 0, z - r - 0.3] as Vec3,
+  };
+}
+
+/** The spa's overflow comes through the north wall this high, then drops into the tank. */
+const TANK_OVERFLOW_LEVEL = 2.25;
+/** The tank's make-up runs in from the south this high, over the room's other lanes. */
+const TANK_MAKE_UP_LEVEL = 3.0;
+/**
+ * The tank's suction runs low, as a flooded suction must (no high point
+ * to trap air): this high, along the west wall in the cabinet's service
+ * space, under every other stub; the one level run below head height.
+ */
+export const SUCTION_LEVEL = 0.3;
+/** Its lane along the west wall, this far off it. */
+const SUCTION_OFF_WALL = 0.15;
+
 /** Where the drain's tundish and floor gully stand: under its stub's turn. */
 export function cabinetGully(room: string, trial?: Placed): Vec3 | null {
   const s = setting(room, trial);
@@ -664,6 +720,99 @@ export function cabinetPipes(
         name: 'Drain to waste valve',
       };
     }
+  }
+  // The jacuzzi's balance tank's runs: the pump's suction from it, the
+  // spa's overflow into it, its make-up, and its overflow to its gully.
+  const tank = cabinetBalanceTank(room);
+  const suction = ports.find((p) => p.port.to === 'tank');
+  if (tank && suction) {
+    const { at, off } = suction;
+    const lane = -s.layout.box.w / 2 + SUCTION_OFF_WALL;
+    const y = SUCTION_LEVEL;
+    const [tx, , tz] = tank.suction;
+    add(suction.port, [
+      at,
+      off,
+      [off[0], y, off[2]],
+      [lane, y, off[2]],
+      [lane, y, tz],
+      [tx, y, tz],
+    ]);
+    const run = runs[runs.length - 1];
+    run.valve = {
+      id: 'Suction from the balance tank valve',
+      at: [off[0], (off[1] + y) / 2, off[2]],
+      axis: 'y',
+      operator: 'motor',
+      installed: true,
+      name: 'Suction from the balance tank valve',
+    };
+    // The spa's overflow: in through the north wall, down into the tank.
+    const [ox, oy, oz] = tank.overflowIn;
+    const overflow: CabinetRun = {
+      name: 'Overflow from the spa',
+      kind: 'pvc-pressure',
+      od: 0.05,
+      service: 'pool water',
+      label: 'SPA OVERFLOW',
+      // From the spa to the tank, against its points.
+      flow: -1,
+      ...throughWall(
+        [
+          [ox, oy, oz],
+          [ox, TANK_OVERFLOW_LEVEL, oz],
+          [ox, TANK_OVERFLOW_LEVEL, -h],
+        ],
+        h,
+        'pvc-pressure',
+      ),
+    };
+    overflow.valve = {
+      id: 'Overflow from the spa valve',
+      at: [ox, (oy + TANK_OVERFLOW_LEVEL) / 2, oz],
+      axis: 'y',
+      operator: 'motor',
+      installed: true,
+      name: 'Overflow from the spa valve',
+    };
+    runs.push(overflow);
+    // Its make-up, in through the south wall from the water service, over
+    // the room's other lanes, down to the float valve on its lid.
+    const [mx, my, mz] = tank.makeUp;
+    runs.push({
+      name: 'Make-up to the balance tank',
+      kind: 'pvc-pressure',
+      od: 0.032,
+      service: 'make-up',
+      label: 'TANK MAKE-UP',
+      flow: -1,
+      ...throughWall(
+        [
+          [mx, my, mz],
+          [mx, TANK_MAKE_UP_LEVEL, mz],
+          [mx, TANK_MAKE_UP_LEVEL, h],
+        ],
+        h,
+        'pvc-pressure',
+      ),
+    });
+    // Its overflow, out and down into its tundish.
+    const [vx, vy, vz] = tank.overflowOut;
+    const [gx, , gz] = tank.gully;
+    runs.push({
+      name: 'Balance tank overflow',
+      kind: 'pvc-drain',
+      od: 0.05,
+      service: 'drainage',
+      label: 'TANK OVERFLOW',
+      flow: 1,
+      points: [
+        [vx, vy, vz],
+        [gx, vy, gz],
+        [gx, 0.17, gz],
+      ],
+      through: [],
+    });
   }
   if (room === 'plant_pool_04') {
     const returnRun = runs.find((r) => r.name === 'Return to the spa');

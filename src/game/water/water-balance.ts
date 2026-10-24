@@ -91,6 +91,11 @@ export interface WaterState {
    */
   gravityDrain?: boolean;
   /**
+   * Whether its overflow's way to the tank is shut (the jacuzzi's gutter
+   * valve): what comes over the lip spills over the deck to waste.
+   */
+  overflowShut?: boolean;
+  /**
    * What the plant sends to waste now, m³/h (a backwash, as its valves
    * have it), drawn from the tank; given, it stands in for the day's
    * backwash at midnight.
@@ -187,10 +192,11 @@ export function stepWater(
       drainedNow = Math.max(0, drainedNow - (-p.depth - level) * p.area);
       level = -p.depth;
     }
+    const overflowIn = s.overflowShut ? 0 : f.overflow;
     let tank =
       s.tankVolume +
-      (f.overflow + f.mainDrains - f.circulation + f.makeUp) * dt;
-    let spilt = s.spilt;
+      (overflowIn + f.mainDrains - f.circulation + f.makeUp) * dt;
+    let spilt = s.spilt + (f.overflow - overflowIn) * dt;
     if (tank > p.tank) {
       spilt += tank - p.tank;
       tank = p.tank;

@@ -98,10 +98,10 @@ describe('the jacuzzi’s jets and air', () => {
     },
   });
 
-  it('stops its circulation pump, and its dosing, with its overflow and return valves shut', () => {
+  it('stops its circulation pump, and its dosing, with its suction and return valves shut', () => {
     let w = act(start, { act: 'start' });
     expect(jacuzziCirculating(w)).toBe(true);
-    w = shut(w, 'overflow', 'return');
+    w = shut(w, 'suction', 'return');
     expect(jacuzziCirculating(w)).toBe(false);
     expect(jacuzziRuns(w)).toEqual({ jets: false, air: false });
     const dosed = (x: World) =>
@@ -109,7 +109,7 @@ describe('the jacuzzi’s jets and air', () => {
         .hypochlorite;
     expect(dosed(w)).toBeLessThan(dosed(start));
     // Either one shut is enough.
-    expect(jacuzziCirculating(shut(start, 'overflow'))).toBe(false);
+    expect(jacuzziCirculating(shut(start, 'suction'))).toBe(false);
     expect(jacuzziCirculating(shut(start, 'return'))).toBe(false);
   });
 
@@ -133,7 +133,7 @@ describe('the jacuzzi’s jets and air', () => {
       room: 'plant_pool_03',
       on: false,
     });
-    w = shut(w, 'overflow', 'return');
+    w = shut(w, 'suction', 'return');
     expect(jacuzziCirculating(w)).toBe(false);
     const before = w.pools.pool_03.level;
     w = advance(w, 60, 1);

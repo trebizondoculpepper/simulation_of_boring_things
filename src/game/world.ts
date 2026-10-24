@@ -707,7 +707,7 @@ export function stepWorld(world: World, delta: number): World {
 
 /**
  * What the jacuzzi's cabinet is given: power (its room's and its
- * isolator), a way through its overflow and return valves, and the
+ * isolator), a way through its suction and return valves, and the
  * tank its pump draws from: its external balance tank (`jacuzziPlumbing`).
  */
 export const jacuzziCabinetInputs = (world: World): JacuzziCabinetInputs => {
@@ -750,6 +750,7 @@ export const jacuzziFlow = (world: World): JacuzziCirculation => ({
   heat:
     serviceAvailable(world.plant, 'plant_pool_03', 'heat') &&
     jacuzziPaths(world.installedValves).heating,
+  overflowShut: !jacuzziPaths(world.installedValves).overflow,
 });
 
 /**
@@ -812,7 +813,7 @@ export const pressJacuzziPlate = (world: World, button: 'start' | 'stop') =>
 
 /**
  * Whether the jacuzzi's water circulates: its cabinet supplied, on, not
- * tripped, with a way through its overflow and return valves.
+ * tripped, with a way through its suction and return valves.
  */
 export const jacuzziCirculating = (world: World) =>
   circulating(

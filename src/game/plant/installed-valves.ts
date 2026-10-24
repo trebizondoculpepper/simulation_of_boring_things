@@ -382,6 +382,13 @@ export const INSTALLED_VALVES: Readonly<
     tag: 'PL3-JZ1-DV1',
     normal: 'closed',
   },
+  // The jacuzzi's pump's suction from its balance tank, motorised (2026-10-24).
+  'plant_pool_03|Suction from the balance tank|Suction from the balance tank valve':
+    {
+      assetId: 'valve-0100',
+      tag: 'PL3-JZ1-IV8',
+      normal: 'open',
+    },
   'plant_pool_04|Overflow from the spa|Overflow from the spa valve': {
     assetId: 'valve-0094',
     tag: 'PL4-PW1-IV2',
