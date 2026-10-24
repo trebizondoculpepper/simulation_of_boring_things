@@ -10,6 +10,7 @@ import {
   HemisphereLight,
   HalfFloatType,
   Mesh,
+  Object3D,
   PerspectiveCamera,
   Plane,
   Raycaster,
@@ -762,9 +763,22 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     levelPanel.group.rotation.y = Math.PI / 2;
     rooms.add(levelPanel.group);
   }
+  // The jacuzzi plant room's drain, heard from its door, a metre up on
+  // the hall side.
   const drainAudio =
-    id === 'pool_03' && !gallery && !devRoom
-      ? createJacuzziDrainAudio(poolsideKit)
+    id === 'pool_03' && !gallery && !devRoom && plantDoor && spec.plantDoor
+      ? (() => {
+          const at = new Object3D();
+          at.name = 'Plant room drain heard at the door';
+          const west = spec.plantDoor.wall === 'west';
+          at.position.set(
+            ((west ? -1 : 1) * spec.w) / 2 + (west ? 0.3 : -0.3),
+            1,
+            spec.plantDoor.z,
+          );
+          rooms.add(at);
+          return createJacuzziDrainAudio(poolsideKit, at);
+        })()
       : null;
   let last = 0;
   let officeWasOpen = false;

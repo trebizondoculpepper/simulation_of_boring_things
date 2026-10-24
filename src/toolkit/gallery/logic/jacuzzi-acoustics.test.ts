@@ -1,5 +1,10 @@
 import { expect, it } from 'vite-plus/test';
-import { jacuzziApproachGain, jacuzziDrainDoorGain } from './jacuzzi-acoustics';
+import {
+  JACUZZI_DRAIN_AT_DOOR,
+  JACUZZI_DRAIN_TO_DOOR,
+  jacuzziApproachGain,
+  jacuzziDrainDoorGain,
+} from './jacuzzi-acoustics';
 import { carry, roomCorridors } from './pool-loop';
 import { pieceLength } from '../../components/architectural/logic/corridor-path';
 
@@ -75,4 +80,12 @@ it('attenuates a closed-door drain by exactly 30 dB and opens smoothly', () => {
   expect(20 * Math.log10(jacuzziDrainDoorGain(0))).toBeCloseTo(-30, 8);
   expect(jacuzziDrainDoorGain(0.15)).toBeGreaterThan(jacuzziDrainDoorGain(0));
   expect(jacuzziDrainDoorGain(0.35)).toBe(1);
+});
+
+it('hears the drain quieter at the hall door than at its tundish, across the plant room', () => {
+  expect(JACUZZI_DRAIN_TO_DOOR).toBeGreaterThan(4);
+  expect(JACUZZI_DRAIN_TO_DOOR).toBeLessThan(12);
+  expect(JACUZZI_DRAIN_AT_DOOR).toBeLessThan(0.3);
+  // Even with the door wide open, the hall never hears it at full level.
+  expect(JACUZZI_DRAIN_AT_DOOR * jacuzziDrainDoorGain(1)).toBeLessThan(0.3);
 });
