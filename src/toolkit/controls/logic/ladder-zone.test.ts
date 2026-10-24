@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { climb, holdOnRungs, ladderAt, onRungs } from './ladder-zone';
+import { climb, ladderToUse } from './ladder-zone';
 
 const zone = {
   minX: 1.75,
@@ -8,29 +8,33 @@ const zone = {
   maxZ: 1.3,
   bottom: -3.5,
   top: 0,
+  bottomExit: { x: 2.25, z: 0.9 },
+  topExit: { x: 1.6, z: 0.9 },
+  rung: { x: 2, z: 0.9 },
 };
 
-describe('ladder zones', () => {
-  it('climbs up looking up and down looking down, and not looking level', () => {
-    expect(climb(zone, -2, 1, 0.4, 1, 1)).toBeCloseTo(-1.1);
-    expect(climb(zone, -2, 1, -0.4, 1, 1)).toBeCloseTo(-2.9);
-    expect(climb(zone, -2, -1, 0.4, 1, 1)).toBeCloseTo(-2.9);
-    expect(climb(zone, -2, 1, 0, 1, 1)).toBe(-2);
+describe('ladder controls', () => {
+  it('mounts with Use only when near an end at the right height', () => {
+    expect(ladderToUse([zone], 2.3, -3.5, 0.9, 1)).toEqual({
+      zone,
+      end: 'bottom',
+    });
+    expect(ladderToUse([zone], 1.6, 0, 0.9, 1)).toEqual({
+      zone,
+      end: 'top',
+    });
+    expect(ladderToUse([zone], 2.7, 0, 0.9, 1)).toBeNull();
+    expect(ladderToUse([zone], 4, -3.5, 0.9, 1)).toBeNull();
   });
 
-  it('never goes below the floor or above the gantry', () => {
-    expect(climb(zone, -0.2, 1, 0.5, 10, 1)).toBe(0);
-    expect(climb(zone, -3.3, 1, -0.5, 10, 1)).toBe(-3.5);
+  it('climbs with W and descends with S independent of view pitch', () => {
+    expect(climb(zone, -2, 1, 1, 1)).toBeCloseTo(-1.1);
+    expect(climb(zone, -2, -1, 1, 1)).toBeCloseTo(-2.9);
+    expect(climb(zone, -2, 0, 1, 1)).toBe(-2);
   });
 
-  it('holds a climber part way up inside the cage', () => {
-    expect(onRungs(zone, -2, 1)).toBe(true);
-    expect(onRungs(zone, 0, 1)).toBe(false);
-    expect(onRungs(zone, -3.5, 1)).toBe(false);
-    const held = holdOnRungs(zone, 0.5, 2, 0.25);
-    expect(held.x).toBeCloseTo(2.0);
-    expect(held.z).toBeCloseTo(1.05);
-    expect(ladderAt([zone], 2, 1)).toBe(zone);
-    expect(ladderAt([zone], 0, 0)).toBe(null);
+  it('stops at the ends', () => {
+    expect(climb(zone, -0.2, 1, 10, 1)).toBe(0);
+    expect(climb(zone, -3.3, -1, 10, 1)).toBe(-3.5);
   });
 });

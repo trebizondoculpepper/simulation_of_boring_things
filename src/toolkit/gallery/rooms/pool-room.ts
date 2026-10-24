@@ -968,6 +968,28 @@ export function startPoolRoom(
           archedFloorAt(x / m, z / m))
         : null) ?? poolFloorAt(x / m, z / m)) * m,
     start: { x: 0, z: 0 },
+    ladders: () =>
+      id === 'PR_A'
+        ? [
+            {
+              minX: (BACK_LADDER.x - 0.5) * m,
+              maxX: (BACK_LADDER.x + 0.5) * m,
+              minZ: (BACK_LADDER.z - 0.35) * m,
+              maxZ: (BACK_LADDER.z + 0.35) * m,
+              bottom: POOL_FLOOR * m,
+              top: 0,
+              rung: { x: (BACK_LADDER.x + 0.16) * m, z: BACK_LADDER.z * m },
+              bottomExit: {
+                x: (BACK_LADDER.x + 0.42) * m,
+                z: BACK_LADDER.z * m,
+              },
+              topExit: {
+                x: (BACK_LADDER.x - 0.46) * m,
+                z: BACK_LADDER.z * m,
+              },
+            },
+          ]
+        : [],
     solids: () => [
       ...walls,
       ...solids,

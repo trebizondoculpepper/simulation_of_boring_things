@@ -5,7 +5,7 @@ import type { PortableObject, SupportSurface } from './object-handling';
 import { lockUnavailable } from '../logic/pointer-lock';
 import { cutOpenings, slide } from '../logic/walk-collision';
 import type { Footprint } from '../logic/walk-collision';
-import { climb, holdOnRungs, ladderAt, onRungs } from '../logic/ladder-zone';
+import { climb, ladderToUse } from '../logic/ladder-zone';
 import type { LadderZone } from '../logic/ladder-zone';
 import { PAD, controlsHelp, deadZone } from '../logic/controls';
 import type { InputMode } from '../logic/controls';
@@ -146,8 +146,8 @@ export interface FirstPersonOptions {
   /** Solid footprints on the floor plan, in scene units. */
   solids?: () => readonly Footprint[];
   /**
-   * Ladders, in scene units (`ladder-zone.ts`): inside one, walking while
-   * looking up or down climbs it, between its foot and its head.
+   * Ladders, in scene units (`ladder-zone.ts`): Use at either end mounts one;
+   * forward climbs and back descends until the walker leaves an end.
    */
   ladders?: () => readonly LadderZone[];
   /** World objects for the shared pickup/drop interaction. */
@@ -243,6 +243,30 @@ export function createFirstPerson(options: FirstPersonOptions) {
   const use = (x: number, y: number) => {
     const carried = handling?.heldObject();
     if (carried && options.useWhileHolding?.(carried, x, y)) return;
+    if (attachedLadder) return;
+    const mount = ladderToUse(
+      options.ladders?.() ?? [],
+      walker.x,
+      currentFloorY,
+      walker.z,
+      metre,
+    );
+    if (mount) {
+      attachedLadder = mount.zone;
+      currentFloorY = mount.zone[mount.end];
+      walker.x = mount.zone.rung.x;
+      walker.z = mount.zone.rung.z;
+      nudge.forward = 0;
+      nudge.right = 0;
+      help.textContent =
+        input === 'gamepad'
+          ? 'Left stick forward: climb · back: descend'
+          : input === 'touch'
+            ? 'Left stick forward: climb · back: descend'
+            : 'W: climb · S: descend';
+      showHelp();
+      return;
+    }
     if (!handling?.use(x, y)) options.use(x, y);
   };
   const walker = {
@@ -262,6 +286,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
   // takes a step, however slowly the room draws.
   const tapped = new Set<string>();
   const nudge = { forward: 0, right: 0 };
+  let attachedLadder: LadderZone | null = null;
   let lockRefused = false;
   /** When the mouse was last released (Esc), for the browser's cooldown. */
   let releasedAt = -Infinity;
@@ -783,6 +808,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
       y?: number,
       floor?: number,
     ) {
+      attachedLadder = null;
       currentFloorY = floor ?? options.floorAt?.(x, z, currentFloorY) ?? floorY;
       walker.x = x;
       walker.z = z;
@@ -905,27 +931,33 @@ export function createFirstPerson(options: FirstPersonOptions) {
         (walker.lowCrouched ? 0.3 : walker.crouched ? 0.5 : 1) *
         delta;
       tapped.clear();
-      // On a ladder, walking while looking up or down climbs it instead.
-      const ladders = options.ladders?.() ?? [];
-      const onLadder = ladderAt(ladders, walker.x, walker.z);
-      const climbed = onLadder
-        ? climb(
-            onLadder,
-            currentFloorY,
-            Math.max(-1, Math.min(1, ahead)),
-            walker.pitch,
-            delta,
-            metre,
-          )
-        : currentFloorY;
-      const climbing = climbed !== currentFloorY;
-      currentFloorY = climbed;
-      const forward = climbing
+      const ladder = attachedLadder;
+      if (ladder) {
+        const travel = ahead + nudge.forward / metre;
+        currentFloorY = Math.min(
+          ladder.top,
+          Math.max(
+            ladder.bottom,
+            climb(ladder, currentFloorY, ahead, delta, metre) + nudge.forward,
+          ),
+        );
+        walker.x = ladder.rung.x;
+        walker.z = ladder.rung.z;
+        if (
+          (travel > 0 && currentFloorY >= ladder.top) ||
+          (travel < 0 && currentFloorY <= ladder.bottom)
+        ) {
+          const exit = travel > 0 ? ladder.topExit : ladder.bottomExit;
+          walker.x = exit.x;
+          walker.z = exit.z;
+          attachedLadder = null;
+          help.textContent = controlsHelp(input ?? 'mouse');
+        }
+      }
+      const forward = ladder
         ? 0
         : (ahead / length) * speed + still * nudge.forward;
-      const right = climbing
-        ? 0
-        : (aside / length) * speed + still * nudge.right;
+      const right = ladder ? 0 : (aside / length) * speed + still * nudge.right;
       nudge.forward = 0;
       nudge.right = 0;
       const cuts = openings();
@@ -939,16 +971,12 @@ export function createFirstPerson(options: FirstPersonOptions) {
         -Math.cos(walker.yaw) * forward + Math.sin(walker.yaw) * right,
         WALKER_RADIUS_METRES * metre,
       );
-      // Part way up a ladder, the walker stays in front of its rungs.
-      const kept =
-        onLadder && onRungs(onLadder, currentFloorY, metre)
-          ? holdOnRungs(onLadder, next.x, next.z, WALKER_RADIUS_METRES * metre)
-          : next;
+      const kept = attachedLadder ? attachedLadder.rung : next;
       walker.stride += Math.hypot(kept.x - walker.x, kept.z - walker.z);
       walker.x = kept.x;
       walker.z = kept.z;
-      // On a ladder its height is the climb's; off it, the floor's.
-      if (!ladderAt(ladders, walker.x, walker.z))
+      // The ladder owns height until the walker leaves an end.
+      if (!attachedLadder)
         currentFloorY =
           options.floorAt?.(walker.x, walker.z, currentFloorY) ?? floorY;
       walker.crouch +=

@@ -40,7 +40,7 @@ When adding connected rooms, follow the [open-threshold rendering guide](doc/des
 
 The default reception view faces into the building. `?at=<room id>` starts in a given room (for example `?at=boiler`). In the browser console, `facility.goTo('pumps')` jumps to a room and `facility.rooms()` lists the ids.
 
-Walk with WASD, run with Shift, click to capture the mouse and look, Esc to free the cursor. Doors open as you approach and close after you leave. Touch and gamepad also work.
+Walk with WASD, run with Shift, click to capture the mouse and look, Esc to free the cursor. At a pool ladder, press Use (E, the on-screen Use button or gamepad A) to mount it; hold forward to climb or back to descend. Movement returns to normal at either end. Doors open as you approach and close after you leave. Touch and gamepad also work.
 
 ## Checks
 

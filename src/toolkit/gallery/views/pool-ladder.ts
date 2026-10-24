@@ -8,6 +8,7 @@ import {
   TubeGeometry,
   Vector3,
 } from 'three';
+import type { LadderZone } from '../../controls/logic/ladder-zone';
 
 /**
  * A deck-mounted stainless pool ladder, as on most pools: two 42 mm grab
@@ -20,6 +21,7 @@ import {
 export function createPoolLadder(depth: number, width = 0.5) {
   const group = new Group();
   group.name = 'pool ladder';
+  group.userData.ladderDepth = depth;
   const steel = new MeshStandardMaterial({
     color: '#d6dcdd',
     metalness: 0.9,
@@ -65,4 +67,39 @@ export function createPoolLadder(depth: number, width = 0.5) {
     group.add(tread);
   }
   return group;
+}
+
+/** Match every visible pool ladder to the shared Use/W/S movement model. */
+export function poolLadderZones(
+  root: Group,
+  floorAt: (x: number, z: number) => number,
+): LadderZone[] {
+  root.updateWorldMatrix(true, true);
+  const zones: LadderZone[] = [];
+  root.traverse((object) => {
+    if (object.name !== 'pool ladder') return;
+    const depth = object.userData.ladderDepth as number | undefined;
+    if (depth === undefined) return;
+    const point = (x: number) => {
+      const p = object.localToWorld(new Vector3(x, 0, 0));
+      return { x: p.x, z: p.z };
+    };
+    const bottomExit = point(0.42);
+    const topExit = point(-0.46);
+    const rung = point(0.16);
+    const baseY = object.localToWorld(new Vector3()).y;
+    const lower = floorAt(bottomExit.x, bottomExit.z);
+    zones.push({
+      minX: Math.min(bottomExit.x, topExit.x) - 0.3,
+      maxX: Math.max(bottomExit.x, topExit.x) + 0.3,
+      minZ: Math.min(bottomExit.z, topExit.z) - 0.3,
+      maxZ: Math.max(bottomExit.z, topExit.z) + 0.3,
+      bottom: Number.isFinite(lower) ? lower : baseY - depth,
+      top: baseY,
+      bottomExit,
+      topExit,
+      rung,
+    });
+  });
+  return zones;
 }

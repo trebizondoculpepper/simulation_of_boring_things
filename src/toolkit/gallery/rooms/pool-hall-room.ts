@@ -46,6 +46,7 @@ import type { RoomId } from '../logic/dev-room-links';
 import { enterDevRoom } from '../logic/dev-room-links';
 import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
 import { createPoolHall } from '../views/pool-hall';
+import { poolLadderZones } from '../views/pool-ladder';
 import { createPanelKit } from '../../components/core/views/eighties-controls';
 import { createPoolInfoSign } from '../../components/pool/views/pool-info-sign';
 import {
@@ -434,6 +435,13 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
             ? officeWay.frame.y
             : gallery.floor
           : hallFloorAt(spec, x / metre, z / metre))) * metre,
+    ladders: () =>
+      gallery
+        ? []
+        : poolLadderZones(
+            rooms,
+            (x, z) => hallFloorAt(spec, x / metre, z / metre) * metre,
+          ),
     // The plant room doorway: its leaf while shut, but never where the
     // walker stands; a stop just beyond until the plant room is seen.
     // So too the office's doorway.
