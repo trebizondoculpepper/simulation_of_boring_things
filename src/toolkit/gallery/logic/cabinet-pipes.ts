@@ -158,7 +158,9 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
       },
       {
         name: 'Jets discharge to the spa',
-        at: [jx - 0.1, base + 1.25, back],
+        // Stepped toward the bay's end, clear of the blower's air line
+        // (`spa-pack.ts`, `JETS_DISCHARGE_STEP`).
+        at: [jx - 0.1 + 0.12, base + 1.25, back],
         out: 'back',
         kind: 'pvc-pressure',
         od: 0.09,

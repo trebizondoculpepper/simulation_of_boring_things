@@ -27,6 +27,7 @@ import {
   HALL_AIR,
   POOL_IDS,
   POOL_TARGET,
+  circulating,
   dosedVolumes,
   makeUpDemand,
   newPools,
@@ -105,6 +106,13 @@ import {
   newMotors,
   stepMotors,
 } from './plant/motor-starters';
+import {
+  actOnJacuzzi,
+  jacuzziRunning,
+  newJacuzzi,
+  stepJacuzzi,
+} from './plant/jacuzzi';
+import type { JacuzziAction, JacuzziState } from './plant/jacuzzi';
 import type {
   MotorsState,
   MotorTag,
@@ -112,7 +120,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 21;
+export const WORLD_VERSION = 22;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -162,6 +170,8 @@ export interface World {
   airHandling: AirHandlingState;
   /** The motors' starters, worked from their plant rooms' panels (`motor-starters.ts`). */
   motors: MotorsState;
+  /** The jacuzzi's jets and air (`jacuzzi.ts`). */
+  jacuzzi: JacuzziState;
 }
 
 export function newWorld(): World {
@@ -184,6 +194,7 @@ export function newWorld(): World {
     olympicTank: newOlympicTank(),
     airHandling: newAirHandling(),
     motors: newMotors(),
+    jacuzzi: newJacuzzi(),
   };
 }
 
@@ -223,7 +234,9 @@ export type WorldAction =
   /** A motor's starter worked on its plant room's panel: its selector, START, STOP or RESET. */
   | { type: 'motor/starter'; tag: MotorTag; action: StarterAction }
   /** A motor panel's emergency stop struck in, or released. */
-  | { type: 'motor/stop'; pool: StartedPool; stopped: boolean };
+  | { type: 'motor/stop'; pool: StartedPool; stopped: boolean }
+  /** The jacuzzi's jets and air worked, from its cabinet or its wall plate. */
+  | { type: 'jacuzzi'; action: JacuzziAction };
 
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
@@ -349,6 +362,11 @@ export function applyAction(world: World, action: WorldAction): World {
       const motors = actOnStarter(world.motors, action.tag, action.action);
       return motors === world.motors ? world : { ...world, motors };
     }
+    case 'jacuzzi':
+      return {
+        ...world,
+        jacuzzi: actOnJacuzzi(world.jacuzzi, action.action, world.time),
+      };
     case 'motor/stop':
       return world.motors.stopped[action.pool] === action.stopped
         ? world
@@ -557,6 +575,7 @@ export function stepWorld(world: World, delta: number): World {
     pools: water.pools,
     airHandling,
     motors,
+    jacuzzi: stepJacuzzi(world.jacuzzi, world.time + delta),
     loungeValvePositions,
     olympic: battery
       ? stepOlympicBattery(world.olympic, battery, delta)
@@ -581,6 +600,13 @@ export function stepWorld(world: World, delta: number): World {
     ),
   };
 }
+
+/** What of the jacuzzi's jets and air runs: called for, while it circulates. */
+export const jacuzziRuns = (world: World) =>
+  jacuzziRunning(
+    world.jacuzzi,
+    circulating(world.pools.pool_03, world.plant, 'pool_03', world.motors),
+  );
 
 /** The world's fixed time step, seconds. */
 export const STEP = 0.1;

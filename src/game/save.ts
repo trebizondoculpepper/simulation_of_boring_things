@@ -89,6 +89,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   19: (world) => world,
   // 20 → 21: the motors' starters, in AUTO, the duty pumps running (`fillDefaults` adds them).
   20: (world) => world,
+  // 21 → 22: the jacuzzi's jets and air, off (`fillDefaults` adds them).
+  21: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

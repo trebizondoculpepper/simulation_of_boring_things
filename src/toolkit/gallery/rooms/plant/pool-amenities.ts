@@ -19,6 +19,10 @@ import {
 } from 'three';
 import type { Object3D } from 'three';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
+import { worldStore } from '../../../save/world-store';
+import { jacuzziRuns } from '../../../../game/world';
+import { JACUZZI_CYCLE } from '../../../../game/plant/jacuzzi';
+import type { JacuzziAction } from '../../../../game/plant/jacuzzi';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
 import { createMicroLabel } from '../../../components/core/views/eighties-controls';
 import { piezoButton } from '../../../components/core/parts/wet-parts';
@@ -359,6 +363,16 @@ const spa = {
   light: signal(false),
 };
 
+/**
+ * The world, where there is a page to keep it: the jacuzzi's jets and air
+ * are its (`game/plant/jacuzzi.ts`), worked from this plate and from its
+ * cabinet in the plant room alike, and the tub shows them.
+ */
+const jacuzziWorld = () =>
+  typeof window === 'undefined' ? null : worldStore('dev');
+const jacuzziAct = (action: JacuzziAction) =>
+  jacuzziWorld()?.dispatch({ type: 'jacuzzi', action });
+
 // ---- The jacuzzi, on its stepped plinth -------------------------------------
 
 const TUB = {
@@ -602,6 +616,16 @@ function buildJacuzzi(kit: PanelKit): LiveExhibit {
     },
     update(delta) {
       time += delta;
+      // The jets and air as the world runs them, whoever started them.
+      const world = jacuzziWorld()?.world.value;
+      if (world) {
+        const runs = jacuzziRuns(world);
+        spa.state = {
+          ...spa.state,
+          jets: runs.jets ? JACUZZI_CYCLE : 0,
+          air: runs.air ? JACUZZI_CYCLE : 0,
+        };
+      }
       const state = (spa.state = stepSpa(spa.state, delta));
       for (const sound of sounds) {
         const on = sound.when();
@@ -674,14 +698,20 @@ function buildJacuzziPlate(kit: PanelKit): LiveExhibit {
         'start',
         'green',
         'START',
-        () => (spa.state = startCycle(spa.state)),
+        () =>
+          jacuzziWorld()
+            ? jacuzziAct({ act: 'start' })
+            : (spa.state = startCycle(spa.state)),
         spa.running,
       ],
       [
         'stop',
         'red',
         'STOP',
-        () => (spa.state = stopCycle(spa.state)),
+        () =>
+          jacuzziWorld()
+            ? jacuzziAct({ act: 'stop' })
+            : (spa.state = stopCycle(spa.state)),
         undefined,
       ],
       [

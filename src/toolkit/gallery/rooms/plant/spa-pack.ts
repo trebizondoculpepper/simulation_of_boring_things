@@ -17,15 +17,19 @@ import {
   createSurgeVessel,
 } from '../../../components/plant/views/spa-pack-parts';
 import {
+  AIR_BLOWER_PIPES,
+  JET_PUMP_STUBS,
   createAirBlower,
   createJetPump,
 } from '../../../components/plant/views/pumps-plant';
+import type { OwnPipe } from '../../../components/plant/views/pumps-plant';
 import { createDialGauge } from '../../../components/industrial-control/views/dial-gauge';
 import {
   createPartSet,
   doorBack,
   doorLatch,
   pilotLight,
+  pushButton,
   selector,
 } from '../../../components/core/parts/parts';
 import { worldStore } from '../../../save/world-store';
@@ -38,7 +42,11 @@ import {
   partOn,
 } from '../../../../game/plant/identification';
 import { createCabinetMimic } from '../../../components/plant/views/cabinet-mimic';
-import { clampSetpoint, footbathFilling } from '../../../../game/world';
+import {
+  clampSetpoint,
+  footbathFilling,
+  jacuzziRuns,
+} from '../../../../game/world';
 import { footbathPumpStarved } from '../../../../game/plant/pools';
 
 /**
@@ -78,6 +86,208 @@ export const spaGland = (c: { w: number; d: number }) => ({
 const OPEN = 1.75;
 /** The filter's working pressure, bar. */
 const WORKING = 0.7;
+
+type P3 = [number, number, number];
+
+/** A pipe run inside a cabinet: its points (the cabinet body's frame, or the skid's), its kind and size. */
+export interface CabinetRun {
+  name: string;
+  points: P3[];
+  kind: PipeKindId;
+  od: number;
+}
+
+/** Where the skid stands in the body, and its deck's height. */
+const skidAt = (jets: boolean) => ({ x: jets ? -JETS_BAY / 2 : 0, y: 0.16 });
+
+/** The skid's runs, in its frame (heights over its deck), the back panel at `hd` behind the body's middle. */
+function skidRuns(hd: number): CabinetRun[] {
+  // Out through the back panel and a little beyond, where each connection
+  // ends, plain, ready to be connected to the spa and the heating ring; its
+  // isolating valve is the room's, up the pipe's rise behind the cabinet
+  // (`cabinet-pipes.ts`), clear of the elbow at the stub (the owner,
+  // 2026-10-23).
+  const out = -hd - 0.03;
+  const pvc = (name: string, points: P3[]): CabinetRun => ({
+    name,
+    points,
+    kind: 'pvc-pressure',
+    od: 0.05,
+  });
+  return [
+    // Over the top and down between them.
+    pvc('Pump to filter', [
+      [-0.3, 0.27, 0.1],
+      [-0.3, 0.45, 0.1],
+      [0.095, 0.45, 0.1],
+      [0.095, 0.12, 0.1],
+      [0.11, 0.12, 0.1],
+    ]),
+    pvc('Filter to the UV unit', [
+      [0.57, 0.12, 0.1],
+      [0.6, 0.12, 0.1],
+      [0.6, 0.45, 0.1],
+      [0.6, 0.45, 0.28],
+      [0.7, 0.45, 0.28],
+      [0.7, 0.27, 0.28],
+    ]),
+    // From its back port, behind the filter.
+    pvc('UV unit to the heat exchanger', [
+      [0.7, 0.27, -0.12],
+      [0.7, 0.45, -0.12],
+      [0.385, 0.45, -0.12],
+      [0.385, 0.32, -0.12],
+      [0.385, 0.32, -0.22],
+    ]),
+    pvc('Return to the spa', [
+      [0.385, 0.08, -0.22],
+      [0.385, 0.08, -0.16],
+      [0.52, 0.08, -0.16],
+      [0.52, 0.08, out],
+    ]),
+    pvc('Overflow into the surge vessel', [
+      [-0.66, 0.59, 0.1],
+      [-0.66, 1.0, 0.1],
+      [-0.66, 1.0, out],
+    ]),
+    // The heating ring's, in copper.
+    {
+      name: 'Heating flow',
+      kind: 'copper',
+      od: 0.022,
+      points: [
+        [0.315, 0.32, -0.22],
+        [0.315, 0.32, -0.16],
+        [0.315, 1.0, -0.16],
+        [0.315, 1.0, out],
+      ],
+    },
+    {
+      name: 'Heating return',
+      kind: 'copper',
+      od: 0.022,
+      points: [
+        [0.315, 0.08, -0.22],
+        [0.315, 0.08, -0.16],
+        [0.2, 0.08, -0.16],
+        [0.2, 1.1, -0.16],
+        [0.2, 1.1, out],
+      ],
+    },
+    // Low through the back panel, from under the surge vessel and filter.
+    {
+      name: 'Drain to waste',
+      kind: 'pvc-drain',
+      od: 0.05,
+      points: [
+        [SPA_DRAIN.x, SPA_DRAIN.y, -0.05],
+        [SPA_DRAIN.x, SPA_DRAIN.y, out],
+      ],
+    },
+  ];
+}
+
+/** The jets' bay's machines, in the body's frame: the jet pump's place and the blower's. */
+const jetsBay = (c: { w: number }) => {
+  const jx = c.w / 2 - JETS_BAY / 2;
+  return {
+    jx,
+    base: 0.1,
+    pump: [jx, 0.1, 0.24] as P3,
+    blower: [jx - 0.2, 0.1, -0.06] as P3,
+  };
+};
+
+/**
+ * How far the jets' discharge steps toward the bay's outer end before it
+ * goes back to the wall: clear of the blower's air line rising behind the
+ * pump (the owner, 2026-10-24: they crossed).
+ */
+export const JETS_DISCHARGE_STEP = 0.12;
+
+/** The jets' bay's runs, in the body's frame. */
+function jetsRuns(c: { w: number; d: number }): CabinetRun[] {
+  const { jx, base } = jetsBay(c);
+  const out = -c.d / 2 - 0.03;
+  const x = jx - 0.1 + JETS_DISCHARGE_STEP;
+  return [
+    // From the spa into the pump's strainer pot.
+    {
+      name: 'Jets suction',
+      kind: 'pvc-pressure',
+      od: 0.09,
+      points: [
+        [jx - 0.45, base + 0.35, 0.24],
+        [jx - 0.5, base + 0.35, 0.24],
+        [jx - 0.5, base + 0.35, out],
+      ],
+    },
+    // Up from the pump, over toward the bay's end, and back to the jets.
+    {
+      name: 'Jets discharge',
+      kind: 'pvc-pressure',
+      od: 0.09,
+      points: [
+        [jx - 0.1, base + 0.7, 0.24],
+        [jx - 0.1, base + 1.25, 0.24],
+        [x, base + 1.25, 0.24],
+        [x, base + 1.25, out],
+      ],
+    },
+    // From the blower's loop out to the spa's air ring.
+    {
+      name: 'Air line',
+      kind: 'pvc-pressure',
+      od: 0.06,
+      points: [
+        [jx + 0.2, base + 1.4, -0.1],
+        [jx + 0.2, base + 1.4, out],
+      ],
+    },
+  ];
+}
+
+/**
+ * Every pipe inside a cabinet, in its body's frame: the skid's runs, the
+ * jets' bay's, and the machines' own pipework (the jet pump's stubs, the
+ * blower's air line), as straight lengths, for checking that none passes
+ * through another.
+ */
+export function cabinetPipework(jets: boolean): {
+  name: string;
+  from: P3;
+  to: P3;
+  r: number;
+}[] {
+  const c = jets ? JACUZZI_CABINET : CABINET;
+  const skid = skidAt(jets);
+  const lengths = (r: CabinetRun, shift: P3) =>
+    r.points.slice(1).map((to, i) => ({
+      name: r.name,
+      from: r.points[i].map((v, k) => v + shift[k]) as P3,
+      to: to.map((v, k) => v + shift[k]) as P3,
+      r: r.od / 2,
+    }));
+  const out = [
+    ...skidRuns(c.d / 2).flatMap((r) => lengths(r, [skid.x, skid.y, 0])),
+  ];
+  if (jets) {
+    const bay = jetsBay(c);
+    out.push(...jetsRuns(c).flatMap((r) => lengths(r, [0, 0, 0])));
+    const own = (name: string, pipes: readonly OwnPipe[], at: P3) =>
+      pipes.map((p) => ({
+        name,
+        from: p.from.map((v, k) => v + at[k]) as P3,
+        to: p.to.map((v, k) => v + at[k]) as P3,
+        r: p.r,
+      }));
+    out.push(
+      ...own('Jet pump’s own stubs', JET_PUMP_STUBS, bay.pump),
+      ...own('Blower’s own air line', AIR_BLOWER_PIPES, bay.blower),
+    );
+  }
+  return out;
+}
 
 /** Supplies a development cabinet from a separate, port-connected trial. */
 export interface SpaPackDemoBinding {
@@ -163,9 +373,9 @@ function buildSpaPack(
   // The skid stands at the cabinet's left, leaving the jets' bay free.
   const shell = body;
   const skid = new Group();
-  skid.position.x = jets ? -JETS_BAY / 2 : 0;
+  skid.position.x = skidAt(jets).x;
   shell.add(skid);
-  const skidY = 0.16;
+  const skidY = skidAt(jets).y;
   t.box(skid, dark, 1.55, 0.06, 0.7, 0, skidY - 0.03, 0);
   const backZ = -hd + c.wall;
   const set = <P extends { group: Group }>(
@@ -201,14 +411,6 @@ function buildSpaPack(
     kind: 'grommet' as const,
     thickness: c.wall,
   };
-  /**
-   * Out through the back panel and a little beyond, where each connection
-   * ends, plain, ready to be connected to the spa and the heating ring; its
-   * isolating valve is the room's, up the pipe's rise behind the cabinet
-   * (`cabinet-pipes.ts`), clear of the elbow at the stub (the owner,
-   * 2026-10-23).
-   */
-  const out = -hd - 0.03;
   const run = (
     points: [number, number, number][],
     kind: PipeKindId = 'pvc-pressure',
@@ -227,76 +429,11 @@ function buildSpaPack(
       ),
     );
   };
-  // Pump to filter, over the top and down between them.
-  run([
-    [-0.3, 0.27, 0.1],
-    [-0.3, 0.45, 0.1],
-    [0.095, 0.45, 0.1],
-    [0.095, 0.12, 0.1],
-    [0.11, 0.12, 0.1],
-  ]);
-  // Filter to the UV unit's front port.
-  run([
-    [0.57, 0.12, 0.1],
-    [0.6, 0.12, 0.1],
-    [0.6, 0.45, 0.1],
-    [0.6, 0.45, 0.28],
-    [0.7, 0.45, 0.28],
-    [0.7, 0.27, 0.28],
-  ]);
-  // The UV unit's back port to the heat exchanger, behind the filter.
-  run([
-    [0.7, 0.27, -0.12],
-    [0.7, 0.45, -0.12],
-    [0.385, 0.45, -0.12],
-    [0.385, 0.32, -0.12],
-    [0.385, 0.32, -0.22],
-  ]);
-  // Back to the spa, out through the back wall.
-  run([
-    [0.385, 0.08, -0.22],
-    [0.385, 0.08, -0.16],
-    [0.52, 0.08, -0.16],
-    [0.52, 0.08, out],
-  ]);
-  // From the spa's overflow into the surge vessel.
-  run([
-    [-0.66, 0.59, 0.1],
-    [-0.66, 1.0, 0.1],
-    [-0.66, 1.0, out],
-  ]);
-  // The heating ring's flow and return to the exchanger, in copper.
-  run(
-    [
-      [0.315, 0.32, -0.22],
-      [0.315, 0.32, -0.16],
-      [0.315, 1.0, -0.16],
-      [0.315, 1.0, out],
-    ],
-    'copper',
-    0.022,
-  );
-  run(
-    [
-      [0.315, 0.08, -0.22],
-      [0.315, 0.08, -0.16],
-      [0.2, 0.08, -0.16],
-      [0.2, 1.1, -0.16],
-      [0.2, 1.1, out],
-    ],
-    'copper',
-    0.022,
-  );
-  // Its drain to waste, low through the back panel, from under the skid's
-  // surge vessel and filter.
-  run(
-    [
-      [SPA_DRAIN.x, SPA_DRAIN.y, -0.05],
-      [SPA_DRAIN.x, SPA_DRAIN.y, out],
-    ],
-    'pvc-drain',
-    0.05,
-  );
+  // Its runs, the skid's (`cabinetPipework`): pump to filter, filter to
+  // the UV unit, the UV unit to the exchanger, back to the spa, the
+  // overflow into the surge vessel, the heating's flow and return, the
+  // drain.
+  for (const r of skidRuns(hd)) run(r.points, r.kind, r.od);
   // The dosing tubes, from each pump head's outlet down under the pumps,
   // back to the wall, along it and down to their injection points on the
   // return.
@@ -340,10 +477,9 @@ function buildSpaPack(
   const jetPump = jets ? createJetPump(kit) : null;
   const blower = jets ? createAirBlower(kit) : null;
   if (jetPump && blower) {
-    const jx = c.w / 2 - JETS_BAY / 2;
-    const base = 0.1;
-    jetPump.position.set(jx, base, 0.24);
-    blower.position.set(jx - 0.2, base, -0.06);
+    const { pump: at, blower: blowerAt } = jetsBay(c);
+    jetPump.position.set(...at);
+    blower.position.set(...blowerAt);
     shell.add(jetPump, blower);
     const back = {
       at: [0, 0, -c.d / 2 + c.wall / 2] as const,
@@ -351,7 +487,6 @@ function buildSpaPack(
       kind: 'grommet' as const,
       thickness: c.wall,
     };
-    const out = -c.d / 2 - 0.03;
     const line = (points: [number, number, number][], od: number) =>
       shell.add(
         createPipe('pvc-pressure', od, points, {
@@ -360,32 +495,9 @@ function buildSpaPack(
           ends: ['open', 'open'],
         }),
       );
-    // The jets' suction from the spa, into the pump's strainer pot.
-    line(
-      [
-        [jx - 0.45, base + 0.35, 0.24],
-        [jx - 0.5, base + 0.35, 0.24],
-        [jx - 0.5, base + 0.35, out],
-      ],
-      0.09,
-    );
-    // Its discharge up and back out to the jets.
-    line(
-      [
-        [jx - 0.1, base + 0.7, 0.24],
-        [jx - 0.1, base + 1.25, 0.24],
-        [jx - 0.1, base + 1.25, out],
-      ],
-      0.09,
-    );
-    // The blower's air line, from its loop out to the spa's air ring.
-    line(
-      [
-        [jx + 0.2, base + 1.4, -0.1],
-        [jx + 0.2, base + 1.4, out],
-      ],
-      0.06,
-    );
+    // The jets' suction, their discharge, the blower's air line
+    // (`cabinetPipework`).
+    for (const r of jetsRuns(c)) line(r.points, r.od);
   }
 
   // ---- The doors ---------------------------------------------------------
@@ -603,33 +715,47 @@ function buildSpaPack(
   front.add(gauge.group);
   // The jets and the air, each on its own switch, interlocked with the
   // circulation: neither runs unless the pump does.
-  if (jets)
-    (['JETS', 'AIR'] as const).map((legend, i) => {
-      const sw = parts.add(
-        selector(kit, {
-          positions: 2,
-          initial: 0,
-          legend,
-          name: `Spa set ${legend.toLowerCase()} switch`,
-        }),
+  // The jets and the air, each on an illuminated button: pressed to start
+  // and to stop, lit while it runs, and run only with the circulation.
+  // In service they are the world's (`game/plant/jacuzzi.ts`), worked from
+  // here and from the plate by the tub alike, so the lamp follows the world
+  // whichever started it; an exhibit keeps its own.
+  if (jets) {
+    const world =
+      inService && typeof window !== 'undefined' ? worldStore('dev') : null;
+    (
+      [
+        ['JETS', 'jets'],
+        ['AIR', 'air'],
+      ] as const
+    ).forEach(([legend, what], i) => {
+      const own = signal(false);
+      const lit = computed(() =>
+        world
+          ? jacuzziRuns(world.world.value)[what]
+          : running.value && own.value,
       );
-      sw.object.position.set(0.2, 0.06 - i * 0.17, 0);
-      sw.object.scale.setScalar(0.8);
-      front.add(sw.object);
-      const run = computed(() => running.value && sw.position.value === 1);
-      const lamp = parts.add(
-        pilotLight(kit, {
+      const button = parts.add(
+        pushButton(kit, {
           colour: 'green',
-          legend: `${legend} RUN`,
-          drive: run,
-          pushToTest: false,
-          name: `Spa set ${legend.toLowerCase()} run lamp`,
+          head: 'illuminated',
+          lamp: lit,
+          legend,
+          name: `Spa set ${legend.toLowerCase()} button`,
+          action: () =>
+            world
+              ? world.dispatch({
+                  type: 'jacuzzi',
+                  action: { act: 'toggle', what },
+                })
+              : (own.value = !own.value),
         }),
       );
-      lamp.object.position.set(0.32, 0.06 - i * 0.17, 0);
-      lamp.object.scale.setScalar(0.8);
-      front.add(lamp.object);
+      button.object.position.set(0.26, 0.06 - i * 0.17, 0);
+      button.object.scale.setScalar(0.8);
+      front.add(button.object);
     });
+  }
 
   // Everything here moves or changes: none of it is merged.
   object.traverse((o) => (o.userData.live = true));

@@ -1015,6 +1015,25 @@ export function createFlowMeter(kit: PanelKit) {
  * with its own pre-filter, 795 mm long, 90 mm connections): a
  * self-priming pump with a clear-lidded strainer pot, on a plinth.
  */
+/** A length of a machine's own pipework, in its frame: from, to, radius. */
+export interface OwnPipe {
+  from: readonly [number, number, number];
+  to: readonly [number, number, number];
+  r: number;
+}
+
+/** The jet pump's own stubs: suction into its pot, discharge up from its casing. */
+export const JET_PUMP_STUBS: readonly OwnPipe[] = [
+  { from: [-0.45, 0.35, 0], to: [-0.37, 0.35, 0], r: 0.045 },
+  { from: [-0.1, 0.4, 0], to: [-0.1, 0.7, 0], r: 0.045 },
+];
+
+/** The air blower's own air line: up from its silencers to its loop, and along to its non-return valve. */
+export const AIR_BLOWER_PIPES: readonly OwnPipe[] = [
+  { from: [0.08, 0.73, -0.04], to: [0.08, 1.4, -0.04], r: 0.03 },
+  { from: [0.08, 1.4, -0.04], to: [0.4, 1.4, -0.04], r: 0.03 },
+];
+
 export function createJetPump(kit: PanelKit) {
   const t = plantTools(kit);
   const group = new Group();
@@ -1042,20 +1061,8 @@ export function createJetPump(kit: PanelKit) {
   fins(t, group, paint, 0.085, 0.0, 0.25, y, 0);
   t.cyl(group, livery.paint.shade, 0.09, 0.08, 0.32, y, 0, 'x', 24);
   // Suction into the pot, discharge up from the casing.
-  t.rod(
-    group,
-    t.paint(FINISH.pvc, 0.45),
-    [-0.45, y + 0.05, 0],
-    [-0.37, y + 0.05, 0],
-    0.045,
-  );
-  t.rod(
-    group,
-    t.paint(FINISH.pvc, 0.45),
-    [-0.1, y + 0.1, 0],
-    [-0.1, y + 0.4, 0],
-    0.045,
-  );
+  for (const p of JET_PUMP_STUBS)
+    t.rod(group, t.paint(FINISH.pvc, 0.45), [...p.from], [...p.to], p.r);
   badge(kit, group, 'grundflow', [0.12, y + 0.04, 0.087], 0.03);
   return group;
 }
@@ -1106,20 +1113,8 @@ export function createAirBlower(kit: PanelKit) {
       20,
     );
   }
-  t.rod(
-    group,
-    t.paint(FINISH.pvc, 0.45),
-    [0.08, y + 0.48, -0.04],
-    [0.08, 1.4, -0.04],
-    0.03,
-  );
-  t.rod(
-    group,
-    t.paint(FINISH.pvc, 0.45),
-    [0.08, 1.4, -0.04],
-    [0.4, 1.4, -0.04],
-    0.03,
-  );
+  for (const p of AIR_BLOWER_PIPES)
+    t.rod(group, t.paint(FINISH.pvc, 0.45), [...p.from], [...p.to], p.r);
   t.cyl(group, t.paint('#c9cdcf', 0.4), 0.045, 0.08, 0.25, 1.4, -0.04, 'x', 16);
   badge(kit, group, 'pepperdyne', [0, y, 0.002], 0.03);
   return group;

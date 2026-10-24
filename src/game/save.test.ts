@@ -58,6 +58,7 @@ describe('a save', () => {
       olympicTank: newWorld().olympicTank,
       airHandling: newWorld().airHandling,
       motors: newWorld().motors,
+      jacuzzi: newWorld().jacuzzi,
     });
   });
 
