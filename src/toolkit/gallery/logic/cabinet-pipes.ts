@@ -52,6 +52,8 @@ export interface CabinetPort {
   label: string;
   /** Where its run goes. */
   to: 'pool' | 'plant' | 'drain' | 'isolator';
+  /** Which way it flows: out of the cabinet along its run, or in. */
+  flow: 'out' | 'in';
 }
 
 /** The cabinet's sizes, as `spa-pack.ts` has them. */
@@ -89,6 +91,7 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
       od: 0.05,
       service: 'pool water',
       label: 'SPA RETURN',
+      flow: 'out',
       to: 'pool',
     },
     {
@@ -99,6 +102,7 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
       od: 0.05,
       service: 'pool water',
       label: 'SPA OVERFLOW',
+      flow: 'in',
       to: 'pool',
     },
     {
@@ -109,6 +113,7 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
       od: 0.0337,
       service: 'heating flow',
       label: 'LTHW FLOW',
+      flow: 'in',
       to: 'plant',
     },
     {
@@ -119,6 +124,7 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
       od: 0.0337,
       service: 'heating return',
       label: 'LTHW RETURN',
+      flow: 'out',
       to: 'plant',
     },
     {
@@ -129,6 +135,7 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
       od: 0.05,
       service: 'drainage',
       label: 'DRAIN',
+      flow: 'out',
       to: 'drain',
     },
     {
@@ -139,6 +146,7 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
       od: 0.025,
       service: 'electrical',
       label: '400 V SUPPLY',
+      flow: 'in',
       to: 'isolator',
     },
   ];
@@ -154,6 +162,7 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
         od: 0.09,
         service: 'pool water',
         label: 'JETS SUCTION',
+        flow: 'in',
         to: 'pool',
       },
       {
@@ -166,6 +175,7 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
         od: 0.09,
         service: 'pool water',
         label: 'JETS DISCHARGE',
+        flow: 'out',
         to: 'pool',
       },
       {
@@ -176,6 +186,7 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
         od: 0.06,
         service: 'air',
         label: 'BLOWER AIR',
+        flow: 'out',
         to: 'pool',
       },
     );
@@ -238,6 +249,8 @@ export interface CabinetRun {
   od: number;
   service: Service;
   label: string;
+  /** Whether it flows the way its points go (from the cabinet, out), or against them. */
+  flow: 1 | -1;
   points: Vec3[];
   /** Where it passes through the room's walls. */
   through: WallCrossing[];
@@ -500,6 +513,7 @@ export function cabinetPipes(
       od: port.od,
       service: port.service,
       label: port.label,
+      flow: port.flow === 'out' ? 1 : -1,
       ...throughWall(points, h, port.kind),
     });
   // To the pool: north first, lowest.
@@ -586,6 +600,8 @@ export function cabinetPipes(
       od: 0.05,
       service: 'make-up',
       label: 'FOOTBATH MAKE-UP',
+      // In from the south, on north to the pool.
+      flow: 1,
       points: [
         [x, y, h + WALL],
         [x, y, 0],
@@ -618,6 +634,8 @@ export function cabinetPipes(
   const iso = cabinetIsolator(room, trial)!;
   const supply = ports.find((p) => p.port.to === 'isolator')!;
   const [inX, inY, inZ] = iso.supplyIn;
+  // In from the south wall to the isolator: against its points, which
+  // start at the isolator, as the supply port's flow ('in') has it.
   add({ ...supply.port, name: 'Supply to the isolator' }, [
     [inX, inY, inZ],
     [inX, SUPPLY_LEVEL, inZ],
@@ -637,6 +655,8 @@ export function cabinetPipes(
     od: supply.port.od,
     service: 'electrical',
     label: 'CABINET SUPPLY',
+    // From the isolator to the cabinet, as its points go.
+    flow: 1,
     points: [f, [f[0], FEED_LEVEL, f[2]], turn, [g[0], FEED_LEVEL, g[2]], g],
     through: [],
   });

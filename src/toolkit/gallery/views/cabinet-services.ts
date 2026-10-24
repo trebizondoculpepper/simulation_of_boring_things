@@ -100,6 +100,12 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
         radius: run.od / 2 + lagging,
         service: MARKED[run.service],
         text: run.label,
+        flow: run.flow,
+        // Stencilled on: the runs here are packed too close for plates
+        // hung beneath them (the owner, 2026-10-24). White on the dark
+        // steel conduit, black on the grey plastic and the lagging.
+        lettering: 'stencil',
+        ink: run.kind === 'steel-screwed' ? '#f2f2ee' : '#1b1d1e',
       }),
     );
     if (run.valve) {
