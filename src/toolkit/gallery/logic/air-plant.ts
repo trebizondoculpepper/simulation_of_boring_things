@@ -1,10 +1,11 @@
-import type { Footprint } from '../../controls/logic/walk-collision';
 import { POOLS } from '../../../game/plant-sizing/pools.config';
 import { sizePlant } from '../../../game/plant-sizing/sizing';
 import { ahuSizeFor, ductSize } from '../../../game/plant-sizing/ahu-range';
 import type { AhuSize } from '../../../game/plant-sizing/ahu-range';
 import type { Item, Placed, RoomBox } from './room-equipment';
 import { shellRoomBox } from './room-equipment';
+import { decksAndStair, GANTRY_WIDTH } from './stair-run';
+import type { Surface } from './stair-run';
 
 /**
  * The air handling plant: the pool halls' air handling units (the DanX
@@ -249,21 +250,16 @@ export function airDucts(placed: readonly Placed[], box: RoomBox): Duct[] {
 
 // ---- Gantries and the stair ------------------------------------------------
 
-/** A walking surface above the floor: level, or a flight rising from (a) to (b). */
-export interface Surface {
-  name: string;
-  area: Footprint;
-  /** Its height: level, or rising along x or z from `from` to `to`. */
-  y:
-    | number
-    | { along: 'x' | 'z'; at0: number; y0: number; at1: number; y1: number };
-}
+export {
+  FLIGHT,
+  GANTRY_WIDTH,
+  levelSolids,
+  STEP_UP,
+  surfaceFloorAt as airFloorAt,
+  surfaceY,
+} from './stair-run';
+export type { Surface } from './stair-run';
 
-/** The gantries' width, the stair's going and its flights' width, metres. */
-export const GANTRY_WIDTH = 1.2;
-
-/** A flight's going (its length on plan), metres: 2.4 m rise over 3 m, about 39 degrees. */
-export const FLIGHT = 3.0;
 /** How far the stair's foot stands north of the stacks' south end, clear of the door, metres. */
 export const STAIR_SET_BACK = 2.5;
 
@@ -271,12 +267,9 @@ export const STAIR_SET_BACK = 2.5;
  * The gantries along the west stacks' fronts at each upper unit's floor,
  * and their stair, outside them (the owner, 2026-10-24: the stair on the
  * outside of the three-storey structure, two flights on in the same
- * direction with a small landing at the middle floor): in a band of its
- * own just east of the gantries, from its foot set back from the door,
- * a flight north up to a landing beside the first gantry, then a second
- * flight straight on north up to a landing beside the second. Nothing is
- * over either flight, and the floor under the first gantry stays clear
- * for working on the lowest units.
+ * direction with a small landing at the middle floor): the stair helper's
+ * (`stair-run.ts`), its foot set back from the door. The floor under the
+ * first gantry stays clear for working on the lowest units.
  */
 export function gantries(box: RoomBox): Surface[] {
   const west = placeStacks(box).filter((s) => s.at.face === 'east');
@@ -284,182 +277,11 @@ export function gantries(box: RoomBox): Surface[] {
   const units = stackOf(west[0].item.key)!.units;
   const size = units[0].size;
   const front = west[0].at.x + west[0].item.d / 2;
-  const x0 = front;
-  const x1 = front + GANTRY_WIDTH;
-  const x2 = x1 + GANTRY_WIDTH;
   const north = Math.min(...west.map((s) => s.at.z - s.item.w / 2));
   const south = Math.max(...west.map((s) => s.at.z + s.item.w / 2));
-  const levels = units.slice(1).map((_, k) => unitBase(size, k + 1));
-  const out: Surface[] = levels.map((y, k) => ({
-    name: `Gantry ${k + 1}`,
-    area: { minX: x0, maxX: x1, minZ: north, maxZ: south },
-    y,
-  }));
-  // Up the band from its foot, set back from the door, each flight then
-  // its landing.
-  let z = south - STAIR_SET_BACK;
-  let below = 0;
-  const ORDINAL = ['first', 'second', 'third'];
-  levels.forEach((y, k) => {
-    out.push(
-      {
-        name: `Stair, ${ORDINAL[k]} flight`,
-        area: { minX: x1, maxX: x2, minZ: z - FLIGHT, maxZ: z },
-        y: { along: 'z', at0: z, y0: below, at1: z - FLIGHT, y1: y },
-      },
-      {
-        name:
-          k === 0
-            ? 'First landing'
-            : k === 1
-              ? 'Second landing'
-              : `Landing ${k + 1}`,
-        area: {
-          minX: x1,
-          maxX: x2,
-          minZ: z - FLIGHT - GANTRY_WIDTH,
-          maxZ: z - FLIGHT,
-        },
-        y,
-      },
-    );
-    z -= FLIGHT + GANTRY_WIDTH;
-    below = y;
+  return decksAndStair({
+    deck: { minX: front, maxX: front + GANTRY_WIDTH, minZ: north, maxZ: south },
+    levels: units.slice(1).map((_, k) => unitBase(size, k + 1)),
+    foot: south - STAIR_SET_BACK,
   });
-  return out;
-}
-
-const inside = (f: Footprint, x: number, z: number) =>
-  x >= f.minX - 1e-9 &&
-  x <= f.maxX + 1e-9 &&
-  z >= f.minZ - 1e-9 &&
-  z <= f.maxZ + 1e-9;
-
-/** A surface's height at (x, z). */
-export function surfaceY(s: Surface, x: number, z: number): number {
-  if (typeof s.y === 'number') return s.y;
-  const t = ((s.y.along === 'x' ? x : z) - s.y.at0) / (s.y.at1 - s.y.at0);
-  return s.y.y0 + (s.y.y1 - s.y.y0) * Math.max(0, Math.min(1, t));
-}
-
-/** How high a walker steps up without a stair's flight. */
-export const STEP_UP = 0.45;
-
-/**
- * The floor under a walker at (x, z), come from height `previous`: the
- * highest of the floor and the surfaces there that is no more than a
- * step above where they were. So one walks under a gantry, or on it.
- */
-export function airFloorAt(
-  surfaces: readonly Surface[],
-  x: number,
-  z: number,
-  previous: number,
-): number {
-  let best = 0;
-  for (const s of surfaces) {
-    if (!inside(s.area, x, z)) continue;
-    const y = surfaceY(s, x, z);
-    if (y <= previous + STEP_UP && y > best) best = y;
-  }
-  return best;
-}
-
-/** The surfaces one may walk on, at the level of `y`: about the floor, the first gantry, the second. */
-function levelOf(surfaces: readonly Surface[], y: number) {
-  const levels = [
-    0,
-    ...new Set(
-      surfaces.filter((s) => typeof s.y === 'number').map((s) => s.y as number),
-    ),
-  ].sort((a, b) => a - b);
-  let k = 0;
-  for (let i = 0; i < levels.length; i++)
-    if (Math.abs(levels[i] - y) < Math.abs(levels[k] - y)) k = i;
-  return { level: levels[k], k };
-}
-
-/**
- * What stops a walker at height `y`: on the floor, the first flight's
- * underside where it is too low to pass; up on a gantry, its handrails,
- * every edge of the surfaces of that level except where one meets
- * another or a flight of the stair.
- */
-export function levelSolids(
-  surfaces: readonly Surface[],
-  y: number,
-): Footprint[] {
-  const { level } = levelOf(surfaces, y);
-  if (level < 0.5) {
-    // Climbing the first flight, not under it: nothing stops the walker
-    // but the floor's level's rails, of which there are none.
-    if (y > STEP_UP / 2) return [];
-    // Under the first flight, where its underside is below a head.
-    const first = surfaces.find((s) => s.name === 'Stair, first flight');
-    if (!first || typeof first.y === 'number') return [];
-    const { at0, at1, y0, y1 } = first.y;
-    const low = at0 + ((1.0 - y0) / (y1 - y0)) * (at1 - at0);
-    const high = at1;
-    return [
-      {
-        minX: first.area.minX,
-        maxX: first.area.maxX,
-        minZ: Math.min(low, high),
-        maxZ: Math.max(low, high),
-      },
-    ];
-  }
-  // The surfaces at this level, and the flights that reach it.
-  const here = surfaces.filter((s) =>
-    typeof s.y === 'number'
-      ? Math.abs(s.y - level) < 0.01
-      : Math.abs(s.y.y0 - level) < 0.01 || Math.abs(s.y.y1 - level) < 0.01,
-  );
-  // What opens a rail: a level surface, or a flight's mouth at this level
-  // (its end at this height), never the rest of a flight beside it.
-  const openings = here.map((o) => {
-    if (typeof o.y === 'number') return o.area;
-    const z = Math.abs(o.y.y0 - level) < 0.01 ? o.y.at0 : o.y.at1;
-    return o.y.along === 'z'
-      ? { ...o.area, minZ: z - 0.05, maxZ: z + 0.05 }
-      : { ...o.area, minX: z - 0.05, maxX: z + 0.05 };
-  });
-  const rails: Footprint[] = [];
-  const T = 0.04;
-  for (const [i, s] of here.entries()) {
-    const a = s.area;
-    const edges: [Footprint, 'x' | 'z'][] = [
-      [{ minX: a.minX, maxX: a.maxX, minZ: a.minZ - T, maxZ: a.minZ }, 'x'],
-      [{ minX: a.minX, maxX: a.maxX, minZ: a.maxZ, maxZ: a.maxZ + T }, 'x'],
-      [{ minX: a.minX - T, maxX: a.minX, minZ: a.minZ, maxZ: a.maxZ }, 'z'],
-      [{ minX: a.maxX, maxX: a.maxX + T, minZ: a.minZ, maxZ: a.maxZ }, 'z'],
-    ];
-    for (const [edge, along] of edges) {
-      // Cut out where another surface of this level lies across it.
-      let pieces: [number, number][] =
-        along === 'x' ? [[edge.minX, edge.maxX]] : [[edge.minZ, edge.maxZ]];
-      for (const [j, b] of openings.entries()) {
-        if (j === i) continue;
-        const touches =
-          along === 'x'
-            ? b.minZ < edge.maxZ + 1e-6 && b.maxZ > edge.minZ - 1e-6
-            : b.minX < edge.maxX + 1e-6 && b.maxX > edge.minX - 1e-6;
-        if (!touches) continue;
-        const [c0, c1] = along === 'x' ? [b.minX, b.maxX] : [b.minZ, b.maxZ];
-        pieces = pieces.flatMap(([p0, p1]) => {
-          const keep: [number, number][] = [];
-          if (c0 > p0) keep.push([p0, Math.min(p1, c0)]);
-          if (c1 < p1) keep.push([Math.max(p0, c1), p1]);
-          return keep.filter(([q0, q1]) => q1 - q0 > 1e-6);
-        });
-      }
-      for (const [p0, p1] of pieces)
-        rails.push(
-          along === 'x'
-            ? { ...edge, minX: p0, maxX: p1 }
-            : { ...edge, minZ: p0, maxZ: p1 },
-        );
-    }
-  }
-  return rails;
 }

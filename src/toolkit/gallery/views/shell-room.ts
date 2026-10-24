@@ -269,7 +269,8 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
   });
 
   // The title card, on the wall facing its first door, at eye height.
-  const first = v.doors[0];
+  // With no doors, on the north wall.
+  const first = v.doors[0] ?? { wall: 'south' };
   const facing: ShellWall =
     first.wall === 'south'
       ? 'north'

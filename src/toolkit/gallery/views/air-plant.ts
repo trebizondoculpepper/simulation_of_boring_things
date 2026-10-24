@@ -1,8 +1,8 @@
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { Material } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
-import { airBox, airDucts, gantries, levelSolids } from '../logic/air-plant';
-import type { Duct, Surface } from '../logic/air-plant';
+import { airBox, airDucts, gantries } from '../logic/air-plant';
+import type { Duct } from '../logic/air-plant';
 import type { Placed } from '../logic/room-equipment';
 import { AIR_UNITS } from '../logic/air-plant';
 import { airMimicSpec, airMimicState } from '../logic/air-mimic';
@@ -14,8 +14,9 @@ import {
   registerAirUnit,
 } from '../../components/plant/views/pool-ahu';
 import { ahuLamps } from '../../components/plant/logic/pool-ahu';
-import type { Footprint } from '../../controls/logic/walk-collision';
 import { mergeStatic } from '../../components/core/views/merge-static';
+import { createStairStructure } from './stair-run';
+export { gantryColumnFeet, gantryColumns } from './stair-run';
 
 /**
  * The air plant's ductwork and its gantries (`logic/air-plant.ts`), in
@@ -124,178 +125,14 @@ export function createAirPlantStructure(
     );
   }
 
-  // ---- The gantries and the stair ------------------------------------------
-  const steel = paint('#3c4a57', 0.55, 0.4);
-  const grating = paint('#5f676b', 0.5, 0.6);
-  const yellow = paint('#e3b51f', 0.5, 0.2);
-  const surfaces = gantries(room);
-  const decks = surfaces.filter((s) => typeof s.y === 'number');
-  for (const s of decks) {
-    const a = s.area;
-    const y = s.y as number;
-    const w = a.maxX - a.minX;
-    const d = a.maxZ - a.minZ;
-    const cx = (a.minX + a.maxX) / 2;
-    const cz = (a.minZ + a.maxZ) / 2;
-    box(grating, w, 0.04, d, cx, y - 0.02, cz, s.name);
-    // Its framing under the grating.
-    for (const x of [a.minX + 0.05, a.maxX - 0.05])
-      box(steel, 0.1, 0.18, d, x, y - 0.13, cz);
-    for (let z = a.minZ + 0.05; z < a.maxZ; z += 1.5)
-      box(steel, w, 0.12, 0.08, cx, y - 0.1, z);
-  }
-  // Columns to the floor, along each deck's open edge, every 3 m.
-  for (const p of gantryColumns(surfaces))
-    box(steel, 0.12, p.top, 0.12, p.x, p.top / 2, p.z, 'gantry column');
-  // The flights: channel stringers, treads every 250 mm.
-  for (const s of surfaces.filter((x) => typeof x.y !== 'number')) {
-    const a = s.area;
-    const f = s.y as Exclude<Surface['y'], number>;
-    const run = Math.abs(f.at1 - f.at0);
-    const rise = f.y1 - f.y0;
-    const steps = Math.round(run / 0.25);
-    for (let k = 0; k < steps; k++) {
-      const z = f.at0 + ((f.at1 - f.at0) * (k + 0.5)) / steps;
-      const y = f.y0 + (rise * (k + 1)) / steps;
-      box(
-        grating,
-        a.maxX - a.minX - 0.12,
-        0.04,
-        0.24,
-        (a.minX + a.maxX) / 2,
-        y - 0.02,
-        z,
-        `${s.name} tread`,
-      );
-      // The nosing, yellow.
-      box(
-        yellow,
-        a.maxX - a.minX - 0.12,
-        0.02,
-        0.04,
-        (a.minX + a.maxX) / 2,
-        y - 0.005,
-        z - Math.sign(f.at1 - f.at0) * 0.1,
-      );
-    }
-    for (const x of [a.minX + 0.03, a.maxX - 0.03]) {
-      const len = Math.hypot(run, rise);
-      const st = box(
-        steel,
-        0.06,
-        0.25,
-        len,
-        x,
-        (f.y0 + f.y1) / 2 - 0.1,
-        (f.at0 + f.at1) / 2,
-        `${s.name} stringer`,
-      );
-      st.rotation.x = Math.atan2(-rise, f.at1 - f.at0);
-      // Its handrail, each side (BS EN ISO 14122-3): a top rail 1 m over
-      // the nosings' line and a knee rail, on posts at each end and the
-      // middle, sloping with the flight.
-      for (const [hy, th] of [
-        [1.0, 0.05],
-        [0.5, 0.04],
-      ] as const) {
-        const rail = box(
-          yellow,
-          th,
-          th,
-          len,
-          x,
-          (f.y0 + f.y1) / 2 + hy,
-          (f.at0 + f.at1) / 2,
-          'handrail',
-        );
-        rail.rotation.x = Math.atan2(-rise, f.at1 - f.at0);
-      }
-      for (const t of [0.04, 0.5, 0.96]) {
-        const pz = f.at0 + (f.at1 - f.at0) * t;
-        const py = f.y0 + rise * t;
-        box(yellow, 0.05, 1.0, 0.05, x, py + 0.5, pz, 'handrail post');
-      }
-    }
-  }
-  // The handrails: at each level, along its rails' lines, posts every
-  // 1.5 m, a top rail at 1.1 m, a knee rail, and a toe board.
-  const levels = [...new Set(decks.map((s) => s.y as number))];
-  // Not along the stacks' fronts, where the units themselves are the
-  // edge and their controllers stand at a hand's height over the deck.
-  const stacksFront = Math.min(...decks.map((s) => s.area.minX));
-  for (const y of levels)
-    for (const r of levelSolids(surfaces, y))
-      if (Math.abs(r.maxX - stacksFront) > 0.01 || r.maxZ - r.minZ < 0.1)
-        drawRail(r, y);
+  // ---- The gantries and the stair (`stair-run.ts`) -------------------------
+  group.add(createStairStructure(kit, gantries(room), floorY));
   // Every duct, deck and rail is still: drawn in a few meshes, cell by
   // cell, so what is out of sight can be culled.
   group.updateMatrixWorld(true);
   mergeStatic(group, 6, new Set(), { share: true });
-  function drawRail(r: Footprint, y: number) {
-    const alongX = r.maxX - r.minX > r.maxZ - r.minZ;
-    const length = alongX ? r.maxX - r.minX : r.maxZ - r.minZ;
-    if (length < 0.05) return;
-    const cx = (r.minX + r.maxX) / 2;
-    const cz = (r.minZ + r.maxZ) / 2;
-    for (const [hy, th] of [
-      [1.1, 0.05],
-      [0.55, 0.04],
-    ] as const)
-      box(
-        yellow,
-        alongX ? length : th,
-        th,
-        alongX ? th : length,
-        cx,
-        y + hy,
-        cz,
-        'handrail',
-      );
-    box(
-      steel,
-      alongX ? length : 0.02,
-      0.15,
-      alongX ? 0.02 : length,
-      cx,
-      y + 0.075,
-      cz,
-    );
-    for (let s = 0; s <= length + 1e-6; s += Math.min(1.5, length)) {
-      const px = alongX ? r.minX + s : cx;
-      const pz = alongX ? cz : r.minZ + s;
-      box(yellow, 0.05, 1.1, 0.05, px, y + 0.55, pz);
-    }
-  }
   return group;
 }
-
-/** The gantries' columns: along each level deck's east edge every 3 m, from the floor to under it. */
-export function gantryColumns(surfaces: readonly Surface[]) {
-  const out: { x: number; z: number; top: number }[] = [];
-  for (const s of surfaces) {
-    if (typeof s.y !== 'number') continue;
-    const a = s.area;
-    for (let z = a.minZ + 0.1; z <= a.maxZ - 0.05; z += 3)
-      out.push({ x: a.maxX - 0.06, z, top: s.y - 0.22 });
-    out.push({ x: a.maxX - 0.06, z: a.maxZ - 0.1, top: s.y - 0.22 });
-  }
-  // One column for each place, the tallest.
-  const by = new Map<string, { x: number; z: number; top: number }>();
-  for (const c of out) {
-    const k = `${c.x.toFixed(2)},${c.z.toFixed(2)}`;
-    if ((by.get(k)?.top ?? -1) < c.top) by.set(k, c);
-  }
-  return [...by.values()];
-}
-
-/** The columns' feet, to walk round on the floor. */
-export const gantryColumnFeet = (surfaces: readonly Surface[]): Footprint[] =>
-  gantryColumns(surfaces).map((c) => ({
-    minX: c.x - 0.06,
-    maxX: c.x + 0.06,
-    minZ: c.z - 0.06,
-    maxZ: c.z + 0.06,
-  }));
 
 /**
  * The air plant's mimic and control panel (`logic/air-mimic.ts`), by

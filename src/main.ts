@@ -389,6 +389,9 @@ const starter = async (
     return (surface) =>
       startPoolHallRoom(surface, 'pool_04', { devRoom: 'dev33' });
   }
+  if (room === 'dev34')
+    return (await import('./toolkit/gallery/rooms/shell-room'))
+      .startStairTowerRoom;
   if (room === 'dev31')
     return (await import('./rendering/effects-playground-room'))
       .startEffectsPlaygroundRoom;

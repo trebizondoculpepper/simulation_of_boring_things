@@ -57,6 +57,12 @@ import {
 } from '../logic/shell-rooms';
 import type { ShellDoor, ShellRoomId } from '../logic/shell-rooms';
 import { airFloorAt, airBox, gantries, levelSolids } from '../logic/air-plant';
+import {
+  STAIR_TOWER,
+  stairTowerRuns,
+  surfaceFloorAt,
+} from '../logic/stair-run';
+import { createStairStructure, gantryColumnFeet } from '../views/stair-run';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { createShellRoom, createWetHall } from '../views/shell-room';
 import { createRoomEquipment } from '../views/room-equipment';
@@ -119,6 +125,50 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
   });
 }
 
+/**
+ * The stair test room (dev34): a wide room four storeys tall, a deck at
+ * each upper storey along its west wall and the stair helper's stair
+ * outside them, from the floor to the top (`logic/stair-run.ts`). No
+ * doors; nothing else in it.
+ */
+export function startStairTowerRoom(canvas: HTMLCanvasElement) {
+  const { w, d, height } = STAIR_TOWER;
+  const room = { w, d, doors: [] as ShellDoor[] };
+  const runs = stairTowerRuns();
+  const surfaces = runs.flatMap((r) => r.surfaces);
+  return runShell(canvas, {
+    self: 'dev34',
+    room,
+    build: (metre, kit) => {
+      const built = createShellRoom(metre, kit, {
+        ...room,
+        floor: 0,
+        roof: height,
+        title: 'DEV34 · STAIR TOWER',
+        note: 'four storeys, the stair helper from floor to top, painted and stainless',
+        seed: 34,
+      });
+      for (const r of runs)
+        built.group.add(
+          createStairStructure(kit, r.surfaces, 0, {
+            side: r.side,
+            finish: r.finish,
+          }),
+        );
+      return built;
+    },
+    floorAt: (x, z, previous) => surfaceFloorAt(surfaces, x, z, previous),
+    levelSolids: (y) => levelSolids(surfaces, y),
+    solids: [
+      ...shellSolids(room),
+      ...runs.flatMap((r) => gantryColumnFeet(r.surfaces, r.side)),
+    ],
+    powered: () => true,
+    // In the middle of the room's south end, looking north between the stairs.
+    start: { x: 0, z: d / 2 - 1.5, yaw: 0 },
+  });
+}
+
 /** The wet hall, half a storey down in the middle of the main corridor's ring. */
 export function startWetHall(canvas: HTMLCanvasElement) {
   const room = wetHallRoom();
@@ -149,6 +199,8 @@ interface ShellConfig {
   levelSolids?: (y: number) => Footprint[];
   solids: Footprint[];
   start: { x: number; z: number; yaw: number };
+  /** Whether its lamps and displays have power: by default, its own room's supply. */
+  powered?: () => boolean;
 }
 
 /**
@@ -392,7 +444,10 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   // Its lights, following its lighting zone (`room-lights.ts`).
   const roomLights = bindRoomLights(scene, zoneOfRoom(cfg.self));
   // Its equipment's lamps and displays, dark without its power.
-  const roomPower = bindRoomPower(scene, roomPowered(cfg.self as ServiceRoom));
+  const roomPower = bindRoomPower(
+    scene,
+    cfg.powered ?? roomPowered(cfg.self as ServiceRoom),
+  );
   let last = 0;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
