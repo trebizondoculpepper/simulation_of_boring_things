@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { flyCamera, flightHelp } from './noclip';
+import {
+  ROLL_DEGREES_PER_SECOND,
+  flyCamera,
+  flightHelp,
+  rollCamera,
+  wrapAngle,
+} from './noclip';
 
 const bounds = { minX: -5, maxX: 5, minY: -3, maxY: 8, minZ: -5, maxZ: 5 };
 const pose = { x: 0, y: 2, z: 0, yaw: 0, pitch: 0 };
@@ -36,5 +42,39 @@ describe('noclip flight', () => {
     expect(flightHelp('mouse')).toContain('Ctrl');
     expect(flightHelp('touch')).toContain('UP / DOWN');
     expect(flightHelp('gamepad')).toContain('A: rise');
+  });
+  it('explains rolling and levelling for all input schemes', () => {
+    expect(flightHelp('mouse')).toContain('Q / E: roll');
+    expect(flightHelp('mouse')).toContain('R: level');
+    expect(flightHelp('touch')).toContain('LEVEL');
+    expect(flightHelp('gamepad')).toContain('LB / RB: roll');
+  });
+});
+
+describe('noclip roll', () => {
+  const degrees = (r: number) => (r * 180) / Math.PI;
+  it('rolls at a steady rate while held, either way, and holds when let go', () => {
+    expect(degrees(rollCamera(0, 1, 1))).toBeCloseTo(ROLL_DEGREES_PER_SECOND);
+    expect(degrees(rollCamera(0, -1, 0.5))).toBeCloseTo(
+      -ROLL_DEGREES_PER_SECOND / 2,
+    );
+    expect(rollCamera(0.3, 0, 5)).toBeCloseTo(0.3);
+  });
+  it('takes a trigger’s part-pull as a slower roll, and never more than full', () => {
+    expect(degrees(rollCamera(0, 0.25, 1))).toBeCloseTo(
+      ROLL_DEGREES_PER_SECOND / 4,
+    );
+    expect(rollCamera(0, 3, 1)).toBeCloseTo(rollCamera(0, 1, 1));
+  });
+  it('goes all the way round, kept within a half turn either way', () => {
+    let roll = 0;
+    for (let i = 0; i < 100; i++) roll = rollCamera(roll, 1, 0.1);
+    expect(Math.abs(roll)).toBeLessThanOrEqual(Math.PI);
+    expect(degrees(roll)).toBeCloseTo(
+      ((ROLL_DEGREES_PER_SECOND * 10 + 180) % 360) - 180,
+    );
+    expect(wrapAngle(-Math.PI)).toBe(Math.PI);
+    expect(wrapAngle(Math.PI * 3)).toBeCloseTo(Math.PI);
+    expect(wrapAngle(-0.5)).toBeCloseTo(-0.5);
   });
 });

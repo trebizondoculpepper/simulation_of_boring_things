@@ -19,6 +19,10 @@ The owner, 2026-10-23: to set up and work out the camera angles for the title's 
 
 What the owner needs from it is the shot, so noclip should make the shot easy to keep: a small readout of the camera's place and heading while it is on (x, y, z in metres, yaw and pitch in degrees), and a key or a button on the escape screen to copy the room's address with them (`?room=…&x=…&y=…&z=…&yaw=…&pitch=…`, which the game already opens at), so a framed shot can be written down, shared and returned to.
 
+## Roll (the owner, 2026-10-24)
+
+For more unusual camera angles, noclip can roll the camera about its line of sight. Q and E roll it left and right at 40° a second while held, and R levels it; on a gamepad LB and RB roll (the bumpers turn knobs only when walking, and noclip works nothing) and Y levels; on touch, held ⟲ and ⟳ buttons and a LEVEL button beside UP and DOWN. Roll goes all the way round. Flight and looking stay as before, along the yaw and pitch, so the roll tilts only the picture. The readout shows it, Copy Camera Link writes it as `roll` in degrees clockwise (left out when level), and a link with `roll` opens rolled; a link without it is level. The logic is `rollCamera` in `logic/noclip.ts`, tested beside it.
+
 ## Rules it must keep
 
 All input goes through the one control scheme in `src/toolkit/controls/`; rooms do not bind their own keys. The bounds and the movement are pure logic in a `logic/` folder, tested beside it.

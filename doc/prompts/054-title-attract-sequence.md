@@ -16,6 +16,10 @@ The attract simulation must be independent of the player's simulation: no readin
 
 The attract sequence never uses the player's game state. It has worlds of its own, prepared just for it: simple presets (lighting status, some pools empty, and the like), each made once from a new world by a few actions and frozen (`src/game/attract-scenarios.ts`). Each shot names its preset; when it plays, a copy runs on from it in memory (`createScenarioStore` in `world-store.ts`), never saved, so the same shot starts the same every time and still moves while it is seen. Rooms take their world from `roomWorld()`, never from a save slot by name; the attract sequence builds its rooms on canvases of its own, never reusing the player's, each on its shot's world, and lets them go as it moves on. Shots to come: a pan past a filter's sight glass with its animation running; props floating in a pool, placed for the shot only, for the camera to pan alongside.
 
+## Camera paths (the owner, 2026-10-24)
+
+The camera keys a shot passes through (noclip links: x, y, z, yaw, pitch, roll, zoom, each with a time) are joined into smoothed three-dimensional Bézier splines, so the camera glides through them as a film camera on a rail would. The research and the proposed design are in `doc/research/camera-splines.md`: a centripetal Catmull-Rom curve (equivalently, Bézier segments with automatic handles) through the positions, an arc-length table and a monotone time-to-distance curve for the timing, the angles (shortest way round) and the logarithm of the zoom smoothed through time, all pure and tested.
+
 ## Playback and loading
 
 Build and prepare the next scene in the background before its turn, including the first rendered frame and GPU preparation. Keep a bounded active/next scene set and dispose obsolete scenes. Do not repeat the synchronous speculative-loading hitches documented in the room-loading report: measure transition frame gaps and keep expensive preparation away from the visible camera motion where practical.

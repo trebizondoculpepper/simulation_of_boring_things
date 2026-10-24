@@ -20,6 +20,32 @@ export interface FlightPose {
   pitch: number;
 }
 
+/** Rolling the view while a roll control is held, degrees a second. */
+export const ROLL_DEGREES_PER_SECOND = 40;
+
+/** An angle brought into (−π, π]. */
+export function wrapAngle(radians: number) {
+  const turn = Math.PI * 2;
+  const wrapped = radians - turn * Math.floor((radians + Math.PI) / turn);
+  return wrapped === -Math.PI ? Math.PI : wrapped;
+}
+
+/**
+ * The camera's roll, radians (positive turns the view clockwise, as a
+ * camera tipped to its right), after `seconds` with `turn` held: −1 to
+ * roll left, +1 right, fractions from a trigger or stick. Free all the
+ * way round; never rounded back to level but by `level`.
+ */
+export function rollCamera(roll: number, turn: number, seconds: number) {
+  const step =
+    (Math.max(-1, Math.min(1, turn)) *
+      ROLL_DEGREES_PER_SECOND *
+      Math.PI *
+      Math.max(0, seconds)) /
+    180;
+  return wrapAngle(roll + step);
+}
+
 /** Look-relative flight, with no gravity or obstacle collision, inside the room envelope. */
 export function flyCamera(
   pose: FlightPose,
@@ -46,7 +72,7 @@ export function flyCamera(
 
 export const flightHelp = (mode: 'mouse' | 'touch' | 'gamepad') =>
   mode === 'gamepad'
-    ? 'NOCLIP · Left stick: fly · Right stick: look · A: rise · B: descend · Click left stick: faster · Triggers: zoom'
+    ? 'NOCLIP · Left stick: fly · Right stick: look · A: rise · B: descend · LB / RB: roll · Y: level · Click left stick: faster · Triggers: zoom'
     : mode === 'touch'
-      ? 'NOCLIP · Left stick: fly · Right stick: look · UP / DOWN: rise / descend · Stick rim: faster · Pinch: zoom'
-      : 'NOCLIP · WASD: fly along the view · Space: rise · Shift: descend · Ctrl: faster · Mouse: look · Wheel: zoom · Esc: menu';
+      ? 'NOCLIP · Left stick: fly · Right stick: look · UP / DOWN: rise / descend · ⟲ / ⟳: roll · LEVEL: level · Stick rim: faster · Pinch: zoom'
+      : 'NOCLIP · WASD: fly along the view · Space: rise · Shift: descend · Q / E: roll · R: level · Ctrl: faster · Mouse: look · Wheel: zoom · Esc: menu';

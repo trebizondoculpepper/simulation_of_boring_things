@@ -237,7 +237,7 @@ export function createPauseMenu(actions: PauseMenuActions) {
     const note = document.createElement('p');
     note.className = 'settings-note';
     note.textContent =
-      'Frame a title shot: fly through equipment; Space up, Shift down, Ctrl faster. Turning this off returns you to your walking position.';
+      'Frame a title shot: fly through equipment; Space up, Shift down, Ctrl faster; Q and E roll the view, R levels it. Turning this off returns you to your walking position.';
     pages.get('Game')!.append(note);
   }
   if (actions.copyCamera)

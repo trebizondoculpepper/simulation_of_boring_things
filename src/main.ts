@@ -289,6 +289,9 @@ const copyCameraLocation = async () => {
     pitch: ((pose.pitch * 180) / Math.PI).toFixed(1),
     zoom: control.zoom.toFixed(3),
   }).toString();
+  // A rolled view's roll, degrees clockwise; a level one says nothing.
+  const roll = ((control.roll * 180) / Math.PI).toFixed(1);
+  if (Number(roll) !== 0) url.searchParams.set('roll', roll);
   positionButton.disabled = true;
   try {
     await navigator.clipboard.writeText(url.href);
@@ -858,6 +861,8 @@ const openRoom = async () => {
     );
     const zoom = number('zoom');
     if (zoom !== null) control.zoom = zoom;
+    // Degrees clockwise; a link without it is level.
+    control.roll = ((number('roll') ?? 0) * Math.PI) / 180;
   }
   loaded.handle.resume?.();
   rememberPlayer();
@@ -1109,6 +1114,7 @@ const handOver = (to: RoomId, from: RoomId) => {
   entry.handle.enter?.(from, to);
   // Where the walker was, as the doorway carries it, the door with it.
   toWalk.place(there.x, there.z, there.yaw, eye.pitch, there.y ?? eye.y);
+  toWalk.roll = eye.roll ?? 0;
   far.swingTo(-angle);
   entry.handle.resume?.();
   // The room left behind is drawn underneath from the next frame.
@@ -1307,6 +1313,9 @@ window.addEventListener('pool-plant:room-zone', (event) => {
     );
     url.searchParams.set('pitch', ((pose.pitch * 180) / Math.PI).toFixed(1));
     url.searchParams.set('zoom', control.zoom.toFixed(3));
+    const roll = ((control.roll * 180) / Math.PI).toFixed(1);
+    if (Number(roll) !== 0) url.searchParams.set('roll', roll);
+    else url.searchParams.delete('roll');
   }
   history.replaceState(null, '', url);
   zoneTransferPending = true;
@@ -1325,6 +1334,7 @@ window.addEventListener('pool-plant:room-zone', (event) => {
       const next = nextSurface ? firstPersonOn(nextSurface) : null;
       if (next && pose) {
         next.place(pose.x, pose.z, pose.yaw, pose.pitch, pose.y);
+        next.roll = pose.roll ?? 0;
         if (zoom !== undefined) next.zoom = zoom;
       }
       loaded.handle.resume?.();

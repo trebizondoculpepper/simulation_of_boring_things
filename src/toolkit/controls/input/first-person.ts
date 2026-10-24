@@ -1,6 +1,6 @@
 import type { Box3, Object3D, PerspectiveCamera } from 'three';
 import { Box3 as SceneBounds } from 'three';
-import { noclip, flyCamera, flightHelp } from '../logic/noclip';
+import { noclip, flyCamera, flightHelp, rollCamera } from '../logic/noclip';
 import type { FlightBounds } from '../logic/noclip';
 import { createObjectHandling } from './object-handling';
 import type { DropPlacement } from './object-handling';
@@ -199,6 +199,8 @@ export interface EyePose {
   z: number;
   yaw: number;
   pitch: number;
+  /** Its roll about the line of sight, radians, clockwise positive. */
+  roll?: number;
   /** The camera's field of view now, degrees. */
   fov: number;
 }
@@ -280,6 +282,9 @@ export function createFirstPerson(options: FirstPersonOptions) {
     z: options.start.z,
     yaw: options.start.yaw ?? 0,
     pitch: options.start.pitch ?? 0,
+    // About the line of sight, clockwise positive: rolled only in noclip,
+    // or by the app (a camera link, the title's shots).
+    roll: 0,
     crouched: false,
     lowCrouched: false,
     crouch: 0,
@@ -296,6 +301,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
   let flying = false;
   let flightY = floorY + EYE_HEIGHT_METRES * metre;
   let flightUp = 0;
+  let flightRoll = 0;
   let returnTo: { walker: typeof walker; floor: number } | null = null;
   let fallbackBounds: FlightBounds | null = null;
   const flightBounds = (x: number, z: number): FlightBounds => {
@@ -440,6 +446,31 @@ export function createFirstPerson(options: FirstPersonOptions) {
       });
     altitude.append(button);
   }
+  // Rolling the view, held, and levelling it again, for unusual angles.
+  for (const [label, name, direction] of [
+    ['⟲', 'Roll left', -1],
+    ['⟳', 'Roll right', 1],
+  ] as const) {
+    const button = hudButton(label, name);
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      button.setPointerCapture?.(event.pointerId);
+      flightRoll = direction;
+    });
+    for (const event of ['pointerup', 'pointercancel', 'lostpointercapture'])
+      button.addEventListener(event, () => {
+        flightRoll = 0;
+      });
+    altitude.append(button);
+  }
+  const levelButton = hudButton('LEVEL', 'Level the view');
+  levelButton.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    walker.roll = 0;
+  });
+  altitude.append(levelButton);
   canvas.parentElement?.append(altitude);
   const flightReadout = document.createElement('div');
   flightReadout.className = 'noclip-readout';
@@ -564,7 +595,9 @@ export function createFirstPerson(options: FirstPersonOptions) {
       WALK_KEYS.has(event.code) ||
       event.code === 'KeyX' ||
       (noclip.value &&
-        ['Space', 'ControlLeft', 'ControlRight'].includes(event.code))
+        ['Space', 'ControlLeft', 'ControlRight', 'KeyQ', 'KeyE'].includes(
+          event.code,
+        ))
     ) {
       setInput('mouse');
       keys.add(event.code);
@@ -575,6 +608,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     if (event.repeat) return;
     if (event.code === 'KeyC' && !noclip.value) changeStance(walker);
     if (event.code === 'KeyV' && !noclip.value) changeStance(walker, true);
+    if (event.code === 'KeyR' && noclip.value) walker.roll = 0;
     if (event.code === 'KeyE') use(0, 0);
     if (event.code === 'KeyF') {
       setInput('mouse');
@@ -587,6 +621,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     tapped.clear();
     touchInspect = false;
     flightUp = 0;
+    flightRoll = 0;
   };
   const look = (event: MouseEvent) => {
     if (!locked()) return;
@@ -776,6 +811,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     run: false,
     inspect: false,
     up: 0,
+    roll: 0,
   };
   const readGamepad = () => {
     if (canvas.parentElement?.hidden || following) return idle;
@@ -811,8 +847,10 @@ export function createFirstPerson(options: FirstPersonOptions) {
       pad.buttons.some((b) => b.pressed);
     if (active) setInput('gamepad');
     if (went(PAD.use) && !noclip.value) use(0, 0);
-    if (went(PAD.knobDown)) turningKnobs(-1, () => use(0, 0));
-    if (went(PAD.knobUp)) turningKnobs(1, () => use(0, 0));
+    // In noclip the bumpers roll the view instead, and Y levels it.
+    if (went(PAD.knobDown) && !noclip.value) turningKnobs(-1, () => use(0, 0));
+    if (went(PAD.knobUp) && !noclip.value) turningKnobs(1, () => use(0, 0));
+    if (went(PAD.level) && noclip.value) walker.roll = 0;
     if (went(PAD.crouch) && !noclip.value) {
       changeStance(walker);
     }
@@ -827,6 +865,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
       run: padRun,
       inspect: pad.buttons[3]?.pressed ?? false,
       up: noclip.value ? button(PAD.use) - button(PAD.crouch) : 0,
+      roll: noclip.value ? button(PAD.knobUp) - button(PAD.knobDown) : 0,
     };
   };
 
@@ -847,8 +886,20 @@ export function createFirstPerson(options: FirstPersonOptions) {
         z: camera.position.z,
         yaw: walker.yaw,
         pitch: walker.pitch,
+        roll: walker.roll,
         fov: camera.fov,
       };
+    },
+    /**
+     * The camera's roll about its line of sight, radians, clockwise
+     * positive. Noclip's controls roll it; the app sets it from a camera
+     * link or a title shot. Placing the camera leaves it as it is.
+     */
+    get roll() {
+      return walker.roll;
+    },
+    set roll(value: number) {
+      if (Number.isFinite(value)) walker.roll = value;
     },
     /** Optical zoom relative to the room's normal field of view. */
     get zoom() {
@@ -936,6 +987,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
           eye.y + Math.sin(eye.pitch),
           eye.z - Math.cos(eye.yaw) * Math.cos(eye.pitch),
         );
+        if (eye.roll) camera.rotateZ(-eye.roll);
         if (camera.fov !== eye.fov) {
           camera.fov = eye.fov;
           camera.updateProjectionMatrix();
@@ -979,6 +1031,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
         tapped.clear();
         sticks?.reset();
         flightUp = 0;
+        flightRoll = 0;
       }
       const pad = readGamepad();
       const held = (...codes: string[]) =>
@@ -1060,6 +1113,16 @@ export function createFirstPerson(options: FirstPersonOptions) {
           (held('ShiftLeft', 'ShiftRight') ? 1 : 0) +
           flightUp +
           pad.up);
+      if (flying)
+        walker.roll = rollCamera(
+          walker.roll,
+          still *
+            ((held('KeyE') ? 1 : 0) -
+              (held('KeyQ') ? 1 : 0) +
+              flightRoll +
+              pad.roll),
+          delta,
+        );
       tapped.clear();
       const ladder = attachedLadder;
       if (ladder) {
@@ -1141,13 +1204,15 @@ export function createFirstPerson(options: FirstPersonOptions) {
         ? flightY
         : eyeY() + walker.eyeOffset - walker.crouch * 0.65 * metre + bob;
       if (flying)
-        flightReadout.textContent = `NOCLIP · x ${(walker.x / metre).toFixed(2)} · y ${(y / metre).toFixed(2)} · z ${(walker.z / metre).toFixed(2)} · yaw ${((walker.yaw * 180) / Math.PI).toFixed(1)}° · pitch ${((walker.pitch * 180) / Math.PI).toFixed(1)}°`;
+        flightReadout.textContent = `NOCLIP · x ${(walker.x / metre).toFixed(2)} · y ${(y / metre).toFixed(2)} · z ${(walker.z / metre).toFixed(2)} · yaw ${((walker.yaw * 180) / Math.PI).toFixed(1)}° · pitch ${((walker.pitch * 180) / Math.PI).toFixed(1)}° · roll ${((walker.roll * 180) / Math.PI).toFixed(1)}°`;
       camera.position.set(walker.x, y, walker.z);
       camera.lookAt(
         walker.x + Math.sin(walker.yaw) * Math.cos(walker.pitch),
         y + Math.sin(walker.pitch),
         walker.z - Math.cos(walker.yaw) * Math.cos(walker.pitch),
       );
+      // Rolled about the line of sight, after aiming.
+      if (walker.roll) camera.rotateZ(-walker.roll);
       // The room's own field of view if it set one, else the player's.
       const fov = (options.fov ?? settings.value.fov) / walker.zoom;
       if (camera.fov !== fov) {

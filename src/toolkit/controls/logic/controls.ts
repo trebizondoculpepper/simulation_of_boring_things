@@ -135,6 +135,8 @@ export const PAD = {
   torch: 2,
   knobDown: 4,
   knobUp: 5,
+  /** Y: in noclip, levels a rolled view. */
+  level: 3,
   zoomOut: 6,
   zoomIn: 7,
   run: 10,
