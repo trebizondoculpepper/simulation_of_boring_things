@@ -61,7 +61,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 ## Wiring the plant rooms' machines to the world
 
 - [ ] **The jacuzzi's balance tank** ([056](doc/prompts/056-jacuzzi-balance-tank.md), the owner, 2026-10-24): a deck-level spa cannot work without one.
-  - [x] **Stage 1, the model:** (done 2026-10-24, 4e3d195) a spa balance tank sized by its allowances (1.3 m³ for the jacuzzi); the cabinet's controller given its tank as an input, tested against an ideal tank and then the world's.
+  - [x] **Stage 1, the model:** (done 2026-10-24, 1305a28) a spa balance tank sized by its allowances (1.3 m³ for the jacuzzi); the cabinet's controller given its tank as an input, tested against an ideal tank and then the world's.
   - [ ] **Stage 2, installed:** a GRP balance tank component beside the cabinet, the gutter into it, the pump's suction from it, its make-up and overflow, all replumbed by the plumber; its sight gauge showing the world's level.
 - [ ] **The Olympic's busbar by the pipe helper, and its tap-offs drawn** (the owner, 2026-10-24: busbars always by the plumber and pipe helper, every part a component): its busbar ring is laid by a hand-written rule and drawn as containment, and its fused tap-offs exist only in its plumbing logic and plan; lay it as `busbar-trunking` and hang a tap-off unit (`createBusbarTapOff`, fused and pole-worked) at each drop, each switching its machine's supply in the world.
 - [ ] **Fully operational: the wiring audit's work** ([audit](doc/reports/wiring-audit-2026-10-24.md), the owner, 2026-10-24), in this order:
