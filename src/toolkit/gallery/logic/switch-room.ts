@@ -12,7 +12,7 @@ import type { ServiceRoom } from '../../../game/plant/services';
 export const SWITCHBOARD_FEEDS: Readonly<
   Record<string, readonly ServiceRoom[]>
 > = {
-  'MCC-1': ['wet_hall'],
+  'DB-WET HALL': ['wet_hall'],
   'DB-OLYMPIC': ['plant_pool_02'],
   'DB-LOUNGE': ['plant_pool_01'],
   'DB-SPAS': ['plant_pool_03', 'plant_pool_04'],

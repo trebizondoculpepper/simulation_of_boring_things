@@ -871,10 +871,6 @@ export function roomEquipment(
             back: 0,
             walls: ['west', 'east'],
           }),
-          floor('mcc', 'Motor control centre', 1.82, 0.56, 2, {
-            back: 0,
-            walls: ['east', 'west'],
-          }),
           // The whole site's supply, where it is found first.
           floor(
             'main-switch',
@@ -892,15 +888,6 @@ export function roomEquipment(
             1.8,
             { back: 0 },
           ),
-          wall(
-            'distribution-board',
-            'Distribution board',
-            0.5,
-            0.35,
-            0.86,
-            1.5,
-          ),
-          wall('rotary-isolators', 'Rotary isolators', 1.2, 0.2, 0.6, 1.4),
           // The lighting board, DB-L1: a way for each lighting zone.
           wall(
             'lighting-board',
@@ -1202,6 +1189,33 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
       put(box, at('mimic-gas'), { wall: 'east', along: -1.4 }),
       put(box, at('mimic-boiler-heat'), { wall: 'east', along: 1.1 }),
       put(box, at('combustion-panel'), { wall: 'east', along: 3.15 }),
+    ];
+  },
+  // The switch room (043, 2026-10-24: only what works): where the search
+  // had each before its motor control centre, rotary isolators and spare
+  // distribution board went, so nothing else moved: the switchboard on
+  // the west wall, the main switch on the east, a door's width north of
+  // the lighting board; their panels and its poster where they were.
+  switch_room: (box, items) => {
+    const at = (key: string) => items.find((i) => i.key === key)!;
+    const onWall = (p: Placed, side: Side): Placed => ({ ...p, side });
+    return [
+      onWall(
+        put(box, at('lv-switchboard'), { x: -2.17, z: -2.69, face: 'east' }),
+        'west',
+      ),
+      onWall(
+        put(box, at('main-switch'), { x: 2.275, z: -1.12, face: 'west' }),
+        'east',
+      ),
+      onWall(
+        put(box, at('central-battery'), { x: -2.25, z: -0.39, face: 'east' }),
+        'west',
+      ),
+      put(box, at('lighting-board'), { wall: 'east', along: -0.34 }),
+      put(box, at('generator-point'), { wall: 'south', along: -1.79 }),
+      put(box, at('earthing-terminal'), { wall: 'west', along: 3.58 }),
+      put(box, at('sign:shock-poster'), { wall: 'south', along: 1.75 }),
     ];
   },
   // The Olympic's: where its plan stands each machine (`olympic-plan.ts`).

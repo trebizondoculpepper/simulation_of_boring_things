@@ -109,6 +109,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Changed
 
+- The switch room keeps only what works ([043](doc/prompts/043-switch-room-tidy.md), the owner, 2026-10-24): its motor control centre, sample rotary isolators and spare distribution board, none wired to the world, are gone (motors are to be started from panels in their own plant rooms, [044](doc/prompts/044-plant-room-motor-panels.md)); the switchboard's MCC-1 way is DB-WET HALL, the wet hall it always fed; the trunking runs from the main switch along the walls into the switchboard; the room is laid out by hand where everything else already stood.
 - PL2-F1-V4's actuator faces the accessible south aisle. Upright actuated butterfly valves keep their manual override button facing horizontally when the actuator turns sideways.
 - Dev19 now occupies a 20 m square, 4 m high room with equipment on all four walls. Its graph service runs use the commodity-based pipe helper, including yellow gas lines, heating pipework, pool and mains water, power conduit and twin-wall flue. Small graph port labels face the player.
 - Small component legends, maker badges and machine nameplates fade smoothly as their lettering shrinks below readable screen size, including when the player zooms out.

@@ -11,6 +11,6 @@ describe('the main switchboard’s ways', () => {
   it('are named as their legends begin', () => {
     expect(wayName('DB-OLYMPIC 160 A')).toBe('DB-OLYMPIC');
     expect(wayName('DB-AIR PLANT 250 A')).toBe('DB-AIR PLANT');
-    expect(wayName('MCC-1 400 A')).toBe('MCC-1');
+    expect(wayName('DB-WET HALL 100 A')).toBe('DB-WET HALL');
   });
 });

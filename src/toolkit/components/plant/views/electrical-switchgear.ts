@@ -397,11 +397,11 @@ export function createMainSwitchboard(
   door(t, group, paint, w - 0.02, 0.7, xs[0], 0.47, face);
   legend(t, group, 'INCOMING CABLES', xs[0], 0.72, face + 0.019, 0.2, 0.024);
   // Outgoing ways: three tiers of two MCCB doors in each of two sections.
-  // The building's own loads: the motor control centre, each plant room's
-  // board, the boiler house, the air plant's handling units, lighting and
-  // small power, the emergency lighting battery and the BMS's UPS.
+  // The building's own loads: each plant room's board (the wet hall's,
+  // the pools', the boiler house's, the air plant's), lighting and small
+  // power, the emergency lighting battery and the BMS's UPS.
   const ways = [
-    ['MCC-1 400 A', 'DB-OLYMPIC 160 A'],
+    ['DB-WET HALL 100 A', 'DB-OLYMPIC 160 A'],
     ['DB-LOUNGE 100 A', 'DB-SPAS 63 A'],
     ['DB-BOILERS 100 A', 'DB-AIR PLANT 250 A'],
     ['DB-LIGHTING 160 A', 'DB-SMALL POWER 125 A'],

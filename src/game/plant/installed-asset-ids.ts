@@ -1,5 +1,10 @@
 /** Permanent installation IDs and explicit display tags for placed equipment.
- * A layout edit must update this register deliberately; it cannot renumber assets. */
+ * A layout edit must update this register deliberately; it cannot renumber assets.
+ *
+ * Retired, never to be reused (043, 2026-10-24: the switch room keeps only
+ * what works): asset-0064 SR-CP1 (the motor control centre), asset-0067
+ * SR-DB3 (a distribution board) and asset-0068 SR-IS2 (sample rotary
+ * isolators). */
 export const INSTALLED_ASSET_IDS: Readonly<
   Record<string, { assetId: string; tag: string }>
 > = {
@@ -188,10 +193,6 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0063',
     tag: 'SR-DB1',
   },
-  'switch_room|mcc|Motor control centre': {
-    assetId: 'asset-0064',
-    tag: 'SR-CP1',
-  },
   'switch_room|main-switch|Main incoming switch': {
     assetId: 'asset-0065',
     tag: 'SR-IS1',
@@ -199,14 +200,6 @@ export const INSTALLED_ASSET_IDS: Readonly<
   'switch_room|central-battery|Emergency lighting central battery': {
     assetId: 'asset-0066',
     tag: 'SR-DB2',
-  },
-  'switch_room|distribution-board|Distribution board': {
-    assetId: 'asset-0067',
-    tag: 'SR-DB3',
-  },
-  'switch_room|rotary-isolators|Rotary isolators': {
-    assetId: 'asset-0068',
-    tag: 'SR-IS2',
   },
   'switch_room|lighting-board|Lighting distribution board DB-L1': {
     assetId: 'asset-0069',

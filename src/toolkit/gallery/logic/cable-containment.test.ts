@@ -23,12 +23,7 @@ describe('the switch room’s containment', () => {
   });
 
   it('runs trunking from each piece of switchgear’s top up to the ladder, the board’s the widest', () => {
-    for (const key of [
-      'main-switch',
-      'lv-switchboard',
-      'mcc',
-      'central-battery',
-    ]) {
+    for (const key of ['main-switch', 'lv-switchboard', 'central-battery']) {
       const p = layout.placed.find((q) => q.item.key === key)!;
       const riser = runs.find((r) => r.name === `${p.item.label} trunking`)!;
       expect(riser, key).toBeDefined();
@@ -56,29 +51,30 @@ describe('the switch room’s containment', () => {
     expect(width('LV main switchboard')).toBeGreaterThanOrEqual(0.6);
   });
 
-  it('joins the main switch to the motor control centre, and that to the main switchboard, in trunking', () => {
-    for (const name of [
-      'Trunking, main switch to the motor control centre',
-      'Trunking, motor control centre to the main switchboard',
-      'Trunking, down into the motor control centre',
-      'Trunking, down into the main switchboard',
-    ])
-      expect(
-        runs.some((r) => r.name === name),
-        name,
-      ).toBe(true);
-    // Into the motor control centre's end, and onto its and the board's tops.
-    const mcc = layout.placed.find((p) => p.item.key === 'mcc')!;
-    const across = runs.find((r) =>
-      r.name.endsWith('to the motor control centre'),
+  it('joins the main switch to the main switchboard in trunking, end to end', () => {
+    const legs = [
+      'Trunking, main switch along its wall',
+      'Trunking, main switch to the main switchboard',
+    ].map((name) => runs.find((r) => r.name === name)!);
+    const down = runs.find(
+      (r) => r.name === 'Trunking, down into the main switchboard',
     )!;
-    const z = across.to[2];
-    expect(
-      Math.abs(z - mcc.footprint.minZ) < 1e-6 ||
-        Math.abs(z - mcc.footprint.maxZ) < 1e-6,
-    ).toBe(true);
-    for (const r of runs.filter((q) => q.name.startsWith('Trunking, down')))
-      expect(r.from[1]).toBe(2);
+    expect(legs.every(Boolean) && Boolean(down)).toBe(true);
+    // Each leg starts where the last ended, the last at the board's riser.
+    expect(near(legs[0].to, legs[1].from)).toBe(true);
+    expect(near(legs[1].to, down.to)).toBe(true);
+    // Off the main switch's riser, onto the board's top.
+    const sw = runs.find((r) => r.name === 'Main incoming switch trunking')!;
+    expect(legs[0].from[0]).toBeCloseTo(sw.from[0], 1);
+    expect(legs[0].from[2]).toBeCloseTo(sw.from[2], 1);
+    expect(down.from[1]).toBe(2);
+    expect(runs.some((r) => /motor control centre/.test(r.name))).toBe(false);
+  });
+
+  it('keeps no motor starters, and no board that switches nothing', () => {
+    const keys = layout.placed.map((p) => p.item.key);
+    for (const gone of ['mcc', 'rotary-isolators', 'distribution-board'])
+      expect(keys).not.toContain(gone);
   });
 
   it('carries the sub-mains out over the door, above its head', () => {

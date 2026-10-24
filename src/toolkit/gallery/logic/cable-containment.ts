@@ -56,7 +56,6 @@ const OFF_WALL = 0.4;
 const RISERS: Record<string, { width: number; depth: number }> = {
   'main-switch': { width: 0.6, depth: 0.2 },
   'lv-switchboard': { width: 0.6, depth: 0.2 },
-  mcc: { width: 0.45, depth: 0.15 },
   'central-battery': { width: 0.2, depth: 0.1 },
 };
 
@@ -82,7 +81,7 @@ export function switchRoomContainment(): {
     to: Containment['to'],
   ) => runs.push({ name, kind: 'ladder', ...LADDER, from, to });
   // The ladder round the room: along the west wall, the north, and the
-  // east as far as the motor control centre; and from the west wall's
+  // east; and from the west wall's
   // south end along the south wall to over the door.
   const wx = -hw + OFF_WALL;
   const ex = hw - OFF_WALL;
@@ -131,54 +130,46 @@ export function switchRoomContainment(): {
       facing,
     });
   }
-  // Trunking between the cabinets: from the main switch's side across to
-  // the motor control centre beside it, as the Encabulator's isolator feeds
-  // its line-up; and from the motor control centre's top along the north
-  // wall and down into the main switchboard's.
+  // Trunking from the main switch to the main switchboard: off its
+  // riser, along its wall to the north wall, along that, and down into
+  // the board's top.
   const find = (key: string) => placed.find((p) => p.item.key === key);
   const sw = find('main-switch');
-  const mcc = find('mcc');
   const board = find('lv-switchboard');
-  if (sw && mcc) {
-    const [bx, bz] = backOf(sw);
-    const x = sw.x + bx * (sw.item.d / 2 - 0.15);
-    const z = sw.z + bz * (sw.item.d / 2 - 0.15);
-    const toward = Math.sign(mcc.z - sw.z);
-    const y = MAIN_SWITCH.top - 0.14;
-    runs.push({
-      name: 'Trunking, main switch to the motor control centre',
-      kind: 'trunking',
-      width: 0.15,
-      depth: 0.15,
-      from: [x, y, z + (toward * sw.item.w) / 2 - toward * 0.13],
-      to: [x, y, toward > 0 ? mcc.footprint.minZ : mcc.footprint.maxZ],
-    });
-  }
-  if (mcc && board) {
+  if (sw && board) {
     const y = 2.6;
     const north = -hd + 0.1;
-    const ends = [mcc, board].map((p) => {
-      const [bx] = backOf(p);
-      return { x: p.x + bx * (p.item.d / 2 - 0.12), top: p.item.h };
-    });
-    runs.push({
-      name: 'Trunking, motor control centre to the main switchboard',
-      kind: 'trunking',
-      width: 0.3,
-      depth: 0.15,
-      from: [ends[0].x, y, north],
-      to: [ends[1].x, y, north],
-    });
-    for (const [i, e] of ends.entries())
-      runs.push({
-        name: `Trunking, down into the ${i ? 'main switchboard' : 'motor control centre'}`,
+    const [sx] = backOf(sw);
+    const [kx] = backOf(board);
+    const swX = sw.x + sx * (sw.item.d / 2 - 0.15);
+    const boardX = board.x + kx * (board.item.d / 2 - 0.12);
+    runs.push(
+      {
+        name: 'Trunking, main switch along its wall',
         kind: 'trunking',
         width: 0.3,
         depth: 0.15,
-        from: [e.x, e.top, north],
-        to: [e.x, y, north],
+        from: [swX, y, sw.z],
+        to: [swX, y, north],
+      },
+      {
+        name: 'Trunking, main switch to the main switchboard',
+        kind: 'trunking',
+        width: 0.3,
+        depth: 0.15,
+        from: [swX, y, north],
+        to: [boardX, y, north],
+      },
+      {
+        name: 'Trunking, down into the main switchboard',
+        kind: 'trunking',
+        width: 0.3,
+        depth: 0.15,
+        from: [boardX, board.item.h, north],
+        to: [boardX, y, north],
         facing: 'z',
-      });
+      },
+    );
   }
   return { runs, entries };
 }

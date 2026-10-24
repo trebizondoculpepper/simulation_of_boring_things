@@ -33,11 +33,8 @@ describe('the real plant rooms’ machines, wired to the world', () => {
         'calorifier',
         'central-battery',
         'contact-tank',
-        'distribution-board',
         'fire-repeater',
-        'mcc',
         'pressurisation',
-        'rotary-isolators',
       ].sort(),
     );
   });
