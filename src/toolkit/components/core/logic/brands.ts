@@ -478,7 +478,8 @@ export const BRANDS: readonly Brand[] = [
     tagline: 'Shut, latched, and staying shut',
     founded: 1961,
     country: 'United Kingdom',
-    makes: 'Steel fire doorsets, door closers and coded locks',
+    makes:
+      'Steel fire doorsets, door closers, coded locks and workshop storage cupboards',
     promise: 'Doors that close themselves behind every careless hand',
     mark: 'doorset',
     colours: ['#5d6b5e', '#e3e1d6', '#1b1e1c'],

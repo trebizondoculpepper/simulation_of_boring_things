@@ -43,6 +43,7 @@ import type {
   RackUnitView,
 } from '../../components/industrial-control/views/rack-equipment';
 import { createFirstPerson } from '../../controls/input/first-person';
+import { isHeldPortableHit } from '../../controls/input/object-handling';
 import { createPartSet, rackUnit } from '../../components/core/parts/parts';
 import { partAudio } from '../../components/core/audio/part-audio';
 import {
@@ -132,6 +133,8 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
   const footprints: Footprint[] = [];
   const storageCupboards: ReturnType<typeof createEngineerStorageCupboard>[] =
     [];
+  const storageObjects = new Group();
+  scene.add(storageObjects);
   /** Stand something built in metres at (x, z) metres, facing +z turned by `yaw`. */
   const stand = (
     object: Object3D,
@@ -374,12 +377,13 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
   }
   // Two engineer's stores cupboards, modelled from the owner's reference:
   // solid steel and glazed doors, with working parts drawers in both.
-  for (const [style, x] of [
-    ['solid', 3.65],
-    ['glass', 4.85],
+  for (const [style, x, label] of [
+    ['solid', 3.65, 'PARTS STORES'],
+    ['glass', 4.85, 'TEST EQUIPMENT'],
   ] as const) {
-    const cupboard = createEngineerStorageCupboard(kit, style);
+    const cupboard = createEngineerStorageCupboard(kit, style, label);
     stand(cupboard.group, x, -5.25, 0.5, 0.96);
+    storageObjects.add(cupboard.group);
     storageCupboards.push(cupboard);
   }
 
@@ -488,6 +492,24 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
     scene,
     canvas,
     camera,
+    objects: storageObjects,
+    allowPickup(object) {
+      for (const cupboard of storageCupboards) {
+        const allowed = cupboard.canRemove(object);
+        if (allowed !== null) return allowed;
+      }
+      return true;
+    },
+    heldAction(object, _portable, x, y) {
+      raycaster.setFromCamera(pointer.set(x, y), camera);
+      const hit = raycaster
+        .intersectObjects(scene.children, true)
+        .find((candidate) => !isHeldPortableHit(candidate.object));
+      if (!hit || hit.distance > 3.2 * m) return false;
+      return storageCupboards.some((cupboard) =>
+        cupboard.returnItem(object, hit.object),
+      );
+    },
     metre: m,
     floorY: 0,
     start: views[params.get('view') ?? ''] ??
@@ -579,6 +601,7 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
     walk.dispose();
     portals.dispose();
     parts.dispose();
+    for (const cupboard of storageCupboards) cupboard.dispose();
     notes.remove();
     disposeKit(kit, scene as unknown as Group);
     scene.traverse((object) => {
