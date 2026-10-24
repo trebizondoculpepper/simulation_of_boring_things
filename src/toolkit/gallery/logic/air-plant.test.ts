@@ -143,23 +143,101 @@ describe('the gantries and their stair', () => {
   it('are reached by walking up the stair, step by step, from the floor to the top', () => {
     const f1 = surfaces.find((s) => s.name === 'Stair, first flight')!;
     const f2 = surfaces.find((s) => s.name === 'Stair, second flight')!;
-    // Up the first flight, northward.
+    const top = surfaces.find((s) => s.name === 'Second landing')!;
+    // Up the first flight, northward, to the middle landing.
     let y = 0;
     const fx = (f1.area.minX + f1.area.maxX) / 2;
-    for (let zz = f1.area.maxZ + 0.3; zz >= f1.area.minZ - 0.5; zz -= 0.05)
+    for (let zz = f1.area.maxZ + 0.3; zz >= f1.area.minZ - 0.6; zz -= 0.05)
       y = airFloorAt(surfaces, fx, zz, y);
     expect(y).toBeCloseTo(2.4, 6);
-    // Across the landing and up the second, southward.
-    const gx = (f2.area.minX + f2.area.maxX) / 2;
-    for (let xx = fx; xx <= gx; xx += 0.05)
-      y = airFloorAt(surfaces, xx, f2.area.minZ - 0.3, y);
-    for (let zz = f2.area.minZ - 0.3; zz <= f2.area.maxZ + 0.5; zz += 0.05)
-      y = airFloorAt(surfaces, gx, zz, y);
-    expect(y).toBeCloseTo(4.8, 6);
-    // And along the top gantry, back north over the first flight.
-    for (let zz = f2.area.maxZ + 0.5; zz >= g2.area.minZ + 0.5; zz -= 0.1)
+    // Straight on north up the second, the same way, to the top landing.
+    for (let zz = f2.area.maxZ; zz >= top.area.minZ + 0.3; zz -= 0.05)
       y = airFloorAt(surfaces, fx, zz, y);
     expect(y).toBeCloseTo(4.8, 6);
+    // And sideways west off the landing, onto the top gantry.
+    const tz = (top.area.minZ + top.area.maxZ) / 2;
+    for (let xx = fx; xx >= x; xx -= 0.05) y = airFloorAt(surfaces, xx, tz, y);
+    expect(y).toBeCloseTo(4.8, 6);
+  });
+
+  it('let a walker climb the whole stair without walking into anything', () => {
+    const f1 = surfaces.find((s) => s.name === 'Stair, first flight')!;
+    const top = surfaces.find((s) => s.name === 'Second landing')!;
+    const fx = (f1.area.minX + f1.area.maxX) / 2;
+    let y = 0;
+    for (let zz = f1.area.maxZ + 0.5; zz >= top.area.minZ + 0.3; zz -= 0.05) {
+      y = airFloorAt(surfaces, fx, zz, y);
+      const blocked = levelSolids(surfaces, y).some((r) =>
+        overlap(r, {
+          minX: fx - 0.3,
+          maxX: fx + 0.3,
+          minZ: zz - 0.3,
+          maxZ: zz + 0.3,
+        }),
+      );
+      expect(blocked, `at z ${zz.toFixed(2)}, y ${y.toFixed(2)}`).toBe(false);
+    }
+    expect(y).toBeCloseTo(4.8, 6);
+  });
+
+  it('stop a walker on the floor from passing under the first flight’s low end', () => {
+    const f1 = surfaces.find((s) => s.name === 'Stair, first flight')!;
+    const under = levelSolids(surfaces, 0);
+    const mid = {
+      minX: f1.area.minX + 0.2,
+      maxX: f1.area.maxX - 0.2,
+      minZ: (f1.area.minZ + f1.area.maxZ) / 2 - 0.1,
+      maxZ: (f1.area.minZ + f1.area.maxZ) / 2 + 0.1,
+    };
+    expect(under.some((r) => overlap(r, mid))).toBe(true);
+  });
+
+  it('run outside the gantries, both flights the same way, nothing over either', () => {
+    const flights = surfaces.filter((s) => typeof s.y !== 'number');
+    expect(flights).toHaveLength(2);
+    for (const f of flights) {
+      // East of the gantries, never under one.
+      expect(f.area.minX).toBeGreaterThanOrEqual(g1.area.maxX - 1e-9);
+      for (const d of surfaces.filter((s) => typeof s.y === 'number'))
+        if (
+          d.area.minX < f.area.maxX - 1e-9 &&
+          d.area.maxX > f.area.minX + 1e-9
+        )
+          expect(
+            d.area.maxZ <= f.area.minZ + 1e-9 ||
+              d.area.minZ >= f.area.maxZ - 1e-9,
+          ).toBe(true);
+      // Rising northward, at a stair's pitch (BS EN ISO 14122-3: up to 45 degrees).
+      if (typeof f.y === 'number') continue;
+      expect(f.y.at1).toBeLessThan(f.y.at0);
+      const pitch = Math.atan2(f.y.y1 - f.y.y0, f.y.at0 - f.y.at1);
+      expect(pitch).toBeGreaterThan((30 * Math.PI) / 180);
+      expect(pitch).toBeLessThan((42 * Math.PI) / 180);
+    }
+  });
+
+  it('meet each gantry from a landing at its own level', () => {
+    for (const [landing, gantry] of [
+      ['First landing', g1],
+      ['Second landing', g2],
+    ] as const) {
+      const l = surfaces.find((s) => s.name === landing)!;
+      expect(l.y).toBe(gantry.y);
+      expect(l.area.minX).toBeCloseTo(gantry.area.maxX, 6);
+      expect(l.area.minZ).toBeGreaterThanOrEqual(gantry.area.minZ - 1e-9);
+      expect(l.area.maxZ).toBeLessThanOrEqual(gantry.area.maxZ + 1e-9);
+      // No rail between them.
+      const level = typeof l.y === 'number' ? l.y : 0;
+      const between = {
+        minX: l.area.minX - 0.02,
+        maxX: l.area.minX + 0.02,
+        minZ: l.area.minZ + 0.2,
+        maxZ: l.area.maxZ - 0.2,
+      };
+      expect(
+        levelSolids(surfaces, level).some((r) => overlap(r, between)),
+      ).toBe(false);
+    }
   });
 
   it('rail every gantry’s open edge, but leave the way on to the stair', () => {

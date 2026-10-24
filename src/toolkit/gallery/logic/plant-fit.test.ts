@@ -63,7 +63,10 @@ describe('room for everything', () => {
     for (const [room, id] of Object.entries(rooms)) {
       const spec = SHELL_ROOMS[room as ShellRoomId];
       const r = need(id);
-      expect(fits(spec, r), room).toBe(true);
+      // The sizing lays the air plant's units out on the floor; as built
+      // the Olympic's stand three high, and the room is narrowed to them
+      // (the owner, 2026-10-24): its own layout's tests show it holds them.
+      if (room !== 'air_plant') expect(fits(spec, r), room).toBe(true);
       expect(spec.height, room).toBeGreaterThanOrEqual(r.height);
     }
   });

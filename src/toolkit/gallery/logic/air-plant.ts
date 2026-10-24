@@ -262,12 +262,19 @@ export interface Surface {
 /** The gantries' width, the stair's going and its flights' width, metres. */
 export const GANTRY_WIDTH = 1.2;
 
+/** A flight's going (its length on plan), metres: 2.4 m rise over 3 m, about 39 degrees. */
+export const FLIGHT = 3.0;
+
 /**
  * The gantries along the west stacks' fronts at each upper unit's floor,
- * and the stair to them at the south end: a flight from the floor up to
- * the first, northward under the gantries' line; a landing; a flight
- * beside it on up to the second, southward; and the second's landing,
- * from which it runs back north over the first flight.
+ * and their stair, outside them (the owner, 2026-10-24: the stair on the
+ * outside of the three-storey structure, two flights on in the same
+ * direction with a small landing at the middle floor): in a band of its
+ * own just east of the gantries, from its foot at the stacks' south end,
+ * a flight north up to a landing beside the first gantry, then a second
+ * flight straight on north up to a landing beside the second. Nothing is
+ * over either flight, and the floor under the first gantry stays clear
+ * for working on the lowest units.
  */
 export function gantries(box: RoomBox): Surface[] {
   const west = placeStacks(box).filter((s) => s.at.face === 'east');
@@ -281,58 +288,41 @@ export function gantries(box: RoomBox): Surface[] {
   const north = Math.min(...west.map((s) => s.at.z - s.item.w / 2));
   const south = Math.max(...west.map((s) => s.at.z + s.item.w / 2));
   const levels = units.slice(1).map((_, k) => unitBase(size, k + 1));
-  const out: Surface[] = [];
-  const flight = 3.0;
-  const z0 = south + 0.1;
+  const out: Surface[] = levels.map((y, k) => ({
+    name: `Gantry ${k + 1}`,
+    area: { minX: x0, maxX: x1, minZ: north, maxZ: south },
+    y,
+  }));
+  // Up the band from its foot, each flight then its landing.
+  let z = south;
+  let below = 0;
+  const ORDINAL = ['first', 'second', 'third'];
   levels.forEach((y, k) => {
-    out.push({
-      name: `Gantry ${k + 1}`,
-      area: {
-        minX: x0,
-        maxX: x1,
-        minZ: north,
-        maxZ: k === 0 ? z0 : z0 + flight + GANTRY_WIDTH,
-      },
-      y,
-    });
-  });
-  if (levels.length >= 1)
     out.push(
       {
-        name: 'Stair, first flight',
-        area: { minX: x0, maxX: x1, minZ: z0, maxZ: z0 + flight },
-        y: { along: 'z', at0: z0 + flight, y0: 0, at1: z0, y1: levels[0] },
+        name: `Stair, ${ORDINAL[k]} flight`,
+        area: { minX: x1, maxX: x2, minZ: z - FLIGHT, maxZ: z },
+        y: { along: 'z', at0: z, y0: below, at1: z - FLIGHT, y1: y },
       },
       {
-        name: 'First landing',
-        area: { minX: x0, maxX: x2, minZ: z0 - GANTRY_WIDTH, maxZ: z0 },
-        y: levels[0],
-      },
-    );
-  if (levels.length >= 2)
-    out.push(
-      {
-        name: 'Stair, second flight',
-        area: { minX: x1, maxX: x2, minZ: z0, maxZ: z0 + flight },
-        y: {
-          along: 'z',
-          at0: z0,
-          y0: levels[0],
-          at1: z0 + flight,
-          y1: levels[1],
-        },
-      },
-      {
-        name: 'Second landing',
+        name:
+          k === 0
+            ? 'First landing'
+            : k === 1
+              ? 'Second landing'
+              : `Landing ${k + 1}`,
         area: {
-          minX: x0,
+          minX: x1,
           maxX: x2,
-          minZ: z0 + flight,
-          maxZ: z0 + flight + GANTRY_WIDTH,
+          minZ: z - FLIGHT - GANTRY_WIDTH,
+          maxZ: z - FLIGHT,
         },
-        y: levels[1],
+        y,
       },
     );
+    z -= FLIGHT + GANTRY_WIDTH;
+    below = y;
+  });
   return out;
 }
 
@@ -398,6 +388,9 @@ export function levelSolids(
 ): Footprint[] {
   const { level } = levelOf(surfaces, y);
   if (level < 0.5) {
+    // Climbing the first flight, not under it: nothing stops the walker
+    // but the floor's level's rails, of which there are none.
+    if (y > STEP_UP / 2) return [];
     // Under the first flight, where its underside is below a head.
     const first = surfaces.find((s) => s.name === 'Stair, first flight');
     if (!first || typeof first.y === 'number') return [];

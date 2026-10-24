@@ -112,8 +112,11 @@ export const SHELL_ROOMS = {
   air_plant: {
     id: 'air_plant',
     title: 'AIR HANDLING PLANT',
-    w: 17.5,
-    d: 28,
+    // Narrowed to its contents (the owner, 2026-10-24: much of it was
+    // wasted): the Olympic's stacks, their gantries and the stair outside
+    // them along the west, an aisle, the other halls' units along the east.
+    w: 9.5,
+    d: 25,
     // Tall enough for the Olympic's units three high, with gantries to
     // their upper two (`air-plant.ts`); its floor as the others'.
     height: 10,
