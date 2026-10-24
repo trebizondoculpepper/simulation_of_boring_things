@@ -1,5 +1,7 @@
 import { computed, signal } from '@preact/signals-core';
 import { Group } from 'three';
+import type { Object3D } from 'three';
+import type { ReadonlySignal } from '@preact/signals-core';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import { createPipe } from '../../../components/core/views/pipe-kinds';
 import type { PipeKindId } from '../../../components/core/views/pipe-kinds';
@@ -664,11 +666,21 @@ function buildSpaPack(
   const doorOpen = computed(() => latches.some((l) => l.open.value));
   // Its pump's motor, heard while it runs (the owner, 2026-10-23): at full
   // volume while either door is open more than about 20 degrees, fading
-  // to 20 dB down as the last one shuts (`doorGain`).
+  // to 15 dB down as the last one shuts (`doorGain`). The jacuzzi's jet
+  // pump and air blower likewise, each while it runs (the owner,
+  // 2026-10-24), louder than the circulation: bigger motors.
   const HUM = 0.07;
-  const humLevel = signal(HUM * doorGain(0));
+  const doors = signal(doorGain(0));
+  const humLevel = computed(() => HUM * doors.value);
   const hum = machineTone('motor', signal(1), humLevel);
   let humming = false;
+  const bay: {
+    what: 'jets' | 'air';
+    runs: ReadonlySignal<boolean>;
+    source: Object3D;
+    recipe: ReturnType<typeof machineTone>;
+    on: boolean;
+  }[] = [];
   const doorLamp = computed(() => supplied.value && doorOpen.value);
   const uvOn = computed(() => running.value && !doorOpen.value);
   (
@@ -753,6 +765,27 @@ function buildSpaPack(
               : (own.value = !own.value),
         }),
       );
+      // Heard while it runs: the jet pump's motor, the blower's whine.
+      const source = what === 'jets' ? jetPump : blower;
+      if (source)
+        bay.push({
+          what,
+          runs: lit,
+          source,
+          recipe:
+            what === 'jets'
+              ? machineTone(
+                  'pump',
+                  signal(1),
+                  computed(() => 0.11 * doors.value),
+                )
+              : machineTone(
+                  'blower',
+                  signal(1),
+                  computed(() => 0.09 * doors.value),
+                ),
+          on: false,
+        });
       button.object.position.set(0.26, 0.06 - i * 0.17, 0);
       button.object.scale.setScalar(0.8);
       front.add(button.object);
@@ -774,8 +807,14 @@ function buildSpaPack(
       left.hinge.rotation.y = -swing[0];
       right.hinge.rotation.y = swing[1];
       // Heard by the wider-open door.
-      humLevel.value =
-        HUM * doorGain((Math.max(swing[0], swing[1]) * 180) / Math.PI);
+      doors.value = doorGain((Math.max(swing[0], swing[1]) * 180) / Math.PI);
+      for (const b of bay) {
+        const sounding = b.runs.value;
+        if (sounding !== b.on) {
+          b.on = sounding;
+          partAudio.hold(b.source, sounding ? b.recipe : null, b.source);
+        }
+      }
       const on = running.value;
       if (on !== humming) {
         humming = on;
@@ -811,6 +850,10 @@ function buildSpaPack(
     dispose: () => {
       humming = false;
       partAudio.hold(pump.group, null);
+      for (const b of bay) {
+        b.on = false;
+        partAudio.hold(b.source, null);
+      }
     },
   };
 }

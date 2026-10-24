@@ -478,7 +478,7 @@ export function cabinetGully(room: string, trial?: Placed): Vec3 | null {
   if (!s) return null;
   const port = cabinetPorts(s.jets).find((p) => p.to === 'drain')!;
   const at = inRoom(s.placed, port.at);
-  const reach = room === 'plant_pool_04' ? FOOTBATH_DRAIN_REACH : CLEAR;
+  const reach = MOTORISED.has(room) ? FOOTBATH_DRAIN_REACH : CLEAR;
   return [at[0] + s.outDir[0] * reach, 0, at[2] + s.outDir[2] * reach];
 }
 
@@ -640,13 +640,30 @@ export function cabinetPipes(
   });
   // The drain, down into its tundish (its rim at 0.12 m, an air gap over it).
   for (const { port, at } of ports.filter((p) => p.port.to === 'drain')) {
-    const reach = room === 'plant_pool_04' ? FOOTBATH_DRAIN_REACH : CLEAR;
+    const reach = MOTORISED.has(room) ? FOOTBATH_DRAIN_REACH : CLEAR;
     const out: Vec3 = [
       at[0] + outDir[0] * reach,
       at[1],
       at[2] + outDir[2] * reach,
     ];
     add(port, [at, out, [out[0], 0.17, out[2]]]);
+  }
+  // The jacuzzi's drain valve, motorised on its one short length, as the
+  // foot spa's (the owner, 2026-10-24: on its valve panel with the rest).
+  if (room === 'plant_pool_03') {
+    const drainRun = runs.find((r) => r.name === 'Drain to waste');
+    if (drainRun) {
+      const [a, b] = drainRun.points;
+      drainRun.valve = {
+        id: 'Drain to waste valve',
+        at: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2],
+        axis: Math.abs(a[0] - b[0]) > Math.abs(a[2] - b[2]) ? 'x' : 'z',
+        facing: -Math.PI / 2,
+        operator: 'motor',
+        installed: true,
+        name: 'Drain to waste valve',
+      };
+    }
   }
   if (room === 'plant_pool_04') {
     const returnRun = runs.find((r) => r.name === 'Return to the spa');

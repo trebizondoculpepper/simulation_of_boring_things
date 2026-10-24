@@ -46,6 +46,7 @@ import {
 import { signal } from '@preact/signals-core';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { footbathDischarging } from '../../../game/plant/footbath-discharge';
+import { jacuzziDischarging } from '../../../game/world';
 import { machineTone } from '../../components/sound/audio/machine-tones';
 import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
 import { createValveControlPanel } from '../../components/plant/views/valve-control-panel';
@@ -130,24 +131,38 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
               newIdentifiedPlant(),
             id,
           );
-      const binding = installed
+      // The jacuzzi's drain valve opens and shuts its drain-down in the
+      // world: open, its pump sends the tub's water to waste.
+      const jacuzziDrain =
+        room === 'plant_pool_03' && run.name === 'Drain to waste';
+      const binding = jacuzziDrain
         ? {
-            open: () =>
-              store?.world.value.installedValves[installed.assetId] ??
-              installed.normal === 'open',
+            open: () => store?.world.value.pools.pool_03.drainDown ?? false,
             set: (open: boolean) =>
               store?.dispatch({
-                type: 'plant/valve',
-                id: installed.assetId,
+                type: 'pool/drain-down',
+                pool: 'pool_03',
                 open,
               }),
           }
-        : {
-            open: () =>
-              store ? partOpen(store.world.value.identifiedPlant, id) : true,
-            set: (open: boolean) =>
-              store?.dispatch({ type: 'plant/valve', id, open }),
-          };
+        : installed
+          ? {
+              open: () =>
+                store?.world.value.installedValves[installed.assetId] ??
+                installed.normal === 'open',
+              set: (open: boolean) =>
+                store?.dispatch({
+                  type: 'plant/valve',
+                  id: installed.assetId,
+                  open,
+                }),
+            }
+          : {
+              open: () =>
+                store ? partOpen(store.world.value.identifiedPlant, id) : true,
+              set: (open: boolean) =>
+                store?.dispatch({ type: 'plant/valve', id, open }),
+            };
       if (run.valve.operator === 'motor') {
         // A motorised ball valve, its actuator up (out of a riser, turned
         // aside), its lamp as its limit switches find it; worked from the
@@ -371,14 +386,17 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       isolator?.update(delta);
       for (const valve of valveParts) valve.update(delta);
       for (const lamp of motorLamps) lamp(delta);
-      // Gurgling while the foot spa's water runs away down it.
-      if (drainMouth && store && room === 'plant_pool_04') {
+      // Gurgling while the spa's water runs away down it.
+      if (drainMouth && store) {
         const w = store.world.value;
-        const running = footbathDischarging(
-          w.identifiedPlant,
-          w.pools.pool_04,
-          w.plant.isolators[name] ?? true,
-        );
+        const running =
+          room === 'plant_pool_03'
+            ? jacuzziDischarging(w)
+            : footbathDischarging(
+                w.identifiedPlant,
+                w.pools.pool_04,
+                w.plant.isolators[name] ?? true,
+              );
         if (running !== gurgling) {
           gurgling = running;
           partAudio.hold(

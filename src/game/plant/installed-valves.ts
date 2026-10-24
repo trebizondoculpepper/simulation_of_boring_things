@@ -376,6 +376,12 @@ export const INSTALLED_VALVES: Readonly<
     tag: 'PL3-JZ1-IV4',
     normal: 'open',
   },
+  // The jacuzzi's drain valve, motorised, shut in service (2026-10-24).
+  'plant_pool_03|Drain to waste|Drain to waste valve': {
+    assetId: 'valve-0099',
+    tag: 'PL3-JZ1-DV1',
+    normal: 'closed',
+  },
   'plant_pool_04|Overflow from the spa|Overflow from the spa valve': {
     assetId: 'valve-0094',
     tag: 'PL4-PW1-IV2',

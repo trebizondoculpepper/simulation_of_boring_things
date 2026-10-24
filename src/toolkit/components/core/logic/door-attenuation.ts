@@ -8,8 +8,12 @@
 
 /** Open this far, a door lets everything out, degrees. */
 export const DOOR_FULL_AT = 20;
-/** Shut, it holds the sound this far down, decibels. */
-export const DOOR_SHUT_DB = -20;
+/**
+ * Shut, it holds the sound this far down, decibels: a sheet-steel cabinet
+ * door, enough that its machines are still heard running (the owner,
+ * 2026-10-24: -15 dB at most).
+ */
+export const DOOR_SHUT_DB = -15;
 
 /** The gain of a sound heard past a door open `degrees` from shut. */
 export function doorGain(degrees: number): number {

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { advance, applyAction, jacuzziRuns, newWorld } from '../world';
+import {
+  advance,
+  applyAction,
+  jacuzziDischarging,
+  jacuzziRuns,
+  newWorld,
+} from '../world';
 import type { World } from '../world';
 import type { JacuzziAction } from './jacuzzi';
 
@@ -40,5 +46,23 @@ describe('the jacuzzi’s jets and air', () => {
       on: false,
     });
     expect(jacuzziRuns(w)).toEqual({ jets: false, air: false });
+  });
+
+  it('drain away while its drain valve is open, gurgling until the tub is shut off or empty', () => {
+    expect(jacuzziDischarging(start)).toBe(false);
+    const open = applyAction(start, {
+      type: 'pool/drain-down',
+      pool: 'pool_03',
+      open: true,
+    });
+    let w = advance(open, 60, 1);
+    expect(jacuzziDischarging(w)).toBe(true);
+    expect(w.pools.pool_03.level).toBeLessThan(start.pools.pool_03.level);
+    w = applyAction(w, {
+      type: 'pool/drain-down',
+      pool: 'pool_03',
+      open: false,
+    });
+    expect(jacuzziDischarging(w)).toBe(false);
   });
 });
