@@ -33,7 +33,13 @@ export function createActuatedButterflyValve(
   dn: DN,
   axis: 'x' | 'y' | 'z',
   name: string,
-  binding?: { open(): boolean; set(open: boolean): void },
+  binding?: {
+    open(): boolean;
+    set(open: boolean): void;
+    position?(): number;
+    power?(): boolean;
+    air?(): boolean;
+  },
 ) {
   const a = beginPart(kit, name);
   const t = plantTools(kit);
@@ -157,8 +163,16 @@ export function createActuatedButterflyValve(
   };
   a.uses.set(override, toggle);
   a.updates.push((delta) => {
-    if (binding) state = { ...state, command: binding.open() };
-    state = stepActuatedValve(state, delta, stroke);
+    if (binding)
+      state = {
+        ...state,
+        command: binding.open(),
+        power: binding.power?.() ?? state.power,
+        air: binding.air?.() ?? state.air,
+      };
+    state = binding?.position
+      ? { ...state, position: binding.position() }
+      : stepActuatedValve(state, delta, stroke);
     indicator.rotation.y = (1 - state.position) * (Math.PI / 2);
     lamp.set(energised(state));
   });

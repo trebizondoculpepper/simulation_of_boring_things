@@ -584,6 +584,7 @@ function poolPlant(
         f.w,
         f.d,
         f.h,
+        { nozzles: 'radial' },
       ),
     ),
     floor('uv-unit', `${name} UV unit`, 1.7, 1.6, 1.7),

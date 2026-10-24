@@ -301,7 +301,12 @@ export function poolPlantPipework(room: string): {
       points,
       valves: (r.valves ?? []).map((v) => ({
         ...v,
-        operator: v.at[1] > REACH ? 'chain' : 'lever',
+        operator:
+          room === 'plant_pool_01'
+            ? 'solenoid'
+            : v.at[1] > REACH
+              ? 'chain'
+              : 'lever',
       })),
     };
     runs.push(made);
@@ -396,6 +401,13 @@ export function poolPlantPipework(room: string): {
     joins: [pumps.item.label, 'Pump discharge main'],
     service: 'pool water',
     label: 'DISCHARGE',
+    valves: [outA, outB].map((p, i) => ({
+      at: [p.at[0], 1.95, p.at[2]],
+      axis: 'y',
+      name: `Pump ${i + 1} discharge valve`,
+      facing: [0, 0, 1],
+      od: p.od,
+    })),
   });
   tees.push({
     name: 'Pump discharge header tee',
@@ -425,7 +437,7 @@ export function poolPlantPipework(room: string): {
   const south = faces.filter((x) => x.dir[2] < -0.5);
   const east = faces.filter((x) => x.dir[0] < -0.5);
   // The lines the headers run along in front of the filters' faces.
-  const OUT_LINE = 0.35;
+  const OUT_LINE = 0.65;
   // The inlet line (and the floor channel under it) far enough out that
   // the channel stands clear of every filter's footprint.
   const IN_LINE = Math.max(
@@ -579,12 +591,17 @@ export function poolPlantPipework(room: string): {
 
   faces.forEach(({ f, inlet, outlet, drain, dir }, i) => {
     const n = i + 1;
+    const radial = (p: typeof inlet): Vec3 => [
+      p.at[0] + p.outward[0] * 0.22,
+      p.at[1] + p.outward[1] * 0.22,
+      p.at[2] + p.outward[2] * 0.22,
+    ];
     // Straight out from nozzle `p` to the line `d` in front of the
     // vessel's front (its outlet nozzle).
     const line = (p: Vec3, d: number): Vec3 =>
-      Math.abs(dir[0]) > 0.5
-        ? [outlet.at[0] + dir[0] * d, p[1], p[2]]
-        : [p[0], p[1], outlet.at[2] + dir[2] * d];
+      dir[2] < -0.5
+        ? [p[0], p[1], outlet.at[2] - d]
+        : [outlet.at[0] - d, p[1], p[2]];
     // The inlet: down from the header, out to the nozzle; its valve on
     // the level length, near the nozzle.
     const inTee = line(inlet.at, IN_LINE);
@@ -639,7 +656,12 @@ export function poolPlantPipework(room: string): {
       name: `Filter ${n} inlet`,
       kind: 'pvc-pressure',
       od: inlet.od,
-      points: [inTee, inlet.at],
+      points: [
+        inTee,
+        [radial(inlet)[0], inTee[1], inTee[2]],
+        radial(inlet),
+        inlet.at,
+      ],
       joins: [
         f.item.label,
         `Filter ${n} inlet drop`,
@@ -671,17 +693,14 @@ export function poolPlantPipework(room: string): {
     });
     // The outlet: out of the nozzle, up into the outlet header.
     const outletLine = line(outlet.at, OUT_LINE);
-    const outletStub = line(
-      outlet.at,
+    const outletRadial = radial(outlet);
+    const outletStub: Vec3 =
       dir[2] < -0.5
-        ? outlet.at[2] - f.footprint.minZ + 0.2
-        : dir[0] < -0.5
-          ? outlet.at[0] - f.footprint.minX + 0.2
-          : OUT_LINE,
-    );
-    // The lounge filters put the two nozzle axes only 90 mm apart. Move
-    // the outlet rise sideways before taking it up to the high header so
-    // its outside diameter clears the inlet branch beside it.
+        ? [outletRadial[0], outletRadial[1], f.footprint.minZ - 0.2]
+        : [f.footprint.minX - 0.2, outletRadial[1], outletRadial[2]];
+    // The lounge filters put the two nozzle axes only 90 mm apart. The
+    // lateral bend belongs below the sight glass and service hatch; a
+    // bend at the nozzle's height cuts across the vessel's front.
     const outTee: Vec3 =
       dir[2] < -0.5
         ? [f.footprint.maxX + 0.15, outletLine[1], outletLine[2]]
@@ -701,8 +720,11 @@ export function poolPlantPipework(room: string): {
       od: outlet.od,
       points: [
         outlet.at,
+        outletRadial,
         outletStub,
-        [outTee[0], outletStub[1], outletStub[2]],
+        [outletStub[0], 0.3, outletStub[2]],
+        [outTee[0], 0.3, outletStub[2]],
+        [outTee[0], 0.3, outTee[2]],
         outTee,
         [outTee[0], L.filterOut, outTee[2]],
       ],
@@ -721,11 +743,18 @@ export function poolPlantPipework(room: string): {
     });
     // The drain: out of the nozzle to the channel's line and down into it.
     const drainEnd = line(drain.at, IN_LINE);
+    const drainRadial = radial(drain);
     run({
       name: `Filter ${n} drain`,
       kind: 'pvc-drain',
       od: drain.od,
-      points: [drain.at, drainEnd, [drainEnd[0], 0.05, drainEnd[2]]],
+      points: [
+        drain.at,
+        drainRadial,
+        [drainRadial[0], drainEnd[1], drainEnd[2]],
+        drainEnd,
+        [drainEnd[0], 0.05, drainEnd[2]],
+      ],
       joins: [f.item.label],
       service: 'drainage',
       label: `F${n} DRAIN`,

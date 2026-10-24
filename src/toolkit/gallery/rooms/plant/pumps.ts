@@ -104,7 +104,7 @@ export function pumpPairExhibit(pool: PoolId = 'pool_02'): PlantExhibit {
       // their running pressures and its sound held at it, running up as it
       // starts and coasting down as it stops; the other sits with its
       // gauges at the suction's static head, silent.
-      const pair = createPumpPair(kit);
+      const pair = createPumpPair(kit, pool !== 'pool_01');
       const sound = pumpSound();
       const heard = [false, false];
       return {

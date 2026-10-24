@@ -235,12 +235,14 @@ export function dosedVolumes(
   pools: PoolsState,
   plant: PlantServices,
   stock: ChemicalStock = ALL_STOCKED,
+  loungeMoving = true,
 ): Record<Chemical, number> {
   const out = { hypochlorite: 0, acid: 0 };
   for (const id of POOL_IDS) {
     const room = `plant_${id}` as ServiceRoom;
     if (
       !circulating(pools[id], plant, id) ||
+      (id === 'pool_01' && !loungeMoving) ||
       !serviceAvailable(plant, room, 'chemical')
     )
       continue;
@@ -327,6 +329,8 @@ export function stepPoolsWater(
     /** Whether its make-up control calls for water. */
     makeUpCalling: boolean;
   },
+  /** The lounge filter battery's return and waste, from its valve positions. */
+  lounge?: (running: boolean) => { toPool: number; toWaste: number },
 ): {
   pools: PoolsState;
   drawn: number;
@@ -368,16 +372,20 @@ export function stepPoolsWater(
         !footbath ||
         !footbathPumpStarved(old, footbath.draining)) &&
       (id !== 'pool_04' || !footbath || footbath.powered);
-    // UV and ozone, where they are isolated, break down the combined
-    // chlorine (the chloramines) as the water passes.
-    const uv =
-      circulation &&
-      (!(id in TREATED_BY) ||
-        TREATED_BY[id]!.some((name) => plant.isolators[name]));
     // The Olympic's battery, if its model is given: what its valves let through.
     const battery = id === 'pool_02' && olympic ? olympic(circulation) : null;
-    const heat = circulation && serviceAvailable(plant, room, 'heat');
-    const dosing = circulation && serviceAvailable(plant, room, 'chemical');
+    const loungeFlows = id === 'pool_01' && lounge ? lounge(circulation) : null;
+    const loungeMoving = !loungeFlows || loungeFlows.toPool > 0;
+    // UV, heat and dosing need water through the lounge's open filter path.
+    const uv =
+      circulation &&
+      loungeMoving &&
+      (!(id in TREATED_BY) ||
+        TREATED_BY[id]!.some((name) => plant.isolators[name]));
+    const heat =
+      circulation && loungeMoving && serviceAvailable(plant, room, 'heat');
+    const dosing =
+      circulation && loungeMoving && serviceAvailable(plant, room, 'chemical');
     // Each chemical dosed only while its store has some.
     const hypochlorite = dosing && stock.hypochlorite;
     const acid = dosing && stock.acid;
@@ -387,7 +395,7 @@ export function stepPoolsWater(
       circulation &&
         !drainDown &&
         (id !== 'pool_04' || !footbath || footbath.returning)
-        ? (battery?.toPool ?? POOL_TARGET[id].flow)
+        ? (battery?.toPool ?? loungeFlows?.toPool ?? POOL_TARGET[id].flow)
         : 0,
       0.08,
       dt,
@@ -423,7 +431,14 @@ export function stepPoolsWater(
               toWaste: battery.toWaste,
               makeUpCalling: battery.makeUpCalling,
             }
-          : {}),
+          : loungeFlows
+            ? {
+                pumpFlow: loungeFlows.toPool,
+                ...(loungeFlows.toWaste > 0
+                  ? { toWaste: loungeFlows.toWaste }
+                  : {}),
+              }
+            : {}),
       },
       dt / 3600,
       // Sub-steps of at most 5 s. Not that a small pool fills fast (the

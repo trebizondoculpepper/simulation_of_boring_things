@@ -167,6 +167,9 @@ describe.each(EQUIPPED_ROOMS)('%s', (room) => {
     // a lever, or a chain wheel's chain, comes to hand.
     const out = roomPipes(room)
       .flatMap((r) => r.valves)
+      // A solenoid valve is operated from its local mimic; its actuator
+      // need not be reachable from the floor beside a pump.
+      .filter((v) => v.operator === 'lever' || v.operator === 'chain')
       .filter(
         (v) =>
           !reaches({

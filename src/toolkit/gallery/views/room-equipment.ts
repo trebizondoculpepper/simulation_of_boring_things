@@ -371,6 +371,7 @@ function modelFor(
       shell: dia * 0.57,
       dn: dia >= 2 ? 200 : 80,
       label: `SMDD ${Math.round(dia * 1000)}`,
+      sightSide: pool === 'pool_01' ? 'right' : 'left',
     });
     filter.position.z += 0.1;
     const holder = new Group();

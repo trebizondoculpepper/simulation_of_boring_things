@@ -13,6 +13,7 @@ import { markPipe } from '../../components/plant/views/pipe-markers';
 import type { PipeService } from '../../components/plant/views/pipe-markers';
 import { worldStore } from '../../save/world-store';
 import type { IsolatorName } from '../../../game/plant/services';
+import { serviceAvailable } from '../../../game/plant/services';
 import { createPowerIsolator } from '../../components/industrial-control/views/panel-switchgear';
 import {
   addChainWheel,
@@ -155,6 +156,20 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       open: () =>
         store?.world.value.installedValves[installed.assetId] ??
         installed.normal === 'open',
+      position: () =>
+        store?.world.value.loungeValvePositions[installed.assetId] ??
+        Number(
+          store?.world.value.installedValves[installed.assetId] ??
+            installed.normal === 'open',
+        ),
+      power: () =>
+        room !== 'plant_pool_01' ||
+        !store ||
+        serviceAvailable(store.world.value.plant, 'plant_pool_01', 'power'),
+      air: () =>
+        room !== 'plant_pool_01' ||
+        !store ||
+        serviceAvailable(store.world.value.plant, 'plant_pool_01', 'air'),
       set: (open: boolean) =>
         store?.dispatch({ type: 'plant/valve', id: installed.assetId, open }),
     };

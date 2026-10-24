@@ -83,6 +83,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   16: (world) => world,
   // 17 → 18: each pool's thermostat, at its design temperature (`fillDefaults` adds it).
   17: (world) => world,
+  // 18 → 19: actual positions of the lounge filter solenoid valves.
+  18: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

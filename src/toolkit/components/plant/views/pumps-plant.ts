@@ -392,7 +392,7 @@ export function createStrainer(kit: PanelKit) {
  * Duty and standby circulation pumps, each with its strainer ahead of it
  * and a butterfly valve either side: two sets side by side.
  */
-export function createPumpPair(kit: PanelKit) {
+export function createPumpPair(kit: PanelKit, dischargeValves = true) {
   const t = plantTools(kit);
   const group = new Group();
   const pumps: ReturnType<typeof createEndSuctionPump>[] = [];
@@ -416,7 +416,8 @@ export function createPumpPair(kit: PanelKit) {
       [PAIR_DISCHARGE_X, 1.28, 0.12],
       [PAIR_DISCHARGE_X, 1.75, 0.12],
     ]);
-    t.butterflyValve(set, 150, [PAIR_DISCHARGE_X, 1.5, 0.12], 'y');
+    if (dischargeValves)
+      t.butterflyValve(set, 150, [PAIR_DISCHARGE_X, 1.5, 0.12], 'y');
     const tag = t.printed(
       0.3,
       0.06,
@@ -548,12 +549,15 @@ export function createSandFilter(
     dia,
     shell,
     label,
+    sightSide = 'left',
   }: {
     dia: number;
     shell: number;
     /** Its nozzles' bore: the room's pipework is sized by it. */
     dn: DN;
     label: string;
+    /** Small filter banks can keep the sight glass clear of their nozzle bank. */
+    sightSide?: 'left' | 'right';
   },
 ) {
   const t = plantTools(kit);
@@ -635,7 +639,7 @@ export function createSandFilter(
   t.cyl(group, steel, 0.009, 0.18, 0, hatchY, face + 0.085, 'x', 8);
   // Seat the sight glass outside the curved shell at its offset position.
   // A fixed fraction of the front radius buried most of the disc in the vessel.
-  const sightX = -r * 0.45;
+  const sightX = (sightSide === 'right' ? 1 : -1) * r * 0.45;
   const sightZ = Math.sqrt(r * r - sightX * sightX);
   const sightMount = new Group();
   sightMount.position.set(sightX, cy + 0.15, zc + sightZ);
@@ -710,12 +714,20 @@ export function createSandFilter(
     inletGauge.update(delta);
     outletGauge.update(delta);
   };
-  badge(kit, group, 'lidoluxe', [0, cy + 0.45, face + 0.005], 0.08);
+  badge(
+    kit,
+    group,
+    'lidoluxe',
+    [sightSide === 'right' ? -0.12 : 0, cy + 0.45, face + 0.005],
+    0.08,
+  );
   nameplate(
     kit,
     group,
     'lidoluxe',
-    [r * 0.35, cy + 0.2, face + 0.004],
+    sightSide === 'right'
+      ? [0.12, cy + 0.4, face + 0.004]
+      : [r * 0.35, cy + 0.2, face + 0.004],
     [label, '4 bar  40 °C', 'Bed depth 1.2 m'],
     0.16,
     0.08,

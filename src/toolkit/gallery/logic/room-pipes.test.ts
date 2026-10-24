@@ -88,11 +88,19 @@ describe.each([['plant_pool_01', 'medium']] as const)(
     });
     it('runs square', () => {
       for (const r of runs)
-        for (const { a, b } of lengths(r))
+        for (const [i, { a, b }] of lengths(r).entries()) {
+          // Only the short nipple normal to a curved filter shell is diagonal.
+          if (
+            r.name.startsWith('Filter ') &&
+            (i === 0 || i === r.points.length - 2) &&
+            /^(Filter \d+ (inlet|outlet|drain))$/.test(r.name)
+          )
+            continue;
           expect(
             [0, 1, 2].filter((k) => Math.abs(a[k] - b[k]) > 1e-6).length,
             r.name,
           ).toBeLessThanOrEqual(1);
+        }
     });
 
     it('connects every nozzle of every machine on the water’s loop, exactly at it', () => {
@@ -130,7 +138,14 @@ describe.each([['plant_pool_01', 'medium']] as const)(
             if (m.item.mount !== 'floor') continue;
             // Its own machines' nozzles: its first and last lengths touch them.
             const own = r.joins.includes(m.item.label);
-            if (own && (i === 0 || i === r.points.length - 2)) continue;
+            if (
+              own &&
+              (i === 0 ||
+                i === r.points.length - 2 ||
+                (r.name.startsWith('Filter ') &&
+                  (i === 1 || i === r.points.length - 3)))
+            )
+              continue;
             const f = m.footprint;
             const body = {
               min: [f.minX, 0, f.minZ],
@@ -211,6 +226,19 @@ describe.each([['plant_pool_01', 'medium']] as const)(
         ).toBeLessThanOrEqual(REACH);
       for (const v of valves.filter((v) => v.at[1] > REACH))
         expect(v.operator, v.name).toBe('chain');
+      expect(valves.every((v) => v.operator === 'solenoid')).toBe(true);
+    });
+
+    it('takes the filter outlet bend below the front observation area', () => {
+      for (const run of runs.filter((r) =>
+        /^Filter \d+ outlet$/.test(r.name),
+      )) {
+        expect(run.points[0][1]).toBeGreaterThan(0.3);
+        expect(run.points[1][1]).toBe(run.points[0][1]);
+        expect(run.points[2][1]).toBe(run.points[0][1]);
+        expect(run.points[3][1]).toBe(0.3);
+        expect(run.points[4][1]).toBe(0.3);
+      }
     });
 
     it('puts every tee where three of its runs meet: two along its main, one along its branch', () => {

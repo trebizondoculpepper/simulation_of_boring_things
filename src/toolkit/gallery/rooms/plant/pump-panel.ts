@@ -22,6 +22,12 @@ import { currentPlant } from './live-plant';
 import type { PoolId } from '../../../../game/plant/pools';
 import type { PlantReading } from '../../logic/control-room-demo';
 import { MAIN_POOL_MIMIC, mainPoolState } from '../../logic/pool-mimics';
+import {
+  LOUNGE_VALVE_MIMIC,
+  loungeValveMimicState,
+} from '../../logic/lounge-valve-mimic';
+import { LOUNGE_VALVES } from '../../../../game/plant/lounge-valves';
+import { worldStore } from '../../../save/world-store';
 import type { PumpsShown } from '../../logic/pool-mimics';
 import {
   AUTO,
@@ -103,10 +109,27 @@ export const pumpPanelExhibit = (pool: PoolId = 'pool_02'): PlantExhibit => ({
     });
     cubicle.group.position.z = 0.25;
     const parts = cubicle.parts;
-    const mimic = createMimicBoard(kit, MAIN_POOL_MIMIC, {
-      maker: 'penfold',
-      press: (id) => pressPump(id, 'local'),
-    });
+    const store = typeof window === 'undefined' ? null : worldStore('dev');
+    const mimic = createMimicBoard(
+      kit,
+      pool === 'pool_01' ? LOUNGE_VALVE_MIMIC : MAIN_POOL_MIMIC,
+      {
+        maker: 'penfold',
+        press: (id) => {
+          const [assetId, verb] = id.split('/');
+          if (
+            pool === 'pool_01' &&
+            LOUNGE_VALVES.some((valve) => valve.assetId === assetId)
+          ) {
+            store?.dispatch({
+              type: 'plant/valve',
+              id: assetId,
+              open: verb === 'open',
+            });
+          } else pressPump(id, 'local');
+        },
+      },
+    );
     cubicle.fasciaFace.add(mimic.group);
     for (const [object, use] of mimic.parts.uses) parts.uses.set(object, use);
     // A door for each pump: its indicator, its ammeter, its selector.
@@ -176,7 +199,14 @@ export const pumpPanelExhibit = (pool: PoolId = 'pool_02'): PlantExhibit => ({
           const amps = shown[p.id] === 0 ? reading.amps[p.id] : 0;
           p.amps.show(amps.toFixed(1).padStart(5, ' '));
         }
-        mimic.show(mainPoolState(reading, shown));
+        mimic.show(
+          pool === 'pool_01'
+            ? loungeValveMimicState(
+                store?.world.value.loungeValvePositions ?? {},
+                shown,
+              )
+            : mainPoolState(reading, shown),
+        );
         mimic.parts.update(delta);
       },
     };

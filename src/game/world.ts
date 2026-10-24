@@ -12,6 +12,11 @@
 
 /** Bumped whenever the world's shape changes; `save.ts` migrates older saves. */
 import { newPlantServices } from './plant/services';
+import {
+  loungeValveFlows,
+  newLoungeValvePositions,
+  stepLoungeValves,
+} from './plant/lounge-valves';
 import type {
   IsolatorName,
   PlantServices,
@@ -83,7 +88,7 @@ import { makeUpCalls, newOlympicTank } from './plant/olympic-tank';
 import type { OlympicTankState } from './plant/olympic-tank';
 import type { MakeupMode } from './plant/balance-tank';
 
-export const WORLD_VERSION = 18;
+export const WORLD_VERSION = 19;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -123,6 +128,8 @@ export interface World {
   identifiedPlant: Block;
   /** Installed pipework valve positions, keyed by permanent asset ID. */
   installedValves: Record<string, boolean>;
+  /** Actual travel of the lounge plant's solenoid valves, 0 shut to 1 open. */
+  loungeValvePositions: Record<string, number>;
   /** The Olympic's filter battery: each bed's dirt (`olympic-battery.ts`). */
   olympic: OlympicBatteryState;
   /** The Olympic's balance tank's controls: its make-up (`olympic-tank.ts`). */
@@ -144,6 +151,7 @@ export function newWorld(): World {
     gas: newGasZones(),
     identifiedPlant: newIdentifiedPlant(),
     installedValves: newInstalledValveStates(),
+    loungeValvePositions: newLoungeValvePositions(),
     olympic: newOlympicBattery(),
     olympicTank: newOlympicTank(),
   };
@@ -379,6 +387,12 @@ export function stepWorld(world: World, delta: number): World {
     const s = slowStartAt(world.plant, world.time - world.startup);
     world = { ...world, plant: s.plant, startup: s.done ? -1 : world.startup };
   }
+  const loungeValvePositions = stepLoungeValves(
+    world.loungeValvePositions,
+    world.installedValves,
+    world.plant,
+    delta,
+  );
   // What the stores have, as the step begins; the pools dose from it, and
   // the stores give what was dosed.
   const stock = {
@@ -425,11 +439,13 @@ export function stepWorld(world: World, delta: number): World {
         makeUpCalling: calling,
       };
     },
+    (running) => loungeValveFlows(loungeValvePositions, running),
   );
   return {
     ...world,
     time: world.time + delta,
     pools: water.pools,
+    loungeValvePositions,
     olympic: battery
       ? stepOlympicBattery(world.olympic, battery, delta)
       : world.olympic,
@@ -442,7 +458,12 @@ export function stepWorld(world: World, delta: number): World {
     gas: stepGasZones(world.gas, world.plant, delta),
     chemicals: stepChemicalStores(
       world.chemicals,
-      dosedVolumes(world.pools, world.plant, stock),
+      dosedVolumes(
+        world.pools,
+        world.plant,
+        stock,
+        loungeValveFlows(loungeValvePositions, true).toPool > 0,
+      ),
       delta,
     ),
   };

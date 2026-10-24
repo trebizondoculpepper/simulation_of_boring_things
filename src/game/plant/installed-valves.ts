@@ -48,6 +48,16 @@ export const INSTALLED_VALVES: Readonly<
     tag: 'PL1-T1-DV1',
     normal: 'closed',
   },
+  'plant_pool_01|Pump discharge header|Pump 1 discharge valve': {
+    assetId: 'valve-0097',
+    tag: 'PL1-P1-IV1',
+    normal: 'open',
+  },
+  'plant_pool_01|Pump discharge header|Pump 2 discharge valve': {
+    assetId: 'valve-0098',
+    tag: 'PL1-P2-IV1',
+    normal: 'open',
+  },
   'wet_hall|Town main to the break tank|Town main stop valve': {
     assetId: 'valve-0031',
     tag: 'WH-MU1-IV1',
