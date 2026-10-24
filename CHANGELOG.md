@@ -6,6 +6,9 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Dev30 has a fibre-optic concrete wall booth: 88 warm-white pinpoints flush with a raw board-marked wall, scattered irregularly and driven by its Lumenhaus dimmer and a twinkle-wheel selector.
+- The jacuzzi's simulated water quantity now drives percent full and visible height through a reusable basin profile. Its two tapered basins meet at the seat: about 20 % of the water reaches the seat, and the other 80 % fills the wider upper basin. Dev35's FILL % control runs from empty to full; the water surface stays continuous in height as it widens over the step.
+- POOL-03's jacuzzi plinth now meets the west wall at its rear, with steps on its other three sides; Dev35's TUB EFFECTS panel is mounted on a short post directly in front of the supplied viewpoint, with the tub visible beyond it.
 - Dev35's jacuzzi water lab has a TUB EFFECTS panel (the owner, 2026-10-24): its water's level from empty to full in 5 % steps, with an LED readout, and illuminated JETS, LIGHT and BUBBLES buttons, each pressed on and off, setting the tub directly past its controller. The tub's water falls inside its wall and then its seat's ring as the level drops; its jets stream only under water, and its bubbles rise only from sources under water, up to the surface.
 - Pool ladders now mount with Use at either end. Forward climbs and back descends without requiring a particular view angle; reaching the deck or pool floor returns to normal walking. PR_A and the pool hall, donut pool and arched pool ladders use the shared control scheme.
 - The nearest closed-door room's code is prefetched before opening. Scene construction waits until the door opens, and an already visited nearest room stays cached when its door closes.

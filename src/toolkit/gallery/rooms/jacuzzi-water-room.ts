@@ -55,11 +55,16 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
   // Its effects panel (the owner, 2026-10-24): the water's level in 5 %
   // steps, and the jets, light and bubbles each on or off, set directly.
   const effects = createSpaEffectsPanel(kit, 'TUB EFFECTS');
-  const { tub, plate } = createJacuzziDemo(kit, effects.effects);
-  // The low post sits south of the plinth: the controls and water stay in
-  // the same view as the walker operates LEVEL, JETS, LIGHT and BUBBLES.
+  const { tub, plate } = createJacuzziDemo(
+    kit,
+    effects.effects,
+    spec.w / 2 - 2.7 + 0.15,
+  );
+  // The low post stands between the supplied viewpoint and the tub, with
+  // its controls facing east toward the walker and the water behind it.
   const effectsPost = mountSpaEffectsOnPost(kit, effects.group);
-  effectsPost.position.set(-3.65, 0, 2.55);
+  effectsPost.position.set(-0.4, 0, -0.04);
+  effectsPost.rotation.y = Math.PI / 2;
   const devWindow = window as unknown as { jacuzziWater?: unknown };
   devWindow.jacuzziWater = { tub, plate, effects };
   tub.object.position.x = -2.7;
@@ -85,6 +90,12 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
   composer.addPass(new OutputPass());
   const walls = [
     ...hallSolids(spec),
+    {
+      minX: -0.52,
+      maxX: -0.28,
+      minZ: -0.16,
+      maxZ: 0.08,
+    },
     // The prototype has no neighbours: keep the walker inside its hall.
     {
       minX: -spec.w / 2,

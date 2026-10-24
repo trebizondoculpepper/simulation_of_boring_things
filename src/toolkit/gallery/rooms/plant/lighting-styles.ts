@@ -23,10 +23,11 @@ import {
 } from '../../../components/architectural/logic/architectural-lighting';
 import { CEIL, D, SIZE, W, booth, glow, lamp, live } from './lighting-booth';
 import { SMALL_FITTINGS } from './lighting-styles-small';
+import { CONCRETE_FIBRE_WALL } from './concrete-fibre-wall';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
-  'Architectural lighting, tried out: booths, each a stretch of wall and ceiling lit one way, each on its own Lumenhaus dimmer. A direct/indirect halo panel, cove lighting, wall grazing, a shadow-gap slot, a fibre-optic starlight ceiling and a luminous ceiling; then smaller fittings (downlights and wall-washers, globe pendants, up/down wall cylinders), and fittings for tiled and curved walls (tile-flush lights and bulkheads, flexible neon and a curved grazer, sconces on a round column).';
+  'Architectural lighting, tried out: booths, each a stretch of wall and ceiling lit one way, each on its own Lumenhaus dimmer. A direct/indirect halo panel, cove lighting, wall grazing, a shadow-gap slot, a fibre-optic starlight ceiling, a fibre-optic concrete wall and a luminous ceiling; then smaller fittings (downlights and wall-washers, globe pendants, up/down wall cylinders), and fittings for tiled and curved walls (tile-flush lights and bulkheads, flexible neon and a curved grazer, sconces on a round column).';
 
 /** Lit by its own fittings: the room's general light only a little fill. */
 export const FINISH: RoomFinish = { ownLights: true, wall: '#34383a' };
@@ -487,6 +488,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     maker: 'lumenhaus',
     build: starlight,
   },
+  CONCRETE_FIBRE_WALL,
   {
     title: 'Luminous ceiling',
     reference:

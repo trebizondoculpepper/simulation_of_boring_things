@@ -58,7 +58,10 @@ import { createSignState } from '../../components/pool/logic/pool-info-sign';
 import { createPaceClock } from '../../components/pool/views/pace-clock';
 import { worldStore } from '../../save/world-store';
 import { serviceAvailable } from '../../../game/plant/services';
-import { JACUZZI_EXHIBIT, JACUZZI_PLATE_EXHIBIT } from './plant/pool-amenities';
+import {
+  buildWallBackedJacuzzi,
+  JACUZZI_PLATE_EXHIBIT,
+} from './plant/pool-amenities';
 import { plantRoomDoor } from '../../components/architectural/parts/plant-door';
 import { cardReader } from '../../components/architectural/parts/card-reader';
 import { doorwayBlock, PLANT_DOORWAY, PLANT_SILL } from '../logic/plant-rooms';
@@ -207,7 +210,9 @@ export function startPoolHallRoom(
       })()
     : null;
   const spaTub =
-    id === 'pool_03' && !gallery ? JACUZZI_EXHIBIT.build(poolsideKit) : null;
+    id === 'pool_03' && !gallery
+      ? buildWallBackedJacuzzi(poolsideKit, spec.w / 2 - 2.7 + 0.15)
+      : null;
   const spaPanel =
     id === 'pool_03' && !gallery
       ? JACUZZI_PLATE_EXHIBIT.build(poolsideKit)

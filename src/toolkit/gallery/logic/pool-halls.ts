@@ -496,10 +496,16 @@ export function hallFloorAt(s: PoolHallSpec, x: number, z: number): number {
   )
     return PLANT_SILL;
   if (s.id === 'pool_03') {
-    const edge = Math.max(Math.abs(x + 2.7), Math.abs(z));
-    if (edge <= 1.6) return 0.9;
-    if (edge <= 1.8) return 0.6;
-    if (edge <= 2) return 0.3;
+    // All three tiers run west into the wall, so no rear stair is left.
+    // Each tier widens only on the front and the two sides.
+    if (x >= -s.w / 2 - 0.15) {
+      for (const [half, height] of [
+        [1.6, 0.9],
+        [1.8, 0.6],
+        [2, 0.3],
+      ])
+        if (x <= -2.7 + half && Math.abs(z) <= half) return height;
+    }
   }
   for (const b of s.basins) {
     const y = basinFloorAt(b, x, z);

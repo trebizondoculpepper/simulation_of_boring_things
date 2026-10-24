@@ -16,7 +16,7 @@ import { plantTools } from '../../components/plant/views/plant-tools';
 
 /**
  * A development room's direct effects panel for a spa tub (the owner,
- * 2026-10-24: dev35's): a Penfold enclosure with its LEVEL knob from
+ * 2026-10-24: dev35's): a Penfold enclosure with its FILL knob from
  * empty to full in 5 % steps and an LED readout of it, and an illuminated
  * button each for the JETS, the LIGHT and the BUBBLES, pressed on and
  * pressed off, lit while on. It sets the room's tub, past its controller,
@@ -48,13 +48,13 @@ export function createSpaEffectsPanel(kit: PanelKit, title: string) {
   name.position.set(-0.05, h / 2 - 0.035, 0.001);
   front.add(name);
   const parts = createPartSet();
-  // Its level: twenty steps of 5 %, full to start.
+  // Its fill by water volume: twenty steps of 5 %, full to start.
   const knob = parts.add(
     potentiometer(kit, {
       steps: 20,
       initial: 1,
-      legend: 'LEVEL',
-      name: 'Tub water level knob',
+      legend: 'FILL',
+      name: 'Tub water fill knob',
     }),
   );
   knob.object.position.set(-0.18, -0.03, 0);
@@ -63,7 +63,7 @@ export function createSpaEffectsPanel(kit: PanelKit, title: string) {
   readout.group.position.set(-0.07, -0.01, 0.002);
   readout.group.traverse((o) => (o.userData.live = true));
   front.add(readout.group);
-  const unit = createDymoLabel(kit, 'LEVEL %', { seed: 35 });
+  const unit = createDymoLabel(kit, 'FILL %', { seed: 35 });
   unit.position.set(-0.07, -0.06, 0.003);
   front.add(unit);
   // Its effects: each an illuminated button, a press toggling it.
@@ -94,7 +94,7 @@ export function createSpaEffectsPanel(kit: PanelKit, title: string) {
     group,
     parts,
     /** The tub's effects, as `SpaEffects` wants them. */
-    effects: { level: knob.share, jets, bubbles, light },
+    effects: { fillFraction: knob.share, jets, bubbles, light },
     update(delta: number) {
       readout.show(String(Math.round(knob.share.value * 100)));
       parts.update(delta);

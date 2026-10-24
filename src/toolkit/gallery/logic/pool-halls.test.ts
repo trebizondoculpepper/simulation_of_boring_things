@@ -50,6 +50,12 @@ describe('pool halls', () => {
     expect(hallFloorAt(jacuzzi, -0.95, 0)).toBeCloseTo(0.6);
     expect(hallFloorAt(jacuzzi, -0.8, 0)).toBeCloseTo(0.3);
     expect(hallFloorAt(jacuzzi, 0, 0)).toBe(0);
+    // The rear of every tier meets the west wall; only the other three
+    // sides have steps.
+    expect(hallFloorAt(jacuzzi, -4.9, 0)).toBeCloseTo(0.9);
+    expect(hallFloorAt(jacuzzi, -4.9, 1.7)).toBeCloseTo(0.6);
+    expect(hallFloorAt(jacuzzi, -4.9, 1.9)).toBeCloseTo(0.3);
+    expect(hallFloorAt(jacuzzi, -4.9, 2.1)).toBe(0);
   });
 
   it('stands the lounge’s arch on the deck, its columns in the water, and sinks its well', () => {

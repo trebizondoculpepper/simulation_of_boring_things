@@ -64,6 +64,12 @@ import {
   stepSpa,
 } from '../../../components/pool/logic/spa-controller';
 import {
+  steppedTubHeightAtVolume,
+  steppedTubPercentFull,
+  steppedTubRadiusAtHeight,
+  steppedTubVolumeAtHeight,
+} from '../../../components/pool/logic/stepped-tub-volume';
+import {
   initialShower,
   pressShower,
   running,
@@ -361,11 +367,11 @@ export const FOOTBATH_EXHIBIT: PlantExhibit = {
  */
 /**
  * A development room's direct control of the tub's effects (dev35's
- * effects panel): its water's level, 0 empty to 1 full, and its jets,
+ * effects panel): its requested fill by volume, 0 empty to 1 full, and its jets,
  * bubbles and light each on or off, past the spa's controller.
  */
 export interface SpaEffects {
-  level: ReadonlySignal<number>;
+  fillFraction: ReadonlySignal<number>;
   jets: ReadonlySignal<boolean>;
   bubbles: ReadonlySignal<boolean>;
   light: ReadonlySignal<boolean>;
@@ -373,6 +379,8 @@ export interface SpaEffects {
 
 const createSpaState = (effects?: SpaEffects) => ({
   state: initialSpa(36.5, 37),
+  /** The simulated quantity; geometry and percentage are presentation values. */
+  waterVolumeM3: 0,
   running: signal(false),
   light: signal(false),
   effects,
@@ -409,7 +417,7 @@ const jacuzziPowered = computed(() => {
 const TUB = {
   r: 1.2,
   rim: 0.9,
-  seat: 0.45,
+  seat: 0.57,
   below: 0.45,
   gutter: 0.2,
   /** The plinth: its top deck's half-width, and three steps down. */
@@ -431,7 +439,11 @@ const TUB = {
  * treads, and here is on the room's wall. The heating and the
  * circulation are the plant's (`spa-controller.ts`), unseen.
  */
-function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
+function buildJacuzzi(
+  kit: PanelKit,
+  spaState = spa,
+  rearExtent?: number,
+): LiveExhibit {
   const t = plantTools(kit);
   const m = fittingMaterials(kit);
   const object = new Group();
@@ -453,17 +465,28 @@ function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
   const inner = TUB.r - TUB.seat;
   const outer = TUB.r + TUB.gutter;
   const gutterBed = TUB.rim - 0.15;
+  const fillProfile = {
+    floor: TUB_FLOOR,
+    step: seatTop,
+    rim: surface,
+    lowerBottomRadius: inner - 0.05,
+    lowerTopRadius: inner,
+    upperBottomRadius: TUB.r - 0.03,
+    upperTopRadius: TUB.r,
+  };
+  const capacity = steppedTubVolumeAtHeight(fillProfile, surface);
 
-  // The plinth: three square tiers, each a step lower and wider, the tub's
-  // round cut through them all.
+  // Three tiers around the tub. In POOL-03 the rear edge of every tier
+  // runs into the west wall, leaving steps only at the front and sides.
   for (let k = 0; k < TUB.steps; k++) {
     const top = (TUB.rim / TUB.steps) * (TUB.steps - k);
     const half = TUB.deck + k * TUB.going;
+    const back = rearExtent ?? half;
     const tier = new Shape();
-    tier.moveTo(-half, -half);
+    tier.moveTo(-back, -half);
     tier.lineTo(half, -half);
     tier.lineTo(half, half);
-    tier.lineTo(-half, half);
+    tier.lineTo(-back, half);
     tier.closePath();
     const hole = new Path();
     hole.absarc(0, 0, outer, 0, Math.PI * 2, false);
@@ -488,9 +511,9 @@ function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
       new LatheGeometry(
         [
           [0, TUB_FLOOR],
-          [inner, TUB_FLOOR],
+          [fillProfile.lowerBottomRadius, TUB_FLOOR],
           [inner, seatTop],
-          [TUB.r, seatTop],
+          [fillProfile.upperBottomRadius, seatTop],
           [TUB.r, gutterBed],
           [outer, gutterBed],
           [outer, TUB.rim],
@@ -622,6 +645,7 @@ function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
   // The spa's state, shared with its control plate on the wall: a new
   // tub starts it afresh.
   spaState.state = initialSpa(36.5, 37);
+  spaState.waterVolumeM3 = capacity;
 
   let time = 0;
   object.traverse((o) => (o.userData.live = true));
@@ -675,15 +699,22 @@ function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
           light: fx.light.value,
         };
       const state = (spaState.state = stepSpa(spaState.state, delta));
-      // Its water's level: full at the deck, down to its floor. Over the
-      // gutter while full, inside the wall above the seat, inside the
-      // seat's ring below it; none when empty.
-      const level = fx ? Math.max(0, Math.min(1, fx.level.value)) : 1;
-      const waterY = TUB_FLOOR + level * (surface - TUB_FLOOR);
-      const wet = level > 0.004;
+      // The level control is a share of water volume. The narrow lower
+      // basin rises faster than the wider basin above the seat; the water
+      // surface widens abruptly at the seat without jumping in height.
+      if (fx)
+        spaState.waterVolumeM3 =
+          Math.max(0, Math.min(1, fx.fillFraction.value)) * capacity;
+      const waterVolume = spaState.waterVolumeM3;
+      const percentFull = steppedTubPercentFull(fillProfile, waterVolume);
+      const waterY = steppedTubHeightAtVolume(fillProfile, waterVolume);
+      const wet = percentFull > 0;
       water.visible = wet;
       water.position.y = waterY;
-      const across = level >= 0.999 ? outer : waterY > seatTop ? TUB.r : inner;
+      const across =
+        percentFull >= 100
+          ? outer
+          : steppedTubRadiusAtHeight(fillProfile, waterY);
       water.scale.set(across / outer, 1, across / outer);
       uniforms.waterY.value = wet ? waterY : -10;
       for (const sound of sounds) {
@@ -709,6 +740,14 @@ function buildJacuzzi(kit: PanelKit, spaState = spa): LiveExhibit {
       glow.intensity = spaState.light.value ? 1.2 : 0;
     },
   };
+}
+
+/** The in-service jacuzzi has its rear plinth face buried in the room wall. */
+export function buildWallBackedJacuzzi(
+  kit: PanelKit,
+  rearExtent: number,
+): LiveExhibit {
+  return buildJacuzzi(kit, spa, rearExtent);
 }
 
 export const JACUZZI_EXHIBIT: PlantExhibit = {
@@ -825,10 +864,14 @@ export const AMENITY_EXHIBITS: readonly PlantExhibit[] = [
 ];
 
 /** A fresh tub and control plate using the same components, with private state. */
-export function createJacuzziDemo(kit: PanelKit, effects?: SpaEffects) {
+export function createJacuzziDemo(
+  kit: PanelKit,
+  effects?: SpaEffects,
+  rearExtent?: number,
+) {
   const state = createSpaState(effects);
   return {
-    tub: buildJacuzzi(kit, state),
+    tub: buildJacuzzi(kit, state, rearExtent),
     plate: buildJacuzziPlate(kit, state),
   };
 }
