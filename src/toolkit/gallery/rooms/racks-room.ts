@@ -50,6 +50,7 @@ import {
   ps1Uniforms,
 } from '../../components/core/parts/ps1-material';
 import { knobDirection } from '../../controls/input/knob-turning';
+import { createEngineerStorageCupboard } from '../../components/site-dressing/views/engineer-storage-cupboard';
 
 /** A unit to fit, and the rack unit its bottom sits at. */
 type Fit = [at: number, options: RackUnitOptions];
@@ -129,6 +130,8 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
 
   const kit = createPanelKit();
   const footprints: Footprint[] = [];
+  const storageCupboards: ReturnType<typeof createEngineerStorageCupboard>[] =
+    [];
   /** Stand something built in metres at (x, z) metres, facing +z turned by `yaw`. */
   const stand = (
     object: Object3D,
@@ -369,6 +372,16 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
     );
     stand(frame.group, 2.4, backZ - 0.27, 0.8, 0.6);
   }
+  // Two engineer's stores cupboards, modelled from the owner's reference:
+  // solid steel and glazed doors, with working parts drawers in both.
+  for (const [style, x] of [
+    ['solid', 3.65],
+    ['glass', 4.85],
+  ] as const) {
+    const cupboard = createEngineerStorageCupboard(kit, style);
+    stand(cupboard.group, x, -5.25, 0.5, 0.96);
+    storageCupboards.push(cupboard);
+  }
 
   // ---- Loose units on display plinths ------------------------------------
   const plinthPaint = createPs1Material({ color: '#4c504e' });
@@ -494,12 +507,16 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
         const work = parts.uses.get(o);
         // A knob turns down or up by which half of it is clicked.
         if (work) return work(knobDirection(o, hit.point, camera));
+        for (const cupboard of storageCupboards) {
+          const operate = cupboard.uses.get(o);
+          if (operate) return operate();
+        }
       }
     },
   });
   const notes = document.createElement('div');
   notes.textContent =
-    'DEV1 · Racks: rack cabinets and rack-mount units to catalogue dimensions';
+    'DEV1 · Racks and engineer stores: click cupboard doors and parts drawers';
   Object.assign(notes.style, {
     position: 'absolute',
     top: '12px',
@@ -551,6 +568,7 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
     ps1Uniforms.time.value = time / 1000;
     walk.update(delta);
     parts.update(delta);
+    for (const cupboard of storageCupboards) cupboard.update(delta);
     portals.update(delta, walk.walker.x, walk.walker.z);
     partAudio.listen(camera, m);
     renderer.render(scene, camera);
