@@ -49,10 +49,14 @@ import { footbathDischarging } from '../../../game/plant/footbath-discharge';
 import { jacuzziDischarging } from '../../../game/world';
 import { machineTone } from '../../components/sound/audio/machine-tones';
 import { drainGurgle } from '../../components/plant/audio/drain';
+import { createFallingWater } from '../../components/plant/views/falling-water';
 import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
 import { createValveControlPanel } from '../../components/plant/views/valve-control-panel';
 import type { PanelValve } from '../../components/plant/views/valve-control-panel';
 import { installedValveFor } from '../../../game/plant/installed-valves';
+
+/** The drain's water as it leaves its 50 mm pipe's bore, its radius, m. */
+const DRAIN_STREAM = 0.018;
 
 /** Each run's service, as its markings name it. */
 const MARKED: Record<Service, PipeService> = {
@@ -306,6 +310,9 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   // The foot spa's drain-down, heard running into its tundish.
   let drainMouth: Mesh | null = null;
   let gurgling = false;
+  // And seen: the water falling from the drain's open end across its air
+  // gap into the tundish, while it runs.
+  let drainFall: ReturnType<typeof createFallingWater> | null = null;
   // The drain's floor gully, its grating flush with the floor, and the
   // tundish on it that the drain discharges into across an air gap.
   const gully = cabinetGully(room);
@@ -333,6 +340,12 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     const tail = new Mesh(new CylinderGeometry(0.02, 0.02, 0.03, 12), steel);
     tail.position.set(gully[0], floorY + 0.015, gully[2]);
     group.add(grating, tundish, tail);
+    // The pipe ends at 0.17 m (`cabinet-pipes.ts`); the water lands a
+    // little way down inside the tundish, under its rim at 0.12 m.
+    drainFall = createFallingWater(kit, DRAIN_STREAM);
+    drainFall.group.position.set(gully[0], floorY + 0.17, gully[2]);
+    drainFall.set(0, 0.17 - 0.08);
+    group.add(drainFall.group);
   }
   // The busbar's tap-off unit, over the room's switch-fuse (the bar
   // itself is one of the runs above, `cabinet-pipes.ts`): its back on the
@@ -387,12 +400,14 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
         for (const stop of motorStops) stop();
         if (drainMouth) partAudio.hold(drainMouth, null);
         gurgling = false;
+        drainFall?.dispose();
       }
     },
     /** Silence any valve motor still running, and the drain. */
     dispose() {
       for (const stop of motorStops) stop();
       if (drainMouth) partAudio.hold(drainMouth, null);
+      drainFall?.dispose();
     },
     update(delta: number) {
       // As the world has it, switched here or anywhere.
@@ -421,7 +436,9 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
             drainMouth,
           );
         }
+        drainFall?.set(running ? 0.6 : 0, 0.17 - 0.08);
       }
+      drainFall?.update(delta);
       panel?.update(delta);
     },
   };
