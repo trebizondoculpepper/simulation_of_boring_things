@@ -1,6 +1,6 @@
 # 038: Noclip, a free camera
 
-Status: implementation authorised 2026-10-24 (the owner); the first tool for authoring the title sequence, before attract mode (054).
+Status: implemented 2026-10-24 in `bfc8521`; the first tool for authoring the title sequence, before attract mode (054).
 
 ## Why
 

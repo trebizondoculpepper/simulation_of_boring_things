@@ -4,7 +4,7 @@ The project's one to-do list (the owner, 2026-10-23): every task not yet finishe
 
 ## Now: title sequence tools
 
-- [ ] **Noclip for framing camera shots** ([038](doc/prompts/038-noclip-camera.md), authorised 2026-10-24): implement first; Esc-menu toggle, free flight through equipment, room bounds, keyboard/touch/gamepad controls, live coordinates and camera-link copying. Preserve the normal walking/Continue position.
+- [x] **Noclip for framing camera shots** ([038](doc/prompts/038-noclip-camera.md), done 2026-10-24, `bfc8521`): Esc-menu toggle, free flight through equipment, room bounds, keyboard/touch/gamepad controls, live coordinates and camera-link copying. Preserve the normal walking/Continue position.
 - [ ] **Title attract sequence** ([054](doc/prompts/054-title-attract-sequence.md), specified 2026-10-24): after noclip, independently staged world scenarios and authored camera moves, next-scene background preparation and fades through black, with uninterrupted theme music and no changes to the player's simulation.
 
 ## Now: the Olympic plant room, working (prompt 035)
