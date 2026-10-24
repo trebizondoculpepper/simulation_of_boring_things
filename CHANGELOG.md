@@ -60,6 +60,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- The jacuzzi's and footbath's plant rooms' power conduits came from nowhere (the room's supply down from the ceiling, the cabinet isolator's into the south wall). Each room now has a busbar trunking along its west wall at 3.5 m, in through the south wall, and each conduit rises into a fused tap-off box hung beneath it.
 - The jacuzzi's and footbath's plant rooms' pipe labels point the way each run flows, not the way it was drawn: SPA OVERFLOW, JETS SUCTION and LTHW FLOW now point into the cabinet. Their labels are stencilled onto the pipes (the service's name and an arrow, upright from either side) rather than hung beneath them on plates, the runs there being packed close; other rooms keep their plates.
 - Inside the jacuzzi's cabinet, the jet pump's discharge ran straight through the air blower's air line; it now steps 120 mm toward the jets' bay's end before going back to the wall, and its connection and the room's pipe move with it. A test now checks every pipe inside both spa cabinets, the machines' own pipework included, against every other.
 - The stair helper no longer draws level handrails and toe boards over and under its flights (along each flight's outer side and across its ends, at the height of the deck it reaches): the "structure above the stairs" the owner saw in the air plant. A flight's own handrails slope with it; only its sides stop a walker.

@@ -4,7 +4,10 @@ import {
 } from '../../components/industrial-control/logic/enclosures';
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  BUS_TAP_FOOT,
+  CABINET_BUS,
   cabinetBodyIn,
+  cabinetBusbar,
   cabinetGully,
   cabinetIsolator,
   cabinetPipes,
@@ -12,6 +15,7 @@ import {
 } from './cabinet-pipes';
 import type { CabinetRun, Vec3 } from './cabinet-pipes';
 import { layoutRoom } from './room-equipment';
+import { roomServiceRoutes } from './room-services';
 
 /** Every straight length of a run, as a box (its pipe's thickness round it). */
 const lengths = (r: CabinetRun) =>
@@ -70,12 +74,11 @@ describe.each([
         ).toBeLessThanOrEqual(1);
   });
 
-  it('takes the spa’s water out north, and the heating and the supply in from the south, each through the wall in its fitting', () => {
+  it('takes the spa’s water out north, and the heating in from the south, each through the wall in its fitting', () => {
     for (const r of runs) {
       const end = r.points[r.points.length - 1];
       const out = r.service === 'pool water' || r.service === 'air';
-      const south =
-        r.service.startsWith('heating') || r.name === 'Supply to the isolator';
+      const south = r.service.startsWith('heating');
       if (!out && !south) continue;
       // Through the wall to its outer face, 0.2 m beyond the inner.
       expect(end[2], r.name).toBeCloseTo(out ? -(h + 0.2) : h + 0.2);
@@ -85,6 +88,34 @@ describe.each([
         plastic ? 'fire-collar' : 'sleeve',
       );
     }
+  });
+
+  it('runs a busbar along the west wall, in through the south, every power conduit rising into a tap-off on it', () => {
+    const bus = cabinetBusbar(room)!;
+    const [trunk] = bus.runs;
+    const west = -layout.box.w / 2 + CABINET_BUS.off;
+    expect(trunk.from[0]).toBeCloseTo(west, 6);
+    expect(trunk.to[0]).toBeCloseTo(west, 6);
+    expect(trunk.from[2]).toBeCloseTo(h, 6);
+    expect(bus.entries[0].at[2]).toBeCloseTo(h, 6);
+    // The cabinet isolator's supply and the room's own, each up to a tap-off.
+    const supply = named('Supply to the isolator');
+    const room_ = roomServiceRoutes(room).find((r) =>
+      r.name.endsWith('room supply'),
+    )!;
+    for (const top of [supply.points.at(-1)!, room_.points[0]]) {
+      expect(top[1]).toBeCloseTo(BUS_TAP_FOOT, 6);
+      const tap = bus.taps.find(
+        (t) => Math.abs(t.at[2] - top[2]) < CABINET_BUS.tap.along / 2,
+      );
+      expect(tap, `a tap-off over ${top.join(',')}`).toBeDefined();
+      expect(Math.abs(tap!.at[0] - top[0])).toBeLessThan(
+        CABINET_BUS.tap.across / 2,
+      );
+    }
+    // The tap-off boxes do not overlap.
+    const [a, b] = bus.taps;
+    expect(Math.abs(a.at[2] - b.at[2])).toBeGreaterThan(CABINET_BUS.tap.along);
   });
 
   it('lags the heating', () => {

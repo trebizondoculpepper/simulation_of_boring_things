@@ -1,4 +1,5 @@
-import { layoutRoom } from './room-equipment';
+import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
+import type { Containment, WallEntry } from './cable-containment';
 import type { Placed } from './room-equipment';
 import {
   POWER_ISOLATOR,
@@ -300,8 +301,79 @@ const HEATING_LANE = 0.17;
 export const ABOVE_DOORS = 2.8;
 /** The footbath's make-up main runs this high, above the plant lanes. */
 export const MAKE_UP_LEVEL = 3.4;
-/** The isolator's supply comes along the wall this high, over everything else. */
-const SUPPLY_LEVEL = 3.1;
+/**
+ * The room's busbar trunking (the owner, 2026-10-24: every power conduit
+ * should come from somewhere): a plug-in busbar along the west wall at
+ * high level, in through the south wall from the main corridor, over
+ * everything on that wall and under the services ceiling; its trunking
+ * 150 mm square, its middle this far off the wall. Each conduit rises
+ * into a fused tap-off box hung beneath it: the room's own switch-fuse's,
+ * and the cabinet isolator's.
+ */
+export const CABINET_BUS = {
+  y: 3.5,
+  off: 0.125,
+  size: 0.15,
+  /** A tap-off box: across the wall, its height, along it. */
+  tap: { across: 0.2, high: 0.25, along: 0.2 },
+} as const;
+/** Where a tap-off box's foot is, and its conduit enters it. */
+export const BUS_TAP_FOOT =
+  CABINET_BUS.y - CABINET_BUS.size / 2 - CABINET_BUS.tap.high;
+
+/**
+ * The cabinet room's busbar: its trunking along the west wall, where it
+ * comes in through the south wall, and each tap-off box's middle (the
+ * room's switch-fuse's and the cabinet isolator's).
+ */
+export function cabinetBusbar(
+  room: string,
+  trial?: Placed,
+): {
+  runs: Containment[];
+  entries: WallEntry[];
+  taps: { name: string; at: Vec3 }[];
+} | null {
+  const s = setting(room, trial);
+  const iso = cabinetIsolator(room, trial);
+  if (!s || !iso) return null;
+  const B = CABINET_BUS;
+  const x = -s.layout.box.w / 2 + B.off;
+  const h = s.h;
+  const tapY = B.y - B.size / 2 - B.tap.high / 2;
+  return {
+    runs: [
+      {
+        name: 'Busbar trunking, west wall',
+        kind: 'trunking',
+        width: B.size,
+        depth: B.size,
+        from: [x, B.y, h],
+        to: [x, B.y, -h + 0.2],
+      },
+    ],
+    entries: [
+      {
+        name: 'Busbar in from the main corridor',
+        at: [x, B.y, h],
+        normal: [0, 1],
+        width: B.size,
+        to: 'main_corridor',
+      },
+    ],
+    taps: [
+      {
+        name: 'Tap-off: the room’s switch-fuse',
+        at: [x, tapY, h - FEEDER_ISOLATOR.fromSouth],
+      },
+      {
+        name: 'Tap-off: the cabinet’s isolator',
+        at: [x, tapY, iso.supplyIn[2]],
+      },
+    ],
+  };
+}
+
 /** Its feed to the cabinet crosses over the cabinet's roof this high. */
 const FEED_LEVEL = 2.35;
 /** The walls' thickness. */
@@ -634,12 +706,12 @@ export function cabinetPipes(
   const iso = cabinetIsolator(room, trial)!;
   const supply = ports.find((p) => p.port.to === 'isolator')!;
   const [inX, inY, inZ] = iso.supplyIn;
-  // In from the south wall to the isolator: against its points, which
-  // start at the isolator, as the supply port's flow ('in') has it.
+  // Down from its tap-off on the busbar overhead to the isolator: against
+  // its points, which start at the isolator, as the supply port's flow
+  // ('in') has it.
   add({ ...supply.port, name: 'Supply to the isolator' }, [
     [inX, inY, inZ],
-    [inX, SUPPLY_LEVEL, inZ],
-    [inX, SUPPLY_LEVEL, h],
+    [inX, BUS_TAP_FOOT, inZ],
   ]);
   const g = supply.at;
   const f = iso.feedOut;

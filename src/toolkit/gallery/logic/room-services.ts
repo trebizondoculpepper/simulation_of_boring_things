@@ -1,6 +1,7 @@
 import { ROOM_SERVICES } from '../../../game/plant/services';
 import type { ServiceRoom, Utility } from '../../../game/plant/services';
 import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
+import { BUS_TAP_FOOT, cabinetBusbar } from './cabinet-pipes';
 import {
   SWITCH_FUSE,
   glandTop,
@@ -89,14 +90,17 @@ export function roomServiceRoutes(
   // (`FEEDER_ISOLATOR`), its conduit down the wall into its gland from the
   // distribution conduit (or, in a pool plant room, which has none, from
   // the services ceiling at the same height).
+  // A spa's plant room has its busbar along that wall: its supply drops
+  // from a tap-off on it (`cabinetBusbar`).
   const feederS = box.d / 2 - FEEDER_ISOLATOR.fromSouth;
+  const fromY = cabinetBusbar(room) ? BUS_TAP_FOOT : y;
   routes.push({
     name: `${room} room supply`,
     utility: 'power',
     kind: 'steel-screwed',
     od: 0.0337,
     points: [
-      onWall(box, 'west', feederS, y, STANDOFF),
+      onWall(box, 'west', feederS, fromY, STANDOFF),
       onWall(
         box,
         'west',
