@@ -50,7 +50,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Wiring the plant rooms' machines to the world
 
-- [ ] **The switch room, only what works** ([043](doc/prompts/043-switch-room-tidy.md), the owner, 2026-10-24): stage one of its redesign: remove the motor control centre, the sample rotary isolators and the spare distribution board, none wired to the world; rename the switchboard's "MCC-1" way to the wet hall it feeds; re-route the trunking from the main switch straight to the switchboard.
+- [x] **The switch room, only what works** ([043](doc/prompts/043-switch-room-tidy.md), the owner, 2026-10-24): stage one of its redesign: remove the motor control centre, the sample rotary isolators and the spare distribution board, none wired to the world; rename the switchboard's "MCC-1" way to the wet hall it feeds; re-route the trunking from the main switch straight to the switchboard. Done 2026-10-24, d7190c4.
 - [ ] **Motor panels in the plant rooms** ([044](doc/prompts/044-plant-room-motor-panels.md), the owner, 2026-10-24): stage two: a starter per motor in the world (isolator, HAND-OFF-AUTO, START/STOP, trip and RESET, current), the pool model's pumps following them, and a motor panel in each plant room to work them, room by room; the rebuilt control room to drive the same starters later.
 - [ ] **The machines still to wire** (`UNWIRED` in `src/toolkit/gallery/logic/world-bindings.ts`, which the tests let only shrink): among them the BMS outstation, the calorifier, the central battery (emergency lighting, [011](doc/prompts/011-emergency-lighting.md)), the contact tank, the distribution boards, the fire repeater, the MCC, the pressurisation unit and the rotary isolators.
 
