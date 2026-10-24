@@ -19,6 +19,8 @@ jobs:
     name: Typecheck, lint, test and build
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       # The whole history and its tags, to number the version.
       - uses: actions/checkout@v4
@@ -33,6 +35,7 @@ jobs:
       # patch advanced by the commits since that version's tag (README,
       # "Versions and releases"). Nothing is committed back to main.
       - name: Number the version
+        id: version
         run: |
           base="$(node -p "require('./package.json').version")"
           if count="$(git rev-list --count "v${base}..HEAD" 2>/dev/null)"; then :; else
@@ -42,6 +45,7 @@ jobs:
           IFS=. read -r major minor patch <<< "${base%%-*}"
           version="${major}.${minor}.$((patch + count))"
           echo "VITE_VERSION=${version}" >> "$GITHUB_ENV"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "Version ${version}"
       - run: npm run typecheck
       - run: npm run lint
@@ -56,6 +60,13 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+      # The same site, plain, for the itch.io job.
+      - if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist
+          retention-days: 1
 
   deploy:
     name: Deploy to GitHub Pages
@@ -72,3 +83,30 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  itch:
+    name: Push to itch.io
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Its own queue, so a slow upload never holds up the Pages deploy.
+    concurrency:
+      group: itch
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
+      # butler, itch.io's uploader, logs in with the BUTLER_API_KEY secret.
+      - name: Install butler
+        run: |
+          curl -fsSL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d butler
+          chmod +x butler/butler
+          echo "$PWD/butler" >> "$GITHUB_PATH"
+      - name: Push the build
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: butler push dist salimfadhley/the-pool:html5 --userversion "${{ needs.check.outputs.version }}"
