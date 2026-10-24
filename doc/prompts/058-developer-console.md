@@ -1,6 +1,49 @@
 # 058: Developer console
 
-Status: proposed 2026-10-24, not started. Three proposals below, from minimal to ambitious; B is recommended. Nothing is built until the owner chooses one.
+Status: the owner chose B, mostly, on 2026-10-24, without recording or replay; stage 1 (below, "Stage 1: what is built first") under way. The three proposals researched before the choice follow it, from minimal to ambitious.
+
+## The owner's choice (2026-10-24)
+
+Mostly B. It is a log: anything done in the game that changes the model shows a line. Every object in the game has an identifier now, so a command can switch a particular valve, set a control in the model, or work anything else; other commands work the game itself (noclip on and off), carry the player to another room, and tell them about a room. Not everything at once: first, a console that works as Quake's does, a key that brings down a command prompt with a REPL behind it for simple commands, perhaps with a JavaScript-like syntax, whatever is easy in a TypeScript game. No recording or replaying sessions for now.
+
+## Stage 1: what is built first
+
+### The console
+
+- **Opening it:** the key left of 1 (`Backquote`; on a UK Mac in Safari also `IntlBackslash` when it types `or §), from play or from the free mouse, never while typing in another field, and not on the title screen. It drops down over the top of the view, the log above a`]`prompt, and takes the keyboard: the walker hears nothing while it is down (as when paused), but the world runs on unless`pause` is typed. The same key, or Esc, puts it away; Esc then does not open the pause menu. Opening it frees the mouse; putting it away from play asks for pointer lock again.
+- **The REPL:** Enter runs the line, echoed as `] line`; Up and Down walk the history (the last 100 lines, kept per browser in `localStorage`, every read and write guarded); Tab completes the word at the cursor (command names first, then the command's own arguments: room ids, valve and switch tags, motor tags), cycling through the matches on further presses; Page Up and Page Down scroll the log; `;` separates several commands on one line.
+- **Two syntaxes, one line at a time.** A line whose first word is a command is a Quake command: words separated by spaces, quotes keeping spaces in one word (`open PL1-F1-IV1`, `goto pool_02`). Any other line is JavaScript, evaluated with the commands as functions in scope (`open("PL1-F1-IV1")`, `goto("pool_02")`), `world` as the world now (frozen, read-only), and `act(action)` to dispatch a world action; the value it gives is printed. It is the developer's tool, run in the player's own page, so plain `Function` evaluation is acceptable; nothing typed is ever saved or sent anywhere.
+- **Where it lives:** `src/toolkit/console/` with `logic/` pure and tested (the command line: tokenising, history and completion; the command registry and the commands, given a small `ConsoleHost` interface the app implements, so they import no DOM) and `console-view.ts` (the drop-down). The key is the control scheme's (`isConsoleKey` in `src/toolkit/controls/logic/controls.ts`, and a `consoleOpen` signal beside `paused` and `noclip`); rooms bind nothing.
+
+### The log
+
+- **Every action:** `src/game/events/`: a `GameEvent` (world time, kind `action` / `plant` / `command` / `system`, severity `info` / `notice` / `alarm`, subject, text, who: you or the console), and `describeAction(before, action, after)`, an exhaustive switch over `WorldAction`, so every action has a line and a new action without one fails to compile; it says what was done, and "no change" when nothing changed. Lines read as a plant logbook: the world clock, the subject's tag or id, then the text (`00:41:07  PL1-F1-IV1  valve opened (by you)`).
+- **What the plant does by itself:** watchers diffing the world before and after each step: a motor starting, stopping or tripping; a pool tripping at low-low level or recovering; the jacuzzi cabinet's trip; the booster set's trip; the gas zones' alarms; the boiler house's safety shut-off valve; a lighting zone lit or dark. More watchers follow in later stages.
+- **Wiring:** the player's `WorldStore` gains `events` (a signal of the last 2,000 lines, a bounded ring) and `log(event)` for the console's own lines; its `dispatch` describes each action, and its clock diffs each step. The log is not part of the world and not saved, so no `WORLD_VERSION` bump; it outlives rooms but not a reload. The attract sequence's scenario stores keep no log that anything shows, and the console always works the player's world, never an attract world.
+
+### First commands
+
+- `help [command]`, `clear`, `echo <text>`, `history`
+- `status`: the world clock, the room, paused or not, noclip, the alarms standing
+- `rooms [filter]`: room ids and names; `room [id]`: about a room (its name, and the valves, switches and motors it holds); `goto <room>`: go there
+- `noclip [on|off]`, `torch [on|off]`, `pause`, `unpause`, `cam` (the camera link, printed)
+- `valves [filter]`: every valve with its tag, room and state; `open <tag>`, `close <tag>`; `switches [filter]`, `switch <tag> on|off`; `motors`, `starter <tag> hand|off|auto|start|stop|reset`
+- `get <path>`: read the world by a dotted path (`get pools.pool_02.temperature`)
+- `act <json>`: dispatch any world action, as JSON
+- `condump`: download the log as a text file
+- In JavaScript, the same as functions, plus `world` and `act`.
+
+No developer gate in this stage: the console is the owner's tool while the game is built. Whether players get it, and which commands then need `developer 1`, is decided before it ships to them.
+
+### Acceptance (stage 1)
+
+- Pure and tested: `describeAction` for every action type, and "no change"; the watchers firing once on a transition, never on a steady state; the bounded log; tokenising, `;`, quotes, history and completion; `isConsoleKey` on US, UK PC and UK Mac keyboards; every command having help; the JavaScript path printing values and errors.
+- In a browser: the key opens and closes it from play and from the free mouse; typing never moves the walker; Esc closes it without opening the pause menu; valves opened by command, and by hand in a room, both log a line; `goto`, `noclip` and `room` work; a pump tripping logs itself.
+- The five project checks, the changelog, and the TODO item ticked with its date and commit.
+
+### Later stages
+
+Notify lines over the game while the console is up; more watchers (drain-downs passing levels, chemicals running low, air handling units); `scenario` and `attract` commands; `skip`, `setpoint` and other shortcuts; touch (a Console button in the menu) and gamepad (Back shows the log); the developer gate before players get it.
 
 ## Purpose
 
