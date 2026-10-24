@@ -10,6 +10,8 @@ import { AMBIENT, stepThermal, thermalParams } from './thermal';
 import type { ThermalParams } from './thermal';
 import type { Chemical } from './chemicals';
 import { stepHallRh } from './air-handling';
+import { poolPumping } from './motor-starters';
+import type { MotorsState } from './motor-starters';
 
 export type PoolId = 'pool_01' | 'pool_02' | 'pool_03' | 'pool_04';
 export const POOL_IDS: readonly PoolId[] = [
@@ -217,11 +219,17 @@ export function circulating(
   old: PoolWaterState,
   plant: PlantServices,
   id: PoolId,
+  /**
+   * The motors' starters (`motor-starters.ts`): where a pool's pumps have
+   * them, it circulates while one runs; else while an isolator is on.
+   */
+  motors?: MotorsState,
 ): boolean {
   const room = `plant_${id}` as ServiceRoom;
+  const pumping = motors ? poolPumping(motors, id) : undefined;
   return (
     serviceAvailable(plant, room, 'power') &&
-    ISOLATED_BY[id].some((name) => plant.isolators[name]) &&
+    (pumping ?? ISOLATED_BY[id].some((name) => plant.isolators[name])) &&
     !old.tripped
   );
 }
@@ -240,12 +248,13 @@ export function dosedVolumes(
   plant: PlantServices,
   stock: ChemicalStock = ALL_STOCKED,
   loungeMoving = true,
+  motors?: MotorsState,
 ): Record<Chemical, number> {
   const out = { hypochlorite: 0, acid: 0 };
   for (const id of POOL_IDS) {
     const room = `plant_${id}` as ServiceRoom;
     if (
-      !circulating(pools[id], plant, id) ||
+      !circulating(pools[id], plant, id, motors) ||
       (id === 'pool_01' && !loungeMoving) ||
       !serviceAvailable(plant, room, 'chemical')
     )
@@ -342,6 +351,8 @@ export function stepPoolsWater(
    * the units were in the world, and its humidity stands.
    */
   air?: Record<PoolId, { share: number; drying: number }>,
+  /** The motors' starters, this step's (`motor-starters.ts`). */
+  motors?: MotorsState,
 ): {
   pools: PoolsState;
   drawn: number;
@@ -360,7 +371,7 @@ export function stepPoolsWater(
       (id === 'pool_04' && footbath
         ? footbath.draining
         : pools[id].drainDown) &&
-      circulating(pools[id], plant, id) &&
+      circulating(pools[id], plant, id, motors) &&
       (id !== 'pool_04' ||
         !footbath ||
         !footbathPumpStarved(pools[id], footbath.draining)) &&
@@ -378,7 +389,7 @@ export function stepPoolsWater(
     // The pumps run if the room has power, and one of them, or
     // the pool's cabinet, is not isolated; and not tripped.
     const circulation =
-      circulating(old, plant, id) &&
+      circulating(old, plant, id, motors) &&
       (id !== 'pool_04' ||
         !footbath ||
         !footbathPumpStarved(old, footbath.draining)) &&

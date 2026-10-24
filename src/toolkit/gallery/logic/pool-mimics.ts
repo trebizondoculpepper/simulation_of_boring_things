@@ -107,14 +107,6 @@ export const MAIN_POOL_MIMIC: MimicSpec = {
     { id: 'dosing', at: pt(0.88, 0.28), colour: 'green' },
     { id: 'makeup', at: pt(-0.95, -0.14), colour: 'blue', label: 'MAKE-UP' },
     { id: 'level-low', at: pt(-0.69, -0.14), colour: 'red', label: 'LOW' },
-    // Lit while the pumps' local panel is switched to LOCAL: START and
-    // STOP from the control room are then refused.
-    {
-      id: 'pumps-local',
-      at: pt(-0.41, -0.47),
-      colour: 'amber',
-      label: 'LOCAL',
-    },
   ],
   buttons: [
     { id: 'p1-start', at: pt(-0.535, -0.39), colour: 'green', legend: 'START' },
@@ -142,8 +134,6 @@ export interface PumpsShown {
   /** 0 running, 1 stopped, 2 tripped, for each pump. */
   p1: 0 | 1 | 2;
   p2: 0 | 1 | 2;
-  /** Whether the local panel is in LOCAL. */
-  local: boolean;
 }
 
 export function mainPoolState(p: PlantReading, pumps?: PumpsShown): MimicState {
@@ -166,7 +156,6 @@ export function mainPoolState(p: PlantReading, pumps?: PumpsShown): MimicState {
       'p1-trip': tripped('p1'),
       'p2-run': running('p2'),
       'p2-trip': tripped('p2'),
-      'pumps-local': pumps?.local ?? false,
       ...Object.fromEntries(
         p.filterDp.map((dp, i) => [`f${i + 1}-dp`, dp > 0.7]),
       ),

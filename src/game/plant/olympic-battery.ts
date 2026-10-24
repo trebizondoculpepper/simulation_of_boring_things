@@ -4,6 +4,7 @@ import { installedValveByCommandId } from './installed-valves';
 import { circulating } from './pools';
 import type { PoolsState } from './pools';
 import type { PlantServices } from './services';
+import type { MotorsState } from './motor-starters';
 
 /**
  * The Olympic plant room's filter battery as its valves stand in the world
@@ -186,10 +187,11 @@ export function olympicFlowsOf(world: {
   olympic: OlympicBatteryState;
   pools: PoolsState;
   plant: PlantServices;
+  motors?: MotorsState;
 }): BatteryFlows {
   return olympicBatteryFlows(
     world.installedValves,
     world.olympic,
-    circulating(world.pools.pool_02, world.plant, 'pool_02'),
+    circulating(world.pools.pool_02, world.plant, 'pool_02', world.motors),
   );
 }

@@ -131,10 +131,10 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       y: 1.7,
     },
     build(kit): LiveExhibit {
-      // The main pool's board works the filter pumps remotely, through
-      // their local panel (`pump-panel.ts`): refused while it is in LOCAL.
+      // The main pool's board works the filter pumps' starters, as their
+      // local panel does (`pump-panel.ts`): the one world's.
       const board = createMimicBoard(kit, spec, {
-        press: (id) => pressPump(id, 'remote'),
+        press: (id) => pressPump(id),
       });
       return {
         object: board.group,

@@ -73,11 +73,10 @@ describe('the gas mimic', () => {
 });
 
 describe('the main pool board, with the pumps’ controls', () => {
-  it('shows no flow with both pumps stopped, and the panel in LOCAL', () => {
+  it('shows no flow with both pumps stopped', () => {
     const p = plantAt(10);
-    const s = mainPoolState(p, { p1: 1, p2: 1, local: true });
+    const s = mainPoolState(p, { p1: 1, p2: 1 });
     expect(s.lamps['p1-run']).toBe(false);
-    expect(s.lamps['pumps-local']).toBe(true);
     expect(s.readouts.pumps.flow?.value).toBe(0);
   });
 });

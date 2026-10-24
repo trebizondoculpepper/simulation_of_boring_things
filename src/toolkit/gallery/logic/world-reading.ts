@@ -5,6 +5,8 @@ import { serviceAvailable } from '../../../game/plant/services';
 import type { IsolatorName, ServiceRoom } from '../../../game/plant/services';
 import { WET_HALL_PLANT } from '../../../game/plant/wet-hall';
 import { olympicFlowsOf } from '../../../game/plant/olympic-battery';
+import { POOL_MOTORS } from '../../../game/plant/motor-starters';
+import type { MotorTag } from '../../../game/plant/motor-starters';
 import {
   CHLORINE_LOW,
   FILTER_DP_LIMIT,
@@ -18,13 +20,14 @@ import type { AlarmId, PlantReading } from './control-room-demo';
  * room show (`PlantReading`, which `plantAt`'s scripted loop also gives,
  * for development rooms with no world). Pure.
  *
- * A pool's pumps: its A pump is duty while its isolator is on, its B
- * pump otherwise; one runs while the pool circulates (`pools.ts`: its
- * room powered, an isolator on, not tripped). What the world does not yet
- * model is drawn from what it does: the filters' pressure differences, as
- * clean filters', rising with the square of the flow (the Olympic's from
- * its battery's beds); the hall's humidity,
- * held while its air handling runs and climbing when it does not.
+ * A pool's pumps: where they have starters in the world
+ * (`motor-starters.ts`), as those have them, running, tripped and their
+ * currents; elsewhere its A pump is duty while its isolator is on, its B
+ * pump otherwise, one running while the pool circulates. Its hall's
+ * humidity is the world's (`air-handling.ts`). What the world does not
+ * yet model is drawn from what it does: the filters' pressure
+ * differences, as clean filters', rising with the square of the flow (the
+ * Olympic's from its battery's beds).
  */
 
 /** Each pool's pumps' isolators, A then B, and its UV's. */
@@ -49,8 +52,13 @@ export function plantReadingOf(world: World, pool: PoolId = 'pool_02') {
   const [a, b] = PUMPS[pool] ?? [null, null];
   const aOn = a ? plant.isolators[a] : false;
   const bOn = b ? plant.isolators[b] : false;
-  const p1 = circulating && aOn;
-  const p2 = circulating && !aOn && bOn;
+  const [t1, t2] = POOL_MOTORS(pool);
+  const starter = (t: MotorTag | undefined) =>
+    t ? world.motors.starters[t] : undefined;
+  const s1 = starter(t1);
+  const s2 = starter(t2);
+  const p1 = s1 ? s1.running : circulating && aOn;
+  const p2 = s2 ? s2.running : circulating && !aOn && bOn;
   const share = Math.min(1.2, water.flow / POOL_TARGET[pool].flow);
   // The Olympic's five beds as its battery has them (`olympic-battery.ts`);
   // the others' as clean filters', rising with the square of the flow.
@@ -64,11 +72,11 @@ export function plantReadingOf(world: World, pool: PoolId = 'pool_02') {
   const heat = Object.values(world.pools).reduce((t, p) => t + p.heating, 0);
   const boilersFiring = heat > 1;
   const airOn = serviceAvailable(plant, room, 'air');
-  const hallRh = airOn ? 57 : 71;
+  const hallRh = water.hallRh;
   const alarms: AlarmId[] = [];
-  // A pump that should run but has tripped, by its isolator.
-  if (water.tripped && aOn) alarms.push('p1-trip');
-  if (water.tripped && !aOn && bOn) alarms.push('p2-trip');
+  // A pump tripped: by its starter, or that should run, by its isolator.
+  if (s1 ? s1.tripped : water.tripped && aOn) alarms.push('p1-trip');
+  if (s2 ? s2.tripped : water.tripped && !aOn && bOn) alarms.push('p2-trip');
   if (!circulating || share < 0.5) alarms.push('flow-low');
   if (Math.max(...filterDp) > FILTER_DP_LIMIT) alarms.push('filter-dp');
   if (circulating && uvIsolator && !plant.isolators[uvIsolator])
@@ -106,8 +114,8 @@ export function plantReadingOf(world: World, pool: PoolId = 'pool_02') {
     chlorine: water.freeChlorine,
     ph: water.ph,
     amps: {
-      p1: amps(p1, 37),
-      p2: amps(p2, 37),
+      p1: s1 ? s1.current : amps(p1, 37),
+      p2: s2 ? s2.current : amps(p2, 37),
       supply: airOn ? 29 : 0,
       extract: airOn ? 27 : 0,
       boilers: boilersFiring ? 18 : 3,

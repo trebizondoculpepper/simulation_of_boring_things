@@ -17,7 +17,6 @@ describe('lounge pool solenoid valves', () => {
         loungeValveMimicState(w.loungeValvePositions, {
           p1: 1,
           p2: 1,
-          local: true,
         }),
       ),
     ).toEqual([]);

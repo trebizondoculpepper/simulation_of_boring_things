@@ -99,8 +99,20 @@ import type {
   AirHandlingState,
   AirUnitAction,
 } from './plant/air-handling';
+import {
+  actOnStarter,
+  MOTORS,
+  newMotors,
+  stepMotors,
+} from './plant/motor-starters';
+import type {
+  MotorsState,
+  MotorTag,
+  StartedPool,
+  StarterAction,
+} from './plant/motor-starters';
 
-export const WORLD_VERSION = 20;
+export const WORLD_VERSION = 21;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -148,6 +160,8 @@ export interface World {
   olympicTank: OlympicTankState;
   /** The pool halls' air handling units and the halls' time programmes (`air-handling.ts`). */
   airHandling: AirHandlingState;
+  /** The motors' starters, worked from their plant rooms' panels (`motor-starters.ts`). */
+  motors: MotorsState;
 }
 
 export function newWorld(): World {
@@ -169,6 +183,7 @@ export function newWorld(): World {
     olympic: newOlympicBattery(),
     olympicTank: newOlympicTank(),
     airHandling: newAirHandling(),
+    motors: newMotors(),
   };
 }
 
@@ -204,7 +219,11 @@ export type WorldAction =
   /** An air handling unit's controls worked, on its controller. */
   | { type: 'air/unit'; tag: string; action: AirUnitAction }
   /** A hall's time programme set, on the air plant's mimic: occupied, so its units run in AUTO. */
-  | { type: 'air/occupied'; hall: AirHall; on: boolean };
+  | { type: 'air/occupied'; hall: AirHall; on: boolean }
+  /** A motor's starter worked on its plant room's panel: its selector, START, STOP or RESET. */
+  | { type: 'motor/starter'; tag: MotorTag; action: StarterAction }
+  /** A motor panel's emergency stop struck in, or released. */
+  | { type: 'motor/stop'; pool: StartedPool; stopped: boolean };
 
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
@@ -326,6 +345,23 @@ export function applyAction(world: World, action: WorldAction): World {
         ...world,
         airHandling: actOnUnit(world.airHandling, action.tag, action.action),
       };
+    case 'motor/starter': {
+      const motors = actOnStarter(world.motors, action.tag, action.action);
+      return motors === world.motors ? world : { ...world, motors };
+    }
+    case 'motor/stop':
+      return world.motors.stopped[action.pool] === action.stopped
+        ? world
+        : {
+            ...world,
+            motors: {
+              ...world.motors,
+              stopped: {
+                ...world.motors.stopped,
+                [action.pool]: action.stopped,
+              },
+            },
+          };
     case 'air/occupied':
       return world.airHandling.occupied[action.hall] === action.on
         ? world
@@ -447,6 +483,33 @@ export function stepWorld(world: World, delta: number): World {
     makeUpDemand(world.pools, { pool_02: calling }),
   );
   let battery: BatteryFlows | null = null;
+  // The motors' starters: each on its room's power and local isolator,
+  // and held off while its pool's tank is at its low-low level.
+  const motors = stepMotors(
+    world.motors,
+    {
+      permitted: (tag) =>
+        serviceAvailable(world.plant, `plant_${MOTORS[tag].pool}`, 'power') &&
+        world.plant.isolators[MOTORS[tag].isolator] &&
+        !world.pools[MOTORS[tag].pool].tripped,
+      demand: () => true,
+      // Whether its valves give it somewhere to pump: to the pool, to
+      // waste (a backwash), or to the sewer (a drain-down).
+      flowing: (pool) => {
+        if (world.pools[pool].drainDown) return true;
+        const open =
+          pool === 'pool_02'
+            ? olympicBatteryFlows(world.installedValves, world.olympic, true)
+            : pool === 'pool_01'
+              ? loungeValveFlows(world.loungeValvePositions, true)
+              : null;
+        return (
+          !open || open.toPool + open.toWaste > 0.05 * POOL_TARGET[pool].flow
+        );
+      },
+    },
+    delta,
+  );
   // The air handling units, on the air plant's supply, each at its hall's
   // humidity as the step begins.
   const airHandling = stepAirHandling(
@@ -486,12 +549,14 @@ export function stepWorld(world: World, delta: number): World {
     },
     (running) => loungeValveFlows(loungeValvePositions, running),
     hallHandling(airHandling),
+    motors,
   );
   return {
     ...world,
     time: world.time + delta,
     pools: water.pools,
     airHandling,
+    motors,
     loungeValvePositions,
     olympic: battery
       ? stepOlympicBattery(world.olympic, battery, delta)
@@ -510,6 +575,7 @@ export function stepWorld(world: World, delta: number): World {
         world.plant,
         stock,
         loungeValveFlows(loungeValvePositions, true).toPool > 0,
+        motors,
       ),
       delta,
     ),

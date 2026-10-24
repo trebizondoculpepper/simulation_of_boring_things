@@ -117,13 +117,20 @@ describe('the Olympic pool, circulated by its battery', () => {
     );
   });
 
-  it('stops circulating when every filter’s outlet is shut, though its pumps run', () => {
+  it('stops circulating when every filter’s outlet is shut, though its pumps run, until they trip', () => {
     const shut = Object.fromEntries(
       [1, 2, 3, 4, 5].map((n) => [`PL2-F${n}-V2`, false]),
     );
-    const w = advance(withValves(newWorld(), shut), 120, 1);
-    expect(w.pools.pool_02.flow).toBeLessThan(5);
+    // Its flow falling away within the minute.
+    const w = advance(withValves(newWorld(), shut), 55, 1);
+    expect(w.pools.pool_02.flow).toBeLessThan(10);
     expect(olympicFlowsOf(w).pumping).toBe(true);
+    // Run on against shut valves, the duty pump's thermistors trip it, the
+    // standby takes over, and trips in its turn (`motor-starters.ts`).
+    const later = advance(w, 120, 1);
+    expect(later.motors.starters['P-101A'].tripped).toBe(true);
+    expect(later.motors.starters['P-101B'].tripped).toBe(true);
+    expect(olympicFlowsOf(later).pumping).toBe(false);
   });
 
   it('washes filter 2 in a backwash, drawing its waste from the balance tank', () => {

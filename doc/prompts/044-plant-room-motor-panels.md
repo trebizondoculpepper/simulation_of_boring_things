@@ -20,3 +20,8 @@ Distributed motor control (the owner's choice): each motor is started, stopped a
 - The local isolator, the room's feeder and the site's main switch each still stop it, whatever its panel says.
 - Saves from before load with every starter as found today (running where the pump runs, in AUTO).
 - Tests for each starter's logic and for each pump following its starter; typecheck, lint, format, tests and build pass.
+
+## Progress
+
+- 2026-10-24, first room pair: the pools' circulation pumps have starters in the world (`game/plant/motor-starters.ts`, world version 21): P-101A/B (the Olympic, on drives) and P-201A/B (the lounge, direct on line), duty and standby, in AUTO as found. The pool model circulates while one runs. The trip is the motor's thermistors after a minute's running with its valves giving it nowhere to pump (the Olympic's battery, the lounge's filter path); the tank's low-low level stays an interlock that restarts the pumps once it recovers, as the model's refilling relies on. The existing local control panel in each of those plant rooms (`rooms/plant/pump-panel.ts`) is the motor panel: its HAND · OFF · AUTO selectors, a RESET per pump (new), its emergency stop and its mimic's START and STOP work the starters, and its lamps and ammeters show them; the control room's main pool board works the same starters. Its LOCAL · REMOTE key switch and the mimic's LOCAL lamp are gone (one world, no authority switch).
+- Still to do: the LTHW circulator (P-501A/B) and the make-up booster (P-601), with panels in the boiler house and the wet hall; the spa cabinets' pumps; the air plant's and stores' fans, if they are to have starters.

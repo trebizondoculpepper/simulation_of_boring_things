@@ -2,6 +2,7 @@ import { BALANCE_TANK, newBalanceTank } from './balance-tank';
 import type { BalanceTankState, MakeupMode } from './balance-tank';
 import { olympicFlowsOf } from './olympic-battery';
 import type { OlympicBatteryState } from './olympic-battery';
+import type { MotorsState } from './motor-starters';
 import { circulating, olympicTankLevel } from './pools';
 import type { PoolsState } from './pools';
 import { serviceAvailable } from './services';
@@ -61,10 +62,11 @@ export function olympicTankView(world: {
   olympicTank: OlympicTankState;
   installedValves: Readonly<Record<string, boolean>>;
   olympic: OlympicBatteryState;
+  motors?: MotorsState;
 }): BalanceTankState {
   const water = world.pools.pool_02;
   const level = olympicTankLevel(water.balance);
-  const running = circulating(water, world.plant, 'pool_02');
+  const running = circulating(water, world.plant, 'pool_02', world.motors);
   const pouring =
     world.olympicTank.open &&
     water.makeUp &&
