@@ -20,6 +20,8 @@
  *   the current (BS 7671 Appendix 4, multicore PVC cable clipped direct),
  *   then larger until the voltage drop over the length is within 5 % (3 %
  *   for lighting); the conduit sized to the cable.
+ * - **Busbar**: plug-in busbar trunking, where a room's supply is to be
+ *   tapped off along a wall: the smallest rated for the current.
  * - **Control**: a 20 mm conduit.
  * - **Chemicals and samples**: dosing tube by the dose; positive
  *   displacement pumps, so length does not limit it.
@@ -40,7 +42,8 @@ export type ChosenKind =
   | 'stainless'
   | 'lagged-heating'
   | 'chemical-tube'
-  | 'twin-wall-flue';
+  | 'twin-wall-flue'
+  | 'busbar-trunking';
 
 /** The outside diameters each kind comes in, m: the pipe helper's (`PIPE_KINDS`). */
 export const KIND_SIZES: Record<ChosenKind, readonly number[]> = {
@@ -55,7 +58,15 @@ export const KIND_SIZES: Record<ChosenKind, readonly number[]> = {
   'lagged-heating': [0.0337, 0.0483, 0.0603, 0.0889, 0.1143],
   'chemical-tube': [0.006, 0.008, 0.01, 0.012],
   'twin-wall-flue': [0.2, 0.25, 0.3, 0.35, 0.45, 0.55],
+  'busbar-trunking': [0.1, 0.125, 0.15],
 };
+
+/** Plug-in busbar trunking's ratings, A, and each one's casing, m square. */
+const BUSBARS = [
+  { rating: 160, od: 0.1 },
+  { rating: 400, od: 0.125 },
+  { rating: 800, od: 0.15 },
+] as const;
 
 // ---- What may be asked ------------------------------------------------------------
 
@@ -91,6 +102,8 @@ export type PipeRequest = Common &
         current: number;
         /** Lighting is allowed less drop (3 %) than other loads (5 %). */
         lighting?: boolean;
+        /** Plug-in busbar trunking, to be tapped off along its length, not cable. */
+        busbar?: boolean;
       }
     | { commodity: 'control' }
     | {
@@ -351,6 +364,22 @@ function power(
   r: Extract<PipeRequest, { commodity: 'ac-400v-3ph' | 'ac-230v' }>,
 ): PipeChoice {
   const three = r.commodity === 'ac-400v-3ph';
+  if (r.busbar) {
+    const b =
+      BUSBARS.find((x) => x.rating >= r.current) ?? BUSBARS[BUSBARS.length - 1];
+    return {
+      kind: 'busbar-trunking',
+      od: b.od,
+      reasons: [
+        'plug-in busbar trunking, tapped off along its length',
+        `the smallest rated for ${r.current} A: ${b.rating} A`,
+      ],
+      problems:
+        b.rating < r.current
+          ? [`${r.current} A is more than the largest busbar carries`]
+          : [],
+    };
+  }
   const volts = three ? 400 : 230;
   const allowed = r.lighting ? 3 : 5;
   const rating = (c: (typeof CABLES)[number]) => (three ? c.three : c.single);

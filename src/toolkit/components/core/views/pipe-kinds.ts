@@ -8,7 +8,12 @@ import {
 } from 'three';
 import type { BufferGeometry, Material } from 'three';
 import type { Vec3 } from '../logic/pipe-route';
-import { createFlexHose, createPipeRun, putPipeRun } from './pipe-route';
+import {
+  createFlexHose,
+  createPipeRun,
+  createTrunkingRun,
+  putPipeRun,
+} from './pipe-route';
 import type {
   Penetration,
   PipeEnd,
@@ -40,7 +45,8 @@ export type PipeKindId =
   | 'chemical-tube'
   | 'pressure-hose'
   | 'flue'
-  | 'twin-wall-flue';
+  | 'twin-wall-flue'
+  | 'busbar-trunking';
 
 export interface PipeKind {
   name: string;
@@ -63,9 +69,27 @@ export interface PipeKind {
   insulation?: { thickness: number; colour: string };
   /** Flexible: drawn as a smooth hose through its points, not bent pipe. */
   flexible?: boolean;
+  /** Square, its "diameter" its width: trunking, drawn by `createTrunkingRun`. */
+  square?: boolean;
 }
 
 export const PIPE_KINDS: Record<PipeKindId, PipeKind> = {
+  // Plug-in busbar trunking (Schneider Canalis KS, Eaton's like): copper
+  // bars in a grey steel casing, square, in 3 m lengths joined by a joint
+  // pack, outlets along it for its tap-off units. Laid by the plumber for
+  // a current more than cable carries (`plumber.ts`).
+  'busbar-trunking': {
+    name: 'Plug-in busbar trunking',
+    carries: 'a room’s 400 V supply, its tap-offs along it',
+    joint: 'none',
+    colour: '#9aa1a4',
+    fittingColour: '#6f777a',
+    roughness: 0.5,
+    metalness: 0.5,
+    sizes: [0.1, 0.125, 0.15],
+    lengths: 3,
+    square: true,
+  },
   'pvc-pressure': {
     name: 'PVC-U pressure pipe, solvent-welded',
     carries: 'pool water: circulation, filters, balance tanks',
@@ -277,6 +301,11 @@ export function createPipe(
   options: PipeOptions = {},
 ) {
   const materials = pipeKindMaterials(id, options.colour);
+  if (PIPE_KINDS[id].square)
+    return createTrunkingRun(points, materials, {
+      ...style(id, od, options),
+      lengths: options.lengths ?? PIPE_KINDS[id].lengths,
+    });
   if (PIPE_KINDS[id].flexible && !options.laid)
     return createFlexHose(points, materials.pipe, od);
   return createPipeRun(points, materials, style(id, od, options));

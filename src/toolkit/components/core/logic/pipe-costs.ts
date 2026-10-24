@@ -70,6 +70,12 @@ export const PIPE_PRICES: Record<ChosenKind, Price> = {
     grows: 1,
     why: 'twin-wall stainless flue, with its supports',
   },
+  'busbar-trunking': {
+    perMetre: 260,
+    od: 0.1,
+    grows: 1.3,
+    why: 'plug-in busbar trunking, its joint packs and brackets, installed',
+  },
 };
 
 /** Conduit carrying cables: steel conduit, its cable, and pulling it in. */

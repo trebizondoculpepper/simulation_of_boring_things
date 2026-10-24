@@ -1,7 +1,7 @@
 import { ROOM_SERVICES } from '../../../game/plant/services';
 import type { ServiceRoom, Utility } from '../../../game/plant/services';
 import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
-import { BUS_TAP_FOOT, cabinetBusbar } from './cabinet-pipes';
+import { cabinetBusbar } from './cabinet-pipes';
 import {
   SWITCH_FUSE,
   glandTop,
@@ -87,30 +87,43 @@ export function roomServiceRoutes(
   const y = Math.min(structure.ceilingZone, structure.soffit - 0.15);
 
   // The room's supply: its switch-fuse on the west wall by the entrance
-  // (`FEEDER_ISOLATOR`), its conduit down the wall into its gland from the
+  // (`FEEDER_ISOLATOR`), its supply in through its first gland, its feed
+  // out through its second (turned onto the west wall, its first gland is
+  // to the south). Each conduit runs up the wall: the supply from the
   // distribution conduit (or, in a pool plant room, which has none, from
-  // the services ceiling at the same height).
-  // A spa's plant room has its busbar along that wall: its supply drops
-  // from a tap-off on it (`cabinetBusbar`).
+  // the services ceiling at the same height), the feed back up to it.
+  // A spa's plant room has its busbar along that wall, and its switch-fuse
+  // is fed from it and feeds its cabinet's isolator: those runs are its
+  // cabinet's services' (`cabinet-pipes.ts`).
   const feederS = box.d / 2 - FEEDER_ISOLATOR.fromSouth;
-  const fromY = cabinetBusbar(room) ? BUS_TAP_FOOT : y;
-  routes.push({
-    name: `${room} room supply`,
-    utility: 'power',
-    kind: 'steel-screwed',
-    od: 0.0337,
-    points: [
-      onWall(box, 'west', feederS, fromY, STANDOFF),
-      onWall(
-        box,
-        'west',
-        feederS,
-        FEEDER_ISOLATOR.y + glandTop(SWITCH_FUSE),
-        STANDOFF,
-      ),
-    ],
-    to: 'feeder',
-  });
+  if (!cabinetBusbar(room)) {
+    const [gIn, gOut] = SWITCH_FUSE.glands.x;
+    const top = FEEDER_ISOLATOR.y + glandTop(SWITCH_FUSE);
+    routes.push(
+      {
+        name: `${room} room supply`,
+        utility: 'power',
+        kind: 'steel-screwed',
+        od: 0.0337,
+        points: [
+          onWall(box, 'west', feederS - gIn, y, STANDOFF),
+          onWall(box, 'west', feederS - gIn, top, STANDOFF),
+        ],
+        to: 'feeder',
+      },
+      {
+        name: `${room} room feed`,
+        utility: 'power',
+        kind: 'steel-screwed',
+        od: 0.0337,
+        points: [
+          onWall(box, 'west', feederS - gOut, top, STANDOFF),
+          onWall(box, 'west', feederS - gOut, y, STANDOFF),
+        ],
+        to: 'room',
+      },
+    );
+  }
 
   // These rooms already have individually authored cabinet/plant feeders.
   if (

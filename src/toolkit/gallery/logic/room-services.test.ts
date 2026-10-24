@@ -30,11 +30,17 @@ describe('current plant-room service connections', () => {
           'plant_pool_04',
         ].includes(room)
       ) {
-        // But for the room's own supply, into its switch-fuse.
+        // But for the room's own supply, into its switch-fuse, and its feed
+        // out of it; in the spas' rooms those too are their cabinets'
+        // (`cabinet-pipes.ts`: from their busbars).
         expect(
           routes.filter((r) => r.utility === 'power').map((r) => r.to),
           room,
-        ).toEqual(['feeder']);
+        ).toEqual(
+          room === 'plant_pool_03' || room === 'plant_pool_04'
+            ? []
+            : ['feeder', 'room'],
+        );
       } else {
         expect(
           routes.some((r) => r.name.includes('distribution conduit')),
@@ -61,28 +67,37 @@ describe('current plant-room service connections', () => {
   it('leaves the lounge’s plant room to its port-to-port routing', () => {
     // Its pipework, as the Olympic's, is `room-pipes.ts`'s; every port's
     // connection is checked in `port-connections.test.ts`.
-    // Only the room's supply is routed here.
+    // Only the room's supply, in and out of its switch-fuse, is routed here.
     expect(roomServiceRoutes('plant_pool_01').map((r) => r.to)).toEqual([
       'feeder',
+      'room',
     ]);
   });
 
-  it('brings every room’s supply down into its switch-fuse’s gland', () => {
+  it('brings every room’s supply down into its switch-fuse’s first gland, and its feed out of its second', () => {
     for (const room of Object.keys(ROOM_SERVICES)) {
+      // The spas' rooms' are their cabinets' (`cabinet-pipes.test.ts`).
+      if (room === 'plant_pool_03' || room === 'plant_pool_04') continue;
       const { box } = layoutRoom(room)!;
-      const supply = roomServiceRoutes(room).find((r) => r.to === 'feeder')!;
-      const end = supply.points[supply.points.length - 1];
-      // Over the gland: on the west wall's line at its depth, along the
-      // wall at the switch-fuse's middle, on the gland's top.
-      expect(end[0], room).toBeCloseTo(-box.w / 2 + SWITCH_FUSE.glands.z, 6);
-      expect(end[2], room).toBeCloseTo(
-        box.d / 2 - FEEDER_ISOLATOR.fromSouth,
-        6,
-      );
-      expect(end[1], room).toBeCloseTo(
-        FEEDER_ISOLATOR.y + glandTop(SWITCH_FUSE),
-        6,
-      );
+      const routes = roomServiceRoutes(room);
+      const supply = routes.find((r) => r.to === 'feeder')!;
+      const feed = routes.find((r) => r.to === 'room')!;
+      const middle = box.d / 2 - FEEDER_ISOLATOR.fromSouth;
+      // Turned onto the west wall, its local x is the room's -z.
+      const [gIn, gOut] = SWITCH_FUSE.glands.x;
+      for (const [at, g] of [
+        [supply.points[supply.points.length - 1], gIn],
+        [feed.points[0], gOut],
+      ] as const) {
+        // On a gland: on the west wall's line at its depth, along the
+        // wall at the gland, on its top.
+        expect(at[0], room).toBeCloseTo(-box.w / 2 + SWITCH_FUSE.glands.z, 6);
+        expect(at[2], room).toBeCloseTo(middle - g, 6);
+        expect(at[1], room).toBeCloseTo(
+          FEEDER_ISOLATOR.y + glandTop(SWITCH_FUSE),
+          6,
+        );
+      }
     }
   });
 
@@ -118,9 +133,12 @@ describe('current plant-room service connections', () => {
           r !== main &&
           !isControlDevice(r.to),
       )) {
-        // Its first point on the main: at its height, on a wall's saddles.
-        expect(r.points[0][1], r.name).toBeCloseTo(level, 6);
-        expect(wallOf(box, r.points[0]), r.name).toBeDefined();
+        // Its end on the main: at its height, on a wall's saddles (the
+        // switch-fuse's feed rises to it; every other drops from it).
+        const on =
+          r.to === 'room' ? r.points[r.points.length - 1] : r.points[0];
+        expect(on[1], r.name).toBeCloseTo(level, 6);
+        expect(wallOf(box, on), r.name).toBeDefined();
       }
     }
   });

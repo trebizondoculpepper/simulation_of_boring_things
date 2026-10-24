@@ -1,8 +1,11 @@
 import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
-import type { Containment, WallEntry } from './cable-containment';
+import { choosePipe } from '../../components/core/logic/plumber';
 import type { Placed } from './room-equipment';
 import {
+  BUSBAR_TAP_OFF,
   POWER_ISOLATOR,
+  SWITCH_FUSE,
+  TAP_OFF_GLAND,
   glandTop,
 } from '../../components/industrial-control/logic/enclosures';
 
@@ -38,7 +41,8 @@ export type RunKind =
   | 'pvc-pressure'
   | 'pvc-drain'
   | 'lagged-heating'
-  | 'steel-screwed';
+  | 'steel-screwed'
+  | 'busbar-trunking';
 
 export interface CabinetPort {
   name: string;
@@ -255,6 +259,8 @@ export interface CabinetRun {
   points: Vec3[];
   /** Where it passes through the room's walls. */
   through: WallCrossing[];
+  /** Its ends' finishes, if not open (a busbar's far end is capped). */
+  ends?: readonly ['open' | 'cap', 'open' | 'cap'];
   /** Named operating valve mounted on this pipe in the room. */
   valve?: {
     id: string;
@@ -302,75 +308,69 @@ export const ABOVE_DOORS = 2.8;
 /** The footbath's make-up main runs this high, above the plant lanes. */
 export const MAKE_UP_LEVEL = 3.4;
 /**
- * The room's busbar trunking (the owner, 2026-10-24: every power conduit
- * should come from somewhere): a plug-in busbar along the west wall at
- * high level, in through the south wall from the main corridor, over
- * everything on that wall and under the services ceiling; its trunking
- * 150 mm square, its middle this far off the wall. Each conduit rises
- * into a fused tap-off box hung beneath it: the room's own switch-fuse's,
- * and the cabinet isolator's.
+ * The room's electricity, in the owner's order (2026-10-24): a plug-in
+ * busbar along the west wall at high level, in through the south wall
+ * from the switch room; a tap-off unit on it over the room's switch-fuse;
+ * the switch-fuse (the room's feeder, `room-services.ts`'s place for it),
+ * fed into its first gland, feeding out of its second; the cabinet's
+ * isolator; the cabinet. The busbar and the conduits are the plumber's
+ * choice (`choosePipe`), each run between two components' glands.
  */
 export const CABINET_BUS = {
+  /** The bar's middle: its height, and how far off the wall. */
   y: 3.5,
-  off: 0.125,
-  size: 0.15,
-  /** A tap-off box: across the wall, its height, along it. */
-  tap: { across: 0.2, high: 0.25, along: 0.2 },
+  off: BUSBAR_TAP_OFF.d / 2,
+  /** What it carries: the switch room's way for the spas. */
+  current: 63,
 } as const;
-/** Where a tap-off box's foot is, and its conduit enters it. */
-export const BUS_TAP_FOOT =
-  CABINET_BUS.y - CABINET_BUS.size / 2 - CABINET_BUS.tap.high;
+/** The bar, as the plumber chooses it. */
+const BAR = choosePipe({
+  commodity: 'ac-400v-3ph',
+  current: CABINET_BUS.current,
+  busbar: true,
+});
+/** The cabinet's circuit, as the plumber chooses its conduit: a 32 A way. */
+const CIRCUIT = choosePipe({ commodity: 'ac-400v-3ph', current: 32 });
+/** Where the switch-fuse's feed out runs up to before it crosses to the isolator. */
+const CROSS_LEVEL = 2.25;
 
 /**
- * The cabinet room's busbar: its trunking along the west wall, where it
- * comes in through the south wall, and each tap-off box's middle (the
- * room's switch-fuse's and the cabinet isolator's).
+ * The cabinet room's busbar and the components on its line: the bar's
+ * run, its tap-off unit's place, and the switch-fuse's glands.
  */
-export function cabinetBusbar(
-  room: string,
-  trial?: Placed,
-): {
-  runs: Containment[];
-  entries: WallEntry[];
-  taps: { name: string; at: Vec3 }[];
-} | null {
+export function cabinetBusbar(room: string, trial?: Placed) {
   const s = setting(room, trial);
   const iso = cabinetIsolator(room, trial);
   if (!s || !iso) return null;
-  const B = CABINET_BUS;
-  const x = -s.layout.box.w / 2 + B.off;
+  const hw = s.layout.box.w / 2;
   const h = s.h;
-  const tapY = B.y - B.size / 2 - B.tap.high / 2;
+  const x = -hw + CABINET_BUS.off;
+  // The switch-fuse, turned onto the west wall: its local +x is the room's
+  // -z, so its first gland (supply in) is to the south.
+  const feederZ = h - FEEDER_ISOLATOR.fromSouth;
+  const [gIn, gOut] = SWITCH_FUSE.glands.x;
+  const gx = -hw + SWITCH_FUSE.glands.z;
+  const fuseTop = FEEDER_ISOLATOR.y + glandTop(SWITCH_FUSE);
+  const fuseIn: Vec3 = [gx, fuseTop, feederZ - gIn];
+  const fuseOut: Vec3 = [gx, fuseTop, feederZ - gOut];
+  // The tap-off unit over the switch-fuse's supply gland, hung under the bar.
+  const tapY = CABINET_BUS.y - BAR.od / 2 - BUSBAR_TAP_OFF.h / 2;
+  const tap = { at: [x, tapY, fuseIn[2]] as Vec3, yaw: Math.PI / 2 };
+  const tapGland: Vec3 = [gx, tapY - TAP_OFF_GLAND, fuseIn[2]];
   return {
-    runs: [
-      {
-        name: 'Busbar trunking, west wall',
-        kind: 'trunking',
-        width: B.size,
-        depth: B.size,
-        from: [x, B.y, h],
-        to: [x, B.y, -h + 0.2],
-      },
-    ],
-    entries: [
-      {
-        name: 'Busbar in from the main corridor',
-        at: [x, B.y, h],
-        normal: [0, 1],
-        width: B.size,
-        to: 'main_corridor',
-      },
-    ],
-    taps: [
-      {
-        name: 'Tap-off: the room’s switch-fuse',
-        at: [x, tapY, h - FEEDER_ISOLATOR.fromSouth],
-      },
-      {
-        name: 'Tap-off: the cabinet’s isolator',
-        at: [x, tapY, iso.supplyIn[2]],
-      },
-    ],
+    bar: {
+      od: BAR.od,
+      points: [
+        [x, CABINET_BUS.y, h + WALL],
+        [x, CABINET_BUS.y, -h + 0.2],
+      ] as Vec3[],
+      wallAt: [x, CABINET_BUS.y, h + WALL / 2] as Vec3,
+    },
+    tap,
+    tapGland,
+    fuseIn,
+    fuseOut,
+    isolatorIn: iso.supplyIn,
   };
 }
 
@@ -705,14 +705,57 @@ export function cabinetPipes(
   // the isolator's feed over the cabinet's roof and down into its gland.
   const iso = cabinetIsolator(room, trial)!;
   const supply = ports.find((p) => p.port.to === 'isolator')!;
-  const [inX, inY, inZ] = iso.supplyIn;
-  // Down from its tap-off on the busbar overhead to the isolator: against
-  // its points, which start at the isolator, as the supply port's flow
-  // ('in') has it.
-  add({ ...supply.port, name: 'Supply to the isolator' }, [
-    [inX, inY, inZ],
-    [inX, BUS_TAP_FOOT, inZ],
-  ]);
+  const [inX, , inZ] = iso.supplyIn;
+  // The busbar, in through the south wall from the switch room, capped at
+  // its far end; from its tap-off unit down into the switch-fuse's supply
+  // gland; from the switch-fuse's feed gland up, across over the isolator,
+  // and down into its supply gland.
+  const bus = cabinetBusbar(room, trial)!;
+  runs.push(
+    {
+      name: 'Busbar',
+      kind: 'busbar-trunking',
+      od: bus.bar.od,
+      service: 'electrical',
+      label: '400 V BUSBAR',
+      flow: -1,
+      points: [...bus.bar.points].reverse(),
+      through: [
+        {
+          at: bus.bar.wallAt,
+          normal: [0, 0, 1],
+          thickness: WALL,
+          kind: 'fire-collar',
+        },
+      ],
+      ends: ['cap', 'open'],
+    },
+    {
+      name: 'Busbar to the switch-fuse',
+      kind: CIRCUIT.kind as RunKind,
+      od: CIRCUIT.od,
+      service: 'electrical',
+      label: 'SUPPLY',
+      flow: 1,
+      points: [bus.tapGland, bus.fuseIn],
+      through: [],
+    },
+  );
+  runs.push({
+    name: 'Switch-fuse to the isolator',
+    kind: CIRCUIT.kind as RunKind,
+    od: CIRCUIT.od,
+    service: 'electrical',
+    label: 'CABINET SUPPLY',
+    flow: 1,
+    points: [
+      bus.fuseOut,
+      [bus.fuseOut[0], CROSS_LEVEL, bus.fuseOut[2]],
+      [inX, CROSS_LEVEL, inZ],
+      [inX, iso.supplyIn[1], inZ],
+    ],
+    through: [],
+  });
   const g = supply.at;
   const f = iso.feedOut;
   // Along the wall to the gland's place along it, then out over the roof.

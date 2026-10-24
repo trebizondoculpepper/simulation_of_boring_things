@@ -24,14 +24,13 @@ import {
   newIdentifiedPlant,
 } from '../../../game/plant/identification';
 import {
-  CABINET_BUS,
   cabinetBusbar,
   cabinetGully,
   cabinetIsolator,
   cabinetPipes,
 } from '../logic/cabinet-pipes';
-import { createContainment } from './cable-containment';
-import { roomStructure } from '../logic/room-structure';
+import { createBusbarTapOff } from '../../components/industrial-control/views/busbar-tap-off';
+import { BUSBAR_TAP_OFF } from '../../components/industrial-control/logic/enclosures';
 import type { Service } from '../logic/cabinet-pipes';
 import { CHAIN_TO } from '../logic/room-pipes';
 import { cabinetValvePanel } from '../logic/cabinet-pipes';
@@ -89,6 +88,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   for (const run of runs) {
     const points = run.points.map(lift);
     const pipe = createPipe(run.kind, run.od, points, {
+      ...(run.ends ? { ends: run.ends } : {}),
       through: run.through.map((t) => ({
         at: lift(t.at),
         normal: t.normal,
@@ -99,19 +99,21 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     pipe.name = run.name;
     group.add(pipe);
     const lagging = PIPE_KINDS[run.kind].insulation?.thickness ?? 0;
-    group.add(
-      markPipe(kit, points, {
-        radius: run.od / 2 + lagging,
-        service: MARKED[run.service],
-        text: run.label,
-        flow: run.flow,
-        // Stencilled on: the runs here are packed too close for plates
-        // hung beneath them (the owner, 2026-10-24). White on the dark
-        // steel conduit, black on the grey plastic and the lagging.
-        lettering: 'stencil',
-        ink: run.kind === 'steel-screwed' ? '#f2f2ee' : '#1b1d1e',
-      }),
-    );
+    // A busbar's casing carries its maker's labels, not a pipe's bands.
+    if (run.kind !== 'busbar-trunking')
+      group.add(
+        markPipe(kit, points, {
+          radius: run.od / 2 + lagging,
+          service: MARKED[run.service],
+          text: run.label,
+          flow: run.flow,
+          // Stencilled on: the runs here are packed too close for plates
+          // hung beneath them (the owner, 2026-10-24). White on the dark
+          // steel conduit, black on the grey plastic and the lagging.
+          lettering: 'stencil',
+          ink: run.kind === 'steel-screwed' ? '#f2f2ee' : '#1b1d1e',
+        }),
+      );
     if (run.valve) {
       const { at, axis } = run.valve;
       // A registered pipework valve (`installed-valves.ts`), its state the
@@ -307,44 +309,22 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     tail.position.set(gully[0], floorY + 0.015, gully[2]);
     group.add(grating, tundish, tail);
   }
-  // The busbar along the west wall, in from the south, and its tap-off
-  // boxes, each a grey steel box with its fused switch's handle on its
-  // face, the conduit below rising into its foot.
+  // The busbar's tap-off unit, over the room's switch-fuse (the bar
+  // itself is one of the runs above, `cabinet-pipes.ts`): its back on the
+  // west wall, its front into the room.
   const bus = cabinetBusbar(room);
   if (bus) {
-    group.add(
-      createContainment(
-        kit,
-        bus.runs,
-        bus.entries,
-        roomStructure(room)?.soffit ?? 7,
-        floorY,
-      ),
-    );
-    const grey = new MeshStandardMaterial({
-      color: '#8e9598',
-      roughness: 0.5,
-      metalness: 0.5,
+    const tap = createBusbarTapOff(kit, {
+      legend: 'ROOM SUPPLY',
+      bar: bus.bar.od,
     });
-    const red = new MeshStandardMaterial({ color: '#b3261e', roughness: 0.5 });
-    kit.materials.push(grey, red);
-    const T = CABINET_BUS.tap;
-    for (const tap of bus.taps) {
-      const boxMesh = new Mesh(
-        new BoxGeometry(T.across, T.high, T.along),
-        grey,
-      );
-      boxMesh.position.set(tap.at[0], floorY + tap.at[1], tap.at[2]);
-      boxMesh.name = tap.name;
-      // Its switch handle, on the face toward the room.
-      const handle = new Mesh(new BoxGeometry(0.03, 0.08, 0.02), red);
-      handle.position.set(
-        tap.at[0] + T.across / 2 + 0.015,
-        floorY + tap.at[1],
-        tap.at[2],
-      );
-      group.add(boxMesh, handle);
-    }
+    tap.position.set(
+      bus.tap.at[0] - BUSBAR_TAP_OFF.d / 2,
+      floorY + bus.tap.at[1],
+      bus.tap.at[2],
+    );
+    tap.rotation.y = bus.tap.yaw;
+    group.add(tap);
   }
   // The isolator, its handle the switch.
   const place = cabinetIsolator(room);

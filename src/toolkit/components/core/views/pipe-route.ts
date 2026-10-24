@@ -625,3 +625,87 @@ export function createFlexHose(
   mesh.name = `Flexible hose (${Math.round(od * 1000)} mm)`;
   return mesh;
 }
+
+/**
+ * A run of square trunking (`square` kinds: plug-in busbar trunking)
+ * through `points`, every turn square: each length a box `od` across, a
+ * joint pack round it every `lengths`, an elbow unit at each turn, an end
+ * cap where an end is `cap`, and a fire-stopping frame where it passes
+ * through a surface. Its turns are its points'; it does not bend.
+ */
+export function createTrunkingRun(
+  points: readonly Vec3[],
+  materials: PipeMaterials,
+  style: PipeStyle,
+) {
+  const w = style.od;
+  const casing: BufferGeometry[] = [];
+  const fittings: BufferGeometry[] = [];
+  /** A box `along` long, `across` square, centred at `at`, along `dir`. */
+  const block = (at: Vector3, dir: Vector3, along: number, across: number) => {
+    const g = new BoxGeometry(across, along, across);
+    g.applyQuaternion(
+      new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), dir),
+    );
+    g.translate(at.x, at.y, at.z);
+    return g;
+  };
+  const lengths = style.lengths ?? 3;
+  for (let i = 1; i < points.length; i++) {
+    const a = v3(points[i - 1]);
+    const b = v3(points[i]);
+    const dir = b.clone().sub(a);
+    const len = dir.length();
+    if (len < 1e-6) continue;
+    dir.normalize();
+    casing.push(block(a.clone().add(b).multiplyScalar(0.5), dir, len, w));
+    // Its joint packs, a length apart from its start.
+    for (let s = lengths; s < len - 0.05; s += lengths)
+      fittings.push(
+        block(a.clone().addScaledVector(dir, s), dir, 0.08, w + 0.02),
+      );
+    // Fire-stopping where it passes through a surface: a square frame.
+    for (const through of style.through ?? []) {
+      const n = v3(through.normal).normalize();
+      const denom = dir.dot(n);
+      if (Math.abs(denom) < 1e-6) continue;
+      const t = v3(through.at).sub(a).dot(n) / denom;
+      if (t < -1e-6 || t > len + 1e-6) continue;
+      fittings.push(
+        block(
+          a.clone().addScaledVector(dir, t),
+          dir,
+          (through.thickness ?? 0.02) + 0.01,
+          w + 0.06,
+        ),
+      );
+    }
+  }
+  // An elbow unit at each turn.
+  for (let i = 1; i < points.length - 1; i++)
+    fittings.push(
+      new BoxGeometry(w + 0.01, w + 0.01, w + 0.01).translate(...points[i]),
+    );
+  // An end cap at a capped end.
+  (style.ends ?? ['open', 'open']).forEach((end, k) => {
+    if (end !== 'cap' || points.length < 2) return;
+    const tip = v3(points[k === 0 ? 0 : points.length - 1]);
+    const inner = v3(points[k === 0 ? 1 : points.length - 2]);
+    const dir = tip.clone().sub(inner).normalize();
+    fittings.push(
+      block(tip.clone().addScaledVector(dir, 0.01), dir, 0.02, w + 0.01),
+    );
+  });
+  const group = new Group();
+  group.name = `Trunking run (${Math.round(w * 1000)} mm)`;
+  for (const [m, list] of [
+    [materials.pipe, casing],
+    [materials.fitting ?? materials.pipe, fittings],
+  ] as const) {
+    if (!list.length) continue;
+    const merged = mergeGeometries(list, false);
+    for (const g of list) g.dispose();
+    if (merged) group.add(new Mesh(merged, m));
+  }
+  return group;
+}

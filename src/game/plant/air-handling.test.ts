@@ -33,7 +33,8 @@ describe('the air handling units in the world', () => {
       expect(w.pools[id].hallRh).toBeGreaterThan(53);
       expect(w.pools[id].hallRh).toBeLessThan(61);
     }
-  });
+    // Hours of plant, simulated: allowed longer than the default.
+  }, 30_000);
 
   it('leave the Olympic hall colder and damper with its nine units OFF, and no other hall', () => {
     const on = advance(settled, 6 * 3600, 1);
@@ -45,7 +46,8 @@ describe('the air handling units in the world', () => {
     expect(off.pools.pool_01.hallAir).toBeCloseTo(on.pools.pool_01.hallAir, 6);
     expect(off.pools.pool_01.hallRh).toBeCloseTo(on.pools.pool_01.hallRh, 6);
     for (const u of olympic) expect(off.airHandling.units[u.tag].speed).toBe(0);
-  });
+    // Hours of plant, simulated: allowed longer than the default.
+  }, 30_000);
 
   it('stop with the air plant’s supply, and run again on its return', () => {
     const cut = applyAction(settled, {

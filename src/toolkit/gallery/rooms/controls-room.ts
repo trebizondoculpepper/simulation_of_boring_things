@@ -5,6 +5,7 @@ import {
 import { createDistributionBoard } from '../../components/plant/views/electrical-switchgear';
 import { createPartSet } from '../../components/core/parts/parts';
 import { createRearFittingsBoard } from './rear-fittings-board';
+import { createBusbarLineDemo } from './busbar-line-demo';
 import {
   createRenderer,
   useEnvironment,
@@ -306,6 +307,14 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
       maxZ: half.z * m,
     },
   );
+  // A machine's supply, as the spas' plant rooms have it: busbar, tap-off,
+  // switch-fuse, isolator, out through the wall (`busbar-line-demo.ts`).
+  place(createBusbarLineDemo(kit), 5.45, 0, half.z, Math.PI, {
+    minX: 4.75 * m,
+    maxX: 6.15 * m,
+    minZ: (half.z - 0.3) * m,
+    maxZ: half.z * m,
+  });
   // The same glazed, operable distribution board used in the switch room,
   // with a development tag so its cabinet door can be tried here first.
   const distributionBoard = createDistributionBoard(kit, 'DEV-DB1');

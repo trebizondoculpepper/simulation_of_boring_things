@@ -138,6 +138,10 @@ export function supportSpacing(
     case 'flue':
     case 'twin-wall-flue':
       return { horizontal: 1.8, vertical: 2.0 };
+    // Plug-in busbar trunking: a bracket at least every 3 m length's
+    // joint and between, about every 2 m (makers' guides).
+    case 'busbar-trunking':
+      return { horizontal: 2.0, vertical: 2.0 };
   }
 }
 
