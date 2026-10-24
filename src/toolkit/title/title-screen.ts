@@ -1,3 +1,4 @@
+import { partAudio } from '../components/core/audio/part-audio';
 /**
  * The title screen (`doc/plans/title-screen.md`): "Boring Simulations
  * Presents: The Pool", the main menu (New game, Continue, Settings,
@@ -62,6 +63,14 @@ export function createTitleScreen(actions: TitleActions) {
   item('Instructions', actions.instructions);
   root.append(menu);
 
+  // Until the browser lets sound start (a click or a key on the page), a
+  // word that it is waiting, so the silence does not look broken.
+  const soundHint = document.createElement('p');
+  soundHint.className = 'title-sound-hint';
+  soundHint.textContent = 'Click or press a key for sound';
+  soundHint.setAttribute('aria-live', 'polite');
+  root.append(soundHint);
+
   const build = document.createElement('p');
   build.className = 'title-build';
   build.textContent = actions.build;
@@ -103,6 +112,7 @@ export function createTitleScreen(actions: TitleActions) {
   const poll = () => {
     requestAnimationFrame(poll);
     if (!showing()) return;
+    soundHint.hidden = partAudio.running();
     const pad =
       typeof navigator !== 'undefined' && navigator.getGamepads
         ? [...navigator.getGamepads()].find((p) => p?.mapping === 'standard')

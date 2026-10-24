@@ -44,14 +44,15 @@ import { GAS_ZONE_IDS } from './game/plant/gas';
 import type { PoolId } from './game/plant/pools';
 import { buildLine, versionLabel } from './game/version';
 import { createTitleScreen } from './toolkit/title/title-screen';
-import { orbitPose } from './toolkit/title/logic/title-orbit';
 import {
   ATTRACT_SHOTS,
   attractBlack,
   newAttract,
   nextShot,
+  shotPose,
   stepAttract,
 } from './toolkit/title/logic/attract-sequence';
+import type { AttractShot } from './toolkit/title/logic/attract-sequence';
 import { GEAR_ICON, createPauseMenu } from './toolkit/settings/pause-menu';
 import { settings } from './toolkit/settings/settings-store';
 import { effect } from '@preact/signals-core';
@@ -211,10 +212,7 @@ const pauseMenu = createPauseMenu({
       stopDryPeek();
     }
   },
-  copyCamera: async () => {
-    await copyCameraLocation();
-    return positionStatus.textContent ?? '';
-  },
+  copyCamera: () => copyCameraLocation(),
 });
 const settingsButton = document.createElement('button');
 settingsButton.type = 'button';
@@ -290,29 +288,68 @@ const cameraLink = (): string | null => {
     pitch: ((pose.pitch * 180) / Math.PI).toFixed(1),
     zoom: control.zoom.toFixed(3),
   }).toString();
-  // A rolled view's roll, degrees clockwise; a level one says nothing.
+  // A rolled view's roll, degrees clockwise from level; a level one says
+  // nothing, except a noclip camera's, which says so and always gives its
+  // roll, so the link opens the same shot.
   const roll = ((control.roll * 180) / Math.PI).toFixed(1);
-  if (Number(roll) !== 0) url.searchParams.set('roll', roll);
+  if (noclip.value) {
+    url.searchParams.set('noclip', 'true');
+    url.searchParams.set('roll', roll);
+  } else if (Number(roll) !== 0) url.searchParams.set('roll', roll);
   return url.href;
 };
-const copyCameraLocation = async () => {
+/**
+ * Copy the view's link. Copied, the pin (or camera) flashes, and nothing
+ * is said; a failure is said in the overlay. Returns what happened, for the
+ * pause menu to say.
+ */
+const copyCameraLocation = async (): Promise<string> => {
   const link = cameraLink();
   if (!link) {
     positionStatus.textContent = 'Position unavailable in this view';
-    return;
+    return positionStatus.textContent;
   }
   positionButton.disabled = true;
   try {
     await navigator.clipboard.writeText(link);
-    positionStatus.textContent = 'Link copied';
+    positionStatus.textContent = '';
+    positionButton.classList.remove('is-copied');
+    // Restart its flash, should it be pressed again mid-flash.
+    void positionButton.offsetWidth;
+    positionButton.classList.add('is-copied');
+    return 'Link copied';
   } catch {
     positionStatus.textContent =
       'Could not copy. Allow clipboard access and try again.';
+    return positionStatus.textContent;
   } finally {
     positionButton.disabled = false;
   }
 };
-positionButton.addEventListener('click', copyCameraLocation);
+positionButton.addEventListener('animationend', () =>
+  positionButton.classList.remove('is-copied'),
+);
+positionButton.addEventListener('click', () => void copyCameraLocation());
+// In noclip the pin is a camera: its link is a shot's, `noclip=true` and
+// its roll.
+let wasCamera = noclip.peek();
+effect(() => {
+  const camera = noclip.value;
+  const label = camera
+    ? 'Copy a link to this camera shot'
+    : 'Copy a link to this view';
+  positionButton.textContent = camera ? '📷' : '📍';
+  positionButton.title = label;
+  positionButton.setAttribute('aria-label', label);
+  // Leaving noclip, a reload walks again, whatever link it came by. (Only
+  // on leaving: at startup the link's own `noclip` is yet to be read.)
+  if (wasCamera && !camera) {
+    const url = new URL(location.href);
+    url.searchParams.delete('noclip');
+    history.replaceState(history.state, '', url);
+  }
+  wasCamera = camera;
+});
 // The console (`doc/prompts/058-developer-console.md`): the key left of 1
 // drops it down in a room; it shows the player's world's log and works the
 // player's world and the app, never an attract world.
@@ -680,6 +717,17 @@ window.addEventListener('pool-plant:run-room', (event) => {
 // the title is left. Its rooms are its own, built on canvases of their
 // own and each on its shot's world (`attract-scenarios.ts`), prepared
 // for it, never the player's: the player's rooms and save are untouched.
+/** Put the attract camera where `shot` has it `seconds` into its move: placed, rolled and zoomed. */
+const placeShot = (
+  walk: NonNullable<ReturnType<typeof firstPersonOn>>,
+  shot: AttractShot,
+  seconds: number,
+) => {
+  const p = shotPose(shot, seconds);
+  walk.place(p.x * METRE, p.z * METRE, p.yaw, p.pitch, p.y * METRE);
+  walk.roll = p.roll;
+  walk.zoom = p.zoom;
+};
 const titleVeil = document.createElement('div');
 titleVeil.className = 'attract-veil';
 titleVeil.hidden = true;
@@ -687,6 +735,8 @@ document.body.append(titleVeil);
 let titleBackdrop: { stop(): void } | null = null;
 const startTitleBackdrop = async () => {
   if (titleBackdrop) return;
+  // Its rooms are seen, not heard: only the title's theme plays.
+  partAudio.setGameMuted(true);
   let stopped = false;
   let frame = 0;
   let state = newAttract();
@@ -755,8 +805,8 @@ const startTitleBackdrop = async () => {
     shown = { room, root, handle, walk, store };
     torch.on = !!shot.torch;
     store.run(true);
-    const p = orbitPose(shot.orbit, 0);
-    walk.place(p.x * METRE, p.z * METRE, p.yaw, p.pitch, p.y * METRE);
+    // Where the sequence has chosen it starts, round its move.
+    placeShot(walk, shot, state.shotTime);
     builtFor = index;
     // A few frames drawn behind the black before it fades in.
     seenFrom = performance.now() + 250;
@@ -798,8 +848,7 @@ const startTitleBackdrop = async () => {
         resolveRoomId(ATTRACT_SHOTS[nextShot(state, ATTRACT_SHOTS)].room)!,
       ).catch(() => {});
     if (shown && state.phase !== 'black' && builtFor === state.shot) {
-      const p = orbitPose(ATTRACT_SHOTS[state.shot].orbit, state.shotTime);
-      shown.walk.place(p.x * METRE, p.z * METRE, p.yaw, p.pitch, p.y * METRE);
+      placeShot(shown.walk, ATTRACT_SHOTS[state.shot], state.shotTime);
     }
   };
   frame = requestAnimationFrame(fly);
@@ -807,6 +856,7 @@ const startTitleBackdrop = async () => {
 const stopTitleBackdrop = () => {
   titleBackdrop?.stop();
   titleBackdrop = null;
+  partAudio.setGameMuted(false);
 };
 
 const openRoom = async () => {
@@ -869,8 +919,10 @@ const openRoom = async () => {
     }
     return;
   }
-  // Known to exist: an unknown one went to the title above.
-  noclip.value = false;
+  // Known to exist: an unknown one went to the title above. A camera
+  // shot's link (`noclip=true`) opens in noclip, before the view is placed,
+  // so it is placed where the link says, off the floor if need be.
+  noclip.value = params.get('noclip') === 'true';
   const room = resolveRoomId(params.get('room'))!;
   const start = await starter(room);
   await resetEffects();

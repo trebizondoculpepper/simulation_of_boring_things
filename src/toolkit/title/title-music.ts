@@ -23,7 +23,8 @@ export function createTitleMusic() {
     show() {
       if (playing) return;
       playing = true;
-      partAudio.hold(owner, programme);
+      // Heard through the attract sequence, whose rooms are hushed.
+      partAudio.hold(owner, programme, undefined, { title: true });
     },
     hide() {
       if (!playing) return;

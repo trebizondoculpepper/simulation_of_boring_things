@@ -68,6 +68,13 @@ export type LoopRecipe = (
 
 let context: AudioContext | null = null;
 let master: GainNode | null = null;
+/**
+ * The game's own sounds, before the master: everything but the title's
+ * music, so the title's attract sequence can hush the rooms it shows while
+ * the theme plays on (`setGameMuted`).
+ */
+let game: GainNode | null = null;
+let gameMuted = false;
 let noise: AudioBuffer | null = null;
 let muted = false;
 /** The player's master volume, 0 to 1 (their settings). */
@@ -81,40 +88,75 @@ const holds = new Map<object, { stop(): void; update(): void }>();
  * pump already running as its room is entered): kept, and begun the moment
  * it does, unless let go first.
  */
-const waiting = new Map<object, { recipe: LoopRecipe; from?: Object3D }>();
+const waiting = new Map<
+  object,
+  { recipe: LoopRecipe; from?: Object3D; options?: HoldOptions }
+>();
+
+/** How a held sound is heard. */
+export interface HoldOptions {
+  /** The title's music: straight to the master, never hushed with the game. */
+  title?: boolean;
+}
 const position = new Vector3();
 const facing = new Vector3();
 
-const start = () => {
+/**
+ * Start audio, on a gesture the browser lets start it. A key that does not
+ * count (Escape, or a modifier: Cmd-Tab back to the page, Cmd-R) would
+ * make its context suspended, the music waiting silently; so until the
+ * browser says the page is activated, wait for the next gesture. A context
+ * that is suspended (the tab hidden, the system's audio changed) is resumed
+ * on the next gesture, every time.
+ */
+const start = (eager = false) => {
+  const activation =
+    typeof navigator === 'undefined'
+      ? undefined
+      : (navigator as { userActivation?: { isActive: boolean } })
+          .userActivation;
+  // A gesture that does not count waits for one that does; the first,
+  // eager try (no gesture at all) goes ahead, as a browser that allows the
+  // page sound without one (a site played often) lets it run at once.
+  if (!eager && activation && !activation.isActive) return;
   if (context) {
-    if (context.state === 'suspended') void context.resume();
+    if (context.state !== 'running') void context.resume();
     return;
   }
   context = new AudioContext();
+  if (context.state !== 'running') void context.resume();
   master = context.createGain();
   master.gain.value = muted ? 0 : volume;
   master.connect(context.destination);
+  game = context.createGain();
+  game.gain.value = gameMuted ? 0 : 1;
+  game.connect(master);
   noise = context.createBuffer(1, context.sampleRate, context.sampleRate);
   const samples = noise.getChannelData(0);
   for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
   // What was asked to sound before now, sounding.
   const asked = [...waiting];
   waiting.clear();
-  for (const [owner, { recipe, from }] of asked)
-    partAudio.hold(owner, recipe, from);
+  for (const [owner, { recipe, from, options }] of asked)
+    partAudio.hold(owner, recipe, from, options);
 };
 let listening = false;
 const awaitGesture = () => {
   if (listening || typeof window === 'undefined') return;
   listening = true;
-  window.addEventListener('pointerdown', start, { capture: true });
-  window.addEventListener('keydown', start, { capture: true });
+  const onGesture = () => start();
+  window.addEventListener('pointerdown', onGesture, { capture: true });
+  window.addEventListener('keydown', onGesture, { capture: true });
+  // Try now: where the browser allows sound before a gesture it plays at
+  // once; elsewhere its context waits, suspended, for the first gesture.
+  if (typeof AudioContext !== 'undefined') queueMicrotask(() => start(true));
 };
 
-/** A panner placed where `from` is, or straight to the master. */
-const placed = (from: Object3D | undefined): AudioNode => {
-  if (!context || !master) throw new Error('No audio yet.');
-  if (!from) return master;
+/** A panner placed where `from` is, or straight to the game's bus (the master's, for the title's music). */
+const placed = (from: Object3D | undefined, title = false): AudioNode => {
+  if (!context || !master || !game) throw new Error('No audio yet.');
+  const bus = title ? master : game;
+  if (!from) return bus;
   from.getWorldPosition(position).divideScalar(metre);
   const panner = new PannerNode(context, {
     panningModel: 'equalpower',
@@ -125,7 +167,7 @@ const placed = (from: Object3D | undefined): AudioNode => {
     positionY: position.y,
     positionZ: position.z,
   });
-  panner.connect(master);
+  panner.connect(bus);
   return panner;
 };
 
@@ -267,7 +309,12 @@ export const partAudio = {
    * Hold `recipe` for `owner` from where `from` stands, replacing what it
    * held; `null` lets it go.
    */
-  hold(owner: object, recipe: LoopRecipe | null, from?: Object3D) {
+  hold(
+    owner: object,
+    recipe: LoopRecipe | null,
+    from?: Object3D,
+    options?: HoldOptions,
+  ) {
     awaitGesture();
     holds.get(owner)?.stop();
     holds.delete(owner);
@@ -275,14 +322,14 @@ export const partAudio = {
     if (!recipe) return;
     // No audio yet: kept until the player's first gesture starts it.
     if (!context || !master) {
-      waiting.set(owner, { recipe, from });
+      waiting.set(owner, { recipe, from, options });
       return;
     }
     const ctx = context;
     const gain = ctx.createGain();
     gain.gain.value = 0;
     gain.gain.setTargetAtTime(1, ctx.currentTime, 0.08);
-    const output = placed(from);
+    const output = placed(from, options?.title);
     gain.connect(output);
     const sources = recipe(ctx, gain);
     holds.set(owner, {
@@ -353,6 +400,16 @@ export const partAudio = {
       master.gain.setTargetAtTime(volume, context.currentTime, 0.03);
   },
   muted: () => muted,
+  /**
+   * Hush the game's sounds, or let them be heard: everything but the
+   * title's music (the attract sequence's rooms are seen, not heard).
+   */
+  setGameMuted(value: boolean) {
+    gameMuted = value;
+    if (context && game)
+      game.gain.setTargetAtTime(value ? 0 : 1, context.currentTime, 0.05);
+  },
+  gameMuted: () => gameMuted,
   /** Whether sound has started (after the first gesture). */
   running: () => context?.state === 'running',
 };

@@ -1003,7 +1003,9 @@ export function createFirstPerson(options: FirstPersonOptions) {
       if (shouldFly !== flying) {
         if (shouldFly) {
           returnTo = { walker: { ...walker }, floor: currentFloorY };
-          flightY = camera.position.y;
+          // From the walker's eye, where it stands (or where a link placed
+          // it): not the camera's, which is not yet set on a first frame.
+          flightY = eyeY() + walker.eyeOffset - walker.crouch * 0.65 * metre;
           walker.crouched = walker.lowCrouched = false;
           walker.crouch = 0;
           attachedLadder = null;

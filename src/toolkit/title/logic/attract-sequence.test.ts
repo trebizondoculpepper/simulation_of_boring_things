@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   ATTRACT_SHOTS,
+  SHOT_SECONDS,
+  shotPeriod,
+  shotPose,
   FADE_SECONDS,
   attractBlack,
   newAttract,
@@ -8,8 +11,8 @@ import {
   stepAttract,
 } from './attract-sequence';
 import type { AttractState } from './attract-sequence';
-import { orbitPose } from './title-orbit';
 import { POOL_HALLS } from '../../gallery/logic/pool-halls';
+import { PLANT_FLOOR, layoutRoom } from '../../gallery/logic/room-equipment';
 
 const run = (s: AttractState, seconds: number, ready = true, dt = 0.05) => {
   for (let t = 0; t < seconds - 1e-9; t += dt)
@@ -24,14 +27,27 @@ describe('the title’s attract sequence', () => {
     expect(new Set(ATTRACT_SHOTS.map((s) => s.id)).size).toBe(3);
   });
 
-  it('keeps every shot’s camera inside its hall, over its floor', () => {
-    for (const shot of ATTRACT_SHOTS) {
+  it('keeps every shot’s camera inside its room, over its floor', () => {
+    for (const shot of ATTRACT_SHOTS.filter((s) => s.room in POOL_HALLS)) {
       const hall = POOL_HALLS[shot.room as keyof typeof POOL_HALLS];
-      for (let t = 0; t <= shot.orbit.period; t += 0.5) {
-        const p = orbitPose(shot.orbit, t);
+      const period = shot.path?.period ?? shot.orbit!.period;
+      for (let t = 0; t <= period; t += 0.5) {
+        const p = shotPose(shot, t);
         expect(Math.abs(p.x), shot.id).toBeLessThan(hall.w / 2 - 0.3);
         expect(Math.abs(p.z), shot.id).toBeLessThan(hall.d / 2 - 0.3);
-        expect(p.y, shot.id).toBeGreaterThan(1);
+        // An orbit high over the hall; a fly-by low, but above its deck.
+        expect(p.y, shot.id).toBeGreaterThan(shot.path ? 0.2 : 1);
+      }
+    }
+    // A plant room's fly-by flies close to its plant on purpose: only
+    // inside its walls and over its floor.
+    for (const shot of ATTRACT_SHOTS.filter((s) => !(s.room in POOL_HALLS))) {
+      const box = layoutRoom(shot.room)!.box;
+      for (let t = 0; t <= shot.path!.period; t += 0.25) {
+        const p = shotPose(shot, t);
+        expect(Math.abs(p.x), shot.id).toBeLessThan(box.w / 2);
+        expect(Math.abs(p.z), shot.id).toBeLessThan(box.d / 2);
+        expect(p.y, shot.id).toBeGreaterThan(PLANT_FLOOR + 0.2);
       }
     }
   });
@@ -64,6 +80,29 @@ describe('the title’s attract sequence', () => {
     expect(s.shotTime).toBeGreaterThan(FADE_SECONDS + 4.5);
   });
 
+  it('shows each shot for 25 s, from a point chosen at random round its move', () => {
+    expect(ATTRACT_SHOTS.every((shot) => shot.seconds === SHOT_SECONDS)).toBe(
+      true,
+    );
+    expect(SHOT_SECONDS).toBe(25);
+    const draws = [0.25, 0.5];
+    const random = () => draws.shift() ?? 0;
+    let s = newAttract(ATTRACT_SHOTS, random);
+    const first = 0.25 * shotPeriod(ATTRACT_SHOTS[0]);
+    expect(s.shotTime).toBeCloseTo(first, 9);
+    // Its camera runs on from there, through its fade in and its 25 s.
+    for (let t = 0; t < FADE_SECONDS + 10; t += 0.05)
+      s = stepAttract(s, 0.05, ATTRACT_SHOTS, true, random);
+    expect(s.phase).toBe('showing');
+    expect(s.shotTime).toBeCloseTo(first + FADE_SECONDS + 10, 1);
+    // On to the next, from its own random point.
+    for (let t = 0; t < SHOT_SECONDS - 10 + FADE_SECONDS + 0.2; t += 0.05)
+      s = stepAttract(s, 0.05, ATTRACT_SHOTS, false, random);
+    expect(s.shot).toBe(1);
+    expect(s.phase).toBe('black');
+    expect(s.shotTime).toBeCloseTo(0.5 * shotPeriod(ATTRACT_SHOTS[1]), 9);
+  });
+
   it('goes round: after the last shot, the first', () => {
     let s = newAttract();
     const seen: number[] = [];
@@ -72,7 +111,9 @@ describe('the title’s attract sequence', () => {
       seen.push(s.shot);
       s = run(s, ATTRACT_SHOTS[s.shot].seconds + FADE_SECONDS * 2 + 0.2);
     }
-    expect(seen).toEqual([0, 1, 2, 0]);
-    expect(nextShot({ ...s, shot: 2 }, ATTRACT_SHOTS)).toBe(0);
+    expect(seen).toEqual([...ATTRACT_SHOTS.keys(), 0]);
+    expect(
+      nextShot({ ...s, shot: ATTRACT_SHOTS.length - 1 }, ATTRACT_SHOTS),
+    ).toBe(0);
   });
 });

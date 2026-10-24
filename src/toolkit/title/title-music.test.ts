@@ -8,8 +8,11 @@ it('plays once while the title is shown, stops on entry, and resumes on return',
   const hold = vi.spyOn(partAudio, 'hold').mockImplementation(() => {});
   const music = createTitleMusic();
   music.show();
-  const [owner, programme] = hold.mock.calls[0];
+  const [owner, programme, from, options] = hold.mock.calls[0];
   expect(programme).toBeTypeOf('function');
+  // The title's own, heard while the attract sequence hushes the game.
+  expect(from).toBeUndefined();
+  expect(options).toEqual({ title: true });
   music.show();
   expect(hold).toHaveBeenCalledTimes(1);
   music.hide();
@@ -17,6 +20,8 @@ it('plays once while the title is shown, stops on entry, and resumes on return',
   music.hide();
   expect(hold).toHaveBeenCalledTimes(2);
   music.show();
-  expect(hold).toHaveBeenLastCalledWith(owner, programme);
+  expect(hold).toHaveBeenLastCalledWith(owner, programme, undefined, {
+    title: true,
+  });
   music.hide();
 });

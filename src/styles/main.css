@@ -319,6 +319,19 @@ canvas {
   outline: 3px solid #d3ad55;
   outline-offset: 2px;
 }
+/* Its link copied: it flashes, twice, instead of saying so. */
+.location-pin-button.is-copied {
+  animation: pin-copied 0.5s ease-out 2;
+}
+@keyframes pin-copied {
+  0% {
+    background: var(--hud-amber, #ffa000);
+    box-shadow: 0 0 14px var(--hud-amber-glow, #ffa00099);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
 
 /* The on-screen controls, in the style of Half-Life's HUD: translucent
    grey, amber outlines and amber symbols, glowing a little
@@ -687,6 +700,25 @@ canvas {
 .title-item:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+.title-sound-hint {
+  position: absolute;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  margin: 0;
+  color: #e8e2cc;
+  opacity: 0.75;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+  animation: title-sound-hint 2.4s ease-in-out infinite;
+}
+@keyframes title-sound-hint {
+  50% {
+    opacity: 0.35;
+  }
 }
 .title-build {
   position: absolute;
