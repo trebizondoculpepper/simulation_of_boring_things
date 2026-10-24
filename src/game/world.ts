@@ -619,6 +619,7 @@ export function stepWorld(world: World, delta: number): World {
     (running) => loungeValveFlows(loungeValvePositions, running),
     hallHandling(airHandling),
     motors,
+    world.installedValves,
   );
   return {
     ...world,
@@ -656,28 +657,43 @@ export function stepWorld(world: World, delta: number): World {
         stock,
         loungeValveFlows(loungeValvePositions, true).toPool > 0,
         motors,
+        world.installedValves,
       ),
       delta,
     ),
   };
 }
 
-/** What of the jacuzzi's jets and air runs: called for, while it circulates. */
+/**
+ * Whether the jacuzzi's circulation pump runs: power, its cabinet's
+ * isolator, and a way through its overflow and return valves.
+ */
+export const jacuzziCirculating = (world: World) =>
+  circulating(
+    world.pools.pool_03,
+    world.plant,
+    'pool_03',
+    world.motors,
+    world.installedValves,
+  );
+
+/** What of the jacuzzi's jets and air runs: called for, while it circulates, each with its valves open. */
 export const jacuzziRuns = (world: World) =>
   jacuzziRunning(
     world.jacuzzi,
-    circulating(world.pools.pool_03, world.plant, 'pool_03', world.motors),
+    jacuzziCirculating(world),
+    world.installedValves,
   );
 
 /**
  * Whether the jacuzzi's water is running away down its drain, heard
  * gurgling into its tundish (the owner, 2026-10-24): its drain valve open
- * (its pool's drain-down), its circulation pump running to push it there,
- * and water still in the tub.
+ * (its pool's drain-down) and water still in the tub. By gravity: the
+ * pumps and the room's power have nothing to do with it (the owner,
+ * 2026-10-24).
  */
 export const jacuzziDischarging = (world: World) =>
   world.pools.pool_03.drainDown &&
-  circulating(world.pools.pool_03, world.plant, 'pool_03', world.motors) &&
   world.pools.pool_03.level > -poolDepth('pool_03') + 0.001;
 
 /** The world's fixed time step, seconds. */

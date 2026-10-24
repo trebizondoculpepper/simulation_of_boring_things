@@ -50,6 +50,7 @@ import {
   footbathFilling,
   jacuzziRuns,
 } from '../../../../game/world';
+import { jacuzziPaths } from '../../../../game/plant/jacuzzi';
 import { footbathPumpStarved } from '../../../../game/plant/pools';
 
 /**
@@ -664,17 +665,19 @@ function buildSpaPack(
   const supplied = signal(true);
   object.userData.supply = supplied;
   const trialLowWater = signal(false);
+  // Its pump's cutout: the foot spa's on low water; the jacuzzi's on its
+  // flow switch, with no way through its overflow and return valves
+  // (`jacuzziPaths`). Either stops the pump, and its dosing with it.
   const lowWater = computed(() => {
     if (external) return trialLowWater.value;
     const w = store?.world.value;
-    return (
-      !!w &&
-      !jets &&
-      footbathPumpStarved(
-        w.pools.pool_04,
-        footbathLineup(w.identifiedPlant).draining,
-      )
-    );
+    if (!w) return false;
+    return jets
+      ? !jacuzziPaths(w.installedValves).circulation
+      : footbathPumpStarved(
+          w.pools.pool_04,
+          footbathLineup(w.identifiedPlant).draining,
+        );
   });
   const running = computed(
     () => supplied.value && power.position.value === 1 && !lowWater.value,
@@ -719,14 +722,16 @@ function buildSpaPack(
     lamp.object.scale.setScalar(0.8);
     front.add(lamp.object);
   });
-  if (!jets) {
+  {
     const fault = parts.add(
       pilotLight(kit, {
         colour: 'red',
-        legend: 'LOW WATER',
-        drive: lowWater,
+        legend: jets ? 'NO FLOW' : 'LOW WATER',
+        drive: computed(() => supplied.value && lowWater.value),
         pushToTest: false,
-        name: 'Foot spa cabinet low-water cutout lamp',
+        name: jets
+          ? 'Jacuzzi cabinet no-flow cutout lamp'
+          : 'Foot spa cabinet low-water cutout lamp',
       }),
     );
     fault.object.position.set(-0.15, -0.11, 0);

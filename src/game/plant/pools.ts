@@ -12,6 +12,7 @@ import type { Chemical } from './chemicals';
 import { stepHallRh } from './air-handling';
 import { poolPumping } from './motor-starters';
 import type { MotorsState } from './motor-starters';
+import { jacuzziPaths } from './jacuzzi';
 
 export type PoolId = 'pool_01' | 'pool_02' | 'pool_03' | 'pool_04';
 export const POOL_IDS: readonly PoolId[] = [
@@ -224,13 +225,19 @@ export function circulating(
    * them, it circulates while one runs; else while an isolator is on.
    */
   motors?: MotorsState,
+  /**
+   * The installed valves' states (`installed-valves.ts`): the jacuzzi's
+   * pump stops with its suction or its return shut (`jacuzziPaths`).
+   */
+  valves?: Record<string, boolean>,
 ): boolean {
   const room = `plant_${id}` as ServiceRoom;
   const pumping = motors ? poolPumping(motors, id) : undefined;
   return (
     serviceAvailable(plant, room, 'power') &&
     (pumping ?? ISOLATED_BY[id].some((name) => plant.isolators[name])) &&
-    !old.tripped
+    !old.tripped &&
+    (id !== 'pool_03' || jacuzziPaths(valves).circulation)
   );
 }
 
@@ -249,12 +256,13 @@ export function dosedVolumes(
   stock: ChemicalStock = ALL_STOCKED,
   loungeMoving = true,
   motors?: MotorsState,
+  valves?: Record<string, boolean>,
 ): Record<Chemical, number> {
   const out = { hypochlorite: 0, acid: 0 };
   for (const id of POOL_IDS) {
     const room = `plant_${id}` as ServiceRoom;
     if (
-      !circulating(pools[id], plant, id, motors) ||
+      !circulating(pools[id], plant, id, motors, valves) ||
       (id === 'pool_01' && !loungeMoving) ||
       !serviceAvailable(plant, room, 'chemical')
     )
@@ -353,6 +361,8 @@ export function stepPoolsWater(
   air?: Record<PoolId, { share: number; drying: number }>,
   /** The motors' starters, this step's (`motor-starters.ts`). */
   motors?: MotorsState,
+  /** The installed valves' states, for the jacuzzi's (`jacuzziPaths`). */
+  valves?: Record<string, boolean>,
 ): {
   pools: PoolsState;
   drawn: number;
@@ -365,13 +375,14 @@ export function stepPoolsWater(
   let drawn = 0;
   let backwashed = 0;
   let drained = 0;
-  // The pools draining down now, sharing what the sewer will take.
+  // The pools draining down now, sharing what the sewer will take: the
+  // jacuzzi's by gravity, its valve open, whatever its pump and power do.
   const draining = POOL_IDS.filter(
     (id) =>
       (id === 'pool_04' && footbath
         ? footbath.draining
         : pools[id].drainDown) &&
-      circulating(pools[id], plant, id, motors) &&
+      (id === 'pool_03' || circulating(pools[id], plant, id, motors)) &&
       (id !== 'pool_04' ||
         !footbath ||
         !footbathPumpStarved(pools[id], footbath.draining)) &&
@@ -389,7 +400,7 @@ export function stepPoolsWater(
     // The pumps run if the room has power, and one of them, or
     // the pool's cabinet, is not isolated; and not tripped.
     const circulation =
-      circulating(old, plant, id, motors) &&
+      circulating(old, plant, id, motors, valves) &&
       (id !== 'pool_04' ||
         !footbath ||
         !footbathPumpStarved(old, footbath.draining)) &&
@@ -442,6 +453,7 @@ export function stepPoolsWater(
         makeUpOpen: share > 0 && makeUpOpen,
         drainDown,
         drainRate,
+        ...(id === 'pool_03' ? { gravityDrain: true } : {}),
         drained: 0,
         spilt: 0,
         backwashed: 0,

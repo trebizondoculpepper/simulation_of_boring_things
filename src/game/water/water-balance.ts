@@ -86,6 +86,11 @@ export interface WaterState {
    */
   pumpFlow?: number;
   /**
+   * Whether its drain-down runs to the sewer by gravity, its valve open,
+   * rather than pumped (the jacuzzi's): it drains with its pumps stopped.
+   */
+  gravityDrain?: boolean;
+  /**
    * What the plant sends to waste now, m³/h (a backwash, as its valves
    * have it), drawn from the tank; given, it stands in for the day's
    * backwash at midnight.
@@ -126,7 +131,7 @@ export function flows(p: PoolWater, s: WaterState) {
   const empty = s.level <= -p.depth + 1e-9;
   // Draining down: the pumps take the pool's water to the sewer instead of
   // round to it again, at the consented rate, until it is empty.
-  const drainingDown = s.drainDown && s.pumps;
+  const drainingDown = s.drainDown && (s.pumps || !!s.gravityDrain);
   const toSewer = drainingDown && !empty ? Math.min(s.drainRate, p.flow) : 0;
   const pumped = s.pumpFlow ?? p.flow;
   const circulation = s.pumps && !s.drainDown ? pumped : 0;

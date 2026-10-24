@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   advance,
   applyAction,
+  jacuzziCirculating,
   jacuzziDischarging,
   jacuzziRuns,
   newWorld,
 } from '../world';
 import type { World } from '../world';
 import type { JacuzziAction } from './jacuzzi';
+import { JACUZZI_VALVES } from './jacuzzi';
+import { dosedVolumes } from './pools';
 
 const act = (w: World, action: JacuzziAction) =>
   applyAction(w, { type: 'jacuzzi', action });
@@ -84,5 +87,62 @@ describe('the jacuzzi’s jets and air', () => {
     w = advance({ ...w, pools: low.pools }, 1, 1);
     expect(jacuzziRuns(w)).toEqual({ jets: false, air: false });
     expect(w.jacuzzi).toEqual({ jets: false, air: false, until: -1 });
+  });
+
+  const shut = (w: World, ...keys: (keyof typeof JACUZZI_VALVES)[]): World => ({
+    ...w,
+    installedValves: {
+      ...w.installedValves,
+      ...Object.fromEntries(keys.map((k) => [JACUZZI_VALVES[k], false])),
+    },
+  });
+
+  it('stops its circulation pump, and its dosing, with its overflow and return valves shut', () => {
+    let w = act(start, { act: 'start' });
+    expect(jacuzziCirculating(w)).toBe(true);
+    w = shut(w, 'overflow', 'return');
+    expect(jacuzziCirculating(w)).toBe(false);
+    expect(jacuzziRuns(w)).toEqual({ jets: false, air: false });
+    const dosed = (x: World) =>
+      dosedVolumes(
+        x.pools,
+        x.plant,
+        undefined,
+        true,
+        x.motors,
+        x.installedValves,
+      ).hypochlorite;
+    expect(dosed(w)).toBeLessThan(dosed(start));
+    // Either one shut is enough.
+    expect(jacuzziCirculating(shut(start, 'overflow'))).toBe(false);
+    expect(jacuzziCirculating(shut(start, 'return'))).toBe(false);
+  });
+
+  it('runs its jets and air only with their own valves open', () => {
+    const w = act(start, { act: 'start' });
+    expect(jacuzziRuns(shut(w, 'jetsSuction'))).toEqual({
+      jets: false,
+      air: true,
+    });
+    expect(jacuzziRuns(shut(w, 'air'))).toEqual({ jets: true, air: false });
+  });
+
+  it('drains by gravity, its valve open, with its room’s power cut and its valves shut', () => {
+    let w = applyAction(start, {
+      type: 'pool/drain-down',
+      pool: 'pool_03',
+      open: true,
+    });
+    w = applyAction(w, {
+      type: 'plant/feeder',
+      room: 'plant_pool_03',
+      on: false,
+    });
+    w = shut(w, 'overflow', 'return');
+    expect(jacuzziCirculating(w)).toBe(false);
+    const before = w.pools.pool_03.level;
+    w = advance(w, 60, 1);
+    expect(jacuzziDischarging(w)).toBe(true);
+    expect(w.pools.pool_03.level).toBeLessThan(before);
   });
 });
