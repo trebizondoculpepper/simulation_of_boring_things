@@ -1,6 +1,7 @@
 # Development Diary Entry - 2026-10-24
 
 ## Context
+
 - **Date**: 2026-10-24, overnight, working unattended at the owner's request
 - **Branch**: main
 - **Commits**: 04f3bb6, b70bfb9 (air plant), faeed48 (boiler house); earlier the same session dc4c3c0, 4c737be, b9ea6d8, e26f39d, 2c099e8 and others
