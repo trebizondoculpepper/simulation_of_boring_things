@@ -695,6 +695,50 @@ canvas {
   margin: 0;
   font: 12px/1.2 monospace;
   opacity: 0.7;
+  max-width: calc(100% - 28px);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.title-build a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+.title-build a:hover,
+.title-build a:focus-visible {
+  color: #fff;
+}
+.noclip-readout {
+  position: absolute;
+  top: 94px;
+  left: 12px;
+  right: 12px;
+  pointer-events: none;
+  font: 12px/1.5 monospace;
+  color: #fff;
+  text-shadow: 0 1px 3px #000;
+}
+.noclip-altitude {
+  position: absolute;
+  bottom: 150px;
+  left: 12px;
+  display: flex;
+  gap: 8px;
+}
+.noclip-altitude .hud-button {
+  min-width: 64px;
+  width: auto;
+  padding: 0 10px;
+}
+.on-title .noclip-altitude,
+.on-title .noclip-readout {
+  display: none;
+}
+.noclip-altitude[hidden],
+.noclip-readout[hidden],
+.hud-use[hidden],
+.touch-crouch[hidden],
+.hide-onscreen-controls .noclip-altitude {
+  display: none;
 }
 
 /* Behind the title screen, a room of the game drawn at a quarter of the

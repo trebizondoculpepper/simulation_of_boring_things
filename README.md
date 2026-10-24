@@ -2,23 +2,23 @@
 
 A first-person engineering game set in a leisure centre: walk the public pool hall and the plant rooms behind its staff doors, and keep the pools running. The design brief is `/Users/salimfadhley/Downloads/Pool-Plant-Project-Brief.md`.
 
-**[Play it here](https://trebizondoculpepper.github.io/simulation_of_boring_things/).** Every push to `main` that passes CI is deployed there.
+**[Play it here](https://trebizondoculpepper.github.io/the_pool/).** Every push to `main` that passes CI is deployed there.
 
 The development rooms can be opened directly, among them the modelling demonstrations:
 
-- [Dev19: a plant room laid out, plumbed and scored by the room-layout pipeline](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev19)
-- [Dev20: experimental sources and sinks of every substance](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev20)
-- [Dev21: each source plumbed to its sink, valves closed](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev21)
-- [Dev22: a pump on a battery-backed supply](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev22)
+- [Dev19: a plant room laid out, plumbed and scored by the room-layout pipeline](https://trebizondoculpepper.github.io/the_pool/?room=dev19)
+- [Dev20: experimental sources and sinks of every substance](https://trebizondoculpepper.github.io/the_pool/?room=dev20)
+- [Dev21: each source plumbed to its sink, valves closed](https://trebizondoculpepper.github.io/the_pool/?room=dev21)
+- [Dev22: a pump on a battery-backed supply](https://trebizondoculpepper.github.io/the_pool/?room=dev22)
 - [Dev36: jacuzzi music-effects prototype](?room=dev36)
 - [Dev37: valve test rig, an electric spring-return butterfly valve with its panel and a throw switch to fail its power](?room=dev37)
 - [Duty manager’s office](?room=duty_managers_office)
 - [Dev35: isolated jacuzzi water-effects prototype](?room=dev35)
-- [Dev23: draining a jacuzzi by gravity](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev23)
-- [Dev24: duty and standby pumps](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev24)
-- [Dev25: a tank filled and drained through one port](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev25)
-- [Dev26: an Olympic filter on its five-valve battery](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev26)
-- [Dev27: heat exchange from a gas boiler, with its mimic board](https://trebizondoculpepper.github.io/simulation_of_boring_things/?room=dev27)
+- [Dev23: draining a jacuzzi by gravity](https://trebizondoculpepper.github.io/the_pool/?room=dev23)
+- [Dev24: duty and standby pumps](https://trebizondoculpepper.github.io/the_pool/?room=dev24)
+- [Dev25: a tank filled and drained through one port](https://trebizondoculpepper.github.io/the_pool/?room=dev25)
+- [Dev26: an Olympic filter on its five-valve battery](https://trebizondoculpepper.github.io/the_pool/?room=dev26)
+- [Dev27: heat exchange from a gas boiler, with its mimic board](https://trebizondoculpepper.github.io/the_pool/?room=dev27)
 
 The room-layout pipeline is described in [`doc/room-layout-guide.md`](doc/room-layout-guide.md), and the test scenarios in [`doc/prompts/scenarios.md`](doc/prompts/scenarios.md).
 
@@ -38,7 +38,7 @@ npm ci
 npm run dev   # http://127.0.0.1:5175/
 ```
 
-The front page is the title screen. `?dev` is the developers' panel, a list of every room by its URL; it is a tool, not part of the game. Use `?room=PR_A&x=2.5&z=7.75&yaw=0` to launch at a specific position and heading. Coordinates are metres; `y` sets camera height, while `yaw` and `pitch` are degrees. The Copy location button in each room copies the current coordinates and a shareable URL.
+The front page is the title screen. New Game resets the simulation to nominal operation: all pools full, temperatures at their design settings, normal water chemistry and working plant, starting in the footbath. Continue preserves the saved simulation and restores your last room and view. The playable rooms and development demonstrations currently share the `dev` save slot, so New Game resets that shared simulation. The title loops Treblo's Suspended Circulation after your first click or key press, using the master volume setting, and stops it when you enter a room. `?dev` is the developers' panel, a list of every room by its URL; it is a tool, not part of the game. Use `?room=PR_A&x=2.5&z=7.75&yaw=0` to launch at a specific position and heading. Coordinates are metres; `y` sets camera height, while `yaw` and `pitch` are degrees. The Copy location button in each room copies the current coordinates and a shareable URL.
 
 When adding connected rooms, follow the [open-threshold rendering guide](doc/design/room-transition-rendering.md) so shared geometry keeps the same appearance as the player crosses between room IDs.
 
@@ -46,15 +46,19 @@ The default reception view faces into the building. `?at=<room id>` starts in a 
 
 Walk with WASD, run with Shift, click to capture the mouse and look, Esc to free the cursor. At a pool ladder, press Use (E, the on-screen Use button or gamepad A) to mount it; hold forward to climb or back to descend. Movement returns to normal at either end. Doors open as you approach and close after you leave. Touch and gamepad also work.
 
+For title-shot authoring, open the Esc menu and enable **Noclip free camera**, then Resume. WASD flies along the view; Space rises, Shift descends and Ctrl accelerates. Gamepad A/B rises/descends, and touch has UP/DOWN buttons. You can pass through equipment while staying inside the room envelope; controls and automatic room transitions are disabled. The view shows live coordinates, and **Copy Camera Link** in the menu copies a reusable shot URL. Turning noclip off returns to the walking position; flight does not overwrite the Continue bookmark and is off after a reload. The later attract sequence is specified in [prompt 054](doc/prompts/054-title-attract-sequence.md).
+
 ## Checks
 
 `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build`. CI (`.github/workflows/ci.yml`) runs the same five and deploys the build to GitHub Pages.
 
 ## Versions and releases
 
-The game uses [semantic versioning](https://semver.org/). Every build of `main` is its own version: CI (`.github/workflows/ci.yml`) takes the version in `package.json` and advances its patch by the number of commits since that version's tag, so with `package.json` at 0.1.0 and 74 commits since `v0.1.0`, the build is 0.1.74, and the next push 0.1.75. Nothing is committed back to `main`; the number comes from git. The game reads it in `src/game/version.ts` (falling back to `package.json`'s off CI), and the title screen shows it with the build's commit and date, marked as a development build on the dev server. Below 1.0.0 it is in development.
+The game uses [semantic versioning](https://semver.org/). Every successful `npm run build` advances the patch version in `package.json` and the two root version fields in `package-lock.json`. The bundler uses that next version, and the files are updated only after bundling succeeds; a failed build leaves them unchanged. For example, a successful build at 0.1.241 becomes 0.1.242. The development server shows the current package version without incrementing it. The title screen's bottom-right corner shows the version, source commit and UTC build date, marks development builds and uncommitted changes, and links to the GitHub source.
 
-The levels below say when to cut a release by hand, which moves `package.json` to a new MAJOR or MINOR (or a deliberate PATCH) and tags it; the per-build count then starts again from that tag.
+CI runs the same build command and commits successful version updates on `main` as `Build vX.Y.Z [skip ci]`, so the next build starts from the persisted version without triggering another build for the version commit. GitHub Pages and itch.io receive the same built version. Local builds leave the version updates in the working tree for the owner's next commit. Automatic build numbering does not create release tags or GitHub releases. Below 1.0.0 the game is in development.
+
+The levels below guide deliberate releases, which move `package.json` to a new MAJOR or MINOR (or a deliberate PATCH) and tag it. The Release workflow uses `npm run build -- --release` to rebuild at the tag's exact version, without advancing it.
 
 - **MAJOR:** a save that can no longer be carried forward (a migration dropped from `src/game/save.ts`), or a change that breaks how the game is played or packaged.
 - **MINOR:** new rooms, machines, systems or features, including a new save version with its migration (`WORLD_VERSION`, which counts the save's shape, not releases).

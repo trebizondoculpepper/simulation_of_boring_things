@@ -2,6 +2,11 @@
 
 The project's one to-do list (the owner, 2026-10-23): every task not yet finished, and every item for future delivery, is recorded here. Each item links the prompt that describes it, where there is one. Tick an item off when it is done, with the date and the commit; add new items as they come up, each under the section of its kind.
 
+## Now: title sequence tools
+
+- [ ] **Noclip for framing camera shots** ([038](doc/prompts/038-noclip-camera.md), authorised 2026-10-24): implement first; Esc-menu toggle, free flight through equipment, room bounds, keyboard/touch/gamepad controls, live coordinates and camera-link copying. Preserve the normal walking/Continue position.
+- [ ] **Title attract sequence** ([054](doc/prompts/054-title-attract-sequence.md), specified 2026-10-24): after noclip, independently staged world scenarios and authored camera moves, next-scene background preparation and fades through black, with uninterrupted theme music and no changes to the player's simulation.
+
 ## Now: the Olympic plant room, working (prompt 035)
 
 The owner's priority: the Olympic is the hardest of the pools, and once it works the others follow its pattern.
@@ -28,7 +33,6 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 - [ ] **Other music zones:** independent music for the lazy pool and footbath, with the Olympic pool initially silent. The reusable source/amplifier components and four-zone model exist; only the jacuzzi has tracks and an installed cabinet so far. Assign other zones their own programmes without reusing the jacuzzi's owner-supplied tracks.
 - [ ] **Sound between rooms** ([037](doc/prompts/037-sound-between-rooms.md)): a room is heard through an open door by how far it stands open (full above about 20 % open, about −20 dB at 5 %, silent and its sounds stopped when shut), not by which room the player is in.
-- [ ] **Noclip, a free camera** ([038](doc/prompts/038-noclip-camera.md)): toggled on the escape screen; flying freely in three directions (Space up, Shift down, Ctrl faster, as Minecraft's), through everything in the room but kept within its walls, floor and ceiling; with a readout of the camera's place and a way to copy its address, to set up the shots for the title's attract sequence.
 
 ### Architectural features
 

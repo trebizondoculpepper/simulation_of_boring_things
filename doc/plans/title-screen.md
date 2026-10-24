@@ -2,6 +2,8 @@
 
 Agreed with the owner on 2026-10-22; not yet built.
 
+Current direction (the owner, 2026-10-24): [038](../prompts/038-noclip-camera.md) provides the free camera for authoring shots; [054](../prompts/054-title-attract-sequence.md) supersedes the cycle's transition and state-sharing details below with independent scenario worlds, authored camera presets, next-scene background preparation and fades through black. Implement noclip first; attract playback remains a later task in TODO.md.
+
 ## What it shows
 
 - **Title:** "Boring Simulations Presents:" set small and spaced, above "The Pool", large. Boring Simulations is the studio's name. The game's title is "The Pool"; the browser tab says so too.

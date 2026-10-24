@@ -4,6 +4,7 @@ import {
 } from '../../../scene/breeze-block-texture';
 import {
   AmbientLight,
+  Box3,
   DirectionalLight,
   ExtrudeGeometry,
   Group,
@@ -215,6 +216,8 @@ export function startEquipmentRoom(
   kit.materials.push(floorPaint, wallPaint);
 
   let walls: Footprint[] = [];
+  let flightRoom = { halfX: 10, halfZ: 10, height: 6 };
+  let flightFloor = 0.05 * m;
   let solids: Footprint[] = [];
   /** A room laid out by its layers, with its gantry, if it is one. */
   let sized: SizedPlantRoomLayout | null = null;
@@ -302,6 +305,7 @@ export function startEquipmentRoom(
       : layout.height;
     const deckY = clear + SERVICE_ZONE;
     const height = services ? deckY : layout.height;
+    flightRoom = { halfX, halfZ, height };
     const slab = (
       w: number,
       h: number,
@@ -487,6 +491,8 @@ export function startEquipmentRoom(
         minZ: s.minZ * m,
         maxZ: s.maxZ * m,
       }));
+    flightFloor =
+      Math.min(0, new Box3().setFromObject(room).min.y + 0.1 * m) + 0.05 * m;
     const params = new URLSearchParams(location.search);
     const arrival = portals.arrival(params.get('from'));
     // A position in the link (the position button's) wins: the room is
@@ -549,6 +555,14 @@ export function startEquipmentRoom(
     camera,
     metre: m,
     floorY: 0,
+    flightBounds: () => ({
+      minX: (-flightRoom.halfX + 0.05) * m,
+      maxX: (flightRoom.halfX - 0.05) * m,
+      minZ: (-flightRoom.halfZ + 0.05) * m,
+      maxZ: (flightRoom.halfZ - 0.05) * m,
+      minY: flightFloor,
+      maxY: (flightRoom.height - 0.05) * m,
+    }),
     start: { x: 0, z: 0 },
     floorAt: (x, z, previous) => {
       standing = sized

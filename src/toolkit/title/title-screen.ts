@@ -7,6 +7,8 @@
  * slowly cycling render of the game's rooms seen from high up.
  */
 
+import { createTitleMusic } from './title-music';
+
 export interface TitleActions {
   newGame(): void;
   /** Continue the saved game; greyed out while `canContinue` says no. */
@@ -23,6 +25,7 @@ export interface TitleActions {
 }
 
 export function createTitleScreen(actions: TitleActions) {
+  const music = createTitleMusic();
   const root = document.createElement('div');
   root.className = 'title-screen';
   root.hidden = true;
@@ -62,6 +65,12 @@ export function createTitleScreen(actions: TitleActions) {
   const build = document.createElement('p');
   build.className = 'title-build';
   build.textContent = actions.build;
+  const source = document.createElement('a');
+  source.href = 'https://github.com/trebizondoculpepper/the_pool';
+  source.textContent = 'Source code';
+  source.target = '_blank';
+  source.rel = 'noopener noreferrer';
+  build.append(document.createElement('br'), source);
   root.append(build);
 
   const items = () =>
@@ -118,6 +127,7 @@ export function createTitleScreen(actions: TitleActions) {
   document.body.append(root);
   return {
     show() {
+      music.show();
       const can = actions.canContinue();
       continueItem.disabled = !can;
       continueItem.title = can ? '' : (actions.noContinue ?? '');
@@ -126,6 +136,7 @@ export function createTitleScreen(actions: TitleActions) {
       items()[can ? 1 : 0]?.focus();
     },
     hide() {
+      music.hide();
       root.hidden = true;
     },
   };

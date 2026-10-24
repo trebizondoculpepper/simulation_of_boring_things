@@ -45,6 +45,10 @@ export interface PauseMenuActions {
   devPanel?: () => void;
   /** Whether Esc and Start may open it now: only in a room, not on the title screen. */
   canOpen?: () => boolean;
+  /** Temporary camera authoring, without changing the player's saved position. */
+  noclip?: Readable<boolean>;
+  setNoclip?: (on: boolean) => void;
+  copyCamera?: () => Promise<string>;
 }
 
 const TABS = ['Game', 'Graphics', 'Audio', 'Controls'] as const;
@@ -219,6 +223,29 @@ export function createPauseMenu(actions: PauseMenuActions) {
       ? `Saved at ${time}. The game also saves itself as you play.`
       : 'The game could not be saved here.';
   });
+  if (actions.setNoclip && actions.noclip) {
+    const flight = document.createElement('input');
+    flight.type = 'checkbox';
+    flight.setAttribute('aria-label', 'Noclip free camera');
+    flight.addEventListener('change', () =>
+      actions.setNoclip?.(flight.checked),
+    );
+    row('Game', 'Noclip free camera', flight);
+    effect(() => {
+      flight.checked = actions.noclip!.value;
+    });
+    const note = document.createElement('p');
+    note.className = 'settings-note';
+    note.textContent =
+      'Frame a title shot: fly through equipment; Space up, Shift down, Ctrl faster. Turning this off returns you to your walking position.';
+    pages.get('Game')!.append(note);
+  }
+  if (actions.copyCamera)
+    button('Game', 'Copy Camera Link', () => {
+      void actions.copyCamera!().then((message) => {
+        saved.textContent = message;
+      });
+    });
   button('Game', 'Quit to Title', () => {
     close();
     actions.quitToTitle();

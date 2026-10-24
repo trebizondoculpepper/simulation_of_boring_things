@@ -78,6 +78,7 @@ import {
   throughGalleryOfficeDoor,
   hallSolids,
   POOL_HALLS,
+  roofAt,
 } from '../logic/pool-halls';
 import type { PoolHallId } from '../logic/pool-halls';
 import { createInletStreams } from '../views/inlet-streams';
@@ -449,6 +450,24 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     camera,
     metre,
     floorY: (gallery?.floor ?? 0) * metre,
+    flightBounds: (_x, z) => ({
+      minX: (-spec.w / 2 + 0.05) * metre,
+      maxX: (spec.w / 2 - 0.05) * metre,
+      minZ: (-spec.d / 2 + 0.05) * metre,
+      maxZ: (spec.d / 2 - 0.05) * metre,
+      minY:
+        (Math.min(
+          0,
+          spec.gallery?.floor ?? 0,
+          ...spec.basins.map(
+            (b) =>
+              -(b.shape === 'rect' ? Math.max(b.shallow, b.deep) : b.depth),
+          ),
+        ) +
+          0.05) *
+        metre,
+      maxY: (roofAt(spec, z / metre) - 0.05) * metre,
+    }),
     // In the gallery, at its west end looking east along the windows.
     start: gallery
       ? { x: (gallery.x0 + 1) * metre, z: gallery.z * metre, yaw: Math.PI / 2 }

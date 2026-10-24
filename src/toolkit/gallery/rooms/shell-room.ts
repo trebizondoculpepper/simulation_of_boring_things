@@ -9,6 +9,7 @@ import { worldStore } from '../../save/world-store';
 import {
   ACESFilmicToneMapping,
   AmbientLight,
+  Box3,
   HemisphereLight,
   HalfFloatType,
   Mesh,
@@ -489,12 +490,21 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   const walls = [...cfg.solids, ...machines.solids].map(toMetre);
   // The height of the floor the walker stands on, metres: up on a gantry, or not.
   let standing = cfg.floorAt(cfg.start.x, cfg.start.z, 0);
+  const flightBox = new Box3().setFromObject(rooms);
   const walk = createFirstPerson({
     scene,
     canvas,
     camera,
     metre,
     floorY: cfg.floorAt(cfg.start.x, cfg.start.z, 0) * metre,
+    flightBounds: () => ({
+      minX: (-cfg.room.w / 2 + 0.05) * metre,
+      maxX: (cfg.room.w / 2 - 0.05) * metre,
+      minZ: (-cfg.room.d / 2 + 0.05) * metre,
+      maxZ: (cfg.room.d / 2 - 0.05) * metre,
+      minY: flightBox.min.y + 0.1 * metre,
+      maxY: flightBox.max.y - 0.35 * metre,
+    }),
     start: {
       x: cfg.start.x * metre,
       z: cfg.start.z * metre,

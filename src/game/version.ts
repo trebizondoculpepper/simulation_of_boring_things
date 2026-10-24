@@ -3,9 +3,10 @@ import { version } from '../../package.json';
 /**
  * The game's version: semantic versioning (https://semver.org),
  * MAJOR.MINOR.PATCH with an optional pre-release after a hyphen. Every
- * build of main is its own version: CI takes `package.json`'s and advances
- * its patch by the commits since that version's tag (its `VITE_VERSION`);
- * anywhere else it is `package.json`'s. Releases are git tags
+ * successful build advances package.json's patch and the lockfile together.
+ * The build uses that next version (`VITE_VERSION`) and writes it only
+ * after bundling succeeds. Tagged releases keep their exact version.
+ * Releases are git tags
  * `vMAJOR.MINOR.PATCH` (README, "Versions and releases"); the title screen
  * shows `versionLabel()`.
  *
@@ -93,6 +94,6 @@ export function buildLine(
   build: string | undefined = import.meta.env.VITE_BUILD,
   development = import.meta.env.DEV,
 ): string {
-  if (development) return `v${version} · development build`;
-  return build ? `v${version} · build ${build}` : `v${version}`;
+  const label = build ? `v${version} · build ${build}` : `v${version}`;
+  return `${label}${development ? ' · development build' : ''}`;
 }

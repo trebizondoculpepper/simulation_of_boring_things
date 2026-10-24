@@ -1,5 +1,6 @@
 import type { World } from '../../../game/world';
 import { POOL_TARGET } from '../../../game/plant/pools';
+import { hallHandling } from '../../../game/plant/air-handling';
 import type { PoolId } from '../../../game/plant/pools';
 import { serviceAvailable } from '../../../game/plant/services';
 import type { IsolatorName, ServiceRoom } from '../../../game/plant/services';
@@ -71,7 +72,8 @@ export function plantReadingOf(world: World, pool: PoolId = 'pool_02') {
   const dosing = circulating && serviceAvailable(plant, room, 'chemical');
   const heat = Object.values(world.pools).reduce((t, p) => t + p.heating, 0);
   const boilersFiring = heat > 1;
-  const airOn = serviceAvailable(plant, room, 'air');
+  const airflow = hallHandling(world.airHandling)[pool].share;
+  const airOn = serviceAvailable(plant, 'air_plant', 'power') && airflow > 0.05;
   const hallRh = water.hallRh;
   const alarms: AlarmId[] = [];
   // A pump tripped: by its starter, or that should run, by its isolator.
@@ -120,8 +122,8 @@ export function plantReadingOf(world: World, pool: PoolId = 'pool_02') {
     amps: {
       p1: s1 ? s1.current : amps(p1, 37),
       p2: s2 ? s2.current : amps(p2, 37),
-      supply: airOn ? 29 : 0,
-      extract: airOn ? 27 : 0,
+      supply: airOn ? 29 * airflow : 0,
+      extract: airOn ? 27 * airflow : 0,
       boilers: boilersFiring ? 18 : 3,
     },
     alarms,

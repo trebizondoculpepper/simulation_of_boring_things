@@ -39,7 +39,8 @@ jobs:
       - run: npm test
       - name: Name the build
         run: echo "VITE_BUILD=$(git rev-parse --short HEAD) · $(date -u +'%-d %b %Y')" >> "$GITHUB_ENV"
-      - run: npm run build
+      # A tagged release is rebuilt at the tag's exact version.
+      - run: npm run build -- --release
       # The release's notes are its changelog section; a pre-release
       # version (with a hyphen) is marked as one.
       - name: Publish the GitHub release

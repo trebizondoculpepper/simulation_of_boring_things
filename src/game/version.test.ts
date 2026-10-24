@@ -68,7 +68,9 @@ describe('the game’s version', () => {
     expect(buildLine('0.2.0', '3fe13af · 22 Oct 2026', false)).toBe(
       'v0.2.0 · build 3fe13af · 22 Oct 2026',
     );
-    expect(buildLine('0.2.0', undefined, false)).toBe('v0.2.0');
-    expect(buildLine('0.2.0', 'x', true)).toBe('v0.2.0 · development build');
+    expect(buildLine('0.2.0', '', false)).toBe('v0.2.0');
+    expect(buildLine('0.2.0', 'x', true)).toBe(
+      'v0.2.0 · build x · development build',
+    );
   });
 });

@@ -1,4 +1,7 @@
 import type { Box3, Object3D, PerspectiveCamera } from 'three';
+import { Box3 as SceneBounds } from 'three';
+import { noclip, flyCamera, flightHelp } from '../logic/noclip';
+import type { FlightBounds } from '../logic/noclip';
 import { createObjectHandling } from './object-handling';
 import type { DropPlacement } from './object-handling';
 import type { PortableObject, SupportSurface } from './object-handling';
@@ -145,6 +148,8 @@ export interface FirstPersonOptions {
   start: { x: number; z: number; yaw?: number; pitch?: number };
   /** Solid footprints on the floor plan, in scene units. */
   solids?: () => readonly Footprint[];
+  /** The room envelope, in scene units, independently of internal obstacles. */
+  flightBounds?: (x: number, z: number) => FlightBounds;
   /**
    * Ladders, in scene units (`ladder-zone.ts`): Use at either end mounts one;
    * forward climbs and back descends until the walker leaves an end.
@@ -241,6 +246,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
       )
     : null;
   const use = (x: number, y: number) => {
+    if (noclip.value || paused.value) return;
     const carried = handling?.heldObject();
     if (carried && options.useWhileHolding?.(carried, x, y)) return;
     if (attachedLadder) return;
@@ -287,6 +293,45 @@ export function createFirstPerson(options: FirstPersonOptions) {
   const tapped = new Set<string>();
   const nudge = { forward: 0, right: 0 };
   let attachedLadder: LadderZone | null = null;
+  let flying = false;
+  let flightY = floorY + EYE_HEIGHT_METRES * metre;
+  let flightUp = 0;
+  let returnTo: { walker: typeof walker; floor: number } | null = null;
+  let fallbackBounds: FlightBounds | null = null;
+  const flightBounds = (x: number, z: number): FlightBounds => {
+    if (options.flightBounds) return options.flightBounds(x, z);
+    if (!fallbackBounds) {
+      const candidate = options.scene
+        ? new SceneBounds().setFromObject(options.scene)
+        : null;
+      const box = candidate && !candidate.isEmpty() ? candidate : null;
+      const solids = options.solids?.() ?? [];
+      const inset = 0.05 * metre;
+      fallbackBounds = {
+        minX:
+          (solids.length
+            ? Math.min(...solids.map((s) => s.minX))
+            : (box?.min.x ?? walker.x - 10 * metre)) + inset,
+        maxX:
+          (solids.length
+            ? Math.max(...solids.map((s) => s.maxX))
+            : (box?.max.x ?? walker.x + 10 * metre)) - inset,
+        minZ:
+          (solids.length
+            ? Math.min(...solids.map((s) => s.minZ))
+            : (box?.min.z ?? walker.z - 10 * metre)) + inset,
+        maxZ:
+          (solids.length
+            ? Math.max(...solids.map((s) => s.maxZ))
+            : (box?.max.z ?? walker.z + 10 * metre)) - inset,
+        minY:
+          (box && !box.isEmpty() ? Math.min(floorY, box.min.y) : floorY) +
+          inset,
+        maxY: (box && !box.isEmpty() ? box.max.y : floorY + 6 * metre) - inset,
+      };
+    }
+    return fallbackBounds;
+  };
   let lockRefused = false;
   /** When the mouse was last released (Esc), for the browser's cooldown. */
   let releasedAt = -Infinity;
@@ -375,6 +420,31 @@ export function createFirstPerson(options: FirstPersonOptions) {
   useButton.addEventListener('pointerdown', (event) => event.stopPropagation());
   useButton.addEventListener('click', () => use(0, 0));
   movement.append(useButton);
+  const altitude = document.createElement('div');
+  altitude.className = 'noclip-altitude';
+  altitude.hidden = true;
+  for (const [label, direction] of [
+    ['UP', 1],
+    ['DOWN', -1],
+  ] as const) {
+    const button = hudButton(label, `Fly ${label.toLowerCase()}`);
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      button.setPointerCapture?.(event.pointerId);
+      flightUp = direction;
+    });
+    for (const event of ['pointerup', 'pointercancel', 'lostpointercapture'])
+      button.addEventListener(event, () => {
+        flightUp = 0;
+      });
+    altitude.append(button);
+  }
+  canvas.parentElement?.append(altitude);
+  const flightReadout = document.createElement('div');
+  flightReadout.className = 'noclip-readout';
+  flightReadout.hidden = true;
+  canvas.parentElement?.append(flightReadout);
   canvas.parentElement?.append(movement);
   // The top right's tools (the app puts its view-link pin here too), and
   // the torch, lit while it is on; a click switches it.
@@ -488,16 +558,23 @@ export function createFirstPerson(options: FirstPersonOptions) {
   const keydown = (event: KeyboardEvent) => {
     if (canvas.parentElement?.hidden || following) return;
     if (typing(event)) return;
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
-    if (WALK_KEYS.has(event.code) || event.code === 'KeyX') {
+    if ((event.ctrlKey && !noclip.value) || event.metaKey || event.altKey)
+      return;
+    if (
+      WALK_KEYS.has(event.code) ||
+      event.code === 'KeyX' ||
+      (noclip.value &&
+        ['Space', 'ControlLeft', 'ControlRight'].includes(event.code))
+    ) {
       setInput('mouse');
       keys.add(event.code);
       tapped.add(event.code);
-      if (event.code.startsWith('Arrow')) event.preventDefault();
+      if (event.code.startsWith('Arrow') || noclip.value)
+        event.preventDefault();
     }
     if (event.repeat) return;
-    if (event.code === 'KeyC') changeStance(walker);
-    if (event.code === 'KeyV') changeStance(walker, true);
+    if (event.code === 'KeyC' && !noclip.value) changeStance(walker);
+    if (event.code === 'KeyV' && !noclip.value) changeStance(walker, true);
     if (event.code === 'KeyE') use(0, 0);
     if (event.code === 'KeyF') {
       setInput('mouse');
@@ -509,6 +586,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     keys.clear();
     tapped.clear();
     touchInspect = false;
+    flightUp = 0;
   };
   const look = (event: MouseEvent) => {
     if (!locked()) return;
@@ -518,7 +596,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     // And at the player's sensitivity, up and down swapped if they asked.
     const { sensitivity, invertY } = settings.value;
     const rate = (LOOK_RADIANS_PER_PIXEL * sensitivity) / walker.zoom;
-    if (handling?.holding() && keys.has('KeyX')) {
+    if (!noclip.value && handling?.holding() && keys.has('KeyX')) {
       handling.rotate(event.movementX * rate, event.movementY * rate);
       return;
     }
@@ -624,7 +702,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     const slop = event.pointerType === 'mouse' ? 5 : 12;
     if (Math.hypot(dx, dy) > slop) drag.moved = true;
     if (!drag.moved || holding) return;
-    if (touchInspect && handling?.holding()) {
+    if (!noclip.value && touchInspect && handling?.holding()) {
       handling.rotate(
         (event.clientX - drag.previousX) * 0.004,
         (event.clientY - drag.previousY) * 0.003,
@@ -697,6 +775,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     zoom: 0,
     run: false,
     inspect: false,
+    up: 0,
   };
   const readGamepad = () => {
     if (canvas.parentElement?.hidden || following) return idle;
@@ -731,10 +810,10 @@ export function createFirstPerson(options: FirstPersonOptions) {
       Math.abs(zoom) > 0.05 ||
       pad.buttons.some((b) => b.pressed);
     if (active) setInput('gamepad');
-    if (went(PAD.use)) use(0, 0);
+    if (went(PAD.use) && !noclip.value) use(0, 0);
     if (went(PAD.knobDown)) turningKnobs(-1, () => use(0, 0));
     if (went(PAD.knobUp)) turningKnobs(1, () => use(0, 0));
-    if (went(PAD.crouch)) {
+    if (went(PAD.crouch) && !noclip.value) {
       changeStance(walker);
     }
     if (went(PAD.torch)) torch.toggle();
@@ -747,6 +826,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
       zoom,
       run: padRun,
       inspect: pad.buttons[3]?.pressed ?? false,
+      up: noclip.value ? button(PAD.use) - button(PAD.crouch) : 0,
     };
   };
 
@@ -795,6 +875,9 @@ export function createFirstPerson(options: FirstPersonOptions) {
     get following() {
       return Boolean(following);
     },
+    get noclip() {
+      return flying;
+    },
     /** Doorways cut through the walls while their doors are open. */
     set openings(value: () => readonly Footprint[]) {
       openings = value;
@@ -808,6 +891,10 @@ export function createFirstPerson(options: FirstPersonOptions) {
       y?: number,
       floor?: number,
     ) {
+      if (!noclip.value) {
+        flying = false;
+        returnTo = null;
+      }
       attachedLadder = null;
       currentFloorY = floor ?? options.floorAt?.(x, z, currentFloorY) ?? floorY;
       walker.x = x;
@@ -815,6 +902,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
       walker.yaw = yaw;
       walker.pitch = clampPitch(pitch);
       walker.eyeOffset = (y ?? eyeY()) - eyeY();
+      if (flying && y !== undefined) flightY = y;
       walker.crouched = false;
       walker.lowCrouched = false;
       walker.crouch = 0;
@@ -855,16 +943,48 @@ export function createFirstPerson(options: FirstPersonOptions) {
         handling?.update(delta);
         return;
       }
+      const shouldFly = noclip.value && current();
+      if (shouldFly !== flying) {
+        if (shouldFly) {
+          returnTo = { walker: { ...walker }, floor: currentFloorY };
+          flightY = camera.position.y;
+          walker.crouched = walker.lowCrouched = false;
+          walker.crouch = 0;
+          attachedLadder = null;
+          fallbackBounds = null;
+        } else if (returnTo) {
+          Object.assign(walker, returnTo.walker);
+          currentFloorY = returnTo.floor;
+          returnTo = null;
+        }
+        flying = shouldFly;
+        forget();
+        nudge.forward = nudge.right = 0;
+        sticks?.reset();
+        showHelp();
+      }
+      altitude.hidden = !flying;
+      flightReadout.hidden = !flying;
+      useButton.hidden = flying;
+      crouchButton.hidden = flying;
+      inspectButton.hidden = flying;
+      help.textContent = flying
+        ? flightHelp(input ?? 'mouse')
+        : attachedLadder
+          ? help.textContent
+          : controlsHelp(input ?? 'mouse');
       // Paused behind the menu: nothing held walks on.
       if (paused.value) {
         keys.clear();
         tapped.clear();
+        sticks?.reset();
+        flightUp = 0;
       }
       const pad = readGamepad();
       const held = (...codes: string[]) =>
         codes.some((code) => keys.has(code) || tapped.has(code));
       // The keys and the walk stick add; the stick's push sets the pace.
-      const still = holding ? 0 : 1;
+      const still = holding || paused.value ? 0 : 1;
       // A held on-screen button, once held past a tap.
       const hudHeld =
         pressing.since && performance.now() - pressing.since >= HOLD_MS ? 1 : 0;
@@ -891,7 +1011,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
           (TOUCH_LOOK_RADIANS_PER_SECOND * delta * settings.value.sensitivity) /
           walker.zoom;
         const upDown = settings.value.invertY ? -1 : 1;
-        if (touchInspect && handling?.holding())
+        if (!flying && touchInspect && handling?.holding())
           handling.rotate(sticks.look.x * turn, sticks.look.y * turn * 0.75);
         else {
           walker.yaw += sticks.look.x * turn;
@@ -906,7 +1026,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
           (TOUCH_LOOK_RADIANS_PER_SECOND * delta * settings.value.sensitivity) /
           walker.zoom;
         const upDown = settings.value.invertY ? -1 : 1;
-        if (pad.inspect && handling?.holding())
+        if (!flying && pad.inspect && handling?.holding())
           handling.rotate(pad.look.x * turn, pad.look.y * turn * 0.75);
         else {
           walker.yaw += pad.look.x * turn;
@@ -924,12 +1044,22 @@ export function createFirstPerson(options: FirstPersonOptions) {
         Math.hypot(sticks?.move.x ?? 0, sticks?.move.y ?? 0) >= RUN_DEFLECTION;
       const length = Math.max(1, Math.hypot(ahead, aside));
       const speed =
-        (held('ShiftLeft', 'ShiftRight') || stickRun || pad.run
+        ((flying
+          ? held('ControlLeft', 'ControlRight')
+          : held('ShiftLeft', 'ShiftRight')) ||
+        stickRun ||
+        pad.run
           ? RUN_METRES_PER_SECOND
           : WALK_METRES_PER_SECOND) *
         metre *
         (walker.lowCrouched ? 0.3 : walker.crouched ? 0.5 : 1) *
         delta;
+      const lift =
+        still *
+        ((held('Space') ? 1 : 0) -
+          (held('ShiftLeft', 'ShiftRight') ? 1 : 0) +
+          flightUp +
+          pad.up);
       tapped.clear();
       const ladder = attachedLadder;
       if (ladder) {
@@ -958,25 +1088,46 @@ export function createFirstPerson(options: FirstPersonOptions) {
         ? 0
         : (ahead / length) * speed + still * nudge.forward;
       const right = ladder ? 0 : (aside / length) * speed + still * nudge.right;
+      const flightNudge = { ...nudge };
       nudge.forward = 0;
       nudge.right = 0;
       const cuts = openings();
-      const next = slide(
-        cuts.length
-          ? cutOpenings(options.solids?.() ?? [], cuts)
-          : (options.solids?.() ?? []),
-        walker.x,
-        walker.z,
-        Math.sin(walker.yaw) * forward + Math.cos(walker.yaw) * right,
-        -Math.cos(walker.yaw) * forward + Math.sin(walker.yaw) * right,
-        WALKER_RADIUS_METRES * metre,
-      );
+      const next = flying
+        ? flyCamera(
+            {
+              x: walker.x,
+              y: flightY,
+              z: walker.z,
+              yaw: walker.yaw,
+              pitch: walker.pitch,
+            },
+            {
+              forward:
+                ahead + (still * flightNudge.forward) / Math.max(speed, 1e-6),
+              right:
+                aside + (still * flightNudge.right) / Math.max(speed, 1e-6),
+              up: lift,
+            },
+            speed,
+            flightBounds(walker.x, walker.z),
+          )
+        : slide(
+            cuts.length
+              ? cutOpenings(options.solids?.() ?? [], cuts)
+              : (options.solids?.() ?? []),
+            walker.x,
+            walker.z,
+            Math.sin(walker.yaw) * forward + Math.cos(walker.yaw) * right,
+            -Math.cos(walker.yaw) * forward + Math.sin(walker.yaw) * right,
+            WALKER_RADIUS_METRES * metre,
+          );
+      if (flying && 'y' in next && typeof next.y === 'number') flightY = next.y;
       const kept = attachedLadder ? attachedLadder.rung : next;
       walker.stride += Math.hypot(kept.x - walker.x, kept.z - walker.z);
       walker.x = kept.x;
       walker.z = kept.z;
       // The ladder owns height until the walker leaves an end.
-      if (!attachedLadder)
+      if (!attachedLadder && !flying)
         currentFloorY =
           options.floorAt?.(walker.x, walker.z, currentFloorY) ?? floorY;
       walker.crouch +=
@@ -986,7 +1137,11 @@ export function createFirstPerson(options: FirstPersonOptions) {
       const bob = options.reducedMotion?.()
         ? 0
         : Math.sin((walker.stride / metre) * Math.PI * 1.6) * 0.02 * metre;
-      const y = eyeY() + walker.eyeOffset - walker.crouch * 0.65 * metre + bob;
+      const y = flying
+        ? flightY
+        : eyeY() + walker.eyeOffset - walker.crouch * 0.65 * metre + bob;
+      if (flying)
+        flightReadout.textContent = `NOCLIP · x ${(walker.x / metre).toFixed(2)} · y ${(y / metre).toFixed(2)} · z ${(walker.z / metre).toFixed(2)} · yaw ${((walker.yaw * 180) / Math.PI).toFixed(1)}° · pitch ${((walker.pitch * 180) / Math.PI).toFixed(1)}°`;
       camera.position.set(walker.x, y, walker.z);
       camera.lookAt(
         walker.x + Math.sin(walker.yaw) * Math.cos(walker.pitch),
@@ -1005,7 +1160,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
         { yaw: walker.yaw, pitch: walker.pitch },
         delta,
       );
-      handling?.update(delta);
+      if (!flying) handling?.update(delta);
       const cursorAim = input === 'mouse' && !locked();
       crosshair.hidden = !(
         locked() ||
@@ -1042,6 +1197,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
       }
     },
     dispose() {
+      altitude.remove();
+      flightReadout.remove();
       handling?.dispose();
       lockTarget.removeEventListener('pointerdown', lockedDown);
       document.removeEventListener('keydown', keydown);

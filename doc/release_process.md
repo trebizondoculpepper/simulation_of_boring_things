@@ -10,7 +10,7 @@ How Pool Plant gets from `main` to the places it is played: GitHub Pages and itc
 | itch.io, [The Pool](https://salimfadhley.itch.io/the-pool) | The same `dist/`, as channel `html5` of `salimfadhley/the-pool` | Every push to `main` whose checks pass | `itch` job in `.github/workflows/ci.yml`   |
 | GitHub release                                             | Notes from the version's `CHANGELOG.md` section                 | A pushed tag `vX.Y.Z` (owner only)     | `.github/workflows/release.yml`            |
 
-Both builds of `main` carry the same version, `package.json`'s with its patch advanced by the commits since its tag (for example 0.1.237). The itch.io upload is labelled with it (`--userversion`), so the itch.io dashboard and the game's title screen agree.
+Both destinations carry the same successful build version, recorded in `package.json` and `package-lock.json` (for example 0.1.242). Every successful `npm run build` advances the patch after bundling succeeds; CI commits the version update with `[skip ci]` so it does not trigger another build. The itch.io upload is labelled with it (`--userversion`), so the itch.io dashboard and the game's title screen agree.
 
 ## The itch.io job
 
@@ -47,12 +47,13 @@ ln -sf ~/.local/share/butler/butler ~/.local/bin/butler   # keep 7z.so and libc7
 butler login
 
 # A clean build of HEAD, numbered as CI numbers it.
+# The symlink uses the current checkout path, even if its directory was not renamed.
+pool_checkout=$(pwd)
 git worktree add --detach ../pool-release HEAD
-cd ../pool-release && ln -s ../simulation_of_boring_things/node_modules node_modules
-base=$(node -p "require('./package.json').version")
-IFS=. read -r ma mi pa <<< "$base"
-version="$ma.$mi.$((pa + $(git rev-list --count "v$base..HEAD")))"
-VITE_VERSION=$version VITE_BUILD="$(git rev-parse --short HEAD) · $(date -u +'%-d %b %Y')" npm run build
+cd ../pool-release
+ln -s "$pool_checkout/node_modules" node_modules
+npm run build
+version=$(node -p "require('./package.json').version")
 
 butler push dist salimfadhley/the-pool:html5 --userversion "$version"
 butler status salimfadhley/the-pool:html5   # a minute or so until the build shows ✓

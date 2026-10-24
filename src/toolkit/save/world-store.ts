@@ -166,6 +166,8 @@ function openWorldStore(slot: string): WorldStore {
     holding,
     reset() {
       world.value = newWorld();
+      last = Date.now();
+      lastSave = last;
       save();
     },
     notice,

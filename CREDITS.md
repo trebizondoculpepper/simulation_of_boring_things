@@ -2,6 +2,10 @@
 
 The program is licensed under the GNU General Public License, version 3 or later (`LICENSE`). The recordings and textures below are not the project's own work: each keeps its own licence, which is listed with it, and must be credited as shown wherever the game is distributed. They were copied from the owner's Encabulator project (`doc/reuse-inventory.md`), whose `CREDITS.md` these entries are taken from.
 
+## Owner-supplied title music
+
+`resources/sound/music/title/Ripple Equilibrium - Suspended Circulation - Treblo.ogg` was supplied by the owner on 2026-10-24 and copied unchanged. The filename identifies Treblo as the artist, Ripple Equilibrium as the collection and Suspended Circulation as the track. It loops on the title screen. Licence and additional provenance have not been specified; the software's GPL notice does not establish a separate licence for this recording.
+
 ## Owner-supplied jacuzzi music
 
 The six Still Water Garden MP3s in `resources/sound/music/jacuzzi/` were supplied by the owner on 2026-10-24, unchanged from their Downloads folder. Their filenames identify Treblo as the artist. The tracks are Bamboo and Morning Mist, Glass Water Garden, Pavilion at First Light, Petals on Slow Water, Softly, Slowly Rising and The Weightless Hour. They are used only for the jacuzzi programme. Licence and additional provenance have not been specified; the software's GPL notice does not establish a separate licence for these recordings.

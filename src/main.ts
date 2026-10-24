@@ -23,6 +23,7 @@ import {
 } from './toolkit/gallery/logic/door-joins';
 import { firstPersonOn } from './toolkit/controls/input/first-person';
 import { paused } from './toolkit/controls/logic/paused';
+import { noclip } from './toolkit/controls/logic/noclip';
 import { renderScale } from './toolkit/settings/logic/settings';
 import { METRE } from './toolkit/components/core/logic/units';
 import {
@@ -30,6 +31,7 @@ import {
   rendererOn,
 } from './toolkit/components/core/parts/render-style';
 import { worldStore } from './toolkit/save/world-store';
+import { createGameSession } from './toolkit/save/game-session';
 import { GAS_ZONE_IDS } from './game/plant/gas';
 import type { PoolId } from './game/plant/pools';
 import { buildLine, versionLabel } from './game/version';
@@ -115,6 +117,42 @@ type RoomHandle = (() => void) & {
 };
 const rooms = new Map<string, { root: HTMLElement; handle: RoomHandle }>();
 let current: string | undefined;
+let gameStorage: Storage | null = null;
+try {
+  gameStorage = window.localStorage;
+} catch {
+  // A private browser may block storage entirely.
+}
+const gameSession = createGameSession(worldStore('dev'), gameStorage);
+const rememberPlayer = () => {
+  if (!current || noclip.value) return;
+  const room = resolveRoomId(new URLSearchParams(location.search).get('room'));
+  const surface = surfaceOf(current);
+  const control = surface && firstPersonOn(surface);
+  if (!room || !control || control.noclip) return;
+  const pose = control.pose();
+  gameSession.remember(
+    `?${new URLSearchParams({
+      room,
+      x: String(pose.x / control.metre),
+      y: String(pose.y / control.metre),
+      z: String(pose.z / control.metre),
+      yaw: String((pose.yaw * 180) / Math.PI),
+      pitch: String((pose.pitch * 180) / Math.PI),
+      zoom: String(control.zoom),
+    })}`,
+  );
+};
+const saveGame = () => {
+  rememberPlayer();
+  return worldStore('dev').save();
+};
+const positionSaveTimer = window.setInterval(rememberPlayer, 10_000);
+window.addEventListener('pagehide', rememberPlayer);
+const saveHiddenPosition = () => {
+  if (document.visibilityState === 'hidden') rememberPlayer();
+};
+document.addEventListener('visibilitychange', saveHiddenPosition);
 let revision = 0;
 const positionOverlay = document.createElement('div');
 positionOverlay.className = 'pool-settings-copy';
@@ -139,15 +177,28 @@ effect(() => {
 // (Minecraft's way); Save is for reassurance, and Quit to Title saves first.
 // Until the title screen exists, the title is the room list.
 const pauseMenu = createPauseMenu({
-  save: () => worldStore('dev').save(),
+  save: saveGame,
   holding: worldStore('dev').holding,
   quitToTitle() {
-    worldStore('dev').save();
+    saveGame();
     goTo('');
   },
   // Not on the title screen or the room list: only in a room.
   canOpen: () => current !== undefined,
   devPanel: () => goTo('?dev'),
+  noclip,
+  setNoclip(on) {
+    if (on) rememberPlayer();
+    noclip.value = on;
+    if (on) {
+      stopSeeing();
+      stopDryPeek();
+    }
+  },
+  copyCamera: async () => {
+    await copyCameraLocation();
+    return positionStatus.textContent ?? '';
+  },
 });
 const settingsButton = document.createElement('button');
 settingsButton.type = 'button';
@@ -162,6 +213,8 @@ settingsButton.addEventListener('click', () => pauseMenu.open());
 
 /** Go to a page of the app (`?room=…`, `?dev`, or '' for the title) without reloading. */
 const goTo = (search: string) => {
+  rememberPlayer();
+  noclip.value = false;
   const url = new URL(location.href);
   url.search = search;
   history.pushState(null, '', url);
@@ -169,15 +222,29 @@ const goTo = (search: string) => {
 };
 
 // The title screen (`doc/plans/title-screen.md`), the front page; the
-// developers' room list is at `?dev`. New game starts in the footbath (for
-// now in the shared world: the game's own save is stage 5); Continue
-// waits for that save. Settings and Instructions are the pause menu's
+// developers' room list is at `?dev`. New game resets the shared world to
+// nominal operating conditions and starts in the footbath; Continue
+// restores the last playable view. Settings and Instructions are the pause menu's
 // tabs, opened without its Game tab.
 const titleScreen = createTitleScreen({
-  newGame: () => goTo('?room=pool_04'),
-  continueGame: () => {},
-  canContinue: () => false,
-  noContinue: 'Continue arrives with the game’s own save',
+  newGame: () => {
+    const destination = gameSession.start();
+    // A fresh page also clears room-local demonstrations and cached camera poses.
+    current = undefined;
+    location.assign(destination);
+  },
+  continueGame: () => {
+    const destination = gameSession.resume();
+    if (destination) goTo(destination);
+  },
+  canContinue: () => {
+    const destination = gameSession.resume();
+    return (
+      !!destination &&
+      !!resolveRoomId(new URLSearchParams(destination).get('room'))
+    );
+  },
+  noContinue: 'Start a new game first',
   settings: () => pauseMenu.open('Graphics', { inGame: false }),
   instructions: () => pauseMenu.open('Controls', { inGame: false }),
   covered: () => pauseMenu.isOpen,
@@ -188,7 +255,7 @@ positionStatus.setAttribute('role', 'status');
 positionOverlay.append(roomName, positionStatus);
 positionOverlay.hidden = true;
 document.body.append(positionOverlay);
-positionButton.addEventListener('click', async () => {
+const copyCameraLocation = async () => {
   const id = resolveRoomId(new URLSearchParams(location.search).get('room'));
   const surface = current ? surfaceOf(current) : null;
   const control = surface ? firstPersonOn(surface) : null;
@@ -219,7 +286,8 @@ positionButton.addEventListener('click', async () => {
   } finally {
     positionButton.disabled = false;
   }
-});
+};
+positionButton.addEventListener('click', copyCameraLocation);
 const resetEffects = async () => {
   const { ps1Uniforms } =
     await import('./toolkit/components/core/parts/ps1-material');
@@ -601,6 +669,7 @@ const openRoom = async () => {
   }
   const params = new URLSearchParams(location.search);
   if (!params.has('room')) {
+    noclip.value = false;
     if (document.pointerLockElement) document.exitPointerLock();
     window.dispatchEvent(new Event('blur'));
     stopSeeing();
@@ -647,6 +716,7 @@ const openRoom = async () => {
     return;
   }
   // Known to exist: an unknown one went to the title above.
+  noclip.value = false;
   const room = resolveRoomId(params.get('room'))!;
   const start = await starter(room);
   await resetEffects();
@@ -697,10 +767,12 @@ const openRoom = async () => {
     if (zoom !== null) control.zoom = zoom;
   }
   loaded.handle.resume?.();
+  rememberPlayer();
   if (peekBack(keyOf(room))) void startDryPeek().catch(showError);
   void preloadCluster().catch(showError);
 };
 window.addEventListener('pool-plant:coordinate-hop', (event) => {
+  if (noclip.value) return;
   const pose = (
     event as CustomEvent<{
       room: RoomId;
@@ -866,7 +938,7 @@ const ensureBuilt = (room: RoomId) => {
   return false;
 };
 const checkDoors = () => {
-  if (!current || app.hidden) {
+  if (!current || app.hidden || noclip.value) {
     prefetchedNeighbour = null;
     return stopSeeing();
   }
@@ -951,6 +1023,7 @@ const handOver = (to: RoomId, from: RoomId) => {
   return true;
 };
 const travel = (event: Event) => {
+  if (noclip.value) return;
   const { to, from, through } = (
     event as CustomEvent<{ to: string; from: string; through?: boolean }>
   ).detail;
@@ -1097,6 +1170,7 @@ const preloadCluster = async () => {
 };
 let zoneTransferPending = false;
 window.addEventListener('pool-plant:room-zone', (event) => {
+  if (noclip.value) return;
   const id = (event as CustomEvent<RoomId>).detail;
   if (
     (id !== 'PR_A' &&
@@ -1221,6 +1295,9 @@ void openRoom().catch(showError);
 if (import.meta.hot)
   import.meta.hot.dispose(() => {
     revision++;
+    window.clearInterval(positionSaveTimer);
+    window.removeEventListener('pagehide', rememberPlayer);
+    document.removeEventListener('visibilitychange', saveHiddenPosition);
     jacuzziAmbience.dispose();
     for (const entry of rooms.values()) {
       entry.handle();

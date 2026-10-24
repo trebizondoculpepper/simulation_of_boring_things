@@ -1,6 +1,34 @@
 import { defineConfig } from 'vite-plus';
+import { execFileSync } from 'node:child_process';
+import { version } from './package.json';
+
+/** Build identity for both local and CI builds, beside the package version. */
+const git = (...args: string[]) => {
+  try {
+    return execFileSync('git', args, {
+      cwd: import.meta.dirname,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return '';
+  }
+};
+const commit = git('rev-parse', '--short', 'HEAD');
+const dirty = git('status', '--porcelain') ? ' (uncommitted changes)' : '';
+const localBuild = commit
+  ? `${commit}${dirty} · ${new Date().toISOString().slice(0, 10)}`
+  : `local · ${new Date().toISOString().slice(0, 10)}`;
 
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_VERSION': JSON.stringify(
+      process.env.VITE_VERSION || version,
+    ),
+    'import.meta.env.VITE_BUILD': JSON.stringify(
+      process.env.VITE_BUILD || localBuild,
+    ),
+  },
   lint: {
     plugins: ['oxc', 'typescript', 'unicorn'],
     categories: {

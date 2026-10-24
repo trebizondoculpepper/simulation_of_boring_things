@@ -76,7 +76,7 @@ The owner decided that the game is published first and the manual made after. Ex
 1. **The existing job:** it checks the tag against `package.json` and `CHANGELOG.md`, runs the checks and publishes the GitHub release.
 2. **A second job that needs it:**
    - installs TeX Live (LuaLaTeX, latexmk, and the packages `render.ts` uses, including TeX Gyre fonts) and a headless Chromium;
-   - takes the photographs from the published site (`https://trebizondoculpepper.github.io/simulation_of_boring_things/`) once it carries the tagged version;
+   - takes the photographs from the published site (`https://trebizondoculpepper.github.io/the_pool/`) once it carries the tagged version;
    - builds the manual from the tagged source;
    - uploads the PDF to the same release (`gh release upload`).
 
