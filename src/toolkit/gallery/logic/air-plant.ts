@@ -264,13 +264,15 @@ export const GANTRY_WIDTH = 1.2;
 
 /** A flight's going (its length on plan), metres: 2.4 m rise over 3 m, about 39 degrees. */
 export const FLIGHT = 3.0;
+/** How far the stair's foot stands north of the stacks' south end, clear of the door, metres. */
+export const STAIR_SET_BACK = 2.5;
 
 /**
  * The gantries along the west stacks' fronts at each upper unit's floor,
  * and their stair, outside them (the owner, 2026-10-24: the stair on the
  * outside of the three-storey structure, two flights on in the same
  * direction with a small landing at the middle floor): in a band of its
- * own just east of the gantries, from its foot at the stacks' south end,
+ * own just east of the gantries, from its foot set back from the door,
  * a flight north up to a landing beside the first gantry, then a second
  * flight straight on north up to a landing beside the second. Nothing is
  * over either flight, and the floor under the first gantry stays clear
@@ -293,8 +295,9 @@ export function gantries(box: RoomBox): Surface[] {
     area: { minX: x0, maxX: x1, minZ: north, maxZ: south },
     y,
   }));
-  // Up the band from its foot, each flight then its landing.
-  let z = south;
+  // Up the band from its foot, set back from the door, each flight then
+  // its landing.
+  let z = south - STAIR_SET_BACK;
   let below = 0;
   const ORDINAL = ['first', 'second', 'third'];
   levels.forEach((y, k) => {

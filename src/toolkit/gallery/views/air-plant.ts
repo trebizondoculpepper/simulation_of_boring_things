@@ -190,7 +190,7 @@ export function createAirPlantStructure(
         (f.at0 + f.at1) / 2,
         `${s.name} stringer`,
       );
-      st.rotation.x = Math.atan2(rise, f.at1 - f.at0);
+      st.rotation.x = Math.atan2(-rise, f.at1 - f.at0);
       // Its handrail, each side (BS EN ISO 14122-3): a top rail 1 m over
       // the nosings' line and a knee rail, on posts at each end and the
       // middle, sloping with the flight.
@@ -208,7 +208,7 @@ export function createAirPlantStructure(
           (f.at0 + f.at1) / 2,
           'handrail',
         );
-        rail.rotation.x = Math.atan2(rise, f.at1 - f.at0);
+        rail.rotation.x = Math.atan2(-rise, f.at1 - f.at0);
       }
       for (const t of [0.04, 0.5, 0.96]) {
         const pz = f.at0 + (f.at1 - f.at0) * t;

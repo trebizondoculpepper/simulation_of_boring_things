@@ -216,6 +216,11 @@ describe('the gantries and their stair', () => {
     }
   });
 
+  it('stand their foot well clear of the door in the south wall', () => {
+    const f1 = surfaces.find((s) => s.name === 'Stair, first flight')!;
+    expect(box.d / 2 - f1.area.maxZ).toBeGreaterThanOrEqual(4);
+  });
+
   it('meet each gantry from a landing at its own level', () => {
     for (const [landing, gantry] of [
       ['First landing', g1],
