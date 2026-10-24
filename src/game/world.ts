@@ -109,6 +109,7 @@ import {
 } from './plant/motor-starters';
 import {
   actOnJacuzzi,
+  jacuzziFull,
   jacuzziRunning,
   newJacuzzi,
   stepJacuzzi,
@@ -378,7 +379,12 @@ export function applyAction(world: World, action: WorldAction): World {
     case 'jacuzzi':
       return {
         ...world,
-        jacuzzi: actOnJacuzzi(world.jacuzzi, action.action, world.time),
+        jacuzzi: actOnJacuzzi(
+          world.jacuzzi,
+          action.action,
+          world.time,
+          jacuzziFull(world.pools.pool_03.level),
+        ),
       };
     case 'boiler-gas': {
       const boilerGas = actOnBoilerGas(world.boilerGas, action.action);
@@ -593,7 +599,11 @@ export function stepWorld(world: World, delta: number): World {
     pools: water.pools,
     airHandling,
     motors,
-    jacuzzi: stepJacuzzi(world.jacuzzi, world.time + delta),
+    jacuzzi: stepJacuzzi(
+      world.jacuzzi,
+      world.time + delta,
+      jacuzziFull(water.pools.pool_03.level),
+    ),
     boilerGas: stepBoilerGas(world.boilerGas, delta),
     loungeValvePositions,
     olympic: battery

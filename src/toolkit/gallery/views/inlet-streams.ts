@@ -18,6 +18,12 @@ export interface Inlet {
   y: number;
   z: number;
   yaw: number;
+  /**
+   * A level ledge below it, such as a spa's seat under its jets: at
+   * height `y`, reaching `reach` metres out from the wall. With the water
+   * below it, a stream falling short of its edge ends on it, with no rings.
+   */
+  ledge?: { y: number; reach: number };
 }
 
 /** What drives them: whether water is coming in, and where the surface is. */
@@ -112,7 +118,16 @@ export function createInletStreams(inlets: readonly Inlet[]) {
       group.add(ring);
       return { ring, material, phase: i / RINGS };
     });
-    return { out, mouth, stream, rings, shapedFor: Number.NaN, landing: mouth };
+    return {
+      out,
+      mouth,
+      ledge: inlet.ledge,
+      stream,
+      rings,
+      shapedFor: Number.NaN,
+      landing: mouth,
+      onWater: true,
+    };
   });
   /** Its stream's shape for a surface at `surfaceY`, and where it meets it. */
   const shape = (o: (typeof outlets)[number], surfaceY: number) => {
@@ -122,10 +137,23 @@ export function createInletStreams(inlets: readonly Inlet[]) {
       o.stream.visible = false;
       o.landing = o.mouth.clone().addScaledVector(o.out, 0.12).setY(surfaceY);
       o.shapedFor = surfaceY;
+      o.onWater = true;
       return;
     }
-    // Otherwise a falling arc, out and down, ending at the surface.
-    const fall = Math.max(0.002, o.mouth.y - surfaceY);
+    // Otherwise a falling arc, out and down, ending at the surface, or on
+    // its ledge where the water is below the ledge and the arc short of
+    // its edge.
+    let end = surfaceY;
+    o.onWater = true;
+    if (o.ledge && surfaceY < o.ledge.y) {
+      const drop = Math.max(0, o.mouth.y - o.ledge.y);
+      const out = 0.02 + EXIT_SPEED * Math.sqrt((2 * drop) / G);
+      if (out <= o.ledge.reach) {
+        end = o.ledge.y;
+        o.onWater = false;
+      }
+    }
+    const fall = Math.max(0.002, o.mouth.y - end);
     const t = Math.sqrt((2 * fall) / G);
     const points: Vector3[] = [];
     for (let k = 0; k <= 10; k++) {
@@ -137,7 +165,7 @@ export function createInletStreams(inlets: readonly Inlet[]) {
           .setY(o.mouth.y - (G * s * s) / 2),
       );
     }
-    const landing = points[points.length - 1].clone().setY(surfaceY);
+    const landing = points[points.length - 1].clone().setY(end);
     o.stream.visible = true;
     o.stream.geometry.dispose();
     o.stream.geometry = new TubeGeometry(
@@ -173,7 +201,7 @@ export function createInletStreams(inlets: readonly Inlet[]) {
           shape(o, flow.surfaceY);
         for (const r of o.rings) {
           const p = (clock / RING_SECONDS + r.phase) % 1;
-          r.ring.visible = ringsShown > 0;
+          r.ring.visible = ringsShown > 0 && o.onWater;
           r.ring.position.set(o.landing.x, flow.surfaceY + 0.002, o.landing.z);
           r.ring.scale.setScalar(0.02 + p * RING_REACH);
           r.material.opacity = 0.24 * (1 - p) ** 1.5 * ringsShown;

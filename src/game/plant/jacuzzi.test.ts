@@ -65,4 +65,24 @@ describe('the jacuzzi’s jets and air', () => {
     });
     expect(jacuzziDischarging(w)).toBe(false);
   });
+
+  it('cannot be started until the tub is full, and cut out when it no longer is', () => {
+    const low: World = {
+      ...start,
+      pools: {
+        ...start.pools,
+        pool_03: { ...start.pools.pool_03, level: -0.2 },
+      },
+    };
+    let w = act(low, { act: 'start' });
+    expect(jacuzziRuns(w)).toEqual({ jets: false, air: false });
+    w = act(w, { act: 'toggle', what: 'jets' });
+    expect(w.jacuzzi.jets).toBe(false);
+    // Running when full, they cut out once the level falls, and stay off.
+    w = act(start, { act: 'start' });
+    expect(jacuzziRuns(w)).toEqual({ jets: true, air: true });
+    w = advance({ ...w, pools: low.pools }, 1, 1);
+    expect(jacuzziRuns(w)).toEqual({ jets: false, air: false });
+    expect(w.jacuzzi).toEqual({ jets: false, air: false, until: -1 });
+  });
 });

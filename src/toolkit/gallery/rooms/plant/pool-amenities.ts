@@ -1,5 +1,5 @@
 import { computed, signal } from '@preact/signals-core';
-import type { ReadonlySignal } from '@preact/signals-core';
+import type { ReadonlySignal, Signal } from '@preact/signals-core';
 import { serviceAvailable } from '../../../../game/plant/services';
 import {
   CylinderGeometry,
@@ -23,7 +23,10 @@ import type { Object3D } from 'three';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import { worldStore } from '../../../save/world-store';
 import { jacuzziRuns } from '../../../../game/world';
-import { JACUZZI_CYCLE } from '../../../../game/plant/jacuzzi';
+import {
+  JACUZZI_CYCLE,
+  JACUZZI_LEVEL_SWITCH,
+} from '../../../../game/plant/jacuzzi';
 import type { JacuzziAction } from '../../../../game/plant/jacuzzi';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
 import { createMicroLabel } from '../../../components/core/views/eighties-controls';
@@ -52,6 +55,8 @@ import {
   place,
 } from '../../../components/pool/views/pool-fittings';
 import { rippleWater } from '../../views/round-room-light';
+import { createInletStreams } from '../../views/inlet-streams';
+import type { Inlet } from '../../views/inlet-streams';
 import {
   createPartSet,
   pushButton,
@@ -367,13 +372,15 @@ export const FOOTBATH_EXHIBIT: PlantExhibit = {
  */
 /**
  * A development room's direct control of the tub's effects (dev35's
- * effects panel): its requested fill by volume, 0 empty to 1 full, and its jets,
- * bubbles and light each on or off, past the spa's controller.
+ * effects panel): its requested fill by volume, 0 empty to 1 full, which
+ * the tub fills or drains toward, and its jets, bubbles and light each on
+ * or off, past the spa's controller. The jets and bubbles are writable:
+ * the tub's full-level interlock switches them off when it cuts them out.
  */
 export interface SpaEffects {
   fillFraction: ReadonlySignal<number>;
-  jets: ReadonlySignal<boolean>;
-  bubbles: ReadonlySignal<boolean>;
+  jets: Signal<boolean>;
+  bubbles: Signal<boolean>;
   light: ReadonlySignal<boolean>;
 }
 
@@ -413,6 +420,13 @@ const jacuzziPowered = computed(() => {
 });
 
 // ---- The jacuzzi, on its stepped plinth -------------------------------------
+
+/**
+ * How fast a development room's tub fills through its jets, or drains,
+ * m³/s: far quicker than a real tub's make-up, so its fill can be watched
+ * in a minute or two.
+ */
+const DEMO_FILL_RATE = 0.025;
 
 const TUB = {
   r: 1.2,
@@ -543,6 +557,7 @@ function buildJacuzzi(
 
   // Jets behind each place, the light, the drains.
   const jets: Object3D[] = [];
+  const jetInlets: Inlet[] = [];
   const plume = new MeshStandardMaterial({
     color: '#f2fbfb',
     transparent: true,
@@ -555,6 +570,15 @@ function buildJacuzzi(
     jet.position.set(Math.cos(a) * TUB.r, seatTop + 0.2, Math.sin(a) * TUB.r);
     jet.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a));
     object.add(jet);
+    // Filling, the water comes in through the jets: over the seat, while
+    // the water is below it.
+    jetInlets.push({
+      x: jet.position.x,
+      y: jet.position.y,
+      z: jet.position.z,
+      yaw: jet.rotation.y,
+      ledge: { y: seatTop, reach: fillProfile.upperBottomRadius - inner },
+    });
     // Its stream, while the jets run: a cone of white water off the wall.
     const stream = new Mesh(
       new CylinderGeometry(0.06, 0.015, 0.35, 12, 1, true)
@@ -594,6 +618,10 @@ function buildJacuzzi(
   water.position.y = surface;
   water.renderOrder = 1;
   object.add(water);
+  // The water coming in through the jets while the tub fills: an arc from
+  // each jet out of the water, as the foot spa's inlets (`inlet-streams.ts`).
+  const fillStreams = createInletStreams(jetInlets);
+  object.add(fillStreams.group);
   rippleWater(water, uniforms);
   const waterMaterial = water.material as MeshPhysicalMaterial;
 
@@ -676,9 +704,37 @@ function buildJacuzzi(
     object,
     dispose() {
       for (const sound of sounds) partAudio.hold(sound, null);
+      fillStreams.dispose();
     },
     update(delta) {
       time += delta;
+      // A development room's fill knob is a target: the tub fills through
+      // its jets, or drains, toward it.
+      const fx = spaState.effects;
+      let filling = false;
+      if (fx) {
+        const target =
+          Math.max(0, Math.min(1, fx.fillFraction.value)) * capacity;
+        const gap = target - spaState.waterVolumeM3;
+        const step = DEMO_FILL_RATE * delta;
+        filling = gap > 1e-6;
+        spaState.waterVolumeM3 =
+          Math.abs(gap) <= step
+            ? target
+            : spaState.waterVolumeM3 + Math.sign(gap) * step;
+      }
+      const waterVolume = spaState.waterVolumeM3;
+      const percentFull = steppedTubPercentFull(fillProfile, waterVolume);
+      const waterY = steppedTubHeightAtVolume(fillProfile, waterVolume);
+      const wet = percentFull > 0;
+      // The safety interlock: a level switch just under the overflow lip.
+      // Short of it, the jets and bubbles cut out and cannot be started
+      // (the building's tub has this from the world's, `jacuzzi.ts`).
+      const full = waterY >= surface - JACUZZI_LEVEL_SWITCH;
+      if (fx && !full) {
+        if (fx.jets.peek()) fx.jets.value = false;
+        if (fx.bubbles.peek()) fx.bubbles.value = false;
+      }
       // The jets and air as the world runs them, whoever started them.
       const world = spaState === spa ? jacuzziWorld()?.world.value : undefined;
       if (world) {
@@ -690,7 +746,6 @@ function buildJacuzzi(
         };
       }
       // A development room's effects, set directly.
-      const fx = spaState.effects;
       if (fx)
         spaState.state = {
           ...spaState.state,
@@ -699,16 +754,14 @@ function buildJacuzzi(
           light: fx.light.value,
         };
       const state = (spaState.state = stepSpa(spaState.state, delta));
-      // The level control is a share of water volume. The narrow lower
-      // basin rises faster than the wider basin above the seat; the water
-      // surface widens abruptly at the seat without jumping in height.
-      if (fx)
-        spaState.waterVolumeM3 =
-          Math.max(0, Math.min(1, fx.fillFraction.value)) * capacity;
-      const waterVolume = spaState.waterVolumeM3;
-      const percentFull = steppedTubPercentFull(fillProfile, waterVolume);
-      const waterY = steppedTubHeightAtVolume(fillProfile, waterVolume);
-      const wet = percentFull > 0;
+      // The level is from the water's volume. The narrow lower basin rises
+      // faster than the wider basin above the seat; the water surface
+      // widens abruptly at the seat without jumping in height.
+      fillStreams.update(delta, {
+        filling,
+        surfaceY: wet ? waterY : TUB_FLOOR,
+        wet: wet ? 1 : 0,
+      });
       water.visible = wet;
       water.position.y = waterY;
       const across =
