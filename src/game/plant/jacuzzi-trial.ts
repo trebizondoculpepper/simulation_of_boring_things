@@ -27,6 +27,7 @@ import {
   spaFilterFlows,
   spaFilterLine,
   stepSpaFilter,
+  washSignals,
 } from './spa-filter';
 import type { SpaFilter, SpaFilterAction } from './spa-filter';
 import {
@@ -249,8 +250,11 @@ export function actOnJacuzziTrial(
         cabinet: actOnJacuzziCabinet(t.cabinet, a.action, trialInputs(t).path),
       };
     case 'toggle':
-      // Stopping is always allowed; starting, only full.
-      return t[a.what] || trialFull(t) ? { ...t, [a.what]: !t[a.what] } : t;
+      // Stopping is always allowed; starting, only full, and not while its
+      // filter washes (no circulation).
+      return t[a.what] || (trialFull(t) && filtering(t.filter))
+        ? { ...t, [a.what]: !t[a.what] }
+        : t;
     case 'setpoint':
       return { ...t, setpoint: Math.max(30, Math.min(40, a.celsius)) };
     case 'filter':
@@ -344,8 +348,10 @@ export function stepJacuzziTrial(t: JacuzziTrial, dt: number): JacuzziTrial {
     dirt,
     washed,
   };
-  // The jets' interlock: no longer full, both cut out.
-  return trialFull(next) ? next : { ...next, jets: false, air: false };
+  // The jets' interlock: no longer full, or its filter washing, both cut out.
+  return trialFull(next) && filtering(next.filter)
+    ? next
+    : { ...next, jets: false, air: false };
 }
 
 /** The trial `seconds` on, in steps of `dt`. */
@@ -357,7 +363,9 @@ export function runJacuzziTrial(t: JacuzziTrial, seconds: number, dt = 0.5) {
 /** The cabinet's panel on trial, as `jacuzziCabinetPanel` gives the world's. */
 export function trialPanel(t: JacuzziTrial, doorOpen = false) {
   const inputs = trialInputs(t);
-  const pumpRun = jacuzziPumpCalled(t.cabinet, inputs);
+  // Its pump stops for the wash's stop (`washSignals`).
+  const wash = washSignals(t.filter);
+  const pumpRun = jacuzziPumpCalled(t.cabinet, inputs) && wash.pumpAllowed;
   // Washing, its water goes to drain, not round the spa.
   const flowing = jacuzziWaterFlowing(t.cabinet, inputs) && filtering(t.filter);
   const display = jacuzziCabinetDisplay({
@@ -376,8 +384,9 @@ export function trialPanel(t: JacuzziTrial, doorOpen = false) {
     supplied: inputs.supplied,
     pumpRun,
     flowing,
-    uv: flowing && !doorOpen,
-    dosing: flowing,
+    uv: flowing && !doorOpen && wash.uvReady,
+    dosing: flowing && wash.dosing,
+    washing: wash.washing,
     heating: flowing && heatSupply(t) && t.celsius < t.setpoint,
     noFlow:
       inputs.supplied &&

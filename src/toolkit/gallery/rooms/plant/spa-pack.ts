@@ -8,6 +8,11 @@ import { createPipe } from '../../../components/core/views/pipe-kinds';
 import type { PipeKindId } from '../../../components/core/views/pipe-kinds';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
 import { createMicroLabel } from '../../../components/core/views/eighties-controls';
+import {
+  SERVO_WHIRR,
+  VALVE_STOP,
+} from '../../../components/plant/audio/actuated-valve';
+import type { washSignals } from '../../../../game/plant/spa-filter';
 import { createBrandBadge } from '../../../components/core/views/brand-badge';
 import { panelMakerMark } from '../../../components/core/views/panel-maker-mark';
 import { plantTools } from '../../../components/plant/views/plant-tools';
@@ -316,6 +321,8 @@ export interface SpaFilterBinding {
   mode(): void;
   /** Whether it is washing now (its programme's stop, backwash or rinse). */
   washing(): boolean;
+  /** What its wash changes in the cabinet now (`washSignals`). */
+  signals(): ReturnType<typeof washSignals>;
 }
 
 /**
@@ -761,10 +768,16 @@ export function buildSpaPack(
   // The jacuzzi's panel, as its controller has it.
   const jacuzziPanel = computed(() => panelNow(doorOpen.value));
   // Its pump's motor: running dead-headed, too, until it trips.
+  // Its filter's wash programme, where it has one (`spa-filter.ts`).
+  const washBinding = jz?.filter ?? external?.filter;
+  const wash = signal(washBinding?.signals() ?? null);
   const running = computed(() =>
     jacuzziPanel.value
       ? supplied.value && jacuzziPanel.value.pumpRun
-      : supplied.value && power.position.value === 1 && !lowWater.value,
+      : supplied.value &&
+        power.position.value === 1 &&
+        !lowWater.value &&
+        (wash.value?.pumpAllowed ?? true),
   );
   // Its water moving through the filter, the UV and the dosing.
   const flowing = computed(() =>
@@ -780,8 +793,11 @@ export function buildSpaPack(
   const HUM = 0.07;
   const doors = signal(doorGain(0));
   const humLevel = computed(() => HUM * doors.value);
-  const hum = machineTone('motor', signal(1), humLevel);
+  // Lighter, faster, against the drain while it washes.
+  const pumpRate = computed(() => wash.value?.pumpRate ?? 1);
+  const hum = machineTone('motor', pumpRate, humLevel);
   let humming = false;
+  let servoRunning = false;
   const bay: {
     what: 'jets' | 'air';
     runs: ReadonlySignal<boolean>;
@@ -790,7 +806,10 @@ export function buildSpaPack(
     on: boolean;
   }[] = [];
   const doorLamp = computed(() => supplied.value && doorOpen.value);
-  const uvOn = computed(() => flowing.value && !doorOpen.value);
+  // Lit with its flow, after its warm-up once a wash is done.
+  const uvOn = computed(
+    () => flowing.value && !doorOpen.value && (wash.value?.uvReady ?? true),
+  );
   (
     [
       ['PUMP RUN', 'green', running],
@@ -937,14 +956,26 @@ export function buildSpaPack(
       }
       const moving = flowing.value;
       pump.update(delta, on);
+      // Its programme's state now, and its servo valves heard as they move.
+      wash.value = washBinding?.signals() ?? null;
+      const servos = !!wash.value?.servos;
+      if (servos !== servoRunning) {
+        servoRunning = servos;
+        partAudio.hold(filter.group, servos ? SERVO_WHIRR : null, filter.group);
+        if (!servos) partAudio.play(VALVE_STOP, filter.group);
+      }
       // Its gauge: the pump's pressure on it, filtering or washing.
-      filter.update(delta, running.value ? WORKING : 0);
+      filter.update(
+        delta,
+        running.value ? (wash.value?.gaugeBar ?? WORKING) : 0,
+      );
       uv.update(delta, uvOn.value);
       // The jacuzzi's is plumbed to its external balance tank: its own
       // surge vessel disconnected, empty (`cabinetTanks`).
       vessel.update(delta, moving, jets ? DISCONNECTED_VESSEL.fill : undefined);
       exchanger.update();
-      dosing.update(delta, moving, 1.8, 7.3);
+      // Its peristaltic pumps stop while it washes.
+      dosing.update(delta, moving && (wash.value?.dosing ?? true), 1.8, 7.3);
       // Its mimic, as the world has its water (an exhibit: as if in service).
       const w = store?.world.value;
       const trial = external?.state();
@@ -965,6 +996,7 @@ export function buildSpaPack(
             (w ? w.pools[pool].temperature : ownSet)),
         setC: setting(),
         washLine: (jz?.filter ?? external?.filter)?.line(),
+        washing: !!wash.value?.washing,
         // What the filter's gauge inside reads: its working pressure while
         // it filters, or washes, nothing stopped.
         filterBar: running.value ? WORKING : 0,

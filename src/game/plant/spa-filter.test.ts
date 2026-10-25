@@ -8,6 +8,8 @@ import {
   spaFilterFlows,
   spaFilterLine,
   stepSpaFilter,
+  UV_WARM,
+  washSignals,
 } from './spa-filter';
 import type { SpaFilter } from './spa-filter';
 
@@ -71,5 +73,47 @@ describe('a spa cabinet’s filter', () => {
       1,
     );
     expect(spaFilterLine(washing)).toMatch(/^BACKWASH 2:\d\d$/);
+  });
+});
+
+describe('what a wash changes in its cabinet', () => {
+  it('moves its servos, stops its pump then runs it lighter, stops its dosing, heater and jets, and puts out its UV until it warms again', () => {
+    let f = actOnSpaFilter(newSpaFilter(SPA_FILTERS.jacuzzi), {
+      act: 'wash-now',
+    });
+    expect(washSignals(newSpaFilter(SPA_FILTERS.jacuzzi))).toMatchObject({
+      washing: false,
+      servos: false,
+      dosing: true,
+      uvReady: true,
+      gaugeBar: 0.7,
+    });
+    expect(washSignals(f)).toMatchObject({
+      washing: true,
+      servos: true,
+      pumpAllowed: false,
+      dosing: false,
+      heating: false,
+      jets: false,
+      uvReady: false,
+    });
+    f = run(f, PROGRAMME.stopping + 20, 24, 5, 1);
+    expect(washSignals(f)).toMatchObject({
+      servos: false,
+      pumpAllowed: true,
+      pumpRate: 1.08,
+      gaugeBar: 0.45,
+    });
+    expect(washSignals(f).murk).toBeGreaterThan(0.5);
+    f = run(f, PROGRAMME.backwash + PROGRAMME.rinse - 20, 24, 5, 1);
+    // Back to filtering: the servos move back, the UV warming up.
+    expect(washSignals(f)).toMatchObject({
+      washing: false,
+      servos: true,
+      dosing: true,
+      uvReady: false,
+    });
+    f = run(f, UV_WARM, 24, 5, 1);
+    expect(washSignals(f)).toMatchObject({ servos: false, uvReady: true });
   });
 });

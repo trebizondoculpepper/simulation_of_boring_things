@@ -44,3 +44,33 @@ export const PNEUMATIC_STROKE: LoopRecipe = (context, out) => {
   };
   return [air];
 };
+
+/**
+ * A small servo valve's electric actuator travelling (the spa cabinets'
+ * wash, the owner, 2026-10-25): a geared motor's thin whine, a little
+ * rough, under a soft hiss.
+ */
+export const SERVO_WHIRR: LoopRecipe = (context, out) => {
+  const motor = context.createOscillator();
+  motor.type = 'sawtooth';
+  motor.frequency.value = 410;
+  const wobble = context.createOscillator();
+  wobble.frequency.value = 23;
+  const depth = context.createGain();
+  depth.gain.value = 9;
+  wobble.connect(depth).connect(motor.frequency);
+  const tone = context.createBiquadFilter();
+  tone.type = 'bandpass';
+  tone.frequency.value = 900;
+  tone.Q.value = 1.2;
+  const gain = context.createGain();
+  gain.gain.value = 0.02;
+  motor.connect(tone).connect(gain).connect(out);
+  motor.start();
+  wobble.start();
+  motor.onended = () => {
+    wobble.stop();
+    for (const n of [motor, wobble, depth, tone, gain]) n.disconnect();
+  };
+  return [motor];
+};

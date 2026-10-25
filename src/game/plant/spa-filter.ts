@@ -11,7 +11,10 @@ import type { IdealFilterSpec, IdealFilterState } from './ideal-filter';
  * A packaged spa cabinet's filter and its automatic backwash (the owner,
  * 2026-10-25): the jacuzzi's and the foot spa's work the same way, the
  * jacuzzi's only bigger. Each is the ideal filter (`ideal-filter.ts`),
- * sized by its diameter, behind a multiport valve turned by an actuator.
+ * sized by its diameter. Inside, small servo-driven three-way valves (the
+ * owner, 2026-10-25: not a five-valve face, which is for bigger plant)
+ * turn its pump's flow between the spa and the drain, and the bed's way
+ * through.
  * Its programme runs a backwash on its schedule, set by its MODE button
  * (every 24, 12 or 6 hours, or off), or at once by WASH NOW: the pump
  * stops, the valve turns to BACKWASH and the pump runs the filter in
@@ -59,9 +62,54 @@ export const newSpaFilter = (
   bed: newIdealFilter(),
   schedule,
   phase: 'filter',
-  phaseTime: 0,
+  // In service from the start: its UV long since warm.
+  phaseTime: UV_WARM,
   sinceWash: 0,
 });
+
+/** A UV lamp's warm-up after its flow returns, s. */
+export const UV_WARM = 30;
+/** Its servo valves' travel, s: during the stop at the start of a wash, and after it, back to filtering. */
+export const SERVO_TRAVEL = 6;
+
+/**
+ * What a wash changes in its cabinet, beside the water's way (the owner,
+ * 2026-10-25): its servo valves move at the start (in the stop) and the
+ * end (back to filtering); its pump stops for the stop, then runs on
+ * through the backwash and rinse, against the drain's lighter load; its
+ * dosing pumps stop (dosing what goes to drain wastes chemical); its UV
+ * goes out with no flow through it and warms up again after; its heater
+ * stays off; its jets and air are refused; its filter's gauge reads the
+ * wash's pressures; its WASH lamp lights. Pure.
+ */
+export function washSignals(f: SpaFilter) {
+  const washing = f.phase !== 'filter';
+  return {
+    washing,
+    /** Its servo valves travelling now. */
+    servos:
+      f.phase === 'stopping' ||
+      (f.phase === 'filter' && f.phaseTime < SERVO_TRAVEL),
+    /** Its pump's motor let run: not in the stop. */
+    pumpAllowed: f.phase !== 'stopping',
+    /** Its pump's sound: lighter, faster, against the drain. */
+    pumpRate: washing && f.phase !== 'stopping' ? 1.08 : 1,
+    dosing: !washing,
+    heating: !washing,
+    jets: !washing,
+    /** Its UV lit: with its flow back, after its warm-up. */
+    uvReady: !washing && f.phaseTime >= UV_WARM,
+    /** Its filter's gauge, bar, while its pump runs. */
+    gaugeBar: { filter: 0.7, backwash: 0.45, rinse: 0.6, stopping: 0 }[f.phase],
+    /** Its sight glass, if it shows one: the backwash murky, the rinse clearing. */
+    murk:
+      f.phase === 'backwash'
+        ? Math.max(0.2, 1 - f.phaseTime / PROGRAMME.backwash)
+        : f.phase === 'rinse'
+          ? 0.2 * (1 - f.phaseTime / PROGRAMME.rinse)
+          : 0,
+  };
+}
 
 export type SpaFilterAction = { act: 'mode' } | { act: 'wash-now' };
 

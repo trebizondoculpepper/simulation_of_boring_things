@@ -48,6 +48,8 @@ export interface CabinetMimicState {
   washLine?: string;
   /** Its filter's pressure, bar, as its gauge inside reads it: the display's third page. */
   filterBar?: number;
+  /** Its filter washing: its WASH lamp. */
+  washing?: boolean;
 }
 
 /** The LCD's strip under the print, and the foot spa's DRAINING and FILLING strip under that, m from the plate's middle. */
@@ -201,6 +203,8 @@ export function createCabinetMimic(
     pump: at(xs.pump, yLoop + 0.025, '#4cff6a'),
     uv: at(xs.uv, yLoop + 0.025, '#4aa8ff'),
     heat: at(xs.hx, yLoop + 0.03, '#ffb02a'),
+    // Its WASH lamp, by its filter.
+    wash: at(xs.filter, yLoop + 0.025, '#ffb02a'),
     ...(drainAndMakeUp
       ? {
           drain: at(xs.spa - 0.01, yTop + 0.018, '#ff3b24'),
@@ -343,6 +347,7 @@ export function createCabinetMimic(
       leds.pump.set(s.pump);
       leds.uv.set(s.uv);
       leds.heat.set(s.heat);
+      leds.wash.set(!!s.washing);
       leds.drain?.set(!!s.drain);
       leds.makeUp?.set(!!s.makeUp);
       statusLeds?.drain.set(!!s.drain);
