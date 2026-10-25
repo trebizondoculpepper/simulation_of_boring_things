@@ -17,6 +17,10 @@ The owner, 2026-10-25: besides its volume, and its pressure and temperature, wat
 
 Water chemistry is not simulated for every water. The heating loop (LTHW), the domestic hot water and the chilled water carry their temperature alone (`ThermalWater`), since their chemistry does not matter to normal operations; so may other parts of the simulation where it does not. The full condition is for the treated waters: the pools', the mains', the drains'.
 
+## The owner's ruling: packaged cabinets are black boxes (2026-10-25)
+
+The jacuzzi's and the foot spa's cabinets are modelled as black boxes: their internal components (pump, filter, valve, heater, UV, dosing) are not separate parts of the model. Each cabinet's physics and chemistry are driven by its own internal state (its programme, its filter's bed, its water's condition) and its inputs. The two are the same product at two sizes, with one control panel; the jacuzzi adds an auxiliary panel for its jets and blower.
+
 ## The design
 
 1. **One value: the water's condition.** A small immutable record carried by every body of water and every flow:

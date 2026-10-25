@@ -1,8 +1,20 @@
+import {
+  SPA_FILTERS,
+  actOnSpaFilter,
+  filtering,
+  newSpaFilter,
+  spaFilterFlows,
+  stepSpaFilter,
+} from './spa-filter';
+import type { SpaFilterAction } from './spa-filter';
 import { createGraph, getGraphIssues } from '@statelyai/graph';
 import {
   createExperimentalSink,
   createExperimentalSource,
 } from './experimental-source';
+
+/** The foot spa's circulation, m³/h. */
+export const FOOT_SPA_FLOW = 12;
 
 /** A deliberately simple vessel for testing a real machine against ideal services. */
 export const IDEAL_POOL = {
@@ -244,6 +256,11 @@ export function createIdealFootSpaDemo() {
   let filling = false;
   let draining = false;
   let running = false;
+  // Its filter and its wash programme, as the jacuzzi's (`spa-filter.ts`),
+  // and the dirt in its water, g/m³: soiled to start with.
+  let filter = newSpaFilter(SPA_FILTERS.footSpa);
+  let dirt = 5;
+  let washed = 0;
   return {
     graph: idealFootSpaGraph,
     sources: { makeup, heat, mains },
@@ -261,7 +278,14 @@ export function createIdealFootSpaDemo() {
         running,
         chlorine: 1.2,
         ph: 7.3,
+        filter,
+        dirt,
+        washed,
       };
+    },
+    /** Its filter's MODE, or WASH NOW. */
+    filterAction: (a: SpaFilterAction) => {
+      filter = actOnSpaFilter(filter, a);
     },
     setFill: (on: boolean) => {
       fillOpen = on;
@@ -302,7 +326,32 @@ export function createIdealFootSpaDemo() {
       filling = litres > before && incoming > 0;
       draining = removed > 0;
       running = powerOn && litres >= 60 && mains.remaining() > 0;
-      if (running && celsius < setpoint && heat.remaining() > 0) {
+      // Its pump through its filter: to the spa while it filters, to the
+      // drain while it washes.
+      const pump = running ? FOOT_SPA_FLOW : 0;
+      const through = spaFilterFlows(filter, pump, dirt);
+      filter = stepSpaFilter(filter, pump, dirt, dt);
+      if (through.toWaste > 0) {
+        const out =
+          drain.accept(
+            Math.min(litres / 1000, (through.toWaste * dt) / 3600),
+            dt,
+          ) * 1000;
+        litres -= out;
+        washed += out;
+        draining = draining || out > 0;
+      }
+      if (through.toSpa > 0 && litres > 0)
+        dirt -= Math.min(
+          dirt,
+          ((dirt - through.outDirt) * through.toSpa * dt) / 3.6 / litres,
+        );
+      if (
+        running &&
+        filtering(filter) &&
+        celsius < setpoint &&
+        heat.remaining() > 0
+      ) {
         const primary = heat.draw((10 * dt) / 3600, dt);
         heatSink.accept(primary, dt);
         celsius = Math.min(setpoint, celsius + 0.008 * dt);

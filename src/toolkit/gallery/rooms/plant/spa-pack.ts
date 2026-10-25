@@ -307,6 +307,14 @@ export interface SpaPackDemoBinding {
   };
   setPower(on: boolean): void;
   setSetpoint(celsius: number): void;
+  /** Its filter's wash programme, where it has one (`spa-filter.ts`). */
+  filter?: SpaFilterBinding;
+}
+
+/** A cabinet's filter programme, as its panel works it: its display line and MODE. */
+export interface SpaFilterBinding {
+  line(): string;
+  mode(): void;
 }
 
 /**
@@ -327,6 +335,8 @@ export interface JacuzziCabinetBinding {
   setSetpoint(celsius: number): void;
   /** Heat going into its water. */
   heating(): boolean;
+  /** Its filter's wash programme, where it has one (`spa-filter.ts`). */
+  filter?: SpaFilterBinding;
 }
 
 /** The jacuzzi's cabinet as the world has it. */
@@ -632,7 +642,9 @@ export function buildSpaPack(
   const panelNow = (doorOpen = false) => jz?.panel(doorOpen) ?? null;
   const mimic = createCabinetMimic(kit, {
     drainAndMakeUp: !jets,
-    display: jets ? 'lcd' : 'led',
+    // One display on both, the maker's dot-matrix (the owner, 2026-10-25).
+    display: 'lcd',
+    onMode: () => (jz?.filter ?? external?.filter)?.mode(),
     parts,
     onSet: (step) => {
       const celsius = clampSetpoint(setting() + step);
@@ -957,6 +969,7 @@ export function buildSpaPack(
             trial?.celsius ??
             (w ? w.pools[pool].temperature : ownSet)),
         setC: setting(),
+        washLine: (jz?.filter ?? external?.filter)?.line(),
         ...(jets
           ? {
               lines:
@@ -971,7 +984,22 @@ export function buildSpaPack(
                       ] as const)
                     : null,
             }
-          : {}),
+          : {
+              // The foot spa's, as the jacuzzi's: its water and its state.
+              lines: supplied.value
+                ? ([
+                    `${(trial?.celsius ?? (w ? w.pools[pool].temperature : ownSet)).toFixed(1)}C  SET ${setting().toFixed(1)}`.padEnd(
+                      16,
+                    ),
+                    (trial?.draining || lineup?.draining
+                      ? 'DRAINING'
+                      : on
+                        ? 'RUNNING  UV ON'
+                        : 'STOPPED'
+                    ).padEnd(16),
+                  ] as const)
+                : null,
+            }),
       });
       mimic.update(delta);
     },

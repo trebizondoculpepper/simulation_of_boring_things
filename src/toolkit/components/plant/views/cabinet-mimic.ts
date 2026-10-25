@@ -44,6 +44,8 @@ export interface CabinetMimicState {
   setC: number;
   /** With an LCD: its two lines, or nothing while it has no power. */
   lines?: readonly [string, string] | null;
+  /** Its filter's wash programme, for its display's second page (`spa-filter.ts`). */
+  washLine?: string;
 }
 
 /** How long the readout shows the setting after the last press, s. */
@@ -57,6 +59,7 @@ export function createCabinetMimic(
     onSet,
     parts = createPartSet(),
     display = 'led',
+    onMode,
   }: {
     width?: number;
     drainAndMakeUp?: boolean;
@@ -66,6 +69,8 @@ export function createCabinetMimic(
     onSet?: (step: number) => void;
     /** The panel's parts its buttons join, to be worked with the rest. */
     parts?: ReturnType<typeof createPartSet>;
+    /** Its MODE pressed: the filter's wash schedule stepped. */
+    onMode?: () => void;
   } = {},
 ) {
   const t = plantTools(kit);
@@ -279,6 +284,29 @@ export function createCabinetMimic(
     button.object.scale.setScalar(0.7);
     group.add(button.object);
   }
+  // Under the display, its DISPLAY (what it shows: the status, then the
+  // filter's wash) and MODE (the wash's schedule): the same on every
+  // cabinet of this maker's (the owner, 2026-10-25).
+  let page = 0;
+  if (lcd)
+    (
+      [
+        ['DISPLAY', () => (page = (page + 1) % 2), -0.035],
+        ['MODE', () => onMode?.(), 0.035],
+      ] as const
+    ).forEach(([legend, action, dx]) => {
+      const button = parts.add(
+        pushButton(kit, {
+          colour: 'black',
+          legend,
+          name: `Spa set ${legend.toLowerCase()} button`,
+          action,
+        }),
+      );
+      button.object.position.set(shownX + dx, -0.075, 0.002);
+      button.object.scale.setScalar(0.7);
+      group.add(button.object);
+    });
   // Over the readout, clear of the print.
   const setLamp = at(width / 2 - 0.05, 0.06, '#ffb02a');
   const setMark = createMicroLabel(kit, 'SET', {
@@ -308,7 +336,9 @@ export function createCabinetMimic(
         const lines = s.lines
           ? setting
             ? [`SET ${s.setC.toFixed(1)}C`.padEnd(16), s.lines[1]]
-            : [...s.lines]
+            : page === 1 && s.washLine
+              ? ['FILTER WASH'.padEnd(16), s.washLine.slice(0, 16).padEnd(16)]
+              : [...s.lines]
           : null;
         const key = lines ? lines.join('|') : '';
         if (key !== lastLines) {

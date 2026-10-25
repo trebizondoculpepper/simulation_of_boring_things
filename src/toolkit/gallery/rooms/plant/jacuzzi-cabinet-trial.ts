@@ -23,6 +23,7 @@ import {
 } from '../../../../game/plant/jacuzzi-trial';
 import type { TrialAction } from '../../../../game/plant/jacuzzi-trial';
 import { buildSpaPack } from './spa-pack';
+import { spaFilterLine } from '../../../../game/plant/spa-filter';
 import type { JacuzziCabinetBinding } from './spa-pack';
 
 /** What this room is for, printed on its title card. */
@@ -58,6 +59,11 @@ const binding: JacuzziCabinetBinding = {
   power: () => state.value.cabinet.power,
   setPower: (on) => act({ act: 'cabinet', action: { act: 'power', on } }),
   reset: () => act({ act: 'cabinet', action: { act: 'reset' } }),
+  // Its filter's wash programme (`spa-filter.ts`): the same as the foot spa's.
+  filter: {
+    line: () => spaFilterLine(state.value.filter),
+    mode: () => act({ act: 'filter', action: { act: 'mode' } }),
+  },
   runs: () => trialRuns(state.value),
   toggle: (what) => act({ act: 'toggle', what }),
   waterC: () => state.value.celsius,

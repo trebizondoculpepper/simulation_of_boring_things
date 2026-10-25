@@ -20,6 +20,8 @@ import {
 } from '../../../../game/plant/ideal-pool';
 import { spaPackDemoExhibit } from './spa-pack';
 
+import { spaFilterLine } from '../../../../game/plant/spa-filter';
+
 export const PURPOSE =
   'An isolated foot spa trial. Open MAKE-UP to fill the square ideal pool, turn on its Lidoluxe cabinet to heat and circulate it, then open DRAIN to empty it. The pool display and water quality sign read the same simulation.';
 export const FINISH = { wall: '#cbd3d0', floor: '#929a97' };
@@ -29,6 +31,13 @@ let demo = createIdealFootSpaDemo();
 export function prepareRoom() {
   demo = createIdealFootSpaDemo();
 }
+// For trying it from the console: `idealFootSpa.demo.filterAction({ act: 'wash-now' })`.
+if (typeof window !== 'undefined')
+  (window as unknown as { idealFootSpa?: unknown }).idealFootSpa = {
+    get demo() {
+      return demo;
+    },
+  };
 
 const places = [
   { x: 0, z: -1.5, yaw: 0, y: 0 },
@@ -271,6 +280,11 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     state: () => demo.state,
     setPower: (on) => demo.setPower(on),
     setSetpoint: (v) => demo.setSetpoint(v),
+    // Its filter's wash programme: the same as the jacuzzi's (`spa-filter.ts`).
+    filter: {
+      line: () => spaFilterLine(demo.state.filter),
+      mode: () => demo.filterAction({ act: 'mode' }),
+    },
   }),
   make(
     'demo.makeup',
