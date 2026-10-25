@@ -25,7 +25,9 @@ export type StatusPolicy =
   | 'pump-set'
   | 'cabinet'
   | 'booster'
-  | 'switch';
+  | 'switch'
+  /** A gas detector: its reading. */
+  | 'gas';
 
 /**
  * How a kind is described: an isolating valve by what it isolates, an
@@ -104,7 +106,7 @@ export const PLACED_KINDS = {
   },
   'ozone-monitor': {
     type: 'Ozone-in-air monitor',
-    status: 'none',
+    status: 'gas',
     code: 'GD',
     class: 'plant',
     purpose: 'Monitors room air for ozone and raises a warning and alarm.',

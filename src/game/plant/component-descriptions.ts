@@ -1,3 +1,5 @@
+import { GAS_ZONES } from './gas';
+import type { GasZoneId } from './gas';
 import { MOTORS, POOL_MOTORS } from './motor-starters';
 import type { MotorTag } from './motor-starters';
 import { POOL_IDS } from './pools';
@@ -36,7 +38,9 @@ export type StatusBinding =
   | { cabinet: 'jacuzzi' }
   | { part: string }
   /** A valve, by its tag. */
-  | { valve: string };
+  | { valve: string }
+  /** A gas detector, by its room's gas zone. */
+  | { gasZone: GasZoneId };
 
 /** An item's live state, resolved from the world, ready for its kind's wording. */
 export type ResolvedStatus =
@@ -52,7 +56,8 @@ export type ResolvedStatus =
     }
   | { policy: 'booster'; running: boolean; tripped: boolean }
   | { policy: 'switch'; on: boolean }
-  | { policy: 'valve'; open: boolean };
+  | { policy: 'valve'; open: boolean }
+  | { policy: 'gas'; ppm: number };
 
 /** What a valve's link in its room's enhanced network says it isolates, in a description's words. */
 export interface ValveRoute {
@@ -126,6 +131,10 @@ export function statusBindingFor(subject: {
     case 'gas-ball-valve':
     case 'valve':
       return { valve: subject.tag };
+    case 'ozone-monitor':
+      return subject.room && subject.room in GAS_ZONES
+        ? { gasZone: subject.room as GasZoneId }
+        : undefined;
     case 'cabinet-switch':
       return { part: subject.tag };
     default:
@@ -244,6 +253,9 @@ export function formatStatus(
       }[resolved.state];
     case 'switch':
       return onOff(resolved.on);
+    case 'gas':
+      // As its detector reads it, in ppm (its range is 0–1 ppm).
+      return `reading ${resolved.ppm.toFixed(2)} ppm`;
   }
 }
 

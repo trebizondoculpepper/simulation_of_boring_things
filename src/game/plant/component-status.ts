@@ -71,6 +71,8 @@ export function resolveStatus(
               : 'off',
     };
   }
+  if ('gasZone' in b)
+    return { policy: 'gas', ppm: world.gas[b.gasZone].state.reading };
   if ('valve' in b) {
     // An installed valve's command, or an identified part's state.
     // Its key: the register's asset id, or its model fitting's id.

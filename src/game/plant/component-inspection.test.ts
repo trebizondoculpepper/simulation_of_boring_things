@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { inspectComponent } from './component-inspection';
-import { newWorld } from '../world';
+import { applyAction, newWorld, stepWorld } from '../world';
 
 describe('the information overlay’s lines', () => {
   it('gives a valve’s tag, name and what it isolates', () => {
@@ -39,5 +39,24 @@ describe('the information overlay’s lines', () => {
       inspectComponent({ tag: 'DEV-FT1', name: 'Demonstration flowmeter' }),
     ).toEqual({ key: 'DEV-FT1', title: 'DEV-FT1: Demonstration flowmeter' });
     expect(inspectComponent({})).toBeNull();
+  });
+
+  it('gives an ozone monitor its live reading, rising with a leak', () => {
+    const quiet = inspectComponent({ tag: 'PL1-GD1' }, newWorld());
+    expect(quiet?.detail).toBe(
+      '1st Ozone-in-air monitor in PL1, currently reading 0.00 ppm',
+    );
+    let w = applyAction(newWorld(), {
+      type: 'gas/leak',
+      zone: 'plant_pool_01',
+      gramsPerHour: 5,
+    });
+    w = stepWorld(w, 600);
+    const reading = Number(
+      /reading ([\d.]+) ppm/.exec(
+        inspectComponent({ tag: 'PL1-GD1' }, w)!.detail!,
+      )![1],
+    );
+    expect(reading).toBeGreaterThan(0);
   });
 });

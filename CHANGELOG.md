@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Hovering over a plant room's ozone-in-air monitor (PL1-GD1, PL2-GD1) gives its live reading, as its detector reads it: "1st Ozone-in-air monitor in PL1, currently reading 0.00 ppm" (the owner, 2026-10-25).
 - Planned repeatable mission 067 for a healthy New Game: a maintained operating contract, a dated day-long baseline, and an opt-in read-only audit that records the current model’s trajectory and annunciator indications. Runtime defaults are unchanged by this research.
 
 - The lounge pool's filter mimic (prompt 066, `lounge-filter-mimic.ts`): PL1-CP1's fascia is now a schematic of the lounge battery, grouped by filter, every pipe's LEDs chasing its flow, each filter's four valves round it with OPEN and SHUT lamps and buttons, each filter's signed flow readout, and P-201A and P-201B with RUN, TRIP and NOT AUTO lamps and START and STOP. One component (`views/lounge-filter-mimic.ts`) for PL1-CP1 and the control room, whose wall is still to be agreed; HAND · OFF · AUTO and RESET stay on PL1-CP1's doors. Laid out against a new footprint check (`mimic-layout.ts`): nothing overlaps, 30 mm round every button. Shown working in dev39 against a world of its own.
