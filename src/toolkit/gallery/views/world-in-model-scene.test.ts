@@ -1,3 +1,4 @@
+import { BoxGeometry, Mesh } from 'three';
 import {
   afterEach,
   beforeEach,
@@ -117,8 +118,12 @@ describe('everything the scene draws is in the model (prompt 064)', () => {
     ).toEqual([]);
   });
 
-  it('names what is not bound, in a room not yet built from its model', () => {
-    const unbound = unboundInScene('air_plant', built('air_plant'));
-    expect(unbound.length).toBeGreaterThan(0);
+  it('names anything drawn that is neither bound nor decorative', () => {
+    // Every room is now in its model: a stray, unmarked mesh is caught.
+    const scene = built('air_plant');
+    const stray = new Mesh(new BoxGeometry(1, 1, 1));
+    stray.name = 'Stray box';
+    scene.add(stray);
+    expect(unboundInScene('air_plant', scene)).toEqual(['Stray box']);
   });
 });

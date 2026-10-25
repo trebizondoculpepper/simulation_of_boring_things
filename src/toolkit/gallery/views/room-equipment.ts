@@ -1,3 +1,4 @@
+import { decorativeKind } from '../logic/world-in-model';
 import { retiredFrom } from '../logic/retired-rooms';
 import { olympicRoom } from '../logic/olympic-plumbing';
 import { INSTALLED_ASSET_IDS } from '../../../game/plant/installed-asset-ids';
@@ -863,9 +864,9 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
     object.position.set(p.x, floorY + p.y, p.z);
     object.rotation.y = p.yaw;
     object.name ||= p.item.label;
-    // A sign does nothing: set decoration (prompt 064).
-    if (p.item.key.startsWith('sign:'))
-      markComponent(object, { decorative: true });
+    // A sign, furniture, or what the owner ruled so: set decoration (prompt 064).
+    const decorative = decorativeKind(p.item.key);
+    if (decorative) markComponent(object, { decorative: true });
     // Its identity, for the information overlay (prompt 061).
     const installed =
       INSTALLED_ASSET_IDS[`${room}|${p.item.key}|${p.item.label}`];
@@ -878,6 +879,7 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
       );
       markComponent(object, {
         tag: installed.tag,
+        ...(decorative ? { decorative: true } : {}),
         ...(node ? { model: { node } } : {}),
       });
     }

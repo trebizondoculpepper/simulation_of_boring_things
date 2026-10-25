@@ -1,3 +1,4 @@
+import { markComponent } from '../../components/core/views/component-identity';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { Material } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -54,9 +55,11 @@ export function createAirPlantStructure(
     const mesh = new Mesh(new BoxGeometry(sx, sy, sz), m);
     mesh.position.set(x, floorY + y, z);
     mesh.name = name;
-    group.add(mesh);
+    into.add(mesh);
     return mesh;
   };
+  /** Where `box` draws: the room, or the duct being drawn. */
+  let into: Group = group;
   const galv = paint('#aeb7b8', 0.45, 0.6);
   const lagged = paint('#e3e5e1', 0.7, 0.05);
   const flangeGalv = paint('#9da2a3', 0.45, 0.6);
@@ -66,6 +69,13 @@ export function createAirPlantStructure(
   const room = airBox();
   for (const d of airDucts(placed, room)) drawDuct(d);
   function drawDuct(d: Duct) {
+    // Each duct its own component, its link in the room's model (prompt 064).
+    into = markComponent(new Group(), {
+      name: d.name,
+      model: { link: d.name },
+    });
+    into.name = d.name;
+    group.add(into);
     const warm = d.role === 'supply' || d.role === 'extract';
     const sheet = warm ? lagged : galv;
     const extra = warm ? 0.1 : 0;
@@ -123,8 +133,14 @@ export function createAirPlantStructure(
     );
   }
 
+  into = group;
   // ---- The gantries and the stair (`stair-run.ts`) -------------------------
-  group.add(createStairStructure(kit, gantries(room), floorY));
+  // Architecture, not plant: set decoration.
+  group.add(
+    markComponent(createStairStructure(kit, gantries(room), floorY), {
+      decorative: true,
+    }),
+  );
   // Every duct, deck and rail is still: drawn in a few meshes, cell by
   // cell, so what is out of sight can be culled.
   group.updateMatrixWorld(true);

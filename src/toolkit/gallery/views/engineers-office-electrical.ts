@@ -1,3 +1,4 @@
+import { markComponent } from '../../components/core/views/component-identity';
 import { computed, signal } from '@preact/signals-core';
 import { Group } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -30,7 +31,8 @@ export function createEngineersOfficeElectrical(kit: PanelKit) {
   const line = (name: string, points: [number, number, number][]) => {
     const pipe = createPipe('steel-screwed', 0.021, points);
     pipe.name = name;
-    group.add(pipe);
+    // Each conduit its link in the room's model (prompt 064).
+    group.add(markComponent(pipe, { name, model: { link: name } }));
   };
   // Two legs leave the room switch-fuse, travel around the walls above the
   // cupboards, and return to it. Socket drops branch from that ring.
@@ -80,6 +82,7 @@ export function createEngineersOfficeElectrical(kit: PanelKit) {
       twinSocket(kit, { left, right, live, metalclad: true, testers: false }),
     );
     part.object.name = socket.name;
+    markComponent(part.object, { name: socket.name });
     part.object.position.set(socket.x, 0.55, socket.z);
     part.object.rotation.y = socket.yaw;
     group.add(part.object);
@@ -93,6 +96,7 @@ export function createEngineersOfficeElectrical(kit: PanelKit) {
   const pir = parts.add(occupancySensor(kit, { occupied: sensing }));
   const pirMount = new Group();
   pirMount.name = 'Office PIR light switch';
+  markComponent(pirMount, { name: pirMount.name });
   pirMount.position.set(1.15, 1.9, south);
   pirMount.rotation.y = Math.PI;
   pir.object.rotation.x = -Math.PI / 2;

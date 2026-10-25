@@ -1,6 +1,9 @@
 import { Mesh } from 'three';
 import type { Object3D } from 'three';
-import { owningComponent } from '../../components/core/views/component-identity';
+import {
+  componentOf,
+  owningComponent,
+} from '../../components/core/views/component-identity';
 import {
   bindingForName,
   bindingForTag,
@@ -34,6 +37,19 @@ export function unboundInScene(
     const owner = owningComponent(o);
     const identity = owner?.identity;
     if (identity?.decorative) return;
+    // A named part of something (a cupboard's labels, a switch's sensor):
+    // decoration if that is, in the model if that is.
+    if (identity && !identity.tag && !identity.model)
+      for (let p = owner!.object.parent; p; p = p.parent) {
+        const whole = componentOf(p);
+        if (!whole) continue;
+        if (whole.decorative) return;
+        const bound =
+          (whole.model && isBound(whole.model, model)) ||
+          (whole.name &&
+            isBound(bindingForName(room, whole.name) ?? { node: '' }, model));
+        if (bound) return;
+      }
     if (identity?.model && isBound(identity.model, model)) return;
     // A thing marked by its plate's tag alone: bound if its tag names something in the model.
     const byTag = identity?.tag ? bindingForTag(room, identity.tag) : undefined;

@@ -12,6 +12,14 @@ import { LOUNGE_SCHEMATIC } from './lounge-schematic';
 import { WET_HALL_SCHEMATIC } from './wet-hall-schematic';
 import { BOILER_HOUSE_SCHEMATIC } from './boiler-house-schematic';
 import { SWITCH_ROOM_SCHEMATIC } from './switch-room-schematic';
+import {
+  ACID_STORE_SCHEMATIC,
+  AIR_PLANT_SCHEMATIC,
+  CONTROL_ROOM_SCHEMATIC,
+  ENGINEERS_OFFICE_SCHEMATIC,
+  HYPO_STORE_SCHEMATIC,
+  LOADING_BAY_SCHEMATIC,
+} from './back-room-schematics';
 
 /**
  * The rooms' schematics (prompt 064): for each room built from its model,
@@ -57,6 +65,16 @@ export const SCHEMATICS: Readonly<Record<string, RoomSchematic>> = {
   [WET_HALL_SCHEMATIC.room]: WET_HALL_SCHEMATIC,
   [BOILER_HOUSE_SCHEMATIC.room]: BOILER_HOUSE_SCHEMATIC,
   [SWITCH_ROOM_SCHEMATIC.room]: SWITCH_ROOM_SCHEMATIC,
+  ...Object.fromEntries(
+    [
+      HYPO_STORE_SCHEMATIC,
+      ACID_STORE_SCHEMATIC,
+      LOADING_BAY_SCHEMATIC,
+      AIR_PLANT_SCHEMATIC,
+      CONTROL_ROOM_SCHEMATIC,
+      ENGINEERS_OFFICE_SCHEMATIC,
+    ].map((s) => [s.room, s]),
+  ),
 };
 
 const expanded = new Map<string, Expansion>();

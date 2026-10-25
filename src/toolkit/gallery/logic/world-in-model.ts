@@ -132,10 +132,23 @@ export function isBound(binding: Binding | undefined, model?: RoomModel) {
 
 const DECORATIVE = { binding: { decorative: true } as const };
 
-const decorativeKind = (key: string) => {
+/**
+ * Kinds the owner has ruled set decoration (2026-10-22): the stores' safety
+ * showers, spill kits and PPE cabinets, and the control room's water-test kit.
+ */
+const RULED_DECORATIVE: ReadonlySet<string> = new Set([
+  'safety-shower',
+  'spill-kit',
+  'ppe-cabinet',
+  'water-test-kit',
+]);
+
+/** Whether a placed item, by its key, is set decoration. */
+export const decorativeKind = (key: string) => {
   const kind = key.split(':')[0];
   return (
     kind === 'sign' ||
+    RULED_DECORATIVE.has(kind) ||
     (Object.hasOwn(PLACED_KINDS, kind) &&
       PLACED_KINDS[kind as keyof typeof PLACED_KINDS].class === 'decorative')
   );
