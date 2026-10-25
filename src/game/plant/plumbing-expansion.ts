@@ -69,6 +69,8 @@ export interface Fitting {
   given?: true;
   /** What it is for, in the schematic's words, where the schematic gives it. */
   role?: string;
+  /** How it is worked, where the schematic gives it. */
+  operator?: GivenFitting['operator'];
 }
 
 /**
@@ -86,6 +88,8 @@ export interface GivenFitting {
   normally: 'open' | 'closed';
   /** What it is for: "make-up isolation", "tank drain". */
   role?: string;
+  /** How it is worked, where the schematic says: by hand or by motor. */
+  operator?: 'lever' | 'chain' | 'motor' | 'solenoid';
 }
 
 export interface ExpandOptions {
@@ -221,6 +225,7 @@ export function expandForPlumbing(
       normally: g.normally,
       given: true,
       ...(g.role ? { role: g.role } : {}),
+      ...(g.operator ? { operator: g.operator } : {}),
     });
   }
   const add = (

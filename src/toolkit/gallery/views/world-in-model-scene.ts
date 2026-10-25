@@ -11,11 +11,21 @@ import { isBound, roomModel } from '../logic/world-in-model';
  * a test can name them and the binding can be corrected where the thing is
  * built. The scene is the drawing, so nothing it draws can be missed.
  */
-export function unboundInScene(room: string, root: Object3D): string[] {
+export function unboundInScene(
+  room: string,
+  root: Object3D,
+  /** Another room's things drawn in this one's scene (a corridor run): checked with that room. */
+  elsewhere: (o: Object3D) => boolean = () => false,
+): string[] {
   const model = roomModel(room);
   const found = new Map<string, number>();
+  const outside = (o: Object3D) => {
+    for (let p: Object3D | null = o; p; p = p.parent)
+      if (elsewhere(p)) return true;
+    return false;
+  };
   root.traverse((o) => {
-    if (!(o instanceof Mesh)) return;
+    if (!(o instanceof Mesh) || outside(o)) return;
     const owner = owningComponent(o);
     const identity = owner?.identity;
     if (identity?.decorative) return;

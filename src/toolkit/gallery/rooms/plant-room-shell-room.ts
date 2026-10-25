@@ -1,3 +1,8 @@
+import {
+  componentOf,
+  markComponent,
+} from '../../components/core/views/component-identity';
+import { schematicNodeOfKind } from '../../../game/plant/model-valves';
 import { createInspector } from '../views/inspect-pick';
 import { createZoneMusicRack } from '../../components/sound/parts/zone-music-rack';
 import { createMusicThroughWall } from '../../components/sound/parts/music-speaker';
@@ -636,6 +641,28 @@ export function buildPlantRoomContents(
   parts.add(equipmentDoors);
   if (tankDoors) parts.add(tankDoors);
   parts.add(door);
+  // The shell is architecture, set decoration (prompt 064), but for what
+  // works: its doors, named for themselves and not yet in the model, and
+  // its lights, marked where they are made.
+  markComponent(door.object, { name: 'Plant room door' });
+  markComponent(equipmentDoors.object, { name: 'Equipment doors' });
+  if (tankDoors)
+    markComponent(tankDoors.object, { name: 'Balance tank doors' });
+  for (const child of rooms.children)
+    if (!componentOf(child)) markComponent(child, { decorative: true });
+  // In the jacuzzi's plant room, what each thing is drawn from in its model.
+  const bind = <T extends Object3D>(object: T, kind: string): T => {
+    const room = equipment ?? (hall ? `plant_${hall}` : '');
+    const node = schematicNodeOfKind(room, kind);
+    return node
+      ? markComponent(object, { ...componentOf(object), model: { node } })
+      : object;
+  };
+  // Its lights, marked where they are made, its lighting zone's.
+  rooms.traverse((o) => {
+    if (componentOf(o)?.name === 'Wall batten light')
+      bind(o, 'plant-room-lights');
+  });
   // A hall's plant room's machines, placed (`logic/room-equipment.ts`).
   const machines = hall
     ? createRoomEquipment(kit, equipmentRoom!, plan.floor)
@@ -655,11 +682,11 @@ export function buildPlantRoomContents(
     hall === 'pool_03' ? createJacuzziFibreControl(kit) : null;
   if (jacuzziMimic) {
     jacuzziMimic.group.position.set(0, plan.floor + 1.8, -plan.hz + 0.025);
-    rooms.add(jacuzziMimic.group);
+    rooms.add(bind(jacuzziMimic.group, 'mimic-board'));
   }
   if (fibreControl) {
     fibreControl.group.position.set(-1.9, plan.floor + 1.8, -plan.hz + 0.025);
-    rooms.add(fibreControl.group);
+    rooms.add(bind(fibreControl.group, 'fibre-illuminator'));
   }
   if (hall === 'pool_03') {
     const c = JACUZZI_MUSIC_CABINET;
@@ -668,7 +695,7 @@ export function buildPlantRoomContents(
     );
     music.object.position.set(c.x, plan.floor + c.bottom, c.z);
     music.object.rotation.y = c.yaw;
-    rooms.add(music.object);
+    rooms.add(bind(music.object, 'music-rack'));
     // And the music itself, faintly, through the wall from the hall.
     parts.add(createMusicThroughWall(kit, bindJacuzziMusic(), JACUZZI_MUSIC));
   }

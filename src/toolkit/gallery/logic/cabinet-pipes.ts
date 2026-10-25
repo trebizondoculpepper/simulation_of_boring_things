@@ -1048,6 +1048,10 @@ function bindToModel(room: string, runs: CabinetRun[]): CabinetRun[] {
               id: valve.name,
               installed: true as const,
               name: valve.name,
+              // Worked as its schematic says.
+              ...(valve.operator === 'lever' || valve.operator === 'motor'
+                ? { operator: valve.operator }
+                : {}),
             },
           }
         : {}),

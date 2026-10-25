@@ -1,3 +1,4 @@
+import { markComponent } from '../toolkit/components/core/views/component-identity';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import type { Object3D } from 'three';
@@ -49,6 +50,8 @@ export function addWallBatten(
 ) {
   const fixture = new Group();
   fixture.name = 'sealed wall luminaire';
+  // A light: electrical, working, not scenery (prompt 064).
+  markComponent(fixture, { name: 'Wall batten light' });
   fixture.position.set(x, y, z);
   fixture.rotation.y =
     along === 'x'

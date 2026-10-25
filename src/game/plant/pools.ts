@@ -275,6 +275,8 @@ export interface JacuzziCirculation {
    * float valve gets no water, whatever its float calls for.
    */
   makeUpShut?: boolean;
+  /** Its drain valve open: its drain-down, owned by the valve (prompt 064). */
+  drainOpen?: boolean;
 }
 
 /** Whether each chemical is to be had: its store not run dry. */
@@ -430,7 +432,12 @@ export function stepPoolsWater(
     const room = `plant_${id}` as ServiceRoom;
     const old = pools[id];
     const drainDown =
-      id === 'pool_04' && footbath ? footbath.draining : old.drainDown;
+      id === 'pool_04' && footbath
+        ? footbath.draining
+        : id === 'pool_03' && jacuzzi?.drainOpen !== undefined
+          ? // Its drain valve owns it (prompt 064).
+            jacuzzi.drainOpen
+          : old.drainDown;
     const makeUpOpen =
       id === 'pool_04' && footbath
         ? footbath.makeUpOpen

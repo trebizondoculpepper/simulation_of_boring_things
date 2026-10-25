@@ -1,4 +1,7 @@
-import { markComponent } from '../../components/core/views/component-identity';
+import {
+  componentOf,
+  markComponent,
+} from '../../components/core/views/component-identity';
 import { schematicNodeOfKind } from '../../../game/plant/model-valves';
 import { createJacuzziDrainAudio } from '../views/jacuzzi-drain-audio';
 import { jacuzziSpeakerMounts } from '../logic/jacuzzi-music';
@@ -890,14 +893,24 @@ export function buildPoolHallContents(
   });
   // The hall itself is architecture: set decoration, outside the model
   // (prompt 064). Everything added to it below is marked for itself.
+  // (Its working fittings, its lights and gullies, are marked for
+  // themselves where they are made, and keep their marks.)
   for (const child of rooms.children)
-    markComponent(child, { decorative: true });
+    if (!componentOf(child)) markComponent(child, { decorative: true });
   // In the jacuzzi's room, what each thing is drawn from in its model.
   const bind = <T extends Object3D>(object: T, kind: string): T => {
     const node =
       id === 'pool_03' ? schematicNodeOfKind('plant_pool_03', kind) : undefined;
-    return node ? markComponent(object, { model: { node } }) : object;
+    return node
+      ? markComponent(object, { ...componentOf(object), model: { node } })
+      : object;
   };
+  // Its lights and deck gullies, marked where they are made, in its model.
+  rooms.traverse((o) => {
+    const name = componentOf(o)?.name;
+    if (name === 'Globe light') bind(o, 'hall-lights');
+    if (name === 'Deck gully') bind(o, 'deck-gully');
+  });
   const poolsideKit = createPanelKit();
   const fibreWall =
     id === 'pool_03'

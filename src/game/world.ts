@@ -763,8 +763,9 @@ export const jacuzziPlumbing = (world: World): CabinetPlumbing => {
     external: {
       fill: pool.balance,
       low: pool.tripped,
+      // Its make-up valve's state, the one source (prompt 064).
       filling:
-        pool.makeUp &&
+        jacuzziPaths(world.installedValves).makeUp &&
         poolMakeUpCalling('pool_03', pool) &&
         serviceAvailable(world.plant, 'wet_hall', 'water'),
     },
@@ -784,6 +785,8 @@ export const jacuzziFlow = (world: World): JacuzziCirculation => ({
   tankDrain: jacuzziPaths(world.installedValves).tankDrain,
   // Its tank's make-up isolating valve shut: its float gets no water.
   makeUpShut: !jacuzziPaths(world.installedValves).makeUp,
+  // Its drain valve open: its drain-down (prompt 064: the valve is the one source).
+  drainOpen: jacuzziPaths(world.installedValves).drain,
 });
 
 /**
@@ -873,7 +876,7 @@ export const jacuzziRuns = (world: World) =>
  * 2026-10-24).
  */
 export const jacuzziDischarging = (world: World) =>
-  world.pools.pool_03.drainDown &&
+  jacuzziPaths(world.installedValves).drain &&
   world.pools.pool_03.level > -poolDepth('pool_03') + 0.001;
 
 /**

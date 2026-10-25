@@ -1,3 +1,4 @@
+import { markComponent } from '../../core/views/component-identity';
 import {
   DoubleSide,
   Group,
@@ -28,6 +29,8 @@ export function createMetalGlobeLight(radius = 1.5): Group {
   });
   const fitting = new Group();
   fitting.name = 'metal and translucent globe';
+  // A light: electrical, working, not scenery (prompt 064).
+  markComponent(fitting, { name: 'Globe light' });
   const upper = new Mesh(
     new SphereGeometry(radius, 48, 16, 0, Math.PI * 2, 0, Math.PI / 2),
     metal,

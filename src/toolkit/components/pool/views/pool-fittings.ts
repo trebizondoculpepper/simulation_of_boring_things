@@ -1,3 +1,4 @@
+import { markComponent } from '../../core/views/component-identity';
 import {
   CanvasTexture,
   Group,
@@ -175,6 +176,8 @@ export function createDeckGully(
 ) {
   const group = new Group();
   group.name = 'Deck gully';
+  // A working drain fitting, not scenery: named for itself (prompt 064).
+  markComponent(group, { name: 'Deck gully' });
   const s = 0.15;
   t.box(group, m.steel, s, 0.006, 0.012, 0, -0.003, -s / 2 + 0.006);
   t.box(group, m.steel, s, 0.006, 0.012, 0, -0.003, s / 2 - 0.006);

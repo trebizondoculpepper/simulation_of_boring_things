@@ -12,6 +12,9 @@ import { createRoomEquipment } from './room-equipment';
 import { cabinetServices } from './cabinet-services';
 import { unboundInScene } from './world-in-model-scene';
 import { buildPoolHallContents } from '../rooms/pool-hall-room';
+import { buildPlantRoomContents } from '../rooms/plant-room-shell-room';
+import { shellPlan } from '../logic/shell-plan';
+import { POOL_HALLS } from '../logic/pool-halls';
 
 beforeEach(() => {
   // Enough of a browser for the rooms' builders: canvases to paint labels
@@ -62,15 +65,44 @@ function built(room: string) {
   return root;
 }
 
+/**
+ * Working things not yet in any model, awaiting the owner's ruling
+ * (prompt 063): the rooms' doors. Listed here so that nothing else can
+ * join them unnoticed.
+ */
+const AWAITING_RULING = ['Equipment doors', 'Plant room door'];
+
 describe('everything the scene draws is in the model (prompt 064)', () => {
-  it('the jacuzzi plant room: every mesh bound to its model, or decorative', () => {
+  it('the jacuzzi plant room’s machines and services: every mesh bound, or decorative', () => {
     expect(unboundInScene('plant_pool_03', built('plant_pool_03'))).toEqual([]);
+  });
+
+  it('the whole jacuzzi plant room, shell and all: only its doors await a ruling', () => {
+    const size = POOL_HALLS.pool_03.plantDoor!.size;
+    const room = buildPlantRoomContents(
+      shellPlan(size),
+      1,
+      size,
+      'pool_03',
+      {},
+    );
+    room.rooms.updateMatrixWorld(true);
+    expect(unboundInScene('plant_pool_03', room.rooms)).toEqual(
+      AWAITING_RULING,
+    );
   });
 
   it('the jacuzzi’s own room, the pool hall: every mesh bound, or decorative', () => {
     const hall = buildPoolHallContents('pool_03', 1, { gallery: false });
     hall.rooms.updateMatrixWorld(true);
-    expect(unboundInScene('plant_pool_03', hall.rooms)).toEqual([]);
+    // The corridor drawn on beyond its door is the corridor's, checked with it.
+    expect(
+      unboundInScene(
+        'plant_pool_03',
+        hall.rooms,
+        (o) => o.name === 'corridor run',
+      ),
+    ).toEqual([]);
   });
 
   it('names what is not bound, in a room not yet built from its model', () => {

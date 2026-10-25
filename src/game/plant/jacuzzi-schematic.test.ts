@@ -8,7 +8,14 @@ import {
 } from './jacuzzi-schematic';
 import { MODEL_VALVES } from './model-valves';
 import { JACUZZI_VALVES, jacuzziPaths } from './jacuzzi';
-import { applyAction, newWorld } from '../world';
+import {
+  advance,
+  applyAction,
+  jacuzziDischarging,
+  jacuzziPlumbing,
+  newWorld,
+} from '../world';
+import type { World } from '../world';
 
 describe('the jacuzzi plant room’s schematic (prompt 064)', () => {
   it('holds every valve: the plumber adds nothing', () => {
@@ -82,5 +89,54 @@ describe('the jacuzzi plant room’s schematic (prompt 064)', () => {
       open: false,
     });
     expect(back.installedValves[JACUZZI_VALVES.drain]).toBe(false);
+  });
+});
+
+describe('the jacuzzi’s valves are the one source of their states', () => {
+  const filling = (w: World) => {
+    const p = jacuzziPlumbing(w);
+    return p.tank === 'external' && p.external.filling;
+  };
+  /** The world with its balance tank low enough for its float to call for water. */
+  const calling = () => {
+    const w = newWorld();
+    return {
+      ...w,
+      pools: { ...w.pools, pool_03: { ...w.pools.pool_03, balance: 0.2 } },
+    };
+  };
+
+  it('fills again when the make-up shut by the old pool action is reopened at its valve', () => {
+    const shut = applyAction(calling(), {
+      type: 'pool/make-up',
+      pool: 'pool_03',
+      open: false,
+    });
+    expect(filling(shut)).toBe(false);
+    const reopened = applyAction(shut, {
+      type: 'plant/valve',
+      id: JACUZZI_VALVES.makeUp,
+      open: true,
+    });
+    expect(filling(reopened)).toBe(true);
+    // And the world, stepped on, keeps it so.
+    expect(advance(reopened, 1).pools.pool_03.makeUp).toBe(true);
+  });
+
+  it('drains down by its drain valve, whichever way it is opened, and stops when it is shut', () => {
+    const open = applyAction(newWorld(), {
+      type: 'plant/valve',
+      id: JACUZZI_VALVES.drain,
+      open: true,
+    });
+    expect(jacuzziDischarging(open)).toBe(true);
+    expect(advance(open, 1).pools.pool_03.drainDown).toBe(true);
+    const shut = applyAction(open, {
+      type: 'pool/drain-down',
+      pool: 'pool_03',
+      open: false,
+    });
+    expect(jacuzziDischarging(shut)).toBe(false);
+    expect(advance(shut, 1).pools.pool_03.drainDown).toBe(false);
   });
 });

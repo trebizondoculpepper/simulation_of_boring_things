@@ -30,6 +30,8 @@ export interface ModelValve {
   role: string;
   kind: 'isolating-valve' | 'power-isolator';
   normal: 'open' | 'closed';
+  /** How it is worked, as its schematic says. */
+  operator?: 'lever' | 'chain' | 'motor' | 'solenoid';
   /** What it isolates, in a description's words. */
   route: {
     from: string;
@@ -91,6 +93,7 @@ function roomValves(
         role: f.role ?? '',
         kind,
         normal: f.normally,
+        ...(f.operator ? { operator: f.operator } : {}),
         route: {
           from: words(node.get(link.sourceId)),
           to: words(node.get(link.targetId)),

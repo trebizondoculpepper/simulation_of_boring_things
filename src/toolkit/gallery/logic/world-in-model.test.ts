@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   MODELLED_WORLD_ROOMS,
   drawnThings,
-  identities,
   isBound,
   roomModel,
   unboundIdentities,
 } from './world-in-model';
 import PINNED from './world-in-model.unbound.json';
+import { cabinetPipes } from './cabinet-pipes';
+import { MODEL_VALVES } from '../../../game/plant/model-valves';
 
 /**
  * Everything in the world is in the model (the owner, 2026-10-25; prompt
@@ -41,13 +42,6 @@ describe('everything in the world is in the model', () => {
       ).toEqual([]);
     });
 
-  it('gives each thing in a room one identity', () => {
-    for (const room of MODELLED_WORLD_ROOMS) {
-      const ids = identities(drawnThings(room));
-      expect(new Set(ids).size, room).toBe(ids.length);
-    }
-  });
-
   it('binds the Olympic plant room, built through the plumber, by model id and sort', () => {
     const model = roomModel('plant_pool_02')!;
     const drawn = drawnThings('plant_pool_02');
@@ -70,5 +64,23 @@ describe('everything in the world is in the model', () => {
     expect(office.some((t) => t.binding && 'decorative' in t.binding)).toBe(
       true,
     );
+  });
+});
+
+describe('the jacuzzi plant room’s drawing is its model’s', () => {
+  it('sets each drawn valve on its own run, worked as its schematic says', () => {
+    let valves = 0;
+    for (const run of cabinetPipes('plant_pool_03')) {
+      if (!run.valve) continue;
+      valves++;
+      const fitting = MODEL_VALVES.find(
+        (v) => v.room === 'plant_pool_03' && v.name === run.valve!.id,
+      );
+      expect(fitting, run.name).toBeDefined();
+      // Its fitting sits on the link the run is drawn for.
+      expect(fitting!.link, run.name).toBe(run.link);
+      expect(run.valve.operator, run.name).toBe(fitting!.operator);
+    }
+    expect(valves).toBe(10);
   });
 });

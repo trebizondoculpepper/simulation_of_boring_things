@@ -51,6 +51,12 @@ export const JACUZZI_NODES: readonly SchematicNode[] = [
   { id: 'busbar', kind: 'busbar', name: 'Busbar' },
   { id: 'switch-fuse', kind: 'switch-fuse', name: 'Room supply switch-fuse' },
   { id: 'valve-panel', kind: 'valve-panel', name: 'Valve panel' },
+  { id: 'mimic', kind: 'mimic-board', name: 'Jacuzzi mimic' },
+  {
+    id: 'fibre-illuminator',
+    kind: 'fibre-illuminator',
+    name: 'Spa fibre illuminator',
+  },
   // In the jacuzzi's own room, the pool hall.
   { id: 'plate', kind: 'control-plate', name: 'Jacuzzi control plate' },
   { id: 'music-rack', kind: 'music-rack', name: 'Jacuzzi music rack' },
@@ -61,6 +67,15 @@ export const JACUZZI_NODES: readonly SchematicNode[] = [
     name: 'Jacuzzi water quality display',
   },
   { id: 'fibre-wall', kind: 'fibre-wall', name: 'Fibre-optic wall' },
+  // The two rooms' lights, each its lighting zone's (`lighting.ts`), and
+  // the hall's deck gullies, its deck's drainage.
+  {
+    id: 'plant-room-lights',
+    kind: 'plant-room-lights',
+    name: 'Plant room lights',
+  },
+  { id: 'hall-lights', kind: 'hall-lights', name: 'Jacuzzi hall lights' },
+  { id: 'deck-gullies', kind: 'deck-gully', name: 'Deck gullies' },
 ];
 
 const link = (
@@ -174,6 +189,18 @@ export const JACUZZI_LINKS: readonly PlumbEdge[] = [
     'control',
   ),
   link(
+    'Readings to the mimic',
+    ['cabinet', 'mimic'],
+    ['mimic', 'in'],
+    'control',
+  ),
+  link(
+    'Light to the fibre-optic wall',
+    ['fibre-illuminator', 'out'],
+    ['fibre-wall', 'in'],
+    'control',
+  ),
+  link(
     'Readings to the display',
     ['cabinet', 'readings'],
     ['display', 'in'],
@@ -199,6 +226,8 @@ const valve = (
   edge: string,
   end: 'source' | 'target',
   normally: 'open' | 'closed',
+  /** The cabinet's valves are motorised, worked from its valve panel; the tank's by hand. */
+  operator: 'lever' | 'motor',
 ): GivenFitting & { role: JacuzziValveRole } => ({
   id: `jacuzzi.${role}`,
   kind: 'isolating-valve',
@@ -206,20 +235,33 @@ const valve = (
   end,
   normally,
   role,
+  operator,
 });
 
 /** Every valve and isolator, each where it stands on its link, in service. */
 export const JACUZZI_FITTINGS: readonly (GivenFitting & { role: string })[] = [
-  valve('return', 'Return to the spa', 'source', 'open'),
-  valve('jetsSuction', 'Jets suction from the spa', 'target', 'open'),
-  valve('jetsDischarge', 'Jets discharge to the spa', 'source', 'open'),
-  valve('air', 'Air to the spa’s blower ring', 'source', 'open'),
-  valve('heatingFlow', 'Heating flow', 'target', 'open'),
-  valve('heatingReturn', 'Heating return', 'source', 'open'),
-  valve('drain', 'Drain to waste', 'source', 'closed'),
-  valve('suction', 'Suction from the balance tank', 'target', 'open'),
-  valve('makeUp', 'Make-up to the balance tank', 'target', 'open'),
-  valve('tankDrain', 'Balance tank drain to waste', 'source', 'closed'),
+  valve('return', 'Return to the spa', 'source', 'open', 'motor'),
+  valve('jetsSuction', 'Jets suction from the spa', 'target', 'open', 'motor'),
+  valve(
+    'jetsDischarge',
+    'Jets discharge to the spa',
+    'source',
+    'open',
+    'motor',
+  ),
+  valve('air', 'Air to the spa’s blower ring', 'source', 'open', 'motor'),
+  valve('heatingFlow', 'Heating flow', 'target', 'open', 'motor'),
+  valve('heatingReturn', 'Heating return', 'source', 'open', 'motor'),
+  valve('drain', 'Drain to waste', 'source', 'closed', 'motor'),
+  valve('suction', 'Suction from the balance tank', 'target', 'open', 'motor'),
+  valve('makeUp', 'Make-up to the balance tank', 'target', 'open', 'lever'),
+  valve(
+    'tankDrain',
+    'Balance tank drain to waste',
+    'source',
+    'closed',
+    'lever',
+  ),
   {
     id: 'jacuzzi.isolator',
     kind: 'power-isolator',

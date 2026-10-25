@@ -102,6 +102,8 @@ export function jacuzziPaths(valves?: Record<string, boolean>) {
     heating: open('heatingFlow') && open('heatingReturn'),
     /** Its balance tank's drain to waste: shut unless opened. */
     tankDrain: valves?.[JACUZZI_VALVES.tankDrain] ?? false,
+    /** The tub's drain to waste, its drain-down: shut unless opened. */
+    drain: valves?.[JACUZZI_VALVES.drain] ?? false,
     /** The room's make-up: its float may refill the tank only while this is open. */
     makeUp: open('makeUp'),
   };
