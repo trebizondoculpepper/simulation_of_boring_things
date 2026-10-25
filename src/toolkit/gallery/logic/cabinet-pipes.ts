@@ -490,11 +490,9 @@ export function cabinetValvePanel(room: string, trial?: Placed) {
  * south side, toward the cabinet; the spa's overflow in through its lid;
  * its make-up's float valve on its lid; its overflow out high on its
  * north side, down into a tundish on a floor gully of its own; and its
- * drain to waste (the owner, 2026-10-25) out of its foot on its east
- * side, toward the room, south of its sight gauge, through a lever valve
- * a crouching hand reaches from the aisle, into a tundish on a gully of
- * its own beside it, behind the line of the cabinet's front, so out of
- * its doors' swing.
+ * drain to waste (the owner, 2026-10-25) out of its foot on its north
+ * side, through a lever valve, into the same tundish beside the overflow's
+ * down-pipe (the owner: "use the same drain hole").
  */
 export function cabinetBalanceTank(room: string) {
   if (room !== 'plant_pool_03') return null;
@@ -514,29 +512,38 @@ export function cabinetBalanceTank(room: string) {
     suction: [x - r, 0.3, z] as Vec3,
     overflowIn: [x - 0.25, top, z - 0.25] as Vec3,
     makeUp: [x - 0.4, top, z + 0.2] as Vec3,
-    overflowOut: [x, top - 0.12, z - r] as Vec3,
-    /** Its overflow's tundish and gully, beyond its north side. */
-    gully: [x, 0, z - r - 0.3] as Vec3,
-    /** Its drain's nozzle, at its foot on its east side, south of its gauge. */
-    drainOut: [
-      x + Math.sqrt(r * r - TANK_DRAIN_SOUTH ** 2),
-      TANK_DRAIN_LEVEL,
-      z + TANK_DRAIN_SOUTH,
+    // Over its drop into the gully's tundish, so it runs straight there.
+    overflowOut: [
+      x + TANK_DROP_APART / 2,
+      top - 0.12,
+      z - Math.sqrt(r * r - (TANK_DROP_APART / 2) ** 2),
     ] as Vec3,
-    /** Its drain's tundish and gully, out toward the aisle. */
-    drainGully: [x + r + TANK_DRAIN_REACH, 0, z + TANK_DRAIN_SOUTH] as Vec3,
+    /** Its overflow's and drain's tundish and gully, beyond its north side (the owner: a little further north, for the drain's valve). */
+    gully: [x, 0, z - r - TANK_GULLY_OUT] as Vec3,
+    /** Where its overflow drops into that tundish: east of its middle. */
+    overflowDrop: [x + TANK_DROP_APART / 2, 0, z - r - TANK_GULLY_OUT] as Vec3,
+    /** Its drain's nozzle, at its foot on its north side, beside the overflow's down-pipe. */
+    drainOut: [
+      x - TANK_DROP_APART / 2,
+      TANK_DRAIN_LEVEL,
+      z - Math.sqrt(r * r - (TANK_DROP_APART / 2) ** 2),
+    ] as Vec3,
+    /** Where its drain drops into the same tundish: west of its middle. */
+    drainGully: [x - TANK_DROP_APART / 2, 0, z - r - TANK_GULLY_OUT] as Vec3,
   };
 }
 
 /** The tank's drain leaves its foot this high, over its tundish's rim. */
 const TANK_DRAIN_LEVEL = 0.21;
-/** This far south of the tank's middle, clear of its sight gauge (east, on its middle). */
-const TANK_DRAIN_SOUTH = 0.3;
-/** Its tundish this far out from the tank's side: room for the valve and its lever. */
-const TANK_DRAIN_REACH = 0.5;
+/** The overflow's and the drain's drops into their one tundish, this far apart, m (two DN50 pipes, 4 cm between them). */
+const TANK_DROP_APART = 0.09;
+/** Their tundish this far north of the tank's side, m: room for the drain's valve and its lever. */
+const TANK_GULLY_OUT = 0.45;
 
 /** The spa's overflow comes through the north wall this high, then drops into the tank. */
 const TANK_OVERFLOW_LEVEL = 2.25;
+/** The tank's make-up valve this far above its lid, m: within reach. */
+const MAKE_UP_VALVE_ABOVE = 0.3;
 /** The tank's make-up runs in from the south this high, over the room's other lanes. */
 const TANK_MAKE_UP_LEVEL = 3.0;
 /**
@@ -787,14 +794,8 @@ export function cabinetPipes(
         'pvc-pressure',
       ),
     };
-    overflow.valve = {
-      id: 'Overflow from the spa valve',
-      at: [ox, (oy + TANK_OVERFLOW_LEVEL) / 2, oz],
-      axis: 'y',
-      operator: 'motor',
-      installed: true,
-      name: 'Overflow from the spa valve',
-    };
+    // Never valved: a gravity overflow must always run to its tank (the
+    // owner, 2026-10-25), or the gutter backs up over the deck.
     runs.push(overflow);
     // Its make-up, in through the south wall from the water service, over
     // the room's other lanes, down to the float valve on its lid.
@@ -815,10 +816,21 @@ export function cabinetPipes(
         h,
         'pvc-pressure',
       ),
+      // Its isolating valve (PL3-BT1-IV1; the owner, 2026-10-25): a small
+      // lever valve on its drop, just above the tank, within reach, to
+      // shut off the tank's make-up.
+      valve: {
+        id: 'Balance tank make-up valve',
+        at: [mx, my + MAKE_UP_VALVE_ABOVE, mz],
+        axis: 'y',
+        operator: 'lever',
+        installed: true,
+        name: 'Balance tank make-up valve',
+      },
     });
     // Its overflow, out and down into its tundish.
     const [vx, vy, vz] = tank.overflowOut;
-    const [gx, , gz] = tank.gully;
+    const [gx, , gz] = tank.overflowDrop;
     runs.push({
       name: 'Balance tank overflow',
       kind: 'pvc-drain',
@@ -834,8 +846,9 @@ export function cabinetPipes(
       through: [],
     });
     // Its drain to waste: out of its foot, through its lever valve, and
-    // down into its own tundish. Worked by hand, unlike the cabinet's
-    // motorised valves: a drain opened once in a while, to empty the tank.
+    // down into the overflow's tundish beside its down-pipe. Worked by
+    // hand, unlike the cabinet's motorised valves: a drain opened once in
+    // a while, to empty the tank.
     const [dx, dy, dz] = tank.drainOut;
     const [ex, , ez] = tank.drainGully;
     runs.push({
@@ -853,11 +866,11 @@ export function cabinetPipes(
       through: [],
       valve: {
         id: 'Balance tank drain valve',
-        at: [(dx + ex) / 2, dy, dz],
-        axis: 'x',
-        // Turned so its lever, shut, points south, away from the tank's
-        // sight gauge, toward the hand reaching in from the aisle.
-        facing: -Math.PI / 2,
+        at: [dx, dy, (dz + ez) / 2],
+        axis: 'z',
+        // Turned round: open, its lever points north, away from the tank;
+        // shut, west, away from the overflow's down-pipe.
+        facing: Math.PI,
         operator: 'lever',
         installed: true,
         name: 'Balance tank drain valve',

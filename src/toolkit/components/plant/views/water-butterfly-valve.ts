@@ -8,6 +8,7 @@ import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { beginPart } from '../../core/parts/parts';
 import { PIPE_SIZES, plantTools } from './plant-tools';
+import { createValvePlaques } from './valve-plaques';
 import type { DN } from './plant-tools';
 
 /** A manually operated wafer butterfly isolator on a pool-water pipe. */
@@ -18,6 +19,8 @@ export function createWaterButterflyValve(
   name: string,
   binding?: { open(): boolean; set(open: boolean): void },
   operator: 'lever' | 'chain' = 'lever',
+  /** Its designation, printed on plaques round its body (`valve-plaques.ts`). */
+  plaque?: { tag: string; name: string },
 ) {
   const a = beginPart(kit, name);
   const lever = plantTools(kit).butterflyValve(
@@ -27,6 +30,8 @@ export function createWaterButterflyValve(
     axis,
     operator,
   );
+  if (plaque)
+    a.object.add(createValvePlaques(kit, dn, axis, plaque.tag, plaque.name));
   let open = true;
   let angle = 0;
   const toggle = () => {
@@ -39,7 +44,10 @@ export function createWaterButterflyValve(
   a.updates.push((delta) => {
     const target = (binding?.open() ?? open) ? 0 : Math.PI / 2;
     angle += (target - angle) * Math.min(1, delta * 8);
-    lever.rotation.y = (axis === 'y' ? -Math.PI / 2 : 0) + angle;
+    // Open, the lever lies along the pipe; shut, across it (the owner,
+    // 2026-10-25). On an upright pipe it swings about its sideways stem,
+    // up along the pipe when open and out level (its frame's +x) when shut.
+    lever.rotation.y = angle;
   });
   return Object.defineProperty(a.part(), 'open', {
     get: () => binding?.open() ?? open,

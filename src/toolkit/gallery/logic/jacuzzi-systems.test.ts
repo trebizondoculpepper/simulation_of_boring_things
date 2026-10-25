@@ -86,26 +86,6 @@ describe('the jacuzzi cabinet, with its valve panel and its mimic', () => {
     expect(w.jacuzziCabinet.trip).toBe('no-flow');
   });
 
-  it('with its overflow shut, spills the gutter over the deck and runs its tank down until TANK LOW', () => {
-    let w = valve(start, 'overflow', false);
-    w = applyAction(w, { type: 'pool/make-up', pool: 'pool_03', open: false });
-    const spilt = (x: World) => x.pools.pool_03.level;
-    let lowSeen = false;
-    // It trips on TANK LOW, the spa's floor drains refill the tank by
-    // gravity, it restarts, and round again: never the latched trip.
-    for (let i = 0; i < 120; i++) {
-      w = advance(w, 1, 1);
-      if (w.pools.pool_03.tripped) {
-        lowSeen = true;
-        expect(jacuzziCabinetPanel(w).messages[0]).toBe('TRIP: TANK LOW');
-      }
-      expect(w.jacuzziCabinet.trip).toBe('');
-    }
-    expect(lowSeen).toBe(true);
-    // The spa's water lost over the deck: its level below its lip.
-    expect(spilt(w)).toBeLessThan(0);
-  });
-
   it('stays tripped once the valve reopens, until RESET; RESET with it still shut does nothing', () => {
     let w = tripped(start);
     expect(reset(w).jacuzziCabinet.trip).toBe('no-flow');
@@ -327,6 +307,56 @@ describe('the jacuzzi cabinet, with its external balance tank', () => {
     const hour = advance(ten, 3000, 1);
     expect(hour.pools.pool_03.balance).toBeLessThan(0.002);
     expect(jacuzziTankDraining(hour)).toBe(false);
+  });
+
+  it('stops refilling its tank when its make-up valve is shut, and refills when it opens', () => {
+    // The tub empty, so nothing drains into the tank; the tank low.
+    const low: World = {
+      ...start,
+      pools: {
+        ...start.pools,
+        pool_03: { ...start.pools.pool_03, level: -2, balance: 0.05 },
+      },
+    };
+    const open = advance(low, 120, 1);
+    expect(open.pools.pool_03.balance).toBeGreaterThan(0.08);
+    const shut = advance(valve(low, 'makeUp', false), 120, 1);
+    expect(shut.pools.pool_03.balance).toBeLessThanOrEqual(0.05 + 1e-9);
+    const reopened = advance(valve(shut, 'makeUp', true), 120, 1);
+    expect(reopened.pools.pool_03.balance).toBeGreaterThan(0.08);
+  });
+
+  it('recovers a saved disabled make-up flag when its physical valve is open', () => {
+    const stale: World = {
+      ...start,
+      pools: {
+        ...start.pools,
+        pool_03: {
+          ...start.pools.pool_03,
+          level: -2,
+          balance: 0.05,
+          makeUp: false,
+        },
+      },
+    };
+    const refilled = advance(stale, 120, 1);
+    expect(refilled.pools.pool_03.makeUp).toBe(true);
+    expect(refilled.pools.pool_03.balance).toBeGreaterThan(0.08);
+  });
+
+  it('routes the older make-up command through the physical make-up valve', () => {
+    const closed = applyAction(start, {
+      type: 'pool/make-up',
+      pool: 'pool_03',
+      open: false,
+    });
+    expect(closed.installedValves[JACUZZI_VALVES.makeUp]).toBe(false);
+    const opened = applyAction(closed, {
+      type: 'pool/make-up',
+      pool: 'pool_03',
+      open: true,
+    });
+    expect(opened.installedValves[JACUZZI_VALVES.makeUp]).toBe(true);
   });
 
   it('trips the running pump on its tank’s low-low as the drain outruns the make-up', () => {

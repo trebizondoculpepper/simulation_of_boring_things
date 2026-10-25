@@ -9,6 +9,7 @@ import type { MotorTag } from '../../../game/plant/motor-starters';
 import { GAS_ZONE_IDS } from '../../../game/plant/gas';
 import { worldClock } from '../../../game/events/game-event';
 import { splitStatements, tokenise } from './command-line';
+import { objectStatus, statusNames } from './object-status';
 
 /**
  * The console's commands (`doc/prompts/058-developer-console.md`), and
@@ -231,10 +232,15 @@ export const COMMANDS: readonly ConsoleCommand[] = [
   },
   {
     name: 'status',
-    usage: '',
-    help: 'the clock, the room, and what is switched',
-    run(host) {
+    usage: '[name]',
+    help: 'the clock, the room and the alarms; or, given a name, everything known of that object: status PL3-BT1',
+    complete(host, args) {
+      if (args.length) return [];
+      return statusNames(host.world());
+    },
+    run(host, [name]) {
       const w = host.world();
+      if (name) return objectStatus(w, name);
       const alarms = [
         ...MOTOR_TAGS.filter((t) => w.motors.starters[t].tripped).map(
           (t) => `${t} tripped`,

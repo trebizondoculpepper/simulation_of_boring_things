@@ -4,6 +4,7 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { createBrandBadge } from '../../core/views/brand-badge';
+import { createBodyPlaques } from './valve-plaques';
 import type { RemoteValveGeometry } from '../logic/remote-valve';
 
 /**
@@ -19,7 +20,14 @@ import type { RemoteValveGeometry } from '../logic/remote-valve';
 export function createRemoteValve(
   kit: PanelKit,
   g: RemoteValveGeometry,
-  { stand = true }: { stand?: boolean } = {},
+  {
+    stand = true,
+    plaque,
+  }: {
+    stand?: boolean;
+    /** Its designation, printed on a plaque on its actuator's side, opposite its badge. */
+    plaque?: { tag: string; name: string };
+  } = {},
 ) {
   const t = tools(kit);
   const group = new Group();
@@ -147,6 +155,19 @@ export function createRemoteValve(
   maker.position.set(x1 + 0.001, (y0 + y1) / 2, (z0 + z1) / 2);
   maker.rotation.y = Math.PI / 2;
   group.add(maker);
+  // Its designation on plaques round its bronze collar (the owner,
+  // 2026-10-25), not on a plate beside it.
+  if (plaque && g.medium === 'water') {
+    const plaques = createBodyPlaques(
+      kit,
+      body / 2 + 0.001,
+      'x',
+      plaque.tag,
+      plaque.name,
+    );
+    plaques.position.y = axis;
+    group.add(plaques);
+  }
   const lamp = new MeshBasicMaterial({ color: water ? '#1d2a1f' : '#7c2520' });
   kit.materials.push(lamp);
   const cx = (x0 + x1) / 2;

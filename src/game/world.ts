@@ -117,7 +117,7 @@ import {
   stepJacuzzi,
 } from './plant/jacuzzi';
 import type { JacuzziAction, JacuzziState } from './plant/jacuzzi';
-import { jacuzziPaths } from './plant/jacuzzi';
+import { JACUZZI_VALVES, jacuzziPaths } from './plant/jacuzzi';
 import {
   DISCONNECTED_VESSEL,
   actOnJacuzziCabinet,
@@ -375,6 +375,20 @@ export function applyAction(world: World, action: WorldAction): World {
     }
     case 'pool/drain-down':
     case 'pool/make-up': {
+      if (action.pool === 'pool_03' && action.type === 'pool/make-up') {
+        // The old command and the room's lever work the same valve.
+        return {
+          ...world,
+          installedValves: {
+            ...world.installedValves,
+            [JACUZZI_VALVES.makeUp]: action.open,
+          },
+          pools: {
+            ...world.pools,
+            pool_03: { ...world.pools.pool_03, makeUp: action.open },
+          },
+        };
+      }
       if (action.pool === 'pool_04') {
         // Older scenarios and saves still use these actions. Their footbath
         // route now lives in the named valves, never in the pool flags.
@@ -750,9 +764,10 @@ export const jacuzziFlow = (world: World): JacuzziCirculation => ({
   heat:
     serviceAvailable(world.plant, 'plant_pool_03', 'heat') &&
     jacuzziPaths(world.installedValves).heating,
-  overflowShut: !jacuzziPaths(world.installedValves).overflow,
   // Its balance tank's drain to waste, by hand, by gravity.
   tankDrain: jacuzziPaths(world.installedValves).tankDrain,
+  // Its tank's make-up isolating valve shut: its float gets no water.
+  makeUpShut: !jacuzziPaths(world.installedValves).makeUp,
 });
 
 /**

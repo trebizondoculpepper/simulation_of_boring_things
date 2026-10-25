@@ -8,6 +8,7 @@ import { newIdentifiedPlant, walkIdentified } from './identification';
 import { INSTALLED_ASSET_IDS } from './installed-asset-ids';
 import { INSTALLED_VALVES, newInstalledValveStates } from './installed-valves';
 import { ROOM_SWITCH_FUSES } from './installed-feeders';
+import { INSTALLED_FIXTURES } from './installed-fixtures';
 import { newPlantServices } from './services';
 import type { ServiceRoom } from './services';
 import type { BrandId } from '../../toolkit/components/core/logic/brands';
@@ -511,6 +512,20 @@ export function plantInventory(
       depth: 1,
       source: 'placement',
     })),
+    // Installed equipment drawn outside the rooms' layouts.
+    ...Object.entries(INSTALLED_FIXTURES).map(
+      ([tag, fixture]): InventoryEntry => ({
+        assetId: fixture.assetId,
+        id: tag,
+        name: fixture.name,
+        kind: fixture.kind,
+        brand: fixture.brand,
+        class: 'plant',
+        purpose: fixture.purpose,
+        depth: 1,
+        source: 'placement',
+      }),
+    ),
     ...Object.entries(ROOM_SWITCH_FUSES).map(
       ([room, switchFuse]): InventoryEntry => ({
         assetId: switchFuse.assetId,

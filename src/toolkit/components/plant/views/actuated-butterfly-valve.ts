@@ -12,6 +12,7 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import { beginPart } from '../../core/parts/parts';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import { PIPE_SIZES, plantTools } from './plant-tools';
+import { createValvePlaques } from './valve-plaques';
 import type { DN } from './plant-tools';
 import {
   energised,
@@ -54,7 +55,10 @@ export function createActuatedButterflyValve(
   },
   {
     drive = 'electric',
+    plaque,
   }: {
+    /** Its designation, printed on plaques round its body (`valve-plaques.ts`). */
+    plaque?: { tag: string; name: string };
     /** How it is driven: by an electric motor (every plant valve, the owner, 2026-10-24), or by air, piloted by its solenoid. */
     drive?: 'pneumatic' | 'electric';
   } = {},
@@ -63,6 +67,8 @@ export function createActuatedButterflyValve(
   const t = plantTools(kit);
   // The valve's body, without a lever: its stem and boss stand for the drive.
   t.butterflyValve(a.object, dn, [0, 0, 0], axis, 'chain');
+  if (plaque)
+    a.object.add(createValvePlaques(kit, dn, axis, plaque.tag, plaque.name));
   const s = PIPE_SIZES[dn];
   const neckTop = s.flange * 0.42 + Math.max(0.08, s.od * 0.6);
   // The actuator's assembly, built up +y, turned to face out of a vertical pipe.

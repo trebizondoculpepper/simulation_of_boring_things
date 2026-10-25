@@ -539,7 +539,9 @@ function addPenetrations(
             const tab = new BoxGeometry(0.02, 0.003, 0.04);
             tab.applyMatrix4(
               new Matrix4()
-                .makeBasis(dirOut.clone().cross(n), n, dirOut)
+                // A right-handed frame preserves the box's face winding;
+                // mirroring it showed the back face coplanar with the wall.
+                .makeBasis(n.clone().cross(dirOut), n, dirOut)
                 .setPosition(
                   p
                     .clone()

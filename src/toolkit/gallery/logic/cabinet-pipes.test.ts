@@ -139,13 +139,15 @@ describe.each([
 
   it('uses motor operators on every fitted valve, worked from a panel on a wall', () => {
     expect(runs.filter((run) => run.valve).length).toBeGreaterThan(3);
-    // But the jacuzzi's balance tank's drain, a lever valve worked by hand
-    // (the owner, 2026-10-25).
+    // But the jacuzzi's balance tank's drain and its make-up's isolating
+    // valve, lever valves worked by hand (the owner, 2026-10-25).
+    const byHand = [
+      'Balance tank drain to waste',
+      'Make-up to the balance tank',
+    ];
     expect(
       runs
-        .filter(
-          (run) => run.valve && run.name !== 'Balance tank drain to waste',
-        )
+        .filter((run) => run.valve && !byHand.includes(run.name))
         .every((run) => run.valve!.operator === 'motor'),
     ).toBe(true);
     // Its panel on a wall's face, at eye height.
@@ -160,18 +162,34 @@ describe.each([
   });
 
   if (room === 'plant_pool_03') {
-    it('drains its balance tank from its foot, through a lever valve within reach, into a tundish of its own', () => {
+    it('drains its balance tank from its foot, through a lever valve, into its overflow’s tundish', () => {
       const tank = cabinetBalanceTank(room)!;
       const drain = named('Balance tank drain to waste');
-      // From the tank's nozzle, on its side at its foot.
+      const overflow = named('Balance tank overflow');
+      // From the tank's nozzle, on its north side at its foot.
       const [nx, ny, nz] = drain.points[0];
       expect(near(drain.points[0], tank.drainOut)).toBe(true);
       expect(Math.hypot(nx - tank.x, nz - tank.z)).toBeCloseTo(tank.r, 6);
       expect(ny).toBeLessThan(0.3);
-      // Down into its tundish, over its gully, across an air gap.
+      expect(nz).toBeLessThan(tank.z - tank.r * 0.9);
+      // Down into the one tundish the overflow drops into, beside it.
       const end = drain.points.at(-1)!;
+      const overflowEnd = overflow.points.at(-1)!;
       expect(end[0]).toBeCloseTo(tank.drainGully[0]);
       expect(end[2]).toBeCloseTo(tank.drainGully[2]);
+      expect(
+        Math.hypot(end[0] - tank.gully[0], end[2] - tank.gully[2]),
+      ).toBeLessThan(0.06);
+      expect(
+        Math.hypot(
+          overflowEnd[0] - tank.gully[0],
+          overflowEnd[2] - tank.gully[2],
+        ),
+      ).toBeLessThan(0.06);
+      // The two drops apart: two DN50 pipes, not touching.
+      expect(
+        Math.hypot(end[0] - overflowEnd[0], end[2] - overflowEnd[2]),
+      ).toBeGreaterThan(0.06);
       expect(end[1]).toBeLessThan(0.25);
       expect(end[1]).toBeGreaterThan(0.12);
       // Falling all the way, as a gravity drain must.
@@ -179,19 +197,17 @@ describe.each([
         expect(drain.points[i][1]).toBeLessThanOrEqual(
           drain.points[i - 1][1] + 1e-9,
         );
-      // Its lever valve on the run, out from the tank toward the aisle.
+      // Its lever valve on the run, between the tank and the tundish,
+      // turned so its lever opens away from the tank.
       const v = drain.valve!;
       expect(v.operator).toBe('lever');
       expect(v.installed).toBe(true);
-      expect(v.at[0]).toBeGreaterThan(tank.x + tank.r + 0.15);
-      // Behind the line of the cabinet's front, out of its doors' swing,
-      // and north of its end.
+      expect(v.at[2]).toBeLessThan(nz);
+      expect(v.at[2]).toBeGreaterThan(end[2]);
+      expect(v.facing).toBeCloseTo(Math.PI, 9);
+      // North of the cabinet's end, out of its doors' swing.
       const body = cabinetBodyIn(cabinet, jets);
-      expect(v.at[0]).toBeLessThan(body.max[0]);
-      expect(end[0]).toBeLessThan(body.max[0] - 0.2);
       expect(v.at[2]).toBeLessThan(body.min[2] - 0.5);
-      // Clear of the tank's sight gauge, east on its middle.
-      expect(Math.abs(nz - tank.z)).toBeGreaterThan(0.2);
     });
   }
 

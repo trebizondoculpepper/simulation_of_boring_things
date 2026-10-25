@@ -29,7 +29,9 @@ afterEach(() => vi.unstubAllGlobals());
 describe('switch room distribution board', () => {
   it('opens its labelled glazed door from a click on the leaf', () => {
     const board = createDistributionBoard(createPanelKit());
-    const door = board.object.getObjectByName('SR-DB3 distribution board door');
+    const door = board.object.getObjectByName(
+      'DEV-DB1 distribution board door',
+    );
     expect(door).toBeDefined();
     expect(door?.children.length).toBeGreaterThan(4);
     const clickable = door?.children.find((child) =>

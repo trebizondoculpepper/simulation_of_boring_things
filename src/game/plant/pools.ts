@@ -270,6 +270,11 @@ export interface JacuzziCirculation {
    * tank empties by gravity, pumps or no pumps, power or no power.
    */
   tankDrain?: boolean;
+  /**
+   * Its balance tank's make-up isolating valve shut (PL3-BT1-IV1): its
+   * float valve gets no water, whatever its float calls for.
+   */
+  makeUpShut?: boolean;
 }
 
 /** Whether each chemical is to be had: its store not run dry. */
@@ -427,7 +432,13 @@ export function stepPoolsWater(
     const drainDown =
       id === 'pool_04' && footbath ? footbath.draining : old.drainDown;
     const makeUpOpen =
-      id === 'pool_04' && footbath ? footbath.makeUpOpen : old.makeUp;
+      id === 'pool_04' && footbath
+        ? footbath.makeUpOpen
+        : id === 'pool_03' && jacuzzi?.makeUpShut !== undefined
+          ? // The physical isolator owns this setting. Persisting its shut
+            // state as a second inhibit left the make-up disabled on reopening.
+            !jacuzzi.makeUpShut
+          : old.makeUp;
     // The pumps run if the room has power, and one of them, or
     // the pool's cabinet, is not isolated; and not tripped.
     const circulation =

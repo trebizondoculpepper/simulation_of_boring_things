@@ -361,11 +361,9 @@ export const INSTALLED_VALVES: Readonly<
     tag: 'PL3-JZ1-IV1',
     normal: 'open',
   },
-  'plant_pool_03|Overflow from the spa|Overflow from the spa valve': {
-    assetId: 'valve-0091',
-    tag: 'PL3-JZ1-IV2',
-    normal: 'open',
-  },
+  // valve-0091, PL3-JZ1-IV2, the spa's overflow to its balance tank: removed
+  // (the owner, 2026-10-25). A gravity overflow is never valved; shut, it
+  // would flood the deck. Its asset id is retired, not reused.
   'plant_pool_03|Heating flow|Heating flow valve': {
     assetId: 'valve-0092',
     tag: 'PL3-JZ1-IV3',
@@ -394,6 +392,14 @@ export const INSTALLED_VALVES: Readonly<
     assetId: 'valve-0101',
     tag: 'PL3-BT1-DV1',
     normal: 'closed',
+  },
+  // The jacuzzi's balance tank's make-up isolating valve, a small lever
+  // valve just above the tank, open in service (the owner, 2026-10-25:
+  // nothing could shut off the tank's make-up).
+  'plant_pool_03|Make-up to the balance tank|Balance tank make-up valve': {
+    assetId: 'valve-0102',
+    tag: 'PL3-BT1-IV1',
+    normal: 'open',
   },
   'plant_pool_04|Overflow from the spa|Overflow from the spa valve': {
     assetId: 'valve-0094',

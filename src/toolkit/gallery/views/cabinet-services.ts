@@ -184,7 +184,10 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
         const motor = createRemoteValve(
           kit,
           remoteValveGeometry('water', run.od, 0),
-          { stand: false },
+          {
+            stand: false,
+            plaque: { tag: id, name: description?.name ?? 'Valve' },
+          },
         );
         motor.group.name = `${id} · ${description?.name ?? 'Valve'}`;
         const mount = new Group();
@@ -263,12 +266,17 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
               `${id} · ${description?.name ?? 'Valve'}`,
               binding,
               run.valve.operator,
+              { tag: id, name: description?.name ?? 'Valve' },
             );
       if (valve) {
         valve.object.position.set(...lift(at));
         if (axis === 'x')
           valve.object.rotation.y = run.valve.facing ?? Math.PI / 2;
         if (axis === 'y') valve.object.rotation.y = run.valve.facing ?? 0;
+        // Along z, turned only if it says so (round, so its lever swings
+        // the other way).
+        if (axis === 'z' && run.valve.facing !== undefined)
+          valve.object.rotation.y = run.valve.facing;
         group.add(valve.object);
         valveParts.push(valve);
         for (const [piece, use] of valve.uses) uses.set(piece, () => use());
@@ -285,37 +293,42 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
             if (use) uses.set(chain, () => use());
         }
       }
-      const legend = createMicroLabel(
-        kit,
-        `${id}\n${description?.name ?? 'VALVE'}`,
-        {
-          height: 0.018,
-          ink: '#19242a',
-          plate: '#f0ede3',
-        },
-      );
-      // Mount the plate beyond the lever's swing, on the aisle side of
-      // the pipe. On a high pipe the same plate sits below the valve.
-      if (at[1] > 2) {
-        legend.position.set(at[0], floorY + at[1] - 0.28, at[2]);
-      } else if (axis === 'z') {
-        const inward = at[0] >= 0 ? -1 : 1;
-        legend.position.set(
-          at[0] + inward * 0.34,
-          floorY + at[1] + 0.12,
-          at[2],
+      // Every valve's designation is on the valve: a lever or chain valve's
+      // on plaques round its body, a motorised one's on its actuator's
+      // side. (Kept for any other: a plate beside it.)
+      if (!valve && run.valve.operator !== 'motor') {
+        const legend = createMicroLabel(
+          kit,
+          `${id}\n${description?.name ?? 'VALVE'}`,
+          {
+            height: 0.018,
+            ink: '#19242a',
+            plate: '#f0ede3',
+          },
         );
-        legend.rotation.y = (inward * Math.PI) / 2;
-      } else {
-        const inward = at[2] >= 0 ? -1 : 1;
-        legend.position.set(
-          at[0],
-          floorY + at[1] + 0.12,
-          at[2] + inward * 0.34,
-        );
-        legend.rotation.y = inward < 0 ? Math.PI : 0;
+        // Mount the plate beyond the lever's swing, on the aisle side of
+        // the pipe. On a high pipe the same plate sits below the valve.
+        if (at[1] > 2) {
+          legend.position.set(at[0], floorY + at[1] - 0.28, at[2]);
+        } else if (axis === 'z') {
+          const inward = at[0] >= 0 ? -1 : 1;
+          legend.position.set(
+            at[0] + inward * 0.34,
+            floorY + at[1] + 0.12,
+            at[2],
+          );
+          legend.rotation.y = (inward * Math.PI) / 2;
+        } else {
+          const inward = at[2] >= 0 ? -1 : 1;
+          legend.position.set(
+            at[0],
+            floorY + at[1] + 0.12,
+            at[2] + inward * 0.34,
+          );
+          legend.rotation.y = inward < 0 ? Math.PI : 0;
+        }
+        group.add(legend);
       }
-      group.add(legend);
     }
   }
   // The motorised valves' panel, on its wall.
@@ -354,11 +367,15 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   });
   kit.materials.push(iron, steel);
   /** A floor gully, its grating flush, and the tundish on it. */
-  const tundishOnGully = ([x, , z]: readonly [number, number, number]) => {
+  const tundishOnGully = (
+    [x, , z]: readonly [number, number, number],
+    /** Its rim's radius: wider where two pipes drop into it. */
+    rim = 0.07,
+  ) => {
     const grating = new Mesh(new BoxGeometry(0.3, 0.01, 0.3), iron);
     grating.position.set(x, floorY + 0.005, z);
     const tundish = new Mesh(
-      new CylinderGeometry(0.07, 0.025, 0.1, 20, 1, true),
+      new CylinderGeometry(rim, 0.025, 0.1, 20, 1, true),
       steel,
     );
     tundish.position.set(x, floorY + 0.07, z);
@@ -374,16 +391,17 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   const tank = tankAt
     ? createSpaBalanceTank(kit, { ...JACUZZI_BALANCE_TANK, tag: 'PL3-BT1' })
     : null;
-  // Its own drain's tundish, its water falling into it and heard while
-  // its lever valve is open and there is water to run away.
+  // Its drain's water, falling into the overflow's tundish beside the
+  // overflow's down-pipe, seen and heard while its lever valve is open and
+  // there is water to run away.
   let tankMouth: Mesh | null = null;
   let tankFall: ReturnType<typeof createFallingWater> | null = null;
   let tankGurgling = false;
   if (tank && tankAt) {
     tank.group.position.set(tankAt.x, floorY, tankAt.z);
     group.add(tank.group);
-    tundishOnGully(tankAt.gully);
-    tankMouth = tundishOnGully(tankAt.drainGully);
+    // One tundish for the overflow and the drain, wide enough for both.
+    tankMouth = tundishOnGully(tankAt.gully, 0.1);
     tankFall = createFallingWater(kit, DRAIN_STREAM);
     tankFall.group.position.set(
       tankAt.drainGully[0],

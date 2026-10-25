@@ -195,10 +195,12 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       set: (open: boolean) =>
         store?.dispatch({ type: 'plant/valve', id: installed.assetId, open }),
     };
-    // Put the same designation on the two free sides of the valve body.
-    // A single label offset from the pipe looked suspended in space, and
-    // its text faced the pipe from the aisle side. These lie against the
-    // blue wafer, clear of the pipe axis and the operating handle.
+    // A butterfly valve's designation is printed on plaques round its blue
+    // body (`valve-plaques.ts`). A gas ball valve or a motorised ball valve,
+    // which have none, have the same designation on two tags at the body's
+    // free sides, clear of the pipe axis and the operating handle.
+    const plaque = { tag: installed.tag, name: v.name };
+    const tagged = v.style === 'gas-ball' || v.operator === 'motor';
     const radial =
       v.axis === 'x'
         ? ([0, 1] as const)
@@ -210,7 +212,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       v.style === 'gas-ball'
         ? (v.od / 2) * 1.35
         : PIPE_SIZES[dnFor(v.od)].flange * 0.42;
-    for (const side of [-1, 1]) {
+    for (const side of tagged ? [-1, 1] : []) {
       const nx = (radial[0] / length) * side;
       const nz = (radial[1] / length) * side;
       const tag = createMicroLabel(kit, installed.tag, {
@@ -277,6 +279,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
           v.axis === 'y' ? 'y' : 'z',
           `${installed.tag} · ${v.name}`,
           binding,
+          { plaque },
         ),
       );
       actuated.object.position.set(...lift(v.at));
@@ -293,6 +296,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         `${installed.tag} · ${v.name}`,
         binding,
         v.operator,
+        plaque,
       ),
     );
     part.object.position.set(...lift(v.at));

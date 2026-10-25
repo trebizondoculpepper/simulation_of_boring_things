@@ -886,7 +886,8 @@ export function createVariableSpeedDrive(kit: PanelKit) {
  */
 export function createDistributionBoard(
   kit: PanelKit,
-  tag = 'SR-DB3',
+  // A demonstration board's tag by default: SR-DB3 is retired (043).
+  tag = 'DEV-DB1',
 ): WorkingCabinet {
   const t = plantTools(kit);
   const group = new Group();

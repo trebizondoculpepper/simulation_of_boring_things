@@ -8,6 +8,7 @@ import {
   tokenise,
 } from './command-line';
 import { COMMANDS, candidates, jsName, readPath, runLine } from './commands';
+import { objectStatus } from './object-status';
 import type { ConsoleHost } from './commands';
 import { applyAction, newWorld } from '../../../game/world';
 import type { World, WorldAction } from '../../../game/world';
@@ -215,6 +216,41 @@ describe('the commands', () => {
     expect(candidates(host, ['goto'])).toEqual(['pool_02', 'plant_pool_01']);
     expect(candidates(host, ['open'])).toContain('PL1-F1-IV1');
     expect(candidates(host, ['starter', 'P-101A'])).toContain('reset');
+  });
+});
+
+describe('status of an object', () => {
+  it('prints everything known of a tagged object: the jacuzzi’s balance tank', () => {
+    const w = newWorld();
+    const lines = objectStatus(w, 'pl3-bt1');
+    expect(lines[0]).toBe('PL3-BT1');
+    const text = lines.join('\n');
+    expect(text).toMatch(/capacity_m3 = 1\.3/);
+    expect(text).toMatch(/contents_m3 = [0-9.]+/);
+    expect(text).toMatch(/full_share = /);
+    expect(text).toMatch(/draining_to_waste = false/);
+  });
+
+  it('prints a valve’s record and its command, a motor’s starter, a pool and a part of the world', () => {
+    const w = newWorld();
+    const valve = objectStatus(w, 'PL3-BT1-DV1').join('\n');
+    expect(valve).toMatch(/name = Balance tank drain valve/);
+    expect(valve).toMatch(/commanded = shut/);
+    expect(objectStatus(w, 'P-101A').join('\n')).toMatch(/-- motor starter/);
+    expect(objectStatus(w, 'pool_03').join('\n')).toMatch(/temperature = /);
+    expect(objectStatus(w, 'jacuzziCabinet').join('\n')).toMatch(
+      /-- world\.jacuzziCabinet/,
+    );
+  });
+
+  it('offers near names for one it does not know, and runs as the status command', () => {
+    const w = newWorld();
+    const miss = objectStatus(w, 'PL3-BT');
+    expect(miss[0]).toMatch(/did you mean/);
+    expect(miss.join('\n')).toMatch(/PL3-BT1/);
+    const t = fakeHost();
+    expect(texts(runLine(t.host, 'status PL3-BT1'))[0]).toBe('PL3-BT1');
+    expect(texts(runLine(t.host, 'status')).join('\n')).toMatch(/world clock/);
   });
 });
 
