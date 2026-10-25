@@ -52,12 +52,10 @@ describe('the information overlay’s lines', () => {
       gramsPerHour: 5,
     });
     w = stepWorld(w, 600);
-    const reading = Number(
-      /reading ([\d.]+) ppm/.exec(
-        inspectComponent({ tag: 'PL1-GD1' }, w)!.detail!,
-      )![1],
+    // As its display shows it: a reading above nothing, or over its range.
+    expect(inspectComponent({ tag: 'PL1-GD1' }, w)?.detail).toMatch(
+      /currently reading (0\.(0[1-9]|[1-9]\d)|1\.\d\d) ppm|currently reading over its range \(O-R\)/,
     );
-    expect(reading).toBeGreaterThan(0);
   });
 
   it('says a UV unit is On or Off, as the world models it, never “operational”', () => {

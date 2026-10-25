@@ -1,3 +1,5 @@
+import { GAS_ZONES } from './gas';
+import { gasDisplay } from '../../toolkit/components/general-safety/logic/gas-detection';
 import { uvLampOn } from './uv';
 import { INSTALLED_VALVES } from './installed-valves';
 import { MODEL_VALVES } from './model-valves';
@@ -74,7 +76,14 @@ export function resolveStatus(
   }
   if ('uv' in b) return { policy: 'uv', lit: uvLampOn(world, b.uv) };
   if ('gasZone' in b)
-    return { policy: 'gas', ppm: world.gas[b.gasZone].state.reading };
+    // As its detector's display shows it (`gasDisplay`).
+    return {
+      policy: 'gas',
+      shown: gasDisplay(
+        GAS_ZONES[b.gasZone],
+        world.gas[b.gasZone].state,
+      ).trim(),
+    };
   if ('valve' in b) {
     // An installed valve's command, or an identified part's state.
     // Its key: the register's asset id, or its model fitting's id.

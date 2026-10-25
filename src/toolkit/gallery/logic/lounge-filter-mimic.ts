@@ -9,10 +9,7 @@ import {
   loungeFlowsOf,
 } from '../../../game/plant/lounge-valves';
 import type { MotorTag } from '../../../game/plant/motor-starters';
-import {
-  flowmeterLines,
-  valveTagOf,
-} from '../../../game/plant/part-inspection';
+import { valveTagOf } from '../../../game/plant/part-inspection';
 import type { PartDescription } from '../../../game/plant/part-inspection';
 import type { World, WorldAction } from '../../../game/world';
 import type { LoungeFlows } from '../../../game/plant/lounge-valves';
@@ -461,13 +458,9 @@ export const LOUNGE_FILTER_MIMIC_PARTS = {
       kind: 'reading',
       label: `F${n} FLOW readout`,
       read: (w) => loungeFilterMimicOf(w).readouts[readout]?.[mode()],
-      // As its filter's flowmeter reads it, and the path it measures.
-      context: (w) => {
-        const meter = flowmeterLines(w, `PL1-F${n}-FT1`);
-        return meter?.detail
-          ? `As PL1-F${n}-FT1 reads it. ${meter.detail}`
-          : undefined;
-      },
+      // What it shows, a fixed fact: no more than its display (the owner).
+      context: () =>
+        `Filter ${n}’s flow as PL1-F${n}-FT1 measures it; negative in reverse.`,
     };
   },
 };

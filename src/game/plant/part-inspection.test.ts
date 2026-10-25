@@ -35,9 +35,9 @@ describe('a part’s inspection', () => {
     );
     const lines = describePart(part, running());
     expect(lines.title).toBe('OPEN button — Requests PL1-P1-IV1 to open.');
-    expect(lines.detail).toMatch(
-      /^PL1-P1-IV1: Isolates water .* Currently open\.$/,
-    );
+    // What the valve is for, a fixed fact; not its state, which the button does not show.
+    expect(lines.detail).toMatch(/^PL1-P1-IV1: Isolates water .*\.$/);
+    expect(lines.detail).not.toMatch(/[Cc]urrently/);
     expect(describePart(P.button('p2-start')!, running()).title).toBe(
       'START button — Requests P-201B to start.',
     );
@@ -68,17 +68,18 @@ describe('a part’s inspection', () => {
     );
   });
 
-  it('describes a flowmeter’s path the way the water is going, inventing none at no flow', () => {
+  it('reads a flowmeter as its display shows it, size and arrow, and says only where it is installed', () => {
     expect(inspectComponent({ tag: 'PL1-F2-FT1' }, running())).toEqual({
       key: 'PL1-F2-FT1',
-      title: 'PL1-F2-FT1 — Flowmeter, currently reading 45.0 m³/h.',
+      title:
+        'PL1-F2-FT1 — Flowmeter, currently reading 45.0 m³/h, its arrow pointing forward (->).',
       detail:
-        'Measures filtered water flowing from the lounge pool sand filter 2 into the filter outlet header.',
+        'Installed between the lounge pool sand filter 2 and the filter outlet header; its forward arrow points towards the filter outlet header.',
     });
     expect(
-      inspectComponent({ tag: 'PL1-F2-FT1' }, backwashing(running()))?.detail,
+      inspectComponent({ tag: 'PL1-F2-FT1' }, backwashing(running()))?.title,
     ).toBe(
-      'Measures backwash water flowing from the filter outlet header back into the lounge pool sand filter 2.',
+      'PL1-F2-FT1 — Flowmeter, currently reading 34.0 m³/h, its arrow pointing back (<-).',
     );
     let w = running();
     for (const n of ['P-201A', 'P-201B'] as const)
@@ -88,22 +89,22 @@ describe('a part’s inspection', () => {
         action: { act: 'stop' },
       });
     w = stepWorld(w, 5);
-    expect(inspectComponent({ tag: 'PL1-F2-FT1' }, w)?.detail).toMatch(
-      /^Measures the flow between .*; nothing is flowing\.$/,
+    expect(inspectComponent({ tag: 'PL1-F2-FT1' }, w)?.title).toBe(
+      'PL1-F2-FT1 — Flowmeter, currently reading 0.0 m³/h.',
     );
   });
 
   it('leaves out context the model lacks: the Olympic meters keep their register’s purpose', () => {
     const lines = inspectComponent({ tag: 'PL2-F1-FT1' }, running());
     expect(lines?.title).toMatch(
-      /^PL2-F1-FT1 — Flowmeter, currently reading [\d.]+ m³\/h\.$/,
+      /^PL2-F1-FT1 — Flowmeter, currently reading [\d.]+ m³\/h, its arrow pointing forward \(->\)\.$/,
     );
     expect(lines?.detail).toBe(
       'Measures the flow through filter 1: up its outlet in service, down it while backwashing.',
     );
   });
 
-  it('words a setting by where it stands, and RESET as a request with the trip as it is', () => {
+  it('words a setting by where it stands, and RESET as a request, the trip unsaid', () => {
     const w = running();
     expect(
       describePart(
@@ -131,7 +132,7 @@ describe('a part’s inspection', () => {
       ),
     ).toEqual({
       title: 'RESET button — Requests P-201A’s trip be reset.',
-      detail: 'P-201A is not tripped now.',
+      detail: 'P-201A: Lounge pool duty circulation pump.',
     });
   });
 });

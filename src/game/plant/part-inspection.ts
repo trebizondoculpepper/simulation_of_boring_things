@@ -3,8 +3,7 @@ import type { Reading } from '../../toolkit/components/industrial-control/logic/
 import { INSTALLED_VALVES } from './installed-valves';
 import { INSTALLED_FIXTURES } from './installed-fixtures';
 import { MODEL_VALVES } from './model-valves';
-import { describeForWorld } from './component-status';
-import { plantInventory } from './equipment-catalogue';
+import { componentDescription, plantInventory } from './equipment-catalogue';
 import { SCHEMATICS } from './schematics';
 import { loungeFlowsOf, loungeMeterReadings } from './lounge-valves';
 import { olympicFlowsOf, olympicMeterReadings } from './olympic-battery';
@@ -84,53 +83,48 @@ export const valveTagOf = (assetId: string): string | undefined =>
 export const formatReading = (r: Reading) =>
   `${r.value.toFixed(r.places ?? 0)} ${r.unit === 'm3/h' ? 'm³/h' : r.unit}`;
 
-/** What a command does, in words: a request, since an interlock or a dead supply may refuse it. */
-function commandLines(
-  label: string,
-  action: WorldAction,
-  world?: World,
-): PartLines {
+/**
+ * What a command does, in words: a request, since an interlock or a dead
+ * supply may refuse it. Only what the panel itself tells the player: what
+ * it commands, and what its target is for (a fixed fact, as a schedule
+ * would give it), never the target's state now, which the button does
+ * not show (the owner, 2026-10-25: the overlay reads what is shown, and
+ * gives no peek into the model).
+ */
+function commandLines(label: string, action: WorldAction): PartLines {
   const button = `${label} button`;
   if (action.type === 'plant/valve') {
     const tag = valveTagOf(action.id);
     if (!tag) return { title: button };
-    const verb = action.open ? 'open' : 'shut';
-    const about = world ? describeForWorld(world, tag) : '';
+    const about = componentDescription(tag);
     return {
-      title: `${button} — Requests ${tag} to ${verb}.`,
+      title: `${button} — Requests ${tag} to ${action.open ? 'open' : 'shut'}.`,
       ...(about ? { detail: `${tag}: ${about}` } : {}),
     };
   }
   if (action.type === 'motor/starter') {
     const act = action.action.act;
-    if (act === 'reset') {
-      const s = world?.motors.starters[action.tag];
+    const name = nameOf(action.tag);
+    const detail = name ? `${action.tag}: ${name}.` : undefined;
+    if (act === 'reset')
       return {
         title: `${button} — Requests ${action.tag}’s trip be reset.`,
-        ...(s
-          ? {
-              detail: s.tripped
-                ? `${action.tag} is tripped now; a running motor is not reset.`
-                : `${action.tag} is not tripped now.`,
-            }
-          : {}),
+        ...(detail ? { detail } : {}),
       };
-    }
     if (act !== 'start' && act !== 'stop') return { title: button };
-    const name = nameOf(action.tag);
-    const about = world ? describeForWorld(world, action.tag) : '';
     return {
       title: `${button} — Requests ${action.tag} to ${act}.`,
-      detail: [
-        name
-          ? `${action.tag}: ${name}${about ? `, ${about.replace(/^.*?currently /, 'now ')}` : ''}.`
-          : '',
-        // Its starter obeys START and STOP in AUTO only.
-        'Obeyed only with its starter in AUTO.',
-      ]
-        .filter(Boolean)
-        .join(' '),
+      ...(detail ? { detail } : {}),
     };
+  }
+  if (action.type === 'air/unit') {
+    const act = action.action.act;
+    if (act === 'reset')
+      return { title: `${button} — Requests ${action.tag}’s fault be reset.` };
+    if (act === 'filters')
+      return {
+        title: `${button} — Tells ${action.tag}’s controller its filters have been changed.`,
+      };
   }
   return { title: button };
 }
@@ -139,7 +133,7 @@ function commandLines(
 export function describePart(part: PartDescription, world?: World): PartLines {
   switch (part.kind) {
     case 'command':
-      return commandLines(part.label, part.action, world);
+      return commandLines(part.label, part.action);
     case 'reading': {
       const r = world ? part.read(world) : undefined;
       const context = world ? part.context?.(world) : undefined;
@@ -184,14 +178,20 @@ export function flowmeterReading(
 }
 
 /**
- * A flowmeter's two lines: its reading as its display shows it, and the
- * path the water takes through it, from its link in its room's model, the
- * way the water is going now (none invented at no flow).
+ * A flowmeter's two lines: its reading as its display shows it, and where
+ * it is installed, from its link in its room's model.
  */
 export function flowmeterLines(world: World, tag: string): PartLines | null {
   const value = flowmeterReading(world, tag);
   if (value === undefined) return null;
-  const title = `${tag} — Flowmeter, currently reading ${value.toFixed(1)} m³/h.`;
+  // As its display shows it: the size, and an arrow for the way (`mag-flowmeter.ts`).
+  const arrow =
+    value > 0.05
+      ? ', its arrow pointing forward (->)'
+      : value < -0.05
+        ? ', its arrow pointing back (<-)'
+        : '';
+  const title = `${tag} — Flowmeter, currently reading ${Math.abs(value).toFixed(1)} m³/h${arrow}.`;
   const fixture = INSTALLED_FIXTURES[tag];
   const schematic = Object.values(SCHEMATICS).find(
     (s) => s.room === fixture.room,
@@ -201,12 +201,10 @@ export function flowmeterLines(world: World, tag: string): PartLines | null {
   const name = (id: string) =>
     schematic?.nodes.find((n) => n.id === id)?.name.toLowerCase() ?? id;
   if (!link) return { title, detail: fixture.purpose };
-  const [from, to] = [name(link.sourceId), name(link.targetId)];
-  const detail =
-    Math.abs(value) < 0.05
-      ? `Measures the flow between the ${from} and the ${to}; nothing is flowing.`
-      : value > 0
-        ? `Measures filtered water flowing from the ${from} into the ${to}.`
-        : `Measures backwash water flowing from the ${to} back into the ${from}.`;
-  return { title, detail };
+  // Where it is installed, which the player can see: nothing of the water's
+  // kind or cause, which the meter does not show.
+  return {
+    title,
+    detail: `Installed between the ${name(link.sourceId)} and the ${name(link.targetId)}; its forward arrow points towards the ${name(link.targetId)}.`,
+  };
 }

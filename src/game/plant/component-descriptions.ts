@@ -59,7 +59,7 @@ export type ResolvedStatus =
   | { policy: 'booster'; running: boolean; tripped: boolean }
   | { policy: 'switch'; on: boolean }
   | { policy: 'valve'; open: boolean }
-  | { policy: 'gas'; ppm: number }
+  | { policy: 'gas'; shown: string }
   | { policy: 'uv'; lit: boolean };
 
 /** What a valve's link in its room's enhanced network says it isolates, in a description's words. */
@@ -263,8 +263,10 @@ export function formatStatus(
       // faulty (the owner, 2026-10-25: those words only for things that can fail).
       return onOff(resolved.lit);
     case 'gas':
-      // As its detector reads it, in ppm (its range is 0–1 ppm).
-      return `reading ${resolved.ppm.toFixed(2)} ppm`;
+      // As its detector's display shows it: ppm, or O-R over its range.
+      return resolved.shown === 'O-R'
+        ? 'reading over its range (O-R)'
+        : `reading ${resolved.shown} ppm`;
   }
 }
 
