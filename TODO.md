@@ -126,7 +126,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Housekeeping
 
-- [x] **Walking clearance and prompt archive consolidation** (done 2026-10-25, `454d631`): commit the 0.35 m walker, separate pump-set collision bounds and clearance tests; archive completed/superseded prompts with corrected links and retained follow-ups.
+- [x] **Walking clearance and prompt archive consolidation** (done 2026-10-25, `65a9b1f`): commit the 0.35 m walker, separate pump-set collision bounds and clearance tests; archive completed/superseded prompts with corrected links and retained follow-ups.
 
 - [x] **Register ozone monitors and support their controls** (done 2026-10-25, `d8b5e1d`): add PL1-GD1 and PL2-GD1 to installed fixtures, retain their schematic bindings, identify them on the overlay and printed control plates, and enclose ACCEPT/RESET on the monitor posts.
 

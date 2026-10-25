@@ -5,3 +5,5 @@ The owner asked to commit and push the remaining workspace changes. These reduce
 Completed prompts 013, 060 and 062 move to the done index. Superseded prompts 001, 002, 011, 012 and 016 move to an obsolete index. Documentation and code-comment references follow the moves; unfinished work remains in TODO, including the identification pilot review and the Olympic fittings still to draw.
 
 Validation: typecheck, lint, formatting and all 2,228 tests passed (9 skipped). Production build passed and advanced the version to 0.1.310. Relative links in changed documents also resolved. Existing lint and bundle-size warnings remain.
+
+After rebasing onto the remote updates through 921e80b, the combined tree passed typecheck, lint, formatting, all 2,254 tests (10 skipped) and build 0.1.323. Three incoming Markdown files needed formatting only. The task-list reference follows the rebased implementation commit 65a9b1f. Existing autostashes were retained.
