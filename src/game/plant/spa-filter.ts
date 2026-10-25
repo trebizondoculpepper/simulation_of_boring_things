@@ -28,14 +28,14 @@ import type { IdealFilterSpec, IdealFilterState } from './ideal-filter';
  */
 
 /**
- * The cabinets' filters, the largest the cabinets hold without moving
- * their fittings (the owner, 2026-10-25): the jacuzzi's Ø0.44 m on a 0.8 m
- * bed, the foot spa's Ø0.38 m on 0.6 m; at their circulations (8 and
- * 6 m³/h) both filter at about 53 m/h, a spa filter's rate.
+ * The cabinets' filters, standing outside them beside their cabinets (the
+ * owner, 2026-10-25): the jacuzzi's Ø0.6 m on a 1.0 m bed, the foot spa's
+ * Ø0.5 m on 0.8 m; at their circulations (8 and 6 m³/h) both filter at
+ * about 30 m/h, near medium rate.
  */
 export const SPA_FILTERS = {
-  jacuzzi: { diameter: 0.44, bedDepth: 0.8 },
-  footSpa: { diameter: 0.38, bedDepth: 0.6 },
+  jacuzzi: { diameter: 0.6, bedDepth: 1.0 },
+  footSpa: { diameter: 0.5, bedDepth: 0.8 },
 } as const satisfies Record<string, IdealFilterSpec>;
 
 /** The schedules MODE steps through, in order. */

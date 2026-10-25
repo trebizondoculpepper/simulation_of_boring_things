@@ -1,3 +1,4 @@
+import { placedPort } from './machine-ports';
 import { retiredCabinetRuns, retiredFrom } from './retired-rooms';
 import { SCHEMATICS } from '../../../game/plant/schematics';
 import {
@@ -63,7 +64,7 @@ export interface CabinetPort {
   /** What its run's label says. */
   label: string;
   /** Where its run goes. */
-  to: 'pool' | 'plant' | 'drain' | 'isolator' | 'tank';
+  to: 'pool' | 'plant' | 'drain' | 'isolator' | 'tank' | 'filter';
   /** Which way it flows: out of the cabinet along its run, or in. */
   flow: 'out' | 'in';
 }
@@ -149,6 +150,29 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
       label: 'DRAIN',
       flow: 'out',
       to: 'drain',
+    },
+    // To and from its sand filter, outside it (the owner, 2026-10-25).
+    {
+      name: 'Cabinet to the filter',
+      at: at(-0.1, 0.6),
+      out: 'back',
+      kind: 'pvc-pressure',
+      od: 0.05,
+      service: 'pool water',
+      label: 'TO FILTER',
+      flow: 'out',
+      to: 'filter',
+    },
+    {
+      name: 'Filter to the cabinet',
+      at: at(0.6, 0.75),
+      out: 'back',
+      kind: 'pvc-pressure',
+      od: 0.05,
+      service: 'pool water',
+      label: 'FROM FILTER',
+      flow: 'in',
+      to: 'filter',
     },
     {
       name: 'Electrical supply',
@@ -322,6 +346,8 @@ export interface Isolator {
 
 /** Out from a stub's valve and cap before a pipe turns, metres. */
 const CLEAR = 0.15;
+/** The spa filters' runs' level, over head height (the owner's rule). */
+const FILTER_RUN_LEVEL = 2.7;
 /** Space for the drain valve and its lever before the pipe drops to its gully. */
 const FOOTBATH_DRAIN_REACH = 0.5;
 /** The lowest height a pool pipe crosses the room at, over the cabinet's top. */
@@ -751,6 +777,90 @@ export function cabinetPipes(
       at[2] + outDir[2] * reach,
     ];
     add(port, [at, out, [out[0], 0.17, out[2]]]);
+  }
+  // Its sand filter's runs (the owner, 2026-10-25): out to its unions,
+  // each in its own lane and at its own height, its isolating lever valve
+  // at the cabinet; its wash up out of its valve head and down into a
+  // tundish beside it.
+  const filterPlaced = s.layout.placed.find((p) =>
+    p.item.key.startsWith('sand-filter:spa-'),
+  );
+  if (filterPlaced) {
+    const clean = (pts: Vec3[]) =>
+      pts.filter(
+        (p, i) =>
+          i === 0 ||
+          Math.hypot(
+            p[0] - pts[i - 1][0],
+            p[1] - pts[i - 1][1],
+            p[2] - pts[i - 1][2],
+          ) > 1e-6,
+      );
+    // The run to the nearer union in the inner, lower lane, so neither
+    // crosses the other.
+    const unionOf = (port: CabinetPort) =>
+      placedPort(filterPlaced, port.flow === 'out' ? 'inlet' : 'outlet');
+    const far = (p: { port: CabinetPort; at: Vec3 }) => {
+      const u = unionOf(p.port).at;
+      return Math.hypot(u[0] - p.at[0], u[2] - p.at[2]);
+    };
+    ports
+      .filter((p) => p.port.to === 'filter')
+      .sort((a, b) => far(a) - far(b))
+      .forEach(({ port, at }, i) => {
+        const u = unionOf(port);
+        const ua: Vec3 = [u.at[0], u.at[1], u.at[2]];
+        const uo: Vec3 = [
+          ua[0] + u.outward[0] * CLEAR,
+          ua[1],
+          ua[2] + u.outward[2] * CLEAR,
+        ];
+        // Beyond the heating's lanes, clear of them.
+        const reach = CLEAR + HEATING_LANE + 0.3 + i * 0.12;
+        const off: Vec3 = [
+          at[0] + outDir[0] * reach,
+          at[1],
+          at[2] + outDir[2] * reach,
+        ];
+        const y = FILTER_RUN_LEVEL + i * 0.15;
+        // Up over head height, along, and down to the filter's union.
+        const points = clean([
+          at,
+          off,
+          [off[0], y, off[2]],
+          [off[0], y, uo[2]],
+          [uo[0], y, uo[2]],
+          uo,
+          ua,
+        ]);
+        add(port, points);
+        const run = runs[runs.length - 1];
+        run.valve = {
+          id: `${port.name} valve`,
+          at: [off[0], (off[1] + y) / 2, off[2]],
+          axis: 'y',
+          operator: 'lever',
+          installed: true,
+          name: `${port.name} valve`,
+        };
+      });
+    const w = placedPort(filterPlaced, 'waste');
+    const wa: Vec3 = [w.at[0], w.at[1], w.at[2]];
+    const over: Vec3 = [
+      wa[0] + w.outward[0] * 0.15,
+      wa[1],
+      wa[2] + w.outward[2] * 0.15,
+    ];
+    runs.push({
+      name: 'Filter wash to waste',
+      kind: 'pvc-drain',
+      od: 0.05,
+      service: 'drainage',
+      label: 'FILTER WASH',
+      flow: 1,
+      points: [wa, over, [over[0], 0.17, over[2]]],
+      through: [],
+    });
   }
   // The jacuzzi's drain valve, motorised on its one short length, as the
   // foot spa's (the owner, 2026-10-24: on its valve panel with the rest).

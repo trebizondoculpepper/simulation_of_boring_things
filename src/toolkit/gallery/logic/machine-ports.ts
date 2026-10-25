@@ -1,3 +1,5 @@
+import { spaSandFilterGeometry } from '../../components/plant/logic/spa-sand-filter';
+import { SPA_FILTERS } from '../../../game/plant/spa-filter';
 import {
   FILTER_CENTRE_Z,
   NOZZLE_REACH,
@@ -68,6 +70,33 @@ export function tankFrame(item: Pick<Item, 'w' | 'd' | 'h'>) {
 /** Connection positions are also used by the view to draw each nozzle. */
 export function machinePorts(item: Item): MachinePort[] {
   const [kind, arg] = item.key.split(':');
+  // A spa cabinet's sand filter, outside it (the owner, 2026-10-25): its
+  // unions either side, low, and its wash up out of its valve head.
+  if (
+    kind === 'sand-filter' &&
+    (arg === 'spa-jacuzzi' || arg === 'spa-footSpa')
+  ) {
+    const g = spaSandFilterGeometry(
+      SPA_FILTERS[arg === 'spa-jacuzzi' ? 'jacuzzi' : 'footSpa'],
+    );
+    return [
+      port(
+        'inlet',
+        [-g.unionReach, g.unionY, 0],
+        [-1, 0, 0],
+        0.05,
+        'pool-water',
+      ),
+      port(
+        'outlet',
+        [g.unionReach, g.unionY, 0],
+        [1, 0, 0],
+        0.05,
+        'pool-water',
+      ),
+      port('waste', g.waste, [0, 0, -1], 0.05, 'drain'),
+    ];
+  }
   if (kind === 'sand-filter') {
     // A pressure filter's two process nozzles and its drain, each set on
     // the vessel's curved shell where it is (the room's model stands the

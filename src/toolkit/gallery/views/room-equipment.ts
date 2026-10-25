@@ -1,4 +1,6 @@
 import { decorativeKind } from '../logic/world-in-model';
+import { createSpaSandFilter } from '../../components/plant/views/spa-pack-parts';
+import { SPA_FILTERS } from '../../../game/plant/spa-filter';
 import { ozoneGeneratorStatus } from '../logic/ozone-status';
 import { retiredFrom } from '../logic/retired-rooms';
 import { olympicRoom } from '../logic/olympic-plumbing';
@@ -398,6 +400,33 @@ function modelFor(
         update: () => tank.setLevel(level() ?? 0),
       };
     return tank;
+  }
+  // A spa cabinet's sand filter, outside its cabinet (the owner,
+  // 2026-10-25): its gauge at its pool's circulation pressure, its glass
+  // showing a settled bed (the world has no spa filter's state yet).
+  if (
+    kind === 'sand-filter' &&
+    (arg === 'spa-jacuzzi' || arg === 'spa-footSpa')
+  ) {
+    const filter = createSpaSandFilter(
+      kit,
+      SPA_FILTERS[arg === 'spa-jacuzzi' ? 'jacuzzi' : 'footSpa'],
+    );
+    const store = typeof window === 'undefined' ? null : roomWorld();
+    return {
+      object: filter.group,
+      update(delta) {
+        const flowing = pool
+          ? (store?.world.value.pools[pool].flow ?? 0) > 0.5
+          : false;
+        filter.update(delta, flowing ? 0.7 : 0, {
+          mode: flowing ? 'service' : 'stopped',
+          dirt: 0,
+          channelling: 0,
+          murk: 0,
+        });
+      },
+    };
   }
   if (kind === 'sand-filter') {
     const dia = Number(arg);

@@ -29,6 +29,6 @@ describe('the jacuzzi plant room, plumbed by the router', () => {
 
   it('sets each of the schematic’s valves in its line', () => {
     const valves = plumbed.lines.flatMap((l) => l.valves ?? []);
-    expect(valves).toHaveLength(10);
+    expect(valves).toHaveLength(12);
   });
 });

@@ -1,3 +1,4 @@
+import { placedPort } from './machine-ports';
 import { PIPE_KINDS } from '../../components/core/views/pipe-kinds';
 import { routeVoxelLines } from '../../components/core/logic/voxel-router';
 import type { RouterLine } from '../../components/core/logic/voxel-router';
@@ -139,6 +140,9 @@ export function jacuzziLines(room = JACUZZI_ROOM): JacuzziLine[] {
   const layout = layoutRoom(room);
   const tank = cabinetBalanceTank(room);
   const ports = new Map(cabinetPortsInRoom(room).map((p) => [p.name, p]));
+  const filter = layout?.placed.find((p) =>
+    p.item.key.startsWith('sand-filter:spa-'),
+  );
   if (!layout || !tank) return [];
   const halfZ = layout.box.d / 2;
   const lanes = { north: 0, south: 0 };
@@ -177,7 +181,12 @@ export function jacuzziLines(room = JACUZZI_ROOM): JacuzziLine[] {
         ? { at: cabinetPort.at, outward: cabinetPort.outward }
         : node === 'tank'
           ? tankPort(port)
-          : undefined;
+          : node === 'filter' && filter
+            ? (({ at, outward }) => ({
+                at: [...at] as Vec3,
+                outward: [...outward] as Vec3,
+              }))(placedPort(filter, port))
+            : undefined;
     const source = machineEnd(link.sourceId, link.sourcePort);
     const target = machineEnd(link.targetId, link.targetPort);
     const across = (source ?? target)!.at[0];
@@ -185,6 +194,18 @@ export function jacuzziLines(room = JACUZZI_ROOM): JacuzziLine[] {
     const boundary = (node: string): PortEnd => {
       const kind = nodeKind.get(node);
       if (kind === 'gully') {
+        // The filter's wash, down beside it (`cabinetPipes`).
+        if (link.sourceId === 'filter' && filter) {
+          const w = placedPort(filter, 'waste');
+          return {
+            at: [
+              w.at[0] + w.outward[0] * 0.15,
+              TUNDISH_TOP,
+              w.at[2] + w.outward[2] * 0.15,
+            ],
+            outward: UP,
+          };
+        }
         const at =
           link.sourceId === 'cabinet'
             ? cabinetGully(room)!

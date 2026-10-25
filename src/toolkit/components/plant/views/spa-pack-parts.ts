@@ -6,6 +6,7 @@ import {
   TorusGeometry,
 } from 'three';
 import { createSightGlass } from './sight-glass';
+import { spaSandFilterGeometry } from '../logic/spa-sand-filter';
 import type { GlassInputs } from '../logic/sight-glass';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -143,14 +144,12 @@ export function createSpaSandFilter(
   const p = paints(t);
   const group = new Group();
   group.name = 'Spa sand filter';
-  const r = diameter / 2;
-  const base = 0.06;
-  // The shell: its bed, and the freeboard over it for the bed to lift.
-  const shell = bedDepth + 0.3;
+  // Its one geometry, its ports' too (`spaSandFilterGeometry`).
+  const g = spaSandFilterGeometry({ diameter, bedDepth });
+  const { r, base, shell, top, head } = g;
   t.cyl(group, p.grey, r * 0.85, base, 0, base / 2, 0, 'y', 28);
   t.cyl(group, p.white, r, shell, 0, base + shell / 2, 0, 'y', 36);
   // Its domed top, flattened, and its valve head.
-  const top = base + shell;
   const dome = new Mesh(
     new SphereGeometry(r, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2),
     p.white,
@@ -158,7 +157,6 @@ export function createSpaSandFilter(
   dome.scale.set(1, 0.35, 1);
   dome.position.y = top;
   group.add(dome);
-  const head = top + r * 0.35;
   t.cyl(group, p.grey, 0.07, 0.09, 0, head + 0.04, 0, 'y', 20);
   // The servo on the valve head, its actuator box and its cable gland.
   t.box(group, p.black, 0.09, 0.07, 0.07, 0, head + 0.12, 0);
@@ -170,23 +168,24 @@ export function createSpaSandFilter(
   });
   gauge.group.position.set(0, head + 0.06, 0.08);
   group.add(gauge.group);
-  // Its inlet and outlet: out to where the cartridge's unions were.
+  // Its inlet and outlet unions, low either side, and its wash's outlet
+  // up out of its valve head.
   for (const side of [-1, 1]) {
     const from = r * 0.95;
-    const to = 0.23;
-    if (to > from)
-      t.cyl(
-        group,
-        p.grey,
-        0.028,
-        to - from,
-        side * ((from + to) / 2),
-        0.12,
-        0,
-        'x',
-        16,
-      );
+    const to = g.unionReach;
+    t.cyl(
+      group,
+      p.grey,
+      0.028,
+      to - from,
+      side * ((from + to) / 2),
+      g.unionY,
+      0,
+      'x',
+      16,
+    );
   }
+  t.cyl(group, p.grey, 0.028, 0.07, 0, g.waste[1], g.waste[2] + 0.035, 'z', 16);
   // Its sight glass, half way up its bed, on its front.
   const glass = createSightGlass(kit, {
     radius: 0.045,

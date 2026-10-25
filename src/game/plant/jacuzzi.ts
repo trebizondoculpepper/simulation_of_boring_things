@@ -95,7 +95,12 @@ export function jacuzziPaths(valves?: Record<string, boolean>) {
   const open = (k: keyof typeof JACUZZI_VALVES) =>
     valves?.[JACUZZI_VALVES[k]] ?? true;
   return {
-    circulation: open('suction') && open('return'),
+    // Through its filter, outside the cabinet, too.
+    circulation:
+      open('suction') &&
+      open('return') &&
+      open('filterIn') &&
+      open('filterOut'),
     jets: open('jetsSuction') && open('jetsDischarge'),
     air: open('air'),
     /** The heating's primary through its heat exchanger. */

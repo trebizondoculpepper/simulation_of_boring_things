@@ -60,6 +60,15 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0029',
     tag: 'PL4-CAB1',
   },
+  // The spa cabinets' sand filters, outside them (the owner, 2026-10-25).
+  'plant_pool_03|sand-filter:spa-jacuzzi|Jacuzzi sand filter': {
+    assetId: 'asset-0119',
+    tag: 'PL3-F1',
+  },
+  'plant_pool_04|sand-filter:spa-footSpa|Footbath sand filter': {
+    assetId: 'asset-0120',
+    tag: 'PL4-F1',
+  },
   'wet_hall|break-tank|Make-up break tank (Category 5)': {
     assetId: 'asset-0030',
     tag: 'WH-T1',

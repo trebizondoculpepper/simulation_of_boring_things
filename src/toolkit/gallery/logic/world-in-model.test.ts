@@ -81,6 +81,6 @@ describe('the jacuzzi plant room’s drawing is its model’s', () => {
       expect(fitting!.link, run.name).toBe(run.link);
       expect(run.valve.operator, run.name).toBe(fitting!.operator);
     }
-    expect(valves).toBe(10);
+    expect(valves).toBe(12);
   });
 });

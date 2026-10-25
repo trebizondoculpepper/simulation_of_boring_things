@@ -688,7 +688,7 @@ export function stepWorld(world: World, delta: number): World {
       WET_HALL_PLANT.sewerConsent -
         (world.wetHall.discharging ? WET_HALL_PLANT.dischargeRate : 0),
     ),
-    footbathLineup(world.identifiedPlant),
+    footbathThroughFilter(world),
     // The Olympic's circulation, as its battery's valves and beds give it.
     (running) => {
       battery = olympicBatteryFlows(
@@ -971,4 +971,18 @@ export function appealOf(world: World): Record<PoolId, number> {
       ];
     }),
   ) as Record<PoolId, number>;
+}
+
+/**
+ * The footbath's lineup, its water returning only through its filter,
+ * outside its cabinet, both its isolating valves open (the owner,
+ * 2026-10-25).
+ */
+function footbathThroughFilter(world: World) {
+  const lineup = footbathLineup(world.identifiedPlant);
+  const open = (id: string) => world.installedValves[id] ?? true;
+  return {
+    ...lineup,
+    returning: lineup.returning && open('valve-0104') && open('valve-0105'),
+  };
 }

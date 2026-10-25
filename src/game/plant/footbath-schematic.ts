@@ -23,6 +23,13 @@ const nodes: SchematicNode[] = [
   { id: 'heating', kind: 'heating-main', name: 'Heating main' },
   { id: 'water', kind: 'water-service', name: 'Water service' },
   { id: 'gully', kind: 'gully', name: 'Floor gully' },
+  // Its sand filter, outside the cabinet beside it (the owner, 2026-10-25).
+  {
+    id: 'filter',
+    kind: 'sand-filter',
+    code: 'F1',
+    name: 'Footbath sand filter',
+  },
   { id: 'busbar', kind: 'busbar', name: 'Busbar' },
   { id: 'switch-fuse', kind: 'switch-fuse', name: 'Room supply switch-fuse' },
   { id: 'valve-panel', kind: 'valve-panel', name: 'Valve panel' },
@@ -64,6 +71,19 @@ const links: PlumbEdge[] = [
   ),
   link('Drain to waste', ['cabinet', 'drain'], ['gully', 'in'], 'water'),
   link(
+    'Cabinet to the filter',
+    ['cabinet', 'to-filter'],
+    ['filter', 'inlet'],
+    'water',
+  ),
+  link(
+    'Filter to the cabinet',
+    ['filter', 'outlet'],
+    ['cabinet', 'from-filter'],
+    'water',
+  ),
+  link('Filter wash to waste', ['filter', 'waste'], ['gully', 'in'], 'water'),
+  link(
     'Footbath make-up main',
     ['water', 'out'],
     ['cabinet', 'make-up'],
@@ -104,6 +124,25 @@ export const FOOTBATH_SCHEMATIC: RoomSchematic = {
       role: 'return',
       operator: 'motor',
       keptBy: 'identified',
+    },
+    // Its filter's isolating valves, by hand, open in service.
+    {
+      id: 'valve-0104',
+      kind: 'isolating-valve',
+      edge: 'Cabinet to the filter',
+      end: 'source',
+      normally: 'open',
+      role: 'filterIn',
+      operator: 'lever',
+    },
+    {
+      id: 'valve-0105',
+      kind: 'isolating-valve',
+      edge: 'Filter to the cabinet',
+      end: 'target',
+      normally: 'open',
+      role: 'filterOut',
+      operator: 'lever',
     },
     {
       id: 'valve-0095',

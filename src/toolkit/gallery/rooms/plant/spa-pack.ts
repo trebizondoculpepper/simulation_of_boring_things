@@ -125,20 +125,18 @@ function skidRuns(hd: number, jets = false): CabinetRun[] {
     od: 0.05,
   });
   return [
-    // Over the top and down between them.
-    pvc('Pump to filter', [
+    // Out to its sand filter, outside the cabinet, and back to its UV
+    // unit (the owner, 2026-10-25).
+    pvc('Cabinet to the filter', [
       [-0.3, 0.27, 0.1],
-      [-0.3, 0.45, 0.1],
-      [0.095, 0.45, 0.1],
-      [0.095, 0.12, 0.1],
-      [0.11, 0.12, 0.1],
+      [-0.3, 0.6, 0.1],
+      [-0.1, 0.6, 0.1],
+      [-0.1, 0.6, out],
     ]),
-    pvc('Filter to the UV unit', [
-      [0.57, 0.12, 0.1],
-      [0.6, 0.12, 0.1],
-      [0.6, 0.45, 0.1],
-      [0.6, 0.45, 0.28],
-      [0.7, 0.45, 0.28],
+    pvc('Filter to the cabinet', [
+      [0.6, 0.75, out],
+      [0.6, 0.75, 0.28],
+      [0.7, 0.75, 0.28],
       [0.7, 0.27, 0.28],
     ]),
     // From its back port, behind the filter.
@@ -485,12 +483,16 @@ export function buildSpaPack(
   // outside (the owner, 2026-10-25).
   const vessel = jets ? null : set(createSurgeVessel(kit), -0.66, 0.1);
   const pump = set(createSpaPump(kit), -0.27, 0.1);
-  // Its sand filter (the owner, 2026-10-25), the jacuzzi's the larger.
-  const filter = set(
-    createSpaSandFilter(kit, jets ? SPA_FILTERS.jacuzzi : SPA_FILTERS.footSpa),
-    0.34,
-    0.1,
-  );
+  // Its sand filter stands outside it (the owner, 2026-10-25): in a plant
+  // room, the room's own; as an exhibit or a trial, drawn beside it.
+  const ownFilter = !inService || !!external || !!jacuzziBinding;
+  const filter = ownFilter
+    ? createSpaSandFilter(kit, jets ? SPA_FILTERS.jacuzzi : SPA_FILTERS.footSpa)
+    : null;
+  if (filter) {
+    filter.group.position.set(-c.w / 2 - 0.45, 0, -leafW / 2);
+    object.add(filter.group);
+  }
   const uv = set(createInlineUv(kit), 0.7, 0.06, Math.PI / 2);
   const exchanger = set(createSpaHeatExchanger(kit), 0.35, -0.3);
   const dosing = set(createSpaDosingController(kit), -0.3, backZ);
@@ -981,11 +983,17 @@ export function buildSpaPack(
       const servos = !!wash.value?.servos;
       if (servos !== servoRunning) {
         servoRunning = servos;
-        partAudio.hold(filter.group, servos ? SERVO_WHIRR : null, filter.group);
-        if (!servos) partAudio.play(VALVE_STOP, filter.group);
+        if (filter) {
+          partAudio.hold(
+            filter.group,
+            servos ? SERVO_WHIRR : null,
+            filter.group,
+          );
+          if (!servos) partAudio.play(VALVE_STOP, filter.group);
+        }
       }
       // Its gauge: the pump's pressure on it, filtering or washing.
-      filter.update(
+      filter?.update(
         delta,
         running.value ? (wash.value?.gaugeBar ?? WORKING) : 0,
         washBinding?.glass(running.value),
@@ -1073,7 +1081,8 @@ export function spaPackDemoExhibit(binding: SpaPackDemoBinding): PlantExhibit {
     title: 'Lidoluxe foot spa treatment cabinet',
     reference:
       'The same working cabinet used by the installed foot spa, connected to the ideal pool trial',
-    size: { w: 2.1, d: 1.9, h: 2.2, mount: 'floor' },
+    // Its sand filter beside it, at its left (the owner, 2026-10-25).
+    size: { w: 3.4, d: 1.9, h: 2.2, mount: 'floor' },
     maker: 'lidoluxe',
     build: (kit) => buildSpaPack(kit, 'IDEAL FOOT SPA', false, false, binding),
   };
@@ -1082,14 +1091,16 @@ export function spaPackDemoExhibit(binding: SpaPackDemoBinding): PlantExhibit {
 export const SPA_PACK_EXHIBIT: PlantExhibit = {
   title: 'Packaged spa set in a prefabricated plant cabinet',
   reference:
-    'For circuits under 10 m³/h (the foot spa): pump, sand filter, inline UV, plate heat exchanger and surge vessel on one skid, dosing on the back wall; 1.7 × 0.9 × 2.1 m cabinet',
-  size: { w: 2.1, d: 1.9, h: 2.2, mount: 'floor' },
+    'For circuits under 10 m³/h (the foot spa): pump, inline UV, plate heat exchanger and surge vessel on one skid, dosing on the back wall, in a 1.7 × 0.9 × 2.1 m cabinet; its sand filter, with its sight glass, beside it',
+  size: { w: 3.4, d: 1.9, h: 2.2, mount: 'floor' },
   build: (kit) => buildSpaPack(kit),
 };
 
 /** The footbath's cabinet as installed in its plant room: in service, its POWER on. */
 export const SPA_PACK_IN_SERVICE: PlantExhibit = {
   ...SPA_PACK_EXHIBIT,
+  // Its filter the room's own.
+  size: { w: 2.1, d: 1.9, h: 2.2, mount: 'floor' },
   build: (kit) => buildSpaPack(kit, 'FOOT SPA', false, true),
 };
 
@@ -1097,14 +1108,16 @@ export const SPA_PACK_IN_SERVICE: PlantExhibit = {
 export const JACUZZI_PACK_EXHIBIT: PlantExhibit = {
   title: 'Packaged Jacuzzi plant cabinet',
   reference:
-    'For a spa circuit under 30 m³/h (the Jacuzzi, 8 m³/h): the packaged set, and a bay for its jet pump and air blower, each switched from the panel; 2.8 × 1.0 × 2.1 m cabinet',
-  size: { w: 3.2, d: 3.0, h: 2.2, mount: 'floor' },
+    'For a spa circuit under 30 m³/h (the Jacuzzi, 8 m³/h): the packaged set, and a bay for its jet pump and air blower, each switched from the panel; 2.8 × 1.0 × 2.1 m cabinet, its sand filter beside it',
+  size: { w: 4.6, d: 3.0, h: 2.2, mount: 'floor' },
   build: (kit) => buildSpaPack(kit, 'JACUZZI', true),
 };
 
 /** The Jacuzzi's cabinet as installed in its plant room: in service, its POWER on. */
 export const JACUZZI_PACK_IN_SERVICE: PlantExhibit = {
   ...JACUZZI_PACK_EXHIBIT,
+  // Its filter the room's own.
+  size: { w: 3.2, d: 3.0, h: 2.2, mount: 'floor' },
   build: (kit) => buildSpaPack(kit, 'JACUZZI', true, true),
 };
 

@@ -27,6 +27,13 @@ export const JACUZZI_NODES: readonly SchematicNode[] = [
     code: 'CAB1',
     name: 'Packaged Jacuzzi plant cabinet',
   },
+  // Its sand filter, outside the cabinet beside it (the owner, 2026-10-25).
+  {
+    id: 'filter',
+    kind: 'sand-filter',
+    code: 'F1',
+    name: 'Jacuzzi sand filter',
+  },
   {
     id: 'tank',
     kind: 'balance-tank',
@@ -115,6 +122,21 @@ export const JACUZZI_LINKS: readonly PlumbEdge[] = [
     'water',
   ),
   link('Drain to waste', ['cabinet', 'drain'], ['gully', 'in'], 'water'),
+  // Its filter: the pump's water out to it and back for the UV; its wash
+  // to the gully.
+  link(
+    'Cabinet to the filter',
+    ['cabinet', 'to-filter'],
+    ['filter', 'inlet'],
+    'water',
+  ),
+  link(
+    'Filter to the cabinet',
+    ['filter', 'outlet'],
+    ['cabinet', 'from-filter'],
+    'water',
+  ),
+  link('Filter wash to waste', ['filter', 'waste'], ['gully', 'in'], 'water'),
   link(
     'Suction from the balance tank',
     ['tank', 'suction'],
@@ -208,7 +230,9 @@ export type JacuzziValveRole =
   | 'drain'
   | 'suction'
   | 'makeUp'
-  | 'tankDrain';
+  | 'tankDrain'
+  | 'filterIn'
+  | 'filterOut';
 
 const valve = (
   role: JacuzziValveRole,
@@ -244,6 +268,8 @@ export const JACUZZI_FITTINGS: readonly (GivenFitting & { role: string })[] = [
   valve('drain', 'Drain to waste', 'source', 'closed', 'motor'),
   valve('suction', 'Suction from the balance tank', 'target', 'open', 'motor'),
   valve('makeUp', 'Make-up to the balance tank', 'target', 'open', 'lever'),
+  valve('filterIn', 'Cabinet to the filter', 'source', 'open', 'lever'),
+  valve('filterOut', 'Filter to the cabinet', 'target', 'open', 'lever'),
   valve(
     'tankDrain',
     'Balance tank drain to waste',

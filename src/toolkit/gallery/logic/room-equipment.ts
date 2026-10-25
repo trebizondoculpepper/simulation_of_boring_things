@@ -669,6 +669,15 @@ export function roomEquipment(
           floor('jacuzzi-pack', 'Packaged Jacuzzi plant cabinet', 3.2, 3, 2.2, {
             back: 0.9,
           }),
+          // Its sand filter, outside its cabinet beside it (the owner,
+          // 2026-10-25): Ø0.6 m (`SPA_FILTERS`).
+          floor(
+            'sand-filter:spa-jacuzzi',
+            'Jacuzzi sand filter',
+            0.8,
+            0.8,
+            1.75,
+          ),
         ],
       };
     case 'plant_pool_04':
@@ -692,6 +701,14 @@ export function roomEquipment(
           floor('spa-pack', 'Packaged spa set, footbath', 2.1, 1.9, 2.2, {
             back: 0.9,
           }),
+          // Its sand filter, outside its cabinet beside it: Ø0.5 m.
+          floor(
+            'sand-filter:spa-footSpa',
+            'Footbath sand filter',
+            0.8,
+            0.8,
+            1.5,
+          ),
         ],
       };
     case 'wet_hall':
@@ -1458,11 +1475,22 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
   plant_pool_03: (box, items) => {
     const cabinet = items.find((i) => i.key === 'jacuzzi-pack')!;
     const back = cabinet.back ?? 0;
+    // Its filter in the room's south-west corner, south of it and clear of
+    // the doorway's floor and the heating's lanes overhead: its balance
+    // tank stands to the north.
+    const filter = items.find((i) => i.key === 'sand-filter:spa-jacuzzi')!;
     return [
       put(box, cabinet, {
         x: -box.w / 2 + back + cabinet.d / 2,
         z: 0.65,
         face: 'east',
+      }),
+      put(box, filter, {
+        // Facing north, its unions east and west, each with room to be
+        // reached.
+        x: -box.w / 2 + 0.6,
+        z: box.d / 2 - 0.05 - filter.d / 2,
+        face: 'north',
       }),
     ];
   },
@@ -1471,10 +1499,16 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
   plant_pool_04: (box, items) => {
     const cabinet = items.find((i) => i.key === 'spa-pack')!;
     const back = cabinet.back ?? 0;
+    const filter = items.find((i) => i.key === 'sand-filter:spa-footSpa')!;
     return [
       put(box, cabinet, {
         x: -box.w / 2 + back + cabinet.d / 2,
         z: -0.3,
+        face: 'east',
+      }),
+      put(box, filter, {
+        x: -box.w / 2 + 0.1 + filter.d / 2,
+        z: -0.3 - cabinet.w / 2 - 0.1 - filter.w / 2,
         face: 'east',
       }),
     ];

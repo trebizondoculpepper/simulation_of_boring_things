@@ -378,7 +378,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     title: 'Jacuzzi cabinet, on trial',
     reference:
       'The jacuzzi’s Lidoluxe cabinet, its controller and display, plumbed to the trial’s ideal spa and balance tank',
-    size: { w: 3.2, d: 1.6, h: 2.2, mount: 'floor' },
+    size: { w: 4.6, d: 1.6, h: 2.2, mount: 'floor' },
     maker: 'lidoluxe',
     build: (kit) => {
       const cabinet = buildSpaPack(
