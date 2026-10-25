@@ -14,6 +14,7 @@ import {
   stepFilterRig,
 } from '../../../../game/plant/ideal-filter';
 import type { FilterRig, RigFlows } from '../../../../game/plant/ideal-filter';
+import type { WaterCondition } from '../../../../game/water/water-condition';
 import {
   IDEAL_FILTER_PANEL,
   actOnRig,
@@ -120,8 +121,12 @@ function idealVessel(
   };
 }
 
-const m3h = (q: number) => `${Math.abs(q).toFixed(1).padStart(5)} m3/h`;
-const gm3 = (c: number) => `${c.toFixed(1).padStart(6)} g/m3`;
+const m3h = (q: number) => `${Math.abs(q).toFixed(1).padStart(5)}m3/h`;
+/** A water's condition on a vessel's display (prompt 070): its temperature, its solids and its free chlorine. */
+const water = (w: WaterCondition, q: number) => [
+  `${m3h(q)} ${w.temperature.toFixed(1).padStart(4)}C`,
+  `SS${w.solids.toFixed(1).padStart(5)} FCl${w.freeChlorine.toFixed(2).padStart(5)}`,
+];
 
 export const EXHIBITS: readonly PlantExhibit[] = [
   {
@@ -173,39 +178,38 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     reference: 'Clean water at a fixed 12 m head, as much as is drawn',
     size: { w: 1.3, d: 1.0, h: 1.5, mount: 'floor' },
     build: (kit) =>
-      idealVessel(kit, 'IDEAL CLEAN SOURCE', '#2b7fc4', () => [
-        `OUT ${m3h(flows.valve.clean)}`,
-        `DIRT ${gm3(0)}`,
-      ]),
+      idealVessel(kit, 'IDEAL CLEAN SOURCE', '#2b7fc4', () =>
+        water(rig.sources.clean, flows.valve.clean),
+      ),
   },
   {
     title: 'Ideal dirty source',
     reference: 'Water carrying the dirt set on the panel, at a fixed 12 m head',
     size: { w: 1.3, d: 1.0, h: 1.5, mount: 'floor' },
     build: (kit) =>
-      idealVessel(kit, 'IDEAL DIRTY SOURCE', '#7a5a2a', () => [
-        `OUT ${m3h(flows.valve.dirty)}`,
-        `DIRT ${gm3(rig.dirtySource)}`,
-      ]),
+      idealVessel(kit, 'IDEAL DIRTY SOURCE', '#7a5a2a', () =>
+        water(
+          { ...rig.sources.dirty, solids: rig.dirtySource },
+          flows.valve.dirty,
+        ),
+      ),
   },
   {
     title: 'Ideal clean outlet',
     reference: 'Takes the filtered water, against a fixed 2 m head',
     size: { w: 1.3, d: 1.0, h: 1.5, mount: 'floor' },
     build: (kit) =>
-      idealVessel(kit, 'IDEAL CLEAN OUTLET', '#9fd0ea', () => [
-        `IN  ${m3h(flows.toOutlet)}`,
-        `DIRT ${gm3(flows.outletDirt)}`,
-      ]),
+      idealVessel(kit, 'IDEAL CLEAN OUTLET', '#9fd0ea', () =>
+        water(flows.outlet, flows.toOutlet),
+      ),
   },
   {
     title: 'Ideal waste sink',
     reference: 'Takes backwash and rinse water, at no head',
     size: { w: 1.3, d: 1.0, h: 1.5, mount: 'floor' },
     build: (kit) =>
-      idealVessel(kit, 'IDEAL WASTE SINK', '#5b4630', () => [
-        `IN  ${m3h(flows.toWaste)}`,
-        `DIRT ${gm3(flows.wasteDirt)}`,
-      ]),
+      idealVessel(kit, 'IDEAL WASTE SINK', '#5b4630', () =>
+        water(flows.waste, flows.toWaste),
+      ),
   },
 ];

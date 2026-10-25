@@ -1,3 +1,4 @@
+import { WATERS } from '../water/water-condition';
 import { describe, expect, it } from 'vite-plus/test';
 import {
   SOURCE_SHAPE,
@@ -284,5 +285,36 @@ describe('experimental sources', () => {
     expect(() =>
       createExperimentalSource({ id: 't', substance: 'acid', quantity: -1 }),
     ).toThrow();
+  });
+});
+
+describe('an ideal water source’s water (prompt 070)', () => {
+  it('gives its substance’s condition, or one of its own, and only waters have one', () => {
+    expect(
+      createExperimentalSource({
+        id: 's1',
+        substance: 'pool-water',
+      }).condition(),
+    ).toEqual(WATERS.pool);
+    expect(
+      createExperimentalSource({
+        id: 's2',
+        substance: 'mains-water',
+      }).condition()?.temperature,
+    ).toBe(WATERS.mains.temperature);
+    const own = createExperimentalSource({
+      id: 's3',
+      substance: 'dirty-water',
+      condition: { ...WATERS.dirty, solids: 80 },
+    });
+    expect(own.condition()?.solids).toBe(80);
+    own.setCondition({ ...WATERS.dirty, solids: 5 });
+    expect(own.condition()?.solids).toBe(5);
+    expect(
+      createExperimentalSource({
+        id: 's4',
+        substance: 'power-400v',
+      }).condition(),
+    ).toBeUndefined();
   });
 });

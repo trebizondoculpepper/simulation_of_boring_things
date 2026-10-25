@@ -105,4 +105,13 @@ describe('the ideal filter', () => {
       unsettled: 0,
     });
   });
+
+  it('carries the water’s condition: cleaner out, a trace cooler, its chlorine untouched (prompt 070)', () => {
+    const f = rigFlows(run(newFilterRig(), 'service', 30));
+    expect(f.outlet.solids).toBeLessThan(f.supply.solids * 0.05);
+    expect(f.outlet.temperature).toBeLessThan(f.supply.temperature);
+    expect(f.supply.temperature - f.outlet.temperature).toBeLessThan(0.05);
+    expect(f.outlet.freeChlorine).toBe(f.supply.freeChlorine);
+    expect(f.outlet.organics).toBe(f.supply.organics);
+  });
 });

@@ -1,3 +1,6 @@
+import { WATERS } from '../water/water-condition';
+import type { WaterCondition } from '../water/water-condition';
+
 /**
  * Experimental (placeholder) sources (the owner, 2026-10-23): for when the
  * game needs a source of some substance before the real plant behind it
@@ -316,6 +319,11 @@ export interface ExperimentalSourceSpec {
   outputs?: number;
   /** How much it starts with, in its substance's unit; Infinity for an endless supply. */
   quantity?: number;
+  /**
+   * A water's condition (prompt 070): what it carries besides its volume.
+   * A water source's is its substance's (`WATER_OF`) unless given.
+   */
+  condition?: WaterCondition;
   /** The potential it offers (bar, or volts for power); its substance's by default. */
   potential?: number;
   /** The most it can deliver, its unit an hour; its substance's by default. */
@@ -374,7 +382,10 @@ export interface SourcePort {
 export interface ExperimentalSource {
   readonly role: 'source';
   spec: Required<
-    Omit<ExperimentalSourceSpec, 'potential' | 'maxRate' | 'resistance'>
+    Omit<
+      ExperimentalSourceSpec,
+      'potential' | 'maxRate' | 'resistance' | 'condition'
+    >
   >;
   /** Its ports: `out-1`, `out-2`… typed by its substance, and `remaining`. */
   ports: SourcePort[];
@@ -392,7 +403,21 @@ export interface ExperimentalSource {
   reading(): string;
   /** Its control port's value: what is left. */
   value(): number;
+  /** A water source's water, its condition (prompt 070); none for other substances. */
+  condition(): WaterCondition | undefined;
+  /** Set what a water source gives (an ideal source's water can be anything). */
+  setCondition(c: WaterCondition): void;
 }
+
+/** Each water's condition, as an ideal source of it gives it (prompt 070). */
+export const WATER_OF: Partial<Record<Substance, WaterCondition>> = {
+  'pool-water': WATERS.pool,
+  'mains-water': WATERS.mains,
+  'dirty-water': WATERS.dirty,
+  lthw: WATERS.lthw,
+  dhw: WATERS.dhw,
+  'chilled-water': WATERS.chilled,
+};
 
 /** A substance's ports for a source or sink: its studs round the back, typed, and its one control port on top. */
 function terminalPorts(
@@ -486,6 +511,7 @@ export function createExperimentalSource(
   if (!(full.quantity >= 0))
     throw new Error(`${spec.id}: a quantity cannot be negative`);
   let left = full.quantity;
+  let water = spec.condition ?? WATER_OF[spec.substance];
   const ports = terminalPorts(
     full.substance,
     full.outputs,
@@ -510,6 +536,10 @@ export function createExperimentalSource(
       return given;
     },
     reading: () => show(left),
+    condition: () => water,
+    setCondition(c) {
+      if (water) water = c;
+    },
   };
 }
 

@@ -1,6 +1,8 @@
 import { solveNetwork } from '../sim/hydraulics';
 import type { NetLink, NetNode } from '../sim/hydraulics';
 import type { GlassInputs } from '../../toolkit/components/plant/logic/sight-glass';
+import { WATERS, loseHeat, mix } from '../water/water-condition';
+import type { WaterCondition } from '../water/water-condition';
 
 /**
  * The ideal filter (the owner, 2026-10-25): one pressure sand filter model
@@ -134,8 +136,12 @@ export interface FilterRig {
   /** Each valve's opening, 0 to 1, and its command. */
   opening: Record<RigValve, number>;
   command: Record<RigValve, boolean>;
-  /** Dirt in the dirty source's water, g/m³. */
+  /** Dirt in the dirty source's water, g/m³: its suspended solids, set on the panel. */
   dirtySource: number;
+  /** Each source's water (prompt 070); the dirty one's solids are `dirtySource`. */
+  sources: { clean: WaterCondition; dirty: WaterCondition };
+  /** The rig room's air, °C, which the filter's vessel loses heat to. */
+  ambient: number;
 }
 
 /** A servo valve's stroke, s. */
@@ -159,6 +165,8 @@ export function newFilterRig(spec: IdealFilterSpec = LOUNGE_SIZE): FilterRig {
       boolean
     >,
     dirtySource: 20,
+    sources: { clean: WATERS.clean, dirty: WATERS.dirty },
+    ambient: 18,
   };
 }
 
@@ -179,6 +187,10 @@ export interface RigFlows {
   supplyDirt: number;
   outletDirt: number;
   wasteDirt: number;
+  /** The water's whole condition (prompt 070): the supply's, the clean outlet's, the waste's. */
+  supply: WaterCondition;
+  outlet: WaterCondition;
+  waste: WaterCondition;
 }
 
 const BAR = 1 / 10.2;
@@ -255,9 +267,15 @@ export function rigFlows(rig: FilterRig): RigFlows {
   ) as Record<RigValve, number>;
   const bed = flow('bed');
   const supplied = Math.max(0, valves.clean) + Math.max(0, valves.dirty);
-  const supplyDirt = supplied
-    ? (Math.max(0, valves.dirty) * rig.dirtySource) / supplied
-    : 0;
+  // The supply: the two sources' waters, mixed by their flows.
+  const supply = mix([
+    { condition: rig.sources.clean, share: Math.max(0, valves.clean) },
+    {
+      condition: { ...rig.sources.dirty, solids: rig.dirtySource },
+      share: Math.max(0, valves.dirty),
+    },
+  ]);
+  const supplyDirt = supplied ? supply.solids : 0;
   // Down through the bed: what it lets past. Up: what it washes out.
   const passed = bed > 0 ? filtered(rig, supplyDirt) : supplyDirt;
   const washed =
@@ -272,6 +290,19 @@ export function rigFlows(rig: FilterRig): RigFlows {
   const fromBottom = Math.max(0, valves.v5);
   const toWaste = fromTop + fromBottom;
   const topDirt = bed < 0 ? supplyDirt + washed : supplyDirt;
+  // The filter as a black box on the water: through the bed, its solids as
+  // it lets them past, and a trace of heat lost by its vessel to the room.
+  const through = loseHeat(
+    { ...supply, solids: passed },
+    vesselUa(rig.spec),
+    rig.ambient,
+    Math.abs(bed),
+  );
+  const outlet = through;
+  const waste = mix([
+    { condition: { ...supply, solids: topDirt }, share: fromTop },
+    { condition: through, share: fromBottom },
+  ]);
   return {
     valve: valves,
     bed,
@@ -286,7 +317,17 @@ export function rigFlows(rig: FilterRig): RigFlows {
     wasteDirt: toWaste
       ? (fromTop * topDirt + fromBottom * passed) / toWaste
       : 0,
+    supply,
+    outlet,
+    waste,
   };
+}
+
+/** A vessel's heat loss to its room, W per kelvin: its shell and ends, uninsulated steel and GRP, about 5 W/m²K. */
+export function vesselUa(spec: IdealFilterSpec): number {
+  const z = filterSizing(spec);
+  const shell = Math.PI * spec.diameter * (z.bedDepth + 1);
+  return 5 * (shell + 2 * z.area);
 }
 
 /** What a bed lets past, g/m³, filtering water carrying `dirt` g/m³. */
