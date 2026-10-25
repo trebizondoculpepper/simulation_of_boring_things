@@ -9,6 +9,15 @@ Status: opened 2026-10-25 by the overnight session that implemented prompt [060]
 - No hand-written or manually produced structures: everything derives algorithmically from the game's model.
 - Tags are hierarchical: room, group, item (PL2-P1-P1 is plant room 2, pump set 1, pump 1).
 
+## The owner's answers (2026-10-25, asked one at a time)
+
+1. **The old plant network:** find out whether anything uses it; nothing did, so it is deleted (item 4).
+2. **Pump tags:** no preference; following the hierarchy rule, the pumps become PL2-P1-P1, PL2-P1-P2, PL1-P1-P1 and PL1-P1-P2, starters, plates, panels and console included.
+3. **Filter valve tags:** letters by function, derived from each fitting's role: IV1 inlet, IV2 outlet, BV1 backwash in, BV2 backwash out, RNV1 rinse, DV1 drain, the same scheme in every room.
+4. **The footbath's overflow valve PL4-PW1-IV2:** removed, as the jacuzzi's was; the overflow runs unvalved and its asset id (valve-0094) is retired.
+5. **The regulating valve PL2-F-RV1:** a regulating-valve template, derived from its link: "Regulates water flowing from … to …".
+6. **Persistence:** not a concern for now. "If the network changes then the state of the game is meaningless for now. We can just throw the game state away if the network has changed." So a change to a room's enhanced network may discard the saved world (a version bump with no migration), and the registers need not keep anything by hand to carry saves across a retagging.
+
 ## 1. Build every plant room through the plumber (the main work)
 
 Only the Olympic plant room (`olympic-plumbing.ts`, prompt 033) is laid out from an enhanced network. Every other room's pipework is hand-drawn: the lounge's runs and valves (`room-pipes.ts`), the jacuzzi's and footbath's cabinet services (`cabinet-pipes.ts`), the wet hall's and boiler house's. By the rulings these rooms' drawn valves are things that do not exist on any enhanced network, so their descriptions are empty (tag and name only) and their tags are not derived.
