@@ -31,26 +31,58 @@ export type DrawnKind =
   | 'electrical'
   | 'pipe';
 
+/**
+ * What a drawn thing is bound to: exactly one of a node of its room's
+ * enhanced network (a machine), a fitting (a valve, a meter, an isolator),
+ * a link (a pipe or a cable), or nothing, as set decoration that does
+ * nothing (a sign, furniture; never a working engineering item).
+ */
+export type Binding =
+  | { node: string }
+  | { fitting: string }
+  | { link: string }
+  | { decorative: true };
+
 export interface DrawnThing {
   kind: DrawnKind;
   name: string;
-  /** The id in its room's enhanced network it is drawn from, if any. */
-  node?: string;
-  /** Set decoration: drawn, doing nothing, outside the model. */
-  decorative?: boolean;
+  /** What it is drawn from; none if it is drawn from nothing in the model. */
+  binding?: Binding;
 }
 
-/** A room's enhanced network: every node, fitting and link id. */
-export function roomModel(room: string): ReadonlySet<string> | undefined {
+/** A room's enhanced network: its nodes, fittings and links, by id. */
+export interface RoomModel {
+  nodes: ReadonlySet<string>;
+  fittings: ReadonlySet<string>;
+  links: ReadonlySet<string>;
+}
+
+export function roomModel(room: string): RoomModel | undefined {
   if (room !== 'plant_pool_02') return undefined;
   const { expansion, schematic } = olympicPlumbing();
-  return new Set([
-    ...expansion.nodes.map((n) => n.id),
-    ...expansion.fittings.map((f) => f.id),
-    ...expansion.headers.map((h) => h.id),
-    ...schematic.edges.map((e) => e.id),
-  ]);
+  const fittings = new Set(expansion.fittings.map((f) => f.id));
+  return {
+    // The expanded graph's nodes are its machines and its fittings: a
+    // machine binds to a node that is not a fitting.
+    nodes: new Set(
+      expansion.nodes.map((n) => n.id).filter((id) => !fittings.has(id)),
+    ),
+    fittings,
+    links: new Set(schematic.edges.map((e) => e.id)),
+  };
 }
+
+/** Whether a binding names something its room's model has, of its sort. */
+export function isBound(binding: Binding | undefined, model?: RoomModel) {
+  if (!binding) return false;
+  if ('decorative' in binding) return true;
+  if (!model) return false;
+  if ('node' in binding) return model.nodes.has(binding.node);
+  if ('fitting' in binding) return model.fittings.has(binding.fitting);
+  return model.links.has(binding.link);
+}
+
+const DECORATIVE = { binding: { decorative: true } as const };
 
 const decorativeKind = (key: string) => {
   const kind = key.split(':')[0];
@@ -71,21 +103,20 @@ function olympicThings(): DrawnThing[] {
         ? 'isolator'
         : 'valve';
   return [
-    ...plumbed.items.map((i) => ({
-      kind: 'machine' as const,
+    ...plumbed.items.map((i): DrawnThing => ({
+      kind: 'machine',
       name: i.label,
-      node: i.key,
-      ...(decorativeKind(i.key) ? { decorative: true } : {}),
+      ...(decorativeKind(i.key) ? DECORATIVE : { binding: { node: i.key } }),
     })),
-    ...plumbed.fittings.map((f) => ({
+    ...plumbed.fittings.map((f): DrawnThing => ({
       kind: kindOf(f),
       name: f.id,
-      node: f.id,
+      binding: { fitting: f.id },
     })),
-    ...plumbed.runs.map((r) => ({
-      kind: 'pipe' as const,
+    ...plumbed.runs.map((r): DrawnThing => ({
+      kind: 'pipe',
       name: r.name,
-      node: r.line,
+      binding: { link: r.line },
     })),
   ];
 }
@@ -96,10 +127,10 @@ export function drawnThings(room: string): DrawnThing[] {
     room === 'plant_pool_02'
       ? olympicThings()
       : [
-          ...(layoutRoom(room)?.placed ?? []).map((p) => ({
-            kind: 'machine' as const,
+          ...(layoutRoom(room)?.placed ?? []).map((p): DrawnThing => ({
+            kind: 'machine',
             name: p.item.label,
-            ...(decorativeKind(p.item.key) ? { decorative: true } : {}),
+            ...(decorativeKind(p.item.key) ? DECORATIVE : {}),
           })),
           ...roomPipes(room).flatMap((r) => [
             { kind: 'pipe' as const, name: r.name },
@@ -148,10 +179,30 @@ export function drawnThings(room: string): DrawnThing[] {
 /** What a room draws that is neither in its model nor decorative. */
 export function unboundThings(room: string): DrawnThing[] {
   const model = roomModel(room);
-  return drawnThings(room).filter(
-    (t) => !t.decorative && !(t.node !== undefined && model?.has(t.node)),
-  );
+  return drawnThings(room).filter((t) => !isBound(t.binding, model));
 }
+
+/**
+ * Each thing's identity in its room, for the pinned list of unbound
+ * things: its kind and name, numbered where several share them.
+ */
+export function identities(things: readonly DrawnThing[]): string[] {
+  const seen = new Map<string, number>();
+  return things.map((t) => {
+    const base = `${t.kind}: ${t.name}`;
+    const n = (seen.get(base) ?? 0) + 1;
+    seen.set(base, n);
+    return n === 1 ? base : `${base} #${n}`;
+  });
+}
+
+/** A room's unbound things by identity. */
+export const unboundIdentities = (room: string) => {
+  const model = roomModel(room);
+  const all = drawnThings(room);
+  const ids = identities(all);
+  return ids.filter((_, i) => !isBound(all[i].binding, model));
+};
 
 /** The rooms the game draws plant in. */
 export const MODELLED_WORLD_ROOMS: readonly string[] = EQUIPPED_ROOMS;

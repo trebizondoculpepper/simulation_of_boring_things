@@ -2,83 +2,72 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   MODELLED_WORLD_ROOMS,
   drawnThings,
+  identities,
+  isBound,
   roomModel,
-  unboundThings,
+  unboundIdentities,
 } from './world-in-model';
+import PINNED from './world-in-model.unbound.json';
 
 /**
- * Everything in the world is in the model (the owner, 2026-10-25): what a
- * plant room draws is bound to a node, fitting or link of its enhanced
- * network, or is decorative. Most rooms are still drawn by hand, so each
- * room's count of unbound things is pinned here, and may only fall: a room
- * migrated to the plumber (prompt 063) lowers its count, and anything new
- * drawn outside the model fails this test. Lower a count when it falls;
- * never raise one.
+ * Everything in the world is in the model (the owner, 2026-10-25; prompt
+ * 064): what a plant room draws is bound to a node, fitting or link of its
+ * enhanced network, or is decorative. Most rooms are still drawn by hand,
+ * so the things each draws outside the model are pinned by identity in
+ * `world-in-model.unbound.json`, written by `scripts/pin-unbound.test.ts`
+ * (never by hand). The list may only shrink: anything newly drawn outside
+ * the model fails here, and anything bound since must be unpinned.
  */
-const UNBOUND: Readonly<Record<string, number>> = {
-  plant_pool_01: 75,
-  // Drawn by the room's own code, not the plumber: its wall-mounted panel,
-  // dosing controller and pumps, the pumps' two discharge valve pairs (the
-  // schematic gives the pump block one discharge port), the regulating
-  // valve, the busbar's tap-offs, its headers and chemical, sample and
-  // ozone lines, and its supply.
-  plant_pool_02: 36,
-  plant_pool_03: 32,
-  plant_pool_04: 21,
-  wet_hall: 28,
-  boiler_house: 79,
-  hypo_store: 12,
-  acid_store: 10,
-  loading_bay: 7,
-  switch_room: 11,
-  air_plant: 18,
-  control_room: 27,
-  engineers_office: 5,
-};
+const pinned = PINNED as Record<string, string[]>;
 
 describe('everything in the world is in the model', () => {
   it('pins every plant room, and only those', () => {
-    expect(Object.keys(UNBOUND).sort()).toEqual(
+    expect(Object.keys(pinned).sort()).toEqual(
       [...MODELLED_WORLD_ROOMS].sort(),
     );
   });
 
   for (const room of MODELLED_WORLD_ROOMS)
-    it(`${room}: draws nothing more outside its model than it did`, () => {
-      const unbound = unboundThings(room);
-      const list = unbound.map((t) => `${t.kind}: ${t.name}`);
-      // More than pinned: something new was drawn outside the model.
-      expect(unbound.length, list.join('\n')).toBeLessThanOrEqual(
-        UNBOUND[room],
+    it(`${room}: draws nothing outside its model that is not pinned`, () => {
+      const unbound = unboundIdentities(room);
+      const fresh = unbound.filter((id) => !pinned[room]?.includes(id));
+      expect(fresh, 'drawn outside the model: bind it to the model').toEqual(
+        [],
       );
-      // Fewer: well done; lower the pin so it cannot creep back.
+      const bound = (pinned[room] ?? []).filter((id) => !unbound.includes(id));
       expect(
-        unbound.length,
-        `${room} now has ${unbound.length} unbound: lower its pin`,
-      ).toBe(UNBOUND[room]);
+        bound,
+        'bound since it was pinned: unpin it (PIN_UNBOUND=1 npx vp test run scripts/pin-unbound.test.ts)',
+      ).toEqual([]);
     });
 
-  it('binds the Olympic plant room, built through the plumber, by model id', () => {
-    const model = roomModel('plant_pool_02')!;
-    const drawn = drawnThings('plant_pool_02');
-    const bound = drawn.filter((t) => t.node && model.has(t.node));
-    expect(bound.length).toBeGreaterThan(100);
-    // Its filters, their valves and the pumps' suctions are model ids.
-    expect(model.has('filter-1')).toBe(true);
-    expect(model.has('filter-1.inlet.iso')).toBe(true);
-    expect(bound.some((t) => t.node === 'filter-1.inlet.iso')).toBe(true);
+  it('gives each thing in a room one identity', () => {
+    for (const room of MODELLED_WORLD_ROOMS) {
+      const ids = identities(drawnThings(room));
+      expect(new Set(ids).size, room).toBe(ids.length);
+    }
   });
 
-  it('counts a thing unbound unless its id is in its room’s model, or it is decorative', () => {
-    // A room with no enhanced network binds nothing it draws.
+  it('binds the Olympic plant room, built through the plumber, by model id and sort', () => {
+    const model = roomModel('plant_pool_02')!;
+    const drawn = drawnThings('plant_pool_02');
+    expect(
+      drawn.filter((t) => isBound(t.binding, model)).length,
+    ).toBeGreaterThan(100);
+    expect(model.nodes.has('filter-1')).toBe(true);
+    expect(model.fittings.has('filter-1.inlet.iso')).toBe(true);
+    // A binding of the wrong sort is not bound: a fitting's id as a node.
+    expect(isBound({ node: 'filter-1.inlet.iso' }, model)).toBe(false);
+    expect(isBound({ fitting: 'filter-1.inlet.iso' }, model)).toBe(true);
+    expect(isBound({ link: 'filter-1.inlet' }, model)).toBe(true);
+  });
+
+  it('binds nothing in a room with no model, but decorative things', () => {
     expect(roomModel('plant_pool_03')).toBeUndefined();
-    expect(unboundThings('plant_pool_03')).toHaveLength(
-      drawnThings('plant_pool_03').length,
-    );
-    // Decorative things (the stores' signs, the office's furniture) are not counted.
+    expect(isBound({ fitting: 'x' }, undefined)).toBe(false);
+    expect(isBound({ decorative: true }, undefined)).toBe(true);
     const office = drawnThings('engineers_office');
-    expect(office.some((t) => t.decorative)).toBe(true);
-    expect(unboundThings('engineers_office').every((t) => !t.decorative)).toBe(
+    expect(office.some((t) => t.binding && 'decorative' in t.binding)).toBe(
       true,
     );
   });
