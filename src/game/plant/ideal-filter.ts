@@ -330,14 +330,91 @@ export function vesselUa(spec: IdealFilterSpec): number {
   return 5 * (shell + 2 * z.area);
 }
 
-/** What a bed lets past, g/m³, filtering water carrying `dirt` g/m³. */
-export function filtered(rig: FilterRig, dirt: number): number {
-  const z = filterSizing(rig.spec);
-  const f = rig.filter;
+/** What a bed lets past, g/m³, filtering water carrying `dirt` g/m³: its size, its state. */
+export function bedPasses(
+  spec: IdealFilterSpec,
+  f: IdealFilterState,
+  dirt: number,
+): number {
+  const z = filterSizing(spec);
   // Near its capacity, dirt breaks through.
   const room = Math.max(0, 1 - (f.dirt / z.capacity) ** 3);
   const capture = FILTER_PHYSICS.capture * room * (1 - f.fissuring);
   return dirt * (1 - capture) + FILTER_PHYSICS.fines * f.unsettled;
+}
+
+/** What the rig's bed lets past. */
+export const filtered = (rig: FilterRig, dirt: number) =>
+  bedPasses(rig.spec, rig.filter, dirt);
+
+/** Whether `bed` m³/h through a filter of this size lifts it: upwards, at its lift share of its wash flow. */
+export const bedLifted = (spec: IdealFilterSpec, bed: number) =>
+  -bed >= FILTER_PHYSICS.liftShare * filterSizing(spec).washFlow;
+
+/**
+ * A filter's bed `dt` seconds on, given the flow through it (+ down, −
+ * up) and the dirt in the water coming to it, g/m³: it loads, settles,
+ * washes, heals and fissures. Any filter, in a rig or a packaged cabinet,
+ * steps its bed by this.
+ */
+export function stepFilterBed(
+  spec: IdealFilterSpec,
+  bedState: IdealFilterState,
+  bed: number,
+  inDirt: number,
+  dt: number,
+): IdealFilterState {
+  if (!(dt > 0)) return bedState;
+  const z = filterSizing(spec);
+  let { dirt, fissuring, unsettled } = bedState;
+  const down = Math.max(0, bed);
+  const up = Math.max(0, -bed);
+  const lifted = bedLifted(spec, bed);
+  if (down > 0) {
+    // Capture: what came in less what got past.
+    const caught = Math.max(
+      0,
+      inDirt -
+        bedPasses(spec, bedState, inDirt) +
+        FILTER_PHYSICS.fines * unsettled,
+    );
+    dirt += (caught * down * dt) / 3600 / 1000;
+    // Settling, down through it.
+    unsettled *= Math.exp(
+      -((down / z.designFlow) * dt) / FILTER_PHYSICS.rinseTime,
+    );
+  }
+  if (lifted) {
+    const share = Math.min(1, up / z.washFlow);
+    dirt *= Math.exp(-(share * dt) / FILTER_PHYSICS.washTime);
+    unsettled = 1;
+    // Only a proper lift heals fissures.
+    if (up >= FILTER_PHYSICS.healShare * z.washFlow)
+      fissuring *= Math.exp(-dt / FILTER_PHYSICS.healTime);
+  } else
+    // Loaded and not being washed, the bed cracks and channels.
+    fissuring = Math.min(
+      1,
+      fissuring +
+        ((1 - fissuring) * (dirt / z.dirtRef) * 0.5 * dt) /
+          FILTER_PHYSICS.fissureTime,
+    );
+  return { dirt, fissuring, unsettled };
+}
+
+/** What a lifted bed washes out into the water going up through it, g/m³. */
+export function washedOut(
+  spec: IdealFilterSpec,
+  f: IdealFilterState,
+  bed: number,
+): number {
+  if (!bedLifted(spec, bed)) return 0;
+  const z = filterSizing(spec);
+  return (
+    (f.dirt * 1000 * Math.min(1, -bed / z.washFlow)) /
+    FILTER_PHYSICS.washTime /
+    (-bed / 3600)
+  );
 }
 
 /** The rig `dt` seconds on: its servos travel, its bed loads, washes, settles and fissures. */
@@ -353,42 +430,17 @@ export function stepFilterRig(rig: FilterRig, dt: number): FilterRig {
         : Math.max(want, opening[v] - step);
   }
   const moved = { ...rig, opening };
-  const z = filterSizing(rig.spec);
   const flows = rigFlows(moved);
-  let { dirt, fissuring, unsettled } = rig.filter;
-  const down = Math.max(0, flows.bed);
-  const up = Math.max(0, -flows.bed);
-  if (down > 0) {
-    // Capture: what came in less what got past.
-    const caught = Math.max(
-      0,
-      flows.supplyDirt -
-        filtered(moved, flows.supplyDirt) +
-        FILTER_PHYSICS.fines * unsettled,
-    );
-    dirt += (caught * down * dt) / 3600 / 1000;
-    // Settling, down through it.
-    unsettled *= Math.exp(
-      -((down / z.designFlow) * dt) / FILTER_PHYSICS.rinseTime,
-    );
-  }
-  if (flows.lifted) {
-    const share = Math.min(1, up / z.washFlow);
-    dirt *= Math.exp(-(share * dt) / FILTER_PHYSICS.washTime);
-    unsettled = 1;
-    // Only a proper lift heals fissures.
-    if (up >= FILTER_PHYSICS.healShare * z.washFlow)
-      fissuring *= Math.exp(-dt / FILTER_PHYSICS.healTime);
-  }
-  // Loaded and not being washed, the bed cracks and channels.
-  if (!flows.lifted)
-    fissuring = Math.min(
-      1,
-      fissuring +
-        ((1 - fissuring) * (dirt / z.dirtRef) * 0.5 * dt) /
-          FILTER_PHYSICS.fissureTime,
-    );
-  return { ...moved, filter: { dirt, fissuring, unsettled } };
+  return {
+    ...moved,
+    filter: stepFilterBed(
+      rig.spec,
+      rig.filter,
+      flows.bed,
+      flows.supplyDirt,
+      dt,
+    ),
+  };
 }
 
 /** Maintenance: a chemical clean or new media, the bed as new. */
