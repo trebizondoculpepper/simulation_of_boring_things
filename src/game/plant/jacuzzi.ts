@@ -1,3 +1,4 @@
+import { JACUZZI_VALVE_IDS } from './jacuzzi-schematic';
 /**
  * The jacuzzi's jets and air, in the world: worked from its plant room's
  * cabinet (an illuminated button for each, pressed to start and to stop)
@@ -73,22 +74,11 @@ export const stepJacuzzi = (
     : j;
 
 /**
- * The jacuzzi's isolating valves behind its cabinet, by their asset IDs
- * (`installed-valves.ts`), as the world keeps them open or shut.
+ * The jacuzzi's valves, by what each is for, as the world keeps them open
+ * or shut: their ids in the jacuzzi plant room's model
+ * (`jacuzzi-schematic.ts`), derived from it.
  */
-export const JACUZZI_VALVES = {
-  return: 'valve-0090',
-  suction: 'valve-0100',
-  jetsSuction: 'valve-0089',
-  jetsDischarge: 'valve-0088',
-  air: 'valve-0087',
-  heatingFlow: 'valve-0092',
-  heatingReturn: 'valve-0093',
-  /** Its balance tank's manual drain to waste, shut in service. */
-  tankDrain: 'valve-0101',
-  /** Its balance tank's make-up isolating valve, by hand, open in service: shut, nothing refills the tank. */
-  makeUp: 'valve-0102',
-} as const;
+export const JACUZZI_VALVES = JACUZZI_VALVE_IDS;
 
 /**
  * Which of its machines have a way through their valves: the circulation

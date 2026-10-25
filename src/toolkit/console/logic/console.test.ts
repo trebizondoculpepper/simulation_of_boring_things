@@ -234,7 +234,7 @@ describe('status of an object', () => {
   it('prints a valve’s record and its command, a motor’s starter, a pool and a part of the world', () => {
     const w = newWorld();
     const valve = objectStatus(w, 'PL3-BT1-DV1').join('\n');
-    expect(valve).toMatch(/name = Balance tank drain valve/);
+    expect(valve).toMatch(/name = Balance tank drain to waste valve/);
     expect(valve).toMatch(/commanded = shut/);
     expect(objectStatus(w, 'P-101A').join('\n')).toMatch(/-- motor starter/);
     expect(objectStatus(w, 'pool_03').join('\n')).toMatch(/temperature = /);

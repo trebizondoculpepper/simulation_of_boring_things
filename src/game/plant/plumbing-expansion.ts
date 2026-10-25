@@ -24,6 +24,7 @@
 
 export type PlumbMedium =
   | 'gas'
+  | 'air'
   | 'water'
   | 'chemical'
   | 'oil'

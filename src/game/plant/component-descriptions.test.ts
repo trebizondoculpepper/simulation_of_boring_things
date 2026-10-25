@@ -178,7 +178,7 @@ describe('descriptions of the plant', () => {
     );
   });
 
-  it('describes no valve in a room not yet built through the plumber, rather than inventing one', () => {
+  it('describes the valves of the rooms built from their model, and no other', () => {
     const described = Object.values(INSTALLED_VALVES).filter((v) =>
       Boolean(componentDescription(v.tag)),
     );
@@ -190,10 +190,19 @@ describe('descriptions of the plant', () => {
     expect(described.map((v) => v.tag).sort()).toEqual(
       Object.values(INSTALLED_VALVES)
         .map((v) => v.tag)
-        .filter((t) => t.startsWith('PL2-') && !notInNetwork.includes(t))
+        .filter(
+          (t) =>
+            (t.startsWith('PL2-') && !notInNetwork.includes(t)) ||
+            t.startsWith('PL3-'),
+        )
         .sort(),
     );
-    expect(componentDescription('PL3-BT1-IV1')).toBe('');
+    // The jacuzzi's, from its schematic (prompt 064).
+    expect(componentDescription('PL3-BT1-IV1')).toBe(
+      'Isolates water flowing from the water service to the jacuzzi balance tank.',
+    );
+    // A room still drawn by hand: none.
+    expect(componentDescription('PL1-F1-IV1')).toBe('');
   });
 
   it('describes the 1st Olympic pump by its own starter, live', () => {

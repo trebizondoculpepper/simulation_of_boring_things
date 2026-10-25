@@ -9,6 +9,17 @@ import {
   cabinetValvePanel,
 } from './cabinet-pipes';
 import { olympicPlumbing } from './olympic-plumbing';
+import {
+  JACUZZI_LINKS,
+  JACUZZI_NODES,
+  JACUZZI_ROOM,
+  jacuzziExpansion,
+} from '../../../game/plant/jacuzzi-schematic';
+import { modelValveOn } from '../../../game/plant/model-valves';
+import type {
+  Expansion,
+  PlumbEdge,
+} from '../../../game/plant/plumbing-expansion';
 import { PLACED_KINDS } from '../../../game/plant/equipment-kinds';
 import { ROOM_SWITCH_FUSES } from '../../../game/plant/installed-feeders';
 import { ROOM_SERVICES } from '../../../game/plant/services';
@@ -57,9 +68,25 @@ export interface RoomModel {
   links: ReadonlySet<string>;
 }
 
+/** The enhanced networks of the rooms built from a schematic. */
+const ENHANCED: Partial<
+  Record<string, () => { expansion: Expansion; links: readonly PlumbEdge[] }>
+> = {
+  plant_pool_02: () => {
+    const { expansion, schematic } = olympicPlumbing();
+    return { expansion, links: schematic.edges };
+  },
+  [JACUZZI_ROOM]: () => ({
+    expansion: jacuzziExpansion(),
+    links: JACUZZI_LINKS,
+  }),
+};
+
 export function roomModel(room: string): RoomModel | undefined {
-  if (room !== 'plant_pool_02') return undefined;
-  const { expansion, schematic } = olympicPlumbing();
+  const built = ENHANCED[room]?.();
+  if (!built) return undefined;
+  const { expansion } = built;
+  const schematic = { edges: built.links };
   const fittings = new Set(expansion.fittings.map((f) => f.id));
   return {
     // The expanded graph's nodes are its machines and its fittings: a
@@ -121,17 +148,47 @@ function olympicThings(): DrawnThing[] {
   ];
 }
 
+/** The schematic nodes of rooms built from one, by room. */
+const SCHEMATIC_NODES: Partial<
+  Record<string, readonly { id: string; kind: string }[]>
+> = { [JACUZZI_ROOM]: JACUZZI_NODES };
+
+/** The one node of a kind in a room's schematic, if it has exactly one. */
+const nodeOfKind = (room: string, kind: string) => {
+  const found = (SCHEMATIC_NODES[room] ?? []).filter((n) => n.kind === kind);
+  return found.length === 1 ? found[0].id : undefined;
+};
+
+/** A drawn machine, bound to its room's one node of its kind, if there is one. */
+const machineOfKind = (
+  room: string,
+  name: string,
+  kind: string,
+  as: DrawnKind = 'machine',
+): DrawnThing => {
+  const node = nodeOfKind(room, kind);
+  return { kind: as, name, ...(node ? { binding: { node } } : {}) };
+};
+
+/** The power isolator its room's model sets on a link, as a binding. */
+const isolatorOn = (room: string, link: string) => {
+  const found = ENHANCED[room]?.().expansion.fittings.find(
+    (f) => f.edge === link && f.kind === 'power-isolator',
+  );
+  return found ? { binding: { fitting: found.id } } : {};
+};
+
 /** What a room draws, from the data its scene builders draw from. */
 export function drawnThings(room: string): DrawnThing[] {
   const things: DrawnThing[] =
     room === 'plant_pool_02'
       ? olympicThings()
       : [
-          ...(layoutRoom(room)?.placed ?? []).map((p): DrawnThing => ({
-            kind: 'machine',
-            name: p.item.label,
-            ...(decorativeKind(p.item.key) ? DECORATIVE : {}),
-          })),
+          ...(layoutRoom(room)?.placed ?? []).map((p): DrawnThing =>
+            decorativeKind(p.item.key)
+              ? { kind: 'machine', name: p.item.label, ...DECORATIVE }
+              : machineOfKind(room, p.item.label, p.item.key.split(':')[0]),
+          ),
           ...roomPipes(room).flatMap((r) => [
             { kind: 'pipe' as const, name: r.name },
             ...(r.valves ?? []).map((v) => ({
@@ -147,29 +204,62 @@ export function drawnThings(room: string): DrawnThing[] {
             kind: 'isolator' as const,
             name: i.name,
           })),
-          ...cabinetPipes(room).flatMap((r) => [
-            { kind: 'pipe' as const, name: r.name },
-            ...(r.valve ? [{ kind: 'valve' as const, name: r.valve.id }] : []),
-          ]),
+          ...cabinetPipes(room).flatMap((r): DrawnThing[] => {
+            // A run bound to its link; the busbar's trunking to its machine.
+            const busbar = nodeOfKind(room, 'busbar');
+            const run: DrawnThing = {
+              kind: 'pipe',
+              name: r.name,
+              ...(r.link
+                ? { binding: { link: r.link } }
+                : r.service === 'electrical' && busbar
+                  ? { binding: { node: busbar } }
+                  : {}),
+            };
+            const valve = r.link ? modelValveOn(room, r.link) : undefined;
+            return [
+              run,
+              ...(r.valve
+                ? [
+                    {
+                      kind: 'valve' as const,
+                      name: r.valve.id,
+                      ...(valve ? { binding: { fitting: valve.id } } : {}),
+                    },
+                  ]
+                : []),
+            ];
+          }),
           ...(cabinetBalanceTank(room)
-            ? [{ kind: 'machine' as const, name: 'Balance tank' }]
+            ? [machineOfKind(room, 'Balance tank', 'balance-tank')]
             : []),
           ...(cabinetIsolator(room)
-            ? [{ kind: 'isolator' as const, name: 'Cabinet isolator' }]
+            ? [
+                {
+                  kind: 'isolator' as const,
+                  name: 'Cabinet isolator',
+                  // The isolator its feed's link carries in the room's model.
+                  ...isolatorOn(room, 'Switch-fuse to the cabinet'),
+                },
+              ]
             : []),
           ...(cabinetValvePanel(room)
-            ? [{ kind: 'electrical' as const, name: 'Valve panel' }]
+            ? [machineOfKind(room, 'Valve panel', 'valve-panel', 'electrical')]
             : []),
           ...(cabinetBusbar(room)
-            ? [{ kind: 'electrical' as const, name: 'Cabinet busbar' }]
+            ? [machineOfKind(room, 'Cabinet busbar', 'busbar', 'electrical')]
             : []),
         ];
   // Every room's electrical services, the Olympic's included.
   if (room in ROOM_SWITCH_FUSES)
-    things.push({
-      kind: 'electrical',
-      name: ROOM_SWITCH_FUSES[room as keyof typeof ROOM_SWITCH_FUSES].tag,
-    });
+    things.push(
+      machineOfKind(
+        room,
+        ROOM_SWITCH_FUSES[room as keyof typeof ROOM_SWITCH_FUSES].tag,
+        'switch-fuse',
+        'electrical',
+      ),
+    );
   if (room in ROOM_SERVICES)
     for (const r of roomServiceRoutes(room))
       things.push({ kind: 'pipe', name: `${r.utility}: ${r.name}` });

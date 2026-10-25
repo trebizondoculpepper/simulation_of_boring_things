@@ -63,7 +63,7 @@ describe('everything in the world is in the model', () => {
   });
 
   it('binds nothing in a room with no model, but decorative things', () => {
-    expect(roomModel('plant_pool_03')).toBeUndefined();
+    expect(roomModel('plant_pool_01')).toBeUndefined();
     expect(isBound({ fitting: 'x' }, undefined)).toBe(false);
     expect(isBound({ decorative: true }, undefined)).toBe(true);
     const office = drawnThings('engineers_office');

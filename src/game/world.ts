@@ -157,7 +157,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 26;
+export const WORLD_VERSION = 27;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -292,6 +292,16 @@ export type WorldAction =
   | { type: 'boiler-gas'; action: BoilerGasAction }
   | { type: 'music'; action: ZoneMusicAction };
 
+/** The jacuzzi's drain valve, open or shut, and with it its pool's drain-down. */
+const jacuzziDrainDown = (world: World, open: boolean): World => ({
+  ...world,
+  installedValves: { ...world.installedValves, [JACUZZI_VALVES.drain]: open },
+  pools: {
+    ...world.pools,
+    pool_03: { ...world.pools.pool_03, drainDown: open },
+  },
+});
+
 export function applyAction(world: World, action: WorldAction): World {
   switch (action.type) {
     case 'demo/set':
@@ -334,6 +344,10 @@ export function applyAction(world: World, action: WorldAction): World {
       };
     case 'plant/valve': {
       const installed = installedValveByCommandId(action.id);
+      // The jacuzzi's drain valve is its drain-down (prompt 064): one
+      // fitting of its model, its state the pool's drain-down too.
+      if (installed?.assetId === JACUZZI_VALVES.drain)
+        return jacuzziDrainDown(world, action.open);
       if (installed)
         return {
           ...world,
@@ -375,6 +389,8 @@ export function applyAction(world: World, action: WorldAction): World {
     }
     case 'pool/drain-down':
     case 'pool/make-up': {
+      if (action.pool === 'pool_03' && action.type === 'pool/drain-down')
+        return jacuzziDrainDown(world, action.open);
       if (action.pool === 'pool_03' && action.type === 'pool/make-up') {
         // The old command and the room's lever work the same valve.
         return {

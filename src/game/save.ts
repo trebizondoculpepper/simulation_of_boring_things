@@ -99,6 +99,10 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   24: (world) => world,
   // 25 → 26: the jacuzzi's cabinet, on and not tripped (`fillDefaults` adds it).
   25: (world) => world,
+  // 26 → 27: the jacuzzi plant room built from its model (prompt 064), its
+  // valves keyed by their model ids. The owner (2026-10-25): if the network
+  // has changed, the game state is thrown away; a new world it is.
+  26: () => ({}),
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

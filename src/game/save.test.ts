@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   CATCH_UP_LIMIT,
   catchUpSeconds,
+  MIGRATIONS,
   deserialiseWorld,
   fillDefaults,
   serialiseWorld,
 } from './save';
-import { applyAction, newWorld } from './world';
+import { WORLD_VERSION, applyAction, newWorld } from './world';
 import { FOOTBATH, partOpen } from './plant/identification';
 
 describe('a save', () => {
@@ -32,9 +33,10 @@ describe('a save', () => {
   });
 
   it('fills fields an old save lacks from the defaults, and drops ones no longer used', () => {
+    // A current save lacking fields (an older one is a new world: below).
     const old = JSON.stringify({
       format: 'pool-plant-save',
-      version: 1,
+      version: WORLD_VERSION,
       savedAt: 5,
       world: { time: 40, demo: { on: true }, retired: 3 },
     });
@@ -86,28 +88,31 @@ describe('a save', () => {
 
   it('migrates an old footbath drain and make-up lineup to named valves', () => {
     const { identifiedPlant: _oldTree, ...oldWorld } = newWorld();
+    // Through the migrations from version 13 to 26 (a save older than 27
+    // loads as a new world, so they are applied here directly).
+    let world: unknown = {
+      ...oldWorld,
+      pools: {
+        ...oldWorld.pools,
+        pool_04: { ...oldWorld.pools.pool_04, drainDown: true, makeUp: false },
+      },
+    };
+    for (let v = 13; v < 26; v++) world = MIGRATIONS[v](world);
+    const migrated = fillDefaults(world, newWorld());
+    expect(partOpen(migrated.identifiedPlant, FOOTBATH.drain)).toBe(true);
+    expect(partOpen(migrated.identifiedPlant, FOOTBATH.return)).toBe(false);
+    expect(partOpen(migrated.identifiedPlant, FOOTBATH.makeUp)).toBe(false);
+  });
+
+  it('throws away a save from before the jacuzzi was built from its model (version 27)', () => {
     const old = JSON.stringify({
       format: 'pool-plant-save',
-      version: 13,
-      savedAt: 1,
-      world: {
-        ...oldWorld,
-        pools: {
-          ...oldWorld.pools,
-          pool_04: {
-            ...oldWorld.pools.pool_04,
-            drainDown: true,
-            makeUp: false,
-          },
-        },
-      },
+      version: 26,
+      savedAt: 5,
+      world: { ...newWorld(), time: 400 },
     });
     const loaded = deserialiseWorld(old);
-    expect(loaded.ok).toBe(true);
-    if (!loaded.ok) return;
-    expect(partOpen(loaded.world.identifiedPlant, FOOTBATH.drain)).toBe(true);
-    expect(partOpen(loaded.world.identifiedPlant, FOOTBATH.return)).toBe(false);
-    expect(partOpen(loaded.world.identifiedPlant, FOOTBATH.makeUp)).toBe(false);
+    expect(loaded.ok && loaded.world).toEqual(newWorld());
   });
 
   it('keeps a field only where its type matches', () => {

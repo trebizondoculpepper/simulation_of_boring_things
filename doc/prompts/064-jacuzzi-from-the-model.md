@@ -1,6 +1,6 @@
 # 064: The jacuzzi, from the model
 
-Status: specified 2026-10-25 from the owner's direction; step 1 built the same night (`world-in-model.test.ts`). Follows [063](063-component-information-remediation.md), which has the background and the owner's rulings.
+Status: specified 2026-10-25 from the owner's direction, reviewed by Codex and revised. Built overnight, in the adopted order: 1 (typed bindings, the unbound set pinned by identity), 2 (the plumber's given fittings), 3 (the jacuzzi's schematic, `jacuzzi-schematic.ts`), 4 (the runtime on model ids: `model-valves.ts`, `JACUZZI_VALVES`, the drain valve as the drain-down, saves reset), 5 (the jacuzzi plant room's drawing bound: its pin 0). Not yet: 6 (the jacuzzi pool room) and 7 (the plant room re-routed by the plumber). Follows [063](063-component-information-remediation.md), which has the background and the owner's rulings.
 
 ## The goal
 

@@ -1,6 +1,7 @@
+import { MODEL_ISOLATING_VALVES } from './model-valves';
 /** Explicit identities of each installed room-pipework valve. Display tags may change;
  * asset IDs and save keys do not. Keyed by authored room, run and valve names. */
-export const INSTALLED_VALVES: Readonly<Record<string, InstalledValve>> = {
+const HAND_DRAWN_VALVES: Readonly<Record<string, InstalledValve>> = {
   'plant_pool_01|Filter 1 inlet drop|F1 inlet valve': {
     assetId: 'valve-0001',
     tag: 'PL1-F1-IV1',
@@ -337,68 +338,9 @@ export const INSTALLED_VALVES: Readonly<Record<string, InstalledValve>> = {
     tag: 'PL2-HX1-IV4',
     normal: 'open',
   },
-  // The packaged cabinets' rooms: each water run's isolating valve, up its rise behind the cabinet (2026-10-23).
-  'plant_pool_03|Air to the spa’s blower ring|Air to the spa’s blower ring valve':
-    {
-      assetId: 'valve-0087',
-      tag: 'PL3-JZ1-IV7',
-      normal: 'open',
-    },
-  'plant_pool_03|Jets discharge to the spa|Jets discharge to the spa valve': {
-    assetId: 'valve-0088',
-    tag: 'PL3-JZ1-IV6',
-    normal: 'open',
-  },
-  'plant_pool_03|Jets suction from the spa|Jets suction from the spa valve': {
-    assetId: 'valve-0089',
-    tag: 'PL3-JZ1-IV5',
-    normal: 'open',
-  },
-  'plant_pool_03|Return to the spa|Return to the spa valve': {
-    assetId: 'valve-0090',
-    tag: 'PL3-JZ1-IV1',
-    normal: 'open',
-  },
-  // valve-0091, PL3-JZ1-IV2, the spa's overflow to its balance tank: removed
-  // (the owner, 2026-10-25). A gravity overflow is never valved; shut, it
-  // would flood the deck. Its asset id is retired, not reused.
-  'plant_pool_03|Heating flow|Heating flow valve': {
-    assetId: 'valve-0092',
-    tag: 'PL3-JZ1-IV3',
-    normal: 'open',
-  },
-  'plant_pool_03|Heating return|Heating return valve': {
-    assetId: 'valve-0093',
-    tag: 'PL3-JZ1-IV4',
-    normal: 'open',
-  },
-  // The jacuzzi's drain valve, motorised, shut in service (2026-10-24).
-  'plant_pool_03|Drain to waste|Drain to waste valve': {
-    assetId: 'valve-0099',
-    tag: 'PL3-JZ1-DV1',
-    normal: 'closed',
-  },
-  // The jacuzzi's pump's suction from its balance tank, motorised (2026-10-24).
-  'plant_pool_03|Suction from the balance tank|Suction from the balance tank valve':
-    {
-      assetId: 'valve-0100',
-      tag: 'PL3-JZ1-IV8',
-      normal: 'open',
-    },
-  // The jacuzzi's balance tank's manual drain to waste, at its foot, shut in service (2026-10-25).
-  'plant_pool_03|Balance tank drain to waste|Balance tank drain valve': {
-    assetId: 'valve-0101',
-    tag: 'PL3-BT1-DV1',
-    normal: 'closed',
-  },
-  // The jacuzzi's balance tank's make-up isolating valve, a small lever
-  // valve just above the tank, open in service (the owner, 2026-10-25:
-  // nothing could shut off the tank's make-up).
-  'plant_pool_03|Make-up to the balance tank|Balance tank make-up valve': {
-    assetId: 'valve-0102',
-    tag: 'PL3-BT1-IV1',
-    normal: 'open',
-  },
+  // The jacuzzi plant room's valves are its model's (prompt 064):
+  // `MODEL_VALVES`, joined below. Its old asset ids, valve-0087 to
+  // valve-0102, are retired with the saved worlds that held them.
   'plant_pool_04|Overflow from the spa|Overflow from the spa valve': {
     assetId: 'valve-0094',
     tag: 'PL4-PW1-IV2',
@@ -414,6 +356,22 @@ export const INSTALLED_VALVES: Readonly<Record<string, InstalledValve>> = {
     tag: 'PL4-PW1-IV4',
     normal: 'open',
   },
+};
+
+/**
+ * Every installed valve: those of rooms still drawn by hand, in the table
+ * above, and those of rooms built from their schematic, derived from it
+ * (`model-valves.ts`), each under its model id. Keyed by room, run (its
+ * link) and name.
+ */
+export const INSTALLED_VALVES: Readonly<Record<string, InstalledValve>> = {
+  ...HAND_DRAWN_VALVES,
+  ...Object.fromEntries(
+    MODEL_ISOLATING_VALVES.map((v) => [
+      `${v.room}|${v.link}|${v.name}`,
+      { assetId: v.id, tag: v.tag, normal: v.normal },
+    ]),
+  ),
 };
 
 export interface InstalledValve {

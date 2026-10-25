@@ -1,3 +1,8 @@
+import { JACUZZI_LINKS } from '../../../game/plant/jacuzzi-schematic';
+import {
+  MODELLED_VALVE_ROOMS,
+  modelValveOn,
+} from '../../../game/plant/model-valves';
 import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
 import { JACUZZI_BALANCE_TANK } from '../../../game/plant/spa-balance-tank';
 import { choosePipe } from '../../components/core/logic/plumber';
@@ -272,6 +277,12 @@ export interface CabinetRun {
   through: WallCrossing[];
   /** Its ends' finishes, if not open (a busbar's far end is capped). */
   ends?: readonly ['open' | 'cap', 'open' | 'cap'];
+  /**
+   * The link of the room's model (its schematic, prompt 064) this run is
+   * drawn for, where the room has one: by default its own name; two runs
+   * of one link (a feed either side of its isolator) name it.
+   */
+  link?: string;
   /** Named operating valve mounted on this pipe in the room. */
   valve?: {
     id: string;
@@ -978,6 +989,7 @@ export function cabinetPipes(
   );
   runs.push({
     name: 'Switch-fuse to the isolator',
+    link: 'Switch-fuse to the cabinet',
     kind: CIRCUIT.kind as RunKind,
     od: CIRCUIT.od,
     service: 'electrical',
@@ -1001,6 +1013,7 @@ export function cabinetPipes(
       : [f[0], FEED_LEVEL, g[2]];
   runs.push({
     name: 'Isolator to the cabinet',
+    link: 'Switch-fuse to the cabinet',
     kind: supply.port.kind,
     od: supply.port.od,
     service: 'electrical',
@@ -1010,5 +1023,34 @@ export function cabinetPipes(
     points: [f, [f[0], FEED_LEVEL, f[2]], turn, [g[0], FEED_LEVEL, g[2]], g],
     through: [],
   });
-  return runs;
+  return bindToModel(room, runs);
+}
+
+/**
+ * A room built from its schematic (prompt 064): each run bound to its
+ * link, the busbar's trunking (a machine, not a link) left as it is, and
+ * each run's valve its model's, its id and name derived from the model.
+ */
+function bindToModel(room: string, runs: CabinetRun[]): CabinetRun[] {
+  if (!MODELLED_VALVE_ROOMS.has(room)) return runs;
+  const links = new Set(JACUZZI_LINKS.map((l) => l.id));
+  return runs.map((run) => {
+    const link = run.link ?? (links.has(run.name) ? run.name : undefined);
+    if (!link) return run;
+    const valve = run.valve && modelValveOn(room, link);
+    return {
+      ...run,
+      link,
+      ...(run.valve && valve
+        ? {
+            valve: {
+              ...run.valve,
+              id: valve.name,
+              installed: true as const,
+              name: valve.name,
+            },
+          }
+        : {}),
+    };
+  });
 }

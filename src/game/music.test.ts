@@ -1,6 +1,11 @@
 import { expect, it } from 'vite-plus/test';
 import { advance, applyAction, newWorld } from './world';
-import { deserialiseWorld, serialiseWorld } from './save';
+import {
+  MIGRATIONS,
+  deserialiseWorld,
+  fillDefaults,
+  serialiseWorld,
+} from './save';
 
 it('saves the source and amplifier and pauses the transport when the jacuzzi feeder loses power', () => {
   let w = applyAction(newWorld(), {
@@ -32,17 +37,14 @@ it('saves the source and amplifier and pauses the transport when the jacuzzi fee
   expect(advance(w, 0.5).music.zones.jacuzzi.source.position).toBeCloseTo(0.5);
 });
 
-it('migrates a version 23 save to silent music without losing existing plant state', () => {
+it('migrates a version 23 world to silent music without losing existing plant state', () => {
   const { music: _music, ...previous } = newWorld();
   previous.demo.on = true;
-  const loaded = deserialiseWorld(
-    JSON.stringify({
-      format: 'pool-plant-save',
-      version: 23,
-      savedAt: 10,
-      world: previous,
-    }),
-  );
-  expect(loaded.ok && loaded.world.music).toEqual(newWorld().music);
-  expect(loaded.ok && loaded.world.demo.on).toBe(true);
+  // Through the migrations from 23 to 26 (a save older than 27 loads as a
+  // new world, so they are applied here directly).
+  let world: unknown = previous;
+  for (let v = 23; v < 26; v++) world = MIGRATIONS[v](world);
+  const migrated = fillDefaults(world, newWorld());
+  expect(migrated.music).toEqual(newWorld().music);
+  expect(migrated.demo.on).toBe(true);
 });

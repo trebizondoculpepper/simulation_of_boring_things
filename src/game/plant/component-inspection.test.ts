@@ -10,10 +10,12 @@ describe('the information overlay’s lines', () => {
       detail:
         'Isolates water flowing from the circulation pumps to sand filter 1.',
     });
-    // Its room not yet built through the plumber: its tag and name alone.
+    // The jacuzzi's, from its schematic (prompt 064).
     expect(inspectComponent({ tag: 'PL3-BT1-IV1' }, newWorld())).toEqual({
       key: 'PL3-BT1-IV1',
-      title: 'PL3-BT1-IV1: Balance tank make-up valve',
+      title: 'PL3-BT1-IV1: Make-up to the balance tank valve',
+      detail:
+        'Isolates water flowing from the water service to the jacuzzi balance tank.',
     });
   });
 
