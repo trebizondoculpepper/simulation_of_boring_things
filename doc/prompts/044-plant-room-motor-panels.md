@@ -1,6 +1,6 @@
 # 044: Motor panels in the plant rooms
 
-Status: planned 2026-10-24 (the owner); stage two of the switch room's redesign, after [043](043-switch-room-tidy.md). To be done room by room, as each plant room is next reworked.
+Status: planned 2026-10-24 (the owner); stage two of the switch room's redesign, after [043](done/043-switch-room-tidy.md). To be done room by room, as each plant room is next reworked.
 
 ## Why
 

@@ -3,7 +3,7 @@ import type { NetLink, NetNode } from '../sim/hydraulics';
 
 /**
  * A large pressure sand filter on a five-valve battery (scenario 3, the
- * commercial setup; `doc/prompts/026-scenario-filter-backwash.md`), after
+ * commercial setup; `doc/prompts/done/026-scenario-filter-backwash.md`), after
  * the Olympic pool's 3 m filters. Its face pipework:
  *
  * - V1, inlet: supply to the top distributor;

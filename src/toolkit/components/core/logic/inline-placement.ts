@@ -2,7 +2,7 @@ import type { Vec3 } from './pipe-route';
 
 /**
  * Where a line's inline devices go on its route
- * (`doc/prompts/018-plumber-valves-and-isolators.md`): valves, non-return
+ * (`doc/prompts/done/018-plumber-valves-and-isolators.md`): valves, non-return
  * valves and isolators set into a run that is already routed, each on a
  * straight long enough for it and clear of the bends and the ports'
  * leads, at a height a person can reach where there is one, in their order

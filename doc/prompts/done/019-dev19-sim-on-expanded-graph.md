@@ -1,6 +1,6 @@
 # Prompt: Dev19's simulation runs on the expanded graph
 
-Written by Claude (Opus 5.5, Claude Code) for Codex, 2026-10-23, at the owner's direction. Read `AGENTS.md`, then `doc/prompts/018-plumber-valves-and-isolators.md`, especially its sections "Revision" and "The bound room". This is one bounded task within that work.
+Written by Claude (Opus 5.5, Claude Code) for Codex, 2026-10-23, at the owner's direction. Read `AGENTS.md`, then `doc/prompts/done/018-plumber-valves-and-isolators.md`, especially its sections "Revision" and "The bound room". This is one bounded task within that work.
 
 ## The task
 

@@ -3,7 +3,7 @@ import { MACHINE_GAP } from './room-sizer';
 
 /**
  * Parallel units pre-assembled into blocks
- * (`doc/prompts/020-scorers-and-pipe-costs.md`, the owner, 2026-10-23):
+ * (`doc/prompts/done/020-scorers-and-pipe-costs.md`, the owner, 2026-10-23):
  * identical units that work in parallel (filters, duty and standby
  * pumps) share headers and so stand together. Before placement each group
  * of them is made up into candidate blocks that reach its number (for

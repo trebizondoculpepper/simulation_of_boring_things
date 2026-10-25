@@ -1,6 +1,6 @@
 # Machine ports: check
 
-You are reviewing a change in `/Users/salimfadhley/workspace/simulation_of_boring_things`, a Three.js and TypeScript game about the plant rooms of a leisure centre. Read `AGENTS.md`, `doc/plant-model.md` and the brief the change was made to (`doc/prompts/003-machine-ports-implement.md`) first. This is a check, not a rewrite: do not change the code, do not commit, and do not create a git worktree. Report what you find.
+You are reviewing a change in `/Users/salimfadhley/workspace/simulation_of_boring_things`, a Three.js and TypeScript game about the plant rooms of a leisure centre. Read `AGENTS.md`, `doc/plant-model.md` and the brief the change was made to (`doc/prompts/done/003-machine-ports-implement.md`) first. This is a check, not a rewrite: do not change the code, do not commit, and do not create a git worktree. Report what you find.
 
 ## What the change was meant to do
 

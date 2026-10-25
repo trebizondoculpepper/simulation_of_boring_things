@@ -31,7 +31,7 @@ import { placeRigFittings } from './rig-fittings';
 import type { PlacedRigFitting } from './rig-fittings';
 
 /**
- * Duty and standby pumps (Dev24; scenario 1, `doc/prompts/024-scenario-duty-standby-pumps.md`):
+ * Duty and standby pumps (Dev24; scenario 1, `doc/prompts/done/024-scenario-duty-standby-pumps.md`):
  * two end-suction pump sets side by side, drawing from an endless source
  * through a suction header and delivering through a discharge header to
  * an endless sink, each fed from a Penfold duty/standby panel on an

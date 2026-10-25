@@ -1,7 +1,7 @@
 import type { ChosenKind } from './plumber';
 
 /**
- * What pipework costs, installed (`doc/prompts/020-scorers-and-pipe-costs.md`):
+ * What pipework costs, installed (`doc/prompts/done/020-scorers-and-pipe-costs.md`):
  * an approximate price per metre for each kind and size of pipe, conduit
  * and duct, for the scorer to compare designs by. These are working
  * estimates, in pounds at about 2026 prices, for materials, supports and

@@ -1,5 +1,5 @@
 /**
- * Duty and standby pumps (scenario 1, `doc/prompts/024-scenario-duty-standby-pumps.md`):
+ * Duty and standby pumps (scenario 1, `doc/prompts/done/024-scenario-duty-standby-pumps.md`):
  * two pump sets on shared suction and discharge headers, run by a
  * duty/standby controller. Pure.
  *

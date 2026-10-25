@@ -265,7 +265,7 @@ export function startEquipmentRoom(
     }
     if (finish?.floor) floorPaint.color.set(finish.floor);
     const sizes = exhibits.map((e) => e.size);
-    // Dev19 tries the room's layers (`doc/prompts/017-room-sizer-gantries-placement.md`):
+    // Dev19 tries the room's layers (`doc/prompts/done/017-room-sizer-gantries-placement.md`):
     // sized for its machines, two storeys with a gantry, placed in bands.
     // Dev19b is the same room plumbed by Codex's rules, to compare.
     sized =

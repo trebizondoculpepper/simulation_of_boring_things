@@ -241,7 +241,7 @@ export function layoutSquarePlantRoom(
 
 /**
  * A development plant room laid out by the room's layers
- * (`doc/prompts/017-room-sizer-gantries-placement.md`): sized for its
+ * (`doc/prompts/done/017-room-sizer-gantries-placement.md`): sized for its
  * exhibits (`sizeRoom`), its regions reserved (`reserveRegions`: the door's
  * approach and, two storeys up, a gantry and its stair), then its machines
  * placed round them (`placeMachines`). If they will not all fit, the room

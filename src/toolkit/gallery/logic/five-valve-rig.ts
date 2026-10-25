@@ -29,7 +29,7 @@ import { GULLY, WASTE } from './jacuzzi-drain';
 
 /**
  * Backwashing a sand filter, the commercial setup (Dev26; scenario 3,
- * `doc/prompts/026-scenario-filter-backwash.md`): one of the Olympic
+ * `doc/prompts/done/026-scenario-filter-backwash.md`): one of the Olympic
  * pool's 3 m filters on its five-valve battery, each valve actuated and
  * all five switched together by a Penfold panel, with an electromagnetic
  * flowmeter on each valve's branch. The face pipework is laid by hand from

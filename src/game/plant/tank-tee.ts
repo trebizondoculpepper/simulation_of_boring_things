@@ -1,5 +1,5 @@
 /**
- * A tank on one port (scenario 2, `doc/prompts/025-scenario-tank-fill-float.md`):
+ * A tank on one port (scenario 2, `doc/prompts/done/025-scenario-tank-fill-float.md`):
  * its single bottom connection goes to a tee, with a fill leg from the
  * mains and a drain leg to a gully. Which way the water goes through the
  * tank's port follows the pressures, found by balancing the tee: what

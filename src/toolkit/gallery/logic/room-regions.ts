@@ -2,7 +2,7 @@ import { STOREY } from '../../../game/plant/network/common';
 import type { Footprint } from '../../controls/logic/walk-collision';
 
 /**
- * A room's reserved regions (`doc/prompts/017-room-sizer-gantries-placement.md`):
+ * A room's reserved regions (`doc/prompts/done/017-room-sizer-gantries-placement.md`):
  * boxes of the room that machines, or runs of pipe and conduit, must keep
  * out of. The second of the room's four layers (sizer, regions, placement,
  * plumber): the room sizer gives the room, this reserves its doorways'

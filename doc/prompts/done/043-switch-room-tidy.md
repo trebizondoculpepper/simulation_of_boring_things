@@ -1,6 +1,6 @@
 # 043: The switch room, only what works
 
-Status: planned 2026-10-24 (the owner); stage one of the switch room's redesign, before [044](044-plant-room-motor-panels.md).
+Status: planned 2026-10-24 (the owner); stage one of the switch room's redesign, before [044](../044-plant-room-motor-panels.md).
 
 ## Why
 

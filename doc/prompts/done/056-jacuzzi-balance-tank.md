@@ -33,7 +33,7 @@ The make-up float holds the tank low enough that the bathers' surge and the air'
 - A balance tank component (a vertical GRP tank, its level sight gauge, its make-up float valve, its overflow and its connections as ports), tried in a development room first.
 - Installed beside the cabinet in the jacuzzi's plant room: the spa's overflow (gutter) into it, the pump's suction from it, its make-up from the water service, its overflow and drain to the gully. The cabinet's surge vessel becomes its pump's strainer pot. Every run laid by the plumber between ports; the valve registry, the valve panel and the mimics updated to match; no clashes (`cabinet-ports.test.ts`).
 - Its sight gauge shows the world's tank level.
-- Its heat losses are not modelled: it is an ideal tank, a finite quantity of water with no losses, until [057](057-balance-tank-thermal-losses.md).
+- Its heat losses are not modelled: it is an ideal tank, a finite quantity of water with no losses, until [057](../057-balance-tank-thermal-losses.md).
 
 ## Acceptance
 

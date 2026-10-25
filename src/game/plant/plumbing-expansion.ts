@@ -1,5 +1,5 @@
 /**
- * The plumber's expansion (`doc/prompts/017-room-sizer-gantries-placement.md`):
+ * The plumber's expansion (`doc/prompts/done/017-room-sizer-gantries-placement.md`):
  * the fittings a designer adds to every line as a matter of course, which
  * the base plan leaves out, inserted into the port graph as nodes of their
  * own, each link they sit on split in two:

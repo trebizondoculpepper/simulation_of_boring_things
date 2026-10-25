@@ -2,7 +2,7 @@ import { STOREY } from '../../../game/plant/network/common';
 import { DOOR_APPROACH, STAIR, UPPER_FLOOR } from './room-regions';
 
 /**
- * The room sizer (`doc/prompts/017-room-sizer-gantries-placement.md`), the
+ * The room sizer (`doc/prompts/done/017-room-sizer-gantries-placement.md`), the
  * first of a room's four layers: how big a plant room must be for what it
  * holds. Each machine takes its footprint, a gap round it and its
  * maintenance access in front; the room adds circulation (the walkways

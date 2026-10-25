@@ -1,6 +1,6 @@
 /**
  * A sand filter with a top-mount multiport valve (scenario 3, the simple
- * setup, `doc/prompts/026-scenario-filter-backwash.md`): one lever over a
+ * setup, `doc/prompts/done/026-scenario-filter-backwash.md`): one lever over a
  * dial chooses where the water goes.
  *
  * - FILTER: from the pump, down through the bed, back to the pool (RETURN).

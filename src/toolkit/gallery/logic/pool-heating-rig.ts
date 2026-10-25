@@ -7,7 +7,7 @@ import type { Vec3 } from '../../components/core/logic/pipe-route';
 import type { PlantRoomLayout } from './plant-room-layout';
 
 /**
- * Heat exchange (Dev27; scenario 4, `doc/prompts/027-scenario-heat-exchange.md`):
+ * Heat exchange (Dev27; scenario 4, `doc/prompts/done/027-scenario-heat-exchange.md`):
  * one gas condensing boiler (Hamwarmy, after the Remeha Gas 220 Ace) on
  * unlimited gas and power, its primary circuit through a twin-head
  * circulator to a three-way valve over the shell-and-tube heat exchanger

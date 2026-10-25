@@ -51,7 +51,7 @@ const RINGS = 3;
 const FADE_SECONDS = 0.25;
 
 /**
- * Fresh water coming in through a pool's wall inlets (`doc/prompts/
+ * Fresh water coming in through a pool's wall inlets (`doc/prompts/done/
  * 041-footspa-makeup-jets.md`): from each, a narrow, clear stream, and
  * small rings spreading on the surface near it, nothing white and nothing
  * churning the whole bath. With the inlet's nozzle under water there is

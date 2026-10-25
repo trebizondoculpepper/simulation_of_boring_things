@@ -3,7 +3,7 @@ import { demoGraph } from './port-graph-demo';
 import type { Expansion } from './plumbing-expansion';
 
 /**
- * Dev19's graph as the plumber leaves it (`doc/prompts/018-plumber-valves-and-isolators.md`,
+ * Dev19's graph as the plumber leaves it (`doc/prompts/done/018-plumber-valves-and-isolators.md`,
  * "The bound room"): the designed plan's nodes, the fittings the plumber
  * installed as nodes of their own, each with an `in` and an `out` port in
  * its line's medium, and every link they sit on split through them. The

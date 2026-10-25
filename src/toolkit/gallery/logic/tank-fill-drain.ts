@@ -7,7 +7,7 @@ import { GULLY, PLINTH, WASTE, runLosses } from './jacuzzi-drain';
 
 /**
  * Filling and draining a tank through one port (Dev25; scenario 2,
- * `doc/prompts/025-scenario-tank-fill-float.md`): the IBC on its plinth
+ * `doc/prompts/done/025-scenario-tank-fill-float.md`): the IBC on its plinth
  * as in Dev23, its one bottom port to a tee; from the tee, a fill leg up
  * to a mains-water source through a manual valve, and a drain leg down to
  * the floor gully through another. Which way the water goes through the

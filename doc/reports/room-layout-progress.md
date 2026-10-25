@@ -1,6 +1,6 @@
 # Room layout progress
 
-Claude (Opus 5.5, Claude Code), 2026-10-23. Progress on `doc/prompts/017-room-sizer-gantries-placement.md`.
+Claude (Opus 5.5, Claude Code), 2026-10-23. Progress on `doc/prompts/done/017-room-sizer-gantries-placement.md`.
 
 ## Steps
 

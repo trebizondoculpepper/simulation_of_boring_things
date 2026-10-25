@@ -5,7 +5,7 @@ import { WALL_THICKNESS } from './dev-room-links';
 import { EQUIPMENT_OPENING } from './plant-rooms';
 
 /**
- * The Olympic pool's balance tank hall (Dev28, `doc/prompts/032-balance-tank-hall.md`):
+ * The Olympic pool's balance tank hall (Dev28, `doc/prompts/done/032-balance-tank-hall.md`):
  * a cast concrete tank, 9 × 6 m inside and 4.5 m deep, open below a steel
  * gantry round three sides of it, and at its west end, behind a blockwork
  * partition, a bay of the adjacent plant room, where its machinery is (its

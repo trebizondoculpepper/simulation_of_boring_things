@@ -78,7 +78,7 @@ import {
 /**
  * The simulation the room runs: on the plan until the room is laid out,
  * then on the plumber's graph, with every fitting it installed as a node
- * of its own (`prepareRoom`; `doc/prompts/018-plumber-valves-and-isolators.md`,
+ * of its own (`prepareRoom`; `doc/prompts/done/018-plumber-valves-and-isolators.md`,
  * "The bound room").
  */
 let demo = createPortGraphDemo();
@@ -795,7 +795,7 @@ export function buildPlumbedServices(
 ): LiveExhibit {
   const t = tools(kit);
   const group = new Group();
-  // The plumber's lines (`doc/prompts/018-plumber-valves-and-isolators.md`):
+  // The plumber's lines (`doc/prompts/done/018-plumber-valves-and-isolators.md`):
   // each split at the valves and isolators set into it.
   const plumbing =
     plumbed?.layout === layout

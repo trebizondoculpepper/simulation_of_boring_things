@@ -4,7 +4,7 @@ import type { Region, RegionRoom, Side, Vec3 } from './room-regions';
 import { WALK_HEADROOM } from './room-regions';
 
 /**
- * The placement helper (`doc/prompts/017-room-sizer-gantries-placement.md`),
+ * The placement helper (`doc/prompts/done/017-room-sizer-gantries-placement.md`),
  * the third of a room's four layers: where each machine stands in a room
  * already sized, round its reserved regions, so that what is piped
  * together stands together.

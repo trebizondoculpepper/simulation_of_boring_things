@@ -5,7 +5,7 @@ import { makeUpDemand, olympicTankLevel } from './pools';
 import { makeUpShare } from './wet-hall';
 
 /**
- * Whether fresh make-up water is entering the foot spa now (`doc/prompts/
+ * Whether fresh make-up water is entering the foot spa now (`doc/prompts/done/
  * 041-footspa-makeup-jets.md`): its make-up valve open, its balance tank's
  * float calling, and the wet hall's booster set able to supply it. Seen as
  * the streams and rings at its inlets. A stand-in, from the model as it

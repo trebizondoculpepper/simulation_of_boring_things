@@ -1,6 +1,6 @@
 /**
  * A deck-level spa's balance tank, sized from what it must absorb (the
- * owner, 2026-10-24; `doc/prompts/056-jacuzzi-balance-tank.md`): not, as a
+ * owner, 2026-10-24; `doc/prompts/done/056-jacuzzi-balance-tank.md`): not, as a
  * pool's is, as a share of the water (5 to 10 %), since in a spa the
  * bathers displace a large share of a small body of water. Pure.
  *

@@ -5,7 +5,7 @@ import type { SizedPlantRoomLayout } from './plant-room-layout';
 import type { Dimension, Score } from './room-scorer';
 
 /**
- * The placement scorer (`doc/prompts/020-scorers-and-pipe-costs.md`): the
+ * The placement scorer (`doc/prompts/done/020-scorers-and-pipe-costs.md`): the
  * first of the stage scorers, straight after placement and before any
  * plumbing, so that a poor layout is caught, and searched past, before the
  * dearer stages run on it. It judges only what placement decides, against

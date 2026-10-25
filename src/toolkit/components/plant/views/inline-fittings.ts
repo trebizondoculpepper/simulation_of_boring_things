@@ -10,7 +10,7 @@ import { createMagFlowmeter } from './mag-flowmeter';
 
 /**
  * The fittings the plumber sets into a line
- * (`doc/prompts/018-plumber-valves-and-isolators.md`), each at its real
+ * (`doc/prompts/done/018-plumber-valves-and-isolators.md`), each at its real
  * size against its pipe, drawn in its own frame (the pipe along x through
  * the origin) and turned into place by `placeFitting`:
  *

@@ -1,5 +1,5 @@
 /**
- * The Olympic pool's balance tank (Dev28, `doc/prompts/032-balance-tank-hall.md`):
+ * The Olympic pool's balance tank (Dev28, `doc/prompts/done/032-balance-tank-hall.md`):
  * a cast concrete tank, 9 × 6 m inside and 4.5 m deep, under its hall's
  * gantry. The pool's overflow channels fall into it by gravity; the
  * circulation pumps draw from it; a weir at 4.0 m (216 m³) spills to

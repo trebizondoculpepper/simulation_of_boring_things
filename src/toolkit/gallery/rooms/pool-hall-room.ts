@@ -736,7 +736,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     shownDrop = drop;
     (rooms.userData.setWaterDrop as (d: number) => void)(drop);
   };
-  // The foot spa's make-up, seen coming in (`doc/prompts/041-footspa-
+  // The foot spa's make-up, seen coming in (`doc/prompts/done/041-footspa-
   // makeup-jets.md`): at every one of its channel's south-wall inlets
   // (the owner, 2026-10-23: a stream for each), while fresh water is
   // actually entering it.

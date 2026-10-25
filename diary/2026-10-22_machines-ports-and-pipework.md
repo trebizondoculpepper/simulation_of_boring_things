@@ -60,7 +60,7 @@ The owner wanted every room's machines placed, with room to walk to and reach th
 - Tees drawn as tees once the pipe helper has them.
 - The lounge plant room laid out by hand and piped like the Olympic.
 - The water balance in the world state, so the make-up valve in the wet hall drives it.
-- The independent review, `doc/prompts/004-machine-ports-check.md`.
+- The independent review, `doc/prompts/done/004-machine-ports-check.md`.
 
 ## Later the same day: every port connected, checked
 

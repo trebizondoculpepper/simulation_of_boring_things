@@ -10,7 +10,7 @@ import type {
 } from '../../toolkit/components/plant/logic/boiler-house';
 
 /**
- * Heat exchange (scenario 4, `doc/prompts/027-scenario-heat-exchange.md`):
+ * Heat exchange (scenario 4, `doc/prompts/done/027-scenario-heat-exchange.md`):
  * one gas condensing boiler on a closed primary circuit (boiler,
  * circulator, three-way valve, the shell-and-tube heat exchanger and its
  * bypass, back to the boiler), heating pool water passing through the
