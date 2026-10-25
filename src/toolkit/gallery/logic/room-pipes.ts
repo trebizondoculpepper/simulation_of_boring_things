@@ -119,11 +119,19 @@ export interface PipeRun {
   valves: Valve[];
   /** Its flowmeters, if any. */
   meters?: Meter[];
+  /**
+   * What it is drawn for in its room's model (prompt 064), where that is
+   * not the link of its own name: the header it is part of, or the link
+   * it is a length of.
+   */
+  model?: { link: string } | { node: string };
 }
 
 /** A three-way fitting between a continuous main and a perpendicular branch. */
 export interface PipeTee {
   name: string;
+  /** What it is a fitting of in its room's model: a header, or a link. */
+  model?: { link: string } | { node: string };
   kind: PipeRun['kind'];
   at: Vec3;
   mainOd: number;
@@ -361,6 +369,7 @@ export function poolPlantPipework(room: string): {
   });
   tees.push({
     name: 'Pump suction header tee',
+    model: { link: 'Pump suction header' },
     kind: 'pvc-pressure',
     at: rise,
     mainOd: inA.od,
@@ -390,6 +399,7 @@ export function poolPlantPipework(room: string): {
   const outB = port(pumps, 'dischargeB');
   run({
     name: 'Pump discharge header',
+    model: { node: 'discharge-header' },
     kind: 'pvc-pressure',
     od: outA.od,
     points: [
@@ -411,6 +421,7 @@ export function poolPlantPipework(room: string): {
   });
   tees.push({
     name: 'Pump discharge header tee',
+    model: { node: 'discharge-header' },
     kind: 'pvc-pressure',
     at: [outA.at[0], PUMP_HEADER, (outA.at[2] + outB.at[2]) / 2],
     mainOd: outA.od,
@@ -482,6 +493,7 @@ export function poolPlantPipework(room: string): {
   if (westmostIn < junction[0] - 1e-6)
     run({
       name: 'Filter inlet header, west',
+      model: { node: 'inlet-header' },
       kind: 'pvc-pressure',
       od: main,
       points: [junction, [westmostIn, L.filterIn, inSouthZ]],
@@ -494,6 +506,7 @@ export function poolPlantPipework(room: string): {
     : 0;
   const inletHeader = run({
     name: 'Filter inlet header',
+    model: { node: 'inlet-header' },
     kind: 'pvc-pressure',
     od: main,
     points: east.length
@@ -510,6 +523,7 @@ export function poolPlantPipework(room: string): {
   if (westmostIn < junction[0] - 1e-6)
     tees.push({
       name: 'Filter inlet header junction tee',
+      model: { node: 'inlet-header' },
       kind: 'pvc-pressure',
       at: junction,
       mainOd: main,
@@ -527,6 +541,7 @@ export function poolPlantPipework(room: string): {
     : 0;
   const outletHeader = run({
     name: 'Filter outlet header',
+    model: { node: 'outlet-header' },
     kind: 'pvc-pressure',
     od: main,
     points: east.length
@@ -607,6 +622,7 @@ export function poolPlantPipework(room: string): {
     const inTee = line(inlet.at, IN_LINE);
     tees.push({
       name: `Filter ${n} inlet header tee`,
+      model: { node: 'inlet-header' },
       kind: 'pvc-pressure',
       at: [inTee[0], L.filterIn, inTee[2]],
       mainOd: main,
@@ -619,6 +635,7 @@ export function poolPlantPipework(room: string): {
     // main, the branch off it.
     run({
       name: `Filter ${n} inlet drop`,
+      model: { link: `Filter ${n} inlet` },
       kind: 'pvc-pressure',
       od: inlet.od,
       points: [[inTee[0], L.filterIn, inTee[2]], inTee],
@@ -645,6 +662,7 @@ export function poolPlantPipework(room: string): {
     });
     tees.push({
       name: `Filter ${n} inlet tee`,
+      model: { link: `Filter ${n} inlet` },
       kind: 'pvc-pressure',
       at: inTee,
       mainOd: inlet.od,
@@ -707,6 +725,7 @@ export function poolPlantPipework(room: string): {
         : outletLine;
     tees.push({
       name: `Filter ${n} outlet header tee`,
+      model: { node: 'outlet-header' },
       kind: 'pvc-pressure',
       at: [outTee[0], L.filterOut, outTee[2]],
       mainOd: main,
@@ -940,6 +959,7 @@ export function poolPlantPipework(room: string): {
     });
     run({
       name: `${d.name}, its point`,
+      model: { link: d.name },
       kind: 'chemical-tube',
       od: 0.012,
       points: [[at[0], INTO_CEILING, at[2]], at, [pheOut1[0], d.y, pheOut1[2]]],
@@ -1072,6 +1092,7 @@ export function poolPlantPipework(room: string): {
     const at: Vec3 = [pheOut1[0], L.dosing - 0.3, pheOut1[2] + 0.3];
     run({
       name: 'Acid to the heated main, its point',
+      model: { link: 'Acid to the heated main' },
       kind: 'chemical-tube',
       od: 0.012,
       points: [

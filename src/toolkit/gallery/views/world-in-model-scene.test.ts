@@ -92,6 +92,10 @@ describe('everything the scene draws is in the model (prompt 064)', () => {
     );
   });
 
+  it('the lounge plant room: every mesh bound, or decorative', () => {
+    expect(unboundInScene('plant_pool_01', built('plant_pool_01'))).toEqual([]);
+  });
+
   it('the footbath plant room’s machines and services: every mesh bound, or decorative', () => {
     expect(unboundInScene('plant_pool_04', built('plant_pool_04'))).toEqual([]);
   });
@@ -110,8 +114,8 @@ describe('everything the scene draws is in the model (prompt 064)', () => {
   });
 
   it('names what is not bound, in a room not yet built from its model', () => {
-    const unbound = unboundInScene('plant_pool_01', built('plant_pool_01'));
+    const unbound = unboundInScene('wet_hall', built('wet_hall'));
     expect(unbound.length).toBeGreaterThan(0);
-    expect(unbound).toContain('PL1-P1');
+    expect(unbound).toContain('WH-T1');
   });
 });

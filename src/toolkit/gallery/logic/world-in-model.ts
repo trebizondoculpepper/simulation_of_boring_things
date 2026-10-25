@@ -1,3 +1,6 @@
+import { INSTALLED_ASSET_IDS } from '../../../game/plant/installed-asset-ids';
+import { MOTORS } from '../../../game/plant/motor-starters';
+import { INSTALLED_VALVES } from '../../../game/plant/installed-valves';
 import { EQUIPPED_ROOMS, layoutRoom } from './room-equipment';
 import { roomIsolators, roomPipes } from './room-pipes';
 import { roomServiceRoutes } from './room-services';
@@ -148,7 +151,7 @@ function olympicThings(): DrawnThing[] {
 
 /** The schematic nodes of rooms built from one, by room. */
 const SCHEMATIC_NODES: Partial<
-  Record<string, readonly { id: string; kind: string }[]>
+  Record<string, readonly { id: string; kind: string; name: string }[]>
 > = Object.fromEntries(Object.values(SCHEMATICS).map((s) => [s.room, s.nodes]));
 
 /** The one node of a kind in a room's schematic, if it has exactly one. */
@@ -164,9 +167,39 @@ const machineOfKind = (
   kind: string,
   as: DrawnKind = 'machine',
 ): DrawnThing => {
-  const node = nodeOfKind(room, kind);
+  // Its own node by its name, or its room's one node of its kind.
+  const node = nodeNamed(room, name) ?? nodeOfKind(room, kind);
   return { kind: as, name, ...(node ? { binding: { node } } : {}) };
 };
+
+/** A room's schematic node of this name, if it has one. */
+const nodeNamed = (room: string, name: string) =>
+  SCHEMATIC_NODES[room]?.find((n) => n.name === name)?.id;
+
+/** What a drawn run is drawn for: its declared binding, the link or node of its name, or an isolator's link. */
+export function runBinding(
+  room: string,
+  run: { name: string; model?: { link: string } | { node: string } },
+): Binding | undefined {
+  if (run.model) return run.model;
+  const s = SCHEMATICS[room];
+  if (!s) return undefined;
+  if (s.links.some((l) => l.id === run.name)) return { link: run.name };
+  const node = nodeNamed(room, run.name);
+  if (node) return { node };
+  // An isolator's supply and feed: the two lengths of its link.
+  const half = /^(.*): (supply|feed)$/.exec(run.name);
+  const fitting = half && s.fittings.find((f) => f.id === half[1]);
+  return fitting ? { link: fitting.edge } : undefined;
+}
+
+/** A drawn valve's fitting: the one its register's asset id names, if its room's model has it. */
+function valveBinding(room: string, run: string, valve: string) {
+  const id = INSTALLED_VALVES[`${room}|${run}|${valve}`]?.assetId;
+  return id && SCHEMATICS[room]?.fittings.some((f) => f.id === id)
+    ? { binding: { fitting: id } }
+    : {};
+}
 
 /** The power isolator its room's model sets on a link, as a binding. */
 const isolatorOn = (room: string, link: string) => {
@@ -188,10 +221,15 @@ export function drawnThings(room: string): DrawnThing[] {
               : machineOfKind(room, p.item.label, p.item.key.split(':')[0]),
           ),
           ...roomPipes(room).flatMap((r) => [
-            { kind: 'pipe' as const, name: r.name },
+            {
+              kind: 'pipe' as const,
+              name: r.name,
+              ...(runBinding(room, r) ? { binding: runBinding(room, r)! } : {}),
+            },
             ...(r.valves ?? []).map((v) => ({
               kind: 'valve' as const,
               name: v.name,
+              ...valveBinding(room, r.name, v.name),
             })),
             ...(r.meters ?? []).map((m) => ({
               kind: 'meter' as const,
@@ -201,6 +239,9 @@ export function drawnThings(room: string): DrawnThing[] {
           ...roomIsolators(room).isolators.map((i) => ({
             kind: 'isolator' as const,
             name: i.name,
+            ...(SCHEMATICS[room]?.fittings.some((f) => f.id === i.name)
+              ? { binding: { fitting: i.name } }
+              : {}),
           })),
           ...cabinetPipes(room).flatMap((r): DrawnThing[] => {
             // A run bound to its link; the busbar's trunking to its machine.
@@ -260,7 +301,11 @@ export function drawnThings(room: string): DrawnThing[] {
     );
   if (room in ROOM_SERVICES)
     for (const r of roomServiceRoutes(room))
-      things.push({ kind: 'pipe', name: `${r.utility}: ${r.name}` });
+      things.push({
+        kind: 'pipe',
+        name: `${r.utility}: ${r.name}`,
+        ...(runBinding(room, r) ? { binding: runBinding(room, r)! } : {}),
+      });
   return things;
 }
 
@@ -294,3 +339,26 @@ export const unboundIdentities = (room: string) => {
 
 /** The rooms the game draws plant in. */
 export const MODELLED_WORLD_ROOMS: readonly string[] = EQUIPPED_ROOMS;
+
+/**
+ * What a plate's tag names in its room's model, from the registers: an
+ * installed valve's fitting (by its asset id), a placed machine's node (by
+ * its layout's label), a motor's pump set (by its pool's plant room).
+ */
+export function bindingForTag(room: string, tag: string): Binding | undefined {
+  const valve = Object.values(INSTALLED_VALVES).find((v) => v.tag === tag);
+  if (valve) return { fitting: valve.assetId };
+  const placed = Object.entries(INSTALLED_ASSET_IDS).find(
+    ([key, a]) => a.tag === tag && key.startsWith(`${room}|`),
+  );
+  if (placed) {
+    const [, key, label] = placed[0].split('|');
+    const node = nodeNamed(room, label) ?? nodeOfKind(room, key.split(':')[0]);
+    return node ? { node } : undefined;
+  }
+  if (Object.hasOwn(MOTORS, tag)) {
+    const node = nodeOfKind(room, 'pump-pair');
+    return node ? { node } : undefined;
+  }
+  return undefined;
+}

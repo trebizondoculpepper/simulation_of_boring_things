@@ -26,7 +26,7 @@ export interface ModelValve {
   /** How it is worked, as its schematic says. */
   operator?: 'lever' | 'chain' | 'motor' | 'solenoid';
   /** Kept by the identified model, not among the installed valves. */
-  keptBy?: 'identified';
+  keptBy?: 'identified' | 'register';
   /** What it isolates, in a description's words. */
   route: {
     from: string;
@@ -82,7 +82,8 @@ function roomValves(
     return [
       {
         id: f.id,
-        tag: f.keptBy ? f.id : `${prefix}${n}`,
+        // An identified part's tag is its id; a register's valve keeps its plate there.
+        tag: f.keptBy === 'identified' ? f.id : f.keptBy ? '' : `${prefix}${n}`,
         ...(f.keptBy ? { keptBy: f.keptBy } : {}),
         name: `${link.id} ${kind === 'power-isolator' ? 'isolator' : 'valve'}`,
         room,
@@ -160,4 +161,16 @@ export function schematicFittingOn(
   return MODEL_VALVES.find(
     (v) => v.room === room && v.link === link && v.kind === kind,
   )?.id;
+}
+
+/** A room's schematic node for a drawn machine: its own by its name, or its room's one of its kind. */
+export function schematicNodeFor(
+  room: string,
+  name: string,
+  kind: string,
+): string | undefined {
+  return (
+    SCHEMATICS[room]?.nodes.find((n) => n.name === name)?.id ??
+    schematicNodeOfKind(room, kind)
+  );
 }

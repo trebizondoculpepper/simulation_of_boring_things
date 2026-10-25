@@ -1,3 +1,4 @@
+import type { Object3D } from 'three';
 import { createActuatedButterflyValve } from '../../components/plant/views/actuated-butterfly-valve';
 import { createSampleTakeoff } from '../../components/plant/views/sample-takeoff';
 import { retiredFrom } from '../logic/retired-rooms';
@@ -24,6 +25,9 @@ import {
 import { createGasBallValve } from '../../components/plant/views/gas-fittings';
 import { installedValveFor } from '../../../game/plant/installed-valves';
 import { markComponent } from '../../components/core/views/component-identity';
+import { runBinding } from '../logic/world-in-model';
+import { SCHEMATICS } from '../../../game/plant/schematics';
+import { schematicNodeOfKind } from '../../../game/plant/model-valves';
 import {
   olympicFlowsOf,
   olympicMeterReadings,
@@ -101,7 +105,14 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       })),
     });
     pipe.name = r.name;
-    group.add(pipe);
+    // What it is drawn for in its room's model (prompt 064).
+    const own = retiredFrom(room) ?? room;
+    const model = runBinding(own, r);
+    const bind = <T extends Object3D>(object: T): T =>
+      model && !('decorative' in model)
+        ? markComponent(object, { name: r.name, model })
+        : object;
+    group.add(bind(pipe));
     if (
       (retiredFrom(room) ?? room) === 'plant_pool_02' &&
       r.name === 'Sample line'
@@ -117,20 +128,27 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     if (r.od >= 0.02 && marked) {
       const lagging = PIPE_KINDS[r.kind].insulation?.thickness ?? 0;
       group.add(
-        markPipe(kit, points, {
-          radius: r.od / 2 + lagging,
-          service: marked,
-          text: r.label,
+        bind(
+          markPipe(kit, points, {
+            radius: r.od / 2 + lagging,
+            service: marked,
+            text: r.label,
+          }),
+        ),
+      );
+    }
+    for (const v of r.valves) {
+      const installed = installedValveFor(own, r.name, v.name);
+      const fitting = SCHEMATICS[own]?.fittings.some(
+        (f) => f.id === installed.assetId,
+      );
+      group.add(
+        markComponent(valve(r, v), {
+          tag: installed.tag,
+          ...(fitting ? { model: { fitting: installed.assetId } } : {}),
         }),
       );
     }
-    for (const v of r.valves)
-      group.add(
-        markComponent(
-          valve(r, v),
-          installedValveFor(retiredFrom(room) ?? room, r.name, v.name).tag,
-        ),
-      );
     for (const m of r.meters ?? []) {
       const meter = parts.add(
         createInlineFitting(kit, {
@@ -170,7 +188,9 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       t.branchDirection,
     );
     tee.name = t.name;
-    group.add(tee);
+    group.add(
+      t.model ? markComponent(tee, { name: t.name, model: t.model }) : tee,
+    );
   }
   // What the room's flowmeters read, as the world now stands (the battery's model keeps its own cache).
   function readings(): Record<string, number> {
@@ -350,7 +370,13 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       floorY + 0.006,
       (c.from[2] + c.to[2]) / 2,
     );
-    group.add(slab);
+    // A floor channel: the room's drainage, its drain in the model.
+    const drain = schematicNodeOfKind(retiredFrom(room) ?? room, 'gully');
+    group.add(
+      drain
+        ? markComponent(slab, { name: 'Floor channel', model: { node: drain } })
+        : slab,
+    );
   }
   // The isolators on their stands, their handles the switches.
   const { isolators, stands } = roomIsolators(room);
@@ -368,6 +394,8 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     post.position.set(x, floorY + (ISOLATOR_Y + 0.15) / 2, z);
     const foot = new Mesh(new BoxGeometry(0.2, 0.01, 0.2), galv);
     foot.position.set(x, floorY + 0.005, z);
+    // A stand: structure, it does nothing (prompt 064).
+    for (const o of [post, foot]) markComponent(o, { decorative: true });
     group.add(post, foot);
   }
   const switches = isolators.map((place) => {
@@ -385,7 +413,16 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     );
     isolator.group.rotation.y = Math.atan2(place.facing[0], place.facing[2]);
     isolator.group.name = place.name;
-    group.add(isolator.group);
+    // Its fitting in the room's model, where the room has one.
+    const ownRoom = retiredFrom(room) ?? room;
+    group.add(
+      markComponent(isolator.group, {
+        name: place.name,
+        ...(SCHEMATICS[ownRoom]?.fittings.some((f) => f.id === place.name)
+          ? { model: { fitting: place.name } }
+          : {}),
+      }),
+    );
     // Switched here, it is switched in the world (`world.ts`): its
     // machine stops, and so, if it was the last, does its pool's water.
     const name = place.name as IsolatorName;

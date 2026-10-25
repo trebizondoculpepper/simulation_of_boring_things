@@ -193,6 +193,7 @@ describe('descriptions of the plant', () => {
         .filter(
           (t) =>
             (t.startsWith('PL2-') && !notInNetwork.includes(t)) ||
+            t.startsWith('PL1-') ||
             t.startsWith('PL3-') ||
             t.startsWith('PL4-'),
         )
@@ -202,8 +203,8 @@ describe('descriptions of the plant', () => {
     expect(componentDescription('PL3-BT1-IV1')).toBe(
       'Isolates water flowing from the water service to the jacuzzi balance tank.',
     );
-    // A room still drawn by hand: none.
-    expect(componentDescription('PL1-F1-IV1')).toBe('');
+    // A room not yet in the model: none.
+    expect(componentDescription('WH-T1-IV1')).toBe('');
   });
 
   it('describes the 1st Olympic pump by its own starter, live', () => {

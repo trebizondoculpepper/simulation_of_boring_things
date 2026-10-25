@@ -1,5 +1,6 @@
 import { retiredFrom } from '../logic/retired-rooms';
 import { markComponent } from '../../components/core/views/component-identity';
+import { runBinding } from '../logic/world-in-model';
 import { schematicNodeOfKind } from '../../../game/plant/model-valves';
 import {
   BoxGeometry,
@@ -28,6 +29,16 @@ import {
 /** Room equipment's physical service runs, plus a local power isolator. The
  * isolator changes the saved feeder state; the lamp shows actual upstream
  * availability, including outages in the shared switch room. */
+/** A route drawn for its link in its room's model (prompt 064), where the room has one. */
+const bindRouteIn =
+  (room: string) =>
+  <T extends Object3D>(object: T, route: { name: string }): T => {
+    const model = runBinding(retiredFrom(room) ?? room, route);
+    return model && !('decorative' in model)
+      ? markComponent(object, { name: route.name, model })
+      : object;
+  };
+
 export function createRoomServices(
   kit: PanelKit,
   room: ServiceRoom,
@@ -37,6 +48,7 @@ export function createRoomServices(
 ) {
   const group = new Group();
   group.name = `${room} services`;
+  const bindRoute = bindRouteIn(room);
   const store = typeof window === 'undefined' ? null : roomWorld();
   const fallback = newWorld();
   const uses = new Map<Object3D, () => void>();
@@ -140,7 +152,7 @@ export function createRoomServices(
       );
       outlet.name = `${route.name} outlet box`;
       outlet.position.set(a[0], a[1], a[2]);
-      group.add(cable, outlet);
+      group.add(bindRoute(cable, route), bindRoute(outlet, route));
     } else {
       // Dosing and sample tube clipped in square runs, not hung in curves.
       const pipe = createPipe(
@@ -150,7 +162,7 @@ export function createRoomServices(
         route.kind === 'chemical-tube' ? { laid: true } : {},
       );
       pipe.name = route.name;
-      group.add(pipe);
+      group.add(bindRoute(pipe, route));
     }
   }
 

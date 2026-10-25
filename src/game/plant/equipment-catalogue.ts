@@ -179,21 +179,18 @@ const record = (
 
 /**
  * The installed valves' routes, from the enhanced networks of the rooms
- * built through the plumber or from their schematic, by register key
- * (`room|run|name`): the Olympic and jacuzzi plant rooms, so far. A valve in any other room has no route, and
+ * built through the plumber or from their schematic, by asset id: the Olympic and jacuzzi plant rooms, so far. A valve in any other room has no route, and
  * so no description, until its room's enhanced network exists.
  */
 const enhancedRoutes = (): ReadonlyMap<string, ValveRoute> =>
   new Map([
-    ...[...olympicValveRoutes()].map(
-      ([key, route]) => [`plant_pool_02|${key}`, route] as const,
-    ),
+    ...[...olympicValveRoutes()].flatMap(([key, route]) => {
+      const valve = INSTALLED_VALVES[`plant_pool_02|${key}`];
+      return valve ? [[valve.assetId, route] as const] : [];
+    }),
     // The rooms built from their schematic: each valve's link's ends.
-    ...MODEL_ISOLATING_VALVES.map(
-      (v) => [`${v.room}|${v.link}|${v.name}`, v.route] as const,
-    ),
+    ...MODEL_ISOLATING_VALVES.map((v) => [v.id, v.route] as const),
   ]);
-
 /** The pools' names, for their pumps: "Olympic pool", from its plant room's name. */
 const POOL_PUMP_NAME = (tag: MotorTag) => {
   const motor = MOTORS[tag];
@@ -397,7 +394,7 @@ function inventoryRecords(
               key.split('|')[0] as keyof typeof EQUIPMENT_ROOM_CODES
             ],
           room: key.split('|')[0],
-          route: routes.get(key),
+          route: routes.get(valve.assetId),
         },
       );
     }),

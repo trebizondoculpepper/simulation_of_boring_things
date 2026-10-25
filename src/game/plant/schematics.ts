@@ -8,6 +8,7 @@ import type {
 } from './plumbing-expansion';
 import { JACUZZI_SCHEMATIC } from './jacuzzi-schematic';
 import { FOOTBATH_SCHEMATIC } from './footbath-schematic';
+import { LOUNGE_SCHEMATIC } from './lounge-schematic';
 
 /**
  * The rooms' schematics (prompt 064): for each room built from its model,
@@ -27,10 +28,12 @@ export interface SchematicNode extends PlumbNode {
 export type SchematicFitting = GivenFitting & {
   role?: string;
   /**
-   * Kept by the identified model (`identification.ts`), its id that
-   * model's tag, rather than among the installed valves.
+   * Where the world keeps it, if not among the model's installed valves:
+   * the identified model (`identification.ts`), its id that model's tag;
+   * or the installed valves' register (`installed-valves.ts`), under its
+   * asset id and plate, for a room whose valves are not yet retagged.
    */
-  keptBy?: 'identified';
+  keptBy?: 'identified' | 'register';
 };
 
 export interface RoomSchematic {
@@ -47,6 +50,7 @@ export interface RoomSchematic {
 export const SCHEMATICS: Readonly<Record<string, RoomSchematic>> = {
   [JACUZZI_SCHEMATIC.room]: JACUZZI_SCHEMATIC,
   [FOOTBATH_SCHEMATIC.room]: FOOTBATH_SCHEMATIC,
+  [LOUNGE_SCHEMATIC.room]: LOUNGE_SCHEMATIC,
 };
 
 const expanded = new Map<string, Expansion>();

@@ -66,7 +66,7 @@ describe('the jacuzzi plant room’s schematic (prompt 064)', () => {
     expect(byRole.get('drain')?.tag).toBe('PL3-CAB1-DV1');
     expect(byRole.get('air')?.route.medium).toBe('air');
     expect(byRole.get('heatingFlow')?.route.medium).toBe('heating water');
-    const tags = MODEL_VALVES.map((v) => v.tag);
+    const tags = MODEL_VALVES.map((v) => v.tag).filter(Boolean);
     expect(new Set(tags).size).toBe(tags.length);
   });
 

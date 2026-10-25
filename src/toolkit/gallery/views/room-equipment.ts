@@ -2,7 +2,7 @@ import { retiredFrom } from '../logic/retired-rooms';
 import { olympicRoom } from '../logic/olympic-plumbing';
 import { INSTALLED_ASSET_IDS } from '../../../game/plant/installed-asset-ids';
 import { markComponent } from '../../components/core/views/component-identity';
-import { schematicNodeOfKind } from '../../../game/plant/model-valves';
+import { schematicNodeFor } from '../../../game/plant/model-valves';
 import {
   bedGlass,
   dirtFromDp,
@@ -868,7 +868,11 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
       INSTALLED_ASSET_IDS[`${room}|${p.item.key}|${p.item.label}`];
     if (installed) {
       // And, in a room built from its schematic, its node there (prompt 064).
-      const node = schematicNodeOfKind(room, p.item.key.split(':')[0]);
+      const node = schematicNodeFor(
+        room,
+        p.item.label,
+        p.item.key.split(':')[0],
+      );
       markComponent(object, {
         tag: installed.tag,
         ...(node ? { model: { node } } : {}),
@@ -882,6 +886,12 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
       | { object: Object3D; post: { x: number; z: number; size: number } }
       | undefined;
     if (beside) {
+      // Its own installation, in the model as its own (the ozone monitor).
+      const node = schematicNodeFor(room, beside.object.name, '');
+      markComponent(beside.object, {
+        name: beside.object.name,
+        ...(node ? { model: { node } } : {}),
+      });
       object.updateMatrixWorld(true);
       besides.push(beside.object);
       const c = Math.cos(p.yaw);
