@@ -70,6 +70,14 @@ export function createInspector(options: InspectorOptions) {
     visit(options.root);
     return out;
   };
+  // Every mesh's bounds computed ahead, in idle time, so the first look
+  // does not stall on them (about 40 ms in the Olympic plant room).
+  const warm = () =>
+    options.root.traverse((o) => {
+      if (o instanceof Mesh && !(o.geometry as BufferGeometry).boundingBox)
+        (o.geometry as BufferGeometry).computeBoundingBox();
+    });
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(warm);
   return (x: number, y: number): InspectionTarget | null => {
     raycaster.setFromCamera(pointer.set(x, y), options.camera);
     raycaster.far = INSPECT_REACH_METRES * options.metre;

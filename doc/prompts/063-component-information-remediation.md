@@ -53,8 +53,6 @@ Status is found from each item's kind and room (`statusBindingFor`): motors, pum
 ## 8. Single items
 
 - **PL4-PW1-IV2**, "Overflow from the spa valve" in the footbath room, valves a gravity overflow; the owner removed the same from the jacuzzi (PL3-JZ1-IV2: "A gravity overflow is never valved; shut, it would flood the deck"). Owner to rule.
-- **The Olympic's UV unit** is labelled "Olympic pool uV unit" in its layout (and so in its asset register key): a lower-casing slip in `olympicItems`.
-- **The first pick** costs about 40 ms in the Olympic plant room while bounding boxes are computed; warm them when the room is built.
 - **Hierarchical pump tags.** The pumps are listed by their motor starters' tags (P-101A …), the world's; by the hierarchy they would be PL2-P1-P1 and PL2-P1-P2. Owner to decide whether the starters' tags become the pumps' hierarchical ones (a world version bump: the starters are saved by tag).
 - **Stage 2 (action narratives)** has not begun: 061 starts it once stage 1 is accepted.
 

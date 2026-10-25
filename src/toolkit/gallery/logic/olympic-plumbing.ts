@@ -1464,7 +1464,8 @@ export function olympicItems(): Item[] {
     const item = itemOf(p);
     return {
       ...item,
-      label: `Olympic pool ${p.label.charAt(0).toLowerCase()}${p.label.slice(1)}`,
+      // Lower-cased after the pool's name, unless an acronym (UV) begins it.
+      label: `Olympic pool ${/^[A-Z]{2}/.test(p.label) ? p.label : p.label.charAt(0).toLowerCase() + p.label.slice(1)}`,
     };
   });
 }

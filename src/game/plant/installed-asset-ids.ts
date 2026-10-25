@@ -313,7 +313,7 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0098',
     tag: 'PL2-T2',
   },
-  'plant_pool_02|uv-unit|Olympic pool uV unit': {
+  'plant_pool_02|uv-unit|Olympic pool UV unit': {
     assetId: 'asset-0099',
     tag: 'PL2-UV1',
   },
