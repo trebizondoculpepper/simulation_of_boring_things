@@ -1,3 +1,5 @@
+import { markComponent } from '../../components/core/views/component-identity';
+import { schematicNodeOfKind } from '../../../game/plant/model-valves';
 import { createJacuzziDrainAudio } from '../views/jacuzzi-drain-audio';
 import { jacuzziSpeakerMounts } from '../logic/jacuzzi-music';
 import { createMusicSpeakerPair } from '../../components/sound/parts/music-speaker';
@@ -141,124 +143,16 @@ export function startPoolHallRoom(
   fill.userData.daylightShare = daylit;
   sky.userData.daylightShare = daylit;
   scene.add(fill, sky);
-  const rooms = createPoolHall(spec, metre, {
-    underwater: Boolean(gallery),
-    loopRoom: gallery ? 'pool_02_gallery' : id,
-  });
-  const poolsideKit = createPanelKit();
+  const {
+    rooms,
+    poolsideKit,
+    fibreWall,
+    musicSpeaker,
+    poolside,
+    spaTub,
+    spaPanel,
+  } = buildPoolHallContents(id, metre, { gallery: Boolean(gallery), devRoom });
   const world = roomWorld();
-  const fibreWall =
-    id === 'pool_03'
-      ? createJacuzziFibreWall(spec.w, spec.d, spec.tileTop, spec.h)
-      : null;
-  if (fibreWall) rooms.add(fibreWall.group);
-  const musicSpeaker =
-    id === 'pool_03' && !gallery && !devRoom
-      ? createMusicSpeakerPair(
-          poolsideKit,
-          bindJacuzziMusic(),
-          JACUZZI_MUSIC,
-          jacuzziSpeakerMounts(),
-          metre,
-          true,
-        )
-      : null;
-  if (musicSpeaker) {
-    rooms.add(musicSpeaker.object);
-  }
-  const poolside = !gallery
-    ? (() => {
-        const mounts =
-          id === 'pool_01'
-            ? [
-                { x: -spec.w / 2 + 0.012, z: 3.26, yaw: Math.PI / 2 },
-                { x: spec.w / 2 - 0.012, z: -6.53, yaw: -Math.PI / 2 },
-              ]
-            : id === 'pool_02'
-              ? [{ x: -spec.w / 2 + 0.012, z: -1.94, yaw: Math.PI / 2 }]
-              : id === 'pool_03'
-                ? [{ x: -spec.w / 2 + 0.012, z: 2.92, yaw: Math.PI / 2 }]
-                : [{ x: -1.15, z: spec.d / 2 - 0.012, yaw: Math.PI }];
-        const signs = mounts.map(({ x, z, yaw }, index) => {
-          const sign = createPoolInfoSign(poolsideKit, 'wall');
-          sign.object.name = `${spec.title} water quality sign ${index + 1}`;
-          sign.object.position.set(x, 2, z);
-          sign.object.rotation.y = yaw;
-          rooms.add(sign.object);
-          return sign;
-        });
-        // Beside the first water quality sign, the pool's rules (the spa's
-        // in the jacuzzi room) and, by a pool, its no diving sign.
-        if (id !== 'pool_04') {
-          const { x, z, yaw } = mounts[0];
-          const rules = new Group();
-          rules.name = `${spec.title} rules`;
-          const board =
-            id === 'pool_03'
-              ? createSpaRules(poolsideKit)
-              : createPoolRules(
-                  poolsideKit,
-                  id === 'pool_02' ? 'Olympic Pool' : 'Lounge Pool',
-                );
-          board.position.set(0.75, 0, 0.004);
-          rules.add(board);
-          if (id !== 'pool_03') {
-            const noDiving = createSafetySign(
-              poolsideKit,
-              ['no-diving'],
-              ['NO DIVING'],
-            );
-            noDiving.position.set(1.3, 0.1, 0.004);
-            rules.add(noDiving);
-          }
-          // Along the wall, away from the sign: local +x is the sign's left
-          // as seen from the poolside, so turn it to face the room.
-          rules.position.set(x, 1.6, z);
-          rules.rotation.y = yaw;
-          rooms.add(rules);
-        }
-        const clock = id === 'pool_02' ? createPaceClock(2) : null;
-        if (clock) {
-          // Its case's back on the east wall.
-          clock.object.position.set(spec.w / 2 - 0.04 * 2 - 0.002, 7.5, -5.25);
-          clock.object.rotation.y = -Math.PI / 2;
-          rooms.add(clock.object);
-        }
-        const state = createSignState(
-          id === 'pool_02'
-            ? 'OLYMPIC POOL'
-            : id === 'pool_01'
-              ? 'LOUNGE POOL'
-              : id === 'pool_03'
-                ? 'JACUZZI'
-                : 'FOOTBATH',
-        );
-        return { signs, clock, state };
-      })()
-    : null;
-  const spaTub =
-    id === 'pool_03' && !gallery
-      ? buildWallBackedJacuzzi(poolsideKit, spec.w / 2 - 2.7 + 0.15)
-      : null;
-  const spaPanel =
-    id === 'pool_03' && !gallery
-      ? JACUZZI_PLATE_EXHIBIT.build(poolsideKit)
-      : null;
-  if (spaTub && 'object' in spaTub) {
-    spaTub.object.position.x = -2.7;
-    rooms.add(spaTub.object);
-  }
-  if (spaPanel && 'object' in spaPanel) {
-    // Flat in the plinth's top deck, in its south-east corner, where the
-    // square deck stands clear of the round gutter: sunk flush, its top
-    // toward the tub, so it reads from outside it; clear of the doors.
-    const corner = new Group();
-    corner.position.set(-2.7 + 1.3, 0.9 - 0.026, 1.3);
-    corner.rotation.y = Math.PI / 4;
-    spaPanel.object.rotation.x = -Math.PI / 2;
-    corner.add(spaPanel.object);
-    rooms.add(corner);
-  }
   scene.add(rooms);
 
   const composer = createComposer(
@@ -975,4 +869,156 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       },
     },
   );
+}
+
+/**
+ * A pool hall's contents, as its scene has them: the hall itself, and in
+ * it its signs, rules and clock, and in the jacuzzi room the tub, its wall
+ * plate, the fibre-optic wall and the speakers. Built apart from the
+ * renderer, so a test can build them and check that each is bound to the
+ * model or decorative (prompt 064).
+ */
+export function buildPoolHallContents(
+  id: PoolHallId,
+  metre: number,
+  { gallery, devRoom }: { gallery: boolean; devRoom?: RoomId },
+) {
+  const spec = POOL_HALLS[id];
+  const rooms = createPoolHall(spec, metre, {
+    underwater: Boolean(gallery),
+    loopRoom: gallery ? ('pool_02_gallery' as const) : id,
+  });
+  // The hall itself is architecture: set decoration, outside the model
+  // (prompt 064). Everything added to it below is marked for itself.
+  for (const child of rooms.children)
+    markComponent(child, { decorative: true });
+  // In the jacuzzi's room, what each thing is drawn from in its model.
+  const bind = <T extends Object3D>(object: T, kind: string): T => {
+    const node =
+      id === 'pool_03' ? schematicNodeOfKind('plant_pool_03', kind) : undefined;
+    return node ? markComponent(object, { model: { node } }) : object;
+  };
+  const poolsideKit = createPanelKit();
+  const fibreWall =
+    id === 'pool_03'
+      ? createJacuzziFibreWall(spec.w, spec.d, spec.tileTop, spec.h)
+      : null;
+  if (fibreWall) rooms.add(bind(fibreWall.group, 'fibre-wall'));
+  const musicSpeaker =
+    id === 'pool_03' && !gallery && !devRoom
+      ? createMusicSpeakerPair(
+          poolsideKit,
+          bindJacuzziMusic(),
+          JACUZZI_MUSIC,
+          jacuzziSpeakerMounts(),
+          metre,
+          true,
+        )
+      : null;
+  if (musicSpeaker) {
+    rooms.add(bind(musicSpeaker.object, 'speaker-pair'));
+  }
+  const poolside = !gallery
+    ? (() => {
+        const mounts =
+          id === 'pool_01'
+            ? [
+                { x: -spec.w / 2 + 0.012, z: 3.26, yaw: Math.PI / 2 },
+                { x: spec.w / 2 - 0.012, z: -6.53, yaw: -Math.PI / 2 },
+              ]
+            : id === 'pool_02'
+              ? [{ x: -spec.w / 2 + 0.012, z: -1.94, yaw: Math.PI / 2 }]
+              : id === 'pool_03'
+                ? [{ x: -spec.w / 2 + 0.012, z: 2.92, yaw: Math.PI / 2 }]
+                : [{ x: -1.15, z: spec.d / 2 - 0.012, yaw: Math.PI }];
+        const signs = mounts.map(({ x, z, yaw }, index) => {
+          const sign = createPoolInfoSign(poolsideKit, 'wall');
+          sign.object.name = `${spec.title} water quality sign ${index + 1}`;
+          sign.object.position.set(x, 2, z);
+          sign.object.rotation.y = yaw;
+          rooms.add(bind(sign.object, 'water-quality-display'));
+          return sign;
+        });
+        // Beside the first water quality sign, the pool's rules (the spa's
+        // in the jacuzzi room) and, by a pool, its no diving sign.
+        if (id !== 'pool_04') {
+          const { x, z, yaw } = mounts[0];
+          const rules = new Group();
+          rules.name = `${spec.title} rules`;
+          const board =
+            id === 'pool_03'
+              ? createSpaRules(poolsideKit)
+              : createPoolRules(
+                  poolsideKit,
+                  id === 'pool_02' ? 'Olympic Pool' : 'Lounge Pool',
+                );
+          board.position.set(0.75, 0, 0.004);
+          rules.add(board);
+          if (id !== 'pool_03') {
+            const noDiving = createSafetySign(
+              poolsideKit,
+              ['no-diving'],
+              ['NO DIVING'],
+            );
+            noDiving.position.set(1.3, 0.1, 0.004);
+            rules.add(noDiving);
+          }
+          // Along the wall, away from the sign: local +x is the sign's left
+          // as seen from the poolside, so turn it to face the room.
+          rules.position.set(x, 1.6, z);
+          rules.rotation.y = yaw;
+          // A notice: it does nothing.
+          rooms.add(markComponent(rules, { decorative: true }));
+        }
+        const clock = id === 'pool_02' ? createPaceClock(2) : null;
+        if (clock) {
+          // Its case's back on the east wall.
+          clock.object.position.set(spec.w / 2 - 0.04 * 2 - 0.002, 7.5, -5.25);
+          clock.object.rotation.y = -Math.PI / 2;
+          rooms.add(clock.object);
+        }
+        const state = createSignState(
+          id === 'pool_02'
+            ? 'OLYMPIC POOL'
+            : id === 'pool_01'
+              ? 'LOUNGE POOL'
+              : id === 'pool_03'
+                ? 'JACUZZI'
+                : 'FOOTBATH',
+        );
+        return { signs, clock, state };
+      })()
+    : null;
+  const spaTub =
+    id === 'pool_03' && !gallery
+      ? buildWallBackedJacuzzi(poolsideKit, spec.w / 2 - 2.7 + 0.15)
+      : null;
+  const spaPanel =
+    id === 'pool_03' && !gallery
+      ? JACUZZI_PLATE_EXHIBIT.build(poolsideKit)
+      : null;
+  if (spaTub && 'object' in spaTub) {
+    spaTub.object.position.x = -2.7;
+    rooms.add(bind(spaTub.object, 'spa'));
+  }
+  if (spaPanel && 'object' in spaPanel) {
+    // Flat in the plinth's top deck, in its south-east corner, where the
+    // square deck stands clear of the round gutter: sunk flush, its top
+    // toward the tub, so it reads from outside it; clear of the doors.
+    const corner = new Group();
+    corner.position.set(-2.7 + 1.3, 0.9 - 0.026, 1.3);
+    corner.rotation.y = Math.PI / 4;
+    spaPanel.object.rotation.x = -Math.PI / 2;
+    corner.add(bind(spaPanel.object, 'control-plate'));
+    rooms.add(corner);
+  }
+  return {
+    rooms,
+    poolsideKit,
+    fibreWall,
+    musicSpeaker,
+    poolside,
+    spaTub,
+    spaPanel,
+  };
 }

@@ -13,7 +13,9 @@ import type {
  * expands it (`expandForPlumbing`) and should add nothing; the world's
  * jacuzzi reads its valves by these ids (`jacuzzi.ts`); and everything the
  * room draws is bound to its nodes, fittings and links
- * (`world-in-model.ts`). The packaged cabinet is one machine: its
+ * (`world-in-model.ts`), in the plant room and in the jacuzzi's own room,
+ * the pool hall (its tub, wall plate, speakers, display and fibre-optic
+ * wall). The packaged cabinet is one machine: its
  * circulation pump, jet pump, blower, filter, heater, UV and dosing are
  * inside it. The spa's overflow to the balance tank is never valved (the
  * owner: a gravity overflow, shut, would flood the deck). Pure.
@@ -49,6 +51,16 @@ export const JACUZZI_NODES: readonly SchematicNode[] = [
   { id: 'busbar', kind: 'busbar', name: 'Busbar' },
   { id: 'switch-fuse', kind: 'switch-fuse', name: 'Room supply switch-fuse' },
   { id: 'valve-panel', kind: 'valve-panel', name: 'Valve panel' },
+  // In the jacuzzi's own room, the pool hall.
+  { id: 'plate', kind: 'control-plate', name: 'Jacuzzi control plate' },
+  { id: 'music-rack', kind: 'music-rack', name: 'Jacuzzi music rack' },
+  { id: 'speakers', kind: 'speaker-pair', name: 'Jacuzzi speakers' },
+  {
+    id: 'display',
+    kind: 'water-quality-display',
+    name: 'Jacuzzi water quality display',
+  },
+  { id: 'fibre-wall', kind: 'fibre-wall', name: 'Fibre-optic wall' },
 ];
 
 const link = (
@@ -145,6 +157,26 @@ export const JACUZZI_LINKS: readonly PlumbEdge[] = [
     'Valve panel to the cabinet',
     ['valve-panel', 'control'],
     ['cabinet', 'valves'],
+    'control',
+  ),
+  // Signals, not drawn: the wall plate's START and STOP to the cabinet,
+  // the music to the speakers, the cabinet's readings to the display.
+  link(
+    'Wall plate to the cabinet',
+    ['plate', 'out'],
+    ['cabinet', 'plate'],
+    'control',
+  ),
+  link(
+    'Music to the speakers',
+    ['music-rack', 'out'],
+    ['speakers', 'in'],
+    'control',
+  ),
+  link(
+    'Readings to the display',
+    ['cabinet', 'readings'],
+    ['display', 'in'],
     'control',
   ),
 ];
