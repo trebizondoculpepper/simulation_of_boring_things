@@ -93,8 +93,9 @@ describe('everything the scene draws is in the model (prompt 064)', () => {
     );
   });
 
-  // Every room built from its schematic: its machines, pipework and services.
-  for (const room of Object.keys(SCHEMATICS))
+  // Every room in the model: those built from a schematic, and the Olympic's
+  // (its plumber's expansion with its annex).
+  for (const room of [...Object.keys(SCHEMATICS), 'plant_pool_02'])
     it(`${room}: every mesh its equipment and services draw is bound, or decorative`, () => {
       expect(unboundInScene(room, built(room))).toEqual([]);
     });

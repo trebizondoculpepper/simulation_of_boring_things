@@ -1657,6 +1657,7 @@ export function olympicRoom() {
         return [
           {
             ...m,
+            fitting: f.id,
             at: f.at,
             along: f.along,
             od: r.od,
@@ -1702,6 +1703,7 @@ export function olympicRoom() {
             at: f.at,
             axis,
             name: v.name,
+            fitting: f.id,
             od: r.od,
             // As the plumber's options have it worked.
             operator,
@@ -1716,6 +1718,7 @@ export function olympicRoom() {
       });
     runs.push({
       name: r.name,
+      model: { link: r.line },
       kind: r.kind,
       od: r.od,
       points: r.points,
@@ -1844,4 +1847,10 @@ export function olympicValveTags(): {
       };
     }),
   );
+}
+
+/** Each drawn machine's key in the room's plan, by its label as drawn (`olympicItems`, made from the plan in its order). */
+export function olympicPlanKeys(): ReadonlyMap<string, string> {
+  const plan = olympicPlan();
+  return new Map(olympicItems().map((item, i) => [item.label, plan[i].key]));
 }

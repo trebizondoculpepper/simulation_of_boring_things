@@ -959,7 +959,10 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   if (room === 'plant_pool_02') {
     const soffit = roomStructure(room)?.soffit ?? 8;
     pipework.group.add(
-      createContainment(kit, olympicRoom().busbar, [], soffit, floorY),
+      markComponent(
+        createContainment(kit, olympicRoom().busbar, [], soffit, floorY),
+        { name: 'Busbar', model: { link: 'bus' } },
+      ),
     );
   }
   // The switch room's cable ladder and its switchgear's trunking.

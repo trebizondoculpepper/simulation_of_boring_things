@@ -121,7 +121,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       if (main) {
         const takeoff = createSampleTakeoff(kit, main.od, r.od);
         takeoff.position.set(...lift(r.points[0]));
-        group.add(takeoff);
+        group.add(bind(takeoff));
       }
     }
     const marked = MARKED[r.service];
@@ -145,7 +145,12 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       group.add(
         markComponent(valve(r, v), {
           tag: installed.tag,
-          ...(fitting ? { model: { fitting: installed.assetId } } : {}),
+          // Its fitting: the room's plumbing's own, or its register's.
+          ...(v.fitting
+            ? { model: { fitting: v.fitting } }
+            : fitting
+              ? { model: { fitting: installed.assetId } }
+              : {}),
         }),
       );
     }
@@ -163,18 +168,27 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         }),
       );
       placeFitting(meter.object, 'flowmeter', lift(m.at), m.along, m.inward);
-      group.add(markComponent(meter.object, m.tag));
+      group.add(
+        markComponent(meter.object, {
+          tag: m.tag,
+          ...(m.fitting ? { model: { fitting: m.fitting } } : {}),
+        }),
+      );
     }
   }
   if ((retiredFrom(room) ?? room) === 'plant_pool_02') {
     for (const r of olympicRoom().reducers)
       group.add(
-        createPipeReducer(
-          'pvc-pressure',
-          lift(r.from),
-          lift(r.to),
-          r.fromOd,
-          r.toOd,
+        markComponent(
+          createPipeReducer(
+            'pvc-pressure',
+            lift(r.from),
+            lift(r.to),
+            r.fromOd,
+            r.toOd,
+          ),
+          // The pumps' discharge into its manifold (`olympic-annex.ts`).
+          { name: 'Concentric reducer', model: { node: 'manifold' } },
         ),
       );
   }

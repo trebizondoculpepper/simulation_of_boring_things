@@ -48,6 +48,8 @@ export type Service =
   | 'hot water';
 
 export interface Valve {
+  /** Its fitting in its room's model, where the room's plumbing gives one. */
+  fitting?: string;
   /** Its middle, on its run, and the run's axis there. */
   at: Vec3;
   axis: 'x' | 'y' | 'z';
@@ -84,6 +86,8 @@ export interface Meter {
   reads: string;
   /** On an upright run, the way its head faces in plan. */
   inward: readonly [number, number];
+  /** Its fitting in its room's model, where the room's plumbing gives one. */
+  fitting?: string;
 }
 
 /** Over this, a valve's lever is out of reach from the floor, metres. */

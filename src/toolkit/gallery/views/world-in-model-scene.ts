@@ -1,7 +1,12 @@
 import { Mesh } from 'three';
 import type { Object3D } from 'three';
 import { owningComponent } from '../../components/core/views/component-identity';
-import { bindingForTag, isBound, roomModel } from '../logic/world-in-model';
+import {
+  bindingForName,
+  bindingForTag,
+  isBound,
+  roomModel,
+} from '../logic/world-in-model';
 
 /**
  * Everything drawn is in the model, checked on the scene itself (prompt
@@ -33,6 +38,11 @@ export function unboundInScene(
     // A thing marked by its plate's tag alone: bound if its tag names something in the model.
     const byTag = identity?.tag ? bindingForTag(room, identity.tag) : undefined;
     if (byTag && isBound(byTag, model)) return;
+    // A thing marked by its name alone: bound if a node of the model has it.
+    const byName = identity?.name
+      ? bindingForName(room, identity.name)
+      : undefined;
+    if (byName && isBound(byName, model)) return;
     // Name the thing by its owner, or its nearest named ancestor.
     let named: Object3D | null = owner?.object ?? o;
     while (named && !named.name) named = named.parent;
