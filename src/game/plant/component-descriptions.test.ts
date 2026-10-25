@@ -194,6 +194,7 @@ describe('descriptions of the plant', () => {
           (t) =>
             (t.startsWith('PL2-') && !notInNetwork.includes(t)) ||
             t.startsWith('PL1-') ||
+            t.startsWith('WH-') ||
             t.startsWith('PL3-') ||
             t.startsWith('PL4-'),
         )
@@ -204,7 +205,7 @@ describe('descriptions of the plant', () => {
       'Isolates water flowing from the water service to the jacuzzi balance tank.',
     );
     // A room not yet in the model: none.
-    expect(componentDescription('WH-T1-IV1')).toBe('');
+    expect(componentDescription('BH-B1-IV1')).toBe('');
   });
 
   it('describes the 1st Olympic pump by its own starter, live', () => {

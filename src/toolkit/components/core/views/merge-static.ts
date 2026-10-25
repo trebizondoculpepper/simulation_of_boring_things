@@ -8,6 +8,8 @@ import {
   Vector3,
 } from 'three';
 import type { Material, Object3D } from 'three';
+import { markComponent, owningComponent } from './component-identity';
+import type { ComponentIdentity } from './component-identity';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /**
@@ -69,6 +71,7 @@ export function mergeStatic(
       target: boolean;
       fine: boolean;
       pieceRadius: number;
+      owner?: ComponentIdentity;
     }
   >();
   const originals: Mesh[] = [];
@@ -84,6 +87,7 @@ export function mergeStatic(
     return false;
   };
   const clickTargets = new Set<Mesh>();
+  const owners = new Map<Object3D, number>();
   const centre = new Vector3();
   const ids = new Map<Material | string, number>();
   root.traverse((object) => {
@@ -114,12 +118,25 @@ export function mergeStatic(
     const radius = flat.boundingSphere!.radius;
     const band = fine.findIndex((size) => radius < size);
     const small = band >= 0;
-    const key = `${ids.get(id)}|${target ? 't' : ''}${small ? `f${band}` : ''}${Math.floor(centre.x / cell)},${Math.floor(centre.y / cell)},${Math.floor(centre.z / cell)}`;
+    // A described component is a merge boundary (prompt 061): its pieces
+    // merge only among themselves, and the merged mesh keeps its mark.
+    const owner = owningComponent(object);
+    if (owner && !owners.has(owner.object))
+      owners.set(owner.object, owners.size);
+    const ownerKey = owner ? `o${owners.get(owner.object)}|` : '';
+    const key = `${ownerKey}${ids.get(id)}|${target ? 't' : ''}${small ? `f${band}` : ''}${Math.floor(centre.x / cell)},${Math.floor(centre.y / cell)},${Math.floor(centre.z / cell)}`;
     let entry = groups.get(key);
     if (!entry)
       groups.set(
         key,
-        (entry = { material, parts: [], target, fine: small, pieceRadius: 0 }),
+        (entry = {
+          material,
+          parts: [],
+          target,
+          fine: small,
+          pieceRadius: 0,
+          ...(owner ? { owner: owner.identity } : {}),
+        }),
       );
     entry.parts.push(flat);
     entry.pieceRadius = Math.max(entry.pieceRadius, radius);
@@ -149,6 +166,7 @@ export function mergeStatic(
     target,
     fine,
     pieceRadius,
+    owner,
   } of groups.values()) {
     const geometry =
       parts.length === 1 ? parts[0] : mergeGeometries(parts, false);
@@ -159,6 +177,7 @@ export function mergeStatic(
     // Clicks go to the hidden originals of what a click works.
     if (target) mesh.raycast = () => {};
     if (fine) mesh.userData.pieceRadius = pieceRadius;
+    if (owner) markComponent(mesh, owner);
     holder.add(mesh);
     merged.push(mesh);
     if (parts.length > 1) for (const p of parts) p.dispose();

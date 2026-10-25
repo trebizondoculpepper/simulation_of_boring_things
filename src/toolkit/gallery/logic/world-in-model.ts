@@ -179,7 +179,13 @@ const nodeNamed = (room: string, name: string) =>
 /** What a drawn run is drawn for: its declared binding, the link or node of its name, or an isolator's link. */
 export function runBinding(
   room: string,
-  run: { name: string; model?: { link: string } | { node: string } },
+  run: {
+    name: string;
+    model?: { link: string } | { node: string };
+    /** A service route's machine (its layout's key) and what it carries. */
+    to?: string;
+    utility?: string;
+  },
 ): Binding | undefined {
   if (run.model) return run.model;
   const s = SCHEMATICS[room];
@@ -187,6 +193,23 @@ export function runBinding(
   if (s.links.some((l) => l.id === run.name)) return { link: run.name };
   const node = nodeNamed(room, run.name);
   if (node) return { node };
+  // A service route to a machine: the link that reaches it, in its utility.
+  if (run.to && run.utility) {
+    const target =
+      s.nodes.find((n) => run.name.startsWith(n.name))?.id ??
+      nodeOfKind(room, run.to.split(':')[0]);
+    const medium =
+      run.utility === 'control'
+        ? 'control'
+        : run.utility === 'power'
+          ? 'power'
+          : 'water';
+    const found = s.links.find(
+      (l) =>
+        (l.targetId === target || l.sourceId === target) && l.medium === medium,
+    );
+    if (found) return { link: found.id };
+  }
   // An isolator's supply and feed: the two lengths of its link.
   const half = /^(.*): (supply|feed)$/.exec(run.name);
   const fitting = half && s.fittings.find((f) => f.id === half[1]);

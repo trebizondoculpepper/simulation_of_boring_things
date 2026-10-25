@@ -947,8 +947,12 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   const bus = controlBus(room);
   if (bus) {
     const soffit = roomStructure(room)?.soffit ?? 7;
+    const node = schematicNodeFor(room, 'Control bus', 'control-bus');
     pipework.group.add(
-      createContainment(kit, bus.trunking, [], soffit, floorY),
+      markComponent(createContainment(kit, bus.trunking, [], soffit, floorY), {
+        name: 'Control bus',
+        ...(node ? { model: { node } } : {}),
+      }),
     );
   }
   // The Olympic's busbar ring round its walls (`olympic-plumbing.ts`).

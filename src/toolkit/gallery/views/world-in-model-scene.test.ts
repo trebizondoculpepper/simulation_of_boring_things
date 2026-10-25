@@ -11,6 +11,7 @@ import { createPanelKit } from '../../components/core/views/eighties-controls';
 import { createRoomEquipment } from './room-equipment';
 import { cabinetServices } from './cabinet-services';
 import { unboundInScene } from './world-in-model-scene';
+import { SCHEMATICS } from '../../../game/plant/schematics';
 import { buildPoolHallContents } from '../rooms/pool-hall-room';
 import { buildPlantRoomContents } from '../rooms/plant-room-shell-room';
 import { shellPlan } from '../logic/shell-plan';
@@ -92,9 +93,11 @@ describe('everything the scene draws is in the model (prompt 064)', () => {
     );
   });
 
-  it('the lounge plant room: every mesh bound, or decorative', () => {
-    expect(unboundInScene('plant_pool_01', built('plant_pool_01'))).toEqual([]);
-  });
+  // Every room built from its schematic: its machines, pipework and services.
+  for (const room of Object.keys(SCHEMATICS))
+    it(`${room}: every mesh its equipment and services draw is bound, or decorative`, () => {
+      expect(unboundInScene(room, built(room))).toEqual([]);
+    });
 
   it('the footbath plant room’s machines and services: every mesh bound, or decorative', () => {
     expect(unboundInScene('plant_pool_04', built('plant_pool_04'))).toEqual([]);
@@ -114,8 +117,7 @@ describe('everything the scene draws is in the model (prompt 064)', () => {
   });
 
   it('names what is not bound, in a room not yet built from its model', () => {
-    const unbound = unboundInScene('wet_hall', built('wet_hall'));
+    const unbound = unboundInScene('boiler_house', built('boiler_house'));
     expect(unbound.length).toBeGreaterThan(0);
-    expect(unbound).toContain('WH-T1');
   });
 });

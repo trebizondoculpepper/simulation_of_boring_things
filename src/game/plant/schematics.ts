@@ -9,6 +9,7 @@ import type {
 import { JACUZZI_SCHEMATIC } from './jacuzzi-schematic';
 import { FOOTBATH_SCHEMATIC } from './footbath-schematic';
 import { LOUNGE_SCHEMATIC } from './lounge-schematic';
+import { WET_HALL_SCHEMATIC } from './wet-hall-schematic';
 
 /**
  * The rooms' schematics (prompt 064): for each room built from its model,
@@ -51,6 +52,7 @@ export const SCHEMATICS: Readonly<Record<string, RoomSchematic>> = {
   [JACUZZI_SCHEMATIC.room]: JACUZZI_SCHEMATIC,
   [FOOTBATH_SCHEMATIC.room]: FOOTBATH_SCHEMATIC,
   [LOUNGE_SCHEMATIC.room]: LOUNGE_SCHEMATIC,
+  [WET_HALL_SCHEMATIC.room]: WET_HALL_SCHEMATIC,
 };
 
 const expanded = new Map<string, Expansion>();
