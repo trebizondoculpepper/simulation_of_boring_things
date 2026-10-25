@@ -2,12 +2,20 @@ import { markComponent } from '../../core/views/component-identity';
 import { createSightGlass } from './sight-glass';
 import type { GlassInputs } from '../logic/sight-glass';
 import { GAUGE, gaugeBosses } from '../logic/sand-filter';
-import { Group, Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
+import {
+  CylinderGeometry,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  PlaneGeometry,
+  SphereGeometry,
+} from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createBrassPlate } from '../../core/views/plant-signs';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import { brandLivery } from '../../core/views/brand-livery';
+import { SANS } from '../../core/views/fitting-tools';
 import type { BrandId } from '../../core/logic/brands';
 import { FINISH, PIPE_SIZES, plantTools } from './plant-tools';
 import {
@@ -654,10 +662,14 @@ export function createSandFilter(
   t.cyl(group, steel, 0.009, 0.18, 0, hatchY, face + 0.085, 'x', 8);
   // Seat the sight glass outside the curved shell at its offset position.
   // A fixed fraction of the front radius buried most of the disc in the vessel.
-  const sightX = (sightSide === 'right' ? 1 : -1) * r * 0.45;
+  const sightX = (sightSide === 'right' ? 1 : -1) * r * 0.68;
   const sightZ = Math.sqrt(r * r - sightX * sightX);
   const sightMount = new Group();
-  sightMount.position.set(sightX, cy + 0.15, zc + sightZ);
+  sightMount.position.set(
+    sightX,
+    cy + Math.max(0.28, shell * 0.22),
+    zc + sightZ,
+  );
   sightMount.rotation.y = Math.atan2(sightX, sightZ);
   group.add(sightMount);
   t.cyl(sightMount, livery.paint.shade, 0.115, 0.025, 0, 0, 0.018, 'z', 24);
@@ -665,19 +677,19 @@ export function createSandFilter(
   const sightGlass = createSightGlass(kit, { radius: 0.095 });
   sightGlass.group.position.z = 0.032;
   sightMount.add(sightGlass.group);
-  // Air bleed pipe from the top down the face.
+  // Air bleed pipe follows the rear of the vessel, clear of its inspection face.
   t.rod(
     group,
     t.paint('#e8e8e3', 0.4),
-    [r * 0.3, top - 0.05, zc + r * 0.4],
-    [r * 0.3, top - 0.05, face + 0.05],
+    [0, top - 0.05, zc],
+    [0, top - 0.05, zc - r - 0.05],
     0.012,
   );
   t.rod(
     group,
     t.paint('#e8e8e3', 0.4),
-    [r * 0.3, top - 0.05, face + 0.05],
-    [r * 0.3, 1.0, face + 0.05],
+    [0, top - 0.05, zc - r - 0.05],
+    [0, 1.0, zc - r - 0.05],
     0.012,
   );
   // The two gauges, each on a boss in the vessel's wall
@@ -729,24 +741,64 @@ export function createSandFilter(
     inletGauge.update(delta);
     outletGauge.update(delta);
   };
-  badge(
-    kit,
-    group,
-    'lidoluxe',
-    [sightSide === 'right' ? -0.12 : 0, cy + 0.45, face + 0.005],
-    0.08,
+  // The maker and rating are ink on the curved shell, not floating plates.
+  const logo = createBrandBadge(kit, 'lidoluxe', {
+    form: 'wordmark',
+    height: 0.065,
+    maxWidth: 0.25,
+    ink: '#063c44',
+  });
+  const logoWidth = (logo.geometry as PlaneGeometry).parameters.width;
+  const curvedLogo = new Mesh(
+    new CylinderGeometry(
+      r + 0.004,
+      r + 0.004,
+      0.065,
+      24,
+      1,
+      true,
+      -0.5 - logoWidth / (2 * r),
+      logoWidth / r,
+    ),
+    logo.material,
   );
-  nameplate(
-    kit,
-    group,
-    'lidoluxe',
-    sightSide === 'right'
-      ? [0.12, cy + 0.4, face + 0.004]
-      : [r * 0.35, cy + 0.2, face + 0.004],
-    [label, '4 bar  40 °C', 'Bed depth 1.2 m'],
-    0.16,
-    0.08,
+  curvedLogo.position.set(0, cy + 0.43, zc);
+  curvedLogo.raycast = () => {};
+  group.add(curvedLogo);
+  logo.geometry.dispose();
+  const specWidth = Math.min(0.24, r * 0.7);
+  const spec = t.printed(
+    specWidth,
+    0.095,
+    (c, w, h) => {
+      c.fillStyle = '#d9e9e9';
+      c.fillRect(0, 0, w, h);
+      c.fillStyle = '#173d43';
+      c.font = `bold ${h * 0.23}px ${SANS}`;
+      c.fillText(label, w * 0.06, h * 0.28, w * 0.88);
+      c.font = `${h * 0.21}px ${SANS}`;
+      c.fillText('4 bar  ·  40 °C', w * 0.06, h * 0.56);
+      c.fillText('Bed depth 1.2 m', w * 0.06, h * 0.83);
+    },
+    512,
   );
+  const curvedSpec = new Mesh(
+    new CylinderGeometry(
+      r + 0.004,
+      r + 0.004,
+      0.095,
+      24,
+      1,
+      true,
+      0.5 - specWidth / (2 * r),
+      specWidth / r,
+    ),
+    spec.mesh.material,
+  );
+  curvedSpec.position.set(0, cy + 0.4, zc);
+  curvedSpec.raycast = () => {};
+  group.add(curvedSpec);
+  spec.mesh.geometry.dispose();
   return group;
 }
 
