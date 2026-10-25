@@ -1,3 +1,4 @@
+import { markComponent } from '../../components/core/views/component-identity';
 import { computed, signal } from '@preact/signals-core';
 import { BoxGeometry, Group, Mesh } from 'three';
 import {
@@ -197,6 +198,8 @@ function meterPlinth(kit: PanelKit): TestFitting {
   });
   meter.group.position.set(0, SPOOL_Y, -0.12);
   meter.group.traverse((o) => (o.userData.live = true));
+  // A tagged instrument for the information overlay's trial (prompt 061).
+  markComponent(meter.group, { tag: 'DEV-FT1', name: title });
   p.group.add(meter.group);
   // Centre zero: the knob's middle is no flow, either side flows either way, to 200 m³/h.
   const flow = potentiometer(kit, {

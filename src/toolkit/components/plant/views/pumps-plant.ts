@@ -1,3 +1,4 @@
+import { markComponent } from '../../core/views/component-identity';
 import { createSightGlass } from './sight-glass';
 import type { GlassInputs } from '../logic/sight-glass';
 import { GAUGE, gaugeBosses } from '../logic/sand-filter';
@@ -392,18 +393,26 @@ export function createStrainer(kit: PanelKit) {
  * Duty and standby circulation pumps, each with its strainer ahead of it
  * and a butterfly valve either side: two sets side by side.
  */
-export function createPumpPair(kit: PanelKit, dischargeValves = true) {
+export function createPumpPair(
+  kit: PanelKit,
+  dischargeValves = true,
+  /** Its pumps' tags, duty then standby: the Olympic's by default. */
+  tags: readonly [string, string] = ['P-101A', 'P-101B'],
+) {
   const t = plantTools(kit);
   const group = new Group();
   const pumps: ReturnType<typeof createEndSuctionPump>[] = [];
-  for (const [z, name] of [
-    [-0.75, 'P-101A DUTY'],
-    [0.75, 'P-101B STANDBY'],
+  for (const [z, tagOf, role] of [
+    [-0.75, tags[0], 'DUTY'],
+    [0.75, tags[1], 'STANDBY'],
   ] as const) {
+    const name = `${tagOf} ${role}`;
     const set = new Group();
     set.position.z = z;
     group.add(set);
     const pump = createEndSuctionPump(kit, PUMP_ALONG);
+    // Each pump its own component, within its pump set (prompt 061).
+    markComponent(pump, tagOf);
     pumps.push(pump);
     set.add(pump);
     // The strainer hard up against the pump's suction flange.

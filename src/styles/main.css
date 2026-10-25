@@ -85,6 +85,12 @@ canvas {
 .controls-help.is-faded {
   opacity: 0;
 }
+/* Naming what is aimed at (prompt 061): shown, faded or not, on two lines. */
+.controls-help.is-inspecting {
+  opacity: 1;
+  white-space: pre-line;
+  transition: none;
+}
 [data-input='gamepad'] > .controls-help {
   max-width: calc(100% - 24px);
 }

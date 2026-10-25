@@ -1,6 +1,6 @@
 # 061: Component information overlay
 
-Status: specified 2026-10-25 from the owner's requests and rulings, and the reviewed research in [`doc/research/component-information-overlay.md`](../research/component-information-overlay.md), which holds the detail this prompt summarises (picking, input modes, occlusion, merged geometry, event correlation). Not started. Its second line follows prompt [060](060-inferred-component-descriptions.md), reviewed and ready to implement in its documented order; stage 1 can begin with the first line while the description data layer and its required network reconciliation are implemented.
+Status: specified 2026-10-25 from the owner's requests and rulings, and the reviewed research in [`doc/research/component-information-overlay.md`](../research/component-information-overlay.md), which holds the detail this prompt summarises (picking, input modes, occlusion, merged geometry, event correlation). Stage 1 built 2026-10-25, awaiting the owner's acceptance (see the implementation note at the end, and [062](062-component-information-remediation.md) for what remains). Its second line follows prompt [060](060-inferred-component-descriptions.md), reviewed and ready to implement in its documented order; stage 1 can begin with the first line while the description data layer and its required network reconciliation are implemented.
 
 ## The request
 
@@ -70,3 +70,15 @@ Begun once stage 1 is accepted, reusing its identity lookup. Built on the existi
 - Inspecting never dispatches an action, plays a sound or changes the save. Measure picking cost and draw calls in the Olympic plant room before the overlay is rolled out to every room. The project's five checks pass before each commit.
 
 Accepted when, in the jacuzzi plant room, hovering PL3-BT1-IV1 shows its tag, name and "Isolates water flowing from the water service to the balance tank."; the Olympic plant room's first pump reads "1st Pump in PL2, currently Off" with its pumps stopped and updates when one starts; an item behind a closed cabinet door cannot be inspected; and (stage 2) opening and closing the make-up valve, setting a motorised valve and pressing the cabinet's RESET each give exactly one true sentence.
+
+## Progress check — 2026-10-25 02:19 UTC
+
+Work in progress: `inspection.ts` already handles the 150 ms acquisition delay, stable target keys, immediate loss, and live wording updates with pure tests; `component-identity.ts` marks scene owners, and the room pipework and feeder are gaining marks. The shared description resolver from prompt 060 is committed. Before stage 1 is accepted, check the actual pointer/centre selection and first-surface occlusion, especially a closed cabinet door; keep one `.controls-help` text owner and verify carrying/menu precedence and a stationary pointer while live status changes. Stage-2 narratives remain separate from this inspection pass.
+
+## Implementation note — stage 1, 2026-10-25
+
+- Pure timing and text: `src/toolkit/controls/logic/inspection.ts` (150 ms acquisition, stable keys, immediate loss, wording-only changes), tested.
+- The one owner of `.controls-help`'s text stays `first-person.ts`, which takes an `inspect(x, y)` option and asks it ten times a second at the free pointer (while over the canvas, still counted as over it when the console's catcher covers it) or at the centre (pointer lock, gamepad, touch). Not while flying, climbing, carrying, held (the title), paused or with the console down. The text is written only when it changes; `.is-inspecting` shows it unfaded on two lines without restarting the controls' fade timer.
+- Identity: `src/toolkit/components/core/views/component-identity.ts` marks owners; `src/toolkit/gallery/views/inspect-pick.ts` picks (first visible surface blocks; hidden meshes pass, `userData.pick` meshes count; nearest marked owner up the parents; meshes culled by bounding box within reach before triangles are tested); `src/game/plant/component-inspection.ts` gives the two lines from the registers and prompt 060's resolver, with no formatting of its own.
+- Marked so far: placed layout equipment, room pipework and cabinet services valves, flowmeters, switch-fuses, PL3-BT1, and P-101A/B and P-201A/B within their pump sets. Wired in dev0 (controls named by part name, DEV-FT1 tagged), every plant room (`plant-room-shell-room.ts`) and the other shell rooms (`shell-room.ts`).
+- Verified in Chrome: PL3-BT1-IV1 and PL3-BT1 lines; P-101A Off and On while the pointer stayed still; a wall clears the line; dev0's RESET push button. Measured picking in the Olympic plant room: 11 ms a pick before culling (mostly the services ceiling's merged meshes), 3.2 ms after (the first pick about 40 ms while bounding boxes are computed).

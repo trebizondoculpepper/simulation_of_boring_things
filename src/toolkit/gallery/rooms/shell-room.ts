@@ -1,3 +1,4 @@
+import { createInspector } from '../views/inspect-pick';
 import { computed, signal } from '@preact/signals-core';
 import {
   actOnZoneMusic,
@@ -532,6 +533,13 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     ],
     use: (x, y) => usableAt(x, y)?.(),
     aimed: () => Boolean(usableAt(0, 0)),
+    // What is aimed at, named in the help line (prompt 061).
+    inspect: createInspector({
+      root: rooms,
+      camera,
+      metre,
+      world: () => roomWorld().world.value,
+    }),
   });
   const resize = () => {
     const { width, height } = canvas.getBoundingClientRect();

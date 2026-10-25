@@ -23,6 +23,7 @@ import {
 } from '../../components/plant/views/water-butterfly-valve';
 import { createGasBallValve } from '../../components/plant/views/gas-fittings';
 import { installedValveFor } from '../../../game/plant/installed-valves';
+import { markComponent } from '../../components/core/views/component-identity';
 import {
   olympicFlowsOf,
   olympicMeterReadings,
@@ -123,7 +124,13 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         }),
       );
     }
-    for (const v of r.valves) group.add(valve(r, v));
+    for (const v of r.valves)
+      group.add(
+        markComponent(
+          valve(r, v),
+          installedValveFor(retiredFrom(room) ?? room, r.name, v.name).tag,
+        ),
+      );
     for (const m of r.meters ?? []) {
       const meter = parts.add(
         createInlineFitting(kit, {
@@ -138,7 +145,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         }),
       );
       placeFitting(meter.object, 'flowmeter', lift(m.at), m.along, m.inward);
-      group.add(meter.object);
+      group.add(markComponent(meter.object, m.tag));
     }
   }
   if ((retiredFrom(room) ?? room) === 'plant_pool_02') {

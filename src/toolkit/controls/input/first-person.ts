@@ -1,4 +1,10 @@
 import type { Box3, Object3D, PerspectiveCamera } from 'three';
+import {
+  NO_INSPECTION,
+  inspectionText,
+  stepInspection,
+} from '../logic/inspection';
+import type { InspectionState, InspectionTarget } from '../logic/inspection';
 import { Box3 as SceneBounds } from 'three';
 import { noclip, flyCamera, flightHelp, rollCamera } from '../logic/noclip';
 import type { FlightBounds } from '../logic/noclip';
@@ -189,6 +195,11 @@ export interface FirstPersonOptions {
   useWhileHolding?: (object: Object3D, x: number, y: number) => boolean;
   /** Whether something usable is under the crosshair. */
   aimed?: () => boolean;
+  /**
+   * What is at a normalised screen point (centre is 0, 0), to name in the
+   * help line (prompt 061): inspecting only looks, it never uses.
+   */
+  inspect?: (x: number, y: number) => InspectionTarget | null;
   reducedMotion?: () => boolean;
   /** Field of view in degrees at zoom 1. */
   fov?: number;
@@ -229,6 +240,9 @@ if (
   new URLSearchParams(location.search).get('torch') === 'on'
 )
   torch.on = true;
+
+/** How often the aim is looked at to name what is there, ms. */
+const INSPECT_EVERY_MS = 100;
 
 export function createFirstPerson(options: FirstPersonOptions) {
   const { canvas, camera, metre, floorY } = options;
@@ -680,6 +694,22 @@ export function createFirstPerson(options: FirstPersonOptions) {
   };
   let hoverPoint: [number, number] = [0, 0];
   let hoverPosition: [number, number] = [0, 0];
+  // Whether the free mouse pointer is over the canvas, to inspect what is under it.
+  let hoverInside = false;
+  // Left for good, not merely covered (the console's catcher, a menu):
+  // a pointer still over the canvas keeps inspecting once it is uncovered.
+  const leave = (event: PointerEvent) => {
+    if (event.pointerType !== 'mouse') return;
+    const r = canvas.getBoundingClientRect();
+    hoverInside =
+      event.clientX >= r.left &&
+      event.clientX < r.right &&
+      event.clientY >= r.top &&
+      event.clientY < r.bottom;
+  };
+  // What is named in the help line, and when the aim was last looked at.
+  let inspection: InspectionState = NO_INSPECTION;
+  let inspectedAt = -Infinity;
   // Fingers on the canvas, for the pinch.
   const fingers = new Map<number, { x: number; y: number }>();
   let pinch: { distance: number; zoom: number } | null = null;
@@ -720,6 +750,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
   };
   const move = (event: PointerEvent) => {
     if (event.pointerType === 'mouse' && !locked()) {
+      hoverInside = true;
       hoverPoint = screenPoint(event.clientX, event.clientY);
       const rect = canvas.getBoundingClientRect();
       hoverPosition = [event.clientX - rect.left, event.clientY - rect.top];
@@ -798,6 +829,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
   document.addEventListener('pointerlockerror', refuseLock);
   canvas.addEventListener('pointerdown', down);
   canvas.addEventListener('pointermove', move);
+  canvas.addEventListener('pointerleave', leave);
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointercancel', up);
   const unbindWheel = bindViewWheel(document, canvas, current, locked, wheel);
@@ -1034,11 +1066,41 @@ export function createFirstPerson(options: FirstPersonOptions) {
       useButton.hidden = flying;
       crouchButton.hidden = flying;
       inspectButton.hidden = flying;
-      help.textContent = flying
+      // What is aimed at, named instead of the controls (prompt 061), a few
+      // times a second: not while flying, climbing or carrying, nor behind
+      // the menu or the console, nor while held (the title's shots). Climbing's and carrying's lines come first.
+      const now = performance.now();
+      const inspecting =
+        options.inspect &&
+        !holding &&
+        !flying &&
+        !attachedLadder &&
+        !handling?.holding() &&
+        !inputHeld() &&
+        !canvas.parentElement?.hidden;
+      if (!inspecting) inspection = NO_INSPECTION;
+      else if (now - inspectedAt >= INSPECT_EVERY_MS) {
+        inspectedAt = now;
+        const aimFree = input === 'mouse' && !locked();
+        const target =
+          aimFree && !hoverInside
+            ? null
+            : options.inspect!(
+                aimFree ? hoverPoint[0] : 0,
+                aimFree ? hoverPoint[1] : 0,
+              );
+        inspection = stepInspection(inspection, target, now);
+      }
+      const text = flying
         ? flightHelp(input ?? 'mouse')
         : attachedLadder
           ? help.textContent
-          : controlsHelp(input ?? 'mouse');
+          : inspection.shown
+            ? inspectionText(inspection.shown)
+            : controlsHelp(input ?? 'mouse');
+      // Only when it changes, so it is not announced again every frame.
+      if (help.textContent !== text) help.textContent = text;
+      help.classList.toggle('is-inspecting', Boolean(inspection.shown));
       // Paused behind the menu, or the console down: nothing held walks on.
       if (inputHeld()) {
         keys.clear();
@@ -1288,6 +1350,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
       document.removeEventListener('pointerlockerror', refuseLock);
       canvas.removeEventListener('pointerdown', down);
       canvas.removeEventListener('pointermove', move);
+      canvas.removeEventListener('pointerleave', leave);
       canvas.removeEventListener('pointerup', up);
       canvas.removeEventListener('pointercancel', up);
       unbindWheel();

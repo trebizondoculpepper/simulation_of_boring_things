@@ -62,6 +62,7 @@ import { remoteValveGeometry } from '../../components/plant/logic/remote-valve';
 import { createValveControlPanel } from '../../components/plant/views/valve-control-panel';
 import type { PanelValve } from '../../components/plant/views/valve-control-panel';
 import { installedValveFor } from '../../../game/plant/installed-valves';
+import { markComponent } from '../../components/core/views/component-identity';
 
 /** The drain's water as it leaves its 50 mm pipe's bore, its radius, m. */
 const DRAIN_STREAM = 0.018;
@@ -198,6 +199,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
           motor.group.rotation.z = Math.PI / 2;
         }
         mount.add(motor.group);
+        markComponent(mount, id);
         group.add(mount);
         // Its red override, pressed, works it by hand, as the panel would.
         if (motor.overrideButton)
@@ -269,6 +271,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
               { tag: id, name: description?.name ?? 'Valve' },
             );
       if (valve) {
+        markComponent(valve.object, id);
         valve.object.position.set(...lift(at));
         if (axis === 'x')
           valve.object.rotation.y = run.valve.facing ?? Math.PI / 2;
@@ -399,7 +402,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   let tankGurgling = false;
   if (tank && tankAt) {
     tank.group.position.set(tankAt.x, floorY, tankAt.z);
-    group.add(tank.group);
+    group.add(markComponent(tank.group, 'PL3-BT1'));
     // One tundish for the overflow and the drain, wide enough for both.
     tankMouth = tundishOnGully(tankAt.gully, 0.1);
     tankFall = createFallingWater(kit, DRAIN_STREAM);

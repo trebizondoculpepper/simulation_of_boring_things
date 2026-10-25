@@ -1,3 +1,4 @@
+import { POOL_MOTORS } from '../../../../game/plant/motor-starters';
 import { Group } from 'three';
 import { createPartSet } from '../../../components/core/parts/parts';
 import { createPipe } from '../../../components/core/views/pipe-kinds';
@@ -104,7 +105,12 @@ export function pumpPairExhibit(pool: PoolId = 'pool_02'): PlantExhibit {
       // their running pressures and its sound held at it, running up as it
       // starts and coasting down as it stops; the other sits with its
       // gauges at the suction's static head, silent.
-      const pair = createPumpPair(kit, pool !== 'pool_01');
+      const [duty, standby] = POOL_MOTORS(pool);
+      const pair = createPumpPair(
+        kit,
+        pool !== 'pool_01',
+        duty && standby ? [duty, standby] : undefined,
+      );
       const sound = pumpSound();
       const heard = [false, false];
       return {

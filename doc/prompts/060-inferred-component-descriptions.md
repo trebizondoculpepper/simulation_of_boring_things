@@ -132,3 +132,7 @@ The review removes the request for a further reviewer as a gate. The remaining w
 ## Acceptance
 
 The overlay's second line, the inventory and the console's `status` give the same description for the same item; the jacuzzi plant room's valves all read "Isolates … flowing from … to …"; "1st Pump in PL2, currently Off" appears for P-101A with both Olympic starters stopped and no trip, while PL2-P1 remains a separately identified pump set; no item shows a generic filler sentence.
+
+## Progress check — 2026-10-25 02:19 UTC
+
+The data-layer implementation is committed as `1886f49`: `component-descriptions.ts`, status resolution, the jacuzzi valve endpoints and network cross-check, and shared inventory/console/manual wording are present with dedicated tests. This is the agreed stage-1 data handoff. Keep the overlay portion of the acceptance statement open until prompt 061 renders that same resolver's live line in the game; do not duplicate purpose formatting in the overlay.
