@@ -205,6 +205,17 @@ function said(
               : 'jacuzzi STOP',
       };
     }
+    case 'spa-filter': {
+      const f = after.spaFilters[action.pool];
+      const cabinet = action.pool === 'pool_03' ? 'PL3-CAB1' : 'PL4-CAB1';
+      return {
+        subject: cabinet,
+        text:
+          action.action.act === 'mode'
+            ? `filter backwash schedule ${f.schedule === 'off' ? 'OFF' : `every ${f.schedule}`}`
+            : 'filter WASH NOW',
+      };
+    }
     case 'jacuzzi/cabinet': {
       const a = action.action;
       return {

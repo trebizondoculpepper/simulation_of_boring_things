@@ -142,6 +142,18 @@ import type {
 } from './plant/jacuzzi-cabinet';
 import type { JacuzziCirculation } from './plant/pools';
 import {
+  actOnSpaFilter,
+  filtering,
+  newSpaFilters,
+  stepSpaFilters,
+} from './plant/spa-filter';
+import type {
+  SpaFilter,
+  SpaFilterAction,
+  SpaFiltersState,
+  SpaPool,
+} from './plant/spa-filter';
+import {
   newFibreIlluminator,
   setFibreIlluminator,
 } from './plant/fibre-illuminator';
@@ -163,7 +175,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 28;
+export const WORLD_VERSION = 29;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -219,6 +231,8 @@ export interface World {
   jacuzzi: JacuzziState;
   /** The jacuzzi's treatment cabinet: its POWER and its trip (`jacuzzi-cabinet.ts`). */
   jacuzziCabinet: JacuzziCabinetState;
+  /** The spa cabinets' sand filters and their wash programmes (`spa-filter.ts`). */
+  spaFilters: SpaFiltersState;
   /** The Jacuzzi concrete wall's remote fibre illuminator. */
   jacuzziFibreIlluminator: FibreIlluminatorState;
   /** The boiler house's gas safety: ECV, emergency stop, detector and SSOV (`boiler-gas.ts`). */
@@ -249,6 +263,7 @@ export function newWorld(): World {
     motors: newMotors(),
     jacuzzi: newJacuzzi(),
     jacuzziCabinet: newJacuzziCabinet(),
+    spaFilters: newSpaFilters(),
     jacuzziFibreIlluminator: newFibreIlluminator(),
     boilerGas: newBoilerGas(),
     music: newZoneMusic(),
@@ -296,6 +311,8 @@ export type WorldAction =
   | { type: 'jacuzzi'; action: JacuzziAction }
   /** The jacuzzi's cabinet's POWER switch turned, or its RESET pressed. */
   | { type: 'jacuzzi/cabinet'; action: JacuzziCabinetAction }
+  /** A spa cabinet's MODE or WASH NOW, on its filter's programme. */
+  | { type: 'spa-filter'; pool: SpaPool; action: SpaFilterAction }
   | { type: 'jacuzzi/fibre-illuminator'; action: FibreIlluminatorAction }
   /** The boiler house's gas safety worked: its emergency stop, GAS RESET, ECV or detector TEST. */
   | { type: 'boiler-gas'; action: BoilerGasAction }
@@ -477,6 +494,17 @@ export function applyAction(world: World, action: WorldAction): World {
         ? world
         : { ...world, jacuzziCabinet };
     }
+    case 'spa-filter':
+      return {
+        ...world,
+        spaFilters: {
+          ...world.spaFilters,
+          [action.pool]: actOnSpaFilter(
+            world.spaFilters[action.pool],
+            action.action,
+          ),
+        },
+      };
     case 'jacuzzi/fibre-illuminator':
       return {
         ...world,
@@ -729,6 +757,26 @@ export function stepWorld(world: World, delta: number): World {
       jacuzziFull(water.pools.pool_03.level),
     ),
     jacuzziCabinet,
+    // Its filters: filtering, the spa's circulation through them; washing,
+    // the cabinet's pump's own flow, while the cabinet has power.
+    spaFilters: stepSpaFilters(
+      world.spaFilters,
+      {
+        pool_03: spaFilterPump(
+          world.spaFilters.pool_03,
+          water.pools.pool_03.flow,
+          world.jacuzziCabinet.power,
+          'pool_03',
+        ),
+        pool_04: spaFilterPump(
+          world.spaFilters.pool_04,
+          water.pools.pool_04.flow,
+          footbathLineup(world.identifiedPlant).powered,
+          'pool_04',
+        ),
+      },
+      delta,
+    ),
     boilerGas: stepBoilerGas(world.boilerGas, delta),
     loungeValvePositions,
     loungeFilters: stepLoungeFilters(
@@ -803,10 +851,10 @@ export const jacuzziPlumbing = (world: World): CabinetPlumbing => {
 
 /** The jacuzzi's water moving, and heat reaching it, as its cabinet allows. */
 export const jacuzziFlow = (world: World): JacuzziCirculation => ({
-  flowing: jacuzziWaterFlowing(
-    world.jacuzziCabinet,
-    jacuzziCabinetInputs(world),
-  ),
+  // Its water to the spa only while its filter filters, not while it washes.
+  flowing:
+    jacuzziWaterFlowing(world.jacuzziCabinet, jacuzziCabinetInputs(world)) &&
+    filtering(world.spaFilters.pool_03),
   heat:
     serviceAvailable(world.plant, 'plant_pool_03', 'heat') &&
     jacuzziPaths(world.installedValves).heating,
@@ -983,6 +1031,22 @@ function footbathThroughFilter(world: World) {
   const open = (id: string) => world.installedValves[id] ?? true;
   return {
     ...lineup,
-    returning: lineup.returning && open('valve-0104') && open('valve-0105'),
+    returning:
+      lineup.returning &&
+      open('valve-0104') &&
+      open('valve-0105') &&
+      // Not while its filter washes: its water goes to drain.
+      filtering(world.spaFilters.pool_04),
   };
+}
+
+/** A spa filter's pump's flow: the spa's circulation, or, washing, its own. */
+function spaFilterPump(
+  f: SpaFilter,
+  circulation: number,
+  powered: boolean,
+  pool: SpaPool,
+) {
+  if (filtering(f)) return circulation;
+  return powered ? POOL_TARGET[pool].flow : 0;
 }
