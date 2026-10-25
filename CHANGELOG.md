@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Stair camera smoothing (mission 055): the eye glides over each riser while collision follows the exact step height; placement, ladders, noclip and large floor jumps reset it.
 - An ozone generator says its state as its display and lamps show it: operational (producing ozone), on standby, blocked by no flow, tripped with its fault code, or unpowered (the owner, 2026-10-25). Exhibits may give a live status from their own machine's model where the world has none.
 - A flowmeter's overlay says what its arrow indicates in the plant's words: "The direction arrow indicates water is flowing from the filter outlet header to the lounge pool sand filter 2" (the owner, 2026-10-25).
 - A room's one item of a kind is "the only" one: "The only UV unit in PL1" rather than "1st UV unit in PL1" (the owner, 2026-10-25).

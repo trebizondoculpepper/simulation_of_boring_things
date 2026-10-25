@@ -16,6 +16,7 @@ import { lockUnavailable } from '../logic/pointer-lock';
 import { cutOpenings, slide } from '../logic/walk-collision';
 import type { Footprint } from '../logic/walk-collision';
 import { climb, ladderToUse } from '../logic/ladder-zone';
+import { smoothStairFloor } from '../logic/stair-smoothing';
 import type { LadderZone } from '../logic/ladder-zone';
 import { PAD, deadZone, copyShortcut } from '../logic/controls';
 import type { InputMode } from '../logic/controls';
@@ -291,6 +292,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     if (mount) {
       attachedLadder = mount.zone;
       currentFloorY = mount.zone[mount.end];
+      smoothedFloorY = currentFloorY;
       walker.x = mount.zone.rung.x;
       walker.z = mount.zone.rung.z;
       nudge.forward = 0;
@@ -928,6 +930,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
   };
 
   let currentFloorY = floorY;
+  let smoothedFloorY = floorY;
   const eyeY = () => currentFloorY + EYE_HEIGHT_METRES * metre;
   const controller = {
     walker,
@@ -1006,6 +1009,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
       }
       attachedLadder = null;
       currentFloorY = floor ?? options.floorAt?.(x, z, currentFloorY) ?? floorY;
+      smoothedFloorY = currentFloorY;
       walker.x = x;
       walker.z = z;
       walker.yaw = yaw;
@@ -1081,6 +1085,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
           walker.crouch = 0;
         }
         flying = shouldFly;
+        smoothedFloorY = currentFloorY;
         forget();
         nudge.forward = nudge.right = 0;
         sticks?.reset();
@@ -1248,6 +1253,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
         );
       tapped.clear();
       const ladder = attachedLadder;
+      const priorFloorY = currentFloorY;
       if (ladder) {
         const travel = ahead + nudge.forward / metre;
         currentFloorY = Math.min(
@@ -1316,6 +1322,15 @@ export function createFirstPerson(options: FirstPersonOptions) {
       if (!attachedLadder && !flying)
         currentFloorY =
           options.floorAt?.(walker.x, walker.z, currentFloorY) ?? floorY;
+      smoothedFloorY = smoothStairFloor(
+        smoothedFloorY,
+        currentFloorY,
+        delta,
+        metre,
+        flying ||
+          Boolean(ladder) ||
+          Math.abs(currentFloorY - priorFloorY) > 0.5 * metre,
+      );
       walker.crouch +=
         ((walker.lowCrouched ? 1.85 : walker.crouched ? 1 : 0) -
           walker.crouch) *
@@ -1325,7 +1340,11 @@ export function createFirstPerson(options: FirstPersonOptions) {
         : Math.sin((walker.stride / metre) * Math.PI * 1.6) * 0.02 * metre;
       const y = flying
         ? flightY
-        : eyeY() + walker.eyeOffset - walker.crouch * 0.65 * metre + bob;
+        : smoothedFloorY +
+          EYE_HEIGHT_METRES * metre +
+          walker.eyeOffset -
+          walker.crouch * 0.65 * metre +
+          bob;
       if (flying)
         flightReadout.textContent = `NOCLIP · x ${(walker.x / metre).toFixed(2)} · y ${(y / metre).toFixed(2)} · z ${(walker.z / metre).toFixed(2)} · yaw ${((walker.yaw * 180) / Math.PI).toFixed(1)}° · pitch ${((walker.pitch * 180) / Math.PI).toFixed(1)}° · roll ${((walker.roll * 180) / Math.PI).toFixed(1)}°`;
       camera.position.set(walker.x, y, walker.z);

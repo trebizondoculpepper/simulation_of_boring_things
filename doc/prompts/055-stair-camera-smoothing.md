@@ -1,6 +1,6 @@
 # 055: Stair camera smoothing
 
-Status: specified 2026-10-24. Not started.
+Status: implemented 2026-10-25. Awaiting browser walk-through of all listed stairs.
 
 ## Purpose
 
