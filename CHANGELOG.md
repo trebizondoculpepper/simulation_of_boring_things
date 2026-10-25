@@ -6,6 +6,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Planned repeatable mission 067 for a healthy New Game: a maintained operating contract, a dated day-long baseline, and an opt-in read-only audit that records the current model’s trajectory and annunciator indications. Runtime defaults are unchanged by this research.
+
 - The lounge's filters backwash for real (prompt 066, the owner 2026-10-25): a filter with its inlet shut and its outlet and backwash valve open is washed backwards at 34 m³/h by the other filter's filtered water, down its outlet, up through its bed and out to waste; the pool's return drops by that much, and with both backwashing neither can be. Two new Kessler-Moody flowmeters, PL1-F1-FT1 and PL1-F2-FT1, in the lounge's model on each filter's outlet riser, read each filter's signed flow from the world: +45 m³/h in service, −34 while backwashed.
 - Dev39, control assemblies (the owner, 2026-10-25): a development room for mimics, control boards and other built-up panels, as dev0 is for single components. Its first exhibit is the mimic LED chaser trial: lines chasing forward, back, still, and one that changes every four seconds.
 - Mimic lines can carry an LED chaser (prompt 066, `mimic-chaser.ts`): small LEDs along the line, one in four lit, stepping every 0.12 s of real time in the flow's direction, reversed for back flow, dark under 1 m³/h. Lines without a flow draw as before. Tried in dev39.

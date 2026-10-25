@@ -1,0 +1,11 @@
+# Healthy New Game as a maintained contract
+
+The owner asked to redefine steady state so New Game begins with a healthy, fully operational centre, and to retain the work as a mission that can be rerun when the model changes.
+
+Mission 067 separates healthy operation from a frozen state: automatic controls cycle, standby machines wait, attractions can await START, filters load and chemicals are consumed. The maintained definition is doc/healthy-start.md, with evidence under doc/reports/healthy-start/. The first audit traced game-session start, world reset and constructors, and compared the title’s separately settled normal scenario. An opt-in script records an unmodified world through a day, with commit/version provenance and every-step first annunciator indications.
+
+The baseline at fb1ff79 remained circulating without recorded fault indications. Automatic make-up is nevertheless listed among the annunciator’s alarms, so “zero alarms” needs semantic classification. Midnight is the current start despite occupied AHU flags and opening at 08:00; a consistent open/occupied playable session is proposed for implementation. The current constructor and ten-minute tests do not certify all room-local equipment or persistence. The mission calls for independent health and coverage checks, control probes and trajectory observation, then corrections where justified, with each future run recorded rather than a stale copy of a World used as the preset.
+
+The model changed during the research (4371e93: real lounge backwash and signed filter flowmeters), providing an immediate repeatability check: a second audit retained the same recorded normal-service trajectory and informational make-up indication. Its own dated report records the comparison and the limits of a no-action run.
+
+Validation: the opt-in day-long audit passed on both researched model revisions. Document links resolved. Typecheck, lint, formatting, all 2,228 tests (9 skipped, including the opt-in audit), and production build passed; build advanced to 0.1.308. The format check found two pre-existing Markdown formatting issues in the prompt 066 review; those were formatted without content changes. Existing lint and bundle-size warnings remain. Runtime gameplay defaults were not changed.

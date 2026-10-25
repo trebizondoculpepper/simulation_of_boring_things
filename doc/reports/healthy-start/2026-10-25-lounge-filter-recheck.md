@@ -1,0 +1,9 @@
+# Healthy-start recheck after the lounge filter update
+
+Date: 2026-10-25. Source revision: `4371e93438853cc5e7cfd674e98060df3ff325fb`; world version 27. Scope: repeat the initial observational audit after the lounge’s real backwash paths and signed filter flowmeters were added while mission 067 was being planned. This is an audit rerun, not delivery of the executable health contract.
+
+Command: `AUDIT_HEALTHY_START=1 npx vp test run scripts/healthy-start-audit.test.ts`. Method and checkpoints are unchanged from the [initial audit](2026-10-25-initial-audit.md). The generated JSON includes dirty-file provenance and now also records bathers, appeal, gas, lighting and service states at each checkpoint. These extra observations broaden the evidence but do not constitute independent health assertions for those systems.
+
+The normal filtration trajectory was unchanged at the recorded precision: at 600 s the lounge/Olympic/jacuzzi/footbath flows were 90/621.05/24/12 m³/h; at 24 h they were 90/603.91/24/12 m³/h. At 24 h chemical stocks were 11,841.44 l hypochlorite and 936.58 l acid. The only annunciator indication observed was shared `makeup-running`, first at 1 s. No fault indication was recorded. The audit completes successfully; room-local and browser behavior remain outside its verdict.
+
+The changed backwash paths are normally closed in filtration service, so an unchanged no-action trajectory is plausible. It does not verify backwash operation; that belongs to the feature’s tests and mission 067’s control probes. No changes to the proposed healthy-start contract or runtime defaults were justified by this comparison. Full-facility rules, coverage, integration checks and the playable start/session decision remain pending under [mission 067](../../prompts/067-healthy-new-game.md).
