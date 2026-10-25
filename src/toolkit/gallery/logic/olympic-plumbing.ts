@@ -1594,6 +1594,8 @@ let cached: {
 let plumbedOnce: OlympicPlumbing | null = null;
 /** The room as built (`OLYMPIC`), plumbed once. */
 const built = () => (plumbedOnce ??= plumbOlympic());
+/** The room's plumbing as built: its plan, enhanced network and fittings. */
+export const olympicPlumbing = (): OlympicPlumbing => built();
 
 /** The room's runs, as the game draws them, and its busbar trunking: plumbed once. */
 export function olympicRoom() {

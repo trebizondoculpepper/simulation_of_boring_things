@@ -16,16 +16,14 @@ Written by Claude (Opus 5.5, Claude Code), 2026-10-23, so that any agent can pic
 
 ## 1. What the pipeline does
 
-A plant room is made in stages, each pure and tested, each handing the next a richer room. A scorer after each stage says how good the result is, so layouts can be compared by number and searched.
+A plant room is made in stages, each pure and tested, each handing the next a richer room. A scorer after each stage says how good the result is, so layouts can be compared by number and searched. The process, as the owner set it (2026-10-25):
 
-1. **Sizer:** how big the room must be for its machines.
-2. **Regions:** the space no machine or pipe may take: door approaches, and in rooms two storeys high a gantry and stair against one wall.
-3. **Placement:** where each machine stands, by site rules (corners, walls, freestanding) in bands round a ring walkway, found by seeded annealing.
-4. **Blocks and variants:** identical machines pre-assembled into blocks (rows, 2 × 2), and components built as one of their variants (a heat exchanger as shell-and-tube or plate, on a plinth or the floor); the scorer picks.
-5. **Plumber:** takes the schematic (a port graph) and adds the fittings it implies (isolating valves, non-return valves, power isolators, headers) as new nodes in the graph, then routes every line.
-6. **Router:** lays each line without passing through any other or through a reserved region (the voxel router).
-7. **Scorer:** gates first (all lines routed, no clashes, every fitting in reach, every machine walkable), then weighted dimensions (pipework cost, room area, port heights, process order and more).
-8. **Bound room:** the expanded graph, fittings and all, is the graph the simulation runs, so every valve the plumber added is a working valve.
+1. **Schematic:** the room's machines and every valve and isolator it needs, as a port graph, each with its function, normal state and tag. This is the model; everything after binds to it, and nothing may be drawn that is not in it (`world-in-model.test.ts`).
+2. **Machines into the room:** the sizer (how big the room must be), the regions (door approaches, gantry and stair), and placement of the machines only, optimised (corners, walls, freestanding, in bands round a ring walkway, by seeded annealing), with blocks and variants. Valves are not placed here: they sit in pipes not yet routed.
+3. **Plumber:** routes every line (the clash-free voxel router) and sets each of the schematic's valves and isolators in its line, as efficiently as its rules allow. It may add valves its rules imply, which become part of the model, but a correct schematic needs nothing added.
+4. **Scoring:** gates first (all lines routed, no clashes, every fitting in reach, every machine walkable), then weighted dimensions (pipework cost, room area, port heights, process order and more).
+
+The bound room runs the enhanced network, fittings and all, so every valve the plumber set is a working valve; the scene draws only the network's nodes, fittings and links, or things marked decorative.
 
 Dev19 (`?room=dev19`, and its comparison rooms dev19b, dev19c, dev19d) is the room the whole pipeline was built on. It is the reference for how the stages fit together.
 
