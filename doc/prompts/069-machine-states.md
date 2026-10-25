@@ -1,6 +1,6 @@
 # 069: Each machine's own states, from its own internal state
 
-Status: specified 2026-10-25 from a discussion with the owner; reviewed by Codex the same day ([review](../reviews/2026-10-25-codex-review-069.md)), its findings below; for the owner's review before implementation. It refines how the information overlay ([061](061-component-information-overlay.md), [068](068-inspect-component-parts.md)) words a machine's current state.
+Status: specified 2026-10-25 from a discussion with the owner; reviewed by Codex the same day ([review](../reviews/2026-10-25-codex-review-069.md)), its findings below; for the owner's review before implementation. It refines how the information overlay ([061](061-component-information-overlay.md), [068](done/068-inspect-component-parts.md)) words a machine's current state.
 
 ## The request
 

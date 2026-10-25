@@ -87,9 +87,17 @@ export function createInspector(options: InspectorOptions) {
     hits.sort((a, b) => a.distance - b.distance);
     for (const hit of hits) {
       if (!(hit.object instanceof Mesh) || !shown(hit.object)) continue;
-      const identity =
-        owningComponent(hit.object)?.identity ?? options.identify?.(hit.object);
-      return identity ? inspectComponent(identity, options.world?.()) : null;
+      const owner = owningComponent(hit.object);
+      const identity = owner?.identity ?? options.identify?.(hit.object);
+      if (!identity) return null;
+      const lines = inspectComponent(identity, options.world?.());
+      // A part with nothing more to say: what it is on (prompt 068).
+      if (lines && identity.part && !lines.detail && owner?.object.parent) {
+        const whole = owningComponent(owner.object.parent)?.identity;
+        const on = whole && !whole.part ? inspectComponent(whole) : null;
+        if (on) return { ...lines, detail: `On ${on.title}.` };
+      }
+      return lines;
     }
     return null;
   };

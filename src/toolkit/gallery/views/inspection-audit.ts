@@ -6,8 +6,10 @@ import { createRoomEquipment } from './room-equipment';
 
 /**
  * The inspection audit (prompt 068): in each room, the working parts
- * (every button, switch, lamp, meter a part builder makes) that still
- * name only their panel when aimed at, with no description of their own.
+ * (every button, switch, lamp, meter a part builder makes) that have no
+ * description when aimed at: neither their own as a part (each part has
+ * one from its library, as it shows itself) nor their component's tag or
+ * name.
  * Its counts are pinned (`inspection-coverage.json`, written by
  * `scripts/pin-inspection.test.ts`) and may only fall. For tests only:
  * it builds rooms headless.
@@ -74,7 +76,9 @@ export function undescribedParts(): Record<string, number> {
     g.add(createRoomEquipment(createPanelKit(), room).group);
     let n = 0;
     g.traverse((o) => {
-      if (o.userData.workingPart && !owningComponent(o)?.identity.part) n++;
+      // Described as a part, or as the tagged or named thing it is (a valve, a meter).
+      const id = owningComponent(o)?.identity;
+      if (o.userData.workingPart && !(id?.part || id?.tag || id?.name)) n++;
     });
     counts[room] = n;
   }

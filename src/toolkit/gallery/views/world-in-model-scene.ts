@@ -34,7 +34,15 @@ export function unboundInScene(
   };
   root.traverse((o) => {
     if (!(o instanceof Mesh) || outside(o)) return;
-    const owner = owningComponent(o);
+    let owner = owningComponent(o);
+    // A part described only as it shows itself is its holder's (prompt 068).
+    while (
+      owner?.identity.part?.kind === 'visible' &&
+      !owner.identity.tag &&
+      !owner.identity.model &&
+      owner.object.parent
+    )
+      owner = owningComponent(owner.object.parent);
     const identity = owner?.identity;
     if (identity?.decorative) return;
     // A named part of something (a cupboard's labels, a switch's sensor):

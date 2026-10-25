@@ -1,3 +1,5 @@
+import { markComponent } from '../views/component-identity';
+import type { PartDescription } from '../../../../game/plant/part-inspection';
 import { createElectrolyticCapacitorView } from '../../industrial-control/views/electrolytic-capacitor';
 import type { Attachment } from '../../../controls/logic/drop-profile';
 import { computed, effect, signal } from '@preact/signals-core';
@@ -133,8 +135,14 @@ interface Common {
 export function beginPart(kit: PanelKit, name: string) {
   const object = new Group();
   object.name = name;
-  // A working part, for the inspection audit (prompt 068).
+  // A working part, for the inspection audit (prompt 068), described as it
+  // shows itself until its builder gives something richer.
   object.userData.workingPart = true;
+  const seen: Extract<PartDescription, { kind: 'visible' }> = {
+    kind: 'visible',
+    label: name,
+  };
+  markComponent(object, { part: seen, key: object.uuid });
   const uses = new Map<Object3D, (direction?: number) => void>();
   const updates: ((delta: number) => void)[] = [];
   const listeners = new Set<(event: PartEvent, name: string) => void>();
@@ -180,6 +188,10 @@ export function beginPart(kit: PanelKit, name: string) {
         stop();
         partAudio.hold(owner, null);
       });
+    },
+    /** What can be seen of it now, for the information overlay (prompt 068). */
+    shows(what: () => string | undefined) {
+      seen.shows = what;
     },
     /** Its legend plate, `y` above its centre, as wide as its words. */
     legend(text: string | undefined, y: number, yellow = false) {
@@ -611,6 +623,7 @@ export function pilotLight(
     }
   });
   a.disposers.push(lamp.dispose);
+  a.shows(() => (lamp.lit.value ? 'lit' : 'out'));
   return { ...a.part(), lit: lamp.lit };
 }
 
@@ -670,6 +683,13 @@ export function selector(
     view.update(delta);
   });
   a.disposers.push(part.dispose);
+  // Its position, by the names printed round it where there is one each.
+  const names = props.legend?.split(' · ');
+  a.shows(() =>
+    names?.length === props.positions
+      ? `at ${names[part.position.value]}`
+      : `at position ${part.position.value + 1} of ${props.positions}`,
+  );
   return { ...a.part(), position: part.position };
 }
 
@@ -716,6 +736,9 @@ export function potentiometer(
     view.update(delta);
   });
   a.disposers.push(part.dispose);
+  a.shows(
+    () => `turned to ${Math.round(part.share.value * 100)} % of its travel`,
+  );
   return { ...a.part(), share: part.share, position: part.position };
 }
 
@@ -741,6 +764,7 @@ export function mushroomStop(
     view.update(delta);
   });
   a.disposers.push(stop.dispose);
+  a.shows(() => (stop.pushed.value ? 'pushed in' : 'released'));
   return { ...a.part(), pushed: stop.pushed };
 }
 
@@ -840,6 +864,7 @@ export function disconnectHandle(
     view.group.rotation.z = offset * 3;
   });
   if (!props.shared) a.disposers.push(handle.dispose);
+  a.shows(() => `at ${handle.position.value.toUpperCase()}`);
   return {
     ...a.part(),
     position: handle.position,

@@ -1,14 +1,14 @@
 {
-  "plant_pool_01": 29,
-  "plant_pool_02": 77,
-  "plant_pool_03": 14,
-  "plant_pool_04": 11,
-  "wet_hall": 12,
-  "boiler_house": 76,
-  "hypo_store": 4,
-  "acid_store": 4,
-  "switch_room": 43,
-  "air_plant": 104,
-  "control_room": 16,
-  "engineers_office": 8
+  "plant_pool_01": 0,
+  "plant_pool_02": 0,
+  "plant_pool_03": 0,
+  "plant_pool_04": 0,
+  "wet_hall": 0,
+  "boiler_house": 0,
+  "hypo_store": 0,
+  "acid_store": 0,
+  "switch_room": 0,
+  "air_plant": 0,
+  "control_room": 0,
+  "engineers_office": 0
 }

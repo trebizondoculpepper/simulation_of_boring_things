@@ -46,6 +46,17 @@ export type PartDescription =
       current: (world: World) => string;
     }
   | {
+      /**
+       * Any working part, as it shows itself (prompt 068): its name, and
+       * what can be seen of it (a lamp lit, a selector's position), no
+       * more (the owner, 2026-10-25). Every part has this from its
+       * builder's library until something richer is given.
+       */
+      kind: 'visible';
+      label: string;
+      shows?: () => string | undefined;
+    }
+  | {
       /** A control of its own panel only, which touches no plant: a LAMP TEST. */
       kind: 'local';
       label: string;
@@ -148,6 +159,10 @@ export function describePart(part: PartDescription, world?: World): PartLines {
       return {
         title: `${part.label} — Sets ${part.of}${world ? `: now ${part.current(world)}.` : '.'}`,
       };
+    case 'visible': {
+      const shown = part.shows?.();
+      return { title: shown ? `${part.label} — ${shown}.` : `${part.label}.` };
+    }
     case 'local':
       return { title: `${part.label} — ${part.does}` };
     case 'indicator': {
