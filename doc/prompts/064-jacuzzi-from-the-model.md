@@ -46,6 +46,27 @@ Written into `doc/room-layout-guide.md` (section 1) and `AGENTS.md`. In the code
 
 Everything drawn in the jacuzzi plant room and the jacuzzi pool room is bound to a node of the jacuzzi's model, or marked decorative: their pins in `world-in-model.test.ts` reach 0. Things in the simulation not yet drawn are allowed. A failing run names what is unbound, and the fix is a corrected binding (or a node added to the schematic), never a hand-written register entry.
 
+## Codex's review, taken on board (2026-10-25)
+
+[Codex's review](../reviews/2026-10-25-codex-review-064.md) found the plan feasible and asked for these changes, adopted here; they override the steps above where they differ.
+
+- **Order:** build and test the jacuzzi's schematic and its bindings before removing the hand-drawn services; switch the scene to the new routes and remove the old register entries together. Nothing working is cleared before its replacement exists.
+- **The runtime keys must be the model's.** The world stores `installedValves` by asset id and `plant/valve` resolves through `installedValveByCommandId`; `jacuzziPaths` reads a hand-written table of asset ids (`JACUZZI_VALVES`); the tub's drain is a separate flag (`pools.pool_03.drainDown`, dispatched as `pool/drain-down`), and the make-up writes both a valve and a pool flag. All of these resolve the same model fitting ids: the valve table is derived from the schematic by each valve's function, the tub's drain is a fitting of the schematic whose state the world reads, and the saved world is reset by a version bump (the owner: state may be thrown away). The simulation keeps its existing equations, driven by the model's fitting ids; running the enhanced graph itself is a later step.
+- **The plumber takes given valves.** `expandForPlumbing` gains the schematic's prescribed fittings (each on its link, at its end, with its id, function, normal state and actuation), uses each in place of the one its rules would generate, never duplicates one, keeps their order along the link, and reports every fitting it adds that the schematic lacked. Shared ports need care. The jacuzzi's schematic test asserts zero additions, unique ids and the expected order. The gravity overflow is explicitly unvalved.
+- **The Olympic room is an example with exceptions, not a template:** the jacuzzi reuses the plumber's expansion (and Dev19's designed-valve pattern, `demoPlumbing`), and every fitting it draws is a fitting of its enhanced network; nothing is added outside it.
+- **Decorative has a firm boundary.** A working door, speaker, fibre illuminator, gauge, valve panel or START/STOP plate is never decorative (engineering items work); the architectural shell, signs and inert finishes may be. Each drawn thing has exactly one binding: a model reference of the right sort (a machine to a node, a valve or isolator to a fitting, a pipe to a link) or `decorative`.
+- **The test pins identities, not counts.** One unbound thing replacing another must fail, and blanket decorative marks must not reach zero: the unbound set is recorded by identity, in a file the test writes on request (never by hand) and that may only shrink. The hall's listing is derived from the same specifications and builder data its scene uses, so a new scene object cannot go unnoticed. Further tests: duplicate or mismatched bindings, a valve's action changing the state the simulation reads, and the jacuzzi's existing behaviour (circulation, jets, air, heating, make-up, tank drain, tub drain).
+
+## Build order (adopted)
+
+1. Bindings in the listing: one binding per thing, typed (node, fitting, link or decorative); the unbound set pinned by identity.
+2. The plumber's given fittings, with additions reported (`plumbing-expansion.ts`), tested.
+3. The jacuzzi's schematic (`src/game/plant/jacuzzi-schematic.ts`): machines, ports, links, every valve with its function, normal state and actuation; expanded with zero additions.
+4. The runtime on model ids: the valve table derived from the schematic, the tub's drain and make-up as fittings, actions and panels resolving model ids, the saved world reset.
+5. The jacuzzi plant room's drawing bound to the schematic: each run to its link, each valve to its fitting, the machines to their nodes; its pin reaches 0; tags and descriptions derived (`roomModel`, `enhancedRoutes`); PL3's hand-written register entries removed.
+6. The jacuzzi pool room listed from its builder data and bound; its pin reaches 0.
+7. The jacuzzi plant room's pipes re-routed by the plumber from the placed machines and the schematic (the voxel router), and the room scored.
+
 ## Acceptance
 
 - `world-in-model.test.ts` covers the jacuzzi pool room, with explicit node or decorative bindings, and names unbound things.
