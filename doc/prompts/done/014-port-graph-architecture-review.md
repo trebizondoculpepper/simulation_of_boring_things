@@ -1,6 +1,6 @@
 # Prompt: review the port graph as the world's equipment contract
 
-You are an independent reviewer. Do not implement a migration. Read `AGENTS.md`, `doc/research/port-graph-physical-quantities.md`, `doc/prompts/013-minimal-multidomain-plant.md`, and `src/game/plant/network/port-graph-spike.test.ts`. Inspect the existing plant network, machine port definitions, visual bindings, world state, catalogue, and their tests. Check the library's actual API and limitations against the proposal; distinguish facts in the code from desired future behavior.
+You are an independent reviewer. Do not implement a migration. Read `AGENTS.md`, `doc/research/port-graph-physical-quantities.md`, `doc/prompts/done/013-minimal-multidomain-plant.md`, and `src/game/plant/network/port-graph-spike.test.ts`. Inspect the existing plant network, machine port definitions, visual bindings, world state, catalogue, and their tests. Check the library's actual API and limitations against the proposal; distinguish facts in the code from desired future behavior.
 
 ## Decision to review
 

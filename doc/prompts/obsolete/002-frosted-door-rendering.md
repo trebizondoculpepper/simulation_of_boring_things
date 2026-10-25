@@ -1,5 +1,7 @@
 # 002: Draw the rooms behind doors cheaply
 
+Superseded (2026-10-25) by the restart of the building in `b0cef39` (2026-10-21), which deleted the leisure centre, its frosted doors and the renderer this targets (`src/rendering/facility-world.ts`, `src/scene/doors.ts`, `src/game/doors.ts`) before it was built. Rooms are now separate scenes handed over at their doors; their loading cost is the "Incremental room preparation" item in `TODO.md`.
+
 ## Briefing
 
 The leisure centre (`src/rendering/facility-world.ts`, `src/scene/facility.ts`, `src/scene/doors.ts`, `src/game/doors.ts`) keeps every room model loaded and shows the current room and its neighbours (`visibleRooms`). The frosted sliding doors use a `MeshPhysicalMaterial` with `transmission`. In three.js 0.186 that makes the renderer draw every opaque object in view a second time, every frame, into a render target the size of the screen (`renderTransmissionPass` in `WebGLRenderer.js`; `transmissionResolutionScale` defaults to 1), then mipmap it for the blur. Wherever a frosted door is in view, the whole scene is drawn twice at full resolution, to produce a picture that is then blurred almost to nothing.

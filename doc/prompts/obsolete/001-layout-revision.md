@@ -1,5 +1,7 @@
 # 001: Revise the basic layout, starting with a stair core
 
+Superseded (2026-10-25) by the restart of the building in `b0cef39` (2026-10-21), which deleted the layout this revises (`facility-plan.ts`, `facility-levels.ts`, `src/scene/facility.ts`); the owner had already chosen a different stair on 2026-10-20. The building's layout is now the pool loop and the plant rooms round it; a single plan of it is the open "One facility plan" item in `TODO.md`.
+
 ## Briefing
 
 > **Superseded in part, 2026-10-20.** The owner chose a different stair: a lower service corridor beneath the upper one, joined by one prefabricated galvanised steel straight flight (`STAIR` in `src/game/facility-levels.ts`, `createServiceStair` in `src/scene/facility.ts`). Do not build the stair core described below. The other layout suggestions still stand.

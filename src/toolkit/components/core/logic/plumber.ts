@@ -1,7 +1,7 @@
 /**
  * The plumber: told what a line carries, how much and how far, chooses
  * the pipe (or conduit) a good engineer would, and says why. The pipe
- * helper's functional mode (`doc/prompts/016-pipe-helper-two-ways.md`): the
+ * helper's functional mode (`doc/prompts/obsolete/016-pipe-helper-two-ways.md`): the
  * room says what is needed, the plumber knows how it is done. Pure:
  * metres, m³/h, amperes, kilowatts.
  *

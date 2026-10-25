@@ -1,6 +1,6 @@
 # 052: Emergency power: the central battery, emergency lighting, a generator
 
-Status: planned 2026-10-24, from the [wiring audit](../reports/wiring-audit-2026-10-24.md).
+Status: planned 2026-10-24, from the [wiring audit](../reports/wiring-audit-2026-10-24.md). It supersedes prompt [011](obsolete/011-emergency-lighting.md), whose detail (EN 50171's rated duration, a relay per lighting zone) still applies.
 
 ## Now
 

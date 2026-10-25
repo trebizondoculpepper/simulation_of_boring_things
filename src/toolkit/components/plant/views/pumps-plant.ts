@@ -420,6 +420,8 @@ export function createPumpPair(
     const name = `${tagOf} ${role}`;
     const set = new Group();
     set.position.z = z;
+    // One pump set, solid to walk round (the way between the two is not).
+    set.userData.solid = true;
     group.add(set);
     const pump = createEndSuctionPump(kit, PUMP_ALONG);
     // Each pump its own component, within its pump set (prompt 061).

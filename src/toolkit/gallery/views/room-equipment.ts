@@ -972,6 +972,20 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
         minZ: body.min[2],
         maxZ: body.max[2],
       });
+    } else if (p.item.key === 'pump-pair') {
+      // Each pump set as drawn, so one can walk between duty and standby
+      // (the owner, 2026-10-25), not the pair's whole layout envelope.
+      object.updateMatrixWorld(true);
+      object.traverse((part) => {
+        if (!part.userData.solid) return;
+        const box = new Box3().setFromObject(part);
+        solids.push({
+          minX: box.min.x,
+          maxX: box.max.x,
+          minZ: box.min.z,
+          maxZ: box.max.z,
+        });
+      });
     } else if (p.item.mount === 'floor' && !p.item.walkable)
       solids.push(p.footprint);
   }

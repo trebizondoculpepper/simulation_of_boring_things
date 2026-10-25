@@ -1,6 +1,6 @@
 # Review: the port graph as the world's equipment contract
 
-Claude (Opus 5.5, Claude Code), 2026-10-22 UTC. Answers `doc/prompts/done/014-port-graph-architecture-review.md`. Nothing in the production model was edited; `doc/prompts/013-minimal-multidomain-plant.md` was not run.
+Claude (Opus 5.5, Claude Code), 2026-10-22 UTC. Answers `doc/prompts/done/014-port-graph-architecture-review.md`. Nothing in the production model was edited; `doc/prompts/done/013-minimal-multidomain-plant.md` was not run.
 
 ## Contents
 

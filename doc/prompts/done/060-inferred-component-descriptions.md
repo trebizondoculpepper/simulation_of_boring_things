@@ -1,6 +1,6 @@
 # 060: Inferred component descriptions
 
-Status: implemented 2026-10-25 as a data layer, then reworked the same night to the owner's later rulings (below): descriptions, kinds, live status and ordinals, shared by the overlay, the inventory, the manual and the console's `status`; valves described from their rooms' enhanced networks, so far only the Olympic plant room's. What remains is in [063](063-component-information-remediation.md). Earlier status: reviewed against the running catalogue and plant network on 2026-10-25; ready to implement in the ordered steps below.
+Status: done 2026-10-25 (`1886f49`, reworked in `4b17b50`), its remaining work handed to [063](../063-component-information-remediation.md). Implemented 2026-10-25 as a data layer, then reworked the same night to the owner's later rulings (below): descriptions, kinds, live status and ordinals, shared by the overlay, the inventory, the manual and the console's `status`; valves described from their rooms' enhanced networks, so far only the Olympic plant room's. What remains is in [063](../063-component-information-remediation.md). Earlier status: reviewed against the running catalogue and plant network on 2026-10-25; ready to implement in the ordered steps below.
 
 ## The owner's later rulings (2026-10-25, overnight), which supersede what follows
 

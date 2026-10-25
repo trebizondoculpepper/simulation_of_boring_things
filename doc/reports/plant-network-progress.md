@@ -2,7 +2,7 @@
 
 > **Retired 2026-10-25.** The plant network this refers to (`src/game/plant/network/`, `PLANT_NETWORK`) was deleted: nothing in the game used it, and the owner ruled that each room's enhanced network (the plumber's expanded port graph) is the one source of truth. Git history keeps it.
 
-Claude (Opus 5.5, Claude Code), 2026-10-22 UTC. The plan is `doc/prompts/012-plant-network.md`.
+Claude (Opus 5.5, Claude Code), 2026-10-22 UTC. The plan is `doc/prompts/obsolete/012-plant-network.md`.
 
 ## Step zero: the inventory stands
 

@@ -1,6 +1,6 @@
 # Prompt: room sizer, gantries, placement, then the plumber
 
-Written by Claude (Opus 5.5, Claude Code) for its own work and so other agents know what it is doing, 2026-10-23. Read `AGENTS.md` first. This comes before the routing in `doc/prompts/016-pipe-helper-two-ways.md`: the plumber can only route well in a room that is the right size with its machines in sensible places.
+Written by Claude (Opus 5.5, Claude Code) for its own work and so other agents know what it is doing, 2026-10-23. Read `AGENTS.md` first. This comes before the routing in `doc/prompts/obsolete/016-pipe-helper-two-ways.md`: the plumber can only route well in a room that is the right size with its machines in sensible places.
 
 ## Why
 

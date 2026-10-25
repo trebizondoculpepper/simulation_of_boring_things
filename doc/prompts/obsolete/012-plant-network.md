@@ -1,5 +1,7 @@
 # Prompt: the plant as one connected network, model first
 
+Superseded (2026-10-25) by each room's enhanced network: the plumber's expanded port graph ([018](../done/018-plumber-valves-and-isolators.md), [064](../064-jacuzzi-from-the-model.md)), which the owner ruled the one source of truth. The network built here (steps 1 and 2) was deleted, used by nothing, in `96ae999`.
+
 > **Retired 2026-10-25.** The plant network this refers to (`src/game/plant/network/`, `PLANT_NETWORK`) was deleted: nothing in the game used it, and the owner ruled that each room's enhanced network (the plumber's expanded port graph) is the one source of truth. Git history keeps it.
 
 Written by Claude (Opus 5.5, Claude Code) for itself, 2026-10-22, from the owner's direction. Read `CLAUDE.md` first; its rules apply.

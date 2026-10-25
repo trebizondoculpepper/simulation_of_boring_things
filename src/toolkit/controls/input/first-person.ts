@@ -83,7 +83,12 @@ const TORCH_ICON = `<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden=
 export const RUN_METRES_PER_SECOND = 4.2;
 export const LOOK_RADIANS_PER_PIXEL = 0.0022;
 export const PITCH_LIMIT = 1.45;
-export const WALKER_RADIUS_METRES = 0.25;
+/**
+ * The walker's body, 0.35 m across (the owner, 2026-10-25): a comfortable
+ * fit through a gap of that width. Layouts still aim at 0.5 m walkways
+ * (`doc/room-layout-guide.md`), so it squeezes through, not scrapes.
+ */
+export const WALKER_RADIUS_METRES = 0.175;
 /** Zoom range: 1 is the normal field of view, 4 is four times closer. */
 export const MIN_ZOOM = 0.65;
 export const MAX_ZOOM = 4;

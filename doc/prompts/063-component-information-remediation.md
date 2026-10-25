@@ -1,6 +1,6 @@
 # 063: Component information, what remains
 
-Status: opened 2026-10-25 by the overnight session that implemented prompt [060](060-inferred-component-descriptions.md) (descriptions) and stage 1 of prompt [061](061-component-information-overlay.md) (the inspection overlay), at the owner's request: "If you think there's a problem with them, get as much as you can done, and then make a new mission called Mission 62 to remediate what's left." Prompt 062 had been taken a few minutes earlier by [the HUD declutter](062-hud-declutter.md), so this is 063.
+Status: opened 2026-10-25 by the overnight session that implemented prompt [060](done/060-inferred-component-descriptions.md) (descriptions) and stage 1 of prompt [061](061-component-information-overlay.md) (the inspection overlay), at the owner's request: "If you think there's a problem with them, get as much as you can done, and then make a new mission called Mission 62 to remediate what's left." Prompt 062 had been taken a few minutes earlier by [the HUD declutter](done/062-hud-declutter.md), so this is 063.
 
 ## The owner's rulings that shape it (2026-10-25, overnight)
 
@@ -75,6 +75,6 @@ Status is found from each item's kind and room (`statusBindingFor`): motors, pum
 
 ## 9. Notes
 
-- Prompt [062](062-hud-declutter.md) reworks the same `.controls-help` element: it empties the help line when there is nothing to say and keeps it for contextual lines, this overlay's among them. Keep inspection's precedence (below climbing and carrying, above the empty line).
+- Prompt [062](done/062-hud-declutter.md) reworks the same `.controls-help` element: it empties the help line when there is nothing to say and keeps it for contextual lines, this overlay's among them. Keep inspection's precedence (below climbing and carrying, above the empty line).
 - Another agent was editing the same checkout overnight (the engineers' office storage cupboards); its uncommitted files are not this mission's. The `storage-cupboard` kind was added to `equipment-kinds.ts` so the catalogue accepts its items.
 - `src/game/world.test.ts`'s "come as usual while the plant runs…" timed out once under the full parallel suite and passes alone.

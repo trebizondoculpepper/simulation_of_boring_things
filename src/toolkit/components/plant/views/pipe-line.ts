@@ -13,7 +13,7 @@ import { markPipe } from './pipe-markers';
 import type { PipeService } from './pipe-markers';
 
 /**
- * The pipe helper by function (`doc/prompts/016-pipe-helper-two-ways.md`):
+ * The pipe helper by function (`doc/prompts/obsolete/016-pipe-helper-two-ways.md`):
  * told what a line carries, how much and, if it runs on beyond the room,
  * how far, the plumber (`logic/plumber.ts`) chooses its pipe, and the line
  * is drawn and marked. The explicit way, `createPipe(kind, od, points)`,
