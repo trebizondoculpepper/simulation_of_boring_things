@@ -1,4 +1,4 @@
-import { STOREY } from '../../../game/plant/network/common';
+import { STOREY } from './plant-rooms';
 import { DOOR_APPROACH, STAIR, UPPER_FLOOR } from './room-regions';
 
 /**

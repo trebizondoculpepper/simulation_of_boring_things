@@ -1,6 +1,12 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
 
 /**
+ * A storey of the building, metres: the plant's levels are 4 m apart, the
+ * wet hall on level 0, and a plant room is normally two storeys tall.
+ */
+export const STOREY = 4;
+
+/**
  * The per-attraction plant rooms (`doc/plant-model.md`): each two storeys
  * high, in three sizes (small 8 m, medium 12 m, large 22 m square; the
  * large for the Olympic pool), and a tiny one, 5 m square and one storey,

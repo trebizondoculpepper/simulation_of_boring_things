@@ -29,9 +29,9 @@ Even in the Olympic room some drawn valves are not fittings of its enhanced netw
 
 The registers predate tonight and are hand-written: `installed-asset-ids.ts` (each placed item's asset id and tag), `installed-valves.ts` (each drawn valve's), `installed-fixtures.ts`, `installed-feeders.ts`, and the catalogue's `ROOM_NAMES`. By the rulings each tag and name should come from the enhanced network, the registers keeping only what must persist (asset ids, so saves survive a retagging). This is the larger consequence of the rulings and wants the owner's sign-off on the design before it is started: what persists, where, and how a renamed node keeps its asset id (the legacy network's serial register, `network/serials.ts`, is one precedent).
 
-## 4. The legacy plant network
+## 4. The legacy plant network: deleted
 
-`src/game/plant/network/` (`PLANT_NETWORK`) is a second, older schematic of the pools, the wet hall and the packaged sets, with its own tags. Its tags disagree with the drawn ones almost everywhere: PL2 filter valves IV1/IV2/BV1/BV2/RNV1/WV1 against the drawn V1 to V5 and DV1; drains WV against DV; pump valves; the wet hall's WH-MU against WH-MU1. Its pump nodes are tagged PL1-P1 and PL2-P1, the tags of the drawn pump sets, so it gives one tag to two things. The jacuzzi's is out of date (no balance tank). Tonight's session changed it to match the lounge's drawing, then put it back when the owner ruled that the enhanced network is the truth. Owner to decide: retire it, or derive it from the rooms' enhanced networks.
+`src/game/plant/network/` (`PLANT_NETWORK`), an older schematic with its own tags, was found to be used by nothing in the game (only its own tests, two maintenance scripts and a storey constant), and the owner had it deleted (2026-10-25). `STOREY` moved to `plant-rooms.ts`.
 
 ## 5. Stage 1's remaining acceptance checks
 

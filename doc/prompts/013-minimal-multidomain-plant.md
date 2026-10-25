@@ -1,5 +1,7 @@
 # Prompt: smallest working multi-system plant
 
+> **Retired 2026-10-25.** The plant network this refers to (`src/game/plant/network/`, `PLANT_NETWORK`) was deleted: nothing in the game used it, and the owner ruled that each room's enhanced network (the plumber's expanded port graph) is the one source of truth. Git history keeps it.
+
 Read `AGENTS.md`, `doc/research/port-graph-physical-quantities.md`, `src/game/plant/network/port-graph-spike.test.ts`, and the existing world and plant network before editing. Build a headless, deterministic prototype that proves the port graph can describe a small coupled physical system. Keep the existing game network and saves unchanged until the prototype passes.
 
 ## Physical setup

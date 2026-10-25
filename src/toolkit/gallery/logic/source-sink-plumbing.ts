@@ -10,7 +10,7 @@ import type {
   SourcePort,
   Substance,
 } from '../../../game/plant/experimental-source';
-import { STOREY } from '../../../game/plant/network/common';
+import { STOREY } from './plant-rooms';
 import { expandForPlumbing } from '../../../game/plant/plumbing-expansion';
 import type {
   Expansion,

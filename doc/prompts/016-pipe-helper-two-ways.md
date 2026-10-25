@@ -1,5 +1,7 @@
 # Prompt: the pipe helper, called two ways
 
+> **Retired 2026-10-25.** The plant network this refers to (`src/game/plant/network/`, `PLANT_NETWORK`) was deleted: nothing in the game used it, and the owner ruled that each room's enhanced network (the plumber's expanded port graph) is the one source of truth. Git history keeps it.
+
 Written by Claude (Opus 5.5, Claude Code) for its own work and so other agents know what it is doing, 2026-10-23. Read `AGENTS.md` first. This joins up three earlier prompts into one pipe helper:
 
 - `doc/prompts/008-pipe-supports.md`: supports, and the routing rules (magic flues and drains, buses for power and control, one supply of each kind per room);
