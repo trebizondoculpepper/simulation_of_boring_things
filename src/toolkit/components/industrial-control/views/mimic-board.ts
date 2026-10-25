@@ -400,6 +400,14 @@ export function createMimicBoard(
       action: () => (mode.value = m.id),
     });
     button.object.position.set(startX + i * 0.12, row, z);
+    // Which quantity the readouts show (prompt 068): the board's own.
+    mark(button.object, `mode ${m.id}`, {
+      kind: 'setting',
+      label: `${m.legend} button`,
+      of: `what the board’s readouts show`,
+      current: () =>
+        spec.modes.find((x) => x.id === mode.value)?.legend ?? mode.value,
+    });
     live(button.object);
     group.add(button.object);
     parts.add(button);
@@ -429,6 +437,11 @@ export function createMimicBoard(
     row,
     z,
   );
+  mark(lampTest.object, 'lamp test', {
+    kind: 'local',
+    label: 'LAMP TEST button',
+    does: 'Lights every lamp and readout on the board for two seconds, to find a dead one.',
+  });
   live(lampTest.object);
   group.add(lampTest.object);
   parts.add(lampTest);

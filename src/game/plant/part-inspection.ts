@@ -47,6 +47,13 @@ export type PartDescription =
       current: (world: World) => string;
     }
   | {
+      /** A control of its own panel only, which touches no plant: a LAMP TEST. */
+      kind: 'local';
+      label: string;
+      /** What it does, in its builder's words. */
+      does: string;
+    }
+  | {
       kind: 'indicator';
       /** What is printed by it: RUN. */
       label: string;
@@ -147,6 +154,8 @@ export function describePart(part: PartDescription, world?: World): PartLines {
       return {
         title: `${part.label} — Sets ${part.of}${world ? `: now ${part.current(world)}.` : '.'}`,
       };
+    case 'local':
+      return { title: `${part.label} — ${part.does}` };
     case 'indicator': {
       const lit = world ? part.lit(world) : undefined;
       return {

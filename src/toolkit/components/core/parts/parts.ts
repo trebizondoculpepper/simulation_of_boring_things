@@ -133,6 +133,8 @@ interface Common {
 export function beginPart(kit: PanelKit, name: string) {
   const object = new Group();
   object.name = name;
+  // A working part, for the inspection audit (prompt 068).
+  object.userData.workingPart = true;
   const uses = new Map<Object3D, (direction?: number) => void>();
   const updates: ((delta: number) => void)[] = [];
   const listeners = new Set<(event: PartEvent, name: string) => void>();

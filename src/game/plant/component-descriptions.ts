@@ -259,8 +259,9 @@ export function formatStatus(
     case 'switch':
       return onOff(resolved.on);
     case 'uv':
-      // Only what the world models: no fault, so never "operational".
-      return resolved.lit ? 'lamp lit' : 'lamp off';
+      // On or Off: no fault is modelled, so never operational, tripped or
+      // faulty (the owner, 2026-10-25: those words only for things that can fail).
+      return onOff(resolved.lit);
     case 'gas':
       // As its detector reads it, in ppm (its range is 0–1 ppm).
       return `reading ${resolved.ppm.toFixed(2)} ppm`;

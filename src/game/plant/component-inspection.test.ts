@@ -60,10 +60,10 @@ describe('the information overlay’s lines', () => {
     expect(reading).toBeGreaterThan(0);
   });
 
-  it('says a UV unit’s lamp is lit or off, as the world models it, never “operational”', () => {
+  it('says a UV unit is On or Off, as the world models it, never “operational”', () => {
     let w = stepWorld(newWorld(), 5);
     expect(inspectComponent({ tag: 'PL1-UV1' }, w)?.detail).toBe(
-      '1st UV unit in PL1, currently lamp lit',
+      '1st UV unit in PL1, currently On',
     );
     w = applyAction(w, {
       type: 'plant/isolator',
@@ -72,7 +72,7 @@ describe('the information overlay’s lines', () => {
     });
     w = stepWorld(w, 2);
     expect(inspectComponent({ tag: 'PL1-UV1' }, w)?.detail).toBe(
-      '1st UV unit in PL1, currently lamp off',
+      '1st UV unit in PL1, currently Off',
     );
   });
 });
