@@ -91,6 +91,15 @@ export function resolveStatus(
       Object.values(INSTALLED_VALVES).find((v) => v.tag === b.valve)?.assetId ??
       MODEL_VALVES.find((v) => v.tag === b.valve)?.id ??
       b.valve;
+    // An actuated lounge valve: where it actually is, which its position
+    // indicator shows, not where it is commanded (Codex's review of 069).
+    const travel = world.loungeValvePositions[id];
+    if (typeof travel === 'number')
+      return travel >= 0.98
+        ? { policy: 'valve', open: true }
+        : travel <= 0.02
+          ? { policy: 'valve', open: false }
+          : { policy: 'valve', open: true, partly: true };
     const installed = world.installedValves[id];
     if (typeof installed === 'boolean')
       return { policy: 'valve', open: installed };

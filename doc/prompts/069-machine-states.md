@@ -1,6 +1,6 @@
 # 069: Each machine's own states, from its own internal state
 
-Status: specified 2026-10-25 from a discussion with the owner; for review (the owner, and Codex) before implementation. It refines how the information overlay ([061](061-component-information-overlay.md), [068](068-inspect-component-parts.md)) words a machine's current state.
+Status: specified 2026-10-25 from a discussion with the owner; reviewed by Codex the same day ([review](../reviews/2026-10-25-codex-review-069.md)), its findings below; for the owner's review before implementation. It refines how the information overlay ([061](061-component-information-overlay.md), [068](068-inspect-component-parts.md)) words a machine's current state.
 
 ## The request
 
@@ -20,6 +20,19 @@ And the ruling before it: On and Off are the right words for anything with no fa
   - **Jacuzzi cabinet** (`jacuzzi-cabinet.ts`): `power`, `trip` (`no-flow`), and its panel's derived `supplied`, `flowing`, `pumpRun`.
   - **UV units** (`uv.ts`): on while the pool circulates and the isolator is closed; no fault modelled.
   - **Gas detectors** (`gas.ts`): reading, and latched alarms A1 and A2.
+
+## The owner's rules on what the overlay may say (2026-10-25)
+
+- **Only what is shown, or what a person there would sense.** The overlay is an aid for players whose screens cannot show every display legibly, never a peek into the model: it says what a machine's own displays, lamps and positions show, and what someone standing beside it would see, hear or feel that a game cannot convey (a pump's hum, vibration and warmth). A state's words may therefore name a cause only where that cause is itself visible or sensible there (an isolator's handle at OFF, a selector at HAND, a lamp lit); a cause known only to the model (why a starter tripped, what the controls want) is not said.
+- **On and Off for things with no fault model**; operational, tripped, faulty only for things whose failure modes the world models.
+
+## Codex's review, in brief
+
+- The world holds no ozone-generator or boiler-controller state: both live privately on their panels. Their rows cannot be world-backed until that state is moved into the world (the ozone generator's own block has a full vocabulary: off, tripped with its cause, blocked by no flow, running, standby).
+- Missing states: a pump held off by its balance tank's low-low level (not a trip: it clears itself), a pump running starved, an AHU starting or running down, the jacuzzi's tank low-low hold, a solenoid valve spring-returning or unable to open without power, a gas alarm accepted.
+- A trip's cause cannot be recovered after the fact (`starved` resets), so "tripped (starved)" is not provable; nor is a boiler "firing" from the aggregate heat.
+- One first-match status loses facts that hold together (tripped and isolated); the table should say what its single status serves and keep the rest for inspection.
+- A defect it found, fixed 2026-10-25: the lounge's actuated valves were described by their command, not their actual travel.
 
 ## The proposal
 

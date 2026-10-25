@@ -73,4 +73,17 @@ describe('the information overlay’s lines', () => {
       '1st UV unit in PL1, currently Off',
     );
   });
+
+  it('gives a travelling lounge valve where it actually is, not where it is commanded', () => {
+    const tag = 'PL1-F1-IV1';
+    let w = stepWorld(newWorld(), 1);
+    // PL1-F1-IV1 is kept under valve-0001.
+    w = applyAction(w, { type: 'plant/valve', id: 'valve-0001', open: false });
+    w = stepWorld(w, 2);
+    expect(inspectComponent({ tag }, w)?.detail).toMatch(
+      /Currently part open\.$/,
+    );
+    w = stepWorld(w, 3);
+    expect(inspectComponent({ tag }, w)?.detail).toMatch(/Currently shut\.$/);
+  });
 });

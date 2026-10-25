@@ -142,6 +142,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- A lounge valve's overlay said where it was commanded to be, not where it was: while travelling it now reads part open, as its position indicator shows (found by Codex reviewing prompt 069).
 - A lounge pump with its own discharge valve shut now has nowhere to pump: it starves and trips, and the standby starts (the owner, 2026-10-25). Before, either pump's open discharge counted for both, so the duty pump ran on against its shut valve and the standby never started.
 - The ozone contact tank (PL1-T2, and the ozone room's): its name and its danger warning are spray-stencilled on its curved shell instead of flat engraved plates standing off it; its nozzles come out of its front where the room's pipes meet them (in low left, out high right, the ozone between), so no pipe floats over its dome and no stub sticks out of its side to nothing; its outlet port is lowered from 2.4 m, above the shell, to 2.0 m. A sectional tank's maker's badge (PL1-T1's and every other) stands clear of its front wall instead of 3 mm inside it, so it no longer z-fights.
 - The separately installed Warden ozone monitors have permanent catalogue references PL1-GD1 and PL2-GD1, shown on their alarm control boxes and in inspection, copying, inventory and console lookup. ACCEPT and RESET are mounted on a supported Penfold enclosure instead of floating above the detector.

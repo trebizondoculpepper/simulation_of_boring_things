@@ -58,7 +58,7 @@ export type ResolvedStatus =
     }
   | { policy: 'booster'; running: boolean; tripped: boolean }
   | { policy: 'switch'; on: boolean }
-  | { policy: 'valve'; open: boolean }
+  | { policy: 'valve'; open: boolean; partly?: true }
   | { policy: 'gas'; shown: string }
   | { policy: 'uv'; lit: boolean };
 
@@ -288,7 +288,7 @@ export function describeComponent(
     const state = context.status?.(subject);
     const now =
       state?.policy === 'valve'
-        ? `Currently ${state.open ? 'open' : 'shut'}.`
+        ? `Currently ${state.partly ? 'part open' : state.open ? 'open' : 'shut'}.`
         : '';
     return [purpose, now].filter(Boolean).join(' ');
   }
