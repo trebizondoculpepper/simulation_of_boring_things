@@ -56,7 +56,7 @@ In a room, the key left of 1 (`on a UK or US keyboard, § on a UK Mac) drops dow
 
 ## Versions and releases
 
-Player-facing daily updates follow the [devlog workflow](doc/dvevlogs/README.md). Drafts are compiled on request in `doc/dvevlogs/`; publishing a devlog is a separate step from uploading a game build.
+Player-facing daily updates follow the [devlog workflow](doc/devlogs/README.md). Drafts are compiled on request in `doc/devlogs/`; publishing a devlog is a separate step from uploading a game build.
 
 The game uses [semantic versioning](https://semver.org/). Every successful `npm run build` advances the patch version in `package.json` and the two root version fields in `package-lock.json`. The bundler uses that next version, and the files are updated only after bundling succeeds; a failed build leaves them unchanged. For example, a successful build at 0.1.241 becomes 0.1.242. The development server shows the current package version without incrementing it. The title screen's bottom-right corner shows the version, source commit and UTC build date, marks development builds and uncommitted changes, and links to the GitHub source.
 

@@ -4,7 +4,7 @@ The owner's workflow, 2026-10-25: keep development on main and prepare player-fa
 
 ## Files and numbering
 
-Posts live in `doc/dvevlogs/`, retaining the directory spelling requested by the owner. Use `yyyy_mm_dd_[update number]_headline_feature.md`, for example `2026_10_25_001_a_free_camera_for_exploring_the_plant.md`. This example is a filename illustration, not a claim that update 001 has been compiled or published.
+Posts live in `doc/devlogs/`. Use `yyyy_mm_dd_[update number]_headline_feature.md`, for example `2026_10_25_001_a_free_camera_for_exploring_the_plant.md`. This example is a filename illustration, not a claim that update 001 has been compiled or published.
 
 Use the Europe/London calendar date and a globally increasing, zero-padded update number starting at 001. Numbers continue across days; they do not reset at midnight. Use lowercase words separated by underscores for the headline. Scan existing numbered posts before allocating the next number. Several sessions can update one unpublished draft; an additional post on the same day gets the next number. Keep published filenames and numbers stable, and keep the body of a published post as the record of what was actually posted.
 
