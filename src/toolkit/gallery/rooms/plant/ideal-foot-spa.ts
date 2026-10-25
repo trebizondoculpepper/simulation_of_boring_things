@@ -20,7 +20,7 @@ import {
 } from '../../../../game/plant/ideal-pool';
 import { spaPackDemoExhibit } from './spa-pack';
 
-import { spaFilterLine } from '../../../../game/plant/spa-filter';
+import { filtering, spaFilterLine } from '../../../../game/plant/spa-filter';
 
 export const PURPOSE =
   'An isolated foot spa trial. Open MAKE-UP to fill the square ideal pool, turn on its Lidoluxe cabinet to heat and circulate it, then open DRAIN to empty it. The pool display and water quality sign read the same simulation.';
@@ -283,6 +283,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     // Its filter's wash programme: the same as the jacuzzi's (`spa-filter.ts`).
     filter: {
       line: () => spaFilterLine(demo.state.filter),
+      washing: () => !filtering(demo.state.filter),
       mode: () => demo.filterAction({ act: 'mode' }),
     },
   }),

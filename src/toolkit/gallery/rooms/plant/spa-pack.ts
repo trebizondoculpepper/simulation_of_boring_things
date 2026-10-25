@@ -26,7 +26,6 @@ import {
   createJetPump,
 } from '../../../components/plant/views/pumps-plant';
 import type { OwnPipe } from '../../../components/plant/views/pumps-plant';
-import { createDialGauge } from '../../../components/industrial-control/views/dial-gauge';
 import {
   createPartSet,
   doorBack,
@@ -315,6 +314,8 @@ export interface SpaPackDemoBinding {
 export interface SpaFilterBinding {
   line(): string;
   mode(): void;
+  /** Whether it is washing now (its programme's stop, backwash or rinse). */
+  washing(): boolean;
 }
 
 /**
@@ -846,14 +847,9 @@ export function buildSpaPack(
     reset.object.scale.setScalar(0.8);
     front.add(reset.object);
   }
-  const gauge = createDialGauge(kit, {
-    dia: 0.09,
-    max: 2.5,
-    legend: 'FILTER bar',
-    maker: 'kessler-moody',
-  });
-  gauge.group.position.set(0.02 + shift, -0.11, 0.02);
-  front.add(gauge.group);
+  // No gauge on the door, which nothing connects to (the owner,
+  // 2026-10-25): the filter's pressure is on its own gauge inside, on the
+  // filter, and on the display's FILTER page.
   // The jets and the air, each on its own switch, interlocked with the
   // circulation: neither runs unless the pump does.
   // The jets and the air, each on an illuminated button: pressed to start
@@ -941,15 +937,14 @@ export function buildSpaPack(
       }
       const moving = flowing.value;
       pump.update(delta, on);
-      filter.update(delta, moving ? WORKING : 0);
+      // Its gauge: the pump's pressure on it, filtering or washing.
+      filter.update(delta, running.value ? WORKING : 0);
       uv.update(delta, uvOn.value);
       // The jacuzzi's is plumbed to its external balance tank: its own
       // surge vessel disconnected, empty (`cabinetTanks`).
       vessel.update(delta, moving, jets ? DISCONNECTED_VESSEL.fill : undefined);
       exchanger.update();
       dosing.update(delta, moving, 1.8, 7.3);
-      gauge.set(moving ? WORKING : 0);
-      gauge.update(delta);
       // Its mimic, as the world has its water (an exhibit: as if in service).
       const w = store?.world.value;
       const trial = external?.state();
@@ -970,6 +965,9 @@ export function buildSpaPack(
             (w ? w.pools[pool].temperature : ownSet)),
         setC: setting(),
         washLine: (jz?.filter ?? external?.filter)?.line(),
+        // What the filter's gauge inside reads: its working pressure while
+        // it filters, or washes, nothing stopped.
+        filterBar: running.value ? WORKING : 0,
         ...(jets
           ? {
               lines:
@@ -991,11 +989,13 @@ export function buildSpaPack(
                     `${(trial?.celsius ?? (w ? w.pools[pool].temperature : ownSet)).toFixed(1)}C  SET ${setting().toFixed(1)}`.padEnd(
                       16,
                     ),
-                    (trial?.draining || lineup?.draining
-                      ? 'DRAINING'
-                      : on
-                        ? 'RUNNING  UV ON'
-                        : 'STOPPED'
+                    (external?.filter?.washing()
+                      ? external.filter.line()
+                      : trial?.draining || lineup?.draining
+                        ? 'DRAINING'
+                        : on
+                          ? 'RUNNING  UV ON'
+                          : 'STOPPED'
                     ).padEnd(16),
                   ] as const)
                 : null,

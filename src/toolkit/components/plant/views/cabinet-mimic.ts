@@ -46,7 +46,13 @@ export interface CabinetMimicState {
   lines?: readonly [string, string] | null;
   /** Its filter's wash programme, for its display's second page (`spa-filter.ts`). */
   washLine?: string;
+  /** Its filter's pressure, bar, as its gauge inside reads it: the display's third page. */
+  filterBar?: number;
 }
+
+/** The LCD's strip under the print, and the foot spa's DRAINING and FILLING strip under that, m from the plate's middle. */
+const LCD_Y = -0.16;
+const STATUS_Y = -0.24;
 
 /** How long the readout shows the setting after the last press, s. */
 export const SET_SHOWN = 4;
@@ -213,11 +219,11 @@ export function createCabinetMimic(
           0.065,
           0.008,
           0,
-          -0.16,
+          STATUS_Y,
           0.001,
         );
-        const drain = t.led(group, '#ff3b24', 0.012, -0.2, -0.16, 0.008);
-        const makeUp = t.led(group, '#4aa8ff', 0.012, 0.02, -0.16, 0.008);
+        const drain = t.led(group, '#ff3b24', 0.012, -0.2, STATUS_Y, 0.008);
+        const makeUp = t.led(group, '#4aa8ff', 0.012, 0.02, STATUS_Y, 0.008);
         for (const [label, x] of [
           ['DRAINING', -0.125],
           ['FILLING', 0.12],
@@ -226,7 +232,7 @@ export function createCabinetMimic(
             height: 0.012,
             ink: '#f1f3ed',
           });
-          mark.position.set(x, -0.16, 0.006);
+          mark.position.set(x, STATUS_Y, 0.006);
           group.add(mark);
         }
         return { drain, makeUp };
@@ -236,12 +242,14 @@ export function createCabinetMimic(
   // Or, the jacuzzi's, a 16 × 2 character LCD in its place, its legend
   // printed with the panel, and set far enough left that the thermostat's
   // + and − stand clear of its bezel.
+  // Readable from a step back (the owner, 2026-10-25): its own strip
+  // under the print, about 20 cm wide, its buttons beside it.
   const lcd =
     display === 'lcd'
       ? createCharacterLcd(kit, {
           columns: 16,
           rows: 2,
-          cell: 0.0044,
+          cell: 0.0075,
           backlight: true,
         })
       : null;
@@ -250,15 +258,22 @@ export function createCabinetMimic(
     : createSevenSegment(kit, 3, { digitHeight: 0.022 });
   const shown = lcd ?? readout!;
   // Its middle: the LCD's bezel (0.13 m wide) ends 1 cm short of the + and −.
-  const shownX = width / 2 - (lcd ? 0.115 : 0.07);
-  shown.group.position.set(shownX, lcd ? 0.012 : 0.02, 0.002);
+  const shownX = lcd ? -0.09 : width / 2 - 0.07;
+  shown.group.position.set(shownX, lcd ? LCD_Y : 0.02, 0.002);
+  if (lcd)
+    // Its strip: the panel's dark band under the print.
+    t.box(group, t.paint('#424a49', 0.65), width, 0.075, 0.006, 0, LCD_Y, 0);
   shown.group.traverse((o) => (o.userData.live = true));
   group.add(shown.group);
   const legend = lcd
     ? createMicroLabel(kit, 'STATUS', { height: 0.008, ink: '#1b1f20' })
     : createDymoLabel(kit, 'WATER °C', { seed: 9 });
-  legend.position.set(shownX, lcd ? -0.03 : -0.025, lcd ? 0.002 : 0.003);
-  group.add(legend);
+  legend.position.set(
+    shownX,
+    lcd ? LCD_Y - 0.032 : -0.025,
+    lcd ? 0.007 : 0.003,
+  );
+  if (!lcd) group.add(legend);
   let lastLines = '';
   // The thermostat: ▲ and ▼ beside the readout, and its SET lamp.
   let shownFor = 0;
@@ -291,7 +306,7 @@ export function createCabinetMimic(
   if (lcd)
     (
       [
-        ['DISPLAY', () => (page = (page + 1) % 2), -0.035],
+        ['DISPLAY', () => (page = (page + 1) % 3), -0.035],
         ['MODE', () => onMode?.(), 0.035],
       ] as const
     ).forEach(([legend, action, dx]) => {
@@ -303,7 +318,7 @@ export function createCabinetMimic(
           action,
         }),
       );
-      button.object.position.set(shownX + dx, -0.075, 0.002);
+      button.object.position.set(0.13 + dx * 1.4, LCD_Y - 0.008, 0.004);
       button.object.scale.setScalar(0.7);
       group.add(button.object);
     });
@@ -338,7 +353,12 @@ export function createCabinetMimic(
             ? [`SET ${s.setC.toFixed(1)}C`.padEnd(16), s.lines[1]]
             : page === 1 && s.washLine
               ? ['FILTER WASH'.padEnd(16), s.washLine.slice(0, 16).padEnd(16)]
-              : [...s.lines]
+              : page === 2 && s.filterBar !== undefined
+                ? [
+                    'FILTER PRESSURE'.padEnd(16),
+                    `${s.filterBar.toFixed(2)} bar`.padEnd(16),
+                  ]
+                : [...s.lines]
           : null;
         const key = lines ? lines.join('|') : '';
         if (key !== lastLines) {
