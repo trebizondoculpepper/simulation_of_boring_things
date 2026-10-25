@@ -229,7 +229,14 @@ export function machinePorts(item: Item): MachinePort[] {
     const side = round ? r * 0.5 : item.w * 0.25;
     return [
       port('inlet', [-side, 0.6, front(-side)], [0, 0, 1], 0.16, 'pool-water'),
-      port('outlet', [side, 2.4, front(side)], [0, 0, 1], 0.16, 'pool-water'),
+      // Out high, on the shell below its dome (2.32 m on the ozone room's).
+      port(
+        'outlet',
+        [side, round ? 2.4 : 2.0, front(side)],
+        [0, 0, 1],
+        0.16,
+        'pool-water',
+      ),
       port('ozone', [0, 1.0, front(0)], [0, 0, 1], 0.05, 'ozone'),
     ];
   }

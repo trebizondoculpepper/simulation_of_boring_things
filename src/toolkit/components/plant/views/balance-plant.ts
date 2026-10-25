@@ -155,7 +155,8 @@ export function createSectionalTank(
     lift + H + 0.08,
     0.2,
   );
-  badge(kit, group, brand, [W / 2 - 0.5, lift + H - 0.2, D / 2 + 0.012], 0.08);
+  // On the front wall's face (D / 2 + 0.015), clear of it.
+  badge(kit, group, brand, [W / 2 - 0.5, lift + H - 0.2, D / 2 + 0.02], 0.08);
   return { group, lift, top: lift + H };
 }
 

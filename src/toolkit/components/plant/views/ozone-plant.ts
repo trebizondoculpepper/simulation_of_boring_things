@@ -14,7 +14,11 @@ import {
 } from '../../core/views/eighties-controls';
 import type { SevenSegment } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
-import { createEngravedPlate } from '../../core/views/plant-signs';
+import {
+  createEngravedPlate,
+  createStencilText,
+} from '../../core/views/plant-signs';
+import { wrapOnto } from '../../core/views/wrap-label';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import { panelMakerMark } from '../../core/views/panel-maker-mark';
 import {
@@ -586,23 +590,31 @@ export function createContactTank(kit: PanelKit): OzoneMachineView {
   group.add(dome);
   t.cyl(group, t.paint('#6e7d5c', 0.6), 0.25, 0.12, 0, 2.6, -0.1);
   const pvc = t.paint(PVC_GREY, 0.5);
-  t.cyl(group, pvc, 0.085, 0.5, -0.9, 0.4, 0.3, 'x');
-  t.cyl(group, pvc, 0.085, 0.5, 0.9, 2.0, 0.3, 'x');
+  // Its nozzles on its front, where the room's pipes meet it
+  // (`machine-ports.ts`): the water in low left and out high right, the
+  // ozone between, each from inside the shell to 1 m forward of its centre.
+  const nozzle = (radius: number, x: number, y: number) => {
+    const from = -0.1 + Math.sqrt(0.81 - x * x) - 0.05;
+    t.cyl(group, pvc, radius, 1 - from, x, y, (from + 1) / 2, 'z');
+    t.cyl(group, pvc, radius + 0.03, 0.03, x, y, 0.985, 'z');
+  };
+  nozzle(0.085, -0.5, 0.6);
+  nozzle(0.085, 0.5, 2.0);
+  nozzle(0.03, 0, 1.0);
   t.cyl(group, t.paint('#c9cdcf', 0.3, 0.8), 0.02, 0.4, 0, 2.85, -0.1);
-  const plate = createEngravedPlate(kit, ['OZONE CONTACT TANK  5.5 m³'], {
-    colour: 'white',
-    width: 0.6,
-    height: 0.06,
-  });
-  plate.position.set(0, 1.6, 0.81);
-  group.add(plate);
-  const warn = createEngravedPlate(kit, ['DANGER  OZONE  DO NOT ENTER'], {
-    colour: 'yellow',
-    width: 0.6,
-    height: 0.06,
-  });
-  warn.position.set(0, 1.45, 0.81);
-  group.add(warn);
+  // Its name and its warning sprayed on the shell through a stencil, as
+  // a maintenance crew marks a tank, following its curve.
+  const stencil = (text: string, y: number, height: number, colour: string) => {
+    const paint = createStencilText(kit, text, {
+      height,
+      colour,
+      drips: false,
+    });
+    paint.position.set(0, y, 0.8);
+    group.add(wrapOnto(paint, [0, -0.1], 0.902));
+  };
+  stencil('OZONE CONTACT TANK\n5.5 M3', 1.7, 0.09, '#e9e5d3');
+  stencil('DANGER OZONE\nDO NOT ENTER', 1.3, 0.08, '#f2c21b');
   const parts = createPartSet();
   const analyser = residualAnalyser(kit, parts, group, 'O₃ mg/l', 0.85, 0.7);
   return {

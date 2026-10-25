@@ -130,6 +130,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- The ozone contact tank (PL1-T2, and the ozone room's): its name and its danger warning are spray-stencilled on its curved shell instead of flat engraved plates standing off it; its nozzles come out of its front where the room's pipes meet them (in low left, out high right, the ozone between), so no pipe floats over its dome and no stub sticks out of its side to nothing; its outlet port is lowered from 2.4 m, above the shell, to 2.0 m. A sectional tank's maker's badge (PL1-T1's and every other) stands clear of its front wall instead of 3 mm inside it, so it no longer z-fights.
 - Actuated butterfly valves on upright pipes now mount on their stems; electric and pneumatic overrides remain horizontal.
 
 - Reopening the jacuzzi balance tank’s make-up valve now restores filling: PL3-BT1-IV1 is the source of truth instead of leaving a second saved make-up flag latched off. Older make-up commands operate the same physical valve, and previously stuck saves recover on the next simulation step.
