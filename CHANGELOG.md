@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- A healthy New Game, checked (mission 067): `healthFindings(world)` (`src/game/health.ts`) judges pools, motors, services, valves, gas, the wet hall, chemicals, air handling, the jacuzzi, lighting and make-up against the healthy-start contract, with type-checked coverage of every world field and equipment kind. A new game is healthy on its first frame, at every step of its first hour and through a day; negative controls prove the checker finds closed circulation, a missing utility, a low tank and a gas alarm.
 - Stair camera smoothing (mission 055): the eye glides over each riser while collision follows the exact step height; placement, ladders, noclip and large floor jumps reset it.
 - An ozone generator says its state as its display and lamps show it: operational (producing ozone), on standby, blocked by no flow, tripped with its fault code, or unpowered (the owner, 2026-10-25). Exhibits may give a live status from their own machine's model where the world has none.
 - A flowmeter's overlay says what its arrow indicates in the plant's words: "The direction arrow indicates water is flowing from the filter outlet header to the lounge pool sand filter 2" (the owner, 2026-10-25).

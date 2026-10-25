@@ -1,6 +1,6 @@
 # Healthy New Game: the maintained definition
 
-Status: proposed operating contract, researched 2026-10-25; implement and maintain through [mission 067](prompts/067-healthy-new-game.md). This is the game's definition of normal operation, not real-world commissioning advice. The [initial audit](reports/healthy-start/2026-10-25-initial-audit.md) records what the current model actually does.
+Status: operating contract, researched 2026-10-25 and made executable the same day (`src/game/health.ts`, tested in `src/game/new-game.test.ts`); maintained through [mission 067](prompts/067-healthy-new-game.md). This is the game's definition of normal operation, not real-world commissioning advice. The [initial audit](reports/healthy-start/2026-10-25-initial-audit.md) records what the current model actually does.
 
 ## What “steady state” means here
 
@@ -25,6 +25,10 @@ A duty pump runs while its standby is ready in AUTO; heaters and make-up cycle t
 | Session                 | New Game creates a fresh healthy playable world; Continue preserves the saved one; title scenarios cannot affect it                                                            | New Game/reset/save/Continue integration and independent title-world checks                                                    |
 
 The current constructors set temperatures to 30/28/37/34 °C and nominal treatment flows to 90/620/24/12 m³/h for lounge/Olympic/jacuzzi/footbath. Initial chemistry is pH 7.4, free chlorine 1.4 mg/l and combined chlorine 0.12 mg/l. These are current model inputs, not immutable requirements: a model change must rejustify and update them. See the audit for the measured trajectory and the source of current alarm limits.
+
+## The executable contract
+
+`healthFindings(world)` in `src/game/health.ts` checks the table above as structured findings; `healthFaults` keeps the faults. Its bands (`HEALTHY`) sit inside the game's alarm limits: temperature ±0.5 °C, flow ≥ 80 % of design, surface ≥ −0.03 m, pH 7.2–7.6, free chlorine 1–3 mg/l, balance ≥ 0.2, hall RH ≤ 62 %, chemical stock ≥ 25 % of capacity. Its coverage tables classify every `World` field and every installed equipment kind, enforced by the type checker. `makeup-running` is informational. `src/game/new-game.test.ts` checks the first frame, every step of the first hour, coverage, and negative controls (a closed circulation path, a missing utility, a low tank, a gas alarm).
 
 ## Observation periods
 

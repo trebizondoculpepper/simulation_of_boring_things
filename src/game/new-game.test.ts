@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { advance, newWorld } from './world';
+import { advance, applyAction, newWorld } from './world';
+import type { World } from './world';
+import {
+  KIND_HEALTH_COVERAGE,
+  WORLD_HEALTH_COVERAGE,
+  healthFaults,
+} from './health';
+import { LOUNGE_VALVES } from './plant/lounge-valves';
+import { PLACED_KINDS } from './plant/equipment-kinds';
 import { HALL_AIR, POOL_IDS, POOL_TARGET } from './plant/pools';
 import { ROOM_SERVICES, roomRunning } from './plant/services';
 import type { ServiceRoom } from './plant/services';
@@ -53,5 +61,86 @@ describe('the default new game', () => {
       ).toBeLessThan(0.5);
       expect(pool.ph, id).toBeCloseTo(7.4, 1);
     }
+  });
+});
+
+/**
+ * The healthy-start contract, executable (mission 067,
+ * `doc/healthy-start.md`): the whole centre, every step of the handover
+ * hour, and negative controls proving the checker finds what it should.
+ */
+describe('a new game is healthy, by its contract', () => {
+  it('has no faults on its first frame', () => {
+    expect(healthFaults(newWorld())).toEqual([]);
+  });
+
+  it('stays healthy at every step of its first hour, so no transient fault hides between checkpoints', () => {
+    let w = newWorld();
+    for (let t = 1; t <= 3600; t++) {
+      w = advance(w, 1, 1);
+      const faults = healthFaults(w);
+      if (faults.length)
+        throw new Error(`at ${t} s: ${JSON.stringify(faults)}`);
+    }
+  }, 120_000);
+
+  it('classifies every field of the world and every kind of equipment', () => {
+    expect(Object.keys(WORLD_HEALTH_COVERAGE).sort()).toEqual(
+      Object.keys(newWorld()).sort(),
+    );
+    expect(Object.keys(KIND_HEALTH_COVERAGE).sort()).toEqual(
+      Object.keys(PLACED_KINDS).sort(),
+    );
+  });
+
+  describe('finds the faults it is for', () => {
+    const faultsOf = (w: World) =>
+      healthFaults(w).map((f) => `${f.subsystem}: ${f.asset}`);
+
+    it('a closed circulation path', () => {
+      let w = newWorld();
+      for (const tag of ['PL1-F1-IV2', 'PL1-F2-IV2'])
+        w = applyAction(w, {
+          type: 'plant/valve',
+          id: LOUNGE_VALVES.find((v) => v.tag === tag)!.assetId,
+          open: false,
+        });
+      w = advance(w, 30, 1);
+      expect(faultsOf(w)).toEqual(
+        expect.arrayContaining([
+          'valves: PL1-F1-IV2',
+          'valves: PL1-F2-IV2',
+          'pools: pool_01',
+        ]),
+      );
+    });
+
+    it('a missing utility', () => {
+      const w = applyAction(newWorld(), {
+        type: 'plant/feeder',
+        room: 'plant_pool_01',
+        on: false,
+      });
+      expect(faultsOf(w)).toContain('services: plant_pool_01');
+    });
+
+    it('a low tank', () => {
+      const w = newWorld();
+      const low = {
+        ...w,
+        pools: { ...w.pools, pool_01: { ...w.pools.pool_01, balance: 0.1 } },
+      };
+      expect(faultsOf(low)).toContain('pools: pool_01');
+    });
+
+    it('a gas alarm', () => {
+      let w = applyAction(newWorld(), {
+        type: 'gas/leak',
+        zone: 'plant_pool_01',
+        gramsPerHour: 5,
+      });
+      w = advance(w, 60, 1);
+      expect(faultsOf(w)).toContain('gas: plant_pool_01');
+    });
   });
 });

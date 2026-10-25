@@ -3,6 +3,7 @@ import { newWorld, applyAction } from '../../game/world';
 import { deserialiseWorld, serialiseWorld } from '../../game/save';
 import { worldStore } from './world-store';
 import { createGameSession } from './game-session';
+import { healthFaults } from '../../game/health';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -35,8 +36,12 @@ it('Continue preserves a saved fault and position; New Game resets and saves a n
   const reopened = createGameSession(store, storage);
   expect(reopened.resume()).toBe(position);
   expect(store.world.value).toEqual(damaged);
+  // The damaged save is unhealthy by the contract (mission 067)…
+  expect(healthFaults(store.world.value).length).toBeGreaterThan(0);
   expect(reopened.start()).toBe('?room=pool_04');
   expect(store.world.value).toEqual(newWorld());
+  // …and New Game's is healthy.
+  expect(healthFaults(store.world.value)).toEqual([]);
   const saved = deserialiseWorld(storage.getItem('pool-plant:new-game-test')!);
   expect(saved.ok && saved.world).toEqual(newWorld());
   expect(createGameSession(store, storage).resume()).toBe('?room=pool_04');
