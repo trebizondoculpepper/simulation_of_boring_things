@@ -1,6 +1,14 @@
 import { decorativeKind } from '../logic/world-in-model';
 import { createSpaSandFilter } from '../../components/plant/views/spa-pack-parts';
-import { SPA_FILTERS } from '../../../game/plant/spa-filter';
+import {
+  SPA_FILTERS,
+  spaFilterGlass,
+  washSignals,
+} from '../../../game/plant/spa-filter';
+import {
+  SERVO_WHIRR,
+  VALVE_STOP,
+} from '../../components/plant/audio/actuated-valve';
 import { ozoneGeneratorStatus } from '../logic/ozone-status';
 import { retiredFrom } from '../logic/retired-rooms';
 import { olympicRoom } from '../logic/olympic-plumbing';
@@ -402,29 +410,45 @@ function modelFor(
     return tank;
   }
   // A spa cabinet's sand filter, outside its cabinet (the owner,
-  // 2026-10-25): its gauge at its pool's circulation pressure, its glass
-  // showing a settled bed (the world has no spa filter's state yet).
+  // 2026-10-25): its gauge, sight glass and servo as the world's filter
+  // and its wash programme have them (`spaFilters`).
   if (
     kind === 'sand-filter' &&
     (arg === 'spa-jacuzzi' || arg === 'spa-footSpa')
   ) {
+    const spa = arg === 'spa-jacuzzi' ? 'pool_03' : 'pool_04';
     const filter = createSpaSandFilter(
       kit,
       SPA_FILTERS[arg === 'spa-jacuzzi' ? 'jacuzzi' : 'footSpa'],
     );
     const store = typeof window === 'undefined' ? null : roomWorld();
+    let whirring = false;
     return {
       object: filter.group,
       update(delta) {
-        const flowing = pool
-          ? (store?.world.value.pools[pool].flow ?? 0) > 0.5
-          : false;
-        filter.update(delta, flowing ? 0.7 : 0, {
-          mode: flowing ? 'service' : 'stopped',
-          dirt: 0,
-          channelling: 0,
-          murk: 0,
-        });
+        const w = store?.world.value;
+        if (!w) return;
+        const f = w.spaFilters[spa];
+        const signals = washSignals(f);
+        // Its pump running: the spa circulating, or its wash pumping.
+        const pumping = signals.washing
+          ? signals.pumpAllowed
+          : w.pools[spa].flow > 0.5;
+        filter.update(
+          delta,
+          pumping ? signals.gaugeBar : 0,
+          spaFilterGlass(f, pumping),
+        );
+        // Its servo heard on its valve head as it turns.
+        if (signals.servos !== whirring) {
+          whirring = signals.servos;
+          partAudio.hold(
+            filter.group,
+            whirring ? SERVO_WHIRR : null,
+            filter.group,
+          );
+          if (!whirring) partAudio.play(VALVE_STOP, filter.group);
+        }
       },
     };
   }

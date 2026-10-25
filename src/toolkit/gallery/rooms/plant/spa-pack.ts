@@ -12,8 +12,14 @@ import {
   SERVO_WHIRR,
   VALVE_STOP,
 } from '../../../components/plant/audio/actuated-valve';
-import { SPA_FILTERS } from '../../../../game/plant/spa-filter';
-import type { washSignals } from '../../../../game/plant/spa-filter';
+import {
+  SPA_FILTERS,
+  filtering,
+  spaFilterGlass,
+  spaFilterLine,
+  washSignals,
+} from '../../../../game/plant/spa-filter';
+import type { SpaPool } from '../../../../game/plant/spa-filter';
 import type { GlassInputs } from '../../../components/plant/logic/sight-glass';
 import { createBrandBadge } from '../../../components/core/views/brand-badge';
 import { panelMakerMark } from '../../../components/core/views/panel-maker-mark';
@@ -358,6 +364,22 @@ export interface JacuzziCabinetBinding {
   filter?: SpaFilterBinding;
 }
 
+/** A spa cabinet's filter programme as the world has it (`spaFilters`). */
+export function spaFilterWorldBinding(
+  store: ReturnType<typeof worldStore>,
+  pool: SpaPool,
+): SpaFilterBinding {
+  const f = () => store.world.value.spaFilters[pool];
+  return {
+    line: () => spaFilterLine(f()),
+    mode: () =>
+      store.dispatch({ type: 'spa-filter', pool, action: { act: 'mode' } }),
+    washing: () => !filtering(f()),
+    signals: () => washSignals(f()),
+    glass: (pumping) => spaFilterGlass(f(), pumping),
+  };
+}
+
 /** The jacuzzi's cabinet as the world has it. */
 export function jacuzziWorldBinding(
   store: ReturnType<typeof worldStore>,
@@ -670,11 +692,16 @@ export function buildSpaPack(
     store?.world.value.pools[pool].setpoint ??
     ownSet;
   const panelNow = (doorOpen = false) => jz?.panel(doorOpen) ?? null;
+  // Its filter's programme: a trial's, an exhibit's, or the world's.
+  const filterBinding =
+    jz?.filter ??
+    external?.filter ??
+    (store ? spaFilterWorldBinding(store, pool) : undefined);
   const mimic = createCabinetMimic(kit, {
     drainAndMakeUp: !jets,
     // One display on both, the maker's dot-matrix (the owner, 2026-10-25).
     display: 'lcd',
-    onMode: () => (jz?.filter ?? external?.filter)?.mode(),
+    onMode: () => filterBinding?.mode(),
     parts,
     onSet: (step) => {
       const celsius = clampSetpoint(setting() + step);
@@ -791,7 +818,7 @@ export function buildSpaPack(
   const jacuzziPanel = computed(() => panelNow(doorOpen.value));
   // Its pump's motor: running dead-headed, too, until it trips.
   // Its filter's wash programme, where it has one (`spa-filter.ts`).
-  const washBinding = jz?.filter ?? external?.filter;
+  const washBinding = filterBinding;
   const wash = signal(washBinding?.signals() ?? null);
   const running = computed(() =>
     jacuzziPanel.value
@@ -1023,11 +1050,11 @@ export function buildSpaPack(
             trial?.celsius ??
             (w ? w.pools[pool].temperature : ownSet)),
         setC: setting(),
-        washLine: (jz?.filter ?? external?.filter)?.line(),
+        washLine: filterBinding?.line(),
         washing: !!wash.value?.washing,
         // What the filter's gauge inside reads: its working pressure while
         // it filters, or washes, nothing stopped.
-        filterBar: running.value ? WORKING : 0,
+        filterBar: running.value ? (wash.value?.gaugeBar ?? WORKING) : 0,
         ...(jets
           ? {
               lines:
@@ -1049,8 +1076,8 @@ export function buildSpaPack(
                     `${(trial?.celsius ?? (w ? w.pools[pool].temperature : ownSet)).toFixed(1)}C  SET ${setting().toFixed(1)}`.padEnd(
                       16,
                     ),
-                    (external?.filter?.washing()
-                      ? external.filter.line()
+                    (filterBinding?.washing()
+                      ? filterBinding.line()
                       : trial?.draining || lineup?.draining
                         ? 'DRAINING'
                         : on

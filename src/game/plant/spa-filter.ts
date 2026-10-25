@@ -232,3 +232,32 @@ export function spaFilterGlass(f: SpaFilter, pumping: boolean): GlassInputs {
     murk: pumping ? washSignals(f).murk : 0,
   };
 }
+
+/** The spas whose cabinets have these filters. */
+export type SpaPool = 'pool_03' | 'pool_04';
+export type SpaFiltersState = Record<SpaPool, SpaFilter>;
+
+/** Suspended solids in a busy spa's water, g/m³: what its filter takes out. */
+export const SPA_WATER_DIRT = 4;
+
+/** Both cabinets' filters, in service, a fresh day's wash due on each. */
+export const newSpaFilters = (): SpaFiltersState => ({
+  pool_03: newSpaFilter(SPA_FILTERS.jacuzzi),
+  pool_04: newSpaFilter(SPA_FILTERS.footSpa),
+});
+
+/**
+ * Both filters `dt` seconds on: each by its pump's flow (filtering, the
+ * spa's circulation; washing, its pump's own, while its cabinet has power)
+ * and the spa's water's dirt.
+ */
+export function stepSpaFilters(
+  s: SpaFiltersState,
+  pump: Record<SpaPool, number>,
+  dt: number,
+): SpaFiltersState {
+  return {
+    pool_03: stepSpaFilter(s.pool_03, pump.pool_03, SPA_WATER_DIRT, dt),
+    pool_04: stepSpaFilter(s.pool_04, pump.pool_04, SPA_WATER_DIRT, dt),
+  };
+}
