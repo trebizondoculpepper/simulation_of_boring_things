@@ -1,3 +1,4 @@
+import { retiredFrom } from '../logic/retired-rooms';
 import { Mesh, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import type { Material, Object3D } from 'three';
 import { serviceAvailable } from '../../../game/plant/services';
@@ -109,7 +110,9 @@ export function roomPowered(room: ServiceRoom) {
   const store = typeof window === 'undefined' ? null : roomWorld();
   return () => {
     const w = store?.world.value;
-    return w ? serviceAvailable(w.plant, room, 'power') : true;
+    // A retired copy is powered as the room it was taken from.
+    const own = (retiredFrom(room) ?? room) as ServiceRoom;
+    return w ? serviceAvailable(w.plant, own, 'power') : true;
   };
 }
 

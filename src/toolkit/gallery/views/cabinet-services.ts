@@ -63,6 +63,7 @@ import { createValveControlPanel } from '../../components/plant/views/valve-cont
 import type { PanelValve } from '../../components/plant/views/valve-control-panel';
 import { installedValveFor } from '../../../game/plant/installed-valves';
 import { markComponent } from '../../components/core/views/component-identity';
+import { retiredFrom } from '../logic/retired-rooms';
 import type { ComponentIdentity } from '../../components/core/views/component-identity';
 import {
   MODELLED_VALVE_ROOMS,
@@ -93,8 +94,15 @@ const MARKED: Record<Service, PipeService> = {
  * and the isolator, a working rotary switch-disconnector on the wall,
  * whose handle switches the cabinet's supply.
  */
-export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
-  const runs = cabinetPipes(room);
+export function cabinetServices(
+  kit: PanelKit,
+  /** The room drawn: a plant room, or a retired copy of one. */
+  drawn: string,
+  floorY: number,
+) {
+  const runs = cabinetPipes(drawn);
+  // The room it is, for what is particular to it: a retired copy's own.
+  const room = retiredFrom(drawn) ?? drawn;
   if (!runs.length) return null;
   const group = new Group();
   group.name = 'cabinet services';
@@ -367,7 +375,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     }
   }
   // The motorised valves' panel, on its wall.
-  const panelAt = cabinetValvePanel(room);
+  const panelAt = cabinetValvePanel(drawn);
   const panel =
     panelAt && panelValves.length
       ? createValveControlPanel(
@@ -423,7 +431,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   };
   // The jacuzzi's balance tank, north of its cabinet, its gauge reading
   // the world's level, its overflow's own tundish and gully.
-  const tankAt = cabinetBalanceTank(room);
+  const tankAt = cabinetBalanceTank(drawn);
   const tank = tankAt
     ? createSpaBalanceTank(kit, { ...JACUZZI_BALANCE_TANK, tag: 'PL3-BT1' })
     : null;
@@ -457,7 +465,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       }),
     );
   }
-  const gully = cabinetGully(room);
+  const gully = cabinetGully(drawn);
   if (gully) {
     const tundish = tundishOnGully(gully);
     drainMouth = tundish;
@@ -473,7 +481,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   // The busbar's tap-off unit, over the room's switch-fuse (the bar
   // itself is one of the runs above, `cabinet-pipes.ts`): its back on the
   // west wall, its front into the room.
-  const bus = cabinetBusbar(room);
+  const bus = cabinetBusbar(drawn);
   if (bus) {
     const tap = createBusbarTapOff(kit, {
       legend: 'ROOM SUPPLY',
@@ -488,7 +496,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     group.add(bind(tap, 'Busbar tap-off unit', nodeOf('busbar')));
   }
   // The isolator, its handle the switch.
-  const place = cabinetIsolator(room);
+  const place = cabinetIsolator(drawn);
   const name: IsolatorName =
     room === 'plant_pool_03'
       ? 'Jacuzzi cabinet isolator'

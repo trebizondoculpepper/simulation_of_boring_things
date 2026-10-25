@@ -1,5 +1,7 @@
+import retired1 from './retired/retired1.json';
 import retired0 from './retired/retired0.json';
 import type { PipeRun } from './room-pipes';
+import type { CabinetRun } from './cabinet-pipes';
 import type { layoutRoomLive } from './room-equipment';
 
 /**
@@ -11,6 +13,10 @@ import type { layoutRoomLive } from './room-equipment';
  * (`?room=<id>`): no later change to the generators moves it.
  *
  * - `retired0`: the Olympic pool's plant room (`plant_pool_02`), 2026-10-23.
+ * - `retired1`: the jacuzzi's plant room (`plant_pool_03`), 2026-10-25,
+ *   before its re-plumbing by the plumber (prompt 064): its cabinet's runs
+ *   (`cabinetPipes`) frozen with its layout. Written by
+ *   `RETIRE_JACUZZI=1 npx vp test run scripts/retire-jacuzzi.test.ts`.
  *
  * Pure.
  */
@@ -23,11 +29,18 @@ interface RetiredRoom {
   from: string;
   layout: Layout;
   pipes: PipeRun[];
+  /** A packaged cabinet's runs (`cabinetPipes`), where the room has one. */
+  cabinetRuns?: CabinetRun[];
 }
 
 export const RETIRED_ROOMS: Readonly<Record<string, RetiredRoom>> = {
   retired0: retired0 as unknown as RetiredRoom,
+  retired1: retired1 as unknown as RetiredRoom,
 };
+
+/** A retired room's frozen cabinet runs, if `room` is one with a cabinet. */
+export const retiredCabinetRuns = (room: string): CabinetRun[] | null =>
+  RETIRED_ROOMS[room]?.cabinetRuns ?? null;
 
 /** A retired room's frozen machine layout, if `room` is one. */
 export const retiredLayout = (room: string): Layout | null =>

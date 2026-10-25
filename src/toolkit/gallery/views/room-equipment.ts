@@ -1,3 +1,4 @@
+import { retiredFrom } from '../logic/retired-rooms';
 import { olympicRoom } from '../logic/olympic-plumbing';
 import { INSTALLED_ASSET_IDS } from '../../../game/plant/installed-asset-ids';
 import { markComponent } from '../../components/core/views/component-identity';
@@ -818,7 +819,11 @@ function worldOzoneGenerator(kit: PanelKit, room: ServiceRoom): LiveExhibit {
       const w = store?.world.value;
       fed = w
         ? w.plant.isolators[isolator] !== false &&
-          serviceAvailable(w.plant, room, 'power')
+          serviceAvailable(
+            w.plant,
+            (retiredFrom(room) ?? room) as ServiceRoom,
+            'power',
+          )
         : true;
       sync();
       plant.step(delta);

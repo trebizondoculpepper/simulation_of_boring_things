@@ -496,6 +496,20 @@ const importStarter = async (
         title: 'RETIRED0 · RETIRED: THE OLYMPIC POOL PLANT ROOM',
       });
   }
+  if (room === 'retired1') {
+    // The jacuzzi's plant room as it was on 2026-10-25, before its
+    // re-plumbing by the plumber (prompt 064), frozen as a reference.
+    const [{ startPlantRoomShell }, { POOL_HALLS }] = await Promise.all([
+      import('./toolkit/gallery/rooms/plant-room-shell-room'),
+      import('./toolkit/gallery/logic/pool-halls'),
+    ]);
+    const size = POOL_HALLS.pool_03.plantDoor!.size;
+    return (surface) =>
+      startPlantRoomShell(surface, size, 'pool_03', {
+        equipment: 'retired1',
+        title: 'RETIRED1 · RETIRED: THE JACUZZI PLANT ROOM',
+      });
+  }
   if (room === 'wet_hall')
     return (await import('./toolkit/gallery/rooms/shell-room')).startWetHall;
   if (

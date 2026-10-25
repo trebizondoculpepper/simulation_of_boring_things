@@ -1,3 +1,4 @@
+import { retiredCabinetRuns, retiredFrom } from './retired-rooms';
 import { JACUZZI_LINKS } from '../../../game/plant/jacuzzi-schematic';
 import {
   MODELLED_VALVE_ROOMS,
@@ -470,6 +471,8 @@ export function cabinetIsolator(room: string, trial?: Placed): Isolator | null {
 
 /** The rooms whose cabinet's valves are motorised, worked from a panel. */
 const MOTORISED = new Set(['plant_pool_03', 'plant_pool_04']);
+/** A retired copy's room is the room it was taken from. */
+const own = (room: string) => retiredFrom(room) ?? room;
 
 /**
  * The cabinet's valve panel, its back on a wall at eye height: the foot
@@ -479,11 +482,12 @@ const MOTORISED = new Set(['plant_pool_03', 'plant_pool_04']);
  * tight a room) on the north wall, beside its mimic.
  */
 export function cabinetValvePanel(room: string, trial?: Placed) {
-  if (!MOTORISED.has(room)) return null;
+  if (!MOTORISED.has(own(room))) return null;
   const s = setting(room, trial);
   if (!s) return null;
   // Right of the mimic (1.2 m wide, at the wall's middle), a hand's gap off.
-  if (room === 'plant_pool_03') return { x: 1.16, y: 1.72, z: -s.h, yaw: 0 };
+  if (own(room) === 'plant_pool_03')
+    return { x: 1.16, y: 1.72, z: -s.h, yaw: 0 };
   const x = s.layout.box.w / 2;
   const z = 0.5;
   return {
@@ -506,7 +510,7 @@ export function cabinetValvePanel(room: string, trial?: Placed) {
  * down-pipe (the owner: "use the same drain hole").
  */
 export function cabinetBalanceTank(room: string) {
-  if (room !== 'plant_pool_03') return null;
+  if (own(room) !== 'plant_pool_03') return null;
   const t = JACUZZI_BALANCE_TANK;
   const x = -3.2;
   const z = -2.3;
@@ -665,6 +669,9 @@ export function cabinetPipes(
   trial?: Placed,
   levels: CabinetLevels = CABINET_LEVELS[room] ?? RULE_LEVELS,
 ): CabinetRun[] {
+  // A retired copy's runs, frozen as they were.
+  const frozen = trial ? null : retiredCabinetRuns(room);
+  if (frozen) return frozen;
   const s = setting(room, trial);
   if (!s) return [];
   const { placed, jets, outDir, h } = s;

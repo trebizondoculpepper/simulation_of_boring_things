@@ -1,3 +1,4 @@
+import { retiredFrom } from '../logic/retired-rooms';
 import {
   componentOf,
   markComponent,
@@ -147,7 +148,7 @@ export function startPlantRoomShell(
   // Whether power reaches the cabinet's isolator: its room's switch-fuse,
   // the switchboard's way and the site's main switch (`room-power.ts`).
   const roomLive = equipmentRoom
-    ? roomPowered(equipmentRoom as ServiceRoom)
+    ? roomPowered((retiredFrom(equipmentRoom) ?? equipmentRoom) as ServiceRoom)
     : () => true;
   const mimicStore = jacuzziMimic ? roomWorld() : null;
   const raycaster = new Raycaster();
@@ -652,8 +653,8 @@ export function buildPlantRoomContents(
     if (!componentOf(child)) markComponent(child, { decorative: true });
   // In the jacuzzi's plant room, what each thing is drawn from in its model.
   const bind = <T extends Object3D>(object: T, kind: string): T => {
-    const room = equipment ?? (hall ? `plant_${hall}` : '');
-    const node = schematicNodeOfKind(room, kind);
+    const drawn = equipment ?? (hall ? `plant_${hall}` : '');
+    const node = schematicNodeOfKind(retiredFrom(drawn) ?? drawn, kind);
     return node
       ? markComponent(object, { ...componentOf(object), model: { node } })
       : object;

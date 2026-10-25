@@ -1,3 +1,4 @@
+import { retiredFrom } from '../logic/retired-rooms';
 import { markComponent } from '../../components/core/views/component-identity';
 import { schematicNodeOfKind } from '../../../game/plant/model-valves';
 import {
@@ -196,7 +197,13 @@ export function createRoomServices(
       // As the world has it, switched here or anywhere.
       const on = plant.feeders[room];
       if (on !== undefined && on !== fuse.on) fuse.set(on);
-      fuse.setSupplied(serviceAvailable(plant, room, 'power'));
+      fuse.setSupplied(
+        serviceAvailable(
+          plant,
+          (retiredFrom(room) ?? room) as ServiceRoom,
+          'power',
+        ),
+      );
       fuse.update(delta);
     }
   };

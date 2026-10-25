@@ -1,0 +1,498 @@
+{
+  "note": "The jacuzzi plant room on 2026-10-25, before its re-plumbing by the plumber (prompt 064): its cabinet runs laid by cabinet-pipes.ts rules, bound to its schematic.",
+  "from": "plant_pool_03",
+  "layout": {
+    "box": {
+      "w": 8,
+      "d": 8,
+      "keepClear": [
+        {
+          "minX": -1.3,
+          "maxX": 1.3,
+          "minZ": 2.4,
+          "maxZ": 4
+        },
+        {
+          "minX": 2.7,
+          "maxX": 4,
+          "minZ": 0.8720000000000003,
+          "maxZ": 2.072
+        },
+        {
+          "minX": -0.7,
+          "maxX": 0.7,
+          "minZ": -4,
+          "maxZ": -2.5
+        },
+        {
+          "minX": -4,
+          "maxX": -3.75,
+          "minZ": 2.6999999999999997,
+          "maxZ": 3.1
+        }
+      ],
+      "solid": [
+        {
+          "minX": 2.35,
+          "maxX": 4,
+          "minZ": -4,
+          "maxZ": -2.75
+        },
+        {
+          "minX": 2.95,
+          "maxX": 4,
+          "minZ": -2.8,
+          "maxZ": 0.8720000000000003
+        }
+      ],
+      "pipes": {
+        "north": 0.5,
+        "south": 0.5
+      },
+      "entry": {
+        "x": 0,
+        "z": 3.4
+      }
+    },
+    "items": [
+      {
+        "key": "jacuzzi-pack",
+        "label": "Packaged Jacuzzi plant cabinet",
+        "w": 3.2,
+        "d": 3,
+        "h": 2.2,
+        "mount": "floor",
+        "back": 0.9
+      }
+    ],
+    "placed": [
+      {
+        "item": {
+          "key": "jacuzzi-pack",
+          "label": "Packaged Jacuzzi plant cabinet",
+          "w": 3.2,
+          "d": 3,
+          "h": 2.2,
+          "mount": "floor",
+          "back": 0.9
+        },
+        "x": -1.6,
+        "z": 0.65,
+        "y": 0,
+        "yaw": 1.5707963267948966,
+        "footprint": {
+          "minX": -3.1,
+          "maxX": -0.10000000000000009,
+          "minZ": -0.9500000000000001,
+          "maxZ": 2.25
+        },
+        "access": {
+          "minX": -0.10000000000000009,
+          "maxX": 0.7999999999999999,
+          "minZ": -0.9500000000000001,
+          "maxZ": 2.25
+        },
+        "side": "island"
+      }
+    ],
+    "failed": []
+  },
+  "pipes": [],
+  "cabinetRuns": [
+    {
+      "name": "Air to the spa’s blower ring",
+      "kind": "pvc-pressure",
+      "od": 0.06,
+      "service": "air",
+      "label": "BLOWER AIR",
+      "flow": 1,
+      "points": [
+        [-2.825, 1.5, -0.39999999999999986],
+        [-2.975, 1.5, -0.39999999999999986],
+        [-2.975, 2.2, -0.39999999999999986],
+        [-2.975, 2.2, -4.2]
+      ],
+      "through": [
+        {
+          "at": [-2.975, 2.2, -4.1],
+          "normal": [0, 0, 1],
+          "thickness": 0.2,
+          "kind": "fire-collar"
+        }
+      ],
+      "valve": {
+        "id": "Air to the spa’s blower ring valve",
+        "at": [-2.975, 1.8, -0.39999999999999986],
+        "axis": "y",
+        "operator": "motor",
+        "installed": true,
+        "name": "Air to the spa’s blower ring valve"
+      },
+      "link": "Air to the spa’s blower ring"
+    },
+    {
+      "name": "Jets discharge to the spa",
+      "kind": "pvc-pressure",
+      "od": 0.09,
+      "service": "pool water",
+      "label": "JETS DISCHARGE",
+      "flow": 1,
+      "points": [
+        [-2.825, 1.35, -0.21999999999999995],
+        [-2.975, 1.35, -0.21999999999999995],
+        [-2.975, 2.3200000000000003, -0.21999999999999995],
+        [-2.975, 2.3200000000000003, -4.2]
+      ],
+      "through": [
+        {
+          "at": [-2.975, 2.3200000000000003, -4.1],
+          "normal": [0, 0, 1],
+          "thickness": 0.2,
+          "kind": "fire-collar"
+        }
+      ],
+      "valve": {
+        "id": "Jets discharge to the spa valve",
+        "at": [-2.975, 1.6500000000000001, -0.21999999999999995],
+        "axis": "y",
+        "operator": "motor",
+        "installed": true,
+        "name": "Jets discharge to the spa valve"
+      },
+      "link": "Jets discharge to the spa"
+    },
+    {
+      "name": "Jets suction from the spa",
+      "kind": "pvc-pressure",
+      "od": 0.09,
+      "service": "pool water",
+      "label": "JETS SUCTION",
+      "flow": -1,
+      "points": [
+        [-2.825, 0.44999999999999996, 0.3000000000000001],
+        [-2.975, 0.44999999999999996, 0.3000000000000001],
+        [-2.975, 2.4400000000000004, 0.3000000000000001],
+        [-2.975, 2.4400000000000004, -4.2]
+      ],
+      "through": [
+        {
+          "at": [-2.975, 2.4400000000000004, -4.1],
+          "normal": [0, 0, 1],
+          "thickness": 0.2,
+          "kind": "fire-collar"
+        }
+      ],
+      "valve": {
+        "id": "Jets suction from the spa valve",
+        "at": [-2.975, 1.44, 0.3000000000000001],
+        "axis": "y",
+        "operator": "motor",
+        "installed": true,
+        "name": "Jets suction from the spa valve"
+      },
+      "link": "Jets suction from the spa"
+    },
+    {
+      "name": "Return to the spa",
+      "kind": "pvc-pressure",
+      "od": 0.05,
+      "service": "pool water",
+      "label": "SPA RETURN",
+      "flow": 1,
+      "points": [
+        [-2.825, 0.24, 0.6799999999999999],
+        [-2.975, 0.24, 0.6799999999999999],
+        [-2.975, 2.56, 0.6799999999999999],
+        [-2.975, 2.56, -4.2]
+      ],
+      "through": [
+        {
+          "at": [-2.975, 2.56, -4.1],
+          "normal": [0, 0, 1],
+          "thickness": 0.2,
+          "kind": "fire-collar"
+        }
+      ],
+      "valve": {
+        "id": "Return to the spa valve",
+        "at": [-2.975, 1.6600000000000001, 0.6799999999999999],
+        "axis": "y",
+        "operator": "motor",
+        "installed": true,
+        "name": "Return to the spa valve"
+      },
+      "link": "Return to the spa"
+    },
+    {
+      "name": "Heating flow",
+      "kind": "lagged-heating",
+      "od": 0.0337,
+      "service": "heating flow",
+      "label": "LTHW FLOW",
+      "flow": -1,
+      "points": [
+        [-2.825, 1.16, 0.8849999999999999],
+        [-3.145, 1.16, 0.8849999999999999],
+        [-3.145, 2.2, 0.8849999999999999],
+        [-3.145, 2.2, 4.2]
+      ],
+      "through": [
+        {
+          "at": [-3.145, 2.2, 4.1],
+          "normal": [0, 0, -1],
+          "thickness": 0.2,
+          "kind": "sleeve"
+        }
+      ],
+      "valve": {
+        "id": "Heating flow valve",
+        "at": [-3.145, 1.46, 0.8849999999999999],
+        "axis": "y",
+        "operator": "motor",
+        "installed": true,
+        "name": "Heating flow valve"
+      },
+      "link": "Heating flow"
+    },
+    {
+      "name": "Heating return",
+      "kind": "lagged-heating",
+      "od": 0.0337,
+      "service": "heating return",
+      "label": "LTHW RETURN",
+      "flow": 1,
+      "points": [
+        [-2.825, 1.26, 0.9999999999999999],
+        [-3.295, 1.26, 0.9999999999999999],
+        [-3.295, 2.45, 0.9999999999999999],
+        [-3.295, 2.45, 4.2]
+      ],
+      "through": [
+        {
+          "at": [-3.295, 2.45, 4.1],
+          "normal": [0, 0, -1],
+          "thickness": 0.2,
+          "kind": "sleeve"
+        }
+      ],
+      "valve": {
+        "id": "Heating return valve",
+        "at": [-3.295, 1.56, 0.9999999999999999],
+        "axis": "y",
+        "operator": "motor",
+        "installed": true,
+        "name": "Heating return valve"
+      },
+      "link": "Heating return"
+    },
+    {
+      "name": "Drain to waste",
+      "kind": "pvc-drain",
+      "od": 0.05,
+      "service": "drainage",
+      "label": "DRAIN",
+      "flow": 1,
+      "points": [
+        [-2.825, 0.21000000000000002, 1.15],
+        [-3.325, 0.21000000000000002, 1.15],
+        [-3.325, 0.17, 1.15]
+      ],
+      "through": [],
+      "valve": {
+        "id": "Drain to waste valve",
+        "at": [-3.075, 0.21000000000000002, 1.15],
+        "axis": "x",
+        "facing": -1.5707963267948966,
+        "operator": "motor",
+        "installed": true,
+        "name": "Drain to waste valve"
+      },
+      "link": "Drain to waste"
+    },
+    {
+      "name": "Suction from the balance tank",
+      "kind": "pvc-pressure",
+      "od": 0.05,
+      "service": "pool water",
+      "label": "TANK SUCTION",
+      "flow": -1,
+      "points": [
+        [-2.825, 1.16, 1.8599999999999999],
+        [-2.975, 1.16, 1.8599999999999999],
+        [-2.975, 0.3, 1.8599999999999999],
+        [-3.85, 0.3, 1.8599999999999999],
+        [-3.85, 0.3, -2.3],
+        [-3.75, 0.3, -2.3]
+      ],
+      "through": [],
+      "valve": {
+        "id": "Suction from the balance tank valve",
+        "at": [-2.975, 0.73, 1.8599999999999999],
+        "axis": "y",
+        "operator": "motor",
+        "installed": true,
+        "name": "Suction from the balance tank valve"
+      },
+      "link": "Suction from the balance tank"
+    },
+    {
+      "name": "Overflow from the spa",
+      "kind": "pvc-pressure",
+      "od": 0.05,
+      "service": "pool water",
+      "label": "SPA OVERFLOW",
+      "flow": -1,
+      "points": [
+        [-3.45, 1.55, -2.55],
+        [-3.45, 2.25, -2.55],
+        [-3.45, 2.25, -4.2]
+      ],
+      "through": [
+        {
+          "at": [-3.45, 2.25, -4.1],
+          "normal": [0, 0, 1],
+          "thickness": 0.2,
+          "kind": "fire-collar"
+        }
+      ],
+      "link": "Overflow from the spa"
+    },
+    {
+      "name": "Make-up to the balance tank",
+      "kind": "pvc-pressure",
+      "od": 0.032,
+      "service": "make-up",
+      "label": "TANK MAKE-UP",
+      "flow": -1,
+      "points": [
+        [-3.6, 1.55, -2.0999999999999996],
+        [-3.6, 3, -2.0999999999999996],
+        [-3.6, 3, 4.2]
+      ],
+      "through": [
+        {
+          "at": [-3.6, 3, 4.1],
+          "normal": [0, 0, -1],
+          "thickness": 0.2,
+          "kind": "fire-collar"
+        }
+      ],
+      "valve": {
+        "id": "Make-up to the balance tank valve",
+        "at": [-3.6, 1.85, -2.0999999999999996],
+        "axis": "y",
+        "operator": "lever",
+        "installed": true,
+        "name": "Make-up to the balance tank valve"
+      },
+      "link": "Make-up to the balance tank"
+    },
+    {
+      "name": "Balance tank overflow",
+      "kind": "pvc-drain",
+      "od": 0.05,
+      "service": "drainage",
+      "label": "TANK OVERFLOW",
+      "flow": 1,
+      "points": [
+        [-3.1550000000000002, 1.4300000000000002, -2.8481559996935175],
+        [-3.1550000000000002, 1.4300000000000002, -3.3],
+        [-3.1550000000000002, 0.17, -3.3]
+      ],
+      "through": [],
+      "link": "Balance tank overflow"
+    },
+    {
+      "name": "Balance tank drain to waste",
+      "kind": "pvc-drain",
+      "od": 0.05,
+      "service": "drainage",
+      "label": "TANK DRAIN",
+      "flow": 1,
+      "points": [
+        [-3.245, 0.21, -2.8481559996935175],
+        [-3.245, 0.21, -3.3],
+        [-3.245, 0.17, -3.3]
+      ],
+      "through": [],
+      "valve": {
+        "id": "Balance tank drain to waste valve",
+        "at": [-3.245, 0.21, -3.0740779998467587],
+        "axis": "z",
+        "facing": 3.141592653589793,
+        "operator": "lever",
+        "installed": true,
+        "name": "Balance tank drain to waste valve"
+      },
+      "link": "Balance tank drain to waste"
+    },
+    {
+      "name": "Busbar",
+      "kind": "busbar-trunking",
+      "od": 0.1,
+      "service": "electrical",
+      "label": "400 V BUSBAR",
+      "flow": -1,
+      "points": [
+        [-3.91, 3.5, -3.8],
+        [-3.91, 3.5, 4.2]
+      ],
+      "through": [
+        {
+          "at": [-3.91, 3.5, 4.1],
+          "normal": [0, 0, 1],
+          "thickness": 0.2,
+          "kind": "fire-collar"
+        }
+      ],
+      "ends": ["cap", "open"]
+    },
+    {
+      "name": "Busbar to the switch-fuse",
+      "kind": "steel-screwed",
+      "od": 0.0213,
+      "service": "electrical",
+      "label": "SUPPLY",
+      "flow": 1,
+      "points": [
+        [-3.95, 3.18, 2.9499999999999997],
+        [-3.95, 1.67, 2.9499999999999997]
+      ],
+      "through": [],
+      "link": "Busbar to the switch-fuse"
+    },
+    {
+      "name": "Switch-fuse to the isolator",
+      "link": "Switch-fuse to the cabinet",
+      "kind": "steel-screwed",
+      "od": 0.0213,
+      "service": "electrical",
+      "label": "CABINET SUPPLY",
+      "flow": 1,
+      "points": [
+        [-3.95, 1.67, 2.85],
+        [-3.95, 2.25, 2.85],
+        [-3.95, 2.25, 2.63],
+        [-3.95, 1.596, 2.63]
+      ],
+      "through": []
+    },
+    {
+      "name": "Isolator to the cabinet",
+      "link": "Switch-fuse to the cabinet",
+      "kind": "steel-screwed",
+      "od": 0.025,
+      "service": "electrical",
+      "label": "CABINET SUPPLY",
+      "flow": 1,
+      "points": [
+        [-3.95, 1.596, 2.5700000000000003],
+        [-3.95, 2.35, 2.5700000000000003],
+        [-3.95, 2.35, 1.9499999999999997],
+        [-2.645, 2.35, 1.9499999999999997],
+        [-2.645, 2.16, 1.9499999999999997]
+      ],
+      "through": []
+    }
+  ]
+}
