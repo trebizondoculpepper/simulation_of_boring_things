@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vite-plus/test';
 import { exhibitFor } from '../../toolkit/gallery/views/room-equipment';
 import { layoutRoom } from '../../toolkit/gallery/logic/room-equipment';
 import { GAS_HOUSE } from '../../game/plant/gas-house';
-import { plantInventory } from '../../game/plant/equipment-catalogue';
+import {
+  componentDescription,
+  plantInventory,
+} from '../../game/plant/equipment-catalogue';
 import { escapeLatex, renderManual } from '../latex/render';
 import { boilerHouseChapter } from './boiler-house';
 import { revisionFor } from './fiction';
@@ -46,6 +49,15 @@ describe('the operator’s manual', () => {
     if (schedule?.kind !== 'table' || index?.kind !== 'table')
       throw new Error('missing inventory tables');
     expect(schedule.rows.map((row) => row[0])).toEqual(parts.map((p) => p.id));
+    // Its purposes are the shared descriptions (prompt 060), snapshot-free:
+    // no live status, and an empty cell where none is known.
+    expect(schedule.rows.map((row) => row[4])).toEqual(
+      parts.map((p) => componentDescription(p.id)),
+    );
+    expect(schedule.rows.find((row) => row[0] === 'P-101A')?.[4]).toBe(
+      '1st Pump in PL2',
+    );
+    expect(schedule.rows.find((row) => row[0] === 'PL3')?.[4]).toBe('');
     expect(index.rows.map((row) => row[1]).sort()).toEqual(
       parts.map((p) => p.id).sort(),
     );

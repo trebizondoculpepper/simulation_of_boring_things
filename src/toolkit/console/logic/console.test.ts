@@ -243,6 +243,18 @@ describe('status of an object', () => {
     );
   });
 
+  it('gives the same description as the overlay and the inventory, or none', () => {
+    const w = newWorld();
+    expect(objectStatus(w, 'PL3-BT1-IV1').join('\n')).toContain(
+      'purpose = Isolates water flowing from the water service to the balance tank.',
+    );
+    expect(objectStatus(w, 'P-101A').join('\n')).toMatch(
+      /purpose = 1st Pump in PL2, currently (On|Off|Tripped)/,
+    );
+    // A room has no description: no purpose row at all.
+    expect(objectStatus(w, 'PL3').join('\n')).not.toMatch(/purpose =/);
+  });
+
   it('offers near names for one it does not know, and runs as the status command', () => {
     const w = newWorld();
     const miss = objectStatus(w, 'PL3-BT');

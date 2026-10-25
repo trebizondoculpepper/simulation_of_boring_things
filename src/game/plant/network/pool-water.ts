@@ -15,7 +15,8 @@
  * the top through its inlet valve (IV1) and leaves the bottom through its
  * outlet valve (IV2); to backwash, both are shut and the backwash supply
  * (BV1) sends pumped water up through the bed from the bottom, out of the
- * top through the backwash waste (BV2); the rinse valve (RNV1) runs the
+ * top through the backwash waste (BV2; in the lounge, whose drawn plant
+ * numbers them the other way, supply BV2 and waste BV1); the rinse valve (RNV1) runs the
  * settling bed to waste from the bottom, and the drain valve (WV1) empties
  * the vessel.
  *
@@ -447,8 +448,14 @@ export function largePoolCircuit(b: NetworkBuilder, spec: CircuitSpec) {
     const toWaste = { a: 'pool-water', b: 'drainage' } as const;
     const inlet = fv('iv1', 'inlet valve', pw, true);
     const outlet = fv('iv2', 'outlet valve', pw, true);
-    const bwIn = fv('bv1', 'backwash supply valve', pw, false);
-    const bwOut = fv('bv2', 'backwash waste valve', toWaste, false);
+    // The lounge's drawn plant tags its backwash waste valve BV1 and has
+    // no drawn backwash supply valve (prompt 060's reconciliation, the
+    // owner, 2026-10-25): its network follows the drawing, waste BV1 and
+    // supply BV2. The Olympic nest keeps supply BV1 and waste BV2.
+    const [supplyKey, wasteKey] =
+      spec.system === 'lounge' ? ['bv2', 'bv1'] : ['bv1', 'bv2'];
+    const bwIn = fv(supplyKey, 'backwash supply valve', pw, false);
+    const bwOut = fv(wasteKey, 'backwash waste valve', toWaste, false);
     const rinse = fv('rnv1', 'rinse valve, to waste', toWaste, false);
     const drain = fv('wv1', 'drain valve, to waste', toWaste, false);
     pipe(`${discharge}.main`, `${inlet}.a`);

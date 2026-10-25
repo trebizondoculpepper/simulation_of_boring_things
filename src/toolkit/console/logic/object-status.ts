@@ -1,6 +1,7 @@
 import type { World } from '../../../game/world';
 import { jacuzziTankDraining } from '../../../game/world';
 import { plantInventory } from '../../../game/plant/equipment-catalogue';
+import { inventoryForWorld } from '../../../game/plant/component-status';
 import { INSTALLED_VALVES } from '../../../game/plant/installed-valves';
 import { MOTOR_TAGS } from '../../../game/plant/motor-starters';
 import { JACUZZI_BALANCE_TANK } from '../../../game/plant/spa-balance-tank';
@@ -94,11 +95,7 @@ export function objectStatus(w: World, query: string): string[] {
     if (body.length) lines.push(`-- ${title}`, ...body.map((l) => `  ${l}`));
   };
   // The inventory's record: what it is, and its state.
-  const entry = plantInventory(
-    w.identifiedPlant,
-    w.installedValves,
-    w.plant.feeders,
-  ).find((e) => e.id.toLowerCase() === want);
+  const entry = inventoryForWorld(w).find((e) => e.id.toLowerCase() === want);
   if (entry)
     section('inventory', [
       `tag = ${entry.id}`,
@@ -106,7 +103,8 @@ export function objectStatus(w: World, query: string): string[] {
       `kind = ${entry.kind}`,
       `maker = ${entry.brand}`,
       `class = ${entry.class}`,
-      `purpose = ${entry.purpose}`,
+      // Its description (prompt 060), as the overlay gives it; none where none is known.
+      ...(entry.purpose ? [`purpose = ${entry.purpose}`] : []),
       ...(entry.assetId ? [`asset = ${entry.assetId}`] : []),
       ...(entry.normal ? [`normal = ${entry.normal}`] : []),
       ...(entry.state !== undefined ? flatten(entry.state, 'state') : []),

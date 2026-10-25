@@ -1,6 +1,6 @@
 # 060: Inferred component descriptions
 
-Status: reviewed against the running catalogue and plant network on 2026-10-25; ready to implement in the ordered steps below. The two legacy network mismatches identified by this review must be reconciled before the full acceptance gate passes. It refines what stage 1 of the component information overlay shows on its second line ([research and plan](../research/component-information-overlay.md)), and what the inventory and the console's `status` give as an item's purpose.
+Status: implemented 2026-10-25 as a data layer (steps 1 to 3 below): descriptions, ends, kinds, live status and the network cross-check, shared by the inventory, the manual and the console's `status`; the overlay's second line (step 4) follows with prompt 061's stage 1. The owner chose (2026-10-25) to reconcile the lounge's BV1 conflict by changing the network: its backwash waste is BV1 and its supply BV2, as drawn. Earlier status: reviewed against the running catalogue and plant network on 2026-10-25; ready to implement in the ordered steps below. The two legacy network mismatches identified by this review must be reconciled before the full acceptance gate passes. It refines what stage 1 of the component information overlay shows on its second line ([research and plan](../research/component-information-overlay.md)), and what the inventory and the console's `status` give as an item's purpose.
 
 ## The owner's rulings (2026-10-25)
 

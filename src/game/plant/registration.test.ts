@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { EQUIPMENT_ROOM_CODES, plantInventory } from './equipment-catalogue';
+import {
+  EQUIPMENT_ROOM_CODES,
+  componentDescription,
+  plantInventory,
+} from './equipment-catalogue';
 import { INSTALLED_ASSET_IDS } from './installed-asset-ids';
 import { INSTALLED_VALVES } from './installed-valves';
 import { ROOM_SWITCH_FUSES } from './installed-feeders';
@@ -86,7 +90,7 @@ describe('registration', () => {
     expect(new Set(tags).size).toBe(tags.length);
   });
 
-  it('lists every fixture in the inventory, with its maker and purpose', () => {
+  it('lists every fixture in the inventory, with its maker and description', () => {
     const inventory = registers().inventory;
     for (const [tag, fixture] of Object.entries(INSTALLED_FIXTURES)) {
       const entry = inventory.find((e) => e.id === tag);
@@ -94,8 +98,10 @@ describe('registration', () => {
         assetId: fixture.assetId,
         name: fixture.name,
         brand: fixture.brand,
-        purpose: fixture.purpose,
+        purpose: componentDescription(tag),
       });
+      // Its description is inferred (prompt 060), not its documentation's sentence.
+      expect(entry?.purpose, tag).not.toBe(fixture.purpose);
     }
   });
 });
