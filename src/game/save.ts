@@ -103,6 +103,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // valves keyed by their model ids. The owner (2026-10-25): if the network
   // has changed, the game state is thrown away; a new world it is.
   26: () => ({}),
+  // 27 → 28: the lounge's filter beds, mid-season (`fillDefaults` adds them).
+  27: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

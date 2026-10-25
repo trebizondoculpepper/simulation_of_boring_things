@@ -56,6 +56,7 @@ describe('a save', () => {
       identifiedPlant: newWorld().identifiedPlant,
       installedValves: newWorld().installedValves,
       loungeValvePositions: newWorld().loungeValvePositions,
+      loungeFilters: newWorld().loungeFilters,
       olympic: newWorld().olympic,
       olympicTank: newWorld().olympicTank,
       airHandling: newWorld().airHandling,

@@ -1,3 +1,5 @@
+import { newLoungeFilters, stepLoungeFilters } from './plant/lounge-filters';
+import type { LoungeFiltersState } from './plant/lounge-filters';
 import { installedValveOpen } from './plant/installed-valves';
 import { actOnZoneMusic, newZoneMusic, stepZoneMusic } from './plant/music';
 import type { ZoneMusicState, ZoneMusicAction } from './plant/music';
@@ -17,6 +19,7 @@ import type { ZoneMusicState, ZoneMusicAction } from './plant/music';
 import { newPlantServices, serviceAvailable } from './plant/services';
 import {
   loungeDischargeOpen,
+  loungeFlowsOf,
   loungePumpsRunning,
   loungeValveFlows,
   newLoungeValvePositions,
@@ -160,7 +163,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 27;
+export const WORLD_VERSION = 28;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -202,6 +205,8 @@ export interface World {
   installedValves: Record<string, boolean>;
   /** Actual travel of the lounge plant's solenoid valves, 0 shut to 1 open. */
   loungeValvePositions: Record<string, number>;
+  /** The lounge's filter beds: each one's dirt (`lounge-filters.ts`). */
+  loungeFilters: LoungeFiltersState;
   /** The Olympic's filter battery: each bed's dirt (`olympic-battery.ts`). */
   olympic: OlympicBatteryState;
   /** The Olympic's balance tank's controls: its make-up (`olympic-tank.ts`). */
@@ -237,6 +242,7 @@ export function newWorld(): World {
     identifiedPlant: newIdentifiedPlant(),
     installedValves: newInstalledValveStates(),
     loungeValvePositions: newLoungeValvePositions(),
+    loungeFilters: newLoungeFilters(),
     olympic: newOlympicBattery(),
     olympicTank: newOlympicTank(),
     airHandling: newAirHandling(),
@@ -725,6 +731,11 @@ export function stepWorld(world: World, delta: number): World {
     jacuzziCabinet,
     boilerGas: stepBoilerGas(world.boilerGas, delta),
     loungeValvePositions,
+    loungeFilters: stepLoungeFilters(
+      world.loungeFilters,
+      loungeFlowsOf(world),
+      delta,
+    ),
     olympic: battery
       ? stepOlympicBattery(world.olympic, battery, delta)
       : world.olympic,

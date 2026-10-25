@@ -1,3 +1,5 @@
+import { loungeFilterDp } from '../../../game/plant/lounge-filters';
+import { loungeFlowsOf } from '../../../game/plant/lounge-valves';
 import { UV_ISOLATORS } from '../../../game/plant/uv';
 import type { World } from '../../../game/world';
 import { POOL_TARGET } from '../../../game/plant/pools';
@@ -63,7 +65,10 @@ export function plantReadingOf(world: World, pool: PoolId = 'pool_02') {
   const filterDp =
     pool === 'pool_02'
       ? olympicFlowsOf(world).filters.map((f) => f.bedBar)
-      : CLEAN_DP.map((dp) => dp * share * share);
+      : pool === 'pool_01'
+        ? // The lounge's two beds, by their dirt (`lounge-filters.ts`).
+          loungeFilterDp(world.loungeFilters, loungeFlowsOf(world))
+        : CLEAN_DP.map((dp) => dp * share * share);
   const uvIsolator = UV_ISOLATORS[pool];
   const uvOn = circulating && (uvIsolator ? plant.isolators[uvIsolator] : true);
   const dosing = circulating && serviceAvailable(plant, room, 'chemical');

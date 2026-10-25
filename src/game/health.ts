@@ -374,6 +374,8 @@ export const WORLD_HEALTH_COVERAGE = {
     'not checked: the footbath’s and jacuzzi’s identified parts are judged by their pools’ flow and level; their own states have no rule yet',
   installedValves: 'valves: each at its normal position',
   loungeValvePositions: 'valves: each lounge valve’s travel at its normal',
+  loungeFilters:
+    'not checked: filter dirt is maintenance, a trend not a fault; the pool’s flow catches a blocked filter',
   olympic:
     'not checked: filter dirt is maintenance, a trend not a fault; the pool’s flow catches a blocked battery',
   olympicTank: 'pools: the Olympic’s make-up in AUTO',
