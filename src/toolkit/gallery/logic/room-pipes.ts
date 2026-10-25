@@ -754,6 +754,20 @@ export function poolPlantPipework(room: string): {
       joins: [f.item.label, outletHeader.name],
       service: 'pool water',
       label: `F${n} OUTLET`,
+      // Its flowmeter (prompt 066), up the riser below its valve: up in
+      // service, down while it is backwashed.
+      meters: [
+        {
+          at: [outTee[0], 0.75, outTee[2]],
+          along: [0, 1, 0],
+          od: outlet.od,
+          tag: `PL1-F${n}-FT1`,
+          role: `F${n} FLOW`,
+          reads: `filter-${n}`,
+          inward: [dir[0], dir[2]],
+          fitting: `PL1-F${n}-FT1`,
+        },
+      ],
       valves: [
         {
           at: [outTee[0], 1.3, outTee[2]],

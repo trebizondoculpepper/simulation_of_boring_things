@@ -78,4 +78,18 @@ export const INSTALLED_FIXTURES: Readonly<Record<string, InstalledFixture>> = {
       },
     ]),
   ),
+  // The lounge's two (prompt 066), one on each filter's outlet.
+  ...Object.fromEntries(
+    [1, 2].map((n) => [
+      `PL1-F${n}-FT1`,
+      {
+        assetId: `asset-0${116 + n}`,
+        room: 'plant_pool_01',
+        name: `Lounge filter ${n} outlet flowmeter`,
+        kind: 'flowmeter',
+        brand: 'kessler-moody',
+        purpose: `Measures the flow through filter ${n}: up its outlet in service, down it while backwashing.`,
+      },
+    ]),
+  ),
 };

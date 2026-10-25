@@ -319,6 +319,16 @@ export const LOUNGE_SCHEMATIC: RoomSchematic = {
     ),
     valve('valve-0007', 'Filter 2 outlet', 'source', 'open', 'f2Outlet'),
     valve('valve-0008', 'Filter 2 drain', 'source', 'closed', 'f2Drain'),
+    // Each filter's outlet flowmeter (prompt 066).
+    ...([1, 2] as const).map((n): SchematicFitting => ({
+      id: `PL1-F${n}-FT1`,
+      kind: 'flowmeter',
+      edge: `Filter ${n} outlet`,
+      end: 'source',
+      normally: 'open',
+      role: `f${n}Flow`,
+      keptBy: 'identified',
+    })),
     valve(
       'valve-0009',
       'Balance tank drain to waste',

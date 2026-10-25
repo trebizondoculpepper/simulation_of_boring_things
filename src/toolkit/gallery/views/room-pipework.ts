@@ -1,3 +1,7 @@
+import {
+  loungeFlowsOf,
+  loungeMeterReadings,
+} from '../../../game/plant/lounge-valves';
 import type { Object3D } from 'three';
 import { createFloorGully } from '../../components/plant/views/floor-gully';
 import { loungeValveFlows } from '../../../game/plant/lounge-valves';
@@ -220,7 +224,10 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
   // What the room's flowmeters read, as the world now stands (the battery's model keeps its own cache).
   function readings(): Record<string, number> {
     const world = store?.world.value;
-    if (!world || room !== 'plant_pool_02') return {};
+    if (!world) return {};
+    if (room === 'plant_pool_01')
+      return loungeMeterReadings(loungeFlowsOf(world));
+    if (room !== 'plant_pool_02') return {};
     return olympicMeterReadings(olympicFlowsOf(world));
   }
   function valve(run: PipeRun, v: Valve) {

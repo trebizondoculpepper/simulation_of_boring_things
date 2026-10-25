@@ -296,6 +296,8 @@ export function drawnThings(room: string): DrawnThing[] {
             ...(r.meters ?? []).map((m) => ({
               kind: 'meter' as const,
               name: m.tag,
+              // Its fitting in the room's model, where its run gives one.
+              ...(m.fitting ? { binding: { fitting: m.fitting } } : {}),
             })),
           ]),
           ...roomIsolators(room).isolators.map((i) => ({

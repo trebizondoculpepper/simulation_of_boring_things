@@ -49,7 +49,7 @@ The owner, 2026-10-25: redesign PL1-CP1, the lounge pool's local control panel, 
    - The LED's colour follows the line's (water blue), or amber if a spec asks for it.
    - Pure logic (which LED is lit at which phase) goes in `logic/`, tested; the view instances its LEDs, so a board of many lines stays cheap.
    - Tried first in dev39 (control assemblies): one line forward, one back, one still, one changing. Done 2026-10-25.
-2. **The flowmeters.**
+2. **The flowmeters.** Done 2026-10-25, with the true backwash (the pool's return drops by the backwash's 34 m³/h; both filters backwashing wash neither).
    - PL1-F1-FT1 and PL1-F2-FT1 go in `installed-fixtures.ts` with new asset ids, after the highest in use.
    - They are drawn on the lounge filters' outlet runs in `room-pipes.ts`, the way the Olympic room's are.
    - The world gives each filter's flow, in m³/h with its sign: `loungeValveFlows` grows a per-filter result, and the world exposes it.
