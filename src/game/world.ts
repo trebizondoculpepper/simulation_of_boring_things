@@ -15,6 +15,8 @@ import type { ZoneMusicState, ZoneMusicAction } from './plant/music';
 /** Bumped whenever the world's shape changes; `save.ts` migrates older saves. */
 import { newPlantServices, serviceAvailable } from './plant/services';
 import {
+  loungeDischargeOpen,
+  loungePumpsRunning,
   loungeValveFlows,
   newLoungeValvePositions,
   stepLoungeValves,
@@ -626,8 +628,15 @@ export function stepWorld(world: World, delta: number): World {
       demand: () => true,
       // Whether its valves give it somewhere to pump: to the pool, to
       // waste (a backwash), or to the sewer (a drain-down).
-      flowing: (pool) => {
+      flowing: (pool, tag) => {
         if (world.pools[pool].drainDown) return true;
+        // A lounge pump with its own discharge shut has nowhere to pump.
+        if (
+          pool === 'pool_01' &&
+          (tag === 'P-201A' || tag === 'P-201B') &&
+          !loungeDischargeOpen(world.loungeValvePositions, tag)
+        )
+          return false;
         const open =
           pool === 'pool_02'
             ? olympicBatteryFlows(world.installedValves, world.olympic, true)
@@ -686,7 +695,12 @@ export function stepWorld(world: World, delta: number): World {
         makeUpCalling: calling,
       };
     },
-    (running) => loungeValveFlows(loungeValvePositions, running),
+    (running) =>
+      loungeValveFlows(
+        loungeValvePositions,
+        running,
+        loungePumpsRunning(motors),
+      ),
     hallHandling(airHandling),
     motors,
     jacuzzi,

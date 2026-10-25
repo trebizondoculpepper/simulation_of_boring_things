@@ -122,8 +122,12 @@ export interface StarterWorld {
   permitted: (tag: MotorTag) => boolean;
   /** Whether its pool's controls want circulation (always, for a pool). */
   demand: (pool: PoolId) => boolean;
-  /** Whether its pool's water is moving, as the step begins. */
-  flowing: (pool: PoolId) => boolean;
+  /**
+   * Whether this motor's pump has somewhere to pump, as the step begins:
+   * its pool's water moving, through its own discharge (a pump whose
+   * discharge valve is shut is starved, whatever its partner does).
+   */
+  flowing: (pool: PoolId, tag: MotorTag) => boolean;
 }
 
 /** How long a pump runs with nothing flowing before its thermistors trip it, seconds. */
@@ -189,7 +193,7 @@ export function stepMotors(
         tag,
         wants,
         w.permitted(tag) && !m.stopped[pool],
-        w.flowing(pool),
+        w.flowing(pool, tag),
         dt,
       );
       starters[tag] = next;

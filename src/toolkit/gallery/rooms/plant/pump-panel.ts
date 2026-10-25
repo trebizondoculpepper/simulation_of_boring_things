@@ -23,11 +23,7 @@ import { currentPlant } from './live-plant';
 import type { PoolId } from '../../../../game/plant/pools';
 import type { PlantReading } from '../../logic/control-room-demo';
 import { MAIN_POOL_MIMIC, mainPoolState } from '../../logic/pool-mimics';
-import {
-  LOUNGE_VALVE_MIMIC,
-  loungeValveMimicState,
-} from '../../logic/lounge-valve-mimic';
-import { LOUNGE_VALVES } from '../../../../game/plant/lounge-valves';
+import { createLoungeFilterMimic } from '../../views/lounge-filter-mimic';
 import { roomWorld } from '../../../save/world-store';
 import type { PumpsShown } from '../../logic/pool-mimics';
 import { MOTORS, POOL_MOTORS } from '../../../../game/plant/motor-starters';
@@ -130,26 +126,16 @@ export const pumpPanelExhibit = (pool: PoolId = 'pool_02'): PlantExhibit => ({
     const parts = cubicle.parts;
     const world = store();
     const tags = tagsOf(pool);
-    const mimic = createMimicBoard(
-      kit,
-      pool === 'pool_01' ? LOUNGE_VALVE_MIMIC : MAIN_POOL_MIMIC,
-      {
+    // The lounge's is its filter mimic (prompt 066), the component the
+    // control room's wall carries too; the main pool's its own.
+    const lounge =
+      pool === 'pool_01' ? createLoungeFilterMimic(kit, world) : null;
+    const mimic =
+      lounge ??
+      createMimicBoard(kit, MAIN_POOL_MIMIC, {
         maker: 'penfold',
-        press: (id) => {
-          const [assetId, verb] = id.split('/');
-          if (
-            pool === 'pool_01' &&
-            LOUNGE_VALVES.some((valve) => valve.assetId === assetId)
-          ) {
-            world?.dispatch({
-              type: 'plant/valve',
-              id: assetId,
-              open: verb === 'open',
-            });
-          } else pressPump(id, pool);
-        },
-      },
-    );
+        press: (id) => pressPump(id, pool),
+      });
     cubicle.fasciaFace.add(mimic.group);
     for (const [object, use] of mimic.parts.uses) parts.uses.set(object, use);
     // A door for each pump: its indicator, its ammeter, its selector and
@@ -268,12 +254,11 @@ export const pumpPanelExhibit = (pool: PoolId = 'pool_02'): PlantExhibit => ({
                 : 0;
           p.amps.show(amps.toFixed(1).padStart(5, ' '));
         }
-        mimic.show(
-          pool === 'pool_01'
-            ? loungeValveMimicState(w?.loungeValvePositions ?? {}, shown)
-            : mainPoolState(reading, shown),
-        );
-        mimic.parts.update(delta);
+        if (lounge) lounge.update(delta);
+        else {
+          mimic.show(mainPoolState(reading, shown));
+          mimic.parts.update(delta);
+        }
       },
     };
   },

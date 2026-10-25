@@ -2,6 +2,9 @@ import type { LiveExhibit, PlantExhibit } from './exhibit';
 import type { MimicSpec } from '../../../components/industrial-control/logic/mimic';
 import type { FlowState } from '../../../components/industrial-control/logic/mimic-chaser';
 import { createMimicBoard } from '../../../components/industrial-control/views/mimic-board';
+import { createLoungeFilterMimic } from '../../views/lounge-filter-mimic';
+import { createScenarioStore } from '../../../save/world-store';
+import { newWorld } from '../../../../game/world';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
@@ -96,6 +99,24 @@ export const EXHIBITS: readonly PlantExhibit[] = [
             },
           });
         },
+      };
+    },
+  },
+  {
+    title: 'Lounge pool filter mimic',
+    reference:
+      'PL1-CP1’s fascia and the control room’s wall board (prompt 066): a Penfold mimic, 2.4 × 1.2 m, the lounge battery grouped by filter, worked against this room’s own world',
+    size: { w: 2.5, d: 0.08, h: 1.3, mount: 'wall', y: 1.45 },
+    build(kit): LiveExhibit {
+      // A world of its own, fresh, in memory (dev rooms start fresh).
+      const store = createScenarioStore(newWorld());
+      store.run(true);
+      const mimic = createLoungeFilterMimic(kit, store);
+      return {
+        object: mimic.group,
+        parts: mimic.parts,
+        update: mimic.update,
+        dispose: () => store.stop(),
       };
     },
   },

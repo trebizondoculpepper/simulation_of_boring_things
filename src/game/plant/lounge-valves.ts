@@ -65,6 +65,10 @@ export interface LoungeFlows {
   filters: readonly [number, number];
   /** Each filter's backwash to waste through its BV1. */
   backwash: readonly [number, number];
+  /** Each filter's unfiltered water dumped to waste, its inlet and BV1 both open. */
+  dumps: readonly [number, number];
+  /** Each filter's drain-down through its DV1. */
+  drains: readonly [number, number];
 }
 
 /**
@@ -82,6 +86,8 @@ export interface LoungeFlows {
 export function loungeValveFlows(
   positions: Readonly<Record<string, number>>,
   running: boolean,
+  /** Which pumps run, where known: each delivers through its own discharge valve. */
+  pumps: { p1: boolean; p2: boolean } = { p1: true, p2: true },
 ): LoungeFlows {
   const still: LoungeFlows = {
     toPool: 0,
@@ -89,13 +95,19 @@ export function loungeValveFlows(
     tankDrain: 0,
     filters: [0, 0],
     backwash: [0, 0],
+    dumps: [0, 0],
+    drains: [0, 0],
   };
   if (!running) return still;
   const at = (tag: string) => {
     const valve = VALVE_BY_TAG.get(tag)!;
     return positions[valve.assetId] ?? (valve.normal === 'open' ? 1 : 0);
   };
-  const discharge = Math.max(at('PL1-P1-IV1'), at('PL1-P2-IV1'));
+  // What the running pumps deliver, each through its own discharge valve.
+  const discharge = Math.max(
+    pumps.p1 ? at('PL1-P1-IV1') : 0,
+    pumps.p2 ? at('PL1-P2-IV1') : 0,
+  );
   const filter = (n: 1 | 2) => {
     const v = (letters: string) => at(`PL1-F${n}-${letters}`);
     return {
@@ -129,6 +141,8 @@ export function loungeValveFlows(
     tankDrain,
     filters: [service[0] - backwash[0], service[1] - backwash[1]],
     backwash: [backwash[0], backwash[1]],
+    dumps: [dump[0], dump[1]],
+    drains: [3 * f[0].drain, 3 * f[1].drain],
   };
 }
 
@@ -142,6 +156,7 @@ export function loungeFlowsOf(world: {
   return loungeValveFlows(
     world.loungeValvePositions,
     circulating(world.pools.pool_01, world.plant, 'pool_01', world.motors),
+    loungePumpsRunning(world.motors),
   );
 }
 
@@ -152,3 +167,20 @@ export const loungeMeterReadings = (
   'filter-1': flows.filters[0],
   'filter-2': flows.filters[1],
 });
+
+/** Which lounge pumps run, P-201A as P1 and P-201B as P2; both, where the starters are not known. */
+export const loungePumpsRunning = (motors?: MotorsState) => ({
+  p1: motors?.starters['P-201A'].running ?? true,
+  p2: motors?.starters['P-201B'].running ?? true,
+});
+
+/** Whether a lounge pump's own discharge valve is open enough to pass water. */
+export function loungeDischargeOpen(
+  positions: Readonly<Record<string, number>>,
+  tag: 'P-201A' | 'P-201B',
+): boolean {
+  const valve = VALVE_BY_TAG.get(
+    tag === 'P-201A' ? 'PL1-P1-IV1' : 'PL1-P2-IV1',
+  )!;
+  return (positions[valve.assetId] ?? (valve.normal === 'open' ? 1 : 0)) > 0.05;
+}

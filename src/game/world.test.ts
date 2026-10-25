@@ -126,7 +126,8 @@ describe('the bathers and the water', () => {
     expect(appealOf(w).pool_01).toBe(0);
     expect(w.bathers.pools.pool_01.now).toBe(0);
     expect(w.bathers.pools.pool_01.total - from).toBeLessThan(usual / 2);
-  });
+    // A day and more of the world, simulated: slow beside the whole suite.
+  }, 20_000);
 });
 
 describe('the bathers and the halls', () => {

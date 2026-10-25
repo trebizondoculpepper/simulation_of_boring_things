@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { applyAction, newWorld, stepWorld } from '../world';
-import { checkMimic } from '../../toolkit/components/industrial-control/logic/mimic';
-import {
-  LOUNGE_VALVE_MIMIC,
-  loungeValveMimicState,
-} from '../../toolkit/gallery/logic/lounge-valve-mimic';
 import {
   LOUNGE_VALVES,
   loungeFlowsOf,
@@ -13,26 +8,9 @@ import {
 } from './lounge-valves';
 
 describe('lounge pool solenoid valves', () => {
-  it('models every installed valve and gives the local mimic an open and shut command', () => {
-    const w = newWorld();
+  it('models every installed valve', () => {
+    // Their OPEN and SHUT are the filter mimic's (`lounge-filter-mimic.test.ts`).
     expect(LOUNGE_VALVES).toHaveLength(11);
-    expect(
-      checkMimic(
-        LOUNGE_VALVE_MIMIC,
-        loungeValveMimicState(w.loungeValvePositions, {
-          p1: 1,
-          p2: 1,
-        }),
-      ),
-    ).toEqual([]);
-    for (const valve of LOUNGE_VALVES) {
-      expect(LOUNGE_VALVE_MIMIC.buttons?.map((button) => button.id)).toContain(
-        `${valve.assetId}/open`,
-      );
-      expect(LOUNGE_VALVE_MIMIC.buttons?.map((button) => button.id)).toContain(
-        `${valve.assetId}/shut`,
-      );
-    }
   });
 
   it('travels to shut, blocks its filter path, and springs shut without power, not air', () => {
