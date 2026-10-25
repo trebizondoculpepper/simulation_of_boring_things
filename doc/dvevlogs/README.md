@@ -30,11 +30,13 @@ After publication, open the resulting post and verify its title, body, links and
 
 Checked on 2026-10-25: the installed butler v15.32.0 exposes build upload and management commands, including `push`, `push-preview` and `status`, but no devlog-posting command. The official [butler documentation](https://itch.io/docs/butler/) and [upload documentation](https://itch.io/docs/butler/pushing.html) describe distributing builds; the [public server-side API reference](https://itch.io/docs/api/serverside) does not document creating devlogs. There is therefore no supported butler command or documented public API endpoint we can use to publish this Markdown as a devlog.
 
-Itch.io does support devlog posts on project pages, including build and image attachments and distribution to followers' feeds: see [Introducing devlogs](https://itch.io/updates/introducing-devlogs). The practical route is an editor publication step, performed manually or through an available authenticated browser. Butler remains the tool for build uploads; uploading a Markdown file as a downloadable artifact would not create a devlog. Automated editor publication has not yet been implemented or verified; its follow-up is in the root TODO.md.
+Itch.io does support devlog posts on project pages, including build and image attachments and distribution to followers' feeds: see [Introducing devlogs](https://itch.io/updates/introducing-devlogs). The practical route is an editor publication step, performed manually or through an available authenticated browser. Butler remains the tool for build uploads; uploading a Markdown file as a downloadable artifact would not create a devlog. Authenticated editor publication was verified for update 001 on 2026-10-25 using Chrome's Apple Events JavaScript support: select General Update, enter the body through the editor's HTML view, attach the covered build, enable Published and Save. Verify the resulting post and project access separately: a published post on a Draft project remains unavailable to anonymous visitors. Changing the project's access mode is a separate owner decision.
 
 ## Published posts
 
 | Update | Date | Headline | Local file | itch.io post |
 | ------ | ---- | -------- | ---------- | ------------ |
 
-No posts have been published through this workflow yet.
+| 001 | 2026-10-25 | A title sequence that flies through the building | [Local record](2026_10_25_001_a_title_sequence_that_flies_through_the_building.md) | [Published post](https://salimfadhley.itch.io/the-pool/devlog/1727746/a-title-sequence-that-flies-through-the-building) |
+
+Update 001 is published within the project, which remains in Draft access mode as of publication. The post is verified while signed in; anonymous requests return HTTP 404.

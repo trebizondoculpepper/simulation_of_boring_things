@@ -1010,10 +1010,18 @@ export function createFirstPerson(options: FirstPersonOptions) {
           walker.crouch = 0;
           attachedLadder = null;
           fallbackBounds = null;
-        } else if (returnTo) {
-          Object.assign(walker, returnTo.walker);
-          currentFloorY = returnTo.floor;
-          returnTo = null;
+        } else {
+          if (returnTo) {
+            Object.assign(walker, returnTo.walker);
+            currentFloorY = returnTo.floor;
+            returnTo = null;
+          }
+          // On its feet again: standing, at its eye's own height, level
+          // (a camera link's height and roll are noclip's, not a walker's).
+          walker.eyeOffset = 0;
+          walker.roll = 0;
+          walker.crouched = walker.lowCrouched = false;
+          walker.crouch = 0;
         }
         flying = shouldFly;
         forget();

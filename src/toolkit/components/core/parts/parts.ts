@@ -36,6 +36,7 @@ import {
   createPushbuttonStation,
 } from '../../industrial-control/views/cabinet-fittings';
 import type { PanelKit } from '../views/eighties-controls';
+import { createMicroLabel } from '../views/eighties-controls';
 import type { LensDamage } from '../logic/lens-damage';
 import {
   createCamSelector,
@@ -359,6 +360,8 @@ export function pushButton(
     action?: () => void;
     power?: Readable<boolean>;
     latch?: Readable<boolean>;
+    /** A symbol printed on its cap (+, −, an arrow), pressing in with it. */
+    symbol?: string;
   },
 ): Part {
   const a = beginPart(
@@ -370,6 +373,16 @@ export function pushButton(
     damageSeed: props.damageSeed,
   });
   a.object.add(view.group);
+  if (props.symbol) {
+    // Dark on a light cap, light on a dark one.
+    const light = props.colour === 'white' || props.colour === 'yellow';
+    const symbol = createMicroLabel(kit, props.symbol, {
+      height: 0.014,
+      ink: light ? '#1b1f20' : '#f1ecdc',
+    });
+    symbol.position.z = view.faceZ + 0.0006;
+    view.cap.add(symbol);
+  }
   a.legend(props.legend, 0.03);
   let damaged: LensDamage = 'intact';
   const button = createMomentary({

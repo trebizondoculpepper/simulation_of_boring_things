@@ -228,7 +228,9 @@ export function createCabinetMimic(
       })()
     : null;
   // The water's temperature: an LED readout, its legend on Dymo tape.
-  // Or, the jacuzzi's, a 16 × 2 character LCD in its place.
+  // Or, the jacuzzi's, a 16 × 2 character LCD in its place, its legend
+  // printed with the panel, and set far enough left that the thermostat's
+  // + and − stand clear of its bezel.
   const lcd =
     display === 'lcd'
       ? createCharacterLcd(kit, {
@@ -242,20 +244,16 @@ export function createCabinetMimic(
     ? null
     : createSevenSegment(kit, 3, { digitHeight: 0.022 });
   const shown = lcd ?? readout!;
-  shown.group.position.set(
-    width / 2 - (lcd ? 0.1 : 0.07),
-    lcd ? 0.012 : 0.02,
-    0.002,
-  );
+  // Its middle: the LCD's bezel (0.13 m wide) ends 1 cm short of the + and −.
+  const shownX = width / 2 - (lcd ? 0.115 : 0.07);
+  shown.group.position.set(shownX, lcd ? 0.012 : 0.02, 0.002);
   shown.group.traverse((o) => (o.userData.live = true));
   group.add(shown.group);
-  const tape = createDymoLabel(kit, lcd ? 'STATUS' : 'WATER °C', { seed: 9 });
-  tape.position.set(
-    width / 2 - (lcd ? 0.1 : 0.07),
-    lcd ? -0.03 : -0.025,
-    0.003,
-  );
-  group.add(tape);
+  const legend = lcd
+    ? createMicroLabel(kit, 'STATUS', { height: 0.008, ink: '#1b1f20' })
+    : createDymoLabel(kit, 'WATER °C', { seed: 9 });
+  legend.position.set(shownX, lcd ? -0.03 : -0.025, lcd ? 0.002 : 0.003);
+  group.add(legend);
   let lastLines = '';
   // The thermostat: ▲ and ▼ beside the readout, and its SET lamp.
   let shownFor = 0;
@@ -269,7 +267,10 @@ export function createCabinetMimic(
   ] as const) {
     const button = parts.add(
       pushButton(kit, {
-        colour: 'black',
+        // White, to be seen on the dark panel beside its readout, its
+        // + or − printed on its cap.
+        colour: 'white',
+        symbol: legend,
         name: `Spa set thermostat ${step > 0 ? 'up' : 'down'}`,
         action: () => press(step),
       }),
@@ -277,12 +278,6 @@ export function createCabinetMimic(
     button.object.position.set(width / 2 - 0.018, y, 0.002);
     button.object.scale.setScalar(0.7);
     group.add(button.object);
-    const mark = createMicroLabel(kit, legend, {
-      height: 0.015,
-      ink: '#1b1f20',
-    });
-    mark.position.set(width / 2 - 0.034, y, 0.002);
-    group.add(mark);
   }
   // Over the readout, clear of the print.
   const setLamp = at(width / 2 - 0.05, 0.06, '#ffb02a');

@@ -751,6 +751,8 @@ export const jacuzziFlow = (world: World): JacuzziCirculation => ({
     serviceAvailable(world.plant, 'plant_pool_03', 'heat') &&
     jacuzziPaths(world.installedValves).heating,
   overflowShut: !jacuzziPaths(world.installedValves).overflow,
+  // Its balance tank's drain to waste, by hand, by gravity.
+  tankDrain: jacuzziPaths(world.installedValves).tankDrain,
 });
 
 /**
@@ -842,6 +844,15 @@ export const jacuzziRuns = (world: World) =>
 export const jacuzziDischarging = (world: World) =>
   world.pools.pool_03.drainDown &&
   world.pools.pool_03.level > -poolDepth('pool_03') + 0.001;
+
+/**
+ * Whether the jacuzzi's balance tank is running away to waste down its own
+ * drain (PL3-BT1-DV1, opened by hand): its valve open and water still in
+ * the tank. By gravity, pumps and power or none.
+ */
+export const jacuzziTankDraining = (world: World) =>
+  jacuzziPaths(world.installedValves).tankDrain &&
+  world.pools.pool_03.balance > 0.002;
 
 /** The world's fixed time step, seconds. */
 export const STEP = 0.1;

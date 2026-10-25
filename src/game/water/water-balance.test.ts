@@ -3,6 +3,10 @@ import { POOLS } from '../plant-sizing/pools.config';
 import { ASSUME, sizePlant } from '../plant-sizing/sizing';
 import { flows, startingWater, stepWater } from './water-balance';
 import type { PoolWater } from './water-balance';
+import {
+  JACUZZI_BALANCE_TANK,
+  JACUZZI_TANK_DRAIN,
+} from '../plant/spa-balance-tank';
 
 /** Each pool with pool plant, as the plant sizing has it. */
 const pools: PoolWater[] = sizePlant(POOLS)
@@ -113,5 +117,68 @@ describe('with the water supply shut off', () => {
     // spilt; and evaporating on.
     expect(-s.level).toBeGreaterThan(0.3);
     expect(s.spilt).toBeGreaterThan(50);
+  });
+});
+
+describe('a balance tank’s own drain to waste', () => {
+  // The jacuzzi's tank (`spa-balance-tank.ts`), its pumps stopped, its
+  // make-up shut, the pool's main drains taking nothing back to it.
+  const J = JACUZZI_BALANCE_TANK;
+  const spa: PoolWater = {
+    ...pools[0],
+    name: 'Jacuzzi',
+    tank: J.volume,
+    tankDepth: J.depth,
+    float: J.float,
+    lowLow: J.lowLow,
+    mainDrainShare: 0,
+    makeUpRate: 2.8,
+  };
+  const stopped = (tankDrain: number, makeUpOpen = false) =>
+    stepWater(
+      spa,
+      {
+        ...startingWater(spa),
+        level: 0,
+        pumps: false,
+        makeUpOpen,
+        tankDrain,
+      },
+      10 / 60,
+      5 / 3600,
+    );
+
+  it('empties the tank by gravity, the pumps stopped, in some six minutes from its float', () => {
+    const open = stopped(JACUZZI_TANK_DRAIN.coefficient);
+    expect(open.tankVolume).toBeLessThan(0.005);
+    expect(open.spilt).toBeCloseTo(spa.tank * spa.float, 2);
+    // Not all at once: after three minutes, still some way to go.
+    const partway = stepWater(
+      spa,
+      {
+        ...startingWater(spa),
+        level: 0,
+        pumps: false,
+        makeUpOpen: false,
+        tankDrain: JACUZZI_TANK_DRAIN.coefficient,
+      },
+      3 / 60,
+      5 / 3600,
+    );
+    expect(partway.tankVolume).toBeGreaterThan(0.05);
+    expect(partway.tankVolume).toBeLessThan(spa.tank * spa.float * 0.6);
+  });
+
+  it('holds its water with the drain shut', () => {
+    const shut = stopped(0);
+    expect(shut.tankVolume).toBeCloseTo(spa.tank * spa.float, 6);
+    expect(shut.spilt).toBe(0);
+  });
+
+  it('is held a few centimetres deep, under its low-low, while the make-up runs', () => {
+    const s = stopped(JACUZZI_TANK_DRAIN.coefficient, true);
+    expect(s.tankVolume).toBeGreaterThan(0.01);
+    expect(s.tankVolume).toBeLessThan(spa.tank * spa.lowLow);
+    expect(s.tripped).toBe(true);
   });
 });

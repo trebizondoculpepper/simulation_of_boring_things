@@ -7,6 +7,7 @@ import {
   jacuzziPlate,
   jacuzziPlumbing,
   jacuzziRuns,
+  jacuzziTankDraining,
   newWorld,
   pressJacuzziPlate,
 } from '../../../game/world';
@@ -300,5 +301,38 @@ describe('the jacuzzi cabinet, with its external balance tank', () => {
     );
     expect(on.pools.pool_03.balance).toBeLessThan(off.pools.pool_03.balance);
     expect(on.pools.pool_03.tripped).toBe(false);
+  });
+
+  it('empties its balance tank to waste down its own drain, by hand, with no power and its make-up shut', () => {
+    // The cabinet isolated, the room's power or none: gravity does it.
+    let w = applyAction(start, {
+      type: 'plant/isolator',
+      name: 'Jacuzzi cabinet isolator',
+      on: false,
+    });
+    w = applyAction(w, { type: 'pool/make-up', pool: 'pool_03', open: false });
+    const shut = advance(w, 600, 1);
+    expect(jacuzziTankDraining(shut)).toBe(false);
+    expect(shut.pools.pool_03.balance).toBeGreaterThan(
+      JACUZZI_BALANCE_TANK.float,
+    );
+    const opened = valve(w, 'tankDrain', true);
+    expect(jacuzziTankDraining(opened)).toBe(true);
+    // Down past its low-low in ten minutes, the tub's main drains still
+    // running back into it by gravity, slower than it drains away.
+    const ten = advance(opened, 600, 1);
+    expect(ten.pools.pool_03.balance).toBeLessThan(JACUZZI_BALANCE_TANK.lowLow);
+    expect(ten.pools.pool_03.level).toBeLessThan(shut.pools.pool_03.level);
+    // And in an hour the tank is empty, and the tub with it.
+    const hour = advance(ten, 3000, 1);
+    expect(hour.pools.pool_03.balance).toBeLessThan(0.002);
+    expect(jacuzziTankDraining(hour)).toBe(false);
+  });
+
+  it('trips the running pump on its tank’s low-low as the drain outruns the make-up', () => {
+    const w = advance(valve(start, 'tankDrain', true), 5 * 60, 1);
+    expect(w.pools.pool_03.tripped).toBe(true);
+    expect(jacuzziCabinetPanel(w).flowing).toBe(false);
+    expect(w.pools.pool_03.balance).toBeLessThan(JACUZZI_BALANCE_TANK.float);
   });
 });

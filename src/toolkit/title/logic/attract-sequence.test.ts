@@ -24,11 +24,11 @@ const run = (s: AttractState, seconds: number, ready = true, dt = 0.05) => {
 };
 
 describe('the title’s attract sequence', () => {
-  it('has six shots in five rooms, for now, each a path, start to end, none a loop or an orbit', () => {
+  it('has eight shots in seven rooms, for now, each a path, start to end, none a loop or an orbit', () => {
     expect(ATTRACT_SHOTS.every((s) => s.path?.open)).toBe(true);
-    expect(ATTRACT_SHOTS).toHaveLength(6);
-    expect(new Set(ATTRACT_SHOTS.map((s) => s.room)).size).toBe(5);
-    expect(new Set(ATTRACT_SHOTS.map((s) => s.id)).size).toBe(6);
+    expect(ATTRACT_SHOTS).toHaveLength(8);
+    expect(new Set(ATTRACT_SHOTS.map((s) => s.room)).size).toBe(7);
+    expect(new Set(ATTRACT_SHOTS.map((s) => s.id)).size).toBe(8);
     expect(ATTRACT_SHOTS.every((s) => s.path)).toBe(true);
   });
 
@@ -141,10 +141,10 @@ describe('the title’s attract sequence', () => {
     expect(s.shotTime).toBeCloseTo(0.5 * span(ATTRACT_SHOTS[coming]), 9);
   });
 
-  it('has three pool hall shots and three back room shots, so it can alternate', () => {
+  it('has three pool hall shots and five back room shots, so it can alternate', () => {
     const pools = ATTRACT_SHOTS.filter(inPoolRoom).length;
     expect(pools).toBe(3);
-    expect(ATTRACT_SHOTS.length - pools).toBe(3);
+    expect(ATTRACT_SHOTS.length - pools).toBe(5);
   });
 
   it('plays its shots in a random order, a pool hall’s and a back room’s by turns, never one room twice running nor a shot straight back', () => {

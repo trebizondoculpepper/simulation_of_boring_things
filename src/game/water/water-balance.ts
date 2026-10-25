@@ -24,6 +24,10 @@
  * mean depth, its volume over its area). Its balance tank sits apart
  * meanwhile, topped up by the make-up if that is left open.
  *
+ * A tank may have a drain to waste of its own (`tankDrain`, the jacuzzi's):
+ * open, it empties the tank by gravity, pumps or no pumps, as an orifice
+ * under the tank's head, against whatever the make-up puts in.
+ *
  * Heights are metres from the pool's overflow edge (its lip), up; flows
  * are m³/h; time is hours.
  */
@@ -73,7 +77,7 @@ export interface WaterState {
   drainRate: number;
   /** Pumped to the sewer by draining down so far, m³. */
   drained: number;
-  /** Water lost to waste so far, by overflow, backwash; and evaporated, m³. */
+  /** Water lost to waste so far, by overflow (and the tank's drain), backwash; and evaporated, m³. */
   spilt: number;
   backwashed: number;
   evaporated: number;
@@ -106,6 +110,11 @@ export interface WaterState {
    * Olympic's level switch band, or its HAND), in place of the float.
    */
   makeUpCalling?: boolean;
+  /**
+   * The tank's own drain to waste, open: its flow per root metre of the
+   * tank's water depth, m³/h (`JACUZZI_TANK_DRAIN`); shut, 0 or absent.
+   */
+  tankDrain?: number;
 }
 
 /** A pool brimming, its tank at its float, its pumps running, its make-up open. */
@@ -162,6 +171,9 @@ export function flows(p: PoolWater, s: WaterState) {
     s.makeUpOpen && (s.makeUpCalling ?? s.tankVolume < p.tank * p.float)
       ? p.makeUpRate
       : 0;
+  // The tank's drain, by gravity under the tank's head.
+  const tankDepth = (p.tankDepth * Math.max(0, s.tankVolume)) / p.tank;
+  const tankDrain = s.tankDrain ? s.tankDrain * Math.sqrt(tankDepth) : 0;
   return {
     circulation,
     overflow,
@@ -169,6 +181,7 @@ export function flows(p: PoolWater, s: WaterState) {
     evaporation: empty ? 0 : p.evaporation,
     makeUp,
     toSewer,
+    tankDrain,
   };
 }
 
@@ -201,6 +214,10 @@ export function stepWater(
       spilt += tank - p.tank;
       tank = p.tank;
     }
+    // Its drain to waste: no more than there is.
+    const drainedOut = Math.min(f.tankDrain * dt, Math.max(0, tank));
+    tank -= drainedOut;
+    spilt += drainedOut;
     let backwashed = s.backwashed;
     const day = Math.floor(s.time / 24);
     const time = s.time + dt;

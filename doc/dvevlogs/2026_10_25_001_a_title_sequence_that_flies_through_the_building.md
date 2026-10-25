@@ -2,7 +2,7 @@
 title: 'A title sequence that flies through the building'
 date: '2026-10-25'
 update_number: 1
-status: draft
+status: published
 previous_post: null
 coverage_start: '2026-10-24'
 coverage_end: '2026-10-25'
@@ -10,8 +10,10 @@ from_commit_exclusive: '536f9f0'
 to_commit_inclusive: 'f93cb85'
 build_version: '0.1.265'
 deployment_verified: true
-published_at: null
-itch_url: null
+published_at: '2026-10-25T00:55:35Z'
+itch_url: 'https://salimfadhley.itch.io/the-pool/devlog/1727746/a-title-sequence-that-flies-through-the-building'
+publicly_accessible: false
+visibility_note: 'Post published; the project remains in Draft access mode, so anonymous visitors receive HTTP 404.'
 ---
 
 # A title sequence that flies through the building

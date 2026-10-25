@@ -6,7 +6,7 @@ import { POOLS } from '../plant-sizing/pools.config';
 import { ASSUME, sizePlant } from '../plant-sizing/sizing';
 import { phTarget } from './chemicals';
 import { BALANCE_TANK, volumeOf } from './balance-tank';
-import { JACUZZI_BALANCE_TANK } from './spa-balance-tank';
+import { JACUZZI_BALANCE_TANK, JACUZZI_TANK_DRAIN } from './spa-balance-tank';
 import { AMBIENT, stepThermal, thermalParams } from './thermal';
 import type { ThermalParams } from './thermal';
 import type { Chemical } from './chemicals';
@@ -265,6 +265,11 @@ export interface JacuzziCirculation {
   heat: boolean;
   /** Its gutter's way to the balance tank shut: the overflow spills. */
   overflowShut?: boolean;
+  /**
+   * Its balance tank's drain to waste open (`JACUZZI_TANK_DRAIN`): the
+   * tank empties by gravity, pumps or no pumps, power or no power.
+   */
+  tankDrain?: boolean;
 }
 
 /** Whether each chemical is to be had: its store not run dry. */
@@ -484,7 +489,13 @@ export function stepPoolsWater(
         drainDown,
         drainRate,
         ...(id === 'pool_03'
-          ? { gravityDrain: true, overflowShut: !!jacuzzi?.overflowShut }
+          ? {
+              gravityDrain: true,
+              overflowShut: !!jacuzzi?.overflowShut,
+              tankDrain: jacuzzi?.tankDrain
+                ? JACUZZI_TANK_DRAIN.coefficient
+                : 0,
+            }
           : {}),
         drained: 0,
         spilt: 0,

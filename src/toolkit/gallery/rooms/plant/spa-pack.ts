@@ -379,21 +379,25 @@ export function buildSpaPack(
   const dark = t.paint('#2f3436', 0.6);
 
   // The carcass: back, sides, top, plinth; open at the front for the doors.
+  // The back and sides stand on the plinth, not down beside it, so no face
+  // of theirs lies in the plinth's (which flickered where they met).
   const hd = c.d / 2;
-  t.box(body, steel, c.w, c.h, c.wall, 0, c.h / 2, -hd + c.wall / 2);
+  const plinth = 0.1;
+  const tall = c.h - plinth;
+  t.box(body, steel, c.w, tall, c.wall, 0, plinth + tall / 2, -hd + c.wall / 2);
   for (const side of [-1, 1])
     t.box(
       body,
       steel,
       c.wall,
-      c.h,
+      tall,
       c.d,
       side * (c.w / 2 - c.wall / 2),
-      c.h / 2,
+      plinth + tall / 2,
       0,
     );
   t.box(body, steel, c.w, c.wall, c.d, 0, c.h - c.wall / 2, 0);
-  t.box(body, dark, c.w, 0.1, c.d, 0, 0.05, 0);
+  t.box(body, dark, c.w, plinth, c.d, 0, plinth / 2, 0);
   // Louvres high in each side, for its ventilation.
   for (const side of [-1, 1])
     for (let k = 0; k < 5; k++)

@@ -242,6 +242,8 @@ export interface PushButtonView {
   group: Group;
   /** The part that takes a click. */
   cap: Object3D;
+  /** Its cap's face, in the cap's frame: where a symbol printed on it sits. */
+  faceZ: number;
   /** It dips in and springs back. */
   press(): void;
   /** Light it, for an illuminated button. */
@@ -332,6 +334,8 @@ export function createPushButton(
   return {
     group,
     cap,
+    /** Its cap's face, in the cap's frame: where a symbol printed on it sits. */
+    faceZ: capDepth,
     press() {
       held = 0.18;
     },

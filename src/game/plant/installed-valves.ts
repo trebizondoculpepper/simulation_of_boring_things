@@ -389,6 +389,12 @@ export const INSTALLED_VALVES: Readonly<
       tag: 'PL3-JZ1-IV8',
       normal: 'open',
     },
+  // The jacuzzi's balance tank's manual drain to waste, at its foot, shut in service (2026-10-25).
+  'plant_pool_03|Balance tank drain to waste|Balance tank drain valve': {
+    assetId: 'valve-0101',
+    tag: 'PL3-BT1-DV1',
+    normal: 'closed',
+  },
   'plant_pool_04|Overflow from the spa|Overflow from the spa valve': {
     assetId: 'valve-0094',
     tag: 'PL4-PW1-IV2',

@@ -5,6 +5,7 @@ import {
 import { describe, expect, it } from 'vite-plus/test';
 import {
   CABINET_BUS,
+  cabinetBalanceTank,
   cabinetBodyIn,
   cabinetBusbar,
   cabinetGully,
@@ -50,9 +51,9 @@ describe.each([
     // switch-fuse and from the switch-fuse to the isolator besides; in
     // the footbath's room its make-up main, passing through; in the
     // jacuzzi's, its balance tank's: the spa's overflow into it, its
-    // make-up and its own overflow.
+    // make-up, its own overflow and its drain.
     expect(runs.length).toBe(
-      ports.length + 3 + (room === 'plant_pool_04' ? 1 : 3),
+      ports.length + 3 + (room === 'plant_pool_04' ? 1 : 4),
     );
     for (const kind of [
       'pool water',
@@ -138,9 +139,13 @@ describe.each([
 
   it('uses motor operators on every fitted valve, worked from a panel on a wall', () => {
     expect(runs.filter((run) => run.valve).length).toBeGreaterThan(3);
+    // But the jacuzzi's balance tank's drain, a lever valve worked by hand
+    // (the owner, 2026-10-25).
     expect(
       runs
-        .filter((run) => run.valve)
+        .filter(
+          (run) => run.valve && run.name !== 'Balance tank drain to waste',
+        )
         .every((run) => run.valve!.operator === 'motor'),
     ).toBe(true);
     // Its panel on a wall's face, at eye height.
@@ -153,6 +158,42 @@ describe.each([
     expect(panel.y).toBeGreaterThan(1.4);
     expect(panel.y).toBeLessThan(1.9);
   });
+
+  if (room === 'plant_pool_03') {
+    it('drains its balance tank from its foot, through a lever valve within reach, into a tundish of its own', () => {
+      const tank = cabinetBalanceTank(room)!;
+      const drain = named('Balance tank drain to waste');
+      // From the tank's nozzle, on its side at its foot.
+      const [nx, ny, nz] = drain.points[0];
+      expect(near(drain.points[0], tank.drainOut)).toBe(true);
+      expect(Math.hypot(nx - tank.x, nz - tank.z)).toBeCloseTo(tank.r, 6);
+      expect(ny).toBeLessThan(0.3);
+      // Down into its tundish, over its gully, across an air gap.
+      const end = drain.points.at(-1)!;
+      expect(end[0]).toBeCloseTo(tank.drainGully[0]);
+      expect(end[2]).toBeCloseTo(tank.drainGully[2]);
+      expect(end[1]).toBeLessThan(0.25);
+      expect(end[1]).toBeGreaterThan(0.12);
+      // Falling all the way, as a gravity drain must.
+      for (let i = 1; i < drain.points.length; i++)
+        expect(drain.points[i][1]).toBeLessThanOrEqual(
+          drain.points[i - 1][1] + 1e-9,
+        );
+      // Its lever valve on the run, out from the tank toward the aisle.
+      const v = drain.valve!;
+      expect(v.operator).toBe('lever');
+      expect(v.installed).toBe(true);
+      expect(v.at[0]).toBeGreaterThan(tank.x + tank.r + 0.15);
+      // Behind the line of the cabinet's front, out of its doors' swing,
+      // and north of its end.
+      const body = cabinetBodyIn(cabinet, jets);
+      expect(v.at[0]).toBeLessThan(body.max[0]);
+      expect(end[0]).toBeLessThan(body.max[0] - 0.2);
+      expect(v.at[2]).toBeLessThan(body.min[2] - 0.5);
+      // Clear of the tank's sight gauge, east on its middle.
+      expect(Math.abs(nz - tank.z)).toBeGreaterThan(0.2);
+    });
+  }
 
   if (room === 'plant_pool_04') {
     it('keeps the draw-down valve clear of the cabinet back', () => {

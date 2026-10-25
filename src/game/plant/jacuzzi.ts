@@ -85,6 +85,8 @@ export const JACUZZI_VALVES = {
   air: 'valve-0087',
   heatingFlow: 'valve-0092',
   heatingReturn: 'valve-0093',
+  /** Its balance tank's manual drain to waste, shut in service. */
+  tankDrain: 'valve-0101',
 } as const;
 
 /**
@@ -109,6 +111,8 @@ export function jacuzziPaths(valves?: Record<string, boolean>) {
     air: open('air'),
     /** The heating's primary through its heat exchanger. */
     heating: open('heatingFlow') && open('heatingReturn'),
+    /** Its balance tank's drain to waste: shut unless opened. */
+    tankDrain: valves?.[JACUZZI_VALVES.tankDrain] ?? false,
   };
 }
 

@@ -105,3 +105,29 @@ export const IDEAL_BALANCE_TANK: BalanceTankReading = {
   low: false,
   filling: false,
 };
+
+/**
+ * The jacuzzi's balance tank's drain to waste (the owner, 2026-10-25): a
+ * DN50 lever valve on a nozzle at the tank's foot, discharging by gravity
+ * into a tundish on a floor gully. It runs as an orifice under the tank's
+ * head (Torricelli): its flow `coefficient × √depth`, the coefficient
+ * `Cd · a · √(2g)` for its 45 mm bore, `Cd` 0.5 for the nozzle's entry,
+ * the valve and the pipe's bends. So about 8.6 m³/h from the float's
+ * depth, falling as the tank empties: from the float in about six
+ * minutes, from brim full in about ten. Its make-up (some 2.8 m³/h) holds
+ * it, open, a few centimetres deep, under the low-low; to empty it, shut
+ * the make-up. With the pump stopped the tub's main drains run on into
+ * the tank by gravity (`water-balance.ts`), so the tub empties through
+ * it too, in about an hour, before the tank is empty.
+ */
+export const JACUZZI_TANK_DRAIN = (() => {
+  const bore = 0.045;
+  const cd = 0.5;
+  const area = (Math.PI * bore * bore) / 4;
+  return {
+    bore,
+    cd,
+    /** Its flow per root metre of head, m³/h. */
+    coefficient: cd * area * Math.sqrt(2 * 9.81) * 3600,
+  };
+})();

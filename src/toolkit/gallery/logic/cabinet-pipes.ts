@@ -489,7 +489,12 @@ export function cabinetValvePanel(room: string, trial?: Placed) {
  * cabinet's runs; its nozzles, in the room: its suction outlet low on its
  * south side, toward the cabinet; the spa's overflow in through its lid;
  * its make-up's float valve on its lid; its overflow out high on its
- * north side, down into a tundish on a floor gully of its own.
+ * north side, down into a tundish on a floor gully of its own; and its
+ * drain to waste (the owner, 2026-10-25) out of its foot on its east
+ * side, toward the room, south of its sight gauge, through a lever valve
+ * a crouching hand reaches from the aisle, into a tundish on a gully of
+ * its own beside it, behind the line of the cabinet's front, so out of
+ * its doors' swing.
  */
 export function cabinetBalanceTank(room: string) {
   if (room !== 'plant_pool_03') return null;
@@ -512,8 +517,23 @@ export function cabinetBalanceTank(room: string) {
     overflowOut: [x, top - 0.12, z - r] as Vec3,
     /** Its overflow's tundish and gully, beyond its north side. */
     gully: [x, 0, z - r - 0.3] as Vec3,
+    /** Its drain's nozzle, at its foot on its east side, south of its gauge. */
+    drainOut: [
+      x + Math.sqrt(r * r - TANK_DRAIN_SOUTH ** 2),
+      TANK_DRAIN_LEVEL,
+      z + TANK_DRAIN_SOUTH,
+    ] as Vec3,
+    /** Its drain's tundish and gully, out toward the aisle. */
+    drainGully: [x + r + TANK_DRAIN_REACH, 0, z + TANK_DRAIN_SOUTH] as Vec3,
   };
 }
+
+/** The tank's drain leaves its foot this high, over its tundish's rim. */
+const TANK_DRAIN_LEVEL = 0.21;
+/** This far south of the tank's middle, clear of its sight gauge (east, on its middle). */
+const TANK_DRAIN_SOUTH = 0.3;
+/** Its tundish this far out from the tank's side: room for the valve and its lever. */
+const TANK_DRAIN_REACH = 0.5;
 
 /** The spa's overflow comes through the north wall this high, then drops into the tank. */
 const TANK_OVERFLOW_LEVEL = 2.25;
@@ -812,6 +832,36 @@ export function cabinetPipes(
         [gx, 0.17, gz],
       ],
       through: [],
+    });
+    // Its drain to waste: out of its foot, through its lever valve, and
+    // down into its own tundish. Worked by hand, unlike the cabinet's
+    // motorised valves: a drain opened once in a while, to empty the tank.
+    const [dx, dy, dz] = tank.drainOut;
+    const [ex, , ez] = tank.drainGully;
+    runs.push({
+      name: 'Balance tank drain to waste',
+      kind: 'pvc-drain',
+      od: 0.05,
+      service: 'drainage',
+      label: 'TANK DRAIN',
+      flow: 1,
+      points: [
+        [dx, dy, dz],
+        [ex, dy, ez],
+        [ex, 0.17, ez],
+      ],
+      through: [],
+      valve: {
+        id: 'Balance tank drain valve',
+        at: [(dx + ex) / 2, dy, dz],
+        axis: 'x',
+        // Turned so its lever, shut, points south, away from the tank's
+        // sight gauge, toward the hand reaching in from the aisle.
+        facing: -Math.PI / 2,
+        operator: 'lever',
+        installed: true,
+        name: 'Balance tank drain valve',
+      },
     });
   }
   if (room === 'plant_pool_04') {

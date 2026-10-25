@@ -6,7 +6,12 @@ import {
   PlaneGeometry,
 } from 'three';
 import type { WebGLRenderer } from 'three';
-import { labelOpacity, projectedLabelHeight } from './label-visibility';
+import {
+  LABEL_REACH,
+  labelOpacity,
+  projectedLabelHeight,
+  reachedLabelHeight,
+} from './label-visibility';
 
 describe('printed label visibility', () => {
   it('fades continuously across its readable screen-size range', () => {
@@ -15,6 +20,19 @@ describe('printed label visibility', () => {
     expect(labelOpacity(8.5)).toBeCloseTo(0.5);
     expect(labelOpacity(12)).toBe(1);
     expect(labelOpacity(20)).toBe(1);
+  });
+
+  it('stays readable 1.5 m further off: judged as if that much nearer', () => {
+    expect(LABEL_REACH).toBe(1.5);
+    // A label that would just fade out at 3 m now fades out at 4.5 m.
+    const atThree = 5;
+    const sizeAt = (d: number) => (atThree * 3) / d;
+    expect(labelOpacity(reachedLabelHeight(sizeAt(4.5), 4.5))).toBe(0);
+    expect(labelOpacity(reachedLabelHeight(sizeAt(4.4), 4.4))).toBeGreaterThan(
+      0,
+    );
+    // Within the reach, always clear.
+    expect(labelOpacity(reachedLabelHeight(1, 1.2))).toBe(1);
   });
 
   it('responds to camera zoom as well as distance', () => {

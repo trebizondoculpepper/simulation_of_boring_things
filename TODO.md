@@ -48,6 +48,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Architectural features
 
+- [ ] **Lounge plant room door to the main corridor:** investigate the owner’s report at `?room=plant_pool_01&x=-0.23&y=-1.71&z=3.93&yaw=179.0&pitch=-10.7&zoom=1.000`. The corridor loads and renders when its joint is forced open, but the normal door interaction and crossing have not yet been verified.
 - [ ] **The reception, the changing village and the showers, put back as new sections** (the owner, 2026-10-23), with the reception's **speed gates** ([039](doc/prompts/039-reception-speed-gates.md), reference photographs in `doc/research/reception-turnstiles/`): glass swing-wing turnstiles, free-flow, opening as the walker passes through; their appearance and their motion modelled in a dev room first.
 - [ ] **A ceiling dome CCTV camera** (seen beside the halo panel in `doc/research/lighting/01-direct-indirect-halo-panel.jpg`; [040](doc/prompts/040-direct-indirect-panel.md)): a possible later item, under a fictional maker.
 
@@ -96,7 +97,8 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Housekeeping
 
-- [ ] **Daily devlog publication** (the owner, 2026-10-25; [workflow and template](doc/dvevlogs/README.md)): drafts are compiled on request in `doc/dvevlogs/` as `yyyy_mm_dd_NNN_headline_feature.md`. On the first publication request, verify an authenticated itch.io editor route, publish the selected draft and record its URL and source coverage. Butler v15.32.0 has no devlog-posting command; browser publication has not yet been implemented or exercised.
+- [x] **Daily devlog publication** (done 2026-10-25; commit: “Add jacuzzi tank drain, camera shots and devlog publication”; [workflow and template](doc/dvevlogs/README.md)): authenticated Chrome editor publication verified with [update 001](https://salimfadhley.itch.io/the-pool/devlog/1727746/a-title-sequence-that-flies-through-the-building), attached build 0.1.265, and URL, publication time and source coverage recorded locally. Butler remains for build uploads. The project is still in Draft access mode, so the published post is available only to those who can see the project.
+- [ ] **Public itch.io visibility, when the owner requests it:** the project is in Draft access mode; anonymous visitors receive HTTP 404 for both the game and published devlog 001. Making the project public is separate from publishing a devlog.
 - [ ] **How to make the world model faster, an investigation** ([042](doc/prompts/042-world-model-speed-investigation.md), the owner, 2026-10-24): experiments, not delivery: measure a world step (about 25 µs today, 45 % of it finding the foot spa's valves by tag) and an hour's catch-up (about 0.8 s), try resolving addresses once, caching flow solutions by line-up, event-driven catch-up, a compiled numerical form and a worker, and report which steps give the most benefit for their cost.
 - [ ] **The diary entry for 2026-10-23** (`diary/`): the Olympic plant room's redo, the tank hall, the solenoid valves, the five-valve battery, the world's battery and tank, the water effects.
 - [ ] **The room-name overlay after a hand-over through a door:** check it updates (it did when walking into the tank hall on 2026-10-23).

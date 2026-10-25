@@ -54,7 +54,7 @@ import {
   VALVE_STOP,
 } from '../../components/plant/audio/actuated-valve';
 import { footbathDischarging } from '../../../game/plant/footbath-discharge';
-import { jacuzziDischarging } from '../../../game/world';
+import { jacuzziDischarging, jacuzziTankDraining } from '../../../game/world';
 import { machineTone } from '../../components/sound/audio/machine-tones';
 import { drainGurgle } from '../../components/plant/audio/drain';
 import { createFallingWater } from '../../components/plant/views/falling-water';
@@ -374,10 +374,24 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   const tank = tankAt
     ? createSpaBalanceTank(kit, { ...JACUZZI_BALANCE_TANK, tag: 'PL3-BT1' })
     : null;
+  // Its own drain's tundish, its water falling into it and heard while
+  // its lever valve is open and there is water to run away.
+  let tankMouth: Mesh | null = null;
+  let tankFall: ReturnType<typeof createFallingWater> | null = null;
+  let tankGurgling = false;
   if (tank && tankAt) {
     tank.group.position.set(tankAt.x, floorY, tankAt.z);
     group.add(tank.group);
     tundishOnGully(tankAt.gully);
+    tankMouth = tundishOnGully(tankAt.drainGully);
+    tankFall = createFallingWater(kit, DRAIN_STREAM);
+    tankFall.group.position.set(
+      tankAt.drainGully[0],
+      floorY + 0.17,
+      tankAt.drainGully[2],
+    );
+    tankFall.set(0, 0.17 - 0.08);
+    group.add(tankFall.group);
   }
   const gully = cabinetGully(room);
   if (gully) {
@@ -446,6 +460,9 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
         if (drainMouth) partAudio.hold(drainMouth, null);
         gurgling = false;
         drainFall?.dispose();
+        if (tankMouth) partAudio.hold(tankMouth, null);
+        tankGurgling = false;
+        tankFall?.dispose();
       }
     },
     /** Silence any valve motor still running, and the drain. */
@@ -453,6 +470,8 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       for (const stop of motorStops) stop();
       if (drainMouth) partAudio.hold(drainMouth, null);
       drainFall?.dispose();
+      if (tankMouth) partAudio.hold(tankMouth, null);
+      tankFall?.dispose();
     },
     update(delta: number) {
       // Its balance tank's gauge, at the world's level.
@@ -488,6 +507,17 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
         drainFall?.set(running ? 0.6 : 0, 0.17 - 0.08);
       }
       drainFall?.update(delta);
+      // The balance tank's drain, running as its valve and its water allow.
+      if (tankMouth && store) {
+        const draining = jacuzziTankDraining(store.world.value);
+        const heard = audible && draining;
+        if (heard !== tankGurgling) {
+          tankGurgling = heard;
+          partAudio.hold(tankMouth, heard ? drainGurgle() : null, tankMouth);
+        }
+        tankFall?.set(draining ? 0.6 : 0, 0.17 - 0.08);
+      }
+      tankFall?.update(delta);
       panel?.update(delta);
     },
   };

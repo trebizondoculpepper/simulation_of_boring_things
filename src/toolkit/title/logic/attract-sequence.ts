@@ -206,6 +206,49 @@ const jacuzziPlantPath = createCameraPath(
   JACUZZI_PLANT_PATH.speed,
 );
 
+/**
+ * The boiler house's move (the owner, 2026-10-25): a track down the room
+ * past the boilers, then, slowly, a dolly zoom: the camera drawing back as
+ * its lens widens (1.66× to 0.77×) and its roll deepens, and pushing in
+ * again to the same framing.
+ */
+export const BOILER_PATH: { keys: readonly CameraKey[]; speed: number } = {
+  keys: [
+    '?x=-0.71&y=1.77&z=4.14&yaw=270.9&pitch=-0.6&zoom=1.000&roll=0.0',
+    '?x=-0.61&y=1.73&z=-5.23&yaw=272.0&pitch=-6.1&zoom=1.000&roll=0.0',
+    '?x=-0.98&y=1.69&z=-5.24&yaw=271.5&pitch=-5.2&zoom=1.655&roll=5.3',
+    '?x=-2.11&y=1.59&z=-5.27&yaw=271.5&pitch=-5.2&zoom=0.770&roll=10.0',
+    '?x=-0.98&y=1.69&z=-5.24&yaw=271.5&pitch=-5.2&zoom=1.655&roll=5.3',
+  ]
+    .map(parseViewLink)
+    // Its end slow (the owner): settling into the zoom, then drawing back
+    // and pushing in again, lens, roll and dolly together.
+    .map((k, i) => ({ ...k, seconds: [0, 0, 3, 6, 6][i] })),
+  speed: 0.7,
+};
+const boilerPath = createCameraPath(BOILER_PATH.keys, BOILER_PATH.speed);
+
+/**
+ * The air plant room's move (the owner, 2026-10-25): a long straight track
+ * high down the room on a wide lens, then a swoop down and round into a
+ * close look at its far end.
+ */
+export const AIR_PLANT_PATH: { keys: readonly CameraKey[]; speed: number } = {
+  keys: [
+    '?x=0.66&y=3.77&z=-10.29&yaw=270.0&pitch=-1.2&zoom=0.650&roll=0.0',
+    '?x=0.67&y=3.77&z=10.35&yaw=270.0&pitch=-1.2&zoom=0.650&roll=-0.0',
+    '?x=-0.53&y=2.92&z=11.33&yaw=239.3&pitch=-31.9&zoom=0.737&roll=-4.0',
+    '?x=-2.34&y=1.80&z=11.80&yaw=197.4&pitch=-12.2&zoom=0.737&roll=-6.7',
+    '?x=-2.75&y=1.53&z=11.67&yaw=179.5&pitch=2.3&zoom=0.654&roll=-9.3',
+    '?x=-2.75&y=1.54&z=11.91&yaw=176.5&pitch=-9.5&zoom=0.947&roll=-9.3',
+  ].map(parseViewLink),
+  speed: 0.7,
+};
+const airPlantPath = createCameraPath(
+  AIR_PLANT_PATH.keys,
+  AIR_PLANT_PATH.speed,
+);
+
 /** A shot's camera `seconds` into its move: its path's pose, or its orbit's, level and unzoomed. */
 export function shotPose(shot: AttractShot, seconds: number): CameraSample {
   if (shot.path) return shot.path.sample(seconds);
@@ -216,7 +259,8 @@ export function shotPose(shot: AttractShot, seconds: number): CameraSample {
 /**
  * The shots: the Olympic hall's high dolly; the lounge pool's fly-by;
  * the Olympic hall's level dolly; the Olympic plant room's fly-by; the
- * jacuzzi plant room's path, start to end; the main corridor's
+ * jacuzzi plant room's path, start to end; the boiler house's track and
+ * dolly zoom; the air plant room's track and swoop; the main corridor's
  * barrel-rolling fly-by. Played in a random order, a pool hall's and a
  * back room's by turns (`chooseNext`). The Olympic hall's high orbit and
  * the jacuzzi's were dropped (the owner, 2026-10-25: "It's boring").
@@ -254,6 +298,20 @@ export const ATTRACT_SHOTS: readonly AttractShot[] = [
     id: 'jacuzzi-plant-path',
     room: 'plant_pool_03',
     path: jacuzziPlantPath,
+    scenario: 'normal',
+    seconds: SHOT_SECONDS,
+  },
+  {
+    id: 'boiler-path',
+    room: 'boiler_house',
+    path: boilerPath,
+    scenario: 'normal',
+    seconds: SHOT_SECONDS,
+  },
+  {
+    id: 'air-plant-path',
+    room: 'air_plant',
+    path: airPlantPath,
     scenario: 'normal',
     seconds: SHOT_SECONDS,
   },
