@@ -24,6 +24,12 @@ export interface CameraKey {
   roll?: number;
   /** Magnification; 1 if not given. */
   zoom?: number;
+  /**
+   * On an open path, the least time to reach this key from the one before,
+   * seconds: the owner's own pacing, where a stretch should take longer
+   * than its flight, turn and zoom would.
+   */
+  seconds?: number;
 }
 
 /** What the view needs each frame: metres, radians (as `orbitPose` gives). */
@@ -172,17 +178,18 @@ export interface CameraBounds {
 /**
  * A closed loop through `keys`, flown at `speed` metres a second: its
  * period, each key's time round it, and its pose at any time (wrapping
- * round). Two keys or more. Given `within`, its camera never strays
- * outside those walls, where a curve flown close along one would bulge a
- * little through it.
+ * round). Two keys or more; two make a dolly (`createDolly`). Given
+ * `within`, its camera never strays outside those walls, where a curve
+ * flown close along one would bulge a little through it.
  */
 export function createCameraLoop(
   keys: readonly CameraKey[],
   speed: number,
   within?: CameraBounds,
-) {
+): CameraMove {
   const n = keys.length;
   if (n < 2) throw new Error('A camera loop needs two keys or more');
+  if (n === 2) return createDolly(keys[0], keys[1], speed);
   const points: V3[] = keys.map((k) => [k.x, k.y, k.z]);
   const p = (i: number) => points[((i % n) + n) % n];
   const segment = (i: number, u: number) =>
@@ -243,6 +250,7 @@ export function createCameraLoop(
   );
   const radians = (d: number) => (d * Math.PI) / 180;
   return {
+    open: false,
     /** Metres round it, and seconds to fly it. */
     length,
     period,
@@ -266,4 +274,231 @@ export function createCameraLoop(
   };
 }
 
-export type CameraLoop = ReturnType<typeof createCameraLoop>;
+/** A camera move: a loop, a dolly, or an open path. */
+export interface CameraMove {
+  /** An open path runs once, start to end; a loop or a dolly goes round. */
+  open: boolean;
+  /** Metres along it, and seconds to fly it (once round, or start to end). */
+  length: number;
+  period: number;
+  /** Each key's time along it, seconds. */
+  times: readonly number[];
+  /** The pose `seconds` into it: round and round, or held at its ends. */
+  sample(seconds: number): CameraSample;
+}
+
+/** A loop, by its old name. */
+export type CameraLoop = CameraMove;
+
+/**
+ * Two keys: a dolly, out from the first to the second and back, round and
+ * round, slowing to rest at each end and easing away again (a half cosine
+ * each way, its average speed `speed`); its yaw, pitch, roll and zoom eased
+ * with it, the short way round. A loop through two points would run out
+ * and back along one line and turn about at full speed.
+ */
+function createDolly(a: CameraKey, b: CameraKey, speed: number) {
+  const length = Math.max(Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z), 1e-6);
+  const leg = length / speed;
+  const period = 2 * leg;
+  const turn = (from: number, to: number) => from + wrap180(to - from);
+  const radians = (d: number) => (d * Math.PI) / 180;
+  const ends = {
+    yaw: [a.yaw, turn(a.yaw, b.yaw)],
+    pitch: [a.pitch, b.pitch],
+    roll: [a.roll ?? 0, turn(a.roll ?? 0, b.roll ?? 0)],
+    zoom: [Math.log(a.zoom ?? 1), Math.log(b.zoom ?? 1)],
+  };
+  return {
+    open: false,
+    length: 2 * length,
+    period,
+    times: [0, leg],
+    sample(seconds: number): CameraSample {
+      const t = ((seconds % period) + period) % period;
+      // Out, 0 to 1 over its leg, and back: eased at each end.
+      const f = (1 - Math.cos((Math.PI * t) / leg)) / 2;
+      const at = ([from, to]: number[]) => from + (to - from) * f;
+      return {
+        x: a.x + (b.x - a.x) * f,
+        y: a.y + (b.y - a.y) * f,
+        z: a.z + (b.z - a.z) * f,
+        yaw: radians(at(ends.yaw)),
+        pitch: radians(at(ends.pitch)),
+        roll: radians(at(ends.roll)),
+        zoom: Math.exp(at(ends.zoom)),
+      };
+    },
+  };
+}
+
+/** How fast an open path turns and zooms at most, degrees and log-zoom a second. */
+export const PATH_RATES = { turn: 30, zoom: 0.3, hold: 0.5 } as const;
+
+/**
+ * An open path through `keys` (the owner, 2026-10-25: "this one isn't
+ * supposed to be an orbit"): from the first to the last, once, easing from
+ * rest and to rest. Its line is a centripetal Catmull-Rom spline through
+ * the keys' positions, its ends mirrored. Each stretch between keys takes
+ * as long as the slowest of: flying it at `speed`, turning its yaw, pitch
+ * or roll at `PATH_RATES.turn`, changing its zoom at `PATH_RATES.zoom`,
+ * and `PATH_RATES.hold`; so two keys in one place, the camera only turning
+ * between them, still take their time. Its distance along the line in time
+ * is a monotone cubic through each key's time and distance (Fritsch and
+ * Carlson), so it never runs backwards, meets each key on time, and its
+ * speed changes smoothly through every key; its angles and zoom are cubic
+ * in the same times, never swinging past a key.
+ */
+export function createCameraPath(
+  keys: readonly CameraKey[],
+  speed: number,
+  /** Walls its camera keeps inside, where its curve would bulge through one (as a loop's). */
+  within?: CameraBounds,
+): CameraMove {
+  const n = keys.length;
+  if (n < 2) throw new Error('A camera path needs two keys or more');
+  const points: V3[] = keys.map((k) => [k.x, k.y, k.z]);
+  const p = (i: number): V3 => {
+    if (i < 0) {
+      const [a, b] = [points[0], points[1]];
+      return [2 * a[0] - b[0], 2 * a[1] - b[1], 2 * a[2] - b[2]];
+    }
+    if (i > n - 1) {
+      const [a, b] = [points[n - 1], points[n - 2]];
+      return [2 * a[0] - b[0], 2 * a[1] - b[1], 2 * a[2] - b[2]];
+    }
+    return points[i];
+  };
+  const segment = (i: number, u: number) =>
+    centripetal(p(i - 1), p(i), p(i + 1), p(i + 2), u);
+  const tables = points.slice(0, n - 1).map((_, i) => {
+    const lengths = [0];
+    let last = segment(i, 0);
+    for (let k = 1; k <= SAMPLES; k++) {
+      const next = segment(i, k / SAMPLES);
+      lengths.push(lengths[k - 1] + dist(last, next));
+      last = next;
+    }
+    return lengths;
+  });
+  const starts = [0];
+  for (const t of tables) starts.push(starts[starts.length - 1] + t[SAMPLES]);
+  const length = starts[n - 1];
+  // Each channel unwrapped the short way between keys.
+  const unwrap = (pick: (k: CameraKey) => number) => {
+    const out = [pick(keys[0])];
+    for (let i = 1; i < n; i++)
+      out.push(out[i - 1] + wrap180(pick(keys[i]) - pick(keys[i - 1])));
+    return out;
+  };
+  const yaws = unwrap((k) => k.yaw);
+  const pitches = unwrap((k) => k.pitch);
+  const rolls = unwrap((k) => k.roll ?? 0);
+  const zooms = keys.map((k) => Math.log(k.zoom ?? 1));
+  // Each stretch's time: the slowest of its flight, its turn and its zoom.
+  const times = [0];
+  for (let i = 0; i < n - 1; i++) {
+    const turn = Math.max(
+      Math.abs(yaws[i + 1] - yaws[i]),
+      Math.abs(pitches[i + 1] - pitches[i]),
+      Math.abs(rolls[i + 1] - rolls[i]),
+    );
+    times.push(
+      times[i] +
+        Math.max(
+          (starts[i + 1] - starts[i]) / speed,
+          turn / PATH_RATES.turn,
+          Math.abs(zooms[i + 1] - zooms[i]) / PATH_RATES.zoom,
+          PATH_RATES.hold,
+          keys[i + 1].seconds ?? 0,
+        ),
+    );
+  }
+  const period = times[n - 1];
+  const distance = monotoneChannel(starts, times);
+  const yaw = monotoneChannel(yaws, times);
+  const pitch = monotoneChannel(pitches, times);
+  const roll = monotoneChannel(rolls, times);
+  const zoom = monotoneChannel(zooms, times);
+  /** The position `d` metres along the line. */
+  const positionAt = (d: number): V3 => {
+    const at = Math.min(length, Math.max(0, d));
+    let i = n - 2;
+    while (i > 0 && starts[i] > at) i--;
+    const table = tables[i];
+    const local = at - starts[i];
+    let lo = 0,
+      hi = SAMPLES;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (table[mid] <= local) lo = mid;
+      else hi = mid;
+    }
+    const span = table[hi] - table[lo];
+    const u = (lo + (span < EPS ? 0 : (local - table[lo]) / span)) / SAMPLES;
+    return segment(i, u);
+  };
+  const radians = (d: number) => (d * Math.PI) / 180;
+  return {
+    open: true,
+    length,
+    period,
+    times,
+    sample(seconds: number): CameraSample {
+      const t = Math.min(period, Math.max(0, seconds));
+      const [x, y, z] = positionAt(distance(t));
+      const clamp = (v: number, lo: number, hi: number) =>
+        Math.min(hi, Math.max(lo, v));
+      return {
+        x: within ? clamp(x, within.minX, within.maxX) : x,
+        y,
+        z: within ? clamp(z, within.minZ, within.maxZ) : z,
+        yaw: radians(yaw(t)),
+        pitch: radians(pitch(t)),
+        roll: radians(roll(t)),
+        zoom: Math.exp(zoom(t)),
+      };
+    },
+  };
+}
+
+/**
+ * An open channel through `values` at `times`: a cubic Hermite, its slopes
+ * the three-point derivative but none where it turns back or holds (so it
+ * never overshoots a key) and none at its ends (it eases from rest and to
+ * rest), each limited after Fritsch and Carlson so a rising stretch never
+ * dips. Held at its ends beyond them.
+ */
+function monotoneChannel(values: readonly number[], times: readonly number[]) {
+  const n = values.length;
+  const h = (i: number) => times[i + 1] - times[i];
+  const d = (i: number) =>
+    h(i) < EPS ? 0 : (values[i + 1] - values[i]) / h(i);
+  const slopes = values.map((_, i) => {
+    if (i === 0 || i === n - 1) return 0;
+    const d0 = d(i - 1),
+      d1 = d(i);
+    if (d0 * d1 <= 0) return 0;
+    const m = (h(i) * d0 + h(i - 1) * d1) / (h(i - 1) + h(i));
+    // Fritsch and Carlson: no more than three times either side's slope.
+    return (
+      Math.sign(m) * Math.min(Math.abs(m), 3 * Math.abs(d0), 3 * Math.abs(d1))
+    );
+  });
+  return (t: number) => {
+    if (t <= times[0]) return values[0];
+    if (t >= times[n - 1]) return values[n - 1];
+    let i = n - 2;
+    while (i > 0 && times[i] > t) i--;
+    const span = h(i);
+    const s = span < EPS ? 1 : (t - times[i]) / span;
+    const s2 = s * s,
+      s3 = s2 * s;
+    return (
+      (2 * s3 - 3 * s2 + 1) * values[i] +
+      (s3 - 2 * s2 + s) * slopes[i] * span +
+      (-2 * s3 + 3 * s2) * values[i + 1] +
+      (s3 - s2) * slopes[i + 1] * span
+    );
+  };
+}

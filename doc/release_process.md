@@ -2,6 +2,8 @@
 
 How Pool Plant gets from `main` to the places it is played: GitHub Pages and itch.io. Versioning and tagged releases are in the README ("Versions and releases"); this page covers where each build goes and how to get it there by hand when CI cannot.
 
+Daily player-facing notes follow the [devlog workflow](dvevlogs/README.md), compiled on request and published separately through itch.io's devlog editor. Butler uploads builds; its current command set does not publish devlog posts. Keeping main's build deployments does not require a release branch for daily notes.
+
 ## Where builds go
 
 | Destination                                                | What goes there                                                 | When                                   | Done by                                    |

@@ -56,6 +56,8 @@ In a room, the key left of 1 (`on a UK or US keyboard, § on a UK Mac) drops dow
 
 ## Versions and releases
 
+Player-facing daily updates follow the [devlog workflow](doc/dvevlogs/README.md). Drafts are compiled on request in `doc/dvevlogs/`; publishing a devlog is a separate step from uploading a game build.
+
 The game uses [semantic versioning](https://semver.org/). Every successful `npm run build` advances the patch version in `package.json` and the two root version fields in `package-lock.json`. The bundler uses that next version, and the files are updated only after bundling succeeds; a failed build leaves them unchanged. For example, a successful build at 0.1.241 becomes 0.1.242. The development server shows the current package version without incrementing it. The title screen's bottom-right corner shows the version, source commit and UTC build date, marks development builds and uncommitted changes, and links to the GitHub source.
 
 CI runs the same build command and commits successful version updates on `main` as `Build vX.Y.Z [skip ci]`, so the next build starts from the persisted version without triggering another build for the version commit. GitHub Pages and itch.io receive the same built version. Local builds leave the version updates in the working tree for the owner's next commit. Automatic build numbering does not create release tags or GitHub releases. Below 1.0.0 the game is in development.

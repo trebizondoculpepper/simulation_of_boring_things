@@ -1,0 +1,5 @@
+# Daily devlog workflow
+
+The owner chose on-request session-end devlogs over a release-branch workflow and requested drafts in doc/dvevlogs using yyyy_mm_dd_[update number]_headline_feature.md. Created a workflow and template there, preserving that spelling. Dates use Europe/London and update numbers increase globally from 001. Compilation checks git history, changelog and diary against actual deployment, records coverage in front matter, and does not advance the baseline until a post has been published and verified.
+
+Checked the installed butler v15.32.0 command list and the official butler and server-side API documentation. Butler has no devlog-posting command and the public API does not document creating posts. The plan therefore uses an itch.io editor publication step, manually or through a suitable authenticated browser, while keeping butler for build distribution. No post, build upload, release, schedule or deployment change was made. Authenticated editor publication remains an explicit follow-up in TODO.md; this session did not implement or exercise it.

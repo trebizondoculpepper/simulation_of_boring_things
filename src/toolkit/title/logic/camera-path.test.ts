@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { createCameraLoop, parseViewLink } from './camera-path';
+import {
+  PATH_RATES,
+  createCameraLoop,
+  createCameraPath,
+  parseViewLink,
+} from './camera-path';
 import type { CameraKey } from './camera-path';
 import { LOUNGE_FLYBY } from './attract-sequence';
 
@@ -134,6 +139,80 @@ describe('a camera loop', () => {
       expect(s.x).toBeLessThanOrEqual(11);
     }
     expect(bulge).toBeGreaterThan(0);
+  });
+
+  it('dollies between two keys, out and back, easing to rest at each end', () => {
+    const loop = createCameraLoop(
+      [
+        { x: 0, y: 9, z: 0, yaw: 179.6, pitch: -32, zoom: 1.2 },
+        { x: 40, y: 9, z: 0, yaw: 180, pitch: -32, zoom: 1.2 },
+      ],
+      0.8,
+    );
+    expect(loop.period).toBeCloseTo(100, 6);
+    expect(loop.sample(0).x).toBeCloseTo(0, 6);
+    expect(loop.sample(50).x).toBeCloseTo(40, 6);
+    expect(loop.sample(100).x).toBeCloseTo(0, 6);
+    // At rest at the ends, fastest midway.
+    const speed = (t: number) =>
+      Math.abs(loop.sample(t + 0.05).x - loop.sample(t - 0.05).x) / 0.1;
+    expect(speed(50)).toBeLessThan(0.01);
+    expect(speed(25)).toBeCloseTo((0.8 * Math.PI) / 2, 2);
+    expect(deg(loop.sample(25).yaw)).toBeCloseTo(179.8, 6);
+  });
+
+  it('runs an open path once, start to end, easing from rest and to rest', () => {
+    const path = createCameraPath(SQUARE, 1);
+    expect(path.open).toBe(true);
+    SQUARE.forEach((k, i) => {
+      const s = path.sample(path.times[i]);
+      expect(s.x).toBeCloseTo(k.x, 3);
+      expect(s.z).toBeCloseTo(k.z, 3);
+      expect(wrap(deg(s.yaw) - k.yaw)).toBeCloseTo(0, 6);
+    });
+    // Held at its ends.
+    expect(path.sample(-5).x).toBeCloseTo(0, 6);
+    expect(path.sample(path.period + 5).x).toBeCloseTo(0, 6);
+    expect(path.sample(path.period + 5).z).toBeCloseTo(4, 6);
+    // At rest at both ends; never backwards along its line.
+    const step = 0.05;
+    const moved = (t: number) => {
+      const a = path.sample(t),
+        b = path.sample(t + step);
+      return Math.hypot(b.x - a.x, b.z - a.z) / step;
+    };
+    expect(moved(0)).toBeLessThan(0.05);
+    expect(moved(path.period - step)).toBeLessThan(0.05);
+  });
+
+  it('gives two keys in one place time to turn between them', () => {
+    const path = createCameraPath(
+      [
+        { x: 0, y: 1, z: 0, yaw: 0, pitch: 0 },
+        { x: 3, y: 1, z: 0, yaw: 0, pitch: 0 },
+        { x: 3, y: 1, z: 0, yaw: 90, pitch: 0, roll: 20 },
+        { x: 6, y: 1, z: 0, yaw: 90, pitch: 0, roll: 20 },
+      ],
+      1,
+    );
+    const hold = path.times[2] - path.times[1];
+    expect(hold).toBeCloseTo(90 / PATH_RATES.turn, 6);
+    // It stands still there, turning.
+    const mid = (path.times[1] + path.times[2]) / 2;
+    expect(path.sample(mid).x).toBeCloseTo(3, 3);
+    expect(deg(path.sample(mid).yaw)).toBeGreaterThan(10);
+    expect(deg(path.sample(mid).yaw)).toBeLessThan(80);
+  });
+
+  it('takes at least a key’s own seconds to reach it', () => {
+    const path = createCameraPath(
+      [
+        { x: 0, y: 1, z: 0, yaw: 0, pitch: 0 },
+        { x: 0, y: 1, z: 0, yaw: 5, pitch: 0, seconds: 3 },
+      ],
+      1,
+    );
+    expect(path.period).toBeCloseTo(3, 6);
   });
 
   it('zooms at a steady rate: midway between 1× and 4× is 2×', () => {
