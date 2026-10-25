@@ -1281,6 +1281,7 @@ export function boilerHousePipework(): { runs: PipeRun[]; tees: PipeTee[] } {
     });
     tees.push({
       name: `Cascade ${n} flue tee`,
+      model: { node: `stack-${n}` },
       kind: 'flue',
       at: mid,
       mainOd: 0.25,
@@ -1380,6 +1381,7 @@ export function boilerHousePipework(): { runs: PipeRun[]; tees: PipeTee[] } {
     });
     tees.push({
       name: `${g.name} gas header tee`,
+      model: { node: 'gas-header' },
       kind: 'steel-screwed',
       at: [gx, GAS_HEADER, pz],
       mainOd: 0.0889,
@@ -1405,9 +1407,12 @@ export function boilerHousePipework(): { runs: PipeRun[]; tees: PipeTee[] } {
     mainDirection: Vec3,
     branchDirection: Vec3,
     branchOd: number,
+    /** What it is a fitting of in the room's model (prompt 064). */
+    model?: PipeTee['model'],
   ) =>
     tees.push({
       name,
+      ...(model ? { model } : {}),
       kind: lagged,
       at: where,
       mainOd: main,
@@ -1576,7 +1581,9 @@ export function boilerHousePipework(): { runs: PipeRun[]; tees: PipeTee[] } {
       },
     ],
   });
-  tee('LTHW flow tee', split, [0, 0, 1], [0, -1, 0], 0.0761);
+  tee('LTHW flow tee', split, [0, 0, 1], [0, -1, 0], 0.0761, {
+    node: 'flow-tee',
+  });
   const cf = at(cal, 'primaryFlow');
   const cr = at(cal, 'primaryReturn');
   const coilLane = cf[0] + 0.4;
@@ -1652,6 +1659,7 @@ export function boilerHousePipework(): { runs: PipeRun[]; tees: PipeTee[] } {
     [1, 0, 0],
     [0, 0, 1],
     main,
+    { node: 'return-tee' },
   );
   const fill = at(press, 'system');
   const fillZ = cr[2] + 1.25;
@@ -1676,6 +1684,7 @@ export function boilerHousePipework(): { runs: PipeRun[]; tees: PipeTee[] } {
     [0, 0, 1],
     [0, -1, 0],
     0.022,
+    { link: 'Pressurisation fill' },
   );
   // The calorifier's own water: the cold feed in from the building, the
   // hot water and its secondary return out to it. The three rise beside

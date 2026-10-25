@@ -202,8 +202,16 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       t.branchDirection,
     );
     tee.name = t.name;
+    // What it is a fitting of: as it says, or the run its name is of.
+    const teeModel =
+      t.model ??
+      runBinding(retiredFrom(room) ?? room, {
+        name: t.name.replace(/ tee$/, ''),
+      });
     group.add(
-      t.model ? markComponent(tee, { name: t.name, model: t.model }) : tee,
+      teeModel && !('decorative' in teeModel)
+        ? markComponent(tee, { name: t.name, model: teeModel })
+        : tee,
     );
   }
   // What the room's flowmeters read, as the world now stands (the battery's model keeps its own cache).
@@ -267,7 +275,8 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         v.at[2] + nz * (radius + 0.003),
       );
       tag.rotation.y = Math.atan2(nx, nz);
-      group.add(tag);
+      // Its valve's plate: the valve's, in the model as it is.
+      group.add(markComponent(tag, { tag: installed.tag }));
     }
     if (v.style === 'gas-ball') {
       // A lever ball valve, built along x with its lever up: stood on end
