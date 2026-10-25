@@ -78,6 +78,10 @@ Today the jacuzzi plant room's pipes are laid by `cabinet-pipes.ts`: algorithmic
 
 The electrical runs (busbar, switch-fuse, isolator, cabinet feed) are links of the schematic too, routed the same way once the router takes power lines (the Olympic's are).
 
+## Step 7, first attempt (2026-10-25)
+
+The room as it was is kept as `retired1` (`?room=retired1`). `jacuzzi-plumbing.ts` lays every water and air link of the schematic with the voxel router from the cabinet's and tank's ports to the walls and gullies, gravity lines by a falling rule, and sets the schematic's ten valves by `placeInline`; its test passes. Switched into the room, it broke the room's existing rulings, so it is not drawn yet: level runs below head height (the router has no headroom rule), the door approaches (now passed as regions), the heating pair's stubs closer than two laggings (a known clash), and the drains climbing (gravity, prompt 065). Before the switch the router needs: a headroom rule (level lengths only over 2.2 m, but for stubs and a flooded suction), gravity lines (065), and leads that part a close-set lagged pair.
+
 ## Acceptance
 
 - `world-in-model.test.ts` covers the jacuzzi pool room, with explicit node or decorative bindings, and names unbound things.
