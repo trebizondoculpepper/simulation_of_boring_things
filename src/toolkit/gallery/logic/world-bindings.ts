@@ -95,7 +95,9 @@ export const WORLD_BINDINGS: Readonly<Record<string, WorldBinding>> = {
   'lv-switchboard': world('its ways: the rooms’ feeders'),
   'main-switch': world('the site’s supply'),
   'lighting-board': world('the lighting zones'),
-  'central-battery': todo('the site’s supply: charging, or on battery'),
+  'central-battery': world(
+    'the site’s supply: charging, or carrying the emergency lighting on battery',
+  ),
   'generator-point': passive('a connection box for a hired generator'),
   'earthing-terminal': passive('a copper bar'),
   // The air plant: its own model, fed by the world’s power.

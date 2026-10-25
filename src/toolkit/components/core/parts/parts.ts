@@ -70,6 +70,7 @@ import {
 } from '../../industrial-control/views/industrial-devices';
 import {
   createKeySwitch,
+  createDinDolly,
   createRocker,
 } from '../../industrial-control/views/panel-switchgear';
 import { createStudioSwitch } from '../../industrial-control/views/studio-controls';
@@ -779,8 +780,12 @@ export function disconnectHandle(
   kit: PanelKit,
   props: Common & {
     colour?: 'black' | 'red';
-    /** A small illuminated I/O rocker works a little bucket's breaker. */
-    style?: 'flange' | 'heavy-throw' | 'rotary' | 'rocker';
+    /**
+     * A small illuminated I/O rocker works a little bucket's breaker; a
+     * DIN-rail device's dolly an MCB's or RCBO's (`modules` wide).
+     */
+    style?: 'flange' | 'heavy-throw' | 'rotary' | 'rocker' | 'dolly';
+    modules?: number;
     sound?: 'standard' | 'soft-click';
     /** Reuse an internal breaker's one mechanism and event stream. */
     shared?: ReturnType<typeof createOperatingHandle>;
@@ -797,7 +802,13 @@ export function disconnectHandle(
   const rocker =
     props.style === 'rocker'
       ? createRocker(kit, (props.initial ?? 'on') === 'on')
-      : null;
+      : props.style === 'dolly'
+        ? createDinDolly(
+            kit,
+            (props.initial ?? 'on') === 'on',
+            props.modules ?? 1,
+          )
+        : null;
   const view = rocker
     ? {
         group: rocker.group,

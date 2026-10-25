@@ -9,7 +9,11 @@ import {
 import { Box3, Group, Mesh, MeshBasicMaterial } from 'three';
 import { createPanelKit } from '../../components/core/views/eighties-controls';
 import { EQUIPPED_ROOMS, layoutRoom } from '../logic/room-equipment';
-import { SIMULATOR_DOOR_SWING, createRoomEquipment } from './room-equipment';
+import {
+  MODELS,
+  SIMULATOR_DOOR_SWING,
+  createRoomEquipment,
+} from './room-equipment';
 import { bindRoomPower } from './room-power';
 
 beforeEach(() => {
@@ -114,4 +118,18 @@ it('keeps passive cupboard labels and glazing unchanged when office power is cut
     colours,
   );
   built.dispose();
+});
+
+describe('the rooms’ machines and their models', () => {
+  it('draws every machine with a model as that model, never a placeholder for want of room', () => {
+    const misfits: string[] = [];
+    for (const room of EQUIPPED_ROOMS)
+      for (const p of layoutRoom(room)?.placed ?? []) {
+        const model = MODELS[p.item.key.split(':')[0]];
+        if (!model) continue;
+        if (model.size.w > p.item.w + 0.05 || model.size.d > p.item.d + 0.05)
+          misfits.push(`${room} ${p.item.label}: ${model.title}`);
+      }
+    expect(misfits).toEqual([]);
+  });
 });

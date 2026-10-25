@@ -37,7 +37,11 @@ import {
   stepCentralBattery,
   stepStarter,
 } from '../logic/electrical-room';
-import type { BatteryTest, StarterMode } from '../logic/electrical-room';
+import type {
+  BatteryTest,
+  CentralBattery,
+  StarterMode,
+} from '../logic/electrical-room';
 import { plantTools } from './plant-tools';
 
 /**
@@ -1239,13 +1243,25 @@ export function createGeneratorConnection(kit: PanelKit) {
   return group;
 }
 
+/** The world's central battery, for its cabinet: its state, its mains, its test keys. */
+export interface CentralBatteryBinding {
+  battery(): CentralBattery;
+  mains(): boolean;
+  test(kind: BatteryTest): void;
+}
+
 /**
  * The emergency lighting central battery, after RP-Technik's MultiControl
  * MCS (EN 50171; 1800 × 600 × 450 mm): a free-standing cabinet whose
  * upper door carries the monitoring display, status lamps and test keys
- * over louvred battery compartments.
+ * over louvred battery compartments. Bound (`binding`), it is the world's
+ * battery, on the switch room's mains; on its own, an exhibit's, its mains
+ * always on.
  */
-export function createCentralBattery(kit: PanelKit): WorkingCabinet {
+export function createCentralBattery(
+  kit: PanelKit,
+  binding?: CentralBatteryBinding,
+): WorkingCabinet {
   const t = plantTools(kit);
   const group = new Group();
   const parts = createPartSet();
@@ -1269,7 +1285,9 @@ export function createCentralBattery(kit: PanelKit): WorkingCabinet {
   screen.group.position.set(0, 1.57, z);
   group.add(screen.group);
   live(screen.group);
-  let battery = newCentralBattery();
+  let own = newCentralBattery();
+  const battery = () => binding?.battery() ?? own;
+  const mains = () => binding?.mains() ?? true;
   const lamps = {
     mains: signal(true),
     charging: signal(false),
@@ -1315,7 +1333,8 @@ export function createCentralBattery(kit: PanelKit): WorkingCabinet {
         legend: legendText,
         name: `Central battery ${legendText}`,
         action: () => {
-          battery = pressTest(battery, kind);
+          if (binding) binding.test(kind);
+          else own = pressTest(own, kind);
         },
       }),
       -0.1 + i * 0.2,
@@ -1356,13 +1375,13 @@ export function createCentralBattery(kit: PanelKit): WorkingCabinet {
     object: group,
     parts,
     update(delta) {
-      battery = stepCentralBattery(battery, delta);
-      const lit = batteryLamps(battery);
+      if (!binding) own = stepCentralBattery(own, delta);
+      const lit = batteryLamps(battery(), mains());
       lamps.mains.value = lit.mains;
       lamps.charging.value = lit.charging;
       lamps.fault.value = lit.fault;
       lamps.low.value = lit.low;
-      screen.show(batteryDisplay(battery));
+      screen.show(batteryDisplay(battery(), mains()));
     },
     dispose() {
       parts.dispose();

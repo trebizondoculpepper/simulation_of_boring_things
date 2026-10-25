@@ -95,7 +95,32 @@ function said(
     case 'lighting/zone':
       return {
         subject: `LTG ${action.zone}`,
-        text: `lighting zone ${onOff(action.on)}`,
+        text: `lighting RCBO ${onOff(action.on)}`,
+      };
+    case 'lighting/board': {
+      const a = action.action;
+      if (a.act === 'main')
+        return { subject: 'DB-L1', text: `main switch ${onOff(a.on)}` };
+      return a.act === 'way'
+        ? { subject: `LTG ${a.zone}`, text: `lighting RCBO ${onOff(a.on)}` }
+        : {
+            subject: `LTG ${a.zone}`,
+            text: after.lighting.tripped[a.zone]
+              ? 'lighting RCBO TEST: tripped'
+              : 'lighting RCBO TEST: did not trip',
+          };
+    }
+    case 'lighting/leak':
+      return {
+        subject: `LTG ${action.zone}`,
+        text: `moisture in the light fittings: ${Math.round(action.ma)} mA earth leakage`,
+      };
+    case 'battery/test':
+      return {
+        subject: 'Central battery',
+        text: after.centralBattery.test
+          ? `${action.kind === 'function' ? 'FUNCTION' : 'DURATION'} TEST started`
+          : 'test ended early',
       };
     case 'gas/leak':
       return {

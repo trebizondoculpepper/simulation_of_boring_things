@@ -34,6 +34,10 @@ The owner asked for plant one's and plant two's filters on the ideal filter, wit
 
 The owner asked for realism in the cabinets' power-up: stop at once on power loss with the valves springing shut, a few seconds' boot, a check of the inputs, the valves opening one after another, and a cheap beeper for coming online and for faults. `cabinet-boot.ts` is one controller for both cabinets, in the world; the jacuzzi's pump is held off through a new `ready` input rather than its supply, so its panel stays lit while it boots. Its jacuzzi tests now wait for the restart (about 9 s after a fault clears, 12 s from POWER on). The tank-drain test showed the pump hunting, tripping and restarting as the gutter's water ran back; it always had, but restarted instantly, so the test now counts trips over the run. Checked live through a new development-only console hook: off, the servos shut in 0.6 s; on, booting 3 s, checking 3 s, the four servos opening in turn, running at 13 s.
 
+## The switch room
+
+The owner asked whether everything in the switch room is real, and whether a lighting board of illuminated rockers is anything like real electrics. The audit found the central battery unbound (its own state per drawing, its mains never failing) and, looking in the browser, the generator point drawn as a switch-fuse and the earth bar as a placeholder: the rooms' model table picked exhibits by index, and an inserted exhibit had shifted them. DB-L1 is now a TP&N board of RCBOs with a moisture leakage model; the battery is in the world and lights each zone's emergency lighting when its normal lighting is out; models are picked by title, with a test against placeholders.
+
 ## Next Steps
 
-The rest of the water's condition in the world (prompt 070). The trials' cabinets (dev38, dev32) have no start-up sequence yet: their benches run without one.
+The rest of the water's condition in the world (prompt 070). The trials' cabinets (dev38, dev32) have no start-up sequence yet. Separate emergency fittings, lighting contactors and a generator (TODO).

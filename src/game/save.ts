@@ -115,6 +115,9 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   30: (world) => world,
   // 31 → 32: the spa cabinets' controllers (`fillDefaults`: running).
   31: (world) => world,
+  // 32 → 33: DB-L1's RCBOs and main switch, its circuits' leakage, and the
+  // central battery in the world (`fillDefaults`: all on, dry, charged).
+  32: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

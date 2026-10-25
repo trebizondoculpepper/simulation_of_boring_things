@@ -314,6 +314,58 @@ export function createRocker(kit: PanelKit, on = false): Rocker {
   };
 }
 
+/**
+ * A DIN-rail device's dolly (an MCB's, an RCBO's, a modular switch's): a
+ * white moulded module, `modules` 18 mm wide, its toggle lever up for ON
+ * and down for OFF, marked I and O; no lamp. Its middle at the origin,
+ * its front +z.
+ */
+export function createDinDolly(
+  kit: PanelKit,
+  on = false,
+  modules = 1,
+  lever = '#2a2c2e',
+): Rocker {
+  const group = new Group();
+  group.userData.sound = 'rocker';
+  const w = 0.0175 * modules;
+  const white = kitPaint(kit, '#f3f2ec', 0.45);
+  add(group, new BoxGeometry(w, 0.085, 0.012), white, 0, 0, 0.006);
+  // The raised shoulder its dolly stands out of.
+  add(group, new BoxGeometry(w, 0.034, 0.008), white, 0, 0, 0.016);
+  const dolly = add(
+    group,
+    new BoxGeometry(Math.min(w - 0.004, 0.012 * modules), 0.008, 0.016),
+    kitPaint(kit, lever, 0.5),
+    0,
+    0,
+    0.026,
+  );
+  // It throws: not to be merged with the still parts (`mergeStatic`).
+  dolly.userData.live = true;
+  const mark = kitPaint(kit, '#1a1a1a');
+  add(group, new BoxGeometry(0.0012, 0.004, 0.0006), mark, 0, 0.026, 0.0203);
+  const ring = add(
+    group,
+    new TorusGeometry(0.0018, 0.0005, 4, 10),
+    mark,
+    0,
+    -0.026,
+    0.0203,
+  );
+  ring.name = 'O';
+  const throwTo = (v: boolean) => (v ? 0.011 : -0.011);
+  const move = eased((y) => (dolly.position.y = y), throwTo(on), 40);
+  return {
+    group,
+    rocker: dolly,
+    set(value) {
+      move.to(throwTo(value));
+    },
+    update: move.update,
+  };
+}
+
 export interface KeySwitch {
   group: Group;
   key: Group;

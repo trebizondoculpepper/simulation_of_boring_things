@@ -31,7 +31,6 @@ describe('the real plant rooms’ machines, wired to the world', () => {
       [
         'bms-outstation',
         'calorifier',
-        'central-battery',
         'contact-tank',
         'fire-repeater',
         'pressurisation',
