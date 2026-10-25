@@ -13,6 +13,10 @@ The owner, 2026-10-25: besides its volume, and its pressure and temperature, wat
 - **Temperature** is a pool's and its hall's (`thermal.ts`), heated by an abstract heat service; the heat exchangers, boilers and calorifier carry no water temperature of their own.
 - **Bathers** (`bathers.ts`) are counted per pool and hour, but nothing in the plant reads them (the CCTV research, `doc/research/2026-10-25-cctv-ghost-bathers.md`).
 
+## The owner's ruling: chemistry only where it matters (2026-10-25)
+
+Water chemistry is not simulated for every water. The heating loop (LTHW), the domestic hot water and the chilled water carry their temperature alone (`ThermalWater`), since their chemistry does not matter to normal operations; so may other parts of the simulation where it does not. The full condition is for the treated waters: the pools', the mains', the drains'.
+
 ## The design
 
 1. **One value: the water's condition.** A small immutable record carried by every body of water and every flow:

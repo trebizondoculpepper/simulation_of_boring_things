@@ -1,5 +1,5 @@
-import { WATERS } from '../water/water-condition';
-import type { WaterCondition } from '../water/water-condition';
+import { THERMAL_WATERS, WATERS } from '../water/water-condition';
+import type { ThermalWater, WaterCondition } from '../water/water-condition';
 
 /**
  * Experimental (placeholder) sources (the owner, 2026-10-23): for when the
@@ -403,20 +403,26 @@ export interface ExperimentalSource {
   reading(): string;
   /** Its control port's value: what is left. */
   value(): number;
-  /** A water source's water, its condition (prompt 070); none for other substances. */
+  /** A treated water source's water, its condition (prompt 070); none for other substances. */
   condition(): WaterCondition | undefined;
+  /** Any water source's temperature, °C: the heating loop's and the like's alone of their water. */
+  temperature(): number | undefined;
   /** Set what a water source gives (an ideal source's water can be anything). */
   setCondition(c: WaterCondition): void;
 }
 
-/** Each water's condition, as an ideal source of it gives it (prompt 070). */
+/** Each treated water's condition, as an ideal source of it gives it (prompt 070). */
 export const WATER_OF: Partial<Record<Substance, WaterCondition>> = {
   'pool-water': WATERS.pool,
   'mains-water': WATERS.mains,
   'dirty-water': WATERS.dirty,
-  lthw: WATERS.lthw,
-  dhw: WATERS.dhw,
-  'chilled-water': WATERS.chilled,
+};
+
+/** The waters whose chemistry is not simulated (the owner, 2026-10-25): their temperature alone. */
+export const THERMAL_OF: Partial<Record<Substance, ThermalWater>> = {
+  lthw: THERMAL_WATERS.lthw,
+  dhw: THERMAL_WATERS.dhw,
+  'chilled-water': THERMAL_WATERS.chilled,
 };
 
 /** A substance's ports for a source or sink: its studs round the back, typed, and its one control port on top. */
@@ -537,6 +543,8 @@ export function createExperimentalSource(
     },
     reading: () => show(left),
     condition: () => water,
+    temperature: () =>
+      water?.temperature ?? THERMAL_OF[spec.substance]?.temperature,
     setCondition(c) {
       if (water) water = c;
     },

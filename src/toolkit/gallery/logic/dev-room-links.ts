@@ -55,6 +55,7 @@ export type GalleryRoomId =
   | 'dev38'
   | 'dev39'
   | 'dev40'
+  | 'dev41'
   | 'retired0'
   | 'retired1'
   | 'dev_corridor';
@@ -230,6 +231,8 @@ export const ROOMS: readonly RoomId[] = [
   'dev39',
   // By its URL only: the ideal filter rig, the one filter model on trial.
   'dev40',
+  // By its URL only: the water bench, each machine's effect on the water.
+  'dev41',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   'retired1',
@@ -385,6 +388,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev38: 'DEV38 · JACUZZI CABINET TRIAL',
   dev39: 'DEV39 · CONTROL ASSEMBLIES',
   dev40: 'DEV40 · IDEAL FILTER',
+  dev41: 'DEV41 · WATER BENCH',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   retired1: 'RETIRED1 · JACUZZI PLANT ROOM, 2026-10-25',
   dev_corridor: 'DEV CORRIDOR',
@@ -488,6 +492,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev38: '#6f9aa8',
   dev39: '#8f8a6a',
   dev40: '#6a8fa0',
+  dev41: '#5f8a7d',
   retired0: '#6d7a6f',
   retired1: '#6d7a6f',
   dev_corridor: '#2d9ca0',

@@ -1,6 +1,9 @@
 /**
  * The water's condition (prompt 070, the owner, 2026-10-25): what a body
- * of water or a flow carries besides its volume, the core values for now.
+ * of water or a flow carries besides its volume, the core values for now,
+ * for the waters whose chemistry matters (the pools', the mains', the
+ * drains'); the heating loop and the like carry only their temperature
+ * (`ThermalWater`).
  * Pressure and flow are not the water's but the pipe network's. Turbidity
  * and redox are not carried: they are derived where an instrument reads
  * them (`turbidity`, `redox`).
@@ -66,34 +69,23 @@ export const WATERS = {
     ph: 7.5,
     organics: 6,
   },
-  /** Heating water, the boilers' closed circuit (LTHW): hot, nothing dosed. */
-  lthw: {
-    temperature: 80,
-    solids: 0.5,
-    freeChlorine: 0,
-    combinedChlorine: 0,
-    ph: 9,
-    organics: 0,
-  },
-  /** Domestic hot water, from the calorifier. */
-  dhw: {
-    temperature: 60,
-    solids: 0.2,
-    freeChlorine: 0.1,
-    combinedChlorine: 0,
-    ph: 7.6,
-    organics: 0,
-  },
-  /** Chilled water. */
-  chilled: {
-    temperature: 6,
-    solids: 0.5,
-    freeChlorine: 0,
-    combinedChlorine: 0,
-    ph: 8.5,
-    organics: 0,
-  },
 } as const satisfies Record<string, WaterCondition>;
+
+/**
+ * Waters whose chemistry does not matter to the plant's running (the
+ * owner, 2026-10-25): the heating loop, the hot water, the chilled water.
+ * They carry their temperature alone; their chemistry is not simulated.
+ */
+export interface ThermalWater {
+  temperature: number;
+}
+export const THERMAL_WATERS = {
+  /** Heating water, the boilers' closed circuit (LTHW). */
+  lthw: { temperature: 80 },
+  /** Domestic hot water, from the calorifier. */
+  dhw: { temperature: 60 },
+  chilled: { temperature: 6 },
+} as const satisfies Record<string, ThermalWater>;
 
 const KEYS = [
   'temperature',
