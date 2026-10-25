@@ -117,9 +117,9 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Housekeeping
 
-- [x] **Register ozone monitors and support their controls** (done 2026-10-25, commit pending): add PL1-GD1 and PL2-GD1 to installed fixtures, retain their schematic bindings, identify them on the overlay and printed control plates, and enclose ACCEPT/RESET on the monitor posts.
+- [x] **Register ozone monitors and support their controls** (done 2026-10-25, `d8b5e1d`): add PL1-GD1 and PL2-GD1 to installed fixtures, retain their schematic bindings, identify them on the overlay and printed control plates, and enclose ACCEPT/RESET on the monitor posts.
 
-- [x] **Pump plates, lounge drain gully and controller lid** (done 2026-10-25, commit pending): fix circulation-pump brass plates to their base frames; terminate PL1-T1-DV1 above a working gully tied to the model’s waste node; remove the coplanar housing top beneath PL1-CP2’s lid.
+- [x] **Pump plates, lounge drain gully and controller lid** (done 2026-10-25, `d8b5e1d`): fix circulation-pump brass plates to their base frames; terminate PL1-T1-DV1 above a working gully tied to the model’s waste node; remove the coplanar housing top beneath PL1-CP2’s lid.
 
 - [x] **Copy highlighted objects and camera pins by keyboard** (done 2026-10-25, `e71a817`): Ctrl/Cmd+C copies the displayed object’s tag or untagged name; Ctrl/Cmd+P copies the pin or noclip camera URL. Both report copied values and failures to the developer console, with editing and selected-text copying preserved.
 
