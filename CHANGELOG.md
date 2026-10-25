@@ -6,6 +6,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Hanging pipe identification plates have two fine metal suspension loops and wires connecting their upper fasteners to the pipe.
+
 - The switch room is bound to the model (prompt 064): its schematic (`switch-room-schematic.ts`), the building's incoming supply through the main switch to the LV switchboard and on to the rooms, the lighting board and the central battery, the generator connection and the main earthing terminal; its cable ladder carries the switchboard's feeds. Signs in every room are marked decorative. With it, every plant room, the wet hall, the boiler house and the switch room are wholly in the model.
 - The boiler house is bound to the model (prompt 064): its schematic (`boiler-house-schematic.ts`) has its three cascades and six boilers, their flues and gas, the headers, low-loss header, circulator, calorifier, pressurisation, hot water, panels, mimics and electrics; its seven valves kept under their asset ids. Its tees bind by the run they are of or as they declare; valves' tag plates bind with their valves. Its scene is checked whole.
 - The Olympic plant room is bound to the model (prompt 064): its model is its plumber's expansion with an annex (`olympic-annex.ts`) of what the room lays besides it, under the ids the room already gives them (its wall machines, the pumps' two discharges, the battery's headers and side-stream, the regulating valve, the pool's overflow and main drain, the dosing, sample and ozone lines, the busbar and its tap-offs, the room's supply). Its drawing carries its model ids (runs their lines, valves and flowmeters their fittings), and its scene is checked whole.
@@ -124,6 +126,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 - Every sand filter's sight glass is live, driven by a shared bed model (`plant/logic/filter-bed.ts`): the bed's dirt (from the water it is exposed to, or from its pressure difference where that is all a model gives), its pitting as a function of the time since it was last washed, and which way the water goes through it (down, filtering; up, lifted). It needs to know nothing of backwashing: water coming up through it is a wash and starts its clock again. Fitted to the plant rooms' filters, Dev19's, Dev26's Olympic filter (which starts ten days unwashed, dirty and pitted) and the small multiport filter.
 
 ### Fixed
+
+- Actuated butterfly valves on upright pipes now mount on their stems; electric and pneumatic overrides remain horizontal.
 
 - Reopening the jacuzzi balance tank’s make-up valve now restores filling: PL3-BT1-IV1 is the source of truth instead of leaving a second saved make-up flag latched off. Older make-up commands operate the same physical valve, and previously stuck saves recover on the next simulation step.
 - Fire-collar fixing tabs no longer flicker against walls: corrected their mirrored geometry so the raised outer faces render instead of their backs, which lay directly on the wall.

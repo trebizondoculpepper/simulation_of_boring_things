@@ -73,9 +73,10 @@ export function createActuatedButterflyValve(
   const neckTop = s.flange * 0.42 + Math.max(0.08, s.od * 0.6);
   // The actuator's assembly, built up +y, turned to face out of a vertical pipe.
   const head = new Group();
-  // On an upright pipe swing the actuator sideways without tilting its
-  // front-facing solenoid override toward the floor.
-  if (axis === 'y') head.rotation.z = -Math.PI / 2;
+  head.name = 'Valve actuator';
+  // On an upright pipe the stem points +z. Align the mounting axis with
+  // it, keeping the override facing horizontally (+x).
+  if (axis === 'y') head.rotation.set(Math.PI / 2, Math.PI / 2, 0);
   a.object.add(head);
   /** The pneumatic drive: the actuator's body, its switch box and its solenoid pilot. */
   const pneumatic = () => {

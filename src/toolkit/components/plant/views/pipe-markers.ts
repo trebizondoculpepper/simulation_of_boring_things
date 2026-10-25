@@ -6,10 +6,12 @@ import {
   Mesh,
   MeshStandardMaterial,
   SRGBColorSpace,
+  TorusGeometry,
+  Vector3,
 } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createEngravedPlate } from '../../core/views/plant-signs';
-import { BS1710_BASIC, BS1710_CODE } from './plant-tools';
+import { BS1710_BASIC, BS1710_CODE, plantTools } from './plant-tools';
 
 /**
  * Marking a run of pipework, as a plant room's is (BS 1710): bands of its
@@ -261,10 +263,12 @@ export function markPipe(
     const { a, length } = longest;
     const dir = longest.dir.map((v) => v * flow) as unknown as Vec3;
     const arrow = dir[0] > 0.5 || dir[2] < -0.5 ? '→' : '←';
+    const width = Math.min(0.6, Math.max(0.3, text.length * 0.035));
+    const height = 0.07;
     const plate = createEngravedPlate(kit, [`${text}  ${arrow}`], {
       colour: 'white',
-      width: Math.min(0.6, Math.max(0.3, text.length * 0.035)),
-      height: 0.07,
+      width,
+      height,
     });
     const s = length / 2;
     plate.position.set(
@@ -281,13 +285,43 @@ export function markPipe(
       [`${text}  ${arrow === '→' ? '←' : '→'}`],
       {
         colour: 'white',
-        width: Math.min(0.6, Math.max(0.3, text.length * 0.035)),
-        height: 0.07,
+        width,
+        height,
       },
     );
     back.position.copy(plate.position);
     back.rotation.y = plate.rotation.y + Math.PI;
     group.add(back);
+    // Two wire loops grip the pipe; short drops reach the plate's upper
+    // fasteners. Both faces share these supports.
+    const t = plantTools(kit);
+    const wire = t.paint('#969da3', 0.4, 0.75);
+    const alongX = Math.abs(longest.dir[0]) > 0.5;
+    plate.updateMatrix();
+    for (const side of [-1, 1]) {
+      const end = new Vector3(
+        side * width * 0.46,
+        height * 0.3,
+        0.0045,
+      ).applyMatrix4(plate.matrix);
+      const x = alongX ? end.x : plate.position.x;
+      const z = alongX ? plate.position.z : end.z;
+      const loopRadius = r + 0.0015;
+      const loop = new Mesh(new TorusGeometry(loopRadius, 0.0015, 6, 32), wire);
+      loop.name = 'Pipe sign suspension loop';
+      loop.position.set(x, a[1], z);
+      if (alongX) loop.rotation.y = Math.PI / 2;
+      group.add(loop);
+      const drop = t.rod(
+        group,
+        wire,
+        [x, a[1] - loopRadius, z],
+        [end.x, end.y, end.z],
+        0.0015,
+        8,
+      );
+      drop.name = 'Pipe sign suspension wire';
+    }
   }
   return group;
 }

@@ -283,13 +283,14 @@ export function plantTools(kit: PanelKit) {
     // the lever, not in the plane of its underside (where the two faces
     // would fight for the same pixels).
     const stemEnd = neckBase + neckLength + 0.01;
-    rod(
+    const stem = rod(
       group,
       handle,
       [out[0] * neckBase, out[1] * neckBase, out[2] * neckBase],
       [out[0] * stemEnd, out[1] * stemEnd, out[2] * stemEnd],
       0.022,
     );
+    stem.name = 'Valve stem';
     const lever = new Group();
     lever.userData.live = true;
     const tip = neckBase + neckLength;
