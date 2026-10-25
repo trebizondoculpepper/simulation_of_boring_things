@@ -1,6 +1,6 @@
 {
   "name": "simulation-of-boring-things",
-  "version": "0.1.344",
+  "version": "0.1.345",
   "description": "A first-person leisure-centre pool plant engineering game.",
   "scripts": {
     "dev": "vp dev --host 127.0.0.1",

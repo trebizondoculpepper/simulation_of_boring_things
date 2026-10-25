@@ -33,8 +33,8 @@ export const BOOT = {
   check: 3,
   /** Between one servo's opening and the next's, s. */
   stagger: 1.5,
-  /** A servo's travel, shut to open, s. */
-  travel: 2,
+  /** A servo's travel, shut to open, s: a small, fast geared motor. */
+  travel: 1,
   /** A servo springing back shut with its power gone, s. */
   spring: 0.6,
 } as const;

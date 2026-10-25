@@ -47,21 +47,22 @@ export const PNEUMATIC_STROKE: LoopRecipe = (context, out) => {
 
 /**
  * A small servo valve's electric actuator travelling (the spa cabinets'
- * wash, the owner, 2026-10-25): a geared motor's thin whine, a little
- * rough, under a soft hiss.
+ * wash and start-up, the owner, 2026-10-25): a little geared motor,
+ * smaller and faster than the big plant's actuators, so a higher, quicker
+ * whine, its gear mesh a fast flutter, under a soft hiss.
  */
 export const SERVO_WHIRR: LoopRecipe = (context, out) => {
   const motor = context.createOscillator();
   motor.type = 'sawtooth';
-  motor.frequency.value = 410;
+  motor.frequency.value = 860;
   const wobble = context.createOscillator();
-  wobble.frequency.value = 23;
+  wobble.frequency.value = 47;
   const depth = context.createGain();
-  depth.gain.value = 9;
+  depth.gain.value = 18;
   wobble.connect(depth).connect(motor.frequency);
   const tone = context.createBiquadFilter();
   tone.type = 'bandpass';
-  tone.frequency.value = 900;
+  tone.frequency.value = 1900;
   tone.Q.value = 1.2;
   const gain = context.createGain();
   gain.gain.value = 0.02;

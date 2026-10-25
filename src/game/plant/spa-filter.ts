@@ -83,8 +83,8 @@ export const FIRST_WASH_AT = 2 * 3600;
 
 /** A UV lamp's warm-up after its flow returns, s. */
 export const UV_WARM = 30;
-/** Its servo valves' travel, s: during the stop at the start of a wash, and after it, back to filtering. */
-export const SERVO_TRAVEL = 6;
+/** Its servo valves' travel, s (small, fast geared motors): during the stop at the start of a wash, and after it, back to filtering. */
+export const SERVO_TRAVEL = 3;
 
 /**
  * What a wash changes in its cabinet, beside the water's way (the owner,
