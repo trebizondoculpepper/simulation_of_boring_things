@@ -63,6 +63,13 @@ import { createValveControlPanel } from '../../components/plant/views/valve-cont
 import type { PanelValve } from '../../components/plant/views/valve-control-panel';
 import { installedValveFor } from '../../../game/plant/installed-valves';
 import { markComponent } from '../../components/core/views/component-identity';
+import type { ComponentIdentity } from '../../components/core/views/component-identity';
+import {
+  MODELLED_VALVE_ROOMS,
+  modelValveOn,
+  schematicFittingOn,
+  schematicNodeOfKind,
+} from '../../../game/plant/model-valves';
 
 /** The drain's water as it leaves its 50 mm pipe's bore, its radius, m. */
 const DRAIN_STREAM = 0.018;
@@ -101,6 +108,25 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   const panelValves: PanelValve[] = [];
   const lift = <T extends readonly [number, number, number]>([x, y, z]: T) =>
     [x, floorY + y, z] as const;
+  // In a room built from its schematic (prompt 064), what each thing is
+  // drawn from in its model: everything drawn is bound to the model.
+  const modelled = MODELLED_VALVE_ROOMS.has(room);
+  const bind = <T extends Object3D>(
+    object: T,
+    name: string,
+    model: ComponentIdentity['model'] | undefined,
+  ): T =>
+    modelled
+      ? markComponent(object, { name, ...(model ? { model } : {}) })
+      : object;
+  const nodeOf = (kind: string) => {
+    const node = schematicNodeOfKind(room, kind);
+    return node ? { node } : undefined;
+  };
+  const fittingOf = (link: string | undefined) => {
+    const valve = link && modelled ? modelValveOn(room, link) : undefined;
+    return valve ? { model: { fitting: valve.id } } : {};
+  };
   for (const run of runs) {
     const points = run.points.map(lift);
     const pipe = createPipe(run.kind, run.od, points, {
@@ -113,22 +139,28 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       })),
     });
     pipe.name = run.name;
-    group.add(pipe);
+    // A run is its link's pipe; the busbar's trunking is a machine of its own.
+    const runModel = run.link ? { link: run.link } : nodeOf('busbar');
+    group.add(bind(pipe, run.name, runModel));
     const lagging = PIPE_KINDS[run.kind].insulation?.thickness ?? 0;
     // A busbar's casing carries its maker's labels, not a pipe's bands.
     if (run.kind !== 'busbar-trunking')
       group.add(
-        markPipe(kit, points, {
-          radius: run.od / 2 + lagging,
-          service: MARKED[run.service],
-          text: run.label,
-          flow: run.flow,
-          // Stencilled on: the runs here are packed too close for plates
-          // hung beneath them (the owner, 2026-10-24). White on the dark
-          // steel conduit, black on the grey plastic and the lagging.
-          lettering: 'stencil',
-          ink: run.kind === 'steel-screwed' ? '#f2f2ee' : '#1b1d1e',
-        }),
+        bind(
+          markPipe(kit, points, {
+            radius: run.od / 2 + lagging,
+            service: MARKED[run.service],
+            text: run.label,
+            flow: run.flow,
+            // Stencilled on: the runs here are packed too close for plates
+            // hung beneath them (the owner, 2026-10-24). White on the dark
+            // steel conduit, black on the grey plastic and the lagging.
+            lettering: 'stencil',
+            ink: run.kind === 'steel-screwed' ? '#f2f2ee' : '#1b1d1e',
+          }),
+          run.name,
+          runModel,
+        ),
       );
     if (run.valve) {
       const { at, axis } = run.valve;
@@ -199,7 +231,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
           motor.group.rotation.z = Math.PI / 2;
         }
         mount.add(motor.group);
-        markComponent(mount, id);
+        markComponent(mount, { tag: id, ...fittingOf(run.link) });
         group.add(mount);
         // Its red override, pressed, works it by hand, as the panel would.
         if (motor.overrideButton)
@@ -271,7 +303,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
               { tag: id, name: description?.name ?? 'Valve' },
             );
       if (valve) {
-        markComponent(valve.object, id);
+        markComponent(valve.object, { tag: id, ...fittingOf(run.link) });
         valve.object.position.set(...lift(at));
         if (axis === 'x')
           valve.object.rotation.y = run.valve.facing ?? Math.PI / 2;
@@ -347,7 +379,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   if (panel && panelAt) {
     panel.group.position.set(panelAt.x, floorY + panelAt.y, panelAt.z);
     panel.group.rotation.y = panelAt.yaw;
-    group.add(panel.group);
+    group.add(bind(panel.group, 'Valve panel', nodeOf('valve-panel')));
     for (const [piece, use] of panel.parts.uses) uses.set(piece, () => use());
   }
   // The foot spa's drain-down, heard running into its tundish.
@@ -385,7 +417,8 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     tundish.name = 'Drain tundish';
     const tail = new Mesh(new CylinderGeometry(0.02, 0.02, 0.03, 12), steel);
     tail.position.set(x, floorY + 0.015, z);
-    group.add(grating, tundish, tail);
+    for (const o of [grating, tundish, tail])
+      group.add(bind(o, 'Floor gully', nodeOf('gully')));
     return tundish;
   };
   // The jacuzzi's balance tank, north of its cabinet, its gauge reading
@@ -402,7 +435,12 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
   let tankGurgling = false;
   if (tank && tankAt) {
     tank.group.position.set(tankAt.x, floorY, tankAt.z);
-    group.add(markComponent(tank.group, 'PL3-BT1'));
+    group.add(
+      markComponent(tank.group, {
+        tag: 'PL3-BT1',
+        ...(nodeOf('balance-tank') ? { model: nodeOf('balance-tank') } : {}),
+      }),
+    );
     // One tundish for the overflow and the drain, wide enough for both.
     tankMouth = tundishOnGully(tankAt.gully, 0.1);
     tankFall = createFallingWater(kit, DRAIN_STREAM);
@@ -412,7 +450,12 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       tankAt.drainGully[2],
     );
     tankFall.set(0, 0.17 - 0.08);
-    group.add(tankFall.group);
+    // The water its drain's link carries, seen falling.
+    group.add(
+      bind(tankFall.group, 'Balance tank drain', {
+        link: 'Balance tank drain to waste',
+      }),
+    );
   }
   const gully = cabinetGully(room);
   if (gully) {
@@ -423,7 +466,9 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     drainFall = createFallingWater(kit, DRAIN_STREAM);
     drainFall.group.position.set(gully[0], floorY + 0.17, gully[2]);
     drainFall.set(0, 0.17 - 0.08);
-    group.add(drainFall.group);
+    group.add(
+      bind(drainFall.group, 'Drain to waste', { link: 'Drain to waste' }),
+    );
   }
   // The busbar's tap-off unit, over the room's switch-fuse (the bar
   // itself is one of the runs above, `cabinet-pipes.ts`): its back on the
@@ -440,7 +485,7 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
       bus.tap.at[2],
     );
     tap.rotation.y = bus.tap.yaw;
-    group.add(tap);
+    group.add(bind(tap, 'Busbar tap-off unit', nodeOf('busbar')));
   }
   // The isolator, its handle the switch.
   const place = cabinetIsolator(room);
@@ -459,7 +504,18 @@ export function cabinetServices(kit: PanelKit, room: string, floorY: number) {
     isolator.group.position.set(place.x, floorY + place.y, place.z);
     isolator.group.rotation.y = place.yaw;
     isolator.group.name = 'Cabinet isolator';
-    group.add(isolator.group);
+    const fitting = schematicFittingOn(
+      room,
+      'Switch-fuse to the cabinet',
+      'power-isolator',
+    );
+    group.add(
+      bind(
+        isolator.group,
+        'Cabinet isolator',
+        fitting ? { fitting } : undefined,
+      ),
+    );
     // Switched here, it is switched in the world: the cabinet's pool stops.
     const toggle = () => {
       isolator.toggle();

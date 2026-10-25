@@ -133,3 +133,28 @@ export const modelValveOn = (room: string, link: string) =>
 export const MODELLED_VALVE_ROOMS: ReadonlySet<string> = new Set(
   MODEL_VALVES.map((v) => v.room),
 );
+
+/** The schematics of the rooms built from one, by room. */
+const SCHEMATIC_NODES: Partial<Record<string, readonly SchematicNode[]>> = {
+  [JACUZZI_ROOM]: JACUZZI_NODES,
+};
+
+/** A room's one schematic node of a kind, if it has exactly one. */
+export function schematicNodeOfKind(
+  room: string,
+  kind: string,
+): string | undefined {
+  const found = (SCHEMATIC_NODES[room] ?? []).filter((n) => n.kind === kind);
+  return found.length === 1 ? found[0].id : undefined;
+}
+
+/** A room's model fitting of a kind on a link, if it has one. */
+export function schematicFittingOn(
+  room: string,
+  link: string,
+  kind: ModelValve['kind'],
+): string | undefined {
+  return MODEL_VALVES.find(
+    (v) => v.room === room && v.link === link && v.kind === kind,
+  )?.id;
+}

@@ -1,6 +1,7 @@
 import { olympicRoom } from '../logic/olympic-plumbing';
 import { INSTALLED_ASSET_IDS } from '../../../game/plant/installed-asset-ids';
 import { markComponent } from '../../components/core/views/component-identity';
+import { schematicNodeOfKind } from '../../../game/plant/model-valves';
 import {
   bedGlass,
   dirtFromDp,
@@ -860,7 +861,14 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
     // Its identity, for the information overlay (prompt 061).
     const installed =
       INSTALLED_ASSET_IDS[`${room}|${p.item.key}|${p.item.label}`];
-    if (installed) markComponent(object, installed.tag);
+    if (installed) {
+      // And, in a room built from its schematic, its node there (prompt 064).
+      const node = schematicNodeOfKind(room, p.item.key.split(':')[0]);
+      markComponent(object, {
+        tag: installed.tag,
+        ...(node ? { model: { node } } : {}),
+      });
+    }
     group.add(object);
     // What stands beside a machine but is not part of it (an ozone
     // monitor on its post): moved out into the room's installations, in

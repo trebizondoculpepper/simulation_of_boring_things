@@ -15,6 +15,14 @@ export interface ComponentIdentity {
   tag?: string;
   /** Its name, for a thing with no tag. */
   name?: string;
+  /**
+   * What it is drawn from in its room's model (prompt 064): a machine's
+   * node, a valve's or isolator's fitting, a pipe's link. Everything drawn
+   * is bound to the model or is decorative.
+   */
+  model?: { node: string } | { fitting: string } | { link: string };
+  /** Set decoration: it sits there and does nothing (never a working item). */
+  decorative?: true;
 }
 
 const KEY = 'component';

@@ -1,3 +1,4 @@
+import { markComponent } from '../../core/views/component-identity';
 import {
   BoxGeometry,
   CylinderGeometry,
@@ -34,6 +35,8 @@ import type { Support, SupportPlan, Vec3 } from '../logic/pipe-supports';
 export function createSupports(kit: PanelKit, plan: SupportPlan, floorY = 0) {
   const group = new Group();
   group.name = 'pipe supports';
+  // Structure: it holds the pipes up and does nothing more (prompt 064).
+  markComponent(group, { decorative: true });
   const galv = new MeshStandardMaterial({
     color: '#a9aeae',
     roughness: 0.45,

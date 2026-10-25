@@ -1,4 +1,5 @@
 import { markComponent } from '../../components/core/views/component-identity';
+import { schematicNodeOfKind } from '../../../game/plant/model-valves';
 import {
   BoxGeometry,
   Group,
@@ -173,7 +174,11 @@ export function createRoomServices(
     fuse.group.rotation.y = Math.PI / 2;
     fuse.group.name = `${room} room supply switch-fuse`;
     fuse.group.userData.assetId = ROOM_SWITCH_FUSES[room].assetId;
-    markComponent(fuse.group, ROOM_SWITCH_FUSES[room].tag);
+    const fuseNode = schematicNodeOfKind(room, 'switch-fuse');
+    markComponent(fuse.group, {
+      tag: ROOM_SWITCH_FUSES[room].tag,
+      ...(fuseNode ? { model: { node: fuseNode } } : {}),
+    });
     group.add(fuse.group);
     // Its handle switches the room's feeder in the world, when the
     // interlock lets it (not ON with the door open).
