@@ -82,6 +82,10 @@ export function createTouchSticks(container: HTMLElement) {
   const move = make('move');
   const look = make('look');
   return {
+    setVisible(on: boolean) {
+      root.hidden = !on;
+      if (!on) this.reset();
+    },
     /** Left stick: up walks forward, sideways strafes. */
     move,
     /** Right stick: turns the head. */

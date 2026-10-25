@@ -1,5 +1,7 @@
 import { effect } from '@preact/signals-core';
 import { paused } from '../controls/logic/paused';
+import { controlsHelp } from '../controls/logic/controls';
+import { flightHelp } from '../controls/logic/noclip';
 import type { Readable } from '../components/core/logic/world/components';
 import { RANGES, renderScale } from './logic/settings';
 import type { Settings } from './logic/settings';
@@ -67,6 +69,13 @@ const BINDINGS: readonly [string, string, string][] = [
   ['Torch', 'F', 'X'],
   ['Eye height', 'Alt and the wheel', ''],
   ['Free the mouse', 'Esc', ''],
+  ['Console', '` (key left of 1)', ''],
+  [
+    'Fly in noclip',
+    'WASD; Space up, Shift down, Ctrl faster',
+    'Left stick; A up, B down',
+  ],
+  ['Roll / level in noclip', 'Q / E; R to level', 'LB / RB; Y to level'],
   ['This menu', 'Esc with the mouse free', 'Start'],
 ];
 
@@ -184,11 +193,7 @@ export function createPauseMenu(actions: PauseMenuActions) {
       out.textContent = show(s[key]);
     });
   };
-  const checkbox = (
-    page: Tab,
-    key: 'invertY' | 'onScreenControls',
-    label: string,
-  ) => {
+  const checkbox = (page: Tab, key: 'invertY', label: string) => {
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.addEventListener('change', () =>
@@ -280,7 +285,27 @@ export function createPauseMenu(actions: PauseMenuActions) {
     (v) => `${v.toFixed(2)}×`,
   );
   checkbox('Controls', 'invertY', 'Invert up and down');
-  checkbox('Controls', 'onScreenControls', 'On-screen controls');
+  const onScreen = document.createElement('select');
+  onScreen.setAttribute('aria-label', 'On-screen controls');
+  for (const [value, label] of [
+    ['automatic', 'Automatic'],
+    ['always', 'Always'],
+    ['never', 'Never'],
+  ] as const) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    onScreen.append(option);
+  }
+  onScreen.addEventListener('change', () =>
+    updateSettings({
+      onScreenControls: onScreen.value as Settings['onScreenControls'],
+    }),
+  );
+  row('Controls', 'On-screen controls', onScreen);
+  shows.push((s) => {
+    onScreen.value = s.onScreenControls;
+  });
   const table = document.createElement('table');
   table.className = 'menu-bindings';
   table.innerHTML = `<thead><tr><th></th><th>Keyboard and mouse</th><th>Gamepad</th></tr></thead>`;
@@ -296,6 +321,12 @@ export function createPauseMenu(actions: PauseMenuActions) {
   }
   table.append(body);
   pages.get('Controls')!.append(table);
+  for (const text of [`Touch: ${controlsHelp('touch')}`, flightHelp('touch')]) {
+    const note = document.createElement('p');
+    note.className = 'settings-note';
+    note.textContent = text;
+    pages.get('Controls')!.append(note);
+  }
 
   // Every change shows at once: the readouts follow the sliders.
   effect(() => {
@@ -381,7 +412,9 @@ export function createPauseMenu(actions: PauseMenuActions) {
   // slider, A works the chosen control, B closes, LB and RB switch tabs.
   function focusables(): HTMLElement[] {
     return [
-      ...pages.get(current)!.querySelectorAll<HTMLElement>('input, button'),
+      ...pages
+        .get(current)!
+        .querySelectorAll<HTMLElement>('input, button, select'),
     ].filter((e) => !(e as HTMLButtonElement).disabled);
   }
   const moveFocus = (by: number) => {
@@ -396,6 +429,12 @@ export function createPauseMenu(actions: PauseMenuActions) {
       if (by > 0) el.stepUp();
       else el.stepDown();
       el.dispatchEvent(new Event('input', { bubbles: true }));
+    } else if (el instanceof HTMLSelectElement) {
+      el.selectedIndex = Math.max(
+        0,
+        Math.min(el.options.length - 1, el.selectedIndex + by),
+      );
+      el.dispatchEvent(new Event('change', { bubbles: true }));
     }
   };
   const was = new Set<number>();

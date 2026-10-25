@@ -16,8 +16,17 @@ import { cutOpenings, slide } from '../logic/walk-collision';
 import type { Footprint } from '../logic/walk-collision';
 import { climb, ladderToUse } from '../logic/ladder-zone';
 import type { LadderZone } from '../logic/ladder-zone';
-import { PAD, controlsHelp, deadZone } from '../logic/controls';
+import { PAD, deadZone } from '../logic/controls';
 import type { InputMode } from '../logic/controls';
+import {
+  hudControls,
+  initialInput,
+  nextInput,
+  menuHint,
+  menuHintVisible,
+} from '../logic/hud-policy';
+import type { InputState } from '../logic/hud-policy';
+import { claimMenuHint } from './menu-hint';
 import { turningKnobs } from './knob-turning';
 import { createTouchSticks } from './touch-sticks';
 import { bindViewWheel } from './view-wheel';
@@ -29,6 +38,8 @@ import { consoleOpen } from '../logic/console-open';
 
 /** Whether the walker is to take no input: paused, or the console down. */
 const inputHeld = () => paused.value || consoleOpen.value;
+// Capability and last active device survive room changes, not browser sessions.
+let sessionInput: InputState | null = null;
 
 /**
  * First-person walking, as in any PC shooter, with the same feel as the
@@ -60,8 +71,6 @@ const HOLD_MS = 250;
 /** A tap of an on-screen turn turns this far, and one held this fast. */
 const TAP_TURN_RADIANS = Math.PI / 12;
 const HUD_TURN_RADIANS_PER_SECOND = 1.6;
-/** The help line fades after this long, ms. */
-const HELP_FADE_MS = 60_000;
 /** The torch, as an icon: Half-Life's style, a torch and its beam. */
 const TORCH_ICON = `<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
 <rect x="3" y="13" width="13" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -290,7 +299,6 @@ export function createFirstPerson(options: FirstPersonOptions) {
           : input === 'touch'
             ? 'Left stick forward: climb · back: descend'
             : 'W: climb · S: descend';
-      showHelp();
       return;
     }
     if (!handling?.use(x, y)) options.use(x, y);
@@ -555,45 +563,37 @@ export function createFirstPerson(options: FirstPersonOptions) {
   inspectButton.addEventListener('pointerup', stopInspect);
   inspectButton.addEventListener('pointercancel', stopInspect);
   container?.append(inspectButton);
-  // The controls for the input in use, at the foot of the screen.
+  // One surface for inspection and contextual hints, never a wall of bindings.
   const help = document.createElement('div');
   help.className = 'controls-help';
   help.setAttribute('aria-live', 'polite');
+  help.hidden = true;
   container?.append(help);
   let input: InputMode | undefined;
-  // The help line fades after a minute (on a touch screen, where it
-  // covers the view, sooner); it comes back when the input changes or the
-  // room is entered.
-  let fading: ReturnType<typeof setTimeout> | undefined;
-  const showHelp = () => {
-    help.classList.remove('is-faded');
-    clearTimeout(fading);
-    fading = setTimeout(
-      () => help.classList.add('is-faded'),
-      input === 'touch' ? 10_000 : HELP_FADE_MS,
-    );
-  };
-  const setInput = (mode: InputMode) => {
+  let hintChecked = false;
+  let hintUntil = 0;
+  sessionInput ??= initialInput(
+    typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,
+    typeof matchMedia === 'function' &&
+      matchMedia('(any-pointer: fine)').matches,
+  );
+  const syncInput = () => {
+    const mode = sessionInput!.mode;
     if (!container || input === mode) return;
     input = mode;
     container.dataset.input = mode;
-    movement.style.display = mode === 'mouse' ? '' : 'none';
-    help.textContent = controlsHelp(mode);
-    showHelp();
-    crosshair.hidden = !(
-      locked() ||
-      mode === 'gamepad' ||
-      (mode === 'mouse' && handling?.holding())
-    );
     if (mode !== 'touch') sticks?.reset();
   };
-  setInput(
-    typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
-      ? 'touch'
-      : 'mouse',
-  );
-  const noticeInput = (event: PointerEvent) =>
+  const setInput = (mode: InputMode) => {
+    sessionInput = nextInput(sessionInput!, mode);
+    syncInput();
+    if (mode === 'keyboard') hintUntil = 0;
+  };
+  syncInput();
+  const noticeInput = (event: PointerEvent) => {
+    if (!current() || holding || inputHeld()) return;
     setInput(event.pointerType === 'mouse' ? 'mouse' : 'touch');
+  };
   // Safari's own pinch would zoom the page; the pinch here zooms the view.
   const stopGesture = (event: Event) => event.preventDefault();
 
@@ -609,6 +609,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
     if (typing(event)) return;
     if ((event.ctrlKey && !noclip.value) || event.metaKey || event.altKey)
       return;
+    if (inputHeld()) return;
+    setInput('keyboard');
     if (
       WALK_KEYS.has(event.code) ||
       event.code === 'KeyX' ||
@@ -617,7 +619,6 @@ export function createFirstPerson(options: FirstPersonOptions) {
           event.code,
         ))
     ) {
-      setInput('mouse');
       keys.add(event.code);
       tapped.add(event.code);
       if (event.code.startsWith('Arrow') || noclip.value)
@@ -629,7 +630,6 @@ export function createFirstPerson(options: FirstPersonOptions) {
     if (event.code === 'KeyR' && noclip.value) walker.roll = 0;
     if (event.code === 'KeyE') use(0, 0);
     if (event.code === 'KeyF') {
-      setInput('mouse');
       torch.toggle();
     }
   };
@@ -749,6 +749,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
     };
   };
   const move = (event: PointerEvent) => {
+    if (event.pointerType === 'mouse' && current() && !inputHeld() && !holding)
+      setInput('mouse');
     if (event.pointerType === 'mouse' && !locked()) {
       hoverInside = true;
       hoverPoint = screenPoint(event.clientX, event.clientY);
@@ -994,7 +996,6 @@ export function createFirstPerson(options: FirstPersonOptions) {
       walker.lowCrouched = false;
       walker.crouch = 0;
       sticks?.reset();
-      showHelp();
     },
     /**
      * Hold the player still, or let go: while held, no input walks or
@@ -1010,7 +1011,11 @@ export function createFirstPerson(options: FirstPersonOptions) {
     },
     /** Walk and look for `delta` seconds, then place the camera. */
     update(delta: number) {
+      syncInput();
       if (following) {
+        movement.hidden = help.hidden = altitude.hidden = true;
+        crouchButton.hidden = inspectButton.hidden = true;
+        sticks?.setVisible(false);
         // Another room's eye: no walking, no looking, no crosshair.
         const eye = following();
         crosshair.hidden = true;
@@ -1059,17 +1064,30 @@ export function createFirstPerson(options: FirstPersonOptions) {
         forget();
         nudge.forward = nudge.right = 0;
         sticks?.reset();
-        showHelp();
       }
-      altitude.hidden = !flying;
+      const hud = hudControls(
+        input ?? 'mouse',
+        settings.value.onScreenControls,
+      );
+      const controlsActive = current() && !holding && !inputHeld();
+      movement.hidden = !controlsActive || !hud.movement;
+      if (container)
+        container.dataset.movementPad = movement.hidden ? 'hidden' : 'shown';
+      sticks?.setVisible(controlsActive && hud.touch);
+      altitude.hidden =
+        !controlsActive || !flying || !(hud.movement || hud.touch);
       flightReadout.hidden = !flying;
       useButton.hidden = flying;
-      crouchButton.hidden = flying;
-      inspectButton.hidden = flying;
+      crouchButton.hidden = inspectButton.hidden =
+        !controlsActive || flying || !hud.touch;
       // What is aimed at, named instead of the controls (prompt 061), a few
       // times a second: not while flying, climbing or carrying, nor behind
       // the menu or the console, nor while held (the title's shots). Climbing's and carrying's lines come first.
       const now = performance.now();
+      if (!hintChecked && controlsActive) {
+        hintChecked = true;
+        if (claimMenuHint()) hintUntil = now + 10_000;
+      }
       const inspecting =
         options.inspect &&
         !holding &&
@@ -1081,7 +1099,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
       if (!inspecting) inspection = NO_INSPECTION;
       else if (now - inspectedAt >= INSPECT_EVERY_MS) {
         inspectedAt = now;
-        const aimFree = input === 'mouse' && !locked();
+        const aimFree =
+          (input === 'mouse' || input === 'keyboard') && !locked();
         const target =
           aimFree && !hoverInside
             ? null
@@ -1094,13 +1113,20 @@ export function createFirstPerson(options: FirstPersonOptions) {
       const text = flying
         ? flightHelp(input ?? 'mouse')
         : attachedLadder
-          ? help.textContent
+          ? input === 'touch' || input === 'gamepad'
+            ? 'Left stick forward: climb · back: descend'
+            : 'W: climb · S: descend'
           : inspection.shown
             ? inspectionText(inspection.shown)
-            : controlsHelp(input ?? 'mouse');
+            : menuHintVisible(hintUntil, now, false)
+              ? menuHint(input ?? 'mouse')
+              : '';
       // Only when it changes, so it is not announced again every frame.
       if (help.textContent !== text) help.textContent = text;
       help.classList.toggle('is-inspecting', Boolean(inspection.shown));
+      help.hidden = !text || !controlsActive;
+      // Context remains readable while relevant; only the introductory hint expires.
+      help.classList.remove('is-faded');
       // Paused behind the menu, or the console down: nothing held walks on.
       if (inputHeld()) {
         keys.clear();
@@ -1133,6 +1159,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
           (held('KeyA', 'ArrowLeft') ? 1 : 0) +
           (sticks?.move.x ?? 0) +
           pad.move.x);
+      if (ahead || aside || hudHeld * pressing.turn) hintUntil = 0;
       if (sticks && !holding) {
         // The look stick turns the head, slower as the view zooms in, at
         // the player's sensitivity and the way up they chose.
@@ -1220,7 +1247,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
           walker.x = exit.x;
           walker.z = exit.z;
           attachedLadder = null;
-          help.textContent = controlsHelp(input ?? 'mouse');
+          help.textContent = '';
         }
       }
       const forward = ladder
@@ -1302,7 +1329,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
         delta,
       );
       if (!flying) handling?.update(delta);
-      const cursorAim = input === 'mouse' && !locked();
+      const cursorAim =
+        (input === 'mouse' || input === 'keyboard') && !locked();
       crosshair.hidden = !(
         locked() ||
         input === 'gamepad' ||
@@ -1368,7 +1396,6 @@ export function createFirstPerson(options: FirstPersonOptions) {
       speed.remove();
       options.scene?.remove(torchLight.light, torchLight.target);
       inspectButton.remove();
-      clearTimeout(fading);
       help.remove();
     },
   };

@@ -19,9 +19,25 @@ describe('the player’s settings', () => {
       invertY: true,
       fov: 75,
       renderLevel: 6,
-      onScreenControls: false,
+      onScreenControls: 'never',
     };
     expect(cleanSettings(mine)).toEqual(mine);
+  });
+
+  it('migrates old control choices and validates all three policies', () => {
+    expect(cleanSettings({ onScreenControls: true }).onScreenControls).toBe(
+      'automatic',
+    );
+    expect(cleanSettings({ onScreenControls: false }).onScreenControls).toBe(
+      'never',
+    );
+    for (const choice of ['automatic', 'always', 'never'])
+      expect(cleanSettings({ onScreenControls: choice }).onScreenControls).toBe(
+        choice,
+      );
+    expect(cleanSettings({ onScreenControls: 'bad' }).onScreenControls).toBe(
+      'automatic',
+    );
   });
 
   it('clamp numbers to their ranges and drop bad values', () => {

@@ -1,3 +1,5 @@
+import type { OnScreenControls } from '../../controls/logic/hud-policy';
+
 /**
  * The player's settings (`doc/plans/title-screen.md`): a placeholder set
  * until the game knows what it needs, kept per player in the browser.
@@ -16,7 +18,7 @@ export interface Settings {
   /** Render quality: 0 draws at full resolution, each step up fewer pixels (`renderScale`). */
   renderLevel: number;
   /** Whether the on-screen controls are shown. */
-  onScreenControls: boolean;
+  onScreenControls: OnScreenControls;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -25,7 +27,7 @@ export const DEFAULT_SETTINGS: Settings = {
   invertY: false,
   fov: 52,
   renderLevel: 0,
-  onScreenControls: true,
+  onScreenControls: 'automatic',
 };
 
 /** Each number's range and step, as its slider offers it. */
@@ -59,7 +61,7 @@ export function cleanSettings(stored: unknown): Settings {
     typeof s[key] === 'number' && Number.isFinite(s[key])
       ? clamp(s[key] as number, RANGES[key])
       : DEFAULT_SETTINGS[key];
-  const bool = (key: 'invertY' | 'onScreenControls') =>
+  const bool = (key: 'invertY') =>
     typeof s[key] === 'boolean' ? (s[key] as boolean) : DEFAULT_SETTINGS[key];
   return {
     volume: num('volume'),
@@ -68,6 +70,12 @@ export function cleanSettings(stored: unknown): Settings {
     fov: num('fov'),
     // Whole steps only. (An older save's low/medium/high falls back to 0.)
     renderLevel: Math.round(num('renderLevel')),
-    onScreenControls: bool('onScreenControls'),
+    // The old enabled default becomes Automatic; an explicit disabled choice stays Never.
+    onScreenControls:
+      s.onScreenControls === false
+        ? 'never'
+        : ['automatic', 'always', 'never'].includes(String(s.onScreenControls))
+          ? (s.onScreenControls as OnScreenControls)
+          : 'automatic',
   };
 }

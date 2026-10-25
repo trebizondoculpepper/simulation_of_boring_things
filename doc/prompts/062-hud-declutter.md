@@ -1,6 +1,6 @@
 # 062: Fewer overlays: controls for the input in use, only when needed
 
-Status: researched and specified 2026-10-25 from the owner's request; not started.
+Status: implemented 2026-10-25. Keyboard/mouse/touch/gamepad layout policy and the three-state setting are in the shared controls; browser and project validation are recorded in the diary.
 
 ## The request
 
@@ -55,3 +55,22 @@ Starting the game at a desktop and walking with WASD, nothing on screen describe
 
 - Whether the one short first-time hint ("Esc: menu and controls") is wanted, or no hint at all.
 - Whether a mouse-only player should still see the pad automatically (as proposed), or only with the setting on Always.
+
+## Implemented defaults and remaining HUD audit (2026-10-25)
+
+The implementation uses the proposal’s defaults: one ten-second menu hint, dismissed on movement, and Automatic for the on-screen controls. Its storage marker is browser-local for the current shared dev save slot, with a per-page fallback when storage is blocked. The touch hint names the actual gear icon (⚙), rather than a hamburger button the game does not have. The first active room claims the hint; hidden neighbours and held title cameras do not. Keyboard capability is remembered for this page session across rooms and switches to touch/gamepad, so mouse movement after typing does not resurrect the pad.
+
+The setting is Automatic / Always / Never. Old true migrates to Automatic; old false preserves the player’s disabled choice as Never. Always forces the click-to-walk pad, but does not show touch sticks on a non-touch input. Never hides the on-screen movement controls including touch sticks. All actual input bindings remain active. The selector is keyboard- and gamepad-accessible. Contextual ladder and flight hints and component descriptions remain on the shared information surface; the full reference, including touch and noclip, stays in Controls.
+
+| Remaining HUD item                                  | Does the player need it now?                                                                | Result of this mission                                                                                |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Gear/menu button                                    | Yes, especially without a keyboard; also the destination of the first-use hint.             | Retained.                                                                                             |
+| View-link pin/camera link                           | Useful to the owner for bug reports and camera authoring; less useful during ordinary play. | Retained; moving it into the pause menu is an owner decision.                                         |
+| Torch button and lit indication                     | Required for touch/mouse-only operation; keyboard and gamepad already have bindings.        | Retained; conditional visibility is a possible later owner choice.                                    |
+| Room name card                                      | Useful orientation on arrival and after handover; constant visibility may be unnecessary.   | Retained; an arrival-only timeout is a possible later owner choice.                                   |
+| Crosshair                                           | Aiming feedback during pointer lock, gamepad use or carrying.                               | Existing visibility policy retained.                                                                  |
+| Noclip altitude/position readout                    | Needed while authoring a camera shot, irrelevant during ordinary walking.                   | Existing noclip-only readout retained; flight buttons follow the input/control setting.               |
+| Development-room introduction card and sound toggle | Useful exhibit context/debugging, but can overlap global tools in dev0.                     | Retained; development-only layout cleanup is outside this mission.                                    |
+| Simulation speed button, currently 1×               | A placeholder for prompt 059; it currently does nothing.                                    | Retained as requested by the audit-only scope; strongest candidate for later hiding until functional. |
+
+No audit-only candidate was removed or given a new timeout in this mission. Follow-up choices remain in TODO.md.

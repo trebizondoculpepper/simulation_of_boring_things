@@ -186,7 +186,10 @@ positionButton.className = 'location-pin-button';
 effect(() => {
   const s = settings.value;
   partAudio.setVolume(s.volume);
-  document.body.classList.toggle('hide-onscreen-controls', !s.onScreenControls);
+  document.body.classList.toggle(
+    'hide-onscreen-controls',
+    s.onScreenControls === 'never',
+  );
 });
 // The pause menu: Esc once the mouse is free, a gamepad's Start, or the
 // gear among each room's view tools. The world saves itself as it runs

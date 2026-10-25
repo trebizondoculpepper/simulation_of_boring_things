@@ -6,8 +6,13 @@
  * here and in `first-person.ts`, never in a room.
  */
 
-export type InputMode = 'mouse' | 'touch' | 'gamepad';
-export const INPUT_MODES: readonly InputMode[] = ['mouse', 'touch', 'gamepad'];
+export type InputMode = 'keyboard' | 'mouse' | 'touch' | 'gamepad';
+export const INPUT_MODES: readonly InputMode[] = [
+  'keyboard',
+  'mouse',
+  'touch',
+  'gamepad',
+];
 
 export type ControlAction =
   | 'walk'
@@ -24,9 +29,9 @@ export type ControlAction =
   | 'release';
 
 /** Each action's binding on each input, or null where it has none. */
-export const CONTROL_SCHEME: Record<
+const POINTER_SCHEME: Record<
   ControlAction,
-  Record<InputMode, string | null>
+  Record<Exclude<InputMode, 'keyboard'>, string | null>
 > = {
   walk: {
     mouse: 'WASD or arrows: walk',
@@ -90,6 +95,14 @@ export const CONTROL_SCHEME: Record<
   },
 };
 
+/** Keyboard and pointer share bindings, but have different automatic HUD layouts. */
+export const CONTROL_SCHEME = Object.fromEntries(
+  Object.entries(POINTER_SCHEME).map(([action, bindings]) => [
+    action,
+    { ...bindings, keyboard: bindings.mouse },
+  ]),
+) as Record<ControlAction, Record<InputMode, string | null>>;
+
 const ORDER: readonly ControlAction[] = [
   'walk',
   'run',
@@ -112,7 +125,7 @@ export function controlsHelp(mode: InputMode) {
     const binding = CONTROL_SCHEME[action][mode];
     if (!binding) continue;
     // Run qualifies walking: "Left stick: walk (push it to the rim to run)".
-    if (action === 'run' && mode !== 'mouse') {
+    if (action === 'run' && mode !== 'mouse' && mode !== 'keyboard') {
       parts[parts.length - 1] += ` (${binding})`;
       continue;
     }

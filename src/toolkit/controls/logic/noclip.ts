@@ -70,7 +70,7 @@ export function flyCamera(
   };
 }
 
-export const flightHelp = (mode: 'mouse' | 'touch' | 'gamepad') =>
+export const flightHelp = (mode: 'keyboard' | 'mouse' | 'touch' | 'gamepad') =>
   mode === 'gamepad'
     ? 'NOCLIP · Left stick: fly · Right stick: look · A: rise · B: descend · LB / RB: roll · Y: level · Click left stick: faster · Triggers: zoom'
     : mode === 'touch'
