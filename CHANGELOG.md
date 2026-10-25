@@ -338,6 +338,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Removed
 
+- From the spa cabinets, the parts that did nothing (the owner, 2026-10-25): the jacuzzi's internal surge vessel and the overflow pipe into it (its balance tank is outside), its pump's suction from that tank now coming in low through the back panel straight to the pump, its valve on the level length; and the old cartridge filter, replaced by the sand filter in both.
 - The unused fluorescent ballast start-up recording, which was not cleared for distribution (the tubes' sounds are synthesised).
 
 ## [0.1.0] - 2026-10-22

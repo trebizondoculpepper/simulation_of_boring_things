@@ -126,49 +126,6 @@ export function createSpaPump(kit: PanelKit) {
 }
 
 /**
- * A cartridge filter, after Hayward's Star-Clear Plus C900: 762 mm high
- * and 340 mm across, its 90 ft² cartridge (about 225 × 440 mm) inside. A
- * body on its foot, a clamp ring round its lid, a pressure gauge and an
- * air bleed on top, inlet and outlet unions near its base, a drain plug.
- * Lidoluxe's badge.
- */
-export function createCartridgeFilter(kit: PanelKit) {
-  const t = plantTools(kit);
-  const p = paints(t);
-  const group = new Group();
-  group.name = 'Cartridge filter';
-  t.cyl(group, p.grey, 0.15, 0.05, 0, 0.025, 0, 'y', 28);
-  t.cyl(group, p.white, 0.165, 0.58, 0, 0.34, 0, 'y', 32);
-  // The clamp ring and the lid.
-  t.cyl(group, p.stainless, 0.172, 0.04, 0, 0.64, 0, 'y', 32);
-  t.cyl(group, p.white, 0.16, 0.07, 0, 0.695, 0, 'y', 32);
-  t.cyl(group, p.stainless, 0.012, 0.03, 0.175, 0.64, 0, 'x', 10);
-  // The air bleed and the gauge.
-  t.cyl(group, p.brass, 0.008, 0.04, -0.06, 0.75, 0, 'y', 10);
-  const gauge = createDialGauge(kit, {
-    dia: 0.06,
-    max: 2.5,
-    maker: 'kessler-moody',
-  });
-  gauge.group.position.set(0.05, 0.81, 0.01);
-  group.add(gauge.group);
-  t.cyl(group, p.brass, 0.006, 0.05, 0.05, 0.755, 0, 'y', 8);
-  // Inlet and outlet unions, and the drain plug.
-  for (const side of [-1, 1])
-    t.cyl(group, p.grey, 0.028, 0.07, side * 0.195, 0.12, 0, 'x', 16);
-  t.cyl(group, p.black, 0.015, 0.02, 0, 0.07, 0.166, 'z', 10);
-  badge(kit, group, 'lidoluxe', [0, 0.45, 0.166], 0.03);
-  return {
-    group,
-    /** Its gauge's reading, bar: call each frame. */
-    update(delta: number, pressure: number) {
-      gauge.set(pressure);
-      gauge.update(delta);
-    },
-  };
-}
-
-/**
  * A spa cabinet's sand filter (the owner, 2026-10-25), in place of its
  * cartridge: a small Lidoluxe pressure vessel, its size its filter's
  * (`SPA_FILTERS`: the jacuzzi's Ø0.44 m on a 0.8 m bed, the foot spa's

@@ -58,7 +58,6 @@ import {
   jacuzziRuns,
 } from '../../../../game/world';
 import { footbathPumpStarved } from '../../../../game/plant/pools';
-import { DISCONNECTED_VESSEL } from '../../../../game/plant/jacuzzi-cabinet';
 
 /**
  * A packaged spa set in its prefabricated plant cabinet: what the plant
@@ -112,7 +111,7 @@ export interface CabinetRun {
 const skidAt = (jets: boolean) => ({ x: jets ? -JETS_BAY / 2 : 0, y: 0.16 });
 
 /** The skid's runs, in its frame (heights over its deck), the back panel at `hd` behind the body's middle. */
-function skidRuns(hd: number): CabinetRun[] {
+function skidRuns(hd: number, jets = false): CabinetRun[] {
   // Out through the back panel and a little beyond, where each connection
   // ends, plain, ready to be connected to the spa and the heating ring; its
   // isolating valve is the room's, up the pipe's rise behind the cabinet
@@ -156,11 +155,21 @@ function skidRuns(hd: number): CabinetRun[] {
       [0.52, 0.08, -0.16],
       [0.52, 0.08, out],
     ]),
-    pvc('Overflow into the surge vessel', [
-      [-0.66, 0.59, 0.1],
-      [-0.66, 1.0, 0.1],
-      [-0.66, 1.0, out],
-    ]),
+    // The foot spa's overflow, down into its surge vessel; the jacuzzi's
+    // pump's suction, low, straight from its external balance tank.
+    jets
+      ? // At the room's suction level (`SUCTION_LEVEL`, 0.3 m: the skid's
+        // deck is 0.16 up), into its pump's suction union.
+        pvc('Suction from the balance tank', [
+          [-0.45, 0.14, 0.1],
+          [-0.6, 0.14, 0.1],
+          [-0.6, 0.14, out],
+        ])
+      : pvc('Overflow into the surge vessel', [
+          [-0.66, 0.59, 0.1],
+          [-0.66, 1.0, 0.1],
+          [-0.66, 1.0, out],
+        ]),
     // The heating ring's, in copper.
     {
       name: 'Heating flow',
@@ -472,7 +481,9 @@ export function buildSpaPack(
   // union meeting the pump's suction; the pump; the filter; the UV unit
   // turned to run front to back. Behind: the heat exchanger, and the
   // dosing on the back wall over its containers.
-  const vessel = set(createSurgeVessel(kit), -0.66, 0.1);
+  // The foot spa's surge vessel; the jacuzzi has none, its balance tank
+  // outside (the owner, 2026-10-25).
+  const vessel = jets ? null : set(createSurgeVessel(kit), -0.66, 0.1);
   const pump = set(createSpaPump(kit), -0.27, 0.1);
   // Its sand filter (the owner, 2026-10-25), the jacuzzi's the larger.
   const filter = set(
@@ -517,7 +528,7 @@ export function buildSpaPack(
   // the UV unit, the UV unit to the exchanger, back to the spa, the
   // overflow into the surge vessel, the heating's flow and return, the
   // drain.
-  for (const r of skidRuns(hd)) run(r.points, r.kind, r.od);
+  for (const r of skidRuns(hd, jets)) run(r.points, r.kind, r.od);
   // The dosing tubes, from each pump head's outlet down under the pumps,
   // back to the wall, along it and down to their injection points on the
   // return.
@@ -550,7 +561,7 @@ export function buildSpaPack(
     skid.add(label);
   };
   const edge = 0.351;
-  tag('SV1  SURGE VESSEL', -0.66, skidY - 0.03, edge);
+  if (!jets) tag('SV1  SURGE VESSEL', -0.66, skidY - 0.03, edge);
   tag('P1  CIRCULATION PUMP', -0.27, skidY - 0.03, edge);
   tag('F1  SAND FILTER', 0.34, skidY - 0.03, edge);
   tag('UV1  UV UNIT', 0.7, skidY - 0.03, edge);
@@ -980,9 +991,8 @@ export function buildSpaPack(
         washBinding?.glass(running.value),
       );
       uv.update(delta, uvOn.value);
-      // The jacuzzi's is plumbed to its external balance tank: its own
-      // surge vessel disconnected, empty (`cabinetTanks`).
-      vessel.update(delta, moving, jets ? DISCONNECTED_VESSEL.fill : undefined);
+      // The foot spa's surge vessel; the jacuzzi's tank is outside.
+      vessel?.update(delta, moving);
       exchanger.update();
       // Its peristaltic pumps stop while it washes.
       dosing.update(delta, moving && (wash.value?.dosing ?? true), 1.8, 7.3);
@@ -1072,7 +1082,7 @@ export function spaPackDemoExhibit(binding: SpaPackDemoBinding): PlantExhibit {
 export const SPA_PACK_EXHIBIT: PlantExhibit = {
   title: 'Packaged spa set in a prefabricated plant cabinet',
   reference:
-    'For circuits under 10 m³/h (the foot spa): pump, cartridge filter, inline UV, plate heat exchanger and surge vessel on one skid, dosing on the back wall; 1.7 × 0.9 × 2.1 m cabinet',
+    'For circuits under 10 m³/h (the foot spa): pump, sand filter, inline UV, plate heat exchanger and surge vessel on one skid, dosing on the back wall; 1.7 × 0.9 × 2.1 m cabinet',
   size: { w: 2.1, d: 1.9, h: 2.2, mount: 'floor' },
   build: (kit) => buildSpaPack(kit),
 };
@@ -1194,7 +1204,7 @@ function buildSpaParts(kit: PanelKit): LiveExhibit {
 export const SPA_PARTS_EXHIBIT: PlantExhibit = {
   title: 'Packaged spa set, its parts',
   reference:
-    'Each part of the spa set alone: 0.4 kW self-priming pump; cartridge filter; 40 W inline UV with lamp-hours counter; 20-plate brazed heat exchanger; surge vessel; dosing controller with two peristaltic pumps',
+    'Each part of the spa set alone: 0.4 kW self-priming pump; sand filter with its sight glass; 40 W inline UV with lamp-hours counter; 20-plate brazed heat exchanger; surge vessel; dosing controller with two peristaltic pumps',
   size: { w: 4.9, d: 1.2, h: 1.6, mount: 'floor' },
   build: buildSpaParts,
 };

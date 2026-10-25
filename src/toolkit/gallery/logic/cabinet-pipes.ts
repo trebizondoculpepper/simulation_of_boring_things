@@ -167,11 +167,14 @@ export function cabinetPorts(jets: boolean): CabinetPort[] {
     // (`spa-balance-tank.ts`; the owner, 2026-10-24): its overflow stub is
     // its pump's suction from the tank; the spa's overflow goes to the tank.
     const overflow = ports.findIndex((p) => p.name === 'Overflow from the spa');
+    // Low, straight to its pump: no surge vessel in the jacuzzi's cabinet,
+    // and no high point on a flooded suction (the owner, 2026-10-25).
     ports[overflow] = {
       ...ports[overflow],
       name: 'Suction from the balance tank',
       label: 'TANK SUCTION',
       to: 'tank',
+      at: at(-0.6, 0.14),
     };
     const jx = c.w / 2 - 1.1 / 2;
     const base = 0.1;
@@ -775,10 +778,12 @@ export function cabinetPipes(
     const lane = -s.layout.box.w / 2 + SUCTION_OFF_WALL;
     const y = SUCTION_LEVEL;
     const [tx, , tz] = tank.suction;
+    // Out of the cabinet low: down to the run's level only if it is higher.
+    const drops = Math.abs(off[1] - y) > 0.05;
     add(suction.port, [
       at,
       off,
-      [off[0], y, off[2]],
+      ...(drops ? [[off[0], y, off[2]] as Vec3] : []),
       [lane, y, off[2]],
       [lane, y, tz],
       [tx, y, tz],
@@ -786,8 +791,11 @@ export function cabinetPipes(
     const run = runs[runs.length - 1];
     run.valve = {
       id: 'Suction from the balance tank valve',
-      at: [off[0], (off[1] + y) / 2, off[2]],
-      axis: 'y',
+      // On its drop, or, low already, on its first level length.
+      at: drops
+        ? [off[0], (off[1] + y) / 2, off[2]]
+        : [(off[0] + lane) / 2, off[1], off[2]],
+      axis: drops ? 'y' : 'x',
       operator: 'motor',
       installed: true,
       name: 'Suction from the balance tank valve',
