@@ -115,44 +115,20 @@ export function startPlantRoomShell(
   const camera = new PerspectiveCamera(68, 1, 0.05 * metre, 80 * metre);
   scene.add(new AmbientLight('#f4f7f5', 0.18));
   scene.add(new HemisphereLight('#e9f3f1', '#65716f', 0.45));
-  const kit = createPanelKit();
-  const parts = createPartSet();
-  // Each hall's plant room is numbered as its hall is: plant room 4 is
-  // POOL-04's, the footbath's.
-  const name =
-    title ??
-    (hall
-      ? `PLANT ROOM ${Number(hall.slice(-2))} – ${POOL_HALLS[hall].title.toUpperCase()}`
-      : undefined);
-  const equipmentRoom = equipment ?? (hall ? `plant_${hall}` : undefined);
   const {
-    group: rooms,
-    door,
-    equipment: equipmentDoors,
-    tankDoors,
-  } = createPlantRoomShell(
-    plan,
-    metre,
     kit,
-    name ?? `PLANT ROOM · ${size.toUpperCase()}`,
-  );
-  parts.add(equipmentDoors);
-  if (tankDoors) parts.add(tankDoors);
-  parts.add(door);
+    parts,
+    rooms,
+    door,
+    equipmentDoors,
+    tankDoors,
+    machines,
+    services,
+    jacuzziMimic,
+    fibreControl,
+    equipmentRoom,
+  } = buildPlantRoomContents(plan, metre, size, hall, { equipment, title });
   scene.add(rooms);
-  // A hall's plant room's machines, placed (`logic/room-equipment.ts`).
-  const machines = hall
-    ? createRoomEquipment(kit, equipmentRoom!, plan.floor)
-    : null;
-  if (machines) rooms.add(machines.group);
-  // A packaged cabinet's services (`logic/cabinet-pipes.ts`): its pipes
-  // and conduit, each marked (BS 1710) and fitted where it passes through
-  // a wall; its drain's tundish and gully; and its isolator, which feeds
-  // it: switched off, the cabinet is dead.
-  const services = hall
-    ? cabinetServices(kit, equipmentRoom!, plan.floor)
-    : null;
-  if (services) rooms.add(services.group);
   const supply = machines
     ? (() => {
         let found: { value: boolean } | null = null;
@@ -168,30 +144,7 @@ export function startPlantRoomShell(
   const roomLive = equipmentRoom
     ? roomPowered(equipmentRoom as ServiceRoom)
     : () => true;
-  const jacuzziMimic =
-    hall === 'pool_03' ? createMimicBoard(kit, JACUZZI_MIMIC) : null;
   const mimicStore = jacuzziMimic ? roomWorld() : null;
-  const fibreControl =
-    hall === 'pool_03' ? createJacuzziFibreControl(kit) : null;
-  if (jacuzziMimic) {
-    jacuzziMimic.group.position.set(0, plan.floor + 1.8, -plan.hz + 0.025);
-    rooms.add(jacuzziMimic.group);
-  }
-  if (fibreControl) {
-    fibreControl.group.position.set(-1.9, plan.floor + 1.8, -plan.hz + 0.025);
-    rooms.add(fibreControl.group);
-  }
-  if (hall === 'pool_03') {
-    const c = JACUZZI_MUSIC_CABINET;
-    const music = parts.add(
-      createZoneMusicRack(kit, bindJacuzziMusic(), JACUZZI_MUSIC, false),
-    );
-    music.object.position.set(c.x, plan.floor + c.bottom, c.z);
-    music.object.rotation.y = c.yaw;
-    rooms.add(music.object);
-    // And the music itself, faintly, through the wall from the hall.
-    parts.add(createMusicThroughWall(kit, bindJacuzziMusic(), JACUZZI_MUSIC));
-  }
   const raycaster = new Raycaster();
   const pointer = new Vector2();
   const usableAt = (x: number, y: number) => {
@@ -643,4 +596,93 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       },
     },
   );
+}
+
+/**
+ * A plant room's contents, as its scene has them: its shell and doors, its
+ * machines, a packaged cabinet's services, and in the jacuzzi's the mimic,
+ * the fibre-optic wall's control and the music rack. Built apart from the
+ * renderer, so a test can build them and check that each is bound to the
+ * model or decorative (prompt 064).
+ */
+export function buildPlantRoomContents(
+  plan: ShellPlan,
+  metre: number,
+  size: PlantRoomSize,
+  hall: PlantHall | undefined,
+  { equipment, title }: { equipment?: string; title?: string },
+) {
+  const kit = createPanelKit();
+  const parts = createPartSet();
+  // Each hall's plant room is numbered as its hall is: plant room 4 is
+  // POOL-04's, the footbath's.
+  const name =
+    title ??
+    (hall
+      ? `PLANT ROOM ${Number(hall.slice(-2))} – ${POOL_HALLS[hall].title.toUpperCase()}`
+      : undefined);
+  const equipmentRoom = equipment ?? (hall ? `plant_${hall}` : undefined);
+  const {
+    group: rooms,
+    door,
+    equipment: equipmentDoors,
+    tankDoors,
+  } = createPlantRoomShell(
+    plan,
+    metre,
+    kit,
+    name ?? `PLANT ROOM · ${size.toUpperCase()}`,
+  );
+  parts.add(equipmentDoors);
+  if (tankDoors) parts.add(tankDoors);
+  parts.add(door);
+  // A hall's plant room's machines, placed (`logic/room-equipment.ts`).
+  const machines = hall
+    ? createRoomEquipment(kit, equipmentRoom!, plan.floor)
+    : null;
+  if (machines) rooms.add(machines.group);
+  // A packaged cabinet's services (`logic/cabinet-pipes.ts`): its pipes
+  // and conduit, each marked (BS 1710) and fitted where it passes through
+  // a wall; its drain's tundish and gully; and its isolator, which feeds
+  // it: switched off, the cabinet is dead.
+  const services = hall
+    ? cabinetServices(kit, equipmentRoom!, plan.floor)
+    : null;
+  if (services) rooms.add(services.group);
+  const jacuzziMimic =
+    hall === 'pool_03' ? createMimicBoard(kit, JACUZZI_MIMIC) : null;
+  const fibreControl =
+    hall === 'pool_03' ? createJacuzziFibreControl(kit) : null;
+  if (jacuzziMimic) {
+    jacuzziMimic.group.position.set(0, plan.floor + 1.8, -plan.hz + 0.025);
+    rooms.add(jacuzziMimic.group);
+  }
+  if (fibreControl) {
+    fibreControl.group.position.set(-1.9, plan.floor + 1.8, -plan.hz + 0.025);
+    rooms.add(fibreControl.group);
+  }
+  if (hall === 'pool_03') {
+    const c = JACUZZI_MUSIC_CABINET;
+    const music = parts.add(
+      createZoneMusicRack(kit, bindJacuzziMusic(), JACUZZI_MUSIC, false),
+    );
+    music.object.position.set(c.x, plan.floor + c.bottom, c.z);
+    music.object.rotation.y = c.yaw;
+    rooms.add(music.object);
+    // And the music itself, faintly, through the wall from the hall.
+    parts.add(createMusicThroughWall(kit, bindJacuzziMusic(), JACUZZI_MUSIC));
+  }
+  return {
+    kit,
+    parts,
+    rooms,
+    door,
+    equipmentDoors,
+    tankDoors,
+    machines,
+    services,
+    jacuzziMimic,
+    fibreControl,
+    equipmentRoom,
+  };
 }
