@@ -15,6 +15,7 @@ import { olympicRoom } from '../logic/olympic-plumbing';
 import { INSTALLED_FIXTURES } from '../../../game/plant/installed-fixtures';
 import { createEngravedPlate } from '../../components/core/views/plant-signs';
 import { panelMakerMark } from '../../components/core/views/panel-maker-mark';
+import { createMachineStand } from '../../components/plant/views/machine-stand';
 import { INSTALLED_ASSET_IDS } from '../../../game/plant/installed-asset-ids';
 import { markComponent } from '../../components/core/views/component-identity';
 import { schematicNodeFor } from '../../../game/plant/model-valves';
@@ -966,6 +967,18 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
     if (machinePorts(p.item).length) object.add(drawPortNozzles(kit, p.item));
     object.position.set(p.x, floorY + p.y, p.z);
     object.rotation.y = p.yaw;
+    // A machine on a stand: the steel frame under it, on the floor.
+    if (p.item.mount === 'floor' && p.item.stand) {
+      const frame = createMachineStand(
+        kit,
+        p.item.w - 0.1,
+        p.item.d - 0.1,
+        p.item.stand,
+      );
+      // Part of the machine as built, reaching down to the floor.
+      frame.position.y = -p.item.stand;
+      object.add(frame);
+    }
     object.name ||= p.item.label;
     // A sign, furniture, or what the owner ruled so: set decoration (prompt 064).
     const decorative = decorativeKind(p.item.key);

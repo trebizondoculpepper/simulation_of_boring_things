@@ -94,10 +94,31 @@ describe('the wording', () => {
       'Isolates power for the jacuzzi plant room.',
     );
     expect(equipmentLine(1, 'Pump', 'PL2', 'Off')).toBe(
-      '1st Pump in PL2, currently Off',
+      'The 1st pump in Plant Room 2, currently Off',
     );
     expect(equipmentLine(2, 'Sand filter', 'PL1')).toBe(
-      '2nd Sand filter in PL1',
+      'The 2nd sand filter in Plant Room 1',
+    );
+  });
+
+  it('uses definite articles and long locations, retaining technical acronyms', () => {
+    expect(equipmentLine(1, 'Calorifier', 'BH', undefined, 1)).toBe(
+      'The only calorifier in the boiler house',
+    );
+    expect(equipmentLine(3, 'Boiler', 'BH', undefined, 6)).toBe(
+      'The 3rd boiler in the boiler house',
+    );
+    expect(equipmentLine(2, 'Pump', 'PL1', undefined, 2)).toBe(
+      'The 2nd pump in Plant Room 1',
+    );
+    expect(equipmentLine(1, 'BMS outstation', 'CR', undefined, 1)).toBe(
+      'The only BMS outstation in the plant control room',
+    );
+    expect(componentDescription('B-503')).toBe(
+      'The 3rd boiler in the boiler house',
+    );
+    expect(componentDescription('BH-T2')).toBe(
+      'The only calorifier in the boiler house',
     );
   });
 
@@ -151,6 +172,19 @@ describe('places among a room’s items of a kind', () => {
     expect(placesByKind([...items].reverse())).toEqual(places);
     // Adding an earlier-numbered item moves the later ones on, keeping their identities.
     expect(placesByKind([...items, subject('PL2-P1')]).get('PL2-P10')).toBe(3);
+  });
+
+  it('counts a room’s control panels together, whatever their kinds', () => {
+    // The owner, 2026-10-25: PL2-CP3 was "the only Control panel in PL2".
+    const { places, subjects } = describedComponents();
+    const cp1 = subjects.get('PL2-CP1')!;
+    const cp3 = subjects.get('PL2-CP3')!;
+    expect(cp1.kind).not.toBe(cp3.kind);
+    expect(places.get(cp1.key)).toBe(1);
+    expect(places.get(cp3.key)).toBe(2);
+    expect(describeComponent(cp3, places)).toMatch(
+      /^The 2nd control panel in Plant Room 2/,
+    );
   });
 
   it('ranks the Olympic pumps apart from their pump set', () => {
@@ -212,49 +246,49 @@ describe('descriptions of the plant', () => {
   it('describes the 1st Olympic pump by its own starter, live', () => {
     const stopped = withMotors(newWorld(), { 'P-101A': {}, 'P-101B': {} });
     expect(describeForWorld(stopped, 'P-101A')).toBe(
-      '1st Pump in PL2, currently Off',
+      'The 1st pump in Plant Room 2, currently Off',
     );
     expect(describeForWorld(stopped, 'P-101B')).toBe(
-      '2nd Pump in PL2, currently Off',
+      'The 2nd pump in Plant Room 2, currently Off',
     );
     const running = withMotors(stopped, { 'P-101A': { running: true } });
     expect(describeForWorld(running, 'P-101A')).toBe(
-      '1st Pump in PL2, currently On',
+      'The 1st pump in Plant Room 2, currently On',
     );
     const tripped = withMotors(stopped, {
       'P-101A': { running: true, tripped: true },
     });
     expect(describeForWorld(tripped, 'P-101A')).toBe(
-      '1st Pump in PL2, currently Tripped',
+      'The 1st pump in Plant Room 2, currently Tripped',
     );
     // The pump set is described apart, by both its pumps.
     expect(describeForWorld(running, 'PL2-P1')).toBe(
-      'The only Pump set in PL2, currently P-101A On, P-101B Off',
+      'The only pump set in Plant Room 2, currently P-101A On, P-101B Off',
     );
   });
 
   it('leaves the status out without the world, and for kinds it keeps none of', () => {
-    expect(componentDescription('P-101A')).toBe('1st Pump in PL2');
+    expect(componentDescription('P-101A')).toBe('The 1st pump in Plant Room 2');
     expect(describeForWorld(newWorld(), 'PL2-F1')).toBe(
-      '1st Sand filter in PL2',
+      'The 1st sand filter in Plant Room 2',
     );
     // A binding that finds nothing gives no status, not Off.
     const s = subject('X-1');
     expect(
       describeComponent(s, new Map([['X-1', 1]]), { status: () => undefined }),
-    ).toBe('1st Pump in PL2');
+    ).toBe('The 1st pump in Plant Room 2');
   });
 
   it('gives tanks their level and switch-fuses the power they isolate', () => {
     const world = newWorld();
     expect(describeForWorld(world, 'PL3-BT1')).toMatch(
-      /^The only Balance tank in PL3, currently \d+ % full$/,
+      /^The only balance tank in Plant Room 3, currently \d+ % full$/,
     );
     expect(describeForWorld(world, 'PL3-SF1')).toBe(
       'Isolates power for the jacuzzi plant room.',
     );
     expect(describeForWorld(world, 'PL3-CAB1')).toMatch(
-      /^The only Packaged cabinet in PL3, currently /,
+      /^The only packaged cabinet in Plant Room 3, currently /,
     );
     expect(componentDescription('PL3')).toBe('');
   });
@@ -268,7 +302,7 @@ describe('descriptions of the plant', () => {
     for (const entry of plantInventory())
       expect(entry.purpose, entry.id).toBe(componentDescription(entry.id));
     expect(live.find((e) => e.id === 'P-101A')?.purpose).toBe(
-      '1st Pump in PL2, currently On',
+      'The 1st pump in Plant Room 2, currently On',
     );
     expect(worldContext(world).status).toBeDefined();
   });
@@ -287,10 +321,10 @@ describe('descriptions of the plant', () => {
 
   it('calls a room’s one item of a kind its only one, and numbers the rest (the owner, 2026-10-25)', () => {
     expect(equipmentLine(1, 'UV unit', 'PL1', undefined, 1)).toBe(
-      'The only UV unit in PL1',
+      'The only UV unit in Plant Room 1',
     );
     expect(equipmentLine(1, 'Pump', 'PL2', undefined, 2)).toBe(
-      '1st Pump in PL2',
+      'The 1st pump in Plant Room 2',
     );
   });
 });

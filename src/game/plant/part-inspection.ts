@@ -193,14 +193,17 @@ export function flowmeterReading(
 }
 
 /**
- * A flowmeter's two lines: its reading as its display shows it, and where
+ * A flowmeter's status and context: its reading as its display shows it, and where
  * it is installed, from its link in its room's model.
  */
-export function flowmeterLines(world: World, tag: string): PartLines | null {
+export function flowmeterLines(
+  world: World,
+  tag: string,
+): { status: string; detail?: string } | null {
   const value = flowmeterReading(world, tag);
   if (value === undefined) return null;
   // As its display shows it: the size, and an arrow for the way (`mag-flowmeter.ts`).
-  const title = `${tag} — Flowmeter, currently reading ${Math.abs(value).toFixed(1)} m³/h.`;
+  const status = `reading ${Math.abs(value).toFixed(1)} m³/h`;
   const fixture = INSTALLED_FIXTURES[tag];
   const schematic = Object.values(SCHEMATICS).find(
     (s) => s.room === fixture.room,
@@ -213,7 +216,7 @@ export function flowmeterLines(world: World, tag: string): PartLines | null {
   if (!link)
     // No route in a model: the arrow's way only, as the display shows it.
     return {
-      title,
+      status,
       detail: flowing
         ? `The direction arrow points ${value > 0 ? 'forward (->)' : 'back (<-)'}.`
         : fixture.purpose,
@@ -226,7 +229,7 @@ export function flowmeterLines(world: World, tag: string): PartLines | null {
       : [link.targetId, link.sourceId];
   const commodity = link.medium === 'chemical' ? 'chemical' : link.medium;
   return {
-    title,
+    status,
     detail: flowing
       ? `The direction arrow indicates ${commodity} is flowing from ${name(from)} to ${name(to)}.`
       : `No flow shown; installed between ${name(link.sourceId)} and ${name(link.targetId)}.`,

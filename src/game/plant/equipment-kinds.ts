@@ -200,6 +200,14 @@ export const PLACED_KINDS = {
     class: 'plant',
     purpose: 'Shows wet hall equipment and water levels.',
   },
+  boiler: {
+    type: 'Boiler',
+    status: 'none',
+    code: 'B',
+    class: 'plant',
+    purpose: 'Heats the shared low-temperature heating circuit.',
+    brand: 'hamwarmy',
+  },
   'boiler-cascade': {
     type: 'Boiler cascade',
     status: 'none',

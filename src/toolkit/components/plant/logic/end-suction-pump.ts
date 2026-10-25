@@ -122,3 +122,55 @@ export function endSuctionPumpClashes(p: EndSuctionPumpLayout): string[] {
     out.push('the set overhangs its base frame');
   return out;
 }
+
+/**
+ * The volute: the casing's spiral, seen from the motor along the shaft
+ * (the owner, 2026-10-25: "a true volute"), in the (z, y) plane about the
+ * shaft, metres. Its radius grows from `VOLUTE.tongue` at the tongue
+ * (where the spiral leaves the throat) round a full turn to `VOLUTE.outer`,
+ * then the throat runs straight up under the discharge nozzle, between
+ * `VOLUTE.throat` across, to `VOLUTE.top`. `phi` is measured from straight
+ * up, turning toward +z, the way the water goes.
+ */
+export const VOLUTE = {
+  tongue: 0.3,
+  outer: 0.4,
+  /** The throat's two walls, z: under the discharge nozzle (z 0.12, Ø0.16). */
+  throat: [0.04, 0.2] as const,
+  /** The throat's top, over the shaft. */
+  top: 0.46,
+};
+
+/** Where the spiral starts: on the throat's +z wall at the tongue's radius. */
+export const VOLUTE_START = Math.asin(VOLUTE.throat[1] / VOLUTE.tongue);
+/** Where it ends: on the throat's other wall, a full turn on. */
+export const VOLUTE_END =
+  2 * Math.PI + Math.asin(VOLUTE.throat[0] / VOLUTE.outer);
+
+/** The spiral's radius at `phi`, from the tongue's to the outer. */
+export const voluteRadius = (phi: number) =>
+  VOLUTE.tongue +
+  ((VOLUTE.outer - VOLUTE.tongue) * (phi - VOLUTE_START)) /
+    (VOLUTE_END - VOLUTE_START);
+
+/** The point of the spiral at `phi`: [z, y] about the shaft. */
+export const volutePoint = (phi: number): [number, number] => {
+  const r = voluteRadius(phi);
+  return [r * Math.sin(phi), r * Math.cos(phi)];
+};
+
+/**
+ * The casing's outline, a closed simple polygon of [z, y] points: the
+ * spiral from the tongue round to the throat, up the throat's near wall,
+ * across its top and down its far wall back to the tongue.
+ */
+export function voluteOutline(steps = 72): [number, number][] {
+  const out: [number, number][] = [];
+  for (let i = 0; i <= steps; i++)
+    out.push(
+      volutePoint(VOLUTE_START + ((VOLUTE_END - VOLUTE_START) * i) / steps),
+    );
+  const [near, far] = VOLUTE.throat;
+  out.push([near, VOLUTE.top], [far, VOLUTE.top]);
+  return out;
+}

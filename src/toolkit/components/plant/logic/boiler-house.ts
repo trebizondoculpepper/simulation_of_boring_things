@@ -36,6 +36,33 @@ export const FAULTS = {
 } as const;
 export type Fault = keyof typeof FAULTS;
 
+/** Human-readable controller state, using the same state and permits as the panel. */
+export function boilerStatus(
+  boiler: BoilerState,
+  { powered = true, gas = true }: { powered?: boolean; gas?: boolean } = {},
+): string {
+  if (!powered) return 'unpowered';
+  if (!boiler.on) return 'switched off';
+  if (boiler.lockout) {
+    const cause: Record<Fault, string> = {
+      'ignition-failure': 'ignition failure',
+      'flame-loss': 'flame loss',
+      overheat: 'overheat',
+    };
+    return `locked out (${cause[boiler.lockout]})`;
+  }
+  const phase: Record<BoilerCode, string> = {
+    0: 'standby',
+    1: 'purging',
+    2: 'igniting',
+    3: 'firing',
+    7: 'pump run-on',
+    9: 'blocked (low water pressure)',
+  };
+  const state = phase[boiler.code];
+  return gas ? state : `${state}, gas unavailable`;
+}
+
 /** What the display shows, stepped by the MODE key. */
 export const DISPLAY_MODES = [
   'status',
@@ -381,3 +408,6 @@ export function gasPressures(house: GasHouse, flow: number) {
   const supply = house.ecvOpen ? 21 - flow * 0.02 : 0;
   return { supply, burners: house.ssovOpen ? supply - flow * 0.04 : 0 };
 }
+
+/** Model identifier printed on a Hamwarmy condensing boiler’s rating plate. */
+export const condensingBoilerModel = (output = 300) => `HW ${output}`;

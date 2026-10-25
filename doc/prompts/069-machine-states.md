@@ -68,3 +68,7 @@ And the ruling before it: On and Off are the right words for anything with no fa
 - A pure `machineState(kind, world, subject)` returning the state id and its words, from each kind's table; `formatStatus` uses it, and the old fixed policies are retired kind by kind.
 - Tests per kind: each state reached from a world set up to prove it, and precedence when several hold.
 - No state may be shown that the world cannot prove; a kind without a table keeps saying nothing rather than guessing.
+
+## Boiler implementation and general guidance (2026-10-25)
+
+The owner asked to implement the boiler states and write general guidance for equipment status. [Equipment status and inspection](../equipment-status.md) is the maintained guide for active machinery, valves and isolators, instruments, passive process equipment, architectural components and safety devices. The six boilers now inspect individually under B-501…B-506 with a pure controller-derived vocabulary: unpowered, switched off, standby, purging, igniting, firing, pump run-on, blocked (low water pressure), and locked out with ignition-failure, flame-loss or overheat cause. Missing gas is stated separately. The recoverable water-pressure block is not a latched trip. These are scene callbacks to the existing local boiler controllers; moving them into the world remains mission 046. This is a delivered boiler slice, not completion of all machine families in this prompt.

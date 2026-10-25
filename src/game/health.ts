@@ -420,6 +420,8 @@ export const KIND_HEALTH_COVERAGE = {
   'water-meter': 'not health: a meter, it only counts',
   'backwash-tank': 'wet hall: no overflow',
   'mimic-wet': 'not health: a display of the wet hall',
+  boiler:
+    'not in the world: its individual controller state belongs to its boiler-house panel; gas: shared safety chain; pools: delivered heat',
   'boiler-cascade':
     'not in the world: its controllers’ states are their panels’ own; gas: its safety chain; pools: the heat delivered',
   'low-loss-header': 'pools: water temperature held',

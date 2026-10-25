@@ -34,7 +34,7 @@ describe('an ozone generator’s status, as it shows it', () => {
       inspectComponent(
         { tag: 'PL1-OZ1', status: () => 'unpowered' },
         newWorld(),
-      )?.detail,
-    ).toBe('The only Ozone generator in PL1, currently unpowered');
+      )?.title,
+    ).toBe('PL1-OZ1 (Trioxa Ozone Systems ozone generator) - unpowered');
   });
 });

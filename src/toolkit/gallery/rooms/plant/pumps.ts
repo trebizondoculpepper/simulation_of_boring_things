@@ -108,7 +108,6 @@ export function pumpPairExhibit(pool: PoolId = 'pool_02'): PlantExhibit {
       const [duty, standby] = POOL_MOTORS(pool);
       const pair = createPumpPair(
         kit,
-        pool !== 'pool_01',
         duty && standby ? [duty, standby] : undefined,
       );
       const sound = pumpSound();

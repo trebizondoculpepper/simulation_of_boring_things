@@ -4,16 +4,22 @@ import type { GlassInputs } from '../logic/sight-glass';
 import { GAUGE, gaugeBosses } from '../logic/sand-filter';
 import {
   CylinderGeometry,
+  ExtrudeGeometry,
   Group,
   Mesh,
   MeshStandardMaterial,
   PlaneGeometry,
+  RepeatWrapping,
+  Shape,
   SphereGeometry,
 } from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
-import { createBrassPlate } from '../../core/views/plant-signs';
+import { createEngravedPlate } from '../../core/views/plant-signs';
 import { createBrandBadge } from '../../core/views/brand-badge';
+import { createCanvasTexture } from '../../core/views/screens';
+import { createPs1Material } from '../../core/parts/ps1-material';
+import { brandById } from '../../core/logic/brands';
 import { brandLivery } from '../../core/views/brand-livery';
 import { SANS } from '../../core/views/fitting-tools';
 import type { BrandId } from '../../core/logic/brands';
@@ -32,6 +38,8 @@ import {
   PUMP_SET_LENGTH,
   PUMP_SHAFT_Y,
   endSuctionPumpLayout,
+  volutePoint,
+  voluteOutline,
 } from '../logic/end-suction-pump';
 import type {
   EndSuctionPumpLayout,
@@ -96,6 +104,208 @@ function fins(
 }
 
 /**
+ * Cast iron under paint: a fine sand-cast pitting, as a bump map on its own
+ * copy of the casing's paint (the owner, 2026-10-25: "more interesting to
+ * look at"), so the other parts in the same colour keep theirs.
+ */
+function castIron(kit: PanelKit, paint: Material): Material {
+  const material = paint.clone();
+  if ('bumpMap' in material) {
+    const px = 128;
+    const { context: c, texture } = createCanvasTexture(px, px);
+    let seed = 7;
+    const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    c.fillStyle = '#808080';
+    c.fillRect(0, 0, px, px);
+    for (let i = 0; i < 1400; i++) {
+      const v = Math.round(90 + rand() * 80);
+      c.fillStyle = `rgb(${v},${v},${v})`;
+      const size = 1 + rand() * 2.5;
+      c.beginPath();
+      c.arc(rand() * px, rand() * px, size, 0, Math.PI * 2);
+      c.fill();
+    }
+    texture.wrapS = texture.wrapT = RepeatWrapping;
+    texture.repeat.set(4, 4);
+    texture.needsUpdate = true;
+    (material as MeshStandardMaterial).bumpMap = texture;
+    (material as MeshStandardMaterial).bumpScale = 0.6;
+  }
+  kit.materials.push(material);
+  return material;
+}
+
+/**
+ * Lettering or a mark cast into the iron and painted over with it: raised,
+ * its top lit and its lower edge in shadow, in the casing's own colour, a
+ * flat decal facing +z, `w` × `h` metres. `draw` paints the shape in the
+ * context's fill, in a box `px` × `ph`.
+ */
+function castRelief(
+  kit: PanelKit,
+  w: number,
+  h: number,
+  draw: (c: CanvasRenderingContext2D, px: number, ph: number) => void,
+) {
+  const px = 512;
+  const ph = Math.max(16, Math.round((px * h) / w));
+  const { context: c, texture } = createCanvasTexture(px, ph);
+  c.clearRect(0, 0, px, ph);
+  for (const [dx, dy, colour] of [
+    [1.5, 2, 'rgba(40,40,40,0.55)'],
+    [-1, -1.5, 'rgba(255,255,255,0.9)'],
+    [0, 0, 'rgba(225,227,224,1)'],
+  ] as const) {
+    c.save();
+    c.translate(dx, dy);
+    c.fillStyle = colour;
+    c.strokeStyle = colour;
+    draw(c, px, ph);
+    c.restore();
+  }
+  texture.needsUpdate = true;
+  const material = createPs1Material({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    roughness: 0.6,
+  });
+  kit.materials.push(material);
+  const mesh = new Mesh(new PlaneGeometry(w, h), material);
+  mesh.name = 'Cast relief';
+  mesh.raycast = () => {};
+  return mesh;
+}
+
+/** The point on the volute's front `up` radians above level, and its tilt to face out. */
+function onVoluteFront(up: number, out = 0.002) {
+  const [z, y] = volutePoint(Math.PI / 2 - up);
+  const r = Math.hypot(z, y) + VOLUTE_BEVEL + out;
+  return {
+    at: [r * Math.cos(up), r * Math.sin(up)] as const,
+    tilt: -up,
+  };
+}
+
+/** The volute's rounded edges, metres. */
+const VOLUTE_BEVEL = 0.012;
+
+/**
+ * The volute casing (the owner, 2026-10-25): its spiral (`VOLUTE`) cast in
+ * iron along the shaft from `x0` to `x1`, its edges rounded, its cover
+ * bolted on at the motor's side through a lip round its back.
+ */
+function voluteCasing(
+  t: Tools,
+  parent: Object3D,
+  iron: Material,
+  bolt: Material,
+  shaftY: number,
+  x0: number,
+  x1: number,
+) {
+  const outline = (scale = 1) => {
+    const shape = new Shape();
+    voluteOutline().forEach(([z, y], i) =>
+      i
+        ? shape.lineTo(-z * scale, y * scale)
+        : shape.moveTo(-z * scale, y * scale),
+    );
+    shape.closePath();
+    return shape;
+  };
+  const b = VOLUTE_BEVEL;
+  const casing = new Mesh(
+    new ExtrudeGeometry(outline(), {
+      depth: x1 - x0 - 2 * b,
+      bevelEnabled: true,
+      bevelThickness: b,
+      bevelSize: b,
+      bevelSegments: 2,
+    }),
+    iron,
+  );
+  casing.name = 'Volute casing';
+  casing.rotation.y = Math.PI / 2;
+  casing.position.set(x0 + b, shaftY, 0);
+  parent.add(casing);
+  // The cover's lip at the back, and its bolts round it.
+  const lip = new Mesh(
+    new ExtrudeGeometry(outline(1.06), { depth: 0.03, bevelEnabled: false }),
+    iron,
+  );
+  lip.rotation.y = Math.PI / 2;
+  // Its back a millimetre short of the casing's, so the two never fight.
+  lip.position.set(x1 - 0.031, shaftY, 0);
+  parent.add(lip);
+  for (let i = 0; i < 12; i++) {
+    const [z, y] = volutePoint(VOLUTE_START_FOR_BOLTS + (i / 12) * 2 * Math.PI);
+    const k = (Math.hypot(z, y) + 0.016) / Math.hypot(z, y);
+    t.cyl(
+      parent,
+      bolt,
+      0.011,
+      0.012,
+      x1 + 0.006,
+      shaftY + y * k,
+      z * k,
+      'x',
+      6,
+    );
+  }
+}
+
+/** Where the cover's ring of bolts begins: clear of the throat, past the tongue. */
+const VOLUTE_START_FOR_BOLTS = 1.0;
+
+/**
+ * A flow-direction label, as a maker prints on a pump's nozzles: an arrow
+ * in its brand's blue, pointing along +x, a flat decal facing +z, `length`
+ * along the arrow and `width` across it, metres. Purely decorative.
+ */
+function flowArrow(
+  kit: PanelKit,
+  brand: BrandId,
+  length: number,
+  width: number,
+) {
+  const px = 256;
+  const ph = Math.max(16, Math.round((px * width) / length));
+  const { context: c, texture } = createCanvasTexture(px, ph);
+  c.fillStyle = brandById(brand).colours[0];
+  const shaft = ph * 0.42;
+  const head = ph * 0.95;
+  c.fillRect(ph * 0.1, (ph - shaft) / 2, px - head - ph * 0.1, shaft);
+  c.beginPath();
+  c.moveTo(px - head, 0);
+  c.lineTo(px - 2, ph / 2);
+  c.lineTo(px - head, ph);
+  c.closePath();
+  c.fill();
+  c.fillStyle = '#ffffff';
+  c.font = `700 ${shaft * 0.8}px ${SANS}`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText('FLOW', (px - head) / 2 + ph * 0.05, ph / 2 + 1);
+  texture.needsUpdate = true;
+  const material = createPs1Material({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    roughness: 0.5,
+  });
+  kit.materials.push(material);
+  const mesh = new Mesh(new PlaneGeometry(length, width), material);
+  mesh.name = 'Flow direction label';
+  mesh.raycast = () => {};
+  return mesh;
+}
+
+/**
  * An IEC foot-mounted induction motor along x, shaft toward −x, its
  * shaft centre at `y`, laid out by `endSuctionPumpLayout`: the smooth
  * drive-end shield, the finned frame with its terminal box and feet, and
@@ -131,22 +341,28 @@ function motor(
     28,
   );
   // Terminal box on its cast boss on top of the frame (the boss interrupts
-  // the fins), cable gland on its side.
+  // the fins), its cable gland on its top, where the supply comes down.
   const tx = p.frame.x0 + len(p.frame) * 0.36;
   const boss = 0.05 + FIN_DEPTH;
   t.box(parent, paint, 0.16, boss, 0.16, tx, y + r + FIN_DEPTH - boss / 2, z);
-  t.box(parent, paint, 0.2, 0.12, 0.2, tx, y + r + FIN_DEPTH + 0.06, z);
-  t.cyl(
+  const terminalBox = t.box(
     parent,
-    t.paint('#2b2b2b', 0.6),
-    0.018,
-    0.04,
+    paint,
+    0.2,
+    0.12,
+    0.2,
     tx,
     y + r + FIN_DEPTH + 0.06,
-    z + 0.12,
-    'z',
-    12,
+    z,
   );
+  terminalBox.name = 'Motor terminal box';
+  // The gland: a hex body screwed into the box's top and its dome nut
+  // over the cable, 30 mm high (the owner, 2026-10-25), the supply's
+  // conduit ending on it (`machine-ports.ts`, `MOTOR_GLAND`).
+  const boxTop = y + r + FIN_DEPTH + 0.12;
+  const gland = t.paint('#2b2b2b', 0.6);
+  t.cyl(parent, gland, 0.022, 0.016, tx, boxTop + 0.008, z, 'y', 6);
+  t.cyl(parent, gland, 0.018, 0.014, tx, boxTop + 0.023, z, 'y', 16);
   // Feet, cast on the frame, bolted down on fabricated pedestals (in the
   // base frame's colour) that bring the motor up to the pump's shaft height.
   const footTop = y - r * 0.5;
@@ -268,17 +484,27 @@ export function createEndSuctionPump(kit: PanelKit, x0 = 0) {
   const shaftY = PUMP_SHAFT_Y;
   // The volute, at the suction end, its axis along x.
   const vx = (p.volute.x0 + p.volute.x1) / 2;
-  t.cyl(group, iron, 0.36, p.volute.x1 - p.volute.x0, vx, shaftY, 0, 'x', 36);
-  t.cyl(group, iron, 0.3, 0.06, vx - 0.16, shaftY, 0, 'x', 32);
+  const cast = castIron(kit, iron);
+  voluteCasing(
+    t,
+    group,
+    cast,
+    t.paint('#3a3d40', 0.5, 0.6),
+    shaftY,
+    p.volute.x0,
+    p.volute.x1,
+  );
+  // The suction boss, round its nozzle, on the casing's inlet face.
+  t.cyl(group, cast, 0.3, 0.06, vx - 0.16, shaftY, 0, 'x', 32);
   // Casing foot.
   t.box(
     group,
     iron,
     0.2,
-    shaftY - 0.36 - 0.23,
+    shaftY - 0.33 - 0.23,
     0.4,
     vx,
-    (shaftY - 0.36 + 0.23) / 2,
+    (shaftY - 0.33 + 0.23) / 2,
     0,
   );
   // Axial suction toward −x, radial discharge straight up.
@@ -322,7 +548,67 @@ export function createEndSuctionPump(kit: PanelKit, x0 = 0) {
     livery.paint.main,
     livery.paint.shade,
   );
-  badge(kit, group, 'grundflow', [vx, shaftY + 0.05, 0.37], 0.05);
+  // On the casing's front: its maker's badge; its name and model and the
+  // impeller's rotation, cast into the iron (the owner, 2026-10-25).
+  {
+    const front = onVoluteFront(0.2, 0.003);
+    const mark = badge(kit, group, 'grundflow', [vx, 0, 0], 0.05);
+    mark.position.set(vx, shaftY + front.at[1], front.at[0]);
+    mark.rotation.x = front.tilt;
+    const name = onVoluteFront(-0.02);
+    const lettering = castRelief(kit, 0.22, 0.035, (c, w, h) => {
+      c.font = `800 ${h * 0.62}px ${SANS}`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('GRUNDFLOW · NK 150-315', w / 2, h / 2);
+    });
+    lettering.position.set(vx, shaftY + name.at[1], name.at[0]);
+    lettering.rotation.x = name.tilt;
+    group.add(lettering);
+    // The water goes round the way the spiral grows: down its front.
+    const way = onVoluteFront(-0.32);
+    const arrow = castRelief(kit, 0.14, 0.05, (c, w, h) => {
+      const shaft = h * 0.34;
+      const head = h * 0.95;
+      c.fillRect(h * 0.1, (h - shaft) / 2, w - head - h * 0.1, shaft);
+      c.beginPath();
+      c.moveTo(w - head, h * 0.04);
+      c.lineTo(w - 3, h / 2);
+      c.lineTo(w - head, h * 0.96);
+      c.closePath();
+      c.fill();
+    });
+    arrow.position.set(vx, shaftY + way.at[1], way.at[0]);
+    arrow.rotation.set(way.tilt, 0, -Math.PI / 2, 'XYZ');
+    group.add(arrow);
+  }
+  // Grundflow's rotor, its impeller mark, printed flat and centred on the
+  // grey casing's two round faces (the owner, 2026-10-25, for drama): the
+  // face toward the motor, round the bearing bracket, and the suction
+  // boss, round its nozzle.
+  for (const [x, turn, size] of [
+    [p.volute.x1 + 0.002, Math.PI / 2, 0.56],
+    [p.volute.x0 - 0.06 - 0.002, -Math.PI / 2, 0.56],
+  ] as const) {
+    const rotor = createBrandBadge(kit, 'grundflow', {
+      form: 'mark',
+      height: size,
+    });
+    rotor.name = 'Grundflow rotor emblem';
+    rotor.position.set(x, shaftY, 0);
+    rotor.rotation.y = turn;
+    group.add(rotor);
+  }
+  // The flow's direction on its nozzles, in Grundflow's blue (the owner,
+  // 2026-10-25): in along the suction, toward the casing; out up the
+  // discharge. On their fronts, where they are seen.
+  const into = flowArrow(kit, 'grundflow', 0.12, 0.04);
+  into.position.set(vx - 0.32, shaftY, PIPE_SIZES[200].od / 2 + 0.003);
+  group.add(into);
+  const out = flowArrow(kit, 'grundflow', 0.12, 0.04);
+  out.position.set(vx, shaftY + 0.44, 0.12 + PIPE_SIZES[150].od / 2 + 0.003);
+  out.rotation.z = Math.PI / 2;
+  group.add(out);
   nameplate(
     kit,
     group,
@@ -402,11 +688,12 @@ export function createStrainer(kit: PanelKit) {
 
 /**
  * Duty and standby circulation pumps, each with its strainer ahead of it
- * and a butterfly valve either side: two sets side by side.
+ * and a short riser off its discharge: two sets side by side. Their
+ * valves are the room's plumbing's, each real and working (the owner,
+ * 2026-10-25: no non-functional valve drawn with the pumps).
  */
 export function createPumpPair(
   kit: PanelKit,
-  dischargeValves = true,
   /** Its pumps' tags, duty then standby: the Olympic's by default. */
   tags: readonly [string, string] = ['P-101A', 'P-101B'],
 ) {
@@ -417,7 +704,6 @@ export function createPumpPair(
     [-0.75, tags[0], 'DUTY'],
     [0.75, tags[1], 'STANDBY'],
   ] as const) {
-    const name = `${tagOf} ${role}`;
     const set = new Group();
     set.position.z = z;
     // One pump set, solid to walk round (the way between the two is not).
@@ -432,32 +718,24 @@ export function createPumpPair(
     const strainer = createStrainer(kit);
     strainer.position.x = PAIR_STRAINER_X;
     set.add(strainer);
-    // Isolating valve on the discharge, and a short riser, straight up off
-    // the pump's discharge nozzle.
+    // A short riser, straight up off the pump's discharge nozzle, for the
+    // room's plumbing (and its valves) to carry on from.
     t.pipe(set, 150, [
       [PAIR_DISCHARGE_X, 1.28, 0.12],
       [PAIR_DISCHARGE_X, 1.75, 0.12],
     ]);
-    if (dischargeValves)
-      t.butterflyValve(set, 150, [PAIR_DISCHARGE_X, 1.5, 0.12], 'y');
-    // Fixed to the flat front channel of this pump's fabricated base,
-    // rather than standing beyond the plinth as an unsupported label.
-    const tag = createBrassPlate(kit, 'grundflow', [name], {
-      width: 0.3,
-      height: 0.09,
+    // Its identification: an engraved laminate plate screwed to a flat
+    // face of its motor's terminal box, at the top, where it is seen (the
+    // owner, 2026-10-25): the face away from its cable gland.
+    const box = pump.getObjectByName('Motor terminal box')!;
+    const tag = createEngravedPlate(kit, [tagOf, role], {
+      colour: 'white',
+      width: 0.17,
+      height: 0.07,
     });
-    tag.position.set(0, 0.16, 0.29);
-    const backing = t.box(
-      tag,
-      t.paint(FINISH.brass, 0.35, 0.75),
-      0.3,
-      0.09,
-      0.003,
-      0,
-      0,
-      0.0015,
-    );
-    backing.name = 'Pump identification plate backing';
+    tag.name = `Pump identification plate: ${tagOf} ${role}`;
+    tag.position.set(box.position.x, box.position.y, box.position.z - 0.1);
+    tag.rotation.y = Math.PI;
     pump.add(tag);
   }
   return Object.assign(group, { pumps });

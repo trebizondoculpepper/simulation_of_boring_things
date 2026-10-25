@@ -330,10 +330,11 @@ export function createOzoneGenerator(
   float.userData.live = true;
   float.position.set(-0.2, -0.14, 0.02);
   lower.add(float);
-  t.label(lower, 'COOLING  0–400 l/h', -0.2, -0.21, 0.006, 0.01);
+  t.label(lower, 'COOLING  0–400 l/h', -0.2, -0.21, 0.012, 0.01);
   const thermo = createDialGauge(kit, {
     kind: 'thermometer',
-    dia: 0.08,
+    // The same size as the vacuum gauge beside it, for a neat pair.
+    dia: 0.1,
     min: 0,
     max: 60,
     red: { from: 35, to: 60 },
@@ -347,9 +348,33 @@ export function createOzoneGenerator(
     min: -1,
     max: 0.6,
     legend: 'VACUUM',
+    // Panel-mounted in the door: back entry, its stem behind the panel.
+    entry: 'back',
   });
   vacuum.group.position.set(0.14, 0.05, 0.02);
   lower.add(vacuum.group);
+  // What each reads, on a small plate under it, clear of its bezel by
+  // about 15 mm (the owner, 2026-10-25).
+  t.label(
+    lower,
+    'COOLING WATER TEMP',
+    -0.04,
+    -0.035,
+    0.012,
+    0.009,
+    '#1b1b1b',
+    '#f1f0ea',
+  );
+  t.label(
+    lower,
+    'INJECTOR SUCTION',
+    0.14,
+    -0.035,
+    0.012,
+    0.009,
+    '#1b1b1b',
+    '#f1f0ea',
+  );
   // Louvres along the foot.
   for (let i = 0; i < 6; i++)
     t.box(group, seam, 0.6, 0.008, 0.004, -0.41, 0.2 + i * 0.03, D / 2 + 0.002);

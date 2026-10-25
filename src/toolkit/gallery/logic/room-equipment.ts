@@ -45,6 +45,8 @@ export interface Item {
   /** On the floor, or hung on a wall at `y`, the height of its middle. */
   mount: 'floor' | 'wall';
   y?: number;
+  /** On the floor raised on a steel stand this high, metres (`machine-stand.ts`). */
+  stand?: number;
   /** Clear space behind it, against its wall, for its pipework and access, metres. */
   back?: number;
   /** The walls it may stand against, in the order to try them. */
@@ -1292,7 +1294,11 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
             along: p.facing === 'east' || p.facing === 'west' ? p.z : p.x,
           }),
         ];
-      const placed = put(box, item, { x: p.x, z: p.z, face: p.facing });
+      const placed = {
+        ...put(box, item, { x: p.x, z: p.z, face: p.facing }),
+        // On its stand, if it has one.
+        y: p.stand ?? 0,
+      };
       // A filter is worked from the battery's walkway, beyond its headers.
       return [
         p.key.startsWith('filter')

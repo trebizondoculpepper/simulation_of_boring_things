@@ -249,7 +249,7 @@ describe('status of an object', () => {
       'purpose = Isolates water flowing from the circulation pumps to sand filter 1.',
     );
     expect(objectStatus(w, 'P-101A').join('\n')).toMatch(
-      /purpose = 1st Pump in PL2, currently (On|Off|Tripped)/,
+      /purpose = The 1st pump in Plant Room 2, currently (On|Off|Tripped)/,
     );
     // A room has no description: no purpose row at all.
     expect(objectStatus(w, 'PL3').join('\n')).not.toMatch(/purpose =/);

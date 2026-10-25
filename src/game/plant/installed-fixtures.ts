@@ -1,3 +1,4 @@
+import { condensingBoilerModel } from '../../toolkit/components/plant/logic/boiler-house';
 import type { BrandId } from '../../toolkit/components/core/logic/brands';
 import type { KindId } from './equipment-kinds';
 
@@ -16,11 +17,28 @@ export interface InstalledFixture {
   name: string;
   kind: KindId;
   brand: BrandId | 'unbranded';
+  /** Model identifier only when recorded on the actual equipment. */
+  model?: string;
   /** What it is for, as engineering documentation; its description is inferred (prompt 060). */
   purpose: string;
 }
 
 export const INSTALLED_FIXTURES: Readonly<Record<string, InstalledFixture>> = {
+  // Individual boilers within the three installed cascades, under their existing plates.
+  ...Object.fromEntries(
+    [1, 2, 3, 4, 5, 6].map((n) => [
+      `B-50${n}`,
+      {
+        assetId: `asset-0${120 + n}`,
+        room: 'boiler_house',
+        name: `Condensing boiler B-50${n}`,
+        kind: 'boiler',
+        brand: 'hamwarmy',
+        model: condensingBoilerModel(),
+        purpose: 'Heats the shared low-temperature heating circuit.',
+      },
+    ]),
+  ),
   'PL1-GD1': {
     assetId: 'asset-0115',
     room: 'plant_pool_01',

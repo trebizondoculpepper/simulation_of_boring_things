@@ -45,6 +45,8 @@ export interface PlanItem {
   mount: 'floor' | 'wall';
   /** For wall equipment, the height of its fixing, metres. */
   y?: number;
+  /** For floor equipment raised on a steel stand, the stand's height, metres. */
+  stand?: number;
 }
 
 export interface PlanDoor {
@@ -307,11 +309,17 @@ export function olympicPlan(): PlanItem[] {
   const x = SIZE.exchanger;
   const between = -hx + 0.3 + 2 * SIZE.filter.w + 1.5 * FILTER_GAP;
   out.push(
-    item('exchanger', 'Heat exchanger', x, {
-      x: between,
-      z: band + 0.35 + x.d / 2,
-      facing: 'north',
-    }),
+    // On a 0.6 m steel stand (the owner, 2026-10-25): its low connections,
+    // and the pipes to them, clear of the floor; its high ones and their
+    // valves still within reach.
+    {
+      ...item('exchanger', 'Heat exchanger', x, {
+        x: between,
+        z: band + 0.35 + x.d / 2,
+        facing: 'north',
+      }),
+      stand: 0.6,
+    },
   );
   // The dosing on the south wall, west of the stair's foot, where the chemicals come in.
   const foot = STAIR.minX - 1.2;

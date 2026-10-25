@@ -1,3 +1,4 @@
+import { descriptionLocation } from './room-names';
 import { GAS_ZONES } from './gas';
 import type { GasZoneId } from './gas';
 import { MOTORS, POOL_MOTORS } from './motor-starters';
@@ -179,9 +180,12 @@ export function naturalCompare(a: string, b: string): number {
 }
 
 /**
- * Each subject's place among its room's items of the same kind, from 1,
+ * Each subject's place among its room's items of the same type, from 1,
  * in natural tag order, ties broken by key: the "1st" of "1st Pump in PL2".
- * Rooms and things outside a room are not ranked.
+ * Counted by the type the line names (Control panel), not the kind behind
+ * it, so a balance tank panel and a pump panel are both counted among a
+ * room's control panels (the owner, 2026-10-25: PL2-CP3 was "the only"
+ * one). Rooms and things outside a room are not ranked.
  */
 export function placesByKind(
   subjects: readonly DescribedSubject[],
@@ -189,7 +193,7 @@ export function placesByKind(
   const groups = new Map<string, DescribedSubject[]>();
   for (const s of subjects) {
     if (s.unranked || !s.location) continue;
-    const group = `${s.location}|${s.kind}`;
+    const group = `${s.location}|${equipmentKind(s.kind).type}`;
     groups.set(group, [...(groups.get(group) ?? []), s]);
   }
   const places = new Map<string, number>();
@@ -225,6 +229,14 @@ export function valvePurpose(
 export const powerPurpose = (destination: string) =>
   `Isolates power for ${destination}.`;
 
+/** Common nouns in prose, preserving technical acronyms such as UV and BMS. */
+export function equipmentTypeInProse(type: string): string {
+  const first = type.split(' ')[0];
+  return /^[A-Z0-9-]+$/.test(first)
+    ? type
+    : type[0].toLowerCase() + type.slice(1);
+}
+
 /** Any other equipment's description; the status clause only with a status. */
 export function equipmentLine(
   place: number,
@@ -234,10 +246,9 @@ export function equipmentLine(
   /** How many of its kind its room has: one alone is "the only" (the owner, 2026-10-25). */
   of?: number,
 ): string {
-  const line =
-    of === 1
-      ? `The only ${type} in ${location}`
-      : `${ordinal(place)} ${type} in ${location}`;
+  const noun = equipmentTypeInProse(type);
+  const where = descriptionLocation(location);
+  const line = `The ${of === 1 ? 'only' : ordinal(place)} ${noun} in ${where}`;
   return status ? `${line}, currently ${status}` : line;
 }
 

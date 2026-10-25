@@ -33,9 +33,7 @@ const wall = (z: number) => {
 describe('picking what is aimed at', () => {
   it('names the component a piece belongs to, up its parents', () => {
     const { inspect } = scene();
-    expect(inspect(0, 0)?.title).toBe(
-      'PL3-BT1-IV1: Make-up to the balance tank valve',
-    );
+    expect(inspect(0, 0)?.title).toBe('PL3-BT1-IV1 (butterfly valve)');
     expect(inspect(0.9, 0.9)).toBeNull();
   });
 

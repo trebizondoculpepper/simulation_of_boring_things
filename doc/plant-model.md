@@ -154,3 +154,7 @@ Failures worth playing: a blocked or air-locked sample line, which freezes the r
 - `src/game/plant/circulation.ts`: the main pool's circulation as blocks and a schematic: balance tank, duty and standby pump sets (each a pump, motor, strainer, non-return valve and two isolating valves), four filter sets (filter and its valves), heat exchanger, UV unit, pool. One pump gives its design 160 m³/h; the tests cover both pumps, a tripped or dead-headed pump, an isolated filter, clogging filters and a fouled strainer.
 
 Next: the boiler and heat circuit as blocks (wrapping the boiler controller already written), the temperature step, then placement data for the first plant room.
+
+## Describing equipment state
+
+Follow [Equipment status and inspection](equipment-status.md) when adding a machine, valve, instrument, passive component, architectural fitting or safety device. Its own model supplies the state; inspection reveals only locally observable evidence, individual machines and controls keep their own identities, and missing state never defaults to Off. The guide distinguishes active control phases, positions, readings, process conditions and safety latches, and records the implemented boiler vocabulary.

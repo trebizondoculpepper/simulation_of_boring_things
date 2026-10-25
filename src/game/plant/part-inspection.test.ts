@@ -71,14 +71,16 @@ describe('a part’s inspection', () => {
   it('reads a flowmeter as its display shows it, and says what its arrow indicates between the pipe’s two ends', () => {
     expect(inspectComponent({ tag: 'PL1-F2-FT1' }, running())).toEqual({
       key: 'PL1-F2-FT1',
-      title: 'PL1-F2-FT1 — Flowmeter, currently reading 45.0 m³/h.',
+      title:
+        'PL1-F2-FT1 (Kessler-Moody Instruments flowmeter) - reading 45.0 m³/h',
       detail:
         'The direction arrow indicates water is flowing from the lounge pool sand filter 2 to the filter outlet header.',
     });
     expect(
       inspectComponent({ tag: 'PL1-F2-FT1' }, backwashing(running())),
     ).toMatchObject({
-      title: 'PL1-F2-FT1 — Flowmeter, currently reading 34.0 m³/h.',
+      title:
+        'PL1-F2-FT1 (Kessler-Moody Instruments flowmeter) - reading 34.0 m³/h',
       detail:
         'The direction arrow indicates water is flowing from the filter outlet header to the lounge pool sand filter 2.',
     });
@@ -91,7 +93,8 @@ describe('a part’s inspection', () => {
       });
     w = stepWorld(w, 5);
     expect(inspectComponent({ tag: 'PL1-F2-FT1' }, w)).toMatchObject({
-      title: 'PL1-F2-FT1 — Flowmeter, currently reading 0.0 m³/h.',
+      title:
+        'PL1-F2-FT1 (Kessler-Moody Instruments flowmeter) - reading 0.0 m³/h',
       detail:
         'No flow shown; installed between the lounge pool sand filter 2 and the filter outlet header.',
     });
@@ -100,7 +103,7 @@ describe('a part’s inspection', () => {
   it('gives only the arrow’s way where the model has no route (the Olympic’s meters)', () => {
     const lines = inspectComponent({ tag: 'PL2-F1-FT1' }, running());
     expect(lines?.title).toMatch(
-      /^PL2-F1-FT1 — Flowmeter, currently reading [\d.]+ m³\/h\.$/,
+      /^PL2-F1-FT1 \(Kessler-Moody Instruments flowmeter\) - reading [\d.]+ m³\/h$/,
     );
     // No route in a model: the arrow's way, as the display shows it.
     expect(lines?.detail).toBe('The direction arrow points forward (->).');

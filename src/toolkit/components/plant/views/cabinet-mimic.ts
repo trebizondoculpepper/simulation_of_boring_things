@@ -265,8 +265,10 @@ export function createCabinetMimic(
   const shownX = lcd ? -0.09 : width / 2 - 0.07;
   shown.group.position.set(shownX, lcd ? LCD_Y : 0.02, 0.002);
   if (lcd)
-    // Its strip: the panel's dark band under the print.
-    t.box(group, t.paint('#424a49', 0.65), width, 0.075, 0.006, 0, LCD_Y, 0);
+    // Its strip under the print: a light grey overlay, so the LCD's black
+    // bezel and the black DISPLAY and MODE buttons stand out from it in a
+    // dim plant room (the owner, 2026-10-25: black on black was lost).
+    t.box(group, t.paint('#b4bab6', 0.6), width, 0.075, 0.006, 0, LCD_Y, 0);
   shown.group.traverse((o) => (o.userData.live = true));
   group.add(shown.group);
   const legend = lcd

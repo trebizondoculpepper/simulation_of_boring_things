@@ -1,3 +1,4 @@
+import { markComponent } from '../../../components/core/views/component-identity';
 import { computed, signal } from '@preact/signals-core';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import {
@@ -10,6 +11,7 @@ import { createGasBallValve } from '../../../components/plant/views/gas-fittings
 import type { BallValveView } from '../../../components/plant/views/gas-fittings';
 import { createMimicBoard } from '../../../components/industrial-control/views/mimic-board';
 import {
+  boilerStatus,
   gasPressures,
   gasTo,
   meterFlow,
@@ -157,6 +159,19 @@ export function createLiveBoilerCascade(
   const cascade = createBoilerCascade(kit, {
     panels: panels.map((panel) => panel.group),
     first: first + 1,
+  });
+  cascade.boilers.forEach((boiler, offset) => {
+    const tag = `B-50${first + offset + 1}`;
+    const index = first + offset;
+    markComponent(boiler, {
+      tag,
+      model: { node: tag },
+      status: () =>
+        boilerStatus(house.boilers[index], {
+          powered: house.powered(),
+          gas: gasTo(house.gas, index),
+        }),
+    });
   });
   return {
     object: cascade,

@@ -6,6 +6,7 @@ import {
   MAX_TRIES,
   PURGE_SECONDS,
   boilerDisplay,
+  boilerStatus,
   boilerLamps,
   gasTo,
   meterFlow,
@@ -169,5 +170,45 @@ describe('the gas house', () => {
     const flow = meterFlow(newGasHouse(), [firing, newBoiler()]);
     expect(flow).toBeGreaterThan(5);
     expect(flow).toBeLessThan(32);
+  });
+});
+
+describe('a boiler’s inspection state', () => {
+  it('distinguishes its sequence phases and a recoverable water-pressure block', () => {
+    for (const [code, wording] of [
+      [0, 'standby'],
+      [1, 'purging'],
+      [2, 'igniting'],
+      [3, 'firing'],
+      [7, 'pump run-on'],
+      [9, 'blocked (low water pressure)'],
+    ] as const)
+      expect(boilerStatus({ ...newBoiler(), code })).toBe(wording);
+    const blocked = run(newBoiler(), { pressure: LOW_PRESSURE / 2 }, 1);
+    expect(boilerStatus(blocked)).toBe('blocked (low water pressure)');
+    expect(boilerStatus(run(blocked, { demand: false }, 1))).toBe('standby');
+  });
+  it('retains actual lockout causes until reset, and prioritises unavailable power and OFF', () => {
+    const locked = run(
+      newBoiler(),
+      { gas: false },
+      MAX_TRIES * (PURGE_SECONDS + IGNITION_SECONDS) + 2,
+    );
+    expect(boilerStatus(locked)).toBe('locked out (ignition failure)');
+    expect(boilerStatus(run(locked, {}, 10))).toBe(
+      'locked out (ignition failure)',
+    );
+    expect(boilerStatus(pressBoiler(locked, 'reset'))).toBe('standby');
+    expect(boilerStatus({ ...newBoiler(), lockout: 'flame-loss' })).toBe(
+      'locked out (flame loss)',
+    );
+    expect(boilerStatus({ ...newBoiler(), lockout: 'overheat' })).toBe(
+      'locked out (overheat)',
+    );
+    expect(boilerStatus(locked, { powered: false })).toBe('unpowered');
+    expect(boilerStatus({ ...locked, on: false })).toBe('switched off');
+    expect(boilerStatus(newBoiler(), { gas: false })).toBe(
+      'standby, gas unavailable',
+    );
   });
 });

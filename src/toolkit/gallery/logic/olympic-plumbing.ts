@@ -173,6 +173,7 @@ const itemOf = (p: PlanItem): Item => ({
   h: p.h,
   mount: p.mount,
   ...(p.y !== undefined ? { y: p.y } : {}),
+  ...(p.stand ? { stand: p.stand } : {}),
 });
 
 /** Turned as Three turns an object: 0 faces south. */
@@ -207,7 +208,7 @@ export interface RoomPort {
 export function olympicPorts(items = olympicPlan()): RoomPort[] {
   return items.flatMap((p) => {
     const yaw = YAW[p.facing];
-    const y0 = p.mount === 'wall' ? (p.y ?? 0) : 0;
+    const y0 = p.mount === 'wall' ? (p.y ?? 0) : (p.stand ?? 0);
     // Wall equipment's frame is the middle of its back, in the wall's face (`Placed`).
     const forward = turn([0, 0, 1], yaw);
     const back = p.mount === 'wall' ? p.d / 2 : 0;
@@ -1206,7 +1207,56 @@ export function plumbOlympic(
     }
   }
   const shared = (id: string) =>
-    id.startsWith('pumps.discharge.') || id === 'contact.inlet.iso';
+    id.startsWith('pumps.discharge.') ||
+    id === 'contact.inlet.iso' ||
+    id === 'uv.inlet.iso' ||
+    id === 'uv.outlet.iso';
+  // The UV's isolating valves on long straights, clear of their bends (the
+  // owner, 2026-10-25): the inlet's well up its drop from the high level,
+  // not just above the bend into the low run; the outlet's on the dosing
+  // spool's run along the wall, before the acid quill, not on its short
+  // first leg out of the unit.
+  for (const [id, runName, pick] of [
+    [
+      'uv.inlet.iso',
+      'contact-to-uv',
+      (pts: readonly Vec3[]) => {
+        const i = pts.findIndex(
+          (q, k) =>
+            k > 0 && q[1] < pts[k - 1][1] - 0.5 && q[0] === pts[k - 1][0],
+        );
+        const top = pts[i - 1];
+        return { at: [top[0], 1.4, top[2]] as Vec3, along: [0, -1, 0] as Vec3 };
+      },
+    ],
+    [
+      'uv.outlet.iso',
+      'Dosing spool',
+      (pts: readonly Vec3[]) => {
+        const corner = pts[2];
+        return {
+          at: [round(corner[0] + 0.6), corner[1], corner[2]] as Vec3,
+          along: [1, 0, 0] as Vec3,
+        };
+      },
+    ],
+  ] as const) {
+    const run = runs.find((r) => r.name === runName);
+    const f = [...expansion.along.values()].flat().find((x) => x.id === id);
+    if (!run || !f) continue;
+    const p = pick(run.points);
+    fittings.push({
+      id: f.id,
+      kind: f.kind,
+      line: run.line,
+      run: run.name,
+      at: p.at,
+      along: p.along,
+      normally: f.normally,
+      operator: workedBy(f, p.at),
+      reachable: true,
+    });
+  }
   {
     const main = runs.find((r) => r.name === 'battery-to-contact');
     const f = [...expansion.along.values()]
@@ -1747,12 +1797,20 @@ export function olympicRoom() {
             od: r.od,
             // As the plumber's options have it worked.
             operator,
-            // Its lever away from the wall it is nearest, into the room, unless the plumber turned it.
+            // Its lever away from the wall it is nearest, into the room, unless
+            // the plumber turned it. A valve is built along its frame's z and
+            // turned to `facing`, its shut lever along its frame's +x: so on
+            // a level pipe `facing` runs along the pipe, the way that puts
+            // the lever into the room (across it would turn the valve
+            // crossways on its pipe: the owner, 2026-10-25, PL2-UV1-IV1); on
+            // an upright pipe it is the lever's way out, into the room.
             facing:
               f.facing ??
               (axis === 'x'
-                ? [0, 0, f.at[2] > 0 ? -1 : 1]
-                : [f.at[0] > 0 ? -1 : 1, 0, 0]),
+                ? [f.at[2] > 0 ? 1 : -1, 0, 0]
+                : axis === 'z'
+                  ? [0, 0, f.at[0] > 0 ? -1 : 1]
+                  : [f.at[0] > 0 ? -1 : 1, 0, 0]),
           } satisfies Valve,
         ];
       });

@@ -55,7 +55,7 @@ describe('the operator’s manual', () => {
       parts.map((p) => componentDescription(p.id)),
     );
     expect(schedule.rows.find((row) => row[0] === 'P-101A')?.[4]).toBe(
-      '1st Pump in PL2',
+      'The 1st pump in Plant Room 2',
     );
     expect(schedule.rows.find((row) => row[0] === 'PL3')?.[4]).toBe('');
     expect(index.rows.map((row) => row[1]).sort()).toEqual(

@@ -1,0 +1,15 @@
+# Individual boiler inspection and natural descriptions
+
+The owner reported that BH-B1’s boilers inherited their pair’s hover description, requested definite articles and full location names in generated prose, and asked for useful boiler state descriptions.
+
+The three cascade identifiers remain their assemblies’ identities. Each of the six existing B-501…B-506 machines gains a permanent catalogue entry and its own scene identity bound to its existing boiler schematic node. Its physical tag is now a child of that boiler rather than of the pair, at the same physical position. The nearest-owner inspection rule therefore works on casing and tag, while individual controls keep their more specific descriptions.
+
+A pure boilerStatus selector reads the existing controller and power/gas permits: unpowered, switched off, standby, purging, igniting, firing and pump run-on; blocked (low water pressure), which clears automatically; and locked out (ignition failure/flame loss/overheat), which needs reset. Gas unavailable is stated separately from a proven ignition/flame fault. Live callbacks bind each boiler to its own controller, not its neighbour’s. Those controllers are still the boiler house’s existing local model; putting them in the world remains mission 046.
+
+The common description generator adds The, lowercases common type names while retaining technical acronyms, and expands location codes in prose. The catalogue’s existing room codes and names move to a shared pure room-names module; labels such as Plant Room 1 and the boiler house are derived there. Tags and room identity are unchanged. Overlay, inventory, manual and console continue using the same generator. The health-coverage classification explicitly records the new individual boiler kind’s current model limitation.
+
+The owner then requested general equipment-status documentation. doc/equipment-status.md records the conventions for active machinery, valves and isolators, instruments, passive equipment, architectural mechanisms and safety systems. It explains observable evidence, command versus actual state versus delivered service, precedence and retained fault causes, with the implemented boiler vocabulary and explicit limits of the local-state adapter. The plant-model guide and prompt 069 link to it.
+
+The owner refined the heading to id (brand model type) - current status. Inspection now formats structured catalogue identity and state directly, with the static description or meter direction below, rather than parsing a live prose string. Optional model metadata is recorded only when known; the boilers use the same HW 300 identifier function as their rating plates. Ordinary controls without independent ids retain their own descriptions.
+
+Validation: pending.

@@ -26,22 +26,8 @@ import { olympicValveRoutes } from '../../toolkit/gallery/logic/olympic-plumbing
 import type { ValveRoute } from './component-descriptions';
 import type { Classification, EquipmentKind } from './equipment-kinds';
 
-/** Room codes are fixed, so an equipment tag keeps its location in its name. */
-export const EQUIPMENT_ROOM_CODES = {
-  plant_pool_01: 'PL1',
-  plant_pool_02: 'PL2',
-  plant_pool_03: 'PL3',
-  plant_pool_04: 'PL4',
-  wet_hall: 'WH',
-  boiler_house: 'BH',
-  hypo_store: 'HS',
-  acid_store: 'AS',
-  loading_bay: 'LB',
-  switch_room: 'SR',
-  air_plant: 'AP',
-  control_room: 'CR',
-  engineers_office: 'EO',
-} as const;
+import { EQUIPMENT_ROOM_CODES, ROOM_NAMES } from './room-names';
+export { EQUIPMENT_ROOM_CODES } from './room-names';
 
 export interface CataloguedEquipment {
   assetId: string;
@@ -56,6 +42,8 @@ export interface CataloguedEquipment {
 }
 
 export interface InventoryEntry {
+  /** Model identifier recorded for this installation, when known. */
+  model?: string;
   assetId?: string;
   id: string;
   name: string;
@@ -70,22 +58,6 @@ export interface InventoryEntry {
   /** A saved control may still be awaiting a causal circuit connection. */
   source: 'model' | 'control' | 'placement';
 }
-
-const ROOM_NAMES: Record<string, string> = {
-  plant_pool_01: 'Lounge pool plant room',
-  plant_pool_02: 'Olympic pool plant room',
-  plant_pool_03: 'Jacuzzi plant room',
-  plant_pool_04: 'Footbath plant room',
-  wet_hall: 'Wet hall',
-  boiler_house: 'Boiler house',
-  hypo_store: 'Hypochlorite store',
-  acid_store: 'Acid store',
-  loading_bay: 'Loading bay',
-  switch_room: 'Electrical switch room',
-  air_plant: 'Air plant',
-  control_room: 'Plant control room',
-  engineers_office: 'Engineers’ office',
-};
 
 /** Catalogues the actual placed item definitions; unknown keys fail loudly. */
 export function equipmentCatalogue(): CataloguedEquipment[] {
@@ -286,6 +258,7 @@ function inventoryRecords(
           name: fixture.name,
           kind: fixture.kind,
           brand: fixture.brand,
+          ...(fixture.model ? { model: fixture.model } : {}),
           class: 'plant',
           purpose: '',
           depth: 1,

@@ -1,33 +1,48 @@
 import type { World } from '../world';
-import { plantInventory } from './equipment-catalogue';
-import { describeForWorld } from './component-status';
-import { componentDescription } from './equipment-catalogue';
+import { plantInventory, componentDescription } from './equipment-catalogue';
+import type { InventoryEntry } from './equipment-catalogue';
+import { inspectionStatus } from './component-status';
+import { equipmentKind } from './equipment-kinds';
+import { equipmentTypeInProse } from './component-descriptions';
+import { brandById } from '../../toolkit/components/core/logic/brands';
+import type { BrandId } from '../../toolkit/components/core/logic/brands';
 import { describePart, flowmeterLines } from './part-inspection';
 import type { PartDescription } from './part-inspection';
 
-/**
- * What the information overlay says of a component (prompt 061): its
- * plate's tag and its name on the first line, and its description (prompt
- * 060) on the second, live where the world is given; the second line left
- * out where nothing is known of it. A thing with no tag shows its name
- * alone; a tag no register holds shows the name it is marked with, or
- * nothing. Pure.
- */
-
+/** Whole equipment uses identity/maker/model/type and state, with its purpose below.
+ * Unregistered exhibits and individual controls use only what their identity supplies. */
 export interface ComponentInspection {
   key: string;
   title: string;
   detail?: string;
 }
 
-/** Each registered tag's name, built once: the plant's layout is fixed. */
-let names: Map<string, string> | undefined;
-const nameOf = (tag: string) => {
-  names ??= new Map(plantInventory().map((e) => [e.id, e.name]));
-  return names.get(tag);
+/** Equipment headings omit unknown maker, model and state instead of guessing them. */
+export function equipmentHeading(
+  item: {
+    id: string;
+    type: string;
+    brand?: BrandId | 'unbranded';
+    model?: string;
+  },
+  status?: string,
+): string {
+  const brand =
+    item.brand && item.brand !== 'unbranded'
+      ? brandById(item.brand).name
+      : undefined;
+  const about = [brand, item.model, equipmentTypeInProse(item.type)]
+    .filter(Boolean)
+    .join(' ');
+  return `${item.id} (${about})${status ? ` - ${status}` : ''}`;
+}
+
+let entries: Map<string, InventoryEntry> | undefined;
+const entryOf = (tag: string) => {
+  entries ??= new Map(plantInventory().map((item) => [item.id, item]));
+  return entries.get(tag);
 };
 
-/** The overlay's lines for a component marked `identity`, or null. */
 export function inspectComponent(
   identity: {
     tag?: string;
@@ -38,33 +53,30 @@ export function inspectComponent(
   },
   world?: World,
 ): ComponentInspection | null {
-  // A part inside a component, in its own words (prompt 068).
+  // Individual controls without an independent equipment id retain their own words.
   if (identity.part)
     return {
       key: identity.key ?? `part:${identity.part.label}`,
       ...describePart(identity.part, world),
     };
-  // An installed flowmeter: its reading and its path (prompt 068).
-  const meter =
-    identity.tag && world ? flowmeterLines(world, identity.tag) : null;
-  if (meter) return { key: identity.tag!, ...meter };
   if (identity.tag) {
-    const name = nameOf(identity.tag);
-    // A tag no register holds (a development room's exhibit): its own name, nothing more.
-    if (!name)
+    const item = entryOf(identity.tag);
+    if (!item)
       return identity.name
-        ? { key: identity.tag, title: `${identity.tag}: ${identity.name}` }
+        ? { key: identity.tag, title: `${identity.tag} (${identity.name})` }
         : null;
-    // Its own live state, from its machine's model, where it gives one.
-    const own = identity.status?.();
-    const base = world
-      ? describeForWorld(world, identity.tag)
-      : componentDescription(identity.tag);
-    const detail =
-      own && !/, currently /.test(base) ? `${base}, currently ${own}` : base;
+    const meter = world ? flowmeterLines(world, identity.tag) : null;
+    const state =
+      identity.status?.() ??
+      meter?.status ??
+      (world ? inspectionStatus(world, identity.tag) : undefined);
+    const detail = meter?.detail ?? componentDescription(identity.tag);
     return {
       key: identity.tag,
-      title: `${identity.tag}: ${name}`,
+      title: equipmentHeading(
+        { ...item, type: equipmentKind(item.kind).type },
+        state,
+      ),
       ...(detail ? { detail } : {}),
     };
   }

@@ -1,3 +1,4 @@
+import { equipmentKind } from './equipment-kinds';
 import { GAS_ZONES } from './gas';
 import { gasDisplay } from '../../toolkit/components/general-safety/logic/gas-detection';
 import { uvLampOn } from './uv';
@@ -5,9 +6,13 @@ import { INSTALLED_VALVES } from './installed-valves';
 import { MODEL_VALVES } from './model-valves';
 import type { World } from '../world';
 import { jacuzziCabinetPanel } from '../world';
-import { componentDescription, plantInventory } from './equipment-catalogue';
+import {
+  componentDescription,
+  describedComponents,
+  plantInventory,
+} from './equipment-catalogue';
 import type { InventoryEntry } from './equipment-catalogue';
-import { statusBindingFor } from './component-descriptions';
+import { formatStatus, statusBindingFor } from './component-descriptions';
 import type {
   DescribedSubject,
   DescriptionContext,
@@ -131,3 +136,24 @@ export const inventoryForWorld = (world: World): InventoryEntry[] =>
 /** One component's description as the world has it now, or ''. */
 export const describeForWorld = (world: World, tag: string): string =>
   componentDescription(tag, worldContext(world));
+
+/** One component's actual state for its inspection heading, independent of prose. */
+export function inspectionStatus(
+  world: World,
+  tag: string,
+): string | undefined {
+  const subject = describedComponents().subjects.get(tag);
+  if (!subject) return undefined;
+  if (
+    subject.kind === 'switch-fuse' &&
+    subject.room &&
+    subject.room in world.plant.feeders
+  )
+    return world.plant.feeders[subject.room as keyof typeof world.plant.feeders]
+      ? 'On'
+      : 'Off';
+  const state = resolveStatus(world, subject);
+  if (state?.policy === 'valve')
+    return state.partly ? 'part open' : state.open ? 'open' : 'shut';
+  return formatStatus(equipmentKind(subject.kind).status, state);
+}

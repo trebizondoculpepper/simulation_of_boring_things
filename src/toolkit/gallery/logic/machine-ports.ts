@@ -197,7 +197,7 @@ export function machinePorts(item: Item): MachinePort[] {
   if (kind === 'pump-pair') {
     // Two pump sets side by side, duty and standby (`createPumpPair`): each
     // draws through its strainer, whose inlet faces west, and discharges
-    // up through its isolating valve's riser.
+    // up its riser to the room's plumbing (and its valves).
     const ports: MachinePort[] = [];
     for (const [z, k] of [
       [-0.75, 'A'],
@@ -218,9 +218,10 @@ export function machinePorts(item: Item): MachinePort[] {
           0.16,
           'pool-water',
         ),
-        // Its motor's terminal box, on top of the motor (the pump stands
-        // 0.45 m along in its pair).
-        port(`power${k}`, [0.9, 0.98, z], [0, 1, 0], 0.0269, 'power'),
+        // Its supply into the cable gland on top of its motor's terminal
+        // box (the box's top at 1.012 m, its middle 0.852 m along; the
+        // gland 30 mm high).
+        port(`power${k}`, [0.852, 1.042, z], [0, 1, 0], 0.0269, 'power'),
       );
     }
     return ports;

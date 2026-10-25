@@ -1,3 +1,4 @@
+import { condensingBoilerModel } from '../logic/boiler-house';
 import { Group, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import type { Material, Object3D } from 'three';
 import { wrapOnto } from '../../core/views/wrap-label';
@@ -182,7 +183,7 @@ export function createCondensingBoiler(
     'hamwarmy',
     [W / 2 + 0.002, 0.5, 0],
     [
-      `HW ${output} condensing boiler`,
+      `${condensingBoilerModel(output)} condensing boiler`,
       `${output} kW  G20  PMS 6 bar`,
       'PIN 0063CU3507  IP X4D',
     ],
@@ -251,16 +252,18 @@ export function createBoilerCascade(
     0.05,
     0.1,
   );
+  const boilers: ReturnType<typeof createCondensingBoiler>[] = [];
   const xs = [-(W + gap) / 2, (W + gap) / 2];
   xs.forEach((x, i) => {
     const boiler = createCondensingBoiler(kit, 300, live.panels?.[i]);
     boiler.position.set(x, 0.1, 0.1);
     group.add(boiler);
+    boilers.push(boiler);
     sign(
       t,
-      group,
+      boiler,
       `B-50${first + i}`,
-      [x, 0.1 + H - 0.4, 0.1 + D / 2 + 0.003],
+      [0, H - 0.4, D / 2 + 0.003],
       0.14,
       0.05,
       { ground: '#f2d23a' },
@@ -287,7 +290,7 @@ export function createBoilerCascade(
     10,
   );
   t.cyl(group, pvc, 0.05, 0.12, xs[1] + W / 2 + 0.1, 0.3, back - 0.2, 'y', 16);
-  return group;
+  return Object.assign(group, { boilers });
 }
 
 // ---- Low-loss header ------------------------------------------------------
