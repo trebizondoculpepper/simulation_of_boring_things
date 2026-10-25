@@ -169,8 +169,11 @@ export interface RigFlows {
   bed: number;
   toOutlet: number;
   toWaste: number;
-  /** The bed's pressure difference, bar, and whether it is lifted. */
+  /** The heads at the bed's top and bottom, as its gauges read them, bar; and their difference. */
+  topBar: number;
+  bottomBar: number;
   bedBar: number;
+  /** Whether the bed is lifted. */
   lifted: boolean;
   /** Dirt in the supply, the clean outlet and the waste, g/m³. */
   supplyDirt: number;
@@ -274,6 +277,8 @@ export function rigFlows(rig: FilterRig): RigFlows {
     bed,
     toOutlet,
     toWaste,
+    topBar: (sol.heads.top ?? 0) * BAR,
+    bottomBar: (sol.heads.bottom ?? 0) * BAR,
     bedBar: Math.abs((sol.heads.top ?? 0) - (sol.heads.bottom ?? 0)) * BAR,
     lifted,
     supplyDirt,

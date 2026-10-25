@@ -576,11 +576,14 @@ export function createSandFilter(
     label,
     sightSide = 'left',
     livery: liveryOf = 'lidoluxe',
+    bedDepth = 1.2,
   }: {
     dia: number;
     shell: number;
-    /** Its maker's livery: the plant's are Lidoluxe's; the ideal filter's blue and white (dev40). */
+    /** Its maker's livery and badge: the plant's are Lidoluxe's; the ideal filter's blue and white (dev40). */
     livery?: BrandId;
+    /** Its sand bed's depth, m, as its rating plate gives it. */
+    bedDepth?: number;
     /** Its nozzles' bore: the room's pipework is sized by it. */
     dn: DN;
     label: string;
@@ -747,7 +750,7 @@ export function createSandFilter(
     outletGauge.update(delta);
   };
   // The maker and rating are ink on the curved shell, not floating plates.
-  const logo = createBrandBadge(kit, 'lidoluxe', {
+  const logo = createBrandBadge(kit, liveryOf, {
     form: 'wordmark',
     height: 0.065,
     maxWidth: 0.25,
@@ -783,7 +786,7 @@ export function createSandFilter(
       c.fillText(label, w * 0.06, h * 0.28, w * 0.88);
       c.font = `${h * 0.21}px ${SANS}`;
       c.fillText('4 bar  ·  40 °C', w * 0.06, h * 0.56);
-      c.fillText('Bed depth 1.2 m', w * 0.06, h * 0.83);
+      c.fillText(`Bed depth ${bedDepth.toFixed(1)} m`, w * 0.06, h * 0.83);
     },
     512,
   );
