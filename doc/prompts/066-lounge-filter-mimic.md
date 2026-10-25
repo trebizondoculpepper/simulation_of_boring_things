@@ -19,7 +19,7 @@ The owner, 2026-10-25: redesign PL1-CP1, the lounge pool's local control panel, 
 
 1. **Flowmeters, one per filter outlet:** PL1-F1-FT1 and PL1-F2-FT1. They are real, registered and branded (Kessler-Moody, as the Olympic room's), drawn in the lounge pipework and read from the world. Each reads its filter's flow up the outlet in service, and reversed while backwashing.
 2. **A schematic, grouped by filter.** It is drawn as the plant runs: the balance tank, pumps P1 and P2, the discharge header, the two filters side by side, the return to the pool, and the waste lines. Each filter's inlet, outlet, backwash and drain valves stand around its symbol, each with its OPEN and SHUT lamps and buttons on the pipe it works, and the filter's flow readout beside it.
-3. **LED chasers show the flow:** a row of small LEDs along each pipe, chasing in the flow's direction, dark where nothing flows. Backwash shows as a reversal. It is a new kind of display, so it is tried on dev0's boards first.
+3. **LED chasers show the flow:** a row of small LEDs along each pipe, chasing in the flow's direction, dark where nothing flows. Backwash shows as a reversal. It is a new kind of display, so it is tried first in dev39, the room for control panels and other assemblies (the owner, 2026-10-25: dev0 is for single components).
 4. **The pump doors stay as they are:** indicator, ammeter, HAND · OFF · AUTO and RESET. START, STOP and RUN are on the schematic beside each pump.
 5. **The mimic is one component, used twice:**
    - in PL1-CP1, with the local controls on its doors;
@@ -48,7 +48,7 @@ The owner, 2026-10-25: redesign PL1-CP1, the lounge pool's local control panel, 
    - The board draws LEDs along each line with a source. They run at a fixed real-time pace, independent of the simulation's speed, in the direction given, and stay dark while still.
    - The LED's colour follows the line's (water blue), or amber if a spec asks for it.
    - Pure logic (which LED is lit at which phase) goes in `logic/`, tested; the view instances its LEDs, so a board of many lines stays cheap.
-   - Tried first on a dev0 board: one line forward, one back, one still.
+   - Tried first in dev39 (control assemblies): one line forward, one back, one still, one changing. Done 2026-10-25.
 2. **The flowmeters.**
    - PL1-F1-FT1 and PL1-F2-FT1 go in `installed-fixtures.ts` with new asset ids, after the highest in use.
    - They are drawn on the lounge filters' outlet runs in `room-pipes.ts`, the way the Olympic room's are.

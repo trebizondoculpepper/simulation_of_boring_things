@@ -53,6 +53,7 @@ export type GalleryRoomId =
   | 'dev36'
   | 'dev37'
   | 'dev38'
+  | 'dev39'
   | 'retired0'
   | 'retired1'
   | 'dev_corridor';
@@ -223,6 +224,9 @@ export const ROOMS: readonly RoomId[] = [
   // By its URL only: the jacuzzi's cabinet on trial, with an ideal spa,
   // balance tank and sources, and a test panel.
   'dev38',
+  // By its URL only: control panels and other assemblies, tried before the
+  // plant uses them (dev0 is for single components).
+  'dev39',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   'retired1',
@@ -376,6 +380,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev36: 'DEV36 · MUSIC EFFECTS LAB',
   dev37: 'DEV37 · VALVE TEST RIG',
   dev38: 'DEV38 · JACUZZI CABINET TRIAL',
+  dev39: 'DEV39 · CONTROL ASSEMBLIES',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   retired1: 'RETIRED1 · JACUZZI PLANT ROOM, 2026-10-25',
   dev_corridor: 'DEV CORRIDOR',
@@ -477,6 +482,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev36: '#9baeb8',
   dev37: '#7f8f6a',
   dev38: '#6f9aa8',
+  dev39: '#8f8a6a',
   retired0: '#6d7a6f',
   retired1: '#6d7a6f',
   dev_corridor: '#2d9ca0',
