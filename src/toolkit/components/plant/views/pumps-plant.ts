@@ -575,9 +575,12 @@ export function createSandFilter(
     shell,
     label,
     sightSide = 'left',
+    livery: liveryOf = 'lidoluxe',
   }: {
     dia: number;
     shell: number;
+    /** Its maker's livery: the plant's are Lidoluxe's; the ideal filter's blue and white (dev40). */
+    livery?: BrandId;
     /** Its nozzles' bore: the room's pipework is sized by it. */
     dn: DN;
     label: string;
@@ -592,7 +595,7 @@ export function createSandFilter(
     /** Its sight glass's view of the bed, as the filter's state has it. */
     showGlass(inputs: GlassInputs, delta: number): void;
   };
-  const livery = brandLivery(kit, 'lidoluxe');
+  const livery = brandLivery(kit, liveryOf);
   const glass = livery.paint.casing;
   const r = dia / 2;
   const base = 0.3;
