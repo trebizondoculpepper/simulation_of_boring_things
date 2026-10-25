@@ -86,6 +86,14 @@ describe.each([['plant_pool_01', 'medium']] as const)(
         ).toBe(0);
       }
     });
+    it('ends the balance-tank drain over its gully with an air gap', () => {
+      const drain = runs.find((r) => r.name === 'Balance tank drain to waste')!;
+      const end = drain.points.at(-1)!;
+      const above = drain.points.at(-2)!;
+      expect(end[1]).toBeCloseTo(0.1);
+      expect([end[0], end[2]]).toEqual([above[0], above[2]]);
+      expect(drain.valves![0].at[1]).toBeGreaterThan(end[1]);
+    });
     it('runs square', () => {
       for (const r of runs)
         for (const [i, { a, b }] of lengths(r).entries()) {

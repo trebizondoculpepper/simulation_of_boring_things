@@ -71,6 +71,18 @@ describe('registration', () => {
     expect(unregistered).toEqual([]);
   });
 
+  it('registers the two separately installed ozone monitors', () => {
+    for (const [tag, room] of [
+      ['PL1-GD1', 'plant_pool_01'],
+      ['PL2-GD1', 'plant_pool_02'],
+    ] as const)
+      expect(INSTALLED_FIXTURES[tag]).toMatchObject({
+        room,
+        kind: 'ozone-monitor',
+        brand: 'warden',
+      });
+  });
+
   it('registers every flowmeter drawn in the plant rooms', () => {
     const tags = new Set(Object.keys(INSTALLED_FIXTURES));
     const meters = Object.keys(EQUIPMENT_ROOM_CODES).flatMap((room) =>

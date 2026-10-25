@@ -370,8 +370,21 @@ export function createControllerPanel(kit: PanelKit) {
   t.box(group, t.paint('#c9ccc8', 0.7), 1.0, 1.4, 0.02, 0, 0, 0.01);
   // The controller.
   const meter = brandLivery(kit, 'kessler-moody');
-  t.box(group, meter.paint.casing, 0.43, 0.29, 0.15, 0, 0.45, 0.095);
-  t.box(group, meter.paint.main, 0.43, 0.03, 0.152, 0, 0.58, 0.095);
+  // The body ends at the lid's underside; overlapping them put two
+  // differently coloured top faces at exactly the same height.
+  const housing = t.box(
+    group,
+    meter.paint.casing,
+    0.43,
+    0.26,
+    0.15,
+    0,
+    0.435,
+    0.095,
+  );
+  housing.name = 'Water controller housing';
+  const lid = t.box(group, meter.paint.main, 0.43, 0.03, 0.152, 0, 0.58, 0.095);
+  lid.name = 'Water controller lid';
   // Its screen: redrawn as the readings change, at their displayed places.
   const screen = t.printed(0.155, 0.09, () => {}, 256, true);
   put(group, screen.mesh, [-0.07, 0.46, 0.171]);

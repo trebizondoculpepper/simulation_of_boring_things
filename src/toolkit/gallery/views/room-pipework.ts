@@ -1,4 +1,7 @@
 import type { Object3D } from 'three';
+import { createFloorGully } from '../../components/plant/views/floor-gully';
+import { loungeValveFlows } from '../../../game/plant/lounge-valves';
+import { circulating } from '../../../game/plant/pools';
 import { createActuatedButterflyValve } from '../../components/plant/views/actuated-butterfly-valve';
 import { createSampleTakeoff } from '../../components/plant/views/sample-takeoff';
 import { retiredFrom } from '../logic/retired-rooms';
@@ -401,6 +404,23 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         : slab,
     );
   }
+  // The lounge tank already drains to the schematic's waste node. Its
+  // open pipe discharges visibly across an air gap into that drainage.
+  const tankDrain = runs.find(
+    (run) => run.name === 'Balance tank drain to waste',
+  );
+  let tankGully: ReturnType<typeof createFloorGully> | undefined;
+  if ((retiredFrom(room) ?? room) === 'plant_pool_01' && tankDrain) {
+    const end = tankDrain.points.at(-1)!;
+    tankGully = createFloorGully(kit, { drop: end[1] });
+    tankGully.group.position.set(end[0], floorY, end[2]);
+    group.add(
+      markComponent(tankGully.group, {
+        name: 'Balance tank drain gully',
+        model: { node: schematicNodeOfKind('plant_pool_01', 'gully')! },
+      }),
+    );
+  }
   // The isolators on their stands, their handles the switches.
   const { isolators, stands } = roomIsolators(room);
   const galv = new MeshStandardMaterial({
@@ -466,6 +486,18 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     },
     update(delta: number) {
       parts.update(delta);
+      if (tankGully && store) {
+        const world = store.world.value;
+        const running = circulating(
+          world.pools.pool_01,
+          world.plant,
+          'pool_01',
+          world.motors,
+        );
+        tankGully.setFlow(
+          loungeValveFlows(world.loungeValvePositions, running).tankDrain / 3.6,
+        );
+      }
       for (const { isolator, name } of switches) {
         // As the world has it, switched here or anywhere.
         const on = store?.world.value.plant.isolators[name];

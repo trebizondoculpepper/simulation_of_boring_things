@@ -102,6 +102,14 @@ export const PLACED_KINDS = {
     class: 'plant',
     purpose: 'Transfers heat from the heating circuit into pool water.',
   },
+  'ozone-monitor': {
+    type: 'Ozone-in-air monitor',
+    status: 'none',
+    code: 'GD',
+    class: 'plant',
+    purpose: 'Monitors room air for ozone and raises a warning and alarm.',
+    brand: 'warden',
+  },
   'ozone-generator': {
     type: 'Ozone generator',
     status: 'none',

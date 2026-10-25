@@ -1,4 +1,5 @@
-import { BoxGeometry, Mesh } from 'three';
+import { BoxGeometry, Mesh, Vector3 } from 'three';
+import { componentOf } from '../../components/core/views/component-identity';
 import {
   afterEach,
   beforeEach,
@@ -73,6 +74,24 @@ function built(room: string) {
  * join them unnoticed.
  */
 const AWAITING_RULING = ['Equipment doors', 'Plant room door'];
+
+it('registers the lounge ozone station and supports its ACCEPT and RESET controls', () => {
+  const root = built('plant_pool_01');
+  const monitor = root.getObjectByName('Ozone monitor')!;
+  expect(componentOf(monitor)).toMatchObject({ tag: 'PL1-GD1' });
+  const box = monitor.getObjectByName('Ozone alarm control enclosure')!;
+  const housing = box.children[0] as Mesh;
+  housing.geometry.computeBoundingBox();
+  for (const name of ['ACCEPT push button', 'RESET push button']) {
+    const button = monitor.getObjectByName(name)!;
+    expect(button, name).toBeDefined();
+    const mount = button.getWorldPosition(new Vector3());
+    housing.worldToLocal(mount);
+    expect(housing.geometry.boundingBox!.distanceToPoint(mount)).toBeLessThan(
+      1e-6,
+    );
+  }
+});
 
 describe('everything the scene draws is in the model (prompt 064)', () => {
   it('the jacuzzi plant room’s machines and services: every mesh bound, or decorative', () => {

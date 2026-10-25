@@ -50,13 +50,14 @@ export function loungeValveFlows(
   positions: Readonly<Record<string, number>>,
   running: boolean,
 ) {
-  if (!running) return { toPool: 0, toWaste: 0 };
+  if (!running) return { toPool: 0, toWaste: 0, tankDrain: 0 };
   const at = (tag: string) => {
     const valve = VALVE_BY_TAG.get(tag)!;
     return positions[valve.assetId] ?? (valve.normal === 'open' ? 1 : 0);
   };
   let toPool = 0;
-  let toWaste = at('PL1-T1-DV1') * 5;
+  const tankDrain = at('PL1-T1-DV1') * 5;
+  let toWaste = tankDrain;
   for (const n of [1, 2]) {
     const prefix = `PL1-F${n}-`;
     const inlet = at(`${prefix}IV1`);
@@ -65,5 +66,5 @@ export function loungeValveFlows(
     toWaste += 3 * at(`${prefix}DV1`);
   }
   const discharge = Math.max(at('PL1-P1-IV1'), at('PL1-P2-IV1'));
-  return { toPool: toPool * discharge, toWaste };
+  return { toPool: toPool * discharge, toWaste, tankDrain };
 }

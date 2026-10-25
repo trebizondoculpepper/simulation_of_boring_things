@@ -1,6 +1,9 @@
 import { decorativeKind } from '../logic/world-in-model';
 import { retiredFrom } from '../logic/retired-rooms';
 import { olympicRoom } from '../logic/olympic-plumbing';
+import { INSTALLED_FIXTURES } from '../../../game/plant/installed-fixtures';
+import { createEngravedPlate } from '../../components/core/views/plant-signs';
+import { panelMakerMark } from '../../components/core/views/panel-maker-mark';
 import { INSTALLED_ASSET_IDS } from '../../../game/plant/installed-asset-ids';
 import { markComponent } from '../../components/core/views/component-identity';
 import { schematicNodeFor } from '../../../game/plant/model-valves';
@@ -637,6 +640,41 @@ function withOzoneStation(
     gasBinding(zone),
     generator.parts,
   );
+  // A real enclosure supports the station's two panel-mount buttons.
+  const controls = new Group();
+  controls.name = 'Ozone alarm control enclosure';
+  controls.position.y = 1.3;
+  const enclosurePaint = new MeshStandardMaterial({
+    color: '#d5d8d4',
+    roughness: 0.55,
+  });
+  kit.materials.push(enclosurePaint);
+  const enclosure = new Mesh(new BoxGeometry(0.32, 0.28, 0.08), enclosurePaint);
+  enclosure.position.z = -0.04;
+  controls.add(enclosure);
+  const registered = Object.entries(INSTALLED_FIXTURES).find(
+    ([, f]) => f.room === room && f.kind === 'ozone-monitor',
+  );
+  const label = createEngravedPlate(
+    kit,
+    [registered ? `${registered[0]}  OZONE ALARM` : 'OZONE ALARM'],
+    {
+      colour: 'white',
+      width: 0.28,
+      height: 0.025,
+    },
+  );
+  label.position.set(0, 0.1, 0);
+  controls.add(label);
+  panelMakerMark(kit, controls, {
+    width: 0.32,
+    height: 0.28,
+    z: 0,
+    corner: 'bottom-right',
+    size: 0.009,
+    inset: 0.015,
+  });
+  station.object.add(controls);
   // On its own galvanised post beside the generator's east end, facing
   // the room as the generator does: its detector low (ozone is heavier
   // than air), its beacon at the top, its supply in conduit from the post
@@ -893,8 +931,12 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
     if (beside) {
       // Its own installation, in the model as its own (the ozone monitor).
       const node = schematicNodeFor(room, beside.object.name, '');
+      const fixture = Object.entries(INSTALLED_FIXTURES).find(
+        ([, f]) => f.room === room && f.kind === 'ozone-monitor',
+      );
       markComponent(beside.object, {
         name: beside.object.name,
+        ...(fixture ? { tag: fixture[0] } : {}),
         ...(node ? { model: { node } } : {}),
       });
       object.updateMatrixWorld(true);

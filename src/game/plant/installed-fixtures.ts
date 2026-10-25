@@ -21,6 +21,24 @@ export interface InstalledFixture {
 }
 
 export const INSTALLED_FIXTURES: Readonly<Record<string, InstalledFixture>> = {
+  'PL1-GD1': {
+    assetId: 'asset-0115',
+    room: 'plant_pool_01',
+    name: 'Lounge pool ozone-in-air monitor',
+    kind: 'ozone-monitor',
+    brand: 'warden',
+    purpose:
+      'Detects ozone leaking into the lounge plant room and operates its alarm station.',
+  },
+  'PL2-GD1': {
+    assetId: 'asset-0116',
+    room: 'plant_pool_02',
+    name: 'Olympic pool ozone-in-air monitor',
+    kind: 'ozone-monitor',
+    brand: 'warden',
+    purpose:
+      'Detects ozone leaking into the Olympic plant room and operates its alarm station.',
+  },
   'PL3-BT1': {
     assetId: 'asset-0107',
     room: 'plant_pool_03',

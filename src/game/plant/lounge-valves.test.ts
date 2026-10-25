@@ -54,6 +54,13 @@ describe('lounge pool solenoid valves', () => {
     expect(loungeValveFlows(w.loungeValvePositions, true).toPool).toBe(0);
   });
 
+  it('reports the tank drain’s own flow for its gully, separate from filter waste', () => {
+    const positions = newWorld().loungeValvePositions;
+    expect(loungeValveFlows(positions, true).tankDrain).toBe(0);
+    positions['valve-0009'] = 0.5;
+    expect(loungeValveFlows(positions, true).tankDrain).toBe(2.5);
+    expect(loungeValveFlows(positions, false).tankDrain).toBe(0);
+  });
   it('needs at least one pump discharge valve open to return water', () => {
     let w = newWorld();
     w = applyAction(w, { type: 'plant/valve', id: 'valve-0097', open: false });

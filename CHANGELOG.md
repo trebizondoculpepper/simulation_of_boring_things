@@ -131,6 +131,10 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 ### Fixed
 
 - The ozone contact tank (PL1-T2, and the ozone room's): its name and its danger warning are spray-stencilled on its curved shell instead of flat engraved plates standing off it; its nozzles come out of its front where the room's pipes meet them (in low left, out high right, the ozone between), so no pipe floats over its dome and no stub sticks out of its side to nothing; its outlet port is lowered from 2.4 m, above the shell, to 2.0 m. A sectional tank's maker's badge (PL1-T1's and every other) stands clear of its front wall instead of 3 mm inside it, so it no longer z-fights.
+- The separately installed Warden ozone monitors have permanent catalogue references PL1-GD1 and PL2-GD1, shown on their alarm control boxes and in inspection, copying, inventory and console lookup. ACCEPT and RESET are mounted on a supported Penfold enclosure instead of floating above the detector.
+
+- Circulation pump duty/standby identification is engraved on a solid brass plate screwed to each pump’s flat base frame, replacing floating yellow labels. The lounge balance-tank drain PL1-T1-DV1 discharges across an air gap into a working Certikind floor gully bound to the schematic’s waste node. The dosing controller’s lid now sits above its housing rather than sharing its top face, fixing PL1-CP2’s z-fighting.
+
 - Actuated butterfly valves on upright pipes now mount on their stems; electric and pneumatic overrides remain horizontal.
 
 - Reopening the jacuzzi balance tank’s make-up valve now restores filling: PL3-BT1-IV1 is the source of truth instead of leaving a second saved make-up flag latched off. Older make-up commands operate the same physical valve, and previously stuck saves recover on the next simulation step.

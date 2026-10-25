@@ -5,7 +5,7 @@ import { GAUGE, gaugeBosses } from '../logic/sand-filter';
 import { Group, Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
-import { SANS } from '../../core/views/fitting-tools';
+import { createBrassPlate } from '../../core/views/plant-signs';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import { brandLivery } from '../../core/views/brand-livery';
 import type { BrandId } from '../../core/logic/brands';
@@ -252,7 +252,10 @@ export function createEndSuctionPump(kit: PanelKit, x0 = 0) {
   const p = endSuctionPumpLayout();
   // Base frame: two channels and a deck plate, grouted to a plinth.
   t.box(group, t.paint(FINISH.concrete, 0.85), L + 0.2, 0.1, 0.8, 0, 0.05, 0);
-  for (const z of [-0.25, 0.25]) t.box(group, base, L, 0.12, 0.08, 0, 0.16, z);
+  for (const z of [-0.25, 0.25]) {
+    const channel = t.box(group, base, L, 0.12, 0.08, 0, 0.16, z);
+    channel.name = 'Pump base channel';
+  }
   t.box(group, base, L, 0.012, 0.58, 0, 0.226, 0);
   const shaftY = PUMP_SHAFT_Y;
   // The volute, at the suction end, its axis along x.
@@ -427,22 +430,25 @@ export function createPumpPair(
     ]);
     if (dischargeValves)
       t.butterflyValve(set, 150, [PAIR_DISCHARGE_X, 1.5, 0.12], 'y');
-    const tag = t.printed(
+    // Fixed to the flat front channel of this pump's fabricated base,
+    // rather than standing beyond the plinth as an unsupported label.
+    const tag = createBrassPlate(kit, 'grundflow', [name], {
+      width: 0.3,
+      height: 0.09,
+    });
+    tag.position.set(0, 0.16, 0.29);
+    const backing = t.box(
+      tag,
+      t.paint(FINISH.brass, 0.35, 0.75),
       0.3,
-      0.06,
-      (c, w, h) => {
-        c.fillStyle = '#f2d34a';
-        c.fillRect(0, 0, w, h);
-        c.fillStyle = '#1a1a1a';
-        c.font = `bold ${h * 0.55}px ${SANS}`;
-        c.textAlign = 'center';
-        c.textBaseline = 'middle';
-        c.fillText(name, w / 2, h / 2);
-      },
-      256,
+      0.09,
+      0.003,
+      0,
+      0,
+      0.0015,
     );
-    tag.mesh.position.set(-0.4, 0.3, 0.42);
-    set.add(tag.mesh);
+    backing.name = 'Pump identification plate backing';
+    pump.add(tag);
   }
   return Object.assign(group, { pumps });
 }

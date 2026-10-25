@@ -1110,10 +1110,10 @@ export function poolPlantPipework(room: string): {
     });
   }
 
-  // ---- The balance tank's drain, through its valve into the floor ----------
+  // ---- The balance tank's drain, through its valve over a floor gully -----
   // Out under the tank's ladder to just beyond it, then straight down,
   // so it barely enters the walkway round the tank; its valve on the
-  // drop, reached from the walkway.
+  // drop, reached from the walkway. Its open end leaves a 100 mm air gap.
   {
     const d = port(tank, 'drain');
     const f = tank.footprint;
@@ -1131,7 +1131,7 @@ export function poolPlantPipework(room: string): {
       name: 'Balance tank drain to waste',
       kind: 'pvc-drain',
       od: d.od,
-      points: [d.at, s, [s[0], DUCT_DEPTH, s[2]]],
+      points: [d.at, s, [s[0], 0.1, s[2]]],
       joins: [tank.item.label],
       service: 'drainage',
       label: 'DRAIN',
