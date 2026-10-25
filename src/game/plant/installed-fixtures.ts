@@ -47,41 +47,6 @@ export const INSTALLED_FIXTURES: Readonly<Record<string, InstalledFixture>> = {
     brand: 'kessler-moody',
     purpose: "Measures the circulation pumps' total discharge to the filters.",
   },
-  // The circulation pumps, each its own motor and starter
-  // (`motor-starters.ts`), within their rooms' pump sets (PL1-P1, PL2-P1):
-  // registered one by one so each can be described and found (prompt 060).
-  'P-101A': {
-    assetId: 'asset-0115',
-    room: 'plant_pool_02',
-    name: 'Olympic pool duty circulation pump',
-    kind: 'pump',
-    brand: 'grundflow',
-    purpose: 'Circulates the Olympic pool, the duty pump of PL2-P1.',
-  },
-  'P-101B': {
-    assetId: 'asset-0116',
-    room: 'plant_pool_02',
-    name: 'Olympic pool standby circulation pump',
-    kind: 'pump',
-    brand: 'grundflow',
-    purpose: 'Circulates the Olympic pool, the standby pump of PL2-P1.',
-  },
-  'P-201A': {
-    assetId: 'asset-0117',
-    room: 'plant_pool_01',
-    name: 'Lounge pool duty circulation pump',
-    kind: 'pump',
-    brand: 'grundflow',
-    purpose: 'Circulates the lounge pool, the duty pump of PL1-P1.',
-  },
-  'P-201B': {
-    assetId: 'asset-0118',
-    room: 'plant_pool_01',
-    name: 'Lounge pool standby circulation pump',
-    kind: 'pump',
-    brand: 'grundflow',
-    purpose: 'Circulates the lounge pool, the standby pump of PL1-P1.',
-  },
   ...Object.fromEntries(
     [1, 2, 3, 4, 5].map((n) => [
       `PL2-F${n}-FT1`,

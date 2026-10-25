@@ -22,8 +22,6 @@ import {
   worldContext,
 } from './component-status';
 import { INSTALLED_VALVES } from './installed-valves';
-import { PLANT_NETWORK } from './network/plant-network';
-import { valveEndsProblems } from './network/valve-ends-check';
 import { newWorld } from '../world';
 import type { World } from '../world';
 import type { MotorTag } from './motor-starters';
@@ -78,28 +76,17 @@ describe('the wording', () => {
     ]);
   });
 
-  it('says what a valve isolates, from its ends, an authored purpose first', () => {
+  it('says what a valve isolates, from its route, or nothing without one', () => {
     expect(
       valvePurpose({
-        ends: { from: 'pl3.water-service', to: 'pl3.bt1', medium: 'water' },
+        from: 'the circulation pumps',
+        to: 'sand filter 1',
+        medium: 'water',
       }),
     ).toBe(
-      'Isolates water flowing from the water service to the balance tank.',
+      'Isolates water flowing from the circulation pumps to sand filter 1.',
     );
-    expect(
-      valvePurpose({
-        ends: { from: 'pl3.blower', to: 'pl3.air-ring', medium: 'air' },
-      }),
-    ).toBe(
-      'Isolates air flowing from the air blower to the jacuzzi’s air ring.',
-    );
-    expect(
-      valvePurpose({
-        purpose: 'Something else.',
-        ends: { from: 'pl3.blower', to: 'pl3.air-ring', medium: 'air' },
-      }),
-    ).toBe('Something else.');
-    expect(valvePurpose({})).toBeUndefined();
+    expect(valvePurpose(undefined)).toBeUndefined();
   });
 
   it('says what an isolator isolates, and where equipment is and how it is', () => {
@@ -176,70 +163,37 @@ describe('places among a room’s items of a kind', () => {
 });
 
 describe('descriptions of the plant', () => {
-  it('describes every valve in the jacuzzi plant room by what it isolates', () => {
-    const pl3 = Object.values(INSTALLED_VALVES).filter((v) =>
-      v.tag.startsWith('PL3-'),
+  it('describes every valve in the Olympic plant room from its enhanced network', () => {
+    expect(componentDescription('PL2-F1-V1')).toBe(
+      'Isolates water flowing from the circulation pumps to sand filter 1.',
     );
-    expect(pl3).toHaveLength(10);
-    for (const v of pl3)
-      expect(componentDescription(v.tag), v.tag).toMatch(
-        /^Isolates (water|air|heating water) flowing from .+ to .+\.$/,
-      );
-    expect(componentDescription('PL3-BT1-IV1')).toBe(
-      'Isolates water flowing from the water service to the balance tank.',
+    expect(componentDescription('PL2-F1-V4')).toBe(
+      "Isolates water flowing from sand filter 1 to the main plant's drain.",
+    );
+    expect(componentDescription('PL2-T2-IV1')).toBe(
+      'Isolates water flowing from the filters and the heat exchanger to the ozone contact tank.',
+    );
+    expect(componentDescription('PL2-HX1-IV3')).toBe(
+      "Isolates heating water flowing from the main plant's heating flow to the heat exchanger.",
     );
   });
 
-  it('reports the valves still without ends, rather than inventing them', () => {
-    const missing = Object.values(INSTALLED_VALVES)
-      .filter((v) => !componentDescription(v.tag))
-      .map((v) => v.tag);
-    // The Olympic battery's regulating valve throttles; it isolates no route.
-    expect(missing).toEqual(['PL2-F-RV1']);
-  });
-
-  it('agrees with the plant network for every valve the network also holds', () => {
-    const shared = Object.values(INSTALLED_VALVES).filter((v) =>
-      PLANT_NETWORK.nodes.some((n) => n.tag === v.tag),
+  it('describes no valve in a room not yet built through the plumber, rather than inventing one', () => {
+    const described = Object.values(INSTALLED_VALVES).filter((v) =>
+      Boolean(componentDescription(v.tag)),
     );
-    // Not vacuous: the overlaps are counted, and every one has its ends.
-    expect(shared.length).toBeGreaterThanOrEqual(7);
-    for (const v of shared) {
-      expect(v.ends, v.tag).toBeDefined();
-      expect(valveEndsProblems(PLANT_NETWORK, v.tag, v.ends!)).toEqual([]);
-    }
-    // The lounge's backwash waste valves, reconciled with the drawing.
-    expect(
-      valveEndsProblems(PLANT_NETWORK, 'PL1-F1-BV1', {
-        from: 'pl1.f1',
-        to: 'pl1.dr.header',
-        medium: 'water',
-      }),
-    ).toEqual([]);
-  });
-
-  it('catches swapped ends and the wrong medium', () => {
-    expect(
-      valveEndsProblems(PLANT_NETWORK, 'PL1-F1-IV1', {
-        from: 'pl1.f1',
-        to: 'pl1.pw.discharge-header',
-        medium: 'water',
-      }),
-    ).toHaveLength(2);
-    expect(
-      valveEndsProblems(PLANT_NETWORK, 'PL1-F1-IV1', {
-        from: 'pl1.pw.discharge-header',
-        to: 'pl1.f1',
-        medium: 'air',
-      }),
-    ).toHaveLength(2);
-    expect(
-      valveEndsProblems(PLANT_NETWORK, 'PL3-BT1-IV1', {
-        from: 'pl3.water-service',
-        to: 'pl3.bt1',
-        medium: 'water',
-      }),
-    ).toEqual(['PL3-BT1-IV1: not in the network']);
+    // Every Olympic valve but those drawn without a fitting of the enhanced
+    // network to stand for them (prompt 063): its regulating valve, and its
+    // pumps' two discharge valves, split by the room from the one fitting
+    // the plumber sets on the pump block's single discharge port.
+    const notInNetwork = ['PL2-F-RV1', 'PL2-P1-IV3', 'PL2-P1-IV4'];
+    expect(described.map((v) => v.tag).sort()).toEqual(
+      Object.values(INSTALLED_VALVES)
+        .map((v) => v.tag)
+        .filter((t) => t.startsWith('PL2-') && !notInNetwork.includes(t))
+        .sort(),
+    );
+    expect(componentDescription('PL3-BT1-IV1')).toBe('');
   });
 
   it('describes the 1st Olympic pump by its own starter, live', () => {

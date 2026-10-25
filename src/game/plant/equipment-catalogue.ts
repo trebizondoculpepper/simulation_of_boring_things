@@ -14,17 +14,15 @@ import type { ServiceRoom } from './services';
 import type { BrandId } from '../../toolkit/components/core/logic/brands';
 import { PLACED_KINDS } from './equipment-kinds';
 import type { KindId } from './equipment-kinds';
-import {
-  POWER_FOR,
-  STATUS_BINDINGS,
-  describeComponent,
-  placesByKind,
-} from './component-descriptions';
+import { describeComponent, placesByKind } from './component-descriptions';
 import type {
   DescribedSubject,
   DescriptionContext,
 } from './component-descriptions';
-import { MODEL_VALVE_ENDS } from './valve-endpoints';
+import { MOTORS } from './motor-starters';
+import type { MotorTag } from './motor-starters';
+import { olympicValveRoutes } from '../../toolkit/gallery/logic/olympic-plumbing';
+import type { ValveRoute } from './component-descriptions';
 import type { Classification, EquipmentKind } from './equipment-kinds';
 
 /** Room codes are fixed, so an equipment tag keeps its location in its name. */
@@ -172,18 +170,36 @@ interface InventoryRecord {
 
 const record = (
   entry: InventoryEntry,
-  subject: Omit<DescribedSubject, 'key' | 'tag' | 'status'> &
-    Partial<Pick<DescribedSubject, 'status'>>,
+  subject: Omit<DescribedSubject, 'key' | 'tag'>,
 ): InventoryRecord => ({
   entry,
-  subject: {
-    key: entry.assetId ?? entry.id,
-    tag: entry.id,
-    status: STATUS_BINDINGS[entry.id],
-    ...(POWER_FOR[entry.id] ? { powerFor: POWER_FOR[entry.id] } : {}),
-    ...subject,
-  },
+  subject: { key: entry.assetId ?? entry.id, tag: entry.id, ...subject },
 });
+
+/**
+ * The installed valves' routes, from the enhanced networks of the rooms
+ * built through the plumber, by register key (`room|run|name`): only the
+ * Olympic plant room, so far. A valve in any other room has no route, and
+ * so no description, until its room's enhanced network exists.
+ */
+const enhancedRoutes = (): ReadonlyMap<string, ValveRoute> =>
+  new Map(
+    [...olympicValveRoutes()].map(([key, route]) => [
+      `plant_pool_02|${key}`,
+      route,
+    ]),
+  );
+
+/** The pools' names, for their pumps: "Olympic pool", from its plant room's name. */
+const POOL_PUMP_NAME = (tag: MotorTag) => {
+  const motor = MOTORS[tag];
+  const room = `plant_${motor.pool}`;
+  const pool = ROOM_NAMES[room].replace(/ (pool )?plant room$/i, '');
+  return `${pool} pool ${motor.role} circulation pump`.replace(
+    /pool pool/,
+    'pool',
+  );
+};
 
 /** Every inventory entry with its description's subject, purposes not yet filled. */
 function inventoryRecords(
@@ -191,6 +207,7 @@ function inventoryRecords(
   valveStates: Readonly<Record<string, boolean>>,
   feederStates: Readonly<Record<ServiceRoom, boolean>>,
 ): InventoryRecord[] {
+  const routes = enhancedRoutes();
   const model = walkIdentified(root).map((part) => {
     const kind = modelPartKind(part.id);
     return record(
@@ -209,8 +226,8 @@ function inventoryRecords(
       {
         kind,
         location: part.id.split('-')[0],
+        room: roomOfTag(part.id),
         unranked: kind === 'plant-room',
-        ends: MODEL_VALVE_ENDS[part.id],
       },
     );
   });
@@ -251,6 +268,7 @@ function inventoryRecords(
         },
         {
           kind: part.kind as KindId,
+          room: part.room,
           location:
             EQUIPMENT_ROOM_CODES[
               part.room as keyof typeof EQUIPMENT_ROOM_CODES
@@ -274,6 +292,7 @@ function inventoryRecords(
         },
         {
           kind: fixture.kind,
+          room: fixture.room,
           location:
             EQUIPMENT_ROOM_CODES[
               fixture.room as keyof typeof EQUIPMENT_ROOM_CODES
@@ -298,6 +317,7 @@ function inventoryRecords(
         },
         {
           kind: 'switch-fuse',
+          room,
           location: EQUIPMENT_ROOM_CODES[room as ServiceRoom],
           powerFor: theRoom(room),
         },
@@ -320,7 +340,31 @@ function inventoryRecords(
           depth: 1,
           source: 'placement',
         },
-        { kind: 'pipework', location: 'WH' },
+        { kind: 'pipework', room: 'wet_hall', location: 'WH' },
+      ),
+    ),
+    // The circulation pumps, one by one within their pump sets, as the
+    // world's motor starters have them (`motor-starters.ts`).
+    ...(Object.keys(MOTORS) as MotorTag[]).map((tag) =>
+      record(
+        {
+          id: tag,
+          name: POOL_PUMP_NAME(tag),
+          kind: 'pump',
+          brand: 'grundflow',
+          class: 'plant',
+          purpose: '',
+          depth: 2,
+          source: 'model',
+        },
+        {
+          kind: 'pump',
+          room: `plant_${MOTORS[tag].pool}`,
+          location:
+            EQUIPMENT_ROOM_CODES[
+              `plant_${MOTORS[tag].pool}` as keyof typeof EQUIPMENT_ROOM_CODES
+            ],
+        },
       ),
     ),
     ...Object.entries(INSTALLED_VALVES).map(([key, valve]) => {
@@ -348,8 +392,8 @@ function inventoryRecords(
             EQUIPMENT_ROOM_CODES[
               key.split('|')[0] as keyof typeof EQUIPMENT_ROOM_CODES
             ],
-          ends: valve.ends,
-          purpose: valve.purpose,
+          room: key.split('|')[0],
+          route: routes.get(key),
         },
       );
     }),

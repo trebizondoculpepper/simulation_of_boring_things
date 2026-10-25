@@ -20,6 +20,7 @@ import type {
   FittingKind,
   PlumbEdge,
   PlumbMedium,
+  PlumbNode,
 } from '../../../game/plant/plumbing-expansion';
 import { machinePorts } from './machine-ports';
 import type { MachinePort } from './machine-ports';
@@ -339,6 +340,8 @@ export interface OlympicPlumbing {
   runs: OlympicRun[];
   fittings: OlympicFitting[];
   expansion: Expansion;
+  /** The schematic the plumber expanded: its nodes and base links. */
+  schematic: { nodes: PlumbNode[]; edges: PlumbEdge[] };
   regions: Region[];
   problems: string[];
   reducers: { from: Vec3; to: Vec3; fromOd: number; toOd: number }[];
@@ -1328,6 +1331,7 @@ export function plumbOlympic(
     runs,
     fittings,
     expansion,
+    schematic: { nodes, edges },
     regions,
     problems,
     reducers,
@@ -1584,6 +1588,7 @@ let cached: {
   runs: PipeRun[];
   busbar: Containment[];
   reducers: OlympicPlumbing['reducers'];
+  routes: Map<string, ValveRoute>;
 } | null = null;
 let plumbedOnce: OlympicPlumbing | null = null;
 /** The room as built (`OLYMPIC`), plumbed once. */
@@ -1597,6 +1602,10 @@ export function olympicRoom() {
   const t = PLANT_ROOM.wall;
   const busbar: Containment[] = [];
   const runs: PipeRun[] = [];
+  const routes = new Map<string, ValveRoute>();
+  const words = nodeWords(plumbed);
+  const base = new Map(plumbed.schematic.edges.map((e) => [e.id, e]));
+  const expanded = new Map(plumbed.expansion.fittings.map((f) => [f.id, f]));
   for (const r of plumbed.runs) {
     if (r.name === 'Busbar ring' || r.name === 'Busbar feed') {
       r.points.slice(1).forEach((p, k) =>
@@ -1663,6 +1672,27 @@ export function olympicRoom() {
         const v = valveName(f.id);
         const operator = f.operator === 'pole' ? undefined : DRAWN[f.operator];
         if (!v || !operator) return [];
+        // Its route, from the base link it sits on in the enhanced network.
+        const sits = expanded.get(f.id);
+        const link = sits ? base.get(sits.edge) : undefined;
+        if (link && sits) {
+          const edges = plumbed.schematic.edges;
+          // The served end as itself; the other as all that share its port.
+          const served = (end: 'source' | 'target') =>
+            end === 'source'
+              ? [{ id: link.sourceId, port: link.sourcePort }]
+              : [{ id: link.targetId, port: link.targetPort }];
+          const other = sits.end === 'source' ? 'target' : 'source';
+          const ends = {
+            [sits.end]: words(served(sits.end)),
+            [other]: words(farEnds(edges, link, sits.end)),
+          };
+          routes.set(`${r.name}|${v.name}`, {
+            from: ends.source,
+            to: ends.target,
+            medium: /heating/.test(serviceOf(r)) ? 'heating water' : 'water',
+          });
+        }
         const axis = axisOf(f.along);
         return [
           {
@@ -1694,9 +1724,84 @@ export function olympicRoom() {
       ...(meters.length ? { meters } : {}),
     });
   }
-  cached = { runs, busbar, reducers: plumbed.reducers };
+  cached = { runs, busbar, reducers: plumbed.reducers, routes };
   return cached;
 }
+
+/** A valve's route in the enhanced network, in a description's words. */
+export interface ValveRoute {
+  from: string;
+  to: string;
+  medium: 'water' | 'heating water';
+}
+
+/**
+ * A node of the enhanced network in a sentence, derived, never written: a
+ * machine by its plan label up to any comma, after "the" ("the circulation
+ * pumps"), or bare where it ends in its number ("sand filter 1"); any
+ * other node by its kind and the port the link meets ("the main plant's
+ * drain"); several nodes meeting one shared port by their kinds, several
+ * of a kind in the plural ("the filters and the heat exchanger").
+ */
+function nodeWords(plumbed: OlympicPlumbing) {
+  const labels = new Map(plumbed.items.map((i) => [i.key, i.label]));
+  const kinds = new Map(plumbed.schematic.nodes.map((n) => [n.id, n.kind]));
+  const plain = (text: string) => {
+    const t = text.split(',')[0].replaceAll('-', ' ').trim();
+    // Lower-cased, unless an acronym (UV) begins it.
+    return /^[A-Z]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1);
+  };
+  const the = (words: string) => (/\d$/.test(words) ? words : `the ${words}`);
+  const one = ({ id, port }: { id: string; port: string }) => {
+    const label = labels.get(id);
+    if (label) return the(plain(label));
+    return `${the(plain(kinds.get(id) ?? id))}'s ${plain(port)}`;
+  };
+  return (ids: readonly { id: string; port: string }[]) => {
+    // Grouped by kind, in the order met: several of a kind in the plural.
+    const groups = new Map<string, { id: string; port: string }[]>();
+    for (const n of ids) {
+      const kind = kinds.get(n.id) ?? n.id;
+      groups.set(kind, [...(groups.get(kind) ?? []), n]);
+    }
+    return [...groups]
+      .map(([kind, members]) =>
+        members.length > 1 ? `the ${plain(kind)}s` : one(members[0]),
+      )
+      .join(' and ');
+  };
+}
+
+/**
+ * The far ends of the link a fitting sits on, seen from the node it serves:
+ * the link's other end, or, where the served port is shared by several
+ * links (the filters' outlets into the contact tank's inlet), all of theirs.
+ */
+function farEnds(
+  edges: readonly PlumbEdge[],
+  link: PlumbEdge,
+  end: 'source' | 'target',
+) {
+  const at =
+    end === 'source'
+      ? { id: link.sourceId, port: link.sourcePort }
+      : { id: link.targetId, port: link.targetPort };
+  return edges
+    .filter((e) =>
+      end === 'source'
+        ? e.sourceId === at.id && e.sourcePort === at.port
+        : e.targetId === at.id && e.targetPort === at.port,
+    )
+    .map((e) =>
+      end === 'source'
+        ? { id: e.targetId, port: e.targetPort }
+        : { id: e.sourceId, port: e.sourcePort },
+    );
+}
+
+/** Each drawn valve's route, by its run's and its own name: the room's enhanced network's. */
+export const olympicValveRoutes = (): ReadonlyMap<string, ValveRoute> =>
+  olympicRoom().routes;
 
 /** Each drawn valve's permanent identity's tag, as `installed-valves.ts` registers it. */
 export function olympicValveTags(): {

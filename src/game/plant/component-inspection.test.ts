@@ -4,11 +4,16 @@ import { newWorld } from '../world';
 
 describe('the information overlay’s lines', () => {
   it('gives a valve’s tag, name and what it isolates', () => {
+    expect(inspectComponent({ tag: 'PL2-F1-V1' }, newWorld())).toEqual({
+      key: 'PL2-F1-V1',
+      title: 'PL2-F1-V1: F1 inlet valve',
+      detail:
+        'Isolates water flowing from the circulation pumps to sand filter 1.',
+    });
+    // Its room not yet built through the plumber: its tag and name alone.
     expect(inspectComponent({ tag: 'PL3-BT1-IV1' }, newWorld())).toEqual({
       key: 'PL3-BT1-IV1',
       title: 'PL3-BT1-IV1: Balance tank make-up valve',
-      detail:
-        'Isolates water flowing from the water service to the balance tank.',
     });
   });
 

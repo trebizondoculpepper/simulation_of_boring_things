@@ -2,6 +2,7 @@ import type { World } from '../world';
 import { jacuzziCabinetPanel } from '../world';
 import { componentDescription, plantInventory } from './equipment-catalogue';
 import type { InventoryEntry } from './equipment-catalogue';
+import { statusBindingFor } from './component-descriptions';
 import type {
   DescribedSubject,
   DescriptionContext,
@@ -12,9 +13,9 @@ import { WET_HALL_PLANT } from './wet-hall';
 
 /**
  * Components' live status, read from the world (prompt 060): the context
- * that gives a description its "currently …". Each item's binding
- * (`STATUS_BINDINGS`) names where the world keeps its state; this reads
- * it, and its kind words it. Missing state is not Off: an item whose
+ * that gives a description its "currently …". Where the world keeps an
+ * item's state is found from its kind and room (`statusBindingFor`); this
+ * reads it, and its kind words it. Missing state is not Off: an item whose
  * binding finds nothing has no status. Pure.
  */
 
@@ -23,7 +24,7 @@ export function resolveStatus(
   world: World,
   subject: DescribedSubject,
 ): ResolvedStatus | undefined {
-  const b = subject.status;
+  const b = statusBindingFor(subject);
   if (!b) return undefined;
   if ('motor' in b) {
     const s = world.motors.starters[b.motor];

@@ -245,8 +245,8 @@ describe('status of an object', () => {
 
   it('gives the same description as the overlay and the inventory, or none', () => {
     const w = newWorld();
-    expect(objectStatus(w, 'PL3-BT1-IV1').join('\n')).toContain(
-      'purpose = Isolates water flowing from the water service to the balance tank.',
+    expect(objectStatus(w, 'PL2-F1-V1').join('\n')).toContain(
+      'purpose = Isolates water flowing from the circulation pumps to sand filter 1.',
     );
     expect(objectStatus(w, 'P-101A').join('\n')).toMatch(
       /purpose = 1st Pump in PL2, currently (On|Off|Tripped)/,

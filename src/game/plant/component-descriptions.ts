@@ -1,9 +1,9 @@
+import { MOTORS, POOL_MOTORS } from './motor-starters';
 import type { MotorTag } from './motor-starters';
+import { POOL_IDS } from './pools';
 import type { PoolId } from './pools';
 import { equipmentKind } from './equipment-kinds';
 import type { KindId, StatusPolicy } from './equipment-kinds';
-import { endpointLabel } from './valve-endpoints';
-import type { ValveEnds } from './valve-endpoints';
 
 /**
  * What each component is for, inferred rather than written item by item
@@ -16,9 +16,14 @@ import type { ValveEnds } from './valve-endpoints';
  * - anything else: "<Nth> <type> in <room>, currently <status>", the
  *   status only where the world keeps it for that item.
  *
- * A rare authored purpose replaces the inferred one; with neither, there is
- * no description, never a generic filler. Pure: live status comes in
- * through the context (`component-status.ts` reads it from the world).
+ * Everything is derived from the game's model, nothing written item by
+ * item (the owner, 2026-10-25: "Everything has to derive from the actual
+ * game model … derived algorithmically"): a valve's route is its link in
+ * its room's enhanced network (the plumber's expanded port graph), so a
+ * valve in a room not yet built through the plumber has no description;
+ * an item's live status is found from its kind and its room. Where nothing
+ * is known there is no description, never a generic filler. Pure: live
+ * status comes in through the context (`component-status.ts`).
  */
 
 /** Where in the world an item's live state is kept, for its status. */
@@ -46,6 +51,13 @@ export type ResolvedStatus =
   | { policy: 'booster'; running: boolean; tripped: boolean }
   | { policy: 'switch'; on: boolean };
 
+/** What a valve's link in its room's enhanced network says it isolates, in a description's words. */
+export interface ValveRoute {
+  from: string;
+  to: string;
+  medium: 'water' | 'heating water' | 'air' | 'gas';
+}
+
 /** What a description is built from: one per described component. */
 export interface DescribedSubject {
   /** Its stable key: its asset id, or its tag where it has none. */
@@ -54,14 +66,12 @@ export interface DescribedSubject {
   kind: KindId;
   /** Its room's code as printed (PL2); none for a thing not in a room. */
   location?: string;
-  /** A valve's ends. */
-  ends?: ValveEnds;
-  /** An isolator's destination: "the jacuzzi plant room". */
+  /** Its room, as the game knows it (plant_pool_02). */
+  room?: string;
+  /** A valve's route, from its room's enhanced network. */
+  route?: ValveRoute;
+  /** An isolator's destination, from its register: "the jacuzzi plant room". */
   powerFor?: string;
-  /** A rare authored description, in place of the inferred one. */
-  purpose?: string;
-  /** Where its live state is kept. */
-  status?: StatusBinding;
   /** Left out of the ordinals: a room, which is not equipment in a room. */
   unranked?: boolean;
 }
@@ -71,31 +81,50 @@ export interface DescriptionContext {
   status?(subject: DescribedSubject): ResolvedStatus | undefined;
 }
 
-/**
- * The live state the world keeps for particular items, by tag: instance
- * data, each naming the existing model address; the wording is the kind's.
- */
-export const STATUS_BINDINGS: Readonly<Record<string, StatusBinding>> = {
-  'P-101A': { motor: 'P-101A' },
-  'P-101B': { motor: 'P-101B' },
-  'P-201A': { motor: 'P-201A' },
-  'P-201B': { motor: 'P-201B' },
-  'PL1-P1': { motors: ['P-201A', 'P-201B'] },
-  'PL2-P1': { motors: ['P-101A', 'P-101B'] },
-  'PL1-T1': { pool: 'pool_01' },
-  'PL2-T1': { pool: 'pool_02' },
-  'PL3-BT1': { pool: 'pool_03' },
-  'WH-T1': { wetHallTank: 'breakTank' },
-  'WH-T2': { wetHallTank: 'backwashTank' },
-  'WH-P1': { booster: true },
-  'PL3-CAB1': { cabinet: 'jacuzzi' },
-  'PL4-CAB1-SW1': { part: 'PL4-CAB1-SW1' },
+/** The pool a pool plant room serves (plant_pool_02 → pool_02), if any. */
+const poolOfRoom = (room: string | undefined): PoolId | undefined => {
+  const pool = room?.replace(/^plant_/, '');
+  return POOL_IDS.find((p) => p === pool);
 };
 
-/** Isolators named by tag with what they isolate, beyond the rooms' switch-fuses. */
-export const POWER_FOR: Readonly<Record<string, string>> = {
-  'SR-IS1': 'the whole leisure centre',
-};
+const isMotor = (tag: string): tag is MotorTag => Object.hasOwn(MOTORS, tag);
+
+/**
+ * Where the world keeps an item's live state, found from its kind, its room
+ * and its tag, never listed item by item: a pump by its own starter, a pump
+ * set by its pool's, a balance tank by its pool, the wet hall's tanks and
+ * booster set by the wet hall, the jacuzzi's cabinet by the jacuzzi, a
+ * model switch by its own part.
+ */
+export function statusBindingFor(subject: {
+  tag: string;
+  kind: KindId;
+  room?: string;
+}): StatusBinding | undefined {
+  const pool = poolOfRoom(subject.room);
+  switch (subject.kind) {
+    case 'pump':
+      return isMotor(subject.tag) ? { motor: subject.tag } : undefined;
+    case 'pump-pair': {
+      const motors = pool ? POOL_MOTORS(pool) : [];
+      return motors.length ? { motors } : undefined;
+    }
+    case 'balance-tank':
+      return pool ? { pool } : undefined;
+    case 'break-tank':
+      return { wetHallTank: 'breakTank' };
+    case 'backwash-tank':
+      return { wetHallTank: 'backwashTank' };
+    case 'booster-set':
+      return { booster: true };
+    case 'jacuzzi-pack':
+      return { cabinet: 'jacuzzi' };
+    case 'cabinet-switch':
+      return { part: subject.tag };
+    default:
+      return undefined;
+  }
+}
 
 /** 1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st, 101st. */
 export function ordinal(n: number): string {
@@ -155,15 +184,12 @@ export function placesByKind(
   return places;
 }
 
-/** A valve's description: authored, or from its ends, or none. */
-export function valvePurpose(valve: {
-  purpose?: string;
-  ends?: ValveEnds;
-}): string | undefined {
-  if (valve.purpose) return valve.purpose;
-  if (!valve.ends) return undefined;
-  const { from, to, medium } = valve.ends;
-  return `Isolates ${medium} flowing from ${endpointLabel(from)} to ${endpointLabel(to)}.`;
+/** A valve's description, from its route in the enhanced network, or none. */
+export function valvePurpose(
+  route: ValveRoute | undefined,
+): string | undefined {
+  if (!route) return undefined;
+  return `Isolates ${route.medium} flowing from ${route.from} to ${route.to}.`;
 }
 
 /** An isolator's description. */
@@ -223,10 +249,9 @@ export function describeComponent(
   places: ReadonlyMap<string, number>,
   context: DescriptionContext = {},
 ): string {
-  if (subject.purpose) return subject.purpose;
   const kind = equipmentKind(subject.kind);
   const template = kind.template ?? 'equipment';
-  if (template === 'valve') return valvePurpose(subject) ?? '';
+  if (template === 'valve') return valvePurpose(subject.route) ?? '';
   if (template === 'power' || subject.powerFor)
     return subject.powerFor ? powerPurpose(subject.powerFor) : '';
   const place = places.get(subject.key);

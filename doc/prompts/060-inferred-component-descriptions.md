@@ -1,6 +1,15 @@
 # 060: Inferred component descriptions
 
-Status: implemented 2026-10-25 as a data layer (steps 1 to 3 below): descriptions, ends, kinds, live status and the network cross-check, shared by the inventory, the manual and the console's `status`; the overlay's second line (step 4) follows with prompt 061's stage 1. The owner chose (2026-10-25) to reconcile the lounge's BV1 conflict by changing the network: its backwash waste is BV1 and its supply BV2, as drawn. Earlier status: reviewed against the running catalogue and plant network on 2026-10-25; ready to implement in the ordered steps below. The two legacy network mismatches identified by this review must be reconciled before the full acceptance gate passes. It refines what stage 1 of the component information overlay shows on its second line ([research and plan](../research/component-information-overlay.md)), and what the inventory and the console's `status` give as an item's purpose.
+Status: implemented 2026-10-25 as a data layer, then reworked the same night to the owner's later rulings (below): descriptions, kinds, live status and ordinals, shared by the overlay, the inventory, the manual and the console's `status`; valves described from their rooms' enhanced networks, so far only the Olympic plant room's. What remains is in [063](063-component-information-remediation.md). Earlier status: reviewed against the running catalogue and plant network on 2026-10-25; ready to implement in the ordered steps below.
+
+## The owner's later rulings (2026-10-25, overnight), which supersede what follows
+
+- "The model should be the source of truth and everything should follow from the model, so that the number plates and the descriptions and the overlay pop-ups should all describe a thing's function and purpose in the model … it doesn't go the other way around."
+- The model is the **enhanced network**: "we start with the equipment, we draw a network, and then the plumber might add additional valves and things, and so we have the enhanced network, and the enhanced network is our source of truth. The enhanced network tells us what everything is and where it is, and everything that exists in our world must exist on that enhanced network." It may be edited by hand, but "we can't have anything except that what exists on that network, because that is effectively the port graph of our world."
+- "There should be no handwritten or manually produced structures … Everything has to derive from the actual game model. And everything has to be derived algorithmically, not something that an LLM has manually worked out."
+- Tags are hierarchical: "plant two, pump set one, pump one" (PL2-P1-P1); tag at the group level and below it at the item level.
+
+So option 1 below (ends recorded in the valve register) and the review's endpoint table and legacy-network cross-check were built and then removed: a valve's route is its link in its room's enhanced network (`olympicValveRoutes` in `olympic-plumbing.ts`), its words derived from the network's nodes. The legacy `PLANT_NETWORK` is not the source of truth and is left as it was.
 
 ## The owner's rulings (2026-10-25)
 
