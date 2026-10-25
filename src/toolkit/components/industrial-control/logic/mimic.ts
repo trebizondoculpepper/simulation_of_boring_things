@@ -11,6 +11,8 @@
  * middle, y up; what it shows is a `MimicState`. Pure: no DOM, no Three.
  */
 
+import type { FlowState } from './mimic-chaser';
+
 export type LampColour = 'green' | 'amber' | 'red' | 'white' | 'blue';
 
 export const LAMP_COLOURS: Record<LampColour, string> = {
@@ -48,6 +50,12 @@ export interface MimicSpec {
     colour: string;
     points: readonly Point[];
     width?: number;
+    /**
+     * Its LED chaser (prompt 066): the id of the flow it shows, running
+     * along its points when forward; LEDs in its colour, or amber. A line
+     * without one is drawn plain, as before.
+     */
+    flow?: { id: string; amber?: boolean };
   }[];
   /** The equipment, drawn as symbols with a label under each. */
   shapes: readonly {
@@ -95,6 +103,8 @@ export interface Reading {
 export interface MimicState {
   lamps: Readonly<Record<string, boolean>>;
   readouts: Readonly<Record<string, Readonly<Record<string, Reading>>>>;
+  /** Each chased line's flow, by its flow id (prompt 066); missing is still. */
+  flows?: Readonly<Record<string, FlowState>>;
 }
 
 /** Characters a readout shows: four digits, with the decimal point free. */

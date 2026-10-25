@@ -49,6 +49,7 @@ import {
 } from '../../components/industrial-control/views/period-instruments';
 import { teleprinterInMetres } from '../../components/industrial-control/views/teleprinter';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
+import { flowState } from '../../components/industrial-control/logic/mimic-chaser';
 import { createDialGauge } from '../../components/industrial-control/views/dial-gauge';
 import { createBoilerPanel } from '../../components/plant/views/boiler-controls';
 import {
@@ -1043,6 +1044,25 @@ const DEMO_MIMIC: MimicSpec = {
         [0.42, -0.05],
         [0.3, -0.05],
       ],
+      // Its LED chaser (prompt 066): forward while the pump runs.
+      flow: { id: 'main' },
+    },
+    // Two trial lines for the chaser: one always flowing back, one still.
+    {
+      colour: '#2a5f9e',
+      points: [
+        [-0.55, 0.2],
+        [-0.55, -0.15],
+      ],
+      flow: { id: 'back' },
+    },
+    {
+      colour: '#2a5f9e',
+      points: [
+        [0.55, 0.2],
+        [0.55, -0.15],
+      ],
+      flow: { id: 'still', amber: true },
     },
   ],
   shapes: [
@@ -1067,7 +1087,8 @@ const DEMO_MIMIC: MimicSpec = {
 /**
  * The MIMIC PANEL board: a small mimic, life size, tried here before the
  * plant's boards use it. PUMP switches the pump (its RUN lamp lights),
- * FLOW sets its flow, and the mimic's own FLOW and TEMP buttons change what
+ * FLOW sets its flow (its line's LEDs chase while it flows; of the two
+ * trial lines, the left always chases back and the right stays dark), and the mimic's own FLOW and TEMP buttons change what
  * its readouts show, their legends saying what; LAMP TEST lights it all.
  */
 export function createMimicTestBoard(kit: PanelKit): TestFitting {
@@ -1101,6 +1122,7 @@ export function createMimicTestBoard(kit: PanelKit): TestFitting {
     temperature += ((running ? 34 : 24) - temperature) * delta * 0.1;
     mimic.show({
       lamps: { run: running, hot: running && temperature > 30 },
+      flows: { main: flowState(rate), back: 'back', still: 'still' },
       readouts: {
         pump: { flow: { value: rate, unit: 'm3/h', name: 'PUMP', places: 1 } },
         out: {

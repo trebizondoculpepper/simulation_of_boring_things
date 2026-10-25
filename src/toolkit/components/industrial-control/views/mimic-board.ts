@@ -1,5 +1,18 @@
+import {
+  CHASER_SIZE,
+  chaserLit,
+  chaserPhase,
+  chaserPositions,
+} from '../logic/mimic-chaser';
 import { computed, signal } from '@preact/signals-core';
-import { Group, MeshBasicMaterial } from 'three';
+import {
+  Color,
+  CylinderGeometry,
+  Group,
+  InstancedMesh,
+  Matrix4,
+  MeshBasicMaterial,
+} from 'three';
 import type { BrandId } from '../../core/logic/brands';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import {
@@ -296,6 +309,45 @@ export function createMimicBoard(
     group.add(legend.group);
     return { id: readout.id, digits, legend };
   });
+  // The LED chasers along the lines that carry a flow (prompt 066), all
+  // instances of one LED, so a board of many lines stays cheap.
+  const chased = spec.lines.flatMap((line) =>
+    line.flow
+      ? chaserPositions(line.points).map((at, index) => ({
+          at,
+          index,
+          id: line.flow!.id,
+          colour: new Color(
+            line.flow!.amber ? LAMP_COLOURS.amber : line.colour,
+          ),
+        }))
+      : [],
+  );
+  const dark = new Color('#2c3133');
+  const leds = chased.length
+    ? new InstancedMesh(
+        new CylinderGeometry(
+          CHASER_SIZE / 2,
+          CHASER_SIZE / 2,
+          0.003,
+          8,
+        ).rotateX(Math.PI / 2),
+        new MeshBasicMaterial(),
+        chased.length,
+      )
+    : undefined;
+  if (leds) {
+    kit.materials.push(leds.material as MeshBasicMaterial);
+    const m = new Matrix4();
+    chased.forEach((led, i) => {
+      leds.setMatrixAt(i, m.makeTranslation(led.at[0], led.at[1], z));
+      leds.setColorAt(i, dark);
+    });
+    leds.userData.live = true;
+    group.add(leds);
+  }
+  let shownPhase = -1;
+  let shownFlows: MimicState['flows'];
   // The mode buttons and LAMP TEST, along the bottom.
   const parts = createPartSet();
   const mode = signal(spec.modes[0]?.id ?? '');
@@ -363,6 +415,24 @@ export function createMimicBoard(
         lamp.material.color.set(
           test.value || state.lamps[lamp.id] ? lamp.colour : '#3a3c3a',
         );
+      if (leds) {
+        // Real time, not the simulation's (prompt 066).
+        const phase = chaserPhase(performance.now() / 1000);
+        if (phase !== shownPhase || state.flows !== shownFlows) {
+          shownPhase = phase;
+          shownFlows = state.flows;
+          chased.forEach((led, i) =>
+            leds.setColorAt(
+              i,
+              test.value ||
+                chaserLit(led.index, phase, state.flows?.[led.id] ?? 'still')
+                ? led.colour
+                : dark,
+            ),
+          );
+          leds.instanceColor!.needsUpdate = true;
+        }
+      }
       for (const r of readouts) {
         const reading = state.readouts[r.id]?.[mode.value];
         r.digits.show(test.value ? '8.8.8.8.' : readoutText(reading));

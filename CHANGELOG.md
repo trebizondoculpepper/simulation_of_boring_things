@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Mimic lines can carry an LED chaser (prompt 066, `mimic-chaser.ts`): small LEDs along the line, one in four lit, stepping every 0.12 s of real time in the flow's direction, reversed for back flow, dark under 1 m³/h. Lines without a flow draw as before. Tried on dev0's MIMIC PANEL board: its circuit chases while the pump runs, a trial line chases back, another stays dark.
 - Ctrl/Cmd+C copies the highlighted component’s tag or name; Ctrl/Cmd+P copies the current pin or noclip camera URL. Copy results and values are logged in the game and browser consoles, including missing targets and clipboard failures. The shared controls preserve typing, selected text copying and browser modifier combinations.
 
 - Hanging pipe identification plates have two fine metal suspension loops and wires connecting their upper fasteners to the pipe.
