@@ -36,6 +36,7 @@ import {
   createFirstPerson,
   WALKER_RADIUS_METRES,
 } from '../../controls/input/first-person';
+import { isHeldPortableHit } from '../../controls/input/object-handling';
 import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
 import {
   createPanelKit,
@@ -496,6 +497,21 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     scene,
     canvas,
     camera,
+    objects: cfg.self === 'engineers_office' ? machines.group : undefined,
+    allowPickup: (object) =>
+      cfg.self === 'engineers_office' && machines.canRemove(object),
+    heldAction(object, _portable, x, y) {
+      if (cfg.self !== 'engineers_office') return false;
+      raycaster.setFromCamera(pointer.set(x, y), camera);
+      const hit = raycaster
+        .intersectObject(machines.group, true)
+        .find((candidate) => !isHeldPortableHit(candidate.object));
+      return Boolean(
+        hit &&
+        hit.distance <= 3 * metre &&
+        machines.returnItem(object, hit.object),
+      );
+    },
     metre,
     floorY: cfg.floorAt(cfg.start.x, cfg.start.z, 0) * metre,
     flightBounds: () => ({
@@ -565,6 +581,9 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     cfg.powered ?? roomPowered(cfg.self as ServiceRoom),
   );
   let last = 0;
+  let lastMotionX = NaN;
+  let lastMotionZ = NaN;
+  let lastMotionYaw = NaN;
   renderer.setAnimationLoop((time) => {
     parts.setAudible(!canvas.parentElement?.hidden && !walk.following);
     machines.setAudible(!canvas.parentElement?.hidden && !walk.following);
@@ -572,6 +591,20 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);
+    if (cfg.self === 'engineers_office') {
+      const { x, z, yaw } = walk.walker;
+      if (
+        Number.isNaN(lastMotionX) ||
+        Math.abs(x - lastMotionX) > 0.01 * metre ||
+        Math.abs(z - lastMotionZ) > 0.01 * metre ||
+        Math.abs(yaw - lastMotionYaw) > 0.01
+      ) {
+        machines.senseMotion();
+        lastMotionX = x;
+        lastMotionZ = z;
+        lastMotionYaw = yaw;
+      }
+    }
     roomLights.update(delta);
     partAudio.listen(camera, metre);
     parts.update(delta);

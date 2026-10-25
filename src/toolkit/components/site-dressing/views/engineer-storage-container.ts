@@ -56,6 +56,7 @@ export function createEngineerStorageContainer(
     transparent: true,
     depthWrite: false,
   });
+  material.userData.unpowered = true;
   kit.materials.push(material);
   const plate = new Mesh(new PlaneGeometry(labelWidth, labelHeight), material);
   plate.name = `${id} label`;

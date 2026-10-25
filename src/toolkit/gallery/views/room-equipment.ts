@@ -97,6 +97,7 @@ import {
 import { PUMP_PANEL_EXHIBIT } from '../rooms/plant/pump-panel';
 import { SIMULATOR_SPACE, layoutRoom } from '../logic/room-equipment';
 import { createRoomPipework } from './room-pipework';
+import { createEngineersOfficeElectrical } from './engineers-office-electrical';
 import { createRoomServices } from './room-services';
 import { ROOM_SERVICES } from '../../../game/plant/services';
 import type { IsolatorName, ServiceRoom } from '../../../game/plant/services';
@@ -131,6 +132,8 @@ import { createTwinHeadPump } from '../../components/plant/views/boiler-plant';
 import { pumpSound } from '../../components/plant/views/pump-sound';
 import { HEATING_CIRCULATOR } from '../../components/plant/logic/pump-sound';
 import { partAudio } from '../../components/core/audio/part-audio';
+import { createPartSet } from '../../components/core/parts/parts';
+import { createEngineerStorageCupboard } from '../../components/site-dressing/views/engineer-storage-cupboard';
 
 /** Each model the rooms' machines are, by its key in `logic/room-equipment.ts`. */
 const MODELS: Record<string, PlantExhibit> = {
@@ -314,6 +317,30 @@ function modelFor(
   // A room's notice or sign (`building-signs.ts`).
   if (kind === 'sign' && arg) return createBuildingSign(kit, arg as SignItemId);
   // The engineer's scenario simulator, switching the whole plant.
+  if (kind === 'storage-cupboard' && (arg === 'solid' || arg === 'glass')) {
+    const cupboard = createEngineerStorageCupboard(
+      kit,
+      arg,
+      arg === 'solid' ? 'PARTS STORES' : 'TEST EQUIPMENT',
+      'ironside',
+      `EO.CB.${arg.toUpperCase()}`,
+      false,
+    );
+    // The model's back meets its allocated wall; its body is centred in
+    // the layout's 0.5 m deep footprint.
+    const object = new Group();
+    object.add(cupboard.group);
+    cupboard.group.position.z = 0.25;
+    object.userData.storageCupboard = cupboard;
+    const parts = createPartSet();
+    for (const [object, use] of cupboard.uses) parts.uses.set(object, use);
+    return {
+      object,
+      parts,
+      update: (delta) => cupboard.update(delta),
+      dispose: () => cupboard.dispose(),
+    };
+  }
   if (kind === 'scenario-simulator') return worldScenarioSimulator(kit);
   // The lighting board, its ways the world's lighting zones.
   if (kind === 'lighting-board') return worldLightingBoard(kit);
@@ -815,10 +842,16 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   // Each machine's top as drawn, for its power feed to meet.
   const drawnTops: (number | undefined)[] = [];
   const besides: Object3D[] = [];
+  const storageCupboards: ReturnType<typeof createEngineerStorageCupboard>[] =
+    [];
   for (const [i, p] of placed.entries()) {
     const built = modelFor(kit, p.item, room);
     if (!built) continue;
     const object = isLive(built) ? built.object : built;
+    const storage = object.userData.storageCupboard as
+      | ReturnType<typeof createEngineerStorageCupboard>
+      | undefined;
+    if (storage) storageCupboards.push(storage);
     if (isLive(built)) lives.push(built);
     if (machinePorts(p.item).length) object.add(drawPortNozzles(kit, p.item));
     object.position.set(p.x, floorY + p.y, p.z);
@@ -869,6 +902,12 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   // walk round, its valves more to work.
   const pipework = createRoomPipework(kit, room, floorY);
   group.add(pipework.group);
+  const officeElectrical =
+    room === 'engineers_office' ? createEngineersOfficeElectrical(kit) : null;
+  if (officeElectrical) {
+    pipework.group.add(officeElectrical.object);
+    lives.push(officeElectrical);
+  }
   for (const b of besides) pipework.group.attach(b);
   solids.push(...pipework.solids);
   const services =
@@ -910,6 +949,21 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   return {
     group,
     solids,
+    senseMotion() {
+      officeElectrical?.senseMotion();
+    },
+    canRemove(item: Object3D) {
+      for (const cupboard of storageCupboards) {
+        const allowed = cupboard.canRemove(item);
+        if (allowed !== null) return allowed;
+      }
+      return false;
+    },
+    returnItem(item: Object3D, target: Object3D) {
+      return storageCupboards.some((cupboard) =>
+        cupboard.returnItem(item, target),
+      );
+    },
     /** What working a part beneath `o` does, if any. */
     useOf(o: Object3D) {
       for (const live of lives) {

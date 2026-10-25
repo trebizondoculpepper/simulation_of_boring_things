@@ -26,6 +26,8 @@ export function createEngineerStorageCupboard(
   doors: StorageDoorStyle,
   cabinetLabel = "ENGINEER'S STORES",
   maker: BrandId = 'ironside',
+  cupboardId = `ENG.STORES.${doors.toUpperCase()}`,
+  initialOpen = doors === 'solid',
 ) {
   const group = new Group();
   group.name = `${doors} engineer storage cupboard`;
@@ -34,10 +36,9 @@ export function createEngineerStorageCupboard(
   const containers: EngineerStorageContainer[] = [];
   const itemAccess = new Map<Object3D, () => boolean>();
   const portableItems: ReturnType<typeof createPortableBoard>[] = [];
-  const cupboardId = `ENG.STORES.${doors.toUpperCase()}`;
   const drawerControls: { retract: () => void; isOut: () => boolean }[] = [];
   const hinges: { side: number; group: Group; angle: number }[] = [];
-  let doorsOpen = doors === 'solid';
+  let doorsOpen = initialOpen;
   let closing = false;
   let closeDelay = 0;
   const drawersAccessible = () =>
@@ -609,6 +610,13 @@ export function createEngineerStorageCupboard(
         hinge.group.rotation.y = hinge.angle;
       }
     },
+  });
+
+  // Labels, drawer fronts and glazing are passive materials. The room's
+  // power-cut shader must not treat them as lamps or displays.
+  group.traverse((object) => {
+    if (object instanceof Mesh && object.material instanceof MeshBasicMaterial)
+      object.material.userData.unpowered = true;
   });
 
   return {

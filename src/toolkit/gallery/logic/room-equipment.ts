@@ -973,7 +973,22 @@ export function roomEquipment(
         box: shellRoomBox('engineers_office'),
         items: [
           floor('desk', 'Engineer’s desk', 1.6, 0.8, 0.75, { back: 0 }),
-          floor('filing', 'Filing and spares cabinets', 2, 0.6, 2, { back: 0 }),
+          floor(
+            'storage-cupboard:solid',
+            'Parts stores cupboard',
+            0.96,
+            0.5,
+            1.98,
+            { back: 0 },
+          ),
+          floor(
+            'storage-cupboard:glass',
+            'Test equipment cupboard',
+            0.96,
+            0.5,
+            1.98,
+            { back: 0 },
+          ),
           // The Encabulator's Hyperplasc Scenario Simulator: a 42U rack,
           // its door and handle a little proud of its front; and room on
           // its hinge side (its left, from in front) for its open door's
@@ -1146,6 +1161,27 @@ export const TANK_SURROUND = 0.8;
  * 2026-10-23; that room is kept as `retired0`.)
  */
 const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
+  engineers_office: (box, items) => {
+    const at = (key: string) => items.find((item) => item.key === key)!;
+    const onWall = (
+      item: Item,
+      x: number,
+      z: number,
+      face: Side,
+      side: Side,
+    ) => ({
+      ...put(box, item, { x, z, face }),
+      side,
+    });
+    return [
+      // Keep the desk and simulator exactly where the original packed
+      // office placed them; the two cupboards occupy the old filing bay.
+      onWall(at('desk'), -1.6, -2.2, 'east', 'west'),
+      onWall(at('storage-cupboard:solid'), -1.75, -0.32, 'east', 'west'),
+      onWall(at('storage-cupboard:glass'), -1.75, 0.72, 'east', 'west'),
+      onWall(at('scenario-simulator'), 1.55, -2.53, 'west', 'east'),
+    ];
+  },
   // The boiler house (the owner, 2026-10-24: re-planned): the cascades
   // along the west wall, the low-loss header at their south end, the twin
   // circulator east of the door; the calorifier and the pressurisation

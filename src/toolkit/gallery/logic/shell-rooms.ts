@@ -149,7 +149,7 @@ export const SHELL_ROOMS = {
       corridor(),
       { wall: 'east', at: 0, to: 'pool_02_gallery', kind: 'single' },
     ],
-    note: 'the engineer’s desk, filing and spares',
+    note: 'the engineer’s desk and two stores cupboards',
   },
 } as const satisfies Record<string, ShellSpec>;
 

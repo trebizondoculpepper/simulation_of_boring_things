@@ -118,7 +118,8 @@ export const WORLD_BINDINGS: Readonly<Record<string, WorldBinding>> = {
   // The engineers’ office.
   'scenario-simulator': world('the whole world: it sets its scenarios'),
   desk: passive('furniture'),
-  filing: passive('furniture'),
+  'storage-cupboard:solid': passive('engineer’s parts storage'),
+  'storage-cupboard:glass': passive('engineer’s test equipment storage'),
 };
 
 /** The kinds still to wire. */

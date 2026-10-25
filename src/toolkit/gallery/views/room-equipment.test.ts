@@ -6,10 +6,11 @@ import {
   it,
   vi,
 } from 'vite-plus/test';
-import { Box3, Group } from 'three';
+import { Box3, Group, Mesh, MeshBasicMaterial } from 'three';
 import { createPanelKit } from '../../components/core/views/eighties-controls';
 import { EQUIPPED_ROOMS, layoutRoom } from '../logic/room-equipment';
 import { SIMULATOR_DOOR_SWING, createRoomEquipment } from './room-equipment';
+import { bindRoomPower } from './room-power';
 
 beforeEach(() => {
   vi.stubGlobal('document', {
@@ -93,4 +94,24 @@ describe('the engineer’s office’s scenario simulator', () => {
     }
     built.dispose();
   });
+});
+
+it('keeps passive cupboard labels and glazing unchanged when office power is cut', () => {
+  const built = createRoomEquipment(createPanelKit(), 'engineers_office');
+  const cupboard = built.group.children.find((o) =>
+    o.name.includes('Parts stores cupboard'),
+  )!;
+  const materials = new Set<MeshBasicMaterial>();
+  cupboard.traverse((object) => {
+    if (object instanceof Mesh && object.material instanceof MeshBasicMaterial)
+      materials.add(object.material);
+  });
+  expect(materials.size).toBeGreaterThan(0);
+  const colours = [...materials].map((material) => material.color.getHex());
+  const roomPower = bindRoomPower(cupboard, () => false);
+  roomPower.update(0.1);
+  expect([...materials].map((material) => material.color.getHex())).toEqual(
+    colours,
+  );
+  built.dispose();
 });
