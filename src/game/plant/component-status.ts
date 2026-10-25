@@ -1,3 +1,5 @@
+import { INSTALLED_VALVES } from './installed-valves';
+import { MODEL_VALVES } from './model-valves';
 import type { World } from '../world';
 import { jacuzziCabinetPanel } from '../world';
 import { componentDescription, plantInventory } from './equipment-catalogue';
@@ -68,6 +70,20 @@ export function resolveStatus(
               ? 'no-flow'
               : 'off',
     };
+  }
+  if ('valve' in b) {
+    // An installed valve's command, or an identified part's state.
+    // Its key: the register's asset id, or its model fitting's id.
+    const id =
+      Object.values(INSTALLED_VALVES).find((v) => v.tag === b.valve)?.assetId ??
+      MODEL_VALVES.find((v) => v.tag === b.valve)?.id ??
+      b.valve;
+    const installed = world.installedValves[id];
+    if (typeof installed === 'boolean')
+      return { policy: 'valve', open: installed };
+    const valve = identifiedPart(world.identifiedPlant, id);
+    const open = (valve?.state as { open?: unknown } | undefined)?.open;
+    return typeof open === 'boolean' ? { policy: 'valve', open } : undefined;
   }
   const part = identifiedPart(world.identifiedPlant, b.part);
   const state = part?.state as { on?: unknown } | undefined;

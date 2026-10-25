@@ -34,7 +34,9 @@ export type StatusBinding =
   | { wetHallTank: 'breakTank' | 'backwashTank' }
   | { booster: true }
   | { cabinet: 'jacuzzi' }
-  | { part: string };
+  | { part: string }
+  /** A valve, by its tag. */
+  | { valve: string };
 
 /** An item's live state, resolved from the world, ready for its kind's wording. */
 export type ResolvedStatus =
@@ -49,7 +51,8 @@ export type ResolvedStatus =
       state: 'tripped' | 'circulating' | 'no-flow' | 'off' | 'no-power';
     }
   | { policy: 'booster'; running: boolean; tripped: boolean }
-  | { policy: 'switch'; on: boolean };
+  | { policy: 'switch'; on: boolean }
+  | { policy: 'valve'; open: boolean };
 
 /** What a valve's link in its room's enhanced network says it isolates, in a description's words. */
 export interface ValveRoute {
@@ -119,6 +122,10 @@ export function statusBindingFor(subject: {
       return { booster: true };
     case 'jacuzzi-pack':
       return { cabinet: 'jacuzzi' };
+    case 'butterfly-valve':
+    case 'gas-ball-valve':
+    case 'valve':
+      return { valve: subject.tag };
     case 'cabinet-switch':
       return { part: subject.tag };
     default:
@@ -251,7 +258,17 @@ export function describeComponent(
 ): string {
   const kind = equipmentKind(subject.kind);
   const template = kind.template ?? 'equipment';
-  if (template === 'valve') return valvePurpose(subject.route) ?? '';
+  if (template === 'valve') {
+    // What it isolates, and whether it is open now (the owner, 2026-10-25:
+    // a thing that can be in several states says which).
+    const purpose = valvePurpose(subject.route) ?? '';
+    const state = context.status?.(subject);
+    const now =
+      state?.policy === 'valve'
+        ? `Currently ${state.open ? 'open' : 'shut'}.`
+        : '';
+    return [purpose, now].filter(Boolean).join(' ');
+  }
   if (template === 'power' || subject.powerFor)
     return subject.powerFor ? powerPurpose(subject.powerFor) : '';
   const place = places.get(subject.key);
