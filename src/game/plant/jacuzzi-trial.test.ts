@@ -227,3 +227,32 @@ describe('the jacuzzi cabinet on trial, its sources cut', () => {
     expect(trialPanel(t).messages).toContain('NO HEAT');
   });
 });
+
+describe('the jacuzzi cabinet on trial, backwashing itself', () => {
+  it('stops circulating, washes its filter to drain from the tank, rinses, and filters again', () => {
+    let t = act(steady, { act: 'bathers', in: true });
+    t = runJacuzziTrial(t, 3600, 1);
+    const loaded = t.filter.bed.dirt;
+    const tankBefore = t.tank;
+    t = act(t, { act: 'filter', action: { act: 'wash-now' } });
+    t = runJacuzziTrial(t, 30, 1);
+    expect(t.filter.phase).toBe('backwash');
+    expect(trialPanel(t).messages[0]).toMatch(/^BACKWASH /);
+    expect(trialPanel(t).flowing).toBe(false);
+    t = runJacuzziTrial(t, 240, 1);
+    expect(t.filter.phase).toBe('filter');
+    expect(t.washed).toBeGreaterThan(1);
+    expect(t.filter.bed.dirt).toBeLessThan(loaded * 0.2);
+    // The make-up refills the tank to its float: the bathers' displaced
+    // water, washed away with the rest, is not made up.
+    t = runJacuzziTrial(t, 1800, 1);
+    expect(t.tank).toBeLessThan(tankBefore);
+    expect(t.tank / TRIAL.tank.volume).toBeCloseTo(TRIAL.tank.float, 1);
+    expect(trialPanel(t).flowing).toBe(true);
+  });
+
+  it('steps its schedule by MODE, as the foot spa’s does', () => {
+    const t = act(steady, { act: 'filter', action: { act: 'mode' } });
+    expect(trialPanel(t).washLine).toMatch(/^WASH 12H IN /);
+  });
+});

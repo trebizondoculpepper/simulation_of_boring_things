@@ -20,6 +20,16 @@
  * quickened, so a trial takes minutes, not hours.
  */
 import {
+  SPA_FILTERS,
+  actOnSpaFilter,
+  filtering,
+  newSpaFilter,
+  spaFilterFlows,
+  spaFilterLine,
+  stepSpaFilter,
+} from './spa-filter';
+import type { SpaFilter, SpaFilterAction } from './spa-filter';
+import {
   actOnJacuzziCabinet,
   cabinetTanks,
   DISCONNECTED_VESSEL,
@@ -39,6 +49,9 @@ import {
   JACUZZI_SPA,
   DISPLACEMENT_PER_BATHER,
 } from './spa-balance-tank';
+
+/** What a bather brings into the water, g of suspended dirt an hour. */
+export const BATHER_DIRT = 4;
 
 /** The trial's sizes and rates: SI units, quickened where it says. */
 export const TRIAL = {
@@ -121,6 +134,11 @@ export interface JacuzziTrial {
   celsius: number;
   setpoint: number;
   time: number;
+  /** Its filter and its automatic backwash (`spa-filter.ts`), and the dirt in its water, g/m³. */
+  filter: SpaFilter;
+  dirt: number;
+  /** Washed to drain by its backwashes and rinses, m³. */
+  washed: number;
 }
 
 export function newJacuzziTrial(): JacuzziTrial {
@@ -152,6 +170,9 @@ export function newJacuzziTrial(): JacuzziTrial {
     celsius: 37,
     setpoint: 37,
     time: 0,
+    filter: newSpaFilter(SPA_FILTERS.jacuzzi),
+    dirt: 1,
+    washed: 0,
   };
 }
 
@@ -207,7 +228,9 @@ export type TrialAction =
   | { act: 'cabinet'; action: JacuzziCabinetAction }
   /** The cabinet's JETS or AIR pressed: refused, as the world's, unless full. */
   | { act: 'toggle'; what: 'jets' | 'air' }
-  | { act: 'setpoint'; celsius: number };
+  | { act: 'setpoint'; celsius: number }
+  /** Its filter's MODE or WASH NOW. */
+  | { act: 'filter'; action: SpaFilterAction };
 
 export function actOnJacuzziTrial(
   t: JacuzziTrial,
@@ -230,6 +253,8 @@ export function actOnJacuzziTrial(
       return t[a.what] || trialFull(t) ? { ...t, [a.what]: !t[a.what] } : t;
     case 'setpoint':
       return { ...t, setpoint: Math.max(30, Math.min(40, a.celsius)) };
+    case 'filter':
+      return { ...t, filter: actOnSpaFilter(t.filter, a.action) };
   }
 }
 
@@ -238,12 +263,34 @@ export function stepJacuzziTrial(t: JacuzziTrial, dt: number): JacuzziTrial {
   const V = TRIAL.tank.volume;
   const inputs = trialInputs(t);
   const cabinet = stepJacuzziCabinet(t.cabinet, inputs, dt);
-  const flowing = jacuzziWaterFlowing(cabinet, inputs);
-  let { spa, gutter, tank, overflowed, flooded, celsius } = t;
-  // The pump: from the tank to the spa.
-  const pumped = flowing ? Math.min(TRIAL.flow * dt, tank) : 0;
+  // The pump runs, but its filter's programme says where to: to the spa
+  // while it filters; stopped, then to drain, while it washes.
+  const pumping = jacuzziWaterFlowing(cabinet, inputs);
+  const washing = !filtering(t.filter);
+  const flowing = pumping && !washing;
+  let { spa, gutter, tank, overflowed, flooded, celsius, dirt, washed } = t;
+  const pumpFlow = pumping ? TRIAL.flow * 3600 : 0;
+  const through = spaFilterFlows(t.filter, pumpFlow, dirt);
+  const filter = stepSpaFilter(t.filter, pumpFlow, dirt, dt);
+  // The pump: from the tank, through the filter, to the spa or to drain.
+  const pumped = Math.min(
+    ((through.toSpa + through.toWaste) / 3600) * dt,
+    tank,
+  );
   tank -= pumped;
-  spa += pumped;
+  if (through.toSpa > 0) spa += pumped;
+  else washed += pumped;
+  // Its water's dirt: the bathers' added, the filter's taken out.
+  const water = spa + tank + gutter;
+  dirt +=
+    ((t.bathers ? TRIAL.seats * BATHER_DIRT : 0) * dt) /
+    3600 /
+    Math.max(0.1, water);
+  if (through.toSpa > 0 && water > 0)
+    dirt -= Math.min(
+      dirt,
+      ((dirt - through.outDirt) * through.toSpa * dt) / 3600 / water,
+    );
   // Over the lip into the gutter: whatever stands above it, bathers and all.
   const over = spa + bathersIn(t) - TRIAL.spa;
   if (over > 0) {
@@ -293,6 +340,9 @@ export function stepJacuzziTrial(t: JacuzziTrial, dt: number): JacuzziTrial {
     flooded,
     celsius,
     time: t.time + dt,
+    filter,
+    dirt,
+    washed,
   };
   // The jets' interlock: no longer full, both cut out.
   return trialFull(next) ? next : { ...next, jets: false, air: false };
@@ -308,7 +358,20 @@ export function runJacuzziTrial(t: JacuzziTrial, seconds: number, dt = 0.5) {
 export function trialPanel(t: JacuzziTrial, doorOpen = false) {
   const inputs = trialInputs(t);
   const pumpRun = jacuzziPumpCalled(t.cabinet, inputs);
-  const flowing = jacuzziWaterFlowing(t.cabinet, inputs);
+  // Washing, its water goes to drain, not round the spa.
+  const flowing = jacuzziWaterFlowing(t.cabinet, inputs) && filtering(t.filter);
+  const display = jacuzziCabinetDisplay({
+    cabinet: t.cabinet,
+    supplied: inputs.supplied,
+    flowing,
+    waterC: t.celsius,
+    setC: t.setpoint,
+    heatSupply: heatSupply(t),
+    tank: inputs.tank,
+    draining: t.valves.drain && t.spa > 0.001,
+    doorOpen,
+    time: t.time,
+  });
   return {
     supplied: inputs.supplied,
     pumpRun,
@@ -319,18 +382,12 @@ export function trialPanel(t: JacuzziTrial, doorOpen = false) {
     noFlow:
       inputs.supplied &&
       (t.cabinet.trip !== '' || inputs.tank.low || (pumpRun && !inputs.path)),
-    ...jacuzziCabinetDisplay({
-      cabinet: t.cabinet,
-      supplied: inputs.supplied,
-      flowing,
-      waterC: t.celsius,
-      setC: t.setpoint,
-      heatSupply: heatSupply(t),
-      tank: inputs.tank,
-      draining: t.valves.drain && t.spa > 0.001,
-      doorOpen,
-      time: t.time,
-    }),
+    ...display,
+    // Its filter's line, the same as the foot spa's (`spa-filter.ts`).
+    washLine: spaFilterLine(t.filter),
+    messages: filtering(t.filter)
+      ? display.messages
+      : [spaFilterLine(t.filter), display.messages[1] ?? ''],
   };
 }
 
