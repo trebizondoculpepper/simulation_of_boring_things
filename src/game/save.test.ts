@@ -64,6 +64,7 @@ describe('a save', () => {
       jacuzzi: newWorld().jacuzzi,
       jacuzziCabinet: newWorld().jacuzziCabinet,
       spaFilters: newWorld().spaFilters,
+      cabinets: newWorld().cabinets,
       jacuzziFibreIlluminator: newWorld().jacuzziFibreIlluminator,
       boilerGas: newWorld().boilerGas,
       music: newWorld().music,

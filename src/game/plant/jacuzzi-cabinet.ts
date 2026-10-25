@@ -62,6 +62,12 @@ export interface JacuzziCabinetInputs {
   path: boolean;
   /** Its balance tank. */
   tank: BalanceTankReading;
+  /**
+   * Its controller running, every servo open (`cabinet-boot.ts`): booting,
+   * checking or starting, it holds the pump off. Absent, as on a trial's
+   * bench, it is taken as running.
+   */
+  ready?: boolean;
 }
 
 /**
@@ -72,7 +78,12 @@ export interface JacuzziCabinetInputs {
 export const jacuzziPumpCalled = (
   c: JacuzziCabinetState,
   inputs: JacuzziCabinetInputs,
-) => inputs.supplied && c.power && c.trip === '' && !inputs.tank.low;
+) =>
+  inputs.supplied &&
+  c.power &&
+  c.trip === '' &&
+  !inputs.tank.low &&
+  (inputs.ready ?? true);
 
 /**
  * Where a packaged spa cabinet's pump draws from (the owner, 2026-10-24):

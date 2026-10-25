@@ -48,7 +48,18 @@ import {
   selector,
 } from '../../../components/core/parts/parts';
 import { worldStore, roomWorld } from '../../../save/world-store';
-import { partAudio } from '../../../components/core/audio/part-audio';
+import { partAudio, tone } from '../../../components/core/audio/part-audio';
+import { READY_BEEP_LEVEL } from '../../../components/sound/audio/boot-beep';
+import {
+  CABINET_SERVOS,
+  bootBeep as bootBeepFor,
+  bootLine,
+  cabinetReady,
+} from '../../../../game/plant/cabinet-boot';
+import type {
+  BootPhase,
+  CabinetBoot,
+} from '../../../../game/plant/cabinet-boot';
 import { machineTone } from '../../../components/sound/audio/machine-tones';
 import { doorGain } from '../../../components/core/logic/door-attenuation';
 import {
@@ -58,6 +69,7 @@ import {
 } from '../../../../game/plant/identification';
 import { createCabinetMimic } from '../../../components/plant/views/cabinet-mimic';
 import {
+  cabinetBootInputs,
   clampSetpoint,
   footbathFilling,
   jacuzziCabinetPanel,
@@ -83,6 +95,24 @@ import { footbathPumpStarved } from '../../../../game/plant/pools';
  */
 
 const CABINET = { w: 1.7, d: 0.9, h: 2.1, wall: 0.03 } as const;
+/**
+ * Its controller's beeper (the owner, 2026-10-25): a piezo sounder on its
+ * board, the cheapest there is, a plain square tone. One short beep coming
+ * online; three quick ones for a fault.
+ */
+const ONLINE_BEEP = tone({
+  hz: 2700,
+  seconds: 0.09,
+  level: READY_BEEP_LEVEL,
+  type: 'square',
+});
+const FAULT_BEEP = tone({
+  hz: 2700,
+  seconds: 0.07,
+  level: READY_BEEP_LEVEL,
+  type: 'square',
+  repeat: [3, 0.09],
+});
 /**
  * The Jacuzzi's: the same set in a wider, deeper cabinet, with a bay at
  * its right end for the spa's own jet pump and air blower, each switched
@@ -813,6 +843,16 @@ export function buildSpaPack(
           footbathLineup(w.identifiedPlant).draining,
         );
   });
+  // Its controller starting and stopping, as the world has it
+  // (`cabinet-boot.ts`): a trial's and an exhibit's have none.
+  const boot = computed(() =>
+    !jacuzziBinding && !external
+      ? (store?.world.value.cabinets[pool] ?? null)
+      : null,
+  );
+  const bootReady = computed(() =>
+    boot.value ? cabinetReady(boot.value) : true,
+  );
   const doorOpen = computed(() => latches.some((l) => l.open.value));
   // The jacuzzi's panel, as its controller has it.
   const jacuzziPanel = computed(() => panelNow(doorOpen.value));
@@ -826,6 +866,7 @@ export function buildSpaPack(
       : supplied.value &&
         power.position.value === 1 &&
         !lowWater.value &&
+        bootReady.value &&
         (wash.value?.pumpAllowed ?? true),
   );
   // Its water moving through the filter, the UV and the dosing.
@@ -847,6 +888,11 @@ export function buildSpaPack(
   const hum = machineTone('motor', pumpRate, humLevel);
   let humming = false;
   let servoRunning = false;
+  // Its controller's last phase and servo travel, for its beeps and its
+  // servos' whine as they open in turn.
+  let lastPhase: BootPhase | null = null;
+  let lastValves: CabinetBoot['valves'] | null = null;
+  let bootWhirring = false;
   const bay: {
     what: 'jets' | 'air';
     runs: ReadonlySignal<boolean>;
@@ -1035,6 +1081,33 @@ export function buildSpaPack(
       const w = store?.world.value;
       const trial = external?.state();
       const lineup = w && !jets ? footbathLineup(w.identifiedPlant) : null;
+      // Its controller: a beep coming online, three for a fault; its
+      // servos heard as each opens in turn, or springs shut.
+      const b = boot.value;
+      let bootText: string | null = null;
+      if (b && w) {
+        const beep = lastPhase ? bootBeepFor(lastPhase, b.phase) : null;
+        if (beep)
+          partAudio.play(beep === 'online' ? ONLINE_BEEP : FAULT_BEEP, object);
+        lastPhase = b.phase;
+        const turning =
+          !!lastValves &&
+          CABINET_SERVOS.some((v) => b.valves[v] !== lastValves![v]);
+        lastValves = b.valves;
+        if (turning !== bootWhirring) {
+          bootWhirring = turning;
+          partAudio.hold(
+            exchanger.group,
+            turning ? SERVO_WHIRR : null,
+            exchanger.group,
+          );
+          if (!turning) partAudio.play(VALVE_STOP, exchanger.group);
+        }
+        bootText = bootLine(b, cabinetBootInputs(w)[pool].fault);
+      }
+      /** Its display's lines, its controller's word on the second while it starts. */
+      const withBoot = (l: readonly [string, string] | null) =>
+        l && bootText ? ([l[0], bootText.padEnd(16)] as const) : l;
       mimic.show({
         pump: on,
         uv: uvOn.value,
@@ -1059,7 +1132,7 @@ export function buildSpaPack(
           ? {
               lines:
                 supplied.value && jacuzziPanel.value
-                  ? jacuzziPanel.value.lines
+                  ? withBoot(jacuzziPanel.value.lines)
                   : supplied.value
                     ? ([
                         `${ownSet.toFixed(1)}C  SET ${ownSet.toFixed(1)}`.padEnd(
@@ -1076,13 +1149,15 @@ export function buildSpaPack(
                     `${(trial?.celsius ?? (w ? w.pools[pool].temperature : ownSet)).toFixed(1)}C  SET ${setting().toFixed(1)}`.padEnd(
                       16,
                     ),
-                    (filterBinding?.washing()
-                      ? filterBinding.line()
-                      : trial?.draining || lineup?.draining
-                        ? 'DRAINING'
-                        : on
-                          ? 'RUNNING  UV ON'
-                          : 'STOPPED'
+                    (
+                      bootText ??
+                      (filterBinding?.washing()
+                        ? filterBinding.line()
+                        : trial?.draining || lineup?.draining
+                          ? 'DRAINING'
+                          : on
+                            ? 'RUNNING  UV ON'
+                            : 'STOPPED')
                     ).padEnd(16),
                   ] as const)
                 : null,
@@ -1094,6 +1169,7 @@ export function buildSpaPack(
     dispose: () => {
       humming = false;
       partAudio.hold(pump.group, null);
+      partAudio.hold(exchanger.group, null);
       for (const b of bay) {
         b.on = false;
         partAudio.hold(b.source, null);

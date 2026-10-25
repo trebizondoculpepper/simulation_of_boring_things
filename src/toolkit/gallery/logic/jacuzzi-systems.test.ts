@@ -14,6 +14,7 @@ import {
 import type { World } from '../../../game/world';
 import { JACUZZI_VALVES } from '../../../game/plant/jacuzzi';
 import { NO_FLOW_TRIP } from '../../../game/plant/jacuzzi-cabinet';
+import { BOOT, CABINET_SERVOS } from '../../../game/plant/cabinet-boot';
 import { dosedVolumes, poolVolume } from '../../../game/plant/pools';
 import { JACUZZI_BALANCE_TANK } from '../../../game/plant/spa-balance-tank';
 import { jacuzziMimicState } from './jacuzzi-mimic';
@@ -25,6 +26,11 @@ import { jacuzziMimicState } from './jacuzzi-mimic';
  * heating, all through the one world.
  */
 const start = advance(newWorld(), 10, 1);
+/** Its controller's restart after a fault clears: check, then each servo opened in turn, s. */
+const RESTART =
+  BOOT.check + (CABINET_SERVOS.length - 1) * BOOT.stagger + BOOT.travel + 1;
+/** And from POWER on: its boot first. */
+const COLD_START = BOOT.boot + RESTART;
 const valve = (w: World, k: keyof typeof JACUZZI_VALVES, open: boolean) =>
   applyAction(w, { type: 'plant/valve', id: JACUZZI_VALVES[k], open });
 const reset = (w: World) =>
@@ -92,6 +98,10 @@ describe('the jacuzzi cabinet, with its valve panel and its mimic', () => {
     w = advance(valve(w, 'return', true), 10, 0.5);
     expect(jacuzziCabinetPanel(w).pumpRun).toBe(false);
     w = reset(w);
+    // Its controller checks its inputs and opens its servos in turn before
+    // its pump runs (`cabinet-boot.ts`).
+    expect(jacuzziCabinetPanel(w).pumpRun).toBe(false);
+    w = advance(w, RESTART, 0.5);
     expect(jacuzziCabinetPanel(w)).toMatchObject({
       pumpRun: true,
       flowing: true,
@@ -132,7 +142,7 @@ describe('the jacuzzi cabinet, with its valve panel and its mimic', () => {
         pool_03: { ...w.pools.pool_03, balance: 0.68 },
       },
     };
-    w = advance(w, 2, 0.5);
+    w = advance(w, RESTART, 0.5);
     expect(jacuzziCabinetPanel(w)).toMatchObject({
       pumpRun: true,
       flowing: true,
@@ -152,6 +162,9 @@ describe('the jacuzzi cabinet, with its valve panel and its mimic', () => {
       type: 'jacuzzi/cabinet',
       action: { act: 'power', on: true },
     });
+    // It boots, checks its inputs and opens its servos in turn first.
+    expect(jacuzziCabinetPanel(w).flowing).toBe(false);
+    w = advance(w, COLD_START, 0.5);
     expect(jacuzziCabinetPanel(w).flowing).toBe(true);
   });
 
@@ -210,7 +223,7 @@ describe('the jacuzzi cabinet, with the waterproof wall plate by the tub', () =>
     w = pressJacuzziPlate(w, 'start');
     expect(jacuzziRuns(w)).toEqual({ jets: false, air: false });
     // Reopened and reset, START works again.
-    w = reset(valve(w, 'return', true));
+    w = advance(reset(valve(w, 'return', true)), RESTART, 0.5);
     w = pressJacuzziPlate(w, 'start');
     expect(jacuzziRuns(w)).toEqual({ jets: true, air: true });
   });
@@ -360,9 +373,24 @@ describe('the jacuzzi cabinet, with its external balance tank', () => {
   });
 
   it('trips the running pump on its tank’s low-low as the drain outruns the make-up', () => {
-    const w = advance(valve(start, 'tankDrain', true), 5 * 60, 1);
-    expect(w.pools.pool_03.tripped).toBe(true);
-    expect(jacuzziCabinetPanel(w).flowing).toBe(false);
+    // Tripping, the pump stops, the gutter's water runs back and the tank
+    // recovers; its controller checks again and restarts, and trips again:
+    // it hunts while the drain is open.
+    let w = valve(start, 'tankDrain', true);
+    let trips = 0;
+    let faulted = false;
+    for (let t = 0; t < 5 * 60; t++) {
+      const was = w.pools.pool_03.tripped;
+      w = advance(w, 1, 1);
+      if (!was && w.pools.pool_03.tripped) {
+        trips++;
+        expect(jacuzziCabinetPanel(w).flowing).toBe(false);
+      }
+      // Its controller sees it the next moment: FAULT, its beeps.
+      faulted ||= w.cabinets.pool_03.phase === 'fault';
+    }
+    expect(trips).toBeGreaterThan(0);
+    expect(faulted).toBe(true);
     expect(w.pools.pool_03.balance).toBeLessThan(JACUZZI_BALANCE_TANK.float);
   });
 });

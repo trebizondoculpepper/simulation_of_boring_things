@@ -157,6 +157,12 @@ import {
 } from './plant/spa-filter';
 import { bedPasses } from './plant/ideal-filter';
 import { stepSolids } from './water/solids';
+import {
+  cabinetReady,
+  runningCabinet,
+  stepCabinetBoot,
+} from './plant/cabinet-boot';
+import type { CabinetBoot, CabinetBootInputs } from './plant/cabinet-boot';
 import type {
   SpaFilter,
   SpaFilterAction,
@@ -185,7 +191,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 31;
+export const WORLD_VERSION = 32;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -243,6 +249,8 @@ export interface World {
   jacuzziCabinet: JacuzziCabinetState;
   /** The spa cabinets' sand filters and their wash programmes (`spa-filter.ts`). */
   spaFilters: SpaFiltersState;
+  /** The spa cabinets' controllers starting and stopping, and their servo valves (`cabinet-boot.ts`). */
+  cabinets: Record<SpaPool, CabinetBoot>;
   /** The Jacuzzi concrete wall's remote fibre illuminator. */
   jacuzziFibreIlluminator: FibreIlluminatorState;
   /** The boiler house's gas safety: ECV, emergency stop, detector and SSOV (`boiler-gas.ts`). */
@@ -274,6 +282,7 @@ export function newWorld(): World {
     jacuzzi: newJacuzzi(),
     jacuzziCabinet: newJacuzziCabinet(),
     spaFilters: newSpaFilters(),
+    cabinets: { pool_03: runningCabinet(), pool_04: runningCabinet() },
     jacuzziFibreIlluminator: newFibreIlluminator(),
     boilerGas: newBoilerGas(),
     music: newZoneMusic(),
@@ -712,9 +721,10 @@ export function stepWorld(world: World, delta: number): World {
   );
   const jacuzzi = jacuzziFlow({ ...world, jacuzziCabinet });
   // The spa cabinets' filters washing: their pumps' water to drain.
+  // Their controllers running: a wash's pump runs only then.
   const spaPowered: Record<SpaPool, boolean> = {
-    pool_03: world.jacuzziCabinet.power,
-    pool_04: footbathLineup(world.identifiedPlant).powered,
+    pool_03: cabinetReady(world.cabinets.pool_03),
+    pool_04: cabinetReady(world.cabinets.pool_04),
   };
   const spaWash = {
     pool_03: spaWashFlow(
@@ -787,6 +797,10 @@ export function stepWorld(world: World, delta: number): World {
     jacuzziCabinet,
     // Its filters: filtering, the spa's circulation through them; washing,
     // the cabinet's pump's own flow, while the cabinet has power.
+    cabinets: ((inputs) => ({
+      pool_03: stepCabinetBoot(world.cabinets.pool_03, inputs.pool_03, delta),
+      pool_04: stepCabinetBoot(world.cabinets.pool_04, inputs.pool_04, delta),
+    }))(cabinetBootInputs(world)),
     spaFilters: stepSpaFilters(
       world.spaFilters,
       {
@@ -855,11 +869,43 @@ export function stepWorld(world: World, delta: number): World {
  * isolator), a way through its suction and return valves, and the
  * tank its pump draws from: its external balance tank (`jacuzziPlumbing`).
  */
+/** The jacuzzi cabinet's supply: its room's power and its isolator. */
+export const jacuzziCabinetSupplied = (world: World) =>
+  serviceAvailable(world.plant, 'plant_pool_03', 'power') &&
+  world.plant.isolators['Jacuzzi cabinet isolator'];
+
+/** The foot spa cabinet's supply and POWER switch. */
+export const footbathCabinetPowered = (world: World) =>
+  serviceAvailable(world.plant, 'plant_pool_04', 'power') &&
+  footbathLineup(world.identifiedPlant).powered;
+
+/** What each cabinet's controller is given: its power, and any fault it sees. */
+export function cabinetBootInputs(
+  world: World,
+): Record<SpaPool, CabinetBootInputs> {
+  return {
+    pool_03: {
+      powered: jacuzziCabinetSupplied(world) && world.jacuzziCabinet.power,
+      fault:
+        world.jacuzziCabinet.trip !== ''
+          ? 'NO FLOW'
+          : world.pools.pool_03.tripped
+            ? 'TANK LOW'
+            : '',
+    },
+    pool_04: {
+      powered: footbathCabinetPowered(world),
+      fault: world.pools.pool_04.tripped ? 'TANK LOW' : '',
+    },
+  };
+}
+
 export const jacuzziCabinetInputs = (world: World): JacuzziCabinetInputs => {
   return {
-    supplied:
-      serviceAvailable(world.plant, 'plant_pool_03', 'power') &&
-      world.plant.isolators['Jacuzzi cabinet isolator'],
+    supplied: jacuzziCabinetSupplied(world),
+    // Its pump allowed only once its controller runs, every servo open
+    // (`cabinet-boot.ts`).
+    ready: cabinetReady(world.cabinets.pool_03),
     path: jacuzziPaths(world.installedValves).circulation,
     // Plumbed to its external balance tank; its own vessel disconnected.
     tank: cabinetTanks(jacuzziPlumbing(world), DISCONNECTED_VESSEL).draws,
@@ -1074,7 +1120,9 @@ function footbathThroughFilter(world: World) {
       open('valve-0104') &&
       open('valve-0105') &&
       // Not while its filter washes: its water goes to drain.
-      filtering(world.spaFilters.pool_04),
+      filtering(world.spaFilters.pool_04) &&
+      // Nor until its controller runs, every servo open.
+      cabinetReady(world.cabinets.pool_04),
   };
 }
 

@@ -384,6 +384,8 @@ export const WORLD_HEALTH_COVERAGE = {
   motors: 'motors: duty running, standby in AUTO, no trip or stop',
   jacuzzi: 'not health: the jets and air await a timed START',
   jacuzziCabinet: 'jacuzzi: cabinet powered, no trip',
+  cabinets:
+    'not checked: a spa cabinet’s controller follows its POWER and supply; its pool’s flow catches one stopped',
   spaFilters:
     'not checked: a spa filter’s dirt is maintenance, and its wash a routine its programme runs',
   jacuzziFibreIlluminator:

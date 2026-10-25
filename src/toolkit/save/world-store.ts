@@ -102,6 +102,12 @@ let roomOverride: WorldStore | null = null;
 export function roomWorld(): WorldStore {
   return roomOverride ?? worldStore('dev');
 }
+// For trying the world from the console in development only:
+// `poolWorld.store().dispatch({ type: 'jacuzzi/cabinet', action: { act: 'power', on: false } })`.
+if (typeof window !== 'undefined' && import.meta.env?.DEV)
+  (window as unknown as { poolWorld?: unknown }).poolWorld = {
+    store: roomWorld,
+  };
 /** Rooms' world from now on: `store`, or, with null, the player's again. */
 export function setRoomWorld(store: WorldStore | null) {
   roomOverride = store;
