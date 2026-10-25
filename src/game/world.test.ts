@@ -179,10 +179,12 @@ describe('the mains water off', () => {
       expect(pumpsAt[id], id).toBeGreaterThan(boosterAt);
       expect(w.pools[id].level, id).toBeLessThan(0);
     }
-    // The Olympic, never backwashed, holds its water but chokes: its beds
-    // foul, and its circulation falls.
+    // The Olympic, never backwashed, holds its water but its beds foul to
+    // their capacity and break through (the ideal filter): its circulation
+    // falls, and its water clouds with the dirt they no longer keep.
     expect(pumpsAt.pool_02).toBeUndefined();
-    expect(w.pools.pool_02.flow).toBeLessThan(POOL_TARGET.pool_02.flow * 0.85);
+    expect(w.pools.pool_02.flow).toBeLessThan(POOL_TARGET.pool_02.flow * 0.95);
+    expect(w.pools.pool_02.solids).toBeGreaterThan(20);
     // The main back, the booster set stays tripped until it is reset.
     w = applyAction(w, { type: 'plant/source', utility: 'water', on: true });
     w = advance(w, 3600, 10);

@@ -137,8 +137,11 @@ import {
   olympicTankView,
   tankFloats,
 } from '../../../game/plant/olympic-tank';
-import { olympicFlowsOf } from '../../../game/plant/olympic-battery';
-import { BIG_FILTER } from '../../../game/plant/five-valve-filter';
+import {
+  OLYMPIC_DIRT_REF,
+  olympicBed,
+  olympicFlowsOf,
+} from '../../../game/plant/olympic-battery';
 import {
   createAcidBoard,
   createControllerPanel,
@@ -487,11 +490,15 @@ function modelFor(
             delta,
           );
           look = stepBedLook(look, f.bed, delta);
+          // Its bed as the ideal filter has it: its dirt, its fissures.
           filter.showGlass(
-            bedGlass(look, {
-              bedFlow: f.bed,
-              dirt: w.olympic.dirt[n] / BIG_FILTER.dirtRef,
-            }),
+            {
+              ...bedGlass(look, {
+                bedFlow: f.bed,
+                dirt: w.olympic.dirt[n] / OLYMPIC_DIRT_REF,
+              }),
+              channelling: olympicBed(w.olympic, n).fissuring,
+            },
             delta,
           );
         },

@@ -67,7 +67,11 @@ export const BIG_FILTER = {
   valve: 6e-5,
   bed: 8.3e-5,
   returnRun: 4e-4,
-  wasteRun: 4e-4,
+  // The waste main sized for a proper backwash (2026-10-25): at 4e-4 it
+  // let only 133 m³/h up a 3 m bed (19 m/h), enough to lift and wash it
+  // but short of the 80 % of its 30 m/h wash rate that heals its fissures
+  // (`FILTER_PHYSICS.healShare`); now about 180 m³/h.
+  wasteRun: 7e-5,
   /** The dirt that doubles the bed's resistance, kg; dirt in the water, g/m³ (a dirty pool, to see it in minutes). */
   dirtRef: 5,
   waterDirt: 20,

@@ -123,7 +123,8 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [x] The spa cabinets' sand filters outside them, in their schematics and the world: washing, dirt, gauges, sight glasses (2026-10-25, 7c905b6, 1f55dc2).
 - [x] A spa filter's wash takes its water from the spa's water balance (to drain), made up by the tank's float (2026-10-25).
 - [x] A spa filter's dirt from its spa's water condition (prompt 070's world stage), not a constant: each pool's suspended solids in the world (2026-10-25).
-- [ ] The big pools' filters' capture from their own beds (`BIG_POOL_CAPTURE` stands in), and the rest of the water's condition in the world (prompt 070).
+- [x] The big pools' filters on the ideal filter: the lounge's pair and the Olympic's battery load from their pool's solids, fissure, wash, heal and settle, and their capture sets the pool's water (2026-10-25).
+- [ ] The rest of the water's condition in the world (prompt 070): temperature, chlorine and the rest from `water-condition.ts` in place of the pools' own fields.
 
 ## The operator's manual
 

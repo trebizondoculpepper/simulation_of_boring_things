@@ -1,4 +1,8 @@
-import { newLoungeFilters, stepLoungeFilters } from './plant/lounge-filters';
+import {
+  loungePasses,
+  newLoungeFilters,
+  stepLoungeFilters,
+} from './plant/lounge-filters';
 import type { LoungeFiltersState } from './plant/lounge-filters';
 import { installedValveOpen } from './plant/installed-valves';
 import { actOnZoneMusic, newZoneMusic, stepZoneMusic } from './plant/music';
@@ -35,6 +39,7 @@ import {
   HALL_AIR,
   POOL_IDS,
   POOL_TARGET,
+  poolArea,
   poolVolume,
   circulating,
   dosedVolumes,
@@ -89,6 +94,7 @@ import {
 import {
   newOlympicBattery,
   olympicBatteryFlows,
+  olympicPasses,
   stepOlympicBattery,
 } from './plant/olympic-battery';
 import type {
@@ -150,7 +156,7 @@ import {
   stepSpaFilters,
 } from './plant/spa-filter';
 import { bedPasses } from './plant/ideal-filter';
-import { BIG_POOL_CAPTURE, stepSolids } from './water/solids';
+import { stepSolids } from './water/solids';
 import type {
   SpaFilter,
   SpaFilterAction,
@@ -179,7 +185,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 30;
+export const WORLD_VERSION = 31;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -809,9 +815,15 @@ export function stepWorld(world: World, delta: number): World {
       world.loungeFilters,
       loungeFlowsOf(world),
       delta,
+      world.pools.pool_01.solids,
     ),
     olympic: battery
-      ? stepOlympicBattery(world.olympic, battery, delta)
+      ? stepOlympicBattery(
+          world.olympic,
+          battery,
+          delta,
+          world.pools.pool_02.solids,
+        )
       : world.olympic,
     olympicTank:
       world.olympicTank.open === calling
@@ -1079,14 +1091,16 @@ function spaFilterPump(
 
 /**
  * Each pool's suspended solids a step on (`solids.ts`): its bathers' dirt
- * in, its filters' catch out; the spas' through their own beds.
+ * in, its filters' catch out, each pool's through its own beds.
  */
 function withSolids(world: World, pools: PoolsState, dt: number): PoolsState {
   const passes = (id: PoolId) =>
     id === 'pool_03' || id === 'pool_04'
       ? (solids: number) =>
           bedPasses(world.spaFilters[id].spec, world.spaFilters[id].bed, solids)
-      : (solids: number) => solids * (1 - BIG_POOL_CAPTURE);
+      : id === 'pool_01'
+        ? (solids: number) => loungePasses(world.loungeFilters, solids)
+        : (solids: number) => olympicPasses(world.olympic, solids);
   return Object.fromEntries(
     (Object.keys(pools) as PoolId[]).map((id) => [
       id,
@@ -1097,6 +1111,7 @@ function withSolids(world: World, pools: PoolsState, dt: number): PoolsState {
           {
             bathers: world.bathers.pools[id].now,
             volume: poolVolume(id),
+            area: poolArea(id),
             flow: pools[id].flow,
             passes: passes(id),
           },

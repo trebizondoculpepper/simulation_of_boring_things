@@ -1,60 +1,90 @@
 import type { LoungeFlows } from './lounge-valves';
+import {
+  LOUNGE_SIZE,
+  bedPasses,
+  filterSizing,
+  stepFilterBed,
+} from './ideal-filter';
+import type { IdealFilterState } from './ideal-filter';
 
 /**
- * The lounge's two filter beds (the owner, 2026-10-25: a filter cycle
- * should leave the filters cleaner): each takes the dirt in the water it
- * filters down through it in service, and a backwash up through it washes
- * it out, as the Olympic's battery does (`olympic-battery.ts`), scaled to
- * a Ø1.2 m bed. Dirt adds to the bed's resistance, so a loaded filter's
- * pressure difference rises, and a backwash brings it down. Pure; dirt kg,
- * flows m³/h, times s.
+ * The lounge's two filter beds, each the ideal filter (`ideal-filter.ts`,
+ * the owner, 2026-10-25): a Ø1.2 m bed. In service each takes the dirt
+ * the pool's water brings it (its suspended solids, `solids.ts`), keeping
+ * what its bed catches; a backwash up through it lifts it and washes the
+ * dirt out; back in service it settles, a just-lifted bed letting fines
+ * past until it does; loaded and left unwashed it fissures and channels.
+ * Its dirt adds to its resistance, so a loaded filter's pressure
+ * difference rises, and a backwash brings it down. Pure; dirt kg, flows
+ * m³/h, times s.
  */
 
 export const LOUNGE_FILTER = {
-  /** The dirt that doubles a clean bed's resistance, kg (a Ø1.2 m bed: about a fifth of the Olympic's 7 m²). */
-  dirtRef: 1.2,
-  /** Dirt in the pool's water, g/m³: as the Olympic's. */
-  waterDirt: 1,
-  /** A backwash's time constant at full flow, s, and its full flow, m³/h. */
-  washTime: 60,
-  washFlow: 34,
+  spec: LOUNGE_SIZE,
   /** A clean bed's pressure difference at its 45 m³/h design flow, bar. */
   cleanDp: 0.34,
 } as const;
 
+/** Its dirt reference: the dirt that doubles its resistance, kg. */
+export const LOUNGE_DIRT_REF = filterSizing(LOUNGE_SIZE).dirtRef;
+
 export interface LoungeFiltersState {
   dirt: [number, number];
+  fissuring: [number, number];
+  unsettled: [number, number];
 }
 
-/**
- * A new game's beds: lightly loaded, 0.54 bar at design flow, under the
- * 0.7 bar alarm (`FILTER_DP_LIMIT`), which they reach after about twelve
- * hours' service: a backwash falls due in the first day, as maintenance.
- */
-export const newLoungeFilters = (): LoungeFiltersState => ({
-  dirt: [0.6 * LOUNGE_FILTER.dirtRef, 0.6 * LOUNGE_FILTER.dirtRef],
+/** One bed of the pair, as the ideal filter has it. */
+export const loungeBed = (
+  s: LoungeFiltersState,
+  i: 0 | 1,
+): IdealFilterState => ({
+  dirt: s.dirt[i],
+  fissuring: s.fissuring[i],
+  unsettled: s.unsettled[i],
 });
 
-/** The beds `dt` seconds on, by what flows through each: down in service, up in a backwash. */
+/**
+ * A new game's beds: lightly loaded, settled and sound, 0.54 bar at design
+ * flow, under the 0.7 bar alarm (`FILTER_DP_LIMIT`), which they reach in
+ * the first day's service: a backwash falls due as maintenance.
+ */
+export const newLoungeFilters = (): LoungeFiltersState => ({
+  dirt: [0.6 * LOUNGE_DIRT_REF, 0.6 * LOUNGE_DIRT_REF],
+  fissuring: [0, 0],
+  unsettled: [0, 0],
+});
+
+/**
+ * The beds `dt` seconds on, by what flows through each (down in service,
+ * up in a backwash) and the dirt in the pool's water, g/m³.
+ */
 export function stepLoungeFilters(
   s: LoungeFiltersState,
   flows: LoungeFlows,
   dt: number,
+  dirt = 1,
 ): LoungeFiltersState {
   if (!(dt > 0)) return s;
-  const F = LOUNGE_FILTER;
-  const dirt = s.dirt.map((d, i) => {
-    const service = Math.max(0, flows.filters[i]);
-    const wash = flows.backwash[i];
-    if (wash > 0) return d * Math.exp(-((wash / F.washFlow) * dt) / F.washTime);
-    return d + (F.waterDirt * service * dt) / 3600 / 1000;
-  }) as [number, number];
-  return { dirt };
+  const beds = ([0, 1] as const).map((i) =>
+    stepFilterBed(LOUNGE_SIZE, loungeBed(s, i), flows.filters[i], dirt, dt),
+  );
+  return {
+    dirt: [beds[0].dirt, beds[1].dirt],
+    fissuring: [beds[0].fissuring, beds[1].fissuring],
+    unsettled: [beds[0].unsettled, beds[1].unsettled],
+  };
 }
+
+/** What the pair gives back to the pool, g/m³, from water carrying `dirt`: each bed's, mixed. */
+export const loungePasses = (s: LoungeFiltersState, dirt: number) =>
+  (bedPasses(LOUNGE_SIZE, loungeBed(s, 0), dirt) +
+    bedPasses(LOUNGE_SIZE, loungeBed(s, 1), dirt)) /
+  2;
 
 /** Each bed's pressure difference in service, bar: its flow's square, and its dirt. */
 export const loungeFilterDp = (s: LoungeFiltersState, flows: LoungeFlows) =>
   s.dirt.map((d, i) => {
     const q = Math.max(0, flows.filters[i]) / 45;
-    return LOUNGE_FILTER.cleanDp * q * q * (1 + d / LOUNGE_FILTER.dirtRef);
+    return LOUNGE_FILTER.cleanDp * q * q * (1 + d / LOUNGE_DIRT_REF);
   });

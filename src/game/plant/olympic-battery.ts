@@ -1,3 +1,5 @@
+import { bedPasses, filterSizing, stepFilterBed } from './ideal-filter';
+import type { IdealFilterSpec, IdealFilterState } from './ideal-filter';
 import { BIG_FILTER, VALVES, faceFlows } from './five-valve-filter';
 import type { FiveValveFlows, ValveName } from './five-valve-filter';
 import { installedValveByCommandId } from './installed-valves';
@@ -37,23 +39,45 @@ export const FILTERS = 5;
  */
 export const OLYMPIC_HEAD = 12.9;
 
-/**
- * The dirt in the pool's water, g/m³: a working pool's, so a bed in
- * service doubles its resistance in about a day and a half and wants a
- * backwash every few days (Dev26's filter has a dirty pool's, to see it in
- * minutes).
- */
-export const OLYMPIC_WATER_DIRT = 1;
+/** Each filter of the battery: the ideal filter, Ø3 m (`ideal-filter.ts`). */
+export const OLYMPIC_FILTER: IdealFilterSpec = { diameter: 3 };
+/** Its dirt reference: the dirt that doubles its bed's resistance, kg. */
+export const OLYMPIC_DIRT_REF = filterSizing(OLYMPIC_FILTER).dirtRef;
 
-/** Each filter's bed: the dirt it holds, kg. */
+/**
+ * Each filter's bed, the ideal filter's (the owner, 2026-10-25): its dirt,
+ * kg; how fissured, and how unsettled after a wash, 0 to 1.
+ */
 export interface OlympicBatteryState {
   dirt: number[];
+  fissuring: number[];
+  unsettled: number[];
 }
 
-/** Mid-season: each bed with the dirt Dev26's filter starts with. */
-export const newOlympicBattery = (): OlympicBatteryState => ({
-  dirt: Array.from({ length: FILTERS }, () => 1.6 * BIG_FILTER.dirtRef),
+/** One filter's bed, as the ideal filter has it. */
+export const olympicBed = (
+  b: OlympicBatteryState,
+  i: number,
+): IdealFilterState => ({
+  dirt: b.dirt[i],
+  fissuring: b.fissuring?.[i] ?? 0,
+  unsettled: b.unsettled?.[i] ?? 0,
 });
+
+/** Mid-season: each bed loaded to 1.6 times its dirt reference, settled and sound. */
+export const newOlympicBattery = (): OlympicBatteryState => ({
+  dirt: Array.from({ length: FILTERS }, () => 1.6 * OLYMPIC_DIRT_REF),
+  fissuring: Array.from({ length: FILTERS }, () => 0),
+  unsettled: Array.from({ length: FILTERS }, () => 0),
+});
+
+/**
+ * Its dirt as the face's hydraulics take it (`faceFlows`, in its own
+ * reference's kilograms): the ideal bed's resistance, the same share of
+ * its reference.
+ */
+const faceDirt = (dirt: number) =>
+  Math.round((dirt / OLYMPIC_DIRT_REF) * BIG_FILTER.dirtRef * 10) / 10;
 
 /** The valves between the battery and the pool: the contact tank's in and out, the UV's in and out. */
 const RETURN = ['PL2-T2-IV1', 'PL2-T2-IV2', 'PL2-UV1-IV1', 'PL2-UV1-IV2'];
@@ -127,13 +151,13 @@ export function olympicBatteryFlows(
     pumping,
     draining,
     openings.map((o) => VALVES.map((v) => o[v]).join('')).join(','),
-    battery.dirt.map((d) => Math.round(d * 10)).join(','),
+    battery.dirt.map(faceDirt).join(','),
   ].join('|');
   if (cache?.key === key) return cache.flows;
   const filters = openings.map((opening, i) => {
     const f = faceFlows(
       opening,
-      Math.round(battery.dirt[i] * 10) / 10,
+      faceDirt(battery.dirt[i]),
       pumping,
       OLYMPIC_HEAD,
     );
@@ -158,29 +182,40 @@ export function olympicBatteryFlows(
 }
 
 /**
- * The beds `dt` seconds on: each takes the dirt in the water it filters
- * (down through it), and a backwash (up through it) washes it out, as
- * Dev26's filter does (`stepFiveValve`).
+ * The beds `dt` seconds on, each the ideal filter's (`stepFilterBed`): it
+ * takes the dirt the pool's water brings (`dirt`, g/m³) down through it in
+ * service, a backwash lifts it and washes it out, a rinse down to waste
+ * settles it, and loaded and left it fissures.
  */
 export function stepOlympicBattery(
   battery: OlympicBatteryState,
   flows: BatteryFlows,
   dt: number,
+  dirt = 1,
 ): OlympicBatteryState {
   if (!(dt > 0)) return battery;
+  const beds = battery.dirt.map((_, i) =>
+    stepFilterBed(
+      OLYMPIC_FILTER,
+      olympicBed(battery, i),
+      flows.filters[i]?.bed ?? 0,
+      dirt,
+      dt,
+    ),
+  );
   return {
-    dirt: battery.dirt.map((dirt, i) => {
-      const bed = flows.filters[i]?.bed ?? 0;
-      if (bed > 0) return dirt + (OLYMPIC_WATER_DIRT * bed * dt) / 3600 / 1000;
-      if (bed < 0)
-        return (
-          dirt *
-          Math.exp(-((-bed / BIG_FILTER.washFlow) * dt) / BIG_FILTER.washTime)
-        );
-      return dirt;
-    }),
+    dirt: beds.map((b) => b.dirt),
+    fissuring: beds.map((b) => b.fissuring),
+    unsettled: beds.map((b) => b.unsettled),
   };
 }
+
+/** What the battery gives back to the pool, g/m³, from water carrying `dirt`: its beds', mixed. */
+export const olympicPasses = (b: OlympicBatteryState, dirt: number) =>
+  b.dirt.reduce(
+    (sum, _, i) => sum + bedPasses(OLYMPIC_FILTER, olympicBed(b, i), dirt),
+    0,
+  ) / b.dirt.length;
 
 /** Each flowmeter's reading, by what it reads (`Meter.reads`): `filter-<n>`, `pumps`. */
 export function olympicMeterReadings(
