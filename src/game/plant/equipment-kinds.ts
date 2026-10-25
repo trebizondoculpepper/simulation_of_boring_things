@@ -27,7 +27,9 @@ export type StatusPolicy =
   | 'booster'
   | 'switch'
   /** A gas detector: its reading. */
-  | 'gas';
+  | 'gas'
+  /** A UV unit: its lamp lit or not. */
+  | 'uv';
 
 /**
  * How a kind is described: an isolating valve by what it isolates, an
@@ -77,7 +79,7 @@ export const PLACED_KINDS = {
   },
   'uv-unit': {
     type: 'UV unit',
-    status: 'none',
+    status: 'uv',
     code: 'UV',
     class: 'plant',
     purpose: 'Disinfects circulating water with ultraviolet light.',

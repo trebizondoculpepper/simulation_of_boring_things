@@ -40,7 +40,9 @@ export type StatusBinding =
   /** A valve, by its tag. */
   | { valve: string }
   /** A gas detector, by its room's gas zone. */
-  | { gasZone: GasZoneId };
+  | { gasZone: GasZoneId }
+  /** A UV unit, by its pool. */
+  | { uv: PoolId };
 
 /** An item's live state, resolved from the world, ready for its kind's wording. */
 export type ResolvedStatus =
@@ -57,7 +59,8 @@ export type ResolvedStatus =
   | { policy: 'booster'; running: boolean; tripped: boolean }
   | { policy: 'switch'; on: boolean }
   | { policy: 'valve'; open: boolean }
-  | { policy: 'gas'; ppm: number };
+  | { policy: 'gas'; ppm: number }
+  | { policy: 'uv'; lit: boolean };
 
 /** What a valve's link in its room's enhanced network says it isolates, in a description's words. */
 export interface ValveRoute {
@@ -131,6 +134,8 @@ export function statusBindingFor(subject: {
     case 'gas-ball-valve':
     case 'valve':
       return { valve: subject.tag };
+    case 'uv-unit':
+      return pool ? { uv: pool } : undefined;
     case 'ozone-monitor':
       return subject.room && subject.room in GAS_ZONES
         ? { gasZone: subject.room as GasZoneId }
@@ -253,6 +258,9 @@ export function formatStatus(
       }[resolved.state];
     case 'switch':
       return onOff(resolved.on);
+    case 'uv':
+      // Only what the world models: no fault, so never "operational".
+      return resolved.lit ? 'lamp lit' : 'lamp off';
     case 'gas':
       // As its detector reads it, in ppm (its range is 0–1 ppm).
       return `reading ${resolved.ppm.toFixed(2)} ppm`;

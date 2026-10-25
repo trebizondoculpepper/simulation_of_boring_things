@@ -1,3 +1,4 @@
+import { uvLampOn } from './uv';
 import { INSTALLED_VALVES } from './installed-valves';
 import { MODEL_VALVES } from './model-valves';
 import type { World } from '../world';
@@ -71,6 +72,7 @@ export function resolveStatus(
               : 'off',
     };
   }
+  if ('uv' in b) return { policy: 'uv', lit: uvLampOn(world, b.uv) };
   if ('gasZone' in b)
     return { policy: 'gas', ppm: world.gas[b.gasZone].state.reading };
   if ('valve' in b) {

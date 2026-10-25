@@ -1,3 +1,4 @@
+import { UV_ISOLATORS } from '../../../game/plant/uv';
 import type { World } from '../../../game/world';
 import { POOL_TARGET } from '../../../game/plant/pools';
 import { hallHandling } from '../../../game/plant/air-handling';
@@ -36,10 +37,6 @@ const PUMPS: Partial<Record<PoolId, readonly [IsolatorName, IsolatorName]>> = {
   pool_01: ['P-201A isolator', 'P-201B isolator'],
   pool_02: ['P-101A isolator', 'P-101B isolator'],
 };
-const UV: Partial<Record<PoolId, IsolatorName>> = {
-  pool_01: 'Lounge UV unit isolator',
-  pool_02: 'UV unit isolator',
-};
 
 /** Clean filters' pressure differences at design flow, bar. */
 const CLEAN_DP = [0.34, 0.36, 0.36, 0.31] as const;
@@ -67,7 +64,7 @@ export function plantReadingOf(world: World, pool: PoolId = 'pool_02') {
     pool === 'pool_02'
       ? olympicFlowsOf(world).filters.map((f) => f.bedBar)
       : CLEAN_DP.map((dp) => dp * share * share);
-  const uvIsolator = UV[pool];
+  const uvIsolator = UV_ISOLATORS[pool];
   const uvOn = circulating && (uvIsolator ? plant.isolators[uvIsolator] : true);
   const dosing = circulating && serviceAvailable(plant, room, 'chemical');
   const heat = Object.values(world.pools).reduce((t, p) => t + p.heating, 0);
