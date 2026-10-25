@@ -22,6 +22,7 @@ import {
   throughDoor,
 } from './toolkit/gallery/logic/door-joins';
 import { firstPersonOn } from './toolkit/controls/input/first-person';
+import { setCopyHandler } from './toolkit/controls/input/copy-actions';
 import { clockStopped, paused } from './toolkit/controls/logic/paused';
 import { createConsole } from './toolkit/console/console-view';
 import { consoleOpen } from './toolkit/controls/logic/console-open';
@@ -301,15 +302,40 @@ const cameraLink = (): string | null => {
   } else if (Number(roll) !== 0) url.searchParams.set('roll', roll);
   return url.href;
 };
-/**
- * Copy the view's link. Copied, the pin (or camera) flashes, and nothing
- * is said; a failure is said in the overlay. Returns what happened, for the
- * pause menu to say.
- */
+const logCopy = (text: string, failed = false) => {
+  const store = worldStore('dev');
+  store.log({
+    time: store.world.value.time,
+    kind: 'system',
+    severity: failed ? 'notice' : 'info',
+    subject: '',
+    text,
+  });
+  console.info(text);
+};
+
+const copyObjectReference = async (reference: string | null) => {
+  if (!reference) {
+    logCopy('No highlighted object to copy.', true);
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(reference);
+    logCopy(`Copied object reference: ${reference}`);
+  } catch {
+    logCopy(
+      `Could not copy object reference: ${reference}. Allow clipboard access and try again.`,
+      true,
+    );
+  }
+};
+
+/** Copy and log the view's link, flashing its pin/camera button on success. */
 const copyCameraLocation = async (): Promise<string> => {
   const link = cameraLink();
   if (!link) {
     positionStatus.textContent = 'Position unavailable in this view';
+    logCopy(positionStatus.textContent, true);
     return positionStatus.textContent;
   }
   positionButton.disabled = true;
@@ -320,15 +346,23 @@ const copyCameraLocation = async (): Promise<string> => {
     // Restart its flash, should it be pressed again mid-flash.
     void positionButton.offsetWidth;
     positionButton.classList.add('is-copied');
+    logCopy(
+      `Copied ${new URL(link).searchParams.get('noclip') === 'true' ? 'camera' : 'pin'} link: ${link}`,
+    );
     return 'Link copied';
   } catch {
     positionStatus.textContent =
       'Could not copy. Allow clipboard access and try again.';
+    logCopy(`${positionStatus.textContent} Link: ${link}`, true);
     return positionStatus.textContent;
   } finally {
     positionButton.disabled = false;
   }
 };
+setCopyHandler((request) => {
+  if (request.kind === 'reference') void copyObjectReference(request.reference);
+  else void copyCameraLocation();
+});
 positionButton.addEventListener('animationend', () =>
   positionButton.classList.remove('is-copied'),
 );
@@ -342,7 +376,7 @@ effect(() => {
     ? 'Copy a link to this camera shot'
     : 'Copy a link to this view';
   positionButton.textContent = camera ? '📷' : '📍';
-  positionButton.title = label;
+  positionButton.title = `${label} (Ctrl/Cmd+P)`;
   positionButton.setAttribute('aria-label', label);
   // Leaving noclip, a reload walks again, whatever link it came by. (Only
   // on leaving: at startup the link's own `noclip` is yet to be read.)

@@ -6,6 +6,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Ctrl/Cmd+C copies the highlighted component’s tag or name; Ctrl/Cmd+P copies the current pin or noclip camera URL. Copy results and values are logged in the game and browser consoles, including missing targets and clipboard failures. The shared controls preserve typing, selected text copying and browser modifier combinations.
+
 - Hanging pipe identification plates have two fine metal suspension loops and wires connecting their upper fasteners to the pipe.
 - The remaining back rooms are bound to the model (prompt 064, `back-room-schematics.ts`): the hypochlorite and acid stores, the loading bay, the air plant (every unit's outdoor, exhaust, supply and extract duct its own link), the control room's instruments and the engineers' office with its ring main, sockets and PIR switch. Safety showers, spill kits, PPE cabinets and the water-test kit are decorative, by the owner's rulings, as are furniture and gantries. Every room's drawing is now wholly in the model.
 - The inspection overlay says whether a valve is open or shut now (the owner, 2026-10-25: a thing with several states says which), as it says a pump's on or off.

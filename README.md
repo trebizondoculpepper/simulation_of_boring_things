@@ -44,6 +44,8 @@ When adding connected rooms, follow the [open-threshold rendering guide](doc/des
 
 The default reception view faces into the building. `?at=<room id>` starts in a given room (for example `?at=boiler`). In the browser console, `facility.goTo('pumps')` jumps to a room and `facility.rooms()` lists the ids.
 
+Ctrl+C (Cmd+C on Mac) copies the highlighted component’s tag, or its name when untagged. Ctrl+P (Cmd+P) copies the current pin URL, including the camera pose and roll in noclip. Copy results and their values appear in the developer console. These shortcuts leave text fields and selected text copying alone.
+
 Walk with WASD, run with Shift, click to capture the mouse and look, Esc to free the cursor. At a pool ladder, press Use (E, the on-screen Use button or gamepad A) to mount it; hold forward to climb or back to descend. Movement returns to normal at either end. Doors open as you approach and close after you leave. Touch and gamepad also work.
 
 For title-shot authoring, open the Esc menu and enable **Noclip free camera**, then Resume. WASD flies along the view; Space rises, Shift descends and Ctrl accelerates. Gamepad A/B rises/descends, and touch has UP/DOWN buttons. You can pass through equipment while staying inside the room envelope; controls and automatic room transitions are disabled. The view shows live coordinates, and **Copy Camera Link** in the menu copies a reusable shot URL. Turning noclip off returns to the walking position; flight does not overwrite the Continue bookmark and is off after a reload. Q and E roll the view (LB/RB on a gamepad, ⟲/⟳ on touch) and R levels it; camera links carry the roll. The later attract sequence is specified in [prompt 054](doc/prompts/054-title-attract-sequence.md).

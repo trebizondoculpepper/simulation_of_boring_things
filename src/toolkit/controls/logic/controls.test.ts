@@ -3,6 +3,7 @@ import {
   CONTROL_SCHEME,
   INPUT_MODES,
   controlsHelp,
+  copyShortcut,
   deadZone,
 } from './controls';
 
@@ -48,5 +49,31 @@ describe('the gamepad dead zone', () => {
     const diagonal = deadZone(0.5, 0.5);
     expect(diagonal.x).toBeCloseTo(diagonal.y);
     expect(Math.hypot(diagonal.x, diagonal.y)).toBeLessThan(1);
+  });
+});
+
+describe('copy shortcuts', () => {
+  const plain = {
+    code: 'KeyC',
+    ctrlKey: false,
+    metaKey: false,
+    altKey: false,
+    shiftKey: false,
+  };
+  it('uses Ctrl or Cmd for references and pin/camera links', () => {
+    for (const modifier of ['ctrlKey', 'metaKey'] as const) {
+      expect(copyShortcut({ ...plain, [modifier]: true })).toBe('reference');
+      expect(copyShortcut({ ...plain, code: 'KeyP', [modifier]: true })).toBe(
+        'position',
+      );
+    }
+  });
+  it('leaves plain crouch and browser modifier combinations alone', () => {
+    expect(copyShortcut(plain)).toBeNull();
+    expect(
+      copyShortcut({ ...plain, ctrlKey: true, shiftKey: true }),
+    ).toBeNull();
+    expect(copyShortcut({ ...plain, metaKey: true, altKey: true })).toBeNull();
+    expect(copyShortcut({ ...plain, code: 'KeyF', ctrlKey: true })).toBeNull();
   });
 });

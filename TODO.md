@@ -117,6 +117,8 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Housekeeping
 
+- [x] **Copy highlighted objects and camera pins by keyboard** (done 2026-10-25, commit pending): Ctrl/Cmd+C copies the displayed object’s tag or untagged name; Ctrl/Cmd+P copies the pin or noclip camera URL. Both report copied values and failures to the developer console, with editing and selected-text copying preserved.
+
 - [x] **Attach collar-valve actuators and suspend pipe signs** (done 2026-10-25, `7392e38`): align upright electric and pneumatic drives with their valve stems, keep overrides horizontal, and hang pipe plates from two fine wire loops and drops; regression checks cover all pipe axes and both sign directions.
 
 - [x] **Daily devlog publication** (done 2026-10-25; commit: “Add jacuzzi tank drain, camera shots and devlog publication”; [workflow and template](doc/devlogs/README.md)): authenticated Chrome editor publication verified with [update 001](https://salimfadhley.itch.io/the-pool/devlog/1727746/a-title-sequence-that-flies-through-the-building), attached build 0.1.265, and URL, publication time and source coverage recorded locally. Butler remains for build uploads. The project is still in Draft access mode, so the published post is available only to those who can see the project.

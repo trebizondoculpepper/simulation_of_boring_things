@@ -2,6 +2,7 @@ import type { Box3, Object3D, PerspectiveCamera } from 'three';
 import {
   NO_INSPECTION,
   inspectionText,
+  inspectionReference,
   stepInspection,
 } from '../logic/inspection';
 import type { InspectionState, InspectionTarget } from '../logic/inspection';
@@ -16,7 +17,7 @@ import { cutOpenings, slide } from '../logic/walk-collision';
 import type { Footprint } from '../logic/walk-collision';
 import { climb, ladderToUse } from '../logic/ladder-zone';
 import type { LadderZone } from '../logic/ladder-zone';
-import { PAD, deadZone } from '../logic/controls';
+import { PAD, deadZone, copyShortcut } from '../logic/controls';
 import type { InputMode } from '../logic/controls';
 import {
   hudControls,
@@ -35,6 +36,7 @@ import { createTorchLight } from './torch';
 import { settings } from '../../settings/settings-store';
 import { paused } from '../logic/paused';
 import { consoleOpen } from '../logic/console-open';
+import { requestCopy } from './copy-actions';
 
 /** Whether the walker is to take no input: paused, or the console down. */
 const inputHeld = () => paused.value || consoleOpen.value;
@@ -598,18 +600,36 @@ export function createFirstPerson(options: FirstPersonOptions) {
   const stopGesture = (event: Event) => event.preventDefault();
 
   const typing = (event: Event) =>
-    event.target instanceof HTMLInputElement ||
-    event.target instanceof HTMLTextAreaElement ||
-    event.target instanceof HTMLSelectElement;
+    event.target instanceof Element &&
+    Boolean(
+      event.target.closest(
+        'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]',
+      ),
+    );
   const clampPitch = (pitch: number) =>
     Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, pitch));
 
   const keydown = (event: KeyboardEvent) => {
-    if (canvas.parentElement?.hidden || following) return;
-    if (typing(event)) return;
+    if (!current() || holding || inputHeld() || typing(event)) return;
+    const copy = copyShortcut(event);
+    if (copy) {
+      // Preserve normal text copying when the player has selected page text.
+      if (copy === 'reference' && document.getSelection()?.toString()) return;
+      event.preventDefault();
+      if (event.repeat) return;
+      setInput('keyboard');
+      requestCopy(
+        copy === 'position'
+          ? { kind: 'position' }
+          : {
+              kind: 'reference',
+              reference: inspectionReference(inspection.shown),
+            },
+      );
+      return;
+    }
     if ((event.ctrlKey && !noclip.value) || event.metaKey || event.altKey)
       return;
-    if (inputHeld()) return;
     setInput('keyboard');
     if (
       WALK_KEYS.has(event.code) ||

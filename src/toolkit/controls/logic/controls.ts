@@ -26,7 +26,9 @@ export type ControlAction =
   | 'torch'
   | 'eye'
   | 'console'
-  | 'release';
+  | 'release'
+  | 'copyReference'
+  | 'copyPosition';
 
 /** Each action's binding on each input, or null where it has none. */
 const POINTER_SCHEME: Record<
@@ -88,6 +90,16 @@ const POINTER_SCHEME: Record<
     touch: null,
     gamepad: null,
   },
+  copyReference: {
+    mouse: 'Ctrl/Cmd+C: copy highlighted object reference',
+    touch: null,
+    gamepad: null,
+  },
+  copyPosition: {
+    mouse: 'Ctrl/Cmd+P: copy pin / noclip camera link',
+    touch: null,
+    gamepad: null,
+  },
   release: {
     mouse: 'Esc: cursor',
     touch: null,
@@ -115,6 +127,8 @@ const ORDER: readonly ControlAction[] = [
   'torch',
   'eye',
   'console',
+  'copyReference',
+  'copyPosition',
   'release',
 ];
 
@@ -173,4 +187,21 @@ export const PAD = {
 export function isConsoleKey(code: string, key: string) {
   if (code === 'Backquote') return true;
   return code === 'IntlBackslash' && ['`', '§', '±', '¬'].includes(key);
+}
+
+/** Clipboard chords, before crouching or noclip's Ctrl acceleration. */
+export function copyShortcut(event: {
+  code: string;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+}): 'reference' | 'position' | null {
+  if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey)
+    return null;
+  return event.code === 'KeyC'
+    ? 'reference'
+    : event.code === 'KeyP'
+      ? 'position'
+      : null;
 }

@@ -70,6 +70,8 @@ const BINDINGS: readonly [string, string, string][] = [
   ['Eye height', 'Alt and the wheel', ''],
   ['Free the mouse', 'Esc', ''],
   ['Console', '` (key left of 1)', ''],
+  ['Copy highlighted object reference', 'Ctrl/Cmd+C', ''],
+  ['Copy pin / noclip camera link', 'Ctrl/Cmd+P', ''],
   [
     'Fly in noclip',
     'WASD; Space up, Shift down, Ctrl faster',

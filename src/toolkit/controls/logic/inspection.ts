@@ -57,3 +57,9 @@ export function stepInspection(
 /** The help line's text for a target: its title, and its detail below. */
 export const inspectionText = (target: InspectionTarget) =>
   target.detail ? `${target.title}\n${target.detail}` : target.title;
+
+/** A pasteable asset tag, falling back to the displayed name for untagged parts. */
+export const inspectionReference = (
+  target: InspectionTarget | null,
+): string | null =>
+  target ? (target.key.startsWith('name:') ? target.title : target.key) : null;

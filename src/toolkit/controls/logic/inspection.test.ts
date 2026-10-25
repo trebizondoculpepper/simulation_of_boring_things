@@ -3,6 +3,7 @@ import {
   INSPECT_DELAY_MS,
   NO_INSPECTION,
   inspectionText,
+  inspectionReference,
   stepInspection,
 } from './inspection';
 
@@ -52,5 +53,20 @@ describe('inspecting', () => {
       'PL3-BT1-IV1: Balance tank make-up valve\nIsolates water.',
     );
     expect(inspectionText(tank)).toBe('PL3-BT1: Jacuzzi balance tank');
+  });
+});
+
+describe('copying the highlighted reference', () => {
+  it('uses the stable tag without changing with the live description', () => {
+    expect(inspectionReference(valve)).toBe('PL3-BT1-IV1');
+    expect(inspectionReference({ ...valve, detail: 'Open' })).toBe(
+      'PL3-BT1-IV1',
+    );
+  });
+  it('uses a name for an untagged object and no reference for an empty aim', () => {
+    expect(
+      inspectionReference({ key: 'name:Test button', title: 'Test button' }),
+    ).toBe('Test button');
+    expect(inspectionReference(null)).toBeNull();
   });
 });
