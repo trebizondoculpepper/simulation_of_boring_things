@@ -198,3 +198,88 @@ describe('how a valve is worked', () => {
     ).toBe('solenoid');
   });
 });
+
+describe('the schematic’s own fittings (prompt 064)', () => {
+  const rules = {
+    isolate: new Set(['pool-pump', 'sand-filter']),
+    pumps: new Set(['pool-pump']),
+  };
+  const water = edges.filter((e) => e.medium === 'water');
+
+  it('reports what the rules add when the schematic gives nothing', () => {
+    const x = expandForPlumbing(nodes, water, rules);
+    expect(x.added.map((f) => f.id).sort()).toEqual(
+      x.fittings.map((f) => f.id).sort(),
+    );
+    expect(x.added.length).toBeGreaterThan(0);
+  });
+
+  it('uses the schematic’s fitting in place of the rule’s, adding nothing more', () => {
+    const plain = expandForPlumbing(nodes, water, rules);
+    // Give every fitting the rules would add, under the schematic's own ids.
+    const given = plain.fittings.map((f) => ({
+      id: `given-${f.kind}-${f.edge}-${f.end}`,
+      kind: f.kind,
+      edge: f.edge,
+      end: f.end,
+      normally: 'closed' as const,
+      role: 'test',
+    }));
+    const x = expandForPlumbing(nodes, water, { ...rules, given });
+    expect(x.added).toEqual([]);
+    expect(x.fittings.map((f) => f.id).sort()).toEqual(
+      given.map((g) => g.id).sort(),
+    );
+    expect(x.fittings.every((f) => f.given && f.normally === 'closed')).toBe(
+      true,
+    );
+    // In the same order along each link as the rules would set them.
+    for (const [edge, list] of plain.along)
+      expect(x.along.get(edge)!.map((f) => f.kind)).toEqual(
+        list.map((f) => f.kind),
+      );
+    // And the expanded graph runs through them.
+    for (const g of given)
+      expect(x.edges.some((e) => e.targetId === g.id)).toBe(true);
+  });
+
+  it('sets a given valve the rules would not, in its line, and never twice', () => {
+    // The tank's supply is not isolated by the rules: the schematic gives one.
+    const x = expandForPlumbing(nodes, water, {
+      ...rules,
+      given: [
+        {
+          id: 'tank-outlet',
+          kind: 'isolating-valve',
+          edge: 'suction',
+          end: 'source',
+          normally: 'open',
+        },
+      ],
+    });
+    expect(x.fittings.filter((f) => f.id === 'tank-outlet')).toHaveLength(1);
+    expect(x.along.get('suction')![0].id).toBe('tank-outlet');
+    expect(x.added.some((f) => f.id === 'tank-outlet')).toBe(false);
+    expect(() =>
+      expandForPlumbing(nodes, water, {
+        ...rules,
+        given: [
+          {
+            id: 'a',
+            kind: 'isolating-valve',
+            edge: 'suction',
+            end: 'source',
+            normally: 'open',
+          },
+          {
+            id: 'b',
+            kind: 'isolating-valve',
+            edge: 'suction',
+            end: 'source',
+            normally: 'open',
+          },
+        ],
+      }),
+    ).toThrow(/Two given fittings/);
+  });
+});

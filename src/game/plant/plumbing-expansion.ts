@@ -64,6 +64,27 @@ export interface Fitting {
   medium: PlumbMedium;
   /** The state the plumber leaves it in: open, unless the rules say closed. */
   normally: 'open' | 'closed';
+  /** Given by the schematic (prompt 064), not added by the plumber's rules. */
+  given?: true;
+  /** What it is for, in the schematic's words, where the schematic gives it. */
+  role?: string;
+}
+
+/**
+ * A fitting the schematic names (prompt 064; the owner, 2026-10-25: the
+ * schematic holds every valve and isolator, and the plumber sets them in
+ * their lines). It sits on a base link, at the end by the node it serves.
+ */
+export interface GivenFitting {
+  id: string;
+  kind: FittingKind;
+  /** The base link it sits on. */
+  edge: string;
+  /** Which end of it: by the link's source or its target. */
+  end: 'source' | 'target';
+  normally: 'open' | 'closed';
+  /** What it is for: "make-up isolation", "tank drain". */
+  role?: string;
 }
 
 export interface ExpandOptions {
@@ -109,6 +130,13 @@ export interface ExpandOptions {
    * the port, either way. None by default.
    */
   flowmeters?: ReadonlySet<string>;
+  /**
+   * The schematic's own fittings (prompt 064): each takes the place of the
+   * fitting the rules would put at its end of its link (matched by the
+   * node and port it serves, and its kind, so a shared port's is one), and
+   * one the rules would not put there is set in its line all the same.
+   */
+  given?: readonly GivenFitting[];
 }
 
 export interface Expansion {
@@ -117,6 +145,12 @@ export interface Expansion {
   fittings: Fitting[];
   /** Each base link's fittings, in order from its source to its target (a shared port's on the first of its links only). */
   along: Map<string, Fitting[]>;
+  /**
+   * The fittings the plumber's rules added that the schematic did not give:
+   * none, for a correct schematic (the owner: the plumber should not have
+   * to add anything if the model was correct).
+   */
+  added: Fitting[];
   /** Headers after (or before) ports several links share. */
   headers: {
     id: string;
@@ -152,16 +186,53 @@ export function expandForPlumbing(
     isolateMedia = new Set<PlumbMedium>(['water']),
     normally = 'open',
     flowmeters = new Set(),
+    given = [],
   }: ExpandOptions,
 ): Expansion {
   const kindOf = new Map(nodes.map((n) => [n.id, n.kind]));
+  const edgeById = new Map(edges.map((e) => [e.id, e]));
   const fittings: Fitting[] = [];
   const along = new Map<string, Fitting[]>();
+  const addedIds = new Set<string>();
+  // Where a fitting sits: the node and port it serves, its end and kind.
+  const placeKey = (
+    e: PlumbEdge,
+    end: 'source' | 'target',
+    kind: FittingKind,
+  ) =>
+    end === 'source'
+      ? `${e.sourceId}.${e.sourcePort}|source|${kind}`
+      : `${e.targetId}.${e.targetPort}|target|${kind}`;
+  const givenAt = new Map<string, Fitting>();
+  for (const g of given) {
+    const e = edgeById.get(g.edge);
+    if (!e) throw new Error(`Given fitting ${g.id} is on no link ${g.edge}`);
+    const key = placeKey(e, g.end, g.kind);
+    if (givenAt.has(key))
+      throw new Error(`Two given fittings at one place: ${g.id}`);
+    givenAt.set(key, {
+      id: g.id,
+      kind: g.kind,
+      edge: g.edge,
+      serves: g.end === 'source' ? e.sourceId : e.targetId,
+      end: g.end,
+      medium: e.medium,
+      normally: g.normally,
+      given: true,
+      ...(g.role ? { role: g.role } : {}),
+    });
+  }
   const add = (
     e: PlumbEdge,
     end: 'source' | 'target',
     kind: FittingKind,
   ): Fitting => {
+    // The schematic's own, where it gives one there.
+    const mine = givenAt.get(placeKey(e, end, kind));
+    if (mine) {
+      fittings.push(mine);
+      return mine;
+    }
     const serves = end === 'source' ? e.sourceId : e.targetId;
     const port = end === 'source' ? e.sourcePort : e.targetPort;
     const f: Fitting = {
@@ -174,6 +245,7 @@ export function expandForPlumbing(
       normally,
     };
     fittings.push(f);
+    addedIds.add(f.id);
     return f;
   };
   for (const e of edges) {
@@ -215,6 +287,16 @@ export function expandForPlumbing(
       const fed = powerIsolators === 'every-device' || supplies.has(source);
       if (fed && !switchgear.has(target))
         atTarget.push(add(e, 'target', 'power-isolator'));
+    }
+    // The schematic's own fittings on this link that no rule put there:
+    // set in its line all the same, at their ends.
+    for (const g of given.filter((x) => x.edge === e.id)) {
+      const f = givenAt.get(placeKey(e, g.end, g.kind))!;
+      const list = g.end === 'source' ? atSource : atTarget;
+      if (!list.includes(f)) {
+        fittings.push(f);
+        list.push(f);
+      }
     }
     const list = [...atSource, ...atTarget.reverse()].filter(
       (f) => !omit.has(f.id),
@@ -369,6 +451,7 @@ export function expandForPlumbing(
     edges: outEdges,
     fittings,
     along,
+    added: fittings.filter((f) => addedIds.has(f.id)),
     headers: [...shared.values()].map((s) => ({
       id: s.header,
       serves: s.at.id,
