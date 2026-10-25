@@ -12,7 +12,7 @@ Status: opened 2026-10-25 by the overnight session that implemented prompt [060]
 ## The owner's answers (2026-10-25, asked one at a time)
 
 1. **The old plant network:** find out whether anything uses it; nothing did, so it is deleted (item 4).
-2. **Pump tags:** no preference; following the hierarchy rule, the pumps become PL2-P1-P1, PL2-P1-P2, PL1-P1-P1 and PL1-P1-P2, starters, plates, panels and console included.
+2. **Pump tags:** hierarchical (asked twice; the second time, chosen): the pumps become PL2-P1-P1, PL2-P1-P2, PL1-P1-P1 and PL1-P1-P2, starters, plates, panels and console included.
 3. **Filter valve tags:** letters by function, derived from each fitting's role: IV1 inlet, IV2 outlet, BV1 backwash in, BV2 backwash out, RNV1 rinse, DV1 drain, the same scheme in every room.
 4. **The footbath's overflow valve PL4-PW1-IV2:** removed, as the jacuzzi's was; the overflow runs unvalved and its asset id (valve-0094) is retired.
 5. **The regulating valve PL2-F-RV1:** a regulating-valve template, derived from its link: "Regulates water flowing from … to …".
