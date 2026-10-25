@@ -281,6 +281,25 @@ export function createMimicBoard(
   board.mesh.position.z = 0.041;
   group.add(board.mesh);
   const z = 0.044;
+  // A single live lens is fitted at the centre of each valve symbol.
+  const symbolIndicators = spec.shapes.flatMap((shape) => {
+    if (!shape.indicator) return [];
+    const material = new MeshBasicMaterial({ color: '#3a3c3a' });
+    kit.materials.push(material);
+    const mesh = t.cyl(
+      group,
+      material,
+      0.006,
+      0.006,
+      shape.at[0],
+      shape.at[1],
+      z,
+      'z',
+      16,
+    );
+    mesh.userData.live = true;
+    return [{ ...shape.indicator, material }];
+  });
   // The indicator LEDs.
   const lamps = spec.lamps.map((lamp) => {
     const material = new MeshBasicMaterial({ color: '#3a3c3a' });
@@ -460,6 +479,16 @@ export function createMimicBoard(
     show(state) {
       clock += 1 / 60;
       test.value = clock < testUntil;
+      for (const indicator of symbolIndicators)
+        indicator.material.color.set(
+          test.value
+            ? LAMP_COLOURS.white
+            : state.lamps[indicator.open]
+              ? LAMP_COLOURS.green
+              : state.lamps[indicator.shut]
+                ? LAMP_COLOURS.red
+                : LAMP_COLOURS.amber,
+        );
       for (const lamp of lamps)
         lamp.material.color.set(
           test.value || state.lamps[lamp.id] ? lamp.colour : '#3a3c3a',

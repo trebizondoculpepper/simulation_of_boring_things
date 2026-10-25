@@ -63,6 +63,8 @@ export interface MimicSpec {
     at: Point;
     size?: number;
     label?: string;
+    /** A two-state indicator fitted at the centre of this symbol. */
+    indicator?: { open: string; shut: string };
   }[];
   /** Other printed text. */
   labels?: readonly { text: string; at: Point; size?: number }[];
@@ -168,6 +170,13 @@ export function checkMimic(spec: MimicSpec, state?: MimicState): string[] {
     for (const lamp of spec.lamps)
       if (!(lamp.id in state.lamps))
         problems.push(`lamp ${lamp.id} is not driven`);
+    for (const shape of spec.shapes)
+      if (shape.indicator)
+        for (const lamp of [shape.indicator.open, shape.indicator.shut])
+          if (!(lamp in state.lamps))
+            problems.push(
+              `symbol ${shape.symbol} indicator ${lamp} is not driven`,
+            );
     for (const readout of spec.readouts) {
       const shown = spec.modes.some((m) => state.readouts[readout.id]?.[m.id]);
       if (!shown)

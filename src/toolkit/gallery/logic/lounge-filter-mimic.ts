@@ -20,7 +20,8 @@ import type { LoungeFlows } from '../../../game/plant/lounge-valves';
  * its drain; pumps P-201A and P-201B with their START, STOP and lamps and
  * their discharge valves; the inlet header; the two filters side by side,
  * each with its inlet, backwash, outlet and drain valves round it (OPEN
- * and SHUT lamps and buttons on the pipe each works) and its flow readout
+ * and SHUT buttons beside each valve symbol, with a live indicator on the
+ * symbol) and its flow readout
  * beside it; the filtered-water header, which also feeds a backwash, on to
  * the heat exchanger and the pool; and the waste. Every pipe chases its
  * flow. One spec and one state for both its boards, PL1-CP1's fascia in
@@ -35,33 +36,27 @@ const WASTE = '#7a5a2a';
 /** A lounge valve's asset id by its tag. */
 const id = (tag: string) => LOUNGE_VALVES.find((v) => v.tag === tag)!.assetId;
 
-/** A valve's controls, laid out round `at`: its tag, OPEN and SHUT lamps, OPEN and SHUT buttons. */
+/** A valve's position on a pipe, flanked by its OPEN and SHUT buttons. */
 function valveUnit(tag: string, [x, y]: Point) {
   const v = id(tag);
   return {
-    labels: [{ text: tag, at: [x, y + 0.075] as Point, size: 0.6 }],
-    lamps: [
-      {
-        id: `${v}-open`,
-        at: [x - 0.05, y + 0.035] as Point,
-        colour: 'green' as const,
-      },
-      {
-        id: `${v}-shut`,
-        at: [x + 0.05, y + 0.035] as Point,
-        colour: 'red' as const,
-      },
-    ],
+    labels: [{ text: tag, at: [x, y - 0.07] as Point, size: 0.55 }],
+    shape: {
+      symbol: 'valve' as const,
+      at: [x, y] as Point,
+      size: 0.035,
+      indicator: { open: `${v}-open`, shut: `${v}-shut` },
+    },
     buttons: [
       {
         id: `${v}/open`,
-        at: [x - 0.05, y - 0.04] as Point,
+        at: [x - 0.085, y] as Point,
         colour: 'green' as const,
         legend: 'OPEN',
       },
       {
         id: `${v}/shut`,
-        at: [x + 0.05, y - 0.04] as Point,
+        at: [x + 0.085, y] as Point,
         colour: 'red' as const,
         legend: 'SHUT',
       },
@@ -122,14 +117,14 @@ const HEADER_X = -0.33;
 const TANK: Point = [-1.02, -0.02];
 
 const units = [
-  valveUnit('PL1-P1-IV1', [-0.52, PUMP[1] + 0.13]),
-  valveUnit('PL1-P2-IV1', [-0.52, PUMP[2] + 0.13]),
-  valveUnit('PL1-T1-DV1', [-1.1, -0.33]),
+  valveUnit('PL1-P1-IV1', [-0.48, PUMP[1]]),
+  valveUnit('PL1-P2-IV1', [-0.48, PUMP[2]]),
+  valveUnit('PL1-T1-DV1', [TANK[0], -0.3]),
   ...([1, 2] as const).flatMap((n) => [
-    valveUnit(`PL1-F${n}-IV1`, [F[n] - 0.2, 0.27]),
-    valveUnit(`PL1-F${n}-BV1`, [F[n] + 0.1, 0.33]),
-    valveUnit(`PL1-F${n}-IV2`, [F[n] - 0.2, -0.24]),
-    valveUnit(`PL1-F${n}-DV1`, [F[n] + 0.2, -0.24]),
+    valveUnit(`PL1-F${n}-IV1`, [F[n] - 0.08, 0.27]),
+    valveUnit(`PL1-F${n}-BV1`, [F[n] + 0.22, 0.33]),
+    valveUnit(`PL1-F${n}-IV2`, [F[n] - 0.08, -0.24]),
+    valveUnit(`PL1-F${n}-DV1`, [F[n] + 0.26, -0.24]),
   ]),
 ];
 const pumps = [
@@ -193,7 +188,8 @@ export const LOUNGE_FILTER_MIMIC: MimicSpec = {
         `f${n}-drain`,
         [
           [F[n] + 0.06, FILTER_Y - 0.09],
-          [F[n] + 0.06, -0.33],
+          [F[n] + 0.26, FILTER_Y - 0.09],
+          [F[n] + 0.26, -0.33],
           [F[n] + 0.32, -0.33],
         ],
         WASTE,
@@ -243,6 +239,7 @@ export const LOUNGE_FILTER_MIMIC: MimicSpec = {
     { symbol: 'pump', at: [PUMP_X, PUMP[2]], size: 0.09, label: 'P-201B' },
     { symbol: 'filter', at: [F[1], FILTER_Y], size: 0.18, label: 'FILTER 1' },
     { symbol: 'filter', at: [F[2], FILTER_Y], size: 0.18, label: 'FILTER 2' },
+    ...units.map((unit) => unit.shape),
   ],
   labels: [
     ...units.flatMap((u) => u.labels),
@@ -257,7 +254,7 @@ export const LOUNGE_FILTER_MIMIC: MimicSpec = {
     { text: '+ SERVICE  − BACKWASH', at: [F[1] + 0.3, -0.12], size: 0.45 },
     { text: '+ SERVICE  − BACKWASH', at: [F[2] + 0.3, -0.12], size: 0.45 },
   ],
-  lamps: [...units.flatMap((u) => u.lamps), ...pumps.flatMap((p) => p.lamps)],
+  lamps: pumps.flatMap((p) => p.lamps),
   readouts: [
     { id: 'f1-flow', at: [F[1] + 0.3, 0.04] },
     { id: 'f2-flow', at: [F[2] + 0.3, 0.04] },

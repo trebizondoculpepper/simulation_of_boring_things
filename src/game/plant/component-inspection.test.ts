@@ -44,7 +44,7 @@ describe('the information overlay’s lines', () => {
   it('gives an ozone monitor its live reading, rising with a leak', () => {
     const quiet = inspectComponent({ tag: 'PL1-GD1' }, newWorld());
     expect(quiet?.detail).toBe(
-      '1st Ozone-in-air monitor in PL1, currently reading 0.00 ppm',
+      'The only Ozone-in-air monitor in PL1, currently reading 0.00 ppm',
     );
     let w = applyAction(newWorld(), {
       type: 'gas/leak',
@@ -61,7 +61,7 @@ describe('the information overlay’s lines', () => {
   it('says a UV unit is On or Off, as the world models it, never “operational”', () => {
     let w = stepWorld(newWorld(), 5);
     expect(inspectComponent({ tag: 'PL1-UV1' }, w)?.detail).toBe(
-      '1st UV unit in PL1, currently On',
+      'The only UV unit in PL1, currently On',
     );
     w = applyAction(w, {
       type: 'plant/isolator',
@@ -70,7 +70,7 @@ describe('the information overlay’s lines', () => {
     });
     w = stepWorld(w, 2);
     expect(inspectComponent({ tag: 'PL1-UV1' }, w)?.detail).toBe(
-      '1st UV unit in PL1, currently Off',
+      'The only UV unit in PL1, currently Off',
     );
   });
 

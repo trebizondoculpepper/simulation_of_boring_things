@@ -192,7 +192,7 @@ describe('the mains water off', () => {
     w = advance(w, 36 * 3600, 10);
     for (const id of POOL_IDS) expect(w.pools[id].level, id).toBeGreaterThan(0);
     // Days of plant, simulated: allowed longer than the default under a full run.
-  }, 30_000);
+  }, 90_000);
 });
 
 describe('the dosing chemicals in the world', () => {

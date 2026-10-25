@@ -229,7 +229,7 @@ describe('descriptions of the plant', () => {
     );
     // The pump set is described apart, by both its pumps.
     expect(describeForWorld(running, 'PL2-P1')).toBe(
-      '1st Pump set in PL2, currently P-101A On, P-101B Off',
+      'The only Pump set in PL2, currently P-101A On, P-101B Off',
     );
   });
 
@@ -248,13 +248,13 @@ describe('descriptions of the plant', () => {
   it('gives tanks their level and switch-fuses the power they isolate', () => {
     const world = newWorld();
     expect(describeForWorld(world, 'PL3-BT1')).toMatch(
-      /^1st Balance tank in PL3, currently \d+ % full$/,
+      /^The only Balance tank in PL3, currently \d+ % full$/,
     );
     expect(describeForWorld(world, 'PL3-SF1')).toBe(
       'Isolates power for the jacuzzi plant room.',
     );
     expect(describeForWorld(world, 'PL3-CAB1')).toMatch(
-      /^1st Packaged cabinet in PL3, currently /,
+      /^The only Packaged cabinet in PL3, currently /,
     );
     expect(componentDescription('PL3')).toBe('');
   });
@@ -283,5 +283,14 @@ describe('descriptions of the plant', () => {
       expect(generic.has(componentDescription(s.tag)), s.tag).toBe(false);
     }
     expect(subjects.size).toBeGreaterThan(200);
+  });
+
+  it('calls a room’s one item of a kind its only one, and numbers the rest (the owner, 2026-10-25)', () => {
+    expect(equipmentLine(1, 'UV unit', 'PL1', undefined, 1)).toBe(
+      'The only UV unit in PL1',
+    );
+    expect(equipmentLine(1, 'Pump', 'PL2', undefined, 2)).toBe(
+      '1st Pump in PL2',
+    );
   });
 });

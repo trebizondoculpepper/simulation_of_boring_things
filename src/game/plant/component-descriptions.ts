@@ -193,6 +193,7 @@ export function placesByKind(
     groups.set(group, [...(groups.get(group) ?? []), s]);
   }
   const places = new Map<string, number>();
+  const counts = new Map<string, number>();
   for (const group of groups.values()) {
     const sorted = [...group].sort(
       (a, b) =>
@@ -200,10 +201,17 @@ export function placesByKind(
         (a.tag < b.tag ? -1 : a.tag > b.tag ? 1 : 0) ||
         (a.key < b.key ? -1 : a.key > b.key ? 1 : 0),
     );
-    sorted.forEach((s, i) => places.set(s.key, i + 1));
+    sorted.forEach((s, i) => {
+      places.set(s.key, i + 1);
+      counts.set(s.key, sorted.length);
+    });
   }
+  ofKind.set(places, counts);
   return places;
 }
+
+/** How many of each subject's kind its room has, by the places map they were ranked in. */
+const ofKind = new WeakMap<ReadonlyMap<string, number>, Map<string, number>>();
 
 /** A valve's description, from its route in the enhanced network, or none. */
 export function valvePurpose(
@@ -223,8 +231,13 @@ export function equipmentLine(
   type: string,
   location: string,
   status?: string,
+  /** How many of its kind its room has: one alone is "the only" (the owner, 2026-10-25). */
+  of?: number,
 ): string {
-  const line = `${ordinal(place)} ${type} in ${location}`;
+  const line =
+    of === 1
+      ? `The only ${type} in ${location}`
+      : `${ordinal(place)} ${type} in ${location}`;
   return status ? `${line}, currently ${status}` : line;
 }
 
@@ -300,5 +313,11 @@ export function describeComponent(
     kind.status === 'none'
       ? undefined
       : formatStatus(kind.status, context.status?.(subject));
-  return equipmentLine(place, kind.type, subject.location, status);
+  return equipmentLine(
+    place,
+    kind.type,
+    subject.location,
+    status,
+    ofKind.get(places)?.get(subject.key),
+  );
 }

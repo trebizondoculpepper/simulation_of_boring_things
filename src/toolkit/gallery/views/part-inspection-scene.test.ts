@@ -98,7 +98,7 @@ describe('parts inside a component, in the scene (prompt 068)', () => {
       new Set(owners(root).flatMap((m) => (m.key ? [m.key] : [])));
     const a = keys(createLoungeFilterMimic(kit, null).group);
     const b = keys(createLoungeFilterMimic(kit, null).group);
-    expect(a.size).toBeGreaterThan(40);
+    expect(a.size).toBeGreaterThan(30);
     expect([...a].some((k) => b.has(k))).toBe(false);
   });
 });
