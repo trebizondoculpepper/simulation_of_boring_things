@@ -106,6 +106,8 @@ Where Dev19 stands (2026-10-23): this morning's layout scored about 39; Dev19c (
 
 These came from the owner while the pipeline was built; keep to them.
 
+- **Model first, then binding (2026-10-25).** A room begins with its schematic: its machines and every valve and isolator, each with its function, normal state and tag. Then placement; then the plumber routes the pipes and places the valves as efficiently as its rules allow, adding the valves and isolators its rules imply, each into the model (the enhanced network) before anything is drawn; a schematic may name a valve explicitly to override a rule. The scene only binds: every machine, valve, isolator and pipe drawn is a node, fitting or link of the room's enhanced network, and a view has no way to make one that is not. Tags, names and descriptions are derived from the network, never written by hand. Valves are how machines are isolated and joined, not first-class equipment to be placed and routed between.
+
 - Size the room first; most rooms come out smaller than they were drawn.
 - Two-storey plant rooms are normal: a gantry and stair against one wall, and no pipe may run over the stair or the gantry's walkway.
 - Big tanks go in corners, biggest first; mimics and control panels against walls; pumps freestanding.
