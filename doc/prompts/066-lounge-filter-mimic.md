@@ -1,6 +1,6 @@
 # 066: The lounge pool's filter mimic, grouped by filter, showing its flows
 
-Status: specified 2026-10-25 from a discussion with the owner; for review by another agent before implementation.
+Status: specified 2026-10-25 from a discussion with the owner, its gaps settled the same day (true backwash, the local-controls rule, units, the chaser's numbers, world shape); for review by another agent before implementation.
 
 ## The request
 
@@ -28,6 +28,17 @@ The owner, 2026-10-25: redesign PL1-CP1, the lounge pool's local control panel, 
    Both are the same control, so they always agree.
 
 6. **Some controls are only local** (the gameplay reason): if everything could be worked from the control room, the player would never need to go anywhere. HAND · OFF · AUTO and RESET stay on the plant room's panel only. The control room's copy shows everything and works what the mimic carries (valves' OPEN and SHUT, pumps' START and STOP), but sending a pump to HAND, or resetting a trip, means walking to the lounge plant room.
+
+7. **A true backwash** (the owner, 2026-10-25). The lounge's flow model (`loungeValveFlows`) has no reverse flow today: backwash is only "inlet open and backwash valve open, so water to waste". It is changed so a filter backwashing is fed in reverse: filtered water from the return header (from the other filter in service) goes down that filter's outlet (IV2 open, IV1 shut), up through its bed, and out through its backwash valve (BV1) to waste. Its outlet line chases backwards, its flowmeter reads negative, and its backwash line to waste lights. The reviewer checks that the lounge's four valves per filter can make this path; if they cannot, report what valve is missing rather than inventing one.
+8. **The rule is the project's** (the owner, 2026-10-25): "some controls are only local" is now a rule in `CLAUDE.md`, for every plant room and the control room.
+
+## Settled details
+
+- **Units.** The model's flows are m³/h already: the lounge pool's design circulation is 90 m³/h (`pools.ts`), 45 through each filter. Backwash runs at about 34 m³/h, 30 m/h over a Ø1.2 m filter's 1.13 m² bed, taken from the filter in service, so the pool's return drops by that much while it lasts; the drains run at their present rates. The meters show m³/h to one decimal place, negative in reverse.
+- **World shape.** No change: flows are worked out from the valves' positions and the pumps' states on demand, as now, so neither `WORLD_VERSION` nor a migration is needed. If the reviewer finds otherwise, bump it and migrate.
+- **The chaser.** LEDs 25 mm apart along each line, each 6 mm across, in the line's colour, one lit in every four. The pattern steps every 0.12 s of real time in the flow's direction. A line whose flow is under 1 m³/h is dark. A line through a valve still travelling chases at the flow it carries, and goes dark once the flow stops.
+- **Layout.** The board stays 2.4 × 1.2 m. Before building, lay the schematic out in a pure spec and test that no two of its parts (lamps, buttons, readouts, labels) overlap, and that each button has at least 30 mm clear round it.
+- **The control room's board** is placed by the room's sizer and scorer. If it does not fit beside the three mimics and the annunciator, report it to the owner rather than shrinking it.
 
 ## What to build
 
@@ -57,7 +68,6 @@ The owner, 2026-10-25: redesign PL1-CP1, the lounge pool's local control panel, 
 5. **What stays local.** The control room's board offers no HAND · OFF · AUTO and no RESET.
    - A pump in HAND or OFF, or tripped, shows that on both boards' lamps. Its START does nothing at either board until it is put back in AUTO, as now.
    - The prompt's tests make this explicit, so it is not "fixed" later by mistake.
-   - The rule is recorded in `CLAUDE.md` as a project rule, if the owner agrees.
 
 ## Tests
 
@@ -80,6 +90,6 @@ The owner, 2026-10-25: redesign PL1-CP1, the lounge pool's local control panel, 
 ## For the reviewer
 
 - Check that the chaser can be added to the shared mimic component without changing the other boards' look. Lines without a flow source must draw as now.
-- Check that per-filter flows can be added to `loungeValveFlows` and the world without a change of world shape. If not, say so: it needs a `WORLD_VERSION` bump and a migration.
+- Check the true backwash path (ruling 7) against the lounge's valves and the room's pipework.
 - Check that the control room has wall space for a board of this size, given its three mimics, the annunciator and the other items.
 - Report any wording on the board the owner should see before it ships.
