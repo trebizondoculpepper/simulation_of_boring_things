@@ -3,6 +3,7 @@ import { createMimicBoard } from '../../components/industrial-control/views/mimi
 import type { WorldStore } from '../../save/world-store';
 import {
   LOUNGE_FILTER_MIMIC,
+  LOUNGE_FILTER_MIMIC_PARTS,
   loungeFilterMimicCommand,
   loungeFilterMimicOf,
 } from '../logic/lounge-filter-mimic';
@@ -24,6 +25,7 @@ export function createLoungeFilterMimic(
       const action = loungeFilterMimicCommand(button);
       if (action) store?.dispatch(action);
     },
+    parts: LOUNGE_FILTER_MIMIC_PARTS,
   });
   return {
     ...mimic,

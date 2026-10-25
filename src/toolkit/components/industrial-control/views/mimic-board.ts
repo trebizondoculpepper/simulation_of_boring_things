@@ -1,3 +1,6 @@
+import type { Object3D } from 'three';
+import { markComponent } from '../../core/views/component-identity';
+import type { PartDescription } from '../../../../game/plant/part-inspection';
 import {
   CHASER_SIZE,
   chaserLit,
@@ -191,20 +194,43 @@ function drawSymbol(
   c.restore();
 }
 
+let boards = 0;
+
 export function createMimicBoard(
   kit: PanelKit,
   spec: MimicSpec,
   {
     maker = 'penfold' as BrandId,
     press = () => {},
+    parts: describe,
   }: {
     maker?: BrandId;
     /** Called with a button's id when one of the drawing's buttons is pressed. */
     press?: (id: string) => void;
+    /**
+     * What its buttons, lamps and readouts are, for the information
+     * overlay (prompt 068), by their ids; a readout's by its id and the
+     * mode shown.
+     */
+    parts?: {
+      button?: (id: string) => PartDescription | undefined;
+      lamp?: (id: string) => PartDescription | undefined;
+      readout?: (id: string, mode: () => string) => PartDescription | undefined;
+    };
   } = {},
 ): MimicBoardView {
   const t = plantTools(kit);
   const group = new Group();
+  // This board's own pick keys: two copies of a mimic are two boards.
+  const instance = ++boards;
+  const mark = <T extends Object3D>(
+    object: T,
+    id: string,
+    part?: PartDescription,
+  ) =>
+    part
+      ? markComponent(object, { part, key: `${spec.title}#${instance}.${id}` })
+      : object;
   const { width: W, height: H } = spec;
   // The frame, and the board with its drawing.
   t.box(group, t.paint('#3b3f42', 0.5), W + 0.06, H + 0.06, 0.04, 0, 0, 0.02);
@@ -271,6 +297,8 @@ export function createMimicBoard(
       16,
     );
     mesh.userData.live = true;
+    const lampPart = describe?.lamp?.(lamp.id);
+    mark(mesh, lamp.id, lampPart);
     if (lamp.label) {
       const tag = createMicroLabel(kit, lamp.label, {
         height: 0.014,
@@ -278,15 +306,22 @@ export function createMimicBoard(
         plate: '#f1f1ec',
       });
       tag.position.set(lamp.at[0], lamp.at[1] - 0.028, z);
-      group.add(tag);
+      group.add(mark(tag, lamp.id, lampPart));
     }
     return { id: lamp.id, material, colour: LAMP_COLOURS[lamp.colour] };
   });
   // The readouts and their legends.
   const readouts = spec.readouts.map((readout) => {
     const [x, y] = readout.at;
+    // Its housing, digits and legend, the one part.
+    const holder = mark(
+      new Group(),
+      readout.id,
+      describe?.readout?.(readout.id, () => mode.value),
+    );
+    group.add(holder);
     t.box(
-      group,
+      holder,
       t.paint('#1a1b1c', 0.4),
       0.19,
       0.13,
@@ -298,7 +333,7 @@ export function createMimicBoard(
     const digits = createSevenSegment(kit, 4, { digitHeight: 0.03 });
     digits.group.position.set(x, y, z + 0.004);
     live(digits.group);
-    group.add(digits.group);
+    holder.add(digits.group);
     const legend = createCharacterLcd(kit, {
       columns: LEGEND_COLUMNS,
       rows: 1,
@@ -306,7 +341,7 @@ export function createMimicBoard(
     });
     legend.group.position.set(x, y - 0.06, z + 0.004);
     live(legend.group);
-    group.add(legend.group);
+    holder.add(legend.group);
     return { id: readout.id, digits, legend };
   });
   // The LED chasers along the lines that carry a flow (prompt 066), all
@@ -379,6 +414,7 @@ export function createMimicBoard(
       name: `${spec.title}: ${b.legend ?? b.id}`,
     });
     button.object.position.set(b.at[0], b.at[1], z);
+    mark(button.object, b.id, describe?.button?.(b.id));
     live(button.object);
     group.add(button.object);
     parts.add(button);

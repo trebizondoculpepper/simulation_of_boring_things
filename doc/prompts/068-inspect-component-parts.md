@@ -1,6 +1,6 @@
 # 068: Inspect controls, indicators and instruments inside components
 
-Status: specified 2026-10-25 from the owner's request; todo for implementation. This extends [061](061-component-information-overlay.md) and its remediation [063](063-component-information-remediation.md). The lounge filter mimic and its meters are being developed under [066](066-lounge-filter-mimic.md).
+Status: specified 2026-10-25 from the owner's request; in progress. Stage 1 done 2026-10-25: the typed part contract (`src/game/plant/part-inspection.ts`), parts winning over their panel, the lounge filter mimic's buttons, lamps and readouts, and installed flowmeters' live readings and paths. Still to do: PL1-CP1's doors (selectors, RESET, indicators, ammeters), PL1-UV1 as a control box with a model-backed operating state, a dev0 prototype board, and the audit of other families. This extends [061](061-component-information-overlay.md) and its remediation [063](063-component-information-remediation.md). The lounge filter mimic and its meters are being developed under [066](066-lounge-filter-mimic.md).
 
 ## The request
 

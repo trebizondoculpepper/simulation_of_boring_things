@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Parts inside components say what they are (prompt 068, stage 1, `part-inspection.ts`): a part's description is typed, never parsed from its legend. A button carries the very world action its press sends ("OPEN button — Requests PL1-P1-IV1 to open.", then what that valve isolates and its state); a lamp the condition that lights it ("RUN lamp — Lights for P-201A running: lit now."); a readout the selector its display draws from, in the mode shown. A marked part wins over its panel; every mesh of a part is one target; two copies of a mimic keep apart. The lounge filter mimic is wired throughout. Installed flowmeters give their live, signed reading and the path the water is taking through them, from the room's model (none invented at no flow; the Olympic's, not yet in a schematic, keep their register's purpose).
 - Hovering over a plant room's ozone-in-air monitor (PL1-GD1, PL2-GD1) gives its live reading, as its detector reads it: "1st Ozone-in-air monitor in PL1, currently reading 0.00 ppm" (the owner, 2026-10-25).
 - Planned repeatable mission 067 for a healthy New Game: a maintained operating contract, a dated day-long baseline, and an opt-in read-only audit that records the current model’s trajectory and annunciator indications. Runtime defaults are unchanged by this research.
 

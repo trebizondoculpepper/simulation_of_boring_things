@@ -1,4 +1,5 @@
 import type { Object3D } from 'three';
+import type { PartDescription } from '../../../../game/plant/part-inspection';
 
 /**
  * A described component's identity on its scene objects (prompt 061): the
@@ -23,6 +24,14 @@ export interface ComponentIdentity {
   model?: { node: string } | { fitting: string } | { link: string };
   /** Set decoration: it sits there and does nothing (never a working item). */
   decorative?: true;
+  /**
+   * A part inside a component (prompt 068): a button, lamp or readout,
+   * described in its own words; the nearest marked owner, so it wins over
+   * its panel. Every mesh of it (cap, bezel, legend) is the one part.
+   */
+  part?: PartDescription;
+  /** Its stable pick key, one per part per scene instance (two copies of a mimic differ). */
+  key?: string;
 }
 
 const KEY = 'component';

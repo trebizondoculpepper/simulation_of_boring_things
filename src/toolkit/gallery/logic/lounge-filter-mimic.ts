@@ -9,6 +9,11 @@ import {
   loungeFlowsOf,
 } from '../../../game/plant/lounge-valves';
 import type { MotorTag } from '../../../game/plant/motor-starters';
+import {
+  flowmeterLines,
+  valveTagOf,
+} from '../../../game/plant/part-inspection';
+import type { PartDescription } from '../../../game/plant/part-inspection';
 import type { World, WorldAction } from '../../../game/world';
 import type { LoungeFlows } from '../../../game/plant/lounge-valves';
 
@@ -409,3 +414,60 @@ export function loungeFilterMimicCommand(button: string): WorldAction | null {
     };
   return null;
 }
+
+/**
+ * What each of the board's parts is, for the information overlay (prompt
+ * 068): a button by the action its press sends (`loungeFilterMimicCommand`,
+ * the same one), a lamp by the condition that lights it, a readout by the
+ * board's own state for the mode shown.
+ */
+export const LOUNGE_FILTER_MIMIC_PARTS = {
+  button(button: string): PartDescription | undefined {
+    const action = loungeFilterMimicCommand(button);
+    const label = LOUNGE_FILTER_MIMIC.buttons?.find(
+      (b) => b.id === button,
+    )?.legend;
+    return action && label ? { kind: 'command', label, action } : undefined;
+  },
+  lamp(lamp: string): PartDescription | undefined {
+    const valve = /^(.*)-(open|shut)$/.exec(lamp);
+    const pump = /^(p[12])-(run|trip|local)$/.exec(lamp);
+    const condition = valve
+      ? `${valveTagOf(valve[1])} fully ${valve[2]}`
+      : pump
+        ? {
+            run: `${LOUNGE_PUMP_TAGS[pump[1] as 'p1' | 'p2']} running`,
+            trip: `${LOUNGE_PUMP_TAGS[pump[1] as 'p1' | 'p2']} tripped`,
+            local: `${LOUNGE_PUMP_TAGS[pump[1] as 'p1' | 'p2']}’s starter out of AUTO (in HAND or OFF, on PL1-CP1)`,
+          }[pump[2] as 'run' | 'trip' | 'local']
+        : undefined;
+    if (!condition) return undefined;
+    const label = valve
+      ? valve[2].toUpperCase()
+      : pump![2] === 'local'
+        ? 'NOT AUTO'
+        : pump![2].toUpperCase();
+    return {
+      kind: 'indicator',
+      label,
+      condition,
+      lit: (w) => loungeFilterMimicOf(w).lamps[lamp] ?? false,
+    };
+  },
+  readout(readout: string, mode: () => string): PartDescription | undefined {
+    const n = /^f([12])-flow$/.exec(readout)?.[1];
+    if (!n) return undefined;
+    return {
+      kind: 'reading',
+      label: `F${n} FLOW readout`,
+      read: (w) => loungeFilterMimicOf(w).readouts[readout]?.[mode()],
+      // As its filter's flowmeter reads it, and the path it measures.
+      context: (w) => {
+        const meter = flowmeterLines(w, `PL1-F${n}-FT1`);
+        return meter?.detail
+          ? `As PL1-F${n}-FT1 reads it. ${meter.detail}`
+          : undefined;
+      },
+    };
+  },
+};

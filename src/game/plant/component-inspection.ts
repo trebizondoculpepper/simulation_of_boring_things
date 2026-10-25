@@ -2,6 +2,8 @@ import type { World } from '../world';
 import { plantInventory } from './equipment-catalogue';
 import { describeForWorld } from './component-status';
 import { componentDescription } from './equipment-catalogue';
+import { describePart, flowmeterLines } from './part-inspection';
+import type { PartDescription } from './part-inspection';
 
 /**
  * What the information overlay says of a component (prompt 061): its
@@ -27,9 +29,24 @@ const nameOf = (tag: string) => {
 
 /** The overlay's lines for a component marked `identity`, or null. */
 export function inspectComponent(
-  identity: { tag?: string; name?: string },
+  identity: {
+    tag?: string;
+    name?: string;
+    part?: PartDescription;
+    key?: string;
+  },
   world?: World,
 ): ComponentInspection | null {
+  // A part inside a component, in its own words (prompt 068).
+  if (identity.part)
+    return {
+      key: identity.key ?? `part:${identity.part.label}`,
+      ...describePart(identity.part, world),
+    };
+  // An installed flowmeter: its reading and its path (prompt 068).
+  const meter =
+    identity.tag && world ? flowmeterLines(world, identity.tag) : null;
+  if (meter) return { key: identity.tag!, ...meter };
   if (identity.tag) {
     const name = nameOf(identity.tag);
     // A tag no register holds (a development room's exhibit): its own name, nothing more.
