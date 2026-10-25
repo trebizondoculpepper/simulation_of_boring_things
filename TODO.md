@@ -117,7 +117,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Housekeeping
 
-- [x] **Copy highlighted objects and camera pins by keyboard** (done 2026-10-25, commit pending): Ctrl/Cmd+C copies the displayed object’s tag or untagged name; Ctrl/Cmd+P copies the pin or noclip camera URL. Both report copied values and failures to the developer console, with editing and selected-text copying preserved.
+- [x] **Copy highlighted objects and camera pins by keyboard** (done 2026-10-25, `e71a817`): Ctrl/Cmd+C copies the displayed object’s tag or untagged name; Ctrl/Cmd+P copies the pin or noclip camera URL. Both report copied values and failures to the developer console, with editing and selected-text copying preserved.
 
 - [x] **Attach collar-valve actuators and suspend pipe signs** (done 2026-10-25, `7392e38`): align upright electric and pneumatic drives with their valve stems, keep overrides horizontal, and hang pipe plates from two fine wire loops and drops; regression checks cover all pipe axes and both sign directions.
 
