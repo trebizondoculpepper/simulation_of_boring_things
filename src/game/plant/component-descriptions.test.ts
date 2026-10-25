@@ -193,7 +193,8 @@ describe('descriptions of the plant', () => {
         .filter(
           (t) =>
             (t.startsWith('PL2-') && !notInNetwork.includes(t)) ||
-            t.startsWith('PL3-'),
+            t.startsWith('PL3-') ||
+            t.startsWith('PL4-'),
         )
         .sort(),
     );

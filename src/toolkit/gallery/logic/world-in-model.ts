@@ -9,12 +9,7 @@ import {
   cabinetValvePanel,
 } from './cabinet-pipes';
 import { olympicPlumbing } from './olympic-plumbing';
-import {
-  JACUZZI_LINKS,
-  JACUZZI_NODES,
-  JACUZZI_ROOM,
-  jacuzziExpansion,
-} from '../../../game/plant/jacuzzi-schematic';
+import { SCHEMATICS, schematicExpansion } from '../../../game/plant/schematics';
 import { modelValveOn } from '../../../game/plant/model-valves';
 import type {
   Expansion,
@@ -76,10 +71,13 @@ const ENHANCED: Partial<
     const { expansion, schematic } = olympicPlumbing();
     return { expansion, links: schematic.edges };
   },
-  [JACUZZI_ROOM]: () => ({
-    expansion: jacuzziExpansion(),
-    links: JACUZZI_LINKS,
-  }),
+  // The rooms built from their schematics.
+  ...Object.fromEntries(
+    Object.values(SCHEMATICS).map((s) => [
+      s.room,
+      () => ({ expansion: schematicExpansion(s.room)!, links: s.links }),
+    ]),
+  ),
 };
 
 export function roomModel(room: string): RoomModel | undefined {
@@ -151,7 +149,7 @@ function olympicThings(): DrawnThing[] {
 /** The schematic nodes of rooms built from one, by room. */
 const SCHEMATIC_NODES: Partial<
   Record<string, readonly { id: string; kind: string }[]>
-> = { [JACUZZI_ROOM]: JACUZZI_NODES };
+> = Object.fromEntries(Object.values(SCHEMATICS).map((s) => [s.room, s.nodes]));
 
 /** The one node of a kind in a room's schematic, if it has exactly one. */
 const nodeOfKind = (room: string, kind: string) => {

@@ -1,13 +1,6 @@
 import type { PlumbEdge } from './plumbing-expansion';
-import {
-  JACUZZI_FITTINGS,
-  JACUZZI_LINKS,
-  JACUZZI_NODES,
-  JACUZZI_ROOM,
-  JACUZZI_ROOM_CODE,
-  jacuzziExpansion,
-} from './jacuzzi-schematic';
-import type { SchematicNode } from './jacuzzi-schematic';
+import { SCHEMATICS, schematicExpansion } from './schematics';
+import type { SchematicFitting, SchematicNode } from './schematics';
 
 /**
  * The valves of the rooms built from a schematic (prompt 064), derived
@@ -32,6 +25,8 @@ export interface ModelValve {
   normal: 'open' | 'closed';
   /** How it is worked, as its schematic says. */
   operator?: 'lever' | 'chain' | 'motor' | 'solenoid';
+  /** Kept by the identified model, not among the installed valves. */
+  keptBy?: 'identified';
   /** What it isolates, in a description's words. */
   route: {
     from: string;
@@ -66,7 +61,7 @@ function roomValves(
   code: string,
   nodes: readonly SchematicNode[],
   links: readonly PlumbEdge[],
-  fittings: typeof JACUZZI_FITTINGS,
+  fittings: readonly SchematicFitting[],
 ): ModelValve[] {
   const node = new Map(nodes.map((n) => [n.id, n]));
   const kindOf = (id: string) => node.get(id)?.kind;
@@ -78,15 +73,17 @@ function roomValves(
     const serves = node.get(f.end === 'source' ? link.sourceId : link.targetId);
     const kind = f.kind;
     const prefix = `${code}-${serves?.code ?? 'X'}-${letters(kind, link, kindOf)}`;
-    const n = (counts.get(prefix) ?? 0) + 1;
-    counts.set(prefix, n);
+    // An identified part's tag is its id there; the rest numbered in turn.
+    const n = f.keptBy ? 0 : (counts.get(prefix) ?? 0) + 1;
+    if (!f.keptBy) counts.set(prefix, n);
     const heating = [link.sourceId, link.targetId].some(
       (id) => kindOf(id) === 'heating-main',
     );
     return [
       {
         id: f.id,
-        tag: `${prefix}${n}`,
+        tag: f.keptBy ? f.id : `${prefix}${n}`,
+        ...(f.keptBy ? { keptBy: f.keptBy } : {}),
         name: `${link.id} ${kind === 'power-isolator' ? 'isolator' : 'valve'}`,
         room,
         link: link.id,
@@ -111,21 +108,29 @@ function roomValves(
   });
 }
 
-/** Every room's model valves: the jacuzzi plant room's, so far. */
-export const MODEL_VALVES: readonly ModelValve[] = roomValves(
-  JACUZZI_ROOM,
-  JACUZZI_ROOM_CODE,
-  JACUZZI_NODES,
-  JACUZZI_LINKS,
-  // As the plumber set them: the schematic's own, in their lines' order.
-  JACUZZI_FITTINGS.filter((f) =>
-    jacuzziExpansion().fittings.some((x) => x.id === f.id),
-  ),
-);
+/** Every room's model valves, from each schematic in turn. */
+export const MODEL_VALVES: readonly ModelValve[] = Object.values(
+  SCHEMATICS,
+).flatMap((schematic) => {
+  const set = schematicExpansion(schematic.room)!.fittings;
+  return roomValves(
+    schematic.room,
+    schematic.code,
+    schematic.nodes,
+    schematic.links,
+    // As the plumber set them: the schematic's own, in their lines' order.
+    schematic.fittings.filter((f) => set.some((x) => x.id === f.id)),
+  );
+});
 
 /** The valves (not isolators) the world keeps open or shut. */
 export const MODEL_ISOLATING_VALVES = MODEL_VALVES.filter(
   (v) => v.kind === 'isolating-valve',
+);
+
+/** Those kept among the installed valves (the rest are the identified model's). */
+export const MODEL_INSTALLED_VALVES = MODEL_ISOLATING_VALVES.filter(
+  (v) => !v.keptBy,
 );
 
 /** A room's model valve on a link, by the link's name. */
@@ -137,17 +142,12 @@ export const MODELLED_VALVE_ROOMS: ReadonlySet<string> = new Set(
   MODEL_VALVES.map((v) => v.room),
 );
 
-/** The schematics of the rooms built from one, by room. */
-const SCHEMATIC_NODES: Partial<Record<string, readonly SchematicNode[]>> = {
-  [JACUZZI_ROOM]: JACUZZI_NODES,
-};
-
 /** A room's one schematic node of a kind, if it has exactly one. */
 export function schematicNodeOfKind(
   room: string,
   kind: string,
 ): string | undefined {
-  const found = (SCHEMATIC_NODES[room] ?? []).filter((n) => n.kind === kind);
+  const found = (SCHEMATICS[room]?.nodes ?? []).filter((n) => n.kind === kind);
   return found.length === 1 ? found[0].id : undefined;
 }
 

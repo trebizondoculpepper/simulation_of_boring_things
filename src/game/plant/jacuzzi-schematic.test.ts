@@ -47,7 +47,12 @@ describe('the jacuzzi plant room’s schematic (prompt 064)', () => {
   });
 
   it('derives each valve’s tag from the hierarchy, and its words from its link', () => {
-    const byRole = new Map(MODEL_VALVES.map((v) => [v.role, v]));
+    const byRole = new Map(
+      MODEL_VALVES.filter((v) => v.room === 'plant_pool_03').map((v) => [
+        v.role,
+        v,
+      ]),
+    );
     expect(byRole.get('makeUp')).toMatchObject({
       tag: 'PL3-BT1-IV1',
       normal: 'open',

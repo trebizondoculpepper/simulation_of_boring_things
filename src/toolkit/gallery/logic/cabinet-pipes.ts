@@ -1,5 +1,5 @@
 import { retiredCabinetRuns, retiredFrom } from './retired-rooms';
-import { JACUZZI_LINKS } from '../../../game/plant/jacuzzi-schematic';
+import { SCHEMATICS } from '../../../game/plant/schematics';
 import {
   MODELLED_VALVE_ROOMS,
   modelValveOn,
@@ -1039,29 +1039,36 @@ export function cabinetPipes(
  * each run's valve its model's, its id and name derived from the model.
  */
 function bindToModel(room: string, runs: CabinetRun[]): CabinetRun[] {
-  if (!MODELLED_VALVE_ROOMS.has(room)) return runs;
-  const links = new Set(JACUZZI_LINKS.map((l) => l.id));
+  if (!MODELLED_VALVE_ROOMS.has(own(room))) return runs;
+  const links = new Set((SCHEMATICS[own(room)]?.links ?? []).map((l) => l.id));
   return runs.map((run) => {
     const link = run.link ?? (links.has(run.name) ? run.name : undefined);
     if (!link) return run;
-    const valve = run.valve && modelValveOn(room, link);
+    const valve = run.valve && modelValveOn(own(room), link);
+    // No valve where the model has none (the footbath's overflow).
+    if (run.valve && !valve) {
+      const { valve: _gone, ...rest } = run;
+      return { ...rest, link };
+    }
+    if (!run.valve || !valve) return { ...run, link };
+    // Worked as its schematic says.
+    const operator =
+      valve.operator === 'lever' || valve.operator === 'motor'
+        ? { operator: valve.operator }
+        : {};
     return {
       ...run,
       link,
-      ...(run.valve && valve
-        ? {
-            valve: {
-              ...run.valve,
-              id: valve.name,
-              installed: true as const,
-              name: valve.name,
-              // Worked as its schematic says.
-              ...(valve.operator === 'lever' || valve.operator === 'motor'
-                ? { operator: valve.operator }
-                : {}),
-            },
-          }
-        : {}),
+      // An identified part, by its id there; an installed valve by name.
+      valve: valve.keptBy
+        ? { ...run.valve, id: valve.id, installed: false as const, ...operator }
+        : {
+            ...run.valve,
+            id: valve.name,
+            installed: true as const,
+            name: valve.name,
+            ...operator,
+          },
     };
   });
 }

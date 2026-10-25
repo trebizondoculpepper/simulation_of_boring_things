@@ -1,10 +1,6 @@
 import { expandForPlumbing } from './plumbing-expansion';
-import type {
-  Expansion,
-  GivenFitting,
-  PlumbEdge,
-  PlumbNode,
-} from './plumbing-expansion';
+import type { RoomSchematic, SchematicNode } from './schematics';
+import type { Expansion, GivenFitting, PlumbEdge } from './plumbing-expansion';
 
 /**
  * The jacuzzi plant room's schematic (prompt 064): its machines, the links
@@ -20,13 +16,6 @@ import type {
  * inside it. The spa's overflow to the balance tank is never valved (the
  * owner: a gravity overflow, shut, would flood the deck). Pure.
  */
-
-/** A machine of the room, with the code its tag is built from (PL3-CAB1). */
-export interface SchematicNode extends PlumbNode {
-  /** Its tag's code within the room: CAB1, BT1; none for a boundary. */
-  code?: string;
-  name: string;
-}
 
 export const JACUZZI_ROOM = 'plant_pool_03';
 export const JACUZZI_ROOM_CODE = 'PL3';
@@ -278,18 +267,30 @@ export const JACUZZI_FITTINGS: readonly (GivenFitting & { role: string })[] = [
  * switch-fuse isolated by it. With the schematic's valves given, it should
  * add nothing (`added` is empty).
  */
+const RULES: RoomSchematic['rules'] = {
+  isolate: new Set(['jacuzzi-pack']),
+  pumps: new Set(),
+  isolateMedia: new Set(['water', 'air']),
+  supplies: new Set(['switch-fuse']),
+  switchgear: new Set(['switch-fuse']),
+};
 let expanded: Expansion | undefined;
 export function jacuzziExpansion(): Expansion {
   expanded ??= expandForPlumbing(JACUZZI_NODES, JACUZZI_LINKS, {
-    isolate: new Set(['jacuzzi-pack']),
-    pumps: new Set(),
-    isolateMedia: new Set(['water', 'air']),
-    supplies: new Set(['switch-fuse']),
-    switchgear: new Set(['switch-fuse']),
+    ...RULES,
     given: JACUZZI_FITTINGS,
   });
   return expanded;
 }
+
+export const JACUZZI_SCHEMATIC: RoomSchematic = {
+  room: JACUZZI_ROOM,
+  code: JACUZZI_ROOM_CODE,
+  nodes: JACUZZI_NODES,
+  links: JACUZZI_LINKS,
+  fittings: JACUZZI_FITTINGS,
+  rules: RULES,
+};
 
 /** Each valve's model id by what it is for. */
 export const JACUZZI_VALVE_IDS = Object.fromEntries(

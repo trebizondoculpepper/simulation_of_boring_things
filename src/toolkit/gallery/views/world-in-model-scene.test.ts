@@ -92,6 +92,10 @@ describe('everything the scene draws is in the model (prompt 064)', () => {
     );
   });
 
+  it('the footbath plant room’s machines and services: every mesh bound, or decorative', () => {
+    expect(unboundInScene('plant_pool_04', built('plant_pool_04'))).toEqual([]);
+  });
+
   it('the jacuzzi’s own room, the pool hall: every mesh bound, or decorative', () => {
     const hall = buildPoolHallContents('pool_03', 1, { gallery: false });
     hall.rooms.updateMatrixWorld(true);
@@ -106,8 +110,8 @@ describe('everything the scene draws is in the model (prompt 064)', () => {
   });
 
   it('names what is not bound, in a room not yet built from its model', () => {
-    const unbound = unboundInScene('plant_pool_04', built('plant_pool_04'));
+    const unbound = unboundInScene('plant_pool_01', built('plant_pool_01'));
     expect(unbound.length).toBeGreaterThan(0);
-    expect(unbound).toContain('PL4-CAB1');
+    expect(unbound).toContain('PL1-P1');
   });
 });

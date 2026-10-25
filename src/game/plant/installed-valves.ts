@@ -1,4 +1,4 @@
-import { MODEL_ISOLATING_VALVES } from './model-valves';
+import { MODEL_INSTALLED_VALVES } from './model-valves';
 /** Explicit identities of each installed room-pipework valve. Display tags may change;
  * asset IDs and save keys do not. Keyed by authored room, run and valve names. */
 const HAND_DRAWN_VALVES: Readonly<Record<string, InstalledValve>> = {
@@ -341,21 +341,9 @@ const HAND_DRAWN_VALVES: Readonly<Record<string, InstalledValve>> = {
   // The jacuzzi plant room's valves are its model's (prompt 064):
   // `MODEL_VALVES`, joined below. Its old asset ids, valve-0087 to
   // valve-0102, are retired with the saved worlds that held them.
-  'plant_pool_04|Overflow from the spa|Overflow from the spa valve': {
-    assetId: 'valve-0094',
-    tag: 'PL4-PW1-IV2',
-    normal: 'open',
-  },
-  'plant_pool_04|Heating flow|Heating flow valve': {
-    assetId: 'valve-0095',
-    tag: 'PL4-PW1-IV3',
-    normal: 'open',
-  },
-  'plant_pool_04|Heating return|Heating return valve': {
-    assetId: 'valve-0096',
-    tag: 'PL4-PW1-IV4',
-    normal: 'open',
-  },
+  // The footbath plant room's valves are its model's too (prompt 064),
+  // under their old ids (valve-0095, valve-0096); valve-0094, its
+  // overflow's, is retired (a gravity overflow is never valved).
 };
 
 /**
@@ -367,7 +355,7 @@ const HAND_DRAWN_VALVES: Readonly<Record<string, InstalledValve>> = {
 export const INSTALLED_VALVES: Readonly<Record<string, InstalledValve>> = {
   ...HAND_DRAWN_VALVES,
   ...Object.fromEntries(
-    MODEL_ISOLATING_VALVES.map((v) => [
+    MODEL_INSTALLED_VALVES.map((v) => [
       `${v.room}|${v.link}|${v.name}`,
       { assetId: v.id, tag: v.tag, normal: v.normal },
     ]),
