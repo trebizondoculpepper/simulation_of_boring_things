@@ -1,6 +1,6 @@
 # 061: Component information overlay
 
-Status: specified 2026-10-25 from the owner's requests and rulings, and the reviewed research in [`doc/research/component-information-overlay.md`](../research/component-information-overlay.md), which holds the detail this prompt summarises (picking, input modes, occlusion, merged geometry, event correlation). Stage 1 built 2026-10-25, awaiting the owner's acceptance (see the implementation note at the end, and [062](062-component-information-remediation.md) for what remains). Its second line follows prompt [060](060-inferred-component-descriptions.md), reviewed and ready to implement in its documented order; stage 1 can begin with the first line while the description data layer and its required network reconciliation are implemented.
+Status: specified 2026-10-25 from the owner's requests and rulings, and the reviewed research in [`doc/research/component-information-overlay.md`](../research/component-information-overlay.md), which holds the detail this prompt summarises (picking, input modes, occlusion, merged geometry, event correlation). Stage 1 built 2026-10-25, awaiting the owner's acceptance (see the implementation note at the end, and [063](063-component-information-remediation.md) for what remains). Its second line follows prompt [060](060-inferred-component-descriptions.md), reviewed and ready to implement in its documented order; stage 1 can begin with the first line while the description data layer and its required network reconciliation are implemented.
 
 ## The request
 

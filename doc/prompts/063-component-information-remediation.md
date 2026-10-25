@@ -1,6 +1,6 @@
-# 062: Component information, what remains
+# 063: Component information, what remains
 
-Status: opened 2026-10-25 by the overnight session that implemented prompt [060](060-inferred-component-descriptions.md) (descriptions) and stage 1 of prompt [061](061-component-information-overlay.md) (the inspection overlay), at the owner's request: "If you think there's a problem with them, get as much as you can done, and then make a new mission called Mission 62 to remediate what's left." Each item says what is wrong or unfinished, where, and what done looks like. Items are ordered by how much they block the owner's acceptance of 061's stage 1.
+Status: opened 2026-10-25 by the overnight session that implemented prompt [060](060-inferred-component-descriptions.md) (descriptions) and stage 1 of prompt [061](061-component-information-overlay.md) (the inspection overlay), at the owner's request: "If you think there's a problem with them, get as much as you can done, and then make a new mission called Mission 62 to remediate what's left." Prompt 062 had been taken a few minutes earlier by [the HUD declutter](062-hud-declutter.md), so this is 063. Each item says what is wrong or unfinished, where, and what done looks like. Items are ordered by how much they block the owner's acceptance of 061's stage 1.
 
 ## 1. Stage 1's remaining acceptance checks
 
@@ -40,5 +40,6 @@ The owner (2026-10-25): "if we have misnamed valves in the network, now would be
 
 ## 6. Notes for whoever picks this up
 
+- Prompt [062](062-hud-declutter.md) (fewer overlays) reworks the same `.controls-help` element: it empties the help line when there is nothing to say and keeps it for contextual lines, this overlay's among them. The overlay already writes the line only when its text changes and marks itself `.is-inspecting`; whoever builds 062 should keep inspection's precedence (below climbing and carrying, above the empty line).
 - Another agent was editing the same checkout overnight (the engineers' office storage cupboards: `room-equipment.ts`, `world-bindings.ts`, `engineer-storage-*.ts`, `engineers-office-electrical.ts`). Its uncommitted work makes `room-equipment.test.ts` fail ("Parts stores cupboard: expected -2.25 to be greater than -2.2") and `engineers-office-electrical.ts` fail to typecheck; neither is this mission's. The `storage-cupboard` kind was added to `equipment-kinds.ts` so the catalogue accepts its items.
 - `src/game/world.test.ts`'s "come as usual while the plant runs…" timed out once under the full parallel suite and passes alone.
