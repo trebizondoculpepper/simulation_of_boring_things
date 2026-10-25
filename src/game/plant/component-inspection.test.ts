@@ -8,14 +8,14 @@ describe('the information overlay’s lines', () => {
       key: 'PL2-F1-V1',
       title: 'PL2-F1-V1: F1 inlet valve',
       detail:
-        'Isolates water flowing from the circulation pumps to sand filter 1.',
+        'Isolates water flowing from the circulation pumps to sand filter 1. Currently open.',
     });
     // The jacuzzi's, from its schematic (prompt 064).
     expect(inspectComponent({ tag: 'PL3-BT1-IV1' }, newWorld())).toEqual({
       key: 'PL3-BT1-IV1',
       title: 'PL3-BT1-IV1: Make-up to the balance tank valve',
       detail:
-        'Isolates water flowing from the water service to the jacuzzi balance tank.',
+        'Isolates water flowing from the water service to the jacuzzi balance tank. Currently open.',
     });
   });
 
