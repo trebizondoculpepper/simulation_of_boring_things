@@ -143,6 +143,14 @@ const HAND_DRAWN_VALVES: Readonly<Record<string, InstalledValve>> = {
     tag: 'PL2-P1-IV4',
     normal: 'open',
   },
+  // A drain off the pumps' discharge to the backwash drain (the owner,
+  // 2026-10-25): with the filters' inlets shut, the duty pump empties the
+  // balance tank to the wet hall's holding tank.
+  'plant_pool_02|Pump discharge drain|Pump drain valve': {
+    assetId: 'valve-0103',
+    tag: 'PL2-P1-DV1',
+    normal: 'closed',
+  },
   'plant_pool_02|Filter 1 inlet|F1 inlet valve': {
     assetId: 'valve-0048',
     tag: 'PL2-F1-V1',
@@ -404,4 +412,13 @@ export function newInstalledValveStates(): Record<string, boolean> {
       valve.normal === 'open',
     ]),
   );
+}
+
+/** Whether an installed valve is open, by its plate's tag, as the world has it. */
+export function installedValveOpen(
+  states: Readonly<Record<string, boolean>>,
+  tag: string,
+): boolean {
+  const v = Object.values(INSTALLED_VALVES).find((x) => x.tag === tag);
+  return v ? (states[v.assetId] ?? v.normal === 'open') : false;
 }

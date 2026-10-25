@@ -436,6 +436,16 @@ export function plumbOlympic(
       [mx, ACROSS_Y, d.at[2]],
       d === dB ? reducerBottom : [mx, MANIFOLD_Y, d.at[2]],
     ]);
+  // The pumps' drain (the owner, 2026-10-25): off discharge B's rise, east
+  // and down to a tundish at the floor, which runs to the backwash floor
+  // channel and so to the wet hall's holding tank. Its valve (PL2-P1-DV1)
+  // on the level length, in reach; shut in service.
+  const drainY = round(ACROSS_Y + 0.25);
+  rule('Pump discharge drain', 'pumps.drain', 'drain', 0.11, [
+    [mx, drainY, dB.at[2]],
+    [round(mx + 0.45), drainY, dB.at[2]],
+    [round(mx + 0.45), 0.1, dB.at[2]],
+  ]);
   rule('Pump discharge manifold', 'battery.inlet', 'water', MAIN, [
     reducerTop,
     [mx, MANIFOLD_Y, heelZ],
@@ -1155,6 +1165,24 @@ export function plumbOlympic(
       });
     }
   }
+  // The pumps' drain valve, on its drain's level length.
+  {
+    const run = runs.find((r) => r.name === 'Pump discharge drain');
+    if (run) {
+      const [a, b] = run.points;
+      fittings.push({
+        id: 'pumps.drain.iso',
+        kind: 'isolating-valve',
+        line: 'pumps.drain',
+        run: run.name,
+        at: [round((a[0] + b[0]) / 2), a[1], a[2]],
+        along: [1, 0, 0],
+        normally: 'closed',
+        operator: workedBy({ kind: 'isolating-valve', medium: 'water' }, a),
+        reachable: true,
+      });
+    }
+  }
   // The pumps' common discharge's flowmeter, on the manifold's drop to the battery.
   {
     const f = expansion.fittings.find((x) => x.id === 'pumps.discharge.meter');
@@ -1511,8 +1539,12 @@ function valveName(
     'exchanger.primaryFlow.iso': ['HX primary flow valve', 'HX1'],
     'exchanger.primaryReturn.iso': ['HX primary return valve', 'HX1'],
     'battery.outlet.regulating': ['Side-stream regulating valve', 'F'],
+    'pumps.drain.iso': ['Pump drain valve', 'P1'],
   };
   const t = table[id];
+  // The pumps' drain keeps its own plate: a drain valve (the owner, 2026-10-25).
+  if (id === 'pumps.drain.iso')
+    return { name: t[0], code: t[1], tag: 'PL2-P1-DV1' };
   return t ? { name: t[0], code: t[1] } : null;
 }
 
@@ -1679,6 +1711,14 @@ export function olympicRoom() {
         // Its route, from the base link it sits on in the enhanced network.
         const sits = expanded.get(f.id);
         const link = sits ? base.get(sits.edge) : undefined;
+        // The pumps' drain, beside the expansion (`olympic-annex.ts`): from
+        // the pumps' discharge to the main plant's drain.
+        if (f.id === 'pumps.drain.iso')
+          routes.set(`${r.name}|${v.name}`, {
+            from: 'the circulation pumps',
+            to: "the main plant's drain",
+            medium: 'water',
+          });
         if (link && sits) {
           const edges = plumbed.schematic.edges;
           // The served end as itself; the other as all that share its port.

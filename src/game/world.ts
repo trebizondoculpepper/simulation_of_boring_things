@@ -1,3 +1,4 @@
+import { installedValveOpen } from './plant/installed-valves';
 import { actOnZoneMusic, newZoneMusic, stepZoneMusic } from './plant/music';
 import type { ZoneMusicState, ZoneMusicAction } from './plant/music';
 /**
@@ -731,7 +732,10 @@ export function stepWorld(world: World, delta: number): World {
       world.olympicTank.open === calling
         ? world.olympicTank
         : { ...world.olympicTank, open: calling },
-    wetHall: stepWetHall(world.wetHall, world.plant, water, delta),
+    wetHall: stepWetHall(world.wetHall, world.plant, water, delta, {
+      discharge: installedValveOpen(world.installedValves, 'WH-DR1-DV1'),
+      tankDrain: installedValveOpen(world.installedValves, 'WH-T2-DV1'),
+    }),
     bathers: stepBathers(world.bathers, world.time, delta, appealOf(world)),
     gas: stepGasZones(world.gas, world.plant, delta),
     chemicals: stepChemicalStores(

@@ -72,7 +72,15 @@ function opener(installedValves: Readonly<Record<string, boolean>>) {
   };
 }
 
+/**
+ * What the pumps' drain passes, m³/h, open: a DN100 drain at the pumps'
+ * head. It goes with the backwash to the wet hall's holding tank.
+ */
+export const PUMP_DRAIN_FLOW = 150;
+
 export interface BatteryFlows {
+  /** The pumps' drain to waste, m³/h. */
+  drain: number;
   /** Whether the pumps run with a way through one of them: its suction and discharge valves open. */
   pumping: boolean;
   /** Whether the way on to the pool is open: the contact tank's and the UV's valves. */
@@ -113,8 +121,11 @@ export function olympicBatteryFlows(
         ]),
       ) as Record<ValveName, number>,
   );
+  // The pumps' drain (PL2-P1-DV1): their discharge to the backwash drain.
+  const draining = pumping && open('PL2-P1-DV1');
   const key = [
     pumping,
+    draining,
     openings.map((o) => VALVES.map((v) => o[v]).join('')).join(','),
     battery.dirt.map((d) => Math.round(d * 10)).join(','),
   ].join('|');
@@ -135,10 +146,12 @@ export function olympicBatteryFlows(
     filters,
     discharge: filters.reduce((sum, f) => sum + f.valve.v1 + f.valve.v3, 0),
     toPool: filters.reduce((sum, f) => sum + Math.max(0, f.valve.v2), 0),
-    toWaste: filters.reduce(
-      (sum, f) => sum + Math.max(0, f.valve.v4) + Math.max(0, f.valve.v5),
-      0,
-    ),
+    toWaste:
+      filters.reduce(
+        (sum, f) => sum + Math.max(0, f.valve.v4) + Math.max(0, f.valve.v5),
+        0,
+      ) + (draining ? PUMP_DRAIN_FLOW : 0),
+    drain: draining ? PUMP_DRAIN_FLOW : 0,
   };
   cache = { key, flows };
   return flows;

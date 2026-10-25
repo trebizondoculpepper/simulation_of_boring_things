@@ -39,6 +39,10 @@ export const WET_HALL_PLANT = {
   sewerConsent: 10,
   /** Its discharge to sewer: the consented rate; on above one share, off below another. */
   dischargeRate: 10,
+  /** The backwash discharge valve open, by gravity past its pump to the sewer, m³/h (DN100). */
+  dischargeValveRate: 40,
+  /** The holding tank's drain open, by gravity to the sewer, m³/h (DN80). */
+  tankDrainRate: 25,
   dischargeOn: 0.4,
   dischargeOff: 0.05,
   /** Its high-level alarm: above a night's backwash, which fills it to about 95 %. */
@@ -109,6 +113,16 @@ export function stepWetHall(
   plant: PlantServices,
   flows: { drawn: number; backwashed: number },
   dt: number,
+  /**
+   * Its two drains to the foul sewer, by gravity, open (the owner,
+   * 2026-10-25: valves that do something): the backwash discharge
+   * valve (WH-DR1-DV1) beside its pump, and the holding tank's drain
+   * (WH-T2-DV1). Shut, as in service, unless given.
+   */
+  drains: { discharge: boolean; tankDrain: boolean } = {
+    discharge: false,
+    tankDrain: false,
+  },
 ): WetHallState {
   const P = WET_HALL_PLANT;
   const hours = dt / 3600;
@@ -131,9 +145,12 @@ export function stepWetHall(
     (s.discharging
       ? filled > P.backwashTank * P.dischargeOff
       : filled > P.backwashTank * P.dischargeOn);
+  const gravity =
+    (drains.discharge ? P.dischargeValveRate : 0) +
+    (drains.tankDrain ? P.tankDrainRate : 0);
   const backwashTank = Math.max(
     0,
-    filled - (discharging ? P.dischargeRate * hours : 0),
+    filled - (discharging ? P.dischargeRate * hours : 0) - gravity * hours,
   );
   const spilt = Math.max(0, backwashTank - P.backwashTank);
   return {

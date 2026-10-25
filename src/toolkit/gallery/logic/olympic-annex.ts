@@ -91,6 +91,13 @@ export const OLYMPIC_ANNEX = {
     link('acid-dose', ['acid', 'out'], ['uv', 'dose'], 'chemical'),
     link('sample', ['pumps', 'discharge'], ['controller', 'sample'], 'water'),
     link('ozone', ['generator', 'ozone'], ['contact', 'ozone'], 'gas'),
+    // The pumps' drain to the backwash floor channel (the owner, 2026-10-25).
+    link(
+      'pumps.drain',
+      ['manifold', 'drain'],
+      ['main-plant', 'drain'],
+      'water',
+    ),
     link('bus', ['switch-fuse', 'bus'], ['bus', 'in'], 'power'),
     link(
       'plant_pool_02 room supply',
@@ -117,5 +124,6 @@ export const OLYMPIC_ANNEX = {
     'power-pump-B.tap-off',
     'power-uv.tap-off',
     'battery.outlet.regulating',
+    'pumps.drain.iso',
   ],
 };
