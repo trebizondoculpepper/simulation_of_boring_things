@@ -200,13 +200,7 @@ export function flowmeterLines(world: World, tag: string): PartLines | null {
   const value = flowmeterReading(world, tag);
   if (value === undefined) return null;
   // As its display shows it: the size, and an arrow for the way (`mag-flowmeter.ts`).
-  const arrow =
-    value > 0.05
-      ? ', its arrow pointing forward (->)'
-      : value < -0.05
-        ? ', its arrow pointing back (<-)'
-        : '';
-  const title = `${tag} — Flowmeter, currently reading ${Math.abs(value).toFixed(1)} m³/h${arrow}.`;
+  const title = `${tag} — Flowmeter, currently reading ${Math.abs(value).toFixed(1)} m³/h.`;
   const fixture = INSTALLED_FIXTURES[tag];
   const schematic = Object.values(SCHEMATICS).find(
     (s) => s.room === fixture.room,
@@ -214,12 +208,27 @@ export function flowmeterLines(world: World, tag: string): PartLines | null {
   const fitting = schematic?.fittings.find((f) => f.id === tag);
   const link = fitting && schematic?.links.find((l) => l.id === fitting.edge);
   const name = (id: string) =>
-    schematic?.nodes.find((n) => n.id === id)?.name.toLowerCase() ?? id;
-  if (!link) return { title, detail: fixture.purpose };
-  // Where it is installed, which the player can see: nothing of the water's
-  // kind or cause, which the meter does not show.
+    `the ${schematic?.nodes.find((n) => n.id === id)?.name.toLowerCase() ?? id}`;
+  const flowing = Math.abs(value) > 0.05;
+  if (!link)
+    // No route in a model: the arrow's way only, as the display shows it.
+    return {
+      title,
+      detail: flowing
+        ? `The direction arrow points ${value > 0 ? 'forward (->)' : 'back (<-)'}.`
+        : fixture.purpose,
+    };
+  // What the arrow says, in the plant's words (the owner, 2026-10-25): the
+  // two ends of the pipe it is installed on, which the player can see.
+  const [from, to] =
+    value >= 0
+      ? [link.sourceId, link.targetId]
+      : [link.targetId, link.sourceId];
+  const commodity = link.medium === 'chemical' ? 'chemical' : link.medium;
   return {
     title,
-    detail: `Installed between the ${name(link.sourceId)} and the ${name(link.targetId)}; its forward arrow points towards the ${name(link.targetId)}.`,
+    detail: flowing
+      ? `The direction arrow indicates ${commodity} is flowing from ${name(from)} to ${name(to)}.`
+      : `No flow shown; installed between ${name(link.sourceId)} and ${name(link.targetId)}.`,
   };
 }

@@ -1,4 +1,5 @@
 import { decorativeKind } from '../logic/world-in-model';
+import { ozoneGeneratorStatus } from '../logic/ozone-status';
 import { retiredFrom } from '../logic/retired-rooms';
 import { olympicRoom } from '../logic/olympic-plumbing';
 import { INSTALLED_FIXTURES } from '../../../game/plant/installed-fixtures';
@@ -714,6 +715,7 @@ function withOzoneStation(
     object,
     // The generator's parts, with the station's added (or the station's).
     parts: generator.parts ?? station.parts,
+    ...(generator.status ? { status: generator.status } : {}),
     update: (delta) => generator.update?.(delta),
     dispose: () => generator.dispose?.(),
   };
@@ -854,6 +856,9 @@ function worldOzoneGenerator(kit: PanelKit, room: ServiceRoom): LiveExhibit {
   return {
     object: view.group,
     parts: view.parts,
+    // As its display and lamps show it (the owner, 2026-10-25: a machine
+    // that can fail says operational, tripped, unpowered).
+    status: () => ozoneGeneratorStatus(plant.shown()),
     update(delta) {
       const w = store?.world.value;
       fed = w
@@ -919,6 +924,8 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
         tag: installed.tag,
         ...(decorative ? { decorative: true } : {}),
         ...(node ? { model: { node } } : {}),
+        // Its own live state, where its machine models it (prompt 068).
+        ...(isLive(built) && built.status ? { status: built.status } : {}),
       });
     }
     group.add(object);

@@ -40,6 +40,8 @@ export interface LiveExhibit {
   parts?: PartSet;
   update?(delta: number): void;
   dispose?(): void;
+  /** Its state in words, as it shows it, for the information overlay (prompt 068). */
+  status?(): string;
   /**
    * What bars the walker's way as it works, in metres in the room's frame,
    * for where the walker stands (a door's leaves while shut).

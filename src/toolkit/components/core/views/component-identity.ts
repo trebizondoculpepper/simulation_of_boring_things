@@ -32,6 +32,8 @@ export interface ComponentIdentity {
   part?: PartDescription;
   /** Its stable pick key, one per part per scene instance (two copies of a mimic differ). */
   key?: string;
+  /** Its own live state, from the machine's own model where the world has none. */
+  status?: () => string | undefined;
 }
 
 const KEY = 'component';

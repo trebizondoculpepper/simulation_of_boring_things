@@ -6,6 +6,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- An ozone generator says its state as its display and lamps show it: operational (producing ozone), on standby, blocked by no flow, tripped with its fault code, or unpowered (the owner, 2026-10-25). Exhibits may give a live status from their own machine's model where the world has none.
+- A flowmeter's overlay says what its arrow indicates in the plant's words: "The direction arrow indicates water is flowing from the filter outlet header to the lounge pool sand filter 2" (the owner, 2026-10-25).
 - A room's one item of a kind is "the only" one: "The only UV unit in PL1" rather than "1st UV unit in PL1" (the owner, 2026-10-25).
 - The lounge filter mimic's valves are symbols on their pipes, each flanked by illuminated OPEN and SHUT buttons whose lenses light by the valve's position, in place of separate lamps (mimic buttons may now carry a lamp, `MimicSpec.buttons[].lamp`).
 - Every working part describes itself when aimed at (prompt 068, done): each button, lamp, selector, knob, isolator handle and stop from the part library names itself and what can be seen of it (a lamp lit or out, a selector at AUTO, a handle at ON, a stop pushed in), and says which machine it is on ("AHU-802 HAND OFF AUTO — at AUTO. On AP-AHU1: …"); a builder's richer description (the lounge filter mimic, the pump panels' doors) wins. The audit's count of working parts with no description is 0 in every room, and pinned there.

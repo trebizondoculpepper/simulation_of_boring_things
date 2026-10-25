@@ -34,6 +34,7 @@ export function inspectComponent(
     name?: string;
     part?: PartDescription;
     key?: string;
+    status?: () => string | undefined;
   },
   world?: World,
 ): ComponentInspection | null {
@@ -54,9 +55,13 @@ export function inspectComponent(
       return identity.name
         ? { key: identity.tag, title: `${identity.tag}: ${identity.name}` }
         : null;
-    const detail = world
+    // Its own live state, from its machine's model, where it gives one.
+    const own = identity.status?.();
+    const base = world
       ? describeForWorld(world, identity.tag)
       : componentDescription(identity.tag);
+    const detail =
+      own && !/, currently /.test(base) ? `${base}, currently ${own}` : base;
     return {
       key: identity.tag,
       title: `${identity.tag}: ${name}`,
