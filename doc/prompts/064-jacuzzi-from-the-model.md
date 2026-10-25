@@ -67,6 +67,17 @@ Everything drawn in the jacuzzi plant room and the jacuzzi pool room is bound to
 6. The jacuzzi pool room listed from its builder data and bound; its pin reaches 0.
 7. The jacuzzi plant room's pipes re-routed by the plumber from the placed machines and the schematic (the voxel router), and the room scored.
 
+## Step 7, what remains (written 2026-10-25, overnight)
+
+Today the jacuzzi plant room's pipes are laid by `cabinet-pipes.ts`: algorithmically, by the owner's level rulings, from the cabinet's and the tank's ports (`cabinetPortsInRoom`, `cabinetBalanceTank`) to the walls, the tank and the gully, each valve on its run's rise. Since tonight every run, valve, isolator and fitting it draws is bound to the schematic (`bindToModel`, the scene check), and each valve's actuation comes from the schematic. What step 7 still changes is how the lines are laid and where the valves stand:
+
+1. **The router's lines, from the schematic:** for each water and air link of `JACUZZI_LINKS`, a `RouterLine` (`voxel-router.ts`) from its source's port to its target's: the cabinet's and the tank's ports as they are; the spa's, the heating main's and the water service's at the walls they enter by (north for the spa, south for the heating and make-up, as now); the gully's on the floor. Obstacles: the cabinet's body (`cabinetBodyIn`), the tank, the room's keep-clear regions and solids (`layoutRoom(...).box`). Routed with `routeVoxelLines`, as the Olympic's are.
+2. **The schematic's valves set in their lines** by `placeInline` (`inline-placement.ts`), within reach, each at its end of its link as the schematic says, worked as it says.
+3. **Scored** with `scoreRoom` (`room-scorer.ts`): every gate passed, against today's layout's score.
+4. **Tried in a development room first** (the project's rule): the routed room beside today's, for the owner to compare, before the leisure centre's room switches; then `cabinet-pipes.ts`'s jacuzzi runs are retired and the scene draws the router's.
+
+The electrical runs (busbar, switch-fuse, isolator, cabinet feed) are links of the schematic too, routed the same way once the router takes power lines (the Olympic's are).
+
 ## Acceptance
 
 - `world-in-model.test.ts` covers the jacuzzi pool room, with explicit node or decorative bindings, and names unbound things.
