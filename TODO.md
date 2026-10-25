@@ -76,6 +76,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Plant features
 
+- [ ] **The lounge pool's filter mimic** ([066](doc/prompts/066-lounge-filter-mimic.md), the owner, 2026-10-25): PL1-CP1's fascia a schematic grouped by filter, with LED chasers showing the flows (dev0 first) and two new flowmeters, PL1-F1-FT1 and PL1-F2-FT1; one mimic component in PL1-CP1 and on the control room's wall, the control room's copy without HAND · OFF · AUTO or RESET (some controls are only local). Awaiting another agent's review.
 - [ ] **Gravity lines in the voxel router** ([065](doc/prompts/065-gravity-lines-in-the-router.md), the owner, 2026-10-25): lines tagged gravity-fed, their ends checked (destination lower than source), routed only ever descending; replaces `jacuzzi-plumbing.ts`'s `falling` rule.
 - [x] **Reconcile legacy lounge backwash valve connections for prompt 060** (closed 2026-10-25, superseded): the legacy plant network is not the source of truth (the owner: the enhanced network is), and it has since been deleted, used by nothing; the lounge's valves will be described when the lounge is built through the plumber (063).
 - [ ] **The wet hall's tanks as built** ([036](doc/prompts/036-wet-hall-tanks.md)): the break tank stays sectional GRP; the backwash holding tank and the Lounge pool's balance tank in cast concrete.
