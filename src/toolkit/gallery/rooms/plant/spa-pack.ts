@@ -1077,7 +1077,7 @@ export const SPA_PACK_IN_SERVICE: PlantExhibit = {
 export const JACUZZI_PACK_EXHIBIT: PlantExhibit = {
   title: 'Packaged Jacuzzi plant cabinet',
   reference:
-    'For a spa circuit under 30 m³/h (the Jacuzzi, 28 m³/h): the packaged set, and a bay for its jet pump and air blower, each switched from the panel; 2.8 × 1.0 × 2.1 m cabinet',
+    'For a spa circuit under 30 m³/h (the Jacuzzi, 8 m³/h): the packaged set, and a bay for its jet pump and air blower, each switched from the panel; 2.8 × 1.0 × 2.1 m cabinet',
   size: { w: 3.2, d: 3.0, h: 2.2, mount: 'floor' },
   build: (kit) => buildSpaPack(kit, 'JACUZZI', true),
 };

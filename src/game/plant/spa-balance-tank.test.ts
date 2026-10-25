@@ -11,8 +11,9 @@ describe('a spa’s balance tank', () => {
   it('holds every allowance with its margin, to the next 0.1 m³', () => {
     const t = sizeSpaTank(JACUZZI_SPA);
     expect(t.allowances.bathers).toBeCloseTo(8 * DISPLACEMENT_PER_BATHER);
-    expect(t.allowances.total).toBeCloseTo(1.096, 2);
-    expect(t.volume).toBe(1.3);
+    // Bathers 0.64, transit 0.13, lift 0.09, the pump's 30 s at 8 m³/h 0.067.
+    expect(t.allowances.total).toBeCloseTo(0.927, 2);
+    expect(t.volume).toBe(1.1);
     expect(t.volume).toBeGreaterThanOrEqual(t.allowances.total * 1.1);
   });
 

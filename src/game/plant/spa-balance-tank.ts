@@ -59,11 +59,12 @@ export function sizeSpaTank(s: SpaForTank) {
   return { volume, float, lowLow, allowances: a };
 }
 
-/** The jacuzzi (POOL-03): eight seats, 4.5 m², 28 m³/h. */
+/** The jacuzzi (POOL-03): eight seats, 4.5 m², 8 m³/h. */
 export const JACUZZI_SPA: SpaForTank = {
   seats: 8,
   area: 4.5,
-  flow: 28.3,
+  // Its circulation, m³/h: for its cabinet's Ø0.44 m sand filter (2026-10-25).
+  flow: 8,
   // Its gutter's ring (2.6 m round, 0.2 m wide, 50 mm of water running)
   // and its pipes' 50 L.
   transit: 0.13,

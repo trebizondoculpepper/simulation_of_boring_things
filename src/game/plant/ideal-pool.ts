@@ -14,7 +14,7 @@ import {
 } from './experimental-source';
 
 /** The foot spa's circulation, m³/h. */
-export const FOOT_SPA_FLOW = 12;
+export const FOOT_SPA_FLOW = 6;
 
 /** A deliberately simple vessel for testing a real machine against ideal services. */
 export const IDEAL_POOL = {

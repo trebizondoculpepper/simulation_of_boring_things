@@ -32,7 +32,7 @@ import type { JacuzziCabinetBinding } from './spa-pack';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
-  'The jacuzzi’s cabinet on trial: plumbed to an ideal spa, an ideal 1.3 m³ balance tank and ideal sources of power, water and heat, nothing of the world’s. Work its valves and cut its sources from the test console; seat the bathers; watch the cabinet’s display, its NO FLOW lamp and RESET, and the tank take the surge.';
+  'The jacuzzi’s cabinet on trial: plumbed to an ideal spa, an ideal 1.1 m³ balance tank and ideal sources of power, water and heat, nothing of the world’s. Work its valves and cut its sources from the test console; seat the bathers; watch the cabinet’s display, its NO FLOW lamp and RESET, and the tank take the surge.';
 export const FINISH = { wall: '#cbd3d0', floor: '#929a97' };
 
 /**
@@ -194,7 +194,7 @@ function idealSpa(kit: PanelKit): LiveExhibit {
   };
 }
 
-/** The ideal balance tank: 1.3 m³, 1.1 m across, its float and low-low marked. */
+/** The ideal balance tank: its volume as sized (1.1 m³), 1.1 m across, its float and low-low marked. */
 function idealTank(kit: PanelKit): LiveExhibit {
   const t = plantTools(kit);
   const object = new Group();
@@ -221,7 +221,11 @@ function idealTank(kit: PanelKit): LiveExhibit {
     );
     ring.userData.live = true;
   }
-  const lcd = postLcd(kit, 'IDEAL BALANCE TANK · 1.3 m³', r + 0.25);
+  const lcd = postLcd(
+    kit,
+    `IDEAL BALANCE TANK · ${TRIAL.tank.volume.toFixed(1)} m³`,
+    r + 0.25,
+  );
   object.add(lcd.group);
   return {
     object,
@@ -403,7 +407,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Ideal balance tank',
     reference:
-      '1.3 m³, 1.1 m across and 1.55 m tall; its float (green) and low-low (red) marked',
+      '1.1 m³, 1.1 m across and 1.55 m tall; its float (green) and low-low (red) marked',
     size: { w: 1.6, d: 2.0, h: 1.6, mount: 'floor' },
     build: idealTank,
   },

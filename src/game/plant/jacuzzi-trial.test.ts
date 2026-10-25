@@ -45,10 +45,11 @@ describe('the jacuzzi cabinet on trial, running normally', () => {
 
   it('takes every seat’s surge into the tank without overflowing, and gives it back when they leave', () => {
     const before = steady.tank;
-    let t = runJacuzziTrial(act(steady, { act: 'bathers', in: true }), 120);
+    // At 8 m³/h the gutter's water takes some minutes to come round.
+    let t = runJacuzziTrial(act(steady, { act: 'bathers', in: true }), 600);
     expect(t.tank - before).toBeCloseTo(0.64, 1);
     expect(t.overflowed).toBe(0);
-    t = runJacuzziTrial(act(t, { act: 'bathers', in: false }), 300);
+    t = runJacuzziTrial(act(t, { act: 'bathers', in: false }), 900);
     expect(t.tank).toBeCloseTo(before, 1);
     expect(t.spa).toBeCloseTo(TRIAL.spa, 2);
     expect(t.cabinet.trip).toBe('');
@@ -60,7 +61,7 @@ describe('the jacuzzi cabinet on trial, running normally', () => {
       act: 'cabinet',
       action: { act: 'power', on: false },
     });
-    t = runJacuzziTrial(t, 300);
+    t = runJacuzziTrial(t, 900);
     expect(t.gutter).toBeLessThan(0.001);
     expect(t.overflowed).toBe(0);
     expect(t.tank).toBeLessThanOrEqual(V);
@@ -107,14 +108,15 @@ describe('the jacuzzi cabinet on trial, its valves worked', () => {
     expect(t.cabinet.trip).toBe('no-flow');
   });
 
-  it('with its overflow shut, backs the gutter up over the deck while the pump runs the tank down to TANK LOW', () => {
+  it('with its overflow shut, trips on TANK LOW as the pump runs the tank down, before the gutter floods the deck', () => {
     let t = act(steady, valve('overflow', false), {
       act: 'source',
       source: 'water',
       on: false,
     });
-    t = runJacuzziTrial(t, 120);
-    expect(t.flooded).toBeGreaterThan(0.05);
+    t = runJacuzziTrial(t, 400);
+    // Its 1.1 m³ tank reaches low-low before its gutter overflows.
+    expect(t.flooded).toBe(0);
     expect(t.tankLow).toBe(true);
     expect(trialPanel(t).messages[0]).toBe('TRIP: TANK LOW');
     // Not the latched no-flow trip: its suction and return are open.
@@ -241,13 +243,17 @@ describe('the jacuzzi cabinet on trial, backwashing itself', () => {
     expect(trialPanel(t).flowing).toBe(false);
     t = runJacuzziTrial(t, 240, 1);
     expect(t.filter.phase).toBe('filter');
-    expect(t.washed).toBeGreaterThan(1);
+    // 8 m³/h for the backwash's and rinse's 225 s: half a cubic metre.
+    expect(t.washed).toBeGreaterThan(0.4);
     expect(t.filter.bed.dirt).toBeLessThan(loaded * 0.2);
-    // The make-up refills the tank to its float: the bathers' displaced
-    // water, washed away with the rest, is not made up.
+    // The make-up refills the tank to its float: the wash's half a cubic
+    // metre came out of the bathers' displaced water, not made up, so it
+    // settles between its float and where it was.
     t = runJacuzziTrial(t, 1800, 1);
     expect(t.tank).toBeLessThan(tankBefore);
-    expect(t.tank / TRIAL.tank.volume).toBeCloseTo(TRIAL.tank.float, 1);
+    expect(t.tank / TRIAL.tank.volume).toBeGreaterThanOrEqual(
+      TRIAL.tank.float - 0.01,
+    );
     expect(trialPanel(t).flowing).toBe(true);
   });
 

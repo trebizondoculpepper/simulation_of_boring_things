@@ -81,8 +81,10 @@ const HALL_SHAPE: Record<PoolId, { w: number; d: number; h: number }> = {
 export const POOL_TARGET: Record<PoolId, { temp: number; flow: number }> = {
   pool_01: { temp: 30, flow: 90 },
   pool_02: { temp: 28, flow: 620 },
-  pool_03: { temp: 37, flow: 24 },
-  pool_04: { temp: 34, flow: 12 },
+  // The spas' circulation, for their cabinets' sand filters at about 53
+  // m/h (the owner, 2026-10-25: slowed for filters that fit the cabinets).
+  pool_03: { temp: 37, flow: 8 },
+  pool_04: { temp: 34, flow: 6 },
 };
 
 export function newPools(): PoolsState {

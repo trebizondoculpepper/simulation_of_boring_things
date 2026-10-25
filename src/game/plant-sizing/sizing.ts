@@ -59,7 +59,7 @@ export const ASSUME = {
   /**
    * Below this circulation, m³/h, a circuit gets a packaged spa set (pump,
    * cartridge filter, UV and heat exchanger on one skid) instead of pool
-   * plant: a foot spa's, or a commercial spa's (the Jacuzzi's 28 m³/h),
+   * plant: a foot spa's, or a commercial spa's (the Jacuzzi's, once 28 m³/h, now 8),
    * as such skids are sold to about 30 m³/h.
    */
   packageBelow: 30,

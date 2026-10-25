@@ -225,7 +225,7 @@ describe('status of an object', () => {
     const lines = objectStatus(w, 'pl3-bt1');
     expect(lines[0]).toBe('PL3-BT1');
     const text = lines.join('\n');
-    expect(text).toMatch(/capacity_m3 = 1\.3/);
+    expect(text).toMatch(/capacity_m3 = 1\.1/);
     expect(text).toMatch(/contents_m3 = [0-9.]+/);
     expect(text).toMatch(/full_share = /);
     expect(text).toMatch(/draining_to_waste = false/);
