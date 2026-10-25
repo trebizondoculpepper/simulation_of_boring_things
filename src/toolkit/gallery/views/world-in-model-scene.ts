@@ -46,6 +46,9 @@ export function unboundInScene(
         if (whole.decorative) return;
         const bound =
           (whole.model && isBound(whole.model, model)) ||
+          // A part's panel, known by its plate's tag (prompt 068).
+          (whole.tag &&
+            isBound(bindingForTag(room, whole.tag) ?? { node: '' }, model)) ||
           (whole.name &&
             isBound(bindingForName(room, whole.name) ?? { node: '' }, model));
         if (bound) return;

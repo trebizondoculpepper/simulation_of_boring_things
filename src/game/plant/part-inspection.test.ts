@@ -102,4 +102,36 @@ describe('a part’s inspection', () => {
       'Measures the flow through filter 1: up its outlet in service, down it while backwashing.',
     );
   });
+
+  it('words a setting by where it stands, and RESET as a request with the trip as it is', () => {
+    const w = running();
+    expect(
+      describePart(
+        {
+          kind: 'setting',
+          label: 'HAND · OFF · AUTO selector',
+          of: 'P-201A’s starter',
+          current: (x) => x.motors.starters['P-201A'].mode.toUpperCase(),
+        },
+        w,
+      ).title,
+    ).toBe('HAND · OFF · AUTO selector — Sets P-201A’s starter: now AUTO.');
+    expect(
+      describePart(
+        {
+          kind: 'command',
+          label: 'RESET',
+          action: {
+            type: 'motor/starter',
+            tag: 'P-201A',
+            action: { act: 'reset' },
+          },
+        },
+        w,
+      ),
+    ).toEqual({
+      title: 'RESET button — Requests P-201A’s trip be reset.',
+      detail: 'P-201A is not tripped now.',
+    });
+  });
 });

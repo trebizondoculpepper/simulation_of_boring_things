@@ -38,6 +38,15 @@ export type PartDescription =
       context?: (world: World) => string | undefined;
     }
   | {
+      kind: 'setting';
+      /** What it is: "HAND · OFF · AUTO selector". */
+      label: string;
+      /** What it sets: "P-201A’s starter". */
+      of: string;
+      /** Where it stands now, as its positions are printed. */
+      current: (world: World) => string;
+    }
+  | {
       kind: 'indicator';
       /** What is printed by it: RUN. */
       label: string;
@@ -87,6 +96,19 @@ function commandLines(
   }
   if (action.type === 'motor/starter') {
     const act = action.action.act;
+    if (act === 'reset') {
+      const s = world?.motors.starters[action.tag];
+      return {
+        title: `${button} — Requests ${action.tag}’s trip be reset.`,
+        ...(s
+          ? {
+              detail: s.tripped
+                ? `${action.tag} is tripped now; a running motor is not reset.`
+                : `${action.tag} is not tripped now.`,
+            }
+          : {}),
+      };
+    }
     if (act !== 'start' && act !== 'stop') return { title: button };
     const name = nameOf(action.tag);
     const about = world ? describeForWorld(world, action.tag) : '';
@@ -121,6 +143,10 @@ export function describePart(part: PartDescription, world?: World): PartLines {
         ...(context ? { detail: context } : {}),
       };
     }
+    case 'setting':
+      return {
+        title: `${part.label} — Sets ${part.of}${world ? `: now ${part.current(world)}.` : '.'}`,
+      };
     case 'indicator': {
       const lit = world ? part.lit(world) : undefined;
       return {

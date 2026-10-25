@@ -1,4 +1,6 @@
-import { signal } from '@preact/signals-core';
+import { computed, signal } from '@preact/signals-core';
+import { serviceAvailable } from '../../../../game/plant/services';
+import type { ServiceRoom } from '../../../../game/plant/services';
 import { Group } from 'three';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
@@ -31,7 +33,8 @@ import type {
   MotorTag,
   StarterMode,
 } from '../../../../game/plant/motor-starters';
-import type { World } from '../../../../game/world';
+import type { World, WorldAction } from '../../../../game/world';
+import { markComponent } from '../../../components/core/views/component-identity';
 
 /**
  * The filter pumps' local control panel, in its plant room: each pump's
@@ -93,8 +96,31 @@ export function pressPump(id: string, pool: PoolId = 'pool_02') {
 }
 
 /** A seven-segment ammeter in its bezel, reading a motor's current. */
-function ammeter(kit: PanelKit, parent: Group, x: number, y: number) {
+function ammeter(
+  kit: PanelKit,
+  face: Group,
+  x: number,
+  y: number,
+  /** Its motor, whose current it reads (prompt 068). */
+  tag?: MotorTag,
+) {
   const t = tools(kit);
+  const parent = new Group();
+  face.add(parent);
+  if (tag)
+    markComponent(parent, {
+      part: {
+        kind: 'reading',
+        label: `${tag} ammeter`,
+        read: (w) => ({
+          value: w.motors.starters[tag].current,
+          unit: 'A',
+          places: 1,
+          name: 'current',
+        }),
+      },
+      key: `${tag}.door.AMPS`,
+    });
   t.box(parent, t.paint('#141516', 0.4), 0.13, 0.07, 0.01, x, y, 0.005);
   const digits = createSevenSegment(kit, 4, { digitHeight: 0.024 });
   digits.group.position.set(x, y + 0.004, 0.011);
@@ -153,8 +179,21 @@ export const pumpPanelExhibit = (pool: PoolId = 'pool_02'): PlantExhibit => ({
       });
       indicator.group.position.set(-0.12, 0.2, 0);
       face.add(indicator.group);
-      for (const lamp of indicator.lamps) parts.add(lamp);
-      const amps = ammeter(kit, face, 0.13, 0.21);
+      // Each lamp, the condition that lights it (prompt 068).
+      indicator.lamps.forEach((lamp, k) => {
+        parts.add(lamp);
+        if (tag)
+          markComponent(lamp.object, {
+            part: {
+              kind: 'indicator',
+              label: TRI_STATES.motor[k].legend,
+              condition: `${tag} ${['running', 'stopped', 'tripped'][k]}`,
+              lit: (w) => shownOf(w, tag) === k,
+            },
+            key: `${tag}.door.${TRI_STATES.motor[k].legend}`,
+          });
+      });
+      const amps = ammeter(kit, face, 0.13, 0.21, tag);
       const hoa = parts.add(
         selector(kit, {
           positions: 3,
@@ -180,22 +219,35 @@ export const pumpPanelExhibit = (pool: PoolId = 'pool_02'): PlantExhibit => ({
           name: `${tag ?? `P${i + 1}`} HAND OFF AUTO`,
         }),
       );
+      if (tag)
+        markComponent(hoa.object, {
+          part: {
+            kind: 'setting',
+            label: 'HAND · OFF · AUTO selector',
+            of: `${tag}’s starter`,
+            current: (w) => w.motors.starters[tag].mode.toUpperCase(),
+          },
+          key: `${tag}.door.HOA`,
+        });
       hoa.object.position.set(-0.12, 0.0, 0);
       face.add(hoa.object);
+      // Its RESET: the one action, sent and described (prompt 068).
+      const resetAction: WorldAction | null = tag
+        ? { type: 'motor/starter', tag, action: { act: 'reset' } }
+        : null;
       const reset = parts.add(
         pushButton(kit, {
           colour: 'blue',
           legend: 'RESET',
           name: `${tag ?? `P${i + 1}`} RESET`,
-          action: () =>
-            tag &&
-            world?.dispatch({
-              type: 'motor/starter',
-              tag,
-              action: { act: 'reset' },
-            }),
+          action: () => resetAction && world?.dispatch(resetAction),
         }),
       );
+      if (resetAction)
+        markComponent(reset.object, {
+          part: { kind: 'command', label: 'RESET', action: resetAction },
+          key: `${tag}.door.RESET`,
+        });
       reset.object.position.set(0.13, 0.0, 0);
       face.add(reset.object);
       return { id, tag, state, amps };
@@ -203,13 +255,28 @@ export const pumpPanelExhibit = (pool: PoolId = 'pool_02'): PlantExhibit => ({
     // The third door: the supply lamp and the emergency stop, which stops
     // both pumps until it is released.
     const face = cubicle.doors[2].face;
+    // Lit while its room's supply is on (prompt 068: it had no drive).
+    const room = `plant_${pool}` as ServiceRoom;
+    const supplied = (w: World) => serviceAvailable(w.plant, room, 'power');
     const supply = parts.add(
       pilotLight(kit, {
         colour: 'white',
         legend: 'SUPPLY ON',
         name: 'Supply on lamp',
+        ...(world
+          ? { drive: computed(() => supplied(world.world.value)) }
+          : {}),
       }),
     );
+    markComponent(supply.object, {
+      part: {
+        kind: 'indicator',
+        label: 'SUPPLY ON',
+        condition: 'the plant room’s supply on',
+        lit: supplied,
+      },
+      key: `${pool}.door.SUPPLY`,
+    });
     supply.object.position.set(0.22, 0.2, 0);
     face.add(supply.object);
     const started = pool === 'pool_01' || pool === 'pool_02' ? pool : null;
@@ -234,6 +301,16 @@ export const pumpPanelExhibit = (pool: PoolId = 'pool_02'): PlantExhibit => ({
       }),
     );
     stop.object.position.set(0.12, -0.02, 0);
+    if (started)
+      markComponent(stop.object, {
+        part: {
+          kind: 'setting',
+          label: 'Emergency stop',
+          of: `both ${started === 'pool_01' ? 'lounge' : 'Olympic'} pumps stopped until released`,
+          current: (w) => (w.motors.stopped[started] ? 'PRESSED' : 'RELEASED'),
+        },
+        key: `${pool}.door.ESTOP`,
+      });
     face.add(stop.object);
     const group = new Group();
     group.add(cubicle.group);
