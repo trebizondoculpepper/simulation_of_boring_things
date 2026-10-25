@@ -23,6 +23,7 @@ import { spaPackDemoExhibit } from './spa-pack';
 import {
   filtering,
   spaFilterLine,
+  spaFilterGlass,
   washSignals,
 } from '../../../../game/plant/spa-filter';
 
@@ -289,6 +290,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       line: () => spaFilterLine(demo.state.filter),
       washing: () => !filtering(demo.state.filter),
       signals: () => washSignals(demo.state.filter),
+      glass: (pumping: boolean) => spaFilterGlass(demo.state.filter, pumping),
       mode: () => demo.filterAction({ act: 'mode' }),
     },
   }),

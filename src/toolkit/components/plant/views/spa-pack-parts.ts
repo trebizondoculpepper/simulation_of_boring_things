@@ -1,4 +1,12 @@
-import { Group, Mesh, MeshStandardMaterial, TorusGeometry } from 'three';
+import {
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  SphereGeometry,
+  TorusGeometry,
+} from 'three';
+import { createSightGlass } from './sight-glass';
+import type { GlassInputs } from '../logic/sight-glass';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import {
@@ -156,6 +164,88 @@ export function createCartridgeFilter(kit: PanelKit) {
     update(delta: number, pressure: number) {
       gauge.set(pressure);
       gauge.update(delta);
+    },
+  };
+}
+
+/**
+ * A spa cabinet's sand filter (the owner, 2026-10-25), in place of its
+ * cartridge: a small Lidoluxe pressure vessel, its size its filter's
+ * (`SPA_FILTERS`: the jacuzzi's Ø0.44 m on a 0.8 m bed, the foot spa's
+ * Ø0.38 m on 0.6 m), on its base ring; on its top its three-way valve
+ * head, turned by a servo, and its gauge; a small sight glass on its front
+ * showing its bed; its inlet and outlet unions low at either side, where
+ * the cartridge's were (0.23 m out from its middle, 0.12 m up), so the
+ * cabinet's pipework is unchanged.
+ */
+export function createSpaSandFilter(
+  kit: PanelKit,
+  { diameter, bedDepth }: { diameter: number; bedDepth: number },
+) {
+  const t = plantTools(kit);
+  const p = paints(t);
+  const group = new Group();
+  group.name = 'Spa sand filter';
+  const r = diameter / 2;
+  const base = 0.06;
+  // The shell: its bed, and the freeboard over it for the bed to lift.
+  const shell = bedDepth + 0.3;
+  t.cyl(group, p.grey, r * 0.85, base, 0, base / 2, 0, 'y', 28);
+  t.cyl(group, p.white, r, shell, 0, base + shell / 2, 0, 'y', 36);
+  // Its domed top, flattened, and its valve head.
+  const top = base + shell;
+  const dome = new Mesh(
+    new SphereGeometry(r, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+    p.white,
+  );
+  dome.scale.set(1, 0.35, 1);
+  dome.position.y = top;
+  group.add(dome);
+  const head = top + r * 0.35;
+  t.cyl(group, p.grey, 0.07, 0.09, 0, head + 0.04, 0, 'y', 20);
+  // The servo on the valve head, its actuator box and its cable gland.
+  t.box(group, p.black, 0.09, 0.07, 0.07, 0, head + 0.12, 0);
+  t.cyl(group, p.stainless, 0.008, 0.03, 0.05, head + 0.12, 0, 'x', 8);
+  const gauge = createDialGauge(kit, {
+    dia: 0.06,
+    max: 2.5,
+    maker: 'kessler-moody',
+  });
+  gauge.group.position.set(0, head + 0.06, 0.08);
+  group.add(gauge.group);
+  // Its inlet and outlet: out to where the cartridge's unions were.
+  for (const side of [-1, 1]) {
+    const from = r * 0.95;
+    const to = 0.23;
+    if (to > from)
+      t.cyl(
+        group,
+        p.grey,
+        0.028,
+        to - from,
+        side * ((from + to) / 2),
+        0.12,
+        0,
+        'x',
+        16,
+      );
+  }
+  // Its sight glass, half way up its bed, on its front.
+  const glass = createSightGlass(kit, {
+    radius: 0.045,
+    seed: Math.round(diameter * 100),
+  });
+  glass.group.position.set(0, base + 0.08 + bedDepth * 0.6, r + 0.004);
+  group.add(glass.group);
+  t.cyl(group, p.black, 0.015, 0.02, 0, 0.07, r, 'z', 10);
+  badge(kit, group, 'lidoluxe', [0, base + shell * 0.85, r + 0.002], 0.03);
+  return {
+    group,
+    /** Its gauge's reading, bar, and its sight glass's view of its bed: call each frame. */
+    update(delta: number, pressure: number, bed?: GlassInputs) {
+      gauge.set(pressure);
+      gauge.update(delta);
+      if (bed) glass.update(bed, delta);
     },
   };
 }

@@ -26,6 +26,7 @@ import { buildSpaPack } from './spa-pack';
 import {
   filtering,
   spaFilterLine,
+  spaFilterGlass,
   washSignals,
 } from '../../../../game/plant/spa-filter';
 import type { JacuzziCabinetBinding } from './spa-pack';
@@ -68,6 +69,7 @@ const binding: JacuzziCabinetBinding = {
     line: () => spaFilterLine(state.value.filter),
     washing: () => !filtering(state.value.filter),
     signals: () => washSignals(state.value.filter),
+    glass: (pumping: boolean) => spaFilterGlass(state.value.filter, pumping),
     mode: () => act({ act: 'filter', action: { act: 'mode' } }),
   },
   runs: () => trialRuns(state.value),

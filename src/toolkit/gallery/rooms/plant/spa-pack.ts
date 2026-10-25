@@ -12,12 +12,14 @@ import {
   SERVO_WHIRR,
   VALVE_STOP,
 } from '../../../components/plant/audio/actuated-valve';
+import { SPA_FILTERS } from '../../../../game/plant/spa-filter';
 import type { washSignals } from '../../../../game/plant/spa-filter';
+import type { GlassInputs } from '../../../components/plant/logic/sight-glass';
 import { createBrandBadge } from '../../../components/core/views/brand-badge';
 import { panelMakerMark } from '../../../components/core/views/panel-maker-mark';
 import { plantTools } from '../../../components/plant/views/plant-tools';
 import {
-  createCartridgeFilter,
+  createSpaSandFilter,
   createInlineUv,
   createSpaDosingController,
   createSpaHeatExchanger,
@@ -323,6 +325,8 @@ export interface SpaFilterBinding {
   washing(): boolean;
   /** What its wash changes in the cabinet now (`washSignals`). */
   signals(): ReturnType<typeof washSignals>;
+  /** What its filter's sight glass shows (`spaFilterGlass`). */
+  glass(pumping: boolean): GlassInputs;
 }
 
 /**
@@ -470,7 +474,12 @@ export function buildSpaPack(
   // dosing on the back wall over its containers.
   const vessel = set(createSurgeVessel(kit), -0.66, 0.1);
   const pump = set(createSpaPump(kit), -0.27, 0.1);
-  const filter = set(createCartridgeFilter(kit), 0.34, 0.1);
+  // Its sand filter (the owner, 2026-10-25), the jacuzzi's the larger.
+  const filter = set(
+    createSpaSandFilter(kit, jets ? SPA_FILTERS.jacuzzi : SPA_FILTERS.footSpa),
+    0.34,
+    0.1,
+  );
   const uv = set(createInlineUv(kit), 0.7, 0.06, Math.PI / 2);
   const exchanger = set(createSpaHeatExchanger(kit), 0.35, -0.3);
   const dosing = set(createSpaDosingController(kit), -0.3, backZ);
@@ -543,7 +552,7 @@ export function buildSpaPack(
   const edge = 0.351;
   tag('SV1  SURGE VESSEL', -0.66, skidY - 0.03, edge);
   tag('P1  CIRCULATION PUMP', -0.27, skidY - 0.03, edge);
-  tag('F1  CARTRIDGE FILTER', 0.34, skidY - 0.03, edge);
+  tag('F1  SAND FILTER', 0.34, skidY - 0.03, edge);
   tag('UV1  UV UNIT', 0.7, skidY - 0.03, edge);
   tag('HX1  HEAT EXCHANGER', 0.35, skidY + 0.42, -0.24);
   tag('DC1  DOSING CONTROLLER', -0.3, skidY + 0.95, backZ + 0.002);
@@ -968,6 +977,7 @@ export function buildSpaPack(
       filter.update(
         delta,
         running.value ? (wash.value?.gaugeBar ?? WORKING) : 0,
+        washBinding?.glass(running.value),
       );
       uv.update(delta, uvOn.value);
       // The jacuzzi's is plumbed to its external balance tank: its own
@@ -1125,7 +1135,7 @@ function buildSpaParts(kit: PanelKit): LiveExhibit {
     return part;
   };
   const pump = at(createSpaPump(kit), -1.75);
-  const filter = at(createCartridgeFilter(kit), -1.05);
+  const filter = at(createSpaSandFilter(kit, SPA_FILTERS.footSpa), -1.05);
   const uv = at(createInlineUv(kit), -0.25);
   const exchanger = at(createSpaHeatExchanger(kit), 0.5);
   const vessel = at(createSurgeVessel(kit), 1.1);

@@ -1,3 +1,7 @@
+import type {
+  GlassInputs,
+  GlassMode,
+} from '../../toolkit/components/plant/logic/sight-glass';
 import {
   bedPasses,
   filterSizing,
@@ -208,3 +212,23 @@ export function spaFilterLine(f: SpaFilter): string {
 
 /** A filter's design flow, m³/h, for its cabinet's sizing. */
 export const spaFilterFlow = (f: SpaFilter) => filterSizing(f.spec).designFlow;
+
+/**
+ * What its sight glass shows of its bed (`sight-glass.ts`): its dirt as
+ * the crust, its fissuring as the channelled surface, the backwash's
+ * murk, the rinse clearing.
+ */
+export function spaFilterGlass(f: SpaFilter, pumping: boolean): GlassInputs {
+  const mode: GlassMode =
+    !pumping || f.phase === 'stopping'
+      ? 'stopped'
+      : f.phase === 'filter'
+        ? 'service'
+        : f.phase;
+  return {
+    mode,
+    dirt: f.bed.dirt / filterSizing(f.spec).dirtRef,
+    channelling: f.bed.fissuring,
+    murk: pumping ? washSignals(f).murk : 0,
+  };
+}
