@@ -2,6 +2,10 @@
 
 Status: specified 2026-10-25 from the owner's direction; step 1 built the same night (`world-in-model.test.ts`). Follows [063](063-component-information-remediation.md), which has the background and the owner's rulings.
 
+## The goal
+
+At the end of this, every single visual thing exists in the simulation unless it is explicitly declared decorative. The benefit (the owner): "it should be way easier to debug why things aren't working, because you don't actually need to debug the visual model, you just need to debug the simulation." The jacuzzi is the first room taken all the way; the test makes the rest measurable.
+
 ## The owner's direction (2026-10-25)
 
 - "We're going to start by adding the tests. Then we're going to improve the process as in the way that I've described. And then … clear the pipes from the jacuzzi and try and get everything laid out to our new standard, and then do a test that everything in the jacuzzi plant room and the jacuzzi pool room is something that exists in our world simulation model."
