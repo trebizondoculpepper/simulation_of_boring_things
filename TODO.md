@@ -121,8 +121,9 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [ ] **Each machine's own states** ([069](doc/prompts/069-machine-states.md), the owner, 2026-10-25): each kind declares the states the world can prove (a pump tripped, unpowered, isolated, OFF, running in HAND, running, stopped; a boiler locked out, without gas, firing, standing by), from its own internal state, so the overlay gives the cause; On and Off only for things with no fault model. For review before building.
 - [x] **Inspect parts inside components** ([068](doc/prompts/done/068-inspect-component-parts.md), the owner, 2026-10-25): done 2026-10-25; every working part describes itself, the audit at 0. Richer descriptions for the remaining families after 069.
 - [x] The spa cabinets' sand filters outside them, in their schematics and the world: washing, dirt, gauges, sight glasses (2026-10-25, 7c905b6, 1f55dc2).
-- [ ] A spa filter's wash takes its water from the spa's water balance (to drain), made up by the tank's float.
-- [ ] A spa filter's dirt from its spa's water condition (prompt 070's world stage), not a constant.
+- [x] A spa filter's wash takes its water from the spa's water balance (to drain), made up by the tank's float (2026-10-25).
+- [x] A spa filter's dirt from its spa's water condition (prompt 070's world stage), not a constant: each pool's suspended solids in the world (2026-10-25).
+- [ ] The big pools' filters' capture from their own beds (`BIG_POOL_CAPTURE` stands in), and the rest of the water's condition in the world (prompt 070).
 
 ## The operator's manual
 

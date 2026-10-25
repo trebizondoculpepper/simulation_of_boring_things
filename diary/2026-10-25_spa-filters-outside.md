@@ -17,5 +17,8 @@ Main: the jacuzzi's suction now runs low to its pump (7c02e8e); the filters stan
 ## Outcomes
 The first placement put the jacuzzi's filter on top of its balance tank, which is not a layout item; the corner placement then faced its inlet into a wall and the router could not reach it, so it was turned to face north. Filter runs had to clear the heating lanes and each other: lanes beyond the heating's, the nearer union's run inside and lower.
 
+## Later the same day
+The two gaps closed on main. A wash now uses the water balance's existing `toWaste`: the pump runs, nothing reaches the spa, its flow goes to drain from the tank and the float makes it up. Each pool carries its suspended solids (`src/game/water/solids.ts`): bathers bring 3 g an hour each, the filters keep what their beds catch, the spas' through the ideal filter's `bedPasses`, the big pools' through a fixed 90 % until their beds model it. The thermal tests then caught a real effect: a wash at the end of their 24-hour runs had just replaced half a cubic metre of the jacuzzi's water with cold make-up. The first wash now falls at 02:00, overnight, as a spa's programme would be set.
+
 ## Next Steps
-The wash's water is not yet taken from the spa's water balance; the filter's dirt does not yet come from the water's condition (prompt 070's world stage).
+The big pools' filters' capture from their own beds; the rest of the water's condition in the world (prompt 070).

@@ -31,11 +31,20 @@ describe.each(['pool_03', 'pool_04'] as const)(
       w = run(w, PROGRAMME.stopping + PROGRAMME.backwash / 2);
       expect(w.spaFilters[pool].phase).toBe('backwash');
       expect(w.pools[pool].flow).toBeLessThan(0.5);
-      // After its rinse, filtering again, the spa's flow back.
-      w = run(w, PROGRAMME.backwash / 2 + PROGRAMME.rinse + 300);
+      // Its water to drain, from its tank: the tank lower, its make-up
+      // calling for more.
+      expect(w.pools[pool].balance).toBeLessThan(settled.pools[pool].balance);
+      // After its rinse, filtering again, the bed cleaner.
+      w = run(w, PROGRAMME.backwash / 2 + PROGRAMME.rinse + 2);
       expect(w.spaFilters[pool].phase).toBe('filter');
-      expect(w.pools[pool].flow).toBeGreaterThan(1);
       expect(w.spaFilters[pool].bed.dirt).toBeLessThan(dirty);
+      // And the spa's flow back.
+      w = run(w, 300);
+      expect(w.pools[pool].flow).toBeGreaterThan(1);
+    });
+
+    it('carries the spa’s water’s solids to its bed', () => {
+      expect(settled.pools[pool].solids).toBeGreaterThan(0);
     });
 
     it('steps its schedule on MODE', () => {

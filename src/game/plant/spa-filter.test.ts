@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  FIRST_WASH_AT,
   PROGRAMME,
   SPA_FILTERS,
   actOnSpaFilter,
@@ -32,7 +33,14 @@ describe('a spa cabinet’s filter', () => {
   });
 
   it('backwashes itself on its schedule: stop, backwash to drain, rinse to drain, filter', () => {
-    let f = run(newSpaFilter(SPA_FILTERS.jacuzzi, '6h'), 6 * 3600, 8, 5, 30);
+    // Its first wash at 02:00, then every 6 hours.
+    let f = run(
+      newSpaFilter(SPA_FILTERS.jacuzzi, '6h'),
+      FIRST_WASH_AT + 6 * 3600,
+      8,
+      5,
+      30,
+    );
     const loaded = f.bed.dirt;
     expect(f.phase).toBe('stopping');
     expect(spaFilterFlows(f, 8, 5).toSpa).toBe(0);
@@ -64,7 +72,8 @@ describe('a spa cabinet’s filter', () => {
 
   it('says the same on both cabinets', () => {
     expect(spaFilterLine(newSpaFilter(SPA_FILTERS.jacuzzi))).toBe(
-      'WASH 24H IN 24:00h',
+      // Its first wash at 02:00 the next night.
+      'WASH 24H IN 26:00h',
     );
     const washing = run(
       actOnSpaFilter(newSpaFilter(SPA_FILTERS.footSpa), { act: 'wash-now' }),

@@ -35,6 +35,7 @@ import {
   HALL_AIR,
   POOL_IDS,
   POOL_TARGET,
+  poolVolume,
   circulating,
   dosedVolumes,
   poolDepth,
@@ -145,8 +146,11 @@ import {
   actOnSpaFilter,
   filtering,
   newSpaFilters,
+  spaWashFlow,
   stepSpaFilters,
 } from './plant/spa-filter';
+import { bedPasses } from './plant/ideal-filter';
+import { BIG_POOL_CAPTURE, stepSolids } from './water/solids';
 import type {
   SpaFilter,
   SpaFilterAction,
@@ -175,7 +179,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 29;
+export const WORLD_VERSION = 30;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -701,6 +705,23 @@ export function stepWorld(world: World, delta: number): World {
     delta,
   );
   const jacuzzi = jacuzziFlow({ ...world, jacuzziCabinet });
+  // The spa cabinets' filters washing: their pumps' water to drain.
+  const spaPowered: Record<SpaPool, boolean> = {
+    pool_03: world.jacuzziCabinet.power,
+    pool_04: footbathLineup(world.identifiedPlant).powered,
+  };
+  const spaWash = {
+    pool_03: spaWashFlow(
+      world.spaFilters.pool_03,
+      spaPowered.pool_03,
+      POOL_TARGET.pool_03.flow,
+    ),
+    pool_04: spaWashFlow(
+      world.spaFilters.pool_04,
+      spaPowered.pool_04,
+      POOL_TARGET.pool_04.flow,
+    ),
+  };
   // The heating, as the boilers' gas allows: none with the SSOV or ECV shut.
   const water = stepPoolsWater(
     world.pools,
@@ -739,6 +760,7 @@ export function stepWorld(world: World, delta: number): World {
     hallHandling(airHandling),
     motors,
     jacuzzi,
+    spaWash,
   );
   return {
     ...world,
@@ -748,7 +770,7 @@ export function stepWorld(world: World, delta: number): World {
       delta,
       serviceAvailable(world.plant, 'plant_pool_03', 'power'),
     ),
-    pools: water.pools,
+    pools: withSolids(world, water.pools, delta),
     airHandling,
     motors,
     jacuzzi: stepJacuzzi(
@@ -765,15 +787,19 @@ export function stepWorld(world: World, delta: number): World {
         pool_03: spaFilterPump(
           world.spaFilters.pool_03,
           water.pools.pool_03.flow,
-          world.jacuzziCabinet.power,
+          spaPowered.pool_03,
           'pool_03',
         ),
         pool_04: spaFilterPump(
           world.spaFilters.pool_04,
           water.pools.pool_04.flow,
-          footbathLineup(world.identifiedPlant).powered,
+          spaPowered.pool_04,
           'pool_04',
         ),
+      },
+      {
+        pool_03: world.pools.pool_03.solids,
+        pool_04: world.pools.pool_04.solids,
       },
       delta,
     ),
@@ -1049,4 +1075,34 @@ function spaFilterPump(
 ) {
   if (filtering(f)) return circulation;
   return powered ? POOL_TARGET[pool].flow : 0;
+}
+
+/**
+ * Each pool's suspended solids a step on (`solids.ts`): its bathers' dirt
+ * in, its filters' catch out; the spas' through their own beds.
+ */
+function withSolids(world: World, pools: PoolsState, dt: number): PoolsState {
+  const passes = (id: PoolId) =>
+    id === 'pool_03' || id === 'pool_04'
+      ? (solids: number) =>
+          bedPasses(world.spaFilters[id].spec, world.spaFilters[id].bed, solids)
+      : (solids: number) => solids * (1 - BIG_POOL_CAPTURE);
+  return Object.fromEntries(
+    (Object.keys(pools) as PoolId[]).map((id) => [
+      id,
+      {
+        ...pools[id],
+        solids: stepSolids(
+          world.pools[id].solids,
+          {
+            bathers: world.bathers.pools[id].now,
+            volume: poolVolume(id),
+            flow: pools[id].flow,
+            passes: passes(id),
+          },
+          dt,
+        ),
+      },
+    ]),
+  ) as PoolsState;
 }

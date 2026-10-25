@@ -73,8 +73,13 @@ export const newSpaFilter = (
   phase: 'filter',
   // In service from the start: its UV long since warm.
   phaseTime: UV_WARM,
-  sinceWash: 0,
+  // Its first wash at 02:00, in the night, when the spa is shut and the
+  // make-up's cold water has hours to warm (then every 24 hours, there).
+  sinceWash: -FIRST_WASH_AT,
 });
+
+/** When its first wash falls, s after the world's midnight start. */
+export const FIRST_WASH_AT = 2 * 3600;
 
 /** A UV lamp's warm-up after its flow returns, s. */
 export const UV_WARM = 30;
@@ -237,9 +242,6 @@ export function spaFilterGlass(f: SpaFilter, pumping: boolean): GlassInputs {
 export type SpaPool = 'pool_03' | 'pool_04';
 export type SpaFiltersState = Record<SpaPool, SpaFilter>;
 
-/** Suspended solids in a busy spa's water, g/m³: what its filter takes out. */
-export const SPA_WATER_DIRT = 4;
-
 /** Both cabinets' filters, in service, a fresh day's wash due on each. */
 export const newSpaFilters = (): SpaFiltersState => ({
   pool_03: newSpaFilter(SPA_FILTERS.jacuzzi),
@@ -249,15 +251,21 @@ export const newSpaFilters = (): SpaFiltersState => ({
 /**
  * Both filters `dt` seconds on: each by its pump's flow (filtering, the
  * spa's circulation; washing, its pump's own, while its cabinet has power)
- * and the spa's water's dirt.
+ * and the dirt in the spa's water.
  */
 export function stepSpaFilters(
   s: SpaFiltersState,
   pump: Record<SpaPool, number>,
+  /** Each spa's water's suspended solids, g/m³: what reaches its filter. */
+  dirt: Record<SpaPool, number>,
   dt: number,
 ): SpaFiltersState {
   return {
-    pool_03: stepSpaFilter(s.pool_03, pump.pool_03, SPA_WATER_DIRT, dt),
-    pool_04: stepSpaFilter(s.pool_04, pump.pool_04, SPA_WATER_DIRT, dt),
+    pool_03: stepSpaFilter(s.pool_03, pump.pool_03, dirt.pool_03, dt),
+    pool_04: stepSpaFilter(s.pool_04, pump.pool_04, dirt.pool_04, dt),
   };
 }
+
+/** Its pump's flow to drain, m³/h, while it backwashes or rinses: its spa's design flow, with its cabinet powered. */
+export const spaWashFlow = (f: SpaFilter, powered: boolean, flow: number) =>
+  !filtering(f) && f.phase !== 'stopping' && powered ? flow : 0;

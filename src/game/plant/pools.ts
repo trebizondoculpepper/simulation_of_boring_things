@@ -1,3 +1,4 @@
+import { CLEAN_SOLIDS } from '../water/solids';
 import { ROOM_SERVICES, serviceAvailable } from './services';
 import type { IsolatorName, PlantServices, ServiceRoom } from './services';
 import { stepWater } from '../water/water-balance';
@@ -48,6 +49,8 @@ export interface PoolWaterState {
   setpoint: number;
   /** Whether its make-up valve is open, to take water from the wet hall. */
   makeUp: boolean;
+  /** Its water's suspended solids, g/m³ (`solids.ts`). */
+  solids: number;
 }
 
 export type PoolsState = Record<PoolId, PoolWaterState>;
@@ -113,6 +116,7 @@ export function newPools(): PoolsState {
         heating: 0,
         drainDown: false,
         makeUp: true,
+        solids: CLEAN_SOLIDS,
       },
     ]),
   ) as PoolsState;
@@ -403,6 +407,11 @@ export function stepPoolsWater(
   motors?: MotorsState,
   /** The jacuzzi's cabinet, its water moving and its heat (`jacuzzi-cabinet.ts`). */
   jacuzzi?: JacuzziCirculation,
+  /**
+   * A spa cabinet's filter washing: its pump's flow to drain now, m³/h,
+   * drawn from its tank, none to the spa (`spa-filter.ts`).
+   */
+  spaWash?: Partial<Record<PoolId, number>>,
 ): {
   pools: PoolsState;
   drawn: number;
@@ -498,11 +507,12 @@ export function stepPoolsWater(
         level: old.level,
         tankVolume: old.balance * params.tank,
         pumps:
-          circulation &&
-          (id !== 'pool_04' ||
-            !footbath ||
-            footbath.draining ||
-            footbath.returning),
+          (circulation &&
+            (id !== 'pool_04' ||
+              !footbath ||
+              footbath.draining ||
+              footbath.returning)) ||
+          (spaWash?.[id] ?? 0) > 0,
         tripped: old.tripped,
         // Its make-up valve open, and the wet hall giving water.
         makeUpOpen: share > 0 && makeUpOpen,
@@ -536,6 +546,10 @@ export function stepPoolsWater(
                   : {}),
               }
             : {}),
+        // A spa's filter washing: its pump's water to drain, from its tank.
+        ...((spaWash?.[id] ?? 0) > 0
+          ? { pumpFlow: 0, toWaste: spaWash![id] }
+          : {}),
       },
       dt / 3600,
       // Sub-steps of at most 5 s. Not that a small pool fills fast (the
@@ -610,6 +624,8 @@ export function stepPoolsWater(
     const hallAir = thermal.air;
     const heating = (thermal.waterHeat + thermal.airHeat) / 1000;
     next[id] = {
+      // Its solids carried; the world steps them (`solids.ts`).
+      solids: old.solids ?? CLEAN_SOLIDS,
       level,
       balance,
       temperature,
