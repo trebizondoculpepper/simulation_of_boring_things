@@ -40,19 +40,7 @@
     "pipe: power: loading_bay room feed",
     "pipe: power: loading_bay distribution conduit"
   ],
-  "switch_room": [
-    "machine: LV main switchboard",
-    "machine: Main incoming switch",
-    "machine: Emergency lighting central battery",
-    "machine: Lighting distribution board DB-L1",
-    "machine: Generator connection point",
-    "machine: Main earthing terminal",
-    "electrical: SR-SF1",
-    "pipe: power: switch_room room supply",
-    "pipe: power: switch_room room feed",
-    "pipe: power: switch_room distribution conduit",
-    "pipe: power: Generator connection point power feed 5"
-  ],
+  "switch_room": [],
   "air_plant": [
     "machine: Air handling units AHU-802, AHU-803, AHU-804: OLYMPIC POOL HALL",
     "machine: Air handling units AHU-805, AHU-806, AHU-807: OLYMPIC POOL HALL",

@@ -118,7 +118,7 @@ describe('everything the scene draws is in the model (prompt 064)', () => {
   });
 
   it('names what is not bound, in a room not yet built from its model', () => {
-    const unbound = unboundInScene('switch_room', built('switch_room'));
+    const unbound = unboundInScene('air_plant', built('air_plant'));
     expect(unbound.length).toBeGreaterThan(0);
   });
 });

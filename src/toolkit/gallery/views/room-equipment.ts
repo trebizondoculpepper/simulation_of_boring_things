@@ -863,6 +863,9 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
     object.position.set(p.x, floorY + p.y, p.z);
     object.rotation.y = p.yaw;
     object.name ||= p.item.label;
+    // A sign does nothing: set decoration (prompt 064).
+    if (p.item.key.startsWith('sign:'))
+      markComponent(object, { decorative: true });
     // Its identity, for the information overlay (prompt 061).
     const installed =
       INSTALLED_ASSET_IDS[`${room}|${p.item.key}|${p.item.label}`];
@@ -968,7 +971,13 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   // The switch room's cable ladder and its switchgear's trunking.
   if (room === 'switch_room') {
     const c = switchRoomContainment();
-    pipework.group.add(createContainment(kit, c.runs, c.entries, 7, floorY));
+    // Its cable ladder carries the switchboard's feeds out to the rooms.
+    pipework.group.add(
+      markComponent(createContainment(kit, c.runs, c.entries, 7, floorY), {
+        name: 'Cable ladder',
+        model: { link: 'Switchboard to the rooms' },
+      }),
+    );
   }
   // The air plant's ductwork, gantries and stair (`air-plant.ts`).
   if (room === 'air_plant') {
