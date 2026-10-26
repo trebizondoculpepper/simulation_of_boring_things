@@ -1,6 +1,6 @@
-# 072: A screenshot shortcut, best quality, no overlay
+# 080: A screenshot shortcut, best quality, no overlay
 
-Status: specified 2026-10-26 from the owner's request; not started. (071 is left to another session, which the owner believes has taken it.)
+Status: specified 2026-10-26 from the owner's request; not started. (Written as 072; renumbered 080, as other sessions had taken 071 to 079 meanwhile.)
 
 ## The request
 
