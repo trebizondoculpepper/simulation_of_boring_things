@@ -5,7 +5,6 @@ import {
   Mesh,
   MeshStandardMaterial,
   PlaneGeometry,
-  TorusGeometry,
 } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
@@ -209,15 +208,6 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     0.01,
     -hatch.width + 0.08,
   );
-  const sign = createSafetySign(
-    kit,
-    ['confined'],
-    ['DANGER', 'Confined space', 'Entry by permit only'],
-  );
-  sign.rotation.x = -Math.PI / 2;
-  sign.scale.setScalar(0.8);
-  sign.position.set(0, 0.002, -hatch.width / 2);
-  lid.add(sign);
   // Its steel angle frame round the opening, standing 10 mm proud of the
   // floor, not flush with it (flush, it flickered against the slab).
   for (const side of [-1, 1]) {
@@ -485,14 +475,8 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       );
       brace.rotation.z = Math.atan2(to[1] - from[1], to[0] - from[0]);
     }
-    // Its lifting eye under its arm's tip, over the hatch, bare: its
-    // lifting gear is brought and hung on it only for a lift, and is
-    // otherwise kept away (the owner, 2026-10-26).
-    {
-      const eye = new Mesh(new TorusGeometry(0.035, 0.008, 8, 16), dark);
-      eye.position.set(hx, armY - 0.09, davitZ);
-      group.add(eye);
-    }
+    // Bare: nothing hangs from its arm; its lifting gear is brought and
+    // hung on it only for a lift (the owner, 2026-10-26).
     // Its mark.
     const swl = createMicroLabel(kit, 'PUMP DAVIT  SWL 250 kg', {
       height: 0.03,
@@ -598,7 +582,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   const LID_OPEN = 1.75;
   const uses = new Map<Object3D, () => void>();
   leaf.traverse((o) => uses.set(o, () => (gate.open = !gate.open)));
-  for (const o of [lid, lidPlate, handle, sign])
+  for (const o of [lid, lidPlate, handle])
     o.traverse((c) => uses.set(c, () => (cover.open = !cover.open)));
   const toward = (now: number, target: number, step: number) =>
     now < target ? Math.min(target, now + step) : Math.max(target, now - step);
