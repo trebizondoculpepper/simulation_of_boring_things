@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The plant rooms' valves travel and are heard again (the owner, 2026-10-26): the room bound every valve's position to the world's open or shut, so an actuated valve snapped and never ran its motor; only the lounge's valves, whose travel the world models, take their position from it now, and every other valve strokes itself at its actuator's speed with its motor's sound and its stop.
 - A sight glass's reflection of its room is soft, a small capture stretched over the glass (cheaper too), and its internal reflection fainter (the owner, 2026-10-26).
 - A sight glass's reflection of its room is plainer, and its thick glass shows a faint internal reflection: a soft, dim arc just inside the bottom of its rim, opposite its overhead highlight (the owner, 2026-10-26).
 - A sight glass reflects its real room (the owner, 2026-10-26): each glass captures the room once from just in front of itself (`room-reflection.ts`, a cube camera, taken between frames once the room is built), so its domed pane shows the room's real lights, walls and plant at their real distances, added over the bed behind it, with no point light's spot on it; its rounded, smooth edge catches the room's lights in a small crescent on the side toward them.

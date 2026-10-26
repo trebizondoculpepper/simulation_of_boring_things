@@ -241,12 +241,20 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       open: () =>
         store?.world.value.installedValves[installed.assetId] ??
         installed.normal === 'open',
-      position: () =>
-        store?.world.value.loungeValvePositions[installed.assetId] ??
-        Number(
-          store?.world.value.installedValves[installed.assetId] ??
-            installed.normal === 'open',
-        ),
+      // Its position where the world models its travel (the lounge's
+      // valves); elsewhere none, so it strokes itself at its actuator's
+      // speed and is heard doing so (the owner, 2026-10-26: the Olympic's
+      // valves snapped open and shut, silent).
+      ...(room === 'plant_pool_01'
+        ? {
+            position: () =>
+              store?.world.value.loungeValvePositions[installed.assetId] ??
+              Number(
+                store?.world.value.installedValves[installed.assetId] ??
+                  installed.normal === 'open',
+              ),
+          }
+        : {}),
       power: () =>
         room !== 'plant_pool_01' ||
         !store ||
