@@ -242,6 +242,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- The loading dock's yard tarmac now keeps a fixed clip at the outside wall, so moving into the yard cannot make it show through the extended building wall.
 - The balance-tank hall’s lights and batten diffusers now follow the Olympic plant lighting circuit and the main lighting switches, including the shared emergency-lighting behaviour.
 
 - The balance-tank overflow inlet has a hollow bellmouth and a recessed bore instead of overlapping end faces; the two submerged suction inlets also have open flared mouths.
