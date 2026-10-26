@@ -39,4 +39,12 @@ Itch.io does support devlog posts on project pages, including build and image at
 
 | 001 | 2026-10-25 | A title sequence that flies through the building | [Local record](2026_10_25_001_a_title_sequence_that_flies_through_the_building.md) | [Published post](https://salimfadhley.itch.io/the-pool/devlog/1727746/a-title-sequence-that-flies-through-the-building) |
 
+| 002 | 2026-10-26 | Filters, fault lights, and a plant you can read | [Local record](2026_10_26_002_filters_fault_lights_and_a_plant_you_can_read.md) | [Published post](https://salimfadhley.itch.io/the-pool/devlog/1730093/filters-fault-lights-and-a-plant-you-can-read) |
+
+| 002 | 2026-10-26 | Filters, fault lights, and a plant you can read | [Local record](2026_10_26_002_filters_fault_lights_and_a_plant_you_can_read.md) | [Published post](https://salimfadhley.itch.io/the-pool/devlog/1730093/filters-fault-lights-and-a-plant-you-can-read) |
+
 Update 001 is published within the project, which remains in Draft access mode as of publication. The post is verified while signed in; anonymous requests return HTTP 404.
+
+Update 002 is published and verified with attached build 0.1.356. The project still has Draft access as of 2026-10-26; anonymous requests to the post return HTTP 404.
+
+Update 002 is published and verified with attached build 0.1.356. The project still has Draft access as of 2026-10-26; anonymous requests to the post return HTTP 404.
