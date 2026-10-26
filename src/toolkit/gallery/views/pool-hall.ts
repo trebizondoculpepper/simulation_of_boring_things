@@ -70,7 +70,8 @@ import { PLANT_DOORWAY, PLANT_SILL } from '../logic/plant-rooms';
 /** The plant room door's frame head over the deck, metres. */
 const PLANT_DOOR_HEAD = 2.04 + 2 * 0.05;
 import type { LoopRoom } from '../logic/pool-loop';
-import { createPoolLadder } from './pool-ladder';
+import { createPoolGrabRail } from './pool-ladder';
+import { createHumanLadder } from '../../components/architectural/views/human-ladder';
 import { createMetalGlobeLight } from '../../components/architectural/views/metal-globe-light';
 import {
   archSpan,
@@ -496,7 +497,7 @@ export function createPoolHall(
       });
       const [x, z] = line[best];
       const [ix, iz] = inward[best];
-      const ladder = createPoolLadder(h.below + 0.05);
+      const ladder = createHumanLadder('pool', h.below + 0.05).group;
       ladder.position.set(x, 0, z);
       // Its water side (+x) toward the pool.
       ladder.rotation.y = Math.atan2(-(iz - z), ix - x);
@@ -586,7 +587,7 @@ export function createPoolHall(
         );
       }
       // A handrail down the steps' open side.
-      const rail = createPoolLadder(rectDepth(b, o.minX) * 0.6, 0.01);
+      const rail = createPoolGrabRail(rectDepth(b, o.minX) * 0.6, 0.01);
       rail.position.set(o.minX, 0, o.maxZ - st.width - 0.05);
       group.add(rail);
     }
@@ -694,7 +695,7 @@ export function createPoolHall(
             ] as const)
           : []),
       ] as const) {
-        const ladder = createPoolLadder(depth);
+        const ladder = createHumanLadder('pool', depth).group;
         ladder.position.set(x, 0, z);
         ladder.rotation.y = yaw;
         group.add(ladder);
@@ -881,7 +882,7 @@ export function createPoolHall(
     group.add(lamp);
     group.add(bubbles(b));
     // A grab rail down onto the seat, at the east.
-    const rail = createPoolLadder(b.seat.below + 0.05, 0.4);
+    const rail = createPoolGrabRail(b.seat.below + 0.05, 0.4);
     rail.position.set(b.x + b.r, 0, b.z);
     rail.rotation.y = Math.PI;
     group.add(rail);

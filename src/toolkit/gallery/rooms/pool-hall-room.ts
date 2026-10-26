@@ -57,7 +57,7 @@ import type { RoomId } from '../logic/dev-room-links';
 import { enterDevRoom } from '../logic/dev-room-links';
 import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
 import { createPoolHall } from '../views/pool-hall';
-import { poolLadderZones } from '../views/pool-ladder';
+import { humanLadderZones } from '../../components/architectural/views/human-ladder';
 import { createPanelKit } from '../../components/core/views/eighties-controls';
 import { createPoolInfoSign } from '../../components/pool/views/pool-info-sign';
 import {
@@ -385,7 +385,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     ladders: () =>
       gallery
         ? []
-        : poolLadderZones(
+        : humanLadderZones(
             rooms,
             (x, z) => hallFloorAt(spec, x / metre, z / metre) * metre,
           ),

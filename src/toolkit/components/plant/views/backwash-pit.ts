@@ -1,3 +1,4 @@
+import { createCharacterLcd } from '../../industrial-control/views/panel-instruments';
 import { signal } from '@preact/signals-core';
 import {
   createPartSet,
@@ -64,6 +65,11 @@ export interface PitPumpControls {
     running: readonly boolean[];
     /** Its HIGH float tilted up. */
     high: boolean;
+    /** Its water's depth over its floor, metres, and its share full. */
+    depth: number;
+    share: number;
+    /** Each float switch, tilted up: STOP, START, HIGH, HIGH-HIGH. */
+    floats: readonly boolean[];
   };
   act(a: PitPumpAction): void;
 }
@@ -422,7 +428,11 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     }
     for (const z of posts(z0, z1)) {
       post(x0, z);
-      post(x1, z);
+      // None in its gate's opening (the owner, 2026-10-26: a post stood
+      // in it once the gate moved); the gate has its own posts.
+      const gz0 = rail.gate.at - rail.gate.width / 2 - 0.05;
+      const gz1 = rail.gate.at + rail.gate.width / 2 + 0.05;
+      if (z < gz0 || z > gz1) post(x1, z);
     }
     // Its sides; its east side either side of its gate.
     const g0 = rail.gate.at - rail.gate.width / 2;
@@ -881,7 +891,9 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     panel.rotation.y = Math.PI / 2;
     group.add(panel);
     const PW = 0.46;
-    const PH = 0.5;
+    // Taller, for its depth display and float lamps (the owner,
+    // 2026-10-26).
+    const PH = 0.72;
     t.box(panel, grey, PW, PH, 0.12, 0, 0, -0.06);
     panelMakerMark(kit, panel, { width: PW, height: PH, z: 0.001 });
     const name = createMicroLabel(kit, 'PIT PUMPS P-601 / P-602', {
@@ -924,7 +936,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
             : {}),
         }),
         x,
-        0.09,
+        -0.02,
       );
       mount(
         pilotLight(kit, {
@@ -934,7 +946,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
           name: `Pit pump ${k + 1} run lamp`,
         }),
         x,
-        -0.04,
+        -0.15,
       );
       mount(
         pushButton(kit, {
@@ -946,7 +958,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
           action: () => c?.act({ act: 'duty', pump: k }),
         }),
         x,
-        -0.15,
+        -0.26,
       );
     });
     mount(
@@ -957,7 +969,36 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
         name: 'Pit high level lamp',
       }),
       0,
-      -0.04,
+      -0.15,
+    );
+    // Its water's depth on a backlit display, and each float switch's
+    // lamp: lit while it is tilted up (the owner, 2026-10-26).
+    const screen = createCharacterLcd(kit, {
+      columns: 16,
+      rows: 2,
+      cell: 0.0035,
+      backlight: true,
+    });
+    screen.group.position.set(0, 0.23, 0.002);
+    screen.group.traverse((o) => (o.userData.live = true));
+    panel.add(screen.group);
+    const floatLit = [
+      signal(false),
+      signal(false),
+      signal(false),
+      signal(false),
+    ];
+    (['STOP', 'START', 'HIGH', 'HI-HI'] as const).forEach((legend, i) =>
+      mount(
+        pilotLight(kit, {
+          colour: i < 2 ? 'amber' : 'red',
+          legend,
+          drive: floatLit[i],
+          name: `Pit float ${legend} lamp`,
+        }),
+        -0.15 + i * 0.1,
+        0.11,
+      ),
     );
     panelUpdate = () => {
       if (!c) return;
@@ -967,6 +1008,11 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
         dutyLit[k].value = s.duty === k;
       }
       highLit.value = s.high;
+      s.floats.forEach((up, i) => (floatLit[i].value = up));
+      screen.show([
+        `DEPTH ${s.depth.toFixed(2)} m`.padEnd(16).slice(0, 16),
+        `${Math.round(s.share * 100)}% FULL`.padEnd(16).slice(0, 16),
+      ]);
     };
     // Each pump's power cable (the owner, 2026-10-26: to the pit's wall
     // as soon as it can, then down it, never across the hatch): down the

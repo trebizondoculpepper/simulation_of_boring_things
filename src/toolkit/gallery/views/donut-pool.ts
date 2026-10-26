@@ -53,7 +53,7 @@ import {
   inMetres,
 } from '../../components/architectural/views/board-marked-concrete';
 import { rippleWater } from './round-room-light';
-import { createPoolLadder } from './pool-ladder';
+import { createHumanLadder } from '../../components/architectural/views/human-ladder';
 
 /**
  * donut_pool_1: a white-tiled room 15 m square and 7 m high, a round
@@ -533,7 +533,7 @@ export function createDonutPool(metre: number) {
   rippleWater(water, uniforms);
 
   // A ladder on the outer edge, to the east, facing the column.
-  const ladder = createPoolLadder(-DONUT_POOL_FLOOR + 0.05);
+  const ladder = createHumanLadder('pool', -DONUT_POOL_FLOOR + 0.05).group;
   ladder.position.set(d.outer, 0, 0);
   ladder.rotation.y = Math.PI;
   group.add(ladder);

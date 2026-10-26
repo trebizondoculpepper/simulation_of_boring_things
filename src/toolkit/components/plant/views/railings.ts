@@ -118,7 +118,7 @@ export function createCagedLadder(kit: PanelKit, rise = 4) {
     }
   }
   // Vertical bars round the cage, at most 300 mm apart.
-  for (let i = 0; i <= 6; i++) {
+  for (let i = 0; hoopY.length > 0 && i <= 6; i++) {
     const a = Math.PI * (i / 6);
     const x = Math.cos(a) * 0.35;
     const z = off + Math.sin(a) * depth * 0.5 + depth * 0.5 - 0.05;

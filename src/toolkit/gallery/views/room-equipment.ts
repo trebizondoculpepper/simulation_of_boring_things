@@ -485,9 +485,13 @@ function modelFor(
             controls: {
               state: () => {
                 const wh = roomWorld().world.value.wetHall;
+                const f = pitFloats(wh.backwashTank);
                 return {
                   ...wh.pitPumps,
-                  high: pitFloats(wh.backwashTank).high,
+                  high: f.high,
+                  depth: backwashPitDepth(wh.backwashTank),
+                  share: wh.backwashTank / WET_HALL_PLANT.backwashTank,
+                  floats: [f.stop, f.start, f.high, f.highHigh],
                 };
               },
               act: (action: PitPumpAction) =>

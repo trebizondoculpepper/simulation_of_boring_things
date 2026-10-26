@@ -20,7 +20,7 @@ import {
 } from '../../components/core/parts/render-style';
 import { METRE } from '../../components/core/logic/units';
 import { createFirstPerson } from '../../controls/input/first-person';
-import { poolLadderZones } from '../views/pool-ladder';
+import { humanLadderZones } from '../../components/architectural/views/human-ladder';
 import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
 import {
   ARCHED_CORRIDOR,
@@ -129,7 +129,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     },
     floorAt: (x, z) => (archedFloorAt(x / metre, z / metre) ?? 0) * metre,
     ladders: () =>
-      poolLadderZones(
+      humanLadderZones(
         rooms,
         (x, z) => (archedFloorAt(x / metre, z / metre) ?? 0) * metre,
       ),

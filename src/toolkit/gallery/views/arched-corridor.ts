@@ -31,7 +31,7 @@ import type { TileOptions } from '../../components/pool/views/pool-surfaces';
 import { cutOpenings } from '../../controls/logic/walk-collision';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { addSkylightSun, rippleWater } from './round-room-light';
-import { createPoolLadder } from './pool-ladder';
+import { createHumanLadder } from '../../components/architectural/views/human-ladder';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { diamondOutline } from './diamond-stair-corridor';
 
@@ -536,7 +536,7 @@ export function createArchedCorridor(
   water.renderOrder = 1;
   rippleWater(water, uniforms);
   // A ladder on the pool's east side, facing the steps.
-  const ladder = createPoolLadder(pool.waterY - pool.floor + 0.05);
+  const ladder = createHumanLadder('pool', pool.waterY - pool.floor + 0.05).group;
   ladder.position.set(pool.maxX, e.floor, POOL_LADDER_Z);
   ladder.rotation.y = Math.PI;
   group.add(ladder);

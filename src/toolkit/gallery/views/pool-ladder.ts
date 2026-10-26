@@ -69,6 +69,14 @@ export function createPoolLadder(depth: number, width = 0.5) {
   return group;
 }
 
+/** A matching grab rail beside a step or seat, without a climb zone. */
+export function createPoolGrabRail(depth: number, width: number) {
+  const rail = createPoolLadder(depth, width);
+  rail.name = 'pool step handrail';
+  delete rail.userData.ladderDepth;
+  return rail;
+}
+
 /** Match every visible pool ladder to the shared Use/W/S movement model. */
 export function poolLadderZones(
   root: Group,

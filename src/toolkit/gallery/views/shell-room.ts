@@ -713,21 +713,24 @@ export function createWetHall(metre: number, kit: PanelKit) {
     plate('MAKE-UP MAIN TO POOL PLANT ROOMS', out.x, out.y + 0.3);
     plate('BACKWASH MAIN FROM POOL PLANT ROOMS', bin.x, bin.y + 0.35);
     // The foul sewer's connection in the floor, east of the pit: a
-    // sleeve with its access cover beside it, its name on the floor.
+    // gully's cover with the pipe's sleeve in its middle, its name on the
+    // floor beside it.
     {
       const s = L.sewerDrop;
       const ring = new Mesh(new CylinderGeometry(0.09, 0.09, 0.03, 20), sleeve);
-      ring.position.set(s.x, floorY + 0.015, s.z);
+      ring.position.set(s.x, floorY + 0.018, s.z);
       group.add(ring);
       const cover = new Mesh(
         new BoxGeometry(0.45, 0.012, 0.45),
         paint('#3b3e40', 0.6, 0.5),
       );
-      cover.position.set(s.x + 0.45, floorY + 0.006, s.z);
+      // Centred on the pipe's drop, the pipe through its middle (the
+      // owner, 2026-10-26: in line with the pipe).
+      cover.position.set(s.x, floorY + 0.006, s.z);
       group.add(cover);
       const name = shell.card(0.7, 0.12, ['FOUL SEWER']);
       name.rotation.x = -Math.PI / 2;
-      name.position.set(s.x, floorY + 0.004, s.z + 0.3);
+      name.position.set(s.x, floorY + 0.004, s.z + 0.42);
       group.add(name);
     }
   }

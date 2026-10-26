@@ -21,7 +21,7 @@ import {
 } from '../views/arched-corridor';
 import { createWhiteCorridor } from '../views/white-corridor';
 import { createGreenRoom } from '../views/green-room';
-import { createPoolLadder } from '../views/pool-ladder';
+import { createHumanLadder, humanLadderZones } from '../../components/architectural/views/human-ladder';
 
 /** PR_A's ladder, on the back pool's west side: its middle. */
 const BACK_LADDER = { x: POOL_RECTS[2].minX, z: -6.4 };
@@ -735,7 +735,7 @@ export function startPoolRoom(
   room.add(water);
   if (id === 'PR_A') {
     // A ladder on the back pool's west side.
-    const ladder = createPoolLadder(-POOL_FLOOR);
+    const ladder = createHumanLadder('pool', -POOL_FLOOR).group;
     ladder.position.set(BACK_LADDER.x, 0, BACK_LADDER.z);
     room.add(ladder);
   }
@@ -968,28 +968,7 @@ export function startPoolRoom(
           archedFloorAt(x / m, z / m))
         : null) ?? poolFloorAt(x / m, z / m)) * m,
     start: { x: 0, z: 0 },
-    ladders: () =>
-      id === 'PR_A'
-        ? [
-            {
-              minX: (BACK_LADDER.x - 0.5) * m,
-              maxX: (BACK_LADDER.x + 0.5) * m,
-              minZ: (BACK_LADDER.z - 0.35) * m,
-              maxZ: (BACK_LADDER.z + 0.35) * m,
-              bottom: POOL_FLOOR * m,
-              top: 0,
-              rung: { x: (BACK_LADDER.x + 0.16) * m, z: BACK_LADDER.z * m },
-              bottomExit: {
-                x: (BACK_LADDER.x + 0.42) * m,
-                z: BACK_LADDER.z * m,
-              },
-              topExit: {
-                x: (BACK_LADDER.x - 0.46) * m,
-                z: BACK_LADDER.z * m,
-              },
-            },
-          ]
-        : [],
+    ladders: () => humanLadderZones(room),
     solids: () => [
       ...walls,
       ...solids,
