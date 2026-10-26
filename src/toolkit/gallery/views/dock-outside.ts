@@ -86,12 +86,12 @@ export function createDockOutside(
   // or goes beyond the camera's reach (the owner, 2026-10-26: a black
   // hole showed where its far side passed the camera's 80 m).
   const eye = new Vector3();
-  // The sky and the tarmac only beyond the building's outside wall: each
-  // room is drawn on its own canvas over the next, and anything of this
-  // room's that covered its doorways would hide the rooms beyond them
-  // (the owner, 2026-10-26: the stores were invisible through their
-  // doors). Clipped to the far side of the wall's plane, in world space.
+  // The sky may surround a walker outdoors, but the ground must always
+  // stop at the wall. Sharing the sky's movable clipping plane let the
+  // tarmac show through the extended building when the walker went outside.
+  // These planes are in world space because the room group is transformed.
   const outside = new Plane(new Vector3(0, 0, -1), 0);
+  const groundClip = new Plane(new Vector3(0, 0, -1), 0);
   const wallPoint = new Vector3();
   const eyeAt = new Vector3();
   const placePlane = (
@@ -101,6 +101,7 @@ export function createDockOutside(
     renderer.localClippingEnabled = true;
     group.updateWorldMatrix(true, false);
     wallPoint.set(0, 0, wallZ).applyMatrix4(group.matrixWorld);
+    groundClip.constant = wallPoint.z;
     // Inside the building (the owner, 2026-10-26: a cheat), only beyond
     // the wall: -z + c >= 0, c the wall's z. Out in the yard, all of it,
     // the sky over the roof behind among it: the plane pushed far away.
@@ -113,6 +114,9 @@ export function createDockOutside(
   // of the building, off inside, so the dock still goes dark without its
   // lamps. Night will dim it later.
   const daylight = new HemisphereLight('#e8ecf0', '#55575a', 0);
+  // Not one of the room's lamps: the room's lighting leaves it alone
+  // (`room-lights.ts`), so a power cut never dims it.
+  daylight.userData.daylight = true;
   group.add(daylight);
   sky.dome.onBeforeRender = (r, _s, camera) => {
     placePlane(r, camera);
@@ -147,7 +151,7 @@ export function createDockOutside(
     tarmac.alphaMap = alphaMap;
     tarmac.transparent = true;
   }
-  tarmac.clippingPlanes = [outside];
+  tarmac.clippingPlanes = [groundClip];
   const ground = new Mesh(new CircleGeometry(69, 48), tarmac);
   ground.onBeforeRender = (r, _s, camera) => placePlane(r, camera);
   ground.rotation.x = -Math.PI / 2;
