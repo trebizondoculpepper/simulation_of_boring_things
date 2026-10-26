@@ -7,6 +7,7 @@ import {
   MeshStandardMaterial,
   BoxGeometry,
   CylinderGeometry,
+  PlaneGeometry,
   RepeatWrapping,
   Vector3,
   SRGBColorSpace,
@@ -14,6 +15,7 @@ import {
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createSkyDome } from '../../../scene/sky-dome';
 import { createSkyChanger } from '../../../game/skies';
+import { createBreezeBlockTextures } from '../../../scene/breeze-block-texture';
 import { YARD, dockFloorAt, dockSteps } from '../logic/dock-yard';
 
 /**
@@ -78,7 +80,20 @@ export function createDockOutside(
   const sky = createSkyDome(70);
   sky.set(createSkyChanger('overcast').step(0), 0, 0);
   group.add(sky.dome);
+  // Kept round the camera, wherever it is: a skybox never comes nearer
+  // or goes beyond the camera's reach (the owner, 2026-10-26: a black
+  // hole showed where its far side passed the camera's 80 m).
+  const eye = new Vector3();
+  sky.dome.onBeforeRender = (_r, _s, camera) => {
+    camera.getWorldPosition(eye);
+    sky.dome.matrixWorld.setPosition(eye);
+  };
+  sky.dome.frustumCulled = false;
   const tarmac = tarmacMaterial(kit, 60);
+  // It yields to whatever stands on it, the steps among them.
+  tarmac.polygonOffset = true;
+  tarmac.polygonOffsetFactor = 1;
+  tarmac.polygonOffsetUnits = 2;
   kit.materials.push(tarmac);
   kit.materials.push(tarmac);
   const ground = new Mesh(new CircleGeometry(69, 48), tarmac);
@@ -169,6 +184,63 @@ export function createDockOutside(
       rail.position.copy(p).add(q).multiplyScalar(0.5);
       rail.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), d.normalize());
       group.add(rail);
+    }
+  }
+  // The building's outside wall, carried on east and west far past where
+  // one can walk, fading into the overcast (the owner, 2026-10-26): the
+  // rest of the building, never reached.
+  {
+    const fade = document.createElement('canvas');
+    fade.width = 256;
+    fade.height = 4;
+    const g = fade.getContext('2d')!;
+    const grad = g.createLinearGradient(0, 0, 256, 0);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.3, '#ffffff');
+    grad.addColorStop(1, '#000000');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 256, 4);
+    // In the dock's blockwork, its courses on the dock's own.
+    const blocks = createBreezeBlockTextures();
+    kit.textures.push(blocks.map, blocks.normalMap, blocks.roughnessMap);
+    const far = 68;
+    const top = 7.3;
+    const from = width / 2 + thickness;
+    const len = far - from;
+    for (const side of [-1, 1]) {
+      const alphaMap = new CanvasTexture(fade);
+      // Opaque near the dock, fading outward: along u, the wall's x.
+      alphaMap.repeat.set(side / len, 1);
+      alphaMap.offset.set(-from / len, 0);
+      kit.textures.push(alphaMap);
+      const m = new MeshStandardMaterial({
+        map: blocks.map,
+        normalMap: blocks.normalMap,
+        roughnessMap: blocks.roughnessMap,
+        roughness: 1,
+        alphaMap,
+        transparent: true,
+        depthWrite: false,
+      });
+      kit.materials.push(m);
+      const wall = new Mesh(new PlaneGeometry(len, top - YARD_LEVEL), m);
+      wall.position.set(
+        side * (from + len / 2),
+        (top + YARD_LEVEL) / 2,
+        wallZ - 0.001,
+      );
+      wall.rotation.y = Math.PI;
+      // UVs in metres as the dock's walls have them: u its x, v its height
+      // over the dock's floor in 0.4 m courses.
+      const uv = wall.geometry.attributes.uv;
+      const pos = wall.geometry.attributes.position;
+      for (let k = 0; k < uv.count; k++) {
+        const x = side * (from + len / 2) - pos.getX(k);
+        const y = (top + YARD_LEVEL) / 2 + pos.getY(k);
+        uv.setXY(k, x, y / 0.4);
+      }
+      uv.needsUpdate = true;
+      group.add(wall);
     }
   }
   return { group };
