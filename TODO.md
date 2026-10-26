@@ -86,6 +86,11 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Plant features
 
+- [x] **Spa cabinets' start-up order, WASH NOW and WASH MODE** (done 2026-10-26, `f38beb1`): the motorised valves wait for the controller's self test and open in turn; WASH NOW on the panel; WASH MODE shows its page first; + and − under SET.
+- [x] **The Olympic pool's main drain valve, PL2-T1-IV1** (done 2026-10-26, `f38beb1`): shut, the pool holds its water with its pumps stopped; open, it drains into its balance tank.
+- [x] **The Olympic gantry clear of supports and conduits** (done 2026-10-26, `f38beb1`): supports under the gantry and landing hang from them; conduits pass them only against the wall.
+- [x] **The music rack's status on inspection** (done 2026-10-26, `f38beb1`): the source says what is playing; the amplifier its state.
+- [ ] **Grundflow's other pumps branded like the end-suction pumps** (the owner, 2026-10-25): the impeller emblem and blue flow labels on the booster set's pumps, the boiler house's twin-head circulators and the spa pack's pump, each on its own round faces and nozzles.
 - [x] **Balance-tank hall lighting controls** (done 2026-10-26, `552fcb5`): assign the hall to the Olympic plant lighting circuit and bind its scene lights and batten diffusers to the shared room-lighting controller.
 
 - [x] **Olympic UV orientation, fitting clearance and pump fasteners** (done 2026-10-26, `d89bef9`): face PL2-UV1 into the room with correctly routed ports and cable, extend the exchanger’s four valve spools clear of insulated elbows, shorten and hex the pump casing/strainer heads, and clarify that both tank-hall overflow pipes belong to the Olympic pool.
