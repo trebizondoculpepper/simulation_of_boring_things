@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The booster set's own valves, each pump's suction and discharge isolators, are motorised butterfly valves driven by its controller (the owner, 2026-10-26), no longer lever valves for show: open while the set is powered and in service, shut on a low-water trip or with its power off, opened again by RESET.
 - The booster set's suction and discharge valves (valve-0032 WH-T1-IV1, valve-0033 WH-MU1-IV2) are motorised and driven from the wet hall's control panel (the owner, 2026-10-26): each drawn as a motorised valve, and on the mimic each side of the booster set with its OPEN and SHUT buttons and lamps; while either is shut the booster set gives no make-up (`booster-valves.test.ts`). The mimic now draws the meter on the main before the break tank, as built.
 - The utility's water meter works (the owner, 2026-10-26): its register counts the water let in from the town main past the break tank's float valve (it had counted the booster set's draw), on six black drums of cubic metres and three red of litres, each digit in its own window, its dial's corners its body's blue; hovering over it gives its reading in the information overlay.
 - The town main comes in at the meter line's height, just west of its meter, and turns once straight into it (the owner, 2026-10-26: no dogleg): the wet hall's plumber joins two level ports facing at right angles by one elbow, by rule; its stop valve on the leg out of the wall, facing along it.

@@ -1,3 +1,4 @@
+import { createActuatedButterflyValve } from './actuated-butterfly-valve';
 import { signal } from '@preact/signals-core';
 import { Group } from 'three';
 import type { Object3D } from 'three';
@@ -128,6 +129,7 @@ export function createBoosterSet(
   );
   t.cyl(object, black, 0.06, 0.03, vx, y + 0.645, B.dischargeZ, 'y', 16);
   // The two pumps.
+  const isolators: { at: Point; name: string }[] = [];
   B.pumpX.forEach((x, i) => pump(x, i + 1));
   function pump(x: number, n: number) {
     const z = B.pumpZ;
@@ -152,8 +154,13 @@ export function createBoosterSet(
       ],
       FINISH.stainless,
     );
-    t.butterflyValve(object, 50, [x, y, B.suctionZ - 0.12], 'z');
-    // A check valve and an isolating valve on its discharge.
+    // Its isolating valves, motorised (the owner, 2026-10-26): set in
+    // once its controller's parts are made, below.
+    isolators.push(
+      { at: [x, y, B.suctionZ - 0.12], name: `P${n} suction valve` },
+      { at: [x, y, B.dischargeZ + 0.11], name: `P${n} discharge valve` },
+    );
+    // A check valve on its discharge.
     t.cyl(
       object,
       t.paint(FINISH.brass, 0.35, 0.7),
@@ -165,7 +172,6 @@ export function createBoosterSet(
       'z',
       18,
     );
-    t.butterflyValve(object, 50, [x, y, B.dischargeZ + 0.11], 'z');
     // The stack of stages, its sleeve, and the motor with its drive on top.
     t.cyl(object, steel, 0.075, 0.5, x, 0.58, z, 'y', 24);
     t.cyl(object, black, 0.09, 0.04, x, 0.85, z, 'y', 24);
@@ -192,6 +198,24 @@ export function createBoosterSet(
   }
   // The control unit, on its post at the east end, facing the front.
   const parts = createPartSet();
+  // Each pump's suction and discharge valves, motorised and driven by
+  // its controller (the owner, 2026-10-26): open while the set is
+  // powered and in service, shut on a low-water trip or with its power
+  // off, isolating the pumps; RESET opens them again.
+  for (const v of isolators) {
+    const valve = parts.add(
+      createActuatedButterflyValve(kit, 50, 'z', v.name, {
+        open: () => {
+          const r = feed.read();
+          return r.powered && !r.tripped;
+        },
+        set: () => {},
+        power: () => feed.read().powered,
+      }),
+    );
+    valve.object.position.set(...v.at);
+    object.add(valve.object);
+  }
   const panel = new Group();
   const cx = B.w / 2 - 0.22;
   panel.position.set(cx, 1.05, B.d / 2 - 0.12);
