@@ -67,7 +67,7 @@ const C = MAIN_CORRIDOR;
  * engineer's office (4 m); east, the air handling plant (17.5 m) and the
  * control room (5.5 m); south, the lounge pool's plant room (12 m), the
  * boiler house (8 m) and the electrical switch room (5 m); west, the
- * loading bay (7.5 m), and the footbath's (5 m) and the jacuzzi's (8 m)
+ * loading bay (14.3 m, prompt 073), and the footbath's (5 m) and the jacuzzi's (8 m)
  * plant rooms. The wet hall has two pairs, opposite each other: east, in
  * the middle of its wall, for its stair; west, at the north end of its
  * wall by the loading bay's, for its trolley ramp; in that order.
@@ -80,9 +80,9 @@ export const CORRIDOR_DOORS: readonly CorridorDoor[] = [
   { wall: 'south', at: 6.2, to: 'plant_pool_01' },
   { wall: 'south', at: 16.6, to: 'boiler_house' },
   { wall: 'south', at: 23.5, to: 'switch_room' },
-  { wall: 'west', at: 4, to: 'loading_bay' },
-  { wall: 'west', at: 10.5, to: 'plant_pool_04' },
-  { wall: 'west', at: 17.5, to: 'plant_pool_03' },
+  { wall: 'west', at: 7.4, to: 'loading_bay' },
+  { wall: 'west', at: 17.25, to: 'plant_pool_04' },
+  { wall: 'west', at: 23.95, to: 'plant_pool_03' },
   // The wet hall's stair entrance, in the middle of its east wall.
   { wall: 'inner-east', at: 14, to: 'wet_hall' },
   // The west pair at the north end of its wall, by the loading bay's: the

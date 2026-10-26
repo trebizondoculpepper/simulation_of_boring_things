@@ -72,7 +72,7 @@ import {
   WET_HALL_LAYOUT,
   wetHallPartition,
 } from '../logic/shell-rooms';
-import type { ShellDoor, ShellWall } from '../logic/shell-rooms';
+import type { ShellDoor, ShellWall, ShellAperture } from '../logic/shell-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { DEV_ROOM_NAMES } from '../logic/dev-room-links';
 import type { RoomId } from '../logic/dev-room-links';
@@ -115,6 +115,8 @@ export interface ShellView {
   w: number;
   d: number;
   doors: readonly ShellDoor[];
+  /** Openings with no door in them (the loading dock's, prompt 073). */
+  apertures?: readonly ShellAperture[];
   /** Its floor's level, and its roof's, over the doors' level (0). */
   floor: number;
   roof: number;
@@ -260,6 +262,25 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
         face,
       );
     }
+    // Over each opening with no door, its lintel and the wall above.
+    for (const o of (v.apertures ?? []).filter((o) => o.wall === wall)) {
+      span(
+        o.at - o.w / 2,
+        o.at + o.w / 2,
+        o.h + CONCRETE_LINTEL.height,
+        v.roof,
+      );
+      addConcreteLintel(
+        group,
+        kit,
+        o.w,
+        t,
+        alongX ? o.at : at,
+        o.h,
+        alongX ? at : o.at,
+        alongX,
+      );
+    }
     for (const d of v.doors.filter((d) => d.wall === wall)) {
       const a = d.at - shellOpening(d) / 2;
       const b = d.at + shellOpening(d) / 2;
@@ -352,6 +373,26 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
     ) &&
     !(wall === facing && Math.abs(s - (besideDoor ? 4 : 0)) < 1.6);
   for (const wall of ['north', 'south'] as const) {
+    // A wall with openings: one batten over each opening, and no others
+    // (the owner, 2026-10-26).
+    const over = (v.apertures ?? []).filter((o) => o.wall === wall);
+    if (over.length) {
+      for (const o of over) {
+        const z = wall === 'north' ? -hd + 0.05 : hd - 0.05;
+        // Over the shutter's barrel box, which rolls up over the lintel.
+        const oy = v.floor + o.h + 1.25;
+        addWallBatten(
+          group,
+          battens,
+          o.at,
+          oy,
+          z,
+          'x',
+          wall === 'north' ? 1 : -1,
+        );
+      }
+      continue;
+    }
     const n = Math.max(1, Math.round(v.w / 5));
     for (let i = 0; i < n; i++) {
       const s = -hw + ((i + 0.5) * v.w) / n;

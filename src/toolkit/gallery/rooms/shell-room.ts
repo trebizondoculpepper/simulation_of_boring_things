@@ -1,3 +1,6 @@
+import { createDockFittings, dockPalletSolids } from '../views/dock-fittings';
+import { SHELL_WALL } from '../logic/shell-rooms';
+import { createDockOutside } from '../views/dock-outside';
 import { createInspector } from '../views/inspect-pick';
 import { computed, signal } from '@preact/signals-core';
 import {
@@ -116,20 +119,44 @@ const airSurfaces = gantries(airBox());
 /** One of the main plant's empty rooms (`logic/shell-rooms.ts`), in its own scene. */
 export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
   const spec = SHELL_ROOMS[id];
-  const room = { w: spec.w, d: spec.d, doors: spec.doors };
+  const room = {
+    w: spec.w,
+    d: spec.d,
+    doors: spec.doors,
+    apertures: 'apertures' in spec ? spec.apertures : undefined,
+  };
   return runShell(canvas, {
     self: id,
     room,
-    build: (metre, kit) =>
-      createShellRoom(metre, kit, {
+    build: (metre, kit) => {
+      const built = createShellRoom(metre, kit, {
         ...room,
         floor: 0,
         roof: spec.height,
         // The control room's walls are its mimics': no title card there.
-        title: id === 'control_room' ? null : spec.title,
+        title:
+          id === 'control_room' || id === 'loading_bay' ? null : spec.title,
         note: spec.note,
         seed: SEEDS[id],
-      }),
+      });
+      // The loading dock's openings look out on the yard; its fittings
+      // and pallets (prompt 073).
+      if (id === 'loading_bay') {
+        built.group.add(
+          createDockOutside(kit, {
+            wallZ: -spec.d / 2 - SHELL_WALL,
+            width: spec.w,
+            thickness: SHELL_WALL,
+          }).group,
+          createDockFittings(kit, {
+            wallZ: -spec.d / 2,
+            thickness: SHELL_WALL,
+            apertures: room.apertures ?? [],
+          }).group,
+        );
+      }
+      return built;
+    },
     // The air plant's gantries and stair: walked on, or under, by the
     // height one comes from; their handrails only up on them.
     floorAt:
@@ -138,7 +165,10 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
         : () => 0,
     levelSolids:
       id === 'air_plant' ? (y) => levelSolids(airSurfaces, y) : undefined,
-    solids: shellSolids(room),
+    solids: [
+      ...shellSolids(room),
+      ...(id === 'loading_bay' ? dockPalletSolids() : []),
+    ],
     // Just inside its first door, looking into the room.
     start: (() => {
       const p = shellDoorPlace(room, spec.doors[0]);

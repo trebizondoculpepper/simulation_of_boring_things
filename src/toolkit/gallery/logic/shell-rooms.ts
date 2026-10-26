@@ -30,6 +30,18 @@ export interface ShellDoor {
   kind?: 'pair' | 'single';
 }
 
+/**
+ * An opening in a shell room's wall with no door in it (the loading dock's
+ * lorry openings, prompt 073): its wall, its middle along it, its clear
+ * width and height. The walker is stopped at its edge.
+ */
+export interface ShellAperture {
+  wall: ShellWall;
+  at: number;
+  w: number;
+  h: number;
+}
+
 export interface ShellSpec {
   id: RoomId;
   title: string;
@@ -40,6 +52,8 @@ export interface ShellSpec {
   /** A plant space's generated services ceiling, or an office's plain one. */
   ceiling: 'services' | 'plain';
   doors: readonly ShellDoor[];
+  /** Openings with no door in them, if any. */
+  apertures?: readonly ShellAperture[];
   /** What it is for, on its title card. */
   note: string;
 }
@@ -65,7 +79,12 @@ export const SHELL_ROOMS = {
   loading_bay: {
     id: 'loading_bay',
     title: 'LOADING BAY',
-    w: 7.5,
+    // A two-bay dock (prompt 073; the owner, 2026-10-26): its outside wall
+    // the north, its two lorry openings in it either side of a pier, the
+    // lorries backed up to them from the goods yard, rear ends only.
+    // As wide as the corridor's west side allows (the owner, 2026-10-26:
+    // room at each end to set pallets down beside the openings).
+    w: 14.3,
     d: 12,
     height: 7,
     ceiling: 'services',
@@ -76,7 +95,15 @@ export const SHELL_ROOMS = {
       { wall: 'east', at: -2, to: 'hypo_store' },
       { wall: 'west', at: -3, to: 'acid_store' },
     ],
-    note: 'the tanker stand, and the stores’ fill points',
+    // 3.5 m clear, 4.5 m high, either side of a 2.6 m pier, wide enough
+    // for its doorway to the yard and that door's lintel between the
+    // shutters' guides (the owner, 2026-10-26; the door opened in 080),
+    // 2.35 m of wall at each end.
+    apertures: [
+      { wall: 'north', at: -3.05, w: 3.5, h: 4.5 },
+      { wall: 'north', at: 3.05, w: 3.5, h: 4.5 },
+    ],
+    note: 'two bays: chemicals by tanker on the left, a generator on the right',
   },
   hypo_store: {
     id: 'hypo_store',
@@ -224,19 +251,25 @@ export function shellWallPieces(
     w: number;
     d: number;
     doors: readonly ShellDoorway[];
+    apertures?: readonly ShellAperture[];
   },
   wall: ShellWall,
 ): [number, number][] {
   const { half } = rectWalls(room.w, room.d)[wall];
   const t = SHELL_WALL;
-  const cuts = room.doors
-    .filter((d) => d.wall === wall)
-    .sort((a, b) => a.at - b.at);
+  const cuts = [
+    ...room.doors
+      .filter((d) => d.wall === wall)
+      .map((d) => ({ at: d.at, w: shellOpening(d) })),
+    ...(room.apertures ?? [])
+      .filter((a) => a.wall === wall)
+      .map((a) => ({ at: a.at, w: a.w })),
+  ].sort((a, b) => a.at - b.at);
   let start = -half - t;
   const pieces: [number, number][] = [];
   for (const d of cuts) {
-    pieces.push([start, d.at - shellOpening(d) / 2]);
-    start = d.at + shellOpening(d) / 2;
+    pieces.push([start, d.at - d.w / 2]);
+    start = d.at + d.w / 2;
   }
   pieces.push([start, half + t]);
   return pieces;
@@ -247,10 +280,17 @@ export function shellSolids(room: {
   w: number;
   d: number;
   doors: readonly ShellDoorway[];
+  apertures?: readonly ShellAperture[];
 }): Footprint[] {
-  return (['north', 'east', 'south', 'west'] as const).flatMap((wall) =>
-    shellWallPieces(room, wall).map(([a, b]) => across(room, wall, a, b)),
-  );
+  return [
+    ...(['north', 'east', 'south', 'west'] as const).flatMap((wall) =>
+      shellWallPieces(room, wall).map(([a, b]) => across(room, wall, a, b)),
+    ),
+    // Each opening's edge: the walker stops there (the drop to the yard).
+    ...(room.apertures ?? []).map((a) =>
+      across(room, a.wall, a.at - a.w / 2, a.at + a.w / 2),
+    ),
+  ];
 }
 
 /**
