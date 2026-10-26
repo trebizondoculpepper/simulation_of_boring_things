@@ -6,6 +6,8 @@ import { plantTools } from './plant-tools';
 import { createGratingDeck } from './railings';
 import { createUltrasonicLevel } from './ultrasonic-level';
 import { createStaffGauge } from './staff-gauge';
+import { createTankLadder } from './tank-ladder';
+import { createLifebuoy } from '../../general-safety/views/lifebuoy';
 import { createSafetySign } from '../../general-safety/views/safety-signs';
 import { slabAround } from '../../../gallery/logic/slab-openings';
 
@@ -262,6 +264,54 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     run([x1, z0], [x1, z1]);
     run([x0, z1], [x1, z1]);
     run([x0, z0], [x0, z1]);
+    // Its warnings on the rail, facing out on every side (the owner,
+    // 2026-10-26), between its top and knee rails: the pit's danger, and
+    // that its covers carry no one; at its gate, entry by permit only.
+    const hang = (
+      pictograms: Parameters<typeof createSafetySign>[1],
+      lines: Parameters<typeof createSafetySign>[2],
+      x: number,
+      z: number,
+      yaw: number,
+    ) => {
+      const sign = createSafetySign(kit, pictograms, lines);
+      sign.scale.setScalar(0.85);
+      sign.position.set(x, 0.8, z);
+      sign.rotation.y = yaw;
+      group.add(sign);
+    };
+    const danger = ['DANGER', 'Deep pit', 'Risk of falling'] as const;
+    const covers = [
+      'Do not stand',
+      'on the covers',
+      'Not load-bearing',
+    ] as const;
+    const out = 0.03;
+    // North, toward the aisle, either side of the gate; and the gate's own.
+    hang(['general'], danger, rail.gate.at - 1.8, z0 - out, Math.PI);
+    hang(['no-entry'], covers, rail.gate.at + 1.6, z0 - out, Math.PI);
+    hang(
+      ['confined'],
+      ['Authorised persons only', 'Entry by permit'],
+      rail.gate.at,
+      z0 - out,
+      Math.PI,
+    );
+    // A lifebuoy on the rail beside the gate, with its throw line.
+    {
+      const buoy = createLifebuoy(kit);
+      buoy.rotation.y = Math.PI;
+      buoy.position.set(rail.gate.at - 0.9, 0.75, z0 - out);
+      group.add(buoy);
+    }
+    // South.
+    hang(['general'], danger, -1.2, z1 + out, 0);
+    hang(['no-entry'], covers, 1.2, z1 + out, 0);
+    // East and west.
+    hang(['general'], danger, x1 + out, -0.8, Math.PI / 2);
+    hang(['no-entry'], covers, x1 + out, 0.8, Math.PI / 2);
+    hang(['general'], danger, x0 - out, -0.8, -Math.PI / 2);
+    hang(['no-entry'], covers, x0 - out, 0.8, -Math.PI / 2);
   }
   // The pump's davit outside the rail on the east, its arm reaching over
   // it to the hatch over the sump, its chain block hanging from it.
@@ -299,6 +349,21 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   level.group.position.set(-L / 2 + 1.0, -0.42, -W / 2 + 0.45);
   group.add(level.group);
   t.box(group, steel, 0.08, 0.05, 0.5, -L / 2 + 1.0, -0.12, -W / 2 + 0.25);
+  // Its way out (the owner, 2026-10-26: no one who fell in could climb
+  // out of it): a fixed stainless ladder down its east wall under its
+  // hatch, at the hatch's north edge clear of the sump, from just under
+  // the hatch to its floor; its handholds stop under the hatch, which
+  // closes over it.
+  {
+    const ladder = createTankLadder(kit, {
+      depth: D - 0.05,
+      standOff: 0.18,
+      extension: -0.05,
+    });
+    ladder.rotation.y = -Math.PI / 2;
+    ladder.position.set(L / 2, -0.05, W / 2 - p.hatch + 0.15);
+    group.add(ladder);
+  }
   // Its float switches (the owner, 2026-10-26), in a row by its sump on
   // a bracket from its east wall under the gratings: each on its cable to
   // its level, hanging when dry, tilted up on the water when it reaches
