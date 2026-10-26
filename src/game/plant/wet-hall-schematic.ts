@@ -99,18 +99,14 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
     ...electrics.nodes,
   ],
   links: [
+    // The make-up line (the owner, 2026-10-26), as the water regulations
+    // have it: the town main in through the utility's meter and our own
+    // flowmeter, into the break tank across its Category 5 air gap; the
+    // booster set drawing from the tank, its discharge the boosted make-up
+    // main out to the pool plant rooms.
     link(
-      'Town main to the break tank',
+      'Town main to the meter',
       ['town-main', 'out'],
-      ['break-tank', 'inlet'],
-      'water',
-    ),
-    // The make-up line (the owner, 2026-10-26): the break tank's outlet,
-    // the utility's meter, our own flowmeter, the booster set's suction;
-    // its discharge the make-up main to the pools.
-    link(
-      'Break tank to the meter',
-      ['break-tank', 'outlet'],
       ['meter', 'inlet'],
       'water',
     ),
@@ -121,8 +117,14 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
       'water',
     ),
     link(
-      'Flowmeter to the booster set',
+      'Flowmeter to the break tank',
       ['flowmeter', 'outlet'],
+      ['break-tank', 'inlet'],
+      'water',
+    ),
+    link(
+      'Break tank to the booster set',
+      ['break-tank', 'outlet'],
       ['booster', 'suction'],
       'water',
     ),
@@ -181,14 +183,14 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
   fittings: [
     valve(
       'valve-0031',
-      'Town main to the break tank',
+      'Town main to the meter',
       'source',
       'open',
       'townMainStop',
     ),
     valve(
       'valve-0032',
-      'Break tank to the meter',
+      'Break tank to the booster set',
       'source',
       'open',
       'breakTankOutlet',

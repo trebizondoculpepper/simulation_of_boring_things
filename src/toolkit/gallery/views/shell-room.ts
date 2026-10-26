@@ -1,6 +1,7 @@
 import {
   BoxGeometry,
   CanvasTexture,
+  CylinderGeometry,
   Group,
   Mesh,
   MeshStandardMaterial,
@@ -418,6 +419,8 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
     /** Its wall battens' materials, and their height over its floor. */
     battens,
     battenY: y,
+    /** A printed card: a sign's plate, with its lines. */
+    card,
   };
 }
 
@@ -644,6 +647,31 @@ export function createWetHall(metre: number, kit: PanelKit) {
     const dw = L.door.maxX - L.door.minX;
     const dx = (L.door.minX + L.door.maxX) / 2;
     wallBox(dw, H - L.door.height, t, dx, floorY + (L.door.height + H) / 2, z);
+  }
+  {
+    // The make-up bay's two connections through the north wall: a sleeve
+    // each, its pipe's way through, and a plate naming it (the owner,
+    // 2026-10-26: where the town main comes in, and where the boosted
+    // make-up goes out to the pool plant rooms).
+    const R = WET_HALL.side / 2 - SHELL_WALL;
+    const sleeve = paint('#8d9392', 0.45, 0.6);
+    const plate = (text: string, x: number, y: number) => {
+      const c = shell.card(1.3, 0.2, [text]);
+      c.position.set(x, floorY + y, -R + 0.006);
+      group.add(c);
+    };
+    const { townMainIn: tin, makeUpMainOut: out } = L;
+    for (const [x, y, d] of [
+      [tin.x, tin.y, 0.1],
+      [out.x, out.y, 0.1],
+    ] as const) {
+      const ring = new Mesh(new CylinderGeometry(d, d, 0.06, 20), sleeve);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(x, floorY + y, -R + 0.03);
+      group.add(ring);
+    }
+    plate('TOWN MAIN IN', tin.x, tin.y + 0.3);
+    plate('MAKE-UP MAIN TO POOL PLANT ROOMS', out.x, out.y + 0.3);
   }
   {
     // Its battens and trunking, on both faces of each length of it.
