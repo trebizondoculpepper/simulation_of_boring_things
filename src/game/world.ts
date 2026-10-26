@@ -9,6 +9,7 @@ import { installedValveOpen } from './plant/installed-valves';
 import { actOnZoneMusic, newZoneMusic, stepZoneMusic } from './plant/music';
 import { actOnFireAlarm, newFireAlarm } from './plant/fire-alarm';
 import type { FireAlarmAction, FireAlarmState } from './plant/fire-alarm';
+import type { PitPumpAction } from './plant/wet-hall';
 import type { ZoneMusicState, ZoneMusicAction } from './plant/music';
 /**
  * The game's one world state: everything that carries on whichever room
@@ -59,6 +60,8 @@ import {
   newWetHall,
   resetBooster,
   stepWetHall,
+  actOnPitPumps,
+  pitDischargeRate,
 } from './plant/wet-hall';
 import type { WetHallState } from './plant/wet-hall';
 import { newBathers, poolAppeal, stepBathers } from './bathers';
@@ -220,7 +223,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 38;
+export const WORLD_VERSION = 39;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -383,7 +386,8 @@ export type WorldAction =
   /** The boiler house's gas safety worked: its emergency stop, GAS RESET, ECV or detector TEST. */
   | { type: 'boiler-gas'; action: BoilerGasAction }
   | { type: 'music'; action: ZoneMusicAction }
-  | { type: 'fire-alarm'; action: FireAlarmAction };
+  | { type: 'fire-alarm'; action: FireAlarmAction }
+  | { type: 'pit-pumps'; action: PitPumpAction };
 
 /** The jacuzzi's drain valve, open or shut, and with it its pool's drain-down. */
 const jacuzziDrainDown = (world: World, open: boolean): World => ({
@@ -539,6 +543,14 @@ export function applyAction(world: World, action: WorldAction): World {
       const motors = actOnStarter(world.motors, action.tag, action.action);
       return motors === world.motors ? world : { ...world, motors };
     }
+    case 'pit-pumps':
+      return {
+        ...world,
+        wetHall: {
+          ...world.wetHall,
+          pitPumps: actOnPitPumps(world.wetHall.pitPumps, action.action),
+        },
+      };
     case 'fire-alarm':
       return {
         ...world,
@@ -836,11 +848,7 @@ export function stepWorld(world: World, delta: number): World {
     share,
     world.ambient,
     // The sewer's consent, less the backwash's discharge while it runs.
-    Math.max(
-      0,
-      WET_HALL_PLANT.sewerConsent -
-        (world.wetHall.discharging ? WET_HALL_PLANT.dischargeRate : 0),
-    ),
+    Math.max(0, WET_HALL_PLANT.sewerConsent - pitDischargeRate(world.wetHall)),
     footbathThroughFilter(world),
     // The Olympic's circulation, as its battery's valves and beds give it.
     (running) => {

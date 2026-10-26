@@ -275,6 +275,14 @@ function said(
         severity: a.act === 'stop' && a.pressed ? 'alarm' : 'info',
       };
     }
+    case 'pit-pumps':
+      return {
+        subject: 'PIT PUMPS',
+        text:
+          action.action.act === 'duty'
+            ? `pump ${action.action.pump + 1} selected duty`
+            : `pump ${action.action.pump + 1} switched to ${action.action.mode.toUpperCase()}`,
+      };
     case 'fire-alarm':
       return {
         subject: `FIRE ALARM ${action.action.point.toUpperCase()}`,

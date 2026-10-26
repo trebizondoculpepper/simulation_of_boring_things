@@ -1,3 +1,4 @@
+import type { PitPumpAction } from '../../../game/plant/wet-hall';
 import { decorativeKind } from '../logic/world-in-model';
 import { createSpaSandFilter } from '../../components/plant/views/spa-pack-parts';
 import {
@@ -141,6 +142,7 @@ import { roomStructure } from '../logic/room-structure';
 import { MONITOR_POST, ozoneMonitorPlace } from '../logic/ozone-monitor';
 import { createPipe } from '../../components/core/views/pipe-kinds';
 import {
+  pitFloats,
   BACKWASH_PIT,
   PIT_FLOATS,
   WET_HALL_PLANT,
@@ -476,6 +478,22 @@ function modelFor(
   // at the world's level.
   if (kind === 'backwash-tank' && room === 'wet_hall') {
     const pit = createBackwashPit(kit, {
+      // Its pump control panel, working the world's sump pumps.
+      ...(typeof window === 'undefined'
+        ? {}
+        : {
+            controls: {
+              state: () => {
+                const wh = roomWorld().world.value.wetHall;
+                return {
+                  ...wh.pitPumps,
+                  high: pitFloats(wh.backwashTank).high,
+                };
+              },
+              act: (action: PitPumpAction) =>
+                roomWorld().dispatch({ type: 'pit-pumps', action }),
+            },
+          }),
       length: BACKWASH_PIT.length,
       width: BACKWASH_PIT.width,
       depth: BACKWASH_PIT.depth,
@@ -500,17 +518,15 @@ function modelFor(
     const holder = new Group();
     holder.add(pit.group);
     if (typeof window === 'undefined') return holder;
-    const parts = createPartSet();
-    for (const [o, use] of pit.uses) parts.uses.set(o, use);
     return {
       object: holder,
-      parts,
+      parts: pit.parts,
       update: (delta: number) => {
         pit.update(delta);
         const wh = roomWorld().world.value.wetHall;
         pit.setDepth(backwashPitDepth(wh.backwashTank));
-        // Its duty pump runs while the pit discharges.
-        pit.setPumps([wh.discharging, false]);
+        // Its sump pumps as the world runs them.
+        pit.setPumps(wh.pitPumps.running);
       },
       dispose: () => pit.dispose(),
       // Its rail, davit, shut gate and open hatch, in the room's frame.

@@ -1876,7 +1876,11 @@ export function wetHallPipework(): { runs: PipeRun[] } {
           // the machine it leaves (its lever, open, lies along it); on a
           // riser, out to one side.
           facing: (axis === 'y'
-            ? [1, 0, 0]
+            ? // The pit's discharge isolator turned west, its lever clear
+              // of the hatch's lid as it opens (the owner, 2026-10-26).
+              v.fitting === 'valve-0034'
+              ? [-1, 0, 0]
+              : [1, 0, 0]
             : axis === 'x'
               ? [Math.sign(v.along[0]) || 1, 0, 0]
               : [0, 0, Math.sign(v.along[2]) || 1]) as Vec3,

@@ -1,3 +1,16 @@
+import { signal } from '@preact/signals-core';
+import {
+  createPartSet,
+  pilotLight,
+  pushButton,
+  selector,
+} from '../../core/parts/parts';
+import type { Part } from '../../core/parts/parts';
+import { panelMakerMark } from '../../core/views/panel-maker-mark';
+import type {
+  PitPumpAction,
+  PitPumpMode,
+} from '../../../../game/plant/wet-hall';
 import { createBrandBand } from '../../core/views/brand-badge';
 import { partAudio } from '../../core/audio/part-audio';
 import { pumpSound } from './pump-sound';
@@ -5,7 +18,6 @@ import { BOOSTER_PUMP } from '../logic/pump-sound';
 import { markComponent } from '../../core/views/component-identity';
 import {
   Group,
-  Object3D,
   Mesh,
   MeshStandardMaterial,
   PlaneGeometry,
@@ -44,7 +56,21 @@ export interface PitFloatSpec {
   colour: string;
 }
 
+/** What the pit's pump control panel reads and works (the world's, in a room). */
+export interface PitPumpControls {
+  state(): {
+    modes: readonly PitPumpMode[];
+    duty: 0 | 1;
+    running: readonly boolean[];
+    /** Its HIGH float tilted up. */
+    high: boolean;
+  };
+  act(a: PitPumpAction): void;
+}
+
 export interface BackwashPitSpec {
+  /** Its pump control panel's binding; a panel standing alone without. */
+  controls?: PitPumpControls;
   /** Its inside, metres: length along x, width along z, depth floor to slab. */
   length: number;
   width: number;
@@ -697,6 +723,139 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       },
     };
   })();
+  // Its pump control panel (the owner, 2026-10-26), by Penfold Controls,
+  // on a post outside its rail north of its gate, facing the walkway east
+  // of it: for each pump its HAND · OFF · AUTO selector and RUN lamp; DUTY
+  // 1 and DUTY 2, the duty's lit; its HIGH LEVEL alarm lamp. And each
+  // pump's power cable from it, down its post into a duct cast in the
+  // floor, out under the gratings by the hatch and down beside the pump's
+  // guide rails to its motor.
+  const parts = createPartSet();
+  let panelUpdate = () => {};
+  {
+    const rx = L / 2 + w + PIT_RAIL.off;
+    const post = { x: rx + 0.55, z: -1.3 };
+    const grey = t.paint('#c9cdc8', 0.5);
+    t.box(
+      group,
+      t.paint(FINISH.galvanised, 0.45, 0.6),
+      0.06,
+      1.1,
+      0.06,
+      post.x + 0.04,
+      0.55,
+      post.z,
+    );
+    const panel = new Group();
+    panel.position.set(post.x, 1.3, post.z);
+    panel.rotation.y = Math.PI / 2;
+    group.add(panel);
+    const PW = 0.46;
+    const PH = 0.5;
+    t.box(panel, grey, PW, PH, 0.12, 0, 0, -0.06);
+    panelMakerMark(kit, panel, { width: PW, height: PH, z: 0.001 });
+    const name = createMicroLabel(kit, 'PIT PUMPS P-601 / P-602', {
+      height: 0.018,
+      ink: '#151515',
+      plate: '#f0ede3',
+    });
+    name.position.set(-0.04, PH / 2 - 0.035, 0.001);
+    panel.add(name);
+    const mount = <P extends Part>(part: P, px: number, py: number) => {
+      parts.add(part);
+      part.object.position.set(px, py, 0.002);
+      part.object.scale.setScalar(0.8);
+      panel.add(part.object);
+      return part;
+    };
+    const c = p.controls;
+    const MODES: PitPumpMode[] = ['hand', 'off', 'auto'];
+    const runLit = [signal(false), signal(false)];
+    const dutyLit = [signal(false), signal(false)];
+    const highLit = signal(false);
+    ([0, 1] as const).forEach((k) => {
+      const x = k === 0 ? -0.11 : 0.11;
+      mount(
+        selector(kit, {
+          positions: 3,
+          legend: 'HAND · OFF · AUTO',
+          name: `Pit pump ${k + 1} selector`,
+          initial: 2,
+          ...(c
+            ? {
+                bound: {
+                  get value() {
+                    return MODES.indexOf(c.state().modes[k] as PitPumpMode);
+                  },
+                  set: (n: number) =>
+                    c.act({ act: 'mode', pump: k, mode: MODES[n] }),
+                },
+              }
+            : {}),
+        }),
+        x,
+        0.09,
+      );
+      mount(
+        pilotLight(kit, {
+          colour: 'green',
+          legend: `P${k + 1} RUN`,
+          drive: runLit[k],
+          name: `Pit pump ${k + 1} run lamp`,
+        }),
+        x,
+        -0.04,
+      );
+      mount(
+        pushButton(kit, {
+          colour: 'white',
+          legend: `DUTY ${k + 1}`,
+          head: 'illuminated',
+          lamp: dutyLit[k],
+          name: `Pit pump ${k + 1} duty`,
+          action: () => c?.act({ act: 'duty', pump: k }),
+        }),
+        x,
+        -0.15,
+      );
+    });
+    mount(
+      pilotLight(kit, {
+        colour: 'red',
+        legend: 'HIGH LEVEL',
+        drive: highLit,
+        name: 'Pit high level lamp',
+      }),
+      0,
+      -0.04,
+    );
+    panelUpdate = () => {
+      if (!c) return;
+      const s = c.state();
+      for (const k of [0, 1] as const) {
+        runLit[k].value = s.running[k];
+        dutyLit[k].value = s.duty === k;
+      }
+      highLit.value = s.high;
+    };
+    // Each pump's power cable.
+    const cable = t.paint('#1b1d1e', 0.7);
+    const sumpFloor = -D - p.sump.depth;
+    const px = L / 2 - 0.75;
+    [W / 2 - 0.3, W / 2 - 0.9].forEach((z, k) => {
+      const railX = px - 0.22 + 0.04;
+      const pts: [number, number, number][] = [
+        [post.x, 1.05, post.z + 0.02 * (k - 0.5)],
+        [post.x, -0.12, post.z + 0.02 * (k - 0.5)],
+        [railX, -0.12, post.z + 0.02 * (k - 0.5)],
+        [railX, -0.12, z],
+        [railX, sumpFloor + 0.7, z],
+        [px, sumpFloor + 0.66, z],
+      ];
+      for (let i = 1; i < pts.length; i++)
+        t.rod(group, cable, pts[i - 1], pts[i], 0.008, 6);
+    });
+  }
   // Its way out (the owner, 2026-10-26: no one who fell in could climb
   // out of it): a fixed stainless ladder down its east wall under its
   // hatch, at the hatch's north edge clear of the sump, from just under
@@ -781,7 +940,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   const cover = { open: false, angle: 0 };
   const GATE_OPEN = 1.6;
   const LID_OPEN = 1.75;
-  const uses = new Map<Object3D, () => void>();
+  const uses = parts.uses;
   leaf.traverse((o) => uses.set(o, () => (gate.open = !gate.open)));
   for (const o of [lid, lidPlate, handle, sign])
     o.traverse((c) => uses.set(c, () => (cover.open = !cover.open)));
@@ -790,8 +949,11 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   return {
     group,
     uses,
+    parts,
     /** Swing its gate and hatch toward where they were left. */
     update(delta: number) {
+      panelUpdate();
+      parts.update(delta);
       gate.angle = toward(gate.angle, gate.open ? GATE_OPEN : 0, delta * 1.6);
       cover.angle = toward(
         cover.angle,
@@ -818,7 +980,10 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     },
     /** Which of its sump pumps run, duty first. */
     setPumps: (running: readonly boolean[]) => station.set(running),
-    dispose: () => station.dispose(),
+    dispose: () => {
+      station.dispose();
+      parts.dispose();
+    },
     /** Its water's depth above its floor, metres. */
     setDepth(metres: number) {
       const d = Math.max(0.02, Math.min(p.topWater, metres));

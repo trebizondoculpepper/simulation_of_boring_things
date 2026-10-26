@@ -117,6 +117,54 @@ export const backwashPitDepth = (m3: number) =>
 /** The booster set's run-on after its last draw, seconds: its hysteresis. */
 export const BOOSTER_RUN_ON = 60;
 
+/** A sump pump's selector on its control panel. */
+export type PitPumpMode = 'hand' | 'off' | 'auto';
+
+/**
+ * The backwash pit's two sump pumps (the owner, 2026-10-26): each its
+ * HAND · OFF · AUTO selector; the duty pump, alternated after each
+ * pump-down to share the wear; and which run.
+ */
+export interface PitPumps {
+  modes: [PitPumpMode, PitPumpMode];
+  duty: 0 | 1;
+  running: [boolean, boolean];
+}
+
+export type PitPumpAction =
+  | { act: 'mode'; pump: 0 | 1; mode: PitPumpMode }
+  | { act: 'duty'; pump: 0 | 1 };
+
+export function actOnPitPumps(p: PitPumps, a: PitPumpAction): PitPumps {
+  if (a.act === 'duty') return { ...p, duty: a.pump };
+  const modes: [PitPumpMode, PitPumpMode] = [...p.modes];
+  modes[a.pump] = a.mode;
+  return { ...p, modes };
+}
+
+/**
+ * Which pumps run: in HAND always; in AUTO, while the floats call, the
+ * duty pump, or the standby if the duty pump is not in AUTO. None
+ * without power.
+ */
+export function pitPumpsRunning(
+  p: PitPumps,
+  called: boolean,
+  power: boolean,
+): [boolean, boolean] {
+  if (!power) return [false, false];
+  const auto = (k: 0 | 1) => p.modes[k] === 'auto';
+  const other = (1 - p.duty) as 0 | 1;
+  const answering = auto(p.duty) ? p.duty : auto(other) ? other : null;
+  return [0, 1].map(
+    (k) => p.modes[k] === 'hand' || (called && answering === k),
+  ) as [boolean, boolean];
+}
+
+/** What its sump pumps put down the sewer, m³/h: each running pump's. */
+export const pitDischargeRate = (s: WetHallState) =>
+  WET_HALL_PLANT.dischargeRate * s.pitPumps.running.filter(Boolean).length;
+
 export interface WetHallState {
   /** Water in the break tank, m³. */
   breakTank: number;
@@ -136,8 +184,13 @@ export interface WetHallState {
   meter: number;
   /** Water in the backwash holding tank, m³. */
   backwashTank: number;
-  /** Whether its discharge pump is running. */
+  /**
+   * Whether its floats call its pumps (`pitFloats`): started by START
+   * tilting up, run on until STOP drops; and whether any pump runs.
+   */
   discharging: boolean;
+  /** Its two sump pumps and their control panel (`pitPumpsRunning`). */
+  pitPumps: PitPumps;
   /** Backwash spilt by the holding tank's overflow, m³ in all. */
   spilt: number;
   /** Its controller's high-high inhibit: its inlet shut, no backwash or rinse taken. */
@@ -154,6 +207,7 @@ export function newWetHall(): WetHallState {
     meter: 0,
     backwashTank: 0,
     discharging: false,
+    pitPumps: { modes: ['auto', 'auto'], duty: 0, running: [false, false] },
     spilt: 0,
     inhibit: false,
   };
@@ -220,11 +274,20 @@ export function stepWetHall(
   // run on until STOP drops.
   const now = pitFloats(filled);
   const discharging = powered(plant) && (s.discharging ? now.stop : now.start);
+  // Its pumps on their selectors and its floats; the duty passed to the
+  // other pump after each pump-down (the owner, 2026-10-26).
+  const running = pitPumpsRunning(s.pitPumps, discharging, powered(plant));
+  const pitPumps: PitPumps = {
+    ...s.pitPumps,
+    running,
+    duty:
+      s.discharging && !discharging
+        ? ((1 - s.pitPumps.duty) as 0 | 1)
+        : s.pitPumps.duty,
+  };
+  const pumped = P.dischargeRate * running.filter(Boolean).length;
   const gravity = drains.discharge ? P.dischargeValveRate : 0;
-  const backwashTank = Math.max(
-    0,
-    filled - (discharging ? P.dischargeRate * hours : 0) - gravity * hours,
-  );
+  const backwashTank = Math.max(0, filled - pumped * hours - gravity * hours);
   const spilt = Math.max(0, backwashTank - P.backwashTank);
   // The booster set: started by any draw and run on after the last, as
   // its pressure vessel and controller would, so it does not start and
@@ -248,6 +311,7 @@ export function stepWetHall(
     meter: s.meter + mainsIn,
     backwashTank: Math.min(P.backwashTank, backwashTank),
     discharging,
+    pitPumps,
     spilt: s.spilt + spilt,
     inhibit,
   };

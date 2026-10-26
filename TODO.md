@@ -154,7 +154,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [ ] The outfall flowmeter's spool on the outfall pipe, and the monitor moved to the dirty side's wall, with the wet hall's redesign (prompt 036).
 - [x] The wet hall laid out afresh to prompt 036's plan, before plumbing: the make-up bay's partition and door, its machines, the backwash pit in the floor (2026-10-26).
 - [ ] The booster set's duty changeover (dev42) taken into the wet hall's world: its duty, valves and pumps in the world state, its DUTY buttons on the wet hall's booster set and mimic.
-- [ ] The pit's pump station's duty alternation and its standby taking over on a trip, in the world; an isolating valve on each riser.
+- [ ] The pit's pump station: a pump trip (and the standby taking over on it); an isolating valve on each riser; the panel's power feed from the room's services.
 - [x] The wet hall's pipework from its model, by its plumber, and `wet_hall` taken off `BEING_LAID_OUT` (2026-10-26).
 - [ ] The wet hall's remaining planning (prompt 036): the bay door's raised threshold;  the backwash inlet's air break over the water drawn; a dirty side mimic; the outfall flowmeter's spool on the discharge.
 - [ ] Rendering: skip drawing what is behind the make-up bay's partition when it cannot be seen (later, the owner, 2026-10-26).
