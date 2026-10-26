@@ -60,7 +60,26 @@ import {
 } from './plant/wet-hall';
 import type { WetHallState } from './plant/wet-hall';
 import { newBathers, poolAppeal, stepBathers } from './bathers';
-import { newLighting, zoneLit, zoneOfRoom } from './plant/lighting';
+import {
+  LIGHTING_ZONE_IDS,
+  actOnLightingBoard,
+  lightingWaysLive,
+  newLighting,
+  stepLighting,
+  zoneLit,
+  zoneOfRoom,
+} from './plant/lighting';
+import type { LightingBoardAction } from './plant/lighting';
+import {
+  batteryCanSupply,
+  newCentralBattery,
+  pressTest,
+  stepCentralBattery,
+} from '../toolkit/components/plant/logic/electrical-room';
+import type {
+  BatteryTest,
+  CentralBattery,
+} from '../toolkit/components/plant/logic/electrical-room';
 import { AMBIENT } from './plant/thermal';
 import type { LightingState, LightingZoneId } from './plant/lighting';
 import { fullOff, fullOn, slowStartAt, slowStartBegin } from './plant/startup';
@@ -192,7 +211,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 32;
+export const WORLD_VERSION = 33;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -224,6 +243,8 @@ export interface World {
   startup: number;
   /** The lighting's switches: DB-LIGHTING and each zone's breaker (`lighting.ts`). */
   lighting: LightingState;
+  /** The emergency lighting's central battery (`electrical-room.ts`). */
+  centralBattery: CentralBattery;
   /** The outside's temperature, °C: everything unheated settles to it (`thermal.ts`). */
   ambient: number;
   /** The toxic gas detection's rooms: their air, detectors and leaks (`gas.ts`). */
@@ -270,6 +291,7 @@ export function newWorld(): World {
     bathers: newBathers(),
     startup: -1,
     lighting: newLighting(),
+    centralBattery: newCentralBattery(),
     ambient: AMBIENT,
     gas: newGasZones(),
     identifiedPlant: newIdentifiedPlant(),
@@ -305,6 +327,12 @@ export type WorldAction =
   | { type: 'weather/ambient'; celsius: number }
   | { type: 'lighting/supply'; on: boolean }
   | { type: 'lighting/zone'; zone: LightingZoneId; on: boolean }
+  /** DB-L1 worked: its main switch, a way's RCBO, a way's TEST. */
+  | { type: 'lighting/board'; action: LightingBoardAction }
+  /** Moisture in a zone's fittings: its circuit's earth leakage set, mA (a scenario's). */
+  | { type: 'lighting/leak'; zone: LightingZoneId; ma: number }
+  /** The central battery's FUNCTION or DURATION TEST key. */
+  | { type: 'battery/test'; kind: BatteryTest }
   | { type: 'gas/leak'; zone: GasZoneId; gramsPerHour: number }
   | { type: 'gas/act'; zone: GasZoneId; act: GasZoneAction }
   | { type: 'plant/valve'; id: string; open: boolean }
@@ -586,11 +614,34 @@ export function applyAction(world: World, action: WorldAction): World {
         ? world
         : {
             ...world,
-            lighting: {
-              ...world.lighting,
-              zones: { ...world.lighting.zones, [action.zone]: action.on },
-            },
+            lighting: actOnLightingBoard(
+              world.lighting,
+              { act: 'way', zone: action.zone, on: action.on },
+              lightingWaysLive(world.plant, world.lighting),
+            ),
           };
+    case 'lighting/board':
+      return {
+        ...world,
+        lighting: actOnLightingBoard(
+          world.lighting,
+          action.action,
+          lightingWaysLive(world.plant, world.lighting),
+        ),
+      };
+    case 'lighting/leak':
+      return {
+        ...world,
+        lighting: {
+          ...world.lighting,
+          leakage: { ...world.lighting.leakage, [action.zone]: action.ma },
+        },
+      };
+    case 'battery/test':
+      return {
+        ...world,
+        centralBattery: pressTest(world.centralBattery, action.kind),
+      };
     case 'plant/full-off':
       return { ...world, plant: fullOff(world.plant), startup: -1 };
     case 'plant/full-on':
@@ -853,6 +904,25 @@ export function stepWorld(world: World, delta: number): World {
     }),
     bathers: stepBathers(world.bathers, world.time, delta, appealOf(world)),
     gas: stepGasZones(world.gas, world.plant, delta),
+    // DB-L1's ways: their circuits' leakage from their halls' air, and
+    // their RCBOs tripping on it.
+    lighting: stepLighting(
+      world.lighting,
+      {
+        lounge: world.pools.pool_01.hallRh,
+        olympic: world.pools.pool_02.hallRh,
+        jacuzzi: world.pools.pool_03.hallRh,
+        footbath: world.pools.pool_04.hallRh,
+      },
+      lightingWaysLive(world.plant, world.lighting),
+      delta,
+    ),
+    // The central battery: charging on its mains, or carrying the
+    // emergency lighting lit in every zone whose lights are out.
+    centralBattery: stepCentralBattery(world.centralBattery, delta, {
+      mains: batteryMains(world),
+      load: emergencyLoad(world),
+    }),
     chemicals: stepChemicalStores(
       world.chemicals,
       dosedVolumes(
@@ -1173,3 +1243,23 @@ function withSolids(world: World, pools: PoolsState, dt: number): PoolsState {
     ]),
   ) as PoolsState;
 }
+
+/** The central battery's mains: the switch room's supply. */
+export const batteryMains = (world: World) =>
+  serviceAvailable(world.plant, 'switch_room', 'power');
+
+/**
+ * Whether a zone's emergency lighting is lit: its normal lighting out (a
+ * central system's relay on each zone's supply, EN 50171), or the battery
+ * in a test; and the system able to supply it.
+ */
+export const emergencyLit = (world: World, zone: LightingZoneId) =>
+  batteryCanSupply(world.centralBattery, batteryMains(world)) &&
+  (!!world.centralBattery.test || !zoneLit(world.plant, world.lighting, zone));
+
+/** The share of the emergency lighting lit, its load on the battery. */
+export const emergencyLoad = (world: World) =>
+  world.centralBattery.test
+    ? 1
+    : LIGHTING_ZONE_IDS.filter((z) => !zoneLit(world.plant, world.lighting, z))
+        .length / LIGHTING_ZONE_IDS.length;

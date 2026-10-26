@@ -131,6 +131,11 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [ ] The rest of the water's condition in the world (prompt 070): temperature, chlorine and the rest from `water-condition.ts` in place of the pools' own fields.
 - [x] The spa cabinets start up like their boards: boot, self test, servos opened in turn, a beeper (2026-10-25).
 - [ ] The jacuzzi and foot spa trials (dev38, dev32) run their cabinets' start-up too.
+- [x] DB-L1 as a TP&N RCBO board with earth-leakage trips; the central battery in the world, lighting the emergency lighting (2026-10-25).
+- [ ] Separate emergency light fittings (maintained exit signs, non-maintained bulkheads) in every room and corridor, in place of the normal fittings' dim emergency level (prompt 052).
+- [ ] The lighting's day-to-day switching by contactors on a time clock or photocell, leaving the RCBOs as protection only.
+- [ ] Moisture in the wet hall's, corridors' and plant rooms' fittings, from their own air, not only the halls'.
+- [ ] A hired generator at the connection point (prompt 052).
 
 ## The operator's manual
 

@@ -3,9 +3,10 @@
  * centre, and the emergency lighting central battery. Pure: the views
  * show it and the parts drive it.
  *
- * Some things are taken as given and not modelled: the incoming supply is
- * a steady 400 V three-phase (the owner's rule), so the central battery's
- * mains never fails of itself, only when a test takes it off.
+ * The central battery is given its mains and its load (the world's,
+ * `world.ts`): its charger carries the emergency lighting while it has
+ * mains; with none, or in a test, the battery does, for its rated three
+ * hours at full load and longer at less.
  */
 
 // ---- Motor starters ----------------------------------------------------------
@@ -146,11 +147,38 @@ export function pressTest(
   return { ...b, test: { kind, left: TEST_LENGTH[kind] } };
 }
 
+/** What it is given: its mains, and its load, the share of its emergency lighting lit (0 to 1). */
+export interface CentralBatteryInputs {
+  mains: boolean;
+  load: number;
+}
+
+/** Whether its battery carries its load now: in a test, or with its mains gone. */
+export const onBattery = (b: CentralBattery, mains = true) =>
+  !!b.test || !mains;
+
+/** Whether it can light its emergency fittings now: its charger on mains, or charge left. */
+export const batteryCanSupply = (b: CentralBattery, mains = true) =>
+  (mains && !b.test) || b.charge > 0;
+
 export function stepCentralBattery(
   b: CentralBattery,
   dt: number,
+  inputs: CentralBatteryInputs = { mains: true, load: 0 },
 ): CentralBattery {
-  if (!b.test) return { ...b, charge: Math.min(1, b.charge + RECHARGE * dt) };
+  // On mains and not in a test: charging, its charger carrying its load.
+  if (!b.test && inputs.mains)
+    return { ...b, charge: Math.min(1, b.charge + RECHARGE * dt) };
+  // Its mains gone: the battery carries what is lit, down to empty.
+  if (!b.test)
+    return {
+      ...b,
+      charge: Math.max(
+        0,
+        b.charge - DISCHARGE * Math.min(1, Math.max(0, inputs.load)) * dt,
+      ),
+    };
+  // A test: every fitting lit, at full load.
   const charge = Math.max(0, b.charge - DISCHARGE * dt);
   const left = b.test.left - dt;
   if (charge <= 0) return { ...b, charge, test: null, last: 'failed' };
@@ -159,18 +187,18 @@ export function stepCentralBattery(
 }
 
 /** The cabinet's status lamps. */
-export function batteryLamps(b: CentralBattery) {
+export function batteryLamps(b: CentralBattery, mains = true) {
   return {
-    mains: !b.test,
-    charging: !b.test && b.charge < 0.999,
+    mains: mains && !b.test,
+    charging: mains && !b.test && b.charge < 0.999,
     fault: b.last === 'failed' || b.healthy < b.circuits,
     low: b.charge < LOW,
   };
 }
 
 /** The battery's voltage: 18 blocks of 12 V, floating at 13.65 V a block. */
-export function batteryVolts(b: CentralBattery) {
-  if (b.test) return 18 * (10.5 + 2.2 * b.charge);
+export function batteryVolts(b: CentralBattery, mains = true) {
+  if (onBattery(b, mains)) return 18 * (10.5 + 2.2 * b.charge);
   return 18 * (b.charge >= 0.999 ? 13.65 : 13.2 + 0.6 * b.charge);
 }
 
@@ -186,15 +214,23 @@ const clock = (s: number) => {
 };
 
 /** Its 20 × 4 display, as the controller writes it. */
-export function batteryDisplay(b: CentralBattery): string[] {
+export function batteryDisplay(b: CentralBattery, mains = true): string[] {
   const percent = `${Math.round(b.charge * 100)}%`.padStart(4);
-  const volts = `${Math.round(batteryVolts(b))}V DC`;
+  const volts = `${Math.round(batteryVolts(b, mains))}V DC`;
   const first = b.test
     ? `${b.test.kind === 'function' ? 'FUNCTION' : 'DURATION'} TEST ${clock(b.test.left)}`
-    : `MAINS OK    ${volts}`;
-  const state = b.test ? 'DISCHARGE' : b.charge < 0.999 ? 'CHARGING' : 'FLOAT';
+    : mains
+      ? `MAINS OK    ${volts}`
+      : `MAINS FAIL  ${volts}`;
+  const state = onBattery(b, mains)
+    ? b.charge > 0
+      ? 'DISCHARGE'
+      : 'EXHAUSTED'
+    : b.charge < 0.999
+      ? 'CHARGING'
+      : 'FLOAT';
   const circuits = `CIRCUITS ${b.healthy}/${b.circuits} ${b.healthy === b.circuits ? 'OK' : 'FAULT'}`;
-  const last = b.test
+  const last = onBattery(b, mains)
     ? `ON BATTERY  ${volts}`
     : b.last === 'passed'
       ? 'LAST TEST PASSED'

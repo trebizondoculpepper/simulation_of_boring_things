@@ -23,3 +23,5 @@ The tank has a grated floor sump and a manual penstock, PL2-T1-DV1 (valve-0107),
 Browser checks rendered the actual hall, picked PL2-T1-LT1 with its current depth, opened the gate to 90 degrees through its Use handler, and inspected the sump and revised overflow rim without JavaScript exceptions. Validation is recorded above.
 
 The exact staged tree was exported separately from the shared workspace and passed typecheck, format checking and its full suite independently: 2,348 tests passed, 10 optional tests skipped. This confirms the change does not depend on the other sessions’ unfinished cabinet, sound, main-drain or gantry-conduit edits.
+
+Publication encountered a concurrent electrical/lighting update on origin/main. It was merged in an isolated checkout, preserving both changelog entries and leaving the live workspace’s unfinished edits untouched. The integrated tree passed typecheck, lint, format checking, 2,356 tests (10 optional skips), and the production build, which advanced it to 0.1.351.

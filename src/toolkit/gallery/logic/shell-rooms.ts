@@ -107,7 +107,7 @@ export const SHELL_ROOMS = {
     height: 7,
     ceiling: 'services',
     doors: [corridor()],
-    note: 'the LV switchboard, the incoming supply, the UPS',
+    note: 'the LV switchboard, the incoming supply, the lighting board, the emergency lighting battery',
   },
   air_plant: {
     id: 'air_plant',

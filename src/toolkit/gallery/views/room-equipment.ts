@@ -80,12 +80,16 @@ import { EXHIBITS as DOSING } from '../rooms/plant/dosing';
 import { EXHIBITS as BALANCE } from '../rooms/plant/balance';
 import { createMainSwitch } from '../../components/plant/views/main-switch';
 import { createLightingBoard } from '../../components/plant/views/lighting-board';
+import { createCentralBattery } from '../../components/plant/views/electrical-switchgear';
+import { batteryMains } from '../../../game/world';
 import {
   LIGHTING_BOARD_WAYS,
   LIGHTING_ZONES,
   LIGHTING_ZONE_IDS,
   lightingBoardLive,
+  wayPhase,
 } from '../../../game/plant/lighting';
+import type { LightingBoardAction } from '../../../game/plant/lighting';
 import { createScenarioSimulator } from './scenario-simulator';
 import { createBuildingSign } from './building-signs';
 import { createSafetySign } from '../../components/general-safety/views/safety-signs';
@@ -156,59 +160,71 @@ import { partAudio } from '../../components/core/audio/part-audio';
 import { createPartSet } from '../../components/core/parts/parts';
 import { createEngineerStorageCupboard } from '../../components/site-dressing/views/engineer-storage-cupboard';
 
+/**
+ * An exhibit of a room's list, by its title: so a model is the one named,
+ * however the list is reordered (a list shifted by an exhibit inserted
+ * once drew the generator point as a switch-fuse and the earth bar as a
+ * placeholder).
+ */
+function byTitle(list: readonly PlantExhibit[], title: string): PlantExhibit {
+  const found = list.find((e) => e.title === title);
+  if (!found) throw new Error(`No exhibit titled ${title}`);
+  return found;
+}
+
 /** Each model the rooms' machines are, by its key in `logic/room-equipment.ts`. */
-const MODELS: Record<string, PlantExhibit> = {
-  'pump-pair': PUMPS[0],
-  'uv-unit': PUMPS[4],
-  'heat-exchanger': PUMPS[5],
+export const MODELS: Record<string, PlantExhibit> = {
+  'pump-pair': byTitle(PUMPS, 'Circulation pumps, duty and standby'),
+  'uv-unit': byTitle(PUMPS, 'UV unit'),
+  'heat-exchanger': byTitle(PUMPS, 'Plate heat exchanger'),
   'pump-panel': PUMP_PANEL_EXHIBIT,
   // In their plant rooms, in service: their POWER on, so their isolators
   // are seen to stop them.
   'jacuzzi-pack': JACUZZI_PACK_IN_SERVICE,
   'spa-pack': SPA_PACK_IN_SERVICE,
-  'ozone-generator': OZONE[0],
-  'dosing-controller': DOSING[4],
-  'hypo-pumps': DOSING[2],
-  'acid-pump': DOSING[3],
-  'level-instruments': BALANCE[4],
-  'boiler-cascade': BOILER[0],
-  'low-loss-header': BOILER[1],
-  'lthw-pumps': BOILER[2],
-  pressurisation: BOILER[3],
-  calorifier: BOILER[4],
-  'gas-train': BOILER[5],
-  'dosing-pot': BOILER[6],
-  'gas-safety': BOILER[7],
-  'combustion-panel': BOILER[8],
-  'mimic-gas': BOILER[9],
-  'mimic-boiler-heat': BOILER[10],
-  'hypo-tank': CHEMICALS[0],
-  'acid-ibc': CHEMICALS[1],
-  'spill-kit': CHEMICALS[2],
-  'safety-shower': CHEMICALS[3],
-  'fill-cabinet': CHEMICALS[4],
-  'ppe-cabinet': CHEMICALS[5],
-  'store-extract': CHEMICALS[6],
-  'store-signs': CHEMICALS[7],
-  'lv-switchboard': ELECTRICAL[0],
-  mcc: ELECTRICAL[1],
-  'central-battery': ELECTRICAL[3],
-  'distribution-board': ELECTRICAL[5],
-  'rotary-isolators': ELECTRICAL[6],
-  'generator-point': ELECTRICAL[7],
-  'earthing-terminal': ELECTRICAL[8],
-  'operator-desk': CONTROL[0],
-  'alarm-printer': CONTROL[1],
-  'water-test-kit': CONTROL[2],
-  'mimic-pool': CONTROL[3],
-  'mimic-heating': CONTROL[4],
-  'mimic-air': CONTROL[5],
-  annunciator: CONTROL[6],
-  'chart-recorders': CONTROL[7],
-  'readout-board': CONTROL[8],
-  'bms-outstation': CONTROL[9],
-  'fire-repeater': CONTROL[11],
-  cctv: CONTROL[12],
+  'ozone-generator': byTitle(OZONE, 'Ozone generator'),
+  'dosing-controller': byTitle(DOSING, 'Controller and sample cells'),
+  'hypo-pumps': byTitle(DOSING, 'Hypochlorite dosing pumps'),
+  'acid-pump': byTitle(DOSING, 'Acid dosing pump'),
+  'level-instruments': byTitle(BALANCE, 'Level instruments'),
+  'boiler-cascade': byTitle(BOILER, 'Condensing boilers in cascade'),
+  'low-loss-header': byTitle(BOILER, 'Low-loss header'),
+  'lthw-pumps': byTitle(BOILER, 'Twin-head LTHW circulator'),
+  pressurisation: byTitle(BOILER, 'Pressurisation unit and expansion vessel'),
+  calorifier: byTitle(BOILER, 'Hot-water calorifier'),
+  'gas-train': byTitle(BOILER, 'Gas train'),
+  'dosing-pot': byTitle(BOILER, 'Dosing pot'),
+  'gas-safety': byTitle(BOILER, 'Gas detection and emergency stop'),
+  'combustion-panel': byTitle(BOILER, 'Combustion and ventilation panel'),
+  'mimic-gas': byTitle(BOILER, 'Mimic: boiler house gas'),
+  'mimic-boiler-heat': byTitle(BOILER, 'Mimic: boiler status and heat output'),
+  'hypo-tank': byTitle(CHEMICALS, 'Sodium hypochlorite bulk tank'),
+  'acid-ibc': byTitle(CHEMICALS, 'Acid IBC on spill pallet'),
+  'spill-kit': byTitle(CHEMICALS, 'Chemical spill kit'),
+  'safety-shower': byTitle(CHEMICALS, 'Safety shower and eyewash'),
+  'fill-cabinet': byTitle(CHEMICALS, 'Delivery fill cabinet'),
+  'ppe-cabinet': byTitle(CHEMICALS, 'PPE cabinet'),
+  'store-extract': byTitle(CHEMICALS, 'Extract and chlorine detection'),
+  'store-signs': byTitle(CHEMICALS, 'Store signs'),
+  'lv-switchboard': byTitle(ELECTRICAL, 'LV main switchboard'),
+  mcc: byTitle(ELECTRICAL, 'Motor control centre'),
+  'central-battery': byTitle(ELECTRICAL, 'Emergency lighting central battery'),
+  'distribution-board': byTitle(ELECTRICAL, 'Distribution board'),
+  'rotary-isolators': byTitle(ELECTRICAL, 'Rotary isolators'),
+  'generator-point': byTitle(ELECTRICAL, 'Generator connection point'),
+  'earthing-terminal': byTitle(ELECTRICAL, 'Main earthing terminal'),
+  'operator-desk': byTitle(CONTROL, "Operator's desk, POOLMON"),
+  'alarm-printer': byTitle(CONTROL, 'Alarm printer'),
+  'water-test-kit': byTitle(CONTROL, 'Water-test kit'),
+  'mimic-pool': byTitle(CONTROL, 'Mimic: main pool circuit'),
+  'mimic-heating': byTitle(CONTROL, 'Mimic: heating'),
+  'mimic-air': byTitle(CONTROL, 'Mimic: air handling'),
+  annunciator: byTitle(CONTROL, 'Alarm annunciator'),
+  'chart-recorders': byTitle(CONTROL, 'Chart recorders'),
+  'readout-board': byTitle(CONTROL, 'Readout board'),
+  'bms-outstation': byTitle(CONTROL, 'BMS outstation'),
+  'fire-repeater': byTitle(CONTROL, 'Fire alarm repeater'),
+  cctv: byTitle(CONTROL, 'CCTV monitor'),
 };
 
 /** The model a room's machine is drawn from, by its key's kind, if any. */
@@ -365,6 +381,15 @@ function modelFor(
   if (kind === 'scenario-simulator') return worldScenarioSimulator(kit);
   // The lighting board, its ways the world's lighting zones.
   if (kind === 'lighting-board') return worldLightingBoard(kit);
+  // The emergency lighting's central battery, the world's.
+  if (kind === 'central-battery' && typeof window !== 'undefined') {
+    const store = roomWorld();
+    return createCentralBattery(kit, {
+      battery: () => store.world.value.centralBattery,
+      mains: () => batteryMains(store.world.value),
+      test: (k) => store.dispatch({ type: 'battery/test', kind: k }),
+    });
+  }
   // The main incoming switch, the whole site's supply in the world.
   if (kind === 'main-switch') return createMainSwitch(kit, mainsFeed());
   if (kind === 'ahu-stack') {
@@ -636,21 +661,32 @@ function worldScenarioSimulator(kit: PanelKit): LiveExhibit {
  */
 function worldLightingBoard(kit: PanelKit): LiveExhibit {
   const store = typeof window === 'undefined' ? null : roomWorld();
+  const board = (action: LightingBoardAction) =>
+    store?.dispatch({ type: 'lighting/board', action });
   const ways = Array.from({ length: LIGHTING_BOARD_WAYS }, (_, i) => {
     const zone = LIGHTING_ZONE_IDS.find((z) => LIGHTING_ZONES[z].way === i + 1);
     if (!zone) return null;
     return {
       legend: LIGHTING_ZONES[zone].name,
+      phase: wayPhase(i + 1),
       on: () => store?.world.value.lighting.zones[zone] ?? true,
-      set: (on: boolean) =>
-        store?.dispatch({ type: 'lighting/zone', zone, on }),
+      set: (on: boolean) => board({ act: 'way', zone, on }),
+      tripped: () => store?.world.value.lighting.tripped?.[zone] ?? false,
+      test: () => board({ act: 'test', zone }),
     };
   });
-  // Its rockers lit while DB-L1 has its supply.
-  return createLightingBoard(kit, ways, () => {
-    const w = store?.world.value;
-    return w ? lightingBoardLive(w.plant, w.lighting) : true;
-  });
+  return createLightingBoard(
+    kit,
+    ways,
+    () => {
+      const w = store?.world.value;
+      return w ? lightingBoardLive(w.plant, w.lighting) : true;
+    },
+    {
+      on: () => store?.world.value.lighting.main ?? true,
+      set: (on) => board({ act: 'main', on }),
+    },
+  );
 }
 
 /** A room's gas detection, bound to the world's gas there. */

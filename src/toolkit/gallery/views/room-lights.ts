@@ -1,8 +1,11 @@
 import { Light, Mesh } from 'three';
 import type { Material, Object3D } from 'three';
 import { zoneLit } from '../../../game/plant/lighting';
+
+/** How much of a room's light its emergency lighting gives, a share of its normal. */
+export const EMERGENCY_SHARE = 0.12;
 import type { LightingZoneId } from '../../../game/plant/lighting';
-import { newWorld } from '../../../game/world';
+import { emergencyLit, newWorld } from '../../../game/world';
 import { roomWorld } from '../../save/world-store';
 
 /**
@@ -77,11 +80,17 @@ export function bindRoomLights(
       const world = store?.world.value ?? fallback;
       const lit = (z: LightingZoneId) =>
         zoneLit(world.plant, world.lighting, z);
+      // Its normal lighting out, the emergency lighting from the central
+      // battery while it has charge (`emergencyLit`): a dim fraction, as
+      // the non-maintained fittings among them give.
+      const emergency = (z: LightingZoneId) =>
+        !lit(z) && emergencyLit(world, z) ? EMERGENCY_SHARE : 0;
       for (const [light, d] of lights)
-        light.intensity = d.base * (lit(d.zone) ? 1 : d.share);
+        light.intensity =
+          d.base * (lit(d.zone) ? 1 : Math.max(d.share, emergency(d.zone)));
       for (const [m, d] of fittings)
         (m as Material & { emissiveIntensity: number }).emissiveIntensity =
-          d.base * (lit(d.zone) ? 1 : 0);
+          d.base * (lit(d.zone) ? 1 : emergency(d.zone));
     },
   };
 }
