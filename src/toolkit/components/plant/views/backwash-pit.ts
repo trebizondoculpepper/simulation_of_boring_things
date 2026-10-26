@@ -736,16 +736,33 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     const rx = L / 2 + w + PIT_RAIL.off;
     const post = { x: rx + 0.55, z: -1.3 };
     const grey = t.paint('#c9cdc8', 0.5);
-    t.box(
-      group,
-      t.paint(FINISH.galvanised, 0.45, 0.6),
-      0.06,
-      1.1,
-      0.06,
-      post.x + 0.04,
-      0.55,
-      post.z,
-    );
+    // Its post behind it (the panel's back at post.x − 0.12), from the
+    // floor to its middle, on a bolted base plate, a bolted bracket
+    // between its top and the panel's back (the owner, 2026-10-26).
+    {
+      const galv = t.paint(FINISH.galvanised, 0.45, 0.6);
+      const bolt = t.paint('#3a3d3f', 0.5, 0.6);
+      const bx = post.x - 0.17;
+      t.box(group, galv, 0.08, 1.3, 0.08, bx, 0.65, post.z);
+      t.box(group, galv, 0.24, 0.015, 0.24, bx, 0.0075, post.z);
+      for (const dx of [-0.08, 0.08])
+        for (const dz of [-0.08, 0.08])
+          t.cyl(group, bolt, 0.012, 0.02, bx + dx, 0.02, post.z + dz, 'y', 6);
+      t.box(group, galv, 0.05, 0.3, 0.2, post.x - 0.145, 1.3, post.z);
+      for (const dy of [-0.1, 0.1])
+        for (const dz of [-0.07, 0.07])
+          t.cyl(
+            group,
+            bolt,
+            0.01,
+            0.012,
+            post.x - 0.118,
+            1.3 + dy,
+            post.z + dz,
+            'x',
+            6,
+          );
+    }
     const panel = new Group();
     panel.position.set(post.x, 1.3, post.z);
     panel.rotation.y = Math.PI / 2;
@@ -845,8 +862,8 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     [W / 2 - 0.3, W / 2 - 0.9].forEach((z, k) => {
       const railX = px - 0.22 + 0.04;
       const pts: [number, number, number][] = [
-        [post.x, 1.05, post.z + 0.02 * (k - 0.5)],
-        [post.x, -0.12, post.z + 0.02 * (k - 0.5)],
+        [post.x - 0.06, 1.05, post.z + 0.03 * (k - 0.5)],
+        [post.x - 0.06, -0.12, post.z + 0.03 * (k - 0.5)],
         [railX, -0.12, post.z + 0.02 * (k - 0.5)],
         [railX, -0.12, z],
         [railX, sumpFloor + 0.7, z],
