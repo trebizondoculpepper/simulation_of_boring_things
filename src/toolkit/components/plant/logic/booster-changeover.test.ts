@@ -7,6 +7,7 @@ import {
   newBoosterChangeover,
   stepChangeover,
 } from './booster-changeover';
+import { SET_PRESSURE } from './booster-set';
 import type { BoosterChangeover } from './booster-changeover';
 
 const run = (
@@ -135,14 +136,13 @@ describe('the booster set’s duty changeover', () => {
     );
   });
 
-  it('has no discharge pressure once stopped, more while boosting', () => {
+  it('holds its set pressure on one pump or two, none once stopped', () => {
     let s = run(newBoosterChangeover(), 2);
-    const one = changeoverPressure(s);
-    expect(one).toBeGreaterThan(3);
-    const boosted = changeoverPressure(
-      run(actOnChangeover(s, { act: 'boost' }), 20),
-    );
-    expect(boosted).toBeGreaterThan(one);
+    expect(changeoverPressure(s)).toBeCloseTo(SET_PRESSURE);
+    const boosted = run(actOnChangeover(s, { act: 'boost' }), 20);
+    // More flow, the same pressure: a constant-pressure set.
+    expect(changeoverFlow(boosted)).toBeGreaterThan(changeoverFlow(s));
+    expect(changeoverPressure(boosted)).toBeCloseTo(SET_PRESSURE);
     s = run(actOnChangeover(s, { act: 'stop' }), 15);
     expect(changeoverPressure(s)).toBe(0);
   });

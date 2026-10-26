@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The booster set holds a constant discharge pressure (the owner, 2026-10-26; its CRE pumps are variable speed): 4 bar on one pump or two, whatever the suction, BOOST adding flow and not pressure; the pressure still builds and falls as pumps run up and coast. Tested in dev42 through stop, start and boost: suction 3.0 bar at rest, 2.5 on one pump, 2.2 boosting; flow 6.2 and 10.5 m³/h.
 - Dev42's suction gauge reads its ideal source, the only thing feeding it (the owner, 2026-10-26): the source's 3 bar less what its resistance takes at the set's flow; the source is rated for the set at 20 m³/h, since at its standard 5 m³/h it could not feed even one pump.
 - Dev42's booster set's discharge gauge follows its pumps (the owner, 2026-10-26): each pump's head as the square of its speed through its valves, a little more with both in parallel while boosting, and none once stopped, nothing holding it into the rig's open sink (`changeoverPressure`).
 - Dev42's booster set has a Kessler-Moody electromagnetic flowmeter (FT-1) in its discharge's run overhead to the sink, reading the set's delivery: one pump's, none while stopped, about 1.7 times one while boosting (the owner, 2026-10-26).

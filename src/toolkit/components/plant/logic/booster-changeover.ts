@@ -177,19 +177,17 @@ export function changeoverFlow(s: BoosterChangeover): number {
 }
 
 /**
- * Its discharge manifold's pressure, bar (the owner, 2026-10-26: none
- * once stopped): each pump's head as the square of its speed, through its
- * valves, the higher of the two; a little more with both in parallel, the
- * pipework's resistance rising with their flow. Into an open sink, nothing
- * holds it once they stop.
+ * Its discharge manifold's pressure, bar. A constant-pressure set (the
+ * owner, 2026-10-26; its CRE pumps are variable speed): its controller
+ * trims the pumps' speed to hold its set pressure whatever the suction,
+ * on one pump or two, so BOOST adds flow, not pressure. The pressure
+ * builds as a pump runs up through open valves (its head as the square
+ * of its speed) and falls as it coasts; into an open sink, nothing holds
+ * it once they stop.
  */
 export function changeoverPressure(s: BoosterChangeover): number {
   const head = [0, 1].map((p) => s.speed[p] ** 2 * s.valve[p]);
-  return (
-    SET_PRESSURE *
-    Math.max(head[0], head[1]) *
-    (1 + 0.12 * Math.min(head[0], head[1]))
-  );
+  return SET_PRESSURE * Math.max(head[0], head[1]);
 }
 
 /** What its controller's display says it is doing. */
