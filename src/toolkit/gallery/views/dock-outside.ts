@@ -653,32 +653,38 @@ export function createDockOutside(
     );
     const kw = Math.min(3.0, 2 * inner - 0.3);
     const kd = 2.4;
-    const box = paint(512, 410, (g) => {
+    // Drawn at the box's own proportions, its lettering fitted inside
+    // its dark plate (the owner, 2026-10-26: it overran it).
+    const BW = 512;
+    const BH = Math.round((BW * kd) / kw);
+    const box = paint(BW, BH, (g) => {
       g.strokeStyle = 'rgba(232,192,40,0.95)';
       g.lineWidth = 14;
-      g.strokeRect(7, 7, 498, 396);
+      g.strokeRect(7, 7, BW - 14, BH - 14);
       g.save();
       g.beginPath();
-      g.rect(7, 7, 498, 396);
+      g.rect(7, 7, BW - 14, BH - 14);
       g.clip();
       g.lineWidth = 12;
-      for (let x = -420; x < 520; x += 46) {
+      for (let x = -BH; x < BW + 20; x += 46) {
         g.beginPath();
-        g.moveTo(x, 410);
-        g.lineTo(x + 410, 0);
+        g.moveTo(x, BH);
+        g.lineTo(x + BH, 0);
         g.stroke();
       }
       g.restore();
+      const plateW = BW - 80;
+      const plateH = 100;
       g.fillStyle = 'rgba(60,62,64,1)';
-      g.fillRect(96, 160, 320, 90);
+      g.fillRect((BW - plateW) / 2, BH / 2 - plateH / 2, plateW, plateH);
       g.fillStyle = 'rgba(232,192,40,0.95)';
       g.font = 'bold 64px sans-serif';
       g.textAlign = 'center';
       g.textBaseline = 'middle';
       g.save();
-      g.translate(256, 205);
+      g.translate(BW / 2, BH / 2);
       g.rotate(Math.PI);
-      g.fillText('KEEP CLEAR', 0, 0);
+      g.fillText('KEEP CLEAR', 0, 0, plateW - 30);
       g.restore();
     });
     lay(box, kw, kd, doorX, flight.minZ - kd / 2);
