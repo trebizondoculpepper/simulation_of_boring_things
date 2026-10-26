@@ -250,23 +250,51 @@ export function createCtElectricityMeter(kit: PanelKit) {
     fz,
     20,
   );
-  // Two scroll buttons, one sealable (the reset).
+  // Two scroll buttons, one sealable (the reset): each steps the display
+  // a register on or back (`press`).
+  const buttons: Mesh[] = [];
   for (const x of [-0.02, 0.02])
+    buttons.push(
+      cyl(
+        group,
+        paint(kit, '#2a5a9a', 0.5),
+        0.007,
+        0.006,
+        'z',
+        x,
+        -0.04,
+        fz + 0.001,
+        16,
+      ),
+    );
+  // Its rating plate: riveted aluminium, its legend, the approval mark
+  // and the meter's serial number (MSN; the supply's MPAN is on the
+  // board's label, not the meter: the MPAN is the supply point's).
+  box(
+    group,
+    paint(kit, '#c3c7c9', 0.35, 0.8),
+    0.15,
+    0.03,
+    0.001,
+    0,
+    -0.085,
+    fz - 0.0004,
+  );
+  for (const sx of [-0.07, 0.07])
     cyl(
       group,
-      paint(kit, '#2a5a9a', 0.5),
-      0.007,
-      0.006,
+      paint(kit, '#8d9294', 0.3, 0.8),
+      0.002,
+      0.0012,
       'z',
-      x,
-      -0.04,
-      fz + 0.001,
-      16,
+      sx,
+      -0.085,
+      fz,
+      8,
     );
-  // Its rating plate's legend, the approval mark and the serial.
   const rating = createMicroLabel(
     kit,
-    '3×230/400 V  50 Hz  1(10) A  CT 600/5 A\nCl. 0.5S (C)  kWh Cl. 1 kvarh  M26 0120\nMID B+D  No. 41 08 75 223',
+    '3×230/400 V  50 Hz  1(10) A  CT 600/5 A\nCl. 0.5S (C)  kWh Cl. 1 kvarh  M26 0120\nMID B+D  MSN K08A 4175223',
     { height: 0.0032, ink: '#333333' },
   );
   rating.position.set(0, -0.085, fz);
@@ -283,11 +311,25 @@ export function createCtElectricityMeter(kit: PanelKit) {
     depthWrite: false,
   });
   kit.materials.push(lid);
-  box(group, lid, W + 0.004, H + 0.004, 0.02, 0, 0, F + 0.012);
+  const cover = box(group, lid, W + 0.004, H + 0.004, 0.02, 0, 0, F + 0.012);
+  // Clicks pass through it to the buttons (its window is hinged open
+  // to reach them, in life).
+  cover.raycast = () => {};
   let phase = 0;
   let clock = 0;
+  // A page chosen by its buttons, held for half a minute, then scrolling on.
+  let chosen = 0;
+  let held = 0;
   return {
     group,
+    buttons,
+    /** Its scroll buttons: 0 steps back, 1 on. */
+    press(i: 0 | 1) {
+      const n = ELEC_PAGES.length;
+      const now = held > 0 ? chosen : Math.floor(clock / 5) % n;
+      chosen = (now + (i === 1 ? 1 : n - 1)) % n;
+      held = 30;
+    },
     /**
      * The register, kWh; the load, kW, setting the kWh LED's flashing;
      * the seconds since the last call. The LCD scrolls its registers:
@@ -295,7 +337,11 @@ export function createCtElectricityMeter(kit: PanelKit) {
      */
     show(kwh: number, kw: number, delta: number) {
       clock += delta;
-      const page = ELEC_PAGES[Math.floor(clock / 5) % ELEC_PAGES.length];
+      held = Math.max(0, held - delta);
+      const page =
+        ELEC_PAGES[
+          held > 0 ? chosen : Math.floor(clock / 5) % ELEC_PAGES.length
+        ];
       if (page === '1.8.0')
         lcd.show(`${page}|${Math.floor(kwh).toString().padStart(8, '0')}|kWh`);
       else if (page === '1.7.0') lcd.show(`${page}|${kw.toFixed(2)}|kW`);
@@ -443,17 +489,35 @@ export function createElectricityMeteringCabinet(kit: PanelKit) {
   const modem = createModem(kit);
   modem.group.position.set(0.2, 0.36, bz);
   group.add(modem.group);
-  // The cable from the modem to the meter's comms terminal.
-  box(
-    group,
-    paint(kit, '#1d1d1d', 0.6),
-    0.27,
-    0.006,
-    0.006,
-    0.0,
-    0.16,
-    bz + 0.03,
-  );
+  // The cable from the meter's comms terminal, out of its terminal
+  // cover's right, down, along the board and up into the modem's foot
+  // (the owner, 2026-10-26: it went nowhere).
+  {
+    const lead = paint(kit, '#1d1d1d', 0.6);
+    const pts: [number, number][] = [
+      [-0.08, 0.15],
+      [-0.08, 0.1],
+      [0.2, 0.1],
+      [0.2, 0.3],
+    ];
+    for (let k = 1; k < pts.length; k++) {
+      const [x0, y0] = pts[k - 1];
+      const [x1, y1] = pts[k];
+      const len = Math.hypot(x1 - x0, y1 - y0);
+      const seg = cyl(
+        group,
+        lead,
+        0.004,
+        len,
+        'y',
+        (x0 + x1) / 2,
+        (y0 + y1) / 2,
+        bz + 0.03,
+        8,
+      );
+      seg.rotation.z = Math.atan2(x1 - x0, y1 - y0) * -1;
+    }
+  }
   // The test terminal block: black, ten positions (three voltages and
   // neutral, three CT pairs), each with its link and test socket.
   const ttb = new Group();
@@ -527,6 +591,9 @@ export function createElectricityMeteringCabinet(kit: PanelKit) {
   let t = 0;
   return {
     group,
+    /** Its meter's scroll buttons, and pressing them. */
+    buttons: meter.buttons,
+    press: (i: 0 | 1) => meter.press(i),
     /** Its door, hung on its left edge: its turn about y opens it (shut at 0). */
     door,
     show(kwh: number, kw: number, delta: number) {

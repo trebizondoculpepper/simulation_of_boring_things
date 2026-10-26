@@ -141,6 +141,8 @@ interface Device {
     operate?: Object3D[];
     /** Doors that open and shut with a click, each of its own. */
     doors?: Group[];
+    /** Buttons of its own, each with what pressing it does. */
+    buttons?: { mesh: Object3D; press: () => void }[];
     /** What it does each frame, given whether its service is on. */
     tick?: (delta: number, on: boolean) => void;
   };
@@ -294,6 +296,10 @@ const DEVICES: readonly Device[] = [
         turn: 'lever',
         operate: [sf.group],
         doors: [cabinet.door, isoDoor],
+        buttons: cabinet.buttons.map((mesh, i) => ({
+          mesh,
+          press: () => cabinet.press(i as 0 | 1),
+        })),
         tick: (delta: number, on: boolean) => {
           sf.set(on);
           sf.update(delta);
@@ -315,7 +321,15 @@ export function yardIntake(kit: PanelKit): Part[] {
     const g = new Group();
     g.position.x = d.x;
     a.object.add(g);
-    const { lever, screen, turn: kind, operate, doors, tick } = d.build(kit, g);
+    const {
+      lever,
+      screen,
+      turn: kind,
+      operate,
+      doors,
+      tick,
+      buttons,
+    } = d.build(kit, g);
     // Each installation carries its own maker's badge.
     const open = () => store?.world.value.intake.open[d.service] ?? true;
     const reading = () => store?.world.value.intake.meters[d.service] ?? 0;
@@ -353,6 +367,14 @@ export function yardIntake(kit: PanelKit): Part[] {
         `${open() ? (d.service === 'power' ? 'ON' : 'open') : d.service === 'power' ? 'OFF' : 'shut'} · ${d.meterName}: ${Math.floor(reading())} ${d.unit}`,
     );
     const parts = [a.part()];
+    if (buttons?.length) {
+      // The meter's own buttons: each a press, paging its display.
+      const bp = beginPart(kit, `${d.meterName} buttons`);
+      bp.object.add(new Group());
+      for (const b of buttons) b.mesh.traverse((o) => bp.uses.set(o, b.press));
+      bp.shows(() => `${Math.floor(reading())} ${d.unit}`);
+      parts.push(bp.part());
+    }
     for (const door of doors ?? []) {
       // The cabinet's door, opening and shutting with a click.
       const dp = beginPart(
