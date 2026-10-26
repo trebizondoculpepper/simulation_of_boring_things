@@ -30,9 +30,9 @@ This is how real sites are laid out: the gas meter and its emergency control val
 
 - **The site's electrical load** (needed by the meter; there is none yet, checked 2026-10-26): each consumer's draw in kW while it runs, from its rating (the pumps' motors from the plant sizing, the boosters, the fans and air handling units, the lighting zones, heaters, the dosing and controls), summed in the world each step; the meter integrates it to kWh. Zero when the utility's switch or the building's main switch is off; the emergency lighting then draws on its battery, not the meter.
 
-## To settle with the owner before building
+## Saved games
 
-- Save migration: a new `WORLD_VERSION` if the world's shape changes.
+No migration needed (the owner, 2026-10-26): bump `WORLD_VERSION` and let older saves reset to a new world (a migration step that returns an empty world, as 26 → 27 does).
 
 ## Done when
 
