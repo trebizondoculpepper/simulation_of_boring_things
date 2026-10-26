@@ -84,7 +84,8 @@ export function createSightGlass(
   const glass = new MeshBasicMaterial({
     color: '#000000',
     combine: AddOperation,
-    reflectivity: 0.28,
+    // Plainer to see (the owner, 2026-10-26: too subtle).
+    reflectivity: 0.5,
     transparent: true,
     blending: AdditiveBlending,
     depthWrite: false,
@@ -129,6 +130,26 @@ export function createSightGlass(
   );
   edge.position.z = 0.011;
   group.add(edge);
+  // Its internal reflection (the owner, 2026-10-26): thick glass sends
+  // some of the light that catches its top back through itself, off its
+  // back face, to glow faintly on the opposite rim: a soft, dimmer arc
+  // just inside the bottom of its edge, the room's light being overhead.
+  const inner = new MeshBasicMaterial({
+    color: '#cfe3e8',
+    transparent: true,
+    opacity: 0.12,
+    blending: AdditiveBlending,
+    depthWrite: false,
+  });
+  kit.materials.push(inner);
+  const glow = new Mesh(
+    new TorusGeometry(radius - 0.009, 0.0016, 6, 32, Math.PI * 0.42),
+    inner,
+  );
+  // The arc centred on the bottom of the rim.
+  glow.rotation.z = -Math.PI / 2 - Math.PI * 0.21;
+  glow.position.z = 0.012;
+  group.add(glow);
   // Its grains, sown once: sand in the bed, and those churned up above it.
   const rand = seeded(seed);
   const grains = Array.from({ length: 420 }, () => ({
