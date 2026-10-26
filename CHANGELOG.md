@@ -244,6 +244,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- The engineer's office's 240 V socket ring runs above the signs over its doors, no longer across the corridor door's opening; the south wall's socket stands beside that door rather than on its leaf; the desk socket's drop runs down beside the room's title card, not across it (the owner, 2026-10-26).
 - The loading dock's yard tarmac now keeps a fixed clip at the outside wall, so moving into the yard cannot make it show through the extended building wall.
 - The balance-tank hall’s lights and batten diffusers now follow the Olympic plant lighting circuit and the main lighting switches, including the shared emergency-lighting behaviour.
 
