@@ -1,3 +1,4 @@
+import { withIntake } from '../../../game/plant/site-intake';
 import { Light, Mesh } from 'three';
 import type { Material, Object3D } from 'three';
 import { zoneLit } from '../../../game/plant/lighting';
@@ -79,7 +80,7 @@ export function bindRoomLights(
       }
       const world = store?.world.value ?? fallback;
       const lit = (z: LightingZoneId) =>
-        zoneLit(world.plant, world.lighting, z);
+        zoneLit(withIntake(world.plant, world.intake), world.lighting, z);
       // Its normal lighting out, the emergency lighting from the central
       // battery while it has charge (`emergencyLit`): a dim fraction, as
       // the non-maintained fittings among them give.

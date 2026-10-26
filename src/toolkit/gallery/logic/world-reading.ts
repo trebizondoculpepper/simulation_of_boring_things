@@ -1,3 +1,4 @@
+import { withIntake } from '../../../game/plant/site-intake';
 import { loungeFilterDp } from '../../../game/plant/lounge-filters';
 import { loungeFlowsOf } from '../../../game/plant/lounge-valves';
 import { UV_ISOLATORS } from '../../../game/plant/uv';
@@ -46,7 +47,8 @@ const CLEAN_DP = [0.34, 0.36, 0.36, 0.31] as const;
 export function plantReadingOf(world: World, pool: PoolId = 'pool_02') {
   const room = `plant_${pool}` as ServiceRoom;
   const water = world.pools[pool];
-  const { plant } = world;
+  // As its consumers see it: the utilities' outside devices too (prompt 083).
+  const plant = withIntake(world.plant, world.intake);
   const powered = serviceAvailable(plant, room, 'power');
   const circulating = powered && !water.tripped && water.flow > 0.5;
   const [a, b] = PUMPS[pool] ?? [null, null];

@@ -1,3 +1,4 @@
+import { withIntake } from '../../../game/plant/site-intake';
 import { installedValveByCommandId } from '../../../game/plant/installed-valves';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
@@ -30,7 +31,7 @@ function wetHallWorld(standalone = false) {
       };
       return {
         wetHall: w?.wetHall ?? newWetHall(),
-        mains: w?.plant.sources.water ?? true,
+        mains: w ? withIntake(w.plant, w.intake).sources.water : true,
         valves: { suction: open('WH-T1-IV1'), discharge: open('WH-MU1-IV2') },
       };
     },

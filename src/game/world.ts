@@ -697,7 +697,10 @@ export function applyAction(world: World, action: WorldAction): World {
             lighting: actOnLightingBoard(
               world.lighting,
               { act: 'way', zone: action.zone, on: action.on },
-              lightingWaysLive(world.plant, world.lighting),
+              lightingWaysLive(
+                withIntake(world.plant, world.intake),
+                world.lighting,
+              ),
             ),
           };
     case 'lighting/board':
@@ -706,7 +709,10 @@ export function applyAction(world: World, action: WorldAction): World {
         lighting: actOnLightingBoard(
           world.lighting,
           action.action,
-          lightingWaysLive(world.plant, world.lighting),
+          lightingWaysLive(
+            withIntake(world.plant, world.intake),
+            world.lighting,
+          ),
         ),
       };
     case 'lighting/leak':
@@ -1322,7 +1328,13 @@ export function appealOf(world: World): Record<PoolId, number> {
           hallAir: p.hallAir,
           hallTarget: HALL_AIR[id],
           // Its lights on: daylight is not enough.
-          lit: !zone || zoneLit(world.plant, world.lighting, zone),
+          lit:
+            !zone ||
+            zoneLit(
+              withIntake(world.plant, world.intake),
+              world.lighting,
+              zone,
+            ),
           spa: id === 'pool_03',
         }),
       ];
@@ -1406,11 +1418,14 @@ export const batteryMains = (world: World) =>
  */
 export const emergencyLit = (world: World, zone: LightingZoneId) =>
   batteryCanSupply(world.centralBattery, batteryMains(world)) &&
-  (!!world.centralBattery.test || !zoneLit(world.plant, world.lighting, zone));
+  (!!world.centralBattery.test ||
+    !zoneLit(withIntake(world.plant, world.intake), world.lighting, zone));
 
 /** The share of the emergency lighting lit, its load on the battery. */
 export const emergencyLoad = (world: World) =>
   world.centralBattery.test
     ? 1
-    : LIGHTING_ZONE_IDS.filter((z) => !zoneLit(world.plant, world.lighting, z))
-        .length / LIGHTING_ZONE_IDS.length;
+    : LIGHTING_ZONE_IDS.filter(
+        (z) =>
+          !zoneLit(withIntake(world.plant, world.intake), world.lighting, z),
+      ).length / LIGHTING_ZONE_IDS.length;

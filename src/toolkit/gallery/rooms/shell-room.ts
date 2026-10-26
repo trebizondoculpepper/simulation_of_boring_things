@@ -1,3 +1,4 @@
+import { yardIntake } from '../views/yard-intake';
 import { dockDoor } from '../views/dock-door';
 import { YARD, dockFloorAt, dockYardSolids } from '../logic/dock-yard';
 import { createDockSafety, dockFireAlarm } from '../views/dock-safety';
@@ -160,6 +161,8 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
             return [
               ...dockFireAlarm(kit, { hw: spec.w / 2, hd: spec.d / 2 }),
               door.part,
+              // The site's intake on the outside wall (prompt 083).
+              ...yardIntake(kit),
             ];
           },
           // Out through the pier door, down the steps, onto the tarmac.

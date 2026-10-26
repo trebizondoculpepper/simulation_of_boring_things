@@ -22,6 +22,42 @@ export const YARD = {
   across: 50,
 } as const;
 
+/**
+ * The site's intake on the building's outside wall, left of the dock
+ * (prompt 083): each service's place along the wall, x, and the wall's
+ * outer face, z (the dock's own: 6 m deep inside, a 0.2 m wall).
+ */
+export const INTAKE = {
+  wallZ: -6.2,
+  water: -10,
+  gas: -11.6,
+  power: -13.4,
+} as const;
+
+/** What the intake stands in the way of, down in the yard: its devices and its bollards. */
+export function intakeSolids(): Footprint[] {
+  const z = INTAKE.wallZ;
+  return [
+    {
+      minX: INTAKE.power - 0.5,
+      maxX: INTAKE.water + 0.2,
+      minZ: z - 0.5,
+      maxZ: z,
+    },
+    ...[
+      INTAKE.power - 0.8,
+      (INTAKE.power + INTAKE.gas) / 2,
+      (INTAKE.gas + INTAKE.water) / 2,
+      INTAKE.water + 0.7,
+    ].map((x) => ({
+      minX: x - 0.1,
+      maxX: x + 0.1,
+      minZ: z - 1.6,
+      maxZ: z - 1.4,
+    })),
+  ];
+}
+
 export interface DockFrame {
   wallZ: number;
   thickness: number;
@@ -109,5 +145,5 @@ export function dockYardSolids(f: DockFrame, low: boolean): Footprint[] {
     }
     building.push({ minX: from, maxX: 200, minZ: outer, maxZ: 200 });
   } else building.push(...channels.map((c) => ({ ...c, minZ: outer })));
-  return [...rails, ...ring, ...building];
+  return [...rails, ...ring, ...building, ...(low ? intakeSolids() : [])];
 }

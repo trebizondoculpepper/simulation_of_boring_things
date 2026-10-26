@@ -1,3 +1,4 @@
+import { withIntake } from '../../../game/plant/site-intake';
 import {
   componentOf,
   markComponent,
@@ -613,7 +614,11 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   const roomPower = bindRoomPower(scene, sitePowered());
   const poolLight = () => {
     const w = world.world.value;
-    if (!hallZone || zoneLit(w.plant, w.lighting, hallZone)) return 1;
+    if (
+      !hallZone ||
+      zoneLit(withIntake(w.plant, w.intake), w.lighting, hallZone)
+    )
+      return 1;
     return spec.skylights.length > 0 ? 0.35 : 0;
   };
   // Its water at the world's level (`pools.ts`): the pool's drop below its

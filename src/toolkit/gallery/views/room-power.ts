@@ -1,3 +1,4 @@
+import { withIntake } from '../../../game/plant/site-intake';
 import { retiredFrom } from '../logic/retired-rooms';
 import { Mesh, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import type { Material, Object3D } from 'three';
@@ -121,6 +122,9 @@ export function sitePowered() {
   const store = typeof window === 'undefined' ? null : roomWorld();
   return () => {
     const w = store?.world.value;
-    return w ? w.plant.sources.power && w.plant.feeders.switch_room : true;
+    return w
+      ? withIntake(w.plant, w.intake).sources.power &&
+          w.plant.feeders.switch_room
+      : true;
   };
 }
