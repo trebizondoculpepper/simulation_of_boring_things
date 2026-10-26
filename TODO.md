@@ -4,7 +4,7 @@ The project's one to-do list (the owner, 2026-10-23): every task not yet finishe
 
 ## Now: title sequence tools
 
-- [x] **Unlisted title navigation and lights-out flashlight** (done 2026-10-26, commit pending): `[` restarts the current shot from its beginning on a fresh scenario, `]` advances to the queued shot; title only, ignoring editing/modifiers/repeats and absent from keyboard help. Enable the flashlight for the lights-out switch-room shot.
+- [x] **Unlisted title navigation and lights-out flashlight** (done 2026-10-26, `ce80c65`): `[` restarts the current shot from its beginning on a fresh scenario, `]` advances to the queued shot; title only, ignoring editing/modifiers/repeats and absent from keyboard help. Enable the flashlight for the lights-out switch-room shot.
 
 - [x] **Olympic underwater rolling dolly zoom** (done 2026-10-26, `5b10a4a`): add the owner’s five views with the lights on, retaining the fixed heading/pitch, increasing zoom, rising camera and −92° to +26° roll.
 
@@ -150,6 +150,8 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [ ] **Finish the operator's manual** ([005](doc/prompts/005-finish-operators-manual.md)): its phases 3 to 6, a chapter for each remaining room in the boiler house's pattern, the schematics and their symbols, and the alarm response for every annunciator window (only the boiler house's chapter is written so far).
 
 ## Housekeeping
+
+- [ ] **Devlog 002:** publish the update covering the changes since devlog 001, verify its deployed build and record its itch.io URL.
 
 - [x] **Individual boiler inspection and natural description wording** (done 2026-10-25, `209d53b`): register the six boilers under their existing B-501…B-506 plates, give their bodies and labels individual ownership and controller-derived states, distinguish recoverable low water pressure from lockout causes, and generate descriptions with “The” and full room names. The boiler controllers remain local pending mission 046. Equipment headings use `id (brand model type) - state`, omitting unknown fields and leaving location/purpose below. Added the general equipment-status guide covering active machinery, valves/isolators, instruments, passive equipment, architectural fittings and safety equipment.
 

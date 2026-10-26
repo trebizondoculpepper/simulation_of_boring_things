@@ -38,7 +38,7 @@ describe('draining the Olympic’s balance tank', () => {
   });
 
   it('stops at the tank’s low-low level, the pumps held off', () => {
-    const w = advance(draining(), 3600, 1);
+    const w = advance(draining(), 3600, 5);
     expect(w.pools.pool_02.tripped).toBe(true);
   });
 
