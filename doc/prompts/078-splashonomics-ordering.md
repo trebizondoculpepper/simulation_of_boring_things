@@ -6,6 +6,10 @@ Status: incomplete, for planning (opened 2026-10-26 with the owner, from [073](0
 
 The computer in the manager's or the engineer's office runs Splashonomics (the brand in `brands.ts`: pool operating-cost metering, software and audits), and through it the centre orders what it needs to run (the owner, 2026-10-26): chemical tankers, engineering supplies, anything; it is delivered through the loading dock.
 
+## Running costs (the owner, 2026-10-26)
+
+Splashonomics also costs the centre's running (its maker's own trade: operating-cost metering and audits): it reads the site's three utility meters in the goods yard (`world.intake.meters`, prompt 083: water m³, gas m³, electricity kWh, each counting the plant's actual use), prices them at tariff rates (a standing charge and unit rates, electricity perhaps by time of day), and shows the cost of running the centre by the hour, day and month, and what each part of the plant costs (the site load model's consumers, the boilers' gas).
+
 ## To settle
 
 - Which office and which computer; its period (the game spans the 1980s to the late 2020s), its interface, and how the game simulates it without a screen taking over the instruments.
