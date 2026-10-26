@@ -45,6 +45,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Gameplay features
 
+- [x] **Screenshot shortcut feasibility research** (done 2026-10-26, commit pending): [audit and plan](doc/research/2026-10-26-screenshot-shortcut.md) correct the existing-feature inventory, retain gesture-safe PNG writing, and specify title capture, hard sizing/GPU caps, multi-canvas composition, fallback and browser shortcut limitations. Runtime implementation remains below.
 - [ ] **A screenshot shortcut** ([084](doc/prompts/084-screenshot-shortcut.md), the owner, 2026-10-26): Ctrl/Cmd+Shift+K copies a best-quality frame of the 3D view, full resolution at twice the pixel ratio (up to 3840 px wide), with no overlay, to the clipboard as a PNG, or downloads it where the browser refuses.
 - [ ] **Healthy New Game, maintained as the model evolves** ([067](doc/prompts/067-healthy-new-game.md), planned 2026-10-25): implement the [healthy-start contract](doc/healthy-start.md), whole-facility health and coverage checks, a consistent playable session, bounded trajectory and control probes, and New Game/Continue/title isolation; rerun the same mission after model changes and retain dated audit reports. First run 2026-10-25 ([report](doc/reports/healthy-start/2026-10-25-executable-contract.md)): the contract is executable (`src/game/health.ts`) and a new game passes it on its first frame, every step of its first hour and through a day. Still open: the playable session's time (Monday 00:00 now, 09:00 proposed), the owner's to decide; duty/standby and timed-attraction control probes; browser checks.
 - [x] **Research and plan the repeatable healthy-start mission** (done 2026-10-25, `98874c2`): traced defaults and entry paths, measured a day of normal model operation, recorded the initial audit and definition, and added an opt-in read-only audit command. Runtime preset changes remain mission 067’s delivery work.
@@ -179,6 +180,8 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [ ] **Finish the operator's manual** ([005](doc/prompts/005-finish-operators-manual.md)): its phases 3 to 6, a chapter for each remaining room in the boiler house's pattern, the schematics and their symbols, and the alarm response for every annunciator window (only the boiler house's chapter is written so far).
 
 ## Housekeeping
+
+- [ ] **Wash-O-Tron parallel-suite timing:** the three-hour AUTO wash scenario in `src/game/plant/wash-o-tron.test.ts` exceeded its 5 s default during the screenshot research’s full run, while all seven tests passed on a focused retry. Keep the same hydraulic assertions and make the check reliable under concurrent test load.
 
 - [x] **Devlog 002** (done 2026-10-26, `885c755`): published [Filters, fault lights, and a plant you can read](https://salimfadhley.itch.io/the-pool/devlog/1730093/filters-fault-lights-and-a-plant-you-can-read), covering f93cb85 exclusive through 98cf707 inclusive, with verified build 0.1.356 attached. Project access remains Draft.
 
