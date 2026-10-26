@@ -130,6 +130,12 @@ export function olympicBatteryFlows(
   installedValves: Readonly<Record<string, boolean>>,
   battery: OlympicBatteryState = newOlympicBattery(),
   running = true,
+  /**
+   * The waste main open to the backwash pit: shut by the pit's inlet at
+   * its high-high level (`wet-hall.ts`), when the backwash and rinse
+   * valves have nowhere to send their water.
+   */
+  wasteOpen = true,
 ): BatteryFlows {
   const open = opener(installedValves);
   const pumping = running && PUMP_PATHS.some((path) => path.every(open));
@@ -141,13 +147,18 @@ export function olympicBatteryFlows(
         VALVES.map((v, k) => [
           v,
           // With the way on shut, nothing leaves by the outlets.
-          (v !== 'v2' || returning) && open(`PL2-F${i + 1}-V${k + 1}`) ? 1 : 0,
+          (v !== 'v2' || returning) &&
+          ((v !== 'v4' && v !== 'v5') || wasteOpen) &&
+          open(`PL2-F${i + 1}-V${k + 1}`)
+            ? 1
+            : 0,
         ]),
       ) as Record<ValveName, number>,
   );
   // The pumps' drain (PL2-P1-DV1): their discharge to the backwash drain.
-  const draining = pumping && open('PL2-P1-DV1');
+  const draining = pumping && wasteOpen && open('PL2-P1-DV1');
   const key = [
+    wasteOpen,
     pumping,
     draining,
     openings.map((o) => VALVES.map((v) => o[v]).join('')).join(','),
@@ -236,10 +247,12 @@ export function olympicFlowsOf(world: {
   pools: PoolsState;
   plant: PlantServices;
   motors?: MotorsState;
+  wetHall?: { inhibit?: boolean };
 }): BatteryFlows {
   return olympicBatteryFlows(
     world.installedValves,
     world.olympic,
     circulating(world.pools.pool_02, world.plant, 'pool_02', world.motors),
+    !world.wetHall?.inhibit,
   );
 }

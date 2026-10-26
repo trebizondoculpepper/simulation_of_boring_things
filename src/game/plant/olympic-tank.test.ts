@@ -14,6 +14,18 @@ import {
 const level = (w: World) => olympicTankLevel(w.pools.pool_02.balance);
 
 /** Every filter backwashing at once: a way to draw the tank down hard. */
+/** Filter 1 alone backwashing, as an operator does one at a time. */
+const backwashOne = (w: World) =>
+  Object.entries({ V1: false, V2: false, V3: true, V4: true }).reduce(
+    (y, [v, open]) =>
+      applyAction(y, {
+        type: 'plant/valve',
+        id: installedValveByCommandId(`PL2-F1-${v}`)!.assetId,
+        open,
+      }),
+    w,
+  );
+
 const backwashAll = (w: World) =>
   [1, 2, 3, 4, 5].reduce(
     (x, n) =>
@@ -66,8 +78,19 @@ describe('the Olympic’s balance tank in the world', () => {
   });
 
   it('runs down with its make-up OFF and a backwash drawing on it, until LOW LOW trips the pumps', () => {
+    // One filter backwashing, the wet hall's pit emptying to sewer by its
+    // two drains (`wet-hall.ts`): the pit, 105 m³, outlasts the tank.
     let w = applyAction(newWorld(), { type: 'olympic/makeup', mode: 'off' });
-    w = backwashAll(w);
+    w = backwashOne(w);
+    w = ['WH-DR1-DV1', 'WH-T2-DV1'].reduce(
+      (x, tag) =>
+        applyAction(x, {
+          type: 'plant/valve',
+          id: installedValveByCommandId(tag)!.assetId,
+          open: true,
+        }),
+      w,
+    );
     let low = -1;
     let tripped = -1;
     for (let m = 1; m <= 120 && tripped < 0; m++) {
@@ -77,6 +100,7 @@ describe('the Olympic’s balance tank in the world', () => {
     }
     expect(low).toBeGreaterThan(0);
     expect(tripped).toBeGreaterThan(low);
+    expect(w.wetHall.inhibit).toBe(false);
     expect(level(w)).toBeLessThan(BALANCE_TANK.lowLow + 0.05);
     expect(olympicTankView(w).pumps).toBe('tripped');
   });

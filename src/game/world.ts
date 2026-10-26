@@ -211,7 +211,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 33;
+export const WORLD_VERSION = 34;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -745,7 +745,12 @@ export function stepWorld(world: World, delta: number): World {
           return false;
         const open =
           pool === 'pool_02'
-            ? olympicBatteryFlows(world.installedValves, world.olympic, true)
+            ? olympicBatteryFlows(
+                world.installedValves,
+                world.olympic,
+                true,
+                !world.wetHall.inhibit,
+              )
             : pool === 'pool_01'
               ? loungeValveFlows(world.loungeValvePositions, true)
               : null;
@@ -812,6 +817,8 @@ export function stepWorld(world: World, delta: number): World {
         world.installedValves,
         world.olympic,
         running,
+        // The backwash pit's inlet shut at its high-high level.
+        !world.wetHall.inhibit,
       );
       return {
         toPool: battery.toPool,
@@ -829,6 +836,7 @@ export function stepWorld(world: World, delta: number): World {
         loungeValvePositions,
         running,
         loungePumpsRunning(motors),
+        !world.wetHall.inhibit,
       ),
     hallHandling(airHandling),
     motors,

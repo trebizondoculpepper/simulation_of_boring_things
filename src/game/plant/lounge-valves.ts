@@ -88,6 +88,8 @@ export function loungeValveFlows(
   running: boolean,
   /** Which pumps run, where known: each delivers through its own discharge valve. */
   pumps: { p1: boolean; p2: boolean } = { p1: true, p2: true },
+  /** The waste main open to the backwash pit: shut at its high-high level (`wet-hall.ts`). */
+  wasteOpen = true,
 ): LoungeFlows {
   const still: LoungeFlows = {
     toPool: 0,
@@ -124,17 +126,24 @@ export function loungeValveFlows(
   );
   // Backwashed: as far as its inlet is shut and its outlet and backwash
   // open, and no more than the other filter gives.
+  const waste = wasteOpen ? 1 : 0;
   const backwash = f.map((x, i) =>
     Math.min(
-      LOUNGE_BACKWASH_FLOW * (1 - x.inlet) * Math.min(x.outlet, x.backwash),
+      LOUNGE_BACKWASH_FLOW *
+        (1 - x.inlet) *
+        Math.min(x.outlet, x.backwash) *
+        waste,
       service[1 - i],
     ),
   );
-  const dump = f.map((x) => 5 * x.inlet * x.backwash * discharge);
+  const dump = f.map((x) => 5 * x.inlet * x.backwash * discharge * waste);
   const tankDrain = at('PL1-T1-DV1') * 5;
   const toWaste =
     tankDrain +
-    f.reduce((sum, x, i) => sum + backwash[i] + dump[i] + 3 * x.drain, 0);
+    f.reduce(
+      (sum, x, i) => sum + backwash[i] + dump[i] + 3 * x.drain * waste,
+      0,
+    );
   return {
     toPool: Math.max(0, service[0] + service[1] - backwash[0] - backwash[1]),
     toWaste,
@@ -142,7 +151,7 @@ export function loungeValveFlows(
     filters: [service[0] - backwash[0], service[1] - backwash[1]],
     backwash: [backwash[0], backwash[1]],
     dumps: [dump[0], dump[1]],
-    drains: [3 * f[0].drain, 3 * f[1].drain],
+    drains: [3 * f[0].drain * waste, 3 * f[1].drain * waste],
   };
 }
 
@@ -152,11 +161,13 @@ export function loungeFlowsOf(world: {
   pools: PoolsState;
   plant: PlantServices;
   motors?: MotorsState;
+  wetHall?: { inhibit?: boolean };
 }): LoungeFlows {
   return loungeValveFlows(
     world.loungeValvePositions,
     circulating(world.pools.pool_01, world.plant, 'pool_01', world.motors),
     loungePumpsRunning(world.motors),
+    !world.wetHall?.inhibit,
   );
 }
 

@@ -45,12 +45,12 @@
   <rect class="route" x="571" y="338" width="97" height="73"/>
   <path d="M591 340v69m17-69v69m17-69v69m17-69v69" stroke="#a5afb3" stroke-width="1.5"/>
   <text x="573" y="326" class="small">EAST STAIR + LANDING</text>
-  <rect class="waste" x="305" y="458" width="168" height="112"/>
-  <path d="M305 476h168m-168 19h168m-168 19h168m-168 19h168m-168 19h168" stroke="#9c8867" stroke-width="1"/>
-  <text x="316" y="500" font-weight="bold">BACKWASH PIT</text>
-  <text x="316" y="520" class="small">6 × 4 m plan</text>
-  <text x="316" y="538" class="small">40 m³ usable</text>
-  <text x="316" y="556" class="small">grated access</text>
+  <rect class="waste" x="277" y="458" width="196" height="140"/>
+  <path d="M277 478h196m-196 20h196m-196 20h196m-196 20h196m-196 20h196m-196 20h196" stroke="#9c8867" stroke-width="1"/>
+  <text x="290" y="500" font-weight="bold">BACKWASH PIT</text>
+  <text x="290" y="520" class="small">7 × 5 m plan</text>
+  <text x="290" y="538" class="small">105 m³, 3 m water</text>
+  <text x="290" y="556" class="small">grated access</text>
   <rect class="machine" x="501" y="508" width="56" height="55"/>
   <text x="506" y="528" class="tiny">WASTE</text>
   <text x="506" y="545" class="tiny">PUMP</text>

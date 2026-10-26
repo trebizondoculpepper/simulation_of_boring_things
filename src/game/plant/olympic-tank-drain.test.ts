@@ -38,7 +38,13 @@ describe('draining the Olympic’s balance tank', () => {
   });
 
   it('stops at the tank’s low-low level, the pumps held off', () => {
-    const w = advance(draining(), 3600, 5);
+    // The wet hall's backwash pit emptying to sewer by its two drains, so
+    // the pumps' drain does not fill it to its high-high inhibit first.
+    const w = advance(
+      valve(valve(draining(), 'WH-DR1-DV1', true), 'WH-T2-DV1', true),
+      3600,
+      5,
+    );
     expect(w.pools.pool_02.tripped).toBe(true);
   });
 

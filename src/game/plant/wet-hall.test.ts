@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { newPlantServices } from './services';
 import {
+  BACKWASH_PIT,
   WET_HALL_PLANT as P,
+  backwashPitDepth,
   makeUpShare,
   newWetHall,
   resetBooster,
@@ -66,14 +68,47 @@ describe('the wet hall', () => {
     expect(makeUpShare(s, dark, 1)).toBe(0);
   });
 
-  it('holds a night’s backwash and pumps it away to sewer, spilling only past full', () => {
-    let s = stepWetHall(newWetHall(), plant, { drawn: 0, backwashed: 26 }, 1);
+  it('holds a two-and-one wash and pumps it away to sewer, spilling only past full', () => {
+    // About 50 m³: two Olympic filters and a lounge filter, washed together.
+    let s = stepWetHall(newWetHall(), plant, { drawn: 0, backwashed: 50 }, 1);
     expect(wetHallAlarms(s).backwashHigh).toBe(false);
+    expect(s.inhibit).toBe(false);
     expect(s.discharging).toBe(true);
     for (let i = 0; i < 4 * 3600; i++) s = stepWetHall(s, plant, none, 1);
     expect(s.backwashTank).toBeLessThan(P.backwashTank * P.dischargeOn);
-    s = stepWetHall(s, plant, { drawn: 0, backwashed: 40 }, 1);
+    s = stepWetHall(s, plant, { drawn: 0, backwashed: P.backwashTank }, 1);
     expect(s.spilt).toBeGreaterThan(0);
     expect(wetHallAlarms(s).backwashHigh).toBe(true);
+  });
+
+  it('shuts its inlet at high-high, and opens it again once pumped back down', () => {
+    let s = stepWetHall(
+      newWetHall(),
+      plant,
+      { drawn: 0, backwashed: P.backwashTank * (P.backwashHighHigh + 0.01) },
+      1,
+    );
+    expect(s.inhibit).toBe(true);
+    expect(wetHallAlarms(s).backwashInhibit).toBe(true);
+    // Its pump at the consented rate brings it below its clear level.
+    const hours =
+      (P.backwashTank * (P.backwashHighHigh + 0.01 - P.backwashInhibitClears)) /
+      P.dischargeRate;
+    for (let i = 0; i < hours * 3600 - 120; i++)
+      s = stepWetHall(s, plant, none, 1);
+    expect(s.inhibit).toBe(true);
+    for (let i = 0; i < 240; i++) s = stepWetHall(s, plant, none, 1);
+    expect(s.inhibit).toBe(false);
+  });
+
+  it('is a pit whose working volume is its plan area times its top water level', () => {
+    expect(
+      BACKWASH_PIT.length * BACKWASH_PIT.width * BACKWASH_PIT.topWater,
+    ).toBeCloseTo(P.backwashTank, 6);
+    expect(BACKWASH_PIT.topWater).toBeLessThan(BACKWASH_PIT.depth);
+    expect(backwashPitDepth(P.backwashTank)).toBeCloseTo(
+      BACKWASH_PIT.topWater,
+      6,
+    );
   });
 });

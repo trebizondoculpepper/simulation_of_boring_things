@@ -29,8 +29,16 @@ export const WET_HALL_PLANT = {
   /** It trips below this share of the break tank, and resets only above this. */
   lowLevel: 0.15,
   resetAbove: 0.3,
-  /** The backwash holding tank, m³ (the sizing's 29.5 m³). */
-  backwashTank: 29.5,
+  /**
+   * The backwash pit's working volume, m³, to its top water level
+   * (`BACKWASH_PIT`): sized (the owner, 2026-10-26) for two of the
+   * Olympic's filters and one of the lounge's washed together, which
+   * send about 49 m³ to drain in some eight minutes (backwash and rinse,
+   * measured in the world, `backwash-pit.test.ts`), with room above; then
+   * made half as deep again, for water slides and a children's pool to
+   * come.
+   */
+  backwashTank: 105,
   /**
    * The site's consent to discharge to the foul sewer, m³/h, from the
    * sewerage undertaker: the backwash's discharge and any pool draining
@@ -45,9 +53,39 @@ export const WET_HALL_PLANT = {
   tankDrainRate: 25,
   dischargeOn: 0.4,
   dischargeOff: 0.05,
-  /** Its high-level alarm: above a night's backwash, which fills it to about 95 %. */
-  backwashHigh: 0.97,
+  /** Its high-level alarm: above what a two-and-one wash leaves in it from empty. */
+  backwashHigh: 0.8,
+  /**
+   * Its high-high level: its controller shuts its inlet, inhibiting every
+   * backwash and rinse until the pump has brought it back below its high
+   * level (`backwashInhibitClears`).
+   */
+  backwashHighHigh: 0.93,
+  backwashInhibitClears: 0.75,
 } as const;
+
+/**
+ * The backwash pit (prompt 036; the owner, 2026-10-26): a sealed cast
+ * concrete pit below the wet hall's south floor, serviced from above only,
+ * oversized by half again for water slides and a children's pool to come,
+ * metres inside. Its working volume to its top water level is
+ * `WET_HALL_PLANT.backwashTank`; above that, freeboard to its slab, and
+ * below its floor a settlement sump for its discharge pump.
+ */
+export const BACKWASH_PIT = {
+  length: 7,
+  width: 5,
+  /** Its floor to the underside of its covering slab. */
+  depth: 3.75,
+  /** Its top water level above its floor: where it overflows (2.0 m, half as deep again for the slides and children's pool to come). */
+  topWater: 3.0,
+  /** Its sump, under its pump: a pit in its floor. */
+  sump: { length: 1.2, width: 1.2, depth: 0.6 },
+} as const;
+
+/** Its water's depth above its floor, m, holding `m3`. */
+export const backwashPitDepth = (m3: number) =>
+  Math.max(0, m3) / (BACKWASH_PIT.length * BACKWASH_PIT.width);
 
 export interface WetHallState {
   /** Water in the break tank, m³. */
@@ -65,6 +103,8 @@ export interface WetHallState {
   discharging: boolean;
   /** Backwash spilt by the holding tank's overflow, m³ in all. */
   spilt: number;
+  /** Its controller's high-high inhibit: its inlet shut, no backwash or rinse taken. */
+  inhibit: boolean;
 }
 
 export function newWetHall(): WetHallState {
@@ -77,6 +117,7 @@ export function newWetHall(): WetHallState {
     backwashTank: 0,
     discharging: false,
     spilt: 0,
+    inhibit: false,
   };
 }
 
@@ -153,6 +194,11 @@ export function stepWetHall(
     filled - (discharging ? P.dischargeRate * hours : 0) - gravity * hours,
   );
   const spilt = Math.max(0, backwashTank - P.backwashTank);
+  // Its inhibit: set at high-high, held until the pump has it back down.
+  const level = Math.min(P.backwashTank, backwashTank) / P.backwashTank;
+  const inhibit = s.inhibit
+    ? level > P.backwashInhibitClears
+    : level >= P.backwashHighHigh;
   return {
     breakTank,
     boosterTripped,
@@ -162,6 +208,7 @@ export function stepWetHall(
     backwashTank: Math.min(P.backwashTank, backwashTank),
     discharging,
     spilt: s.spilt + spilt,
+    inhibit,
   };
 }
 
@@ -180,5 +227,7 @@ export function wetHallAlarms(s: WetHallState) {
     breakTankLow: s.breakTank < P.breakTank * 0.3,
     boosterLowWater: s.boosterTripped,
     backwashHigh: s.backwashTank > P.backwashTank * P.backwashHigh,
+    /** High-high: its inlet shut, backwashing inhibited. */
+    backwashInhibit: !!s.inhibit,
   };
 }

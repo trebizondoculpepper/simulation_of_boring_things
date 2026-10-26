@@ -118,6 +118,9 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // 32 → 33: DB-L1's RCBOs and main switch, its circuits' leakage, and the
   // central battery in the world (`fillDefaults`: all on, dry, charged).
   32: (world) => world,
+  // 33 → 34: the backwash pit (70 m³) and its high-high inhibit
+  // (`fillDefaults`: not inhibited).
+  33: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

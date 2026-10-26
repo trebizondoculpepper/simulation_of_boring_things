@@ -126,6 +126,10 @@ export const ASSUME = {
   pipeSpeed: { lthw: 1, water: 1.5, drain: 1.5 },
   /** Filter backwash rate, m/h, for 5 minutes; filters backwashed every other day. */
   backwashRate: 50,
+  /** The backwash holding tank's margin over the simultaneous wash it takes. */
+  backwashMargin: 1.1,
+  /** Shared water services oversized by this, for water slides and a children's pool to come (the owner, 2026-10-26). */
+  futureGrowth: 1.5,
   /** Fresh water to dilute the pools, a share of their volume a day. */
   dilutionPerDay: 0.01,
   /** Clear space round each machine, and the share added for walkways. */
@@ -662,15 +666,35 @@ export function sizePlant(pools: readonly AttractionConfig[]): PlantSizing {
       .map((c) => c.filters.diameter),
     0.6,
   );
-  const backwash =
-    Math.PI * (biggest / 2) ** 2 * ASSUME.backwashRate * (5 / 60);
+  /** One filter's backwash, m³: its rate for 5 minutes. */
+  const washOf = (diameter: number) =>
+    Math.PI * (diameter / 2) ** 2 * ASSUME.backwashRate * (5 / 60);
+  const backwash = washOf(biggest);
+  // The holding tank takes the owner's simultaneous wash (2026-10-26): two
+  // of the largest pool's filters and one of the next pool's together,
+  // with a tenth more, to the next 5 m³.
+  // The next pool by its circulation (the lounge, beside the Olympic).
+  const next =
+    [...circuits]
+      .filter((c) => c.flow >= ASSUME.packageBelow)
+      .sort((a, b) => b.flow - a.flow)[1]?.filters.diameter ?? biggest;
+  // Then half again, for water slides and a children's pool to come
+  // (the owner, 2026-10-26).
+  const held =
+    Math.ceil(
+      ((2 * washOf(biggest) + washOf(next)) * ASSUME.backwashMargin) / 5,
+    ) *
+    5 *
+    ASSUME.futureGrowth;
+  // A pit below the floor (prompt 036), its water 3 m deep: its plan from
+  // that, and above the floor only its guard rail.
   wet.push({
     kind: 'Backwash holding tank',
     name: 'Backwash',
-    w: Math.max(1, Math.sqrt(backwash / 2)),
-    d: Math.max(1, Math.sqrt(backwash / 2)),
-    h: 2.3,
-    rating: `${r1(backwash)} m³`,
+    w: Math.max(1, Math.sqrt(held / 3)),
+    d: Math.max(1, Math.sqrt(held / 3)),
+    h: 1.1,
+    rating: `${r1(held)} m³`,
   });
   // The wet hall is the main plant room: square, three storeys high, with
   // gantries round it at the upper two levels to the rooms' doors.
