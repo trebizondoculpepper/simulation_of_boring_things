@@ -209,7 +209,7 @@ export function machinePorts(item: Item): MachinePort[] {
               hz,
             ],
             [0, 1, 0],
-            0.089,
+            0.11,
             'drain',
           ),
           drawn: true,

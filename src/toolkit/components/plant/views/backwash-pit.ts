@@ -46,7 +46,7 @@ export const PIT_RAIL = {
    * Its gate on its east side, beside the hatch (the owner, 2026-10-26),
    * along that side from the pit's middle (+z south), this wide.
    */
-  gate: { at: 0.5, width: 1.0 },
+  gate: { at: -1.8, width: 1.0 },
 } as const;
 
 /** A float switch, as the pit hangs it: its name, its height above the pit's floor, and its colour. */
@@ -224,11 +224,13 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   // The gratings over its opening, flush with the floor; a solid hatch
   // over its sump, and its kerb round them.
   const hatch = { length: p.hatch, width: p.hatch };
+  // In its north-east corner, toward the aisle, beyond its float
+  // switches, clear of the pumps (the owner, 2026-10-26).
   const hatchArea = {
     minX: L / 2 - hatch.length,
     maxX: L / 2,
-    minZ: W / 2 - hatch.width,
-    maxZ: W / 2,
+    minZ: -W / 2,
+    maxZ: -W / 2 + hatch.width,
   };
   // Its service panel (the owner, 2026-10-26): a fixed steel plate set
   // in the gratings west of the pumps' lifting panel, its holes cut for
@@ -280,11 +282,11 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     group.add(mark);
   }
   const steel = t.paint('#8d9392', 0.45, 0.6);
-  // Its hatch lid, hinged along its outer (south) edge, by the pit's wall,
+  // Its hatch lid, hinged along its outer (north) edge, by the pit's wall,
   // lifting open toward it (the owner, 2026-10-26); its handle inboard.
   const lid = new Group();
   lid.name = 'Backwash pit hatch';
-  lid.position.set((hatchArea.minX + hatchArea.maxX) / 2, 0, hatchArea.maxZ);
+  lid.position.set((hatchArea.minX + hatchArea.maxX) / 2, 0, hatchArea.minZ);
   group.add(lid);
   // Painted chequer plate: raised lozenges in a herringbone, as a
   // galvanised tread-plate hatch is (the owner, 2026-10-26).
@@ -326,7 +328,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     hatch.width,
     0,
     -0.01,
-    -hatch.width / 2,
+    hatch.width / 2,
   );
   const handle = t.box(
     lid,
@@ -336,7 +338,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     0.03,
     0,
     0.01,
-    -hatch.width + 0.08,
+    hatch.width - 0.08,
   );
   const sign = createSafetySign(
     kit,
@@ -345,7 +347,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   );
   sign.rotation.x = -Math.PI / 2;
   sign.scale.setScalar(0.8);
-  sign.position.set(0, 0.003, -hatch.width / 2);
+  sign.position.set(0, 0.003, hatch.width / 2);
   lid.add(sign);
   // Its steel angle frame round the opening, standing 10 mm proud of the
   // floor, not flush with it (flush, it flickered against the slab).
@@ -635,7 +637,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       const to = [davitX - 0.6, armY - 0.05] as const;
       const len = Math.hypot(to[0] - from[0], to[1] - from[1]);
       const brace = t.box(
-        group,
+        davitGroup,
         yellow,
         len,
         0.05,
@@ -733,7 +735,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       // the lifting panel, to the header.
       t.pipe(
         group,
-        80,
+        100,
         [
           [px - 0.22, sumpFloor + 0.24, z],
           [rx, sumpFloor + 0.24, z],
@@ -790,7 +792,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     // The header joining the two risers, and its outlet up.
     t.pipe(
       group,
-      80,
+      100,
       [
         [rx, headerY, zs[0]],
         [rx, headerY, zs[1]],
@@ -800,7 +802,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     const zm = (zs[0] + zs[1]) / 2;
     t.pipe(
       group,
-      80,
+      100,
       [
         [rx, headerY, zm],
         [rx, PIT_DISCHARGE.y, zm],
@@ -843,7 +845,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   let panelUpdate = () => {};
   {
     const rx = L / 2 + w + PIT_RAIL.off;
-    const post = { x: rx + 0.55, z: -1.3 };
+    const post = { x: rx + 0.55, z: 0.4 };
     const grey = t.paint('#c9cdc8', 0.5);
     // Its post behind it (the panel's back at post.x − 0.12), from the
     // floor to its middle, on a bolted base plate, a bolted bracket
@@ -1010,7 +1012,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     });
     ladder.rotation.y = -Math.PI / 2;
     // Centred along the hatch (the owner, 2026-10-26).
-    ladder.position.set(L / 2, -0.05, W / 2 - p.hatch / 2);
+    ladder.position.set(L / 2, -0.05, -W / 2 + p.hatch / 2);
     group.add(ladder);
   }
   // Its float switches (the owner, 2026-10-26), in a row by its sump on
@@ -1102,7 +1104,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
         delta * 1.75,
       );
       leaf.rotation.y = -gate.angle;
-      lid.rotation.x = cover.angle;
+      lid.rotation.x = -cover.angle;
     },
     /** Whether its gate and hatch stand open. */
     gateOpen: () => gate.angle > 0.6,

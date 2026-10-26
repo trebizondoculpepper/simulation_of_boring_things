@@ -14,6 +14,7 @@ import { schematicExpansion } from '../../../game/plant/schematics';
 import { INSTALLED_VALVES } from '../../../game/plant/installed-valves';
 import { layoutRoom, wetHallBox } from './room-equipment';
 import { WET_HALL, WET_HALL_LAYOUT } from './shell-rooms';
+import { BACKWASH_PIT } from '../../../game/plant/wet-hall';
 
 /**
  * The wet hall plumbed by the plumber (prompt 036; the owner, 2026-10-26),
@@ -137,7 +138,9 @@ export function wetHallLines(): WetHallLine[] {
     const od = dirty
       ? 0.16
       : link.sourceId === 'holding'
-        ? 0.076
+        ? // Pumped backwash, grit and all: 110 mm, wide enough not to
+          // block (the owner, 2026-10-26: 76 mm was too thin).
+          0.11
         : gravity
           ? link.sourcePort === 'overflow'
             ? 0.11
@@ -195,6 +198,43 @@ export function wetHallPlumbing() {
       ...solidUpTo(DOOR_HEAD)(k),
       forbids: { runs: true },
     })),
+    // The backwash pit's hatchway, and the space its lid sweeps as it
+    // opens, kept clear of every pipe (the owner, 2026-10-26: the
+    // discharge clipped through it).
+    {
+      min: [
+        WET_HALL_LAYOUT.pit.maxX - BACKWASH_PIT.hatch - 0.1,
+        0,
+        WET_HALL_LAYOUT.pit.minZ - 0.1,
+      ] as Vec3,
+      max: [
+        WET_HALL_LAYOUT.pit.maxX + 0.1,
+        BACKWASH_PIT.hatch + 0.2,
+        WET_HALL_LAYOUT.pit.minZ + BACKWASH_PIT.hatch + 0.1,
+      ] as Vec3,
+      forbids: { runs: true },
+    },
+    // The walkways round the pit's south and east sides: no pipe below
+    // head height across them (the owner, 2026-10-26: the discharge ran
+    // at 1.4 m along the south wall), bar the sewer's drop.
+    ...(() => {
+      const P = WET_HALL_LAYOUT.pit;
+      const R = layout.box.d / 2;
+      const head = 2.2;
+      const drop = WET_HALL_LAYOUT.sewerDrop;
+      return [
+        {
+          min: [P.minX - 0.5, 0, P.maxZ + 0.5] as Vec3,
+          max: [R, head, R] as Vec3,
+          forbids: { runs: true },
+        },
+        {
+          min: [P.maxX + 0.5, 0, P.minZ - 0.5] as Vec3,
+          max: [drop.x - 0.3, head, P.maxZ + 0.5] as Vec3,
+          forbids: { runs: true },
+        },
+      ];
+    })(),
   ];
   // A port inside its machine's box leaves it on a lead long enough to
   // clear it: up out of the pit, past its rail; out from the break
