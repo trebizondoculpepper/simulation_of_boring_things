@@ -1,3 +1,4 @@
+import { markComponent } from '../../core/views/component-identity';
 import { Group, Mesh, MeshStandardMaterial, PlaneGeometry } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
@@ -15,6 +16,13 @@ import { slabAround } from '../../../gallery/logic/slab-openings';
  */
 export const PIT_RAIL = { off: 0.15, gate: { at: -1.5, width: 1.0 } } as const;
 
+/** A float switch, as the pit hangs it: its name, its height above the pit's floor, and its colour. */
+export interface PitFloatSpec {
+  name: string;
+  height: number;
+  colour: string;
+}
+
 export interface BackwashPitSpec {
   /** Its inside, metres: length along x, width along z, depth floor to slab. */
   length: number;
@@ -28,6 +36,8 @@ export interface BackwashPitSpec {
   sump: { length: number; width: number; depth: number };
   /** The hatch over its sump, square. */
   hatch: number;
+  /** Its float switches, deepest first. */
+  floats: readonly PitFloatSpec[];
 }
 
 /**
@@ -289,6 +299,59 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   level.group.position.set(-L / 2 + 1.0, -0.42, -W / 2 + 0.45);
   group.add(level.group);
   t.box(group, steel, 0.08, 0.05, 0.5, -L / 2 + 1.0, -0.12, -W / 2 + 0.25);
+  // Its float switches (the owner, 2026-10-26), in a row by its sump on
+  // a bracket from its east wall under the gratings: each on its cable to
+  // its level, hanging when dry, tilted up on the water when it reaches
+  // it; each a component, saying only what anyone looking in would see.
+  const floats = p.floats.map((f, i) => {
+    const x = L / 2 - 0.25;
+    const z = W / 2 - p.hatch - 0.3 - i * 0.3;
+    const hangFrom = -0.25;
+    const at = -D + f.height;
+    const holder = new Group();
+    holder.position.set(x, 0, z);
+    group.add(holder);
+    const cable = t.paint('#1b1d1e', 0.7);
+    t.cyl(
+      holder,
+      cable,
+      0.004,
+      hangFrom - at,
+      0,
+      (hangFrom + at) / 2,
+      0,
+      'y',
+      6,
+    );
+    const body = new Group();
+    body.position.set(0, at, 0);
+    holder.add(body);
+    t.cyl(body, t.paint(f.colour, 0.45), 0.045, 0.16, 0, -0.08, 0, 'y', 14);
+    let up = false;
+    markComponent(holder, {
+      name: `Backwash pit float switch, ${f.name}`,
+      status: () =>
+        up ? 'Tilted up, on the water' : 'Hanging on its cable, dry',
+    });
+    return {
+      set(depth: number) {
+        up = depth >= f.height;
+        // Tilted up on the water, or hanging straight down.
+        body.rotation.z = up ? 1.2 : 0;
+        body.position.y = up ? Math.min(at + 0.06, -D + depth) : at;
+      },
+    };
+  });
+  t.box(
+    group,
+    steel,
+    0.5,
+    0.04,
+    p.floats.length * 0.3 + 0.1,
+    L / 2 - 0.25,
+    -0.25,
+    W / 2 - p.hatch - 0.3 - ((p.floats.length - 1) * 0.3) / 2,
+  );
   // Its name on its kerb.
   const name = createMicroLabel(kit, 'WH-T2  BACKWASH PIT', {
     height: 0.06,
@@ -306,6 +369,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       water.position.y = -D + d;
       water.visible = metres > 0.01;
       level.show(metres);
+      for (const f of floats) f.set(metres);
     },
   };
 }

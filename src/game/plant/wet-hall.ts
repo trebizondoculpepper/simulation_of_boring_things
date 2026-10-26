@@ -58,10 +58,9 @@ export const WET_HALL_PLANT = {
   /**
    * Its high-high level: its controller shuts its inlet, inhibiting every
    * backwash and rinse until the pump has brought it back below its high
-   * level (`backwashInhibitClears`).
+   * level.
    */
   backwashHighHigh: 0.93,
-  backwashInhibitClears: 0.75,
 } as const;
 
 /**
@@ -84,6 +83,34 @@ export const BACKWASH_PIT = {
   /** The hatch over its sump, in its gratings, this square. */
   hatch: 1.4,
 } as const;
+
+/**
+ * The pit's float switches (the owner, 2026-10-26): four cable-suspended
+ * tilt floats hanging from a bracket under its gratings by its sump, each
+ * at its level, tilting up when the water reaches it and closing its
+ * contact. They are its controls, independent of its ultrasonic
+ * transmitter: STOP and START work its pump, HIGH its high alarm and the
+ * inhibit's release, HIGH-HIGH its inhibit. Each at its share of its
+ * working volume.
+ */
+export const PIT_FLOATS = [
+  { id: 'stop', name: 'STOP', share: WET_HALL_PLANT.dischargeOff },
+  { id: 'start', name: 'START', share: WET_HALL_PLANT.dischargeOn },
+  { id: 'high', name: 'HIGH', share: WET_HALL_PLANT.backwashHigh },
+  { id: 'highHigh', name: 'HIGH-HIGH', share: WET_HALL_PLANT.backwashHighHigh },
+] as const;
+export type PitFloatId = (typeof PIT_FLOATS)[number]['id'];
+
+/** Each float's height above the pit's floor, m: its level's water depth. */
+export const pitFloatHeight = (share: number) =>
+  backwashPitDepth(share * WET_HALL_PLANT.backwashTank);
+
+/** Which of its floats are tilted up, with `m3` in it. */
+export function pitFloats(m3: number): Record<PitFloatId, boolean> {
+  return Object.fromEntries(
+    PIT_FLOATS.map((f) => [f.id, m3 > f.share * WET_HALL_PLANT.backwashTank]),
+  ) as Record<PitFloatId, boolean>;
+}
 
 /** Its water's depth above its floor, m, holding `m3`. */
 export const backwashPitDepth = (m3: number) =>
@@ -183,11 +210,10 @@ export function stepWetHall(
     s.boosterTripped || breakTank < P.breakTank * P.lowLevel;
   // The backwash tank: the backwash in, its pump out to sewer.
   const filled = s.backwashTank + flows.backwashed;
-  const discharging =
-    powered(plant) &&
-    (s.discharging
-      ? filled > P.backwashTank * P.dischargeOff
-      : filled > P.backwashTank * P.dischargeOn);
+  // Its pump on its floats (`pitFloats`): started by START tilting up,
+  // run on until STOP drops.
+  const now = pitFloats(filled);
+  const discharging = powered(plant) && (s.discharging ? now.stop : now.start);
   const gravity =
     (drains.discharge ? P.dischargeValveRate : 0) +
     (drains.tankDrain ? P.tankDrainRate : 0);
@@ -196,11 +222,10 @@ export function stepWetHall(
     filled - (discharging ? P.dischargeRate * hours : 0) - gravity * hours,
   );
   const spilt = Math.max(0, backwashTank - P.backwashTank);
-  // Its inhibit: set at high-high, held until the pump has it back down.
-  const level = Math.min(P.backwashTank, backwashTank) / P.backwashTank;
-  const inhibit = s.inhibit
-    ? level > P.backwashInhibitClears
-    : level >= P.backwashHighHigh;
+  // Its inhibit, on its floats: set when HIGH-HIGH tilts up, held until
+  // the pump has it back down past HIGH.
+  const after = pitFloats(backwashTank);
+  const inhibit = s.inhibit ? after.high : after.highHigh;
   return {
     breakTank,
     boosterTripped,
@@ -228,7 +253,8 @@ export function wetHallAlarms(s: WetHallState) {
   return {
     breakTankLow: s.breakTank < P.breakTank * 0.3,
     boosterLowWater: s.boosterTripped,
-    backwashHigh: s.backwashTank > P.backwashTank * P.backwashHigh,
+    // Its HIGH float tilted up.
+    backwashHigh: pitFloats(s.backwashTank).high,
     /** High-high: its inlet shut, backwashing inhibited. */
     backwashInhibit: !!s.inhibit,
   };

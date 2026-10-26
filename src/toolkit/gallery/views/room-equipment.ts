@@ -142,8 +142,10 @@ import { MONITOR_POST, ozoneMonitorPlace } from '../logic/ozone-monitor';
 import { createPipe } from '../../components/core/views/pipe-kinds';
 import {
   BACKWASH_PIT,
+  PIT_FLOATS,
   WET_HALL_PLANT,
   backwashPitDepth,
+  pitFloatHeight,
 } from '../../../game/plant/wet-hall';
 import { createBackwashPit } from '../../components/plant/views/backwash-pit';
 import { createMakeUpFlowmeter } from '../../components/plant/views/balance-plant';
@@ -481,6 +483,16 @@ function modelFor(
       wall: WET_HALL_LAYOUT.pitWall,
       sump: BACKWASH_PIT.sump,
       hatch: BACKWASH_PIT.hatch,
+      floats: PIT_FLOATS.map((f) => ({
+        name: f.name,
+        height: pitFloatHeight(f.share),
+        colour: {
+          stop: '#2f8f3a',
+          start: '#2456b8',
+          high: '#e0a51c',
+          highHigh: '#c42b23',
+        }[f.id],
+      })),
     });
     pit.setDepth(0);
     // Over its opening: its footprint is shifted east for its davit.

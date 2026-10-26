@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vite-plus/test';
 import { newPlantServices } from './services';
 import {
   BACKWASH_PIT,
+  PIT_FLOATS,
   WET_HALL_PLANT as P,
   backwashPitDepth,
+  pitFloatHeight,
+  pitFloats,
   makeUpShare,
   newWetHall,
   resetBooster,
@@ -81,7 +84,33 @@ describe('the wet hall', () => {
     expect(wetHallAlarms(s).backwashHigh).toBe(true);
   });
 
-  it('shuts its inlet at high-high, and opens it again once pumped back down', () => {
+  it('works its pump and its inhibit on its four floats', () => {
+    const at = (share: number) => pitFloats(share * P.backwashTank);
+    expect(at(0.02)).toEqual({
+      stop: false,
+      start: false,
+      high: false,
+      highHigh: false,
+    });
+    expect(at(0.5)).toEqual({
+      stop: true,
+      start: true,
+      high: false,
+      highHigh: false,
+    });
+    expect(at(0.95)).toEqual({
+      stop: true,
+      start: true,
+      high: true,
+      highHigh: true,
+    });
+    // Each float hangs at its level's depth, deepest first.
+    const heights = PIT_FLOATS.map((f) => pitFloatHeight(f.share));
+    expect(heights).toEqual([...heights].sort((a, b) => a - b));
+    expect(heights.at(-1)!).toBeLessThan(BACKWASH_PIT.topWater);
+  });
+
+  it('shuts its inlet at high-high, and opens it again once pumped back down past HIGH', () => {
     let s = stepWetHall(
       newWetHall(),
       plant,
@@ -92,7 +121,7 @@ describe('the wet hall', () => {
     expect(wetHallAlarms(s).backwashInhibit).toBe(true);
     // Its pump at the consented rate brings it below its clear level.
     const hours =
-      (P.backwashTank * (P.backwashHighHigh + 0.01 - P.backwashInhibitClears)) /
+      (P.backwashTank * (P.backwashHighHigh + 0.01 - P.backwashHigh)) /
       P.dischargeRate;
     for (let i = 0; i < hours * 3600 - 120; i++)
       s = stepWetHall(s, plant, none, 1);
