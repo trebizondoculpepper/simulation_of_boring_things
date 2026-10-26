@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Dev42's booster set has a Kessler-Moody electromagnetic flowmeter (FT-1) in its discharge's run overhead to the sink, reading the set's delivery: one pump's, none while stopped, about 1.7 times one while boosting (the owner, 2026-10-26).
 - The booster set's network gland is a gland only, no cable drawn, and marks its control port (`status`, `BOOSTER_CONTROL`) in the model, where the room's control wiring is to be drawn in (the owner, 2026-10-26); machine ports may now be `control`, which the port-connection check leaves to the control wiring.
 - The booster set's motorised valves are each cabled to its control unit (the owner, 2026-10-26): a thinner cable from each actuator's tail, laid in square runs, into its own small gland under the unit (an actuated valve now marks where its cable's tail ends, `cableTail`); the unit's network gland moves to its top, its cable up to the room's control bus, and the CONTROL NETWORK sign is gone.
 - The booster set's pumps' rating plates sit on their terminal boxes' flat lids, sized to them, not on the round stage sleeves; each terminal box's control cable runs from its gland down and along into a gland under the control unit, and the unit has a larger gland of its own, marked CONTROL NETWORK, its cable down to the floor (the owner, 2026-10-26).

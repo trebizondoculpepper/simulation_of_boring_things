@@ -5,6 +5,7 @@ import {
   PIPE_KINDS,
   createPipe,
 } from '../../../components/core/views/pipe-kinds';
+import { createMagFlowmeter } from '../../../components/plant/views/mag-flowmeter';
 import { createExperimentalSourceView } from '../../../components/plant/views/experimental-source';
 import {
   SOURCE_SHAPE,
@@ -84,6 +85,12 @@ function rig(kit: PanelKit): LiveExhibit {
   const westX = -B.w / 2 - 0.9;
   const eastX = B.w / 2 + 0.9;
   const top = SOURCE_SHAPE.height + SOURCE_SHAPE.stud;
+  const bend = ((PIPE_KINDS.stainless.bend ?? 1.5) * 0.089) / 0.076;
+  // The set's delivery flowmeter, in the discharge's run overhead.
+  const meterX = (B.w / 2 + 0.3 + eastX) / 2;
+  const meter = createMagFlowmeter(kit, { od: 0.076, tag: 'FT-1' });
+  meter.group.position.set(meterX, over, B.dischargeZ);
+  object.add(meter.group);
   const views = (
     [
       [source, westX, B.suctionZ],
@@ -104,7 +111,8 @@ function rig(kit: PanelKit): LiveExhibit {
       [-B.w / 2, y, B.suctionZ],
     ]),
     // Its bends as round as the suction's (the owner, 2026-10-26): the
-    // same radius on the smaller pipe.
+    // same radius on the smaller pipe. A flowmeter in its level run
+    // overhead (the owner, 2026-10-26), the pipe either side of it.
     createPipe(
       'stainless',
       0.076,
@@ -112,10 +120,19 @@ function rig(kit: PanelKit): LiveExhibit {
         [B.w / 2, y, B.dischargeZ],
         [B.w / 2 + 0.3, y, B.dischargeZ],
         [B.w / 2 + 0.3, over, B.dischargeZ],
+        [meterX - 0.15, over, B.dischargeZ],
+      ],
+      { bend },
+    ),
+    createPipe(
+      'stainless',
+      0.076,
+      [
+        [meterX + 0.15, over, B.dischargeZ],
         [eastX, over, B.dischargeZ],
         [eastX, top, B.dischargeZ],
       ],
-      { bend: ((PIPE_KINDS.stainless.bend ?? 1.5) * 0.089) / 0.076 },
+      { bend },
     ),
   );
   return {
@@ -129,6 +146,7 @@ function rig(kit: PanelKit): LiveExhibit {
         delta,
       );
       booster.update?.(delta);
+      meter.show(changeoverFlow(set), 'DELIVERY');
       for (const v of views) v.update();
     },
     dispose() {
