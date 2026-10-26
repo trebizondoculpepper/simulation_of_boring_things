@@ -20,8 +20,23 @@ export const BOOSTER = {
   pumpZ: 0,
 } as const;
 
+/**
+ * The make-up meter's run: its stubs this far either side of its middle,
+ * short, so its pipework is easily routed; its run at the booster set's
+ * manifolds' height, so the meter can stand on the booster's discharge
+ * line, the pipe between them straight (the owner, 2026-10-26).
+ */
+export const METER = { half: 0.3, y: BOOSTER.manifoldY } as const;
+
 /** The make-up water meter set's run (`createWaterMeter`): its ends either side, its height. */
-export const METER = { half: 0.75, y: 0.9 } as const;
+
+/**
+ * Our own make-up flowmeter (the owner, 2026-10-26: the meter is the
+ * utility's, read by its dial and not wired into): an electromagnetic
+ * flowmeter on its own short run straight after the meter, in line with
+ * it, its converter's cable gland on top of its head, so far over its run.
+ */
+export const FLOWMETER = { half: 0.3, od: 0.076, gland: 0.29 } as const;
 
 /** The make-up main's working pressure, bar, while the set holds it. */
 export const SET_PRESSURE = 4.0;

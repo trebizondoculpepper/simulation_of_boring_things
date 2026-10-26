@@ -193,6 +193,21 @@ export const PLACED_KINDS = {
     class: 'plant',
     purpose: 'Holds filter backwash water before discharge.',
   },
+  'make-up-flowmeter': {
+    type: 'Electromagnetic flowmeter',
+    status: 'none',
+    code: 'FT',
+    class: 'plant',
+    purpose:
+      'Measures the make-up water sent to the pools, for the plant’s own controls and records.',
+  },
+  'make-up-recorder': {
+    type: 'Flow recorder',
+    status: 'none',
+    code: 'FQR',
+    class: 'plant',
+    purpose: 'Records the make-up water used, from the meter’s pulses.',
+  },
   'sewer-monitor': {
     type: 'Flow monitor and chart recorder',
     status: 'none',

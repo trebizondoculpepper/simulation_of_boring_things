@@ -385,6 +385,7 @@ export const WORLD_HEALTH_COVERAGE = {
   jacuzzi: 'not health: the jets and air await a timed START',
   jacuzziCabinet: 'jacuzzi: cabinet powered, no trip',
   sewer: 'not health: a record of what went to sewer',
+  makeUpRecord: 'not health: a record of the water used',
   centralBattery:
     'not checked: the emergency lighting’s battery; its charge and tests are maintenance, and the lighting’s own check catches a dark zone',
   cabinets:
@@ -424,6 +425,9 @@ export const KIND_HEALTH_COVERAGE = {
   'backwash-tank': 'wet hall: no overflow',
   'mimic-wet': 'not health: a display of the wet hall',
   'sewer-monitor': 'not health: a record of what went to sewer',
+  'make-up-recorder': 'not health: a record of the water used',
+  'make-up-flowmeter':
+    'not health: an instrument; the pools’ make-up and levels show the water',
   boiler:
     'not in the world: its individual controller state belongs to its boiler-house panel; gas: shared safety chain; pools: delivered heat',
   'boiler-cascade':

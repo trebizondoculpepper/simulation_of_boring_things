@@ -288,6 +288,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Changed
 
+- The wet hall's make-up and pit, further (the owner, 2026-10-26): the utility's meter is read by its dial, not wired into (no pulse emitter), its Splashonomics mark wrapped round its register (`createBrandBand`), its run's valves and strainer left to the plumber, its stubs shortened; our own Kessler-Moody electromagnetic flowmeter (WH-FT1) after it, wired to a new make-up water recorder (WH-FQR2), a pen plotter of the water used, kept in the world (world version 36); the line runs break tank, meter, flowmeter, booster set's suction, straight. The backwash pit is railed round (a gate toward the aisle), its davit outside the rail, its level transmitter under the gratings, its connections its own (in through the gratings, the pump's riser through the hatch, the overflow and drain below the floor), its walls' tops and frame no longer flickering against the slab.
 - The wet hall's make-up bay (the owner, 2026-10-26): its partition the hall's own breeze block at its walls' thickness, 3.6 m tall, running through to the east wall; LED battens on both its faces at the hall's height, with trunking on its aisle side; the standard pair of equipment doors (MAKE-UP WATER, authorised personnel). The hall's own batten where the partition meets its east wall is left out (`partitionsMeet`), as is any batten a control-bus conduit would cross.
 
 ### Fixed

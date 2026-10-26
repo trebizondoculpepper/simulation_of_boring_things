@@ -89,6 +89,16 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0034',
     tag: 'WH-MP1',
   },
+  // Our own make-up flowmeter, after the utility's meter (the owner, 2026-10-26).
+  'wet_hall|make-up-flowmeter|Make-up flowmeter': {
+    assetId: 'asset-0130',
+    tag: 'WH-FT1',
+  },
+  // The make-up water's recorder (the owner, 2026-10-26).
+  'wet_hall|make-up-recorder|Make-up water recorder': {
+    assetId: 'asset-0129',
+    tag: 'WH-FQR2',
+  },
   // The sewer outfall's monitor (the owner, 2026-10-26).
   'wet_hall|sewer-monitor|Sewer outfall monitor': {
     assetId: 'asset-0128',

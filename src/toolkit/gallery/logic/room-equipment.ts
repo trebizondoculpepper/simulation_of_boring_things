@@ -17,7 +17,11 @@ import {
   wetHallPartition,
 } from './shell-rooms';
 import type { ShellRoomId, ShellWall } from './shell-rooms';
-import { BOOSTER } from '../../components/plant/logic/booster-set';
+import {
+  BOOSTER,
+  FLOWMETER,
+  METER,
+} from '../../components/plant/logic/booster-set';
 import { LIGHTING_BOARD, MAIN_SWITCH } from './switch-room';
 import { ROOM_SIGNS, SIGN_ITEMS } from './building-signs';
 import { loungeRoomBox } from './lounge-plant-plan';
@@ -55,6 +59,8 @@ export interface Item {
   walls?: readonly Side[];
   /** Floor that may be walked over: a lorry's bay, painted. */
   walkable?: boolean;
+  /** A pit below the floor (the wet hall's backwash pit), its ports its own. */
+  pit?: boolean;
   /** A wall panel that may hang over a machine on the floor, clear of its top. */
   over?: boolean;
   /**
@@ -734,23 +740,48 @@ export function roomEquipment(
             BOOSTER.d,
             BOOSTER.h,
           ),
-          floor('water-meter', 'Make-up water meter', 1.6, 0.4, 1.2),
+          floor(
+            'water-meter',
+            'Make-up water meter',
+            2 * METER.half + 0.1,
+            0.4,
+            0.6,
+          ),
           // The backwash pit (prompt 036): below the floor, its opening
-          // and its walls' tops this footprint, covered by gratings walked
-          // over; above them only its pump's davit and its instruments.
+          // covered by gratings and railed round, not walked on (the
+          // owner, 2026-10-26); its footprint its walls, its rail and,
+          // on the east, its pump's davit.
           floor(
             'backwash-tank',
             'Backwash holding tank',
             WET_HALL_LAYOUT.pit.maxX -
               WET_HALL_LAYOUT.pit.minX +
-              2 * WET_HALL_LAYOUT.pitWall,
+              2 * (WET_HALL_LAYOUT.pitWall + 0.2) +
+              2 * WET_HALL_LAYOUT.pitDavitShift,
             WET_HALL_LAYOUT.pit.maxZ -
               WET_HALL_LAYOUT.pit.minZ +
-              2 * WET_HALL_LAYOUT.pitWall,
-            1.2,
-            { back: 0, walkable: true },
+              2 * (WET_HALL_LAYOUT.pitWall + 0.2),
+            1.8,
+            { back: 0, pit: true },
           ),
           wall('mimic-wet', 'Mimic: wet hall', 2.2, 0.08, 1.2, 1.6),
+          // Our own flowmeter, straight after the utility's meter.
+          floor(
+            'make-up-flowmeter',
+            'Make-up flowmeter',
+            2 * FLOWMETER.half + 0.1,
+            0.4,
+            0.6,
+          ),
+          // The make-up water's recorder, its pen plotting the water used.
+          wall(
+            'make-up-recorder',
+            'Make-up water recorder',
+            0.6,
+            0.12,
+            0.8,
+            1.5,
+          ),
           // The sewer outfall's monitor and its chart recorder.
           wall('sewer-monitor', 'Sewer outfall monitor', 0.6, 0.12, 0.8, 1.5),
         ],
@@ -1343,10 +1374,26 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
     return [
       put(box, at('break-tank'), { x: -2.4, z: -6.3, face: 'south' }),
       put(box, at('booster-set'), { x: 2.1, z: -6.55, face: 'south' }),
-      put(box, at('water-meter'), { x: 4.7, z: -6.55, face: 'south' }),
+      // The utility's meter, then our flowmeter, on the line into the
+      // booster set's suction at its west end, in line with it, short gaps
+      // between (the owner, 2026-10-26).
+      put(box, at('make-up-flowmeter'), {
+        x: 2.1 - BOOSTER.w / 2 - 0.4 - FLOWMETER.half,
+        z: -6.55 + BOOSTER.suctionZ,
+        face: 'south',
+      }),
+      put(box, at('water-meter'), {
+        x: 2.1 - BOOSTER.w / 2 - 0.4 - 2 * FLOWMETER.half - 0.3 - METER.half,
+        z: -6.55 + BOOSTER.suctionZ,
+        face: 'south',
+      }),
+      // The clean side's mimic on the bay's north wall, the make-up
+      // recorder beside it, over the booster set.
       put(box, at('mimic-wet'), { wall: 'north', along: 6.9 }),
+      put(box, at('make-up-recorder'), { wall: 'north', along: 4.2 }),
+      // Its middle over the opening's, its davit's 0.4 m to the east.
       put(box, at('backwash-tank'), {
-        x: (L.pit.minX + L.pit.maxX) / 2,
+        x: (L.pit.minX + L.pit.maxX) / 2 + L.pitDavitShift,
         z: (L.pit.minZ + L.pit.maxZ) / 2,
         face: 'south',
       }),

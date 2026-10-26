@@ -80,7 +80,10 @@ import { EXHIBITS as DOSING } from '../rooms/plant/dosing';
 import { EXHIBITS as BALANCE } from '../rooms/plant/balance';
 import { createMainSwitch } from '../../components/plant/views/main-switch';
 import { createLightingBoard } from '../../components/plant/views/lighting-board';
-import { createSewerMonitorPanel } from '../../components/plant/views/sewer-monitor-panel';
+import {
+  createFlowRecorderPanel,
+  createSewerMonitorPanel,
+} from '../../components/plant/views/sewer-monitor-panel';
 import {
   SEWER_CHART,
   SEWER_LOG,
@@ -143,6 +146,7 @@ import {
   backwashPitDepth,
 } from '../../../game/plant/wet-hall';
 import { createBackwashPit } from '../../components/plant/views/backwash-pit';
+import { createMakeUpFlowmeter } from '../../components/plant/views/balance-plant';
 import { WET_HALL_LAYOUT } from '../logic/shell-rooms';
 import { pumpPairExhibit } from '../rooms/plant/pumps';
 import { pumpPanelExhibit } from '../rooms/plant/pump-panel';
@@ -332,6 +336,39 @@ function modelFor(
   if (kind === 'booster-set') return createWorldBoosterSet(kit);
   if (kind === 'water-meter') return createWorldWaterMeter(kit);
   if (kind === 'mimic-wet') return createWetHallMimic(kit);
+  // Our own make-up flowmeter, its converter reading the world's flow.
+  if (kind === 'make-up-flowmeter') {
+    const meter = createMakeUpFlowmeter(kit);
+    if (typeof window === 'undefined') return meter.group;
+    return {
+      object: meter.group,
+      update: () => meter.show(roomWorld().world.value.wetHall.flow),
+    };
+  }
+  // The make-up water's recorder, the world's record on its chart.
+  if (kind === 'make-up-recorder' && typeof window !== 'undefined') {
+    const store = roomWorld();
+    const w = () => store.world.value;
+    return createFlowRecorderPanel(
+      kit,
+      {
+        flow: () => w().makeUpRecord.flow,
+        total: () => w().makeUpRecord.total,
+        samples: () => chartWindow(w().makeUpRecord.log, 24, 20),
+        over: () => false,
+        powered: () => serviceAvailable(w().plant, 'wet_hall', 'power'),
+      },
+      {
+        name: 'Make-up water recorder',
+        title: 'MAKE-UP WATER RECORDER',
+        subtitle: 'TOWN MAIN TO THE POOLS',
+        converter: 'KESSLER-MOODY  FT  MAKE-UP',
+        chart: 'MAKE-UP m3/h',
+        scaleMax: 20,
+        hourEvery: 3600 / SEWER_LOG.step,
+      },
+    );
+  }
   // The sewer outfall's monitor, the world's record on its chart.
   if (kind === 'sewer-monitor' && typeof window !== 'undefined') {
     const store = roomWorld();
@@ -443,11 +480,16 @@ function modelFor(
       topWater: BACKWASH_PIT.topWater,
       wall: WET_HALL_LAYOUT.pitWall,
       sump: BACKWASH_PIT.sump,
+      hatch: BACKWASH_PIT.hatch,
     });
     pit.setDepth(0);
-    if (typeof window === 'undefined') return pit.group;
+    // Over its opening: its footprint is shifted east for its davit.
+    pit.group.position.x = -WET_HALL_LAYOUT.pitDavitShift;
+    const holder = new Group();
+    holder.add(pit.group);
+    if (typeof window === 'undefined') return holder;
     return {
-      object: pit.group,
+      object: holder,
       update: () =>
         pit.setDepth(
           backwashPitDepth(roomWorld().world.value.wetHall.backwashTank),

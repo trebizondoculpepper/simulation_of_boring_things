@@ -8,6 +8,13 @@ import { createStaffGauge } from './staff-gauge';
 import { createSafetySign } from '../../general-safety/views/safety-signs';
 import { slabAround } from '../../../gallery/logic/slab-openings';
 
+/**
+ * Its guard rail (the owner, 2026-10-26): this far outside its walls'
+ * outer face, and its gate, along its north side from its middle, this
+ * wide; the davit outside it on the east.
+ */
+export const PIT_RAIL = { off: 0.15, gate: { at: -1.5, width: 1.0 } } as const;
+
 export interface BackwashPitSpec {
   /** Its inside, metres: length along x, width along z, depth floor to slab. */
   length: number;
@@ -19,6 +26,8 @@ export interface BackwashPitSpec {
   wall: number;
   /** Its settlement sump, in its floor under its pump. */
   sump: { length: number; width: number; depth: number };
+  /** The hatch over its sump, square. */
+  hatch: number;
 }
 
 /**
@@ -44,10 +53,54 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   const W = p.width;
   const D = p.depth;
   const w = p.wall;
-  // Its walls, down from the floor.
+  // Its walls, down from the underside of the hall's slab (0.1 m thick):
+  // their tops under it, not in its face, which flickered.
+  const slab = 0.1;
+  const wallH = D - slab;
   for (const side of [-1, 1]) {
-    t.box(group, concrete, L + 2 * w, D, w, 0, -D / 2, side * (W / 2 + w / 2));
-    t.box(group, concrete, w, D, W, side * (L / 2 + w / 2), -D / 2, 0);
+    t.box(
+      group,
+      concrete,
+      L + 2 * w,
+      wallH,
+      w,
+      0,
+      -slab - wallH / 2,
+      side * (W / 2 + w / 2),
+    );
+    t.box(
+      group,
+      concrete,
+      w,
+      wallH,
+      W,
+      side * (L / 2 + w / 2),
+      -slab - wallH / 2,
+      0,
+    );
+  }
+  // The slab's edge round the opening, its cut face lining the pit's top.
+  for (const side of [-1, 1]) {
+    t.box(
+      group,
+      concrete,
+      L,
+      slab,
+      0.002,
+      0,
+      -slab / 2,
+      side * (W / 2 - 0.001),
+    );
+    t.box(
+      group,
+      concrete,
+      0.002,
+      slab,
+      W,
+      side * (L / 2 - 0.001),
+      -slab / 2,
+      0,
+    );
   }
   // Its floor, round its sump in the south-east corner.
   const sump = {
@@ -91,7 +144,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   group.add(gauge);
   // The gratings over its opening, flush with the floor; a solid hatch
   // over its sump, and its kerb round them.
-  const hatch = { length: 1.4, width: 1.4 };
+  const hatch = { length: p.hatch, width: p.hatch };
   const hatchArea = {
     minX: L / 2 - hatch.length,
     maxX: L / 2,
@@ -127,32 +180,115 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     (hatchArea.minZ + hatchArea.maxZ) / 2,
   );
   group.add(sign);
+  // Its steel angle frame round the opening, standing 10 mm proud of the
+  // floor, not flush with it (flush, it flickered against the slab).
   for (const side of [-1, 1]) {
-    t.box(group, steel, L + 0.1, 0.03, 0.05, 0, -0.015, side * (W / 2 + 0.025));
-    t.box(group, steel, 0.05, 0.03, W, side * (L / 2 + 0.025), -0.015, 0);
+    t.box(group, steel, L + 0.1, 0.03, 0.05, 0, -0.005, side * (W / 2 + 0.025));
+    t.box(group, steel, 0.05, 0.03, W, side * (L / 2 + 0.025), -0.005, 0);
   }
-  // The pump's davit beside the hatch: a post, its arm over the sump.
-  const davitX = hatchArea.minX - 0.25;
-  const davitZ = (hatchArea.minZ + hatchArea.maxZ) / 2;
-  t.cyl(group, steel, 0.05, 1.1, davitX, 0.55, davitZ, 'y', 12);
-  t.box(group, steel, 0.9, 0.08, 0.08, davitX + 0.45, 1.1, davitZ);
-  t.cyl(
-    group,
-    t.paint('#2b2e2f', 0.6),
-    0.03,
-    0.12,
-    davitX + 0.85,
-    1.0,
-    davitZ,
-    'y',
-    10,
-  );
-  // The ultrasonic level transmitter on a bracket over a gap at its west
-  // end, looking down at the water.
+  // A guard rail round the whole pit (the owner, 2026-10-26): a pit of
+  // dirty water is hard to get out of, and its covering could fail, so no
+  // one walks on it. Yellow, just outside its frame, a top rail at 1.1 m,
+  // a knee rail at 0.5 m and a toe board; in its north side, toward the
+  // aisle, a self-closing gate for its maintenance, shut.
+  const rail = PIT_RAIL;
+  {
+    const yellow = t.paint('#e3b51f', 0.5);
+    const gateColour = t.paint('#d9a514', 0.5);
+    const x0 = -L / 2 - w - rail.off;
+    const x1 = L / 2 + w + rail.off;
+    const z0 = -W / 2 - w - rail.off;
+    const z1 = W / 2 + w + rail.off;
+    const run = (a: [number, number], b: [number, number], paint = yellow) => {
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const cx = (a[0] + b[0]) / 2;
+      const cz = (a[1] + b[1]) / 2;
+      const alongX = Math.abs(b[0] - a[0]) > Math.abs(b[1] - a[1]);
+      for (const h of [1.1, 0.5])
+        t.box(
+          group,
+          paint,
+          alongX ? len : 0.04,
+          0.04,
+          alongX ? 0.04 : len,
+          cx,
+          h,
+          cz,
+        );
+      t.box(
+        group,
+        paint,
+        alongX ? len : 0.01,
+        0.1,
+        alongX ? 0.01 : len,
+        cx,
+        0.05,
+        cz,
+      );
+    };
+    const post = (x: number, z: number) =>
+      t.cyl(group, yellow, 0.024, 1.12, x, 0.56, z, 'y', 10);
+    // Posts at most 1.8 m apart along each side.
+    const posts = (from: number, to: number) => {
+      const n = Math.max(1, Math.ceil((to - from) / 1.8));
+      return Array.from(
+        { length: n + 1 },
+        (_, i) => from + ((to - from) * i) / n,
+      );
+    };
+    for (const x of posts(x0, x1)) {
+      post(x, z0);
+      post(x, z1);
+    }
+    for (const z of posts(z0, z1)) {
+      post(x0, z);
+      post(x1, z);
+    }
+    const g0 = rail.gate.at - rail.gate.width / 2;
+    const g1 = rail.gate.at + rail.gate.width / 2;
+    run([x0, z0], [g0, z0]);
+    run([g0, z0], [g1, z0], gateColour);
+    run([g1, z0], [x1, z0]);
+    run([x1, z0], [x1, z1]);
+    run([x0, z1], [x1, z1]);
+    run([x0, z0], [x0, z1]);
+  }
+  // The pump's davit outside the rail on the east, its arm reaching over
+  // it to the hatch over the sump, its chain block hanging from it.
+  {
+    const davitX = L / 2 + w + rail.off + 0.3;
+    const hx = (hatchArea.minX + hatchArea.maxX) / 2;
+    const davitZ = (hatchArea.minZ + hatchArea.maxZ) / 2;
+    const reach = davitX - hx;
+    t.cyl(group, steel, 0.05, 1.8, davitX, 0.9, davitZ, 'y', 12);
+    t.box(
+      group,
+      steel,
+      reach + 0.1,
+      0.08,
+      0.08,
+      davitX - reach / 2,
+      1.76,
+      davitZ,
+    );
+    t.cyl(
+      group,
+      t.paint('#2b2e2f', 0.6),
+      0.03,
+      0.12,
+      hx,
+      1.66,
+      davitZ,
+      'y',
+      10,
+    );
+  }
+  // The ultrasonic level transmitter under the gratings, on a bracket
+  // from its north wall, looking down at the water.
   const level = createUltrasonicLevel(kit);
-  level.group.position.set(-L / 2 + 0.5, 0.25, 0);
+  level.group.position.set(-L / 2 + 1.0, -0.42, -W / 2 + 0.45);
   group.add(level.group);
-  t.box(group, steel, 0.6, 0.05, 0.08, -L / 2 + 0.25, 0.22, 0);
+  t.box(group, steel, 0.08, 0.05, 0.5, -L / 2 + 1.0, -0.12, -W / 2 + 0.25);
   // Its name on its kerb.
   const name = createMicroLabel(kit, 'WH-T2  BACKWASH PIT', {
     height: 0.06,

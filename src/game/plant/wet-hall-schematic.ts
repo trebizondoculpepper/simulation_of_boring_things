@@ -33,6 +33,13 @@ const booster = machine(
   'Make-up booster set, duty and standby',
 );
 const meter = machine('meter', 'water-meter', 'Make-up water meter');
+// Our own flowmeter, straight after the utility's meter (the owner,
+// 2026-10-26), wired to the make-up recorder.
+const flowmeter = machine(
+  'flowmeter',
+  'make-up-flowmeter',
+  'Make-up flowmeter',
+);
 const holding = machine('holding', 'backwash-tank', 'Backwash holding tank');
 const mimic = machine('mimic', 'mimic-wet', 'Mimic: wet hall');
 // The sewer outfall's monitor (the owner, 2026-10-26): its flowmeter's
@@ -42,7 +49,20 @@ const outfall = machine(
   'sewer-monitor',
   'Sewer outfall monitor',
 );
-const electrics = roomElectrics(room, [booster, meter, mimic, outfall]);
+// The make-up water's recorder (the owner, 2026-10-26): a pen plotter of
+// the water used, from the meter's pulses.
+const makeUpRecorder = machine(
+  'make-up-recorder',
+  'make-up-recorder',
+  'Make-up water recorder',
+);
+const electrics = roomElectrics(room, [
+  booster,
+  flowmeter,
+  mimic,
+  outfall,
+  makeUpRecorder,
+]);
 
 const valve = (
   id: string,
@@ -67,9 +87,11 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
     breakTank,
     booster,
     meter,
+    flowmeter,
     holding,
     mimic,
     outfall,
+    makeUpRecorder,
     machine('town-main', 'water-main', 'Town main'),
     machine('plant-rooms', 'pool-plant-rooms', 'Pool plant rooms'),
     machine('sewer', 'sewer', 'Sewer'),
@@ -83,21 +105,30 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
       ['break-tank', 'inlet'],
       'water',
     ),
+    // The make-up line (the owner, 2026-10-26): the break tank's outlet,
+    // the utility's meter, our own flowmeter, the booster set's suction;
+    // its discharge the make-up main to the pools.
     link(
-      'Break tank to the booster set',
+      'Break tank to the meter',
       ['break-tank', 'outlet'],
-      ['booster', 'suction'],
-      'water',
-    ),
-    link(
-      'Booster set to the meter',
-      ['booster', 'discharge'],
       ['meter', 'inlet'],
       'water',
     ),
     link(
-      'Make-up main to the pool plant rooms',
+      'Meter to the flowmeter',
       ['meter', 'outlet'],
+      ['flowmeter', 'inlet'],
+      'water',
+    ),
+    link(
+      'Flowmeter to the booster set',
+      ['flowmeter', 'outlet'],
+      ['booster', 'suction'],
+      'water',
+    ),
+    link(
+      'Make-up main to the pool plant rooms',
+      ['booster', 'discharge'],
       ['plant-rooms', 'make-up'],
       'water',
     ),
@@ -128,6 +159,12 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
     ),
     link('Backwash tank drain', ['holding', 'drain'], ['waste', 'in'], 'water'),
     link(
+      'Make-up flow to its recorder',
+      ['flowmeter', 'signal'],
+      ['make-up-recorder', 'flow'],
+      'control',
+    ),
+    link(
       'Outfall flow to its monitor',
       ['holding', 'outfall-flow'],
       ['outfall-monitor', 'flow'],
@@ -151,7 +188,7 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
     ),
     valve(
       'valve-0032',
-      'Break tank to the booster set',
+      'Break tank to the meter',
       'source',
       'open',
       'breakTankOutlet',

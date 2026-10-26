@@ -53,6 +53,7 @@ describe('a save', () => {
       lighting: newWorld().lighting,
       centralBattery: newWorld().centralBattery,
       sewer: newWorld().sewer,
+      makeUpRecord: newWorld().makeUpRecord,
       ambient: newWorld().ambient,
       gas: newWorld().gas,
       identifiedPlant: newWorld().identifiedPlant,

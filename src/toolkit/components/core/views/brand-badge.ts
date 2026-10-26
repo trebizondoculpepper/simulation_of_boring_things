@@ -1,4 +1,4 @@
-import { Mesh, PlaneGeometry } from 'three';
+import { CylinderGeometry, DoubleSide, Mesh, PlaneGeometry } from 'three';
 import type { CanvasTexture } from 'three';
 import { brandById } from '../logic/brands';
 import type { BrandId } from '../logic/brands';
@@ -128,4 +128,54 @@ export function createBrandBadge(
   mesh.position.z = 0.0004;
   backing.add(mesh);
   return backing;
+}
+
+/**
+ * A brand's mark wrapped round a curved face (the owner, 2026-10-26: a
+ * meter's register, printed round it, not a flat sign stuck on): the same
+ * drawing as its badge, on a band of an open cylinder of `radius` about
+ * the y axis, `height` tall, centred on +z, a hair proud of the face. Its
+ * width follows from the drawing, as far round as that takes.
+ */
+export function createBrandBand(
+  kit: PanelKit,
+  id: BrandId,
+  {
+    radius,
+    height,
+    form = 'logo',
+    ink,
+    opacity = 1,
+  }: {
+    radius: number;
+    height: number;
+    form?: BadgeForm;
+    ink?: string;
+    opacity?: number;
+  },
+) {
+  const { texture, aspect } = drawing(id, form, ink);
+  const r = radius + 0.0004;
+  // As far round as its drawing is wide, never more than half round.
+  const theta = Math.min(Math.PI, (height * aspect) / r);
+  const material = createPs1Material({
+    map: texture,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    roughness: 0.5,
+    side: DoubleSide,
+  });
+  kit.materials.push(material);
+  const mesh = new Mesh(
+    new CylinderGeometry(r, r, height, 24, 1, true, -theta / 2, theta),
+    material,
+  );
+  mesh.name = `Band ${brandById(id).name}`;
+  mesh.userData.maker = id;
+  applyLabelFade(mesh, material, height, opacity);
+  mesh.raycast = () => {};
+  return mesh;
 }

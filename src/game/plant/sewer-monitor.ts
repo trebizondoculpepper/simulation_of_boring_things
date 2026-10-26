@@ -94,3 +94,12 @@ export function chartWindow(
   const n = Math.round((hours * 3600) / SEWER_LOG.step);
   return log.slice(-n).map((f) => Math.max(0, Math.min(1, f / scaleMax)));
 }
+
+/**
+ * Any flow's record, as the sewer outfall's is kept: its flow now, its
+ * total and a week's samples. The make-up water's is another (the owner,
+ * 2026-10-26: a pen plotter of the water used).
+ */
+export type FlowRecord = SewerMonitorState;
+export const newFlowRecord = newSewerMonitor;
+export const stepFlowRecord = stepSewerMonitor;

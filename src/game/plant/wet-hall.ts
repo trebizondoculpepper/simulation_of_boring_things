@@ -79,8 +79,10 @@ export const BACKWASH_PIT = {
   depth: 3.75,
   /** Its top water level above its floor: where it overflows (2.0 m, half as deep again for the slides and children's pool to come). */
   topWater: 3.0,
-  /** Its sump, under its pump: a pit in its floor. */
+  /** Its sump, under its pump: a pit in its floor, in its south-east corner. */
   sump: { length: 1.2, width: 1.2, depth: 0.6 },
+  /** The hatch over its sump, in its gratings, this square. */
+  hatch: 1.4,
 } as const;
 
 /** Its water's depth above its floor, m, holding `m3`. */

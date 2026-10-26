@@ -67,7 +67,7 @@ const HAND_DRAWN_VALVES: Readonly<Record<string, InstalledValve>> = {
     tag: 'WH-MU1-IV1',
     normal: 'open',
   },
-  'wet_hall|Break tank to the booster set|Break tank outlet valve': {
+  'wet_hall|Break tank to the meter|Break tank outlet valve': {
     assetId: 'valve-0032',
     tag: 'WH-T1-IV1',
     normal: 'open',

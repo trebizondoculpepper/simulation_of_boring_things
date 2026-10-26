@@ -349,6 +349,11 @@ export const WET_HALL_LAYOUT = {
   pit: { minX: -4.2, maxX: 2.8, minZ: 3, maxZ: 8 },
   /** Its concrete walls round the opening, below the floor. */
   pitWall: 0.3,
+  /**
+   * Its footprint's middle east of its opening's by this much, for its
+   * pump's davit outside its rail on that side (`backwash-pit.ts`).
+   */
+  pitDavitShift: 0.2,
 } as const;
 
 /**

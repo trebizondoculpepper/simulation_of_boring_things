@@ -177,8 +177,13 @@ import {
 } from './plant/spa-filter';
 import { bedPasses } from './plant/ideal-filter';
 import { stepSolids } from './water/solids';
-import { newSewerMonitor, stepSewerMonitor } from './plant/sewer-monitor';
-import type { SewerMonitorState } from './plant/sewer-monitor';
+import {
+  newFlowRecord,
+  newSewerMonitor,
+  stepFlowRecord,
+  stepSewerMonitor,
+} from './plant/sewer-monitor';
+import type { FlowRecord, SewerMonitorState } from './plant/sewer-monitor';
 import {
   cabinetReady,
   runningCabinet,
@@ -213,7 +218,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 35;
+export const WORLD_VERSION = 36;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -247,6 +252,8 @@ export interface World {
   lighting: LightingState;
   /** The sewer outfall's flowmeter and chart recorder (`sewer-monitor.ts`). */
   sewer: SewerMonitorState;
+  /** The make-up water's record, from its meter's pulses, for its chart recorder. */
+  makeUpRecord: FlowRecord;
   /** The emergency lighting's central battery (`electrical-room.ts`). */
   centralBattery: CentralBattery;
   /** The outside's temperature, °C: everything unheated settles to it (`thermal.ts`). */
@@ -297,6 +304,7 @@ export function newWorld(): World {
     lighting: newLighting(),
     centralBattery: newCentralBattery(),
     sewer: newSewerMonitor(),
+    makeUpRecord: newFlowRecord(),
     ambient: AMBIENT,
     gas: newGasZones(),
     identifiedPlant: newIdentifiedPlant(),
@@ -918,6 +926,12 @@ export function stepWorld(world: World, delta: number): World {
         ? world.olympicTank
         : { ...world.olympicTank, open: calling },
     wetHall,
+    // The make-up water's recorder: what its meter counted this step.
+    makeUpRecord: stepFlowRecord(
+      world.makeUpRecord,
+      wetHall.meter - world.wetHall.meter,
+      delta,
+    ),
     // The sewer outfall's flowmeter and its recorder: the pit's outflow
     // (its pump, its drains, any overflow) and the big pools' drain-downs.
     sewer: stepSewerMonitor(

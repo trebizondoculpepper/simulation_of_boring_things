@@ -1,3 +1,5 @@
+import { BACKWASH_PIT } from '../../../game/plant/wet-hall';
+import { WET_HALL_LAYOUT } from './shell-rooms';
 import { spaSandFilterGeometry } from '../../components/plant/logic/spa-sand-filter';
 import { SPA_FILTERS } from '../../../game/plant/spa-filter';
 import {
@@ -12,7 +14,11 @@ import {
   PAIR_DISCHARGE_X,
   PAIR_STRAINER_X,
 } from '../../components/plant/logic/pump-pair';
-import { BOOSTER, METER } from '../../components/plant/logic/booster-set';
+import {
+  BOOSTER,
+  FLOWMETER,
+  METER,
+} from '../../components/plant/logic/booster-set';
 
 /** A physical connection on a machine, in its own metre frame. */
 export interface MachinePort {
@@ -152,6 +158,56 @@ export function machinePorts(item: Item): MachinePort[] {
         port('overflow', [-east, top - 0.35, back], [-1, 0, 0], 0.11, 'drain'),
         port('drain', [nx / 2 - 0.6, 0.35, front], [0, 0, 1], 0.09, 'drain'),
       ];
+    if (kind === 'backwash-tank' && item.pit) {
+      // The wet hall's backwash pit (prompt 036), about its opening's
+      // middle (its footprint shifted east for its davit): the backwash
+      // in down through its gratings at its west end, over its water (an
+      // air break); its pump's discharge riser up out of its sump through
+      // its hatch; its overflow out through its east wall at its top water
+      // level, and its drain from its sump, both below the floor.
+      const P = BACKWASH_PIT;
+      const ox = -WET_HALL_LAYOUT.pitDavitShift;
+      const hatch = P.length / 2 - P.hatch / 2;
+      const hz = P.width / 2 - P.hatch / 2;
+      return [
+        port(
+          'inlet',
+          [ox - P.length / 2 + 1.2, 0.02, 0],
+          [0, 1, 0],
+          0.16,
+          'drain',
+        ),
+        port('discharge', [ox + hatch, 0.02, hz], [0, 1, 0], 0.076, 'drain'),
+        {
+          ...port(
+            'overflow',
+            [
+              ox + P.length / 2 + WET_HALL_LAYOUT.pitWall,
+              -(P.depth - P.topWater),
+              0,
+            ],
+            [1, 0, 0],
+            0.16,
+            'drain',
+          ),
+          drawn: true,
+        },
+        {
+          ...port(
+            'drain',
+            [
+              ox + P.length / 2 - P.sump.length / 2,
+              -P.depth - P.sump.depth - 0.3,
+              P.width / 2 - P.sump.width / 2,
+            ],
+            [0, -1, 0],
+            0.09,
+            'drain',
+          ),
+          drawn: true,
+        },
+      ];
+    }
     if (kind === 'backwash-tank')
       // The backwash holding tank: the backwash in through its roof; its
       // submersible pump's discharge riser up through the roof beside it,
@@ -495,7 +551,8 @@ export function machinePorts(item: Item): MachinePort[] {
       },
     ];
   if (kind === 'water-meter')
-    // The meter set's run, flanged at both ends (`createWaterMeter`).
+    // The utility's meter's run, flanged at both ends (`createWaterMeter`):
+    // read by its dial, not wired into.
     return (['inlet', 'outlet'] as const).map((name, i) => ({
       ...port(
         name,
@@ -506,6 +563,31 @@ export function machinePorts(item: Item): MachinePort[] {
       ),
       drawn: true,
     }));
+  if (kind === 'make-up-flowmeter')
+    // Our own flowmeter's run (`createMakeUpFlowmeter`), and its
+    // converter's cable gland on top of its head.
+    return [
+      ...(['inlet', 'outlet'] as const).map((name, i) => ({
+        ...port(
+          name,
+          [(i ? 1 : -1) * FLOWMETER.half, METER.y, 0],
+          [i ? 1 : -1, 0, 0],
+          0.076,
+          'make-up',
+        ),
+        drawn: true,
+      })),
+      {
+        ...port(
+          'power',
+          [0, METER.y + FLOWMETER.gland, 0],
+          [0, 1, 0],
+          0.0269,
+          'power',
+        ),
+        drawn: true,
+      },
+    ];
   if (kind === 'gas-train')
     // In from the floor at its left, out at the top of its right
     // (`createGasTrain`), DN50.

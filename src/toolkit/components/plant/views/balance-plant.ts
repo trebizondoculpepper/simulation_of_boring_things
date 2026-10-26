@@ -8,13 +8,17 @@ import {
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { SANS } from '../../core/views/fitting-tools';
-import { createBrandBadge } from '../../core/views/brand-badge';
+import {
+  createBrandBadge,
+  createBrandBand,
+} from '../../core/views/brand-badge';
 import { brandLivery } from '../../core/views/brand-livery';
 import type { BrandId } from '../../core/logic/brands';
 import { FINISH, plantTools } from './plant-tools';
 import type { DN, Point } from './plant-tools';
 import { createCagedLadder } from './railings';
-import { METER } from '../logic/booster-set';
+import { createMagFlowmeter } from './mag-flowmeter';
+import { FLOWMETER, METER } from '../logic/booster-set';
 
 /**
  * The balance tank room's plant (dev_balance), in metres, each modelled
@@ -480,10 +484,12 @@ export function createBreakTank(kit: PanelKit) {
 }
 
 /**
- * The make-up water meter set, after the Elster (Honeywell) Helix 4000
- * DN50 Woltmann meter (200 mm long, flanged, ISO 4064): isolating valves,
- * strainer, the meter with its dial register, a double check valve, on a
- * run of copper-grey steel pipe on stands.
+ * The make-up water meter, after the Elster (Honeywell) Helix 4000 DN50
+ * Woltmann meter (200 mm long, flanged, ISO 4064): the utility's revenue
+ * meter, read by its dial register and not wired into (the owner,
+ * 2026-10-26), its maker's mark round it, on its short run of steel pipe
+ * on stands. The run's valves and strainer are the
+ * plumber's, set from the schematic.
  */
 export function createWaterMeter(kit: PanelKit) {
   return createWaterMeterSet(kit).group;
@@ -506,23 +512,9 @@ export function createWaterMeterSet(kit: PanelKit, start = 48273) {
     ],
     FINISH.steel,
   );
-  // Gate valves either end.
-  for (const x of [-0.6, 0.6]) {
-    t.box(group, t.paint('#2d3a4a', 0.5), 0.1, 0.14, 0.09, x, y, 0);
-    t.rod(
-      group,
-      t.paint(FINISH.steel, 0.3, 0.8),
-      [x, y + 0.07, 0],
-      [x, y + 0.18, 0],
-      0.008,
-    );
-    t.cyl(group, t.paint('#c42b23', 0.5), 0.05, 0.012, x, y + 0.18, 0, 'y', 20);
-  }
-  // Y-strainer.
-  const iron = t.paint('#2d3a4a', 0.5);
-  t.cyl(group, iron, 0.045, 0.16, -0.32, y, 0, 'x', 20);
-  const leg = t.cyl(group, iron, 0.035, 0.14, -0.3, y - 0.07, 0, 'y', 16);
-  leg.rotation.z = 0.6;
+  // Its run's fittings (isolating valves, strainer, check valve) are the
+  // plumber's, set in its line from the schematic, not drawn as part of
+  // it (the owner, 2026-10-26: no decorative valves in a component).
   // The meter: body between flanges, register on top.
   const livery = brandLivery(kit, 'splashonomics');
   const blue = livery.paint.main;
@@ -554,20 +546,14 @@ export function createWaterMeterSet(kit: PanelKit, start = 48273) {
   dial.mesh.userData.live = true;
   group.add(dial.mesh);
   let shown = Math.floor(start);
-  badge(kit, group, 'splashonomics', [0, y + 0.1, 0.071], 0.022);
-  // Double check valve.
-  t.cyl(
-    group,
-    t.paint(FINISH.brass, 0.35, 0.7),
-    0.04,
-    0.14,
-    0.33,
-    y,
-    0,
-    'x',
-    20,
-  );
-  for (const x of [-0.45, 0.45])
+  // Its maker's mark printed round its register (the owner, 2026-10-26).
+  const band = createBrandBand(kit, 'splashonomics', {
+    radius: 0.07,
+    height: 0.024,
+  });
+  band.position.set(0, y + 0.1, 0);
+  group.add(band);
+  for (const x of [-(METER.half - 0.08), METER.half - 0.08])
     t.rod(
       group,
       t.paint(FINISH.galvanised, 0.4, 0.6),
@@ -649,4 +635,53 @@ export function createBackwashTank(kit: PanelKit) {
   badge(kit, pump, 'grundflow', [0, 0.42, 0.121], 0.03);
   label(t, pump, 'P-601  TO SEWER\n≤ 5 l/s', [0, 0.85, 0.15], 0.3);
   return outer;
+}
+
+/**
+ * Our own make-up flowmeter (the owner, 2026-10-26): a Kessler-Moody
+ * electromagnetic flowmeter (`createMagFlowmeter`) on its own short run
+ * of steel pipe on stands, straight after the utility's meter and in line
+ * with it, its converter showing the flow and its cable gland on top of
+ * its head, where its conduit comes down.
+ */
+export function createMakeUpFlowmeter(kit: PanelKit) {
+  const t = plantTools(kit);
+  const group = new Group();
+  const y = METER.y;
+  t.pipe(
+    group,
+    65,
+    [
+      [-FLOWMETER.half, y, 0],
+      [FLOWMETER.half, y, 0],
+    ],
+    FINISH.steel,
+  );
+  const meter = createMagFlowmeter(kit, { od: FLOWMETER.od, tag: 'WH-FT1' });
+  meter.group.position.set(0, y, 0);
+  group.add(meter.group);
+  t.cyl(
+    group,
+    t.paint('#1c1e1f', 0.6),
+    0.012,
+    0.03,
+    0,
+    y + FLOWMETER.gland - 0.015,
+    0,
+    'y',
+    10,
+  );
+  for (const x of [-(FLOWMETER.half - 0.08), FLOWMETER.half - 0.08])
+    t.rod(
+      group,
+      t.paint(FINISH.galvanised, 0.4, 0.6),
+      [x, 0, 0],
+      [x, y - 0.03, 0],
+      0.02,
+    );
+  return {
+    group,
+    /** Its converter's reading, m³/h. */
+    show: (flow: number) => meter.show(flow, 'MAKE-UP'),
+  };
 }
