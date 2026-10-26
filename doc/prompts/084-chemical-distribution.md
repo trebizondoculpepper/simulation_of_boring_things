@@ -37,6 +37,74 @@ The owner, 2026-10-26: each chemical store gets suitable storage facilities, siz
 
 Acid and hypochlorite never share a pipe, a duct, a bund or an injection point; mixing them gives chlorine gas (Wells, 1989).
 
+## What goes in each room
+
+The owner, 2026-10-26: a list, room by room, of what this work puts there. "Has" is what the room holds already; everything else is new. Each item is a node (or fitting, or link) of that room's schematic before it is drawn.
+
+**Loading bay and goods yard (`loading_bay`, LB)**
+
+- The yard's fill cabinet: lockable, stainless, signed; inside it, two separate ports.
+- Hypochlorite fill port: its own coupling, cap, drip tray, label, isolating valve.
+- Acid fill port: a different coupling type and size, cap, drip tray, label, isolating valve.
+- At each port: the high-level alarm's beacon and sounder for its bulk tank, a contents indicator, and an emergency stop for a pumped delivery.
+- The two fill lines from the cabinet into the building, each double-contained, each with a non-return valve, falling towards its store.
+- Signs: each port's chemical, CLP pictograms, "Supervised deliveries only".
+- Has: the cabinet (`createFillCabinet`), the tanker's channel at the left bay.
+
+**Hypochlorite store (`hypo_store`, HS)**
+
+- The fill line's entry, its leak detector, and its actuated overfill valve, closed by the high-high level switch.
+- The bulk tanks, opaque UV-stabilised HDPE, each with: a level transmitter and gauge, high and high-high level switches, an inlet valve, a draw-off valve, and a vent to outside. Has: three tanks (`hypo-tank`); resize them from the sizing.
+- The bund: sealed, 110%, no drain, a bund leak detector, a sump and a hand pump.
+- Transfer pumps, duty and standby, each with suction and discharge isolating valves, a non-return valve, a pressure relief valve back to the tank, and a pressure gauge. A local panel with HAND · OFF · AUTO selectors and run and trip lamps.
+- The start of the hypochlorite transfer main, double-contained.
+- Has: extract and chlorine detection (`STORE_DETECTION`), signs. Kept cool: the store's temperature is shown.
+
+**Acid store (`acid_store`, AS, 5 × 5 m)**
+
+- The fill line's entry, its leak detector, its actuated overfill valve.
+- The bulk tank in place of the IBC: HDPE or GRP, with a level transmitter and gauge, high and high-high level switches, inlet and draw-off valves, and a vent through a fume scrubber.
+- The bund: sealed, acid-resistant, 110%, no drain, a leak detector, a sump.
+- Transfer pumps, duty and standby, with valves and a local panel as the hypochlorite store's.
+- The start of the acid transfer main, double-contained.
+- Has: extract and detection, signs; the IBC (`acid-ibc`) goes.
+
+**The corridors the mains cross**
+
+- The two transfer mains, double-contained, on separate brackets, never in the same duct, labelled with chemical and flow direction at intervals and at every wall.
+- Each main has a leak detection point at its low points.
+- Has: the services ceiling, which is decoration and stays separate from these real pipes.
+
+**Lounge pool plant room (`plant_pool_01`)**
+
+- A hypochlorite day tank and an acid day tank, each bunded, each with a level gauge and low and high switches, an actuated inlet valve off its main, and an outlet isolating valve.
+- Has: the dosing controller and sample cells, hypochlorite dosing pumps, an acid dosing pump. Their suction is re-pointed from the stores' stand-in nodes (`hypo-store`, `acid-store`) to the day tanks.
+- The circulation flow switch's interlock to the dosing pumps.
+- The two injection points on the return, well apart.
+
+**Olympic pool plant room (`plant_pool_02`)**
+
+- The same as the lounge's: two day tanks, sized for the larger pool, with their valves and switches.
+- Has: the dosing controller, hypochlorite dosing pumps, an acid dosing pump (`installed-asset-ids.ts`). These are drawn by hand and not yet in a schematic; they are migrated into one with this work (prompt 063).
+- The circulation interlock and the two injection points.
+
+**Jacuzzi plant room (`plant_pool_03`)**
+
+- To decide: the packaged spa cabinet doses inside itself. Either it draws from day tanks fed by the mains, or it keeps its own small containers in a cabinet drip tray, filled by hand. A spa of this size usually has its own containers, so I recommend that, with the mains not running here.
+
+**Footbath plant room (`plant_pool_04`)**
+
+- To decide: its schematic has no dosing. A footbath is usually chlorinated, either fed from a pool's treated water or dosed itself. If it is dosed, a hypochlorite metering pump from a small local container (no acid); if not, nothing new here.
+
+**Control room**
+
+- Repeated on the mimic:
+  - each bulk tank's and day tank's level;
+  - the high-level and leak alarms;
+  - the transfer pumps' run and trip state;
+  - the dosing interlock's state.
+- No selectors or resets: those stay local (the owner's ruling).
+
 ## What to decide
 
 - Which plant rooms dose which pools, so which rooms have day tanks; whether the transfer main runs to each room in turn or branches.
