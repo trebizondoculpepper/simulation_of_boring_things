@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Every character LCD's glass is drawn in front of its own bezel by polygon offset (the owner, 2026-10-26), so it never flickers against it at any distance: fixed once, in `createCharacterLcd`, for every display that uses it.
 - Every ideal source's and sink's display stands 2 mm proud of its bezel, not 1, so it no longer flickers against it (the owner, 2026-10-26).
 - The booster set's STOP shuts its valves (the owner, 2026-10-26): the duty pump coasts to rest, then its valves (and a boosting assist pump's) drive shut; RUN opens them first, then runs it up. No valve shuts on a pump still turning, nor a pump turns against shut valves.
 - The booster set's BOOST (the owner, 2026-10-26): an illuminated button on its controller, lit while on, pressed again to cancel; it runs the standby beside the duty pump, its valves open first, the two in parallel giving about 1.7 times one pump's flow, not twice, against the pipework's resistance; cancelled, STOP or a change of duty, the assist pump coasts to rest and then its valves shut. Both pumps sound as if working harder while boosting: a pump's sound may now follow a load, its motor slipping a little lower and its water and casing louder. Its terminal boxes have a screwed lid, louvres and a cable gland; its pressure vessel is lettered round with its rating (24 L, PN10, pre-charge 2.5 bar).

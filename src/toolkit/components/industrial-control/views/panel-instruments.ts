@@ -448,6 +448,13 @@ export function createCharacterLcd(
     0.002,
   );
   const face = printed(kit, art.texture, backlight);
+  // Its glass always drawn in front of its bezel, a fraction of a
+  // millimetre behind it, at any distance: pulled toward the eye in the
+  // depth buffer by polygon offset, which scales with the buffer's
+  // precision there, so it never flickers (the owner, 2026-10-26).
+  face.polygonOffset = true;
+  face.polygonOffsetFactor = -2;
+  face.polygonOffsetUnits = -4;
   const faceMesh = add(
     group,
     new PlaneGeometry(width, height),
