@@ -1,3 +1,5 @@
+import { createPipe } from '../../core/views/pipe-kinds';
+import { createMicroLabel } from '../../core/views/eighties-controls';
 import { createCanvasTexture } from '../../core/views/screens';
 import { drawBrandMark } from '../../core/views/brand-logo';
 import { BRANDS } from '../../core/logic/brands';
@@ -392,13 +394,15 @@ export function createBoosterSet(
         6,
       );
     }
+    // Its rating plate on its terminal box's lid, sized to it (the
+    // owner, 2026-10-26: not on the round sleeve).
     t.ratingPlate(
       object,
-      [x, 0.6, z + 0.078],
+      [x, 1.08, z + 0.174],
       'GRUNDFLOW',
       [`CRE 5-9  P${n}`, '2.2 kW  400 V'],
-      0.09,
-      0.05,
+      0.12,
+      0.07,
     );
   }
   // The control unit, on its post at the east end, facing the front.
@@ -541,6 +545,55 @@ export function createBoosterSet(
   // pipework's resistance (the owner, 2026-10-26).
   const load = signal(0);
   const sound = pumpSound(BOOSTER_PUMP, load);
+  // Each pump's control cable from its terminal box's gland, down and
+  // along under the set, up into a gland under the control unit; and the
+  // unit's own larger gland, its link to the wider control network (the
+  // owner, 2026-10-26).
+  {
+    const cable = t.paint('#1b1d1e', 0.7);
+    const pz = B.d / 2 - 0.19;
+    const low = 0.72;
+    B.pumpX.forEach((x, i) => {
+      const gx = x + 0.05;
+      const gz = B.pumpZ + 0.15;
+      const ex = cx - 0.12 + i * 0.06;
+      object.add(
+        createPipe(
+          'pressure-hose',
+          0.012,
+          [
+            [gx, 0.99, gz],
+            [gx, low, gz],
+            [ex, low, pz],
+            [ex, 0.8, pz],
+          ],
+          { colour: '#1b1d1e' },
+        ),
+      );
+      t.cyl(object, cable, 0.011, 0.02, ex, 0.79, pz, 'y', 10);
+    });
+    // The network gland, larger, its cable leaving down to the floor's
+    // trunking.
+    t.cyl(object, cable, 0.018, 0.025, cx + 0.11, 0.788, pz, 'y', 12);
+    object.add(
+      createPipe(
+        'pressure-hose',
+        0.016,
+        [
+          [cx + 0.11, 0.78, pz],
+          [cx + 0.11, 0.08, pz],
+        ],
+        { colour: '#1b1d1e' },
+      ),
+    );
+    const net = createMicroLabel(kit, 'CONTROL NETWORK', {
+      height: 0.012,
+      ink: '#f2f2ea',
+      plate: '#25343a',
+    });
+    net.position.set(cx + 0.11, 0.83, B.d / 2 - 0.118);
+    object.add(net);
+  }
   // Its pressure gauges on its manifolds, where they measure (the
   // owner, 2026-10-26: a gauge sits on what it reads, not on the panel):
   // suction on the front manifold, discharge on the back, each on a
