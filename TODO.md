@@ -45,6 +45,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Gameplay features
 
+- [ ] **A screenshot shortcut** ([072](doc/prompts/072-screenshot-shortcut.md), the owner, 2026-10-26): Ctrl/Cmd+Shift+K copies a best-quality frame of the 3D view, full resolution at twice the pixel ratio (up to 3840 px wide), with no overlay, to the clipboard as a PNG, or downloads it where the browser refuses.
 - [ ] **Healthy New Game, maintained as the model evolves** ([067](doc/prompts/067-healthy-new-game.md), planned 2026-10-25): implement the [healthy-start contract](doc/healthy-start.md), whole-facility health and coverage checks, a consistent playable session, bounded trajectory and control probes, and New Game/Continue/title isolation; rerun the same mission after model changes and retain dated audit reports. First run 2026-10-25 ([report](doc/reports/healthy-start/2026-10-25-executable-contract.md)): the contract is executable (`src/game/health.ts`) and a new game passes it on its first frame, every step of its first hour and through a day. Still open: the playable session's time (Monday 00:00 now, 09:00 proposed), the owner's to decide; duty/standby and timed-attraction control probes; browser checks.
 - [x] **Research and plan the repeatable healthy-start mission** (done 2026-10-25, `98874c2`): traced defaults and entry paths, measured a day of normal model operation, recorded the initial audit and definition, and added an opt-in read-only audit command. Runtime preset changes remain mission 067’s delivery work.
 
