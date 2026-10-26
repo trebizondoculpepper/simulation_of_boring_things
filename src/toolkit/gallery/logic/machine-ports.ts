@@ -16,6 +16,7 @@ import {
 } from '../../components/plant/logic/pump-pair';
 import {
   BOOSTER,
+  BREAK_TANK_OUTLET,
   FLOWMETER,
   METER,
 } from '../../components/plant/logic/booster-set';
@@ -148,9 +149,11 @@ export function machinePorts(item: Item): MachinePort[] {
       // warning pipe, high on its west end; its drain on its face.
       return [
         port('mainsIn', [nx / 2 - 0.6, top, back], [0, 1, 0], 0.067, 'make-up'),
+        // Its outlet low on its east end, at the booster set's suction
+        // manifold's height, so the two line up (the owner, 2026-10-26).
         port(
           'outlet',
-          [east, 0.5, back + nz / 2 - 0.5],
+          [east, BREAK_TANK_OUTLET.y, back + nz / 2 - BREAK_TANK_OUTLET.in],
           [1, 0, 0],
           0.089,
           'make-up',

@@ -1,3 +1,4 @@
+import { placedPort } from './machine-ports';
 import { HEADERS, olympicPlan, olympicRoomBox } from './olympic-plan';
 import { olympicItems } from './olympic-plumbing';
 import { retiredLayout } from './retired-rooms';
@@ -21,6 +22,7 @@ import {
   BOOSTER,
   FLOWMETER,
   METER,
+  OUTLET_METER_GAP,
 } from '../../components/plant/logic/booster-set';
 import { LIGHTING_BOARD, MAIN_SWITCH } from './switch-room';
 import { ROOM_SIGNS, SIGN_ITEMS } from './building-signs';
@@ -1392,9 +1394,14 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
         z: -6.3,
         face: 'south',
       }),
+      // The booster set with its suction in line with the tank's outlet,
+      // a flowmeter's room between them, planned (`OUTLET_METER_GAP`).
       put(box, at('booster-set'), {
-        x: 1.9 + L.lineShift + L.tankShift,
-        z: -6.55,
+        x:
+          breakTankOutlet(box, at('break-tank'), L).x +
+          OUTLET_METER_GAP +
+          BOOSTER.w / 2,
+        z: breakTankOutlet(box, at('break-tank'), L).z - BOOSTER.suctionZ,
         face: 'south',
       }),
       // The clean side's mimic on the bay's north wall, the make-up
@@ -1597,3 +1604,14 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
 
 /** The plant room's storey, for its machines' floor. */
 export const PLANT_FLOOR = -PLANT_ROOM.storey;
+
+/** The wet hall's break tank's outlet, where it is placed (`machinePorts`). */
+function breakTankOutlet(box: RoomBox, tank: Item, L: typeof WET_HALL_LAYOUT) {
+  const placed = put(box, tank, {
+    x: -1.1 + L.lineShift + L.tankShift,
+    z: -6.3,
+    face: 'south',
+  });
+  const [x, , z] = placedPort(placed, 'outlet').at;
+  return { x, z };
+}

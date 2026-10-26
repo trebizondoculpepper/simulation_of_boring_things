@@ -155,6 +155,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [x] The wet hall laid out afresh to prompt 036's plan, before plumbing: the make-up bay's partition and door, its machines, the backwash pit in the floor (2026-10-26).
 - [ ] The wet hall's planning, from its new layout (prompt 036): the bay door's leaf, raised threshold and signs; the pit's pump, guide rail and discharge, its inlet as an air break; a dirty side mimic; then its pipework and electrics from its model, and `wet_hall` taken off `BEING_LAID_OUT`.
 - [ ] Rendering: skip drawing what is behind the make-up bay's partition when it cannot be seen (later, the owner, 2026-10-26).
+- [ ] A flowmeter on the break tank's outlet side, in the gap kept for it between the tank and the booster set (the owner, 2026-10-26).
 
 ## The operator's manual
 

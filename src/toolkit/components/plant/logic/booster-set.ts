@@ -38,6 +38,20 @@ export const METER = { half: 0.3, y: BOOSTER.manifoldY } as const;
  */
 export const FLOWMETER = { half: 0.3, od: 0.076, gland: 0.29 } as const;
 
+/**
+ * The break tank's outlet, on its east end (the owner, 2026-10-26): at
+ * the booster set's suction manifold's height, and this far in from its
+ * front, so the booster's suction lines up with it.
+ */
+export const BREAK_TANK_OUTLET = { y: BOOSTER.manifoldY, in: 0.5 } as const;
+
+/**
+ * The gap kept between the break tank's outlet and the booster set's
+ * suction for a flowmeter on the tank's outlet side, planned (the owner,
+ * 2026-10-26): its run and a short length either side.
+ */
+export const OUTLET_METER_GAP = 2 * FLOWMETER.half + 2 * 0.3;
+
 /** The make-up main's working pressure, bar, while the set holds it. */
 export const SET_PRESSURE = 4.0;
 
