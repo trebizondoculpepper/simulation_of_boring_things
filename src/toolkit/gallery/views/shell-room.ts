@@ -7,6 +7,7 @@ import {
   MeshStandardMaterial,
   PlaneGeometry,
   PointLight,
+  RepeatWrapping,
   SRGBColorSpace,
 } from 'three';
 import type { Material, Object3D } from 'three';
@@ -37,6 +38,12 @@ import {
 } from '../../../scene/breeze-block-texture';
 import { createWarehouseConcreteFloor } from '../../../scene/warehouse-concrete-floor';
 import { slabAround } from '../logic/slab-openings';
+import { wetHallBox } from '../logic/room-equipment';
+import { PIT_RAIL } from '../../components/plant/views/backwash-pit';
+import { createExtinguisher } from '../../components/fire/views/fire-fittings';
+import { createFireActionNotice } from '../../components/general-safety/views/safety-notices';
+import { createSafetySign } from '../../components/general-safety/views/safety-signs';
+import { createCanvasTexture } from '../../components/core/views/screens';
 import { createFloorGully } from '../../components/plant/views/floor-gully';
 import { controlBus } from '../logic/control-bus';
 import { roomStructure } from '../logic/room-structure';
@@ -693,6 +700,138 @@ export function createWetHall(metre: number, kit: PanelKit) {
     }
     plate('TOWN MAIN IN', tin.x, tin.y + 0.3);
     plate('MAKE-UP MAIN TO POOL PLANT ROOMS', out.x, out.y + 0.3);
+  }
+  // Its safety (the owner, 2026-10-26): keep-clear hatching on the
+  // floor where nothing may be stood (the ramp's and stair's feet, either
+  // side of the bay's doors, before the pit's gate), yellow walkway lines
+  // along the aisle; fire points by its ways out; signs.
+  {
+    const R = WET_HALL.side / 2 - SHELL_WALL;
+    const hatchArt = createCanvasTexture(128, 128);
+    {
+      const c = hatchArt.context;
+      c.fillStyle = '#e3b51f';
+      c.fillRect(0, 0, 128, 128);
+      c.strokeStyle = '#151515';
+      c.lineWidth = 22;
+      for (let k = -128; k < 256; k += 64) {
+        c.beginPath();
+        c.moveTo(k, 128);
+        c.lineTo(k + 128, 0);
+        c.stroke();
+      }
+      hatchArt.texture.wrapS = hatchArt.texture.wrapT = RepeatWrapping;
+      hatchArt.texture.needsUpdate = true;
+      kit.textures.push(hatchArt.texture);
+    }
+    const hatched = (f: {
+      minX: number;
+      maxX: number;
+      minZ: number;
+      maxZ: number;
+    }) => {
+      const w = f.maxX - f.minX;
+      const d = f.maxZ - f.minZ;
+      const texture = hatchArt.texture.clone();
+      texture.repeat.set(w / 0.5, d / 0.5);
+      texture.needsUpdate = true;
+      kit.textures.push(texture);
+      const m = new MeshStandardMaterial({ map: texture, roughness: 0.8 });
+      kit.materials.push(m);
+      const mesh = new Mesh(new PlaneGeometry(w, d), m);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(
+        (f.minX + f.maxX) / 2,
+        floorY + 0.003,
+        (f.minZ + f.maxZ) / 2,
+      );
+      mesh.name = 'Keep clear: hatched floor marking';
+      group.add(mesh);
+    };
+    for (const k of wetHallBox().keepClear) hatched(k);
+    const t = L.partition.thickness;
+    hatched({
+      minX: L.door.minX,
+      maxX: L.door.maxX,
+      minZ: L.bay.maxZ + t,
+      maxZ: L.bay.maxZ + t + 1.2,
+    });
+    hatched({
+      minX: L.door.minX,
+      maxX: L.door.maxX,
+      minZ: L.bay.maxZ - 1.2,
+      maxZ: L.bay.maxZ,
+    });
+    // Before the pit's gate, on the aisle side of its rail.
+    const pitX = (L.pit.minX + L.pit.maxX) / 2;
+    const railZ = L.pit.minZ - L.pitWall - PIT_RAIL.off;
+    hatched({
+      minX: pitX + PIT_RAIL.gate.at - PIT_RAIL.gate.width / 2,
+      maxX: pitX + PIT_RAIL.gate.at + PIT_RAIL.gate.width / 2,
+      minZ: railZ - 1.0,
+      maxZ: railZ - 0.05,
+    });
+    // The aisle's walkway lines, from the stair's foot to the ramp's.
+    const yellow = paint('#e3b51f', 0.6);
+    for (const z of [L.bay.maxZ + t + 1.3, railZ - 1.1])
+      box(yellow, 12.4, 0.004, 0.08, -0.4, floorY + 0.003, z);
+    // Fire points (BS 5306-8): a CO2 extinguisher for the electrics and a
+    // foam one, each pair with its fire action notice: in the make-up
+    // bay by its doors; by the stair's foot; and by the ramp's foot.
+    const fireAt = (x: number, z: number, yaw: number) => {
+      const point = new Group();
+      point.position.set(x, floorY + 0.3, z);
+      point.rotation.y = yaw;
+      for (const [k, dx] of [
+        ['co2', -0.22],
+        ['foam', 0.22],
+      ] as const) {
+        const e = createExtinguisher(kit, k);
+        e.group.position.x = dx;
+        point.add(e.group);
+      }
+      const notice = createFireActionNotice(kit);
+      notice.position.set(0, 1.45, 0.005);
+      point.add(notice);
+      group.add(point);
+    };
+    fireAt(-1.5, L.bay.maxZ - 0.005, Math.PI);
+    fireAt(R - 0.005, 2.6, -Math.PI / 2);
+    fireAt(-6.0, R - 0.005, Math.PI);
+    // Signs: at each way in (the east landing, the west door at the
+    // ramp's head) safety footwear, wet floor and no smoking; on the
+    // bay's doors no smoking.
+    const signs = (x: number, y: number, z: number, yaw: number) => {
+      const row = new Group();
+      row.position.set(x, y, z);
+      row.rotation.y = yaw;
+      (
+        [
+          [['boots'], ['Safety footwear', 'must be worn']],
+          [['slippery'], ['Caution', 'Wet floor']],
+          [['no-smoking'], ['No smoking']],
+        ] as const
+      ).forEach(([p, lines], i) => {
+        const sign = createSafetySign(kit, p, lines);
+        sign.position.x = (i - 1) * 0.42;
+        row.add(sign);
+      });
+      group.add(row);
+    };
+    signs(R - 0.005, floorY + WET_HALL.drop + 1.6, -2.1, -Math.PI / 2);
+    signs(
+      -R + 0.005,
+      floorY + WET_HALL.drop + 1.6,
+      WET_HALL.ramp.door + 1.6,
+      Math.PI / 2,
+    );
+    const noSmoking = createSafetySign(kit, ['no-smoking'], ['No smoking']);
+    noSmoking.position.set(
+      L.door.maxX + 0.5,
+      floorY + 1.6,
+      L.bay.maxZ + t + 0.005,
+    );
+    group.add(noSmoking);
   }
   // Its floor gullies, flush in the floor, each side's apart.
   for (const g of L.gullies) {
