@@ -677,10 +677,11 @@ export function createWetHall(metre: number, kit: PanelKit) {
       c.position.set(x, floorY + y, -R + 0.006);
       group.add(c);
     };
-    const { townMainIn: tin, makeUpMainOut: out } = L;
+    const { townMainIn: tin, makeUpMainOut: out, backwashMainIn: bin } = L;
     for (const [x, y, d] of [
       [tin.x, tin.y, 0.1],
       [out.x, out.y, 0.1],
+      [bin.x, bin.y, 0.16],
     ] as const) {
       const ring = new Mesh(new CylinderGeometry(d, d, 0.06, 20), sleeve);
       ring.rotation.x = Math.PI / 2;
@@ -694,6 +695,7 @@ export function createWetHall(metre: number, kit: PanelKit) {
     for (const [x, y, r] of [
       [tin.x, tin.y, 0.04],
       [out.x, out.y, 0.045],
+      [bin.x, bin.y, 0.08],
     ] as const) {
       const stub = new Mesh(new CylinderGeometry(r, r, 0.35, 16), steel);
       stub.rotation.x = Math.PI / 2;
@@ -709,6 +711,25 @@ export function createWetHall(metre: number, kit: PanelKit) {
     }
     plate('TOWN MAIN IN', tin.x, tin.y + 0.3);
     plate('MAKE-UP MAIN TO POOL PLANT ROOMS', out.x, out.y + 0.3);
+    plate('BACKWASH MAIN FROM POOL PLANT ROOMS', bin.x, bin.y + 0.35);
+    // The foul sewer's connection in the floor, east of the pit: a
+    // sleeve with its access cover beside it, its name on the floor.
+    {
+      const s = L.sewerDrop;
+      const ring = new Mesh(new CylinderGeometry(0.09, 0.09, 0.03, 20), sleeve);
+      ring.position.set(s.x, floorY + 0.015, s.z);
+      group.add(ring);
+      const cover = new Mesh(
+        new BoxGeometry(0.45, 0.012, 0.45),
+        paint('#3b3e40', 0.6, 0.5),
+      );
+      cover.position.set(s.x + 0.45, floorY + 0.006, s.z);
+      group.add(cover);
+      const name = shell.card(0.7, 0.12, ['FOUL SEWER']);
+      name.rotation.x = -Math.PI / 2;
+      name.position.set(s.x, floorY + 0.004, s.z + 0.3);
+      group.add(name);
+    }
   }
   // Its safety (the owner, 2026-10-26): keep-clear hatching on the
   // floor where nothing may be stood (the ramp's and stair's feet, either

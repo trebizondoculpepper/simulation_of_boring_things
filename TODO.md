@@ -153,7 +153,8 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [x] The sewer outfall monitor and chart recorder in the wet hall, its record in the world; the spas draining into the backwash pit (2026-10-26).
 - [ ] The outfall flowmeter's spool on the outfall pipe, and the monitor moved to the dirty side's wall, with the wet hall's redesign (prompt 036).
 - [x] The wet hall laid out afresh to prompt 036's plan, before plumbing: the make-up bay's partition and door, its machines, the backwash pit in the floor (2026-10-26).
-- [ ] The wet hall's planning, from its new layout (prompt 036): the bay door's leaf, raised threshold and signs; the pit's pump, guide rail and discharge, its inlet as an air break; a dirty side mimic; then its pipework and electrics from its model, and `wet_hall` taken off `BEING_LAID_OUT`.
+- [x] The wet hall's pipework from its model, by its plumber, and `wet_hall` taken off `BEING_LAID_OUT` (2026-10-26).
+- [ ] The wet hall's remaining planning (prompt 036): the bay door's raised threshold; the pit's submersible pump on its guide rail in the sump, its riser drawn down to it; the backwash inlet's air break over the water drawn; a dirty side mimic; the outfall flowmeter's spool on the discharge.
 - [ ] Rendering: skip drawing what is behind the make-up bay's partition when it cannot be seen (later, the owner, 2026-10-26).
 - [ ] A flowmeter on the break tank's outlet side, in the gap kept for it between the tank and the booster set (the owner, 2026-10-26).
 

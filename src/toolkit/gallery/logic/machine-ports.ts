@@ -177,7 +177,9 @@ export function machinePorts(item: Item): MachinePort[] {
       // air break); its pump's discharge riser up out of its sump through
       // a sleeve in its gratings just west of its hatch, not through the
       // hatch's lid (the owner, 2026-10-26: its stub showed on the lid).
-      // No gravity drain or overflow: it is emptied by its pump.
+      // No gravity drain or overflow: it is emptied by its pump. Both its
+      // ports stand up 150 mm through its gratings, flanged stubs from
+      // below, so a pipe meets each clear of the floor.
       const P = BACKWASH_PIT;
       const ox = -WET_HALL_LAYOUT.pitDavitShift;
       const hatch = P.length / 2 - P.hatch / 2;
@@ -185,14 +187,14 @@ export function machinePorts(item: Item): MachinePort[] {
       return [
         port(
           'inlet',
-          [ox - P.length / 2 + 1.2, 0.02, 0],
+          [ox - P.length / 2 + 1.2, 0.15, 0],
           [0, 1, 0],
           0.16,
           'drain',
         ),
         port(
           'discharge',
-          [ox + hatch - P.hatch / 2 - 0.25, 0.02, hz],
+          [ox + hatch - P.hatch / 2 - 0.25, 0.15, hz],
           [0, 1, 0],
           0.076,
           'drain',

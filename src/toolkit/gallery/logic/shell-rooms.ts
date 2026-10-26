@@ -354,6 +354,17 @@ export const WET_HALL_LAYOUT = {
   townMainIn: { x: -2.4, y: 0.6 },
   makeUpMainOut: { x: 5.2, y: 3.0 },
   /**
+   * The backwash main in from the pool plant rooms (the owner, 2026-10-26:
+   * by the north wall, with the outside world's other services), west of
+   * the make-up bay so foul water never crosses it, high enough to pass
+   * over the ramp's head.
+   */
+  backwashMainIn: { x: -5.5, y: 4.2 },
+  /** The north wall's thickness, from the hall's side to its inside face. */
+  northWall: SHELL_WALL,
+  /** The foul sewer's connection in the floor, east of the pit: its pump's discharge goes down it. */
+  sewerDrop: { x: 6.2, z: 7.6 },
+  /**
    * The make-up line's machines along the bay, east of its west side by
    * 2.5 m more than at first (the owner, 2026-10-26: room for its pipes,
    * and for an easy elbow from the town main, which stays where it is).

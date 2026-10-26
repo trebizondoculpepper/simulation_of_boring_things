@@ -35,7 +35,10 @@ function walkable(
   const nz = Math.round(box.d / CELL);
   const obstacles = [
     ...placed
-      .filter((p) => p.item.mount === 'floor' && !p.item.walkable)
+      // A pit is stood on, on its gratings, through its gate.
+      .filter(
+        (p) => p.item.mount === 'floor' && !p.item.walkable && !p.item.pit,
+      )
       .map((p) => p.footprint),
     ...box.solid,
     ...extra,
