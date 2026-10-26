@@ -51,6 +51,12 @@ import { createSandFilter } from '../../components/plant/views/pumps-plant';
 import { machinePorts, tankFrame } from '../logic/machine-ports';
 import { isLive } from '../rooms/plant/exhibit';
 import { roomWorld } from '../../save/world-store';
+import { plantTools } from '../../components/plant/views/plant-tools';
+import {
+  createWashOTron,
+  WASH_O_TRON_SIZE,
+} from '../../components/plant/views/wash-o-tron';
+import { filterValves } from '../../../game/plant/wash-o-tron-world';
 import { computed } from '@preact/signals-core';
 import { createGasStation } from './gas-station';
 import { GAS_ZONES } from '../../../game/plant/gas';
@@ -1397,6 +1403,96 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
         model: { link: 'Switchboard to the rooms' },
       }),
     );
+  }
+  // The Lidoluxe Wash-O-Tron (prompt 072; the owner, 2026-10-26): on the
+  // east wall between filter 5 and the local control panel, its two
+  // conduits running up and across into that panel's side, where the
+  // filters' valve actuators are wired.
+  if (room === 'plant_pool_02') {
+    const panel = placed.findIndex((q) => q.item.key === 'pump-panel');
+    if (panel >= 0) {
+      const store = typeof window === 'undefined' ? null : roomWorld();
+      const wot = createWashOTron(
+        kit,
+        store
+          ? {
+              state: () => store.world.value.washOTron,
+              time: () => store.world.value.time,
+              valves: (n) => filterValves(store.world.value.installedValves, n),
+              pitShare: () =>
+                store.world.value.wetHall.backwashTank /
+                WET_HALL_PLANT.backwashTank,
+              act: (action) => store.dispatch({ type: 'wash-o-tron', action }),
+            }
+          : undefined,
+      );
+      const S = WASH_O_TRON_SIZE;
+      const wallX = (layout?.box.w ?? 22) / 2;
+      const zc = -2.0;
+      const yc = 1.45;
+      wot.group.position.set(wallX, floorY + yc, zc);
+      wot.group.rotation.y = -Math.PI / 2;
+      markComponent(wot.group, {
+        name: 'Lidoluxe Wash-O-Tron filter wash controller',
+      });
+      group.add(wot.group);
+      // Its conduits: up from its top, along the wall, into the panel's
+      // north side.
+      const host = group.children.find(
+        (o) => o.name === placed[panel].item.label,
+      );
+      group.updateMatrixWorld(true);
+      const bounds = new Box3().setFromObject(host ?? group);
+      const t = plantTools(kit);
+      const grey = t.paint('#8e9294', 0.5, 0.3);
+      const conduits = new Group();
+      conduits.name = 'Wash-O-Tron conduits to the local control panel';
+      const topY = floorY + yc + S.h / 2;
+      const runY = topY + 0.18;
+      const intoX = Math.min(wallX - 0.25, bounds.max.x - 0.12);
+      [0, 1].forEach((k) => {
+        const z = zc + S.w / 2 - 0.08 - 0.06 * k;
+        const x = wallX - 0.04 - 0.05 * k;
+        const pts: [number, number, number][] = [
+          [x, topY, z],
+          [x, runY + 0.05 * k, z],
+          [x, runY + 0.05 * k, bounds.min.z - 0.02],
+          [intoX - 0.05 * k, runY + 0.05 * k, bounds.min.z - 0.02],
+          [intoX - 0.05 * k, runY + 0.05 * k, bounds.min.z + 0.01],
+        ];
+        for (let i = 1; i < pts.length; i++)
+          t.rod(conduits, grey, pts[i - 1], pts[i], 0.012, 8);
+        // A gland where it enters the panel.
+        t.cyl(
+          conduits,
+          grey,
+          0.02,
+          0.02,
+          intoX - 0.05 * k,
+          runY + 0.05 * k,
+          bounds.min.z,
+          'z',
+          12,
+        );
+      });
+      group.add(conduits);
+      // A retrofit to the local control panel's installation, drawn with
+      // the room's services and bound to that panel's node in the model.
+      group.remove(wot.group, conduits);
+      const tag =
+        INSTALLED_ASSET_IDS[`${room}|pump-panel|${placed[panel].item.label}`]
+          ?.tag;
+      for (const o of [wot.group, conduits]) {
+        markComponent(o, tag ? { tag } : {});
+        pipework.group.add(o);
+      }
+      lives.push({
+        object: wot.group,
+        parts: wot.parts,
+        update: (d: number) => wot.update(d),
+        dispose: () => wot.dispose(),
+      });
+    }
   }
   // The air plant's ductwork, gantries and stair (`air-plant.ts`).
   if (room === 'air_plant') {
