@@ -576,5 +576,104 @@ export function createDockOutside(
     );
     group.add(site);
   }
+  // Road markings (the owner, 2026-10-26): each lorry bay's white lines
+  // out from its opening and its number painted near their end; across
+  // the foot of the steps, a yellow hatched KEEP CLEAR box, a walkway no
+  // lorry may stand on. Painted on the tarmac, which yields to them.
+  {
+    const lay = (
+      canvas: HTMLCanvasElement,
+      w: number,
+      d: number,
+      x: number,
+      z: number,
+    ) => {
+      const map = new CanvasTexture(canvas);
+      map.colorSpace = SRGBColorSpace;
+      map.anisotropy = 4;
+      kit.textures.push(map);
+      const m = new MeshBasicMaterial({
+        map,
+        color: '#c9c9c9',
+        transparent: true,
+        depthWrite: false,
+      });
+      kit.materials.push(m);
+      const decal = new Mesh(new PlaneGeometry(w, d), m);
+      decal.rotation.x = -Math.PI / 2;
+      decal.position.set(x, YARD_LEVEL + 0.004, z);
+      group.add(decal);
+    };
+    const paint = (
+      w: number,
+      h: number,
+      draw: (g: CanvasRenderingContext2D) => void,
+    ) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      draw(canvas.getContext('2d')!);
+      return canvas;
+    };
+    const bayLength = 14;
+    openings.forEach((o, k) => {
+      // A bay a little wider than its opening; its lines 100 mm wide.
+      const bw = o.w + 0.6;
+      const canvas = paint(256, 1024, (g) => {
+        g.fillStyle = 'rgba(235,235,228,0.92)';
+        const line = (256 * 0.1) / bw;
+        g.fillRect(0, 0, line, 1024);
+        g.fillRect(256 - line, 0, line, 1024);
+        // Its number, large, toward the outer end, upright for a driver
+        // reversing in (reading from the yard).
+        g.font = 'bold 150px sans-serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.save();
+        g.translate(128, 1024 * 0.2);
+        g.rotate(Math.PI);
+        g.fillText(String(k + 1), 0, 0);
+        g.restore();
+      });
+      lay(canvas, bw, bayLength, o.at, wallZ - bayLength / 2);
+    });
+    // The keep-clear box across the foot of the steps.
+    const { flight } = dockSteps({
+      wallZ: wallZ + thickness,
+      thickness,
+      doorX,
+    });
+    const kw = 3.0;
+    const kd = 2.4;
+    const box = paint(512, 410, (g) => {
+      g.strokeStyle = 'rgba(232,192,40,0.95)';
+      g.lineWidth = 14;
+      g.strokeRect(7, 7, 498, 396);
+      g.save();
+      g.beginPath();
+      g.rect(7, 7, 498, 396);
+      g.clip();
+      g.lineWidth = 12;
+      for (let x = -420; x < 520; x += 46) {
+        g.beginPath();
+        g.moveTo(x, 410);
+        g.lineTo(x + 410, 0);
+        g.stroke();
+      }
+      g.restore();
+      g.fillStyle = 'rgba(60,62,64,1)';
+      g.fillRect(96, 160, 320, 90);
+      g.fillStyle = 'rgba(232,192,40,0.95)';
+      g.font = 'bold 64px sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.save();
+      g.translate(256, 205);
+      g.rotate(Math.PI);
+      g.fillText('KEEP CLEAR', 0, 0);
+      g.restore();
+    });
+    lay(box, kw, kd, doorX, flight.minZ - kd / 2);
+  }
   return { group };
 }
