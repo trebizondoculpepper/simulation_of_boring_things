@@ -2,6 +2,7 @@ import {
   CanvasTexture,
   CircleGeometry,
   Group,
+  HemisphereLight,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -107,8 +108,15 @@ export function createDockOutside(
     outside.constant = eyeAt.z > wallPoint.z ? wallPoint.z : 1e9;
   };
   sky.dome.material.clippingPlanes = [outside];
+  // Daylight for the yard (the owner, 2026-10-26: a power cut darkened
+  // it): an overcast sky's light and the ground's, on while the eye is out
+  // of the building, off inside, so the dock still goes dark without its
+  // lamps. Night will dim it later.
+  const daylight = new HemisphereLight('#e8ecf0', '#55575a', 0);
+  group.add(daylight);
   sky.dome.onBeforeRender = (r, _s, camera) => {
     placePlane(r, camera);
+    daylight.intensity = outside.constant > 1e8 ? 2.2 : 0;
     camera.getWorldPosition(eye);
     sky.dome.matrixWorld.setPosition(eye);
   };

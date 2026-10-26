@@ -259,11 +259,18 @@ const DEVICES: readonly Device[] = [
       label.position.set(-0.4, G + 0.6, fz - 0.12);
       label.rotation.y = Math.PI;
       g.add(label);
-      // On, level, into the housing to the meter.
-      const across = new Mesh(new CylinderGeometry(r, r, 0.5, 14), yellow);
-      across.rotation.x = Math.PI / 2;
-      across.position.set(-0.4, G + 0.5, (fz + hz) / 2);
-      g.add(across);
+      // On up to the meter's height, back into the housing, and along
+      // into the meter's inlet flange on its left (the owner, 2026-10-26:
+      // it missed the meter).
+      riser(g, yellow, r, -0.4, G + 0.5, G + 0.9, fz);
+      const back = new Mesh(new CylinderGeometry(r, r, fz - hz, 14), yellow);
+      back.rotation.x = Math.PI / 2;
+      back.position.set(-0.4, G + 0.9, (fz + hz) / 2);
+      g.add(back);
+      const along = new Mesh(new CylinderGeometry(r, r, 0.2, 14), yellow);
+      along.rotation.z = Math.PI / 2;
+      along.position.set(-0.3, G + 0.9, hz);
+      g.add(along);
       // The meter: a large commercial meter, its index on its front.
       box(g, paint(kit, '#b9bdc0', 0.4, 0.5), 0.6, 0.6, 0.42, 0.1, G + 0.9, hz);
       const screen = register(kit, 0.3, 0.09, 'm³', false);
