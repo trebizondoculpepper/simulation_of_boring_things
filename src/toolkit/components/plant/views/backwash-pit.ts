@@ -5,6 +5,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   PlaneGeometry,
+  RepeatWrapping,
 } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
@@ -13,6 +14,7 @@ import { createGratingDeck } from './railings';
 import { createUltrasonicLevel } from './ultrasonic-level';
 import { createStaffGauge } from './staff-gauge';
 import { createTankLadder } from './tank-ladder';
+import { createCanvasTexture } from '../../core/views/screens';
 import { createLifebuoy } from '../../general-safety/views/lifebuoy';
 import { createSafetySign } from '../../general-safety/views/safety-signs';
 import { slabAround } from '../../../gallery/logic/slab-openings';
@@ -188,9 +190,41 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   lid.name = 'Backwash pit hatch';
   lid.position.set((hatchArea.minX + hatchArea.maxX) / 2, 0, hatchArea.maxZ);
   group.add(lid);
+  // Painted chequer plate: raised lozenges in a herringbone, as a
+  // galvanised tread-plate hatch is (the owner, 2026-10-26).
+  const tread = createCanvasTexture(128, 128);
+  {
+    const c = tread.context;
+    c.fillStyle = '#d4b21e';
+    c.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 4; i++)
+      for (let j = 0; j < 4; j++) {
+        const cx = i * 32 + 16;
+        const cy = j * 32 + 16;
+        const turn = (i + j) % 2 ? Math.PI / 4 : -Math.PI / 4;
+        c.save();
+        c.translate(cx, cy);
+        c.rotate(turn);
+        c.fillStyle = '#9c8212';
+        c.fillRect(-11, -2.5, 22, 5);
+        c.fillStyle = '#f0d24a';
+        c.fillRect(-11, -2.5, 22, 2);
+        c.restore();
+      }
+    tread.texture.wrapS = tread.texture.wrapT = RepeatWrapping;
+    tread.texture.repeat.set(hatch.length / 0.12, hatch.width / 0.12);
+    tread.texture.needsUpdate = true;
+    kit.textures.push(tread.texture);
+  }
+  const treadPaint = new MeshStandardMaterial({
+    map: tread.texture,
+    roughness: 0.55,
+    metalness: 0.3,
+  });
+  kit.materials.push(treadPaint);
   const lidPlate = t.box(
     lid,
-    t.paint('#d4b21e', 0.5),
+    treadPaint,
     hatch.length,
     0.02,
     hatch.width,
@@ -208,6 +242,15 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     0.01,
     -hatch.width + 0.08,
   );
+  const sign = createSafetySign(
+    kit,
+    ['confined'],
+    ['DANGER', 'Confined space', 'Entry by permit only'],
+  );
+  sign.rotation.x = -Math.PI / 2;
+  sign.scale.setScalar(0.8);
+  sign.position.set(0, 0.003, -hatch.width / 2);
+  lid.add(sign);
   // Its steel angle frame round the opening, standing 10 mm proud of the
   // floor, not flush with it (flush, it flickered against the slab).
   for (const side of [-1, 1]) {
@@ -582,7 +625,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   const LID_OPEN = 1.75;
   const uses = new Map<Object3D, () => void>();
   leaf.traverse((o) => uses.set(o, () => (gate.open = !gate.open)));
-  for (const o of [lid, lidPlate, handle])
+  for (const o of [lid, lidPlate, handle, sign])
     o.traverse((c) => uses.set(c, () => (cover.open = !cover.open)));
   const toward = (now: number, target: number, step: number) =>
     now < target ? Math.min(target, now + step) : Math.max(target, now - step);

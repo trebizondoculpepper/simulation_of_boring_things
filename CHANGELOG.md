@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The backwash pit's hatch (the owner, 2026-10-26): painted chequer-plate tread on its lid, its confined-space sign kept and raised clear of it; the pump's discharge riser comes up through a sleeve in the gratings beside the hatch, no longer through its lid (its stub showed as a black disc on it); the davit's arm bare, its lifting eye gone.
 - The backwash pit's hatch lid is plain yellow with its handle: its small confined-space sign, whose manhole symbol read as something lying on it, is gone (the gate carries entry by permit); and the davit's lifting eye is gone, nothing hanging from its arm.
 - The pump davit stands bare (the owner, 2026-10-26): its chain block, chain and hook are gone, out of the hatchway; only its lifting eye under the arm's tip, where lifting gear is hung when it is brought for a lift.
 - A minimal working fire alarm (the owner, 2026-10-26), the start of prompt 053's: world state `fireAlarm` (`WORLD_VERSION` 37) with resettable manual call points; one at each of the wet hall's three fire points, 1.4 m up beside the extinguishers, latching until reset with its key, and two sounder-beacons (the hall's east wall, the make-up bay) sounding and flashing while any is latched. Red keep-clear boxes on the floor before each fire point; the ramp's fire point moved clear of the ramp's rail.

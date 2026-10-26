@@ -166,7 +166,8 @@ export function machinePorts(item: Item): MachinePort[] {
       // middle (its footprint shifted east for its davit): the backwash
       // in down through its gratings at its west end, over its water (an
       // air break); its pump's discharge riser up out of its sump through
-      // its hatch; its overflow out through its east wall at its top water
+      // a sleeve in its gratings just west of its hatch, not through the
+      // hatch's lid (the owner, 2026-10-26: its stub showed on the lid); its overflow out through its east wall at its top water
       // level, and its drain from its sump, both below the floor.
       const P = BACKWASH_PIT;
       const ox = -WET_HALL_LAYOUT.pitDavitShift;
@@ -180,7 +181,13 @@ export function machinePorts(item: Item): MachinePort[] {
           0.16,
           'drain',
         ),
-        port('discharge', [ox + hatch, 0.02, hz], [0, 1, 0], 0.076, 'drain'),
+        port(
+          'discharge',
+          [ox + hatch - P.hatch / 2 - 0.25, 0.02, hz],
+          [0, 1, 0],
+          0.076,
+          'drain',
+        ),
         {
           ...port(
             'overflow',
