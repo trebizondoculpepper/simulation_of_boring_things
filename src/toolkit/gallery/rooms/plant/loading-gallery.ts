@@ -11,9 +11,8 @@ import {
   selector,
 } from '../../../components/core/parts/parts';
 import { partAudio } from '../../../components/core/audio/part-audio';
-import { machineTone } from '../../../components/sound/audio/machine-tones';
 import { VALVE_STOP } from '../../../components/plant/audio/actuated-valve';
-import { SHUTTER_RATTLE } from '../../../components/loading-dock/audio/shutter-rattle';
+import { SHUTTER_RUN } from '../../../components/loading-dock/audio/shutter-run';
 import { plantTools } from '../../../components/plant/views/plant-tools';
 import {
   PALLET,
@@ -174,21 +173,17 @@ function shutterRig(kit: PanelKit): LiveExhibit {
   group.add(light.group);
   shutter.group.traverse((o) => (o.userData.live = true));
   light.group.traverse((o) => (o.userData.live = true));
-  // Its sounds (the owner, 2026-10-26): while it runs, its motor's hum
-  // and gear whine from the drive, and the laths' clatter winding onto or
-  // off the barrel; a clunk as it reaches either end.
+  // Its sounds (the owner, 2026-10-26): while it runs, a recording of a
+  // real electric shutter, its motor and its laths' clatter onto the
+  // barrel; a clunk as it reaches either end.
   const drive = beginPart(kit, 'Shutter drive');
   const running = signal(false);
-  const head = new Group();
-  head.position.set(W / 2 + 0.6, H + 0.6, 0.33);
-  group.add(head);
   drive.object.add(new Group());
-  drive.holdWhile(running, machineTone('motor', signal(0.9), 0.07), head);
-  drive.holdWhile(running, machineTone('gear-motor', signal(0.6), 0.05), head);
   const roll = new Group();
   roll.position.set(0, H + 0.6, 0.33);
   group.add(roll);
-  drive.holdWhile(running, SHUTTER_RATTLE, roll);
+  // A recording of a real electric shutter: motor and laths together.
+  drive.holdWhile(running, SHUTTER_RUN, roll);
   parts.add(drive.part());
   let open = 0;
   shutter.setOpen(open);
