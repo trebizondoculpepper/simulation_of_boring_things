@@ -10,7 +10,6 @@ import {
 } from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
-import { createMicroLabel } from '../../components/core/views/eighties-controls';
 import { createServiceCeiling } from '../../components/site-dressing/views/service-ceiling';
 import { createIndustrialAccess } from '../../components/architectural/views/industrial-access';
 import {
@@ -37,6 +36,8 @@ import {
 } from '../../../scene/breeze-block-texture';
 import { createWarehouseConcreteFloor } from '../../../scene/warehouse-concrete-floor';
 import { slabAround } from '../logic/slab-openings';
+import { controlBus } from '../logic/control-bus';
+import { roomStructure } from '../logic/room-structure';
 import type { Rect } from '../logic/slab-openings';
 import { createPs1Material } from '../../components/core/parts/ps1-material';
 import {
@@ -107,6 +108,11 @@ export interface ShellView {
   services?: boolean;
   /** Openings in its floor slab, for what goes down through it (a pit). */
   floorHoles?: readonly Rect[];
+  /**
+   * Where a partition meets its walls, or a conduit rises up them, each
+   * along its wall: no wall batten is hung across one.
+   */
+  partitionsMeet?: readonly { wall: ShellWall; at: number }[];
 }
 
 /**
@@ -322,6 +328,10 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
   const y = v.floor + 3.1;
   const clear = (wall: ShellWall, s: number) =>
     !v.doors.some((d) => d.wall === wall && Math.abs(d.at - s) < 1.6) &&
+    // Half a batten and a partition's half thickness, and a little more.
+    !v.partitionsMeet?.some(
+      (p) => p.wall === wall && Math.abs(p.at - s) < 1.0,
+    ) &&
     !(wall === facing && Math.abs(s - (besideDoor ? 4 : 0)) < 1.6);
   for (const wall of ['north', 'south'] as const) {
     const n = Math.max(1, Math.round(v.w / 5));
@@ -403,6 +413,11 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
     }[],
     box,
     paint,
+    /** A box of the room's blockwork, on its one grid. */
+    wallBox,
+    /** Its wall battens' materials, and their height over its floor. */
+    battens,
+    battenY: y,
   };
 }
 
@@ -426,6 +441,19 @@ export function createWetHall(metre: number, kit: PanelKit) {
     seed: 53,
     // The backwash pit's opening (prompt 036).
     floorHoles: [WET_HALL_LAYOUT.pit],
+    // The make-up bay's partition meets its north and east walls; and
+    // the control bus's conduits and riser rise past the battens' height.
+    partitionsMeet: [
+      ...busCrossings('wet_hall', 3.1),
+      {
+        wall: 'north',
+        at: WET_HALL_LAYOUT.bay.minX - WET_HALL_LAYOUT.partition.thickness / 2,
+      },
+      {
+        wall: 'east',
+        at: WET_HALL_LAYOUT.bay.maxZ + WET_HALL_LAYOUT.partition.thickness / 2,
+      },
+    ],
   });
   const { group, box, paint } = shell;
   const galv = paint('#a9aeae', 0.45, 0.6);
@@ -590,21 +618,24 @@ export function createWetHall(metre: number, kit: PanelKit) {
       box(yellow, 0.045, 1.1, 0.045, px, y + 0.55, pz);
     }
   }
-  // The protected make-up bay's partition (prompt 036): painted blockwork,
-  // a green dado both sides, its service door's opening with a steel frame
-  // and the blockwork carried over it on a lintel.
+  // The protected make-up bay's partition (prompt 036; the owner,
+  // 2026-10-26): the hall's own breeze block, as thick as its walls, a
+  // green dado both sides, its doors' opening (the standard pair, hung
+  // by `wetHallBayDoors`) and the blockwork carried over it; LED battens
+  // on both faces at the hall's height, fed along galvanised trunking just
+  // above them.
   const L = WET_HALL_LAYOUT;
   const floorY = -WET_HALL.drop;
   const H = L.partition.height;
-  const wallPaint = paint('#d9d6cc', 0.9);
   const dadoPaint = paint('#6d7a6f', 0.85);
-  const frame = paint('#3b4144', 0.5, 0.4);
+  const trunking = paint('#b9bdbc', 0.45, 0.6);
+  const { wallBox, battens, battenY } = shell;
   for (const f of wetHallPartition()) {
     const w = f.maxX - f.minX;
     const d = f.maxZ - f.minZ;
-    const x = (f.minX + f.maxX) / 2;
-    const z = (f.minZ + f.maxZ) / 2;
-    box(wallPaint, w, H, d, x, floorY + H / 2, z);
+    const x = (f.minX + f.minX + w) / 2;
+    const z = (f.minZ + f.minZ + d) / 2;
+    wallBox(w, H, d, x, floorY + H / 2, z);
     box(dadoPaint, w + 0.01, 1.2, d + 0.01, x, floorY + 0.6, z);
   }
   {
@@ -612,45 +643,105 @@ export function createWetHall(metre: number, kit: PanelKit) {
     const z = L.bay.maxZ + t / 2;
     const dw = L.door.maxX - L.door.minX;
     const dx = (L.door.minX + L.door.maxX) / 2;
-    box(
-      wallPaint,
-      dw,
-      H - L.door.height,
-      t,
-      dx,
-      floorY + (L.door.height + H) / 2,
-      z,
-    );
-    for (const x of [L.door.minX + 0.03, L.door.maxX - 0.03])
-      box(
-        frame,
-        0.06,
-        L.door.height,
-        t + 0.04,
-        x,
-        floorY + L.door.height / 2,
-        z,
-      );
-    box(frame, dw, 0.06, t + 0.04, dx, floorY + L.door.height - 0.03, z);
+    wallBox(dw, H - L.door.height, t, dx, floorY + (L.door.height + H) / 2, z);
   }
   {
-    // Its sign over the door, from the aisle.
-    const sign = createMicroLabel(
-      kit,
-      'MAKE-UP WATER · AUTHORISED PERSONNEL ONLY',
-      {
-        height: 0.05,
-        ink: '#ffffff',
-        plate: '#1c5aa6',
-        maxWidth: 1.8,
-      },
-    );
-    sign.position.set(
-      (L.door.minX + L.door.maxX) / 2 + 0.6,
-      floorY + L.door.height + 0.3,
-      L.bay.maxZ + L.partition.thickness + 0.005,
-    );
-    group.add(sign);
+    // Its battens and trunking, on both faces of each length of it.
+    const R = WET_HALL.side / 2 - SHELL_WALL;
+    const t = L.partition.thickness;
+    const trunkY = battenY + 0.22;
+    const south = { z: L.bay.maxZ, from: L.bay.minX - t, to: R };
+    const west = { x: L.bay.minX - t / 2, from: -R, to: L.bay.maxZ };
+    for (const face of [-1, 1] as const) {
+      // The south length: its faces into the bay (−z) and onto the aisle (+z).
+      const fz = face === -1 ? south.z - 0.05 : south.z + t + 0.05;
+      const len = south.to - south.from;
+      // Trunking on its aisle face only: inside the bay it would join
+      // nothing (the owner, 2026-10-26).
+      if (face === 1)
+        box(trunking, len, 0.05, 0.1, (south.from + south.to) / 2, trunkY, fz);
+      const n = Math.max(1, Math.round(len / 4.5));
+      for (let i = 0; i < n; i++) {
+        const sx = south.from + ((i + 0.5) * len) / n;
+        if (sx > L.door.minX - 0.8 && sx < L.door.maxX + 0.8) continue;
+        addWallBatten(
+          group,
+          battens,
+          sx,
+          battenY,
+          fz,
+          'x',
+          face === -1 ? -1 : 1,
+        );
+      }
+      // The west length: its faces into the bay (+x) and onto the hall (−x).
+      const fx = west.x + face * (t / 2 + 0.05);
+      const wl = west.to - west.from;
+      if (face === -1)
+        box(trunking, 0.1, 0.05, wl, fx, trunkY, (west.from + west.to) / 2);
+      const m = Math.max(1, Math.round(wl / 4.5));
+      for (let i = 0; i < m; i++) {
+        const sz = west.from + ((i + 0.5) * wl) / m;
+        addWallBatten(
+          group,
+          battens,
+          fx,
+          battenY,
+          sz,
+          'z',
+          face === 1 ? 1 : -1,
+        );
+      }
+    }
   }
+
   return shell;
+}
+
+/**
+ * The wet hall's make-up bay's doors (prompt 036; the owner, 2026-10-26):
+ * the same pair of equipment doors as every plant room's, in the bay's
+ * partition, pulled open from the aisle; for its room's parts.
+ */
+export function wetHallBayDoors(kit: PanelKit) {
+  const L = WET_HALL_LAYOUT;
+  const part = equipmentDoors(kit, 'MAKE-UP WATER', ['authorised']);
+  part.object.position.set(
+    (L.door.minX + L.door.maxX) / 2,
+    -WET_HALL.drop,
+    L.bay.maxZ + L.partition.thickness,
+  );
+  return part;
+}
+
+/**
+ * Where the control bus's conduits and riser rise up a room's walls past
+ * `height` over its floor (its wall battens'), each along its wall: no
+ * batten is hung across one (the owner, 2026-10-26: a riser went through
+ * a light).
+ */
+function busCrossings(room: string, height: number) {
+  const bus = controlBus(room);
+  const structure = roomStructure(room);
+  if (!bus || !structure) return [];
+  const { walls } = structure;
+  const runs = [
+    ...bus.stubs.flatMap((s) =>
+      s.points.slice(1).map((b, i) => [s.points[i], b] as const),
+    ),
+    ...bus.trunking.map((t) => [t.from, t.to] as const),
+  ];
+  const near = (a: number, b: number) => Math.abs(a - b) < 0.2;
+  const out: { wall: ShellWall; at: number }[] = [];
+  for (const [a, b] of runs) {
+    if (Math.abs(a[0] - b[0]) > 1e-6 || Math.abs(a[2] - b[2]) > 1e-6) continue;
+    if (Math.min(a[1], b[1]) > height || Math.max(a[1], b[1]) < height)
+      continue;
+    const [x, , z] = a;
+    if (near(x, walls.west)) out.push({ wall: 'west', at: z });
+    else if (near(x, walls.east)) out.push({ wall: 'east', at: z });
+    else if (near(z, walls.north)) out.push({ wall: 'north', at: x });
+    else if (near(z, walls.south)) out.push({ wall: 'south', at: x });
+  }
+  return out;
 }

@@ -1,6 +1,6 @@
 import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
 import type { Placed, Side } from './room-equipment';
-import { roomStructure } from './room-structure';
+import { deckOf, roomStructure } from './room-structure';
 import { PLANT_ROOM } from './plant-rooms';
 import type { Containment } from './cable-containment';
 import type { Point3, ServiceRoute } from './room-services';
@@ -33,7 +33,13 @@ export const BUS = { width: 0.1, depth: 0.05 } as const;
  */
 export const DOOR_HEAD = PLANT_ROOM.equipment.h + 0.1;
 const OVER = 0.15;
-const LOWEST = DOOR_HEAD + OVER;
+/**
+ * Its clearance over a door's head: past the lintel over the opening (a
+ * 215 mm concrete lintel) and a little more, so it is never fixed into
+ * it (the owner, 2026-10-26).
+ */
+export const OVER_LINTEL = 0.35;
+const LOWEST = DOOR_HEAD + OVER_LINTEL;
 /** Its middle stands this far off the wall's face. */
 const OFF = BUS.depth / 2 + 0.005;
 /** A device's conduit to it. */
@@ -72,7 +78,11 @@ export function controlBus(room: string): ControlBus | null {
       .filter((p) => p.item.mount === 'wall')
       .map((p) => p.y + p.item.h / 2),
   );
-  const y = Math.max(LOWEST, wallTop + OVER);
+  // And over its doors' heads, at the level they open from: a room whose
+  // floor is below its doors (the wet hall's, half a storey down) has
+  // them that much higher (the owner, 2026-10-26: the bus went across
+  // the wet hall's doors).
+  const y = Math.max(LOWEST + (deckOf(room) ?? 0), wallTop + OVER);
   if (y > structure.ceilingZone - 0.2)
     problems.push(
       `no room for the bus between the tallest panel and the services ceiling`,

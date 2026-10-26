@@ -326,19 +326,36 @@ export const WET_HALL = {
  * clear aisle between, from the east stair to the west ramp.
  */
 export const WET_HALL_LAYOUT = {
-  /** The make-up bay's partition: blockwork, this high and thick. */
-  partition: { height: 3, thickness: 0.2 },
-  /** The bay, inside its partition, from the hall's north wall. */
-  bay: { minX: -4.8, maxX: 8.4, maxZ: -2.9 },
-  /** Its service door, in the partition's south side, from the aisle. */
-  door: { minX: -4.3, maxX: -3.3, height: 2.1 },
+  /**
+   * The make-up bay's partition: the hall's breeze block, as thick as its
+   * walls, and tall enough for its battens at the hall's height on both
+   * faces (the owner, 2026-10-26).
+   */
+  partition: { height: 3.6, thickness: SHELL_WALL },
+  /**
+   * The bay, inside its partition, from the hall's north wall; east, to
+   * the hall's own east wall (the owner, 2026-10-26: no slot left between
+   * the partition and that wall).
+   */
+  bay: { minX: -4.8, maxZ: -2.9 },
+  /**
+   * Its doors, in the partition's south side, from the aisle: the same
+   * pair of equipment doors as everywhere (the owner, 2026-10-26), their
+   * opening the shell rooms' (`SHELL_OPENING`) and their head 2.52 m (the
+   * leaves' 2.4 m and their frame).
+   */
+  door: { minX: -4.5, maxX: -4.5 + SHELL_OPENING, height: 2.52 },
   /** The backwash pit's opening in the floor: its inside (`BACKWASH_PIT`, 7 × 5 m). */
   pit: { minX: -4.2, maxX: 2.8, minZ: 3, maxZ: 8 },
   /** Its concrete walls round the opening, below the floor. */
   pitWall: 0.3,
 } as const;
 
-/** The make-up bay's partition walls, as footprints on the floor: west, south either side of its door, east. */
+/**
+ * The make-up bay's partition walls, as footprints on the floor: its west
+ * side from the north wall, and its south side either side of its door,
+ * running on to the hall's east wall.
+ */
 export function wetHallPartition() {
   const R = wetHallRoom().w / 2;
   const L = WET_HALL_LAYOUT;
@@ -347,8 +364,7 @@ export function wetHallPartition() {
   return [
     { minX: L.bay.minX - t, maxX: L.bay.minX, minZ: -R, maxZ: z + t },
     { minX: L.bay.minX - t, maxX: L.door.minX, minZ: z, maxZ: z + t },
-    { minX: L.door.maxX, maxX: L.bay.maxX + t, minZ: z, maxZ: z + t },
-    { minX: L.bay.maxX, maxX: L.bay.maxX + t, minZ: -R, maxZ: z + t },
+    { minX: L.door.maxX, maxX: R, minZ: z, maxZ: z + t },
   ];
 }
 

@@ -90,12 +90,15 @@ function heights(room: string): { soffit: number; services: boolean } | null {
 }
 
 /** How high over the floor its entrance landing is, if it has one. */
-heights.deck = (room: string): number | undefined => {
+heights.deck = (room: string): number | undefined => deckOf(room);
+
+/** How high over its floor a room's entrance landing is, if it has one: its doors' level. */
+export function deckOf(room: string): number | undefined {
   if (room in PLANT_ROOMS)
     return -planOf(room as keyof typeof PLANT_ROOMS).floor;
   if (room === 'wet_hall') return WET_HALL.drop;
   return undefined;
-};
+}
 
 const box = (
   name: string,

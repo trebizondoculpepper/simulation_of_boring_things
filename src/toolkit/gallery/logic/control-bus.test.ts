@@ -1,5 +1,11 @@
+import { deckOf } from './room-structure';
 import { describe, expect, it } from 'vite-plus/test';
-import { DOOR_HEAD, controlBus, isControlDevice } from './control-bus';
+import {
+  DOOR_HEAD,
+  OVER_LINTEL,
+  controlBus,
+  isControlDevice,
+} from './control-bus';
 import { layoutRoom } from './room-equipment';
 import { roomServiceRoutes } from './room-services';
 import { roomStructure } from './room-structure';
@@ -93,7 +99,7 @@ describe('a room’s control bus', () => {
       );
     });
 
-    it('rings the room just above door level, or over a taller panel', () => {
+    it('rings the room clear of its door lintels, at the level its doors open from, or over a taller panel', () => {
       expect(lengths).toHaveLength(4);
       const wallTop = Math.max(
         0,
@@ -101,7 +107,10 @@ describe('a room’s control bus', () => {
           .filter((p) => p.item.mount === 'wall')
           .map((p) => p.y + p.item.h / 2),
       );
-      expect(bus.y).toBeCloseTo(Math.max(DOOR_HEAD, wallTop) + 0.15, 6);
+      expect(bus.y).toBeCloseTo(
+        Math.max(DOOR_HEAD + OVER_LINTEL + (deckOf(room) ?? 0), wallTop + 0.15),
+        6,
+      );
     });
   });
 });

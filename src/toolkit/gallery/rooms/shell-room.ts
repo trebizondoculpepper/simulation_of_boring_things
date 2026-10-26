@@ -79,7 +79,11 @@ import {
 } from '../logic/stair-run';
 import { createStairStructure, gantryColumnFeet } from '../views/stair-run';
 import type { Footprint } from '../../controls/logic/walk-collision';
-import { createShellRoom, createWetHall } from '../views/shell-room';
+import {
+  createShellRoom,
+  createWetHall,
+  wetHallBayDoors,
+} from '../views/shell-room';
 import { createRoomEquipment } from '../views/room-equipment';
 import type { EquipmentDoorsPart } from '../../components/architectural/parts/equipment-doors';
 import type { Group } from 'three';
@@ -272,6 +276,8 @@ export function startWetHall(canvas: HTMLCanvasElement) {
     self: 'wet_hall',
     room,
     build: (metre, kit) => createWetHall(metre, kit),
+    // The make-up bay's pair of equipment doors (prompt 036).
+    install: (kit) => [wetHallBayDoors(kit)],
     floorAt: wetHallFloorAt,
     // And the make-up bay's partition (prompt 036).
     solids: [...shellSolids(room), ...wetHallRails(), ...wetHallPartition()],
