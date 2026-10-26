@@ -14,6 +14,7 @@ import {
   PAIR_DISCHARGE_X,
   PAIR_STRAINER_X,
 } from '../../components/plant/logic/pump-pair';
+import { PIT_DISCHARGE } from '../../components/plant/views/backwash-pit';
 import {
   BOOSTER,
   BOOSTER_CONTROL,
@@ -187,8 +188,8 @@ export function machinePorts(item: Item): MachinePort[] {
       // below, so a pipe meets each clear of the floor.
       const P = BACKWASH_PIT;
       const ox = -WET_HALL_LAYOUT.pitDavitShift;
-      const hatch = P.length / 2 - P.hatch / 2;
-      const hz = P.width / 2 - P.hatch / 2;
+      // Its header's middle, between its two risers.
+      const hz = P.width / 2 - 0.6;
       return [
         port(
           'inlet',
@@ -197,13 +198,18 @@ export function machinePorts(item: Item): MachinePort[] {
           0.16,
           'drain',
         ),
-        port(
-          'discharge',
-          [ox + hatch - P.hatch / 2 - 0.25, 0.15, hz],
-          [0, 1, 0],
-          0.076,
-          'drain',
-        ),
+        // Its pump station's outlet, over the header joining its two
+        // sump pumps' risers west of the hatch (`PIT_DISCHARGE`).
+        {
+          ...port(
+            'discharge',
+            [ox + PIT_DISCHARGE.x(P.length, P.hatch), PIT_DISCHARGE.y, hz],
+            [0, 1, 0],
+            0.089,
+            'drain',
+          ),
+          drawn: true,
+        },
       ];
     }
     if (kind === 'backwash-tank')

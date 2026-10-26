@@ -1,3 +1,7 @@
+import { createBrandBand } from '../../core/views/brand-badge';
+import { partAudio } from '../../core/audio/part-audio';
+import { pumpSound } from './pump-sound';
+import { BOOSTER_PUMP } from '../logic/pump-sound';
 import { markComponent } from '../../core/views/component-identity';
 import {
   Group,
@@ -9,7 +13,7 @@ import {
 } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
-import { plantTools } from './plant-tools';
+import { FINISH, plantTools } from './plant-tools';
 import { createGratingDeck } from './railings';
 import { createUltrasonicLevel } from './ultrasonic-level';
 import { createStaffGauge } from './staff-gauge';
@@ -70,6 +74,18 @@ export interface BackwashPitSpec {
  * the world's level. Its own frame: the hall's floor at y = 0, its middle
  * on its axis, x along its length, +z south.
  */
+/**
+ * Where its pump station's discharge leaves it (the owner, 2026-10-26), in
+ * its own frame: its risers rise through the gratings this far west of
+ * the hatch, join in a header this high over the floor, and its outlet
+ * stands at `y`, facing up, for the sewer's line.
+ */
+export const PIT_DISCHARGE = {
+  x: (length: number, hatch: number) => length / 2 - hatch - 0.2,
+  headerY: 0.35,
+  y: 0.5,
+} as const;
+
 export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   const t = plantTools(kit);
   const group = new Group();
@@ -553,6 +569,134 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   level.group.position.set(-L / 2 + 1.0, -0.42, -W / 2 + 0.45);
   group.add(level.group);
   t.box(group, steel, 0.08, 0.05, 0.5, -L / 2 + 1.0, -0.12, -W / 2 + 0.25);
+  // Its pump station (the owner, 2026-10-26: emptied by pumps at its
+  // bottom, pushing up, not drawn from above): a duty and standby pair of
+  // submersible pumps in its sump, west of its ladder, each docked on a
+  // duckfoot bend fixed to the sump's floor and held on twin guide rails
+  // up to the hatch frame, so the davit lifts it out through the hatch.
+  // From each duckfoot its riser climbs out of the sump, runs west under
+  // the gratings clear of the hatch and rises through them, a swing
+  // non-return valve on it whose arm lifts while its pump pushes; the two
+  // join in a short header over the floor, its outlet up to the sewer's
+  // line (`PIT_DISCHARGE`).
+  const station = (() => {
+    const sumpFloor = -D - p.sump.depth;
+    const px = L / 2 - 0.75;
+    const zs = [W / 2 - 0.3, W / 2 - 0.9];
+    const rx = PIT_DISCHARGE.x(L, p.hatch);
+    const headerY = PIT_DISCHARGE.headerY;
+    const body = t.paint('#2f4f6f', 0.45, 0.4);
+    const black = t.paint('#1d1f21', 0.6);
+    const rail = t.paint(FINISH.galvanised, 0.4, 0.6);
+    const pipeColour = FINISH.galvanised;
+    const arms: Group[] = [];
+    zs.forEach((z, k) => {
+      // The duckfoot bend, bolted to the sump floor.
+      t.box(group, black, 0.3, 0.04, 0.3, px - 0.1, sumpFloor + 0.02, z);
+      t.cyl(group, black, 0.06, 0.2, px - 0.22, sumpFloor + 0.14, z, 'y', 14);
+      // The pump: its volute and its motor above, its lifting hoop.
+      t.cyl(group, body, 0.13, 0.16, px, sumpFloor + 0.13, z, 'y', 24);
+      t.cyl(group, body, 0.11, 0.42, px, sumpFloor + 0.42, z, 'y', 24);
+      t.cyl(group, black, 0.115, 0.03, px, sumpFloor + 0.64, z, 'y', 24);
+      t.rod(
+        group,
+        rail,
+        [px - 0.06, sumpFloor + 0.66, z],
+        [px, sumpFloor + 0.74, z],
+        0.008,
+      );
+      t.rod(
+        group,
+        rail,
+        [px + 0.06, sumpFloor + 0.66, z],
+        [px, sumpFloor + 0.74, z],
+        0.008,
+      );
+      const mark = createBrandBand(kit, 'grundflow', {
+        radius: 0.11,
+        height: 0.03,
+      });
+      mark.position.set(px, sumpFloor + 0.45, z);
+      group.add(mark);
+      // Its twin guide rails, up to a bracket under the hatch frame.
+      for (const dz of [-0.05, 0.05])
+        t.rod(
+          group,
+          rail,
+          [px - 0.22, sumpFloor + 0.24, z + dz],
+          [px - 0.22, -0.06, z + dz],
+          0.012,
+        );
+      t.box(group, rail, 0.06, 0.03, 0.16, px - 0.22, -0.05, z);
+      // Its riser: up out of the sump, west under the gratings, up
+      // through them to the header.
+      t.pipe(
+        group,
+        80,
+        [
+          [px - 0.22, sumpFloor + 0.24, z],
+          [px - 0.22, -D + 0.4, z],
+          [rx, -D + 0.4, z],
+          [rx, headerY, z],
+        ],
+        pipeColour,
+      );
+      // Its swing non-return valve, above the gratings: its body, its
+      // arm and weight on its side, lifting as water goes through.
+      t.cyl(group, t.paint('#3a5f8a', 0.45), 0.065, 0.16, rx, 0.17, z, 'y', 20);
+      const arm = new Group();
+      arm.position.set(rx + 0.07, 0.17, z);
+      group.add(arm);
+      t.box(arm, black, 0.012, 0.012, 0.12, 0, 0, 0.06);
+      t.box(arm, black, 0.04, 0.04, 0.04, 0, 0, 0.12);
+      arms.push(arm);
+      void k;
+    });
+    // The header joining the two risers, and its outlet up.
+    t.pipe(
+      group,
+      80,
+      [
+        [rx, headerY, zs[0]],
+        [rx, headerY, zs[1]],
+      ],
+      pipeColour,
+    );
+    const zm = (zs[0] + zs[1]) / 2;
+    t.pipe(
+      group,
+      80,
+      [
+        [rx, headerY, zm],
+        [rx, PIT_DISCHARGE.y, zm],
+      ],
+      pipeColour,
+    );
+    // Each pump's motor, heard from the sump while it runs.
+    const motors = zs.map((z) => {
+      const m = new Group();
+      m.position.set(px, sumpFloor + 0.4, z);
+      group.add(m);
+      return m;
+    });
+    const sound = pumpSound(BOOSTER_PUMP);
+    const heard = [false, false];
+    return {
+      /** Which pumps run (duty first): their checks open, their motors heard. */
+      set(running: readonly boolean[]) {
+        running.forEach((on, k) => {
+          arms[k].rotation.x = on ? -0.6 : 0;
+          if (on !== heard[k]) {
+            heard[k] = on;
+            partAudio.hold(motors[k], on ? sound : null, motors[k]);
+          }
+        });
+      },
+      dispose() {
+        for (const m of motors) partAudio.hold(m, null);
+      },
+    };
+  })();
   // Its way out (the owner, 2026-10-26: no one who fell in could climb
   // out of it): a fixed stainless ladder down its east wall under its
   // hatch, at the hatch's north edge clear of the sump, from just under
@@ -672,6 +816,9 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
         ...(cover.angle > 0.05 ? [hatchArea] : []),
       ];
     },
+    /** Which of its sump pumps run, duty first. */
+    setPumps: (running: readonly boolean[]) => station.set(running),
+    dispose: () => station.dispose(),
     /** Its water's depth above its floor, metres. */
     setDepth(metres: number) {
       const d = Math.max(0.02, Math.min(p.topWater, metres));

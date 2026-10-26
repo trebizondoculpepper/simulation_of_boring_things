@@ -507,10 +507,12 @@ function modelFor(
       parts,
       update: (delta: number) => {
         pit.update(delta);
-        pit.setDepth(
-          backwashPitDepth(roomWorld().world.value.wetHall.backwashTank),
-        );
+        const wh = roomWorld().world.value.wetHall;
+        pit.setDepth(backwashPitDepth(wh.backwashTank));
+        // Its duty pump runs while the pit discharges.
+        pit.setPumps([wh.discharging, false]);
       },
+      dispose: () => pit.dispose(),
       // Its rail, davit, shut gate and open hatch, in the room's frame.
       solids: () => {
         holder.updateMatrixWorld(true);
