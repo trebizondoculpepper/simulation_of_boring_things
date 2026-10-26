@@ -1,3 +1,5 @@
+import { createSwitchFuse } from '../../components/industrial-control/views/switch-fuse';
+import { createMicroLabel } from '../../components/core/views/eighties-controls';
 import {
   BoxGeometry,
   CanvasTexture,
@@ -137,8 +139,10 @@ interface Device {
     turn: 'lever' | 'wheel';
     /** What a click works the service from, if not all of it. */
     operate?: Object3D[];
-    /** A door that opens and shuts with a click, of its own. */
-    door?: Group;
+    /** Doors that open and shut with a click, each of its own. */
+    doors?: Group[];
+    /** What it does each frame, given whether its service is on. */
+    tick?: (delta: number, on: boolean) => void;
   };
 }
 
@@ -219,39 +223,50 @@ const DEVICES: readonly Device[] = [
       cabinet.group.position.set(0, G + 1.0, INTAKE.wallZ);
       cabinet.group.rotation.y = Math.PI;
       g.add(cabinet.group);
-      // The customer-side isolator beside it: a grey switch box, its
-      // rotary handle red on yellow.
-      const front = INTAKE.wallZ - 0.32;
-      const isoBox = box(
-        g,
-        paint(kit, '#7e8a86', 0.5, 0.4),
-        0.4,
-        0.55,
-        0.3,
-        -0.75,
-        G + 1.0,
-        INTAKE.wallZ - 0.15,
-      );
-      box(
-        g,
-        paint(kit, '#e0b81c', 0.5),
-        0.24,
-        0.24,
-        0.02,
-        -0.75,
-        G + 1.05,
-        front - 0.005,
-      );
+      // The customer-side isolator beside it (the owner, 2026-10-26: the
+      // rough one was rubbish): Voltara's switch-fuse, rated TP&N 800 A
+      // for this supply, scaled up from its 63 A model, in a grey outdoor
+      // enclosure of its own whose door opens; its handle thrown by the
+      // world's intake.
+      const iso = new Group();
+      iso.position.set(-0.85, G + 1.0, INTAKE.wallZ);
+      iso.rotation.y = Math.PI;
+      g.add(iso);
+      const enclosure = paint(kit, '#8f9693', 0.6, 0.2);
+      const EW = 0.75;
+      const EH = 1.05;
+      const ED = 0.42;
+      box(iso, enclosure, EW, EH, 0.02, 0, 0, 0.01);
+      for (const sx of [-1, 1])
+        box(iso, enclosure, 0.02, EH, ED, (sx * EW) / 2, 0, ED / 2);
+      for (const sy of [-1, 1])
+        box(iso, enclosure, EW, 0.02, ED, 0, (sy * EH) / 2, ED / 2);
+      const isoDoor = new Group();
+      isoDoor.position.set(-EW / 2, 0, ED);
+      box(isoDoor, enclosure, EW, EH, 0.02, EW / 2, 0, 0.01);
+      const tag = createMicroLabel(kit, 'SUPPLY ISOLATOR\nDANGER 400 V', {
+        height: 0.03,
+        ink: '#111111',
+        plate: '#e0b81c',
+      });
+      tag.position.set(EW / 2, 0.3, 0.022);
+      isoDoor.add(tag);
+      iso.add(isoDoor);
+      const sf = createSwitchFuse(kit, {
+        on: true,
+        rating: 'TP&N 800A',
+        legend: 'INCOMING SUPPLY',
+      });
+      sf.group.scale.setScalar(2.2);
+      sf.group.position.set(-0.03, 0, 0.02);
+      iso.add(sf.group);
       const lever = new Group();
-      lever.position.set(-0.75, G + 1.05, front - 0.03);
-      box(lever, paint(kit, '#c8261c', 0.5), 0.05, 0.2, 0.05, 0, 0, 0);
-      g.add(lever);
       // Two heavy four-core armoured cables from the ground up into the
       // cabinet's CT chamber, and from the isolator into the wall.
       for (const dx of [0.2, 0.35])
         riser(g, black, 0.035, dx, G - 0.2, G + 0.4, INTAKE.wallZ - 0.12);
-      for (const dx of [-0.8, -0.7]) {
-        riser(g, black, 0.035, dx, G + 1.28, 0.8, INTAKE.wallZ - 0.12);
+      for (const dx of [-0.9, -0.8]) {
+        riser(g, black, 0.035, dx, G + 1.53, 0.8, INTAKE.wallZ - 0.12);
         intoWall(kit, g, black, 0.035, dx, 0.87, INTAKE.wallZ - 0.12);
       }
       // A rubber grommet wherever a cable passes through a cabinet's base
@@ -260,8 +275,8 @@ const DEVICES: readonly Device[] = [
       for (const [x, y] of [
         [0.2, G + 0.4],
         [0.35, G + 0.4],
-        [-0.8, G + 1.275],
-        [-0.7, G + 1.275],
+        [-0.9, G + 1.525],
+        [-0.8, G + 1.525],
       ] as const) {
         const grommet = new Mesh(
           new TorusGeometry(0.045, 0.012, 8, 20),
@@ -277,8 +292,12 @@ const DEVICES: readonly Device[] = [
         lever,
         screen: { show: (v: number) => cabinet.show(v, lastKw, lastDelta) },
         turn: 'lever',
-        operate: [isoBox, lever],
-        door: cabinet.door,
+        operate: [sf.group],
+        doors: [cabinet.door, isoDoor],
+        tick: (delta: number, on: boolean) => {
+          sf.set(on);
+          sf.update(delta);
+        },
       };
     },
   },
@@ -296,7 +315,7 @@ export function yardIntake(kit: PanelKit): Part[] {
     const g = new Group();
     g.position.x = d.x;
     a.object.add(g);
-    const { lever, screen, turn: kind, operate, door } = d.build(kit, g);
+    const { lever, screen, turn: kind, operate, doors, tick } = d.build(kit, g);
     // Each installation carries its own maker's badge.
     const open = () => store?.world.value.intake.open[d.service] ?? true;
     const reading = () => store?.world.value.intake.meters[d.service] ?? 0;
@@ -326,6 +345,7 @@ export function yardIntake(kit: PanelKit): Part[] {
           ? siteLoadKw({ ...w, plant: withIntake(w.plant, w.intake) })
           : 0;
       }
+      tick?.(delta, open());
       screen.show(reading());
     });
     a.shows(
@@ -333,9 +353,14 @@ export function yardIntake(kit: PanelKit): Part[] {
         `${open() ? (d.service === 'power' ? 'ON' : 'open') : d.service === 'power' ? 'OFF' : 'shut'} · ${d.meterName}: ${Math.floor(reading())} ${d.unit}`,
     );
     const parts = [a.part()];
-    if (door) {
+    for (const door of doors ?? []) {
       // The cabinet's door, opening and shutting with a click.
-      const dp = beginPart(kit, 'Metering cabinet door');
+      const dp = beginPart(
+        kit,
+        door === doors?.[0]
+          ? 'Metering cabinet door'
+          : 'Isolator enclosure door',
+      );
       dp.object.add(new Group());
       let want = 0;
       let swing = 0;
