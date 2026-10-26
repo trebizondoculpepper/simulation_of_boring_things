@@ -355,9 +355,10 @@ export const WET_HALL_LAYOUT = {
   makeUpMainOut: { x: 5.2, y: 3.0 },
   /**
    * The make-up line's machines along the bay, east of its west side by
-   * 2 m more than at first (the owner, 2026-10-26: room for its pipes).
+   * 2.5 m more than at first (the owner, 2026-10-26: room for its pipes,
+   * and for an easy elbow from the town main, which stays where it is).
    */
-  lineShift: 2,
+  lineShift: 2.5,
   /** The backwash pit's opening in the floor: its inside (`BACKWASH_PIT`, 7 × 5 m). */
   pit: { minX: -4.2, maxX: 2.8, minZ: 3, maxZ: 8 },
   /** Its concrete walls round the opening, below the floor. */
