@@ -855,22 +855,37 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       }
       highLit.value = s.high;
     };
-    // Each pump's power cable.
+    // Each pump's power cable (the owner, 2026-10-26: to the pit's wall
+    // as soon as it can, then down it, never across the hatch): down the
+    // panel's post into a duct cast in the floor, round outside the pit
+    // to its south wall, in through the wall just under the slab, down
+    // the wall's face in cleats, clear of the ladder on the east wall,
+    // and across just above the pumps to its own motor.
     const cable = t.paint('#1b1d1e', 0.7);
+    const cleat = t.paint('#8d9392', 0.45, 0.6);
     const sumpFloor = -D - p.sump.depth;
     const px = L / 2 - 0.75;
+    const face = W / 2 - 0.03;
+    const outside = W / 2 + w + 0.1;
+    const over = sumpFloor + 0.9;
     [W / 2 - 0.3, W / 2 - 0.9].forEach((z, k) => {
-      const railX = px - 0.22 + 0.04;
+      const dx = px + 0.04 * (k - 0.5);
+      const pz = post.z + 0.03 * (k - 0.5);
       const pts: [number, number, number][] = [
-        [post.x - 0.06, 1.05, post.z + 0.03 * (k - 0.5)],
-        [post.x - 0.06, -0.12, post.z + 0.03 * (k - 0.5)],
-        [railX, -0.12, post.z + 0.02 * (k - 0.5)],
-        [railX, -0.12, z],
-        [railX, sumpFloor + 0.7, z],
+        [post.x - 0.06, 1.05, pz],
+        [post.x - 0.06, -0.15, pz],
+        [post.x - 0.06, -0.15, outside],
+        [dx, -0.15, outside],
+        [dx, -0.15, face],
+        [dx, over + 0.04 * k, face],
+        [dx, over + 0.04 * k, z],
         [px, sumpFloor + 0.66, z],
       ];
       for (let i = 1; i < pts.length; i++)
         t.rod(group, cable, pts[i - 1], pts[i], 0.008, 6);
+      // Its cleats down the wall, every 0.6 m.
+      for (let y = -0.4; y > over; y -= 0.6)
+        t.box(group, cleat, 0.03, 0.02, 0.02, dx, y, face + 0.01);
     });
   }
   // Its way out (the owner, 2026-10-26: no one who fell in could climb
