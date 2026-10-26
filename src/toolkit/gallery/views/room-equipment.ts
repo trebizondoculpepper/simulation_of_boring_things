@@ -687,14 +687,24 @@ function modelFor(
             delta,
           );
           look = stepBedLook(look, f.bed, delta);
-          // Its bed as the ideal filter has it: its dirt, its fissures.
+          // Its bed as the ideal filter has it: its dirt, its fissures;
+          // and, after a backwash, its bed still unsettled: rinsing while
+          // water runs down through it, the water over it clouded (the
+          // owner, 2026-10-26: the glass did not show it).
+          const bed = olympicBed(w.olympic, n);
+          const glass = bedGlass(look, {
+            bedFlow: f.bed,
+            dirt: w.olympic.dirt[n] / OLYMPIC_DIRT_REF,
+          });
           filter.showGlass(
             {
-              ...bedGlass(look, {
-                bedFlow: f.bed,
-                dirt: w.olympic.dirt[n] / OLYMPIC_DIRT_REF,
-              }),
-              channelling: olympicBed(w.olympic, n).fissuring,
+              ...glass,
+              mode:
+                glass.mode === 'service' && bed.unsettled > 0.05
+                  ? 'rinse'
+                  : glass.mode,
+              murk: Math.max(glass.murk, 0.6 * bed.unsettled),
+              channelling: bed.fissuring,
             },
             delta,
           );

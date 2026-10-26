@@ -79,13 +79,15 @@ const clamp = (v: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 
 /** What the picture is heading for, in a state. */
 export function glassTarget(i: GlassInputs) {
-  const dirt = clamp(i.dirt / 2);
+  // Plain to see (the owner, 2026-10-26: clean and dirty beds looked the
+  // same): a full load (1) a thick dark crust, two a near-black one.
+  const dirt = clamp(i.dirt / 1.2);
   const lifted = i.mode === 'backwash';
   return {
     bed: lifted ? BED_LIFTED : BED_REST,
     // Lifted, the crust breaks up into the churning bed.
-    crust: lifted ? 0 : 0.03 + 0.09 * dirt,
-    crustDark: lifted ? 0 : dirt,
+    crust: lifted ? 0 : 0.02 + 0.16 * dirt,
+    crustDark: lifted ? 0 : clamp(1.15 * dirt),
     rough: lifted ? 0.15 : clamp(i.channelling),
     murk: clamp(i.murk),
     churn: lifted ? 1 : i.mode === 'rinse' ? 0.25 : 0,

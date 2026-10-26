@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Every sand filter's sight glass shows its dirt plainly (the owner, 2026-10-26: clean and dirty beds looked the same): a full load is a thick dark crust, more a near-black one, a clean bed none (the Olympic's, the lounge's, the spas' small filters and the ideal filter, all through the one glass). The Olympic's glasses also show a bed left unsettled after a backwash: rinsing while water runs down through it, the water over it clouded.
 - Human access ladders now use one helper for their geometry, collision and climb zones. Pool, tank, pit, caged and utility ladders can be climbed at both ends; gates and hatches control access, and the tank and pit have walkable lower floors. Cable ladders remain cable containment.
 - The backwash pit's water moves (the owner, 2026-10-26: as the main balance tank's): the backwash pours from its inlet's open end down through the gratings into the pit, heard as it pours, and the pit's surface is stirred white where it lands, calm further off (`backwash-pit-water.ts`); the world keeps the pit's inflow for it (`pitInflow`, `WORLD_VERSION` 41).
 - The backwash pit's pump panel shows its water (the owner, 2026-10-26): a backlit display of its depth over its floor and how full it is, and a lamp for each float switch (STOP, START, HIGH, HI-HI), lit while tilted up. The pit's east rail has no post standing in its gate's opening (left there when the gate moved), and the foul sewer's gully is centred on the pipe that drops into it.
