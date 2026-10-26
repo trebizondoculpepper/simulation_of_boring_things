@@ -168,6 +168,13 @@ interface Device {
   ): { lever: Object3D; screen: ReturnType<typeof register> };
 }
 
+/*
+ * Sized for a centre this big (the owner, 2026-10-26: they were a
+ * house's): gas, a DN100 steel service (114 mm) through a large commercial
+ * meter in its housing; water, a DN100 main (110 mm) through a large
+ * combination meter; electricity, a supply of several hundred kVA, two
+ * heavy four-core armoured cables (70 mm) into a large cabinet.
+ */
 const DEVICES: readonly Device[] = [
   {
     service: 'water',
@@ -177,23 +184,24 @@ const DEVICES: readonly Device[] = [
     unit: 'm³',
     build(kit, g) {
       const blue = paint(kit, '#2457a8', 0.45);
-      const z = INTAKE.wallZ - 0.25;
-      riser(g, blue, 0.032, 0, G - 0.2, 0.5, z);
-      intoWall(kit, g, blue, 0.032, 0, 0.56, z);
+      const r = 0.055;
+      const z = INTAKE.wallZ - 0.35;
+      riser(g, blue, r, 0, G - 0.2, 0.55, z);
+      intoWall(kit, g, blue, r, 0, 0.62, z);
       // The stop tap: its body and its lever, along the pipe when open.
-      box(g, paint(kit, '#2b2d2f', 0.5, 0.6), 0.09, 0.12, 0.09, 0, G + 0.45, z);
+      box(g, paint(kit, '#2b2d2f', 0.5, 0.6), 0.2, 0.24, 0.2, 0, G + 0.45, z);
       const lever = new Group();
-      lever.position.set(0, G + 0.45, z - 0.05);
-      box(lever, paint(kit, '#c8261c', 0.5), 0.03, 0.22, 0.02, 0, 0.11, 0);
+      lever.position.set(0, G + 0.45, z - 0.11);
+      box(lever, paint(kit, '#c8261c', 0.5), 0.05, 0.4, 0.03, 0, 0.2, 0);
       g.add(lever);
-      // The meter: a brass body, its dial facing the yard.
+      // The combination meter: a big brass body, its dial facing the yard.
       const brass = paint(kit, '#a7843d', 0.35, 0.8);
-      const body = new Mesh(new CylinderGeometry(0.08, 0.08, 0.1, 20), brass);
+      const body = new Mesh(new CylinderGeometry(0.17, 0.17, 0.24, 24), brass);
       body.rotation.x = Math.PI / 2;
-      body.position.set(0, G + 0.85, z);
+      body.position.set(0, G + 0.95, z);
       g.add(body);
-      const screen = register(kit, 0.11, 0.035, 'm³', false);
-      screen.mesh.position.set(0, G + 0.85, z - 0.052);
+      const screen = register(kit, 0.22, 0.07, 'm³', false);
+      screen.mesh.position.set(0, G + 0.95, z - 0.122);
       screen.mesh.rotation.y = Math.PI;
       g.add(screen.mesh);
       return { lever, screen };
@@ -207,67 +215,64 @@ const DEVICES: readonly Device[] = [
     unit: 'm³',
     build(kit, g) {
       const yellow = paint(kit, '#e0b81c', 0.45, 0.2);
-      const z = INTAKE.wallZ - 0.4;
-      // The ventilated meter housing, its back to the wall, open-fronted.
+      const r = 0.057;
       const grp = paint(kit, '#d9d6cb', 0.7);
-      const hz = INTAKE.wallZ - 0.22;
-      box(g, grp, 0.8, 1.0, 0.03, 0, G + 0.6, INTAKE.wallZ - 0.015);
+      // The ventilated meter housing, its back to the wall, open-fronted.
+      const hz = INTAKE.wallZ - 0.36;
+      box(g, grp, 1.4, 1.6, 0.03, 0, G + 0.85, INTAKE.wallZ - 0.015);
       for (const s of [-1, 1])
-        box(g, grp, 0.03, 1.0, 0.42, s * 0.4, G + 0.6, hz);
-      box(g, grp, 0.83, 0.04, 0.45, 0, G + 1.12, hz);
+        box(g, grp, 0.03, 1.6, 0.72, s * 0.7, G + 0.85, hz);
+      box(g, grp, 1.43, 0.04, 0.75, 0, G + 1.67, hz);
       for (let k = 0; k < 4; k++)
         box(
           g,
           paint(kit, '#5f5d56', 0.8),
-          0.03,
-          0.18,
+          0.05,
+          0.3,
           0.005,
-          0.25,
-          G + 0.9 - k * 0.05,
-          hz - 0.215 + 0.002,
+          0.71,
+          G + 1.3 - k * 0.08,
+          hz,
         );
-      // The service up from the ground, the ECV on it before the housing.
-      riser(g, yellow, 0.03, -0.2, G - 0.2, G + 0.35, z + 0.15);
+      // The service up from the ground, the ECV on it in front of the housing.
+      const fz = INTAKE.wallZ - 0.85;
+      riser(g, yellow, r, -0.4, G - 0.2, G + 0.5, fz);
       box(
         g,
         paint(kit, '#2b2d2f', 0.5, 0.6),
-        0.08,
-        0.1,
-        0.08,
-        -0.2,
-        G + 0.22,
-        z + 0.15,
+        0.22,
+        0.22,
+        0.22,
+        -0.4,
+        G + 0.32,
+        fz,
       );
       const lever = new Group();
-      lever.position.set(-0.2, G + 0.22, z + 0.1);
-      box(lever, yellow, 0.22, 0.03, 0.02, 0.11, 0, 0);
+      lever.position.set(-0.4, G + 0.32, fz - 0.12);
+      box(lever, yellow, 0.4, 0.05, 0.03, 0.2, 0, 0);
       g.add(lever);
       const label = createMicroLabel(kit, 'GAS EMERGENCY\nCONTROL', {
-        height: 0.016,
+        height: 0.03,
         ink: '#111111',
         plate: '#e0b81c',
       });
-      label.position.set(-0.2, G + 0.42, z + 0.09);
+      label.position.set(-0.4, G + 0.6, fz - 0.12);
       label.rotation.y = Math.PI;
       g.add(label);
-      // The meter, its index on its front.
-      box(
-        g,
-        paint(kit, '#b9bdc0', 0.4, 0.5),
-        0.34,
-        0.36,
-        0.22,
-        0.05,
-        G + 0.62,
-        hz,
-      );
-      const screen = register(kit, 0.2, 0.06, 'm³', false);
-      screen.mesh.position.set(0.05, G + 0.67, hz - 0.112);
+      // On, level, into the housing to the meter.
+      const across = new Mesh(new CylinderGeometry(r, r, 0.5, 14), yellow);
+      across.rotation.x = Math.PI / 2;
+      across.position.set(-0.4, G + 0.5, (fz + hz) / 2);
+      g.add(across);
+      // The meter: a large commercial meter, its index on its front.
+      box(g, paint(kit, '#b9bdc0', 0.4, 0.5), 0.6, 0.6, 0.42, 0.1, G + 0.9, hz);
+      const screen = register(kit, 0.3, 0.09, 'm³', false);
+      screen.mesh.position.set(0.1, G + 1.0, hz - 0.212);
       screen.mesh.rotation.y = Math.PI;
       g.add(screen.mesh);
       // Out of the housing's top and into the wall.
-      riser(g, yellow, 0.03, 0.05, G + 0.8, 0.45, hz);
-      intoWall(kit, g, yellow, 0.03, 0.05, 0.51, hz);
+      riser(g, yellow, r, 0.1, G + 1.2, 0.8, hz);
+      intoWall(kit, g, yellow, r, 0.1, 0.87, hz);
       return { lever, screen };
     },
   },
@@ -280,57 +285,61 @@ const DEVICES: readonly Device[] = [
     build(kit, g) {
       const black = paint(kit, '#151617', 0.7);
       const steel = paint(kit, '#7e8a86', 0.5, 0.4);
-      const cz = INTAKE.wallZ - 0.17;
+      const cz = INTAKE.wallZ - 0.25;
       // The cabinet on its plinth, its back to the wall.
-      box(g, paint(kit, '#8a8c88', 0.95), 0.9, 0.12, 0.38, 0, G + 0.06, cz);
-      box(g, steel, 0.86, 1.3, 0.32, 0, G + 0.12 + 0.65, cz);
-      const front = INTAKE.wallZ - 0.33;
+      box(g, paint(kit, '#8a8c88', 0.95), 1.3, 0.15, 0.55, 0, G + 0.075, cz);
+      box(g, steel, 1.25, 1.85, 0.48, 0, G + 0.15 + 0.925, cz);
+      const front = INTAKE.wallZ - 0.49;
       // The network's sealed cut-out: a black box, its seal wire.
-      box(g, black, 0.22, 0.3, 0.02, -0.25, G + 0.95, front - 0.01);
+      box(g, black, 0.36, 0.5, 0.02, -0.38, G + 1.25, front - 0.01);
       box(
         g,
         paint(kit, '#c8261c', 0.4),
-        0.03,
-        0.03,
+        0.04,
+        0.04,
         0.01,
-        -0.25,
-        G + 0.8,
+        -0.38,
+        G + 0.98,
         front - 0.022,
       );
-      // The meter, its kWh register on a small LCD.
+      // The meter, its kWh register on its LCD.
       box(
         g,
         paint(kit, '#d6d6d0', 0.5),
-        0.2,
-        0.28,
+        0.3,
+        0.4,
         0.02,
         0.05,
-        G + 1.0,
+        G + 1.3,
         front - 0.01,
       );
-      const screen = register(kit, 0.15, 0.047, 'kWh', true);
-      screen.mesh.position.set(0.05, G + 1.06, front - 0.021);
+      const screen = register(kit, 0.22, 0.07, 'kWh', true);
+      screen.mesh.position.set(0.05, G + 1.38, front - 0.021);
       screen.mesh.rotation.y = Math.PI;
       g.add(screen.mesh);
       // The isolator, its rotary handle, red on yellow.
       box(
         g,
         paint(kit, '#e0b81c', 0.5),
-        0.16,
-        0.16,
+        0.28,
+        0.28,
         0.02,
-        0.3,
-        G + 0.85,
+        0.42,
+        G + 1.0,
         front - 0.01,
       );
       const lever = new Group();
-      lever.position.set(0.3, G + 0.85, front - 0.03);
-      box(lever, paint(kit, '#c8261c', 0.5), 0.03, 0.13, 0.03, 0, 0, 0);
+      lever.position.set(0.42, G + 1.0, front - 0.035);
+      box(lever, paint(kit, '#c8261c', 0.5), 0.06, 0.24, 0.05, 0, 0, 0);
       g.add(lever);
-      // The armoured cable up from the ground, and on into the wall.
-      riser(g, black, 0.025, -0.3, G - 0.2, G + 0.12, cz);
-      riser(g, black, 0.025, 0.3, G + 1.42, 0.62, cz);
-      intoWall(kit, g, black, 0.025, 0.3, 0.68, cz);
+      // Two heavy four-core armoured cables, 70 mm, up from the ground
+      // into the cabinet's foot, and out of its top into the wall.
+      for (const dx of [-0.45, -0.3])
+        riser(g, black, 0.035, dx, G - 0.2, G + 0.15, cz);
+      for (const dx of [0.3, 0.45]) {
+        riser(g, black, 0.035, dx, G + 2.0, 1.05, cz);
+        intoWall(kit, g, black, 0.035, dx, 1.12, cz);
+      }
       return { lever, screen };
     },
   },
@@ -387,20 +396,20 @@ export function yardIntake(kit: PanelKit): Part[] {
   // The bollards guarding them, and the hatching before them.
   const guard = beginPart(kit, 'Bollards and hatching');
   for (const x of [
-    INTAKE.power - 0.8,
+    INTAKE.power - 1.0,
     (INTAKE.power + INTAKE.gas) / 2,
     (INTAKE.gas + INTAKE.water) / 2,
     INTAKE.water + 0.7,
   ]) {
     const b = createBollard(kit);
-    b.position.set(x, G, INTAKE.wallZ - 1.5);
+    b.position.set(x, G, INTAKE.wallZ - 1.8);
     guard.object.add(b);
   }
   {
-    const x0 = INTAKE.power - 1.1;
+    const x0 = INTAKE.power - 1.3;
     const x1 = INTAKE.water + 1.0;
     const w = x1 - x0;
-    const d = 2.2;
+    const d = 2.6;
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = Math.round((1024 * d) / w);

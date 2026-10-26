@@ -29,9 +29,9 @@ export const YARD = {
  */
 export const INTAKE = {
   wallZ: -6.2,
-  water: -10,
+  water: -9.6,
   gas: -11.6,
-  power: -13.4,
+  power: -13.8,
 } as const;
 
 /** What the intake stands in the way of, down in the yard: its devices and its bollards. */
@@ -45,15 +45,15 @@ export function intakeSolids(): Footprint[] {
       maxZ: z,
     },
     ...[
-      INTAKE.power - 0.8,
+      INTAKE.power - 1.0,
       (INTAKE.power + INTAKE.gas) / 2,
       (INTAKE.gas + INTAKE.water) / 2,
       INTAKE.water + 0.7,
     ].map((x) => ({
       minX: x - 0.1,
       maxX: x + 0.1,
-      minZ: z - 1.6,
-      maxZ: z - 1.4,
+      minZ: z - 1.9,
+      maxZ: z - 1.7,
     })),
   ];
 }
