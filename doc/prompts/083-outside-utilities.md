@@ -23,14 +23,15 @@ This is how real sites are laid out: the gas meter and its emergency control val
 - **The services out of the building's side** (the owner, 2026-10-26): to one side of the yard, clear of the bays and the steps, the three services come out through the building's outside wall, each through a wall sleeve sealed against the weather (a collar and flashing round it, as for a pipe or cable through an outside wall), each in its proper colour (gas yellow, water blue, the electricity supply a black armoured cable), and go down into the ground through an appropriate meter and shut-off:
   - **water**: the main, blue, its stop valve with a lever and its meter, reading and recording as the make-up meter does now;
   - **gas**: yellow, the supplier's meter (its index read on inspection) and before it the emergency control valve with its yellow lever and its GAS EMERGENCY CONTROL label;
-  - **electricity**: the supply cable to the supplier's cut-out, its meter and a main switch with its rotary handle.
+  - **electricity**: the supply cable to the supplier's cut-out, its meter and a main switch with its rotary handle. The meter measures (the owner, 2026-10-26): kilowatt-hours from the site's actual load, read on inspection and recorded as the water meter's are.
     Each a real product's kind, each with its maker under the brands rule. No housing or fence for now: later, a little wooden privacy fence round them (a later item).
 - **The building's own shut-offs stay** (the owner, 2026-10-26): the outside ones are new, the utility company's, upstream of the building's own; the boiler house's gas shut-off is demoted to the internal one; the switch room keeps its main switch, the building's own isolator, not the utility's; the wet hall keeps its stop valve and its make-up meter. Each service then has two shut-offs in series, the utility's outside and the building's inside, each in the plant model and the world, each working.
 - **Three levers outside**: turning any one shuts off that service to the whole facility, through the world: no water to the break tank, no gas to the boilers, no power anywhere (the emergency lighting then on its battery).
 
+- **The site's electrical load** (needed by the meter; there is none yet, checked 2026-10-26): each consumer's draw in kW while it runs, from its rating (the pumps' motors from the plant sizing, the boosters, the fans and air handling units, the lighting zones, heaters, the dosing and controls), summed in the world each step; the meter integrates it to kWh. Zero when the utility's switch or the building's main switch is off; the emergency lighting then draws on its battery, not the meter.
+
 ## To settle with the owner before building
 
-- Whether the electricity meter is modelled (reading kWh from the site's load) or only shown.
 - Save migration: a new `WORLD_VERSION` if the world's shape changes.
 
 ## Done when
