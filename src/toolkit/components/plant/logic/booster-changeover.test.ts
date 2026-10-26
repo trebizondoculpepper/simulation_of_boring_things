@@ -62,16 +62,33 @@ describe('the booster set’s duty changeover', () => {
     }
   });
 
-  it('coasts down on STOP, its valves left open, and starts again on RUN', () => {
+  it('on STOP coasts to rest, then shuts its valves; on RUN opens them, then runs up', () => {
     let s = run(newBoosterChangeover(), 2);
-    s = run(actOnChangeover(s, { act: 'stop' }), 5);
+    s = run(actOnChangeover(s, { act: 'stop' }), 15, (x) => {
+      // Never shut on a pump still turning.
+      if (x.speed[0] > 0) expect(x.valve[0]).toBe(1);
+    });
     expect(s.phase).toBe('stopped');
     expect(s.speed[0]).toBe(0);
-    expect(s.valve[0]).toBe(1);
+    expect(s.valve).toEqual([0, 0]);
     expect(changeoverFlow(s)).toBe(0);
-    s = run(actOnChangeover(s, { act: 'run' }), 5);
+    s = run(actOnChangeover(s, { act: 'run' }), 15, (x) => {
+      // Never turning against shut valves.
+      if (x.speed[0] > 0) expect(x.valve[0]).toBe(1);
+    });
     expect(s.phase).toBe('running');
     expect(s.speed[0]).toBe(1);
+    expect(s.valve[0]).toBe(1);
+  });
+
+  it('shuts the assist pump’s valves too on STOP while boosting', () => {
+    let s = run(
+      actOnChangeover(run(newBoosterChangeover(), 2), { act: 'boost' }),
+      20,
+    );
+    s = run(actOnChangeover(s, { act: 'stop' }), 15);
+    expect(s.valve).toEqual([0, 0]);
+    expect(s.speed).toEqual([0, 0]);
   });
 
   it('holds the outgoing pump’s valves open until it has coasted to rest', () => {

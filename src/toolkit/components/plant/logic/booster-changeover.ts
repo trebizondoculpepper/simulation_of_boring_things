@@ -15,8 +15,8 @@ import { BOOSTER_PUMP } from './pump-sound';
  * 5. running.
  *
  * So the one pump's valves are shut before the other's begin to open: at
- * no moment are both open. STOP coasts the duty pump down, its valves
- * left open for the next start; RUN starts it again.
+ * no moment are both open. STOP coasts the duty pump down, then shuts
+ * its valves; RUN opens them, then runs it up.
  *
  * BOOST (the owner, 2026-10-26) runs the standby with the duty, in
  * parallel, for more flow: its valves drive open and it runs up beside
@@ -105,14 +105,14 @@ export function valvesCalled(s: BoosterChangeover, p: BoosterPump): boolean {
   if (p !== s.duty)
     // The assist pump's, boosting; held open while it coasts to rest.
     return (s.boost && s.phase === 'running') || s.speed[p] > 0;
+  // Open to run, and held open while it coasts down: shut only once it
+  // is at rest, whether changing over or stopped (the owner, 2026-10-26:
+  // STOP closes the valves).
   return (
-    p === s.duty &&
-    // Held open while it coasts down: shut only once it is at rest.
-    (s.phase === 'stopping' ||
-      s.phase === 'opening' ||
-      s.phase === 'starting' ||
-      s.phase === 'running' ||
-      s.phase === 'stopped')
+    s.phase === 'opening' ||
+    s.phase === 'starting' ||
+    s.phase === 'running' ||
+    s.speed[p] > 0
   );
 }
 
@@ -144,8 +144,9 @@ export function stepChangeover(
       else if (!s.run) phase = 'stopped';
       break;
     case 'stopped':
+      // Its valves shut once at rest; started again, they open first.
       if (s.selected !== d) phase = 'stopping';
-      else if (s.run) phase = 'starting';
+      else if (s.run) phase = 'opening';
       break;
     case 'stopping':
       if (speed[d] === 0) phase = 'closing';
