@@ -5,10 +5,15 @@ import type { LiveExhibit, PlantExhibit } from './exhibit';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
 import { createMicroLabel } from '../../../components/core/views/eighties-controls';
 import {
+  beginPart,
   createPartSet,
   pushButton,
   selector,
 } from '../../../components/core/parts/parts';
+import { partAudio } from '../../../components/core/audio/part-audio';
+import { machineTone } from '../../../components/sound/audio/machine-tones';
+import { VALVE_STOP } from '../../../components/plant/audio/actuated-valve';
+import { SHUTTER_RATTLE } from '../../../components/loading-dock/audio/shutter-rattle';
 import { plantTools } from '../../../components/plant/views/plant-tools';
 import {
   PALLET,
@@ -169,6 +174,22 @@ function shutterRig(kit: PanelKit): LiveExhibit {
   group.add(light.group);
   shutter.group.traverse((o) => (o.userData.live = true));
   light.group.traverse((o) => (o.userData.live = true));
+  // Its sounds (the owner, 2026-10-26): while it runs, its motor's hum
+  // and gear whine from the drive, and the laths' clatter winding onto or
+  // off the barrel; a clunk as it reaches either end.
+  const drive = beginPart(kit, 'Shutter drive');
+  const running = signal(false);
+  const head = new Group();
+  head.position.set(W / 2 + 0.6, H + 0.6, 0.33);
+  group.add(head);
+  drive.object.add(new Group());
+  drive.holdWhile(running, machineTone('motor', signal(0.9), 0.07), head);
+  drive.holdWhile(running, machineTone('gear-motor', signal(0.6), 0.05), head);
+  const roll = new Group();
+  roll.position.set(0, H + 0.6, 0.33);
+  group.add(roll);
+  drive.holdWhile(running, SHUTTER_RATTLE, roll);
+  parts.add(drive.part());
   let open = 0;
   shutter.setOpen(open);
   return {
@@ -178,7 +199,11 @@ function shutterRig(kit: PanelKit): LiveExhibit {
       parts.update(delta);
       // About 0.2 m/s, as a geared shutter runs.
       open = Math.max(0, Math.min(1, open + (motion * delta * 0.2) / H));
-      if (open === 0 || open === 1) motion = 0;
+      if (motion !== 0 && (open === 0 || open === 1)) {
+        motion = 0;
+        partAudio.play(VALVE_STOP, roll);
+      }
+      running.value = motion !== 0;
       shutter.setOpen(open);
       light.set(open >= 1 ? 'green' : 'red');
     },

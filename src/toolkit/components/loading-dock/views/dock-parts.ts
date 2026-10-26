@@ -176,12 +176,36 @@ export function createRollerShutter(
     boss.position.set(s * (w / 2 + 0.28), 0.6, 0.33);
     group.add(boss);
   }
-  // The barrel's roll of curtain, seen under the hood's lip.
-  const roll = new Mesh(new CylinderGeometry(0.22, 0.22, w, 24), goosewing);
+  // The barrel's roll of curtain, seen under the hood's lip: its laths'
+  // joints drawn round it, so it is seen to turn as it winds; the bare
+  // barrel, 0.12 m, when the curtain is down, 0.27 m when wound up (the
+  // owner, 2026-10-26).
+  const joints = document.createElement('canvas');
+  joints.width = 256;
+  joints.height = 8;
+  const jg = joints.getContext('2d')!;
+  jg.fillStyle = '#9aa3a8';
+  jg.fillRect(0, 0, 256, 8);
+  jg.fillStyle = '#5f676c';
+  for (let x = 0; x < 256; x += 16) jg.fillRect(x, 0, 3, 8);
+  const jointMap = new CanvasTexture(joints);
+  jointMap.colorSpace = SRGBColorSpace;
+  kit.textures.push(jointMap);
+  const rollPaint = new MeshStandardMaterial({
+    map: jointMap,
+    roughness: 0.45,
+    metalness: 0.35,
+  });
+  kit.materials.push(rollPaint);
+  const ROLL = 0.27;
+  const BARREL = 0.12;
+  const roll = new Mesh(new CylinderGeometry(ROLL, ROLL, w, 32), rollPaint);
   roll.rotation.z = Math.PI / 2;
+  roll.rotation.order = 'ZYX';
   roll.position.set(0, 0.6, 0.33);
   roll.userData.live = true;
   group.add(roll);
+  let turned = 0;
 
   // The guides: a U-channel each side, its brush seal, down to the sill.
   for (const s of [-1, 1]) {
@@ -284,6 +308,7 @@ export function createRollerShutter(
   group.add(badge);
 
   let open = 1;
+  let last = 1;
   const setOpen = (k: number) => {
     open = Math.max(0, Math.min(1, k));
     // Hung below the hood: as many laths as reach down, from the head.
@@ -294,8 +319,14 @@ export function createRollerShutter(
     laths.count = count;
     laths.instanceMatrix.needsUpdate = true;
     rail.position.set(0, -hang - 0.07, 0.06);
-    // The roll on the barrel grows as the curtain winds onto it.
-    roll.scale.set(1, 0.6 + 0.4 * open, 0.6 + 0.4 * open);
+    // The roll swells as the curtain winds onto it, and turns: the
+    // curtain's travel over its radius.
+    const radius = BARREL + (ROLL - BARREL) * open;
+    const swell = radius / ROLL;
+    turned += ((open - last) * h) / radius;
+    last = open;
+    roll.scale.set(swell, 1, swell);
+    roll.rotation.y = turned;
   };
   setOpen(1);
   return {
