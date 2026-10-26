@@ -22,6 +22,7 @@ The owner, 2026-10-26, watching a filter washed by a script: "there needs to be 
 - **A cluster under each vessel, five alike:**
   - illuminated state buttons FILTER, BACKWASH, RINSE, ISOLATE, DRAIN: exactly one lit, the state it is in; pressing another moves it there, its valves driving in order, the new state's lamp flashing until it arrives;
   - AUTO (illuminated): hands the filter to the programme; any state button takes it back to manual;
+  - AIR SCOUR: its place in the cluster, but blanked with a plug and a small NOT FITTED legend (the owner, 2026-10-26: the console is made for air scour, this site has not fitted it);
   - its bed's condition: a short LED bar of its pressure drop, a red WASH DUE LED at its top past the setpoint;
   - FAULT: a valve not reaching its position in time, or a step overrunning.
 - **The controller section:**
@@ -33,11 +34,11 @@ The owner, 2026-10-26, watching a filter washed by a script: "there needs to be 
 
 ## The programme
 
-One filter at a time, in turn or worst first by pressure drop; never taking a filter out while too few would be left filtering for the circulation. Each wash: BACKWASH → SETTLE (all shut, a short timer, the sand dropping back) → RINSE → FILTER, each step ended by its timer or earlier by what a real controller senses (the pressure drop; a turbidity cell on the backwash out, if one is fitted), never by the model's dirt directly. It waits while the pit is inhibited and resumes after. A valve worked by hand during a step puts it on HOLD with VALVE FAULT.
+One filter at a time, in turn or worst first by pressure drop; never taking a filter out while too few would be left filtering for the circulation. Each wash: [AIR SCOUR →] BACKWASH → SETTLE (all shut, a short timer, the sand dropping back) → RINSE → FILTER; the air scour step is in the programme but configured off here, its setpoint showing AIR SCOUR: NOT FITTED on the display, and nothing of it in the world (no blower, no air valves) until it is fitted; each step ended by its timer or earlier by what a real controller senses (the pressure drop; a turbidity cell on the backwash out, if one is fitted), never by the model's dirt directly. It waits while the pit is inhibited and resumes after. A valve worked by hand during a step puts it on HOLD with VALVE FAULT.
 
 ## Later, not now
 
-- AIR SCOUR, once the plant has a blower and air valves.
+- AIR SCOUR in use: a blower and an air valve per filter in the world, the cluster's blank replaced by its illuminated button, and the programme's step switched on (2 to 3 minutes before each backwash, shortening it). The console is ready for it.
 - LOCKOUT: a filter held isolated against the programme while worked on.
 - REFILL/VENT after a drain; SOAK for a chemical clean.
 - The lounge's filters on a Wash-O-Tron of their own.
