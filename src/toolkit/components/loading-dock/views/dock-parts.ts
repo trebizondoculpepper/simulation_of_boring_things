@@ -1,5 +1,14 @@
 import {
   BoxGeometry,
+  DoubleSide,
+  Euler,
+  ExtrudeGeometry,
+  InstancedMesh,
+  Matrix4,
+  Quaternion,
+  Shape,
+  TorusGeometry,
+  Vector3,
   CanvasTexture,
   CircleGeometry,
   CylinderGeometry,
@@ -12,6 +21,7 @@ import {
 } from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
+import { createBrandBadge } from '../../core/views/brand-badge';
 
 /**
  * The loading dock's components (prompt 073; the owner, 2026-10-26: each
@@ -75,90 +85,217 @@ export function hazardMaterial(kit: PanelKit, repeat = 8) {
 
 /**
  * An insulated roller shutter after the UK goods-yard type (Bolton Gate's
- * insulated shutter, HAG Armourguard, Hörmann SB Decotherm): double-skinned
- * 100 mm laths rolling onto a barrel in its box over the opening, guides
- * each side reaching down to `sill`, a bottom rail, a geared motor on the
- * right-hand end plate and a hand chain. `setOpen` rolls the curtain from
- * shut (0) to fully up (1). Origin at the middle of the opening's head on
- * the wall's inside face, facing +z; the opening `w` wide and `h` tall
- * above `sill` (0 for the head's floor... the sill's height below the head).
+ * insulated shutter, HAG Armourguard, Hörmann SB Decotherm), made by
+ * Ironside: a curtain of double-skinned, foam-filled steel laths, each
+ * 100 mm and curved, interlocking, finished in goosewing grey; it rolls
+ * onto a barrel in a curved hood over the opening, its end plates on wall
+ * brackets; U-section guides each side with brush seals; an extruded
+ * aluminium bottom rail with its rubber seal and safety edge and two lift
+ * handles; on the right end plate a geared three-phase motor, its
+ * gearbox and terminal box, and an endless hand chain on its sprocket for
+ * when the power is off, its loop tied off on a chain keep on the wall.
+ * `setOpen` rolls the curtain from shut (0) to fully up (1). Origin at the
+ * middle of the opening's head on the wall's inside face, facing +z; the
+ * opening `w` wide and `h` tall below the head.
  */
 export function createRollerShutter(
   kit: PanelKit,
   { w, h }: { w: number; h: number },
 ) {
   const group = new Group();
-  group.name = 'Insulated roller shutter';
-  const grey = paint(kit, '#8f969b', 0.55, 0.4);
-  const galv = paint(kit, '#a9aeae', 0.45, 0.6);
-  // The curtain's laths: a ribbed grey, drawn on a canvas.
-  const canvas = document.createElement('canvas');
-  canvas.width = 32;
-  canvas.height = 64;
-  const g = canvas.getContext('2d')!;
-  g.fillStyle = '#9aa1a6';
-  g.fillRect(0, 0, 32, 64);
-  g.fillStyle = '#6f767b';
-  g.fillRect(0, 60, 32, 4);
-  g.fillStyle = '#b7bec2';
-  g.fillRect(0, 0, 32, 3);
-  const map = new CanvasTexture(canvas);
-  map.colorSpace = SRGBColorSpace;
-  map.wrapS = map.wrapT = RepeatWrapping;
-  kit.textures.push(map);
-  const lath = new MeshStandardMaterial({
-    map,
-    roughness: 0.5,
-    metalness: 0.3,
+  group.name = 'Ironside insulated roller shutter';
+  const goosewing = paint(kit, '#9aa3a8', 0.42, 0.35);
+  const lathEdge = paint(kit, '#7d858a', 0.5, 0.35);
+  const galv = paint(kit, '#b1b6b6', 0.4, 0.65);
+  const hoodGrey = paint(kit, '#8a9196', 0.5, 0.4);
+  const black = paint(kit, '#141516', 0.8);
+  const ali = paint(kit, '#c9cdcf', 0.3, 0.8);
+  const motorBlue = paint(kit, '#24466e', 0.45, 0.35);
+  const chainSteel = paint(kit, '#5b5f62', 0.4, 0.8);
+
+  // The lath: its profile across, a shallow curve, its two skins and the
+  // hook and bead that interlock it with the next; extruded to the width.
+  const LATH = 0.1;
+  const profile = new Shape();
+  const depth = 0.02;
+  profile.moveTo(0, 0);
+  profile.quadraticCurveTo(depth * 1.2, LATH / 2, 0, LATH);
+  profile.lineTo(-0.004, LATH);
+  profile.lineTo(-0.004, LATH - 0.008);
+  profile.lineTo(-depth * 0.4, LATH - 0.01);
+  profile.quadraticCurveTo(-depth * 0.2, LATH / 2, -depth * 0.4, 0.01);
+  profile.lineTo(-0.004, 0.008);
+  profile.lineTo(-0.004, 0);
+  profile.lineTo(0, 0);
+  const lathGeo = new ExtrudeGeometry(profile, {
+    depth: w,
+    bevelEnabled: false,
+    curveSegments: 6,
   });
-  kit.materials.push(lath);
-  const motorBlue = paint(kit, '#2c4f7c', 0.5, 0.3);
-  const chain = paint(kit, '#4a4d50', 0.5, 0.7);
-  // Barrel box and end plates, over the head.
-  box(group, grey, w + 0.5, 0.65, 0.65, 0, 0.6, 0.33);
+  // Extruded along z; turned so it runs along x, its face toward +z.
+  lathGeo.rotateY(Math.PI / 2);
+  lathGeo.translate(-w / 2, 0, 0);
+  const maxLaths = Math.ceil(h / LATH) + 1;
+  const laths = new InstancedMesh(lathGeo, [goosewing, lathEdge], maxLaths);
+  laths.name = 'Shutter curtain laths';
+  laths.userData.live = true;
+  group.add(laths);
+  const place = new Matrix4();
+
+  // The hood over the barrel: a curved sheet from under its front, round
+  // over its top to the wall (turned onto x, its arc lies in y-z).
+  const hoodR = 0.33;
+  const hood = new Mesh(
+    new CylinderGeometry(
+      hoodR,
+      hoodR,
+      w + 0.5,
+      24,
+      1,
+      true,
+      -Math.PI * 0.25,
+      Math.PI * 0.75,
+    ),
+    hoodGrey,
+  );
+  hood.rotation.z = Math.PI / 2;
+  hood.position.set(0, 0.62, 0.33);
+  hood.material.side = DoubleSide;
+  group.add(hood);
+  box(group, hoodGrey, w + 0.5, 0.04, 0.66, 0, 0.95, 0.33);
+  box(group, hoodGrey, w + 0.5, 0.62, 0.02, 0, 0.64, 0.01);
   for (const s of [-1, 1]) {
-    box(group, galv, 0.04, 0.75, 0.75, s * (w / 2 + 0.27), 0.6, 0.33);
-    // Guides, from the head down to the sill.
-    box(
-      group,
-      galv,
-      0.1,
-      h + 0.25,
-      0.14,
-      s * (w / 2 + 0.07),
-      -h / 2 + 0.125,
-      0.07,
-    );
+    box(group, galv, 0.012, 0.75, 0.7, s * (w / 2 + 0.26), 0.6, 0.35);
+    // The wall bracket under each end plate, bolted.
+    box(group, galv, 0.12, 0.012, 0.6, s * (w / 2 + 0.26), 0.22, 0.3);
+    for (const dz of [0.08, 0.5])
+      box(group, black, 0.02, 0.02, 0.02, s * (w / 2 + 0.24), 0.235, dz);
+    // The barrel's bearing, a boss on the plate.
+    const boss = new Mesh(new CylinderGeometry(0.06, 0.06, 0.04, 16), galv);
+    boss.rotation.z = Math.PI / 2;
+    boss.position.set(s * (w / 2 + 0.28), 0.6, 0.33);
+    group.add(boss);
   }
-  const motor = new Mesh(new CylinderGeometry(0.13, 0.13, 0.35, 16), motorBlue);
-  motor.rotation.z = Math.PI / 2;
-  motor.position.set(w / 2 + 0.47, 0.6, 0.33);
-  group.add(motor);
-  for (const dz of [0.42, 0.5])
-    box(
-      group,
-      chain,
-      0.02,
-      h - 1.2,
-      0.02,
-      w / 2 + 0.47,
-      -(h - 1.2) / 2 + 0.28,
-      dz,
-    );
-  // The curtain: hangs from the box down to its bottom rail.
-  const curtain = new Mesh(new BoxGeometry(w, 1, 0.06), lath);
-  curtain.userData.live = true;
-  group.add(curtain);
-  const rail = box(group, galv, w, 0.1, 0.09, 0, 0, 0.1);
+  // The barrel's roll of curtain, seen under the hood's lip.
+  const roll = new Mesh(new CylinderGeometry(0.22, 0.22, w, 24), goosewing);
+  roll.rotation.z = Math.PI / 2;
+  roll.position.set(0, 0.6, 0.33);
+  roll.userData.live = true;
+  group.add(roll);
+
+  // The guides: a U-channel each side, its brush seal, down to the sill.
+  for (const s of [-1, 1]) {
+    const gx = s * (w / 2 + 0.04);
+    const len = h + 0.3;
+    box(group, galv, 0.1, len, 0.012, gx + s * 0.02, -len / 2 + 0.3, 0.006);
+    box(group, galv, 0.012, len, 0.11, gx - s * 0.035, -len / 2 + 0.3, 0.06);
+    box(group, galv, 0.012, len, 0.11, gx + s * 0.065, -len / 2 + 0.3, 0.06);
+    box(group, black, 0.02, len, 0.01, gx - s * 0.03, -len / 2 + 0.3, 0.115);
+  }
+
+  // The bottom rail: an aluminium T, its rubber seal and safety edge, two
+  // lift handles on the inside face.
+  const rail = new Group();
+  rail.name = 'Shutter bottom rail';
+  box(rail, ali, w, 0.07, 0.05, 0, 0.035, 0.0);
+  box(rail, ali, w, 0.012, 0.09, 0, 0.006, 0.0);
+  const seal = new Mesh(new CylinderGeometry(0.022, 0.022, w, 10), black);
+  seal.rotation.z = Math.PI / 2;
+  seal.position.set(0, -0.018, 0);
+  rail.add(seal);
+  for (const x of [-w / 3, w / 3]) {
+    box(rail, black, 0.12, 0.025, 0.02, x, 0.05, 0.045);
+    for (const dx of [-0.05, 0.05])
+      box(rail, black, 0.02, 0.025, 0.03, x + dx, 0.05, 0.03);
+  }
   rail.userData.live = true;
+  group.add(rail);
+
+  // The drive on the right end plate: gearbox, motor with its cooling
+  // fins and fan cowl, terminal box with its gland.
+  const dx = w / 2 + 0.3;
+  box(group, motorBlue, 0.14, 0.22, 0.2, dx + 0.07, 0.6, 0.33);
+  const motor = new Mesh(new CylinderGeometry(0.11, 0.11, 0.32, 20), motorBlue);
+  motor.rotation.z = Math.PI / 2;
+  motor.position.set(dx + 0.3, 0.6, 0.33);
+  group.add(motor);
+  for (let k = 0; k < 8; k++) {
+    const fin = new Mesh(
+      new CylinderGeometry(0.122, 0.122, 0.008, 20),
+      motorBlue,
+    );
+    fin.rotation.z = Math.PI / 2;
+    fin.position.set(dx + 0.18 + k * 0.03, 0.6, 0.33);
+    group.add(fin);
+  }
+  const cowl = new Mesh(new CylinderGeometry(0.1, 0.115, 0.08, 20), black);
+  cowl.rotation.z = Math.PI / 2;
+  cowl.position.set(dx + 0.5, 0.6, 0.33);
+  group.add(cowl);
+  box(group, motorBlue, 0.1, 0.08, 0.1, dx + 0.3, 0.74, 0.33);
+  const gland = new Mesh(new CylinderGeometry(0.012, 0.012, 0.03, 10), black);
+  gland.position.set(dx + 0.3, 0.795, 0.33);
+  group.add(gland);
+
+  // The hand chain: its sprocket wheel under the gearbox, an endless loop
+  // of links down to the chain keep on the wall, 1.1 m up.
+  const sprocket = new Mesh(
+    new CylinderGeometry(0.07, 0.07, 0.02, 16),
+    chainSteel,
+  );
+  sprocket.rotation.z = Math.PI / 2;
+  sprocket.position.set(dx + 0.07, 0.42, 0.33);
+  group.add(sprocket);
+  const link = new TorusGeometry(0.008, 0.002, 4, 8);
+  const keepY = -h + 1.1;
+  const runs = [0.26, 0.4];
+  const linksPer = Math.floor((0.42 - keepY) / 0.014);
+  const chainLinks = new InstancedMesh(
+    link,
+    chainSteel,
+    runs.length * linksPer,
+  );
+  const q = new Quaternion();
+  const e = new Euler();
+  let n = 0;
+  for (const z of runs)
+    for (let k = 0; k < linksPer; k++) {
+      e.set(0, k % 2 ? Math.PI / 2 : 0, 0);
+      q.setFromEuler(e);
+      chainLinks.setMatrixAt(
+        n++,
+        place.compose(
+          new Vector3(dx + 0.07, 0.42 - k * 0.014, z),
+          q,
+          new Vector3(1, 1.6, 1),
+        ),
+      );
+    }
+  chainLinks.instanceMatrix.needsUpdate = true;
+  group.add(chainLinks);
+  box(group, galv, 0.04, 0.12, 0.05, dx + 0.07, keepY - 0.05, 0.025);
+
+  // Its maker's badge on the hood.
+  const badge = createBrandBadge(kit, 'ironside', {
+    height: 0.05,
+    plate: '#e3e1d6',
+  });
+  badge.position.set(-w / 2 + 0.35, 0.72, 0.665);
+  group.add(badge);
+
   let open = 1;
   const setOpen = (k: number) => {
     open = Math.max(0, Math.min(1, k));
-    const hang = Math.max(0.02, h * (1 - open));
-    curtain.scale.y = hang;
-    curtain.position.set(0, -hang / 2 + 0.25, 0.1);
-    map.repeat.set(1, hang / 0.1);
-    rail.position.y = -hang + 0.25 - 0.05;
+    // Hung below the hood: as many laths as reach down, from the head.
+    const hang = h * (1 - open);
+    const count = Math.min(maxLaths, Math.ceil(hang / LATH));
+    for (let i = 0; i < count; i++)
+      laths.setMatrixAt(i, place.makeTranslation(0, -hang + i * LATH, 0.06));
+    laths.count = count;
+    laths.instanceMatrix.needsUpdate = true;
+    rail.position.set(0, -hang - 0.07, 0.06);
+    // The roll on the barrel grows as the curtain winds onto it.
+    roll.scale.set(1, 0.6 + 0.4 * open, 0.6 + 0.4 * open);
   };
   setOpen(1);
   return {
