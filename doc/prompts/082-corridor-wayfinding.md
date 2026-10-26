@@ -1,6 +1,6 @@
 # 082: Wayfinding signs at the main corridor's corners
 
-Status: not started (written 2026-10-26 with the owner).
+Status: done 2026-10-26.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply.
 

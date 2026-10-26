@@ -1,3 +1,4 @@
+import { createCorridorWayfinding } from './corridor-wayfinding';
 import {
   BoxGeometry,
   CanvasTexture,
@@ -288,6 +289,8 @@ export function createMainCorridor(metre: number, kit: PanelKit) {
   group.add(title);
 
   group.add(createCorridorPosters(kit));
+  // Its wayfinding signs at the outside corners (prompt 082).
+  group.add(createCorridorWayfinding(kit));
 
   function card(cw: number, ch: number, text: string) {
     const canvas = document.createElement('canvas');
