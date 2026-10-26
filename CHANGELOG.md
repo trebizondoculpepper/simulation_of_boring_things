@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The backwash pit is emptied only by its pump (the owner, 2026-10-26): its old gravity drain, drain valve valve-0036 (WH-T2-DV1) and overflow, from when it stood on the floor, are gone from the schematic, the register and the world, since 3.75 m down they could not drain; its high-high float's inhibit stops it overfilling. The break tank's inlet comes square down through the middle of its roof, never its side. The schematic's ports match the machines' (`mainsIn`, `discharge`).
 - The backwash pit's rail signs are 260 × 390 mm rail signs, their wires tied just inside their corners (the owner, 2026-10-26: the wires missed the smaller card).
 - The backwash pit's rail signs are wired at their corners to the top and knee rails, no longer floating (the owner, 2026-10-26).
 - The backwash pit's ladder is centred along its hatch, and nothing of it stands above the deck (the owner, 2026-10-26): a tank ladder no longer puts a wall bracket or its maker's badge above its top, which in the pit had stuck out across the hatch's swing.

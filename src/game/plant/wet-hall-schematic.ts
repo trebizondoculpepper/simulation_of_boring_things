@@ -119,7 +119,7 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
     link(
       'Flowmeter to the break tank',
       ['flowmeter', 'outlet'],
-      ['break-tank', 'inlet'],
+      ['break-tank', 'mainsIn'],
       'water',
     ),
     link(
@@ -142,7 +142,7 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
     ),
     link(
       'Backwash discharge to the sewer',
-      ['holding', 'outlet'],
+      ['holding', 'discharge'],
       ['sewer', 'in'],
       'water',
     ),
@@ -153,13 +153,9 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
       'water',
     ),
     link('Break tank drain', ['break-tank', 'drain'], ['waste', 'in'], 'water'),
-    link(
-      'Backwash tank overflow',
-      ['holding', 'overflow'],
-      ['waste', 'in'],
-      'water',
-    ),
-    link('Backwash tank drain', ['holding', 'drain'], ['waste', 'in'], 'water'),
+    // The pit has no gravity drain or overflow (the owner, 2026-10-26):
+    // 3.75 m down, it is emptied by its pump, and its high-high float's
+    // inhibit stops it overfilling.
     link(
       'Make-up flow to its recorder',
       ['flowmeter', 'signal'],
@@ -215,13 +211,6 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
       'source',
       'closed',
       'breakTankDrain',
-    ),
-    valve(
-      'valve-0036',
-      'Backwash tank drain',
-      'source',
-      'closed',
-      'backwashTankDrain',
     ),
   ],
   rules: { isolate: new Set(), pumps: new Set() },

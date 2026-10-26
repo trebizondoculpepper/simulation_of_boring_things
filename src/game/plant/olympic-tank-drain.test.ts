@@ -8,7 +8,7 @@ import { olympicFlowsOf, PUMP_DRAIN_FLOW } from './olympic-battery';
  * Draining the Olympic's balance tank (the owner, 2026-10-25): its pumps'
  * drain (PL2-P1-DV1) to the backwash floor channel and so to the wet
  * hall's holding tank, and the holding tank's own drains to the sewer
- * (WH-DR1-DV1, WH-T2-DV1).
+ * (WH-DR1-DV1).
  */
 const id = (tag: string) =>
   Object.values(INSTALLED_VALVES).find((v) => v.tag === tag)!.assetId;
@@ -38,22 +38,18 @@ describe('draining the Olympic’s balance tank', () => {
   });
 
   it('stops at the tank’s low-low level, the pumps held off', () => {
-    // The wet hall's backwash pit emptying to sewer by its two drains, so
+    // The wet hall's backwash pit emptying to sewer by its discharge valve, so
     // the pumps' drain does not fill it to its high-high inhibit first.
-    const w = advance(
-      valve(valve(draining(), 'WH-DR1-DV1', true), 'WH-T2-DV1', true),
-      3600,
-      5,
-    );
+    const w = advance(valve(draining(), 'WH-DR1-DV1', true), 3600, 5);
     expect(w.pools.pool_02.tripped).toBe(true);
   });
 
-  it('empties the holding tank to the sewer by its own drains', () => {
+  it('empties the holding tank to the sewer by its discharge valve', () => {
     let w = advance(draining(), 600, 1);
     w = valve(w, 'PL2-P1-DV1', false);
     const held = w.wetHall.backwashTank;
-    w = valve(valve(w, 'WH-DR1-DV1', true), 'WH-T2-DV1', true);
-    w = advance(w, 1500, 1);
+    w = valve(w, 'WH-DR1-DV1', true);
+    w = advance(w, 2400, 1);
     expect(held).toBeGreaterThan(15);
     expect(w.wetHall.backwashTank).toBe(0);
   });

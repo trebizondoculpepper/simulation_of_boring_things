@@ -87,11 +87,8 @@ const HAND_DRAWN_VALVES: Readonly<Record<string, InstalledValve>> = {
     tag: 'WH-T1-DV1',
     normal: 'closed',
   },
-  'wet_hall|Backwash tank drain|Backwash tank drain valve': {
-    assetId: 'valve-0036',
-    tag: 'WH-T2-DV1',
-    normal: 'closed',
-  },
+  // valve-0036, the backwash tank's drain, retired with it: the pit is
+  // emptied by its pump (the owner, 2026-10-26).
   'boiler_house|B-501 gas drop|B-501 gas isolating valve': {
     assetId: 'valve-0037',
     tag: 'BH-B1-IV1',

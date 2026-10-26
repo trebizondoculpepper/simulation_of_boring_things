@@ -869,7 +869,6 @@ export function stepWorld(world: World, delta: number): World {
   );
   const wetHall = stepWetHall(world.wetHall, world.plant, water, delta, {
     discharge: installedValveOpen(world.installedValves, 'WH-DR1-DV1'),
-    tankDrain: installedValveOpen(world.installedValves, 'WH-T2-DV1'),
   });
   return {
     ...world,

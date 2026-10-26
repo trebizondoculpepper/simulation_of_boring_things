@@ -79,10 +79,10 @@ describe('the Olympic’s balance tank in the world', () => {
 
   it('runs down with its make-up OFF and a backwash drawing on it, until LOW LOW trips the pumps', () => {
     // One filter backwashing, the wet hall's pit emptying to sewer by its
-    // two drains (`wet-hall.ts`): the pit, 105 m³, outlasts the tank.
+    // discharge valve (`wet-hall.ts`): the pit, 105 m³, outlasts the tank.
     let w = applyAction(newWorld(), { type: 'olympic/makeup', mode: 'off' });
     w = backwashOne(w);
-    w = ['WH-DR1-DV1', 'WH-T2-DV1'].reduce(
+    w = ['WH-DR1-DV1'].reduce(
       (x, tag) =>
         applyAction(x, {
           type: 'plant/valve',

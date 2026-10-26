@@ -42,12 +42,12 @@ describe('the sewer outfall, in the world', () => {
     expect(w.sewer.flow).toBeLessThanOrEqual(P.dischargeRate + 1e-6);
   });
 
-  it('shows the pit’s gravity drains putting more down the sewer than the consent', () => {
+  it('shows the pit’s discharge valve putting more down the sewer than the consent', () => {
     let w = newWorld();
     w = { ...w, wetHall: { ...w.wetHall, backwashTank: 50 } };
     w = applyAction(w, {
       type: 'plant/valve',
-      id: installedValveByCommandId('WH-T2-DV1')!.assetId,
+      id: installedValveByCommandId('WH-DR1-DV1')!.assetId,
       open: true,
     });
     w = advance(w, 60, 1);

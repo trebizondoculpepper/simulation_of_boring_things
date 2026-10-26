@@ -148,7 +148,16 @@ export function machinePorts(item: Item): MachinePort[] {
       // to the booster set low on its east end; its weir overflow, the
       // warning pipe, high on its west end; its drain on its face.
       return [
-        port('mainsIn', [nx / 2 - 0.6, top, back], [0, 1, 0], 0.067, 'make-up'),
+        // Its inlet square down through the middle of its roof, never its
+        // side: the float valve inside over the air gap (the owner,
+        // 2026-10-26).
+        port(
+          'mainsIn',
+          [nx / 2 - 0.6, top, (back + front) / 2],
+          [0, 1, 0],
+          0.067,
+          'make-up',
+        ),
         // Its outlet low on its east end, at the booster set's suction
         // manifold's height, so the two line up (the owner, 2026-10-26).
         port(
@@ -167,8 +176,8 @@ export function machinePorts(item: Item): MachinePort[] {
       // in down through its gratings at its west end, over its water (an
       // air break); its pump's discharge riser up out of its sump through
       // a sleeve in its gratings just west of its hatch, not through the
-      // hatch's lid (the owner, 2026-10-26: its stub showed on the lid); its overflow out through its east wall at its top water
-      // level, and its drain from its sump, both below the floor.
+      // hatch's lid (the owner, 2026-10-26: its stub showed on the lid).
+      // No gravity drain or overflow: it is emptied by its pump.
       const P = BACKWASH_PIT;
       const ox = -WET_HALL_LAYOUT.pitDavitShift;
       const hatch = P.length / 2 - P.hatch / 2;
@@ -188,34 +197,6 @@ export function machinePorts(item: Item): MachinePort[] {
           0.076,
           'drain',
         ),
-        {
-          ...port(
-            'overflow',
-            [
-              ox + P.length / 2 + WET_HALL_LAYOUT.pitWall,
-              -(P.depth - P.topWater),
-              0,
-            ],
-            [1, 0, 0],
-            0.16,
-            'drain',
-          ),
-          drawn: true,
-        },
-        {
-          ...port(
-            'drain',
-            [
-              ox + P.length / 2 - P.sump.length / 2,
-              -P.depth - P.sump.depth - 0.3,
-              P.width / 2 - P.sump.width / 2,
-            ],
-            [0, -1, 0],
-            0.09,
-            'drain',
-          ),
-          drawn: true,
-        },
       ];
     }
     if (kind === 'backwash-tank')
