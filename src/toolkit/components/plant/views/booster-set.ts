@@ -4,6 +4,7 @@ import { drawBrandMark } from '../../core/views/brand-logo';
 import { BRANDS } from '../../core/logic/brands';
 import {
   changeoverFlow,
+  changeoverPressure,
   changeoverStatus,
   motorCalled,
   valvesCalled,
@@ -673,7 +674,7 @@ export function createBoosterSet(
       } else screen.show(boosterDisplay(r));
       // Suction: the break tank's head; discharge: the set's pressure.
       gauges[0].set(0.3);
-      gauges[1].set(boosterPressure(r));
+      gauges[1].set(co ? changeoverPressure(co.state()) : boosterPressure(r));
       for (const g of gauges) g.update(delta);
     },
     dispose() {

@@ -3,6 +3,7 @@ import {
   CHANGEOVER,
   actOnChangeover,
   changeoverFlow,
+  changeoverPressure,
   newBoosterChangeover,
   stepChangeover,
 } from './booster-changeover';
@@ -132,5 +133,17 @@ describe('the booster set’s duty changeover', () => {
     expect(actOnChangeover(boosted, { act: 'duty', pump: 1 }).boost).toBe(
       false,
     );
+  });
+
+  it('has no discharge pressure once stopped, more while boosting', () => {
+    let s = run(newBoosterChangeover(), 2);
+    const one = changeoverPressure(s);
+    expect(one).toBeGreaterThan(3);
+    const boosted = changeoverPressure(
+      run(actOnChangeover(s, { act: 'boost' }), 20),
+    );
+    expect(boosted).toBeGreaterThan(one);
+    s = run(actOnChangeover(s, { act: 'stop' }), 15);
+    expect(changeoverPressure(s)).toBe(0);
   });
 });

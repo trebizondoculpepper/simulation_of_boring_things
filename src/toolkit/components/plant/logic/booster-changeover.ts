@@ -1,4 +1,5 @@
 import { BOOSTER_PUMP } from './pump-sound';
+import { SET_PRESSURE } from './booster-set';
 
 /**
  * The make-up booster set's two pumps and their valves (the owner,
@@ -173,6 +174,22 @@ export function changeoverFlow(s: BoosterChangeover): number {
   const q = [s.speed[0] * s.valve[0], s.speed[1] * s.valve[1]];
   // Two in parallel share one pressure: about 1.7 times one, not twice.
   return CHANGEOVER.rate * (q[0] + q[1]) * (1 - 0.15 * Math.min(q[0], q[1]));
+}
+
+/**
+ * Its discharge manifold's pressure, bar (the owner, 2026-10-26: none
+ * once stopped): each pump's head as the square of its speed, through its
+ * valves, the higher of the two; a little more with both in parallel, the
+ * pipework's resistance rising with their flow. Into an open sink, nothing
+ * holds it once they stop.
+ */
+export function changeoverPressure(s: BoosterChangeover): number {
+  const head = [0, 1].map((p) => s.speed[p] ** 2 * s.valve[p]);
+  return (
+    SET_PRESSURE *
+    Math.max(head[0], head[1]) *
+    (1 + 0.12 * Math.min(head[0], head[1]))
+  );
 }
 
 /** What its controller's display says it is doing. */
