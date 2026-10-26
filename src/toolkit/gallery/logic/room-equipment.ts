@@ -1377,14 +1377,26 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
       // flowmeter in line, then the break tank they fill, then the booster
       // set drawing from it, its discharge rising at the bay's east end
       // to the make-up main out (`WET_HALL_LAYOUT`).
-      put(box, at('water-meter'), { x: -4.25, z: -6.3, face: 'south' }),
-      put(box, at('make-up-flowmeter'), {
-        x: -4.25 + METER.half + 0.3 + FLOWMETER.half,
+      put(box, at('water-meter'), {
+        x: -4.25 + L.lineShift,
         z: -6.3,
         face: 'south',
       }),
-      put(box, at('break-tank'), { x: -1.1, z: -6.3, face: 'south' }),
-      put(box, at('booster-set'), { x: 1.9, z: -6.55, face: 'south' }),
+      put(box, at('make-up-flowmeter'), {
+        x: -4.25 + L.lineShift + METER.half + 0.3 + FLOWMETER.half,
+        z: -6.3,
+        face: 'south',
+      }),
+      put(box, at('break-tank'), {
+        x: -1.1 + L.lineShift,
+        z: -6.3,
+        face: 'south',
+      }),
+      put(box, at('booster-set'), {
+        x: 1.9 + L.lineShift,
+        z: -6.55,
+        face: 'south',
+      }),
       // The clean side's mimic on the bay's north wall, the make-up
       // recorder beside it, over the booster set.
       put(box, at('mimic-wet'), { wall: 'north', along: 6.9 }),

@@ -670,6 +670,26 @@ export function createWetHall(metre: number, kit: PanelKit) {
       ring.position.set(x, floorY + y, -R + 0.03);
       group.add(ring);
     }
+    // Each main's stub out of its sleeve: a short flanged length of it,
+    // for the plumber to join (the owner, 2026-10-26: the outside world's
+    // services come in by the north wall).
+    const steel = paint('#5f6b73', 0.45, 0.5);
+    for (const [x, y, r] of [
+      [tin.x, tin.y, 0.04],
+      [out.x, out.y, 0.045],
+    ] as const) {
+      const stub = new Mesh(new CylinderGeometry(r, r, 0.35, 16), steel);
+      stub.rotation.x = Math.PI / 2;
+      stub.position.set(x, floorY + y, -R + 0.175);
+      group.add(stub);
+      const flange = new Mesh(
+        new CylinderGeometry(r * 2, r * 2, 0.02, 16),
+        steel,
+      );
+      flange.rotation.x = Math.PI / 2;
+      flange.position.set(x, floorY + y, -R + 0.36);
+      group.add(flange);
+    }
     plate('TOWN MAIN IN', tin.x, tin.y + 0.3);
     plate('MAKE-UP MAIN TO POOL PLANT ROOMS', out.x, out.y + 0.3);
   }

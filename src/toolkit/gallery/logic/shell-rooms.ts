@@ -351,8 +351,13 @@ export const WET_HALL_LAYOUT = {
    * meter; the boosted make-up main out, high, at its east end, to the
    * pool plant rooms. Along the wall (x) and over the floor (y).
    */
-  townMainIn: { x: -4.4, y: 0.6 },
-  makeUpMainOut: { x: 3.4, y: 3.0 },
+  townMainIn: { x: -2.4, y: 0.6 },
+  makeUpMainOut: { x: 5.2, y: 3.0 },
+  /**
+   * The make-up line's machines along the bay, east of its west side by
+   * 2 m more than at first (the owner, 2026-10-26: room for its pipes).
+   */
+  lineShift: 2,
   /** The backwash pit's opening in the floor: its inside (`BACKWASH_PIT`, 7 × 5 m). */
   pit: { minX: -4.2, maxX: 2.8, minZ: 3, maxZ: 8 },
   /** Its concrete walls round the opening, below the floor. */

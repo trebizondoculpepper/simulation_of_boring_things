@@ -57,6 +57,8 @@ The clean-bay partition and raised threshold are conservative design choices, no
 
 ## Questions settled (the owner, 2026-10-26)
 
+- **The north wall is where the outside world's services come in and go out** (the owner, 2026-10-26): the town main in at the make-up bay's west end, low, and the boosted make-up main out to the pool plant rooms at its east end, high, each through a marked sleeve with a flanged stub for the plumber to join.
+
 - **The site is in England.** England's rules are the regulatory basis: the Water Supply (Water Fittings) Regulations 1999 and the Water Industry Act 1991, as in the source table above.
 - **The make-up bay is a partitioned zone inside `wet_hall`, not a room of its own.** Its division may be a partition or a full wall; either way it is part of `wet_hall` and the same simulation circuit.
 - **The backwash pit is serviced from above only.** There is no lower-level service access: inspection, instruments, sampling and pump withdrawal are from the floor and its guarded hatch, with no routine entry.
