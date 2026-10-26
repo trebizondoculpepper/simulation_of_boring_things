@@ -1,6 +1,6 @@
 # 072: The Lidoluxe Wash-O-Tron, an automatic filter wash controller
 
-Status: not started (written 2026-10-26; rewritten the same day as the Wash-O-Tron).
+Status: not started (written 2026-10-26; rewritten the same day as the Wash-O-Tron; a second opinion from Codex adopted the same day, below).
 
 ## The request
 
@@ -16,7 +16,7 @@ The owner, 2026-10-26, watching a filter washed by a script: "there needs to be 
 
 ## The console
 
-**The Lidoluxe Wash-O-Tron**: the filter maker's own retrofit controller, about 1996, fitted beside the battery; a beige powder-coated case, the Lidoluxe badge and a model plate (WASH-O-TRON 5 · 1996), surface conduit to the valves' actuators. It is Lidoluxe's product, not a Penfold board: an exception to the rule that every board carries Penfold's mark, for the owner to confirm. Laid out as a mimic.
+**The Lidoluxe Wash-O-Tron**: the filter maker's own retrofit controller, about 1996, fitted beside the battery; a beige powder-coated case, the Lidoluxe badge and a model plate (WASH-O-TRON 5 · 1996), surface conduit to the valves' actuators. Lidoluxe's badge on the controller, Penfold's panel-builder's mark on the panel (adopted below). Laid out as a mimic.
 
 - **The mimic band:** the five vessels as they stand, the inlet and outlet headers, the backwash main to the pit and the waste line; each valve a small lamp on its line, lit while open, whatever set it; PIT INHIBIT where the backwash main leaves for the wet hall.
 - **A cluster under each vessel, five alike:**
@@ -52,3 +52,16 @@ One filter at a time, in turn or worst first by pressure drop; never taking a fi
 
 - From the console alone, any filter can be set to each state and its valves follow; in AUTO a cycle washes all five in turn, each to clean and settled, the pit never spilling; tested in the world.
 - Both consoles show the same state and work the same filters; seen in the game.
+
+## Adopted from a second opinion (Codex, 2026-10-26; the owner adopted all of it)
+
+- **Proved steps.** Each change of state is a sequence: shut the present path, prove the valves have reached position (a command is not proof of travel), set the new path, then admit water; a step's timer starts only once its valves are proved and the pump runs with real wash flow. Flow is stopped while valve paths change.
+- **DRAIN is a procedure:** isolate, relieve and vent, then open DV1; a drained filter is never restarted by the programme. **LOCKOUT is in the first version** (a filter held isolated against the programme while worked on), with DRAIN.
+- **Interlocks:** never two washes at once, the Olympic's and the lounge's together; a wash only while the rest can carry the circulation (four of five Olympic filters available, checked against the actual total and per-filter flow).
+- **Admission, not interruption:** before starting a wash the programme checks the pit has room for the whole of it (backwash, settle and rinse, at about 180 m³/h: some 15 m³ backwash alone) and waits otherwise, showing PIT CAPACITY; the high-high inhibit is the last resort, not the plan.
+- **Triggers:** scheduled opportunities, plus WASH DUE from the pressure drop at comparable flow, plus a longest time since the last wash. Steps end on their timers (backwash up to 5 min, settle 1, rinse 3: to be checked against the model's flows and the sight glass), with a minimum effective backwash; no turbidity cell for now (deferred), and no worst-first ordering (a due queue).
+- **Lamps say more:** each state's lamp shows requested, valves moving, proved, or faulted, distinctly; the display says why a wash waits (PIT CAPACITY, LOW FLOW, FILTER UNAVAILABLE).
+- **HOLD, STEP and SKIP defined:** HOLD leaves the filter in a safe valve state; STEP never bypasses a proof, the flow or the pit's admission; SKIP leaves the filter still due.
+- **Local only:** setpoint editing (PROGRAMME, − / +, ENTER), RESET and LOCKOUT work on the plant room's console alone; the control room's repeat shows everything and can request WASH NOW (consistent with the rule that mode changes and resets stay local). PROGRAMME is an editing gesture, not access control.
+- **Makers:** the Lidoluxe product badge on the controller, Penfold's discreet panel-builder's mark on the panel it is built into, keeping the panel-maker rule.
+- **Fix first, separately:** the pit can break its sewer consent (both pumps in HAND give 20 m³/h; the gravity discharge valve WH-DR1-DV1 adds 40 m³/h; consent 10 m³/h). No schedule can be guaranteed compliant until that is reconciled.
