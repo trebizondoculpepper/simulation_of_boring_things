@@ -12,15 +12,18 @@ import {
 } from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
-import { createMicroLabel } from '../../components/core/views/eighties-controls';
 import { beginPart } from '../../components/core/parts/parts';
 import type { Part } from '../../components/core/parts/parts';
-import { createBrandBadge } from '../../components/core/views/brand-badge';
-import type { BrandId } from '../../components/core/logic/brands';
 import { createBollard } from '../../components/loading-dock/views/yard-kit';
 import { roomWorld } from '../../save/world-store';
 import type { IntakeService } from '../../../game/plant/site-intake';
 import { INTAKE, YARD } from '../logic/dock-yard';
+import {
+  createElectricityMeteringCabinet,
+  createGasMeterTrain,
+  createWaterMeterSet,
+} from '../../components/plant/views/utility-meters';
+import { siteLoadKw, withIntake } from '../../../game/plant/site-intake';
 
 /**
  * The site's intake in the goods yard (prompt 083; the owner, 2026-10-26):
@@ -118,44 +121,6 @@ function intoWall(
   p.add(elbow);
 }
 
-/** A meter's register on a small screen of its own, redrawn as it moves on. */
-function register(
-  kit: PanelKit,
-  w: number,
-  h: number,
-  unit: string,
-  lcd: boolean,
-) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 80;
-  const g = canvas.getContext('2d')!;
-  const map = new CanvasTexture(canvas);
-  map.colorSpace = SRGBColorSpace;
-  kit.textures.push(map);
-  const m = new MeshBasicMaterial({ map });
-  kit.materials.push(m);
-  const mesh = new Mesh(new PlaneGeometry(w, h), m);
-  mesh.userData.live = true;
-  let shown = '';
-  const show = (value: number) => {
-    const text = Math.floor(value).toString().padStart(7, '0');
-    if (text === shown) return;
-    shown = text;
-    g.fillStyle = lcd ? '#a9c08a' : '#111111';
-    g.fillRect(0, 0, 256, 80);
-    g.fillStyle = lcd ? '#1c2a12' : '#f2f2ea';
-    g.font = `bold 44px ${lcd ? 'monospace' : 'sans-serif'}`;
-    g.textAlign = 'left';
-    g.textBaseline = 'middle';
-    g.fillText(text, 12, 40);
-    g.font = 'bold 22px sans-serif';
-    g.fillText(unit, 200, 44);
-    map.needsUpdate = true;
-  };
-  return { mesh, show };
-}
-
 interface Device {
   service: IntakeService;
   x: number;
@@ -165,7 +130,12 @@ interface Device {
   build(
     kit: PanelKit,
     g: Group,
-  ): { lever: Object3D; screen: ReturnType<typeof register> };
+  ): {
+    lever: Object3D;
+    screen: { show(value: number): void };
+    /** A lever turns a quarter; a handwheel spins several turns. */
+    turn: 'lever' | 'wheel';
+  };
 }
 
 /*
@@ -179,32 +149,27 @@ const DEVICES: readonly Device[] = [
   {
     service: 'water',
     x: INTAKE.water,
-    name: 'Water main stop tap',
+    name: 'Water main inlet valve',
     meterName: 'Water revenue meter',
     unit: 'm³',
     build(kit, g) {
       const blue = paint(kit, '#2457a8', 0.45);
-      const r = 0.055;
-      const z = INTAKE.wallZ - 0.35;
-      riser(g, blue, r, 0, G - 0.2, 0.55, z);
-      intoWall(kit, g, blue, r, 0, 0.62, z);
-      // The stop tap: its body and its lever, along the pipe when open.
-      box(g, paint(kit, '#2b2d2f', 0.5, 0.6), 0.2, 0.24, 0.2, 0, G + 0.45, z);
-      const lever = new Group();
-      lever.position.set(0, G + 0.45, z - 0.11);
-      box(lever, paint(kit, '#c8261c', 0.5), 0.05, 0.4, 0.03, 0, 0.2, 0);
-      g.add(lever);
-      // The combination meter: a big brass body, its dial facing the yard.
-      const brass = paint(kit, '#a7843d', 0.35, 0.8);
-      const body = new Mesh(new CylinderGeometry(0.17, 0.17, 0.24, 24), brass);
-      body.rotation.x = Math.PI / 2;
-      body.position.set(0, G + 0.95, z);
-      g.add(body);
-      const screen = register(kit, 0.22, 0.07, 'm³', false);
-      screen.mesh.position.set(0, G + 0.95, z - 0.122);
-      screen.mesh.rotation.y = Math.PI;
-      g.add(screen.mesh);
-      return { lever, screen };
+      const r = 0.058;
+      // The meter set along the wall, the main rising from the ground into
+      // its inlet and out of its outlet up into the wall's sleeve.
+      const set = createWaterMeterSet(kit);
+      const z = INTAKE.wallZ - 0.45;
+      set.group.position.set(0, G, z);
+      set.group.rotation.y = Math.PI;
+      g.add(set.group);
+      riser(g, blue, r, 1.2, G - 0.2, G + 0.4, z);
+      riser(g, blue, r, -1.2, G + 0.4, 0.55, z);
+      intoWall(kit, g, blue, r, -1.2, 0.62, z);
+      return {
+        lever: set.inlet,
+        screen: { show: (v: number) => set.show(v) },
+        turn: 'wheel',
+      };
     },
   },
   {
@@ -214,73 +179,27 @@ const DEVICES: readonly Device[] = [
     meterName: 'Gas meter',
     unit: 'm³',
     build(kit, g) {
-      const yellow = paint(kit, '#e0b81c', 0.45, 0.2);
-      const r = 0.057;
-      const grp = paint(kit, '#d9d6cb', 0.7);
-      // The ventilated meter housing, its back to the wall, open-fronted.
-      const hz = INTAKE.wallZ - 0.36;
-      box(g, grp, 1.4, 1.6, 0.03, 0, G + 0.85, INTAKE.wallZ - 0.015);
-      for (const s of [-1, 1])
-        box(g, grp, 0.03, 1.6, 0.72, s * 0.7, G + 0.85, hz);
-      box(g, grp, 1.43, 0.04, 0.75, 0, G + 1.67, hz);
-      for (let k = 0; k < 4; k++)
-        box(
-          g,
-          paint(kit, '#5f5d56', 0.8),
-          0.05,
-          0.3,
-          0.005,
-          0.71,
-          G + 1.3 - k * 0.08,
-          hz,
-        );
-      // The service up from the ground, the ECV on it in front of the housing.
-      const fz = INTAKE.wallZ - 0.85;
-      riser(g, yellow, r, -0.4, G - 0.2, G + 0.5, fz);
-      box(
+      // The whole installation on the wall, its pipe at 0.9 m: the ECV,
+      // filter, slam-shut regulator, meter, converter and outlet valve.
+      const train = createGasMeterTrain(kit);
+      train.group.position.set(0, G + 0.9, INTAKE.wallZ);
+      train.group.rotation.y = Math.PI;
+      g.add(train.group);
+      // Its outlet, turned back into the wall through its sleeve.
+      intoWall(
+        kit,
         g,
-        paint(kit, '#2b2d2f', 0.5, 0.6),
-        0.22,
-        0.22,
-        0.22,
-        -0.4,
-        G + 0.32,
-        fz,
+        paint(kit, '#e0b81c', 0.45, 0.2),
+        0.045,
+        -1.3,
+        G + 0.9,
+        INTAKE.wallZ - 0.22,
       );
-      const lever = new Group();
-      lever.position.set(-0.4, G + 0.32, fz - 0.12);
-      box(lever, yellow, 0.4, 0.05, 0.03, 0.2, 0, 0);
-      g.add(lever);
-      const label = createMicroLabel(kit, 'GAS EMERGENCY\nCONTROL', {
-        height: 0.03,
-        ink: '#111111',
-        plate: '#e0b81c',
-      });
-      label.position.set(-0.4, G + 0.6, fz - 0.12);
-      label.rotation.y = Math.PI;
-      g.add(label);
-      // On up to the meter's height, back into the housing, and along
-      // into the meter's inlet flange on its left (the owner, 2026-10-26:
-      // it missed the meter).
-      riser(g, yellow, r, -0.4, G + 0.5, G + 0.9, fz);
-      const back = new Mesh(new CylinderGeometry(r, r, fz - hz, 14), yellow);
-      back.rotation.x = Math.PI / 2;
-      back.position.set(-0.4, G + 0.9, (fz + hz) / 2);
-      g.add(back);
-      const along = new Mesh(new CylinderGeometry(r, r, 0.2, 14), yellow);
-      along.rotation.z = Math.PI / 2;
-      along.position.set(-0.3, G + 0.9, hz);
-      g.add(along);
-      // The meter: a large commercial meter, its index on its front.
-      box(g, paint(kit, '#b9bdc0', 0.4, 0.5), 0.6, 0.6, 0.42, 0.1, G + 0.9, hz);
-      const screen = register(kit, 0.3, 0.09, 'm³', false);
-      screen.mesh.position.set(0.1, G + 1.0, hz - 0.212);
-      screen.mesh.rotation.y = Math.PI;
-      g.add(screen.mesh);
-      // Out of the housing's top and into the wall.
-      riser(g, yellow, r, 0.1, G + 1.2, 0.8, hz);
-      intoWall(kit, g, yellow, r, 0.1, 0.87, hz);
-      return { lever, screen };
+      return {
+        lever: train.ecv,
+        screen: { show: (v: number) => train.show(v) },
+        turn: 'lever',
+      };
     },
   },
   {
@@ -291,72 +210,58 @@ const DEVICES: readonly Device[] = [
     unit: 'kWh',
     build(kit, g) {
       const black = paint(kit, '#151617', 0.7);
-      const steel = paint(kit, '#7e8a86', 0.5, 0.4);
-      const cz = INTAKE.wallZ - 0.25;
-      // The cabinet on its plinth, its back to the wall.
-      box(g, paint(kit, '#8a8c88', 0.95), 1.3, 0.15, 0.55, 0, G + 0.075, cz);
-      box(g, steel, 1.25, 1.85, 0.48, 0, G + 0.15 + 0.925, cz);
-      const front = INTAKE.wallZ - 0.49;
-      // The network's sealed cut-out: a black box, its seal wire.
-      box(g, black, 0.36, 0.5, 0.02, -0.38, G + 1.25, front - 0.01);
+      // The metering cabinet on the wall, its foot 0.4 m up.
+      const cabinet = createElectricityMeteringCabinet(kit);
+      cabinet.group.position.set(0, G + 1.0, INTAKE.wallZ);
+      cabinet.group.rotation.y = Math.PI;
+      g.add(cabinet.group);
+      // The customer-side isolator beside it: a grey switch box, its
+      // rotary handle red on yellow.
+      const front = INTAKE.wallZ - 0.32;
       box(
         g,
-        paint(kit, '#c8261c', 0.4),
-        0.04,
-        0.04,
-        0.01,
-        -0.38,
-        G + 0.98,
-        front - 0.022,
-      );
-      // The meter, its kWh register on its LCD.
-      box(
-        g,
-        paint(kit, '#d6d6d0', 0.5),
-        0.3,
+        paint(kit, '#7e8a86', 0.5, 0.4),
         0.4,
-        0.02,
-        0.05,
-        G + 1.3,
-        front - 0.01,
+        0.55,
+        0.3,
+        -0.75,
+        G + 1.0,
+        INTAKE.wallZ - 0.15,
       );
-      const screen = register(kit, 0.22, 0.07, 'kWh', true);
-      screen.mesh.position.set(0.05, G + 1.38, front - 0.021);
-      screen.mesh.rotation.y = Math.PI;
-      g.add(screen.mesh);
-      // The isolator, its rotary handle, red on yellow.
       box(
         g,
         paint(kit, '#e0b81c', 0.5),
-        0.28,
-        0.28,
+        0.24,
+        0.24,
         0.02,
-        0.42,
-        G + 1.0,
-        front - 0.01,
+        -0.75,
+        G + 1.05,
+        front - 0.005,
       );
       const lever = new Group();
-      lever.position.set(0.42, G + 1.0, front - 0.035);
-      box(lever, paint(kit, '#c8261c', 0.5), 0.06, 0.24, 0.05, 0, 0, 0);
+      lever.position.set(-0.75, G + 1.05, front - 0.03);
+      box(lever, paint(kit, '#c8261c', 0.5), 0.05, 0.2, 0.05, 0, 0, 0);
       g.add(lever);
-      // Two heavy four-core armoured cables, 70 mm, up from the ground
-      // into the cabinet's foot, and out of its top into the wall.
-      for (const dx of [-0.45, -0.3])
-        riser(g, black, 0.035, dx, G - 0.2, G + 0.15, cz);
-      for (const dx of [0.3, 0.45]) {
-        riser(g, black, 0.035, dx, G + 2.0, 1.05, cz);
-        intoWall(kit, g, black, 0.035, dx, 1.12, cz);
+      // Two heavy four-core armoured cables from the ground up into the
+      // cabinet's CT chamber, and from the isolator into the wall.
+      for (const dx of [0.2, 0.35])
+        riser(g, black, 0.035, dx, G - 0.2, G + 0.4, INTAKE.wallZ - 0.12);
+      for (const dx of [-0.8, -0.7]) {
+        riser(g, black, 0.035, dx, G + 1.28, 0.8, INTAKE.wallZ - 0.12);
+        intoWall(kit, g, black, 0.035, dx, 0.87, INTAKE.wallZ - 0.12);
       }
-      return { lever, screen };
+      return {
+        lever,
+        screen: { show: (v: number) => cabinet.show(v, lastKw, lastDelta) },
+        turn: 'lever',
+      };
     },
   },
 ];
 
-const MAKERS: Record<IntakeService, BrandId> = {
-  water: 'trager-feinstein',
-  gas: 'trager-feinstein',
-  power: 'kessler-moody',
-};
+/** The site's load and the last frame's time, for the electricity meter's pulse LED. */
+let lastKw = 0;
+let lastDelta = 0;
 
 /** The three services, each a working part: its lever and its meter. */
 export function yardIntake(kit: PanelKit): Part[] {
@@ -366,13 +271,8 @@ export function yardIntake(kit: PanelKit): Part[] {
     const g = new Group();
     g.position.x = d.x;
     a.object.add(g);
-    const { lever, screen } = d.build(kit, g);
-    const badge = createBrandBadge(kit, MAKERS[d.service], { height: 0.018 });
-    badge.position
-      .copy(screen.mesh.position)
-      .add({ x: 0, y: 0.05, z: -0.002 } as never);
-    badge.rotation.y = Math.PI;
-    g.add(badge);
+    const { lever, screen, turn: kind } = d.build(kit, g);
+    // Each installation carries its own maker's badge.
     const open = () => store?.world.value.intake.open[d.service] ?? true;
     const reading = () => store?.world.value.intake.meters[d.service] ?? 0;
     g.traverse((o) =>
@@ -391,7 +291,15 @@ export function yardIntake(kit: PanelKit): Part[] {
         turn < want
           ? Math.min(want, turn + delta * 3)
           : Math.max(want, turn - delta * 3);
-      lever.rotation.z = (turn * Math.PI) / 2;
+      if (kind === 'wheel') lever.rotation.y = turn * Math.PI * 6;
+      else lever.rotation.z = (turn * Math.PI) / 2;
+      if (d.service === 'power') {
+        lastDelta = delta;
+        const w = store?.world.value;
+        lastKw = w
+          ? siteLoadKw({ ...w, plant: withIntake(w.plant, w.intake) })
+          : 0;
+      }
       screen.show(reading());
     });
     a.shows(

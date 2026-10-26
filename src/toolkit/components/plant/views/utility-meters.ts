@@ -778,8 +778,12 @@ export function createGasMeterTrain(kit: PanelKit) {
     flange(x + 0.07);
     cyl(group, yellow, 0.07, 0.12, 'x', x, 0, z, 20);
     cyl(group, steel, 0.015, 0.05, 'y', x, 0.08, z, 10);
-    // The lever, along the pipe: open.
-    box(group, red, 0.22, 0.02, 0.025, x + 0.09, 0.11, z);
+    // The lever, along the pipe: open; on its spindle, so it can be turned
+    // a quarter across the pipe to shut it.
+    const lever = new Group();
+    lever.position.set(x, 0.11, z);
+    box(lever, red, 0.22, 0.02, 0.025, 0.09, 0, 0);
+    group.add(lever);
     const tag = createMicroLabel(kit, label, {
       height: 0.016,
       ink: '#111111',
@@ -787,12 +791,13 @@ export function createGasMeterTrain(kit: PanelKit) {
     });
     tag.position.set(x, -0.14, z + 0.02);
     group.add(tag);
+    return lever;
   };
   // Upstream riser in from the floor, then across.
   cyl(group, yellow, r, 1.0, 'y', -1.3, -0.5, z, 20);
   cyl(group, yellow, r * 1.15, r * 2.3, 'x', -1.3, 0, z, 20);
   pipe(-1.3, -1.1);
-  valve(-1.0, 'ECV');
+  const ecv = valve(-1.0, 'ECV');
   pipe(-0.93, -0.8);
   // The filter: a pot under the line, its drain plug, a dP gauge.
   flange(-0.8);
@@ -885,6 +890,8 @@ export function createGasMeterTrain(kit: PanelKit) {
   group.add(mprn);
   return {
     group,
+    /** The ECV's lever, on its spindle: turned a quarter, shut. */
+    ecv,
     /** The register, m³; `delta` pages the converter. */
     show(m3: number, delta = 0) {
       meter.show(m3);
@@ -1029,11 +1036,13 @@ export function createWaterMeterSet(kit: PanelKit) {
     cyl(group, blue, 0.08, 0.17, 'x', x, y, 0, 20);
     box(group, blue, 0.12, 0.2, 0.15, x, y + 0.1, 0);
     cyl(group, steel, 0.012, 0.15, 'y', x, y + 0.27, 0, 10);
+    const handwheel = new Group();
+    handwheel.position.set(x, y + 0.34, 0);
     const wheel = new Mesh(new TorusGeometry(0.1, 0.012, 8, 24), black);
     wheel.rotation.x = Math.PI / 2;
-    wheel.position.set(x, y + 0.34, 0);
-    group.add(wheel);
-    box(group, black, 0.2, 0.012, 0.012, x, y + 0.34, 0);
+    handwheel.add(wheel);
+    box(handwheel, black, 0.2, 0.012, 0.012, 0, 0, 0);
+    group.add(handwheel);
     const tag = createMicroLabel(kit, label, {
       height: 0.02,
       ink: '#111111',
@@ -1041,9 +1050,10 @@ export function createWaterMeterSet(kit: PanelKit) {
     });
     tag.position.set(x, y - 0.14, 0.09);
     group.add(tag);
+    return handwheel;
   };
   pipe(-1.2, -0.9);
-  gate(-0.8, 'INLET VALVE');
+  const inlet = gate(-0.8, 'INLET VALVE');
   pipe(-0.7, -0.6);
   // The Y-strainer: its screen leg angled down and forward, a drain plug.
   flange(-0.6);
@@ -1107,6 +1117,8 @@ export function createWaterMeterSet(kit: PanelKit) {
   group.add(arrow);
   return {
     group,
+    /** The inlet gate valve's handwheel, on its spindle. */
+    inlet,
     show(m3: number) {
       meter.show(m3);
     },

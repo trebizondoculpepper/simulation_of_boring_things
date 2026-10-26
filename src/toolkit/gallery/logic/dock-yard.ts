@@ -29,9 +29,9 @@ export const YARD = {
  */
 export const INTAKE = {
   wallZ: -6.2,
-  water: -9.6,
-  gas: -11.6,
-  power: -13.8,
+  water: -9.8,
+  gas: -13.2,
+  power: -16.2,
 } as const;
 
 /** What the intake stands in the way of, down in the yard: its devices and its bollards. */
