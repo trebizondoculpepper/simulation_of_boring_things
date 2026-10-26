@@ -1,5 +1,6 @@
 import type { ReadonlySignal } from '@preact/signals-core';
 import { recordedLoop } from '../../core/audio/recorded-loop';
+import { recording } from '../../core/audio/part-audio';
 
 /**
  * A roller shutter running (the owner, 2026-10-26): a recording of an
@@ -14,3 +15,13 @@ export const shutterRun = (speed?: ReadonlySignal<number>) =>
     0.6,
     speed,
   );
+
+/**
+ * The shutter coming to rest: the same recording's first take ending, the
+ * curtain landing and its motor cutting out under its brake, matched in
+ * level to the running loop.
+ */
+export const SHUTTER_STOP = recording(
+  new URL('./assets/shutter-stop.wav', import.meta.url),
+  0.6,
+);

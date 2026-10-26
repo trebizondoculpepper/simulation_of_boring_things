@@ -11,8 +11,10 @@ import {
   selector,
 } from '../../../components/core/parts/parts';
 import { partAudio } from '../../../components/core/audio/part-audio';
-import { VALVE_STOP } from '../../../components/plant/audio/actuated-valve';
-import { shutterRun } from '../../../components/loading-dock/audio/shutter-run';
+import {
+  SHUTTER_STOP,
+  shutterRun,
+} from '../../../components/loading-dock/audio/shutter-run';
 import { plantTools } from '../../../components/plant/views/plant-tools';
 import {
   PALLET,
@@ -213,7 +215,7 @@ function shutterRig(kit: PanelKit): LiveExhibit {
       }
       // The brake's clunk as it comes to rest, however it stopped.
       const nowRunning = speed.value > 0.01;
-      if (running.value && !nowRunning) partAudio.play(VALVE_STOP, roll);
+      if (running.value && !nowRunning) partAudio.play(SHUTTER_STOP, roll);
       running.value = nowRunning;
       shutter.setOpen(open);
       light.set(open >= 1 ? 'green' : 'red');
