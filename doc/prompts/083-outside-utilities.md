@@ -1,6 +1,6 @@
 # 083: The utilities area in the goods yard
 
-Status: not started (written 2026-10-26 with the owner).
+Status: not started (written 2026-10-26 with the owner; refined the same day).
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply.
 
@@ -20,21 +20,20 @@ This is how real sites are laid out: the gas meter and its emergency control val
 ## What to build
 
 - **Dressing**: industrial wheelie bins (1100 L four-wheeled steel bins, a general waste and a recycling one), and what else a service yard holds; set decoration, clear of the lorries' bays and the steps.
-- **A utilities area** to one side of the yard, against the building's outside wall, clear of the bays: three outside housings in a row, each a real product's kind, each with its maker under the brands rule:
-  - **water**: the incoming main rising from the ground into a meter kiosk, its stop valve with a lever (or a key-operated boundary stop tap beside it), its meter reading and recording as the make-up meter does now;
-  - **gas**: a meter housing on the wall, the supplier's meter (its index read on inspection), and before it the emergency control valve with its lever, a yellow handle, its "GAS EMERGENCY CONTROL" label; the gas main then entering the building toward the boiler house;
-  - **electricity**: a meter cabinet with the supplier's cut-out and meter, and the main switch with its rotary handle; the incoming cable then running to the switch room.
-- **What moves**: the water main's stop valve and meter out of the wet hall; the gas emergency control out of the boiler house (its safety panel and SSOV stay there, the SSOV still shutting on its emergency stop); the main incoming switch out of the switch room. Each in the plant model (its node and its links moved, its tag and permanent asset ID kept), in the world (its state kept, so a saved game keeps whether it is open or on), and drawn from the model; the rooms they leave lose them.
-- **Three levers, three shut-offs**: turning any one shuts off that service to the whole facility, through the world: no water to the break tank, no gas to the boilers, no power anywhere (the emergency lighting then on its battery).
+- **The services out of the building's side** (the owner, 2026-10-26): to one side of the yard, clear of the bays and the steps, the three services come out through the building's outside wall, each through a wall sleeve sealed against the weather (a collar and flashing round it, as for a pipe or cable through an outside wall), each in its proper colour (gas yellow, water blue, the electricity supply a black armoured cable), and go down into the ground through an appropriate meter and shut-off:
+  - **water**: the main, blue, its stop valve with a lever and its meter, reading and recording as the make-up meter does now;
+  - **gas**: yellow, the supplier's meter (its index read on inspection) and before it the emergency control valve with its yellow lever and its GAS EMERGENCY CONTROL label;
+  - **electricity**: the supply cable to the supplier's cut-out, its meter and a main switch with its rotary handle.
+    Each a real product's kind, each with its maker under the brands rule. No housing or fence for now: later, a little wooden privacy fence round them (a later item).
+- **The building's own shut-offs stay** (the owner, 2026-10-26): the outside ones are new, the utility company's, upstream of the building's own; the boiler house's gas shut-off is demoted to the internal one; the switch room keeps its main switch, the building's own isolator, not the utility's; the wet hall keeps its stop valve and its make-up meter. Each service then has two shut-offs in series, the utility's outside and the building's inside, each in the plant model and the world, each working.
+- **Three levers outside**: turning any one shuts off that service to the whole facility, through the world: no water to the break tank, no gas to the boilers, no power anywhere (the emergency lighting then on its battery).
 
 ## To settle with the owner before building
 
-- Which side of the yard the utilities area stands on, and whether it is open or behind a small fence and gate.
-- Whether the gas emergency control is separate from the boiler house's SSOV in the world (two valves in series) or the same valve moved.
 - Whether the electricity meter is modelled (reading kWh from the site's load) or only shown.
 - Save migration: a new `WORLD_VERSION` if the world's shape changes.
 
 ## Done when
 
-- Bins and dressing in the yard; the utilities area with its three housings, each working, read on inspection, its lever shutting off its service to the facility, seen in the game.
+- Bins and dressing in the yard; the three services out of the building's side, each through its sealed sleeve to its meter and shut-off, each working, read on inspection, its lever shutting off its service to the facility, seen in the game.
 - The wet hall, the boiler house and the switch room no longer hold the meters or the master shut-offs; the plant model, the world and the drawing agree; tests cover each shut-off's effect; the five checks pass.
