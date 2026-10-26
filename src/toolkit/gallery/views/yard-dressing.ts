@@ -1,3 +1,8 @@
+import {
+  addSkipGraffiti,
+  createSkip,
+} from '../../components/site-dressing/views/skip';
+import { dressSkip } from '../../components/site-dressing/logic/skip-dressing';
 import { Group } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { markComponent } from '../../components/core/views/component-identity';
@@ -12,7 +17,6 @@ import {
   createLpgCage,
   createPalletStack,
   createSadPlanter,
-  createSkip,
   createWheelieBin,
 } from '../../components/loading-dock/views/yard-kit';
 import { INTAKE, YARD, YARD_DRESSING } from '../logic/dock-yard';
@@ -40,7 +44,13 @@ export function createYardDressing(
     'crates-green': () => createCrateStack(kit, 4, '#3b7a3a'),
     lpg: () => createLpgCage(kit),
     grit: () => createGritBin(kit),
-    skip: () => createSkip(kit),
+    skip: () => {
+      // The game's skip (from the Encabulator): a random hire firm's name,
+      // a random tag or two of graffiti (the owner, 2026-10-26).
+      const skip = createSkip(kit);
+      addSkipGraffiti(kit, skip.group, dressSkip(Math.random).tags);
+      return skip.group;
+    },
     cone: () => createCone(kit),
     pallets: () => createPalletStack(kit, 5),
   } as const;

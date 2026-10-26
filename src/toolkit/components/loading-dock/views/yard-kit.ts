@@ -1,4 +1,11 @@
-import { CylinderGeometry, Group, Mesh } from 'three';
+import {
+  CylinderGeometry,
+  DoubleSide,
+  Group,
+  LatheGeometry,
+  Mesh,
+  Vector2,
+} from 'three';
 import type { Material } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { plantTools } from '../../plant/views/plant-tools';
@@ -375,35 +382,72 @@ export function createWheelieBin(
   return g;
 }
 
-/** A builder's skip, 8 yd³, yellow, a little rubbish in it. */
-export function createSkip(kit: PanelKit) {
+/**
+ * An 18 kg forklift propane cylinder: its foot ring, domed bottom and
+ * top, a straight welded body, the steel collar round its valve with two
+ * hand-holds cut in it, the valve; red, a band and a hazard label, chipped.
+ * Origin on the floor at its middle.
+ */
+export function createLpgCylinder(kit: PanelKit, seed = 0) {
   const t = plantTools(kit);
   const g = new Group();
-  g.name = 'Skip';
-  const yellow = t.paint('#d9a51b', 0.7, 0.3);
-  t.box(g, yellow, 3.6, 0.06, 1.7, 0, 0.03, 0);
-  for (const s of [-1, 1]) {
-    const side = t.box(g, yellow, 3.6, 1.25, 0.05, 0, 0.66, s * 0.9);
-    side.rotation.x = -s * 0.12;
-  }
-  for (const s of [-1, 1]) {
-    const end = t.box(g, yellow, 0.05, 1.25, 1.9, s * 2.0, 0.66, 0);
-    end.rotation.z = s * 0.35;
-  }
-  // What's in it: broken boards, a carpet roll, rubble.
-  t.box(g, t.paint('#7a6a55', 0.95), 3.2, 0.5, 1.5, 0, 0.3, 0);
-  const plank = t.box(
-    g,
-    t.paint('#a07c52', 0.9),
-    2.2,
-    0.03,
-    0.15,
-    0.2,
-    0.7,
-    0.2,
+  g.name = 'Forklift propane cylinder, 18 kg';
+  const red = t.paint(seed % 2 ? '#a8261d' : '#b82e22', 0.5, 0.3);
+  // Its body, turned: (radius, height) up from the floor.
+  const body = new Mesh(
+    new LatheGeometry(
+      [
+        [0.0, 0.05],
+        [0.09, 0.05],
+        [0.135, 0.08],
+        [0.152, 0.13],
+        [0.152, 0.6],
+        [0.14, 0.66],
+        [0.105, 0.7],
+        [0.04, 0.72],
+        [0.0, 0.72],
+      ].map(([r, y]) => new Vector2(r, y)),
+      28,
+    ),
+    red,
   );
-  plank.rotation.z = 0.3;
-  t.cyl(g, t.paint('#4a5a6a', 0.95), 0.18, 1.6, -0.7, 0.75, -0.2, 'x', 12);
+  g.add(body);
+  // The foot ring it stands on, and the collar round the valve: open
+  // steel shells, the collar with two hand-holds.
+  const shell = t.paint(seed % 2 ? '#a8261d' : '#b82e22', 0.5, 0.3);
+  shell.side = DoubleSide;
+  const foot = new Mesh(
+    new CylinderGeometry(0.14, 0.145, 0.06, 28, 1, true),
+    shell,
+  );
+  foot.position.y = 0.03;
+  g.add(foot);
+  const collar = new Mesh(
+    new CylinderGeometry(0.115, 0.115, 0.13, 28, 1, true),
+    shell,
+  );
+  collar.position.y = 0.78;
+  g.add(collar);
+  const dark = t.paint('#1b1b1c', 0.9);
+  for (const s of [-1, 1]) t.box(g, dark, 0.09, 0.04, 0.005, 0, 0.8, s * 0.116);
+  // The welded seam band round its middle.
+  t.cyl(g, t.paint('#7e2018', 0.5, 0.3), 0.154, 0.012, 0, 0.36, 0, 'y', 28);
+  // The valve and its outlet.
+  const brass = t.paint('#b08d45', 0.35, 0.8);
+  t.cyl(g, brass, 0.022, 0.07, 0, 0.75, 0, 'y', 12);
+  t.cyl(g, brass, 0.012, 0.05, 0.03, 0.77, 0, 'x', 10);
+  // A hazard label, and a chip of bare steel.
+  t.box(g, t.paint('#e3c81f', 0.6), 0.08, 0.08, 0.002, 0, 0.45, 0.153);
+  t.box(
+    g,
+    t.paint('#6a6460', 0.7, 0.6),
+    0.03,
+    0.015,
+    0.002,
+    0.05,
+    0.2 + (seed % 3) * 0.1,
+    -0.153,
+  );
   return g;
 }
 
@@ -435,14 +479,13 @@ export function createLpgCage(kit: PanelKit) {
   for (const sx of [-1, 1])
     for (let z = -D / 2; z <= D / 2 + 1e-6; z += 0.1)
       t.box(g, galv, 0.006, H - 0.1, 0.006, (sx * W) / 2, H / 2 + 0.05, z);
-  // The cylinders: two rows, red with yellow collars, valves up.
-  const red = t.paint('#b5291f', 0.55, 0.3);
-  const collar = t.paint('#e0b81c', 0.5);
+  // The cylinders: two rows of three, each turned as a real 18 kg forklift
+  // cylinder is (the owner, 2026-10-26: the first were terrible).
   for (let i = 0; i < 6; i++) {
-    const x = -0.55 + (i % 3) * 0.55;
-    const z = i < 3 ? -0.18 : 0.18;
-    t.cyl(g, red, 0.15, 0.62, x, 0.43, z, 'y', 18);
-    t.cyl(g, collar, 0.1, 0.12, x, 0.8, z, 'y', 14);
+    const c = createLpgCylinder(kit, i);
+    c.position.set(-0.5 + (i % 3) * 0.5, 0.1, i < 3 ? -0.17 : 0.17);
+    c.rotation.y = i * 1.3;
+    g.add(c);
   }
   const sign = createMicroLabel(
     kit,

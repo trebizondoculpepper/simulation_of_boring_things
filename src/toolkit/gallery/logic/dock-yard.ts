@@ -74,7 +74,7 @@ export const YARD_DRESSING = [
   { kind: 'crates-green', x: 13.4, z: -6.55, yaw: -0.1, w: 0.6, d: 0.5 },
   { kind: 'lpg', x: 15.0, z: -6.7, yaw: Math.PI, w: 1.5, d: 0.8 },
   { kind: 'grit', x: 16.6, z: -6.6, yaw: Math.PI, w: 0.95, d: 0.66 },
-  { kind: 'skip', x: 12.0, z: -11.0, yaw: 0.08, w: 3.8, d: 1.9 },
+  { kind: 'skip', x: 12.0, z: -11.0, yaw: 0.08, w: 2.0, d: 1.4 },
   { kind: 'cone', x: 9.6, z: -10.2, yaw: 0, w: 0.4, d: 0.4 },
   { kind: 'cone', x: 9.9, z: -11.6, yaw: 0, w: 0.4, d: 0.4 },
   { kind: 'pallets', x: 15.4, z: -9.8, yaw: 0.3, w: 1.2, d: 1.2 },
