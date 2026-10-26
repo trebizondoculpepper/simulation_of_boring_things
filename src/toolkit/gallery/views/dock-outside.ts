@@ -128,9 +128,10 @@ export function createDockOutside(
     const g = fade.getContext('2d')!;
     const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
     grad.addColorStop(0, '#ffffff');
-    // Fading before the building's wall does (the owner, 2026-10-26).
-    grad.addColorStop(0.3, '#ffffff');
-    grad.addColorStop(0.75, '#000000');
+    // Solid to the walking circle's edge, 25 m from the steps' foot, gone
+    // by 40 m, before the building's wall (the owner, 2026-10-26).
+    grad.addColorStop(25 / 69, '#ffffff');
+    grad.addColorStop(40 / 69, '#000000');
     g.fillStyle = grad;
     g.fillRect(0, 0, 256, 256);
     const alphaMap = new CanvasTexture(fade);
@@ -251,7 +252,8 @@ export function createDockOutside(
     // In the dock's blockwork, its courses on the dock's own.
     const blocks = createBreezeBlockTextures();
     kit.textures.push(blocks.map, blocks.normalMap, blocks.roughnessMap);
-    const far = 68;
+    // Fading out to nothing by 50 m either side (the owner, 2026-10-26).
+    const far = 50;
     const top = 7.3;
     const from = width / 2 + thickness;
     const len = far - from;
@@ -314,7 +316,7 @@ export function createDockOutside(
     const roofTop = 7.3;
     const depth = 24;
     const pitch = (4 * Math.PI) / 180;
-    const run = 2 * 68;
+    const run = 2 * 50;
     // Fading along the building as the wall does.
     const fade = document.createElement('canvas');
     fade.width = 256;
