@@ -142,7 +142,10 @@ export function createDockOutside(
   const ground = new Mesh(new CircleGeometry(69, 48), tarmac);
   ground.onBeforeRender = (r, _s, camera) => placePlane(r, camera);
   ground.rotation.x = -Math.PI / 2;
-  ground.position.set(0, YARD_LEVEL, wallZ - 30);
+  // Centred on the foot of the steps from the pier door, the middle of
+  // the yard the walker may cross (the owner, 2026-10-26).
+  const foot = dockSteps({ wallZ: wallZ + thickness, thickness, doorX }).foot;
+  ground.position.set(foot.x, YARD_LEVEL, foot.z);
   group.add(ground);
   // The dock's outside wall below its floor, down to the tarmac: brick
   // red engineering brick under the openings, the dock's face.
