@@ -368,7 +368,7 @@ export const ATTRACT_SHOTS: readonly AttractShot[] = [
     room: 'switch_room',
     path: switchRoomFlyby,
     scenario: 'lights-out',
-    torch: false,
+    torch: true,
     seconds: SHOT_SECONDS,
   },
   {
@@ -509,6 +509,26 @@ export function stepAttract(
       };
     }
   }
+}
+
+/** Manual title navigation starts at the beginning of the selected move, behind black. */
+export function controlAttract(
+  state: AttractState,
+  command: 'restart' | 'next',
+  shots: readonly AttractShot[] = ATTRACT_SHOTS,
+  random: () => number = Math.random,
+): AttractState {
+  if (command === 'restart')
+    return { ...state, phase: 'black', t: 0, shotTime: 0 };
+  const shot = state.next;
+  return {
+    shot,
+    next: chooseNext(shots, shot, state.shot, random),
+    previous: state.shot,
+    phase: 'black',
+    t: 0,
+    shotTime: 0,
+  };
 }
 
 /** How black the screen is, 0 (clear) to 1. */

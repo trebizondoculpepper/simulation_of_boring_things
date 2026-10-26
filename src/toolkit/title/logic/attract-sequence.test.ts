@@ -13,6 +13,7 @@ import {
   shotPose,
   FADE_SECONDS,
   attractBlack,
+  controlAttract,
   newAttract,
   nextShot,
   stepAttract,
@@ -195,13 +196,13 @@ describe('the title’s attract sequence', () => {
   });
 });
 
-it('stages the eight switch-room views with the lighting circuit off and the camera torch off', () => {
+it('stages the eight switch-room views with the lighting circuit off and the camera torch on', () => {
   const shot = ATTRACT_SHOTS.find(
     (s) => s.id === 'switch-room-lights-out-flyby',
   )!;
   expect(shot.room).toBe('switch_room');
   expect(shot.scenario).toBe('lights-out');
-  expect(shot.torch).toBe(false);
+  expect(shot.torch).toBe(true);
   const dark = attractScenario(shot.scenario);
   expect(dark.lighting.supply).toBe(false);
   expect(dark.plant.sources.power).toBe(true);
@@ -246,4 +247,33 @@ it('flies the Olympic dolly zoom with the authored roll, below the surface and w
     expect(p.zoom).toBeGreaterThanOrEqual(zoom - 1e-9);
     zoom = p.zoom;
   }
+});
+
+it('restarts the current move at its beginning and advances to the queued shot behind black', () => {
+  const state = {
+    ...newAttract(ATTRACT_SHOTS, () => 0.4),
+    phase: 'showing' as const,
+    t: 2,
+    shotTime: 15,
+  };
+  const restarted = controlAttract(state, 'restart');
+  expect(restarted).toMatchObject({
+    shot: state.shot,
+    next: state.next,
+    previous: state.previous,
+    phase: 'black',
+    t: 0,
+    shotTime: 0,
+  });
+  const next = controlAttract(state, 'next', ATTRACT_SHOTS, () => 0.5);
+  expect(next).toMatchObject({
+    shot: state.next,
+    previous: state.shot,
+    phase: 'black',
+    t: 0,
+    shotTime: 0,
+  });
+  expect(next.next).not.toBe(next.shot);
+  expect(state.shotTime).toBe(15);
+  expect(stepAttract(next, 1, ATTRACT_SHOTS, false).phase).toBe('black');
 });

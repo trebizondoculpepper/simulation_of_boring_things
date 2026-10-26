@@ -4,6 +4,7 @@ import {
   INPUT_MODES,
   controlsHelp,
   copyShortcut,
+  titleShortcut,
   deadZone,
 } from './controls';
 
@@ -76,4 +77,27 @@ describe('copy shortcuts', () => {
     expect(copyShortcut({ ...plain, metaKey: true, altKey: true })).toBeNull();
     expect(copyShortcut({ ...plain, code: 'KeyF', ctrlKey: true })).toBeNull();
   });
+});
+
+it('keeps title navigation on unmodified bracket presses and out of keyboard help', () => {
+  const plain = {
+    code: 'BracketLeft',
+    ctrlKey: false,
+    metaKey: false,
+    altKey: false,
+    shiftKey: false,
+    repeat: false,
+  };
+  expect(titleShortcut(plain)).toBe('restart');
+  expect(titleShortcut({ ...plain, code: 'BracketRight' })).toBe('next');
+  for (const key of [
+    'ctrlKey',
+    'metaKey',
+    'altKey',
+    'shiftKey',
+    'repeat',
+  ] as const)
+    expect(titleShortcut({ ...plain, [key]: true })).toBeNull();
+  expect(titleShortcut({ ...plain, code: 'KeyR' })).toBeNull();
+  expect(controlsHelp('keyboard')).not.toMatch(/restart|next shot|\[|\]/i);
 });

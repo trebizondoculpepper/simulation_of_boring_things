@@ -1,3 +1,4 @@
+import { bindTitleShortcuts } from './toolkit/controls/input/title-shortcuts';
 import { createJacuzziAmbience } from './toolkit/gallery/views/jacuzzi-ambience';
 import { jacuzziApproachGain } from './toolkit/gallery/logic/jacuzzi-acoustics';
 import './styles/main.css';
@@ -48,6 +49,7 @@ import { createTitleScreen } from './toolkit/title/title-screen';
 import {
   ATTRACT_SHOTS,
   attractBlack,
+  controlAttract,
   newAttract,
   nextShot,
   shotPose,
@@ -810,6 +812,7 @@ const startTitleBackdrop = async () => {
   let builtFor = -1;
   let seenFrom = 0;
   let building = false;
+  let presentation = 0;
   // The player's torch, put back as it was when the title is left.
   const playerTorch = torch.on;
   /** Let the shot on screen go: its room, its renderer, its world. */
@@ -823,11 +826,12 @@ const startTitleBackdrop = async () => {
   };
   /** Build the shot's room on its own world, and put it on screen, black. */
   const present = async (index: number) => {
+    const ownPresentation = ++presentation;
     const shot = ATTRACT_SHOTS[index];
     const room = resolveRoomId(shot.room);
     if (!room) return;
     const start = await starter(room);
-    if (stopped) return;
+    if (stopped || ownPresentation !== presentation) return;
     letGo();
     // Its world: its scenario, afresh, running while it is seen; and the
     // room built now reads it, not the player's.
@@ -865,8 +869,17 @@ const startTitleBackdrop = async () => {
     // A few frames drawn behind the black before it fades in.
     seenFrom = performance.now() + 250;
   };
+  const unbindTitleShortcuts = bindTitleShortcuts((command) => {
+    state = controlAttract(state, command);
+    // Restart also rebuilds the same scene on a fresh scenario world. Invalidate
+    // an outstanding import so rapid presses cannot show an outdated request.
+    presentation++;
+    builtFor = -1;
+    titleVeil.style.opacity = '1';
+  });
   titleBackdrop = {
     stop() {
+      unbindTitleShortcuts();
       stopped = true;
       cancelAnimationFrame(frame);
       titleVeil.hidden = true;

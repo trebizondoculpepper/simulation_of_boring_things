@@ -6,9 +6,11 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Unlisted title shortcuts: `[` restarts the current shot from the beginning and `]` advances to the next shot. They rebuild the staged scene, apply only on the title screen, and leave keyboard instructions unchanged. The lights-out switch-room flyby has its flashlight on.
+
 - An underwater Olympic pool title shot follows the owner’s five-key dolly zoom with a roll, rising from 0.93 m to 0.16 m below the surface while the lighting remains on.
 
-- A switch-room title flyby follows the owner’s eight camera views, including the final stationary turn and zoom, with the main lighting supply switched off in its staged world and the camera torch off.
+- A switch-room title flyby follows the owner’s eight camera views, including the final stationary turn and zoom, with the main lighting supply switched off in its staged world and the camera torch on.
 
 - The Olympic tank hall’s ladder-access gate opens with Use and closes itself. Its floor sump drains by gravity through PL2-T1-DV1, worked from an extended-spindle handwheel on the gantry; the valve position persists with the other installed valves.
 - Tank-hall inspection now identifies PL2-T1-LT1, the live ultrasonic level transmitter, and the two pump suction intakes. The transmitter’s signal cable rises to the soffit and runs south then west through the partition towards the pool controls.

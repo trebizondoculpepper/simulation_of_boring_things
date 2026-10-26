@@ -205,3 +205,27 @@ export function copyShortcut(event: {
       ? 'position'
       : null;
 }
+
+/** Unlisted title-screen navigation; deliberately absent from the gameplay help. */
+export function titleShortcut(event: {
+  code: string;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+  repeat: boolean;
+}): 'restart' | 'next' | null {
+  if (
+    event.repeat ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.altKey ||
+    event.shiftKey
+  )
+    return null;
+  return event.code === 'BracketLeft'
+    ? 'restart'
+    : event.code === 'BracketRight'
+      ? 'next'
+      : null;
+}

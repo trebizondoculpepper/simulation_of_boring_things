@@ -4,9 +4,11 @@ The project's one to-do list (the owner, 2026-10-23): every task not yet finishe
 
 ## Now: title sequence tools
 
+- [x] **Unlisted title navigation and lights-out flashlight** (done 2026-10-26, commit pending): `[` restarts the current shot from its beginning on a fresh scenario, `]` advances to the queued shot; title only, ignoring editing/modifiers/repeats and absent from keyboard help. Enable the flashlight for the lights-out switch-room shot.
+
 - [x] **Olympic underwater rolling dolly zoom** (done 2026-10-26, `5b10a4a`): add the owner’s five views with the lights on, retaining the fixed heading/pitch, increasing zoom, rising camera and −92° to +26° roll.
 
-- [x] **Switch-room flyby with lighting off** (done 2026-10-26, `552fcb5`): add the owner’s eight camera views to the title sequence, using a separate lights-out world with the main lighting supply off and the camera torch off; retain the final stationary turn and zoom.
+- [x] **Switch-room flyby with lighting off** (done 2026-10-26, `552fcb5`): add the owner’s eight camera views to the title sequence, using a separate lights-out world with the main lighting supply off; retain the final stationary turn and zoom.
 
 - [x] **Noclip for framing camera shots** ([038](doc/prompts/done/038-noclip-camera.md), done 2026-10-24, `bfc8521`): Esc-menu toggle, free flight through equipment, room bounds, keyboard/touch/gamepad controls, live coordinates and camera-link copying. Preserve the normal walking/Continue position.
 - [x] **Roll in noclip** (the owner, 2026-10-24; done 2026-10-24, `f0b798d`): Q/E (LB/RB, ⟲/⟳) roll the camera about its line of sight, R (Y, LEVEL) levels it; the readout and camera links carry `roll` in degrees.
