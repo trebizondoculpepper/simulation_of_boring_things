@@ -21,6 +21,17 @@ export const BOOSTER = {
 } as const;
 
 /**
+ * Its control port, in its own frame: the network gland on top of its
+ * control unit (the owner, 2026-10-26), where the room's control wiring
+ * is drawn in.
+ */
+export const BOOSTER_CONTROL = [
+  BOOSTER.w / 2 - 0.22 + 0.11,
+  1.325,
+  BOOSTER.d / 2 - 0.19,
+] as const;
+
+/**
  * The make-up meter's run: its stubs this far either side of its middle,
  * short, so its pipework is easily routed; its run at the booster set's
  * manifolds' height, so the meter can stand on the booster's discharge

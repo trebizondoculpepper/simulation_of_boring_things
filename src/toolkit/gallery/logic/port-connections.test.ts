@@ -37,6 +37,9 @@ const KINDS: Record<MachinePort['service'], readonly string[]> = {
   flue: ['flue'],
   'hot-water': ['copper'],
   air: ['duct'],
+  // A control port is wired by the room's control wiring, not piped; it
+  // is not checked here (the owner, 2026-10-26: marked, not yet drawn).
+  control: [],
 };
 
 /** Within this angle of the port's direction, its run leaves it. */
@@ -125,26 +128,27 @@ describe.each(PIPED.filter((r) => !BEING_LAID_OUT.includes(r)))(
   '%s: every port connected',
   (room) => {
     const runs = runsIn(room);
-    it.each(portsIn(room).map((p) => [`${p.machine}: ${p.name}`, p] as const))(
-      '%s',
-      (_, port) => {
-        const ends = endingAt(runs, port.at);
-        expect(ends.length, 'a run ends on it').toBeGreaterThan(0);
-        const right = ends.filter((e) => port.kinds.includes(e.run.kind));
-        expect(
-          right.map((e) => e.run.kind),
-          `of the right kind (${port.kinds.join(' or ')}); found ${ends.map((e) => `${e.run.name}: ${e.run.kind}`).join(', ')}`,
-        ).not.toEqual([]);
-        const along = right.some(
-          (e) =>
-            e.leaving[0] * port.outward[0] +
-              e.leaving[1] * port.outward[1] +
-              e.leaving[2] * port.outward[2] >=
-            Math.cos(ANGLE),
-        );
-        expect(along, 'leaving along the port’s direction').toBe(true);
-      },
-    );
+    it.each(
+      portsIn(room)
+        .filter((p) => p.kinds.length > 0)
+        .map((p) => [`${p.machine}: ${p.name}`, p] as const),
+    )('%s', (_, port) => {
+      const ends = endingAt(runs, port.at);
+      expect(ends.length, 'a run ends on it').toBeGreaterThan(0);
+      const right = ends.filter((e) => port.kinds.includes(e.run.kind));
+      expect(
+        right.map((e) => e.run.kind),
+        `of the right kind (${port.kinds.join(' or ')}); found ${ends.map((e) => `${e.run.name}: ${e.run.kind}`).join(', ')}`,
+      ).not.toEqual([]);
+      const along = right.some(
+        (e) =>
+          e.leaving[0] * port.outward[0] +
+            e.leaving[1] * port.outward[1] +
+            e.leaving[2] * port.outward[2] >=
+          Math.cos(ANGLE),
+      );
+      expect(along, 'leaving along the port’s direction').toBe(true);
+    });
   },
 );
 

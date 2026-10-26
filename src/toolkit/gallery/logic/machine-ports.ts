@@ -16,6 +16,7 @@ import {
 } from '../../components/plant/logic/pump-pair';
 import {
   BOOSTER,
+  BOOSTER_CONTROL,
   BREAK_TANK_OUTLET,
   FLOWMETER,
   METER,
@@ -39,7 +40,8 @@ export interface MachinePort {
     | 'gas'
     | 'flue'
     | 'hot-water'
-    | 'air';
+    | 'air'
+    | 'control';
   /** Its machine's model draws this connection itself, so no nozzle is added. */
   drawn?: boolean;
 }
@@ -543,6 +545,12 @@ export function machinePorts(item: Item): MachinePort[] {
           0.076,
           'make-up',
         ),
+        drawn: true,
+      },
+      // Its control port: the gland on top of its control unit (the
+      // owner, 2026-10-26), its status to the mimic.
+      {
+        ...port('status', BOOSTER_CONTROL, [0, 1, 0], 0.02, 'control'),
         drawn: true,
       },
     ];

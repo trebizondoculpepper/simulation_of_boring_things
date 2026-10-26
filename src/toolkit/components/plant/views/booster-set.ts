@@ -41,6 +41,7 @@ import { FINISH, plantTools } from './plant-tools';
 import type { Point } from './plant-tools';
 import {
   BOOSTER,
+  BOOSTER_CONTROL,
   boosterDisplay,
   boosterLamps,
   boosterPressure,
@@ -601,18 +602,18 @@ export function createBoosterSet(
       t.cyl(object, cable, 0.007, 0.016, ex, 0.792, pz, 'y', 8);
     });
     // The network gland, larger, on top of the unit (the owner,
-    // 2026-10-26), its cable leaving up to the room's control bus.
-    t.cyl(object, cable, 0.018, 0.025, cx + 0.11, 1.312, pz, 'y', 12);
-    object.add(
-      createPipe(
-        'pressure-hose',
-        0.016,
-        [
-          [cx + 0.11, 1.32, pz],
-          [cx + 0.11, 2.2, pz],
-        ],
-        { colour: '#1b1d1e' },
-      ),
+    // 2026-10-26): its control port (`BOOSTER_CONTROL`), where the
+    // room's control wiring is to be drawn in; no cable drawn here.
+    t.cyl(
+      object,
+      cable,
+      0.018,
+      0.025,
+      BOOSTER_CONTROL[0],
+      BOOSTER_CONTROL[1] - 0.0125,
+      BOOSTER_CONTROL[2],
+      'y',
+      12,
     );
   }
   // Its pressure gauges on its manifolds, where they measure (the
