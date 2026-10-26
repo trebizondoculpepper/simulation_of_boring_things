@@ -92,16 +92,23 @@ export function createDockOutside(
   // doors). Clipped to the far side of the wall's plane, in world space.
   const outside = new Plane(new Vector3(0, 0, -1), 0);
   const wallPoint = new Vector3();
-  const placePlane = (renderer: { localClippingEnabled: boolean }) => {
+  const eyeAt = new Vector3();
+  const placePlane = (
+    renderer: { localClippingEnabled: boolean },
+    camera: { getWorldPosition(v: Vector3): Vector3 },
+  ) => {
     renderer.localClippingEnabled = true;
     group.updateWorldMatrix(true, false);
     wallPoint.set(0, 0, wallZ).applyMatrix4(group.matrixWorld);
-    // Keep z at or beyond the wall: -z + c >= 0 where c is the wall's z.
-    outside.constant = wallPoint.z;
+    // Inside the building (the owner, 2026-10-26: a cheat), only beyond
+    // the wall: -z + c >= 0, c the wall's z. Out in the yard, all of it,
+    // the sky over the roof behind among it: the plane pushed far away.
+    camera.getWorldPosition(eyeAt);
+    outside.constant = eyeAt.z > wallPoint.z ? wallPoint.z : 1e9;
   };
   sky.dome.material.clippingPlanes = [outside];
   sky.dome.onBeforeRender = (r, _s, camera) => {
-    placePlane(r);
+    placePlane(r, camera);
     camera.getWorldPosition(eye);
     sky.dome.matrixWorld.setPosition(eye);
   };
@@ -132,7 +139,7 @@ export function createDockOutside(
   }
   tarmac.clippingPlanes = [outside];
   const ground = new Mesh(new CircleGeometry(69, 48), tarmac);
-  ground.onBeforeRender = (r) => placePlane(r);
+  ground.onBeforeRender = (r, _s, camera) => placePlane(r, camera);
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(0, YARD_LEVEL, wallZ - 30);
   group.add(ground);
