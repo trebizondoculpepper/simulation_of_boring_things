@@ -1,7 +1,11 @@
+import { attachRoomReflection } from '../../core/views/room-reflection';
 import {
+  AddOperation,
+  AdditiveBlending,
   CircleGeometry,
   Group,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   SphereGeometry,
   TorusGeometry,
@@ -74,12 +78,15 @@ export function createSightGlass(
   // nearly invisible face-on, the room's lights giving it its highlights
   // as one moves; and its bevelled edge, a rounded ring of the same glass
   // where the highlights catch, as on a thick sight glass.
-  const glass = new MeshStandardMaterial({
-    color: '#eef4f6',
-    roughness: 0.03,
-    metalness: 0.15,
+  // The pane shows only what it reflects, the room's own reflection
+  // (`room-reflection.ts`, captured by the room), added over the picture
+  // behind it: no point light's spot on it (the owner, 2026-10-26).
+  const glass = new MeshBasicMaterial({
+    color: '#000000',
+    combine: AddOperation,
+    reflectivity: 0.28,
     transparent: true,
-    opacity: 0.14,
+    blending: AdditiveBlending,
     depthWrite: false,
   });
   kit.materials.push(glass);
@@ -104,12 +111,16 @@ export function createSightGlass(
   pane.rotation.x = Math.PI / 2;
   pane.position.z = 0.009 + rise - sphere;
   group.add(pane);
+  // What it reflects: the room, seen from just in front of it.
+  attachRoomReflection(group, [glass]);
+  // Its rounded edge, smooth: the room's lights catch it in a small
+  // crescent on the side toward them, showing the glass's curved profile.
   const edgeGlass = new MeshStandardMaterial({
     color: '#dfe9ec',
-    roughness: 0.05,
-    metalness: 0.2,
+    roughness: 0.12,
+    metalness: 0.6,
     transparent: true,
-    opacity: 0.25,
+    opacity: 0.35,
   });
   kit.materials.push(edgeGlass);
   const edge = new Mesh(
