@@ -148,6 +148,9 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // 42 → 43: the Wash-O-Tron (`fillDefaults`: its filters filtering, AUTO
   // off).
   42: (world) => world,
+  // 43 → 44: the site's intake in the goods yard (prompt 083): older saves
+  // start a new world (the owner, 2026-10-26: no migration).
+  43: () => ({}),
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

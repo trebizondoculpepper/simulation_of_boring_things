@@ -73,6 +73,7 @@ describe('a save', () => {
       music: newWorld().music,
       fireAlarm: newWorld().fireAlarm,
       washOTron: newWorld().washOTron,
+      intake: newWorld().intake,
     });
   });
 

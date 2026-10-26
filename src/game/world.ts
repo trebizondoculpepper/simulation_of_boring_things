@@ -1,3 +1,13 @@
+import {
+  actOnIntake,
+  newSiteIntake,
+  restoreInside,
+  siteGasM3h,
+  siteLoadKw,
+  stepIntakeMeters,
+  withIntake,
+} from './plant/site-intake';
+import type { IntakeAction, SiteIntake } from './plant/site-intake';
 import { actOnWashOTron, newWashOTron } from './plant/wash-o-tron';
 import type { WashAction, WashOTron } from './plant/wash-o-tron';
 import { stepWashWorld } from './plant/wash-o-tron-world';
@@ -231,7 +241,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 43;
+export const WORLD_VERSION = 44;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -306,6 +316,8 @@ export interface World {
   fireAlarm: FireAlarmState;
   /** The Olympic's filter wash controller (`plant/wash-o-tron.ts`, prompt 072). */
   washOTron: WashOTron;
+  /** The site's intake in the goods yard: the utilities' outside devices and meters (`plant/site-intake.ts`, prompt 083). */
+  intake: SiteIntake;
 }
 
 export function newWorld(): World {
@@ -341,6 +353,7 @@ export function newWorld(): World {
     music: newZoneMusic(),
     fireAlarm: newFireAlarm(),
     washOTron: newWashOTron(),
+    intake: newSiteIntake(),
   };
 }
 
@@ -400,6 +413,7 @@ export type WorldAction =
   | { type: 'fire-alarm'; action: FireAlarmAction }
   | { type: 'pit-pumps'; action: PitPumpAction }
   | { type: 'wash-o-tron'; action: WashAction }
+  | { type: 'intake'; action: IntakeAction }
   | { type: 'booster/changeover'; action: ChangeoverAction };
 
 /** The jacuzzi's drain valve, open or shut, and with it its pool's drain-down. */
@@ -564,6 +578,10 @@ export function applyAction(world: World, action: WorldAction): World {
           booster: actOnChangeover(world.wetHall.booster, action.action),
         },
       };
+    case 'intake': {
+      const intake = actOnIntake(world.intake, action.action);
+      return intake === world.intake ? world : { ...world, intake };
+    }
     case 'wash-o-tron':
       return {
         ...world,
@@ -755,7 +773,35 @@ export function footbathFilling(world: World): boolean {
 }
 
 /** The world `delta` seconds on. */
+/**
+ * The world `delta` seconds on (prompt 083): its consumers see each
+ * service only while both the building's own switch and the utility's
+ * outside device allow it (`withIntake`); after the step the building's
+ * switches stand as they were wherever the intake hid them, and the
+ * intake's meters count the water, gas and electricity taken.
+ */
 export function stepWorld(world: World, delta: number): World {
+  const inside = world.plant;
+  const next = stepPlant(
+    { ...world, plant: withIntake(inside, world.intake) },
+    delta,
+  );
+  const plant = restoreInside(inside, next.plant, world.intake);
+  const effective = withIntake(plant, world.intake);
+  const hours = delta / 3600;
+  const intake = stepIntakeMeters(
+    world.intake,
+    {
+      water: hours > 0 ? (next.wetHall.meter - world.wetHall.meter) / hours : 0,
+      gas: siteGasM3h(next.pools, effective.sources.heat),
+      power: siteLoadKw({ ...next, plant: effective }),
+    },
+    delta,
+  );
+  return { ...next, plant, intake };
+}
+
+function stepPlant(world: World, delta: number): World {
   // The Wash-O-Tron first: the filters' valves it drives this step.
   world = { ...world, ...stepWashWorld(world, delta) };
   // SLOW START, closing the feeders in turn as it goes.

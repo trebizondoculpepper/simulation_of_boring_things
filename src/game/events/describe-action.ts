@@ -283,6 +283,11 @@ function said(
             ? `pump ${action.action.pump + 1} selected duty`
             : `${action.action.act.toUpperCase()} pressed`,
       };
+    case 'intake':
+      return {
+        subject: 'INTAKE',
+        text: `${action.action.service.toUpperCase()} ${action.action.open ? 'ON' : 'OFF'}`,
+      };
     case 'wash-o-tron': {
       const a = action.action;
       return {
