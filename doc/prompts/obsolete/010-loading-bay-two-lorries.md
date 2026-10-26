@@ -1,5 +1,7 @@
 # Prompt: a loading bay two lorries wide, and the generator connection there
 
+Superseded by [073](../073-loading-dock-layout.md) (2026-10-26), which takes in all it asked.
+
 Status: not started (checked 2026-10-26): the bay is still 7.5 m wide with one tanker stand, and the generator connection point is still in the switch room.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply.

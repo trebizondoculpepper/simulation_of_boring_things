@@ -19,5 +19,5 @@ Switching off the main incoming switch leaves the building lit by its emergency 
 ## Remaining (checked 2026-10-26)
 
 - Separate emergency light fittings, central-system versions of the existing designs (`createExitSign`, `createEmergencyBulkhead`, `createEmergencyLight` in `safety-fittings.ts`) and a new twin-spot: maintained exit signs over every exit, twin-spots high in the halls, wet hall and big plant rooms, bulkheads in the small plant rooms and stores, downlights along the corridors; lit from the world's battery, their test lamps showing, in place of the normal fittings' dim level.
-- A hired generator at the connection point (or decided against), feeding the essential load and lighting GENERATOR RUNNING (with [010](010-loading-bay-two-lorries.md)).
+- A hired generator at the connection point (or decided against), feeding the essential load and lighting GENERATOR RUNNING (with [010](obsolete/010-loading-bay-two-lorries.md)).
 - The acceptance check: with the main incoming switch off, the building stays lit by its emergency fittings for the battery's duration, then goes dark, and the battery recharges when the mains return.
