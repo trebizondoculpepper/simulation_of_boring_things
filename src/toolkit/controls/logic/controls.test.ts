@@ -89,6 +89,29 @@ describe('copy shortcuts', () => {
       ).toBe('screenshot');
     expect(copyShortcut({ ...plain, code: 'KeyS', ctrlKey: true })).toBeNull();
   });
+  it('copies a screenshot with Ctrl+Shift+K or Cmd+Shift+K, and lists it', () => {
+    for (const modifier of ['ctrlKey', 'metaKey'] as const)
+      expect(
+        copyShortcut({
+          ...plain,
+          code: 'KeyK',
+          shiftKey: true,
+          [modifier]: true,
+        }),
+      ).toBe('screenshot');
+    const chord = { ...plain, code: 'KeyK', shiftKey: true, ctrlKey: true };
+    expect(copyShortcut({ ...chord, altKey: true })).toBeNull();
+    expect(copyShortcut({ ...chord, metaKey: true })).toBeNull();
+    expect(copyShortcut({ ...chord, shiftKey: false })).toBeNull();
+    expect(copyShortcut({ ...chord, ctrlKey: false })).toBeNull();
+    // The others keep requiring no Shift.
+    expect(copyShortcut({ ...chord, code: 'KeyC' })).toBeNull();
+    expect(copyShortcut({ ...chord, code: 'KeyP' })).toBeNull();
+    expect(controlsHelp('keyboard')).toContain(
+      'Ctrl/Cmd+Shift+K: copy a screenshot',
+    );
+    expect(controlsHelp('touch')).not.toContain('screenshot');
+  });
 });
 
 it('keeps title navigation on unmodified bracket presses and out of keyboard help', () => {

@@ -72,7 +72,7 @@ const BINDINGS: readonly [string, string, string][] = [
   ['Console', '` (key left of 1)', ''],
   ['Copy highlighted object reference', 'Ctrl/Cmd+C', ''],
   ['Copy pin / noclip camera link', 'Ctrl/Cmd+P', ''],
-  ['Copy clean screenshot', 'Ctrl+Alt+S / Cmd+Option+S', ''],
+  ['Copy a screenshot', 'Ctrl/Cmd+Shift+K', ''],
   ['Noclip on / off', 'Ctrl+Shift+N', ''],
   [
     'Fly in noclip',

@@ -3,7 +3,7 @@ import { createJacuzziAmbience } from './toolkit/gallery/views/jacuzzi-ambience'
 import { jacuzziApproachGain } from './toolkit/gallery/logic/jacuzzi-acoustics';
 import './styles/main.css';
 import { createRoomModuleCache } from './toolkit/gallery/logic/room-module-cache';
-import { Plane, Vector3 } from 'three';
+import { Plane, Vector2, Vector3 } from 'three';
 import {
   EQUIPMENT_ROOMS,
   DEV_ROOM_NAMES,
@@ -32,7 +32,11 @@ import { createConsole } from './toolkit/console/console-view';
 import { consoleOpen } from './toolkit/controls/logic/console-open';
 import { noclip } from './toolkit/controls/logic/noclip';
 import { renderScale } from './toolkit/settings/logic/settings';
-import { screenshotPixelRatio } from './toolkit/controls/logic/screenshot-size';
+import {
+  screenshotFileName,
+  screenshotPixelRatio,
+  screenshotSize,
+} from './toolkit/controls/logic/screenshot-size';
 import { METRE } from './toolkit/components/core/logic/units';
 import {
   inertClip,
@@ -190,7 +194,7 @@ positionButton.className = 'location-pin-button';
 const screenshotButton = document.createElement('button');
 screenshotButton.type = 'button';
 screenshotButton.textContent = '▣';
-screenshotButton.title = 'Copy clean screenshot (Ctrl+Alt+S / ⌘+Option+S)';
+screenshotButton.title = 'Copy a screenshot (Ctrl/Cmd+Shift+K)';
 screenshotButton.setAttribute('aria-label', 'Copy screenshot without overlays');
 screenshotButton.className = 'location-pin-button screenshot-button';
 // The player's settings that are the app's to apply: the master volume,
@@ -371,87 +375,240 @@ const copyCameraLocation = async (): Promise<string> => {
     positionButton.disabled = false;
   }
 };
-/** Render the visible room canvases at capture resolution, then restore play quality. */
-const captureScene = (): HTMLCanvasElement | null => {
-  const surface = current ? surfaceOf(current) : null;
-  const draw = surface && rendererOn(surface);
-  if (!surface || !draw?.loop) return null;
-  const underSurface = seeing ? surfaceOf(keyOf(seeing.under)) : null;
-  const under = underSurface && rendererOn(underSurface);
-  const gl = draw.renderer.getContext();
-  const viewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
+/**
+ * The room canvases the player sees now, bottom first, as the page stacks
+ * them: the room shown, one seen through an open doorway under it, a
+ * title shot. Only canvases a room renderer draws: nothing of the page's
+ * interface, which is never on them.
+ */
+const worldLayers = () =>
+  [...(canvas.parentElement?.children ?? [])]
+    .filter(
+      (root): root is HTMLElement =>
+        root instanceof HTMLElement && root.localName === 'section',
+    )
+    .filter((root) => !root.hidden)
+    .map((root, order) => ({
+      root,
+      order,
+      z: Number(root.style.zIndex) || 0,
+    }))
+    .sort((a, b) => a.z - b.z || a.order - b.order)
+    .map(({ root }) => root.querySelector('canvas'))
+    .filter(
+      (surface): surface is HTMLCanvasElement =>
+        surface !== null && !surface.hidden,
+    )
+    .flatMap((surface) => {
+      const draw = rendererOn(surface);
+      return draw ? [{ surface, draw }] : [];
+    });
+/**
+ * A best-quality frame of the view now (prompt 084): every room canvas
+ * seen drawn again at full resolution (render scale 1, whatever the
+ * player's graphics quality), at twice the device's pixel ratio up to
+ * 3840 px wide (`screenshot-size.ts`), through each room's own pipeline;
+ * at the time of its last frame, so nothing moves or runs on; composited
+ * at once into a canvas of its own, before the browser can discard the
+ * drawing; and the rooms' pixel ratios put back. Null with nothing to draw.
+ */
+const captureView = (): HTMLCanvasElement | null => {
+  const layers = worldLayers();
+  const top = layers.at(-1);
+  if (!top) return null;
+  const view = top.draw.renderer.getSize(new Vector2());
+  // The tightest limit of every renderer drawing it.
   const maxDimension = Math.min(
-    8192,
-    draw.renderer.capabilities.maxTextureSize,
-    gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number,
-    viewport[0],
-    viewport[1],
+    ...layers.map(({ draw }) => {
+      const gl = draw.renderer.getContext();
+      const viewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
+      return Math.min(
+        draw.renderer.capabilities.maxTextureSize,
+        gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number,
+        viewport[0],
+        viewport[1],
+      );
+    }),
   );
-  const scale = renderScale(settings.value.renderLevel);
-  const cssWidth = surface.width / draw.renderer.getPixelRatio();
-  const cssHeight = surface.height / draw.renderer.getPixelRatio();
   const ratio = screenshotPixelRatio(
-    cssWidth,
-    cssHeight,
-    draw.renderer.getPixelRatio(),
+    view.x,
+    view.y,
+    globalThis.devicePixelRatio ?? 1,
     maxDimension,
   );
-  const entries = [draw, under].filter((entry) => entry !== null);
-  const original = entries.map((entry) => entry.renderer.getPixelRatio());
+  if (ratio === null) return null;
+  // Each renderer scales the ratio it is given by the render quality.
+  const scale = renderScale(settings.value.renderLevel);
+  const original = layers.map(({ draw }) => draw.renderer.getPixelRatio());
   try {
-    for (const entry of entries) entry.renderer.setPixelRatio(ratio / scale);
-    const time = performance.now();
-    draw.loop(time);
-    draw.after?.(time);
+    for (const { draw } of layers) draw.renderer.setPixelRatio(ratio / scale);
+    // Each frame the browser runs, run again: a paused room is drawn by
+    // the frame of the room over it (`after`).
+    for (const { draw } of layers) {
+      if (draw.paused || !draw.loop) continue;
+      draw.loop(draw.time);
+      draw.after?.(draw.time);
+    }
     const image = document.createElement('canvas');
-    image.width = surface.width;
-    image.height = surface.height;
+    const size = screenshotSize(view.x, view.y, ratio);
+    image.width = size.width;
+    image.height = size.height;
     const context = image.getContext('2d');
     if (!context) return null;
-    if (underSurface)
-      context.drawImage(underSurface, 0, 0, image.width, image.height);
-    context.drawImage(surface, 0, 0, image.width, image.height);
+    for (const { surface } of layers) {
+      // A room drawn but not shown (a staircase seen through) adds nothing.
+      const opacity = Number(surface.style.opacity || 1);
+      if (!(opacity > 0)) continue;
+      context.globalAlpha = Math.min(1, opacity);
+      context.drawImage(surface, 0, 0, image.width, image.height);
+    }
     return image;
   } finally {
-    entries.forEach((entry, index) =>
-      entry.renderer.setPixelRatio(original[index] / scale),
+    layers.forEach(({ draw }, index) =>
+      draw.renderer.setPixelRatio(original[index] / scale),
     );
   }
 };
-const copyScreenshot = async () => {
-  screenshotButton.disabled = true;
-  try {
-    const image = captureScene();
-    if (!image) throw new Error('No game view is available.');
-    const png = new Promise<Blob>((resolve, reject) =>
-      image.toBlob(
-        (blob) =>
-          blob ? resolve(blob) : reject(new Error('PNG encoding failed.')),
-        'image/png',
-      ),
-    );
-    // Supplying a promise keeps the clipboard request in the key/click gesture.
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
-    positionStatus.textContent = `Screenshot copied (${image.width} × ${image.height})`;
-    logCopy(positionStatus.textContent);
-  } catch (error) {
-    positionStatus.textContent =
-      'Could not copy screenshot. Allow clipboard access and try again.';
-    logCopy(`${positionStatus.textContent} ${String(error)}`, true);
-  } finally {
-    screenshotButton.disabled = false;
+/**
+ * A short notice over everything, the title included: what became of a
+ * screenshot, with a Save button where it could only be saved, in case
+ * the browser held its download back.
+ */
+const shotNotice = document.createElement('div');
+shotNotice.className = 'screenshot-notice';
+shotNotice.setAttribute('role', 'status');
+shotNotice.hidden = true;
+document.body.append(shotNotice);
+let shotNoticeTimer = 0;
+const noticeShot = (text: string, save?: () => void) => {
+  shotNotice.replaceChildren(text);
+  if (save) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Save';
+    button.addEventListener('click', save);
+    shotNotice.append(' ', button);
   }
+  shotNotice.hidden = false;
+  window.clearTimeout(shotNoticeTimer);
+  shotNoticeTimer = window.setTimeout(
+    () => (shotNotice.hidden = true),
+    save ? 8000 : 3000,
+  );
+};
+const downloadShot = (blob: Blob, name: string) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+};
+/** The room a screenshot is of, or why there is none to take now. */
+const shotTarget = (): { room: string } | { unavailable: string } => {
+  if (titleBackdrop) {
+    const room = titleBackdrop.shown();
+    return room
+      ? { room }
+      : { unavailable: 'The scene is still loading; try again in a moment' };
+  }
+  if (!current) return { unavailable: 'No game view to capture' };
+  return {
+    room:
+      resolveRoomId(new URLSearchParams(location.search).get('room')) ??
+      current,
+  };
+};
+let shooting = false;
+/**
+ * Copy a best-quality screenshot to the clipboard as a PNG, or save it
+ * where the browser will not (prompt 084). The clipboard write starts here,
+ * in the key press or click, with the PNG still to come, as Safari asks;
+ * the same PNG is saved if it is refused.
+ */
+const copyScreenshot = () => {
+  if (shooting) return;
+  const target = shotTarget();
+  if ('unavailable' in target) {
+    noticeShot(target.unavailable);
+    logCopy(`Screenshot not taken: ${target.unavailable}.`, true);
+    return;
+  }
+  let image: HTMLCanvasElement | null = null;
+  try {
+    image = captureView();
+  } catch (error) {
+    logCopy(`Screenshot failed: ${String(error)}`, true);
+  }
+  if (!image) {
+    noticeShot('Could not take a screenshot');
+    return;
+  }
+  shooting = true;
+  screenshotButton.disabled = true;
+  const dimensions = `${image.width} × ${image.height}`;
+  // Encoding a large PNG can take a moment.
+  noticeShot(`Copying screenshot, ${dimensions}…`);
+  const name = screenshotFileName(target.room, new Date());
+  const png = new Promise<Blob>((resolve, reject) =>
+    image.toBlob(
+      (blob) =>
+        blob ? resolve(blob) : reject(new Error('PNG encoding failed.')),
+      'image/png',
+    ),
+  );
+  png.catch(() => {});
+  let copied: Promise<void>;
+  try {
+    copied =
+      typeof ClipboardItem === 'function' && navigator.clipboard?.write
+        ? navigator.clipboard.write([new ClipboardItem({ 'image/png': png })])
+        : Promise.reject(new Error('This browser cannot copy images.'));
+  } catch (error) {
+    copied = Promise.reject(error);
+  }
+  void copied
+    .then(
+      () => {
+        noticeShot(`Screenshot copied, ${dimensions}`);
+        logCopy(`Screenshot copied, ${dimensions}`);
+      },
+      async (refused) => {
+        let blob: Blob;
+        try {
+          blob = await png;
+        } catch (error) {
+          noticeShot('Could not take a screenshot');
+          logCopy(`Screenshot failed: ${String(error)}`, true);
+          return;
+        }
+        downloadShot(blob, name);
+        noticeShot(`Screenshot saved, ${dimensions}`, () =>
+          downloadShot(blob, name),
+        );
+        logCopy(
+          `Screenshot saved as ${name}, ${dimensions} (not copied: ${String(refused)})`,
+          true,
+        );
+      },
+    )
+    .finally(() => {
+      shooting = false;
+      screenshotButton.disabled = false;
+    });
 };
 setCopyHandler((request) => {
   if (request.kind === 'reference') void copyObjectReference(request.reference);
   else if (request.kind === 'position') void copyCameraLocation();
-  else void copyScreenshot();
+  else copyScreenshot();
 });
 positionButton.addEventListener('animationend', () =>
   positionButton.classList.remove('is-copied'),
 );
 positionButton.addEventListener('click', () => void copyCameraLocation());
-screenshotButton.addEventListener('click', () => void copyScreenshot());
+screenshotButton.addEventListener('click', copyScreenshot);
 // In noclip the pin is a camera: its link is a shot's, `noclip=true` and
 // its roll.
 let wasCamera = noclip.peek();
@@ -873,7 +1030,11 @@ const titleVeil = document.createElement('div');
 titleVeil.className = 'attract-veil';
 titleVeil.hidden = true;
 document.body.append(titleVeil);
-let titleBackdrop: { stop(): void } | null = null;
+let titleBackdrop: {
+  stop(): void;
+  /** The room of the shot on screen, or null while none is ready to be seen. */
+  shown(): RoomId | null;
+} | null = null;
 const startTitleBackdrop = async () => {
   if (titleBackdrop) return;
   // Its rooms are seen, not heard: only the title's theme plays.
@@ -954,14 +1115,21 @@ const startTitleBackdrop = async () => {
     // A few frames drawn behind the black before it fades in.
     seenFrom = performance.now() + 250;
   };
-  const unbindTitleShortcuts = bindTitleShortcuts((command) => {
-    state = controlAttract(state, command);
-    // Restart also rebuilds the same scene on a fresh scenario world. Invalidate
-    // an outstanding import so rapid presses cannot show an outdated request.
-    presentation++;
-    builtFor = -1;
-    titleVeil.style.opacity = '1';
-  });
+  const unbindTitleShortcuts = bindTitleShortcuts(
+    (command) => {
+      state = controlAttract(state, command);
+      // Restart also rebuilds the same scene on a fresh scenario world. Invalidate
+      // an outstanding import so rapid presses cannot show an outdated request.
+      presentation++;
+      builtFor = -1;
+      titleVeil.style.opacity = '1';
+    },
+    // A screenshot of the shot playing, unless the menu or the console
+    // has the keyboard (prompt 084).
+    () => {
+      if (!pauseMenu.isOpen && !consoleOpen.value) copyScreenshot();
+    },
+  );
   titleBackdrop = {
     stop() {
       unbindTitleShortcuts();
@@ -973,6 +1141,10 @@ const startTitleBackdrop = async () => {
       torch.on = playerTorch;
       paused.value = false;
     },
+    shown: () =>
+      shown && state.phase !== 'black' && builtFor === state.shot
+        ? shown.room
+        : null,
   };
   paused.value = true;
   app.hidden = false;

@@ -1,8 +1,13 @@
-import { titleShortcut } from '../logic/controls';
+import { copyShortcut, titleShortcut } from '../logic/controls';
 
-/** Shared input, installed only while the title backdrop is active. */
+/**
+ * Shared input, installed only while the title backdrop is active: its
+ * shots' navigation, and the screenshot chord (the game's own handler
+ * takes no input while the title pauses it).
+ */
 export function bindTitleShortcuts(
   action: (command: 'restart' | 'next') => void,
+  screenshot: () => void,
 ) {
   const keydown = (event: KeyboardEvent) => {
     if (event.defaultPrevented || event.isComposing) return;
@@ -13,6 +18,11 @@ export function bindTitleShortcuts(
       )
     )
       return;
+    if (copyShortcut(event) === 'screenshot') {
+      event.preventDefault();
+      if (!event.repeat) screenshot();
+      return;
+    }
     const command = titleShortcut(event);
     if (!command) return;
     event.preventDefault();

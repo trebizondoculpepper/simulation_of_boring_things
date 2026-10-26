@@ -54,6 +54,12 @@ export interface RoomRenderer {
   paused: boolean;
   /** Run just after each of this room's frames: another room's, drawn under it. */
   after: ((time: number) => void) | null;
+  /**
+   * The time the browser last ran its frame at: run again at this time, a
+   * frame advances nothing (no time has passed) and only draws, as a
+   * screenshot wants (`captureView` in `src/main.ts`).
+   */
+  time: number;
 }
 export function rendererOn(canvas: HTMLCanvasElement) {
   return renderers.get(canvas) ?? null;
@@ -146,6 +152,7 @@ export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
     loop: null,
     paused: false,
     after: null,
+    time: 0,
   };
   renderers.set(canvas, entry);
   const setLoop = renderer.setAnimationLoop.bind(renderer);
@@ -154,6 +161,7 @@ export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
     setLoop(
       callback
         ? (time, frame) => {
+            entry.time = time;
             if (!entry.paused) callback(time, frame);
             entry.after?.(time);
           }

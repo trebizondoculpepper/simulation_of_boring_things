@@ -5,7 +5,7 @@ it('ignores editing and consumed events, and removes its listener when the title
   const target = new EventTarget();
   vi.stubGlobal('document', target);
   const action = vi.fn();
-  const dispose = bindTitleShortcuts(action);
+  const dispose = bindTitleShortcuts(action, vi.fn());
   const press = (code: string, editable = false, consumed = false) => {
     const event = new Event('keydown', { cancelable: true });
     Object.assign(event, {
@@ -34,4 +34,33 @@ it('ignores editing and consumed events, and removes its listener when the title
   dispose();
   expect(press('BracketRight').defaultPrevented).toBe(false);
   expect(action).toHaveBeenCalledTimes(2);
+});
+
+it('takes the screenshot chord on the title, once per press', () => {
+  const target = new EventTarget();
+  vi.stubGlobal('document', target);
+  const action = vi.fn();
+  const screenshot = vi.fn();
+  const dispose = bindTitleShortcuts(action, screenshot);
+  const press = (keys: Record<string, unknown>) => {
+    const event = new Event('keydown', { cancelable: true });
+    Object.assign(event, {
+      code: 'KeyK',
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      shiftKey: true,
+      repeat: false,
+      ...keys,
+    });
+    target.dispatchEvent(event);
+    return event;
+  };
+  expect(press({ ctrlKey: true }).defaultPrevented).toBe(true);
+  press({ metaKey: true });
+  press({ ctrlKey: true, repeat: true });
+  press({ shiftKey: false, ctrlKey: true });
+  expect(screenshot).toHaveBeenCalledTimes(2);
+  expect(action).not.toHaveBeenCalled();
+  dispose();
 });

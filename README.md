@@ -46,7 +46,7 @@ The default reception view faces into the building. `?at=<room id>` starts in a 
 
 Ctrl+C (Cmd+C on Mac) copies the highlighted component’s tag, or its name when untagged. Ctrl+P (Cmd+P) copies the current pin URL, including the camera pose and roll in noclip. Copy results and their values appear in the developer console. These shortcuts leave text fields and selected text copying alone.
 
-Ctrl+Alt+S on PC or Cmd+Option+S on Mac copies a PNG of the game view without HUD overlays. The ▣ button beside the view pin does the same. The game briefly renders the shot at a higher resolution, up to the graphics device's limit and a 16-megapixel budget, then restores the normal rendering quality.
+Ctrl+Shift+K on PC or Cmd+Shift+K on Mac (or the older Ctrl+Alt+S / Cmd+Option+S) copies a best-quality PNG of the game view, with no interface over it, on the title screen too. The ▣ button beside the view pin does the same, where a browser keeps the chord for itself (Firefox's Web Console on Windows and Linux). The shot is drawn again at full resolution, whatever the graphics quality setting, at twice the screen's pixel ratio, at most 3840 pixels wide, within the graphics device's limits and a 16-megapixel budget; then the normal rendering is put back. Where the browser refuses the clipboard, the same PNG downloads instead (`pool-plant-<room>-<date-time>.png`).
 
 Walk with WASD, run with Shift, click to capture the mouse and look, Esc to free the cursor. At a pool ladder, press Use (E, the on-screen Use button or gamepad A) to mount it; hold forward to climb or back to descend. Movement returns to normal at either end. Doors open as you approach and close after you leave. Touch and gamepad also work.
 

@@ -1,6 +1,6 @@
 # 084: A screenshot shortcut, best quality, no overlay
 
-Status: researched 2026-10-26; implementation pending. See the [feasibility research and integration plan](../research/2026-10-26-screenshot-shortcut.md). (Written as 072; renumbered 084, as other sessions took the numbers in between meanwhile.)
+Status: researched 2026-10-26; built 2026-10-26 (`captureView` and `copyScreenshot` in `src/main.ts`, `screenshot-size.ts`, `copyShortcut`), checked in headless Chrome; open doorways, dry peeks, Safari, Firefox and the itch.io embed still to check (TODO). See the [feasibility research and integration plan](../research/2026-10-26-screenshot-shortcut.md). (Written as 072; renumbered 084, as other sessions took the numbers in between meanwhile.)
 
 ## The request
 

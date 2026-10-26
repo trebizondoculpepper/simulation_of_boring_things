@@ -29,6 +29,7 @@ export type ControlAction =
   | 'release'
   | 'copyReference'
   | 'copyPosition'
+  | 'screenshot'
   | 'noclip';
 
 /** Each action's binding on each input, or null where it has none. */
@@ -101,6 +102,11 @@ const POINTER_SCHEME: Record<
     touch: null,
     gamepad: null,
   },
+  screenshot: {
+    mouse: 'Ctrl/Cmd+Shift+K: copy a screenshot',
+    touch: null,
+    gamepad: null,
+  },
   noclip: {
     mouse: 'Ctrl+Shift+N: noclip on / off',
     touch: null,
@@ -135,6 +141,7 @@ const ORDER: readonly ControlAction[] = [
   'console',
   'copyReference',
   'copyPosition',
+  'screenshot',
   'noclip',
   'release',
 ];
@@ -196,7 +203,11 @@ export function isConsoleKey(code: string, key: string) {
   return code === 'IntlBackslash' && ['`', '§', '±', '¬'].includes(key);
 }
 
-/** Clipboard chords, before crouching or noclip's Ctrl acceleration. */
+/**
+ * Clipboard chords, before crouching or noclip's Ctrl acceleration. A
+ * screenshot is Ctrl/Cmd+Shift+K (the owner, 2026-10-26; prompt 084), or
+ * the older Ctrl+Alt+S / Cmd+Option+S.
+ */
 export function copyShortcut(event: {
   code: string;
   ctrlKey: boolean;
@@ -204,7 +215,9 @@ export function copyShortcut(event: {
   altKey: boolean;
   shiftKey: boolean;
 }): 'reference' | 'position' | 'screenshot' | null {
-  if (event.shiftKey || event.ctrlKey === event.metaKey) return null;
+  if (event.ctrlKey === event.metaKey) return null;
+  if (event.shiftKey)
+    return event.code === 'KeyK' && !event.altKey ? 'screenshot' : null;
   if (event.altKey) return event.code === 'KeyS' ? 'screenshot' : null;
   return event.code === 'KeyC'
     ? 'reference'

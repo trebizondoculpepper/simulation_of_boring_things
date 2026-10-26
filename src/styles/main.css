@@ -780,6 +780,35 @@ canvas {
   display: none;
 }
 
+/* What became of a screenshot (src/main.ts, prompt 084): over everything,
+   the title included, for a few seconds. */
+.screenshot-notice {
+  position: fixed;
+  z-index: 1000;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 6px 10px;
+  border: 1px solid var(--hud-amber, #ffa000);
+  border-radius: 4px;
+  background: var(--hud-grey, #222);
+  color: var(--hud-amber, #ffa000);
+  font: bold 13px/1.4 monospace;
+  pointer-events: auto;
+}
+.screenshot-notice[hidden] {
+  display: none;
+}
+.screenshot-notice button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 1px 8px;
+  cursor: pointer;
+}
 /* Behind the title screen, a room of the game drawn at a quarter of the
    resolution (src/main.ts, the title's backdrop): blurred, darkened a
    little and scaled a touch so its softened edges do not show; its HUD
