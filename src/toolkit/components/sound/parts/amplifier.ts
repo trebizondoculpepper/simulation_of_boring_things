@@ -10,6 +10,8 @@ import { tools } from '../../core/views/fitting-tools';
 import { panelMakerMark } from '../../core/views/panel-maker-mark';
 import { createRackUnit } from '../../industrial-control/views/rack-equipment';
 import type { MusicBinding } from './music-binding';
+import { markComponent } from '../../core/views/component-identity';
+import { amplifierStatus } from '../logic/amplifier';
 
 /** A 3U amplifier: facility-powered, with an output switch and level pot. */
 export function amplifier(kit: PanelKit, binding: MusicBinding) {
@@ -22,6 +24,12 @@ export function amplifier(kit: PanelKit, binding: MusicBinding) {
     label: 'SYNCLEX · JACUZZI AMPLIFIER',
   });
   a.object.add(unit.group);
+  // Itself, for the information overlay: its state, as an active component's.
+  markComponent(a.object, {
+    name: 'Synclex jacuzzi amplifier',
+    status: () =>
+      amplifierStatus(binding.amplifier.value, binding.powered.value),
+  });
   const t = tools(kit);
   const on = computed(
     () => binding.powered.value && binding.amplifier.value.on,

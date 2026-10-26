@@ -316,6 +316,14 @@ const HAND_DRAWN_VALVES: Readonly<Record<string, InstalledValve>> = {
     tag: 'PL2-UV1-IV1',
     normal: 'open',
   },
+  // The pool's main drains into its balance tank (the owner, 2026-10-26):
+  // shut, the pool holds its water when its pumps stop; open with them
+  // stopped, it drains into the tank by gravity.
+  'plant_pool_02|Pool main drain|Pool main drain isolating valve': {
+    assetId: 'valve-0110',
+    tag: 'PL2-T1-IV1',
+    normal: 'open',
+  },
   'plant_pool_02|battery-to-contact|Contact tank inlet valve': {
     assetId: 'valve-0065',
     tag: 'PL2-T2-IV1',

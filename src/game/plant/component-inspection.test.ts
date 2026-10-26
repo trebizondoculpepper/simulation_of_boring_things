@@ -101,3 +101,15 @@ it('formats only known maker, model and status fields', () => {
     'UV1 (UV unit) - Off',
   );
 });
+
+describe('an untagged component with a state of its own', () => {
+  it('shows its state after its name', () => {
+    expect(
+      inspectComponent({
+        name: 'Synclex jacuzzi amplifier',
+        status: () => 'Off',
+      })?.title,
+    ).toBe('Synclex jacuzzi amplifier - Off');
+    expect(inspectComponent({ name: 'Rack' })?.title).toBe('Rack');
+  });
+});

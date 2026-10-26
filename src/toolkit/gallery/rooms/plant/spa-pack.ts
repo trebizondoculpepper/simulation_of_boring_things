@@ -364,6 +364,8 @@ export interface SpaPackDemoBinding {
 export interface SpaFilterBinding {
   line(): string;
   mode(): void;
+  /** WASH NOW: its programme started at once. */
+  washNow(): void;
   /** Whether it is washing now (its programme's stop, backwash or rinse). */
   washing(): boolean;
   /** What its wash changes in the cabinet now (`washSignals`). */
@@ -404,6 +406,12 @@ export function spaFilterWorldBinding(
     line: () => spaFilterLine(f()),
     mode: () =>
       store.dispatch({ type: 'spa-filter', pool, action: { act: 'mode' } }),
+    washNow: () =>
+      store.dispatch({
+        type: 'spa-filter',
+        pool,
+        action: { act: 'wash-now' },
+      }),
     washing: () => !filtering(f()),
     signals: () => washSignals(f()),
     glass: (pumping) => spaFilterGlass(f(), pumping),
@@ -732,6 +740,7 @@ export function buildSpaPack(
     // One display on both, the maker's dot-matrix (the owner, 2026-10-25).
     display: 'lcd',
     onMode: () => filterBinding?.mode(),
+    onWashNow: () => filterBinding?.washNow(),
     parts,
     onSet: (step) => {
       const celsius = clampSetpoint(setting() + step);

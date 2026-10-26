@@ -718,6 +718,66 @@ function worldGasStation(kit: PanelKit, zone: GasZoneId): LiveExhibit {
  * facing east: the detector low (ozone is heavier than air), the
  * sounder-beacon on top, ACCEPT and RESET at hand height.
  */
+/**
+ * The ozone monitor's supply conduit, in its machine's frame: from its
+ * post's top straight up to the services ceiling, or, under a deck (the
+ * Olympic's gantry), up to just under it and back to the nearest wall,
+ * passing the deck against the wall (the owner, 2026-10-26: a conduit
+ * may pierce the gantry only very close to the wall).
+ */
+function monitorSupply(
+  room: string,
+  item: Item,
+  postX: number,
+  postZ: number,
+  postTop: number,
+  od: number,
+): [number, number, number][] {
+  const structure = roomStructure(room);
+  const ceiling = structure?.ceilingZone ?? postTop + 1;
+  const straight: [number, number, number][] = [
+    [postX, postTop, postZ],
+    [postX, ceiling, postZ],
+  ];
+  const p = layoutRoom(room)?.placed.find(
+    (q) => q.item.key === item.key && q.item.label === item.label,
+  );
+  if (!structure || !p) return straight;
+  const c = Math.cos(p.yaw);
+  const sn = Math.sin(p.yaw);
+  const wx = p.x + postX * c + postZ * sn;
+  const wz = p.z - postX * sn + postZ * c;
+  const deck = structure.obstacles.find(
+    (o) =>
+      o.kind === 'landing' &&
+      o.minY > postTop &&
+      wx > o.minX &&
+      wx < o.maxX &&
+      wz > o.minZ &&
+      wz < o.maxZ,
+  );
+  if (!deck) return straight;
+  const { walls } = structure;
+  const [dx, dz, dist] = (
+    [
+      [1, 0, walls.east - wx],
+      [-1, 0, wx - walls.west],
+      [0, 1, walls.south - wz],
+      [0, -1, wz - walls.north],
+    ] as const
+  ).reduce((a, b) => (b[2] < a[2] ? b : a));
+  const reach = dist - 0.03 - od / 2;
+  const lx = postX + (dx * c - dz * sn) * reach;
+  const lz = postZ + (dx * sn + dz * c) * reach;
+  const under = deck.minY - 0.1;
+  return [
+    [postX, postTop, postZ],
+    [postX, under, postZ],
+    [lx, under, lz],
+    [lx, ceiling, lz],
+  ];
+}
+
 function withOzoneStation(
   kit: PanelKit,
   built: Object3D | LiveExhibit,
@@ -792,10 +852,11 @@ function withOzoneStation(
   post.position.set(postX, postTop / 2, postZ);
   const foot = new Mesh(new BoxGeometry(0.2, 0.01, 0.2), galv);
   foot.position.set(postX, 0.005, postZ);
-  const conduit = createPipe('steel-screwed', 0.0269, [
-    [postX, postTop, postZ],
-    [postX, roomStructure(room)?.ceilingZone ?? postTop + 1, postZ],
-  ]);
+  const conduit = createPipe(
+    'steel-screwed',
+    0.0269,
+    monitorSupply(room, item, postX, postZ, postTop, 0.0269),
+  );
   conduit.name = 'Ozone detection supply';
   // Its own installation beside the generator, not part of it: the room
   // takes it out into its installed services (`installedBeside`).

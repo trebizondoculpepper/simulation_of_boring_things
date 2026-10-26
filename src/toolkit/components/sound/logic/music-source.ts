@@ -35,3 +35,18 @@ export function stepMusicSource(
   }
   return { track, position };
 }
+
+/**
+ * What the source says it is doing, for the information overlay (the
+ * owner, 2026-10-25: it should say what is playing): the track's title
+ * while it has power, else Off.
+ */
+export function musicSourceStatus(
+  s: MusicSourceState,
+  powered: boolean,
+  titles: readonly string[],
+): string {
+  if (!powered) return 'Off';
+  const title = titles[s.track];
+  return title ? `Playing “${title}”` : 'Playing';
+}

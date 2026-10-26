@@ -1,6 +1,54 @@
 # 063: Component information, what remains
 
-Status: opened 2026-10-25 by the overnight session that implemented prompt [060](done/060-inferred-component-descriptions.md) (descriptions) and stage 1 of prompt [061](061-component-information-overlay.md) (the inspection overlay), at the owner's request: "If you think there's a problem with them, get as much as you can done, and then make a new mission called Mission 62 to remediate what's left." Prompt 062 had been taken a few minutes earlier by [the HUD declutter](done/062-hud-declutter.md), so this is 063.
+Status: opened 2026-10-25 by the overnight session that implemented prompt [060](done/060-inferred-component-descriptions.md) (descriptions) and stage 1 of prompt [061](061-component-information-overlay.md) (the inspection overlay), at the owner's request: "If you think there's a problem with them, get as much as you can done, and then make a new mission called Mission 62 to remediate what's left." Prompt 062 had been taken a few minutes earlier by [the HUD declutter](done/062-hud-declutter.md), so this is 063. Reviewed 2026-10-26: the main work (every room bound to its model) is done; eight smaller items remain (see the review below).
+
+## Review, 2026-10-26: what is still to do
+
+Checked against the code on 2026-10-26 (main at the time). **Still needed, but much smaller than when it was opened.**
+
+**Done since it was opened:**
+
+- **Every plant room is bound to its model** (items 0 and 1, the main work): each has a schematic (`schematics.ts`: lounge, jacuzzi, footbath, wet hall, boiler house, switch room, the stores, loading bay, air plant), and `world-in-model.unbound.json` pins **0 unbound drawn things in every room**, down from 361 of 479. The schematic rooms' valves are derived from their schematics (`model-valves.ts`), with hierarchical tags and routes, so their descriptions read as the rulings ask: PL3-BT1-IV1 gives "Isolates water flowing from the water service to the jacuzzi balance tank." (061's acceptance sentence).
+- **Valve descriptions:** 83 of the 86 registered valves have one; the three left are below.
+- **The footbath's overflow valve PL4-PW1-IV2** (answer 4): removed.
+- **Part inspection** (item 6, partly): prompt [068](done/068-inspect-component-parts.md) named controls, lamps and readouts inside panels (the lounge mimic, the pump panels' doors, flowmeters); the jacuzzi music rack's source and amplifier now name themselves and their state (2026-10-26); the pool halls mark some components.
+- **Statuses** (item 7, partly): UV units (On or Off) and ozone monitors have them now, beside the pumps, pump sets, tanks, booster set, cabinets and valves.
+
+**Actions, in order** (quickest first; each ends with the project's five checks and its `TODO.md` item ticked with its commit):
+
+1. **Describe the pumps' two discharge valves, PL2-P1-IV3 and PL2-P1-IV4.**
+   - In `olympic-plumbing.ts`, give the fittings `pumps.dischargeA.iso` and `pumps.dischargeB.iso` (set by the room's code on the `Discharge A` and `Discharge B` risers) the annex's links `pumps.dischargeA` and `pumps.dischargeB` (`olympic-annex.ts`), so `olympicValveRoutes()` gives each a route.
+   - Done when both read "Isolates water flowing from the circulation pump … to …", and `component-descriptions.test.ts` no longer lists them as unrouted.
+2. **Describe the regulating valve, PL2-F-RV1** (answer 5).
+   - Add a regulating-valve template to `component-descriptions.ts`: "Regulates <medium> flowing from <source> to <destination>.", chosen by the fitting's kind (`regulating-valve`), beside the isolating one.
+   - Put `battery.outlet.regulating` on the enhanced network as a fitting of a link (by a plumber rule, not the room's code), so its route is derived.
+   - Done when PL2-F-RV1 reads "Regulates water flowing from the filters' outlet header to …" and all 86 registered valves have a description.
+3. **Derive the Olympic's valve tags; the filters' by function** (answer 3).
+   - Replace `valveName`'s hand table in `olympic-plumbing.ts` with tags derived from the hierarchy (room, the machine served, the fitting's role and number), as `model-valves.ts` does for the schematic rooms.
+   - The filters' five valves become IV1 inlet, IV2 outlet, BV1 backwash in, BV2 backwash out, RNV1 rinse, DV1 drain (PL2-F1-IV1 …), the same scheme in every room; update the registers, the battery's mimic and panels, the manual and the tests that name V1 to V5.
+   - Bump `WORLD_VERSION` (32 now) with no migration (answer 6: a changed network may discard the saved world).
+   - Done when no tag in `olympic-plumbing.ts` is written by hand and `registration.test.ts` passes.
+4. **Hierarchical pump tags** (answer 2).
+   - Rename the starters in `motor-starters.ts` (`MOTORS`: P-101A, P-101B, P-201A, P-201B) to PL2-P1-P1, PL2-P1-P2, PL1-P1-P1, PL1-P1-P2, and every use: `world.ts`, `pools.ts`, `services.ts`, `lounge-valves.ts`, `lounge-schematic.ts`, `part-inspection.ts`, `world-reading.ts`, `lounge-filter-mimic.ts`, `room-equipment.ts`, `dosing-equipment.ts`, `plant-corridor-room.ts`, the pump plates (`pumps-plant.ts`), the panels, the console and the tests.
+   - Bump `WORLD_VERSION` with no migration (answer 6).
+   - Done when no `P-101`/`P-201` tag remains in the source and the overlay, plates, panels and console all show the new tags.
+5. **Statuses for the kinds still without one** (item 7).
+   - In `statusBindingFor` (`component-descriptions.ts`) and `component-status.ts`, from the world only: the sand filters (In service, Backwashing, from the battery's flows and the lounge's valves), the heat exchangers (heating or not, from their primary valves and flow), the dosing pumps (dosing or stopped), the boilers (firing, from `boiler-house.ts`).
+   - The AHUs last: first derive one tag set from the other (the catalogue's AP-AHU1 and the world's AHU-801 in `air-handling.ts`), never joining them by index.
+   - Done when each reads "currently …" in the overlay, tested per kind.
+6. **The registers derived from the network** (item 3).
+   - First write the design for the owner's sign-off: what each register keeps (if anything, now that answer 6 lifts persistence), where the tags and names come from, and what replaces `installed-valves.ts`, `installed-asset-ids.ts`, `installed-fixtures.ts`, `installed-feeders.ts` and `ROOM_NAMES`. Build only once it is approved.
+7. **Mark the components still unmarked** (item 6).
+   - The corridors and the development rooms other than dev0: each engineering item marked by tag or name (`markComponent`), decorative where it is set dressing; then check the pool halls' coverage with the inspection audit (`inspection-audit.ts`).
+8. **Stage 1's remaining acceptance checks** (item 5), in the browser:
+   - pointer lock (centre aim), a gamepad and touch;
+   - narrow screens (two lines at phone width, `.controls-help` at the top on touch);
+   - ladders, carrying, noclip, the pause menu, the console and room changes;
+   - a component behind a closed cabinet door, named only with the door open (first check that something inside the jacuzzi's cabinet is now a component of its own, since 064 bound the room to its model).
+   - Record each check here, then ask the owner to accept stage 1.
+9. **Stage 2, the action narratives** (061): begun once the owner has accepted stage 1.
+
+The sections below are the mission as opened, kept as the record.
 
 ## The owner's rulings that shape it (2026-10-25, overnight)
 

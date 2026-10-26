@@ -77,14 +77,20 @@ export interface CabinetBootInputs {
 /** Whether it lets its pump run: running, every servo open. */
 export const cabinetReady = (b: CabinetBoot) => b.phase === 'running';
 
+/**
+ * Whether it commands its `turn`th servo open (from 0): running, or
+ * starting and that servo's turn come; never while booting or in its self
+ * test (the owner, 2026-10-25). The cabinet's motorised valves outside it
+ * take their turns by this too.
+ */
+export const servoCommanded = (b: CabinetBoot, turn: number) =>
+  b.phase === 'running' ||
+  (b.phase === 'starting' && b.time >= turn * BOOT.stagger);
+
 /** Each servo, as far as its phase commands it: opened in turn while it starts. */
 function commanded(b: CabinetBoot): Record<CabinetServo, boolean> {
   return Object.fromEntries(
-    CABINET_SERVOS.map((s, i) => [
-      s,
-      b.phase === 'running' ||
-        (b.phase === 'starting' && b.time >= i * BOOT.stagger),
-    ]),
+    CABINET_SERVOS.map((s, i) => [s, servoCommanded(b, i)]),
   ) as Record<CabinetServo, boolean>;
 }
 

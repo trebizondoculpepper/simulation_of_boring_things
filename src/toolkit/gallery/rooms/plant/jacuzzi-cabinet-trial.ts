@@ -71,6 +71,7 @@ const binding: JacuzziCabinetBinding = {
     signals: () => washSignals(state.value.filter),
     glass: (pumping: boolean) => spaFilterGlass(state.value.filter, pumping),
     mode: () => act({ act: 'filter', action: { act: 'mode' } }),
+    washNow: () => act({ act: 'filter', action: { act: 'wash-now' } }),
   },
   runs: () => trialRuns(state.value),
   toggle: (what) => act({ act: 'toggle', what }),

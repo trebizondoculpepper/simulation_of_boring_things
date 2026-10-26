@@ -395,6 +395,8 @@ export function stepPoolsWater(
     makeUpCalling: boolean;
     /** Gravity drain coefficient, m³/h per square root metre of tank depth. */
     tankDrain?: number;
+    /** Its main drains' valve into the tank shut. */
+    mainDrainShut?: boolean;
   },
   /** The lounge filter battery's return and waste, from its valve positions. */
   lounge?: (running: boolean) => { toPool: number; toWaste: number },
@@ -540,6 +542,7 @@ export function stepPoolsWater(
               toWaste: battery.toWaste,
               makeUpCalling: battery.makeUpCalling,
               tankDrain: battery.tankDrain ?? 0,
+              ...(battery.mainDrainShut ? { mainDrainShut: true } : {}),
             }
           : loungeFlows
             ? {

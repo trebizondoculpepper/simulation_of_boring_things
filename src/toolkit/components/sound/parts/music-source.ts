@@ -4,6 +4,8 @@ import { tools } from '../../core/views/fitting-tools';
 import { createRackUnit } from '../../industrial-control/views/rack-equipment';
 import { createCharacterLcd } from '../../industrial-control/views/panel-instruments';
 import type { MusicBinding } from './music-binding';
+import { markComponent } from '../../core/views/component-identity';
+import { musicSourceStatus } from '../logic/music-source';
 
 /** A 1U music_source: fixed programme transport, character LCD and NEXT. */
 export function music_source(
@@ -20,6 +22,12 @@ export function music_source(
     label: 'SYNCLEX · MUSIC SOURCE',
   });
   a.object.add(unit.group);
+  // Itself, for the information overlay: what it is playing.
+  markComponent(a.object, {
+    name: 'Synclex music source',
+    status: () =>
+      musicSourceStatus(binding.source.value, binding.powered.value, titles),
+  });
   const t = tools(kit);
   const lcd = createCharacterLcd(kit, {
     columns: 24,
