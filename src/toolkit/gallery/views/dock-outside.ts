@@ -260,5 +260,184 @@ export function createDockOutside(
       group.add(wall);
     }
   }
+  // Its roof (the owner, 2026-10-26): the utility block's shallow-pitched
+  // roof of profiled steel, its trapezoidal ribs running down the slope
+  // to a gutter at the eaves, a fascia over the wall's head; carried on
+  // and faded with the wall.
+  {
+    const ribs = document.createElement('canvas');
+    ribs.width = 64;
+    ribs.height = 8;
+    const g = ribs.getContext('2d')!;
+    g.fillStyle = '#8d9496';
+    g.fillRect(0, 0, 64, 8);
+    g.fillStyle = '#6c7375';
+    g.fillRect(0, 0, 10, 8);
+    g.fillStyle = '#b1b7b9';
+    g.fillRect(10, 0, 4, 8);
+    g.fillRect(60, 0, 4, 8);
+    const ribMap = new CanvasTexture(ribs);
+    ribMap.colorSpace = SRGBColorSpace;
+    ribMap.wrapS = ribMap.wrapT = RepeatWrapping;
+    kit.textures.push(ribMap);
+    const roofTop = 7.3;
+    const depth = 24;
+    const pitch = (4 * Math.PI) / 180;
+    const run = 2 * 68;
+    // Fading along the building as the wall does.
+    const fade = document.createElement('canvas');
+    fade.width = 256;
+    fade.height = 4;
+    const f = fade.getContext('2d')!;
+    const grad = f.createLinearGradient(0, 0, 256, 0);
+    grad.addColorStop(0, '#000000');
+    grad.addColorStop(0.35, '#ffffff');
+    grad.addColorStop(0.65, '#ffffff');
+    grad.addColorStop(1, '#000000');
+    f.fillStyle = grad;
+    f.fillRect(0, 0, 256, 4);
+    const alphaMap = new CanvasTexture(fade);
+    kit.textures.push(alphaMap);
+    const sheet = new MeshStandardMaterial({
+      map: ribMap,
+      roughness: 0.45,
+      metalness: 0.55,
+      alphaMap,
+      transparent: true,
+      depthWrite: false,
+    });
+    kit.materials.push(sheet);
+    const roof = new Mesh(new PlaneGeometry(run, depth), sheet);
+    // Its UVs: ribs every 0.333 m along the building, the fade once across.
+    const uv = roof.geometry.attributes.uv;
+    const pos = roof.geometry.attributes.position;
+    for (let k = 0; k < uv.count; k++) uv.setXY(k, pos.getX(k) / 0.333, 0);
+    uv.needsUpdate = true;
+    ribMap.repeat.set(1, 1);
+    alphaMap.repeat.set(1 / (run / 0.333), 1);
+    alphaMap.offset.set(0.5, 0);
+    roof.rotation.x = -Math.PI / 2 - pitch;
+    roof.position.set(
+      0,
+      roofTop + (depth / 2) * Math.sin(pitch) + 0.15,
+      wallZ - 0.35 + depth / 2,
+    );
+    group.add(roof);
+    const trimM = new MeshStandardMaterial({
+      color: '#5f6b70',
+      roughness: 0.5,
+      metalness: 0.4,
+      alphaMap,
+      transparent: true,
+      depthWrite: false,
+    });
+    kit.materials.push(trimM);
+    const trim = (h: number, d: number, y: number, z: number) => {
+      const m = new Mesh(new BoxGeometry(run, h, d), trimM);
+      const u = m.geometry.attributes.uv;
+      const p = m.geometry.attributes.position;
+      for (let k = 0; k < u.count; k++) u.setXY(k, p.getX(k) / 0.333, 0);
+      u.needsUpdate = true;
+      m.position.set(0, y, z);
+      group.add(m);
+    };
+    // The fascia over the wall's head, and the eaves gutter before it.
+    trim(0.5, 0.06, roofTop, wallZ - 0.03);
+    trim(0.15, 0.18, roofTop + 0.1, wallZ - 0.3);
+  }
+  // Its sign, over the openings (the owner, 2026-10-26).
+  {
+    const canvas = document.createElement('canvas');
+    canvas.width = 2048;
+    canvas.height = 256;
+    const g = canvas.getContext('2d')!;
+    g.fillStyle = '#123f5c';
+    g.fillRect(0, 0, 2048, 256);
+    g.fillStyle = '#f4c542';
+    g.fillRect(0, 216, 2048, 16);
+    g.fillStyle = '#ffffff';
+    g.font = 'bold 104px sans-serif';
+    g.textAlign = 'center';
+    g.fillText('SUNNYSIDE LEISURE CENTRE', 1024, 118);
+    g.font = 'bold 64px sans-serif';
+    g.fillStyle = '#f4c542';
+    g.fillText('UTILITY AREA C', 1024, 192);
+    const map = new CanvasTexture(canvas);
+    map.colorSpace = SRGBColorSpace;
+    kit.textures.push(map);
+    const m = new MeshStandardMaterial({ map, roughness: 0.5 });
+    kit.materials.push(m);
+    const sign = new Mesh(new BoxGeometry(7.2, 0.9, 0.05), m);
+    sign.position.set(0, 6.05, wallZ - 0.03);
+    sign.rotation.y = Math.PI;
+    group.add(sign);
+  }
+  // In the distance, the boiler house's flue (the owner, 2026-10-26): its
+  // gas condensing boilers' twin-wall stainless flues, clustered on a
+  // galvanised lattice support, rising above the roof to their caps.
+  {
+    const flue = new Group();
+    flue.name = 'Boiler house flue stack';
+    const steel = new MeshStandardMaterial({
+      color: '#c3c8ca',
+      roughness: 0.3,
+      metalness: 0.85,
+    });
+    const galv = new MeshStandardMaterial({
+      color: '#9da3a3',
+      roughness: 0.5,
+      metalness: 0.6,
+    });
+    kit.materials.push(steel, galv);
+    const base = 7.6;
+    const top = 19;
+    // Five flues, one a boiler, in a tight ring.
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * Math.PI * 2;
+      const x = Math.cos(a) * 0.45;
+      const z = Math.sin(a) * 0.45;
+      const h = top - base - (k % 2) * 0.6;
+      const pipe = new Mesh(new CylinderGeometry(0.15, 0.15, h, 16), steel);
+      pipe.position.set(x, base + h / 2, z);
+      flue.add(pipe);
+      // Its terminal cap, and a band at each joint.
+      const cap = new Mesh(new CylinderGeometry(0.22, 0.16, 0.2, 16), steel);
+      cap.position.set(x, base + h + 0.1, z);
+      flue.add(cap);
+      for (let y = base + 1; y < base + h; y += 1.2) {
+        const band = new Mesh(
+          new CylinderGeometry(0.165, 0.165, 0.05, 16),
+          galv,
+        );
+        band.position.set(x, y, z);
+        flue.add(band);
+      }
+    }
+    // The lattice support: four legs and their bracing rings.
+    const span = 0.9;
+    for (const [x, z] of [
+      [-span, -span],
+      [span, -span],
+      [span, span],
+      [-span, span],
+    ] as const) {
+      const leg = new Mesh(new BoxGeometry(0.08, top - 1 - base, 0.08), galv);
+      leg.position.set(x, base + (top - 1 - base) / 2, z);
+      flue.add(leg);
+    }
+    for (let y = base + 0.5; y < top - 1; y += 1.6)
+      for (const [w, d, x, z] of [
+        [2 * span, 0.05, 0, -span],
+        [2 * span, 0.05, 0, span],
+        [0.05, 2 * span, -span, 0],
+        [0.05, 2 * span, span, 0],
+      ] as const) {
+        const bar = new Mesh(new BoxGeometry(w, 0.05, d), galv);
+        bar.position.set(x, y, z);
+        flue.add(bar);
+      }
+    flue.position.set(14, 0, wallZ + 15);
+    group.add(flue);
+  }
   return { group };
 }
