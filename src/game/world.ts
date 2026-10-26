@@ -1,3 +1,6 @@
+import { actOnWashOTron, newWashOTron } from './plant/wash-o-tron';
+import type { WashAction, WashOTron } from './plant/wash-o-tron';
+import { stepWashWorld } from './plant/wash-o-tron-world';
 import {
   actOnChangeover,
   changeoverFlow,
@@ -228,7 +231,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 42;
+export const WORLD_VERSION = 43;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -301,6 +304,8 @@ export interface World {
   music: ZoneMusicState;
   /** The fire alarm's call points (`plant/fire-alarm.ts`). */
   fireAlarm: FireAlarmState;
+  /** The Olympic's filter wash controller (`plant/wash-o-tron.ts`, prompt 072). */
+  washOTron: WashOTron;
 }
 
 export function newWorld(): World {
@@ -335,6 +340,7 @@ export function newWorld(): World {
     boilerGas: newBoilerGas(),
     music: newZoneMusic(),
     fireAlarm: newFireAlarm(),
+    washOTron: newWashOTron(),
   };
 }
 
@@ -393,6 +399,7 @@ export type WorldAction =
   | { type: 'music'; action: ZoneMusicAction }
   | { type: 'fire-alarm'; action: FireAlarmAction }
   | { type: 'pit-pumps'; action: PitPumpAction }
+  | { type: 'wash-o-tron'; action: WashAction }
   | { type: 'booster/changeover'; action: ChangeoverAction };
 
 /** The jacuzzi's drain valve, open or shut, and with it its pool's drain-down. */
@@ -556,6 +563,11 @@ export function applyAction(world: World, action: WorldAction): World {
           ...world.wetHall,
           booster: actOnChangeover(world.wetHall.booster, action.action),
         },
+      };
+    case 'wash-o-tron':
+      return {
+        ...world,
+        washOTron: actOnWashOTron(world.washOTron, action.action, world.time),
       };
     case 'pit-pumps':
       return {
@@ -744,6 +756,8 @@ export function footbathFilling(world: World): boolean {
 
 /** The world `delta` seconds on. */
 export function stepWorld(world: World, delta: number): World {
+  // The Wash-O-Tron first: the filters' valves it drives this step.
+  world = { ...world, ...stepWashWorld(world, delta) };
   // SLOW START, closing the feeders in turn as it goes.
   if (world.startup >= 0) {
     const s = slowStartAt(world.plant, world.time - world.startup);

@@ -283,6 +283,18 @@ function said(
             ? `pump ${action.action.pump + 1} selected duty`
             : `${action.action.act.toUpperCase()} pressed`,
       };
+    case 'wash-o-tron': {
+      const a = action.action;
+      return {
+        subject: 'WASH-O-TRON',
+        text:
+          a.act === 'mode'
+            ? `F${a.filter + 1} ${a.mode.toUpperCase()}`
+            : 'filter' in a
+              ? `F${a.filter + 1} ${a.act.toUpperCase()}`
+              : a.act.toUpperCase(),
+      };
+    }
     case 'pit-pumps':
       return {
         subject: 'PIT PUMPS',

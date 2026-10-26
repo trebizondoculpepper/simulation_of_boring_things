@@ -398,6 +398,8 @@ export const WORLD_HEALTH_COVERAGE = {
   music: 'not health: the halls’ music',
   fireAlarm:
     'not checked: an alarm raised by hand, seen and heard where it sounds',
+  washOTron:
+    'not checked: the filters’ wash controller; a filter it leaves washing shows in the pool’s flow',
 } as const satisfies Record<keyof World, string>;
 
 /**

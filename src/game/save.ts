@@ -145,6 +145,9 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
     const valves = (w.installedValves ?? {}) as Record<string, boolean>;
     return { ...w, installedValves: { ...valves, 'valve-0034': true } };
   },
+  // 42 → 43: the Wash-O-Tron (`fillDefaults`: its filters filtering, AUTO
+  // off).
+  42: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {
