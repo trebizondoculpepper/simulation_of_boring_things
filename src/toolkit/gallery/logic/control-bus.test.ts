@@ -1,3 +1,4 @@
+import { machinePorts } from './machine-ports';
 import { deckOf } from './room-structure';
 import { describe, expect, it } from 'vite-plus/test';
 import {
@@ -79,13 +80,32 @@ describe('a room’s control bus', () => {
         const end = stubs[0].points.at(-1)!;
         const onBus = lengths.some((t) => toSegment(end, t.from, t.to) < 0.06);
         expect(onBus, `${key} ends on the bus`).toBe(true);
-        expect(len(stubs[0].points), key).toBeLessThan(3);
+        // A device by a wall is close to its bus; one standing out in the
+        // room wired from its own control port (the booster set's gland)
+        // goes up to the bus's height and square across to it.
+        const p = placed.find((q) => q.item.key === key)!;
+        const ownPort = machinePorts(p.item).some(
+          (q) => q.service === 'control',
+        );
+        expect(len(stubs[0].points), key).toBeLessThan(ownPort ? 10 : 3);
       }
     });
 
     it('gives no control device a feed of its own from the ceiling', () => {
+      // Bar a machine wired at a control port of its own (the booster
+      // set), which takes its power by its own feed too.
+      const ported = new Set(
+        placed
+          .filter((p) =>
+            machinePorts(p.item).some((q) => q.service === 'control'),
+          )
+          .map((p) => p.item.key),
+      );
       const feeds = roomServiceRoutes(room).filter(
-        (r) => isControlDevice(r.to) && !r.name.endsWith(' control'),
+        (r) =>
+          isControlDevice(r.to) &&
+          !ported.has(r.to) &&
+          !r.name.endsWith(' control'),
       );
       expect(feeds.map((r) => r.name)).toEqual([]);
     });

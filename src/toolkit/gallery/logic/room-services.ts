@@ -246,8 +246,14 @@ export function roomServiceRoutes(
     for (const [i, p] of placed.entries()) {
       if (!active(p.item.key)) continue;
       // Control devices take their power and signals from the room's
-      // control bus (`control-bus.ts`), not a feed of their own.
-      if (isControlDevice(p.item.key)) continue;
+      // control bus (`control-bus.ts`), not a feed of their own; but a
+      // machine wired to the bus at a control port of its own (the
+      // booster set) still takes its power by its own feed.
+      if (
+        isControlDevice(p.item.key) &&
+        !machinePorts(p.item).some((q) => q.service === 'control')
+      )
+        continue;
       // The switch room's cabinets carry hundreds of amps: heavy trunking
       // to the cable ladder (`cable-containment.ts`), not a conduit.
       if (room === 'switch_room' && SWITCHGEAR.has(p.item.key)) continue;

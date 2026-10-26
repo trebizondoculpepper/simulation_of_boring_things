@@ -201,7 +201,15 @@ export function wetHallPlumbing() {
   // tank's face, past its ladder's cage.
   const inPit = (end: PortEnd) => end.at[1] < 0.2 && end.outward[1] > 0;
   const lead = (l: WetHallLine, end: PortEnd) =>
-    inPit(end) && end !== sewerEnd(l) ? 1.6 : 0.2;
+    inPit(end) && end !== sewerEnd(l)
+      ? 1.6
+      : // The booster set's discharge out level far enough for its
+        // motorised valve on the straight, on a floor stand, before it
+        // turns up (the owner, 2026-10-26: it sat on the riser, held by
+        // nothing).
+        l.link === 'Make-up main to the pool plant rooms' && end === l.start
+        ? 0.7
+        : 0.2;
   const sewerEnd = (l: WetHallLine) =>
     l.link === 'Backwash discharge to the sewer' ? l.end : undefined;
   // Two ports facing each other on one line are joined straight, a
@@ -301,8 +309,11 @@ export function wetHallPlumbing() {
             bends: 0.06,
             reach: [0, 1.8],
           }
-        : straight.has(l.link)
-          ? // A spool or elbow between ports, low: worked crouching.
+        : straight.has(l.link) ||
+            l.link === 'Make-up main to the pool plant rooms'
+          ? // A spool or elbow between ports, low: worked crouching; or a
+            // motorised valve, worked from its panel, set low on the level
+            // run where it is carried.
             { reach: [0, 1.8] }
           : {},
     );

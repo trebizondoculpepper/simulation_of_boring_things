@@ -145,7 +145,16 @@ export function roomStructure(
   const { w, d, keepClear, solid } = layout.box;
   const machines = layout.placed.map((p) =>
     p.item.mount === 'floor'
-      ? box(p.item.label, 'machine', p.footprint, 0, p.item.h)
+      ? // A skid (the booster set) offers only its base frame to fix to:
+        // above it its pumps stand apart, nothing to bracket off (the
+        // owner, 2026-10-26: a bracket hung in the air by its end).
+        box(
+          p.item.label,
+          'machine',
+          p.footprint,
+          0,
+          p.item.key === 'booster-set' ? 0.12 : p.item.h,
+        )
       : box(
           p.item.label,
           'machine',

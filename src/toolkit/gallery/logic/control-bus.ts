@@ -1,3 +1,4 @@
+import { machinePorts, placedPort } from './machine-ports';
 import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
 import type { Placed, Side } from './room-equipment';
 import { deckOf, roomStructure } from './room-structure';
@@ -20,7 +21,7 @@ import type { Point3, ServiceRoute } from './room-services';
 
 /** The devices on the control bus: panels, mimics, instruments, the desk and its printer. */
 export const isControlDevice = (key: string) =>
-  /^(operator-desk|alarm-printer|mimic-|annunciator|chart-recorders|readout-board|bms-outstation|fire-repeater|cctv|gas-safety|combustion-panel|level-instruments)/.test(
+  /^(operator-desk|alarm-printer|mimic-|annunciator|chart-recorders|readout-board|bms-outstation|fire-repeater|cctv|gas-safety|combustion-panel|level-instruments|booster-set)/.test(
     key,
   );
 
@@ -154,7 +155,11 @@ export function controlBus(room: string): ControlBus | null {
   for (const p of devices) {
     const name = `${p.item.label} control`;
     const top = topOf(p);
-    if (p.side !== 'island' && spans.has(p.side as Side)) {
+    // A device with a control port of its own (the booster set's gland,
+    // the owner, 2026-10-26) is wired there, straight up from it.
+    const own = machinePorts(p.item).find((q) => q.service === 'control');
+    const port = own ? placedPort(p, own.name).at : null;
+    if (!port && p.side !== 'island' && spans.has(p.side as Side)) {
       // Straight up its wall from its top into the bus.
       const side = p.side as Side;
       const s = along(side, p.x, p.z);
@@ -174,27 +179,33 @@ export function controlBus(room: string): ControlBus | null {
     // Out in the room (or by a wall without the bus): up to the bus's
     // height, then square across to the nearest point of it.
     let best: { at: Point3; d: number } | null = null;
+    // From its control port, where it has one, else its middle.
+    const ox = port ? port[0] : p.x;
+    const oz = port ? port[2] : p.z;
     for (const [side, [lo2, hi2]] of spans) {
-      const s = Math.min(hi2, Math.max(lo2, along(side, p.x, p.z)));
+      const s = Math.min(hi2, Math.max(lo2, along(side, ox, oz)));
       const at = onWall(side, s, y, OFF + BUS.depth / 2);
-      const d = Math.abs(at[0] - p.x) + Math.abs(at[2] - p.z);
+      const d = Math.abs(at[0] - ox) + Math.abs(at[2] - oz);
       if (!best || d < best.d) best = { at, d };
     }
     if (!best) {
       problems.push(`${p.item.label}: no bus to reach`);
       continue;
     }
-    const up: Point3 = [p.x, y, p.z];
+    const [fx, fy, fz]: Point3 = port
+      ? [port[0], port[1], port[2]]
+      : [p.x, top, p.z];
+    const up: Point3 = [fx, y, fz];
     const corner: Point3 =
-      Math.abs(best.at[0] - p.x) < Math.abs(best.at[2] - p.z)
-        ? [best.at[0], y, p.z]
-        : [p.x, y, best.at[2]];
+      Math.abs(best.at[0] - fx) < Math.abs(best.at[2] - fz)
+        ? [best.at[0], y, fz]
+        : [fx, y, best.at[2]];
     stubs.push({
       name,
       utility: 'power',
       kind: 'steel-screwed',
       od: STUB_OD,
-      points: [[p.x, top, p.z], up, corner, best.at],
+      points: [[fx, fy, fz], up, corner, best.at],
       to: p.item.key,
     });
   }

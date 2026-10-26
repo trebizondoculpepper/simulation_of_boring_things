@@ -37,9 +37,8 @@ const KINDS: Record<MachinePort['service'], readonly string[]> = {
   flue: ['flue'],
   'hot-water': ['copper'],
   air: ['duct'],
-  // A control port is wired by the room's control wiring, not piped; it
-  // is not checked here (the owner, 2026-10-26: marked, not yet drawn).
-  control: [],
+  // A control port, by the room's control bus's stub (`control-bus.ts`).
+  control: ['steel-screwed'],
 };
 
 /** Within this angle of the port's direction, its run leaves it. */

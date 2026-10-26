@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The wet hall's booster set plumbed in afresh (the owner, 2026-10-26): its discharge leaves level far enough for its motorised valve to sit on the straight, carried by a floor stand, before it turns up (it had sat on the riser, held by a bracket hung in the air off the set's envelope; the support planner now sees a skid's base frame alone as something to fix to); and it is wired to the room's control bus from its control port, the gland on top of its control unit, straight up and across to the bus, keeping its own power feed.
 - The booster set holds a constant discharge pressure (the owner, 2026-10-26; its CRE pumps are variable speed): 4 bar on one pump or two, whatever the suction, BOOST adding flow and not pressure; the pressure still builds and falls as pumps run up and coast. Tested in dev42 through stop, start and boost: suction 3.0 bar at rest, 2.5 on one pump, 2.2 boosting; flow 6.2 and 10.5 m³/h.
 - Dev42's suction gauge reads its ideal source, the only thing feeding it (the owner, 2026-10-26): the source's 3 bar less what its resistance takes at the set's flow; the source is rated for the set at 20 m³/h, since at its standard 5 m³/h it could not feed even one pump.
 - Dev42's booster set's discharge gauge follows its pumps (the owner, 2026-10-26): each pump's head as the square of its speed through its valves, a little more with both in parallel while boosting, and none once stopped, nothing holding it into the rig's open sink (`changeoverPressure`).
