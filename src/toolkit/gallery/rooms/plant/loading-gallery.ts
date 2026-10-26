@@ -43,6 +43,11 @@ import {
   createSackTruck,
   createSafetyMirror,
 } from '../../../components/loading-dock/views/yard-kit';
+import {
+  createElectricityMeteringCabinet,
+  createGasMeterTrain,
+  createWaterMeterSet,
+} from '../../../components/plant/views/utility-meters';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
@@ -229,6 +234,38 @@ function shutterRig(kit: PanelKit): LiveExhibit {
   };
 }
 
+/**
+ * A meter whose register counts up as the site draws: `rate` units an
+ * hour, sped up so the last drums and digits are seen to move.
+ */
+function metering<T extends { group: Group }>(
+  make: (kit: PanelKit) => T,
+  lift: number,
+  start: number,
+  rate: number,
+  show: (meter: T, reading: number, delta: number) => void,
+  unit: string,
+): (kit: PanelKit) => LiveExhibit {
+  return (kit) => {
+    const meter = make(kit);
+    // Its origin moved to the middle of what the exhibit's size encloses.
+    const holder = new Group();
+    meter.group.position.y = lift;
+    holder.add(meter.group);
+    let reading = start;
+    show(meter, reading, 0);
+    return {
+      object: holder,
+      update(delta) {
+        // Sixty times real time.
+        reading += (rate / 3600) * delta * 60;
+        show(meter, reading, delta);
+      },
+      status: () => `reads ${Math.floor(reading)} ${unit}`,
+    };
+  };
+}
+
 export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Insulated roller shutter, its controller and dock light',
@@ -395,5 +432,50 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       'Heavy steel, single-pole connectors of the Powerlock kind: L1 L2 L3 and earth',
     size: { w: 1.1, d: 0.45, h: 1.4, mount: 'wall', y: 1.2 },
     build: openable(createGeneratorCabinet),
+  },
+  {
+    title: 'Electricity metering cabinet',
+    reference:
+      'A three-phase CT-operated meter after the Landis+Gyr E650 and Elster A1700 (600/5 A CTs, Cl. 0.5S) over its test terminal block, a 4G AMR modem and the sealed CT chamber, in a GRP cabinet 800 × 1200 × 320 mm',
+    size: { w: 0.95, d: 1.2, h: 1.85, mount: 'wall', y: 0.9 },
+    maker: 'kessler-moody',
+    build: metering(
+      createElectricityMeteringCabinet,
+      0.3,
+      1_284_337,
+      180,
+      (m, kwh, delta) => m.show(kwh, 180 + 20 * Math.sin(kwh / 3), delta),
+      'kWh',
+    ),
+  },
+  {
+    title: 'Gas meter installation',
+    reference:
+      'DN80 in yellow-painted pipe: ECV, filter, slam-shut regulator with relief vent, a G100 rotary meter after the Elster RABO/RVG (160 m³/h) and a volume converter after the Elster EK205, outlet valve',
+    size: { w: 2.9, d: 0.45, h: 2.1, mount: 'wall', y: 1.0 },
+    maker: 'trager-feinstein',
+    build: metering(
+      createGasMeterTrain,
+      0,
+      408_215,
+      110,
+      (m, v, d) => m.show(v, d),
+      'm³',
+    ),
+  },
+  {
+    title: 'Water meter set',
+    reference:
+      'DN100: gate valves, Y-strainer, an ultrasonic meter after the Kamstrup flowIQ 3100 (Q3 100 m³/h) and a dismantling joint, ductile iron in blue epoxy',
+    size: { w: 2.5, d: 0.35, h: 0.85, mount: 'floor' },
+    maker: 'trager-feinstein',
+    build: metering(
+      createWaterMeterSet,
+      0,
+      52_118.402,
+      6,
+      (m, v) => m.show(v),
+      'm³',
+    ),
   },
 ];
