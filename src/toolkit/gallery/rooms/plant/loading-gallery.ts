@@ -12,7 +12,7 @@ import {
 } from '../../../components/core/parts/parts';
 import { partAudio } from '../../../components/core/audio/part-audio';
 import { VALVE_STOP } from '../../../components/plant/audio/actuated-valve';
-import { SHUTTER_RUN } from '../../../components/loading-dock/audio/shutter-run';
+import { shutterRun } from '../../../components/loading-dock/audio/shutter-run';
 import { plantTools } from '../../../components/plant/views/plant-tools';
 import {
   PALLET,
@@ -182,23 +182,39 @@ function shutterRig(kit: PanelKit): LiveExhibit {
   const roll = new Group();
   roll.position.set(0, H + 0.6, 0.33);
   group.add(roll);
-  // A recording of a real electric shutter: motor and laths together.
-  drive.holdWhile(running, SHUTTER_RUN, roll);
+  // A recording of a real electric shutter: motor and laths together,
+  // running up and down with the motor's speed.
+  const speed = signal(0);
+  drive.holdWhile(running, shutterRun(speed), roll);
   parts.add(drive.part());
   let open = 0;
+  let direction = 0;
   shutter.setOpen(open);
   return {
     object: group,
     parts,
     update(delta) {
       parts.update(delta);
-      // About 0.2 m/s, as a geared shutter runs.
-      open = Math.max(0, Math.min(1, open + (motion * delta * 0.2) / H));
+      // The motor runs up to speed in about 0.8 s and down, braked, in
+      // about 0.4 s (the owner, 2026-10-26); full speed about 0.2 m/s.
+      const target = motion !== 0 ? 1 : 0;
+      speed.value =
+        target > speed.value
+          ? Math.min(1, speed.value + delta / 0.8)
+          : Math.max(0, speed.value - delta / 0.4);
+      if (motion !== 0) direction = motion;
+      open = Math.max(
+        0,
+        Math.min(1, open + (direction * speed.value * delta * 0.2) / H),
+      );
       if (motion !== 0 && (open === 0 || open === 1)) {
         motion = 0;
-        partAudio.play(VALVE_STOP, roll);
+        speed.value = 0;
       }
-      running.value = motion !== 0;
+      // The brake's clunk as it comes to rest, however it stopped.
+      const nowRunning = speed.value > 0.01;
+      if (running.value && !nowRunning) partAudio.play(VALVE_STOP, roll);
+      running.value = nowRunning;
       shutter.setOpen(open);
       light.set(open >= 1 ? 'green' : 'red');
     },
