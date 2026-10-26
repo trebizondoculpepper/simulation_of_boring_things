@@ -1,3 +1,5 @@
+import { dockDoor } from '../views/dock-door';
+import { YARD, dockFloorAt, dockYardSolids } from '../logic/dock-yard';
 import { createDockSafety, dockFireAlarm } from '../views/dock-safety';
 import {
   createDockFittings,
@@ -84,7 +86,11 @@ import {
   wetHallRails,
   wetHallRoom,
 } from '../logic/shell-rooms';
-import type { ShellDoor, ShellRoomId } from '../logic/shell-rooms';
+import type {
+  ShellAperture,
+  ShellDoor,
+  ShellRoomId,
+} from '../logic/shell-rooms';
 import { airFloorAt, airBox, gantries, levelSolids } from '../logic/air-plant';
 import {
   STAIR_TOWER,
@@ -128,17 +134,48 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
     w: spec.w,
     d: spec.d,
     doors: spec.doors,
-    apertures: 'apertures' in spec ? spec.apertures : undefined,
+    apertures: ('apertures' in spec ? spec.apertures : undefined) as
+      | readonly ShellAperture[]
+      | undefined,
   };
-  const channels = (room.apertures ?? []).map((o) =>
-    dockChannel(o, -spec.d / 2),
-  );
+  const channels = (room.apertures ?? [])
+    .filter((o) => !o.door)
+    .map((o) => dockChannel(o, -spec.d / 2));
+  // The loading dock's way out to the yard (prompts 073, 080).
+  const yard = {
+    wallZ: -spec.d / 2,
+    thickness: SHELL_WALL,
+    doorX: room.apertures?.find((o) => o.door)?.at ?? 0,
+  };
+  let pierOpen = () => false;
+  const lorryOpenings = (room.apertures ?? []).filter((o) => !o.door);
   return runShell(canvas, {
     self: id,
     ...(id === 'loading_bay'
       ? {
-          install: (kit: ReturnType<typeof createPanelKit>) =>
-            dockFireAlarm(kit, { hw: spec.w / 2, hd: spec.d / 2 }),
+          install: (kit: ReturnType<typeof createPanelKit>) => {
+            const door = dockDoor(kit, { x: yard.doorX, wallZ: yard.wallZ });
+            pierOpen = door.open;
+            return [
+              ...dockFireAlarm(kit, { hw: spec.w / 2, hd: spec.d / 2 }),
+              door.part,
+            ];
+          },
+          // Out through the pier door, down the steps, onto the tarmac.
+          levelSolids: (y: number) => [
+            ...dockYardSolids(yard, y < YARD.level / 2),
+            // The door's leaf while it is shut.
+            ...(pierOpen()
+              ? []
+              : [
+                  {
+                    minX: yard.doorX - 0.5,
+                    maxX: yard.doorX + 0.5,
+                    minZ: yard.wallZ - yard.thickness,
+                    maxZ: yard.wallZ,
+                  },
+                ]),
+          ],
         }
       : {}),
     room,
@@ -150,8 +187,10 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
         // The control room's walls are its mimics': no title card there.
         title:
           id === 'control_room' || id === 'loading_bay' ? null : spec.title,
-        // The loading dock's lorry channels, cut out of its floor.
+        // The loading dock's lorry channels, cut out of its floor; its
+        // lights a metre higher, all at one level (the owner, 2026-10-26).
         floorHoles: channels,
+        ...(id === 'loading_bay' ? { battenHeight: 4.1 } : {}),
         note: spec.note,
         seed: SEEDS[id],
       });
@@ -163,19 +202,20 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
             wallZ: -spec.d / 2 - SHELL_WALL,
             width: spec.w,
             thickness: SHELL_WALL,
-            openings: room.apertures ?? [],
+            openings: (room.apertures ?? []).filter((o) => !o.door),
+            doorX: yard.doorX,
           }).group,
           createDockFittings(kit, {
             wallZ: -spec.d / 2,
             thickness: SHELL_WALL,
-            apertures: room.apertures ?? [],
+            apertures: lorryOpenings,
           }).group,
           createDockSafety(kit, {
             wallZ: -spec.d / 2,
             hw: spec.w / 2,
             hd: spec.d / 2,
             thickness: SHELL_WALL,
-            apertures: room.apertures ?? [],
+            apertures: lorryOpenings,
           }).group,
         );
       }
@@ -186,9 +226,12 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
     floorAt:
       id === 'air_plant'
         ? (x, z, previous) => airFloorAt(airSurfaces, x, z, previous)
-        : () => 0,
-    levelSolids:
-      id === 'air_plant' ? (y) => levelSolids(airSurfaces, y) : undefined,
+        : id === 'loading_bay'
+          ? (x, z) => dockFloorAt(yard, x, z)
+          : () => 0,
+    ...(id === 'air_plant'
+      ? { levelSolids: (y: number) => levelSolids(airSurfaces, y) }
+      : {}),
     solids: [
       ...shellSolids(room),
       ...(id === 'loading_bay' ? dockPalletSolids() : []),

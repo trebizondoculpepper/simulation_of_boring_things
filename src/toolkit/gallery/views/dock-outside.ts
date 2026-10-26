@@ -6,12 +6,15 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
   BoxGeometry,
+  CylinderGeometry,
   RepeatWrapping,
+  Vector3,
   SRGBColorSpace,
 } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createSkyDome } from '../../../scene/sky-dome';
 import { createSkyChanger } from '../../../game/skies';
+import { YARD, dockFloorAt, dockSteps } from '../logic/dock-yard';
 
 /**
  * What the loading dock's openings look out on (prompt 073): tarmac as far
@@ -22,7 +25,7 @@ import { createSkyChanger } from '../../../game/skies';
  * the goods yard (prompt 080). Metres, the dock's middle at the origin,
  * its floor at y = 0, its outside wall at z = `wallZ` (north, −z).
  */
-export const YARD_LEVEL = -1.2;
+export const YARD_LEVEL = YARD.level;
 
 /**
  * The roadways' tarmac, grey and faintly speckled, `repeat` times across
@@ -58,12 +61,15 @@ export function createDockOutside(
     width,
     thickness,
     openings = [],
+    doorX = 0,
   }: {
     wallZ: number;
     width: number;
     thickness: number;
     /** The lorry openings, each its middle and width along the wall. */
     openings?: readonly { at: number; w: number }[];
+    /** The pier door's middle along the wall, where the steps go down. */
+    doorX?: number;
   },
 ) {
   const group = new Group();
@@ -97,6 +103,73 @@ export function createDockOutside(
       group.add(face);
     }
     from = o.at + o.w / 2;
+  }
+  // The landing outside the pier door and its flight of steps down to
+  // the tarmac, concrete, a galvanised handrail each side (prompt 080).
+  const { landing, flight } = dockSteps({
+    wallZ: wallZ + thickness,
+    thickness,
+    doorX,
+  });
+  const concrete = new MeshStandardMaterial({
+    color: '#8a8c88',
+    roughness: 0.95,
+  });
+  const galv = new MeshStandardMaterial({
+    color: '#a9aeae',
+    roughness: 0.45,
+    metalness: 0.6,
+  });
+  kit.materials.push(concrete, galv);
+  const w = landing.maxX - landing.minX;
+  const slab = new Mesh(
+    new BoxGeometry(w, -YARD_LEVEL, landing.maxZ - landing.minZ),
+    concrete,
+  );
+  slab.position.set(doorX, YARD_LEVEL / 2, (landing.minZ + landing.maxZ) / 2);
+  group.add(slab);
+  for (let k = 0; k < YARD.risers; k++) {
+    const top = -((k + 1) * -YARD_LEVEL) / YARD.risers;
+    const z0 = flight.maxZ - (k + 1) * YARD.going;
+    const step = new Mesh(
+      new BoxGeometry(w, top - YARD_LEVEL, YARD.going),
+      concrete,
+    );
+    step.position.set(doorX, (top + YARD_LEVEL) / 2, z0 + YARD.going / 2);
+    group.add(step);
+  }
+  for (const x of [landing.minX + 0.03, landing.maxX - 0.03]) {
+    // Posts, and a rail 0.9 m over the pitch line.
+    for (const z of [landing.maxZ - 0.1, landing.minZ, flight.minZ + 0.3]) {
+      const y0 = dockFloorAt(
+        { wallZ: wallZ + thickness, thickness, doorX },
+        x,
+        z - 0.01,
+      );
+      const post = new Mesh(new BoxGeometry(0.05, 1.0, 0.05), galv);
+      post.position.set(x, y0 + 0.5, z);
+      group.add(post);
+    }
+    const a = new Vector3(x, 1.0, landing.maxZ - 0.1);
+    const b = new Vector3(x, 1.0, landing.minZ);
+    const c = new Vector3(
+      x,
+      YARD_LEVEL + 1.0 + (0.3 / (YARD.risers * YARD.going)) * -YARD_LEVEL,
+      flight.minZ + 0.3,
+    );
+    for (const [p, q] of [
+      [a, b],
+      [b, c],
+    ] as const) {
+      const d = q.clone().sub(p);
+      const rail = new Mesh(
+        new CylinderGeometry(0.024, 0.024, d.length(), 8),
+        galv,
+      );
+      rail.position.copy(p).add(q).multiplyScalar(0.5);
+      rail.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), d.normalize());
+      group.add(rail);
+    }
   }
   return { group };
 }

@@ -252,38 +252,6 @@ export function createDockFittings(
     group.add(channel);
   });
 
-  // The pier's personnel door, shut, on its inside face.
-  {
-    const door = new Group();
-    door.name = 'Pier door to the goods yard';
-    const piers = [...apertures].sort((a, b) => a.at - b.at);
-    const x = piers.length === 2 ? (piers[0].at + piers[1].at) / 2 : 0;
-    box(door, galv, 1.1, 2.15, 0.05, x, 1.075, wallZ + 0.025);
-    box(
-      door,
-      paint('#5d6a72', 0.6, 0.3),
-      0.93,
-      2.05,
-      0.04,
-      x,
-      1.04,
-      wallZ + 0.05,
-    );
-    box(door, galv, 0.4, 0.04, 0.04, x - 0.2, 1.05, wallZ + 0.09);
-    // Its lintel, bearing 0.15 m into the pier either side.
-    box(
-      door,
-      paint('#b5b2a8', 0.9),
-      1.4,
-      0.2,
-      thickness + 0.02,
-      x,
-      2.25,
-      wallZ - thickness / 2,
-    );
-    group.add(door);
-  }
-
   // Pallets of deliveries, set decoration: a pallet, its goods
   // shrink-wrapped, a label on the front.
   const timber = paint('#a07c52', 0.9);

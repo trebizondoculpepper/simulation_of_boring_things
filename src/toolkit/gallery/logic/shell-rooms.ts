@@ -40,6 +40,8 @@ export interface ShellAperture {
   at: number;
   w: number;
   h: number;
+  /** A personnel door hangs in it (drawn by its room): no edge stop across it. */
+  door?: boolean;
 }
 
 export interface ShellSpec {
@@ -102,6 +104,8 @@ export const SHELL_ROOMS = {
     apertures: [
       { wall: 'north', at: -3.05, w: 3.5, h: 4.5 },
       { wall: 'north', at: 3.05, w: 3.5, h: 4.5 },
+      // The pier's fire exit door, out to the yard's steps.
+      { wall: 'north', at: 0, w: 1.0, h: 2.1, door: true },
     ],
     note: 'two bays: chemicals by tanker on the left, a generator on the right',
   },
@@ -287,9 +291,9 @@ export function shellSolids(room: {
       shellWallPieces(room, wall).map(([a, b]) => across(room, wall, a, b)),
     ),
     // Each opening's edge: the walker stops there (the drop to the yard).
-    ...(room.apertures ?? []).map((a) =>
-      across(room, a.wall, a.at - a.w / 2, a.at + a.w / 2),
-    ),
+    ...(room.apertures ?? [])
+      .filter((a) => !a.door)
+      .map((a) => across(room, a.wall, a.at - a.w / 2, a.at + a.w / 2)),
   ];
 }
 

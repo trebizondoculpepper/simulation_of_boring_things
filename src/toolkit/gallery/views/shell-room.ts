@@ -115,6 +115,8 @@ export interface ShellView {
   w: number;
   d: number;
   doors: readonly ShellDoor[];
+  /** Its wall battens' height over its floor, if not the usual 3.1 m. */
+  battenHeight?: number;
   /** Openings with no door in them (the loading dock's, prompt 073). */
   apertures?: readonly ShellAperture[];
   /** Its floor's level, and its roof's, over the doors' level (0). */
@@ -161,9 +163,20 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
     roughness: 1,
   });
   kit.materials.push(block);
+  // Walls and floors yield to anything lying flat on them (the owner,
+  // 2026-10-26: almost everything matters more than a wall or a floor):
+  // their depth pushed back a hair, so a sign, a frame or a marking on
+  // them never flickers.
+  const yieldTo = (m: Material) => {
+    m.polygonOffset = true;
+    m.polygonOffsetFactor = 1;
+    m.polygonOffsetUnits = 2;
+  };
+  yieldTo(block);
   const dado = paint('#6d7a6f');
   const concrete = createWarehouseConcreteFloor(Math.max(v.w, v.d));
   kit.materials.push(concrete);
+  yieldTo(concrete);
   if (concrete.map) kit.textures.push(concrete.map);
   const dark = paint('#0b0d0d', 1);
   const box = (
@@ -364,7 +377,7 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
   // for every 10 m or so of the room's length, at most three.
   const battens = createWallBattenMaterials();
   kit.materials.push(...Object.values(battens));
-  const y = v.floor + 3.1;
+  const y = v.floor + (v.battenHeight ?? 3.1);
   const clear = (wall: ShellWall, s: number) =>
     !v.doors.some((d) => d.wall === wall && Math.abs(d.at - s) < 1.6) &&
     // Half a batten and a partition's half thickness, and a little more.
@@ -373,26 +386,9 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
     ) &&
     !(wall === facing && Math.abs(s - (besideDoor ? 4 : 0)) < 1.6);
   for (const wall of ['north', 'south'] as const) {
-    // A wall with openings: one batten over each opening, and no others
-    // (the owner, 2026-10-26).
-    const over = (v.apertures ?? []).filter((o) => o.wall === wall);
-    if (over.length) {
-      for (const o of over) {
-        const z = wall === 'north' ? -hd + 0.05 : hd - 0.05;
-        // Over the shutter's barrel box, which rolls up over the lintel.
-        const oy = v.floor + o.h + 1.25;
-        addWallBatten(
-          group,
-          battens,
-          o.at,
-          oy,
-          z,
-          'x',
-          wall === 'north' ? 1 : -1,
-        );
-      }
-      continue;
-    }
+    // A wall with openings has no battens (the owner, 2026-10-26: the
+    // loading dock's lit from its side walls).
+    if ((v.apertures ?? []).some((o) => o.wall === wall)) continue;
     const n = Math.max(1, Math.round(v.w / 5));
     for (let i = 0; i < n; i++) {
       const s = -hw + ((i + 0.5) * v.w) / n;

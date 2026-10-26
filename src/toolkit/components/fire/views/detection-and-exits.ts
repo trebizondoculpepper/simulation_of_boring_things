@@ -79,10 +79,18 @@ export function createFireExitDoor(kit: PanelKit, width: number, height = 2.1) {
     );
   const leaves = width > 1.2 ? 2 : 1;
   const leafWidth = width / leaves - 0.01;
+  const leafHinges: Group[] = [];
   for (let i = 0; i < leaves; i++) {
-    const x = -width / 2 + (i + 0.5) * (width / leaves);
+    // Each leaf on its hinge at its outer edge, so it can swing
+    // (`group.userData.leaves`, the hinge's turn opening it outward, -z).
+    const hingeX = i === 0 ? -width / 2 : width / 2;
+    const hinge = new Group();
+    hinge.position.x = hingeX;
+    group.add(hinge);
+    leafHinges.push(hinge);
+    const x = -width / 2 + (i + 0.5) * (width / leaves) - hingeX;
     t.box(
-      group,
+      hinge,
       leafPaint,
       leafWidth,
       height - 0.01,
@@ -92,10 +100,10 @@ export function createFireExitDoor(kit: PanelKit, width: number, height = 2.1) {
       0.0225,
     );
     // The push bar, across most of the leaf, on its two end housings.
-    t.box(group, steel, leafWidth * 0.8, 0.04, 0.035, x, 1.0, 0.075);
+    t.box(hinge, steel, leafWidth * 0.8, 0.04, 0.035, x, 1.0, 0.075);
     for (const end of [-1, 1])
       t.box(
-        group,
+        hinge,
         steel,
         0.05,
         0.08,
@@ -120,8 +128,9 @@ export function createFireExitDoor(kit: PanelKit, width: number, height = 2.1) {
       256,
     );
     sign.mesh.position.set(x, 1.22, 0.047);
-    group.add(sign.mesh);
+    hinge.add(sign.mesh);
   }
+  group.userData.leaves = leafHinges;
   return group;
 }
 
