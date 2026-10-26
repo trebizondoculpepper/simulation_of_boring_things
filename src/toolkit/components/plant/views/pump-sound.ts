@@ -1,3 +1,5 @@
+import { effect } from '@preact/signals-core';
+import type { ReadonlySignal } from '@preact/signals-core';
 import type { LoopRecipe } from '../../core/audio/part-audio';
 import { noiseSource } from '../../core/audio/part-loops';
 import {
@@ -16,8 +18,17 @@ import type { PumpSet } from '../logic/pump-sound';
  * (`partAudio.hold`): a restrained motor hum and impeller note under
  * textured bearing, fan and water noise. All turning layers run up and
  * coast down with shaft speed; the magnetic hum dies as power is lost.
+ *
+ * `load` (0 to 1), where given, is how hard it works against its system
+ * (the owner, 2026-10-26: two pumps boosting against the pipework's
+ * resistance): loaded, the motor slips a little more, so its turning
+ * notes drop a touch, and its water and casing roar louder. It follows
+ * the signal while it runs, once run up, without starting again.
  */
-export function pumpSound(p: PumpSet = CIRCULATION_PUMP): LoopRecipe {
+export function pumpSound(
+  p: PumpSet = CIRCULATION_PUMP,
+  load?: ReadonlySignal<number>,
+): LoopRecipe {
   return (context, out) => {
     const start = context.currentTime;
     const master = context.createGain();
@@ -156,12 +167,24 @@ export function pumpSound(p: PumpSet = CIRCULATION_PUMP): LoopRecipe {
       }
     };
     drive(start, p.runUp, true);
+    // Its load, followed from the end of its run-up on.
+    const loaded = load
+      ? effect(() => {
+          const l = Math.min(1, Math.max(0, load.value));
+          const at = Math.max(context.currentTime, start + p.runUp + 0.05);
+          for (const t of turning)
+            t.osc.frequency.setTargetAtTime(t.hz * (1 - 0.035 * l), at, 0.5);
+          for (const f of filters)
+            f.gain.gain.setTargetAtTime(f.level * (1 + 0.45 * l), at, 0.5);
+        })
+      : () => {};
     const sources = [...hum, ...turning.map((t) => t.osc), noise, bearings];
     // Stopped: the hum cut, the rest coasting down, then let go.
     return [
       {
         release: p.coastDown,
         stop(end?: number) {
+          loaded();
           const now = context.currentTime;
           if (humGain.gain.cancelAndHoldAtTime)
             humGain.gain.cancelAndHoldAtTime(now);

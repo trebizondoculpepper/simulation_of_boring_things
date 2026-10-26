@@ -1,3 +1,4 @@
+import { createCanvasTexture } from '../../core/views/screens';
 import { drawBrandMark } from '../../core/views/brand-logo';
 import { BRANDS } from '../../core/logic/brands';
 import {
@@ -16,8 +17,13 @@ import { pumpSound } from './pump-sound';
 import { BOOSTER_PUMP } from '../logic/pump-sound';
 import { createActuatedButterflyValve } from './actuated-butterfly-valve';
 import { signal } from '@preact/signals-core';
-import { CapsuleGeometry, Group, Mesh } from 'three';
-import type { MeshStandardMaterial } from 'three';
+import {
+  CapsuleGeometry,
+  CylinderGeometry,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+} from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import {
@@ -101,6 +107,49 @@ export function createBoosterSet(
   const gfBlue = t.paint('#0b4f9c', 0.4, 0.2);
   const gfGrey = t.paint('#8a9196', 0.45, 0.4);
   const gfOrange = t.paint('#e07a22', 0.5);
+  /** Lettering wrapped round a vertical cylinder, facing the front. */
+  const wrapText = (
+    text: string[],
+    at: Point,
+    radius: number,
+    height: number,
+  ) => {
+    const art = createCanvasTexture(1024, 64);
+    const c = art.context;
+    c.clearRect(0, 0, 1024, 64);
+    c.fillStyle = '#f2f2ea';
+    c.font = 'bold 40px sans-serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(text.join('  '), 512, 34, 1000);
+    art.texture.needsUpdate = true;
+    kit.textures.push(art.texture);
+    const material = new MeshStandardMaterial({
+      map: art.texture,
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      roughness: 0.6,
+    });
+    kit.materials.push(material);
+    const theta = Math.min(Math.PI * 1.6, (height * 1024) / 64 / radius);
+    const mesh = new Mesh(
+      new CylinderGeometry(
+        radius,
+        radius,
+        height,
+        32,
+        1,
+        true,
+        -theta / 2,
+        theta,
+      ),
+      material,
+    );
+    mesh.position.set(...at);
+    object.add(mesh);
+  };
   /** Its mark wrapped round a curved surface, facing the front. */
   const band = (at: Point, radius: number, height: number) => {
     const b = createBrandBand(kit, 'grundflow', { radius, height });
@@ -182,6 +231,13 @@ export function createBoosterSet(
     10,
   );
   band([vx, y + 0.36, B.dischargeZ], 0.14, 0.04);
+  // Its rating lettered round it under the band (the owner, 2026-10-26).
+  wrapText(
+    ['24 L  ·  PN10: MAX 10 bar  ·  PRE-CHARGE 2.5 bar  ·  -10/+70 °C'],
+    [vx, y + 0.53, B.dischargeZ],
+    0.141,
+    0.035,
+  );
   // The two pumps.
   const isolators: { at: Point; name: string }[] = [];
   B.pumpX.forEach((x, i) => pump(x, i + 1));
@@ -232,6 +288,44 @@ export function createBoosterSet(
     t.cyl(object, gfGrey, 0.09, 0.04, x, 0.85, z, 'y', 24);
     t.cyl(object, gfBlue, 0.11, 0.34, x, 1.04, z, 'y', 28);
     t.box(object, gfOrange, 0.17, 0.12, 0.08, x, 1.08, z + 0.13);
+    // Its terminal box made one (the owner, 2026-10-26): a screw at each
+    // corner of its lid, louvres on its east side, a cable gland under it.
+    const lid = z + 0.17;
+    for (const dx of [-0.07, 0.07])
+      for (const dy of [-0.045, 0.045])
+        t.cyl(
+          object,
+          steel,
+          0.006,
+          0.004,
+          x + dx,
+          1.08 + dy,
+          lid + 0.002,
+          'z',
+          8,
+        );
+    t.box(
+      object,
+      t.paint('#c9661a', 0.55),
+      0.15,
+      0.1,
+      0.002,
+      x,
+      1.08,
+      lid + 0.001,
+    );
+    for (let k = 0; k < 5; k++)
+      t.box(
+        object,
+        t.paint('#3a2a1c', 0.7),
+        0.003,
+        0.006,
+        0.05,
+        x + 0.0855,
+        1.05 + k * 0.015,
+        z + 0.13,
+      );
+    t.cyl(object, black, 0.012, 0.025, x + 0.05, 1.008, z + 0.15, 'y', 10);
     t.cyl(object, gfGrey, 0.115, 0.04, x, 1.23, z, 'y', 28);
     // Its maker's mark wrapped round its motor, under its terminal box.
     band([x, 0.93, z], 0.11, 0.03);
@@ -402,6 +496,7 @@ export function createBoosterSet(
   // Its duty selector and RUN and STOP, where its changeover is
   // modelled: each DUTY lit while its pump is selected.
   const selected = [signal(false), signal(false)] as const;
+  const boostLit = signal(false);
   if (co)
     (
       [
@@ -409,6 +504,7 @@ export function createBoosterSet(
         ['DUTY 2', 'white', { act: 'duty', pump: 1 }, selected[1]],
         ['RUN', 'green', { act: 'run' }, null],
         ['STOP', 'red', { act: 'stop' }, null],
+        ['BOOST', 'yellow', { act: 'boost' }, boostLit],
       ] as const
     ).forEach(([legend, colour, action, lamp], i) =>
       mount(
@@ -419,7 +515,7 @@ export function createBoosterSet(
           name: `Booster set ${legend}`,
           action: () => co.act(action),
         }),
-        -0.12 + i * 0.08,
+        -0.136 + i * 0.068,
         -0.045,
       ),
     );
@@ -441,7 +537,10 @@ export function createBoosterSet(
     return m;
   });
   const heard = [false, false];
-  const sound = pumpSound(BOOSTER_PUMP);
+  // Both pumps working harder while boosting, in parallel against the
+  // pipework's resistance (the owner, 2026-10-26).
+  const load = signal(0);
+  const sound = pumpSound(BOOSTER_PUMP, load);
   // Its pressure gauges on its manifolds, where they measure (the
   // owner, 2026-10-26: a gauge sits on what it reads, not on the panel):
   // suction on the front manifold, discharge on the back, each on a
@@ -480,6 +579,8 @@ export function createBoosterSet(
         const s = co.state();
         lamps.run1.value = motorCalled(s, 0);
         lamps.run2.value = motorCalled(s, 1);
+        load.value = s.speed[0] > 0.5 && s.speed[1] > 0.5 ? 1 : 0;
+        boostLit.value = s.boost;
         selected[0].value = s.selected === 0;
         selected[1].value = s.selected === 1;
         // Each motor heard running up when called, coasting down when not.

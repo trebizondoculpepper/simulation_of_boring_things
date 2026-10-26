@@ -16,7 +16,15 @@ import { BOOSTER_PUMP } from './pump-sound';
  *
  * So the one pump's valves are shut before the other's begin to open: at
  * no moment are both open. STOP coasts the duty pump down, its valves
- * left open for the next start; RUN starts it again. Pure.
+ * left open for the next start; RUN starts it again.
+ *
+ * BOOST (the owner, 2026-10-26) runs the standby with the duty, in
+ * parallel, for more flow: its valves drive open and it runs up beside
+ * the duty pump, each pump's discharge check valve keeping either from
+ * being back-fed; the two give about 1.7 times one pump's flow, not
+ * twice, sharing one discharge pressure. BOOST again, STOP or a change
+ * of duty takes the assist pump off: it coasts to rest, then its valves
+ * shut. Pure.
  */
 
 export type BoosterPump = 0 | 1;
@@ -51,12 +59,15 @@ export interface BoosterChangeover {
   speed: [number, number];
   /** Each pump's valves' position, 0 (shut) to 1 (open). */
   valve: [number, number];
+  /** Whether BOOST is on: the standby running with the duty. */
+  boost: boolean;
 }
 
 export type ChangeoverAction =
   | { act: 'duty'; pump: BoosterPump }
   | { act: 'run' }
-  | { act: 'stop' };
+  | { act: 'stop' }
+  | { act: 'boost' };
 
 export function newBoosterChangeover(): BoosterChangeover {
   return {
@@ -66,6 +77,7 @@ export function newBoosterChangeover(): BoosterChangeover {
     run: true,
     speed: [1, 0],
     valve: [1, 0],
+    boost: false,
   };
 }
 
@@ -73,20 +85,26 @@ export function actOnChangeover(
   s: BoosterChangeover,
   a: ChangeoverAction,
 ): BoosterChangeover {
-  if (a.act === 'duty') return { ...s, selected: a.pump };
+  if (a.act === 'duty')
+    return { ...s, selected: a.pump, boost: a.pump === s.duty && s.boost };
   if (a.act === 'run') return { ...s, run: true };
-  return { ...s, run: false };
+  if (a.act === 'boost') return { ...s, boost: !s.boost };
+  return { ...s, run: false, boost: false };
 }
 
 /** Whether a pump's motor is called to run. */
 export function motorCalled(s: BoosterChangeover, p: BoosterPump): boolean {
-  return (
-    p === s.duty && s.run && (s.phase === 'running' || s.phase === 'starting')
-  );
+  if (p !== s.duty)
+    // The assist pump, boosting: once its valves are fully open.
+    return s.boost && s.phase === 'running' && s.valve[p] === 1;
+  return s.run && (s.phase === 'running' || s.phase === 'starting');
 }
 
 /** Whether a pump's valves are commanded open. */
 export function valvesCalled(s: BoosterChangeover, p: BoosterPump): boolean {
+  if (p !== s.duty)
+    // The assist pump's, boosting; held open while it coasts to rest.
+    return (s.boost && s.phase === 'running') || s.speed[p] > 0;
   return (
     p === s.duty &&
     // Held open while it coasts down: shut only once it is at rest.
@@ -151,7 +169,9 @@ export function stepChangeover(
 
 /** The set's delivery, m³/h: each pump's at its speed, through its valves. */
 export function changeoverFlow(s: BoosterChangeover): number {
-  return CHANGEOVER.rate * (s.speed[0] * s.valve[0] + s.speed[1] * s.valve[1]);
+  const q = [s.speed[0] * s.valve[0], s.speed[1] * s.valve[1]];
+  // Two in parallel share one pressure: about 1.7 times one, not twice.
+  return CHANGEOVER.rate * (q[0] + q[1]) * (1 - 0.15 * Math.min(q[0], q[1]));
 }
 
 /** What its controller's display says it is doing. */
@@ -159,7 +179,9 @@ export function changeoverStatus(s: BoosterChangeover): string {
   const n = (p: BoosterPump) => `P${p + 1}`;
   switch (s.phase) {
     case 'running':
-      return `${n(s.duty)} DUTY RUNNING`;
+      return s.boost && s.speed[1 - s.duty] > 0
+        ? 'BOOST P1+P2'
+        : `${n(s.duty)} DUTY RUNNING`;
     case 'stopped':
       return `${n(s.duty)} DUTY STOPPED`;
     case 'stopping':

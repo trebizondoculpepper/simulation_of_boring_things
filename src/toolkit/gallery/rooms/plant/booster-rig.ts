@@ -23,7 +23,7 @@ import type { BoosterChangeover } from '../../../components/plant/logic/booster-
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
-  'The make-up booster set, modelled: an ideal clean water source into its suction, its discharge into an ideal sink. Choose its duty pump with DUTY 1 or DUTY 2: the running pump coasts down, its valves drive shut, the other pump’s open and it runs up, so only the pump running ever has its valves open and nothing can run back through the standby. RUN and STOP start and stop the duty pump.';
+  'The make-up booster set, modelled: an ideal clean water source into its suction, its discharge into an ideal sink. Choose its duty pump with DUTY 1 or DUTY 2: the running pump coasts down, its valves drive shut, the other pump’s open and it runs up, so only the pump running ever has its valves open and nothing can run back through the standby. RUN and STOP start and stop the duty pump. BOOST runs the standby beside it, for about 1.7 times the flow (two in parallel share one pressure), both working harder.';
 
 /**
  * Dev42, the booster set's rig (the owner, 2026-10-26): the Grundflow

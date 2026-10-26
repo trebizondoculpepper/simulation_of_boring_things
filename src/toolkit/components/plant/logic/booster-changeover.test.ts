@@ -81,4 +81,39 @@ describe('the booster set’s duty changeover', () => {
       if (x.speed[0] > 0) expect(x.valve[0]).toBe(1);
     });
   });
+
+  it('runs both pumps in parallel on BOOST, for about 1.7 times the flow', () => {
+    let s = run(newBoosterChangeover(), 2);
+    s = run(actOnChangeover(s, { act: 'boost' }), 20, (x) => {
+      // The assist pump never turns against its own shut valves.
+      if (x.speed[1] > 0) expect(x.valve[1]).toBe(1);
+    });
+    expect(s.speed).toEqual([1, 1]);
+    expect(s.valve).toEqual([1, 1]);
+    expect(changeoverFlow(s) / CHANGEOVER.rate).toBeCloseTo(1.7);
+  });
+
+  it('takes the assist pump off on BOOST again: it coasts to rest, then its valves shut', () => {
+    let s = run(
+      actOnChangeover(run(newBoosterChangeover(), 2), { act: 'boost' }),
+      20,
+    );
+    s = run(actOnChangeover(s, { act: 'boost' }), 20, (x) => {
+      if (x.speed[1] > 0) expect(x.valve[1]).toBe(1);
+    });
+    expect(s.speed).toEqual([1, 0]);
+    expect(s.valve).toEqual([1, 0]);
+    expect(changeoverFlow(s)).toBeCloseTo(CHANGEOVER.rate);
+  });
+
+  it('ends BOOST on STOP or a change of duty', () => {
+    const boosted = run(
+      actOnChangeover(run(newBoosterChangeover(), 2), { act: 'boost' }),
+      20,
+    );
+    expect(actOnChangeover(boosted, { act: 'stop' }).boost).toBe(false);
+    expect(actOnChangeover(boosted, { act: 'duty', pump: 1 }).boost).toBe(
+      false,
+    );
+  });
 });
