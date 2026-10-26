@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- A sight glass's reflection of its room is soft, a small capture stretched over the glass (cheaper too), and its internal reflection fainter (the owner, 2026-10-26).
 - A sight glass's reflection of its room is plainer, and its thick glass shows a faint internal reflection: a soft, dim arc just inside the bottom of its rim, opposite its overhead highlight (the owner, 2026-10-26).
 - A sight glass reflects its real room (the owner, 2026-10-26): each glass captures the room once from just in front of itself (`room-reflection.ts`, a cube camera, taken between frames once the room is built), so its domed pane shows the room's real lights, walls and plant at their real distances, added over the bed behind it, with no point light's spot on it; its rounded, smooth edge catches the room's lights in a small crescent on the side toward them.
 - A sight glass is real glass (the owner, 2026-10-26): no reflection painted into its picture; a clear, very smooth domed pane in front of it, 12 mm proud at its middle, so a light's highlight lies within the glass on the side toward it, and a rounded bevelled edge of the same glass, lit by the room, so its highlights move as one moves; what is behind it matte.

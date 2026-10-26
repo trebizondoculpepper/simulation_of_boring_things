@@ -21,7 +21,10 @@ import type { Material, Object3D, Texture } from 'three';
 export function attachRoomReflection(
   owner: Object3D,
   materials: readonly (Material & { envMap?: Texture | null })[],
-  { size = 128, out = 0.05, frames = 4 } = {},
+  // Small, so it is soft: stretched over the surface, a 40 px capture
+  // blurs the room as a thick glass would, and costs less than a sharp one
+  // (the owner, 2026-10-26).
+  { size = 40, out = 0.05, frames = 4 } = {},
 ) {
   const target = new WebGLCubeRenderTarget(size, { type: HalfFloatType });
   const marker = new Mesh(

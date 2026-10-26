@@ -137,7 +137,7 @@ export function createSightGlass(
   const inner = new MeshBasicMaterial({
     color: '#cfe3e8',
     transparent: true,
-    opacity: 0.12,
+    opacity: 0.08,
     blending: AdditiveBlending,
     depthWrite: false,
   });
