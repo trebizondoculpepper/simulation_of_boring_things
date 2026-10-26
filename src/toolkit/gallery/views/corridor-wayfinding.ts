@@ -26,12 +26,12 @@ import type { RoomId } from '../logic/dev-room-links';
 const WIDTH = 0.6;
 const PX = 1000; // canvas pixels per metre
 
-/** A room's name as the signs give it: the wet hall's shortened, the dash spaced. */
+/** A room's name as the signs give it: the wet hall's and the plant rooms' shortened. */
 const nameOf = (room: string) =>
-  (DEV_ROOM_NAMES[room as RoomId] ?? room.toUpperCase()).replace(
-    /^WET HALL · .*/,
-    'WET HALL',
-  );
+  (DEV_ROOM_NAMES[room as RoomId] ?? room.toUpperCase())
+    .replace(/^WET HALL · .*/, 'WET HALL')
+    // Plant rooms by number alone (the owner, 2026-10-26).
+    .replace(/^(PLANT ROOM \d+) – .*/, '$1');
 
 function drawSign(s: WayfindingSign) {
   const line = 62;
