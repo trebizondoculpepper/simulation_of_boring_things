@@ -762,14 +762,15 @@ export function createWetHall(metre: number, kit: PanelKit) {
       minZ: L.bay.maxZ - 1.2,
       maxZ: L.bay.maxZ,
     });
-    // Before the pit's gate, on the aisle side of its rail.
-    const pitX = (L.pit.minX + L.pit.maxX) / 2;
+    // Before the pit's gate, outside its rail on the east by the hatch.
+    const pitZ = (L.pit.minZ + L.pit.maxZ) / 2;
+    const railX = L.pit.maxX + L.pitWall + PIT_RAIL.off;
     const railZ = L.pit.minZ - L.pitWall - PIT_RAIL.off;
     hatched({
-      minX: pitX + PIT_RAIL.gate.at - PIT_RAIL.gate.width / 2,
-      maxX: pitX + PIT_RAIL.gate.at + PIT_RAIL.gate.width / 2,
-      minZ: railZ - 1.0,
-      maxZ: railZ - 0.05,
+      minX: railX + 0.05,
+      maxX: railX + 1.0,
+      minZ: pitZ + PIT_RAIL.gate.at - PIT_RAIL.gate.width / 2,
+      maxZ: pitZ + PIT_RAIL.gate.at + PIT_RAIL.gate.width / 2,
     });
     // The aisle's walkway lines, from the stair's foot to the ramp's.
     const yellow = paint('#e3b51f', 0.6);

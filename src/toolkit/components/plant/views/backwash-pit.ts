@@ -16,7 +16,14 @@ import { slabAround } from '../../../gallery/logic/slab-openings';
  * outer face, and its gate, along its north side from its middle, this
  * wide; the davit outside it on the east.
  */
-export const PIT_RAIL = { off: 0.15, gate: { at: -1.5, width: 1.0 } } as const;
+export const PIT_RAIL = {
+  off: 0.15,
+  /**
+   * Its gate on its east side, beside the hatch (the owner, 2026-10-26),
+   * along that side from the pit's middle (+z south), this wide.
+   */
+  gate: { at: 0.5, width: 1.0 },
+} as const;
 
 /** A float switch, as the pit hangs it: its name, its height above the pit's floor, and its colour. */
 export interface PitFloatSpec {
@@ -256,14 +263,42 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       post(x0, z);
       post(x1, z);
     }
+    // Its sides; its east side either side of its gate.
     const g0 = rail.gate.at - rail.gate.width / 2;
     const g1 = rail.gate.at + rail.gate.width / 2;
-    run([x0, z0], [g0, z0]);
-    run([g0, z0], [g1, z0], gateColour);
-    run([g1, z0], [x1, z0]);
-    run([x1, z0], [x1, z1]);
+    run([x0, z0], [x1, z0]);
+    run([x1, z0], [x1, g0]);
+    run([x1, g1], [x1, z1]);
     run([x0, z1], [x1, z1]);
     run([x0, z0], [x0, z1]);
+    // Its gate (the owner, 2026-10-26): a self-closing swing gate beside
+    // the hatch, shut, opening outward. Its posts either side, its leaf a
+    // frame with a top rail, knee rail and bars, hung on its spring hinge
+    // on its south post, its latch on its north.
+    {
+      post(x1, g0);
+      post(x1, g1);
+      const leaf = new Group();
+      leaf.position.set(x1, 0, g1);
+      group.add(leaf);
+      const lw = rail.gate.width - 0.08;
+      for (const h of [1.05, 0.55, 0.12])
+        t.box(leaf, gateColour, 0.035, 0.035, lw, 0, h, -lw / 2 - 0.04);
+      for (const dz of [-0.04, -lw - 0.04, -lw / 2 - 0.04])
+        t.box(leaf, gateColour, 0.035, 0.95, 0.035, 0, 0.6, dz);
+      // Its spring hinge on the south post, its latch on the north.
+      t.cyl(leaf, t.paint('#2b2e2f', 0.6), 0.03, 0.18, 0, 0.9, 0, 'y', 10);
+      t.box(
+        group,
+        t.paint('#2b2e2f', 0.6),
+        0.06,
+        0.08,
+        0.05,
+        x1,
+        0.95,
+        g0 + 0.03,
+      );
+    }
     // Its warnings on the rail, facing out on every side (the owner,
     // 2026-10-26), between its top and knee rails: the pit's danger, and
     // that its covers carry no one; at its gate, entry by permit only.
@@ -287,61 +322,139 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       'Not load-bearing',
     ] as const;
     const out = 0.03;
-    // North, toward the aisle, either side of the gate; and the gate's own.
-    hang(['general'], danger, rail.gate.at - 1.8, z0 - out, Math.PI);
-    hang(['no-entry'], covers, rail.gate.at + 1.6, z0 - out, Math.PI);
-    hang(
-      ['confined'],
-      ['Authorised persons only', 'Entry by permit'],
-      rail.gate.at,
-      z0 - out,
-      Math.PI,
-    );
-    // A lifebuoy on the rail beside the gate, with its throw line.
+    // North, toward the aisle.
+    hang(['general'], danger, -1.8, z0 - out, Math.PI);
+    hang(['no-entry'], covers, 1.4, z0 - out, Math.PI);
+    // A lifebuoy on the rail, toward the aisle, near the gate.
     {
       const buoy = createLifebuoy(kit);
       buoy.rotation.y = Math.PI;
-      buoy.position.set(rail.gate.at - 0.9, 0.75, z0 - out);
+      buoy.position.set(x1 - 0.7, 0.75, z0 - out);
       group.add(buoy);
     }
     // South.
     hang(['general'], danger, -1.2, z1 + out, 0);
     hang(['no-entry'], covers, 1.2, z1 + out, 0);
-    // East and west.
-    hang(['general'], danger, x1 + out, -0.8, Math.PI / 2);
-    hang(['no-entry'], covers, x1 + out, 0.8, Math.PI / 2);
+    // East, by its gate: the gate's own, entry by permit, and the danger.
+    hang(
+      ['confined'],
+      ['Authorised persons only', 'Entry by permit'],
+      x1 + out,
+      g0 - 0.5,
+      Math.PI / 2,
+    );
+    hang(['general'], danger, x1 + out, -1.9, Math.PI / 2);
+    // West.
     hang(['general'], danger, x0 - out, -0.8, -Math.PI / 2);
     hang(['no-entry'], covers, x0 - out, 0.8, -Math.PI / 2);
   }
   // The pump's davit outside the rail on the east, its arm reaching over
   // it to the hatch over the sump, its chain block hanging from it.
+  // Painted yellow and marked with its safe working load, as lifting gear
+  // is; its post on a 400 mm square base plate, 25 mm thick, held down by
+  // four anchor bolts with their nuts and washers; a gusset where its arm
+  // meets its post, and a diagonal knee brace under the arm (the owner,
+  // 2026-10-26: it read as an arch stuck into the concrete).
   {
     const davitX = L / 2 + w + rail.off + 0.3;
     const hx = (hatchArea.minX + hatchArea.maxX) / 2;
     const davitZ = (hatchArea.minZ + hatchArea.maxZ) / 2;
     const reach = davitX - hx;
-    t.cyl(group, steel, 0.05, 1.8, davitX, 0.9, davitZ, 'y', 12);
-    t.box(
-      group,
-      steel,
-      reach + 0.1,
-      0.08,
-      0.08,
-      davitX - reach / 2,
-      1.76,
-      davitZ,
-    );
+    const yellow = t.paint('#e3b51f', 0.5);
+    const dark = t.paint('#2b2e2f', 0.6);
+    const armY = 1.76;
+    // Its base plate and its four anchor bolts.
+    t.box(group, yellow, 0.4, 0.025, 0.4, davitX, 0.0125, davitZ);
+    for (const dx of [-0.15, 0.15])
+      for (const dz of [-0.15, 0.15]) {
+        t.cyl(
+          group,
+          dark,
+          0.022,
+          0.006,
+          davitX + dx,
+          0.028,
+          davitZ + dz,
+          'y',
+          12,
+        );
+        t.cyl(
+          group,
+          dark,
+          0.016,
+          0.022,
+          davitX + dx,
+          0.042,
+          davitZ + dz,
+          'y',
+          6,
+        );
+        t.cyl(
+          group,
+          dark,
+          0.008,
+          0.02,
+          davitX + dx,
+          0.062,
+          davitZ + dz,
+          'y',
+          8,
+        );
+      }
+    // Its post, and its arm over the rail to the hatch.
     t.cyl(
       group,
-      t.paint('#2b2e2f', 0.6),
-      0.03,
-      0.12,
-      hx,
-      1.66,
+      yellow,
+      0.06,
+      armY + 0.04,
+      davitX,
+      (armY + 0.04) / 2,
       davitZ,
       'y',
-      10,
+      14,
     );
+    t.box(
+      group,
+      yellow,
+      reach + 0.12,
+      0.1,
+      0.08,
+      davitX - reach / 2,
+      armY,
+      davitZ,
+    );
+    // The gusset where they meet, and the knee brace under the arm.
+    t.box(group, yellow, 0.22, 0.22, 0.012, davitX - 0.11, armY - 0.11, davitZ);
+    {
+      const from = [davitX, armY - 0.7] as const;
+      const to = [davitX - 0.6, armY - 0.05] as const;
+      const len = Math.hypot(to[0] - from[0], to[1] - from[1]);
+      const brace = t.box(
+        group,
+        yellow,
+        len,
+        0.05,
+        0.05,
+        (from[0] + to[0]) / 2,
+        (from[1] + to[1]) / 2,
+        davitZ,
+      );
+      brace.rotation.z = Math.atan2(to[1] - from[1], to[0] - from[0]);
+    }
+    // Its chain block over the hatch, and its mark.
+    t.cyl(group, dark, 0.04, 0.14, hx, armY - 0.12, davitZ, 'y', 10);
+    const swl = createMicroLabel(kit, 'PUMP DAVIT  SWL 250 kg', {
+      height: 0.03,
+      ink: '#151515',
+      plate: '#e3b51f',
+    });
+    // On both faces of its arm, along it.
+    swl.position.set(davitX - reach / 2, armY, davitZ + 0.041);
+    const back = swl.clone();
+    back.rotation.y = Math.PI;
+    back.position.z = davitZ - 0.041;
+    group.add(back);
+    group.add(swl);
   }
   // The ultrasonic level transmitter under the gratings, on a bracket
   // from its north wall, looking down at the water.
