@@ -116,7 +116,7 @@ export function createArchitecturalFixture(
       box(group, steel, 1.26, 0.03, 0.04, 0, y, 0.06);
     for (let y = -0.27; y <= 0.27; y += 0.04)
       box(group, steel, 1.2, 0.018, 0.035, 0, y, 0.065);
-  } else if (kind === 'ladder') {
+  } else if (kind === 'cable-ladder') {
     for (const x of [-0.15, 0.15]) box(group, steel, 0.025, 0.1, 3, x, 0, 0);
     for (let z = -1.35; z < 1.5; z += 0.3)
       box(group, steel, 0.3, 0.021, 0.042, 0, -0.035, z);

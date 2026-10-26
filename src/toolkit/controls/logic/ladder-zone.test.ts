@@ -27,6 +27,12 @@ describe('ladder controls', () => {
     expect(ladderToUse([zone], 4, -3.5, 0.9, 1)).toBeNull();
   });
 
+  it('can close the upper entry while preserving escape from below', () => {
+    const maintenance = { ...zone, canUseTop: false };
+    expect(ladderToUse([maintenance], 1.6, 0, 0.9, 1)).toBeNull();
+    expect(ladderToUse([maintenance], 2.25, -3.5, 0.9, 1)?.end).toBe('bottom');
+  });
+
   it('climbs with W and descends with S independent of view pitch', () => {
     expect(climb(zone, -2, 1, 1, 1)).toBeCloseTo(-1.1);
     expect(climb(zone, -2, -1, 1, 1)).toBeCloseTo(-2.9);

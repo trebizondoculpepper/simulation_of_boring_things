@@ -1,4 +1,11 @@
-import { Group, Vector3 } from 'three';
+import {
+  Box3,
+  BoxGeometry,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  Vector3,
+} from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import type { Footprint } from '../../../controls/logic/walk-collision';
@@ -16,8 +23,25 @@ import { createCagedLadder } from '../../plant/views/railings';
 interface LadderRecord {
   layout: HumanLadderLayout;
   enabled: () => boolean;
+  topEnabled: () => boolean;
+  bottomEnabled: () => boolean;
 }
 const records = new WeakMap<Object3D, LadderRecord>();
+const roomCache = new WeakMap<
+  Object3D,
+  { children: number; ladders: Group[] }
+>();
+
+function roomLadders(root: Object3D): Group[] {
+  const prior = roomCache.get(root);
+  if (prior?.children === root.children.length) return prior.ladders;
+  const ladders: Group[] = [];
+  root.traverse((object) => {
+    if (records.has(object)) ladders.push(object as Group);
+  });
+  roomCache.set(root, { children: root.children.length, ladders });
+  return ladders;
+}
 
 const worldPoint = (group: Group, at: LadderPoint) =>
   group.localToWorld(new Vector3(...at));
@@ -58,6 +82,8 @@ export function createHumanLadder(
     topExit?: LadderPoint;
     bottomExit?: LadderPoint;
     enabled?: () => boolean;
+    topEnabled?: () => boolean;
+    bottomEnabled?: () => boolean;
   } = {},
 ) {
   const layout = humanLadderLayout(kind, height, options);
@@ -72,10 +98,40 @@ export function createHumanLadder(
             standOff: options.standOff,
             extension: options.extension,
           })
-        : createCagedLadder(options.kit, height);
+        : createCagedLadder(options.kit, height, kind === 'caged');
+  }
+  if (kind === 'caged' || kind === 'utility') {
+    const metal = new MeshStandardMaterial({
+      color: '#565d60',
+      metalness: 0.62,
+      roughness: 0.45,
+    });
+    options.kit?.materials.push(metal);
+    const side = Math.sign(layout.topExit[2]) || -1;
+    const centre = side * 0.54;
+    const deck = new Mesh(new BoxGeometry(1.18, 0.06, 0.9), metal);
+    deck.name = 'Ladder top service landing';
+    deck.position.set(0, layout.top - 0.03, centre);
+    group.add(deck);
+    for (const x of [-0.57, 0.57]) {
+      const rail = new Mesh(new BoxGeometry(0.035, 1.05, 0.9), metal);
+      rail.name = 'Ladder landing guard';
+      rail.position.set(x, layout.top + 0.525, centre);
+      group.add(rail);
+    }
+    const end = new Mesh(new BoxGeometry(1.18, 1.05, 0.035), metal);
+    end.name = 'Ladder landing end guard';
+    end.position.set(0, layout.top + 0.525, centre + side * 0.44);
+    group.add(end);
   }
   group.name = `${kind} human access ladder`;
-  const record = { layout, enabled: options.enabled ?? (() => true) };
+  group.userData.live = true;
+  const record = {
+    layout,
+    enabled: options.enabled ?? (() => true),
+    topEnabled: options.topEnabled ?? (() => true),
+    bottomEnabled: options.bottomEnabled ?? (() => true),
+  };
   records.set(group, record);
   return {
     group,
@@ -108,16 +164,68 @@ export function humanLadderZones(
 ): LadderZone[] {
   root.updateWorldMatrix(true, true);
   const zones: LadderZone[] = [];
-  root.traverse((object) => {
+  for (const object of roomLadders(root)) {
     const record = records.get(object);
     if (record?.enabled()) {
       const zone = zoneOf(object as Group, record.layout);
+      zone.canUseTop = record.topEnabled();
+      zone.canUseBottom = record.bottomEnabled();
       if (floorAt && record.layout.kind === 'pool') {
         const lower = floorAt(zone.bottomExit.x, zone.bottomExit.z);
         if (Number.isFinite(lower)) zone.bottom = lower;
       }
       zones.push(zone);
     }
-  });
+  }
   return zones;
+}
+
+/** A short guarded landing made with each elevated human ladder. */
+export function humanLadderLandingAt(
+  root: Object3D,
+  x: number,
+  z: number,
+  previousY: number,
+): number | null {
+  root.updateWorldMatrix(true, true);
+  let found: number | null = null;
+  for (const object of roomLadders(root)) {
+    const record = records.get(object);
+    if (
+      !record ||
+      (record.layout.kind !== 'caged' && record.layout.kind !== 'utility')
+    )
+      continue;
+    const zone = zoneOf(object as Group, record.layout);
+    if (
+      previousY >= zone.top - 0.5 &&
+      Math.abs(x - zone.topExit.x) < 0.52 &&
+      Math.abs(z - zone.topExit.z) < 0.4
+    )
+      found = zone.top;
+  }
+  return found;
+}
+
+/** Rail footprints on elevated ladder landings, in the room's scene units. */
+export function humanLadderLandingSolids(root: Object3D): Footprint[] {
+  root.updateWorldMatrix(true, true);
+  const solids: Footprint[] = [];
+  for (const ladder of roomLadders(root)) {
+    for (const part of ladder.children) {
+      if (
+        !part.name.startsWith('Ladder landing') ||
+        !part.name.endsWith('guard')
+      )
+        continue;
+      const box = new Box3().setFromObject(part);
+      solids.push({
+        minX: box.min.x,
+        maxX: box.max.x,
+        minZ: box.min.z,
+        maxZ: box.max.z,
+      });
+    }
+  }
+  return solids;
 }

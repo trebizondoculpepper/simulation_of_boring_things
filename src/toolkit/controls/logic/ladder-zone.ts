@@ -9,6 +9,9 @@ export interface LadderZone extends Footprint {
   topExit: { x: number; z: number };
   /** The position held while moving on the rungs. */
   rung: { x: number; z: number };
+  /** Restrict entry at one end without trapping someone at the other. */
+  canUseBottom?: boolean;
+  canUseTop?: boolean;
 }
 
 /** Climbing speed, metres a second. */
@@ -28,6 +31,8 @@ export function ladderToUse(
 ): { zone: LadderZone; end: LadderEnd } | null {
   for (const zone of zones) {
     for (const end of ['bottom', 'top'] as const) {
+      if (end === 'bottom' && zone.canUseBottom === false) continue;
+      if (end === 'top' && zone.canUseTop === false) continue;
       const floor = zone[end];
       const exit = end === 'bottom' ? zone.bottomExit : zone.topExit;
       if (

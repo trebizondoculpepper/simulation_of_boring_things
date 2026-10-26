@@ -28,7 +28,7 @@ import {
   createGratingDeck,
   createGuardRail,
 } from '../../../components/plant/views/railings';
-import { createTankLadder } from '../../../components/plant/views/tank-ladder';
+import { createHumanLadder } from '../../../components/architectural/views/human-ladder';
 import { createFloatSwitch } from '../../../components/plant/views/float-switch';
 import { createUltrasonicLevel } from '../../../components/plant/views/ultrasonic-level';
 import { createStaffGauge } from '../../../components/plant/views/staff-gauge';
@@ -119,7 +119,10 @@ export function buildHall(
      */
     source?: () => BalanceTankState;
   } = {},
-): LiveExhibit & { doors: ReturnType<typeof equipmentDoors> } {
+): LiveExhibit & {
+  doors: ReturnType<typeof equipmentDoors>;
+  holdLadderGate(): void;
+} {
   if (source) state = source();
   const object = new Group();
   object.name = 'Balance tank hall';
@@ -261,10 +264,16 @@ export function buildHall(
   object.add(deepSign);
 
   // The ladder down the east wall, and the staff gauge beside it.
-  const ladder = createTankLadder(kit, { depth: -TANK.floor });
-  ladder.rotation.y = -Math.PI / 2;
-  ladder.position.set(TANK.maxX, 0, LADDER.z);
-  object.add(ladder);
+  const ladder = createHumanLadder('tank-access', -TANK.floor, {
+    kit,
+    topExit: [-0.65, 0, LADDER.standOff],
+    bottomExit: [0, TANK.floor, LADDER.standOff + 0.48],
+    enabled: () => gate.angle() > 0.6,
+    topEnabled: () => heightOf(state.level) < TANK.floor + 0.3,
+  });
+  ladder.group.rotation.y = -Math.PI / 2;
+  ladder.group.position.set(TANK.maxX, 0, LADDER.z);
+  object.add(ladder.group);
   const gauge = createStaffGauge(kit, -TANK.floor - 0.1);
   gauge.rotation.y = -Math.PI / 2;
   gauge.position.set(TANK.maxX - 0.003, TANK.floor, SPOTS.gauge.z);
@@ -652,6 +661,7 @@ export function buildHall(
     object,
     parts,
     doors,
+    holdLadderGate: () => gate.holdOpen(),
     // The doors bar the doorway while shut, and are held open while the walker stands in it.
     solids: (walker) => {
       const inside = overlaps(leaves, walker.x, walker.z, 0.35);

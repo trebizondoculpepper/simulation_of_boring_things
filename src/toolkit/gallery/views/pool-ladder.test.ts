@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { Group } from 'three';
-import { createPoolLadder, poolLadderZones } from './pool-ladder';
+import {
+  createHumanLadder,
+  humanLadderZones,
+} from '../../components/architectural/views/human-ladder';
 
 describe('pool ladder movement zones', () => {
   it('follows a rotated, scaled ladder and uses the actual pool floor', () => {
     const room = new Group();
     room.scale.setScalar(2);
-    const ladder = createPoolLadder(1);
+    const ladder = createHumanLadder('pool', 1).group;
     ladder.position.set(3, 0, -4);
     ladder.rotation.y = Math.PI / 2;
     room.add(ladder);
-    const [zone] = poolLadderZones(room, () => -1.8);
+    const [zone] = humanLadderZones(room, () => -1.8);
     expect(zone.bottom).toBe(-1.8);
     expect(zone.top).toBe(0);
     expect(zone.rung.x).toBeCloseTo(6);

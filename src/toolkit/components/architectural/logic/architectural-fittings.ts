@@ -131,7 +131,7 @@ export const ARCHITECTURAL_FITTINGS = {
       'HAG C Door horizontal folding family, selected 6000 × 5000 mm opening',
     source: 'https://www.hag.co.uk/product/c-door/',
   },
-  ladder: {
+  'cable-ladder': {
     title: 'Galvanised cable ladder',
     reference: 'Legrand Swifts 3 m length, 300 mm width, 100 mm side rails',
     source:

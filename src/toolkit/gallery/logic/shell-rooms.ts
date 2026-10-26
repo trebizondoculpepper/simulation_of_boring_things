@@ -2,6 +2,7 @@ import type { Footprint } from '../../controls/logic/walk-collision';
 import type { RoomId } from './dev-room-links';
 import { MAIN_CORRIDOR } from './main-corridor';
 import { PLANT_DOORWAY } from './plant-rooms';
+import { BACKWASH_PIT } from '../../../game/plant/wet-hall';
 
 /**
  * The main plant's rooms off the main corridor (`main-corridor.ts`), and
@@ -527,7 +528,16 @@ function northEntrance() {
 }
 
 /** The floor under the walker: a landing at 0, a tread of a stair, or the hall's floor below. */
-export function wetHallFloorAt(x: number, z: number) {
+export function wetHallFloorAt(x: number, z: number, previous = 0) {
+  const pit = WET_HALL_LAYOUT.pit;
+  if (
+    previous < -WET_HALL.drop - 0.5 &&
+    x > pit.minX + 0.15 &&
+    x < pit.maxX - 0.15 &&
+    z > pit.minZ + 0.15 &&
+    z < pit.maxZ - 0.15
+  )
+    return -WET_HALL.drop - BACKWASH_PIT.depth;
   const { landing, stair, riser } = northEntrance();
   const R = wetHallRoom().w / 2;
   // In the west doorway, through the wall: level with the ramp's top.
@@ -558,6 +568,19 @@ export function wetHallFloorAt(x: number, z: number) {
     }
   }
   return -WET_HALL.drop;
+}
+
+/** Below the wet-hall deck, the backwash pit's concrete walls bound walking. */
+export function wetHallPitWalls(floorY: number): Footprint[] {
+  if (floorY > -WET_HALL.drop - 0.5) return [];
+  const p = WET_HALL_LAYOUT.pit;
+  const t = WET_HALL_LAYOUT.pitWall;
+  return [
+    { minX: p.minX - t, maxX: p.minX, minZ: p.minZ - t, maxZ: p.maxZ + t },
+    { minX: p.maxX, maxX: p.maxX + t, minZ: p.minZ - t, maxZ: p.maxZ + t },
+    { minX: p.minX, maxX: p.maxX, minZ: p.minZ - t, maxZ: p.minZ },
+    { minX: p.minX, maxX: p.maxX, minZ: p.maxZ, maxZ: p.maxZ + t },
+  ];
 }
 
 /** Turned back from the north entrance's frame to `wall`'s. */

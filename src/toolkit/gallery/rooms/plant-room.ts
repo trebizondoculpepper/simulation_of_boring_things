@@ -61,6 +61,11 @@ import { SANS, tools } from '../../components/core/views/fitting-tools';
 import { mergeTree } from '../../components/core/views/merge-static';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { createFirstPerson } from '../../controls/input/first-person';
+import {
+  humanLadderLandingAt,
+  humanLadderLandingSolids,
+  humanLadderZones,
+} from '../../components/architectural/views/human-ladder';
 import { knobDirection } from '../../controls/input/knob-turning';
 import {
   createPs1Material,
@@ -575,15 +580,19 @@ export function startEquipmentRoom(
     }),
     start: { x: 0, z: 0 },
     floorAt: (x, z, previous) => {
-      standing = sized
-        ? regionFloorAt(sized.room, sized.gantry, x / m, z / m, previous / m)
-        : 0;
+      standing =
+        humanLadderLandingAt(room, x, z, previous) ??
+        (sized
+          ? regionFloorAt(sized.room, sized.gantry, x / m, z / m, previous / m)
+          : 0);
       return standing * m;
     },
+    ladders: () => humanLadderZones(room),
     // Up the stair or on the gantry, its rails; on the floor, the machines too.
     solids: () => [
       ...walls,
       ...(standing < 0.5 ? solids : []),
+      ...(standing >= 0.5 ? humanLadderLandingSolids(room) : []),
       // What the exhibits put in the way as they work (a shut door).
       ...live
         .flatMap(

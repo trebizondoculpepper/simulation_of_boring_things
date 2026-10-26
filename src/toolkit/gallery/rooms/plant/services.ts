@@ -16,10 +16,10 @@ import {
   createSpiralDuct,
 } from '../../../components/plant/views/ductwork';
 import {
-  createCagedLadder,
   createFloorSurfaces,
   createGuardRail,
 } from '../../../components/plant/views/railings';
+import { createHumanLadder } from '../../../components/architectural/views/human-ladder';
 import { tools } from '../../../components/core/views/fitting-tools';
 
 /** What the room is for, on its title card. */
@@ -97,7 +97,10 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       const group = new Group();
       const t = tools(kit);
       t.box(group, t.paint('#cfd2c8', 0.85), 1.0, 4.6, 0.1, 0, 2.3, -0.45);
-      const ladder = createCagedLadder(kit, 3.5);
+      const ladder = createHumanLadder('caged', 3.5, {
+        kit,
+        topExit: [0, 3.5, 0.6],
+      }).group;
       ladder.position.z = -0.4;
       group.add(ladder);
       return group;

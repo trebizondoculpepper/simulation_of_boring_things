@@ -90,7 +90,7 @@ export function createGuardRail(kit: PanelKit, options: GuardRailOptions) {
 }
 
 /** A fixed ladder with safety cage, `rise` metres high, against a wall at z = 0. */
-export function createCagedLadder(kit: PanelKit, rise = 4) {
+export function createCagedLadder(kit: PanelKit, rise = 4, cage = true) {
   const t = plantTools(kit);
   const group = new Group();
   const steel = t.paint(RAIL_COLOUR.galvanised[0], 0.42, 0.6);
@@ -102,7 +102,7 @@ export function createCagedLadder(kit: PanelKit, rise = 4) {
   // Hoops from 2.4 m, every 0.9 m, 700 mm deep from the rungs.
   const depth = 0.7;
   const hoopY: number[] = [];
-  for (let y = 2.4; y <= rise + 1.0; y += 0.9) hoopY.push(y);
+  if (cage) for (let y = 2.4; y <= rise + 1.0; y += 0.9) hoopY.push(y);
   for (const y of hoopY) {
     const points = 10;
     for (let i = 0; i < points; i++) {

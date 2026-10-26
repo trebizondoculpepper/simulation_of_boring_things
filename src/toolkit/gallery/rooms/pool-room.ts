@@ -21,7 +21,10 @@ import {
 } from '../views/arched-corridor';
 import { createWhiteCorridor } from '../views/white-corridor';
 import { createGreenRoom } from '../views/green-room';
-import { createHumanLadder, humanLadderZones } from '../../components/architectural/views/human-ladder';
+import {
+  createHumanLadder,
+  humanLadderZones,
+} from '../../components/architectural/views/human-ladder';
 
 /** PR_A's ladder, on the back pool's west side: its middle. */
 const BACK_LADDER = { x: POOL_RECTS[2].minX, z: -6.4 };

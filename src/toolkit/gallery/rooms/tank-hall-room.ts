@@ -20,6 +20,7 @@ import {
 } from '../../components/core/views/eighties-controls';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { createFirstPerson } from '../../controls/input/first-person';
+import { humanLadderZones } from '../../components/architectural/views/human-ladder';
 import { knobDirection } from '../../controls/input/knob-turning';
 import {
   createPs1Material,
@@ -43,6 +44,7 @@ import {
   OPENING,
   PARTITION,
   TANK,
+  tankHallFloorAt,
 } from '../logic/balance-tank-hall';
 import { buildHall, prepareRoom } from './plant/balance-tank-hall';
 import { roomWorld } from '../../save/world-store';
@@ -177,11 +179,21 @@ export function startTankHall(canvas: HTMLCanvasElement) {
     floorY: 0,
     // On the gantry just inside the doors, looking out over the water.
     start: { x: (TANK.minX + 0.8) * m, z: DOORWAY.z * m, yaw: Math.PI / 2 },
-    floorAt: () => 0,
+    floorAt: (x, z, previous) =>
+      tankHallFloorAt(x / m, z / m, previous / m) * m,
+    ladders: () => humanLadderZones(room),
     solids: () => [
-      ...fixed.map(toMetre),
-      ...(
-        hall.solids?.({ x: walk.walker.x / m, z: walk.walker.z / m }) ?? []
+      ...(walk.floorY < -0.5 * m ? fixed.slice(1) : fixed).map(toMetre),
+      ...(walk.floorY < -0.5 * m
+        ? [
+            {
+              minX: TANK.minX - PARTITION,
+              maxX: TANK.minX,
+              minZ: TANK.minZ,
+              maxZ: TANK.maxZ,
+            },
+          ]
+        : (hall.solids?.({ x: walk.walker.x / m, z: walk.walker.z / m }) ?? [])
       ).map(toMetre),
       ...(seenPlant ? [] : [toMetre(beyond)]),
     ],
@@ -249,6 +261,7 @@ export function startTankHall(canvas: HTMLCanvasElement) {
     last = time;
     ps1Uniforms.time.value = time / 1000;
     walk.update(delta);
+    if (walk.floorY < -0.5 * m) hall.holdLadderGate();
     partAudio.listen(camera, m);
     hall.parts?.update(delta);
     hall.update?.(delta);

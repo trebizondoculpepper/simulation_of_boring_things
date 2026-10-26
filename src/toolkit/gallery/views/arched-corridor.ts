@@ -536,7 +536,10 @@ export function createArchedCorridor(
   water.renderOrder = 1;
   rippleWater(water, uniforms);
   // A ladder on the pool's east side, facing the steps.
-  const ladder = createHumanLadder('pool', pool.waterY - pool.floor + 0.05).group;
+  const ladder = createHumanLadder(
+    'pool',
+    pool.waterY - pool.floor + 0.05,
+  ).group;
   ladder.position.set(pool.maxX, e.floor, POOL_LADDER_Z);
   ladder.rotation.y = Math.PI;
   group.add(ladder);

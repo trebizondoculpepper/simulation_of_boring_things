@@ -47,6 +47,21 @@ export const TANK = {
   maxZ: T.width / 2,
   floor: -T.depth,
 } as const;
+
+/** Keep the gantry over the tank while standing high, and the tank floor after descent. */
+export function tankHallFloorAt(
+  x: number,
+  z: number,
+  previous: number,
+): number {
+  return previous < -0.5 &&
+    x > TANK.minX &&
+    x < TANK.maxX &&
+    z > TANK.minZ &&
+    z < TANK.maxZ
+    ? TANK.floor
+    : 0;
+}
 /** The bay's floor. */
 export const BAY_FLOOR = { minX: -IN.x, maxX: TANK.minX - PARTITION } as const;
 /** The open water between the gantries: what the floor is cut away for. */

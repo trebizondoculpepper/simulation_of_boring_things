@@ -36,6 +36,11 @@ import {
   createFirstPerson,
   WALKER_RADIUS_METRES,
 } from '../../controls/input/first-person';
+import {
+  humanLadderLandingAt,
+  humanLadderLandingSolids,
+  humanLadderZones,
+} from '../../components/architectural/views/human-ladder';
 import { isHeldPortableHit } from '../../controls/input/object-handling';
 import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
 import {
@@ -67,6 +72,7 @@ import {
   throughShellDoor,
   wetHallFloorAt,
   wetHallPartition,
+  wetHallPitWalls,
   wetHallRails,
   wetHallRoom,
 } from '../logic/shell-rooms';
@@ -280,6 +286,7 @@ export function startWetHall(canvas: HTMLCanvasElement) {
     // The make-up bay's pair of equipment doors (prompt 036).
     install: (kit) => [wetHallBayDoors(kit), ...wetHallFireAlarm(kit)],
     floorAt: wetHallFloorAt,
+    levelSolids: wetHallPitWalls,
     // And the make-up bay's partition (prompt 036).
     solids: [...shellSolids(room), ...wetHallRails(), ...wetHallPartition()],
     // On the east landing, looking west over the hall to the ramp.
@@ -498,9 +505,11 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   });
   composer.addPass(film);
 
-  const walls = [...cfg.solids, ...machines.solids].map(toMetre);
+  const walls = cfg.solids.map(toMetre);
+  const machineWalls = machines.solids.map(toMetre);
   // The height of the floor the walker stands on, metres: up on a gantry, or not.
   let standing = cfg.floorAt(cfg.start.x, cfg.start.z, 0);
+  let onLadderLanding = false;
   const flightBox = new Box3().setFromObject(rooms);
   const walk = createFirstPerson({
     scene,
@@ -538,13 +547,21 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       pitch: cfg.start.pitch,
     },
     floorAt: (x, z, previous) => {
-      standing = cfg.floorAt(x / metre, z / metre, previous / metre);
+      const landing = humanLadderLandingAt(rooms, x, z, previous);
+      onLadderLanding = landing !== null;
+      standing =
+        landing === null
+          ? cfg.floorAt(x / metre, z / metre, previous / metre)
+          : landing / metre;
       return standing * metre;
     },
+    ladders: () => humanLadderZones(rooms),
     // Each doorway: its leaves while shut, but never where the walker
     // stands; a stop just beyond until the room there is seen.
     solids: () => [
       ...walls,
+      ...(onLadderLanding ? [] : machineWalls),
+      ...(onLadderLanding ? humanLadderLandingSolids(rooms) : []),
       ...(cfg.levelSolids?.(standing) ?? []).map(toMetre),
       ...machines
         .movingSolids({ x: walk.walker.x / metre, z: walk.walker.z / metre })

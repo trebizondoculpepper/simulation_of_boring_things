@@ -14,7 +14,7 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import type { BrandId } from '../../core/logic/brands';
 import { createEngravedPlate } from '../../core/views/plant-signs';
 import { createSectionalTank } from './balance-plant';
-import { createCagedLadder } from './railings';
+import { createHumanLadder } from '../../architectural/views/human-ladder';
 
 /**
  * Blocking out a room before its machines are modelled: a real tank of
@@ -132,7 +132,7 @@ export function createTank(
     );
     group.add(plate);
     if (ladderDepth) {
-      const ladder = createCagedLadder(kit, tank.top + 0.05);
+      const ladder = createHumanLadder('caged', tank.top + 0.05, { kit }).group;
       ladder.position.set(-nx / 2 + 0.45, 0, back + nz / 2 + 0.02);
       group.add(ladder);
     }

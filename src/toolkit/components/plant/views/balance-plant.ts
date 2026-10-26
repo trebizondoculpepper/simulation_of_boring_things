@@ -16,7 +16,7 @@ import { brandLivery } from '../../core/views/brand-livery';
 import type { BrandId } from '../../core/logic/brands';
 import { FINISH, plantTools } from './plant-tools';
 import type { DN, Point } from './plant-tools';
-import { createCagedLadder } from './railings';
+import { createHumanLadder } from '../../architectural/views/human-ladder';
 import { createMagFlowmeter } from './mag-flowmeter';
 import { FLOWMETER, METER } from '../logic/booster-set';
 
@@ -235,7 +235,7 @@ export function createBalanceTank(kit: PanelKit) {
     '#f2d34a',
   );
   // Caged ladder up the face to the roof.
-  const ladder = createCagedLadder(kit, top + 0.05);
+  const ladder = createHumanLadder('caged', top + 0.05, { kit }).group;
   ladder.position.set(-2.55, 0, front + 0.02);
   group.add(ladder);
   return group;

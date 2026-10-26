@@ -30,7 +30,7 @@ import { FINISH, plantTools } from './plant-tools';
 import { createGratingDeck } from './railings';
 import { createUltrasonicLevel } from './ultrasonic-level';
 import { createStaffGauge } from './staff-gauge';
-import { createTankLadder } from './tank-ladder';
+import { createHumanLadder } from '../../architectural/views/human-ladder';
 import { createCanvasTexture } from '../../core/views/screens';
 import { createLifebuoy } from '../../general-safety/views/lifebuoy';
 import { createSafetySign } from '../../general-safety/views/safety-signs';
@@ -1052,17 +1052,17 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   // hatch, at the hatch's north edge clear of the sump, from just under
   // the hatch to its floor; its handholds stop under the hatch, which
   // closes over it.
-  {
-    const ladder = createTankLadder(kit, {
-      depth: D - 0.05,
-      standOff: 0.18,
-      extension: -0.05,
-    });
-    ladder.rotation.y = -Math.PI / 2;
-    // Centred along the hatch (the owner, 2026-10-26).
-    ladder.position.set(L / 2, -0.05, -W / 2 + p.hatch / 2);
-    group.add(ladder);
-  }
+  let waterDepth = 0;
+  const accessLadder = createHumanLadder('tank-access', D, {
+    kit,
+    extension: -0.05,
+    topExit: [0, 0, -0.94],
+    bottomExit: [0, -D, 0.62],
+    topEnabled: () => waterDepth < 0.3,
+  });
+  accessLadder.group.rotation.y = -Math.PI / 2;
+  accessLadder.group.position.set(L / 2, 0, -W / 2 + p.hatch / 2);
+  group.add(accessLadder.group);
   // Its float switches (the owner, 2026-10-26), in a row by its sump on
   // a bracket from its east wall under the gratings: each on its cable to
   // its level, hanging when dry, tilted up on the water when it reaches
@@ -1129,6 +1129,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   // over a second; local, not world state, like a door's leaf.
   const gate = { open: false, angle: 0 };
   const cover = { open: false, angle: 0 };
+  accessLadder.setEnabled(() => gate.angle > 0.6 && cover.angle > 0.6);
   const GATE_OPEN = 1.6;
   const LID_OPEN = 1.75;
   const uses = parts.uses;
@@ -1157,16 +1158,16 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     /** Whether its gate and hatch stand open. */
     gateOpen: () => gate.angle > 0.6,
     hatchOpen: () => cover.angle > 0.05,
+    accessLadder,
     /**
      * What bars the walker now, in its own frame: its rail and davit; its
-     * gate's gap while shut; its hatch's opening while open (no one steps
-     * into the pit; its ladder is for a permitted entry, not modelled).
+     * gate's gap while shut; its cover bars the hatch while closed.
      */
     solids() {
       return [
         ...fixedSolids,
         ...(gate.angle > 0.6 ? [] : [gateGap]),
-        ...(cover.angle > 0.05 ? [hatchArea] : []),
+        ...(cover.angle > 0.05 ? [] : [hatchArea]),
       ];
     },
     /** Which of its sump pumps run, duty first. */
@@ -1178,6 +1179,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     /** Its water's depth above its floor, metres. */
     setDepth(metres: number) {
       const d = Math.max(0.02, Math.min(p.topWater, metres));
+      waterDepth = d;
       water.position.y = -D + d;
       water.visible = metres > 0.01;
       level.show(metres);

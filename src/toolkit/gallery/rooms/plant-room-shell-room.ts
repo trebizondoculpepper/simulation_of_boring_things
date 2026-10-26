@@ -37,6 +37,11 @@ import {
   createFirstPerson,
   WALKER_RADIUS_METRES,
 } from '../../controls/input/first-person';
+import {
+  humanLadderLandingAt,
+  humanLadderLandingSolids,
+  humanLadderZones,
+} from '../../components/architectural/views/human-ladder';
 import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
 import { createPlantRoomShell } from '../views/plant-room-shell';
 import { PLANT_ROOM } from '../logic/plant-rooms';
@@ -306,14 +311,15 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   // The walls (and the decks' rails, the stair) for the level the walker
   // is on; on the plant floor, its machines' footprints too.
   const wallsUp = shellSolids(plan, true).map(toMetre);
-  const wallsDown = [
-    ...shellSolids(plan, false),
+  const wallsDown = shellSolids(plan, false).map(toMetre);
+  const equipmentWalls = [
     ...(machines?.solids ?? []),
     ...(services?.solids ?? []),
     ...(hall === 'pool_03' ? [JACUZZI_MUSIC_CABINET.footprint] : []),
   ].map(toMetre);
   /** The walker's floor's height, metres. */
   let standing = 0;
+  let onLadderLanding = false;
   // On its deck, just inside the plant room door, looking into the room.
   const inward = [-northWay.frame.out[0], -northWay.frame.out[1]] as const;
   const walk = createFirstPerson({
@@ -337,18 +343,20 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       yaw: Math.atan2(inward[0], -inward[1]),
     },
     floorAt: (x, z, previous) => {
-      standing = shellFloorAt(
-        plan,
-        x / metre,
-        z / metre,
-        (previous ?? 0) / metre,
-      );
+      const landing = humanLadderLandingAt(rooms, x, z, previous);
+      onLadderLanding = landing !== null;
+      standing =
+        landing ??
+        shellFloorAt(plan, x / metre, z / metre, (previous ?? 0) / metre);
       return standing * metre;
     },
+    ladders: () => humanLadderZones(rooms),
     // Each doorway: its leaf while shut, but never where the walker
     // stands; a stop just beyond until the room there is seen.
     solids: () => [
       ...(aloft(plan, standing) ? wallsUp : wallsDown),
+      ...(onLadderLanding || aloft(plan, standing) ? [] : equipmentWalls),
+      ...(onLadderLanding ? humanLadderLandingSolids(rooms) : []),
       ...stops().map(toMetre),
     ],
     use: (x, y) => usableAt(x, y)?.(),
