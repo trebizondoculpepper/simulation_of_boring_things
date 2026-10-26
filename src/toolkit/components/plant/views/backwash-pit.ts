@@ -5,6 +5,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   PlaneGeometry,
+  TorusGeometry,
 } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
@@ -484,23 +485,15 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       );
       brace.rotation.z = Math.atan2(to[1] - from[1], to[0] - from[0]);
     }
-    // Its chain block over the hatch, and its mark.
-    // Hung from a trolley clamped under the arm's tip: the block, its
-    // load chain down to its hook, stowed up under the arm.
-    t.box(group, dark, 0.12, 0.05, 0.1, hx, armY - 0.075, davitZ);
-    t.box(group, dark, 0.14, 0.18, 0.1, hx, armY - 0.19, davitZ);
-    t.cyl(group, steel, 0.006, 0.5, hx + 0.03, armY - 0.53, davitZ, 'y', 6);
-    t.cyl(group, steel, 0.006, 0.3, hx - 0.03, armY - 0.43, davitZ, 'y', 6);
-    t.box(
-      group,
-      t.paint('#e3b51f', 0.5),
-      0.03,
-      0.08,
-      0.02,
-      hx + 0.03,
-      armY - 0.82,
-      davitZ,
-    );
+    // Its lifting eye under its arm's tip, over the hatch, bare: its
+    // lifting gear is brought and hung on it only for a lift, and is
+    // otherwise kept away (the owner, 2026-10-26).
+    {
+      const eye = new Mesh(new TorusGeometry(0.035, 0.008, 8, 16), dark);
+      eye.position.set(hx, armY - 0.09, davitZ);
+      group.add(eye);
+    }
+    // Its mark.
     const swl = createMicroLabel(kit, 'PUMP DAVIT  SWL 250 kg', {
       height: 0.03,
       ink: '#151515',

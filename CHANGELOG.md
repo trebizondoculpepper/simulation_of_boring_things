@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The pump davit stands bare (the owner, 2026-10-26): its chain block, chain and hook are gone, out of the hatchway; only its lifting eye under the arm's tip, where lifting gear is hung when it is brought for a lift.
 - A minimal working fire alarm (the owner, 2026-10-26), the start of prompt 053's: world state `fireAlarm` (`WORLD_VERSION` 37) with resettable manual call points; one at each of the wet hall's three fire points, 1.4 m up beside the extinguishers, latching until reset with its key, and two sounder-beacons (the hall's east wall, the make-up bay) sounding and flashing while any is latched. Red keep-clear boxes on the floor before each fire point; the ramp's fire point moved clear of the ramp's rail.
 - The backwash pit's gate and hatch open and shut with a click (the owner, 2026-10-26); the hatch is hinged on its outer edge. Its gratings and closed hatch can be walked on; its rail, davit foot, shut gate and open hatch bar the way. The davit's chain block hangs on a trolley with its chain and hook.
 - The backwash pit's gate moves to its east side beside the hatch, a self-closing swing gate on a spring hinge with its latch, keep-clear hatching before it (the owner, 2026-10-26). The pump davit is painted yellow, stands on a 400 mm bolted base plate with four anchor bolts, has a gusset and knee brace, and carries PUMP DAVIT SWL 250 kg along its arm.
