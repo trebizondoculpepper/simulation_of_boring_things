@@ -156,7 +156,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Housekeeping
 
-- [x] **Devlog 002** (done 2026-10-26, commit pending): published [Filters, fault lights, and a plant you can read](https://salimfadhley.itch.io/the-pool/devlog/1730093/filters-fault-lights-and-a-plant-you-can-read), covering f93cb85 exclusive through 98cf707 inclusive, with verified build 0.1.356 attached. Project access remains Draft.
+- [x] **Devlog 002** (done 2026-10-26, `885c755`): published [Filters, fault lights, and a plant you can read](https://salimfadhley.itch.io/the-pool/devlog/1730093/filters-fault-lights-and-a-plant-you-can-read), covering f93cb85 exclusive through 98cf707 inclusive, with verified build 0.1.356 attached. Project access remains Draft.
 
 - [x] **Individual boiler inspection and natural description wording** (done 2026-10-25, `209d53b`): register the six boilers under their existing B-501…B-506 plates, give their bodies and labels individual ownership and controller-derived states, distinguish recoverable low water pressure from lockout causes, and generate descriptions with “The” and full room names. The boiler controllers remain local pending mission 046. Equipment headings use `id (brand model type) - state`, omitting unknown fields and leaving location/purpose below. Added the general equipment-status guide covering active machinery, valves/isolators, instruments, passive equipment, architectural fittings and safety equipment.
 
