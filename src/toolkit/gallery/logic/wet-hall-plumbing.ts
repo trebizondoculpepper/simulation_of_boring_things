@@ -201,24 +201,41 @@ export function wetHallPlumbing() {
   // tank's face, past its ladder's cage.
   const inPit = (end: PortEnd) => end.at[1] < 0.2 && end.outward[1] > 0;
   const lead = (l: WetHallLine, end: PortEnd) =>
-    inPit(end) && end !== sewerEnd(l)
-      ? 1.6
-      : l.link === 'Break tank drain' && end === l.start
-        ? 1.0
-        : 0.2;
+    inPit(end) && end !== sewerEnd(l) ? 1.6 : 0.2;
   const sewerEnd = (l: WetHallLine) =>
     l.link === 'Backwash discharge to the sewer' ? l.end : undefined;
-  const router: RouterLine[] = lines.map((l) => ({
-    id: l.link,
-    start: l.start,
-    end: l.end,
-    od: l.od,
-    joint: l.joint,
-    price: pricePerMetre(l.kind, l.od),
-    startStraight: lead(l, l.start),
-    endStraight: lead(l, l.end),
-    ...(l.gravity ? { priority: 5, gravity: true as const } : {}),
-  }));
+  // Two ports facing each other on one line are joined straight, a
+  // short spool, not routed (the owner, 2026-10-26: the meter to the
+  // flowmeter looped up and down); the router lays the rest round them.
+  const facing = (l: WetHallLine) => {
+    const [a, b] = [l.start, l.end];
+    const d: Vec3 = [b.at[0] - a.at[0], b.at[1] - a.at[1], b.at[2] - a.at[2]];
+    const len = Math.hypot(...d);
+    return (
+      len > 0 &&
+      [0, 1, 2].every(
+        (i) =>
+          Math.abs(a.outward[i] - d[i] / len) < 1e-6 &&
+          Math.abs(b.outward[i] + d[i] / len) < 1e-6,
+      )
+    );
+  };
+  const straight = new Map(
+    lines.filter(facing).map((l) => [l.link, [l.start.at, l.end.at] as Vec3[]]),
+  );
+  const router: RouterLine[] = lines
+    .filter((l) => !straight.has(l.link))
+    .map((l) => ({
+      id: l.link,
+      start: l.start,
+      end: l.end,
+      od: l.od,
+      joint: l.joint,
+      price: pricePerMetre(l.kind, l.od),
+      startStraight: lead(l, l.start),
+      endStraight: lead(l, l.end),
+      ...(l.gravity ? { priority: 5, gravity: true as const } : {}),
+    }));
   const routed = routeVoxelLines(
     {
       halfX: layout.box.w / 2,
@@ -228,8 +245,16 @@ export function wetHallPlumbing() {
       regions,
     },
     router,
-    [],
+    lines
+      .filter((l) => straight.has(l.link))
+      .map((l) => ({
+        name: l.link,
+        points: straight.get(l.link)!,
+        od: l.od,
+        joint: l.joint,
+      })),
   );
+  for (const [link, points] of straight) routed.routes.set(link, points);
   const along = schematicExpansion('wet_hall')?.along ?? new Map();
   const problems: string[] = [];
   const done = lines.map((l): WetHallLine => {
@@ -246,15 +271,17 @@ export function wetHallPlumbing() {
         near: f.end === 'source' ? ('start' as const) : ('end' as const),
       })),
       // A gravity line's valve at its foot, by the floor, worked
-      // crouching; the break tank's drain valve out past its ladder's
-      // cage, where one can stand to it.
+      // crouching.
       l.gravity
         ? {
-            ends: l.link === 'Break tank drain' ? 0.7 : 0.04,
+            ends: 0.04,
             bends: 0.06,
             reach: [0, 1.8],
           }
-        : {},
+        : straight.has(l.link)
+          ? // A spool between facing ports, low: worked crouching.
+            { reach: [0, 1.8] }
+          : {},
     );
     problems.push(...placed.problems.map((p) => `${l.link}: ${p}`));
     return {

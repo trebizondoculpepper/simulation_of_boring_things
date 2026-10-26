@@ -375,13 +375,13 @@ export const WET_HALL_LAYOUT = {
   /**
    * Its floor gullies (the owner, 2026-10-26: spills must drain), each
    * side's apart (prompt 036's plan): the make-up bay's two, by the break
-   * tank's warning overflow and in front of the booster set, on their own
+   * tank's warning overflow and beyond its drain, before the booster set, on their own
    * branch to the foul drain, never to the pit; the dirty side's two, by
    * the pit's pump and in its south-west corner; none in the aisle.
    */
   gullies: [
     { x: 0.0, z: -7.6, side: 'clean' },
-    { x: 5.4, z: -4.6, side: 'clean' },
+    { x: 4.1, z: -5.25, side: 'clean' },
     { x: 5.0, z: 4.2, side: 'dirty' },
     { x: -5.6, z: 8.6, side: 'dirty' },
   ],

@@ -1864,8 +1864,14 @@ export function wetHallPipework(): { runs: PipeRun[] } {
           name: v.name,
           od: l.od,
           operator: 'lever' as const,
-          // Its lever out from the pipe, across it in plan.
-          facing: (axis === 'x' ? [0, 0, 1] : [1, 0, 0]) as Vec3,
+          // On a level pipe, along it the way the line runs, away from
+          // the machine it leaves (its lever, open, lies along it); on a
+          // riser, out to one side.
+          facing: (axis === 'y'
+            ? [1, 0, 0]
+            : axis === 'x'
+              ? [Math.sign(v.along[0]) || 1, 0, 0]
+              : [0, 0, Math.sign(v.along[2]) || 1]) as Vec3,
         };
       }),
     });

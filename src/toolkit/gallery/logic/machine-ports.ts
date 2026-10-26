@@ -168,7 +168,10 @@ export function machinePorts(item: Item): MachinePort[] {
           'make-up',
         ),
         port('overflow', [-east, top - 0.35, back], [-1, 0, 0], 0.11, 'drain'),
-        port('drain', [nx / 2 - 0.6, 0.35, front], [0, 0, 1], 0.09, 'drain'),
+        // Its drain low on its east end, the booster set's side, toward
+        // its front, falling straight to the gully beyond it (the owner,
+        // 2026-10-26: a smoother run out of the tank).
+        port('drain', [east, 0.3, front - 0.15], [1, 0, 0], 0.09, 'drain'),
       ];
     if (kind === 'backwash-tank' && item.pit) {
       // The wet hall's backwash pit (prompt 036), about its opening's
