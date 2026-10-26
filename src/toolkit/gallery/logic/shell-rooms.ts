@@ -351,7 +351,10 @@ export const WET_HALL_LAYOUT = {
    * meter; the boosted make-up main out, high, at its east end, to the
    * pool plant rooms. Along the wall (x) and over the floor (y).
    */
-  townMainIn: { x: -2.4, y: 0.6 },
+  // At the meter line's height and just west of its meter, so the main
+  // comes out of the wall and turns once, straight into the meter (the
+  // owner, 2026-10-26: no dogleg).
+  townMainIn: { x: -2.6, y: 0.25 },
   makeUpMainOut: { x: 5.2, y: 3.0 },
   /**
    * The backwash main in from the pool plant rooms (the owner, 2026-10-26:

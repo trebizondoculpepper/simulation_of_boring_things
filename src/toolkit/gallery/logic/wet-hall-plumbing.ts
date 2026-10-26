@@ -220,8 +220,31 @@ export function wetHallPlumbing() {
       )
     );
   };
-  const straight = new Map(
-    lines.filter(facing).map((l) => [l.link, [l.start.at, l.end.at] as Vec3[]]),
+  // Two ports level with each other, facing at right angles, each out
+  // toward the corner between them, are joined by one elbow (the owner,
+  // 2026-10-26: the town main straight into its meter, no dogleg).
+  const elbow = (l: WetHallLine): Vec3[] | undefined => {
+    const [a, b] = [l.start, l.end];
+    if (l.gravity || Math.abs(a.at[1] - b.at[1]) > 1e-6) return undefined;
+    const axis = (v: Vec3) =>
+      Math.abs(v[0]) > 0.9 ? 0 : Math.abs(v[2]) > 0.9 ? 2 : -1;
+    const ia = axis(a.outward);
+    const ib = axis(b.outward);
+    if (ia < 0 || ib < 0 || ia === ib) return undefined;
+    const corner: Vec3 =
+      ia === 0 ? [b.at[0], a.at[1], a.at[2]] : [a.at[0], a.at[1], b.at[2]];
+    const out = (from: Vec3, dir: Vec3) =>
+      (corner[0] - from[0]) * dir[0] + (corner[2] - from[2]) * dir[2];
+    return out(a.at, a.outward) > 0.2 && out(b.at, b.outward) > 0.2
+      ? [a.at, corner, b.at]
+      : undefined;
+  };
+  const straight = new Map<string, Vec3[]>(
+    lines.flatMap((l): [string, Vec3[]][] => {
+      if (facing(l)) return [[l.link, [l.start.at, l.end.at]]];
+      const e = elbow(l);
+      return e ? [[l.link, e]] : [];
+    }),
   );
   const router: RouterLine[] = lines
     .filter((l) => !straight.has(l.link))
@@ -279,7 +302,7 @@ export function wetHallPlumbing() {
             reach: [0, 1.8],
           }
         : straight.has(l.link)
-          ? // A spool between facing ports, low: worked crouching.
+          ? // A spool or elbow between ports, low: worked crouching.
             { reach: [0, 1.8] }
           : {},
     );
