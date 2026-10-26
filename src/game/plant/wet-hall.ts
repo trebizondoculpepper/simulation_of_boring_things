@@ -122,7 +122,7 @@ export interface WetHallState {
   /** Whether the booster set delivered in the last step, and at what rate, m³/h. */
   boosterRunning: boolean;
   flow: number;
-  /** The make-up water meter's reading, m³. */
+  /** The water in from the town main, through its meters, m³ in all. */
   meter: number;
   /** Water in the backwash holding tank, m³. */
   backwashTank: number;
@@ -194,13 +194,13 @@ export function stepWetHall(
   // The break tank: the main in through the float valve, the make-up out.
   const filling =
     plant.sources.water && s.breakTank < P.breakTank * P.floatOpen;
+  const before = Math.max(0, s.breakTank - flows.drawn);
   const breakTank = Math.min(
     P.breakTank,
-    Math.max(
-      0,
-      s.breakTank + (filling ? P.mainsFill * hours : 0) - flows.drawn,
-    ),
+    before + (filling ? P.mainsFill * hours : 0),
   );
+  // What came in from the main, through the meter, past the float valve.
+  const mainsIn = breakTank - before;
   const boosterTripped =
     s.boosterTripped || breakTank < P.breakTank * P.lowLevel;
   // The backwash tank: the backwash in, its pump out to sewer.
@@ -224,7 +224,7 @@ export function stepWetHall(
     boosterTripped,
     boosterRunning: flows.drawn > 0,
     flow: hours > 0 ? flows.drawn / hours : 0,
-    meter: s.meter + flows.drawn,
+    meter: s.meter + mainsIn,
     backwashTank: Math.min(P.backwashTank, backwashTank),
     discharging,
     spilt: s.spilt + spilt,

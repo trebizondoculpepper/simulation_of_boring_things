@@ -524,18 +524,32 @@ export function createWaterMeterSet(kit: PanelKit, start = 48273) {
   t.cyl(group, blue, 0.07, 0.07, 0, y + 0.1, 0, 'y', 24);
   const register =
     (m3: number) => (c: CanvasRenderingContext2D, w: number, h: number) => {
-      c.clearRect(0, 0, w, h);
+      // Its corners its body's blue, the dial's face round within them.
+      c.fillStyle = livery.palette.main;
+      c.fillRect(0, 0, w, h);
       c.fillStyle = '#f4f2e8';
       c.beginPath();
       c.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2);
       c.fill();
-      c.fillStyle = '#111';
-      c.fillRect(w * 0.18, h * 0.38, w * 0.64, h * 0.16);
-      c.fillStyle = '#f4f2e8';
-      c.font = `bold ${h * 0.13}px monospace`;
+      // Six black drums of whole cubic metres, three red of litres, each
+      // digit in its own drum's window.
+      const whole = Math.floor(m3);
+      const litres = Math.floor((m3 - whole) * 1000);
+      const digits = (
+        String(whole % 1e6).padStart(6, '0') + String(litres).padStart(3, '0')
+      ).split('');
+      const left = w * 0.12;
+      const cell = (w * 0.76) / 9;
+      c.font = `bold ${h * 0.1}px monospace`;
       c.textAlign = 'center';
-      const drums = String(Math.floor(m3) % 1e6).padStart(6, '0');
-      c.fillText(drums.split('').join(' '), w / 2, h * 0.5);
+      c.textBaseline = 'middle';
+      digits.forEach((d, k) => {
+        c.fillStyle = k < 6 ? '#111' : '#a3241c';
+        c.fillRect(left + k * cell + 1, h * 0.39, cell - 2, h * 0.14);
+        c.fillStyle = '#f4f2e8';
+        c.fillText(d, left + (k + 0.5) * cell, h * 0.465);
+      });
+      c.textBaseline = 'alphabetic';
       c.fillStyle = '#111';
       c.font = `${h * 0.08}px ${SANS}`;
       c.fillText('m³', w / 2, h * 0.68);
@@ -545,7 +559,7 @@ export function createWaterMeterSet(kit: PanelKit, start = 48273) {
   dial.mesh.position.set(0, y + 0.137, 0);
   dial.mesh.userData.live = true;
   group.add(dial.mesh);
-  let shown = Math.floor(start);
+  let shown = start;
   // Its maker's mark printed round its register (the owner, 2026-10-26).
   const band = createBrandBand(kit, 'splashonomics', {
     radius: 0.07,
@@ -563,15 +577,18 @@ export function createWaterMeterSet(kit: PanelKit, start = 48273) {
     );
   return {
     group,
-    /** The register at `start` plus `m3` passed. */
+    /** The register at `start` plus `m3` passed, to the litre. */
     show(m3: number) {
-      const now = Math.floor(start + m3);
+      const now = Math.floor((start + m3) * 1000) / 1000;
       if (now === shown) return;
       shown = now;
       const c = dial.context;
       register(now)(c, c.canvas.width, c.canvas.height);
       dial.texture.needsUpdate = true;
     },
+    /** What its register reads, as one would read it off. */
+    reading: () =>
+      `${Math.floor(shown).toString().padStart(6, '0')}.${String(Math.round((shown % 1) * 1000)).padStart(3, '0')} m³`,
   };
 }
 

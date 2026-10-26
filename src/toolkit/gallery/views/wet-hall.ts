@@ -92,6 +92,8 @@ export function createWorldWaterMeter(kit: PanelKit) {
     update() {
       meter.show(w.reading().wetHall.meter);
     },
+    // Its register's reading, as it shows it (prompt 068).
+    status: () => `Reads ${meter.reading()}`,
   };
 }
 
