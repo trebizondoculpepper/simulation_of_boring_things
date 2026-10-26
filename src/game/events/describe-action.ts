@@ -275,6 +275,14 @@ function said(
         severity: a.act === 'stop' && a.pressed ? 'alarm' : 'info',
       };
     }
+    case 'booster/changeover':
+      return {
+        subject: 'BOOSTER SET',
+        text:
+          action.action.act === 'duty'
+            ? `pump ${action.action.pump + 1} selected duty`
+            : `${action.action.act.toUpperCase()} pressed`,
+      };
     case 'pit-pumps':
       return {
         subject: 'PIT PUMPS',

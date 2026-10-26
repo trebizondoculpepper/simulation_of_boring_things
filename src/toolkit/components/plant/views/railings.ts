@@ -6,6 +6,7 @@ import {
   PlaneGeometry,
   RepeatWrapping,
   SRGBColorSpace,
+  DoubleSide,
 } from 'three';
 import type { Material } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -194,6 +195,9 @@ export function createGratingDeck(kit: PanelKit, w: number, d: number) {
   const uv = geometry.getAttribute('uv');
   for (let i = 0; i < uv.count; i++)
     uv.setXY(i, uv.getX(i) * w, uv.getY(i) * d);
+  // Seen from below too: from under a gantry, or inside a pit (the
+  // owner, 2026-10-26: it vanished from underneath).
+  material.side = DoubleSide;
   const deck = new Mesh(geometry, material);
   deck.rotation.x = -Math.PI / 2;
   deck.name = 'Steel grating';

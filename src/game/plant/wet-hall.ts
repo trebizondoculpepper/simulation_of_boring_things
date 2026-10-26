@@ -1,3 +1,9 @@
+import {
+  changeoverFlow,
+  newBoosterChangeover,
+  stepChangeover,
+} from '../../toolkit/components/plant/logic/booster-changeover';
+import type { BoosterChangeover } from '../../toolkit/components/plant/logic/booster-changeover';
 /**
  * The wet hall: the water services every pool shares (`sizing.ts`).
  *
@@ -179,6 +185,12 @@ export interface WetHallState {
   boosterRunning: boolean;
   /** Seconds of its run-on left. */
   boosterRunOn: number;
+  /**
+   * Its two pumps, their valves and its controller's DUTY, RUN, STOP and
+   * BOOST (`booster-changeover.ts`, the owner, 2026-10-26: brought in
+   * from dev42), called by the make-up's demand through its run-on.
+   */
+  booster: BoosterChangeover;
   flow: number;
   /** The water in from the town main, through its meters, m³ in all. */
   meter: number;
@@ -203,6 +215,11 @@ export function newWetHall(): WetHallState {
     boosterTripped: false,
     boosterRunning: false,
     boosterRunOn: 0,
+    booster: {
+      ...newBoosterChangeover(),
+      speed: [0, 0],
+      called: false,
+    },
     flow: 0,
     meter: 0,
     backwashTank: 0,
@@ -244,7 +261,12 @@ export function makeUpShare(
 export function stepWetHall(
   s: WetHallState,
   plant: PlantServices,
-  flows: { drawn: number; backwashed: number },
+  flows: {
+    drawn: number;
+    backwashed: number;
+    /** Whether the pools' make-up calls for water (else, any draw). */
+    demand?: boolean;
+  },
   dt: number,
   /**
    * Its drain to the foul sewer open (the owner, 2026-10-25: valves
@@ -295,9 +317,14 @@ export function stepWetHall(
   const boosterRunOn =
     boosterTripped || !powered(plant)
       ? 0
-      : flows.drawn > 0
+      : (flows.demand ?? flows.drawn > 0)
         ? BOOSTER_RUN_ON
         : Math.max(0, s.boosterRunOn - dt);
+  // Its pumps and valves, called while its run-on lasts.
+  const booster = stepChangeover(
+    { ...s.booster, called: boosterRunOn > 0 },
+    dt,
+  );
   // Its inhibit, on its floats: set when HIGH-HIGH tilts up, held until
   // the pump has it back down past HIGH.
   const after = pitFloats(backwashTank);
@@ -305,8 +332,9 @@ export function stepWetHall(
   return {
     breakTank,
     boosterTripped,
-    boosterRunning: boosterRunOn > 0,
+    boosterRunning: changeoverFlow(booster) > 0,
     boosterRunOn,
+    booster,
     flow: hours > 0 ? flows.drawn / hours : 0,
     meter: s.meter + mainsIn,
     backwashTank: Math.min(P.backwashTank, backwashTank),

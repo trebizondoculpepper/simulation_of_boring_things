@@ -1,3 +1,8 @@
+import {
+  actOnChangeover,
+  changeoverFlow,
+} from '../toolkit/components/plant/logic/booster-changeover';
+import type { ChangeoverAction } from '../toolkit/components/plant/logic/booster-changeover';
 import { OLYMPIC_TANK_DRAIN } from './plant/balance-tank';
 import {
   loungePasses,
@@ -223,7 +228,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 39;
+export const WORLD_VERSION = 40;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -387,7 +392,8 @@ export type WorldAction =
   | { type: 'boiler-gas'; action: BoilerGasAction }
   | { type: 'music'; action: ZoneMusicAction }
   | { type: 'fire-alarm'; action: FireAlarmAction }
-  | { type: 'pit-pumps'; action: PitPumpAction };
+  | { type: 'pit-pumps'; action: PitPumpAction }
+  | { type: 'booster/changeover'; action: ChangeoverAction };
 
 /** The jacuzzi's drain valve, open or shut, and with it its pool's drain-down. */
 const jacuzziDrainDown = (world: World, open: boolean): World => ({
@@ -543,6 +549,14 @@ export function applyAction(world: World, action: WorldAction): World {
       const motors = actOnStarter(world.motors, action.tag, action.action);
       return motors === world.motors ? world : { ...world, motors };
     }
+    case 'booster/changeover':
+      return {
+        ...world,
+        wetHall: {
+          ...world.wetHall,
+          booster: actOnChangeover(world.wetHall.booster, action.action),
+        },
+      };
     case 'pit-pumps':
       return {
         ...world,
@@ -757,13 +771,12 @@ export function stepWorld(world: World, delta: number): World {
   const boosterValves =
     installedValveOpen(world.installedValves, 'WH-T1-IV1') &&
     installedValveOpen(world.installedValves, 'WH-MU1-IV2');
-  const share = boosterValves
-    ? makeUpShare(
-        world.wetHall,
-        world.plant,
-        makeUpDemand(world.pools, { pool_02: calling }),
-      )
-    : 0;
+  const demand = makeUpDemand(world.pools, { pool_02: calling });
+  // And none unless its pumps deliver (their changeover, RUN or STOP).
+  const share =
+    boosterValves && changeoverFlow(world.wetHall.booster) > 0
+      ? makeUpShare(world.wetHall, world.plant, demand)
+      : 0;
   let battery: BatteryFlows | null = null;
   // The motors' starters: each on its room's power and local isolator,
   // and held off while its pool's tank is at its low-low level.
@@ -882,9 +895,15 @@ export function stepWorld(world: World, delta: number): World {
     jacuzzi,
     spaWash,
   );
-  const wetHall = stepWetHall(world.wetHall, world.plant, water, delta, {
-    discharge: installedValveOpen(world.installedValves, 'WH-DR1-DV1'),
-  });
+  const wetHall = stepWetHall(
+    world.wetHall,
+    world.plant,
+    { ...water, demand: demand > 0 },
+    delta,
+    {
+      discharge: installedValveOpen(world.installedValves, 'WH-DR1-DV1'),
+    },
+  );
   return {
     ...world,
     time: world.time + delta,

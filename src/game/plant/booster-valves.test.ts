@@ -20,7 +20,7 @@ describe('the booster set’s motorised valves', () => {
   };
 
   it('let the booster set give make-up while both are open', () => {
-    expect(calling(newWorld()).wetHall.boosterRunning).toBe(true);
+    expect(calling(newWorld()).wetHall.flow).toBeGreaterThan(0);
   });
 
   it('give no make-up while either is shut', () => {
@@ -32,7 +32,8 @@ describe('the booster set’s motorised valves', () => {
         pools: { ...w.pools, pool_01: { ...w.pools.pool_01, balance: 0.2 } },
       };
       for (let i = 0; i < 60; i++) w = stepWorld(w, 1);
-      expect(w.wetHall.boosterRunning, tag).toBe(false);
+      // Its pump may run against the shut valve, but nothing is delivered.
+      expect(w.wetHall.flow, tag).toBe(0);
     }
   });
 });

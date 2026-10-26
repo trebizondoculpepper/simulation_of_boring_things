@@ -62,6 +62,12 @@ export interface BoosterChangeover {
   valve: [number, number];
   /** Whether BOOST is on: the standby running with the duty. */
   boost: boolean;
+  /**
+   * Whether there is demand for it (in the wet hall, the pools' make-up
+   * calling, held by its run-on; always, on a rig): without it, RUN, its
+   * pumps rest with their valves left open, ready.
+   */
+  called: boolean;
 }
 
 export type ChangeoverAction =
@@ -79,6 +85,7 @@ export function newBoosterChangeover(): BoosterChangeover {
     speed: [1, 0],
     valve: [1, 0],
     boost: false,
+    called: true,
   };
 }
 
@@ -95,6 +102,7 @@ export function actOnChangeover(
 
 /** Whether a pump's motor is called to run. */
 export function motorCalled(s: BoosterChangeover, p: BoosterPump): boolean {
+  if (!s.called) return false;
   if (p !== s.duty)
     // The assist pump, boosting: once its valves are fully open.
     return s.boost && s.phase === 'running' && s.valve[p] === 1;
@@ -195,6 +203,7 @@ export function changeoverStatus(s: BoosterChangeover): string {
   const n = (p: BoosterPump) => `P${p + 1}`;
   switch (s.phase) {
     case 'running':
+      if (!s.called && s.speed[s.duty] === 0) return `${n(s.duty)} READY`;
       return s.boost && s.speed[1 - s.duty] > 0
         ? 'BOOST P1+P2'
         : `${n(s.duty)} DUTY RUNNING`;

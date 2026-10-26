@@ -10,10 +10,6 @@ import { newPlantServices } from '../../../game/plant/services';
 import { roomWorld } from '../../save/world-store';
 import { wetHallMimicSpec, wetHallMimicState } from '../logic/wet-hall-mimic';
 import type { WetHallReading } from '../logic/wet-hall-mimic';
-import type { LiveExhibit } from '../rooms/plant/exhibit';
-import { partAudio } from '../../components/core/audio/part-audio';
-import { pumpSound } from '../../components/plant/views/pump-sound';
-import { BOOSTER_PUMP } from '../../components/plant/logic/pump-sound';
 
 /**
  * The wet hall's working machines, bound to the world's wet hall
@@ -56,9 +52,14 @@ function wetHallWorld(standalone = false) {
   };
 }
 
-/** The booster set, its controller reading the world's wet hall. */
+/**
+ * The booster set, its controller reading the world's wet hall: its duty
+ * changeover (DUTY, RUN, STOP, BOOST) the world's (the owner, 2026-10-26:
+ * brought in from dev42), each pump heard as it runs up and coasts.
+ */
 export function createWorldBoosterSet(kit: PanelKit) {
   const w = wetHallWorld();
+  const store = typeof window === 'undefined' ? null : roomWorld();
   const feed: BoosterFeed = {
     read() {
       const s = w.reading().wetHall;
@@ -71,27 +72,14 @@ export function createWorldBoosterSet(kit: PanelKit) {
       };
     },
     reset: () => w.reset(),
-  };
-  // Heard while it runs: its pump's sound held at it.
-  const set = createBoosterSet(kit, feed);
-  const sound = pumpSound(BOOSTER_PUMP);
-  let heard = false;
-  const live: LiveExhibit = {
-    ...set,
-    update(delta: number) {
-      set.update?.(delta);
-      const running = feed.read().running;
-      if (running !== heard) {
-        heard = running;
-        partAudio.hold(set, running ? sound : null, set.object);
-      }
-    },
-    dispose() {
-      partAudio.hold(set, null);
-      set.dispose?.();
+    // Its suction: the break tank's head over it.
+    suction: () => 0.25,
+    changeover: {
+      state: () => w.reading().wetHall.booster,
+      act: (action) => store?.dispatch({ type: 'booster/changeover', action }),
     },
   };
-  return live;
+  return createBoosterSet(kit, feed);
 }
 
 /** The make-up meter, its register counting the world's make-up. */
