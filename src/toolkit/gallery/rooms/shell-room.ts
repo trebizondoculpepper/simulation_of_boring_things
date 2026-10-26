@@ -1,3 +1,4 @@
+import { createDockSafety, dockFireAlarm } from '../views/dock-safety';
 import {
   createDockFittings,
   dockChannel,
@@ -134,6 +135,12 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
   );
   return runShell(canvas, {
     self: id,
+    ...(id === 'loading_bay'
+      ? {
+          install: (kit: ReturnType<typeof createPanelKit>) =>
+            dockFireAlarm(kit, { hw: spec.w / 2, hd: spec.d / 2 }),
+        }
+      : {}),
     room,
     build: (metre, kit) => {
       const built = createShellRoom(metre, kit, {
@@ -160,6 +167,13 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
           }).group,
           createDockFittings(kit, {
             wallZ: -spec.d / 2,
+            thickness: SHELL_WALL,
+            apertures: room.apertures ?? [],
+          }).group,
+          createDockSafety(kit, {
+            wallZ: -spec.d / 2,
+            hw: spec.w / 2,
+            hd: spec.d / 2,
             thickness: SHELL_WALL,
             apertures: room.apertures ?? [],
           }).group,

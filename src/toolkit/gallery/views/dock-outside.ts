@@ -24,6 +24,33 @@ import { createSkyChanger } from '../../../game/skies';
  */
 export const YARD_LEVEL = -1.2;
 
+/**
+ * The roadways' tarmac, grey and faintly speckled, `repeat` times across
+ * its surface's UVs; it runs into the dock's channels too (the owner,
+ * 2026-10-26). Its texture is kept in `kit`; its material is the caller's.
+ */
+export function tarmacMaterial(kit: PanelKit, repeat: number) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 256;
+  const g = canvas.getContext('2d')!;
+  g.fillStyle = '#6a6b6d';
+  g.fillRect(0, 0, 256, 256);
+  let seed = 5;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 9000; i++) {
+    const v = 80 + Math.floor(rnd() * 60);
+    g.fillStyle = `rgb(${v},${v},${v + 2})`;
+    g.fillRect(rnd() * 256, rnd() * 256, 1 + rnd() * 1.5, 1 + rnd() * 1.5);
+  }
+  const map = new CanvasTexture(canvas);
+  map.colorSpace = SRGBColorSpace;
+  map.wrapS = map.wrapT = RepeatWrapping;
+  map.repeat.set(repeat, repeat);
+  kit.textures.push(map);
+  // Lit by the day, not by the dock's lamps: drawn at its daylight shade.
+  return new MeshBasicMaterial({ map, color: '#c9c9c9' });
+}
+
 export function createDockOutside(
   kit: PanelKit,
   {
@@ -45,26 +72,8 @@ export function createDockOutside(
   const sky = createSkyDome(70);
   sky.set(createSkyChanger('overcast').step(0), 0, 0);
   group.add(sky.dome);
-  // The tarmac: a grey, faintly speckled plane out to the dome.
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 256;
-  const g = canvas.getContext('2d')!;
-  g.fillStyle = '#6a6b6d';
-  g.fillRect(0, 0, 256, 256);
-  let seed = 5;
-  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 9000; i++) {
-    const v = 80 + Math.floor(rnd() * 60);
-    g.fillStyle = `rgb(${v},${v},${v + 2})`;
-    g.fillRect(rnd() * 256, rnd() * 256, 1 + rnd() * 1.5, 1 + rnd() * 1.5);
-  }
-  const map = new CanvasTexture(canvas);
-  map.colorSpace = SRGBColorSpace;
-  map.wrapS = map.wrapT = RepeatWrapping;
-  map.repeat.set(60, 60);
-  kit.textures.push(map);
-  // Lit by the day, not by the dock's lamps: drawn at its daylight shade.
-  const tarmac = new MeshBasicMaterial({ map, color: '#c9c9c9' });
+  const tarmac = tarmacMaterial(kit, 60);
+  kit.materials.push(tarmac);
   kit.materials.push(tarmac);
   const ground = new Mesh(new CircleGeometry(69, 48), tarmac);
   ground.rotation.x = -Math.PI / 2;

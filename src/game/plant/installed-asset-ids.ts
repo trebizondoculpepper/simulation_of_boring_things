@@ -201,10 +201,6 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0059',
     tag: 'AS-AHU1',
   },
-  'loading_bay|tanker-stand|Tanker stand': {
-    assetId: 'asset-0060',
-    tag: 'LB-FX1',
-  },
   'loading_bay|fill-cabinet|Delivery fill cabinet: hypochlorite': {
     assetId: 'asset-0061',
     tag: 'LB-CAB1',

@@ -904,13 +904,6 @@ export function roomEquipment(
       return {
         box: shellRoomBox('loading_bay'),
         items: [
-          // The tanker's stand, down the middle from the outside end:
-          // painted floor, walked over, never built on.
-          floor('tanker-stand', 'Tanker stand', 3.2, 9, 0, {
-            back: 0,
-            walls: ['north'],
-            walkable: true,
-          }),
           // Each store's fill cabinet on the wall of its own store.
           wall(
             'fill-cabinet',

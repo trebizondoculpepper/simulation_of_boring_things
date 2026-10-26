@@ -13,7 +13,7 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { markComponent } from '../../components/core/views/component-identity';
 import type { ShellAperture } from '../logic/shell-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
-import { YARD_LEVEL } from './dock-outside';
+import { YARD_LEVEL, tarmacMaterial } from './dock-outside';
 
 /** How far each lorry channel runs into the dock from its opening, metres: half a rigid lorry. */
 export const CHANNEL_LENGTH = 6;
@@ -27,7 +27,7 @@ export const dockChannel = (o: ShellAperture, wallZ: number) => ({
 });
 
 /** Yellow and black hazard striping, for a drop's edge. */
-function hazardStripes(kit: PanelKit) {
+export function hazardStripes(kit: PanelKit) {
   const canvas = document.createElement('canvas');
   canvas.width = 256;
   canvas.height = 32;
@@ -139,7 +139,9 @@ export function createDockFittings(
   const chain = paint('#4a4d50', 0.5, 0.7);
   const rubber = paint('#161718', 0.9);
   const concrete = paint('#7d7f7c', 0.95);
-  const hazard = hazardStripes(kit);
+  // The roadways' tarmac carried into each channel (the owner, 2026-10-26).
+  const tarmac = tarmacMaterial(kit, 3);
+  kit.materials.push(tarmac);
   void thickness;
 
   apertures.forEach((o, i) => {
@@ -222,7 +224,7 @@ export function createDockFittings(
     const cx = (c.minX + c.maxX) / 2;
     const cz = (c.minZ + c.maxZ) / 2;
     const depth = -YARD_LEVEL;
-    box(channel, concrete, cw, 0.1, cl, cx, YARD_LEVEL - 0.05, cz);
+    box(channel, tarmac, cw, 0.1, cl, cx, YARD_LEVEL - 0.05, cz);
     for (const s of [-1, 1])
       box(
         channel,
@@ -244,19 +246,6 @@ export function createDockFittings(
       YARD_LEVEL / 2,
       c.maxZ + 0.1,
     );
-    // Its edges marked, yellow and black, along both sides and the end.
-    for (const s of [-1, 1])
-      box(
-        channel,
-        hazard,
-        0.12,
-        0.004,
-        cl,
-        cx + s * (cw / 2 + 0.06),
-        0.002,
-        cz,
-      );
-    box(channel, hazard, cw + 0.24, 0.004, 0.12, cx, 0.002, c.maxZ + 0.06);
     // Two rubber buffers on the end wall, where the lorry stops.
     for (const s of [-1, 1])
       box(channel, rubber, 0.3, 0.45, 0.12, cx + s * 0.9, -0.45, c.maxZ - 0.06);

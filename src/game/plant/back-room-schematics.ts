@@ -84,28 +84,20 @@ export const ACID_STORE_SCHEMATIC = chemicalStore('acid_store', 'AS', 'Acid', [
   machine('ibc', 'acid-ibc', 'Acid IBC on spill pallet'),
 ]);
 
-const tanker = machine('tanker-stand', 'tanker-stand', 'Tanker stand');
 const fills = (['hypochlorite', 'acid'] as const).map((c) =>
   machine(`fill-${c}`, 'fill-cabinet', `Delivery fill cabinet: ${c}`),
 );
 export const LOADING_BAY_SCHEMATIC = backRoom(
   'loading_bay',
   'LB',
+  // No tanker stand: the tanker is a lorry backed into its channel in the
+  // dock (prompt 073), connected in the yard (076, 080).
   [
-    tanker,
     ...fills,
     machine('hypo-store', 'chemical-store', 'Hypochlorite store'),
     machine('acid-store', 'chemical-store', 'Acid store'),
   ],
   [
-    ...fills.map((f) =>
-      link(
-        `Tanker to the ${f.name}`,
-        ['tanker-stand', 'hose'],
-        [f.id, 'in'],
-        'chemical',
-      ),
-    ),
     link(
       'Hypochlorite delivery line',
       ['fill-hypochlorite', 'out'],

@@ -2,7 +2,7 @@
  * A minimal fire alarm (the owner, 2026-10-26), the start of prompt 053's:
  * resettable manual call points, each latched when pressed until its key
  * resets it; while any is latched, its zone's sounders sound and its
- * beacons flash. One zone so far, the wet hall's.
+ * beacons flash. Two zones so far, the wet hall's and the loading dock's.
  */
 
 /** The call points, by id, and the zone each is in. */
@@ -10,6 +10,10 @@ export const CALL_POINTS = {
   'wh-mcp-1': 'wet_hall',
   'wh-mcp-2': 'wet_hall',
   'wh-mcp-3': 'wet_hall',
+  // The loading dock's (prompt 073): by the corridor's doors and the acid
+  // store's.
+  'lb-mcp-1': 'loading_bay',
+  'lb-mcp-2': 'loading_bay',
 } as const;
 
 export type CallPointId = keyof typeof CALL_POINTS;
