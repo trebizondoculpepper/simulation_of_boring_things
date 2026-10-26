@@ -59,7 +59,17 @@ export function createBeamReflector(kit: PanelKit) {
  * above, each with its push bar at 1 m, under the door's frame. Its origin
  * is on the floor at the middle of the opening.
  */
-export function createFireExitDoor(kit: PanelKit, width: number, height = 2.1) {
+export function createFireExitDoor(
+  kit: PanelKit,
+  width: number,
+  height = 2.1,
+  /**
+   * An outside access device on the outer face (-z): a lever handle on its
+   * escutcheon plate with a key cylinder, so the door is opened from
+   * outside too (the owner, 2026-10-26).
+   */
+  { outsideHandle = false } = {},
+) {
   const t = tools(kit);
   const group = new Group();
   const frame = t.paint('#3c4447', 0.45, 0.3);
@@ -129,6 +139,34 @@ export function createFireExitDoor(kit: PanelKit, width: number, height = 2.1) {
     );
     sign.mesh.position.set(x, 1.22, 0.047);
     hinge.add(sign.mesh);
+    if (outsideHandle) {
+      // At the leaf's free edge, 1 m up, on its outer face.
+      const free = x + Math.sign(x) * (leafWidth / 2 - 0.09);
+      t.box(hinge, steel, 0.05, 0.22, 0.012, free, 1.0, -0.006);
+      t.box(hinge, steel, 0.025, 0.025, 0.06, free, 1.03, -0.04);
+      t.box(hinge, steel, 0.025, 0.025, 0.14, free, 1.03, -0.07);
+      const bar = t.box(
+        hinge,
+        steel,
+        0.13,
+        0.022,
+        0.022,
+        free - Math.sign(x) * 0.06,
+        1.03,
+        -0.075,
+      );
+      void bar;
+      t.box(
+        hinge,
+        t.paint('#2a2a2a', 0.4, 0.6),
+        0.018,
+        0.018,
+        0.006,
+        free,
+        0.95,
+        -0.014,
+      );
+    }
   }
   group.userData.leaves = leafHinges;
   return group;

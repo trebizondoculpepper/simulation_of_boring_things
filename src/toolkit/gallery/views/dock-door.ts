@@ -17,7 +17,7 @@ export function dockDoor(
   width = 1.0,
 ): { part: Part; open: () => boolean } {
   const a = beginPart(kit, 'Fire exit door to the goods yard');
-  const door = createFireExitDoor(kit, width);
+  const door = createFireExitDoor(kit, width, 2.1, { outsideHandle: true });
   // Its frame 5 mm proud of the wall's face, so the two never fight.
   door.position.set(at.x, 0, at.wallZ + 0.005);
   a.object.add(door);
