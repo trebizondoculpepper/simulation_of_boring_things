@@ -385,15 +385,16 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       holder.rotation.y = yaw;
       group.add(holder);
       const sign = createSafetySign(kit, pictograms, lines);
-      sign.scale.setScalar(0.85);
+      // A rail sign, 260 × 390 mm.
+      sign.scale.setScalar(1.3);
       sign.position.y = 0.8;
       holder.add(sign);
       // Wired to its top and knee rails at its corners (the owner,
       // 2026-10-26: it seemed to float).
       for (const sx of [-0.12, 0.12])
         for (const [from, to] of [
-          [0.92, 1.1],
-          [0.68, 0.5],
+          [0.97, 1.1],
+          [0.63, 0.5],
         ])
           t.rod(holder, wire, [sx, from, -0.004], [sx, to, -out], 0.0015, 4);
     };

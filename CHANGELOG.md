@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The backwash pit's rail signs are 260 × 390 mm rail signs, their wires tied just inside their corners (the owner, 2026-10-26: the wires missed the smaller card).
 - The backwash pit's rail signs are wired at their corners to the top and knee rails, no longer floating (the owner, 2026-10-26).
 - The backwash pit's ladder is centred along its hatch, and nothing of it stands above the deck (the owner, 2026-10-26): a tank ladder no longer puts a wall bracket or its maker's badge above its top, which in the pit had stuck out across the hatch's swing.
 - The backwash pit's hatch (the owner, 2026-10-26): painted chequer-plate tread on its lid, its confined-space sign kept and raised clear of it; the pump's discharge riser comes up through a sleeve in the gratings beside the hatch, no longer through its lid (its stub showed as a black disc on it); the davit's arm bare, its lifting eye gone.
