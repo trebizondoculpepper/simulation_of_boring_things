@@ -1,4 +1,10 @@
-import { CircleGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
+import {
+  CircleGeometry,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  TorusGeometry,
+} from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createCanvasTexture } from '../../core/views/screens';
 import { plantTools } from './plant-tools';
@@ -45,9 +51,11 @@ export function createSightGlass(
   const px = 256;
   const { context: c, texture } = createCanvasTexture(px, px);
   kit.textures.push(texture);
+  // What is behind the glass, matte: the glass in front of it gives the
+  // shine (the owner, 2026-10-26: no reflection painted into it).
   const material = new MeshStandardMaterial({
     map: texture,
-    roughness: 0.15,
+    roughness: 0.9,
     emissive: '#ffffff',
     emissiveMap: texture,
     emissiveIntensity: 0.35,
@@ -61,6 +69,36 @@ export function createSightGlass(
   // Its rim, a dark ring round the glass.
   const rim = t.paint('#2a2f33', 0.5, 0.5);
   t.cyl(group, rim, radius * 1.18, 0.012, 0, 0, 0, 'z', 40);
+  // The glass itself, in front of the picture: a clear, very smooth pane,
+  // nearly invisible face-on, the room's lights giving it its highlights
+  // as one moves; and its bevelled edge, a rounded ring of the same glass
+  // where the highlights catch, as on a thick sight glass.
+  const glass = new MeshStandardMaterial({
+    color: '#eef4f6',
+    roughness: 0.04,
+    metalness: 0.1,
+    transparent: true,
+    opacity: 0.12,
+    depthWrite: false,
+  });
+  kit.materials.push(glass);
+  const pane = new Mesh(new CircleGeometry(radius, 48), glass);
+  pane.position.z = 0.013;
+  group.add(pane);
+  const edgeGlass = new MeshStandardMaterial({
+    color: '#dfe9ec',
+    roughness: 0.05,
+    metalness: 0.2,
+    transparent: true,
+    opacity: 0.45,
+  });
+  kit.materials.push(edgeGlass);
+  const edge = new Mesh(
+    new TorusGeometry(radius - 0.003, 0.0045, 10, 48),
+    edgeGlass,
+  );
+  edge.position.z = 0.011;
+  group.add(edge);
   // Its grains, sown once: sand in the bed, and those churned up above it.
   const rand = seeded(seed);
   const grains = Array.from({ length: 420 }, () => ({
@@ -170,12 +208,6 @@ export function createSightGlass(
       c.fillRect(0, 0, px, px);
       c.restore();
     }
-    // The glass's glint.
-    c.strokeStyle = 'rgba(255,255,255,0.28)';
-    c.lineWidth = 10;
-    c.beginPath();
-    c.arc(px / 2, px / 2, px * 0.38, Math.PI * 1.1, Math.PI * 1.45);
-    c.stroke();
     c.restore();
     texture.needsUpdate = true;
   };
