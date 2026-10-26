@@ -24,6 +24,7 @@ import {
   LCD_MODES,
   createAnnunciatorPanel,
   createChartRecorder,
+  createTrendRecorder,
   createLcdMonitor,
   createDoorLeaf,
   createLouvres,
@@ -1000,6 +1001,34 @@ export function createPeriodBoard(kit: PanelKit): TestFitting {
   updates.push((delta) => {
     recorder.set([temp.share.value, rh.share.value]);
     recorder.update(delta);
+  });
+  // The trend recorder writing a kept record (the sewer outfall's, the
+  // owner, 2026-10-26): its knob's value sampled each second here, an
+  // hour line every minute, the consent ruled at a third of its scale.
+  const trend = createTrendRecorder(kit, {
+    title: 'TREND TEST',
+    scale: '0    15    30',
+    marks: [{ at: 1 / 3, colour: '#d02b20' }],
+    hourEvery: 60,
+  });
+  board.at(trend.group, 0.33, 0.05);
+  const flow = board.place(
+    potentiometer(kit, { legend: 'FLOW', initial: 0.3 }),
+    0.33,
+    -0.3,
+  );
+  board.caption('TREND RECORDER, KEPT RECORD', 0.33, 0.36, 0.012);
+  const record: number[] = [];
+  let sampled = 0;
+  updates.push((delta) => {
+    sampled += delta;
+    if (sampled >= 1) {
+      sampled = 0;
+      record.push(flow.share.value);
+      if (record.length > 288) record.shift();
+    }
+    trend.show(record);
+    trend.update(delta);
   });
   // The alarm printer (the teleprinter, its fanfold paper falling to a
   // pile on the floor) and its test button.

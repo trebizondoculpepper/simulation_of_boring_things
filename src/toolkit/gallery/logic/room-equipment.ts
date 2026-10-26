@@ -737,6 +737,8 @@ export function roomEquipment(
             ...size(sectionalSize(4, 4, 2)),
           ),
           wall('mimic-wet', 'Mimic: wet hall', 2.2, 0.08, 1.2, 1.6),
+          // The sewer outfall's monitor and its chart recorder.
+          wall('sewer-monitor', 'Sewer outfall monitor', 0.6, 0.12, 0.8, 1.5),
         ],
       };
     case 'boiler_house':
@@ -1333,6 +1335,9 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
       // Its run in line with the booster set's discharge.
       row('water-meter', -0.3, 0.38),
       put(box, at('mimic-wet'), { wall: 'north', along: 2.0 }),
+      // Its outfall monitor across the hall, on the south wall, readable
+      // from the aisle (until the hall's redesign, prompt 036).
+      put(box, at('sewer-monitor'), { wall: 'south', along: 0 }),
       row('backwash-tank', 6.0, 0.6),
     ];
   },

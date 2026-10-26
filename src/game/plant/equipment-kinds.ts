@@ -193,6 +193,14 @@ export const PLACED_KINDS = {
     class: 'plant',
     purpose: 'Holds filter backwash water before discharge.',
   },
+  'sewer-monitor': {
+    type: 'Flow monitor and chart recorder',
+    status: 'none',
+    code: 'FQR',
+    class: 'plant',
+    purpose:
+      'Measures and records the flow to the foul sewer against the discharge consent.',
+  },
   'mimic-wet': {
     type: 'Mimic panel',
     status: 'none',

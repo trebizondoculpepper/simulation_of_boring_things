@@ -74,3 +74,23 @@ export function stepSewerMonitor(
 /** Whether it is putting more down the sewer than the consent allows, m³/h. */
 export const overConsent = (s: SewerMonitorState, consent: number) =>
   s.flow > consent + 1e-6;
+
+/**
+ * Its recorder's chart (the owner, 2026-10-26): a strip of paper creeping
+ * down past one pen at 20 mm an hour, a day showing in its window; its
+ * scale 0 to 30 m³/h across, the consent ruled on it in red.
+ */
+export const SEWER_CHART = {
+  hours: 24,
+  scaleMax: 30,
+} as const;
+
+/** The samples showing on its chart now, newest last, each 0 to 1 across its scale. */
+export function chartWindow(
+  log: readonly number[],
+  hours: number = SEWER_CHART.hours,
+  scaleMax: number = SEWER_CHART.scaleMax,
+): number[] {
+  const n = Math.round((hours * 3600) / SEWER_LOG.step);
+  return log.slice(-n).map((f) => Math.max(0, Math.min(1, f / scaleMax)));
+}

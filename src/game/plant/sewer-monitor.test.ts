@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  SEWER_CHART,
   SEWER_LOG,
+  chartWindow,
   newSewerMonitor,
   overConsent,
   stepSewerMonitor,
@@ -32,6 +34,14 @@ describe('the sewer outfall monitor', () => {
       s = stepSewerMonitor(s, n, SEWER_LOG.step);
     expect(s.log.length).toBe(SEWER_LOG.length);
     expect(s.log[0]).toBeCloseTo((10 / SEWER_LOG.step) * 3600, 6);
+  });
+
+  it('shows a day of its record on its chart, each sample across its scale', () => {
+    const log = Array.from({ length: 400 }, (_, i) => (i < 200 ? 45 : 15));
+    const w = chartWindow(log);
+    expect(w.length).toBe((SEWER_CHART.hours * 3600) / SEWER_LOG.step);
+    expect(w.at(-1)).toBeCloseTo(15 / SEWER_CHART.scaleMax, 6);
+    expect(Math.max(...w)).toBe(1);
   });
 
   it('says when it is over the consent', () => {

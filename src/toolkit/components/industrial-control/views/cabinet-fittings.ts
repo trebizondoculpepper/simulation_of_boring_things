@@ -741,6 +741,168 @@ export function createChartRecorder(
   };
 }
 
+export interface TrendRecorderView {
+  group: Group;
+  /**
+   * Its paper's record, newest last, each 0 to 1 across its scale: the pen
+   * on the newest, the older ink crept down the paper. Redrawn only when
+   * the record changes.
+   */
+  show(samples: readonly number[]): void;
+  update(delta: number): void;
+}
+
+/**
+ * A single-pen strip-chart recorder writing a kept record (the owner,
+ * 2026-10-26: the sewer outfall's): as `createChartRecorder`, a black
+ * bezel and glass door over chart paper ruled in green, but its trace
+ * drawn from the record it is given, not from what its pen has seen since
+ * the room was built, so the paper is the same after a reload. Hour lines
+ * across the paper as it creeps down, `marks` ruled down it in their
+ * colours (a consent, a limit), and the scale's legend over the top.
+ * Kessler-Moody's. Its middle at the origin, its face +z, 0.18 × 0.2 m.
+ */
+export function createTrendRecorder(
+  kit: PanelKit,
+  {
+    title,
+    scale,
+    marks = [],
+    hourEvery,
+    pen = '#c4211b',
+  }: {
+    title: string;
+    /** The scale's legend across the top. */
+    scale: string;
+    /** Lines ruled down the paper, each at its share of the scale. */
+    marks?: readonly { at: number; colour: string }[];
+    /** Samples between the hour lines. */
+    hourEvery: number;
+    pen?: string;
+  },
+): TrendRecorderView {
+  const group = new Group();
+  const width = 0.18;
+  const height = 0.2;
+  add(
+    group,
+    new BoxGeometry(width, height, 0.03),
+    kitPaint(kit, '#26272a', 0.15),
+    0,
+    0,
+    0.015,
+  );
+  const pw = 0.13;
+  const ph = 0.13;
+  const py = 0.012;
+  const paperZ = 0.033;
+  const detailZ = 0.036;
+  const glassZ = 0.041;
+  const art = screen(kit, 192, 192);
+  add(group, new PlaneGeometry(pw, ph), art.material, 0, py, paperZ);
+  const glass = createPs1Material({
+    color: '#c9d4d6',
+    transparent: true,
+    opacity: 0.12,
+    roughness: 0.05,
+  });
+  glass.depthWrite = false;
+  kit.materials.push(glass);
+  add(group, new PlaneGeometry(pw + 0.01, ph + 0.01), glass, 0, py, glassZ);
+  const strip = createMicroLabel(kit, scale, {
+    height: 0.0045,
+    ink: '#202020',
+    plate: '#e8e4d6',
+  });
+  strip.position.set(0, py + ph / 2 - 0.006, detailZ);
+  group.add(strip);
+  const penMesh = add(
+    group,
+    new BoxGeometry(0.005, 0.012, 0.006),
+    kitPaint(kit, pen),
+    0,
+    py + ph / 2 - 0.02,
+    0.037,
+  );
+  // It moves: not to be merged with the still parts (`mergeStatic`).
+  penMesh.userData.live = true;
+  const badge = createMicroLabel(kit, title, {
+    height: 0.006,
+    ink: '#c9cbcd',
+  });
+  badge.position.set(-0.03, -height / 2 + 0.017, paperZ);
+  group.add(badge);
+  const maker = createBrandBadge(kit, 'kessler-moody', {
+    form: 'wordmark',
+    height: 0.008,
+    ink: '#9a9da0',
+  });
+  maker.position.set(0, height / 2 - 0.011, paperZ);
+  group.add(maker);
+  const c = art.context;
+  const S = art.canvas.width;
+  // The pen writes this far down the paper; the rest of it is the record.
+  const top = 14;
+  let shown = '';
+  let target = 0;
+  const draw = (samples: readonly number[]) => {
+    c.fillStyle = '#f4f1e6';
+    c.fillRect(0, 0, S, S);
+    c.strokeStyle = '#9cc7a4';
+    c.lineWidth = 1;
+    c.beginPath();
+    for (let x = 0; x <= S; x += S / 6) {
+      c.moveTo(Math.round(x) + 0.5, 0);
+      c.lineTo(Math.round(x) + 0.5, S);
+    }
+    c.stroke();
+    // A sample's height on the paper, from the pen's line down.
+    const step = (S - top) / Math.max(1, samples.length - 1);
+    // Hour lines, darker, with the paper.
+    c.strokeStyle = '#6fa77b';
+    c.beginPath();
+    for (let i = samples.length - 1; i >= 0; i -= hourEvery) {
+      const y = top + (samples.length - 1 - i) * step;
+      c.moveTo(0, Math.round(y) + 0.5);
+      c.lineTo(S, Math.round(y) + 0.5);
+    }
+    c.stroke();
+    for (const m of marks) {
+      c.strokeStyle = m.colour;
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.moveTo(m.at * S, 0);
+      c.lineTo(m.at * S, S);
+      c.stroke();
+    }
+    // The ink: the newest at the pen, the oldest down at the bottom.
+    c.strokeStyle = pen;
+    c.lineWidth = 1.8;
+    c.beginPath();
+    samples.forEach((v, i) => {
+      const x = v * S;
+      const y = top + (samples.length - 1 - i) * step;
+      if (i === 0) c.moveTo(x, y);
+      else c.lineTo(x, y);
+    });
+    c.stroke();
+    art.texture.needsUpdate = true;
+  };
+  return {
+    group,
+    show(samples) {
+      target = samples.at(-1) ?? 0;
+      const key = `${samples.length}:${samples.at(-1) ?? ''}:${samples[0] ?? ''}`;
+      if (key === shown) return;
+      shown = key;
+      draw(samples);
+    },
+    update() {
+      penMesh.position.x += ((target - 0.5) * pw - penMesh.position.x) * 0.3;
+    },
+  };
+}
+
 export interface AnnunciatorView {
   group: Group;
   /** Each window's lens, for clicks. */

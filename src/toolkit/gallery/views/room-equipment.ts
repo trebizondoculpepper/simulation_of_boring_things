@@ -80,6 +80,13 @@ import { EXHIBITS as DOSING } from '../rooms/plant/dosing';
 import { EXHIBITS as BALANCE } from '../rooms/plant/balance';
 import { createMainSwitch } from '../../components/plant/views/main-switch';
 import { createLightingBoard } from '../../components/plant/views/lighting-board';
+import { createSewerMonitorPanel } from '../../components/plant/views/sewer-monitor-panel';
+import {
+  SEWER_CHART,
+  SEWER_LOG,
+  chartWindow,
+  overConsent,
+} from '../../../game/plant/sewer-monitor';
 import { createCentralBattery } from '../../components/plant/views/electrical-switchgear';
 import { batteryMains } from '../../../game/world';
 import {
@@ -319,6 +326,26 @@ function modelFor(
   if (kind === 'booster-set') return createWorldBoosterSet(kit);
   if (kind === 'water-meter') return createWorldWaterMeter(kit);
   if (kind === 'mimic-wet') return createWetHallMimic(kit);
+  // The sewer outfall's monitor, the world's record on its chart.
+  if (kind === 'sewer-monitor' && typeof window !== 'undefined') {
+    const store = roomWorld();
+    const w = () => store.world.value;
+    return createSewerMonitorPanel(
+      kit,
+      {
+        flow: () => w().sewer.flow,
+        total: () => w().sewer.total,
+        samples: () => chartWindow(w().sewer.log),
+        over: () => overConsent(w().sewer, WET_HALL_PLANT.sewerConsent),
+        powered: () => serviceAvailable(w().plant, 'wet_hall', 'power'),
+      },
+      {
+        consent: WET_HALL_PLANT.sewerConsent,
+        scaleMax: SEWER_CHART.scaleMax,
+        hourEvery: 3600 / SEWER_LOG.step,
+      },
+    );
+  }
   // The switch room's switchboard, its ways feeding the rooms in the world.
   if (kind === 'lv-switchboard') return createMainSwitchboard(kit, worldFeed());
   // The gas train, its gas emergency notice above it by its valve.

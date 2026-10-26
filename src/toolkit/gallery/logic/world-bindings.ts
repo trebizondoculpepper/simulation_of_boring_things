@@ -55,6 +55,9 @@ export const WORLD_BINDINGS: Readonly<Record<string, WorldBinding>> = {
   'booster-set': world('the wet hall: break tank, booster set'),
   'water-meter': world('the wet hall’s make-up meter'),
   'mimic-wet': world('the wet hall'),
+  'sewer-monitor': world(
+    'the sewer outfall: its flow, its total and its week’s record',
+  ),
   'break-tank': world('the wet hall’s break-tank level, on its sight gauge'),
   'backwash-tank': world(
     'the wet hall’s backwash-tank level, on its sight gauge',

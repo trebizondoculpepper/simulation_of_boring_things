@@ -35,7 +35,14 @@ const booster = machine(
 const meter = machine('meter', 'water-meter', 'Make-up water meter');
 const holding = machine('holding', 'backwash-tank', 'Backwash holding tank');
 const mimic = machine('mimic', 'mimic-wet', 'Mimic: wet hall');
-const electrics = roomElectrics(room, [booster, meter, mimic]);
+// The sewer outfall's monitor (the owner, 2026-10-26): its flowmeter's
+// converter and its chart recorder, on the wall.
+const outfall = machine(
+  'outfall-monitor',
+  'sewer-monitor',
+  'Sewer outfall monitor',
+);
+const electrics = roomElectrics(room, [booster, meter, mimic, outfall]);
 
 const valve = (
   id: string,
@@ -62,6 +69,7 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
     meter,
     holding,
     mimic,
+    outfall,
     machine('town-main', 'water-main', 'Town main'),
     machine('plant-rooms', 'pool-plant-rooms', 'Pool plant rooms'),
     machine('sewer', 'sewer', 'Sewer'),
@@ -119,6 +127,12 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
       'water',
     ),
     link('Backwash tank drain', ['holding', 'drain'], ['waste', 'in'], 'water'),
+    link(
+      'Outfall flow to its monitor',
+      ['holding', 'outfall-flow'],
+      ['outfall-monitor', 'flow'],
+      'control',
+    ),
     link(
       'Wet hall signals to the mimic',
       ['booster', 'status'],

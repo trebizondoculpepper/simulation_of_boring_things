@@ -89,6 +89,11 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0034',
     tag: 'WH-MP1',
   },
+  // The sewer outfall's monitor (the owner, 2026-10-26).
+  'wet_hall|sewer-monitor|Sewer outfall monitor': {
+    assetId: 'asset-0128',
+    tag: 'WH-FQR1',
+  },
   'boiler_house|boiler-cascade:1|Condensing boilers, cascade 1': {
     assetId: 'asset-0035',
     tag: 'BH-B1',

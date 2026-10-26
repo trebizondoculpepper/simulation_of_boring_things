@@ -150,6 +150,8 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [ ] The lighting's day-to-day switching by contactors on a time clock or photocell, leaving the RCBOs as protection only.
 - [ ] Moisture in the wet hall's, corridors' and plant rooms' fittings, from their own air, not only the halls'.
 - [ ] A hired generator at the connection point (prompt 052).
+- [x] The sewer outfall monitor and chart recorder in the wet hall, its record in the world; the spas draining into the backwash pit (2026-10-26).
+- [ ] The outfall flowmeter's spool on the outfall pipe, and the monitor moved to the dirty side's wall, with the wet hall's redesign (prompt 036).
 
 ## The operator's manual
 
