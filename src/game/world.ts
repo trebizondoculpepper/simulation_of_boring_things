@@ -740,11 +740,18 @@ export function stepWorld(world: World, delta: number): World {
     world.olympicTank,
     olympicTankLevel(world.pools.pool_02.balance),
   ); // The make-up the booster set can give the pools' float valves calling.
-  const share = makeUpShare(
-    world.wetHall,
-    world.plant,
-    makeUpDemand(world.pools, { pool_02: calling }),
-  );
+  // None while either of the booster set's motorised valves is shut
+  // (the owner, 2026-10-26: driven from its control panel).
+  const boosterValves =
+    installedValveOpen(world.installedValves, 'WH-T1-IV1') &&
+    installedValveOpen(world.installedValves, 'WH-MU1-IV2');
+  const share = boosterValves
+    ? makeUpShare(
+        world.wetHall,
+        world.plant,
+        makeUpDemand(world.pools, { pool_02: calling }),
+      )
+    : 0;
   let battery: BatteryFlows | null = null;
   // The motors' starters: each on its room's power and local isolator,
   // and held off while its pool's tank is at its low-low level.

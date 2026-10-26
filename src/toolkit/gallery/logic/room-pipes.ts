@@ -1805,6 +1805,9 @@ export const BEING_LAID_OUT: readonly string[] = [];
  * its valves the register's, set where the plumber put them. Pure:
  * metres, the hall's frame, its floor at y = 0.
  */
+/** The booster set's motorised valves, by fitting: its suction's and its discharge's. */
+const BOOSTER_VALVES = new Set(['valve-0032', 'valve-0033']);
+
 export function wetHallPipework(): { runs: PipeRun[] } {
   const layout = layoutRoom('wet_hall');
   const label = (key: string) =>
@@ -1863,7 +1866,12 @@ export function wetHallPipework(): { runs: PipeRun[] } {
           axis,
           name: v.name,
           od: l.od,
-          operator: 'lever' as const,
+          // The booster set's suction and discharge valves motorised,
+          // driven from the wet hall's control panel (the owner,
+          // 2026-10-26).
+          operator: BOOSTER_VALVES.has(v.fitting)
+            ? ('motor' as const)
+            : ('lever' as const),
           // On a level pipe, along it the way the line runs, away from
           // the machine it leaves (its lever, open, lies along it); on a
           // riser, out to one side.

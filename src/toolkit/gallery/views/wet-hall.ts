@@ -1,3 +1,4 @@
+import { installedValveByCommandId } from '../../../game/plant/installed-valves';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createMimicBoard } from '../../components/industrial-control/views/mimic-board';
 import { createBoosterSet } from '../../components/plant/views/booster-set';
@@ -27,9 +28,14 @@ function wetHallWorld(standalone = false) {
   return {
     reading(): WetHallReading {
       const w = world();
+      const open = (tag: string) => {
+        const v = installedValveByCommandId(tag);
+        return !w || !v ? true : w.installedValves[v.assetId] !== false;
+      };
       return {
         wetHall: w?.wetHall ?? newWetHall(),
         mains: w?.plant.sources.water ?? true,
+        valves: { suction: open('WH-T1-IV1'), discharge: open('WH-MU1-IV2') },
       };
     },
     powered() {
@@ -41,6 +47,11 @@ function wetHallWorld(standalone = false) {
     },
     reset() {
       store?.dispatch({ type: 'plant/booster-reset' });
+    },
+    /** Drive one of the booster set's motorised valves open or shut. */
+    valve(tag: string, open: boolean) {
+      const v = installedValveByCommandId(tag);
+      if (v) store?.dispatch({ type: 'plant/valve', id: v.assetId, open });
     },
   };
 }
@@ -106,6 +117,15 @@ export function createWetHallMimic(kit: PanelKit, standalone = false) {
   const board = createMimicBoard(kit, wetHallMimicSpec, {
     press: (id) => {
       if (id === 'booster-reset') w.reset();
+      const [which, act] = id.split('-');
+      if (
+        (which === 'suction' || which === 'discharge') &&
+        (act === 'open' || act === 'shut')
+      )
+        w.valve(
+          which === 'suction' ? 'WH-T1-IV1' : 'WH-MU1-IV2',
+          act === 'open',
+        );
     },
   });
   return {

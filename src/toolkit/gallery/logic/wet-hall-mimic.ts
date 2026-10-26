@@ -36,7 +36,11 @@ export const wetHallMimicSpec: MimicSpec = {
   shapes: [
     { symbol: 'tank', at: pt(-0.55, TOP), size: 0.1, label: 'BREAK TANK' },
     { symbol: 'pump', at: pt(-0.05, TOP), size: 0.07, label: 'BOOSTER SET' },
-    { symbol: 'valve', at: pt(0.4, TOP), size: 0.05, label: 'METER' },
+    // Its motorised suction and discharge valves (the owner, 2026-10-26).
+    { symbol: 'valve', at: pt(-0.3, TOP), size: 0.045, label: 'IV1' },
+    { symbol: 'valve', at: pt(0.18, TOP), size: 0.045, label: 'IV2' },
+    // The meter on the main, before the break tank, as built.
+    { symbol: 'valve', at: pt(-0.8, TOP), size: 0.05, label: 'METER' },
     {
       symbol: 'tank',
       at: pt(0.45, BOTTOM),
@@ -46,7 +50,7 @@ export const wetHallMimicSpec: MimicSpec = {
     { symbol: 'pump', at: pt(-0.05, BOTTOM), size: 0.07, label: 'P-601' },
   ],
   labels: [
-    { text: 'MAINS IN', at: pt(-0.9, TOP + 0.07), size: 0.8 },
+    { text: 'MAINS IN', at: pt(-0.98, TOP + 0.07), size: 0.8 },
     { text: 'TO POOL PLANT', at: pt(0.85, TOP + 0.07), size: 0.8 },
     { text: 'FROM FILTERS', at: pt(0.85, BOTTOM + 0.07), size: 0.8 },
     { text: 'TO SEWER', at: pt(-0.9, BOTTOM + 0.07), size: 0.8 },
@@ -72,6 +76,30 @@ export const wetHallMimicSpec: MimicSpec = {
       label: 'LOW WATER',
     },
     {
+      id: 'suction-open-lamp',
+      at: pt(-0.36, TOP - 0.1),
+      colour: 'green',
+      label: 'OPEN',
+    },
+    {
+      id: 'suction-shut-lamp',
+      at: pt(-0.24, TOP - 0.1),
+      colour: 'red',
+      label: 'SHUT',
+    },
+    {
+      id: 'discharge-open-lamp',
+      at: pt(0.12, TOP - 0.1),
+      colour: 'green',
+      label: 'OPEN',
+    },
+    {
+      id: 'discharge-shut-lamp',
+      at: pt(0.24, TOP - 0.1),
+      colour: 'red',
+      label: 'SHUT',
+    },
+    {
       id: 'backwash-high',
       at: pt(0.45, BOTTOM - 0.17),
       colour: 'red',
@@ -86,10 +114,34 @@ export const wetHallMimicSpec: MimicSpec = {
   ],
   readouts: [
     { id: 'break', at: pt(-0.55, TOP + 0.24) },
-    { id: 'makeup', at: pt(0.4, TOP + 0.24) },
+    { id: 'makeup', at: pt(-0.8, TOP + 0.24) },
     { id: 'backwash', at: pt(0.45, BOTTOM + 0.2) },
   ],
   buttons: [
+    {
+      id: 'suction-open',
+      at: pt(-0.36, TOP - 0.29),
+      colour: 'green',
+      legend: 'OPEN',
+    },
+    {
+      id: 'suction-shut',
+      at: pt(-0.24, TOP - 0.29),
+      colour: 'red',
+      legend: 'SHUT',
+    },
+    {
+      id: 'discharge-open',
+      at: pt(0.12, TOP - 0.29),
+      colour: 'green',
+      legend: 'OPEN',
+    },
+    {
+      id: 'discharge-shut',
+      at: pt(0.24, TOP - 0.29),
+      colour: 'red',
+      legend: 'SHUT',
+    },
     {
       id: 'booster-reset',
       at: pt(-0.05, TOP - 0.29),
@@ -107,11 +159,14 @@ export const wetHallMimicSpec: MimicSpec = {
 export interface WetHallReading {
   wetHall: WetHallState;
   mains: boolean;
+  /** The booster set's motorised valves, open. */
+  valves?: { suction: boolean; discharge: boolean };
 }
 
 export function wetHallMimicState({
   wetHall: s,
   mains,
+  valves = { suction: true, discharge: true },
 }: WetHallReading): MimicState {
   const P = WET_HALL_PLANT;
   const alarms = wetHallAlarms(s);
@@ -123,6 +178,10 @@ export function wetHallMimicState({
       'booster-trip': alarms.boosterLowWater,
       'backwash-high': alarms.backwashHigh,
       'discharge-run': s.discharging,
+      'suction-open-lamp': valves.suction,
+      'suction-shut-lamp': !valves.suction,
+      'discharge-open-lamp': valves.discharge,
+      'discharge-shut-lamp': !valves.discharge,
     },
     readouts: {
       break: {
