@@ -66,6 +66,15 @@ export const INSTALLED_FIXTURES: Readonly<Record<string, InstalledFixture>> = {
     purpose:
       "Takes the spa's overflow and holds the water the bathers and jets displace, for the circulation pump to draw from.",
   },
+  'PL2-T1-LT1': {
+    assetId: 'asset-0127',
+    room: 'plant_pool_02',
+    name: 'Olympic balance tank ultrasonic level transmitter',
+    kind: 'level-transmitter',
+    brand: 'trager-feinstein',
+    purpose:
+      'Measures the water depth in the Olympic balance tank and sends its level signal to the pool control panel.',
+  },
   'PL2-T1': {
     assetId: 'asset-0108',
     room: 'plant_pool_02',

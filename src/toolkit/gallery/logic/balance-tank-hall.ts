@@ -1,3 +1,4 @@
+import type { PipeRun } from './room-pipes';
 import { BALANCE_TANK } from '../../../game/plant/balance-tank';
 import type { Vec3 } from '../../components/core/logic/pipe-route';
 import type { PlantRoomLayout } from './plant-room-layout';
@@ -87,6 +88,8 @@ export const SPOTS = {
     bayX: BAY_FLOOR.maxX - 0.15,
     high: 2.95,
   },
+  /** Drain sump at the east wall; extended spindle on the gantry. */
+  drain: { x: TANK.maxX - 0.12, z: -2.55 },
   /** The weir to drain, out of the east wall. */
   weir: { z: -1.0 },
   /** The two suctions to the pumps, through the partition low down into the plant room. */
@@ -136,6 +139,49 @@ export function hallPipes() {
   };
 }
 
+/** A separate hall route: its penstock is worked by an extended spindle on the gantry. */
+export function hallDrainRun(): PipeRun {
+  const d = SPOTS.drain;
+  return {
+    name: 'Balance tank drain to waste',
+    kind: 'pvc-drain',
+    od: 0.11,
+    service: 'drainage',
+    joins: ['tank', 'drain'],
+    label: 'TANK DRAIN',
+    through: [],
+    points: [
+      [d.x - 0.2, TANK.floor - 0.16, d.z],
+      [TANK.maxX + 0.4, TANK.floor - 0.16, d.z],
+    ],
+    valves: [
+      {
+        name: 'Balance tank drain valve',
+        at: [d.x + 0.02, TANK.floor - 0.16, d.z],
+        axis: 'x',
+        od: 0.11,
+        operator: 'lever',
+        facing: [-1, 0, 0],
+        fitting: 'tank.drain.iso',
+      },
+    ],
+  };
+}
+
+/** Two-wire level signal: out of the side gland, up, south, then west through the partition towards the pool controls. */
+export function hallLevelCable(): Vec3[] {
+  const tx = SPOTS.transmitter;
+  const high = HALL.height - 0.25;
+  const south = TANK.maxZ - 0.15;
+  return [
+    [tx.x + 0.11, tx.y + 0.2, tx.z],
+    [tx.x + 0.18, tx.y + 0.2, tx.z],
+    [tx.x + 0.18, high, tx.z],
+    [tx.x + 0.18, high, south],
+    [TANK.minX - PARTITION - 0.05, high, south],
+  ];
+}
+
 export const HALL_PIPES = {
   returns: { od: 0.315 },
   makeup: { od: 0.054 },
@@ -147,7 +193,7 @@ export const HALL_PIPES = {
 export const HALL_INLET_LABELS = [
   ...SPOTS.returns.map((r, i) => ({
     id: `olympic-overflow-${i + 1}`,
-    lines: [`POOL OVERFLOW ${i + 1}`, 'OLYMPIC POOL'],
+    lines: ['OLYMPIC POOL', `OVERFLOW RETURN ${i + 1}`],
     at: [r.x, 1.35, r.z] as Vec3,
     od: HALL_PIPES.returns.od,
   })),

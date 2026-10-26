@@ -243,17 +243,18 @@ function voluteCasing(
   for (let i = 0; i < 12; i++) {
     const [z, y] = volutePoint(VOLUTE_START_FOR_BOLTS + (i / 12) * 2 * Math.PI);
     const k = (Math.hypot(z, y) + 0.016) / Math.hypot(z, y);
-    t.cyl(
+    const head = t.cyl(
       parent,
       bolt,
       0.011,
-      0.012,
-      x1 + 0.006,
+      0.008,
+      x1 + 0.004,
       shaftY + y * k,
       z * k,
       'x',
       6,
     );
+    head.name = 'Pump casing bolt';
   }
 }
 
@@ -653,17 +654,18 @@ export function createStrainer(kit: PanelKit) {
   t.cyl(group, t.paint('#9fc1c9', 0.1), 0.12, 0.012, 0, 0.815, 0, 'y', 32);
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2;
-    t.cyl(
+    const head = t.cyl(
       group,
       t.paint('#c9a43b', 0.4, 0.6),
       0.016,
-      0.06,
+      0.012,
       Math.cos(a) * 0.17,
-      0.83,
+      0.816,
       Math.sin(a) * 0.17,
       'y',
-      10,
+      6,
     );
+    head.name = 'Strainer lid bolt';
   }
   for (const x of [-0.12, 0.12])
     t.box(group, iron, 0.03, 0.08, 0.03, x, 0.85, 0);

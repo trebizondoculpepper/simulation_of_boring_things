@@ -1,3 +1,4 @@
+import { OLYMPIC_TANK_DRAIN } from './plant/balance-tank';
 import {
   loungePasses,
   newLoungeFilters,
@@ -765,6 +766,9 @@ export function stepWorld(world: World, delta: number): World {
         toPool: battery.toPool,
         toWaste: battery.toWaste,
         makeUpCalling: calling,
+        tankDrain: installedValveOpen(world.installedValves, 'PL2-T1-DV1')
+          ? OLYMPIC_TANK_DRAIN.coefficient
+          : 0,
       };
     },
     (running) =>

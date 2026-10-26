@@ -1,3 +1,4 @@
+import { installedValveOpen } from './installed-valves';
 import { BALANCE_TANK, newBalanceTank } from './balance-tank';
 import type { BalanceTankState, MakeupMode } from './balance-tank';
 import { olympicFlowsOf } from './olympic-battery';
@@ -74,6 +75,7 @@ export function olympicTankView(world: {
   const flows = olympicFlowsOf(world);
   return {
     ...newBalanceTank(level),
+    drainOpen: installedValveOpen(world.installedValves, 'PL2-T1-DV1'),
     level,
     pumps: water.tripped ? 'tripped' : running ? 'run' : 'stop',
     makeupMode: world.olympicTank.makeup,

@@ -2,6 +2,11 @@ import { MODEL_INSTALLED_VALVES } from './model-valves';
 /** Explicit identities of each installed room-pipework valve. Display tags may change;
  * asset IDs and save keys do not. Keyed by authored room, run and valve names. */
 const HAND_DRAWN_VALVES: Readonly<Record<string, InstalledValve>> = {
+  'plant_pool_02|Balance tank drain to waste|Balance tank drain valve': {
+    assetId: 'valve-0107',
+    tag: 'PL2-T1-DV1',
+    normal: 'closed',
+  },
   'plant_pool_01|Filter 1 inlet drop|F1 inlet valve': {
     assetId: 'valve-0001',
     tag: 'PL1-F1-IV1',

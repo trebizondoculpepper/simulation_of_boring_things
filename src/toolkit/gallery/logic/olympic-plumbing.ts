@@ -606,7 +606,7 @@ export function plumbOlympic(
   // doses onto it by a quill on its top, a short drop below the pump.
   const uvOut = port('uv', 'outlet');
   const spoolZ = round(hz - SPOOL_OFF);
-  const turnX = round(uvOut.at[0] + 0.5);
+  const turnX = round(uvOut.at[0] + uvOut.outward[0] * 0.5);
   const doseX = ['acid', 'hypo'].map((k) => port(k, 'dose').at[0]);
   const spoolEnd = round(Math.max(...doseX) + 0.6);
   rule('Dosing spool', 'uv-to-pool', 'water', uvOut.od, [
@@ -967,11 +967,17 @@ export function plumbOlympic(
     price: pricePerMetre(pipeOf[w.pipe].kind, w.od, {
       conduit: w.pipe === 'power',
     }),
-    startStraight: 0.45,
+    // The exchanger's valves need a complete straight spool beyond each
+    // flange, before the drawn elbow (including heating insulation).
+    startStraight: ['hx-return', 'heating-return'].includes(w.id) ? 0.8 : 0.45,
     // Laid first, as they have least room: the treatment main, the side-stream's return, the pumps' feeds across the room.
     ...(FIRST.has(w.id) ? { priority: 10 } : {}),
     // A pump's power port is inside its casing's box: a lead long enough to clear it (as Dev24's).
-    endStraight: w.id.startsWith('power-pump') ? 1.0 : 0.45,
+    endStraight: w.id.startsWith('power-pump')
+      ? 1.0
+      : ['hx-flow', 'heating-flow'].includes(w.id)
+        ? 0.8
+        : 0.45,
   }));
   const routed = routeVoxelLines(
     { halfX: hx, halfZ: hz, height: 6.0, regions: routerRegions, obstacles },

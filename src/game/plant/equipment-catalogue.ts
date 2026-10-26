@@ -156,6 +156,10 @@ const record = (
  */
 const enhancedRoutes = (): ReadonlyMap<string, ValveRoute> =>
   new Map([
+    [
+      'valve-0107',
+      { from: 'the Olympic balance tank', to: 'the drain', medium: 'water' },
+    ],
     ...[...olympicValveRoutes()].flatMap(([key, route]) => {
       const valve = INSTALLED_VALVES[`plant_pool_02|${key}`];
       return valve ? [[valve.assetId, route] as const] : [];
@@ -343,16 +347,19 @@ function inventoryRecords(
     ),
     ...Object.entries(INSTALLED_VALVES).map(([key, valve]) => {
       const name = key.split('|')[2];
-      const kind: KindId = /gas/i.test(name)
-        ? 'gas-ball-valve'
-        : 'butterfly-valve';
+      const penstock = valve.tag === 'PL2-T1-DV1';
+      const kind: KindId = penstock
+        ? 'penstock'
+        : /gas/i.test(name)
+          ? 'gas-ball-valve'
+          : 'butterfly-valve';
       return record(
         {
           assetId: valve.assetId,
           id: valve.tag,
           name,
           kind,
-          brand: 'unbranded',
+          brand: penstock ? 'grundflow' : 'unbranded',
           class: 'plant',
           purpose: '',
           normal: valve.normal,

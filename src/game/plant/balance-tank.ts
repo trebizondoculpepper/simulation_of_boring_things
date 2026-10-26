@@ -54,7 +54,15 @@ export const SESSIONS = [
 export type MakeupMode = 'off' | 'auto' | 'hand';
 export type PumpState = 'run' | 'stop' | 'tripped';
 
+/** DN100 gravity drain, Cd=0.5; m³/h per square root metre of head. */
+export const OLYMPIC_TANK_DRAIN = {
+  coefficient: ((0.5 * Math.PI * 0.1 ** 2) / 4) * Math.sqrt(2 * 9.81) * 3600,
+};
+
 export interface BalanceTankState {
+  /** Optional view/exhibit state; the building keeps its valve in installedValves. */
+  drainOpen?: boolean;
+  drainFlow?: number;
   /** The water's depth, m. */
   level: number;
   bathers: number;
@@ -175,9 +183,17 @@ function stepOnce(s: BalanceTankState, dt: number): BalanceTankState {
   const makeup = makeupOpen ? (T.makeup / hour) * dt : 0;
   const head = Math.max(0, s.level - T.weir);
   const spill = Math.min(((T.weirK * head ** 1.5) / hour) * dt, head * AREA);
+  const drainFlow = s.drainOpen
+    ? OLYMPIC_TANK_DRAIN.coefficient * Math.sqrt(Math.max(0, s.level))
+    : 0;
   const volume = Math.max(
     0,
-    volumeOf(s.level) + inflow - pumped + makeup - spill,
+    volumeOf(s.level) +
+      inflow -
+      pumped +
+      makeup -
+      spill -
+      (drainFlow * dt) / hour,
   );
   const level = Math.min(T.depth, volume / AREA);
   // LOW LOW trips the pumps.
@@ -185,6 +201,7 @@ function stepOnce(s: BalanceTankState, dt: number): BalanceTankState {
   return {
     ...s,
     level,
+    drainFlow,
     bathers,
     poolShort,
     channels,

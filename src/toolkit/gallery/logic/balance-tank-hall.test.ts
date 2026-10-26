@@ -8,6 +8,8 @@ import {
   START,
   TANK,
   hallPipes,
+  hallLevelCable,
+  hallDrainRun,
   heightOf,
 } from './balance-tank-hall';
 
@@ -27,9 +29,12 @@ describe('the balance tank hall', () => {
 
   it('identifies both pool overflow drops and the mains make-up at their actual pipes', () => {
     const runs = hallPipes();
+    expect(
+      HALL_INLET_LABELS.slice(0, 2).map((label) => label.lines[1]),
+    ).toEqual(['OVERFLOW RETURN 1', 'OVERFLOW RETURN 2']);
     expect(HALL_INLET_LABELS.map((label) => label.lines[0])).toEqual([
-      'POOL OVERFLOW 1',
-      'POOL OVERFLOW 2',
+      'OLYMPIC POOL',
+      'OLYMPIC POOL',
       'MAINS MAKE-UP',
     ]);
     for (const [index, label] of HALL_INLET_LABELS.entries()) {
@@ -64,4 +69,24 @@ describe('the balance tank hall', () => {
     for (const r of hallPipes().suctions)
       expect(r.at(-1)![0]).toBeLessThan(TANK.minX - PARTITION);
   });
+});
+
+it('takes the level cable from its gland up, south and west through the partition', () => {
+  const p = hallLevelCable();
+  expect(p[0]).toEqual([
+    SPOTS.transmitter.x + 0.11,
+    SPOTS.transmitter.y + 0.2,
+    SPOTS.transmitter.z,
+  ]);
+  expect(p[2][1]).toBeGreaterThan(p[0][1]);
+  expect(p[3][2]).toBeGreaterThan(p[2][2]);
+  expect(p.at(-1)![0]).toBeLessThan(TANK.minX - PARTITION);
+  for (const point of p) expect(point[1]).toBeLessThan(HALL.height);
+});
+it('takes the floor drain out through the east wall below its sump, with its penstock on the run', () => {
+  const run = hallDrainRun();
+  expect(run.points[0][1]).toBeLessThan(TANK.floor);
+  expect(run.points.at(-1)![0]).toBeGreaterThan(TANK.maxX);
+  expect(run.valves[0].at[1]).toBe(run.points[0][1]);
+  expect(run.valves[0].at[0]).toBeGreaterThan(run.points[0][0]);
 });

@@ -6,9 +6,13 @@ import {
   it,
   vi,
 } from 'vite-plus/test';
-import { Box3 } from 'three';
+import { Box3, CylinderGeometry, Mesh } from 'three';
 import { createPanelKit, disposeKit } from '../../core/views/eighties-controls';
-import { createPumpPair } from './pumps-plant';
+import {
+  createEndSuctionPump,
+  createPumpPair,
+  createStrainer,
+} from './pumps-plant';
 import { machinePorts } from '../../../gallery/logic/machine-ports';
 import { createControllerPanel } from './dosing-equipment';
 
@@ -36,6 +40,31 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('plant identification and enclosures', () => {
+  it('seats short hexagonal heads on the pump casing and strainer lid', () => {
+    const kit = createPanelKit();
+    const pump = createEndSuctionPump(kit);
+    const strainer = createStrainer(kit);
+    for (const [root, name, count, height] of [
+      [pump, 'Pump casing bolt', 12, 0.008],
+      [strainer, 'Strainer lid bolt', 6, 0.012],
+    ] as const) {
+      const heads = root.getObjectsByProperty('name', name);
+      expect(heads).toHaveLength(count);
+      for (const head of heads) {
+        expect(head).toBeInstanceOf(Mesh);
+        const geometry = (head as Mesh<CylinderGeometry>).geometry;
+        expect(geometry.parameters.radialSegments).toBe(6);
+        expect(geometry.parameters.height).toBeCloseTo(height);
+        if (root === strainer)
+          expect(head.position.y - height / 2).toBeCloseTo(0.81);
+      }
+    }
+    disposeKit(kit, pump);
+    strainer.traverse((o) => {
+      if (o instanceof Mesh) o.geometry.dispose();
+    });
+  });
+
   it('screws each pump’s laminate identification to its motor’s terminal box', () => {
     // The owner, 2026-10-25: on a flat surface at the top, where it is seen.
     const kit = createPanelKit();

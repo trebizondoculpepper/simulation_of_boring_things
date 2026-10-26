@@ -540,6 +540,25 @@ export const PLACED_KINDS = {
 
 /** The kinds of things registered outside the layouts: valves, fixtures, feeders, model parts. */
 export const OTHER_KINDS = {
+  penstock: {
+    code: 'DV',
+    class: 'plant',
+    type: 'Drain penstock',
+    status: 'none',
+    template: 'valve',
+    purpose:
+      'Opens or shuts a tank outlet, worked by an extended spindle from above.',
+    brand: 'grundflow',
+  },
+  'level-transmitter': {
+    code: 'LT',
+    class: 'plant',
+    type: 'Level transmitter',
+    status: 'none',
+    purpose:
+      'Measures water depth and sends its level signal to the tank control panel.',
+    brand: 'trager-feinstein',
+  },
   pump: {
     code: 'P',
     class: 'plant',

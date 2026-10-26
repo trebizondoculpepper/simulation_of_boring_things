@@ -1,3 +1,8 @@
+import { tankDrain } from '../../../components/plant/parts/tank-drain';
+import { markComponent } from '../../../components/core/views/component-identity';
+import { createFlexHose } from '../../../components/core/views/pipe-route';
+import { createPipeBellmouth } from '../../../components/plant/views/pipe-bellmouth';
+import { ladderGate } from '../../../components/architectural/parts/ladder-gate';
 import { createPartSet } from '../../../components/core/parts/parts';
 import { BoxGeometry, Group, Mesh, PlaneGeometry, PointLight } from 'three';
 import { METRE } from '../../../components/core/logic/units';
@@ -60,6 +65,8 @@ import {
   START as HALL_START,
   TANK,
   hallPipes,
+  hallLevelCable,
+  hallDrainRun,
   heightOf,
   layoutBalanceHall,
 } from '../../logic/balance-tank-hall';
@@ -101,8 +108,10 @@ export function buildHall(
   {
     bay = true,
     source,
+    setDrain,
   }: {
     bay?: boolean;
+    setDrain?: (open: boolean) => void;
     /**
      * Where its water comes from: the world's Olympic tank, read each
      * frame (`tank-hall-room.ts`); without it, the exhibit's own tank,
@@ -243,22 +252,9 @@ export function buildHall(
   rail(OPENING.minX, TANK.maxX, OPENING.minZ, false);
   rail(OPENING.minX, GATE.minX, OPENING.maxZ, false);
   rail(OPENING.minZ, OPENING.maxZ, OPENING.minX, true);
-  const yellow = t.paint('#e3b520', 0.5);
-  const gate = new Group();
-  gate.position.set(GATE.minX, 0, OPENING.maxZ);
-  object.add(gate);
-  const gw = GATE.maxX - GATE.minX - 0.05;
-  for (const y of [0.5, 1.0])
-    t.box(gate, yellow, gw, 0.035, 0.035, gw / 2, y, 0);
-  for (const x of [0.02, gw])
-    t.box(gate, yellow, 0.035, 0.6, 0.035, x, 0.75, 0);
-  const confined = createSafetySign(
-    kit,
-    ['confined'],
-    ['Confined space', 'Entry by permit only'],
-  );
-  confined.position.set(GATE.minX + gw / 2, 0.75, OPENING.maxZ + 0.03);
-  object.add(confined);
+  const gate = ladderGate(kit, GATE.maxX - GATE.minX - 0.05);
+  gate.object.position.set(GATE.minX, 0, OPENING.maxZ);
+  object.add(gate.object);
   const deepSign = createSafetySign(kit, ['general'], ['Danger', 'Deep water']);
   deepSign.rotation.y = -Math.PI / 2;
   deepSign.position.set(OPENING.minX - 0.03, 0.85, 0.9);
@@ -325,30 +321,45 @@ export function buildHall(
     }
     object.add(marker);
   }
-  object.add(createPipe('pvc-drain', HALL_PIPES.weir.od, runs.weir));
-  // The weir's bellmouth, its rim the weir.
+  const weirRun = runs.weir.map((p) => [...p] as [number, number, number]);
+  // Bury the pipe's end face below the flared inlet, clear of its annular rim.
+  weirRun[0][1] -= 0.08;
+  object.add(
+    markComponent(createPipe('pvc-drain', HALL_PIPES.weir.od, weirRun), {
+      name: 'Balance tank overflow to waste',
+    }),
+  );
   const pvc = t.paint('#4a4e52', 0.5);
-  t.cyl(
-    object,
+  const weirMouth = createPipeBellmouth(
     pvc,
+    HALL_PIPES.weir.od,
     HALL_PIPES.weir.od * 0.9,
     0.08,
-    runs.weir[0][0],
-    runs.weir[0][1] - 0.04,
-    runs.weir[0][2],
   );
-  for (const r of runs.suctions) {
-    // Low in the tank's west wall, through the partition, under the bay to the pumps.
-    object.add(createPipe('pvc-pressure', HALL_PIPES.suction.od, r));
-    t.cyl(
-      object,
+  // Shade the bore below the rim; the route's closed end sits deeper behind it.
+  const bore = t.paint('#101719', 1);
+  t.cyl(weirMouth, bore, HALL_PIPES.weir.od / 2 - 0.008, 0.002, 0, -0.078, 0);
+  weirMouth.position.set(...runs.weir[0]);
+  markComponent(weirMouth, { name: 'Balance tank overflow inlet — to waste' });
+  object.add(weirMouth);
+  for (const [i, r] of runs.suctions.entries()) {
+    // These downward-facing inlets continue west through the partition to the pumps.
+    const intake = markComponent(new Group(), {
+      name: `Olympic pump ${i === 0 ? 'A' : 'B'} suction intake — through the west wall to the plant room`,
+      model: { link: `tank.suction${i === 0 ? 'A' : 'B'}` },
+    });
+    intake.add(createPipe('pvc-pressure', HALL_PIPES.suction.od, r));
+    const mouth = createPipeBellmouth(
       pvc,
+      HALL_PIPES.suction.od,
       HALL_PIPES.suction.od * 0.85,
       0.1,
-      r[0][0],
-      r[0][1] - 0.05,
-      r[0][2],
     );
+    t.cyl(mouth, bore, HALL_PIPES.suction.od / 2 - 0.008, 0.002, 0, -0.098, 0);
+    mouth.rotation.x = Math.PI;
+    mouth.position.set(r[0][0], r[0][1] - 0.1, r[0][2]);
+    intake.add(mouth);
+    object.add(intake);
   }
   // In the bay, on the main's rise (the building's is in the plant room).
   const valve = bay ? createSolenoidValve(kit, HALL_PIPES.makeup.od) : null;
@@ -391,7 +402,47 @@ export function buildHall(
   t.box(object, steel, 0.05, 0.82, 0.05, tx.x, 0.75, OPENING.maxZ + 0.04);
   const transmitter = createUltrasonicLevel(kit);
   transmitter.group.position.set(tx.x, tx.y, tx.z);
+  markComponent(transmitter.group, {
+    tag: 'PL2-T1-LT1',
+    model: { node: 'tank-level-transmitter' },
+    status: () => `${state.level.toFixed(2)} m`,
+  });
   object.add(transmitter.group);
+  const signalCable = createFlexHose(
+    hallLevelCable(),
+    t.paint('#252a2c', 0.65),
+    0.012,
+  );
+  signalCable.name = 'Level transmitter signal cable — south to pool controls';
+  markComponent(signalCable, {
+    name: signalCable.name,
+    model: { link: 'tank.level-signal' },
+  });
+  object.add(signalCable);
+  // Two overhead saddles suspend the cable below the soffit on its way to the doorway.
+  const cableHigh = HALL.height - 0.25;
+  for (const x of [tx.x + 0.18, (tx.x + TANK.minX) / 2]) {
+    t.box(
+      object,
+      steel,
+      0.025,
+      0.25,
+      0.025,
+      x,
+      cableHigh + 0.125,
+      TANK.maxZ - 0.15,
+    );
+    t.box(
+      object,
+      steel,
+      0.06,
+      0.015,
+      0.045,
+      x,
+      cableHigh - 0.008,
+      TANK.maxZ - 0.15,
+    );
+  }
 
   // The float switches on their bracket off the north rail.
   const fl = SPOTS.floats;
@@ -463,6 +514,29 @@ export function buildHall(
     object.add(panel.group);
   }
   const parts = panel?.parts ?? createPartSet();
+  parts.add(gate);
+  const drain = tankDrain(kit, -TANK.floor, {
+    get: () => !!state.drainOpen,
+    set: (open) => {
+      if (setDrain) setDrain(open);
+      else state = { ...state, drainOpen: open };
+    },
+  });
+  drain.object.position.set(SPOTS.drain.x, 0, SPOTS.drain.z);
+  markComponent(drain.object, {
+    tag: 'PL2-T1-DV1',
+    model: { fitting: 'tank.drain.iso' },
+    status: () => (state.drainOpen ? 'Open' : 'Closed'),
+  });
+  parts.add(drain);
+  object.add(drain.object);
+  const drainRun = hallDrainRun();
+  object.add(
+    markComponent(createPipe(drainRun.kind, drainRun.od, drainRun.points), {
+      name: 'Balance tank floor drain to waste',
+      model: { link: 'tank.drain' },
+    }),
+  );
   // The make-up solenoid valve's manual override: held open by hand
   // (HAND), or given back to its level control (AUTO).
   if (valve)
@@ -582,11 +656,30 @@ export function buildHall(
     solids: (walker) => {
       const inside = overlaps(leaves, walker.x, walker.z, 0.35);
       if (inside) doors.holdOpen();
-      return doorwayStops(
-        { inside, shut: doors.angle() < 0.6, seen: true },
-        leaves,
-        leaves,
-      );
+      const gateSweep = {
+        minX: GATE.minX - 0.05,
+        maxX: GATE.maxX,
+        minZ: OPENING.maxZ - 0.05,
+        maxZ: OPENING.maxZ + 0.65,
+      };
+      if (overlaps(gateSweep, walker.x, walker.z, 0.35)) gate.holdOpen();
+      return [
+        ...(gate.angle() < 0.6
+          ? [
+              {
+                minX: GATE.minX,
+                maxX: GATE.maxX,
+                minZ: OPENING.maxZ - 0.03,
+                maxZ: OPENING.maxZ + 0.03,
+              },
+            ]
+          : []),
+        ...doorwayStops(
+          { inside, shut: doors.angle() < 0.6, seen: true },
+          leaves,
+          leaves,
+        ),
+      ];
     },
     update: (delta) => {
       for (const u of updates) u(delta);

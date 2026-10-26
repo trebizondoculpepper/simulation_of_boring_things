@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { advance, applyAction, newWorld } from '../world';
 import type { World } from '../world';
-import { INSTALLED_VALVES } from './installed-valves';
+import { INSTALLED_VALVES, installedValveOpen } from './installed-valves';
 import { olympicFlowsOf, PUMP_DRAIN_FLOW } from './olympic-battery';
 
 /**
@@ -50,5 +50,33 @@ describe('draining the Olympic’s balance tank', () => {
     w = advance(w, 1500, 1);
     expect(held).toBeGreaterThan(15);
     expect(w.wetHall.backwashTank).toBe(0);
+  });
+});
+
+describe('Olympic tank floor drain', () => {
+  it('is closed by default, including older saves missing its new key', () => {
+    const w = newWorld();
+    expect(w.installedValves[id('PL2-T1-DV1')]).toBe(false);
+    expect(installedValveOpen({}, 'PL2-T1-DV1')).toBe(false);
+  });
+  it('drains by gravity with circulation stopped and stops when shut', () => {
+    let w = newWorld();
+    w = applyAction(w, { type: 'olympic/makeup', mode: 'off' });
+    w = applyAction(w, { type: 'motor/stop', pool: 'pool_02', stopped: true });
+    const shut = advance(w, 600, 1);
+    const open = advance(valve(w, 'PL2-T1-DV1', true), 600, 1);
+    expect(open.pools.pool_02.balance).toBeLessThan(
+      shut.pools.pool_02.balance - 0.05,
+    );
+    expect(open.pools.pool_02.balance).toBeGreaterThanOrEqual(0);
+    const closed = valve(open, 'PL2-T1-DV1', false);
+    const afterShut = advance(closed, 300, 1);
+    // The stopped pool can still drain into the tank; compare the same returning water with its outlet open and shut.
+    expect(afterShut.pools.pool_02.balance).toBeGreaterThanOrEqual(
+      closed.pools.pool_02.balance,
+    );
+    expect(afterShut.pools.pool_02.balance).toBeGreaterThan(
+      advance(open, 300, 1).pools.pool_02.balance,
+    );
   });
 });

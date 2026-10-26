@@ -1,3 +1,4 @@
+import { createInspector } from '../views/inspect-pick';
 import {
   AmbientLight,
   BoxGeometry,
@@ -81,6 +82,8 @@ export function startTankHall(canvas: HTMLCanvasElement) {
   const hall = buildHall(kit, {
     bay: false,
     source: () => olympicTankView(store.world.value),
+    setDrain: (open) =>
+      store.dispatch({ type: 'plant/valve', id: 'PL2-T1-DV1', open }),
   });
   room.add(hall.object);
 
@@ -182,6 +185,12 @@ export function startTankHall(canvas: HTMLCanvasElement) {
     ],
     use: (x, y) => useAt(x, y)?.(),
     aimed: () => Boolean(useAt(0, 0)),
+    inspect: createInspector({
+      root: room,
+      camera,
+      metre: m,
+      world: () => store.world.value,
+    }),
   });
   const raycaster = new Raycaster();
   const pointer = new Vector2();

@@ -28,6 +28,11 @@ const link = (
 
 export const OLYMPIC_ANNEX = {
   nodes: [
+    {
+      id: 'tank-level-transmitter',
+      kind: 'level-transmitter',
+      name: 'Balance tank level transmitter',
+    },
     { id: 'tankPanel', kind: 'balance-tank-panel', name: 'Balance tank panel' },
     {
       id: 'controller',
@@ -47,6 +52,13 @@ export const OLYMPIC_ANNEX = {
     { id: 'ozone-monitor', kind: 'ozone-monitor', name: 'Ozone monitor' },
   ],
   links: [
+    link('tank.drain', ['tank', 'drain'], ['main-plant', 'drain'], 'water'),
+    link(
+      'tank.level-signal',
+      ['tank-level-transmitter', 'signal'],
+      ['tankPanel', 'level'],
+      'power',
+    ),
     link(
       'pumps.dischargeA',
       ['pumps', 'dischargeA'],
@@ -114,6 +126,8 @@ export const OLYMPIC_ANNEX = {
   ],
   /** Fittings the room sets that the expansion does not, by their ids there. */
   fittings: [
+    'tank.drain.iso',
+    'pool.mainDrain.iso',
     'pumps.dischargeA.nrv',
     'pumps.dischargeA.iso',
     'pumps.dischargeB.nrv',

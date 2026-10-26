@@ -1,3 +1,4 @@
+import { drawnSegments } from '../../components/core/logic/pipe-route';
 import { describe, expect, it } from 'vite-plus/test';
 import {
   MAIN,
@@ -32,6 +33,60 @@ describe('the Olympic plant room, plumbed and routed', () => {
       .find((v) => v.name === 'F1 backwash out valve');
     expect(drawn?.facing).toEqual([0, 0, 1]);
     expect(drawn?.axis).toBe('y');
+  });
+
+  it('faces the UV panel into the room and routes its power and outlet from the turned ports', () => {
+    const uv = plumbed.items.find((i) => i.key === 'uv')!;
+    expect(uv.facing).toBe('north');
+    const power = plumbed.ports.find(
+      (p) => p.machine === 'uv' && p.name === 'power',
+    )!;
+    expect(power.at[2]).toBeLessThan(uv.z);
+    expect(run('power-uv').points.at(-1)).toEqual(power.at);
+    const outlet = plumbed.ports.find(
+      (p) => p.machine === 'uv' && p.name === 'outlet',
+    )!;
+    const [from, to] = run('Dosing spool').points;
+    expect(from).toEqual(outlet.at);
+    expect(
+      to.reduce(
+        (sum, value, k) => sum + (value - from[k]) * outlet.outward[k],
+        0,
+      ),
+    ).toBeGreaterThan(0);
+  });
+
+  it('puts all four heat-exchanger valves fully on drawn straights, clear of insulated elbows', () => {
+    const valves = plumbed.fittings.filter((f) =>
+      f.id.startsWith('exchanger.'),
+    );
+    expect(valves).toHaveLength(4);
+    const distance = (a: readonly number[], b: readonly number[]) =>
+      Math.hypot(...a.map((v, k) => v - b[k]));
+    for (const valve of valves) {
+      const pipe = run(valve.run);
+      const segments = drawnSegments({
+        ...pipe,
+        insulation: pipe.kind === 'lagged-heating' ? 0.04 : 0,
+      });
+      const straight = segments.find(
+        (s) =>
+          s.kind === 'straight' &&
+          Math.abs(
+            distance(s.from, valve.at) + distance(s.to, valve.at) - s.length,
+          ) < 1e-6,
+      );
+      expect(straight, valve.id).toBeDefined();
+      if (straight?.kind !== 'straight') throw new Error(valve.id);
+      // Room for both the valve's flanges and the elbow's socket/flange, beyond the curve itself.
+      expect(
+        Math.min(
+          distance(straight.from, valve.at),
+          distance(straight.to, valve.at),
+        ),
+        valve.id,
+      ).toBeGreaterThan(0.12);
+    }
   });
 
   it('routes every line and leaves nothing unplumbed', () => {

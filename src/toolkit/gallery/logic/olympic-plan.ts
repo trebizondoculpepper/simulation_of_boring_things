@@ -282,14 +282,14 @@ export function olympicPlan(): PlanItem[] {
   // The UV unit by the south wall, west of the dosing, so the return main
   // leaving it passes the dosing pumps along the wall, where the chemicals
   // are dosed into it: acid and hypochlorite lines never run over a
-  // walkway (the owner, 2026-10-23). It faces the wall, its access
-  // between, its outlet toward the dosing.
+  // walkway (the owner, 2026-10-23). Its panel faces north into the
+  // room; the outlet doubles back along the wall to the dosing spool.
   const u = SIZE.uv;
   out.push(
     item('uv', 'UV unit', u, {
       x: UV_X,
       z: hz - PLAN_ACCESS - u.d / 2,
-      facing: 'south',
+      facing: 'north',
     }),
   );
   // On the east wall, south of the battery's walkway: the panel, then the ozone generator.

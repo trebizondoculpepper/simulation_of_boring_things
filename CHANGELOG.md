@@ -6,6 +6,9 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The Olympic tank hall’s ladder-access gate opens with Use and closes itself. Its floor sump drains by gravity through PL2-T1-DV1, worked from an extended-spindle handwheel on the gantry; the valve position persists with the other installed valves.
+- Tank-hall inspection now identifies PL2-T1-LT1, the live ultrasonic level transmitter, and the two pump suction intakes. The transmitter’s signal cable rises to the soffit and runs south then west through the partition towards the pool controls.
+
 - The spa cabinets' controllers start and stop like the little boards they are (`cabinet-boot.ts`, world version 32): power lost or switched off, they stop at once and their four servo valves spring shut; powered, they boot (BOOTING, 3 s), check their inputs (SELF TEST, 3 s), open their servos one after another (suction, return, filter, heat; STARTING n/4), and only then let the pump run. A fault (NO FLOW, TANK LOW) stops them, and they check and restart once it clears. A piezo beeper gives one short beep coming online and three for a fault; the servos are heard as they turn. A development-only console hook, `poolWorld.store()`, reaches the world.
 - General equipment-status guidance in `doc/equipment-status.md`: identity and observability, power/control/operating phases, position versus command, instrument readings, passive and architectural conditions, safety latches, and the implemented boiler vocabulary.
 - The spa cabinets have sand filters inside in place of cartridges (the owner, 2026-10-25): a small Lidoluxe pressure vessel sized as its filter (the jacuzzi's Ø0.44 m on a 0.8 m bed, the foot spa's Ø0.38 m on 0.6 m), its servo-turned three-way valve head and gauge on top, and a small sight glass on its front showing its bed, from the filter's own state: its dirt, its channelling, a backwash's murk and the rinse clearing. Its unions meet the cabinet's pipework where the cartridge's did; nothing outside changed.
@@ -162,6 +165,11 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 - Every sand filter's sight glass is live, driven by a shared bed model (`plant/logic/filter-bed.ts`): the bed's dirt (from the water it is exposed to, or from its pressure difference where that is all a model gives), its pitting as a function of the time since it was last washed, and which way the water goes through it (down, filtering; up, lifted). It needs to know nothing of backwashing: water coming up through it is a wash and starts its clock again. Fitted to the plant rooms' filters, Dev19's, Dev26's Olympic filter (which starts ten days unwashed, dirty and pitted) and the small multiport filter.
 
 ### Fixed
+
+- The balance-tank overflow inlet has a hollow bellmouth and a recessed bore instead of overlapping end faces; the two submerged suction inlets also have open flared mouths.
+
+- PL2-UV1’s control panel faces north into the Olympic plant room; its inlet/outlet routing and power conduit follow the rotated ports. The four heat-exchanger connections have longer straight spools so their valves and flanges clear the drawn elbows, including heating insulation. Grundflow circulation-pump casing and strainer-lid bolt heads are shorter and hexagonal.
+- The concrete balance-tank hall’s inlet labels say OLYMPIC POOL / OVERFLOW RETURN 1 or 2, distinguishing the two Olympic returns from pool numbers. The lounge and Olympic pools retain their separate balance tanks.
 
 - Each boiler in the three boiler-house cascades is individually registered and inspectable under its existing B-501…B-506 plate, including its casing and label. Its live inspection state follows its own controller: unpowered, switched off, standby, purging, igniting, firing, pump run-on, a recoverable low-water-pressure block, or lockout with the actual ignition/flame/overheat cause.
 

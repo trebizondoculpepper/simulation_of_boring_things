@@ -1,3 +1,4 @@
+import { hallDrainRun } from '../../toolkit/gallery/logic/balance-tank-hall';
 import { describe, expect, it } from 'vite-plus/test';
 import { roomPipes } from '../../toolkit/gallery/logic/room-pipes';
 import { cabinetPipes } from '../../toolkit/gallery/logic/cabinet-pipes';
@@ -30,6 +31,13 @@ describe('installed pipework valves', () => {
           expect(seen.has(installed.assetId)).toBe(false);
           seen.add(installed.assetId);
         }
+    const hallDrain = installedValveFor(
+      'plant_pool_02',
+      hallDrainRun().name,
+      hallDrainRun().valves[0].name,
+    );
+    expect(seen.has(hallDrain.assetId)).toBe(false);
+    seen.add(hallDrain.assetId);
     expect(seen.size).toBe(Object.keys(INSTALLED_VALVES).length);
     expect(
       new Set(Object.values(INSTALLED_VALVES).map((v) => v.tag)).size,
@@ -72,6 +80,11 @@ describe('installed pipework valves', () => {
       world.installedValves,
     );
     const authored = [
+      {
+        room: 'plant_pool_02',
+        run: hallDrainRun(),
+        valve: hallDrainRun().valves[0],
+      },
       ...ROOMS.flatMap((room) =>
         roomPipes(room).flatMap((run) =>
           run.valves.map((valve) => ({ room, run, valve })),
