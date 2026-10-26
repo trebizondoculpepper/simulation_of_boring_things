@@ -1,5 +1,11 @@
 import { markComponent } from '../../core/views/component-identity';
-import { Group, Mesh, MeshStandardMaterial, PlaneGeometry } from 'three';
+import {
+  Group,
+  Object3D,
+  Mesh,
+  MeshStandardMaterial,
+  PlaneGeometry,
+} from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
 import { plantTools } from './plant-tools';
@@ -176,15 +182,31 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     group.add(deck);
   }
   const steel = t.paint('#8d9392', 0.45, 0.6);
-  t.box(
-    group,
+  // Its hatch lid, hinged along its outer (south) edge, by the pit's wall,
+  // lifting open toward it (the owner, 2026-10-26); its handle inboard.
+  const lid = new Group();
+  lid.name = 'Backwash pit hatch';
+  lid.position.set((hatchArea.minX + hatchArea.maxX) / 2, 0, hatchArea.maxZ);
+  group.add(lid);
+  const lidPlate = t.box(
+    lid,
     t.paint('#d4b21e', 0.5),
     hatch.length,
     0.02,
     hatch.width,
-    (hatchArea.minX + hatchArea.maxX) / 2,
+    0,
     -0.01,
-    (hatchArea.minZ + hatchArea.maxZ) / 2,
+    -hatch.width / 2,
+  );
+  const handle = t.box(
+    lid,
+    t.paint('#2b2e2f', 0.6),
+    0.2,
+    0.02,
+    0.03,
+    0,
+    0.01,
+    -hatch.width + 0.08,
   );
   const sign = createSafetySign(
     kit,
@@ -193,12 +215,8 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   );
   sign.rotation.x = -Math.PI / 2;
   sign.scale.setScalar(0.8);
-  sign.position.set(
-    (hatchArea.minX + hatchArea.maxX) / 2,
-    0.002,
-    (hatchArea.minZ + hatchArea.maxZ) / 2,
-  );
-  group.add(sign);
+  sign.position.set(0, 0.002, -hatch.width / 2);
+  lid.add(sign);
   // Its steel angle frame round the opening, standing 10 mm proud of the
   // floor, not flush with it (flush, it flickered against the slab).
   for (const side of [-1, 1]) {
@@ -211,6 +229,17 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   // a knee rail at 0.5 m and a toe board; in its north side, toward the
   // aisle, a self-closing gate for its maintenance, shut.
   const rail = PIT_RAIL;
+  const leaf = new Group();
+  leaf.name = 'Backwash pit gate';
+  // What bars the walker, in its own frame: its rail's sides (its gate's
+  // gap apart), its davit's foot.
+  const fixedSolids: {
+    minX: number;
+    maxX: number;
+    minZ: number;
+    maxZ: number;
+  }[] = [];
+  const gateGap = { minX: 0, maxX: 0, minZ: 0, maxZ: 0 };
   {
     const yellow = t.paint('#e3b51f', 0.5);
     const gateColour = t.paint('#d9a514', 0.5);
@@ -266,6 +295,15 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     // Its sides; its east side either side of its gate.
     const g0 = rail.gate.at - rail.gate.width / 2;
     const g1 = rail.gate.at + rail.gate.width / 2;
+    const r = 0.05;
+    fixedSolids.push(
+      { minX: x0 - r, maxX: x1 + r, minZ: z0 - r, maxZ: z0 + r },
+      { minX: x0 - r, maxX: x1 + r, minZ: z1 - r, maxZ: z1 + r },
+      { minX: x0 - r, maxX: x0 + r, minZ: z0, maxZ: z1 },
+      { minX: x1 - r, maxX: x1 + r, minZ: z0, maxZ: g0 },
+      { minX: x1 - r, maxX: x1 + r, minZ: g1, maxZ: z1 },
+    );
+    Object.assign(gateGap, { minX: x1 - r, maxX: x1 + r, minZ: g0, maxZ: g1 });
     run([x0, z0], [x1, z0]);
     run([x1, z0], [x1, g0]);
     run([x1, g1], [x1, z1]);
@@ -278,7 +316,6 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     {
       post(x1, g0);
       post(x1, g1);
-      const leaf = new Group();
       leaf.position.set(x1, 0, g1);
       group.add(leaf);
       const lw = rail.gate.width - 0.08;
@@ -365,6 +402,12 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     const armY = 1.76;
     // Its base plate and its four anchor bolts.
     t.box(group, yellow, 0.4, 0.025, 0.4, davitX, 0.0125, davitZ);
+    fixedSolids.push({
+      minX: davitX - 0.2,
+      maxX: davitX + 0.2,
+      minZ: davitZ - 0.2,
+      maxZ: davitZ + 0.2,
+    });
     for (const dx of [-0.15, 0.15])
       for (const dz of [-0.15, 0.15]) {
         t.cyl(
@@ -442,7 +485,22 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       brace.rotation.z = Math.atan2(to[1] - from[1], to[0] - from[0]);
     }
     // Its chain block over the hatch, and its mark.
-    t.cyl(group, dark, 0.04, 0.14, hx, armY - 0.12, davitZ, 'y', 10);
+    // Hung from a trolley clamped under the arm's tip: the block, its
+    // load chain down to its hook, stowed up under the arm.
+    t.box(group, dark, 0.12, 0.05, 0.1, hx, armY - 0.075, davitZ);
+    t.box(group, dark, 0.14, 0.18, 0.1, hx, armY - 0.19, davitZ);
+    t.cyl(group, steel, 0.006, 0.5, hx + 0.03, armY - 0.53, davitZ, 'y', 6);
+    t.cyl(group, steel, 0.006, 0.3, hx - 0.03, armY - 0.43, davitZ, 'y', 6);
+    t.box(
+      group,
+      t.paint('#e3b51f', 0.5),
+      0.03,
+      0.08,
+      0.02,
+      hx + 0.03,
+      armY - 0.82,
+      davitZ,
+    );
     const swl = createMicroLabel(kit, 'PUMP DAVIT  SWL 250 kg', {
       height: 0.03,
       ink: '#151515',
@@ -539,8 +597,47 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   name.rotation.x = -Math.PI / 2;
   name.position.set(-L / 2 + 1.2, 0.003, W / 2 + 0.15);
   group.add(name);
+  // Its gate and hatch, each opened or shut by a click, swinging there
+  // over a second; local, not world state, like a door's leaf.
+  const gate = { open: false, angle: 0 };
+  const cover = { open: false, angle: 0 };
+  const GATE_OPEN = 1.6;
+  const LID_OPEN = 1.75;
+  const uses = new Map<Object3D, () => void>();
+  leaf.traverse((o) => uses.set(o, () => (gate.open = !gate.open)));
+  for (const o of [lid, lidPlate, handle, sign])
+    o.traverse((c) => uses.set(c, () => (cover.open = !cover.open)));
+  const toward = (now: number, target: number, step: number) =>
+    now < target ? Math.min(target, now + step) : Math.max(target, now - step);
   return {
     group,
+    uses,
+    /** Swing its gate and hatch toward where they were left. */
+    update(delta: number) {
+      gate.angle = toward(gate.angle, gate.open ? GATE_OPEN : 0, delta * 1.6);
+      cover.angle = toward(
+        cover.angle,
+        cover.open ? LID_OPEN : 0,
+        delta * 1.75,
+      );
+      leaf.rotation.y = -gate.angle;
+      lid.rotation.x = cover.angle;
+    },
+    /** Whether its gate and hatch stand open. */
+    gateOpen: () => gate.angle > 0.6,
+    hatchOpen: () => cover.angle > 0.05,
+    /**
+     * What bars the walker now, in its own frame: its rail and davit; its
+     * gate's gap while shut; its hatch's opening while open (no one steps
+     * into the pit; its ladder is for a permitted entry, not modelled).
+     */
+    solids() {
+      return [
+        ...fixedSolids,
+        ...(gate.angle > 0.6 ? [] : [gateGap]),
+        ...(cover.angle > 0.05 ? [hatchArea] : []),
+      ];
+    },
     /** Its water's depth above its floor, metres. */
     setDepth(metres: number) {
       const d = Math.max(0.02, Math.min(p.topWater, metres));

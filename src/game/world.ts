@@ -7,6 +7,8 @@ import {
 import type { LoungeFiltersState } from './plant/lounge-filters';
 import { installedValveOpen } from './plant/installed-valves';
 import { actOnZoneMusic, newZoneMusic, stepZoneMusic } from './plant/music';
+import { actOnFireAlarm, newFireAlarm } from './plant/fire-alarm';
+import type { FireAlarmAction, FireAlarmState } from './plant/fire-alarm';
 import type { ZoneMusicState, ZoneMusicAction } from './plant/music';
 /**
  * The game's one world state: everything that carries on whichever room
@@ -218,7 +220,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 36;
+export const WORLD_VERSION = 37;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -289,6 +291,8 @@ export interface World {
   /** The boiler house's gas safety: ECV, emergency stop, detector and SSOV (`boiler-gas.ts`). */
   boilerGas: BoilerGasState;
   music: ZoneMusicState;
+  /** The fire alarm's call points (`plant/fire-alarm.ts`). */
+  fireAlarm: FireAlarmState;
 }
 
 export function newWorld(): World {
@@ -322,6 +326,7 @@ export function newWorld(): World {
     jacuzziFibreIlluminator: newFibreIlluminator(),
     boilerGas: newBoilerGas(),
     music: newZoneMusic(),
+    fireAlarm: newFireAlarm(),
   };
 }
 
@@ -377,7 +382,8 @@ export type WorldAction =
   | { type: 'jacuzzi/fibre-illuminator'; action: FibreIlluminatorAction }
   /** The boiler house's gas safety worked: its emergency stop, GAS RESET, ECV or detector TEST. */
   | { type: 'boiler-gas'; action: BoilerGasAction }
-  | { type: 'music'; action: ZoneMusicAction };
+  | { type: 'music'; action: ZoneMusicAction }
+  | { type: 'fire-alarm'; action: FireAlarmAction };
 
 /** The jacuzzi's drain valve, open or shut, and with it its pool's drain-down. */
 const jacuzziDrainDown = (world: World, open: boolean): World => ({
@@ -533,6 +539,11 @@ export function applyAction(world: World, action: WorldAction): World {
       const motors = actOnStarter(world.motors, action.tag, action.action);
       return motors === world.motors ? world : { ...world, motors };
     }
+    case 'fire-alarm':
+      return {
+        ...world,
+        fireAlarm: actOnFireAlarm(world.fireAlarm, action.action),
+      };
     case 'music':
       return { ...world, music: actOnZoneMusic(world.music, action.action) };
     case 'jacuzzi':

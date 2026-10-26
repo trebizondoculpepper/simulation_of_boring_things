@@ -396,6 +396,8 @@ export const WORLD_HEALTH_COVERAGE = {
     'not checked: decoration lighting, its own on switch',
   boilerGas: 'gas: the boiler house’s safety chain made',
   music: 'not health: the halls’ music',
+  fireAlarm:
+    'not checked: an alarm raised by hand, seen and heard where it sounds',
 } as const satisfies Record<keyof World, string>;
 
 /**

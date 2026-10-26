@@ -500,12 +500,32 @@ function modelFor(
     const holder = new Group();
     holder.add(pit.group);
     if (typeof window === 'undefined') return holder;
+    const parts = createPartSet();
+    for (const [o, use] of pit.uses) parts.uses.set(o, use);
     return {
       object: holder,
-      update: () =>
+      parts,
+      update: (delta: number) => {
+        pit.update(delta);
         pit.setDepth(
           backwashPitDepth(roomWorld().world.value.wetHall.backwashTank),
-        ),
+        );
+      },
+      // Its rail, davit, shut gate and open hatch, in the room's frame.
+      solids: () => {
+        holder.updateMatrixWorld(true);
+        const at = new Vector3();
+        return pit.solids().map((r) => {
+          const a = pit.group.localToWorld(at.set(r.minX, 0, r.minZ)).clone();
+          const b = pit.group.localToWorld(at.set(r.maxX, 0, r.maxZ));
+          return {
+            minX: Math.min(a.x, b.x),
+            maxX: Math.max(a.x, b.x),
+            minZ: Math.min(a.z, b.z),
+            maxZ: Math.max(a.z, b.z),
+          };
+        });
+      },
     };
   }
   if (TANKS[kind]) {
@@ -1264,6 +1284,9 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
           maxZ: box.max.z,
         });
       });
+    } else if (p.item.pit) {
+      // A pit is walked over on its gratings; its rail bars the way (its
+      // `solids`, as its gate and hatch stand).
     } else if (p.item.mount === 'floor' && !p.item.walkable)
       solids.push(p.footprint);
   }
@@ -1345,6 +1368,10 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
       return storageCupboards.some((cupboard) =>
         cupboard.returnItem(item, target),
       );
+    },
+    /** What its working machines bar now, for where the walker stands. */
+    movingSolids(walker: { x: number; z: number }) {
+      return lives.flatMap((live) => live.solids?.(walker) ?? []);
     },
     /** What working a part beneath `o` does, if any. */
     useOf(o: Object3D) {

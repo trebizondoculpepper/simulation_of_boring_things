@@ -83,6 +83,7 @@ import {
   createShellRoom,
   createWetHall,
   wetHallBayDoors,
+  wetHallFireAlarm,
 } from '../views/shell-room';
 import { createRoomEquipment } from '../views/room-equipment';
 import type { EquipmentDoorsPart } from '../../components/architectural/parts/equipment-doors';
@@ -277,7 +278,7 @@ export function startWetHall(canvas: HTMLCanvasElement) {
     room,
     build: (metre, kit) => createWetHall(metre, kit),
     // The make-up bay's pair of equipment doors (prompt 036).
-    install: (kit) => [wetHallBayDoors(kit)],
+    install: (kit) => [wetHallBayDoors(kit), ...wetHallFireAlarm(kit)],
     floorAt: wetHallFloorAt,
     // And the make-up bay's partition (prompt 036).
     solids: [...shellSolids(room), ...wetHallRails(), ...wetHallPartition()],
@@ -545,6 +546,9 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     solids: () => [
       ...walls,
       ...(cfg.levelSolids?.(standing) ?? []).map(toMetre),
+      ...machines
+        .movingSolids({ x: walk.walker.x / metre, z: walk.walker.z / metre })
+        .map(toMetre),
       ...ways
         .flatMap((w) =>
           doorwayStops(

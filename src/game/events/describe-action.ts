@@ -275,6 +275,14 @@ function said(
         severity: a.act === 'stop' && a.pressed ? 'alarm' : 'info',
       };
     }
+    case 'fire-alarm':
+      return {
+        subject: `FIRE ALARM ${action.action.point.toUpperCase()}`,
+        text:
+          action.action.act === 'press'
+            ? 'manual call point operated'
+            : 'call point reset with its key',
+      };
     case 'music': {
       const a = action.action;
       return {

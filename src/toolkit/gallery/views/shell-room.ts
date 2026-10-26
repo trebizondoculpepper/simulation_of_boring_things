@@ -9,6 +9,7 @@ import {
   PointLight,
   RepeatWrapping,
   SRGBColorSpace,
+  Vector3,
 } from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -38,6 +39,14 @@ import {
 } from '../../../scene/breeze-block-texture';
 import { createWarehouseConcreteFloor } from '../../../scene/warehouse-concrete-floor';
 import { slabAround } from '../logic/slab-openings';
+import { computed } from '@preact/signals-core';
+import {
+  callPoint,
+  sounderBeacon,
+} from '../../components/fire/parts/fire-parts';
+import type { Part } from '../../components/core/parts/parts';
+import { roomWorld } from '../../save/world-store';
+import { zoneInAlarm } from '../../../game/plant/fire-alarm';
 import { wetHallBox } from '../logic/room-equipment';
 import { PIT_RAIL } from '../../components/plant/views/backwash-pit';
 import { createExtinguisher } from '../../components/fire/views/fire-fittings';
@@ -791,14 +800,29 @@ export function createWetHall(metre: number, kit: PanelKit) {
         e.group.position.x = dx;
         point.add(e.group);
       }
+      // The floor before it kept clear (the owner, 2026-10-26).
+      const clear = new Group();
+      const mark = (w: number, d: number, px: number, pz: number) =>
+        box(
+          paint('#c4231c', 0.6),
+          w,
+          0.004,
+          d,
+          px,
+          -0.3 + 0.003 - 0.001,
+          pz,
+          clear,
+        );
+      mark(1.0, 0.06, 0, 0.8);
+      mark(0.06, 0.8, -0.5, 0.4);
+      mark(0.06, 0.8, 0.5, 0.4);
+      point.add(clear);
       const notice = createFireActionNotice(kit);
       notice.position.set(0, 1.45, 0.005);
       point.add(notice);
       group.add(point);
     };
-    fireAt(-1.5, L.bay.maxZ - 0.005, Math.PI);
-    fireAt(R - 0.005, 2.6, -Math.PI / 2);
-    fireAt(-6.0, R - 0.005, Math.PI);
+    for (const f of wetHallFirePoints()) fireAt(f.x, f.z, f.yaw);
     // Signs: at each way in (the east landing, the west door at the
     // ramp's head) safety footwear, wet floor and no smoking; on the
     // bay's doors no smoking.
@@ -898,6 +922,74 @@ export function createWetHall(metre: number, kit: PanelKit) {
  * the same pair of equipment doors as every plant room's, in the bay's
  * partition, pulled open from the aisle; for its room's parts.
  */
+/**
+ * The wet hall's fire points (the owner, 2026-10-26): in the make-up bay
+ * by its doors, by the stair's foot, and by the ramp's foot (clear of its
+ * rail); each a CO2 and a foam extinguisher, its fire action notice and a
+ * manual call point, faces into the room. Room frame, on its walls.
+ */
+export function wetHallFirePoints() {
+  const L = WET_HALL_LAYOUT;
+  const R = WET_HALL.side / 2 - SHELL_WALL;
+  return [
+    { id: 'wh-mcp-1', x: -1.5, z: L.bay.maxZ - 0.005, yaw: Math.PI },
+    { id: 'wh-mcp-2', x: R - 0.005, z: 2.6, yaw: -Math.PI / 2 },
+    { id: 'wh-mcp-3', x: -4.0, z: R - 0.005, yaw: Math.PI },
+  ] as const;
+}
+
+/**
+ * The wet hall's fire alarm (the owner, 2026-10-26): a manual call point
+ * at each fire point, 1.4 m up beside its extinguishers, latching the
+ * world's alarm until reset with its key; a sounder-beacon high on the
+ * hall's east wall past its stair and another in the make-up bay, sounding and flashing
+ * while any is latched.
+ */
+export function wetHallFireAlarm(kit: PanelKit): Part[] {
+  const L = WET_HALL_LAYOUT;
+  const R = WET_HALL.side / 2 - SHELL_WALL;
+  const floorY = -WET_HALL.drop;
+  const store = roomWorld();
+  const alarm = computed(() =>
+    zoneInAlarm(store.world.value.fireAlarm, 'wet_hall'),
+  );
+  const parts: Part[] = [];
+  for (const f of wetHallFirePoints()) {
+    const latched = computed(() => store.world.value.fireAlarm.latched[f.id]);
+    const p = callPoint(kit, {
+      latched,
+      press: () =>
+        store.dispatch({
+          type: 'fire-alarm',
+          action: { act: 'press', point: f.id },
+        }),
+      reset: () =>
+        store.dispatch({
+          type: 'fire-alarm',
+          action: { act: 'reset', point: f.id },
+        }),
+    });
+    // Beside the extinguishers, 1.4 m up (BS 5839-1).
+    const at = new Vector3(0.62, 0, 0).applyAxisAngle(
+      new Vector3(0, 1, 0),
+      f.yaw,
+    );
+    p.object.position.set(f.x + at.x, floorY + 1.4, f.z + at.z);
+    p.object.rotation.y = f.yaw;
+    parts.push(p);
+  }
+  for (const [x, z, yaw] of [
+    [R - 0.005, 4.0, -Math.PI / 2],
+    [3.0, L.bay.maxZ - 0.005, Math.PI],
+  ] as const) {
+    const s = sounderBeacon(kit, { sounding: alarm });
+    s.object.position.set(x, floorY + 3.2, z);
+    s.object.rotation.y = yaw;
+    parts.push(s);
+  }
+  return parts;
+}
+
 export function wetHallBayDoors(kit: PanelKit) {
   const L = WET_HALL_LAYOUT;
   const part = equipmentDoors(kit, 'MAKE-UP WATER', ['authorised']);

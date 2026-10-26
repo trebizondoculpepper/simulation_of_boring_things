@@ -126,6 +126,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   34: (world) => world,
   // 35 → 36: the make-up water's record (`fillDefaults`: none yet).
   35: (world) => world,
+  // 36 → 37: the fire alarm's call points (`fillDefaults`: none latched).
+  36: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {
