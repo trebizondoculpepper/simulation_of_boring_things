@@ -525,7 +525,9 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       g0 - 0.5,
       Math.PI / 2,
     );
-    hang(['general'], danger, x1 + out, -1.9, Math.PI / 2);
+    // Just south of the gate, to its left from the walkway (the owner,
+    // 2026-10-26: it hung where the gate is).
+    hang(['general'], danger, x1 + out, g1 + 0.4, Math.PI / 2);
     // West.
     hang(['general'], danger, x0 - out, -0.8, -Math.PI / 2);
     hang(['no-entry'], covers, x0 - out, 0.8, -Math.PI / 2);
