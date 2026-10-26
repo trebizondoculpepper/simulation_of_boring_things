@@ -229,7 +229,9 @@ export function createExperimentalSourceView(
       cell: 0.0092,
       backlight: true,
     });
-    lcd.group.position.set(0, y, r + 0.027);
+    // 2 mm proud of its bezel's face (r + 0.026), not 1: closer, it
+    // flickered against it (the owner, 2026-10-26).
+    lcd.group.position.set(0, y, r + 0.028);
     face.add(lcd.group);
     return lcd;
   });
