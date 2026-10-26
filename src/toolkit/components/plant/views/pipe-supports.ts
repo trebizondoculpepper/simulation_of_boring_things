@@ -43,6 +43,14 @@ export function createSupports(kit: PanelKit, plan: SupportPlan, floorY = 0) {
     metalness: 0.6,
   });
   kit.materials.push(galv);
+  // Hardwood bearer blocks under heavy pipes (the owner, 2026-10-26): the
+  // timber spreads the load and keeps the pipe off the steel.
+  const wood = new MeshStandardMaterial({
+    color: '#8a5a32',
+    roughness: 0.85,
+    metalness: 0,
+  });
+  kit.materials.push(wood);
 
   const lift = (p: Vec3) => new Vector3(p[0], p[1] + floorY, p[2]);
   const up = new Vector3(0, 1, 0);
@@ -50,6 +58,32 @@ export function createSupports(kit: PanelKit, plan: SupportPlan, floorY = 0) {
   const channels: Matrix4[] = [];
   const plates: Matrix4[] = [];
   const rings: Matrix4[] = [];
+  const blocks: Matrix4[] = [];
+  /** Pipes this big or bigger (outside radius, m: DN150) sit on timber. */
+  const HEAVY = 0.08;
+  /**
+   * A hardwood block from under the pipe at `s` down to `to` (directly
+   * below it), as long along the pipe as the pipe is wide, a little
+   * narrower across it.
+   */
+  const block = (s: Support, to: Vector3) => {
+    const at = lift(s.at);
+    const top = at.y - s.radius;
+    const h = top - to.y;
+    if (h < 0.01 || s.along === 'y') return false;
+    const along = Math.max(0.12, s.radius * 1.2);
+    const across = s.radius * 1.6;
+    blocks.push(
+      new Matrix4().compose(
+        new Vector3(to.x, to.y + h / 2, to.z),
+        new Quaternion(),
+        s.along === 'x'
+          ? new Vector3(along, h, across)
+          : new Vector3(across, h, along),
+      ),
+    );
+    return true;
+  };
 
   /** A cylinder of `radius` from `a` to `b` (unit cylinder, scaled). */
   const between = (list: Matrix4[], a: Vector3, b: Vector3, radius: number) => {
@@ -135,10 +169,12 @@ export function createSupports(kit: PanelKit, plan: SupportPlan, floorY = 0) {
             between(rods, end, fix, 0.005);
             plate(fix, new Vector3(0, -1, 0), 0.08);
           }
-          // The pipe's saddle down to the channel.
-          between(rods, surface(s, to), to, 0.006);
+          // The pipe's saddle down to the channel: timber under a heavy one.
+          if (!(s.radius >= HEAVY && block(s, to)))
+            between(rods, surface(s, to), to, 0.006);
         } else if (s.trapeze !== undefined) {
-          between(rods, surface(s, to), to, 0.006);
+          if (!(s.radius >= HEAVY && block(s, to)))
+            between(rods, surface(s, to), to, 0.006);
           if (!drawnTrapezes.has(s.trapeze)) {
             drawnTrapezes.add(s.trapeze);
             const t = plan.trapezes[s.trapeze];
@@ -166,7 +202,12 @@ export function createSupports(kit: PanelKit, plan: SupportPlan, floorY = 0) {
       }
       case 'floor-stand': {
         ring(s);
-        channel(surface(s, to), to);
+        // A heavy pipe on a timber block on its post.
+        const seat = lift(s.at);
+        seat.y -= s.radius + Math.min(0.1, s.radius);
+        if (s.radius >= HEAVY && seat.y > to.y + 0.05 && block(s, seat))
+          channel(seat, to);
+        else channel(surface(s, to), to);
         plate(to, up, 0.14);
         break;
       }
@@ -179,7 +220,11 @@ export function createSupports(kit: PanelKit, plan: SupportPlan, floorY = 0) {
     name: string,
   ) => {
     if (!list.length) return;
-    const mesh = new InstancedMesh(geometry, galv, list.length);
+    const mesh = new InstancedMesh(
+      geometry,
+      list === blocks ? wood : galv,
+      list.length,
+    );
     list.forEach((m, i) => mesh.setMatrixAt(i, m));
     mesh.instanceMatrix.needsUpdate = true;
     mesh.name = name;
@@ -190,5 +235,6 @@ export function createSupports(kit: PanelKit, plan: SupportPlan, floorY = 0) {
   instanced(new BoxGeometry(1, 1, 1), channels, 'channel strut');
   instanced(new BoxGeometry(1, 1, 1), plates, 'base and ceiling plates');
   instanced(new TorusGeometry(1, 0.1, 6, 20), rings, 'pipe rings');
+  instanced(new BoxGeometry(1, 1, 1), blocks, 'hardwood bearer blocks');
   return group;
 }
