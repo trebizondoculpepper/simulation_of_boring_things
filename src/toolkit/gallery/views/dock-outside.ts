@@ -15,6 +15,7 @@ import {
   SRGBColorSpace,
 } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
+import type { Material, Object3D } from 'three';
 import { createSkyDome } from '../../../scene/sky-dome';
 import { createSkyChanger } from '../../../game/skies';
 import { createBreezeBlockTextures } from '../../../scene/breeze-block-texture';
@@ -95,6 +96,29 @@ export function createDockOutside(
   const wallPoint = new Vector3();
   const eyeAt = new Vector3();
   const eyeLocal = new Vector3();
+  // Every material in the dock's room, the yard's among them, clipped
+  // by `yardClip`; looked for again now and then, so parts installed later
+  // are caught.
+  const yardClip = new Plane(new Vector3(0, 0, 1), 1e9);
+  const clipped = new WeakSet<Material>();
+  let lastClip = -Infinity;
+  const clipYard = () => {
+    const now = performance.now();
+    if (now - lastClip < 2000) return;
+    lastClip = now;
+    let root: Object3D = group;
+    while (root.parent && root.parent.type !== 'Scene') root = root.parent;
+    root.traverse((o) => {
+      const m = (o as Mesh).material as Material | Material[] | undefined;
+      if (!m) return;
+      for (const mat of Array.isArray(m) ? m : [m]) {
+        if (clipped.has(mat) || mat === occluder) continue;
+        clipped.add(mat);
+        mat.clippingPlanes = [...(mat.clippingPlanes ?? []), yardClip];
+        mat.needsUpdate = true;
+      }
+    });
+  };
   const placePlane = (
     renderer: { localClippingEnabled: boolean },
     camera: { getWorldPosition(v: Vector3): Vector3 },
@@ -112,11 +136,16 @@ export function createDockOutside(
     // sky in the hypochlorite store's doorway): no sky at all, the blocks
     // below being behind the eye there.
     const local = group.worldToLocal(eyeLocal.copy(eyeAt));
-    if (
+    const inDoorway =
       local.z > wallZ &&
-      (Math.abs(local.x) > width / 2 - 0.05 || local.z > -wallZ - 0.05)
-    )
-      outside.constant = -1e9;
+      (Math.abs(local.x) > width / 2 - 0.05 || local.z > -wallZ - 0.05);
+    if (inDoorway) outside.constant = -1e9;
+    // And nothing of the yard either (the owner, 2026-10-26: the bins and
+    // the skip over the hypochlorite store, seen from its doorway, the
+    // dock's canvas drawn over the store's): everything of the dock's
+    // beyond its outside wall's line is clipped away. Kept: z >= the line.
+    yardClip.constant = inDoorway ? -wallPoint.z : 1e9;
+    clipYard();
   };
   sky.dome.material.clippingPlanes = [outside];
   // The rooms off the dock's sides and back (the owner, 2026-10-26: the

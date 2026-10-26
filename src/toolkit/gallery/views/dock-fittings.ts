@@ -19,7 +19,6 @@ import {
   createRollerShutter,
 } from '../../components/loading-dock/views/dock-parts';
 import {
-  createPalletStack,
   createPalletTruck,
   createRollCage,
   createSackTruck,
@@ -104,20 +103,17 @@ export const DOCK_PALLETS: readonly {
 ];
 /**
  * The dock's handling kit, set decoration: a hand pallet truck by the
- * deliveries, a stack of empty pallets waiting to go back, a roll cage and
- * a sack truck by the corridor's doors. Each its builder, place and turn.
+ * deliveries, a roll cage and a sack truck by the corridor's doors. Each its builder, place and turn.
  */
 const DOCK_KIT: readonly [(kit: PanelKit) => Group, number, number, number][] =
   [
     [createPalletTruck, -4.6, 3.6, Math.PI / 2],
-    [(kit) => createPalletStack(kit, 7), 6.2, -0.8, 0],
     [createRollCage, 2.4, 5.2, 0],
     [createSackTruck, 3.3, 5.5, Math.PI],
   ];
 /** What the kit stands in the way of. */
 const KIT_SOLIDS: Footprint[] = [
   { minX: -5.45, maxX: -3.75, minZ: 3.2, maxZ: 4.0 },
-  { minX: 5.6, maxX: 6.8, minZ: -1.3, maxZ: -0.3 },
   { minX: 3.8, maxX: 4.6, minZ: 4.85, maxZ: 5.55 },
 ];
 
