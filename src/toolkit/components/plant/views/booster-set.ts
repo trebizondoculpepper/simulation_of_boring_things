@@ -1,3 +1,17 @@
+import {
+  changeoverFlow,
+  changeoverStatus,
+  motorCalled,
+  valvesCalled,
+} from '../logic/booster-changeover';
+import type {
+  BoosterChangeover,
+  BoosterPump,
+  ChangeoverAction,
+} from '../logic/booster-changeover';
+import { partAudio } from '../../core/audio/part-audio';
+import { pumpSound } from './pump-sound';
+import { BOOSTER_PUMP } from '../logic/pump-sound';
 import { createActuatedButterflyValve } from './actuated-butterfly-valve';
 import { signal } from '@preact/signals-core';
 import { Group } from 'three';
@@ -24,6 +38,16 @@ import type { LiveExhibit } from '../../../gallery/rooms/plant/exhibit';
 export interface BoosterFeed {
   read(): BoosterReading;
   reset(): void;
+  /**
+   * Its two pumps' duty changeover (`booster-changeover.ts`), where it is
+   * modelled (dev42): its pumps' speeds and valves follow it, its DUTY,
+   * RUN and STOP buttons work it, and its motors are heard running up and
+   * coasting down.
+   */
+  changeover?: {
+    state(): BoosterChangeover;
+    act(a: ChangeoverAction): void;
+  };
 }
 
 /** With no wet hall to read (a development room): in service, delivering. */
@@ -202,20 +226,36 @@ export function createBoosterSet(
   // its controller (the owner, 2026-10-26): open while the set is
   // powered and in service, shut on a low-water trip or with its power
   // off, isolating the pumps; RESET opens them again.
-  for (const v of isolators) {
+  // Where its changeover is modelled, each pump's pair follows it.
+  const co = feed.changeover;
+  isolators.forEach((v, i) => {
+    const pump = (i < 2 ? 0 : 1) as BoosterPump;
     const valve = parts.add(
-      createActuatedButterflyValve(kit, 50, 'z', v.name, {
-        open: () => {
-          const r = feed.read();
-          return r.powered && !r.tripped;
-        },
-        set: () => {},
-        power: () => feed.read().powered,
-      }),
+      createActuatedButterflyValve(
+        kit,
+        50,
+        'z',
+        v.name,
+        co
+          ? {
+              open: () => valvesCalled(co.state(), pump),
+              set: () => {},
+              position: () => co.state().valve[pump],
+              power: () => true,
+            }
+          : {
+              open: () => {
+                const r = feed.read();
+                return r.powered && !r.tripped;
+              },
+              set: () => {},
+              power: () => feed.read().powered,
+            },
+      ),
     );
     valve.object.position.set(...v.at);
     object.add(valve.object);
-  }
+  });
   const panel = new Group();
   const cx = B.w / 2 - 0.22;
   panel.position.set(cx, 1.05, B.d / 2 - 0.12);
@@ -272,6 +312,30 @@ export function createBoosterSet(
       0.04,
     ),
   );
+  // Its duty selector and RUN and STOP, where its changeover is
+  // modelled: each DUTY lit while its pump is selected.
+  const selected = [signal(false), signal(false)] as const;
+  if (co)
+    (
+      [
+        ['DUTY 1', 'white', { act: 'duty', pump: 0 }, selected[0]],
+        ['DUTY 2', 'white', { act: 'duty', pump: 1 }, selected[1]],
+        ['RUN', 'green', { act: 'run' }, null],
+        ['STOP', 'red', { act: 'stop' }, null],
+      ] as const
+    ).forEach(([legend, colour, action, lamp], i) =>
+      mount(
+        pushButton(kit, {
+          colour,
+          legend,
+          ...(lamp ? { head: 'illuminated' as const, lamp } : {}),
+          name: `Booster set ${legend}`,
+          action: () => co.act(action),
+        }),
+        -0.12 + i * 0.08,
+        -0.045,
+      ),
+    );
   mount(
     pushButton(kit, {
       colour: 'blue',
@@ -282,6 +346,15 @@ export function createBoosterSet(
     0.1,
     -0.13,
   );
+  // Each pump's motor, heard where it stands.
+  const motors = B.pumpX.map((x) => {
+    const m = new Group();
+    m.position.set(x, 1.0, B.pumpZ);
+    object.add(m);
+    return m;
+  });
+  const heard = [false, false];
+  const sound = pumpSound(BOOSTER_PUMP);
   const gauge = createDialGauge(kit, {
     dia: 0.09,
     max: 10,
@@ -302,11 +375,30 @@ export function createBoosterSet(
       lamps.run1.value = l.run1;
       lamps.run2.value = l.run2;
       lamps.lowWater.value = l.lowWater;
-      screen.show(boosterDisplay(r));
+      if (co) {
+        const s = co.state();
+        lamps.run1.value = motorCalled(s, 0);
+        lamps.run2.value = motorCalled(s, 1);
+        selected[0].value = s.selected === 0;
+        selected[1].value = s.selected === 1;
+        // Each motor heard running up when called, coasting down when not.
+        ([0, 1] as const).forEach((p) => {
+          const on = motorCalled(s, p);
+          if (on !== heard[p]) {
+            heard[p] = on;
+            partAudio.hold(motors[p], on ? sound : null, motors[p]);
+          }
+        });
+        screen.show([
+          changeoverStatus(s).padEnd(16).slice(0, 16),
+          `FLOW ${changeoverFlow(s).toFixed(1)} m3/h`.padEnd(16).slice(0, 16),
+        ]);
+      } else screen.show(boosterDisplay(r));
       gauge.set(boosterPressure(r));
       gauge.update(delta);
     },
     dispose() {
+      for (const m of motors) partAudio.hold(m, null);
       parts.dispose();
     },
   };

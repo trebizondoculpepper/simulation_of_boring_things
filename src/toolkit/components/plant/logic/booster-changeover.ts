@@ -1,0 +1,174 @@
+import { BOOSTER_PUMP } from './pump-sound';
+
+/**
+ * The make-up booster set's two pumps and their valves (the owner,
+ * 2026-10-26): one pump on duty, the other standing by, each with a
+ * motorised valve on its suction and on its discharge, driven together.
+ * Only the pump running has its valves open, so water can never pass
+ * back through the one standing by. Changing the duty is a sequence the
+ * controller runs, each step waiting on the last:
+ *
+ * 1. stopping: the outgoing pump coasts down to rest;
+ * 2. closing: its valves drive shut;
+ * 3. opening: the incoming pump's valves drive open;
+ * 4. starting: it runs up to speed;
+ * 5. running.
+ *
+ * So the one pump's valves are shut before the other's begin to open: at
+ * no moment are both open. STOP coasts the duty pump down, its valves
+ * left open for the next start; RUN starts it again. Pure.
+ */
+
+export type BoosterPump = 0 | 1;
+
+export type ChangeoverPhase =
+  | 'running'
+  | 'stopping'
+  | 'closing'
+  | 'opening'
+  | 'starting'
+  | 'stopped';
+
+export const CHANGEOVER = {
+  /** A valve's actuator, shut to open, seconds (a Belimo-class drive on DN50). */
+  stroke: 8,
+  /** A pump's run-up and coast-down, seconds, as its sound (`BOOSTER_PUMP`). */
+  runUp: BOOSTER_PUMP.runUp,
+  coastDown: BOOSTER_PUMP.coastDown,
+  /** One pump's delivery at speed, valves open, m³/h. */
+  rate: 6.2,
+} as const;
+
+export interface BoosterChangeover {
+  /** The pump on duty now. */
+  duty: BoosterPump;
+  /** The pump selected for duty: the duty, or one being changed over to. */
+  selected: BoosterPump;
+  phase: ChangeoverPhase;
+  /** Whether the set is called to run (RUN), or stopped (STOP). */
+  run: boolean;
+  /** Each pump's speed, 0 (at rest) to 1. */
+  speed: [number, number];
+  /** Each pump's valves' position, 0 (shut) to 1 (open). */
+  valve: [number, number];
+}
+
+export type ChangeoverAction =
+  | { act: 'duty'; pump: BoosterPump }
+  | { act: 'run' }
+  | { act: 'stop' };
+
+export function newBoosterChangeover(): BoosterChangeover {
+  return {
+    duty: 0,
+    selected: 0,
+    phase: 'running',
+    run: true,
+    speed: [1, 0],
+    valve: [1, 0],
+  };
+}
+
+export function actOnChangeover(
+  s: BoosterChangeover,
+  a: ChangeoverAction,
+): BoosterChangeover {
+  if (a.act === 'duty') return { ...s, selected: a.pump };
+  if (a.act === 'run') return { ...s, run: true };
+  return { ...s, run: false };
+}
+
+/** Whether a pump's motor is called to run. */
+export function motorCalled(s: BoosterChangeover, p: BoosterPump): boolean {
+  return (
+    p === s.duty && s.run && (s.phase === 'running' || s.phase === 'starting')
+  );
+}
+
+/** Whether a pump's valves are commanded open. */
+export function valvesCalled(s: BoosterChangeover, p: BoosterPump): boolean {
+  return (
+    p === s.duty &&
+    // Held open while it coasts down: shut only once it is at rest.
+    (s.phase === 'stopping' ||
+      s.phase === 'opening' ||
+      s.phase === 'starting' ||
+      s.phase === 'running' ||
+      s.phase === 'stopped')
+  );
+}
+
+const toward = (now: number, target: number, step: number) =>
+  now < target ? Math.min(target, now + step) : Math.max(target, now - step);
+
+/** The set `dt` seconds on. */
+export function stepChangeover(
+  s: BoosterChangeover,
+  dt: number,
+): BoosterChangeover {
+  const C = CHANGEOVER;
+  const pumps = [0, 1] as const;
+  const speed = pumps.map((p) =>
+    toward(
+      s.speed[p],
+      motorCalled(s, p) ? 1 : 0,
+      dt / (motorCalled(s, p) ? C.runUp : C.coastDown),
+    ),
+  ) as [number, number];
+  const valve = pumps.map((p) =>
+    toward(s.valve[p], valvesCalled(s, p) ? 1 : 0, dt / C.stroke),
+  ) as [number, number];
+  let { phase, duty } = s;
+  const d = duty;
+  switch (phase) {
+    case 'running':
+      if (s.selected !== d) phase = 'stopping';
+      else if (!s.run) phase = 'stopped';
+      break;
+    case 'stopped':
+      if (s.selected !== d) phase = 'stopping';
+      else if (s.run) phase = 'starting';
+      break;
+    case 'stopping':
+      if (speed[d] === 0) phase = 'closing';
+      break;
+    case 'closing':
+      if (valve[d] === 0) {
+        duty = s.selected;
+        phase = 'opening';
+      }
+      break;
+    case 'opening':
+      if (valve[d] === 1) phase = s.run ? 'starting' : 'stopped';
+      break;
+    case 'starting':
+      if (speed[d] === 1) phase = 'running';
+      else if (!s.run) phase = 'stopped';
+      break;
+  }
+  return { ...s, phase, duty, speed, valve };
+}
+
+/** The set's delivery, m³/h: each pump's at its speed, through its valves. */
+export function changeoverFlow(s: BoosterChangeover): number {
+  return CHANGEOVER.rate * (s.speed[0] * s.valve[0] + s.speed[1] * s.valve[1]);
+}
+
+/** What its controller's display says it is doing. */
+export function changeoverStatus(s: BoosterChangeover): string {
+  const n = (p: BoosterPump) => `P${p + 1}`;
+  switch (s.phase) {
+    case 'running':
+      return `${n(s.duty)} DUTY RUNNING`;
+    case 'stopped':
+      return `${n(s.duty)} DUTY STOPPED`;
+    case 'stopping':
+      return `${n(s.duty)} STOPPING`;
+    case 'closing':
+      return `${n(s.duty)} VALVES SHUT`;
+    case 'opening':
+      return `${n(s.duty)} VALVES OPEN`;
+    case 'starting':
+      return `${n(s.duty)} STARTING`;
+  }
+}

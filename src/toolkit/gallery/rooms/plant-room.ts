@@ -104,7 +104,8 @@ export type ExhibitRoomId =
   | 'dev38'
   | 'dev39'
   | 'dev40'
-  | 'dev41';
+  | 'dev41'
+  | 'dev42';
 
 /** A room's own finish (`FINISH` in its module). */
 export interface RoomFinish {
@@ -172,6 +173,7 @@ const EXHIBITS: Record<
   dev39: () => import('./plant/control-assemblies'),
   dev40: () => import('./plant/ideal-filter-rig'),
   dev41: () => import('./plant/water-bench'),
+  dev42: () => import('./plant/booster-rig'),
 };
 
 /**
