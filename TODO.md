@@ -4,7 +4,7 @@ The project's one to-do list (the owner, 2026-10-23): every task not yet finishe
 
 ## Now: title sequence tools
 
-- [x] **Olympic underwater rolling dolly zoom** (done 2026-10-26, commit pending): add the owner’s five views with the lights on, retaining the fixed heading/pitch, increasing zoom, rising camera and −92° to +26° roll.
+- [x] **Olympic underwater rolling dolly zoom** (done 2026-10-26, `5b10a4a`): add the owner’s five views with the lights on, retaining the fixed heading/pitch, increasing zoom, rising camera and −92° to +26° roll.
 
 - [x] **Switch-room flyby with lighting off** (done 2026-10-26, `552fcb5`): add the owner’s eight camera views to the title sequence, using a separate lights-out world with the main lighting supply off and the camera torch off; retain the final stationary turn and zoom.
 
