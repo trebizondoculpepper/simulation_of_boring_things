@@ -114,13 +114,23 @@ export function pitFloats(m3: number): Record<PitFloatId, boolean> {
 export const backwashPitDepth = (m3: number) =>
   Math.max(0, m3) / (BACKWASH_PIT.length * BACKWASH_PIT.width);
 
+/** The booster set's run-on after its last draw, seconds: its hysteresis. */
+export const BOOSTER_RUN_ON = 60;
+
 export interface WetHallState {
   /** Water in the break tank, m³. */
   breakTank: number;
   /** Whether the booster set has tripped on the break tank's low level; latched. */
   boosterTripped: boolean;
-  /** Whether the booster set delivered in the last step, and at what rate, m³/h. */
+  /**
+   * Whether the booster set is running: started by any draw, run on for
+   * `BOOSTER_RUN_ON` seconds after the last (the owner, 2026-10-26: it
+   * flapped on and off with the pools' float valves); and at what rate
+   * it delivered in the last step, m³/h.
+   */
   boosterRunning: boolean;
+  /** Seconds of its run-on left. */
+  boosterRunOn: number;
   flow: number;
   /** The water in from the town main, through its meters, m³ in all. */
   meter: number;
@@ -139,6 +149,7 @@ export function newWetHall(): WetHallState {
     breakTank: WET_HALL_PLANT.breakTank * WET_HALL_PLANT.floatOpen,
     boosterTripped: false,
     boosterRunning: false,
+    boosterRunOn: 0,
     flow: 0,
     meter: 0,
     backwashTank: 0,
@@ -215,6 +226,15 @@ export function stepWetHall(
     filled - (discharging ? P.dischargeRate * hours : 0) - gravity * hours,
   );
   const spilt = Math.max(0, backwashTank - P.backwashTank);
+  // The booster set: started by any draw and run on after the last, as
+  // its pressure vessel and controller would, so it does not start and
+  // stop with every float valve; stopped at once by a trip or no power.
+  const boosterRunOn =
+    boosterTripped || !powered(plant)
+      ? 0
+      : flows.drawn > 0
+        ? BOOSTER_RUN_ON
+        : Math.max(0, s.boosterRunOn - dt);
   // Its inhibit, on its floats: set when HIGH-HIGH tilts up, held until
   // the pump has it back down past HIGH.
   const after = pitFloats(backwashTank);
@@ -222,7 +242,8 @@ export function stepWetHall(
   return {
     breakTank,
     boosterTripped,
-    boosterRunning: flows.drawn > 0,
+    boosterRunning: boosterRunOn > 0,
+    boosterRunOn,
     flow: hours > 0 ? flows.drawn / hours : 0,
     meter: s.meter + mainsIn,
     backwashTank: Math.min(P.backwashTank, backwashTank),

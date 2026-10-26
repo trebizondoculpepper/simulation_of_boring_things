@@ -128,6 +128,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   35: (world) => world,
   // 36 → 37: the fire alarm's call points (`fillDefaults`: none latched).
   36: (world) => world,
+  // 37 → 38: the booster set's run-on (`fillDefaults`: none left).
+  37: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

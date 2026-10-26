@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { newPlantServices } from './services';
 import {
+  BOOSTER_RUN_ON,
   BACKWASH_PIT,
   PIT_FLOATS,
   WET_HALL_PLANT as P,
@@ -139,5 +140,28 @@ describe('the wet hall', () => {
       BACKWASH_PIT.topWater,
       6,
     );
+  });
+});
+
+describe('the booster set’s run-on', () => {
+  it('runs on after the last draw, so it does not flap with the float valves', () => {
+    let s = stepWetHall(newWetHall(), plant, { drawn: 0.01, backwashed: 0 }, 1);
+    expect(s.boosterRunning).toBe(true);
+    // The float valves shut and open again, step by step: it keeps running.
+    for (let t = 0; t < 40; t++)
+      s = stepWetHall(
+        s,
+        plant,
+        { drawn: t % 3 === 0 ? 0.01 : 0, backwashed: 0 },
+        1,
+      );
+    expect(s.boosterRunning).toBe(true);
+    // No draw at all: it stops once its run-on is spent.
+    for (let t = 0; t < BOOSTER_RUN_ON - 5; t++)
+      s = stepWetHall(s, plant, { drawn: 0, backwashed: 0 }, 1);
+    expect(s.boosterRunning).toBe(true);
+    for (let t = 0; t < 10; t++)
+      s = stepWetHall(s, plant, { drawn: 0, backwashed: 0 }, 1);
+    expect(s.boosterRunning).toBe(false);
   });
 });
