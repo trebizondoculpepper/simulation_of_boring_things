@@ -155,6 +155,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [x] The wet hall laid out afresh to prompt 036's plan, before plumbing: the make-up bay's partition and door, its machines, the backwash pit in the floor (2026-10-26).
 - [ ] The booster set's duty changeover (dev42) taken into the wet hall's world: its duty, valves and pumps in the world state, its DUTY buttons on the wet hall's booster set and mimic.
 - [ ] The pit's pump station: a pump trip (and the standby taking over on it); an isolating valve on each riser; the panel's power feed from the room's services.
+- [ ] **An automatic filter wash controller, fitted later** ([072](doc/prompts/072-filter-wash-controller.md), the owner, 2026-10-26): a retrofitted Penfold board whose programme backwashes, rinses and returns the Olympic's filters to service one at a time on a cycle, respecting the pit's inhibit.
 - [x] **Every ladder climbable, by one ladder helper** ([071](doc/prompts/071-ladders.md), the owner, 2026-10-26): one helper draws every kind of ladder (pool, access, safety, utility) with its solids and its climbable zone; every ladder drawn through it; going down into the backwash pit and the tank hall's tank on foot.
 - [x] The wet hall's pipework from its model, by its plumber, and `wet_hall` taken off `BEING_LAID_OUT` (2026-10-26).
 - [ ] The wet hall's remaining planning (prompt 036): the bay door's raised threshold; the backwash inlet's air break over the water drawn; a dirty side mimic; the outfall flowmeter's spool on the discharge.
