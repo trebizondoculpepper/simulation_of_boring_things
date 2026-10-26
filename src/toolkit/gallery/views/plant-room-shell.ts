@@ -1,10 +1,13 @@
 import {
+  createEngravedSign,
+  cutLines,
+} from '../../components/general-safety/views/engraved-sign';
+import {
   BoxGeometry,
   CanvasTexture,
   Group,
   Mesh,
   MeshStandardMaterial,
-  PlaneGeometry,
   PointLight,
   RepeatWrapping,
   SRGBColorSpace,
@@ -320,17 +323,16 @@ export function createPlantRoomShell(
     ? placeDoors(plan.tankDoor, 'BALANCE TANK', 'balance tank lobby')
     : null;
 
-  const title = card(1.6, 0.36, (c, w, hh) => {
-    c.fillStyle = '#f4f2ea';
-    c.fillRect(0, 0, w, hh);
-    c.fillStyle = '#4e5a52';
-    c.font = `bold ${hh * 0.3}px Arial, Helvetica, sans-serif`;
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillText(name, w / 2, hh * 0.38, w * 0.94);
-    c.font = `${hh * 0.2}px Arial, Helvetica, sans-serif`;
-    c.fillText(plan.label, w / 2, hh * 0.72, w * 0.94);
-  });
+  // Engraved laminate (the owner, 2026-10-26).
+  const title = createEngravedSign(
+    kit,
+    1.6,
+    0.36,
+    cutLines([
+      { text: name, size: 0.27, y: 0.38, bold: true },
+      { text: plan.label, size: 0.17, y: 0.72 },
+    ]),
+  );
   const tf = wallFrame(plan, plan.title.wall, plan.title.at);
   title.position.set(
     tf.x - tf.out[0] * 0.002,
@@ -382,27 +384,6 @@ export function createPlantRoomShell(
     }
   }
 
-  function card(
-    w: number,
-    hh: number,
-    draw: (c: CanvasRenderingContext2D, cw: number, ch: number) => void,
-  ) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = Math.round((512 * hh) / w);
-    const c = canvas.getContext('2d');
-    if (c) draw(c, canvas.width, canvas.height);
-    const texture = new CanvasTexture(canvas);
-    texture.colorSpace = SRGBColorSpace;
-    kit.textures.push(texture);
-    // Printed: lit as any surface is, dark in the dark.
-    const material = new MeshStandardMaterial({
-      map: texture,
-      roughness: 0.85,
-    });
-    kit.materials.push(material);
-    return new Mesh(new PlaneGeometry(w, hh), material);
-  }
   // Overhead, under the roof, a generated services ceiling.
   group.add(
     createServiceCeiling(

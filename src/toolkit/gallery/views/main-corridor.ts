@@ -1,3 +1,4 @@
+import { createEngravedNameSign } from '../../components/general-safety/views/engraved-sign';
 import { createCorridorWayfinding } from './corridor-wayfinding';
 import {
   BoxGeometry,
@@ -5,7 +6,6 @@ import {
   Group,
   Mesh,
   MeshStandardMaterial,
-  PlaneGeometry,
   PointLight,
   RepeatWrapping,
   SRGBColorSpace,
@@ -292,32 +292,9 @@ export function createMainCorridor(metre: number, kit: PanelKit) {
   // Its wayfinding signs at the outside corners (prompt 082).
   group.add(createCorridorWayfinding(kit));
 
+  /** A sign (the owner, 2026-10-26: engraved laminate, white over black). */
   function card(cw: number, ch: number, text: string) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = Math.round((512 * ch) / cw);
-    const c = canvas.getContext('2d');
-    if (c) {
-      c.fillStyle = '#f4f2ea';
-      c.fillRect(0, 0, canvas.width, canvas.height);
-      c.fillStyle = '#16191a';
-      c.font = `bold ${canvas.height * 0.42}px Arial, Helvetica, sans-serif`;
-      c.textAlign = 'center';
-      c.textBaseline = 'middle';
-      c.fillText(
-        text,
-        canvas.width / 2,
-        canvas.height * 0.54,
-        canvas.width * 0.92,
-      );
-    }
-    const map = new CanvasTexture(canvas);
-    map.colorSpace = SRGBColorSpace;
-    kit.textures.push(map);
-    // Printed: lit as any surface is, dark in the dark.
-    const material = new MeshStandardMaterial({ map, roughness: 0.85 });
-    kit.materials.push(material);
-    return new Mesh(new PlaneGeometry(cw, ch), material);
+    return createEngravedNameSign(kit, cw, ch, text);
   }
   return {
     group,
