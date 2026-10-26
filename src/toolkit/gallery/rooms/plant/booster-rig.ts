@@ -1,9 +1,13 @@
 import { Group } from 'three';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
-import { createMicroLabel } from '../../../components/core/views/eighties-controls';
 import { createPipe } from '../../../components/core/views/pipe-kinds';
-import { plantTools } from '../../../components/plant/views/plant-tools';
+import { createExperimentalSourceView } from '../../../components/plant/views/experimental-source';
+import {
+  SOURCE_SHAPE,
+  createExperimentalSink,
+  createExperimentalSource,
+} from '../../../../game/plant/experimental-source';
 import { createBoosterSet } from '../../../components/plant/views/booster-set';
 import { BOOSTER } from '../../../components/plant/logic/booster-set';
 import {
@@ -21,8 +25,8 @@ export const PURPOSE =
 /**
  * Dev42, the booster set's rig (the owner, 2026-10-26): the Grundflow
  * set the wet hall uses, its duty changeover modelled
- * (`booster-changeover.ts`), between an ideal clean water source and an
- * ideal sink, each drum showing what flows. Fresh each time it is built.
+ * (`booster-changeover.ts`), between the standard ideal clean water source
+ * and sink, each showing what it has given or taken. Fresh each time it is built.
  */
 
 let set: BoosterChangeover = newBoosterChangeover();
@@ -40,7 +44,6 @@ if (typeof window !== 'undefined')
   };
 
 function rig(kit: PanelKit): LiveExhibit {
-  const t = plantTools(kit);
   const object = new Group();
   object.name = 'Booster set rig';
   const B = BOOSTER;
@@ -62,33 +65,47 @@ function rig(kit: PanelKit): LiveExhibit {
     },
   });
   object.add(booster.object);
-  // The ideal source drum west of its suction, the ideal sink east of
-  // its discharge, each joined to its manifold by a short pipe.
+  // The standard ideal source and sink (`experimental-source.ts`), each
+  // drawn the one way: mains water, endless, piped from the stud on its
+  // top down to the set's manifolds.
+  const source = createExperimentalSource({
+    id: 'booster.source',
+    substance: 'mains-water',
+  });
+  const sink = createExperimentalSink({
+    id: 'booster.sink',
+    substance: 'mains-water',
+  });
   const y = B.manifoldY;
-  const drum = (x: number, z: number, colour: string, name: string) => {
-    t.cyl(object, t.paint(colour, 0.45), 0.35, 1.0, x, 0.5, z, 'y', 32);
-    t.cyl(object, t.paint('#e8ecee', 0.4), 0.36, 0.05, x, 1.0, z, 'y', 32);
-    const label = createMicroLabel(kit, name, {
-      height: 0.04,
-      maxWidth: 0.6,
-      ink: '#f2f2ea',
-      plate: '#25343a',
-    });
-    label.position.set(x, 0.75, z + 0.36);
-    object.add(label);
-  };
+  const over = 1.45;
   const westX = -B.w / 2 - 0.9;
   const eastX = B.w / 2 + 0.9;
-  drum(westX, B.suctionZ, '#2b7fc4', 'CLEAN WATER: IDEAL SOURCE');
-  drum(eastX, B.dischargeZ, '#9fd0ea', 'IDEAL SINK');
+  const top = SOURCE_SHAPE.height + SOURCE_SHAPE.stud;
+  const views = (
+    [
+      [source, westX, B.suctionZ],
+      [sink, eastX, B.dischargeZ],
+    ] as const
+  ).map(([terminal, x, z]) => {
+    const view = createExperimentalSourceView(kit, terminal);
+    view.group.position.set(x, 0, z);
+    object.add(view.group);
+    return view;
+  });
   object.add(
     createPipe('stainless', 0.089, [
-      [westX + 0.35, y, B.suctionZ],
+      [westX, top, B.suctionZ],
+      [westX, over, B.suctionZ],
+      [-B.w / 2 - 0.3, over, B.suctionZ],
+      [-B.w / 2 - 0.3, y, B.suctionZ],
       [-B.w / 2, y, B.suctionZ],
     ]),
     createPipe('stainless', 0.076, [
       [B.w / 2, y, B.dischargeZ],
-      [eastX - 0.35, y, B.dischargeZ],
+      [B.w / 2 + 0.3, y, B.dischargeZ],
+      [B.w / 2 + 0.3, over, B.dischargeZ],
+      [eastX, over, B.dischargeZ],
+      [eastX, top, B.dischargeZ],
     ]),
   );
   return {
@@ -96,7 +113,13 @@ function rig(kit: PanelKit): LiveExhibit {
     parts: booster.parts,
     update(delta) {
       set = stepChangeover(set, delta);
+      // What the set delivers, drawn from the source into the sink.
+      sink.accept(
+        source.draw((changeoverFlow(set) * delta) / 3600, delta),
+        delta,
+      );
       booster.update?.(delta);
+      for (const v of views) v.update();
     },
     dispose() {
       booster.dispose?.();
