@@ -57,6 +57,8 @@ The clean-bay partition and raised threshold are conservative design choices, no
 
 ## Questions settled (the owner, 2026-10-26)
 
+- **Floor gullies, each side's apart** (the owner, 2026-10-26: spills must drain): two in the make-up bay (by the break tank's warning overflow, and in front of the booster set) on their own branch to the foul drain, never to the pit; two on the dirty side (by the pit's pump, and in its south-west corner); none in the aisle (`WET_HALL_LAYOUT.gullies`).
+
 - **The north wall is where the outside world's services come in and go out** (the owner, 2026-10-26): the town main in at the make-up bay's west end, low, and the boosted make-up main out to the pool plant rooms at its east end, high, each through a marked sleeve with a flanged stub for the plumber to join.
 
 - **The site is in England.** England's rules are the regulatory basis: the Water Supply (Water Fittings) Regulations 1999 and the Water Industry Act 1991, as in the source table above.

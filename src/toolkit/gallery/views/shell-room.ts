@@ -37,6 +37,7 @@ import {
 } from '../../../scene/breeze-block-texture';
 import { createWarehouseConcreteFloor } from '../../../scene/warehouse-concrete-floor';
 import { slabAround } from '../logic/slab-openings';
+import { createFloorGully } from '../../components/plant/views/floor-gully';
 import { controlBus } from '../logic/control-bus';
 import { roomStructure } from '../logic/room-structure';
 import type { Rect } from '../logic/slab-openings';
@@ -692,6 +693,12 @@ export function createWetHall(metre: number, kit: PanelKit) {
     }
     plate('TOWN MAIN IN', tin.x, tin.y + 0.3);
     plate('MAKE-UP MAIN TO POOL PLANT ROOMS', out.x, out.y + 0.3);
+  }
+  // Its floor gullies, flush in the floor, each side's apart.
+  for (const g of L.gullies) {
+    const gully = createFloorGully(kit);
+    gully.group.position.set(g.x, floorY + 0.001, g.z);
+    group.add(gully.group);
   }
   {
     // Its battens and trunking, on both faces of each length of it.
