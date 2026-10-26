@@ -203,7 +203,11 @@ export function machinePorts(item: Item): MachinePort[] {
         {
           ...port(
             'discharge',
-            [ox + PIT_DISCHARGE.x(P.length, P.hatch), PIT_DISCHARGE.y, hz],
+            [
+              ox + PIT_DISCHARGE.x(P.length, P.hatch, P.sump.length),
+              PIT_DISCHARGE.y,
+              hz,
+            ],
             [0, 1, 0],
             0.089,
             'drain',

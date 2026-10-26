@@ -101,13 +101,22 @@ export interface BackwashPitSpec {
  * on its axis, x along its length, +z south.
  */
 /**
+ * Its sump's middle along x, in its own frame (the owner, 2026-10-26: out
+ * from under the hatch, toward the ramp, so nothing of the pumps stands
+ * in the hatchway): against its south wall, 0.3 m west of the hatch.
+ */
+export const pitSumpX = (length: number, hatch: number, sump: number) =>
+  length / 2 - hatch - 0.3 - sump / 2;
+
+/**
  * Where its pump station's discharge leaves it (the owner, 2026-10-26), in
  * its own frame: its risers rise through the gratings this far west of
  * the hatch, join in a header this high over the floor, and its outlet
  * stands at `y`, facing up, for the sewer's line.
  */
 export const PIT_DISCHARGE = {
-  x: (length: number, hatch: number) => length / 2 - hatch - 0.2,
+  x: (length: number, hatch: number, sump: number) =>
+    pitSumpX(length, hatch, sump) - 0.5,
   headerY: 0.35,
   y: 0.5,
 } as const;
@@ -172,9 +181,10 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     );
   }
   // Its floor, round its sump in the south-east corner.
+  const sumpX = pitSumpX(L, p.hatch, p.sump.length);
   const sump = {
-    minX: L / 2 - p.sump.length,
-    maxX: L / 2,
+    minX: sumpX - p.sump.length / 2,
+    maxX: sumpX + p.sump.length / 2,
     minZ: W / 2 - p.sump.width,
     maxZ: W / 2,
   };
@@ -220,10 +230,54 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     minZ: W / 2 - hatch.width,
     maxZ: W / 2,
   };
-  for (const r of slabAround(L, W, [hatchArea])) {
+  // Its service panel (the owner, 2026-10-26): a fixed steel plate set
+  // in the gratings west of the pumps' lifting panel, its holes cut for
+  // their risers, each with a collar.
+  const riserX = PIT_DISCHARGE.x(L, p.hatch, p.sump.length);
+  const servicePanel = {
+    minX: riserX - 0.2,
+    maxX: riserX + 0.09,
+    minZ: W / 2 - 1.15,
+    maxZ: W / 2 - 0.05,
+  };
+  for (const r of slabAround(L, W, [hatchArea, servicePanel])) {
     const deck = createGratingDeck(kit, r.maxX - r.minX, r.maxZ - r.minZ);
     deck.position.set((r.minX + r.maxX) / 2, -0.005, (r.minZ + r.maxZ) / 2);
     group.add(deck);
+  }
+  {
+    const sp = servicePanel;
+    t.box(
+      group,
+      t.paint('#7d8487', 0.5, 0.5),
+      sp.maxX - sp.minX,
+      0.012,
+      sp.maxZ - sp.minZ,
+      (sp.minX + sp.maxX) / 2,
+      -0.006,
+      (sp.minZ + sp.maxZ) / 2,
+    );
+    for (const z of [W / 2 - 0.3, W / 2 - 0.9])
+      t.cyl(
+        group,
+        t.paint('#4a4f52', 0.5, 0.5),
+        0.065,
+        0.03,
+        riserX,
+        0.01,
+        z,
+        'y',
+        18,
+      );
+    const mark = createMicroLabel(kit, 'SERVICE PANEL', {
+      height: 0.03,
+      ink: '#151515',
+      plate: '#d8dcdc',
+    });
+    mark.rotation.x = -Math.PI / 2;
+    mark.rotation.z = Math.PI / 2;
+    mark.position.set(sp.minX + 0.06, 0.002, (sp.minZ + sp.maxZ) / 2);
+    group.add(mark);
   }
   const steel = t.paint('#8d9392', 0.45, 0.6);
   // Its hatch lid, hinged along its outer (south) edge, by the pit's wall,
@@ -474,33 +528,43 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     hang(['general'], danger, x0 - out, -0.8, -Math.PI / 2);
     hang(['no-entry'], covers, x0 - out, 0.8, -Math.PI / 2);
   }
-  // The pump's davit outside the rail on the east, its arm reaching over
-  // it to the hatch over the sump, its chain block hanging from it.
+  // The pumps' davit outside the rail, its arm reaching over it to the
+  // lifting panel over the sump.
   // Painted yellow and marked with its safe working load, as lifting gear
   // is; its post on a 400 mm square base plate, 25 mm thick, held down by
   // four anchor bolts with their nuts and washers; a gusset where its arm
   // meets its post, and a diagonal knee brace under the arm (the owner,
   // 2026-10-26: it read as an arch stuck into the concrete).
   {
-    const davitX = L / 2 + w + rail.off + 0.3;
-    const hx = (hatchArea.minX + hatchArea.maxX) / 2;
-    const davitZ = (hatchArea.minZ + hatchArea.maxZ) / 2;
-    const reach = davitX - hx;
+    // On the pit's south side now, over the pumps' lifting panel, its arm
+    // reaching north (the owner, 2026-10-26: the pumps out from under the
+    // hatch): built in its own frame, its arm along −x, turned a quarter.
+    const davitGroup = new Group();
+    const outZ = W / 2 + w + rail.off + 0.35;
+    davitGroup.position.set(pitSumpX(L, p.hatch, p.sump.length), 0, outZ);
+    davitGroup.rotation.y = -Math.PI / 2;
+    group.add(davitGroup);
+    const davitX = 0;
+    const davitZ = 0;
+    const reach = outZ - (W / 2 - 0.6);
     const yellow = t.paint('#e3b51f', 0.5);
     const dark = t.paint('#2b2e2f', 0.6);
     const armY = 1.76;
     // Its base plate and its four anchor bolts.
-    t.box(group, yellow, 0.4, 0.025, 0.4, davitX, 0.0125, davitZ);
-    fixedSolids.push({
-      minX: davitX - 0.2,
-      maxX: davitX + 0.2,
-      minZ: davitZ - 0.2,
-      maxZ: davitZ + 0.2,
-    });
+    t.box(davitGroup, yellow, 0.4, 0.025, 0.4, davitX, 0.0125, davitZ);
+    {
+      const cx = pitSumpX(L, p.hatch, p.sump.length);
+      fixedSolids.push({
+        minX: cx - 0.2,
+        maxX: cx + 0.2,
+        minZ: outZ - 0.2,
+        maxZ: outZ + 0.2,
+      });
+    }
     for (const dx of [-0.15, 0.15])
       for (const dz of [-0.15, 0.15]) {
         t.cyl(
-          group,
+          davitGroup,
           dark,
           0.022,
           0.006,
@@ -511,7 +575,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
           12,
         );
         t.cyl(
-          group,
+          davitGroup,
           dark,
           0.016,
           0.022,
@@ -522,7 +586,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
           6,
         );
         t.cyl(
-          group,
+          davitGroup,
           dark,
           0.008,
           0.02,
@@ -535,7 +599,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       }
     // Its post, and its arm over the rail to the hatch.
     t.cyl(
-      group,
+      davitGroup,
       yellow,
       0.06,
       armY + 0.04,
@@ -546,7 +610,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       14,
     );
     t.box(
-      group,
+      davitGroup,
       yellow,
       reach + 0.12,
       0.1,
@@ -556,7 +620,16 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       davitZ,
     );
     // The gusset where they meet, and the knee brace under the arm.
-    t.box(group, yellow, 0.22, 0.22, 0.012, davitX - 0.11, armY - 0.11, davitZ);
+    t.box(
+      davitGroup,
+      yellow,
+      0.22,
+      0.22,
+      0.012,
+      davitX - 0.11,
+      armY - 0.11,
+      davitZ,
+    );
     {
       const from = [davitX, armY - 0.7] as const;
       const to = [davitX - 0.6, armY - 0.05] as const;
@@ -586,8 +659,8 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     const back = swl.clone();
     back.rotation.y = Math.PI;
     back.position.z = davitZ - 0.041;
-    group.add(back);
-    group.add(swl);
+    davitGroup.add(back);
+    davitGroup.add(swl);
   }
   // The ultrasonic level transmitter under the gratings, on a bracket
   // from its north wall, looking down at the water.
@@ -607,9 +680,9 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
   // line (`PIT_DISCHARGE`).
   const station = (() => {
     const sumpFloor = -D - p.sump.depth;
-    const px = L / 2 - 0.75;
+    const px = sumpX;
     const zs = [W / 2 - 0.3, W / 2 - 0.9];
-    const rx = PIT_DISCHARGE.x(L, p.hatch);
+    const rx = PIT_DISCHARGE.x(L, p.hatch, p.sump.length);
     const headerY = PIT_DISCHARGE.headerY;
     const body = t.paint('#2f4f6f', 0.45, 0.4);
     const black = t.paint('#1d1f21', 0.6);
@@ -644,25 +717,26 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       });
       mark.position.set(px, sumpFloor + 0.45, z);
       group.add(mark);
-      // Its twin guide rails, up to a bracket under the hatch frame.
+      // Its twin guide rails, up to a bracket bolted to the cross-beam
+      // (below), never to the gratings (the owner, 2026-10-26).
       for (const dz of [-0.05, 0.05])
         t.rod(
           group,
           rail,
           [px - 0.22, sumpFloor + 0.24, z + dz],
-          [px - 0.22, -0.06, z + dz],
+          [px - 0.22, -0.12, z + dz],
           0.012,
         );
-      t.box(group, rail, 0.06, 0.03, 0.16, px - 0.22, -0.05, z);
-      // Its riser: up out of the sump, west under the gratings, up
-      // through them to the header.
+      t.box(group, rail, 0.12, 0.03, 0.16, px - 0.28, -0.12, z);
+      // Its riser: out of its duckfoot along the sump's floor to the
+      // sump's west side, and straight up through the gratings, west of
+      // the lifting panel, to the header.
       t.pipe(
         group,
         80,
         [
           [px - 0.22, sumpFloor + 0.24, z],
-          [px - 0.22, -D + 0.4, z],
-          [rx, -D + 0.4, z],
+          [rx, sumpFloor + 0.24, z],
           [rx, headerY, z],
         ],
         pipeColour,
@@ -678,6 +752,41 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       arms.push(arm);
       void k;
     });
+    // The cross-beam the guide rails hang from (the owner, 2026-10-26: a
+    // structural member, not the gratings): a steel channel spanning the
+    // pit north to south under the gratings, its ends in pockets in the
+    // walls, west of the lifting panel.
+    t.box(
+      group,
+      t.paint('#3d4246', 0.55, 0.5),
+      0.08,
+      0.16,
+      W + 2 * w,
+      px - 0.36,
+      -0.1,
+      0,
+    );
+    // The lifting panel over the pumps: a removable section of grating,
+    // marked out in yellow, through which the davit lifts them.
+    {
+      const yellow = t.paint('#e3b51f', 0.5);
+      const x0 = px - 0.4;
+      const x1 = px + 0.45;
+      const z0 = W / 2 - 1.15;
+      const z1 = W / 2 - 0.05;
+      t.box(group, yellow, x1 - x0, 0.004, 0.04, (x0 + x1) / 2, 0.003, z0);
+      t.box(group, yellow, x1 - x0, 0.004, 0.04, (x0 + x1) / 2, 0.003, z1);
+      t.box(group, yellow, 0.04, 0.004, z1 - z0, x0, 0.003, (z0 + z1) / 2);
+      t.box(group, yellow, 0.04, 0.004, z1 - z0, x1, 0.003, (z0 + z1) / 2);
+      const mark = createMicroLabel(kit, 'LIFTING PANEL', {
+        height: 0.04,
+        ink: '#151515',
+        plate: '#e3b51f',
+      });
+      mark.rotation.x = -Math.PI / 2;
+      mark.position.set((x0 + x1) / 2, 0.006, z0 + 0.1);
+      group.add(mark);
+    }
     // The header joining the two risers, and its outlet up.
     t.pipe(
       group,
@@ -864,7 +973,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
     const cable = t.paint('#1b1d1e', 0.7);
     const cleat = t.paint('#8d9392', 0.45, 0.6);
     const sumpFloor = -D - p.sump.depth;
-    const px = L / 2 - 0.75;
+    const px = pitSumpX(L, p.hatch, p.sump.length);
     const face = W / 2 - 0.03;
     const outside = W / 2 + w + 0.1;
     const over = sumpFloor + 0.9;

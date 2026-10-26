@@ -751,8 +751,8 @@ export function roomEquipment(
           ),
           // The backwash pit (prompt 036): below the floor, its opening
           // covered by gratings and railed round, not walked on (the
-          // owner, 2026-10-26); its footprint its walls, its rail and,
-          // on the east, its pump's davit.
+          // owner, 2026-10-26); its footprint its walls, its rail, its
+          // pump panel on the east and its pumps' davit on the south.
           floor(
             'backwash-tank',
             'Backwash holding tank',
@@ -760,9 +760,11 @@ export function roomEquipment(
               WET_HALL_LAYOUT.pit.minX +
               2 * (WET_HALL_LAYOUT.pitWall + 0.2) +
               2 * WET_HALL_LAYOUT.pitDavitShift,
+            // And its pumps' davit on its south side (the owner,
+            // 2026-10-26), centred: as far again on the north.
             WET_HALL_LAYOUT.pit.maxZ -
               WET_HALL_LAYOUT.pit.minZ +
-              2 * (WET_HALL_LAYOUT.pitWall + 0.2),
+              2 * (WET_HALL_LAYOUT.pitWall + 0.2 + 0.35),
             1.8,
             { back: 0, pit: true },
           ),
