@@ -380,11 +380,22 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       z: number,
       yaw: number,
     ) => {
+      const holder = new Group();
+      holder.position.set(x, 0, z);
+      holder.rotation.y = yaw;
+      group.add(holder);
       const sign = createSafetySign(kit, pictograms, lines);
       sign.scale.setScalar(0.85);
-      sign.position.set(x, 0.8, z);
-      sign.rotation.y = yaw;
-      group.add(sign);
+      sign.position.y = 0.8;
+      holder.add(sign);
+      // Wired to its top and knee rails at its corners (the owner,
+      // 2026-10-26: it seemed to float).
+      for (const sx of [-0.12, 0.12])
+        for (const [from, to] of [
+          [0.92, 1.1],
+          [0.68, 0.5],
+        ])
+          t.rod(holder, wire, [sx, from, -0.004], [sx, to, -out], 0.0015, 4);
     };
     const danger = ['DANGER', 'Deep pit', 'Risk of falling'] as const;
     const covers = [
@@ -393,6 +404,7 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       'Not load-bearing',
     ] as const;
     const out = 0.03;
+    const wire = t.paint('#9aa0a2', 0.4, 0.8);
     // North, toward the aisle.
     hang(['general'], danger, -1.8, z0 - out, Math.PI);
     hang(['no-entry'], covers, 1.4, z0 - out, Math.PI);

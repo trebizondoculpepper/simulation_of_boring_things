@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The backwash pit's rail signs are wired at their corners to the top and knee rails, no longer floating (the owner, 2026-10-26).
 - The backwash pit's ladder is centred along its hatch, and nothing of it stands above the deck (the owner, 2026-10-26): a tank ladder no longer puts a wall bracket or its maker's badge above its top, which in the pit had stuck out across the hatch's swing.
 - The backwash pit's hatch (the owner, 2026-10-26): painted chequer-plate tread on its lid, its confined-space sign kept and raised clear of it; the pump's discharge riser comes up through a sleeve in the gratings beside the hatch, no longer through its lid (its stub showed as a black disc on it); the davit's arm bare, its lifting eye gone.
 - The backwash pit's hatch lid is plain yellow with its handle: its small confined-space sign, whose manhole symbol read as something lying on it, is gone (the gate carries entry by permit); and the davit's lifting eye is gone, nothing hanging from its arm.
