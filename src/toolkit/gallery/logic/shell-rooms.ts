@@ -359,6 +359,8 @@ export const WET_HALL_LAYOUT = {
    * and for an easy elbow from the town main, which stays where it is).
    */
   lineShift: 2.5,
+  /** And the break tank and booster set 0.5 m further (the owner, 2026-10-26). */
+  tankShift: 0.5,
   /** The backwash pit's opening in the floor: its inside (`BACKWASH_PIT`, 7 × 5 m). */
   pit: { minX: -4.2, maxX: 2.8, minZ: 3, maxZ: 8 },
   /** Its concrete walls round the opening, below the floor. */

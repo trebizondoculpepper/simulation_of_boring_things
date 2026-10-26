@@ -1388,12 +1388,12 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
         face: 'south',
       }),
       put(box, at('break-tank'), {
-        x: -1.1 + L.lineShift,
+        x: -1.1 + L.lineShift + L.tankShift,
         z: -6.3,
         face: 'south',
       }),
       put(box, at('booster-set'), {
-        x: 1.9 + L.lineShift,
+        x: 1.9 + L.lineShift + L.tankShift,
         z: -6.55,
         face: 'south',
       }),
