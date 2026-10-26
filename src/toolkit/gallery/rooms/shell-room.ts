@@ -1,4 +1,8 @@
-import { createDockFittings, dockPalletSolids } from '../views/dock-fittings';
+import {
+  createDockFittings,
+  dockChannel,
+  dockPalletSolids,
+} from '../views/dock-fittings';
 import { SHELL_WALL } from '../logic/shell-rooms';
 import { createDockOutside } from '../views/dock-outside';
 import { createInspector } from '../views/inspect-pick';
@@ -125,6 +129,9 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
     doors: spec.doors,
     apertures: 'apertures' in spec ? spec.apertures : undefined,
   };
+  const channels = (room.apertures ?? []).map((o) =>
+    dockChannel(o, -spec.d / 2),
+  );
   return runShell(canvas, {
     self: id,
     room,
@@ -136,6 +143,8 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
         // The control room's walls are its mimics': no title card there.
         title:
           id === 'control_room' || id === 'loading_bay' ? null : spec.title,
+        // The loading dock's lorry channels, cut out of its floor.
+        floorHoles: channels,
         note: spec.note,
         seed: SEEDS[id],
       });
@@ -147,6 +156,7 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
             wallZ: -spec.d / 2 - SHELL_WALL,
             width: spec.w,
             thickness: SHELL_WALL,
+            openings: room.apertures ?? [],
           }).group,
           createDockFittings(kit, {
             wallZ: -spec.d / 2,
@@ -168,6 +178,8 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
     solids: [
       ...shellSolids(room),
       ...(id === 'loading_bay' ? dockPalletSolids() : []),
+      // Its channels: the walker kept out of them for now (prompt 073).
+      ...channels,
     ],
     // Just inside its first door, looking into the room.
     start: (() => {

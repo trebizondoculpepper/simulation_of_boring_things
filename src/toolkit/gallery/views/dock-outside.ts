@@ -30,7 +30,14 @@ export function createDockOutside(
     wallZ,
     width,
     thickness,
-  }: { wallZ: number; width: number; thickness: number },
+    openings = [],
+  }: {
+    wallZ: number;
+    width: number;
+    thickness: number;
+    /** The lorry openings, each its middle and width along the wall. */
+    openings?: readonly { at: number; w: number }[];
+  },
 ) {
   const group = new Group();
   group.name = 'the goods yard, seen from the dock';
@@ -67,11 +74,20 @@ export function createDockOutside(
   // red engineering brick under the openings, the dock's face.
   const brick = new MeshStandardMaterial({ color: '#6b4a3c', roughness: 0.9 });
   kit.materials.push(brick);
-  const face = new Mesh(
-    new BoxGeometry(width + 2 * thickness, -YARD_LEVEL, thickness),
-    brick,
-  );
-  face.position.set(0, YARD_LEVEL / 2, wallZ - thickness / 2);
-  group.add(face);
+  // In pieces, round the channels' openings down to the tarmac.
+  const cuts = [...openings].sort((p, q) => p.at - q.at);
+  let from = -width / 2 - thickness;
+  for (const o of [...cuts, { at: width / 2 + thickness, w: 0 }]) {
+    const to = o.at - o.w / 2;
+    if (to - from > 0.01) {
+      const face = new Mesh(
+        new BoxGeometry(to - from, -YARD_LEVEL, thickness),
+        brick,
+      );
+      face.position.set((from + to) / 2, YARD_LEVEL / 2, wallZ + thickness / 2);
+      group.add(face);
+    }
+    from = o.at + o.w / 2;
+  }
   return { group };
 }

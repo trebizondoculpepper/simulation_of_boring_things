@@ -5,6 +5,7 @@ import {
   Group,
   Mesh,
   MeshStandardMaterial,
+  RepeatWrapping,
   SRGBColorSpace,
 } from 'three';
 import type { Material } from 'three';
@@ -12,13 +13,53 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { markComponent } from '../../components/core/views/component-identity';
 import type { ShellAperture } from '../logic/shell-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
+import { YARD_LEVEL } from './dock-outside';
+
+/** How far each lorry channel runs into the dock from its opening, metres: half a rigid lorry. */
+export const CHANNEL_LENGTH = 6;
+
+/** A bay's channel in the dock's floor: its opening's width, from the outside wall inward. */
+export const dockChannel = (o: ShellAperture, wallZ: number) => ({
+  minX: o.at - o.w / 2,
+  maxX: o.at + o.w / 2,
+  minZ: wallZ,
+  maxZ: wallZ + CHANNEL_LENGTH,
+});
+
+/** Yellow and black hazard striping, for a drop's edge. */
+function hazardStripes(kit: PanelKit) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 32;
+  const g = canvas.getContext('2d')!;
+  g.fillStyle = '#e0b81c';
+  g.fillRect(0, 0, 256, 32);
+  g.fillStyle = '#151515';
+  for (let x = -32; x < 256; x += 32) {
+    g.beginPath();
+    g.moveTo(x, 32);
+    g.lineTo(x + 16, 32);
+    g.lineTo(x + 32, 0);
+    g.lineTo(x + 16, 0);
+    g.fill();
+  }
+  const map = new CanvasTexture(canvas);
+  map.colorSpace = SRGBColorSpace;
+  map.wrapS = map.wrapT = RepeatWrapping;
+  map.repeat.set(20, 1);
+  kit.textures.push(map);
+  const m = new MeshStandardMaterial({ map, roughness: 0.7 });
+  kit.materials.push(m);
+  return m;
+}
 
 /**
  * The loading dock's fittings, rough (prompt 073; the owner, 2026-10-26:
  * blocking-out components to scope the space, refined later): at each
  * lorry opening an insulated roller shutter, rolled up and fixed (its
  * barrel box, guides, bottom rail, motor and hand chain; working in 075),
- * a dock leveller in the floor, buffers and a dock shelter outside; the
+ * and the channel the lorry's rear half backs into, sunk to the yard's
+ * level, its edges marked and its buffers at the end; the
  * pier's personnel door, shut (opened onto the yard in 080); and pallets
  * of deliveries waiting to be put away, by the doors into the building
  * (set decoration). Metres, the dock's middle at the origin, its floor at
@@ -96,11 +137,10 @@ export function createDockFittings(
   const galv = paint('#a9aeae', 0.45, 0.6);
   const motorBlue = paint('#2c4f7c', 0.5, 0.3);
   const chain = paint('#4a4d50', 0.5, 0.7);
-  const plate = paint('#6e7275', 0.6, 0.6);
-  const yellow = paint('#d8b41c', 0.6);
   const rubber = paint('#161718', 0.9);
-  const shelterGrey = paint('#2a2c2e', 0.95);
-  const outer = wallZ - thickness;
+  const concrete = paint('#7d7f7c', 0.95);
+  const hazard = hazardStripes(kit);
+  void thickness;
 
   apertures.forEach((o, i) => {
     // The roller shutter, rolled up: its barrel box over the opening on the
@@ -124,10 +164,10 @@ export function createDockFittings(
         shutter,
         galv,
         0.1,
-        o.h + 0.6,
+        o.h + 0.6 - YARD_LEVEL,
         0.14,
         o.at + s * (o.w / 2 + 0.07),
-        (o.h + 0.6) / 2,
+        (o.h + 0.6 + YARD_LEVEL) / 2,
         wallZ + 0.07,
       );
       box(
@@ -171,64 +211,56 @@ export function createDockFittings(
     );
     group.add(shutter);
 
-    // The dock leveller: a steel deck in the floor at the opening, its
-    // pit's yellow edge, its lip folded down over the dock's face.
-    const leveller = new Group();
-    leveller.name = `Dock leveller, bay ${i + 1}`;
-    const lw = Math.min(2.0, o.w - 0.6);
-    const ld = 2.5;
-    box(leveller, plate, lw, 0.02, ld, o.at, 0.01, wallZ + ld / 2);
+    // Its channel (the owner, 2026-10-26): sunk to the yard's level, from
+    // the opening into the dock, the lorry's rear half backed in along it,
+    // its flatbed level with the dock floor either side and at the end.
+    const channel = new Group();
+    channel.name = `Lorry channel, bay ${i + 1}`;
+    const c = dockChannel(o, wallZ);
+    const cw = c.maxX - c.minX;
+    const cl = c.maxZ - c.minZ;
+    const cx = (c.minX + c.maxX) / 2;
+    const cz = (c.minZ + c.maxZ) / 2;
+    const depth = -YARD_LEVEL;
+    box(channel, concrete, cw, 0.1, cl, cx, YARD_LEVEL - 0.05, cz);
     for (const s of [-1, 1])
       box(
-        leveller,
-        yellow,
-        0.08,
-        0.021,
-        ld,
-        o.at + s * (lw / 2 + 0.04),
-        0.0105,
-        wallZ + ld / 2,
-      );
-    box(leveller, plate, lw, 0.4, 0.02, o.at, -0.2, outer - 0.01);
-    group.add(leveller);
-
-    // Outside: two rubber buffers on the dock's face, and the dock shelter
-    // round the opening on the outside wall.
-    const outside = new Group();
-    outside.name = `Dock buffers and shelter, bay ${i + 1}`;
-    for (const s of [-1, 1])
-      box(
-        outside,
-        rubber,
-        0.25,
-        0.45,
-        0.1,
-        o.at + s * (lw / 2 + 0.35),
-        -0.3,
-        outer - 0.05,
-      );
-    for (const s of [-1, 1])
-      box(
-        outside,
-        shelterGrey,
-        0.3,
-        o.h + 0.4,
-        0.5,
-        o.at + s * (o.w / 2 + 0.15),
-        (o.h + 0.4) / 2 + 0.05,
-        outer - 0.25,
+        channel,
+        concrete,
+        0.2,
+        depth,
+        cl,
+        cx + s * (cw / 2 + 0.1),
+        YARD_LEVEL / 2,
+        cz,
       );
     box(
-      outside,
-      shelterGrey,
-      o.w + 0.6,
-      0.6,
-      0.5,
-      o.at,
-      o.h + 0.5,
-      outer - 0.25,
+      channel,
+      concrete,
+      cw + 0.4,
+      depth,
+      0.2,
+      cx,
+      YARD_LEVEL / 2,
+      c.maxZ + 0.1,
     );
-    group.add(outside);
+    // Its edges marked, yellow and black, along both sides and the end.
+    for (const s of [-1, 1])
+      box(
+        channel,
+        hazard,
+        0.12,
+        0.004,
+        cl,
+        cx + s * (cw / 2 + 0.06),
+        0.002,
+        cz,
+      );
+    box(channel, hazard, cw + 0.24, 0.004, 0.12, cx, 0.002, c.maxZ + 0.06);
+    // Two rubber buffers on the end wall, where the lorry stops.
+    for (const s of [-1, 1])
+      box(channel, rubber, 0.3, 0.45, 0.12, cx + s * 0.9, -0.45, c.maxZ - 0.06);
+    group.add(channel);
   });
 
   // The pier's personnel door, shut, on its inside face.
