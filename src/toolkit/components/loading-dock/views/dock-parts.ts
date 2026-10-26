@@ -206,6 +206,32 @@ export function createRollerShutter(
   roll.userData.live = true;
   group.add(roll);
   let turned = 0;
+  // The curtain's run from the opening's head up to the roll, leaving it
+  // on the wall side of the barrel: laths seen climbing onto it (the
+  // owner, 2026-10-26: they vanished in the gap). A length of the same
+  // laths' face, tilted as the roll swells and shrinks.
+  const runCanvas = document.createElement('canvas');
+  runCanvas.width = 8;
+  runCanvas.height = 64;
+  const rg = runCanvas.getContext('2d')!;
+  rg.fillStyle = '#9aa3a8';
+  rg.fillRect(0, 0, 8, 64);
+  rg.fillStyle = '#6d757a';
+  rg.fillRect(0, 60, 8, 4);
+  const runMap = new CanvasTexture(runCanvas);
+  runMap.colorSpace = SRGBColorSpace;
+  runMap.wrapS = runMap.wrapT = RepeatWrapping;
+  kit.textures.push(runMap);
+  const runPaint = new MeshStandardMaterial({
+    map: runMap,
+    roughness: 0.45,
+    metalness: 0.35,
+  });
+  kit.materials.push(runPaint);
+  const run = new Mesh(new BoxGeometry(w, 1, 0.025), runPaint);
+  run.name = 'Shutter curtain, winding onto the barrel';
+  run.userData.live = true;
+  group.add(run);
 
   // The guides: a U-channel each side, its brush seal, down to the sill.
   for (const s of [-1, 1]) {
@@ -313,12 +339,22 @@ export function createRollerShutter(
     open = Math.max(0, Math.min(1, k));
     // Hung below the hood: as many laths as reach down, from the head.
     const hang = h * (1 - open);
-    const count = Math.min(maxLaths, Math.ceil(hang / LATH));
+    // The bottom rail is the curtain's lowest piece, its seal on the sill
+    // when shut, and never wound up: fully open, it hangs just under the
+    // hood (the owner, 2026-10-26); the laths stand on it.
+    const RAIL = 0.08;
+    const count = Math.min(
+      maxLaths,
+      Math.max(0, Math.ceil((hang - RAIL) / LATH)),
+    );
     for (let i = 0; i < count; i++)
-      laths.setMatrixAt(i, place.makeTranslation(0, -hang + i * LATH, 0.06));
+      laths.setMatrixAt(
+        i,
+        place.makeTranslation(0, -hang + RAIL + i * LATH, 0.06),
+      );
     laths.count = count;
     laths.instanceMatrix.needsUpdate = true;
-    rail.position.set(0, -hang - 0.07, 0.06);
+    rail.position.set(0, -hang + 0.04, 0.06);
     // The roll swells as the curtain winds onto it, and turns: the
     // curtain's travel over its radius.
     const radius = BARREL + (ROLL - BARREL) * open;
@@ -327,6 +363,18 @@ export function createRollerShutter(
     last = open;
     roll.scale.set(swell, 1, swell);
     roll.rotation.y = turned;
+    // From the head (y 0, the curtain's plane) to where it meets the roll
+    // on the wall side, at the barrel's height.
+    const fromZ = 0.06;
+    const toZ = 0.33 - radius;
+    const rise = 0.6;
+    const len = Math.hypot(rise, toZ - fromZ);
+    run.scale.y = len;
+    run.position.set(0, rise / 2, (fromZ + toZ) / 2);
+    run.rotation.x = Math.atan2(toZ - fromZ, rise);
+    // Its laths' joints slide up it as the curtain winds.
+    runMap.repeat.set(1, len / LATH);
+    runMap.offset.y = (open * h) / LATH;
   };
   setOpen(1);
   return {
