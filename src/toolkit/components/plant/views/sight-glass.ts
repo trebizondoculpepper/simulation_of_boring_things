@@ -3,6 +3,7 @@ import {
   Group,
   Mesh,
   MeshStandardMaterial,
+  SphereGeometry,
   TorusGeometry,
 } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -75,22 +76,40 @@ export function createSightGlass(
   // where the highlights catch, as on a thick sight glass.
   const glass = new MeshStandardMaterial({
     color: '#eef4f6',
-    roughness: 0.04,
-    metalness: 0.1,
+    roughness: 0.03,
+    metalness: 0.15,
     transparent: true,
-    opacity: 0.12,
+    opacity: 0.14,
     depthWrite: false,
   });
   kit.materials.push(glass);
-  const pane = new Mesh(new CircleGeometry(radius, 48), glass);
-  pane.position.z = 0.013;
+  // Domed, as a thick sight glass is (the owner, 2026-10-26): a shallow
+  // cap of a sphere, 12 mm proud at its middle, so its surface faces a
+  // little different ways across it and a light's highlight lies within
+  // the glass on the side toward it, moving as one moves.
+  const rise = 0.012;
+  const sphere = (radius * radius + rise * rise) / (2 * rise);
+  const pane = new Mesh(
+    new SphereGeometry(
+      sphere,
+      48,
+      12,
+      0,
+      Math.PI * 2,
+      0,
+      Math.asin(Math.min(1, radius / sphere)),
+    ),
+    glass,
+  );
+  pane.rotation.x = Math.PI / 2;
+  pane.position.z = 0.009 + rise - sphere;
   group.add(pane);
   const edgeGlass = new MeshStandardMaterial({
     color: '#dfe9ec',
     roughness: 0.05,
     metalness: 0.2,
     transparent: true,
-    opacity: 0.45,
+    opacity: 0.25,
   });
   kit.materials.push(edgeGlass);
   const edge = new Mesh(
