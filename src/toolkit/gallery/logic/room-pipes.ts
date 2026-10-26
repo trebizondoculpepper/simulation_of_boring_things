@@ -1172,7 +1172,8 @@ export function roomPipes(room: string): PipeRun[] {
   const retired = retiredPipes(room);
   if (retired) return retired;
   if (room === 'boiler_house') return boilerHousePipework().runs;
-  if (room === 'wet_hall') return wetHallPipework().runs;
+  // A room being laid out afresh has no pipework yet (`BEING_LAID_OUT`).
+  if (BEING_LAID_OUT.includes(room)) return [];
   return room in ROUTED ? poolPlantPipework(room).runs : [];
 }
 
@@ -1790,6 +1791,14 @@ export function pipeObstacles(
 
 /** The wet hall's roof over its floor, from its structure (`roomStructure`). */
 const WET_HALL_ROOF = WET_HALL_SOFFIT;
+
+/**
+ * Rooms being laid out afresh (the owner, 2026-10-26): their machines
+ * placed first, their pipework laid from their model once the layout is
+ * settled, so none is drawn meanwhile and the plumbing checks pass them
+ * by. The wet hall (prompt 036); `wetHallPipework` is its old room's.
+ */
+export const BEING_LAID_OUT: readonly string[] = ['wet_hall'];
 
 /**
  * The wet hall's pipework (`src/game/plant/wet-hall.ts`), port to port:

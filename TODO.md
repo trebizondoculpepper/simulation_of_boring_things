@@ -152,6 +152,9 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [ ] A hired generator at the connection point (prompt 052).
 - [x] The sewer outfall monitor and chart recorder in the wet hall, its record in the world; the spas draining into the backwash pit (2026-10-26).
 - [ ] The outfall flowmeter's spool on the outfall pipe, and the monitor moved to the dirty side's wall, with the wet hall's redesign (prompt 036).
+- [x] The wet hall laid out afresh to prompt 036's plan, before plumbing: the make-up bay's partition and door, its machines, the backwash pit in the floor (2026-10-26).
+- [ ] The wet hall's planning, from its new layout (prompt 036): the bay door's leaf, raised threshold and signs; the pit's pump, guide rail and discharge, its inlet as an air break; a dirty side mimic; then its pipework and electrics from its model, and `wet_hall` taken off `BEING_LAID_OUT`.
+- [ ] Rendering: skip drawing what is behind the make-up bay's partition when it cannot be seen (later, the owner, 2026-10-26).
 
 ## The operator's manual
 

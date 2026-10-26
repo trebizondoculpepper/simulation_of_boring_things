@@ -317,6 +317,41 @@ export const WET_HALL = {
   ramp: { lane: 1.8, door: -8 },
 } as const;
 
+/**
+ * The wet hall as the owner's plan lays it out (prompt 036,
+ * `doc/plans/036-wet-hall-tanks.md`; the owner, 2026-10-26), its floor's
+ * frame, metres, +x east, +z south: a protected make-up bay to the north,
+ * partitioned off from the hall with its own service door; the backwash
+ * pit below the floor to the south, its opening covered by gratings; a
+ * clear aisle between, from the east stair to the west ramp.
+ */
+export const WET_HALL_LAYOUT = {
+  /** The make-up bay's partition: blockwork, this high and thick. */
+  partition: { height: 3, thickness: 0.2 },
+  /** The bay, inside its partition, from the hall's north wall. */
+  bay: { minX: -4.8, maxX: 8.4, maxZ: -2.9 },
+  /** Its service door, in the partition's south side, from the aisle. */
+  door: { minX: -4.3, maxX: -3.3, height: 2.1 },
+  /** The backwash pit's opening in the floor: its inside (`BACKWASH_PIT`, 7 × 5 m). */
+  pit: { minX: -4.2, maxX: 2.8, minZ: 3, maxZ: 8 },
+  /** Its concrete walls round the opening, below the floor. */
+  pitWall: 0.3,
+} as const;
+
+/** The make-up bay's partition walls, as footprints on the floor: west, south either side of its door, east. */
+export function wetHallPartition() {
+  const R = wetHallRoom().w / 2;
+  const L = WET_HALL_LAYOUT;
+  const t = L.partition.thickness;
+  const z = L.bay.maxZ;
+  return [
+    { minX: L.bay.minX - t, maxX: L.bay.minX, minZ: -R, maxZ: z + t },
+    { minX: L.bay.minX - t, maxX: L.door.minX, minZ: z, maxZ: z + t },
+    { minX: L.door.maxX, maxX: L.bay.maxX + t, minZ: z, maxZ: z + t },
+    { minX: L.bay.maxX, maxX: L.bay.maxX + t, minZ: -R, maxZ: z + t },
+  ];
+}
+
 /** Its doors: east, for the stair, and west, for the ramp, opposite; numbered alike with the corridor's. */
 export const WET_HALL_DOORS: readonly ShellDoor[] = (
   ['east', 'west'] as const

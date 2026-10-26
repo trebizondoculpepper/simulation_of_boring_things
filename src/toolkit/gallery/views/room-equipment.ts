@@ -137,7 +137,13 @@ import type { PoolId } from '../../../game/plant/pools';
 import { roomStructure } from '../logic/room-structure';
 import { MONITOR_POST, ozoneMonitorPlace } from '../logic/ozone-monitor';
 import { createPipe } from '../../components/core/views/pipe-kinds';
-import { WET_HALL_PLANT } from '../../../game/plant/wet-hall';
+import {
+  BACKWASH_PIT,
+  WET_HALL_PLANT,
+  backwashPitDepth,
+} from '../../../game/plant/wet-hall';
+import { createBackwashPit } from '../../components/plant/views/backwash-pit';
+import { WET_HALL_LAYOUT } from '../logic/shell-rooms';
 import { pumpPairExhibit } from '../rooms/plant/pumps';
 import { pumpPanelExhibit } from '../rooms/plant/pump-panel';
 import { currentPlant } from '../rooms/plant/live-plant';
@@ -427,6 +433,27 @@ function modelFor(
   // The lounge's contact tank is the ozone room's own model.
   if (kind === 'contact-tank' && item.w <= OZONE[3].size.w + 0.05)
     return OZONE[3].build(kit);
+  // The wet hall's backwash pit (prompt 036): below the floor, its water
+  // at the world's level.
+  if (kind === 'backwash-tank' && room === 'wet_hall') {
+    const pit = createBackwashPit(kit, {
+      length: BACKWASH_PIT.length,
+      width: BACKWASH_PIT.width,
+      depth: BACKWASH_PIT.depth,
+      topWater: BACKWASH_PIT.topWater,
+      wall: WET_HALL_LAYOUT.pitWall,
+      sump: BACKWASH_PIT.sump,
+    });
+    pit.setDepth(0);
+    if (typeof window === 'undefined') return pit.group;
+    return {
+      object: pit.group,
+      update: () =>
+        pit.setDepth(
+          backwashPitDepth(roomWorld().world.value.wetHall.backwashTank),
+        ),
+    };
+  }
   if (TANKS[kind]) {
     const tank = createTank(kit, {
       w: item.w,

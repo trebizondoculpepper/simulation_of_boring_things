@@ -10,6 +10,7 @@ import {
 } from 'three';
 import type { Material, Object3D } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
+import { createMicroLabel } from '../../components/core/views/eighties-controls';
 import { createServiceCeiling } from '../../components/site-dressing/views/service-ceiling';
 import { createIndustrialAccess } from '../../components/architectural/views/industrial-access';
 import {
@@ -35,6 +36,8 @@ import {
   mapBlockwork,
 } from '../../../scene/breeze-block-texture';
 import { createWarehouseConcreteFloor } from '../../../scene/warehouse-concrete-floor';
+import { slabAround } from '../logic/slab-openings';
+import type { Rect } from '../logic/slab-openings';
 import { createPs1Material } from '../../components/core/parts/ps1-material';
 import {
   SHELL_WALL,
@@ -47,6 +50,8 @@ import {
   wetHallFloorAt,
   wetHallRampRails,
   wetHallRamp,
+  WET_HALL_LAYOUT,
+  wetHallPartition,
 } from '../logic/shell-rooms';
 import type { ShellDoor, ShellWall } from '../logic/shell-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
@@ -100,6 +105,8 @@ export interface ShellView {
   seed: number;
   /** Plain offices and listening rooms have no exposed overhead services. */
   services?: boolean;
+  /** Openings in its floor slab, for what goes down through it (a pit). */
+  floorHoles?: readonly Rect[];
 }
 
 /**
@@ -174,7 +181,17 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
   const headOf = (d: ShellDoor) =>
     d.kind === 'single' ? PLANT_DOOR_OPENING.h : openingH;
   // The floor, and the roof.
-  box(concrete, v.w, 0.1, v.d, 0, v.floor - 0.05, 0);
+  // Round any openings in it (`slabAround`).
+  for (const p of slabAround(v.w, v.d, v.floorHoles ?? []))
+    box(
+      concrete,
+      p.maxX - p.minX,
+      0.1,
+      p.maxZ - p.minZ,
+      (p.minX + p.maxX) / 2,
+      v.floor - 0.05,
+      (p.minZ + p.maxZ) / 2,
+    );
   wallBox(v.w + 2 * t, 0.3, v.d + 2 * t, 0, v.roof + 0.15, 0);
   // The walls, round their doorways, a header over each (and where the
   // floor is below the doors', the wall under each doorway); the dado.
@@ -407,6 +424,8 @@ export function createWetHall(metre: number, kit: PanelKit) {
     title: 'WET HALL · MAIN PLANT ROOM',
     note: 'make-up water, backwash; half a storey down',
     seed: 53,
+    // The backwash pit's opening (prompt 036).
+    floorHoles: [WET_HALL_LAYOUT.pit],
   });
   const { group, box, paint } = shell;
   const galv = paint('#a9aeae', 0.45, 0.6);
@@ -570,6 +589,68 @@ export function createWetHall(metre: number, kit: PanelKit) {
       const y = surface(px, pz);
       box(yellow, 0.045, 1.1, 0.045, px, y + 0.55, pz);
     }
+  }
+  // The protected make-up bay's partition (prompt 036): painted blockwork,
+  // a green dado both sides, its service door's opening with a steel frame
+  // and the blockwork carried over it on a lintel.
+  const L = WET_HALL_LAYOUT;
+  const floorY = -WET_HALL.drop;
+  const H = L.partition.height;
+  const wallPaint = paint('#d9d6cc', 0.9);
+  const dadoPaint = paint('#6d7a6f', 0.85);
+  const frame = paint('#3b4144', 0.5, 0.4);
+  for (const f of wetHallPartition()) {
+    const w = f.maxX - f.minX;
+    const d = f.maxZ - f.minZ;
+    const x = (f.minX + f.maxX) / 2;
+    const z = (f.minZ + f.maxZ) / 2;
+    box(wallPaint, w, H, d, x, floorY + H / 2, z);
+    box(dadoPaint, w + 0.01, 1.2, d + 0.01, x, floorY + 0.6, z);
+  }
+  {
+    const t = L.partition.thickness;
+    const z = L.bay.maxZ + t / 2;
+    const dw = L.door.maxX - L.door.minX;
+    const dx = (L.door.minX + L.door.maxX) / 2;
+    box(
+      wallPaint,
+      dw,
+      H - L.door.height,
+      t,
+      dx,
+      floorY + (L.door.height + H) / 2,
+      z,
+    );
+    for (const x of [L.door.minX + 0.03, L.door.maxX - 0.03])
+      box(
+        frame,
+        0.06,
+        L.door.height,
+        t + 0.04,
+        x,
+        floorY + L.door.height / 2,
+        z,
+      );
+    box(frame, dw, 0.06, t + 0.04, dx, floorY + L.door.height - 0.03, z);
+  }
+  {
+    // Its sign over the door, from the aisle.
+    const sign = createMicroLabel(
+      kit,
+      'MAKE-UP WATER · AUTHORISED PERSONNEL ONLY',
+      {
+        height: 0.05,
+        ink: '#ffffff',
+        plate: '#1c5aa6',
+        maxWidth: 1.8,
+      },
+    );
+    sign.position.set(
+      (L.door.minX + L.door.maxX) / 2 + 0.6,
+      floorY + L.door.height + 0.3,
+      L.bay.maxZ + L.partition.thickness + 0.005,
+    );
+    group.add(sign);
   }
   return shell;
 }

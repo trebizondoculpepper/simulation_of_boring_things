@@ -1,3 +1,4 @@
+import { BEING_LAID_OUT } from '../logic/room-pipes';
 import {
   afterEach,
   beforeEach,
@@ -72,104 +73,107 @@ const isPipework = (o: Object3D) =>
   ['pipework', 'cabinet services'].includes(o.name) ||
   /services|ductwork/i.test(o.name);
 
-describe.each(PIPED)('%s, as drawn', (room) => {
-  const built = () => {
-    const kit = createPanelKit();
-    const equipment = createRoomEquipment(kit, room);
-    const cabinet = cabinetServices(kit, room, 0);
-    if (cabinet) equipment.group.add(cabinet.group);
-    return equipment.group;
-  };
-  const ports = () => {
-    const layout = layoutRoom(room)!;
-    return [
-      ...layout.placed.flatMap((p) =>
-        machinePorts(p.item).map((port) => ({
-          ...placedPort(p, port.name),
-          name: `${p.item.label}: ${port.name}`,
+describe.each(PIPED.filter((r) => !BEING_LAID_OUT.includes(r)))(
+  '%s, as drawn',
+  (room) => {
+    const built = () => {
+      const kit = createPanelKit();
+      const equipment = createRoomEquipment(kit, room);
+      const cabinet = cabinetServices(kit, room, 0);
+      if (cabinet) equipment.group.add(cabinet.group);
+      return equipment.group;
+    };
+    const ports = () => {
+      const layout = layoutRoom(room)!;
+      return [
+        ...layout.placed.flatMap((p) =>
+          machinePorts(p.item).map((port) => ({
+            ...placedPort(p, port.name),
+            name: `${p.item.label}: ${port.name}`,
+          })),
+        ),
+        ...cabinetPortsInRoom(room).map((port) => ({
+          name: `cabinet: ${port.name}`,
+          at: port.at,
+          outward: port.outward,
         })),
-      ),
-      ...cabinetPortsInRoom(room).map((port) => ({
-        name: `cabinet: ${port.name}`,
-        at: port.at,
-        outward: port.outward,
-      })),
-    ];
-  };
+      ];
+    };
 
-  it('draws a pipe, conduit or duct reaching every port, from just outside its nozzle', () => {
-    const group = built();
-    const pipework = group.children.filter(isPipework);
-    expect(pipework.length).toBeGreaterThan(0);
-    const drawn = pipework.flatMap(meshes);
-    const missing: string[] = [];
-    for (const port of ports()) {
-      // A point just out along the port: some pipe's mesh must hold it.
-      const probe = new Vector3(...port.at).addScaledVector(
-        new Vector3(...port.outward),
-        0.06,
-      );
-      if (
-        !drawn.some(({ box }) =>
-          box.clone().expandByScalar(0.01).containsPoint(probe),
-        )
-      )
-        missing.push(port.name);
-    }
-    expect(missing).toEqual([]);
-  });
-
-  it('declares a port at every connection a machine’s model draws', () => {
-    // A model may draw its own connections (a boiler's spigots, named
-    // "Flow port" and so on): each must be a declared port, or nothing
-    // checks that a pipe reaches it.
-    const group = built();
-    group.updateMatrixWorld(true);
-    const declared = ports();
-    const missing: string[] = [];
-    group.children
-      .filter((o) => !isPipework(o))
-      .forEach((machine) =>
-        machine.traverse((o) => {
-          if (!(o instanceof Mesh) || !/ port$/i.test(o.name)) return;
-          // The port is at the connector's end, on its box.
-          const box = new Box3().setFromObject(o);
-          const centre = box.getCenter(new Vector3());
-          if (
-            !declared.some(
-              (p) => box.distanceToPoint(new Vector3(...p.at)) < 0.01,
-            )
+    it('draws a pipe, conduit or duct reaching every port, from just outside its nozzle', () => {
+      const group = built();
+      const pipework = group.children.filter(isPipework);
+      expect(pipework.length).toBeGreaterThan(0);
+      const drawn = pipework.flatMap(meshes);
+      const missing: string[] = [];
+      for (const port of ports()) {
+        // A point just out along the port: some pipe's mesh must hold it.
+        const probe = new Vector3(...port.at).addScaledVector(
+          new Vector3(...port.outward),
+          0.06,
+        );
+        if (
+          !drawn.some(({ box }) =>
+            box.clone().expandByScalar(0.01).containsPoint(probe),
           )
-            missing.push(
-              `${o.name} at ${centre
-                .toArray()
-                .map((v) => v.toFixed(2))
-                .join(', ')}`,
-            );
-        }),
-      );
-    expect(missing).toEqual([]);
-  });
-
-  it('draws a nozzle or stub on the machine at every port', () => {
-    const group = built();
-    const machines = group.children
-      .filter((o) => !isPipework(o))
-      .flatMap(meshes);
-    const missing: string[] = [];
-    for (const port of ports()) {
-      // Just inside the port, back toward its machine: the nozzle's metal.
-      const probe = new Vector3(...port.at).addScaledVector(
-        new Vector3(...port.outward),
-        -0.03,
-      );
-      if (
-        !machines.some(({ box }) =>
-          box.clone().expandByScalar(0.01).containsPoint(probe),
         )
-      )
-        missing.push(port.name);
-    }
-    expect(missing).toEqual([]);
-  });
-});
+          missing.push(port.name);
+      }
+      expect(missing).toEqual([]);
+    });
+
+    it('declares a port at every connection a machine’s model draws', () => {
+      // A model may draw its own connections (a boiler's spigots, named
+      // "Flow port" and so on): each must be a declared port, or nothing
+      // checks that a pipe reaches it.
+      const group = built();
+      group.updateMatrixWorld(true);
+      const declared = ports();
+      const missing: string[] = [];
+      group.children
+        .filter((o) => !isPipework(o))
+        .forEach((machine) =>
+          machine.traverse((o) => {
+            if (!(o instanceof Mesh) || !/ port$/i.test(o.name)) return;
+            // The port is at the connector's end, on its box.
+            const box = new Box3().setFromObject(o);
+            const centre = box.getCenter(new Vector3());
+            if (
+              !declared.some(
+                (p) => box.distanceToPoint(new Vector3(...p.at)) < 0.01,
+              )
+            )
+              missing.push(
+                `${o.name} at ${centre
+                  .toArray()
+                  .map((v) => v.toFixed(2))
+                  .join(', ')}`,
+              );
+          }),
+        );
+      expect(missing).toEqual([]);
+    });
+
+    it('draws a nozzle or stub on the machine at every port', () => {
+      const group = built();
+      const machines = group.children
+        .filter((o) => !isPipework(o))
+        .flatMap(meshes);
+      const missing: string[] = [];
+      for (const port of ports()) {
+        // Just inside the port, back toward its machine: the nozzle's metal.
+        const probe = new Vector3(...port.at).addScaledVector(
+          new Vector3(...port.outward),
+          -0.03,
+        );
+        if (
+          !machines.some(({ box }) =>
+            box.clone().expandByScalar(0.01).containsPoint(probe),
+          )
+        )
+          missing.push(port.name);
+      }
+      expect(missing).toEqual([]);
+    });
+  },
+);

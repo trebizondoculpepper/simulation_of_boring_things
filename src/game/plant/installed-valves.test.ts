@@ -1,3 +1,4 @@
+import { BEING_LAID_OUT } from '../../toolkit/gallery/logic/room-pipes';
 import { hallDrainRun } from '../../toolkit/gallery/logic/balance-tank-hall';
 import { describe, expect, it } from 'vite-plus/test';
 import { roomPipes } from '../../toolkit/gallery/logic/room-pipes';
@@ -11,7 +12,16 @@ import {
 } from './installed-valves';
 import { plantInventory } from './equipment-catalogue';
 
-const ROOMS = ['plant_pool_01', 'plant_pool_02', 'wet_hall', 'boiler_house'];
+const ROOMS = [
+  'plant_pool_01',
+  'plant_pool_02',
+  'wet_hall',
+  'boiler_house',
+].filter((r) => !BEING_LAID_OUT.includes(r));
+/** The registered valves of rooms not being laid out afresh. */
+const REGISTERED = Object.entries(INSTALLED_VALVES).filter(
+  ([key]) => !BEING_LAID_OUT.includes(key.split('|')[0]),
+);
 
 describe('installed pipework valves', () => {
   it('has exactly one permanent identity and display tag for every drawn valve', () => {
@@ -38,13 +48,9 @@ describe('installed pipework valves', () => {
     );
     expect(seen.has(hallDrain.assetId)).toBe(false);
     seen.add(hallDrain.assetId);
-    expect(seen.size).toBe(Object.keys(INSTALLED_VALVES).length);
-    expect(
-      new Set(Object.values(INSTALLED_VALVES).map((v) => v.tag)).size,
-    ).toBe(seen.size);
-    expect(
-      new Set(Object.values(INSTALLED_VALVES).map((v) => v.assetId)).size,
-    ).toBe(seen.size);
+    expect(seen.size).toBe(REGISTERED.length);
+    expect(new Set(REGISTERED.map(([, v]) => v.tag)).size).toBe(seen.size);
+    expect(new Set(REGISTERED.map(([, v]) => v.assetId)).size).toBe(seen.size);
     for (const valve of Object.values(INSTALLED_VALVES)) {
       expect(installedValveByCommandId(valve.assetId)).toBe(valve);
       expect(installedValveByCommandId(valve.tag)).toBe(valve);
@@ -100,7 +106,7 @@ describe('installed pipework valves', () => {
       ),
     ];
     const offRoute: string[] = [];
-    for (const [key, installed] of Object.entries(INSTALLED_VALVES)) {
+    for (const [key, installed] of REGISTERED) {
       const matches = authored.filter(
         ({ room, run, valve }) => `${room}|${run.name}|${valve.name}` === key,
       );

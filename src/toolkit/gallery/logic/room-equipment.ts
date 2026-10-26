@@ -13,6 +13,8 @@ import {
   WET_HALL,
   wetHallRamp,
   wetHallRoom,
+  WET_HALL_LAYOUT,
+  wetHallPartition,
 } from './shell-rooms';
 import type { ShellRoomId, ShellWall } from './shell-rooms';
 import { BOOSTER } from '../../components/plant/logic/booster-set';
@@ -483,6 +485,8 @@ export function wetHallBox(): RoomBox {
       minZ: -S.width / 2 - 0.05,
       maxZ: S.width / 2 + 0.05,
     },
+    // The make-up bay's partition (prompt 036).
+    ...wetHallPartition(),
     // The ramp, its landings and flights.
     { minX: -R, maxX: r.first.maxX + 0.05, minZ: -R, maxZ: R },
     {
@@ -731,10 +735,20 @@ export function roomEquipment(
             BOOSTER.h,
           ),
           floor('water-meter', 'Make-up water meter', 1.6, 0.4, 1.2),
+          // The backwash pit (prompt 036): below the floor, its opening
+          // and its walls' tops this footprint, covered by gratings walked
+          // over; above them only its pump's davit and its instruments.
           floor(
             'backwash-tank',
             'Backwash holding tank',
-            ...size(sectionalSize(4, 4, 2)),
+            WET_HALL_LAYOUT.pit.maxX -
+              WET_HALL_LAYOUT.pit.minX +
+              2 * WET_HALL_LAYOUT.pitWall,
+            WET_HALL_LAYOUT.pit.maxZ -
+              WET_HALL_LAYOUT.pit.minZ +
+              2 * WET_HALL_LAYOUT.pitWall,
+            1.2,
+            { back: 0, walkable: true },
           ),
           wall('mimic-wet', 'Mimic: wet hall', 2.2, 0.08, 1.2, 1.6),
           // The sewer outfall's monitor and its chart recorder.
@@ -1318,27 +1332,25 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
   // The wet hall: along its north wall, west to east, in the order the
   // water goes: the break tank, the booster set, the meter; the mimic;
   // then the backwash tank. Each faces the room, its back to the wall.
+  // The wet hall as the owner's plan lays it out (prompt 036,
+  // `WET_HALL_LAYOUT`): the make-up bay's machines in a row across it,
+  // facing the aisle; the backwash pit in its opening to the south; the
+  // clean side's mimic on the bay's north wall, the outfall's monitor on
+  // the dirty side's east wall.
   wet_hall: (box, items) => {
     const at = (key: string) => items.find((i) => i.key === key)!;
-    const north = -box.d / 2;
-    const row = (key: string, x: number, gap: number) => {
-      const item = at(key);
-      return put(box, item, {
-        x,
-        z: north + gap + item.d / 2,
-        face: 'south',
-      });
-    };
+    const L = WET_HALL_LAYOUT;
     return [
-      row('break-tank', -5.6, 0.6),
-      row('booster-set', -2.6, 0.4),
-      // Its run in line with the booster set's discharge.
-      row('water-meter', -0.3, 0.38),
-      put(box, at('mimic-wet'), { wall: 'north', along: 2.0 }),
-      // Its outfall monitor across the hall, on the south wall, readable
-      // from the aisle (until the hall's redesign, prompt 036).
-      put(box, at('sewer-monitor'), { wall: 'south', along: 0 }),
-      row('backwash-tank', 6.0, 0.6),
+      put(box, at('break-tank'), { x: -2.4, z: -6.3, face: 'south' }),
+      put(box, at('booster-set'), { x: 2.1, z: -6.55, face: 'south' }),
+      put(box, at('water-meter'), { x: 4.7, z: -6.55, face: 'south' }),
+      put(box, at('mimic-wet'), { wall: 'north', along: 6.9 }),
+      put(box, at('backwash-tank'), {
+        x: (L.pit.minX + L.pit.maxX) / 2,
+        z: (L.pit.minZ + L.pit.maxZ) / 2,
+        face: 'south',
+      }),
+      put(box, at('sewer-monitor'), { wall: 'east', along: 5.5 }),
     ];
   },
   // The air plant: its stacks where `air-plant.ts` stands them, under

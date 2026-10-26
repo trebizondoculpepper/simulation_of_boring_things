@@ -66,6 +66,7 @@ import {
   shellSolids,
   throughShellDoor,
   wetHallFloorAt,
+  wetHallPartition,
   wetHallRails,
   wetHallRoom,
 } from '../logic/shell-rooms';
@@ -272,7 +273,8 @@ export function startWetHall(canvas: HTMLCanvasElement) {
     room,
     build: (metre, kit) => createWetHall(metre, kit),
     floorAt: wetHallFloorAt,
-    solids: [...shellSolids(room), ...wetHallRails()],
+    // And the make-up bay's partition (prompt 036).
+    solids: [...shellSolids(room), ...wetHallRails(), ...wetHallPartition()],
     // On the east landing, looking west over the hall to the ramp.
     start: { x: room.w / 2 - 0.6, z: 0, yaw: -Math.PI / 2 },
   });
