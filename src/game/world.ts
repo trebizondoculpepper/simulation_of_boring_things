@@ -177,6 +177,8 @@ import {
 } from './plant/spa-filter';
 import { bedPasses } from './plant/ideal-filter';
 import { stepSolids } from './water/solids';
+import { newSewerMonitor, stepSewerMonitor } from './plant/sewer-monitor';
+import type { SewerMonitorState } from './plant/sewer-monitor';
 import {
   cabinetReady,
   runningCabinet,
@@ -211,7 +213,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 34;
+export const WORLD_VERSION = 35;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -243,6 +245,8 @@ export interface World {
   startup: number;
   /** The lighting's switches: DB-LIGHTING and each zone's breaker (`lighting.ts`). */
   lighting: LightingState;
+  /** The sewer outfall's flowmeter and chart recorder (`sewer-monitor.ts`). */
+  sewer: SewerMonitorState;
   /** The emergency lighting's central battery (`electrical-room.ts`). */
   centralBattery: CentralBattery;
   /** The outside's temperature, °C: everything unheated settles to it (`thermal.ts`). */
@@ -292,6 +296,7 @@ export function newWorld(): World {
     startup: -1,
     lighting: newLighting(),
     centralBattery: newCentralBattery(),
+    sewer: newSewerMonitor(),
     ambient: AMBIENT,
     gas: newGasZones(),
     identifiedPlant: newIdentifiedPlant(),
@@ -843,6 +848,10 @@ export function stepWorld(world: World, delta: number): World {
     jacuzzi,
     spaWash,
   );
+  const wetHall = stepWetHall(world.wetHall, world.plant, water, delta, {
+    discharge: installedValveOpen(world.installedValves, 'WH-DR1-DV1'),
+    tankDrain: installedValveOpen(world.installedValves, 'WH-T2-DV1'),
+  });
   return {
     ...world,
     time: world.time + delta,
@@ -908,10 +917,17 @@ export function stepWorld(world: World, delta: number): World {
       world.olympicTank.open === calling
         ? world.olympicTank
         : { ...world.olympicTank, open: calling },
-    wetHall: stepWetHall(world.wetHall, world.plant, water, delta, {
-      discharge: installedValveOpen(world.installedValves, 'WH-DR1-DV1'),
-      tankDrain: installedValveOpen(world.installedValves, 'WH-T2-DV1'),
-    }),
+    wetHall,
+    // The sewer outfall's flowmeter and its recorder: the pit's outflow
+    // (its pump, its drains, any overflow) and the big pools' drain-downs.
+    sewer: stepSewerMonitor(
+      world.sewer,
+      world.wetHall.backwashTank +
+        water.backwashed -
+        wetHall.backwashTank +
+        water.drained,
+      delta,
+    ),
     bathers: stepBathers(world.bathers, world.time, delta, appealOf(world)),
     gas: stepGasZones(world.gas, world.plant, delta),
     // DB-L1's ways: their circuits' leakage from their halls' air, and

@@ -121,6 +121,9 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // 33 → 34: the backwash pit (70 m³) and its high-high inhibit
   // (`fillDefaults`: not inhibited).
   33: (world) => world,
+  // 34 → 35: the sewer outfall's monitor and its record (`fillDefaults`:
+  // nothing recorded yet).
+  34: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

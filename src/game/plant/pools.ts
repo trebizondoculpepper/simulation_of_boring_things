@@ -137,6 +137,17 @@ const TREATED_BY: Partial<Record<PoolId, readonly IsolatorName[]>> = {
 };
 
 /** Each pool's water, by its circuit in the plant sizing. */
+/**
+ * The pools whose drain-downs go into the wet hall's backwash pit, with
+ * their filters' washes, not straight to the sewer (the owner,
+ * 2026-10-26): the spas. The pit's pump is then the site's one controlled
+ * discharge (`sewer-monitor.ts`).
+ */
+export const INTO_THE_PIT: ReadonlySet<PoolId> = new Set([
+  'pool_03',
+  'pool_04',
+]);
+
 const WATER: Record<PoolId, PoolWater> = (() => {
   const circuits = sizePlant(POOLS).circuits;
   const out = {} as Record<PoolId, PoolWater>;
@@ -430,6 +441,8 @@ export function stepPoolsWater(
   let drained = 0;
   // The pools draining down now, sharing what the sewer will take: the
   // jacuzzi's by gravity, its valve open, whatever its pump and power do.
+  // The spas drain into the backwash pit (`INTO_THE_PIT`), not the sewer,
+  // so take no share of it.
   const draining = POOL_IDS.filter(
     (id) =>
       (id === 'pool_04' && footbath
@@ -441,7 +454,8 @@ export function stepPoolsWater(
         !footbathPumpStarved(pools[id], footbath.draining)) &&
       (id !== 'pool_04' || !footbath || footbath.powered),
   );
-  const drainRate = draining.length ? sewer / draining.length : 0;
+  const toSewer = draining.filter((id) => !INTO_THE_PIT.has(id));
+  const drainRate = toSewer.length ? sewer / toSewer.length : 0;
   const next = {} as PoolsState;
   for (const id of POOL_IDS) {
     const room = `plant_${id}` as ServiceRoom;
@@ -521,7 +535,8 @@ export function stepPoolsWater(
         // Its make-up valve open, and the wet hall giving water.
         makeUpOpen: share > 0 && makeUpOpen,
         drainDown,
-        drainRate,
+        // A spa's own drain line into the pit: at its circulation's rate.
+        drainRate: INTO_THE_PIT.has(id) ? POOL_TARGET[id].flow : drainRate,
         ...(id === 'pool_03'
           ? {
               gravityDrain: true,
@@ -565,8 +580,9 @@ export function stepPoolsWater(
       Math.min(dt, 5) / 3600,
     );
     drawn += water.madeUp;
-    backwashed += water.backwashed;
-    drained += water.drained;
+    // A spa's drain-down goes into the backwash pit with its washes.
+    backwashed += water.backwashed + (INTO_THE_PIT.has(id) ? water.drained : 0);
+    drained += INTO_THE_PIT.has(id) ? 0 : water.drained;
     // Tripped on low-low, the pumps restart once the tank has recovered.
     const balance = water.tankVolume / params.tank;
     const tripped = water.tripped && balance < params.float * 0.8;

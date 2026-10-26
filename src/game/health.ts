@@ -384,6 +384,7 @@ export const WORLD_HEALTH_COVERAGE = {
   motors: 'motors: duty running, standby in AUTO, no trip or stop',
   jacuzzi: 'not health: the jets and air await a timed START',
   jacuzziCabinet: 'jacuzzi: cabinet powered, no trip',
+  sewer: 'not health: a record of what went to sewer',
   centralBattery:
     'not checked: the emergency lighting’s battery; its charge and tests are maintenance, and the lighting’s own check catches a dark zone',
   cabinets:
