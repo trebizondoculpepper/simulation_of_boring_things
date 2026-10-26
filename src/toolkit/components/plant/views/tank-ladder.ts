@@ -33,7 +33,8 @@ export function createTankLadder(
   for (let y = -depth + 0.25; y <= -0.12; y += 0.25)
     t.rod(group, steel, [-half, y, z], [half, y, z], 0.0125, 10);
   // Its stand-off brackets to the wall, each with its fixing plate.
-  for (let y = -depth + 0.3; y < 0.5; y += 1.2)
+  // None above its top: under a hatch, nothing stands proud of the deck.
+  for (let y = -depth + 0.3; y < Math.min(0.5, extension - 0.1); y += 1.2)
     for (const x of [-half, half]) {
       t.rod(group, steel, [x, y, 0.01], [x, y, z], 0.012, 8);
       t.box(group, steel, 0.08, 0.12, 0.008, x, y, 0.004);
@@ -46,7 +47,7 @@ export function createTankLadder(
     height: 0.025,
     plate: '#d9dcdd',
   });
-  badge.position.set(half, 0.5, z + 0.03);
+  badge.position.set(half, Math.min(0.5, extension - 0.15), z + 0.03);
   group.add(badge);
   return group;
 }

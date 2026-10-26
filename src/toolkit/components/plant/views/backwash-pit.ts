@@ -552,7 +552,8 @@ export function createBackwashPit(kit: PanelKit, p: BackwashPitSpec) {
       extension: -0.05,
     });
     ladder.rotation.y = -Math.PI / 2;
-    ladder.position.set(L / 2, -0.05, W / 2 - p.hatch + 0.15);
+    // Centred along the hatch (the owner, 2026-10-26).
+    ladder.position.set(L / 2, -0.05, W / 2 - p.hatch / 2);
     group.add(ladder);
   }
   // Its float switches (the owner, 2026-10-26), in a row by its sump on
