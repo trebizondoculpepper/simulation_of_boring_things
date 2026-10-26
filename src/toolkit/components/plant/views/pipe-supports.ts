@@ -1,3 +1,4 @@
+import { createCanvasTexture } from '../../core/views/screens';
 import { markComponent } from '../../core/views/component-identity';
 import {
   BoxGeometry,
@@ -51,6 +52,53 @@ export function createSupports(kit: PanelKit, plan: SupportPlan, floorY = 0) {
     metalness: 0,
   });
   kit.materials.push(wood);
+  // Weathered oak: a painted grain of long, wavering streaks and the odd
+  // knot, greyed by years in a damp plant room.
+  if (typeof document !== 'undefined') {
+    const art = createCanvasTexture(512, 256);
+    const g = art.context;
+    g.fillStyle = '#8b7356';
+    g.fillRect(0, 0, 512, 256);
+    let seed = 11;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 90; i++) {
+      const y0 = rnd() * 256;
+      const dark = rnd() < 0.6;
+      g.strokeStyle = dark
+        ? `rgba(70,50,32,${0.25 + rnd() * 0.35})`
+        : `rgba(190,165,128,${0.15 + rnd() * 0.25})`;
+      g.lineWidth = 0.6 + rnd() * 2.2;
+      const amp = 1 + rnd() * 4;
+      const f = 0.006 + rnd() * 0.01;
+      const ph = rnd() * 6;
+      g.beginPath();
+      for (let x = 0; x <= 512; x += 8) {
+        const y = y0 + amp * Math.sin(x * f + ph);
+        if (x === 0) g.moveTo(x, y);
+        else g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+    for (let k = 0; k < 2; k++) {
+      const x = 80 + rnd() * 350;
+      const y = 40 + rnd() * 170;
+      for (let r = 14; r > 2; r -= 3) {
+        g.strokeStyle = `rgba(60,40,24,${0.5 - r / 40})`;
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.ellipse(x, y, r * 1.8, r, 0, 0, Math.PI * 2);
+        g.stroke();
+      }
+      g.fillStyle = 'rgba(55,36,20,0.8)';
+      g.beginPath();
+      g.ellipse(x, y, 4, 2.5, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+    art.texture.needsUpdate = true;
+    kit.textures.push(art.texture);
+    wood.map = art.texture;
+    wood.color.set('#ffffff');
+  }
 
   const lift = (p: Vec3) => new Vector3(p[0], p[1] + floorY, p[2]);
   const up = new Vector3(0, 1, 0);
