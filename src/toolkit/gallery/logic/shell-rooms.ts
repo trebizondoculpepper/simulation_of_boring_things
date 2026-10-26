@@ -28,6 +28,12 @@ export interface ShellDoor {
    * would not fit the room beyond (the underwater gallery, 2.5 m tall).
    */
   kind?: 'pair' | 'single';
+  /**
+   * Which way its pair swings: into this room (the default), or out of it,
+   * into the room beyond (the chemical stores' doors, out to the loading
+   * bay from either side, the owner, 2026-10-26).
+   */
+  swing?: 'in' | 'out';
 }
 
 /**
@@ -118,7 +124,7 @@ export const SHELL_ROOMS = {
     d: 8,
     height: 7,
     ceiling: 'services',
-    doors: [{ wall: 'south', at: 0, to: 'loading_bay' }],
+    doors: [{ wall: 'south', at: 0, to: 'loading_bay', swing: 'out' }],
     note: 'three bulk containers on their bunds; never with acid',
   },
   acid_store: {
@@ -130,7 +136,7 @@ export const SHELL_ROOMS = {
     d: 5,
     height: 7,
     ceiling: 'services',
-    doors: [{ wall: 'south', at: 0, to: 'loading_bay' }],
+    doors: [{ wall: 'south', at: 0, to: 'loading_bay', swing: 'out' }],
     note: 'one bulk container on its bund; never with hypochlorite',
   },
   switch_room: {

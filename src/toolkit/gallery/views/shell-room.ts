@@ -326,7 +326,12 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
     const part =
       door.kind === 'single'
         ? singleDoor(kit, door.to)
-        : equipmentDoors(kit, signTo(door.to), warningsFor(door.to));
+        : equipmentDoors(
+            kit,
+            signTo(door.to),
+            warningsFor(door.to),
+            door.swing === 'out' ? -1 : 1,
+          );
     part.object.position.set(p.inner.x, 0, p.inner.z);
     part.object.rotation.y = yaw;
     group.add(part.object);

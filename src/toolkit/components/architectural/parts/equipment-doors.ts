@@ -68,6 +68,8 @@ export function equipmentDoors(
   kit: PanelKit,
   label = 'MAIN PLANT',
   warnings: DoorWarningSelection = 'plant',
+  /** 1: it swings toward +z, its pull side; −1: the other way. */
+  swing: 1 | -1 = 1,
 ): EquipmentDoorsPart {
   const t = tools(kit);
   const a = beginPart(kit, 'equipment doors');
@@ -164,8 +166,9 @@ export function equipmentDoors(
       if (was === 'opening' && state.phase === 'held')
         for (const other of controls) if (other.hinge !== hinge) other.hold();
       if (r.latchedNow) play(DOOR_SHUT(), a.object);
-      // Each swings out toward +z, the pull side, about its own hinge.
-      hinge.rotation.y = side * state.angle;
+      // Each swings out toward +z, the pull side, about its own hinge
+      // (or toward −z, where it is hung to swing the other way).
+      hinge.rotation.y = side * swing * state.angle;
     });
     hinge.traverse((o) => (o.userData.live = true));
     return hinge;
