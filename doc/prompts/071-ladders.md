@@ -16,7 +16,7 @@ The owner, 2026-10-26: review all the ladders in the game and make sure every on
   - the sectional tanks' caged ladders up their faces (`TANK_LADDER` in `blockout.ts`, drawn with `createTank`): the break tank and every GRP tank;
   - the fixed ladder with cage in the services exhibits (`rooms/plant/services.ts`) and the architectural fixtures' `ladder` (`architectural-fixtures.ts`);
   - its gate (`ladder-gate.ts`), a part, not a ladder.
-- Cable ladder (`cable-containment.ts`, the services ceiling) is containment, not a ladder, and is out of scope.
+- **Not ladders:** cable ladder (`cable-containment.ts`, the main corridor, the services ceiling) is containment, decoration or plant, never climbable; the ladder helper deals only with ladders a person climbs, and leaves it alone (the owner, 2026-10-26).
 
 ## What to build
 
