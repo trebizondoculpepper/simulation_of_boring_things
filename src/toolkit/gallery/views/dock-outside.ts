@@ -602,6 +602,10 @@ export function createDockOutside(
       const decal = new Mesh(new PlaneGeometry(w, d), m);
       decal.rotation.x = -Math.PI / 2;
       decal.position.set(x, YARD_LEVEL + 0.004, z);
+      // Always drawn after the tarmac, itself transparent: sorted by
+      // distance, the tarmac would otherwise cover them from inside the
+      // dock (the owner, 2026-10-26: the bay numbers vanished from there).
+      decal.renderOrder = 1;
       group.add(decal);
     };
     const paint = (
