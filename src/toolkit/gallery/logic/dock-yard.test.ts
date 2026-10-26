@@ -32,4 +32,37 @@ describe('the loading dock, out to the yard', () => {
     expect(inside(dockYardSolids(F, true))).toBe(true);
     expect(inside(dockYardSolids(F, false))).toBe(false);
   });
+
+  describe('with its lorry channels', () => {
+    const C = { minX: -4.8, maxX: -1.3, minZ: -6, maxZ: 0 };
+    const G = { ...F, channels: [C] };
+    const blocked = (
+      solids: { minX: number; maxX: number; minZ: number; maxZ: number }[],
+      x: number,
+      z: number,
+    ) =>
+      solids.some(
+        (r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ,
+      );
+
+    it('stands at the yard’s level in a channel and its opening', () => {
+      expect(dockFloorAt(G, -3, -3)).toBe(YARD.level);
+      expect(dockFloorAt(G, -3, -6.1)).toBe(YARD.level);
+      expect(dockFloorAt(G, -6, -3)).toBe(0);
+    });
+
+    it('lets the walker in from the yard but not up onto the dock’s floor', () => {
+      const low = dockYardSolids(G, true);
+      expect(blocked(low, -3, -3)).toBe(false);
+      expect(blocked(low, -6, -3)).toBe(true);
+      expect(blocked(low, -3, 2)).toBe(true);
+    });
+
+    it('keeps the walker on the dock’s floor out of the channel', () => {
+      const high = dockYardSolids(G, false);
+      expect(blocked(high, -3, -3)).toBe(true);
+      expect(blocked(high, -3, -6.1)).toBe(true);
+      expect(blocked(high, -6, -3)).toBe(false);
+    });
+  });
 });

@@ -27,6 +27,8 @@ export interface DockFrame {
   thickness: number;
   /** The pier door's middle along the wall. */
   doorX: number;
+  /** The lorry channels, sunk to the yard's level, open to it through the wall. */
+  channels?: readonly Footprint[];
 }
 
 /** Where the landing, the flight and the steps' foot are. */
@@ -52,6 +54,10 @@ export function dockSteps(f: DockFrame) {
 export function dockFloorAt(f: DockFrame, x: number, z: number): number {
   const { outer, landing, flight } = dockSteps(f);
   const within = (r: Footprint) => x >= r.minX && x <= r.maxX;
+  // In a lorry channel, or its opening through the wall: the yard's level
+  // (the owner, 2026-10-26: walked into from the tarmac).
+  for (const c of f.channels ?? [])
+    if (within(c) && z >= outer && z <= c.maxZ) return YARD.level;
   // Inside, and in the door's opening through the wall: the dock's floor.
   if (z >= outer) return 0;
   if (within(landing) && z >= landing.minZ) return 0;
@@ -89,8 +95,19 @@ export function dockYardSolids(f: DockFrame, low: boolean): Footprint[] {
     const s = (Math.PI * r) / n + 0.2;
     ring.push({ minX: cx - s, maxX: cx + s, minZ: cz - s, maxZ: cz + s });
   }
-  const building: Footprint[] = low
-    ? [{ minX: -200, maxX: 200, minZ: outer, maxZ: 200 }]
-    : [];
+  // Down at the yard's level, the building is solid but for its lorry
+  // channels, walked into from the tarmac; up on the dock's floor, the
+  // channels are the drop, kept out of.
+  const channels = [...(f.channels ?? [])].sort((a, b) => a.minX - b.minX);
+  const building: Footprint[] = [];
+  if (low) {
+    let from = -200;
+    for (const c of channels) {
+      building.push({ minX: from, maxX: c.minX, minZ: outer, maxZ: 200 });
+      building.push({ minX: c.minX, maxX: c.maxX, minZ: c.maxZ, maxZ: 200 });
+      from = c.maxX;
+    }
+    building.push({ minX: from, maxX: 200, minZ: outer, maxZ: 200 });
+  } else building.push(...channels.map((c) => ({ ...c, minZ: outer })));
   return [...rails, ...ring, ...building];
 }

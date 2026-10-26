@@ -290,10 +290,6 @@ export function shellSolids(room: {
     ...(['north', 'east', 'south', 'west'] as const).flatMap((wall) =>
       shellWallPieces(room, wall).map(([a, b]) => across(room, wall, a, b)),
     ),
-    // Each opening's edge: the walker stops there (the drop to the yard).
-    ...(room.apertures ?? [])
-      .filter((a) => !a.door)
-      .map((a) => across(room, a.wall, a.at - a.w / 2, a.at + a.w / 2)),
   ];
 }
 

@@ -146,6 +146,7 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
     wallZ: -spec.d / 2,
     thickness: SHELL_WALL,
     doorX: room.apertures?.find((o) => o.door)?.at ?? 0,
+    channels,
   };
   let pierOpen = () => false;
   const lorryOpenings = (room.apertures ?? []).filter((o) => !o.door);
@@ -235,8 +236,6 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
     solids: [
       ...shellSolids(room),
       ...(id === 'loading_bay' ? dockPalletSolids() : []),
-      // Its channels: the walker kept out of them for now (prompt 073).
-      ...channels,
     ],
     // Just inside its first door, looking into the room.
     start: (() => {
