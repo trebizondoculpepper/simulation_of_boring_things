@@ -96,6 +96,23 @@ export function createDockOutside(
   tarmac.polygonOffsetUnits = 2;
   kit.materials.push(tarmac);
   kit.materials.push(tarmac);
+  // Fading out into the overcast toward its edge, a little beyond where
+  // the building's wall fades (the owner, 2026-10-26).
+  {
+    const fade = document.createElement('canvas');
+    fade.width = fade.height = 256;
+    const g = fade.getContext('2d')!;
+    const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.6, '#ffffff');
+    grad.addColorStop(0.97, '#000000');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 256, 256);
+    const alphaMap = new CanvasTexture(fade);
+    kit.textures.push(alphaMap);
+    tarmac.alphaMap = alphaMap;
+    tarmac.transparent = true;
+  }
   const ground = new Mesh(new CircleGeometry(69, 48), tarmac);
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(0, YARD_LEVEL, wallZ - 30);
