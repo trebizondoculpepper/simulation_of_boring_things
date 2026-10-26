@@ -1,3 +1,5 @@
+import { bindRoomLights } from '../views/room-lights';
+import { zoneOfRoom } from '../../../game/plant/lighting';
 import { createInspector } from '../views/inspect-pick';
 import {
   AmbientLight,
@@ -235,6 +237,8 @@ export function startTankHall(canvas: HTMLCanvasElement) {
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
   resize();
+  const roomLights = bindRoomLights(scene, zoneOfRoom(self));
+  roomLights.update(0);
   let last = 0;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) {
@@ -248,6 +252,7 @@ export function startTankHall(canvas: HTMLCanvasElement) {
     partAudio.listen(camera, m);
     hall.parts?.update(delta);
     hall.update?.(delta);
+    roomLights.update(delta);
     // Out through the doors, once the plant room is seen beyond: handed over to it.
     if (seenPlant && !leaving && !walk.following) {
       const x = walk.walker.x / m;

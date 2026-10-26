@@ -6,6 +6,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- A switch-room title flyby follows the owner’s eight camera views, including the final stationary turn and zoom, with the main lighting supply switched off in its staged world and the camera torch off.
+
 - The Olympic tank hall’s ladder-access gate opens with Use and closes itself. Its floor sump drains by gravity through PL2-T1-DV1, worked from an extended-spindle handwheel on the gantry; the valve position persists with the other installed valves.
 - Tank-hall inspection now identifies PL2-T1-LT1, the live ultrasonic level transmitter, and the two pump suction intakes. The transmitter’s signal cable rises to the soffit and runs south then west through the partition towards the pool controls.
 
@@ -167,6 +169,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 - Every sand filter's sight glass is live, driven by a shared bed model (`plant/logic/filter-bed.ts`): the bed's dirt (from the water it is exposed to, or from its pressure difference where that is all a model gives), its pitting as a function of the time since it was last washed, and which way the water goes through it (down, filtering; up, lifted). It needs to know nothing of backwashing: water coming up through it is a wash and starts its clock again. Fitted to the plant rooms' filters, Dev19's, Dev26's Olympic filter (which starts ten days unwashed, dirty and pitted) and the small multiport filter.
 
 ### Fixed
+
+- The balance-tank hall’s lights and batten diffusers now follow the Olympic plant lighting circuit and the main lighting switches, including the shared emergency-lighting behaviour.
 
 - The balance-tank overflow inlet has a hollow bellmouth and a recessed bore instead of overlapping end faces; the two submerged suction inlets also have open flared mouths.
 

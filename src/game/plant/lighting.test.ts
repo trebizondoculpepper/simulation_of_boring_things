@@ -33,6 +33,7 @@ describe('the lighting’s zones', () => {
       'pool_04',
       'plant_pool_01',
       'plant_pool_02',
+      'tank_hall',
       'plant_pool_03',
       'plant_pool_04',
       'wet_hall',

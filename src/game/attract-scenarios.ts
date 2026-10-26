@@ -45,7 +45,7 @@ const PRESETS: Record<AttractScenarioId, Preset> = {
     make: settled,
   },
   'lights-out': {
-    title: 'The lighting supply failed: dark but for the torch',
+    title: 'The main lighting circuit switched off',
     make: () => acting(settled(), { type: 'lighting/supply', on: false }),
   },
   'pools-drained': {

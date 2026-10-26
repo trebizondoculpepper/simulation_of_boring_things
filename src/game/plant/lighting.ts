@@ -71,7 +71,7 @@ export const LIGHTING_ZONES = {
   plant_pool_02: {
     way: 7,
     name: 'OLYMPIC PLANT ROOM',
-    rooms: ['plant_pool_02'],
+    rooms: ['plant_pool_02', 'tank_hall'],
     daylight: false,
   },
   plant_pool_03: {

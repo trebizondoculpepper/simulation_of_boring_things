@@ -1,6 +1,8 @@
+import { attractScenario } from '../../../game/attract-scenarios';
 import { describe, expect, it } from 'vite-plus/test';
 import {
   ATTRACT_SHOTS,
+  SWITCH_ROOM_FLYBY,
   SHOT_SECONDS,
   THEME_BEAT,
   inPoolRoom,
@@ -24,11 +26,11 @@ const run = (s: AttractState, seconds: number, ready = true, dt = 0.05) => {
 };
 
 describe('the title’s attract sequence', () => {
-  it('has eight shots in seven rooms, for now, each a path, start to end, none a loop or an orbit', () => {
+  it('has nine shots in eight rooms, for now, each a path, start to end, none a loop or an orbit', () => {
     expect(ATTRACT_SHOTS.every((s) => s.path?.open)).toBe(true);
-    expect(ATTRACT_SHOTS).toHaveLength(8);
-    expect(new Set(ATTRACT_SHOTS.map((s) => s.room)).size).toBe(7);
-    expect(new Set(ATTRACT_SHOTS.map((s) => s.id)).size).toBe(8);
+    expect(ATTRACT_SHOTS).toHaveLength(9);
+    expect(new Set(ATTRACT_SHOTS.map((s) => s.room)).size).toBe(8);
+    expect(new Set(ATTRACT_SHOTS.map((s) => s.id)).size).toBe(9);
     expect(ATTRACT_SHOTS.every((s) => s.path)).toBe(true);
   });
 
@@ -141,10 +143,10 @@ describe('the title’s attract sequence', () => {
     expect(s.shotTime).toBeCloseTo(0.5 * span(ATTRACT_SHOTS[coming]), 9);
   });
 
-  it('has three pool hall shots and five back room shots, so it can alternate', () => {
+  it('has three pool hall shots and six back room shots, so it can alternate', () => {
     const pools = ATTRACT_SHOTS.filter(inPoolRoom).length;
     expect(pools).toBe(3);
-    expect(ATTRACT_SHOTS.length - pools).toBe(5);
+    expect(ATTRACT_SHOTS.length - pools).toBe(6);
   });
 
   it('plays its shots in a random order, a pool hall’s and a back room’s by turns, never one room twice running nor a shot straight back', () => {
@@ -156,7 +158,7 @@ describe('the title’s attract sequence', () => {
     };
     let s = newAttract(ATTRACT_SHOTS, random);
     const seen: number[] = [];
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 120; i++) {
       seen.push(s.shot);
       // What is fetched while it shows is what comes next.
       const coming = nextShot(s);
@@ -186,4 +188,31 @@ describe('the title’s attract sequence', () => {
     const late = newAttract(shots, () => 0.999999);
     expect(late.shotTime + shown).toBeLessThanOrEqual(shot.path!.period);
   });
+});
+
+it('stages the eight switch-room views with the lighting circuit off and the camera torch off', () => {
+  const shot = ATTRACT_SHOTS.find(
+    (s) => s.id === 'switch-room-lights-out-flyby',
+  )!;
+  expect(shot.room).toBe('switch_room');
+  expect(shot.scenario).toBe('lights-out');
+  expect(shot.torch).toBe(false);
+  const dark = attractScenario(shot.scenario);
+  expect(dark.lighting.supply).toBe(false);
+  expect(dark.plant.sources.power).toBe(true);
+  expect(attractScenario('normal').lighting.supply).toBe(true);
+  expect(SWITCH_ROOM_FLYBY.keys).toHaveLength(8);
+  expect(shot.path?.open).toBe(true);
+  const first = shotPose(shot, 0);
+  expect(first.x).toBeCloseTo(0.13);
+  expect(first.z).toBeCloseTo(-0.25);
+  const last = shotPose(shot, shotPeriod(shot));
+  expect(last.x).toBeCloseTo(-0.32);
+  expect(last.y).toBeCloseTo(1.81);
+  expect(last.z).toBeCloseTo(0);
+  expect(Math.atan2(Math.sin(last.yaw), Math.cos(last.yaw))).toBeCloseTo(
+    (145.7 * Math.PI) / 180,
+  );
+  expect(last.pitch).toBeCloseTo((50.7 * Math.PI) / 180);
+  expect(last.zoom).toBeCloseTo(0.745);
 });

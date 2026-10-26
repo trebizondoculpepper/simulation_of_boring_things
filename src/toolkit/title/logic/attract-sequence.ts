@@ -249,6 +249,26 @@ const airPlantPath = createCameraPath(
   AIR_PLANT_PATH.speed,
 );
 
+/** The owner's eight switch-room views, with the main lighting circuit off. */
+export const SWITCH_ROOM_FLYBY: { keys: readonly CameraKey[]; speed: number } =
+  {
+    keys: [
+      '?x=0.13&y=1.83&z=-0.25&yaw=258.0&pitch=-12.2&zoom=1.000',
+      '?x=0.03&y=1.79&z=-1.96&yaw=260.3&pitch=1.3&zoom=1.000',
+      '?x=-0.41&y=1.80&z=-2.92&yaw=272.0&pitch=-33.7&zoom=0.759',
+      '?x=-0.55&y=1.79&z=-2.09&yaw=14.5&pitch=-4.6&zoom=0.650',
+      '?x=-0.36&y=1.82&z=-2.80&yaw=123.0&pitch=-5.7&zoom=0.784',
+      '?x=-0.05&y=1.81&z=-0.06&yaw=76.2&pitch=-3.3&zoom=0.784',
+      '?x=-0.32&y=1.81&z=-0.00&yaw=79.4&pitch=-4.5&zoom=2.298',
+      '?x=-0.32&y=1.81&z=-0.00&yaw=145.7&pitch=50.7&zoom=0.745',
+    ].map(parseViewLink),
+    speed: 0.7,
+  };
+const switchRoomFlyby = createCameraPath(
+  SWITCH_ROOM_FLYBY.keys,
+  SWITCH_ROOM_FLYBY.speed,
+);
+
 /** A shot's camera `seconds` into its move: its path's pose, or its orbit's, level and unzoomed. */
 export function shotPose(shot: AttractShot, seconds: number): CameraSample {
   if (shot.path) return shot.path.sample(seconds);
@@ -261,7 +281,8 @@ export function shotPose(shot: AttractShot, seconds: number): CameraSample {
  * the Olympic hall's level dolly; the Olympic plant room's fly-by; the
  * jacuzzi plant room's path, start to end; the boiler house's track and
  * dolly zoom; the air plant room's track and swoop; the main corridor's
- * barrel-rolling fly-by. Played in a random order, a pool hall's and a
+ * barrel-rolling fly-by; the switch room with its lighting circuit off.
+ * Played in a random order, a pool hall's and a
  * back room's by turns (`chooseNext`). The Olympic hall's high orbit and
  * the jacuzzi's were dropped (the owner, 2026-10-25: "It's boring").
  */
@@ -320,6 +341,14 @@ export const ATTRACT_SHOTS: readonly AttractShot[] = [
     room: 'main_corridor',
     path: corridorFlyby,
     scenario: 'normal',
+    seconds: SHOT_SECONDS,
+  },
+  {
+    id: 'switch-room-lights-out-flyby',
+    room: 'switch_room',
+    path: switchRoomFlyby,
+    scenario: 'lights-out',
+    torch: false,
     seconds: SHOT_SECONDS,
   },
 ];
