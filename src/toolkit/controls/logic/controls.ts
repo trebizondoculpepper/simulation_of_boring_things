@@ -203,9 +203,9 @@ export function copyShortcut(event: {
   metaKey: boolean;
   altKey: boolean;
   shiftKey: boolean;
-}): 'reference' | 'position' | null {
-  if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey)
-    return null;
+}): 'reference' | 'position' | 'screenshot' | null {
+  if (event.shiftKey || event.ctrlKey === event.metaKey) return null;
+  if (event.altKey) return event.code === 'KeyS' ? 'screenshot' : null;
   return event.code === 'KeyC'
     ? 'reference'
     : event.code === 'KeyP'

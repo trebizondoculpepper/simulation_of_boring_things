@@ -633,10 +633,12 @@ export function createFirstPerson(options: FirstPersonOptions) {
       requestCopy(
         copy === 'position'
           ? { kind: 'position' }
-          : {
-              kind: 'reference',
-              reference: inspectionReference(inspection.shown),
-            },
+          : copy === 'screenshot'
+            ? { kind: 'screenshot' }
+            : {
+                kind: 'reference',
+                reference: inspectionReference(inspection.shown),
+              },
       );
       return;
     }

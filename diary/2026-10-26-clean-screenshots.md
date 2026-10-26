@@ -1,0 +1,3 @@
+# Clean screenshots
+
+Added a screenshot clipboard action to the shared keyboard controls and a button beside the view pin. Ctrl+Alt+S on PC and Cmd+Option+S on Mac copy a PNG assembled from the visible room render canvases, leaving the HUD and other HTML overlays out. The capture temporarily increases each renderer's pixel ratio within a 16-megapixel and GPU-size budget, renders the current frame, composites any room visible through a doorway, and restores the player's quality setting before PNG encoding. The shortcut and resolution policy have focused tests, and the feature was checked in Chrome with a 4998 × 3200 copy whose render canvas returned to its original size.

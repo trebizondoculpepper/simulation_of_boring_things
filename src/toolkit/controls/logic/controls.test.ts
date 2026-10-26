@@ -77,6 +77,18 @@ describe('copy shortcuts', () => {
     expect(copyShortcut({ ...plain, metaKey: true, altKey: true })).toBeNull();
     expect(copyShortcut({ ...plain, code: 'KeyF', ctrlKey: true })).toBeNull();
   });
+  it('copies a clean screenshot with Ctrl+Alt+S or Cmd+Option+S', () => {
+    for (const modifier of ['ctrlKey', 'metaKey'] as const)
+      expect(
+        copyShortcut({
+          ...plain,
+          code: 'KeyS',
+          altKey: true,
+          [modifier]: true,
+        }),
+      ).toBe('screenshot');
+    expect(copyShortcut({ ...plain, code: 'KeyS', ctrlKey: true })).toBeNull();
+  });
 });
 
 it('keeps title navigation on unmodified bracket presses and out of keyboard help', () => {

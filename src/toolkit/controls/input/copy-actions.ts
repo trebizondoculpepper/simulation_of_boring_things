@@ -1,7 +1,8 @@
 /** The app supplies clipboard effects; shared controls own the shortcuts. */
 export type CopyRequest =
   | { kind: 'reference'; reference: string | null }
-  | { kind: 'position' };
+  | { kind: 'position' }
+  | { kind: 'screenshot' };
 
 let handler: ((request: CopyRequest) => void) | undefined;
 

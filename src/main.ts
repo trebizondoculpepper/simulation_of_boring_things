@@ -32,6 +32,7 @@ import { createConsole } from './toolkit/console/console-view';
 import { consoleOpen } from './toolkit/controls/logic/console-open';
 import { noclip } from './toolkit/controls/logic/noclip';
 import { renderScale } from './toolkit/settings/logic/settings';
+import { screenshotPixelRatio } from './toolkit/controls/logic/screenshot-size';
 import { METRE } from './toolkit/components/core/logic/units';
 import {
   inertClip,
@@ -186,6 +187,12 @@ positionButton.textContent = '📍';
 positionButton.title = 'Copy a link to this view';
 positionButton.setAttribute('aria-label', 'Copy a link to this view');
 positionButton.className = 'location-pin-button';
+const screenshotButton = document.createElement('button');
+screenshotButton.type = 'button';
+screenshotButton.textContent = '▣';
+screenshotButton.title = 'Copy clean screenshot (Ctrl+Alt+S / ⌘+Option+S)';
+screenshotButton.setAttribute('aria-label', 'Copy screenshot without overlays');
+screenshotButton.className = 'location-pin-button screenshot-button';
 // The player's settings that are the app's to apply: the master volume,
 // and whether the on-screen controls are shown. (Look, field of view and
 // graphics quality are applied where they are used.)
@@ -364,14 +371,87 @@ const copyCameraLocation = async (): Promise<string> => {
     positionButton.disabled = false;
   }
 };
+/** Render the visible room canvases at capture resolution, then restore play quality. */
+const captureScene = (): HTMLCanvasElement | null => {
+  const surface = current ? surfaceOf(current) : null;
+  const draw = surface && rendererOn(surface);
+  if (!surface || !draw?.loop) return null;
+  const underSurface = seeing ? surfaceOf(keyOf(seeing.under)) : null;
+  const under = underSurface && rendererOn(underSurface);
+  const gl = draw.renderer.getContext();
+  const viewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
+  const maxDimension = Math.min(
+    8192,
+    draw.renderer.capabilities.maxTextureSize,
+    gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number,
+    viewport[0],
+    viewport[1],
+  );
+  const scale = renderScale(settings.value.renderLevel);
+  const cssWidth = surface.width / draw.renderer.getPixelRatio();
+  const cssHeight = surface.height / draw.renderer.getPixelRatio();
+  const ratio = screenshotPixelRatio(
+    cssWidth,
+    cssHeight,
+    draw.renderer.getPixelRatio(),
+    maxDimension,
+  );
+  const entries = [draw, under].filter((entry) => entry !== null);
+  const original = entries.map((entry) => entry.renderer.getPixelRatio());
+  try {
+    for (const entry of entries) entry.renderer.setPixelRatio(ratio / scale);
+    const time = performance.now();
+    draw.loop(time);
+    draw.after?.(time);
+    const image = document.createElement('canvas');
+    image.width = surface.width;
+    image.height = surface.height;
+    const context = image.getContext('2d');
+    if (!context) return null;
+    if (underSurface)
+      context.drawImage(underSurface, 0, 0, image.width, image.height);
+    context.drawImage(surface, 0, 0, image.width, image.height);
+    return image;
+  } finally {
+    entries.forEach((entry, index) =>
+      entry.renderer.setPixelRatio(original[index] / scale),
+    );
+  }
+};
+const copyScreenshot = async () => {
+  screenshotButton.disabled = true;
+  try {
+    const image = captureScene();
+    if (!image) throw new Error('No game view is available.');
+    const png = new Promise<Blob>((resolve, reject) =>
+      image.toBlob(
+        (blob) =>
+          blob ? resolve(blob) : reject(new Error('PNG encoding failed.')),
+        'image/png',
+      ),
+    );
+    // Supplying a promise keeps the clipboard request in the key/click gesture.
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+    positionStatus.textContent = `Screenshot copied (${image.width} × ${image.height})`;
+    logCopy(positionStatus.textContent);
+  } catch (error) {
+    positionStatus.textContent =
+      'Could not copy screenshot. Allow clipboard access and try again.';
+    logCopy(`${positionStatus.textContent} ${String(error)}`, true);
+  } finally {
+    screenshotButton.disabled = false;
+  }
+};
 setCopyHandler((request) => {
   if (request.kind === 'reference') void copyObjectReference(request.reference);
-  else void copyCameraLocation();
+  else if (request.kind === 'position') void copyCameraLocation();
+  else void copyScreenshot();
 });
 positionButton.addEventListener('animationend', () =>
   positionButton.classList.remove('is-copied'),
 );
 positionButton.addEventListener('click', () => void copyCameraLocation());
+screenshotButton.addEventListener('click', () => void copyScreenshot());
 // In noclip the pin is a camera: its link is a shot's, `noclip=true` and
 // its roll.
 let wasCamera = noclip.peek();
@@ -1103,9 +1183,10 @@ const showOnTop = (key: string) => {
     '[aria-label="View tools"]',
   );
   if (tools) {
-    tools.prepend(positionButton);
+    tools.prepend(positionButton, screenshotButton);
     tools.append(settingsButton);
-  } else positionOverlay.append(positionButton, settingsButton);
+  } else
+    positionOverlay.append(positionButton, screenshotButton, settingsButton);
   for (const [id, entry] of rooms) {
     entry.root.hidden = id !== key;
     entry.root.style.zIndex = id === key ? '1' : '';
