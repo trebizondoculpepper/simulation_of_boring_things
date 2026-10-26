@@ -4,7 +4,9 @@ The project's one to-do list (the owner, 2026-10-23): every task not yet finishe
 
 ## Now: title sequence tools
 
-- [x] **Switch-room flyby with lighting off** (done 2026-10-26, commit pending): add the owner’s eight camera views to the title sequence, using a separate lights-out world with the main lighting supply off and the camera torch off; retain the final stationary turn and zoom.
+- [x] **Olympic underwater rolling dolly zoom** (done 2026-10-26, commit pending): add the owner’s five views with the lights on, retaining the fixed heading/pitch, increasing zoom, rising camera and −92° to +26° roll.
+
+- [x] **Switch-room flyby with lighting off** (done 2026-10-26, `552fcb5`): add the owner’s eight camera views to the title sequence, using a separate lights-out world with the main lighting supply off and the camera torch off; retain the final stationary turn and zoom.
 
 - [x] **Noclip for framing camera shots** ([038](doc/prompts/done/038-noclip-camera.md), done 2026-10-24, `bfc8521`): Esc-menu toggle, free flight through equipment, room bounds, keyboard/touch/gamepad controls, live coordinates and camera-link copying. Preserve the normal walking/Continue position.
 - [x] **Roll in noclip** (the owner, 2026-10-24; done 2026-10-24, `f0b798d`): Q/E (LB/RB, ⟲/⟳) roll the camera about its line of sight, R (Y, LEVEL) levels it; the readout and camera links carry `roll` in degrees.
@@ -82,7 +84,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Plant features
 
-- [x] **Balance-tank hall lighting controls** (done 2026-10-26, commit pending): assign the hall to the Olympic plant lighting circuit and bind its scene lights and batten diffusers to the shared room-lighting controller.
+- [x] **Balance-tank hall lighting controls** (done 2026-10-26, `552fcb5`): assign the hall to the Olympic plant lighting circuit and bind its scene lights and batten diffusers to the shared room-lighting controller.
 
 - [x] **Olympic UV orientation, fitting clearance and pump fasteners** (done 2026-10-26, `d89bef9`): face PL2-UV1 into the room with correctly routed ports and cable, extend the exchanger’s four valve spools clear of insulated elbows, shorten and hex the pump casing/strainer heads, and clarify that both tank-hall overflow pipes belong to the Olympic pool.
 - [x] **Tank-hall access, instruments and drainage** (done 2026-10-26, `d89bef9`): the ladder gate opens with Use and self-closes, the ultrasonic transmitter is inspectable as PL2-T1-LT1 with its live depth and an overhead cable rising then heading south and west towards the pool controls, the suction bellmouths are identified, the overflow has a hollow rim without coplanar caps, and a grated floor drain works through PL2-T1-DV1’s handwheel on the gantry.

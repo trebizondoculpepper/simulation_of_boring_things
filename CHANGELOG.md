@@ -6,6 +6,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- An underwater Olympic pool title shot follows the owner’s five-key dolly zoom with a roll, rising from 0.93 m to 0.16 m below the surface while the lighting remains on.
+
 - A switch-room title flyby follows the owner’s eight camera views, including the final stationary turn and zoom, with the main lighting supply switched off in its staged world and the camera torch off.
 
 - The Olympic tank hall’s ladder-access gate opens with Use and closes itself. Its floor sump drains by gravity through PL2-T1-DV1, worked from an extended-spindle handwheel on the gantry; the valve position persists with the other installed valves.

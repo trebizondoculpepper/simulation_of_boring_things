@@ -1,8 +1,11 @@
+import { poolDepth } from '../../../game/plant/pools';
+import type { PoolId } from '../../../game/plant/pools';
 import { attractScenario } from '../../../game/attract-scenarios';
 import { describe, expect, it } from 'vite-plus/test';
 import {
   ATTRACT_SHOTS,
   SWITCH_ROOM_FLYBY,
+  OLYMPIC_ROLL_DOLLY_ZOOM,
   SHOT_SECONDS,
   THEME_BEAT,
   inPoolRoom,
@@ -26,11 +29,11 @@ const run = (s: AttractState, seconds: number, ready = true, dt = 0.05) => {
 };
 
 describe('the title’s attract sequence', () => {
-  it('has nine shots in eight rooms, for now, each a path, start to end, none a loop or an orbit', () => {
+  it('has ten shots in eight rooms, for now, each a path, start to end, none a loop or an orbit', () => {
     expect(ATTRACT_SHOTS.every((s) => s.path?.open)).toBe(true);
-    expect(ATTRACT_SHOTS).toHaveLength(9);
+    expect(ATTRACT_SHOTS).toHaveLength(10);
     expect(new Set(ATTRACT_SHOTS.map((s) => s.room)).size).toBe(8);
-    expect(new Set(ATTRACT_SHOTS.map((s) => s.id)).size).toBe(9);
+    expect(new Set(ATTRACT_SHOTS.map((s) => s.id)).size).toBe(10);
     expect(ATTRACT_SHOTS.every((s) => s.path)).toBe(true);
   });
 
@@ -42,8 +45,10 @@ describe('the title’s attract sequence', () => {
         const p = shotPose(shot, t);
         expect(Math.abs(p.x), shot.id).toBeLessThan(hall.w / 2 - 0.3);
         expect(Math.abs(p.z), shot.id).toBeLessThan(hall.d / 2 - 0.3);
-        // An orbit high over the hall; a fly-by low, but above its deck.
-        expect(p.y, shot.id).toBeGreaterThan(shot.path ? 0.2 : 1);
+        // Authored paths may pass underwater, but must stay above the basin floor.
+        expect(p.y, shot.id).toBeGreaterThan(
+          -poolDepth(shot.room as PoolId) + 0.1,
+        );
       }
     }
     // A plant room's fly-by flies close to its plant on purpose: only
@@ -143,9 +148,9 @@ describe('the title’s attract sequence', () => {
     expect(s.shotTime).toBeCloseTo(0.5 * span(ATTRACT_SHOTS[coming]), 9);
   });
 
-  it('has three pool hall shots and six back room shots, so it can alternate', () => {
+  it('has four pool hall shots and six back room shots, so it can alternate', () => {
     const pools = ATTRACT_SHOTS.filter(inPoolRoom).length;
-    expect(pools).toBe(3);
+    expect(pools).toBe(4);
     expect(ATTRACT_SHOTS.length - pools).toBe(6);
   });
 
@@ -215,4 +220,30 @@ it('stages the eight switch-room views with the lighting circuit off and the cam
   );
   expect(last.pitch).toBeCloseTo((50.7 * Math.PI) / 180);
   expect(last.zoom).toBeCloseTo(0.745);
+});
+
+it('flies the Olympic dolly zoom with the authored roll, below the surface and with lights on', () => {
+  const shot = ATTRACT_SHOTS.find((s) => s.id === 'olympic-roll-dolly-zoom')!;
+  expect(shot.scenario).toBe('normal');
+  expect(attractScenario(shot.scenario).lighting.supply).toBe(true);
+  expect(OLYMPIC_ROLL_DOLLY_ZOOM.keys).toHaveLength(5);
+  const first = shotPose(shot, 0);
+  const last = shotPose(shot, shotPeriod(shot));
+  expect(first.z).toBeCloseTo(-11.15);
+  expect(first.y).toBeCloseTo(-0.93);
+  expect(first.roll).toBeCloseTo((-92 * Math.PI) / 180);
+  expect(first.zoom).toBeCloseTo(0.949);
+  expect(last.z).toBeCloseTo(2.39);
+  expect(last.y).toBeCloseTo(-0.16);
+  expect(last.roll).toBeCloseTo((26 * Math.PI) / 180);
+  expect(last.zoom).toBeCloseTo(3.589);
+  let zoom = first.zoom;
+  for (let t = 0; t <= shotPeriod(shot); t += 0.1) {
+    const p = shotPose(shot, t);
+    expect(p.y).toBeLessThan(0);
+    expect(p.yaw).toBeCloseTo((359.6 * Math.PI) / 180);
+    expect(p.pitch).toBeCloseTo((-3.3 * Math.PI) / 180);
+    expect(p.zoom).toBeGreaterThanOrEqual(zoom - 1e-9);
+    zoom = p.zoom;
+  }
 });

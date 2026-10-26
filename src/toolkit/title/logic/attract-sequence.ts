@@ -269,6 +269,25 @@ const switchRoomFlyby = createCameraPath(
   SWITCH_ROOM_FLYBY.speed,
 );
 
+/** The owner's underwater Olympic dolly zoom, rising and rolling towards the surface. */
+export const OLYMPIC_ROLL_DOLLY_ZOOM: {
+  keys: readonly CameraKey[];
+  speed: number;
+} = {
+  keys: [
+    '?x=2.00&y=-0.93&z=-11.15&yaw=359.6&pitch=-3.3&zoom=0.949&roll=-92.0',
+    '?x=2.03&y=-0.69&z=-7.02&yaw=359.6&pitch=-3.3&zoom=1.141&roll=-18.0',
+    '?x=2.04&y=-0.55&z=-4.42&yaw=359.6&pitch=-3.3&zoom=1.425&roll=6.0',
+    '?x=2.13&y=-0.39&z=-1.63&yaw=359.6&pitch=-3.3&zoom=2.070&roll=26.0',
+    '?x=2.16&y=-0.16&z=2.39&yaw=359.6&pitch=-3.3&zoom=3.589&roll=26.0',
+  ].map(parseViewLink),
+  speed: 0.7,
+};
+const olympicRollDollyZoom = createCameraPath(
+  OLYMPIC_ROLL_DOLLY_ZOOM.keys,
+  OLYMPIC_ROLL_DOLLY_ZOOM.speed,
+);
+
 /** A shot's camera `seconds` into its move: its path's pose, or its orbit's, level and unzoomed. */
 export function shotPose(shot: AttractShot, seconds: number): CameraSample {
   if (shot.path) return shot.path.sample(seconds);
@@ -281,7 +300,8 @@ export function shotPose(shot: AttractShot, seconds: number): CameraSample {
  * the Olympic hall's level dolly; the Olympic plant room's fly-by; the
  * jacuzzi plant room's path, start to end; the boiler house's track and
  * dolly zoom; the air plant room's track and swoop; the main corridor's
- * barrel-rolling fly-by; the switch room with its lighting circuit off.
+ * barrel-rolling fly-by; the switch room with its lighting circuit off;
+ * and the Olympic pool's underwater dolly zoom with a roll.
  * Played in a random order, a pool hall's and a
  * back room's by turns (`chooseNext`). The Olympic hall's high orbit and
  * the jacuzzi's were dropped (the owner, 2026-10-25: "It's boring").
@@ -349,6 +369,13 @@ export const ATTRACT_SHOTS: readonly AttractShot[] = [
     path: switchRoomFlyby,
     scenario: 'lights-out',
     torch: false,
+    seconds: SHOT_SECONDS,
+  },
+  {
+    id: 'olympic-roll-dolly-zoom',
+    room: 'pool_02',
+    path: olympicRollDollyZoom,
+    scenario: 'normal',
     seconds: SHOT_SECONDS,
   },
 ];
