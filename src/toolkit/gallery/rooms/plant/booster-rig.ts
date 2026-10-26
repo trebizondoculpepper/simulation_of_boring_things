@@ -17,6 +17,7 @@ import { BOOSTER } from '../../../components/plant/logic/booster-set';
 import {
   actOnChangeover,
   changeoverFlow,
+  changeoverPressure,
   newBoosterChangeover,
   stepChangeover,
 } from '../../../components/plant/logic/booster-changeover';
@@ -45,9 +46,19 @@ if (typeof window !== 'undefined')
     },
     act: (a: Parameters<typeof actOnChangeover>[1]) =>
       (set = actOnChangeover(set, a)),
+    get readings() {
+      return readings();
+    },
   };
 
+let readings = () => ({});
 function rig(kit: PanelKit): LiveExhibit {
+  /** Its suction: the ideal source's supply, less its resistance at the set's flow. */
+  const suctionOf = () =>
+    Math.max(
+      0,
+      source.flow.potential - source.flow.resistance * changeoverFlow(set),
+    );
   const object = new Group();
   object.name = 'Booster set rig';
   const B = BOOSTER;
@@ -65,11 +76,7 @@ function rig(kit: PanelKit): LiveExhibit {
     reset: () => {},
     // Its suction fed by the ideal source alone (the owner, 2026-10-26):
     // its supply pressure, less what its resistance takes at the flow.
-    suction: () =>
-      Math.max(
-        0,
-        source.flow.potential - source.flow.resistance * changeoverFlow(set),
-      ),
+    suction: () => suctionOf(),
     changeover: {
       state: () => set,
       act: (a) => (set = actOnChangeover(set, a)),
@@ -90,6 +97,13 @@ function rig(kit: PanelKit): LiveExhibit {
   const sink = createExperimentalSink({
     id: 'booster.sink',
     substance: 'mains-water',
+  });
+  // What its gauges and its flowmeter show, for trying from the console.
+  readings = () => ({
+    phase: set.phase,
+    suction: +suctionOf().toFixed(2),
+    discharge: +changeoverPressure(set).toFixed(2),
+    flow: +changeoverFlow(set).toFixed(2),
   });
   const y = B.manifoldY;
   const over = 1.45;
