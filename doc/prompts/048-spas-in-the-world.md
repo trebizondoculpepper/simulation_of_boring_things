@@ -1,6 +1,6 @@
 # 048: The spa cabinets and the jacuzzi in the world
 
-Status: planned 2026-10-24, from the [wiring audit](../reports/wiring-audit-2026-10-24.md). Coordinate with the foot spa's open item (its pump protection and gravity drain, `TODO.md`) and any uncommitted work on `spa-pack.ts`.
+Status: partly done (checked 2026-10-26): the jacuzzi's POWER, JETS and AIR, its cabinet's controller and start-up, both cabinets' filters and their washes are in the world; the hall's tub still runs its own spa, and the cabinets' chemistry readouts are not yet from the world.
 
 ## Now
 
@@ -15,3 +15,9 @@ The jacuzzi's cabinet POWER is page state (the footbath's is the world's); its J
 ## Acceptance
 
 Switching the jacuzzi off at its cabinet, at its isolator or at its room's feeder stops it everywhere: the tub, the cabinet, the room's mimic and the control room. Its wall plate's jets button works the world's jets. Tests; checks pass.
+
+## Remaining (checked 2026-10-26)
+
+- The jacuzzi tub in its hall and its wall plate showing pool_03 from the world (temperature, running), with no spa state kept in `pool-amenities.ts`.
+- The cabinets' chlorine and pH readouts from pools 03 and 04.
+- A test that switching off at the cabinet, its isolator or the room's feeder stops the jacuzzi everywhere (tub, cabinet, room mimic, control room).

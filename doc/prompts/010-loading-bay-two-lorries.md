@@ -1,5 +1,7 @@
 # Prompt: a loading bay two lorries wide, and the generator connection there
 
+Status: not started (checked 2026-10-26): the bay is still 7.5 m wide with one tanker stand, and the generator connection point is still in the switch room.
+
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply.
 
 ## What the owner wants
@@ -65,3 +67,11 @@ Commit as `loading-bay: <what changed>` and push; rebase if `main` has moved, ne
 - give anything left undone, and why.
 
 Commit the report as `report(loading-bay): <summary>`.
+
+## Remaining (checked 2026-10-26)
+
+- Widen the bay to about 10.5 m, keeping its depth, height and the stores on its side walls.
+- Two stands, DELIVERIES and GENERATOR, walkable.
+- Move the generator connection point to the bay's wall beside the generator stand, noting its cable's route (with [052](052-emergency-power.md)'s hired generator).
+- Update `doc/plans/plant-sizing.md` and the catalogue register.
+- Tests of the two stands and the generator point's place; a look by eye; the progress report.

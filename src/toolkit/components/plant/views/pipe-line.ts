@@ -26,7 +26,7 @@ import type { PipeService } from './pipe-markers';
 /**
  * The marking each commodity takes (BS 1710, `pipe-markers.ts`), where the
  * marker has its colours right; the rest are left unmarked until the
- * line marking is rebuilt (`doc/prompts/015-pipe-lines.md`) rather than
+ * line marking is rebuilt (`doc/prompts/obsolete/015-pipe-lines.md`) rather than
  * marked wrongly (mains water and DHW are not pool water; ozone is not
  * compressed air).
  */

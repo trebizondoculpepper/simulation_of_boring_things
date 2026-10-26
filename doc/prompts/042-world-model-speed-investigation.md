@@ -1,6 +1,6 @@
 # 042: How to make the world model faster — an investigation
 
-Status: planned 2026-10-24; an investigation, not a delivery (the owner). Nothing in the game is to be changed by it; its product is a report with measurements and a ranked recommendation, for the owner to decide what, if anything, to build.
+Status: not started (checked 2026-10-26): no benchmark harness, experiments or report yet.
 
 ## The question
 
@@ -34,3 +34,10 @@ Each to be tried as an experiment on a copy (a scratch branch or export, never `
 ## Deliverable
 
 A report in `doc/` (and a diary entry): the measurements before and after each experiment, the candidates ranked by benefit for effort, and a recommendation of what to build now, what to keep for when the model grows, and what not to do. The experiments themselves are not merged; the benchmark harness may be, if the owner agrees.
+
+## Remaining (checked 2026-10-26)
+
+- A benchmark harness: one step's time, its parts' times, an hour's catch-up and the saved size, on today's world and on a synthetic one four or five times larger.
+- Profile a step and a catch-up first.
+- Try candidates 1 to 6 on a scratch branch, each checked to give the same results.
+- A report in `doc/` with the measurements and a ranked recommendation, and a diary entry.

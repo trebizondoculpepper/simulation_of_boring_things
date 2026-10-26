@@ -1,6 +1,6 @@
 # 059: Time acceleration
 
-Status: specified 2026-10-25 from the owner's request and the research in [`doc/research/time-acceleration.md`](../research/time-acceleration.md); not started. Three choices are the owner's before it is built (below).
+Status: not started (checked 2026-10-26): nothing is built, and the owner's three choices (top speed, dropping back to 1× on alarms by default, whether the speed survives a reload) are still to settle.
 
 ## The request
 
@@ -38,3 +38,14 @@ At 10,000× a simulated day passes in under nine real seconds with the frame rat
 - The top speed: 10,000× (10 s steps, measured to agree), or on to 100,000× (60 s steps, measured to agree, about 8 % of a core).
 - Whether dropping back to 1× on alarms is on by default.
 - Whether the speed survives a reload.
+
+## Remaining (checked 2026-10-26)
+
+- The owner's three choices: the top speed (10,000× or 100,000×), whether dropping back on alarms is on by default, whether the speed survives a reload.
+- `src/game/time-warp.ts`: the speeds, next and previous, the step for each, with tests.
+- `world-store.ts` advancing the world at the speed's step, the speed a session setting.
+- Controls through the control scheme, the HUD's `▶▶ 1×` button and the help line.
+- Dropping back to 1× when the event log records something that needs the player, with a setting to turn it off.
+- One-shot sounds thinned above 30×, and a minimum real play time for held loops.
+- The rooms' own frame-delta models moved into the world first, or given the world's elapsed time.
+- Step-size agreement tests and the 10,000×-day acceptance run.

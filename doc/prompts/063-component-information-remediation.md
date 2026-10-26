@@ -1,6 +1,6 @@
 # 063: Component information, what remains
 
-Status: opened 2026-10-25 by the overnight session that implemented prompt [060](done/060-inferred-component-descriptions.md) (descriptions) and stage 1 of prompt [061](061-component-information-overlay.md) (the inspection overlay), at the owner's request: "If you think there's a problem with them, get as much as you can done, and then make a new mission called Mission 62 to remediate what's left." Prompt 062 had been taken a few minutes earlier by [the HUD declutter](done/062-hud-declutter.md), so this is 063. Reviewed 2026-10-26: the main work (every room bound to its model) is done; eight smaller items remain (see the review below).
+Status: partly done (checked 2026-10-26): every plant room is bound to its model, 0 unbound and 83 of 86 valves described; actions 1 to 9 of its review of 2026-10-26 are still to do.
 
 ## Review, 2026-10-26: what is still to do
 
@@ -126,3 +126,14 @@ Status is found from each item's kind and room (`statusBindingFor`): motors, pum
 - Prompt [062](done/062-hud-declutter.md) reworks the same `.controls-help` element: it empties the help line when there is nothing to say and keeps it for contextual lines, this overlay's among them. Keep inspection's precedence (below climbing and carrying, above the empty line).
 - Another agent was editing the same checkout overnight (the engineers' office storage cupboards); its uncommitted files are not this mission's. The `storage-cupboard` kind was added to `equipment-kinds.ts` so the catalogue accepts its items.
 - `src/game/world.test.ts`'s "come as usual while the plant runs…" timed out once under the full parallel suite and passes alone.
+
+## Remaining (checked 2026-10-26)
+
+- PL2-P1-IV3 and PL2-P1-IV4 described, their fittings given the annex's discharge links.
+- A regulating-valve template, and PL2-F-RV1 on the enhanced network.
+- The Olympic's valve tags derived, the filters' by function (IV, BV, RNV, DV) not V1 to V5, with `WORLD_VERSION` bumped.
+- Hierarchical pump tags (PL2-P1-P1 and so on) wherever P-101 and P-201 appear, with `WORLD_VERSION` bumped.
+- Statuses for the sand filters, heat exchangers, dosing pumps, boilers and AHUs (the AHUs after unifying their tags).
+- A design for registers derived from the network, for the owner's sign-off, then built.
+- The components in the corridors and the dev rooms other than dev0 marked, and the pool halls audited.
+- Stage 1's remaining browser checks, then the owner's acceptance; then stage 2 of [061](061-component-information-overlay.md).

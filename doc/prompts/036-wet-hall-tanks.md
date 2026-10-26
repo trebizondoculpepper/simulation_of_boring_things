@@ -1,6 +1,6 @@
 # 036: The wet hall's tanks, as built
 
-Status: planned for the later wet hall redesign; not started. Prompt 035 is a reference for the tank hall's construction and world binding, not a prerequisite.
+Status: not started (checked 2026-10-26); ready for dev-room prototypes, installation deferred to the owner's wet hall redesign.
 
 ## Readiness check (2026-10-26)
 
@@ -24,3 +24,9 @@ Each pool keeps its own tank, as the owner first designed it: that is standard p
 ## Order of work
 
 Model each new tank in a dev room first. Install the tanks when the owner takes up the wet hall redesign, joined to the world's water model as the Olympic's tank is (prompt 035, item 2).
+
+## Remaining (checked 2026-10-26)
+
+- In a dev room: a concrete backwash holding pit of 29.5 m³, with its sump, discharge pump, gantry, ladder and level instruments, bound to the wet hall's world state.
+- In a dev room: the lounge pool's concrete balance tank hall, entered from its plant room, bound to its balance state.
+- Install both in the wet hall's redesign, checking geometry, access, registration and live readings against the schematic. The break tank stays GRP; the spa and footbath tanks stay as they are.

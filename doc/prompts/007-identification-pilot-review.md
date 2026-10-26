@@ -1,5 +1,7 @@
 # Prompt: review of the plant identification pilot, and what to do next
 
+Status: not done (checked 2026-10-26): none of its items has been delivered (no `identification(` commits, no progress report), and much of it is overtaken by the enhanced networks and hierarchical tags of [063](063-component-information-remediation.md) and [064](064-jacuzzi-from-the-model.md); the owner is to say whether to close it as superseded or finish the footbath's part.
+
 You built the footbath pilot of the plant identification system: `src/game/plant/identification.ts` and its tests, the world's `identifiedPlant` tree (save version 14), the `plant/valve` and `plant/switch` actions, the footbath's valve-driven drain-down in `src/game/plant/pools.ts`, the bound and labelled valves in `src/toolkit/gallery/views/cabinet-services.ts`, and the `?manual` bill of parts (`src/toolkit/manual/plant-manual.ts`). It was committed in `4ec31b5`, and `6f4d8e3` raised the footbath's make-up main overhead and gave its valve a chain wheel. This is a review of that work against the agreed design, and a request to close the gaps.
 
 Read first:
@@ -107,3 +109,8 @@ Any dev-room exhibit that is catalogued uses the `dev.` ID namespace and `DEV` t
 1. After each checkpoint, commit with the message `identification(<item number>): <what changed>` and push. If the push fails because `main` moved, rebase and push again; never force-push.
 2. When you finish, or if you stop early, write `doc/reports/identification-pilot-progress.md`. Start with a line naming yourself (model and tool) and the UTC date. Then give each item 1–8 a line: done, partly done, or not done, with the commit hashes. End with any question only the owner can decide, one per line.
 3. Commit that report with the message `report(identification): <one-line summary>` and push. It will be found with `git log --grep='identification('`.
+
+## Remaining (checked 2026-10-26)
+
+- The owner's decision: close it as superseded by 063 and 064, or finish the footbath.
+- If finished: permanent asset IDs with tag aliases (item 1); the proposal's codes, migrated (item 2); roles and per-mode normal states (item 3); bound state for P1, F1, UV1, HX1 and DP1 (item 4); an index validated once (item 5); the plan for the next circuit (item 6); a test of the `dev.` namespace (item 7); housekeeping and the progress report (item 8).

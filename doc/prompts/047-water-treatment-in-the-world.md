@@ -1,6 +1,6 @@
 # 047: Ozone and UV treatment in the world
 
-Status: planned 2026-10-24, from the [wiring audit](../reports/wiring-audit-2026-10-24.md).
+Status: partly done (checked 2026-10-26): the spa cabinets' UV runs in the world and the ozone plant reports its state, but treatment still follows "either isolator on" (`TREATED_BY`) and the contact tank shows the dev room's residual.
 
 ## Now
 
@@ -15,3 +15,10 @@ Each ozone generator (lounge, Olympic) runs its own ozone plant in closure state
 ## Acceptance
 
 Stopping a pool's ozone generator, or its UV, lets its combined chlorine rise, seen on its dosing controller and in the control room; restarting brings it down. The contact tank's residual reads its own room's plant. Tests; checks pass.
+
+## Remaining (checked 2026-10-26)
+
+- The ozone plant stepped in the world from the pool's real flow (controls, output, contact tank residual, destruct unit), shown by its panel and contact tank.
+- `TREATED_BY` replaced by separate contributions from UV running (lamp, flow, isolator, power) and ozone produced (with [070](070-water-condition.md)'s `irradiate` and `ozonate`).
+- Each contact tank reading its own room's plant.
+- Tests: stopping a pool's ozone or UV raises its combined chlorine; restarting brings it down.

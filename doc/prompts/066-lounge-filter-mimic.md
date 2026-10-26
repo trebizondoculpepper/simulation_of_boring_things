@@ -1,6 +1,6 @@
 # 066: The lounge pool's filter mimic, grouped by filter, showing its flows
 
-Status: specified 2026-10-25 from a discussion with the owner, its gaps settled the same day (true backwash, the local-controls rule, units, the chaser's numbers, world shape); for review by another agent before implementation.
+Status: partly done (checked 2026-10-26): the chaser, the two flowmeters, the true backwash and the schematic on PL1-CP1's fascia are built and tested; the control room's copy is not yet installed, waiting on the owner for its wall space.
 
 ## The request
 
@@ -93,3 +93,10 @@ The owner, 2026-10-25: redesign PL1-CP1, the lounge pool's local control panel, 
 - Check the true backwash path (ruling 7) against the lounge's valves and the room's pipework.
 - Check that the control room has wall space for a board of this size, given its three mimics, the annunciator and the other items.
 - Report any wording on the board the owner should see before it ships.
+
+## Remaining (checked 2026-10-26)
+
+- "Mimic: lounge pool filters" on the control room's wall from `createLoungeFilterMimic`, without HAND · OFF · AUTO or RESET, placed by the room's sizer and scorer; if it does not fit beside the three mimics and the annunciator, tell the owner.
+- The Penfold mark on the control room's board.
+- A test that the control room's board offers no mode selector or reset, and that its START does nothing to a pump in HAND.
+- Acceptance in the browser: both boards show the same thing at the same moment.

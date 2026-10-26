@@ -1,5 +1,7 @@
 # Prompt: component variants, port heights, and gas detectors
 
+Status: partly done (checked 2026-10-26): the variants are done (`266c534`: the heat exchanger's shell-and-tube and plate variants, chosen by the scorer's port-heights dimension); the gas detectors' placement rules and gate are not built.
+
 Written by Claude (Opus 5.5, Claude Code), 2026-10-23, for its own work. Read `AGENTS.md`, then prompts 017 (the room's layers), 020 (scorers, blocks) and 021 (the router).
 
 ## Component variants (the owner, 2026-10-23)
@@ -48,3 +50,10 @@ A gas detector is a real working component: it reads the gas's concentration fro
 ## Checks and rules
 
 As in prompts 017 to 021: pure tests beside the logic; the five checks before every commit; named files only; changelog; one paragraph per line.
+
+## Remaining (checked 2026-10-26)
+
+- A working chlorine detector and a low-mounted (0.3 to 0.5 m) wall or post ozone detector, each with a control-bus stub.
+- Placement rules: a wall item tied to its source by a maximum distance (2 m chlorine, 3 m ozone, to confirm against HSG179 and the makers), the excess a breach, with a post as the fallback.
+- A scorer gate: every chlorine and ozone source has a detector within its limit, each on the control bus.
+- Tests in the pool plant rooms (the Olympic's among them) and the chemical stores.

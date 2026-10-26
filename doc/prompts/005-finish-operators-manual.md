@@ -1,5 +1,7 @@
 # 005: Finish the operator's manual
 
+Status: partly done (checked 2026-10-26): phases 1 and 2 are built (the front matter, the boiler house's chapter, schematics with symbols, the LaTeX build); phases 3 to 6 are not started.
+
 ## Briefing
 
 Every release of Pool Plant is to come with a downloadable PDF: the Operation and Maintenance (O&M) manual for the leisure centre's plant, written inside the game's fiction as the contractor who fitted out the pool plant would have handed it to the council, and generated entirely from the game's own model, so it is always true of the build it ships with. The plan is `doc/plans/operators-manual.md`; read it first, then `CLAUDE.md` (the project's rules) and `README.md`.
@@ -110,3 +112,12 @@ When you finish, or stop to ask, report:
 - anything left undone and why.
 
 Attach the PDF's path.
+
+## Remaining (checked 2026-10-26)
+
+- A chapter for each remaining room (plant_pool_01 to 04, wet hall, air plant, switch room, hypochlorite and acid stores, loading bay, control room), every exhibit with its maker, and a test that every scheduled item has one.
+- Symbols for pumps, filters, tanks, heat exchangers, UV, the ozone generator, dosing pumps, fans and isolators.
+- The book-wide sections: the installation, operation, alarm response (with a test that every annunciator window appears), maintenance, health and safety, record drawings, appendices (glossary, index).
+- Phase 4: photo mode with a ready signal, a fixed scenario and a shot list.
+- Phase 5: the release job (TeX Live and Chromium, photographs from the published site, `gh release upload`) and a download link on the start screen.
+- Phase 6: LaTeX checks, cross-references, drawing numbers, Rev. A for the release the owner names.

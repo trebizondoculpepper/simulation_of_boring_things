@@ -1,6 +1,6 @@
 # 069: Each machine's own states, from its own internal state
 
-Status: specified 2026-10-25 from a discussion with the owner; reviewed by Codex the same day ([review](../reviews/2026-10-25-codex-review-069.md)), its findings below; for the owner's review before implementation. It refines how the information overlay ([061](061-component-information-overlay.md), [068](done/068-inspect-component-parts.md)) words a machine's current state.
+Status: partly done (checked 2026-10-26): reviewed by Codex and waiting on the owner's three questions; only the boilers' states and the general guidance ([`doc/equipment-status.md`](../equipment-status.md)) are built.
 
 ## The request
 
@@ -72,3 +72,11 @@ And the ruling before it: On and Off are the right words for anything with no fa
 ## Boiler implementation and general guidance (2026-10-25)
 
 The owner asked to implement the boiler states and write general guidance for equipment status. [Equipment status and inspection](../equipment-status.md) is the maintained guide for active machinery, valves and isolators, instruments, passive process equipment, architectural components and safety devices. The six boilers now inspect individually under B-501…B-506 with a pure controller-derived vocabulary: unpowered, switched off, standby, purging, igniting, firing, pump run-on, blocked (low water pressure), and locked out with ignition-failure, flame-loss or overheat cause. Missing gas is stated separately. The recoverable water-pressure block is not a latched trip. These are scene callbacks to the existing local boiler controllers; moving them into the world remains mission 046. This is a delivered boiler slice, not completion of all machine families in this prompt.
+
+## Remaining (checked 2026-10-26)
+
+- The owner's three answers, asked one at a time: the precedence (isolated and OFF together, say), whether the boiler controllers' modes become world state, and whether Stopped stays distinct from Off.
+- A pure `machineState(kind, world, subject)` from a per-kind table of states, precedence and world conditions; `formatStatus` using it, the old policies retired kind by kind.
+- Tables for the pump and pump set, AHU, booster set, jacuzzi cabinet (with its start-up phases), UV, gas detector, solenoid and manual valves, with the review's missing states (the low-low hold, running starved, an AHU starting or running down, spring-shut without power, a gas alarm accepted).
+- The ozone generator's and boiler controllers' state in the world ([046](046-boiler-house-in-the-world.md)) before their rows can come from it.
+- Tests per kind: each state reached, and the precedence where several hold.

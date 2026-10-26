@@ -1,5 +1,7 @@
 # Prompt: the pipe helper draws a line from what it carries
 
+Status: superseded 2026-10-25 by the owner's ruling that each room's enhanced network (the plumber's expanded port graph) is the one source of truth; the plant network it built on was deleted, and nothing of it was built (checked 2026-10-26).
+
 > **Retired 2026-10-25.** The plant network this refers to (`src/game/plant/network/`, `PLANT_NETWORK`) was deleted: nothing in the game used it, and the owner ruled that each room's enhanced network (the plumber's expanded port graph) is the one source of truth. Git history keeps it.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `AGENTS.md` first; its rules apply. Read `doc/prompts/008-pipe-supports.md` (the pipe helper's supports and routing rules) and `doc/reports/port-graph-architecture-review.md` (typed media and ratings) before designing.

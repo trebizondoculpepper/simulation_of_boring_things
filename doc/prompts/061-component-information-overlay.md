@@ -1,6 +1,6 @@
 # 061: Component information overlay
 
-Status: specified 2026-10-25 from the owner's requests and rulings, and the reviewed research in [`doc/research/component-information-overlay.md`](../research/component-information-overlay.md), which holds the detail this prompt summarises (picking, input modes, occlusion, merged geometry, event correlation). Stage 1 built 2026-10-25, awaiting the owner's acceptance (see the implementation note at the end, and [063](063-component-information-remediation.md) for what remains). Its second line follows prompt [060](done/060-inferred-component-descriptions.md), reviewed and ready to implement in its documented order; stage 1 can begin with the first line while the description data layer and its required network reconciliation are implemented.
+Status: partly done (checked 2026-10-26): stage 1 (inspection) is built (`5bd25b3`) and awaits the owner's acceptance after the browser checks in [063](063-component-information-remediation.md); stage 2 (action narratives) is not begun.
 
 ## The request
 
@@ -86,3 +86,9 @@ Work in progress: `inspection.ts` already handles the 150 ms acquisition delay, 
 ### After the owner's later rulings (2026-10-25, overnight)
 
 The second line now comes only from the model (prompt 060's later rulings): a valve is described only where its room's enhanced network gives its route, so far the Olympic plant room (checked in Chrome: `PL2-F1-V1: F1 inlet valve` / "Isolates water flowing from the circulation pumps to sand filter 1."). The jacuzzi's PL3-BT1-IV1 shows its tag and name alone until the jacuzzi plant room is built through the plumber, so the acceptance sentence for it waits on [063](063-component-information-remediation.md). The circulation pumps' lines are unchanged ("1st Pump in PL2, currently Off"), their records now derived from the world's motor starters.
+
+## Remaining (checked 2026-10-26)
+
+- Stage 1's remaining browser checks (pointer lock, gamepad, touch, narrow screens, ladders, carrying, noclip, menu, console, room changes, a component behind a shut cabinet door), then the owner's acceptance.
+- Stage 2: one true sentence for each confirmed player action (a manual valve opened or shut, a motorised valve set, a button pressed, a switch switched, refused or unchanged), from structured events; shown 4 s of real time, a queue of three that coalesces repeats, cleared on New Game, a room change and the menu.
+- Stage 2's tests, and its acceptance in the jacuzzi plant room (the make-up valve, a motorised valve, the cabinet's RESET).

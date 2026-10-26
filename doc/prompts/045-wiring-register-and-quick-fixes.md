@@ -1,6 +1,6 @@
 # 045: The wiring register made true, and the quick fixes
 
-Status: planned 2026-10-24, from the [wiring audit](../reports/wiring-audit-2026-10-24.md). Do this first: it is small, and it stops the register hiding the rest.
+Status: partly done (checked 2026-10-26): later work made several register entries true (the boiler gas, ozone, the jacuzzi cabinet, the central battery), but the `partial` kind and most of the quick fixes are not done.
 
 ## The register
 
@@ -20,3 +20,15 @@ Status: planned 2026-10-24, from the [wiring audit](../reports/wiring-audit-2026
 ## Acceptance
 
 Each fix has a test where its logic is pure; the register's test passes with the corrected entries; typecheck, lint, format, tests and build pass.
+
+## Remaining (checked 2026-10-26)
+
+- The `partial` binding kind in `world-bindings.ts`, saying what is missing; every entry re-audited; the `todo` and `partial` lists pinned in the ratchet test.
+- The Olympic balance tank panel's START and STOP through `motor/starter`.
+- Isolator stands for the Olympic's UV and ozone isolators.
+- The poolside sign's hall air and humidity from `hallAir` and `hallRh`, its combined chlorine refreshed.
+- The lounge's dosing controller and pumps given their own tags (not DP-101A, AIC-101), their running from the world.
+- Each pool's pump gauge formula from its own design flow.
+- The air mimic's RUN and DIRTY lamps from `air-handling.ts`, per hall.
+- The readout board's supply and extract amps from the units' speeds.
+- The POOLMON desk: the lounge named as the lounge (not LEARNER), the Olympic's chemistry page labelled as the Olympic's.

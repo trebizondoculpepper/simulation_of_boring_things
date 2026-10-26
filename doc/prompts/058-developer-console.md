@@ -1,6 +1,6 @@
 # 058: Developer console
 
-Status: the owner chose B, mostly, on 2026-10-24, without recording or replay. Stage 1 (below, "Stage 1: what is built first") was built 2026-10-25: `src/game/events/` (the log, `describeAction`, the watchers), `src/toolkit/console/` (the command line, the commands, the drop-down), `isConsoleKey` and `consoleOpen` in the controls, and the host in `src/main.ts`. Its `pause` stops only the world's clock (`clockStopped` in `paused.ts`), so the player can still walk about. Later stages are still to come. The three proposals researched before the choice follow it, from minimal to ambitious.
+Status: stage 1 done 2026-10-25 (`2758b24`), with `status <name>` added (`3108b5a`); the later stages are still to come (checked 2026-10-26).
 
 ## The owner's choice (2026-10-24)
 
@@ -182,3 +182,12 @@ Cost: weeks, a world version, touching every plant module, and new control-room 
 ## Recommendation
 
 Build **B**. A gives a console that cannot explain a trip, which is the most useful thing it can do here; C is the right destination but couples the console to a world version change and to new control-room equipment the owner has not asked for. B keeps the log out of the save, needs no migration, touches rooms not at all (one optional argument on `dispatch`), keeps all input in the one control scheme, and makes every later step of C (module-reported events, a saved journal, the alarm printer, replay) an addition rather than a rewrite. Questions for the owner before starting, one at a time: whether players get the console or only developers; then whether the world keeps running while it is down.
+
+## Remaining (checked 2026-10-26)
+
+- Notify lines over the game while the console is up.
+- More watchers: drain-downs passing levels, chemicals running low, air handling units.
+- `scenario` and `attract` commands, the `?scenario=` list moved into a pure module both share.
+- `skip`, `setpoint` and other shortcuts.
+- Touch (a Console button in the menu) and gamepad (Back shows the log).
+- A developer gate before players get it.

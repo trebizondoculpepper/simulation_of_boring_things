@@ -1,6 +1,6 @@
 # 034: The Olympic's mimic wall
 
-Status: planned 2026-10-23; nothing built yet.
+Status: planned 2026-10-23; not started (checked 2026-10-26). The lounge's filter mimic ([066](066-lounge-filter-mimic.md)) and dev0's LED chaser are building blocks for it.
 
 The owner, 2026-10-23, once the Olympic plant room was redone (prompt 033) and its valves made solenoid-operated: the controls and mimics are redesigned for the new plant, in two identical copies, one local in the plant room and one remote in the new control room.
 
@@ -29,3 +29,11 @@ The balance tank keeps its own local panel (Dev28's `balance-tank-panel.ts`), to
 ## Order of work
 
 Each tile is tried on dev0's boards first, then the wall built twice. The filter battery tile first: it is the most complex, and where the solenoid valves show.
+
+## Remaining (checked 2026-10-26)
+
+- The four Penfold tiles (treatment, filter battery, circulation, electrical), each tried on dev0 first, the filter battery's first.
+- The backwash sequence indicator and its controller (FILTERING through RETURN TO SERVICE).
+- The local copy under the plant room's east gantry and the remote copy in the new control room, bound to the same world addresses; the remote copy without mode selectors or resets.
+- The heat exchanger's side-stream branch on `heating-mimic.ts`.
+- The new control room to hold the remote copy.

@@ -1,6 +1,6 @@
 # 037: Sound between rooms
 
-Status: planned 2026-10-23; not to be implemented yet (the owner).
+Status: planned 2026-10-23, deferred by the owner; not started (checked 2026-10-26). Only cabinet-door attenuation (`door-attenuation.ts`) and the jacuzzi's scene-local drain sound exist.
 
 ## The principle
 
@@ -22,3 +22,10 @@ Today a room's held sounds (`partAudio.hold`) start with the room and stop when 
 ## Order of work
 
 Not now. When it is taken up: try it on a pair of dev rooms joined by a door first, with something loud in one of them (the tank hall's returns pouring, or a pump set), then fit it to every joined doorway.
+
+## Remaining (checked 2026-10-26)
+
+- Door state (how far each door is open) in the world (`TODO.md`, "Doors in the simulation").
+- A room-to-room gain from the door's opening: full above about 20 % open, about −20 dB at 5 %, silent shut.
+- A neighbouring room's held sounds played from the doorway while its door is open, stopping when its last door shuts, not at the hand-over.
+- Tried on two dev rooms first, then every joined doorway.

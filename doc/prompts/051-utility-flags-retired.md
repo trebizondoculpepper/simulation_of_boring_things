@@ -1,6 +1,6 @@
 # 051: The utility flags retired: heat, air and chemicals from the machines
 
-Status: planned 2026-10-24, from the [wiring audit](../reports/wiring-audit-2026-10-24.md). After 046 (heat).
+Status: not started (checked 2026-10-26): the heat, air and chemical flags in `services.ts` still stand in for the machines.
 
 ## Now
 
@@ -17,3 +17,11 @@ The world's utility sources (`services.ts`: power, water, heat, air, chemical) a
 ## Acceptance
 
 No pool, hall or room depends on a utility flag but power (the site's supply) and the town main; every dependency is on a modelled machine. Checks pass.
+
+## Remaining (checked 2026-10-26)
+
+- Heat from the boiler house's circuit ([046](046-boiler-house-in-the-world.md)), its flag removed.
+- Air: each hall's ventilation from its units alone, `ahu-fault` from the units' faults, the extract fans as machines, the lounge's valve actuators on what actually drives them.
+- Chemicals from each store's stock and feeder, with deliveries and each hypochlorite tank's level.
+- The town main shut by its stop valve ([049](049-every-valve-does-something.md)).
+- FULL OFF and FULL ON acting on the machines, not the flags.

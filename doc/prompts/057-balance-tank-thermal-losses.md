@@ -1,6 +1,6 @@
 # 057: Heat lost from the jacuzzi's balance tank
 
-Status: specified 2026-10-24. Not started. Until it is, the jacuzzi's balance tank is ideal: it holds a finite quantity of water (1.3 m³, `spa-balance-tank.ts`) and loses no heat (the owner, 2026-10-24).
+Status: not started (checked 2026-10-26): the jacuzzi's balance tank is still ideal, its water losing no heat.
 
 ## Purpose
 
@@ -20,3 +20,12 @@ A spa's balance tank holds water at the spa's temperature, 37 °C, in a plant ro
 - Pure, tested: the loss for a full and a near-empty tank, insulated and bare, against a hand calculation; zero with the water at the room's temperature; the jacuzzi's heating rising by the tank's loss in a steady state.
 - The world's existing thermal and jacuzzi tests unchanged except where the new loss is expected.
 - The five project checks, the changelog, and the TODO item ticked with its date and commit.
+
+## Remaining (checked 2026-10-26)
+
+- The tank's wall and lid losses (wetted area × U × the water's difference from the room's air), with cited U-values for bare and foam-insulated GRP as named constants.
+- The plant room's air temperature, or a fixed constant.
+- An insulated flag on the installed tank, insulated by default, drawn to match.
+- The loss carried into the jacuzzi's heating, so the boiler house and NO HEAT and TEMP LOW follow.
+- dev38's tank kept ideal.
+- Tests against a hand calculation.

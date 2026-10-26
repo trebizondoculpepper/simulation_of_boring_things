@@ -1,6 +1,6 @@
 # 050: The control room, fully live
 
-Status: planned 2026-10-24, from the [wiring audit](../reports/wiring-audit-2026-10-24.md). Before, or as part of, the control room's rebuild: its boards should already tell the truth.
+Status: not started (checked 2026-10-26): the control room still reads the Olympic almost alone, and its annunciator, printer, BMS outstation and CCTV are still page state or painted.
 
 ## Now
 
@@ -16,3 +16,11 @@ The control room reads the Olympic (pool_02) almost throughout: the lounge and j
 ## Acceptance
 
 Every lamp, readout and button in the control room reads or works the world, for every pool; nothing scripted remains. Checks pass.
+
+## Remaining (checked 2026-10-26)
+
+- The lounge's, jacuzzi's and footbath's circulation, chemistry, levels and alarms on the control room's boards and desk pages, their pumps' starters worked from there (no mode selectors or resets, by the local-controls rule).
+- Every annunciator window fed by the world (boiler lockout, LTHW low, gas detected, chemical leak, fire alarm, pool alarm, generator running), a blank window marked SPARE.
+- ACCEPT, RESET and MUTE state, and the printer's log stamped with world time, in the world.
+- The BMS outstation driven by the world's plant, or retired.
+- The CCTV given real views, or registered as decorative.

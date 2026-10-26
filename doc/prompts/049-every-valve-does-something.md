@@ -1,6 +1,6 @@
 # 049: Every installed valve does something
 
-Status: planned 2026-10-24, from the [wiring audit](../reports/wiring-audit-2026-10-24.md).
+Status: partly done (checked 2026-10-26): the lounge's filters, the jacuzzi's valves, the spa filters' isolators, the wet hall's drain and the Olympic tank's drain valves work; the rest are still dead, and no test walks the register.
 
 ## Now
 
@@ -16,3 +16,12 @@ Every registered installed valve (`installed-valves.ts`) is operable and saved, 
 ## Acceptance
 
 No installed valve is operable without an effect. Checks pass.
+
+## Remaining (checked 2026-10-26)
+
+- The wet hall's main stop valve and the break tank's inlet and outlet read by `stepWetHall` (and the backwash tank's inlet if not already).
+- The footbath's overflow and heating valves read by its circuit.
+- The Olympic's five filter drains (drain-down), its regulating valve (its flow) and its four heat exchanger valves (isolating or bypassing its heating) read by the model.
+- The boiler house's gas and heating valves (with [046](046-boiler-house-in-the-world.md)).
+- Any valve with no part in the model given one, or retired from the register.
+- A test walking `installed-valves.ts`: shutting each valve changes a flow, level or temperature, or it is listed as deliberately inert, with its reason.

@@ -1,5 +1,7 @@
 # Prompt: modelling gas leaks (parked)
 
+Status: parked, not started beyond a draft (checked 2026-10-26): only the pure room-air model exists (`src/game/plant/room-air.ts`, `bc762a3`), used by no room; taken up as scenario 6 when the owner asks.
+
 Written by Claude (Opus 5.5, Claude Code), 2026-10-23, for future work. Parked by the owner the same day ("stay focused on modelling rooms and getting basic stuff working"); pick it up only when the owner asks. It is now scenario 6 of the owner's eight test scenarios (prompts 024 to 031), and uses the experimental sources (Dev20) and their sinks. Read `AGENTS.md`, then prompt 022 (gas detectors) and `src/game/plant/experimental-source.ts` (experimental sources).
 
 **Status:** Not started (a draft air model only: `src/game/plant/room-air.ts`).
@@ -28,3 +30,11 @@ A draft, pure and tested, is in `src/game/plant/room-air.ts` (with `room-air.tes
 3. Room air in the world state (`src/game/world.ts`), per room, if a leak must carry on while the player is elsewhere (bump `WORLD_VERSION`, add a migration).
 4. The detectors' alarms to the control bus and the control room's annunciator; the ventilation's fans driving `airChanges`, so purging a room is something the player does.
 5. Other disasters on the same air: a gas main leak (natural gas, lighter than air, rising), a chemical mix in the dosing room making chlorine.
+
+## Remaining (checked 2026-10-26)
+
+- Vent and detector views bound to the model (reusing the lever ball valve and the experimental source view).
+- A dev room: an ozone source, ball valve and vent, a near and a far detector; then a chlorine line.
+- Room air in the world (with `WORLD_VERSION` and a migration), if a leak must carry on while the player is elsewhere.
+- Detector alarms to the control bus and the annunciator; fans driving air changes, so the player can purge.
+- Other disasters on the same air: a gas main leak, chemicals mixed making chlorine.

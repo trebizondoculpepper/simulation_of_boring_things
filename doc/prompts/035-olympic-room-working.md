@@ -1,6 +1,6 @@
 # 035: The Olympic plant room, working
 
-Status: started 2026-10-23. The to-do list for making the Olympic plant room (prompt 033) one working plant, the owner's order: item 1 first.
+Status: partly done (checked 2026-10-26): items 1 and 2 done 2026-10-23 (`845a5ab`, `0e146c5`, finished in `d89bef9`); the mimic wall, the remaining fittings, safety and housekeeping are still to do.
 
 The owner, 2026-10-23: the room looks finished, but its parts follow different models. The valves and the flowmeters follow the world's valve states (`installedValves`, `olympic-battery.ts`); the machines (pumps, filter gauges and sight glasses, UV, dosing) follow the older whole-pool reading (`plantReadingOf`), which knows nothing of the room's valves; the tank hall runs a balance tank of its own.
 
@@ -16,3 +16,11 @@ The project's one to-do list is `TODO.md` in the repository's root (the owner, 2
 - [ ] **7. Later, not now: the wet hall's tanks as built** (prompt 036): the break tank stays GRP; the backwash holding tank and the Lounge pool's balance tank in cast concrete.
 - [ ] **8. Later, not now: sound between rooms** (prompt 037): a room is heard through an open door, by how far it stands open (full above about 20 % open, about −20 dB at 5 %, silent and its sounds stopped when shut), not by which room the player is in.
 - [ ] **6. Housekeeping:** the diary entry for 2026-10-23; the room-name overlay after a hand-over through a door; the stray `retired0` git tag (remove if the owner wishes).
+
+## Remaining (checked 2026-10-26)
+
+- Item 3: the mimic wall ([034](034-olympic-mimic-wall.md)).
+- Item 4: draw the UV and ozone isolators; the non-return valves and tap-offs are now in the model, to be confirmed drawn.
+- Item 5: the chlorine and ozone gas detectors ([022](022-component-variants-and-detectors.md)), and warning signs on the tank hall's doors.
+- Item 6: the diary entry for 2026-10-23, the room-name overlay after a hand-over through a door, the `retired0` tag if the owner wants it removed.
+- Items 7 and 8, later: [036](036-wet-hall-tanks.md) and [037](037-sound-between-rooms.md).

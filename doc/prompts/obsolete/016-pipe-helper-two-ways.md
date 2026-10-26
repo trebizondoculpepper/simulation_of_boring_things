@@ -1,13 +1,13 @@
 # Prompt: the pipe helper, called two ways
 
-Superseded (2026-10-25) by the room layout pipeline ([017](../done/017-room-sizer-gantries-placement.md) to [021](../done/021-clash-free-router.md), then [064](../064-jacuzzi-from-the-model.md) and [065](../done/065-gravity-lines-in-the-router.md)): the plumber chooses each line's pipe from what it carries (`plumber.ts`, `pipe-line.ts`, `815fa44`) and the voxel router routes port to port from the schematic, while its step 5 (lines issued by the old plant network) went with that network in `96ae999`. What is left of its parts stays with [008](../008-pipe-supports.md) (supports) and [015](../015-pipe-lines.md) (marking).
+Superseded (2026-10-25) by the room layout pipeline ([017](../done/017-room-sizer-gantries-placement.md) to [021](../done/021-clash-free-router.md), then [064](../064-jacuzzi-from-the-model.md) and [065](../done/065-gravity-lines-in-the-router.md)): the plumber chooses each line's pipe from what it carries (`plumber.ts`, `pipe-line.ts`, `815fa44`) and the voxel router routes port to port from the schematic, while its step 5 (lines issued by the old plant network) went with that network in `96ae999`. What is left of its parts stays with [008](../008-pipe-supports.md) (supports) and [015](015-pipe-lines.md) (marking).
 
 > **Retired 2026-10-25.** The plant network this refers to (`src/game/plant/network/`, `PLANT_NETWORK`) was deleted: nothing in the game used it, and the owner ruled that each room's enhanced network (the plumber's expanded port graph) is the one source of truth. Git history keeps it.
 
 Written by Claude (Opus 5.5, Claude Code) for its own work and so other agents know what it is doing, 2026-10-23. Read `AGENTS.md` first. This joins up three earlier prompts into one pipe helper:
 
 - `doc/prompts/008-pipe-supports.md`: supports, and the routing rules (magic flues and drains, buses for power and control, one supply of each kind per room);
-- `doc/prompts/015-pipe-lines.md`: material, size, colour and marking chosen from what a line carries;
+- `doc/prompts/obsolete/015-pipe-lines.md`: material, size, colour and marking chosen from what a line carries;
 - the clash and port checks already in `src/toolkit/components/core/logic/pipe-route.ts` (`pipeClashes`, `withPortLeads`, `leavesPortsSquare`).
 
 ## What the owner wants

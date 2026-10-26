@@ -1,5 +1,7 @@
 # Prompt: every pipe supported, by the pipe helper
 
+Status: partly done (checked 2026-10-26): steps 0 to 3 are done (`b7eccac`, `88ad50f`, `41bff00`): one room structure, the support table, a planner that never skips, and every room's pipework, cabinet services and conduits supported; the exhibits, the routing-rule tests and the report remain.
+
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply. This prompt asks you to make pipe and conduit supports the pipe helper's job, so that no pipe in the game hangs in mid-air.
 
 ## The problem
@@ -175,3 +177,10 @@ Commit each step as `supports(<step>): <what changed>` and push; if the push fai
 - [Engineering ToolBox: Steel pipes, supports](https://www.engineeringtoolbox.com/steel-pipe-supports-d_1071.html); [Engineering ToolBox: Copper tubes, supports](https://www.engineeringtoolbox.com/copper-tube-supports-d_1070.html).
 - [Vinidex: PVC above-ground installation](https://www.vinidex.com.au/technical-resources/pvc-above-ground-installation/) (spacing by DN, and the temperature reduction); [Plastic Pipe Shop: Pipe clip spacing](https://www.plasticpipeshop.co.uk/Pipe-Clip-Spacing_ep_52-1.html) (PVC and ABS, by size and temperature).
 - IET On-Site Guide, Table 4.12, as reproduced at [TLC Direct: Plastic and metal conduits](https://www.tlc-direct.co.uk/Book/4.5.1.htm).
+
+## Remaining (checked 2026-10-26)
+
+- The rest of step 4: the exhibits (the pipe gallery in `pipes-n-dreams.ts`, the machines' own runs in `spa-pack.ts` and `plant/pumps.ts`) onto the helper.
+- Routing-rule tests: flues go up unobstructed, drains end over a gully, electrical and control stubs end on the supply wall when near enough, no service enters a room more than once each way.
+- A look by eye at `plant_pool_02`, `plant_pool_04` and `control_room`.
+- `doc/reports/pipe-supports-progress.md`, with any figures corrected.

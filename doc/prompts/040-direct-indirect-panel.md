@@ -1,6 +1,6 @@
 # 040: A direct/indirect "halo" ceiling panel
 
-Status: planned 2026-10-23; not to be modelled yet (the owner). Reference photograph: `doc/research/lighting/01-direct-indirect-halo-panel.jpg`.
+Status: partly done (checked 2026-10-26): tried in dev30's lighting-styles booth (`haloPanel`, Lumenhaus, its own dimmer); not yet on the lighting model's circuits nor hung in the public spaces.
 
 ## What it is
 
@@ -23,3 +23,9 @@ In the photograph a ceiling-mounted CCTV dome camera at the wall's corner: a pos
 ## Order of work
 
 Not now. When taken up: in a dev room first, beside the rooms' existing luminaires, then in the public spaces.
+
+## Remaining (checked 2026-10-26)
+
+- Put the panel on `lighting.ts`: lit only while its zone and RCBO are, not by a booth dimmer.
+- Hang it in the modern public spaces (reception, changing village) once [039](039-reception-speed-gates.md) puts them back.
+- Later, perhaps: a ceiling dome CCTV camera under a maker of our own.

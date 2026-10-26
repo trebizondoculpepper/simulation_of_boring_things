@@ -1,6 +1,6 @@
 # 039: The reception's speed gates
 
-Status: planned 2026-10-23; not to be modelled yet (the owner). For when the leisure centre's reception, changing village and showers are put back as new sections.
+Status: planned 2026-10-23, deferred by the owner until the reception is put back; not started (checked 2026-10-26).
 
 ## Why
 
@@ -33,3 +33,9 @@ The owner wants them free-flow: no card, they open as the walker passes. The lan
 ## Order of work
 
 Not now. When the reception is put back: a dev room with a bank of three cabinets and two lanes, one each way; then into the reception.
+
+## Remaining (checked 2026-10-26)
+
+- Pure, tested gate logic: wing positions, opening and closing, each lane's direction, who is in the lane, the barred way refused.
+- The cabinets, drive posts, wings, chevron indicators, readers and sensor dots, with a maker in `brands.ts` and its mark on the cabinet.
+- A dev room with three cabinets and two lanes, one each way; then the reception.

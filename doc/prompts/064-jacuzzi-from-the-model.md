@@ -1,6 +1,6 @@
 # 064: The jacuzzi, from the model
 
-Status: specified 2026-10-25 from the owner's direction, reviewed by Codex and revised. Built overnight, in the adopted order: 1 (typed bindings, the unbound set pinned by identity), 2 (the plumber's given fittings), 3 (the jacuzzi's schematic, `jacuzzi-schematic.ts`), 4 (the runtime on model ids: `model-valves.ts`, `JACUZZI_VALVES`, the drain valve as the drain-down, saves reset), 5 (the jacuzzi plant room's drawing bound: its pin 0). 6 (the jacuzzi pool room: its contents built apart from the renderer and checked on the scene; its devices added to the schematic). Also: a scene-level check (`world-in-model-scene.test.ts`) on what the builders actually draw, every mesh bound or decorative. Then [Codex's review of the implementation](../reviews/2026-10-25-codex-review-064-implementation.md), taken on board: the make-up and drain are their valves' states alone; fittings carry their actuation; valves are tested on their own runs; the whole plant room (`buildPlantRoomContents`) and hall are checked, their mimic, fibre illuminator, music rack, lights and deck gullies in the model. Not yet: 7 (the plant room re-routed by the plumber, and scored); the doors (plant room door, equipment doors), awaiting the owner's ruling on whether doors are in the model; and the hall's own plant door, built outside `buildPoolHallContents`. Follows [063](063-component-information-remediation.md), which has the background and the owner's rulings.
+Status: partly done (checked 2026-10-26): steps 1 to 6 are built and the room is bound to its schematic; step 7 (routing by the plumber, scoring, a dev-room trial and switching over) and the doors are still to do. Gravity lines are now in the router ([065](done/065-gravity-lines-in-the-router.md)).
 
 ## The goal
 
@@ -89,3 +89,13 @@ The room as it was is kept as `retired1` (`?room=retired1`). `jacuzzi-plumbing.t
 - The jacuzzi plant room is laid out, plumbed and scored from its schematic; its pins and the jacuzzi pool room's are 0.
 - The jacuzzi works as before in the browser (the cabinet circulates, jets and air run, the tank's make-up, drain and low-low trip, heating, the tub's drain-down), and hovering PL3's valves shows their derived descriptions.
 - The project's five checks pass.
+
+## Remaining (checked 2026-10-26)
+
+- The voxel router's headroom rule (level runs only above 2.2 m, but for stubs and a flooded suction) and leads that part a close-set lagged pair.
+- The jacuzzi plant room re-routed from its schematic by `jacuzzi-plumbing.ts`, its valves set by `placeInline`.
+- The room scored by `scoreRoom`, every gate passing, compared with today's layout.
+- The routed room tried in a dev room beside today's for the owner, then switched over, the jacuzzi's runs in `cabinet-pipes.ts` retired.
+- The machines placed and optimised from the schematic, and scored; the electrical links routed the same way.
+- The plant room's doors bound once doors are in the simulation, and the hall's plant door added to the check.
+- A check in the browser that the jacuzzi works as before.

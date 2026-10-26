@@ -1,6 +1,6 @@
 # 054: Title attract sequence
 
-Status: specified 2026-10-24; under way. The sequence runs (`src/toolkit/title/logic/attract-sequence.ts`, `src/main.ts`): three placeholder orbits in three rooms (the owner, 2026-10-24: pick three orbits from different rooms, to be changed later), fades through black, the player's world paused under it. Each shot shows a prepared world of its own (done 2026-10-24). Still to do, as `TODO.md` lists: authored shots, more presets, the sight-glass shot, floating props, and background preparation of the next scene.
+Status: partly done (checked 2026-10-26): the sequence, its fades and its prepared worlds are done (2026-10-24), and the lounge's fly-by is flown on the camera spline (2026-10-25); the other authored shots and preparing scenes in the background are still to come.
 
 ## Purpose
 
@@ -29,3 +29,10 @@ Fade the scene to black, switch while fully black, then fade in the next scene; 
 ## Acceptance
 
 Verify at least two distinct rooms, a preset scenario per shot, timed camera motion, seamless music, next-scene preparation, black transitions, a full repeating cycle, cancellation during loading/fades, repeated title/game visits without accumulating contexts or streams, and unchanged player save/state/bookmark. Test interpolation/timing independently and check the sequence visually in a browser, recording transition frame gaps and resource counts. Run the standard five project checks, update the changelog and diary, and keep unfinished delivery in TODO.md.
+
+## Remaining (checked 2026-10-26)
+
+- Authored shots for the Olympic and the jacuzzi in place of their placeholder orbits; timed, non-looping paths with a time for each key and easing.
+- More presets as the owner asks; the filter sight-glass shot; floating props in a pool for one shot only.
+- The next scene built and drawn in the background before its turn, frame gaps measured, a fallback shot when loading fails.
+- The browser acceptance: transition frame gaps, resource counts after repeated title and game visits, cancelling during loading and fades.

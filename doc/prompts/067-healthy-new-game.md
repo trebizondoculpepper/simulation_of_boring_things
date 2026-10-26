@@ -1,6 +1,6 @@
 # 067: Define and maintain a healthy New Game
 
-Status: researched and planned 2026-10-25; the executable contract delivered 2026-10-25 ([report](../reports/healthy-start/2026-10-25-executable-contract.md)); the playable session's time awaits the owner. This is a repeatable maintenance mission. Its first execution establishes an executable healthy-start contract; later executions audit and repair drift as the game model evolves.
+Status: partly done (checked 2026-10-26): the executable contract (`src/game/health.ts`, `new-game.test.ts`) is in place and a new game passes it; the owner has still to choose the playable session's time, the control probes and browser checks are not done, and the audit is due again after the model's changes of 2026-10-25 (solids, the ideal filters, the cabinets' start-up, the RCBOs and the central battery).
 
 ## The owner's request
 
@@ -41,3 +41,10 @@ Use the same mission number after topology, equipment, sizing, controller, thres
 | 2026-10-25 | See initial audit | Research and planning; read-only day-long trajectory                                                                                  | Current model circulation remains active; normal make-up activity is reported among annunciator alarms; full-facility executable coverage and the playable time/session decision remain to implement |
 | 2026-10-25 | `4371e93`         | Repeat observational audit after lounge backwash and flowmeter model changes                                                          | Normal-service trajectory unchanged at recorded precision; implementation remains pending                                                                                                            |
 | 2026-10-25 | `4b99c2f`         | Executable contract (`src/game/health.ts`), coverage tables, first-hour and day checks, negative controls, session check; audit rerun | Healthy at the first frame, every step of the first hour and through a day; nothing to repair; coverage limits recorded; session time for the owner                                                  |
+
+## Remaining (checked 2026-10-26)
+
+- The owner to choose the playable session's start (Monday 00:00 now, 09:00 proposed).
+- Control probes on independent copies: duty and standby takeover, make-up hysteresis, heating and ventilation control, timed attractions starting and stopping.
+- Browser checks: New Game replaces an unhealthy save, Continue keeps the player's changes, room changes and title shots do not alter the world.
+- Rerun work packages 1, 2 and 6 after the changes of 2026-10-25, and record the run in the table and a dated report.

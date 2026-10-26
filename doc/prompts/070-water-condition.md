@@ -1,6 +1,6 @@
 # 070: The water's condition, carried through the plant
 
-Status: specified 2026-10-25 from a discussion with the owner; for review before implementation.
+Status: partly done (checked 2026-10-26): the condition record and its rules, the dev40 filter rig and the dev41 bench (filter, boiler, dosing, UV) are built, and the world's pools carry suspended solids through ideal filters on every pool; the rest of the condition is not yet in the world.
 
 ## The request
 
@@ -74,3 +74,11 @@ Water balance (alkalinity, calcium hardness, dissolved solids; scale and corrosi
 2. Temperature: should heat losses on the way (pipes, filter vessels) be modelled at all, or only the pools' and halls'?
 3. The town's main: a fixed condition, or one that varies (cold in winter, harder in some areas)?
 4. Should the stand-in chemistry be kept for comparison while the new model is checked, or replaced outright?
+
+## Remaining (checked 2026-10-26)
+
+- The owner's four questions: the bather-load model, heat losses on the way, the town main's condition, whether to keep the stand-in chemistry for comparison.
+- Stage 3: an ozone and contact-tank rig and an acid-dosing line on the bench, each in a dev room first.
+- Stage 4: each pool, balance tank and plant flow carrying a whole `WaterCondition`; the pools' own temperature, free and combined chlorine and pH fields replaced by mass balances, the water loaded with bathers' organic matter.
+- Instruments (turbidity, chlorine analyser, redox) reading the condition and showing only what they display.
+- `WORLD_VERSION` bumped, mission [067](067-healthy-new-game.md) rerun, its bands confirmed.

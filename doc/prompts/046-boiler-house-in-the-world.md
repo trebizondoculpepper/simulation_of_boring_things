@@ -1,6 +1,6 @@
 # 046: The boiler house in the world
 
-Status: planned 2026-10-24, from the [wiring audit](../reports/wiring-audit-2026-10-24.md). The largest gap: the air handling units' fault again, on the plant that heats every pool.
+Status: partly done (checked 2026-10-26): the boiler gas safety (ECV, emergency stop, detector, SSOV) is in the world and cuts the heating; the boilers, combustion, pressure and calorifier are not.
 
 ## Now
 
@@ -18,3 +18,13 @@ The boiler house's model (`src/toolkit/gallery/rooms/plant/boiler.ts`, `house`: 
 ## Acceptance
 
 Locking out the boilers (gas emergency stop, ECV shut, power off, combustion fan off) stops the pools' and halls' heating, seen in their temperatures falling; restoring and resetting brings it back. The boiler house runs and is saved whichever room the player is in. Every boiler house mimic and the control room's heating mimic agree with it. Tests for each part; typecheck, lint, format, tests and build pass.
+
+## Remaining (checked 2026-10-26)
+
+- The boilers' state, combustion (fan HAND · OFF · AUTO, flue temperatures, CO, reset) and fouling in the world, with a new version and migration.
+- Heat from the cascade: the heating circuit's flow temperature and heat available follow the boilers firing, the circulator and the system pressure; demand from the thermostats through the low-loss header.
+- P-501A/B on starters, with a boiler house panel (with [044](044-plant-room-motor-panels.md)).
+- The pressurisation unit (a leak or drain, refill, low-pressure lockout) and the calorifier's stored-water temperature.
+- The boiler house's gas detection made one with `gas.ts`.
+- The control room's heating state, LTHW reading and boiler amps from the world.
+- The boiler house's gas and heating valves read by the model.

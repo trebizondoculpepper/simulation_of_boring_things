@@ -1,6 +1,6 @@
 # 044: Motor panels in the plant rooms
 
-Status: planned 2026-10-24 (the owner); stage two of the switch room's redesign, after [043](done/043-switch-room-tidy.md). To be done room by room, as each plant room is next reworked.
+Status: partly done (checked 2026-10-26): the Olympic's and the lounge's circulation pumps have starters in the world, worked from their existing local panels; the other rooms' motors have none.
 
 ## Why
 
@@ -25,3 +25,11 @@ Distributed motor control (the owner's choice): each motor is started, stopped a
 
 - 2026-10-24, first room pair: the pools' circulation pumps have starters in the world (`game/plant/motor-starters.ts`, world version 21): P-101A/B (the Olympic, on drives) and P-201A/B (the lounge, direct on line), duty and standby, in AUTO as found. The pool model circulates while one runs. The trip is the motor's thermistors after a minute's running with its valves giving it nowhere to pump (the Olympic's battery, the lounge's filter path); the tank's low-low level stays an interlock that restarts the pumps once it recovers, as the model's refilling relies on. The existing local control panel in each of those plant rooms (`rooms/plant/pump-panel.ts`) is the motor panel: its HAND · OFF · AUTO selectors, a RESET per pump (new), its emergency stop and its mimic's START and STOP work the starters, and its lamps and ammeters show them; the control room's main pool board works the same starters. Its LOCAL · REMOTE key switch and the mimic's LOCAL lamp are gone (one world, no authority switch).
 - Still to do: the LTHW circulator (P-501A/B) and the make-up booster (P-601), with panels in the boiler house and the wet hall; the spa cabinets' pumps; the air plant's and stores' fans, if they are to have starters.
+
+## Remaining (checked 2026-10-26)
+
+- Starters for P-501A/B and P-601, with Penfold motor panels in the boiler house and the wet hall.
+- Starters and panels for the spa cabinets' pumps.
+- A decision on whether the air plant's and stores' fans get starters, and if so, build them.
+- A Penfold motor panel per plant room built from the MCC parts, tried in a dev room first.
+- The mimics' RUN and TRIP lamps from each starter, in every room.
