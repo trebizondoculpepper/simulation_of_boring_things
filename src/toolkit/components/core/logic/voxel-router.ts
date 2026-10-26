@@ -18,6 +18,12 @@ export interface RouterLine {
   startStraight?: number;
   endStraight?: number;
   insulation?: number;
+  /**
+   * A gravity line (prompt 065): an overflow or a drain, which must fall
+   * all the way. Its end must be below its start, and its route never
+   * rises: level lengths and drops only.
+   */
+  gravity?: true;
 }
 
 export interface RouterRoom {
@@ -126,9 +132,14 @@ function clear(
     )
       return false;
   }
+  if (line.gravity && !neverRises(points)) return false;
   const run = drawing(line, points);
   return previous.every((other) => pipeClashes([other, run]).length === 0);
 }
+
+/** Whether a route never rises along it: each point no higher than the one before. */
+export const neverRises = (points: readonly Vec3[]) =>
+  points.every((p, i) => i === 0 || p[1] <= points[i - 1][1] + 1e-9);
 
 function compact(points: readonly Vec3[]): Vec3[] {
   const result: Vec3[] = [];
@@ -185,10 +196,29 @@ function candidate(
     return lead(port, minimum);
   };
   const s = endpoint(line.start, line.startStraight ?? 0);
-  const t = endpoint(line.end, line.endStraight ?? 0);
-  const levels = [
-    0.8, 1.1, 1.4, 1.7, 2, 2.3, 2.7, 3.2, 3.8, 4.5, 5.3, 6.1, 6.9, 7.5,
-  ].filter((y) => y > Math.max(s[1], t[1]) + r && y < room.height - r - 0.03);
+  let t = endpoint(line.end, line.endStraight ?? 0);
+  // A gravity line dropping into an end that faces up (a tundish): its
+  // last length no higher than where it starts, short if it must be, so
+  // it never climbs to come down into it.
+  if (line.gravity && t[1] > s[1] && line.end.outward[1] > 0)
+    t = lead(
+      line.end,
+      Math.max(0, (s[1] - line.end.at[1]) / line.end.outward[1]),
+    );
+  // Over everything between them, or, a gravity line, at a level between
+  // its ends': across at its start's level or lower, then down.
+  const levels = line.gravity
+    ? [
+        s[1],
+        ...[
+          0.2, 0.4, 0.6, 0.8, 1.1, 1.4, 1.7, 2, 2.3, 2.7, 3.2, 3.8, 4.5, 5.3,
+        ].filter((y) => y < s[1] && y >= t[1]),
+      ].sort((a, b) => b - a)
+    : [
+        0.8, 1.1, 1.4, 1.7, 2, 2.3, 2.7, 3.2, 3.8, 4.5, 5.3, 6.1, 6.9, 7.5,
+      ].filter(
+        (y) => y > Math.max(s[1], t[1]) + r && y < room.height - r - 0.03,
+      );
   const xs = [s[0], t[0], 0, -room.halfX + r + 0.3, room.halfX - r - 0.3];
   const zs = [s[2], t[2], 0, -room.halfZ + r + 0.3, room.halfZ - r - 0.3];
   for (const y of levels)
@@ -376,6 +406,8 @@ function search(
     ];
     for (let axis = 0; axis < 3; axis++)
       for (const sign of [-1, 1]) {
+        // A gravity line never steps up.
+        if (line.gravity && axis === 1 && sign === 1) continue;
         const n = coordinates[axis] + sign;
         if (n < 0 || n >= sizes[axis]) continue;
         const next = current.i + sign * stride[axis];
@@ -418,9 +450,15 @@ function search(
 /** Route the hardest lines first, then retry failed lines with deterministic orders. */
 export function routeVoxelLines(
   room: RouterRoom,
-  lines: readonly RouterLine[],
+  given: readonly RouterLine[],
   fixed: readonly DrawnRun[] = [],
 ): RouterResult {
+  // A gravity line whose end is not below its start cannot fall to it:
+  // refused, never routed uphill.
+  const uphill = given.filter(
+    (line) => line.gravity && line.end.at[1] >= line.start.at[1] - 1e-9,
+  );
+  const lines = given.filter((line) => !uphill.includes(line));
   const ordered = [...lines].sort(
     (a, b) =>
       (b.priority ?? b.od) - (a.priority ?? a.od) || a.id.localeCompare(b.id),
@@ -443,8 +481,17 @@ export function routeVoxelLines(
   }
   return {
     routes: best,
-    problems: lines
-      .filter((line) => !best.has(line.id))
-      .map((line) => `${line.id}: no clash-free route`),
+    problems: [
+      ...uphill.map(
+        (line) => `${line.id}: a gravity line whose end is not below its start`,
+      ),
+      ...lines
+        .filter((line) => !best.has(line.id))
+        .map((line) =>
+          line.gravity
+            ? `${line.id}: no clash-free route that only falls`
+            : `${line.id}: no clash-free route`,
+        ),
+    ],
   };
 }

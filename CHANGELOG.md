@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The voxel router understands gravity lines (prompt 065): a line tagged `gravity` is refused if its end is not below its start, and is routed only level or downwards, never rising; the jacuzzi plant room's overflows and drains are now routed by it, not by a rule of their own.
 - Unlisted title shortcuts: `[` restarts the current shot from the beginning and `]` advances to the next shot. They rebuild the staged scene, apply only on the title screen, and leave keyboard instructions unchanged. The lights-out switch-room flyby has its flashlight on.
 
 - An underwater Olympic pool title shot follows the owner’s five-key dolly zoom with a roll, rising from 0.93 m to 0.16 m below the surface while the lighting remains on.

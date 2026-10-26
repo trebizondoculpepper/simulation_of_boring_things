@@ -1,6 +1,14 @@
 # 036: The wet hall's tanks, as built
 
-Status: planned 2026-10-23, for later; not started. The owner does not want it taken up until the Olympic plant room works (prompt 035).
+Status: planned for the later wet hall redesign; not started. Prompt 035 is a reference for the tank hall's construction and world binding, not a prerequisite.
+
+## Readiness check (2026-10-26)
+
+**Decision: ready for design and dev-room prototypes; live installation is deferred until the owner redesigns the wet hall.** The unfinished items in prompt 035 do not block this work. The Olympic concrete tank hall and its world binding already provide the parts and approach needed for the new tanks.
+
+**Available foundations:** the Olympic concrete tank hall (`src/toolkit/gallery/rooms/plant/balance-tank-hall.ts`) and its world binding provide a pattern; the wet hall already has a schematic (`src/game/plant/wet-hall-schematic.ts`), a 13.2 m³ break tank and 29.5 m³ backwash holding volume in its simulation (`src/game/plant/wet-hall.ts`), and working equipment registration. These make a dev-room prototype feasible without changing the live rooms.
+
+**Work to include in that redesign:** replace the wet hall's currently sectional 3 × 2 × 2 m backwash tank view with a concrete pit sized to its 29.5 m³ model, keeping its pump, level instruments, ports, valves and mimic tied to the same world state. Keep the Category 5 break tank sectional GRP. Replace the Lounge pool's currently sectional GRP balance tank with a smaller concrete hall connected to its plant room and existing pool balance state. Keep the spa and footbath packaged tanks. Prototype each new construction in a dev room first, then verify the installed geometry, access, registration and live readings against its schematic and world state.
 
 The owner, 2026-10-23: each pool was given its own balance tank, as steel or fibreglass upstanding tanks, before the Olympic's cast concrete tank hall (prompt 032) showed what a large pool's tank usually is. Where there is room, as there is, the wet hall core and the other pools should have their tanks built as a real leisure centre's would be.
 
@@ -15,4 +23,4 @@ Each pool keeps its own tank, as the owner first designed it: that is standard p
 
 ## Order of work
 
-Model each new tank in a dev room first, then install it in the wet hall or its plant room, joined to the world's water model as the Olympic's tank is (prompt 035, item 2).
+Model each new tank in a dev room first. Install the tanks when the owner takes up the wet hall redesign, joined to the world's water model as the Olympic's tank is (prompt 035, item 2).
