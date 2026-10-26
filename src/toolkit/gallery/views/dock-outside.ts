@@ -94,6 +94,7 @@ export function createDockOutside(
   const groundClip = new Plane(new Vector3(0, 0, -1), 0);
   const wallPoint = new Vector3();
   const eyeAt = new Vector3();
+  const eyeLocal = new Vector3();
   const placePlane = (
     renderer: { localClippingEnabled: boolean },
     camera: { getWorldPosition(v: Vector3): Vector3 },
@@ -107,8 +108,51 @@ export function createDockOutside(
     // the sky over the roof behind among it: the plane pushed far away.
     camera.getWorldPosition(eyeAt);
     outside.constant = eyeAt.z > wallPoint.z ? wallPoint.z : 1e9;
+    // In a side room's doorway, or beyond it (the owner, 2026-10-26: the
+    // sky in the hypochlorite store's doorway): no sky at all, the blocks
+    // below being behind the eye there.
+    const local = group.worldToLocal(eyeLocal.copy(eyeAt));
+    if (
+      local.z > wallZ &&
+      (Math.abs(local.x) > width / 2 - 0.05 || local.z > -wallZ - 0.05)
+    )
+      outside.constant = -1e9;
   };
   sky.dome.material.clippingPlanes = [outside];
+  // The rooms off the dock's sides and back (the owner, 2026-10-26: the
+  // sky showed through the chemical stores' doors, beyond the wall's line
+  // looking north): while the eye is inside, invisible blocks fill all
+  // round the dock south of its outside wall, drawn first, writing depth
+  // only, so the sky fails behind them and the neighbouring room's own
+  // canvas shows through its doorway. Clipped away entirely when the eye
+  // is out in the yard, so the sky over the roof stays.
+  const indoors = new Plane(new Vector3(0, 0, 1), 0);
+  const occluder = new MeshBasicMaterial({
+    colorWrite: false,
+    clippingPlanes: [indoors],
+  });
+  kit.materials.push(occluder);
+  const far = 200;
+  // Their faces inside the walls, never on them.
+  const hw = width / 2 + thickness / 2;
+  const back = -wallZ + thickness / 2;
+  for (const [x0, x1, z0, z1] of [
+    [-far, -hw, wallZ, far],
+    [hw, far, wallZ, far],
+    [-hw, hw, back, far],
+  ] as const) {
+    const box = new Mesh(new BoxGeometry(x1 - x0, far, z1 - z0), occluder);
+    box.position.set((x0 + x1) / 2, far / 2 - 20, (z0 + z1) / 2);
+    box.renderOrder = -10;
+    box.frustumCulled = false;
+    box.raycast = () => {};
+    box.onBeforeRender = (r, _s, camera) => {
+      placePlane(r, camera);
+      // Kept (z >= the wall) while inside; out in the yard, nothing.
+      indoors.constant = outside.constant === 1e9 ? -1e9 : -wallPoint.z;
+    };
+    group.add(box);
+  }
   // Daylight for the dock and its yard (the owner, 2026-10-26: a power
   // cut darkened the yard), an overcast sky's light and the ground's.
   const daylight = new HemisphereLight('#e8ecf0', '#55575a', 1.6);
