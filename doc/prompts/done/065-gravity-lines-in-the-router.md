@@ -1,6 +1,6 @@
 # 065: Gravity lines in the voxel router
 
-Status: specified 2026-10-25 from the owner's request; not started.
+Status: done 2026-10-26. `RouterLine.gravity` in `voxel-router.ts`: a gravity line whose end is not below its start is refused; its templates cross at its start's level or lower; its search takes no upward step; a finished route that rises anywhere is rejected (`neverRises`); its last drop into an upward-facing end (a tundish) is shortened to fit under its start. `jacuzzi-plumbing.ts` dropped `falling` and routes its gravity lines with the rest. The minimum fall (1:40) is still to come.
 
 ## The request
 

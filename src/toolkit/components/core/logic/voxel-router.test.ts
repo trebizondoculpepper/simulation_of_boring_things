@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { pipeClashes } from './pipe-route';
-import { routeVoxelLines } from './voxel-router';
+import { neverRises, routeVoxelLines } from './voxel-router';
 import type { RouterLine, RouterRoom } from './voxel-router';
 
 const room: RouterRoom = { halfX: 3, halfZ: 3, height: 5 };
@@ -73,5 +73,56 @@ describe('voxel router', () => {
         (p) => p[0] > -0.5 && p[0] < 0.5 && p[2] > -0.5 && p[2] < 0.5,
       ),
     ).toBe(false);
+  });
+});
+
+describe('gravity lines (prompt 065)', () => {
+  /** A drain from a nozzle high on one side to a gully on the far side, with a box between. */
+  const drain = (gravity: boolean): RouterLine => ({
+    id: 'drain',
+    start: { at: [-2, 1.5, 0], outward: [1, 0, 0] },
+    end: { at: [2, 0.2, 0], outward: [0, 1, 0] },
+    od: 0.05,
+    joint: 'socket',
+    price: 10,
+    ...(gravity ? { gravity: true as const } : {}),
+  });
+  type Box = [number, number, number];
+  const obstacle = {
+    min: [-0.5, 0, -0.6] as Box,
+    max: [0.5, 1.8, 0.6] as Box,
+  };
+  const rises = (points: readonly (readonly number[])[]) =>
+    points.some((p, i) => i > 0 && p[1] > points[i - 1][1] + 1e-9);
+
+  it('routes a gravity line round an obstacle, never rising', () => {
+    const result = routeVoxelLines({ ...room, obstacles: [obstacle] }, [
+      drain(true),
+    ]);
+    expect(result.problems).toEqual([]);
+    const points = result.routes.get('drain')!;
+    expect(rises(points)).toBe(false);
+    expect(neverRises(points)).toBe(true);
+  });
+
+  it('refuses a gravity line whose end is above its start', () => {
+    const up: RouterLine = {
+      ...drain(true),
+      start: { at: [2, 0.2, 0], outward: [0, 1, 0] },
+      end: { at: [-2, 1.5, 0], outward: [1, 0, 0] },
+    };
+    const result = routeVoxelLines(room, [up]);
+    expect(result.routes.has('drain')).toBe(false);
+    expect(result.problems).toEqual([
+      'drain: a gravity line whose end is not below its start',
+    ]);
+  });
+
+  it('still lets an ordinary line between the same ends rise over the obstacle', () => {
+    const result = routeVoxelLines({ ...room, obstacles: [obstacle] }, [
+      drain(false),
+    ]);
+    expect(result.problems).toEqual([]);
+    expect(rises(result.routes.get('drain')!)).toBe(true);
   });
 });

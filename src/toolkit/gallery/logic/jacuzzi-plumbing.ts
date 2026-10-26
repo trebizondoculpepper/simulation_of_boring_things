@@ -86,50 +86,6 @@ const gravity = (link: PlumbEdge) =>
   /overflow/.test(link.targetPort) ||
   nodeKind.get(link.targetId) === 'gully';
 
-/**
- * A gravity line's route, by rule (the router lays lines that may rise):
- * out of its port, level across to over where it lands, then straight
- * down into it. It never rises.
- */
-function falling(start: PortEnd, end: PortEnd, lead = 0.15): Vec3[] {
-  const out: Vec3 = [
-    start.at[0] + start.outward[0] * lead,
-    start.at[1] + start.outward[1] * lead,
-    start.at[2] + start.outward[2] * lead,
-  ];
-  const y = out[1];
-  const points: Vec3[] = [
-    start.at,
-    out,
-    [end.at[0], y, out[2]],
-    [end.at[0], y, end.at[2]],
-    end.at,
-  ];
-  // Without its steps of no length, and straight on through its points.
-  const kept = points.filter(
-    (p, i) =>
-      i === 0 ||
-      Math.hypot(
-        p[0] - points[i - 1][0],
-        p[1] - points[i - 1][1],
-        p[2] - points[i - 1][2],
-      ) > 1e-6,
-  );
-  return kept.filter((p, i) => {
-    if (i === 0 || i === kept.length - 1) return true;
-    const a = kept[i - 1];
-    const b = kept[i + 1];
-    const u = [p[0] - a[0], p[1] - a[1], p[2] - a[2]];
-    const v = [b[0] - p[0], b[1] - p[1], b[2] - p[2]];
-    const cross = Math.hypot(
-      u[1] * v[2] - u[2] * v[1],
-      u[2] * v[0] - u[0] * v[2],
-      u[0] * v[1] - u[1] * v[0],
-    );
-    return cross > 1e-9;
-  });
-}
-
 /** The water and air links the router lays (the rest are signals and power). */
 export const ROUTED_LINKS: readonly PlumbEdge[] = JACUZZI_LINKS.filter(
   (l) => l.medium === 'water' || l.medium === 'air',
@@ -249,28 +205,30 @@ export function jacuzziPlumbing(
   ];
   const isGravity = (l: JacuzziLine) =>
     gravity(JACUZZI_LINKS.find((x) => x.id === l.link)!);
-  // The gravity lines by rule; the router lays the rest round them.
-  const fallen = new Map(
-    lines.filter(isGravity).map((l) => [l.link, falling(l.start, l.end)]),
-  );
-  const router: RouterLine[] = lines
-    .filter((l) => !isGravity(l))
-    .map((l) => ({
-      id: l.link,
-      start: l.start,
-      end: l.end,
-      od: l.od,
-      joint: l.joint,
-      price: pricePerMetre(l.kind, l.od),
-      startStraight: 0.15,
-      endStraight: 0.15,
-      // Half its lagging: the cabinet's heating stubs stand closer than two
-      // laggings (a clash known since 2026-10-23, `pipe-clashes.test.ts`),
-      // and the router must still lead them out apart.
-      insulation: (PIPE_KINDS[l.kind].insulation?.thickness ?? 0) / 2,
-      // The lagged heating pair, its ports close together, laid first.
-      ...(l.kind === 'lagged-heating' ? { priority: 10 } : {}),
-    }));
+  // Every line through the router: the gravity lines tagged, which it
+  // routes so they only ever fall (prompt 065).
+  const router: RouterLine[] = lines.map((l) => ({
+    id: l.link,
+    start: l.start,
+    end: l.end,
+    od: l.od,
+    joint: l.joint,
+    price: pricePerMetre(l.kind, l.od),
+    startStraight: 0.15,
+    endStraight: 0.15,
+    // Half its lagging: the cabinet's heating stubs stand closer than two
+    // laggings (a clash known since 2026-10-23, `pipe-clashes.test.ts`),
+    // and the router must still lead them out apart.
+    insulation: (PIPE_KINDS[l.kind].insulation?.thickness ?? 0) / 2,
+    // The lagged heating pair, its ports close together, laid first; then
+    // the gravity lines, which have the fewest ways to go.
+    ...(l.kind === 'lagged-heating'
+      ? { priority: 10 }
+      : isGravity(l)
+        ? { priority: 5 }
+        : {}),
+    ...(isGravity(l) ? { gravity: true as const } : {}),
+  }));
   // The room's doorways and the spaces kept clear before them: no pipe
   // through them below the doors' head.
   const regions = layout.box.keepClear.map((k) => ({
@@ -287,22 +245,14 @@ export function jacuzziPlumbing(
       regions,
     },
     router,
-    [
-      ...fixed,
-      ...lines.filter(isGravity).map((l) => ({
-        name: l.link,
-        points: fallen.get(l.link)!,
-        od: l.od,
-        joint: l.joint,
-      })),
-    ],
+    fixed,
   );
   // Each line's valves, the schematic's own, set in it where a person can
   // reach them, each near the end of the link the schematic puts it at.
   const along = jacuzziExpansion().along;
   const problems: string[] = [];
   const done = lines.map((l): JacuzziLine => {
-    const points = fallen.get(l.link) ?? routed.routes.get(l.link);
+    const points = routed.routes.get(l.link);
     if (!points) return l;
     const fittings = (along.get(l.link) ?? []).filter(
       (f) => f.kind === 'isolating-valve',
@@ -331,7 +281,7 @@ export function jacuzziPlumbing(
       ...problems,
       ...routed.problems,
       ...lines
-        .filter((l) => !routed.routes.has(l.link) && !fallen.has(l.link))
+        .filter((l) => !routed.routes.has(l.link))
         .map((l) => `${l.link}: not routed`),
     ],
   };
