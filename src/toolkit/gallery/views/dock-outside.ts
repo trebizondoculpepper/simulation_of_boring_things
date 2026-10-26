@@ -643,7 +643,11 @@ export function createDockOutside(
       thickness,
       doorX,
     });
-    const kw = 3.0;
+    // As wide as the pier's walkway between the bays' inner lines allows.
+    const inner = Math.min(
+      ...openings.map((o) => Math.abs(o.at - doorX) - (o.w + 0.6) / 2),
+    );
+    const kw = Math.min(3.0, 2 * inner - 0.3);
     const kd = 2.4;
     const box = paint(512, 410, (g) => {
       g.strokeStyle = 'rgba(232,192,40,0.95)';

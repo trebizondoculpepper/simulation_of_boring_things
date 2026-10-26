@@ -97,13 +97,14 @@ export const SHELL_ROOMS = {
       { wall: 'east', at: -2, to: 'hypo_store' },
       { wall: 'west', at: -3, to: 'acid_store' },
     ],
-    // 3.5 m clear, 4.5 m high, either side of a 2.6 m pier, wide enough
-    // for its doorway to the yard and that door's lintel between the
-    // shutters' guides (the owner, 2026-10-26; the door opened in 080),
-    // 2.35 m of wall at each end.
+    // 3.2 m clear (a 2.55 m lorry and room), 4.5 m high, either side of
+    // a 3.2 m pier, wide enough for its doorway and lintel between the
+    // shutters' guides and for the yard's keep-clear box at its steps
+    // between the bays' markings (the owner, 2026-10-26), 2.35 m of wall
+    // at each end.
     apertures: [
-      { wall: 'north', at: -3.05, w: 3.5, h: 4.5 },
-      { wall: 'north', at: 3.05, w: 3.5, h: 4.5 },
+      { wall: 'north', at: -3.2, w: 3.2, h: 4.5 },
+      { wall: 'north', at: 3.2, w: 3.2, h: 4.5 },
       // The pier's fire exit door, out to the yard's steps.
       { wall: 'north', at: 0, w: 1.0, h: 2.1, door: true },
     ],
