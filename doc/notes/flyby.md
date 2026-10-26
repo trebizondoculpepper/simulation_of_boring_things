@@ -72,3 +72,23 @@ http://127.0.0.1:5175/?room=air_plant&x=-2.75&y=1.54&z=11.91&yaw=176.5&pitch=-9.
 
 http://127.0.0.1:5175/?room=pool_04&x=-0.17&y=2.56&z=0.29&yaw=59.2&pitch=-83.1&zoom=0.884&noclip=true&roll=0.0
 http://127.0.0.1:5175/?room=pool_04&x=-0.27&y=1.67&z=0.05&yaw=6.4&pitch=-83.1&zoom=0.770&noclip=true&roll=-40.7
+
+With the main lighting circuit switched off
+https://trebizondoculpepper.github.io/the_pool/?room=switch_room&x=0.13&y=1.83&z=-0.25&yaw=258.0&pitch=-12.2&zoom=1.000
+https://trebizondoculpepper.github.io/the_pool/?room=switch_room&x=0.03&y=1.79&z=-1.96&yaw=260.3&pitch=1.3&zoom=1.000
+https://trebizondoculpepper.github.io/the_pool/?room=switch_room&x=-0.41&y=1.80&z=-2.92&yaw=272.0&pitch=-33.7&zoom=0.759
+https://trebizondoculpepper.github.io/the_pool/?room=switch_room&x=-0.55&y=1.79&z=-2.09&yaw=14.5&pitch=-4.6&zoom=0.650
+https://trebizondoculpepper.github.io/the_pool/?room=switch_room&x=-0.36&y=1.82&z=-2.80&yaw=123.0&pitch=-5.7&zoom=0.784
+https://trebizondoculpepper.github.io/the_pool/?room=switch_room&x=-0.05&y=1.81&z=-0.06&yaw=76.2&pitch=-3.3&zoom=0.784
+https://trebizondoculpepper.github.io/the_pool/?room=switch_room&x=-0.32&y=1.81&z=-0.00&yaw=79.4&pitch=-4.5&zoom=2.298
+https://trebizondoculpepper.github.io/the_pool/?room=switch_room&x=-0.32&y=1.81&z=-0.00&yaw=145.7&pitch=50.7&zoom=0.745
+
+https://trebizondoculpepper.github.io/the_pool/?room=control_room&x=0.20&y=1.84&z=0.33&yaw=81.4&pitch=-5.2&zoom=1.000
+https://trebizondoculpepper.github.io/the_pool/?room=control_room&x=0.13&y=1.82&z=-0.63&yaw=80.7&pitch=-5.0&zoom=1.817
+
+With lights on:
+https://trebizondoculpepper.github.io/the_pool/?room=pool_02&x=2.00&y=-0.93&z=-11.15&yaw=359.6&pitch=-3.3&zoom=0.949&noclip=true&roll=-92.0
+https://trebizondoculpepper.github.io/the_pool/?room=pool_02&x=2.03&y=-0.69&z=-7.02&yaw=359.6&pitch=-3.3&zoom=1.141&noclip=true&roll=-18.0
+https://trebizondoculpepper.github.io/the_pool/?room=pool_02&x=2.04&y=-0.55&z=-4.42&yaw=359.6&pitch=-3.3&zoom=1.425&noclip=true&roll=6.0
+https://trebizondoculpepper.github.io/the_pool/?room=pool_02&x=2.13&y=-0.39&z=-1.63&yaw=359.6&pitch=-3.3&zoom=2.070&noclip=true&roll=26.0
+https://trebizondoculpepper.github.io/the_pool/?room=pool_02&x=2.16&y=-0.16&z=2.39&yaw=359.6&pitch=-3.3&zoom=3.589&noclip=true&roll=26.0
