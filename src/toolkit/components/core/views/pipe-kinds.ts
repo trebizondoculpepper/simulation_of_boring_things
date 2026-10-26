@@ -278,6 +278,8 @@ export interface PipeOptions {
   through?: readonly Penetration[];
   /** Each end's finish: open into a fitting, capped, or valved and capped. */
   ends?: readonly [PipeEnd, PipeEnd];
+  /** Its bends' radius, in outside diameters, where not its kind's. */
+  bend?: number;
 }
 
 const style = (id: PipeKindId, od: number, options: PipeOptions) => {
@@ -285,7 +287,7 @@ const style = (id: PipeKindId, od: number, options: PipeOptions) => {
   return {
     od,
     joint: k.joint,
-    bend: k.bend,
+    bend: options.bend ?? k.bend,
     insulation: k.insulation?.thickness,
     lengths: options.lengths ?? k.lengths,
     through: options.through,

@@ -1,3 +1,5 @@
+import { drawBrandMark } from '../../core/views/brand-logo';
+import { BRANDS } from '../../core/logic/brands';
 import {
   changeoverFlow,
   changeoverStatus,
@@ -14,10 +16,14 @@ import { pumpSound } from './pump-sound';
 import { BOOSTER_PUMP } from '../logic/pump-sound';
 import { createActuatedButterflyValve } from './actuated-butterfly-valve';
 import { signal } from '@preact/signals-core';
-import { Group } from 'three';
+import { CapsuleGeometry, Group, Mesh } from 'three';
+import type { MeshStandardMaterial } from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
-import { createBrandBadge } from '../../core/views/brand-badge';
+import {
+  createBrandBadge,
+  createBrandBand,
+} from '../../core/views/brand-badge';
 import { brandLivery } from '../../core/views/brand-livery';
 import { createPartSet, pilotLight, pushButton } from '../../core/parts/parts';
 import type { Part } from '../../core/parts/parts';
@@ -86,11 +92,21 @@ export function createBoosterSet(
   const object = new Group();
   object.name = 'Make-up booster set';
   const livery = brandLivery(kit, 'grundflow');
-  const blue = livery.paint.casing;
   const steel = t.paint(FINISH.stainless, 0.3, 0.8);
   const galv = t.paint(FINISH.galvanised, 0.45, 0.6);
   const black = t.paint('#1d1f21', 0.6);
   const B = BOOSTER;
+  const GRUNDFLOW = BRANDS.find((b) => b.id === 'grundflow')!;
+  // Grundflow's colours: its blue, its grey and its orange.
+  const gfBlue = t.paint('#0b4f9c', 0.4, 0.2);
+  const gfGrey = t.paint('#8a9196', 0.45, 0.4);
+  const gfOrange = t.paint('#e07a22', 0.5);
+  /** Its mark wrapped round a curved surface, facing the front. */
+  const band = (at: Point, radius: number, height: number) => {
+    const b = createBrandBand(kit, 'grundflow', { radius, height });
+    b.position.set(...at);
+    object.add(b);
+  };
   const y = B.manifoldY;
   // The base: two galvanised channels the set's length, cross members.
   for (const z of [-B.d / 2 + 0.12, B.d / 2 - 0.12])
@@ -131,35 +147,50 @@ export function createBoosterSet(
     'x',
     FINISH.stainless,
   );
-  // The diaphragm vessel, on the discharge manifold's closed west end.
+  // The diaphragm vessel, on the discharge manifold's closed west end:
+  // a rounded pressure vessel, domed top and bottom, in Grundflow's
+  // colours (the owner, 2026-10-26): its blue shell, grey feet ring and
+  // connection, an orange band with its maker's mark, and its charge
+  // valve on its top dome.
   const vx = -B.w / 2 + 0.25;
+  const grey = gfGrey;
+  const orange = gfOrange;
   t.rod(
     object,
     steel,
     [vx, y, B.dischargeZ],
-    [vx, y + 0.18, B.dischargeZ],
+    [vx, y + 0.16, B.dischargeZ],
     0.02,
   );
+  t.cyl(object, grey, 0.07, 0.04, vx, y + 0.17, B.dischargeZ, 'y', 20);
+  const vessel = new Mesh(
+    new CapsuleGeometry(0.14, 0.26, 10, 28),
+    t.paint('#0b4f9c', 0.4, 0.2),
+  );
+  vessel.position.set(vx, y + 0.17 + 0.14 + 0.13, B.dischargeZ);
+  object.add(vessel);
+  t.cyl(object, orange, 0.142, 0.05, vx, y + 0.44, B.dischargeZ, 'y', 28);
   t.cyl(
     object,
-    t.paint('#c42b23', 0.45),
-    0.14,
-    0.42,
+    grey,
+    0.018,
+    0.04,
     vx,
-    y + 0.42,
+    y + 0.17 + 0.28 + 0.28 + 0.01,
     B.dischargeZ,
     'y',
-    28,
+    10,
   );
-  t.cyl(object, black, 0.06, 0.03, vx, y + 0.645, B.dischargeZ, 'y', 16);
+  band([vx, y + 0.36, B.dischargeZ], 0.14, 0.04);
   // The two pumps.
   const isolators: { at: Point; name: string }[] = [];
   B.pumpX.forEach((x, i) => pump(x, i + 1));
   function pump(x: number, n: number) {
     const z = B.pumpZ;
     // Its base, its inline suction and discharge either side of it.
-    t.box(object, black, 0.26, 0.08, 0.26, x, 0.14, z);
-    t.cyl(object, black, 0.1, 0.16, x, y, z, 'y', 24);
+    // In Grundflow's blue, orange and grey (the owner, 2026-10-26).
+    t.box(object, gfGrey, 0.26, 0.08, 0.26, x, 0.14, z);
+    t.cyl(object, gfGrey, 0.1, 0.16, x, y, z, 'y', 24);
     t.pipe(
       object,
       50,
@@ -198,11 +229,75 @@ export function createBoosterSet(
     );
     // The stack of stages, its sleeve, and the motor with its drive on top.
     t.cyl(object, steel, 0.075, 0.5, x, 0.58, z, 'y', 24);
-    t.cyl(object, black, 0.09, 0.04, x, 0.85, z, 'y', 24);
-    t.cyl(object, blue, 0.11, 0.34, x, 1.04, z, 'y', 28);
-    t.box(object, blue, 0.17, 0.12, 0.08, x, 1.08, z + 0.13);
-    t.cyl(object, black, 0.115, 0.04, x, 1.23, z, 'y', 28);
-    badge([x, 1.0, z + 0.112], 0.022);
+    t.cyl(object, gfGrey, 0.09, 0.04, x, 0.85, z, 'y', 24);
+    t.cyl(object, gfBlue, 0.11, 0.34, x, 1.04, z, 'y', 28);
+    t.box(object, gfOrange, 0.17, 0.12, 0.08, x, 1.08, z + 0.13);
+    t.cyl(object, gfGrey, 0.115, 0.04, x, 1.23, z, 'y', 28);
+    // Its maker's mark wrapped round its motor, under its terminal box.
+    band([x, 0.93, z], 0.11, 0.03);
+    // Its fan cowl's top: a bolted plate, the impeller mark on it, worn
+    // a little (the owner, 2026-10-26).
+    const top = t.printed(
+      0.2,
+      0.2,
+      (c, cw, ch) => {
+        c.clearRect(0, 0, cw, ch);
+        c.fillStyle = '#8a9196';
+        c.beginPath();
+        c.arc(cw / 2, ch / 2, cw / 2, 0, Math.PI * 2);
+        c.fill();
+        // Its wear: fine speckle and a few scuffs, the same on each pump
+        // but turned (a seeded scatter, not random each build).
+        let seed = 7 + n * 31;
+        const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+        for (let k = 0; k < 900; k++) {
+          const a = rnd() * Math.PI * 2;
+          const r = Math.sqrt(rnd()) * cw * 0.48;
+          c.fillStyle =
+            rnd() < 0.5 ? 'rgba(40,44,48,0.18)' : 'rgba(230,234,236,0.16)';
+          c.fillRect(cw / 2 + Math.cos(a) * r, ch / 2 + Math.sin(a) * r, 2, 2);
+        }
+        c.strokeStyle = 'rgba(200,205,208,0.35)';
+        c.lineWidth = 1.5;
+        for (let k = 0; k < 6; k++) {
+          const a = rnd() * Math.PI * 2;
+          const r = cw * (0.15 + rnd() * 0.25);
+          const sx = cw / 2 + Math.cos(a) * r;
+          const sy = ch / 2 + Math.sin(a) * r;
+          c.beginPath();
+          c.moveTo(sx, sy);
+          c.lineTo(
+            sx + (rnd() - 0.5) * cw * 0.2,
+            sy + (rnd() - 0.5) * ch * 0.08,
+          );
+          c.stroke();
+        }
+        drawBrandMark(c, GRUNDFLOW, cw / 2, ch / 2, cw * 0.26);
+      },
+      256,
+    );
+    // Round: its square's corners left out.
+    const topMaterial = top.mesh.material as MeshStandardMaterial;
+    topMaterial.transparent = true;
+    topMaterial.alphaTest = 0.5;
+    top.mesh.rotation.x = -Math.PI / 2;
+    top.mesh.position.set(x, 1.2505, z);
+    object.add(top.mesh);
+    // Its six bolts round the plate.
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2 + Math.PI / 6;
+      t.cyl(
+        object,
+        steel,
+        0.008,
+        0.008,
+        x + Math.cos(a) * 0.088,
+        1.254,
+        z + Math.sin(a) * 0.088,
+        'y',
+        6,
+      );
+    }
     t.ratingPlate(
       object,
       [x, 0.6, z + 0.078],
@@ -211,14 +306,6 @@ export function createBoosterSet(
       0.09,
       0.05,
     );
-  }
-  function badge(at: Point, height: number) {
-    const mesh = createBrandBadge(kit, 'grundflow', {
-      height,
-      plate: '#eceee8',
-    });
-    mesh.position.set(...at);
-    object.add(mesh);
   }
   // The control unit, on its post at the east end, facing the front.
   const parts = createPartSet();
@@ -355,16 +442,30 @@ export function createBoosterSet(
   });
   const heard = [false, false];
   const sound = pumpSound(BOOSTER_PUMP);
-  const gauge = createDialGauge(kit, {
-    dia: 0.09,
-    max: 10,
-    unit: 'bar',
-    legend: 'DISCHARGE',
-    flutter: 0.01,
+  // Its pressure gauges on its manifolds, where they measure (the
+  // owner, 2026-10-26: a gauge sits on what it reads, not on the panel):
+  // suction on the front manifold, discharge on the back, each on a
+  // short stub with its gauge cock, facing the front.
+  const gauges = (
+    [
+      ['SUCTION', 4, -B.w / 2 + 0.2, B.suctionZ],
+      ['DISCHARGE', 10, B.w / 2 - 0.12, B.dischargeZ],
+    ] as const
+  ).map(([legend, max, gx, gz]) => {
+    t.rod(object, steel, [gx, y, gz], [gx, y + 0.17, gz], 0.008);
+    t.cyl(object, black, 0.012, 0.03, gx, y + 0.1, gz, 'y', 10);
+    const g = createDialGauge(kit, {
+      dia: 0.1,
+      max,
+      unit: 'bar',
+      legend,
+      flutter: 0.01,
+    });
+    g.group.position.set(gx, y + 0.22, gz + 0.012);
+    g.group.traverse((o: Object3D) => (o.userData.live = true));
+    object.add(g.group);
+    return g;
   });
-  gauge.group.position.set(-0.08, -0.13, z);
-  gauge.group.traverse((o: Object3D) => (o.userData.live = true));
-  panel.add(gauge.group);
   return {
     object,
     parts,
@@ -394,8 +495,10 @@ export function createBoosterSet(
           `FLOW ${changeoverFlow(s).toFixed(1)} m3/h`.padEnd(16).slice(0, 16),
         ]);
       } else screen.show(boosterDisplay(r));
-      gauge.set(boosterPressure(r));
-      gauge.update(delta);
+      // Suction: the break tank's head; discharge: the set's pressure.
+      gauges[0].set(0.3);
+      gauges[1].set(boosterPressure(r));
+      for (const g of gauges) g.update(delta);
     },
     dispose() {
       for (const m of motors) partAudio.hold(m, null);

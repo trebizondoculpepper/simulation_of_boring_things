@@ -1,7 +1,10 @@
 import { Group } from 'three';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
-import { createPipe } from '../../../components/core/views/pipe-kinds';
+import {
+  PIPE_KINDS,
+  createPipe,
+} from '../../../components/core/views/pipe-kinds';
 import { createExperimentalSourceView } from '../../../components/plant/views/experimental-source';
 import {
   SOURCE_SHAPE,
@@ -100,13 +103,20 @@ function rig(kit: PanelKit): LiveExhibit {
       [-B.w / 2 - 0.3, y, B.suctionZ],
       [-B.w / 2, y, B.suctionZ],
     ]),
-    createPipe('stainless', 0.076, [
-      [B.w / 2, y, B.dischargeZ],
-      [B.w / 2 + 0.3, y, B.dischargeZ],
-      [B.w / 2 + 0.3, over, B.dischargeZ],
-      [eastX, over, B.dischargeZ],
-      [eastX, top, B.dischargeZ],
-    ]),
+    // Its bends as round as the suction's (the owner, 2026-10-26): the
+    // same radius on the smaller pipe.
+    createPipe(
+      'stainless',
+      0.076,
+      [
+        [B.w / 2, y, B.dischargeZ],
+        [B.w / 2 + 0.3, y, B.dischargeZ],
+        [B.w / 2 + 0.3, over, B.dischargeZ],
+        [eastX, over, B.dischargeZ],
+        [eastX, top, B.dischargeZ],
+      ],
+      { bend: ((PIPE_KINDS.stainless.bend ?? 1.5) * 0.089) / 0.076 },
+    ),
   );
   return {
     object,
