@@ -820,6 +820,8 @@ export function stepWorld(world: World, delta: number): World {
         tankDrain: installedValveOpen(world.installedValves, 'PL2-T1-DV1')
           ? OLYMPIC_TANK_DRAIN.coefficient
           : 0,
+        // Its main drains into the tank, through their isolating valve.
+        mainDrainShut: !installedValveOpen(world.installedValves, 'PL2-T1-IV1'),
       };
     },
     (running) =>

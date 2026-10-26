@@ -274,6 +274,8 @@ const CHANNEL = -0.3;
  * in from the walls. Its trunking is about 150 mm square.
  */
 export const BUSBAR = { y: 5.75, off: 0.3, od: 0.15 } as const;
+/** A conduit's saddles hold it this far off its wall, surface to face, metres. */
+const WALL_SADDLE = 0.03;
 /** A tap-off box hangs this far under the busbar, its drop leaving its foot. */
 const TAP = 0.3;
 /** The dosing spool's line in from the south wall, and the height the chemical lines come in at. */
@@ -669,8 +671,10 @@ export function plumbOlympic(
 
   // The drops by the walls, laid by rule: from its tap-off straight down
   // the wall, then across over the machine and down onto its power port.
-  // (The east wall's pass the gantry's deck where it meets the wall, in a
-  // sleeve.) The UV's, in the room's middle, is routed.
+  // The east wall's step in to the wall first, on its saddles, and pass the
+  // gantry's deck there, close against the wall: a conduit may pierce the
+  // deck only so (the owner, 2026-10-26). The UV's, in the room's middle,
+  // is routed.
   const drop = (
     line: string,
     side: 'east' | 'west',
@@ -679,12 +683,29 @@ export function plumbOlympic(
     od: number,
   ) => {
     const x = side === 'east' ? bx : -bx;
-    rule(`Busbar drop to ${p.machine} (${p.name})`, line, 'power', od, [
-      [x, B.y - B.od / 2, p.at[2]],
-      [x, across, p.at[2]],
-      [p.at[0], across, p.at[2]],
-      p.at,
-    ]);
+    const top = B.y - B.od / 2;
+    const hug = hx - WALL_SADDLE - od / 2;
+    rule(
+      `Busbar drop to ${p.machine} (${p.name})`,
+      line,
+      'power',
+      od,
+      side === 'east'
+        ? [
+            [x, top, p.at[2]],
+            [x, top - 0.15, p.at[2]],
+            [hug, top - 0.15, p.at[2]],
+            [hug, across, p.at[2]],
+            [p.at[0], across, p.at[2]],
+            p.at,
+          ]
+        : [
+            [x, top, p.at[2]],
+            [x, across, p.at[2]],
+            [p.at[0], across, p.at[2]],
+            p.at,
+          ],
+    );
   };
   drop(
     'power-panel',
@@ -1190,6 +1211,28 @@ export function plumbOlympic(
       });
     }
   }
+  // The pool's main drains' isolating valve, on its main just inside the
+  // north wall, before it turns for the tank (the owner, 2026-10-26).
+  {
+    const run = runs.find((r) => r.name === 'Pool main drain');
+    if (run) {
+      const [a, b] = run.points;
+      const z = -olympicRoomPlan().halfZ + 0.18;
+      const t = (z - a[2]) / (b[2] - a[2]);
+      const at: Vec3 = [a[0], round(a[1] + (b[1] - a[1]) * t), z];
+      fittings.push({
+        id: 'pool.mainDrain.iso',
+        kind: 'isolating-valve',
+        line: 'pool.mainDrain',
+        run: run.name,
+        at,
+        along: [0, 0, 1],
+        normally: 'open',
+        operator: workedBy({ kind: 'isolating-valve', medium: 'water' }, at),
+        reachable: true,
+      });
+    }
+  }
   // The pumps' common discharge's flowmeter, on the manifold's drop to the battery.
   {
     const f = expansion.fittings.find((x) => x.id === 'pumps.discharge.meter');
@@ -1596,6 +1639,7 @@ function valveName(
     'exchanger.primaryReturn.iso': ['HX primary return valve', 'HX1'],
     'battery.outlet.regulating': ['Side-stream regulating valve', 'F'],
     'pumps.drain.iso': ['Pump drain valve', 'P1'],
+    'pool.mainDrain.iso': ['Pool main drain isolating valve', 'T1'],
   };
   const t = table[id];
   // The pumps' drain keeps its own plate: a drain valve (the owner, 2026-10-25).
@@ -1769,6 +1813,12 @@ export function olympicRoom() {
         const link = sits ? base.get(sits.edge) : undefined;
         // The pumps' drain, beside the expansion (`olympic-annex.ts`): from
         // the pumps' discharge to the main plant's drain.
+        if (f.id === 'pool.mainDrain.iso')
+          routes.set(`${r.name}|${v.name}`, {
+            from: "the pool's main drains",
+            to: 'the balance tank',
+            medium: 'water',
+          });
         if (f.id === 'pumps.drain.iso')
           routes.set(`${r.name}|${v.name}`, {
             from: 'the circulation pumps',

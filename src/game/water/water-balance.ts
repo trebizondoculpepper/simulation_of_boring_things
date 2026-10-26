@@ -115,6 +115,12 @@ export interface WaterState {
    * tank's water depth, m³/h (`JACUZZI_TANK_DRAIN`); shut, 0 or absent.
    */
   tankDrain?: number;
+  /**
+   * Its main drains' valve into the tank shut (the Olympic's PL2-T1-IV1):
+   * nothing leaves the pool by its main drains, pumps or no pumps; the
+   * pool holds its water when its pumps stop (the owner, 2026-10-26).
+   */
+  mainDrainShut?: boolean;
 }
 
 /** A pool brimming, its tank at its float, its pumps running, its make-up open. */
@@ -158,15 +164,16 @@ export function flows(p: PoolWater, s: WaterState) {
   // the tank's, once they stop.
   const head = s.level - tankSurface(p, s);
   // Draining down, the main drains are valved to the pumps, not the tank.
-  const mainDrains = s.drainDown
-    ? 0
-    : s.pumps
-      ? pumped * p.mainDrainShare
-      : head > 0 && !empty
-        ? p.flow *
-          p.mainDrainShare *
-          Math.sqrt(head / (p.tankBelow + p.tankDepth))
-        : 0;
+  const mainDrains =
+    s.drainDown || s.mainDrainShut
+      ? 0
+      : s.pumps
+        ? pumped * p.mainDrainShare
+        : head > 0 && !empty
+          ? p.flow *
+            p.mainDrainShare *
+            Math.sqrt(head / (p.tankBelow + p.tankDepth))
+          : 0;
   const makeUp =
     s.makeUpOpen && (s.makeUpCalling ?? s.tankVolume < p.tank * p.float)
       ? p.makeUpRate

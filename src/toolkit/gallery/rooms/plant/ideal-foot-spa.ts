@@ -292,6 +292,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       signals: () => washSignals(demo.state.filter),
       glass: (pumping: boolean) => spaFilterGlass(demo.state.filter, pumping),
       mode: () => demo.filterAction({ act: 'mode' }),
+      washNow: () => demo.filterAction({ act: 'wash-now' }),
     },
   }),
   make(

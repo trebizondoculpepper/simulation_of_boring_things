@@ -5,6 +5,7 @@ import { plantRoomPlan } from './plant-rooms';
 import { POOL_HALLS } from './pool-halls';
 import { MAIN_CORRIDOR } from './main-corridor';
 import { SHELL_ROOMS, WET_HALL } from './shell-rooms';
+import { DECK_SOFFIT, olympicRoomPlan } from './olympic-plan';
 
 /**
  * A room's structure, from one place, for everything that runs pipe,
@@ -113,6 +114,20 @@ const box = (
   maxZ: f.maxZ,
 });
 
+/** Each room's decks cantilevered from its walls, over clear floor. */
+const DECKS: Record<
+  string,
+  () => readonly (Footprint & { name: string; soffit: number })[]
+> = {
+  plant_pool_02: () => {
+    const plan = olympicRoomPlan();
+    return [
+      { name: 'gantry', soffit: DECK_SOFFIT, ...plan.gantry },
+      { name: 'landing', soffit: DECK_SOFFIT, ...plan.landing },
+    ];
+  },
+};
+
 /**
  * The structure of `room`, or null if it is not a room whose services are
  * laid out. `supplyWall` overrides its supply wall for this helper.
@@ -153,6 +168,13 @@ export function roomStructure(
       ),
       ...solid.map((f, i) =>
         box(`landing or stair ${i + 1}`, 'landing', f, 0, landing),
+      ),
+      // Decks cantilevered off the walls, clear floor under them: from
+      // their underside up to their rail. Nothing hung from the roof passes
+      // through them; what is under them hangs from them (the owner,
+      // 2026-10-26).
+      ...(DECKS[room]?.() ?? []).map((f) =>
+        box(f.name, 'landing', f, f.soffit, landing),
       ),
     ],
   };

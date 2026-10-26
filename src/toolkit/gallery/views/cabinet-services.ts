@@ -39,6 +39,10 @@ import { createSpaBalanceTank } from '../../components/plant/views/spa-balance-t
 import { JACUZZI_BALANCE_TANK } from '../../../game/plant/spa-balance-tank';
 import { createRemoteValve } from '../../components/plant/views/remote-actuators';
 import {
+  CABINET_SERVOS,
+  servoCommanded,
+} from '../../../game/plant/cabinet-boot';
+import {
   motorGoal,
   motorLimits,
   motorRate,
@@ -262,10 +266,26 @@ export function cabinetServices(
             room as ServiceRoom,
             'power',
           );
+        // Its cabinet's controller works it (`cabinet-boot.ts`): powered
+        // only while the controller is on, and opened in its turn once the
+        // controller has booted and passed its self test, never before
+        // (the owner, 2026-10-25).
+        const pool =
+          room === 'plant_pool_03'
+            ? 'pool_03'
+            : room === 'plant_pool_04'
+              ? 'pool_04'
+              : null;
+        const turn = Math.min(index, CABINET_SERVOS.length - 1);
+        const cabinet = () =>
+          pool && store ? store.world.value.cabinets[pool] : null;
         motorLamps.push((delta) => {
-          const power = powered();
+          const boot = cabinet();
+          const power = powered() && (!boot || boot.phase !== 'off');
+          const command =
+            binding.open() && (!boot || servoCommanded(boot, turn));
           travel = stepMotorisedValve(
-            { ...travel, command: binding.open(), power },
+            { ...travel, command, power },
             delta,
             stroke,
           );

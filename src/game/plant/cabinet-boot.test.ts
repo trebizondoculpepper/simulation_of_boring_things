@@ -7,6 +7,7 @@ import {
   cabinetReady,
   offCabinet,
   runningCabinet,
+  servoCommanded,
   stepCabinetBoot,
 } from './cabinet-boot';
 import type { CabinetBoot, CabinetBootInputs } from './cabinet-boot';
@@ -77,5 +78,23 @@ describe('a spa cabinet’s controller starting and stopping', () => {
     expect(bootLine(run(offCabinet(), ON, 1).b)).toBe('BOOTING...');
     expect(bootLine(run(offCabinet(), ON, BOOT.boot + 1).b)).toBe('SELF TEST');
     expect(bootLine(runningCabinet())).toBeNull();
+  });
+});
+
+describe('its valves wait for its self test', () => {
+  // The owner, 2026-10-25: no valve opens until the self test is complete.
+  it('commands none open while booting or checking, then each in its turn', () => {
+    const on = { powered: true, fault: '' };
+    let b = offCabinet();
+    for (let t = 0; t < BOOT.boot + BOOT.check - 0.2; t += 0.1) {
+      b = stepCabinetBoot(b, on, 0.1);
+      for (let turn = 0; turn < 6; turn++)
+        expect(servoCommanded(b, turn), `${b.phase} ${t}`).toBe(false);
+      expect(CABINET_SERVOS.every((s) => b.valves[s] === 0)).toBe(true);
+    }
+    while (b.phase !== 'starting') b = stepCabinetBoot(b, on, 0.1);
+    expect(servoCommanded(b, 0)).toBe(true);
+    expect(servoCommanded(b, 1)).toBe(false);
+    expect(servoCommanded(runningCabinet(), 5)).toBe(true);
   });
 });

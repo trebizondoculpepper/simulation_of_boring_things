@@ -68,6 +68,7 @@ export function createCabinetMimic(
     parts = createPartSet(),
     display = 'led',
     onMode,
+    onWashNow,
   }: {
     width?: number;
     drainAndMakeUp?: boolean;
@@ -79,6 +80,8 @@ export function createCabinetMimic(
     parts?: ReturnType<typeof createPartSet>;
     /** Its MODE pressed: the filter's wash schedule stepped. */
     onMode?: () => void;
+    /** Its WASH NOW pressed: the filter's wash programme started at once. */
+    onWashNow?: () => void;
   } = {},
 ) {
   const t = plantTools(kit);
@@ -261,8 +264,11 @@ export function createCabinetMimic(
     ? null
     : createSevenSegment(kit, 3, { digitHeight: 0.022 });
   const shown = lcd ?? readout!;
-  // Its middle: the LCD's bezel (0.13 m wide) ends 1 cm short of the + and −.
-  const shownX = lcd ? -0.09 : width / 2 - 0.07;
+  // Its middle: the LCD's bezel (0.13 m wide) at the strip's left, clear
+  // of the DISPLAY, WASH MODE and WASH NOW buttons beside it.
+  const shownX = lcd ? -0.11 : width / 2 - 0.07;
+  // The thermostat's column: its SET lamp, its + and − under it.
+  const SET_X = width / 2 - 0.05;
   shown.group.position.set(shownX, lcd ? LCD_Y : 0.02, 0.002);
   if (lcd)
     // Its strip under the print: a light grey overlay, so the LCD's black
@@ -301,35 +307,50 @@ export function createCabinetMimic(
         action: () => press(step),
       }),
     );
-    button.object.position.set(width / 2 - 0.018, y, 0.002);
+    // Straight under the SET lamp (the owner, 2026-10-26).
+    button.object.position.set(SET_X, y, 0.002);
     button.object.scale.setScalar(0.7);
     group.add(button.object);
   }
   // Under the display, its DISPLAY (what it shows: the status, then the
-  // filter's wash) and MODE (the wash's schedule): the same on every
-  // cabinet of this maker's (the owner, 2026-10-25).
+  // filter's wash, then its pressure) and WASH MODE (the wash's schedule):
+  // the same on every cabinet of this maker's (the owner, 2026-10-25).
+  // WASH MODE's first press shows the wash's page with its setting; each
+  // press after steps it, seen as it changes (the owner, 2026-10-25: what
+  // MODE did was not clear, changing a page not on show).
   let page = 0;
+  const washMode = () => {
+    if (page === 1) onMode?.();
+    else page = 1;
+  };
+  // WASH NOW (the owner, 2026-10-25): its filter washed at once, the wash's
+  // page shown so its progress is seen.
+  const washNow = () => {
+    page = 1;
+    onWashNow?.();
+  };
   if (lcd)
     (
       [
-        ['DISPLAY', () => (page = (page + 1) % 3), -0.035],
-        ['MODE', () => onMode?.(), 0.035],
+        ['DISPLAY', () => (page = (page + 1) % 3), 0.05, 'display'],
+        ['WASH MODE', washMode, 0.12, 'wash mode'],
+        ['WASH NOW', washNow, 0.19, 'wash now'],
       ] as const
-    ).forEach(([legend, action, dx]) => {
+    ).forEach(([legend, action, x, what]) => {
       const button = parts.add(
         pushButton(kit, {
           colour: 'black',
           legend,
-          name: `Spa set ${legend.toLowerCase()} button`,
+          name: `Spa set ${what} button`,
           action,
         }),
       );
-      button.object.position.set(0.13 + dx * 1.4, LCD_Y - 0.008, 0.004);
+      button.object.position.set(x, LCD_Y - 0.008, 0.004);
       button.object.scale.setScalar(0.7);
       group.add(button.object);
     });
   // Over the readout, clear of the print.
-  const setLamp = at(width / 2 - 0.05, 0.06, '#ffb02a');
+  const setLamp = at(SET_X, 0.06, '#ffb02a');
   const setMark = createMicroLabel(kit, 'SET', {
     height: 0.008,
     ink: '#1b1f20',

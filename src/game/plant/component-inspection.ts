@@ -80,7 +80,12 @@ export function inspectComponent(
       ...(detail ? { detail } : {}),
     };
   }
-  return identity.name
-    ? { key: `name:${identity.name}`, title: identity.name }
-    : null;
+  // A thing with no tag: its name, and its own state where it keeps one
+  // (a music source's track, an amplifier's on and volume).
+  if (!identity.name) return null;
+  const state = identity.status?.();
+  return {
+    key: `name:${identity.name}`,
+    title: state ? `${identity.name} - ${state}` : identity.name,
+  };
 }
