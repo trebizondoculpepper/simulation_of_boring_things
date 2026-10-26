@@ -1,4 +1,4 @@
-import { Group } from 'three';
+import { CylinderGeometry, Group, Mesh } from 'three';
 import type { Material } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { plantTools } from '../../plant/views/plant-tools';
@@ -341,4 +341,240 @@ export function createGeneratorCabinet(kit: PanelKit) {
   warn.position.set(0, 0.4, 0.03);
   g.add(warn);
   return { group: g, door };
+}
+
+// ---- The goods yard's dressing (prompt 083; the owner, 2026-10-26) -------
+
+/** An 1100 L four-wheeled steel bin, its lid's colour its stream's. */
+export function createWheelieBin(
+  kit: PanelKit,
+  lid = '#2f6b33',
+  label = 'GENERAL WASTE',
+) {
+  const t = plantTools(kit);
+  const g = new Group();
+  g.name = `1100 L bin: ${label}`;
+  const steel = t.paint('#8d9392', 0.5, 0.6);
+  const black = t.paint('#151617', 0.85);
+  t.box(g, steel, 1.24, 1.0, 0.98, 0, 0.66, 0);
+  // Its domed lid in two halves.
+  for (const s of [-1, 1]) {
+    const half = t.box(g, t.paint(lid, 0.6), 0.62, 0.06, 1.0, s * 0.31, 1.2, 0);
+    half.rotation.z = s * 0.06;
+  }
+  for (const x of [-0.5, 0.5])
+    for (const z of [-0.38, 0.38])
+      t.cyl(g, black, 0.1, 0.05, x, 0.1, z, 'x', 14);
+  const l = createMicroLabel(kit, label, {
+    height: 0.06,
+    ink: '#ffffff',
+    plate: lid,
+  });
+  l.position.set(0, 0.85, 0.492);
+  g.add(l);
+  return g;
+}
+
+/** A builder's skip, 8 yd³, yellow, a little rubbish in it. */
+export function createSkip(kit: PanelKit) {
+  const t = plantTools(kit);
+  const g = new Group();
+  g.name = 'Skip';
+  const yellow = t.paint('#d9a51b', 0.7, 0.3);
+  t.box(g, yellow, 3.6, 0.06, 1.7, 0, 0.03, 0);
+  for (const s of [-1, 1]) {
+    const side = t.box(g, yellow, 3.6, 1.25, 0.05, 0, 0.66, s * 0.9);
+    side.rotation.x = -s * 0.12;
+  }
+  for (const s of [-1, 1]) {
+    const end = t.box(g, yellow, 0.05, 1.25, 1.9, s * 2.0, 0.66, 0);
+    end.rotation.z = s * 0.35;
+  }
+  // What's in it: broken boards, a carpet roll, rubble.
+  t.box(g, t.paint('#7a6a55', 0.95), 3.2, 0.5, 1.5, 0, 0.3, 0);
+  const plank = t.box(
+    g,
+    t.paint('#a07c52', 0.9),
+    2.2,
+    0.03,
+    0.15,
+    0.2,
+    0.7,
+    0.2,
+  );
+  plank.rotation.z = 0.3;
+  t.cyl(g, t.paint('#4a5a6a', 0.95), 0.18, 1.6, -0.7, 0.75, -0.2, 'x', 12);
+  return g;
+}
+
+/**
+ * A locked mesh cage of forklift propane cylinders (18 kg, the forklift
+ * kind, red and yellow), the spent ones for collection.
+ */
+export function createLpgCage(kit: PanelKit) {
+  const t = plantTools(kit);
+  const g = new Group();
+  g.name = 'LPG cylinder cage';
+  const galv = t.paint('#a9aeae', 0.45, 0.6);
+  const W = 1.5;
+  const D = 0.8;
+  const H = 1.8;
+  for (const x of [-W / 2, W / 2])
+    for (const z of [-D / 2, D / 2]) t.box(g, galv, 0.04, H, 0.04, x, H / 2, z);
+  for (const y of [0.1, H]) {
+    t.box(g, galv, W, 0.04, 0.04, 0, y, -D / 2);
+    t.box(g, galv, W, 0.04, 0.04, 0, y, D / 2);
+    t.box(g, galv, 0.04, 0.04, D, -W / 2, y, 0);
+    t.box(g, galv, 0.04, 0.04, D, W / 2, y, 0);
+  }
+  // Its mesh: thin bars on every face but the back.
+  for (let x = -W / 2; x <= W / 2 + 1e-6; x += 0.1)
+    t.box(g, galv, 0.006, H - 0.1, 0.006, x, H / 2 + 0.05, D / 2);
+  for (let y = 0.2; y < H; y += 0.15)
+    t.box(g, galv, W, 0.006, 0.006, 0, y, D / 2);
+  for (const sx of [-1, 1])
+    for (let z = -D / 2; z <= D / 2 + 1e-6; z += 0.1)
+      t.box(g, galv, 0.006, H - 0.1, 0.006, (sx * W) / 2, H / 2 + 0.05, z);
+  // The cylinders: two rows, red with yellow collars, valves up.
+  const red = t.paint('#b5291f', 0.55, 0.3);
+  const collar = t.paint('#e0b81c', 0.5);
+  for (let i = 0; i < 6; i++) {
+    const x = -0.55 + (i % 3) * 0.55;
+    const z = i < 3 ? -0.18 : 0.18;
+    t.cyl(g, red, 0.15, 0.62, x, 0.43, z, 'y', 18);
+    t.cyl(g, collar, 0.1, 0.12, x, 0.8, z, 'y', 14);
+  }
+  const sign = createMicroLabel(
+    kit,
+    'LPG · HIGHLY FLAMMABLE\nNO SMOKING · EMPTIES',
+    {
+      height: 0.05,
+      ink: '#111111',
+      plate: '#e0b81c',
+    },
+  );
+  sign.position.set(0, 1.45, D / 2 + 0.01);
+  g.add(sign);
+  return g;
+}
+
+/** A tired planter: a square tub and a half-dead shrub. */
+export function createSadPlanter(kit: PanelKit, seed = 1) {
+  const t = plantTools(kit);
+  const g = new Group();
+  g.name = 'Planter';
+  t.box(g, t.paint('#3a3d3f', 0.8), 0.6, 0.55, 0.6, 0, 0.275, 0);
+  t.box(g, t.paint('#4a3a2a', 1), 0.54, 0.02, 0.54, 0, 0.55, 0);
+  // A thin shrub, brown more than green, a few leaves left.
+  let r = seed * 9301 + 49297;
+  const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+  const brown = t.paint('#6b5236', 0.9);
+  const leaf = t.paint('#6f7a3a', 0.9);
+  for (let k = 0; k < 5; k++) {
+    const a = rnd() * Math.PI * 2;
+    const len = 0.4 + rnd() * 0.5;
+    t.rod(
+      g,
+      brown,
+      [0, 0.55, 0],
+      [Math.cos(a) * 0.2, 0.55 + len, Math.sin(a) * 0.2],
+      0.012,
+      6,
+    );
+    if (rnd() < 0.6)
+      t.box(
+        g,
+        leaf,
+        0.12,
+        0.08,
+        0.1,
+        Math.cos(a) * 0.18,
+        0.5 + len,
+        Math.sin(a) * 0.18,
+      );
+  }
+  return g;
+}
+
+/** A yellow grit bin, its lid shut. */
+export function createGritBin(kit: PanelKit) {
+  const t = plantTools(kit);
+  const g = new Group();
+  g.name = 'Grit bin';
+  const yellow = t.paint('#e3b51f', 0.6);
+  t.box(g, yellow, 0.9, 0.6, 0.6, 0, 0.3, 0);
+  t.box(g, yellow, 0.94, 0.08, 0.66, 0, 0.64, 0);
+  const l = createMicroLabel(kit, 'GRIT', { height: 0.1, ink: '#111111' });
+  l.position.set(0, 0.35, 0.302);
+  g.add(l);
+  return g;
+}
+
+/** A traffic cone, 750 mm. */
+export function createCone(kit: PanelKit) {
+  const t = plantTools(kit);
+  const g = new Group();
+  g.name = 'Traffic cone';
+  const m = new Mesh(
+    new CylinderGeometry(0.035, 0.17, 0.72, 16),
+    t.paint('#e8561a', 0.6),
+  );
+  m.position.y = 0.39;
+  g.add(m);
+  t.box(g, t.paint('#151617', 0.8), 0.38, 0.03, 0.38, 0, 0.015, 0);
+  const band = new Mesh(
+    new CylinderGeometry(0.1, 0.12, 0.1, 16),
+    t.paint('#e9e6dc', 0.4),
+  );
+  band.position.y = 0.45;
+  g.add(band);
+  return g;
+}
+
+/** A strapped stack of flattened cardboard on a pallet. */
+export function createCardboardStack(kit: PanelKit) {
+  const g = new Group();
+  g.name = 'Flattened cardboard';
+  g.add(createPallet(kit));
+  const t = plantTools(kit);
+  const card = t.paint('#a88654', 0.9);
+  for (let k = 0; k < 8; k++) {
+    const sheet = t.box(
+      g,
+      card,
+      1.15,
+      0.06,
+      0.95,
+      (k % 2) * 0.03 - 0.015,
+      0.144 + 0.03 + k * 0.06,
+      (k % 3) * 0.02 - 0.02,
+    );
+    sheet.rotation.y = (k % 2) * 0.03;
+  }
+  for (const x of [-0.3, 0.3])
+    t.box(g, t.paint('#1d4f9e', 0.5), 0.03, 0.52, 0.97, x, 0.42, 0);
+  return g;
+}
+
+/** A stack of returnable plastic crates, `n` high. */
+export function createCrateStack(kit: PanelKit, n = 5, colour = '#2a6fa8') {
+  const t = plantTools(kit);
+  const g = new Group();
+  g.name = 'Returned crates';
+  const m = t.paint(colour, 0.6);
+  for (let k = 0; k < n; k++) {
+    const c = t.box(g, m, 0.6, 0.3, 0.4, 0, 0.15 + k * 0.29, 0);
+    c.rotation.y = (k % 2) * 0.05;
+  }
+  return g;
+}
+
+/** A wall-mounted cigarette bin, stainless. Origin at its back, facing +z. */
+export function createCigaretteBin(kit: PanelKit) {
+  const t = plantTools(kit);
+  const g = new Group();
+  g.name = 'Cigarette bin';
+  t.cyl(g, t.paint('#b9bec0', 0.3, 0.8), 0.07, 0.45, 0, 0, 0.08, 'y', 18);
+  t.cyl(g, t.paint('#2a2c2e', 0.6), 0.072, 0.06, 0, 0.23, 0.08, 'y', 18);
+  return g;
 }

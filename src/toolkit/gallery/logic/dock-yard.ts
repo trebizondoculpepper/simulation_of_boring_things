@@ -58,6 +58,38 @@ export function intakeSolids(): Footprint[] {
   ];
 }
 
+/**
+ * The goods yard's dressing (prompt 083; the owner, 2026-10-26: what a
+ * yard holds), right of the dock as seen from inside (left as one faces
+ * the building), clear of the bays and the steps: each piece's kind, its
+ * place (x, z), its turn, and its footprint (w along x, d along z).
+ */
+export const YARD_DRESSING = [
+  { kind: 'planter', x: 6.0, z: -6.6, yaw: 0, w: 0.6, d: 0.6 },
+  { kind: 'planter', x: 6.9, z: -6.6, yaw: 0, w: 0.6, d: 0.6 },
+  { kind: 'bin-general', x: 8.6, z: -6.8, yaw: Math.PI, w: 1.3, d: 1.0 },
+  { kind: 'bin-recycling', x: 10.1, z: -6.8, yaw: Math.PI, w: 1.3, d: 1.0 },
+  { kind: 'cardboard', x: 11.7, z: -6.85, yaw: 0, w: 1.2, d: 1.0 },
+  { kind: 'crates', x: 12.8, z: -6.6, yaw: 0.2, w: 0.6, d: 0.5 },
+  { kind: 'crates-green', x: 13.4, z: -6.55, yaw: -0.1, w: 0.6, d: 0.5 },
+  { kind: 'lpg', x: 15.0, z: -6.7, yaw: Math.PI, w: 1.5, d: 0.8 },
+  { kind: 'grit', x: 16.6, z: -6.6, yaw: Math.PI, w: 0.95, d: 0.66 },
+  { kind: 'skip', x: 12.0, z: -11.0, yaw: 0.08, w: 3.8, d: 1.9 },
+  { kind: 'cone', x: 9.6, z: -10.2, yaw: 0, w: 0.4, d: 0.4 },
+  { kind: 'cone', x: 9.9, z: -11.6, yaw: 0, w: 0.4, d: 0.4 },
+  { kind: 'pallets', x: 15.4, z: -9.8, yaw: 0.3, w: 1.2, d: 1.2 },
+] as const;
+
+/** What the dressing stands in the way of. */
+export function dressingSolids(): Footprint[] {
+  return YARD_DRESSING.map((p) => ({
+    minX: p.x - p.w / 2,
+    maxX: p.x + p.w / 2,
+    minZ: p.z - p.d / 2,
+    maxZ: p.z + p.d / 2,
+  }));
+}
+
 export interface DockFrame {
   wallZ: number;
   thickness: number;
@@ -145,5 +177,10 @@ export function dockYardSolids(f: DockFrame, low: boolean): Footprint[] {
     }
     building.push({ minX: from, maxX: 200, minZ: outer, maxZ: 200 });
   } else building.push(...channels.map((c) => ({ ...c, minZ: outer })));
-  return [...rails, ...ring, ...building, ...(low ? intakeSolids() : [])];
+  return [
+    ...rails,
+    ...ring,
+    ...building,
+    ...(low ? [...intakeSolids(), ...dressingSolids()] : []),
+  ];
 }

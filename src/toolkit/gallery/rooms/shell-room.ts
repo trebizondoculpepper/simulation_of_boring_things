@@ -1,3 +1,4 @@
+import { createYardDressing } from '../views/yard-dressing';
 import { yardIntake } from '../views/yard-intake';
 import { dockDoor } from '../views/dock-door';
 import { YARD, dockFloorAt, dockYardSolids } from '../logic/dock-yard';
@@ -214,6 +215,7 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
             thickness: SHELL_WALL,
             apertures: lorryOpenings,
           }).group,
+          createYardDressing(kit, lorryOpenings, yard.doorX),
           createDockSafety(kit, {
             wallZ: -spec.d / 2,
             hw: spec.w / 2,
