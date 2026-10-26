@@ -1,4 +1,4 @@
-import { Group } from 'three';
+import { Group, Object3D } from 'three';
 import { signal } from '@preact/signals-core';
 import { partAudio } from '../../core/audio/part-audio';
 import {
@@ -286,6 +286,9 @@ export function createActuatedButterflyValve(
       0.004,
       8,
     );
+    // Where its cable's tail ends, for whoever runs it on.
+    cableTail.position.set(-W / 2 - 0.06, mid - 0.05, 0);
+    head.add(cableTail);
     // Its badge across the front left of its lamp and override, as large
     // as fits there.
     const left = -W / 2 + 0.006;
@@ -298,6 +301,8 @@ export function createActuatedButterflyValve(
     head.add(badge);
     return { indicator, lamp, override, pilot: head };
   };
+  const cableTail = new Object3D();
+  cableTail.name = 'cable tail';
   const { indicator, lamp, override, pilot } =
     drive === 'electric' ? electric() : pneumatic();
   let state = newActuatedValve(binding?.open() ?? true);
@@ -366,6 +371,8 @@ export function createActuatedButterflyValve(
     setSupplies(power: boolean, air: boolean) {
       state = { ...state, power, air: electricDrive || air };
     },
+    /** Its electric drive's cable tail's end, to run its cable on from. */
+    cableTail,
     /** How open it stands, and what its limit switches say. */
     position: () => state.position,
     limits: () => limits(state),

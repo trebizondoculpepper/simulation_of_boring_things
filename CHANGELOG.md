@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The booster set's motorised valves are each cabled to its control unit (the owner, 2026-10-26): a thinner cable from each actuator's tail, laid in square runs, into its own small gland under the unit (an actuated valve now marks where its cable's tail ends, `cableTail`); the unit's network gland moves to its top, its cable up to the room's control bus, and the CONTROL NETWORK sign is gone.
 - The booster set's pumps' rating plates sit on their terminal boxes' flat lids, sized to them, not on the round stage sleeves; each terminal box's control cable runs from its gland down and along into a gland under the control unit, and the unit has a larger gland of its own, marked CONTROL NETWORK, its cable down to the floor (the owner, 2026-10-26).
 - Every character LCD's glass is drawn in front of its own bezel by polygon offset (the owner, 2026-10-26), so it never flickers against it at any distance: fixed once, in `createCharacterLcd`, for every display that uses it.
 - Every ideal source's and sink's display stands 2 mm proud of its bezel, not 1, so it no longer flickers against it (the owner, 2026-10-26).

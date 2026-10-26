@@ -1,5 +1,4 @@
 import { createPipe } from '../../core/views/pipe-kinds';
-import { createMicroLabel } from '../../core/views/eighties-controls';
 import { createCanvasTexture } from '../../core/views/screens';
 import { drawBrandMark } from '../../core/views/brand-logo';
 import { BRANDS } from '../../core/logic/brands';
@@ -25,6 +24,7 @@ import {
   Group,
   Mesh,
   MeshStandardMaterial,
+  Vector3,
 } from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -411,6 +411,7 @@ export function createBoosterSet(
   // its controller (the owner, 2026-10-26): open while the set is
   // powered and in service, shut on a low-water trip or with its power
   // off, isolating the pumps; RESET opens them again.
+  const tails: Object3D[] = [];
   // Where its changeover is modelled, each pump's pair follows it.
   const co = feed.changeover;
   isolators.forEach((v, i) => {
@@ -440,6 +441,7 @@ export function createBoosterSet(
     );
     valve.object.position.set(...v.at);
     object.add(valve.object);
+    tails.push(valve.cableTail);
   });
   const panel = new Group();
   const cx = B.w / 2 - 0.22;
@@ -547,8 +549,8 @@ export function createBoosterSet(
   const sound = pumpSound(BOOSTER_PUMP, load);
   // Each pump's control cable from its terminal box's gland, down and
   // along under the set, up into a gland under the control unit; and the
-  // unit's own larger gland, its link to the wider control network (the
-  // owner, 2026-10-26).
+  // unit's own larger gland on its top, its link to the wider control
+  // network (the owner, 2026-10-26).
   {
     const cable = t.paint('#1b1d1e', 0.7);
     const pz = B.d / 2 - 0.19;
@@ -572,27 +574,46 @@ export function createBoosterSet(
       );
       t.cyl(object, cable, 0.011, 0.02, ex, 0.79, pz, 'y', 10);
     });
-    // The network gland, larger, its cable leaving down to the floor's
-    // trunking.
-    t.cyl(object, cable, 0.018, 0.025, cx + 0.11, 0.788, pz, 'y', 12);
+    // Each motorised valve's thinner cable, from its actuator's tail
+    // down under the set (beneath the motors' cables), along and up into
+    // its own small gland under the unit (the owner, 2026-10-26).
+    object.updateMatrixWorld(true);
+    const at = new Vector3();
+    tails.forEach((tail, k) => {
+      const [tx, ty, tz] = object
+        .worldToLocal(tail.getWorldPosition(at))
+        .toArray();
+      const ex = cx - 0.02 + k * 0.03;
+      object.add(
+        createPipe(
+          'pressure-hose',
+          0.007,
+          [
+            [tx, ty, tz],
+            [tx, 0.66 - k * 0.012, tz],
+            [ex, 0.66 - k * 0.012, pz],
+            [ex, 0.8, pz],
+          ],
+          // Laid in square runs and clipped, not hanging in loops.
+          { colour: '#2a2b2c', laid: true },
+        ),
+      );
+      t.cyl(object, cable, 0.007, 0.016, ex, 0.792, pz, 'y', 8);
+    });
+    // The network gland, larger, on top of the unit (the owner,
+    // 2026-10-26), its cable leaving up to the room's control bus.
+    t.cyl(object, cable, 0.018, 0.025, cx + 0.11, 1.312, pz, 'y', 12);
     object.add(
       createPipe(
         'pressure-hose',
         0.016,
         [
-          [cx + 0.11, 0.78, pz],
-          [cx + 0.11, 0.08, pz],
+          [cx + 0.11, 1.32, pz],
+          [cx + 0.11, 2.2, pz],
         ],
         { colour: '#1b1d1e' },
       ),
     );
-    const net = createMicroLabel(kit, 'CONTROL NETWORK', {
-      height: 0.012,
-      ink: '#f2f2ea',
-      plate: '#25343a',
-    });
-    net.position.set(cx + 0.11, 0.83, B.d / 2 - 0.118);
-    object.add(net);
   }
   // Its pressure gauges on its manifolds, where they measure (the
   // owner, 2026-10-26: a gauge sits on what it reads, not on the panel):
