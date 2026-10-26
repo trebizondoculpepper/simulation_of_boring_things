@@ -182,7 +182,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Housekeeping
 
-- [x] Mission archive policy and review (2026-10-26; commit pending): review all 85 prompts; file mostly completed missions under done, retain explicit remaining scope and unchecked follow-ups, and repair archive links.
+- [x] Mission archive policy and review (2026-10-26; `1e2d855`): review all 85 prompts; file mostly completed missions under done, retain explicit remaining scope and unchecked follow-ups, and repair archive links.
 - [ ] **World simulation parallel-suite timing:** hall lights-out and air-handling/cooling tests in `src/game/world.test.ts` exceeded the 5 s default during the mission review. Preserve their assertions and make the checks reliable under concurrent load.
 
 - [ ] **Wash-O-Tron parallel-suite timing:** the three-hour AUTO wash scenario in `src/game/plant/wash-o-tron.test.ts` exceeded its 5 s default during the screenshot research’s full run, while all seven tests passed on a focused retry. Keep the same hydraulic assertions and make the check reliable under concurrent test load.
@@ -206,7 +206,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [ ] **How to make the world model faster, an investigation** ([042](doc/prompts/042-world-model-speed-investigation.md), the owner, 2026-10-24): experiments, not delivery: measure a world step (about 25 µs today, 45 % of it finding the foot spa's valves by tag) and an hour's catch-up (about 0.8 s), try resolving addresses once, caching flow solutions by line-up, event-driven catch-up, a compiled numerical form and a worker, and report which steps give the most benefit for their cost.
 - [ ] **The diary entry for 2026-10-23** (`diary/`): the Olympic plant room's redo, the tank hall, the solenoid valves, the five-valve battery, the world's battery and tank, the water effects.
 - [ ] **The room-name overlay after a hand-over through a door:** check it updates (it did when walking into the tank hall on 2026-10-23).
-- [x] **Legacy identification-pilot review retired** (superseded 2026-10-26, archive commit pending): [007](doc/prompts/obsolete/007-identification-pilot-review.md) yields to the enhanced-network work; the unresolved compatibility and metadata questions remain in the follow-up below.
+- [x] **Legacy identification-pilot review retired** (superseded 2026-10-26, archive commit `1e2d855`): [007](doc/prompts/obsolete/007-identification-pilot-review.md) yields to the enhanced-network work; the unresolved compatibility and metadata questions remain in the follow-up below.
 - [ ] **The stray `retired0` git tag:** a non-release tag made on 2026-10-23, harmless to CI; remove it if the owner wishes.
 
 ## Remaining work from mostly completed archived missions
