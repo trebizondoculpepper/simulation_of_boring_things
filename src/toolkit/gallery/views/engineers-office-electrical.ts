@@ -14,6 +14,7 @@ import { roomWorld } from '../../save/world-store';
 import { SHELL_ROOMS } from '../logic/shell-rooms';
 import { FEEDER_ISOLATOR } from '../logic/room-equipment';
 import { createOfficePir } from '../logic/office-pir';
+import { EQUIPMENT_DOORS } from '../../components/architectural/parts/equipment-doors';
 import type { Binding } from '../../components/core/logic/world/components';
 
 /** The office's real switched outlets, on a two-leg 240 V conduit ring. */
@@ -27,7 +28,11 @@ export function createEngineersOfficeElectrical(kit: PanelKit) {
   const north = -box.d / 2 + 0.05;
   const south = box.d / 2 - 0.05;
   const feeder = box.d / 2 - FEEDER_ISOLATOR.fromSouth;
-  const high = 2.28;
+  // The ring runs above the signs over the doors (the owner, 2026-10-26),
+  // the corridor door's the highest: over its opening's head, its sign's
+  // middle 0.35 m up and 0.24 m tall (`shell-room.ts`), then clear of it.
+  const doorHead = EQUIPMENT_DOORS.h + 2 * EQUIPMENT_DOORS.frame;
+  const high = doorHead + 0.35 + 0.24 / 2 + 0.15;
   const line = (name: string, points: [number, number, number][]) => {
     const pipe = createPipe('steel-screwed', 0.021, points);
     pipe.name = name;
@@ -35,7 +40,7 @@ export function createEngineersOfficeElectrical(kit: PanelKit) {
     group.add(markComponent(pipe, { name, model: { link: name } }));
   };
   // Two legs leave the room switch-fuse, travel around the walls above the
-  // cupboards, and return to it. Socket drops branch from that ring.
+  // cupboards and the doors' signs, and return to it. Socket drops branch from that ring.
   line('Office 240 V ring main', [
     [west, 1.86, feeder - 0.08],
     [west, high, feeder - 0.08],
@@ -56,9 +61,13 @@ export function createEngineersOfficeElectrical(kit: PanelKit) {
       'power',
     );
   const sockets = [
-    { name: 'Desk twin socket', x: -0.9, z: north, yaw: 0 },
+    // Its drop down beside the room's title card (±1.2 m on the north
+    // wall, `shell-room.ts`), not across it, then over to the socket.
+    { name: 'Desk twin socket', x: -0.9, z: north, yaw: 0, via: -1.27 },
     { name: 'East wall twin socket', x: east, z: 0.8, yaw: -Math.PI / 2 },
-    { name: 'South wall twin socket', x: 0.8, z: south, yaw: Math.PI },
+    // West of the corridor door's opening (±0.96 m), not on its leaf, and
+    // clear of the PIR east of it (the owner, 2026-10-26).
+    { name: 'South wall twin socket', x: -1.4, z: south, yaw: Math.PI },
   ] as const;
   for (const socket of sockets) {
     const rocker = (): Binding<boolean> => {
@@ -86,10 +95,21 @@ export function createEngineersOfficeElectrical(kit: PanelKit) {
     part.object.position.set(socket.x, 0.55, socket.z);
     part.object.rotation.y = socket.yaw;
     group.add(part.object);
-    line(`${socket.name} conduit`, [
-      [socket.x, high, socket.z],
-      [socket.x, 0.55, socket.z],
-    ]);
+    const via = 'via' in socket ? socket.via : undefined;
+    line(
+      `${socket.name} conduit`,
+      via === undefined
+        ? [
+            [socket.x, high, socket.z],
+            [socket.x, 0.55, socket.z],
+          ]
+        : [
+            [via, high, socket.z],
+            [via, 0.75, socket.z],
+            [socket.x, 0.75, socket.z],
+            [socket.x, 0.55, socket.z],
+          ],
+    );
   }
 
   const sensing = signal(false);
