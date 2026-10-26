@@ -128,8 +128,9 @@ export function createDockOutside(
     const g = fade.getContext('2d')!;
     const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
     grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.6, '#ffffff');
-    grad.addColorStop(0.97, '#000000');
+    // Fading before the building's wall does (the owner, 2026-10-26).
+    grad.addColorStop(0.3, '#ffffff');
+    grad.addColorStop(0.75, '#000000');
     g.fillStyle = grad;
     g.fillRect(0, 0, 256, 256);
     const alphaMap = new CanvasTexture(fade);
@@ -239,7 +240,8 @@ export function createDockOutside(
     const g = fade.getContext('2d')!;
     const grad = g.createLinearGradient(0, 0, 256, 0);
     grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.3, '#ffffff');
+    // Solid further out than the tarmac, fading after it.
+    grad.addColorStop(0.5, '#ffffff');
     grad.addColorStop(1, '#000000');
     g.fillStyle = grad;
     g.fillRect(0, 0, 256, 4);
