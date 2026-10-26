@@ -23,7 +23,10 @@ import {
   throughDoor,
 } from './toolkit/gallery/logic/door-joins';
 import { firstPersonOn } from './toolkit/controls/input/first-person';
-import { setCopyHandler } from './toolkit/controls/input/copy-actions';
+import {
+  setCopyHandler,
+  setNoclipToggle,
+} from './toolkit/controls/input/copy-actions';
 import { clockStopped, paused } from './toolkit/controls/logic/paused';
 import { createConsole } from './toolkit/console/console-view';
 import { consoleOpen } from './toolkit/controls/logic/console-open';
@@ -1590,3 +1593,16 @@ if (import.meta.hot)
     window.removeEventListener('dev-room', travel);
     window.removeEventListener('popstate', popstate);
   });
+
+// Ctrl+Shift+N (the control scheme's chord): noclip on and off, as the
+// pause menu's switch does, in a room only.
+setNoclipToggle(() => {
+  if (current === undefined || consoleOpen.value) return;
+  const on = !noclip.value;
+  if (on) rememberPlayer();
+  noclip.value = on;
+  if (on) {
+    stopSeeing();
+    stopDryPeek();
+  }
+});

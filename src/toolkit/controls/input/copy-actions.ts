@@ -12,3 +12,14 @@ export function setCopyHandler(next: (request: CopyRequest) => void) {
 export function requestCopy(request: CopyRequest) {
   handler?.(request);
 }
+
+let noclipHandler: (() => void) | undefined;
+
+/** The app supplies what turning noclip on and off does. */
+export function setNoclipToggle(next: () => void) {
+  noclipHandler = next;
+}
+
+export function requestNoclipToggle() {
+  noclipHandler?.();
+}

@@ -18,7 +18,7 @@ import type { Footprint } from '../logic/walk-collision';
 import { climb, ladderToUse } from '../logic/ladder-zone';
 import { smoothStairFloor } from '../logic/stair-smoothing';
 import type { LadderZone } from '../logic/ladder-zone';
-import { PAD, deadZone, copyShortcut } from '../logic/controls';
+import { PAD, deadZone, copyShortcut, noclipShortcut } from '../logic/controls';
 import type { InputMode } from '../logic/controls';
 import {
   hudControls,
@@ -37,7 +37,7 @@ import { createTorchLight } from './torch';
 import { settings } from '../../settings/settings-store';
 import { paused } from '../logic/paused';
 import { consoleOpen } from '../logic/console-open';
-import { requestCopy } from './copy-actions';
+import { requestCopy, requestNoclipToggle } from './copy-actions';
 
 /** Whether the walker is to take no input: paused, or the console down. */
 const inputHeld = () => paused.value || consoleOpen.value;
@@ -618,6 +618,11 @@ export function createFirstPerson(options: FirstPersonOptions) {
 
   const keydown = (event: KeyboardEvent) => {
     if (!current() || holding || inputHeld() || typing(event)) return;
+    if (noclipShortcut(event)) {
+      event.preventDefault();
+      if (!event.repeat) requestNoclipToggle();
+      return;
+    }
     const copy = copyShortcut(event);
     if (copy) {
       // Preserve normal text copying when the player has selected page text.

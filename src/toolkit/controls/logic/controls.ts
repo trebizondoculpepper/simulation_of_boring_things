@@ -28,7 +28,8 @@ export type ControlAction =
   | 'console'
   | 'release'
   | 'copyReference'
-  | 'copyPosition';
+  | 'copyPosition'
+  | 'noclip';
 
 /** Each action's binding on each input, or null where it has none. */
 const POINTER_SCHEME: Record<
@@ -100,6 +101,11 @@ const POINTER_SCHEME: Record<
     touch: null,
     gamepad: null,
   },
+  noclip: {
+    mouse: 'Ctrl+Shift+N: noclip on / off',
+    touch: null,
+    gamepad: null,
+  },
   release: {
     mouse: 'Esc: cursor',
     touch: null,
@@ -129,6 +135,7 @@ const ORDER: readonly ControlAction[] = [
   'console',
   'copyReference',
   'copyPosition',
+  'noclip',
   'release',
 ];
 
@@ -204,6 +211,26 @@ export function copyShortcut(event: {
     : event.code === 'KeyP'
       ? 'position'
       : null;
+}
+
+/**
+ * Ctrl+Shift+N: noclip on and off (the owner, 2026-10-26). Ctrl, not Cmd:
+ * Cmd+Shift+N is the browser's own new private window.
+ */
+export function noclipShortcut(event: {
+  code: string;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+}): boolean {
+  return (
+    event.code === 'KeyN' &&
+    event.ctrlKey &&
+    event.shiftKey &&
+    !event.metaKey &&
+    !event.altKey
+  );
 }
 
 /** Unlisted title-screen navigation; deliberately absent from the gameplay help. */
