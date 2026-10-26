@@ -100,7 +100,19 @@ export function hazardMaterial(kit: PanelKit, repeat = 8) {
  */
 export function createRollerShutter(
   kit: PanelKit,
-  { w, h }: { w: number; h: number },
+  {
+    w,
+    h,
+    driveSide = 1,
+    chainTo = -h + 1.1,
+  }: {
+    w: number;
+    h: number;
+    /** Which end plate carries the drive and chain: +1 the right, -1 the left. */
+    driveSide?: 1 | -1;
+    /** How far below the head the hand chain's keep is (1.1 m above the floor where it's worked). */
+    chainTo?: number;
+  },
 ) {
   const group = new Group();
   group.name = 'Ironside insulated roller shutter';
@@ -261,14 +273,19 @@ export function createRollerShutter(
   rail.userData.live = true;
   group.add(rail);
 
+  // The drive and the hand chain on one end plate, mirrored to the left
+  // where a pier would have them over its door.
+  const driveGroup = new Group();
+  driveGroup.scale.x = driveSide;
+  group.add(driveGroup);
   // The drive on the right end plate: gearbox, motor with its cooling
   // fins and fan cowl, terminal box with its gland.
   const dx = w / 2 + 0.3;
-  box(group, motorBlue, 0.14, 0.22, 0.2, dx + 0.07, 0.6, 0.33);
+  box(driveGroup, motorBlue, 0.14, 0.22, 0.2, dx + 0.07, 0.6, 0.33);
   const motor = new Mesh(new CylinderGeometry(0.11, 0.11, 0.32, 20), motorBlue);
   motor.rotation.z = Math.PI / 2;
   motor.position.set(dx + 0.3, 0.6, 0.33);
-  group.add(motor);
+  driveGroup.add(motor);
   for (let k = 0; k < 8; k++) {
     const fin = new Mesh(
       new CylinderGeometry(0.122, 0.122, 0.008, 20),
@@ -276,16 +293,16 @@ export function createRollerShutter(
     );
     fin.rotation.z = Math.PI / 2;
     fin.position.set(dx + 0.18 + k * 0.03, 0.6, 0.33);
-    group.add(fin);
+    driveGroup.add(fin);
   }
   const cowl = new Mesh(new CylinderGeometry(0.1, 0.115, 0.08, 20), black);
   cowl.rotation.z = Math.PI / 2;
   cowl.position.set(dx + 0.5, 0.6, 0.33);
-  group.add(cowl);
-  box(group, motorBlue, 0.1, 0.08, 0.1, dx + 0.3, 0.74, 0.33);
+  driveGroup.add(cowl);
+  box(driveGroup, motorBlue, 0.1, 0.08, 0.1, dx + 0.3, 0.74, 0.33);
   const gland = new Mesh(new CylinderGeometry(0.012, 0.012, 0.03, 10), black);
   gland.position.set(dx + 0.3, 0.795, 0.33);
-  group.add(gland);
+  driveGroup.add(gland);
 
   // The hand chain: its sprocket wheel under the gearbox, an endless loop
   // of links down to the chain keep on the wall, 1.1 m up.
@@ -295,9 +312,9 @@ export function createRollerShutter(
   );
   sprocket.rotation.z = Math.PI / 2;
   sprocket.position.set(dx + 0.07, 0.42, 0.33);
-  group.add(sprocket);
+  driveGroup.add(sprocket);
   const link = new TorusGeometry(0.008, 0.002, 4, 8);
-  const keepY = -h + 1.1;
+  const keepY = chainTo;
   const runs = [0.26, 0.4];
   const linksPer = Math.floor((0.42 - keepY) / 0.014);
   const chainLinks = new InstancedMesh(
@@ -322,8 +339,8 @@ export function createRollerShutter(
       );
     }
   chainLinks.instanceMatrix.needsUpdate = true;
-  group.add(chainLinks);
-  box(group, galv, 0.04, 0.12, 0.05, dx + 0.07, keepY - 0.05, 0.025);
+  driveGroup.add(chainLinks);
+  box(driveGroup, galv, 0.04, 0.12, 0.05, dx + 0.07, keepY - 0.05, 0.025);
 
   // Its maker's badge on the hood.
   const badge = createBrandBadge(kit, 'ironside', {

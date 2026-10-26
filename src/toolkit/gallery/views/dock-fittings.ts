@@ -1,7 +1,6 @@
 import {
   BoxGeometry,
   CanvasTexture,
-  CylinderGeometry,
   Group,
   Mesh,
   MeshStandardMaterial,
@@ -14,6 +13,17 @@ import { markComponent } from '../../components/core/views/component-identity';
 import type { ShellAperture } from '../logic/shell-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { YARD_LEVEL, tarmacMaterial } from './dock-outside';
+import {
+  PALLET,
+  createPalletOfGoods,
+  createRollerShutter,
+} from '../../components/loading-dock/views/dock-parts';
+import {
+  createPalletStack,
+  createPalletTruck,
+  createRollCage,
+  createSackTruck,
+} from '../../components/loading-dock/views/yard-kit';
 
 /** How far each lorry channel runs into the dock from its opening, metres: half a rigid lorry. */
 export const CHANNEL_LENGTH = 6;
@@ -92,16 +102,36 @@ export const DOCK_PALLETS: readonly {
   },
   { x: 6.2, z: 3.2, colour: '#2f6f9e', h: 0.9, label: 'LANE ROPES' },
 ];
-const PALLET = { w: 1.2, d: 1.0, h: 0.144 };
+/**
+ * The dock's handling kit, set decoration: a hand pallet truck by the
+ * deliveries, a stack of empty pallets waiting to go back, a roll cage and
+ * a sack truck by the corridor's doors. Each its builder, place and turn.
+ */
+const DOCK_KIT: readonly [(kit: PanelKit) => Group, number, number, number][] =
+  [
+    [createPalletTruck, -4.6, 3.0, Math.PI / 2],
+    [(kit) => createPalletStack(kit, 7), 6.2, 1.6, 0],
+    [createRollCage, 2.4, 5.2, 0],
+    [createSackTruck, 3.3, 5.5, Math.PI],
+  ];
+/** What the kit stands in the way of. */
+const KIT_SOLIDS: Footprint[] = [
+  { minX: -5.45, maxX: -3.75, minZ: 2.6, maxZ: 3.4 },
+  { minX: 5.6, maxX: 6.8, minZ: 1.1, maxZ: 2.1 },
+  { minX: 3.8, maxX: 4.6, minZ: 4.85, maxZ: 5.55 },
+];
 
 /** What the pallets stand in the way of. */
-export const dockPalletSolids = (): Footprint[] =>
-  DOCK_PALLETS.map((p) => ({
-    minX: p.x - PALLET.w / 2,
-    maxX: p.x + PALLET.w / 2,
-    minZ: p.z - PALLET.d / 2,
-    maxZ: p.z + PALLET.d / 2,
-  }));
+export const dockPalletSolids = (): Footprint[] => [
+  // Each pallet turned a quarter, its long side across the dock.
+  ...DOCK_PALLETS.map((p) => ({
+    minX: p.x - PALLET.d / 2,
+    maxX: p.x + PALLET.d / 2,
+    minZ: p.z - PALLET.w / 2,
+    maxZ: p.z + PALLET.w / 2,
+  })),
+  ...KIT_SOLIDS,
+];
 
 export function createDockFittings(
   kit: PanelKit,
@@ -133,10 +163,6 @@ export function createDockFittings(
     parent.add(mesh);
     return mesh;
   };
-  const shutterGrey = paint('#8f969b', 0.55, 0.4);
-  const galv = paint('#a9aeae', 0.45, 0.6);
-  const motorBlue = paint('#2c4f7c', 0.5, 0.3);
-  const chain = paint('#4a4d50', 0.5, 0.7);
   const rubber = paint('#161718', 0.9);
   const concrete = paint('#7d7f7c', 0.95);
   // The roadways' tarmac carried into each channel (the owner, 2026-10-26).
@@ -145,73 +171,20 @@ export function createDockFittings(
   void thickness;
 
   apertures.forEach((o, i) => {
-    // The roller shutter, rolled up: its barrel box over the opening on the
-    // inside face, guides each side, the bottom rail showing under the box,
-    // its motor on the right-hand end plate, the hand chain hanging down.
-    const shutter = new Group();
-    shutter.name = `Roller shutter, bay ${i + 1}`;
-    const top = o.h + 0.25;
-    box(
-      shutter,
-      shutterGrey,
-      o.w + 0.5,
-      0.65,
-      0.65,
-      o.at,
-      top + 0.35,
-      wallZ + 0.33,
-    );
-    for (const s of [-1, 1]) {
-      box(
-        shutter,
-        galv,
-        0.1,
-        o.h + 0.6 - YARD_LEVEL,
-        0.14,
-        o.at + s * (o.w / 2 + 0.07),
-        (o.h + 0.6 + YARD_LEVEL) / 2,
-        wallZ + 0.07,
-      );
-      box(
-        shutter,
-        galv,
-        0.04,
-        0.75,
-        0.75,
-        o.at + s * (o.w / 2 + 0.27),
-        top + 0.35,
-        wallZ + 0.33,
-      );
-    }
-    box(shutter, galv, o.w, 0.1, 0.08, o.at, o.h - 0.05, wallZ + 0.1);
-    const motor = new Mesh(
-      new CylinderGeometry(0.13, 0.13, 0.35, 16),
-      motorBlue,
-    );
-    motor.rotation.z = Math.PI / 2;
-    motor.position.set(o.at + o.w / 2 + 0.47, top + 0.35, wallZ + 0.33);
-    shutter.add(motor);
-    box(
-      shutter,
-      chain,
-      0.02,
-      top - 1.2,
-      0.02,
-      o.at + o.w / 2 + 0.47,
-      (top + 1.2) / 2,
-      wallZ + 0.42,
-    );
-    box(
-      shutter,
-      chain,
-      0.02,
-      top - 1.2,
-      0.02,
-      o.at + o.w / 2 + 0.47,
-      (top + 1.2) / 2,
-      wallZ + 0.5,
-    );
-    group.add(shutter);
+    // The roller shutter (dev43's, Ironside's), wound up open: its head
+    // over the opening, its curtain reaching down to the channel's floor,
+    // its drive on the outer end plate, clear of the pier's door, and its
+    // hand chain stopping 1.1 m above the dock's floor.
+    const shutter = createRollerShutter(kit, {
+      w: o.w,
+      h: o.h - YARD_LEVEL,
+      driveSide: o.at < 0 ? -1 : 1,
+      chainTo: 1.1 - o.h,
+    });
+    shutter.setOpen(1);
+    shutter.group.name = `Roller shutter, bay ${i + 1}`;
+    shutter.group.position.set(o.at, o.h, wallZ);
+    group.add(shutter.group);
 
     // Its channel (the owner, 2026-10-26): sunk to the yard's level, from
     // the opening into the dock, the lorry's rear half backed in along it,
@@ -252,63 +225,21 @@ export function createDockFittings(
     group.add(channel);
   });
 
-  // Pallets of deliveries, set decoration: a pallet, its goods
-  // shrink-wrapped, a label on the front.
-  const timber = paint('#a07c52', 0.9);
+  // Pallets of deliveries (dev43's), set decoration, their labels toward
+  // the dock's middle; and the handling kit that moves them.
   const pallets = new Group();
   pallets.name = 'Deliveries waiting to be put away';
   for (const p of DOCK_PALLETS) {
-    const stack = new Group();
+    const stack = createPalletOfGoods(kit, p);
     stack.position.set(p.x, 0, p.z);
-    box(stack, timber, PALLET.w, PALLET.h, PALLET.d, 0, PALLET.h / 2, 0);
-    const goods = paint(p.colour, 0.35);
-    box(
-      stack,
-      goods,
-      PALLET.w - 0.04,
-      p.h,
-      PALLET.d - 0.04,
-      0,
-      PALLET.h + p.h / 2,
-      0,
-    );
-    // Its label, toward the dock's middle.
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 96;
-    const g = canvas.getContext('2d')!;
-    g.fillStyle = '#ffffff';
-    g.fillRect(0, 0, 256, 96);
-    g.fillStyle = '#111111';
-    g.font = 'bold 22px sans-serif';
-    g.textAlign = 'center';
-    const words = p.label.split(' · ');
-    words.forEach((w, k) =>
-      g.fillText(w, 128, 40 + k * 28 - (words.length - 1) * 14),
-    );
-    const map = new CanvasTexture(canvas);
-    map.colorSpace = SRGBColorSpace;
-    kit.textures.push(map);
-    const label = new MeshStandardMaterial({ map, roughness: 0.8 });
-    kit.materials.push(label);
-    const face = box(
-      stack,
-      label,
-      0.5,
-      0.19,
-      0.005,
-      0,
-      PALLET.h + p.h * 0.6,
-      0,
-    );
-    const toward = p.x < 0 ? 1 : -1;
-    face.rotation.y = (toward * Math.PI) / 2;
-    face.position.set(
-      (toward * (PALLET.w - 0.04)) / 2 + toward * 0.004,
-      PALLET.h + p.h * 0.6,
-      0,
-    );
+    stack.rotation.y = p.x < 0 ? Math.PI / 2 : -Math.PI / 2;
     pallets.add(stack);
+  }
+  for (const [make, x, z, yaw] of DOCK_KIT) {
+    const thing = make(kit);
+    thing.position.set(x, 0, z);
+    thing.rotation.y = yaw;
+    pallets.add(thing);
   }
   markComponent(pallets, { decorative: true });
   group.add(pallets);
