@@ -84,8 +84,8 @@ export const DOCK_PALLETS: readonly {
   h: number;
   label: string;
 }[] = [
-  { x: -6.2, z: 4.6, colour: '#3d7fb8', h: 1.3, label: 'CLEANING SUPPLIES' },
-  { x: -6.2, z: 3.2, colour: '#c9b48a', h: 1.1, label: 'CATERING · CAFÉ' },
+  { x: -6.2, z: 5.15, colour: '#3d7fb8', h: 1.3, label: 'CLEANING SUPPLIES' },
+  { x: -6.2, z: 3.85, colour: '#c9b48a', h: 1.1, label: 'CATERING · CAFÉ' },
   {
     x: -4.8,
     z: 4.6,
@@ -95,12 +95,12 @@ export const DOCK_PALLETS: readonly {
   },
   {
     x: 6.2,
-    z: 4.6,
+    z: 5.15,
     colour: '#8a8f94',
     h: 1.0,
     label: 'FITTINGS · PLUMBING SPARES',
   },
-  { x: 6.2, z: 3.2, colour: '#2f6f9e', h: 0.9, label: 'LANE ROPES' },
+  { x: 6.2, z: 3.85, colour: '#2f6f9e', h: 0.9, label: 'LANE ROPES' },
 ];
 /**
  * The dock's handling kit, set decoration: a hand pallet truck by the
@@ -109,15 +109,15 @@ export const DOCK_PALLETS: readonly {
  */
 const DOCK_KIT: readonly [(kit: PanelKit) => Group, number, number, number][] =
   [
-    [createPalletTruck, -4.6, 3.0, Math.PI / 2],
-    [(kit) => createPalletStack(kit, 7), 6.2, 1.6, 0],
+    [createPalletTruck, -4.6, 3.6, Math.PI / 2],
+    [(kit) => createPalletStack(kit, 7), 6.2, -0.8, 0],
     [createRollCage, 2.4, 5.2, 0],
     [createSackTruck, 3.3, 5.5, Math.PI],
   ];
 /** What the kit stands in the way of. */
 const KIT_SOLIDS: Footprint[] = [
-  { minX: -5.45, maxX: -3.75, minZ: 2.6, maxZ: 3.4 },
-  { minX: 5.6, maxX: 6.8, minZ: 1.1, maxZ: 2.1 },
+  { minX: -5.45, maxX: -3.75, minZ: 3.2, maxZ: 4.0 },
+  { minX: 5.6, maxX: 6.8, minZ: -1.3, maxZ: -0.3 },
   { minX: 3.8, maxX: 4.6, minZ: 4.85, maxZ: 5.55 },
 ];
 

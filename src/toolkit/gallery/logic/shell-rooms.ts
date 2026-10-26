@@ -91,11 +91,12 @@ export const SHELL_ROOMS = {
     height: 7,
     ceiling: 'services',
     // The chemical stores off its side walls, the whole bay between them,
-    // so they never share a wall or a drain.
+    // so they never share a wall or a drain; their doors face each other
+    // across the bay (the owner, 2026-10-26).
     doors: [
       corridor(),
-      { wall: 'east', at: -2, to: 'hypo_store' },
-      { wall: 'west', at: -3, to: 'acid_store' },
+      { wall: 'east', at: 1.7, to: 'hypo_store' },
+      { wall: 'west', at: 1.7, to: 'acid_store' },
     ],
     // 3.2 m clear (a 2.55 m lorry and room), 4.5 m high, either side of
     // a 3.2 m pier, wide enough for its doorway and lintel between the

@@ -64,7 +64,7 @@ interface DockFrame {
 export function dockFirePoints(f: { hw: number; hd: number }) {
   return [
     { id: 'lb-mcp-1', x: -2.2, z: f.hd - 0.005, yaw: Math.PI },
-    { id: 'lb-mcp-2', x: -f.hw + 0.005, z: 1.0, yaw: Math.PI / 2 },
+    { id: 'lb-mcp-2', x: -f.hw + 0.005, z: -1.7, yaw: Math.PI / 2 },
   ] as const;
 }
 
@@ -270,14 +270,14 @@ export function createDockSafety(kit: PanelKit, f: DockFrame) {
     group.add(point);
   }
   // The law poster by the corridor's doors; the chemical notices by the
-  // acid store's.
+  // acid store's, beside its door, the fire point beyond them.
   const law = createLawPoster(kit);
   law.position.set(2.6, 1.6, f.hd - 0.005);
   law.rotation.y = Math.PI;
   group.add(law);
   for (const [make, z] of [
-    [createNeverMixNotice, -0.6],
-    [createSpillageNotice, -1.25],
+    [createNeverMixNotice, 0.35],
+    [createSpillageNotice, -0.3],
   ] as const) {
     const n = make(kit);
     n.position.set(-f.hw + 0.005, 1.6, z);
