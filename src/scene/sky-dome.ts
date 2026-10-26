@@ -43,14 +43,20 @@ export function createSkyDome(radius: number) {
     uniforms,
     side: BackSide,
     depthWrite: false,
+    // Clippable (a room showing it only through its openings sets planes).
+    clipping: true,
     vertexShader: /* glsl */ `
+      #include <clipping_planes_pars_vertex>
       varying vec3 vDir;
       void main() {
         vDir = normalize(position);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+        #include <clipping_planes_vertex>
       }
     `,
     fragmentShader: /* glsl */ `
+      #include <clipping_planes_pars_fragment>
       uniform vec3 zenith, horizon, sunDir, sunColour, cloudLit, cloudShade;
       uniform float sunLevel, cover, softness, scale, stretch, drift, stars, time;
       uniform float layers, layerSpeed, quake, spread;
@@ -70,6 +76,7 @@ export function createSkyDome(radius: number) {
         return v;
       }
       void main() {
+        #include <clipping_planes_fragment>
         vec3 d = normalize(vDir);
         float up = clamp(d.y, 0.0, 1.0);
         vec3 colour = mix(horizon, zenith, pow(up, 0.55));

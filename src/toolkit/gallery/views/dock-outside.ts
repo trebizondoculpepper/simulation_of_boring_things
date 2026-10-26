@@ -7,6 +7,7 @@ import {
   MeshStandardMaterial,
   BoxGeometry,
   CylinderGeometry,
+  Plane,
   PlaneGeometry,
   RepeatWrapping,
   Vector3,
@@ -84,7 +85,23 @@ export function createDockOutside(
   // or goes beyond the camera's reach (the owner, 2026-10-26: a black
   // hole showed where its far side passed the camera's 80 m).
   const eye = new Vector3();
-  sky.dome.onBeforeRender = (_r, _s, camera) => {
+  // The sky and the tarmac only beyond the building's outside wall: each
+  // room is drawn on its own canvas over the next, and anything of this
+  // room's that covered its doorways would hide the rooms beyond them
+  // (the owner, 2026-10-26: the stores were invisible through their
+  // doors). Clipped to the far side of the wall's plane, in world space.
+  const outside = new Plane(new Vector3(0, 0, -1), 0);
+  const wallPoint = new Vector3();
+  const placePlane = (renderer: { localClippingEnabled: boolean }) => {
+    renderer.localClippingEnabled = true;
+    group.updateWorldMatrix(true, false);
+    wallPoint.set(0, 0, wallZ).applyMatrix4(group.matrixWorld);
+    // Keep z at or beyond the wall: -z + c >= 0 where c is the wall's z.
+    outside.constant = wallPoint.z;
+  };
+  sky.dome.material.clippingPlanes = [outside];
+  sky.dome.onBeforeRender = (r, _s, camera) => {
+    placePlane(r);
     camera.getWorldPosition(eye);
     sky.dome.matrixWorld.setPosition(eye);
   };
@@ -113,7 +130,9 @@ export function createDockOutside(
     tarmac.alphaMap = alphaMap;
     tarmac.transparent = true;
   }
+  tarmac.clippingPlanes = [outside];
   const ground = new Mesh(new CircleGeometry(69, 48), tarmac);
+  ground.onBeforeRender = (r) => placePlane(r);
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(0, YARD_LEVEL, wallZ - 30);
   group.add(ground);
