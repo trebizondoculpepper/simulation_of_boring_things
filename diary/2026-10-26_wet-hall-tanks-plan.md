@@ -1,0 +1,7 @@
+# Wet hall tanks plan, 2026-10-26
+
+The owner started prompt 036 and chose two principal wet-hall tanks: one clean make-up vessel and one dirty backwash holding tank. Prompt 035 is a useful construction reference rather than a dependency. I documented a scaled top-down layout inside the existing 19.6 m wet hall, reserving the west trolley ramp, east stair and central aisle, and put the clean GRP tank, booster and meter in a protected northern service bay with the concrete backwash pit and discharge pump to the south.
+
+The existing backwash simulation capacity is 29.5 m³ although the prompt describes roughly 30 m³ from one Olympic backwash. The plan proposes 40 m³ usable pit storage as a provisional target, with the final size to be verified against the largest event and sewer discharge terms before implementation. The plan keeps the Lounge balance tank as a separate follow-on project.
+
+England and Wales water-fittings law requires protection against contamination and backflow appropriate to the downstream risk; Water Regs UK treats swimming-pool plant as fluid category 5 and advises a Type AA or AB air gap and an air break for backwash. No blanket legal prohibition on both tanks sharing a hall was identified, so the clean-bay partition is a design safeguard rather than a claimed legal mandate. The local water and sewerage undertakers' approval and consent terms remain real-site questions, not values supplied by the game's model.

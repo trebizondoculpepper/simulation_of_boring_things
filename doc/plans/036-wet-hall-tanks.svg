@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 750" role="img" aria-labelledby="title desc">
+  <title id="title">Prompt 036 proposed wet hall tank layout</title>
+  <desc id="desc">Scaled plan of the 19.6 metre square wet hall. A protected GRP make-up tank, booster and meter occupy a northern bay. A cast-concrete backwash pit and discharge pump occupy the south. The west ramp, east stair and central aisle remain clear.</desc>
+  <style>
+    text{font:14px Arial,Helvetica,sans-serif;fill:#203038}
+    .heading{font:bold 20px Arial,Helvetica,sans-serif}
+    .small{font:12px Arial,Helvetica,sans-serif}
+    .tiny{font:11px Arial,Helvetica,sans-serif}
+    .room{fill:#faf9f3;stroke:#283b43;stroke-width:4}
+    .clean{fill:#dcf1ef;stroke:#247d80;stroke-width:2}
+    .tank{fill:#a9dbd9;stroke:#176b70;stroke-width:2}
+    .waste{fill:#d8c9ac;stroke:#7d5d35;stroke-width:2}
+    .machine{fill:#d4dce0;stroke:#58707e;stroke-width:2}
+    .route{fill:#e2e5e7;stroke:#8d979b;stroke-width:1.5}
+    .path{fill:#f7f0c8;stroke:#b89b36;stroke-width:1.5;stroke-dasharray:7 5}
+  </style>
+  <text x="120" y="43" class="heading">WET HALL · TWO TANKS</text>
+  <text x="120" y="66">Concept plan · 1 m = 28 px · +x east, +z south</text>
+  <path d="M730 116v-49m0 0-8 14m8-14 8 14" fill="none" stroke="#203038" stroke-width="2"/>
+  <text x="722" y="56">N</text>
+  <rect class="room" x="120" y="100" width="549" height="549"/>
+  <rect class="route" x="121" y="101" width="101" height="547"/>
+  <text x="135" y="340" transform="rotate(-90 135 340)">WEST TROLLEY RAMP · KEEP CLEAR</text>
+  <path d="M150 156v370m0 0-7-12m7 12 7-12M192 526V212m0 0-7 12m7-12 7 12" fill="none" stroke="#7e8a8f" stroke-width="2"/>
+  <rect class="clean" x="260" y="122" width="369" height="171"/>
+  <text x="275" y="147" font-weight="bold">PROTECTED MAKE-UP SERVICE BAY</text>
+  <rect class="tank" x="285" y="157" width="84" height="84"/>
+  <text x="289" y="183" class="small">GRP clean</text>
+  <text x="289" y="200" class="small">make-up</text>
+  <text x="289" y="217" class="small">13.2 m³</text>
+  <rect class="machine" x="422" y="170" width="62" height="43"/>
+  <text x="427" y="188" class="tiny">DUTY +</text>
+  <text x="427" y="204" class="tiny">STANDBY</text>
+  <rect class="machine" x="506" y="178" width="40" height="27"/>
+  <text x="510" y="195" class="tiny">METER</text>
+  <rect class="machine" x="565" y="128" width="52" height="17"/>
+  <text x="565" y="117" class="tiny">CLEAN MIMIC</text>
+  <path d="M369 195h53m62 0h22m40 0h60" fill="none" stroke="#16838b" stroke-width="4" marker-end="url(#arrowClean)"/>
+  <text x="276" y="259" class="small">AA/AB air gap at mains inlet · covered and insulated</text>
+  <path d="M260 264v20h30" fill="none" stroke="#fff" stroke-width="7"/>
+  <path d="M260 264v20h30" fill="none" stroke="#247d80" stroke-width="2"/>
+  <text x="286" y="283" class="tiny">service door</text>
+  <rect class="path" x="260" y="313" width="311" height="125"/>
+  <text x="290" y="379" font-weight="bold">CLEAR CENTRAL SERVICE AISLE</text>
+  <rect class="route" x="571" y="338" width="97" height="73"/>
+  <path d="M591 340v69m17-69v69m17-69v69m17-69v69" stroke="#a5afb3" stroke-width="1.5"/>
+  <text x="573" y="326" class="small">EAST STAIR + LANDING</text>
+  <rect class="waste" x="305" y="458" width="168" height="112"/>
+  <path d="M305 476h168m-168 19h168m-168 19h168m-168 19h168m-168 19h168" stroke="#9c8867" stroke-width="1"/>
+  <text x="316" y="500" font-weight="bold">BACKWASH PIT</text>
+  <text x="316" y="520" class="small">6 × 4 m plan</text>
+  <text x="316" y="538" class="small">40 m³ usable</text>
+  <text x="316" y="556" class="small">grated access</text>
+  <rect class="machine" x="501" y="508" width="56" height="55"/>
+  <text x="506" y="528" class="tiny">WASTE</text>
+  <text x="506" y="545" class="tiny">PUMP</text>
+  <rect class="machine" x="581" y="485" width="51" height="76"/>
+  <text x="588" y="507" class="tiny">DIRTY</text>
+  <text x="588" y="524" class="tiny">MIMIC</text>
+  <text x="588" y="541" class="tiny">ALARMS</text>
+  <path d="M473 536h28m56 0h24" fill="none" stroke="#926532" stroke-width="4" marker-end="url(#arrowWaste)"/>
+  <text x="296" y="605" class="small">Air-break backwash inlet · settlement sump · high/high-high level</text>
+  <path d="M108 149h24" stroke="#283b43" stroke-width="7"/>
+  <text x="20" y="143" class="small">WEST DOOR</text>
+  <path d="M658 374h24" stroke="#283b43" stroke-width="7"/>
+  <text x="691" y="379" class="small">EAST DOOR</text>
+  <path d="M120 685h280m-280-5v10m140-10v10m140-10v10" stroke="#203038" stroke-width="2"/>
+  <text x="116" y="708" class="small">0</text>
+  <text x="251" y="708" class="small">5 m</text>
+  <text x="388" y="708" class="small">10 m</text>
+  <text x="496" y="694" class="small">Coordinates and envelopes are provisional; reserve access before routing pipes.</text>
+  <defs>
+    <marker id="arrowClean" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7" fill="#16838b"/></marker>
+    <marker id="arrowWaste" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7" fill="#926532"/></marker>
+  </defs>
+</svg>
