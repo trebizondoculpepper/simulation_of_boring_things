@@ -196,6 +196,8 @@ export interface WetHallState {
   meter: number;
   /** Water in the backwash holding tank, m³. */
   backwashTank: number;
+  /** The backwash coming into it in the last step, m³/h (for its pouring). */
+  pitInflow: number;
   /**
    * Whether its floats call its pumps (`pitFloats`): started by START
    * tilting up, run on until STOP drops; and whether any pump runs.
@@ -223,6 +225,7 @@ export function newWetHall(): WetHallState {
     flow: 0,
     meter: 0,
     backwashTank: 0,
+    pitInflow: 0,
     discharging: false,
     pitPumps: { modes: ['auto', 'auto'], duty: 0, running: [false, false] },
     spilt: 0,
@@ -338,6 +341,7 @@ export function stepWetHall(
     flow: hours > 0 ? flows.drawn / hours : 0,
     meter: s.meter + mainsIn,
     backwashTank: Math.min(P.backwashTank, backwashTank),
+    pitInflow: hours > 0 ? flows.backwashed / hours : 0,
     discharging,
     pitPumps,
     spilt: s.spilt + spilt,

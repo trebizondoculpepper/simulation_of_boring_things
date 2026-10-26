@@ -136,6 +136,8 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // 39 → 40: the booster set's duty changeover in the world (`fillDefaults`:
   // pump 1 on duty, RUN, at rest).
   39: (world) => world,
+  // 40 → 41: the backwash pit's inflow, for its pouring (`fillDefaults`: none).
+  40: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

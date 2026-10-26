@@ -1,3 +1,4 @@
+import { createBackwashPitWater } from '../../components/plant/views/backwash-pit-water';
 import type { PitPumpAction } from '../../../game/plant/wet-hall';
 import { decorativeKind } from '../logic/world-in-model';
 import { createSpaSandFilter } from '../../components/plant/views/spa-pack-parts';
@@ -517,6 +518,22 @@ function modelFor(
       })),
     });
     pit.setDepth(0);
+    // Its water in motion: the backwash pouring in from its inlet, its
+    // surface stirred where it lands, heard as it pours (the owner,
+    // 2026-10-26: as the main balance tank's).
+    const P = BACKWASH_PIT;
+    const inletEnd = [-P.length / 2 + 1.2, 0.15, 0] as const;
+    const moving = createBackwashPitWater(kit, {
+      length: P.length,
+      width: P.width,
+      inlet: inletEnd,
+      inletOd: 0.16,
+      fullFlow: 120,
+    });
+    pit.group.traverse((o) => {
+      if (o.name === 'Backwash in the pit') moving.replace(o);
+    });
+    pit.group.add(moving.group);
     // Over its opening: its footprint is shifted east for its davit.
     pit.group.position.x = -WET_HALL_LAYOUT.pitDavitShift;
     const holder = new Group();
@@ -529,10 +546,14 @@ function modelFor(
         pit.update(delta);
         const wh = roomWorld().world.value.wetHall;
         pit.setDepth(backwashPitDepth(wh.backwashTank));
+        moving.update(wh.pitInflow, delta);
         // Its sump pumps as the world runs them.
         pit.setPumps(wh.pitPumps.running);
       },
-      dispose: () => pit.dispose(),
+      dispose: () => {
+        moving.dispose();
+        pit.dispose();
+      },
       // Its rail, davit, shut gate and open hatch, in the room's frame.
       solids: () => {
         holder.updateMatrixWorld(true);
