@@ -1,6 +1,18 @@
 # 061: Component information overlay
 
-Status: partly done (checked 2026-10-26): stage 1 (inspection) is built (`5bd25b3`) and awaits the owner's acceptance after the browser checks in [063](063-component-information-remediation.md); stage 2 (action narratives) is not begun.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/061-component-information-overlay.md`.
+
+**Delivered:** The inspection overlay and component/part identities are implemented, with live visible-state descriptions.
+
+**Still outstanding:** Complete stage-1 browser/input/occlusion acceptance and stage-2 confirmed-action narratives, queue/coalescing/clearing rules and their browser tests.
+
+**Evidence:** 5bd25b3, b2cd02c; done/068-inspect-component-parts.md. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## The request
 

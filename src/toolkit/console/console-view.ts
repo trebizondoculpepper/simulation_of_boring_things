@@ -15,7 +15,7 @@ import { candidates, runLine } from './logic/commands';
 import type { ConsoleHost, ConsoleLine } from './logic/commands';
 
 /**
- * The console (`doc/prompts/058-developer-console.md`): Quake's, dropped
+ * The console (`doc/prompts/done/058-developer-console.md`): Quake's, dropped
  * down over the top of the view by the key left of 1, the log above a `]`
  * prompt. It takes the keyboard while it is down; the walker hears
  * nothing (`consoleOpen`), but the world runs on. The same key or Esc puts

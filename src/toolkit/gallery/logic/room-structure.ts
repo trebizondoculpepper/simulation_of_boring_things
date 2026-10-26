@@ -12,7 +12,7 @@ import { DECK_SOFFIT, olympicRoomPlan } from './olympic-plan';
  * conduit or duct in it and must fix it to the building: its floor, the
  * underside of its roof slab (the soffit), the bottom of its services
  * ceiling's zone, its walls' inner faces, its supply wall, and what a
- * support may not pass through (`doc/prompts/008-pipe-supports.md`).
+ * support may not pass through (`doc/prompts/done/008-pipe-supports.md`).
  * Pure: metres, the room's middle at x = z = 0, its floor at y = 0, x
  * east, z south.
  */

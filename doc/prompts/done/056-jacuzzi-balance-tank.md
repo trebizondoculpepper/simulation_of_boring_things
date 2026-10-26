@@ -2,6 +2,18 @@
 
 Status: specified 2026-10-24. Stage 1 done (1305a28), stage 2 done 2026-10-24; a trial room, dev38, tests the cabinet with an ideal spa, tank and sources.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/056-jacuzzi-balance-tank.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** `TODO.md`, done 2026-10-24: stage 1 `1305a28`, stage 2 `9c9fab9`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Purpose
 
 The jacuzzi is deck-level: its water spills over its rim into a gutter, and the gutter drains to a balance tank, from which the circulation pump draws. The only thing standing in for that tank today is the treatment cabinet's surge vessel, about 35 L drawn, while the water model uses 0.84 m³. Neither is right, and without a tank of the proper size the system could never work: eight bathers getting in would overflow it, and the pump would draw it dry when they got out (the owner, 2026-10-24). The cabinet keeps its size and becomes a cabinet that works with an external balance tank, which stands beside it in the plant room.

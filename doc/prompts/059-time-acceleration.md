@@ -2,6 +2,18 @@
 
 Status: not started (checked 2026-10-26): nothing is built, and the owner's three choices (top speed, dropping back to 1× on alarms by default, whether the speed survives a reload) are still to settle.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/059-time-acceleration.md`.
+
+**Delivered:** not started
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## The request
 
 The owner, 2026-10-25: "Time acceleration. The time should be skipped in exponentially increasing steps, starting at 1×, and perhaps going up to 10000×. It shouldn't affect animation speeds and the pitch of sound effects."

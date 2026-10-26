@@ -1,6 +1,18 @@
 # 054: Title attract sequence
 
-Status: partly done (checked 2026-10-26): the sequence, its fades and its prepared worlds are done (2026-10-24), and the lounge's fly-by is flown on the camera spline (2026-10-25); the other authored shots and preparing scenes in the background are still to come.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/054-title-attract-sequence.md`.
+
+**Delivered:** Authored camera paths, staged worlds, fades and continuous title music are implemented, including the Olympic rolling dolly zoom and lights-out switch-room shot.
+
+**Still outstanding:** Build/draw the next scene ahead of its turn rather than only fetching its module; measure transition gaps and resource lifetimes, test cancellation/repeated title visits, and add further owner-requested scenarios separately.
+
+**Evidence:** 515f5f1, 5b10a4a, ce80c65; src/toolkit/title/logic/attract-sequence.ts. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## Purpose
 

@@ -1,5 +1,17 @@
 # Prompt: room sizer, gantries, placement, then the plumber
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/017-room-sizer-gantries-placement.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** Steps 1 to 4 in `doc/reports/room-layout-progress.md`; step 5 by 018 and 021; step 6 only if the owner asks. `room-sizer.ts`, `room-regions.ts`, `machine-placement.ts`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 Written by Claude (Opus 5.5, Claude Code) for its own work and so other agents know what it is doing, 2026-10-23. Read `AGENTS.md` first. This comes before the routing in `doc/prompts/obsolete/016-pipe-helper-two-ways.md`: the plumber can only route well in a room that is the right size with its machines in sensible places.
 
 ## Why

@@ -1,6 +1,18 @@
 # 060: Inferred component descriptions
 
-Status: done 2026-10-25 (`1886f49`, reworked in `4b17b50`), its remaining work handed to [063](../063-component-information-remediation.md). Implemented 2026-10-25 as a data layer, then reworked the same night to the owner's later rulings (below): descriptions, kinds, live status and ordinals, shared by the overlay, the inventory, the manual and the console's `status`; valves described from their rooms' enhanced networks, so far only the Olympic plant room's. What remains is in [063](../063-component-information-remediation.md). Earlier status: reviewed against the running catalogue and plant network on 2026-10-25; ready to implement in the ordered steps below.
+Status: done 2026-10-25 (`1886f49`, reworked in `4b17b50`), its remaining work handed to [063](063-component-information-remediation.md). Implemented 2026-10-25 as a data layer, then reworked the same night to the owner's later rulings (below): descriptions, kinds, live status and ordinals, shared by the overlay, the inventory, the manual and the console's `status`; valves described from their rooms' enhanced networks, so far only the Olympic plant room's. What remains is in [063](063-component-information-remediation.md). Earlier status: reviewed against the running catalogue and plant network on 2026-10-25; ready to implement in the ordered steps below.
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/060-inferred-component-descriptions.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** `component-descriptions.ts`, `1886f49`, reworked to the enhanced network in `4b17b50` (2026-10-25); `TODO.md` ticked. What remains is prompt 063's. Moved 2026-10-25.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## The owner's later rulings (2026-10-25, overnight), which supersede what follows
 

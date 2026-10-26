@@ -12,7 +12,7 @@ import { splitStatements, tokenise } from './command-line';
 import { objectStatus, statusNames } from './object-status';
 
 /**
- * The console's commands (`doc/prompts/058-developer-console.md`), and
+ * The console's commands (`doc/prompts/done/058-developer-console.md`), and
  * running a line: Quake's way (`open PL1-F1-IV1`) when it starts with a
  * command's name, else JavaScript with the commands as functions
  * (`open("PL1-F1-IV1")`), `world` and `act` in scope. The app is reached

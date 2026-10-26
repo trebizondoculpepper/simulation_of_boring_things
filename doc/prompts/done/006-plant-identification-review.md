@@ -1,5 +1,17 @@
 # Prompt: review the plant identification and object model design
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/006-plant-identification-review.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** Review written to `doc/reports/plant-identification-review.md`, `7737d30`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 You are being asked for a technical review, as a computer scientist, of a modelling design for this project (a browser game, "The Pool": a first-person simulation of a leisure centre's pool plant, TypeScript and Three.js, in this repository). We want your critique and your better ideas before we build it. Please do not implement anything. Read the files named below to check our claims against the code, and write your feedback to `doc/reports/plant-identification-review.md` (one paragraph per line, never hard-wrapped).
 
 ## 1. The problem

@@ -2,6 +2,18 @@
 
 Status: planned 2026-10-23; the owner asked for a prompt before implementation.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/041-footspa-makeup-jets.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** `inlet-streams.ts` and `footbathMakeUpEntering`, `4c737be`; `CHANGELOG.md`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Intent
 
 Show the small fresh-water supply entering the foot spa in `pool_04` while it is actually filling. Use the existing wall inlets rather than adding prominent new fittings. At full level the water surface must cover the inlet centres, which are about 7.5 cm below the lip. The inlet streams should be narrow and clear, without white water or a broad churn; small rings should spread only near the active inlets.

@@ -1,10 +1,22 @@
 # Prompt: scenario 5, chemical dosing with a measurement loop
 
-Status: not started (checked 2026-10-26): no dosing rig, measurement loop or dev room exists; scenarios 024 to 027 are done, this one is not.
+Status: active (checked 2026-10-26): Dev41 has an ideal dosing bench, but the requested IBC-fed, probe-controlled scenario with loss of prime and a low-level alarm remains outstanding.
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/028-scenario-chemical-dosing.md`.
+
+**Delivered:** Dev41 demonstrates an ideal dosing station in `water-bench.ts`; this is preparatory work for the requested closed-loop rig.
+
+**Still outstanding:** Build the IBC-fed measurement loop, probe/set-point control, loss of prime and low-level alarm, and complete the scenario’s acceptance checks.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 Written by Claude (Opus 5.5, Claude Code), 2026-10-23, one of eight test scenarios the owner asked for (each proving a piece of modelling the Olympic pool's redo will need). Read `AGENTS.md`, then the scenarios already built: Dev21 (sources to sinks, `source-sink-plumbing.ts`), Dev22 (battery-backed pump, `battery-pump-rig.ts`), Dev23 (gravity drain, `jacuzzi-drain.ts`).
 
-**Status:** Not started.
+**Status:** Scenario not yet implemented; ideal dosing bench available.
 
 ## The scenario
 

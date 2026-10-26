@@ -1,6 +1,18 @@
 # 083: The utilities area in the goods yard
 
-Status: in progress (written 2026-10-26 with the owner; refined the same day; Codex's review adopted, below).
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/083-outside-utilities.md`.
+
+**Delivered:** The outside water/gas/power intake, independent saved shut-offs, integrated meters, inspection/physical fittings and yard dressing are implemented.
+
+**Still outstanding:** Complete the full ordered-path, isolation/reload/meter acceptance matrix and yard collision/feedback walk-through. The owner’s later requirement that building-side shut-offs stay supersedes the earlier acceptance sentence saying all inside shut-offs disappear.
+
+**Evidence:** 25bf3d0, adc9cd1, efb3821, 1242a8c; src/game/plant/site-intake.test.ts. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply.
 

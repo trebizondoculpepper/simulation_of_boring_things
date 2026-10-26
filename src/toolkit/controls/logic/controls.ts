@@ -192,7 +192,7 @@ export const PAD = {
 
 /**
  * Whether a key brings the console down or puts it away
- * (`doc/prompts/058-developer-console.md`): the key left of 1, whatever it
+ * (`doc/prompts/done/058-developer-console.md`): the key left of 1, whatever it
  * is labelled (` and ¬ on a UK PC, § and ± on a UK Mac), named by its
  * place. Safari on an Apple ISO keyboard has been reported to swap that
  * key's code with the one beside left Shift, so that one counts too when

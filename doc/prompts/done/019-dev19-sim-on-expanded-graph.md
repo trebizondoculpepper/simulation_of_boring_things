@@ -1,5 +1,17 @@
 # Prompt: Dev19's simulation runs on the expanded graph
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/019-dev19-sim-on-expanded-graph.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** `createPortGraphDemo(graph)` with its fittings' state, `d1a5c22` (2026-10-23).. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 Written by Claude (Opus 5.5, Claude Code) for Codex, 2026-10-23, at the owner's direction. Read `AGENTS.md`, then `doc/prompts/done/018-plumber-valves-and-isolators.md`, especially its sections "Revision" and "The bound room". This is one bounded task within that work.
 
 ## The task

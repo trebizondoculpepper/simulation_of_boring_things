@@ -1,6 +1,6 @@
 # Camera splines for the attract sequence
 
-Research for authored camera moves in the title's attract sequence (`doc/prompts/054-title-attract-sequence.md`, `src/toolkit/title/logic/attract-sequence.ts`). The owner frames shots in noclip and copies each pose as a link (x, y, z in metres; yaw and pitch in degrees, yaw 0 facing north, −z; zoom; roll in degrees to come). The question is how to join a list of such poses into one smooth, film-like glide. Researched 2026-10-24. Anything marked **(inferred)** is my reasoning, not a source's statement.
+Research for authored camera moves in the title's attract sequence (`doc/prompts/done/054-title-attract-sequence.md`, `src/toolkit/title/logic/attract-sequence.ts`). The owner frames shots in noclip and copies each pose as a link (x, y, z in metres; yaw and pitch in degrees, yaw 0 facing north, −z; zoom; roll in degrees to come). The question is how to join a list of such poses into one smooth, film-like glide. Researched 2026-10-24. Anything marked **(inferred)** is my reasoning, not a source's statement.
 
 ## Contents
 

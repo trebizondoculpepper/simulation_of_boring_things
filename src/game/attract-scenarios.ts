@@ -1,6 +1,6 @@
 /**
  * The worlds the title's attract sequence shows (the owner, 2026-10-24;
- * `doc/prompts/054-title-attract-sequence.md`): prepared just for it, never
+ * `doc/prompts/done/054-title-attract-sequence.md`): prepared just for it, never
  * the player's. Each is a world built from a new one by a few actions and
  * frozen, so it cannot be changed, and each shot starts from its own
  * afresh, the same every time, and runs on from it while it is seen

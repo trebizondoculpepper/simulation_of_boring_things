@@ -6,7 +6,7 @@ import { GAS_ZONE_IDS } from '../plant/gas';
 import { LIGHTING_ZONE_IDS } from '../plant/lighting';
 
 /**
- * What the plant does by itself (`doc/prompts/058-developer-console.md`):
+ * What the plant does by itself (`doc/prompts/done/058-developer-console.md`):
  * watchers, each picking one small value from the world and saying what
  * its change means, run on the world before and after each step. Each
  * fires once on a change, never on a steady state. Pure.

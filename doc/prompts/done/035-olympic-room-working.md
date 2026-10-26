@@ -1,6 +1,18 @@
 # 035: The Olympic plant room, working
 
-Status: partly done (checked 2026-10-26): items 1 and 2 done 2026-10-23 (`845a5ab`, `0e146c5`, finished in `d89bef9`); the mimic wall, the remaining fittings, safety and housekeeping are still to do.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/035-olympic-room-working.md`.
+
+**Delivered:** The Olympic circulation and shared balance-tank world are working, with tank-hall instruments, drainage and access components.
+
+**Still outstanding:** Finish the mimic wall (034), remaining fittings and detection (022/045), warning signs, and the original browser/housekeeping acceptance items.
+
+**Evidence:** 845a5ab, 0e146c5, d89bef9. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 The owner, 2026-10-23: the room looks finished, but its parts follow different models. The valves and the flowmeters follow the world's valve states (`installedValves`, `olympic-battery.ts`); the machines (pumps, filter gauges and sight glasses, UV, dosing) follow the older whole-pool reading (`plantReadingOf`), which knows nothing of the room's valves; the tank hall runs a balance tank of its own.
 
@@ -19,8 +31,8 @@ The project's one to-do list is `TODO.md` in the repository's root (the owner, 2
 
 ## Remaining (checked 2026-10-26)
 
-- Item 3: the mimic wall ([034](034-olympic-mimic-wall.md)).
+- Item 3: the mimic wall ([034](../034-olympic-mimic-wall.md)).
 - Item 4: draw the UV and ozone isolators; the non-return valves and tap-offs are now in the model, to be confirmed drawn.
-- Item 5: the chlorine and ozone gas detectors ([022](022-component-variants-and-detectors.md)), and warning signs on the tank hall's doors.
+- Item 5: the chlorine and ozone gas detectors ([022](../022-component-variants-and-detectors.md)), and warning signs on the tank hall's doors.
 - Item 6: the diary entry for 2026-10-23, the room-name overlay after a hand-over through a door, the `retired0` tag if the owner wants it removed.
-- Items 7 and 8, later: [036](036-wet-hall-tanks.md) and [037](037-sound-between-rooms.md).
+- Items 7 and 8, later: [036](036-wet-hall-tanks.md) and [037](../037-sound-between-rooms.md).

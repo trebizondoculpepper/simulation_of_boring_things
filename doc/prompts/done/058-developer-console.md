@@ -1,6 +1,18 @@
 # 058: Developer console
 
-Status: stage 1 done 2026-10-25 (`2758b24`), with `status <name>` added (`3108b5a`); the later stages are still to come (checked 2026-10-26).
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/058-developer-console.md`.
+
+**Delivered:** The shared console, world REPL/actions, event log, history/completion and status inspection are available.
+
+**Still outstanding:** Complete the later-stage notification surface, watchers/scenario commands and convenience commands, touch/gamepad access and the developer-access policy.
+
+**Evidence:** 2758b24, 3108b5a. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## The owner's choice (2026-10-24)
 

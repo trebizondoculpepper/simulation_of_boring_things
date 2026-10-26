@@ -2,6 +2,18 @@
 
 Status: partly done (checked 2026-10-26): the Olympic's and the lounge's circulation pumps have starters in the world, worked from their existing local panels; the other rooms' motors have none.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Partial / active. **Filed:** `doc/prompts/044-plant-room-motor-panels.md`.
+
+**Delivered:** partly done
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Why
 
 Distributed motor control (the owner's choice): each motor is started, stopped and reset from a panel in its own plant room, fed from that room's distribution board, beside the local isolators already there. Later, the rebuilt control room drives the same starters remotely, as its mimics already share the one world with the plant rooms' boards (local and remote boards on one world node, no LOCAL/REMOTE switch).

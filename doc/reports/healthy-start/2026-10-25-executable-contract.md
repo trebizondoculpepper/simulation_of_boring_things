@@ -1,6 +1,6 @@
 # Healthy-start run: the executable contract
 
-Date: 2026-10-25. Source revision for the observational audit: `4b99c2f` (working tree also carried another session's uncommitted stair-smoothing and sand-filter edits, recorded in the generated JSON; neither touches the world model). `WORLD_VERSION` 27. This run implements work packages 1, 3, 5 and 6 of [mission 067](../../prompts/067-healthy-new-game.md); work package 4 (repair) found nothing to repair; the playable session's time is left for the owner.
+Date: 2026-10-25. Source revision for the observational audit: `4b99c2f` (working tree also carried another session's uncommitted stair-smoothing and sand-filter edits, recorded in the generated JSON; neither touches the world model). `WORLD_VERSION` 27. This run implements work packages 1, 3, 5 and 6 of [mission 067](../../prompts/done/067-healthy-new-game.md); work package 4 (repair) found nothing to repair; the playable session's time is left for the owner.
 
 ## Changes since the previous run
 

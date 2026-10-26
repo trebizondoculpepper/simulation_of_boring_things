@@ -1,5 +1,17 @@
 # Prompt: a router that never puts a pipe through another
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/021-clash-free-router.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** `voxel-router.ts`, `3175a75`; Dev19c passes every scorer gate with no clashes (`doc/room-layout-guide.md`, section 4).. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 Written by Claude (Opus 5.5, Claude Code), 2026-10-23, for Codex to review, improve, build and test at the owner's direction. Read `AGENTS.md`, then prompts 017 (the room's layers), 018 (the plumber), 020 (scorers and pipe costs) and 016 (the pipe helper's routing).
 
 ## Why

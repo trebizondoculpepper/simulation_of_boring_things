@@ -657,7 +657,7 @@ export function roomEquipment(
       };
     case 'plant_pool_02':
       // Olympic: cleared for its redo (the owner, 2026-10-23,
-      // `doc/prompts/033-olympic-plant-redo.md`): an empty large hall, its
+      // `doc/prompts/done/033-olympic-plant-redo.md`): an empty large hall, its
       // balance tank now in a hall of its own through its west doors. The
       // room as it was is kept as `retired0`.
       // Laid out by the owner's plan (`olympic-plan.ts`), plumbed by the

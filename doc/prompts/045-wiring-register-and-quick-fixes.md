@@ -2,6 +2,18 @@
 
 Status: partly done (checked 2026-10-26): later work made several register entries true (the boiler gas, ozone, the jacuzzi cabinet, the central battery), but the `partial` kind and most of the quick fixes are not done.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Partial / active. **Filed:** `doc/prompts/045-wiring-register-and-quick-fixes.md`.
+
+**Delivered:** partly done
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## The register
 
 `src/toolkit/gallery/logic/world-bindings.ts` records how each machine meets the world, and says `world` for machines that are not: the boiler cascade, gas train, gas safety, combustion panel, the boiler house's two mimics, the ozone generator, the jacuzzi cabinet (`jacuzzi-pack`), the sand filters and the CCTV. Add a fourth kind, `partial` (shows the world but has controls or readouts that do not reach it), with what is missing, and set each of those to `todo` or `partial` truthfully, citing the prompt that fixes it (046 to 053). Its test pins the list of `todo` and `partial` kinds, which only shrinks. Note in the register's comment the faults it exists to catch: state kept in a view's module, controls that change only the page, readouts from constants.

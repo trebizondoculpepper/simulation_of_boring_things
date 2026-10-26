@@ -63,7 +63,7 @@ export const PLANT_ROOM = {
 /**
  * A plant room of `size`: its plan, the landing's, the stair's and the doors'.
  * `tankHall`: a large room whose balance tank is in a hall of its own beside
- * it (the Olympic's, from 2026-10-23, `doc/prompts/033-olympic-plant-redo.md`)
+ * it (the Olympic's, from 2026-10-23, `doc/prompts/done/033-olympic-plant-redo.md`)
  * has the equipment doors to it in its west wall, at the north end of the
  * plant floor.
  */

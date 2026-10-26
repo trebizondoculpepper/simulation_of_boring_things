@@ -1,5 +1,5 @@
 /**
- * The console's command line (`doc/prompts/058-developer-console.md`):
+ * The console's command line (`doc/prompts/done/058-developer-console.md`):
  * splitting a line into statements and words, as Quake's console did, the
  * history, and Tab completion. Pure.
  */

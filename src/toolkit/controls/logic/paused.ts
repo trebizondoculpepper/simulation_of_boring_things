@@ -10,7 +10,7 @@ export const paused = signal(false);
 
 /**
  * Whether the world's clock is stopped by the console's `pause`
- * (`doc/prompts/058-developer-console.md`): the world stands still, as
+ * (`doc/prompts/done/058-developer-console.md`): the world stands still, as
  * behind the menu, but the player can still walk about and look at it.
  */
 export const clockStopped = signal(false);

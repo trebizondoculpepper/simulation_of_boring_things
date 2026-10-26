@@ -2,6 +2,18 @@
 
 Status: partly done (checked 2026-10-26): the boiler gas safety (ECV, emergency stop, detector, SSOV) is in the world and cuts the heating; the boilers, combustion, pressure and calorifier are not.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Partial / active. **Filed:** `doc/prompts/046-boiler-house-in-the-world.md`.
+
+**Delivered:** partly done
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Now
 
 The boiler house's model (`src/toolkit/gallery/rooms/plant/boiler.ts`, `house`: six boilers, the gas house with its ECV and emergency stop, combustion with its fan and flue temperatures, fouling) is a module-level object in a view: unsaved, stepped only while the room is shown, and of no effect. The world's heat is a flag (`sources.heat` and the boiler house's feeder, `services.ts`). The boilers fire because the pools draw heat (`boilersFiring` from the pools' heating), not the reverse. The LTHW circulator follows the Olympic plant room's heat service. The pressurisation unit, calorifier, low-loss header and dosing pot are static; system pressure is a constant 2.4 bar. The boiler house's natural-gas safety is a page system apart from the world's gas detection. The control room's heating mimic is constants and a sine.

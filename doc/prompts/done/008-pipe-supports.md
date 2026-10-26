@@ -1,6 +1,18 @@
 # Prompt: every pipe supported, by the pipe helper
 
-Status: partly done (checked 2026-10-26): steps 0 to 3 are done (`b7eccac`, `88ad50f`, `41bff00`): one room structure, the support table, a planner that never skips, and every room's pipework, cabinet services and conduits supported; the exhibits, the routing-rule tests and the report remain.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/008-pipe-supports.md`.
+
+**Delivered:** The shared room structure, support rules/planner and installed room/cabinet/conduit supports are implemented.
+
+**Still outstanding:** Migrate remaining gallery/exhibit runs; add the routing-rule checks; complete the listed browser inspections and supports progress report.
+
+**Evidence:** b7eccac, 88ad50f, 41bff00. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply. This prompt asks you to make pipe and conduit supports the pipe helper's job, so that no pipe in the game hangs in mid-air.
 

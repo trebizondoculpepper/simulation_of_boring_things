@@ -1,6 +1,18 @@
 # 032: The Olympic balance tank hall (Dev28)
 
-Status: built as Dev28 (2026-10-23); not yet in the leisure centre.
+Status: complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/032-balance-tank-hall.md`.
+
+**Delivered:** Dev28’s hall is built and installed in the leisure centre, with world bindings delivered under 035 (`0e146c5`) and later tank-hall work (`d89bef9`).
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** Dev28 `d276467`; then in the building as the tank hall joined to the Olympic plant room, `17099c8`, and in the world's model, `0e146c5` (2026-10-23). The make-up's solenoid valve still to be drawn is prompt 035's, in `TODO.md`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 The owner, comparing layouts for the Olympic plant room against `retired0`: take the balance tank out of the plant room into a hall of its own beside it, a cast concrete tank that can be as deep as it needs to be, entered at the plant floor's level. Modelled first as a dev room, at the Olympic tank's real size: "not tiled, just cast concrete … you enter onto a gantry, you look down, and it's just a pool of water, and there's a gantry for observation around the edge, and perhaps some safety features like a life preserver and a stainless steel ladder."
 

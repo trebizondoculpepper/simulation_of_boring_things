@@ -1,8 +1,20 @@
 # Prompt: smallest working multi-system plant
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/013-minimal-multidomain-plant.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** Write or explicitly waive the original Dev19/minimal-plant progress report; the implementation is delivered.
+
+**Evidence:** Built as Dev19, `port-graph-demo.ts` and its tests, `fc89a7d` (2026-10-23); outcome in diary `2026-10-22_port-graph-physical-quantities.md`; the port graph adopted after 014 (018, 019). Its own report was never written. Moved 2026-10-25.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 > **Retired 2026-10-25.** The plant network this refers to (`src/game/plant/network/`, `PLANT_NETWORK`) was deleted: nothing in the game used it, and the owner ruled that each room's enhanced network (the plumber's expanded port graph) is the one source of truth. Git history keeps it.
 
-Status: done 2026-10-23. The prototype was built as Dev19 (`port-graph-demo.ts`, its tests, and the room), `fc89a7d`, with its outcome in `diary/2026-10-22_port-graph-physical-quantities.md`; [014](014-port-graph-architecture-review.md)'s review recommended adapting it, and the owner adopted the port graph ([018](018-plumber-valves-and-isolators.md), [019](019-dev19-sim-on-expanded-graph.md)). The separate report its acceptance check 5 asked for was never written; the diary and 014's review stand in for it.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
 
 Read `AGENTS.md`, `doc/research/port-graph-physical-quantities.md`, `src/game/plant/network/port-graph-spike.test.ts`, and the existing world and plant network before editing. Build a headless, deterministic prototype that proves the port graph can describe a small coupled physical system. Keep the existing game network and saves unchanged until the prototype passes.
 

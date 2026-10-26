@@ -2,6 +2,18 @@
 
 Status: partly done (checked 2026-10-26): phases 1 and 2 are built (the front matter, the boiler house's chapter, schematics with symbols, the LaTeX build); phases 3 to 6 are not started.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Partial / active. **Filed:** `doc/prompts/005-finish-operators-manual.md`.
+
+**Delivered:** partly done
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Briefing
 
 Every release of Pool Plant is to come with a downloadable PDF: the Operation and Maintenance (O&M) manual for the leisure centre's plant, written inside the game's fiction as the contractor who fitted out the pool plant would have handed it to the council, and generated entirely from the game's own model, so it is always true of the build it ships with. The plan is `doc/plans/operators-manual.md`; read it first, then `CLAUDE.md` (the project's rules) and `README.md`.

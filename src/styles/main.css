@@ -876,7 +876,7 @@ canvas {
   }
 }
 
-/* The console (doc/prompts/058-developer-console.md): Quake's, dropped
+/* The console (doc/prompts/done/058-developer-console.md): Quake's, dropped
    down over the top of the view by the key left of 1, in the HUD's amber.
    Above the HUD and the room name; the pause menu never shows with it. */
 .game-console {

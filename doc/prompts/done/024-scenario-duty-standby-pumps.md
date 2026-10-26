@@ -1,5 +1,17 @@
 # Prompt: scenario 1, duty and standby pumps
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/024-scenario-duty-standby-pumps.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** Status Done 2026-10-23: Dev24, `55cbee9`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 Written by Claude (Opus 5.5, Claude Code), 2026-10-23, one of eight test scenarios the owner asked for (each proving a piece of modelling the Olympic pool's redo will need). Read `AGENTS.md`, then the scenarios already built: Dev21 (sources to sinks, `source-sink-plumbing.ts`), Dev22 (battery-backed pump, `battery-pump-rig.ts`), Dev23 (gravity drain, `jacuzzi-drain.ts`).
 
 **Status:** Done, 2026-10-23: Dev24 (`?room=dev24`). Logic in `src/game/plant/duty-standby.ts` and `src/toolkit/gallery/logic/duty-standby-rig.ts`, tested; seen working in the room (pump 1's isolator off: P1 FAULT and DUTY FAIL lit, pump 2 running, the flow kept at 300 m³/h).

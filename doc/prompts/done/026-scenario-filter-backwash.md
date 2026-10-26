@@ -1,5 +1,17 @@
 # Prompt: scenario 3, backwashing a sand filter
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/026-scenario-filter-backwash.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** Status Done 2026-10-23: Dev26, simple setup `6c59e05`, then the five-valve battery `4264b00`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 Written by Claude (Opus 5.5, Claude Code), 2026-10-23, one of eight test scenarios the owner asked for (each proving a piece of modelling the Olympic pool's redo will need). Read `AGENTS.md`, then the scenarios already built: Dev21 (sources to sinks, `source-sink-plumbing.ts`), Dev22 (battery-backed pump, `battery-pump-rig.ts`), Dev23 (gravity drain, `jacuzzi-drain.ts`).
 
 **Status:** Done (the simple setup), 2026-10-23: Dev26 (`?room=dev26`), a small filter with a top-mount multiport valve (FILTER, BACKWASH, RINSE, CLOSED). Logic in `src/game/plant/multiport-filter.ts` and `src/toolkit/gallery/logic/filter-backwash.ts`, tested; seen in the room (a dirty bed at 0.54 bar, the lever turned under flow caught, the backwash running brown to the gully). Then, at the owner's asking, the commercial setup replaced it in Dev26: one of the Olympic pool's 3 m filters on its five-valve battery (V1 inlet, V2 outlet, V3 backwash in, V4 backwash out, V5 rinse), the valves actuated and switched together by a Penfold panel (OFF, SERVICE, BACKWASH, RINSE; the supply held off while they travel), an electromagnetic flowmeter on each valve's branch, and the water side solved as a network (`src/game/plant/five-valve-filter.ts`, `src/toolkit/gallery/logic/five-valve-rig.ts`); seen switching to backwash in the room. The small multiport filter stays as a component (`multiport-filter.ts`).

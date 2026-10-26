@@ -2,6 +2,18 @@
 
 Status: not started (checked 2026-10-26): no benchmark harness, experiments or report yet.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/042-world-model-speed-investigation.md`.
+
+**Delivered:** not started
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## The question
 
 Can the world simulation (`src/game/world.ts` and what it steps: the pools, the Olympic battery and tank, the wet hall, bathers, gas, chemicals, the identified plant) be made much cheaper at run time, perhaps by compiling the authored model (blocks within blocks, addressed by path, `doc/plant-model.md`) into a purely numerical form? Which specific steps would give the most benefit for the least cost, now and as the model grows?

@@ -2,6 +2,18 @@
 
 Status: planned 2026-10-23, deferred by the owner; not started (checked 2026-10-26). Only cabinet-door attenuation (`door-attenuation.ts`) and the jacuzzi's scene-local drain sound exist.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/037-sound-between-rooms.md`.
+
+**Delivered:** planned 2026-10-23, deferred by the owner; not started
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## The principle
 
 You do not have to be in a room to hear the room's noises (the owner, 2026-10-23). A room's sound reaches the next room through the doorway between them, by how far the door stands open, not by which room the player is in. Moving from one room into another changes nothing by itself: the room behind is heard as long as its door is open.

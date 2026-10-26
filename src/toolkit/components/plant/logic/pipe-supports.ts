@@ -1,7 +1,7 @@
 /**
  * Pipe supports: how far apart a run's supports may be, by what it is
  * made of and its size, and where each of a run's supports goes and what
- * it is fixed to (`doc/prompts/008-pipe-supports.md`). Pure: metres, the
+ * it is fixed to (`doc/prompts/done/008-pipe-supports.md`). Pure: metres, the
  * room's floor at y = 0.
  *
  * The rules, after UK practice of the plant's period:

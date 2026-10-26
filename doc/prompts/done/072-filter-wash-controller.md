@@ -1,6 +1,18 @@
 # 072: The Lidoluxe Wash-O-Tron, an automatic filter wash controller
 
-Status: not started (written 2026-10-26; rewritten the same day as the Wash-O-Tron; a second opinion from Codex adopted the same day, below).
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/072-filter-wash-controller.md`.
+
+**Delivered:** The Wash-O-Tron’s world actions, proved valve sequences, automatic wash programme, LCD/control component and local Olympic console exist. Its old “not started” status is stale.
+
+**Still outstanding:** Install the control-room console; verify both consoles share state; strengthen the complete all-five-filter wash/rinse and sewer-consent acceptance, plus the browser checks. Keep the long AUTO test’s parallel-suite timing follow-up open.
+
+**Evidence:** ea83068, 6b8fcbe; src/game/plant/wash-o-tron.test.ts. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## The request
 

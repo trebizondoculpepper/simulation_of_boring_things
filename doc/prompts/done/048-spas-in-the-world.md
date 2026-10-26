@@ -1,6 +1,18 @@
 # 048: The spa cabinets and the jacuzzi in the world
 
-Status: partly done (checked 2026-10-26): the jacuzzi's POWER, JETS and AIR, its cabinet's controller and start-up, both cabinets' filters and their washes are in the world; the hall's tub still runs its own spa, and the cabinets' chemistry readouts are not yet from the world.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/048-spas-in-the-world.md`.
+
+**Delivered:** Cabinet power/start-up, circulation, jets/air, filter wash state and the tub’s level/effects are connected to the world.
+
+**Still outstanding:** Replace cabinet dosing constants (1.8 chlorine / 7.3 pH), reconcile remaining local tub/controller temperature state with pool_03, and verify cabinet/isolator/feeder shutdown across all views.
+
+**Evidence:** e8a6dc8, 0e955c8; src/toolkit/gallery/rooms/plant/spa-pack.ts and pool-amenities.ts. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## Now
 

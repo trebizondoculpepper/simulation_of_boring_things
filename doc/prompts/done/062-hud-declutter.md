@@ -2,6 +2,18 @@
 
 Status: done 2026-10-25, `c3cf783` (recorded in `808941d`). Keyboard/mouse/touch/gamepad layout policy and the three-state setting are in the shared controls; browser and project validation are recorded in the diary.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/062-hud-declutter.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** `c3cf783`, recorded in `808941d` (2026-10-25); `TODO.md` ticked. The HUD choices its audit left for the owner are their own `TODO.md` item. Moved 2026-10-25.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## The request
 
 The owner, 2026-10-25:
@@ -15,7 +27,7 @@ The owner, 2026-10-25:
 
 All of it is built in `src/toolkit/controls/input/first-person.ts`, styled in `src/styles/main.css`.
 
-- **The help line** (`.controls-help`): on entering a room, and whenever the input changes, it shows every binding for the input in use (`controlsHelp(mode)` in `controls/logic/controls.ts`, "WASD: walk · Shift: run · …"), fading after a minute (ten seconds on touch). The same element carries contextual lines: the ladder's "W: climb · S: descend", noclip's flight keys, and, by prompt [061](../061-component-information-overlay.md), the component information overlay.
+- **The help line** (`.controls-help`): on entering a room, and whenever the input changes, it shows every binding for the input in use (`controlsHelp(mode)` in `controls/logic/controls.ts`, "WASD: walk · Shift: run · …"), fading after a minute (ten seconds on touch). The same element carries contextual lines: the ladder's "W: climb · S: descend", noclip's flight keys, and, by prompt [061](061-component-information-overlay.md), the component information overlay.
 - **The movement pad** (`.hud-movement`, bottom left: the step pad, the two turns and USE) is shown whenever the input is `mouse`, which is also what any key press sets. So a player walking with WASD still sees it. The pause menu's Controls tab has an "On-screen controls" switch (`settings.onScreenControls`, the body class `hide-onscreen-controls`) that hides it.
 - **The thumbsticks, CROUCH and INSPECT** are shown only while `data-input='touch'`. The input starts as `touch` when the primary pointer is coarse (`matchMedia('(pointer: coarse)')`) and becomes `touch` on any touch or pen `pointerdown`, `mouse` on a mouse pointer, a walking key or mouse look, and `gamepad` while a gamepad is in use. This is nearly right already; the gaps are below.
 - **The full reference** is already in the pause menu's Controls tab (a table of every binding, keyboard and mouse beside gamepad).

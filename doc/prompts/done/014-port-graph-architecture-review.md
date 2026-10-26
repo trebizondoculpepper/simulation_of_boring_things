@@ -1,5 +1,17 @@
 # Prompt: review the port graph as the world's equipment contract
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/014-port-graph-architecture-review.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** Review written to `doc/reports/port-graph-architecture-review.md`, `eed8cfe`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 You are an independent reviewer. Do not implement a migration. Read `AGENTS.md`, `doc/research/port-graph-physical-quantities.md`, `doc/prompts/done/013-minimal-multidomain-plant.md`, and `src/game/plant/network/port-graph-spike.test.ts`. Inspect the existing plant network, machine port definitions, visual bindings, world state, catalogue, and their tests. Check the library's actual API and limitations against the proposal; distinguish facts in the code from desired future behavior.
 
 ## Decision to review

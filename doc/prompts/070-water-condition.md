@@ -2,6 +2,18 @@
 
 Status: partly done (checked 2026-10-26): the condition record and its rules, the dev40 filter rig and the dev41 bench (filter, boiler, dosing, UV) are built, and the world's pools carry suspended solids through ideal filters on every pool; the rest of the condition is not yet in the world.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Partial / active. **Filed:** `doc/prompts/070-water-condition.md`.
+
+**Delivered:** partly done
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## The request
 
 The owner, 2026-10-25: besides its volume, and its pressure and temperature, water has a condition: "it could contain chlorine, ozone, it could contain dirt." For now every water source should carry "just the core values", and each machine should be a black box that adjusts them: a filter "would reduce the amount of … suspended particulates, maybe reduce the temperature ever so slightly towards ambient"; a boiler "would be a machine that updates the temperature of water". "A lot of things in our game follow from being able to simulate different kinds of water conditions."
@@ -81,4 +93,4 @@ Water balance (alkalinity, calcium hardness, dissolved solids; scale and corrosi
 - Stage 3: an ozone and contact-tank rig and an acid-dosing line on the bench, each in a dev room first.
 - Stage 4: each pool, balance tank and plant flow carrying a whole `WaterCondition`; the pools' own temperature, free and combined chlorine and pH fields replaced by mass balances, the water loaded with bathers' organic matter.
 - Instruments (turbidity, chlorine analyser, redox) reading the condition and showing only what they display.
-- `WORLD_VERSION` bumped, mission [067](067-healthy-new-game.md) rerun, its bands confirmed.
+- `WORLD_VERSION` bumped, mission [067](done/067-healthy-new-game.md) rerun, its bands confirmed.

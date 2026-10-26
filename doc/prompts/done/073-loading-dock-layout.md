@@ -1,6 +1,18 @@
 # 073: The loading dock, laid out
 
-Status: not started (written 2026-10-26 with the owner; revised the same day after a second opinion from Codex, and the yard moved out to [080](080-goods-yard.md)). Takes in [010](obsolete/010-loading-bay-two-lorries.md). The first of a series: [074](074-delivery-lorries.md) the lorries, [075](075-roller-shutters.md) the shutters, [076](076-chemical-delivery.md) chemical deliveries, [077](077-generator-hook-up.md) the generator hook-up, [078](078-splashonomics-ordering.md) ordering, [079](079-mains-failure.md) a mains failure, [080](080-goods-yard.md) the goods yard, [081](081-acid-supply.md) how acid is supplied.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/073-loading-dock-layout.md`.
+
+**Delivered:** The two-bay dock, shutters/pier door, depressed lorry channels, stairs, outdoor views and delivery/handling scenery are implemented and iteratively corrected.
+
+**Still outstanding:** Complete the model-led chemical/generator service-route acceptance and cabinet/asset relocation checks; retain the walk-through of all approaches, levels and clearances. Later vehicle/delivery mechanics remain 074–079, not missing dock-layout work.
+
+**Evidence:** 43f8db2, 0243526, 9e8c286; src/toolkit/gallery/logic/dock-yard.test.ts. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply.
 
@@ -29,7 +41,7 @@ The goods yard outside, its steps, its limit, the two hookup cabinets and the lo
 
 ## What goes in it
 
-- **Roller shutters, one per bay, drawn open and fixed:** insulated steel shutters after the UK goods-yard type (Bolton Gate's insulated shutter, HAG Armourguard, Hörmann SB Decotherm): about 3.5 m wide by 4 to 4.5 m high, a barrel box over the opening, guide channels each side, a bottom rail, a geared motor on one end plate and a hand chain. Rough. They are made to work in [075](075-roller-shutters.md), under a fictional maker's brand.
+- **Roller shutters, one per bay, drawn open and fixed:** insulated steel shutters after the UK goods-yard type (Bolton Gate's insulated shutter, HAG Armourguard, Hörmann SB Decotherm): about 3.5 m wide by 4 to 4.5 m high, a barrel box over the opening, guide channels each side, a bottom rail, a geared motor on one end plate and a hand chain. Rough. They are made to work in [075](../075-roller-shutters.md), under a fictional maker's brand.
 - **Dock fittings at each bay, rough components to refine later:** a dock leveller (a hinged plate and lip bridging the dock floor to the lorry bed), dock buffers, and a dock shelter round the opening on the outside wall.
 - **Placeholder lorries:** [080](080-goods-yard.md); not in this mission.
 - **The lines and the cable to the outside wall,** for the hookup cabinets [080](080-goods-yard.md) puts outside either side of the pier door: the acid line from the left of the pier to the acid store, the hypochlorite line overhead across the dock, double-contained, to the hypochlorite store, at a stated clearance above the shutters' barrels and anything else; and the generator cable from the right of the pier back to the switch room, drawn but not connected. Every line is one of the schematic's connections (the plant-model rules apply). The dock's two fill cabinets and the switch room's `generator-point` go, their asset IDs carried to 080's cabinets.

@@ -57,4 +57,4 @@ The audit observes the world and shared plant readings. It does not prove that a
 
 ## Next execution
 
-Implement [mission 067](../../prompts/067-healthy-new-game.md) against the [maintained definition](../../healthy-start.md). Establish subsystem health predicates and independent coverage, choose the playable time/session, verify automatic and timed controls, then change initial settings only where evidence requires it. Preserve this report and compare the next run’s trajectories and findings.
+Implement [mission 067](../../prompts/done/067-healthy-new-game.md) against the [maintained definition](../../healthy-start.md). Establish subsystem health predicates and independent coverage, choose the playable time/session, verify automatic and timed controls, then change initial settings only where evidence requires it. Preserve this report and compare the next run’s trajectories and findings.

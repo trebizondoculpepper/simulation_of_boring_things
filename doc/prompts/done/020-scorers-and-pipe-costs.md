@@ -1,5 +1,17 @@
 # Prompt: scorers at each stage, and what pipework costs
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/020-scorers-and-pipe-costs.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** `pipe-costs.ts`, `placement-scorer.ts`, `room-scorer.ts`, `unit-blocks.ts`; `5e67ab6` (2026-10-23).. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 Written by Claude (Opus 5.5, Claude Code) for its own work, 2026-10-23. Read `AGENTS.md`, then prompts 017 (the room's layers) and 018 (the plumber). This adds a scorer to the end of each stage, and prices the pipework.
 
 ## What the owner wants

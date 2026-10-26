@@ -2,6 +2,18 @@
 
 Status: not started (checked 2026-10-26): the heat, air and chemical flags in `services.ts` still stand in for the machines.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/051-utility-flags-retired.md`.
+
+**Delivered:** not started
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Now
 
 The world's utility sources (`services.ts`: power, water, heat, air, chemical) are booleans that only FULL ON sets, always on in practice, combined with room feeders. They stand in for machines the world now has or will have: **heat** decides the pools' and halls' heating, unrelated to the boilers; **air** decides the `ahu-fault` alarm, a hall's "ventilated" flag (beside its units' real airflow), the chemical stores' and ozone rooms' extract fans, and powers the lounge's valve actuators as if it were compressed air; **chemical** gates dosing beside the stores' real stock, acid dosing needing the hypochlorite store's feeder.

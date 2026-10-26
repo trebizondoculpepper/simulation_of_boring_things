@@ -1,12 +1,24 @@
 # 067: Define and maintain a healthy New Game
 
-Status: partly done (checked 2026-10-26): the executable contract (`src/game/health.ts`, `new-game.test.ts`) is in place and a new game passes it; the owner has still to choose the playable session's time, the control probes and browser checks are not done, and the audit is due again after the model's changes of 2026-10-25 (solids, the ideal filters, the cabinets' start-up, the RCBOs and the central battery).
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/067-healthy-new-game.md`.
+
+**Delivered:** The healthy-start contract, executable health/coverage checks and dated first audit are delivered; this remains a repeatable operating audit.
+
+**Still outstanding:** Settle the session start time, complete independent control probes and browser New Game/Continue/title isolation checks, and rerun the dated audit after the later model changes.
+
+**Evidence:** df929ec, 98874c2; doc/reports/healthy-start/2026-10-25-executable-contract.md. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## The owner's request
 
 A normal New Game should place the player in a normal, healthy pool with all facilities operational. Model changes may change which settings are normal. Work out the healthy state, record the reasoning and evidence, and make the work possible to repeat.
 
-The maintained definition is [`doc/healthy-start.md`](../healthy-start.md). The [initial audit](../reports/healthy-start/2026-10-25-initial-audit.md) supplies the first measured baseline. This prompt plans future implementation; the research has not changed runtime defaults.
+The maintained definition is [`doc/healthy-start.md`](../../healthy-start.md). The [initial audit](../../reports/healthy-start/2026-10-25-initial-audit.md) supplies the first measured baseline. This prompt plans future implementation; the research has not changed runtime defaults.
 
 ## Scope
 

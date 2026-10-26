@@ -1,6 +1,18 @@
 # 034: The Olympic's mimic wall
 
-Status: planned 2026-10-23; not started (checked 2026-10-26). The lounge's filter mimic ([066](066-lounge-filter-mimic.md)) and dev0's LED chaser are building blocks for it.
+Status: planned 2026-10-23; not started (checked 2026-10-26). The lounge's filter mimic ([066](done/066-lounge-filter-mimic.md)) and dev0's LED chaser are building blocks for it.
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/034-olympic-mimic-wall.md`.
+
+**Delivered:** planned 2026-10-23; not started
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 The owner, 2026-10-23, once the Olympic plant room was redone (prompt 033) and its valves made solenoid-operated: the controls and mimics are redesigned for the new plant, in two identical copies, one local in the plant room and one remote in the new control room.
 

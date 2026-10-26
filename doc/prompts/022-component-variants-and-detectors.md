@@ -2,6 +2,18 @@
 
 Status: partly done (checked 2026-10-26): the variants are done (`266c534`: the heat exchanger's shell-and-tube and plate variants, chosen by the scorer's port-heights dimension); the gas detectors' placement rules and gate are not built.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Partial / active. **Filed:** `doc/prompts/022-component-variants-and-detectors.md`.
+
+**Delivered:** partly done
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 Written by Claude (Opus 5.5, Claude Code), 2026-10-23, for its own work. Read `AGENTS.md`, then prompts 017 (the room's layers), 020 (scorers, blocks) and 021 (the router).
 
 ## Component variants (the owner, 2026-10-23)

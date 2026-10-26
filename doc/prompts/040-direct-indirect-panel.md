@@ -2,6 +2,18 @@
 
 Status: partly done (checked 2026-10-26): tried in dev30's lighting-styles booth (`haloPanel`, Lumenhaus, its own dimmer); not yet on the lighting model's circuits nor hung in the public spaces.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Partial / active. **Filed:** `doc/prompts/040-direct-indirect-panel.md`.
+
+**Delivered:** partly done
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## What it is
 
 A direct/indirect luminaire, sold as a suspended or floating "halo" panel: a large rectangular LED panel hung just below the ceiling, its opal diffuser in a slim dark frame lighting the room below (direct), and light from its edges or top washing the ceiling around it (indirect), so the ceiling glows brightest close to the frame and fades away from it: a halo. It is the reverse of cove lighting, where hidden light washes the ceiling from a recess at its edge and there is no diffuser.

@@ -1,6 +1,6 @@
 # Prompt 071: human ladder implementation plan
 
-Status: researched 2026-10-26. This is the implementation plan for [prompt 071](../prompts/071-ladders.md). No other prompt blocks the work.
+Status: researched 2026-10-26. This is the implementation plan for [prompt 071](../prompts/done/071-ladders.md). No other prompt blocks the work.
 
 ## Classification and scope
 

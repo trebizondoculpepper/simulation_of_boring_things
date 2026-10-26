@@ -1,6 +1,18 @@
 # 076: Chemical deliveries: connecting the tanker and filling the stores
 
-Status: incomplete, for planning (opened 2026-10-26 with the owner, from [073](073-loading-dock-layout.md)). Not ready to start: the questions below are to be settled with the owner first.
+Status: incomplete, for planning (opened 2026-10-26 with the owner, from [073](done/073-loading-dock-layout.md)). Not ready to start: the questions below are to be settled with the owner first.
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/076-chemical-delivery.md`.
+
+**Delivered:** incomplete, for planning (opened 2026-10-26 with the owner, from [073](done/073-loading-dock-layout.md)). Not ready to start: the questions below are to be settled with the owner first.
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## The idea
 

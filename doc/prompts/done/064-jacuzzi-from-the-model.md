@@ -1,6 +1,18 @@
 # 064: The jacuzzi, from the model
 
-Status: partly done (checked 2026-10-26): steps 1 to 6 are built and the room is bound to its schematic; step 7 (routing by the plumber, scoring, a dev-room trial and switching over) and the doors are still to do. Gravity lines are now in the router ([065](done/065-gravity-lines-in-the-router.md)).
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/064-jacuzzi-from-the-model.md`.
+
+**Delivered:** The schematic-driven Jacuzzi room and pool bindings exist, and its plumbing implementation uses the voxel router including gravity lines.
+
+**Still outstanding:** Complete the requested scored/prototyped cutover and room/door acceptance; verify remaining headroom/close-pair rules, all placements/electrical routes and retirement of legacy cabinet routes. The old assertion that routing logic is absent is stale.
+
+**Evidence:** 40d5760, 12e85dc, c56b452; src/toolkit/gallery/logic/jacuzzi-plumbing.ts. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## The goal
 
@@ -48,7 +60,7 @@ Everything drawn in the jacuzzi plant room and the jacuzzi pool room is bound to
 
 ## Codex's review, taken on board (2026-10-25)
 
-[Codex's review](../reviews/2026-10-25-codex-review-064.md) found the plan feasible and asked for these changes, adopted here; they override the steps above where they differ.
+[Codex's review](../../reviews/2026-10-25-codex-review-064.md) found the plan feasible and asked for these changes, adopted here; they override the steps above where they differ.
 
 - **Order:** build and test the jacuzzi's schematic and its bindings before removing the hand-drawn services; switch the scene to the new routes and remove the old register entries together. Nothing working is cleared before its replacement exists.
 - **The runtime keys must be the model's.** The world stores `installedValves` by asset id and `plant/valve` resolves through `installedValveByCommandId`; `jacuzziPaths` reads a hand-written table of asset ids (`JACUZZI_VALVES`); the tub's drain is a separate flag (`pools.pool_03.drainDown`, dispatched as `pool/drain-down`), and the make-up writes both a valve and a pool flag. All of these resolve the same model fitting ids: the valve table is derived from the schematic by each valve's function, the tub's drain is a fitting of the schematic whose state the world reads, and the saved world is reset by a version bump (the owner: state may be thrown away). The simulation keeps its existing equations, driven by the model's fitting ids; running the enhanced graph itself is a later step.

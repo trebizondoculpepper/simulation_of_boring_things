@@ -2,6 +2,18 @@
 
 Status: not started (checked 2026-10-26): the jacuzzi's balance tank is still ideal, its water losing no heat.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/057-balance-tank-thermal-losses.md`.
+
+**Delivered:** not started
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Purpose
 
 A spa's balance tank holds water at the spa's temperature, 37 °C, in a plant room at perhaps 20 to 25 °C. A real tank loses heat through its walls and lid, so commercial spa installers specify foam-insulated GRP tanks, or lag them, as they lag the hot pipework. Today the world's thermal model (`src/game/plant/thermal.ts`) treats the jacuzzi's water as one body, the tank's share included, losing heat only at the spa's surface. Model the tank's losses, so an uninsulated tank costs heat and the insulated one is visibly worth having.

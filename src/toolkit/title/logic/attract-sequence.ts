@@ -5,7 +5,7 @@ import { createCameraPath, parseViewLink } from './camera-path';
 import type { CameraKey, CameraMove, CameraSample } from './camera-path';
 
 /**
- * The title's attract sequence (`doc/prompts/054-title-attract-sequence.md`):
+ * The title's attract sequence (`doc/prompts/done/054-title-attract-sequence.md`):
  * the shots it plays behind the title menu, round and round, while the
  * theme plays on, and the timeline that fades each to black, holds there
  * until the next is built, and fades it in. Pure.

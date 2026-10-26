@@ -1,6 +1,6 @@
 # Healthy New Game: the maintained definition
 
-Status: operating contract, researched 2026-10-25 and made executable the same day (`src/game/health.ts`, tested in `src/game/new-game.test.ts`); maintained through [mission 067](prompts/067-healthy-new-game.md). This is the game's definition of normal operation, not real-world commissioning advice. The [initial audit](reports/healthy-start/2026-10-25-initial-audit.md) records what the current model actually does.
+Status: operating contract, researched 2026-10-25 and made executable the same day (`src/game/health.ts`, tested in `src/game/new-game.test.ts`); maintained through [mission 067](prompts/done/067-healthy-new-game.md). This is the game's definition of normal operation, not real-world commissioning advice. The [initial audit](reports/healthy-start/2026-10-25-initial-audit.md) records what the current model actually does.
 
 ## What “steady state” means here
 

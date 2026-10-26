@@ -1,5 +1,5 @@
 /**
- * The game's event log (`doc/prompts/058-developer-console.md`): a line for
+ * The game's event log (`doc/prompts/done/058-developer-console.md`): a line for
  * everything done to the model and everything the plant does by itself,
  * as a plant logbook would keep it. The console shows it. It is not part
  * of the world and is never saved. Pure.

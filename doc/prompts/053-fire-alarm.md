@@ -2,6 +2,18 @@
 
 Status: not started (checked 2026-10-26): there is no fire alarm in the world, and the repeater is still unwired.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/053-fire-alarm.md`.
+
+**Delivered:** not started
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## To do
 
 - A fire alarm system in the world after a real addressable panel (BS 5839-1): its panel (in reception or the control room), detectors in each zone, manual call points (the corridors' signs become working call points), sounders and beacons, its states (normal, fault, pre-alarm, fire, silenced, reset), its events log.

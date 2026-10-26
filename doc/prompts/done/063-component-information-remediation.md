@@ -1,6 +1,18 @@
 # 063: Component information, what remains
 
-Status: partly done (checked 2026-10-26): every plant room is bound to its model, 0 unbound and 83 of 86 valves described; actions 1 to 9 of its review of 2026-10-26 are still to do.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/063-component-information-remediation.md`.
+
+**Delivered:** The room-model binding and component/part inspection foundation is delivered; the prompt already records zero unbound plant items and the remaining tag/description cases.
+
+**Still outstanding:** Retain and execute the nine remediation actions below: discharge/regulating valve descriptions, canonical tags and migrations, per-kind statuses, register derivation, coverage outside plant rooms and browser acceptance.
+
+**Evidence:** 4b17b50, 209d53b; doc/reports/plant-identification-gap-audit.md. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## Review, 2026-10-26: what is still to do
 
@@ -11,7 +23,7 @@ Checked against the code on 2026-10-26 (main at the time). **Still needed, but m
 - **Every plant room is bound to its model** (items 0 and 1, the main work): each has a schematic (`schematics.ts`: lounge, jacuzzi, footbath, wet hall, boiler house, switch room, the stores, loading bay, air plant), and `world-in-model.unbound.json` pins **0 unbound drawn things in every room**, down from 361 of 479. The schematic rooms' valves are derived from their schematics (`model-valves.ts`), with hierarchical tags and routes, so their descriptions read as the rulings ask: PL3-BT1-IV1 gives "Isolates water flowing from the water service to the jacuzzi balance tank." (061's acceptance sentence).
 - **Valve descriptions:** 83 of the 86 registered valves have one; the three left are below.
 - **The footbath's overflow valve PL4-PW1-IV2** (answer 4): removed.
-- **Part inspection** (item 6, partly): prompt [068](done/068-inspect-component-parts.md) named controls, lamps and readouts inside panels (the lounge mimic, the pump panels' doors, flowmeters); the jacuzzi music rack's source and amplifier now name themselves and their state (2026-10-26); the pool halls mark some components.
+- **Part inspection** (item 6, partly): prompt [068](068-inspect-component-parts.md) named controls, lamps and readouts inside panels (the lounge mimic, the pump panels' doors, flowmeters); the jacuzzi music rack's source and amplifier now name themselves and their state (2026-10-26); the pool halls mark some components.
 - **Statuses** (item 7, partly): UV units (On or Off) and ozone monitors have them now, beside the pumps, pump sets, tanks, booster set, cabinets and valves.
 
 **Actions, in order** (quickest first; each ends with the project's five checks and its `TODO.md` item ticked with its commit):
@@ -123,7 +135,7 @@ Status is found from each item's kind and room (`statusBindingFor`): motors, pum
 
 ## 9. Notes
 
-- Prompt [062](done/062-hud-declutter.md) reworks the same `.controls-help` element: it empties the help line when there is nothing to say and keeps it for contextual lines, this overlay's among them. Keep inspection's precedence (below climbing and carrying, above the empty line).
+- Prompt [062](062-hud-declutter.md) reworks the same `.controls-help` element: it empties the help line when there is nothing to say and keeps it for contextual lines, this overlay's among them. Keep inspection's precedence (below climbing and carrying, above the empty line).
 - Another agent was editing the same checkout overnight (the engineers' office storage cupboards); its uncommitted files are not this mission's. The `storage-cupboard` kind was added to `equipment-kinds.ts` so the catalogue accepts its items.
 - `src/game/world.test.ts`'s "come as usual while the plant runs…" timed out once under the full parallel suite and passes alone.
 

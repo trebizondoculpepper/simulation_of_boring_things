@@ -1,5 +1,17 @@
 # 002: Draw the rooms behind doors cheaply
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Obsolete. **Filed:** `doc/prompts/obsolete/002-frosted-door-rendering.md`.
+
+**Delivered:** Preserved historical request; replacement recorded in the obsolete index.
+
+**Still outstanding:** Any retained scope stays in the linked active mission or TODO.md.
+
+**Evidence:** Existing supersession record. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 Superseded (2026-10-25) by the restart of the building in `b0cef39` (2026-10-21), which deleted the leisure centre, its frosted doors and the renderer this targets (`src/rendering/facility-world.ts`, `src/scene/doors.ts`, `src/game/doors.ts`) before it was built. Rooms are now separate scenes handed over at their doors; their loading cost is the "Incremental room preparation" item in `TODO.md`.
 
 ## Briefing

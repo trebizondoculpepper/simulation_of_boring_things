@@ -2,6 +2,18 @@
 
 Status: partly done (checked 2026-10-26): the spa cabinets' UV runs in the world and the ozone plant reports its state, but treatment still follows "either isolator on" (`TREATED_BY`) and the contact tank shows the dev room's residual.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Partial / active. **Filed:** `doc/prompts/047-water-treatment-in-the-world.md`.
+
+**Delivered:** partly done
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Now
 
 Each ozone generator (lounge, Olympic) runs its own ozone plant in closure state in its view (`views/room-equipment.ts`, `worldOzoneGenerator`): START, STOP, setpoint, RESET and HAND-OFF-AUTO change only it, and its circulation flow is a constant. The world counts a pool's water as treated while either its UV or its ozone isolator is on (`pools.ts`, `TREATED_BY`), so the generator's STOP does nothing. The lounge's contact tank shows the dev ozone room's residual; the Olympic's is a static vessel. The spa cabinets' UV is the page's.

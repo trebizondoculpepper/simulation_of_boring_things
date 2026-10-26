@@ -1,6 +1,6 @@
 # Screenshot shortcut: feasibility and implementation research
 
-Reviewed 2026-10-26 against source `280c614`, for [prompt 084](../prompts/084-screenshot-shortcut.md), originally numbered 072. This is research, not a screenshot implementation change. Prompt 071 concerns ladders and is outside this review.
+Reviewed 2026-10-26 against source `280c614`, for [prompt 084](../prompts/done/084-screenshot-shortcut.md), originally numbered 072. This is research, not a screenshot implementation change. Prompt 071 concerns ladders and is outside this review.
 
 ## Verdict
 

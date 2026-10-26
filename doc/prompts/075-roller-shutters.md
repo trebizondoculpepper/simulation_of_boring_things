@@ -1,6 +1,18 @@
 # 075: The loading dock's roller shutters, working
 
-Status: incomplete, for planning (opened 2026-10-26 with the owner, from [073](073-loading-dock-layout.md)). Not ready to start: the questions below are to be settled with the owner first.
+Status: active planning / partial prototype (reviewed 2026-10-26): detailed shutter views are installed by 073, but this mission’s control, persistence and safety decisions remain open.
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/075-roller-shutters.md`.
+
+**Delivered:** Detailed shutter views exist under 073; motor/control/persistence scope remains active.
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## The idea
 

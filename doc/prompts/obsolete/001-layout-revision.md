@@ -1,5 +1,17 @@
 # 001: Revise the basic layout, starting with a stair core
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Obsolete. **Filed:** `doc/prompts/obsolete/001-layout-revision.md`.
+
+**Delivered:** Preserved historical request; replacement recorded in the obsolete index.
+
+**Still outstanding:** Any retained scope stays in the linked active mission or TODO.md.
+
+**Evidence:** Existing supersession record. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 Superseded (2026-10-25) by the restart of the building in `b0cef39` (2026-10-21), which deleted the layout this revises (`facility-plan.ts`, `facility-levels.ts`, `src/scene/facility.ts`); the owner had already chosen a different stair on 2026-10-20. The building's layout is now the pool loop and the plant rooms round it; a single plan of it is the open "One facility plan" item in `TODO.md`.
 
 ## Briefing

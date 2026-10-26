@@ -2,6 +2,18 @@
 
 Status: partly done (checked 2026-10-26): reviewed by Codex and waiting on the owner's three questions; only the boilers' states and the general guidance ([`doc/equipment-status.md`](../equipment-status.md)) are built.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Partial / active. **Filed:** `doc/prompts/069-machine-states.md`.
+
+**Delivered:** partly done
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## The request
 
 The owner, 2026-10-25: "For something like a pump, we might say that it is operational, tripped, unpowered … something could be powered but switched off, and something like a boiler can be running, can be off, it can be unpowered. So there's probably a lot of difference. We might have to have a think about what kinds of states are sensible for each machine … the machine's own internal state will inform the description of what its current state is."

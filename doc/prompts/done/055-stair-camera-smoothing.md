@@ -1,6 +1,18 @@
 # 055: Stair camera smoothing
 
-Status: done 2026-10-25 (`de705ce`; checked 2026-10-26): the camera's floor filter (`stair-smoothing.ts`, `smoothStairFloor`) and its tests are in, used by `first-person.ts` for the camera only; the browser walk-through of the listed stairs (dev34, the air plant, the pool loop's stair corridors, the plant-room decks) is still to be done, and is kept in `TODO.md`.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/055-stair-camera-smoothing.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** Complete the required stair/browser walk-through and record it.
+
+**Evidence:** `TODO.md`, done 2026-10-25: `de705ce`; the browser walk-through of the stairs is still to be done.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## Purpose
 

@@ -1,6 +1,6 @@
 # Identification pilot: status
 
-Claude Opus 5.5 (Claude Code), 2026-10-22, about 18:55 UTC. A status check on the plant identification pilot, against the eight items in `doc/prompts/007-identification-pilot-review.md`, written at the owner's request while the other agent is still at work.
+Claude Opus 5.5 (Claude Code), 2026-10-22, about 18:55 UTC. A status check on the plant identification pilot, against the eight items in `doc/prompts/obsolete/007-identification-pilot-review.md`, written at the owner's request while the other agent is still at work.
 
 ## Since the review prompt
 

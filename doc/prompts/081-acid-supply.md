@@ -2,9 +2,21 @@
 
 Status: incomplete, for planning (opened 2026-10-26 with the owner, from Codex's review of [076](076-chemical-delivery.md)). Decided: bulk tanker delivery (below); the rest to settle.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/081-acid-supply.md`.
+
+**Delivered:** incomplete, for planning (opened 2026-10-26 with the owner, from Codex's review of [076](076-chemical-delivery.md)). Decided: bulk tanker delivery (below); the rest to settle.
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## The idea
 
-The acid store holds one 1,000 L IBC on a spill pallet (`chemicals.ts`), while hypochlorite is 12,000 L in three bulk tanks. A tanker delivering acid through the yard's fill cabinet ([080](080-goods-yard.md), [076](076-chemical-delivery.md)) needs somewhere to pump it: so either the acid store gains a fixed bulk tank, filled from the yard, or acid keeps arriving as IBCs, delivered on a pallet and moved into the store, and the yard's acid inlet goes.
+The acid store holds one 1,000 L IBC on a spill pallet (`chemicals.ts`), while hypochlorite is 12,000 L in three bulk tanks. A tanker delivering acid through the yard's fill cabinet ([080](done/080-goods-yard.md), [076](076-chemical-delivery.md)) needs somewhere to pump it: so either the acid store gains a fixed bulk tank, filled from the yard, or acid keeps arriving as IBCs, delivered on a pallet and moved into the store, and the yard's acid inlet goes.
 
 ## Decided (the owner, 2026-10-26)
 

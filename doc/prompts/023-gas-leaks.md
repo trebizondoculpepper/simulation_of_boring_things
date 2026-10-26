@@ -2,6 +2,18 @@
 
 Status: parked, not started beyond a draft (checked 2026-10-26): only the pure room-air model exists (`src/game/plant/room-air.ts`, `bc762a3`), used by no room; taken up as scenario 6 when the owner asks.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/023-gas-leaks.md`.
+
+**Delivered:** parked, not started beyond a draft
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 Written by Claude (Opus 5.5, Claude Code), 2026-10-23, for future work. Parked by the owner the same day ("stay focused on modelling rooms and getting basic stuff working"); pick it up only when the owner asks. It is now scenario 6 of the owner's eight test scenarios (prompts 024 to 031), and uses the experimental sources (Dev20) and their sinks. Read `AGENTS.md`, then prompt 022 (gas detectors) and `src/game/plant/experimental-source.ts` (experimental sources).
 
 **Status:** Not started (a draft air model only: `src/game/plant/room-air.ts`).

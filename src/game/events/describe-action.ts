@@ -5,7 +5,7 @@ import { identifiedPart } from '../plant/identification';
 import { MOTORS } from '../plant/motor-starters';
 
 /**
- * A line for an action done to the world (`doc/prompts/058-developer-console.md`):
+ * A line for an action done to the world (`doc/prompts/done/058-developer-console.md`):
  * what was done, said as a plant logbook would, and "no change" when it
  * changed nothing. Every action has one: the switch is exhaustive, so a
  * new action without a line does not compile. Pure.

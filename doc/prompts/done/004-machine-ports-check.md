@@ -1,5 +1,17 @@
 # Machine ports: check
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/004-machine-ports-check.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** The review was run and its fixes made (each filter's inlet valve above the backwash tee, the contact tank's nozzles, the dev room's face pipework): diary `2026-10-22_machines-ports-and-pipework.md`, `398d9f1`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 You are reviewing a change in `/Users/salimfadhley/workspace/simulation_of_boring_things`, a Three.js and TypeScript game about the plant rooms of a leisure centre. Read `AGENTS.md`, `doc/plant-model.md` and the brief the change was made to (`doc/prompts/done/003-machine-ports-implement.md`) first. This is a check, not a rewrite: do not change the code, do not commit, and do not create a git worktree. Report what you find.
 
 ## What the change was meant to do

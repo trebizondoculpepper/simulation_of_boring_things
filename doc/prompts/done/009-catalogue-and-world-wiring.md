@@ -1,5 +1,17 @@
 # Prompt: can the plant catalogue prove every machine is wired to the model?
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/009-catalogue-and-world-wiring.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** Advice written to `doc/reports/catalogue-and-world-wiring-advice.md`, `db6a90a`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 You are the agent building the plant's identification and catalogue: `src/game/plant/equipment-catalogue.ts`, `installed-asset-ids.ts`, `installed-valves.ts`, `installed-feeders.ts`, `identification.ts`, and the bill of parts (`src/toolkit/manual/plant-manual.ts`, `src/manual/logic/manual.ts`). Another agent, working in the same checkout, is wiring the machines in the real plant rooms to the simulation (`src/game/world.ts`). This prompt asks for your advice, not your code: can your catalogue be what proves that every machine in every plant room is properly connected to the model, and if so, how should the two pieces of work meet?
 
 Read `CLAUDE.md` first. Its rule matters here: every engineering item is a real, working component, with state, which can be driven and shows what it is doing.
@@ -43,7 +55,7 @@ All of it is on `main`. The relevant commits are `414be97`, `34b1b5e`, `a9c7aba`
 4. What does your `source: 'model' | 'control' | 'placement'` mean today? Could it become the wiring status, with `placement` meaning "placed, not yet wired"?
 5. How should controls that drive the world be catalogued: the motor control centre's starters, the switch-fuses, the isolators, your installed valves? Are they parts of their parent asset, with a world address each?
 6. Are there machines your catalogue knows of that the wiring agent's register does not cover, or the reverse? The register test only checks keys present in `equipmentCatalogue()`.
-7. In what order would you do this, given your own remaining items in `doc/prompts/007-identification-pilot-review.md`, especially permanent asset IDs?
+7. In what order would you do this, given your own remaining items in `doc/prompts/obsolete/007-identification-pilot-review.md`, especially permanent asset IDs?
 
 ## Keep it short
 

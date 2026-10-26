@@ -1,6 +1,18 @@
 # 082: Wayfinding signs at the main corridor's corners
 
-Status: done 2026-10-26.
+Status: complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/082-corridor-wayfinding.md`.
+
+**Delivered:** The corridor signs are generated from the door/wall data and installed at the outside corners, with ordering/clearance tests.
+
+**Still outstanding:** None identified within the requested scope.
+
+**Evidence:** a463d32; src/toolkit/gallery/logic/corridor-wayfinding.test.ts. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply.
 

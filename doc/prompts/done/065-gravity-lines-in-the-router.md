@@ -1,6 +1,18 @@
 # 065: Gravity lines in the voxel router
 
-Status: done 2026-10-26. `RouterLine.gravity` in `voxel-router.ts`: a gravity line whose end is not below its start is refused; its templates cross at its start's level or lower; its search takes no upward step; a finished route that rises anywhere is rejected (`neverRises`); its last drop into an upward-facing end (a tundish) is shortened to fit under its start. `jacuzzi-plumbing.ts` dropped `falling` and routes its gravity lines with the rest. The minimum fall (1:40) is still to come.
+Status: complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/065-gravity-lines-in-the-router.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** Existing completion record. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## The request
 

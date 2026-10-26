@@ -2,6 +2,18 @@
 
 Status: planned 2026-10-23, deferred by the owner until the reception is put back; not started (checked 2026-10-26).
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/039-reception-speed-gates.md`.
+
+**Delivered:** planned 2026-10-23, deferred by the owner until the reception is put back; not started
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Why
 
 The owner, 2026-10-23: a modern-style turnstile for the reception, a feature of it, that opens as the walker passes through. Its appearance and its motion are to be modelled; reference photographs in `doc/research/reception-turnstiles/` (a bystander's face blurred in the second).

@@ -2,6 +2,18 @@
 
 Status: implemented 2026-10-24 in `bfc8521`; the first tool for authoring the title sequence, before attract mode (054).
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/038-noclip-camera.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** `TODO.md`, done 2026-10-24, `bfc8521`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Why
 
 The owner, 2026-10-23: to set up and work out the camera angles for the title's attract sequence, a mode that moves the view freely in all three directions, as Minecraft's noclip (its spectator flight) does.

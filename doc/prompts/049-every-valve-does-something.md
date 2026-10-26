@@ -2,6 +2,18 @@
 
 Status: partly done (checked 2026-10-26): the lounge's filters, the jacuzzi's valves, the spa filters' isolators, the wet hall's drain and the Olympic tank's drain valves work; the rest are still dead, and no test walks the register.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Partial / active. **Filed:** `doc/prompts/049-every-valve-does-something.md`.
+
+**Delivered:** partly done
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Now
 
 Every registered installed valve (`installed-valves.ts`) is operable and saved, but only the lounge's eleven and the Olympic's battery valves change flows. About 25 do nothing: the wet hall's six (shutting the town main's stop valve does not stop the break tank filling; the backwash discharge valve shows shut while the world discharges), the jacuzzi's seven, the footbath's overflow and heating valves, the Olympic's five filter drains, its regulating valve and its four heat exchanger valves, and the boiler house's gas and LTHW valves (with 046).

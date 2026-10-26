@@ -1,6 +1,18 @@
 # Prompt: the plant as one connected network, model first
 
-Superseded (2026-10-25) by each room's enhanced network: the plumber's expanded port graph ([018](../done/018-plumber-valves-and-isolators.md), [064](../064-jacuzzi-from-the-model.md)), which the owner ruled the one source of truth. The network built here (steps 1 and 2) was deleted, used by nothing, in `96ae999`.
+## Review checkpoint — 2026-10-26
+
+**Classification:** Obsolete. **Filed:** `doc/prompts/obsolete/012-plant-network.md`.
+
+**Delivered:** Preserved historical request; replacement recorded in the obsolete index.
+
+**Still outstanding:** Any retained scope stays in the linked active mission or TODO.md.
+
+**Evidence:** Existing supersession record. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
+Superseded (2026-10-25) by each room's enhanced network: the plumber's expanded port graph ([018](../done/018-plumber-valves-and-isolators.md), [064](../done/064-jacuzzi-from-the-model.md)), which the owner ruled the one source of truth. The network built here (steps 1 and 2) was deleted, used by nothing, in `96ae999`.
 
 > **Retired 2026-10-25.** The plant network this refers to (`src/game/plant/network/`, `PLANT_NETWORK`) was deleted: nothing in the game used it, and the owner ruled that each room's enhanced network (the plumber's expanded port graph) is the one source of truth. Git history keeps it.
 

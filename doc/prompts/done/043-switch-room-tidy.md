@@ -2,6 +2,18 @@
 
 Status: planned 2026-10-24 (the owner); stage one of the switch room's redesign, before [044](../044-plant-room-motor-panels.md).
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/043-switch-room-tidy.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** `TODO.md`, done 2026-10-24, `d7190c4`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Why
 
 The world models the site's power as one incoming supply, a feeder per room switched from the main switchboard's breakers, and local isolators beside some machines in the plant rooms. Nothing in the switch room starts, stops or isolates a single motor. Yet the switch room holds a motor control centre (MCC-1) whose doors name the Olympic's, the lounge's, the heating's and the booster's pumps, with starters, drives and isolators that keep their own state and switch nothing; the switchboard's "MCC-1" breaker feeds only the wet hall in the world; and a board of sample rotary isolators shows "P-101 PUMP" padlocked off while the world's P-101 isolators stand by the pumps. The owner chose distributed motor control (option two): motors are started and stopped from panels in their own plant rooms (044), and the switch room keeps only the building's distribution.

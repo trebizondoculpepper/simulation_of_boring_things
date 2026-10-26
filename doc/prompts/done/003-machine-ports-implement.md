@@ -1,5 +1,17 @@
 # Machine ports: implement
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/003-machine-ports-implement.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** `machine-ports.ts`, port-to-port routing in `room-pipes.ts` and the port tests, `e34bb85` and `f82ac4f` (2026-10-22); diary `2026-10-22_machines-ports-and-pipework.md`.. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 You are working in `/Users/salimfadhley/workspace/simulation_of_boring_things`, a Three.js and TypeScript game about the plant rooms of a leisure centre. Read `AGENTS.md` (the project's rules), `doc/plant-model.md` (the plant model, and the principles for placing machinery) and this prompt before you start. Work in the repository's own checkout on its current branch. Do not create a git worktree, and do not commit: the owner commits.
 
 ## Background

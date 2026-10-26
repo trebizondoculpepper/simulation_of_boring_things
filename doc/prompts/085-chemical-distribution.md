@@ -2,6 +2,18 @@
 
 Status: to do (written 2026-10-26 with the owner).
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/085-chemical-distribution.md`.
+
+**Delivered:** to do (written 2026-10-26 with the owner).
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply, above all that the enhanced network is the one source of truth: each chemical's path goes into the schematic first, with every valve and its tag, and the plumber routes the pipes; nothing is drawn that is not in the model. Read `doc/plant-model.md` and `doc/room-layout-guide.md`.
 
 ## The request
@@ -13,7 +25,7 @@ The owner, 2026-10-26: there are no lines from the fillers to the chemical store
 - `src/game/plant/back-room-schematics.ts`: `LOADING_BAY_SCHEMATIC` has two `fill-cabinet` nodes, each with an abstract link to a `chemical-store` stand-in; `HYPO_STORE_SCHEMATIC` and `ACID_STORE_SCHEMATIC` each have a `delivery` stand-in feeding their tanks and a `dosing` stand-in drawing them. No valves, no routed pipe, nothing drawn between rooms.
 - The yard's fill cabinet (`createFillCabinet`, `yard-kit.ts`, `chemicals-storage.ts`): one lockable cabinet with two couplings, 2" and 1½", and a tank-full alarm. The schematic has two cabinets; settle which is true (one cabinet holding two separate, labelled ports is usual), and make the model and the scene agree.
 - Hypochlorite: three 1,000 L-class bunded bulk tanks in its store. Acid: one IBC on a spill pallet, to be replaced by a fixed bunded bulk tank ([081](081-acid-supply.md): both chemicals by bulk tanker).
-- Deliveries: [076](076-chemical-delivery.md) (the delivery mechanic), [081](081-acid-supply.md), [080](080-goods-yard.md) (the yard).
+- Deliveries: [076](076-chemical-delivery.md) (the delivery mechanic), [081](081-acid-supply.md), [080](done/080-goods-yard.md) (the yard).
 
 ## The arrangement (decided with the owner)
 

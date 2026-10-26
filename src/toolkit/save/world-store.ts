@@ -39,7 +39,7 @@ export interface WorldStore {
   /** Do `action` to the world, logged as done by `by` (the player's hand unless said). */
   dispatch(action: WorldAction, by?: 'you' | 'console'): void;
   /**
-   * The event log (`doc/prompts/058-developer-console.md`): a line for each
+   * The event log (`doc/prompts/done/058-developer-console.md`): a line for each
    * action and for each thing the plant did by itself, the newest last,
    * for this page only, never saved.
    */
@@ -93,7 +93,7 @@ export function worldStore(slot: string): WorldStore {
 /**
  * The world a room reads and works: the player's (the dev rooms' save
  * slot), or, while one is set (`setRoomWorld`), another, such as the
- * title's attract sequence's scenario (`doc/prompts/054-title-attract-sequence.md`).
+ * title's attract sequence's scenario (`doc/prompts/done/054-title-attract-sequence.md`).
  * Rooms take their world from here, never from a save slot by name, so a
  * room built for the attract sequence reads and acts on the attract
  * sequence's world, and the player's never sees it.

@@ -1,6 +1,18 @@
 # 071: Every human access ladder climbable, by one ladder helper
 
-Status: implemented 2026-10-26. The [implementation plan](../plans/071-human-ladders.md) gives the inventory, helper contract, floor and hatch changes, sequence, research and verification.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/071-ladders.md`.
+
+**Delivered:** The human ladder helper, common climb control, tank/pit floor handoffs and guarded elevated landings are implemented; the second climb mechanism is removed.
+
+**Still outstanding:** Finish the data-backed every-ladder inventory and browser round trips. Audit raised-landing units/collision: the helper returns scene-unit heights while plant-room-shell-room.ts and plant-room.ts multiply a selected landing by METRE again. Confirm gate/hatch recovery and both exit clearances before full acceptance.
+
+**Evidence:** 9d855ff; src/toolkit/components/architectural/views/human-ladder.ts. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## The request
 

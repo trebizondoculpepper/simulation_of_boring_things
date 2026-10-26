@@ -629,7 +629,7 @@ effect(() => {
   }
   wasCamera = camera;
 });
-// The console (`doc/prompts/058-developer-console.md`): the key left of 1
+// The console (`doc/prompts/done/058-developer-console.md`): the key left of 1
 // drops it down in a room; it shows the player's world's log and works the
 // player's world and the app, never an attract world.
 createConsole({
@@ -1006,7 +1006,7 @@ window.addEventListener('pool-plant:run-room', (event) => {
 // Behind the title screen, rooms of the game, live, seen from where the
 // player never goes, at a quarter of the resolution and blurred
 // (`doc/plans/title-screen.md`), one shot after another
-// (`doc/prompts/054-title-attract-sequence.md`, `attract-sequence.ts`):
+// (`doc/prompts/done/054-title-attract-sequence.md`, `attract-sequence.ts`):
 // each a slow orbit in its room, fading to black, held black while the
 // next room is built, and fading in on it; round and round, the theme
 // playing on. The game is paused under it, so its rooms take no input,

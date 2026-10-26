@@ -1,6 +1,18 @@
 # 066: The lounge pool's filter mimic, grouped by filter, showing its flows
 
-Status: partly done (checked 2026-10-26): the chaser, the two flowmeters, the true backwash and the schematic on PL1-CP1's fascia are built and tested; the control room's copy is not yet installed, waiting on the owner for its wall space.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/066-lounge-filter-mimic.md`.
+
+**Delivered:** PL1-CP1 has the lounge filter mimic, LED flow chasers, two flowmeters and working reverse backwash.
+
+**Still outstanding:** Install the control-room copy and maker mark, preserving local-only mode/reset controls; test synchronized readings and remote START permissions, and complete the two-board browser acceptance.
+
+**Evidence:** 117c729, 4371e93, 63e2d0d. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 ## The request
 

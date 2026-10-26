@@ -1,6 +1,18 @@
 # 033: The Olympic plant room's redo
 
-Status: stages 1 to 3 done 2026-10-23; checked 2026-10-26: the pumps' non-return valves and the busbar's fused tap-offs are now in the room's model, but the UV and ozone isolators are not drawn and the gas detectors are not built.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/033-olympic-plant-redo.md`.
+
+**Delivered:** The Olympic room, layout pipeline, plant and connected tank-hall arrangement are built; subsequent fittings and orientation fixes are installed.
+
+**Still outstanding:** Complete/verify UV and ozone local isolators, chlorine/ozone detector placement, and the in-game non-return/tap-off fitting audit.
+
+**Evidence:** 845a5ab, d89bef9; src/toolkit/gallery/logic/olympic-plumbing.ts. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 The owner, 2026-10-23, once the balance tank had its own hall (Dev28, prompt 032): keep the large plant room, clear it out, and reinstall what the new equipment needs, laid out with the pipeline (sizer, placement, plumber, router, scorer: `doc/room-layout-guide.md`). The original room was laid out by hand two days before those tools existed; it is kept as `retired0`, so it need not be compared or preserved.
 
@@ -24,6 +36,6 @@ Each wall of a pool's plant room is the way to one place, and every line leaves 
 
 ## Remaining (checked 2026-10-26)
 
-- Draw the UV unit's and the ozone generator's local power isolators on stands (also in [045](045-wiring-register-and-quick-fixes.md)).
-- The chlorine and ozone gas detectors ([022](022-component-variants-and-detectors.md)).
+- Draw the UV unit's and the ozone generator's local power isolators on stands (also in [045](../045-wiring-register-and-quick-fixes.md)).
+- The chlorine and ozone gas detectors ([022](../022-component-variants-and-detectors.md)).
 - Check in the game that every non-return valve and tap-off is drawn and inspectable, and tick `TODO.md`'s "Fittings implied but not drawn".

@@ -1,6 +1,16 @@
 # 084: A screenshot shortcut, best quality, no overlay
 
-Status: researched 2026-10-26; built 2026-10-26 (`captureView` and `copyScreenshot` in `src/main.ts`, `screenshot-size.ts`, `copyShortcut`), checked in headless Chrome; open doorways, dry peeks, Safari, Firefox and the itch.io embed still to check (TODO). See the [feasibility research and integration plan](../research/2026-10-26-screenshot-shortcut.md). (Written as 072; renumbered 084, as other sessions took the numbers in between meanwhile.)
+Status: researched 2026-10-26; built 2026-10-26 (`captureView` and `copyScreenshot` in `src/main.ts`, `screenshot-size.ts`, `copyShortcut`), checked in headless Chrome; open doorways, dry peeks, Safari, Firefox and the itch.io embed still to check (TODO). See the [feasibility research and integration plan](../../research/2026-10-26-screenshot-shortcut.md). (Written as 072; renumbered 084, as other sessions took the numbers in between meanwhile.)
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/084-screenshot-shortcut.md`.
+
+**Delivered:** Ctrl/Cmd+Shift+K captures a bounded full-resolution clean PNG, including title shots, with clipboard delivery or download fallback; sizing and shortcut checks and headless Chrome acceptance are recorded in the build diary.
+
+**Still outstanding:** Check open-doorway and dry-peek composition, Safari clipboard gestures, Firefox button fallback and the itch.io embed. These remain unchecked in root TODO.md.
+
+**Evidence:** `c6b471f`, `082b22e`, and `diary/2026-10-26-screenshot-shortcut-build.md`. This implementation landed during the review; the checkpoint supersedes the earlier research-only status.
 
 ## The request
 

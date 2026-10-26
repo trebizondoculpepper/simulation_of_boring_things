@@ -2,6 +2,18 @@
 
 Status: not started (checked 2026-10-26): the control room still reads the Olympic almost alone, and its annunciator, printer, BMS outstation and CCTV are still page state or painted.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/050-control-room-fully-live.md`.
+
+**Delivered:** not started
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 ## Now
 
 The control room reads the Olympic (pool_02) almost throughout: the lounge and jacuzzi appear only as temperatures, the footbath not at all. The heating mimic, the air mimic and some readouts are constants and formulas (045 fixes the smallest, 046 the heating). Eight annunciator windows can never light (boiler lockout, gas detected, LTHW low, chemical leak, fire alarm, pool alarm, generator running, spare). The annunciator's ACCEPT and RESET and the alarm printer's log are page state, timed by the page's clock. The BMS outstation, fire repeater and CCTV are painted.

@@ -15,7 +15,7 @@ import type { Point3, ServiceRoute } from './room-services';
  * sends a short conduit to the nearest point of it, instead of a line of
  * its own across the room. It enters the room once, rising into the services ceiling at the
  * supply wall: beyond that a control network we do not route is imagined
- * (`doc/prompts/008-pipe-supports.md`). Pure: metres, the room's middle at
+ * (`doc/prompts/done/008-pipe-supports.md`). Pure: metres, the room's middle at
  * x = z = 0, its floor at y = 0.
  */
 

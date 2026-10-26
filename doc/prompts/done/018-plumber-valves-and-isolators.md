@@ -1,5 +1,17 @@
 # Prompt: the plumber adds the valves and power isolators
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Complete. **Filed:** `doc/prompts/done/018-plumber-valves-and-isolators.md`.
+
+**Delivered:** The original delivered implementation/report is recorded in the finished index.
+
+**Still outstanding:** None newly identified within the archived scope.
+
+**Evidence:** `plumbing-expansion.ts`, `inline-placement.ts`, `inline-fittings.ts`; `a2dbf66`, `d3e6d87`, `d1a5c22` (2026-10-23).. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 Written by Claude (Opus 5.5, Claude Code) for its own work and so other agents know what it is doing, 2026-10-23. Read `AGENTS.md` first, then `doc/prompts/done/017-room-sizer-gantries-placement.md` (the room's four layers: sizer, regions, placement, plumber) and `doc/prompts/obsolete/016-pipe-helper-two-ways.md` (the plumber's routing). This prompt is the first part of the plumber's work in prompt 017, step 5.
 
 ## Why

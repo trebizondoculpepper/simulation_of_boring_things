@@ -1,6 +1,18 @@
 # Prompt: emergency lighting and its central battery, in the world
 
-Superseded (2026-10-25) by [052](../052-emergency-power.md), the wiring audit's emergency power prompt, which takes in all of this (the central battery in the world, its tests from its panel, emergency lighting on a mains failure) and adds emergency light fittings and a generator. Nothing of this was built; its detail (EN 50171 duration, a sub-circuit relay per lighting zone, the battery's discharge by load) is still useful to 052.
+## Review checkpoint — 2026-10-26
+
+**Classification:** Obsolete. **Filed:** `doc/prompts/obsolete/011-emergency-lighting.md`.
+
+**Delivered:** Preserved historical request; replacement recorded in the obsolete index.
+
+**Still outstanding:** Any retained scope stays in the linked active mission or TODO.md.
+
+**Evidence:** Existing supersession record. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
+Superseded (2026-10-25) by [052](../done/052-emergency-power.md), the wiring audit's emergency power prompt, which takes in all of this (the central battery in the world, its tests from its panel, emergency lighting on a mains failure) and adds emergency light fittings and a generator. Nothing of this was built; its detail (EN 50171 duration, a sub-circuit relay per lighting zone, the battery's discharge by load) is still useful to 052.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply.
 

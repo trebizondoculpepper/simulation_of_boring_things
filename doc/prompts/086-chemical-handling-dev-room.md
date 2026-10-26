@@ -2,6 +2,18 @@
 
 Status: to do (written 2026-10-26 with the owner), a sub-mission of [085](085-chemical-distribution.md), for another agent.
 
+## Review checkpoint — 2026-10-26
+
+**Classification:** Active / planned. **Filed:** `doc/prompts/086-chemical-handling-dev-room.md`.
+
+**Delivered:** to do (written 2026-10-26 with the owner), a sub-mission of [085](085-chemical-distribution.md), for another agent.
+
+**Still outstanding:** Retain the prompt’s required work and current root TODO entries.
+
+**Evidence:** Current prompt, its Remaining section and source check. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply: every engineering item is a real, working component after a real product, with state, driven, showing what it does, and carrying its maker's brand. Read [085](085-chemical-distribution.md), which this room serves, and [076](076-chemical-delivery.md) and [081](081-acid-supply.md).
 
 ## The request

@@ -1,8 +1,20 @@
 # 036: The wet hall's tanks, as built
 
-Status: planning started 2026-10-26; construction and installation not started. Prompt 035 is a construction and model-binding reference, not a prerequisite.
+Status: mostly complete (reviewed 2026-10-26, source `e5078c4`).
 
-The proposed layout and implementation method are in [the wet hall tanks plan](../plans/036-wet-hall-tanks.md) and its [scaled 2D drawing](../plans/036-wet-hall-tanks.svg). The wet hall will have two principal tanks: a protected sectional GRP clean make-up break tank and a below-floor concrete dirty backwash tank. Keep the existing west ramp, east stair and central aisle clear.
+## Review checkpoint — 2026-10-26
+
+**Classification:** Mostly complete. **Filed:** `doc/prompts/done/036-wet-hall-tanks.md`.
+
+**Delivered:** The wet hall has installed tanks, a concrete backwash pit, live level/pump controls and a maintenance ladder. Its old “construction not started” status is stale.
+
+**Still outstanding:** Complete the remaining inlet air-break/outfall-flowmeter and dirty-side mimic requirements, check access/registration in the browser, and deliver or separately scope the requested lounge concrete balance-tank hall.
+
+**Evidence:** dd13119, 9d855ff; src/toolkit/components/plant/views/backwash-pit.ts. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
+
+The proposed layout and implementation method are in [the wet hall tanks plan](../../plans/036-wet-hall-tanks.md) and its [scaled 2D drawing](../../plans/036-wet-hall-tanks.svg). The wet hall will have two principal tanks: a protected sectional GRP clean make-up break tank and a below-floor concrete dirty backwash tank. Keep the existing west ramp, east stair and central aisle clear.
 
 ## Readiness check (2026-10-26)
 
@@ -12,7 +24,7 @@ The proposed layout and implementation method are in [the wet hall tanks plan](.
 
 **Scope of this start:** replace the wet hall's currently sectional 3 × 2 × 2 m backwash tank view with a concrete pit, keeping its pump, level instruments, ports, valves and mimic tied to the same world state. The pit holds 105 m³ (the owner, 2026-10-26: two Olympic filters and one lounge filter washable at once, 70 m³, then half as deep again for water slides and a children's pool to come; modelled and tested, `wet-hall.ts`, `backwash-pit.test.ts`). Keep the break tank sectional GRP, in a protected clean make-up bay. The Lounge pool's currently sectional GRP balance tank is a separate follow-on hall connected to its plant room and existing pool balance state. Keep the spa and footbath packaged tanks. Build them in the wet hall itself (the owner, 2026-10-26: no dev room; the wet hall is not yet designed), then verify geometry, access, registration and live readings against the schematic and world state.
 
-**Regulatory check:** current England/Wales sources do not identify a blanket ban on these two tanks sharing a hall. This is an inference, not formal approval. The design must prevent contamination, include fluid-category-5 backflow protection at the mains connection, break the backwash discharge from the wastewater system, and meet the water and sewerage undertakers' requirements. The [plan's source table](../plans/036-wet-hall-tanks.md#uk-regulatory-check-and-design-safeguards) distinguishes law from guidance. The protected clean bay is a conservative safeguard, not a claim that a partition is explicitly prescribed by law.
+**Regulatory check:** current England/Wales sources do not identify a blanket ban on these two tanks sharing a hall. This is an inference, not formal approval. The design must prevent contamination, include fluid-category-5 backflow protection at the mains connection, break the backwash discharge from the wastewater system, and meet the water and sewerage undertakers' requirements. The [plan's source table](../../plans/036-wet-hall-tanks.md#uk-regulatory-check-and-design-safeguards) distinguishes law from guidance. The protected clean bay is a conservative safeguard, not a claim that a partition is explicitly prescribed by law.
 
 The owner, 2026-10-23: each pool was given its own balance tank, as steel or fibreglass upstanding tanks, before the Olympic's cast concrete tank hall (prompt 032) showed what a large pool's tank usually is. Where there is room, as there is, the wet hall core and the other pools should have their tanks built as a real leisure centre's would be.
 
@@ -27,7 +39,7 @@ Each pool keeps its own tank, as the owner first designed it: that is standard p
 
 ## Order of work
 
-Follow [the plan](../plans/036-wet-hall-tanks.md): make the footprint and access rules executable first, model the two wet-hall tanks and their safeguards in a dev room, then install them in the wet hall and bind them to its existing world model. Treat the Lounge balance-tank hall as a distinct follow-on after the two-tank wet-hall layout works.
+Follow [the plan](../../plans/036-wet-hall-tanks.md): make the footprint and access rules executable first, model the two wet-hall tanks and their safeguards in a dev room, then install them in the wet hall and bind them to its existing world model. Treat the Lounge balance-tank hall as a distinct follow-on after the two-tank wet-hall layout works.
 
 ## Remaining (checked 2026-10-26)
 

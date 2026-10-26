@@ -1,6 +1,18 @@
 # Prompt: review of the plant identification pilot, and what to do next
 
-Status: not done (checked 2026-10-26): none of its items has been delivered (no `identification(` commits, no progress report), and much of it is overtaken by the enhanced networks and hierarchical tags of [063](063-component-information-remediation.md) and [064](064-jacuzzi-from-the-model.md); the owner is to say whether to close it as superseded or finish the footbath's part.
+Status: obsolete (reviewed 2026-10-26, source `e5078c4`).
+
+## Review checkpoint — 2026-10-26
+
+**Classification:** Obsolete. **Filed:** `doc/prompts/obsolete/007-identification-pilot-review.md`.
+
+**Delivered:** The v14 identification-pilot review is superseded as an implementation track by the owner’s enhanced-network architecture and current remediation missions.
+
+**Still outstanding:** Legacy IDs/aliases, canonical codes, role/mode state, cached index and dev namespace questions are carried into the root TODO’s legacy-identification follow-up under 063/064/069; no old schema/code migration is authorised by this archive.
+
+**Evidence:** 96ae999 and missions 063/064/069; doc/reports/identification-pilot-status.md. Reviewed against source `e5078c4`.
+
+The original request and earlier implementation notes below are retained as history; this checkpoint supersedes any conflicting old completion claims. Outstanding work remains open in the root TODO.
 
 You built the footbath pilot of the plant identification system: `src/game/plant/identification.ts` and its tests, the world's `identifiedPlant` tree (save version 14), the `plant/valve` and `plant/switch` actions, the footbath's valve-driven drain-down in `src/game/plant/pools.ts`, the bound and labelled valves in `src/toolkit/gallery/views/cabinet-services.ts`, and the `?manual` bill of parts (`src/toolkit/manual/plant-manual.ts`). It was committed in `4ec31b5`, and `6f4d8e3` raised the footbath's make-up main overhead and gave its valve a chain wheel. This is a review of that work against the agreed design, and a request to close the gaps.
 
