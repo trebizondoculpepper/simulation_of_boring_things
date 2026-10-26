@@ -439,5 +439,109 @@ export function createDockOutside(
     flue.position.set(14, 0, wallZ + 15);
     group.add(flue);
   }
+  // On the roof, a medium rooftop 5G site (the owner, 2026-10-26): a short
+  // galvanised mast on a ballasted frame, three panel antennas a sector
+  // each, a remote radio unit behind each, a cable tray to two grey
+  // equipment cabinets. Someone else's kit: set decoration.
+  {
+    const site = new Group();
+    site.name = 'Rooftop 5G site';
+    const galv = new MeshStandardMaterial({
+      color: '#9da3a3',
+      roughness: 0.5,
+      metalness: 0.6,
+    });
+    const white = new MeshStandardMaterial({
+      color: '#e6e7e3',
+      roughness: 0.6,
+    });
+    const grey = new MeshStandardMaterial({
+      color: '#7b8285',
+      roughness: 0.55,
+      metalness: 0.3,
+    });
+    const ballast = new MeshStandardMaterial({
+      color: '#8c8e8a',
+      roughness: 0.95,
+    });
+    kit.materials.push(galv, white, grey, ballast);
+    const add = (
+      geo: BoxGeometry | CylinderGeometry,
+      m: MeshStandardMaterial,
+      x: number,
+      y: number,
+      z: number,
+    ) => {
+      const mesh = new Mesh(geo, m);
+      mesh.position.set(x, y, z);
+      site.add(mesh);
+      return mesh;
+    };
+    // The ballasted frame: a steel square on concrete blocks.
+    for (const [x, z] of [
+      [-1.2, -1.2],
+      [1.2, -1.2],
+      [1.2, 1.2],
+      [-1.2, 1.2],
+    ] as const)
+      add(new BoxGeometry(0.5, 0.25, 0.5), ballast, x, 0.125, z);
+    for (const z of [-1.2, 1.2])
+      add(new BoxGeometry(2.9, 0.12, 0.12), galv, 0, 0.31, z);
+    for (const x of [-1.2, 1.2])
+      add(new BoxGeometry(0.12, 0.12, 2.9), galv, x, 0.31, 0);
+    // The mast, and its head frame.
+    add(new CylinderGeometry(0.09, 0.11, 5.5, 12), galv, 0, 0.37 + 2.75, 0);
+    for (const dz of [-0.6, 0.6]) {
+      const strut = add(
+        new CylinderGeometry(0.03, 0.03, 1.6, 6),
+        galv,
+        0,
+        1.0,
+        dz * 0.6,
+      );
+      strut.rotation.x = dz > 0 ? -0.7 : 0.7;
+    }
+    const headY = 4.8;
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * Math.PI * 2 + Math.PI / 2;
+      const r = 0.55;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      // Its arm out from the mast.
+      const arm = add(
+        new BoxGeometry(r, 0.06, 0.06),
+        galv,
+        x / 2,
+        headY,
+        z / 2,
+      );
+      arm.rotation.y = -a;
+      // The panel antenna, 1.5 m tall, facing outward.
+      const panel = add(new BoxGeometry(0.32, 1.5, 0.12), white, x, headY, z);
+      panel.rotation.y = -a + Math.PI / 2;
+      // Its remote radio unit behind it, lower down.
+      const rru = add(
+        new BoxGeometry(0.3, 0.45, 0.16),
+        grey,
+        x * 0.7,
+        headY - 1.2,
+        z * 0.7,
+      );
+      rru.rotation.y = -a + Math.PI / 2;
+    }
+    // A cable tray to the cabinets.
+    add(new BoxGeometry(0.2, 0.06, 3.5), galv, 0.3, 0.5, 2.9);
+    for (const x of [-0.45, 0.45])
+      add(new BoxGeometry(0.75, 1.6, 0.6), grey, x, 0.8 + 0.3, 5);
+    // On the roof, set back from the edge, at the left of the frontage
+    // seen from the yard (its slope's height there).
+    const back = 4;
+    site.position.set(
+      -11,
+      7.3 + 0.15 + back * Math.tan((4 * Math.PI) / 180),
+      wallZ + back,
+    );
+    group.add(site);
+  }
   return { group };
 }
