@@ -311,10 +311,10 @@ export function createCtElectricityMeter(kit: PanelKit) {
     depthWrite: false,
   });
   kit.materials.push(lid);
-  const cover = box(group, lid, W + 0.004, H + 0.004, 0.02, 0, 0, F + 0.012);
+  const lidMesh = box(group, lid, W + 0.004, H + 0.004, 0.02, 0, 0, F + 0.012);
   // Clicks pass through it to the buttons (its window is hinged open
   // to reach them, in life).
-  cover.raycast = () => {};
+  lidMesh.raycast = () => {};
   let phase = 0;
   let clock = 0;
   // A page chosen by its buttons, held for half a minute, then scrolling on.
