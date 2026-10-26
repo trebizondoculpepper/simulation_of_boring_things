@@ -78,23 +78,15 @@ describe('the Olympic’s balance tank in the world', () => {
   });
 
   it('runs down with its make-up OFF and a backwash drawing on it, until LOW LOW trips the pumps', () => {
-    // One filter backwashing, the wet hall's pit emptying to sewer by its
-    // discharge valve (`wet-hall.ts`): the pit, 105 m³, outlasts the tank.
+    // One filter backwashing; the pit kept empty (an ideal pit: this is
+    // the balance tank's test, not the pit's, which fills and inhibits).
     let w = applyAction(newWorld(), { type: 'olympic/makeup', mode: 'off' });
     w = backwashOne(w);
-    w = ['WH-DR1-DV1'].reduce(
-      (x, tag) =>
-        applyAction(x, {
-          type: 'plant/valve',
-          id: installedValveByCommandId(tag)!.assetId,
-          open: true,
-        }),
-      w,
-    );
     let low = -1;
     let tripped = -1;
     for (let m = 1; m <= 120 && tripped < 0; m++) {
       w = advance(w, 60, 1);
+      w = { ...w, wetHall: { ...w.wetHall, backwashTank: 0, inhibit: false } };
       if (low < 0 && tankFloats(level(w)).low) low = m;
       if (w.pools.pool_02.tripped) tripped = m;
     }

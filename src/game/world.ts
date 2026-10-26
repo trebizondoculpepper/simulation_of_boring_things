@@ -228,7 +228,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 41;
+export const WORLD_VERSION = 42;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -861,7 +861,14 @@ export function stepWorld(world: World, delta: number): World {
     share,
     world.ambient,
     // The sewer's consent, less the backwash's discharge while it runs.
-    Math.max(0, WET_HALL_PLANT.sewerConsent - pitDischargeRate(world.wetHall)),
+    Math.max(
+      0,
+      WET_HALL_PLANT.sewerConsent -
+        pitDischargeRate(
+          world.wetHall,
+          installedValveOpen(world.installedValves, 'WH-DR1-DV1'),
+        ),
+    ),
     footbathThroughFilter(world),
     // The Olympic's circulation, as its battery's valves and beds give it.
     (running) => {

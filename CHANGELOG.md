@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The backwash pit keeps its sewer consent (Codex's review, 2026-10-26): its two pumps are interlocked, one at a time, even both in HAND; and its discharge valve (valve-0034, WH-DR1-DV1) is the pumps' isolating valve, open in service, no longer an impossible gravity drain adding 40 m³/h from 3.75 m down. `WORLD_VERSION` 42 opens it in saved games.
 - The plant rooms' valves travel and are heard again (the owner, 2026-10-26): the room bound every valve's position to the world's open or shut, so an actuated valve snapped and never ran its motor; only the lounge's valves, whose travel the world models, take their position from it now, and every other valve strokes itself at its actuator's speed with its motor's sound and its stop.
 - A sight glass's reflection of its room is soft, a small capture stretched over the glass (cheaper too), and its internal reflection fainter (the owner, 2026-10-26).
 - A sight glass's reflection of its room is plainer, and its thick glass shows a faint internal reflection: a soft, dim arc just inside the bottom of its rim, opposite its overhead highlight (the owner, 2026-10-26).

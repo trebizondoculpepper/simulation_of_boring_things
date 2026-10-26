@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vite-plus/test';
 import { advance, applyAction, newWorld } from '../world';
 import { SEWER_LOG, overConsent } from './sewer-monitor';
 import { WET_HALL_PLANT as P } from './wet-hall';
-import { installedValveByCommandId } from './installed-valves';
 
 /**
  * The sewer outfall's flowmeter and recorder in the world (the owner,
@@ -42,15 +41,17 @@ describe('the sewer outfall, in the world', () => {
     expect(w.sewer.flow).toBeLessThanOrEqual(P.dischargeRate + 1e-6);
   });
 
-  it('shows the pit’s discharge valve putting more down the sewer than the consent', () => {
+  it('keeps the pit within the consent, both its pumps in HAND interlocked to one', () => {
     let w = newWorld();
     w = { ...w, wetHall: { ...w.wetHall, backwashTank: 50 } };
-    w = applyAction(w, {
-      type: 'plant/valve',
-      id: installedValveByCommandId('WH-DR1-DV1')!.assetId,
-      open: true,
-    });
+    for (const pump of [0, 1] as const)
+      w = applyAction(w, {
+        type: 'pit-pumps',
+        action: { act: 'mode', pump, mode: 'hand' },
+      });
     w = advance(w, 60, 1);
-    expect(overConsent(w.sewer, P.sewerConsent)).toBe(true);
+    expect(w.wetHall.pitPumps.running.filter(Boolean)).toHaveLength(1);
+    expect(overConsent(w.sewer, P.sewerConsent)).toBe(false);
+    expect(w.sewer.flow).toBeCloseTo(P.dischargeRate);
   });
 });

@@ -138,6 +138,13 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   39: (world) => world,
   // 40 → 41: the backwash pit's inflow, for its pouring (`fillDefaults`: none).
   40: (world) => world,
+  // 41 → 42: the pit's discharge valve (valve-0034) is its pumps' isolating
+  // valve, open in service, no longer a gravity drain kept shut.
+  41: (world) => {
+    const w = world as Record<string, unknown>;
+    const valves = (w.installedValves ?? {}) as Record<string, boolean>;
+    return { ...w, installedValves: { ...valves, 'valve-0034': true } };
+  },
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

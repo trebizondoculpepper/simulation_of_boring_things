@@ -7,8 +7,7 @@ import { olympicFlowsOf, PUMP_DRAIN_FLOW } from './olympic-battery';
 /**
  * Draining the Olympic's balance tank (the owner, 2026-10-25): its pumps'
  * drain (PL2-P1-DV1) to the backwash floor channel and so to the wet
- * hall's holding tank, and the holding tank's own drains to the sewer
- * (WH-DR1-DV1).
+ * hall's holding tank, and that emptied to the sewer by its pumps.
  */
 const id = (tag: string) =>
   Object.values(INSTALLED_VALVES).find((v) => v.tag === tag)!.assetId;
@@ -37,19 +36,27 @@ describe('draining the Olympic’s balance tank', () => {
     expect(w.wetHall.backwashTank).toBeGreaterThan(20);
   });
 
-  it('stops at the tank’s low-low level, the pumps held off', () => {
-    // The wet hall's backwash pit emptying to sewer by its discharge valve, so
-    // the pumps' drain does not fill it to its high-high inhibit first.
-    const w = advance(valve(draining(), 'WH-DR1-DV1', true), 3600, 5);
+  it('stops at the tank’s low-low level, the pumps held off, the pit never spilling', () => {
+    // The pit, emptied only by its pump at the sewer's consent, fills to
+    // its inhibit on the way, holds the drain while it pumps down, and
+    // lets it go on: the tank reaches low-low in a few hours.
+    let w = draining();
+    for (let t = 0; t < 5 * 3600 && !w.pools.pool_02.tripped; t += 600)
+      w = advance(w, 600, 5);
     expect(w.pools.pool_02.tripped).toBe(true);
+    expect(w.wetHall.spilt).toBe(0);
   });
 
-  it('empties the holding tank to the sewer by its discharge valve', () => {
+  it('empties the holding tank to the sewer by its pump, in HAND', () => {
     let w = advance(draining(), 600, 1);
     w = valve(w, 'PL2-P1-DV1', false);
     const held = w.wetHall.backwashTank;
-    w = valve(w, 'WH-DR1-DV1', true);
-    w = advance(w, 2400, 1);
+    // Below its START float its pumps rest; in HAND, pump 1 empties it.
+    w = applyAction(w, {
+      type: 'pit-pumps',
+      action: { act: 'mode', pump: 0, mode: 'hand' },
+    });
+    w = advance(w, 3 * 3600, 5);
     expect(held).toBeGreaterThan(15);
     expect(w.wetHall.backwashTank).toBe(0);
   });

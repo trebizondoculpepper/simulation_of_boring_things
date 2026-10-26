@@ -53,8 +53,6 @@ export const WET_HALL_PLANT = {
   sewerConsent: 10,
   /** Its discharge to sewer: the consented rate; on above one share, off below another. */
   dischargeRate: 10,
-  /** The backwash discharge valve open, by gravity past its pump to the sewer, m³/h (DN100). */
-  dischargeValveRate: 40,
   dischargeOn: 0.4,
   dischargeOff: 0.05,
   /** Its high-level alarm: above what a two-and-one wash leaves in it from empty. */
@@ -162,14 +160,23 @@ export function pitPumpsRunning(
   const auto = (k: 0 | 1) => p.modes[k] === 'auto';
   const other = (1 - p.duty) as 0 | 1;
   const answering = auto(p.duty) ? p.duty : auto(other) ? other : null;
-  return [0, 1].map(
+  const wanted = [0, 1].map(
     (k) => p.modes[k] === 'hand' || (called && answering === k),
   ) as [boolean, boolean];
+  // Interlocked, one pump at a time (Codex's review, 2026-10-26: two in
+  // HAND broke the sewer's consent): asked for both, the duty runs.
+  return wanted[0] && wanted[1] ? [p.duty === 0, p.duty === 1] : wanted;
 }
 
-/** What its sump pumps put down the sewer, m³/h: each running pump's. */
-export const pitDischargeRate = (s: WetHallState) =>
-  WET_HALL_PLANT.dischargeRate * s.pitPumps.running.filter(Boolean).length;
+/**
+ * What its sump pumps put down the sewer, m³/h: the running pump's (one at
+ * a time, interlocked), the consented rate, while the discharge's
+ * isolating valve stands open; none against it shut.
+ */
+export const pitDischargeRate = (s: WetHallState, valveOpen = true) =>
+  valveOpen && s.pitPumps.running.some(Boolean)
+    ? WET_HALL_PLANT.dischargeRate
+    : 0;
 
 export interface WetHallState {
   /** Water in the break tank, m³. */
@@ -272,12 +279,11 @@ export function stepWetHall(
   },
   dt: number,
   /**
-   * Its drain to the foul sewer open (the owner, 2026-10-25: valves
-   * that do something): the backwash discharge valve (WH-DR1-DV1) beside
-   * its pump. The pit has no drain of its own (the owner, 2026-10-26).
-   * Shut, as in service, unless given.
+   * Its pumps' discharge isolating valve (WH-DR1-DV1), open in service:
+   * shut, the pumps give nothing to the sewer. The pit has no drain of its
+   * own (the owner, 2026-10-26). Open unless given.
    */
-  drains: { discharge: boolean } = { discharge: false },
+  drains: { discharge: boolean } = { discharge: true },
 ): WetHallState {
   const P = WET_HALL_PLANT;
   const hours = dt / 3600;
@@ -310,9 +316,11 @@ export function stepWetHall(
         ? ((1 - s.pitPumps.duty) as 0 | 1)
         : s.pitPumps.duty,
   };
-  const pumped = P.dischargeRate * running.filter(Boolean).length;
-  const gravity = drains.discharge ? P.dischargeValveRate : 0;
-  const backwashTank = Math.max(0, filled - pumped * hours - gravity * hours);
+  // Pumped through the discharge's isolating valve (WH-DR1-DV1), none
+  // with it shut: no gravity path, 3.75 m down (Codex's review).
+  const pumped =
+    drains.discharge && running.some(Boolean) ? P.dischargeRate : 0;
+  const backwashTank = Math.max(0, filled - pumped * hours);
   const spilt = Math.max(0, backwashTank - P.backwashTank);
   // The booster set: started by any draw and run on after the last, as
   // its pressure vessel and controller would, so it does not start and

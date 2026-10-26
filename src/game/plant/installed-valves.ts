@@ -80,7 +80,9 @@ const HAND_DRAWN_VALVES: Readonly<Record<string, InstalledValve>> = {
   'wet_hall|Backwash discharge to the sewer|Backwash discharge valve': {
     assetId: 'valve-0034',
     tag: 'WH-DR1-DV1',
-    normal: 'closed',
+    // The pumps' discharge isolating valve, open in service (Codex's
+    // review, 2026-10-26: it was a gravity drain, impossible 3.75 m down).
+    normal: 'open',
   },
   'wet_hall|Break tank drain|Break tank drain valve': {
     assetId: 'valve-0035',

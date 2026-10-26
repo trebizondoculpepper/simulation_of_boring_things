@@ -202,7 +202,7 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
       'valve-0034',
       'Backwash discharge to the sewer',
       'source',
-      'closed',
+      'open',
       'backwashDischarge',
     ),
     valve(
