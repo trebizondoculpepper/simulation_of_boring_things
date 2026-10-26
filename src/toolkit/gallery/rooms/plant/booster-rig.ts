@@ -63,6 +63,13 @@ function rig(kit: PanelKit): LiveExhibit {
       };
     },
     reset: () => {},
+    // Its suction fed by the ideal source alone (the owner, 2026-10-26):
+    // its supply pressure, less what its resistance takes at the flow.
+    suction: () =>
+      Math.max(
+        0,
+        source.flow.potential - source.flow.resistance * changeoverFlow(set),
+      ),
     changeover: {
       state: () => set,
       act: (a) => (set = actOnChangeover(set, a)),
@@ -72,9 +79,13 @@ function rig(kit: PanelKit): LiveExhibit {
   // The standard ideal source and sink (`experimental-source.ts`), each
   // drawn the one way: mains water, endless, piped from the stud on its
   // top down to the set's manifolds.
+  // Rated for the set, boosting (the owner, 2026-10-26): a 5 m³/h
+  // source would starve it; at 20 m³/h its 3 bar falls to about 2.5 with
+  // one pump drawing and 2.2 with both.
   const source = createExperimentalSource({
     id: 'booster.source',
     substance: 'mains-water',
+    maxRate: 20,
   });
   const sink = createExperimentalSink({
     id: 'booster.sink',

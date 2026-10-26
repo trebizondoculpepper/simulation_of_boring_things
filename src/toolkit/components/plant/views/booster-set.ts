@@ -60,6 +60,8 @@ export interface BoosterFeed {
    * RUN and STOP buttons work it, and its motors are heard running up and
    * coasting down.
    */
+  /** Its suction manifold's pressure, bar, where something feeds it (dev42's ideal source). */
+  suction?(): number;
   changeover?: {
     state(): BoosterChangeover;
     act(a: ChangeoverAction): void;
@@ -672,8 +674,9 @@ export function createBoosterSet(
           `FLOW ${changeoverFlow(s).toFixed(1)} m3/h`.padEnd(16).slice(0, 16),
         ]);
       } else screen.show(boosterDisplay(r));
-      // Suction: the break tank's head; discharge: the set's pressure.
-      gauges[0].set(0.3);
+      // Suction: what feeds it (else the break tank's head); discharge:
+      // the set's pressure.
+      gauges[0].set(feed.suction?.() ?? 0.3);
       gauges[1].set(co ? changeoverPressure(co.state()) : boosterPressure(r));
       for (const g of gauges) g.update(delta);
     },
