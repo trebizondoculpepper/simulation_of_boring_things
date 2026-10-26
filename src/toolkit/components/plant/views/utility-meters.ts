@@ -195,7 +195,9 @@ export function createCtElectricityMeter(kit: PanelKit) {
     g.font = `bold ${h * 0.5}px monospace`;
     g.textBaseline = 'middle';
     g.textAlign = 'right';
-    g.fillText(value, w * 0.8, h * 0.56);
+    // Fitted between the register code and the unit (the owner,
+    // 2026-10-26: it overran the screen).
+    g.fillText(value, w * 0.8, h * 0.56, w * 0.6);
     g.font = `${h * 0.2}px sans-serif`;
     g.textAlign = 'left';
     g.fillText(code, w * 0.03, h * 0.17);
@@ -525,6 +527,8 @@ export function createElectricityMeteringCabinet(kit: PanelKit) {
   let t = 0;
   return {
     group,
+    /** Its door, hung on its left edge: its turn about y opens it (shut at 0). */
+    door,
     show(kwh: number, kw: number, delta: number) {
       t += delta;
       meter.show(kwh, kw, delta);

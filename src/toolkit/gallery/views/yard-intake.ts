@@ -135,6 +135,10 @@ interface Device {
     screen: { show(value: number): void };
     /** A lever turns a quarter; a handwheel spins several turns. */
     turn: 'lever' | 'wheel';
+    /** What a click works the service from, if not all of it. */
+    operate?: Object3D[];
+    /** A door that opens and shuts with a click, of its own. */
+    door?: Group;
   };
 }
 
@@ -218,7 +222,7 @@ const DEVICES: readonly Device[] = [
       // The customer-side isolator beside it: a grey switch box, its
       // rotary handle red on yellow.
       const front = INTAKE.wallZ - 0.32;
-      box(
+      const isoBox = box(
         g,
         paint(kit, '#7e8a86', 0.5, 0.4),
         0.4,
@@ -250,10 +254,31 @@ const DEVICES: readonly Device[] = [
         riser(g, black, 0.035, dx, G + 1.28, 0.8, INTAKE.wallZ - 0.12);
         intoWall(kit, g, black, 0.035, dx, 0.87, INTAKE.wallZ - 0.12);
       }
+      // A rubber grommet wherever a cable passes through a cabinet's base
+      // or top (the owner, 2026-10-26).
+      const rubber = paint(kit, '#1b1c1d', 0.9);
+      for (const [x, y] of [
+        [0.2, G + 0.4],
+        [0.35, G + 0.4],
+        [-0.8, G + 1.275],
+        [-0.7, G + 1.275],
+      ] as const) {
+        const grommet = new Mesh(
+          new TorusGeometry(0.045, 0.012, 8, 20),
+          rubber,
+        );
+        grommet.rotation.x = Math.PI / 2;
+        grommet.position.set(x, y, INTAKE.wallZ - 0.12);
+        g.add(grommet);
+      }
+      // Shut, to begin with.
+      cabinet.door.rotation.y = 0;
       return {
         lever,
         screen: { show: (v: number) => cabinet.show(v, lastKw, lastDelta) },
         turn: 'lever',
+        operate: [isoBox, lever],
+        door: cabinet.door,
       };
     },
   },
@@ -271,18 +296,19 @@ export function yardIntake(kit: PanelKit): Part[] {
     const g = new Group();
     g.position.x = d.x;
     a.object.add(g);
-    const { lever, screen, turn: kind } = d.build(kit, g);
+    const { lever, screen, turn: kind, operate, door } = d.build(kit, g);
     // Each installation carries its own maker's badge.
     const open = () => store?.world.value.intake.open[d.service] ?? true;
     const reading = () => store?.world.value.intake.meters[d.service] ?? 0;
-    g.traverse((o) =>
-      a.uses.set(o, () =>
-        store?.dispatch({
-          type: 'intake',
-          action: { act: 'set', service: d.service, open: !open() },
-        }),
-      ),
-    );
+    for (const target of operate ?? [g])
+      target.traverse((o) =>
+        a.uses.set(o, () =>
+          store?.dispatch({
+            type: 'intake',
+            action: { act: 'set', service: d.service, open: !open() },
+          }),
+        ),
+      );
     // A quarter turn: along the pipe (or upright) when open, across when shut.
     let turn = open() ? 0 : 1;
     a.updates.push((delta) => {
@@ -306,8 +332,27 @@ export function yardIntake(kit: PanelKit): Part[] {
       () =>
         `${open() ? (d.service === 'power' ? 'ON' : 'open') : d.service === 'power' ? 'OFF' : 'shut'} · ${d.meterName}: ${Math.floor(reading())} ${d.unit}`,
     );
-    return a.part();
-  });
+    const parts = [a.part()];
+    if (door) {
+      // The cabinet's door, opening and shutting with a click.
+      const dp = beginPart(kit, 'Metering cabinet door');
+      dp.object.add(new Group());
+      let want = 0;
+      let swing = 0;
+      door.traverse((o) => dp.uses.set(o, () => (want = want ? 0 : 1)));
+      door.traverse((o) => (o.userData.live = true));
+      dp.updates.push((delta) => {
+        swing =
+          swing < want
+            ? Math.min(want, swing + delta * 1.5)
+            : Math.max(want, swing - delta * 1.5);
+        door.rotation.y = -1.6 * swing;
+      });
+      dp.shows(() => (swing > 0.05 ? 'open' : 'shut'));
+      parts.push(dp.part());
+    }
+    return parts;
+  }).flat();
   // The bollards guarding them, and the hatching before them.
   const guard = beginPart(kit, 'Bollards and hatching');
   for (const x of [
