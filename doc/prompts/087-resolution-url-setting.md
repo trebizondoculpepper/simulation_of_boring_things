@@ -1,6 +1,6 @@
 # 087: Start the game at a lower resolution from the URL
 
-Status: to do (written 2026-10-27 from the owner's request), for another agent. Not yet confirmed by the owner; see the open questions at the end.
+Status: to do (written 2026-10-27 from the owner's request), for another agent. Persistence decided by the owner 2026-10-27; two questions remain open (end). Wider graphics settings are researched in [graphics-quality-presets](../research/graphics-quality-presets.md).
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply: all input goes through `src/toolkit/controls/`, `logic/` folders are pure and tested beside them, and markdown is one paragraph per line.
 
@@ -25,7 +25,7 @@ The owner, 2026-10-27: "we should be able to start the game at lower resolution 
 
 The alternative, a plain divisor (`resolution=6` meaning one sixth of each side, a thirty-sixth of the pixels), would be very blocky and would need a second scale beside the slider's; not recommended. If the owner wants lower than level 10 allows, widen `RANGES.renderLevel` instead, so the slider and the URL stay one scale.
 
-**URL wins at start-up, and persists.** Recommended: at start-up, before any renderer is made, a valid `resolution` is applied with `updateSettings({ renderLevel })`, so it is saved like a slider change. Someone sent a link for a weak machine then keeps the lower resolution on their next visit without the parameter, and can raise it in the pause menu as usual. The alternative (apply for this page only, without saving) is in the open questions.
+**URL wins at start-up, and persists.** Decided (the owner, 2026-10-27): the URL setting is remembered; it writes the saved settings, so a returning player gets the settings they chose and does not get a jittery start. at start-up, before any renderer is made, a valid `resolution` is applied with `updateSettings({ renderLevel })`, so it is saved like a slider change. Someone sent a link for a weak machine then keeps the lower resolution on their next visit without the parameter, and can raise it in the pause menu as usual.
 
 **Applied before the first frame.** Apply it where the settings are first loaded (or at the very top of `main.ts`, before the title screen or any room builds its renderer), so no frame is drawn at full resolution first. Because `createRenderer` already follows the signal, applying it later would still work, but would cost a frame or two at full size on exactly the machines that can least afford it.
 
@@ -46,13 +46,13 @@ The alternative, a plain divisor (`resolution=6` meaning one sixth of each side,
 ## Acceptance
 
 - Opening `?resolution=6` (with or without `room=`) draws the title and every room at 0.46 of each side from the first frame; the pause menu's slider shows level 6 (`1:2.17`).
-- Reloading without the parameter keeps level 6 (if persisting is confirmed); the slider still changes it freely.
+- Reloading without the parameter keeps level 6; the slider still changes it freely.
 - Out-of-range and malformed values do as the tests say; no error, no blank screen.
 - HUD, menus and inspection text stay crisp; screenshots (Ctrl/Cmd+Shift+K) are full quality.
 - `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build` pass.
 
 ## Open questions for the owner
 
-1. Should `resolution=` be saved (so the next visit keeps it), or apply to this visit only? Recommended: saved.
+1. (Decided 2026-10-27: saved; the URL writes the saved settings.)
 2. Is `resolution=6` meaning the existing Render quality level 6 (about a fifth of the pixels) right, or did you mean something lower, a sixth of each side?
 3. Smooth upscaling as now, or a deliberately pixelated look at low resolutions?
