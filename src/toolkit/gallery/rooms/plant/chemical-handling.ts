@@ -64,7 +64,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Day tank sizes',
     reference:
-      'Every framed day tank the building uses, smallest to largest: 15, 30, 60, 200, 300, 500 and 1,000 L, each labelled with the pools it serves',
+      'Every day tank the building uses, smallest to largest: Chlorella DoseCell bottles of 15 to 500 L (sensor, switches, pump and display in one powered head), and the framed 1,000 L tank',
     size: { w: 11.2, d: 1.6, h: 2.0, mount: 'floor' },
     maker: 'chlorella',
     build: (kit) => createDayTankRange(kit),

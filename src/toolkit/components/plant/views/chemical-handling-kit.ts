@@ -42,6 +42,14 @@ import { createAnnunciator } from '../../industrial-control/logic/annunciator';
 import { plantTools } from './plant-tools';
 import { createDigitalPump } from './dosing-equipment';
 import { createFramedChemicalTank } from './framed-chemical-tank';
+import { createDoseBottle } from './dose-bottle';
+import {
+  bottleLevel,
+  bottleReadout,
+  bottleSize,
+  newDoseBottle,
+  stepDoseBottle,
+} from '../../../../game/plant/dose-bottle';
 import {
   DAY_TANKS,
   dayTankSize,
@@ -1824,27 +1832,67 @@ export function createDayTankRange(kit: PanelKit) {
     }
   const list = [...sizes.entries()].sort(([a], [b]) => a - b);
   const gap = 0.35;
-  const widths = list.map(([litres]) => dayTankSize(litres).L + 0.4);
+  // Below 1,000 l a dose bottle; the largest keeps its framed tank.
+  const isBottle = (litres: number) => litres < 1000;
+  const widths = list.map(([litres]) =>
+    isBottle(litres)
+      ? Math.max(0.6, bottleSize(litres).d + 0.45)
+      : dayTankSize(litres).L + 0.4,
+  );
   const total = widths.reduce((s, w) => s + w, 0) + gap * (widths.length - 1);
   const root = new Group();
   const parts = createPartSet();
   let x = -total / 2;
   const stations = list.map(([litres, { chemical, uses }], i) => {
-    const s = createDayTankStation(kit, chemical, undefined, 0, {
-      litres,
-      tag: `${litres} L`,
-      withPump: false,
-      withGear: false,
-      centred: true,
-    });
     const cx = x + widths[i] / 2;
     x += widths[i] + gap;
-    s.object.position.x = cx;
-    root.add(s.object);
     f.label(root, `${litres} L`, cx, 1.75, 0, 0.06, '#ffffff', '#2a2f31');
     f.label(root, uses.join(' · '), cx, 1.62, 0, 0.03, '#2a2f31', '#e8ebe9');
-    for (const [o, use] of s.parts.uses) parts.uses.set(o, use);
-    return s;
+    if (!isBottle(litres)) {
+      const s = createDayTankStation(kit, chemical, undefined, 0, {
+        litres,
+        tag: `${litres} L`,
+        withPump: false,
+        withGear: false,
+        centred: true,
+      });
+      s.object.position.x = cx;
+      root.add(s.object);
+      for (const [o, use] of s.parts.uses) parts.uses.set(o, use);
+      return s;
+    }
+    // An ideal line keeps the bottle topped up whenever it calls; its pump
+    // doses fast enough that a fill comes round every few minutes.
+    const bottle = createDoseBottle(kit, {
+      tag: `${litres} L`,
+      product: PRODUCT[chemical],
+      litres,
+      acid: chemical === 'acid',
+    });
+    bottle.object.position.x = cx;
+    root.add(bottle.object);
+    let state = newDoseBottle(litres, 0.25 + 0.1 * i);
+    const trend = levelTrend();
+    return {
+      update(delta: number) {
+        state = stepDoseBottle(
+          state,
+          {
+            fillLpm: state.calling ? litres * 0.6 : 0,
+            doseLpm: litres * 0.25,
+          },
+          delta,
+        );
+        bottle.show(bottleReadout(state));
+        trend.sample(state.litres, delta);
+      },
+      status: () =>
+        describeTank(
+          `Dose bottle, ${litres} L`,
+          bottleLevel(state),
+          trend.lpm(),
+        ),
+    };
   });
   return {
     object: root,
