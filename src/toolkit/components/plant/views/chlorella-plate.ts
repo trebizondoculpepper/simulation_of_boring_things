@@ -11,7 +11,17 @@ import { drawBrandMark, wordmarkFont } from '../../core/views/brand-logo';
  * wide, a third as tall; facing +z.
  */
 export function chlorellaPlate(kit: PanelKit, w: number, line: string): Mesh {
-  const brand = brandLivery(kit, 'chlorella');
+  return brandPlate(kit, 'chlorella', w, line);
+}
+
+/** Any maker's plate, as Chlorella's: its mark and wordmark, a line beneath. */
+export function brandPlate(
+  kit: PanelKit,
+  id: Parameters<typeof brandLivery>[1],
+  w: number,
+  line: string,
+): Mesh {
+  const brand = brandLivery(kit, id);
   return tools(kit).printed(
     w,
     w * 0.32,

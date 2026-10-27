@@ -1,6 +1,7 @@
 import type { PlantExhibit } from './exhibit';
 import { layoutSquarePlantRoom } from '../../logic/plant-room-layout';
 import type { ExhibitSize } from '../../logic/plant-room-layout';
+import { createPeristalticDemo } from '../../../components/plant/views/peristaltic-pump';
 import { createDoseCellDemo } from '../../../components/plant/views/dose-cell-head';
 import {
   createBulkTankDemo,
@@ -69,6 +70,14 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     size: { w: 0.6, d: 0.6, h: 1.3, mount: 'floor' },
     maker: 'chlorella',
     build: (kit) => createDoseCellDemo(kit, { acid: true }),
+  },
+  {
+    title: 'Peristaltic dosing pump',
+    reference:
+      'Grundflow PERI 30, after the Watson-Marlow Qdos: a roller pump head under a clear guard, a colour TFT and membrane keys (START, STOP, ▲, ▼) that work',
+    size: { w: 0.6, d: 0.6, h: 1.3, mount: 'floor' },
+    maker: 'grundflow',
+    build: (kit) => createPeristalticDemo(kit),
   },
   {
     title: 'Day tank sizes',

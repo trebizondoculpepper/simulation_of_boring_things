@@ -432,6 +432,7 @@ export function startEquipmentRoom(
       const place = layout.places[i];
       const holder = new Group();
       holder.name = `Exhibit: ${exhibit.title}`;
+      placed.push({ title: exhibit.title, x: place.x, z: place.z, yaw: place.yaw });
       holder.position.set(place.x, place.y, place.z);
       holder.rotation.set(0, place.yaw, place.tilt ?? 0);
       const built = exhibit.build(kit);
@@ -669,8 +670,11 @@ export function startEquipmentRoom(
     aimed: () => Boolean(useAt(0, 0)),
   });
 
-  // A development handle for the console: stand anywhere, in metres.
+  // A development handle for the console: stand anywhere, in metres; and
+  // where each exhibit stands, for framing pictures of it.
+  const placed: { title: string; x: number; z: number; yaw: number }[] = [];
   (window as unknown as { exhibitRoom: unknown }).exhibitRoom = {
+    exhibits: () => placed,
     place(x: number, z: number, yaw = 0, pitch = 0) {
       walk.place(x * m, z * m, yaw, pitch);
     },

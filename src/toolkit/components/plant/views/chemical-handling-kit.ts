@@ -40,11 +40,11 @@ import {
 import { createAnnunciatorPanel } from '../../industrial-control/views/cabinet-fittings';
 import { createAnnunciator } from '../../industrial-control/logic/annunciator';
 import { plantTools } from './plant-tools';
-import { createDigitalPump } from './dosing-equipment';
 import { createFramedChemicalTank } from './framed-chemical-tank';
 import { createDoseBottle } from './dose-bottle';
 import { chlorellaPlate } from './chlorella-plate';
 import { hose } from './hose';
+import { createPeristalticPump } from './peristaltic-pump';
 import {
   bottleLevel,
   bottleSize,
@@ -767,13 +767,18 @@ export function createDayTankStation(
   const oz = tankZ + W / 2 + 0.38;
   const ox = -L / 2 + Math.min(0.45, L * 0.3) + 0.4;
   const px = bw / 2 + 0.27;
+  let pump: ReturnType<typeof createPeristalticPump> | null = null;
   if (withPump) {
     // The dosing pump on its bracket beside the bund, fed from the outlet.
     t.box(group, galv, 0.04, 0.72, 0.04, px, 0.36, -0.2);
     t.box(group, galv, 0.3, 0.02, 0.24, px, 0.7, -0.2);
-    const pump = createDigitalPump(kit, chemical === 'acid' ? 'ACID' : 'HYPO');
-    pump.position.set(px, 0.71, -0.2);
-    group.add(pump);
+    pump = createPeristalticPump(
+      kit,
+      `${tag ?? chemical.toUpperCase()} DOSING`,
+    );
+    pump.object.position.set(px, 0.71, -0.2);
+    group.add(pump.object);
+    for (const [o, use] of pump.parts.uses) parts.uses.set(o, use);
     // A short rigid stub from the outlet valve, then a soft reinforced
     // PVC hose looping up to the pump's suction.
     t.rod(group, pvc, [ox, oy, oz], [ox + 0.12, oy, oz], 0.015, 10);
@@ -783,9 +788,13 @@ export function createDayTankStation(
       [
         [ox + 0.12, oy, oz],
         [px - 0.15, oy + 0.05, oz - 0.05],
-        [px - 0.1, 0.78, -0.12],
+        [
+          px + pump.suctionAt[0],
+          0.71 + pump.suctionAt[1],
+          -0.2 + pump.suctionAt[2],
+        ],
       ],
-      0.009,
+      0.006,
       0.05,
     );
   } else {
@@ -869,6 +878,8 @@ export function createDayTankStation(
     update(delta: number) {
       if (!shared) store.step(delta);
       parts.update(delta);
+      const tk = store.state.value.tanks[index];
+      pump?.update(delta, tk.litres > 0 && tk.doseLpm > 0);
       tank.setLevel(level.value);
       pointer.rotation.y = fill.value ? Math.PI / 2 : 0;
       trend.sample(store.state.value.tanks[index].litres, delta);
