@@ -1,3 +1,4 @@
+import { createPipeMarker } from '../../components/plant/views/pipe-marker';
 import {
   loungeFlowsOf,
   loungeMeterReadings,
@@ -92,6 +93,44 @@ const dnFor = (od: number): DN =>
  * floor channels, grated or under chequer plate. With the low runs to walk
  * round, and the valves' parts to work.
  */
+/** Where along a chemical run its markers go: the middle of each straight of 0.8 m or more, and every 3 m along a longer one, each with its direction of flow. */
+function chemicalMarkers(
+  points: readonly (readonly [number, number, number])[],
+) {
+  const out: { at: [number, number, number]; dir: [number, number, number] }[] =
+    [];
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    const d: [number, number, number] = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    const L = Math.hypot(...d);
+    if (L < 0.8) continue;
+    const n = Math.max(1, Math.floor(L / 3));
+    const u: [number, number, number] = [d[0] / L, d[1] / L, d[2] / L];
+    for (let k = 0; k < n; k++) {
+      const t = ((k + 0.5) / n) * L;
+      out.push({
+        at: [a[0] + u[0] * t, a[1] + u[1] * t, a[2] + u[2] * t],
+        dir: u,
+      });
+    }
+  }
+  return out;
+}
+
+/** A marker (built along +x, its arrow +x) set at `m`, turned to its flow. */
+function placeMarker(
+  marker: Object3D,
+  m: { at: [number, number, number]; dir: [number, number, number] },
+) {
+  marker.position.set(...m.at);
+  const [dx, dy, dz] = m.dir;
+  if (Math.abs(dy) > 0.9)
+    marker.rotation.z = dy > 0 ? Math.PI / 2 : -Math.PI / 2;
+  else marker.rotation.y = Math.atan2(-dz, dx);
+  return marker;
+}
+
 export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
   const runs = roomPipes(room);
   const group = new Group();
@@ -131,8 +170,38 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         group.add(bind(takeoff));
       }
     }
+    // A chemical line (plan 085): its transfer mains, branches and fills
+    // double-contained, an outer pipe over the carrier; every chemical
+    // run marked to BS 1710, hazard bands, legend and a flow arrow, along
+    // its straights.
+    const chemical = r.service === 'hypochlorite' || r.service === 'acid';
+    if (chemical && r.od >= 0.016) {
+      const contained = r.kind === 'pvc-pressure';
+      const outer = contained ? Math.max(0.05, r.od * 1.9) : r.od;
+      if (contained && r.od >= 0.024)
+        group.add(
+          bind(
+            createPipe('pvc-pressure', outer, points, {
+              through: [],
+            }),
+          ),
+        );
+      for (const m of chemicalMarkers(points))
+        group.add(
+          bind(
+            placeMarker(
+              createPipeMarker(kit, {
+                r: outer / 2,
+                chemical: r.service as 'hypochlorite' | 'acid',
+                contained,
+              }).object,
+              m,
+            ),
+          ),
+        );
+    }
     const marked = MARKED[r.service];
-    if (r.od >= 0.02 && marked) {
+    if (!(chemical && r.od >= 0.016) && r.od >= 0.02 && marked) {
       const lagging = PIPE_KINDS[r.kind].insulation?.thickness ?? 0;
       group.add(
         bind(
