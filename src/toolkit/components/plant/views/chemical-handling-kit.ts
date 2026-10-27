@@ -23,6 +23,8 @@ import type {
   TransferTrial,
 } from '../../../../game/plant/chemical-transfer-demo';
 import type { PanelKit } from '../../core/views/eighties-controls';
+import { createSevenSegment } from '../../core/views/eighties-controls';
+import type { SevenSegment } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { brandLivery } from '../../core/views/brand-livery';
 import { panelMakerMark } from '../../core/views/panel-maker-mark';
@@ -382,7 +384,12 @@ export function createTransferPumpSkid(
   stop.object.scale.setScalar(0.7);
   box.add(stop.object);
   parts.add(stop);
-  panelMakerMark(kit, box, { width: 0.32, height: 0.46, z: 0.061 });
+  panelMakerMark(kit, box, {
+    width: 0.32,
+    height: 0.46,
+    z: 0.061,
+    corner: 'bottom-right',
+  });
 
   let spin = 0;
   // Chlorella's plate on the skid's front: they supply the skid, Grundflow the pump.
@@ -603,7 +610,12 @@ export function createDualTransferPumpSkid(kit: PanelKit, chemical: Chemical) {
   stop.object.scale.setScalar(0.7);
   box.add(stop.object);
   parts.add(stop);
-  panelMakerMark(kit, box, { width: 0.32, height: 0.46, z: 0.061 });
+  panelMakerMark(kit, box, {
+    width: 0.32,
+    height: 0.46,
+    z: 0.061,
+    corner: 'bottom-right',
+  });
   let spin = 0;
   // Chlorella's plate on the skid's front.
   const plate = chlorellaPlate(kit, 0.3, 'DUTY/STANDBY TRANSFER SKID');
@@ -1630,14 +1642,25 @@ export function createDistributionPanel(
     ] as const
   ).forEach(([legend, colour, action], i) => {
     const p = pushButton(kit, { colour, legend, action });
-    p.object.position.set(W / 2 - 0.32 + i * 0.1, -H / 2 + 0.1, z);
+    p.object.position.set(W / 2 - 0.4 + i * 0.13, -H / 2 + 0.12, z);
     p.object.scale.setScalar(0.7);
     p.object.traverse((o) => (o.userData.live = true));
     group.add(p.object);
     parts.add(p);
+    // Engraved beneath, readable from where one stands.
+    f.label(
+      group,
+      legend,
+      W / 2 - 0.4 + i * 0.13,
+      -H / 2 + 0.065,
+      z,
+      0.016,
+      '#1b1b1b',
+      '#f4f3ee',
+    );
   });
   type Section = {
-    meters: ReturnType<typeof createPanelMeter>[];
+    readouts: SevenSegment[];
     outlets: Signal<boolean>[];
     auto: Signal<boolean>;
     hand: Signal<boolean>;
@@ -1649,7 +1672,7 @@ export function createDistributionPanel(
   (['hypochlorite', 'acid'] as const).forEach((c, s) => {
     const x0 = s ? 0.05 : -W / 2 + 0.05;
     const sec: Section = {
-      meters: [],
+      readouts: [],
       outlets: [0, 1, 2, 3].map(() => signal(false)),
       auto: signal(false),
       hand: signal(false),
@@ -1668,22 +1691,21 @@ export function createDistributionPanel(
       BAND[c],
     );
     ['STORE', 'PL1', 'PL2', 'PL3', 'PL4'].forEach((name, i) => {
-      const m = createPanelMeter(kit, '%', {
-        width: 0.11,
-        scaleMax: 100,
-        redFrom: 0.95,
-      });
+      // A three-digit LED readout of its contents in percent.
+      const m = createSevenSegment(kit, 3, { digitHeight: 0.026 });
       const x = x0 + 0.07 + i * 0.14;
-      m.group.position.set(x, 0.04, z);
+      m.group.position.set(x - 0.008, 0.04, z);
       m.group.traverse((o) => (o.userData.live = true));
       group.add(m.group);
-      sec.meters.push(m);
-      f.label(group, name, x, -0.04, z, 0.016, '#1b1b1b', '#f4f3ee');
+      sec.readouts.push(m);
+      f.label(group, '%', x + 0.05, 0.03, z, 0.014, '#1b1b1b');
+      f.label(group, name, x, -0.01, z, 0.016, '#1b1b1b', '#f4f3ee');
       if (i > 0) {
         const lamp = pilotLight(kit, {
           colour: 'amber',
           legend: 'FILLING',
           drive: sec.outlets[i - 1],
+          series: 'xb4',
         });
         lamp.object.position.set(x, -0.12, z);
         lamp.object.scale.setScalar(0.55);
@@ -1694,14 +1716,14 @@ export function createDistributionPanel(
     });
     (
       [
-        ['SELECTOR\nAUTO', 'white', sec.auto],
-        ['SELECTOR\nHAND', 'amber', sec.hand],
-        ['PUMP\nRUN', 'green', sec.run],
-        ['PUMP\nIN AUTO', 'white', sec.inAuto],
-        ['HIGH-HIGH\nTRIP', 'red', sec.trip],
+        ['SEL AUTO', 'white', sec.auto],
+        ['SEL HAND', 'amber', sec.hand],
+        ['PUMP RUN', 'green', sec.run],
+        ['PUMP AUTO', 'white', sec.inAuto],
+        ['HH TRIP', 'red', sec.trip],
       ] as const
     ).forEach(([legend, colour, drive], i) => {
-      const lamp = pilotLight(kit, { colour, legend, drive });
+      const lamp = pilotLight(kit, { colour, legend, drive, series: 'xb4' });
       lamp.object.position.set(x0 + 0.07 + i * 0.14, -0.3, z);
       lamp.object.scale.setScalar(0.6);
       group.add(lamp.object);
@@ -1738,8 +1760,13 @@ export function createDistributionPanel(
         for (const c of ['hypochlorite', 'acid'] as const) {
           const line = r[c];
           const sec = sections[c];
-          sec.meters[0].set(line.store);
-          line.days.forEach((v, i) => sec.meters[i + 1]?.set(v));
+          const pc = (v: number) =>
+            String(Math.round(Math.max(0, Math.min(1, v)) * 100)).padStart(
+              3,
+              ' ',
+            );
+          sec.readouts[0].show(pc(line.store));
+          line.days.forEach((v, i) => sec.readouts[i + 1]?.show(pc(v)));
           sec.outlets.forEach((o, i) => (o.value = line.serving === i));
           sec.auto.value = line.mode === 'auto';
           sec.hand.value = line.mode === 'hand';
@@ -1756,8 +1783,6 @@ export function createDistributionPanel(
         }
         logic.sense(alarms);
       }
-      for (const c of ['hypochlorite', 'acid'] as const)
-        for (const m of sections[c].meters) m.update(delta);
       lampTest = Math.max(0, lampTest - delta);
       panel.set(lampTest > 0 ? labels.map(() => true) : logic.lit(time));
     },

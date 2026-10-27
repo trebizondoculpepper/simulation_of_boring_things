@@ -187,7 +187,14 @@ describe.each(EQUIPPED_ROOMS)('%s', (room) => {
   });
 
   it('hangs every panel within reach, between knee and head height', () => {
-    for (const p of layout.placed.filter((q) => q.item.mount === 'wall')) {
+    // Signs are to be read, not reached: a store's warnings hang above its
+    // tall tanks, where they are seen (the owner, 2026-10-27).
+    for (const p of layout.placed.filter(
+      (q) =>
+        q.item.mount === 'wall' &&
+        !q.item.key.startsWith('sign:') &&
+        q.item.key !== 'store-signs',
+    )) {
       const y = p.y;
       const floorY = 0;
       expect(y - floorY, p.item.label).toBeGreaterThanOrEqual(0.5);

@@ -13,6 +13,7 @@ import { FINISH, plantTools } from './plant-tools';
 import type { Point } from './plant-tools';
 import {
   createEmergencySign,
+  createChemicalLabel,
   createHazardLabel,
   createMandatorySign,
   createNotice,
@@ -891,22 +892,18 @@ export function createStoreSigns(kit: PanelKit) {
   );
   put(
     group,
-    createHazardLabel(
+    createChemicalLabel(
       t,
       0.42,
       0.32,
-      'SODIUM HYPOCHLORITE',
-      '14–15 % available chlorine · UN 1791',
-      ['corrosive', 'environment'],
+      'SODIUM HYPOCHLORITE 14% · UN 1791',
+      false,
     ),
     [-0.5, -0.22, 0.021],
   );
   put(
     group,
-    createHazardLabel(t, 0.42, 0.32, 'HYDROCHLORIC ACID', '32–33 % · UN 1789', [
-      'corrosive',
-      'exclamation',
-    ]),
+    createChemicalLabel(t, 0.42, 0.32, 'HYDROCHLORIC ACID 10% · UN 1789', true),
     [0.0, -0.22, 0.021],
   );
   put(

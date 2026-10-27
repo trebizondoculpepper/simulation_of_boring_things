@@ -44,7 +44,8 @@ export const DAY_TANKS: Record<
     { site: 'pool_04', litres: 30 },
   ],
   acid: [
-    { site: 'pool_01', litres: 200 },
+    // The lounge uses little acid: a 60 l bottle lasts about two weeks.
+    { site: 'pool_01', litres: 60 },
     { site: 'pool_02', litres: 500 },
     { site: 'pool_03', litres: 30 },
     { site: 'pool_04', litres: 15 },
@@ -263,8 +264,20 @@ export function stepDistribution(
     line = { ...line, tanks, tripped };
     line = { ...line, serving: serve(c, line) };
     // The transfer, never more than the store has.
+    // Its high switch shuts the inlet as the level reaches it, however long
+    // the step: a small bottle filled at 20 l a minute is not overfilled
+    // into its high-high trip in one step. It may pass the switch a little,
+    // as a real one does, so it is sure to stop calling.
+    const room =
+      line.serving === null
+        ? 0
+        : Math.max(
+            0,
+            DAY_TANKS[c][line.serving].litres * (DISTRIBUTION.high + 0.02) -
+              line.tanks[line.serving].litres,
+          );
     const inflow = transferRunning(line, stores[c], capacity[c])
-      ? Math.min(stores[c], (DISTRIBUTION.pumpLpm * dt) / 60)
+      ? Math.min(stores[c], (DISTRIBUTION.pumpLpm * dt) / 60, room)
       : 0;
     taken[c] = inflow;
     tanks = line.tanks.map((t, i) => {

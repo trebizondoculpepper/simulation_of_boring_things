@@ -53,6 +53,8 @@ export interface ShellAperture {
 export interface ShellSpec {
   id: RoomId;
   title: string;
+  /** Its title card's height, if not eye height (above tall plant). */
+  titleHeight?: number;
   /** Its frontage (east to west) and its depth (north to south), metres. */
   w: number;
   d: number;
@@ -128,6 +130,8 @@ export const SHELL_ROOMS = {
     ceiling: 'services',
     doors: [{ wall: 'south', at: 0, to: 'loading_bay', swing: 'out' }],
     note: 'three bulk containers on their bunds; never with acid',
+    // Its title above the framed tanks, where they do not hide it.
+    titleHeight: 3.0,
   },
   acid_store: {
     id: 'acid_store',
@@ -141,6 +145,8 @@ export const SHELL_ROOMS = {
     ceiling: 'services',
     doors: [{ wall: 'south', at: 0, to: 'loading_bay', swing: 'out' }],
     note: 'one bulk container on its bund; never with hypochlorite',
+    // Its title above the framed tanks, where they do not hide it.
+    titleHeight: 3.0,
   },
   switch_room: {
     id: 'switch_room',

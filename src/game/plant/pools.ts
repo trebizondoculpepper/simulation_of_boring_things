@@ -618,7 +618,10 @@ export function stepPoolsWater(
     const level = water.level;
     const freeChlorine = clamp(
       old.freeChlorine +
-        (hypochlorite ? (1.4 - old.freeChlorine) * 0.001 : -0.0003) * dt,
+        // Undosed, chlorine is used up by the bathers and the light: about
+        // 0.36 mg/l an hour, gone from 1.4 in four hours (the owner,
+        // 2026-10-27: 80 minutes was too harsh).
+        (hypochlorite ? (1.4 - old.freeChlorine) * 0.001 : -0.0001) * dt,
       0,
       5,
     );

@@ -198,4 +198,23 @@ describe('the chemical distribution: store, transfer pump, selector, day tanks',
     });
     expect(dayLevel('hypochlorite', 1, d.hypochlorite)).toBeCloseTo(0.03, 6);
   });
+
+  it('never overfills a small bottle into its high-high trip, even in long steps', () => {
+    let d = withLevel(quiet(), 'acid', 3, 0.1);
+    let s = { ...CAP };
+    for (let t = 0; t < 1200; t += 60) {
+      const r = stepDistribution(d, s, CAP, {}, 60);
+      d = r.distribution;
+      s = {
+        hypochlorite: s.hypochlorite - r.taken.hypochlorite,
+        acid: s.acid - r.taken.acid,
+      };
+    }
+    expect(d.acid.tripped).toBe(false);
+    expect(dayLevel('acid', 3, d.acid)).toBeGreaterThanOrEqual(
+      DISTRIBUTION.high,
+    );
+    expect(dayLevel('acid', 3, d.acid)).toBeLessThan(DISTRIBUTION.highHigh);
+    expect(d.acid.tanks[3].calling).toBe(false);
+  });
 });

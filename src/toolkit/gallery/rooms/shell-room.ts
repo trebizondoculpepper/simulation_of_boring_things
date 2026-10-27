@@ -192,6 +192,7 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
         // The control room's walls are its mimics': no title card there.
         title:
           id === 'control_room' || id === 'loading_bay' ? null : spec.title,
+        titleHeight: (spec as { titleHeight?: number }).titleHeight,
         // The loading dock's lorry channels, cut out of its floor; its
         // lights a metre higher, all at one level (the owner, 2026-10-26).
         floorHoles: channels,

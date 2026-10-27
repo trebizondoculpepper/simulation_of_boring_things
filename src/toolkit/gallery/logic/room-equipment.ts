@@ -984,7 +984,7 @@ export function roomEquipment(
             2.2,
             1.25,
           ),
-          wall('store-signs', 'Store signs', 1.6, 0.05, 1, 1.5),
+          wall('store-signs', 'Store signs', 1.6, 0.05, 1, 2.6),
         ],
       };
     case 'acid_store':
@@ -1013,7 +1013,7 @@ export function roomEquipment(
             2.2,
             1.25,
           ),
-          wall('store-signs', 'Store signs', 1.6, 0.05, 1, 1.5),
+          wall('store-signs', 'Store signs', 1.6, 0.05, 1, 2.6),
         ],
       };
     case 'loading_bay':

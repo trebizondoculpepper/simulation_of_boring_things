@@ -126,6 +126,8 @@ export interface ShellView {
   roof: number;
   /** Its title card: name, and what it is for; none if `title` is null. */
   title: string | null;
+  /** The title card's height, if not eye height: above tall plant (the chemical stores). */
+  titleHeight?: number;
   note: string;
   seed: number;
   /** Plain offices and listening rooms have no exposed overhead services. */
@@ -374,7 +376,7 @@ export function createShellRoom(metre: number, kit: PanelKit, v: ShellView) {
   const titleAt = shellDoorPlace(v, { wall: facing, at: besideDoor ? 4 : 0 });
   title.position.set(
     titleAt.inner.x + titleAt.into[0] * 0.01,
-    Math.max(v.floor + 1.8, 1.8),
+    v.titleHeight ?? Math.max(v.floor + 1.8, 1.8),
     titleAt.inner.z + titleAt.into[1] * 0.01,
   );
   title.rotation.y = Math.atan2(titleAt.into[0], titleAt.into[1]);
