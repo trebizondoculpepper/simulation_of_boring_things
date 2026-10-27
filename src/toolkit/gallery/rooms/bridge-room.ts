@@ -20,6 +20,7 @@ import {
   designScreen,
 } from '../views/station-schematics';
 import { createViewscreen } from '../views/bridge-viewscreen';
+import { createBridgeLightsUp } from '../views/bridge-lights-up';
 import { BRIDGE_BINDINGS, bridgeSpec } from '../logic/bridge-bindings';
 import { plantReadingOf } from '../logic/world-reading';
 import { createParodyPanel } from '../views/parody-panel';
@@ -190,7 +191,18 @@ function installConsoles(kit: PanelKit): Part[] {
 
 /**
  * The bridge, the game's control room (mission 095): dev46's room off the
- * main corridor, with its working consoles.
+ * main corridor, with its working consoles; dark as the walker comes in
+ * from the corridor, its lights then coming up (`bridge-lights-up.ts`).
  */
-export const startTheBridge = (canvas: HTMLCanvasElement) =>
-  startBridgeRoom(canvas, installConsoles);
+export function startTheBridge(canvas: HTMLCanvasElement) {
+  // Its lights coming up as the walker comes in (the owner, 2026-10-27).
+  const lightsUp = createBridgeLightsUp();
+  const handle = startBridgeRoom(canvas, (kit) => [
+    ...installConsoles(kit),
+    lightsUp,
+  ]);
+  return Object.assign(handle, {
+    enter: (from: string | null) => lightsUp.enter(from),
+    suspend: () => lightsUp.leave(),
+  });
+}

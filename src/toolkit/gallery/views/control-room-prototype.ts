@@ -1039,7 +1039,7 @@ export function createControlRoomPrototype(
       const n = inward(a, b);
       const len = Math.hypot(b.x - a.x, b.z - a.z);
       const strip = box(
-        d.cove,
+        d.coveAft,
         len - 1.2,
         0.04,
         0.06,

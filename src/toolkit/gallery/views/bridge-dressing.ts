@@ -16,6 +16,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { cornerFillets } from '../logic/control-room-prototype';
 import type { Point } from '../logic/control-room-prototype';
+import type { LightStage } from '../logic/bridge-lights-up';
 
 /**
  * The bridge's dressing (mission 095; the owner, 2026-10-27: "light the
@@ -64,6 +65,22 @@ export function bridgeMaterials(kit: PanelKit) {
     kit.materials.push(m);
     return m;
   };
+  /** A light fitting's glowing material, of a stage of the lights coming up. */
+  const fitting = <M extends Material>(m: M, stage: LightStage) => {
+    m.userData.lightFitting = true;
+    m.userData.bridgeLightStage = stage;
+    return keep(m);
+  };
+  const cove = (stage: LightStage) =>
+    fitting(
+      new MeshStandardMaterial({
+        color: '#fff0d8',
+        emissive: '#ffe2b8',
+        emissiveIntensity: 1.6,
+        roughness: 0.6,
+      }),
+      stage,
+    );
   /** A carpet: a flat colour with a fine, random tuft. */
   const carpet = (base: string, fleck: string, repeat: number, seed: number) =>
     keep(
@@ -155,17 +172,17 @@ export function bridgeMaterials(kit: PanelKit) {
         metalness: 0.6,
       }),
     ),
-    /** A hidden cove's light, seen as a glowing strip. */
-    cove: keep(
-      new MeshStandardMaterial({
-        color: '#fff0d8',
-        emissive: '#ffe2b8',
-        emissiveIntensity: 1.6,
-        roughness: 0.6,
-      }),
-    ),
+    /**
+     * A hidden cove's light, seen as a glowing strip: one material for each
+     * stage of the bridge's lights coming up (`bridge-lights-up.ts`), the
+     * coves round the dome, the ribs' and walls' tops, the aft strip. Light
+     * fittings, following the room's lighting way (`room-lights.ts`).
+     */
+    cove: cove('rings'),
+    coveWall: cove('walls'),
+    coveAft: cove('aft'),
     /** The dome's lit diffuser. */
-    domeGlow: keep(
+    domeGlow: fitting(
       new MeshStandardMaterial({
         color: '#fff6e8',
         emissive: '#ffe9c8',
@@ -173,6 +190,7 @@ export function bridgeMaterials(kit: PanelKit) {
         roughness: 0.8,
         side: 2,
       }),
+      'dome',
     ),
     beige: keep(new MeshStandardMaterial({ color: '#d6c6a8', roughness: 0.8 })),
   };
@@ -286,7 +304,7 @@ export function bridgeCeiling(
     for (const s of [-1, 1]) {
       const strip = new Mesh(
         new RoundedBoxGeometry(0.04, 0.03, len, 1, 0.01),
-        m.cove,
+        m.coveWall,
       );
       strip.position.set(0.3 * s, 0.18, 0);
       rib.add(strip);
@@ -323,7 +341,7 @@ export function bridgeCeiling(
     g.add(lip2);
     const strip = new Mesh(
       new RoundedBoxGeometry(len - 0.2, 0.03, 0.05, 1, 0.01),
-      m.cove,
+      m.coveWall,
     );
     strip.position.set(
       (a.x + b.x) / 2 + nx * 0.06,
@@ -336,16 +354,24 @@ export function bridgeCeiling(
   // The light itself: a few warm points just under the ceiling, at the
   // coves, so what they light is mostly the ceiling, which lights the room
   // (the owner: "very little direct lighting"); one inside the dome.
-  const lights: [number, number, number, number][] = [
-    [c.x, top + 0.5, c.z, 34],
-    ...[0, 1, 2, 3].map((k): [number, number, number, number] => {
+  // Each of a stage of the lights coming up (`bridge-lights-up.ts`).
+  type Lamp = [number, number, number, number, LightStage];
+  const lights: Lamp[] = [
+    [c.x, top + 0.5, c.z, 34, 'dome'],
+    ...[0, 1, 2, 3].map((k): Lamp => {
       const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
-      return [c.x + Math.cos(a) * ox, top - 0.45, c.z + Math.sin(a) * oz, 14];
+      return [
+        c.x + Math.cos(a) * ox,
+        top - 0.45,
+        c.z + Math.sin(a) * oz,
+        14,
+        'rings',
+      ];
     }),
-    [0, top - 0.5, front + 1.5, 12],
-    [0, top - 0.5, (room[3].z + room[4].z) / 2, 10],
+    [0, top - 0.5, front + 1.5, 12, 'walls'],
+    [0, top - 0.5, (room[3].z + room[4].z) / 2, 10, 'aft'],
   ];
-  for (const [x, y, z, power] of lights) {
+  for (const [x, y, z, power, stage] of lights) {
     const light = new PointLight(
       '#ffe6c4',
       power * opts.metre * opts.metre,
@@ -353,6 +379,7 @@ export function bridgeCeiling(
       2,
     );
     light.position.set(x, y, z);
+    light.userData.bridgeLightStage = stage;
     g.add(light);
   }
   return g;
