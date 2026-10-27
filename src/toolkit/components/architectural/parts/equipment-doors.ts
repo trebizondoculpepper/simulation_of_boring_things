@@ -27,6 +27,7 @@ import {
 import type { PlantDoorState } from '../logic/plant-door';
 import { doorFrame, kickPlate, pullHandle, pushPlate } from './door-hardware';
 import { cardReader } from './card-reader';
+import type { SoundRecipe } from '../../core/audio/part-audio';
 import { createDoorWarningStickers } from '../views/door-warning-stickers';
 import type { DoorWarningSelection } from '../logic/door-warnings';
 import { CONCRETE_LINTEL } from '../views/concrete-lintel';
@@ -75,6 +76,8 @@ export function equipmentDoors(
   warnings: DoorWarningSelection = 'plant',
   /** 1: it swings toward +z, its pull side; −1: the other way. */
   swing: 1 | -1 = 1,
+  /** Its card readers' beep as they go green (default the synthesised `BEEP`). */
+  options: { readerBeep?: SoundRecipe } = {},
 ): EquipmentDoorsPart {
   const t = tools(kit);
   const a = beginPart(kit, 'equipment doors');
@@ -176,7 +179,7 @@ export function equipmentDoors(
     [w / 2 + f + 0.2, 0, 0],
     [-(w / 2 + f + 0.2), -0.2, Math.PI],
   ] as const) {
-    const reader = cardReader(kit);
+    const reader = cardReader(kit, { beep: options.readerBeep });
     readers.push(reader);
     reader.object.position.set(x, 1.1, z);
     reader.object.rotation.y = turn;

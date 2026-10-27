@@ -2,6 +2,11 @@ import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import { runShell } from './shell-room';
 import { createControlRoomPrototype } from '../views/control-room-prototype';
 import { equipmentDoors } from '../../components/architectural/parts/equipment-doors';
+import { consoleRecording } from '../../components/sound/audio/console-recordings';
+import {
+  CARD_READ_SOUND,
+  LEVELS,
+} from '../../components/sound/logic/console-sounds';
 import type { EquipmentDoorsPart } from '../../components/architectural/parts/equipment-doors';
 import type { Part } from '../../components/core/parts/parts';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -106,7 +111,11 @@ export function startBridgeRoom(
       // beyond, a dark lobby until the corridor is seen through them.
       const yaw = way.frame.yaw;
       // No sign over them on the bridge's side (the owner, 2026-10-27).
-      const part = equipmentDoors(kit, '', warningsFor('main_corridor'));
+      // Their card readers answer with the owner's console sound, as
+      // everything electronic on the bridge does (the owner, 2026-10-27).
+      const part = equipmentDoors(kit, '', warningsFor('main_corridor'), 1, {
+        readerBeep: consoleRecording(CARD_READ_SOUND, LEVELS.cardRead),
+      });
       onDoors?.(part);
       part.object.position.set(way.inner.x, STOREY, way.inner.z);
       part.object.rotation.y = yaw;

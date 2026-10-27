@@ -11,6 +11,7 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import { beginPart } from '../../core/parts/parts';
 import type { Part } from '../../core/parts/parts';
+import type { SoundRecipe } from '../../core/audio/part-audio';
 import { BEEP, play } from '../../core/parts/building-part-tools';
 import {
   initialCardReader,
@@ -26,10 +27,14 @@ import {
  * at its top, red idle and green when a card is read, and its maker's
  * mark at its foot (Ironside, who make the doorsets and their locks).
  * Present a card (use it): green for three seconds, with a beep as it
- * goes green. Built in
+ * goes green (the parts library's synthesised `BEEP`, or `options.beep`:
+ * the bridge's doors use the owner's console sounds). Built in
  * metres facing +z, its back on the wall at z = 0.
  */
-export function cardReader(kit: PanelKit): Part & {
+export function cardReader(
+  kit: PanelKit,
+  options: { beep?: SoundRecipe } = {},
+): Part & {
   doorOpened: (audible?: boolean) => void;
 } {
   const a = beginPart(kit, 'card reader');
@@ -91,7 +96,7 @@ export function cardReader(kit: PanelKit): Part & {
   let shown: 'red' | 'green' = 'red';
   const setGreen = (audible: boolean) => {
     state = presentCard();
-    if (shown === 'red' && audible) play(BEEP, a.object);
+    if (shown === 'red' && audible) play(options.beep ?? BEEP, a.object);
     shown = 'green';
     led.color.set('#3bd65a');
   };
