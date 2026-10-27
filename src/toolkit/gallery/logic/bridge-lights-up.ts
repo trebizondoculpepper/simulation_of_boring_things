@@ -8,14 +8,16 @@
  * scales what that gives. Pure: seconds since the walker arrived in,
  * shares of each stage's normal light.
  */
+import { BOOT_TIMING, bootDuration } from '../../../ui2d/boot';
+import type { BootTiming } from '../../../ui2d/boot';
 
 /** The stages, in the order they come up. */
 export const LIGHT_STAGES = ['rings', 'dome', 'walls', 'aft'] as const;
 export type LightStage = (typeof LIGHT_STAGES)[number];
 
 export const LIGHTS_UP = {
-  /** Seconds of darkness (the under-console glow coming up in it) before the main lights. */
-  dark: 3.0,
+  /** Seconds of darkness (the displays booting, the under-console glow coming up in it) before the main lights. */
+  dark: 4.0,
   /** Each stage's start after the darkness, and its rise, seconds. */
   starts: { rings: 0, dome: 0.6, walls: 1.2, aft: 1.7 } as Record<
     LightStage,
@@ -60,7 +62,32 @@ export function lightsUpLevels(t: number): Record<LightStage | 'fill', number> {
  * over `fade` (unless EMERGENCY LIGHTS keeps it lit, which the world
  * says, not this).
  */
-export const ENTRANCE_GLOW = { at: 1.0, rise: 0.6, fade: 1.5 } as const;
+export const ENTRANCE_GLOW = { at: 3.0, rise: 0.6, fade: 1.5 } as const;
+
+/**
+ * The displays booting in the entrance (the owner, 2026-10-27): black as
+ * the walker comes in, the emblems appearing in a scattered wave from
+ * `first` over `spread` seconds, each shown `emblem` seconds, then the
+ * interfaces drawing in, as the under-console glow comes up and before
+ * the main lights (`ui2d/boot.ts`).
+ */
+export const ENTRANCE_BOOT = { first: 0.2, spread: 1.0, emblem: 2.0 } as const;
+
+/** The displays' boot timing in the entrance. */
+export const entranceBootTiming = (): BootTiming => ({
+  ...BOOT_TIMING,
+  emblem: ENTRANCE_BOOT.emblem,
+});
+
+/** Seconds after arriving that the displays' interfaces begin, and finish, drawing in (the earliest's start, the latest's end). */
+export function entranceInterfaces() {
+  const t = entranceBootTiming();
+  const before = t.emblem + t.fade + t.gap;
+  return {
+    from: ENTRANCE_BOOT.first + before,
+    to: ENTRANCE_BOOT.first + ENTRANCE_BOOT.spread + bootDuration(t),
+  };
+}
 
 /** The entrance's own share of the under-console glow `t` seconds after arriving. */
 export function entranceGlow(t: number): number {

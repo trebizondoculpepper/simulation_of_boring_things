@@ -135,6 +135,18 @@ describe('a display’s boot (the owner, 2026-10-27)', () => {
     expect(boot.booting).toBe(true);
   });
 
+  it('takes a boot’s own timing for that boot', () => {
+    const boot = new BootScreen(new Label('x'));
+    boot.boot(0, { emblem: 2 });
+    boot.tick(0);
+    boot.tick(2.1);
+    expect(boot.phase).toBe('fade');
+    boot.boot(0);
+    boot.tick(3);
+    boot.tick(5.1);
+    expect(boot.phase).toBe('emblem');
+  });
+
   it('skips straight to on', () => {
     const p = panel();
     p.boot.boot(0);

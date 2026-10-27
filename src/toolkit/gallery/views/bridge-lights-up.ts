@@ -46,7 +46,8 @@ type Glow = Material & { emissiveIntensity: number };
  * leaving, so the room waits dark.
  */
 export function createBridgeLightsUp(mainLit: () => boolean): Part & {
-  enter(from: string | null): void;
+  /** The walker in, from `from`: whether the entrance plays (walked in from the corridor). */
+  enter(from: string | null): boolean;
   leave(): void;
   /** The entrance's share of the under-console glow now (`entranceGlow`), 0 outside it. */
   glow(): number;
@@ -127,6 +128,7 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
         rise(play ? 0 : Infinity);
         entrance = play;
       }
+      return play;
     },
     leave() {
       present = false;

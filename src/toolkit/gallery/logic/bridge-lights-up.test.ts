@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  ENTRANCE_BOOT,
   ENTRANCE_GLOW,
+  entranceInterfaces,
   LIGHTS_UP,
   entranceGlow,
   LIGHT_STAGES,
@@ -16,8 +18,8 @@ describe('the bridge’s lights coming up (the owner, 2026-10-27)', () => {
       for (const s of LIGHT_STAGES) expect(l[s], `${s} at ${t}`).toBe(0);
       expect(l.fill).toBeCloseTo(LIGHTS_UP.floor);
     }
-    expect(LIGHTS_UP.dark).toBeGreaterThanOrEqual(2);
-    expect(LIGHTS_UP.dark).toBeLessThanOrEqual(3);
+    expect(LIGHTS_UP.dark).toBeGreaterThanOrEqual(3);
+    expect(LIGHTS_UP.dark).toBeLessThanOrEqual(4.5);
   });
 
   it('brings the cove rings up first, then the dome, the walls and the aft strip', () => {
@@ -51,18 +53,26 @@ describe('the bridge’s lights coming up (the owner, 2026-10-27)', () => {
     }
   });
 
-  it('brings the glow under the consoles up first, then the main lights 2 to 3 s on', () => {
-    // Displays only at first.
+  it('boots the displays first, then the glow under the consoles as their interfaces draw in, then the main lights', () => {
+    // Displays only at first: black, then their emblems in a scattered wave.
     expect(entranceGlow(0)).toBe(0);
     expect(entranceGlow(ENTRANCE_GLOW.at - 0.01)).toBe(0);
-    expect(ENTRANCE_GLOW.at).toBeGreaterThan(0.5);
-    expect(ENTRANCE_GLOW.at).toBeLessThanOrEqual(1.5);
-    // Then the glow, quickly, full before the main lights begin.
+    expect(ENTRANCE_BOOT.first).toBeGreaterThan(0);
+    expect(ENTRANCE_BOOT.spread).toBeGreaterThan(0.5);
+    expect(ENTRANCE_BOOT.emblem).toBeGreaterThanOrEqual(2);
+    expect(ENTRANCE_BOOT.emblem).toBeLessThanOrEqual(3);
+    // The glow comes up as the interfaces draw in, after the first begins.
+    const drawn = entranceInterfaces();
+    expect(ENTRANCE_GLOW.at).toBeGreaterThanOrEqual(drawn.from);
+    expect(ENTRANCE_GLOW.at).toBeLessThan(drawn.to);
+    // Then the glow, quickly, full before the main lights begin, which
+    // begin about as the last interface is drawn.
     const full = ENTRANCE_GLOW.at + ENTRANCE_GLOW.rise;
     expect(entranceGlow(full)).toBe(1);
     expect(full).toBeLessThan(LIGHTS_UP.dark);
+    expect(Math.abs(LIGHTS_UP.dark - drawn.to)).toBeLessThanOrEqual(1);
     const gap = LIGHTS_UP.dark - ENTRANCE_GLOW.at;
-    expect(gap).toBeGreaterThanOrEqual(2);
+    expect(gap).toBeGreaterThanOrEqual(0.8);
     expect(gap).toBeLessThanOrEqual(3);
     for (const s of LIGHT_STAGES) expect(lightsUpLevels(full)[s]).toBe(0);
   });

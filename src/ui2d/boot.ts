@@ -184,7 +184,8 @@ export interface BootScreenOptions {
  * moves, and never by itself once on.
  */
 export class BootScreen extends UiNode {
-  readonly timing: BootTiming;
+  /** Its boot's timing: its own options', or a boot's own (`boot`). */
+  timing: BootTiming;
   private mode: 'on' | 'waiting' | 'running' | 'dark';
   private offset = 0;
   private start = 0;
@@ -202,8 +203,9 @@ export class BootScreen extends UiNode {
     this.add(content);
   }
 
-  /** Boot: black at once, the emblem `offset` seconds after its next tick. */
-  boot(offset = 0) {
+  /** Boot: black at once, the emblem `offset` seconds after its next tick; `timing` for this boot only. */
+  boot(offset = 0, timing?: Partial<BootTiming>) {
+    this.timing = { ...BOOT_TIMING, ...this.options.timing, ...timing };
     this.mode = 'waiting';
     this.offset = Math.max(0, offset);
     this.plan = null;
@@ -361,9 +363,9 @@ export class BootGroup {
     this.screens.delete(screen);
   }
 
-  /** Every screen booted, at offsets scattered over `spread` seconds from `from`. */
-  bootAll(spread = 1.5, from = 0) {
-    for (const s of this.screens) s.boot(from + this.random() * spread);
+  /** Every screen booted, at offsets scattered over `spread` seconds from `from`; `timing` for this boot only. */
+  bootAll(spread = 1.5, from = 0, timing?: Partial<BootTiming>) {
+    for (const s of this.screens) s.boot(from + this.random() * spread, timing);
   }
 
   skipAll() {

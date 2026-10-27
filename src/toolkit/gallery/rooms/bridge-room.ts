@@ -25,7 +25,14 @@ import {
 } from '../views/station-schematics';
 import { createViewscreen } from '../views/bridge-viewscreen';
 import { createBridgeLightsUp } from '../views/bridge-lights-up';
-import { LIGHTS_UP, lightsUpTotal } from '../logic/bridge-lights-up';
+import {
+  ENTRANCE_BOOT,
+  LIGHTS_UP,
+  entranceBootTiming,
+  lightsUpTotal,
+} from '../logic/bridge-lights-up';
+import { bootGroupOf } from '../../components/industrial-control/views/touch-surface';
+import type { BootGroup } from '../../../ui2d';
 import { sharedBridgeAmbience } from '../../components/sound/audio/bridge-ambience';
 import { createBridgeEmergencyLights } from '../views/bridge-emergency-lights';
 import {
@@ -232,13 +239,18 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   });
   const chatter = installChatter();
   const alarmBleep = installAlarmBleep();
-  const handle = startBridgeRoom(canvas, (kit) => [
-    ...installConsoles(kit),
-    installLightSwitch(kit, () => lightsUp.glow()),
-    lightsUp,
-    chatter,
-    alarmBleep,
-  ]);
+  // Its displays' boot (the owner, 2026-10-27): every touch screen made with its kit.
+  let displays: BootGroup | null = null;
+  const handle = startBridgeRoom(canvas, (kit) => {
+    displays = bootGroupOf(kit);
+    return [
+      ...installConsoles(kit),
+      installLightSwitch(kit, () => lightsUp.glow()),
+      lightsUp,
+      chatter,
+      alarmBleep,
+    ];
+  });
   // Its room tone (`components/sound/audio/bridge-ambience.ts`): the
   // game's one, shared with the corridor, which hears it through the open
   // doors; full whenever the walker is in here, however they came, rising
@@ -250,7 +262,17 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   };
   return Object.assign(dispose, handle, {
     enter: (from: string | null) => {
-      lightsUp.enter(from);
+      // Walked in from the corridor, its displays boot as its lights come
+      // up: black, their emblems in a scattered wave, their interfaces
+      // drawn in as the under-console glow rises, before the main lights
+      // (`ENTRANCE_BOOT`); arriving any other way they are simply on.
+      if (lightsUp.enter(from))
+        displays?.bootAll(
+          ENTRANCE_BOOT.spread,
+          ENTRANCE_BOOT.first,
+          entranceBootTiming(),
+        );
+      else displays?.skipAll();
       // The walker's first visit: the bridge's theme, once a save (the
       // owner's, 2026-10-27; `bridgeThemeHeard`).
       const first = world();
