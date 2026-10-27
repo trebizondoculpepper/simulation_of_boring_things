@@ -18,6 +18,7 @@ import {
 import type {
   ChemicalDistribution,
   DistributionAction,
+  DistributionPower,
 } from './plant/chemical-distribution';
 import { actOnWashOTron, newWashOTron } from './plant/wash-o-tron';
 import type { WashAction, WashOTron } from './plant/wash-o-tron';
@@ -826,6 +827,18 @@ export function stepWorld(world: World, delta: number): World {
   return { ...next, plant, intake };
 }
 
+/**
+ * Each chemical line's power (the owner, 2026-10-27): its transfer pump
+ * on its store's supply, its selector's valves on the wet hall's.
+ */
+export function distributionPower(plant: PlantServices): DistributionPower {
+  const hall = serviceAvailable(plant, 'wet_hall', 'power');
+  return {
+    hypochlorite: hall && serviceAvailable(plant, 'hypo_store', 'power'),
+    acid: hall && serviceAvailable(plant, 'acid_store', 'power'),
+  };
+}
+
 /** The stores and the day tanks `delta` seconds on (plan 085). */
 function stepChemicals(
   world: World,
@@ -838,6 +851,7 @@ function stepChemicals(
     STORE_CAPACITY,
     doseDraw(dosed),
     delta,
+    distributionPower(world.plant),
   );
   return {
     chemicals: {

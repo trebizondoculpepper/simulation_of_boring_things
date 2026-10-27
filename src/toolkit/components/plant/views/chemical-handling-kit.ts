@@ -1782,6 +1782,19 @@ export function createDistributionPanel(
           );
         }
         logic.sense(alarms);
+      } else {
+        // No power: every readout blank, every lamp out, the
+        // annunciator dark, LAMP TEST and all.
+        for (const c of ['hypochlorite', 'acid'] as const) {
+          const sec = sections[c];
+          for (const r of sec.readouts) r.show('   ');
+          for (const o of sec.outlets) o.value = false;
+          for (const l of [sec.auto, sec.hand, sec.run, sec.inAuto, sec.trip])
+            l.value = false;
+        }
+        lampTest = 0;
+        panel.set(labels.map(() => false));
+        return;
       }
       lampTest = Math.max(0, lampTest - delta);
       panel.set(lampTest > 0 ? labels.map(() => true) : logic.lit(time));

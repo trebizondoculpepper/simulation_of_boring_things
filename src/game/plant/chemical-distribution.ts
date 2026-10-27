@@ -173,8 +173,10 @@ export function transferRunning(
   line: ChemicalLine,
   store: number,
   capacity: number,
+  powered = true,
 ): boolean {
   return (
+    powered &&
     !line.tripped &&
     line.serving !== null &&
     line.hoa !== 'off' &&
@@ -234,10 +236,22 @@ export function dayTankStock(
 }
 
 /**
+ * Whether each chemical's line has its power (the owner, 2026-10-27): its
+ * transfer pump's, from its store's supply, and its selector's motorised
+ * valves', from the wet hall's. Either off, nothing is transferred.
+ */
+export type DistributionPower = Record<Chemical, boolean>;
+export const ALL_POWERED: DistributionPower = {
+  hypochlorite: true,
+  acid: true,
+};
+
+/**
  * The distribution `dt` seconds on: each line's switches, its selector,
  * its pump moving litres from its store to the served day tank, and every
- * day tank drawn on by its pool's dosing (`draw`, litres a second). Gives
- * the litres each store gave.
+ * day tank drawn on by its pool's dosing (`draw`, litres a second); a
+ * line without power (`power`) transfers nothing. Gives the litres each
+ * store gave.
  */
 export function stepDistribution(
   d: ChemicalDistribution,
@@ -245,6 +259,7 @@ export function stepDistribution(
   capacity: Record<Chemical, number>,
   draw: Partial<Record<PoolId, Record<Chemical, number>>>,
   dt: number,
+  power: DistributionPower = ALL_POWERED,
 ): { distribution: ChemicalDistribution; taken: Record<Chemical, number> } {
   const taken = { hypochlorite: 0, acid: 0 };
   const out = { ...d };
@@ -276,7 +291,7 @@ export function stepDistribution(
             DAY_TANKS[c][line.serving].litres * (DISTRIBUTION.high + 0.02) -
               line.tanks[line.serving].litres,
           );
-    const inflow = transferRunning(line, stores[c], capacity[c])
+    const inflow = transferRunning(line, stores[c], capacity[c], power[c])
       ? Math.min(stores[c], (DISTRIBUTION.pumpLpm * dt) / 60, room)
       : 0;
     taken[c] = inflow;

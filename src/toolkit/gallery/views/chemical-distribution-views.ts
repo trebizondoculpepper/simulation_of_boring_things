@@ -2,6 +2,9 @@ import { Group } from 'three';
 import { computed } from '@preact/signals-core';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import type { LiveExhibit } from '../rooms/plant/exhibit';
+import { distributionPower } from '../../../game/world';
+import { serviceAvailable } from '../../../game/plant/services';
+import type { ServiceRoom } from '../../../game/plant/services';
 import { roomWorld } from '../../save/world-store';
 import { STORE_CAPACITY } from '../../../game/plant/chemicals';
 import type { Chemical } from '../../../game/plant/chemicals';
@@ -102,6 +105,7 @@ function worldTransferStore(c: Chemical): TransferStore {
         w.distribution[c],
         w.chemicals[c],
         STORE_CAPACITY[c],
+        distributionPower(w.plant)[c],
       );
     }),
     act(a: TransferAction) {
@@ -116,10 +120,15 @@ function worldTransferStore(c: Chemical): TransferStore {
   };
 }
 
-/** The distribution as its panel shows it, from the world. */
+/**
+ * The distribution as its panel shows it, from the world; null, the panel
+ * dark, while the wet hall, where it hangs, has no power.
+ */
 function readDistribution(): Record<Chemical, DistributionReading> | null {
   if (typeof window === 'undefined') return null;
   const w = roomWorld().world.value;
+  if (!serviceAvailable(w.plant, 'wet_hall', 'power')) return null;
+  const power = distributionPower(w.plant);
   const line = (c: Chemical): DistributionReading => {
     const d = w.distribution[c];
     return {
@@ -127,7 +136,7 @@ function readDistribution(): Record<Chemical, DistributionReading> | null {
       days: d.tanks.map((t, i) => t.litres / DAY_TANKS[c][i].litres),
       serving: d.serving,
       mode: d.mode,
-      running: transferRunning(d, w.chemicals[c], STORE_CAPACITY[c]),
+      running: transferRunning(d, w.chemicals[c], STORE_CAPACITY[c], power[c]),
       tripped: d.tripped,
       inAuto: d.hoa === 'auto',
     };
@@ -215,7 +224,16 @@ function dayBottle(
     update(delta) {
       const s = state();
       trend.sample(s.litres, delta);
-      bottle.show(s, true, delta);
+      // Its head on its plant room's supply.
+      const site = DAY_TANKS[c][index].site;
+      const powered =
+        typeof window === 'undefined' ||
+        serviceAvailable(
+          roomWorld().world.value.plant,
+          `plant_${site}` as ServiceRoom,
+          'power',
+        );
+      bottle.show(s, powered, delta);
     },
     status: () =>
       describeTank(

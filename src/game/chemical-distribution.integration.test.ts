@@ -98,3 +98,31 @@ describe('the chemical distribution, end to end', () => {
     expect(w.pools.pool_02.freeChlorine).toBeGreaterThan(chlorineLow);
   }, 60_000);
 });
+
+describe('the chemical distribution, on its power (the owner, 2026-10-27)', () => {
+  const feeder = (w: World, room: 'wet_hall' | 'hypo_store', on: boolean) =>
+    applyAction(w, { type: 'plant/feeder', room, on });
+
+  it('transfers nothing while the wet hall’s circuit is off, and resumes when it is back on', () => {
+    let w = nearlyEmpty(newWorld(), 'hypochlorite', 'pool_02', 0.15);
+    w = feeder(w, 'wet_hall', false);
+    const before = litres(w, 'hypochlorite', 'pool_02');
+    w = advance(w, 1800, 10);
+    // It only falls: dosing draws on it, nothing fills it.
+    expect(litres(w, 'hypochlorite', 'pool_02')).toBeLessThanOrEqual(before);
+    w = feeder(w, 'wet_hall', true);
+    w = advance(w, 1800, 10);
+    expect(litres(w, 'hypochlorite', 'pool_02')).toBeGreaterThan(before);
+  });
+
+  it('stops a chemical’s transfer when its store’s supply is off, not the other’s', () => {
+    let w = nearlyEmpty(newWorld(), 'hypochlorite', 'pool_02', 0.15);
+    w = nearlyEmpty(w, 'acid', 'pool_02', 0.15);
+    w = feeder(w, 'hypo_store', false);
+    const hypo = litres(w, 'hypochlorite', 'pool_02');
+    const acid = litres(w, 'acid', 'pool_02');
+    w = advance(w, 1800, 10);
+    expect(litres(w, 'hypochlorite', 'pool_02')).toBeLessThanOrEqual(hypo);
+    expect(litres(w, 'acid', 'pool_02')).toBeGreaterThan(acid);
+  });
+});
