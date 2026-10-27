@@ -393,6 +393,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Changed
 
+- The footbath's hypochlorite day tank stands in the plant room's south-west corner, backed onto the south wall and facing north, clear of the south door's swing and leaving a 1.1 m way into the cabinet's lane along the west wall; its fill and dosing tube follow it (prompt 089, item 1, the owner, 2026-10-27).
 - Chemical dose-bottle bunds have separate red/yellow rim caps above their black walls, with fitted corners, removing the overlapping faces that caused z-fighting.
 
 - Document mission filing rules and audit all 85 mission prompts: mostly completed missions now live under `done/`, with dated evidence and outstanding work retained in the prompt and TODO.

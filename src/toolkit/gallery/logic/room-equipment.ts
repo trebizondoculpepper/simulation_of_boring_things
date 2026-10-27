@@ -691,7 +691,11 @@ const CHEM_AT: Record<string, Record<string, At>> = {
     'chem-day:acid:pool_03': { x: 1.9, z: 1.2, face: 'west' },
   },
   plant_pool_04: {
-    'chem-day:hypochlorite:pool_04': { x: 0.95, z: -0.6, face: 'south' },
+    // In the south-west corner, backed onto the south wall, facing north
+    // (the owner, 2026-10-27): clear of the south door's swing (from x
+    // -1.3), leaving the way into the cabinet's lane along the west wall
+    // 1.1 m wide between its front and the cabinet's south end.
+    'chem-day:hypochlorite:pool_04': { x: -2.15, z: 2.15, face: 'north' },
     'chem-day:acid:pool_04': { x: 1.95, z: 1.75, face: 'north' },
   },
   wet_hall: {

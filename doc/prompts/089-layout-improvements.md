@@ -1,6 +1,6 @@
 # 089: Layout and equipment improvements, collected
 
-Status: collected 2026-10-27, each item's feasibility checked and the owner's answers recorded; not started. The first of two missions: the second, the wet hall's chemical distribution panels (WH-CP1) redesigned, is [091](091-chemical-distribution-panels.md). For each item: its feasibility checked against the code, the owner's follow-up answers recorded, then the work described.
+Status: collected 2026-10-27, each item's feasibility checked and the owner's answers recorded; in progress 2026-10-27, item by item in the order 1, 6, 5, 4, 3, 2 (each item's own status under it). The first of two missions: the second, the wet hall's chemical distribution panels (WH-CP1) redesigned, is [091](091-chemical-distribution-panels.md). For each item: its feasibility checked against the code, the owner's follow-up answers recorded, then the work described.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply, above all the enhanced network as the one source of truth, and `doc/room-layout-guide.md` for any move of plant in a room. Markdown is one paragraph per line.
 
@@ -15,6 +15,8 @@ Owner's answer (2026-10-27): the south-west corner, the bottle backed onto the s
 - Move it by editing its `CHEM_AT` entry (position and facing), not by drawing it elsewhere; the plumber and the day-tank plumbing reroute its fill and dosing tube.
 - Keep the lane behind the cabinet reachable (0.5 m clear), the south door's swing clear, and its back (fill socket and power lead) to the nearer wall.
 - Check: screenshots from the owner's view and the room's scoring/acceptance tests.
+
+Done (2026-10-27): `CHEM_AT.plant_pool_04` puts the bottle at x −2.15, z 2.15, facing north (its back 5 cm off the south and west walls); the way into the cabinet's lane is 1.1 m between the bottle's front and the cabinet's south end; its fill and dosing tube reroute from it. The room's logic tests (plumbing, clashes, fit) pass; checked by eye from the owner's view.
 
 ## 2. The dosing pump set's pumps, in the peristaltic pump's style
 
