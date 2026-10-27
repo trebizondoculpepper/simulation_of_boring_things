@@ -98,6 +98,8 @@ export function elbowPath(
   outer: number,
   inner: number,
 ): PathOp[] {
+  side = Math.max(0, Math.min(side, r.w));
+  arm = Math.max(0, Math.min(arm, r.h));
   const R = Math.max(0, Math.min(outer, side, r.h - arm, r.w));
   const ri = Math.max(0, Math.min(inner, r.w - side, r.h - arm));
   // Drawn for the north-west corner, in the rectangle's own frame.

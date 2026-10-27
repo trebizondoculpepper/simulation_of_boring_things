@@ -61,6 +61,7 @@ export type GalleryRoomId =
   | 'dev44'
   | 'dev45'
   | 'dev46'
+  | 'dev47'
   | 'retired0'
   | 'retired1'
   | 'dev_corridor';
@@ -249,6 +250,8 @@ export const ROOMS: readonly RoomId[] = [
   // starship bridge on the same geometry.
   'dev45',
   'dev46',
+  // By its URL only: touch panels, 2D controls on 3D surfaces (mission 093).
+  'dev47',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   'retired1',
@@ -410,6 +413,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev44: 'DEV44 · CHEMICAL HANDLING',
   dev45: 'DEV45 · CONTROL ROOM PROTOTYPE · LAIR',
   dev46: 'DEV46 · CONTROL ROOM PROTOTYPE · BRIDGE',
+  dev47: 'DEV47 · TOUCH PANELS (24TH CENTURY)',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   retired1: 'RETIRED1 · JACUZZI PLANT ROOM, 2026-10-25',
   dev_corridor: 'DEV CORRIDOR',
@@ -519,6 +523,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev44: '#c3a93a',
   dev45: '#a32a22',
   dev46: '#c890c8',
+  dev47: '#ff9933',
   retired0: '#6d7a6f',
   retired1: '#6d7a6f',
   dev_corridor: '#2d9ca0',

@@ -71,6 +71,7 @@ import {
   humanLadderZones,
 } from '../../components/architectural/views/human-ladder';
 import { knobDirection } from '../../controls/input/knob-turning';
+import { touchingAt } from '../../controls/input/touch-point';
 import {
   createPs1Material,
   ps1Uniforms,
@@ -116,7 +117,8 @@ export type ExhibitRoomId =
   | 'dev41'
   | 'dev42'
   | 'dev43'
-  | 'dev44';
+  | 'dev44'
+  | 'dev47';
 
 /** A room's own finish (`FINISH` in its module). */
 export interface RoomFinish {
@@ -187,6 +189,7 @@ const EXHIBITS: Record<
   dev42: () => import('./plant/booster-rig'),
   dev43: () => import('./plant/loading-gallery'),
   dev44: () => import('./plant/chemical-handling'),
+  dev47: () => import('./plant/touch-panels'),
 };
 
 /**
@@ -467,7 +470,17 @@ export function startEquipmentRoom(
           maxWidth: Math.max(1.6, exhibit.size.w),
         },
       );
-      if (layoutRoom) {
+      if (layoutRoom && exhibit.size.mount === 'wall') {
+        // A wall exhibit in a room's own layout, on any of its walls:
+        // under it on its own wall, facing the way it faces.
+        const out = 0.03 + exhibit.size.d;
+        caption.position.set(
+          place.x + Math.sin(place.yaw) * out,
+          Math.max(0.5, place.y - exhibit.size.h / 2 - 0.3),
+          place.z + Math.cos(place.yaw) * out,
+        );
+        caption.rotation.y = place.yaw;
+      } else if (layoutRoom) {
         // On the wall behind it, facing into the room, clear of what
         // rises from its top.
         const north = place.z < 0;
@@ -619,7 +632,9 @@ export function startEquipmentRoom(
         const work = exhibit.parts?.uses.get(o);
         if (work) {
           const at = o;
-          return () => work(knobDirection(at, hit.point, camera));
+          // A touch surface may ask where it was touched (`touch-point.ts`).
+          return () =>
+            touchingAt(hit, () => work(knobDirection(at, hit.point, camera)));
         }
       }
     }

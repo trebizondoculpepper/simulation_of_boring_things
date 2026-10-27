@@ -111,7 +111,13 @@ export class Elbow extends UiNode {
     super(options);
   }
   protected draw(ctx: CanvasRenderingContext2D, theme: Theme) {
-    const u = this.unit || this.rect.h / theme.proportions.elbowHeight;
+    // Its own size, unless its frame gave one: as big as fits its rectangle.
+    const u =
+      this.unit ||
+      Math.min(
+        this.rect.h / theme.proportions.elbowHeight,
+        this.rect.w / (theme.proportions.buttonWidth + 0.6),
+      );
     const side = this.side || u * theme.proportions.buttonWidth;
     const arm = this.arm || u * theme.proportions.arm;
     ctx.fillStyle = colourOf(theme, this.colour);
@@ -155,7 +161,11 @@ export class Bar extends UiNode {
     public colour = 'frame',
     public caps: Caps = 'none',
     public title = '',
-    readonly options: NodeOptions & { titleAlign?: 'left' | 'right' } = {},
+    readonly options: NodeOptions & {
+      titleAlign?: 'left' | 'right';
+      /** Which way the title's black block reaches out of the bar: down (a top bar's), or up (a bottom bar's). */
+      titleReach?: 'down' | 'up';
+    } = {},
   ) {
     super(options);
   }
@@ -179,13 +189,15 @@ export class Bar extends UiNode {
     const right = this.options.titleAlign !== 'left';
     const x = right ? r.x + r.w - w - r.h * 1.2 : r.x + r.h * 1.2;
     ctx.fillStyle = theme.background;
-    ctx.fillRect(x, r.y - 1, w, r.h * 1.5 + 1);
+    const up = this.options.titleReach === 'up';
+    const top = up ? r.y - r.h * 0.5 : r.y - 1;
+    ctx.fillRect(x, top, w, r.h * 1.5 + 1);
     text(
       ctx,
       theme,
       this.title,
       x + w / 2,
-      r.y + r.h * 1.38,
+      top + r.h * 1.38,
       px,
       'accent',
       'center',
@@ -212,6 +224,9 @@ export interface ButtonOptions extends NodeOptions {
   /** What its press does; its answer is the sound (null for none, nothing for a confirm). */
   onPress?: () => UiSound | null | void;
 }
+
+/** How much wider than high a rounded button is kept, at least. */
+export const MIN_PILL_ASPECT = 1.6;
 
 /** A block button (a pill by default): lit, pressed, disabled and flashing as asked. */
 export class Button extends UiNode {
@@ -280,8 +295,19 @@ export class Button extends UiNode {
         : colourOf(theme, 'dim');
     return colourOf(theme, this.lit ? this.litColour : this.colour);
   }
-  protected draw(ctx: CanvasRenderingContext2D, theme: Theme) {
+  /**
+   * The block it draws in its rectangle: a rounded button is kept at
+   * least `MIN_PILL_ASPECT` times as wide as it is high (a pill, never a
+   * disc), centred in a taller cell; a square one fills it.
+   */
+  shape(): Rect {
     const r = this.rect;
+    if (this.caps === 'none') return r;
+    const h = Math.min(r.h, r.w / MIN_PILL_ASPECT);
+    return rect(r.x, r.y + (r.h - h) / 2, r.w, h);
+  }
+  protected draw(ctx: CanvasRenderingContext2D, theme: Theme) {
+    const r = this.shape();
     if (r.w <= 0 || r.h <= 0) return;
     ctx.fillStyle = this.shownColour(theme);
     tracePath(ctx, pillPath(r, this.caps));
@@ -332,6 +358,13 @@ export class Button extends UiNode {
         'alphabetic',
         room,
       );
+  }
+}
+
+/** A block that shows a state as a button does (lit, flashing) but takes no presses: a lamp, an annunciator window. */
+export class Indicator extends Button {
+  get pressable() {
+    return false;
   }
 }
 
@@ -948,7 +981,9 @@ export class Frame extends UiNode {
     this.top = new Elbow('nw', colour, options.code ?? '');
     this.bottom = new Elbow('sw', colour);
     this.topBar = new Bar(colour, 'right', options.title ?? '');
-    this.bottomBar = new Bar(colour, 'right', options.footer ?? '');
+    this.bottomBar = new Bar(colour, 'right', options.footer ?? '', {
+      titleReach: 'up',
+    });
     this.filler = new Bar('tertiary', 'none');
     this.add(
       this.top,

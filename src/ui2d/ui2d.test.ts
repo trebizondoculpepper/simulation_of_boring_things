@@ -56,6 +56,21 @@ describe('the kit’s layout', () => {
     expect(nw).toContainEqual({ op: 'L', x: 210, y: 50 });
   });
 
+  it('keeps a rounded button a pill, never a disc, in a tall cell', () => {
+    const b = new Button({ label: 'X' });
+    b.layout(rect(0, 0, 80, 200), BLOCK_THEME);
+    expect(b.shape().h).toBe(50);
+    expect(b.shape().y).toBe(75);
+    const square = new Button({ caps: 'none' });
+    square.layout(rect(0, 0, 80, 200), BLOCK_THEME);
+    expect(square.shape().h).toBe(200);
+  });
+
+  it('keeps an elbow inside a rectangle narrower than its column', () => {
+    const ops = elbowPath(rect(0, 0, 50, 100), 'nw', 150, 30, 75, 36);
+    for (const p of ops) if ('x' in p) expect(p.x).toBeLessThanOrEqual(50);
+  });
+
   it('rounds a pill’s ends into half circles of half its height', () => {
     const ops = pillPath(rect(0, 0, 100, 40), 'both');
     const arcs = ops.filter((p) => p.op === 'A');

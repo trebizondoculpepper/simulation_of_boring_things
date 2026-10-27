@@ -39,9 +39,10 @@ The six Still Water Garden MP3s in `resources/sound/music/jacuzzi/` were supplie
 
 ## Fonts
 
-| Files                                                                                                            | Author and source                                                                                                     | Licence                                                        |
-| ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `src/toolkit/components/core/assets/fonts/PermanentMarker-Regular.ttf` (the handwriting on tape labels and tags) | Permanent Marker by Font Diner, from [Google Fonts](https://github.com/google/fonts/tree/main/apache/permanentmarker) | Apache License 2.0, in `PermanentMarker-LICENSE.txt` beside it |
+| Files                                                                                                            | Author and source                                                                                                                                                                                                                      | Licence                                                        |
+| ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `src/toolkit/components/core/assets/fonts/PermanentMarker-Regular.ttf` (the handwriting on tape labels and tags) | Permanent Marker by Font Diner, from [Google Fonts](https://github.com/google/fonts/tree/main/apache/permanentmarker)                                                                                                                  | Apache License 2.0, in `PermanentMarker-LICENSE.txt` beside it |
+| `src/toolkit/components/core/assets/fonts/Antonio-Variable.ttf` (the lettering on the touch panels, mission 093) | Antonio by Vernon Adams, Copyright 2013 The Antonio Project Authors (https://github.com/googlefonts/antonioFont), from [Google Fonts](https://github.com/google/fonts/tree/main/ofl/antonio) (`Antonio[wght].ttf`, renamed, unchanged) | SIL Open Font License 1.1, in `Antonio-OFL.txt` beside it      |
 
 ## Code
 

@@ -1,6 +1,6 @@
 # 093: A starship-bridge widget kit, for swimming pools
 
-Status: stage 1 under way (2026-10-27): the kit built as its own generic layer, `src/ui2d/` (the owner: separate and reusable, depending on nothing in the game; its API in its `README.md`), tested; next its 3D surface and a dev room of touch panels re-imagining the game's panels. Written 2026-10-27 from the owner's request. Feeds mission 092's bridge (dev46): its touch stations and its main viewscreen.
+Status: stage 1 under way (2026-10-27). Built: the kit as its own generic layer, `src/ui2d/` (the owner: separate and reusable, depending on nothing in the game; its API in its `README.md`), tested; the generic touch surface (`src/toolkit/components/industrial-control/{logic,views}/touch-surface.ts`): a black backing frame of any outline with ui2d screens set coplanar into it inside a bezel, uses routed to the tree at the touched pixel, bleeps on its sounds; dev47 (`?room=dev47`), touch panels of every shape. Next: the dev0 board, then the later stages below. Written 2026-10-27 from the owner's request.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first, `doc/design/control-interface-archetypes.md` (the starship bridge touch station) and mission 092. Markdown is one paragraph per line.
 
@@ -36,3 +36,9 @@ Not HTML in the scene: the browser cannot draw the DOM into a WebGL texture, and
 - The kit's logic tested (layout, hit-testing, page state); the dev0 board works by touch with bleeps; screenshots.
 - The viewscreen switches modes and shows live world state in dev46; screenshots of each mode.
 - `CREDITS.md` and `doc/reuse-inventory.md` record what came from which MIT library; nothing GPL or unlicensed used; no Star Trek names, logos or fonts.
+
+## The owner's refinements (2026-10-27, during stage 1)
+
+- **A separate layer:** "keep the 2D widget kit as a distinctly separate, generic user-interface components layer that could be lifted out and reused in another project." So `src/ui2d/`: no imports from Three.js, the game or the toolkit; a component tree that lays itself out in a pixel rectangle, paints to a canvas context, says when it needs painting, takes presses in its own pixels and answers with an action and a sound for the host to play; one theme among possible others. The game's side holds the adapters.
+- **Generic tools for 2D controls in 3D:** a touch surface: a black backing frame of any outline (rectangles, rounded rectangles, trapezia, raked console tops, concave outlines, curved strips), one or more ui2d screens inset in it with a bezel (4 mm a side by default, 0 allowed), coplanar with the frame and drawn over it by render order and polygon offset rather than nudged forward; a 3D hit mapped to the screen's pixel; its pure parts tested.
+- **The dev room's scope:** "I just want to see a variety of different controls on a variety of different shapes. It just doesn't matter if any of it makes any sense. The question is, can we lay out things? Can we lay out LCARS things in a 2D space in a 3D world?" So dev47 shows touch surfaces of many shapes with an assortment of widgets under pool-flavoured nonsense, answering every touch, bound to nothing. Re-imagining the game's real panels and mimics on touch screens (the pump panel, WH-CP1, a mimic, the annunciator, the changeover switch, the readings), each working on a trial state, is deferred, with the viewscreen's modes, to the later stages.
