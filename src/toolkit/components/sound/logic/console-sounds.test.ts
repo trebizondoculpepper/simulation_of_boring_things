@@ -70,12 +70,10 @@ describe('the bridge’s console sounds', () => {
     expect(pick(TOUCH_SOUNDS.deny)).toBe('lock_out');
   });
 
-  it('cues a display’s emblem and its coming on; the main viewscreen engines online', () => {
-    expect(bootCue('emblem', false)).toEqual(BOOT_SOUNDS.emblem);
-    expect(bootCue('on', false)).toEqual(BOOT_SOUNDS.running);
-    expect(bootCue('on', true)).toEqual(['engines_online']);
-    expect(bootCue('emblem', true)).toBeNull();
-    for (const phase of ['black', 'fade', 'draw'] as const) {
+  it('cues a display only as its interface starts up; the main viewscreen engines online', () => {
+    expect(bootCue('draw', false)).toEqual(BOOT_SOUNDS.drawIn);
+    expect(bootCue('draw', true)).toEqual(['engines_online']);
+    for (const phase of ['black', 'emblem', 'fade', 'on'] as const) {
       expect(bootCue(phase, false)).toBeNull();
       expect(bootCue(phase, true)).toBeNull();
     }
@@ -83,7 +81,7 @@ describe('the bridge’s console sounds', () => {
 
   it('keeps a room of booting displays from stacking its cues', () => {
     const gate = createCueGate();
-    // 25 displays' emblems within 2.5 s, each wanting one of two files.
+    // 25 displays' interfaces starting within 2.5 s, each wanting one of two files.
     const pick = createPicker(seeded(9));
     const random = seeded(4);
     const times = Array.from({ length: 25 }, () => random() * 2.5).sort(
@@ -91,7 +89,7 @@ describe('the bridge’s console sounds', () => {
     );
     const heard: { t: number; name: string }[] = [];
     for (const t of times) {
-      const name = pick(BOOT_SOUNDS.emblem);
+      const name = pick(BOOT_SOUNDS.drawIn);
       if (gate(name, t)) heard.push({ t, name });
     }
     expect(heard.length).toBeGreaterThan(2);

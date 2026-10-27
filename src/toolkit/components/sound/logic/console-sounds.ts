@@ -122,21 +122,20 @@ export const CHATTER_SOUNDS: readonly UsedSound[] = [
   'we_are_being_hailed',
 ];
 
-/** What a display's boot is heard to say: as the room's displays' power rises, and as each reaches a phase. */
+/**
+ * What a display's boot is heard to say: only as its interface starts up,
+ * drawing in after the emblem and the black (the owner, 2026-10-27: "the
+ * boot noises should play when the LCARS interface starts up, and not when
+ * the boot sequence starts"); the power rising and the emblem are silent.
+ */
 export const BOOT_SOUNDS = {
-  /** Once, from the main viewscreen, as the displays' power rises. */
-  powerUp: 'system_booting_up',
-  /** Each display's emblem appearing. */
-  emblem: ['now_online', 'processing'],
-  /** Each display operational. */
-  running: ['correct_entry', 'ack_trill'],
-  /** The main viewscreen operational. */
-  mainRunning: 'engines_online',
+  /** Each display's interface starting up. */
+  drawIn: ['now_online', 'processing', 'correct_entry', 'ack_trill'],
+  /** The main viewscreen's interface starting up. */
+  mainDrawIn: 'engines_online',
 } as const satisfies {
-  powerUp: UsedSound;
-  emblem: readonly UsedSound[];
-  running: readonly UsedSound[];
-  mainRunning: UsedSound;
+  drawIn: readonly UsedSound[];
+  mainDrawIn: UsedSound;
 };
 
 /**
@@ -157,15 +156,13 @@ export function createPicker(random: () => number) {
   };
 }
 
-/** The files a display's boot phase asks for (none for most): the main viewscreen's own on reaching RUNNING. */
+/** The files a display's boot phase asks for: only as its interface starts to draw in. */
 export function bootCue(
   phase: BootPhase,
   main: boolean,
 ): readonly UsedSound[] | null {
-  if (phase === 'emblem') return main ? null : BOOT_SOUNDS.emblem;
-  if (phase === 'on')
-    return main ? [BOOT_SOUNDS.mainRunning] : BOOT_SOUNDS.running;
-  return null;
+  if (phase !== 'draw') return null;
+  return main ? [BOOT_SOUNDS.mainDrawIn] : BOOT_SOUNDS.drawIn;
 }
 
 /** The gaps a room's boot cues keep, seconds: between any two, and between two of the same file. */

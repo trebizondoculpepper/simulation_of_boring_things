@@ -5,7 +5,6 @@ import { musicPlaylist } from '../../components/sound/audio/music-playlist';
 import { computed, effect, signal } from '@preact/signals-core';
 import { createChatter } from '../../components/sound/logic/console-chatter';
 import {
-  BOOT_SOUNDS,
   LEVELS,
   bootCue,
   createCueGate,
@@ -353,8 +352,6 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
         const up = on ? powerUp : 'instant';
         const ready = group.setPower(on, up);
         powerUp = ENTRANCE_BOOT;
-        // Booting (never an instant power-up): heard from the viewscreen.
-        if (up !== 'instant' && ready > 0) bootSounds.powerUp();
         if (on && onBooting) {
           onBooting(ready);
           onBooting = null;
@@ -620,10 +617,10 @@ function installChatter() {
 }
 
 /**
- * The displays heard booting (the owner, 2026-10-27): as their power
- * rises, the main viewscreen says it is booting up; each display's emblem
- * coming up, and each display coming on, a quiet cue from that display;
- * the main viewscreen coming on, engines online. Some 25 displays boot
+ * The displays heard booting (the owner, 2026-10-27): only as each one's
+ * interface starts up, drawing in after its emblem and black, a quiet cue
+ * from that display; the main viewscreen's, engines online. The power
+ * rising and the emblems are silent. Some 25 displays boot
  * within a few seconds, so the cues pass a gate (`createCueGate`): any
  * that would crowd another are dropped. An instant power-up (a reload, a
  * link) or a skip is silent.
@@ -631,10 +628,6 @@ function installChatter() {
 function installBootSounds(kit: PanelKit) {
   const object = new Group();
   object.name = 'Display boot sounds';
-  const vp = viewscreenPlace();
-  const viewscreen = new Object3D();
-  viewscreen.position.set(vp.x, vp.y, vp.z);
-  object.add(viewscreen);
   const pick = createPicker(Math.random);
   const gate = createCueGate();
   const now = () =>
@@ -650,10 +643,6 @@ function installBootSounds(kit: PanelKit) {
   return {
     object,
     uses: new Map<Object3D, () => void>(),
-    powerUp() {
-      gate(BOOT_SOUNDS.powerUp, now(), true);
-      playConsoleSound(BOOT_SOUNDS.powerUp, LEVELS.bootMain, viewscreen);
-    },
     update: () => {},
     onEvent: () => () => {},
     setAudible: () => {},
