@@ -54,11 +54,14 @@ import { livePagesFor } from './bridge-pages';
 import type { WorldAction } from '../../../game/world';
 import {
   commandNow,
+  confirmAt,
   lookup,
   outOfBand,
+  pressConfirm,
   refusal,
 } from '../logic/bridge-bindings';
 import type {
+  Armed,
   BridgeContext,
   CommandOf,
   PanelBinding,
@@ -118,11 +121,39 @@ export function createParodyPanel(
   /** Its refusal, shown across its top for a few seconds. */
   let notice = '';
   let noticeLeft = 0;
+  /** Its command awaiting confirmation, if any (`pressConfirm`); its buttons by label, relabelled CONFIRM while armed. */
+  let armed: Armed = null;
+  const confirmButtons = new Map<string, Button>();
+  const disarm = () => {
+    if (armed) confirmButtons.get(armed.label)?.setLabel(armed.label);
+    armed = null;
+  };
   /** A press of a wired item: done, or refused with its reason. */
-  const command = (cmd: CommandOf | undefined): UiSound | undefined => {
+  const command = (
+    cmd: CommandOf | undefined,
+    label = '',
+  ): UiSound | undefined => {
     const c = live?.context();
     if (!cmd || !c || !live) return 'deny';
     const now = commandNow(cmd, c);
+    if (now.kind === 'confirm') {
+      const r = pressConfirm(armed, label, seconds);
+      disarm();
+      if (!r.confirmed) {
+        // Asked to confirm: CONFIRM in its place, the question across the top.
+        armed = r.armed;
+        confirmButtons.get(label)?.setLabel('CONFIRM');
+        notice = now.prompt;
+        noticeLeft = armed ? armed.until - seconds : 0;
+        return 'confirm';
+      }
+      noticeLeft = 0;
+      for (const step of now.steps)
+        if (step.after > 0)
+          setTimeout(() => live.dispatch(step.action), step.after * 1000);
+        else live.dispatch(step.action);
+      return 'done';
+    }
     if (now.kind === 'act') {
       const action = now.act(c);
       if (action) live.dispatch(action);
@@ -204,12 +235,14 @@ export function createParodyPanel(
                 if (verb === 'lamp-test') lampTest = 2;
                 if (!B && verb === 'reset')
                   annunciators.forEach((a) => a.reset());
-                const answer = B ? command(cmd) : press(label);
+                const answer = B ? command(cmd, label) : press(label);
                 // Alarms accepted: heard as such, unless refused.
                 return accepting && answer !== 'deny' ? 'ack' : answer;
               },
             });
             if (lit) reads.push((c) => button.setLit(lit(c)));
+            if (typeof cmd === 'object' && cmd.kind === 'confirm')
+              confirmButtons.set(label, button);
             // ACCEPT ALARMS shown only while there is something to accept
             // (the owner, 2026-10-27), blank otherwise.
             if (label === 'ACCEPT ALARMS') acceptButtons.push(button);
@@ -561,6 +594,8 @@ export function createParodyPanel(
       // Wired: the world read a few times a second (it steps ten times a
       // second), its refusals shown across the top for a while.
       noticeLeft = Math.max(0, noticeLeft - delta);
+      // Unconfirmed in time: lapsed, its button as it was.
+      if (armed && !confirmAt(armed, seconds)) disarm();
       status.set(noticeLeft > 0 ? notice : '', noticeLeft > 0, 'warning');
       const c = live?.context();
       if (c && (seconds >= nextRead || lampTest > 0 || delta === 0)) {

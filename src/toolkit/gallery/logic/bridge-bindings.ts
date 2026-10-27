@@ -67,7 +67,44 @@ export type Command =
   /** Refused: the world has nothing behind it yet. */
   | { kind: 'unmodelled'; what: string }
   /** The board's own display: changes what it shows, nothing in the world. */
-  | { kind: 'view' };
+  | { kind: 'view' }
+  /**
+   * Asks to be confirmed (the owner, 2026-10-27): the first press arms it,
+   * the panel asking for a second within `CONFIRM_WINDOW` seconds, which
+   * carries out its steps, each `after` seconds from that press; unpressed,
+   * it lapses (`pressConfirm`).
+   */
+  | { kind: 'confirm'; prompt: string; steps: readonly ConfirmStep[] };
+
+/** One of a confirmed command's actions, `after` seconds from the confirming press. */
+export interface ConfirmStep {
+  after: number;
+  action: WorldAction;
+}
+
+/** Seconds a confirm-step command waits for its second press before it lapses. */
+export const CONFIRM_WINDOW = 5;
+
+/** A panel's confirm step: the command armed by its label, and until when (the panel's own seconds). */
+export type Armed = { label: string; until: number } | null;
+
+/**
+ * A press of a confirm-step command at `now`: the second press of the
+ * same one within its window confirms it; any other arms it afresh.
+ */
+export function pressConfirm(
+  armed: Armed,
+  label: string,
+  now: number,
+): { armed: Armed; confirmed: boolean } {
+  if (armed && armed.label === label && now <= armed.until)
+    return { armed: null, confirmed: true };
+  return { armed: { label, until: now + CONFIRM_WINDOW }, confirmed: false };
+}
+
+/** The confirm step at `now`: lapsed (null) once its window has passed. */
+export const confirmAt = (armed: Armed, now: number): Armed =>
+  armed && now > armed.until ? null : armed;
 
 /** A press's command, fixed or from the world as it is. */
 export type CommandOf = Command | ((c: BridgeContext) => Command);
@@ -575,6 +612,29 @@ const POOLS: readonly [PoolId, string][] = [
   ['pool_04', 'FOOTBATH'],
 ];
 
+/** Central Control's reboot of every bridge display (the owner, 2026-10-27). */
+export const REBOOT_DISPLAYS = 'REBOOT DISPLAYS';
+
+/** Seconds the bridge's displays stay off in a reboot before they are switched on again. */
+export const REBOOT_OFF_FOR = 1;
+
+/**
+ * REBOOT DISPLAYS, confirmed (the owner, 2026-10-27: "possible to reboot
+ * the bridge controls from one of the bridge controls"): the bridge's
+ * displays switched off in the world, every one black at once, and on
+ * again `REBOOT_OFF_FOR` seconds later, each booting on its own drawn
+ * durations, the main viewscreen last (`bridge-room.ts`). Its lights and
+ * theme are not touched: it is not the first view.
+ */
+export const REBOOT_COMMAND: Command = {
+  kind: 'confirm',
+  prompt: 'REBOOT ALL BRIDGE DISPLAYS? PRESS CONFIRM',
+  steps: [
+    { after: 0, action: { type: 'bridge/displays', on: false } },
+    { after: REBOOT_OFF_FOR, action: { type: 'bridge/displays', on: true } },
+  ],
+};
+
 /**
  * Central Control, the operator's console (mission 092's list, the
  * research's, as far as the model goes today): the time and whether open,
@@ -674,6 +734,7 @@ export const CENTRAL_CONTROL: ParodySpec = {
             labels: ['MAINS', 'GENERATOR', 'EMERGENCY LIGHTING ON BATTERY'],
           },
           { kind: 'gauges', items: ['BATTERY CHARGE'] },
+          { kind: 'buttons', labels: [REBOOT_DISPLAYS] },
         ],
         [
           {
@@ -797,6 +858,7 @@ function centralControl(): PanelBinding {
       'POOL EMERGENCY ALARM': unmodelled('a pool emergency alarm'),
       'STOP DOSING': unmodelled('a dosing stop'),
       'PA TO POOLSIDE': unmodelled('a public address system'),
+      [REBOOT_DISPLAYS]: REBOOT_COMMAND,
     },
   };
 }
