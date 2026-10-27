@@ -18,7 +18,7 @@ export interface ThemeCueIo {
 /**
  * Seconds of the theme played (the owner, 2026-10-27): the whole track is
  * 2:06.8; it plays from the start and its slow fade begins here, after a
- * minute, silent ten seconds later (the stop is the player's fade,
+ * minute, silent twelve seconds later (the stop is the player's fade,
  * `THEME_FADE`, never a cut).
  */
 export const THEME_LENGTH = 60;

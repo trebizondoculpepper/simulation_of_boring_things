@@ -703,7 +703,7 @@ function installAlarmBleep() {
  */
 /** Its fade as the walker leaves, and its slow fade at its own end (the owner, 2026-10-27). */
 const THEME_FADE = 3;
-const THEME_END_FADE = 10;
+const THEME_END_FADE = 12;
 const bridgeTheme = (() => {
   const owner = {};
   let fade = THEME_FADE;
@@ -738,8 +738,16 @@ const bridgeTheme = (() => {
         stop() {
           const t = context.currentTime;
           fader.gain.cancelScheduledValues(t);
-          fader.gain.setValueAtTime(fader.gain.value, t);
-          fader.gain.linearRampToValueAtTime(0, t + fade);
+          fader.gain.setValueAtTime(Math.max(fader.gain.value, 1e-3), t);
+          // Evenly in loudness, a steady fall in decibels to −60 dB,
+          // then silence: a straight ramp in gain stays loud for most of
+          // its length and drops away at the end, heard as a sudden stop
+          // (the owner, 2026-10-27).
+          fader.gain.exponentialRampToValueAtTime(
+            1e-3,
+            t + Math.max(fade, 0.05),
+          );
+          fader.gain.setValueAtTime(0, t + Math.max(fade, 0.05));
           window.setTimeout(
             () => inner.forEach((source) => source.stop()),
             fade * 1000 + 100,
