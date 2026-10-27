@@ -6,13 +6,19 @@ import { createAnnunciator } from '../../components/industrial-control/logic/ann
 import { markComponent } from '../../components/core/views/component-identity';
 import { ANNUNCIATOR_ALARMS } from '../logic/control-room-demo';
 import {
+  backWallScreenPlaces,
   bridgePanelPlaces,
   deskScreenPlaces,
   stationScreenPlaces,
   viewscreenPlace,
 } from '../logic/control-room-prototype';
-import { stationNamed } from '../logic/station-schematics';
-import { createStationSchematic } from '../views/station-schematics';
+import { STATION_DESIGNS, stationNamed } from '../logic/station-schematics';
+import type { Design } from '../logic/station-schematics';
+import {
+  createSchematicSurface,
+  createStationSchematic,
+  designScreen,
+} from '../views/station-schematics';
 import { createViewscreen } from '../views/bridge-viewscreen';
 import { BRIDGE_BINDINGS, bridgeSpec } from '../logic/bridge-bindings';
 import { plantReadingOf } from '../logic/world-reading';
@@ -110,6 +116,53 @@ function installConsoles(kit: PanelKit): Part[] {
       },
     ];
   });
+  // The back walls' displays, where the conference table looked out (the
+  // owner, 2026-10-27): each turning through its designs, set apart in
+  // time; drawn coarser than the desks' screens, being larger and seen
+  // from further off.
+  const back = backWallScreenPlaces();
+  const displays = back.map((place, i) => {
+    const designs: readonly Design[] =
+      'station' in place.show
+        ? STATION_DESIGNS[stationNamed(place.show.station)!]
+        : place.show.overviews.map((overview): Design => ({
+            kind: 'overview',
+            overview,
+          }));
+    const tree = designScreen(designs, {
+      mode: 'rotator',
+      title: place.title,
+      period: 24,
+      offset: (i * 24) / back.length,
+    });
+    const screen = createSchematicSurface(
+      kit,
+      tree,
+      `${place.title} display`,
+      place.size,
+      context,
+      place.h > 2 ? 200 : 320,
+    );
+    const holder = new Group();
+    holder.name = `${place.title} display (the bridge's back wall)`;
+    holder.position.set(place.x, place.y, place.z);
+    holder.rotation.set(0, place.yaw, 0);
+    holder.add(screen.object);
+    markComponent(holder, {
+      name: holder.name,
+      model: { node: 'operator-desk' },
+      status: () => screen.status?.(),
+    });
+    const parts = screen.parts!;
+    return {
+      object: holder,
+      uses: parts.uses,
+      update: (delta: number) => screen.update?.(delta),
+      onEvent: parts.onEvent,
+      setAudible: parts.setAudible,
+      dispose: () => parts.dispose(),
+    };
+  });
   // The main viewscreen, live, on the big wall (`viewscreenPlace`).
   const vp = viewscreenPlace();
   const screen = createViewscreen(kit, vp.size, context, shared);
@@ -123,6 +176,7 @@ function installConsoles(kit: PanelKit): Part[] {
   return [
     ...consoles,
     ...schematics,
+    ...displays,
     {
       object: screen.object as Group,
       uses: sp.uses,

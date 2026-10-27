@@ -34,6 +34,7 @@ import {
   cutLines,
 } from '../../components/general-safety/views/engraved-sign';
 import {
+  BRIDGE_FIN,
   CONFERENCE,
   CONTROL_ROOM,
   PLACEHOLDERS,
@@ -569,12 +570,12 @@ export function createControlRoomPrototype(
       const pz = a.z + (b.z - a.z) * s;
       const f = box(
         fin,
-        bridge ? 0.06 : 0.12,
+        bridge ? BRIDGE_FIN.w : 0.12,
         H,
-        bridge ? 0.04 : 0.35,
-        px + n.x * (bridge ? 0.02 : 0.17),
+        bridge ? BRIDGE_FIN.depth : 0.35,
+        px + n.x * (bridge ? BRIDGE_FIN.depth / 2 : 0.17),
         STOREY + H / 2,
-        pz + n.z * (bridge ? 0.02 : 0.17),
+        pz + n.z * (bridge ? BRIDGE_FIN.depth / 2 : 0.17),
         roomGroup,
       );
       f.rotation.y = -yaw;
@@ -692,38 +693,40 @@ export function createControlRoomPrototype(
     ] as const)
       box(steel, 0.04, 0.9, 0.04, x, STOREY + y + 0.45, z, stage);
   }
-  // The conference table, long and black, and its chairs.
-  const tbl = conferenceTable();
-  const table = decor(new Group(), 'Conference table');
-  stage.add(table);
-  const ty = STOREY + ph;
-  box(
-    bridge ? wood : lacquer,
-    tbl.maxX - tbl.minX,
-    0.06,
-    tbl.maxZ - tbl.minZ,
-    0,
-    ty + 0.74,
-    CONFERENCE.z,
-    table,
-  );
-  box(
-    trim,
-    tbl.maxX - tbl.minX + 0.01,
-    0.02,
-    tbl.maxZ - tbl.minZ + 0.01,
-    0,
-    ty + 0.71,
-    CONFERENCE.z,
-    table,
-  );
-  for (const x of [tbl.minX + 0.8, tbl.maxX - 0.8])
-    box(fin, 0.5, 0.7, 0.6, x, ty + 0.35, CONFERENCE.z, table);
-  const leather = bridge
-    ? paint('#8a7f72', 0.8, 0)
-    : paint('#2a1712', 0.45, 0.05);
-  for (const c of conferenceChairs())
-    table.add(chair(leather, c, ty, 'Chair', 'conference'));
+  // The lair's conference table, long and black, and its chairs. The
+  // bridge has none (the owner, 2026-10-27): its stage is open floor, with
+  // displays on its back walls, mounted by the bridge room.
+  if (!bridge) {
+    const tbl = conferenceTable();
+    const table = decor(new Group(), 'Conference table');
+    stage.add(table);
+    const ty = STOREY + ph;
+    box(
+      lacquer,
+      tbl.maxX - tbl.minX,
+      0.06,
+      tbl.maxZ - tbl.minZ,
+      0,
+      ty + 0.74,
+      CONFERENCE.z,
+      table,
+    );
+    box(
+      trim,
+      tbl.maxX - tbl.minX + 0.01,
+      0.02,
+      tbl.maxZ - tbl.minZ + 0.01,
+      0,
+      ty + 0.71,
+      CONFERENCE.z,
+      table,
+    );
+    for (const x of [tbl.minX + 0.8, tbl.maxX - 0.8])
+      box(fin, 0.5, 0.7, 0.6, x, ty + 0.35, CONFERENCE.z, table);
+    const leather = paint('#2a1712', 0.45, 0.05);
+    for (const c of conferenceChairs())
+      table.add(chair(leather, c, ty, 'Chair', 'conference'));
+  }
 
   // ------------------------------------------------------------- the desk
   const desk = decor(new Group(), 'Operator desk (placeholder)');

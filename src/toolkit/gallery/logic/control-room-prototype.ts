@@ -540,7 +540,13 @@ export function rampHeightAt(x: number, z: number): number | null {
   return STOREY + rise * PLATFORM.height;
 }
 
-/** The conference table on the platform, and its chairs, five a side. */
+/**
+ * The lair's conference table on the platform, and its chairs, five a
+ * side. The bridge has none (the owner, 2026-10-27: "get rid of the
+ * conference table and chairs and just ... have displays on the back
+ * wall"): its stage is open floor, its back walls' displays
+ * `backWallScreenPlaces`.
+ */
 export const CONFERENCE = { w: 5.0, d: 1.5, z: 6.3 } as const;
 
 export const conferenceTable = (): Footprint => ({
@@ -903,7 +909,7 @@ export function protoSolids(
     ...desk,
     ...(game ? [] : openingGuard()),
     ...platformRail(theme),
-    conferenceTable(),
+    ...(bridge ? [] : [conferenceTable()]),
     ...(bridge ? stationSolids() : []),
     ...(bridge ? chairSolids() : []),
     ...(bridge
@@ -980,7 +986,7 @@ export function cornerFillets() {
   });
 }
 
-/** The bridge's chairs' places: the operator's and those beside it, each station's, the conference table's. */
+/** The bridge's chairs' places: the operator's and those beside it, and each station's. */
 export function chairPlaces(): { x: number; z: number; r: number }[] {
   const c = chairPlace();
   return [
@@ -1444,6 +1450,21 @@ export const STATION_SCREEN = {
   behind: 0.06,
 } as const;
 
+/**
+ * The bridge's wall fins (the vertical joints between its wall panels,
+ * one every 2.4 m or so): `w` wide, standing `depth` out from the wall's
+ * face.
+ */
+export const BRIDGE_FIN = { w: 0.06, depth: 0.04 } as const;
+
+/**
+ * How far a screen hung on the bridge's walls stands off the wall, to the
+ * back of its body: 10 mm clear of the fins (the owner, 2026-10-27: the
+ * back walls' displays cut into them). A schematic surface's body is 20 mm
+ * deep, in front of its holder's origin.
+ */
+export const WALL_SCREEN_OFF = BRIDGE_FIN.depth + 0.01;
+
 /** A rear station's screen on the aft wall over its console. */
 export const REAR_SCREEN = { w: 1.7, h: 0.92, middle: 1.75 } as const;
 
@@ -1467,13 +1488,152 @@ export function stationScreenPlaces(): SchematicScreenPlace[] {
   });
   const rear = rearStationPlaces().map((r): SchematicScreenPlace => ({
     station: r.role,
-    // On the wall behind its console, a hair out from it.
-    x: r.x - r.n.x * (REAR_CONSOLE.out - 0.01),
+    // On the wall behind its console, clear of the wall's fins.
+    x: r.x - r.n.x * (REAR_CONSOLE.out - WALL_SCREEN_OFF),
     y: STOREY + PLATFORM.height + REAR_SCREEN.middle,
-    z: r.z - r.n.z * (REAR_CONSOLE.out - 0.01),
+    z: r.z - r.n.z * (REAR_CONSOLE.out - WALL_SCREEN_OFF),
     yaw: Math.atan2(r.n.x, r.n.z),
     tilt: 0,
     size: { w: REAR_SCREEN.w, h: REAR_SCREEN.h },
   }));
   return [...forward, ...rear];
+}
+
+/**
+ * The displays on the bridge's back walls (the owner, 2026-10-27: "get
+ * rid of the conference table and chairs and just ... have displays on
+ * the back wall"), on the two aft walls over the stage (sides 3 and 4):
+ * a large screen high on each, over the light strip's hood, and on each
+ * a screen at eye height either side of its rear stations, in the
+ * stretches they leave free. Each turns through its designs: a
+ * station's (`station-schematics.ts`) or hydrodynamic overviews by id
+ * (`schematic-overviews.ts`). `at` is metres along its wall from its
+ * start (side 3 from the east side corner to the back corner, side 4
+ * from the back corner west), `middle` its middle over the stage.
+ */
+export const BACK_WALL_SCREENS: readonly {
+  title: string;
+  side: 3 | 4;
+  at: number | 'middle';
+  middle: number;
+  w: number;
+  h: number;
+  /** A station's designs, or overviews by id. */
+  show: { station: string } | { overviews: readonly string[] };
+}[] = [
+  {
+    title: 'SITE STATUS',
+    side: 4,
+    at: 'middle',
+    middle: 4.4,
+    w: 4.8,
+    h: 2.6,
+    show: { station: 'CENTRAL CONTROL' },
+  },
+  {
+    title: 'THE WHOLE PLANT',
+    side: 3,
+    at: 'middle',
+    middle: 4.4,
+    w: 4.8,
+    h: 2.6,
+    show: { station: 'MAIN VIEWSCREEN' },
+  },
+  {
+    title: 'MAIN POOLS',
+    side: 4,
+    at: 2.95,
+    middle: 1.75,
+    w: 3.0,
+    h: 1.5,
+    show: { overviews: ['olympic', 'lounge'] },
+  },
+  {
+    title: 'SMALL POOLS',
+    side: 3,
+    at: -2.95,
+    middle: 1.75,
+    w: 3.0,
+    h: 1.5,
+    show: { overviews: ['jacuzzi', 'footbath'] },
+  },
+  {
+    title: 'HEAT AND GAS',
+    side: 4,
+    at: -2.65,
+    middle: 1.75,
+    w: 3.0,
+    h: 1.5,
+    show: { overviews: ['heating', 'gas'] },
+  },
+  {
+    title: 'AIR AND POWER',
+    side: 3,
+    at: 2.65,
+    middle: 1.75,
+    w: 3.0,
+    h: 1.5,
+    show: { overviews: ['air', 'power'] },
+  },
+];
+
+/** The back walls' displays placed: each one's middle `WALL_SCREEN_OFF` out from its wall, facing the room, and its stretch along the wall (metres from its start). */
+export function backWallScreenPlaces() {
+  const room = roomPolygon();
+  return BACK_WALL_SCREENS.map((s) => {
+    const [a, b] = sides(room)[s.side];
+    const len = Math.hypot(b.x - a.x, b.z - a.z);
+    const n = inward(a, b);
+    // A negative `at` counts back from the wall's end.
+    const at = s.at === 'middle' ? len / 2 : s.at < 0 ? len + s.at : s.at;
+    const t = at / len;
+    return {
+      ...s,
+      x: a.x + (b.x - a.x) * t + n.x * WALL_SCREEN_OFF,
+      y: STOREY + PLATFORM.height + s.middle,
+      z: a.z + (b.z - a.z) * t + n.z * WALL_SCREEN_OFF,
+      yaw: Math.atan2(n.x, n.z),
+      tilt: 0,
+      size: { w: s.w, h: s.h },
+      along: [at - s.w / 2, at + s.w / 2] as [number, number],
+    };
+  });
+}
+
+/**
+ * The east wall kept clear for a doorway (the owner, 2026-10-27: "I'll
+ * use the east door to open into a Star Trek style captain's ready room.
+ * That'll be a future change though. So reserve the east panel that
+ * doesn't have anything on it for a doorway in future"): the east side
+ * wall (side 2), between its corners' fillets, and `depth` metres of
+ * floor before it. Nothing is to be placed there: no panels, screens,
+ * stations or chairs. The door and the room are not built yet
+ * (`TODO.md`).
+ */
+export const READY_ROOM_RESERVE = { side: 2, depth: 1.5 } as const;
+
+/** The reserved east wall: its ends, the way into the room, and the stretch along it kept clear (metres from its start, inside the fillets). */
+export function readyRoomReserve() {
+  const [a, b] = sides(roomPolygon())[READY_ROOM_RESERVE.side];
+  const len = Math.hypot(b.x - a.x, b.z - a.z);
+  return {
+    a,
+    b,
+    n: inward(a, b),
+    along: [CORNER_FILLET, len - CORNER_FILLET] as [number, number],
+  };
+}
+
+/** Whether (x, z) is on the reserved east wall's stretch, within its `depth` of floor before it. */
+export function inReadyRoomReserve(x: number, z: number) {
+  const { a, b, n, along } = readyRoomReserve();
+  const len = Math.hypot(b.x - a.x, b.z - a.z);
+  const s = ((x - a.x) * (b.x - a.x) + (z - a.z) * (b.z - a.z)) / len;
+  const d = (x - a.x) * n.x + (z - a.z) * n.z;
+  return (
+    s >= along[0] &&
+    s <= along[1] &&
+    d >= -CONTROL_ROOM.wall &&
+    d <= READY_ROOM_RESERVE.depth
+  );
 }

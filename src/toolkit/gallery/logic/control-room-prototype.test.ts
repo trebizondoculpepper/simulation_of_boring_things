@@ -284,7 +284,7 @@ describe('walking the prototype', () => {
     expect(rail.some((s) => overlaps(s, half, edge - g, 0.05))).toBe(true);
   });
 
-  it('makes the stage at least 7 m deep and 10 m wide where the table stands, with room to walk round it', () => {
+  it('makes the lair’s stage at least 7 m deep and 10 m wide where its table stands, with room to walk round it', () => {
     const edge = edgeAt(0);
     const room2 = roomPolygon();
     expect(room2[4].z - edge).toBeGreaterThanOrEqual(7);
@@ -301,7 +301,7 @@ describe('walking the prototype', () => {
         expect(platformStepAt(c.x + dx, c.z + dz) > 0).toBe(true);
   });
 
-  it('puts the conference table on the platform, its chairs round it', () => {
+  it('puts the lair’s conference table on the platform, its chairs round it', () => {
     const t = conferenceTable();
     for (const x of [t.minX, t.maxX])
       for (const z of [t.minZ, t.maxZ]) {
@@ -444,7 +444,7 @@ describe('the bridge: ramps either side up to the stage', () => {
     expect(edgeAt(roomPolygon()[3].x)).toBeCloseTo(platformEdge());
     expect(edgeAt(-5)).toBeCloseTo(edgeAt(5));
     expect(edgeAt(5)).toBeGreaterThan(edgeAt(8));
-    // The conference table's chairs stand clear of it, on the stage.
+    // The lair's conference table's chairs stand clear of it, on the stage.
     for (const c of conferenceChairs())
       expect(platformStepAt(c.x, c.z)).toBe(PLATFORM.height);
   });
@@ -465,7 +465,7 @@ describe('the bridge: ramps either side up to the stage', () => {
 });
 
 describe('the bridge’s officers (mission 095)', () => {
-  it('stands the four rear stations on the stage, against its aft walls, clear of the conference chairs', () => {
+  it('stands the four rear stations on the stage, against its aft walls', () => {
     const rear = rearStationPlaces();
     expect(rear.map((r) => r.role)).toEqual([
       'WATER SCIENCE OFFICER',
@@ -487,8 +487,6 @@ describe('the bridge’s officers (mission 095)', () => {
         ),
         r.role,
       ).toBe(false);
-      for (const c of conferenceChairs())
-        expect(Math.hypot(c.x - stand.x, c.z - stand.z)).toBeGreaterThan(0.8);
     }
   });
 
@@ -617,9 +615,11 @@ describe('moving about the bridge (the owner, 2026-10-27: hard to get about)', (
     const c = chairPlace();
     expect(can(c.x, c.z + 0.9), 'the operator’s chair').toBe(true);
     // Up the steps and both ramps onto the stage, and to each rear station.
-    expect(can(0, CONFERENCE.z - CONFERENCE.d / 2 - 1.0), 'the stage').toBe(
-      true,
-    );
+    expect(can(0, edgeAt(0) + 0.6), 'the stage').toBe(true);
+    // Across the stage, open floor where the conference table stood.
+    expect(can(0, CONFERENCE.z), 'the stage’s middle').toBe(true);
+    expect(can(-4, CONFERENCE.z), 'the stage’s west').toBe(true);
+    expect(can(4, CONFERENCE.z), 'the stage’s east').toBe(true);
     for (const r of rearStationPlaces())
       expect(can(r.x + r.n.x * 0.9, r.z + r.n.z * 0.9), r.role).toBe(true);
   });
