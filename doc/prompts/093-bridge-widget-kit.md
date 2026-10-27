@@ -1,6 +1,6 @@
 # 093: A starship-bridge widget kit, for swimming pools
 
-Status: to do (written 2026-10-27 from the owner's request). Feeds mission 092's bridge (dev46): its touch stations and its main viewscreen.
+Status: stage 1 under way (2026-10-27): the kit built as its own generic layer, `src/ui2d/` (the owner: separate and reusable, depending on nothing in the game; its API in its `README.md`), tested; next its 3D surface and a dev room of touch panels re-imagining the game's panels. Written 2026-10-27 from the owner's request. Feeds mission 092's bridge (dev46): its touch stations and its main viewscreen.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first, `doc/design/control-interface-archetypes.md` (the starship bridge touch station) and mission 092. Markdown is one paragraph per line.
 
