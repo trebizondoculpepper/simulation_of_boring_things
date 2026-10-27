@@ -134,11 +134,28 @@ export function createDoseCellHead(
   let last: { o: Readout; b: DoseBottle } | null = null;
   let shown = '';
   let heard = false;
+  // What the display shows, from its inputs: checked before the dots are
+  // rasterised, so an unchanged display costs a string, not a 96 × 40
+  // frame and its 3,840-dot key, each frame (mission 094).
+  let inputs = '';
   const draw = () => {
     if (!last) return;
     const { o, b } = last;
-    const fr = dotFrame(GW, GH);
     const on = o.powered;
+    const wanted = on
+      ? [
+          page,
+          testing > 0,
+          page === 0
+            ? `${b.litres.toFixed(b.capacity < 100 ? 1 : 0)}|${Math.round(Math.max(0, Math.min(1, b.litres / b.capacity)) * 1000)}`
+            : page === 1
+              ? `${o.high}${o.low}${o.calling}`
+              : o.pumping,
+        ].join('|')
+      : 'off';
+    if (wanted === inputs) return;
+    inputs = wanted;
+    const fr = dotFrame(GW, GH);
     if (on) {
       const level = Math.max(0, Math.min(1, b.litres / b.capacity));
       fillBox(fr, 0, 0, GW, 9);

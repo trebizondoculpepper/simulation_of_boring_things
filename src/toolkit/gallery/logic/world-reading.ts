@@ -44,7 +44,31 @@ const PUMPS: Partial<Record<PoolId, readonly [IsolatorName, IsolatorName]>> = {
 /** Clean filters' pressure differences at design flow, bar. */
 const CLEAN_DP = [0.34, 0.36, 0.36, 0.31] as const;
 
-export function plantReadingOf(world: World, pool: PoolId = 'pool_02') {
+/**
+ * Readings already worked out, by world and pool. The world is immutable,
+ * so a reading holds until the world changes (ten times a second), and the
+ * dozen displays that read it each frame share one (mission 094).
+ */
+const readings = new WeakMap<World, Map<PoolId, PlantReading>>();
+
+export function plantReadingOf(
+  world: World,
+  pool: PoolId = 'pool_02',
+): PlantReading {
+  let byPool = readings.get(world);
+  if (!byPool) {
+    byPool = new Map();
+    readings.set(world, byPool);
+  }
+  let reading = byPool.get(pool);
+  if (!reading) {
+    reading = readPlant(world, pool);
+    byPool.set(pool, reading);
+  }
+  return reading;
+}
+
+function readPlant(world: World, pool: PoolId): PlantReading {
   const room = `plant_${pool}` as ServiceRoom;
   const water = world.pools[pool];
   // As its consumers see it: the utilities' outside devices too (prompt 083).

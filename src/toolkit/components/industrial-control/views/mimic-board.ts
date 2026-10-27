@@ -472,6 +472,14 @@ export function createMimicBoard(
     maker,
     size: 0.024,
   });
+  // Each lamp's colour as last set: a CSS colour is parsed only when it
+  // changes, not for every lamp every frame (mission 094).
+  const lit: string[] = [];
+  const light = (i: number, material: { color: Color }, colour: string) => {
+    if (lit[i] === colour) return;
+    lit[i] = colour;
+    material.color.set(colour);
+  };
   return {
     group,
     parts,
@@ -479,8 +487,10 @@ export function createMimicBoard(
     show(state) {
       clock += 1 / 60;
       test.value = clock < testUntil;
-      for (const indicator of symbolIndicators)
-        indicator.material.color.set(
+      symbolIndicators.forEach((indicator, i) =>
+        light(
+          i,
+          indicator.material,
           test.value
             ? LAMP_COLOURS.white
             : state.lamps[indicator.open]
@@ -488,11 +498,15 @@ export function createMimicBoard(
               : state.lamps[indicator.shut]
                 ? LAMP_COLOURS.red
                 : LAMP_COLOURS.amber,
-        );
-      for (const lamp of lamps)
-        lamp.material.color.set(
+        ),
+      );
+      lamps.forEach((lamp, i) =>
+        light(
+          symbolIndicators.length + i,
+          lamp.material,
           test.value || state.lamps[lamp.id] ? lamp.colour : '#3a3c3a',
-        );
+        ),
+      );
       if (leds) {
         // Real time, not the simulation's (prompt 066).
         const phase = chaserPhase(performance.now() / 1000);

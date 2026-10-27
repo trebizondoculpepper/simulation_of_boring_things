@@ -267,6 +267,8 @@ export function createDiaphragmPump(
   lcd.mesh.position.set(L.x, L.y + 0.003, front + 0.0058);
   lcd.mesh.userData.live = true;
   group.add(lcd.mesh);
+  let drawnDots: Uint8Array | null = null;
+  let drawnLines: ReturnType<typeof diaphragmDisplay> = null;
   const drawLcd = (
     lines: ReturnType<typeof diaphragmDisplay>,
     flash: boolean,
@@ -289,15 +291,25 @@ export function createDiaphragmPump(
     const h = c.canvas.height;
     const px = w / L.gw;
     const py = h / L.gh;
-    c.fillStyle = lines ? '#0a2142' : '#05070a';
-    c.fillRect(0, 0, w, h);
+    // Only the dots that changed are painted again (a stroke's marker is
+    // sixteen of them), each over its own square: the whole matrix only
+    // when it is switched on or off (mission 094).
+    const whole = !drawnDots || !lines !== !drawnLines;
+    if (whole) {
+      c.fillStyle = lines ? '#0a2142' : '#05070a';
+      c.fillRect(0, 0, w, h);
+    }
     for (let y = 0; y < L.gh; y++)
       for (let x = 0; x < L.gw; x++) {
         const lit = isLit(fr, x, y);
+        if (!whole && drawnDots![y * L.gw + x] === fr.dots[y * L.gw + x])
+          continue;
         if (!lit && !lines) continue;
         c.fillStyle = lit ? '#9fdcff' : '#10305a';
         c.fillRect(x * px, y * py, px - 1, py - 1);
       }
+    drawnDots = fr.dots;
+    drawnLines = lines;
     lcd.texture.needsUpdate = true;
   };
   // Its keys.

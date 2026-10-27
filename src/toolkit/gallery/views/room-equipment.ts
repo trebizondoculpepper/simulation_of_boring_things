@@ -114,6 +114,7 @@ import {
 } from '../../../game/plant/sewer-monitor';
 import { createCentralBattery } from '../../components/plant/views/electrical-switchgear';
 import { batteryMains } from '../../../game/world';
+import type { World } from '../../../game/world';
 import {
   LIGHTING_BOARD_WAYS,
   LIGHTING_ZONES,
@@ -1702,7 +1703,18 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
  */
 function worldBalanceTankPanel(kit: PanelKit): LiveExhibit {
   const store = roomWorld();
-  const view = () => olympicTankView(store.world.value);
+  // Worked out once per world step, not by each of its eight readings
+  // every frame (mission 094).
+  let seen: World | null = null;
+  let tank: ReturnType<typeof olympicTankView> | null = null;
+  const view = () => {
+    const w = store.world.value;
+    if (w !== seen || !tank) {
+      seen = w;
+      tank = olympicTankView(w);
+    }
+    return tank;
+  };
   const panel = createBalanceTankPanel(kit, {
     level: () => view().level,
     volume: () => volumeOf(view().level),

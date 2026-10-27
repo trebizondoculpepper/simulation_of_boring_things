@@ -249,8 +249,14 @@ export function createTeleprinter(title = 'OPERATOR ACTION LOG') {
     outputPile.add(fold);
     folds.push(fold);
   }
+  // The ribbon as last shaped: reshaped (its vertices and normals) only
+  // when the paper has moved, not every frame while it stands (mission 094).
+  let shaped = '';
   const shapeRibbon = (phase: number) => {
     const lower = outputPile.position.y + 0.48;
+    const key = `${phase}|${lower}`;
+    if (key === shaped) return;
+    shaped = key;
     const vertices = ribbonGeometry.getAttribute('position');
     for (let row = 0; row <= segments; row++) {
       const t = row / segments;

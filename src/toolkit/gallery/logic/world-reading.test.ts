@@ -5,6 +5,15 @@ import { plantReadingOf } from './world-reading';
 describe('the plant as the world has it', () => {
   const running = advance(newWorld(), 600, 10);
 
+  it('works out a reading once per world and pool (mission 094)', () => {
+    const world = newWorld();
+    const r = plantReadingOf(world, 'pool_02');
+    expect(plantReadingOf(world, 'pool_02')).toBe(r);
+    expect(plantReadingOf(world, 'pool_01')).not.toBe(r);
+    const later = advance(world, 0.1, 0.1);
+    expect(plantReadingOf(later, 'pool_02')).not.toBe(r);
+  });
+
   it('starts every pool with treatment running and no annunciator alarms', () => {
     const world = newWorld();
     for (const pool of ['pool_01', 'pool_02', 'pool_03', 'pool_04'] as const) {

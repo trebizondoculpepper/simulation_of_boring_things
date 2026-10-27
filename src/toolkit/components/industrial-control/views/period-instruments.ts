@@ -201,6 +201,11 @@ export function createCircularChartRecorder(
       const c = chart.context;
       const m = c.canvas.width / 2;
       const a = turned * Math.PI * 2 - Math.PI / 2;
+      // Ink is laid, and the chart uploaded, only once a pen has moved a
+      // pixel: a week's chart creeps a fraction of a pixel a frame, so
+      // drawing every frame uploaded 512 × 512 sixty times a second for
+      // the same picture (mission 094).
+      let inked = false;
       pens.forEach((colour, i) => {
         const r = (0.12 + values[i] * 0.83) * m * 0.95;
         const point: [number, number] = [
@@ -209,16 +214,18 @@ export function createCircularChartRecorder(
         ];
         const from = last[i];
         if (from) {
+          if (Math.hypot(point[0] - from[0], point[1] - from[1]) < 1) return;
           c.strokeStyle = colour;
           c.lineWidth = 3;
           c.beginPath();
           c.moveTo(...from);
           c.lineTo(...point);
           c.stroke();
+          inked = true;
         }
         last[i] = point;
       });
-      chart.texture.needsUpdate = true;
+      if (inked) chart.texture.needsUpdate = true;
     },
   };
 }
