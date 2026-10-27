@@ -121,4 +121,12 @@ describe('the bridge’s panels, wired to the world (mission 095)', () => {
     expect(viewscreenShows(2)).toBe('ALARMS');
     expect(viewscreenShows(0)).toBe('SCHEMATIC');
   });
+
+  it('warms the Olympic by half a degree from the bather welfare counsellor’s panel', () => {
+    const w = newWorld();
+    const after = press('BWC-01', 'OLYMPIC WARMER', w).world;
+    expect(after.pools.pool_02.setpoint).toBeCloseTo(
+      w.pools.pool_02.setpoint + 0.5,
+    );
+  });
 });

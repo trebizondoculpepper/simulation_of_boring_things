@@ -11,7 +11,9 @@ import {
 } from '../../../game/plant/changeover';
 import { CALL_POINTS, zoneInAlarm } from '../../../game/plant/fire-alarm';
 import type { FireZone } from '../../../game/plant/fire-alarm';
-import { CAPACITY, clock, isOpen } from '../../../game/bathers';
+import { CAPACITY, CLOSES, OPENS, clock, isOpen } from '../../../game/bathers';
+import { SETPOINT_RANGE } from '../../../game/world';
+import { WET_HALL_PLANT, pitFloats } from '../../../game/plant/wet-hall';
 import { HEALTHY } from '../../../game/health';
 import { STORE_CAPACITY } from '../../../game/plant/chemicals';
 import type { Chemical } from '../../../game/plant/chemicals';
@@ -866,6 +868,248 @@ function distributionPanel(): PanelBinding {
   };
 }
 
+/** CR-CP3: the chart recorders, as trends of the world's water and air. */
+function chartRecorders(): PanelBinding {
+  return {
+    code: 'CR-CP3',
+    model: { room: 'control_room', node: 'chart-recorders' },
+    trends: {
+      'POOL TEMPERATURES': (c) =>
+        share(c.world.pools.pool_02.temperature, 20, 40),
+      'CHLORINE AND PH': (c) => share(c.world.pools.pool_02.freeChlorine, 0, 4),
+      'HALL AIR · 7 DAYS': (c) => share(c.world.pools.pool_02.hallAir, 20, 40),
+    },
+  };
+}
+
+/** WH-T2: the backwash pit's pump panel in the wet hall (its selectors and duty local). */
+function pitPumps(): PanelBinding {
+  const AT = 'the pit pump panel in the wet hall';
+  const pit = (c: BridgeContext) => c.world.wetHall;
+  const floats = (c: BridgeContext) => pitFloats(pit(c).backwashTank);
+  const mode = (n: 0 | 1) => ({
+    value: (c: BridgeContext) =>
+      ['hand', 'off', 'auto'].indexOf(pit(c).pitPumps.modes[n]),
+    choose: () => local(AT),
+  });
+  const duty = (n: 0 | 1) =>
+    Object.assign(local(AT), {
+      lit: (c: BridgeContext) => pit(c).pitPumps.duty === n,
+    });
+  return {
+    code: 'WH-T2',
+    model: { room: 'wet_hall', node: 'holding' },
+    gauges: {
+      'PIT DEPTH': (c) =>
+        [
+          pit(c).backwashTank / WET_HALL_PLANT.backwashTank,
+          `${pit(c).backwashTank.toFixed(1)} m³`,
+        ] as const,
+    },
+    selectors: { 'P-601': mode(0), 'P-602': mode(1) },
+    buttons: { 'DUTY 1': duty(0), 'DUTY 2': duty(1) },
+    lamps: {
+      'P1 RUN': (c) => pit(c).pitPumps.running[0],
+      'P2 RUN': (c) => pit(c).pitPumps.running[1],
+      'HIGH LEVEL': (c) => floats(c).high,
+      'HI-HI': (c) => floats(c).highHigh,
+    },
+  };
+}
+
+/** LB-CAB1: the delivery fill cabinet on the loading bay: the stores it fills. */
+function fillCabinet(): PanelBinding {
+  const store = (chemical: Chemical) => (c: BridgeContext) =>
+    [
+      c.world.chemicals[chemical] / STORE_CAPACITY[chemical],
+      `${Math.round(c.world.chemicals[chemical])} l`,
+    ] as const;
+  return {
+    code: 'LB-CAB1',
+    model: { room: 'loading_bay', node: 'fill' },
+    banners: { 'COUPLE 2" HYPO · 1½" ACID': () => false },
+    gauges: { 'HYPO TANK': store('hypochlorite'), 'ACID IBC': store('acid') },
+    lamps: {
+      'TANK FULL ALARM': (c) =>
+        c.world.chemicals.hypochlorite >= STORE_CAPACITY.hypochlorite * 0.98 ||
+        c.world.chemicals.acid >= STORE_CAPACITY.acid * 0.98,
+      // Deliveries are not yet modelled as a filling: dark.
+      FILLING: null,
+      'DOOR UNLOCKED': null,
+    },
+    buttons: {
+      'HORN SILENCE': unmodelled('the fill cabinet’s horn'),
+      'LAMP TEST': VIEW,
+    },
+  };
+}
+
+/** The assistant duty manager's panel, at the command chair on the right: bathers and opening. */
+export const ASSISTANT_DUTY_MANAGER: ParodySpec = {
+  original: 'RECEPTION’S COUNT OF BATHERS AND THE OPENING HOURS',
+  title: 'ASSISTANT DUTY MANAGER',
+  code: 'ADM-01',
+  colour: 'lilac',
+  size: { w: 1.1, h: 0.62 },
+  pages: [
+    {
+      name: 'BATHERS',
+      columns: [
+        [{ kind: 'gauges', items: POOLS.map(([, n]) => `${n} BATHERS`) }],
+      ],
+    },
+    {
+      name: 'AWAY',
+      columns: [
+        [{ kind: 'list', rows: POOLS.map(([, n]) => `${n} TURNED AWAY`) }],
+      ],
+    },
+    {
+      name: 'HOURS',
+      columns: [
+        [
+          {
+            kind: 'readouts',
+            items: [
+              ['TIME', '', 0, 0],
+              ['OPENS', '', 0, 0],
+              ['CLOSES', '', 0, 0],
+            ],
+          },
+          { kind: 'lamps', labels: ['CENTRE OPEN'] },
+        ],
+      ],
+    },
+  ],
+};
+
+/** The bather welfare counsellor's panel, at the command chair on the left: warmth and comfort. */
+export const BATHER_WELFARE: ParodySpec = {
+  original: 'THE POOLS’ THERMOSTATS AND THE HALLS’ AIR',
+  title: 'BATHER WELFARE COUNSELLOR',
+  code: 'BWC-01',
+  colour: 'anakiwa',
+  size: { w: 1.1, h: 0.62 },
+  pages: [
+    {
+      name: 'WATER',
+      columns: [
+        [
+          {
+            kind: 'readouts',
+            items: POOLS.map(([, n]) => [`${n} WATER`, '°C', 0, 0] as const),
+          },
+        ],
+      ],
+    },
+    {
+      name: 'SET',
+      columns: [
+        [
+          {
+            kind: 'readouts',
+            items: [
+              ['LOUNGE SET', '°C', 0, 0],
+              ['OLYMPIC SET', '°C', 0, 0],
+            ],
+          },
+          { kind: 'buttons', labels: ['LOUNGE WARMER', 'LOUNGE COOLER'] },
+          { kind: 'buttons', labels: ['OLYMPIC WARMER', 'OLYMPIC COOLER'] },
+        ],
+      ],
+    },
+    {
+      name: 'AIR',
+      columns: [
+        [
+          {
+            kind: 'readouts',
+            items: POOLS.map(([, n]) => [`${n} HALL AIR`, '°C', 0, 0] as const),
+          },
+        ],
+      ],
+    },
+    {
+      name: 'HUMIDITY',
+      columns: [
+        [
+          {
+            kind: 'readouts',
+            items: POOLS.map(
+              ([, n]) => [`${n} HUMIDITY`, '%RH', 0, 0] as const,
+            ),
+          },
+        ],
+      ],
+    },
+  ],
+};
+
+function assistantDutyManager(): PanelBinding {
+  const hhmm = (h: number) => `${String(h).padStart(2, '0')}:00`;
+  return {
+    code: 'ADM-01',
+    model: { room: 'control_room', node: 'operator-desk' },
+    gauges: Object.fromEntries(
+      POOLS.map(([pool, n]) => [
+        `${n} BATHERS`,
+        (c: BridgeContext) => {
+          const now = c.world.bathers.pools[pool].now;
+          return [now / CAPACITY[pool], `${now} / ${CAPACITY[pool]}`] as const;
+        },
+      ]),
+    ),
+    rows: Object.fromEntries(
+      POOLS.map(([pool, n]) => [
+        `${n} TURNED AWAY`,
+        (c: BridgeContext) => String(c.world.bathers.pools[pool].turnedAway),
+      ]),
+    ),
+    readouts: {
+      TIME: (c) => {
+        const { hour } = clock(c.world.time);
+        const h = Math.floor(hour);
+        const m = Math.floor((hour - h) * 60);
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      },
+      OPENS: () => hhmm(OPENS),
+      CLOSES: () => hhmm(CLOSES),
+    },
+    lamps: { 'CENTRE OPEN': (c) => isOpen(c.world.time) },
+  };
+}
+
+function batherWelfare(): PanelBinding {
+  const readouts: Record<string, Read<number>> = {};
+  for (const [pool, n] of POOLS) {
+    readouts[`${n} WATER`] = (c) => c.world.pools[pool].temperature;
+    readouts[`${n} SET`] = (c) => c.world.pools[pool].setpoint;
+    readouts[`${n} HALL AIR`] = (c) => c.world.pools[pool].hallAir;
+    readouts[`${n} HUMIDITY`] = (c) => c.world.pools[pool].hallRh;
+  }
+  // The pools' thermostats (`pool/setpoint`), half a degree a press, in range.
+  const nudge = (pool: PoolId, by: number): Command =>
+    act((c) => ({
+      type: 'pool/setpoint',
+      pool,
+      celsius: Math.min(
+        SETPOINT_RANGE.max,
+        Math.max(SETPOINT_RANGE.min, c.world.pools[pool].setpoint + by),
+      ),
+    }));
+  return {
+    code: 'BWC-01',
+    model: { room: 'control_room', node: 'operator-desk' },
+    readouts,
+    buttons: {
+      'LOUNGE WARMER': nudge('pool_01', 0.5),
+      'LOUNGE COOLER': nudge('pool_01', -0.5),
+      'OLYMPIC WARMER': nudge('pool_02', 0.5),
+      'OLYMPIC COOLER': nudge('pool_02', -0.5),
+    },
+  };
+}
+
 /** The bridge's wired panels, by their specs' codes. */
 export const BRIDGE_BINDINGS: Readonly<Record<string, PanelBinding>> =
   Object.fromEntries(
@@ -880,12 +1124,19 @@ export const BRIDGE_BINDINGS: Readonly<Record<string, PanelBinding>> =
       annunciator(),
       centralControl(),
       distributionPanel(),
+      chartRecorders(),
+      pitPumps(),
+      fillCabinet(),
+      assistantDutyManager(),
+      batherWelfare(),
     ].map((b) => [b.code, b]),
   );
 
 /** A wired panel's spec, by its code: dev48's, or Central Control's. */
 export function bridgeSpec(code: string): ParodySpec {
   if (code === CENTRAL_CONTROL.code) return CENTRAL_CONTROL;
+  if (code === ASSISTANT_DUTY_MANAGER.code) return ASSISTANT_DUTY_MANAGER;
+  if (code === BATHER_WELFARE.code) return BATHER_WELFARE;
   const spec = PARODY_SPECS.find((s) => s.code === code);
   if (!spec) throw new Error(`No reimagined panel ${code}`);
   return spec;

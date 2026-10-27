@@ -803,6 +803,11 @@ export function protoSolids(
     ...platformRail(theme),
     conferenceTable(),
     ...(theme === 'bridge' ? stationSolids() : []),
+    ...(theme === 'bridge' && y >= STOREY + PLATFORM.height - 0.3
+      ? rearStationPlaces().flatMap((r) =>
+          bandAlong(r.corners[0], r.corners[1], REAR_CONSOLE.d, 0.25),
+        )
+      : []),
   ];
 }
 
@@ -844,13 +849,88 @@ export const ringLightCentre = () => chairPlace();
  * facing the big wall. Placeholders: no touch controls or sounds yet.
  */
 export const STATIONS = [
-  'CIRCULATION & FILTRATION',
-  'CHEMICAL DOSING',
-  'HEATING',
-  'AIR HANDLING',
-  'POWER',
-  'BUILDING',
+  'FLOW NAVIGATOR',
+  'DISINFECTION TACTICAL',
+  'BOILER HELMSMAN',
+  'LIFE SUPPORT OFFICER',
+  'CHIEF ELECTRICAL ENGINEER',
+  'SECURITY CHIEF',
 ] as const;
+
+/**
+ * The bridge's officers (the owner, 2026-10-27, mission 095): each
+ * station a parody officer's, its nameplate the role and its duty. The
+ * forward six round the desk; the command chairs at the desk (the duty
+ * manager's in the middle at Central Control, the assistant duty
+ * manager's at its right, the bather welfare counsellor's at its left);
+ * the rear four along the aft walls on the stage.
+ */
+export const DUTIES: Record<string, string> = {
+  'FLOW NAVIGATOR': 'CIRCULATION AND FILTRATION',
+  'DISINFECTION TACTICAL': 'DOSING AND DISINFECTION',
+  'BOILER HELMSMAN': 'GAS AND BOILERS',
+  'LIFE SUPPORT OFFICER': 'AIR HANDLING',
+  'CHIEF ELECTRICAL ENGINEER': 'POWER AND LIGHTING',
+  'SECURITY CHIEF': 'DOORS, CCTV, FIRE AND GAS',
+  'THE DUTY MANAGER': 'CENTRAL CONTROL',
+  'THE ASSISTANT DUTY MANAGER': 'BATHERS AND OPENING',
+  'THE BATHER WELFARE COUNSELLOR': 'WARMTH AND COMFORT',
+  'WATER SCIENCE OFFICER': 'READINGS AND TRENDS',
+  'DRAINAGE OFFICER': 'BACKWASH AND DRAINAGE',
+  'LOADING BAY CHIEF': 'DELIVERIES AND THE DOCK',
+  'OPERATIONS OFFICER': 'CHEMICAL STOCKS',
+};
+
+/** The rear stations, along the aft walls on the stage: their side, and where along it (a share). */
+export const REAR_STATIONS = [
+  { role: 'WATER SCIENCE OFFICER', side: 4, at: 0.3, panel: 'CR-CP3' },
+  { role: 'DRAINAGE OFFICER', side: 4, at: 0.68, panel: 'WH-T2' },
+  { role: 'LOADING BAY CHIEF', side: 3, at: 0.32, panel: 'LB-CAB1' },
+  { role: 'OPERATIONS OFFICER', side: 3, at: 0.7, panel: 'WH-CP1' },
+] as const;
+
+/** A rear station's console: standing height, its top sloping up to the wall. */
+export const REAR_CONSOLE = {
+  w: 2.0,
+  d: 0.7,
+  low: 0.95,
+  high: 1.2,
+  /** Its middle's distance out from the wall. */
+  out: 0.45,
+} as const;
+
+/** Each rear station's console: its middle, its operator's way (facing the wall), its corners. */
+export function rearStationPlaces() {
+  const room = roomPolygon();
+  return REAR_STATIONS.map((r) => {
+    const [a, b] = sides(room)[r.side];
+    const n = inward(a, b);
+    const u = { x: b.x - a.x, z: b.z - a.z };
+    const len = Math.hypot(u.x, u.z);
+    const ux = u.x / len;
+    const uz = u.z / len;
+    const x = a.x + u.x * r.at + n.x * REAR_CONSOLE.out;
+    const z = a.z + u.z * r.at + n.z * REAR_CONSOLE.out;
+    const { w, d } = REAR_CONSOLE;
+    const at = (s: number, t: number): Point => ({
+      x: x + (ux * s * w) / 2 + (n.x * t * d) / 2,
+      z: z + (uz * s * w) / 2 + (n.z * t * d) / 2,
+    });
+    return {
+      ...r,
+      x,
+      z,
+      /** The way out from the wall, into the room: where its operator stands. */
+      n,
+      corners: [at(-1, -1), at(1, -1), at(1, 1), at(-1, 1)] as [
+        Point,
+        Point,
+        Point,
+        Point,
+      ],
+    };
+  });
+}
 
 export const STATION = {
   /** Its width and depth on plan. */
@@ -925,17 +1005,21 @@ export interface PanelPlace {
  * chemical distribution's on the front walls, at eye height.
  */
 export const STATION_PANELS: Record<(typeof STATIONS)[number], string> = {
-  'CIRCULATION & FILTRATION': 'PL2-CP1',
-  'CHEMICAL DOSING': 'PL2-CP2',
-  HEATING: 'CR-MP2',
-  'AIR HANDLING': 'CR-MP3',
-  POWER: 'SR-IS3',
-  BUILDING: 'CR-CP6',
+  'FLOW NAVIGATOR': 'PL2-CP1',
+  'DISINFECTION TACTICAL': 'PL2-CP2',
+  'BOILER HELMSMAN': 'CR-MP2',
+  'LIFE SUPPORT OFFICER': 'CR-MP3',
+  'CHIEF ELECTRICAL ENGINEER': 'SR-IS3',
+  'SECURITY CHIEF': 'CR-CP6',
 };
 export const WALL_PANELS: readonly { code: string; side: number }[] = [
   { code: 'CR-MP1', side: 1 },
   { code: 'CR-CP2', side: 6 },
-  { code: 'WH-CP1', side: 2 },
+];
+/** The command chairs' panels on the desk: the assistant duty manager's at the right (east), the counsellor's at the left. */
+export const DESK_PANELS: readonly { code: string; side: number }[] = [
+  { code: 'ADM-01', side: 1 },
+  { code: 'BWC-01', side: 6 },
 ];
 
 export function bridgePanelPlaces(): PanelPlace[] {
@@ -951,11 +1035,42 @@ export function bridgePanelPlaces(): PanelPlace[] {
   }));
   // Central Control on the desk's front segment, between its upstand and
   // the operator's edge (its top 0.9 m high there, 0.76 at the edge).
-  const front = deskSegments().find((s) => s.side === 0)!;
   const lerp = (p: Point, q: Point, t: number) => ({
     x: p.x + (q.x - p.x) * t,
     z: p.z + (q.z - p.z) * t,
   });
+  const onDesk = (side: number, code: string): PanelPlace => {
+    const seg = deskSegments().find((s) => s.side === side)!;
+    const u0 = lerp(
+      lerp(seg.outer[0], seg.outer[1], 0.5),
+      lerp(seg.inner[0], seg.inner[1], 0.5),
+      0.3,
+    );
+    const q0 = lerp(seg.inner[0], seg.inner[1], 0.5);
+    const dep = Math.hypot(q0.x - u0.x, q0.z - u0.z);
+    // Its top's length halfway between the upstand and the operator's edge.
+    const len =
+      (Math.hypot(
+        seg.inner[1].x - seg.inner[0].x,
+        seg.inner[1].z - seg.inner[0].z,
+      ) +
+        Math.hypot(
+          seg.outer[1].x - seg.outer[0].x,
+          seg.outer[1].z - seg.outer[0].z,
+        )) /
+      2;
+    return {
+      code,
+      x: (u0.x + q0.x) / 2,
+      y: STOREY + (0.9 + 0.76) / 2 + 0.014,
+      z: (u0.z + q0.z) / 2,
+      // Facing its operator, inward from the segment.
+      yaw: Math.atan2(q0.x - u0.x, q0.z - u0.z),
+      tilt: Math.PI / 2 - Math.atan2(0.9 - 0.76, dep),
+      fit: { w: len - 0.25, h: dep - 0.06 },
+    };
+  };
+  const front = deskSegments().find((s) => s.side === 0)!;
   const u = lerp(
     lerp(front.outer[0], front.outer[1], 0.5),
     lerp(front.inner[0], front.inner[1], 0.5),
@@ -991,7 +1106,28 @@ export function bridgePanelPlaces(): PanelPlace[] {
       fit: { w: 3.2, h: 1.9 },
     };
   });
-  return [...stations, central, ...walls];
+  const desk = DESK_PANELS.map((p) => onDesk(p.side, p.code));
+  const rear = rearStationPlaces().map((r): PanelPlace => {
+    const slope = Math.atan2(
+      REAR_CONSOLE.high - REAR_CONSOLE.low,
+      REAR_CONSOLE.d,
+    );
+    return {
+      code: r.panel,
+      x: r.x,
+      y:
+        STOREY +
+        PLATFORM.height +
+        (REAR_CONSOLE.low + REAR_CONSOLE.high) / 2 +
+        0.012,
+      z: r.z,
+      // Facing its operator, out from the wall.
+      yaw: Math.atan2(r.n.x, r.n.z),
+      tilt: Math.PI / 2 - slope,
+      fit: { w: REAR_CONSOLE.w - 0.1, h: REAR_CONSOLE.d - 0.06 },
+    };
+  });
+  return [...stations, central, ...desk, ...walls, ...rear];
 }
 
 /** The bridge's main viewscreen on the big wall: its middle, facing the room, and its glass. */

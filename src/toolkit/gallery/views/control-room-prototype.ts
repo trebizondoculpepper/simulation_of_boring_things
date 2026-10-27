@@ -45,6 +45,9 @@ import {
   STOREY,
   bridgeDoor,
   chairPlace,
+  DUTIES,
+  REAR_CONSOLE,
+  rearStationPlaces,
   edgeAt,
   horseshoePoints,
   rampHeightAt,
@@ -776,8 +779,9 @@ export function createControlRoomPrototype(
         const inner = at(Q0, Q1, u);
         return [at(outer, inner, v), y0 + 0.9 + (0.76 - 0.9) * v];
       };
-      // In the game, the front segment's top is Central Control's.
-      if (!(game && s.side === 0))
+      // In the game, the front segment's top is Central Control's, the
+      // two beside it the command chairs' panels.
+      if (!(game && (s.side === 0 || s.side === 1 || s.side === 6)))
         desk.add(
           inset(
             [tp(u0, 0.15), tp(u1, 0.15), tp(u1, 0.6), tp(u0, 0.6)],
@@ -834,6 +838,28 @@ export function createControlRoomPrototype(
         ),
       );
   if (bridge) stations();
+  if (bridge) rearStations();
+  // The command chairs' plaques, in the desk's edge before each (mission 095).
+  if (bridge)
+    for (const [side, role] of [
+      [0, 'THE DUTY MANAGER'],
+      [1, 'THE ASSISTANT DUTY MANAGER'],
+      [6, 'THE BATHER WELFARE COUNSELLOR'],
+    ] as const) {
+      const seg = deskSegments().find((x) => x.side === side)!;
+      const q = lerp2(seg.inner[0], seg.inner[1], 0.5);
+      const o = lerp2(seg.outer[0], seg.outer[1], 0.5);
+      const len = Math.hypot(q.x - o.x, q.z - o.z);
+      const n = { x: (q.x - o.x) / len, z: (q.z - o.z) / len };
+      desk.add(
+        plaque(
+          role,
+          { x: q.x + n.x * 0.004, z: q.z + n.z * 0.004 },
+          STOREY + 0.73,
+          Math.atan2(n.x, n.z),
+        ),
+      );
+    }
 
   // ------------------------------------------------------ the ring light
   // The lair's alone: a ring of photo-flood lamps on a dark steel hoop,
@@ -967,7 +993,8 @@ export function createControlRoomPrototype(
         : y1 + 0.4;
     label.position.set(mid.x + n.x * 0.04, ly, mid.z + n.z * 0.04);
     label.rotation.y = Math.atan2(n.x, n.z);
-    holder.add(label);
+    // In the game the viewscreen is live: no placeholder's label.
+    if (!game) holder.add(label);
   }
   // A low warm wash from the coffers, over the whole floor and the
   // stage: dim in the lair, where the desk's pool and the displays are
@@ -1361,6 +1388,67 @@ export function createControlRoomPrototype(
         stage,
       );
   }
+  /** A point `t` of the way from p to q. */
+  function lerp2(p: Point, q: Point, t: number): Point {
+    return { x: p.x + (q.x - p.x) * t, z: p.z + (q.z - p.z) * t };
+  }
+  /**
+   * An officer's plaque (the owner, 2026-10-27): a small engraved plate,
+   * 200 × 36 mm, its role and, smaller, its duty, set into a desk's front
+   * edge facing `yaw` (its face's +z).
+   */
+  function plaque(role: string, at: Point, y: number, yaw: number) {
+    const p = createEngravedSign(
+      kit,
+      0.2,
+      0.036,
+      cutLines([
+        { text: role, size: 0.42, y: 0.36, bold: true },
+        {
+          text: (DUTIES[role] ?? '').replace(/ AND /g, ' · '),
+          size: 0.26,
+          y: 0.74,
+        },
+      ]),
+    );
+    p.position.set(at.x, y, at.z);
+    p.rotation.y = yaw;
+    p.name = `${role} plaque`;
+    return p;
+  }
+  /** The rear stations along the aft walls on the stage (mission 095): standing consoles, their tops sloping up to the wall, a nameplate over each. */
+  function rearStations() {
+    const y0 = STOREY + PLATFORM.height;
+    for (const r of rearStationPlaces()) {
+      const g = decor(new Group(), `${r.role} station`);
+      stage.add(g);
+      const [a, b, c2, d] = r.corners;
+      // Its operator's edge low, its wall edge high.
+      g.add(
+        hexa(
+          [c2, d, a, b],
+          [y0, y0, y0, y0],
+          [
+            y0 + REAR_CONSOLE.low,
+            y0 + REAR_CONSOLE.low,
+            y0 + REAR_CONSOLE.high,
+            y0 + REAR_CONSOLE.high,
+          ],
+          lacquer,
+        ),
+      );
+      // Its officer's plaque, small, set into its front edge.
+      const front = lerp2(c2, d, 0.5);
+      g.add(
+        plaque(
+          r.role,
+          { x: front.x + r.n.x * 0.004, z: front.z + r.n.z * 0.004 },
+          y0 + REAR_CONSOLE.low - 0.04,
+          Math.atan2(r.n.x, r.n.z),
+        ),
+      );
+    }
+  }
   /** The bridge's operator stations, one per pool system. */
   function stations() {
     const black = lacquer;
@@ -1412,12 +1500,18 @@ export function createControlRoomPrototype(
           k++;
         }
       }
-      // Its label, standing at its far edge, facing the operator.
-      const label = sign(1.6, 0.3, [st.system]);
-      const mid = lerp(c2, d, 0.5);
-      label.position.set(mid.x, STOREY + STATION.high + 0.2, mid.z);
-      label.rotation.y = -st.yaw;
-      g.add(label);
+      // Its officer's plaque (mission 095; the owner: small, fitted to the
+      // desk), set into its front edge below the operator's side of its top.
+      const edge2 = lerp(a, b, 0.5);
+      const back = { x: -Math.sin(st.yaw), z: Math.cos(st.yaw) };
+      g.add(
+        plaque(
+          st.system,
+          { x: edge2.x + back.x * 0.004, z: edge2.z + back.z * 0.004 },
+          STOREY + STATION.low - 0.04,
+          -st.yaw,
+        ),
+      );
       // Its chair.
       const f = { x: Math.sin(st.yaw), z: -Math.cos(st.yaw) };
       g.add(

@@ -20,6 +20,8 @@ import {
   HORSESHOE,
   edgeAt,
   STATIONS,
+  DUTIES,
+  rearStationPlaces,
   stationPlaces,
   deskInner,
   deskOuter,
@@ -457,5 +459,39 @@ describe('the bridge: ramps either side up to the stage', () => {
         stationPlaces().some((p) => overlaps(s, p.x, p.z, 0)),
       ),
     ).toBe(false);
+  });
+});
+
+describe('the bridge’s officers (mission 095)', () => {
+  it('stands the four rear stations on the stage, against its aft walls, clear of the conference chairs', () => {
+    const rear = rearStationPlaces();
+    expect(rear.map((r) => r.role)).toEqual([
+      'WATER SCIENCE OFFICER',
+      'DRAINAGE OFFICER',
+      'LOADING BAY CHIEF',
+      'OPERATIONS OFFICER',
+    ]);
+    for (const r of rear) {
+      for (const c of r.corners) {
+        expect(insidePolygon(roomPolygon(), c.x, c.z), r.role).toBe(true);
+        expect(platformStepAt(c.x, c.z), r.role).toBe(PLATFORM.height);
+      }
+      // Its operator stands in front of it, on the stage, unhindered.
+      const stand = { x: r.x + r.n.x * 0.9, z: r.z + r.n.z * 0.9 };
+      expect(platformStepAt(stand.x, stand.z)).toBe(PLATFORM.height);
+      expect(
+        protoSolids(STOREY + PLATFORM.height, 'bridge').some((s) =>
+          overlaps(s, stand.x, stand.z, 0.2),
+        ),
+        r.role,
+      ).toBe(false);
+      for (const c of conferenceChairs())
+        expect(Math.hypot(c.x - stand.x, c.z - stand.z)).toBeGreaterThan(0.8);
+    }
+  });
+
+  it('names every station and command chair with its duty', () => {
+    for (const role of [...STATIONS, ...rearStationPlaces().map((r) => r.role)])
+      expect(DUTIES[role], role).toBeDefined();
   });
 });
