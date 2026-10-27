@@ -107,6 +107,11 @@ function said(
       const a = action.action;
       if (a.act === 'main')
         return { subject: 'DB-L1', text: `main switch ${onOff(a.on)}` };
+      if (a.act === 'switch')
+        return {
+          subject: `${a.room.toUpperCase()} LIGHT SWITCH`,
+          text: `${a.gang === 'main' ? 'MAIN LIGHTS' : 'EMERGENCY LIGHTS'} ${onOff(a.on)}`,
+        };
       return a.act === 'way'
         ? { subject: `LTG ${a.zone}`, text: `lighting RCBO ${onOff(a.on)}` }
         : {

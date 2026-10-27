@@ -250,7 +250,7 @@ import type {
 
 import { turnChangeover } from './plant/changeover';
 
-export const WORLD_VERSION = 47;
+export const WORLD_VERSION = 48;
 
 /**
  * Where the main corridor's control room doors lead (the owner,

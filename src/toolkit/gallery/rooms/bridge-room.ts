@@ -21,6 +21,17 @@ import {
 } from '../views/station-schematics';
 import { createViewscreen } from '../views/bridge-viewscreen';
 import { createBridgeLightsUp } from '../views/bridge-lights-up';
+import { createBridgeEmergencyLights } from '../views/bridge-emergency-lights';
+import {
+  bridgeEmergencyLit,
+  bridgeMainLit,
+  lightSwitchPlace,
+} from '../logic/bridge-lighting';
+import { lightSwitch } from '../../components/architectural/parts/building-parts';
+import {
+  createEngravedSign,
+  cutLines,
+} from '../../components/general-safety/views/engraved-sign';
 import { BRIDGE_BINDINGS, bridgeSpec } from '../logic/bridge-bindings';
 import { plantReadingOf } from '../logic/world-reading';
 import { createParodyPanel } from '../views/parody-panel';
@@ -195,14 +206,95 @@ function installConsoles(kit: PanelKit): Part[] {
  * from the corridor, its lights then coming up (`bridge-lights-up.ts`).
  */
 export function startTheBridge(canvas: HTMLCanvasElement) {
-  // Its lights coming up as the walker comes in (the owner, 2026-10-27).
-  const lightsUp = createBridgeLightsUp();
+  const store = typeof window === 'undefined' ? null : roomWorld();
+  const world = () => store?.world.value ?? null;
+  // Its lights coming up as the walker comes in, while MAIN LIGHTS is on
+  // and its way live (the owner, 2026-10-27).
+  const lightsUp = createBridgeLightsUp(() => {
+    const w = world();
+    return w ? bridgeMainLit(w) : true;
+  });
   const handle = startBridgeRoom(canvas, (kit) => [
     ...installConsoles(kit),
+    installLightSwitch(kit),
     lightsUp,
   ]);
   return Object.assign(handle, {
     enter: (from: string | null) => lightsUp.enter(from),
     suspend: () => lightsUp.leave(),
   });
+}
+
+/**
+ * The bridge's light switch (the owner, 2026-10-27): a white two-gang
+ * plate inside the corridor doors, to the right as one comes in, 1.2 m
+ * up (`lightSwitchPlace`), its rockers MAIN LIGHTS and EMERGENCY LIGHTS
+ * thrown in the world (`lighting.switches.bridge`), small engraved labels
+ * under it; and the emergency fittings it switches, lit as the world
+ * says (`bridgeEmergencyLit`).
+ */
+function installLightSwitch(kit: PanelKit): Part {
+  const store = typeof window === 'undefined' ? null : roomWorld();
+  const gang = (g: 'main' | 'emergency') => ({
+    get value() {
+      return store?.world.value.lighting.switches.bridge[g] ?? g === 'main';
+    },
+    set(on: boolean) {
+      store?.dispatch({
+        type: 'lighting/board',
+        action: { act: 'switch', room: 'bridge', gang: g, on },
+      });
+    },
+  });
+  const part = lightSwitch(kit, {
+    name: 'bridge light switch',
+    gangs: [gang('main'), gang('emergency')],
+  });
+  const place = lightSwitchPlace();
+  const holder = new Group();
+  holder.name = 'Bridge light switch (MAIN LIGHTS, EMERGENCY LIGHTS)';
+  holder.position.set(place.x, place.y, place.z);
+  holder.rotation.y = place.yaw;
+  holder.add(part.object);
+  // Under each rocker a small engraved label.
+  [
+    ['MAIN', -0.021],
+    ['EMERGENCY', 0.021],
+  ].forEach(([text, x]) => {
+    const label = createEngravedSign(
+      kit,
+      0.04,
+      0.012,
+      cutLines([
+        { text: text as string, size: 0.42, y: 0.36, bold: true },
+        { text: 'LIGHTS', size: 0.34, y: 0.74 },
+      ]),
+    );
+    label.position.set(x as number, -0.056, 0);
+    holder.add(label);
+  });
+  const emergency = createBridgeEmergencyLights(kit);
+  markComponent(holder, {
+    name: 'Bridge light switch',
+    status: () => {
+      const w = store?.world.value;
+      if (!w) return 'Bridge light switch';
+      const sw = w.lighting.switches.bridge;
+      return `MAIN LIGHTS ${sw.main ? 'ON' : 'OFF'} · EMERGENCY LIGHTS ${sw.emergency ? 'ON' : 'OFF'}`;
+    },
+  });
+  const object = new Group();
+  object.add(holder, emergency.group);
+  return {
+    object,
+    uses: part.uses,
+    update(delta) {
+      part.update(delta);
+      const w = store?.world.value;
+      emergency.set(w ? bridgeEmergencyLit(w) : false);
+    },
+    onEvent: part.onEvent,
+    setAudible: part.setAudible,
+    dispose: () => part.dispose(),
+  };
 }

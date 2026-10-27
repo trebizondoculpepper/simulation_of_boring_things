@@ -22,7 +22,9 @@ import { roomWorld } from '../../save/world-store';
  *   hall's skylights. A light that is partly daylight bounce keeps that
  *   share when its zone is out (`userData.daylightShare`).
  * - A fitting's diffuser is a material marked `userData.lightFitting`.
- * - The torch (`Torch`) is the player's, and left alone.
+ * - The torch (`Torch`) is the player's, and left alone; so is a light
+ *   switched by its own room (`userData.ownSwitching`: the bridge's
+ *   emergency lighting, on its own switch and the central battery).
  *
  * What it finds is found again every couple of seconds, so a machine
  * built later is caught too.
@@ -44,7 +46,13 @@ export function bindRoomLights(
   const scan = () => {
     scene.traverse((o) => {
       if (o instanceof Light) {
-        if (o.name === 'Torch' || o.userData.daylight || lights.has(o)) return;
+        if (
+          o.name === 'Torch' ||
+          o.userData.daylight ||
+          o.userData.ownSwitching ||
+          lights.has(o)
+        )
+          return;
         const z = zoneOf(o);
         if (!z) return;
         lights.set(o, {

@@ -160,7 +160,27 @@ export interface LightingState {
   tripped: Record<LightingZoneId, boolean>;
   /** Each circuit's earth leakage, mA. */
   leakage: Record<LightingZoneId, number>;
+  /**
+   * The rooms' own light switches, where a room has one on its wall
+   * (`ROOM_SWITCHES`): the bridge's two-gang plate by its corridor doors,
+   * MAIN LIGHTS (its normal lighting, on its zone's way) and EMERGENCY
+   * LIGHTS (its maintained emergency fittings, lit from the way or the
+   * central battery).
+   */
+  switches: Record<RoomSwitchId, RoomSwitch>;
 }
+
+/** A room's two-gang light switch: its normal lights, its emergency lights. */
+export interface RoomSwitch {
+  main: boolean;
+  emergency: boolean;
+}
+
+/** The rooms with a light switch of their own, and the zone each is on. */
+export const ROOM_SWITCHES = {
+  bridge: { zone: 'control_room' },
+} as const satisfies Record<string, { zone: LightingZoneId }>;
+export type RoomSwitchId = keyof typeof ROOM_SWITCHES;
 
 const eachZone = <T>(v: T) =>
   Object.fromEntries(LIGHTING_ZONE_IDS.map((z) => [z, v])) as Record<
@@ -174,6 +194,7 @@ export const newLighting = (): LightingState => ({
   zones: eachZone(true),
   tripped: eachZone(false),
   leakage: eachZone(0),
+  switches: { bridge: { main: true, emergency: false } },
 });
 
 /** Each way's RCBO: its rating, its trip current and its type. */
@@ -193,7 +214,14 @@ export const MOISTURE = { condense: 75, rate: 4.2e-4, dry: 3 * 3600 } as const;
 export type LightingBoardAction =
   | { act: 'main'; on: boolean }
   | { act: 'way'; zone: LightingZoneId; on: boolean }
-  | { act: 'test'; zone: LightingZoneId };
+  | { act: 'test'; zone: LightingZoneId }
+  /** A room's own light switch: one gang thrown. */
+  | {
+      act: 'switch';
+      room: RoomSwitchId;
+      gang: keyof RoomSwitch;
+      on: boolean;
+    };
 
 export function actOnLightingBoard(
   l: LightingState,
@@ -201,6 +229,16 @@ export function actOnLightingBoard(
   live: boolean,
 ): LightingState {
   if (a.act === 'main') return l.main === a.on ? l : { ...l, main: a.on };
+  if (a.act === 'switch')
+    return l.switches[a.room][a.gang] === a.on
+      ? l
+      : {
+          ...l,
+          switches: {
+            ...l.switches,
+            [a.room]: { ...l.switches[a.room], [a.gang]: a.on },
+          },
+        };
   if (a.act === 'way')
     return {
       ...l,
@@ -274,3 +312,10 @@ export const zoneLit = (
   l: LightingState,
   zone: LightingZoneId,
 ) => lightingWaysLive(plant, l) && l.zones[zone];
+
+/** Whether a room's normal lights are on: its zone lit, and its own switch's MAIN LIGHTS on. */
+export const roomLightsOn = (
+  plant: PlantServices,
+  l: LightingState,
+  room: RoomSwitchId,
+) => zoneLit(plant, l, ROOM_SWITCHES[room].zone) && l.switches[room].main;

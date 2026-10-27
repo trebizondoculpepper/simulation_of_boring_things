@@ -164,6 +164,9 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
     typeof world === 'object' && world !== null
       ? { ...world, controlRoomMode: 'old' }
       : world,
+  // 47 → 48: the bridge's light switch (the owner, 2026-10-27): MAIN
+  // LIGHTS on, EMERGENCY LIGHTS off (`fillDefaults` adds it).
+  47: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {
