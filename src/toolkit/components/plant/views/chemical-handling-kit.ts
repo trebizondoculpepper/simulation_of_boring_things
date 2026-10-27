@@ -1825,7 +1825,6 @@ const POOL_NAME: Record<string, string> = {
  * with its size and the pools it serves.
  */
 export function createDayTankRange(kit: PanelKit) {
-  const f = tools(kit);
   const sizes = new Map<number, { chemical: Chemical; uses: string[] }>();
   for (const chemical of ['hypochlorite', 'acid'] as const)
     for (const { site, litres } of DAY_TANKS[chemical]) {
@@ -1851,8 +1850,6 @@ export function createDayTankRange(kit: PanelKit) {
   const stations = list.map(([litres, { chemical, uses }], i) => {
     const cx = x + widths[i] / 2;
     x += widths[i] + gap;
-    f.label(root, `${litres} L`, cx, 1.75, 0, 0.06, '#ffffff', '#2a2f31');
-    f.label(root, uses.join(' · '), cx, 1.62, 0, 0.03, '#2a2f31', '#e8ebe9');
     if (!isBottle(litres)) {
       const s = createDayTankStation(kit, chemical, undefined, 0, {
         litres,
@@ -1893,7 +1890,7 @@ export function createDayTankRange(kit: PanelKit) {
       },
       status: () =>
         describeTank(
-          `Dose bottle, ${litres} L`,
+          `Dose bottle, ${litres} L (${uses.join(', ')})`,
           bottleLevel(state),
           trend.lpm(),
         ),
