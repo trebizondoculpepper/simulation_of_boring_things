@@ -369,6 +369,36 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
 export function createPeristalticDemo(kit: PanelKit) {
   const pump = createPeristalticPump(kit, 'DEMO DOSING');
   const object = onPlinth(kit, pump.object, 0.36);
+  // Its tube: suction down the plinth's side from its bottle below, the
+  // discharge up and away to its injection point.
+  const tp = plantTools(kit);
+  const tubeM = tp.paint('#e3d9b8', 0.45);
+  const [sx, sy, sz] = pump.suctionAt;
+  const [qx, qy, qz] = pump.dischargeAt;
+  const top = 1.0;
+  hose(
+    object,
+    tubeM,
+    [
+      [sx, top + sy, sz],
+      [sx - 0.05, top + sy - 0.05, sz + 0.05],
+      [-0.2, 0.6, 0.2],
+      [-0.2, 0.01, 0.3],
+    ],
+    0.0045,
+    0.02,
+  );
+  hose(
+    object,
+    tubeM,
+    [
+      [qx, top + qy, qz],
+      [qx - 0.06, top + qy + 0.1, qz],
+      [-0.15, 1.9, -0.25],
+    ],
+    0.0045,
+    0.03,
+  );
   return {
     object,
     parts: pump.parts,

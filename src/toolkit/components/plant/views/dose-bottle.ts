@@ -189,6 +189,10 @@ export function createDoseBottle(
     object: group,
     /** Where its fill stub ends, for the transfer line. */
     fillAt: [fillX, top + 0.16, fillZ] as const,
+    /** Where its dosing tube comes down beside it, to run on to the injection point. */
+    dosingAt: [-r - 0.03, base + 0.05, hz + 0.02] as const,
+    /** Where its power lead reaches the floor. */
+    powerAt: [0.06, 0.03, -r - 0.02] as const,
     /** Its footprint's radius, its tray's. */
     radius: trayR,
     /** Shows the bottle `b`'s state on its head. */

@@ -761,6 +761,21 @@ export function createDayTankStation(
     pump.object.position.set(px, 0.71, -0.2);
     group.add(pump.object);
     for (const [o, use] of pump.parts.uses) parts.uses.set(o, use);
+    // Its discharge: soft PE tube up off the pump head and back over the
+    // bund to the dosing line behind (to the injection point).
+    const [qx, qy, qz] = pump.dischargeAt;
+    hose(
+      group,
+      t.paint('#ece9dc', 0.5),
+      [
+        [px + qx, 0.71 + qy, -0.2 + qz],
+        [px + qx - 0.05, 0.71 + qy + 0.12, -0.2 + qz],
+        [px, 1.5, -bd / 2 - 0.05],
+        [px, 1.9, -bd / 2 - 0.1],
+      ],
+      0.004,
+      0.03,
+    );
     // A short rigid stub from the outlet valve, then a soft reinforced
     // PVC hose looping up to the pump's suction.
     t.rod(group, pvc, [ox, oy, oz], [ox + 0.12, oy, oz], 0.015, 10);
@@ -1801,6 +1816,7 @@ export function createDayTankRange(kit: PanelKit) {
     }
   const list = [...sizes.entries()].sort(([a], [b]) => a - b);
   const gap = 0.35;
+  const t = plantTools(kit);
   // Below 1,000 l a dose bottle; the largest keeps its framed tank.
   const isBottle = (litres: number) => litres < 1000;
   const widths = list.map(([litres]) =>
@@ -1838,6 +1854,47 @@ export function createDayTankRange(kit: PanelKit) {
     });
     bottle.object.position.x = cx;
     root.add(bottle.object);
+    // Its connections, run back to the wall behind the row: the fill line
+    // rigid ABS up from its fill socket and back at high level (to the
+    // selector); its dosing tube soft PE along the floor (to the injection
+    // point); its power lead to the floor trunking.
+    const back = -0.75;
+    const [fx, fy, fz] = bottle.fillAt;
+    const absM = t.paint('#4b4f53', 0.5);
+    t.rod(root, absM, [cx + fx, fy, fz], [cx + fx, 1.95, fz], 0.012, 10);
+    t.rod(root, absM, [cx + fx, 1.95, fz], [cx + fx, 1.95, back], 0.012, 10);
+    t.cyl(
+      root,
+      t.paint(BAND[chemical], 0.5),
+      0.014,
+      0.04,
+      cx + fx,
+      1.6,
+      fz,
+      'y',
+      10,
+    );
+    const [dx, dy, dz] = bottle.dosingAt;
+    hose(
+      root,
+      t.paint('#ece9dc', 0.5),
+      [
+        [cx + dx, dy, dz],
+        [cx + dx, 0.012, dz - 0.1],
+        [cx + dx, 0.012, back],
+      ],
+      0.004,
+      0.01,
+    );
+    const [px2, py2, pz2] = bottle.powerAt;
+    t.rod(
+      root,
+      t.paint('#2a2f31', 0.6),
+      [cx + px2, py2, pz2],
+      [cx + px2, py2, back],
+      0.005,
+      6,
+    );
     for (const [o, use] of bottle.parts.uses) parts.uses.set(o, use);
     let state = newDoseBottle(litres, 0.25 + 0.1 * i);
     const trend = levelTrend();
@@ -1862,6 +1919,9 @@ export function createDayTankRange(kit: PanelKit) {
         ),
     };
   });
+  // The floor trunking along the wall the leads and tubes run into, and
+  // the high-level cable tray the fill lines cross under.
+  t.box(root, t.paint('#9aa09e', 0.6), total + 0.4, 0.06, 0.1, 0, 0.03, -0.78);
   return {
     object: root,
     parts,
@@ -1932,6 +1992,16 @@ export function createBulkTankDemo(kit: PanelKit, chemical: Chemical) {
     litres,
     acid: chemical === 'acid',
   });
+  // Its fill line on from its fill valve, down and away along the floor to
+  // the fill point; the vent and outlet already run off the tank.
+  const t = plantTools(kit);
+  const [fx, fy, fz] = tank.fillAt;
+  const absM = t.paint('#4b4f53', 0.5);
+  t.rod(tank.object, absM, [fx, fy, fz], [fx, 0.08, fz], 0.025, 12);
+  t.rod(tank.object, absM, [fx, 0.08, fz], [fx + 0.6, 0.08, fz], 0.025, 12);
+  const marker = createPipeMarker(kit, { r: 0.025, chemical, flow: -1 });
+  marker.object.position.set(fx + 0.35, 0.08, fz);
+  tank.object.add(marker.object);
   const trend = levelTrend();
   let time = chemical === 'acid' ? 200 : 0;
   const level = () => 0.55 + 0.35 * Math.sin(time / 90);

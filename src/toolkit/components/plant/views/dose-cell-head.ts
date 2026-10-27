@@ -12,6 +12,7 @@ import {
   stepDoseBottle,
 } from '../../../../game/plant/dose-bottle';
 import { onPlinth } from './plinth';
+import { hose } from './hose';
 import type { DoseBottle } from '../../../../game/plant/dose-bottle';
 import { createPartSet, pushButton } from '../../core/parts/parts';
 import { partAudio } from '../../core/audio/part-audio';
@@ -312,6 +313,33 @@ export function createDoseCellDemo(
     acid,
   });
   const object = onPlinth(kit, head.object, 0.32);
+  // Its dosing tube and power lead down the plinth to the floor.
+  const tp = plantTools(kit);
+  const [dx, dy, dz] = head.dischargeAt;
+  hose(
+    object,
+    tp.paint('#ece9dc', 0.5),
+    [
+      [dx, 1.0 + dy, dz],
+      [dx - 0.04, 0.95, dz],
+      [-0.18, 0.5, dz],
+      [-0.18, 0.01, dz + 0.1],
+    ],
+    0.004,
+    0.01,
+  );
+  const [ex, ey, ez] = head.powerAt;
+  hose(
+    object,
+    tp.paint('#2a2f31', 0.6),
+    [
+      [ex, 1.0 + ey, ez],
+      [ex, 0.98, -0.18],
+      [ex, 0.01, -0.22],
+    ],
+    0.005,
+    0.01,
+  );
   let b = newDoseBottle(litres, acid ? 0.35 : 0.8);
   return {
     object,
