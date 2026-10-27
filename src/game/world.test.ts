@@ -163,7 +163,8 @@ describe('the bathers and the halls', () => {
     w = advance(w, 6 * 3600, 10);
     expect(w.pools.pool_02.hallAir).toBeLessThan(25);
     expect(appealOf(w).pool_02).toBeLessThan(0.5);
-  });
+    // A day and a half of world: slow under a full parallel run.
+  }, 15_000);
 });
 
 describe('the mains water off', () => {

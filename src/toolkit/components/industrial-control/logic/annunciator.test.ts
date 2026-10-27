@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { createAnnunciator } from './annunciator';
+import { awaitingAccept, createAnnunciator } from './annunciator';
 
 describe('the annunciator', () => {
   it('flashes a new alarm until it is acknowledged, then burns steady', () => {
@@ -69,5 +69,20 @@ describe('the annunciator', () => {
     a.sense([false]);
     a.reset();
     expect(a.states).toEqual(['flashing']);
+  });
+});
+
+describe('ACCEPT shown only when it has something to do', () => {
+  it('awaits acceptance while any window flashes, and not after ACCEPT', () => {
+    const a = createAnnunciator(3, { manualReset: true });
+    const b = createAnnunciator(2);
+    expect(awaitingAccept([a, b])).toBe(false);
+    a.sense([false, true, false]);
+    expect(awaitingAccept([a, b])).toBe(true);
+    a.acknowledge();
+    expect(a.states[1]).toBe('steady');
+    expect(awaitingAccept([a, b])).toBe(false);
+    b.sense([true, false]);
+    expect(awaitingAccept([a, b])).toBe(true);
   });
 });

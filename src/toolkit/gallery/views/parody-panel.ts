@@ -24,7 +24,10 @@ import type {
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createPartSet } from '../../components/core/parts/parts';
 import { createTouchSurface } from '../../components/industrial-control/views/touch-surface';
-import { createAnnunciator } from '../../components/industrial-control/logic/annunciator';
+import {
+  awaitingAccept,
+  createAnnunciator,
+} from '../../components/industrial-control/logic/annunciator';
 import {
   polygonOutline,
   roundedOutline,
@@ -141,6 +144,8 @@ export function createParodyPanel(
     return r.counted ? undefined : 'deny';
   };
   const annunciators: ReturnType<typeof createAnnunciator>[] = [];
+  /** Its ACCEPT buttons, hidden while nothing awaits acceptance. */
+  const acceptButtons: Button[] = [];
   /** Its own annunciators and the room's shared one, each once. */
   const everyAnnunciator = () => [
     ...new Set([...annunciators, ...(live?.shared ? [live.shared] : [])]),
@@ -198,6 +203,9 @@ export function createParodyPanel(
               },
             });
             if (lit) reads.push((c) => button.setLit(lit(c)));
+            // ACCEPT ALARMS shown only while there is something to accept
+            // (the owner, 2026-10-27), blank otherwise.
+            if (label === 'ACCEPT ALARMS') acceptButtons.push(button);
             return button;
           }),
         );
@@ -456,15 +464,17 @@ export function createParodyPanel(
   const sidebar: UiNode[] = stack
     ? stack.ids.map((id) => pageButton(stack, id, { colour: colour() }))
     : [];
-  if (annunciators.length)
+  if (annunciators.length) {
+    const accept = new Button({
+      label: 'ACCEPT',
+      colour: 'golden-tanoi',
+      onPress: () => {
+        everyAnnunciator().forEach((a) => a.acknowledge());
+      },
+    });
+    acceptButtons.push(accept);
     sidebar.push(
-      new Button({
-        label: 'ACCEPT',
-        colour: 'golden-tanoi',
-        onPress: () => {
-          everyAnnunciator().forEach((a) => a.acknowledge());
-        },
-      }),
+      accept,
       new Button({
         label: 'RESET',
         colour: 'golden-tanoi',
@@ -479,6 +489,13 @@ export function createParodyPanel(
         onPress: () => void (lampTest = 2),
       }),
     );
+  }
+  if (acceptButtons.length)
+    ticks.push(() => {
+      const anything = everyAnnunciator();
+      const shown = !anything.length || awaitingAccept(anything);
+      for (const b of acceptButtons) b.setHidden(!shown);
+    });
   const status = new Banner({ size: 40 });
   const tree = new Frame({
     title: spec.title,

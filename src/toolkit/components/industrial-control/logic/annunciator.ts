@@ -34,6 +34,14 @@ export interface Annunciator {
 /** How many times a second a flashing window blinks. */
 export const FLASH_HZ = 2.5;
 
+/**
+ * Whether ACCEPT has anything to do: some window of these annunciators
+ * flashing. A console shows its ACCEPT only then (the owner, 2026-10-27).
+ */
+export const awaitingAccept = (
+  annunciators: readonly { readonly states: readonly WindowState[] }[],
+): boolean => annunciators.some((a) => a.states.includes('flashing'));
+
 /** What each window shows at `seconds`: lit, and whether it is in its flash. */
 export function litWindows(
   states: readonly WindowState[],
