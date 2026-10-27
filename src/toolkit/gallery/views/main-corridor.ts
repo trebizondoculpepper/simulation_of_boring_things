@@ -309,9 +309,13 @@ export function createMainCorridor(metre: number, kit: PanelKit) {
   };
 }
 
-/** What a corridor door's sign says: the room beyond's name. */
+/**
+ * What a corridor door's sign says: the room beyond's name; the bridge's
+ * doors say only CONTROL ROOM (the owner, 2026-10-27), its grander name
+ * kept for inside.
+ */
 export function signFor(d: CorridorDoor) {
-  return signTo(d.to as RoomId);
+  return d.to === 'bridge' ? 'CONTROL ROOM' : signTo(d.to as RoomId);
 }
 
 /** Yellow and black hazard hatching, diagonal, repeating. */
