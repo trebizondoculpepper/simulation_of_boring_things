@@ -1,6 +1,6 @@
 # Bridge console paging: design and implementation plan
 
-Status: research and plan only (2026-10-27). Not implemented: other agents (alarm acceptance, alarm bleep and room tone; the Olympic filter washing page) are still changing the bridge and the world. Implement once they have finished. Part of mission [095](../prompts/095-the-bridge.md); the widget belongs to mission [093](../prompts/093-bridge-widget-kit.md)'s `ui2d` kit.
+Status: implemented 2026-10-27, as changed by the owner's rulings while it was built: see [Implemented as](#implemented-as) at the end, which overrides the plan where they differ. Part of mission [095](../prompts/095-the-bridge.md); the widget belongs to mission [093](../prompts/093-bridge-widget-kit.md)'s `ui2d` kit.
 
 ## Contents
 
@@ -16,6 +16,7 @@ Status: research and plan only (2026-10-27). Not implemented: other agents (alar
 - [Risks and conflicts](#risks-and-conflicts)
 - [Tests](#tests)
 - [Estimate](#estimate)
+- [Implemented as](#implemented-as)
 
 ## The request
 
@@ -272,3 +273,56 @@ Changed (minimal edits):
 ## Estimate
 
 About a day of agent time once the others have finished: the registry and its tests 1.5 h; the world field, action, migration and tests 1.5 h; the pager widget and its tests 1.5 h; the console mount with rebuild and the forwarder 2.5 h; the viewscreen choice 1 h; records, browser check, merges and the gates (typecheck, lint, format, tests, build) 1.5 h. Most of the risk is in the press forwarding and disposal, so those are done first and checked in the browser before the rest.
+
+## Implemented as
+
+Built 2026-10-27. The owner saw it live while it was built and ruled several times; where this section and the plan above differ, this section is what was built.
+
+### The owner's rulings (2026-10-27)
+
+- **Roles, not free paging, at a workstation.** "The lower display you set determines which upper displays are available, so for example if you select filtration officer, then all of the upper displays should be related to filtration." A workstation's lower console (its input panel) is set to a role, an officer, by ◄ and ►, and shows that role's panel; its upper displays then page only through that role's displays. Setting a new role resets each upper display to its own entry of the new role's list: the first, or a different one each where a station has several upper screens (Central Control's four desk screens). The role is the lower console's page, so it persists in the world like every console's page.
+- **Lower for control, upper for information** (a loose rule, both take some input): the lower console's page for a role is its control panel (starts and stops, valves, set points); the upper displays' pages are schematic browsers, overviews and the back walls' displays (plus OLYMPIC FILTER WASHING, which is a page of touch input but suits any console).
+- **LOCK only where a display turns by itself.** "The lock is only needed on the schematic displays ... not on the workstation LCARS input panels, since those do not advance automatically." The stations' and desk's upper screens, the back walls' displays and the main viewscreen (and Central Control's viewscreen strip) have ◄ LOCK ►; the workstations' lower panels and the front walls' panels have ◄ ► alone.
+- **What LOCK does.** "The lock should prevent the display from advancing." LOCK holds the page's own rotation on the design it shows (its rotator paused, `hold` on `SchematicScreen`, `createSchematicSurface` and `createViewscreen`); unlocking lets it turn again. ◄ and ► still work while locked: they choose the page that is then held. (The plan's "locked: ◄ ► refused" was dropped.)
+- **The strip's look.** The order is ◄, LOCK, ► (the lock between the arrows), the three buttons the same size (pill-proportioned blocks 64 px wide on the strip's 320 × 64 px surface); without a LOCK, ◄ and ► the same size side by side. The arrows are drawn arrowheads, large and centred in their blocks, about the size of the LOCK lettering, which is centred too.
+
+### Choices made where the plan left one open
+
+- **Unlocked by default:** every console starts on its default page, unlocked (`newBridgeConsoles`), so its own rotation runs as before.
+- **Central Control's viewscreen strip** sits beside its own strip (to the right, along the frame's bottom bar), not above it: above, it covered the left end of ACCEPT ALARMS. It is titled `VS · ` and the page's short name.
+- **Presses on a strip:** a strip's sheet and screen lie in one plane, so the ray can strike the sheet first; the console's forwarder (its one use on its holder) therefore hands any touch inside a strip's rectangle to that strip's screen by its point in the plane, and anything else to whichever of the page's pieces was touched (`touchPoint`).
+- **Pixels:** a schematic page is drawn at 600 px/m under 1.2 m high, 320 under 2 m, 200 above (the canvas capped at 2048 px a side as before); a panel at its own 560 px/m, scaled to fit.
+- **Rear screens and panels:** the plan's "panels on the 1.70 × 0.92 rear screens by aspect" was not built: panels suit panel places, the front walls and the viewscreen only.
+- **Pages that do not turn** (a wired panel, a single overview, the filter washing page) ignore LOCK beyond showing it lit.
+- **Disposal on rebuild:** a paged-away exhibit's geometries, its textures and materials (taken out of the kit's lists again) and its boot screens (out of the room's boot group) are freed.
+- **Two consoles may show the same page**; a panel's own UI state (its page within its frame, a refusal notice) is lost when paged away; only world state persists.
+
+### The roles and their displays (`ROLE_PAGES`, `logic/bridge-pages.ts`)
+
+The first entry is the role's panel (the lower console's page); the rest are the upper displays' pages (those suiting a screen).
+
+| Role | Lower (panel) | Upper displays |
+| --- | --- | --- |
+| Flow Navigator | PL2-CP1 | FLOW NAVIGATOR browser, OLYMPIC FILTER WASHING, overviews olympic, lounge, jacuzzi, footbath, backwash; displays MAIN POOLS, SMALL POOLS |
+| Disinfection Tactical | PL2-CP2 | DISINFECTION TACTICAL and WATER SCIENCE OFFICER browsers; overviews olympic, lounge; MAIN POOLS |
+| Boiler Helmsman | CR-MP2 | BOILER HELMSMAN browser; overviews heating, gas; HEAT AND GAS |
+| Life Support Officer | CR-MP3 | LIFE SUPPORT OFFICER browser; overview air; AIR AND POWER |
+| Chief Electrical Engineer | SR-IS3 | CHIEF ELECTRICAL ENGINEER browser; overview power; AIR AND POWER |
+| Security Chief | CR-CP6 | SECURITY CHIEF browser; overview gas; SITE STATUS |
+| Central Control | CC-01 | CENTRAL CONTROL and MAIN VIEWSCREEN browsers; SITE STATUS, THE WHOLE PLANT |
+| Assistant Duty Manager | ADM-01 | CENTRAL CONTROL browser; SITE STATUS, THE WHOLE PLANT |
+| Bather Welfare Counsellor | BWC-01 | MAIN VIEWSCREEN browser; MAIN POOLS, SMALL POOLS |
+| Water Science Officer | CR-CP3 | WATER SCIENCE OFFICER and DISINFECTION TACTICAL browsers; overviews olympic, lounge, jacuzzi, footbath; MAIN POOLS, SMALL POOLS |
+| Drainage Officer | WH-T2 | DRAINAGE OFFICER browser; overviews backwash, make-up |
+| Loading Bay Chief | LB-CAB1 | LOADING BAY CHIEF and OPERATIONS OFFICER browsers |
+| Operations Officer | WH-CP1 | OPERATIONS OFFICER and LOADING BAY CHIEF browsers; overview make-up |
+
+Which lower console governs which upper displays (`governor` in `game/bridge-consoles.ts`): each forward and rear station's screen its own station's panel; the desk's four front screens and its right-rear and left-rear screens Central Control's; its right screen the Assistant Duty Manager's; its left screen the Bather Welfare Counsellor's. A lower console pages through the thirteen roles' panels, its own default first. The front walls' panels, the back walls' displays and the viewscreen are no workstation's: each pages through every page that suits it, its default first. An upper display's default stays today's page where its role (at the start, its station's own) lists it.
+
+### Where it lives
+
+- `src/ui2d/pager.ts` (`ConsolePager`, generic, tested in `pager.test.ts`).
+- `src/game/bridge-consoles.ts`: the 40 consoles, their kinds, defaults, roles and governors; `ConsoleChoice`, `chooseConsole`. The world's `bridgeConsoles` (`WORLD_VERSION` 52, migration 51 → 52 an identity, `fillDefaults` adding every console), the action `bridge/console`, its health entry and its log line.
+- `src/toolkit/gallery/logic/bridge-pages.ts`: the registry (panels, the filter washing page, the 12 station browsers, the 10 overviews, the 6 displays: 44 pages), `ROLE_PAGES`, `consolePages`, `pageOf`, `stepPage`, `roleOf`, `chooseRole`, the console ids of the places and the strip's placement; tested in `bridge-pages.test.ts`.
+- `src/toolkit/gallery/views/bridge-console.ts`: `buildPage`, `createBridgeConsole` (holder, rebuild on change, the forwarder, the strips, LOCK's hold) and `installBridgeConsoles`, which `bridge-room.ts` now calls in place of its own loops.
+- `src/toolkit/gallery/views/bridge-viewscreen.ts`: its own browser blank behind another chosen page, `alarms()` for the takeover over it, `hold`.

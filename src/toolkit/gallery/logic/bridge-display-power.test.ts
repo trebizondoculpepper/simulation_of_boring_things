@@ -72,7 +72,7 @@ describe('the bridge’s display power (the owner, 2026-10-27)', () => {
   });
 
   it('migrates an older save: on where the theme was heard, off otherwise', () => {
-    expect(WORLD_VERSION).toBe(51);
+    expect(WORLD_VERSION).toBeGreaterThanOrEqual(51);
     for (const heard of [true, false]) {
       const old = { ...newWorld(), bridgeThemeHeard: heard } as Record<
         string,

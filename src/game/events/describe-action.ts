@@ -365,6 +365,20 @@ function said(
         subject: 'THE BRIDGE',
         text: `displays switched ${action.on ? 'on' : 'off'}`,
       };
+    case 'bridge/console':
+      return {
+        subject: 'THE BRIDGE',
+        text: [
+          action.page !== undefined
+            ? `${action.console} paged to ${action.page ?? 'its default'}`
+            : '',
+          action.locked !== undefined
+            ? `${action.console} ${action.locked ? 'locked' : 'unlocked'}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join(', '),
+      };
     case 'bridge/first-visit-reset':
       return {
         subject: 'CONTROL ROOM MODE',

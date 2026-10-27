@@ -258,8 +258,10 @@ import {
 import type { AnnunciatorState } from './annunciator';
 import type { AlarmId } from '../toolkit/gallery/logic/control-room-demo';
 import { plantReadingOf } from '../toolkit/gallery/logic/world-reading';
+import { chooseConsole, newBridgeConsoles } from './bridge-consoles';
+import type { ConsoleChoice } from './bridge-consoles';
 
-export const WORLD_VERSION = 51;
+export const WORLD_VERSION = 52;
 
 /**
  * Where the main corridor's control room doors lead (the owner,
@@ -367,6 +369,12 @@ export interface World {
    * accepted, steady until reset (`annunciator.ts`).
    */
   annunciator: AnnunciatorState;
+  /**
+   * What each of the bridge's consoles shows and whether it is locked
+   * there (the owner, 2026-10-27), by console id (`bridge-consoles.ts`);
+   * the main viewscreen's, chosen from Central Control, among them.
+   */
+  bridgeConsoles: Record<string, ConsoleChoice>;
 }
 
 export function newWorld(): World {
@@ -408,6 +416,7 @@ export function newWorld(): World {
     bridgeThemeHeard: false,
     bridgeDisplaysOn: false,
     annunciator: newAnnunciator(),
+    bridgeConsoles: newBridgeConsoles(),
   };
 }
 
@@ -479,6 +488,13 @@ export type WorldAction =
   | { type: 'bridge/displays'; on: boolean }
   /** Forget the bridge's first visit: its theme plays again (the knob plate's RESET). */
   | { type: 'bridge/first-visit-reset' }
+  /** A bridge console paged (`page`, null for its default) or locked (`bridgeConsoles`). */
+  | {
+      type: 'bridge/console';
+      console: string;
+      page?: string | null;
+      locked?: boolean;
+    }
   /** ACCEPT at an annunciator or console: its flashing alarms (only `alarms`, if given) accepted. */
   | { type: 'alarms/accept'; alarms?: AlarmId[] }
   /** RESET at an annunciator or console: accepted alarms that have cleared put out. */
@@ -843,6 +859,16 @@ export function applyAction(world: World, action: WorldAction): World {
       return world.bridgeDisplaysOn === action.on
         ? world
         : { ...world, bridgeDisplaysOn: action.on };
+    case 'bridge/console': {
+      const bridgeConsoles = chooseConsole(
+        world.bridgeConsoles,
+        action.console,
+        action,
+      );
+      return bridgeConsoles === world.bridgeConsoles
+        ? world
+        : { ...world, bridgeConsoles };
+    }
     case 'bridge/first-visit-reset':
       // The bridge as first found (the owner, 2026-10-27): its theme not
       // yet heard, so the next visit plays the reveal; its MAIN LIGHTS on,

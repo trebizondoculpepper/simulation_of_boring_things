@@ -11,6 +11,7 @@ A small, framework-free kit of user-interface components drawn with the Canvas 2
 - `schematic.ts`: schematic building blocks and the rotator and browser (below).
 - `schematic.test.ts`: their tests (layout, rotation timing, dirty tracking).
 - `boot.ts`: a display's boot (`BootScreen`, `BootGroup`, `bootState`, the draw-in) and `emblem.ts`, its emblem; `boot.test.ts`, their tests.
+- `pager.ts`: `ConsolePager`, a console's paging strip (◄, LOCK, ► or ◄ ► alone, the page's short title and its place in the list), drawn on a 320 × 64 px surface (`PAGER_PIXELS`) so it looks the same at any size; it keeps no page of its own, its host answers ◄, ► and LOCK and tells it what to show (`set`); `pager.test.ts`, its tests.
 - `ui2d.test.ts`: the tests (layout, hit-testing, page and selector state, dirty flags).
 
 ## The API

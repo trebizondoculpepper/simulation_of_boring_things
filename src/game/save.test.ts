@@ -79,6 +79,7 @@ describe('a save', () => {
       bridgeThemeHeard: false,
       bridgeDisplaysOn: false,
       annunciator: newWorld().annunciator,
+      bridgeConsoles: newWorld().bridgeConsoles,
     });
   });
 
@@ -159,6 +160,57 @@ describe('a save', () => {
       newWorld().annunciator,
     );
     expect(loaded.ok && loaded.world.time).toBe(400);
+  });
+
+  it('brings a save from before the bridge’s console paging up with every console on its default, unlocked', () => {
+    const { bridgeConsoles: _none, ...before } = newWorld();
+    const old = JSON.stringify({
+      format: 'pool-plant-save',
+      version: 51,
+      savedAt: 5,
+      world: before,
+    });
+    const loaded = deserialiseWorld(old);
+    expect(loaded.ok && loaded.world.bridgeConsoles).toEqual(
+      newWorld().bridgeConsoles,
+    );
+  });
+
+  it('keeps a bridge console’s page and lock, drops consoles no longer there, keeps a page id it does not know', () => {
+    let world = applyAction(newWorld(), {
+      type: 'bridge/console',
+      console: 'flow-navigator.panel',
+      page: 'overview.gas',
+    });
+    world = applyAction(world, {
+      type: 'bridge/console',
+      console: 'viewscreen',
+      page: 'no-such-page',
+    });
+    world = applyAction(world, {
+      type: 'bridge/console',
+      console: 'viewscreen',
+      locked: true,
+    });
+    const text = serialiseWorld(
+      {
+        ...world,
+        bridgeConsoles: {
+          ...world.bridgeConsoles,
+          'gone.panel': { page: 'x', locked: true },
+        },
+      },
+      5,
+    );
+    const loaded = deserialiseWorld(text);
+    if (!loaded.ok) throw new Error(loaded.reason);
+    const c = loaded.world.bridgeConsoles;
+    expect(c['flow-navigator.panel']).toEqual({
+      page: 'overview.gas',
+      locked: false,
+    });
+    expect(c.viewscreen).toEqual({ page: 'no-such-page', locked: true });
+    expect(c['gone.panel']).toBeUndefined();
   });
 
   it('keeps a field only where its type matches', () => {

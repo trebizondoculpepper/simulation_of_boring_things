@@ -319,6 +319,8 @@ export interface SchematicScreen {
   current(): number;
   /** Whether its rotation is held. */
   held(): boolean;
+  /** Hold its rotation on the design shown, or let it go (a console's LOCK). */
+  hold(held: boolean): void;
 }
 
 /**
@@ -388,6 +390,7 @@ export function designScreen(
     titles,
     current,
     held: () => rotator?.paused ?? false,
+    hold: (held) => rotator?.setPaused(held),
     update(c, seconds) {
       last = c;
       lastSeconds = seconds;
@@ -432,7 +435,7 @@ export function createSchematicSurface(
   size: { w: number; h: number },
   context: () => SchematicContext | null,
   pixelsPerMetre = 560,
-): LiveExhibit {
+): LiveExhibit & { hold(held: boolean): void } {
   const surface = createTouchSurface(kit, {
     name,
     bezel: 0.012,
@@ -461,6 +464,7 @@ export function createSchematicSurface(
       }
       parts.update(delta);
     },
+    hold: (held) => screen.hold(held),
     status: () =>
       `${name}: ${screen.titles[screen.current()]}${screen.held() ? ', held' : ''}`,
   };
@@ -473,7 +477,7 @@ export function createStationSchematic(
   size: { w: number; h: number },
   context: () => SchematicContext | null,
   options: StationSchematicOptions & { pixelsPerMetre?: number } = {},
-): LiveExhibit {
+): LiveExhibit & { hold(held: boolean): void } {
   return createSchematicSurface(
     kit,
     stationSchematic(station, options),

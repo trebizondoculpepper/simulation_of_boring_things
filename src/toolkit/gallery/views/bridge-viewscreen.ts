@@ -28,7 +28,11 @@ export function createViewscreen(
   size: { w: number; h: number },
   context: () => BridgeContext | null,
   annunciator: Annunciator,
-): LiveExhibit {
+  options: {
+    /** Whether another page is chosen for it (from Central Control), drawn in front: its own browser then blank behind it. */
+    blank?: () => boolean;
+  } = {},
+): LiveExhibit & { alarms(): boolean; hold(held: boolean): void } {
   // The plant's schematics, the main viewscreen's own designs turning,
   // any overview brought up from its list (`station-schematics.ts`).
   const browser = stationSchematic('MAIN VIEWSCREEN', { period: 24 });
@@ -43,7 +47,11 @@ export function createViewscreen(
     sidebar: [],
     content: alarms,
   });
-  const pages = new PageStack({ SCHEMATIC: browser.tree, ALARMS: frame });
+  const pages = new PageStack({
+    SCHEMATIC: browser.tree,
+    ALARMS: frame,
+    BLANK: new Stack('column', []),
+  });
   const surface = createTouchSurface(kit, {
     name: 'Main viewscreen',
     bezel: 0.02,
@@ -79,7 +87,7 @@ export function createViewscreen(
       (_, i) => annunciator.states[i] === 'flashing',
     );
     const mode = viewscreenShows(flashing.length);
-    pages.show(mode);
+    pages.show(mode === 'SCHEMATIC' && options.blank?.() ? 'BLANK' : mode);
     if (mode === 'ALARMS') {
       banner.set(
         `${flashing.length} ALARM${flashing.length > 1 ? 'S' : ''} · ACCEPT AT CENTRAL CONTROL`,
@@ -102,6 +110,8 @@ export function createViewscreen(
   return {
     object,
     parts,
+    alarms: () => pages.current === 'ALARMS',
+    hold: (held) => browser.hold(held),
     update(delta) {
       seconds += delta;
       if (seconds >= next) {

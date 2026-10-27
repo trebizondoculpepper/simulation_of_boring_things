@@ -184,6 +184,10 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
             (world as Record<string, unknown>).bridgeThemeHeard === true,
         }
       : world,
+  // 51 → 52: the bridge's consoles' pages and locks (the owner,
+  // 2026-10-27): every console on its default page, unlocked
+  // (`fillDefaults` adds them).
+  51: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

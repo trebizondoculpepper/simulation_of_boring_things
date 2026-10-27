@@ -10,3 +10,4 @@ export * from './components';
 export * from './schematic';
 export * from './emblem';
 export * from './boot';
+export * from './pager';
