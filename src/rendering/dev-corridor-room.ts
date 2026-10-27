@@ -465,7 +465,7 @@ export function startDevCorridorRoom(
     const seen = showZones(vx, vz);
     placeLights(vx, vz, seen);
     goThrough(here.x, here.z);
-    portals.update(delta, walk.walker.x, walk.walker.z);
+    portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     partAudio.listen(camera, m);
     renderer.info.reset();
     renderer.clear();

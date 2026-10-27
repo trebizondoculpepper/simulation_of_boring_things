@@ -1378,7 +1378,7 @@ void main() {
       }
     }
     partAudio.listen(camera, m);
-    portals.update(delta, walk.walker.x, walk.walker.z);
+    portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     parts.update(delta);
     apply();
     room.visible = !dryOnly;

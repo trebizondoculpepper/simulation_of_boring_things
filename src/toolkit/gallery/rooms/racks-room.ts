@@ -591,7 +591,7 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
     walk.update(delta);
     parts.update(delta);
     for (const cupboard of storageCupboards) cupboard.update(delta);
-    portals.update(delta, walk.walker.x, walk.walker.z);
+    portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     partAudio.listen(camera, m);
     renderer.render(scene, camera);
   });

@@ -23,9 +23,9 @@ import {
   play,
 } from '../../core/parts/building-part-tools';
 import {
-  holdDoorOpen,
   initialPlantDoor,
   PLANT_DOOR,
+  standDoorOpen,
   stepPlantDoor,
   workDoor,
 } from '../logic/plant-door';
@@ -61,8 +61,11 @@ export function plantRoomDoor(
   swingTo: (angle: number) => void;
   /** Hide its leaf: the room beyond draws the one leaf of the doorway. */
   showLeaf: (on: boolean) => void;
-  /** Hold it open while someone stands in its doorway. */
-  holdOpen: () => void;
+  /**
+   * Whether someone is near its doorway (`door-proximity.ts`), told each
+   * frame before it moves: open, it waits for them; closing, it opens again.
+   */
+  setNearby: (near: boolean) => void;
   /** Its card reader, which the room may light (any door of its open). */
   reader: ReturnType<typeof cardReader>;
 } {
@@ -158,6 +161,7 @@ export function plantRoomDoor(
   const arm = t.box(armPivot, dark, 0.24, 0.014, 0.025, 0.12, 0, 0);
 
   let state = initialPlantDoor();
+  let nearby = false;
   const work = () => {
     const was = state.phase;
     state = workDoor(state);
@@ -167,7 +171,7 @@ export function plantRoomDoor(
   // The whole leaf and all on it (handles, push and kick plates) work it.
   for (const target of [hinge, leaf, pull, lever]) a.uses.set(target, work);
   a.updates.push((delta) => {
-    const r = stepPlantDoor(state, delta);
+    const r = stepPlantDoor(state, delta, nearby);
     state = r.state;
     if (r.latchedNow) play(DOOR_SHUT(), a.object);
     hinge.rotation.y = -state.angle;
@@ -201,25 +205,13 @@ export function plantRoomDoor(
   return {
     ...a.part(),
     angle: () => state.angle,
-    holdOpen: () => {
-      state = holdDoorOpen(state);
+    setNearby: (near) => {
+      nearby = near;
     },
     reader,
     swingTo(angle) {
-      const open = Math.min(D.open, Math.abs(angle));
-      if (open > 0 && state.angle === 0) reader.doorOpened(false);
-      state =
-        open > 0
-          ? {
-              ...state,
-              angle: open,
-              latched: false,
-              phase: 'closing',
-              timer: 0,
-              closeFrom: open,
-              closeElapsed: 0,
-            }
-          : initialPlantDoor();
+      if (Math.abs(angle) > 0 && state.angle === 0) reader.doorOpened(false);
+      state = standDoorOpen(angle);
     },
     showLeaf(on) {
       hinge.visible = on;

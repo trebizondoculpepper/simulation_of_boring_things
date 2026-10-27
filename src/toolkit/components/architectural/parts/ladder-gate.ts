@@ -28,6 +28,7 @@ export function ladderGate(kit: PanelKit, width: number) {
   sign.position.set(width / 2, 0.75, 0.03);
   a.object.add(sign);
   let state = initialPlantDoor();
+  let nearby = false;
   a.uses.set(a.object, () => {
     state = workDoor(state);
   });
@@ -39,14 +40,19 @@ export function ladderGate(kit: PanelKit, width: number) {
         : 'Open',
   );
   a.updates.push((dt) => {
-    state = stepPlantDoor(state, dt).state;
+    state = stepPlantDoor(state, dt, nearby).state;
     a.object.rotation.y = -state.angle;
   });
   return {
     ...a.part(),
     angle: () => state.angle,
+    /** Held where it stands while someone climbs in the pit below it. */
     holdOpen: () => {
       state = holdDoorOpen(state);
+    },
+    /** Whether someone is near it on the deck (`door-proximity.ts`), told before it moves. */
+    setNearby: (near: boolean) => {
+      nearby = near;
     },
   };
 }

@@ -53,6 +53,10 @@ import { doorReaders } from '../../components/architectural/logic/card-reader';
 import { enterDevRoom } from '../logic/dev-room-links';
 import type { RoomId } from '../logic/dev-room-links';
 import { bindRoomLights } from '../views/room-lights';
+import {
+  createDoorPresence,
+  doorActor,
+} from '../../components/architectural/logic/door-proximity';
 import { bindRoomPower, sitePowered } from '../views/room-power';
 
 /**
@@ -199,6 +203,9 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
       },
     });
   });
+  // Whether the walker is near each pair (`door-proximity.ts`), one for
+  // each doorway, wider than its threshold: once open, the pair waits.
+  const near = ways.map((w) => createDoorPresence(w.leaf));
   const inWay = (w: (typeof ways)[number]) =>
     overlaps(
       w.leaf,
@@ -318,9 +325,10 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     last = time;
     walk.update(delta);
     roomLights.update(delta);
+    // No pair closes on someone near it: told before the leaves move.
+    const actor = doorActor(walk, metre, WALKER_RADIUS_METRES);
+    ways.forEach((w, i) => w.part.setNearby(near[i].update(actor)));
     parts.update(delta);
-    // No pair closes on someone standing in its doorway.
-    for (const w of ways) if (inWay(w)) w.part.holdOpen();
     // Each pair's card readers show green while it stands open, beeping
     // only when it is opened here, not when it is found open on arrival.
     doors.forEach((d, i) => {

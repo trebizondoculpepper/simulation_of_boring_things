@@ -94,6 +94,10 @@ import { knobDirection } from '../../controls/input/knob-turning';
 import type { Inlet } from '../views/inlet-streams';
 import { footbathMakeUpEntering } from '../../../game/plant/footbath-makeup';
 import { bindRoomLights } from '../views/room-lights';
+import {
+  createDoorPresence,
+  doorActor,
+} from '../../components/architectural/logic/door-proximity';
 import { zoneLit, zoneOfRoom } from '../../../game/plant/lighting';
 import type { PoolUniforms } from '../../components/pool/views/pool-surfaces';
 import { bindRoomPower, sitePowered } from '../views/room-power';
@@ -316,6 +320,14 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       walk.walker.z / metre,
       WALKER_RADIUS_METRES,
     );
+  // Whether the walker is near each doorway (`door-proximity.ts`): its
+  // door, once open, waits for them, wider than its threshold above.
+  const plantPresence = plantWay
+    ? createDoorPresence({ ...plantWay.leaf, floor: PLANT_SILL })
+    : null;
+  const officePresence = officeWay
+    ? createDoorPresence({ ...officeWay.leaf, floor: officeWay.frame.y })
+    : null;
   const raycaster = new Raycaster();
   const pointer = new Vector2();
   const useSpaPanel = (x: number, y: number) => {
@@ -728,6 +740,12 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     partAudio.listen(camera, metre);
     if (spaTub && 'object' in spaTub) spaTub.update?.(delta);
     if (spaPanel && 'object' in spaPanel) spaPanel.parts?.update(delta);
+    // Near a door, it waits, told before it moves.
+    const actor = doorActor(walk, metre, WALKER_RADIUS_METRES);
+    if (plantDoor && plantPresence)
+      plantDoor.setNearby(plantPresence.update(actor));
+    if (officeDoor && officePresence)
+      officeDoor.setNearby(officePresence.update(actor));
     plantDoor?.update(delta);
     officeDoor?.update(delta);
     officeReader?.update(delta);
@@ -737,7 +755,6 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       if (open && !officeWasOpen) officeReader.doorOpened(true);
       officeWasOpen = open;
     }
-    if (officeDoor && inOfficeWay()) officeDoor.holdOpen();
     // Through the office's door, once the office is seen beyond it.
     if (
       officeWay &&
@@ -753,8 +770,6 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       leavingForOffice = true;
       enterDevRoom('engineers_office', 'pool_02_gallery', true);
     }
-    // It never closes on someone standing in its doorway.
-    if (plantDoor && inPlantWay()) plantDoor.holdOpen();
     // Through the plant room door, once its room is seen beyond it: handed
     // over to it, without a break.
     if (

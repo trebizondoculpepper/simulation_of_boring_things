@@ -45,9 +45,21 @@ export function createSpringDoor() {
       pushing = 0;
       dwell = 0;
     },
-    /** Advance `dt` seconds; `held` while someone stands in the doorway. */
+    /** Advance `dt` seconds; `held` while someone is near its doorway. */
     step(dt: number, held = false) {
       dt = Math.max(0, dt);
+      // Someone near it (`door-proximity.ts`): open, it waits; caught part
+      // shut on its spring, or stood part open, it opens again the way it
+      // was swinging, at its opening speed. Shut, it stays shut.
+      if (
+        held &&
+        !pushing &&
+        angle !== 0 &&
+        Math.abs(angle) < DOOR_OPEN_ANGLE
+      ) {
+        pushing = Math.sign(angle) as 1 | -1;
+        dwell = DOOR_DWELL_SECONDS;
+      }
       if (pushing) {
         angle += (pushing * DOOR_OPEN_ANGLE * dt) / DOOR_OPEN_SECONDS;
         if (Math.abs(angle) >= DOOR_OPEN_ANGLE) {

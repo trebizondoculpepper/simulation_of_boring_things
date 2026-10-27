@@ -53,12 +53,52 @@ export const workDoor = (s: PlantDoorState): PlantDoorState => ({
   closeElapsed: 0,
 });
 
-/** The door `dt` seconds on, and whether it latched shut in that time. */
+/**
+ * Someone near the doorway (`door-proximity.ts`), taken before the door
+ * moves: a shut door stays shut (it is opened by its handle, as ever); an
+ * opening door goes on opening; one held fully open waits a full hold
+ * again; and one its closer has begun to sweep, or one stood part open,
+ * opens again from where it is, at its opening speed, without a snap,
+ * however near shut it has come, so long as it has not latched.
+ */
+export function keepDoorOpen(s: PlantDoorState): PlantDoorState {
+  if (s.latched || s.phase === 'shut' || s.phase === 'opening') return s;
+  if (s.phase === 'held' && s.angle >= PLANT_DOOR.open)
+    return { ...s, timer: PLANT_DOOR.held };
+  return { ...s, phase: 'opening', timer: 0, closeFrom: 0, closeElapsed: 0 };
+}
+
+/**
+ * Stood open at `angle` (handed over from the other side of its doorway,
+ * the walker just through it): held there for a full hold before its
+ * closer takes it, not set closing at once; shut if `angle` is 0.
+ */
+export function standDoorOpen(angle: number): PlantDoorState {
+  const open = Math.min(PLANT_DOOR.open, Math.abs(angle));
+  return open > 0
+    ? {
+        ...initialPlantDoor(),
+        angle: open,
+        latched: false,
+        phase: 'held',
+        timer: PLANT_DOOR.held,
+      }
+    : initialPlantDoor();
+}
+
+/**
+ * The door `dt` seconds on, and whether it latched shut in that time;
+ * `nearby` while someone is near its doorway (`keepDoorOpen`), applied
+ * before it moves, so it can never take a last closing step and latch
+ * beside them.
+ */
 export function stepPlantDoor(
   s: PlantDoorState,
   dt: number,
+  nearby = false,
 ): { state: PlantDoorState; latchedNow: boolean } {
   const D = PLANT_DOOR;
+  if (nearby) s = keepDoorOpen(s);
   if (s.phase === 'opening') {
     const angle = Math.min(D.open, s.angle + D.opening * dt);
     return {
@@ -108,8 +148,10 @@ export function stepPlantDoor(
 }
 
 /**
- * Someone standing in the doorway: an open door is held open, its closer
- * waiting, until they are clear; it never closes on them.
+ * Held where it stands, its closer waiting a full hold: the pair's other
+ * leaf caught as this one is opened (`equipment-doors.ts`), and a gate
+ * held while someone climbs below it. Someone near the doorway is
+ * `stepPlantDoor`'s `nearby`, which opens it again.
  */
 export function holdDoorOpen(s: PlantDoorState): PlantDoorState {
   if (s.angle <= 0.05 || s.phase === 'opening') return s;

@@ -596,7 +596,7 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     last = time;
     ps1Uniforms.time.value = time / 1000;
     walk.update(delta);
-    passages.update(delta, walk.walker.x, walk.walker.z);
+    passages.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     for (const fitting of fittings)
       fitting.update(time / 1000, delta, reducedMotion?.matches ?? false);
     dazzle.update(delta);

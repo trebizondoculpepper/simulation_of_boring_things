@@ -421,7 +421,7 @@ export function startWaterRoom(canvas: HTMLCanvasElement) {
     if (last) frameMs += (time - last - frameMs) * 0.05;
     last = time;
     walk.update(delta);
-    portals.update(delta, walk.walker.x, walk.walker.z);
+    portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     drift(now);
     // The inlets stir the water now and then, along the pool's sides.
     stir -= delta;

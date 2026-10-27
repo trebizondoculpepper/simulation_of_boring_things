@@ -4,6 +4,7 @@ import type { PartSet } from '../../../components/core/parts/parts';
 import type { ExhibitSize } from '../../logic/plant-room-layout';
 import type { BrandId } from '../../../components/core/logic/brands';
 import type { Footprint } from '../../../controls/logic/walk-collision';
+import type { DoorwayActor } from '../../../components/architectural/logic/door-proximity';
 
 /**
  * One piece of plant shown in a plant development room: a model built at
@@ -47,6 +48,12 @@ export interface LiveExhibit {
    * for where the walker stands (a door's leaves while shut).
    */
   solids?(walker: { x: number; z: number }): Footprint[];
+  /**
+   * Who is near its doors, in metres in the room's frame, told each frame
+   * before its parts move (`door-proximity.ts`): null while the room only
+   * follows another's eye. Its doors, once open, wait for them.
+   */
+  sense?(walker: DoorwayActor | null): void;
 }
 
 /** Whether `built` is a working exhibit rather than a bare model. */

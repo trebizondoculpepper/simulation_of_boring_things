@@ -30,6 +30,8 @@ import {
 import type { RoomId, Portal } from '../logic/dev-room-links';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { createPs1Material } from '../../components/core/parts/ps1-material';
+import { createDoorPresence } from '../../components/architectural/logic/door-proximity';
+import { WALKER_RADIUS_METRES } from '../../controls/input/first-person';
 
 /** How close to its wall a walker's centre must come to touch a portal, metres. */
 export const PORTAL_REACH = WALL_THICKNESS / 2 + 0.25 + 0.15;
@@ -150,6 +152,8 @@ export function createPortals(
     seeing: boolean;
     /** How far in front of it the walker was last frame, metres. */
     was: number;
+    /** Whether the walker is near its doorway (`door-proximity.ts`). */
+    near: ReturnType<typeof createDoorPresence>;
   }[] = [];
   const withdraw: (() => void)[] = [];
   const travel = (to: RoomId, through = false) => {
@@ -179,7 +183,27 @@ export function createPortals(
     );
     door.add(part.object);
     for (const [object, use] of part.uses) uses.set(object, use);
-    const entry = { portal, part, seeing: false, was: Infinity };
+    // Its doorway through the wall, metres: the door waits for anyone near it.
+    const across = SPRING_OPENING.width / 2;
+    const deep = WALL_THICKNESS / 2;
+    const cx = portal.x / metre;
+    const cz = portal.z / metre;
+    const near = createDoorPresence(
+      inward.x
+        ? {
+            minX: cx - deep,
+            maxX: cx + deep,
+            minZ: cz - across,
+            maxZ: cz + across,
+          }
+        : {
+            minX: cx - across,
+            maxX: cx + across,
+            minZ: cz - deep,
+            maxZ: cz + deep,
+          },
+    );
+    const entry = { portal, part, seeing: false, was: Infinity, near };
     doors.push(entry);
     // Hung the other way about to the door it faces across the doorway
     // (the corridor's), so the two are one door: the same hinge, the same
@@ -389,11 +413,19 @@ export function createPortals(
         pitch: 0,
       };
     },
-    /** Travel if the walker, at (x, z), has walked into a portal. */
-    update(delta: number, x: number, z: number) {
+    /**
+     * Travel if the walker, at (x, z), has walked into a portal; `present`
+     * false while this room only follows another's eye, its walker parked.
+     */
+    update(delta: number, x: number, z: number, present = true) {
+      // A door is held open while someone is near its doorway, told
+      // before it moves; walking through it while it is open goes to its room.
+      const actor = present
+        ? { x: x / metre, z: z / metre, radius: WALKER_RADIUS_METRES }
+        : null;
+      for (const { part, near } of doors)
+        part.hold(near.update(actor) && part.door.open);
       parts.update(delta);
-      // A door is held open while someone stands in its doorway, and
-      // walking through it while it is open goes to its room.
       for (const entry of doors) {
         const { portal, part } = entry;
         const inward = INWARD[portal.side];
@@ -404,7 +436,6 @@ export function createPortals(
           Math.abs((x - portal.x) * inward.z - (z - portal.z) * inward.x) /
           metre;
         const inDoorway = along <= THROUGH.half && off <= THROUGH.face;
-        part.hold(inDoorway && part.door.open);
         const was = entry.was;
         entry.was = off;
         if (leaving || !inDoorway || !part.door.open) continue;

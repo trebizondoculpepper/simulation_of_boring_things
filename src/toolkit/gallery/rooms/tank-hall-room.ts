@@ -19,7 +19,11 @@ import {
   disposeKit,
 } from '../../components/core/views/eighties-controls';
 import { partAudio } from '../../components/core/audio/part-audio';
-import { createFirstPerson } from '../../controls/input/first-person';
+import {
+  createFirstPerson,
+  WALKER_RADIUS_METRES,
+} from '../../controls/input/first-person';
+import { doorActor } from '../../components/architectural/logic/door-proximity';
 import { humanLadderZones } from '../../components/architectural/views/human-ladder';
 import { knobDirection } from '../../controls/input/knob-turning';
 import {
@@ -262,6 +266,8 @@ export function startTankHall(canvas: HTMLCanvasElement) {
     ps1Uniforms.time.value = time / 1000;
     walk.update(delta);
     if (walk.floorY < -0.5 * m) hall.holdLadderGate();
+    // Near its doors or gate, they wait: told before they move.
+    hall.sense?.(doorActor(walk, m, WALKER_RADIUS_METRES));
     partAudio.listen(camera, m);
     hall.parts?.update(delta);
     hall.update?.(delta);

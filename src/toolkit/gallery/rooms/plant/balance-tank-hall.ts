@@ -3,6 +3,7 @@ import { markComponent } from '../../../components/core/views/component-identity
 import { createFlexHose } from '../../../components/core/views/pipe-route';
 import { createPipeBellmouth } from '../../../components/plant/views/pipe-bellmouth';
 import { ladderGate } from '../../../components/architectural/parts/ladder-gate';
+import { createDoorPresence } from '../../../components/architectural/logic/door-proximity';
 import { createPartSet } from '../../../components/core/parts/parts';
 import { BoxGeometry, Group, Mesh, PlaneGeometry, PointLight } from 'three';
 import { METRE } from '../../../components/core/logic/units';
@@ -608,6 +609,22 @@ export function buildHall(
     minZ: d0,
     maxZ: d1,
   };
+  // Who is near the doors, and the ladder gate on the deck (`door-proximity.ts`):
+  // not someone in the pit below the gate, on another level.
+  const doorsNear = createDoorPresence(leaves);
+  const gateNear = createDoorPresence({
+    minX: GATE.minX,
+    maxX: GATE.maxX,
+    minZ: OPENING.maxZ - 0.03,
+    maxZ: OPENING.maxZ + 0.03,
+    floor: 0,
+  });
+  const gateSweep = {
+    minX: GATE.minX - 0.05,
+    maxX: GATE.maxX,
+    minZ: OPENING.maxZ - 0.05,
+    maxZ: OPENING.maxZ + 0.65,
+  };
 
   // Light: sealed LED battens high on the walls, as the plant rooms have, a few lamps lighting the room.
   const battens = createWallBattenMaterials();
@@ -662,17 +679,19 @@ export function buildHall(
     parts,
     doors,
     holdLadderGate: () => gate.holdOpen(),
-    // The doors bar the doorway while shut, and are held open while the walker stands in it.
+    // Near the doors, or the gate on the deck, they wait (told before they
+    // move); in the gate's own sweep, it waits whatever its level.
+    sense: (walker) => {
+      doors.setNearby(doorsNear.update(walker));
+      const inSweep =
+        walker !== null &&
+        (walker.floor ?? 0) > -0.5 &&
+        overlaps(gateSweep, walker.x, walker.z, 0.35);
+      gate.setNearby(gateNear.update(walker) || inSweep);
+    },
+    // The doors bar the doorway while shut, except to the walker standing in it.
     solids: (walker) => {
       const inside = overlaps(leaves, walker.x, walker.z, 0.35);
-      if (inside) doors.holdOpen();
-      const gateSweep = {
-        minX: GATE.minX - 0.05,
-        maxX: GATE.maxX,
-        minZ: OPENING.maxZ - 0.05,
-        maxZ: OPENING.maxZ + 0.65,
-      };
-      if (overlaps(gateSweep, walker.x, walker.z, 0.35)) gate.holdOpen();
       return [
         ...(gate.angle() < 0.6
           ? [

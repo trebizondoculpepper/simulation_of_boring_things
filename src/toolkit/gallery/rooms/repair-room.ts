@@ -802,7 +802,7 @@ export function startRepairRoom(canvas: HTMLCanvasElement) {
           ? '#2b9b4e'
           : '#b32b21',
     );
-    portals.update(delta, walk.walker.x, walk.walker.z);
+    portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     partAudio.listen(camera, m);
     renderer.render(scene, camera);
   });

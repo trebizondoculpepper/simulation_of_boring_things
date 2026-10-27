@@ -457,7 +457,7 @@ export function startFiresRoom(canvas: HTMLCanvasElement) {
     const seconds = time / 1000;
     ps1Uniforms.time.value = seconds;
     walk.update(delta);
-    portals.update(delta, walk.walker.x, walk.walker.z);
+    portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     parts.update(delta);
     const now = level();
     if (now !== shown) {

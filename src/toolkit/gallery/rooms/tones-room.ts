@@ -531,7 +531,7 @@ export function startTonesRoom(canvas: HTMLCanvasElement) {
     ps1Uniforms.time.value = time / 1000;
     walk.update(delta);
     parts.update(delta);
-    portals.update(delta, walk.walker.x, walk.walker.z);
+    portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     partAudio.listen(camera, m);
     renderer.render(scene, camera);
   });

@@ -62,3 +62,34 @@ describe('a double-action spring door', () => {
     expect(door.open).toBe(false);
   });
 });
+
+describe('a spring door with someone near it (mission 090)', () => {
+  it('opens again the way it was swinging if they come near as it closes', () => {
+    for (const way of [1, -1] as const) {
+      const door = createSpringDoor();
+      door.push(way);
+      run(door, DOOR_OPEN_SECONDS + DOOR_DWELL_SECONDS + 1);
+      const caught = door.angle;
+      expect(Math.abs(caught)).toBeLessThan(DOOR_OPEN_ANGLE * 0.9);
+      expect(Math.sign(caught)).toBe(way);
+      let previous = Math.abs(caught);
+      for (let i = 0; i < 60; i++) {
+        door.step(1 / 60, true);
+        expect(Math.sign(door.angle)).toBe(way);
+        expect(Math.abs(door.angle)).toBeGreaterThanOrEqual(previous);
+        previous = Math.abs(door.angle);
+      }
+      expect(door.angle).toBeCloseTo(way * DOOR_OPEN_ANGLE);
+      // Clear of it, its full dwell before the spring takes it.
+      run(door, DOOR_DWELL_SECONDS - 0.1);
+      expect(door.angle).toBeCloseTo(way * DOOR_OPEN_ANGLE);
+    }
+  });
+
+  it('a shut door is not opened by someone near it', () => {
+    const door = createSpringDoor();
+    run(door, 5, true);
+    expect(door.angle).toBe(0);
+    expect(door.open).toBe(false);
+  });
+});

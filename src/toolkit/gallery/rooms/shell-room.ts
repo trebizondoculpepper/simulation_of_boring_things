@@ -111,6 +111,10 @@ import { createRoomEquipment } from '../views/room-equipment';
 import type { EquipmentDoorsPart } from '../../components/architectural/parts/equipment-doors';
 import type { Group } from 'three';
 import { bindRoomLights } from '../views/room-lights';
+import {
+  createDoorPresence,
+  doorActor,
+} from '../../components/architectural/logic/door-proximity';
 import { zoneOfRoom } from '../../../game/plant/lighting';
 import { bindRoomPower, roomPowered } from '../views/room-power';
 import type { ServiceRoom } from '../../../game/plant/services';
@@ -481,6 +485,9 @@ function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
     ...shellDoorway(cfg.room, d.door),
     seen: false,
   }));
+  // Whether the walker is near each doorway (`door-proximity.ts`), one for
+  // each, wider than its threshold: once open, its pair waits for them.
+  const near = ways.map((w) => createDoorPresence(w.leaf));
   type Way = (typeof ways)[number];
   const inWay = (w: Way) =>
     overlaps(
@@ -741,10 +748,11 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     }
     roomLights.update(delta);
     partAudio.listen(camera, metre);
+    // No pair closes on someone near it: told before the leaves move.
+    const actor = doorActor(walk, metre, WALKER_RADIUS_METRES);
+    ways.forEach((w, i) => w.part.setNearby(near[i].update(actor)));
     parts.update(delta);
     machines.update(delta);
-    // No pair closes on someone standing in its doorway.
-    for (const w of ways) if (inWay(w)) w.part.holdOpen();
     const r = doorReaders(
       wasOpen,
       doors.some((d) => d.part.open()),

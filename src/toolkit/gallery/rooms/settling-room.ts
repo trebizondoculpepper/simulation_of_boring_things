@@ -690,7 +690,7 @@ export function startSettlingRoom(canvas: HTMLCanvasElement) {
     fly(delta);
     vanish(delta);
     parts.update(delta);
-    portals.update(delta, walk.walker.x, walk.walker.z);
+    portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     partAudio.listen(camera, m);
     renderer.render(scene, camera);
   });

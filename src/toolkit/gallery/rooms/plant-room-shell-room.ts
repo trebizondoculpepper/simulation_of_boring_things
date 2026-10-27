@@ -79,6 +79,10 @@ import { createMimicBoard } from '../../components/industrial-control/views/mimi
 import { JACUZZI_MIMIC, jacuzziMimicState } from '../logic/jacuzzi-mimic';
 import { createJacuzziFibreControl } from '../views/jacuzzi-fibre-control';
 import { bindRoomLights } from '../views/room-lights';
+import {
+  createDoorPresence,
+  doorActor,
+} from '../../components/architectural/logic/door-proximity';
 import { zoneOfRoom } from '../../../game/plant/lighting';
 import { bindRoomPower, roomPowered } from '../views/room-power';
 import type { ServiceRoom } from '../../../game/plant/services';
@@ -270,6 +274,11 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   const southWay = wayOf(plan.equipment);
   // The balance tank hall's doors: nothing beyond them yet.
   const westWay = plan.tankDoor ? wayOf(plan.tankDoor) : null;
+  // Whether the walker is near each doorway (`door-proximity.ts`), wider
+  // than its threshold: its doors, once open, wait for them.
+  const northNear = createDoorPresence(northWay.leaf);
+  const southNear = createDoorPresence(southWay.leaf);
+  const westNear = westWay ? createDoorPresence(westWay.leaf) : null;
   const inWay = (w: typeof northWay) =>
     overlaps(
       w.leaf,
@@ -513,11 +522,12 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     walk.update(delta);
     roomLights.update(delta);
     partAudio.listen(camera, metre);
+    // A door never closes on someone near it: told before it moves.
+    const actor = doorActor(walk, metre, WALKER_RADIUS_METRES);
+    door.setNearby(northNear.update(actor));
+    equipmentDoors.setNearby(southNear.update(actor));
+    if (westNear && tankDoors) tankDoors.setNearby(westNear.update(actor));
     parts.update(delta);
-    // A door never closes on someone standing in its doorway.
-    if (inWay(northWay)) door.holdOpen();
-    if (inWay(southWay)) equipmentDoors.holdOpen();
-    if (westWay && tankDoors && inWay(westWay)) tankDoors.holdOpen();
     // Every card reader in the room shows green while either pair of its
     // doors stands open (beeping as it goes green).
     // They beep only when a door is opened while the walker is here, not

@@ -20,6 +20,7 @@ import {
 import {
   holdDoorOpen,
   initialPlantDoor,
+  standDoorOpen,
   stepPlantDoor,
   workDoor,
 } from '../logic/plant-door';
@@ -56,8 +57,12 @@ export interface EquipmentDoorsPart extends Part {
   angle: () => number;
   /** Stand both leaves open at `angle` (handed over through the doorway). */
   swingTo: (angle: number) => void;
-  /** Hold both leaves open while someone stands in the doorway. */
-  holdOpen: () => void;
+  /**
+   * Whether someone is near the doorway (`door-proximity.ts`), told each
+   * frame before the leaves move: each leaf that stands open waits, and
+   * one closing opens again; a shut leaf stays shut.
+   */
+  setNearby: (near: boolean) => void;
   /** Hide the leaves: the room beyond draws the doorway's one pair. */
   showLeaves: (on: boolean) => void;
   /** Its card readers, which the room may light. */
@@ -87,6 +92,7 @@ export function equipmentDoors(
     hold: () => void;
   }[] = [];
   const readers: ReturnType<typeof cardReader>[] = [];
+  let nearby = false;
   const stickerTemplate = createDoorWarningStickers(kit, warnings);
   const leaves = ([-1, 1] as const).map((side) => {
     // Hung on its outer jamb, meeting its pair in the middle.
@@ -130,19 +136,7 @@ export function equipmentDoors(
     controls.push({
       angle: () => state.angle,
       swingTo: (angle: number) => {
-        const open = Math.min(Math.PI / 2, Math.abs(angle));
-        state =
-          open > 0
-            ? {
-                ...state,
-                angle: open,
-                latched: false,
-                phase: 'closing',
-                timer: 0,
-                closeFrom: open,
-                closeElapsed: 0,
-              }
-            : initialPlantDoor();
+        state = standDoorOpen(angle);
       },
       hinge,
       hold: () => {
@@ -158,7 +152,7 @@ export function equipmentDoors(
     for (const target of [hinge, leaf, pull]) a.uses.set(target, work);
     a.updates.push((delta) => {
       const was = state.phase;
-      const r = stepPlantDoor(state, delta);
+      const r = stepPlantDoor(state, delta, nearby);
       state = r.state;
       // The last leaf opened sets the pair's closing time. An older leaf
       // waits through this leaf's full hold, even if its own hold was
@@ -225,8 +219,8 @@ export function equipmentDoors(
     swingTo: (value) => {
       for (const c of controls) c.swingTo(value);
     },
-    holdOpen: () => {
-      for (const c of controls) c.hold();
+    setNearby: (near) => {
+      nearby = near;
     },
     showLeaves: (on) => {
       for (const c of controls) c.hinge.visible = on;

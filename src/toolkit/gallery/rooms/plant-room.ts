@@ -60,7 +60,11 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { SANS, tools } from '../../components/core/views/fitting-tools';
 import { mergeTree } from '../../components/core/views/merge-static';
 import { partAudio } from '../../components/core/audio/part-audio';
-import { createFirstPerson } from '../../controls/input/first-person';
+import {
+  createFirstPerson,
+  WALKER_RADIUS_METRES,
+} from '../../controls/input/first-person';
+import { doorActor } from '../../components/architectural/logic/door-proximity';
 import {
   humanLadderLandingAt,
   humanLadderLandingSolids,
@@ -735,7 +739,10 @@ export function startEquipmentRoom(
     ps1Uniforms.time.value = time / 1000;
     walk.update(delta);
     partAudio.listen(camera, m);
-    portals?.update(delta, walk.walker.x, walk.walker.z);
+    portals?.update(delta, walk.walker.x, walk.walker.z, !walk.following);
+    // Near an exhibit's doors, they wait: told before they move.
+    const actor = doorActor(walk, m, WALKER_RADIUS_METRES);
+    for (const exhibit of live) exhibit.sense?.(actor);
     for (const exhibit of live) {
       exhibit.parts?.update(delta);
       exhibit.update?.(delta);

@@ -1711,7 +1711,7 @@ export function startEffectsPlaygroundRoom(canvas: HTMLCanvasElement) {
       panel.update(seconds, delta, reducedMotion.matches);
     teletype.update(delta, reducedMotion.matches);
     walk.update(delta);
-    passages.update(delta, walk.walker.x, walk.walker.z);
+    passages.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     patterns.step(delta);
     const { take } = ghosting.step(delta, {
       x: walk.walker.x / m,

@@ -402,7 +402,7 @@ export function startBinRoom(canvas: HTMLCanvasElement) {
     for (const effect of appearing)
       if (!effect.update(delta)) appearing.delete(effect);
     parts.update(delta);
-    portals.update(delta, walk.walker.x, walk.walker.z);
+    portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     partAudio.listen(camera, m);
     renderer.render(scene, camera);
   });
