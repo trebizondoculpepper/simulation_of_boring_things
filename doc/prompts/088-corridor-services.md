@@ -1,6 +1,6 @@
 # 088: Services through the corridors, as decoration
 
-Status: to do (written 2026-10-27 from the owner's request). Stage 1, the research, started the same day; its findings go to `doc/research/corridor-services.md`. Stage 2, the plumbing, waits on it.
+Status: stages 1 and 2 done 2026-10-27 (`doc/research/corridor-services.md`; `src/toolkit/gallery/logic/corridor-services.ts` and its view). To be updated now and then as the plant grows.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply. Markdown is one paragraph per line.
 

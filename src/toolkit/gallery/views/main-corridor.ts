@@ -15,6 +15,7 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createServiceCeiling } from '../../components/site-dressing/views/service-ceiling';
 import { corridorContainment } from '../logic/cable-containment';
 import { createContainment } from './cable-containment';
+import { createCorridorServices } from './corridor-services';
 import {
   EQUIPMENT_DOORS,
   equipmentDoors,
@@ -166,6 +167,8 @@ export function createMainCorridor(metre: number, kit: PanelKit) {
   // The cable ladder from the switch room round the ring, into every room.
   const cables = corridorContainment();
   group.add(createContainment(kit, cables.runs, cables.entries, H));
+  // The wet services round the ring, below it (prompt 088): decoration.
+  group.add(createCorridorServices(kit));
   // The services ceiling over each side, and the wall battens and lights.
   strips.forEach(([minX, maxX, minZ, maxZ], i) =>
     group.add(
