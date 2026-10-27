@@ -1,0 +1,652 @@
+import type { Footprint } from '../../controls/logic/walk-collision';
+import { STEP_UP, surfaceFloorAt } from './stair-run';
+import type { Surface } from './stair-run';
+
+/**
+ * The control room's prototype (mission 092, stage 0; dev45), to the
+ * layout the owner chose (2026-10-27, "E, option C as the owner wants
+ * it"), made grand (layout F, then bigger again: the owner wants an extreme,
+ * deliberate grandiosity, Bond villain meets Mission Control): one big
+ * open space, a flattened heptagon 28 × 22 m, 9 m to its ceiling, a
+ * giant ring light over the operator's chair. From a corridor door a
+ * switchback stair climbs a whole 8 m storey in its own stair hall and
+ * comes up, off centre, through a guarded opening in the floor on the
+ * room's left (west), between the desk and the left wall, facing the big
+ * wall. In the middle front, a segmented heptagonal operator's desk of
+ * the room's shape, smaller, its big side toward the big wall, open at
+ * the back for the operator to get in. The back end, behind the line
+ * joining the two back side corners, is a raised stage 1.05 m up, a
+ * wide flight of six risers in the middle and a guard rail along the
+ * rest of its front, holding a long conference table looking over the
+ * desk to the big wall. Pure: metres,
+ * x east, z south, the ground floor at 0. The room's axis is x = 0, from
+ * the big wall's middle (north) to the back corner (south).
+ */
+
+export interface Point {
+  x: number;
+  z: number;
+}
+
+/** The storey the stair climbs, metres. */
+export const STOREY = 8;
+
+/** The room's dimensions, metres. */
+export const CONTROL_ROOM = {
+  /** The big (front, north) wall's length. */
+  front: 24,
+  /** From the big wall to the back corner, on the axis. */
+  depth: 22,
+  /** The big wall's line, z. */
+  frontZ: -11,
+  /** Floor to ceiling. */
+  ceiling: 9,
+  /** The walls' thickness. */
+  wall: 0.3,
+} as const;
+
+/**
+ * The room's corners on plan, clockwise from the big wall's west end
+ * (the owner's plan): the big wall; its two neighbours angled out to the
+ * room's widest; two side walls angled back in; and two back walls
+ * meeting in the corner on the axis. Each corner is given as a fraction
+ * of the big wall's half-length across and of the depth back from it.
+ */
+const SHAPE: readonly [number, number][] = [
+  [-1, 0],
+  [1, 0],
+  [1.1667, 0.3],
+  [1, 0.6],
+  [0, 1],
+  [-1, 0.6],
+  [-1.1667, 0.3],
+];
+
+/** A heptagon of the room's shape: `front` long on its big side at `frontZ`, `depth` deep. */
+export function heptagon(front: number, depth: number, frontZ: number) {
+  return SHAPE.map(([u, v]) => ({
+    x: (u * front) / 2,
+    z: frontZ + v * depth,
+  }));
+}
+
+/** The room's inner face on plan. */
+export const roomPolygon = (): Point[] =>
+  heptagon(CONTROL_ROOM.front, CONTROL_ROOM.depth, CONTROL_ROOM.frontZ);
+
+/** The wall from corner `i` to the next. */
+export const sides = (poly: readonly Point[]) =>
+  poly.map((a, i) => [a, poly[(i + 1) % poly.length]] as const);
+
+/** Whether (x, z) is inside a convex polygon wound clockwise on plan (x east, z south). */
+export function insidePolygon(poly: readonly Point[], x: number, z: number) {
+  return sides(poly).every(
+    ([a, b]) => (b.x - a.x) * (z - a.z) - (b.z - a.z) * (x - a.x) >= -1e-9,
+  );
+}
+
+/** How far (x, z) is from the segment a–b. */
+export function distanceToSegment(p: Point, a: Point, b: Point) {
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  const t = Math.max(
+    0,
+    Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / (dx * dx + dz * dz)),
+  );
+  return Math.hypot(p.x - (a.x + t * dx), p.z - (a.z + t * dz));
+}
+
+/** The inward unit normal of the side a–b of a clockwise polygon. */
+export function inward(a: Point, b: Point): Point {
+  const len = Math.hypot(b.x - a.x, b.z - a.z);
+  return { x: -(b.z - a.z) / len, z: (b.x - a.x) / len };
+}
+
+/** A convex clockwise polygon with every side moved `d` inward. */
+export function insetPolygon(poly: readonly Point[], d: number): Point[] {
+  const lines = sides(poly).map(([a, b]) => {
+    const n = inward(a, b);
+    return {
+      p: { x: a.x + n.x * d, z: a.z + n.z * d },
+      dir: { x: b.x - a.x, z: b.z - a.z },
+    };
+  });
+  return lines.map((l, i) => {
+    const prev = lines[(i + lines.length - 1) % lines.length];
+    // Where the previous side's line meets this one's.
+    const det = prev.dir.x * l.dir.z - prev.dir.z * l.dir.x;
+    const t =
+      ((l.p.x - prev.p.x) * l.dir.z - (l.p.z - prev.p.z) * l.dir.x) / det;
+    return { x: prev.p.x + prev.dir.x * t, z: prev.p.z + prev.dir.z * t };
+  });
+}
+
+/**
+ * The operator's desk: the room's shape at `scale`, its big side
+ * `frontZ`, `top` deep from its outer edge to the operator's. One
+ * segment for each side but the two at the back (corners 3 to 5), left
+ * open for the operator to get in.
+ */
+export const DESK = {
+  scale: 0.25,
+  frontZ: -6.5,
+  /** Its top's depth, outer edge to the operator's edge. */
+  top: 1.0,
+  /** The sides it has no segment on: its back two, the way in. */
+  open: [3, 4] as readonly number[],
+} as const;
+
+export function deskOuter(): Point[] {
+  const { front, depth } = CONTROL_ROOM;
+  return heptagon(front * DESK.scale, depth * DESK.scale, DESK.frontZ);
+}
+
+export const deskInner = () => insetPolygon(deskOuter(), DESK.top);
+
+/** The desk's segments, each its side's outer and inner edges (a quadrilateral). */
+export function deskSegments() {
+  const outer = deskOuter();
+  const inner = deskInner();
+  const n = outer.length;
+  return outer
+    .map((_, i) => ({
+      side: i,
+      outer: [outer[i], outer[(i + 1) % n]] as const,
+      inner: [inner[i], inner[(i + 1) % n]] as const,
+    }))
+    .filter((s) => !DESK.open.includes(s.side));
+}
+
+/** Where the operator's chair stands: in the desk's well, toward its front. */
+export function chairPlace(): Point {
+  const inner = deskInner();
+  const front = (inner[0].z + inner[1].z) / 2;
+  return { x: 0, z: front + 1.6 };
+}
+
+// ---------------------------------------------------------------- stair
+
+/**
+ * The stair (Approved Document K): at most 16 risers to a flight, a
+ * riser of at most 220 mm and a going of at least 220 mm for a general
+ * access stair; 46 risers of 174 mm, goings of 250 mm, in three flights
+ * of 16, 15 and 15, two lanes side by side (a switchback): the first and
+ * third flights north up the arrival lane (off centre, on the room's
+ * left), the second south up the lane west of it, landings across both
+ * lanes at each end.
+ */
+export const STAIR = {
+  risers: [16, 15, 15],
+  going: 0.25,
+  /** Each flight's clear width, and the landings' depth along the lanes. */
+  width: 1.5,
+  landing: 1.5,
+  /** The wall between the lanes. */
+  spine: 0.2,
+  /** The stair hall's walls. */
+  wall: 0.2,
+  /** Where the last flight comes up into the room, z: its top nosing. */
+  topZ: -4.0,
+  /** The arrival lane's middle, x: off centre, between the desk and the left wall. */
+  laneX: -7.5,
+  /** The level floor from the door to the first riser. */
+  approach: 1.6,
+} as const;
+
+export const riserHeight = () =>
+  STOREY / STAIR.risers.reduce((a, b) => a + b, 0);
+
+/**
+ * The lanes: the arrival lane (first and third flights; `axis`, the
+ * stair's own axis) and the lane west of it (`east` no longer: `side`).
+ */
+export function lanes() {
+  const w = STAIR.width;
+  const x = STAIR.laneX;
+  const axis = { minX: x - w / 2, maxX: x + w / 2 };
+  const side = {
+    minX: x - w / 2 - STAIR.spine - w,
+    maxX: x - w / 2 - STAIR.spine,
+  };
+  return { axis, side };
+}
+
+export interface Flight {
+  name: string;
+  risers: number;
+  /** Its walking surface, a ramp along its nosings' line. */
+  surface: Surface & {
+    y: { along: 'z'; at0: number; y0: number; at1: number; y1: number };
+  };
+}
+
+/**
+ * The stair's flights and landings. The flights' tops and feet all line
+ * up at the lanes' ends: the north landing's south edge at `topZ`, the
+ * south landing's north edge a flight's going south of it.
+ */
+export function stairPlan() {
+  const r = riserHeight();
+  const { going, landing } = STAIR;
+  const { axis, side } = lanes();
+  const north = STAIR.topZ;
+  // The second and third flights (15 risers, 14 goings) span the lanes'
+  // length; the first, one riser more, starts a going further south.
+  const length = (STAIR.risers[1] - 1) * going;
+  const south = north + length;
+  const [n1, n2, n3] = STAIR.risers;
+  const heights = [0, n1 * r, (n1 + n2) * r, STOREY];
+  const flight = (
+    name: string,
+    risers: number,
+    lane: { minX: number; maxX: number },
+    at0: number,
+    at1: number,
+    y0: number,
+    y1: number,
+  ): Flight => ({
+    name,
+    risers,
+    surface: {
+      name,
+      area: {
+        ...lane,
+        minZ: Math.min(at0, at1),
+        maxZ: Math.max(at0, at1),
+      },
+      y: { along: 'z', at0, y0, at1, y1 },
+    },
+  });
+  const foot = north + (n1 - 1) * going;
+  const flights = [
+    flight('First flight', n1, axis, foot, north, heights[0], heights[1]),
+    flight('Second flight', n2, side, north, south, heights[1], heights[2]),
+    flight('Third flight', n3, axis, south, north, heights[2], heights[3]),
+  ];
+  const across = { minX: side.minX, maxX: axis.maxX };
+  const landings: Surface[] = [
+    {
+      name: 'North landing',
+      area: { ...across, minZ: north - landing, maxZ: north },
+      y: heights[1],
+    },
+    {
+      name: 'South landing',
+      area: { ...across, minZ: south, maxZ: south + landing },
+      y: heights[2],
+    },
+  ];
+  // The stair hall: round the lanes and landings, and the level approach
+  // from its door to the first riser.
+  const t = STAIR.wall;
+  const hall: Footprint = {
+    minX: side.minX - t,
+    maxX: axis.maxX + t,
+    minZ: north - landing - t,
+    maxZ: Math.max(foot, south + landing) + STAIR.approach + t,
+  };
+  // The guarded opening in the room's floor: over the third flight, from
+  // its top nosing back to the south landing.
+  const opening: Footprint = { ...axis, minZ: north, maxZ: south };
+  // The door into the stair hall, in its south wall, in line with the first flight.
+  const door = {
+    x: STAIR.laneX,
+    z: hall.maxZ - t / 2,
+    width: 1.0,
+    height: 2.1,
+  };
+  return { flights, landings, hall, opening, door, heights, foot, south };
+}
+
+/** The stair's walking surfaces. */
+export const stairSurfaces = (): Surface[] => {
+  const p = stairPlan();
+  return [...p.flights.map((f) => f.surface), ...p.landings];
+};
+
+// --------------------------------------------------------- walking
+
+/**
+ * The floor under a walker at (x, z), come from height `previous`: the
+ * stair's surfaces, the stair hall's ground floor, and the room's floor
+ * one storey up, round its opening.
+ */
+export function protoFloorAt(x: number, z: number, previous: number) {
+  const stair = surfaceFloorAt(stairSurfaces(), x, z, previous);
+  const { opening } = stairPlan();
+  const inOpening =
+    x > opening.minX &&
+    x < opening.maxX &&
+    z > opening.minZ + 1e-6 &&
+    z < opening.maxZ;
+  if (!insidePolygon(roomPolygon(), x, z) || inOpening) return stair;
+  // The stage or its step there if within a step, else the main floor.
+  const raised = STOREY + platformStepAt(x, z);
+  const room = raised <= previous + STEP_UP ? raised : STOREY;
+  return room <= previous + STEP_UP ? Math.max(stair, room) : stair;
+}
+
+/**
+ * The raised stage at the back: behind the line joining the two back
+ * side corners, 1.05 m up, six risers of 175 mm in the middle (five
+ * treads in front of its edge), handrails both sides of them, a 1.1 m
+ * guard rail along the rest of its front (a drop over 600 mm).
+ */
+export const PLATFORM = {
+  height: 1.05,
+  risers: 6,
+  going: 0.28,
+  /** The steps' width, centred on the axis. */
+  stepWidth: 4.0,
+} as const;
+
+/** The platform's front edge, z. */
+export const platformEdge = () => roomPolygon()[3].z;
+
+/** How high the room's floor is at (x, z) over its main floor: on the platform, on a step, or not. */
+export function platformStepAt(x: number, z: number) {
+  const edge = platformEdge();
+  if (z >= edge) return PLATFORM.height;
+  const { risers, going, stepWidth, height } = PLATFORM;
+  if (Math.abs(x) > stepWidth / 2) return 0;
+  const treads = risers - 1;
+  const k = Math.ceil((z - (edge - treads * going)) / going);
+  if (k < 1) return 0;
+  return (k * height) / risers;
+}
+
+/** The rail along the platform's front, either side of its steps. */
+export function platformRail(): Footprint[] {
+  const room = roomPolygon();
+  const edge = platformEdge();
+  const half = PLATFORM.stepWidth / 2;
+  const T = 0.05;
+  const foot = edge - (PLATFORM.risers - 1) * PLATFORM.going;
+  return [
+    { minX: room[5].x, maxX: -half, minZ: edge - T, maxZ: edge },
+    { minX: half, maxX: room[3].x, minZ: edge - T, maxZ: edge },
+    // The steps' handrails, each side.
+    { minX: -half - T, maxX: -half, minZ: foot, maxZ: edge },
+    { minX: half, maxX: half + T, minZ: foot, maxZ: edge },
+  ];
+}
+
+/** The conference table on the platform, and its chairs, five a side. */
+export const CONFERENCE = { w: 5.0, d: 1.5, z: 5.8 } as const;
+
+export const conferenceTable = (): Footprint => ({
+  minX: -CONFERENCE.w / 2,
+  maxX: CONFERENCE.w / 2,
+  minZ: CONFERENCE.z - CONFERENCE.d / 2,
+  maxZ: CONFERENCE.z + CONFERENCE.d / 2,
+});
+
+export const conferenceChairs = () =>
+  [-2, -1, 0, 1, 2].flatMap((x) => [
+    { x, z: CONFERENCE.z - CONFERENCE.d / 2 - 0.3, yaw: Math.PI },
+    { x, z: CONFERENCE.z + CONFERENCE.d / 2 + 0.3, yaw: 0 },
+  ]);
+
+/** Boxes along the segment a–b, `depth` thick on its `side` (+1 inward of a clockwise polygon), in pieces at most `piece` long. */
+export function bandAlong(
+  a: Point,
+  b: Point,
+  depth: number,
+  piece = 0.4,
+  offset = 0,
+): Footprint[] {
+  const n = inward(a, b);
+  const len = Math.hypot(b.x - a.x, b.z - a.z);
+  const count = Math.max(1, Math.ceil(len / piece));
+  const out: Footprint[] = [];
+  for (let k = 0; k < count; k++) {
+    const t0 = k / count;
+    const t1 = (k + 1) / count;
+    const pts = [t0, t1].flatMap((t) => {
+      const px = a.x + (b.x - a.x) * t;
+      const pz = a.z + (b.z - a.z) * t;
+      return [offset, offset + depth].map((s) => ({
+        x: px + n.x * s,
+        z: pz + n.z * s,
+      }));
+    });
+    out.push({
+      minX: Math.min(...pts.map((p) => p.x)),
+      maxX: Math.max(...pts.map((p) => p.x)),
+      minZ: Math.min(...pts.map((p) => p.z)),
+      maxZ: Math.max(...pts.map((p) => p.z)),
+    });
+  }
+  return out;
+}
+
+/** How deep each wall's placeholder stands out from it, metres (`PLACEHOLDERS`). */
+export const placeholderDepth = (side: number) =>
+  PLACEHOLDERS.filter((p) => p.side === side).reduce(
+    (d, p) => Math.max(d, p.depth),
+    0,
+  );
+
+/**
+ * The placeholders for the consoles round the walls, by side (0 the big
+ * wall, then clockwise), as the owner's plan has them: where each era's
+ * console will go, so the owner can judge proportions. Each is `width`
+ * along its wall from its middle (`at`, metres along from the side's
+ * start), `height` tall from `bottom` (over the floor it stands on: the
+ * platform's, on the back walls) and `depth` deep.
+ */
+export const PLACEHOLDERS: readonly {
+  side: number;
+  label: string;
+  note: string;
+  era: '1980s' | '1990s' | '2010s';
+  at: number;
+  width: number;
+  bottom: number;
+  height: number;
+  depth: number;
+}[] = [
+  {
+    side: 0,
+    label: '2010s LED PROCESS WALL',
+    note: 'the main display: LED-matrix panels, the process animated',
+    era: '2010s',
+    at: 12,
+    width: 20,
+    bottom: 1.5,
+    height: 5.5,
+    depth: 0.15,
+  },
+  {
+    side: 1,
+    label: '1980s MIMIC · POOLS',
+    note: 'mimic panel, 30 mm devices, moving-coil meters',
+    era: '1980s',
+    at: 3.45,
+    width: 5.6,
+    bottom: 0,
+    height: 2.6,
+    depth: 0.5,
+  },
+  {
+    side: 2,
+    label: '1990s LCD CONSOLES',
+    note: 'segment and character LCD panels',
+    era: '1990s',
+    at: 3.45,
+    width: 5.6,
+    bottom: 0,
+    height: 1.25,
+    depth: 0.7,
+  },
+  {
+    side: 3,
+    label: '2010s TRENDS + CCTV',
+    note: 'flat screens: trends, the CCTV quad',
+    era: '2010s',
+    at: 7.4,
+    width: 11,
+    bottom: 1.2,
+    height: 2.6,
+    depth: 0.15,
+  },
+  {
+    side: 4,
+    label: '1980s MIMIC · AIR + ANNUNCIATOR',
+    note: 'mimic panel, alarm annunciator windows',
+    era: '1980s',
+    at: 7.5,
+    width: 11,
+    bottom: 0,
+    height: 2.6,
+    depth: 0.5,
+  },
+  {
+    side: 5,
+    label: '1990s OT-216 TERMINALS',
+    note: 'compact terminals and their control boxes, on the wall',
+    era: '1990s',
+    at: 3.45,
+    width: 5.6,
+    bottom: 1.0,
+    height: 0.9,
+    depth: 0.3,
+  },
+  {
+    side: 6,
+    label: '1980s MIMIC · HEATING',
+    note: 'mimic panel, 30 mm devices, moving-coil meters',
+    era: '1980s',
+    at: 3.45,
+    width: 5.6,
+    bottom: 0,
+    height: 2.6,
+    depth: 0.5,
+  },
+];
+
+/** The floor a wall's placeholder stands on, over the main floor: the platform's on the back walls. */
+export const placeholderFloor = (side: number) =>
+  side === 3 || side === 4 ? PLATFORM.height : 0;
+
+/** A placeholder's footprint corners, on plan. */
+export function placeholderCorners(p: (typeof PLACEHOLDERS)[number]) {
+  const [a, b] = sides(roomPolygon())[p.side];
+  const len = Math.hypot(b.x - a.x, b.z - a.z);
+  const u = { x: (b.x - a.x) / len, z: (b.z - a.z) / len };
+  const n = inward(a, b);
+  const s0 = p.at - p.width / 2;
+  const s1 = p.at + p.width / 2;
+  const at = (s: number, d: number) => ({
+    x: a.x + u.x * s + n.x * d,
+    z: a.z + u.z * s + n.z * d,
+  });
+  return [at(s0, 0), at(s1, 0), at(s1, p.depth), at(s0, p.depth)];
+}
+
+/** The guard round the floor's opening: its sides and back, open at its north end (the stair's mouth). */
+export function openingGuard(): Footprint[] {
+  const { opening } = stairPlan();
+  const T = 0.05;
+  return [
+    { ...opening, minX: opening.minX - T, maxX: opening.minX },
+    { ...opening, minX: opening.maxX, maxX: opening.maxX + T },
+    {
+      minX: opening.minX - T,
+      maxX: opening.maxX + T,
+      minZ: opening.maxZ,
+      maxZ: opening.maxZ + T,
+    },
+  ];
+}
+
+/** The stair hall's walls, round its lanes, landings and approach. */
+export function hallWalls(): Footprint[] {
+  const { hall } = stairPlan();
+  const t = STAIR.wall;
+  return [
+    { ...hall, maxX: hall.minX + t },
+    { ...hall, minX: hall.maxX - t },
+    { ...hall, maxZ: hall.minZ + t },
+    { ...hall, minZ: hall.maxZ - t },
+  ];
+}
+
+/** The wall between the lanes, the length of the flights. */
+export function spine(): Footprint {
+  const { axis, side } = lanes();
+  const p = stairPlan();
+  return { minX: side.maxX, maxX: axis.minX, minZ: STAIR.topZ, maxZ: p.south };
+}
+
+/**
+ * What stops a walker standing at height `y`. In the stair hall (below
+ * the room): its walls and the spine; on the ground, also the space
+ * under the second flight and the north landing, closed off; on the
+ * south landing, its guard over the approach. In the room: its walls
+ * with their consoles, the desk, and the guard round the opening.
+ */
+export function protoSolids(y: number): Footprint[] {
+  const p = stairPlan();
+  const { side: west } = lanes();
+  if (y < STOREY - 0.5) {
+    const out = [...hallWalls(), spine()];
+    if (y < STEP_UP)
+      out.push({
+        ...west,
+        minZ: STAIR.topZ - STAIR.landing,
+        maxZ: p.south,
+      });
+    else
+      out.push({
+        minX: p.hall.minX,
+        maxX: p.hall.maxX,
+        minZ: p.south + STAIR.landing,
+        maxZ: p.south + STAIR.landing + 0.05,
+      });
+    return out;
+  }
+  const room = roomPolygon();
+  const walls = sides(room).flatMap(([a, b], i) =>
+    bandAlong(a, b, CONTROL_ROOM.wall + placeholderDepth(i), 0.3, -0.3),
+  );
+  const desk = deskSegments().flatMap((s) =>
+    bandAlong(s.outer[0], s.outer[1], DESK.top, 0.25),
+  );
+  return [
+    ...walls,
+    ...desk,
+    ...openingGuard(),
+    ...platformRail(),
+    conferenceTable(),
+  ];
+}
+
+/** Where the walker starts: in the stair hall, inside its door, facing the stair. */
+export function protoStart() {
+  const { door } = stairPlan();
+  return { x: door.x, z: door.z - 0.8, yaw: 0 };
+}
+
+/** The plan's bounds, for the room's frame and its noclip. */
+export function protoBounds(): Footprint {
+  const room = roomPolygon();
+  const { hall } = stairPlan();
+  const t = CONTROL_ROOM.wall;
+  return {
+    minX: Math.min(...room.map((p) => p.x)) - t,
+    maxX: Math.max(...room.map((p) => p.x)) + t,
+    minZ: Math.min(...room.map((p) => p.z)) - t,
+    maxZ: Math.max(hall.maxZ, ...room.map((p) => p.z + t)),
+  };
+}
+
+/**
+ * The ring light (the owner, 2026-10-27, after the war room in Dr.
+ * Strangelove): a giant circular luminaire `diameter` across, hung on
+ * rods from the ceiling `height` over the floor, centred on the
+ * operator's chair, lighting the desk in a pool. Set decoration.
+ */
+export const RING_LIGHT = { diameter: 8, height: 5.6, hangers: 8 } as const;
+
+export const ringLightCentre = () => chairPlace();

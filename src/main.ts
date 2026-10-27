@@ -876,6 +876,9 @@ const importStarter = async (
   if (room === 'dev34')
     return (await import('./toolkit/gallery/rooms/shell-room'))
       .startStairTowerRoom;
+  if (room === 'dev45')
+    return (await import('./toolkit/gallery/rooms/control-room-prototype'))
+      .startControlRoomPrototype;
   if (room === 'dev31')
     return (await import('./rendering/effects-playground-room'))
       .startEffectsPlaygroundRoom;

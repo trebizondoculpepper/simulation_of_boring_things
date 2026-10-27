@@ -402,7 +402,7 @@ export function startWetHall(canvas: HTMLCanvasElement) {
   });
 }
 
-interface ShellConfig {
+export interface ShellConfig {
   self: RoomId;
   install?: (kit: ReturnType<typeof createPanelKit>) => Part[];
   room: { w: number; d: number; doors: readonly ShellDoor[] };
@@ -431,7 +431,7 @@ interface ShellConfig {
  * doorway in use. Every card reader in the room shows green while any of
  * its doors stands open, beeping as one is opened here.
  */
-function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
+export function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
   const metre = METRE;
   const scene = new Scene();
   scene.background = null;
