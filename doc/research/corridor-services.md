@@ -317,6 +317,7 @@ These are reported, not fixed. Stage 1 changes no code.
 ## The owner's rulings
 
 - **Levels between rooms (2026-10-27):** the building's geography is not modelled consistently, so between rooms levels and gravity do not matter. A line that goes down into a gully or a floor channel in one room may emerge at whatever level the next room needs: the backwash leaves the plant rooms by their floor channels and arrives in the wet hall at its high stub, and the corridor shows each service at the corridor's own height for it. Within a room, gravity lines must still fall. This settles question 1, and question 2 likewise: the wet hall's low stubs need no risers in the corridor.
+- **The heating ring's size (2026-10-27):** the ring matches the boiler house's own flow and return, DN80 (88.9 mm), which stay as they are (DN100 was tried and does not fit the boiler house without re-laying it); each plant room tees off it into its own connection, and the Lounge's and Olympic's 114.3 mm entries are not worried about for now. This settles question 3.
 
 ## Open questions for the owner
 
@@ -324,7 +325,7 @@ Ask one at a time, roughly in this order:
 
 1. (Settled 2026-10-27, see the rulings.) The backwash: should the corridor show it as an overhead 160 mm main into the wet hall's high stub, as the wet hall has it, which needs the plant rooms' backwash pumped? Or as a gravity drain under the corridor floor (covered trench, chequer plate), which matches the plant rooms' floor channels but not the wet hall's stub?
 2. (Settled 2026-10-27, see the rulings.) The wet hall's stubs come out below the corridor's headroom (make-up at 1.25 m, chemicals at 1.45 to 2.15 m). Are vertical risers against the inner wall, in guards, acceptable? Or should the wet hall's stubs be raised later so they come through above 2.8 m?
-3. The LTHW ring: size it DN100 to match PL1's and PL2's 114.3 mm branches, with an increaser where the boiler house's 88.9 mm main meets it? Or DN80, with the plant rooms' entries reduced?
+3. (Settled 2026-10-27, see the rulings.) The LTHW ring: size it DN100 to match PL1's and PL2's 114.3 mm branches, with an increaser where the boiler house's 88.9 mm main meets it? Or DN80, with the plant rooms' entries reduced?
 4. The power: is a cable ladder carrying radial feeders acceptable as the "electrical ring"? Or would you rather have a plug-in busbar ring, even though one way would then feed every room?
 5. A potable cold-water main from the wet hall to the boiler house's cold feed, which the model does not have: add it to the decoration, or leave the cold feed's stub unexplained?
 6. The chemical mains crossing the loading bay from the stores to the corridor: draw them in the bay too (they are not in a corridor), or leave the bay bare?
