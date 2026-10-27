@@ -112,6 +112,7 @@ export type RoomId =
   | 'switch_room'
   | 'air_plant'
   | 'control_room'
+  | 'bridge'
   | 'engineers_office'
   | 'duty_managers_office'
   | 'plant_room_tiny'
@@ -293,6 +294,9 @@ export const ROOMS: readonly RoomId[] = [
   'acid_store',
   'switch_room',
   'air_plant',
+  // The control room is the bridge (mission 095), up its stair off the
+  // corridor; the old one is retired, by its URL only, kept to restore.
+  'bridge',
   'control_room',
   'engineers_office',
   'duty_managers_office',
@@ -347,7 +351,8 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   acid_store: 'ACID STORE',
   switch_room: 'ELECTRICAL SWITCH ROOM',
   air_plant: 'AIR HANDLING PLANT',
-  control_room: 'CONTROL ROOM',
+  control_room: 'CONTROL ROOM (RETIRED)',
+  bridge: 'THE BRIDGE · CONTROL ROOM',
   engineers_office: 'ENGINEER’S OFFICE',
   duty_managers_office: 'DUTY MANAGER’S OFFICE',
   plant_room_tiny: 'PLANT ROOM · TINY · 5 × 5 M',
@@ -459,6 +464,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   switch_room: '#6d7a6f',
   air_plant: '#6d7a6f',
   control_room: '#6d7a6f',
+  bridge: '#c890c8',
   engineers_office: '#6d7a6f',
   duty_managers_office: '#7e8975',
   plant_room_tiny: '#6d7a6f',

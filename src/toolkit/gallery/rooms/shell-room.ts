@@ -11,6 +11,7 @@ import {
 import { SHELL_WALL } from '../logic/shell-rooms';
 import { createDockOutside } from '../views/dock-outside';
 import { createInspector } from '../views/inspect-pick';
+import { touchingAt } from '../../controls/input/touch-point';
 import { computed, signal } from '@preact/signals-core';
 import {
   actOnZoneMusic,
@@ -421,6 +422,12 @@ export interface ShellConfig {
   start: { x: number; z: number; yaw: number; pitch?: number };
   /** Whether its lamps and displays have power: by default, its own room's supply. */
   powered?: () => boolean;
+  /** Its lighting zone's room, if not its own (the bridge's is the control room's). */
+  lightsOf?: string;
+  /** Where its noclip may fly, metres, if not within `room` (the bridge's plan). */
+  bounds?: Footprint;
+  /** Its doorways stop the walker only below this height, metres (the bridge's are at the foot of its stair). */
+  doorsBelow?: number;
 }
 
 /**
@@ -466,7 +473,9 @@ export function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
       const work = parts.uses.get(o) ?? machines.useOf(o);
       if (work) {
         const at = o;
-        return () => work(knobDirection(at, hit.point, camera));
+        // With the hit known, so a touch surface can ask where it was touched.
+        return () =>
+          touchingAt(hit, () => work(knobDirection(at, hit.point, camera)));
       }
     }
     return null;
@@ -644,14 +653,29 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     metre,
     floorY: cfg.floorAt(cfg.start.x, cfg.start.z, 0) * metre,
     // The loading dock's noclip reaches out over its yard (prompt 080).
-    flightBounds: () => ({
-      minX: (cfg.self === 'loading_bay' ? -30 : -cfg.room.w / 2 + 0.05) * metre,
-      maxX: (cfg.self === 'loading_bay' ? 30 : cfg.room.w / 2 - 0.05) * metre,
-      minZ: (cfg.self === 'loading_bay' ? -40 : -cfg.room.d / 2 + 0.05) * metre,
-      maxZ: (cfg.room.d / 2 - 0.05) * metre,
-      minY: flightBox.min.y + 0.1 * metre,
-      maxY: flightBox.max.y - 0.35 * metre,
-    }),
+    flightBounds: () =>
+      cfg.bounds
+        ? {
+            minX: (cfg.bounds.minX + 0.05) * metre,
+            maxX: (cfg.bounds.maxX - 0.05) * metre,
+            minZ: (cfg.bounds.minZ + 0.05) * metre,
+            maxZ: (cfg.bounds.maxZ - 0.05) * metre,
+            minY: flightBox.min.y + 0.1 * metre,
+            maxY: flightBox.max.y - 0.35 * metre,
+          }
+        : {
+            minX:
+              (cfg.self === 'loading_bay' ? -30 : -cfg.room.w / 2 + 0.05) *
+              metre,
+            maxX:
+              (cfg.self === 'loading_bay' ? 30 : cfg.room.w / 2 - 0.05) * metre,
+            minZ:
+              (cfg.self === 'loading_bay' ? -40 : -cfg.room.d / 2 + 0.05) *
+              metre,
+            maxZ: (cfg.room.d / 2 - 0.05) * metre,
+            minY: flightBox.min.y + 0.1 * metre,
+            maxY: flightBox.max.y - 0.35 * metre,
+          },
     start: {
       x: cfg.start.x * metre,
       z: cfg.start.z * metre,
@@ -679,6 +703,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         .movingSolids({ x: walk.walker.x / metre, z: walk.walker.z / metre })
         .map(toMetre),
       ...ways
+        .filter(() => standing < (cfg.doorsBelow ?? Infinity))
         .flatMap((w) =>
           doorwayStops(
             { inside: inWay(w), shut: w.part.angle() < 0.6, seen: w.seen },
@@ -698,6 +723,15 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       world: () => roomWorld().world.value,
     }),
   });
+  // A development handle for the console, as the plant rooms' is: stand
+  // anywhere, in metres, and use what is at (x, y) on the screen (−1 to 1).
+  const handle = {
+    place(x: number, z: number, yaw = 0, pitch = 0) {
+      walk.place(x * metre, z * metre, yaw, pitch);
+    },
+    use: (x = 0, y = 0) => usableAt(x, y)?.(),
+  };
+  (window as unknown as { shellRoom: unknown }).shellRoom = handle;
   const resize = () => {
     const { width, height } = canvas.getBoundingClientRect();
     if (!width || !height) return;
@@ -715,7 +749,10 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   let wasOpen: boolean | null = null;
   const readers = doors.flatMap((d) => d.part.readers);
   // Its lights, following its lighting zone (`room-lights.ts`).
-  const roomLights = bindRoomLights(scene, zoneOfRoom(cfg.self));
+  const roomLights = bindRoomLights(
+    scene,
+    zoneOfRoom(cfg.lightsOf ?? cfg.self),
+  );
   // Its equipment's lamps and displays, dark without its power.
   const roomPower = bindRoomPower(
     scene,
@@ -793,11 +830,14 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         if (object instanceof Mesh) object.geometry.dispose();
       });
       renderer.dispose();
+      const w = window as unknown as { shellRoom?: unknown };
+      if (w.shellRoom === handle) delete w.shellRoom;
     },
     {
       resume() {
         leaving = false;
         wasOpen = null;
+        (window as unknown as { shellRoom: unknown }).shellRoom = handle;
       },
       setVisual(enabled: boolean) {
         visual = enabled;

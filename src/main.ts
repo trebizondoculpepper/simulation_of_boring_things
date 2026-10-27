@@ -882,6 +882,8 @@ const importStarter = async (
   if (room === 'dev46')
     return (await import('./toolkit/gallery/rooms/control-room-prototype'))
       .startBridgePrototype;
+  if (room === 'bridge')
+    return (await import('./toolkit/gallery/rooms/bridge-room')).startTheBridge;
   if (room === 'dev31')
     return (await import('./rendering/effects-playground-room'))
       .startEffectsPlaygroundRoom;

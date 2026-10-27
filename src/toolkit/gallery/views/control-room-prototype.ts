@@ -34,6 +34,7 @@ import {
   STAIR,
   STATION,
   STOREY,
+  bridgeDoor,
   chairPlace,
   conferenceChairs,
   conferenceTable,
@@ -71,8 +72,17 @@ export function createControlRoomPrototype(
   kit: PanelKit,
   title: string,
   theme: Theme = 'lair',
+  options: {
+    /**
+     * The game's bridge (mission 095): the stair hall's door is the main
+     * corridor's doorway (`bridgeDoor`), open, its doors hung by the
+     * room; and no placeholders, the room's own consoles standing there.
+     */
+    game?: boolean;
+  } = {},
 ) {
   const bridge = theme === 'bridge';
+  const game = options.game ?? false;
   const group = new Group();
   group.name = 'control room prototype';
   group.scale.setScalar(metre);
@@ -165,9 +175,11 @@ export function createControlRoomPrototype(
   box(hallWall, t, STOREY, hd, hall.minX + t / 2, STOREY / 2, hcz, hallGroup);
   box(hallWall, t, STOREY, hd, hall.maxX - t / 2, STOREY / 2, hcz, hallGroup);
   box(hallWall, hw, STOREY, t, hcx, STOREY / 2, hall.minZ + t / 2, hallGroup);
-  const dw = door.width;
-  const left = door.x - dw / 2 - hall.minX;
-  const right = hall.maxX - (door.x + dw / 2);
+  // The game's doorway, or the prototypes' stand-in door.
+  const way = game ? bridgeDoor() : door;
+  const dw = way.width;
+  const left = way.x - dw / 2 - hall.minX;
+  const right = hall.maxX - (way.x + dw / 2);
   box(
     hallWall,
     left,
@@ -191,19 +203,20 @@ export function createControlRoomPrototype(
   box(
     hallWall,
     dw,
-    STOREY - door.height,
+    STOREY - way.height,
     t,
-    door.x,
-    (STOREY + door.height) / 2,
+    way.x,
+    (STOREY + way.height) / 2,
     door.z,
     hallGroup,
   );
-  // The door: standing in for the corridor's, shut (no way through yet).
+  // The door: standing in for the corridor's, shut (no way through), in
+  // the prototypes; in the game the room hangs the corridor's doors.
   const doorSet = decor(
     new Group(),
     'Doorway (stands in for the corridor door)',
   );
-  hallGroup.add(doorSet);
+  if (!game) hallGroup.add(doorSet);
   box(
     paint('#2a2522', 0.5, 0.3),
     dw - 0.06,
@@ -387,7 +400,9 @@ export function createControlRoomPrototype(
   // The title card, on the approach's east wall, at eye height.
   const card = sign(1.6, 0.42, [
     title,
-    `${CONTROL_ROOM.front} m big wall · ${STOREY} m up · placeholders only`,
+    game
+      ? `the plant's control room · ${STOREY} m up`
+      : `${CONTROL_ROOM.front} m big wall · ${STOREY} m up · placeholders only`,
   ]);
   card.position.set(hall.maxX - t - 0.005, 1.7, door.z - 1.6);
   card.rotation.y = -Math.PI / 2;
@@ -897,6 +912,8 @@ export function createControlRoomPrototype(
   for (const p0 of PLACEHOLDERS) {
     // The bridge's big wall is one full-height viewscreen.
     const screen = bridge && p0.side === 0;
+    // In the game, the room's own consoles stand where the placeholders were.
+    if (game && !screen) continue;
     const p = screen
       ? {
           ...p0,

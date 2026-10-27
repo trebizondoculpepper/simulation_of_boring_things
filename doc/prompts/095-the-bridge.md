@@ -1,6 +1,6 @@
 # 095: The bridge becomes the control room
 
-Status: to do (written 2026-10-27 from the owner's request).
+Status: under way (2026-10-27): stage 1 done, the bridge a game room off the main corridor (`?room=bridge`), the old control room retired and kept by its URL (`?room=control_room`); next, the panels wired. Written 2026-10-27 from the owner's request.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first, then missions [092](092-control-room-2010s.md) (the grand control room and its dev rooms dev45 and dev46) and [093](093-bridge-widget-kit.md) (the ui2d kit, the touch surfaces, dev47 and dev48's 69 panels reimagined), and [the Central Control research](../research/central-control-console.md). Markdown is one paragraph per line.
 

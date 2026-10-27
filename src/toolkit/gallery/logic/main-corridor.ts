@@ -65,7 +65,7 @@ const C = MAIN_CORRIDOR;
  * along each outside wall from its north or west end with a 0.2 m party
  * wall between them: north, the Olympic pool's plant room (22 m) and the
  * engineer's office (4 m); east, the air handling plant (17.5 m) and the
- * control room (5.5 m); south, the lounge pool's plant room (12 m), the
+ * control room (5.5 m), now the bridge's stair hall (mission 095); south, the lounge pool's plant room (12 m), the
  * boiler house (8 m) and the electrical switch room (5 m); west, the
  * loading bay (14.3 m, prompt 073), and the footbath's (5 m) and the jacuzzi's (8 m)
  * plant rooms. The wet hall has two pairs, opposite each other: east, in
@@ -76,7 +76,8 @@ export const CORRIDOR_DOORS: readonly CorridorDoor[] = [
   { wall: 'north', at: 11.2, to: 'plant_pool_02' },
   { wall: 'north', at: 24.6, to: 'engineers_office' },
   { wall: 'east', at: 9, to: 'air_plant' },
-  { wall: 'east', at: 20.9, to: 'control_room' },
+  // The control room's doors: up the stair to the bridge (mission 095).
+  { wall: 'east', at: 20.9, to: 'bridge' },
   { wall: 'south', at: 6.2, to: 'plant_pool_01' },
   { wall: 'south', at: 16.6, to: 'boiler_house' },
   { wall: 'south', at: 23.5, to: 'switch_room' },

@@ -1,6 +1,7 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { STEP_UP, surfaceFloorAt } from './stair-run';
 import type { Surface } from './stair-run';
+import { MAIN_CORRIDOR } from './main-corridor';
 
 /**
  * The control room's prototype (mission 092, stage 0; dev45), to the
@@ -670,15 +671,59 @@ export function openingGuard(): Footprint[] {
   ];
 }
 
-/** The stair hall's walls, round its lanes, landings and approach. */
-export function hallWalls(): Footprint[] {
+/**
+ * The bridge's doorway (mission 095): in the game, the stair hall's door
+ * is the main corridor's control room doorway, a pair of the standard
+ * equipment doors (`MAIN_CORRIDOR.opening` wide, its head 2.52 m),
+ * centred in the hall's south wall; the prototypes keep their stand-in.
+ */
+export function bridgeDoor() {
+  const { hall } = stairPlan();
+  return {
+    x: (hall.minX + hall.maxX) / 2,
+    /** The wall's middle, z; its outer face is the hall's south edge. */
+    z: hall.maxZ - STAIR.wall / 2,
+    width: MAIN_CORRIDOR.opening,
+    height: 2.52,
+  };
+}
+
+/**
+ * The rectangle the game's room runner (`runShell`) places the bridge's
+ * doorway on: centred on the plan's origin, its south wall's inner face
+ * the stair hall's, so the doorway sits on it at the hall's middle. Only
+ * the doorway uses it: the room's own walls and floors are the plan's.
+ */
+export function bridgeShellRect() {
+  const { hall } = stairPlan();
+  const b = protoBounds();
+  return {
+    w: 2 * Math.max(-b.minX, b.maxX),
+    d: 2 * (hall.maxZ - STAIR.wall),
+    at: bridgeDoor().x,
+  };
+}
+
+/**
+ * The stair hall's walls, round its lanes, landings and approach; with
+ * `doorway`, its south wall open at the bridge's doorway (the room's
+ * runner stops the walker there while its doors are shut).
+ */
+export function hallWalls(doorway = false): Footprint[] {
   const { hall } = stairPlan();
   const t = STAIR.wall;
+  const south = { ...hall, minZ: hall.maxZ - t };
+  const d = bridgeDoor();
   return [
     { ...hall, maxX: hall.minX + t },
     { ...hall, minX: hall.maxX - t },
     { ...hall, maxZ: hall.minZ + t },
-    { ...hall, minZ: hall.maxZ - t },
+    ...(doorway
+      ? [
+          { ...south, maxX: d.x - d.width / 2 },
+          { ...south, minX: d.x + d.width / 2 },
+        ]
+      : [south]),
   ];
 }
 
@@ -697,11 +742,15 @@ export function spine(): Footprint {
  * south landing, its guard over the approach. In the room: its walls
  * with their consoles, the desk, and the guard round the opening.
  */
-export function protoSolids(y: number, theme: Theme = 'lair'): Footprint[] {
+export function protoSolids(
+  y: number,
+  theme: Theme = 'lair',
+  doorway = false,
+): Footprint[] {
   const p = stairPlan();
   const { side: under } = lanes();
   if (y < STOREY - 0.5) {
-    const out = [...hallWalls(), spine()];
+    const out = [...hallWalls(doorway), spine()];
     if (y < STEP_UP)
       out.push({
         ...under,

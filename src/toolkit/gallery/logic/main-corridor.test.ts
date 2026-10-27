@@ -21,6 +21,14 @@ import {
   wetHallRoom,
 } from './shell-rooms';
 import type { ShellRoomId } from './shell-rooms';
+import {
+  STAIR,
+  bridgeDoor,
+  bridgeShellRect,
+  protoFloorAt,
+  protoSolids,
+  stairPlan,
+} from './control-room-prototype';
 
 const C = MAIN_CORRIDOR;
 const blocked = (x: number, z: number) =>
@@ -57,8 +65,11 @@ describe('the main corridor', () => {
         'plant_pool_02',
         'plant_pool_03',
         'plant_pool_04',
+        // The control room is the bridge (mission 095); the old is retired.
+        'bridge',
         ...Object.keys(SHELL_ROOMS).filter(
-          (k) => k !== 'hypo_store' && k !== 'acid_store',
+          (k) =>
+            k !== 'hypo_store' && k !== 'acid_store' && k !== 'control_room',
         ),
       ].sort(),
     );
@@ -86,6 +97,8 @@ const FRONTAGE: Record<string, number> = {
   plant_pool_02: 22,
   plant_pool_03: 8,
   plant_pool_04: 5,
+  // The old control room's frontage, which the bridge's stair hall takes.
+  bridge: 5.9,
 };
 const frontage = (to: string) =>
   FRONTAGE[to] ?? SHELL_ROOMS[to as ShellRoomId].w + 0.4;
@@ -180,6 +193,37 @@ describe('passing between the main corridor and the rooms off it', () => {
         ),
       ).toBe(false);
     }
+  });
+
+  it('carries the walker into the bridge’s stair hall, between its walls at the foot of its stair, and back', () => {
+    const d = CORRIDOR_DOORS.find((x) => x.to === 'bridge')!;
+    const rect = bridgeShellRect();
+    const door = { wall: 'south' as const, at: rect.at, to: d.to };
+    const f = shellDoorPlace(rect, door).frame;
+    const p = doorPlace(d);
+    const there = walkThrough(
+      { x: p.x, z: p.z, y: 0, yaw: corridorYaw(d) },
+      { ...f, y: 0 },
+      p,
+    );
+    // Its frame is the stair hall's doorway: on its south face, mid hall.
+    const way = bridgeDoor();
+    expect(f.x).toBeCloseTo(way.x);
+    expect(f.z).toBeCloseTo(way.z + STAIR.wall / 2);
+    const { hall } = stairPlan();
+    expect(there.x).toBeGreaterThan(hall.minX + STAIR.wall);
+    expect(there.x).toBeLessThan(hall.maxX - STAIR.wall);
+    expect(there.z).toBeLessThan(hall.maxZ - STAIR.wall);
+    expect(protoFloorAt(there.x, there.z, 0, 'bridge')).toBe(0);
+    expect(
+      protoSolids(0, 'bridge', true).some(
+        (s) =>
+          there.x > s.minX &&
+          there.x < s.maxX &&
+          there.z > s.minZ &&
+          there.z < s.maxZ,
+      ),
+    ).toBe(false);
   });
 
   it('carries the walker through each of the wet hall’s two doorways onto its landing, at the corridor’s level', () => {
