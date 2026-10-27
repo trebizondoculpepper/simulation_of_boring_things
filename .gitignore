@@ -15,3 +15,6 @@ agent-inbox.toml
 reference/
 build/
 .firecrawl/
+
+# The owner's reference bleeps, cut from the show's own audio: kept local, never published (2026-10-27).
+resources/sound/effects/science_fiction_bleeps/
