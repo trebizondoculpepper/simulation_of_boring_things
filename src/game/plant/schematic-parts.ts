@@ -68,3 +68,127 @@ export function roomElectrics(
     ],
   };
 }
+
+const CHEMICAL_NAME = { hypochlorite: 'Hypochlorite', acid: 'Acid' } as const;
+
+/**
+ * A plant room's day tanks (plan 085): for each chemical, its branch from
+ * the wet hall's transfer selector (a boundary), the day tank it fills,
+ * and the day tank's draw-off to `to` (the room's dosing pump, or its
+ * packaged cabinet's dosing).
+ */
+export function dayTanks(
+  to: Record<'hypochlorite' | 'acid', [string, string]>,
+): { nodes: SchematicNode[]; links: PlumbEdge[] } {
+  const chemicals = ['hypochlorite', 'acid'] as const;
+  return {
+    nodes: chemicals.flatMap((c) => [
+      {
+        id: `${c}-branch`,
+        kind: 'chemical-branch',
+        name: `${CHEMICAL_NAME[c]} branch from the wet hall`,
+      },
+      {
+        id: `${c}-day`,
+        kind: 'chem-day',
+        name: `${CHEMICAL_NAME[c]} day tank`,
+      },
+    ]),
+    links: chemicals.flatMap((c) => [
+      link(
+        `${CHEMICAL_NAME[c]} branch to its day tank`,
+        [`${c}-branch`, 'out'],
+        [`${c}-day`, 'fill'],
+        'chemical',
+      ),
+      link(
+        `${CHEMICAL_NAME[c]} from its day tank`,
+        [`${c}-day`, 'out'],
+        to[c],
+        'chemical',
+      ),
+    ]),
+  };
+}
+
+/**
+ * A chemical store's transfer (plan 085): its tanks' draw-offs into its
+ * transfer pump, and the pump's discharge into its main to the wet hall
+ * (a boundary).
+ */
+export function storeTransfer(
+  chemical: 'hypochlorite' | 'acid',
+  tanks: readonly string[],
+): { nodes: SchematicNode[]; links: PlumbEdge[] } {
+  const name = CHEMICAL_NAME[chemical];
+  return {
+    nodes: [
+      { id: 'transfer', kind: 'chem-pump', name: `${name} transfer pump` },
+      {
+        id: 'main',
+        kind: 'chemical-main',
+        name: `${name} main to the wet hall`,
+      },
+    ],
+    links: [
+      ...tanks.map((t, i) =>
+        link(
+          `${name} bulk tank ${i + 1} to its transfer pump`,
+          [t, 'out'],
+          ['transfer', 'in'],
+          'chemical',
+        ),
+      ),
+      link(`${name} main`, ['transfer', 'out'], ['main', 'in'], 'chemical'),
+    ],
+  };
+}
+
+/**
+ * The wet hall's transfer selectors (plan 085): for each chemical, its
+ * main in from its store (a boundary), its selector, and its live outlets'
+ * branches to the four plant rooms (boundaries); its spares blanked, so
+ * not in the model.
+ */
+export function transferSelectors(): {
+  nodes: SchematicNode[];
+  links: PlumbEdge[];
+} {
+  const chemicals = ['hypochlorite', 'acid'] as const;
+  const rooms = [1, 2, 3, 4];
+  return {
+    nodes: chemicals.flatMap((c) => [
+      {
+        id: `${c}-main`,
+        kind: 'chemical-main',
+        name: `${CHEMICAL_NAME[c]} main from its store`,
+      },
+      {
+        id: `${c}-selector`,
+        kind: 'chem-selector',
+        name: `${CHEMICAL_NAME[c]} transfer selector`,
+      },
+      ...rooms.map((r) => ({
+        id: `${c}-pl${r}`,
+        kind: 'chemical-branch',
+        name: `${CHEMICAL_NAME[c]} branch to PL${r}`,
+      })),
+    ]),
+    links: chemicals.flatMap((c) => [
+      link(
+        `${CHEMICAL_NAME[c]} main to its selector`,
+        [`${c}-main`, 'out'],
+        [`${c}-selector`, 'in'],
+        'chemical',
+      ),
+      ...rooms.map((r) =>
+        link(
+          `${CHEMICAL_NAME[c]} branch to PL${r}`,
+          [`${c}-selector`, `outlet-${r}`],
+          [`${c}-pl${r}`, 'in'],
+          'chemical',
+        ),
+      ),
+    ]),
+  };
+}

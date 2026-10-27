@@ -50,6 +50,30 @@ export const DAY_TANKS: Record<
   ],
 };
 
+/**
+ * A day tank's body for its size, metres: framed rectangular tanks, as
+ * the bulk tanks are, from the Olympic's 1,000 l down to the footbath's
+ * 15 l acid (plan 085).
+ */
+export function dayTankSize(litres: number) {
+  const table: [number, { L: number; W: number; H: number }][] = [
+    [15, { L: 0.36, W: 0.3, H: 0.32 }],
+    [30, { L: 0.42, W: 0.34, H: 0.4 }],
+    [60, { L: 0.5, W: 0.4, H: 0.5 }],
+    [200, { L: 0.8, W: 0.6, H: 0.7 }],
+    [300, { L: 0.9, W: 0.65, H: 0.8 }],
+    [500, { L: 1.1, W: 0.75, H: 0.85 }],
+    [1000, { L: 1.4, W: 0.9, H: 1.05 }],
+  ];
+  return (table.find(([l]) => l >= litres) ?? table[table.length - 1])[1];
+}
+
+/** A day tank's place in a room, metres: its bund, and its inlet riser's height. */
+export function dayTankFootprint(litres: number) {
+  const { L, W } = dayTankSize(litres);
+  return { w: L + 0.4, d: W + 0.6, h: 1.8 };
+}
+
 /** The selectors' outlets: six each. */
 export const SELECTOR_WAYS = 6;
 
@@ -86,6 +110,19 @@ export interface ChemicalLine {
 }
 
 export type ChemicalDistribution = Record<Chemical, ChemicalLine>;
+
+/** A line with a day tank for each of its sites: one saved with fewer given new ones, part full. */
+function fitted(c: Chemical, line: ChemicalLine): ChemicalLine {
+  const want = DAY_TANKS[c].length;
+  if (line.tanks.length === want) return line;
+  return {
+    ...line,
+    tanks: DAY_TANKS[c].map(
+      (t, i) => line.tanks[i] ?? { litres: t.litres * 0.7, calling: false },
+    ),
+    serving: line.serving !== null && line.serving < want ? line.serving : null,
+  };
+}
 
 export function newChemicalDistribution(): ChemicalDistribution {
   const line = (c: Chemical): ChemicalLine => ({
@@ -171,7 +208,7 @@ export function dayTankStock(
 ): Record<Chemical, boolean> {
   const has = (c: Chemical) => {
     const i = dayTankOf(c, site);
-    return i >= 0 && d[c].tanks[i].litres > 0;
+    return i >= 0 && (d[c]?.tanks[i]?.litres ?? 0) > 0;
   };
   return { hypochlorite: has('hypochlorite'), acid: has('acid') };
 }
@@ -192,7 +229,7 @@ export function stepDistribution(
   const taken = { hypochlorite: 0, acid: 0 };
   const out = { ...d };
   for (const c of CHEMICALS) {
-    let line = d[c];
+    let line = fitted(c, d[c]);
     // The switches.
     let tripped = line.tripped;
     let tanks = line.tanks.map((t, i) => {

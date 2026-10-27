@@ -3,7 +3,7 @@ import type {
   SchematicFitting,
   SchematicNode,
 } from './schematics';
-import { link, roomElectrics } from './schematic-parts';
+import { link, roomElectrics, transferSelectors } from './schematic-parts';
 
 /**
  * The wet hall's schematic (prompt 064; the owner, 2026-10-25: every
@@ -80,6 +80,8 @@ const valve = (
   keptBy: 'register',
 });
 
+const SELECTORS = transferSelectors();
+
 export const WET_HALL_SCHEMATIC: RoomSchematic = {
   room,
   code: 'WH',
@@ -96,9 +98,12 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
     machine('plant-rooms', 'pool-plant-rooms', 'Pool plant rooms'),
     machine('sewer', 'sewer', 'Sewer'),
     machine('waste', 'gully', 'Drain to waste'),
+    // The chemical distribution's selectors (plan 085).
+    ...SELECTORS.nodes,
     ...electrics.nodes,
   ],
   links: [
+    ...SELECTORS.links,
     // The make-up line (the owner, 2026-10-26), as the water regulations
     // have it: the town main in through the utility's meter and our own
     // flowmeter, into the break tank across its Category 5 air gap; the

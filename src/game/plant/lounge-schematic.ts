@@ -1,4 +1,5 @@
 import type { PlumbEdge } from './plumbing-expansion';
+import { dayTanks } from './schematic-parts';
 import type {
   RoomSchematic,
   SchematicFitting,
@@ -19,6 +20,11 @@ const machine = (id: string, kind: string, name: string): SchematicNode => ({
   id,
   kind,
   name,
+});
+
+const DAY_TANKS = dayTanks({
+  hypochlorite: ['hypo-pumps', 'in'],
+  acid: ['acid-pump', 'in'],
 });
 
 const nodes: SchematicNode[] = [
@@ -52,8 +58,8 @@ const nodes: SchematicNode[] = [
   machine('heating', 'heating-main', 'Heating main'),
   machine('water', 'water-service', 'Water service'),
   machine('waste', 'gully', 'Drain to waste'),
-  machine('hypo-store', 'chemical-store', 'Hypochlorite store'),
-  machine('acid-store', 'chemical-store', 'Acid store'),
+  // Its day tanks, filled from the wet hall's selectors (plan 085).
+  ...DAY_TANKS.nodes,
   machine('switch-fuse', 'switch-fuse', 'Room supply switch-fuse'),
   machine('supply', 'room-supply', 'Room supply'),
 ];
@@ -195,24 +201,14 @@ const links: PlumbEdge[] = [
     ['waste', 'in'],
     'water',
   ),
-  link(
-    'Hypochlorite from the store',
-    ['hypo-store', 'out'],
-    ['hypo-pumps', 'in'],
-    'chemical',
-  ),
+  ...DAY_TANKS.links,
   link(
     'Hypochlorite to the heated main',
     ['hypo-pumps', 'out'],
     ['heated-main', 'hypochlorite'],
     'chemical',
   ),
-  link(
-    'Acid from the store',
-    ['acid-store', 'out'],
-    ['acid-pump', 'in'],
-    'chemical',
-  ),
+
   link(
     'Acid to the heated main',
     ['acid-pump', 'out'],

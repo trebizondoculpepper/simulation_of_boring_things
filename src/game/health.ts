@@ -451,6 +451,12 @@ export const KIND_HEALTH_COVERAGE = {
   'mimic-gas': 'not health: a display of the gas chain',
   'mimic-boiler-heat': 'not health: a display of the heating',
   'combustion-panel': 'not in the world: no state yet',
+  'chem-bulk': 'chemicals: stock',
+  'chem-pump':
+    'not checked: a transfer pump; a day tank it leaves dry shows in its pool’s chemistry',
+  'chem-selector':
+    'not checked: a transfer selector; a day tank it leaves dry shows in its pool’s chemistry',
+  'chem-day': 'pools: chemistry; a dry day tank stops its pool’s dosing',
   'hypo-tank': 'chemicals: hypochlorite stock',
   'acid-ibc': 'chemicals: acid stock',
   'safety-shower': 'not health: set decoration (the owner, 2026-10-22)',

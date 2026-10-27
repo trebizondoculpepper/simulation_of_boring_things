@@ -1,4 +1,5 @@
 import type { PlumbEdge } from '../../../game/plant/plumbing-expansion';
+import { dayTanks } from '../../../game/plant/schematic-parts';
 
 /**
  * The Olympic plant room's model beyond its plumber's expansion (prompt
@@ -26,6 +27,11 @@ const link = (
   medium,
 });
 
+const DAY_TANKS = dayTanks({
+  hypochlorite: ['hypo', 'in'],
+  acid: ['acid', 'in'],
+});
+
 export const OLYMPIC_ANNEX = {
   nodes: [
     {
@@ -45,8 +51,8 @@ export const OLYMPIC_ANNEX = {
     { id: 'inlet-header', kind: 'header', name: 'Inlet header' },
     { id: 'outlet-header', kind: 'header', name: 'Outlet header' },
     { id: 'backwash-header', kind: 'header', name: 'Backwash header' },
-    { id: 'hypo-store', kind: 'chemical-store', name: 'Hypochlorite store' },
-    { id: 'acid-store', kind: 'chemical-store', name: 'Acid store' },
+    // Its day tanks, filled from the wet hall's selectors (plan 085).
+    ...DAY_TANKS.nodes,
     { id: 'switch-fuse', kind: 'switch-fuse', name: 'Room supply switch-fuse' },
     { id: 'room-supply', kind: 'room-supply', name: 'Room supply' },
     { id: 'ozone-monitor', kind: 'ozone-monitor', name: 'Ozone monitor' },
@@ -97,9 +103,18 @@ export const OLYMPIC_ANNEX = {
       ['tank', 'mainDrain'],
       'water',
     ),
-    link('hypo-supply', ['hypo-store', 'out'], ['hypo', 'in'], 'chemical'),
+    // Each branch into its day tank; each day tank's draw-off its supply
+    // line to its dosing pump, as the room draws it.
+    ...DAY_TANKS.links.filter((l) => l.id.endsWith('to its day tank')),
+    link(
+      'hypo-supply',
+      ['hypochlorite-day', 'out'],
+      ['hypo', 'in'],
+      'chemical',
+    ),
+    link('acid-supply', ['acid-day', 'out'], ['acid', 'in'], 'chemical'),
     link('hypo-dose', ['hypo', 'out'], ['uv', 'dose'], 'chemical'),
-    link('acid-supply', ['acid-store', 'out'], ['acid', 'in'], 'chemical'),
+
     link('acid-dose', ['acid', 'out'], ['uv', 'dose'], 'chemical'),
     link('sample', ['pumps', 'discharge'], ['controller', 'sample'], 'water'),
     link('ozone', ['generator', 'ozone'], ['contact', 'ozone'], 'gas'),

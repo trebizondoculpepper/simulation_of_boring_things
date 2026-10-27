@@ -309,6 +309,37 @@ export const PLACED_KINDS = {
     class: 'plant',
     purpose: 'Indicates combustion and ventilation status.',
   },
+  'chem-bulk': {
+    type: 'Chemical tank',
+    status: 'none',
+    code: 'T',
+    class: 'plant',
+    purpose:
+      'Stores a dosing chemical in bulk, filled by tanker, for transfer to the day tanks.',
+  },
+  'chem-pump': {
+    type: 'Transfer pump',
+    status: 'none',
+    code: 'P',
+    class: 'plant',
+    purpose:
+      'Sends a dosing chemical from its store along its main to the day tanks.',
+  },
+  'chem-selector': {
+    type: 'Transfer selector',
+    status: 'none',
+    code: 'XS',
+    class: 'plant',
+    purpose: 'Sends a dosing chemical to each plant room’s day tank in turn.',
+  },
+  'chem-day': {
+    type: 'Day tank',
+    status: 'none',
+    code: 'DT',
+    class: 'plant',
+    purpose:
+      'Holds a plant room’s dosing chemical for its pool, refilled from the store.',
+  },
   'hypo-tank': {
     type: 'Chemical tank',
     status: 'none',

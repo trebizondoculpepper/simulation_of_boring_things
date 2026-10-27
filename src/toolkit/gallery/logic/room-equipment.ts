@@ -1,3 +1,9 @@
+import { CHEMICALS } from '../../../game/plant/chemicals';
+import {
+  DAY_TANKS,
+  dayTankFootprint,
+} from '../../../game/plant/chemical-distribution';
+import type { PoolId } from '../../../game/plant/pools';
 import { placedPort } from './machine-ports';
 import { HEADERS, olympicPlan, olympicRoomBox } from './olympic-plan';
 import { olympicItems } from './olympic-plumbing';
@@ -636,6 +642,76 @@ function poolPlant(
   ];
 }
 
+// ---- The chemical distribution (plan 085) -----------------------------------
+
+/** A store's framed bulk tank, its transfer pump, a selector: w, d, h, metres. */
+const BULK_TANK = [2.7, 1.65, 2.6] as const;
+const TRANSFER_PUMP = [2.2, 1.0, 1.6] as const;
+const SELECTOR = [3.1, 0.8, 2.0] as const;
+
+/** A plant room's day tanks, one per chemical it doses, each in its bund. */
+function chemDays(pool: PoolId): Item[] {
+  return CHEMICALS.flatMap((c) => {
+    const i = DAY_TANKS[c].findIndex((t) => t.site === pool);
+    if (i < 0) return [];
+    const fp = dayTankFootprint(DAY_TANKS[c][i].litres);
+    return [
+      floor(
+        `chem-day:${c}:${pool}`,
+        `${c === 'acid' ? 'Acid' : 'Hypochlorite'} day tank`,
+        fp.w,
+        fp.d,
+        fp.h,
+        { back: 0 },
+      ),
+    ];
+  });
+}
+
+type At = { x: number; z: number; face: Side };
+/**
+ * Where each room's chemical machines stand (plan 085): each plant room's
+ * day tanks in floor its machines leave free, acid and hypochlorite apart;
+ * the wet hall's selectors on its dirty side, east of the backwash pit.
+ */
+const CHEM_AT: Record<string, Record<string, At>> = {
+  plant_pool_01: {
+    'chem-day:hypochlorite:pool_01': { x: 3.65, z: -2.95, face: 'south' },
+    'chem-day:acid:pool_01': { x: 2.35, z: 2.65, face: 'east' },
+  },
+  plant_pool_02: {
+    'chem-day:hypochlorite:pool_02': { x: -7.5, z: 5.9, face: 'north' },
+    'chem-day:acid:pool_02': { x: 8.2, z: 4.1, face: 'north' },
+  },
+  plant_pool_03: {
+    'chem-day:hypochlorite:pool_03': { x: 1.2, z: -1.7, face: 'west' },
+    'chem-day:acid:pool_03': { x: 1.9, z: 1.2, face: 'west' },
+  },
+  plant_pool_04: {
+    'chem-day:hypochlorite:pool_04': { x: 0.95, z: -0.6, face: 'east' },
+    'chem-day:acid:pool_04': { x: 1.95, z: 1.75, face: 'north' },
+  },
+  wet_hall: {
+    // In the south-east corner, clear of the hall's fire point on the east
+    // wall (z 2.6), its sewer monitor and the pit's davit.
+    'chem-selector:hypochlorite': { x: 7.4, z: 9.35, face: 'north' },
+    'chem-selector:acid': { x: 9.35, z: 7.4, face: 'west' },
+  },
+};
+
+/** The chemical machines of a hand-laid room, placed. */
+function chemPlaced(
+  room: string,
+  box: RoomBox,
+  items: readonly Item[],
+): Placed[] {
+  const at = CHEM_AT[room];
+  if (!at) return [];
+  return items.flatMap((item) =>
+    at[item.key] ? [put(box, item, at[item.key])] : [],
+  );
+}
+
 /** Each room's machines, and its box. */
 export function roomEquipment(
   room: string,
@@ -647,13 +723,16 @@ export function roomEquipment(
       // Lounge: 11.1 m³ tank, 2 × 1.2 m filters (the sizing's plant).
       return {
         box: loungeRoomBox(),
-        items: poolPlant(
-          'plant_pool_01',
-          'Lounge pool',
-          { nx: 3, nz: 2, ny: 2 },
-          { count: 2, dia: 1.2 },
-          0.96,
-        ),
+        items: [
+          ...poolPlant(
+            'plant_pool_01',
+            'Lounge pool',
+            { nx: 3, nz: 2, ny: 2 },
+            { count: 2, dia: 1.2 },
+            0.96,
+          ),
+          ...chemDays('pool_01'),
+        ],
       };
     case 'plant_pool_02':
       // Olympic: cleared for its redo (the owner, 2026-10-23,
@@ -662,7 +741,10 @@ export function roomEquipment(
       // room as it was is kept as `retired0`.
       // Laid out by the owner's plan (`olympic-plan.ts`), plumbed by the
       // pipeline (`olympic-plumbing.ts`): 22 × 14 m.
-      return { box: olympicRoomBox(), items: olympicItems() };
+      return {
+        box: olympicRoomBox(),
+        items: [...olympicItems(), ...chemDays('pool_02')],
+      };
     case 'plant_pool_03':
       return {
         // In front of its mimic board, in the middle of the north wall. Its
@@ -692,6 +774,7 @@ export function roomEquipment(
             0.8,
             1.75,
           ),
+          ...chemDays('pool_03'),
         ],
       };
     case 'plant_pool_04':
@@ -723,6 +806,7 @@ export function roomEquipment(
             0.8,
             1.5,
           ),
+          ...chemDays('pool_04'),
         ],
       };
     case 'wet_hall':
@@ -788,6 +872,14 @@ export function roomEquipment(
           ),
           // The sewer outfall's monitor and its chart recorder.
           wall('sewer-monitor', 'Sewer outfall monitor', 0.6, 0.12, 0.8, 1.5),
+          // The chemical distribution's two transfer selectors on the dirty
+          // side, well apart (plan 085).
+          floor(
+            'chem-selector:hypochlorite',
+            'Hypochlorite transfer selector',
+            ...SELECTOR,
+          ),
+          floor('chem-selector:acid', 'Acid transfer selector', ...SELECTOR),
         ],
       };
     case 'boiler_house':
@@ -851,15 +943,20 @@ export function roomEquipment(
       return {
         box: shellRoomBox('hypo_store'),
         items: [
+          // Framed 4,000 l tanks (plan 085), and the transfer pump that
+          // sends their hypochlorite to the plant rooms' day tanks.
           ...[1, 2, 3].map((i) =>
             floor(
-              'hypo-tank',
+              `chem-bulk:hypochlorite:${i}`,
               `Sodium hypochlorite bulk tank ${i}`,
-              1.75,
-              1.75,
-              2,
-              { back: 0.3 },
+              ...BULK_TANK,
+              { back: 0.2 },
             ),
+          ),
+          floor(
+            'chem-pump:hypochlorite',
+            'Hypochlorite transfer pump',
+            ...TRANSFER_PUMP,
           ),
           floor('safety-shower', 'Safety shower and eyewash', 1.25, 1.4, 2.3, {
             back: 0,
@@ -881,9 +978,15 @@ export function roomEquipment(
       return {
         box: shellRoomBox('acid_store'),
         items: [
-          floor('acid-ibc', 'Acid IBC on spill pallet', 2, 1.4, 2.2, {
-            back: 0.3,
-          }),
+          // One framed 4,000 l tank of 10% hydrochloric acid (plan 085), in
+          // place of the IBC, and its transfer pump.
+          floor(
+            'chem-bulk:acid:1',
+            'Hydrochloric acid bulk tank',
+            ...BULK_TANK,
+            { back: 0.2 },
+          ),
+          floor('chem-pump:acid', 'Acid transfer pump', ...TRANSFER_PUMP),
           floor('safety-shower', 'Safety shower and eyewash', 1.25, 1.4, 2.3, {
             back: 0,
           }),
@@ -1151,7 +1254,9 @@ export function layoutRoomLive(room: string) {
       }),
     ],
   };
-  const fixed = FIXED[room]?.(r.box, r.items);
+  const fixed = FIXED[room]?.(r.box, r.items).concat(
+    chemPlaced(room, r.box, r.items),
+  );
   return {
     ...r,
     ...(fixed ? { placed: fixed, failed: [] } : packRoom(r.box, r.items)),

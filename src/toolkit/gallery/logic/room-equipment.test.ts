@@ -211,9 +211,9 @@ describe('the balance tanks', () => {
 });
 
 describe('the Olympic plant room, redone (prompt 033)', () => {
-  it('stands its fifteen machines and panels as its plan has them, in a room of 22 × 14 m, plumbed', () => {
+  it('stands its fifteen machines and panels as its plan has them, and its two day tanks, in a room of 22 × 14 m, plumbed', () => {
     const layout = layoutRoom('plant_pool_02')!;
-    expect(layout.placed).toHaveLength(15);
+    expect(layout.placed).toHaveLength(17);
     expect([layout.box.w, layout.box.d]).toEqual([22, 14]);
     expect(roomPipes('plant_pool_02').length).toBeGreaterThan(40);
   });

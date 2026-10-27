@@ -4,7 +4,8 @@
  * Retired, never to be reused (043, 2026-10-24: the switch room keeps only
  * what works): asset-0064 SR-CP1 (the motor control centre), asset-0067
  * SR-DB3 (a distribution board) and asset-0068 SR-IS2 (sample rotary
- * isolators). */
+ * isolators); asset-0055 AS-T1 (the acid IBC, 2026-10-27: its bulk
+ * tank took its place, plan 085). */
 export const INSTALLED_ASSET_IDS: Readonly<
   Record<string, { assetId: string; tag: string }>
 > = {
@@ -153,15 +154,15 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0047',
     tag: 'BH-CP2',
   },
-  'hypo_store|hypo-tank|Sodium hypochlorite bulk tank 1': {
+  'hypo_store|chem-bulk:hypochlorite:1|Sodium hypochlorite bulk tank 1': {
     assetId: 'asset-0048',
     tag: 'HS-T1',
   },
-  'hypo_store|hypo-tank|Sodium hypochlorite bulk tank 2': {
+  'hypo_store|chem-bulk:hypochlorite:2|Sodium hypochlorite bulk tank 2': {
     assetId: 'asset-0049',
     tag: 'HS-T2',
   },
-  'hypo_store|hypo-tank|Sodium hypochlorite bulk tank 3': {
+  'hypo_store|chem-bulk:hypochlorite:3|Sodium hypochlorite bulk tank 3': {
     assetId: 'asset-0050',
     tag: 'HS-T3',
   },
@@ -181,8 +182,9 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0054',
     tag: 'HS-AHU1',
   },
-  'acid_store|acid-ibc|Acid IBC on spill pallet': {
-    assetId: 'asset-0055',
+  // The acid's IBC (asset-0055) retired for its bulk tank (plan 085).
+  'acid_store|chem-bulk:acid:1|Hydrochloric acid bulk tank': {
+    assetId: 'asset-0131',
     tag: 'AS-T1',
   },
   'acid_store|safety-shower|Safety shower and eyewash': {
@@ -365,5 +367,54 @@ export const INSTALLED_ASSET_IDS: Readonly<
   'plant_pool_02|balance-tank-panel|Olympic pool balance tank panel': {
     assetId: 'asset-0106',
     tag: 'PL2-CP3',
+  },
+  // The chemical distribution (plan 085).
+  'hypo_store|chem-pump:hypochlorite|Hypochlorite transfer pump': {
+    assetId: 'asset-0132',
+    tag: 'HS-P1',
+  },
+  'acid_store|chem-pump:acid|Acid transfer pump': {
+    assetId: 'asset-0133',
+    tag: 'AS-P1',
+  },
+  'wet_hall|chem-selector:hypochlorite|Hypochlorite transfer selector': {
+    assetId: 'asset-0134',
+    tag: 'WH-XS1',
+  },
+  'wet_hall|chem-selector:acid|Acid transfer selector': {
+    assetId: 'asset-0135',
+    tag: 'WH-XS2',
+  },
+  'plant_pool_01|chem-day:hypochlorite:pool_01|Hypochlorite day tank': {
+    assetId: 'asset-0136',
+    tag: 'PL1-DT1',
+  },
+  'plant_pool_01|chem-day:acid:pool_01|Acid day tank': {
+    assetId: 'asset-0137',
+    tag: 'PL1-DT2',
+  },
+  'plant_pool_02|chem-day:hypochlorite:pool_02|Hypochlorite day tank': {
+    assetId: 'asset-0138',
+    tag: 'PL2-DT1',
+  },
+  'plant_pool_02|chem-day:acid:pool_02|Acid day tank': {
+    assetId: 'asset-0139',
+    tag: 'PL2-DT2',
+  },
+  'plant_pool_03|chem-day:hypochlorite:pool_03|Hypochlorite day tank': {
+    assetId: 'asset-0140',
+    tag: 'PL3-DT1',
+  },
+  'plant_pool_03|chem-day:acid:pool_03|Acid day tank': {
+    assetId: 'asset-0141',
+    tag: 'PL3-DT2',
+  },
+  'plant_pool_04|chem-day:hypochlorite:pool_04|Hypochlorite day tank': {
+    assetId: 'asset-0142',
+    tag: 'PL4-DT1',
+  },
+  'plant_pool_04|chem-day:acid:pool_04|Acid day tank': {
+    assetId: 'asset-0143',
+    tag: 'PL4-DT2',
   },
 };

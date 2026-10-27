@@ -1,5 +1,6 @@
 import type { PlumbEdge } from './plumbing-expansion';
 import type { RoomSchematic, SchematicNode } from './schematics';
+import { dayTanks } from './schematic-parts';
 
 /**
  * The footbath plant room's schematic (`plant_pool_04`; prompt 064, the
@@ -11,6 +12,11 @@ import type { RoomSchematic, SchematicNode } from './schematics';
  * the footbath is never valved (the owner, as the jacuzzi's: a gravity
  * overflow, shut, would flood the deck). Pure.
  */
+
+const FOOTBATH_DAY_TANKS = dayTanks({
+  hypochlorite: ['cabinet', 'hypochlorite'],
+  acid: ['cabinet', 'acid'],
+});
 
 const nodes: SchematicNode[] = [
   {
@@ -33,6 +39,8 @@ const nodes: SchematicNode[] = [
   { id: 'busbar', kind: 'busbar', name: 'Busbar' },
   { id: 'switch-fuse', kind: 'switch-fuse', name: 'Room supply switch-fuse' },
   { id: 'valve-panel', kind: 'valve-panel', name: 'Valve panel' },
+  // Its day tanks (plan 085), drawn on by the cabinet's own dosing.
+  ...FOOTBATH_DAY_TANKS.nodes,
 ];
 
 const link = (
@@ -107,6 +115,7 @@ const links: PlumbEdge[] = [
     ['cabinet', 'valves'],
     'control',
   ),
+  ...FOOTBATH_DAY_TANKS.links,
 ];
 
 export const FOOTBATH_SCHEMATIC: RoomSchematic = {

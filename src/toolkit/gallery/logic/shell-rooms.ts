@@ -120,8 +120,10 @@ export const SHELL_ROOMS = {
   hypo_store: {
     id: 'hypo_store',
     title: 'SODIUM HYPOCHLORITE STORE',
-    w: 5,
-    d: 8,
+    // Three framed 4,000 l tanks and the transfer pump (plan 085), with
+    // the shower and the extract still clear.
+    w: 6,
+    d: 9,
     height: 7,
     ceiling: 'services',
     doors: [{ wall: 'south', at: 0, to: 'loading_bay', swing: 'out' }],
@@ -132,8 +134,9 @@ export const SHELL_ROOMS = {
     title: 'ACID STORE',
     // Larger than the sizing's 4 × 4.5 m: its extract, PPE cabinet and
     // signs need wall of their own, clear of the pallet and the shower.
-    w: 5,
-    d: 5,
+    // Its framed 4,000 l tank and transfer pump (plan 085).
+    w: 6,
+    d: 6,
     height: 7,
     ceiling: 'services',
     doors: [{ wall: 'south', at: 0, to: 'loading_bay', swing: 'out' }],

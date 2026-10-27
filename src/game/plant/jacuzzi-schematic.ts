@@ -1,4 +1,5 @@
 import { expandForPlumbing } from './plumbing-expansion';
+import { dayTanks } from './schematic-parts';
 import type { RoomSchematic, SchematicNode } from './schematics';
 import type { Expansion, GivenFitting, PlumbEdge } from './plumbing-expansion';
 
@@ -19,6 +20,12 @@ import type { Expansion, GivenFitting, PlumbEdge } from './plumbing-expansion';
 
 export const JACUZZI_ROOM = 'plant_pool_03';
 export const JACUZZI_ROOM_CODE = 'PL3';
+
+/** Its day tanks (plan 085), drawn on by the cabinet's own dosing. */
+const JACUZZI_DAY_TANKS = dayTanks({
+  hypochlorite: ['cabinet', 'hypochlorite'],
+  acid: ['cabinet', 'acid'],
+});
 
 export const JACUZZI_NODES: readonly SchematicNode[] = [
   {
@@ -72,6 +79,7 @@ export const JACUZZI_NODES: readonly SchematicNode[] = [
   },
   { id: 'hall-lights', kind: 'hall-lights', name: 'Jacuzzi hall lights' },
   { id: 'deck-gullies', kind: 'deck-gully', name: 'Deck gullies' },
+  ...JACUZZI_DAY_TANKS.nodes,
 ];
 
 const link = (
@@ -217,6 +225,9 @@ export const JACUZZI_LINKS: readonly PlumbEdge[] = [
     ['display', 'in'],
     'control',
   ),
+  // Its day tanks, filled from the wet hall's selectors (plan 085), each
+  // drawn on by the cabinet's own dosing.
+  ...JACUZZI_DAY_TANKS.links,
 ];
 
 /** What each of the room's valves is for, as the world's jacuzzi reads it. */

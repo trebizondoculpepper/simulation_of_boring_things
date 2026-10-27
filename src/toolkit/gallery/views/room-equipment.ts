@@ -28,6 +28,7 @@ import {
   stepBedLook,
 } from '../../components/plant/logic/filter-bed';
 import { controlBus } from '../logic/control-bus';
+import { chemicalModel } from './chemical-distribution-views';
 import { roomSupports } from '../logic/room-supports';
 import { createSupports } from '../../components/plant/views/pipe-supports';
 import {
@@ -278,6 +279,9 @@ function modelFor(
   room = '',
 ): Object3D | LiveExhibit | null {
   const [kind, arg] = item.key.split(':');
+  // The chemical distribution's machines, bound to the world's (plan 085).
+  const chemical = chemicalModel(kit, item.key);
+  if (chemical) return chemical;
   // A pool plant room's pumps and their panel: its own pool's, from the
   // world (`live-plant.ts`).
   const pool = /^plant_(pool_0[1-4])$/.exec(room)?.[1] as PoolId | undefined;

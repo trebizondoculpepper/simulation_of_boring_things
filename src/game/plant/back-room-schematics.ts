@@ -1,6 +1,6 @@
 import type { PlumbEdge } from './plumbing-expansion';
 import type { RoomSchematic, SchematicNode } from './schematics';
-import { link, roomElectrics } from './schematic-parts';
+import { link, roomElectrics, storeTransfer } from './schematic-parts';
 
 /**
  * The schematics of the building's back rooms that hold no pipework of
@@ -38,17 +38,26 @@ function backRoom(
   };
 }
 
-/** A chemical store: its tanks filled from the loading bay and drawn by the plant rooms' dosing, and its extract. */
+/**
+ * A chemical store (plan 085): its bulk tanks filled from the loading
+ * bay's fill point, drawn by its transfer pump into its main to the wet
+ * hall's selector; and its extract.
+ */
 function chemicalStore(
   room: string,
   code: string,
-  chemical: string,
+  chemical: 'hypochlorite' | 'acid',
   tanks: readonly SchematicNode[],
 ): RoomSchematic {
+  const name = chemical === 'acid' ? 'Acid' : 'Hypochlorite';
   const extract = machine(
     'extract',
     'store-extract',
     'Extract and chlorine detection',
+  );
+  const transfer = storeTransfer(
+    chemical,
+    tanks.map((t) => t.id),
   );
   return backRoom(
     room,
@@ -56,32 +65,32 @@ function chemicalStore(
     [
       ...tanks,
       extract,
-      machine('delivery', 'fill-line', `${chemical} delivery line`),
-      machine('dosing', 'dosing-pumps', `${chemical} dosing pumps`),
+      machine('delivery', 'fill-line', `${name} delivery line`),
+      ...transfer.nodes,
       machine('outside', 'atmosphere', 'Outside air'),
     ],
     [
-      ...tanks.flatMap((t) => [
+      ...tanks.map((t) =>
         link(`${t.name} fill`, ['delivery', 'out'], [t.id, 'fill'], 'chemical'),
-        link(`${t.name} draw-off`, [t.id, 'out'], ['dosing', 'in'], 'chemical'),
-      ]),
+      ),
+      ...transfer.links,
       link('Store extract', ['extract', 'out'], ['outside', 'in'], 'air'),
     ],
-    [extract],
+    [extract, transfer.nodes[0]],
   );
 }
 
 export const HYPO_STORE_SCHEMATIC = chemicalStore(
   'hypo_store',
   'HS',
-  'Hypochlorite',
+  'hypochlorite',
   [1, 2, 3].map((n) =>
-    machine(`tank-${n}`, 'hypo-tank', `Sodium hypochlorite bulk tank ${n}`),
+    machine(`tank-${n}`, 'chem-bulk', `Sodium hypochlorite bulk tank ${n}`),
   ),
 );
 
-export const ACID_STORE_SCHEMATIC = chemicalStore('acid_store', 'AS', 'Acid', [
-  machine('ibc', 'acid-ibc', 'Acid IBC on spill pallet'),
+export const ACID_STORE_SCHEMATIC = chemicalStore('acid_store', 'AS', 'acid', [
+  machine('tank-1', 'chem-bulk', 'Hydrochloric acid bulk tank'),
 ]);
 
 const fills = (['hypochlorite', 'acid'] as const).map((c) =>

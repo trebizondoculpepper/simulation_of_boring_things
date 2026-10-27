@@ -163,4 +163,15 @@ describe('the chemical distribution: store, transfer pump, selector, day tanks',
       dayTankStock(withLevel(d, 'hypochlorite', 1, 0), 'pool_02').hypochlorite,
     ).toBe(false);
   });
+
+  it('gives a line saved with fewer day tanks the ones it lacks', () => {
+    const d = newChemicalDistribution();
+    const short = {
+      ...d,
+      acid: { ...d.acid, tanks: d.acid.tanks.slice(0, 3) },
+    };
+    expect(dayTankStock(short, 'pool_04').acid).toBe(false);
+    const r = stepDistribution(short, CAP, CAP, {}, 1);
+    expect(r.distribution.acid.tanks).toHaveLength(DAY_TANKS.acid.length);
+  });
 });

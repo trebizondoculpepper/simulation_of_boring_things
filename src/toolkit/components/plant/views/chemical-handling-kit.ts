@@ -6,7 +6,7 @@ import {
   MeshStandardMaterial,
 } from 'three';
 import { computed, signal } from '@preact/signals-core';
-import type { Signal } from '@preact/signals-core';
+import type { ReadonlySignal } from '@preact/signals-core';
 import {
   actOnTransfer,
   levelOf,
@@ -42,6 +42,7 @@ import { createAnnunciator } from '../../industrial-control/logic/annunciator';
 import { plantTools } from './plant-tools';
 import { createDigitalPump } from './dosing-equipment';
 import { createFramedChemicalTank } from './framed-chemical-tank';
+import { dayTankSize } from '../../../../game/plant/chemical-distribution';
 
 /**
  * Dev44's chemical handling equipment beyond the bulk tanks
@@ -90,13 +91,17 @@ function translucent(kit: PanelKit, colour: string, opacity: number) {
  * pump skid and the day tank it fills; whoever made it steps it.
  */
 export interface TransferStore {
-  state: Signal<TransferTrial>;
+  state: ReadonlySignal<TransferTrial>;
   act(a: TransferAction): void;
   step(seconds: number): void;
+  /** Whether its pump runs, where more decides it than the trial knows (the world's store's low level). */
+  pumpOn?: ReadonlySignal<boolean>;
 }
 
-export function createTransferStore(): TransferStore {
-  const state = signal(newTransferTrial());
+export function createTransferStore(
+  initial: TransferTrial = newTransferTrial(),
+): TransferStore {
+  const state = signal(initial);
   return {
     state,
     act: (a) => (state.value = actOnTransfer(state.value, a)),
@@ -143,7 +148,9 @@ export function createTransferPumpSkid(
   t.box(group, t.paint('#202223', 0.8), 1.42, 0.02, 0.82, 0, 0.125, 0);
   for (const z of [-0.4, 0.4]) t.box(group, galv, 1.4, 0.06, 0.06, 0, 0.17, z);
 
-  const running = [computed(() => pumpRunning(store.state.value))];
+  const running = [
+    store.pumpOn ?? computed(() => pumpRunning(store.state.value)),
+  ];
   const tripped = computed(() => store.state.value.tripped);
   const gauges: ReturnType<typeof createRoundGauge>[] = [];
   const impellers: Group[] = [];
@@ -620,16 +627,15 @@ export function createDualTransferPumpSkid(kit: PanelKit, chemical: Chemical) {
 // ---- The day tank station -----------------------------------------------
 
 /**
- * A plant room's day tank, after the 200 L dosing tanks pool plant rooms
- * use: natural, translucent HDPE, so the level shows through its wall
- * against a moulded litre scale; a screw lid with its sockets; standing in
- * its own bund (a 250 L spill tray). Its low and high float switches on
- * their stems; its actuated inlet valve off the transfer main, open while
- * it fills; its outlet to the dosing pump beside it on the wall bracket.
- * And what the guidance asks at a chemical point: an eyewash station on
- * the wall, a face visor and gauntlets on their hooks, the hazard label
- * and the never-mix notice. The level falls as it doses; at low the inlet
- * opens, at high it shuts.
+ * A day tank, after the small framed tanks dosing plant uses: black HDPE
+ * in a galvanised frame, as the bulk tanks are (`framed-chemical-tank.ts`),
+ * standing in its own bund (a spill tray of 110%). Its level read by its
+ * ultrasonic sensor on its display, and shown by its float indicator
+ * through the lid; its low and high float switches; its actuated inlet
+ * valve on a riser off its branch, open while it fills; its outlet to the
+ * dosing. Beside it, as asked: its own dosing pump on a bracket (where the
+ * room has none), and the safety gear of a chemical point (an eyewash
+ * station, a visor and gauntlets, the never-mix notice).
  */
 export function createDayTankStation(
   kit: PanelKit,
@@ -637,20 +643,39 @@ export function createDayTankStation(
   shared?: TransferStore,
   /** Which of the trial's day tanks this is. */
   index = 0,
+  {
+    litres = 300,
+    tag,
+    withPump = true,
+    withGear = true,
+    centred = false,
+  }: {
+    litres?: number;
+    tag?: string;
+    withPump?: boolean;
+    withGear?: boolean;
+    /** Centred on its footprint (`dayTankFootprint`), as a room places it. */
+    centred?: boolean;
+  } = {},
 ) {
   const store = shared ?? createTransferStore();
+  const root = new Group();
   const group = new Group();
+  root.add(group);
   const t = plantTools(kit);
   const f = tools(kit);
   const parts = createPartSet();
   const galv = t.paint('#a9afaf', 0.38, 0.75);
   const pvc = t.paint('#5a5f63', 0.55);
   const dark = t.paint('#2a2f31', 0.6);
-  // The bund: a black PE spill tray, 110% of the tank and its outlet in it.
+  const size = dayTankSize(litres);
+  const { L, W, H } = size;
+  // The bund: a black PE spill tray, 110% of the tank, its outlet in it.
   const tray = t.paint('#202223', 0.8);
-  const bw = 1.3;
-  const bd = 1.25;
+  const bw = L + 0.4;
+  const bd = W + 0.6;
   const bz = 0.05;
+  const wallH = Math.min(0.3, Math.max(0.12, H * 0.35));
   t.box(group, tray, bw, 0.04, bd, 0, 0.02, bz);
   for (const [w, d, x, z] of [
     [bw, 0.04, 0, bz + bd / 2 - 0.02],
@@ -658,128 +683,188 @@ export function createDayTankStation(
     [0.04, bd, bw / 2 - 0.02, bz],
     [0.04, bd, -bw / 2 + 0.02, bz],
   ] as const)
-    t.box(group, tray, w, 0.3, d, x, 0.15, z);
+    t.box(group, tray, w, wallH, d, x, wallH / 2, z);
   f.label(
     group,
-    'BUND 330 L',
+    `BUND ${Math.ceil((litres * 1.1) / 5) * 5} L`,
     0,
-    0.2,
+    wallH * 0.6,
     bz + bd / 2 + 0.002,
-    0.03,
+    0.025,
     '#ffffff',
     '#202223',
   );
-  // The tank: a small framed black HDPE tank, as the bulk tanks are
-  // (`framed-chemical-tank.ts`), its level read by its ultrasonic sensor
-  // on its display, and shown by its float indicator through the lid.
+  const tankTag = tag ?? `${chemical === 'acid' ? 'ADT' : 'HDT'}${index + 1}`;
   const tankZ = -0.2;
   const tank = createFramedChemicalTank(kit, {
-    tag: `${chemical === 'acid' ? 'ADT' : 'HDT'}${index + 1}`,
+    tag: tankTag,
     product: PRODUCT[chemical],
-    litres: 300,
+    litres,
     acid: chemical === 'acid',
-    size: { L: 0.9, W: 0.65, H: 0.8 },
+    size,
     floatGauge: true,
     fillLine: false,
     outletSide: 1,
   });
   tank.object.position.set(0, 0.04, tankZ);
   group.add(tank.object);
-  const top = 0.04 + 0.12 + 0.8;
+  const top = 0.04 + 0.12 + H;
   const fill = computed(() => valveOpen(store.state.value, index));
   const level = computed(() => levelOf(store.state.value.tanks[index]));
   // Low and high switches: float switches in the lid, their cables.
-  for (const [x, z, tag] of [
-    [0.33, -0.15, 'LSL'],
-    [0.33, 0.1, 'LSH'],
+  for (const [z, name] of [
+    [-W * 0.22, 'LSL'],
+    [W * 0.15, 'LSH'],
   ] as const) {
+    const x = L / 2 - 0.08;
     t.cyl(
       group,
       t.paint('#d4a017', 0.5),
-      0.022,
-      0.06,
+      0.018,
+      0.05,
       x,
-      top + 0.04,
+      top + 0.035,
       tankZ + z,
       'y',
       10,
     );
-    t.cyl(group, dark, 0.008, 0.03, x, top + 0.085, tankZ + z, 'y', 6);
-    f.label(group, tag, x, top + 0.12, tankZ + z, 0.016, '#1b1b1b', '#d4a017');
+    t.cyl(group, dark, 0.007, 0.03, x, top + 0.075, tankZ + z, 'y', 6);
+    f.label(group, name, x, top + 0.11, tankZ + z, 0.014, '#1b1b1b', '#d4a017');
   }
-  // The inlet off the transfer main: a riser into the lid, its actuated
-  // valve, a grey actuator with its yellow position dome, open while
-  // filling.
+  // The inlet off its branch: a riser into the lid, its actuated valve, a
+  // grey actuator with its yellow position dome, open while filling.
   const ix = -0.05;
-  const iz = tankZ - 0.15;
-  t.rod(group, pvc, [ix, top, iz], [ix, 1.65, iz], 0.02, 10);
-  t.rod(group, pvc, [ix, 1.65, iz], [ix, 1.65, -0.6], 0.02, 10);
-  t.box(group, pvc, 0.08, 0.08, 0.08, ix, 1.3, iz);
-  t.box(group, t.paint('#7b8285', 0.5), 0.12, 0.1, 0.1, ix, 1.4, iz);
-  t.cyl(group, t.paint('#e5c43a', 0.4), 0.03, 0.03, ix, 1.465, iz, 'y', 12);
-  const pointer = t.box(group, dark, 0.05, 0.008, 0.008, ix, 1.485, iz);
-  const trend = levelTrend();
-  pointer.userData.live = true;
-  f.label(group, 'XV INLET', ix, 1.3, iz + 0.045, 0.016, '#ffffff', '#2a2f31');
-  // The dosing pump on its bracket beside the bund, fed from the outlet.
-  t.box(group, galv, 0.04, 0.72, 0.04, 0.92, 0.36, -0.2);
-  t.box(group, galv, 0.3, 0.02, 0.24, 0.92, 0.7, -0.2);
-  const pump = createDigitalPump(kit, chemical === 'acid' ? 'ACID' : 'HYPO');
-  pump.position.set(0.92, 0.71, -0.2);
-  group.add(pump);
-  const oy = 0.04 + 0.12 + 0.18;
-  const oz = tankZ + 0.65 / 2 + 0.38;
-  t.rod(group, pvc, [0.4, oy, oz], [0.82, oy, oz], 0.015, 10);
-  t.rod(group, pvc, [0.82, oy, oz], [0.82, 0.78, -0.12], 0.006, 6);
-  // The safety gear: the eyewash station on the wall, the visor and
-  // gauntlets, the never-mix notice.
-  const gear = new Group();
-  gear.position.set(-0.95, 0, -0.55);
-  group.add(gear);
-  t.box(gear, t.paint('#2f8f4e', 0.5), 0.26, 0.36, 0.08, 0, 1.35, 0);
-  for (const x of [-0.06, 0.06]) {
-    t.cyl(gear, t.paint('#f2f2ee', 0.4), 0.035, 0.2, x, 1.33, 0.06, 'y', 16);
-    t.cyl(gear, t.paint('#2f8f4e', 0.5), 0.02, 0.04, x, 1.45, 0.06, 'y', 12);
-  }
-  f.label(gear, 'EYE WASH', 0, 1.55, 0.045, 0.03, '#ffffff', '#2f8f4e');
-  t.cyl(gear, galv, 0.008, 0.06, -0.08, 0.95, 0.03, 'z', 6);
-  t.box(
-    gear,
-    translucent(kit, '#cfe7ef', 0.5),
-    0.2,
-    0.22,
-    0.01,
-    -0.08,
-    0.84,
-    0.065,
+  const iz = tankZ - W * 0.25;
+  const riser = Math.max(1.65, top + 0.5);
+  t.rod(group, pvc, [ix, top, iz], [ix, riser, iz], 0.02, 10);
+  t.rod(group, pvc, [ix, riser, iz], [ix, riser, -bd / 2 - 0.1], 0.02, 10);
+  const vy = Math.max(top + 0.25, 1.3);
+  t.box(group, pvc, 0.08, 0.08, 0.08, ix, vy, iz);
+  t.box(group, t.paint('#7b8285', 0.5), 0.12, 0.1, 0.1, ix, vy + 0.1, iz);
+  t.cyl(
+    group,
+    t.paint('#e5c43a', 0.4),
+    0.03,
+    0.03,
+    ix,
+    vy + 0.165,
+    iz,
+    'y',
+    12,
   );
-  t.box(gear, t.paint('#2b2b2b', 0.6), 0.2, 0.03, 0.02, -0.08, 0.95, 0.065);
-  t.cyl(gear, galv, 0.008, 0.06, 0.1, 0.95, 0.03, 'z', 6);
-  for (const x of [0.07, 0.13])
-    t.box(gear, t.paint('#3a7d3a', 0.7), 0.05, 0.3, 0.03, x, 0.8, 0.06);
+  const pointer = t.box(group, dark, 0.05, 0.008, 0.008, ix, vy + 0.185, iz);
+  pointer.userData.live = true;
+  const trend = levelTrend();
   f.label(
     group,
-    'NEVER MIX ACID AND HYPOCHLORITE',
-    -0.95,
-    1.7,
-    -0.545,
-    0.022,
-    '#1b1b1b',
-    '#e5c43a',
+    `${tankTag}-XV`,
+    ix,
+    vy,
+    iz + 0.045,
+    0.016,
+    '#ffffff',
+    '#2a2f31',
   );
-
-  // A sim: it doses down; at low the inlet opens and it fills; at high it shuts.
+  // Its outlet's draw-off, out to the dosing.
+  const oy = 0.04 + 0.12 + Math.min(0.18, H * 0.3);
+  const oz = tankZ + W / 2 + 0.38;
+  const ox = -L / 2 + Math.min(0.45, L * 0.3) + 0.4;
+  const px = bw / 2 + 0.27;
+  if (withPump) {
+    // The dosing pump on its bracket beside the bund, fed from the outlet.
+    t.box(group, galv, 0.04, 0.72, 0.04, px, 0.36, -0.2);
+    t.box(group, galv, 0.3, 0.02, 0.24, px, 0.7, -0.2);
+    const pump = createDigitalPump(kit, chemical === 'acid' ? 'ACID' : 'HYPO');
+    pump.position.set(px, 0.71, -0.2);
+    group.add(pump);
+    t.rod(group, pvc, [ox, oy, oz], [px - 0.1, oy, oz], 0.015, 10);
+    t.rod(group, pvc, [px - 0.1, oy, oz], [px - 0.1, 0.78, -0.12], 0.006, 6);
+  } else {
+    // To the room's dosing pumps: up the bund's side and away at high level.
+    t.rod(group, pvc, [ox, oy, oz], [bw / 2 - 0.1, oy, oz], 0.015, 10);
+    t.rod(
+      group,
+      pvc,
+      [bw / 2 - 0.1, oy, oz],
+      [bw / 2 - 0.1, riser - 0.15, oz],
+      0.012,
+      8,
+    );
+    t.rod(
+      group,
+      pvc,
+      [bw / 2 - 0.1, riser - 0.15, oz],
+      [bw / 2 - 0.1, riser - 0.15, -bd / 2 - 0.1],
+      0.012,
+      8,
+    );
+    f.label(
+      group,
+      'TO DOSING',
+      bw / 2 - 0.1,
+      riser - 0.05,
+      oz,
+      0.016,
+      '#ffffff',
+      BAND[chemical],
+    );
+  }
+  if (withGear) {
+    // The safety gear: the eyewash station on the wall, the visor and
+    // gauntlets, the never-mix notice.
+    const gear = new Group();
+    gear.position.set(-bw / 2 - 0.3, 0, -bd / 2 + 0.05);
+    group.add(gear);
+    t.box(gear, t.paint('#2f8f4e', 0.5), 0.26, 0.36, 0.08, 0, 1.35, 0);
+    for (const x of [-0.06, 0.06]) {
+      t.cyl(gear, t.paint('#f2f2ee', 0.4), 0.035, 0.2, x, 1.33, 0.06, 'y', 16);
+      t.cyl(gear, t.paint('#2f8f4e', 0.5), 0.02, 0.04, x, 1.45, 0.06, 'y', 12);
+    }
+    f.label(gear, 'EYE WASH', 0, 1.55, 0.045, 0.03, '#ffffff', '#2f8f4e');
+    t.cyl(gear, galv, 0.008, 0.06, -0.08, 0.95, 0.03, 'z', 6);
+    t.box(
+      gear,
+      translucent(kit, '#cfe7ef', 0.5),
+      0.2,
+      0.22,
+      0.01,
+      -0.08,
+      0.84,
+      0.065,
+    );
+    t.box(gear, t.paint('#2b2b2b', 0.6), 0.2, 0.03, 0.02, -0.08, 0.95, 0.065);
+    t.cyl(gear, galv, 0.008, 0.06, 0.1, 0.95, 0.03, 'z', 6);
+    for (const x of [0.07, 0.13])
+      t.box(gear, t.paint('#3a7d3a', 0.7), 0.05, 0.3, 0.03, x, 0.8, 0.06);
+    f.label(
+      gear,
+      'NEVER MIX ACID AND HYPOCHLORITE',
+      0,
+      1.7,
+      0.01,
+      0.022,
+      '#1b1b1b',
+      '#e5c43a',
+    );
+  }
   const fillLamp = pilotLight(kit, {
     colour: 'amber',
     legend: 'FILLING',
     drive: fill,
   });
-  fillLamp.object.position.set(ix + 0.1, 1.4, iz + 0.05);
+  fillLamp.object.position.set(ix + 0.1, vy + 0.1, iz + 0.05);
   fillLamp.object.scale.setScalar(0.6);
   group.add(fillLamp.object);
   parts.add(fillLamp);
+  // Centred on its footprint: the bund, with the pump's room to its right
+  // and the gear's to its left.
+  if (centred) {
+    const left = bw / 2 + (withGear ? 0.55 : 0);
+    const right = bw / 2 + (withPump ? 0.55 : 0);
+    group.position.set((left - right) / 2, 0, -bz);
+  }
   return {
-    object: group,
+    object: root,
     parts,
     level,
     update(delta: number) {
@@ -791,7 +876,7 @@ export function createDayTankStation(
     },
     status: () =>
       describeTank(
-        `${chemical === 'acid' ? 'Hydrochloric acid' : 'Sodium hypochlorite'} day tank`,
+        `${chemical === 'acid' ? 'Hydrochloric acid' : 'Sodium hypochlorite'} day tank ${tankTag}`,
         level.value,
         trend.lpm(),
       ),
@@ -1405,13 +1490,11 @@ export function createTransferTrial(kit: PanelKit, chemical: Chemical) {
   const group = new Group();
   const t = plantTools(kit);
   const f = tools(kit);
-  const store = createTransferStore();
-  store.state.value = {
-    ...store.state.value,
-    tanks: store.state.value.tanks.map((tk, i) =>
-      i ? tk : { ...tk, litres: 50 },
-    ),
-  };
+  const first = newTransferTrial();
+  const store = createTransferStore({
+    ...first,
+    tanks: first.tanks.map((tk, i) => (i ? tk : { ...tk, litres: 50 })),
+  });
   const pvc = t.paint('#5a5f63', 0.55);
   // The source: a plain blue block, plainly not real plant.
   const sx = -5.2;

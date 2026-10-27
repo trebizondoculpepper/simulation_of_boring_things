@@ -1078,11 +1078,11 @@ export function poolPlantPipework(room: string): {
     });
   }
 
-  // ---- Chemicals from the stores, down out of the ceiling -------------------
+  // ---- Chemicals from the day tanks, down out of the ceiling ---------------
   const acidPump = by('acid dosing pump');
   for (const [item, name] of [
-    [by('hypochlorite dosing pumps'), 'Hypochlorite from the store'],
-    [acidPump, 'Acid from the store'],
+    [by('hypochlorite dosing pumps'), 'Hypochlorite from its day tank'],
+    [acidPump, 'Acid from its day tank'],
   ] as const) {
     const p = port(item, 'supply');
     run({

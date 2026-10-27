@@ -426,7 +426,7 @@ export function createFramedChemicalTank(
 
   // The outlet: the steel flange near the foot, a PVC-U union ball valve,
   // its red lever, and the draw-off on to the transfer pumps.
-  const outX = -L / 2 + 0.45;
+  const outX = -L / 2 + Math.min(0.45, L * 0.3);
   const outY = base + 0.18;
   t.cyl(group, galv, 0.1, 0.02, outX, outY, W / 2 + 0.01, 'z', 24);
   for (let i = 0; i < 8; i++) {

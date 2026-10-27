@@ -87,6 +87,14 @@ export const WORLD_BINDINGS: Readonly<Record<string, WorldBinding>> = {
   'low-loss-header': passive('a vessel: its thermometers are the boilers’'),
   'dosing-pot': passive('a vessel with valves, used only when dosing by hand'),
   // The chemical stores and loading bay.
+  'chem-bulk': world('its store’s stock'),
+  'chem-pump': world(
+    'its chemical’s distribution: its selector, its trip, its store',
+  ),
+  'chem-selector': world(
+    'its chemical’s distribution: its mode, pick and outlet served',
+  ),
+  'chem-day': world('its day tank’s litres and its inlet'),
   'hypo-tank': world('the hypochlorite store’s stock'),
   'acid-ibc': world('the acid store’s stock'),
   'store-extract': world('its room’s gas detection and extract'),
