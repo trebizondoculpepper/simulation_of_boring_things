@@ -25,6 +25,10 @@ const URLS: Record<UsedSound, URL> = {
     '../../../../../resources/sound/effects/resynthesized_bloops/actioning.mp3',
     import.meta.url,
   ),
+  amber_alert: new URL(
+    '../../../../../resources/sound/effects/resynthesized_bloops/amber_alert.mp3',
+    import.meta.url,
+  ),
   coming_out_of_warp: new URL(
     '../../../../../resources/sound/effects/resynthesized_bloops/coming_out_of_warp.mp3',
     import.meta.url,

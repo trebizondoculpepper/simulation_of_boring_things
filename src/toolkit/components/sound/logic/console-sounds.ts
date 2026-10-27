@@ -32,10 +32,11 @@ export type ConsoleSound =
   | 'urgent_alert'
   | 'we_are_being_hailed';
 
-/** The files used so far (the alarm-like rest are kept for later). */
+/** The files used so far (the alarm-like rest but `amber_alert` are kept for later). */
 export const USED_SOUNDS = [
   'ack_trill',
   'actioning',
+  'amber_alert',
   'coming_out_of_warp',
   'correct_entry',
   'engines_online',
@@ -57,6 +58,7 @@ export type UsedSound = (typeof USED_SOUNDS)[number];
 export const LOUDNESS: Record<UsedSound, { mean: number; peak: number }> = {
   ack_trill: { mean: -29.6, peak: -14.9 },
   actioning: { mean: -25.1, peak: -10.2 },
+  amber_alert: { mean: -19.0, peak: -6.5 },
   coming_out_of_warp: { mean: -19.5, peak: -6.3 },
   correct_entry: { mean: -30.1, peak: -15.4 },
   engines_online: { mean: -22.3, peak: -8.2 },
@@ -86,14 +88,30 @@ export function balanced(name: UsedSound, level: number): number {
  * Each event's level, a share of the reference loudness: a touch about
  * as loud as the synthesised bleeps it replaces; each display's boot
  * cues quiet, there being some 25 of them; the main viewscreen's above
- * them; the chatter soft, from across the room.
+ * them; the chatter soft, from across the room; the alarm sounder well
+ * above the chatter and a touch, to be heard across the bridge; a card
+ * reader's accepted read about as a touch.
  */
 export const LEVELS = {
   touch: 0.35,
   bootEach: 0.16,
   bootMain: 0.45,
   chatter: 0.25,
+  alarm: 0.7,
+  cardRead: 0.3,
 } as const;
+
+/**
+ * The alarm sounder's file (the owner, 2026-10-27: "the dismissable alarm
+ * noise"): heard from Central Control while any alarm is unaccepted, every
+ * 10 s until ACCEPT (`gallery/logic/alarm-bleep.ts`). The world's alarms
+ * are of one kind, so one file; `urgent_alert` is kept for a graver class
+ * should the annunciator ever distinguish one.
+ */
+export const ALARM_SOUND: UsedSound = 'amber_alert';
+
+/** A card reader's accepted read, on the bridge's doors: an accepted entry. */
+export const CARD_READ_SOUND: UsedSound = 'correct_entry';
 
 /**
  * Which files answer a touch, by the sound the press asks for: an

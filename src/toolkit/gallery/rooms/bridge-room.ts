@@ -652,9 +652,10 @@ function installBootSounds(kit: PanelKit) {
 
 /**
  * The alarm bleep (the owner, 2026-10-27): while any alarm on the world's
- * annunciator is unaccepted and the walker is on the bridge, a two-tone
- * bleep from Central Control, where it is accepted, at once and then
- * every 10 s (`logic/alarm-bleep.ts`); it stops on ACCEPT.
+ * annunciator is unaccepted and the walker is on the bridge, the owner's
+ * `amber_alert`, resynthesised, from Central Control, where it is
+ * accepted, at once and then every 10 s (`logic/alarm-bleep.ts`); it
+ * stops on ACCEPT.
  */
 function installAlarmBleep() {
   const store = typeof window === 'undefined' ? null : roomWorld();
@@ -685,7 +686,7 @@ function installAlarmBleep() {
         delta,
         w ? unacceptedAlarms(w.annunciator).length > 0 : false,
       );
-      if (due) partAudio.play({ tones: [...ALARM_BLEEP.tones] }, at);
+      if (due) playConsoleSound(ALARM_BLEEP.sound, ALARM_BLEEP.level, at);
     },
     onEvent: () => () => {},
     setAudible: () => {},

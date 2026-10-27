@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { ALARM_BLEEP, createAlarmBleep } from './alarm-bleep';
+import {
+  LEVELS,
+  USED_SOUNDS,
+} from '../../components/sound/logic/console-sounds';
 
 /** The times it bleeps over `seconds` in tenths, unaccepted while `when`. */
 const run = (
@@ -38,11 +42,11 @@ describe('the bridge’s alarm bleep', () => {
     expect(run(bleep, 5)).toEqual([0]);
   });
 
-  it('is a high-low pair, twice, under half a second each', () => {
-    expect(ALARM_BLEEP.tones).toHaveLength(4);
-    for (const t of ALARM_BLEEP.tones) {
-      expect(t.at + t.seconds).toBeLessThan(1);
-      expect(t.level).toBeGreaterThan(0.035);
-    }
+  it('is the owner’s amber_alert, well above the chatter and a touch', () => {
+    expect(ALARM_BLEEP.sound).toBe('amber_alert');
+    expect(USED_SOUNDS).toContain(ALARM_BLEEP.sound);
+    expect(ALARM_BLEEP.level).toBeGreaterThan(LEVELS.chatter * 2);
+    expect(ALARM_BLEEP.level).toBeGreaterThan(LEVELS.touch);
+    expect(ALARM_BLEEP).not.toHaveProperty('tones');
   });
 });

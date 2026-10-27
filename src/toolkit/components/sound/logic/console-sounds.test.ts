@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  ALARM_SOUND,
   BOOT_GAPS,
+  CARD_READ_SOUND,
   BOOT_SOUNDS,
   CHATTER_SOUNDS,
   LEVELS,
@@ -15,7 +17,7 @@ import {
 } from './console-sounds';
 import { seeded } from './console-chatter';
 
-const ALARM_LIKE = [
+const ALARM_LIKE: string[] = [
   'amber_alert',
   'urgent_alert',
   'component_failure',
@@ -27,9 +29,22 @@ const ALARM_LIKE = [
 ];
 
 describe('the bridge’s console sounds', () => {
-  it('uses none of the alarm-like files yet', () => {
-    for (const name of USED_SOUNDS) expect(ALARM_LIKE).not.toContain(name);
-    for (const name of CHATTER_SOUNDS) expect(USED_SOUNDS).toContain(name);
+  it('uses the alarm-like files only for the alarm sounder', () => {
+    const touches = Object.values(TOUCH_SOUNDS).flat();
+    const boots = [...BOOT_SOUNDS.drawIn, BOOT_SOUNDS.mainDrawIn];
+    for (const name of [...touches, ...boots, ...CHATTER_SOUNDS]) {
+      expect(USED_SOUNDS).toContain(name);
+      expect(ALARM_LIKE).not.toContain(name);
+    }
+    expect(CARD_READ_SOUND).toBe('correct_entry');
+    expect(ALARM_SOUND).toBe('amber_alert');
+    expect(USED_SOUNDS).toContain(ALARM_SOUND);
+    expect(
+      USED_SOUNDS.filter((n) => ALARM_LIKE.includes(n) && n !== ALARM_SOUND),
+    ).toEqual([]);
+    // Heard across the bridge: well above the chatter, above a touch.
+    expect(LEVELS.alarm).toBeGreaterThan(2 * LEVELS.chatter);
+    expect(LEVELS.alarm).toBeGreaterThan(LEVELS.touch);
   });
 
   it('answers each touch sensibly: presses vary, refusals lock out, alarms accepted trill', () => {
