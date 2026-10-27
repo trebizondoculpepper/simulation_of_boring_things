@@ -89,7 +89,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     title: 'Chemical distribution panel',
     reference:
       'The wet hall’s panel, Penfold Controls: each store and day tank on a meter, filling lamps, selector and pump lamps, an annunciator; run by its own trials',
-    size: { w: 1.7, d: 0.3, h: 1.2, mount: 'wall', y: 1.5 },
+    size: { w: 1.7, d: 0.6, h: 2.1, mount: 'floor' },
     build: (kit) => createDistributionPanelDemo(kit),
   },
   {

@@ -1910,8 +1910,19 @@ export function createDistributionPanelDemo(kit: PanelKit) {
     return { hypochlorite: line('hypochlorite'), acid: line('acid') };
   };
   const panel = createDistributionPanel(kit, read);
+  // Stood on two galvanised posts and a foot, its middle at eye height.
+  const t = plantTools(kit);
+  const galv = t.paint('#a9afaf', 0.38, 0.75);
+  const object = new Group();
+  panel.object.position.set(0, 1.5, -0.1);
+  object.add(panel.object);
+  for (const x of [-0.6, 0.6]) {
+    t.box(object, galv, 0.05, 1.0, 0.05, x, 0.5, -0.05);
+    t.box(object, galv, 0.08, 0.02, 0.5, x, 0.01, 0.05);
+  }
   return {
     ...panel,
+    object,
     update(delta: number) {
       stores.hypochlorite.step(delta * 10);
       stores.acid.step(delta * 10);
