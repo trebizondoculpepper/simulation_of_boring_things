@@ -239,14 +239,14 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
       group,
       legend === 'UP' ? '▲' : legend === 'DOWN' ? '▼' : legend,
       x,
-      y - 0.012,
+      y - 0.0145,
       front + 0.0055,
       0.0045,
       '#cfd6db',
     );
     parts.add(b);
   };
-  const keyY = 0.01 + H * 0.4;
+  const keyY = 0.01 + H * 0.45;
   key('green', 'START', -0.045, keyY, () => (on = true));
   key('red', 'STOP', -0.015, keyY, () => (on = false));
   key('black', 'UP', 0.025, keyY, () => (rate = Math.min(1, rate + 0.05)));
@@ -265,26 +265,31 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
       0.003,
       0.004,
       x,
-      0.01 + H * 0.27,
+      0.01 + H * 0.3,
       front + 0.006,
       'z',
       12,
     ).userData.live = true;
     return m;
   };
-  const runLamp = lamp('#3ee05a', -0.045);
-  const alarmLamp = lamp('#ff4a2e', -0.03);
-  f.label(
-    group,
-    'RUN  ALARM',
-    -0.035,
-    0.01 + H * 0.22,
-    front + 0.0055,
-    0.0045,
-    '#cfd6db',
-  );
-  const mark = brandPlate(kit, 'grundflow', 0.075, 'PERI 30');
-  mark.position.set(0.035, 0.01 + H * 0.24, front + 0.0056);
+  const runLamp = lamp('#3ee05a', -0.05);
+  const alarmLamp = lamp('#ff4a2e', -0.022);
+  // Each lamp's legend beside it, clear of the badge.
+  for (const [x, name] of [
+    [-0.05, 'RUN'],
+    [-0.022, 'ALARM'],
+  ] as const)
+    f.label(
+      group,
+      name,
+      x + (name === 'ALARM' ? 0.015 : 0.011),
+      0.01 + H * 0.3,
+      front + 0.0055,
+      0.0042,
+      '#cfd6db',
+    );
+  const mark = brandPlate(kit, 'grundflow', 0.058, 'PERI 30');
+  mark.position.set(0.042, 0.01 + H * 0.3, front + 0.0056);
   group.add(mark);
   // A fine cast texture: shallow ribs along the casing's top.
   for (let i = 0; i < 6; i++)
