@@ -479,6 +479,77 @@ export function createLeverSelector(
 }
 
 /**
+ * A changeover switch's rotary handle, after the Socomec SIRCOVER and
+ * ABB OT…C door handles (the owner, 2026-10-27: not a small knob scaled
+ * up): a 90 mm square grey escutcheon, a round black hub, and a one-ended
+ * pistol-grip lever with a white index along it, pointing at its position
+ * (I upper left, 0 up, II upper right), a padlock hasp under it. Real
+ * size, metres, facing +z.
+ */
+export function createChangeoverHandle(kit: PanelKit): LeverSelectorView {
+  const group = new Group();
+  const black = kitPaint(kit, '#18191a', 0.55);
+  const lever = kitPaint(kit, '#202123', 0.4);
+  // Its escutcheon grey, so the black hub and grip stand out on it.
+  add(
+    group,
+    new BoxGeometry(0.09, 0.09, 0.006),
+    kitPaint(kit, '#5c6062', 0.6),
+    0,
+    0,
+    0.003,
+  );
+  // The padlock hasp at the escutcheon's foot, a slot through it.
+  add(
+    group,
+    new BoxGeometry(0.022, 0.016, 0.004),
+    kitPaint(kit, '#8d9192', 0.4),
+    0,
+    -0.036,
+    0.008,
+  );
+  add(group, new BoxGeometry(0.01, 0.004, 0.005), black, 0, -0.038, 0.009);
+  const knob = new Group();
+  // It turns: not to be merged with the still parts (`mergeStatic`).
+  knob.userData.live = true;
+  group.add(knob);
+  disc(knob, 0.026, 0.018, lever, 0.006, 32, 0.023);
+  // The grip, tapering out from the hub to its end, rounded.
+  const grip = add(
+    knob,
+    new CylinderGeometry(0.014, 0.018, 0.06, 20),
+    lever,
+    0,
+    0.04,
+    0.018,
+  );
+  grip.scale.set(1, 1, 0.75);
+  disc(knob, 0.014, 0.012, lever, 0.012, 20).position.set(0, 0.07, 0.018);
+  // Its index, white, along its top.
+  add(
+    knob,
+    new BoxGeometry(0.003, 0.05, 0.0008),
+    kitPaint(kit, '#eeeae0'),
+    0,
+    0.045,
+    0.027,
+  );
+  const angles = [Math.PI / 4, 0, -Math.PI / 4];
+  let target = angles[0];
+  knob.rotation.z = target;
+  return {
+    group,
+    knob,
+    set(position) {
+      target = angles[Math.max(0, Math.min(angles.length - 1, position))];
+    },
+    update(delta) {
+      knob.rotation.z += (target - knob.rotation.z) * Math.min(1, delta * 12);
+    },
+  };
+}
+
+/**
  * Four-step cam selector after Harmony K1D004NLH: a 45 mm square metal
  * escutcheon and 35 mm black handle, with four maintained 45° detents.
  * https://www.se.com/nl/en/product/K1D004NLH/

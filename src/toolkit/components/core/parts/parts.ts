@@ -42,6 +42,7 @@ import { createMicroLabel } from '../views/eighties-controls';
 import type { LensDamage } from '../logic/lens-damage';
 import {
   createCamSelector,
+  createChangeoverHandle,
   createLegendPlate,
   createLeverSelector,
   createMushroomHead,
@@ -645,6 +646,8 @@ export function selector(
     bound?: Binding<number>;
     latch?: Readable<boolean>;
     series?: DeviceSeries;
+    /** A changeover switch's big rotary handle (`createChangeoverHandle`), three positions. */
+    handle?: 'changeover';
   },
 ): Part & { position: ReadonlySignal<number> } {
   const a = beginPart(
@@ -653,11 +656,13 @@ export function selector(
       `${props.legend ?? ''} ${props.key ? 'key ' : ''}selector`.trim(),
   );
   const view =
-    props.positions === 4
-      ? createCamSelector(kit)
-      : props.series === 'xb4'
-        ? createXB4Selector(kit, props.positions)
-        : createLeverSelector(kit, props.positions, { key: props.key });
+    props.handle === 'changeover'
+      ? createChangeoverHandle(kit)
+      : props.positions === 4
+        ? createCamSelector(kit)
+        : props.series === 'xb4'
+          ? createXB4Selector(kit, props.positions)
+          : createLeverSelector(kit, props.positions, { key: props.key });
   a.object.add(view.group);
   a.legend(props.legend, 0.03);
   const part = createSelector({

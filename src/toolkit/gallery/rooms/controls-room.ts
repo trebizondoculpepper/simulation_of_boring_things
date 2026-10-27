@@ -48,6 +48,7 @@ import {
   createSmallControlsBoard,
   createWetControlsBoard,
   createSwingHandleBoard,
+  createChangeoverHandleBoard,
   createCharacterLcdBoard,
   createTriStateBoard,
   createGaugeTestBoard,
@@ -249,6 +250,13 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     maxX: (periodX + 0.3) * m,
     minZ: 6.4 * m,
     maxZ: 6.8 * m,
+  });
+  // The changeover switch's rotary handle, beside the cubicle's.
+  place(createChangeoverHandleBoard(kit), periodX, 1.55, 7.2, Math.PI / 2, {
+    minX: -half.x * m,
+    maxX: (periodX + 0.3) * m,
+    minZ: 7.0 * m,
+    maxZ: 7.4 * m,
   });
   // The OT-216 terminal's character LCD and cursor keys (prompt 091), on
   // the south wall, tried here before dev44's terminals use them.

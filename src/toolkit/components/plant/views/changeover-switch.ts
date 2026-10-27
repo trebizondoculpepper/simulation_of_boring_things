@@ -2,6 +2,8 @@ import { Group } from 'three';
 import { signal } from '@preact/signals-core';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
+import { createDymoLabel } from '../../core/views/hand-labels';
+import type { DYMO } from '../../core/views/hand-labels';
 import { createPartSet, pilotLight, selector } from '../../core/parts/parts';
 import type { Part } from '../../core/parts/parts';
 import { panelMakerMark } from '../../core/views/panel-maker-mark';
@@ -59,25 +61,33 @@ export function createChangeoverSwitch(
   face.position.z = d;
   object.add(face);
   panelMakerMark(kit, face, { width: w, height: h, z: 0.001 });
-  const plate = (
+  // Its legends on embossed Dymo tape (the owner, 2026-10-27): the box
+  // made up on site, labelled by whoever wired it; only its DANGER
+  // sticker is a printed sign.
+  let seed = 11;
+  const dymo = (
     text: string,
     y: number,
-    height: number,
-    plateColour = '#f0ede3',
+    colour: keyof typeof DYMO = 'black',
+    scale = 1.6,
+    x = 0,
   ) => {
-    const label = createMicroLabel(kit, text, {
-      height,
-      ink: '#151515',
-      plate: plateColour,
-    });
-    label.position.set(0, y, 0.001);
+    const label = createDymoLabel(kit, text, { colour, seed: seed++ });
+    label.scale.setScalar(scale);
+    label.position.set(x, y, 0.002);
     face.add(label);
     return label;
   };
-  plate('MAINS / GENERATOR CHANGEOVER', h / 2 - 0.07, 0.02);
-  plate('400 A  3 POLE + N  400 V', h / 2 - 0.1, 0.014);
-  plate('DANGER  400 V', -h / 2 + 0.05, 0.02, '#f0d21c');
-  plate('ONE SUPPLY ONLY  -  TURN THROUGH 0', -h / 2 + 0.085, 0.013);
+  dymo('MAINS/GEN CHANGEOVER', h / 2 - 0.06, 'black', 2.2);
+  dymo('400A 3P+N', h / 2 - 0.095);
+  dymo('ONE SUPPLY ONLY - TURN THRU 0', -h / 2 + 0.1, 'red');
+  const danger = createMicroLabel(kit, 'DANGER  400 V', {
+    height: 0.014,
+    ink: '#151515',
+    plate: '#f0d21c',
+  });
+  danger.position.set(0, -h / 2 + 0.06, 0.001);
+  face.add(danger);
   // The switch's maker on its handle's escutcheon.
   const mark = createBrandBadge(kit, 'voltara', { height: 0.018 });
   mark.position.set(0, -0.205, 0.002);
@@ -96,6 +106,7 @@ export function createChangeoverSwitch(
   mount(
     selector(kit, {
       positions: 3,
+      handle: 'changeover',
       name: 'Changeover switch handle',
       initial: CHANGEOVER_POSITIONS.indexOf(position()),
       bound: {
@@ -115,7 +126,7 @@ export function createChangeoverSwitch(
     }),
     0,
     -0.02,
-    4,
+    1.4,
   );
   // Its positions round the handle, where its lever points: I upper left,
   // 0 up, II upper right.
@@ -123,18 +134,13 @@ export function createChangeoverSwitch(
     const angle = Math.PI / 2 + (1 - i) * (Math.PI / 4);
     const label = createMicroLabel(kit, p, { height: 0.026, ink: '#151515' });
     label.position.set(
-      Math.cos(angle) * 0.105,
-      -0.02 + Math.sin(angle) * 0.105,
+      Math.cos(angle) * 0.125,
+      -0.02 + Math.sin(angle) * 0.125,
       0.002,
     );
     face.add(label);
   });
-  const legends = createMicroLabel(kit, 'I MAINS     0 OFF     II GENERATOR', {
-    height: 0.012,
-    ink: '#151515',
-  });
-  legends.position.set(0, -0.175, 0.002);
-  face.add(legends);
+  dymo('I MAINS  0 OFF  II GEN', -0.175);
   // Its lamps, each lit from its own side's supply.
   const mainsLit = signal(binding?.mainsAvailable() ?? true);
   const generatorLit = signal(binding?.generatorAvailable() ?? false);
@@ -171,19 +177,9 @@ export function createChangeoverSwitch(
     0.16,
     0.9,
   );
-  // Their legends, large enough to read from the floor.
-  for (const [text, x] of [
-    ['MAINS\nAVAILABLE', -0.13],
-    ['GENERATOR\nAVAILABLE', 0.13],
-  ] as const) {
-    const label = createMicroLabel(kit, text, {
-      height: 0.011,
-      ink: '#151515',
-      plate: '#f0ede3',
-    });
-    label.position.set(x, 0.205, 0.002);
-    face.add(label);
-  }
+  // Their legends, a strip of tape over each.
+  dymo('MAINS', 0.215, 'blue', 1.6, -0.13);
+  dymo('GENERATOR', 0.215, 'blue', 1.6, 0.13);
   return {
     object,
     parts,

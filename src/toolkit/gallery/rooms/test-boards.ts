@@ -1431,6 +1431,57 @@ export function createSwingHandleBoard(kit: PanelKit): TestFitting {
 }
 
 /**
+ * The CHANGEOVER HANDLE board: a mains / generator changeover switch's
+ * rotary handle (`createChangeoverHandle`, after the Socomec SIRCOVER and
+ * ABB OT…C), life size, its positions I · 0 · II round it, tried here
+ * before the switch room's changeover switch uses it (the owner,
+ * 2026-10-27): a click turns it a position, and a lamp under each
+ * position shows where it stands.
+ */
+export function createChangeoverHandleBoard(kit: PanelKit): TestFitting {
+  const board = createBoard(kit, {
+    title: 'CHANGEOVER HANDLE',
+    width: 0.3,
+    height: 0.4,
+    scale: 1,
+    captionScale: 1.2,
+  });
+  const handle = selector(kit, {
+    positions: 3,
+    handle: 'changeover',
+    legend: 'I · 0 · II',
+    name: 'Changeover handle',
+  });
+  board.place(handle, 0, 0.0, 1);
+  const t = tools(kit);
+  const lamps = (['I', '0', 'II'] as const).map((name, i) => {
+    const x = (i - 1) * 0.07;
+    board.caption(name, x, -0.12, 0.012);
+    const lamp = new MeshBasicMaterial({ color: '#2a2c2a' });
+    kit.materials.push(lamp);
+    const tell = t.cyl(
+      board.parts,
+      lamp,
+      0.006,
+      0.003,
+      x,
+      -0.15,
+      0.003,
+      'z',
+      12,
+    );
+    tell.userData.live = true;
+    return lamp;
+  });
+  return fitting(board, [
+    () =>
+      lamps.forEach((l, i) =>
+        l.color.set(handle.position.value === i ? '#5dff7a' : '#2a2c2a'),
+      ),
+  ]);
+}
+
+/**
  * The WET CONTROLS board: the stainless piezo switch used wherever a
  * button is needed near water (a spa's deck, a shower, the poolside),
  * twice life size. START lights its ring and keeps it lit, as a cycle
