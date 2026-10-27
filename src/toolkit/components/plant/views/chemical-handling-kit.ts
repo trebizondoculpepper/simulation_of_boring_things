@@ -44,6 +44,7 @@ import { createDigitalPump } from './dosing-equipment';
 import { createFramedChemicalTank } from './framed-chemical-tank';
 import { createDoseBottle } from './dose-bottle';
 import { chlorellaPlate } from './chlorella-plate';
+import { hose } from './hose';
 import {
   bottleLevel,
   bottleSize,
@@ -773,8 +774,20 @@ export function createDayTankStation(
     const pump = createDigitalPump(kit, chemical === 'acid' ? 'ACID' : 'HYPO');
     pump.position.set(px, 0.71, -0.2);
     group.add(pump);
-    t.rod(group, pvc, [ox, oy, oz], [px - 0.1, oy, oz], 0.015, 10);
-    t.rod(group, pvc, [px - 0.1, oy, oz], [px - 0.1, 0.78, -0.12], 0.006, 6);
+    // A short rigid stub from the outlet valve, then a soft reinforced
+    // PVC hose looping up to the pump's suction.
+    t.rod(group, pvc, [ox, oy, oz], [ox + 0.12, oy, oz], 0.015, 10);
+    hose(
+      group,
+      t.paint('#d9dcd2', 0.35),
+      [
+        [ox + 0.12, oy, oz],
+        [px - 0.15, oy + 0.05, oz - 0.05],
+        [px - 0.1, 0.78, -0.12],
+      ],
+      0.009,
+      0.05,
+    );
   } else {
     // To the room's dosing pumps: up the bund's side and away at high level.
     t.rod(group, pvc, [ox, oy, oz], [bw / 2 - 0.1, oy, oz], 0.015, 10);

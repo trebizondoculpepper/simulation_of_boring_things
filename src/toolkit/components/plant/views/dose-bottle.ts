@@ -3,6 +3,7 @@ import type { Mesh, PlaneGeometry } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { plantTools } from './plant-tools';
+import { hose } from './hose';
 import { createDoseCellHead, DOSE_CELL_HEAD } from './dose-cell-head';
 import { createChemicalLabel } from './chemicals-signs';
 import { bottleBund, bottleSize } from '../../../../game/plant/dose-bottle';
@@ -138,22 +139,16 @@ export function createDoseBottle(
   // The dosing tube from the pump, out of the head's side and down to the tray's edge.
   const tube = t.paint('#e8e6dc', 0.5);
   const tx = -hw / 2;
-  t.rod(group, tube, [tx, headY, hz], [tx - 0.05, headY, hz], 0.004, 6);
-  t.rod(
+  hose(
     group,
     tube,
-    [tx - 0.05, headY, hz],
-    [-r - 0.03, headY - 0.05, hz],
+    [
+      [tx - 0.016, headY, hz],
+      [-r - 0.03, headY - 0.06, hz],
+      [-r - 0.03, base + 0.05, hz + 0.02],
+    ],
     0.004,
-    6,
-  );
-  t.rod(
-    group,
-    tube,
-    [-r - 0.03, headY - 0.05, hz],
-    [-r - 0.03, 0.12, hz],
-    0.004,
-    6,
+    0.02,
   );
   // The power cable: from the head's back down the bottle to the floor.
   t.rod(

@@ -75,14 +75,13 @@ export function createDoseCellHead(
   );
 
   // The display in its dark bezel.
-  t.box(group, dark, 0.15, 0.072, 0.004, 0, h * 0.62, front + 0.001);
   const lcd = createCharacterLcd(kit, {
     columns: 16,
     rows: 2,
-    cell: 0.0048,
+    cell: 0.0034,
     backlight: true,
   });
-  lcd.group.position.set(0, h * 0.62, front + 0.001);
+  lcd.group.position.set(0, h * 0.64, front + 0.001);
   group.add(lcd.group);
 
   // The lamps in a row under the display, each with its legend below it.
@@ -101,23 +100,23 @@ export function createDoseCellHead(
       roughness: 0.4,
     });
     kit.materials.push(mat);
-    const x = -0.045 + i * 0.03;
+    const x = -0.036 + i * 0.024;
     const lamp = t.cyl(
       group,
       mat,
-      0.0035,
+      0.0025,
       0.004,
       x,
-      h * 0.27,
+      h * 0.36,
       front + 0.002,
       'z',
       12,
     );
     lamp.userData.live = true;
-    f.label(group, name, x, h * 0.18, front + 0.001, 0.006, '#1b1b1b');
+    f.label(group, name, x, h * 0.28, front + 0.001, 0.0045, '#1b1b1b');
     return mat;
   });
-  f.label(group, 'DOSECELL', 0, h * 0.08, front + 0.001, 0.008, '#2a2f31');
+  f.label(group, 'DOSECELL', 0, h * 0.14, front + 0.001, 0.0065, '#2a2f31');
 
   // Chlorella's plate on its right side.
   const plate = chlorellaPlate(kit, d * 0.8, 'CHEMICAL HANDLING');
