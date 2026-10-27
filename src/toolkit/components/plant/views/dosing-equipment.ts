@@ -1,10 +1,4 @@
-import {
-  BoxGeometry,
-  CylinderGeometry,
-  Group,
-  Mesh,
-  MeshStandardMaterial,
-} from 'three';
+import { CylinderGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { SANS } from '../../core/views/fitting-tools';
@@ -13,6 +7,9 @@ import { FINISH, PIPE_SIZES, plantTools } from './plant-tools';
 import type { Point } from './plant-tools';
 import { createNotice, createTag } from './chemicals-signs';
 import { CHEMICAL_COLOUR } from './chemicals-storage';
+import { createDiaphragmPump } from './diaphragm-pump';
+import type { DiaphragmPump } from './diaphragm-pump';
+import { createPartSet } from '../../core/parts/parts';
 
 /**
  * A pool's dosing plant, in metres, each piece at the size of the
@@ -97,101 +94,6 @@ function clear(kit: PanelKit, tint = '#d8eef2', opacity = 0.35) {
   return material;
 }
 
-/**
- * A solenoid diaphragm dosing pump lying on its foot, its dosing head at
- * its left end (−x) with suction valve below and discharge above. After
- * the ProMinent gamma/ X (housing about 110 mm wide, about 200 mm to the
- * discharge valve; head Ø70–90 mm).
- */
-export function createSolenoidPump(kit: PanelKit, label: string) {
-  const t = plantTools(kit);
-  const group = new Group() as Group & {
-    /** Its LCD and run lamp as it doses, or stands. */
-    show(s: DosingPumpState): void;
-  };
-  const maker = brandLivery(kit, 'grundflow');
-  const body = maker.paint.casing;
-  const lightGrey = maker.paint.main;
-  t.box(group, maker.paint.shade, 0.2, 0.02, 0.13, 0.02, 0.01, 0);
-  t.box(group, body, 0.2, 0.15, 0.11, 0.03, 0.095, 0);
-  t.box(group, lightGrey, 0.2, 0.02, 0.112, 0.03, 0.18, 0);
-  // The control panel on the front: LCD, keys, stroke-length knob, and
-  // its run lamp, which flashes with each stroke.
-  const screen = liveLcd(t, 0.06, 0.03, [label, 'STOP']);
-  put(group, screen.mesh, [0.06, 0.12, 0.0555]);
-  const runLit = new MeshStandardMaterial({
-    color: '#2bd65a',
-    emissive: '#2bd65a',
-    emissiveIntensity: 0,
-  });
-  kit.materials.push(runLit);
-  const runLamp = new Mesh(new BoxGeometry(0.008, 0.008, 0.003), runLit);
-  runLamp.position.set(0.0, 0.105, 0.0565);
-  runLamp.userData.live = true;
-  group.add(runLamp);
-  for (const x of [0.0, 0.02, 0.04])
-    t.box(group, lightGrey, 0.014, 0.012, 0.004, x + 0.04, 0.085, 0.057);
-  t.cyl(group, maker.paint.accent, 0.018, 0.012, 0.11, 0.135, 0.058, 'z', 20);
-  // The dosing head, PVDF white, and its valves.
-  const pvdf = t.paint('#ecebe4', 0.4);
-  t.cyl(group, pvdf, 0.04, 0.05, -0.095, 0.1, 0, 'x', 24);
-  t.cyl(group, pvdf, 0.012, 0.035, -0.095, 0.045, 0, 'y', 12);
-  t.cyl(group, pvdf, 0.012, 0.035, -0.095, 0.155, 0, 'y', 12);
-  t.cyl(
-    group,
-    t.paint('#c42b23', 0.4),
-    0.007,
-    0.02,
-    -0.095,
-    0.1,
-    0.045,
-    'z',
-    10,
-  );
-  put(group, maker.badge(0.012), [0.05, 0.16, 0.0558]);
-  group.userData.live = true;
-  group.show = ({ running, rate }) => {
-    screen.show([label, running ? `${rate.toFixed(2)} l/h` : 'STOP']);
-    // A stroke a second or so, the lamp lit for each.
-    const now = typeof performance === 'undefined' ? 0 : performance.now();
-    runLit.emissiveIntensity = running && now % 900 < 180 ? 1.6 : 0;
-  };
-  return group;
-}
-
-/**
- * A stepper-motor diaphragm dosing pump on its click-stop plate, its
- * control cube on the front with a click wheel, its head on the left.
- * After the Grundfos SMART Digital DDA 7.5-16 (drawing: 280 mm high,
- * 251 and 196 mm across; G 5/8" connections).
- */
-export function createDigitalPump(kit: PanelKit, label: string) {
-  const t = plantTools(kit);
-  const group = new Group() as Group & {
-    /** Its display as it doses, or stands. */
-    show(s: DosingPumpState): void;
-  };
-  const maker = brandLivery(kit, 'grundflow');
-  const grey = maker.paint.casing;
-  t.box(group, maker.paint.shade, 0.196, 0.012, 0.17, 0, 0.006, 0);
-  t.box(group, grey, 0.15, 0.24, 0.17, 0.02, 0.132, -0.01);
-  // The control cube with its display and click wheel.
-  t.box(group, maker.paint.main, 0.11, 0.11, 0.05, 0.03, 0.17, 0.095);
-  const screen = liveLcd(t, 0.07, 0.04, [label, 'STOP'], '#10283a', '#9fd8ff');
-  put(group, screen.mesh, [0.03, 0.19, 0.121]);
-  t.cyl(group, maker.paint.accent, 0.018, 0.012, 0.03, 0.14, 0.123, 'z', 20);
-  // The dosing head and valves.
-  const pp = t.paint('#c9cbc6', 0.45);
-  t.cyl(group, pp, 0.045, 0.05, -0.075, 0.13, 0, 'x', 24);
-  t.cyl(group, pp, 0.012, 0.04, -0.075, 0.07, 0, 'y', 12);
-  t.cyl(group, pp, 0.012, 0.04, -0.075, 0.19, 0, 'y', 12);
-  put(group, maker.badge(0.012), [0.03, 0.235, 0.121]);
-  group.userData.live = true;
-  group.show = ({ running, rate }) =>
-    screen.show([label, running ? `${rate.toFixed(2)} l/h` : 'STOP']);
-  return group;
-}
-
 /** A soft dosing tube (PE, 12 mm) through `points`, in `colour`. */
 function tube(
   t: Tools,
@@ -204,19 +106,32 @@ function tube(
     t.rod(parent, material, points[i], points[i + 1], 0.006, 8);
 }
 
+/** A dosing board, working: its pumps' keys and state, and what its controller asks. */
+export interface DosingBoard {
+  object: Group;
+  parts: ReturnType<typeof createPartSet>;
+  /** Its pumps' keys: stepped by whoever shows it. */
+  /** What its controller asks now: its duty pump to dose, at a rate. */
+  show(s: DosingPumpState): void;
+  update(delta: number, powered?: boolean): void;
+  status(): string;
+}
+
 /**
  * The hypochlorite dosing set on its backboard: duty and standby pumps
- * on a bunded shelf, a calibration column on the suction, the suction
- * from the bulk tank below and the discharge through a multifunction
- * valve out to the injection point. Wall exhibit, 1.2 × 1.0 m board.
+ * (Grundflow solenoid diaphragm pumps, after the ProMinent gamma/ X:
+ * `diaphragm-pump.ts`, prompt 089) on a bunded shelf, a calibration
+ * column on the suction, the suction from the bulk tank below and the
+ * discharge through a multifunction valve out to the injection point. Its
+ * duty pump doses as its controller asks; its standby stands. Unbound (an
+ * exhibit), its duty pump is asked for 1.24 l/h. Wall exhibit, 1.2 × 1.0 m
+ * board.
  */
-export function createHypochloriteBoard(kit: PanelKit) {
+export function createHypochloriteBoard(kit: PanelKit): DosingBoard {
   const t = plantTools(kit);
-  const group = new Group() as Group & {
-    /** Its duty pump dosing, or both standing; the standby stands. */
-    show(s: DosingPumpState): void;
-  };
-  const pumps: ReturnType<typeof createSolenoidPump>[] = [];
+  const group = new Group();
+  const parts = createPartSet();
+  const pumps: DiaphragmPump[] = [];
   const board = t.paint('#ecece6', 0.7);
   t.box(group, board, 1.2, 1.0, 0.02, 0, 0, 0.01);
   // The bunded shelf.
@@ -227,27 +142,30 @@ export function createHypochloriteBoard(kit: PanelKit) {
     [-0.25, 'DP-101A DUTY'],
     [0.25, 'DP-101B STANDBY'],
   ] as const) {
-    const pump = createSolenoidPump(kit, name.slice(0, 7));
+    const pump = createDiaphragmPump(kit, name.slice(0, 7), 'solenoid');
     pumps.push(pump);
-    put(group, pump, [x, -0.24, 0.13]);
+    put(group, pump.object, [x, -0.24, 0.13]);
+    for (const part of pump.keys) parts.add(part);
     put(group, createTag(t, name, 0.18), [x, -0.36, 0.021]);
     // Suction down and out of the board's foot; discharge up to the header.
+    const [sx, sy] = pump.suctionAt;
+    const [qx, qy] = pump.dischargeAt;
     tube(t, group, [
-      [x - 0.095, -0.205, 0.13],
-      [x - 0.095, -0.205, 0.06],
-      [x - 0.095, -0.48, 0.06],
+      [x + sx, -0.24 + sy, 0.13],
+      [x + sx, -0.24 + sy, 0.06],
+      [x + sx, -0.48, 0.06],
     ]);
     tube(t, group, [
-      [x - 0.095, -0.07, 0.13],
-      [x - 0.095, 0.2, 0.13],
-      [x - 0.095, 0.2, 0.06],
+      [x + qx, -0.24 + qy, 0.13],
+      [x + qx, 0.2, 0.13],
+      [x + qx, 0.2, 0.06],
     ]);
     t.cyl(
       group,
       t.paint('#ecebe4', 0.4),
       0.018,
       0.08,
-      x - 0.095,
+      x + qx,
       0.08,
       0.13,
       'y',
@@ -283,37 +201,45 @@ export function createHypochloriteBoard(kit: PanelKit) {
   );
   put(group, createTag(t, 'FROM BULK TANK ↓', 0.2), [0.0, -0.45, 0.021]);
   put(group, createTag(t, 'TO INJECTION ↑', 0.18), [0.38, 0.32, 0.021]);
-  group.userData.live = true;
-  group.show = (state) => {
-    pumps[0].show(state);
-    pumps[1].show({ running: false, rate: 0 });
+  let asked: DosingPumpState = { running: true, rate: 1.24 };
+  return {
+    object: group,
+    parts,
+    show: (s) => (asked = s),
+    update(delta, powered = true) {
+      pumps[0].update(delta, asked, powered);
+      // The standby is never asked while its duty runs.
+      pumps[1].update(delta, { running: false, rate: asked.rate }, powered);
+    },
+    status: () => pumps.map((p) => p.status()).join('; '),
   };
-  return group;
 }
 
 /**
  * The acid (pH correction) dosing pump on its own small board and tray,
- * kept apart from the hypochlorite. Wall exhibit, 0.7 × 0.8 m board.
+ * kept apart from the hypochlorite: a Grundflow stepper diaphragm pump,
+ * after the Grundfos SMART Digital DDA 7.5-16 (`diaphragm-pump.ts`, prompt
+ * 089), dosing as its controller asks. Unbound (an exhibit), it is asked
+ * for 0.62 l/h. Wall exhibit, 0.7 × 0.8 m board.
  */
-export function createAcidBoard(kit: PanelKit) {
+export function createAcidBoard(kit: PanelKit): DosingBoard {
   const t = plantTools(kit);
-  const group = new Group() as Group & {
-    /** Its pump dosing, or standing. */
-    show(s: DosingPumpState): void;
-  };
+  const group = new Group();
   t.box(group, t.paint('#ecece6', 0.7), 0.7, 0.8, 0.02, 0, 0, 0.01);
   const tray = t.paint('#2a2d2f', 0.6);
   t.box(group, tray, 0.5, 0.02, 0.28, 0, -0.2, 0.16);
   t.box(group, tray, 0.5, 0.05, 0.01, 0, -0.175, 0.3);
-  const pump = createDigitalPump(kit, 'DP-102');
-  put(group, pump, [0.03, -0.19, 0.14]);
+  const pump = createDiaphragmPump(kit, 'DP-102', 'stepper');
+  put(group, pump.object, [0.03, -0.19, 0.14]);
+  const [sx, sy] = pump.suctionAt;
+  const [qx, qy] = pump.dischargeAt;
   tube(
     t,
     group,
     [
-      [-0.045, -0.12, 0.14],
-      [-0.045, -0.12, 0.06],
-      [-0.045, -0.38, 0.06],
+      [0.03 + sx, -0.19 + sy, 0.14],
+      [0.03 + sx, -0.19 + sy, 0.06],
+      [0.03 + sx, -0.38, 0.06],
     ],
     '#d9c9c9',
   );
@@ -321,9 +247,9 @@ export function createAcidBoard(kit: PanelKit) {
     t,
     group,
     [
-      [-0.045, 0.0, 0.14],
-      [-0.045, 0.25, 0.14],
-      [-0.045, 0.25, 0.06],
+      [0.03 + qx, -0.19 + qy, 0.14],
+      [0.03 + qx, 0.25, 0.14],
+      [0.03 + qx, 0.25, 0.06],
       [0.25, 0.25, 0.06],
       [0.25, 0.4, 0.06],
     ],
@@ -338,9 +264,47 @@ export function createAcidBoard(kit: PanelKit) {
     [0, 0.33, 0.021],
   );
   put(group, createTag(t, 'DP-102', 0.12), [0.03, -0.3, 0.021]);
-  group.userData.live = true;
-  group.show = (state) => pump.show(state);
-  return group;
+  let asked: DosingPumpState = { running: true, rate: 0.62 };
+  return {
+    object: group,
+    parts: pump.parts,
+    show: (s) => (asked = s),
+    update: (delta, powered = true) => pump.update(delta, asked, powered),
+    status: pump.status,
+  };
+}
+
+/**
+ * A dosing board on a floor stand, for a gallery whose exhibits stand on
+ * the floor (dev44): two galvanised posts on base plates, the board hung
+ * between them at its working height (its middle 1.3 m up). Its front +z.
+ */
+export function onBoardStand(
+  kit: PanelKit,
+  board: DosingBoard,
+  width: number,
+  height: number,
+): DosingBoard {
+  const t = plantTools(kit);
+  const object = new Group();
+  const galv = t.paint(FINISH.galvanised, 0.45, 0.6);
+  for (const side of [-1, 1]) {
+    const x = side * (width / 2 + 0.03);
+    t.box(
+      object,
+      galv,
+      0.04,
+      1.3 + height / 2 + 0.05,
+      0.04,
+      x,
+      (1.3 + height / 2 + 0.05) / 2,
+      -0.03,
+    );
+    t.box(object, galv, 0.2, 0.01, 0.3, x, 0.005, 0.05);
+  }
+  board.object.position.set(0, 1.3, -0.01);
+  object.add(board.object);
+  return { ...board, object };
 }
 
 /**

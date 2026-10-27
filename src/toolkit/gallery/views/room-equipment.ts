@@ -194,6 +194,10 @@ import {
   createControllerPanel,
   createHypochloriteBoard,
 } from '../../components/plant/views/dosing-equipment';
+import type {
+  DosingBoard,
+  DosingPumpState,
+} from '../../components/plant/views/dosing-equipment';
 import { createUvUnit } from '../../components/plant/views/pumps-plant';
 import { createTwinHeadPump } from '../../components/plant/views/boiler-plant';
 import { pumpSound } from '../../components/plant/views/pump-sound';
@@ -341,10 +345,27 @@ function modelFor(
     });
     if (kind === 'dosing-controller')
       return live(createControllerPanel(kit), () => world().pools[pool]);
+    // Its dosing pumps (prompt 089, item 2): asked to dose as its pool is
+    // dosed, on its room's power; their keys work.
+    const board = (b: DosingBoard, read: () => DosingPumpState): LiveExhibit =>
+      typeof window === 'undefined'
+        ? { object: b.object, parts: b.parts, status: b.status }
+        : {
+            object: b.object,
+            parts: b.parts,
+            update: (delta) => {
+              b.show(read());
+              b.update(
+                delta,
+                serviceAvailable(world().plant, `plant_${pool}`, 'power'),
+              );
+            },
+            status: b.status,
+          };
     if (kind === 'hypo-pumps')
-      return live(createHypochloriteBoard(kit), dosing('hypochlorite', 1.24));
+      return board(createHypochloriteBoard(kit), dosing('hypochlorite', 1.24));
     if (kind === 'acid-pump')
-      return live(createAcidBoard(kit), dosing('acid', 0.62));
+      return board(createAcidBoard(kit), dosing('acid', 0.62));
     if (kind === 'uv-unit') {
       // As its exhibit stands it, 0.3 m back.
       const uv = createUvUnit(kit);

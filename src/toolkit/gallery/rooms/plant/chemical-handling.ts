@@ -2,6 +2,12 @@ import type { PlantExhibit } from './exhibit';
 import { layoutSquarePlantRoom } from '../../logic/plant-room-layout';
 import type { ExhibitSize } from '../../logic/plant-room-layout';
 import { createPeristalticDemo } from '../../../components/plant/views/peristaltic-pump';
+import { createDiaphragmDemo } from '../../../components/plant/views/diaphragm-pump';
+import {
+  createAcidBoard,
+  createHypochloriteBoard,
+  onBoardStand,
+} from '../../../components/plant/views/dosing-equipment';
 import { createLevelInstrumentsDemo } from '../../../components/plant/views/level-instruments';
 import { createChemicalValveDemo } from '../../../components/plant/views/chemical-ball-valve';
 import { createDosingValvesDemo } from '../../../components/plant/views/dosing-valves';
@@ -84,6 +90,40 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     size: { w: 0.6, d: 0.6, h: 1.3, mount: 'floor' },
     maker: 'grundflow',
     build: (kit) => createPeristalticDemo(kit),
+  },
+  // Prompt 089, item 2: the dosing set's diaphragm pumps rebuilt to the
+  // peristaltic pump's standard, beside it to compare.
+  {
+    title: 'Solenoid diaphragm dosing pump',
+    reference:
+      'Grundflow DMX 1602, after the ProMinent gamma/ X GMXa: 2.1 l/h, 180 strokes a minute; PVDF head with its valves and bleed; dot-matrix LCD, START, STOP, ▲, ▼ and P keys; STROKE, WARN and ERROR lamps',
+    size: { w: 0.6, d: 0.6, h: 1.3, mount: 'floor' },
+    maker: 'grundflow',
+    build: (kit) => createDiaphragmDemo(kit, 'solenoid'),
+  },
+  {
+    title: 'Stepper diaphragm dosing pump',
+    reference:
+      'Grundflow DDS 7.5-16, after the Grundfos SMART Digital DDA 7.5-16: 7.5 l/h at full stroke, the same fascia and keys',
+    size: { w: 0.6, d: 0.6, h: 1.4, mount: 'floor' },
+    maker: 'grundflow',
+    build: (kit) => createDiaphragmDemo(kit, 'stepper'),
+  },
+  {
+    title: 'Hypochlorite dosing set',
+    reference:
+      'The plant rooms’ set: duty and standby solenoid pumps on a bunded shelf, a calibration column, the discharge header; on a stand here',
+    size: { w: 1.4, d: 0.5, h: 1.9, mount: 'floor' },
+    maker: 'grundflow',
+    build: (kit) => onBoardStand(kit, createHypochloriteBoard(kit), 1.2, 1.0),
+  },
+  {
+    title: 'Acid dosing board',
+    reference:
+      'The plant rooms’ acid board: the stepper pump on its tray; on a stand here',
+    size: { w: 0.9, d: 0.5, h: 1.8, mount: 'floor' },
+    maker: 'grundflow',
+    build: (kit) => onBoardStand(kit, createAcidBoard(kit), 0.7, 0.8),
   },
   {
     title: 'Day tank sizes',

@@ -94,3 +94,68 @@ export const PERISTALTIC_PUMP: LoopRecipe = (context, out) => {
   lfo.start();
   return [...hum, noise, lfo];
 };
+
+/**
+ * A solenoid metering pump (prompt 089, item 2): its solenoid's sharp
+ * tick at each stroke, a dry knock of the diaphragm and its valves,
+ * about one and a half a second, over a faint mains buzz.
+ */
+export const SOLENOID_PUMP: LoopRecipe = (context, out) => {
+  const master = context.createGain();
+  master.gain.value = 0.045;
+  master.connect(out);
+  const buzz = context.createOscillator();
+  buzz.type = 'sawtooth';
+  buzz.frequency.value = 100;
+  const buzzLevel = context.createGain();
+  buzzLevel.gain.value = 0.03;
+  buzz.connect(buzzLevel).connect(master);
+  buzz.start();
+  // Each stroke: a short burst of bright noise, gated by a narrow pulse.
+  const noise = noiseSource(context);
+  const band = context.createBiquadFilter();
+  band.type = 'bandpass';
+  band.frequency.value = 1400;
+  band.Q.value = 0.9;
+  const gate = context.createGain();
+  gate.gain.value = 0;
+  const pulse = context.createOscillator();
+  pulse.type = 'square';
+  pulse.frequency.value = 1.5;
+  const shape = context.createWaveShaper();
+  // Only the pulse's very top lets the tick through: a short click.
+  const curve = new Float32Array(256);
+  for (let i = 0; i < 256; i++) curve[i] = i > 250 ? 1 : 0;
+  shape.curve = curve;
+  pulse.connect(shape).connect(gate.gain);
+  noise.connect(band).connect(gate).connect(master);
+  noise.start();
+  pulse.start();
+  return [buzz, noise, pulse];
+};
+
+/**
+ * A stepper-motor metering pump (prompt 089, item 2): the stepper's soft
+ * whirr, its pitch rising and falling with each stroke (a quick suction,
+ * a long discharge), and a muffled click of its valves.
+ */
+export const STEPPER_PUMP: LoopRecipe = (context, out) => {
+  const master = context.createGain();
+  master.gain.value = 0.03;
+  master.connect(out);
+  const whirr = context.createOscillator();
+  whirr.type = 'triangle';
+  whirr.frequency.value = 420;
+  const sweep = context.createOscillator();
+  sweep.type = 'sawtooth';
+  sweep.frequency.value = 1.2;
+  const sweepDepth = context.createGain();
+  sweepDepth.gain.value = 140;
+  sweep.connect(sweepDepth).connect(whirr.frequency);
+  const level = context.createGain();
+  level.gain.value = 0.35;
+  whirr.connect(level).connect(master);
+  whirr.start();
+  sweep.start();
+  return [whirr, sweep];
+};
