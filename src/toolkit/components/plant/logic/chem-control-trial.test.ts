@@ -28,7 +28,7 @@ const act = (s: ChemControlTrial, ...as: TrialAction[]) =>
 const cmd = (command: TerminalCommand): TrialAction => ({
   act: 'terminal',
   chemical: 'hypochlorite',
-  tag: 'WH-OT1',
+  tag: 'PROTO-OT1',
   command,
 });
 /** A quiet trial: no dosing, every hypochlorite tank half full. */
@@ -162,8 +162,8 @@ describe('the chemical control trial', () => {
       cmd({ kind: 'fill-now', tank: 0 }),
     );
     expect(s.log).toEqual([
-      'WH-OT1: PL1 LOUNGE FILL NOW',
-      'WH-OT1: PL4 FOOTBATH HIGH LEVEL 25L',
+      'PROTO-OT1: PL1 LOUNGE FILL NOW',
+      'PROTO-OT1: PL4 FOOTBATH HIGH LEVEL 25L',
     ]);
   });
 

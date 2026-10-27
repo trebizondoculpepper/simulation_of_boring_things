@@ -5,6 +5,7 @@ import { createMimicBoard } from '../../../components/industrial-control/views/m
 import { createLoungeFilterMimic } from '../../views/lounge-filter-mimic';
 import { createScenarioStore } from '../../../save/world-store';
 import { newWorld } from '../../../../game/world';
+import { createChemControlPrototype } from '../../../components/plant/views/chem-control-prototype';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
@@ -119,5 +120,12 @@ export const EXHIBITS: readonly PlantExhibit[] = [
         dispose: () => store.stop(),
       };
     },
+  },
+  {
+    title: 'Chemical distribution terminals and control box',
+    reference:
+      'WH-CP1’s replacement on trial (prompt 091): two Penfold OT-216 operator terminals, about 200 × 140 × 50 mm, 16 × 2 STN LCD and membrane keys, one each for hypochlorite and acid, and their 600 × 400 × 200 mm control box, run by their own trial ten times fast, with a trial station for the local controls and faults',
+    size: { w: 3.0, d: 0.8, h: 2.3, mount: 'floor' },
+    build: (kit) => createChemControlPrototype(kit),
   },
 ];

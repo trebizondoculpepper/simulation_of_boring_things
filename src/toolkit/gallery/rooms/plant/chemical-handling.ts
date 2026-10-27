@@ -7,11 +7,11 @@ import { createChemicalValveDemo } from '../../../components/plant/views/chemica
 import { createDosingValvesDemo } from '../../../components/plant/views/dosing-valves';
 import { createLeakDetectionDemo } from '../../../components/plant/views/leak-detection';
 import { createDoseCellDemo } from '../../../components/plant/views/dose-cell-head';
+import { createChemControlPrototype } from '../../../components/plant/views/chem-control-prototype';
 import {
   createBulkTankDemo,
   createChemicalPipeSamples,
   createDayTankRange,
-  createDistributionPanelDemo,
   createTransferPumpSkid,
   createTransferTrial,
 } from '../../../components/plant/views/chemical-handling-kit';
@@ -21,7 +21,8 @@ import {
  * owner (2026-10-26/27), each real and working: the stores' framed bulk
  * tanks, the transfer pump skids, the selector and day tanks in a trial,
  * every day tank size (the DoseCell bottles and the framed 1,000 l), the
- * DoseCell head alone, the distribution panel and the chemical pipes.
+ * DoseCell head alone, the distribution panel (today's WH-CP1 beside its
+ * replacement on trial, prompt 091) and the chemical pipes.
  */
 export const PURPOSE =
   'The chemical distribution: bulk tanks, transfer pumps, selectors, dose bottles and their panel';
@@ -99,11 +100,11 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     build: (kit) => createTransferTrial(kit, 'hypochlorite'),
   },
   {
-    title: 'Chemical distribution panel',
+    title: 'Chemical distribution panels, today’s and the new',
     reference:
-      'The wet hall’s panel, Penfold Controls: each store and day tank on a meter, filling lamps, selector and pump lamps, an annunciator; run by its own trials',
-    size: { w: 1.7, d: 0.6, h: 2.1, mount: 'floor' },
-    build: (kit) => createDistributionPanelDemo(kit),
+      'WH-CP1 as the wet hall has it today, and its replacement on trial (prompt 091): Penfold OT-216 terminals for hypochlorite and acid (16 × 2 LCD, F1 MON, F2 SET, F3 CMD, ESC, ENTER, cursor keys, LOCAL ACCESS key) and their control box (isolator, MCB, PLC after a LOGO! 8), all on one trial of both lines ten times fast, with a trial station for the local controls and faults',
+    size: { w: 4.7, d: 0.8, h: 2.3, mount: 'floor' },
+    build: (kit) => createChemControlPrototype(kit, { oldPanel: true }),
   },
   {
     title: 'Level instruments',

@@ -48,6 +48,7 @@ import {
   createSmallControlsBoard,
   createWetControlsBoard,
   createSwingHandleBoard,
+  createCharacterLcdBoard,
   createTriStateBoard,
   createGaugeTestBoard,
   createMimicTestBoard,
@@ -248,6 +249,14 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     maxX: (periodX + 0.3) * m,
     minZ: 6.4 * m,
     maxZ: 6.8 * m,
+  });
+  // The OT-216 terminal's character LCD and cursor keys (prompt 091), on
+  // the south wall, tried here before dev44's terminals use them.
+  place(createCharacterLcdBoard(kit), -1.0, 1.55, half.z - 0.15, Math.PI, {
+    minX: -1.3 * m,
+    maxX: -0.7 * m,
+    minZ: (half.z - 0.35) * m,
+    maxZ: half.z * m,
   });
   // The poolside information sign, on trial here before dev13 and the
   // pool halls: on the south wall, and on its post beside it, each with

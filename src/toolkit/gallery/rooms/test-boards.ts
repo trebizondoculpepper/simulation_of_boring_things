@@ -98,6 +98,7 @@ import { swingHandle } from '../../components/core/parts/swing-handle';
 import { PENFOLD_GREY } from '../../components/industrial-control/views/control-cubicle';
 import type { Part, PartSet } from '../../components/core/parts/parts';
 import { createPs1Material } from '../../components/core/parts/ps1-material';
+import { createCharacterLcd } from '../../components/industrial-control/views/ot216-terminal';
 
 /** What a board or pedestal gives the room. */
 export interface TestFitting {
@@ -1471,4 +1472,76 @@ export function createWetControlsBoard(kit: PanelKit): TestFitting {
     0.008,
   );
   return fitting(board);
+}
+
+/**
+ * The CHARACTER LCD AND CURSOR KEYS board (prompt 091): the OT-216
+ * terminal's new kinds of control and display, tried here first, twice
+ * life size: a 16 × 2 STN character LCD (yellow-green, LED backlit, a
+ * blinking block cursor) and membrane keys with tactile domes, four of
+ * them cursor keys in an inverted T as on a PC keyboard of the time. The
+ * LCD says which key was pressed last and moves its cursor with ◀ ▶;
+ * BACKLIGHT dims and lights it.
+ */
+export function createCharacterLcdBoard(kit: PanelKit): TestFitting {
+  const board = createBoard(kit, {
+    title: 'CHARACTER LCD AND CURSOR KEYS',
+    width: 0.5,
+    height: 0.42,
+    scale: 1,
+    captionScale: 1.2,
+  });
+  const lcd = createCharacterLcd(kit, { w: 0.232, h: 0.06 });
+  board.at(lcd.mesh, -0.06, 0.1).position.z = 0.002;
+  let last = 'NONE';
+  let col = 0;
+  let lit = true;
+  let presses = 0;
+  const keys: [string, string, number, number, () => void][] = [
+    ['F1', '#3b4f6b', -0.2, -0.02, () => {}],
+    ['ESC', '#9a2a22', -0.14, -0.02, () => (col = 0)],
+    ['ENTER', '#2f6a3a', -0.08, -0.02, () => {}],
+    ['BACKLIGHT', '#2a2b2c', -0.14, -0.1, () => (lit = !lit)],
+    ['▲', '#2a2b2c', 0.13, -0.02, () => {}],
+    ['◀', '#2a2b2c', 0.08, -0.08, () => (col = Math.max(0, col - 1))],
+    ['▼', '#2a2b2c', 0.13, -0.08, () => {}],
+    ['▶', '#2a2b2c', 0.18, -0.08, () => (col = Math.min(15, col + 1))],
+  ];
+  for (const [legend, colour, x, y, act] of keys)
+    board.place(
+      membraneKey(kit, {
+        legend,
+        colour,
+        ink: '#1b1b1b',
+        action: () => {
+          last = legend;
+          presses++;
+          act();
+        },
+      }),
+      x,
+      y,
+      1.6,
+    );
+  board.caption('16 × 2 STN CHARACTER LCD, LED BACKLIT', -0.06, 0.05, 0.008);
+  board.caption(
+    'MEMBRANE KEYS, TACTILE DOMES; CURSOR KEYS IN AN INVERTED T',
+    0,
+    -0.17,
+    0.008,
+  );
+  let time = 0;
+  return fitting(board, [
+    (delta) => {
+      time += delta;
+      const top =
+        `KEY ${last}`.padEnd(12).slice(0, 12) +
+        String(presses % 1000).padStart(4);
+      lcd.show(
+        [top, `CURSOR AT ${String(col + 1).padStart(2)}`],
+        time % 1 < 0.5 ? { row: 1, col } : null,
+        lit ? 1 : 0.35,
+      );
+    },
+  ]);
 }
