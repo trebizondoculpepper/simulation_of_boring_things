@@ -693,6 +693,43 @@ function build_(
   };
   const meterSteps: ((delta: number) => void)[] = [];
   for (const m of layout.modules) bolt(m);
+  // Blanking plates, screwed into every rack place no module takes, as
+  // on an aircraft's panel where a unit is missing or not fitted (the
+  // owner, 2026-10-27): the same plate, seam and fasteners, nothing on it
+  // but a small stamped part number.
+  for (const b of layout.blanks) {
+    const blank = new Group();
+    blank.name = `Blanking plate ${b.columns} x ${b.rows}`;
+    blank.position.set(px(b.x + b.w / 2), py(b.y + b.h / 2), 0);
+    group.add(blank);
+    const plate = new Mesh(new BoxGeometry(b.w, b.h, PLATE), paints.plate);
+    plate.position.z = -PLATE / 2 + 0.001;
+    blank.add(plate);
+    const facePlate = new Mesh(
+      new BoxGeometry(b.w - 0.0018, b.h - 0.0018, 0.0006),
+      paints.face,
+    );
+    facePlate.position.z = 0.0013;
+    blank.add(facePlate);
+    const face = new Group();
+    face.position.z = 0.0016;
+    blank.add(face);
+    const inset = 0.0052;
+    for (const [sx, sy] of [
+      [-1, 1],
+      [1, 1],
+      [-1, -1],
+      [1, -1],
+    ])
+      fastener(paints, face, sx * (b.w / 2 - inset), sy * (b.h / 2 - inset));
+    const stamp = createMicroLabel(kit, `PN SP1-BLK-${b.columns}${b.rows}`, {
+      height: 0.0022,
+      ink: '#8b8e8b',
+      bold: false,
+    });
+    stamp.position.set(0, -b.h / 2 + 0.006, 0.0002);
+    face.add(stamp);
+  }
 
   return {
     group,

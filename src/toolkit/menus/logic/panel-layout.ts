@@ -1,23 +1,21 @@
 import type { PanelItem, PanelZone } from './settings-panel';
+import { layoutGrid } from './rack-grid';
+import type { Grid, RackUnit } from './rack-grid';
 
 /**
- * The settings panel's layout (mission 096; the owner, 2026-10-27): a rack
- * into which modules are bolted, as an aircraft's instrument panel is.
- * Every module is a whole number of rack units wide and tall (columns and
- * rows of one pitch, one gutter between plates), so edges line up across
- * the whole panel, rows are of equal height and columns run on from group
- * to group. Each function's modules (GAME, PICTURE, …) are packed into the
- * smallest block of the grid they fill best; the blocks are set in shelves
- * across the panel, one empty column between them, each shelf centred on
- * whole columns, under a band for the groups' legends. The width given
- * (it follows the screen) is the most the panel may take; it is then cut
- * to its widest shelf, and its height is what the shelves need.
- * In metres, x to the right from the panel's left edge, y down from its
- * top edge. Pure.
+ * The settings panel's layout (mission 096; the owner, 2026-10-27), declared
+ * on the rack grid (`rack-grid.ts`): the panel is a shelf-flow grid of
+ * groups (GAME, PICTURE, …), one empty column apart, each shelf centred and
+ * its groups stretched to its height under a band for their legends; each
+ * group is a dense-flow sub-grid of modules, each module a whole number of
+ * rack units (`MODULE_UNITS`), and every cell a group leaves empty is
+ * blanked off. The width given (it follows the screen) is the most the
+ * panel may take; it is cut to its widest shelf. In metres, x to the right
+ * from the panel's left edge, y down from its top edge. Pure.
  */
 
 /** The rack's unit: a column's width and a row's height, and the gutter between plates. */
-export const RACK = { column: 0.02, row: 0.085, gutter: 0.004 } as const;
+export const RACK: RackUnit = { column: 0.02, row: 0.085, gutter: 0.004 };
 /** From one column, or one row, to the next. */
 export const PITCH = {
   x: RACK.column + RACK.gutter,
@@ -78,6 +76,12 @@ export interface ModuleBox {
   h: number;
 }
 
+/** A blanking plate: plain metal, screwed into a rack place left empty. */
+export type BlankBox = Omit<ModuleBox, 'item' | 'title'>;
+
+/** The widest blanking plate made, in columns (the knob module's width). */
+export const BLANK_MAX_COLUMNS = 9;
+
 export interface GroupBox {
   zone: PanelZone;
   column: number;
@@ -100,6 +104,8 @@ export interface PanelLayout {
   left: number;
   groups: GroupBox[];
   modules: ModuleBox[];
+  /** The blanking plates filling every rack place no module takes. */
+  blanks: BlankBox[];
 }
 
 /** A module's title. */
@@ -122,158 +128,89 @@ function cardUnits(lines: number, columns: number): [number, number] {
 /** Whether a card this many columns wide prints each binding on two lines. */
 export const narrowCard = (columns: number) => columns < CARD.columns;
 
-/**
- * Pack sizes into a grid `width` columns wide, first fit, row by row:
- * each at the first place it fits, scanning rows from the top and each
- * row from the left. Returns their places and the rows used.
- */
-export function packGrid(
-  sizes: readonly [number, number][],
-  width: number,
-): { places: [number, number][]; rows: number } {
-  const taken: boolean[][] = [];
-  const free = (c: number, r: number, w: number, h: number) => {
-    if (c + w > width) return false;
-    for (let y = r; y < r + h; y++)
-      for (let x = c; x < c + w; x++) if (taken[y]?.[x]) return false;
-    return true;
+/** The settings panel as a grid: what is on it, and how it is laid out. */
+export function panelGrid(
+  zones: readonly PanelZone[],
+  room: number,
+  cardLines: number,
+): Grid<PanelItem, PanelZone | null> {
+  return {
+    grid: null,
+    flow: 'shelf',
+    gap: 1,
+    band: SPACING.legend,
+    shelfGap: SPACING.shelfGap,
+    justify: 'center',
+    stretch: true,
+    columns: undefined,
+    children: zones.map((zone) => ({
+      grid: zone,
+      flow: 'dense',
+      blank: true,
+      children: zone.items.map((item) => ({
+        item,
+        span:
+          item.kind === 'card'
+            ? cardUnits(cardLines, room)
+            : MODULE_UNITS[item.kind],
+      })),
+    })),
   };
-  const places: [number, number][] = [];
-  let rows = 0;
-  for (const [w, h] of sizes) {
-    let at: [number, number] | null = null;
-    for (let r = 0; !at; r++)
-      for (let c = 0; c + w <= width && !at; c++)
-        if (free(c, r, w, h)) at = [c, r];
-    const [c, r] = at!;
-    for (let y = r; y < r + h; y++) {
-      taken[y] ??= [];
-      for (let x = c; x < c + w; x++) taken[y][x] = true;
-    }
-    places.push([c, r]);
-    rows = Math.max(rows, r + h);
-  }
-  return { places, rows };
 }
 
-/** Lay out the panel's zones `width` wide, the card holding `cardLines` lines. */
+/** Lay out the panel's zones at most `width` wide, the card holding `cardLines` lines. */
 export function layoutPanel(
   zones: readonly PanelZone[],
   width: number,
   { cardLines = 20 } = {},
 ): PanelLayout {
-  const { margin, legend, shelfGap, header, footer } = SPACING;
+  const { margin, legend, header, footer } = SPACING;
   const room = Math.max(
     1,
     Math.floor((width - 2 * margin + RACK.gutter) / PITCH.x),
   );
-  // Each group's packings, from its narrowest block to one row.
-  const blocks = zones.map((zone) => {
-    const sizes = zone.items.map((item) =>
-      item.kind === 'card'
-        ? cardUnits(cardLines, room)
-        : MODULE_UNITS[item.kind],
-    );
-    const widest = Math.max(...sizes.map(([w]) => w));
-    const all = sizes.reduce((sum, [w]) => sum + w, 0);
-    const packings: {
-      cols: number;
-      places: [number, number][];
-      rows: number;
-    }[] = [];
-    for (
-      let cols = widest;
-      cols <= Math.max(widest, Math.min(room, all));
-      cols++
-    ) {
-      const { places, rows } = packGrid(sizes, cols);
-      const used = Math.max(...places.map(([c], i) => c + sizes[i][0]));
-      packings.push({ cols: used, places, rows });
-    }
-    // At first, the block that wastes least.
-    const best = packings.reduce((a, b) =>
-      b.cols * b.rows < a.cols * a.rows ? b : a,
-    );
-    return { zone, sizes, packings, ...best };
+  const laid = layoutGrid(panelGrid(zones, room, cardLines), RACK, {
+    maxColumns: room,
+    widestBlank: BLANK_MAX_COLUMNS,
   });
-  // The blocks in shelves, one empty column apart, each shelf centred.
-  const shelves: (typeof blocks)[] = [];
-  for (const block of blocks) {
-    const shelf = shelves.at(-1);
-    const used = shelf
-      ? shelf.reduce((sum, b) => sum + b.cols + 1, 0)
-      : Infinity;
-    if (shelf && used + block.cols <= room) shelf.push(block);
-    else shelves.push([block]);
-  }
-  // Then every block in a shelf as narrow as it can be within the shelf's
-  // height, so the shelf is filled and its blocks are of a height.
-  for (const shelf of shelves) {
-    const height = Math.max(...shelf.map((b) => b.rows));
-    for (const block of shelf) {
-      const fits = block.packings.filter((p) => p.rows <= height);
-      const narrowest = fits.reduce((a, b) => (b.cols < a.cols ? b : a));
-      Object.assign(block, narrowest);
-    }
-  }
   // The panel is as wide as its widest shelf: no bare frame at the sides.
-  const spanOf = (shelf: (typeof blocks)[number][]) =>
-    shelf.reduce((sum, b) => sum + b.cols, 0) + shelf.length - 1;
-  const columns = Math.max(...shelves.map(spanOf));
-  width = spanX(columns) + 2 * margin;
   const left = margin;
+  const top = margin + header;
+  const zoneOf = (g: PanelZone | null | undefined) => g?.id ?? '';
   const groups: GroupBox[] = [];
   const modules: ModuleBox[] = [];
-  let y = margin + header;
-  let row = 0;
-  for (const shelf of shelves) {
-    const span = spanOf(shelf);
-    let column = Math.max(0, Math.floor((columns - span) / 2));
-    const rows = Math.max(...shelf.map((b) => b.rows));
-    const top = y + legend;
-    for (const block of shelf) {
-      const x = left + column * PITCH.x;
-      groups.push({
-        zone: block.zone,
-        column,
-        row,
-        columns: block.cols,
-        rows: block.rows,
-        x,
-        y: top,
-        w: spanX(block.cols),
-        h: spanY(block.rows),
-        legendY: y + legend / 2,
+  const blanks: BlankBox[] = [];
+  for (const cell of laid.cells) {
+    const at = {
+      column: cell.column,
+      row: cell.row,
+      columns: cell.columns,
+      rows: cell.rows,
+      x: left + cell.x,
+      y: top + cell.y,
+      w: cell.w,
+      h: cell.h,
+    };
+    if (cell.kind === 'grid' && cell.grid)
+      groups.push({ zone: cell.grid, ...at, legendY: at.y - legend / 2 });
+    else if (cell.kind === 'leaf' && cell.item)
+      modules.push({
+        zone: zoneOf(cell.parent),
+        item: cell.item,
+        title: moduleTitle(cell.item),
+        ...at,
       });
-      block.zone.items.forEach((item, i) => {
-        const [c, r] = block.places[i];
-        const [w, h] = block.sizes[i];
-        modules.push({
-          zone: block.zone.id,
-          item,
-          title: moduleTitle(item),
-          column: column + c,
-          row: row + r,
-          columns: w,
-          rows: h,
-          x: left + (column + c) * PITCH.x,
-          y: top + r * PITCH.y,
-          w: spanX(w),
-          h: spanY(h),
-        });
-      });
-      column += block.cols + 1;
-    }
-    y = top + spanY(rows) + shelfGap;
-    row += rows;
+    else if (cell.kind === 'blank')
+      blanks.push({ zone: zoneOf(cell.parent), ...at });
   }
   return {
-    width,
-    height: y - shelfGap + footer + margin,
-    columns,
+    width: spanX(laid.columns) + 2 * margin,
+    height: top + laid.height + footer + margin,
+    columns: laid.columns,
     left,
     groups,
     modules,
+    blanks,
   };
 }
 
