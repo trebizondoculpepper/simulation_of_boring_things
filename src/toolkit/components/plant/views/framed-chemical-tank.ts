@@ -5,7 +5,7 @@ import { tools } from '../../core/views/fitting-tools';
 import { brandLivery } from '../../core/views/brand-livery';
 import { drawBrandMark, wordmarkFont } from '../../core/views/brand-logo';
 import { plantTools } from './plant-tools';
-import { createHazardLabel } from './chemicals-signs';
+import { createChemicalLabel } from './chemicals-signs';
 
 /**
  * A bulk chemical tank in its galvanised frame (the owner, 2026-10-26: the
@@ -521,16 +521,7 @@ export function createFramedChemicalTank(
   );
   plate.mesh.position.set(-L / 8 - 0.1 * k, bands[1] + 0.13 * k, W / 2 + 0.03);
   group.add(plate.mesh);
-  const hazard = createHazardLabel(
-    t,
-    0.5 * k,
-    0.36 * k,
-    product,
-    acid
-      ? 'Causes severe skin burns and eye damage. May cause respiratory irritation.'
-      : 'Causes severe skin burns and eye damage. Contact with acids liberates toxic gas.',
-    acid ? ['corrosive', 'exclamation'] : ['corrosive', 'environment'],
-  );
+  const hazard = createChemicalLabel(t, 0.5 * k, 0.36 * k, product, acid);
   hazard.position.set(-L / 8 - 0.1 * k, bands[1] - 0.22 * k, W / 2 + 0.003);
   group.add(hazard);
   f.label(

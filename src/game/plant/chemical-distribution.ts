@@ -1,6 +1,7 @@
 import type { PoolId } from './pools';
 import type { Chemical } from './chemicals';
 import { CHEMICALS, DOSE_PER_M3_DAY } from './chemicals';
+import { bottleBund, bottleSize, isDoseBottle } from './dose-bottle';
 
 /**
  * The chemical distribution (plan 085; the owner, 2026-10-26): each
@@ -70,6 +71,14 @@ export function dayTankSize(litres: number) {
 
 /** A day tank's place in a room, metres: its bund, and its inlet riser's height. */
 export function dayTankFootprint(litres: number) {
+  if (isDoseBottle(litres)) {
+    const { side, sump } = bottleBund(litres);
+    return {
+      w: side + 0.1,
+      d: side + 0.1,
+      h: Math.max(1.2, sump + bottleSize(litres).h + 0.45),
+    };
+  }
   const { L, W } = dayTankSize(litres);
   return { w: L + 0.4, d: W + 0.6, h: 1.8 };
 }

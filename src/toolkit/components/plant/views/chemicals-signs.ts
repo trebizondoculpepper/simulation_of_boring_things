@@ -307,3 +307,36 @@ export function createTag(
     384,
   ).mesh;
 }
+
+/**
+ * A pool chemical's CLP label, as its strength classifies it: sodium
+ * hypochlorite 14% is Skin Corr. 1B and Aquatic Acute 1 with EUH031
+ * (DANGER); hydrochloric acid at 10% is below the corrosive limit (25%),
+ * an irritant to skin, eyes and lungs and corrosive to metals (WARNING).
+ */
+export function createChemicalLabel(
+  t: Tools,
+  w: number,
+  h: number,
+  product: string,
+  acid: boolean,
+) {
+  return acid
+    ? createHazardLabel(
+        t,
+        w,
+        h,
+        product,
+        'Causes skin and serious eye irritation. May cause respiratory irritation. May be corrosive to metals.',
+        ['corrosive', 'exclamation'],
+        'WARNING',
+      )
+    : createHazardLabel(
+        t,
+        w,
+        h,
+        product,
+        'Causes severe skin burns and eye damage. Very toxic to aquatic life. Contact with acids liberates toxic gas.',
+        ['corrosive', 'environment'],
+      );
+}

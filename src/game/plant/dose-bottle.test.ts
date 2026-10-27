@@ -3,6 +3,7 @@ import {
   BOTTLE,
   bottleLevel,
   bottleReadout,
+  bottleBund,
   bottleSize,
   newDoseBottle,
   stepDoseBottle,
@@ -47,6 +48,13 @@ describe('a dose bottle: sensor, switches, its own pump, its display', () => {
     for (const litres of [15, 30, 60, 200, 300, 500]) {
       const { d, h } = bottleSize(litres);
       expect(((Math.PI * d * d) / 4) * h * 1000).toBeCloseTo(litres, 6);
+    }
+  });
+
+  it('stands on a spill pallet whose sump holds 110% of it', () => {
+    for (const litres of [15, 30, 60, 200, 300, 500]) {
+      const { side, sump } = bottleBund(litres);
+      expect(side * side * sump * 1000).toBeCloseTo(litres * 1.1, 6);
     }
   });
 });

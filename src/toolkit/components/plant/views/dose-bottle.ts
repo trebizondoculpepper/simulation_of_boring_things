@@ -3,8 +3,8 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { brandLivery } from '../../core/views/brand-livery';
 import { plantTools } from './plant-tools';
-import { createHazardLabel } from './chemicals-signs';
-import { bottleSize } from '../../../../game/plant/dose-bottle';
+import { createChemicalLabel } from './chemicals-signs';
+import { bottleBund, bottleSize } from '../../../../game/plant/dose-bottle';
 import type { bottleReadout } from '../../../../game/plant/dose-bottle';
 
 type Readout = ReturnType<typeof bottleReadout>;
@@ -44,12 +44,46 @@ export function createDoseBottle(
   const head = t.paint('#c9ccc8', 0.55);
   const brand = brandLivery(kit, 'chlorella');
 
-  // The spill tray: round, a little wider than the bottle, its lip low.
+  // The spill pallet: a square sump holding 110% of the bottle under a
+  // grid deck, the bottle standing on the deck; its rim banded in the
+  // chemical's colour (hypochlorite yellow, acid red), its capacity on it.
   const tray = t.paint('#202223', 0.8);
-  const trayR = r + 0.08;
-  t.cyl(group, tray, trayR, 0.03, 0, 0.015, 0, 'y', 40);
-  t.cyl(group, tray, trayR, 0.08, 0, 0.04, 0, 'y', 40);
-  const base = 0.03;
+  const colour = t.paint(acid ? '#b92b24' : '#d2ae20', 0.5);
+  const { side, sump } = bottleBund(litres);
+  const wall = 0.02;
+  t.box(group, tray, side, 0.02, side, 0, 0.01, 0);
+  for (const [w, dd, x, z] of [
+    [side, wall, 0, side / 2 - wall / 2],
+    [side, wall, 0, -side / 2 + wall / 2],
+    [wall, side, side / 2 - wall / 2, 0],
+    [wall, side, -side / 2 + wall / 2, 0],
+  ] as const) {
+    t.box(group, tray, w, sump, dd, x, sump / 2, z);
+    t.box(group, colour, w + 0.002, 0.025, dd + 0.002, x, sump - 0.0125, z);
+  }
+  for (let i = 0; i < 6; i++)
+    t.box(
+      group,
+      dark,
+      side - 2 * wall,
+      0.015,
+      0.012,
+      0,
+      sump - 0.01,
+      -side / 2 + ((i + 0.5) * side) / 6,
+    );
+  f.label(
+    group,
+    `BUND ${Math.ceil((litres * 1.1) / 5) * 5} L`,
+    0,
+    sump * 0.45,
+    side / 2 + 0.002,
+    Math.min(0.03, sump * 0.3),
+    '#ffffff',
+    '#202223',
+  );
+  const trayR = side / 2;
+  const base = sump;
 
   // The bottle: its body, a moulded shoulder and its lid's neck.
   const top = base + h;
@@ -64,6 +98,7 @@ export function createDoseBottle(
   const hd = 0.15;
   const hz = Math.min(0, r - hd / 2 - 0.01);
   const headY = top + hh / 2;
+  t.box(group, colour, hw + 0.002, 0.018, hd + 0.002, 0, top + hh - 0.009, hz);
   t.box(group, head, hw, hh, hd, 0, headY, hz);
   t.cyl(
     group,
@@ -252,16 +287,7 @@ export function createDoseBottle(
 
   // Its product label on the front, its tag above it.
   const lw = Math.min(0.3, d * 0.7);
-  const hazard = createHazardLabel(
-    t,
-    lw,
-    lw * 0.72,
-    product,
-    acid
-      ? 'Causes severe skin burns and eye damage.'
-      : 'Causes severe skin burns and eye damage. Contact with acids liberates toxic gas.',
-    acid ? ['corrosive', 'exclamation'] : ['corrosive', 'environment'],
-  );
+  const hazard = createChemicalLabel(t, lw, lw * 0.72, product, acid);
   hazard.position.set(0, base + h * 0.45, r + 0.004);
   group.add(hazard);
   f.label(

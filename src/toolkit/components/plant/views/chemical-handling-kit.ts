@@ -43,6 +43,7 @@ import { plantTools } from './plant-tools';
 import { createDigitalPump } from './dosing-equipment';
 import { createFramedChemicalTank } from './framed-chemical-tank';
 import { createDoseBottle } from './dose-bottle';
+import { chlorellaPlate } from './chlorella-plate';
 import {
   bottleLevel,
   bottleReadout,
@@ -399,6 +400,10 @@ export function createTransferPumpSkid(
   panelMakerMark(kit, box, { width: 0.32, height: 0.46, z: 0.061 });
 
   let spin = 0;
+  // Chlorella's plate on the skid's front: they supply the skid, Grundflow the pump.
+  const plate = chlorellaPlate(kit, 0.3, 'TRANSFER SKID · BUNDED');
+  plate.position.set(0.45, 0.06, 0.451);
+  group.add(plate);
   return {
     object: group,
     parts,
@@ -614,6 +619,10 @@ export function createDualTransferPumpSkid(kit: PanelKit, chemical: Chemical) {
   parts.add(stop);
   panelMakerMark(kit, box, { width: 0.32, height: 0.46, z: 0.061 });
   let spin = 0;
+  // Chlorella's plate on the skid's front.
+  const plate = chlorellaPlate(kit, 0.3, 'DUTY/STANDBY TRANSFER SKID');
+  plate.position.set(0.45, 0.06, 0.451);
+  group.add(plate);
   return {
     object: group,
     parts,
@@ -1458,6 +1467,14 @@ export function createTransferSelector(
     z: 0.05,
     corner: 'bottom-right',
   });
+  // Chlorella's plate on its back rail.
+  const plate = chlorellaPlate(
+    kit,
+    0.42,
+    `TRANSFER SELECTOR · ${n}-WAY · PVC-U`,
+  );
+  plate.position.set(0, 1.38, -0.125);
+  group.add(plate);
   return {
     object: group,
     parts,

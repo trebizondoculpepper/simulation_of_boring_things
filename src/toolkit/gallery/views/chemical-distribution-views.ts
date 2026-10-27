@@ -19,6 +19,14 @@ import type {
   TransferTrial,
 } from '../../../game/plant/chemical-transfer-demo';
 import { createFramedChemicalTank } from '../../components/plant/views/framed-chemical-tank';
+import { createDoseBottle } from '../../components/plant/views/dose-bottle';
+import {
+  BOTTLE,
+  bottleLevel,
+  bottleReadout,
+  isDoseBottle,
+} from '../../../game/plant/dose-bottle';
+import type { DoseBottle } from '../../../game/plant/dose-bottle';
 import {
   SELECTOR_OUTLETS,
   createDayTankStation,
@@ -169,6 +177,53 @@ function bulkTank(kit: PanelKit, c: Chemical, n: number): LiveExhibit {
   };
 }
 
+/**
+ * A plant room's day tank as a dose bottle, its contents and its call the
+ * world's line's; its pump seen running while its contents fall.
+ */
+function dayBottle(
+  kit: PanelKit,
+  c: Chemical,
+  index: number,
+  tag: string,
+): LiveExhibit {
+  const capacity = DAY_TANKS[c][index].litres;
+  const bottle = createDoseBottle(kit, {
+    tag,
+    product: PRODUCT[c],
+    litres: capacity,
+    acid: c === 'acid',
+  });
+  const trend = levelTrend();
+  const state = (): DoseBottle => {
+    const t =
+      typeof window === 'undefined'
+        ? undefined
+        : roomWorld().world.value.distribution[c].tanks[index];
+    return {
+      capacity,
+      litres: t?.litres ?? capacity * 0.7,
+      calling: t?.calling ?? false,
+      pumping:
+        trend.lpm() < -1e-4 && (t?.litres ?? 0) > capacity * BOTTLE.empty,
+    };
+  };
+  return {
+    object: bottle.object,
+    update(delta) {
+      const s = state();
+      trend.sample(s.litres, delta);
+      bottle.show(bottleReadout(s));
+    },
+    status: () =>
+      describeTank(
+        `${NAME[c]} dose bottle ${tag}`,
+        bottleLevel(state()),
+        trend.lpm(),
+      ),
+  };
+}
+
 /** The model for a chemical distribution key, bound to the world; null if the key is another's. */
 export function chemicalModel(kit: PanelKit, key: string): LiveExhibit | null {
   const [kind, chemical, arg] = key.split(':');
@@ -191,9 +246,11 @@ export function chemicalModel(kit: PanelKit, key: string): LiveExhibit | null {
       if (index < 0) return null;
       const litres = DAY_TANKS[chemical][index].litres;
       const room = Number(arg?.slice(-1));
+      const tag = `PL${room}-DT${chemical === 'acid' ? 2 : 1}`;
+      if (isDoseBottle(litres)) return dayBottle(kit, chemical, index, tag);
       return createDayTankStation(kit, chemical, storeOf(chemical), index, {
         litres,
-        tag: `PL${room}-DT${chemical === 'acid' ? 2 : 1}`,
+        tag,
         withPump: false,
         withGear: false,
         centred: true,

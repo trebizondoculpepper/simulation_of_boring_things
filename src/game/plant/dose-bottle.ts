@@ -88,3 +88,13 @@ export function bottleSize(litres: number) {
   const d = Math.cbrt((4 * (litres / 1000)) / (1.4 * Math.PI));
   return { d, h: 1.4 * d };
 }
+
+/** Below this size a day tank is a dose bottle; at it and above, a framed tank. */
+export const BOTTLE_MAX_LITRES = 1000;
+export const isDoseBottle = (litres: number) => litres < BOTTLE_MAX_LITRES;
+
+/** Its spill pallet, metres: a square sump holding 110% of it under a grid deck. */
+export function bottleBund(litres: number) {
+  const side = bottleSize(litres).d + 0.2;
+  return { side, sump: (1.1 * litres) / 1000 / (side * side) };
+}
