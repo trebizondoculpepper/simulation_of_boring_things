@@ -393,6 +393,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Changed
 
+- Chemical dose-bottle bunds have separate red/yellow rim caps above their black walls, with fitted corners, removing the overlapping faces that caused z-fighting.
+
 - Document mission filing rules and audit all 85 mission prompts: mostly completed missions now live under `done/`, with dated evidence and outstanding work retained in the prompt and TODO.
 
 - The wet hall's booster set lined up with the break tank's outlet (the owner, 2026-10-26): the outlet low on the tank's east end at the booster's suction height, the booster's suction on the same line, a flowmeter's room left between them for a meter planned on the tank's outlet side (`OUTLET_METER_GAP`). The tank's mains inlet stays on its roof, its Category 5 air gap inside it.

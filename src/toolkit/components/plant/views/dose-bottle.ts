@@ -51,6 +51,8 @@ export function createDoseBottle(
   const colour = t.paint(acid ? '#b92b24' : '#d2ae20', 0.5);
   const { side, sump } = bottleBund(litres);
   const wall = 0.02;
+  const rimHeight = Math.min(0.025, sump / 2);
+  const wallHeight = sump - rimHeight;
   t.box(group, tray, side, 0.02, side, 0, 0.01, 0);
   for (const [w, dd, x, z] of [
     [side, wall, 0, side / 2 - wall / 2],
@@ -58,8 +60,35 @@ export function createDoseBottle(
     [wall, side, side / 2 - wall / 2, 0],
     [wall, side, -side / 2 + wall / 2, 0],
   ] as const) {
-    t.box(group, tray, w, sump, dd, x, sump / 2, z);
-    t.box(group, colour, w + 0.002, 0.025, dd + 0.002, x, sump - 0.0125, z);
+    t.box(group, tray, w, wallHeight, dd, x, wallHeight / 2, z);
+  }
+  // A separate cap above the black walls, with a 1 mm overhang on each
+  // face. The side pieces fit between the front and back: neither the
+  // wall tops nor the neighbouring coloured caps share a visible face.
+  const rimSide = side + 0.002;
+  const rimWall = wall + 0.002;
+  const rimOffset = (rimSide - rimWall) / 2;
+  for (const sign of [-1, 1]) {
+    t.box(
+      group,
+      colour,
+      rimSide,
+      rimHeight,
+      rimWall,
+      0,
+      sump - rimHeight / 2,
+      sign * rimOffset,
+    );
+    t.box(
+      group,
+      colour,
+      rimWall,
+      rimHeight,
+      rimSide - 2 * rimWall,
+      sign * rimOffset,
+      sump - rimHeight / 2,
+      0,
+    );
   }
   for (let i = 0; i < 6; i++)
     t.box(

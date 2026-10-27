@@ -187,6 +187,8 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Housekeeping
 
+- [x] **Chemical bund rim z-fighting** (2026-10-27; commit pending): lower the black walls beneath separate red/yellow caps and fit the cap corners without overlapping faces.
+
 - [x] Mission archive policy and review (2026-10-26; `1e2d855`): review all 85 prompts; file mostly completed missions under done, retain explicit remaining scope and unchecked follow-ups, and repair archive links.
 - [ ] **World simulation parallel-suite timing:** hall lights-out and air-handling/cooling tests in `src/game/world.test.ts` exceeded the 5 s default during the mission review. Preserve their assertions and make the checks reliable under concurrent load.
 
