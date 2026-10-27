@@ -18,6 +18,10 @@ import {
   threeScreenPanel,
   trapeziumPanel,
 } from '../../views/touch-panel-gallery';
+import {
+  AMBIENCE_PANEL,
+  createBridgeAmbiencePanel,
+} from '../../views/bridge-ambience-panel';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
@@ -116,6 +120,20 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       build: (kit) => createParodyPanel(kit, spec, 20 + i),
     };
   }),
+  // The bridge's ambience, to hear before it goes onto the bridge (mission 095).
+  {
+    title: 'Bridge ambience',
+    reference:
+      'Synthesised room tone for the bridge: a beating drone, the air of a big ship, sparse computer chirps; three variants',
+    size: {
+      w: AMBIENCE_PANEL.w,
+      d: AMBIENCE_PANEL.d,
+      h: AMBIENCE_PANEL.h,
+      mount: 'wall',
+      y: 1.3,
+    },
+    build: createBridgeAmbiencePanel,
+  },
 ];
 
 /** Where each exhibit goes, by its index in `EXHIBITS`: a wall and a place along it, or the floor. */
@@ -134,11 +152,13 @@ const PLACES: readonly (
   { floor: [1.8, -0.4] },
   { wall: 'east', at: -1.6 },
   { wall: 'east', at: 1.6 },
+  { wall: 'north', at: -4.6 },
 ];
 
 /**
  * Its own layout: the panels round all four walls of a 12 × 10 m room
- * (the bezel-less strip high on the north wall),
+ * (the bezel-less strip high on the north wall, the bridge ambience's
+ * small plate to its west),
  * the console and the lectern standing in the middle facing south.
  */
 export function layoutRoom(sizes: readonly ExhibitSize[]): PlantRoomLayout {

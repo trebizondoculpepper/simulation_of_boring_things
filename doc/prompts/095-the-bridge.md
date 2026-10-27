@@ -128,3 +128,31 @@ The owner: when the walker enters the bridge from the corridor its lights start 
 The owner: "an old-fashioned knob, perhaps mounted near the security card reader, near the doorway from the corridor to the control [room]. It should be labeled in Dymo saying ... CONTROL ROOM MODE. And the options are OLD or NEW ... a bit of an Easter egg. If you ignore the knob, you just go to the normal control [room]. But if you set it to NEW before going through the door, it sets it to this wonderful new place."
 
 So the old control room is un-retired and is again what the corridor's control room doors lead to by default; the bridge is behind the knob. The knob is the parts library's black pointer knob on a small grey plate on the corridor's east wall, 0.5 m past the doorway's edge beyond the card reader, 1.4 m up, its Dymo tape CONTROL ROOM MODE, OLD (upper left) and NEW (upper right); a click turns it to its other position. The world keeps it (`controlRoomMode`, `WORLD_VERSION` 47, older saves at OLD). `CORRIDOR_DOORS` names `control_room`; the corridor registers that doorway's joint to the room the knob chooses (`corridorDoorTo`), changing it only while the doors are shut (`settledDoorTo`), and keeps a never-opening joint to the other room so that room, reached by its URL, still sees and hands back through the doorway. Neither room's files changed. Checked in the game: the knob turned to NEW, the doors opened on the bridge; turned back while they stood open, nothing changed until they had shut; reopened, the old control room, walked into.
+
+## The bridge's ambience (the owner, 2026-10-27)
+
+The owner: "find the Star Trek bridge noise and see if we can resynthesize something that sounds similar." Researched from descriptions only (nothing from the show or any upload of it sampled, copied or downloaded): the Next Generation bridge is heard as a low, steady engine hum (said by a Warner sound editor to be a heavily processed recording of an airliner in flight) with soft air under it and, now and then, quiet console chirps; Diboz's CC0 "control_room.wav" (freesound 211683, described as a starship bridge's ambience: a muted hum, an air-conditioning duct's overtone, random high blips) was read about for character, not used. The result is our own synthesis, in Web Audio, in four layers under one fader, not placed (a room tone fills the room):
+
+- **Drone:** six oscillators on 55 Hz and its harmonics (55, 55.23, 82.41, 110.17, 164.9, 220.6 Hz), pairs a fraction of a hertz apart beating slowly, spread left and right, under a 320 Hz low-pass (`DRONE_PARTIALS`).
+- **Rumble and body:** two long noise loops (7.3 s and 5.9 s, left and right, so the field is wide and nothing repeats in under seconds), one low-passed about 120 Hz with its cutoff drifting, one band-passed about 250 Hz: the big ship's air, the airliner's roar.
+- **Air:** the same noise between 1.6 and 6.5 kHz, a soft ventilation hiss.
+- **Chirps:** a seeded chirp field (`createChirpField`): blips, pairs, trills, glides and console warbles on a pentatonic set from A5 up, at exponentially distributed gaps (never closer than the variant's least gap, never more than four means apart), panned across the field, softened by a 4.2 kHz low-pass and given a short room echo; scheduled 1.2 s ahead by a 300 ms timer.
+
+Each layer swells slowly at its own rate (periods of 22 to 73 s, none a simple multiple of another), so the whole never comes round again. No per-sample script: about two dozen nodes held, a few more for each chirp while it sounds. Three variants (`BRIDGE_AMBIENCE`): QUIET (about 5 chirps a minute), STANDARD (14), BUSY (36). Rendered offline at full gain the standard variant peaks at about 0.08 and has an RMS of about 0.02 (−34 dBFS): background, under the panels' bleeps; the tested ceiling (every layer meeting in phase, every swell at its top, the loudest chirp with all its echoes) is under 0.4.
+
+Code: `src/toolkit/components/sound/logic/bridge-ambience.ts` (pure: variants, partials, chirp field, peak budget, the presence rule and its gate; tested), `src/toolkit/components/sound/audio/bridge-ambience.ts` (`bridgeAmbience(variant, options)`, a held sound; `createBridgeAmbience(options)`, the room's controller). Heard in dev47 (`?room=dev47`, the small BRIDGE AMBIENCE plate on the north wall at its west end: QUIET, STANDARD, BUSY, one at a time, pressed again for silence).
+
+**Heard only in the bridge** (the owner, 2026-10-27, finding it in the corridor with the doors shut): `ambienceGain` and `createAmbienceGate` (tested) give its full level only while the walker is in the bridge; nothing for the bridge merely built or prefetched, or drawn beyond the corridor's doorway, or a room that only follows another's eye; from the corridor at most `DOOR_LEAK` (0.15) of it, and only as far as the doors stand open, fading to nothing as they shut.
+
+### Hooking it into the bridge
+
+Not yet hooked in (the bridge's own files were being edited). In `startTheBridge` (`rooms/bridge-room.ts`), with `createBridgeAmbience` from `components/sound/audio/bridge-ambience` and `LIGHTS_UP`, `lightsUpTotal` from `logic/bridge-lights-up`:
+
+```ts
+const ambience = createBridgeAmbience(); // { variant: 'quiet' | 'standard' | 'busy', level }
+// in the returned handle:
+enter: (from) => { lightsUp.enter(from); ambience.setPresence({ inside: true }, { after: LIGHTS_UP.dark, rise: lightsUpTotal() - LIGHTS_UP.dark }); },
+suspend: () => { lightsUp.leave(); ambience.setPresence({ inside: false }); },
+```
+
+and `ambience.dispose()` wherever the handle's `dispose` is. `setPresence` starts it only on entering, so building or prefetching the bridge, or drawing it past the corridor's doorway, never sounds it. To let it be heard faintly through the open doors from the corridor, the corridor would call `setPresence({ inside: false, doorOpen })` each frame with the doors' open share (0 to 1) on the same controller.
