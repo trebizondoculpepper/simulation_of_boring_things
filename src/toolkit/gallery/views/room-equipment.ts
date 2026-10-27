@@ -93,6 +93,8 @@ import { createChangeoverSwitch } from '../../components/plant/views/changeover-
 import { createFirePoint } from './fire-point';
 import { FIRE_POINT_DEPTH, firePointKinds } from '../logic/fire-point';
 import { switchRoomFloor, MAT } from '../logic/switch-room-floor';
+import { isBundedTank, roomBundMarkings } from '../logic/bund-marking';
+import { createBundMarkings } from './bund-marking';
 import type { ChangeoverBinding } from '../../components/plant/views/changeover-switch';
 import {
   changeoverStatus,
@@ -1441,6 +1443,20 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   // The switch room's floor (prompt 089, item 5): its switchgear's
   // working spaces marked in yellow, and rubber matting before the main
   // switchboard.
+  // The painted hazard stripes round its bunded tanks, and their
+  // chemicals' names (prompt 089, item 3): set decoration, drawn from the
+  // tanks' places, with the room's services.
+  if (layout && placed.some((p) => isBundedTank(p.item.key)))
+    pipework.group.add(
+      markComponent(
+        createBundMarkings(
+          kit,
+          roomBundMarkings({ box: layout.box, placed }),
+          floorY,
+        ),
+        { name: 'Bund floor markings', decorative: true },
+      ),
+    );
   if (room === 'switch_room' && layout) {
     const floorMarks = switchRoomFloor(placed);
     const yellow = new MeshStandardMaterial({

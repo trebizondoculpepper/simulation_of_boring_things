@@ -46,6 +46,8 @@ Owner's answers (2026-10-27): every bunded tank, both the eight day-tank bottles
 - Try it in the chemical gallery (dev44) first, then in the plant rooms.
 - Check: screenshots of a bunded tank in dev44 and in plant_pool_04 after item 1.
 
+Done (2026-10-27): `src/toolkit/gallery/logic/bund-marking.ts` (`bundMarking`, `roomBundMarkings`, `bundOf`): for each placed `chem-day:*` and `chem-bulk:*` item, its bund (a bottle's spill pallet, else the tank's footprint), a 50 mm stripe on each side 0.12 m out (0.08 or 0.04 where something stands by it; cut round anything still in the way; none against a wall), kept inside the walls and off every other floor item, kept-clear and solid zone; and a stencil of the chemical's name before its front (or beside it, slid off the walls) where there is floor. Drawn by `src/toolkit/gallery/views/bund-marking.ts` in every room that has bunded tanks (set decoration, with the room's services, polygon-offset 4 mm over the floor so it never z-fights). Tried in dev44 (exhibit "Bund floor markings"). Tests: `bund-marking.test.ts` (all twelve tanks marked and named, nothing crossed, the footbath's corner bottle marked on its two open sides, a stripe cut round a skid). All twelve have a stencil.
+
 ## 4. Where the hypochlorite and the acid are injected
 
 The owner, 2026-10-27: "Check where we do the injection of chlorite and hydrochloric acid."

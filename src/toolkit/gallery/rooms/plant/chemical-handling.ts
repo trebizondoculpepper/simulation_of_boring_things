@@ -8,6 +8,7 @@ import { createDosingValvesDemo } from '../../../components/plant/views/dosing-v
 import { createLeakDetectionDemo } from '../../../components/plant/views/leak-detection';
 import { createDoseCellDemo } from '../../../components/plant/views/dose-cell-head';
 import { createChemControlPrototype } from '../../../components/plant/views/chem-control-prototype';
+import { createBundMarkingDemo } from '../../views/bund-marking';
 import {
   createBulkTankDemo,
   createChemicalPipeSamples,
@@ -105,6 +106,14 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       'WH-CP1 as the wet hall has it today, and its replacement on trial (prompt 091): Penfold OT-216 terminals for hypochlorite and acid (16 × 2 LCD, F1 MON, F2 SET, F3 CMD, ESC, ENTER, cursor keys, LOCAL ACCESS key) and their control box (isolator, MCB, PLC after a LOGO! 8), all on one trial of both lines ten times fast, with a trial station for the local controls and faults',
     size: { w: 4.7, d: 0.8, h: 2.3, mount: 'floor' },
     build: (kit) => createChemControlPrototype(kit, { oldPanel: true }),
+  },
+  {
+    // Prompt 089, item 3: tried here before the plant rooms.
+    title: 'Bund floor markings',
+    reference:
+      'A 50 mm yellow-and-black hazard stripe a short way out round each bund, giving way to walls and machines, the chemical stencilled before it',
+    size: { w: 3.2, d: 2.2, h: 1.2, mount: 'floor' },
+    build: (kit) => createBundMarkingDemo(kit),
   },
   {
     title: 'Level instruments',
