@@ -681,7 +681,7 @@ const CHEM_AT: Record<string, Record<string, At>> = {
   },
   plant_pool_02: {
     'chem-day:hypochlorite:pool_02': { x: -7.5, z: 5.9, face: 'north' },
-    'chem-day:acid:pool_02': { x: 8.2, z: 4.1, face: 'north' },
+    'chem-day:acid:pool_02': { x: 6.9, z: 4.2, face: 'north' },
   },
   plant_pool_03: {
     'chem-day:hypochlorite:pool_03': { x: 1.2, z: -1.7, face: 'west' },

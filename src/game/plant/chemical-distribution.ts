@@ -124,10 +124,20 @@ function fitted(c: Chemical, line: ChemicalLine): ChemicalLine {
   };
 }
 
+/**
+ * Where each day tank stands in a new game, a share of full: most part
+ * full; the Olympic's hypochlorite and the lounge's acid just below low,
+ * so each line is seen to call and transfer as the game begins.
+ */
+const START: Partial<Record<Chemical, Partial<Record<DayTankSite, number>>>> = {
+  hypochlorite: { pool_02: 0.18 },
+  acid: { pool_01: 0.18 },
+};
+
 export function newChemicalDistribution(): ChemicalDistribution {
   const line = (c: Chemical): ChemicalLine => ({
     tanks: DAY_TANKS[c].map((t) => ({
-      litres: t.litres * 0.7,
+      litres: t.litres * (START[c]?.[t.site] ?? 0.7),
       calling: false,
     })),
     mode: 'auto',

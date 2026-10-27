@@ -31,6 +31,18 @@ const run = (
   }
   return { d, s };
 };
+/** Every day tank part full, none calling: a quiet start for a test. */
+const quiet = (): ChemicalDistribution => {
+  const d = newChemicalDistribution();
+  const fill = (c: 'hypochlorite' | 'acid') => ({
+    ...d[c],
+    tanks: d[c].tanks.map((t, i) => ({
+      ...t,
+      litres: DAY_TANKS[c][i].litres * 0.7,
+    })),
+  });
+  return { hypochlorite: fill('hypochlorite'), acid: fill('acid') };
+};
 const withLevel = (
   d: ChemicalDistribution,
   c: 'hypochlorite' | 'acid',
@@ -47,16 +59,18 @@ const withLevel = (
 });
 
 describe('the chemical distribution: store, transfer pump, selector, day tanks', () => {
-  it('starts with every day tank part full and nothing moving', () => {
+  it('starts with each line calling for one day tank, the Olympic’s hypochlorite and the lounge’s acid', () => {
     const d = newChemicalDistribution();
     expect(d.hypochlorite.tanks).toHaveLength(4);
     expect(d.acid.tanks).toHaveLength(4);
     const r = stepDistribution(d, CAP, CAP, {}, 1);
-    expect(r.taken).toEqual({ hypochlorite: 0, acid: 0 });
+    expect(r.distribution.hypochlorite.serving).toBe(1);
+    expect(r.distribution.acid.serving).toBe(0);
+    expect(r.taken.hypochlorite).toBeGreaterThan(0);
   });
 
   it('fills a low day tank from its store to high through its own outlet, the litres conserved', () => {
-    const d0 = withLevel(newChemicalDistribution(), 'acid', 1, 0.1);
+    const d0 = withLevel(quiet(), 'acid', 1, 0.1);
     const before = d0.acid.tanks.reduce((t, k) => t + k.litres, 0);
     const { d, s } = run(d0, CAP, 3600);
     expect(dayLevel('acid', 1, d.acid)).toBeGreaterThanOrEqual(
@@ -70,7 +84,7 @@ describe('the chemical distribution: store, transfer pump, selector, day tanks',
 
   it('serves calling day tanks one at a time, never two outlets open', () => {
     let d = withLevel(
-      withLevel(newChemicalDistribution(), 'hypochlorite', 0, 0.1),
+      withLevel(quiet(), 'hypochlorite', 0, 0.1),
       'hypochlorite',
       3,
       0.1,

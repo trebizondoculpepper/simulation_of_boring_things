@@ -127,7 +127,7 @@ export function createFramedChemicalTank(
   // The top: the DN400 filling dome, its screw lid ribbed for a grip;
   // the 2" sockets each with its union nut.
   const domeX = -L / 4;
-  const domeR = 0.24 * k;
+  const domeR = Math.min(0.24 * k, Math.min(L, W) * 0.28);
   t.cyl(group, hdpe, domeR, 0.07, domeX, top + 0.035, 0, 'y', 36);
   t.cyl(group, dark, domeR - 0.005, 0.05, domeX, top + 0.095, 0, 'y', 36);
   for (let i = 0; i < 12; i++) {
@@ -145,7 +145,13 @@ export function createFramedChemicalTank(
   }
   f.label(
     group,
-    k < 1 ? 'DN300' : 'DN400',
+    domeR >= 0.2
+      ? 'DN400'
+      : domeR >= 0.14
+        ? 'DN300'
+        : domeR >= 0.09
+          ? 'DN200'
+          : 'DN150',
     domeX,
     top + 0.121,
     0,

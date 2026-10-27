@@ -84,6 +84,8 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [ ] **Delivery lorries that come and go** ([074](doc/prompts/074-delivery-lorries.md)): incomplete, for planning.
 - [ ] **The loading dock's roller shutters, working** ([075](doc/prompts/075-roller-shutters.md)): incomplete, for planning.
 - [ ] **Chemical deliveries** ([076](doc/prompts/076-chemical-delivery.md)): incomplete, for planning.
+- [ ] **Chemical distribution** ([085](doc/prompts/085-chemical-distribution.md), [plan](doc/plans/085-chemical-distribution.md)): model, bulk tanks, transfer pumps, selectors and day tanks placed and working (2026-10-27, 0216ab7, 09911de). Still to do: the mains and branches as routed, double-contained pipes between the rooms; the controls (the wet hall's distribution panel, the stores' handling panels, each plant room's day tank panel, the control room's mimic page); deliveries into the bulk tanks (076); dosing rates from the pools' bather load.
+- [ ] **Dev44, chemical handling** ([086](doc/prompts/086-chemical-handling-dev-room.md)): tanks, pump, selector, day tanks, pipes and the transfer trial built; the panels written (`createStoreHandlingPanel`, `createDayTankPanel`) but not yet shown; gauges and meters last, as the owner asked; an ideal acid source and a sink block.
 - [ ] **The generator hook-up** ([077](doc/prompts/077-generator-hook-up.md)): incomplete, for planning.
 - [ ] **Ordering supplies through Splashonomics** ([078](doc/prompts/078-splashonomics-ordering.md)): incomplete, for planning.
 - [ ] **A mains failure** ([079](doc/prompts/079-mains-failure.md)): incomplete, for planning.

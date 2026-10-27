@@ -1,6 +1,6 @@
 # 085: Chemical distribution: the plan
 
-Status: plan (written 2026-10-26 with the owner), for [prompt 085](../prompts/085-chemical-distribution.md); its equipment is prototyped in dev44 ([086](../prompts/086-chemical-handling-dev-room.md)).
+Status: in progress (written 2026-10-26 with the owner; the model and step 1 done 2026-10-27), for [prompt 085](../prompts/085-chemical-distribution.md); its equipment is prototyped in dev44 ([086](../prompts/086-chemical-handling-dev-room.md)).
 
 ## The decisions
 
