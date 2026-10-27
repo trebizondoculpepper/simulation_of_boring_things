@@ -44,6 +44,7 @@ import { createFramedChemicalTank } from './framed-chemical-tank';
 import { createDoseBottle } from './dose-bottle';
 import { chlorellaPlate } from './chlorella-plate';
 import { hose } from './hose';
+import { describe } from './describe';
 import { createPipeMarker } from './pipe-marker';
 import { createChemicalBallValve } from './chemical-ball-valve';
 import {
@@ -1297,7 +1298,6 @@ export function createTransferSelector(
   const galv = t.paint('#a9afaf', 0.38, 0.75);
   const pvc = t.paint('#5a5f63', 0.55);
   const dark = t.paint('#2a2f31', 0.6);
-  const band = t.paint(BAND[chemical], 0.5);
   const pitch = 0.32;
   const n = outlets.length;
   const x0 = -((n - 1) * pitch) / 2;
@@ -1314,18 +1314,10 @@ export function createTransferSelector(
   // The header, its feed at the left end, its banding and blanked far end.
   t.rod(group, pvc, [-w / 2 - 0.2, hy, 0], [w / 2 - 0.15, hy, 0], 0.032, 14);
   t.cyl(group, galv, 0.06, 0.02, w / 2 - 0.15, hy, 0, 'x', 20);
-  for (const x of [-w / 2 + 0.05, 0])
-    t.cyl(group, band, 0.035, 0.06, x, hy, 0, 'x', 14);
-  f.label(
-    group,
-    `${PRODUCT[chemical]} · TRANSFER SELECTOR`,
-    0,
-    hy - 0.15,
-    0.04,
-    0.026,
-    '#ffffff',
-    BAND[chemical],
-  );
+  // The header's marker, its flow from the feed toward the outlets.
+  const headerMarker = createPipeMarker(kit, { r: 0.032, chemical, flow: 1 });
+  headerMarker.object.position.set(-w / 2 + 0.12, hy, 0);
+  group.add(headerMarker.object);
   const actuated: [number, ReturnType<typeof createMotorisedChemicalValve>][] =
     [];
   outlets.forEach((name, i) => {
@@ -1333,7 +1325,7 @@ export function createTransferSelector(
     t.rod(group, pvc, [x, hy, 0], [x, hy + 0.12, 0], 0.022, 12);
     if (!name) {
       // A spare: its tee blanked with a bolted blind flange, tagged.
-      t.cyl(group, galv, 0.055, 0.025, x, hy + 0.13, 0, 'y', 20);
+      const blind = t.cyl(group, galv, 0.055, 0.025, x, hy + 0.13, 0, 'y', 20);
       for (let k = 0; k < 4; k++) {
         const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
         t.cyl(
@@ -1348,16 +1340,7 @@ export function createTransferSelector(
           6,
         );
       }
-      f.label(
-        group,
-        `OUTLET ${i + 1} · SPARE`,
-        x,
-        hy + 0.25,
-        0.01,
-        0.02,
-        '#1b1b1b',
-        '#e5c43a',
-      );
+      describe(blind, `Outlet ${i + 1}: spare, blanked with a blind flange`);
       return;
     }
     // The manual isolating valve, then the actuated valve the selector
@@ -1382,16 +1365,15 @@ export function createTransferSelector(
     actuated.push([i, act]);
     // Up to its outlet, banded, its plate.
     t.rod(group, pvc, [x, hy + 0.5, 0], [x, 1.75, 0], 0.022, 12);
-    t.cyl(group, band, 0.025, 0.05, x, 1.3, 0, 'y', 12);
-    f.label(
-      group,
-      `${i + 1} · ${name}`,
-      x,
-      hy + 0.58,
-      0.03,
-      0.019,
-      '#ffffff',
-      '#2a2f31',
+    // Its marker on the riser, flow up to its plant room.
+    const riserMarker = createPipeMarker(kit, { r: 0.022, chemical, flow: 1 });
+    riserMarker.object.rotation.z = Math.PI / 2;
+    riserMarker.object.position.set(x, 1.3, 0);
+    group.add(riserMarker.object);
+    describe(
+      riserMarker.object,
+      `Outlet ${i + 1} riser to ${name}: ${PRODUCT[chemical]}`,
+      () => (valveOpen(store.state.value, i) ? 'Filling now' : 'Not filling'),
     );
   });
   // The station on the right upright.
