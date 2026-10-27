@@ -92,6 +92,67 @@ export function staggeredOffsets(
   return Array.from({ length: n }, () => from + random() * spread);
 }
 
+/** A duration drawn from a normal distribution, seconds: `mean`, standard deviation `sd`, floored at `min` (0 if none). */
+export interface Spread {
+  mean: number;
+  sd: number;
+  min?: number;
+}
+
+/** One draw from `spread` (Box–Muller over `random`), floored at its `min` (or 0). */
+export function sampleSpread(
+  spread: Spread,
+  random: () => number = Math.random,
+): number {
+  const u = Math.max(1e-12, random());
+  const v = random();
+  const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  return Math.max(spread.min ?? 0, spread.mean + spread.sd * z);
+}
+
+/**
+ * A boot whose parts are each drawn afresh per screen (the owner,
+ * 2026-10-27): `from` seconds of black for every screen, then its own
+ * further black (`black`), its emblem (`emblem`, its fade-in included),
+ * black again (`after`, the emblem's fade to black included: floored at
+ * `fade`), then the draw-in. `timing` gives the fixed parts (the emblem's
+ * fade-in, its fade, the draw-in).
+ */
+export interface BootSpec {
+  from?: number;
+  black: Spread;
+  emblem: Spread;
+  after: Spread;
+  timing?: Partial<BootTiming>;
+}
+
+/** One screen's boot drawn from `spec`: its offset (all its black before the emblem) and its timing. */
+export function sampleBoot(
+  spec: BootSpec,
+  random: () => number = Math.random,
+): { offset: number; timing: BootTiming } {
+  const base = { ...BOOT_TIMING, ...spec.timing };
+  const offset = (spec.from ?? 0) + sampleSpread(spec.black, random);
+  const emblem = Math.max(base.emblemIn, sampleSpread(spec.emblem, random));
+  const after = Math.max(base.fade, sampleSpread(spec.after, random));
+  return {
+    offset,
+    timing: { ...base, emblem, gap: after - base.fade },
+  };
+}
+
+/** Seconds from a boot drawn from `spec` beginning to its screen being operational, on average (each part at its mean, floored). */
+export function meanBootReady(spec: BootSpec): number {
+  const base = { ...BOOT_TIMING, ...spec.timing };
+  return (
+    (spec.from ?? 0) +
+    Math.max(spec.black.min ?? 0, spec.black.mean) +
+    Math.max(base.emblemIn, spec.emblem.min ?? 0, spec.emblem.mean) +
+    Math.max(base.fade, spec.after.min ?? 0, spec.after.mean) +
+    base.draw
+  );
+}
+
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const ease = (x: number) => {
   const c = clamp01(x);
@@ -192,6 +253,12 @@ export class BootScreen extends UiNode {
   private now = 0;
   private shown = '';
   private plan: Map<UiNode, { start: number; frame: boolean }> | null = null;
+  /**
+   * Told whenever a boot or a skip changes what it shows, so its host can
+   * repaint at once rather than at its next frame (a room seen only
+   * through a doorway, say, whose screens must go black on the spot).
+   */
+  onChange: (() => void) | null = null;
 
   constructor(
     readonly content: UiNode,
@@ -211,6 +278,7 @@ export class BootScreen extends UiNode {
     this.plan = null;
     this.shown = 'black';
     this.markDirty();
+    this.onChange?.();
   }
 
   /** Straight to on, operational. */
@@ -219,6 +287,7 @@ export class BootScreen extends UiNode {
     this.mode = 'on';
     this.plan = null;
     this.markDirty();
+    this.onChange?.();
   }
 
   /** Where its boot is now. */
@@ -344,7 +413,7 @@ export class BootScreen extends UiNode {
 /**
  * The screens of a room, booted together, each at its own offset: `bootAll`
  * scatters them over `spread` seconds (a room of screens never boots as
- * one); `skipAll` puts them all on; `autoBoot` boots each screen as it
+ * one), or `bootEach` boots each with its own drawn durations; `skipAll` puts them all on; `autoBoot` boots each screen as it
  * joins (a room built while its screens arrive, booting on entry).
  */
 export class BootGroup {
@@ -362,6 +431,27 @@ export class BootGroup {
   remove(screen: BootScreen) {
     this.screens.delete(screen);
   }
+
+  /**
+   * Every screen booted with its own durations, each drawn independently
+   * from `spec` (`sampleBoot`), so the screens drift apart through the
+   * whole boot. Returns the seconds from now (their next tick) until the
+   * last of them is operational (`spec`'s mean if there are none), also
+   * kept as `readyAt`.
+   */
+  bootEach(spec: BootSpec): number {
+    let last = this.screens.size ? 0 : meanBootReady(spec);
+    for (const s of this.screens) {
+      const { offset, timing } = sampleBoot(spec, this.random);
+      s.boot(offset, timing);
+      last = Math.max(last, offset + bootDuration(timing));
+    }
+    this.readyAt = last;
+    return last;
+  }
+
+  /** Seconds from the last `bootEach` until its last screen was to be operational. */
+  readyAt = 0;
 
   /** Every screen booted, at offsets scattered over `spread` seconds from `from`; `timing` for this boot only. */
   bootAll(spread = 1.5, from = 0, timing?: Partial<BootTiming>) {

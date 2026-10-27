@@ -232,6 +232,8 @@ export function createTouchSurface(
     group.add(body);
   }
 
+  // The surface's clock, seconds, advanced by its updates.
+  let seconds = 0;
   const screens = options.screens.map((spec) => {
     const theme = spec.theme ?? BLOCK_THEME;
     const ppm = spec.pixelsPerMetre ?? 800;
@@ -285,6 +287,14 @@ export function createTouchSurface(
       texture.needsUpdate = true;
     };
     repaint();
+    // A boot or a skip shown at once, not only at the room's next frame
+    // (the owner, 2026-10-27: after RESET the bridge's displays stayed on,
+    // seen from the corridor, until the walker came in).
+    if (boot)
+      boot.onChange = () => {
+        root.tick(seconds);
+        repaint();
+      };
     const touchPixel = (x: number, y: number) => {
       root.tap(x, y);
       repaint();
@@ -306,7 +316,6 @@ export function createTouchSurface(
     return { root, mesh, repaint, touchPixel, width, height, boot };
   });
 
-  let seconds = 0;
   a.updates.push((delta) => {
     seconds += delta;
     for (const s of screens) {

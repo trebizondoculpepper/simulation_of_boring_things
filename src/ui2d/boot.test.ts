@@ -16,9 +16,32 @@ import {
   bootState,
   drawInPlan,
   drawInShare,
+  meanBootReady,
   rect,
+  sampleBoot,
+  sampleSpread,
   staggeredOffsets,
 } from './index';
+import type { BootSpec } from './index';
+
+/** A seeded source of uniform numbers in [0, 1) (mulberry32). */
+function seeded(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const SPEC: BootSpec = {
+  from: 2,
+  black: { mean: 2.7, sd: 0.4 },
+  emblem: { mean: 6, sd: 2, min: 0.5 },
+  after: { mean: 2, sd: 0.5, min: 0.5 },
+};
 import type { UiNode } from './index';
 
 /** A canvas context that does nothing, recording which nodes' fills happen. */
@@ -251,5 +274,83 @@ describe('a display’s boot (the owner, 2026-10-27)', () => {
     group.autoBoot({ spread: 1 });
     const late: UiNode = group.add(new BootScreen(new Label('late')));
     expect((late as BootScreen).booting).toBe(true);
+  });
+
+  it('draws durations from a normal distribution, floored', () => {
+    const random = seeded(42);
+    const draws = Array.from({ length: 4000 }, () =>
+      sampleSpread({ mean: 6, sd: 2 }, random),
+    );
+    const mean = draws.reduce((a, b) => a + b, 0) / draws.length;
+    const sd = Math.sqrt(
+      draws.reduce((a, b) => a + (b - mean) ** 2, 0) / draws.length,
+    );
+    expect(mean).toBeCloseTo(6, 1);
+    expect(sd).toBeGreaterThan(1.8);
+    expect(sd).toBeLessThan(2.2);
+    for (let i = 0; i < 2000; i++) {
+      expect(sampleSpread({ mean: 0.2, sd: 1 }, random)).toBeGreaterThanOrEqual(
+        0,
+      );
+      expect(
+        sampleSpread({ mean: 0.2, sd: 1, min: 0.5 }, random),
+      ).toBeGreaterThanOrEqual(0.5);
+    }
+  });
+
+  it('samples a boot per screen: its black, emblem and black again, the fade inside the last', () => {
+    const random = seeded(3);
+    for (let i = 0; i < 500; i++) {
+      const { offset, timing } = sampleBoot(SPEC, random);
+      expect(offset).toBeGreaterThanOrEqual(2);
+      expect(timing.emblem).toBeGreaterThanOrEqual(0.5);
+      expect(timing.fade).toBe(BOOT_TIMING.fade);
+      expect(timing.gap).toBeGreaterThanOrEqual(0);
+      expect(timing.draw).toBe(BOOT_TIMING.draw);
+      expect(timing.emblemIn).toBe(BOOT_TIMING.emblemIn);
+    }
+    expect(meanBootReady(SPEC)).toBeCloseTo(2 + 2.7 + 6 + 2 + 1);
+  });
+
+  it('boots each screen on its own drawn durations, and says when the last is operational', () => {
+    const group = new BootGroup(seeded(11));
+    const screens = Array.from({ length: 8 }, (_, i) =>
+      group.add(new BootScreen(new Label(`${i}`))),
+    );
+    const ready = group.bootEach(SPEC);
+    expect(group.readyAt).toBe(ready);
+    expect(new Set(screens.map((s) => s.timing.emblem)).size).toBe(8);
+    for (const s of screens) s.tick(100);
+    for (const s of screens) s.tick(100 + 1.99);
+    for (const s of screens) expect(s.phase).toBe('black');
+    for (const s of screens) s.tick(100 + ready - 0.01);
+    expect(screens.some((s) => !s.operational)).toBe(true);
+    for (const s of screens) s.tick(100 + ready + 0.001);
+    for (const s of screens) expect(s.operational).toBe(true);
+    expect(group.booting).toBe(false);
+    // Empty: its mean.
+    expect(new BootGroup().bootEach(SPEC)).toBeCloseTo(meanBootReady(SPEC));
+  });
+
+  it('tells its host at once when a boot or a skip changes it, so a screen seen from afar goes black on the spot', () => {
+    const group = new BootGroup(seeded(1));
+    const screen = group.add(new BootScreen(new Label('x')));
+    let told = 0;
+    screen.onChange = () => {
+      told++;
+      screen.tick(50);
+    };
+    // Reset while away: black at once, waiting for ever, never on by itself.
+    group.bootAll(0, Number.POSITIVE_INFINITY);
+    expect(told).toBe(1);
+    expect(screen.phase).toBe('black');
+    expect(screen.operational).toBe(false);
+    for (const t of [51, 500, 5000]) {
+      screen.tick(t);
+      expect(screen.phase).toBe('black');
+    }
+    group.skipAll();
+    expect(told).toBe(2);
+    expect(screen.operational).toBe(true);
   });
 });
