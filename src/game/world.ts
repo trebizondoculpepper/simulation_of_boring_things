@@ -829,9 +829,19 @@ export function applyAction(world: World, action: WorldAction): World {
         ? world
         : { ...world, bridgeThemeHeard: true };
     case 'bridge/first-visit-reset':
-      return world.bridgeThemeHeard
-        ? { ...world, bridgeThemeHeard: false }
-        : world;
+      // The bridge as first found (the owner, 2026-10-27): its theme not
+      // yet heard and its lights off, so the next visit plays it all.
+      return {
+        ...world,
+        bridgeThemeHeard: false,
+        lighting: {
+          ...world.lighting,
+          switches: {
+            ...world.lighting.switches,
+            bridge: { main: false, emergency: false },
+          },
+        },
+      };
     case 'alarms/accept': {
       const annunciator = acceptAlarms(world.annunciator, action.alarms);
       return annunciator === world.annunciator

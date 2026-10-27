@@ -10,5 +10,10 @@ describe('the bridge’s first visit (the owner, 2026-10-27)', () => {
     expect(applyAction(w, { type: 'bridge/theme-heard' })).toBe(w);
     w = applyAction(w, { type: 'bridge/first-visit-reset' });
     expect(w.bridgeThemeHeard).toBe(false);
+    // Its lights off as first found, MAIN and EMERGENCY both.
+    expect(w.lighting.switches.bridge).toEqual({
+      main: false,
+      emergency: false,
+    });
   });
 });
