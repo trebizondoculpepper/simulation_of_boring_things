@@ -130,11 +130,11 @@ export function createChemControlPrototype(
     for (const [o, use] of term.parts.uses) parts.uses.set(o, use);
     t.label(
       root,
-      `${spec.tag} ${spec.title}`,
+      `${spec.tag}\n${spec.title}`,
       tx,
-      1.68,
+      1.69,
       wallZ + 0.002,
-      0.02,
+      0.016,
       '#1b1b1b',
       '#f4f3ee',
     );
