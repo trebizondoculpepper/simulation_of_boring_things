@@ -1,6 +1,6 @@
 # 090 research: keep opened doors open near the player
 
-Checked 2026-10-27 against `55229c1`. This is repository research; no runtime code changed. [Mission 090](../prompts/done/090-door-proximity-hold-open.md) was implemented in `39ea689` (mostly complete; remaining browser checks are listed in its completion record).
+Checked 2026-10-27 against `55229c1`. This is repository research; no runtime code changed. [Mission 090](../prompts/done/090-door-proximity-hold-open.md) was implemented in `ef0c221` (mostly complete; remaining browser checks are listed in its completion record).
 
 ## Finding
 

@@ -76,7 +76,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Architectural features
 
-- [x] **Doors stay open while the player is nearby** ([090](doc/prompts/done/090-door-proximity-hold-open.md), requested 2026-10-27): implemented 2026-10-27, `39ea689` (mostly complete): shared 1.5/1.75 m proximity with hysteresis applied before each door step, closing leaves reopen smoothly, handed-over doors wait a full hold, only the active walker counts; plant doors, equipment pairs, ladder gate and spring portals. Exceptions recorded in the prompt.
+- [x] **Doors stay open while the player is nearby** ([090](doc/prompts/done/090-door-proximity-hold-open.md), requested 2026-10-27): implemented 2026-10-27, `ef0c221` (mostly complete): shared 1.5/1.75 m proximity with hysteresis applied before each door step, closing leaves reopen smoothly, handed-over doors wait a full hold, only the active walker counts; plant doors, equipment pairs, ladder gate and spring portals. Exceptions recorded in the prompt.
   - [ ] Browser acceptance still to do: plant side, paired doorways (`main_corridor` ↔ `wet_hall`, `plant_pool_02` ↔ `tank_hall`), ladder gate, a development spring doorway, return during closing, walk-through handover and sounds; owner to confirm the 1.5/1.75 m distances.
 
 - [ ] **One facility plan** (the owner, 2026-10-25): combine the building's scattered plans (`poolrooms-plan.ts`, `main-plant-plan.ts`, `pool-halls.ts`, the plant rooms' shell plans, the corridors and their joins) into one model of the building: its rooms and the openings between them, each with an identity and the two rooms it joins, the plans derived from it or checked against it. `AGENTS.md` still names a `src/game/facility-plan.ts` that no longer exists.

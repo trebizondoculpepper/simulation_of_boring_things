@@ -1,6 +1,6 @@
 # 090: Keep an opened door open while the player is nearby
 
-Status: mostly complete, checked 2026-10-27 against `39ea689`. Implemented with focused logic tests; browser acceptance partly done (pool-to-plant door, hall side). Researched 2026-10-27 against `55229c1`; see the [research and change plan](../../research/090-door-proximity-hold-open.md).
+Status: mostly complete, checked 2026-10-27 against `ef0c221`. Implemented with focused logic tests; browser acceptance partly done (pool-to-plant door, hall side). Researched 2026-10-27 against `55229c1`; see the [research and change plan](../../research/090-door-proximity-hold-open.md).
 
 Read the root AGENTS.md and this directory’s AGENTS.md before implementation. Markdown is one paragraph per line.
 
@@ -42,7 +42,7 @@ Run the project’s required typecheck, lint, formatting, tests and build checks
 
 ## Completion record
 
-Checked 2026-10-27. Status: mostly complete. Implementation commit `39ea689`.
+Checked 2026-10-27. Status: mostly complete. Implementation commit `ef0c221`.
 
 Delivered:
 
