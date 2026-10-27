@@ -3,6 +3,7 @@ import type { Material, Object3D } from 'three';
 import type { Part } from '../../components/core/parts/parts';
 import {
   LIGHTS_UP,
+  entranceGlow,
   lightsUpLevels,
   lightsUpTotal,
   playsEntrance,
@@ -47,6 +48,8 @@ type Glow = Material & { emissiveIntensity: number };
 export function createBridgeLightsUp(mainLit: () => boolean): Part & {
   enter(from: string | null): void;
   leave(): void;
+  /** The entrance's share of the under-console glow now (`entranceGlow`), 0 outside it. */
+  glow(): number;
 } {
   const object = new Group();
   object.name = 'Bridge lights coming up (presentation)';
@@ -61,6 +64,8 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
   let out = !openedHere;
   let current: Levels = openedHere ? lightsUpLevels(Infinity) : dark;
   let first = true;
+  // Whether the rise under way is the entrance, its glow first.
+  let entrance = false;
   let lights: { light: Light; stage: LightStage | 'fill' }[] | null = null;
   let glows: { m: Glow; stage: LightStage }[] = [];
   const collect = () => {
@@ -113,16 +118,22 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
       const play = playsEntrance(from, openedHere && !enteredBefore);
       enteredBefore = true;
       present = true;
+      entrance = false;
       if (!mainLit()) {
         falling = null;
         out = true;
         current = dark;
-      } else rise(play ? 0 : Infinity);
+      } else {
+        rise(play ? 0 : Infinity);
+        entrance = play;
+      }
     },
     leave() {
       present = false;
+      entrance = false;
       fall();
     },
+    glow: () => (entrance && !out && !falling ? entranceGlow(t) : 0),
     update(delta) {
       if (!lights) collect();
       if (!lights) return;
@@ -134,7 +145,10 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
       }
       first = false;
       // MAIN LIGHTS switched on with the walker here: the rise, at once.
-      if (on && present && (out || falling)) rise(LIGHTS_UP.dark);
+      if (on && present && (out || falling)) {
+        entrance = false;
+        rise(LIGHTS_UP.dark);
+      }
       // Switched off, or its way gone: down.
       if (!on && !out) fall();
       if (falling) {
@@ -155,7 +169,10 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
       else {
         t += delta;
         current = lightsUpLevels(t);
-        if (t >= lightsUpTotal()) return;
+        if (t >= lightsUpTotal()) {
+          if (entrance && entranceGlow(t) === 0) entrance = false;
+          return;
+        }
       }
       // After the lighting way has set them this frame: scaled.
       for (const { light, stage } of lights) light.intensity *= current[stage];

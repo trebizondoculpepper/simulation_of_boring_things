@@ -14,8 +14,8 @@ export const LIGHT_STAGES = ['rings', 'dome', 'walls', 'aft'] as const;
 export type LightStage = (typeof LIGHT_STAGES)[number];
 
 export const LIGHTS_UP = {
-  /** Seconds of darkness after arriving. */
-  dark: 2.5,
+  /** Seconds of darkness (the under-console glow coming up in it) before the main lights. */
+  dark: 3.0,
   /** Each stage's start after the darkness, and its rise, seconds. */
   starts: { rings: 0, dome: 0.6, walls: 1.2, aft: 1.7 } as Record<
     LightStage,
@@ -50,6 +50,23 @@ export function lightsUpLevels(t: number): Record<LightStage | 'fill', number> {
     LIGHT_STAGES.reduce((sum, s) => sum + out[s], 0) / LIGHT_STAGES.length;
   out.fill = LIGHTS_UP.floor + (1 - LIGHTS_UP.floor) * mean;
   return out;
+}
+
+/**
+ * The under-console glow in the entrance (the owner, 2026-10-27:
+ * displays only, then the glow under the consoles, then the main
+ * lights): it comes up `at` seconds after arriving over `rise`, before
+ * the main lights at `LIGHTS_UP.dark`, and, once they are full, fades
+ * over `fade` (unless EMERGENCY LIGHTS keeps it lit, which the world
+ * says, not this).
+ */
+export const ENTRANCE_GLOW = { at: 1.0, rise: 0.6, fade: 1.5 } as const;
+
+/** The entrance's own share of the under-console glow `t` seconds after arriving. */
+export function entranceGlow(t: number): number {
+  const up = smooth((t - ENTRANCE_GLOW.at) / ENTRANCE_GLOW.rise);
+  const down = 1 - smooth((t - lightsUpTotal()) / ENTRANCE_GLOW.fade);
+  return Math.min(up, down);
 }
 
 /**

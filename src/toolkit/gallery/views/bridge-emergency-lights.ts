@@ -2,6 +2,7 @@ import {
   AdditiveBlending,
   BoxGeometry,
   CanvasTexture,
+  Color,
   Group,
   HemisphereLight,
   Mesh,
@@ -89,15 +90,19 @@ export function createBridgeEmergencyLights(kit: PanelKit) {
   const fill = new HemisphereLight('#cfe0ff', '#202833', 0);
   fill.userData.ownSwitching = true;
   group.add(fill);
-  let was: boolean | null = null;
+  const dark = new Color('#000000');
+  const glow = new Color(GLOW);
+  let was: number | null = null;
   return {
     group,
-    set(lit: boolean) {
-      if (lit === was) return;
-      was = lit;
-      line.color.set(lit ? GLOW : '#000000');
-      spill.opacity = lit ? 0.22 : 0;
-      fill.intensity = lit ? 0.07 : 0;
+    /** Lit, or how far lit (0 to 1: the entrance's fade). */
+    set(lit: boolean | number) {
+      const level = typeof lit === 'number' ? lit : lit ? 1 : 0;
+      if (level === was) return;
+      was = level;
+      line.color.copy(dark).lerp(glow, level);
+      spill.opacity = 0.22 * level;
+      fill.intensity = 0.07 * level;
     },
   };
 }

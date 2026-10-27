@@ -228,7 +228,7 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   const alarmBleep = installAlarmBleep();
   const handle = startBridgeRoom(canvas, (kit) => [
     ...installConsoles(kit),
-    installLightSwitch(kit),
+    installLightSwitch(kit, () => lightsUp.glow()),
     lightsUp,
     chatter,
     alarmBleep,
@@ -274,7 +274,11 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
  * consoles, `underConsoleGlow`), lit as the world
  * says (`bridgeEmergencyLit`).
  */
-function installLightSwitch(kit: PanelKit): Part {
+function installLightSwitch(
+  kit: PanelKit,
+  /** The entrance's share of the under-console glow (`createBridgeLightsUp`). */
+  entranceGlow: () => number = () => 0,
+): Part {
   const store = typeof window === 'undefined' ? null : roomWorld();
   const gang = (g: 'main' | 'emergency') => ({
     get value() {
@@ -339,7 +343,10 @@ function installLightSwitch(kit: PanelKit): Part {
     update(delta) {
       part.update(delta);
       const w = store?.world.value;
-      emergency.set(w ? bridgeEmergencyLit(w) : false);
+      // Lit as the world says, or as the entrance brings it up first.
+      emergency.set(
+        Math.max(w && bridgeEmergencyLit(w) ? 1 : 0, entranceGlow()),
+      );
     },
     onEvent: part.onEvent,
     setAudible: part.setAudible,

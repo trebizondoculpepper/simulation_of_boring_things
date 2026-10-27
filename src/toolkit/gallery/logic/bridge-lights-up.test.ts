@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  ENTRANCE_GLOW,
   LIGHTS_UP,
+  entranceGlow,
   LIGHT_STAGES,
   lightsUpLevels,
   lightsUpTotal,
@@ -47,6 +49,36 @@ describe('the bridge’s lights coming up (the owner, 2026-10-27)', () => {
       }
       prev = l;
     }
+  });
+
+  it('brings the glow under the consoles up first, then the main lights 2 to 3 s on', () => {
+    // Displays only at first.
+    expect(entranceGlow(0)).toBe(0);
+    expect(entranceGlow(ENTRANCE_GLOW.at - 0.01)).toBe(0);
+    expect(ENTRANCE_GLOW.at).toBeGreaterThan(0.5);
+    expect(ENTRANCE_GLOW.at).toBeLessThanOrEqual(1.5);
+    // Then the glow, quickly, full before the main lights begin.
+    const full = ENTRANCE_GLOW.at + ENTRANCE_GLOW.rise;
+    expect(entranceGlow(full)).toBe(1);
+    expect(full).toBeLessThan(LIGHTS_UP.dark);
+    const gap = LIGHTS_UP.dark - ENTRANCE_GLOW.at;
+    expect(gap).toBeGreaterThanOrEqual(2);
+    expect(gap).toBeLessThanOrEqual(3);
+    for (const s of LIGHT_STAGES) expect(lightsUpLevels(full)[s]).toBe(0);
+  });
+
+  it('keeps the glow while the main lights come up, then lets it fade (the switch keeping it, if on)', () => {
+    for (
+      let t = ENTRANCE_GLOW.at + ENTRANCE_GLOW.rise;
+      t <= lightsUpTotal();
+      t += 0.1
+    )
+      expect(entranceGlow(t), `at ${t}`).toBe(1);
+    expect(entranceGlow(lightsUpTotal() + ENTRANCE_GLOW.fade / 2)).toBeLessThan(
+      1,
+    );
+    expect(entranceGlow(lightsUpTotal() + ENTRANCE_GLOW.fade)).toBe(0);
+    expect(entranceGlow(Infinity)).toBe(0);
   });
 
   it('plays when walked in from the corridor, not on opening the page on the bridge', () => {
