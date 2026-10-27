@@ -1,4 +1,6 @@
 import type { PlantExhibit } from './exhibit';
+import { PARODY_SPECS } from '../../logic/parody-specs';
+import { createParodyPanel } from '../../views/parody-panel';
 import { WALL_FACE } from '../../logic/plant-room-layout';
 import type {
   ExhibitPlace,
@@ -22,7 +24,12 @@ export const PURPOSE =
   'Touch panels: 2D controls laid out on 3D surfaces of every shape, from the ui2d kit (mission 093)';
 
 /** A dim room, so the screens glow. */
-export const FINISH = { wall: '#5d5a63', floor: '#3b3a40' };
+export const FINISH = {
+  wall: '#5d5a63',
+  floor: '#3b3a40',
+  // Small, over the door near the west wall's south end: the walls are for panels.
+  titleCard: { x: -5.83, y: 2.75, z: 3.9, yaw: Math.PI / 2, scale: 0.45 },
+};
 
 /**
  * Dev47, the touch panels (mission 093; the owner, 2026-10-27): "a
@@ -97,6 +104,18 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     size: { w: 0.7, d: 0.6, h: 1.8, mount: 'floor' },
     build: lectern,
   },
+  // The east wall, where the title card was (the owner: "just see how it
+  // looks"): two of dev48's reinterpreted panels.
+  ...['ANN 01', 'XFER 01'].map((code, i): PlantExhibit => {
+    const spec = PARODY_SPECS.find((p) => p.code === code)!;
+    const { w = 1.6, h = 1.0 } = spec.size ?? {};
+    return {
+      title: spec.title,
+      reference: `Parodies ${spec.original}`,
+      size: { w: w + 0.2, d: 0.06, h: h + 0.1, mount: 'wall' },
+      build: (kit) => createParodyPanel(kit, spec, 20 + i),
+    };
+  }),
 ];
 
 /** Where each exhibit goes, by its index in `EXHIBITS`: a wall and a place along it, or the floor. */
@@ -113,6 +132,8 @@ const PLACES: readonly (
   { wall: 'west', at: -1.2 },
   { floor: [-1.4, -0.4] },
   { floor: [1.8, -0.4] },
+  { wall: 'east', at: -1.6 },
+  { wall: 'east', at: 1.6 },
 ];
 
 /**

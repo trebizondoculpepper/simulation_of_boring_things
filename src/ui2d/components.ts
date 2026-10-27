@@ -219,6 +219,8 @@ export interface ButtonOptions extends NodeOptions {
   disabled?: boolean;
   /** Flashing (an alarm's button). */
   flashing?: boolean;
+  /** Kept at pill proportions even with square ends (a row of segments all the same height). */
+  pill?: boolean;
   /** The action its press names. */
   action?: string;
   /** What its press does; its answer is the sound (null for none, nothing for a confirm). */
@@ -302,7 +304,7 @@ export class Button extends UiNode {
    */
   shape(): Rect {
     const r = this.rect;
-    if (this.caps === 'none') return r;
+    if (this.caps === 'none' && !this.options.pill) return r;
     const h = Math.min(r.h, r.w / MIN_PILL_ASPECT);
     return rect(r.x, r.y + (r.h - h) / 2, r.w, h);
   }
@@ -440,6 +442,7 @@ export class Segmented extends UiNode {
                   ? 'right'
                   : 'none'
             : 'both',
+          pill: true,
           lit: i === this.selected,
           id: options.id ? `${options.id}/${i}` : undefined,
           onPress: () => this.choose(i),

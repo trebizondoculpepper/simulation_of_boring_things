@@ -118,7 +118,8 @@ export type ExhibitRoomId =
   | 'dev42'
   | 'dev43'
   | 'dev44'
-  | 'dev47';
+  | 'dev47'
+  | 'dev48';
 
 /** A room's own finish (`FINISH` in its module). */
 export interface RoomFinish {
@@ -128,6 +129,11 @@ export interface RoomFinish {
   blockwork?: boolean;
   /** Lit by its own fittings: the room's general light only a little fill. */
   ownLights?: boolean;
+  /**
+   * Where its title card goes, metres, if not across its east wall: its
+   * middle, its turn (0 faces south) and its scale (1 is 3.6 × 1.2 m).
+   */
+  titleCard?: { x: number; y: number; z: number; yaw: number; scale?: number };
 }
 
 const EXHIBITS: Record<
@@ -190,6 +196,7 @@ const EXHIBITS: Record<
   dev43: () => import('./plant/loading-gallery'),
   dev44: () => import('./plant/chemical-handling'),
   dev47: () => import('./plant/touch-panels'),
+  dev48: () => import('./plant/touch-panels-plant'),
 };
 
 /**
@@ -431,8 +438,15 @@ export function startEquipmentRoom(
       },
       1024,
     );
-    card.mesh.position.set(halfX - 0.17, Math.min(2.2, height - 0.8), 0);
-    card.mesh.rotation.y = -Math.PI / 2;
+    const placedCard = finish?.titleCard;
+    if (placedCard) {
+      card.mesh.position.set(placedCard.x, placedCard.y, placedCard.z);
+      card.mesh.rotation.y = placedCard.yaw;
+      card.mesh.scale.setScalar(placedCard.scale ?? 1);
+    } else {
+      card.mesh.position.set(halfX - 0.17, Math.min(2.2, height - 0.8), 0);
+      card.mesh.rotation.y = -Math.PI / 2;
+    }
     room.add(card.mesh);
 
     exhibits.forEach((exhibit, i) => {
