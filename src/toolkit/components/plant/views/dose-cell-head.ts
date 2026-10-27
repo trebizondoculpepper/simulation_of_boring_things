@@ -29,7 +29,7 @@ const CHLORELLA = { green: '#3f9b3a', pale: '#cfe9b0', dark: '#16301a' };
 type Readout = ReturnType<typeof bottleReadout>;
 
 /** The head's housing, metres: the same unit on every bottle. */
-export const DOSE_CELL_HEAD = { w: 0.2, h: 0.12, d: 0.15 } as const;
+export const DOSE_CELL_HEAD = { w: 0.2, h: 0.13, d: 0.15 } as const;
 
 /**
  * Chlorella's DoseCell head (the owner, 2026-10-27): the one powered unit
@@ -58,11 +58,19 @@ export function createDoseCellHead(
   const band = t.paint(acid ? '#b92b24' : '#d2ae20', 0.5);
   const front = d / 2;
 
-  // The housing, its band round its top, the motor's dome.
-  const shell = new Mesh(new RoundedBoxGeometry(w, h, d, 3, 0.012), grey);
+  // A clamshell of cast polycarbonate: front and back halves, their edges
+  // well rounded, the gasket between them in the chemical's colour; the
+  // front's face flat, where the fascia sits. The motor's dome on top.
+  const R = 0.012;
+  const shell = new Mesh(new RoundedBoxGeometry(w, h, d, 3, R), grey);
   shell.position.set(0, h / 2, 0);
   group.add(shell);
-  t.box(group, band, w + 0.002, 0.014, d + 0.002, 0, h - 0.022, 0);
+  const gasket = new Mesh(
+    new RoundedBoxGeometry(w + 0.002, h + 0.002, 0.006, 3, R),
+    band,
+  );
+  gasket.position.set(0, h / 2, -d * 0.15);
+  group.add(gasket);
   t.cyl(group, dark, 0.048, 0.012, -0.045, h + 0.006, -0.02, 'y', 24);
   t.cyl(
     group,
@@ -92,12 +100,21 @@ export function createDoseCellHead(
   // green); HI, LO, CALL and PUMP lamps; three keys that work: ◄ and ►
   // turn its pages (contents, switches, pump), TEST lights every lamp.
   const green = t.paint(CHLORELLA.green, 0.45);
-  t.box(group, green, w * 0.9, h * 0.86, 0.003, 0, h * 0.5, front + 0.0005);
+  t.box(
+    group,
+    green,
+    w - 2 * R - 0.008,
+    h - 2 * R - 0.008,
+    0.003,
+    0,
+    h * 0.5,
+    front + 0.0005,
+  );
   t.box(
     group,
     t.paint('#1b211d', 0.3),
-    w * 0.84,
-    h * 0.78,
+    w - 2 * R - 0.016,
+    h - 2 * R - 0.016,
     0.003,
     0,
     h * 0.5,
@@ -106,7 +123,7 @@ export function createDoseCellHead(
   const GW = 96;
   const GH = 40;
   const lcd = f.printed(0.104, 0.044, () => {}, GW * 4, true);
-  lcd.mesh.position.set(0, h * 0.66, front + 0.0048);
+  lcd.mesh.position.set(0, h * 0.645, front + 0.0048);
   lcd.mesh.userData.live = true;
   group.add(lcd.mesh);
   let page = 0;
@@ -190,7 +207,7 @@ export function createDoseCellHead(
       0.0022,
       0.004,
       x,
-      h * 0.34,
+      h * 0.4,
       front + 0.005,
       'z',
       12,
@@ -199,7 +216,7 @@ export function createDoseCellHead(
       group,
       name,
       x + 0.0105,
-      h * 0.34,
+      h * 0.4,
       front + 0.0047,
       0.0036,
       '#cfd6db',
@@ -224,17 +241,17 @@ export function createDoseCellHead(
         draw();
       },
     });
-    b.object.position.set(x, h * 0.22, front + 0.005);
+    b.object.position.set(x, h * 0.27, front + 0.005);
     b.object.scale.setScalar(0.2);
     group.add(b.object);
     parts.add(b);
-    f.label(group, legend, x, h * 0.13, front + 0.0047, 0.0034, '#cfd6db');
+    f.label(group, legend, x, h * 0.175, front + 0.0047, 0.0034, '#cfd6db');
   });
   f.label(
     group,
     'DOSECELL',
     -0.045,
-    h * 0.17,
+    h * 0.2,
     front + 0.0047,
     0.0055,
     CHLORELLA.pale,

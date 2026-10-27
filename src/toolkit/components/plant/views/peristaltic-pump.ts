@@ -29,7 +29,8 @@ import { onPlinth } from './plinth';
 /**
  * A small peristaltic dosing pump (the owner, 2026-10-27: the bland box
  * made to look the part), after the Watson-Marlow Qdos and 300 series: a
- * rounded cast casing on rubber feet; on its left face the pump head, a
+ * clamshell case of cast polycarbonate on rubber feet, its fascia within
+ * the flat of its front; on its left face the pump head, a
  * clear hinged guard over a rotor whose three rollers squeeze a loop of
  * reinforced tube against the track, the tube in at the bottom and out at
  * the top through its clamps; Grundflow's (blue, orange, grey): on its
@@ -47,8 +48,8 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
   const f = tools(kit);
   const maker = brandLivery(kit, 'grundflow');
   const group = new Group();
-  const W = 0.17;
-  const H = 0.19;
+  const W = 0.19;
+  const H = 0.21;
   const D = 0.15;
   const body = maker.paint.casing;
   const dark = t.paint('#25292b', 0.6);
@@ -62,19 +63,19 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
     [W / 2 - 0.02, D / 2 - 0.02],
   ] as const)
     t.cyl(group, rubber, 0.012, 0.01, x, 0.005, z, 'y', 12);
-  const shell = new Mesh(new RoundedBoxGeometry(W, H, D, 4, 0.018), body);
+  // A clamshell of cast polycarbonate: two halves, front and back, their
+  // edges well rounded, a dark seam where they meet; the front's face flat,
+  // where the fascia sits.
+  const R = 0.018;
+  const shell = new Mesh(new RoundedBoxGeometry(W, H, D, 4, R), body);
   shell.position.set(0, 0.01 + H / 2, 0);
   group.add(shell);
-  t.box(
-    group,
-    maker.paint.main,
-    W + 0.002,
-    0.012,
-    D + 0.002,
-    0,
-    0.01 + H * 0.3,
-    0,
+  const seam = new Mesh(
+    new RoundedBoxGeometry(W + 0.002, H + 0.002, 0.004, 4, R),
+    t.paint('#3a3f42', 0.6),
   );
+  seam.position.set(0, 0.01 + H / 2, -D * 0.12);
+  group.add(seam);
 
   // The pump head on the left face: its housing, the track, the rotor and
   // its rollers, the loop of tube, the clear guard.
@@ -151,24 +152,27 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
   // mode and a flow bar; START (green) and STOP (red) keys, ▲ and ▼ to set
   // the rate; RUN and ALARM lamps; Grundflow's wordmark beneath.
   const front = D / 2 + 0.001;
-  const panelY = 0.01 + H * 0.56;
+  // The fascia within the flat of the face, clear of its rounded edges.
+  const panelY = 0.01 + H / 2;
+  const flatW = W - 2 * R;
+  const flatH = H - 2 * R;
   t.box(
     group,
     maker.paint.main,
-    W * 0.86,
-    H * 0.8,
+    flatW - 0.008,
+    flatH - 0.008,
     0.004,
-    0.01,
+    0,
     panelY,
     front + 0.001,
   );
   t.box(
     group,
     t.paint('#1e2226', 0.28),
-    W * 0.78,
-    H * 0.72,
+    flatW - 0.016,
+    flatH - 0.016,
     0.003,
-    0.01,
+    0,
     panelY,
     front + 0.004,
   );
@@ -178,7 +182,7 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
   const GH = 72;
   const P = 4;
   const tft = f.printed(0.1, 0.06, () => {}, GW * P, true);
-  tft.mesh.position.set(0.01, 0.01 + H * 0.74, front + 0.0058);
+  tft.mesh.position.set(0.005, 0.01 + H * 0.72, front + 0.0058);
   tft.mesh.userData.live = true;
   group.add(tft.mesh);
   const drawTft = (
@@ -291,7 +295,7 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
       '#cfd6db',
     );
   const mark = brandPlate(kit, 'grundflow', 0.058, 'PERI 30');
-  mark.position.set(0.042, 0.01 + H * 0.3, front + 0.0056);
+  mark.position.set(0.03, 0.01 + H * 0.3, front + 0.0056);
   group.add(mark);
   // A fine cast texture: shallow ribs along the casing's top.
   for (let i = 0; i < 6; i++)
@@ -305,16 +309,6 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
       0.01 + H + 0.001,
       -D / 2 + 0.03 + i * 0.018,
     );
-  f.label(
-    group,
-    label,
-    0.012,
-    0.01 + H * 0.06,
-    front,
-    0.006,
-    '#1b1b1b',
-    '#f4f3ee',
-  );
 
   // The cable gland at the back, its lead down to the floor.
   t.cyl(group, dark, 0.008, 0.014, W / 2 - 0.03, 0.05, -D / 2 - 0.007, 'z', 10);

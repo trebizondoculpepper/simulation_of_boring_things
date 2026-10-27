@@ -8,8 +8,9 @@ import { noiseSource } from '../../core/audio/part-loops';
  * - `SUBMERGED_PUMP`: the DoseCell's pump, down in its bottle: a motor's
  *   50 Hz hum and its harmonic heard through liquid and plastic, so dull
  *   (lowpassed hard), with a soft diaphragm thump twice a second;
- * - `PERISTALTIC_PUMP`: a geared motor's thin whine under the rollers'
- *   rhythmic squeeze of the tube, three a turn.
+ * - `PERISTALTIC_PUMP`: a geared servo running easily (the owner,
+ *   2026-10-27): a fairly low hum, not a whine, under the rollers'
+ *   soft rhythmic squeeze of the tube, three a turn.
  */
 
 export const SUBMERGED_PUMP: LoopRecipe = (context, out) => {
@@ -57,20 +58,29 @@ export const PERISTALTIC_PUMP: LoopRecipe = (context, out) => {
   const master = context.createGain();
   master.gain.value = 0.035;
   master.connect(out);
-  // The geared motor's whine.
-  const whine = context.createOscillator();
-  whine.type = 'triangle';
-  whine.frequency.value = 420;
-  const wg = context.createGain();
-  wg.gain.value = 0.25;
-  whine.connect(wg).connect(master);
-  whine.start();
+  // The geared servo's low hum, and its gear mesh a little above it.
+  const hum = (
+    [
+      [96, 0.4],
+      [192, 0.12],
+      [288, 0.04],
+    ] as const
+  ).map(([hz, level]) => {
+    const osc = context.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = hz;
+    const g = context.createGain();
+    g.gain.value = level;
+    osc.connect(g).connect(master);
+    osc.start();
+    return osc;
+  });
   // The rollers squeezing the tube: a soft, rubbery swish three times a turn.
   const noise = noiseSource(context);
   const band = context.createBiquadFilter();
   band.type = 'bandpass';
-  band.frequency.value = 650;
-  band.Q.value = 1.4;
+  band.frequency.value = 320;
+  band.Q.value = 1.2;
   const gate = context.createGain();
   gate.gain.value = 0.3;
   const lfo = context.createOscillator();
@@ -82,5 +92,5 @@ export const PERISTALTIC_PUMP: LoopRecipe = (context, out) => {
   noise.connect(band).connect(gate).connect(master);
   noise.start();
   lfo.start();
-  return [whine, noise, lfo];
+  return [...hum, noise, lfo];
 };

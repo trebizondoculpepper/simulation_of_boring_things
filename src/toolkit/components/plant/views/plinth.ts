@@ -14,7 +14,16 @@ export const PLINTH_TOP = 1.0;
 export function onPlinth(kit: PanelKit, item: Object3D, w = 0.45): Group {
   const t = plantTools(kit);
   const group = new Group();
-  t.box(group, t.paint('#8d9290', 0.7), w, PLINTH_TOP, w, 0, PLINTH_TOP / 2, 0);
+  t.box(
+    group,
+    t.paint('#8d9290', 0.7),
+    w,
+    PLINTH_TOP - 0.04,
+    w,
+    0,
+    (PLINTH_TOP - 0.04) / 2,
+    0,
+  );
   t.box(
     group,
     t.paint('#6f7472', 0.6),
