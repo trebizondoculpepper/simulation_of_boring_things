@@ -13,3 +13,7 @@ Approved by the owner, 2026-10-27, from mission 091's prototype: "a sort of earl
 ## Site-made box
 
 A small enclosure made up by the site's own electrician: a standard grey steel box, a few heavy-duty devices on its door, its legends on embossed Dymo tape, only its warning a printed sticker. Example: the switch room's mains / generator changeover switch (the owner, 2026-10-27).
+
+## Starship bridge touch station (parody)
+
+Approved by the owner, 2026-10-27, for the control room (mission 092): the pool's operations in the manner of a late-1980s television starship's bridge: flat, sloping, touch-sensitive panels of colour-blocked rounded bars and buttons on black, each touch answered with a bleep, a station for each major system round the operator's chair, and a giant main screen ahead. In the game's own design, lettering and sounds, never another work's artwork, fonts, names or logos. The joke is the grandeur applied to a swimming pool.
