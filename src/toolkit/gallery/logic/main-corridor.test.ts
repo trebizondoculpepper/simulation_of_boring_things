@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   CORRIDOR_DOORS,
   CORRIDOR_QUADRANTS,
+  corridorArrival,
   corridorSolids,
   dadoPieces,
   corridorYaw,
@@ -263,5 +264,44 @@ describe('the corridor’s quadrant colours', () => {
     expect(dadoPieces('inner-south', MAIN_CORRIDOR.width, S / 2)).toEqual([
       { a: MAIN_CORRIDOR.width, b: S / 2, quadrant: 'south-west' },
     ]);
+  });
+});
+
+describe('arriving in the corridor from a room', () => {
+  it('stands outside that room’s doors, facing away from them, the bridge at the control room’s', () => {
+    const bridge = corridorArrival('bridge')!;
+    const control = corridorArrival('control_room')!;
+    expect(bridge).toEqual(control);
+    const door = CORRIDOR_DOORS.find((d) => d.to === 'control_room')!;
+    const p = doorPlace(door);
+    expect(Math.hypot(bridge.x - p.x, bridge.z - p.z)).toBeCloseTo(1.5);
+    expect(inCorridor(bridge.x, bridge.z)).toBe(true);
+    // Facing into the corridor: its view (sin yaw, −cos yaw) is the door's way in.
+    expect(Math.sin(bridge.yaw)).toBeCloseTo(p.into[0]);
+    expect(-Math.cos(bridge.yaw)).toBeCloseTo(p.into[1]);
+    expect(corridorArrival(null)).toBeNull();
+    expect(corridorArrival('nowhere')).toBeNull();
+    // Every door: from its room (and its side), the walker stands outside it.
+    for (const d of CORRIDOR_DOORS) {
+      const a = corridorArrival(d.to, d.wall.replace('inner-', ''))!;
+      const p = doorPlace(d);
+      expect(inCorridor(a.x, a.z), d.to).toBe(true);
+      expect(Math.hypot(a.x - p.x, a.z - p.z), d.to).toBeCloseTo(1.5);
+    }
+  });
+
+  it('tells the wet hall’s two pairs of doors apart, east and west', () => {
+    const east = corridorArrival('wet_hall', 'east')!;
+    const west = corridorArrival('wet_hall', 'west')!;
+    expect(east.x).toBeGreaterThan(west.x);
+    expect(corridorArrival('wet_hall')).toEqual(
+      corridorArrival(
+        'wet_hall',
+        CORRIDOR_DOORS.find((d) => d.to === 'wet_hall')!.wall.replace(
+          'inner-',
+          '',
+        ),
+      ),
+    );
   });
 });

@@ -251,3 +251,35 @@ export function dadoPieces(
     };
   });
 }
+
+/**
+ * Where a walker arriving from `from` stands in the corridor (a link's
+ * `?from=`, a room's way back): a metre and a half out from that room's
+ * doors, facing along the corridor's way into the ring, away from them.
+ * The bridge comes back through the control room's doors (the CONTROL
+ * ROOM MODE knob's, `control-room-mode.ts`). A room with more than one
+ * pair of doors here (the wet hall's east and west) is told which by
+ * `side` (`?door=east` or `west`, the wall's side), else the first. Null
+ * for a room with no door here. Metres, the corridor's frame; yaw as the
+ * walker's (0 looks −z).
+ */
+export function corridorArrival(
+  from: string | null,
+  side?: string | null,
+): { x: number; z: number; yaw: number } | null {
+  if (!from) return null;
+  const to = from === 'bridge' ? 'control_room' : from;
+  const doors = CORRIDOR_DOORS.filter((d) => d.to === to);
+  const door =
+    (side &&
+      doors.find((d) => d.wall.replace('inner-', '') === side.toLowerCase())) ||
+    doors[0];
+  if (!door) return null;
+  const p = doorPlace(door);
+  const out = 1.5;
+  return {
+    x: p.x + p.into[0] * out,
+    z: p.z + p.into[1] * out,
+    yaw: Math.atan2(p.into[0], -p.into[1]),
+  };
+}

@@ -36,6 +36,7 @@ import {
   doorPlace,
   inCorridor,
   MAIN_CORRIDOR,
+  corridorArrival,
 } from '../logic/main-corridor';
 import {
   createPanelKit,
@@ -371,8 +372,21 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     camera,
     metre,
     floorY: 0,
-    // In the outside corner, looking along the east leg.
-    start: { x: 2 * metre, z: 2 * metre, yaw: Math.PI / 2 },
+    // Outside the doors of the room it came from (`?from=`), or else in
+    // the outside corner, looking along the east leg.
+    start: (() => {
+      const params =
+        typeof location === 'undefined'
+          ? null
+          : new URLSearchParams(location.search);
+      const a = corridorArrival(
+        params?.get('from') ?? null,
+        params?.get('door'),
+      );
+      return a
+        ? { x: a.x * metre, z: a.z * metre, yaw: a.yaw }
+        : { x: 2 * metre, z: 2 * metre, yaw: Math.PI / 2 };
+    })(),
     floorAt: () => 0,
     // Each doorway shut to walking but while its doors stand open and the
     // room beyond is seen through them.
