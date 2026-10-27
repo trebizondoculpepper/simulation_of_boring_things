@@ -44,6 +44,7 @@ import { createFramedChemicalTank } from './framed-chemical-tank';
 import { createDoseBottle } from './dose-bottle';
 import { chlorellaPlate } from './chlorella-plate';
 import { hose } from './hose';
+import { createPipeMarker } from './pipe-marker';
 import { createPeristalticPump } from './peristaltic-pump';
 import {
   bottleLevel,
@@ -929,6 +930,14 @@ export function createChemicalPipeSamples(kit: PanelKit) {
   outer.position.set(-0.2, y1, -0.1);
   group.add(outer);
   t.cyl(group, abs, 0.057, 0.4, 0.6, y1, -0.1, 'x', 28);
+  const dc = createPipeMarker(kit, {
+    r: 0.057,
+    chemical: 'hypochlorite',
+    contained: true,
+  });
+  dc.object.position.set(0.6, y1, -0.1);
+  dc.object.scale.x = Math.min(1, 0.38 / dc.length);
+  group.add(dc.object);
   t.cyl(group, t.paint('#3b3e41', 0.5), 0.03, 1.7, 0, y1, -0.1, 'x', 20);
   for (const x of [-0.6, -0.2, 0.2])
     t.cyl(group, t.paint('#e5c43a', 0.5), 0.053, 0.02, x, y1, -0.1, 'x', 16);
@@ -961,11 +970,16 @@ export function createChemicalPipeSamples(kit: PanelKit) {
   t.rod(group, abs, [-0.2, y2, -0.1], [-0.2, y2 + 0.2, -0.1], 0.025, 16);
   t.cyl(group, abs, 0.04, 0.06, 0.2, y2, -0.1, 'x', 8);
   t.rod(group, abs, [0.5, y2, -0.1], [0.5, y2 + 0.25, -0.1], 0.025, 16);
-  for (const [x, c] of [
-    [-0.6, BAND.acid],
-    [0.0, BAND.hypochlorite],
-  ] as const)
-    t.cyl(group, t.paint(c, 0.5), 0.027, 0.06, x, y2, -0.1, 'x', 16);
+  // Its identification markers (BS 1710): an acid line and a hypochlorite
+  // line, each with its flow.
+  for (const [x, chemical, flow] of [
+    [-0.5, 'acid', 1],
+    [0.15, 'hypochlorite', -1],
+  ] as const) {
+    const m = createPipeMarker(kit, { r: 0.025, chemical, flow });
+    m.object.position.set(x, y2, -0.1);
+    group.add(m.object);
+  }
   f.label(
     group,
     'ABS CHEMICAL PIPE, SOLVENT-WELDED · DN25',
@@ -975,26 +989,6 @@ export function createChemicalPipeSamples(kit: PanelKit) {
     0.022,
     '#1b1b1b',
     '#f4f3ee',
-  );
-  f.label(
-    group,
-    'HCl 10% →',
-    -0.6,
-    y2 - 0.06,
-    -0.07,
-    0.016,
-    '#ffffff',
-    BAND.acid,
-  );
-  f.label(
-    group,
-    'NaOCl 14% →',
-    0.0,
-    y2 - 0.06,
-    -0.07,
-    0.016,
-    '#1b1b1b',
-    BAND.hypochlorite,
   );
   // PE dosing tube: 6 × 4 mm, clipped in square runs on a board.
   const y3 = 0.5 + 0.08;
