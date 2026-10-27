@@ -32,8 +32,19 @@ So the screens do not take over (the `CLAUDE.md` rule stands): they are a couple
 - **Beyond it, round the walls, consoles of different eras, each after its archetype:** the 1980s discrete industrial components (the existing mimics and annunciator, large panels of 30 mm devices, moving-coil meters); the 1990s LCD displays (character and segment LCD panels, the early-2000s compact terminals of mission 091 and their like); and a couple of mid-2010s computer-generated displays (the LED-matrix process wall and a period HMI workstation with its assistant mascot, as above).
 - Each console its own kind of interface, all reading and working the one world, so the room shows the same plant several ways.
 
+## The room itself (the owner, 2026-10-27)
+
+"I think we need to begin by prototyping the new control room. So, I have an idea that actually, to make it more dramatic, you would enter from the corridor, immediately go up a flight of stairs, which would take us an entire 8-meter story, and then it opens out into a seven-sided room. It'll be like a flattened heptagon with one large wall and a sort of symmetrical layout. And in the center of the room is a similarly shaped desk where the operator's chair is. Around the operator on all of the walls will be controls, projections, mimics, displays, the master control room for the entire facility."
+
+- **The approach:** from the corridor door straight onto a stair that climbs a whole 8 m storey. UK rules (Approved Document K) allow at most 16 risers to a flight, so 8 m is about 46 risers of about 175 mm in three or more flights with landings: a switchback stair in its own stair hall (default; the owner may prefer another form).
+- **The room:** a flattened heptagon, symmetrical about one axis: one large wall (the front, the main display wall), its two neighbours angled in, and four shorter walls closing round the back. With seven sides the axis runs from the large wall's middle to the opposite corner, so the stair arrives through the floor near that back corner and the room opens out ahead, the big wall facing the walker as they come up (default).
+- **The desk:** in the middle, a heptagonal operator's desk of the same shape (smaller, its large side toward the big wall), the operator's chair within it, its console within arm's reach.
+- **The walls:** every wall carries controls, projections, mimics and displays of the eras above: the master control room for the whole facility.
+- **First:** prototype the room in a dev room (stair and all, blank consoles as placeholders where needed), before any consoles are built or the real control room changes.
+
 ## Stages
 
+0. The room's prototype: the stair hall and the heptagonal room with its desk, in a new dev room, walkable, as above.
 1. Design note: the archetype added to `doc/design/control-interface-archetypes.md` once approved; the video wall's tiles, the HMI's screens and the mascot's character and lines sketched.
 2. A dev room prototype (dev39, the control assemblies room): the desk console first, then one LED-matrix tile animating one process from a trial state; one workstation screen with its tabs, trend and alarm banner; the mascot popping up on cues.
 3. The control room laid out: the controller's desk console in the middle; round the walls the 1980s panels (the existing mimics and annunciator kept or moved), the 1990s LCD consoles and the couple of mid-2010s screens; the period features; all bound to the world and its enhanced network.
