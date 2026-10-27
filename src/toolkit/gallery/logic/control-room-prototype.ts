@@ -993,3 +993,15 @@ export function bridgePanelPlaces(): PanelPlace[] {
   });
   return [...stations, central, ...walls];
 }
+
+/** The bridge's main viewscreen on the big wall: its middle, facing the room, and its glass. */
+export function viewscreenPlace() {
+  const screen = PLACEHOLDERS.find((p) => p.side === 0)!;
+  const height = CONTROL_ROOM.ceiling - 1.2;
+  return {
+    x: 0,
+    y: STOREY + 0.5 + height / 2,
+    z: CONTROL_ROOM.frontZ + screen.depth + 0.03,
+    size: { w: screen.width * 0.94, h: height * 0.84 },
+  };
+}

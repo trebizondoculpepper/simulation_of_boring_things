@@ -5,7 +5,11 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createAnnunciator } from '../../components/industrial-control/logic/annunciator';
 import { markComponent } from '../../components/core/views/component-identity';
 import { ANNUNCIATOR_ALARMS } from '../logic/control-room-demo';
-import { bridgePanelPlaces } from '../logic/control-room-prototype';
+import {
+  bridgePanelPlaces,
+  viewscreenPlace,
+} from '../logic/control-room-prototype';
+import { createViewscreen } from '../views/bridge-viewscreen';
 import { BRIDGE_BINDINGS, bridgeSpec } from '../logic/bridge-bindings';
 import { plantReadingOf } from '../logic/world-reading';
 import { createParodyPanel } from '../views/parody-panel';
@@ -29,7 +33,7 @@ function installConsoles(kit: PanelKit): Part[] {
     const world = store?.world.value;
     return world ? { world, reading: plantReadingOf(world, 'pool_02') } : null;
   };
-  return bridgePanelPlaces().map((place, i) => {
+  const consoles = bridgePanelPlaces().map((place, i) => {
     const spec = bridgeSpec(place.code);
     const binding = BRIDGE_BINDINGS[place.code];
     const panel = createParodyPanel(kit, spec, i, {
@@ -67,6 +71,27 @@ function installConsoles(kit: PanelKit): Part[] {
       },
     };
   });
+  // The main viewscreen, live, on the big wall (`viewscreenPlace`).
+  const vp = viewscreenPlace();
+  const screen = createViewscreen(kit, vp.size, context, shared);
+  screen.object.position.set(vp.x, vp.y, vp.z);
+  markComponent(screen.object, {
+    name: 'Main viewscreen',
+    model: { node: 'mimic-pool' },
+    status: () => screen.status?.(),
+  });
+  const sp = screen.parts!;
+  return [
+    ...consoles,
+    {
+      object: screen.object as Group,
+      uses: sp.uses,
+      update: (delta: number) => screen.update?.(delta),
+      onEvent: sp.onEvent,
+      setAudible: sp.setAudible,
+      dispose: () => sp.dispose(),
+    },
+  ];
 }
 
 /**

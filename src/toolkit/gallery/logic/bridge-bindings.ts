@@ -899,3 +899,11 @@ export function refusal(cmd: Command): string | null {
     return `NOT YET MODELLED · ${cmd.what.toUpperCase()}`;
   return null;
 }
+
+/**
+ * What the main viewscreen shows (mission 095, for now): the alarm list
+ * while any alarm on the bridge's annunciator is unaccepted, else the
+ * main pool's circuit.
+ */
+export const viewscreenShows = (unaccepted: number): 'ALARMS' | 'SCHEMATIC' =>
+  unaccepted > 0 ? 'ALARMS' : 'SCHEMATIC';

@@ -1,6 +1,6 @@
 # 095: The bridge becomes the control room
 
-Status: under way (2026-10-27): stage 1 done, the bridge a game room off the main corridor (`?room=bridge`), the old control room retired and kept by its URL (`?room=control_room`); then the bridge's look after the owner's brief below (2026-10-27); the first batch of panels wired (below); next, the rest of the control room's boards and the viewscreen. Written 2026-10-27 from the owner's request.
+Status: under way (2026-10-27): stage 1 done, the bridge a game room off the main corridor (`?room=bridge`), the old control room retired and kept by its URL (`?room=control_room`); then the bridge's look after the owner's brief below (2026-10-27); the first batch of panels wired (below); the live viewscreen (2026-10-27); next, the rest of the control room's boards. Written 2026-10-27 from the owner's request.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first, then missions [092](092-control-room-2010s.md) (the grand control room and its dev rooms dev45 and dev46) and [093](093-bridge-widget-kit.md) (the ui2d kit, the touch surfaces, dev47 and dev48's 69 panels reimagined), and [the Central Control research](../research/central-control-console.md). Markdown is one paragraph per line.
 
@@ -59,3 +59,7 @@ Each panel on the bridge is dev48's reimagining (`parody-specs.ts`) built by the
 | Side wall, east                  | WH-CP1                | the stores, day tanks, selector, pumps and trips of the distribution                                                 | —                                                                                     | —                                                                                       |
 
 Checked in the game: P-101B started from the bridge's PL2-CP1 and seen running on the Olympic plant room's mimic; its RESET refused with LOCAL CONTROL ONLY. Doing so found a save bug (a starter's START given in AUTO was dropped on loading: `fillDefaults` took a saved value of another type than the default's null), fixed. No world shape changed: no migration.
+
+## The main viewscreen (2026-10-27)
+
+The big wall's screen is live (`views/bridge-viewscreen.ts`): the Olympic's circulation as an animated schematic (its machines' states the CR-MP1 wiring's, the water moving while its pumps run) with its flow, chlorine, pH, temperature and bathers; while any alarm on the bridge's annunciator is unaccepted, a flashing ALERT and the alarm list with the room to go to, until ACCEPT at Central Control or CR-CP2. Its other modes (CCTV, trends, the selector) remain mission 093's stage 2.

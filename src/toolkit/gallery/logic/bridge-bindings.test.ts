@@ -10,6 +10,7 @@ import {
   lookup,
   refusal,
   unwired,
+  viewscreenShows,
 } from './bridge-bindings';
 import type { BridgeContext, Command } from './bridge-bindings';
 import { plantReadingOf } from './world-reading';
@@ -114,5 +115,10 @@ describe('the bridge’s panels, wired to the world (mission 095)', () => {
     expect(share).toBeGreaterThanOrEqual(0);
     expect(words).toMatch(/\/ 312$/);
     expect(cc.gauges!['HYPOCHLORITE STORE'](c)[0]).toBeCloseTo(1);
+  });
+
+  it('puts the alarms on the viewscreen while any is unaccepted, else the circuit', () => {
+    expect(viewscreenShows(2)).toBe('ALARMS');
+    expect(viewscreenShows(0)).toBe('SCHEMATIC');
   });
 });
