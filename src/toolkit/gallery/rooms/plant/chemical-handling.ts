@@ -2,6 +2,7 @@ import type { PlantExhibit } from './exhibit';
 import { layoutSquarePlantRoom } from '../../logic/plant-room-layout';
 import type { ExhibitSize } from '../../logic/plant-room-layout';
 import { createPeristalticDemo } from '../../../components/plant/views/peristaltic-pump';
+import { createLevelInstrumentsDemo } from '../../../components/plant/views/level-instruments';
 import { createChemicalValveDemo } from '../../../components/plant/views/chemical-ball-valve';
 import { createLeakDetectionDemo } from '../../../components/plant/views/leak-detection';
 import { createDoseCellDemo } from '../../../components/plant/views/dose-cell-head';
@@ -102,6 +103,13 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       'The wet hall’s panel, Penfold Controls: each store and day tank on a meter, filling lamps, selector and pump lamps, an annunciator; run by its own trials',
     size: { w: 1.7, d: 0.6, h: 2.1, mount: 'floor' },
     build: (kit) => createDistributionPanelDemo(kit),
+  },
+  {
+    title: 'Level instruments',
+    reference:
+      'The bulk tanks’ level transmitters, ultrasonic (after Siemens Probe LU) and 80 GHz radar (after VEGAPULS C 21), and the Kessler-Moody LI-5 field indicator they drive',
+    size: { w: 0.7, d: 0.7, h: 1.4, mount: 'floor' },
+    build: (kit) => createLevelInstrumentsDemo(kit),
   },
   {
     title: 'Chemical isolation valves',

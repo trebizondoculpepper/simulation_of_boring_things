@@ -6,6 +6,10 @@ import { brandLivery } from '../../core/views/brand-livery';
 import { drawBrandMark, wordmarkFont } from '../../core/views/brand-logo';
 import { plantTools } from './plant-tools';
 import { createChemicalLabel } from './chemicals-signs';
+import {
+  createLevelIndicator,
+  createLevelTransmitter,
+} from './level-instruments';
 import { createChemicalBallValve } from './chemical-ball-valve';
 import { createPartSet } from '../../core/parts/parts';
 
@@ -251,22 +255,11 @@ export function createFramedChemicalTank(
   // The level transmitter in its socket: ultrasonic, a squat white head
   // over a wide transducer face (after Siemens' Probe LU); or 80 GHz
   // radar, a compact grey barrel with a PTFE lens (after VEGAPULS C 21).
-  const lt = new Group();
+  const lt = createLevelTransmitter(kit, acid);
   lt.position.set(L / 8, top, 0);
   group.add(lt);
   socket(L / 8, 0).visible = false;
-  t.cyl(lt, hdpe, 0.06, 0.05, 0, 0.025, 0, 'y', 16);
-  if (acid) {
-    t.cyl(lt, t.paint('#5d6366', 0.4, 0.2), 0.042, 0.17, 0, 0.135, 0, 'y', 24);
-    t.cyl(lt, t.paint('#e8e6dc', 0.5), 0.044, 0.02, 0, 0.06, 0, 'y', 24);
-    t.cyl(lt, dark, 0.044, 0.025, 0, 0.23, 0, 'y', 24);
-  } else {
-    t.cyl(lt, t.paint('#e9eae4', 0.5), 0.07, 0.08, 0, 0.09, 0, 'y', 24);
-    t.cyl(lt, t.paint('#d9dad4', 0.5), 0.05, 0.13, 0, 0.195, 0, 'y', 24);
-    t.cyl(lt, t.paint('#2f63a3', 0.5), 0.052, 0.025, 0, 0.27, 0, 'y', 24);
-  }
   // Its cable gland, and the cable over to the junction box on the post.
-  t.cyl(lt, dark, 0.014, 0.04, 0.05, 0.17, 0, 'x', 8);
   const jbX = L / 2 + 0.11;
   const jbY = Math.min(1.55, top - 0.15);
   const jbZ = W / 2 - 0.05;
@@ -352,52 +345,13 @@ export function createFramedChemicalTank(
   // The local display: a loop-powered field indicator, after the
   // Kessler-Moody ones, on a bracket at eye height: five red digits of
   // litres, a bar of the contents, and its own gland underneath.
-  const disp = new Group();
-  disp.position.set(
+  const indicator = createLevelIndicator(kit, { tag, litres });
+  indicator.object.position.set(
     Math.min(0.3, L / 2 - 0.15),
     Math.min(1.55, top - 0.12),
     W / 2 + 0.07,
   );
-  group.add(disp);
-  t.box(disp, galv, 0.04, 0.12, 0.04, 0, -0.08, -0.03);
-  t.box(disp, t.paint('#33393b', 0.5), 0.15, 0.12, 0.07, 0, 0, 0);
-  t.cyl(disp, dark, 0.011, 0.025, 0, -0.072, 0, 'y', 8);
-  const face = f.printed(0.13, 0.095, () => {}, 256, true);
-  face.mesh.position.set(0, 0, 0.036);
-  face.mesh.userData.live = true;
-  disp.add(face.mesh);
-  let shown = -1;
-  const drawFace = (fraction: number) => {
-    const c = face.context;
-    const w = c.canvas.width;
-    const h = c.canvas.height;
-    c.fillStyle = '#121616';
-    c.fillRect(0, 0, w, h);
-    c.fillStyle = '#6f7a7a';
-    c.font = 'bold 16px sans-serif';
-    c.fillText('KESSLER-MOODY  LI-5', 10, 20);
-    c.fillText(`${tag}  L`, w - 92, 20);
-    c.fillStyle = '#ff3a26';
-    c.font = 'bold 74px monospace';
-    c.textAlign = 'right';
-    c.fillText(
-      String(Math.round(fraction * litres)).padStart(5, ' '),
-      w - 14,
-      100,
-    );
-    c.textAlign = 'left';
-    c.strokeStyle = '#6f7a7a';
-    c.strokeRect(12, h - 50, w - 24, 26);
-    c.fillStyle = fraction > 0.95 ? '#ff3a26' : '#d9a21c';
-    c.fillRect(14, h - 48, (w - 28) * fraction, 22);
-    c.fillStyle = '#6f7a7a';
-    c.font = '14px sans-serif';
-    for (const p of [0, 25, 50, 75, 100])
-      c.fillText(`${p}`, 12 + ((w - 40) * p) / 100, h - 8);
-    face.texture.needsUpdate = true;
-  };
-  drawFace(0);
-  f.label(disp, `${tag}-LI`, 0, 0.075, 0.03, 0.016, '#1b1b1b', '#f4f3ee');
+  group.add(indicator.object);
 
   // The outlet: the steel flange near the foot, a PVC-U union ball valve,
   // its red lever, and the draw-off on to the transfer pumps.
@@ -559,10 +513,7 @@ export function createFramedChemicalTank(
     setLevel(fraction: number) {
       const v = Math.max(0, Math.min(1, fraction));
       setRod(v);
-      const r = Math.round(v * litres);
-      if (r === shown) return;
-      shown = r;
-      drawFace(v);
+      indicator.set(v);
     },
   };
 }
