@@ -1,7 +1,7 @@
 import { Group, Object3D } from 'three';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { musicPlaylist } from '../../components/sound/audio/music-playlist';
-import { signal } from '@preact/signals-core';
+import { effect, signal } from '@preact/signals-core';
 import { createChatter } from '../../components/sound/logic/console-chatter';
 import { startBridgeRoom } from './control-room-prototype';
 import type { Part } from '../../components/core/parts/parts';
@@ -24,7 +24,10 @@ import {
   designScreen,
 } from '../views/station-schematics';
 import { createViewscreen } from '../views/bridge-viewscreen';
-import { createBridgeLightsUp } from '../views/bridge-lights-up';
+import {
+  createBridgeLightsUp,
+  pageOpenedOnBridge,
+} from '../views/bridge-lights-up';
 import {
   ENTRANCE_BOOT,
   LIGHTS_UP,
@@ -233,6 +236,8 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   // Its lights coming up as the walker comes in, while MAIN LIGHTS is on
   // and its way live (the owner, 2026-10-27).
   let lightsOnTimer = 0;
+  // Whether the walker is on the bridge now.
+  let inside = false;
   const lightsUp = createBridgeLightsUp(() => {
     const w = world();
     return w ? bridgeMainLit(w) : true;
@@ -243,6 +248,27 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   let displays: BootGroup | null = null;
   const handle = startBridgeRoom(canvas, (kit) => {
     displays = bootGroupOf(kit);
+    // Built before the walker comes in (seen through the corridor's doors),
+    // its displays are dark, as its lights are, until the entrance boots
+    // them (the owner, 2026-10-27: it was seen already on from the hall).
+    if (!pageOpenedOnBridge())
+      displays.autoBoot({ from: Number.POSITIVE_INFINITY, spread: 0 });
+    // Reset to first found (the CONTROL ROOM MODE plate's RESET) while the
+    // walker is away: dark again but for its emergency glow, its displays
+    // black, ready to boot as the walker comes in (the owner, 2026-10-27).
+    if (store) {
+      const group = displays;
+      let heard = store.world.value.bridgeThemeHeard;
+      effect(() => {
+        const now = store.world.value.bridgeThemeHeard;
+        if (heard && !now && !inside) {
+          lightsUp.reset();
+          group.bootAll(0, Number.POSITIVE_INFINITY);
+          group.autoBoot({ from: Number.POSITIVE_INFINITY, spread: 0 });
+        }
+        heard = now;
+      });
+    }
     return [
       ...installConsoles(kit),
       installLightSwitch(kit, () => lightsUp.glow()),
@@ -262,10 +288,12 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   };
   return Object.assign(dispose, handle, {
     enter: (from: string | null) => {
+      inside = true;
       // Walked in from the corridor, its displays boot as its lights come
       // up: black, their emblems in a scattered wave, their interfaces
       // drawn in as the under-console glow rises, before the main lights
       // (`ENTRANCE_BOOT`); arriving any other way they are simply on.
+      displays?.autoBoot(null);
       if (lightsUp.enter(from))
         displays?.bootAll(
           ENTRANCE_BOOT.spread,
@@ -306,6 +334,7 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
       );
     },
     suspend: () => {
+      inside = false;
       window.clearTimeout(lightsOnTimer);
       lightsUp.leave();
       chatter.setActive(false);

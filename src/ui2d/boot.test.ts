@@ -64,8 +64,9 @@ function panel() {
 describe('a display’s boot (the owner, 2026-10-27)', () => {
   it('runs black, emblem, fade, black, draw-in, on, in that order and time', () => {
     const T = BOOT_TIMING;
-    expect(T.emblem).toBeGreaterThanOrEqual(2);
-    expect(T.emblem).toBeLessThanOrEqual(3);
+    // About 5 s (the owner, 2026-10-27).
+    expect(T.emblem).toBeGreaterThanOrEqual(4);
+    expect(T.emblem).toBeLessThanOrEqual(6);
     expect(T.fade).toBeCloseTo(0.5);
     expect(T.draw).toBeCloseTo(1);
     expect(bootState(-0.1).phase).toBe('black');

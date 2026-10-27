@@ -34,7 +34,7 @@ export interface BootTiming {
 }
 
 export const BOOT_TIMING: BootTiming = {
-  emblem: 2.5,
+  emblem: 5.0,
   emblemIn: 0.3,
   fade: 0.5,
   gap: 0.15,

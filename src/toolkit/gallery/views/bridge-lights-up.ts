@@ -14,7 +14,7 @@ import type { LightStage } from '../logic/bridge-lights-up';
 let enteredBefore = false;
 
 /** Whether the page was opened (or reloaded) on the bridge. */
-function pageOpenedOnBridge() {
+export function pageOpenedOnBridge() {
   try {
     const nav = performance.getEntriesByType('navigation')[0] as
       | PerformanceNavigationTiming
@@ -49,6 +49,8 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
   /** The walker in, from `from`: whether the entrance plays (walked in from the corridor). */
   enter(from: string | null): boolean;
   leave(): void;
+  /** Back to the bridge as first found. */
+  reset(): void;
   /** The entrance's share of the under-console glow now (`entranceGlow`), 0 outside it. */
   glow(): number;
 } {
@@ -135,7 +137,24 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
       entrance = false;
       fall();
     },
-    glow: () => (entrance && !out && !falling ? entranceGlow(t) : 0),
+    /** Back to the bridge as first found (the CONTROL ROOM MODE plate's RESET): dark but for its emergency glow, never entered. */
+    reset() {
+      if (present) return;
+      enteredBefore = false;
+      entrance = false;
+      falling = null;
+      out = true;
+      current = dark;
+    },
+    // Under its emergency lights alone until first entered, seen from the
+    // corridor (the owner, 2026-10-27); in the entrance, until the main
+    // lights are up.
+    glow: () =>
+      entrance && !out && !falling
+        ? entranceGlow(t)
+        : !present && !enteredBefore
+          ? 1
+          : 0,
     update(delta) {
       if (!lights) collect();
       if (!lights) return;

@@ -19,7 +19,7 @@ describe('the bridge’s lights coming up (the owner, 2026-10-27)', () => {
       expect(l.fill).toBeCloseTo(LIGHTS_UP.floor);
     }
     expect(LIGHTS_UP.dark).toBeGreaterThanOrEqual(3);
-    expect(LIGHTS_UP.dark).toBeLessThanOrEqual(4.5);
+    expect(LIGHTS_UP.dark).toBeLessThanOrEqual(14);
   });
 
   it('brings the cove rings up first, then the dome, the walls and the aft strip', () => {
@@ -53,28 +53,21 @@ describe('the bridge’s lights coming up (the owner, 2026-10-27)', () => {
     }
   });
 
-  it('boots the displays first, then the glow under the consoles as their interfaces draw in, then the main lights', () => {
-    // Displays only at first: black, then their emblems in a scattered wave.
-    expect(entranceGlow(0)).toBe(0);
-    expect(entranceGlow(ENTRANCE_GLOW.at - 0.01)).toBe(0);
+  it('is first found under its emergency glow, its displays booting, the main lights two seconds after the last is on (the owner, 2026-10-27)', () => {
+    // The glow under the consoles from the moment the walker comes in.
+    expect(entranceGlow(0)).toBe(1);
     expect(ENTRANCE_BOOT.first).toBeGreaterThan(0);
     expect(ENTRANCE_BOOT.spread).toBeGreaterThan(0.5);
-    expect(ENTRANCE_BOOT.emblem).toBeGreaterThanOrEqual(2);
-    expect(ENTRANCE_BOOT.emblem).toBeLessThanOrEqual(3);
-    // The glow comes up as the interfaces draw in, after the first begins.
+    // The start delay about 2.7 s on average, the emblem about 5 s.
+    expect(ENTRANCE_BOOT.first + ENTRANCE_BOOT.spread / 2).toBeCloseTo(2.7, 1);
+    expect(ENTRANCE_BOOT.emblem).toBeGreaterThanOrEqual(4);
+    expect(ENTRANCE_BOOT.emblem).toBeLessThanOrEqual(6);
+    // The main lights two seconds after the last display is drawn in, and
+    // none of them on before.
     const drawn = entranceInterfaces();
-    expect(ENTRANCE_GLOW.at).toBeGreaterThanOrEqual(drawn.from);
-    expect(ENTRANCE_GLOW.at).toBeLessThan(drawn.to);
-    // Then the glow, quickly, full before the main lights begin, which
-    // begin about as the last interface is drawn.
-    const full = ENTRANCE_GLOW.at + ENTRANCE_GLOW.rise;
-    expect(entranceGlow(full)).toBe(1);
-    expect(full).toBeLessThan(LIGHTS_UP.dark);
-    expect(Math.abs(LIGHTS_UP.dark - drawn.to)).toBeLessThanOrEqual(1);
-    const gap = LIGHTS_UP.dark - ENTRANCE_GLOW.at;
-    expect(gap).toBeGreaterThanOrEqual(0.8);
-    expect(gap).toBeLessThanOrEqual(3);
-    for (const s of LIGHT_STAGES) expect(lightsUpLevels(full)[s]).toBe(0);
+    expect(LIGHTS_UP.dark - drawn.to).toBeCloseTo(2, 1);
+    for (const s of LIGHT_STAGES)
+      expect(lightsUpLevels(LIGHTS_UP.dark - 0.01)[s]).toBe(0);
   });
 
   it('keeps the glow while the main lights come up, then lets it fade (the switch keeping it, if on)', () => {
