@@ -5,8 +5,9 @@ import {
   LIGHT_SWITCH,
   bridgeEmergencyLit,
   bridgeMainLit,
+  GLOW_SPILL,
   bridgeSwitchLive,
-  emergencyPlan,
+  underConsoleGlow,
   lightSwitchPlace,
 } from './bridge-lighting';
 import {
@@ -14,9 +15,12 @@ import {
   STOREY,
   bridgeArrival,
   bridgeDoor,
+  PLATFORM,
   inReadyRoomReserve,
   insidePolygon,
+  rearStationPlaces,
   roomPolygon,
+  stationPlaces,
 } from './control-room-prototype';
 
 const gang = (w: World, g: 'main' | 'emergency', on: boolean) =>
@@ -49,7 +53,7 @@ describe('the bridge’s light switch (the owner, 2026-10-27)', () => {
     expect(bridgeMainLit(wayOff)).toBe(false);
   });
 
-  it('lights the emergency fittings with EMERGENCY LIGHTS, from the way or the battery', () => {
+  it('lights the glow under the consoles with EMERGENCY LIGHTS, from the way or the battery', () => {
     const on = gang(newWorld(), 'emergency', true);
     expect(bridgeEmergencyLit(on)).toBe(true);
     // Both off: dark but for the displays.
@@ -100,18 +104,44 @@ describe('the bridge’s light switch (the owner, 2026-10-27)', () => {
     expect(Math.abs(p.along - ENTRY.at)).toBeLessThan(d.width / 2 + 0.6);
   });
 
-  it('places the emergency fittings in the room, none on the ready room’s reserve', () => {
-    const { luminaires, strips } = emergencyPlan();
-    expect(luminaires.length).toBeGreaterThanOrEqual(3);
-    expect(strips.length).toBeGreaterThan(6);
-    for (const l of luminaires) {
-      expect(insidePolygon(roomPolygon(), l.x, l.z), l.name).toBe(true);
-      expect(inReadyRoomReserve(l.x, l.z), l.name).toBe(false);
-    }
-    for (const s of strips)
-      for (const p of [s.a, s.b]) {
-        expect(insidePolygon(roomPolygon(), p.x, p.z), s.name).toBe(true);
-        expect(p.y, s.name).toBeGreaterThanOrEqual(STOREY);
+  it('lights only a glow under the consoles, spilling onto the floor of the room', () => {
+    const glows = underConsoleGlow();
+    // The desk's five segments' long edges, six stations all round, four
+    // rear stations but for their wall sides.
+    expect(glows).toHaveLength(5 * 2 + 6 * 4 + 4 * 3);
+    for (const g of glows) {
+      expect(Math.hypot(g.out.x, g.out.z), g.name).toBeCloseTo(1);
+      // Along its edge, the way out square to it.
+      const along = { x: g.b.x - g.a.x, z: g.b.z - g.a.z };
+      expect(along.x * g.out.x + along.z * g.out.z, g.name).toBeCloseTo(0);
+      // Its spill on the floor in the room, not on the ready room's reserve.
+      for (const p of [g.a, g.b]) {
+        const x = p.x + g.out.x * GLOW_SPILL;
+        const z = p.z + g.out.z * GLOW_SPILL;
+        expect(insidePolygon(roomPolygon(), x, z), g.name).toBe(true);
+        expect(inReadyRoomReserve(x, z), g.name).toBe(false);
       }
+      expect([STOREY, STOREY + PLATFORM.height], g.name).toContain(g.y);
+    }
+  });
+
+  it('spills each glow away from its console, never under it', () => {
+    for (const st of stationPlaces()) {
+      const mine = underConsoleGlow().filter((g) => g.name === st.system);
+      expect(mine).toHaveLength(4);
+      for (const g of mine) {
+        const m = { x: (g.a.x + g.b.x) / 2, z: (g.a.z + g.b.z) / 2 };
+        expect(
+          (m.x - st.x) * g.out.x + (m.z - st.z) * g.out.z,
+          g.name,
+        ).toBeGreaterThan(0);
+      }
+    }
+    for (const r of rearStationPlaces()) {
+      const mine = underConsoleGlow().filter((g) => g.name === r.role);
+      // None toward the wall.
+      for (const g of mine)
+        expect(g.out.x * r.n.x + g.out.z * r.n.z, g.name).toBeGreaterThan(-0.5);
+    }
   });
 });

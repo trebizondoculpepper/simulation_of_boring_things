@@ -1,74 +1,89 @@
 import {
+  AdditiveBlending,
   BoxGeometry,
+  CanvasTexture,
   Group,
   HemisphereLight,
   Mesh,
-  MeshStandardMaterial,
-  Vector3,
+  MeshBasicMaterial,
+  PlaneGeometry,
 } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
-import { emergencyPlan } from '../logic/bridge-lighting';
+import { GLOW_SPILL, underConsoleGlow } from '../logic/bridge-lighting';
+
+/** The glow's colour: a cool, faint blue-white. */
+const GLOW = '#9fc2ff';
+
+/** A strip of the floor's glow: brightest at the console's foot, gone at `GLOW_SPILL`. */
+function spillTexture(): CanvasTexture | null {
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 4;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const g = ctx.createLinearGradient(0, 0, 0, 64);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.35, 'rgba(255,255,255,0.45)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 4, 64);
+  return new CanvasTexture(canvas);
+}
 
 /**
- * The bridge's emergency lighting (the owner, 2026-10-27: very dim, cool,
- * "so you can just about get around"; `emergencyPlan`, a proposal): slim
- * white luminaires, their lenses glowing cool white, and low-level LED
- * strips on the stage's step nosings and the ramps' open edges, with a
- * faint cool fill for the room while they are lit. On the central battery
- * system, so not the room's power (`userData.ownPower`) or its lighting
- * way's dimming (`userData.ownSwitching`): `set(lit)` each frame from the
- * world (`bridgeEmergencyLit`).
+ * The bridge's emergency lighting (the owner, 2026-10-27: EMERGENCY
+ * LIGHTS is "only a very dim light coming from under the consoles"):
+ * hidden strips at the feet of the desk's segments, the stations and the
+ * rear stations (`underConsoleGlow`), each a thin glowing line tucked
+ * under its console's edge and a faint glow spilling half a metre across
+ * the floor from it, with a little cool fill for the room while lit:
+ * enough to just about get around. On the central battery system, so not
+ * the room's power (`userData.ownPower`) or its lighting way's dimming
+ * (`userData.ownSwitching`): `set(lit)` each frame from the world
+ * (`bridgeEmergencyLit`).
  */
 export function createBridgeEmergencyLights(kit: PanelKit) {
   const group = new Group();
-  group.name = 'Bridge emergency lighting';
+  group.name = 'Bridge emergency lighting (under the consoles)';
   group.userData.ownPower = true;
-  const body = new MeshStandardMaterial({ color: '#eceeee', roughness: 0.5 });
-  const lens = new MeshStandardMaterial({
-    color: '#dfe8f2',
-    emissive: '#cfe2ff',
-    emissiveIntensity: 0,
-    roughness: 0.3,
+  const line = new MeshBasicMaterial({ color: '#000000' });
+  const spill = new MeshBasicMaterial({
+    color: GLOW,
+    map: spillTexture(),
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    blending: AdditiveBlending,
   });
-  const strip = new MeshStandardMaterial({
-    color: '#3a3f44',
-    emissive: '#bcd6ff',
-    emissiveIntensity: 0,
-    roughness: 0.4,
-  });
-  kit.materials.push(body, lens, strip);
-  const plan = emergencyPlan();
-  for (const l of plan.luminaires) {
-    // A slim maintained luminaire, 330 × 110 × 45 mm, its lens below.
-    const g = new Group();
-    g.name = `Emergency luminaire (${l.name})`;
-    g.position.set(l.x, l.y, l.z);
-    g.rotation.y = l.yaw;
-    const box = new Mesh(new BoxGeometry(0.33, 0.11, 0.045), body);
-    box.position.z = 0.0225;
-    const glass = new Mesh(new BoxGeometry(0.3, 0.012, 0.035), lens);
-    glass.position.set(0, -0.058, 0.024);
-    g.add(box, glass);
-    group.add(g);
-  }
-  for (const s of plan.strips) {
-    const dx = s.b.x - s.a.x;
-    const dy = s.b.y - s.a.y;
-    const dz = s.b.z - s.a.z;
-    const len = Math.hypot(dx, dy, dz);
-    const m = new Mesh(new BoxGeometry(0.012, 0.006, len), strip);
-    m.name = `Emergency strip (${s.name})`;
-    m.position.set(
-      (s.a.x + s.b.x) / 2,
-      (s.a.y + s.b.y) / 2 + 0.004,
-      (s.a.z + s.b.z) / 2,
+  kit.materials.push(line, spill);
+  for (const g of underConsoleGlow()) {
+    const dx = g.b.x - g.a.x;
+    const dz = g.b.z - g.a.z;
+    const len = Math.hypot(dx, dz);
+    const turn = Math.atan2(dx, dz);
+    // The strip, 20 mm up and 30 mm in under the console's edge.
+    const strip = new Mesh(new BoxGeometry(0.012, 0.008, len), line);
+    strip.name = `Under-console strip (${g.name})`;
+    strip.position.set(
+      (g.a.x + g.b.x) / 2 - g.out.x * 0.03,
+      g.y + 0.02,
+      (g.a.z + g.b.z) / 2 - g.out.z * 0.03,
     );
-    // Along its run (lookAt works in world space: turned by direction).
-    m.quaternion.setFromUnitVectors(
-      new Vector3(0, 0, 1),
-      new Vector3(dx, dy, dz).normalize(),
+    strip.rotation.y = turn;
+    // Its light on the floor, from the foot outward.
+    const floor = new Mesh(new PlaneGeometry(len, GLOW_SPILL), spill);
+    floor.name = `Under-console glow (${g.name})`;
+    floor.position.set(
+      (g.a.x + g.b.x) / 2 + (g.out.x * GLOW_SPILL) / 2,
+      g.y + 0.006,
+      (g.a.z + g.b.z) / 2 + (g.out.z * GLOW_SPILL) / 2,
     );
-    group.add(m);
+    // Flat on the floor, its texture's top (v = 1) at the console's foot.
+    floor.rotation.order = 'YXZ';
+    floor.rotation.set(-Math.PI / 2, Math.atan2(g.out.x, g.out.z), 0);
+    floor.renderOrder = 1;
+    group.add(strip, floor);
   }
   // The little light they give the room: cool and faint.
   const fill = new HemisphereLight('#cfe0ff', '#202833', 0);
@@ -80,9 +95,9 @@ export function createBridgeEmergencyLights(kit: PanelKit) {
     set(lit: boolean) {
       if (lit === was) return;
       was = lit;
-      lens.emissiveIntensity = lit ? 1.4 : 0;
-      strip.emissiveIntensity = lit ? 1.6 : 0;
-      fill.intensity = lit ? 0.16 : 0;
+      line.color.set(lit ? GLOW : '#000000');
+      spill.opacity = lit ? 0.22 : 0;
+      fill.intensity = lit ? 0.07 : 0;
     },
   };
 }

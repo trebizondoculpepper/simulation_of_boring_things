@@ -270,7 +270,8 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
  * plate inside the corridor doors, to the right as one comes in, 1.2 m
  * up (`lightSwitchPlace`), its rockers MAIN LIGHTS and EMERGENCY LIGHTS
  * thrown in the world (`lighting.switches.bridge`), small engraved labels
- * under it; and the emergency fittings it switches, lit as the world
+ * under it; and the emergency lighting it switches (the glow under the
+ * consoles, `underConsoleGlow`), lit as the world
  * says (`bridgeEmergencyLit`).
  */
 function installLightSwitch(kit: PanelKit): Part {
