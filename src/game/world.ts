@@ -830,7 +830,8 @@ export function applyAction(world: World, action: WorldAction): World {
         : { ...world, bridgeThemeHeard: true };
     case 'bridge/first-visit-reset':
       // The bridge as first found (the owner, 2026-10-27): its theme not
-      // yet heard and its lights off, so the next visit plays it all.
+      // yet heard, so the next visit plays the reveal; its MAIN LIGHTS on,
+      // the reveal itself keeping the room dark until its time.
       return {
         ...world,
         bridgeThemeHeard: false,
@@ -838,7 +839,7 @@ export function applyAction(world: World, action: WorldAction): World {
           ...world.lighting,
           switches: {
             ...world.lighting.switches,
-            bridge: { main: false, emergency: false },
+            bridge: { main: true, emergency: false },
           },
         },
       };

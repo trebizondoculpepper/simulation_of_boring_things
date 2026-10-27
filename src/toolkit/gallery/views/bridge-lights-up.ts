@@ -67,8 +67,11 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
   let out = !openedHere;
   let current: Levels = openedHere ? lightsUpLevels(Infinity) : dark;
   let first = true;
-  // Whether the rise under way is the entrance, its glow first.
+  // Whether the rise under way is the entrance, its glow first; and the
+  // entrance's own clock, seconds since the walker came in, which runs
+  // whether or not MAIN LIGHTS is yet on.
   let entrance = false;
+  let since = Infinity;
   let lights: { light: Light; stage: LightStage | 'fill' }[] | null = null;
   let glows: { m: Glow; stage: LightStage }[] = [];
   const collect = () => {
@@ -121,15 +124,16 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
       const play = playsEntrance(from, openedHere && !enteredBefore);
       enteredBefore = true;
       present = true;
-      entrance = false;
+      entrance = play;
+      since = play ? 0 : Infinity;
       if (!mainLit()) {
+        // Found with MAIN LIGHTS off: dark but for the glow, until the
+        // switch is thrown (by the bridge itself, as the last display is
+        // up, `AUTO_LIGHTS_ON_MS`).
         falling = null;
         out = true;
         current = dark;
-      } else {
-        rise(play ? 0 : Infinity);
-        entrance = play;
-      }
+      } else rise(play ? 0 : Infinity);
       return play;
     },
     leave() {
@@ -150,8 +154,8 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
     // corridor (the owner, 2026-10-27); in the entrance, until the main
     // lights are up.
     glow: () =>
-      entrance && !out && !falling
-        ? entranceGlow(t)
+      entrance && !falling
+        ? entranceGlow(since)
         : !present && !enteredBefore
           ? 1
           : 0,
@@ -165,11 +169,10 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
         current = dark;
       }
       first = false;
-      // MAIN LIGHTS switched on with the walker here: the rise, at once.
-      if (on && present && (out || falling)) {
-        entrance = false;
-        rise(LIGHTS_UP.dark);
-      }
+      since += delta;
+      // MAIN LIGHTS switched on with the walker here: the rise, at once
+      // (in the entrance, the glow keeps its own time).
+      if (on && present && (out || falling)) rise(LIGHTS_UP.dark);
       // Switched off, or its way gone: down.
       if (!on && !out) fall();
       if (falling) {
@@ -191,7 +194,7 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
         t += delta;
         current = lightsUpLevels(t);
         if (t >= lightsUpTotal()) {
-          if (entrance && entranceGlow(t) === 0) entrance = false;
+          if (entrance && entranceGlow(since) === 0) entrance = false;
           return;
         }
       }

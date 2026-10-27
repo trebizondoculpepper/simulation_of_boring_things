@@ -1,5 +1,6 @@
 import { Group, Object3D } from 'three';
 import { partAudio } from '../../components/core/audio/part-audio';
+import type { LoopRecipe } from '../../components/core/audio/part-audio';
 import { musicPlaylist } from '../../components/sound/audio/music-playlist';
 import { effect, signal } from '@preact/signals-core';
 import { createChatter } from '../../components/sound/logic/console-chatter';
@@ -294,7 +295,8 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
       // drawn in as the under-console glow rises, before the main lights
       // (`ENTRANCE_BOOT`); arriving any other way they are simply on.
       displays?.autoBoot(null);
-      if (lightsUp.enter(from))
+      const played = lightsUp.enter(from);
+      if (played)
         displays?.bootAll(
           ENTRANCE_BOOT.spread,
           ENTRANCE_BOOT.first,
@@ -313,15 +315,27 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
       // an occupancy sensor would: the switch is thrown in the world.
       window.clearTimeout(lightsOnTimer);
       const w = world();
-      if (w && !w.lighting.switches.bridge.main)
-        lightsOnTimer = window.setTimeout(() => {
-          const now = world();
-          if (now && !now.lighting.switches.bridge.main)
-            store?.dispatch({
-              type: 'lighting/board',
-              action: { act: 'switch', room: 'bridge', gang: 'main', on: true },
-            });
-        }, AUTO_LIGHTS_ON_MS);
+      // Not in the reveal (the owner, 2026-10-27): there the lights come
+      // up in their own time.
+      if (w && !played && !w.lighting.switches.bridge.main)
+        lightsOnTimer = window.setTimeout(
+          () => {
+            const now = world();
+            if (now && !now.lighting.switches.bridge.main)
+              store?.dispatch({
+                type: 'lighting/board',
+                action: {
+                  act: 'switch',
+                  room: 'bridge',
+                  gang: 'main',
+                  on: true,
+                },
+              });
+            // In the entrance, two seconds after the last display is up
+            // (`LIGHTS_UP.dark`), as the owner's sequence has it.
+          },
+          played ? LIGHTS_UP.dark * 1000 : AUTO_LIGHTS_ON_MS,
+        );
       chatter.setActive(true);
       alarmBleep.setActive(true);
       // From the corridor it rises with the lights; arriving any other
@@ -335,6 +349,7 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
     },
     suspend: () => {
       inside = false;
+      bridgeTheme.stop();
       window.clearTimeout(lightsOnTimer);
       lightsUp.leave();
       chatter.setActive(false);
@@ -510,11 +525,12 @@ function installAlarmBleep() {
 
 /**
  * The bridge's theme (the owner's, 2026-10-27): "Boldly Into the Deep End",
- * thirty seconds, through the game's music volume, placed nowhere: once
- * begun it plays to its end wherever the walker goes. Played on a first
- * visit; begun again from the top if the walker comes in once more while
- * the bridge is still as first seen (after the knob plate's RESET).
+ * thirty seconds, through the game's music volume, placed nowhere. Played
+ * on a first visit; begun again from the top if the walker comes in once
+ * more while the bridge is still as first seen (after the knob plate's
+ * RESET); faded out over three seconds if the walker leaves before it ends.
  */
+const THEME_FADE = 3;
 const bridgeTheme = (() => {
   const owner = {};
   let timer = 0;
@@ -522,25 +538,41 @@ const bridgeTheme = (() => {
     window.clearTimeout(timer);
     partAudio.hold(owner, null);
   };
+  const playlist = musicPlaylist(
+    [
+      {
+        url: new URL(
+          '../../../../resources/sound/music/bridge/boldly-into-the-deep-end.ogg',
+          import.meta.url,
+        ),
+        title: 'Boldly Into the Deep End — Treblo',
+      },
+    ],
+    signal(0.6),
+    () => {},
+  );
+  // The playlist under a fader of its own, so stopping it fades it out.
+  const faded: LoopRecipe = (context, out) => {
+    const fader = context.createGain();
+    fader.connect(out);
+    const inner = playlist(context, fader);
+    return [
+      ...inner,
+      {
+        release: THEME_FADE,
+        stop(when?: number) {
+          const t = context.currentTime;
+          fader.gain.cancelScheduledValues(t);
+          fader.gain.setValueAtTime(fader.gain.value, t);
+          fader.gain.linearRampToValueAtTime(0, when ?? t + THEME_FADE);
+        },
+      },
+    ];
+  };
   return {
     play() {
       stop();
-      partAudio.hold(
-        owner,
-        musicPlaylist(
-          [
-            {
-              url: new URL(
-                '../../../../resources/sound/music/bridge/boldly-into-the-deep-end.ogg',
-                import.meta.url,
-              ),
-              title: 'Boldly Into the Deep End — Treblo',
-            },
-          ],
-          signal(0.6),
-          () => {},
-        ),
-      );
+      partAudio.hold(owner, faded);
       // Once through, not round again.
       timer = window.setTimeout(stop, 31_000);
     },
