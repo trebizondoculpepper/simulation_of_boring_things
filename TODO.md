@@ -42,6 +42,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 ### Performance
 
 - [ ] **Incremental room preparation:** nearest-door prefetch now imports code only, because speculative synchronous scene construction and first-frame effects caused pauses during play. Split expensive builders into bounded jobs (moving pure layout work to workers where useful), make GPU upload/effect preparation incremental, and measure frame gaps before restoring background scene preparation. Also reduce Olympic static draw calls and profile the ozone-generator view factory. Measurements, priorities and acceptance checks: [plant-room loading report, 2026-10-24](doc/reports/plant-room-load-performance-2026-10-24.md).
+- [ ] **Lower resolution from the URL** ([087](doc/prompts/087-resolution-url-setting.md), the owner, 2026-10-27): `?resolution=N` sets the existing render quality (`renderLevel`, 0–10) before the first frame, so weaker machines can play; parser in `settings/logic/` with tests. Three open questions for the owner (persist or not, the scale, smooth or pixelated).
 
 ### Gameplay features
 
