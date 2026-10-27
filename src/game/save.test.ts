@@ -132,6 +132,24 @@ describe('a save', () => {
     });
   });
 
+  it('keeps a saved value where the default is null (a starter’s command)', () => {
+    expect(
+      fillDefaults(
+        { a: true, b: 2, c: { x: 1 } },
+        { a: null, b: null, c: null },
+      ),
+    ).toEqual({ a: true, b: 2, c: null });
+    const started = applyAction(newWorld(), {
+      type: 'motor/starter',
+      tag: 'P-101B',
+      action: { act: 'start' },
+    });
+    const loaded = deserialiseWorld(serialiseWorld(started, 0));
+    expect(loaded.ok && loaded.world.motors.starters['P-101B'].command).toBe(
+      true,
+    );
+  });
+
   it('catches up the time it was away, up to an hour', () => {
     expect(catchUpSeconds(0, 90_000)).toBe(90);
     expect(catchUpSeconds(0, 10 * 3600_000)).toBe(CATCH_UP_LIMIT);

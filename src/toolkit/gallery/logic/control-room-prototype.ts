@@ -902,3 +902,94 @@ export const stationSolids = (): Footprint[] =>
   stationPlaces().flatMap((s) =>
     bandAlong(s.corners[0], s.corners[1], STATION.d, 0.25),
   );
+
+/** A touch panel's place on the bridge: its middle, its turn about y, its tilt back from upright, and how far it is scaled. */
+export interface PanelPlace {
+  code: string;
+  x: number;
+  y: number;
+  z: number;
+  /** Its face's turn about y (as Three turns an object): its +z the way it faces. */
+  yaw: number;
+  /** Tilted back from upright, radians (π/2 lies flat, face up). */
+  tilt: number;
+  /** Its glass's largest width and height here, metres. */
+  fit: { w: number; h: number };
+}
+
+/**
+ * The bridge's wired panels (mission 095), by the spec codes of
+ * `bridge-bindings.ts`: one on each system station's sloping top, facing
+ * its operator; Central Control on the operator's desk, its front
+ * segment's sloping top; and the control room's own boards and the
+ * chemical distribution's on the front walls, at eye height.
+ */
+export const STATION_PANELS: Record<(typeof STATIONS)[number], string> = {
+  'CIRCULATION & FILTRATION': 'PL2-CP1',
+  'CHEMICAL DOSING': 'PL2-CP2',
+  HEATING: 'CR-MP2',
+  'AIR HANDLING': 'CR-MP3',
+  POWER: 'SR-IS3',
+  BUILDING: 'CR-CP6',
+};
+export const WALL_PANELS: readonly { code: string; side: number }[] = [
+  { code: 'CR-MP1', side: 1 },
+  { code: 'CR-CP2', side: 6 },
+  { code: 'WH-CP1', side: 2 },
+];
+
+export function bridgePanelPlaces(): PanelPlace[] {
+  const slope = Math.atan2(STATION.high - STATION.low, STATION.d);
+  const stations = stationPlaces().map((st): PanelPlace => ({
+    code: STATION_PANELS[st.system],
+    x: st.x,
+    y: STOREY + (STATION.low + STATION.high) / 2 + 0.012,
+    z: st.z,
+    yaw: -st.yaw,
+    tilt: Math.PI / 2 - slope,
+    fit: { w: STATION.w - 0.1, h: STATION.d - 0.06 },
+  }));
+  // Central Control on the desk's front segment, between its upstand and
+  // the operator's edge (its top 0.9 m high there, 0.76 at the edge).
+  const front = deskSegments().find((s) => s.side === 0)!;
+  const lerp = (p: Point, q: Point, t: number) => ({
+    x: p.x + (q.x - p.x) * t,
+    z: p.z + (q.z - p.z) * t,
+  });
+  const u = lerp(
+    lerp(front.outer[0], front.outer[1], 0.5),
+    lerp(front.inner[0], front.inner[1], 0.5),
+    0.3,
+  );
+  const q = lerp(front.inner[0], front.inner[1], 0.5);
+  const depth = Math.hypot(q.x - u.x, q.z - u.z);
+  const inner = Math.hypot(
+    front.inner[1].x - front.inner[0].x,
+    front.inner[1].z - front.inner[0].z,
+  );
+  const central: PanelPlace = {
+    code: 'CC-01',
+    x: (u.x + q.x) / 2,
+    y: STOREY + (0.9 + 0.76) / 2 + 0.014,
+    z: (u.z + q.z) / 2,
+    // Facing the operator, south.
+    yaw: 0,
+    tilt: Math.PI / 2 - Math.atan2(0.9 - 0.76, depth),
+    fit: { w: inner - 0.3, h: depth - 0.06 },
+  };
+  const room = roomPolygon();
+  const walls = WALL_PANELS.map(({ code, side }): PanelPlace => {
+    const [a, b] = sides(room)[side];
+    const n = inward(a, b);
+    return {
+      code,
+      x: (a.x + b.x) / 2 + n.x * 0.06,
+      y: STOREY + 1.75,
+      z: (a.z + b.z) / 2 + n.z * 0.06,
+      yaw: Math.atan2(n.x, n.z),
+      tilt: 0,
+      fit: { w: 3.2, h: 1.9 },
+    };
+  });
+  return [...stations, central, ...walls];
+}

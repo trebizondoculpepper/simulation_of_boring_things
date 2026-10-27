@@ -46,6 +46,33 @@ import type {
   ParodyWidget,
 } from '../logic/parody-trial';
 import type { LiveExhibit } from '../rooms/plant/exhibit';
+import type { WorldAction } from '../../../game/world';
+import {
+  commandNow,
+  lookup,
+  outOfBand,
+  refusal,
+} from '../logic/bridge-bindings';
+import type {
+  BridgeContext,
+  CommandOf,
+  PanelBinding,
+} from '../logic/bridge-bindings';
+
+/**
+ * A reimagined panel wired to the world (mission 095, the bridge): its
+ * items read and worked through `binding` (`bridge-bindings.ts`) instead
+ * of its trial; a refused press (local only, not yet modelled) answered
+ * with a deny bleep and its reason across the panel's top.
+ */
+export interface ParodyLive {
+  binding: PanelBinding;
+  /** The world and the plant reading now; null where there is no world. */
+  context(): BridgeContext | null;
+  dispatch(action: WorldAction): void;
+  /** An annunciator shared by the room's panels, accepted from any (the view's, as the original's). */
+  shared?: ReturnType<typeof createAnnunciator>;
+}
 
 /**
  * One of the game's panels reinterpreted as a 24th-century touch screen
@@ -76,9 +103,35 @@ export function createParodyPanel(
   kit: PanelKit,
   spec: ParodySpec,
   seed: number,
+  live?: ParodyLive,
 ): LiveExhibit {
   let trial = newTrial(seed);
   const ticks: Tick[] = [];
+  /** A wired panel's: what each item shows of the world. */
+  const reads: ((c: BridgeContext, seconds: number) => void)[] = [];
+  const B = live?.binding;
+  /** Its refusal, shown across its top for a few seconds. */
+  let notice = '';
+  let noticeLeft = 0;
+  /** A press of a wired item: done, or refused with its reason. */
+  const command = (cmd: CommandOf | undefined): UiSound | undefined => {
+    const c = live?.context();
+    if (!cmd || !c || !live) return 'deny';
+    const now = commandNow(cmd, c);
+    if (now.kind === 'act') {
+      const action = now.act(c);
+      if (action) live.dispatch(action);
+      return undefined;
+    }
+    if (now.kind === 'view') return undefined;
+    notice = refusal(now) ?? '';
+    noticeLeft = 4;
+    return 'deny';
+  };
+  /** Where an item sits, for its binding's qualified key. */
+  let at = { page: '', column: 0 };
+  const bound = <T>(map: Record<string, T> | undefined, label: string) =>
+    lookup(map, at.page, at.column, label);
   let k = seed * 3;
   const colour = () => COLOURS[k++ % COLOURS.length];
   /** A press by a button's legend, answered with a deny if it did not count. */
@@ -104,16 +157,22 @@ export function createParodyPanel(
                   : i === w.labels.length - 1
                     ? 'right'
                     : 'none';
-            if (w.latch)
-              return new Toggle({
+            const cmd = B ? bound(B.buttons, label) : undefined;
+            const lit = (cmd as { lit?: (c: BridgeContext) => boolean })?.lit;
+            if (w.latch && !(B && !lit)) {
+              const t = new Toggle({
                 label,
                 colour: colour(),
                 caps,
                 pill: true,
-                onToggle: () => press(label),
+                onToggle: () => (B ? command(cmd) : press(label)),
               });
+              // Wired: lit as the world has it, whatever the press did.
+              if (lit) reads.push((c) => t.setOn(lit(c)));
+              return t;
+            }
             const verb = verbOf(label);
-            return new Button({
+            const button = new Button({
               label,
               caps,
               pill: true,
@@ -126,27 +185,38 @@ export function createParodyPanel(
                       ? 'mariner'
                       : colour(),
               onPress: () => {
-                if (verb === 'accept')
+                if (verb === 'accept' || label === 'ACCEPT ALARMS') {
                   annunciators.forEach((a) => a.acknowledge());
+                  live?.shared?.acknowledge();
+                }
                 if (verb === 'lamp-test') lampTest = 2;
+                if (B) return command(cmd);
                 if (verb === 'reset') annunciators.forEach((a) => a.reset());
                 return press(label);
               },
             });
+            if (lit) reads.push((c) => button.setLit(lit(c)));
+            return button;
           }),
         );
-      case 'selector':
-        return new Segmented({
+      case 'selector': {
+        const sel = B ? bound(B.selectors, w.label) : undefined;
+        const seg = new Segmented({
           options: w.options,
           selected: w.selected ?? 0,
           colour: colour(),
           id: w.label,
+          ...(B ? { onSelect: (i: number) => command(sel?.choose(i)) } : {}),
         });
+        if (sel) reads.push((c) => seg.select(sel.value(c)));
+        return seg;
+      }
       case 'lamps': {
         const lamps = w.labels.map((label) => {
           const sense = lampSense(label);
           return {
             sense,
+            read: B ? bound(B.lamps, label) : undefined,
             node: new Indicator({
               label,
               colour: 'track',
@@ -161,11 +231,18 @@ export function createParodyPanel(
           };
         });
         const base = k;
-        ticks.push((t) =>
-          lamps.forEach((l, i) =>
-            l.node.setLit(lampTest > 0 || lampLit(l.sense, t, base + i)),
-          ),
-        );
+        if (B)
+          reads.push((c) =>
+            lamps.forEach((l) =>
+              l.node.setLit(lampTest > 0 || Boolean(l.read?.(c))),
+            ),
+          );
+        else
+          ticks.push((t) =>
+            lamps.forEach((l, i) =>
+              l.node.setLit(lampTest > 0 || lampLit(l.sense, t, base + i)),
+            ),
+          );
         return new Stack(
           'row',
           lamps.map((l) => l.node),
@@ -176,16 +253,30 @@ export function createParodyPanel(
           ([name, unit]) => new Readout(name, unit, { colour: colour() }),
         );
         const base = k;
-        ticks.push((t, s) =>
-          list.forEach((r, i) => {
-            const [, , lo, hi] = w.items[i];
-            const v = wander(s, lo, hi, base + i);
-            r.set(
-              v.toFixed(hi - lo < 5 ? 2 : hi - lo < 50 ? 1 : 0),
-              t.tripped && i === 0,
-            );
-          }),
-        );
+        if (B) {
+          const fns = w.items.map(([name]) => bound(B.readouts, name));
+          reads.push((c) =>
+            list.forEach((r, i) => {
+              const v = fns[i]?.(c);
+              if (v === undefined) return r.set('----');
+              if (typeof v === 'string') return r.set(v);
+              const [name, , lo, hi] = w.items[i];
+              const places =
+                hi > lo ? (hi - lo < 5 ? 2 : hi - lo < 50 ? 1 : 0) : 1;
+              r.set(v.toFixed(places), outOfBand(name, v));
+            }),
+          );
+        } else
+          ticks.push((t, s) =>
+            list.forEach((r, i) => {
+              const [, , lo, hi] = w.items[i];
+              const v = wander(s, lo, hi, base + i);
+              r.set(
+                v.toFixed(hi - lo < 5 ? 2 : hi - lo < 50 ? 1 : 0),
+                t.tripped && i === 0,
+              );
+            }),
+          );
         return new Stack('column', list);
       }
       case 'gauges': {
@@ -198,12 +289,21 @@ export function createParodyPanel(
             }),
         );
         const base = k;
-        ticks.push((_t, s) =>
-          list.forEach((g, i) => {
-            const v = wander(s, 0.05, 0.98, base + i);
-            g.set(v, `${Math.round(v * 100)}%`);
-          }),
-        );
+        if (B) {
+          const fns = w.items.map((n) => bound(B.gauges, n));
+          reads.push((c) =>
+            list.forEach((g, i) => {
+              const v = fns[i]?.(c);
+              if (v) g.set(Math.max(0, Math.min(1, v[0])), v[1]);
+            }),
+          );
+        } else
+          ticks.push((_t, s) =>
+            list.forEach((g, i) => {
+              const v = wander(s, 0.05, 0.98, base + i);
+              g.set(v, `${Math.round(v * 100)}%`);
+            }),
+          );
         return new Stack(w.vertical ? 'row' : 'column', list);
       }
       case 'trend': {
@@ -216,16 +316,29 @@ export function createParodyPanel(
         });
         let next = 0;
         const base = k;
-        ticks.push((_t, s) => {
-          if (s < next) return;
-          next = s + 0.5;
-          tr.push(wander(s, 0.05, 0.95, base));
-        });
+        const fn = B ? bound(B.trends, w.name) : undefined;
+        if (B)
+          reads.push((c, s) => {
+            if (s < next || !fn) return;
+            next = s + 2;
+            tr.push(fn(c));
+          });
+        else
+          ticks.push((_t, s) => {
+            if (s < next) return;
+            next = s + 0.5;
+            tr.push(wander(s, 0.05, 0.95, base));
+          });
         return tr;
       }
       case 'annunciator': {
         const n = w.windows.length;
-        const logic = createAnnunciator(n, { manualReset: true });
+        // The room's shared one where it fits (the bridge's, accepted from
+        // Central Control too), else its own.
+        const logic =
+          live?.shared && live.shared.states.length === n
+            ? live.shared
+            : createAnnunciator(n, { manualReset: true });
         annunciators.push(logic);
         const cells = w.windows.map((words) => {
           const [a, ...b] = words.split(' ');
@@ -247,45 +360,79 @@ export function createParodyPanel(
           );
         const one = seed % n;
         const two = (seed * 7 + 3) % n;
-        ticks.push((t, s) => {
-          logic.sense(
-            cells.map(
-              (_, i) =>
-                (t.tripped && i === one) ||
-                (i === two && Math.sin(s / 9 + seed) > 0.7),
-            ),
-          );
+        const show = (s: number) => {
           const lit = lampTest > 0 ? cells.map(() => true) : logic.lit(s);
           cells.forEach((c, i) => {
             c.setLit(lit[i]);
             c.setFlashing(lampTest <= 0 && logic.states[i] === 'flashing');
           });
-        });
+        };
+        if (B) {
+          let sensed: readonly boolean[] = cells.map(() => false);
+          reads.push((c) => (sensed = B.windows?.(c) ?? sensed));
+          ticks.push((_t, s) => {
+            logic.sense(sensed.map(Boolean));
+            show(s);
+          });
+        } else
+          ticks.push((t, s) => {
+            logic.sense(
+              cells.map(
+                (_, i) =>
+                  (t.tripped && i === one) ||
+                  (i === two && Math.sin(s / 9 + seed) > 0.7),
+              ),
+            );
+            show(s);
+          });
         return new Stack('column', rows, { gap: 6 });
       }
       case 'banner': {
         const b = new Banner();
-        ticks.push((t) =>
-          b.set(w.words, t.tripped, t.tripped ? 'alert' : 'golden-tanoi'),
-        );
+        const fn = B ? bound(B.banners, w.words) : undefined;
+        if (B)
+          reads.push((c) => {
+            const alarm = Boolean(fn?.(c));
+            b.set(w.words, alarm, alarm ? 'alert' : 'golden-tanoi');
+          });
+        else
+          ticks.push((t) =>
+            b.set(w.words, t.tripped, t.tripped ? 'alert' : 'golden-tanoi'),
+          );
         return b;
       }
       case 'list': {
         const list = new List({ onRow: () => undefined });
         const base = k;
-        ticks.push((_t, s) =>
-          list.set(
-            w.rows.map((words, i) => ({
-              words,
-              right: `${Math.round(wander(s, 1, 99, base + i))}`,
-              colour: COLOURS[(base + i) % COLOURS.length],
-            })),
-          ),
-        );
+        if (B) {
+          const fns = w.rows.map((r) => bound(B.rows, r));
+          reads.push((c) =>
+            list.set(
+              w.rows.map((words, i) => ({
+                words,
+                right: fns[i]?.(c) ?? '',
+                colour: COLOURS[(base + i) % COLOURS.length],
+              })),
+            ),
+          );
+        } else
+          ticks.push((_t, s) =>
+            list.set(
+              w.rows.map((words, i) => ({
+                words,
+                right: `${Math.round(wander(s, 1, 99, base + i))}`,
+                colour: COLOURS[(base + i) % COLOURS.length],
+              })),
+            ),
+          );
         return list;
       }
       case 'circuit':
-        return circuit(w.symbols, ticks);
+        return circuit(
+          w.symbols,
+          ticks,
+          B ? { binding: B, at, reads, command } : undefined,
+        );
     }
   };
 
@@ -293,7 +440,10 @@ export function createParodyPanel(
     name: p.name,
     node: new Stack(
       'row',
-      p.columns.map((col) => new Stack('column', col.map(widget))),
+      p.columns.map((col, ci) => {
+        at = { page: p.name, column: ci };
+        return new Stack('column', col.map(widget));
+      }),
       { gap: 24 },
     ) as UiNode,
   }));
@@ -309,14 +459,18 @@ export function createParodyPanel(
       new Button({
         label: 'ACCEPT',
         colour: 'golden-tanoi',
-        onPress: () => void annunciators.forEach((a) => a.acknowledge()),
+        onPress: () => {
+          annunciators.forEach((a) => a.acknowledge());
+          live?.shared?.acknowledge();
+        },
       }),
       new Button({
         label: 'RESET',
         colour: 'golden-tanoi',
         onPress: () => {
           annunciators.forEach((a) => a.reset());
-          return press('RESET');
+          live?.shared?.reset();
+          return B ? undefined : press('RESET');
         },
       }),
       new Button({
@@ -329,7 +483,9 @@ export function createParodyPanel(
   const tree = new Frame({
     title: spec.title,
     code: spec.code,
-    footer: `PARODIES ${spec.original}`,
+    footer: B
+      ? `LIVE · REIMAGINES ${spec.original}`
+      : `PARODIES ${spec.original}`,
     colour: spec.colour ?? colour(),
     sidebar,
     content: new Stack('column', [status, stack ?? pages[0].node]),
@@ -357,14 +513,27 @@ export function createParodyPanel(
   surface.group.position.z = 0.02;
   object.add(surface.group);
   let seconds = 0;
+  let nextRead = 0;
   const run = (delta: number) => {
     seconds += delta;
-    trial = stepTrial(trial, delta);
     lampTest = Math.max(0, lampTest - delta);
-    status.set(
-      trial.tripped ? `${spec.code} · FAULT · RESET REQUIRED` : '',
-      trial.tripped,
-    );
+    if (B) {
+      // Wired: the world read a few times a second (it steps ten times a
+      // second), its refusals shown across the top for a while.
+      noticeLeft = Math.max(0, noticeLeft - delta);
+      status.set(noticeLeft > 0 ? notice : '', noticeLeft > 0, 'warning');
+      const c = live?.context();
+      if (c && (seconds >= nextRead || lampTest > 0 || delta === 0)) {
+        nextRead = seconds + 0.25;
+        for (const r of reads) r(c, seconds);
+      }
+    } else {
+      trial = stepTrial(trial, delta);
+      status.set(
+        trial.tripped ? `${spec.code} · FAULT · RESET REQUIRED` : '',
+        trial.tripped,
+      );
+    }
     for (const t of ticks) t(trial, seconds);
   };
   run(0);
@@ -376,7 +545,9 @@ export function createParodyPanel(
       parts.update(delta);
     },
     status: () =>
-      `${spec.title}, parodying ${spec.original}: ${trial.tripped ? 'tripped' : trial.going ? 'running' : 'stopped'}`,
+      B
+        ? `${spec.title}, the bridge's touch screen of ${spec.original}, live`
+        : `${spec.title}, parodying ${spec.original}: ${trial.tripped ? 'tripped' : trial.going ? 'running' : 'stopped'}`,
   };
 }
 
@@ -384,6 +555,12 @@ export function createParodyPanel(
 function circuit(
   symbols: Extract<ParodyWidget, { kind: 'circuit' }>['symbols'],
   ticks: Tick[],
+  wired?: {
+    binding: PanelBinding;
+    at: { page: string; column: number };
+    reads: ((c: BridgeContext, seconds: number) => void)[];
+    command: (cmd: CommandOf | undefined) => UiSound | undefined;
+  },
 ): UiNode {
   const n = symbols.length;
   // Round a rectangle 2 × 1, the symbols evenly along its top and bottom.
@@ -435,13 +612,33 @@ function circuit(
             : 'blue-bell',
     label: s.label,
     state: 'on',
-    onPress: () => void (on[i] = !on[i]),
+    onPress: wired
+      ? () => {
+          const sym = lookup(
+            wired.binding.symbols,
+            wired.at.page,
+            wired.at.column,
+            s.label,
+          );
+          return sym?.press ? wired.command(sym.press) : null;
+        }
+      : () => void (on[i] = !on[i]),
   }));
   const d = new Diagram({
     bounds: { minX: -1, minY: -0.6, maxX: 1, maxY: 0.6 },
     lines,
     symbols: shapes,
   });
+  if (wired) {
+    const syms = symbols.map((s) =>
+      lookup(wired.binding.symbols, wired.at.page, wired.at.column, s.label),
+    );
+    wired.reads.push((c) => {
+      shapes.forEach((s, i) => d.setSymbol(s.id, syms[i]?.state(c) ?? 'off'));
+      d.setFlow('loop', wired.binding.flow?.(c) ? 'forward' : 'still');
+    });
+    return d;
+  }
   ticks.push((t) => {
     shapes.forEach((s, i) =>
       d.setSymbol(

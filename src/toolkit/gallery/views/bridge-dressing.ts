@@ -530,3 +530,46 @@ export function upholsteredChair(
     }
   return c;
 }
+
+/**
+ * An idle screen in the bridge's style, for the desk's upstand where no
+ * panel is wired yet: near black, a frame of dim colour blocks, a few
+ * faint rows of figures; drawn once, never changing (it shows nothing of
+ * the world, set decoration).
+ */
+export function idleScreen(kit: PanelKit) {
+  const map = canvasTexture(kit, 512, 256, (g) => {
+    g.fillStyle = '#030305';
+    g.fillRect(0, 0, 512, 256);
+    const blocks = ['#c8873f', '#9a76a8', '#6d79b0', '#b8945e'];
+    const rand = seeded(23);
+    // An elbow and a bar, dim.
+    g.globalAlpha = 0.55;
+    g.fillStyle = blocks[0];
+    g.beginPath();
+    g.roundRect(16, 16, 60, 120, [28, 0, 0, 0]);
+    g.fill();
+    g.fillRect(16, 16, 420, 22);
+    g.fillStyle = blocks[1];
+    g.fillRect(16, 146, 60, 40);
+    g.fillStyle = blocks[2];
+    g.fillRect(16, 196, 60, 44);
+    // Faint rows of figures.
+    g.globalAlpha = 0.35;
+    for (let r = 0; r < 7; r++)
+      for (let c = 0; c < 6; c++) {
+        g.fillStyle = blocks[(r + c) % 4];
+        g.fillRect(100 + c * 64, 58 + r * 26, 20 + rand() * 34, 10);
+      }
+    g.globalAlpha = 1;
+  });
+  const m = new MeshStandardMaterial({
+    color: '#000000',
+    emissive: '#ffffff',
+    emissiveMap: map,
+    emissiveIntensity: 0.55,
+    roughness: 0.3,
+  });
+  kit.materials.push(m);
+  return m;
+}

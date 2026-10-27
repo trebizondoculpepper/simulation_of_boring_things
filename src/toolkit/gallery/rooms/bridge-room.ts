@@ -1,8 +1,77 @@
+import { Group } from 'three';
 import { startBridgeRoom } from './control-room-prototype';
+import type { Part } from '../../components/core/parts/parts';
+import type { PanelKit } from '../../components/core/views/eighties-controls';
+import { createAnnunciator } from '../../components/industrial-control/logic/annunciator';
+import { markComponent } from '../../components/core/views/component-identity';
+import { ANNUNCIATOR_ALARMS } from '../logic/control-room-demo';
+import { bridgePanelPlaces } from '../logic/control-room-prototype';
+import { BRIDGE_BINDINGS, bridgeSpec } from '../logic/bridge-bindings';
+import { plantReadingOf } from '../logic/world-reading';
+import { createParodyPanel } from '../views/parody-panel';
+import { roomWorld } from '../../save/world-store';
+
+/**
+ * The bridge's consoles (mission 095): dev48's reimagined panels on its
+ * stations, Central Control on the operator's desk and the control room's
+ * boards on its front walls, each wired to the one world
+ * (`bridge-bindings.ts`): reading it as their originals do and asking it
+ * what their originals' controls ask; local-only controls refused. The
+ * annunciator's ACCEPT and RESET are the room's, as the old control
+ * room's were its board's, shared by its CR-CP2 copy and Central Control.
+ */
+function installConsoles(kit: PanelKit): Part[] {
+  const store = typeof window === 'undefined' ? null : roomWorld();
+  const shared = createAnnunciator(ANNUNCIATOR_ALARMS.length, {
+    manualReset: true,
+  });
+  const context = () => {
+    const world = store?.world.value;
+    return world ? { world, reading: plantReadingOf(world, 'pool_02') } : null;
+  };
+  return bridgePanelPlaces().map((place, i) => {
+    const spec = bridgeSpec(place.code);
+    const binding = BRIDGE_BINDINGS[place.code];
+    const panel = createParodyPanel(kit, spec, i, {
+      binding,
+      context,
+      dispatch: (action) => store?.dispatch(action),
+      shared,
+    });
+    const { w = 1.6, h = 1.0 } = spec.size ?? {};
+    const scale = Math.min(place.fit.w / (w + 0.1), place.fit.h / (h + 0.1));
+    const holder = new Group();
+    holder.name = `${spec.title} (the bridge's ${spec.code})`;
+    holder.position.set(place.x, place.y, place.z);
+    holder.rotation.order = 'YXZ';
+    holder.rotation.set(-place.tilt, place.yaw, 0);
+    panel.object.scale.setScalar(scale);
+    // Its glass is drawn about its middle: at the holder's origin.
+    holder.add(panel.object);
+    // Bound to its original's node in its room's model (`world-in-model.ts`).
+    markComponent(holder, {
+      name: holder.name,
+      model: { node: binding.model.node },
+      status: () => panel.status?.(),
+    });
+    const parts = panel.parts!;
+    return {
+      object: holder,
+      uses: parts.uses,
+      update: (delta: number) => panel.update?.(delta),
+      onEvent: parts.onEvent,
+      setAudible: parts.setAudible,
+      dispose: () => {
+        parts.dispose();
+        panel.dispose?.();
+      },
+    };
+  });
+}
 
 /**
  * The bridge, the game's control room (mission 095): dev46's room off the
  * main corridor, with its working consoles.
  */
 export const startTheBridge = (canvas: HTMLCanvasElement) =>
-  startBridgeRoom(canvas);
+  startBridgeRoom(canvas, installConsoles);

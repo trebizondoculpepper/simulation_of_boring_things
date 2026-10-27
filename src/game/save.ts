@@ -192,6 +192,18 @@ export function fillDefaults<T>(value: unknown, defaults: T): T {
   }
   if (Array.isArray(defaults))
     return (Array.isArray(value) ? value : defaults) as T;
+  // A field null by default (a starter's command, a line's outlet served)
+  // keeps a saved plain value: its type is not the null's (mission 095:
+  // a pump started from the bridge was stopped by a reload).
+  if (defaults === null)
+    return (
+      value === null ||
+      typeof value === 'boolean' ||
+      typeof value === 'string' ||
+      (typeof value === 'number' && Number.isFinite(value))
+        ? value
+        : defaults
+    ) as T;
   if (
     typeof value === typeof defaults &&
     !(typeof value === 'number' && !Number.isFinite(value))

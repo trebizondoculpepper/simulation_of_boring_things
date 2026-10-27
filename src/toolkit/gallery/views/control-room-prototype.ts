@@ -25,6 +25,7 @@ import {
   bridgeMaterials,
   carpetRing,
   chaserLights,
+  idleScreen,
   upholsteredChair,
 } from './bridge-dressing';
 import type { ChairKind } from './bridge-dressing';
@@ -705,7 +706,11 @@ export function createControlRoomPrototype(
     ? paint('#d9d2bd', 0.55, 0.05)
     : paint('#8d949a', 0.3, 0.7);
   const charcoal = bridge ? paint('#55504a', 0.7, 0.05) : lacquer;
-  const insetScreen = glow('#3ab0a0', 0.55, '#071312');
+  // On the bridge an idle screen in its style (the owner asked what the flat
+  // teal ones were: placeholders); the lair's keep their teal glow.
+  const insetScreen = dressing
+    ? idleScreen(kit)
+    : glow('#3ab0a0', 0.55, '#071312');
   const insetPanel = paint('#8f8b80', 0.6, 0.15);
   for (const s of deskSegments()) {
     const [P0, P1] = s.outer;
@@ -762,21 +767,25 @@ export function createControlRoomPrototype(
       const u0 = (k + 0.18) / screens;
       const u1 = (k + 0.82) / screens;
       const c = [face(u0, 0.2), face(u1, 0.2), face(u1, 0.85), face(u0, 0.85)];
-      desk.add(inset(c, n, insetScreen));
+      desk.add(
+        dressing ? screenQuad(c, n, insetScreen) : inset(c, n, insetScreen),
+      );
       // A blank control panel in the top below it.
       const tp = (u: number, v: number): [Point, number] => {
         const outer = at(U0, U1, u);
         const inner = at(Q0, Q1, u);
         return [at(outer, inner, v), y0 + 0.9 + (0.76 - 0.9) * v];
       };
-      desk.add(
-        inset(
-          [tp(u0, 0.15), tp(u1, 0.15), tp(u1, 0.6), tp(u0, 0.6)],
-          { x: 0, z: 0 },
-          insetPanel,
-          true,
-        ),
-      );
+      // In the game, the front segment's top is Central Control's.
+      if (!(game && s.side === 0))
+        desk.add(
+          inset(
+            [tp(u0, 0.15), tp(u1, 0.15), tp(u1, 0.6), tp(u0, 0.6)],
+            { x: 0, z: 0 },
+            insetPanel,
+            true,
+          ),
+        );
     }
   }
   // Dark cheeks at the two open ends.
@@ -1106,6 +1115,39 @@ export function createControlRoomPrototype(
     geometry.computeVertexNormals();
     return new Mesh(geometry, m);
   }
+  /** A flat screen on a face given by its corners (left foot, right foot, right head, left head), `n` off it, mapped for its picture. */
+  function screenQuad(corners: [Point, number][], n: Point, m: Material) {
+    const p = corners.map(([q, y]) => [
+      q.x + n.x * 0.016,
+      y,
+      q.z + n.z * 0.016,
+    ]);
+    const g = new BufferGeometry();
+    g.setAttribute(
+      'position',
+      new Float32BufferAttribute(
+        [0, 1, 2, 0, 2, 3].flatMap((i) => p[i]),
+        3,
+      ),
+    );
+    const uv = [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, 1],
+    ];
+    g.setAttribute(
+      'uv',
+      new Float32BufferAttribute(
+        [0, 1, 2, 0, 2, 3].flatMap((i) => uv[i]),
+        2,
+      ),
+    );
+    g.computeVertexNormals();
+    const mesh = new Mesh(g, m);
+    (m as MeshStandardMaterial).side = 2;
+    return mesh;
+  }
   /** A thin inset on a face given by its corners, standing `n` (or up) off it. */
   function inset(
     corners: [Point, number][],
@@ -1346,7 +1388,8 @@ export function createControlRoomPrototype(
         x: p.x + (q.x - p.x) * t,
         z: p.z + (q.z - p.z) * t,
       });
-      for (let row = 0; row < 3; row++) {
+      // In the game its touch panel lies there instead (mission 095).
+      for (let row = 0; row < (game ? 0 : 3); row++) {
         const v0 = 0.15 + row * 0.25;
         const v1 = v0 + 0.14;
         let u = 0.06;
