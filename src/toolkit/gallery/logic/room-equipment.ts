@@ -671,24 +671,27 @@ function chemDays(pool: PoolId): Item[] {
 type At = { x: number; z: number; face: Side } | { wall: Side; along: number };
 /**
  * Where each room's chemical machines stand (plan 085): each plant room's
- * day tanks in floor its machines leave free, acid and hypochlorite apart;
+ * day tanks in floor its machines leave free, acid and hypochlorite apart,
+ * none under a stair or landing; each turned with its back (its fill
+ * socket and power lead) to its nearest wall, where the mains and cables
+ * run, and its front (its DoseCell's display) into the room (2026-10-27);
  * the wet hall's selectors on its dirty side, east of the backwash pit.
  */
 const CHEM_AT: Record<string, Record<string, At>> = {
   plant_pool_01: {
-    'chem-day:hypochlorite:pool_01': { x: 3.65, z: -2.95, face: 'south' },
-    'chem-day:acid:pool_01': { x: 2.35, z: 2.65, face: 'east' },
+    'chem-day:hypochlorite:pool_01': { x: 3.65, z: -2.95, face: 'west' },
+    'chem-day:acid:pool_01': { x: 2.35, z: 2.65, face: 'north' },
   },
   plant_pool_02: {
     'chem-day:hypochlorite:pool_02': { x: -7.5, z: 5.9, face: 'north' },
     'chem-day:acid:pool_02': { x: 6.9, z: 4.2, face: 'north' },
   },
   plant_pool_03: {
-    'chem-day:hypochlorite:pool_03': { x: 1.2, z: -1.7, face: 'west' },
+    'chem-day:hypochlorite:pool_03': { x: 1.2, z: -1.7, face: 'south' },
     'chem-day:acid:pool_03': { x: 1.9, z: 1.2, face: 'west' },
   },
   plant_pool_04: {
-    'chem-day:hypochlorite:pool_04': { x: 0.95, z: -0.6, face: 'east' },
+    'chem-day:hypochlorite:pool_04': { x: 0.95, z: -0.6, face: 'south' },
     'chem-day:acid:pool_04': { x: 1.95, z: 1.75, face: 'north' },
   },
   wet_hall: {
