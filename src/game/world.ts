@@ -894,7 +894,18 @@ function stepPlant(world: World, delta: number): World {
   );
   // What each pool's day tanks have, as the step begins: each pool doses
   // from its own (plan 085), and its tanks give what was dosed.
-  const stock = (id: PoolId) => dayTankStock(world.distribution, id);
+  // The lounge doses each through its injection quill (prompt 089, item
+  // 4): with the quill's isolating valve shut, none of it goes in.
+  const stock = (id: PoolId) => {
+    const s = dayTankStock(world.distribution, id);
+    if (id !== 'pool_01') return s;
+    const open = (k: string) =>
+      world.installedValves[`${k}-quill.in.iso`] ?? true;
+    return {
+      hypochlorite: s.hypochlorite && open('hypo'),
+      acid: s.acid && open('acid'),
+    };
+  };
   // The Olympic's make-up, on its band at the tank's depth as the step begins.
   const calling = makeUpCalls(
     world.olympicTank,

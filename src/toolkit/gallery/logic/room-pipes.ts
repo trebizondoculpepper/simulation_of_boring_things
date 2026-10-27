@@ -67,8 +67,11 @@ export interface Valve {
    * an electric actuator (`remote-actuators.ts`).
    */
   operator: 'lever' | 'chain' | 'solenoid' | 'motor';
-  /** A water butterfly valve (the default), or a gas lever ball valve. */
-  style?: 'butterfly' | 'gas-ball';
+  /**
+   * A water butterfly valve (the default), a gas lever ball valve, or a
+   * dosing quill's DN15 chemical ball valve (drawn with its quill set).
+   */
+  style?: 'butterfly' | 'gas-ball' | 'chemical-ball';
   /**
    * The way it faces in plan, away from its machine: its lever, open,
    * along a level pipe that way; its neck and lever, on a vertical pipe,
@@ -134,6 +137,29 @@ export interface PipeRun {
    */
   model?: { link: string } | { node: string };
 }
+
+/**
+ * A dosing line's injection point (prompt 089, item 4): its quill set into
+ * a vertical main, out from it level, its non-return valve and its
+ * isolating ball valve on the quill's outer end, then the dosing tube.
+ */
+export interface InjectionPoint {
+  name: string;
+  chemical: 'acid' | 'hypochlorite';
+  /** The quill, its isolating valve and its non-return valve in the room's model. */
+  quill: string;
+  valve: string;
+  check: string;
+  /** The main's middle at the quill's height, the way out from it, and its size. */
+  at: Vec3;
+  outward: Vec3;
+  mainOd: number;
+}
+
+/** Each quill's height over the floor: its valve worked from the floor. */
+export const QUILL_Y = 1.5;
+/** A quill set's length out from its main's surface: boss and quill, check valve, ball valve. */
+export const QUILL_SET = 0.24;
 
 /** A three-way fitting between a continuous main and a perpendicular branch. */
 export interface PipeTee {
@@ -265,6 +291,7 @@ export function poolPlantPipework(room: string): {
   tees: PipeTee[];
   isolators: IsolatorPlace[];
   stands: Vec3[];
+  injections: InjectionPoint[];
 } {
   const layout = layoutRoom(room)!;
   // Into the services ceiling (`roomStructure`): a run that ends here goes
@@ -291,6 +318,7 @@ export function poolPlantPipework(room: string): {
   const runs: PipeRun[] = [];
   const channels: FloorChannel[] = [];
   const tees: PipeTee[] = [];
+  const injections: InjectionPoint[] = [];
   const run = (
     r: Omit<PipeRun, 'through' | 'valves'> & {
       valves?: Omit<Valve, 'operator'>[];
@@ -830,7 +858,11 @@ export function poolPlantPipework(room: string): {
       pheIn1,
       pheIn.at,
     ],
-    joins: [phe.item.label, outletHeader.name],
+    joins: [
+      phe.item.label,
+      outletHeader.name,
+      'Sample line from the filtered main',
+    ],
     service: 'pool water',
     label: 'TO HEAT EXCHANGER',
   });
@@ -849,8 +881,7 @@ export function poolPlantPipework(room: string): {
     joins: [
       phe.item.label,
       contact.item.label,
-      'Hypochlorite to the heated main',
-      'Sample line from the heated main',
+      'Acid injection into the heated main',
     ],
     service: 'pool water',
     label: 'HEATED',
@@ -880,7 +911,7 @@ export function poolPlantPipework(room: string): {
       [uvOut1[0], L.toPool, uvOut1[2]],
       [uvOut1[0], L.toPool, -hz],
     ],
-    joins: [uv.item.label],
+    joins: [uv.item.label, 'Hypochlorite injection into the return main'],
     service: 'pool water',
     label: 'TO POOL',
   });
@@ -943,53 +974,145 @@ export function poolPlantPipework(room: string): {
     service: 'electrical',
     label: '400 V SUPPLY',
   });
-  // The dosing: from the panels in the south-east corner, clipped along
-  // the south wall behind everything, to the main as it leaves the heat
-  // exchanger: the hypochlorite into it, the sample from it.
-  const dosing = [
-    {
-      item: by('hypochlorite dosing pumps'),
-      port: 'dose',
-      service: 'hypochlorite' as const,
-      name: 'Hypochlorite to the heated main',
-      label: 'HYPOCHLORITE',
-      y: L.dosing,
-    },
-    {
-      item: by('dosing controller and sample cells'),
-      port: 'sample',
-      service: 'sample' as const,
-      name: 'Sample line from the heated main',
-      label: 'SAMPLE',
-      y: L.dosing - 0.15,
-    },
-  ];
-  // Each line up from its panel into the ceiling, and down out of it to
-  // its point on the main beside the heat exchanger.
-  dosing.forEach((d, i) => {
-    const p = port(d.item, d.port);
+  // The dosing (prompt 089, item 4; the owner, 2026-10-27, the Olympic's
+  // way): the controller samples the filtered main before any dosing,
+  // through a saddle on its last length into the heat exchanger; the acid
+  // goes in after the heat exchanger, on the heated main's riser, and the
+  // hypochlorite last, after the UV unit, on the return main's riser: each
+  // through its injection quill, its isolating ball valve and its
+  // non-return valve, within reach. Each line from its panel up into the
+  // ceiling, and down out of it to its point.
+  const sampleAt: Vec3 = [pheIn1[0] - 0.15, pheIn1[1], pheIn1[2]];
+  {
+    const controller = by('dosing controller and sample cells');
+    const p = port(controller, 'sample');
     const s = out(p, 0.1);
-    const at: Vec3 = [pheOut1[0], d.y, pheOut1[2] + 0.2 + i * 0.05];
     run({
-      name: d.name,
+      name: 'Sample line from the filtered main',
       kind: 'chemical-tube',
       od: 0.012,
       points: [p.at, s, [s[0], INTO_CEILING, s[2]]],
-      joins: [d.item.item.label],
-      service: d.service,
-      label: d.label,
+      joins: [controller.item.label],
+      service: 'sample',
+      label: 'SAMPLE',
     });
     run({
-      name: `${d.name}, its point`,
-      model: { link: d.name },
+      name: 'Sample line from the filtered main, its point',
+      model: { link: 'Sample line from the filtered main' },
       kind: 'chemical-tube',
       od: 0.012,
-      points: [[at[0], INTO_CEILING, at[2]], at, [pheOut1[0], d.y, pheOut1[2]]],
-      joins: ['Heat exchanger to the ozone contact tank'],
-      service: d.service,
-      label: d.label,
+      points: [
+        [sampleAt[0], sampleAt[1] + pheIn.od / 2, sampleAt[2]],
+        [sampleAt[0], INTO_CEILING, sampleAt[2]],
+      ],
+      joins: ['Filtered main to the heat exchanger'],
+      service: 'sample',
+      label: 'SAMPLE',
     });
-  });
+  }
+  const hypoPumps = by('hypochlorite dosing pumps');
+  const acidDoser = by('acid dosing pump');
+  const quills: {
+    k: 'acid' | 'hypo';
+    pump: Placed;
+    main: Vec3;
+    od: number;
+    outward: Vec3;
+    into: string;
+  }[] = [
+    {
+      k: 'acid',
+      pump: acidDoser,
+      // On the heated main's riser, south of it, 1.5 m up.
+      main: [pheOut1[0], QUILL_Y, pheOut1[2]],
+      od: pheOut.od,
+      outward: [0, 0, 1],
+      into: 'Heat exchanger to the ozone contact tank',
+    },
+    {
+      k: 'hypo',
+      pump: hypoPumps,
+      // On the return main's riser beside the UV unit, east of it.
+      main: [uvOut1[0], QUILL_Y, uvOut1[2]],
+      od: uvOut.od,
+      outward: [1, 0, 0],
+      into: 'Return main to the pool’s inlets',
+    },
+  ];
+  for (const q of quills) {
+    const Name = q.k === 'acid' ? 'Acid' : 'Hypochlorite';
+    const service =
+      q.k === 'acid' ? ('acid' as const) : ('hypochlorite' as const);
+    const label = q.k === 'acid' ? 'ACID' : 'HYPOCHLORITE';
+    const into =
+      q.k === 'acid'
+        ? 'Acid injection into the heated main'
+        : 'Hypochlorite injection into the return main';
+    const p = port(q.pump, 'dose');
+    const s = out(p, 0.1);
+    run({
+      name: `${Name} to its injection quill, from its pump`,
+      model: { link: `${Name} to its injection quill` },
+      kind: 'chemical-tube',
+      od: 0.012,
+      points: [p.at, s, [s[0], INTO_CEILING, s[2]]],
+      joins: [q.pump.item.label],
+      service,
+      label,
+    });
+    // The set's outer end, where the tube meets its ball valve, and the
+    // tube on out a little, then up into the ceiling.
+    const r = q.od / 2;
+    const along = (d: number): Vec3 => [
+      q.main[0] + q.outward[0] * d,
+      q.main[1],
+      q.main[2] + q.outward[2] * d,
+    ];
+    // Down out of the ceiling, a little out from the set, and in through
+    // its ball valve and check valve to the quill's outer end; the ball
+    // valve, on it, is drawn with the quill set.
+    const turn = along(r + QUILL_SET + 0.04);
+    run({
+      name: `${Name} to its injection quill`,
+      kind: 'chemical-tube',
+      od: 0.012,
+      points: [[turn[0], INTO_CEILING, turn[2]], turn, along(r + 0.07)],
+      joins: [],
+      service,
+      label,
+      valves: [
+        {
+          at: along(r + 0.19),
+          axis: q.outward[0] !== 0 ? 'x' : 'z',
+          name: `${Name} to its injection quill valve`,
+          od: 0.021,
+          style: 'chemical-ball',
+          facing: q.outward,
+        },
+      ],
+    });
+    // The quill's dip tube, from its boss on the main's surface to the
+    // main's middle, where the chemical is let into the flow.
+    run({
+      name: into,
+      kind: 'chemical-tube',
+      od: 0.012,
+      points: [along(r), along(0.3 * r)],
+      joins: [q.into],
+      service,
+      label,
+    });
+    injections.push({
+      name: `${Name} injection quill`,
+      chemical: service,
+      quill: `${q.k}-quill`,
+      valve: `${q.k}-quill.in.iso`,
+      check: `${q.k}-quill.in.nrv`,
+      at: q.main,
+      outward: q.outward,
+      mainOd: q.od,
+    });
+  }
   // ---- Power: each machine through its isolator ------------------------------
   // Each isolator on a stand beside its machine, facing where someone
   // stands to work it; its supply down out of the ceiling's cable tray;
@@ -1082,37 +1205,7 @@ export function poolPlantPipework(room: string): {
   }
 
   // ---- Chemicals: each day tank's branch and dosing tube (plan 085) -------
-  const acidPump = by('acid dosing pump');
   for (const r of dayTankPlumbing(room).runs) run(r);
-  // The acid's dose up into the ceiling and down to its point on the main.
-  {
-    const p = port(acidPump, 'dose');
-    const s = out(p, 0.1);
-    run({
-      name: 'Acid to the heated main',
-      kind: 'chemical-tube',
-      od: 0.012,
-      points: [p.at, s, [s[0], INTO_CEILING, s[2]]],
-      joins: [acidPump.item.label],
-      service: 'acid',
-      label: 'ACID',
-    });
-    const at: Vec3 = [pheOut1[0], L.dosing - 0.3, pheOut1[2] + 0.3];
-    run({
-      name: 'Acid to the heated main, its point',
-      model: { link: 'Acid to the heated main' },
-      kind: 'chemical-tube',
-      od: 0.012,
-      points: [
-        [at[0], INTO_CEILING, at[2]],
-        at,
-        [pheOut1[0], at[1], pheOut1[2]],
-      ],
-      joins: ['Heat exchanger to the ozone contact tank'],
-      service: 'acid',
-      label: 'ACID',
-    });
-  }
 
   // ---- The balance tank's drain, through its valve over a floor gully -----
   // Out under the tank's ladder to just beyond it, then straight down,
@@ -1151,7 +1244,7 @@ export function poolPlantPipework(room: string): {
     });
   }
 
-  return { runs, channels, tees, isolators, stands };
+  return { runs, channels, tees, isolators, stands, injections };
 }
 
 /** The pipework of a room, if it has any laid out yet. */
@@ -1173,6 +1266,13 @@ export function roomPipes(room: string): PipeRun[] {
   // A room being laid out afresh has no pipework yet (`BEING_LAID_OUT`).
   if (BEING_LAID_OUT.includes(room)) return [];
   return room in ROUTED ? poolPlantPipework(room).runs : [];
+}
+
+/** The injection points of a room's dosing lines. */
+export function roomInjections(room: string): InjectionPoint[] {
+  return room in ROUTED && !retiredPipes(room)
+    ? poolPlantPipework(room).injections
+    : [];
 }
 
 /** The isolators of a room, and their stands' feet. */

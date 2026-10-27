@@ -1,4 +1,5 @@
 import { INSTALLED_VALVES } from './installed-valves';
+import { MODEL_VALVES } from './model-valves';
 import type { PlantServices } from './services';
 import { circulating } from './pools';
 import type { PoolsState } from './pools';
@@ -7,8 +8,11 @@ import { serviceAvailable } from './services';
 import { strokeTime } from '../../toolkit/components/plant/logic/actuated-valve';
 
 /** The nine installed valves on the lounge pool's filter and balance-tank pipework. */
-export const LOUNGE_VALVES = Object.values(INSTALLED_VALVES).filter((valve) =>
-  valve.tag.startsWith('PL1-'),
+export const LOUNGE_VALVES = Object.values(INSTALLED_VALVES).filter(
+  (valve) =>
+    valve.tag.startsWith('PL1-') &&
+    // Not the dosing quills' ball valves (prompt 089), worked by hand.
+    MODEL_VALVES.find((v) => v.id === valve.assetId)?.operator !== 'lever',
 );
 const STROKE = strokeTime(0.09);
 const VALVE_BY_TAG = new Map(LOUNGE_VALVES.map((valve) => [valve.tag, valve]));

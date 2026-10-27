@@ -55,6 +55,19 @@ const nodes: SchematicNode[] = [
   machine('inlet-header', 'header', 'Filter inlet header'),
   machine('outlet-header', 'header', 'Filter outlet header'),
   machine('heated-main', 'header', 'Heated main'),
+  // Where the chemicals go in (prompt 089, item 4; the owner, 2026-10-27,
+  // the Olympic's way): the acid into the heated main after the heat
+  // exchanger, the hypochlorite into the return main after the UV unit,
+  // last, each through its injection quill.
+  machine('return-main', 'header', 'Return main'),
+  {
+    ...machine('acid-quill', 'injection-quill', 'Acid injection quill'),
+    code: 'IQ1',
+  },
+  {
+    ...machine('hypo-quill', 'injection-quill', 'Hypochlorite injection quill'),
+    code: 'IQ2',
+  },
   machine('heating', 'heating-main', 'Heating main'),
   machine('water', 'water-service', 'Water service'),
   machine('waste', 'gully', 'Drain to waste'),
@@ -202,22 +215,35 @@ const links: PlumbEdge[] = [
     'water',
   ),
   ...DAY_TANKS.links,
+  // Each dosing pump's discharge to its quill, the quill into its main;
+  // the controller's sample from the filtered main, before any dosing.
   link(
-    'Hypochlorite to the heated main',
-    ['hypo-pumps', 'out'],
-    ['heated-main', 'hypochlorite'],
+    'Acid to its injection quill',
+    ['acid-pump', 'out'],
+    ['acid-quill', 'in'],
     'chemical',
   ),
-
   link(
-    'Acid to the heated main',
-    ['acid-pump', 'out'],
+    'Acid injection into the heated main',
+    ['acid-quill', 'out'],
     ['heated-main', 'acid'],
     'chemical',
   ),
   link(
-    'Sample line from the heated main',
-    ['heated-main', 'sample'],
+    'Hypochlorite to its injection quill',
+    ['hypo-pumps', 'out'],
+    ['hypo-quill', 'in'],
+    'chemical',
+  ),
+  link(
+    'Hypochlorite injection into the return main',
+    ['hypo-quill', 'out'],
+    ['return-main', 'hypochlorite'],
+    'chemical',
+  ),
+  link(
+    'Sample line from the filtered main',
+    ['outlet-header', 'sample'],
     ['dosing', 'sample'],
     'water',
   ),
@@ -332,6 +358,33 @@ export const LOUNGE_SCHEMATIC: RoomSchematic = {
       'closed',
       'tankDrain',
     ),
+    // Each quill's isolating valve and non-return valve, on its dosing
+    // line at the quill (prompt 089, item 4).
+    ...(['acid', 'hypo'] as const).flatMap((k): SchematicFitting[] => {
+      const edge =
+        k === 'acid'
+          ? 'Acid to its injection quill'
+          : 'Hypochlorite to its injection quill';
+      return [
+        {
+          id: `${k}-quill.in.iso`,
+          kind: 'isolating-valve',
+          edge,
+          end: 'target',
+          normally: 'open',
+          role: `${k === 'acid' ? 'acid' : 'hypochlorite'} injection isolation`,
+          operator: 'lever',
+        },
+        {
+          id: `${k}-quill.in.nrv`,
+          kind: 'non-return-valve',
+          edge,
+          end: 'target',
+          normally: 'open',
+          role: `${k === 'acid' ? 'acid' : 'hypochlorite'} injection non-return`,
+        },
+      ];
+    }),
     isolator('P-201A isolator', 'P-201A power'),
     isolator('P-201B isolator', 'P-201B power'),
     isolator('Lounge UV unit isolator', 'UV unit power'),

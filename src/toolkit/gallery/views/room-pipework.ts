@@ -9,6 +9,7 @@ import { loungeValveFlows } from '../../../game/plant/lounge-valves';
 import { circulating } from '../../../game/plant/pools';
 import { createActuatedButterflyValve } from '../../components/plant/views/actuated-butterfly-valve';
 import { createSampleTakeoff } from '../../components/plant/views/sample-takeoff';
+import { createInjectionQuillSet } from '../../components/plant/views/injection-quill';
 import { retiredFrom } from '../logic/retired-rooms';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -49,6 +50,7 @@ import { PIPE_SIZES } from '../../components/plant/views/plant-tools';
 import {
   CHAIN_TO,
   ISOLATOR_Y,
+  roomInjections,
   roomIsolators,
   standFootprint,
   pipeObstacles,
@@ -170,6 +172,22 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         group.add(bind(takeoff));
       }
     }
+    // The lounge's sample, off the filtered main by its saddle (prompt
+    // 089, item 4): the main's middle half its size below the tube's foot.
+    if (
+      (retiredFrom(room) ?? room) === 'plant_pool_01' &&
+      r.name === 'Sample line from the filtered main, its point'
+    ) {
+      const main = runs.find(
+        (run) => run.name === 'Filtered main to the heat exchanger',
+      );
+      if (main) {
+        const takeoff = createSampleTakeoff(kit, main.od, r.od);
+        const [x, y, z] = r.points[0];
+        takeoff.position.set(...lift([x, y - main.od / 2, z] as const));
+        group.add(bind(takeoff));
+      }
+    }
     // A chemical line (plan 085): its transfer mains, branches and fills
     // double-contained, an outer pipe over the carrier; every chemical
     // run marked to BS 1710, hazard bands, legend and a flow arrow, along
@@ -214,6 +232,8 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       );
     }
     for (const v of r.valves) {
+      // A dosing quill's ball valve is drawn with its quill set.
+      if (v.style === 'chemical-ball') continue;
       const installed = installedValveFor(own, r.name, v.name);
       const fitting = SCHEMATICS[own]?.fittings.some(
         (f) => f.id === installed.assetId,
@@ -452,6 +472,44 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       if (use) parts.uses.set(chain, use);
     return part.object;
   }
+  // The dosing lines' injection points (prompt 089, item 4): each quill
+  // in its main, its non-return valve and its isolating ball valve, the
+  // ball valve the world's (its model valve), its check valve passing
+  // while it is open.
+  const checks: { check: { flowing: boolean }; open: () => boolean }[] = [];
+  for (const q of roomInjections(retiredFrom(room) ?? room)) {
+    const open = () => store?.world.value.installedValves[q.valve] ?? true;
+    const set = createInjectionQuillSet(kit, {
+      mainRadius: q.mainOd / 2,
+      name: q.name,
+      valve: {
+        open,
+        set: (on: boolean) =>
+          store?.dispatch({ type: 'plant/valve', id: q.valve, open: on }),
+      },
+    });
+    parts.add(set.quill);
+    parts.add(set.check);
+    parts.add(set.valve);
+    markComponent(set.quill.object, { name: q.name, model: { node: q.quill } });
+    markComponent(set.check.object, {
+      name: `${q.name} non-return valve`,
+      model: { fitting: q.check },
+    });
+    markComponent(set.valve.object, {
+      name: `${q.name} isolating valve`,
+      model: { fitting: q.valve },
+    });
+    checks.push({ check: set.check, open });
+    set.group.position.set(...lift(q.at));
+    set.group.rotation.y = Math.atan2(-q.outward[2], q.outward[0]);
+    group.add(
+      markComponent(set.group, {
+        name: `${q.name} set`,
+        model: { node: q.quill },
+      }),
+    );
+  }
   // The floor channels: grated, or covered with chequer plate.
   const grating = new MeshStandardMaterial({
     color: '#3a3d3e',
@@ -569,6 +627,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       parts.setAudible(on);
     },
     update(delta: number) {
+      for (const c of checks) c.check.flowing = c.open();
       parts.update(delta);
       if (tankGully && store) {
         const world = store.world.value;
