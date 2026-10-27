@@ -1,7 +1,8 @@
 /**
  * The settings panel's view (mission 096): a "desk" view rather than true
- * isometric, the orthographic camera a little above and to one side of
- * the panel's face, so the parts stand proud and read as 3D while small
+ * isometric, the orthographic camera a little above the panel's face
+ * (straight on, so its rows stay level; the owner, 2026-10-27, asked for
+ * the plates to line up), so the parts stand proud and read as 3D while small
  * lettering is barely foreshortened. The panel is as wide as the screen
  * lets it be at a legible scale, and as tall as its modules need; the view
  * scrolls down it. Pure.
@@ -10,22 +11,26 @@
 /** The camera's pose, radians: how far it looks down at the face, and round. */
 export const DESK_VIEW = {
   pitch: (14 * Math.PI) / 180,
-  yaw: (5 * Math.PI) / 180,
+  yaw: 0,
 };
 
-/** The scale the panel is drawn at where the screen allows, CSS pixels a millimetre. */
-export const LEGIBLE = 1.9;
+/**
+ * The scale the panel is drawn at where the screen allows, CSS pixels a
+ * millimetre: half the first trial's (the owner, 2026-10-27: "about 50 %
+ * smaller", so more of the panel is seen at once).
+ */
+export const LEGIBLE = 0.95;
 /** The largest it is drawn, on a wide screen. */
-export const LARGEST = 2.4;
+export const LARGEST = 1.25;
 /** The panel's narrowest and widest, metres. */
-export const PANEL_WIDTH = { min: 0.27, max: 1.05 } as const;
+export const PANEL_WIDTH = { min: 0.36, max: 1.7 } as const;
 /** The screen's margin each side, CSS pixels. */
 export const SCREEN_MARGIN = 16;
 
 export interface DeskFit {
   /** The panel's width, metres. */
   panelWidth: number;
-  /** CSS pixels a millimetre, snapped to quarter pixels. */
+  /** CSS pixels a millimetre, snapped to twentieths. */
   pixelsPerMillimetre: number;
 }
 
@@ -37,11 +42,11 @@ export function fitPanel(cssWidth: number): DeskFit {
     PANEL_WIDTH.max,
     Math.max(PANEL_WIDTH.min, usable / (LEGIBLE * 1000 * across)),
   );
-  // As large as fits, up to the largest, snapped down to a quarter pixel.
+  // As large as fits, up to the largest, snapped down to a twentieth (a whole pixel every 20 mm).
   const fits = usable / (panelWidth * 1000 * across);
   const pixelsPerMillimetre = Math.max(
-    0.25,
-    Math.floor(Math.min(LARGEST, fits) * 4) / 4,
+    0.05,
+    Math.floor(Math.min(LARGEST, fits) * 20 + 1e-9) / 20,
   );
   return { panelWidth, pixelsPerMillimetre };
 }

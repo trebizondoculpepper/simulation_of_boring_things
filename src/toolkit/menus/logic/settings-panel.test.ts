@@ -4,6 +4,7 @@ import {
   KNOBS,
   METERS,
   armed,
+  dialScale,
   knobIndex,
   knobReadout,
   knobSteps,
@@ -79,7 +80,8 @@ describe('knobs', () => {
   it('turn render quality from worst to best', () => {
     expect(knobValue('renderLevel', 0)).toBe(10);
     expect(knobValue('renderLevel', knobSteps('renderLevel'))).toBe(0);
-    expect(knobReadout('renderLevel', 0)).toBe('1.00');
+    expect(knobReadout('renderLevel', 0)).toBe('100');
+    expect(knobReadout('renderLevel', 10)).toBe('39');
   });
   it('read out as the DOM menu shows them', () => {
     expect(knobReadout('volume', 0.8)).toBe('80');
@@ -96,6 +98,20 @@ describe('knobs', () => {
         expect(r).toBeGreaterThanOrEqual(0);
         expect(r).toBeLessThanOrEqual(1);
       }
+    }
+  });
+  it('print their own scales round their dials, in order', () => {
+    expect(dialScale('renderLevel').map((d) => d.text)).toEqual([
+      'WORST',
+      'BEST',
+    ]);
+    expect(dialScale('fov')[0]).toEqual({ share: 0, text: '40°' });
+    expect(dialScale('volume').at(-1)).toEqual({ share: 1, text: '100' });
+    for (const id of ids) {
+      const shares = dialScale(id).map((d) => d.share);
+      expect(shares).toEqual([...shares].sort((a, b) => a - b));
+      expect(Math.min(...shares)).toBeGreaterThanOrEqual(0);
+      expect(Math.max(...shares)).toBeLessThanOrEqual(1);
     }
   });
   it('write the settings their positions mean', () => {

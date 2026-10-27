@@ -1,11 +1,5 @@
 import { computed, effect, signal } from '@preact/signals-core';
-import {
-  BoxGeometry,
-  CylinderGeometry,
-  Group,
-  Mesh,
-  PlaneGeometry,
-} from 'three';
+import { BoxGeometry, SphereGeometry, Group, Mesh, PlaneGeometry } from 'three';
 import type { Object3D } from 'three';
 import {
   createPartSet,
@@ -37,11 +31,12 @@ import {
 } from '../../components/industrial-control/views/panel-instruments';
 import { PENFOLD_GREY } from '../../components/industrial-control/views/control-cubicle';
 import { settings, updateSettings } from '../../settings/settings-store';
-import { CARD, SPACING } from '../logic/panel-layout';
+import { CARD, RACK, SPACING, narrowCard } from '../logic/panel-layout';
 import type { ModuleBox, PanelLayout } from '../logic/panel-layout';
 import {
   CONFIRM_WINDOW,
   METERS,
+  dialScale,
   knobIndex,
   knobReadout,
   knobSteps,
@@ -90,30 +85,116 @@ export interface SettingsPanelView {
   dispose(): void;
 }
 
-/** The panel's paints. */
-const PANEL = '#3b3f43';
+/** The panel's paints: its frame, and the silk-screened legends on it. */
+const FRAME = '#3b3f43';
 const SILK = '#ecebe4';
 /** Lettering drawn at this multiple of its usual resolution: crisp up close. */
 const LETTERING = 3;
-/** A module's face stands this far proud of the panel. */
-const MODULE_DEPTH = 0.004;
+/** A module's plate: how thick it is, and how deep the rack's opening behind it. */
+const PLATE = 0.003;
+const WELL = 0.006;
 
-/** A quarter-turn (DZUS) fastener's head, its slot across it, at `x`, `y`. */
-function fastener(kit: PanelKit, parent: Object3D, x: number, y: number) {
+/** The shared paints of the rack and its fixings, made once per panel. */
+function rackPaints(kit: PanelKit) {
+  return {
+    frame: kitPaint(kit, FRAME),
+    well: kitPaint(kit, '#0c0d0e'),
+    lip: kitPaint(kit, '#5d6266', 0.6),
+    plate: kitPaint(kit, '#aeb1ae', 0.15),
+    face: kitPaint(kit, PENFOLD_GREY, 0.1),
+    screw: kitPaint(kit, '#c3c7ca', 0.9),
+    slot: kitPaint(kit, '#202224'),
+    dial: (() => {
+      const m = createPs1Material({ color: '#ffffff' });
+      kit.materials.push(m);
+      return m;
+    })(),
+  };
+}
+type RackPaints = ReturnType<typeof rackPaints>;
+
+/**
+ * A quarter-turn (DZUS) fastener: a slightly domed, polished head with a
+ * slot across it, at `x`, `y` on a plate's face, turned as it was left.
+ */
+function fastener(paints: RackPaints, parent: Object3D, x: number, y: number) {
+  const r = 0.0036;
   const head = new Mesh(
-    new CylinderGeometry(0.0034, 0.0036, 0.0012, 14),
-    kitPaint(kit, '#8f9396', 0.7),
+    new SphereGeometry(r, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+    paints.screw,
   );
   head.rotation.x = Math.PI / 2;
-  head.position.set(x, y, 0.0006);
+  head.scale.set(1, 0.42, 1);
+  head.position.set(x, y, 0);
   parent.add(head);
-  const slot = new Mesh(
-    new BoxGeometry(0.0052, 0.0008, 0.0004),
-    kitPaint(kit, '#26282a'),
-  );
-  slot.position.set(x, y, 0.0013);
-  slot.rotation.z = ((x * 997 + y * 631) % 1) * Math.PI;
+  const slot = new Mesh(new BoxGeometry(r * 1.7, 0.0007, 0.0006), paints.slot);
+  slot.position.set(x, y, r * 0.42 - 0.0001);
+  slot.rotation.z = (Math.abs(x * 997 + y * 631) % 1) * Math.PI;
   parent.add(slot);
+}
+
+/**
+ * A knob's dial, printed on a black disc behind it: a tick at each
+ * detent, longer at its figures, and the figures (or words) round it.
+ */
+function drawDial(
+  kit: PanelKit,
+  material: RackPaints['dial'],
+  radius: number,
+  detents: number,
+  marks: readonly { share: number; text: string }[],
+) {
+  const size = 512;
+  const { context: c, texture } = createCanvasTexture(size, size);
+  kit.textures.push(texture);
+  const m = size / 2;
+  const scale = m / radius;
+  c.fillStyle = '#1b1c1e';
+  c.beginPath();
+  c.arc(m, m, m - 2, 0, Math.PI * 2);
+  c.fill();
+  // The knob's travel, as `createPotentiometer` turns it: 270°, from
+  // lower left (share 0) round the top to lower right (share 1).
+  const toward = (share: number) =>
+    (Math.PI * 3) / 4 - share * ((Math.PI * 3) / 2);
+  const at = (share: number, r: number) => {
+    const a = toward(share);
+    return [m - Math.sin(a) * r * scale, m - Math.cos(a) * r * scale];
+  };
+  c.strokeStyle = '#ecebe4';
+  c.lineCap = 'round';
+  const shares = new Set(marks.map((k) => k.share));
+  for (let i = 0; i <= detents; i++) {
+    const share = i / detents;
+    const major = shares.has(share) || i === 0 || i === detents;
+    c.lineWidth = major ? 5 : 2.5;
+    const [x0, y0] = at(share, radius * (major ? 0.6 : 0.64));
+    const [x1, y1] = at(share, radius * 0.72);
+    c.beginPath();
+    c.moveTo(x0, y0);
+    c.lineTo(x1, y1);
+    c.stroke();
+  }
+  c.fillStyle = '#ecebe4';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  for (const { share, text } of marks) {
+    c.font = `bold ${text.length > 3 ? 34 : 40}px ${PANEL_FONT}`;
+    const [x, y] = at(share, radius * 0.86);
+    c.fillText(text, x, y);
+  }
+  texture.needsUpdate = true;
+  const dialMaterial = material.clone();
+  dialMaterial.map = texture;
+  dialMaterial.transparent = true;
+  dialMaterial.alphaTest = 0.5;
+  kit.materials.push(dialMaterial);
+  const mesh = new Mesh(
+    new PlaneGeometry(radius * 2, radius * 2),
+    dialMaterial,
+  );
+  mesh.name = 'Dial';
+  return mesh;
 }
 
 /** The instruction card's art: the bindings, printed small, in a table. */
@@ -123,6 +204,7 @@ function drawCard(
   height: number,
   bindings: readonly (readonly [string, string, string])[],
   touch: string,
+  narrow: boolean,
 ) {
   const perMetre = 9000;
   const w = Math.round(width * perMetre);
@@ -131,9 +213,10 @@ function drawCard(
   kit.textures.push(texture);
   c.fillStyle = '#f3f1e8';
   c.fillRect(0, 0, w, h);
-  const line = CARD.line * perMetre;
   const pad = CARD.pad * perMetre * 0.6;
-  const narrow = width < 0.26;
+  // The lines spread to fill the card its rack rows give it, up to a third larger.
+  const lines = bindings.length * (narrow ? 2 : 1) + 2;
+  const line = Math.min(CARD.line * perMetre * 1.35, (h - 2 * pad) / lines);
   c.fillStyle = '#1d1e1b';
   c.textBaseline = 'middle';
   const font = (bold: boolean) =>
@@ -233,40 +316,37 @@ function build_(
   const px = (x: number) => x - W / 2;
   const py = (y: number) => H / 2 - y;
 
-  // The panel itself, and its silk-screened group outlines and headings.
-  const base = new Mesh(new BoxGeometry(W, H, 0.02), kitPaint(kit, PANEL));
+  // The frame, and in it an opening for each group, a dark well with a
+  // metal lip, into which the modules are bolted; the gutters between the
+  // plates show the well. Each group's legend is silk-screened above it.
+  const paints = rackPaints(kit);
+  const base = new Mesh(new BoxGeometry(W, H, 0.02), paints.frame);
   base.position.z = -0.01;
   group.add(base);
-  const silk = kitPaint(kit, SILK);
-  const rule = (x: number, y: number, w: number, h: number) => {
-    const m = new Mesh(new PlaneGeometry(w, h), silk);
-    m.position.set(px(x + w / 2), py(y + h / 2), 0.0003);
-    group.add(m);
-  };
+  const lip = 0.0018;
   for (const g of layout.groups) {
-    const t = 0.0009;
-    const top = g.y + SPACING.heading / 2;
-    const heading = createMicroLabel(kit, g.zone.title, {
-      height: 0.0055,
+    const ow = g.w + 2 * RACK.gutter;
+    const oh = g.h + 2 * RACK.gutter;
+    const well = new Mesh(new BoxGeometry(ow, oh, 0.001), paints.well);
+    well.position.set(px(g.x + g.w / 2), py(g.y + g.h / 2), -WELL);
+    group.add(well);
+    const edge = (x: number, y: number, w: number, h: number) => {
+      const m = new Mesh(new BoxGeometry(w, h, WELL), paints.lip);
+      m.position.set(px(x + w / 2), py(y + h / 2), -WELL / 2 + 0.0003);
+      group.add(m);
+    };
+    const x0 = g.x - RACK.gutter;
+    const y0 = g.y - RACK.gutter;
+    edge(x0 - lip, y0 - lip, ow + 2 * lip, lip);
+    edge(x0 - lip, y0 + oh, ow + 2 * lip, lip);
+    edge(x0 - lip, y0, lip, oh);
+    edge(x0 + ow, y0, lip, oh);
+    const legend = createMicroLabel(kit, g.zone.title, {
+      height: 0.0045,
       ink: SILK,
-      plate: PANEL,
     });
-    heading.position.set(px(g.x + g.w / 2), py(top), 0.0004);
-    group.add(heading);
-    // The outline, broken where the heading crosses it.
-    const label = 0.006 * g.zone.title.length + 0.012;
-    const side = (g.w - label) / 2;
-    rule(g.x, top - t / 2, side, t);
-    rule(g.x + g.w - side, top - t / 2, side, t);
-    rule(g.x, g.y + g.h - t, g.w, t);
-    rule(g.x, top, t, g.h - (top - g.y));
-    rule(g.x + g.w - t, top, t, g.h - (top - g.y));
-    if (g.zone.dymo) {
-      // The maintenance group is a site addition: its heading on tape too.
-      const tape = createDymoLabel(kit, 'SITE ADDITION', { colour: 'red' });
-      tape.position.set(px(g.x + g.w - 0.05), py(g.y + g.h - 0.008), 0.0006);
-      group.add(tape);
-    }
+    legend.position.set(px(g.x + g.w / 2), py(g.legendY - 0.002), 0.0004);
+    group.add(legend);
   }
 
   // The header: the panel's name engraved, Penfold's mark top right.
@@ -369,30 +449,35 @@ function build_(
     mod.name = `Module: ${m.title}`;
     mod.position.set(px(m.x + m.w / 2), py(m.y + m.h / 2), 0);
     group.add(mod);
-    const plate = new Mesh(
-      new BoxGeometry(m.w, m.h, MODULE_DEPTH),
-      kitPaint(kit, PENFOLD_GREY),
-    );
-    plate.position.z = MODULE_DEPTH / 2;
+    // The plate: its edge, darker, and its face a little in from it, so
+    // its thickness and bevel show; it stands a hair proud of the frame.
+    const plate = new Mesh(new BoxGeometry(m.w, m.h, PLATE), paints.plate);
+    plate.position.z = -PLATE / 2 + 0.001;
     mod.add(plate);
+    const facePlate = new Mesh(
+      new BoxGeometry(m.w - 0.0018, m.h - 0.0018, 0.0006),
+      paints.face,
+    );
+    facePlate.position.z = 0.001 + 0.0003;
+    mod.add(facePlate);
     const face = new Group();
-    face.position.z = MODULE_DEPTH;
+    face.position.z = 0.0016;
     mod.add(face);
-    const inset = 0.0055;
+    const inset = 0.0052;
     for (const [sx, sy] of [
       [-1, 1],
       [1, 1],
       [-1, -1],
       [1, -1],
     ])
-      fastener(kit, face, sx * (m.w / 2 - inset), sy * (m.h / 2 - inset));
+      fastener(paints, face, sx * (m.w / 2 - inset), sy * (m.h / 2 - inset));
     // Its title: engraved, or Dymo tape for a site addition.
     const titleY = m.h / 2 - 0.004 - SPACING.title / 2;
     const dymo = 'dymo' in m.item && m.item.dymo;
     const title = dymo
       ? createDymoLabel(kit, m.title, { colour: 'black', seed: m.title.length })
       : createEngravedPlate(kit, [m.title], {
-          width: m.w - 0.022,
+          width: m.w - 0.02,
           height: SPACING.title,
         });
     title.position.set(0, titleY, 0.0002);
@@ -408,14 +493,15 @@ function build_(
     switch (item.kind) {
       case 'pot': {
         const spec = METERS[item.id];
+        const meterW = 0.1;
         const meter = createPanelMeter(kit, spec.unit, {
-          width: 0.088,
+          width: meterW,
           scaleMax: spec.scaleMax,
           redFrom: spec.redFrom ?? 1,
           band: spec.band ?? null,
         });
-        const meterH = 0.088 / 1.16;
-        place(meter.group, -m.w / 2 + 0.01 + 0.044, body - 0.004 - meterH / 2);
+        const meterX = -m.w / 2 + 0.011 + meterW / 2;
+        place(meter.group, meterX, body - 0.006 - meterW / 1.16 / 2);
         const knob = parts.add(
           potentiometer(kit, {
             name: `${item.legend} knob`,
@@ -429,30 +515,31 @@ function build_(
             },
           }),
         );
-        // A black dial plate behind it, so its white scale reads on the grey.
-        const dial = new Mesh(
-          new CylinderGeometry(0.031, 0.031, 0.001, 36),
-          kitPaint(kit, '#1c1d1f'),
-        );
-        dial.rotation.x = Math.PI / 2;
-        place(dial, m.w / 2 - 0.05, centreY + 0.002).position.z = 0.0005;
-        place(knob.object, m.w / 2 - 0.05, centreY + 0.006);
-        const readout = createSevenSegment(kit, item.digits, {
-          digitHeight: 0.0105,
+        // The knob's own printed 0–10 is for dark panels: this module
+        // prints its setting's own scale on a dial behind it instead.
+        knob.object.traverse((o) => {
+          if (o.name.startsWith('Label 0')) o.visible = false;
         });
-        const readY = -m.h / 2 + 0.017;
-        place(readout.group, -m.w / 2 + 0.054, readY);
+        const knobX = m.w / 2 - 0.05;
+        const dial = drawDial(
+          kit,
+          paints.dial,
+          0.04,
+          knobSteps(item.id),
+          dialScale(item.id),
+        );
+        place(dial, knobX, centreY).position.z = 0.0003;
+        place(knob.object, knobX, centreY);
+        const readout = createSevenSegment(kit, item.digits, {
+          digitHeight: 0.012,
+        });
+        const readY = -m.h / 2 + 0.02;
+        place(readout.group, meterX - 0.008, readY);
         const unit = createMicroLabel(kit, item.unit, {
           height: 0.0045,
           ink: '#202120',
         });
-        place(
-          unit,
-          item.unit.endsWith(':')
-            ? -m.w / 2 + 0.054 - 0.038
-            : -m.w / 2 + 0.054 + 0.038,
-          readY,
-        ).position.z = 0.0004;
+        place(unit, meterX + 0.036, readY).position.z = 0.0004;
         let last = '';
         let needle: NeedleState = {
           at: spec.reading(settings.peek()[item.id]),
@@ -588,7 +675,14 @@ function build_(
           kitPaint(kit, '#2a2c2e'),
         );
         place(holder, 0, centreY - 0.002).position.z = 0.001;
-        const art = drawCard(kit, cw, ch, bindings, touchHelp);
+        const art = drawCard(
+          kit,
+          cw,
+          ch,
+          bindings,
+          touchHelp,
+          narrowCard(m.columns),
+        );
         const material = createPs1Material({ map: art, roughness: 0.35 });
         kit.materials.push(material);
         const card = new Mesh(new PlaneGeometry(cw, ch), material);

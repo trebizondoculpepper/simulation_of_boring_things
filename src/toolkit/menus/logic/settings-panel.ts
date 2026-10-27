@@ -98,12 +98,12 @@ export const KNOBS: Record<
     step: 0.05,
     show: (v) => String(Math.round(v * 100)),
   },
-  // Shown as the DOM menu's ratio, 1 : x; the knob's scale reads the level.
+  // Shown as the share of full resolution each side, a per cent.
   renderLevel: {
     min: 0,
     max: 10,
     step: 1,
-    show: (v) => (1 / renderScale(v)).toFixed(2),
+    show: (v) => String(Math.round(renderScale(v) * 100)),
   },
   // 2° a detent, so the rooms' own 52° is a position.
   fov: { min: 40, max: 90, step: 2, show: (v) => String(Math.round(v)) },
@@ -157,7 +157,8 @@ export const knobReadout = (id: KnobSetting, value: number) =>
 /**
  * Each knob's meter: a DH-670 moving-coil meter, its unit printed large
  * and its scale's full-scale figure, and the needle's reading (0 to 1) for
- * a setting's value. Quality reads 0 (worst) to 10 (best); the field of
+ * a setting's value. Quality reads the resolution drawn, a per cent of
+ * full each side (level 10 draws 39 %); the field of
  * view reads its degrees on a 0 to 90 scale, its usable range banded.
  */
 export const METERS: Record<
@@ -171,11 +172,12 @@ export const METERS: Record<
   }
 > = {
   volume: { unit: '%', scaleMax: 100, redFrom: 0.9, reading: (v) => v },
+  // The resolution drawn, as a per cent of full along each side.
   renderLevel: {
-    unit: 'QUALITY',
-    scaleMax: 10,
-    band: { from: 0, to: 0.3, colour: '#b8342a' },
-    reading: (v) => knobShare('renderLevel', v),
+    unit: '% RES',
+    scaleMax: 100,
+    band: { from: 0, to: 0.5, colour: '#b8342a' },
+    reading: (v) => renderScale(v),
   },
   fov: {
     unit: 'DEG',
@@ -190,6 +192,30 @@ export const METERS: Record<
     reading: (v) => v / 3,
   },
 };
+
+/**
+ * What is printed round each knob on its dial: figures (or words) at
+ * shares of its travel, and a tick at every detent.
+ */
+export function dialScale(id: KnobSetting): { share: number; text: string }[] {
+  const at = (value: number, text = String(value)) => ({
+    share: knobShare(id, value),
+    text,
+  });
+  switch (id) {
+    case 'renderLevel':
+      return [
+        { share: 0, text: 'WORST' },
+        { share: 1, text: 'BEST' },
+      ];
+    case 'volume':
+      return [0, 0.25, 0.5, 0.75, 1].map((v) => at(v, String(v * 100)));
+    case 'fov':
+      return [40, 50, 60, 70, 80, 90].map((v) => at(v, `${v}°`));
+    case 'sensitivity':
+      return [0.25, 1, 2, 3].map((v) => at(v));
+  }
+}
 
 /** The on-screen controls selector's positions, left to right. */
 export const ON_SCREEN_POSITIONS: readonly OnScreenControls[] = [
@@ -261,8 +287,8 @@ export function settingsPanel(offers: PanelOffers): PanelZone[] {
           kind: 'pot',
           id: 'renderLevel',
           legend: 'RENDER QUALITY',
-          unit: '1 :',
-          digits: 4,
+          unit: '% RES',
+          digits: 3,
         },
         {
           kind: 'pot',

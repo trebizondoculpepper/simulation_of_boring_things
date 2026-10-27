@@ -540,7 +540,8 @@ export function createSevenSegment(
         context.shadowColor = point ? colour : 'transparent';
         context.shadowBlur = point ? 5 * S : 0;
         context.beginPath();
-        context.arc(8 + i * cellW + 36, 8 + 54, 3.5, 0, Math.PI * 2);
+        // Clear of the digit's segments, so a lit point reads as a point.
+        context.arc(8 + i * cellW + 38, 8 + 59, 3.8, 0, Math.PI * 2);
         context.fill();
         context.shadowBlur = 0;
       });

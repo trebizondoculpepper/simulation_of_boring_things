@@ -10,14 +10,17 @@ import {
 describe('the desk view', () => {
   it('draws a desktop panel at a legible, snapped scale', () => {
     const fit = fitPanel(1280);
-    expect(fit.pixelsPerMillimetre).toBeGreaterThanOrEqual(1.75);
+    expect(fit.pixelsPerMillimetre).toBeGreaterThanOrEqual(0.9);
     expect(fit.pixelsPerMillimetre).toBeLessThanOrEqual(LARGEST);
-    expect((fit.pixelsPerMillimetre * 4) % 1).toBe(0);
+    expect(fit.pixelsPerMillimetre * 20).toBeCloseTo(
+      Math.round(fit.pixelsPerMillimetre * 20),
+      9,
+    );
   });
   it('keeps a phone panel at its narrowest, smaller', () => {
     const fit = fitPanel(360);
     expect(fit.panelWidth).toBe(PANEL_WIDTH.min);
-    expect(fit.pixelsPerMillimetre).toBeLessThan(1.5);
+    expect(fit.pixelsPerMillimetre).toBeLessThan(1);
   });
   it('never draws wider than the screen', () => {
     for (const w of [360, 800, 1280, 2560]) {
