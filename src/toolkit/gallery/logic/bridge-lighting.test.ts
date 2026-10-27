@@ -5,6 +5,7 @@ import {
   LIGHT_SWITCH,
   bridgeEmergencyLit,
   bridgeMainLit,
+  bridgeSwitchLive,
   emergencyPlan,
   lightSwitchPlace,
 } from './bridge-lighting';
@@ -69,6 +70,20 @@ describe('the bridge’s light switch (the owner, 2026-10-27)', () => {
     const w = mainsOff(newWorld());
     expect(w.lighting.switches.bridge.emergency).toBe(false);
     expect(bridgeEmergencyLit(w)).toBe(true);
+  });
+
+  it('lights its locator LEDs while the way or the battery can supply them', () => {
+    expect(bridgeSwitchLive(newWorld())).toBe(true);
+    // The mains gone: on the battery.
+    const off = mainsOff(newWorld());
+    expect(bridgeSwitchLive(off)).toBe(true);
+    // And the battery flat: dark.
+    expect(
+      bridgeSwitchLive({
+        ...off,
+        centralBattery: { ...off.centralBattery, charge: 0 },
+      }),
+    ).toBe(false);
   });
 
   it('hangs the switch inside the doors, to the right as one comes in, 1.2 m up', () => {

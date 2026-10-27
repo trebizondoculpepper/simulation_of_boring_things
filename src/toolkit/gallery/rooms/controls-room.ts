@@ -55,6 +55,7 @@ import {
   createMimicTestBoard,
   createPeriodBoard,
   createStudioBoard,
+  createLightSwitchBoard,
 } from './test-boards';
 import type { TestFitting } from './test-boards';
 import type { LiveExhibit, PlantExhibit } from './plant/exhibit';
@@ -263,6 +264,14 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
   place(createCharacterLcdBoard(kit), -1.0, 1.55, half.z - 0.15, Math.PI, {
     minX: -1.3 * m,
     maxX: -0.7 * m,
+    minZ: (half.z - 0.35) * m,
+    maxZ: half.z * m,
+  });
+  // The plate light switches with their locator LEDs (the owner,
+  // 2026-10-27), on the south wall beside the character LCD.
+  place(createLightSwitchBoard(kit), -2.2, 1.4, half.z - 0.15, Math.PI, {
+    minX: -2.65 * m,
+    maxX: -1.75 * m,
     minZ: (half.z - 0.35) * m,
     maxZ: half.z * m,
   });

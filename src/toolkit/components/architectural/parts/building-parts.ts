@@ -1,6 +1,7 @@
 import { signal } from '@preact/signals-core';
 import { PointLight } from 'three';
 import { createLedDriver } from '../logic/led-driver';
+import { locatorGlow } from '../logic/switch-locator';
 import { createFluorescentTube } from '../logic/fluorescent-gear';
 import { createSpringDoor } from '../logic/spring-door';
 import { createSpringDoorView } from '../views/spring-door';
@@ -84,13 +85,27 @@ const MAGLOCK = click({
 
 // ---- Lighting ----------------------------------------------------------------
 
-/** A plate switch of one rocker per gang, each throwing its binding. */
+/**
+ * A plate switch of one rocker per gang (one to three), each throwing its
+ * binding; by default with a locator LED under each rocker, glowing softly
+ * while its gang is off so the switch can be found in the dark, while its
+ * `supply` is live (live where none is given; `switch-locator.ts`).
+ */
 export function lightSwitch(
   kit: PanelKit,
-  props: { name?: string; gangs: Binding<boolean>[] },
+  props: {
+    name?: string;
+    gangs: Binding<boolean>[];
+    /** Locator LEDs by the rockers (default true). */
+    locators?: boolean;
+    /** Whether the switch's supply is live, lighting its locators. */
+    supply?: Readable<boolean>;
+  },
 ): Part {
   const a = beginPart(kit, props.name ?? 'light switch');
-  const view = createRockerPlate(kit, props.gangs.length);
+  const view = createRockerPlate(kit, props.gangs.length, {
+    locators: props.locators ?? true,
+  });
   a.object.add(view.group);
   const e = emitter();
   a.voice(e, { on: ROCKER, off: ROCKER });
@@ -101,7 +116,13 @@ export function lightSwitch(
       e.emit(bound.value ? 'on' : 'off');
     });
   });
-  show(a, () => view.rockers.forEach((r, i) => r.set(props.gangs[i].value)));
+  show(a, () =>
+    view.rockers.forEach((r, i) => {
+      const on = props.gangs[i].value;
+      r.set(on);
+      r.glow(locatorGlow(on, props.supply?.value ?? true));
+    }),
+  );
   return a.part();
 }
 

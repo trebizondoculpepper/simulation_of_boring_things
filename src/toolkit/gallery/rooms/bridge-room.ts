@@ -29,6 +29,7 @@ import { createBridgeEmergencyLights } from '../views/bridge-emergency-lights';
 import {
   bridgeEmergencyLit,
   bridgeMainLit,
+  bridgeSwitchLive,
   lightSwitchPlace,
 } from '../logic/bridge-lighting';
 import { lightSwitch } from '../../components/architectural/parts/building-parts';
@@ -288,6 +289,13 @@ function installLightSwitch(kit: PanelKit): Part {
   const part = lightSwitch(kit, {
     name: 'bridge light switch',
     gangs: [gang('main'), gang('emergency')],
+    // Its locator LEDs, to find it in the dark (the owner, 2026-10-27).
+    supply: {
+      get value() {
+        const w = store?.world.value;
+        return w ? bridgeSwitchLive(w) : true;
+      },
+    },
   });
   const place = lightSwitchPlace();
   const holder = new Group();

@@ -85,6 +85,7 @@ import {
 } from '../../components/core/parts/parts';
 import { STUDIO_LED_COLOURS } from '../../components/industrial-control/views/studio-controls';
 import { piezoButton } from '../../components/core/parts/wet-parts';
+import { lightSwitch } from '../../components/architectural/parts/building-parts';
 import type {
   StudioCapColour,
   StudioLedColour,
@@ -1292,6 +1293,74 @@ export function createSmallControlsBoard(kit: PanelKit): TestFitting {
     2,
   );
   board.caption('ILLUMINATED I/O ROCKERS, TWICE LIFE SIZE', 0, -0.16, 0.008);
+  return fitting(board);
+}
+
+/**
+ * The LIGHT SWITCHES board (the owner, 2026-10-27): the parts library's
+ * plate light switch in one, two and three gangs, each gang with its
+ * amber locator LED glowing while it is off, so a switch can be found in
+ * the dark (`switch-locator.ts`), twice life size; and a one-gang SUPPLY
+ * switch for them all, showing the locators out without a supply.
+ */
+export function createLightSwitchBoard(kit: PanelKit): TestFitting {
+  const board = createBoard(kit, {
+    title: 'LIGHT SWITCHES',
+    width: 0.78,
+    height: 0.36,
+    scale: 1,
+    captionScale: 1.2,
+  });
+  const supply = signal(true);
+  const gang = () => {
+    const on = signal(false);
+    return {
+      get value() {
+        return on.value;
+      },
+      set(value: boolean) {
+        on.value = value;
+      },
+    };
+  };
+  [1, 2, 3].forEach((gangs, i) =>
+    board.place(
+      lightSwitch(kit, {
+        name: `${gangs}-gang light switch`,
+        gangs: Array.from({ length: gangs }, gang),
+        supply,
+      }),
+      [-0.27, -0.06, 0.2][i],
+      0.06,
+      2,
+    ),
+  );
+  board.caption(
+    '1, 2 AND 3 GANG, LOCATOR LEDS, TWICE LIFE SIZE',
+    0,
+    -0.05,
+    0.008,
+  );
+  board.place(
+    lightSwitch(kit, {
+      name: 'locators’ supply switch',
+      gangs: [
+        {
+          get value() {
+            return supply.value;
+          },
+          set(value: boolean) {
+            supply.value = value;
+          },
+        },
+      ],
+      locators: false,
+    }),
+    0,
+    -0.11,
+    1,
+  );
+  board.caption('SUPPLY', 0, -0.165, 0.008);
   return fitting(board);
 }
 

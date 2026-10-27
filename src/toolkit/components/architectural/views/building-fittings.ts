@@ -12,6 +12,7 @@ import { kitGlow } from '../../core/views/eighties-controls';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { PLATE_WHITE, SANS, tools } from '../../core/views/fitting-tools';
+import { SWITCH_LOCATOR } from '../logic/switch-locator';
 
 /**
  * Views of a present-day English building's general fittings: light
@@ -25,8 +26,16 @@ import { PLATE_WHITE, SANS, tools } from '../../core/views/fitting-tools';
 
 // ---- Lighting -----------------------------------------------------------
 
-/** A white plate switch of 1 to 3 rocker gangs, its rockers each `set`. */
-export function createRockerPlate(kit: PanelKit, gangs: number) {
+/**
+ * A white plate switch of 1 to 3 rocker gangs, its rockers each `set`;
+ * with `locators` (the default), a small amber locator lens under each
+ * rocker, lit by its `glow` (0 to 1).
+ */
+export function createRockerPlate(
+  kit: PanelKit,
+  gangs: number,
+  { locators = true }: { locators?: boolean } = {},
+) {
   const t = tools(kit);
   const group = new Group();
   const width = gangs > 2 ? 0.146 : 0.086;
@@ -38,10 +47,17 @@ export function createRockerPlate(kit: PanelKit, gangs: number) {
     group.add(pivot);
     const mesh = t.box(pivot, t.paint('#ecebe4', 0.3), 0.022, 0.044, 0.008);
     mesh.position.z = 0.003;
+    // A 3 mm lens set in the plate under the rocker.
+    const locator = locators
+      ? t.led(group, SWITCH_LOCATOR.colour, 0.0015, x, -0.031, 0.0095)
+      : null;
     return {
       mesh,
       set(on: boolean) {
         pivot.rotation.x = on ? -0.14 : 0.14;
+      },
+      glow(level: number) {
+        locator?.set(level);
       },
     };
   });

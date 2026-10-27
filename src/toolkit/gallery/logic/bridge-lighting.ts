@@ -53,6 +53,15 @@ export function bridgeEmergencyLit(world: World): boolean {
 }
 
 /** Where the switch plate goes: on the west wall's inner face, to the right of the doorway as one comes in, its middle `height` over the floor. */
+/**
+ * Whether the bridge's light switch's supply is live, lighting its locator
+ * LEDs (the owner, 2026-10-27): the control room's lighting way, or the
+ * central battery able to supply.
+ */
+export const bridgeSwitchLive = (world: World): boolean =>
+  zoneLit(withIntake(world.plant, world.intake), world.lighting, BRIDGE_ZONE) ||
+  batteryCanSupply(world.centralBattery, batteryMains(world));
+
 export const LIGHT_SWITCH = { height: 1.2, beyond: 0.3 } as const;
 
 export function lightSwitchPlace() {
