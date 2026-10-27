@@ -1,6 +1,6 @@
-# 092: The control room, mid-2010s
+# 092: The control room, a bit of every era
 
-Status: to do (written 2026-10-27 from the owner's request); its rules question open (below). A design mission first: try it in a dev room before the control room changes.
+Status: to do (written 2026-10-27 from the owner's request; its layout and the screens question settled by the owner the same day, below). A design mission first: try it in a dev room before the control room changes.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first, and `doc/design/control-interface-archetypes.md`. Markdown is one paragraph per line.
 
@@ -22,13 +22,19 @@ A third archetype for the control room: the mid-2010s control room, where screen
 - **The period features:** a wall clock synced by radio, a CCTV quad monitor, the alarm printer kept on as a backup nobody reads, laminated quick-reference cards, a coffee-ringed keyboard, a wall-mounted flat TV on a news channel.
 - **What stays:** the control room still diagnoses; putting things right often means going to the room concerned (`CLAUDE.md`: some controls are only local). The screens show and command what the mimics do now (valves' OPEN and SHUT, pumps' START and STOP); mode selectors and trip resets stay local.
 
-## Open question for the owner
+## The owner's answer: a bit of everything (2026-10-27)
 
-`CLAUDE.md` says: "Screens within screens are the least interesting thing to simulate, so no single PC, SCADA or touch screen may take over the instruments; a modern item is welcome where it brings its own kind of interface." The request is screens in the control room. Proposed reading, to confirm: the screens are welcome as the control room's own kind of interface (an animated LED wall, a period HMI and its mascot), each drawn and simulated by the game, sitting alongside the existing mimics and annunciator rather than replacing every instrument; the plant rooms keep their single-purpose instruments.
+"I want to kind of keep the bit of everything thing going. So the control room, I would like it to have a central desk with a sort of a console that puts some important controls within arm's reach of a controller sat at a desk. And beyond the controller's desk, which will have physical controls, there will be various kinds of wall controls or consoles, and these will be in different styles from different eras. So perhaps the discrete industrial components of the 80s, there will be the LCD displays of the 90s, and maybe a couple of computer-generated displays of the mid-2010s."
+
+So the screens do not take over (the `CLAUDE.md` rule stands): they are a couple of the room's consoles among many.
+
+- **The controller's desk, in the middle:** a seated operator's console with physical controls within arm's reach: the important commands (the pumps' START and STOP, the valves' OPEN and SHUT that the mimics carry, an alarm ACCEPT and RESET, the plant-wide stops), lit push buttons and selectors on its sloping desk top, a few key readouts on its upstand. Local-only controls (mode selectors, trip resets) still stay in the plant rooms.
+- **Beyond it, round the walls, consoles of different eras, each after its archetype:** the 1980s discrete industrial components (the existing mimics and annunciator, large panels of 30 mm devices, moving-coil meters); the 1990s LCD displays (character and segment LCD panels, the early-2000s compact terminals of mission 091 and their like); and a couple of mid-2010s computer-generated displays (the LED-matrix process wall and a period HMI workstation with its assistant mascot, as above).
+- Each console its own kind of interface, all reading and working the one world, so the room shows the same plant several ways.
 
 ## Stages
 
 1. Design note: the archetype added to `doc/design/control-interface-archetypes.md` once approved; the video wall's tiles, the HMI's screens and the mascot's character and lines sketched.
-2. A dev room prototype (dev39, the control assemblies room): one LED-matrix tile animating one process from a trial state; one workstation screen with its tabs, trend and alarm banner; the mascot popping up on cues.
-3. The control room laid out: the video wall, the workstations, the period features, the existing mimics and annunciator kept (or moved), all bound to the world and its enhanced network.
+2. A dev room prototype (dev39, the control assemblies room): the desk console first, then one LED-matrix tile animating one process from a trial state; one workstation screen with its tabs, trend and alarm banner; the mascot popping up on cues.
+3. The control room laid out: the controller's desk console in the middle; round the walls the 1980s panels (the existing mimics and annunciator kept or moved), the 1990s LCD consoles and the couple of mid-2010s screens; the period features; all bound to the world and its enhanced network.
 4. Checks: screenshots, the layout tests, frame time in the control room (the display-only updates research, `doc/research/display-only-updates.md`: redraw only on change, throttle the LED wall).
