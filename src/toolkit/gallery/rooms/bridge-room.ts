@@ -28,14 +28,18 @@ import { createViewscreen } from '../views/bridge-viewscreen';
 import { createBridgeLightsUp } from '../views/bridge-lights-up';
 import {
   ENTRANCE_BOOT,
+  displaysOnLeaving,
   LIGHTS_UP,
   THEME_AT,
   entranceBootMean,
   entranceKind,
   entranceLightsAt,
   lightsUpTotal,
+  revealWaiting,
+  stepReveal,
 } from '../logic/bridge-lights-up';
-import type { Entrance } from '../logic/bridge-lights-up';
+import type { Entrance, RevealTrigger } from '../logic/bridge-lights-up';
+import type { EquipmentDoorsPart } from '../../components/architectural/parts/equipment-doors';
 import { bootGroupOf } from '../../components/industrial-control/views/touch-surface';
 import type { BootGroup } from '../../../ui2d';
 import { sharedBridgeAmbience } from '../../components/sound/audio/bridge-ambience';
@@ -250,41 +254,81 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   const alarmBleep = installAlarmBleep();
   // Its displays' boot (the owner, 2026-10-27): every touch screen made with its kit.
   let displays: BootGroup | null = null;
-  const handle = startBridgeRoom(canvas, (kit) => {
-    displays = bootGroupOf(kit);
-    // Built before the walker comes in (seen through the corridor's doors)
-    // for the first view, its displays are dark, as its lights are, until
-    // the entrance boots them (the owner, 2026-10-27: it was seen already
-    // on from the hall); once seen, they wait on. Dark whenever its theme
-    // is unheard (a first visit, or after RESET), however the page was
-    // opened (a bridge built after RESET was found on); entered any other
-    // way, `enter` puts them on.
-    if (store && !store.world.value.bridgeThemeHeard)
-      displays.autoBoot({ from: Number.POSITIVE_INFINITY, spread: 0 });
-    // Reset to first found (the CONTROL ROOM MODE plate's RESET) while the
-    // walker is away: dark again but for its emergency glow, its displays
-    // black, ready to boot as the walker comes in (the owner, 2026-10-27).
-    if (store) {
-      const group = displays;
-      let heard = store.world.value.bridgeThemeHeard;
-      effect(() => {
-        const now = store.world.value.bridgeThemeHeard;
-        if (heard && !now && !inside) {
-          lightsUp.reset();
-          group.bootAll(0, Number.POSITIVE_INFINITY);
-          group.autoBoot({ from: Number.POSITIVE_INFINITY, spread: 0 });
-        }
-        heard = now;
-      });
-    }
-    return [
-      ...installConsoles(kit),
-      installLightSwitch(kit, () => lightsUp.glow()),
-      lightsUp,
-      chatter,
-      alarmBleep,
-    ];
-  });
+  // Its doors to the corridor, and the first view waiting for them to shut
+  // behind the walker (the owner, 2026-10-27; `stepReveal`).
+  let doors: EquipmentDoorsPart | null = null;
+  let reveal: RevealTrigger | null = null;
+  /** The first view begun, the doors shut behind the walker: its t = 0. */
+  const beginFirstView = () => {
+    // Every display booting on its own drawn durations; the main lights
+    // `LIGHTS_UP.afterBoot` after the last is operational.
+    const ready = displays
+      ? displays.bootEach(ENTRANCE_BOOT)
+      : entranceBootMean();
+    const entrance: Entrance = {
+      kind: 'first',
+      lightsAt: entranceLightsAt('first', ready),
+    };
+    lightsUp.begin(entrance);
+    // Heard from now, a save; begun as the room goes black (`THEME_AT`).
+    store?.dispatch({ type: 'bridge/theme-heard' });
+    window.clearTimeout(themeTimer);
+    themeTimer = window.setTimeout(() => bridgeTheme.play(), THEME_AT * 1000);
+  };
+  // Each frame: the held first view's trigger, stepped with the doors.
+  const revealPart: Part = {
+    object: new Group(),
+    uses: new Map(),
+    onEvent: () => () => {},
+    setAudible: () => {},
+    dispose: () => {},
+    update(delta) {
+      if (!reveal || reveal.started) return;
+      const shut = doors ? doors.angle() < 1e-3 : true;
+      reveal = stepReveal(reveal, delta, shut);
+      if (reveal.started) beginFirstView();
+    },
+  };
+  const handle = startBridgeRoom(
+    canvas,
+    (kit) => {
+      displays = bootGroupOf(kit);
+      // Built before the walker comes in (seen through the corridor's doors)
+      // for the first view, its displays are dark, as its lights are, until
+      // the entrance boots them (the owner, 2026-10-27: it was seen already
+      // on from the hall); once seen, they wait on. Dark whenever its theme
+      // is unheard (a first visit, or after RESET), however the page was
+      // opened (a bridge built after RESET was found on); entered any other
+      // way, `enter` puts them on.
+      if (store && !store.world.value.bridgeThemeHeard)
+        displays.autoBoot({ from: Number.POSITIVE_INFINITY, spread: 0 });
+      // Reset to first found (the CONTROL ROOM MODE plate's RESET) while the
+      // walker is away: dark again but for its emergency glow, its displays
+      // black, ready to boot as the walker comes in (the owner, 2026-10-27).
+      if (store) {
+        const group = displays;
+        let heard = store.world.value.bridgeThemeHeard;
+        effect(() => {
+          const now = store.world.value.bridgeThemeHeard;
+          if (heard && !now && !inside) {
+            lightsUp.reset();
+            group.bootAll(0, Number.POSITIVE_INFINITY);
+            group.autoBoot({ from: Number.POSITIVE_INFINITY, spread: 0 });
+          }
+          heard = now;
+        });
+      }
+      return [
+        ...installConsoles(kit),
+        installLightSwitch(kit, () => lightsUp.glow()),
+        lightsUp,
+        revealPart,
+        chatter,
+        alarmBleep,
+      ];
+    },
+    (d) => (doors = d),
+  );
   // Its room tone (`components/sound/audio/bridge-ambience.ts`): the
   // game's one, shared with the corridor, which hears it through the open
   // doors; full whenever the walker is in here, however they came, rising
@@ -307,31 +351,25 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
         ? entranceKind('main_corridor', false, heard)
         : null;
       let entrance: Entrance | null = null;
+      window.clearTimeout(themeTimer);
       if (kind === 'first') {
-        // Every display booting on its own drawn durations; the main
-        // lights `LIGHTS_UP.afterBoot` after the last is operational.
-        const ready = displays
-          ? displays.bootEach(ENTRANCE_BOOT)
-          : entranceBootMean();
-        entrance = { kind, lightsAt: entranceLightsAt(kind, ready) };
+        // Held, as seen from outside (displays black, the glow alone),
+        // until the doors shut behind the walker (`revealPart`).
+        displays?.bootAll(0, Number.POSITIVE_INFINITY);
+        reveal = revealWaiting();
+        lightsUp.enter('held');
       } else {
         // A later visit, or any other way in: the displays simply on.
+        reveal = null;
         displays?.skipAll();
         if (kind) entrance = { kind, lightsAt: entranceLightsAt(kind, 0) };
-      }
-      lightsUp.enter(entrance);
-      // The walker's first visit: the bridge's theme, once a save (the
-      // owner's, 2026-10-27; `bridgeThemeHeard`); in the first view, begun
-      // as the room goes black (`THEME_AT`).
-      window.clearTimeout(themeTimer);
-      if (w0 && !heard) {
-        store?.dispatch({ type: 'bridge/theme-heard' });
-        if (kind === 'first')
-          themeTimer = window.setTimeout(
-            () => bridgeTheme.play(),
-            THEME_AT * 1000,
-          );
-        else bridgeTheme.play();
+        lightsUp.enter(entrance);
+        // A first visit made any other way: the bridge's theme at once,
+        // once a save (the owner's, 2026-10-27; `bridgeThemeHeard`).
+        if (w0 && !heard) {
+          store?.dispatch({ type: 'bridge/theme-heard' });
+          bridgeTheme.play();
+        }
       }
       // Found with its MAIN LIGHTS off, the bridge puts them on itself
       // after the walker comes in (the owner, 2026-10-27), as an occupancy
@@ -361,21 +399,36 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
       alarmBleep.setActive(true);
       // In an entrance it rises with the main lights; arriving any other
       // way (a reload, a link, noclip) it is simply there.
+      // (In the first view, about when they will: the doors' wait not
+      // known yet.)
       ambience.bridge(
         true,
-        entrance
-          ? { after: entrance.lightsAt, rise: lightsUpTotal(0) }
-          : undefined,
+        kind === 'first'
+          ? {
+              after: entranceLightsAt('first', entranceBootMean()) + 3,
+              rise: lightsUpTotal(0),
+            }
+          : entrance
+            ? { after: entrance.lightsAt, rise: lightsUpTotal(0) }
+            : undefined,
       );
     },
     suspend: () => {
+      // Suspended also when merely drawn beyond the corridor's doors
+      // (`startSeeing` in `main.ts`), never having been entered: only a
+      // walker leaving changes what it shows.
+      const left = inside;
       inside = false;
       // Leaving (the owner, 2026-10-27): the theme fades out over 3 s (or
       // never starts); the main lights go out; the displays stay on and
       // the emergency glow stays, as seen from the corridor.
       window.clearTimeout(themeTimer);
       bridgeTheme.stop();
-      displays?.skipAll();
+      // Left before the doors shut: nothing started, still the first view
+      // (displays black); otherwise the displays stay on.
+      const held = reveal !== null && !reveal.started;
+      reveal = null;
+      if (displaysOnLeaving(left, held)) displays?.skipAll();
       window.clearTimeout(lightsOnTimer);
       lightsUp.leave();
       chatter.setActive(false);

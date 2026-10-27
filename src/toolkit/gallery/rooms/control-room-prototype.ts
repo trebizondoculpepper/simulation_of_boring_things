@@ -2,6 +2,7 @@ import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import { runShell } from './shell-room';
 import { createControlRoomPrototype } from '../views/control-room-prototype';
 import { equipmentDoors } from '../../components/architectural/parts/equipment-doors';
+import type { EquipmentDoorsPart } from '../../components/architectural/parts/equipment-doors';
 import type { Part } from '../../components/core/parts/parts';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import {
@@ -75,6 +76,8 @@ export const startBridgePrototype = (canvas: HTMLCanvasElement) =>
 export function startBridgeRoom(
   canvas: HTMLCanvasElement,
   install: (kit: PanelKit) => Part[] = () => [],
+  /** Told of its doors to the corridor once built (the reveal waits for them to shut). */
+  onDoors?: (doors: EquipmentDoorsPart) => void,
 ) {
   // Its one doorway, in its west wall (`bridgeDoorway`), joined to the
   // corridor's control room doorway a storey down; the runner's rectangle
@@ -104,6 +107,7 @@ export function startBridgeRoom(
       const yaw = way.frame.yaw;
       // No sign over them on the bridge's side (the owner, 2026-10-27).
       const part = equipmentDoors(kit, '', warningsFor('main_corridor'));
+      onDoors?.(part);
       part.object.position.set(way.inner.x, STOREY, way.inner.z);
       part.object.rotation.y = yaw;
       const lobby = new Group();

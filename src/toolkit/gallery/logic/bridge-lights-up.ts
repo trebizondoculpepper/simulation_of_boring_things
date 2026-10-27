@@ -84,9 +84,66 @@ export const entranceBootMean = () => meanBootReady(ENTRANCE_BOOT);
  * lights are full it fades over `fade` (unless EMERGENCY LIGHTS keeps it
  * lit, which the world says, not this).
  */
-export const ENTRANCE_GLOW = { out: 1, black: 4, back: 1, fade: 1.5 } as const;
+export const ENTRANCE_GLOW = { out: 1, black: 5, back: 1, fade: 1.5 } as const;
 
-/** The first view's theme begins as the room goes wholly black: the glow faded out (the owner, 2026-10-27). */
+/**
+ * The first view begins as the corridor doors shut behind the walker (the
+ * owner, 2026-10-27: "I want the user to walk into a mysterious space for
+ * a bit"); until then the room stays as seen from outside. Its trigger:
+ * waiting until the doors, once seen open (as the walker comes through
+ * them), are shut; if they are never seen open (handed over already
+ * shut), any shut after `assumeOpenAfter` seconds. Pure.
+ */
+export const REVEAL_DOORS = { assumeOpenAfter: 2 } as const;
+
+export interface RevealTrigger {
+  /** The doors seen open since the walker came in. */
+  seenOpen: boolean;
+  /** Seconds since the walker came in. */
+  waited: number;
+  /** The doors have shut behind the walker: the first view's t = 0. */
+  started: boolean;
+}
+
+/** The trigger as the walker comes in. */
+export const revealWaiting = (): RevealTrigger => ({
+  seenOpen: false,
+  waited: 0,
+  started: false,
+});
+
+/** The trigger `delta` seconds on, the doors `shut` (fully closed) or not. Once started, it stays so. */
+export function stepReveal(
+  s: RevealTrigger,
+  delta: number,
+  shut: boolean,
+): RevealTrigger {
+  if (s.started) return s;
+  const waited = s.waited + delta;
+  const seenOpen = s.seenOpen || !shut;
+  return {
+    seenOpen,
+    waited,
+    started: shut && (seenOpen || waited >= REVEAL_DOORS.assumeOpenAfter),
+  };
+}
+
+/**
+ * Whether the bridge being suspended puts its displays on (the owner,
+ * 2026-10-27: leaving, the monitors stay on): only when the walker was
+ * inside and the first view had begun. Not when it is merely drawn
+ * beyond the corridor's doors (suspended without ever being entered: so
+ * after RESET they stay black), nor when the walker left before the doors
+ * shut behind them (still the first view).
+ */
+export function displaysOnLeaving(
+  wasInside: boolean,
+  heldFirstView: boolean,
+): boolean {
+  return wasInside && !heldFirstView;
+}
+
+/** The first view's theme begins as the room goes wholly black, the glow faded out, `THEME_AT` seconds after the doors shut (the owner, 2026-10-27). */
 export const THEME_AT = ENTRANCE_GLOW.out;
 
 /** How the walker came in: the first view (the reveal), a later visit, or neither (`null`). */
@@ -98,7 +155,7 @@ export interface Entrance {
   lightsAt: number;
 }
 
-/** The first view's glow curve `t` seconds after the threshold: on, out over 1 s, black 4 s, back up over 1 s. */
+/** The first view's glow curve `t` seconds after the doors shut behind the walker: on, out over 1 s, black 5 s, back up over 1 s. */
 export function firstViewGlow(t: number): number {
   const g = ENTRANCE_GLOW;
   if (t < g.out) return 1 - smooth(t / g.out);

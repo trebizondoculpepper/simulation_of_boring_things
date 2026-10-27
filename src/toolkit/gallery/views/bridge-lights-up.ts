@@ -50,8 +50,10 @@ type Glow = Material & { emissiveIntensity: number };
 export function createBridgeLightsUp(mainLit: () => boolean): Part & {
   /** Whether an entry from `from` would play an entrance (walked in from the corridor, not the page opened here). */
   plays(from: string | null): boolean;
-  /** The walker in, playing `entrance` (null: none, the lights as their switches say). */
-  enter(entrance: Entrance | null): void;
+  /** The walker in, playing `entrance` (null: none, the lights as their switches say; `'held'`: the first view, waiting for the doors, the room kept as seen from outside). */
+  enter(entrance: Entrance | 'held' | null): void;
+  /** A held first view begun (the corridor doors shut behind the walker): `entrance` from now. */
+  begin(entrance: Entrance): void;
   leave(): void;
   /** Back to the bridge as first found. */
   reset(): void;
@@ -77,6 +79,8 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
   // own clock, seconds since the walker came in, which runs whether or
   // not MAIN LIGHTS is yet on.
   let entrance: Entrance | null = null;
+  // A first view held until the corridor doors shut behind the walker.
+  let held = false;
   let since = Infinity;
   let lights: { light: Light; stage: LightStage | 'fill' }[] | null = null;
   let glows: { m: Glow; stage: LightStage }[] = [];
@@ -128,13 +132,17 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
     setAudible: () => {},
     dispose: () => {},
     plays: (from) => playsEntrance(from, openedHere && !enteredBefore),
-    enter(next) {
+    enter(arrival) {
       enteredBefore = true;
       present = true;
+      // Held: dark, but for the glow, until `begin` (the owner, 2026-10-27:
+      // "walk into a mysterious space for a bit").
+      held = arrival === 'held';
+      const next = held ? null : (arrival as Entrance | null);
       entrance = next;
       since = next ? 0 : Infinity;
-      if (!mainLit()) {
-        // Found with MAIN LIGHTS off: dark but for the glow, until the
+      if (held || !mainLit()) {
+        // Held, or found with MAIN LIGHTS off: dark but for the glow, until the
         // switch is thrown (by hand, or by the bridge itself outside the
         // first view, `AUTO_LIGHTS_ON_MS`).
         falling = null;
@@ -143,8 +151,15 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
       } else if (next) rise(0, next.lightsAt);
       else rise(Infinity);
     },
+    begin(next) {
+      held = false;
+      entrance = next;
+      since = 0;
+      if (mainLit()) rise(0, next.lightsAt);
+    },
     leave() {
       present = false;
+      held = false;
       entrance = null;
       fall();
     },
@@ -160,7 +175,11 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
     // (the owner, 2026-10-27); in an entrance, its own curve until the
     // main lights are up.
     glow: () =>
-      entrance && !falling ? entranceGlow(since, entrance) : !present ? 1 : 0,
+      entrance && !falling
+        ? entranceGlow(since, entrance)
+        : !present || held
+          ? 1
+          : 0,
     update(delta) {
       if (!lights) collect();
       if (!lights) return;
@@ -174,7 +193,7 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
       since += delta;
       // MAIN LIGHTS switched on with the walker here: the rise, at once
       // (in the entrance, the glow keeps its own time).
-      if (on && present && (out || falling)) rise(0);
+      if (on && present && !held && (out || falling)) rise(0);
       // Switched off, or its way gone: down.
       if (!on && !out) fall();
       if (falling) {

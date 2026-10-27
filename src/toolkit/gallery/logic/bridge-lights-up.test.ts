@@ -14,6 +14,10 @@ import {
   lightsUpLevels,
   lightsUpTotal,
   playsEntrance,
+  REVEAL_DOORS,
+  displaysOnLeaving,
+  revealWaiting,
+  stepReveal,
 } from './bridge-lights-up';
 import type { Entrance } from './bridge-lights-up';
 
@@ -86,24 +90,24 @@ describe('the bridge’s lights coming up (the owner, 2026-10-27)', () => {
 });
 
 describe('the first view (the owner, 2026-10-27, doc/notes/bridge_reveal.md)', () => {
-  it('has the glow on at the threshold, out over 1 s, black 4 s, back up over 1 s', () => {
+  it('has the glow on as the doors shut, out over 1 s, black 5 s, back up over 1 s', () => {
     expect(ENTRANCE_GLOW.out).toBe(1);
-    expect(ENTRANCE_GLOW.black).toBe(4);
+    expect(ENTRANCE_GLOW.black).toBe(5);
     expect(ENTRANCE_GLOW.back).toBe(1);
     expect(firstViewGlow(0)).toBe(1);
     expect(firstViewGlow(0.5)).toBeCloseTo(0.5);
-    for (let t = 1; t <= 5; t += 0.25)
+    for (let t = 1; t <= 6; t += 0.25)
       expect(firstViewGlow(t), `at ${t}`).toBe(0);
-    expect(firstViewGlow(5.5)).toBeCloseTo(0.5);
-    expect(firstViewGlow(6)).toBe(1);
+    expect(firstViewGlow(6.5)).toBeCloseTo(0.5);
+    expect(firstViewGlow(7)).toBe(1);
     expect(firstViewGlow(60)).toBe(1);
     // Falling, then rising, without a step.
     let prev = firstViewGlow(0);
-    for (let t = 0.05; t < 7; t += 0.05) {
+    for (let t = 0.05; t < 8; t += 0.05) {
       const g = firstViewGlow(t);
       expect(Math.abs(g - prev)).toBeLessThan(0.1);
       if (t < 1) expect(g).toBeLessThanOrEqual(prev);
-      if (t > 5) expect(g).toBeGreaterThanOrEqual(prev);
+      if (t > 6) expect(g).toBeGreaterThanOrEqual(prev);
       prev = g;
     }
   });
@@ -169,7 +173,7 @@ describe('the first view (the owner, 2026-10-27, doc/notes/bridge_reveal.md)', (
           lightsUpLevels(entrance.lightsAt - 0.01, entrance.lightsAt)[s],
         ).toBe(0);
       // The glow back well before the lights; faded only after they are full.
-      expect(entranceGlow(6, entrance)).toBe(1);
+      expect(entranceGlow(7, entrance)).toBe(1);
       expect(entranceGlow(lightsUpTotal(entrance.lightsAt), entrance)).toBe(1);
       expect(
         entranceGlow(
@@ -230,5 +234,85 @@ describe('later visits, and other ways in (the owner, 2026-10-27)', () => {
       expect(entranceKind('main_corridor', true, heard)).toBeNull();
       expect(entranceKind(null, false, heard)).toBeNull();
     }
+  });
+});
+
+describe('the first view waits for the doors to shut behind the walker (the owner, 2026-10-27)', () => {
+  const run = (frames: boolean[], delta = 0.1) => {
+    let s = revealWaiting();
+    const started: number[] = [];
+    frames.forEach((shut, i) => {
+      const was = s.started;
+      s = stepReveal(s, delta, shut);
+      if (s.started && !was) started.push(i);
+    });
+    return { s, started };
+  };
+
+  it('does not start while the doors stand open, and starts the moment they are shut', () => {
+    const open = Array(30).fill(false);
+    expect(run(open).s.started).toBe(false);
+    const { started } = run([...open, true, true, true]);
+    expect(started).toEqual([30]);
+  });
+
+  it('does not start before the doors are seen open (the hand-over), unless they never are', () => {
+    // Shut on the first frames only (before the hand-over swings them open), then open, then shut.
+    expect(run([true, false, false, true]).started).toEqual([3]);
+    // Never seen open: started once `assumeOpenAfter` has passed.
+    const n = Math.ceil(REVEAL_DOORS.assumeOpenAfter / 0.1) + 2;
+    const { started } = run(Array(n).fill(true));
+    expect(started).toHaveLength(1);
+    expect((started[0] + 1) * 0.1).toBeGreaterThanOrEqual(
+      REVEAL_DOORS.assumeOpenAfter - 1e-9,
+    );
+  });
+
+  it('stays started, whatever the doors do next', () => {
+    const { s } = run([false, true, false, false, true]);
+    expect(s.started).toBe(true);
+    expect(stepReveal(s, 1, false)).toBe(s);
+  });
+});
+
+describe('after RESET, seen from the corridor (the owner, 2026-10-27)', () => {
+  /** The bridge's screens as `startTheBridge` builds them: dark while the theme is unheard. */
+  const build = (heard: boolean, n = 6) => {
+    const group = new BootGroup(seeded(4));
+    if (!heard) group.autoBoot({ from: Number.POSITIVE_INFINITY, spread: 0 });
+    const screens = Array.from({ length: n }, (_, i) =>
+      group.add(new BootScreen(new Label(`${i}`))),
+    );
+    return { group, screens };
+  };
+  /** The reset effect, applied while the walker is away. */
+  const reset = (group: BootGroup) => {
+    group.bootAll(0, Number.POSITIVE_INFINITY);
+    group.autoBoot({ from: Number.POSITIVE_INFINITY, spread: 0 });
+  };
+  /** Drawn beyond the corridor's doors: suspended, never entered, then frames. */
+  const seenFromCorridor = (group: BootGroup, screens: BootScreen[]) => {
+    if (displaysOnLeaving(false, false)) group.skipAll();
+    for (const t of [0, 1, 30, 300]) for (const s of screens) s.tick(t);
+  };
+
+  it('built after RESET: every screen black, and still black once seen through the doors', () => {
+    const { group, screens } = build(false);
+    seenFromCorridor(group, screens);
+    for (const s of screens) expect(s.phase).toBe('black');
+  });
+
+  it('built while heard, then RESET: every screen black, and still black once seen through the doors', () => {
+    const { group, screens } = build(true);
+    for (const s of screens) expect(s.operational).toBe(true);
+    reset(group);
+    seenFromCorridor(group, screens);
+    for (const s of screens) expect(s.phase).toBe('black');
+  });
+
+  it('keeps the displays on when the walker leaves after the first view began, black if before the doors shut', () => {
+    expect(displaysOnLeaving(true, false)).toBe(true);
+    expect(displaysOnLeaving(true, true)).toBe(false);
+    expect(displaysOnLeaving(false, false)).toBe(false);
   });
 });
