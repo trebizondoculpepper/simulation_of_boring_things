@@ -42,7 +42,10 @@ import { createAnnunciator } from '../../industrial-control/logic/annunciator';
 import { plantTools } from './plant-tools';
 import { createDigitalPump } from './dosing-equipment';
 import { createFramedChemicalTank } from './framed-chemical-tank';
-import { dayTankSize } from '../../../../game/plant/chemical-distribution';
+import {
+  DAY_TANKS,
+  dayTankSize,
+} from '../../../../game/plant/chemical-distribution';
 
 /**
  * Dev44's chemical handling equipment beyond the bulk tanks
@@ -1792,6 +1795,62 @@ export function createDistributionPanel(
         return `${c === 'acid' ? 'acid' : 'hypochlorite'} ${l.tripped ? 'TRIPPED' : at}`;
       };
       return `${say('hypochlorite')}; ${say('acid')}`;
+    },
+  };
+}
+
+const POOL_NAME: Record<string, string> = {
+  pool_01: 'Lounge',
+  pool_02: 'Olympic',
+  pool_03: 'Jacuzzi',
+  pool_04: 'Footbath',
+};
+
+/**
+ * Every day tank the building uses (`DAY_TANKS`), smallest to largest, in
+ * a row: each its own station without its pump or safety gear, labelled
+ * with its size and the pools it serves.
+ */
+export function createDayTankRange(kit: PanelKit) {
+  const f = tools(kit);
+  const sizes = new Map<number, { chemical: Chemical; uses: string[] }>();
+  for (const chemical of ['hypochlorite', 'acid'] as const)
+    for (const { site, litres } of DAY_TANKS[chemical]) {
+      const entry = sizes.get(litres) ?? { chemical, uses: [] };
+      entry.uses.push(
+        `${POOL_NAME[site] ?? site} ${chemical === 'acid' ? 'acid' : 'hypo'}`,
+      );
+      sizes.set(litres, entry);
+    }
+  const list = [...sizes.entries()].sort(([a], [b]) => a - b);
+  const gap = 0.35;
+  const widths = list.map(([litres]) => dayTankSize(litres).L + 0.4);
+  const total = widths.reduce((s, w) => s + w, 0) + gap * (widths.length - 1);
+  const root = new Group();
+  const parts = createPartSet();
+  let x = -total / 2;
+  const stations = list.map(([litres, { chemical, uses }], i) => {
+    const s = createDayTankStation(kit, chemical, undefined, 0, {
+      litres,
+      tag: `${litres} L`,
+      withPump: false,
+      withGear: false,
+      centred: true,
+    });
+    const cx = x + widths[i] / 2;
+    x += widths[i] + gap;
+    s.object.position.x = cx;
+    root.add(s.object);
+    f.label(root, `${litres} L`, cx, 1.75, 0, 0.06, '#ffffff', '#2a2f31');
+    f.label(root, uses.join(' · '), cx, 1.62, 0, 0.03, '#2a2f31', '#e8ebe9');
+    for (const [o, use] of s.parts.uses) parts.uses.set(o, use);
+    return s;
+  });
+  return {
+    object: root,
+    parts,
+    update(delta: number) {
+      for (const s of stations) s.update(delta);
     },
   };
 }

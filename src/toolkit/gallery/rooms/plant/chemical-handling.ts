@@ -3,6 +3,7 @@ import { createChemicalDeliveryRig } from '../../../components/plant/views/chemi
 import { EXHIBITS as STORE_EXHIBITS } from './chemicals';
 import {
   createChemicalPipeSamples,
+  createDayTankRange,
   createDayTankStation,
   createTransferPumpSkid,
   createTransferTrial,
@@ -47,7 +48,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Hypochlorite day tank',
     reference:
-      '200 L translucent HDPE day tank in a 250 L bund; low and high switches, actuated inlet, dosing pump, eyewash and PPE',
+      '300 L framed HDPE day tank in its bund; low and high switches, actuated inlet, dosing pump, eyewash and PPE',
     size: { w: 1.9, d: 1.1, h: 2.0, mount: 'floor' },
     maker: 'chlorella',
     build: (kit) => createDayTankStation(kit, 'hypochlorite'),
@@ -55,10 +56,18 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Acid day tank',
     reference:
-      '200 L translucent HDPE day tank for 10% hydrochloric acid in its bund, with its switches, inlet, dosing pump and safety gear',
+      '300 L framed HDPE day tank for 10% hydrochloric acid in its bund, with its switches, inlet, dosing pump and safety gear',
     size: { w: 1.9, d: 1.1, h: 2.0, mount: 'floor' },
     maker: 'chlorella',
     build: (kit) => createDayTankStation(kit, 'acid'),
+  },
+  {
+    title: 'Day tank sizes',
+    reference:
+      'Every framed day tank the building uses, smallest to largest: 15, 30, 60, 200, 300, 500 and 1,000 L, each labelled with the pools it serves',
+    size: { w: 11.2, d: 1.6, h: 2.0, mount: 'floor' },
+    maker: 'chlorella',
+    build: (kit) => createDayTankRange(kit),
   },
   {
     title: 'Transfer trial: ideal source, selector, four day tanks',

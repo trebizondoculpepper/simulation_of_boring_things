@@ -63,7 +63,7 @@ describe('the transfer trial: one transfer set, a selector, several day tanks', 
   });
 
   it('keeps every day tank between its switches as they dose, round and round', () => {
-    let s = run(newTransferTrial(), 4 * 3600, 5);
+    const s = run(newTransferTrial(), 4 * 3600, 5);
     for (const t of s.tanks) {
       expect(levelOf(t)).toBeGreaterThan(TRANSFER.low - 0.06);
       expect(levelOf(t)).toBeLessThan(TRANSFER.highHigh);
