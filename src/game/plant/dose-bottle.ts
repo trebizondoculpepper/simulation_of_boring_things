@@ -98,3 +98,18 @@ export function bottleBund(litres: number) {
   const side = bottleSize(litres).d + 0.2;
   return { side, sump: (1.1 * litres) / 1000 / (side * side) };
 }
+
+/**
+ * What its head's 16 × 2 character LCD shows: its tag and its litres on
+ * the first line; on the second a bar of ten blocks, one a tenth full,
+ * dashes for the rest, and its percentage. Blank unpowered.
+ */
+export function bottleLcd(tag: string, b: DoseBottle, powered = true) {
+  if (!powered) return { lines: [] as string[], on: false };
+  const level = Math.max(0, Math.min(1, bottleLevel(b)));
+  const litres = b.litres.toFixed(b.capacity < 100 ? 1 : 0);
+  const first = `${tag.slice(0, 8).padEnd(8)}${`${litres} L`.padStart(8)}`;
+  const blocks = Math.round(level * 10);
+  const second = `${'█'.repeat(blocks)}${'-'.repeat(10 - blocks)} ${`${Math.round(level * 100)}`.padStart(3)}%`;
+  return { lines: [first, second], on: true };
+}

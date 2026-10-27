@@ -6,9 +6,8 @@ import { plantTools } from './plant-tools';
 import { createDoseCellHead, DOSE_CELL_HEAD } from './dose-cell-head';
 import { createChemicalLabel } from './chemicals-signs';
 import { bottleBund, bottleSize } from '../../../../game/plant/dose-bottle';
-import type { bottleReadout } from '../../../../game/plant/dose-bottle';
-
-type Readout = ReturnType<typeof bottleReadout>;
+import { bottleReadout } from '../../../../game/plant/dose-bottle';
+import type { DoseBottle } from '../../../../game/plant/dose-bottle';
 
 /**
  * A dose bottle (`game/plant/dose-bottle.ts`): Chlorella's DoseCell, an
@@ -197,7 +196,9 @@ export function createDoseBottle(
     fillAt: [fillX, top + 0.16, fillZ] as const,
     /** Its footprint's radius, its tray's. */
     radius: trayR,
-    show: (o: Readout) => cell.show(o),
+    /** Shows the bottle `b`'s state on its head. */
+    show: (b: DoseBottle, powered = true) =>
+      cell.show(bottleReadout(b, powered), b),
   };
 }
 

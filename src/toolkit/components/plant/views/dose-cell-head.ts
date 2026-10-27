@@ -4,7 +4,15 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { plantTools } from './plant-tools';
 import { chlorellaPlate } from './chlorella-plate';
-import type { bottleReadout } from '../../../../game/plant/dose-bottle';
+import {
+  bottleLcd,
+  bottleReadout,
+  newDoseBottle,
+  stepDoseBottle,
+} from '../../../../game/plant/dose-bottle';
+import { onPlinth } from './plinth';
+import type { DoseBottle } from '../../../../game/plant/dose-bottle';
+import { createCharacterLcd } from '../../industrial-control/views/panel-instruments';
 
 type Readout = ReturnType<typeof bottleReadout>;
 
@@ -17,7 +25,7 @@ export const DOSE_CELL_HEAD = { w: 0.2, h: 0.12, d: 0.15 } as const;
  * alike but for its band (yellow, red). A rounded grey moulding holding
  * the ultrasonic sensor (looking down through the lid), the high and low
  * switches and the motorised dosing pump (its motor's dome on top); on its
- * front a recessed LCD of the bottle's litres, a row of four small lamps
+ * front a 16 × 2 character LCD (its tag and litres, and a bar of blocks), a row of four small lamps
  * beneath it (HI, LO, CALL, PUMP) and DOSECELL; Chlorella's plate on its
  * right side; the pump's discharge gland on its left side and the power
  * gland at its back.
@@ -68,43 +76,14 @@ export function createDoseCellHead(
 
   // The display in its dark bezel.
   t.box(group, dark, 0.15, 0.072, 0.004, 0, h * 0.62, front + 0.001);
-  const face = f.printed(0.136, 0.06, () => {}, 256, true);
-  face.mesh.position.set(0, h * 0.62, front + 0.0035);
-  face.mesh.userData.live = true;
-  group.add(face.mesh);
-  let shown = '';
-  const draw = (o: Readout) => {
-    const key = o.powered ? `${Math.round((o.litres ?? 0) * 10)}` : 'off';
-    if (key === shown) return;
-    shown = key;
-    const c = face.context;
-    const cw = c.canvas.width;
-    const ch = c.canvas.height;
-    c.fillStyle = o.powered ? '#a9c49a' : '#3a4236';
-    c.fillRect(0, 0, cw, ch);
-    if (o.powered) {
-      const litres = o.litres ?? 0;
-      c.fillStyle = '#1d2618';
-      c.font = 'bold 15px sans-serif';
-      c.fillText(tag, 8, 18);
-      c.font = 'bold 54px monospace';
-      c.textAlign = 'right';
-      c.fillText(litres.toFixed(litres < 100 ? 1 : 0), cw - 34, 76);
-      c.font = 'bold 22px sans-serif';
-      c.fillText('L', cw - 8, 76);
-      c.textAlign = 'left';
-      c.strokeStyle = '#1d2618';
-      c.lineWidth = 2;
-      c.strokeRect(8, ch - 30, cw - 16, 18);
-      c.fillRect(
-        10,
-        ch - 28,
-        (cw - 20) * Math.max(0, Math.min(1, o.level)),
-        14,
-      );
-    }
-    face.texture.needsUpdate = true;
-  };
+  const lcd = createCharacterLcd(kit, {
+    columns: 16,
+    rows: 2,
+    cell: 0.0048,
+    backlight: true,
+  });
+  lcd.group.position.set(0, h * 0.62, front + 0.001);
+  group.add(lcd.group);
 
   // The lamps in a row under the display, each with its legend below it.
   const lamps = (
@@ -150,25 +129,48 @@ export function createDoseCellHead(
   t.cyl(group, dark, 0.009, 0.016, -w / 2 - 0.008, h * 0.5, 0, 'x', 10);
   t.cyl(group, dark, 0.01, 0.016, 0.06, h * 0.5, -d / 2 - 0.008, 'z', 10);
 
-  draw({
-    powered: true,
-    litres: 0,
-    level: 0,
-    high: false,
-    low: false,
-    calling: false,
-    pumping: false,
-  });
   return {
     object: group,
     /** Where the dosing tube leaves it, in its own frame. */
     dischargeAt: [-w / 2 - 0.016, h * 0.5, 0] as const,
     /** Where the power cable leaves it, in its own frame. */
     powerAt: [0.06, h * 0.5, -d / 2 - 0.016] as const,
-    show(o: Readout) {
-      draw(o);
+    /** Its lamps from `o`, its display from the bottle `b` it heads. */
+    show(o: Readout, b: DoseBottle) {
+      const { lines, on: lit } = bottleLcd(tag, b, o.powered);
+      lcd.show(lines, lit);
       const on = [o.high, o.low, o.calling, o.pumping];
       lamps.forEach((m, i) => (m.emissiveIntensity = on[i] ? 1.6 : 0));
     },
+  };
+}
+
+/**
+ * A DoseCell head alone on a plinth, for trying it: an ideal bottle of
+ * `litres` beneath it (unseen) dosing down and refilled when it calls, so
+ * its display counts and its lamps work.
+ */
+export function createDoseCellDemo(
+  kit: PanelKit,
+  { acid, litres = 30 }: { acid: boolean; litres?: number },
+) {
+  const head = createDoseCellHead(kit, {
+    tag: acid ? 'DEMO-DT2' : 'DEMO-DT1',
+    acid,
+  });
+  const object = onPlinth(kit, head.object, 0.32);
+  let b = newDoseBottle(litres, acid ? 0.35 : 0.8);
+  return {
+    object,
+    update(delta: number) {
+      b = stepDoseBottle(
+        b,
+        { fillLpm: b.calling ? litres * 0.6 : 0, doseLpm: litres * 0.25 },
+        delta,
+      );
+      head.show(bottleReadout(b), b);
+    },
+    status: () =>
+      `DoseCell head (${acid ? 'acid' : 'hypochlorite'}): ${b.litres.toFixed(1)} L of ${litres} L${b.calling ? ', calling' : ''}${b.pumping ? ', pumping' : ''}`,
   };
 }

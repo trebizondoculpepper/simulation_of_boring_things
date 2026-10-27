@@ -178,16 +178,6 @@ export function createFramedChemicalTank(
     ]);
     t.box(group, pvc, 0.1, 0.1, 0.1, fillX, 0.95, fillZ);
     t.box(group, red, 0.2, 0.02, 0.03, fillX, 0.95, fillZ + 0.07);
-    f.label(
-      group,
-      `${tag}-V1 FILL`,
-      fillX,
-      1.1,
-      fillZ + 0.035,
-      0.02,
-      '#ffffff',
-      '#2a2f31',
-    );
   }
   // The vent: a gooseneck, its mesh to the room; on the acid's (10%, the
   // owner, 2026-10-26: little fume at that strength), through a small
@@ -215,15 +205,6 @@ export function createFramedChemicalTank(
       24,
     );
     t.cyl(group, dark, 0.085, 0.04, ventX, top + 0.6, 0.25, 'y', 24);
-    f.label(
-      group,
-      'CARBON VENT FILTER',
-      ventX,
-      top + 0.42,
-      0.25 + 0.082,
-      0.018,
-      '#ffffff',
-    );
     t.rod(
       group,
       pvc,
@@ -305,16 +286,6 @@ export function createFramedChemicalTank(
     0.006,
     6,
   );
-  f.label(
-    group,
-    `${tag}-LT`,
-    L / 8,
-    top + 0.32,
-    0,
-    0.022,
-    '#ffffff',
-    '#2a2f31',
-  );
 
   // The high-level switch: a float switch in its own socket, its own gland
   // and cable; it trips the delivery whatever the transmitter says.
@@ -347,16 +318,6 @@ export function createFramedChemicalTank(
     [jbX - 0.05, top + 0.22, W / 2 + 0.06],
     0.006,
     6,
-  );
-  f.label(
-    group,
-    `${tag}-LSHH`,
-    lsX,
-    top + 0.24,
-    0.25,
-    0.02,
-    '#1b1b1b',
-    '#d4a017',
   );
 
   // The junction box on the right front post: grey GRP, four glands under
@@ -484,16 +445,6 @@ export function createFramedChemicalTank(
     [outX + outletSide * 0.4, outY, W / 2 + 0.38],
     0.03,
     12,
-  );
-  f.label(
-    group,
-    `${tag}-V2 OUTLET`,
-    outX,
-    outY + 0.17,
-    W / 2 + 0.14,
-    0.02,
-    '#ffffff',
-    '#2a2f31',
   );
 
   // Its plates: Chlorella's maker's plate on the front band; the product

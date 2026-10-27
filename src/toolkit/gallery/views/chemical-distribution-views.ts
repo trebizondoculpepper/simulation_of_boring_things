@@ -23,7 +23,6 @@ import { createDoseBottle } from '../../components/plant/views/dose-bottle';
 import {
   BOTTLE,
   bottleLevel,
-  bottleReadout,
   isDoseBottle,
 } from '../../../game/plant/dose-bottle';
 import type { DoseBottle } from '../../../game/plant/dose-bottle';
@@ -213,7 +212,7 @@ function dayBottle(
     update(delta) {
       const s = state();
       trend.sample(s.litres, delta);
-      bottle.show(bottleReadout(s));
+      bottle.show(s);
     },
     status: () =>
       describeTank(

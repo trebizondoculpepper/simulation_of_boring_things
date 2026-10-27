@@ -46,7 +46,6 @@ import { createDoseBottle } from './dose-bottle';
 import { chlorellaPlate } from './chlorella-plate';
 import {
   bottleLevel,
-  bottleReadout,
   bottleSize,
   newDoseBottle,
   stepDoseBottle,
@@ -691,16 +690,6 @@ export function createDayTankStation(
     [0.04, bd, -bw / 2 + 0.02, bz],
   ] as const)
     t.box(group, tray, w, wallH, d, x, wallH / 2, z);
-  f.label(
-    group,
-    `BUND ${Math.ceil((litres * 1.1) / 5) * 5} L`,
-    0,
-    wallH * 0.6,
-    bz + bd / 2 + 0.002,
-    0.025,
-    '#ffffff',
-    '#202223',
-  );
   const tankTag = tag ?? `${chemical === 'acid' ? 'ADT' : 'HDT'}${index + 1}`;
   const tankZ = -0.2;
   const tank = createFramedChemicalTank(kit, {
@@ -804,16 +793,6 @@ export function createDayTankStation(
       [bw / 2 - 0.1, riser - 0.15, -bd / 2 - 0.1],
       0.012,
       8,
-    );
-    f.label(
-      group,
-      'TO DOSING',
-      bw / 2 - 0.1,
-      riser - 0.05,
-      oz,
-      0.016,
-      '#ffffff',
-      BAND[chemical],
     );
   }
   if (withGear) {
@@ -1885,7 +1864,7 @@ export function createDayTankRange(kit: PanelKit) {
           },
           delta,
         );
-        bottle.show(bottleReadout(state));
+        bottle.show(state);
         trend.sample(state.litres, delta);
       },
       status: () =>

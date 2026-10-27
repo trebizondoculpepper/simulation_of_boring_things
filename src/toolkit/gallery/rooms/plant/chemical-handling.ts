@@ -1,4 +1,7 @@
+import { layoutSquarePlantRoom } from '../../logic/plant-room-layout';
+import type { ExhibitSize } from '../../logic/plant-room-layout';
 import type { PlantExhibit } from './exhibit';
+import { createDoseCellDemo } from '../../../components/plant/views/dose-cell-head';
 import { createChemicalDeliveryRig } from '../../../components/plant/views/chemical-delivery-rig';
 import { EXHIBITS as STORE_EXHIBITS } from './chemicals';
 import {
@@ -62,6 +65,21 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     build: (kit) => createDayTankStation(kit, 'acid'),
   },
   {
+    title: 'DoseCell head, hypochlorite',
+    reference:
+      'Chlorella DoseCell: the powered head on every dose bottle; ultrasonic level, high and low switches, dosing pump, 16 × 2 LCD and HI, LO, CALL and PUMP lamps; yellow band',
+    size: { w: 0.6, d: 0.6, h: 1.3, mount: 'floor' },
+    maker: 'chlorella',
+    build: (kit) => createDoseCellDemo(kit, { acid: false }),
+  },
+  {
+    title: 'DoseCell head, acid',
+    reference: 'The same head on an acid bottle, its band red',
+    size: { w: 0.6, d: 0.6, h: 1.3, mount: 'floor' },
+    maker: 'chlorella',
+    build: (kit) => createDoseCellDemo(kit, { acid: true }),
+  },
+  {
     title: 'Day tank sizes',
     reference:
       'Every day tank the building uses, smallest to largest: Chlorella DoseCell bottles of 15 to 500 L (sensor, switches, pump and display in one powered head), and the framed 1,000 L tank',
@@ -93,3 +111,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     ].includes(item.title),
   ),
 ];
+
+/** A square room, its exhibits round all four walls, so less walking (the owner, 2026-10-27). */
+export const layoutRoom = (sizes: readonly ExhibitSize[]) =>
+  layoutSquarePlantRoom(sizes);

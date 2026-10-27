@@ -4,6 +4,7 @@ import {
   bottleLevel,
   bottleReadout,
   bottleBund,
+  bottleLcd,
   bottleSize,
   newDoseBottle,
   stepDoseBottle,
@@ -56,5 +57,14 @@ describe('a dose bottle: sensor, switches, its own pump, its display', () => {
       const { side, sump } = bottleBund(litres);
       expect(side * side * sump * 1000).toBeCloseTo(litres * 1.1, 6);
     }
+  });
+
+  it('shows its litres and a bar of blocks on its two-line display', () => {
+    const { lines, on } = bottleLcd('PL4-DT2', newDoseBottle(15, 0.62));
+    expect(on).toBe(true);
+    expect(lines[0]).toBe('PL4-DT2    9.3 L');
+    expect(lines[1]).toBe('██████----  62%');
+    expect(lines.every((l) => l.length <= 16)).toBe(true);
+    expect(bottleLcd('X', newDoseBottle(15), false).on).toBe(false);
   });
 });
