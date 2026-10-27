@@ -158,9 +158,9 @@ export function createViewscreen(
   const alarms = new Stack('column', [banner, list]);
   const pages = new PageStack({ SCHEMATIC: schematic, ALARMS: alarms });
   const frame = new Frame({
-    title: 'MAIN VIEWER · OLYMPIC CIRCULATION',
+    title: 'OLYMPIC CIRCULATION',
     code: 'VS-01',
-    footer: 'LIVE · THE PLANT AS THE WORLD HAS IT',
+    footer: '',
     colour: 'golden-tanoi',
     sidebar: [],
     content: pages,
@@ -192,14 +192,10 @@ export function createViewscreen(
     );
     const mode = viewscreenShows(flashing.length);
     pages.show(mode);
-    frame.topBar.setTitle(
-      mode === 'ALARMS'
-        ? 'MAIN VIEWER · ALERT'
-        : 'MAIN VIEWER · OLYMPIC CIRCULATION',
-    );
+    frame.topBar.setTitle(mode === 'ALARMS' ? 'ALERT' : 'OLYMPIC CIRCULATION');
     if (mode === 'ALARMS') {
       banner.set(
-        `ALERT · ${flashing.length} ALARM${flashing.length > 1 ? 'S' : ''} UNACCEPTED · ACCEPT AT CENTRAL CONTROL`,
+        `${flashing.length} ALARM${flashing.length > 1 ? 'S' : ''} · ACCEPT AT CENTRAL CONTROL`,
         true,
       );
       list.set(

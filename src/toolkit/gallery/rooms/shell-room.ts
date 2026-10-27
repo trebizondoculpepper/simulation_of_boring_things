@@ -403,6 +403,14 @@ export function startWetHall(canvas: HTMLCanvasElement) {
   });
 }
 
+export interface CustomDoorway {
+  frame: { x: number; z: number; yaw: number };
+  leaf: Footprint;
+  beyond: Footprint;
+  opening: Footprint;
+  through(x: number, z: number): boolean;
+}
+
 export interface ShellConfig {
   self: RoomId;
   install?: (kit: ReturnType<typeof createPanelKit>) => Part[];
@@ -426,8 +434,14 @@ export interface ShellConfig {
   lightsOf?: string;
   /** Where its noclip may fly, metres, if not within `room` (the bridge's plan). */
   bounds?: Footprint;
-  /** Its doorways stop the walker only below this height, metres (the bridge's are at the foot of its stair). */
-  doorsBelow?: number;
+  /** Its doorways' floor, metres, if not 0 (the bridge's, a storey up). */
+  doorY?: number;
+  /**
+   * A doorway not in the room's rectangle's walls (the bridge's, in an
+   * angled wall): its frame, its leaves' and beyond's footprints, its
+   * opening while seen through, and whether a walker has gone out by it.
+   */
+  doorway?: (door: ShellDoor) => CustomDoorway | undefined;
 }
 
 /**
@@ -488,12 +502,18 @@ export function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
   });
 
   // Each doorway: where it is, whether the room beyond is seen through it.
-  const ways = doors.map((d) => ({
-    ...d,
-    place: shellDoorPlace(cfg.room, d.door),
-    ...shellDoorway(cfg.room, d.door),
-    seen: false,
-  }));
+  const ways = doors.map((d) => {
+    const custom = cfg.doorway?.(d.door);
+    return {
+      ...d,
+      place: shellDoorPlace(cfg.room, d.door),
+      ...(custom
+        ? { leaf: custom.leaf, beyond: custom.beyond }
+        : shellDoorway(cfg.room, d.door)),
+      custom,
+      seen: false,
+    };
+  });
   // Whether the walker is near each doorway (`door-proximity.ts`), one for
   // each, wider than its threshold: once open, its pair waits for them.
   const near = ways.map((w) => createDoorPresence(w.leaf));
@@ -507,16 +527,17 @@ export function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
     );
   const jointFor = (w: Way): Joint => ({
     frame: {
-      x: w.place.frame.x * metre,
-      z: w.place.frame.z * metre,
-      y: 0,
-      yaw: w.place.frame.yaw,
+      x: (w.custom ?? w.place).frame.x * metre,
+      z: (w.custom ?? w.place).frame.z * metre,
+      y: (cfg.doorY ?? 0) * metre,
+      yaw: (w.custom ?? w.place).frame.yaw,
     },
     onOpen: true,
     open: () => w.part.open(),
     angle: () => w.part.angle(),
     swingTo: (a) => w.part.swingTo(a),
     opening: () => {
+      if (w.custom) return toMetre(w.custom.opening);
       const { outer, into, alongX } = w.place;
       const half = shellOpening(w.door) / 2;
       const x0 = outer.x - into[0] * 2;
@@ -703,7 +724,6 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
         .movingSolids({ x: walk.walker.x / metre, z: walk.walker.z / metre })
         .map(toMetre),
       ...ways
-        .filter(() => standing < (cfg.doorsBelow ?? Infinity))
         .flatMap((w) =>
           doorwayStops(
             { inside: inWay(w), shut: w.part.angle() < 0.6, seen: w.seen },
@@ -730,6 +750,12 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       walk.place(x * metre, z * metre, yaw, pitch);
     },
     use: (x = 0, y = 0) => usableAt(x, y)?.(),
+    /** Where the walker is, metres, and the floor it stands on. */
+    pose: () => ({
+      x: walk.walker.x / metre,
+      z: walk.walker.z / metre,
+      floor: standing,
+    }),
   };
   (window as unknown as { shellRoom: unknown }).shellRoom = handle;
   const resize = () => {
@@ -802,7 +828,12 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       const z = walk.walker.z / metre;
       for (const g of groups) {
         const w = inUse(g);
-        if (w.seen && throughShellDoor(cfg.room, w.door, x, z)) {
+        if (
+          w.seen &&
+          (w.custom
+            ? w.custom.through(x, z)
+            : throughShellDoor(cfg.room, w.door, x, z))
+        ) {
           leaving = true;
           enterDevRoom(g.to, cfg.self, true);
           break;

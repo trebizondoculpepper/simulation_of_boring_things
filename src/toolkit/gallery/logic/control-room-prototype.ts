@@ -166,6 +166,30 @@ export function deskSegments() {
     .filter((s) => !DESK.open.includes(s.side));
 }
 
+/** A desk segment's sloping top: from its upstand's foot (0.3 of the way in) at 0.9 m to the operator's edge at 0.76 m. */
+export const DESK_TOP = { from: 0.3, upstand: 0.9, edge: 0.76 } as const;
+
+/** Segment `side`'s sloping top on plan: its upstand edge left and right, then the operator's edge right and left; and its depth across. */
+export function deskTop(side: number) {
+  const seg = deskSegments().find((s) => s.side === side)!;
+  const at = (p: Point, q: Point) => ({
+    x: p.x + (q.x - p.x) * DESK_TOP.from,
+    z: p.z + (q.z - p.z) * DESK_TOP.from,
+  });
+  const u0 = at(seg.outer[0], seg.inner[0]);
+  const u1 = at(seg.outer[1], seg.inner[1]);
+  const corners: [Point, Point, Point, Point] = [
+    u0,
+    u1,
+    seg.inner[1],
+    seg.inner[0],
+  ];
+  return {
+    corners,
+    depth: DESK.top * (1 - DESK_TOP.from),
+  };
+}
+
 /** Where the operator's chair stands: in the desk's well, toward its front. */
 export function chairPlace(): Point {
   const inner = deskInner();
@@ -335,8 +359,19 @@ export function protoFloorAt(
   z: number,
   previous: number,
   theme: Theme = 'lair',
+  game = false,
 ) {
   const ramp = theme === 'bridge' ? rampHeightAt(x, z) : null;
+  if (game) {
+    // The game's bridge has no stair (the owner, 2026-10-27): one storey,
+    // its floor whole; the stage and the ramps on it, from that floor.
+    const from = Math.max(previous, STOREY);
+    const raised = STOREY + platformStepAt(x, z);
+    const room = raised <= from + STEP_UP ? raised : STOREY;
+    return ramp !== null && ramp <= from + STEP_UP
+      ? Math.max(ramp, room)
+      : room;
+  }
   const stair = Math.max(
     surfaceFloorAt(stairSurfaces(), x, z, previous),
     ramp !== null && ramp <= previous + STEP_UP ? ramp : 0,
@@ -515,11 +550,19 @@ export const conferenceTable = (): Footprint => ({
   maxZ: CONFERENCE.z + CONFERENCE.d / 2,
 });
 
-export const conferenceChairs = () =>
-  [-2, -1, 0, 1, 2].flatMap((x) => [
-    { x, z: CONFERENCE.z - CONFERENCE.d / 2 - 0.3, yaw: Math.PI },
-    { x, z: CONFERENCE.z + CONFERENCE.d / 2 + 0.3, yaw: 0 },
-  ]);
+/**
+ * The conference table's chairs, each facing the table (a chair's yaw 0
+ * faces south, +z): five along each long side, tucked in a little, and
+ * one at each end facing along it (the owner, 2026-10-27).
+ */
+export const conferenceChairs = () => [
+  ...[-2, -1, 0, 1, 2].flatMap((x) => [
+    { x, z: CONFERENCE.z - CONFERENCE.d / 2 - 0.28, yaw: 0 },
+    { x, z: CONFERENCE.z + CONFERENCE.d / 2 + 0.28, yaw: Math.PI },
+  ]),
+  { x: -CONFERENCE.w / 2 - 0.34, z: CONFERENCE.z, yaw: Math.PI / 2 },
+  { x: CONFERENCE.w / 2 + 0.34, z: CONFERENCE.z, yaw: -Math.PI / 2 },
+];
 
 /** Boxes along the segment a–b, `depth` thick on its `side` (+1 inward of a clockwise polygon), in pieces at most `piece` long. */
 export function bandAlong(
@@ -695,58 +738,103 @@ export function openingGuard(): Footprint[] {
 }
 
 /**
- * The bridge's doorway (mission 095): in the game, the stair hall's door
- * is the main corridor's control room doorway, a pair of the standard
- * equipment doors (`MAIN_CORRIDOR.opening` wide, its head 2.52 m),
- * centred in the hall's south wall; the prototypes keep their stand-in.
+ * Where the bridge is entered from the corridor (the owner, 2026-10-27:
+ * the 8 m stair abandoned, "going down it the walker's head clips through
+ * the room above"; an elevator to come on the west wall, prototyped in a
+ * dev room later): for now the corridor's control room doorway, a pair of
+ * the standard equipment doors (`MAIN_CORRIDOR.opening` wide, its head
+ * 2.52 m), set flush into the bridge's west wall (side 5) where the
+ * owner's view from (−9.2, −2.7), looking west, meets it, on the bridge's
+ * floor; the rest of that stretch of wall kept clear for the elevator.
  */
+export const ENTRY = { side: 5, at: 3.71 } as const;
+
+/** The bridge's doorway in its west wall: its middle on the wall's inner face, the way into the room, along the wall, and its size. */
 export function bridgeDoor() {
-  const { hall } = stairPlan();
+  const [a, b] = sides(roomPolygon())[ENTRY.side];
+  const len = Math.hypot(b.x - a.x, b.z - a.z);
+  const u = { x: (b.x - a.x) / len, z: (b.z - a.z) / len };
+  const n = inward(a, b);
   return {
-    x: (hall.minX + hall.maxX) / 2,
-    /** The wall's middle, z; its outer face is the hall's south edge. */
-    z: hall.maxZ - STAIR.wall / 2,
+    x: a.x + u.x * ENTRY.at,
+    z: a.z + u.z * ENTRY.at,
+    into: n,
+    along: u,
     width: MAIN_CORRIDOR.opening,
     height: 2.52,
   };
 }
 
-/**
- * The rectangle the game's room runner (`runShell`) places the bridge's
- * doorway on: centred on the plan's origin, its south wall's inner face
- * the stair hall's, so the doorway sits on it at the hall's middle. Only
- * the doorway uses it: the room's own walls and floors are the plan's.
- */
-export function bridgeShellRect() {
-  const { hall } = stairPlan();
-  const b = protoBounds();
+/** The bridge's doorway's geometry for the room's runner: its faces, its frame, its leaves' and beyond's footprints, and whether a walker has gone out through it. */
+export function bridgeDoorway() {
+  const d = bridgeDoor();
+  const t = 0.2;
+  const half = d.width / 2;
+  const inner = { x: d.x, z: d.z };
+  const outer = { x: d.x - d.into.x * t, z: d.z - d.into.z * t };
+  const box = (back: number, front: number): Footprint => {
+    const pts = [-1, 1].flatMap((s) =>
+      [back, front].map((k) => ({
+        x: d.x + d.along.x * half * s + d.into.x * k,
+        z: d.z + d.along.z * half * s + d.into.z * k,
+      })),
+    );
+    return {
+      minX: Math.min(...pts.map((p) => p.x)),
+      maxX: Math.max(...pts.map((p) => p.x)),
+      minZ: Math.min(...pts.map((p) => p.z)),
+      maxZ: Math.max(...pts.map((p) => p.z)),
+    };
+  };
   return {
-    w: 2 * Math.max(-b.minX, b.maxX),
-    d: 2 * (hall.maxZ - STAIR.wall),
-    at: bridgeDoor().x,
+    inner,
+    outer,
+    into: d.into,
+    frame: { ...outer, yaw: Math.atan2(d.into.x, d.into.z) },
+    leaf: box(-t, 0),
+    beyond: box(-t - 0.3, -t),
+    /** The doorway's footprint while the corridor is seen through it, metres. */
+    opening: box(-t - 2, 0.4),
+    /** Whether (x, z) has gone out past its outer face, within its opening. */
+    through(x: number, z: number) {
+      const out = (outer.x - x) * d.into.x + (outer.z - z) * d.into.z;
+      const along = (x - outer.x) * d.along.x + (z - outer.z) * d.along.z;
+      return out > 0.05 && Math.abs(along) < half;
+    },
   };
 }
 
-/**
- * The stair hall's walls, round its lanes, landings and approach; with
- * `doorway`, its south wall open at the bridge's doorway (the room's
- * runner stops the walker there while its doors are shut).
- */
-export function hallWalls(doorway = false): Footprint[] {
+/** The wall pieces either side of the doorway along its side: [from, to] distances along it. */
+export function entryWallPieces(): [number, number][] {
+  const [a, b] = sides(roomPolygon())[ENTRY.side];
+  const len = Math.hypot(b.x - a.x, b.z - a.z);
+  const half = MAIN_CORRIDOR.opening / 2;
+  return [
+    [0, ENTRY.at - half],
+    [ENTRY.at + half, len],
+  ];
+}
+
+/** Where the walker arrives on the bridge: just inside the doorway, facing into the room. */
+export function bridgeArrival() {
+  const d = bridgeDoor();
+  return {
+    x: d.x + d.into.x * 0.8,
+    z: d.z + d.into.z * 0.8,
+    // The walker's yaw: its view (sin yaw, −cos yaw) into the room.
+    yaw: Math.atan2(d.into.x, -d.into.z),
+  };
+}
+
+/** The stair hall's walls, round its lanes, landings and approach. */
+export function hallWalls(): Footprint[] {
   const { hall } = stairPlan();
   const t = STAIR.wall;
-  const south = { ...hall, minZ: hall.maxZ - t };
-  const d = bridgeDoor();
   return [
     { ...hall, maxX: hall.minX + t },
     { ...hall, minX: hall.maxX - t },
     { ...hall, maxZ: hall.minZ + t },
-    ...(doorway
-      ? [
-          { ...south, maxX: d.x - d.width / 2 },
-          { ...south, minX: d.x + d.width / 2 },
-        ]
-      : [south]),
+    { ...hall, minZ: hall.maxZ - t },
   ];
 }
 
@@ -768,12 +856,12 @@ export function spine(): Footprint {
 export function protoSolids(
   y: number,
   theme: Theme = 'lair',
-  doorway = false,
+  game = false,
 ): Footprint[] {
   const p = stairPlan();
   const { side: under } = lanes();
-  if (y < STOREY - 0.5) {
-    const out = [...hallWalls(doorway), spine()];
+  if (!game && y < STOREY - 0.5) {
+    const out = [...hallWalls(), spine()];
     if (y < STEP_UP)
       out.push({
         ...under,
@@ -790,26 +878,131 @@ export function protoSolids(
     return out;
   }
   const room = roomPolygon();
-  const walls = sides(room).flatMap(([a, b], i) =>
-    bandAlong(a, b, CONTROL_ROOM.wall + placeholderDepth(i), 0.3, -0.3),
-  );
+  // The game's walls carry nothing on the floor (its panels hang flat on
+  // them); the prototypes' stand their placeholders out from them.
+  const walls = sides(room).flatMap(([a, b], i) => {
+    const depth = CONTROL_ROOM.wall + (game ? 0 : placeholderDepth(i));
+    if (!game || i !== ENTRY.side) return bandAlong(a, b, depth, 0.3, -0.3);
+    // The game's west wall, open at its doorway.
+    const len = Math.hypot(b.x - a.x, b.z - a.z);
+    const at = (d: number) => ({
+      x: a.x + ((b.x - a.x) * d) / len,
+      z: a.z + ((b.z - a.z) * d) / len,
+    });
+    return entryWallPieces().flatMap(([p, q]) =>
+      bandAlong(at(p), at(q), depth, 0.3, -0.3),
+    );
+  });
+  // Each desk segment as drawn: its angled quadrilateral, not boxes round it.
   const desk = deskSegments().flatMap((s) =>
-    bandAlong(s.outer[0], s.outer[1], DESK.top, 0.25),
+    polygonCells([s.outer[0], s.outer[1], s.inner[1], s.inner[0]]),
   );
+  const bridge = theme === 'bridge';
   return [
     ...walls,
     ...desk,
-    ...openingGuard(),
+    ...(game ? [] : openingGuard()),
     ...platformRail(theme),
     conferenceTable(),
-    ...(theme === 'bridge' ? stationSolids() : []),
-    ...(theme === 'bridge' && y >= STOREY + PLATFORM.height - 0.3
-      ? rearStationPlaces().flatMap((r) =>
-          bandAlong(r.corners[0], r.corners[1], REAR_CONSOLE.d, 0.25),
-        )
+    ...(bridge ? stationSolids() : []),
+    ...(bridge ? chairSolids() : []),
+    ...(bridge
+      ? cornerFillets().flatMap((c) => polygonCells(circle(c, c.r)))
+      : []),
+    ...(bridge && y >= STOREY + PLATFORM.height - 0.3
+      ? rearStationPlaces().flatMap((r) => polygonCells(r.corners))
       : []),
   ];
 }
+
+/**
+ * A convex polygon's footprint as thin boxes, one a row `cell` deep, each
+ * spanning the polygon's width at its row's middle: within half a cell of
+ * the polygon's own outline, for walking collision (the owner, 2026-10-27:
+ * boxes round angled desks blocked the walkways between them).
+ */
+export function polygonCells(poly: readonly Point[], cell = 0.08): Footprint[] {
+  const zs = poly.map((p) => p.z);
+  const minZ = Math.min(...zs);
+  const maxZ = Math.max(...zs);
+  const out: Footprint[] = [];
+  for (let z0 = minZ; z0 < maxZ - 1e-9; z0 += cell) {
+    const z1 = Math.min(maxZ, z0 + cell);
+    const zc = (z0 + z1) / 2;
+    const xs: number[] = [];
+    sides(poly).forEach(([a, b]) => {
+      if ((a.z - zc) * (b.z - zc) > 0 || a.z === b.z) return;
+      xs.push(a.x + ((zc - a.z) / (b.z - a.z)) * (b.x - a.x));
+    });
+    if (xs.length < 2) continue;
+    out.push({
+      minX: Math.min(...xs),
+      maxX: Math.max(...xs),
+      minZ: z0,
+      maxZ: z1,
+    });
+  }
+  return out;
+}
+
+/** A circle as a polygon of `n` sides. */
+export function circle(c: Point, r: number, n = 16): Point[] {
+  return Array.from({ length: n }, (_, k) => ({
+    x: c.x + r * Math.cos((k / n) * Math.PI * 2),
+    z: c.z + r * Math.sin((k / n) * Math.PI * 2),
+  }));
+}
+
+/**
+ * The bridge's rounded corners: a fillet in each, tangent to both walls,
+ * standing no more than `CORNER_FILLET` out from its corner (a fixed
+ * radius in the room's wide, obtuse corners made great columns, one
+ * across the east ramp's foot).
+ */
+export const CORNER_FILLET = 0.9;
+export function cornerFillets() {
+  const room = roomPolygon();
+  return room.map((p, i) => {
+    const prev = room[(i + room.length - 1) % room.length];
+    const next = room[(i + 1) % room.length];
+    const unit = (q: Point) => {
+      const l = Math.hypot(q.x, q.z);
+      return { x: q.x / l, z: q.z / l };
+    };
+    const u = unit({ x: prev.x - p.x, z: prev.z - p.z });
+    const v = unit({ x: next.x - p.x, z: next.z - p.z });
+    const bis = unit({ x: u.x + v.x, z: u.z + v.z });
+    const half =
+      Math.acos(Math.max(-1, Math.min(1, u.x * v.x + u.z * v.z))) / 2;
+    const r = CORNER_FILLET / (1 / Math.sin(half) + 1);
+    const d = r / Math.sin(half);
+    return { x: p.x + bis.x * d, z: p.z + bis.z * d, r };
+  });
+}
+
+/** The bridge's chairs' places: the operator's and those beside it, each station's, the conference table's. */
+export function chairPlaces(): { x: number; z: number; r: number }[] {
+  const c = chairPlace();
+  return [
+    { x: c.x, z: c.z, r: 0.42 },
+    { x: c.x - 1.5, z: c.z + 0.5, r: 0.34 },
+    { x: c.x + 1.5, z: c.z + 0.5, r: 0.34 },
+    ...stationPlaces().map((st) => ({
+      x: st.x - Math.sin(st.yaw) * 0.9,
+      z: st.z + Math.cos(st.yaw) * 0.9,
+      r: 0.28,
+    })),
+  ];
+}
+
+/** What the chairs stop a walker with: their seats' footprints. */
+export const chairSolids = (): Footprint[] =>
+  chairPlaces().map((c) => ({
+    minX: c.x - c.r,
+    maxX: c.x + c.r,
+    minZ: c.z - c.r,
+    maxZ: c.z + c.r,
+  }));
 
 /** Where the walker starts: in the stair hall, inside its door, facing the stair. */
 export function protoStart() {
@@ -883,10 +1076,10 @@ export const DUTIES: Record<string, string> = {
 
 /** The rear stations, along the aft walls on the stage: their side, and where along it (a share). */
 export const REAR_STATIONS = [
-  { role: 'WATER SCIENCE OFFICER', side: 4, at: 0.3, panel: 'CR-CP3' },
-  { role: 'DRAINAGE OFFICER', side: 4, at: 0.68, panel: 'WH-T2' },
-  { role: 'LOADING BAY CHIEF', side: 3, at: 0.32, panel: 'LB-CAB1' },
-  { role: 'OPERATIONS OFFICER', side: 3, at: 0.7, panel: 'WH-CP1' },
+  { role: 'WATER SCIENCE OFFICER', side: 4, at: 0.45, panel: 'CR-CP3' },
+  { role: 'DRAINAGE OFFICER', side: 4, at: 0.6, panel: 'WH-T2' },
+  { role: 'LOADING BAY CHIEF', side: 3, at: 0.4, panel: 'LB-CAB1' },
+  { role: 'OPERATIONS OFFICER', side: 3, at: 0.55, panel: 'WH-CP1' },
 ] as const;
 
 /** A rear station's console: standing height, its top sloping up to the wall. */
@@ -979,9 +1172,7 @@ export function stationPlaces(): StationPlace[] {
 
 /** What a station stops a walker with: its footprint, in short boxes. */
 export const stationSolids = (): Footprint[] =>
-  stationPlaces().flatMap((s) =>
-    bandAlong(s.corners[0], s.corners[1], STATION.d, 0.25),
-  );
+  stationPlaces().flatMap((s) => polygonCells(s.corners));
 
 /** A touch panel's place on the bridge: its middle, its turn about y, its tilt back from upright, and how far it is scaled. */
 export interface PanelPlace {
@@ -1040,58 +1231,27 @@ export function bridgePanelPlaces(): PanelPlace[] {
     z: p.z + (q.z - p.z) * t,
   });
   const onDesk = (side: number, code: string): PanelPlace => {
-    const seg = deskSegments().find((s) => s.side === side)!;
-    const u0 = lerp(
-      lerp(seg.outer[0], seg.outer[1], 0.5),
-      lerp(seg.inner[0], seg.inner[1], 0.5),
-      0.3,
-    );
-    const q0 = lerp(seg.inner[0], seg.inner[1], 0.5);
-    const dep = Math.hypot(q0.x - u0.x, q0.z - u0.z);
-    // Its top's length halfway between the upstand and the operator's edge.
-    const len =
-      (Math.hypot(
-        seg.inner[1].x - seg.inner[0].x,
-        seg.inner[1].z - seg.inner[0].z,
-      ) +
-        Math.hypot(
-          seg.outer[1].x - seg.outer[0].x,
-          seg.outer[1].z - seg.outer[0].z,
-        )) /
-      2;
+    // Flush in its own segment's sloping top: centred, its edges parallel
+    // to the segment's front, at its slope, inside its narrower (inner)
+    // edge, never across into its neighbour (the owner, 2026-10-27).
+    const top = deskTop(side);
+    const [u0, u1, q1, q0] = top.corners;
+    const n = inward(u0, u1);
+    const centre = lerp(lerp(u0, u1, 0.5), lerp(q0, q1, 0.5), 0.5);
+    const inner = Math.hypot(q1.x - q0.x, q1.z - q0.z);
+    const dep = top.depth;
     return {
       code,
-      x: (u0.x + q0.x) / 2,
-      y: STOREY + (0.9 + 0.76) / 2 + 0.014,
-      z: (u0.z + q0.z) / 2,
-      // Facing its operator, inward from the segment.
-      yaw: Math.atan2(q0.x - u0.x, q0.z - u0.z),
-      tilt: Math.PI / 2 - Math.atan2(0.9 - 0.76, dep),
-      fit: { w: len - 0.25, h: dep - 0.06 },
+      x: centre.x,
+      y: STOREY + (DESK_TOP.upstand + DESK_TOP.edge) / 2 + 0.014,
+      z: centre.z,
+      // Facing its operator: the segment's inward normal.
+      yaw: Math.atan2(n.x, n.z),
+      tilt: Math.PI / 2 - Math.atan2(DESK_TOP.upstand - DESK_TOP.edge, dep),
+      fit: { w: inner - 0.12, h: dep - 0.06 },
     };
   };
-  const front = deskSegments().find((s) => s.side === 0)!;
-  const u = lerp(
-    lerp(front.outer[0], front.outer[1], 0.5),
-    lerp(front.inner[0], front.inner[1], 0.5),
-    0.3,
-  );
-  const q = lerp(front.inner[0], front.inner[1], 0.5);
-  const depth = Math.hypot(q.x - u.x, q.z - u.z);
-  const inner = Math.hypot(
-    front.inner[1].x - front.inner[0].x,
-    front.inner[1].z - front.inner[0].z,
-  );
-  const central: PanelPlace = {
-    code: 'CC-01',
-    x: (u.x + q.x) / 2,
-    y: STOREY + (0.9 + 0.76) / 2 + 0.014,
-    z: (u.z + q.z) / 2,
-    // Facing the operator, south.
-    yaw: 0,
-    tilt: Math.PI / 2 - Math.atan2(0.9 - 0.76, depth),
-    fit: { w: inner - 0.3, h: depth - 0.06 },
-  };
+  const central = onDesk(0, 'CC-01');
   const room = roomPolygon();
   const walls = WALL_PANELS.map(({ code, side }): PanelPlace => {
     const [a, b] = sides(room)[side];
@@ -1140,4 +1300,55 @@ export function viewscreenPlace() {
     z: CONTROL_ROOM.frontZ + screen.depth + 0.03,
     size: { w: screen.width * 0.94, h: height * 0.84 },
   };
+}
+
+/**
+ * Each officer's plaque (the owner, 2026-10-27: small, fitted to the
+ * desk, readable where its officer stands): its role, its middle, and its
+ * face's turn (+z outward, toward its officer). A station's in its front
+ * edge under the operator's side of its top; a rear station's in its
+ * front edge; the command chairs' in the desk's operator's edge before
+ * each (the assistant duty manager's on the duty manager's right, east;
+ * the counsellor's on the left, west).
+ */
+export function plaquePlaces() {
+  const out: { role: string; x: number; y: number; z: number; yaw: number }[] =
+    [];
+  for (const st of stationPlaces()) {
+    const [a, b] = st.corners;
+    const back = { x: -Math.sin(st.yaw), z: Math.cos(st.yaw) };
+    out.push({
+      role: st.system,
+      x: (a.x + b.x) / 2 + back.x * 0.004,
+      y: STOREY + STATION.low - 0.04,
+      z: (a.z + b.z) / 2 + back.z * 0.004,
+      yaw: -st.yaw,
+    });
+  }
+  for (const r of rearStationPlaces()) {
+    const [, , c, d] = r.corners;
+    out.push({
+      role: r.role,
+      x: (c.x + d.x) / 2 + r.n.x * 0.004,
+      y: STOREY + PLATFORM.height + REAR_CONSOLE.low - 0.04,
+      z: (c.z + d.z) / 2 + r.n.z * 0.004,
+      yaw: Math.atan2(r.n.x, r.n.z),
+    });
+  }
+  for (const [side, role] of [
+    [0, 'THE DUTY MANAGER'],
+    [1, 'THE ASSISTANT DUTY MANAGER'],
+    [6, 'THE BATHER WELFARE COUNSELLOR'],
+  ] as const) {
+    const [u0, u1, q1, q0] = deskTop(side).corners;
+    const n = inward(u0, u1);
+    out.push({
+      role,
+      x: (q0.x + q1.x) / 2 + n.x * 0.004,
+      y: STOREY + DESK_TOP.edge - 0.03,
+      z: (q0.z + q1.z) / 2 + n.z * 0.004,
+      yaw: Math.atan2(n.x, n.z),
+    });
+  }
+  return out;
 }

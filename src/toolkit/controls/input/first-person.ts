@@ -1020,7 +1020,14 @@ export function createFirstPerson(options: FirstPersonOptions) {
         returnTo = null;
       }
       attachedLadder = null;
-      currentFloorY = floor ?? options.floorAt?.(x, z, currentFloorY) ?? floorY;
+      // Walking, with the eye given: the floor under that eye, not the one
+      // stood on before (placed up a storey, the walker stood on the floor
+      // below and could not walk down the stair it was over: mission 095).
+      const from =
+        y !== undefined && !flying
+          ? y - EYE_HEIGHT_METRES * metre
+          : currentFloorY;
+      currentFloorY = floor ?? options.floorAt?.(x, z, from) ?? floorY;
       smoothedFloorY = currentFloorY;
       walker.x = x;
       walker.z = z;

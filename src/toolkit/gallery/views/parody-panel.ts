@@ -483,9 +483,8 @@ export function createParodyPanel(
   const tree = new Frame({
     title: spec.title,
     code: spec.code,
-    footer: B
-      ? `LIVE · REIMAGINES ${spec.original}`
-      : `PARODIES ${spec.original}`,
+    // On the bridge every panel is live: no footer (the owner: no redundant words).
+    footer: B ? '' : `PARODIES ${spec.original}`,
     colour: spec.colour ?? colour(),
     sidebar,
     content: new Stack('column', [status, stack ?? pages[0].node]),

@@ -208,7 +208,8 @@ export function equipmentDoors(
   // Above the concrete lintel over the opening (`concrete-lintel.ts`),
   // clear of it by 4 cm, not behind it.
   sign.position.set(0, h + 2 * f + CONCRETE_LINTEL.height + 0.04 + 0.09, 0.003);
-  a.object.add(sign);
+  // No sign where there is nothing to name (the bridge's side, mission 095).
+  if (label) a.object.add(sign);
   const badge = createBrandBadge(kit, 'ironside', { height: 0.03 });
   badge.position.set(0, h + f * 1.5, 0.002);
   a.object.add(badge);

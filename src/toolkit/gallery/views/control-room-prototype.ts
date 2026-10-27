@@ -44,10 +44,13 @@ import {
   STATION,
   STOREY,
   bridgeDoor,
+  ENTRY,
+  entryWallPieces,
   chairPlace,
   DUTIES,
   REAR_CONSOLE,
   rearStationPlaces,
+  plaquePlaces,
   edgeAt,
   horseshoePoints,
   rampHeightAt,
@@ -178,7 +181,9 @@ export function createControlRoomPrototype(
   const plan = stairPlan();
   const { hall, flights, landings, opening, door } = plan;
   const hallGroup = decor(new Group(), 'Stair hall');
-  group.add(hallGroup);
+  // The game's bridge has no stair, its hall or its opening (the owner,
+  // 2026-10-27): a lift car by the west wall instead, for now.
+  if (!game) group.add(hallGroup);
   const hw = hall.maxX - hall.minX;
   const hd = hall.maxZ - hall.minZ;
   const hcx = (hall.minX + hall.maxX) / 2;
@@ -434,14 +439,15 @@ export function createControlRoomPrototype(
   const top = STOREY + H;
   // The floor, round the opening: polished, dark, reflective.
   const floorShape = flatShape(room);
-  floorShape.holes.push(
-    flatPath([
-      { x: opening.minX, z: opening.minZ },
-      { x: opening.maxX, z: opening.minZ },
-      { x: opening.maxX, z: opening.maxZ },
-      { x: opening.minX, z: opening.maxZ },
-    ]),
-  );
+  if (!game)
+    floorShape.holes.push(
+      flatPath([
+        { x: opening.minX, z: opening.minZ },
+        { x: opening.maxX, z: opening.minZ },
+        { x: opening.maxX, z: opening.maxZ },
+        { x: opening.minX, z: opening.maxZ },
+      ]),
+    );
   roomGroup.add(slab(floorShape, STOREY - 0.3, 0.3, gloss));
   // The ceiling, and its deep coffers: a grid of dark beams, a warm
   // downlight in each coffer.
@@ -512,21 +518,32 @@ export function createControlRoomPrototype(
   // The walls: the lair's dark, with raked steel fins between the
   // consoles; the bridge's beige, in light grey panels.
   const T = CONTROL_ROOM.wall;
-  for (const [a, b] of sides(room)) {
+  for (const [i, [a, b]] of sides(room).entries()) {
     const len = Math.hypot(b.x - a.x, b.z - a.z);
     const n = inward(a, b);
     const yaw = Math.atan2(b.z - a.z, b.x - a.x);
-    const wall = box(
-      darkWall,
-      len + T * 2,
-      H + 0.3,
-      T,
-      (a.x + b.x) / 2 - (n.x * T) / 2,
-      STOREY + H / 2,
-      (a.z + b.z) / 2 - (n.z * T) / 2,
-      roomGroup,
-    );
-    wall.rotation.y = -yaw;
+    // A piece of the wall, from `p` to `q` along it, `y0` to `y1` up.
+    const piece = (p: number, q: number, y0: number, y1: number) => {
+      const c = (p + q) / 2 / len;
+      const w = box(
+        darkWall,
+        q - p,
+        y1 - y0,
+        T,
+        a.x + (b.x - a.x) * c - (n.x * T) / 2,
+        (y0 + y1) / 2,
+        a.z + (b.z - a.z) * c - (n.z * T) / 2,
+        roomGroup,
+      );
+      w.rotation.y = -yaw;
+    };
+    if (game && i === ENTRY.side) {
+      // The game's west wall, its doorway to the corridor cut through it.
+      const [[p0, q0], [p1, q1]] = entryWallPieces();
+      piece(p0 - T, q0, STOREY, STOREY + H + 0.3);
+      piece(p1, q1 + T, STOREY, STOREY + H + 0.3);
+      piece(q0, p1, STOREY + bridgeDoor().height, STOREY + H + 0.3);
+    } else piece(-T, len + T, STOREY, STOREY + H + 0.3);
     // A skirting of brass, and a fin every 2.4 m raked back toward the top.
     const sk = box(
       trim,
@@ -539,9 +556,13 @@ export function createControlRoomPrototype(
       roomGroup,
     );
     sk.rotation.y = -yaw;
+    // Not across the game's doorway.
+    const entry = game && i === ENTRY.side;
+    if (entry) sk.visible = false;
     const count = Math.floor(len / 2.4);
     for (let k = 1; k < count; k++) {
       const s = k / count;
+      if (entry && Math.abs(s * len - ENTRY.at) < 1.4) continue;
       const px = a.x + (b.x - a.x) * s;
       const pz = a.z + (b.z - a.z) * s;
       const f = box(
@@ -560,7 +581,7 @@ export function createControlRoomPrototype(
   }
   // The guard round the opening: glass in a stainless frame, 1.1 m.
   const guard = decor(new Group(), 'Guard round the stair opening');
-  roomGroup.add(guard);
+  if (!game) roomGroup.add(guard);
   balustrade(
     { x: opening.minX, z: opening.minZ },
     { x: opening.minX, z: opening.maxZ },
@@ -801,10 +822,17 @@ export function createControlRoomPrototype(
     const P = s.outer[end];
     const Q = s.inner[end];
     const along = end === 1 ? -1 : 1;
-    const dx = (s.outer[1].x - s.outer[0].x) * 0.02 * along;
-    const dz = (s.outer[1].z - s.outer[0].z) * 0.02 * along;
-    const P2 = { x: P.x + dx, z: P.z + dz };
-    const Q2 = { x: Q.x + dx, z: Q.z + dz };
+    // Outside the segment's end, back to back with it, never in its plane
+    // (the owner saw stripes across it, 2026-10-27: it overlapped the
+    // segment, its face coplanar with the segment's end).
+    const len = Math.hypot(
+      s.outer[1].x - s.outer[0].x,
+      s.outer[1].z - s.outer[0].z,
+    );
+    const ux = (s.outer[1].x - s.outer[0].x) / len;
+    const uz = (s.outer[1].z - s.outer[0].z) / len;
+    const P2 = { x: P.x - ux * 0.04 * along, z: P.z - uz * 0.04 * along };
+    const Q2 = { x: Q.x - ux * 0.04 * along, z: Q.z - uz * 0.04 * along };
     desk.add(
       hexa(
         [P, P2, Q2, Q],
@@ -839,27 +867,10 @@ export function createControlRoomPrototype(
       );
   if (bridge) stations();
   if (bridge) rearStations();
-  // The command chairs' plaques, in the desk's edge before each (mission 095).
+  // The officers' plaques (mission 095), each in its desk's front edge.
   if (bridge)
-    for (const [side, role] of [
-      [0, 'THE DUTY MANAGER'],
-      [1, 'THE ASSISTANT DUTY MANAGER'],
-      [6, 'THE BATHER WELFARE COUNSELLOR'],
-    ] as const) {
-      const seg = deskSegments().find((x) => x.side === side)!;
-      const q = lerp2(seg.inner[0], seg.inner[1], 0.5);
-      const o = lerp2(seg.outer[0], seg.outer[1], 0.5);
-      const len = Math.hypot(q.x - o.x, q.z - o.z);
-      const n = { x: (q.x - o.x) / len, z: (q.z - o.z) / len };
-      desk.add(
-        plaque(
-          role,
-          { x: q.x + n.x * 0.004, z: q.z + n.z * 0.004 },
-          STOREY + 0.73,
-          Math.atan2(n.x, n.z),
-        ),
-      );
-    }
+    for (const p of plaquePlaces())
+      roomGroup.add(plaque(p.role, { x: p.x, z: p.z }, p.y, p.yaw));
 
   // ------------------------------------------------------ the ring light
   // The lair's alone: a ring of photo-flood lamps on a dark steel hoop,
@@ -1388,10 +1399,6 @@ export function createControlRoomPrototype(
         stage,
       );
   }
-  /** A point `t` of the way from p to q. */
-  function lerp2(p: Point, q: Point, t: number): Point {
-    return { x: p.x + (q.x - p.x) * t, z: p.z + (q.z - p.z) * t };
-  }
   /**
    * An officer's plaque (the owner, 2026-10-27): a small engraved plate,
    * 200 × 36 mm, its role and, smaller, its duty, set into a desk's front
@@ -1435,16 +1442,6 @@ export function createControlRoomPrototype(
             y0 + REAR_CONSOLE.high,
           ],
           lacquer,
-        ),
-      );
-      // Its officer's plaque, small, set into its front edge.
-      const front = lerp2(c2, d, 0.5);
-      g.add(
-        plaque(
-          r.role,
-          { x: front.x + r.n.x * 0.004, z: front.z + r.n.z * 0.004 },
-          y0 + REAR_CONSOLE.low - 0.04,
-          Math.atan2(r.n.x, r.n.z),
         ),
       );
     }
@@ -1500,18 +1497,6 @@ export function createControlRoomPrototype(
           k++;
         }
       }
-      // Its officer's plaque (mission 095; the owner: small, fitted to the
-      // desk), set into its front edge below the operator's side of its top.
-      const edge2 = lerp(a, b, 0.5);
-      const back = { x: -Math.sin(st.yaw), z: Math.cos(st.yaw) };
-      g.add(
-        plaque(
-          st.system,
-          { x: edge2.x + back.x * 0.004, z: edge2.z + back.z * 0.004 },
-          STOREY + STATION.low - 0.04,
-          -st.yaw,
-        ),
-      );
       // Its chair.
       const f = { x: Math.sin(st.yaw), z: -Math.cos(st.yaw) };
       g.add(

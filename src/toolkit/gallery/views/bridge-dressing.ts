@@ -14,6 +14,7 @@ import {
 import type { Material, Object3D } from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
+import { cornerFillets } from '../logic/control-room-prototype';
 import type { Point } from '../logic/control-room-prototype';
 
 /**
@@ -51,12 +52,6 @@ function canvasTexture(
   kit.textures.push(map);
   return map;
 }
-
-/** A unit vector along (x, z). */
-const norm = (p: Point): Point => {
-  const l = Math.hypot(p.x, p.z) || 1;
-  return { x: p.x / l, z: p.z / l };
-};
 
 /** A seeded random, so every load is the same. */
 function seeded(seed: number) {
@@ -297,27 +292,14 @@ export function bridgeCeiling(
       rib.add(strip);
     }
   }
-  // A very rounded space: a large fillet in every corner, floor to ceiling.
-  for (let i = 0; i < room.length; i++) {
-    const p = room[i];
-    const prev = room[(i + room.length - 1) % room.length];
-    const next = room[(i + 1) % room.length];
-    const u = norm({ x: prev.x - p.x, z: prev.z - p.z });
-    const v = norm({ x: next.x - p.x, z: next.z - p.z });
-    const bis = norm({ x: u.x + v.x, z: u.z + v.z });
-    const half =
-      Math.acos(Math.max(-1, Math.min(1, u.x * v.x + u.z * v.z))) / 2;
-    const r = 0.9;
-    const d = r / Math.sin(half);
+  // A very rounded space: a fillet in every corner, floor to ceiling, as
+  // its walking collision has it (`cornerFillets`).
+  for (const f of cornerFillets()) {
     const fillet = new Mesh(
-      new CylinderGeometry(r, r, top - opts.floor, 24, 1, true, 0, Math.PI * 2),
+      new CylinderGeometry(f.r, f.r, top - opts.floor, 24, 1, true),
       m.beige,
     );
-    fillet.position.set(
-      p.x + bis.x * d,
-      (top + opts.floor) / 2,
-      p.z + bis.z * d,
-    );
+    fillet.position.set(f.x, (top + opts.floor) / 2, f.z);
     g.add(fillet);
   }
   // A cove along every wall's top.

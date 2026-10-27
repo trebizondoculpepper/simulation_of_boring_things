@@ -22,12 +22,12 @@ import {
 } from './shell-rooms';
 import type { ShellRoomId } from './shell-rooms';
 import {
-  STAIR,
-  bridgeDoor,
-  bridgeShellRect,
+  STOREY,
+  bridgeDoorway,
+  insidePolygon,
   protoFloorAt,
   protoSolids,
-  stairPlan,
+  roomPolygon,
 } from './control-room-prototype';
 
 const C = MAIN_CORRIDOR;
@@ -195,28 +195,22 @@ describe('passing between the main corridor and the rooms off it', () => {
     }
   });
 
-  it('carries the walker into the bridge’s stair hall, between its walls at the foot of its stair, and back', () => {
+  it('carries the walker onto the bridge’s floor through its west wall, a storey up, and back', () => {
     const d = CORRIDOR_DOORS.find((x) => x.to === 'bridge')!;
-    const rect = bridgeShellRect();
-    const door = { wall: 'south' as const, at: rect.at, to: d.to };
-    const f = shellDoorPlace(rect, door).frame;
+    const way = bridgeDoorway();
     const p = doorPlace(d);
     const there = walkThrough(
       { x: p.x, z: p.z, y: 0, yaw: corridorYaw(d) },
-      { ...f, y: 0 },
+      { ...way.frame, y: STOREY },
       p,
     );
-    // Its frame is the stair hall's doorway: on its south face, mid hall.
-    const way = bridgeDoor();
-    expect(f.x).toBeCloseTo(way.x);
-    expect(f.z).toBeCloseTo(way.z + STAIR.wall / 2);
-    const { hall } = stairPlan();
-    expect(there.x).toBeGreaterThan(hall.minX + STAIR.wall);
-    expect(there.x).toBeLessThan(hall.maxX - STAIR.wall);
-    expect(there.z).toBeLessThan(hall.maxZ - STAIR.wall);
-    expect(protoFloorAt(there.x, there.z, 0, 'bridge')).toBe(0);
+    expect(there.y).toBeCloseTo(1.8 + STOREY);
+    // In the room, on its floor, in nothing solid, and not yet out.
+    expect(insidePolygon(roomPolygon(), there.x, there.z)).toBe(true);
+    expect(way.through(there.x, there.z)).toBe(false);
+    expect(protoFloorAt(there.x, there.z, STOREY, 'bridge', true)).toBe(STOREY);
     expect(
-      protoSolids(0, 'bridge', true).some(
+      protoSolids(STOREY, 'bridge', true).some(
         (s) =>
           there.x > s.minX &&
           there.x < s.maxX &&
@@ -224,6 +218,12 @@ describe('passing between the main corridor and the rooms off it', () => {
           there.z < s.maxZ,
       ),
     ).toBe(false);
+    // Out past the wall, through the doorway: handed back.
+    const out = {
+      x: way.outer.x - way.into.x * 0.3,
+      z: way.outer.z - way.into.z * 0.3,
+    };
+    expect(way.through(out.x, out.z)).toBe(true);
   });
 
   it('carries the walker through each of the wet hall’s two doorways onto its landing, at the corridor’s level', () => {

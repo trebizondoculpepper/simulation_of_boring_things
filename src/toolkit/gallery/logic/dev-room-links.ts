@@ -63,6 +63,7 @@ export type GalleryRoomId =
   | 'dev46'
   | 'dev47'
   | 'dev48'
+  | 'dev49'
   | 'retired0'
   | 'retired1'
   | 'dev_corridor';
@@ -256,6 +257,8 @@ export const ROOMS: readonly RoomId[] = [
   'dev47',
   // By its URL only: every panel in the plant as a touch screen (mission 093).
   'dev48',
+  // By its URL only: the bridge stations' schematic screens (mission 095).
+  'dev49',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   'retired1',
@@ -352,7 +355,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   switch_room: 'ELECTRICAL SWITCH ROOM',
   air_plant: 'AIR HANDLING PLANT',
   control_room: 'CONTROL ROOM (RETIRED)',
-  bridge: 'THE BRIDGE · CONTROL ROOM',
+  bridge: 'THE BRIDGE',
   engineers_office: 'ENGINEER’S OFFICE',
   duty_managers_office: 'DUTY MANAGER’S OFFICE',
   plant_room_tiny: 'PLANT ROOM · TINY · 5 × 5 M',
@@ -423,6 +426,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev46: 'DEV46 · CONTROL ROOM PROTOTYPE · BRIDGE',
   dev47: 'DEV47 · TOUCH PANELS (24TH CENTURY)',
   dev48: 'DEV48 · THE PLANT REIMAGINED (24TH CENTURY)',
+  dev49: 'DEV49 · STATION SCHEMATICS (24TH CENTURY)',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   retired1: 'RETIRED1 · JACUZZI PLANT ROOM, 2026-10-25',
   dev_corridor: 'DEV CORRIDOR',
@@ -535,6 +539,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev46: '#c890c8',
   dev47: '#ff9933',
   dev48: '#cc99cc',
+  dev49: '#ffcc66',
   retired0: '#6d7a6f',
   retired1: '#6d7a6f',
   dev_corridor: '#2d9ca0',

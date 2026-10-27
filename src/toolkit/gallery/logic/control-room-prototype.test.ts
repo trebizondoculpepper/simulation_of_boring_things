@@ -21,6 +21,7 @@ import {
   edgeAt,
   STATIONS,
   DUTIES,
+  bridgeArrival,
   rearStationPlaces,
   stationPlaces,
   deskInner,
@@ -38,6 +39,7 @@ import {
   stairPlan,
 } from './control-room-prototype';
 import { overlaps } from '../../controls/logic/walk-collision';
+import type { Footprint } from '../../controls/logic/walk-collision';
 
 const room = roomPolygon();
 const lengths = sides(room).map(([a, b]) => Math.hypot(b.x - a.x, b.z - a.z));
@@ -493,5 +495,167 @@ describe('the bridge’s officers (mission 095)', () => {
   it('names every station and command chair with its duty', () => {
     for (const role of [...STATIONS, ...rearStationPlaces().map((r) => r.role)])
       expect(DUTIES[role], role).toBeDefined();
+  });
+});
+
+describe('walking down again on the bridge (mission 095)', () => {
+  /** Walk `route` from height `from` in 2.5 cm steps, as the walker does, its radius 0.175 m. */
+  const cache = new Map<string, Footprint[]>();
+  const solidsAt = (y: number) => {
+    const k = y.toFixed(3);
+    if (!cache.has(k)) cache.set(k, protoSolids(y, 'bridge', true));
+    return cache.get(k)!;
+  };
+  const walk = (route: [number, number][], from: number) => {
+    let [x, z] = route[0];
+    let y = from;
+    for (const [tx, tz] of route.slice(1)) {
+      const steps = Math.ceil(Math.hypot(tx - x, tz - z) / 0.05);
+      const [x0, z0] = [x, z];
+      for (let k = 1; k <= steps; k++) {
+        x = x0 + ((tx - x0) * k) / steps;
+        z = z0 + ((tz - z0) * k) / steps;
+        const next = protoFloorAt(x, z, y, 'bridge', true);
+        expect(Math.abs(next - y), `${x},${z} from ${y}`).toBeLessThan(0.25);
+        for (const s of solidsAt(next))
+          expect(overlaps(s, x, z, 0.175), `${x},${z},${next}`).toBe(false);
+        y = next;
+      }
+    }
+    return { x, z, y };
+  };
+
+  it('walks down the stage’s central steps and down each ramp', () => {
+    const top = walk(
+      [
+        [0, edgeAt(0) + 1],
+        [0, edgeAt(0) - PLATFORM.risers * PLATFORM.going - 0.6],
+      ],
+      STOREY + PLATFORM.height,
+    );
+    expect(top.y).toBe(STOREY);
+    for (const s of [-1, 1]) {
+      const along: [number, number][] = [];
+      for (let x = RAMP.end + 0.6; x <= RAMP.low - 0.8; x += 0.5)
+        along.push([s * x, edgeAt(s * x) - RAMP.depth / 2]);
+      const end = walk(
+        [
+          [s * (RAMP.end + 0.6), edgeAt(RAMP.end + 0.6) + 1],
+          ...along,
+          [s * (RAMP.low - 0.8), 0.6],
+        ],
+        STOREY + PLATFORM.height,
+      );
+      expect(end.y).toBe(STOREY);
+    }
+  });
+});
+
+describe('moving about the bridge (the owner, 2026-10-27: hard to get about)', () => {
+  /**
+   * Which places a walker `radius` wide (half a walkway's width) can reach
+   * from `from`, over a 10 cm grid of the room's storey, stepping up or
+   * down as the floors allow: a flood fill.
+   */
+  function reach(from: [number, number], radius: number) {
+    const cell = 0.1;
+    const key = (i: number, j: number) => `${i},${j}`;
+    const seen = new Map<string, number>();
+    const solids = new Map<string, Footprint[]>();
+    const blocked = (x: number, z: number, y: number) => {
+      const k = y.toFixed(2);
+      if (!solids.has(k)) solids.set(k, protoSolids(y, 'bridge', true));
+      return solids.get(k)!.some((s) => overlaps(s, x, z, radius));
+    };
+    const i0 = Math.round(from[0] / cell);
+    const j0 = Math.round(from[1] / cell);
+    const y0 = protoFloorAt(from[0], from[1], STOREY, 'bridge', true);
+    seen.set(key(i0, j0), y0);
+    const queue: [number, number, number][] = [[i0, j0, y0]];
+    while (queue.length) {
+      const [i, j, y] = queue.shift()!;
+      for (const [di, dj] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const ni = i + di;
+        const nj = j + dj;
+        if (seen.has(key(ni, nj))) continue;
+        const x = ni * cell;
+        const z = nj * cell;
+        if (!insidePolygon(roomPolygon(), x, z)) continue;
+        const ny = protoFloorAt(x, z, y, 'bridge', true);
+        if (ny < STOREY - 0.01 || Math.abs(ny - y) > 0.25) continue;
+        if (blocked(x, z, ny)) continue;
+        seen.set(key(ni, nj), ny);
+        queue.push([ni, nj, ny]);
+      }
+    }
+    return (x: number, z: number) => {
+      for (let di = -2; di <= 2; di++)
+        for (let dj = -2; dj <= 2; dj++)
+          if (
+            seen.has(key(Math.round(x / cell) + di, Math.round(z / cell) + dj))
+          )
+            return true;
+      return false;
+    };
+  }
+
+  it('leaves 0.9 m walkways from the lift to every station, the operator’s chair, the stage and the rear stations', () => {
+    const a = bridgeArrival();
+    const can = reach([a.x, a.z], 0.45);
+    for (const st of stationPlaces()) {
+      // Its operator's place, behind its chair.
+      const x = st.x - Math.sin(st.yaw) * 1.6;
+      const z = st.z + Math.cos(st.yaw) * 1.6;
+      expect(can(x, z), st.system).toBe(true);
+    }
+    // Into the desk's well, behind the operator's chair.
+    const c = chairPlace();
+    expect(can(c.x, c.z + 0.9), 'the operator’s chair').toBe(true);
+    // Up the steps and both ramps onto the stage, and to each rear station.
+    expect(can(0, CONFERENCE.z - CONFERENCE.d / 2 - 1.0), 'the stage').toBe(
+      true,
+    );
+    for (const r of rearStationPlaces())
+      expect(can(r.x + r.n.x * 0.9, r.z + r.n.z * 0.9), r.role).toBe(true);
+  });
+
+  it('walks onto the stage by each ramp too, with the walker’s own width', () => {
+    for (const s of [-1, 1]) {
+      const can = reach(
+        [s * RAMP.low + s * 0.6, edgeAt(RAMP.low) - 1.6],
+        0.175,
+      );
+      expect(can(s * (RAMP.end - 0.6), edgeAt(RAMP.end) + 0.8)).toBe(true);
+    }
+  });
+});
+
+describe('the bridge without its stair (the owner, 2026-10-27)', () => {
+  it('has one whole floor, the stair’s opening gone, the walker arriving before the lift', () => {
+    const { opening } = stairPlan();
+    const mid = {
+      x: (opening.minX + opening.maxX) / 2,
+      z: (opening.minZ + opening.maxZ) / 2,
+    };
+    expect(protoFloorAt(mid.x, mid.z, STOREY, 'bridge', true)).toBe(STOREY);
+    expect(protoFloorAt(mid.x, mid.z, 0, 'bridge', true)).toBe(STOREY);
+    const a = bridgeArrival();
+    expect(protoFloorAt(a.x, a.z, 0, 'bridge', true)).toBe(STOREY);
+    expect(
+      protoSolids(STOREY, 'bridge', true).some((s) =>
+        overlaps(s, a.x, a.z, 0.175),
+      ),
+    ).toBe(false);
+    // Nothing of the stair hall stops a walker on the floor.
+    expect(
+      protoSolids(STOREY, 'bridge', true).some((s) =>
+        overlaps(s, mid.x, mid.z, 0.175),
+      ),
+    ).toBe(false);
   });
 });

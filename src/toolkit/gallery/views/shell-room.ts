@@ -111,6 +111,8 @@ function singleDoor(kit: PanelKit, to: RoomId): EquipmentDoorsPart {
 
 /** What a door's sign says: the room beyond's name. */
 export function signTo(room: RoomId) {
+  // The corridor's sign to the bridge says what it is (the owner, 2026-10-27).
+  if (room === 'bridge') return 'CONTROL ROOM';
   const title = DEV_ROOM_NAMES[room] ?? room.toUpperCase();
   return title.replace(/^WET HALL · .*/, 'WET HALL');
 }

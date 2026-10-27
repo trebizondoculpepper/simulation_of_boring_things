@@ -15,6 +15,14 @@ import {
 import type { BridgeContext, Command } from './bridge-bindings';
 import { plantReadingOf } from './world-reading';
 import { roomModel } from './world-in-model';
+import {
+  bridgePanelPlaces,
+  chairPlace,
+  deskTop,
+  insidePolygon,
+  plaquePlaces,
+  protoSolids,
+} from './control-room-prototype';
 
 const ctx = (world: World): BridgeContext => ({
   world,
@@ -128,5 +136,69 @@ describe('the bridge’s panels, wired to the world (mission 095)', () => {
     expect(after.pools.pool_02.setpoint).toBeCloseTo(
       w.pools.pool_02.setpoint + 0.5,
     );
+  });
+});
+
+describe('the bridge’s desk panels and plaques sit where they belong (mission 095)', () => {
+  it('lays each desk panel flush in its own segment’s top, parallel to its front edge', () => {
+    const places = bridgePanelPlaces();
+    for (const [code, side] of [
+      ['CC-01', 0],
+      ['ADM-01', 1],
+      ['BWC-01', 6],
+    ] as const) {
+      const place = places.find((p) => p.code === code)!;
+      const spec = bridgeSpec(code);
+      const { w = 1.6, h = 1.0 } = spec.size ?? {};
+      const scale = Math.min(place.fit.w / (w + 0.1), place.fit.h / (h + 0.1));
+      const along = { x: Math.cos(place.yaw), z: -Math.sin(place.yaw) };
+      const up = { x: Math.sin(place.yaw), z: Math.cos(place.yaw) };
+      const top = deskTop(side);
+      const [u0, u1] = top.corners;
+      // Parallel to the segment's front edge.
+      const edge = { x: u1.x - u0.x, z: u1.z - u0.z };
+      expect(Math.abs(along.x * edge.z - along.z * edge.x), code).toBeLessThan(
+        1e-6 * Math.hypot(edge.x, edge.z) + 1e-9,
+      );
+      // Its frame's corners on plan inside the top.
+      const hw = ((w + 0.1) * scale) / 2;
+      const hd = (((h + 0.1) * scale) / 2) * Math.cos(Math.PI / 2 - place.tilt);
+      for (const s1 of [-1, 1])
+        for (const s2 of [-1, 1])
+          expect(
+            insidePolygon(
+              top.corners,
+              place.x + along.x * hw * s1 + up.x * hd * s2,
+              place.z + along.z * hw * s1 + up.z * hd * s2,
+            ),
+            `${code} ${s1} ${s2}`,
+          ).toBe(true);
+    }
+  });
+
+  it('sets each plaque in its own desk’s edge, facing its officer, the assistant duty manager on the duty manager’s right', () => {
+    const plaques = plaquePlaces();
+    const chair = chairPlace();
+    const adm = plaques.find((p) => p.role === 'THE ASSISTANT DUTY MANAGER')!;
+    const bwc = plaques.find(
+      (p) => p.role === 'THE BATHER WELFARE COUNSELLOR',
+    )!;
+    // Seated facing the viewscreen (north), right is east.
+    expect(adm.x).toBeGreaterThan(chair.x);
+    expect(bwc.x).toBeLessThan(chair.x);
+    for (const p of plaques) {
+      // Facing its officer: out of its desk, toward where they stand.
+      const face = { x: Math.sin(p.yaw), z: Math.cos(p.yaw) };
+      const ahead = { x: p.x + face.x * 0.1, z: p.z + face.z * 0.1 };
+      const behind = { x: p.x - face.x * 0.1, z: p.z - face.z * 0.1 };
+      const solids = protoSolids(p.y + 0.1, 'bridge', true);
+      const inSolid = (q: { x: number; z: number }) =>
+        solids.some(
+          (s) => q.x > s.minX && q.x < s.maxX && q.z > s.minZ && q.z < s.maxZ,
+        );
+      expect(inSolid(behind), `${p.role} behind`).toBe(true);
+      expect(inSolid(ahead), `${p.role} ahead`).toBe(false);
+    }
+    expect(new Set(plaques.map((p) => p.role)).size).toBe(plaques.length);
   });
 });
