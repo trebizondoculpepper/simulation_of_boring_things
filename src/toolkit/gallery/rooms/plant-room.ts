@@ -432,7 +432,12 @@ export function startEquipmentRoom(
       const place = layout.places[i];
       const holder = new Group();
       holder.name = `Exhibit: ${exhibit.title}`;
-      placed.push({ title: exhibit.title, x: place.x, z: place.z, yaw: place.yaw });
+      placed.push({
+        title: exhibit.title,
+        x: place.x,
+        z: place.z,
+        yaw: place.yaw,
+      });
       holder.position.set(place.x, place.y, place.z);
       holder.rotation.set(0, place.yaw, place.tilt ?? 0);
       const built = exhibit.build(kit);
