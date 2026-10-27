@@ -9,7 +9,7 @@ function rig() {
   const log: string[] = [];
   const cue = createThemeCue({
     start: () => log.push(`start@${now}`),
-    stop: () => log.push(`stop@${now}`),
+    stop: (ending) => log.push(`${ending ? 'end' : 'stop'}@${now}`),
     setTimeout: (fn, ms) => {
       timers.set(++id, { at: now + ms / 1000, fn });
       return id;
@@ -33,7 +33,7 @@ function rig() {
 
 describe('the bridge’s theme (the owner, 2026-10-27)', () => {
   it('plays to its end while the walker stays, its end counted from its start', () => {
-    expect(THEME_LENGTH).toBe(45);
+    expect(THEME_LENGTH).toBe(60);
     const { cue, log, advance } = rig();
     cue.cue(1);
     advance(0.5);
@@ -43,7 +43,7 @@ describe('the bridge’s theme (the owner, 2026-10-27)', () => {
     advance(THEME_LENGTH);
     expect(log).toEqual(['start@1']);
     advance(1 + THEME_LENGTH);
-    expect(log).toEqual(['start@1', `stop@${1 + THEME_LENGTH}`]);
+    expect(log).toEqual(['start@1', `end@${1 + THEME_LENGTH}`]);
     expect(cue.state).toBe('idle');
   });
 
@@ -57,8 +57,8 @@ describe('the bridge’s theme (the owner, 2026-10-27)', () => {
     cue.cue(0);
     advance(20);
     expect(log).toEqual(['start@1']);
-    advance(60);
-    expect(log).toEqual(['start@1', `stop@${1 + THEME_LENGTH}`]);
+    advance(1 + THEME_LENGTH);
+    expect(log).toEqual(['start@1', `end@${1 + THEME_LENGTH}`]);
   });
 
   it('fades out when the walker leaves, and never begins if they leave first', () => {

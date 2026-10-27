@@ -256,7 +256,7 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   // The theme: cued once, stopped only by the walker leaving or its end.
   const theme = createThemeCue({
     start: () => bridgeTheme.play(),
-    stop: () => bridgeTheme.stop(),
+    stop: (ending) => bridgeTheme.stop(ending ? THEME_END_FADE : THEME_FADE),
     setTimeout: (fn, ms) => window.setTimeout(fn, ms),
     clearTimeout: (id) => window.clearTimeout(id),
   });
@@ -647,15 +647,21 @@ function installAlarmBleep() {
 /**
  * The bridge's theme (the owner's, 2026-10-27): "Boldly Into the Deep End",
  * the whole track (2:06.8), through the game's music volume, placed
- * nowhere. Played on a first visit from its start; faded out over three
- * seconds after 45 s (`THEME_LENGTH`, `bridge-theme-cue.ts`), or as the
+ * nowhere. Played on a first visit from its start; faded out slowly, over
+ * ten seconds, from one minute (`THEME_LENGTH`, `bridge-theme-cue.ts`), or as the
  * walker leaves, whichever is first; begun again from the top on a first
  * view after the knob plate's RESET.
  */
+/** Its fade as the walker leaves, and its slow fade at its own end (the owner, 2026-10-27). */
 const THEME_FADE = 3;
+const THEME_END_FADE = 10;
 const bridgeTheme = (() => {
   const owner = {};
-  const stop = () => partAudio.hold(owner, null);
+  let fade = THEME_FADE;
+  const stop = (seconds = THEME_FADE) => {
+    fade = seconds;
+    partAudio.hold(owner, null);
+  };
   const playlist = musicPlaylist(
     [
       {
@@ -675,14 +681,20 @@ const bridgeTheme = (() => {
     fader.connect(out);
     const inner = playlist(context, fader);
     return [
-      ...inner,
       {
-        release: THEME_FADE,
-        stop(when?: number) {
+        release: THEME_END_FADE,
+        // Faded first, the track released only once silent: the
+        // playlist's own stop lets its stream go half a second later,
+        // which cut the fade short (the owner heard it end suddenly).
+        stop() {
           const t = context.currentTime;
           fader.gain.cancelScheduledValues(t);
           fader.gain.setValueAtTime(fader.gain.value, t);
-          fader.gain.linearRampToValueAtTime(0, when ?? t + THEME_FADE);
+          fader.gain.linearRampToValueAtTime(0, t + fade);
+          window.setTimeout(
+            () => inner.forEach((source) => source.stop()),
+            fade * 1000 + 100,
+          );
         },
       },
     ];
@@ -691,7 +703,7 @@ const bridgeTheme = (() => {
     // Once through, not round again: its end is the cue's
     // (`bridge-theme-cue.ts`, `THEME_LENGTH`).
     play() {
-      stop();
+      stop(0);
       partAudio.hold(owner, faded);
     },
     stop,

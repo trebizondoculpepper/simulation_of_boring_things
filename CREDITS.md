@@ -57,4 +57,4 @@ The bridge's room tone (`src/toolkit/components/sound/audio/bridge-ambience.ts`,
 
 The bridge's room tone, `src/toolkit/components/sound/audio/assets/bridge-room-tone.ogg`, is the owner's own synthesis (2026-10-27), a one-minute loop cut from it (`assets/README.md`).
 
-`resources/sound/music/bridge/boldly-into-the-deep-end.ogg` was supplied by the owner on 2026-10-27 as "Space theme - Boldly Into the Deep End - Treblo.ogg", made by them with a music generator from their own prompt; renamed, otherwise unchanged (Opus, 2:07). The game plays its first 45 seconds, fading out over 3 seconds, on the walker's first visit to the bridge.
+`resources/sound/music/bridge/boldly-into-the-deep-end.ogg` was supplied by the owner on 2026-10-27 as "Space theme - Boldly Into the Deep End - Treblo.ogg", made by them with a music generator from their own prompt; renamed, otherwise unchanged (Opus, 2:07). The game plays its first minute, then fades it out slowly over 10 seconds, on the walker's first visit to the bridge.

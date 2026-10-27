@@ -9,25 +9,26 @@
  */
 export interface ThemeCueIo {
   start(): void;
-  /** Fade out (the walker leaving) or end. */
-  stop(): void;
+  /** Fade out: quickly as the walker leaves, slowly at its own end (`ending`). */
+  stop(ending: boolean): void;
   setTimeout(fn: () => void, ms: number): number;
   clearTimeout(id: number): void;
 }
 
 /**
  * Seconds of the theme played (the owner, 2026-10-27): the whole track is
- * 2:06.8; it plays from the start and its 3 s fade begins here, silent by
- * 48 s (the stop is the player's fade, `THEME_FADE`, never a cut).
+ * 2:06.8; it plays from the start and its slow fade begins here, after a
+ * minute, silent ten seconds later (the stop is the player's fade,
+ * `THEME_FADE`, never a cut).
  */
-export const THEME_LENGTH = 45;
+export const THEME_LENGTH = 60;
 
 export function createThemeCue(io: ThemeCueIo, length = THEME_LENGTH) {
   let state: 'idle' | 'cued' | 'playing' = 'idle';
   let timer = 0;
   const end = () => {
     state = 'idle';
-    io.stop();
+    io.stop(true);
   };
   return {
     get state() {
@@ -51,7 +52,7 @@ export function createThemeCue(io: ThemeCueIo, length = THEME_LENGTH) {
     /** The walker gone: not begun if cued; faded out if playing. */
     leave() {
       io.clearTimeout(timer);
-      if (state === 'playing') io.stop();
+      if (state === 'playing') io.stop(false);
       state = 'idle';
     },
   };
