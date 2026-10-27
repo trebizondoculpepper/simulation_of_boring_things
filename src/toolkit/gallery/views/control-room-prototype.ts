@@ -1,6 +1,9 @@
 import {
   BoxGeometry,
   BufferGeometry,
+  CanvasTexture,
+  HemisphereLight,
+  SRGBColorSpace,
   CylinderGeometry,
   ExtrudeGeometry,
   Float32BufferAttribute,
@@ -26,8 +29,10 @@ import {
   CONTROL_ROOM,
   PLACEHOLDERS,
   PLATFORM,
+  RAMP,
   RING_LIGHT,
   STAIR,
+  STATION,
   STOREY,
   chairPlace,
   conferenceChairs,
@@ -44,8 +49,9 @@ import {
   sides,
   spine,
   stairPlan,
+  stationPlaces,
 } from '../logic/control-room-prototype';
-import type { Point } from '../logic/control-room-prototype';
+import type { Point, Theme } from '../logic/control-room-prototype';
 
 /**
  * The control room's prototype (mission 092, stage 0; dev45), drawn from
@@ -64,7 +70,9 @@ export function createControlRoomPrototype(
   metre: number,
   kit: PanelKit,
   title: string,
+  theme: Theme = 'lair',
 ) {
+  const bridge = theme === 'bridge';
   const group = new Group();
   group.name = 'control room prototype';
   group.scale.setScalar(metre);
@@ -104,13 +112,21 @@ export function createControlRoomPrototype(
     return markComponent(o, { name, decorative: true });
   };
 
-  // Materials.
-  const gloss = paint('#2b2520', 0.22, 0.15);
+  // Materials: the lair's black lacquer, brushed steel and glossy black
+  // floor; the bridge's carpet, beige and light grey panels and wood.
+  const gloss = bridge
+    ? paint('#6e675e', 0.95, 0)
+    : paint('#141215', 0.08, 0.4);
   const stone = paint('#3b3631', 0.55, 0.05);
-  const darkWall = paint('#2a2c30', 0.7, 0.1);
-  const fin = paint('#2b2e33', 0.45, 0.4);
-  const ceilingMat = paint('#121315', 0.9);
-  const beam = paint('#1c1d20', 0.6, 0.2);
+  const darkWall = bridge
+    ? paint('#d3cab8', 0.85)
+    : paint('#232528', 0.6, 0.15);
+  const fin = bridge
+    ? paint('#b9b7b1', 0.7, 0.05)
+    : paint('#4a4f55', 0.35, 0.6);
+  const ceilingMat = bridge ? paint('#c9c4ba', 0.9) : paint('#2a2a2b', 0.95);
+  const beam = bridge ? paint('#bdb6a8', 0.85) : paint('#333336', 0.9);
+  const lacquer = paint('#0b0b0c', 0.12, 0.1);
   const hallWall = paint('#4a4640', 0.85);
   const brass = paint('#b08a45', 0.3, 0.8);
   const steel = paint('#c7cbce', 0.25, 0.6);
@@ -125,6 +141,7 @@ export function createControlRoomPrototype(
   const wood = paint('#7a4a2a', 0.45, 0.05);
   const woodDark = paint('#4f2e19', 0.5, 0.05);
   const beige = paint('#cbbd9f', 0.75, 0);
+  const trim = bridge ? wood : steel;
   const colourBar: Record<string, MeshStandardMaterial> = Object.fromEntries(
     ['#e49a4c', '#c890c8', '#9aa6e0', '#e2b77a'].map((c) => [
       c,
@@ -404,40 +421,92 @@ export function createControlRoomPrototype(
     Math.min(...zs),
     Math.max(...zs),
   ];
-  const bay = 3;
-  for (let x = Math.ceil(minX / bay) * bay; x <= maxX; x += bay)
-    box(
-      beam,
-      0.35,
-      0.9,
-      maxZ - minZ,
-      x,
-      top - 0.45,
-      (minZ + maxZ) / 2,
-      roomGroup,
-    );
-  for (let z = minZ + bay; z < maxZ; z += bay)
-    box(
-      beam,
-      maxX - minX,
-      0.9,
-      0.35,
-      (minX + maxX) / 2,
-      top - 0.45,
-      z,
-      roomGroup,
-    );
-  for (let x = Math.ceil(minX / bay) * bay + bay / 2; x < maxX; x += bay)
-    for (let z = minZ + bay / 2; z < maxZ; z += bay)
-      if (insideRoom(x, z, 0.6)) {
-        const d = new Mesh(
-          new CylinderGeometry(0.12, 0.12, 0.02, 16),
-          downlight,
+  if (bridge) {
+    // The bridge's coffers: square, light, a cove light hidden along
+    // each beam's foot washing the ceiling, soft and even.
+    const bay = 3;
+    const cove = glow('#fff1dc', 1.4, '#fff8ee');
+    for (let x = Math.ceil(minX / bay) * bay; x <= maxX; x += bay) {
+      box(
+        beam,
+        0.35,
+        0.6,
+        maxZ - minZ,
+        x,
+        top - 0.3,
+        (minZ + maxZ) / 2,
+        roomGroup,
+      );
+      box(
+        cove,
+        0.04,
+        0.03,
+        maxZ - minZ,
+        x + 0.2,
+        top - 0.58,
+        (minZ + maxZ) / 2,
+        roomGroup,
+      );
+    }
+    for (let z = minZ + bay; z < maxZ; z += bay) {
+      box(
+        beam,
+        maxX - minX,
+        0.6,
+        0.35,
+        (minX + maxX) / 2,
+        top - 0.3,
+        z,
+        roomGroup,
+      );
+      box(
+        cove,
+        maxX - minX,
+        0.03,
+        0.04,
+        (minX + maxX) / 2,
+        top - 0.58,
+        z + 0.2,
+        roomGroup,
+      );
+    }
+  } else {
+    // The lair's: deep triangular coffers in dark concrete (after the War
+    // Room's), beams three ways, a warm downlight in some.
+    const bay = 3.6;
+    const span = Math.hypot(maxX - minX, maxZ - minZ) + 4;
+    const cx = (minX + maxX) / 2;
+    const cz = (minZ + maxZ) / 2;
+    for (const angle of [0, Math.PI / 3, (2 * Math.PI) / 3]) {
+      const nx = -Math.sin(angle);
+      const nz = Math.cos(angle);
+      for (let k = -Math.ceil(span / 2 / bay); k <= span / 2 / bay; k++) {
+        const b = box(
+          beam,
+          span,
+          1.4,
+          0.3,
+          cx + nx * k * bay,
+          top - 0.7,
+          cz + nz * k * bay,
+          roomGroup,
         );
-        d.position.set(x, top - 0.01, z);
-        roomGroup.add(d);
+        b.rotation.y = -angle;
       }
-  // The walls: dark, with raked fins between the consoles.
+    }
+    for (let x = Math.ceil(minX / bay) * bay + bay / 2; x < maxX; x += bay * 2)
+      for (let z = minZ + bay / 2; z < maxZ; z += bay * 2)
+        if (insideRoom(x, z, 0.6)) {
+          const d = new Mesh(
+            new CylinderGeometry(0.1, 0.1, 0.02, 16),
+            downlight,
+          );
+          d.position.set(x, top - 0.01, z);
+          roomGroup.add(d);
+        }
+  }
+  // The walls: the lair's dark, with raked steel fins between the
+  // consoles; the bridge's beige, in light grey panels.
   const T = CONTROL_ROOM.wall;
   for (const [a, b] of sides(room)) {
     const len = Math.hypot(b.x - a.x, b.z - a.z);
@@ -456,7 +525,7 @@ export function createControlRoomPrototype(
     wall.rotation.y = -yaw;
     // A skirting of brass, and a fin every 2.4 m raked back toward the top.
     const sk = box(
-      brass,
+      trim,
       len,
       0.06,
       0.02,
@@ -473,16 +542,16 @@ export function createControlRoomPrototype(
       const pz = a.z + (b.z - a.z) * s;
       const f = box(
         fin,
-        0.12,
+        bridge ? 0.06 : 0.12,
         H,
-        0.35,
-        px + n.x * 0.17,
+        bridge ? 0.04 : 0.35,
+        px + n.x * (bridge ? 0.02 : 0.17),
         STOREY + H / 2,
-        pz + n.z * 0.17,
+        pz + n.z * (bridge ? 0.02 : 0.17),
         roomGroup,
       );
       f.rotation.y = -yaw;
-      f.rotateX(0.04);
+      if (!bridge) f.rotateX(0.04);
     }
   }
   // The guard round the opening: glass in a stainless frame, 1.1 m.
@@ -526,7 +595,7 @@ export function createControlRoomPrototype(
   const ph = PLATFORM.height;
   stage.add(slab(flatShape([room[3], room[4], room[5]]), STOREY, ph, gloss));
   box(
-    brass,
+    trim,
     room[3].x - room[5].x,
     0.04,
     0.03,
@@ -550,7 +619,7 @@ export function createControlRoomPrototype(
       stage,
     );
     box(
-      brass,
+      trim,
       PLATFORM.stepWidth,
       0.012,
       0.03,
@@ -565,8 +634,21 @@ export function createControlRoomPrototype(
   // After the Enterprise's bridge (a style cue only): a solid parapet,
   // beige, capped with a wood rail, wood panelling down the stage's
   // face, and flat rounded colour bars along it.
-  parapet({ x: room[5].x + 0.3, z: edge }, { x: -half, z: edge });
-  parapet({ x: half, z: edge }, { x: room[3].x - 0.3, z: edge });
+  // The lair's the same in black lacquer and brushed steel, plain.
+  const { top: rampTop, end: rampEnd } = RAMP;
+  for (const [a, b] of bridge
+    ? [
+        [room[5].x + 0.3, -rampTop],
+        [-rampEnd, -half],
+        [half, rampEnd],
+        [rampTop, room[3].x - 0.3],
+      ]
+    : [
+        [room[5].x + 0.3, -half],
+        [half, room[3].x - 0.3],
+      ])
+    parapet({ x: a, z: edge }, { x: b, z: edge });
+  if (bridge) for (const s2 of [-1, 1]) ramp(s2);
   const foot = edge - (PLATFORM.risers - 1) * PLATFORM.going;
   for (const x of [-half, half]) {
     const dz = edge - foot;
@@ -591,7 +673,7 @@ export function createControlRoomPrototype(
   stage.add(table);
   const ty = STOREY + ph;
   box(
-    paint('#0d0d0e', 0.15, 0.2),
+    bridge ? wood : lacquer,
     tbl.maxX - tbl.minX,
     0.06,
     tbl.maxZ - tbl.minZ,
@@ -601,7 +683,7 @@ export function createControlRoomPrototype(
     table,
   );
   box(
-    brass,
+    trim,
     tbl.maxX - tbl.minX + 0.01,
     0.02,
     tbl.maxZ - tbl.minZ + 0.01,
@@ -612,14 +694,18 @@ export function createControlRoomPrototype(
   );
   for (const x of [tbl.minX + 0.8, tbl.maxX - 0.8])
     box(fin, 0.5, 0.7, 0.6, x, ty + 0.35, CONFERENCE.z, table);
-  const leather = paint('#2a1712', 0.45, 0.05);
+  const leather = bridge
+    ? paint('#8a7f72', 0.8, 0)
+    : paint('#2a1712', 0.45, 0.05);
   for (const c of conferenceChairs()) table.add(chair(leather, c, ty));
 
   // ------------------------------------------------------------- the desk
   const desk = decor(new Group(), 'Operator desk (placeholder)');
   roomGroup.add(desk);
-  const cream = paint('#d9d2bd', 0.55, 0.05);
-  const charcoal = paint('#1d1d1f', 0.6, 0.1);
+  const cream = bridge
+    ? paint('#d9d2bd', 0.55, 0.05)
+    : paint('#8d949a', 0.3, 0.7);
+  const charcoal = bridge ? paint('#55504a', 0.7, 0.05) : lacquer;
   const insetScreen = glow('#3ab0a0', 0.55, '#071312');
   const insetPanel = paint('#8f8b80', 0.6, 0.15);
   for (const s of deskSegments()) {
@@ -726,20 +812,41 @@ export function createControlRoomPrototype(
       'Operator chair',
     ),
   );
+  // On the bridge, a pair of chairs either side of the operator's.
+  if (bridge)
+    for (const dx of [-1.3, 1.3])
+      desk.add(
+        chair(
+          paint('#6f6458', 0.8, 0),
+          { x: c.x + dx, z: c.z + 0.5, yaw: Math.PI },
+          STOREY,
+          'Chair',
+        ),
+      );
+  if (bridge) stations();
 
   // ------------------------------------------------------ the ring light
+  // The lair's alone: a ring of photo-flood lamps on a dark steel hoop,
+  // low over the desk, lighting it in a pool while the rest falls dark.
   const ring = decor(new Group(), 'Ring light (Strangelove)');
-  roomGroup.add(ring);
+  if (!bridge) roomGroup.add(ring);
   const rc = ringLightCentre();
   const ry = STOREY + RING_LIGHT.height;
   const R = RING_LIGHT.diameter / 2;
   const tube = new Mesh(
     new TorusGeometry(R, 0.09, 12, 96),
-    glow('#fff1d6', 3.2, '#fff6e6'),
+    glow('#fff1d6', 0.7, '#3a352c'),
   );
   tube.rotation.x = Math.PI / 2;
   tube.position.set(rc.x, ry, rc.z);
   ring.add(tube);
+  const lamp = glow('#fff4e0', 1.1, '#d8d0c0');
+  for (let k = 0; k < 48; k++) {
+    const a = (k / 48) * Math.PI * 2;
+    const bulb = new Mesh(new CylinderGeometry(0.11, 0.07, 0.12, 12), lamp);
+    bulb.position.set(rc.x + Math.cos(a) * R, ry - 0.1, rc.z + Math.sin(a) * R);
+    ring.add(bulb);
+  }
   const housing = new Mesh(new TorusGeometry(R, 0.16, 8, 96, Math.PI * 2), fin);
   housing.rotation.x = Math.PI / 2;
   housing.scale.set(1, 1, 0.5);
@@ -787,7 +894,18 @@ export function createControlRoomPrototype(
     '1990s': { body: '#bdbab1', face: '#3f8f6a', glow: 0.35 },
     '2010s': { body: '#0c0d0f', face: '#2f63c0', glow: 0.38 },
   };
-  for (const p of PLACEHOLDERS) {
+  for (const p0 of PLACEHOLDERS) {
+    // The bridge's big wall is one full-height viewscreen.
+    const screen = bridge && p0.side === 0;
+    const p = screen
+      ? {
+          ...p0,
+          label: 'VIEWSCREEN',
+          note: 'the main display, full height: the plant, animated',
+          bottom: 0.5,
+          height: H - 1.2,
+        }
+      : p0;
     const look = eras[p.era];
     const holder = decor(new Group(), `${p.label} (placeholder)`);
     roomGroup.add(holder);
@@ -821,7 +939,7 @@ export function createControlRoomPrototype(
       inset(
         [f(0.03, 0.08), f(0.97, 0.08), f(0.97, 0.92), f(0.03, 0.92)],
         n,
-        glow(look.face, look.glow, '#0a0a0a'),
+        screen ? starfield() : glow(look.face, look.glow, '#0a0a0a'),
       ),
     );
     // Its label, at eye height or on its top.
@@ -830,15 +948,22 @@ export function createControlRoomPrototype(
       x: (corners[2].x + corners[3].x) / 2,
       z: (corners[2].z + corners[3].z) / 2,
     };
-    const ly =
-      p.height > 1.6
+    const ly = screen
+      ? y0 + 0.5
+      : p.height > 1.6
         ? y0 + Math.min(p.height - 0.4, 1.7 - p.bottom + 0.4)
         : y1 + 0.4;
     label.position.set(mid.x + n.x * 0.04, ly, mid.z + n.z * 0.04);
     label.rotation.y = Math.atan2(n.x, n.z);
     holder.add(label);
   }
-  // A low warm wash from the coffers, over the whole floor and the stage.
+  // A low warm wash from the coffers, over the whole floor and the
+  // stage: dim in the lair, where the desk's pool and the displays are
+  // the light; soft and even on the bridge.
+  if (bridge) {
+    const sky = new HemisphereLight('#fff4e4', '#6e675e', 0.9);
+    roomGroup.add(sky);
+  }
   for (const [x, z] of [
     [-8, room[0].z + 3],
     [8, room[0].z + 3],
@@ -847,7 +972,12 @@ export function createControlRoomPrototype(
     [-4, (edge + room[4].z) / 2],
     [4, (edge + room[4].z) / 2],
   ] as const) {
-    const light = new PointLight('#ffc98f', 14 * metre * metre, 22 * metre, 2);
+    const light = new PointLight(
+      bridge ? '#fff0dc' : '#ffc98f',
+      (bridge ? 22 : 3.5) * metre * metre,
+      22 * metre,
+      2,
+    );
     light.position.set(x, STOREY + 7.4, z);
     roomGroup.add(light);
   }
@@ -1003,6 +1133,12 @@ export function createControlRoomPrototype(
       p.rotation.y = yaw;
       return p;
     };
+    if (!bridge) {
+      // The lair's: black lacquer, a brushed steel cap.
+      piece(lacquer, ph + 1.05, 0.12, STOREY + (ph + 1.05) / 2, 0.06);
+      piece(steel, 0.05, 0.2, STOREY + ph + 1.08, 0.06).name = 'Guard rail';
+      return;
+    }
     // The stage's face, wood, in panels.
     piece(wood, ph, 0.04, STOREY + ph / 2, -0.02);
     const panels = Math.max(1, Math.round(len / 1.2));
@@ -1047,6 +1183,156 @@ export function createControlRoomPrototype(
       x += w + 0.12;
       k++;
     }
+    // Its back, toward the table: flat touch-console panels, black, with
+    // rounded colour bars.
+    const back = piece(lacquer, 0.5, 0.02, STOREY + ph + 0.75, 0.13);
+    back.rotateX(-0.35);
+  }
+  /** The bridge's ramp on side `s` (−1 west, 1 east): sloping, its landing, handrails both sides. */
+  function ramp(s: number) {
+    const { low, top: rt, end, near, open } = RAMP;
+    const h = STOREY + ph;
+    const p = (x: number, z: number) => ({ x: s * x, z });
+    const quad = [p(low, near), p(rt, near), p(rt, edge), p(low, edge)];
+    stage.add(
+      hexa(
+        quad,
+        [STOREY, STOREY, STOREY, STOREY],
+        [STOREY + 0.01, h, h, STOREY + 0.01],
+        gloss,
+      ),
+    );
+    const land = [p(rt, near), p(end, near), p(end, edge), p(rt, edge)];
+    stage.add(
+      hexa(land, [STOREY, STOREY, STOREY, STOREY], [h, h, h, h], gloss),
+    );
+    const heightAt = (x: number) =>
+      x >= rt ? STOREY + ((low - x) / (low - rt)) * ph : h;
+    // A handrail each side, 0.9 m over the ramp; on its open side a
+    // guard from where it is high enough to fall from, posts every metre.
+    for (const z of [near + 0.05, edge - 0.08]) {
+      const from = z < edge - 0.1 ? open : low;
+      const steps = 24;
+      for (let k = 0; k < steps; k++) {
+        const x0 = from + ((end - from) * k) / steps;
+        const x1 = from + ((end - from) * (k + 1)) / steps;
+        const y0 = heightAt(x0) + 0.9;
+        const y1 = heightAt(x1) + 0.9;
+        const seg = new Mesh(
+          new CylinderGeometry(0.025, 0.025, Math.hypot(x1 - x0, y1 - y0), 8),
+          wood,
+        );
+        seg.position.set((s * (x0 + x1)) / 2, (y0 + y1) / 2, z);
+        seg.rotation.z = Math.atan2(-s * (x1 - x0), y1 - y0);
+        stage.add(seg);
+      }
+      if (z < edge - 0.1)
+        for (let x = end; x <= open + 1e-6; x += 1)
+          box(steel, 0.04, 1.1, 0.04, s * x, heightAt(x) + 0.55, z, stage);
+    }
+    // And a glass guard along its open side.
+    balustrade(p(end, near), p(open, near), h - 0.0, stage);
+  }
+  /** The bridge's operator stations, one per pool system. */
+  function stations() {
+    const black = lacquer;
+    for (const st of stationPlaces()) {
+      const g = decor(new Group(), `${st.system} station (placeholder)`);
+      roomGroup.add(g);
+      const [a, b, c2, d] = st.corners;
+      // A black pedestal, its top sloping up away from the operator.
+      g.add(
+        hexa(
+          [a, b, c2, d],
+          [STOREY, STOREY, STOREY, STOREY],
+          [
+            STOREY + STATION.low,
+            STOREY + STATION.low,
+            STOREY + STATION.high,
+            STOREY + STATION.high,
+          ],
+          black,
+        ),
+      );
+      // Rounded colour bars across its flat touch face.
+      const colours = ['#e49a4c', '#c890c8', '#9aa6e0', '#e2b77a', '#d9735a'];
+      const lerp = (p: Point, q: Point, t: number) => ({
+        x: p.x + (q.x - p.x) * t,
+        z: p.z + (q.z - p.z) * t,
+      });
+      for (let row = 0; row < 3; row++) {
+        const v0 = 0.15 + row * 0.25;
+        const v1 = v0 + 0.14;
+        let u = 0.06;
+        let k = row;
+        while (u < 0.9) {
+          const w = Math.min(0.94 - u, 0.14 + ((k * 5) % 4) * 0.08);
+          const pt = (uu: number, vv: number): [Point, number] => [
+            lerp(lerp(b, a, uu), lerp(c2, d, uu), vv),
+            STOREY + STATION.low + (STATION.high - STATION.low) * vv,
+          ];
+          g.add(
+            inset(
+              [pt(u, v0), pt(u + w, v0), pt(u + w, v1), pt(u, v1)],
+              { x: 0, z: 0 },
+              colourBar[colours[k % 4]],
+              true,
+            ),
+          );
+          u += w + 0.03;
+          k++;
+        }
+      }
+      // Its label, standing at its far edge, facing the operator.
+      const label = sign(1.6, 0.3, [st.system]);
+      const mid = lerp(c2, d, 0.5);
+      label.position.set(mid.x, STOREY + STATION.high + 0.2, mid.z);
+      label.rotation.y = -st.yaw;
+      g.add(label);
+      // Its chair.
+      const f = { x: Math.sin(st.yaw), z: -Math.cos(st.yaw) };
+      g.add(
+        chair(
+          paint('#6f6458', 0.8, 0),
+          { x: st.x - f.x * 0.9, z: st.z - f.z * 0.9, yaw: st.yaw + Math.PI },
+          STOREY,
+          'Chair',
+        ),
+      );
+    }
+  }
+  /** A dark field of stars, the viewscreen's placeholder picture. */
+  function starfield() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 2048;
+    canvas.height = 1024;
+    const g = canvas.getContext('2d')!;
+    const sky = g.createLinearGradient(0, 0, 0, 1024);
+    sky.addColorStop(0, '#02040b');
+    sky.addColorStop(1, '#0a1a2e');
+    g.fillStyle = sky;
+    g.fillRect(0, 0, 2048, 1024);
+    let seed = 92;
+    const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let k = 0; k < 900; k++) {
+      const r = rand() < 0.9 ? 1 : 2.2;
+      g.fillStyle = `rgba(255,255,255,${0.35 + rand() * 0.65})`;
+      g.beginPath();
+      g.arc(rand() * 2048, rand() * 1024, r, 0, Math.PI * 2);
+      g.fill();
+    }
+    const map = new CanvasTexture(canvas);
+    map.colorSpace = SRGBColorSpace;
+    kit.textures.push(map);
+    const m = new MeshStandardMaterial({
+      color: '#000000',
+      emissive: '#ffffff',
+      emissiveMap: map,
+      emissiveIntensity: 0.9,
+      roughness: 0.6,
+    });
+    kit.materials.push(m);
+    return m;
   }
   /** A swivel chair facing `yaw` (0 faces south, π north). */
   function chair(

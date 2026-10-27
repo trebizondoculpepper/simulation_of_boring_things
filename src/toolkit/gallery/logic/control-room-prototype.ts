@@ -23,6 +23,14 @@ import type { Surface } from './stair-run';
  * the big wall's middle (north) to the back corner (south).
  */
 
+/**
+ * The two versions of the prototype on one geometry (the owner,
+ * 2026-10-27): the Bond villain's lair (dev45) and the starship bridge
+ * (dev46). The bridge adds its stations for each pool system and ramps
+ * either side up to the stage.
+ */
+export type Theme = 'lair' | 'bridge';
+
 export interface Point {
   x: number;
   z: number;
@@ -129,7 +137,7 @@ export function insetPolygon(poly: readonly Point[], d: number): Point[] {
  */
 export const DESK = {
   scale: 0.25,
-  frontZ: -6.5,
+  frontZ: -5.2,
   /** Its top's depth, outer edge to the operator's edge. */
   top: 1.0,
   /** The sides it has no segment on: its back two, the way in. */
@@ -172,7 +180,7 @@ export function chairPlace(): Point {
  * access stair; 46 risers of 174 mm, goings of 250 mm, in three flights
  * of 16, 15 and 15, two lanes side by side (a switchback): the first and
  * third flights north up the arrival lane (off centre, on the room's
- * left), the second south up the lane west of it, landings across both
+ * left), the second south up the lane east of it, landings across both
  * lanes at each end.
  */
 export const STAIR = {
@@ -186,9 +194,9 @@ export const STAIR = {
   /** The stair hall's walls. */
   wall: 0.2,
   /** Where the last flight comes up into the room, z: its top nosing. */
-  topZ: -4.0,
+  topZ: -2.6,
   /** The arrival lane's middle, x: off centre, between the desk and the left wall. */
-  laneX: -7.5,
+  laneX: -8.2,
   /** The level floor from the door to the first riser. */
   approach: 1.6,
 } as const;
@@ -198,18 +206,28 @@ export const riserHeight = () =>
 
 /**
  * The lanes: the arrival lane (first and third flights; `axis`, the
- * stair's own axis) and the lane west of it (`east` no longer: `side`).
+ * stair's own axis) and the second flight's lane (`side`) east of it,
+ * under the room's floor toward the desk.
  */
 export function lanes() {
   const w = STAIR.width;
   const x = STAIR.laneX;
   const axis = { minX: x - w / 2, maxX: x + w / 2 };
   const side = {
-    minX: x - w / 2 - STAIR.spine - w,
-    maxX: x - w / 2 - STAIR.spine,
+    minX: x + w / 2 + STAIR.spine,
+    maxX: x + w / 2 + STAIR.spine + w,
   };
   return { axis, side };
 }
+
+/** Both lanes, across. */
+const acrossLanes = () => {
+  const { axis, side } = lanes();
+  return {
+    minX: Math.min(axis.minX, side.minX),
+    maxX: Math.max(axis.maxX, side.maxX),
+  };
+};
 
 export interface Flight {
   name: string;
@@ -263,7 +281,7 @@ export function stairPlan() {
     flight('Second flight', n2, side, north, south, heights[1], heights[2]),
     flight('Third flight', n3, axis, south, north, heights[2], heights[3]),
   ];
-  const across = { minX: side.minX, maxX: axis.maxX };
+  const across = acrossLanes();
   const landings: Surface[] = [
     {
       name: 'North landing',
@@ -280,8 +298,8 @@ export function stairPlan() {
   // from its door to the first riser.
   const t = STAIR.wall;
   const hall: Footprint = {
-    minX: side.minX - t,
-    maxX: axis.maxX + t,
+    minX: across.minX - t,
+    maxX: across.maxX + t,
     minZ: north - landing - t,
     maxZ: Math.max(foot, south + landing) + STAIR.approach + t,
   };
@@ -311,8 +329,16 @@ export const stairSurfaces = (): Surface[] => {
  * stair's surfaces, the stair hall's ground floor, and the room's floor
  * one storey up, round its opening.
  */
-export function protoFloorAt(x: number, z: number, previous: number) {
-  const stair = surfaceFloorAt(stairSurfaces(), x, z, previous);
+export function protoFloorAt(
+  x: number,
+  z: number,
+  previous: number,
+  theme: Theme = 'lair',
+) {
+  const stair = Math.max(
+    surfaceFloorAt(stairSurfaces(), x, z, previous),
+    theme === 'bridge' ? surfaceFloorAt(rampSurfaces(), x, z, previous) : 0,
+  );
   const { opening } = stairPlan();
   const inOpening =
     x > opening.minX &&
@@ -356,19 +382,103 @@ export function platformStepAt(x: number, z: number) {
 }
 
 /** The rail along the platform's front, either side of its steps. */
-export function platformRail(): Footprint[] {
+export function platformRail(theme: Theme = 'lair'): Footprint[] {
   const room = roomPolygon();
   const edge = platformEdge();
   const half = PLATFORM.stepWidth / 2;
   const T = 0.05;
   const foot = edge - (PLATFORM.risers - 1) * PLATFORM.going;
+  const { top, end, near, open } = RAMP;
+  // The bridge's front: open where each ramp's top landing meets it.
+  const front: [number, number][] =
+    theme === 'bridge'
+      ? [
+          [room[5].x, -top],
+          [-end, -half],
+          [half, end],
+          [top, room[3].x],
+        ]
+      : [
+          [room[5].x, -half],
+          [half, room[3].x],
+        ];
+  const ramps: Footprint[] =
+    theme === 'bridge'
+      ? [-1, 1].flatMap((s) => [
+          // Each ramp's open side, where it is high enough to fall from,
+          // and its top landing's inner end.
+          {
+            minX: Math.min(s * open, s * end),
+            maxX: Math.max(s * open, s * end),
+            minZ: near - T,
+            maxZ: near,
+          },
+          {
+            minX: s > 0 ? end - T : -end,
+            maxX: s > 0 ? end : -end + T,
+            minZ: near,
+            maxZ: edge,
+          },
+        ])
+      : [];
   return [
-    { minX: room[5].x, maxX: -half, minZ: edge - T, maxZ: edge },
-    { minX: half, maxX: room[3].x, minZ: edge - T, maxZ: edge },
+    ...front.map(([a, b]) => ({
+      minX: a,
+      maxX: b,
+      minZ: edge - T,
+      maxZ: edge,
+    })),
+    ...ramps,
     // The steps' handrails, each side.
     { minX: -half - T, maxX: -half, minZ: foot, maxZ: edge },
     { minX: half, maxX: half + T, minZ: foot, maxZ: edge },
   ];
+}
+
+/**
+ * The bridge's ramps, either side of the stage's steps (the owner,
+ * 2026-10-27): each along the stage's front, rising inward from `low`
+ * (metres from the axis) to `top`, then a level landing to `end` beside
+ * the steps, from which one steps onto the stage; `near` its open side,
+ * z, guarded from `open` inward, where it is high enough to fall from;
+ * walked onto from the main floor at its low outer end. At about 1:7 it
+ * is steeper than Approved Document M's 1:12, for the look (a question
+ * for the owner).
+ */
+export const RAMP = {
+  low: 11.0,
+  top: 4.0,
+  end: 2.8,
+  near: 1.0,
+  open: 9.0,
+} as const;
+
+export function rampSurfaces(): Surface[] {
+  const { low, top, end, near } = RAMP;
+  const edge = platformEdge();
+  const h = STOREY + PLATFORM.height;
+  return [-1, 1].flatMap((s) => [
+    {
+      name: s < 0 ? 'West ramp' : 'East ramp',
+      area: {
+        minX: Math.min(s * low, s * top),
+        maxX: Math.max(s * low, s * top),
+        minZ: near,
+        maxZ: edge,
+      },
+      y: { along: 'x' as const, at0: s * low, y0: STOREY, at1: s * top, y1: h },
+    },
+    {
+      name: s < 0 ? 'West ramp landing' : 'East ramp landing',
+      area: {
+        minX: Math.min(s * top, s * end),
+        maxX: Math.max(s * top, s * end),
+        minZ: near,
+        maxZ: edge,
+      },
+      y: h,
+    },
+  ]);
 }
 
 /** The conference table on the platform, and its chairs, five a side. */
@@ -576,7 +686,8 @@ export function hallWalls(): Footprint[] {
 export function spine(): Footprint {
   const { axis, side } = lanes();
   const p = stairPlan();
-  return { minX: side.maxX, maxX: axis.minX, minZ: STAIR.topZ, maxZ: p.south };
+  const [a, b] = axis.minX < side.minX ? [axis, side] : [side, axis];
+  return { minX: a.maxX, maxX: b.minX, minZ: STAIR.topZ, maxZ: p.south };
 }
 
 /**
@@ -586,14 +697,14 @@ export function spine(): Footprint {
  * south landing, its guard over the approach. In the room: its walls
  * with their consoles, the desk, and the guard round the opening.
  */
-export function protoSolids(y: number): Footprint[] {
+export function protoSolids(y: number, theme: Theme = 'lair'): Footprint[] {
   const p = stairPlan();
-  const { side: west } = lanes();
+  const { side: under } = lanes();
   if (y < STOREY - 0.5) {
     const out = [...hallWalls(), spine()];
     if (y < STEP_UP)
       out.push({
-        ...west,
+        ...under,
         minZ: STAIR.topZ - STAIR.landing,
         maxZ: p.south,
       });
@@ -617,8 +728,9 @@ export function protoSolids(y: number): Footprint[] {
     ...walls,
     ...desk,
     ...openingGuard(),
-    ...platformRail(),
+    ...platformRail(theme),
     conferenceTable(),
+    ...(theme === 'bridge' ? stationSolids() : []),
   ];
 }
 
@@ -647,6 +759,74 @@ export function protoBounds(): Footprint {
  * rods from the ceiling `height` over the floor, centred on the
  * operator's chair, lighting the desk in a pool. Set decoration.
  */
-export const RING_LIGHT = { diameter: 8, height: 5.6, hangers: 8 } as const;
+export const RING_LIGHT = { diameter: 8, height: 3.4, hangers: 8 } as const;
 
 export const ringLightCentre = () => chairPlace();
+
+/**
+ * The operator stations, one per major pool system (the owner,
+ * 2026-10-27: "operator stations for each of the major swimming pool
+ * systems", flat sloping touch panels after a starship's bridge, a style
+ * cue only): in a shallow arc round the front of the desk, centred on
+ * the operator's chair, each turned a little toward the middle but all
+ * facing the big wall. Placeholders: no touch controls or sounds yet.
+ */
+export const STATIONS = [
+  'CIRCULATION & FILTRATION',
+  'CHEMICAL DOSING',
+  'HEATING',
+  'AIR HANDLING',
+  'POWER',
+  'BUILDING',
+] as const;
+
+export const STATION = {
+  /** Its width and depth on plan. */
+  w: 1.8,
+  d: 0.9,
+  /** The arc's radius from the chair, and each station's bearing from north, degrees. */
+  radius: 6.2,
+  bearings: [-64, -39, -14, 14, 39, 64],
+  /** Its top: the operator's edge, and the far edge. */
+  low: 0.76,
+  high: 1.0,
+} as const;
+
+export interface StationPlace {
+  system: (typeof STATIONS)[number];
+  x: number;
+  z: number;
+  /** The way its operator looks (`(sin yaw, -cos yaw)`): 0 is north, to the big wall. */
+  yaw: number;
+  /** Its corners on plan: the operator's edge right to left, then the far edge left to right. */
+  corners: [Point, Point, Point, Point];
+}
+
+export function stationPlaces(): StationPlace[] {
+  const c = chairPlace();
+  return STATIONS.map((system, i) => {
+    const phi = (STATION.bearings[i] * Math.PI) / 180;
+    const x = c.x + STATION.radius * Math.sin(phi);
+    const z = c.z - STATION.radius * Math.cos(phi);
+    const yaw = -phi / 3;
+    const f = { x: Math.sin(yaw), z: -Math.cos(yaw) };
+    const r = { x: Math.cos(yaw), z: Math.sin(yaw) };
+    const at = (s: number, t: number) => ({
+      x: x + (r.x * s * STATION.w) / 2 + (f.x * t * STATION.d) / 2,
+      z: z + (r.z * s * STATION.w) / 2 + (f.z * t * STATION.d) / 2,
+    });
+    return {
+      system,
+      x,
+      z,
+      yaw,
+      corners: [at(1, -1), at(-1, -1), at(-1, 1), at(1, 1)],
+    };
+  });
+}
+
+/** What a station stops a walker with: its footprint, in short boxes. */
+export const stationSolids = (): Footprint[] =>
+  stationPlaces().flatMap((s) =>
+    bandAlong(s.corners[0], s.corners[1], STATION.d, 0.25),
+  );

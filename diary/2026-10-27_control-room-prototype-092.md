@@ -29,3 +29,7 @@ New: `logic/control-room-prototype.ts` and its test, `views/control-room-prototy
 - The six stations (circulation and filtration, chemical dosing, heating, air handling, power, building) round the desk, as flat sloping touch-panel placeholders.
 - Brighter, warmer arrival; the curved TNG-style rail round the stage, if the owner wants the stage's front curved.
 - Then stage 1: the design note in `doc/design/control-interface-archetypes.md`.
+
+## Later the same day: two versions
+
+The owner asked for the room in two versions on one geometry, two dev rooms from one builder: dev45 the Bond villain's lair and dev46 the starship bridge. The view now takes a theme (`'lair' | 'bridge'`); the logic's walking takes it too, for the bridge's two additions: its six stations, one per pool system, in an arc round the front of the desk (placed by a small numeric search for an arc clear of the desk, the walls' consoles, the stair opening and each other: radius 6.2 m, bearings ±14°, ±39°, ±64°), and its ramps either side of the stage's steps. Fitting the stations meant moving the desk 1.3 m south, the stair opening 1.4 m south and turning the stair's second lane east, under the floor, so the stair hall stays under the room. The ramps rise 1.05 m in 7 m, about 1:7: steeper than Approved Document M allows, a question for the owner. The lair's ring light was at first a solid tube blown out by the bloom; a ring of small lamps on a dark hoop, lower, reads better.

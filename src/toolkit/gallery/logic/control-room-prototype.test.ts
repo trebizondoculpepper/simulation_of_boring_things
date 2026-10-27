@@ -16,6 +16,9 @@ import {
   platformRail,
   platformStepAt,
   ringLightCentre,
+  RAMP,
+  STATIONS,
+  stationPlaces,
   deskInner,
   deskOuter,
   deskSegments,
@@ -177,7 +180,9 @@ describe('the stair (Approved Document K)', () => {
 
   it('has landings at least the stair width deep', () => {
     for (const l of plan.landings)
-      expect(l.area.maxZ - l.area.minZ).toBeGreaterThanOrEqual(STAIR.width);
+      expect(l.area.maxZ - l.area.minZ).toBeGreaterThanOrEqual(
+        STAIR.width - 1e-9,
+      );
   });
 
   it('keeps 2 m headroom under the room floor over everything but the opening', () => {
@@ -223,10 +228,9 @@ describe('walking the prototype', () => {
       [axis, plan.opening.minZ - 1],
       // Then round the opening, across the room, up the stage's steps,
       // to its table.
-      [plan.opening.maxX + 1, plan.opening.minZ - 1],
-      [plan.opening.maxX + 1, plan.opening.maxZ + 1],
-      [0, plan.opening.maxZ + 1],
-      [0, platformEdge() - 2],
+      [-4.5, plan.opening.minZ - 1],
+      [-4.5, 0.3],
+      [0, 0.3],
       [0, CONFERENCE.z - CONFERENCE.d / 2 - 0.3],
     ];
     let y = protoFloorAt(start.x, start.z, 0);
@@ -320,5 +324,122 @@ describe('walking the prototype', () => {
     expect(solids.some((s) => overlaps(s, x, STAIR.topZ + 1, 0.175))).toBe(
       true,
     );
+  });
+});
+
+describe('the operator stations, one per pool system', () => {
+  const places = stationPlaces();
+  const minDistance = (
+    a: readonly { x: number; z: number }[],
+    b: readonly { x: number; z: number }[],
+  ) => {
+    let best = Infinity;
+    for (const p of a)
+      for (const [i, q] of b.entries())
+        best = Math.min(best, distanceToSegment(p, q, b[(i + 1) % b.length]));
+    for (const p of b)
+      for (const [i, q] of a.entries())
+        best = Math.min(best, distanceToSegment(p, q, a[(i + 1) % a.length]));
+    return best;
+  };
+
+  it('has the six systems, each facing the big wall', () => {
+    expect(places.map((p) => p.system)).toEqual([...STATIONS]);
+    for (const p of places) expect(Math.cos(p.yaw)).toBeGreaterThan(0.9);
+  });
+
+  it('stands inside the room, at least 1.2 m clear of the walls and their consoles', () => {
+    for (const p of places)
+      for (const c of p.corners) {
+        expect(insidePolygon(room, c.x, c.z)).toBe(true);
+        for (const [i, [a, b]] of sides(room).entries()) {
+          const depth = Math.max(
+            0,
+            ...PLACEHOLDERS.filter((q) => q.side === i).map((q) => q.depth),
+          );
+          expect(distanceToSegment(c, a, b) - depth).toBeGreaterThan(1.2);
+        }
+      }
+  });
+
+  it('leaves walkways round the desk, between the stations and to the stair', () => {
+    const { opening } = stairPlan();
+    const hole = [
+      { x: opening.minX, z: opening.minZ },
+      { x: opening.maxX, z: opening.minZ },
+      { x: opening.maxX, z: opening.maxZ },
+      { x: opening.minX, z: opening.maxZ },
+    ];
+    for (const [i, p] of places.entries()) {
+      expect(minDistance(p.corners, deskOuter()), `desk ${i}`).toBeGreaterThan(
+        1.0,
+      );
+      expect(minDistance(p.corners, hole), `hole ${i}`).toBeGreaterThan(0.9);
+      if (i > 0)
+        expect(
+          minDistance(p.corners, places[i - 1].corners),
+          `between ${i}`,
+        ).toBeGreaterThan(0.7);
+    }
+  });
+
+  it('keeps the stair mouth free to walk out of, north', () => {
+    const { opening } = stairPlan();
+    const x = (opening.minX + opening.maxX) / 2;
+    for (let z = opening.minZ - 0.2; z > opening.minZ - 2; z -= 0.1)
+      expect(
+        protoSolids(STOREY, 'bridge').some((s) => overlaps(s, x, z, 0.175)),
+        `${z}`,
+      ).toBe(false);
+  });
+});
+
+describe('the bridge: ramps either side up to the stage', () => {
+  const walk = (route: [number, number][], from: number) => {
+    let [x, z] = route[0];
+    let y = from;
+    for (const [tx, tz] of route.slice(1)) {
+      const steps = Math.ceil(Math.hypot(tx - x, tz - z) / 0.05);
+      const [x0, z0] = [x, z];
+      for (let k = 1; k <= steps; k++) {
+        x = x0 + ((tx - x0) * k) / steps;
+        z = z0 + ((tz - z0) * k) / steps;
+        const next = protoFloorAt(x, z, y, 'bridge');
+        expect(Math.abs(next - y), `${x},${z}`).toBeLessThan(0.25);
+        for (const s of protoSolids(next, 'bridge'))
+          expect(overlaps(s, x, z, 0.1), `${x},${z},${next}`).toBe(false);
+        y = next;
+      }
+    }
+    return y;
+  };
+
+  it('climbs each ramp from its low outer end to the stage', () => {
+    for (const s of [-1, 1]) {
+      const mid = (RAMP.near + platformEdge()) / 2;
+      const y = walk(
+        [
+          [s * (RAMP.low - 0.8), 0.2],
+          [s * (RAMP.low - 0.8), mid],
+          [s * (RAMP.end + 0.6), mid],
+          [s * (RAMP.end + 0.6), platformEdge() + 1],
+        ],
+        STOREY,
+      );
+      expect(y).toBeCloseTo(STOREY + PLATFORM.height);
+    }
+  });
+
+  it("guards each ramp's open side, and leaves the lair without ramps or stations", () => {
+    const x = (RAMP.open + RAMP.top) / 2;
+    expect(
+      protoSolids(STOREY, 'bridge').some((s) => overlaps(s, x, RAMP.near, 0.1)),
+    ).toBe(true);
+    expect(protoFloorAt(x, RAMP.near + 0.5, STOREY + 0.5, 'lair')).toBe(STOREY);
+    expect(
+      protoSolids(STOREY, 'lair').some((s) =>
+        stationPlaces().some((p) => overlaps(s, p.x, p.z, 0)),
+      ),
+    ).toBe(false);
   });
 });
