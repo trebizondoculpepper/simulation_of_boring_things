@@ -1,0 +1,83 @@
+# 089: Layout and equipment improvements, collected
+
+Status: collected 2026-10-27, each item's feasibility checked and the owner's answers recorded; not started. The first of two missions: the second, the wet hall's chemical distribution panels (WH-CP1) redesigned, is [091](091-chemical-distribution-panels.md). For each item: its feasibility checked against the code, the owner's follow-up answers recorded, then the work described.
+
+You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply, above all the enhanced network as the one source of truth, and `doc/room-layout-guide.md` for any move of plant in a room. Markdown is one paragraph per line.
+
+## 1. Footbath: the hypochlorite tank into the corner
+
+The owner, 2026-10-27: "Can we move the hypochlorite tank to this corner": [plant_pool_04, x −0.32, y 1.78, z 1.96, yaw 262.6°, pitch −43.8°, zoom 2.136](https://trebizondoculpepper.github.io/the_pool/?room=plant_pool_04&x=-0.32&y=1.78&z=1.96&yaw=262.6&pitch=-43.8&zoom=2.136).
+
+Feasibility (checked 2026-10-27): feasible, a small change. The "hypochlorite tank" is the footbath's hypochlorite day tank, a Chlorella DoseCell bottle on its spill pallet (`chem-day:hypochlorite:pool_04`, 0.60 × 0.60 m), placed by `CHEM_AT.plant_pool_04` in `src/toolkit/gallery/logic/room-equipment.ts` at x 0.95, z −0.6, facing south, in front of the cabinet. The room is 5 × 5 m (x and z −2.5 to 2.5). The view looks west (yaw 270° faces −x) down into the south-west corner, beside the south door, an empty floor there now (screenshot checked). Free floor in that corner: x −2.5 to −1.3 (the south door's swing starts at −1.3), z 0.75 (the cabinet's south end) to 2.5, less a small keep-clear strip on the west wall at z 1.2–1.6. A 0.6 m bottle fits, backed onto the south or west wall. One constraint: the cabinet stands 0.9 m off the west wall so its back stubs' valves can be worked, and the sand filter closes the north end of that lane, so this corner is the lane's only way in; the bottle must leave at least the 0.5 m walkway into it. Its fill branch (straight down from the services ceiling) and its dosing tube (up, across at 2.5 m, down into the cabinet's top) are routed from its position by `dayTankPlumbing`, so they follow it.
+
+Owner's answer (2026-10-27): the south-west corner, the bottle backed onto the south wall, tight into the corner, facing north; the widest way into the cabinet's lane along the west wall.
+
+- Move it by editing its `CHEM_AT` entry (position and facing), not by drawing it elsewhere; the plumber and the day-tank plumbing reroute its fill and dosing tube.
+- Keep the lane behind the cabinet reachable (0.5 m clear), the south door's swing clear, and its back (fill socket and power lead) to the nearer wall.
+- Check: screenshots from the owner's view and the room's scoring/acceptance tests.
+
+## 2. The dosing pump set's pumps, in the peristaltic pump's style
+
+The owner, 2026-10-27: "Can we improve the design for the dosing pumps in the dosing pump set to be similar in style to the peristaltic pump. Also, put that in our chemical gallery so we can see it improved."
+
+Feasibility (checked 2026-10-27): feasible, a moderate piece of modelling. The set is `createHypochloriteBoard` (`dosing-equipment.ts`): a 1.2 × 1.0 m wall board with duty and standby pumps on a bunded shelf, a calibration column, the suction from below and the discharge through a multifunction valve. Its pumps are `createSolenoidPump`, about a dozen boxes and cylinders with a text LCD (after the ProMinent gamma/ X); the acid board's single pump is `createDigitalPump`, likewise boxes (after the Grundfos DDA). The peristaltic pump (`peristaltic-pump.ts`, about 600 lines) is the pattern: rounded clamshell, membrane keypad, dot-matrix LCD in the controller's font, working keys, lamps, sound and a turning rotor. Its parts (rounded slab, dot-matrix drawing, push buttons, Grundflow livery and plate, hose) are reusable for a diaphragm pump. The set's boards are used in the lounge (plant_pool_01) and the Olympic (plant_pool_02) and shown in the dosing gallery (`src/toolkit/gallery/rooms/plant/dosing.ts`); their ports (`machinePorts` for `hypo-pumps` and `acid-pump`) must stay where the pipes expect them. Dev44 is a square room with exhibits round its walls; a wall exhibit for the board fits beside the peristaltic pump.
+
+Owner's answer (2026-10-27): the same finish, still diaphragm pumps: both the hypochlorite set's duty and standby solenoid pumps and the acid board's stepper pump keep their dosing heads, rebuilt to the peristaltic pump's standard.
+
+- Now: the hypochlorite dosing set (`createHypochloriteBoard` in `src/toolkit/components/plant/views/dosing-equipment.ts`, the `hypo-pumps` machine in every plant room) carries duty and standby pumps drawn by `createSolenoidPump`, plain boxes with a cylinder head; the acid board's `createDigitalPump` is the same kind of box. The model to follow is `createPeristalticPump` (`peristaltic-pump.ts`, after the Watson-Marlow Qdos): a rounded clamshell casing with a parting seam, rubber feet, a flat fascia with a membrane keypad, a working dot-matrix LCD, working START, STOP, ▲ and ▼ keys, RUN and ALARM lamps, Grundflow's livery and badge, a cable gland, and a moving part that shows it running.
+- Redesign the set's pumps to that standard, staying true to what they are: solenoid (or stepper) diaphragm metering pumps after the ProMinent gamma/ X and Grundfos SMART Digital DDA, at their real sizes, the dosing head with suction and discharge valves and a bleed, the stroke shown while it doses (a stroke LED or the head's pulse, and its sound). Keep them real, working and bound to the model: their display shows the rate, they start and stop with the controller's demand, and their state reaches inspection.
+- Keep their ports and the board's pipework where the plumber expects them, or update the ports with the model; every room with a `hypo-pumps` (and, if redesigned too, the acid board) must still plumb.
+- Put the redesigned pump, and the whole dosing set, in the chemical gallery (dev44, `src/toolkit/gallery/rooms/plant/chemical-handling.ts`) beside the peristaltic pump, so the two can be compared.
+- Check: screenshots in dev44 and in a plant room, plus the existing dosing and plant-mounting tests.
+
+## 3. Floor markings round the bunded tanks
+
+The owner, 2026-10-27: "we need to add floor markings around the bunded tanks."
+
+Feasibility (checked 2026-10-27): feasible. What is bunded in the game: every plant room's two day tanks, DoseCell bottles on spill pallets with red (acid) or yellow (hypochlorite) rims (`dose-bottle.ts`, `bottleBund`), eight in all in plant_pool_01 to 04, each placed by `CHEM_AT`; the bulk tanks of the hypochlorite and acid stores (`hypo_store`, `acid_store`, `back-room-schematics.ts`); and `createBundedTank` exhibits in the chemicals gallery. A marking can be drawn from each placed tank's footprint, as the hatched keep-clear marking in `shell-room.ts` is drawn from its rectangle (a plane 3 mm above the floor). Small rooms are tight: in the footbath a marking 0.3 m out from a bottle would reach the cabinet's lane and the door swing, so the offset must give way to walls, footprints and keep-clear zones.
+
+Owner's answers (2026-10-27): every bunded tank, both the eight day-tank bottles in the pool plant rooms and the bulk tanks in the hypochlorite and acid stores; marked with a 50 mm yellow-and-black hazard stripe round each bund, a short way out, the chemical's name stencilled on the floor.
+
+- Every bunded tank (`createBundedTank` in `src/toolkit/components/plant/views/chemicals-storage.ts`, the bulk hypochlorite and acid tanks in each plant room and the chemical stores) gets painted floor markings round its bund, as a real plant room has: a yellow line, or yellow and black hazard striping, a short way out from the bund's foot, marking the zone kept clear round it, with stencilled wording where it suits (the chemical's name, KEEP CLEAR); hypochlorite and acid told apart if the colour coding allows (see `doc/research/` and the signage gallery, `src/toolkit/gallery/rooms/plant/signage.ts`, for the stencils).
+- Reuse what exists where it can: the hatched keep-clear floor marking in `src/toolkit/gallery/views/shell-room.ts` and the stencil styles in the signage gallery. The markings belong to the tank's placement, so they move with it (item 1) and follow its footprint; they must not cross walls, drains, plinths or other machines' footprints, and must sit just above the floor without z-fighting.
+- Set decoration on the floor, not an engineering item, but drawn from the tank's node, not placed by hand.
+- Try it in the chemical gallery (dev44) first, then in the plant rooms.
+- Check: screenshots of a bunded tank in dev44 and in plant_pool_04 after item 1.
+
+## 4. Where the hypochlorite and the acid are injected
+
+The owner, 2026-10-27: "Check where we do the injection of chlorite and hydrochloric acid."
+
+Findings (checked 2026-10-27):
+
+- **Lounge (plant_pool_01).** Order of treatment: pumps → filter → heat exchanger → ozone contact tank → UV → pool (`lounge-schematic.ts`). The hypochlorite, the acid and the controller's sample line all meet the main at one place, the riser just after the heat exchanger (`pheOut1` in `room-pipes.ts`, "Hypochlorite to the heated main", "Acid to the heated main", "Sample line from the heated main"), 0.15 m apart up it: hypochlorite at `L.dosing`, the sample 0.15 m below, the acid 0.3 m below. Three problems: the sample is taken between the two injection points, so the controller reads freshly dosed water, not the pool's (the board's own doc says it samples before the dosing points); acid and hypochlorite are only 0.3 m apart, where good practice keeps them well apart, acid first, so the two never meet concentrated; and the hypochlorite goes in before the ozone contact tank, which destroys it, where the residual disinfectant is normally dosed after ozone (and UV), last. There is no injection quill drawn; the tube ends at the main.
+- **Olympic (plant_pool_02).** Done well: both dose lines drop onto a dosing spool on the return after the UV unit, along the south wall, each through a quill on the spool's top (`olympic-plumbing.ts`), the acid's upstream. Their separation is the pumps' spacing on the wall, not checked against a rule.
+- **Jacuzzi and footbath (plant_pool_03, 04).** Each day tank's dosing tube goes into its packaged cabinet's top (`machinePorts` for `spa-pack` and `jacuzzi-pack`); the injection is the cabinet's own, inside it, not drawn in the rooms. In dev35's cabinet exhibit (`spa-pack.ts`) the tubes run to injection points on the return.
+- The chemistry model does not depend on where the points are, so moving them changes the drawing and the schematic, not the simulation.
+
+Owner's answer (2026-10-27): fix the lounge, the Olympic's way. In the lounge, take the sample from the main before any dosing (the filtered main, or the pumps' discharge), inject the acid after the heat exchanger and the hypochlorite after the UV unit on the return main, each through a drawn injection quill with its isolating and non-return valve, as the Olympic does; the schematic's links move first, then the runs.
+
+## 5. The switch room's fire safety: electrical-fire gear, a fire point, floor markings
+
+The owner, 2026-10-27: "We are missing fire safety gear in the switch room, should be appropriate for electrical fires. Also a fire point, floor markings."
+
+Feasibility (checked 2026-10-27): feasible, mostly reuse. The switch room (`switch_room`, a shell room) holds the LV main switchboard on the west wall, the main incoming switch and the lighting board DB-L1 on the east, the emergency lighting central battery, a generator connection point on the south wall, the earthing terminal and an electric shock treatment poster (`building-signs.ts`); placed by `layoutRoom`'s `switch_room` entry in `room-equipment.ts`. It has no extinguisher, fire point or floor marking. What exists to reuse: `createExtinguisher` (`src/toolkit/components/fire/views/fire-fittings.ts`, kinds water, foam, CO2 and dry powder, each in its colour band); `createFirePointStand` and the fire action notice (`detection-and-exits.ts`); and the wet hall's fire points (`fireAt` in `src/toolkit/gallery/views/shell-room.ts`: a CO2 and a foam extinguisher on the wall, the notice above, and a red keep-clear outline on the floor in front, the owner's of 2026-10-26), which is drawn by hand in that view, not from a layout item. For electrical fires the right extinguishers are CO2 (BS 5306-8; no water or foam on live LV gear, and dry powder is avoided indoors where it damages switchgear and obscures escape).
+
+Owner's answer (2026-10-27): the fire point, plus insulating rubber matting along the switchboard's front and the 1 m working space before the boards marked on the floor.
+
+- A fire point by the room's door, on the wall: CO2 extinguishers (two 5 kg is usual for an LV switch room), the fire action notice, a FIRE POINT sign, and its red keep-clear outline on the floor.
+- Floor markings: the fire point's outline; and, before the switchboard and the main switch, the 1 m working space (BS 7671, already kept clear in the layout) marked out, with insulating rubber matting (BS EN 61111) along the switchboard's front, as LV switch rooms have.
+- Make the fire point a layout item (a reusable fire point, its kinds of extinguisher a parameter) placed by `layoutRoom`, and use the same piece for the wet hall's, rather than a second hand-drawn copy; keep it clear of the boards' working space and the door's swing.
+- Check: screenshots in the switch room; the layout tests.
+
+## 6. No generator point in the switch room; a mains/generator changeover switch instead
+
+The owner, 2026-10-27: "The generator terminal should not be in the switch room, but we should probably have a selector switch that switches between mains and generator power."
+
+Feasibility (checked 2026-10-27): feasible; the removal is small, the switch is a real model change.
+
+- There are two generator connections now: the switch room's "Generator connection point" (`generator-point` in `switch-room-schematic.ts`, on the south wall, linked "Generator to the switchboard") and the loading bay's "Generator connection cabinet" (`back-room-schematics.ts`, by the bay, the owner's of 2026-10-27), whose "Generator cable to the switch room" lands on the switch room's `generator` port. The bay's is the right one (a hired generator parks outside), so the switch room's is a duplicate: remove its node, its link, its placement (`switch_room` in `room-equipment.ts`, `generator-point` on the south wall), its installed asset id (`installed-asset-ids.ts`) and its health entry.
+- The world has no generator supply: the site's power is the mains (`plant.sources.power`) through the main incoming switch (`MAIN_SWITCH`, `switch-room.ts`) to the LV switchboard, whose ways feed the rooms (`SWITCHBOARD_FEEDS`). The generator cable arrives but goes nowhere.
+- The changeover switch: a manual three-position changeover switch, I (mains) · 0 (off) · II (generator), after the Socomec SIRCOVER or ABB OT…C changeover, its rotary handle padlockable, between the main incoming switch and the switchboard, with the bay's generator cable landing on its II side. Real and working: a world field for its position (a `WORLD_VERSION` bump and migration); the switchboard energised from the mains in I, from the generator in II (only while a generator is connected and running), from nothing in 0; break-before-make, so mains and generator are never paralleled; lamps for MAINS AVAILABLE and GENERATOR AVAILABLE; its state in inspection. A local control (`CLAUDE.md`: "Some controls are only local"): on its panel in the switch room only.
+- Owner's answer (2026-10-27): the switch now, the generator later. Build the working I · 0 · II switch with its lamps; position II gives no power (GENERATOR AVAILABLE unlit) until a hired generator is modelled, a later item (TODO).
+- Check: model tests (supply in each position, never both), the switch-room layout and screenshots.
