@@ -1,0 +1,1500 @@
+import {
+  CylinderGeometry,
+  DoubleSide,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+} from 'three';
+import { computed, signal } from '@preact/signals-core';
+import type { Signal } from '@preact/signals-core';
+import {
+  actOnTransfer,
+  levelOf,
+  newTransferTrial,
+  pumpRunning,
+  stepTransfer,
+  valveOpen,
+  describeTank,
+  levelTrend,
+} from '../../../../game/plant/chemical-transfer-demo';
+import type {
+  Hoa,
+  TransferAction,
+  TransferTrial,
+} from '../../../../game/plant/chemical-transfer-demo';
+import type { PanelKit } from '../../core/views/eighties-controls';
+import { tools } from '../../core/views/fitting-tools';
+import { brandLivery } from '../../core/views/brand-livery';
+import { panelMakerMark } from '../../core/views/panel-maker-mark';
+import {
+  createPartSet,
+  keySwitch,
+  pilotLight,
+  pushButton,
+  selector,
+} from '../../core/parts/parts';
+import {
+  createPanelMeter,
+  createRoundGauge,
+} from '../../industrial-control/views/panel-instruments';
+import { createAnnunciatorPanel } from '../../industrial-control/views/cabinet-fittings';
+import { createAnnunciator } from '../../industrial-control/logic/annunciator';
+import { plantTools } from './plant-tools';
+import { createDigitalPump } from './dosing-equipment';
+import { createFramedChemicalTank } from './framed-chemical-tank';
+
+/**
+ * Dev44's chemical handling equipment beyond the bulk tanks
+ * (`framed-chemical-tank.ts`; prompt 086; the owner, 2026-10-26): each a
+ * working model after a real kind of product, under the game's makers.
+ *
+ * - The transfer pump skid: duty and standby sealless magnetic-drive
+ *   pumps, as chemical transfer uses, on a bunded skid.
+ * - The day tank station: a translucent HDPE day tank in its bund with its
+ *   level switches, actuated inlet, dosing pump and safety gear.
+ * - The chemical pipes: a sample stand of each kind.
+ * - The store's chemical handling panel and a plant room's day tank panel.
+ *
+ * Metres; each on the floor (or a wall) at the middle of its footprint,
+ * its front toward +z.
+ */
+
+type Chemical = 'hypochlorite' | 'acid';
+const PRODUCT: Record<Chemical, string> = {
+  hypochlorite: 'SODIUM HYPOCHLORITE 14%',
+  acid: 'HYDROCHLORIC ACID 10%',
+};
+/** The chemical's line colour (BS 1710: acids and alkalis violet), and its ident band. */
+const BAND: Record<Chemical, string> = {
+  hypochlorite: '#d2ae20',
+  acid: '#b92b24',
+};
+
+function translucent(kit: PanelKit, colour: string, opacity: number) {
+  const m = new MeshStandardMaterial({
+    color: colour,
+    roughness: 0.55,
+    transparent: true,
+    opacity,
+    side: DoubleSide,
+    depthWrite: false,
+  });
+  kit.materials.push(m);
+  return m;
+}
+
+// ---- The trial's state ----------------------------------------------------
+
+/**
+ * The transfer trial's state (`chemical-transfer-demo.ts`), shared by the
+ * pump skid and the day tank it fills; whoever made it steps it.
+ */
+export interface TransferStore {
+  state: Signal<TransferTrial>;
+  act(a: TransferAction): void;
+  step(seconds: number): void;
+}
+
+export function createTransferStore(): TransferStore {
+  const state = signal(newTransferTrial());
+  return {
+    state,
+    act: (a) => (state.value = actOnTransfer(state.value, a)),
+    step: (seconds) => (state.value = stepTransfer(state.value, seconds)),
+  };
+}
+
+const HOA: readonly Hoa[] = ['hand', 'off', 'auto'];
+
+// ---- The transfer pump skid ----------------------------------------------
+
+/**
+ * The transfer pump, after the sealless magnetic-drive
+ * centrifugal pumps chemical transfer uses (Iwaki MX class): a polypropylene
+ * pump head close-coupled to its motor, no seal to leak. Grundflow's, on a
+ * galvanised skid over its own drip tray. One pump, not a duty and
+ * standby pair (the owner, 2026-10-26: light work beside the water pumps',
+ * and one that fails is soon swapped). Its suction and discharge
+ * ball valves, a non-return valve, a pressure gauge on a diaphragm seal
+ * (the chemical never reaches the gauge), a relief valve back to the tank.
+ * The local station beside it: the pump's HAND · OFF · AUTO, its RUN and
+ * TRIP lamps, the transfer selector's HAND · AUTO and the trip reset.
+ */
+export function createTransferPumpSkid(
+  kit: PanelKit,
+  chemical: Chemical,
+  shared?: TransferStore,
+) {
+  const store = shared ?? createTransferStore();
+  const group = new Group();
+  const t = plantTools(kit);
+  const f = tools(kit);
+  const parts = createPartSet();
+  const maker = brandLivery(kit, 'grundflow');
+  const galv = t.paint('#a9afaf', 0.38, 0.75);
+  const pp = t.paint('#dcdcd2', 0.6);
+  const pvc = t.paint('#5a5f63', 0.55);
+  const dark = t.paint('#2a2f31', 0.6);
+  const red = t.paint('#b8261f', 0.5);
+  const band = t.paint(BAND[chemical], 0.5);
+
+  // The skid and its tray.
+  t.box(group, t.paint('#2b2d2e', 0.8), 1.5, 0.12, 0.9, 0, 0.06, 0);
+  t.box(group, t.paint('#202223', 0.8), 1.42, 0.02, 0.82, 0, 0.125, 0);
+  for (const z of [-0.4, 0.4]) t.box(group, galv, 1.4, 0.06, 0.06, 0, 0.17, z);
+
+  const running = [computed(() => pumpRunning(store.state.value))];
+  const tripped = computed(() => store.state.value.tripped);
+  const gauges: ReturnType<typeof createRoundGauge>[] = [];
+  const impellers: Group[] = [];
+
+  for (const [i, x] of [[0, 0]] as const) {
+    const p = new Group();
+    p.position.set(x, 0.2, -0.05);
+    group.add(p);
+    // The motor: TEFC, finned, on its feet; the fan cowl at the back.
+    t.box(p, galv, 0.24, 0.03, 0.2, 0, 0.015, -0.12);
+    const motor = t.cyl(
+      p,
+      maker.paint.main,
+      0.075,
+      0.26,
+      0,
+      0.11,
+      -0.13,
+      'z',
+      24,
+    );
+    for (let k = 0; k < 10; k++) {
+      const a = (k / 10) * Math.PI * 2;
+      t.box(
+        p,
+        maker.paint.main,
+        0.008,
+        0.008,
+        0.22,
+        Math.cos(a) * 0.078,
+        0.11 + Math.sin(a) * 0.078,
+        -0.13,
+      );
+    }
+    void motor;
+    t.cyl(p, dark, 0.07, 0.04, 0, 0.11, -0.28, 'z', 24);
+    t.box(p, maker.paint.main, 0.08, 0.06, 0.08, 0, 0.21, -0.1);
+    // The bracket and the pump head: PP, axial suction to the front,
+    // discharge up from the volute.
+    t.cyl(p, galv, 0.06, 0.06, 0, 0.11, 0.03, 'z', 20);
+    t.cyl(p, pp, 0.085, 0.07, 0, 0.11, 0.095, 'z', 28);
+    const imp = new Group();
+    imp.position.set(0, 0.11, 0.135);
+    p.add(imp);
+    for (let k = 0; k < 4; k++)
+      t.box(imp, pp, 0.004, 0.06, 0.01, 0, 0, 0).rotation.z = (k * Math.PI) / 4;
+    imp.traverse((o) => (o.userData.live = true));
+    impellers.push(imp);
+    t.cyl(p, pp, 0.03, 0.06, 0, 0.11, 0.15, 'z', 16);
+    t.rod(p, pp, [0, 0.19, 0.095], [0, 0.3, 0.095], 0.022, 12);
+    f.label(p, `P${i + 1}`, 0.1, 0.29, -0.02, 0.04, '#ffffff', '#2a2f31');
+    f.label(
+      p,
+      'GRUNDFLOW MX-251 MAG DRIVE',
+      0,
+      0.06,
+      -0.006 + 0.08,
+      0.012,
+      '#ffffff',
+    );
+    // Suction: from the header in front, its ball valve.
+    t.rod(group, pvc, [x, 0.31, 0.15], [x, 0.31, 0.32], 0.025, 12);
+    t.box(group, pvc, 0.08, 0.08, 0.08, x, 0.31, 0.25);
+    t.box(group, red, 0.02, 0.015, 0.16, x, 0.37, 0.25).rotation.y =
+      Math.PI / 2;
+    // Discharge: up, its non-return valve, its gauge on a diaphragm seal,
+    // its isolating valve, into the common main behind.
+    const top = 0.2 + 0.3;
+    t.cyl(group, pvc, 0.035, 0.09, x, top + 0.07, 0.045, 'y', 12);
+    f.label(
+      group,
+      'NRV',
+      x + 0.05,
+      top + 0.07,
+      0.045,
+      0.014,
+      '#ffffff',
+      '#2a2f31',
+    );
+    t.rod(group, pvc, [x, top, 0.045], [x, top + 0.38, 0.045], 0.022, 12);
+    t.cyl(
+      group,
+      t.paint('#c6cacb', 0.3, 0.7),
+      0.03,
+      0.03,
+      x + 0.07,
+      top + 0.2,
+      0.045,
+      'x',
+      16,
+    );
+    t.rod(
+      group,
+      pvc,
+      [x, top + 0.2, 0.045],
+      [x + 0.06, top + 0.2, 0.045],
+      0.012,
+      8,
+    );
+    const g = createRoundGauge(kit, {
+      radius: 0.045,
+      label: 'bar',
+      scaleMax: 6,
+      redFrom: 0.75,
+    });
+    g.group.position.set(x + 0.12, top + 0.2, 0.045);
+    g.group.rotation.y = 0;
+    g.group.traverse((o) => (o.userData.live = true));
+    group.add(g.group);
+    gauges.push(g);
+    t.box(group, pvc, 0.08, 0.08, 0.08, x, top + 0.3, 0.045);
+    t.box(group, red, 0.16, 0.015, 0.02, x, top + 0.3, 0.1);
+    t.rod(
+      group,
+      pvc,
+      [x, top + 0.38, 0.045],
+      [x, top + 0.38, -0.35],
+      0.022,
+      12,
+    );
+  }
+  // The suction header and the common discharge main, banded by chemical;
+  // the relief valve off the main, its return dropping back to the tank.
+  t.rod(group, pvc, [-0.7, 0.31, 0.32], [0.7, 0.31, 0.32], 0.028, 12);
+  t.rod(group, pvc, [-0.7, 0.88, -0.35], [0.7, 0.88, -0.35], 0.028, 12);
+  for (const x of [-0.6, 0.6]) {
+    t.cyl(group, band, 0.031, 0.05, x, 0.31, 0.32, 'x', 12);
+    t.cyl(group, band, 0.031, 0.05, x, 0.88, -0.35, 'x', 12);
+  }
+  t.cyl(group, t.paint('#c9b437', 0.5), 0.03, 0.12, 0.55, 0.98, -0.35, 'y', 12);
+  t.rod(group, pvc, [0.55, 1.04, -0.35], [0.66, 1.04, -0.35], 0.016, 8);
+  t.rod(group, pvc, [0.66, 1.04, -0.35], [0.66, 0.2, -0.35], 0.016, 8);
+  f.label(
+    group,
+    'PRV 4 bar → TANK',
+    0.55,
+    1.08,
+    -0.31,
+    0.016,
+    '#1b1b1b',
+    '#c9b437',
+  );
+  f.label(
+    group,
+    `${PRODUCT[chemical]} → DAY TANKS`,
+    0,
+    0.94,
+    -0.31,
+    0.02,
+    '#ffffff',
+    BAND[chemical],
+  );
+  f.label(
+    group,
+    `FROM BULK TANKS`,
+    -0.45,
+    0.37,
+    0.36,
+    0.018,
+    '#ffffff',
+    BAND[chemical],
+  );
+
+  // The local station on its post: each pump's selector and lamps, the
+  // duty selector, a stop; a DEMAND key standing in for the day tanks' call.
+  const post = new Group();
+  post.position.set(0.9, 0, 0.25);
+  group.add(post);
+  t.box(post, galv, 0.05, 1.3, 0.05, 0, 0.65, -0.05);
+  const box = new Group();
+  box.position.set(0, 1.25, 0);
+  post.add(box);
+  t.box(box, t.paint('#d9d4c4', 0.55), 0.32, 0.46, 0.12, 0, 0, 0);
+  f.label(box, 'TRANSFER PUMP', 0, 0.2, 0.062, 0.018, '#1b1b1b');
+  for (const i of [0]) {
+    const y = 0.08 - i * 0.12;
+    const sel = selector(kit, {
+      positions: 3,
+      legend: 'HAND · OFF · AUTO',
+      bound: {
+        get value() {
+          return HOA.indexOf(store.state.value.hoa);
+        },
+        set: (n: number) => store.act({ act: 'hoa', to: HOA[n] }),
+      },
+    });
+    sel.object.position.set(-0.08, y, 0.062);
+    sel.object.scale.setScalar(0.8);
+    box.add(sel.object);
+    parts.add(sel);
+    const run = pilotLight(kit, {
+      colour: 'green',
+      legend: 'RUN',
+      drive: running[i],
+    });
+    run.object.position.set(0.05, y, 0.062);
+    run.object.scale.setScalar(0.7);
+    box.add(run.object);
+    parts.add(run);
+    const trip = pilotLight(kit, {
+      colour: 'amber',
+      legend: 'TRIP',
+      drive: tripped,
+    });
+    trip.object.position.set(0.12, y, 0.062);
+    trip.object.scale.setScalar(0.7);
+    box.add(trip.object);
+    parts.add(trip);
+  }
+
+  // HAND · AUTO for the transfer selector it feeds.
+  const call = selector(kit, {
+    positions: 2,
+    legend: 'SELECTOR HAND · AUTO',
+    bound: {
+      get value() {
+        return store.state.value.mode === 'auto' ? 1 : 0;
+      },
+      set: (n: number) => store.act({ act: 'mode', to: n ? 'auto' : 'hand' }),
+    },
+  });
+  call.object.position.set(0, -0.07, 0.062);
+  call.object.scale.setScalar(0.8);
+  box.add(call.object);
+  parts.add(call);
+  const stop = pushButton(kit, {
+    colour: 'blue',
+    legend: 'TRIP RESET',
+    action: () => store.act({ act: 'reset' }),
+  });
+  stop.object.position.set(0, -0.2, 0.062);
+  stop.object.scale.setScalar(0.7);
+  box.add(stop.object);
+  parts.add(stop);
+  panelMakerMark(kit, box, { width: 0.32, height: 0.46, z: 0.061 });
+
+  let spin = 0;
+  return {
+    object: group,
+    parts,
+    update(delta: number) {
+      if (!shared) store.step(delta);
+      parts.update(delta);
+      running.forEach((r, i) => {
+        gauges[i].set(r.value ? 0.48 : 0.02);
+        gauges[i].update(delta);
+      });
+      spin += delta * 30;
+      impellers.forEach((imp, i) => {
+        if (running[i].value) imp.rotation.z = spin;
+      });
+    },
+    status: () =>
+      `transfer pump ${running[0].value ? 'running' : 'stopped'}${store.state.value.tripped ? ', tripped' : ''}`,
+  };
+}
+
+// ---- The duty and standby pump set (kept for later) ----------------------
+
+/**
+ * A duty and standby pair of the same magnetic-drive transfer pumps on one
+ * skid, each with its own valves, non-return valve and diaphragm-seal
+ * gauge into a common main; its station has each pump's HAND · OFF ·
+ * AUTO with RUN and TRIP lamps, the duty selector, a DEMAND key and a
+ * stop. Not used in dev44 (the owner, 2026-10-26: one pump will do for the
+ * chemical transfer), kept for plant that does work hard enough to need a
+ * standby. It runs on its own: the duty pump in AUTO while DEMAND is on.
+ */
+export function createDualTransferPumpSkid(kit: PanelKit, chemical: Chemical) {
+  const group = new Group();
+  const t = plantTools(kit);
+  const f = tools(kit);
+  const parts = createPartSet();
+  const maker = brandLivery(kit, 'grundflow');
+  const galv = t.paint('#a9afaf', 0.38, 0.75);
+  const pp = t.paint('#dcdcd2', 0.6);
+  const pvc = t.paint('#5a5f63', 0.55);
+  const dark = t.paint('#2a2f31', 0.6);
+  const red = t.paint('#b8261f', 0.5);
+  const band = t.paint(BAND[chemical], 0.5);
+  t.box(group, t.paint('#2b2d2e', 0.8), 1.5, 0.12, 0.9, 0, 0.06, 0);
+  t.box(group, t.paint('#202223', 0.8), 1.42, 0.02, 0.82, 0, 0.125, 0);
+  for (const z of [-0.4, 0.4]) t.box(group, galv, 1.4, 0.06, 0.06, 0, 0.17, z);
+  const hoa = [signal(2), signal(2)];
+  const duty = signal(0);
+  const demand = signal(false);
+  const stopped = signal(false);
+  const running = [0, 1].map((i) =>
+    computed(
+      () =>
+        !stopped.value &&
+        (hoa[i].value === 0 ||
+          (hoa[i].value === 2 && demand.value && duty.value === i)),
+    ),
+  );
+  const gauges: ReturnType<typeof createRoundGauge>[] = [];
+  const impellers: Group[] = [];
+  for (const [i, x] of [
+    [0, -0.36],
+    [1, 0.36],
+  ] as const) {
+    const p = new Group();
+    p.position.set(x, 0.2, -0.05);
+    group.add(p);
+    t.box(p, galv, 0.24, 0.03, 0.2, 0, 0.015, -0.12);
+    t.cyl(p, maker.paint.main, 0.075, 0.26, 0, 0.11, -0.13, 'z', 24);
+    for (let k = 0; k < 10; k++) {
+      const a = (k / 10) * Math.PI * 2;
+      t.box(
+        p,
+        maker.paint.main,
+        0.008,
+        0.008,
+        0.22,
+        Math.cos(a) * 0.078,
+        0.11 + Math.sin(a) * 0.078,
+        -0.13,
+      );
+    }
+    t.cyl(p, dark, 0.07, 0.04, 0, 0.11, -0.28, 'z', 24);
+    t.box(p, maker.paint.main, 0.08, 0.06, 0.08, 0, 0.21, -0.1);
+    t.cyl(p, galv, 0.06, 0.06, 0, 0.11, 0.03, 'z', 20);
+    t.cyl(p, pp, 0.085, 0.07, 0, 0.11, 0.095, 'z', 28);
+    const imp = new Group();
+    imp.position.set(0, 0.11, 0.135);
+    p.add(imp);
+    for (let k = 0; k < 4; k++)
+      t.box(imp, pp, 0.004, 0.06, 0.01, 0, 0, 0).rotation.z = (k * Math.PI) / 4;
+    imp.traverse((o) => (o.userData.live = true));
+    impellers.push(imp);
+    t.cyl(p, pp, 0.03, 0.06, 0, 0.11, 0.15, 'z', 16);
+    t.rod(p, pp, [0, 0.19, 0.095], [0, 0.3, 0.095], 0.022, 12);
+    f.label(p, `P${i + 1}`, 0, 0.29, -0.02, 0.04, '#ffffff', '#2a2f31');
+    t.rod(group, pvc, [x, 0.31, 0.15], [x, 0.31, 0.32], 0.025, 12);
+    t.box(group, pvc, 0.08, 0.08, 0.08, x, 0.31, 0.25);
+    t.box(group, red, 0.02, 0.015, 0.16, x, 0.37, 0.25).rotation.y =
+      Math.PI / 2;
+    const top = 0.5;
+    t.cyl(group, pvc, 0.035, 0.09, x, top + 0.07, 0.045, 'y', 12);
+    t.rod(group, pvc, [x, top, 0.045], [x, top + 0.38, 0.045], 0.022, 12);
+    t.rod(
+      group,
+      pvc,
+      [x, top + 0.2, 0.045],
+      [x + 0.06, top + 0.2, 0.045],
+      0.012,
+      8,
+    );
+    const g = createRoundGauge(kit, {
+      radius: 0.045,
+      label: 'bar',
+      scaleMax: 6,
+      redFrom: 0.75,
+    });
+    g.group.position.set(x + 0.12, top + 0.2, 0.045);
+    g.group.traverse((o) => (o.userData.live = true));
+    group.add(g.group);
+    gauges.push(g);
+    t.box(group, pvc, 0.08, 0.08, 0.08, x, top + 0.3, 0.045);
+    t.box(group, red, 0.16, 0.015, 0.02, x, top + 0.3, 0.1);
+    t.rod(
+      group,
+      pvc,
+      [x, top + 0.38, 0.045],
+      [x, top + 0.38, -0.35],
+      0.022,
+      12,
+    );
+  }
+  t.rod(group, pvc, [-0.7, 0.31, 0.32], [0.7, 0.31, 0.32], 0.028, 12);
+  t.rod(group, pvc, [-0.7, 0.88, -0.35], [0.7, 0.88, -0.35], 0.028, 12);
+  for (const x of [-0.6, 0.6])
+    t.cyl(group, band, 0.031, 0.05, x, 0.88, -0.35, 'x', 12);
+  const box = new Group();
+  box.position.set(0.9, 1.25, 0.25);
+  group.add(box);
+  t.box(group, galv, 0.05, 1.3, 0.05, 0.9, 0.65, 0.2);
+  t.box(box, t.paint('#d9d4c4', 0.55), 0.32, 0.46, 0.12, 0, 0, 0);
+  f.label(box, 'TRANSFER PUMPS', 0, 0.2, 0.062, 0.018, '#1b1b1b');
+  for (const i of [0, 1]) {
+    const y = 0.11 - i * 0.12;
+    const sel = selector(kit, {
+      positions: 3,
+      legend: `P${i + 1} HAND · OFF · AUTO`,
+      bound: {
+        get value() {
+          return hoa[i].value;
+        },
+        set: (n: number) => (hoa[i].value = n),
+      },
+    });
+    sel.object.position.set(-0.08, y, 0.062);
+    sel.object.scale.setScalar(0.8);
+    box.add(sel.object);
+    parts.add(sel);
+    const run = pilotLight(kit, {
+      colour: 'green',
+      legend: 'RUN',
+      drive: running[i],
+    });
+    run.object.position.set(0.05, y, 0.062);
+    run.object.scale.setScalar(0.7);
+    box.add(run.object);
+    parts.add(run);
+    const trip = pilotLight(kit, {
+      colour: 'amber',
+      legend: 'TRIP',
+      drive: stopped,
+    });
+    trip.object.position.set(0.12, y, 0.062);
+    trip.object.scale.setScalar(0.7);
+    box.add(trip.object);
+    parts.add(trip);
+  }
+  const dutySel = selector(kit, {
+    positions: 2,
+    legend: 'DUTY P1 · P2',
+    bound: {
+      get value() {
+        return duty.value;
+      },
+      set: (n: number) => (duty.value = n),
+    },
+  });
+  dutySel.object.position.set(-0.08, -0.15, 0.062);
+  dutySel.object.scale.setScalar(0.8);
+  box.add(dutySel.object);
+  parts.add(dutySel);
+  const call = keySwitch(kit, {
+    legend: 'DEMAND',
+    bound: {
+      get value() {
+        return demand.value;
+      },
+      set: (v: boolean) => (demand.value = v),
+    },
+  });
+  call.object.position.set(0.08, -0.15, 0.062);
+  call.object.scale.setScalar(0.8);
+  box.add(call.object);
+  parts.add(call);
+  const stop = pushButton(kit, {
+    colour: 'red',
+    legend: 'STOP · RESET',
+    action: () => (stopped.value = !stopped.value),
+  });
+  stop.object.position.set(0, -0.2, 0.062);
+  stop.object.scale.setScalar(0.7);
+  box.add(stop.object);
+  parts.add(stop);
+  panelMakerMark(kit, box, { width: 0.32, height: 0.46, z: 0.061 });
+  let spin = 0;
+  return {
+    object: group,
+    parts,
+    update(delta: number) {
+      parts.update(delta);
+      running.forEach((r, i) => {
+        gauges[i].set(r.value ? 0.48 : 0.02);
+        gauges[i].update(delta);
+      });
+      spin += delta * 30;
+      impellers.forEach((imp, i) => {
+        if (running[i].value) imp.rotation.z = spin;
+      });
+    },
+    status: () =>
+      running
+        .map((r, i) => `P${i + 1} ${r.value ? 'running' : 'stopped'}`)
+        .join('; '),
+  };
+}
+
+// ---- The day tank station -----------------------------------------------
+
+/**
+ * A plant room's day tank, after the 200 L dosing tanks pool plant rooms
+ * use: natural, translucent HDPE, so the level shows through its wall
+ * against a moulded litre scale; a screw lid with its sockets; standing in
+ * its own bund (a 250 L spill tray). Its low and high float switches on
+ * their stems; its actuated inlet valve off the transfer main, open while
+ * it fills; its outlet to the dosing pump beside it on the wall bracket.
+ * And what the guidance asks at a chemical point: an eyewash station on
+ * the wall, a face visor and gauntlets on their hooks, the hazard label
+ * and the never-mix notice. The level falls as it doses; at low the inlet
+ * opens, at high it shuts.
+ */
+export function createDayTankStation(
+  kit: PanelKit,
+  chemical: Chemical,
+  shared?: TransferStore,
+  /** Which of the trial's day tanks this is. */
+  index = 0,
+) {
+  const store = shared ?? createTransferStore();
+  const group = new Group();
+  const t = plantTools(kit);
+  const f = tools(kit);
+  const parts = createPartSet();
+  const galv = t.paint('#a9afaf', 0.38, 0.75);
+  const pvc = t.paint('#5a5f63', 0.55);
+  const dark = t.paint('#2a2f31', 0.6);
+  // The bund: a black PE spill tray, 110% of the tank and its outlet in it.
+  const tray = t.paint('#202223', 0.8);
+  const bw = 1.3;
+  const bd = 1.25;
+  const bz = 0.05;
+  t.box(group, tray, bw, 0.04, bd, 0, 0.02, bz);
+  for (const [w, d, x, z] of [
+    [bw, 0.04, 0, bz + bd / 2 - 0.02],
+    [bw, 0.04, 0, bz - bd / 2 + 0.02],
+    [0.04, bd, bw / 2 - 0.02, bz],
+    [0.04, bd, -bw / 2 + 0.02, bz],
+  ] as const)
+    t.box(group, tray, w, 0.3, d, x, 0.15, z);
+  f.label(
+    group,
+    'BUND 330 L',
+    0,
+    0.2,
+    bz + bd / 2 + 0.002,
+    0.03,
+    '#ffffff',
+    '#202223',
+  );
+  // The tank: a small framed black HDPE tank, as the bulk tanks are
+  // (`framed-chemical-tank.ts`), its level read by its ultrasonic sensor
+  // on its display, and shown by its float indicator through the lid.
+  const tankZ = -0.2;
+  const tank = createFramedChemicalTank(kit, {
+    tag: `${chemical === 'acid' ? 'ADT' : 'HDT'}${index + 1}`,
+    product: PRODUCT[chemical],
+    litres: 300,
+    acid: chemical === 'acid',
+    size: { L: 0.9, W: 0.65, H: 0.8 },
+    floatGauge: true,
+    fillLine: false,
+    outletSide: 1,
+  });
+  tank.object.position.set(0, 0.04, tankZ);
+  group.add(tank.object);
+  const top = 0.04 + 0.12 + 0.8;
+  const fill = computed(() => valveOpen(store.state.value, index));
+  const level = computed(() => levelOf(store.state.value.tanks[index]));
+  // Low and high switches: float switches in the lid, their cables.
+  for (const [x, z, tag] of [
+    [0.33, -0.15, 'LSL'],
+    [0.33, 0.1, 'LSH'],
+  ] as const) {
+    t.cyl(
+      group,
+      t.paint('#d4a017', 0.5),
+      0.022,
+      0.06,
+      x,
+      top + 0.04,
+      tankZ + z,
+      'y',
+      10,
+    );
+    t.cyl(group, dark, 0.008, 0.03, x, top + 0.085, tankZ + z, 'y', 6);
+    f.label(group, tag, x, top + 0.12, tankZ + z, 0.016, '#1b1b1b', '#d4a017');
+  }
+  // The inlet off the transfer main: a riser into the lid, its actuated
+  // valve, a grey actuator with its yellow position dome, open while
+  // filling.
+  const ix = -0.05;
+  const iz = tankZ - 0.15;
+  t.rod(group, pvc, [ix, top, iz], [ix, 1.65, iz], 0.02, 10);
+  t.rod(group, pvc, [ix, 1.65, iz], [ix, 1.65, -0.6], 0.02, 10);
+  t.box(group, pvc, 0.08, 0.08, 0.08, ix, 1.3, iz);
+  t.box(group, t.paint('#7b8285', 0.5), 0.12, 0.1, 0.1, ix, 1.4, iz);
+  t.cyl(group, t.paint('#e5c43a', 0.4), 0.03, 0.03, ix, 1.465, iz, 'y', 12);
+  const pointer = t.box(group, dark, 0.05, 0.008, 0.008, ix, 1.485, iz);
+  const trend = levelTrend();
+  pointer.userData.live = true;
+  f.label(group, 'XV INLET', ix, 1.3, iz + 0.045, 0.016, '#ffffff', '#2a2f31');
+  // The dosing pump on its bracket beside the bund, fed from the outlet.
+  t.box(group, galv, 0.04, 0.72, 0.04, 0.92, 0.36, -0.2);
+  t.box(group, galv, 0.3, 0.02, 0.24, 0.92, 0.7, -0.2);
+  const pump = createDigitalPump(kit, chemical === 'acid' ? 'ACID' : 'HYPO');
+  pump.position.set(0.92, 0.71, -0.2);
+  group.add(pump);
+  const oy = 0.04 + 0.12 + 0.18;
+  const oz = tankZ + 0.65 / 2 + 0.38;
+  t.rod(group, pvc, [0.4, oy, oz], [0.82, oy, oz], 0.015, 10);
+  t.rod(group, pvc, [0.82, oy, oz], [0.82, 0.78, -0.12], 0.006, 6);
+  // The safety gear: the eyewash station on the wall, the visor and
+  // gauntlets, the never-mix notice.
+  const gear = new Group();
+  gear.position.set(-0.95, 0, -0.55);
+  group.add(gear);
+  t.box(gear, t.paint('#2f8f4e', 0.5), 0.26, 0.36, 0.08, 0, 1.35, 0);
+  for (const x of [-0.06, 0.06]) {
+    t.cyl(gear, t.paint('#f2f2ee', 0.4), 0.035, 0.2, x, 1.33, 0.06, 'y', 16);
+    t.cyl(gear, t.paint('#2f8f4e', 0.5), 0.02, 0.04, x, 1.45, 0.06, 'y', 12);
+  }
+  f.label(gear, 'EYE WASH', 0, 1.55, 0.045, 0.03, '#ffffff', '#2f8f4e');
+  t.cyl(gear, galv, 0.008, 0.06, -0.08, 0.95, 0.03, 'z', 6);
+  t.box(
+    gear,
+    translucent(kit, '#cfe7ef', 0.5),
+    0.2,
+    0.22,
+    0.01,
+    -0.08,
+    0.84,
+    0.065,
+  );
+  t.box(gear, t.paint('#2b2b2b', 0.6), 0.2, 0.03, 0.02, -0.08, 0.95, 0.065);
+  t.cyl(gear, galv, 0.008, 0.06, 0.1, 0.95, 0.03, 'z', 6);
+  for (const x of [0.07, 0.13])
+    t.box(gear, t.paint('#3a7d3a', 0.7), 0.05, 0.3, 0.03, x, 0.8, 0.06);
+  f.label(
+    group,
+    'NEVER MIX ACID AND HYPOCHLORITE',
+    -0.95,
+    1.7,
+    -0.545,
+    0.022,
+    '#1b1b1b',
+    '#e5c43a',
+  );
+
+  // A sim: it doses down; at low the inlet opens and it fills; at high it shuts.
+  const fillLamp = pilotLight(kit, {
+    colour: 'amber',
+    legend: 'FILLING',
+    drive: fill,
+  });
+  fillLamp.object.position.set(ix + 0.1, 1.4, iz + 0.05);
+  fillLamp.object.scale.setScalar(0.6);
+  group.add(fillLamp.object);
+  parts.add(fillLamp);
+  return {
+    object: group,
+    parts,
+    level,
+    update(delta: number) {
+      if (!shared) store.step(delta);
+      parts.update(delta);
+      tank.setLevel(level.value);
+      pointer.rotation.y = fill.value ? Math.PI / 2 : 0;
+      trend.sample(store.state.value.tanks[index].litres, delta);
+    },
+    status: () =>
+      describeTank(
+        `${chemical === 'acid' ? 'Hydrochloric acid' : 'Sodium hypochlorite'} day tank`,
+        level.value,
+        trend.lpm(),
+      ),
+  };
+}
+
+// ---- The pipe samples ---------------------------------------------------
+
+/**
+ * The chemical lines, a sample of each on a stand, cut back so their
+ * make-up shows:
+ *
+ * - double-contained ABS: a carrier pipe in a containment pipe on
+ *   spacers, its leak detection port at the low point with its sensor;
+ *   for every fill line and transfer main through the building;
+ * - solvent-welded ABS chemical pipe, rigid runs inside a room, its
+ *   fittings and ident bands;
+ * - polyethylene dosing tube, clipped in square runs, pump to injection.
+ */
+export function createChemicalPipeSamples(kit: PanelKit) {
+  const group = new Group();
+  const t = plantTools(kit);
+  const f = tools(kit);
+  const galv = t.paint('#a9afaf', 0.38, 0.75);
+  const abs = t.paint('#4b4f53', 0.5);
+  const clear = translucent(kit, '#cfd6d8', 0.35);
+  // The stand: two uprights and three arms.
+  for (const x of [-0.9, 0.9])
+    t.box(group, galv, 0.05, 1.5, 0.05, x, 0.75, -0.15);
+  for (const y of [0.5, 0.95, 1.4])
+    t.box(group, galv, 1.9, 0.04, 0.04, 0, y, -0.15);
+  // Double-contained: the outer clear here, cut away, so the carrier and
+  // its spacers show; its detection port and sensor at the end.
+  const y1 = 1.4 + 0.09;
+  const outer = new Mesh(
+    new CylinderGeometry(0.055, 0.055, 1.2, 28, 1, true),
+    clear,
+  );
+  outer.rotation.z = Math.PI / 2;
+  outer.position.set(-0.2, y1, -0.1);
+  group.add(outer);
+  t.cyl(group, abs, 0.057, 0.4, 0.6, y1, -0.1, 'x', 28);
+  t.cyl(group, t.paint('#3b3e41', 0.5), 0.03, 1.7, 0, y1, -0.1, 'x', 20);
+  for (const x of [-0.6, -0.2, 0.2])
+    t.cyl(group, t.paint('#e5c43a', 0.5), 0.053, 0.02, x, y1, -0.1, 'x', 16);
+  t.cyl(group, abs, 0.018, 0.12, 0.6, y1 - 0.1, -0.1, 'y', 10);
+  t.box(group, t.paint('#2f63a3', 0.5), 0.05, 0.06, 0.05, 0.6, y1 - 0.19, -0.1);
+  f.label(
+    group,
+    'LEAK SENSOR',
+    0.6,
+    y1 - 0.26,
+    -0.07,
+    0.018,
+    '#ffffff',
+    '#2f63a3',
+  );
+  f.label(
+    group,
+    'DOUBLE-CONTAINED ABS · DN25 IN DN63 · FILL LINES AND TRANSFER MAINS',
+    0,
+    y1 + 0.1,
+    -0.08,
+    0.022,
+    '#1b1b1b',
+    '#f4f3ee',
+  );
+  // Solvent-welded ABS: a run with a tee, an elbow and a union, its bands.
+  const y2 = 0.95 + 0.06;
+  t.rod(group, abs, [-0.8, y2, -0.1], [0.5, y2, -0.1], 0.025, 16);
+  t.box(group, abs, 0.08, 0.08, 0.08, -0.2, y2, -0.1);
+  t.rod(group, abs, [-0.2, y2, -0.1], [-0.2, y2 + 0.2, -0.1], 0.025, 16);
+  t.cyl(group, abs, 0.04, 0.06, 0.2, y2, -0.1, 'x', 8);
+  t.rod(group, abs, [0.5, y2, -0.1], [0.5, y2 + 0.25, -0.1], 0.025, 16);
+  for (const [x, c] of [
+    [-0.6, BAND.acid],
+    [0.0, BAND.hypochlorite],
+  ] as const)
+    t.cyl(group, t.paint(c, 0.5), 0.027, 0.06, x, y2, -0.1, 'x', 16);
+  f.label(
+    group,
+    'ABS CHEMICAL PIPE, SOLVENT-WELDED · DN25',
+    0,
+    y2 + 0.32,
+    -0.08,
+    0.022,
+    '#1b1b1b',
+    '#f4f3ee',
+  );
+  f.label(
+    group,
+    'HCl 10% →',
+    -0.6,
+    y2 - 0.06,
+    -0.07,
+    0.016,
+    '#ffffff',
+    BAND.acid,
+  );
+  f.label(
+    group,
+    'NaOCl 14% →',
+    0.0,
+    y2 - 0.06,
+    -0.07,
+    0.016,
+    '#1b1b1b',
+    BAND.hypochlorite,
+  );
+  // PE dosing tube: 6 × 4 mm, clipped in square runs on a board.
+  const y3 = 0.5 + 0.08;
+  t.box(group, t.paint('#d5d1c4', 0.7), 1.6, 0.25, 0.02, 0, y3 + 0.02, -0.12);
+  const tube = t.paint('#e8e5da', 0.4);
+  const run: [number, number][] = [
+    [-0.7, 0.08],
+    [-0.2, 0.08],
+    [-0.2, -0.05],
+    [0.4, -0.05],
+    [0.4, 0.08],
+    [0.7, 0.08],
+  ];
+  for (let i = 0; i < run.length - 1; i++)
+    t.rod(
+      group,
+      tube,
+      [run[i][0], y3 + run[i][1], -0.1],
+      [run[i + 1][0], y3 + run[i + 1][1], -0.1],
+      0.004,
+      6,
+    );
+  for (const [x, dy] of [
+    [-0.5, 0.08],
+    [0.1, -0.05],
+    [0.55, 0.08],
+  ] as const)
+    t.box(group, t.paint('#2b2b2b', 0.6), 0.02, 0.025, 0.012, x, y3 + dy, -0.1);
+  f.label(
+    group,
+    'PE DOSING TUBE 6 × 4 mm · PUMP TO INJECTION',
+    0,
+    y3 - 0.13,
+    -0.1,
+    0.02,
+    '#1b1b1b',
+    '#f4f3ee',
+  );
+  return group;
+}
+
+// ---- The panels ---------------------------------------------------------
+
+/**
+ * The chemical store's handling panel, Penfold Controls': a wall cabinet
+ * with each bulk tank's contents on a moving-coil meter in percent, the
+ * store's annunciator (high level, high-high and overfill valve shut, bund
+ * leak, pipe leak, transfer pump trip, gas detected, delivery in
+ * progress), ACCEPT, RESET and LAMP TEST, and a TEST key that raises each
+ * alarm in turn, for trying it. Local: nothing here is worked from the
+ * control room.
+ */
+export function createStoreHandlingPanel(kit: PanelKit, chemical: Chemical) {
+  const group = new Group();
+  const t = plantTools(kit);
+  const f = tools(kit);
+  const parts = createPartSet();
+  const W = 0.8;
+  const H = 1.0;
+  t.box(group, t.paint('#d9d4c4', 0.55), W, H, 0.22, 0, 0, 0.11);
+  t.box(group, t.paint('#cfcabb', 0.55), W - 0.04, H - 0.04, 0.01, 0, 0, 0.225);
+  f.label(
+    group,
+    `${chemical === 'acid' ? 'ACID' : 'HYPOCHLORITE'} STORE · CHEMICAL HANDLING`,
+    0,
+    H / 2 - 0.06,
+    0.232,
+    0.026,
+    '#1b1b1b',
+    '#f4f3ee',
+  );
+  const z = 0.232;
+  const tanks = chemical === 'acid' ? 1 : 3;
+  const levels = Array.from({ length: tanks }, (_, i) => 0.35 + i * 0.18);
+  const meters = levels.map((_, i) => {
+    const m = createPanelMeter(kit, '%', {
+      width: 0.1,
+      scaleMax: 100,
+      redFrom: 0.9,
+    });
+    m.group.position.set((i - (tanks - 1) / 2) * 0.16, 0.3, z);
+    m.group.traverse((o) => (o.userData.live = true));
+    group.add(m.group);
+    f.label(
+      group,
+      `${chemical === 'acid' ? 'AS' : 'HS'}-T${i + 1}`,
+      (i - (tanks - 1) / 2) * 0.16,
+      0.22,
+      z,
+      0.018,
+      '#1b1b1b',
+      '#f4f3ee',
+    );
+    return m;
+  });
+  const labels = [
+    'HIGH LEVEL',
+    'HIGH-HIGH OVERFILL SHUT',
+    'BUND LEAK',
+    'PIPE LEAK',
+    'PUMP TRIP',
+    'GAS DETECTED',
+    'DELIVERY ON',
+    'SUPPLY FAIL',
+  ];
+  const panel = createAnnunciatorPanel(kit, labels, { columns: 4, cell: 0.13 });
+  panel.group.position.set(0, 0.0, z);
+  panel.group.traverse((o) => (o.userData.live = true));
+  group.add(panel.group);
+  const logic = createAnnunciator(labels.length, { manualReset: true });
+  const alarms = labels.map(() => false);
+  let testing = -1;
+  const button = (
+    legend: string,
+    colour: 'black' | 'white' | 'red',
+    x: number,
+    action: () => void,
+  ) => {
+    const p = pushButton(kit, { colour, legend, action });
+    p.object.position.set(x, -0.25, z);
+    p.object.traverse((o) => (o.userData.live = true));
+    group.add(p.object);
+    parts.add(p);
+  };
+  button('ACCEPT', 'black', -0.24, () => logic.acknowledge());
+  button('RESET', 'black', -0.08, () => logic.reset());
+  let lampTest = 0;
+  button('LAMP TEST', 'white', 0.08, () => (lampTest = 2));
+  button('TEST NEXT', 'red', 0.24, () => {
+    if (testing >= 0) alarms[testing] = false;
+    testing = (testing + 1) % (labels.length + 1);
+    if (testing === labels.length) testing = -1;
+    else alarms[testing] = true;
+  });
+  panelMakerMark(kit, group, {
+    width: W,
+    height: H,
+    z: z,
+    corner: 'bottom-right',
+  });
+  let time = 0;
+  return {
+    object: group,
+    parts,
+    update(delta: number) {
+      time += delta;
+      parts.update(delta);
+      logic.sense(alarms);
+      lampTest = Math.max(0, lampTest - delta);
+      panel.set(lampTest > 0 ? labels.map(() => true) : logic.lit(time));
+      meters.forEach((m, i) => {
+        m.set(levels[i]);
+        m.update(delta);
+      });
+    },
+    status: () =>
+      `alarms: ${labels.filter((_, i) => alarms[i]).join(', ') || 'none'}`,
+  };
+}
+
+/**
+ * A plant room's day tank panel, Penfold's: each day tank's level on a
+ * meter, its FILLING and LOW lamps, its inlet valve's OPEN and SHUT, the
+ * CIRCULATION PROVEN lamp that the dosing waits on, and a key to inhibit
+ * the dosing for maintenance.
+ */
+export function createDayTankPanel(kit: PanelKit) {
+  const group = new Group();
+  const t = plantTools(kit);
+  const f = tools(kit);
+  const parts = createPartSet();
+  const W = 0.6;
+  const H = 0.7;
+  t.box(group, t.paint('#d9d4c4', 0.55), W, H, 0.18, 0, 0, 0.09);
+  const z = 0.182;
+  f.label(
+    group,
+    'DAY TANKS · DOSING',
+    0,
+    H / 2 - 0.05,
+    z,
+    0.024,
+    '#1b1b1b',
+    '#f4f3ee',
+  );
+  const level = [signal(0.6), signal(0.3)];
+  const filling = [signal(false), signal(true)];
+  const proven = signal(true);
+  const inhibit = signal(false);
+  const meters = ['HYPO', 'ACID'].map((name, i) => {
+    const x = i ? 0.14 : -0.14;
+    const m = createPanelMeter(kit, '%', { width: 0.09, scaleMax: 100 });
+    m.group.position.set(x, 0.17, z);
+    m.group.traverse((o) => (o.userData.live = true));
+    group.add(m.group);
+    f.label(group, `${name} DAY TANK`, x, 0.1, z, 0.016, '#1b1b1b', '#f4f3ee');
+    const lamp = (
+      legend: string,
+      colour: 'amber' | 'red' | 'green' | 'white',
+      dx: number,
+      dy: number,
+      drive: { value: boolean },
+    ) => {
+      const l = pilotLight(kit, { colour, legend, drive: drive as never });
+      l.object.position.set(x + dx, dy, z);
+      l.object.scale.setScalar(0.6);
+      group.add(l.object);
+      parts.add(l);
+    };
+    lamp('FILLING', 'amber', -0.05, 0.02, filling[i]);
+    lamp(
+      'LOW',
+      'red',
+      0.05,
+      0.02,
+      computed(() => level[i].value < 0.2),
+    );
+    lamp('XV OPEN', 'green', -0.05, -0.07, filling[i]);
+    lamp(
+      'XV SHUT',
+      'white',
+      0.05,
+      -0.07,
+      computed(() => !filling[i].value),
+    );
+    return m;
+  });
+  const circ = pilotLight(kit, {
+    colour: 'green',
+    legend: 'CIRCULATION PROVEN',
+    drive: proven,
+  });
+  circ.object.position.set(-0.12, -0.2, z);
+  circ.object.scale.setScalar(0.7);
+  group.add(circ.object);
+  parts.add(circ);
+  const key = keySwitch(kit, {
+    legend: 'DOSING INHIBIT',
+    bound: {
+      get value() {
+        return inhibit.value;
+      },
+      set: (v: boolean) => (inhibit.value = v),
+    },
+  });
+  key.object.position.set(0.12, -0.2, z);
+  key.object.scale.setScalar(0.8);
+  group.add(key.object);
+  parts.add(key);
+  panelMakerMark(kit, group, {
+    width: W,
+    height: H,
+    z,
+    corner: 'bottom-right',
+  });
+  return {
+    object: group,
+    parts,
+    update(delta: number) {
+      parts.update(delta);
+      for (const i of [0, 1]) {
+        const dosing = proven.value && !inhibit.value;
+        if (filling[i].value) {
+          level[i].value = Math.min(1, level[i].value + delta * 0.03);
+          if (level[i].value >= 0.9) filling[i].value = false;
+        } else if (dosing) {
+          level[i].value = Math.max(
+            0,
+            level[i].value - delta * (i ? 0.006 : 0.01),
+          );
+          if (level[i].value <= 0.2) filling[i].value = true;
+        }
+        meters[i].set(level[i].value);
+        meters[i].update(delta);
+      }
+    },
+    status: () =>
+      `hypo ${Math.round(level[0].value * 100)}%, acid ${Math.round(level[1].value * 100)}%${inhibit.value ? '; dosing inhibited' : ''}`,
+  };
+}
+
+// ---- The transfer selector ----------------------------------------------
+
+/** The selector's six outlets: four plant rooms now, two blanked for the pools to come. */
+export const SELECTOR_OUTLETS: readonly (string | null)[] = [
+  'LOUNGE PL1',
+  'OLYMPIC PL2',
+  'JACUZZI PL3',
+  'FOOTBATH PL4',
+  null,
+  null,
+];
+
+/**
+ * The transfer selector (the owner, 2026-10-26: one transfer set per
+ * chemical, sent to each plant room's day tank in turn; six ways, two
+ * blanked for the pools to come): a PVC-U header on a galvanised frame
+ * over its drip tray, fed at its left end from the transfer pumps; six
+ * outlets up off it, each a manual isolating valve and an actuated ball
+ * valve (grey actuator, yellow position dome, its pointer across the pipe
+ * while shut) and its plant room's plate; a spare one a blind flange,
+ * bolted, tagged SPARE. Its station: HAND · AUTO, and a lit button for
+ * each outlet, lit while that outlet is served; in HAND, pressing one
+ * sends the chemical there. Outlet `i` serves the trial's tank `i`.
+ */
+export function createTransferSelector(
+  kit: PanelKit,
+  chemical: Chemical,
+  store: TransferStore,
+  outlets: readonly (string | null)[] = SELECTOR_OUTLETS,
+) {
+  const group = new Group();
+  const t = plantTools(kit);
+  const f = tools(kit);
+  const parts = createPartSet();
+  const galv = t.paint('#a9afaf', 0.38, 0.75);
+  const pvc = t.paint('#5a5f63', 0.55);
+  const dark = t.paint('#2a2f31', 0.6);
+  const red = t.paint('#b8261f', 0.5);
+  const band = t.paint(BAND[chemical], 0.5);
+  const pitch = 0.32;
+  const n = outlets.length;
+  const x0 = -((n - 1) * pitch) / 2;
+  const hy = 0.75;
+  // The frame and tray.
+  const w = n * pitch + 0.3;
+  t.box(group, t.paint('#202223', 0.8), w, 0.05, 0.6, 0, 0.025, 0);
+  for (const x of [-w / 2 + 0.08, w / 2 - 0.08]) {
+    t.box(group, galv, 0.04, 1.5, 0.04, x, 0.75, -0.15);
+    t.box(group, galv, 0.04, 0.04, 0.5, x, 0.05, -0.05);
+  }
+  t.box(group, galv, w - 0.1, 0.04, 0.04, 0, hy - 0.06, -0.15);
+  t.box(group, galv, w - 0.1, 0.04, 0.04, 0, 1.45, -0.15);
+  // The header, its feed at the left end, its banding and blanked far end.
+  t.rod(group, pvc, [-w / 2 - 0.2, hy, 0], [w / 2 - 0.15, hy, 0], 0.032, 14);
+  t.cyl(group, galv, 0.06, 0.02, w / 2 - 0.15, hy, 0, 'x', 20);
+  for (const x of [-w / 2 + 0.05, 0])
+    t.cyl(group, band, 0.035, 0.06, x, hy, 0, 'x', 14);
+  f.label(
+    group,
+    `${PRODUCT[chemical]} · TRANSFER SELECTOR`,
+    0,
+    hy - 0.15,
+    0.04,
+    0.026,
+    '#ffffff',
+    BAND[chemical],
+  );
+  const pointers: Mesh[] = [];
+  outlets.forEach((name, i) => {
+    const x = x0 + i * pitch;
+    t.rod(group, pvc, [x, hy, 0], [x, hy + 0.12, 0], 0.022, 12);
+    if (!name) {
+      // A spare: its tee blanked with a bolted blind flange, tagged.
+      t.cyl(group, galv, 0.055, 0.025, x, hy + 0.13, 0, 'y', 20);
+      for (let k = 0; k < 4; k++) {
+        const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
+        t.cyl(
+          group,
+          dark,
+          0.007,
+          0.04,
+          x + Math.cos(a) * 0.04,
+          hy + 0.13,
+          Math.sin(a) * 0.04,
+          'y',
+          6,
+        );
+      }
+      f.label(
+        group,
+        `OUTLET ${i + 1} · SPARE`,
+        x,
+        hy + 0.25,
+        0.01,
+        0.02,
+        '#1b1b1b',
+        '#e5c43a',
+      );
+      return;
+    }
+    // The manual isolating valve, its red lever along the pipe while open.
+    t.box(group, pvc, 0.07, 0.07, 0.07, x, hy + 0.17, 0);
+    t.box(group, red, 0.015, 0.14, 0.012, x, hy + 0.17, 0.05);
+    // The actuated valve: its body, its actuator, its dome and pointer.
+    t.rod(group, pvc, [x, hy + 0.2, 0], [x, hy + 0.5, 0], 0.022, 12);
+    t.box(group, pvc, 0.075, 0.075, 0.075, x, hy + 0.36, 0);
+    t.box(group, t.paint('#7b8285', 0.5), 0.1, 0.09, 0.09, x, hy + 0.36, 0.08);
+    t.cyl(
+      group,
+      t.paint('#e5c43a', 0.4),
+      0.025,
+      0.025,
+      x,
+      hy + 0.36,
+      0.137,
+      'z',
+      12,
+    );
+    const p = t.box(group, dark, 0.008, 0.045, 0.006, x, hy + 0.36, 0.152);
+    p.userData.live = true;
+    pointers.push(p);
+    // Up to its outlet, banded, its plate.
+    t.rod(group, pvc, [x, hy + 0.5, 0], [x, 1.75, 0], 0.022, 12);
+    t.cyl(group, band, 0.025, 0.05, x, 1.3, 0, 'y', 12);
+    f.label(
+      group,
+      `${i + 1} · ${name}`,
+      x,
+      hy + 0.58,
+      0.03,
+      0.019,
+      '#ffffff',
+      '#2a2f31',
+    );
+  });
+  // The station on the right upright.
+  const box = new Group();
+  box.position.set(w / 2 + 0.25, 1.25, 0);
+  group.add(box);
+  t.box(group, galv, 0.04, 1.25, 0.04, w / 2 + 0.25, 0.625, -0.08);
+  t.box(box, t.paint('#d9d4c4', 0.55), 0.3, 0.5, 0.1, 0, 0, 0);
+  f.label(box, 'DESTINATION', 0, 0.22, 0.051, 0.018, '#1b1b1b');
+  const mode = selector(kit, {
+    positions: 2,
+    legend: 'HAND · AUTO',
+    bound: {
+      get value() {
+        return store.state.value.mode === 'auto' ? 1 : 0;
+      },
+      set: (v: number) => store.act({ act: 'mode', to: v ? 'auto' : 'hand' }),
+    },
+  });
+  mode.object.position.set(0, 0.12, 0.051);
+  mode.object.scale.setScalar(0.75);
+  box.add(mode.object);
+  parts.add(mode);
+  outlets.forEach((name, i) => {
+    const b = pushButton(kit, {
+      colour: name ? 'white' : 'black',
+      head: 'illuminated',
+      legend: name ? `${i + 1}` : `${i + 1} SPARE`,
+      lamp: computed(() => !!name && store.state.value.serving === i),
+      action: () => {
+        if (name) store.act({ act: 'pick', tank: i });
+      },
+    });
+    b.object.position.set(
+      -0.08 + (i % 3) * 0.08,
+      -0.03 - Math.floor(i / 3) * 0.12,
+      0.051,
+    );
+    b.object.scale.setScalar(0.6);
+    box.add(b.object);
+    parts.add(b);
+  });
+  panelMakerMark(kit, box, {
+    width: 0.3,
+    height: 0.5,
+    z: 0.05,
+    corner: 'bottom-right',
+  });
+  return {
+    object: group,
+    parts,
+    /** Outlet `i`'s top, in the selector's frame, to pipe on from. */
+    outletTop: (i: number) => [x0 + i * pitch, 1.75, 0] as const,
+    /** Where its header takes its feed. */
+    inlet: [-w / 2 - 0.2, hy, 0] as const,
+    update(delta: number) {
+      parts.update(delta);
+      let k = 0;
+      outlets.forEach((name, i) => {
+        if (!name) return;
+        pointers[k++].rotation.z = valveOpen(store.state.value, i)
+          ? 0
+          : Math.PI / 2;
+      });
+    },
+    status: () => {
+      const s = store.state.value;
+      const at =
+        s.serving === null
+          ? 'none'
+          : `${s.serving + 1} (${outlets[s.serving]})`;
+      return `${s.mode === 'auto' ? 'AUTO' : 'HAND'}; serving outlet ${at}`;
+    },
+  };
+}
+
+// ---- The transfer trial -------------------------------------------------
+
+/**
+ * The transfer trial (the owner, 2026-10-26: pipe an idealised source into
+ * the tanks and see them fill): an endless source standing in for the bulk
+ * tanks, the transfer pump skid, the six-way transfer selector, and the
+ * four plant rooms' day tanks off its live outlets, all on one tested
+ * state (`chemical-transfer-demo.ts`). The first tank starts low, so the
+ * selector opens its outlet and the duty pump fills it; as the others
+ * dose down and call, each is served in turn. Run ten times fast.
+ */
+export function createTransferTrial(kit: PanelKit, chemical: Chemical) {
+  const group = new Group();
+  const t = plantTools(kit);
+  const f = tools(kit);
+  const store = createTransferStore();
+  store.state.value = {
+    ...store.state.value,
+    tanks: store.state.value.tanks.map((tk, i) =>
+      i ? tk : { ...tk, litres: 50 },
+    ),
+  };
+  const pvc = t.paint('#5a5f63', 0.55);
+  // The source: a plain blue block, plainly not real plant.
+  const sx = -5.2;
+  t.box(group, t.paint('#3567a8', 0.5), 0.8, 1.2, 0.8, sx, 0.6, 0.2);
+  f.label(group, 'IDEAL SOURCE', sx, 1.0, 0.61, 0.05, '#ffffff', '#3567a8');
+  f.label(
+    group,
+    `${PRODUCT[chemical]} · UNLIMITED`,
+    sx,
+    0.88,
+    0.61,
+    0.025,
+    '#ffffff',
+    '#3567a8',
+  );
+  f.label(group, 'TRIAL ×10', sx, 1.32, 0.2, 0.06, '#1b1b1b', '#e5c43a');
+  const kx = -3.3;
+  t.rod(group, pvc, [sx + 0.4, 0.31, 0.32], [kx - 0.7, 0.31, 0.32], 0.028, 12);
+  const skid = createTransferPumpSkid(kit, chemical, store);
+  skid.object.position.x = kx;
+  group.add(skid.object);
+  const sel = createTransferSelector(kit, chemical, store);
+  const mx = -0.6;
+  const mz = -0.3;
+  sel.object.position.set(mx, 0, mz);
+  group.add(sel.object);
+  // The skid's main into the selector's header.
+  const [ix, iy, iz] = sel.inlet;
+  const main: [number, number, number][] = [
+    [kx + 0.7, 0.88, -0.35],
+    [kx + 1.2, 0.88, -0.35],
+    [kx + 1.2, iy, mz + iz],
+    [mx + ix, iy, mz + iz],
+  ];
+  for (let i = 0; i < main.length - 1; i++)
+    t.rod(group, pvc, main[i], main[i + 1], 0.022, 12);
+  // The four day tanks, each piped from its outlet over the top.
+  const tanks = [0, 1, 2, 3].map((i) => {
+    const tx = 2.2 + i * 2.4;
+    const tank = createDayTankStation(kit, chemical, store, i);
+    tank.object.position.set(tx, 0, 0);
+    group.add(tank.object);
+    const [ox, oy, oz] = sel.outletTop(i);
+    const h = 2.0 + i * 0.09;
+    const run: [number, number, number][] = [
+      [mx + ox, oy, mz + oz],
+      [mx + ox, h, mz + oz],
+      [mx + ox, h, -0.9],
+      [tx - 0.05, h, -0.9],
+      [tx - 0.05, 1.65, -0.9],
+      [tx - 0.05, 1.65, -0.6],
+    ];
+    for (let k = 0; k < run.length - 1; k++)
+      t.rod(group, pvc, run[k], run[k + 1], 0.02, 10);
+    f.label(
+      group,
+      `${i + 1} · ${SELECTOR_OUTLETS[i]}`,
+      tx,
+      2.25,
+      0,
+      0.05,
+      '#ffffff',
+      '#2a2f31',
+    );
+    return tank;
+  });
+  const parts = createPartSet();
+  for (const p of [skid.parts, sel.parts, ...tanks.map((k) => k.parts)])
+    for (const [o, use] of p.uses) parts.uses.set(o, use);
+  // Its footprint runs from the source's left (−5.6) to the last bund's
+  // right (10.4): centred on its middle, as an exhibit is.
+  const root = new Group();
+  group.position.x = -2.4;
+  root.add(group);
+  return {
+    object: root,
+    parts,
+    update(delta: number) {
+      store.step(delta * 10);
+      skid.update(delta);
+      sel.update(delta);
+      for (const k of tanks) k.update(delta);
+    },
+    status: () => `${skid.status()}; selector ${sel.status()}`,
+  };
+}

@@ -111,7 +111,8 @@ export type ExhibitRoomId =
   | 'dev40'
   | 'dev41'
   | 'dev42'
-  | 'dev43';
+  | 'dev43'
+  | 'dev44';
 
 /** A room's own finish (`FINISH` in its module). */
 export interface RoomFinish {
@@ -181,6 +182,7 @@ const EXHIBITS: Record<
   dev41: () => import('./plant/water-bench'),
   dev42: () => import('./plant/booster-rig'),
   dev43: () => import('./plant/loading-gallery'),
+  dev44: () => import('./plant/chemical-handling'),
 };
 
 /**
@@ -508,6 +510,53 @@ export function startEquipmentRoom(
         minZ: s.minZ * m,
         maxZ: s.maxZ * m,
       }));
+    if (id === 'dev44') {
+      // The delivery exhibits contain walkable aisles. Their catalogue
+      // rectangles reserve display space, but only the actual vessels and
+      // cabinets block a person. Include every smaller exhibit too.
+      const boxAt = (
+        i: number,
+        x: number,
+        z: number,
+        halfW: number,
+        halfD: number,
+      ): Footprint => {
+        const p = layout.places[i];
+        const c = Math.cos(p.yaw),
+          s = Math.sin(p.yaw);
+        const corners = [
+          [x - halfW, z - halfD],
+          [x - halfW, z + halfD],
+          [x + halfW, z - halfD],
+          [x + halfW, z + halfD],
+        ].map(([lx, lz]) => ({
+          x: p.x + lx * c + lz * s,
+          z: p.z - lx * s + lz * c,
+        }));
+        return {
+          minX: Math.min(...corners.map((q) => q.x)) * m,
+          maxX: Math.max(...corners.map((q) => q.x)) * m,
+          minZ: Math.min(...corners.map((q) => q.z)) * m,
+          maxZ: Math.max(...corners.map((q) => q.z)) * m,
+        };
+      };
+      solids = exhibits.flatMap((e, i) => {
+        if (i === 0 || i === 1) {
+          const count = i === 0 ? 3 : 1;
+          return [
+            ...Array.from({ length: count }, (_, tank) =>
+              boxAt(i, (tank - (count - 1) / 2) * 2.75, -1.9, 1.25, 0.7),
+            ),
+            boxAt(i, 0, 1.18, 0.42, 0.18),
+            boxAt(i, 2, 2.4, 0.9, 0.12),
+            boxAt(i, -2.2, 3.45, 0.43, 0.7),
+          ];
+        }
+        return e.size.mount === 'floor'
+          ? [boxAt(i, 0, 0, e.size.w / 2, e.size.d / 2)]
+          : [];
+      });
+    }
     flightFloor =
       Math.min(0, new Box3().setFromObject(room).min.y + 0.1 * m) + 0.05 * m;
     const params = new URLSearchParams(location.search);
