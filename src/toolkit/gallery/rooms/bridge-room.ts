@@ -215,11 +215,15 @@ function installConsoles(kit: PanelKit): Part[] {
  * main corridor, with its working consoles; dark as the walker comes in
  * from the corridor, its lights then coming up (`bridge-lights-up.ts`).
  */
+/** How long after coming in, its MAIN LIGHTS found off, the bridge puts them on: ms. */
+export const AUTO_LIGHTS_ON_MS = 3000;
+
 export function startTheBridge(canvas: HTMLCanvasElement) {
   const store = typeof window === 'undefined' ? null : roomWorld();
   const world = () => store?.world.value ?? null;
   // Its lights coming up as the walker comes in, while MAIN LIGHTS is on
   // and its way live (the owner, 2026-10-27).
+  let lightsOnTimer = 0;
   const lightsUp = createBridgeLightsUp(() => {
     const w = world();
     return w ? bridgeMainLit(w) : true;
@@ -245,6 +249,20 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   return Object.assign(dispose, handle, {
     enter: (from: string | null) => {
       lightsUp.enter(from);
+      // Found with its MAIN LIGHTS off, the bridge puts them on itself a
+      // few seconds after the walker comes in (the owner, 2026-10-27), as
+      // an occupancy sensor would: the switch is thrown in the world.
+      window.clearTimeout(lightsOnTimer);
+      const w = world();
+      if (w && !w.lighting.switches.bridge.main)
+        lightsOnTimer = window.setTimeout(() => {
+          const now = world();
+          if (now && !now.lighting.switches.bridge.main)
+            store?.dispatch({
+              type: 'lighting/board',
+              action: { act: 'switch', room: 'bridge', gang: 'main', on: true },
+            });
+        }, AUTO_LIGHTS_ON_MS);
       chatter.setActive(true);
       alarmBleep.setActive(true);
       // From the corridor it rises with the lights; arriving any other
@@ -257,6 +275,7 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
       );
     },
     suspend: () => {
+      window.clearTimeout(lightsOnTimer);
       lightsUp.leave();
       chatter.setActive(false);
       alarmBleep.setActive(false);

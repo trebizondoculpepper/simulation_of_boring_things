@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Entering the bridge with its MAIN LIGHTS off, they switch on by themselves after 3 s, as with an occupancy sensor (the owner, 2026-10-27).
 - `?room=main_corridor&from=<room>` puts the walker outside that room's doors, facing into the corridor, for every door off the ring; `from=bridge` at the control room's; the wet hall's two pairs told apart by `&door=east` or `&door=west` (the owner, 2026-10-27).
 - The bridge's entrance in three steps (the owner, 2026-10-27): walking in from the corridor, the displays only, then at 1 s the glow under the consoles coming up quickly, then from 3 s the main lights as before (`ENTRANCE_GLOW`, `entranceGlow`, `LIGHTS_UP.dark` now 3.0 s; tested); once the main lights are full the glow fades out again unless EMERGENCY LIGHTS is on.
 - The bridge's EMERGENCY LIGHTS are now only a very dim glow from under the consoles (the owner's decision, 2026-10-27): hidden strips at the feet of the operator's desk, the six stations and the four rear stations, their faint cool light spilling half a metre across the floor, and a little fill, enough to just about get around (`underConsoleGlow`, tested); the luminaire over the doors, the aft walls' fittings and the step and ramp strips are gone. MAIN LIGHTS stays the overhead and cove lighting; the glow still comes on from the central battery if the lighting way fails.
