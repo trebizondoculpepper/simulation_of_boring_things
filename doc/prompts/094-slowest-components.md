@@ -1,6 +1,6 @@
 # 094: Find the slowest components, then fix or flag them
 
-Status: to do (written 2026-10-27 from the owner's request).
+Status: stages 1–3 done 2026-10-27 ([report](../reports/component-cost-2026-10-27.md)): the benchmark built and run in the browser, every component ranked, the chart recorders and the other named offenders fixed (before and after numbers in the report) or flagged in `TODO.md`. Stage 4's budgets are in the benchmark; its `CLAUDE.md` rule is proposed in the report, not applied, for the owner. Written 2026-10-27 from the owner's request.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first, and the research this builds on, [display-only updates](../research/display-only-updates.md). Markdown is one paragraph per line.
 
