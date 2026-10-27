@@ -53,4 +53,29 @@ describe('the CONTROL ROOM MODE knob, built', () => {
     expect(knob.position.value).toBe(1);
     knob.dispose();
   });
+
+  it('will not turn while the control room’s doors stand open', () => {
+    const world = signal<World>(newWorld());
+    const doorsOpen = signal(true);
+    const knob = createControlRoomModeKnob(
+      createPanelKit(),
+      {
+        get value() {
+          return modePosition(world.value.controlRoomMode);
+        },
+        set: (position) =>
+          (world.value = applyAction(world.value, modeAction(position))),
+      },
+      doorsOpen,
+    );
+    const [use] = [...knob.uses.values()];
+    use(1);
+    expect(world.value.controlRoomMode).toBe('old');
+    expect(knob.position.value).toBe(0);
+    // Shut, it turns.
+    doorsOpen.value = false;
+    use(1);
+    expect(world.value.controlRoomMode).toBe('new');
+    knob.dispose();
+  });
 });

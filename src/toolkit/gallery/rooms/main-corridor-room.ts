@@ -1,3 +1,4 @@
+import { signal } from '@preact/signals-core';
 import {
   ACESFilmicToneMapping,
   AmbientLight,
@@ -98,14 +99,22 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
   // card reader (`control-room-mode.ts`): where those doors lead.
   const world = roomWorld();
   const mode = world.read((w) => w.controlRoomMode);
-  const controlDoor = doors.find((d) => d.door.to === 'control_room')!.door;
+  const controlDoors = doors.find((d) => d.door.to === 'control_room')!;
+  const controlDoor = controlDoors.door;
+  // Locked out while those doors stand open (the owner, 2026-10-27): it
+  // turns only with them shut, so where they lead never changes in view.
+  const controlDoorsOpen = signal(false);
   const knob = parts.add(
-    createControlRoomModeKnob(kit, {
-      get value() {
-        return modePosition(mode.value);
+    createControlRoomModeKnob(
+      kit,
+      {
+        get value() {
+          return modePosition(mode.value);
+        },
+        set: (position) => world.dispatch(modeAction(position)),
       },
-      set: (position) => world.dispatch(modeAction(position)),
-    }),
+      controlDoorsOpen,
+    ),
   );
   {
     const k = modeKnobPlace(controlDoor);
@@ -416,6 +425,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     // No pair closes on someone near it: told before the leaves move.
     const actor = doorActor(walk, metre, WALKER_RADIUS_METRES);
     ways.forEach((w, i) => w.part.setNearby(near[i].update(actor)));
+    controlDoorsOpen.value = controlDoors.part.open();
     parts.update(delta);
     settleDestinations();
     // Each pair's card readers show green while it stands open, beeping

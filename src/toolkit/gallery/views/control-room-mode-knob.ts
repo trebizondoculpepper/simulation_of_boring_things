@@ -3,7 +3,8 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { kitPaint } from '../../components/core/views/eighties-controls';
 import { createDymoLabel } from '../../components/core/views/hand-labels';
 import { markComponent } from '../../components/core/views/component-identity';
-import { beginPart } from '../../components/core/parts/parts';
+import { beginPart, LOCKED } from '../../components/core/parts/parts';
+import type { ReadonlySignal } from '@preact/signals-core';
 import { createSelector } from '../../components/core/logic/world/components';
 import type { Binding } from '../../components/core/logic/world/components';
 import { createKnob } from '../../components/industrial-control/views/panel-switchgear';
@@ -31,11 +32,14 @@ const DETENT = recording(
  * turns it to its other position, whichever side is clicked. `bound`: its
  * detent in the world, 0 OLD, 1 NEW. Metres, facing +z, its plate's back
  * at z = 0. Marked set decoration for the model (it works only where the
- * doors lead, no plant), though it works.
+ * doors lead, no plant), though it works. `locked`: while true (the
+ * control room's doors stand open, the owner, 2026-10-27), it will not
+ * turn: it rattles against its stop.
  */
 export function createControlRoomModeKnob(
   kit: PanelKit,
   bound: Binding<number>,
+  locked?: ReadonlySignal<boolean>,
 ) {
   const a = beginPart(kit, NAME);
   const { object } = a;
@@ -79,9 +83,9 @@ export function createControlRoomModeKnob(
   const knob = createKnob(kit, { radius: 0.016, style: 'pointer' });
   knob.group.position.z = plateT;
   object.add(knob.group);
-  const selector = createSelector({ positions: 2, bound });
+  const selector = createSelector({ positions: 2, bound, latch: locked });
   knob.set(share(selector.position.peek()));
-  a.voice(selector, { detent: DETENT });
+  a.voice(selector, { detent: DETENT, refused: LOCKED });
   // A click turns it to its other position, from either side.
   a.uses.set(knob.spindle, () =>
     selector.turn(selector.position.peek() ? -1 : 1),

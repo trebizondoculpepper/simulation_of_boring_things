@@ -251,7 +251,7 @@ const KEY_TURN = click({
   repeat: [3, 0.035],
 });
 /** A locked control rattling against its stop. */
-const LOCKED = click({
+export const LOCKED = click({
   band: 900,
   q: 3,
   decay: 0.02,
