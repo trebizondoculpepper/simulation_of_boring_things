@@ -75,6 +75,7 @@ describe('a save', () => {
       fireAlarm: newWorld().fireAlarm,
       washOTron: newWorld().washOTron,
       intake: newWorld().intake,
+      controlRoomMode: 'old',
     });
   });
 
@@ -123,6 +124,23 @@ describe('a save', () => {
     });
     const loaded = deserialiseWorld(old);
     expect(loaded.ok && loaded.world).toEqual(newWorld());
+  });
+
+  it('brings a save from before the CONTROL ROOM MODE knob up with it at OLD', () => {
+    const { controlRoomMode: _none, ...before } = newWorld();
+    const old = JSON.stringify({
+      format: 'pool-plant-save',
+      version: 46,
+      savedAt: 5,
+      world: { ...before, time: 400 },
+    });
+    const loaded = deserialiseWorld(old);
+    expect(loaded.ok && loaded.world.controlRoomMode).toBe('old');
+    expect(loaded.ok && loaded.world.time).toBe(400);
+    expect(MIGRATIONS[46]({ time: 1 })).toEqual({
+      time: 1,
+      controlRoomMode: 'old',
+    });
   });
 
   it('keeps a field only where its type matches', () => {

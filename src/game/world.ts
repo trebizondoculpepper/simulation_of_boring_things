@@ -250,7 +250,15 @@ import type {
 
 import { turnChangeover } from './plant/changeover';
 
-export const WORLD_VERSION = 46;
+export const WORLD_VERSION = 47;
+
+/**
+ * Where the main corridor's control room doors lead (the owner,
+ * 2026-10-27): OLD, the old control room; NEW, the bridge. Set by the
+ * CONTROL ROOM MODE knob on the corridor wall beside the doors, an Easter
+ * egg: left alone, the doors lead to the old control room.
+ */
+export type ControlRoomMode = 'old' | 'new';
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -332,6 +340,8 @@ export interface World {
   washOTron: WashOTron;
   /** The site's intake in the goods yard: the utilities' outside devices and meters (`plant/site-intake.ts`, prompt 083). */
   intake: SiteIntake;
+  /** Where the corridor's control room doors lead: the CONTROL ROOM MODE knob. */
+  controlRoomMode: ControlRoomMode;
 }
 
 export function newWorld(): World {
@@ -369,6 +379,7 @@ export function newWorld(): World {
     fireAlarm: newFireAlarm(),
     washOTron: newWashOTron(),
     intake: newSiteIntake(),
+    controlRoomMode: 'old',
   };
 }
 
@@ -432,7 +443,9 @@ export type WorldAction =
   | { type: 'wash-o-tron'; action: WashAction }
   | { type: 'intake'; action: IntakeAction }
   | { type: 'distribution'; action: DistributionAction }
-  | { type: 'booster/changeover'; action: ChangeoverAction };
+  | { type: 'booster/changeover'; action: ChangeoverAction }
+  /** The CONTROL ROOM MODE knob turned: where the control room doors lead. */
+  | { type: 'control-room/mode'; mode: ControlRoomMode };
 
 /** The jacuzzi's drain valve, open or shut, and with it its pool's drain-down. */
 const jacuzziDrainDown = (world: World, open: boolean): World => ({
@@ -781,6 +794,10 @@ export function applyAction(world: World, action: WorldAction): World {
         ? world
         : { ...world, plant: { ...world.plant, changeover } };
     }
+    case 'control-room/mode':
+      return world.controlRoomMode === action.mode
+        ? world
+        : { ...world, controlRoomMode: action.mode };
     case 'plant/feeder':
       return world.plant.feeders[action.room] === action.on
         ? world

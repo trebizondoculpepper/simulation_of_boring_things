@@ -65,11 +65,10 @@ describe('the main corridor', () => {
         'plant_pool_02',
         'plant_pool_03',
         'plant_pool_04',
-        // The control room is the bridge (mission 095); the old is retired.
-        'bridge',
+        // The control room's doors: the old control room's, or the
+        // bridge's behind the CONTROL ROOM MODE knob (`control-room-mode.ts`).
         ...Object.keys(SHELL_ROOMS).filter(
-          (k) =>
-            k !== 'hypo_store' && k !== 'acid_store' && k !== 'control_room',
+          (k) => k !== 'hypo_store' && k !== 'acid_store',
         ),
       ].sort(),
     );
@@ -97,8 +96,6 @@ const FRONTAGE: Record<string, number> = {
   plant_pool_02: 22,
   plant_pool_03: 8,
   plant_pool_04: 5,
-  // The old control room's frontage, which the bridge's stair hall takes.
-  bridge: 5.9,
 };
 const frontage = (to: string) =>
   FRONTAGE[to] ?? SHELL_ROOMS[to as ShellRoomId].w + 0.4;
@@ -196,7 +193,8 @@ describe('passing between the main corridor and the rooms off it', () => {
   });
 
   it('carries the walker onto the bridge’s floor through its west wall, a storey up, and back', () => {
-    const d = CORRIDOR_DOORS.find((x) => x.to === 'bridge')!;
+    // The control room's doors, with the CONTROL ROOM MODE knob at NEW.
+    const d = CORRIDOR_DOORS.find((x) => x.to === 'control_room')!;
     const way = bridgeDoorway();
     const p = doorPlace(d);
     const there = walkThrough(

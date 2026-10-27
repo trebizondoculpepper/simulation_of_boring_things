@@ -158,6 +158,12 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // its handle at I, mains (`fillDefaults` adds it); the switch room's
   // generator connection point removed.
   45: (world) => world,
+  // 46 → 47: the CONTROL ROOM MODE knob (the owner, 2026-10-27): at OLD,
+  // so the corridor's control room doors lead to the old control room.
+  46: (world) =>
+    typeof world === 'object' && world !== null
+      ? { ...world, controlRoomMode: 'old' }
+      : world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

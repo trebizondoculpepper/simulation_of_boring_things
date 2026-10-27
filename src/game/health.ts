@@ -404,6 +404,8 @@ export const WORLD_HEALTH_COVERAGE = {
     'not checked: the utilities’ outside devices and meters; a shut one shows in what stops',
   washOTron:
     'not checked: the filters’ wash controller; a filter it leaves washing shows in the pool’s flow',
+  controlRoomMode:
+    'not health: the CONTROL ROOM MODE knob, where the control room doors lead',
 } as const satisfies Record<keyof World, string>;
 
 /**

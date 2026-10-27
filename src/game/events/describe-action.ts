@@ -339,6 +339,11 @@ function said(
             ? 'manual call point operated'
             : 'call point reset with its key',
       };
+    case 'control-room/mode':
+      return {
+        subject: 'CONTROL ROOM MODE',
+        text: `knob turned to ${action.mode.toUpperCase()}`,
+      };
     case 'music': {
       const a = action.action;
       return {

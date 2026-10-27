@@ -30,6 +30,7 @@ import { createMainCorridor } from '../views/main-corridor';
 import {
   corridorDoorBlock,
   corridorSolids,
+  corridorWalls,
   corridorYaw,
   doorPlace,
   inCorridor,
@@ -58,6 +59,16 @@ import {
   doorActor,
 } from '../../components/architectural/logic/door-proximity';
 import { bindRoomPower, sitePowered } from '../views/room-power';
+import { roomWorld } from '../../save/world-store';
+import {
+  CONTROL_ROOM_MODES,
+  corridorDoorTo,
+  modeAction,
+  modeKnobPlace,
+  modePosition,
+  settledDoorTo,
+} from '../logic/control-room-mode';
+import { createControlRoomModeKnob } from '../views/control-room-mode-knob';
 
 /**
  * main_corridor: the ring of plant corridor (`logic/main-corridor.ts`),
@@ -83,6 +94,31 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
   const { group: rooms, doors } = createMainCorridor(metre, kit);
   for (const d of doors) parts.add(d.part);
   scene.add(rooms);
+  // The CONTROL ROOM MODE knob beside the control room's doors, by their
+  // card reader (`control-room-mode.ts`): where those doors lead.
+  const world = roomWorld();
+  const mode = world.read((w) => w.controlRoomMode);
+  const controlDoor = doors.find((d) => d.door.to === 'control_room')!.door;
+  const knob = parts.add(
+    createControlRoomModeKnob(kit, {
+      get value() {
+        return modePosition(mode.value);
+      },
+      set: (position) => world.dispatch(modeAction(position)),
+    }),
+  );
+  {
+    const k = modeKnobPlace(controlDoor);
+    const w = corridorWalls()[k.wall];
+    // In the corridor's group, which is in metres (scaled by `metre`).
+    knob.object.position.set(
+      w.alongX ? k.at : w.line,
+      k.height,
+      w.alongX ? w.line : k.at,
+    );
+    knob.object.rotation.y = Math.atan2(w.into[0], w.into[1]);
+    rooms.add(knob.object);
+  }
   const raycaster = new Raycaster();
   const pointer = new Vector2();
   const usableAt = (x: number, y: number) => {
@@ -121,7 +157,6 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
     return {
       ...d,
       p,
-      to: d.door.to as RoomId,
       seen: false,
       leaf,
       beyond: {
@@ -161,15 +196,48 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
     },
     peek: (on) => w.part.showLeaves(!on),
   });
-  const groups = [...new Set(ways.map((w) => w.to))].map((to) => ({
-    to,
-    ways: ways.filter((w) => w.to === to),
-  }));
+  // One joint for each room off the ring, registered to the room its
+  // doors lead to: the control room's, to the old control room or the
+  // bridge as the CONTROL ROOM MODE knob says, changed only while they
+  // are shut (`control-room-mode.ts`).
+  const destination = (w: Way) => corridorDoorTo(w.door, mode.peek()) as RoomId;
+  const groups = [...new Set(ways.map((w) => w.door.to))].map((key) => {
+    const its = ways.filter((w) => w.door.to === key);
+    return { to: destination(its[0]), ways: its, withdraw: () => {} };
+  });
   const inUse = (g: (typeof groups)[number]) =>
     g.ways.length === 1
       ? g.ways[0]
       : g.ways[activeDoorway('main_corridor', g.to)];
-  const withdrawals = groups.map((g) => {
+  // The rooms a doorway may lead to: the control room's doors, either.
+  const destinations = (w: Way) =>
+    [
+      ...new Set(CONTROL_ROOM_MODES.map((m) => corridorDoorTo(w.door, m))),
+    ] as RoomId[];
+  /**
+   * A doorway's joints: to the room it leads to now, and, to each other
+   * room it may lead to, one that never opens (so the app never draws
+   * that room through it), so that room, reached by its URL, can still
+   * see and hand back through the doorway; registered after, so the
+   * nearest door is the one in use.
+   */
+  const register = (g: (typeof groups)[number]) => {
+    const active = registerActive(g);
+    const others = destinations(g.ways[0])
+      .filter((to) => to !== g.to)
+      .map((to) =>
+        registerJoint('main_corridor', to, {
+          ...jointFor(g.ways[0]),
+          onOpen: false,
+          open: () => false,
+        }),
+      );
+    return () => {
+      active();
+      for (const o of others) o();
+    };
+  };
+  const registerActive = (g: (typeof groups)[number]) => {
     if (g.ways.length === 1)
       return registerJoint('main_corridor', g.to, jointFor(g.ways[0]));
     const each = g.ways.map(jointFor);
@@ -202,7 +270,27 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
         each[active()].peek(on);
       },
     });
-  });
+  };
+  for (const g of groups) g.withdraw = register(g);
+  /** Each doorway's joint to the room it leads to now, re-registered if that has changed. */
+  const settleDestinations = () => {
+    for (const g of groups) {
+      const to = settledDoorTo(
+        g.to,
+        destination(g.ways[0]),
+        g.ways.some((w) => w.part.open()),
+      ) as RoomId;
+      if (to === g.to) continue;
+      g.withdraw();
+      for (const w of g.ways) {
+        w.seen = false;
+        w.lobby.visible = true;
+        w.part.showLeaves(true);
+      }
+      g.to = to;
+      g.withdraw = register(g);
+    }
+  };
   // Whether the walker is near each pair (`door-proximity.ts`), one for
   // each doorway, wider than its threshold: once open, the pair waits.
   const near = ways.map((w) => createDoorPresence(w.leaf));
@@ -329,6 +417,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     const actor = doorActor(walk, metre, WALKER_RADIUS_METRES);
     ways.forEach((w, i) => w.part.setNearby(near[i].update(actor)));
     parts.update(delta);
+    settleDestinations();
     // Each pair's card readers show green while it stands open, beeping
     // only when it is opened here, not when it is found open on arrival.
     doors.forEach((d, i) => {
@@ -366,7 +455,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       renderer.setAnimationLoop(null);
       observer.disconnect();
       composer.dispose();
-      for (const w of withdrawals) w();
+      for (const g of groups) g.withdraw();
       parts.dispose();
       disposeKit(kit, rooms as never);
       walk.dispose();
