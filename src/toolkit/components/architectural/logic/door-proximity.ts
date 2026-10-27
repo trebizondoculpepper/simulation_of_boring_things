@@ -81,9 +81,11 @@ export const nextDoorPresence = (
 
 /**
  * One doorway's presence, remembered from frame to frame: `update` with
- * the walker (or null, when the room is not the one the player is in:
- * drawn under another, its own walker left where it was) says whether
- * someone is near it now. Keep one per doorway, not per leaf or room.
+ * the walker says whether someone is near it now; with null, when the
+ * room is not the one the player is in (drawn under another, its own
+ * walker left where it was), it does not know (undefined), so its doors
+ * neither hold for nor hurry from a walker who is not there. Keep one per
+ * doorway, not per leaf or room.
  */
 export function createDoorPresence(
   opening: DoorwayOpening | (() => DoorwayOpening),
@@ -91,11 +93,13 @@ export function createDoorPresence(
 ) {
   let near = false;
   return {
-    update(actor: DoorwayActor | null): boolean {
+    update(actor: DoorwayActor | null): boolean | undefined {
       const o = typeof opening === 'function' ? opening() : opening;
-      near = actor
-        ? nextDoorPresence(near, doorwayClearance(o, actor, rule), rule)
-        : false;
+      if (!actor) {
+        near = false;
+        return undefined;
+      }
+      near = nextDoorPresence(near, doorwayClearance(o, actor, rule), rule);
       return near;
     },
     get near() {

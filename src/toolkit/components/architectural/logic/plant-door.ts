@@ -17,6 +17,15 @@ export const PLANT_DOOR = {
   held: 2.5,
   /** Average closing speed, radians a second. */
   sweep: 0.35,
+  /**
+   * Once whoever opened it has walked away from its doorway (beyond the
+   * proximity's release, `door-proximity.ts`; the owner, 2026-10-27: "If
+   * you open a door and then walk away from it, it should close more or
+   * less immediately"): its hold cut to this, seconds, and its closer
+   * sweeping at this average speed, radians a second.
+   */
+  awayHold: 0.3,
+  awaySweep: 1.6,
   /** How fast it opens when pulled or pushed, radians a second. */
   opening: 2.2,
 } as const;
@@ -87,18 +96,24 @@ export function standDoorOpen(angle: number): PlantDoorState {
 }
 
 /**
- * The door `dt` seconds on, and whether it latched shut in that time;
- * `nearby` while someone is near its doorway (`keepDoorOpen`), applied
- * before it moves, so it can never take a last closing step and latch
- * beside them.
+ * The door `dt` seconds on, and whether it latched shut in that time.
+ * `nearby` is whether someone is near its doorway, where its room tells
+ * it: true, it is kept open (`keepDoorOpen`), applied before it moves, so
+ * it can never take a last closing step and latch beside them; false,
+ * everyone has walked away, and it closes at once and briskly (its
+ * `awayHold` and `awaySweep`); left out, no one is watching for walkers,
+ * and it keeps its ordinary hold and sweep.
  */
 export function stepPlantDoor(
   s: PlantDoorState,
   dt: number,
-  nearby = false,
+  nearby?: boolean,
 ): { state: PlantDoorState; latchedNow: boolean } {
   const D = PLANT_DOOR;
+  const away = nearby === false;
   if (nearby) s = keepDoorOpen(s);
+  if (away && s.phase === 'held' && s.timer > D.awayHold)
+    s = { ...s, timer: D.awayHold };
   if (s.phase === 'opening') {
     const angle = Math.min(D.open, s.angle + D.opening * dt);
     return {
@@ -126,7 +141,10 @@ export function stepPlantDoor(
   }
   if (s.phase === 'closing') {
     const from = s.closeFrom || s.angle;
-    const elapsed = s.closeElapsed + Math.max(0, dt);
+    // Walked away from, its closer sweeps faster from where it is: the
+    // same eased sweep, run on quicker, so it never jumps.
+    const elapsed =
+      s.closeElapsed + Math.max(0, dt) * (away ? D.awaySweep / D.sweep : 1);
     const duration = Math.max(0.4, from / D.sweep);
     const t = Math.min(1, elapsed / duration);
     const eased = t * t * (3 - 2 * t);

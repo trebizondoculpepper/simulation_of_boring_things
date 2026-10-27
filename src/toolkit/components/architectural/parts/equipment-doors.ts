@@ -62,7 +62,7 @@ export interface EquipmentDoorsPart extends Part {
    * frame before the leaves move: each leaf that stands open waits, and
    * one closing opens again; a shut leaf stays shut.
    */
-  setNearby: (near: boolean) => void;
+  setNearby: (near: boolean | undefined) => void;
   /** Hide the leaves: the room beyond draws the doorway's one pair. */
   showLeaves: (on: boolean) => void;
   /** Its card readers, which the room may light. */
@@ -92,7 +92,8 @@ export function equipmentDoors(
     hold: () => void;
   }[] = [];
   const readers: ReturnType<typeof cardReader>[] = [];
-  let nearby = false;
+  // Unknown until its room says (`setNearby`), then whether anyone is near.
+  let nearby: boolean | undefined;
   const stickerTemplate = createDoorWarningStickers(kit, warnings);
   const leaves = ([-1, 1] as const).map((side) => {
     // Hung on its outer jamb, meeting its pair in the middle.

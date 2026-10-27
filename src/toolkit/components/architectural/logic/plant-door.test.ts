@@ -121,10 +121,22 @@ describe('a door with someone near it (mission 090)', () => {
     expect(r.s.angle).toBeCloseTo(PLANT_DOOR.open);
     expect(r.s.phase).toBe('held');
     s = r.s;
-    // Clear of it, a full hold before its closer takes it again.
-    const away = walk(s, PLANT_DOOR.held - 0.2, () => false);
-    expect(away.s.phase).toBe('held');
-    expect(walk(away.s, 0.4, () => false).s.phase).toBe('closing');
+    // Walked away from, it closes at once and briskly (the owner,
+    // 2026-10-27): its short hold, then shut within a couple of seconds.
+    expect(walk(s, PLANT_DOOR.awayHold - 0.1, () => false).s.phase).toBe(
+      'held',
+    );
+    expect(walk(s, PLANT_DOOR.awayHold + 0.1, () => false).s.phase).toBe(
+      'closing',
+    );
+    expect(walk(s, PLANT_DOOR.awayHold + 1.5, () => false).latched).toBe(true);
+  });
+
+  it('with no one watching for walkers, it keeps its ordinary hold', () => {
+    // Already some way through its hold once opened.
+    const s = run(opened(), PLANT_DOOR.held - 0.6).s;
+    expect(s.phase).toBe('held');
+    expect(run(s, 0.8).s.phase).toBe('closing');
   });
 
   it('is caught even a frame before it latches, and never latches beside them', () => {
@@ -143,11 +155,12 @@ describe('a door with someone near it (mission 090)', () => {
     expect(r.state.angle).toBeGreaterThan(s.angle);
   });
 
-  it('leaving and coming back within its hold keeps it open; away long enough, it shuts', () => {
+  it('leaving and coming straight back keeps it open; away long enough, it shuts', () => {
+    // A step away and straight back, before it can swing shut.
     const back = walk(
       opened(),
       12,
-      (t) => t < 1 || (t > 1 + PLANT_DOOR.held - 0.5 && t < 6) || t > 6 + 1,
+      (t) => t < 1 || (t > 1.5 && t < 6) || t > 6.5,
     );
     expect(back.latched).toBe(false);
     expect(back.s.angle).toBeCloseTo(PLANT_DOOR.open);

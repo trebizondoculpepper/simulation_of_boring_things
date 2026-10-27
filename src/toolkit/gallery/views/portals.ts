@@ -424,7 +424,7 @@ export function createPortals(
         ? { x: x / metre, z: z / metre, radius: WALKER_RADIUS_METRES }
         : null;
       for (const { part, near } of doors)
-        part.hold(near.update(actor) && part.door.open);
+        part.hold(near.update(actor) === true && part.door.open);
       parts.update(delta);
       for (const entry of doors) {
         const { portal, part } = entry;

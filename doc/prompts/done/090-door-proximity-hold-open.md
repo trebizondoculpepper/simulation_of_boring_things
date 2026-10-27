@@ -63,3 +63,5 @@ Remaining:
 
 - Browser acceptance from the plant side, at a paired corridor/equipment doorway (`main_corridor` ↔ `wet_hall`, both doorways; `plant_pool_02` ↔ `tank_hall`), the tank-hall ladder gate and a development spring doorway; returning while a door closes (unit-tested, not seen in the browser); walking through both ways to check handover, collision, the room beyond and door sounds.
 - Owner validation of the 1.5/1.75 m distances in play.
+
+Follow-up (the owner, 2026-10-27): "when you get more than a certain distance away from a door, it should close more rapidly. So it's not so much on a timer, it's really based on your distance from the door. If you open a door and then walk away from it, it should close more or less immediately." Done: beyond the release distance a door's hold is cut to 0.3 s (`PLANT_DOOR.awayHold`) and its closer sweeps at about 1.6 rad/s (`awaySweep`), the same eased sweep run faster so it never jumps; presence is now three-valued (near, away, unknown), and a room drawn under another reports unknown, so its doors keep their ordinary hold. The development portals' spring doors are unchanged.

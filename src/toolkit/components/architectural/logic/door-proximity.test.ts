@@ -86,7 +86,7 @@ describe('someone near a doorway, frame by frame', () => {
   it('standing on the edge does not flicker', () => {
     const presence = createDoorPresence(single);
     const z = 0.1 + R + 1.5;
-    const seen: boolean[] = [];
+    const seen: (boolean | undefined)[] = [];
     // Swaying a centimetre or two about the edge, each frame.
     for (let i = 0; i < 200; i++)
       seen.push(
@@ -106,8 +106,9 @@ describe('someone near a doorway, frame by frame', () => {
   it('no one is near a doorway of a room drawn under another', () => {
     const presence = createDoorPresence(() => single);
     expect(presence.update({ x: 0, z: 0, radius: R })).toBe(true);
-    // The room left behind: its own walker parked in the doorway counts for nothing.
-    expect(presence.update(null)).toBe(false);
+    // The room left behind: its own walker parked in the doorway counts
+    // for nothing, and its doors neither hold for nor hurry from it.
+    expect(presence.update(null)).toBeUndefined();
     expect(presence.near).toBe(false);
   });
 

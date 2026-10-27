@@ -28,7 +28,8 @@ export function ladderGate(kit: PanelKit, width: number) {
   sign.position.set(width / 2, 0.75, 0.03);
   a.object.add(sign);
   let state = initialPlantDoor();
-  let nearby = false;
+  // Unknown until its room says (`setNearby`), then whether anyone is near.
+  let nearby: boolean | undefined;
   a.uses.set(a.object, () => {
     state = workDoor(state);
   });
@@ -51,7 +52,7 @@ export function ladderGate(kit: PanelKit, width: number) {
       state = holdDoorOpen(state);
     },
     /** Whether someone is near it on the deck (`door-proximity.ts`), told before it moves. */
-    setNearby: (near: boolean) => {
+    setNearby: (near: boolean | undefined) => {
       nearby = near;
     },
   };

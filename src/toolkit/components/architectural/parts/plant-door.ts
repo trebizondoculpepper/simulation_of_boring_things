@@ -65,7 +65,7 @@ export function plantRoomDoor(
    * Whether someone is near its doorway (`door-proximity.ts`), told each
    * frame before it moves: open, it waits for them; closing, it opens again.
    */
-  setNearby: (near: boolean) => void;
+  setNearby: (near: boolean | undefined) => void;
   /** Its card reader, which the room may light (any door of its open). */
   reader: ReturnType<typeof cardReader>;
 } {
@@ -161,7 +161,8 @@ export function plantRoomDoor(
   const arm = t.box(armPivot, dark, 0.24, 0.014, 0.025, 0.12, 0, 0);
 
   let state = initialPlantDoor();
-  let nearby = false;
+  // Unknown until its room says (`setNearby`), then whether anyone is near.
+  let nearby: boolean | undefined;
   const work = () => {
     const was = state.phase;
     state = workDoor(state);

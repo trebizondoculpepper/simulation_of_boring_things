@@ -90,11 +90,11 @@ describe('paired equipment doors with someone near (mission 090)', () => {
     advance(part, 20);
     expect(Math.abs(leaves[0].rotation.y)).toBeCloseTo(Math.PI / 2);
     expect(Math.abs(leaves[1].rotation.y)).toBe(0);
-    // Gone, the open leaf waits its hold, then closes.
+    // Gone, the open leaf closes at once and briskly.
     part.setNearby(false);
-    advance(part, 2.3);
+    advance(part, 0.2);
     expect(Math.abs(leaves[0].rotation.y)).toBeCloseTo(Math.PI / 2);
-    advance(part, 10);
+    advance(part, 2);
     expect(Math.abs(leaves[0].rotation.y)).toBe(0);
     part.dispose();
   });
