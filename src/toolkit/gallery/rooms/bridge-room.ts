@@ -41,6 +41,8 @@ import { plantReadingOf } from '../logic/world-reading';
 import { createParodyPanel } from '../views/parody-panel';
 import { roomWorld } from '../../save/world-store';
 import { worldAnnunciator } from '../logic/world-annunciator';
+import { ALARM_BLEEP, createAlarmBleep } from '../logic/alarm-bleep';
+import { unacceptedAlarms } from '../../../game/annunciator';
 
 /**
  * The bridge's consoles (mission 095): dev48's reimagined panels on its
@@ -222,11 +224,13 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
     return w ? bridgeMainLit(w) : true;
   });
   const chatter = installChatter();
+  const alarmBleep = installAlarmBleep();
   const handle = startBridgeRoom(canvas, (kit) => [
     ...installConsoles(kit),
     installLightSwitch(kit),
     lightsUp,
     chatter,
+    alarmBleep,
   ]);
   // Its hum (`components/sound/audio/bridge-ambience.ts`): heard only
   // with the walker inside, rising with its lights; the room's equipment,
@@ -240,6 +244,7 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
     enter: (from: string | null) => {
       lightsUp.enter(from);
       chatter.setActive(true);
+      alarmBleep.setActive(true);
       ambience.setPresence(
         { inside: true },
         { after: LIGHTS_UP.dark, rise: lightsUpTotal() - LIGHTS_UP.dark },
@@ -248,6 +253,7 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
     suspend: () => {
       lightsUp.leave();
       chatter.setActive(false);
+      alarmBleep.setActive(false);
       ambience.setPresence({ inside: false });
     },
   });
@@ -352,6 +358,49 @@ function installChatter() {
     update(delta: number) {
       const due = clock.step(delta);
       if (due) partAudio.play({ tones: due.chirp }, emitters[due.console]);
+    },
+    onEvent: () => () => {},
+    setAudible: () => {},
+    dispose: () => {},
+  };
+}
+
+/**
+ * The alarm bleep (the owner, 2026-10-27): while any alarm on the world's
+ * annunciator is unaccepted and the walker is on the bridge, a two-tone
+ * bleep from Central Control, where it is accepted, at once and then
+ * every 10 s (`logic/alarm-bleep.ts`); it stops on ACCEPT.
+ */
+function installAlarmBleep() {
+  const store = typeof window === 'undefined' ? null : roomWorld();
+  const object = new Group();
+  object.name = 'Alarm bleep (Central Control)';
+  const at = new Object3D();
+  const cc = bridgePanelPlaces().find((p) => p.code === 'CC-01');
+  if (cc) at.position.set(cc.x, cc.y, cc.z);
+  object.add(at);
+  const clock = createAlarmBleep();
+  // Central Control's own sounder, so bound to its node.
+  markComponent(object, {
+    name: 'Central Control alarm bleep',
+    model: { node: BRIDGE_BINDINGS['CC-01'].model.node },
+    status: () => {
+      const w = store?.world.value;
+      const n = w ? unacceptedAlarms(w.annunciator).length : 0;
+      return n ? `${n} unaccepted · bleeping` : 'Quiet';
+    },
+  });
+  return {
+    object,
+    uses: new Map<Object3D, () => void>(),
+    setActive: (on: boolean) => clock.setActive(on),
+    update(delta: number) {
+      const w = store?.world.value;
+      const due = clock.step(
+        delta,
+        w ? unacceptedAlarms(w.annunciator).length > 0 : false,
+      );
+      if (due) partAudio.play({ tones: [...ALARM_BLEEP.tones] }, at);
     },
     onEvent: () => () => {},
     setAudible: () => {},
