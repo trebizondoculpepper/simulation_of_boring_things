@@ -62,6 +62,22 @@ The owner's choice, from the concept plans: **"E, option C as the owner wants it
 - **Built (2026-10-27):** one shared builder with a theme (`views/control-room-prototype.ts`, `'lair' | 'bridge'`) on one pure geometry (`logic/control-room-prototype.ts`); dev45 the lair (no stations, a ring of photo-flood lamps 8 m across hung 3.4 m over the floor, triangular coffers, black lacquer and brushed steel, a dim wash), dev46 the bridge (six stations in a shallow arc round the front of the desk, each turned toward the middle but facing the big wall, a pair of chairs either side of the operator's, the full-height viewscreen showing a starfield placeholder, carpet, beige panels, cove lights, a wood-capped parapet with colour bars, and a ramp either side of the stage's steps).
 - **The look:** three inspirations, as original designs (no copied logos, names or artwork): Ken Adam's Bond-villain sets (Dr. No, Goldfinger, You Only Live Twice: a polished dark floor, dark faceted walls, a deep coffered ceiling, the displays and the desk glowing in the gloom, menace and expense); the Enterprise bridge of The Next Generation (the big front viewscreen as the main wall, the operator's chair as the focus, wood-toned panelling and beige round the raised rear section, flat rounded colour bars); EPCOT Computer Central (the segmented console desk with screens set into it). Mission Control order: everything faces the big wall.
 
+## Central Control: the operator's console (2026-10-27)
+
+The console nearest the operator's chair is called **Central Control** (the owner). What goes on it: whatever matters in the first minute of an incident, or what the person in charge watches all day; everything else lives at the system stations. In order of importance, from what the game models:
+
+1. **Emergency:** the pool emergency alarm and evacuate (with the fire alarm's status); STOP DOSING, all pools; stop circulation per pool (with a confirm); the features' stops (wave machine, flumes).
+2. **Water quality at a glance:** free chlorine, pH and temperature per pool, each a green, amber or red tile (combined chlorine and turbidity when modelled).
+3. **Alarms:** the annunciator's summary (active, unaccepted), ACCEPT, and a list whose items put the alarm on the main screen.
+4. **Circulation and filters:** each pool's pumps running and flow; each filter in service, backwash due or backwashing.
+5. **Chemicals in stock:** the stores and day tanks in litres; a transfer under way.
+6. **Power:** mains or generator (the changeover switch), the emergency lighting, any room without supply.
+7. **Building:** bathers per pool against its limit; a CCTV camera onto the main screen; doors and access.
+8. **The main viewscreen's selector:** what the big screen shows (schematic, CCTV, trends, alarms).
+9. **Comms:** PA to the poolside, intercom to each plant room.
+
+Kept off it, by the rule that some controls are only local: mode selectors (HAND · OFF · AUTO) and trip resets. Central Control sees everything and commands what the mimics command; putting a trip right still means going to the plant room. On the bridge version, it may be split into the chair's two armrests (left: emergency and alarms; right: water quality and the viewscreen) with the rest on the desk ahead.
+
 ## Stages
 
 0. The room's prototype: the stair hall and the heptagonal room with its desk, in a new dev room, walkable, as above.
