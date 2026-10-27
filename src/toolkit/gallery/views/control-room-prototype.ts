@@ -3,6 +3,7 @@ import {
   BufferGeometry,
   CanvasTexture,
   HemisphereLight,
+  Matrix4,
   SRGBColorSpace,
   CylinderGeometry,
   ExtrudeGeometry,
@@ -18,6 +19,7 @@ import {
   Vector3,
 } from 'three';
 import type { Material, Object3D } from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { markComponent } from '../../components/core/views/component-identity';
 import {
@@ -37,6 +39,7 @@ import {
   BRIDGE_FIN,
   CONFERENCE,
   CONTROL_ROOM,
+  DESK,
   PLACEHOLDERS,
   PLATFORM,
   RAMP,
@@ -72,8 +75,11 @@ import {
   spine,
   stairPlan,
   stationPlaces,
+  stepRailFoot,
 } from '../logic/control-room-prototype';
 import type { Point, Theme } from '../logic/control-room-prototype';
+import { cheekOutline, deskSweep, wedgeOutline } from '../logic/rounded-desk';
+import type { OutlinePoint, SweepMesh } from '../logic/rounded-desk';
 
 /**
  * The control room's prototype (mission 092, stage 0; dev45), drawn from
@@ -674,21 +680,26 @@ export function createControlRoomPrototype(
   // The stage's face where no parapet stands on it: the steps' sides and
   // the ramps' landings.
   if (bridge) for (const s2 of [-1, 1]) ramp(s2);
-  const foot = edgeAt(half) - (PLATFORM.risers - 1) * PLATFORM.going;
+  // The steps' handrails, along the nosings' line (from the bottom step's
+  // at one riser up to the stage's edge); on the bridge, ending at their
+  // foot in line with the ramps' guards (`stepRailFoot`).
+  const nosing = edgeAt(half) - (PLATFORM.risers - 1) * PLATFORM.going;
+  const foot = stepRailFoot(theme);
   for (const x of [-half, half]) {
     const top0 = edgeAt(half);
+    const lowY = rr + ((ph - rr) * (foot - nosing)) / (top0 - nosing);
     const dz = top0 - foot;
     const rail = new Mesh(
-      new CylinderGeometry(0.025, 0.025, Math.hypot(dz, ph - rr), 10),
+      new CylinderGeometry(0.025, 0.025, Math.hypot(dz, ph - lowY), 10),
       bridge ? dressing!.oak(1) : steel,
     );
-    rail.position.set(x, STOREY + (rr + ph) / 2 + 0.9, (top0 + foot) / 2);
-    rail.rotation.x = Math.PI / 2 - Math.atan2(ph - rr, dz);
+    rail.position.set(x, STOREY + (lowY + ph) / 2 + 0.9, (top0 + foot) / 2);
+    rail.rotation.x = Math.PI / 2 - Math.atan2(ph - lowY, dz);
     rail.name = 'Handrail';
     stage.add(rail);
     for (const [z, y] of [
-      [foot, rr],
-      [(foot + top0) / 2, (rr + ph) / 2],
+      [foot, lowY],
+      [(foot + top0) / 2, (lowY + ph) / 2],
       [top0, ph],
     ] as const)
       box(steel, 0.04, 0.9, 0.04, x, STOREY + y + 0.45, z, stage);
@@ -750,39 +761,9 @@ export function createControlRoomPrototype(
     });
     const U0 = at(P0, Q0, 0.3);
     const U1 = at(P1, Q1, 0.3);
-    const K0 = at(P0, Q0, 0.6);
-    const K1 = at(P1, Q1, 0.6);
-    const y0 = STOREY;
-    // The body, charcoal, to the knee space; a black kick plinth.
-    desk.add(
-      hexa(
-        [P0, P1, K1, K0],
-        [y0, y0, y0, y0],
-        [y0 + 0.72, y0 + 0.72, y0 + 0.72, y0 + 0.72],
-        charcoal,
-      ),
-    );
-    // The sloping top, cream, from the upstand to the operator's edge.
-    desk.add(
-      hexa(
-        [U0, U1, Q1, Q0],
-        [y0 + 0.72, y0 + 0.72, y0 + 0.7, y0 + 0.7],
-        [y0 + 0.9, y0 + 0.9, y0 + 0.76, y0 + 0.76],
-        cream,
-      ),
-    );
-    // The raised upstand behind, its face raked back toward the top.
     const R0 = at(P0, Q0, 0.18);
     const R1 = at(P1, Q1, 0.18);
-    desk.add(
-      hexa(
-        [P0, P1, U1, U0],
-        [y0 + 0.72, y0 + 0.72, y0 + 0.72, y0 + 0.72],
-        [y0 + 1.45, y0 + 1.45, y0 + 0.9, y0 + 0.9],
-        cream,
-        [P0, P1, R1, R0],
-      ),
-    );
+    const y0 = STOREY;
     // Its screens, set into the raked face, and panel insets in the top.
     const face = (u: number, v: number): [Point, number] => {
       const bottom = at(U0, U1, u);
@@ -821,35 +802,44 @@ export function createControlRoomPrototype(
         );
     }
   }
-  // Dark cheeks at the two open ends.
+  // The body, the top and the upstand, rounded (the owner, 2026-10-27:
+  // "soften the corners of this desk"; then the inside as well): one
+  // sweep of the rounded profile round the whole run, its plan's corners
+  // rounded outside and in (`logic/rounded-desk.ts`), one mesh a finish;
+  // and the dark cheeks closing its two open ends, their edges rounded.
+  const sweep = deskSweep();
+  const swept = (m: SweepMesh) => {
+    const g = new BufferGeometry();
+    g.setAttribute('position', new Float32BufferAttribute(m.positions, 3));
+    g.setIndex(m.indices);
+    g.computeVertexNormals();
+    g.translate(0, STOREY, 0);
+    return g.toNonIndexed();
+  };
+  const charcoalParts = [swept(sweep.charcoal)];
   const segs = deskSegments();
   for (const [s, end] of [
     [segs.find((x) => x.side === 2)!, 1],
     [segs.find((x) => x.side === 5)!, 0],
   ] as const) {
-    const P = s.outer[end];
-    const Q = s.inner[end];
-    const along = end === 1 ? -1 : 1;
     // Outside the segment's end, back to back with it, never in its plane
     // (the owner saw stripes across it, 2026-10-27: it overlapped the
     // segment, its face coplanar with the segment's end).
+    const P = s.outer[end];
+    const Q = s.inner[end];
     const len = Math.hypot(
       s.outer[1].x - s.outer[0].x,
       s.outer[1].z - s.outer[0].z,
     );
-    const ux = (s.outer[1].x - s.outer[0].x) / len;
-    const uz = (s.outer[1].z - s.outer[0].z) / len;
-    const P2 = { x: P.x - ux * 0.04 * along, z: P.z - uz * 0.04 * along };
-    const Q2 = { x: Q.x - ux * 0.04 * along, z: Q.z - uz * 0.04 * along };
-    desk.add(
-      hexa(
-        [P, P2, Q2, Q],
-        [STOREY, STOREY, STOREY, STOREY],
-        [STOREY + 1.47, STOREY + 1.47, STOREY + 0.78, STOREY + 0.78],
-        charcoal,
-      ),
+    const along = end === 1 ? -1 : 1;
+    const ux = (-(s.outer[1].x - s.outer[0].x) / len) * along;
+    const uz = (-(s.outer[1].z - s.outer[0].z) / len) * along;
+    charcoalParts.push(
+      roundedSlab(cheekOutline(), P, Q, DESK.top, ux, uz, 0.04),
     );
   }
+  desk.add(new Mesh(mergeGeometries(charcoalParts), charcoal));
+  desk.add(new Mesh(swept(sweep.cream), cream));
   // The operator's red swivel chair.
   const c = chairPlace();
   desk.add(
@@ -1161,6 +1151,124 @@ export function createControlRoomPrototype(
     geometry.computeVertexNormals();
     return new Mesh(geometry, m);
   }
+  /**
+   * A slab of `outline` (x metres across, y up), `thickness` thick, every
+   * edge rounded by a bevel: its x laid from P toward Q (`span` metres of
+   * x reaching Q), its y up from the storey, its thickness along (ux, uz).
+   */
+  function roundedSlab(
+    outline: readonly OutlinePoint[],
+    P: Point,
+    Q: Point,
+    span: number,
+    ux: number,
+    uz: number,
+    thickness: number,
+    bevel = 0.012,
+  ) {
+    const m = new Matrix4().set(
+      (Q.x - P.x) / span,
+      0,
+      ux,
+      P.x,
+      0,
+      1,
+      0,
+      STOREY,
+      (Q.z - P.z) / span,
+      0,
+      uz,
+      P.z,
+      0,
+      0,
+      0,
+      1,
+    );
+    return bevelled(outline, thickness, bevel, m);
+  }
+  /**
+   * A console on plan [l0, l1, h1, h0] (its low edge l0–l1, `low` high,
+   * its far edge `high`), standing on `y0`, its edges and corners rounded.
+   */
+  function roundedWedge(
+    corners: readonly Point[],
+    y0: number,
+    low: number,
+    high: number,
+    m: Material,
+    bevel = 0.03,
+  ) {
+    const [l0, l1, , h0] = corners;
+    const depth = Math.hypot(h0.x - l0.x, h0.z - l0.z);
+    const width = Math.hypot(l1.x - l0.x, l1.z - l0.z);
+    const frame = new Matrix4().set(
+      (h0.x - l0.x) / depth,
+      0,
+      (l1.x - l0.x) / width,
+      l0.x,
+      0,
+      1,
+      0,
+      y0,
+      (h0.z - l0.z) / depth,
+      0,
+      (l1.z - l0.z) / width,
+      l0.z,
+      0,
+      0,
+      0,
+      1,
+    );
+    return new Mesh(
+      bevelled(wedgeOutline(depth, low, high, bevel), width, bevel, frame),
+      m,
+    );
+  }
+  /** `outline` extruded `thickness` along z with its edges bevelled round, then placed by `frame` (its winding kept outward). */
+  function bevelled(
+    outline: readonly OutlinePoint[],
+    thickness: number,
+    bevel: number,
+    frame: Matrix4,
+  ) {
+    const g = new ExtrudeGeometry(flatOutline(outline), {
+      depth: Math.max(0.001, thickness - 2 * bevel),
+      bevelEnabled: true,
+      bevelThickness: bevel,
+      bevelSize: bevel,
+      bevelSegments: 4,
+      curveSegments: 1,
+    });
+    g.translate(0, 0, bevel);
+    g.deleteAttribute('uv');
+    g.applyMatrix4(frame);
+    if (frame.determinant() < 0) flipWinding(g);
+    return g;
+  }
+  function flatOutline(outline: readonly OutlinePoint[]) {
+    const shape = new Shape();
+    outline.forEach((p, i) =>
+      i ? shape.lineTo(p.x, p.y) : shape.moveTo(p.x, p.y),
+    );
+    shape.closePath();
+    return shape;
+  }
+  /** Reverse every triangle of a non-indexed geometry, front faces turned back outward. */
+  function flipWinding(g: BufferGeometry) {
+    for (const name of Object.keys(g.attributes)) {
+      const a = g.getAttribute(name);
+      const arr = a.array as Float32Array;
+      const k = a.itemSize;
+      for (let t = 0; t < a.count; t += 3)
+        for (let c = 0; c < k; c++) {
+          const i1 = (t + 1) * k + c;
+          const i2 = (t + 2) * k + c;
+          const tmp = arr[i1];
+          arr[i1] = arr[i2];
+          arr[i2] = tmp;
+        }
+    }
+  }
   /** A flat screen on a face given by its corners (left foot, right foot, right head, left head), `n` off it, mapped for its picture. */
   function screenQuad(corners: [Point, number][], n: Point, m: Material) {
     const p = corners.map(([q, y]) => [
@@ -1440,15 +1548,11 @@ export function createControlRoomPrototype(
       const [a, b, c2, d] = r.corners;
       // Its operator's edge low, its wall edge high.
       g.add(
-        hexa(
+        roundedWedge(
           [c2, d, a, b],
-          [y0, y0, y0, y0],
-          [
-            y0 + REAR_CONSOLE.low,
-            y0 + REAR_CONSOLE.low,
-            y0 + REAR_CONSOLE.high,
-            y0 + REAR_CONSOLE.high,
-          ],
+          y0,
+          REAR_CONSOLE.low,
+          REAR_CONSOLE.high,
           lacquer,
         ),
       );
@@ -1463,17 +1567,7 @@ export function createControlRoomPrototype(
       const [a, b, c2, d] = st.corners;
       // A black pedestal, its top sloping up away from the operator.
       g.add(
-        hexa(
-          [a, b, c2, d],
-          [STOREY, STOREY, STOREY, STOREY],
-          [
-            STOREY + STATION.low,
-            STOREY + STATION.low,
-            STOREY + STATION.high,
-            STOREY + STATION.high,
-          ],
-          black,
-        ),
+        roundedWedge([a, b, c2, d], STOREY, STATION.low, STATION.high, black),
       );
       // Rounded colour bars across its flat touch face.
       const colours = ['#e49a4c', '#c890c8', '#9aa6e0', '#e2b77a', '#d9735a'];

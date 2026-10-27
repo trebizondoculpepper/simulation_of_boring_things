@@ -14,6 +14,7 @@ import {
   lanes,
   platformEdge,
   platformRail,
+  stepRailFoot,
   platformStepAt,
   ringLightCentre,
   RAMP,
@@ -282,6 +283,20 @@ describe('walking the prototype', () => {
     const half = PLATFORM.stepWidth / 2;
     expect(rail.some((s) => overlaps(s, -half, edge - g, 0.05))).toBe(true);
     expect(rail.some((s) => overlaps(s, half, edge - g, 0.05))).toBe(true);
+  });
+
+  it('ends the bridge steps’ handrails at their foot in line with the ramps’ guards, not forward of them', () => {
+    const half = PLATFORM.stepWidth / 2;
+    const line = edgeAt(half) - RAMP.depth;
+    expect(stepRailFoot('bridge')).toBeCloseTo(line);
+    expect(stepRailFoot('bridge')).toBeGreaterThan(stepRailFoot('lair'));
+    const rails = platformRail('bridge').filter(
+      (s) =>
+        s.maxX - s.minX < 0.1 &&
+        Math.abs(Math.abs(s.minX + 0.025) - half) < 0.05,
+    );
+    expect(rails).toHaveLength(2);
+    for (const r of rails) expect(r.minZ).toBeCloseTo(line);
   });
 
   it('makes the lair’s stage at least 7 m deep and 10 m wide where its table stands, with room to walk round it', () => {

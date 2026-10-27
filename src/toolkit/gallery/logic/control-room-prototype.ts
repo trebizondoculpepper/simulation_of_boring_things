@@ -463,12 +463,26 @@ function alongHorseshoe(x0: number, x1: number, T: number, back = 0) {
   });
 }
 
+/**
+ * Where the stage steps' handrails end at their foot, z. On the bridge, no
+ * further forward than the ramps' guards beside them, `RAMP.depth` in front
+ * of the stage's edge (the owner, 2026-10-27: they "project too far
+ * forwards on the lower edge ... the same width as the railings"); in
+ * the lair, at the bottom step's nosing.
+ */
+export function stepRailFoot(theme: Theme = 'lair') {
+  const half = PLATFORM.stepWidth / 2;
+  const nosing = edgeAt(half) - (PLATFORM.risers - 1) * PLATFORM.going;
+  return theme === 'bridge'
+    ? Math.max(nosing, edgeAt(half) - RAMP.depth)
+    : nosing;
+}
+
 /** The rail along the platform's front, either side of its steps. */
 export function platformRail(theme: Theme = 'lair'): Footprint[] {
   const room = roomPolygon();
   const half = PLATFORM.stepWidth / 2;
   const T = 0.05;
-  const treads = PLATFORM.risers - 1;
   const { top, end, depth, open } = RAMP;
   // The bridge's front: open where each ramp's top landing meets it.
   const front: [number, number][] =
@@ -504,7 +518,7 @@ export function platformRail(theme: Theme = 'lair'): Footprint[] {
     ...[-half - T, half].map((x) => ({
       minX: x,
       maxX: x + T,
-      minZ: edgeAt(half) - treads * PLATFORM.going,
+      minZ: stepRailFoot(theme),
       maxZ: edgeAt(half),
     })),
   ];
