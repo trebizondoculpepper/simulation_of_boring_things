@@ -7,8 +7,10 @@ import {
   ECHO,
   SWELL_DEPTH,
   SWELL_HZ,
+  ambienceGain,
   createAmbienceGate,
   createChirpField,
+  reportedPresence,
   seededRandom,
 } from '../logic/bridge-ambience';
 import type {
@@ -452,6 +454,55 @@ export function createBridgeAmbience(
     dispose() {
       gate.update({ inside: false });
       this.stop();
+    },
+  };
+}
+
+/**
+ * The one bridge room tone the game plays (the owner, 2026-10-27), driven
+ * by both the rooms it is heard from, so only one ever sounds: the bridge
+ * reports the walker in it or not (`bridge`, with the entrance's fade);
+ * the main corridor, each frame while the walker is in it, how open its
+ * control room doors stand when they lead to the bridge (`corridor`, null
+ * when they do not or the walker has gone). Full inside; a little
+ * through the open doors, fading as they shut (`reportedPresence`,
+ * `ambienceGain`).
+ */
+let shared: ReturnType<typeof createSharedAmbience> | null = null;
+export function sharedBridgeAmbience() {
+  if (!shared) {
+    shared = createSharedAmbience();
+    // For trying it from the console in development only.
+    if (typeof window !== 'undefined' && import.meta.env?.DEV)
+      (window as unknown as { bridgeAmbience: unknown }).bridgeAmbience =
+        shared;
+  }
+  return shared;
+}
+
+function createSharedAmbience() {
+  const ambience = createBridgeAmbience();
+  const reports = { bridge: false, corridorDoor: null as number | null };
+  const apply = (fade?: AmbienceFade) =>
+    ambience.setPresence(reportedPresence(reports), fade);
+  return {
+    /** The walker in the bridge, or gone from it. */
+    bridge(inside: boolean, fade?: AmbienceFade) {
+      reports.bridge = inside;
+      apply(fade);
+    },
+    /** From the corridor: its doors' open share when they lead to the bridge, else null. */
+    corridor(doorOpen: number | null) {
+      if (reports.corridorDoor === doorOpen) return;
+      reports.corridorDoor = doorOpen;
+      apply();
+    },
+    get playing() {
+      return ambience.playing;
+    },
+    /** The share of its level heard now, 0 to 1. */
+    get level() {
+      return ambienceGain(reportedPresence(reports));
     },
   };
 }

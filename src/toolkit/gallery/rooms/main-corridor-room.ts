@@ -53,6 +53,8 @@ import type { Joint } from '../logic/door-joins';
 import { doorwayStops, overlaps } from '../logic/doorway';
 import { doorReaders } from '../../components/architectural/logic/card-reader';
 import { enterDevRoom } from '../logic/dev-room-links';
+import { sharedBridgeAmbience } from '../../components/sound/audio/bridge-ambience';
+import { doorShare } from '../../components/sound/logic/bridge-ambience';
 import type { RoomId } from '../logic/dev-room-links';
 import { bindRoomLights } from '../views/room-lights';
 import {
@@ -409,6 +411,17 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   resize();
   let visual = true;
   let leaving = false;
+  // The bridge's room tone through the control room doors (the owner,
+  // 2026-10-27): while the walker is here and those doors lead to the
+  // bridge, how far they stand open; nothing otherwise.
+  const ambience = sharedBridgeAmbience();
+  const controlGroup = groups.find((g) => g.ways[0].door.to === 'control_room');
+  const hearBridge = () =>
+    ambience.corridor(
+      !walk.following && controlGroup?.to === 'bridge'
+        ? doorShare(inUse(controlGroup).part.angle())
+        : null,
+    );
   // Whether each pair stood open last frame: null on arrival.
   const wasOpen: (boolean | null)[] = doors.map(() => null);
   // Its lights, the corridors' zone (`room-lights.ts`).
@@ -428,6 +441,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     controlDoorsOpen.value = controlDoors.part.open();
     parts.update(delta);
     settleDestinations();
+    hearBridge();
     // Each pair's card readers show green while it stands open, beeping
     // only when it is opened here, not when it is found open on arrival.
     doors.forEach((d, i) => {
@@ -466,6 +480,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       observer.disconnect();
       composer.dispose();
       for (const g of groups) g.withdraw();
+      ambience.corridor(null);
       parts.dispose();
       disposeKit(kit, rooms as never);
       walk.dispose();
@@ -478,6 +493,9 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       resume() {
         leaving = false;
         wasOpen.fill(null);
+      },
+      suspend() {
+        ambience.corridor(null);
       },
       setVisual(enabled: boolean) {
         visual = enabled;

@@ -11,6 +11,8 @@ import {
   ambienceGain,
   createAmbienceGate,
   chirpLength,
+  doorShare,
+  reportedPresence,
   createChirpField,
   peakBudget,
   seededRandom,
@@ -206,5 +208,41 @@ describe('the ambience’s gate starts it on entering and stops it on leaving', 
     });
     expect(gate.update({ inside: false, doorOpen: 0 }).action).toBe(null);
     expect(gate.playing).toBe(false);
+  });
+});
+
+describe('the room tone wherever the walker hears it (the owner, 2026-10-27)', () => {
+  const gain = (bridge: boolean, corridorDoor: number | null) =>
+    ambienceGain(reportedPresence({ bridge, corridorDoor }));
+
+  it('is full whenever the walker is on the bridge, whatever the corridor says', () => {
+    expect(gain(true, null)).toBe(1);
+    expect(gain(true, 0)).toBe(1);
+    expect(gain(true, 1)).toBe(1);
+  });
+
+  it('is heard from the corridor only through doors that lead to the bridge, as far as they are open', () => {
+    expect(gain(false, null)).toBe(0);
+    expect(gain(false, 0)).toBe(0);
+    expect(gain(false, 1)).toBeCloseTo(DOOR_LEAK);
+    expect(gain(false, 0.5)).toBeCloseTo(DOOR_LEAK / 2);
+  });
+
+  it('measures the doors open by their swing, fully at a right angle', () => {
+    expect(doorShare(0)).toBe(0);
+    expect(doorShare(Math.PI / 4)).toBeCloseTo(0.5);
+    expect(doorShare(-Math.PI / 2)).toBe(1);
+    expect(doorShare(3)).toBe(1);
+  });
+
+  it('starts once from the corridor, rises on entering without starting again, and stops as the doors shut behind', () => {
+    const gate = createAmbienceGate();
+    const at = (bridge: boolean, door: number | null) =>
+      gate.update(reportedPresence({ bridge, corridorDoor: door }));
+    expect(at(false, 0).action).toBe(null);
+    expect(at(false, 0.3).action).toBe('start');
+    expect(at(true, null)).toEqual({ action: null, level: 1 });
+    expect(at(false, 1).action).toBe(null);
+    expect(at(false, 0)).toEqual({ action: 'stop', level: 0 });
   });
 });

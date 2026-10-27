@@ -24,7 +24,7 @@ import {
 import { createViewscreen } from '../views/bridge-viewscreen';
 import { createBridgeLightsUp } from '../views/bridge-lights-up';
 import { LIGHTS_UP, lightsUpTotal } from '../logic/bridge-lights-up';
-import { createBridgeAmbience } from '../../components/sound/audio/bridge-ambience';
+import { sharedBridgeAmbience } from '../../components/sound/audio/bridge-ambience';
 import { createBridgeEmergencyLights } from '../views/bridge-emergency-lights';
 import {
   bridgeEmergencyLit,
@@ -232,29 +232,34 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
     chatter,
     alarmBleep,
   ]);
-  // Its hum (`components/sound/audio/bridge-ambience.ts`): heard only
-  // with the walker inside, rising with its lights; the room's equipment,
-  // so it hums on with the lights off.
-  const ambience = createBridgeAmbience();
+  // Its room tone (`components/sound/audio/bridge-ambience.ts`): the
+  // game's one, shared with the corridor, which hears it through the open
+  // doors; full whenever the walker is in here, however they came, rising
+  // with its lights; the room's equipment, so it hums on with them off.
+  const ambience = sharedBridgeAmbience();
   const dispose = () => {
     handle();
-    ambience.dispose();
+    ambience.bridge(false);
   };
   return Object.assign(dispose, handle, {
     enter: (from: string | null) => {
       lightsUp.enter(from);
       chatter.setActive(true);
       alarmBleep.setActive(true);
-      ambience.setPresence(
-        { inside: true },
-        { after: LIGHTS_UP.dark, rise: lightsUpTotal() - LIGHTS_UP.dark },
+      // From the corridor it rises with the lights; arriving any other
+      // way (a reload, a link, noclip) it is simply there.
+      ambience.bridge(
+        true,
+        from === 'main_corridor'
+          ? { after: LIGHTS_UP.dark, rise: lightsUpTotal() - LIGHTS_UP.dark }
+          : undefined,
       );
     },
     suspend: () => {
       lightsUp.leave();
       chatter.setActive(false);
       alarmBleep.setActive(false);
-      ambience.setPresence({ inside: false });
+      ambience.bridge(false);
     },
   });
 }

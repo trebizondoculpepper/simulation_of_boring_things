@@ -361,3 +361,24 @@ export function createAmbienceGate() {
     },
   };
 }
+
+/** How open a pair of doors is, 0 shut to 1, from its more open leaf's swing (radians; fully open at a right angle). */
+export const doorShare = (angle: number): number =>
+  Math.min(1, Math.max(0, Math.abs(angle) / (Math.PI / 2)));
+
+/**
+ * Where the walker is, from what the rooms report (the owner, 2026-10-27:
+ * "the room tone should be heard anytime you're in the room, and also if
+ * you're standing outside the room with the doors open"): the bridge says
+ * whether the walker is in it, however they got there; the main corridor,
+ * while the walker is in it, how far its control room doors stand open if
+ * they lead to the bridge (else null). Inside wins; otherwise the
+ * corridor's doors, or nothing.
+ */
+export function reportedPresence(reports: {
+  bridge: boolean;
+  corridorDoor: number | null;
+}): AmbiencePresence {
+  if (reports.bridge) return { inside: true };
+  return { inside: false, doorOpen: reports.corridorDoor ?? 0 };
+}
