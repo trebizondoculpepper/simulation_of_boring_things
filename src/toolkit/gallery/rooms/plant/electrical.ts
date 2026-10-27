@@ -15,6 +15,10 @@ import {
   createMotorControlCentre,
   createVariableSpeedDrive,
 } from '../../../components/plant/views/electrical-switchgear';
+import {
+  CHANGEOVER_SWITCH,
+  createChangeoverSwitch,
+} from '../../../components/plant/views/changeover-switch';
 
 /** What this plant room is for, printed on its title card. */
 export const PURPOSE =
@@ -91,6 +95,21 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     reference: 'After Union Connector GCB 400 A, 762 × 610 × 254 mm',
     size: { w: 0.62, d: 0.4, h: 0.77, mount: 'wall', y: 1.3 },
     build: createGeneratorConnection,
+  },
+  {
+    // Prompt 089, item 6: between the main incoming switch and the
+    // switchboard; the loading bay's generator cable on its II side.
+    title: 'Mains/generator changeover switch',
+    reference:
+      'After Socomec SIRCOVER and ABB OT…C manual changeovers, 400 A, I · 0 · II, in a 500 × 700 × 250 mm enclosure',
+    size: {
+      w: CHANGEOVER_SWITCH.w,
+      d: CHANGEOVER_SWITCH.d,
+      h: CHANGEOVER_SWITCH.h,
+      mount: 'wall',
+      y: CHANGEOVER_SWITCH.y,
+    },
+    build: (kit) => createChangeoverSwitch(kit),
   },
   {
     title: 'Main earthing terminal',

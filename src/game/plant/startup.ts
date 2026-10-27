@@ -61,6 +61,8 @@ export function fullOn(plant: PlantServices): PlantServices {
     isolators: Object.fromEntries(
       ISOLATORS.map((name) => [name, true]),
     ) as Record<IsolatorName, boolean>,
+    // The whole plant on: the switchboard on the mains.
+    changeover: 'I',
   };
 }
 

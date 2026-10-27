@@ -154,6 +154,10 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // 44 → 45: the chemical distribution (plan 085): its day tanks part
   // full (`fillDefaults` adds them); the acid store's 4,000 l tank.
   44: (world) => world,
+  // 45 → 46: the mains/generator changeover switch (prompt 089, item 6):
+  // its handle at I, mains (`fillDefaults` adds it); the switch room's
+  // generator connection point removed.
+  45: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

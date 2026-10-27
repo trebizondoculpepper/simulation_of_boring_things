@@ -465,6 +465,15 @@ export const PLACED_KINDS = {
     purpose: 'Distributes and protects lighting-zone circuits.',
     brand: 'voltara',
   },
+  'changeover-switch': {
+    type: 'Changeover switch',
+    status: 'none',
+    code: 'IS',
+    class: 'plant',
+    purpose:
+      'Feeds the switchboard from the mains (I), nothing (0) or a generator (II), never both.',
+    brand: 'voltara',
+  },
   'generator-point': {
     type: 'Generator connection',
     status: 'none',

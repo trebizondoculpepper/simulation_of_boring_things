@@ -1,3 +1,6 @@
+import { switchboardLive } from './changeover';
+import type { ChangeoverPosition } from './changeover';
+
 /** Shared utilities and the rooms that consume them. This is the current
  * gallery layout, rather than the older five-attraction sizing study. */
 export type Utility = 'power' | 'water' | 'heat' | 'air' | 'chemical';
@@ -63,6 +66,12 @@ export interface PlantServices {
   feeders: Record<ServiceRoom, boolean>;
   /** Each machine's isolator: on, or locked off. */
   isolators: Record<IsolatorName, boolean>;
+  /**
+   * The mains/generator changeover switch's handle (`changeover.ts`):
+   * I (mains), 0 (off) or II (generator), between the main switch and the
+   * switchboard.
+   */
+  changeover: ChangeoverPosition;
 }
 
 export function newPlantServices(): PlantServices {
@@ -80,6 +89,7 @@ export function newPlantServices(): PlantServices {
     isolators: Object.fromEntries(
       ISOLATORS.map((name) => [name, true]),
     ) as Record<IsolatorName, boolean>,
+    changeover: 'I',
   };
 }
 
@@ -90,8 +100,9 @@ export function serviceAvailable(
 ): boolean {
   if (!(ROOM_SERVICES[room] as readonly Utility[]).includes(utility))
     return false;
-  if (!plant.sources.power || !plant.feeders[room]) return false;
-  if (!plant.sources[utility]) return false;
+  if (!switchboardLive(plant) || !plant.feeders[room]) return false;
+  // Power is the switchboard's, from whichever supply the changeover gives it.
+  if (utility !== 'power' && !plant.sources[utility]) return false;
   if (utility === 'chemical' && !plant.feeders.acid_store) return false;
   const source = UTILITY_SOURCE[utility];
   return source === room || plant.feeders[source];

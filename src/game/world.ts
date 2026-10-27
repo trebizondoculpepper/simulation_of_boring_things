@@ -248,7 +248,9 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 45;
+import { turnChangeover } from './plant/changeover';
+
+export const WORLD_VERSION = 46;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -376,6 +378,8 @@ export type WorldAction =
   | { type: 'demo/reset' }
   | { type: 'plant/source'; utility: Utility; on: boolean }
   | { type: 'plant/feeder'; room: ServiceRoom; on: boolean }
+  /** The changeover switch's handle turned one position (−1 toward I, +1 toward II). */
+  | { type: 'plant/changeover'; direction: -1 | 1 }
   | { type: 'plant/isolator'; name: IsolatorName; on: boolean }
   | { type: 'plant/delivery'; chemical: Chemical; litres: number }
   | { type: 'plant/booster-reset' }
@@ -767,6 +771,15 @@ export function applyAction(world: World, action: WorldAction): World {
     case 'plant/booster-reset': {
       const wetHall = resetBooster(world.wetHall);
       return wetHall === world.wetHall ? world : { ...world, wetHall };
+    }
+    case 'plant/changeover': {
+      const changeover = turnChangeover(
+        world.plant.changeover,
+        action.direction,
+      );
+      return changeover === world.plant.changeover
+        ? world
+        : { ...world, plant: { ...world.plant, changeover } };
     }
     case 'plant/feeder':
       return world.plant.feeders[action.room] === action.on

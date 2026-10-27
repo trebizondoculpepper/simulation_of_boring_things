@@ -56,6 +56,12 @@ function said(
         text: `${action.utility} supply to the plant ${onOff(action.on)}`,
         severity: action.on ? 'info' : 'notice',
       };
+    case 'plant/changeover':
+      return {
+        subject: 'switch_room',
+        text: `changeover switch turned toward ${action.direction < 0 ? 'I (mains)' : 'II (generator)'}`,
+        severity: 'notice',
+      };
     case 'plant/feeder':
       return {
         subject: action.room,

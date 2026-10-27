@@ -6,8 +6,11 @@ import { link, roomElectrics } from './schematic-parts';
  * room's design kept, every component in the model): the building's
  * incoming supply through its main switch to the LV switchboard, which
  * feeds the rooms, the lighting board and the emergency lighting's central
- * battery; the generator connection into the switchboard; the main
- * earthing terminal; and the room's own electrics. Pure.
+ * battery; the mains/generator changeover switch between the main switch
+ * and the switchboard, the loading bay's generator cable (a boundary) on
+ * its II side (prompt 089, item 6: the room's own generator connection
+ * point was a duplicate of the bay's, and is gone); the main earthing
+ * terminal; and the room's own electrics. Pure.
  */
 
 const room = 'switch_room';
@@ -35,7 +38,18 @@ export const SWITCH_ROOM_SCHEMATIC: RoomSchematic = {
       'lighting-board',
       'Lighting distribution board DB-L1',
     ),
-    machine('generator-point', 'generator-point', 'Generator connection point'),
+    machine(
+      'changeover',
+      'changeover-switch',
+      'Mains/generator changeover switch',
+    ),
+    // The loading bay's generator cable, in over the cable ladder (a
+    // boundary: its connection cabinet is the bay's).
+    machine(
+      'generator-cable',
+      'generator-cable',
+      'Generator cable from the loading bay',
+    ),
     machine('earthing', 'earthing-terminal', 'Main earthing terminal'),
     machine('rooms', 'room-feeders', 'The rooms’ supplies'),
     machine('lighting-zones', 'lighting-zones', 'Lighting zones'),
@@ -49,8 +63,14 @@ export const SWITCH_ROOM_SCHEMATIC: RoomSchematic = {
       'power',
     ),
     link(
-      'Main switch to the switchboard',
+      'Main switch to the changeover switch',
       ['main-switch', 'out'],
+      ['changeover', 'mains'],
+      'power',
+    ),
+    link(
+      'Changeover switch to the switchboard',
+      ['changeover', 'out'],
       ['switchboard', 'in'],
       'power',
     ),
@@ -85,9 +105,9 @@ export const SWITCH_ROOM_SCHEMATIC: RoomSchematic = {
       'power',
     ),
     link(
-      'Generator to the switchboard',
-      ['generator-point', 'out'],
-      ['switchboard', 'generator'],
+      'Generator cable to the changeover switch',
+      ['generator-cable', 'out'],
+      ['changeover', 'generator'],
       'power',
     ),
     link(

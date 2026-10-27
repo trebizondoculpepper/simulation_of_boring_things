@@ -31,6 +31,7 @@ import {
   OUTLET_METER_GAP,
 } from '../../components/plant/logic/booster-set';
 import { LIGHTING_BOARD, MAIN_SWITCH } from './switch-room';
+import { CHANGEOVER_SWITCH } from '../../components/plant/views/changeover-switch';
 import { ROOM_SIGNS, SIGN_ITEMS } from './building-signs';
 import { loungeRoomBox } from './lounge-plant-plan';
 
@@ -1082,13 +1083,18 @@ export function roomEquipment(
             // title card on the north.
             { walls: ['east'] },
           ),
+          // Between the main switch and the switchboard (prompt 089, item
+          // 6): the loading bay's generator cable lands on its II side.
+          // (The room's own generator connection point, a duplicate of the
+          // bay's cabinet, is gone.)
           wall(
-            'generator-point',
-            'Generator connection point',
-            0.62,
-            0.4,
-            0.77,
-            1.3,
+            'changeover-switch',
+            'Mains/generator changeover switch',
+            CHANGEOVER_SWITCH.w,
+            CHANGEOVER_SWITCH.d,
+            CHANGEOVER_SWITCH.h,
+            CHANGEOVER_SWITCH.y,
+            { walls: ['east'] },
           ),
           wall(
             'earthing-terminal',
@@ -1433,7 +1439,9 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
         'west',
       ),
       put(box, at('lighting-board'), { wall: 'east', along: -0.34 }),
-      put(box, at('generator-point'), { wall: 'south', along: -1.79 }),
+      // North of the main switch on its wall, under the trunking from it
+      // to the switchboard.
+      put(box, at('changeover-switch'), { wall: 'east', along: -2.3 }),
       put(box, at('earthing-terminal'), { wall: 'west', along: 3.58 }),
       put(box, at('sign:shock-poster'), { wall: 'south', along: 1.75 }),
     ];

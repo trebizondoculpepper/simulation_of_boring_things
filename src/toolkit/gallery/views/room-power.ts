@@ -1,4 +1,5 @@
 import { withIntake } from '../../../game/plant/site-intake';
+import { switchboardLive } from '../../../game/plant/changeover';
 import { retiredFrom } from '../logic/retired-rooms';
 import { Mesh, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import type { Material, Object3D } from 'three';
@@ -117,13 +118,13 @@ export function roomPowered(room: ServiceRoom) {
   };
 }
 
-/** Whether the site has power: the main switch, and the switch room's supply (the halls and corridors). */
+/** Whether the site has power: the switchboard live (the main switch and the changeover), and the switch room's supply (the halls and corridors). */
 export function sitePowered() {
   const store = typeof window === 'undefined' ? null : roomWorld();
   return () => {
     const w = store?.world.value;
     return w
-      ? withIntake(w.plant, w.intake).sources.power &&
+      ? switchboardLive(withIntake(w.plant, w.intake)) &&
           w.plant.feeders.switch_room
       : true;
   };

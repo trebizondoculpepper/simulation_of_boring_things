@@ -88,6 +88,14 @@ import { EXHIBITS as OZONE } from '../rooms/plant/ozone';
 import { EXHIBITS as DOSING } from '../rooms/plant/dosing';
 import { EXHIBITS as BALANCE } from '../rooms/plant/balance';
 import { createMainSwitch } from '../../components/plant/views/main-switch';
+import { withIntake } from '../../../game/plant/site-intake';
+import { createChangeoverSwitch } from '../../components/plant/views/changeover-switch';
+import type { ChangeoverBinding } from '../../components/plant/views/changeover-switch';
+import {
+  changeoverStatus,
+  generatorAvailable,
+  mainsAvailable,
+} from '../../../game/plant/changeover';
 import { createLightingBoard } from '../../components/plant/views/lighting-board';
 import {
   createFlowRecorderPanel,
@@ -241,6 +249,7 @@ export const MODELS: Record<string, PlantExhibit> = {
   'distribution-board': byTitle(ELECTRICAL, 'Distribution board'),
   'rotary-isolators': byTitle(ELECTRICAL, 'Rotary isolators'),
   'generator-point': byTitle(ELECTRICAL, 'Generator connection point'),
+  'changeover-switch': byTitle(ELECTRICAL, 'Mains/generator changeover switch'),
   'earthing-terminal': byTitle(ELECTRICAL, 'Main earthing terminal'),
   'operator-desk': byTitle(CONTROL, "Operator's desk, POOLMON"),
   'alarm-printer': byTitle(CONTROL, 'Alarm printer'),
@@ -477,6 +486,9 @@ function modelFor(
   }
   // The main incoming switch, the whole site's supply in the world.
   if (kind === 'main-switch') return createMainSwitch(kit, mainsFeed());
+  // The mains/generator changeover switch, the world's (prompt 089).
+  if (kind === 'changeover-switch')
+    return createChangeoverSwitch(kit, changeoverBinding());
   if (kind === 'ahu-stack') {
     const stack = stackOf(item.key);
     if (stack) return createAhuStack(kit, stack.units, STACK_FRAME);
@@ -1087,6 +1099,22 @@ function worldTankLevel(
   };
   update();
   return { object: tank, update };
+}
+
+/** The world's changeover switch: its handle, and the supplies at its sides. */
+function changeoverBinding(): ChangeoverBinding | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const store = roomWorld();
+  const plant = () =>
+    withIntake(store.world.value.plant, store.world.value.intake);
+  return {
+    position: () => store.world.value.plant.changeover,
+    turn: (direction) =>
+      store.dispatch({ type: 'plant/changeover', direction }),
+    mainsAvailable: () => mainsAvailable(plant()),
+    generatorAvailable: () => generatorAvailable(plant()),
+    status: () => changeoverStatus(plant()),
+  };
 }
 
 /** The world's whole-site supply (`plant.sources.power`), for the main switch. */

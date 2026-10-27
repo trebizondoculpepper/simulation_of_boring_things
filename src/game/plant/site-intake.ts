@@ -1,4 +1,5 @@
 import type { PlantServices } from './services';
+import { switchboardSource } from './changeover';
 import { MOTORS, MOTOR_TAGS } from './motor-starters';
 import type { MotorsState } from './motor-starters';
 import { LIGHTING_ZONE_IDS } from './lighting';
@@ -114,9 +115,9 @@ export interface SiteLoadInputs {
   wetHall: WetHallState;
 }
 
-/** The site's electrical load now, kW: nothing without mains. */
+/** The site's electrical load now, kW: nothing unless the mains feeds the switchboard. */
 export function siteLoadKw(w: SiteLoadInputs): number {
-  if (!w.plant.sources.power) return 0;
+  if (switchboardSource(w.plant) !== 'mains') return 0;
   let kw = BASE_LOAD;
   for (const tag of MOTOR_TAGS)
     if (w.motors.starters[tag]?.running) kw += MOTORS[tag].fla * KW_PER_FLA;

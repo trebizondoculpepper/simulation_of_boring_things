@@ -160,6 +160,7 @@ export function switchRoomContainment(): {
         from: [swX, y, north],
         to: [boardX, y, north],
       },
+      ...changeoverDrop(find('changeover-switch'), swX, y),
       {
         name: 'Trunking, down into the main switchboard',
         kind: 'trunking',
@@ -172,6 +173,40 @@ export function switchRoomContainment(): {
     );
   }
   return { runs, entries };
+}
+
+/**
+ * The changeover switch's trunking (prompt 089, item 6): down from the
+ * main switch's run to the switchboard, along its wall overhead, into the
+ * switch's top: the mains in, and the switchboard's supply out, through
+ * it; the generator cable from the loading bay comes by the cable ladder.
+ */
+function changeoverDrop(
+  p: Placed | undefined,
+  x: number,
+  y: number,
+): Containment[] {
+  if (!p) return [];
+  return [
+    {
+      name: 'Trunking, down into the changeover switch',
+      kind: 'trunking',
+      width: 0.3,
+      depth: 0.15,
+      from: [x, p.y + p.item.h / 2, p.z],
+      to: [x, y, p.z],
+      facing: 'x',
+    },
+    {
+      name: 'Changeover switch trunking',
+      kind: 'trunking',
+      width: 0.2,
+      depth: 0.1,
+      from: [x, y + 0.15, p.z],
+      to: [x, LADDER_Y, p.z],
+      facing: 'x',
+    },
+  ];
 }
 
 /**

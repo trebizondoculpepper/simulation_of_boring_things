@@ -476,6 +476,7 @@ export const KIND_HEALTH_COVERAGE = {
   'rotary-isolators': 'services: isolators on',
   'lighting-board': 'lighting: supply and zones',
   'generator-point': 'not health: a connection for a hired generator',
+  'changeover-switch': 'services: the switchboard’s supply',
   'earthing-terminal': 'not in the world: no state',
   'ahu-stack': 'air: units in service, not tripped',
   'mimic-air': 'not health: a display of the air plant',

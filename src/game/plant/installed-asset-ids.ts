@@ -7,7 +7,9 @@
  * isolators); asset-0055 AS-T1 (the acid IBC, 2026-10-27: its bulk
  * tank took its place, plan 085); asset-0061 (the hypochlorite fill
  * cabinet, 2026-10-27: one cabinet takes both deliveries, and the
- * generator's connection cabinet its place). */
+ * generator's connection cabinet its place); asset-0070 SR-FX1 (the
+ * switch room's generator connection point, 2026-10-27: a duplicate of
+ * the loading bay's cabinet, prompt 089). */
 export const INSTALLED_ASSET_IDS: Readonly<
   Record<string, { assetId: string; tag: string }>
 > = {
@@ -229,9 +231,9 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0069',
     tag: 'SR-DB4',
   },
-  'switch_room|generator-point|Generator connection point': {
-    assetId: 'asset-0070',
-    tag: 'SR-FX1',
+  'switch_room|changeover-switch|Mains/generator changeover switch': {
+    assetId: 'asset-0146',
+    tag: 'SR-IS3',
   },
   'switch_room|earthing-terminal|Main earthing terminal': {
     assetId: 'asset-0071',

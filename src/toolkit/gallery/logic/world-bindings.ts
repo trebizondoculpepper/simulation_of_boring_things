@@ -117,6 +117,9 @@ export const WORLD_BINDINGS: Readonly<Record<string, WorldBinding>> = {
     'the site’s supply: charging, or carrying the emergency lighting on battery',
   ),
   'generator-point': passive('a connection box for a hired generator'),
+  'changeover-switch': world(
+    'its handle (I, 0, II) and the supplies at its sides',
+  ),
   'earthing-terminal': passive('a copper bar'),
   // The air plant: its own model, fed by the world’s power.
   'ahu-stack': world('the air plant model: the world’s power'),

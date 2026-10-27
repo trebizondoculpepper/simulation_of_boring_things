@@ -131,6 +131,7 @@ export const LOADING_BAY_SCHEMATIC = backRoom(
     link(
       'Generator cable to the switch room',
       ['generator-point', 'out'],
+      // On the changeover switch's II side (prompt 089, item 6).
       ['switch-room', 'generator'],
       'power',
     ),

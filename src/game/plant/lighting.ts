@@ -20,6 +20,7 @@
  * Pure.
  */
 import type { PlantServices } from './services';
+import { switchboardLive } from './changeover';
 
 export interface LightingZone {
   /** Its way on DB-L1, from 1. */
@@ -261,7 +262,7 @@ export function zoneOfRoom(room: string): LightingZoneId | undefined {
 
 /** Whether DB-L1 itself has a supply. */
 export const lightingBoardLive = (plant: PlantServices, l: LightingState) =>
-  plant.sources.power && plant.feeders.switch_room && l.supply;
+  switchboardLive(plant) && plant.feeders.switch_room && l.supply;
 
 /** Whether DB-L1's ways are live: its supply, and its main switch on. */
 export const lightingWaysLive = (plant: PlantServices, l: LightingState) =>
