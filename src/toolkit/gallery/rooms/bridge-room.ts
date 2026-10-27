@@ -4,6 +4,14 @@ import type { LoopRecipe } from '../../components/core/audio/part-audio';
 import { musicPlaylist } from '../../components/sound/audio/music-playlist';
 import { computed, effect, signal } from '@preact/signals-core';
 import { createChatter } from '../../components/sound/logic/console-chatter';
+import {
+  BOOT_SOUNDS,
+  LEVELS,
+  bootCue,
+  createCueGate,
+  createPicker,
+} from '../../components/sound/logic/console-sounds';
+import { playConsoleSound } from '../../components/sound/audio/console-recordings';
 import { startBridgeRoom } from './control-room-prototype';
 import type { Part } from '../../components/core/parts/parts';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -41,7 +49,10 @@ import {
 } from '../logic/bridge-lights-up';
 import type { Entrance, RevealTrigger } from '../logic/bridge-lights-up';
 import type { EquipmentDoorsPart } from '../../components/architectural/parts/equipment-doors';
-import { bootGroupOf } from '../../components/industrial-control/views/touch-surface';
+import {
+  bootGroupOf,
+  onBootPhase,
+} from '../../components/industrial-control/views/touch-surface';
 import type { BootGroup, BootSpec } from '../../../ui2d';
 import { roomPowered } from '../views/room-power';
 import { createThemeCue } from '../logic/bridge-theme-cue';
@@ -333,13 +344,17 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
     (kit) => {
       const group = bootGroupOf(kit);
       displays = group;
+      const bootSounds = installBootSounds(kit);
       // One power for every display, however and whenever built: those
       // already made, and those to come (they join at the group's power).
       effect(() => {
         const on = displayPower.value;
         if (on === group.powered) return;
-        const ready = group.setPower(on, on ? powerUp : 'instant');
+        const up = on ? powerUp : 'instant';
+        const ready = group.setPower(on, up);
         powerUp = ENTRANCE_BOOT;
+        // Booting (never an instant power-up): heard from the viewscreen.
+        if (up !== 'instant' && ready > 0) bootSounds.powerUp();
         if (on && onBooting) {
           onBooting(ready);
           onBooting = null;
@@ -361,6 +376,7 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
         installLightSwitch(kit, () => lightsUp.glow()),
         lightsUp,
         revealPart,
+        bootSounds,
         chatter,
         alarmBleep,
       ];
@@ -572,8 +588,9 @@ function installLightSwitch(
 /**
  * The consoles chattering (the owner, 2026-10-27): every so often (a
  * normal spread of gaps, mean 25 s, deviation 10 s, `console-chatter.ts`)
- * one of the stations round the room, forward or aft, bleeps or bloops a
- * chirp made up afresh, heard from where it stands. Only with the walker
+ * one of the stations round the room, forward or aft, bleeps or bloops
+ * one of the owner's console sounds, resynthesised (`console-sounds.ts`,
+ * `CHATTER_SOUNDS`), heard from where it stands. Only with the walker
  * on the bridge. Set decoration: it tells of nothing.
  */
 function installChatter() {
@@ -593,11 +610,54 @@ function installChatter() {
     setActive: (on: boolean) => clock.setActive(on),
     update(delta: number) {
       const due = clock.step(delta);
-      if (due) partAudio.play({ tones: due.chirp }, emitters[due.console]);
+      if (due)
+        playConsoleSound(due.sound, LEVELS.chatter, emitters[due.console]);
     },
     onEvent: () => () => {},
     setAudible: () => {},
     dispose: () => {},
+  };
+}
+
+/**
+ * The displays heard booting (the owner, 2026-10-27): as their power
+ * rises, the main viewscreen says it is booting up; each display's emblem
+ * coming up, and each display coming on, a quiet cue from that display;
+ * the main viewscreen coming on, engines online. Some 25 displays boot
+ * within a few seconds, so the cues pass a gate (`createCueGate`): any
+ * that would crowd another are dropped. An instant power-up (a reload, a
+ * link) or a skip is silent.
+ */
+function installBootSounds(kit: PanelKit) {
+  const object = new Group();
+  object.name = 'Display boot sounds';
+  const vp = viewscreenPlace();
+  const viewscreen = new Object3D();
+  viewscreen.position.set(vp.x, vp.y, vp.z);
+  object.add(viewscreen);
+  const pick = createPicker(Math.random);
+  const gate = createCueGate();
+  const now = () =>
+    typeof performance === 'undefined' ? 0 : performance.now() / 1000;
+  onBootPhase(kit, (phase, screen, main) => {
+    const cues = bootCue(phase, main);
+    if (!cues) return;
+    const name = pick(cues);
+    if (gate(name, now(), main))
+      playConsoleSound(name, main ? LEVELS.bootMain : LEVELS.bootEach, screen);
+  });
+  markComponent(object, { name: 'Display boot sounds', decorative: true });
+  return {
+    object,
+    uses: new Map<Object3D, () => void>(),
+    powerUp() {
+      gate(BOOT_SOUNDS.powerUp, now(), true);
+      playConsoleSound(BOOT_SOUNDS.powerUp, LEVELS.bootMain, viewscreen);
+    },
+    update: () => {},
+    onEvent: () => () => {},
+    setAudible: () => {},
+    dispose: () => onBootPhase(kit, null),
   };
 }
 

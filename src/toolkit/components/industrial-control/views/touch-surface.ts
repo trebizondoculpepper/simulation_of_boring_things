@@ -15,6 +15,7 @@ import {
   UiRoot,
 } from '../../../../ui2d';
 import type {
+  BootPhase,
   BootScreenOptions,
   Theme,
   UiNode,
@@ -25,8 +26,9 @@ import { createCanvasTexture } from '../../core/views/screens';
 import { createPs1Material } from '../../core/parts/ps1-material';
 import { beginPart } from '../../core/parts/parts';
 import { partAudio } from '../../core/audio/part-audio';
+import type { SoundRecipe } from '../../core/audio/part-audio';
 import { touchPoint } from '../../../controls/input/touch-point';
-import { TOUCH_BLEEPS } from '../../sound/audio/touch-bleeps';
+import { synthTouchSound } from '../../sound/audio/touch-bleeps';
 import {
   bend,
   cornerRadius,
@@ -53,8 +55,8 @@ import type { Point2, ScreenRect } from '../logic/touch-surface';
  * touch where it landed: from the hit's texture coordinates
  * (`touchPoint`), or, on a flat surface, from the hit's point in the
  * frame's plane; it goes to that screen's tree as a tap at its pixel, and
- * the tree's sounds are played as the game's touch bleeps from the
- * screen.
+ * the tree's sounds are played from the screen, as the game's touch
+ * bleeps or the surface's own (`sounds`).
  *
  * In metres, the frame's face at z = 0 facing +z, its body `depth` behind;
  * the frame's own coordinates have x right and y up from its origin.
@@ -111,6 +113,25 @@ export function bootGroupOf(kit: PanelKit): BootGroup {
   return group;
 }
 
+/** Told of a boot phase reached by a screen made with a kit: the phase, the screen, and whether it is the room's main one (booting last, `lastAfter`). */
+export type BootPhaseListener = (
+  phase: BootPhase,
+  screen: Mesh,
+  main: boolean,
+) => void;
+
+const bootListeners = new WeakMap<PanelKit, BootPhaseListener>();
+
+/**
+ * Hear the boot of every touch screen made with `kit` from now on (a
+ * room's, to make its own boot sounds; the owner, 2026-10-27): each phase
+ * a screen ticks through, never a skip or an instant power-up.
+ */
+export function onBootPhase(kit: PanelKit, listener: BootPhaseListener | null) {
+  if (listener) bootListeners.set(kit, listener);
+  else bootListeners.delete(kit);
+}
+
 export interface TouchScreenSpec {
   /** Its opening in the frame, metres. */
   rect: ScreenRect;
@@ -140,6 +161,8 @@ export interface TouchSurfaceOptions {
   /** The frame's body behind its face, metres (0 for a bare sheet). */
   depth?: number;
   frameColour?: string;
+  /** What its touches sound like, by the sound a press asks for (default: the game's synthesised bleeps, `synthTouchSound`). */
+  sounds?: (sound: UiSound) => SoundRecipe | null;
   /** Bend the whole surface round a vertical axis this far in front of it (a curved strip; its outline a rectangle round its screens). */
   curve?: number;
   name?: string;
@@ -266,11 +289,18 @@ export function createTouchSurface(
     // Run through a boot (the owner, 2026-10-27): on until booted.
     const boot =
       spec.boot === false ? null : new BootScreen(spec.tree, spec.boot ?? {});
-    if (boot) bootGroupOf(kit).add(boot);
+    if (boot) {
+      bootGroupOf(kit).add(boot);
+      const main = boot.options.lastAfter !== undefined;
+      boot.onPhase = (phase) => bootListeners.get(kit)?.(phase, mesh, main);
+    }
     const root = new UiRoot(boot ?? spec.tree, theme, {
       width,
       height,
-      onSound: (sound: UiSound) => partAudio.play(TOUCH_BLEEPS[sound], mesh),
+      onSound: (sound: UiSound) => {
+        const recipe = (options.sounds ?? synthTouchSound)(sound);
+        if (recipe) partAudio.play(recipe, mesh);
+      },
     });
     whenFont(() => spec.tree.markDirty());
     // Repainted, and its texture uploaded, only when its tree says it has

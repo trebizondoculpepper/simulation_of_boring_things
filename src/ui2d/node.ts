@@ -2,8 +2,13 @@ import { contains, rect } from './geometry';
 import type { PathOp, Rect } from './geometry';
 import type { Theme } from './theme';
 
-/** The sounds a press asks the host to make: the kit makes none itself. */
-export type UiSound = 'confirm' | 'deny' | 'page' | 'alert';
+/**
+ * The sounds a press asks the host to make: the kit makes none itself.
+ * `confirm`, an ordinary press; `done`, a command carried out or an entry
+ * accepted; `ack`, alarms accepted; `deny`, a refusal; `page`, a page
+ * change; `alert`, an alert.
+ */
+export type UiSound = 'confirm' | 'done' | 'ack' | 'deny' | 'page' | 'alert';
 
 /** What a press did: the action it names, if any, and the sound it asks for. */
 export interface PressResult {

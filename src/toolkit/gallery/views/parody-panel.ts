@@ -24,6 +24,7 @@ import type {
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createPartSet } from '../../components/core/parts/parts';
 import { createTouchSurface } from '../../components/industrial-control/views/touch-surface';
+import { recordedTouchSound } from '../../components/sound/audio/console-recordings';
 import {
   awaitingAccept,
   createAnnunciator,
@@ -125,7 +126,8 @@ export function createParodyPanel(
     if (now.kind === 'act') {
       const action = now.act(c);
       if (action) live.dispatch(action);
-      return undefined;
+      // Carried out: heard as an accepted entry.
+      return 'done';
     }
     if (now.kind === 'view') return undefined;
     notice = refusal(now) ?? '';
@@ -195,12 +197,16 @@ export function createParodyPanel(
                       ? 'mariner'
                       : colour(),
               onPress: () => {
-                if (verb === 'accept' || label === 'ACCEPT ALARMS')
+                const accepting =
+                  verb === 'accept' || label === 'ACCEPT ALARMS';
+                if (accepting)
                   everyAnnunciator().forEach((a) => a.acknowledge());
                 if (verb === 'lamp-test') lampTest = 2;
-                if (B) return command(cmd);
-                if (verb === 'reset') annunciators.forEach((a) => a.reset());
-                return press(label);
+                if (!B && verb === 'reset')
+                  annunciators.forEach((a) => a.reset());
+                const answer = B ? command(cmd) : press(label);
+                // Alarms accepted: heard as such, unless refused.
+                return accepting && answer !== 'deny' ? 'ack' : answer;
               },
             });
             if (lit) reads.push((c) => button.setLit(lit(c)));
@@ -486,6 +492,7 @@ export function createParodyPanel(
       colour: 'golden-tanoi',
       onPress: () => {
         everyAnnunciator().forEach((a) => a.acknowledge());
+        return 'ack';
       },
     });
     acceptButtons.push(accept);
@@ -537,6 +544,8 @@ export function createParodyPanel(
     bezel: outline ? 0.004 : 0.012,
     // Fewer pixels than a lone panel's: a room holds seventy of them.
     screens: [{ rect: { x: 0, y: 0, w, h }, tree, pixelsPerMetre: 560 }],
+    // The bridge's consoles answer with the owner's sounds (2026-10-27).
+    sounds: recordedTouchSound,
   });
   const parts = createPartSet();
   parts.add(surface.part);

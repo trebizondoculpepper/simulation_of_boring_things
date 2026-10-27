@@ -24,6 +24,7 @@ import type {
 } from '../../../ui2d';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createTouchSurface } from '../../components/industrial-control/views/touch-surface';
+import { recordedTouchSound } from '../../components/sound/audio/console-recordings';
 import { createPartSet } from '../../components/core/parts/parts';
 import {
   OVERVIEWS,
@@ -438,6 +439,8 @@ export function createSchematicSurface(
     screens: [
       { rect: { x: 0, y: 0, ...size }, tree: screen.tree, pixelsPerMetre },
     ],
+    // The bridge's consoles answer with the owner's sounds (2026-10-27).
+    sounds: recordedTouchSound,
   });
   const parts = createPartSet();
   parts.add(surface.part);

@@ -379,3 +379,22 @@ describe('a display’s boot (the owner, 2026-10-27)', () => {
     }
   });
 });
+
+describe('a boot heard by its host', () => {
+  it('tells each phase once as it ticks through it, and nothing for a skip or an instant power-up', () => {
+    const screen = new BootScreen(new Label('x'));
+    const heard: string[] = [];
+    screen.onPhase = (phase) => heard.push(phase);
+    screen.boot(0.5);
+    for (let t = 0; t <= bootDuration() + 1; t += 0.05) screen.tick(t);
+    expect(heard).toEqual(['emblem', 'fade', 'black', 'draw', 'on']);
+    heard.length = 0;
+    screen.boot(0);
+    screen.skip();
+    screen.tick(100);
+    screen.setPower(false);
+    screen.setPower(true, 'instant');
+    screen.tick(200);
+    expect(heard).toEqual([]);
+  });
+});

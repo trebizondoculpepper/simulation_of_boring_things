@@ -7,6 +7,7 @@ import {
   nextGap,
   seeded,
 } from './console-chatter';
+import { CHATTER_SOUNDS } from './console-sounds';
 
 describe('the bridge consoles’ chatter', () => {
   it('spaces its chirps about 25 s apart, give or take 10 s, never under its floor', () => {
@@ -54,5 +55,21 @@ describe('the bridge consoles’ chatter', () => {
     expect(heard.length).toBeLessThan(190);
     expect(new Set(heard).size).toBeGreaterThan(5);
     for (const i of heard) expect(i).toBeLessThan(10);
+  });
+});
+
+describe('the chatter’s recordings', () => {
+  it('plays only the neutral set, never the same file twice running', () => {
+    const chatter = createChatter(10, seeded(5));
+    chatter.setActive(true);
+    const heard: string[] = [];
+    for (let t = 0; t < 7200; t += 0.5) {
+      const c = chatter.step(0.5);
+      if (c) heard.push(c.sound);
+    }
+    for (const s of heard) expect(CHATTER_SOUNDS).toContain(s);
+    for (let i = 1; i < heard.length; i++)
+      expect(heard[i]).not.toBe(heard[i - 1]);
+    expect(new Set(heard).size).toBe(CHATTER_SOUNDS.length);
   });
 });

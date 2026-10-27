@@ -1,11 +1,16 @@
+import { CHATTER_SOUNDS, createPicker } from './console-sounds';
+import type { UsedSound } from './console-sounds';
+
 /**
  * The bridge's consoles chattering to themselves (the owner, 2026-10-27):
  * now and then a station round the room bleeps or bloops, unbidden, as a
  * starship's consoles do in the background. The gaps between chirps are
  * drawn from a normal distribution, mean 25 s, standard deviation 10 s,
- * never shorter than `MIN_GAP`; each chirp is a short run of tones made
- * up afresh, from a handful of shapes (a blip, a pair, a trill, a rising
- * or falling run, a warble). Pure: seeded, so tests can follow it.
+ * never shorter than `MIN_GAP`; each chirp is one of the owner's console
+ * sounds, resynthesised (`console-sounds.ts`, `CHATTER_SOUNDS`), at
+ * random, never the same twice running (2026-10-27; before, a short run
+ * of tones made up afresh, `makeChirp`, kept for any console without
+ * recordings). Pure: seeded, so tests can follow it.
  */
 
 export const CHATTER = {
@@ -14,7 +19,7 @@ export const CHATTER = {
   sd: 10,
   /** The shortest gap allowed, seconds. */
   minGap: 3,
-  /** Each tone's level: soft, from across the room. */
+  /** Each synthesised tone's level (`makeChirp`): soft, from across the room. */
   level: 0.035,
 } as const;
 
@@ -120,27 +125,28 @@ export function makeChirp(
 }
 
 /**
- * The chatter's clock: `step(dt)` gives the chirp due now, if one is,
- * with the index of the console it comes from (of `consoles`), and sets
- * the next. Silent while `active` is false (the walker elsewhere); the
+ * The chatter's clock: `step(dt)` gives the chirp due now, if one is (the
+ * recording it plays), with the index of the console it comes from (of
+ * `consoles`), and sets the next. Silent while `active` is false (the walker elsewhere); the
  * clock starts afresh, a gap ahead, when it becomes active.
  */
 export function createChatter(consoles: number, random: () => number) {
   let wait = nextGap(random);
   let active = false;
+  const pick = createPicker(random);
   return {
     setActive(on: boolean) {
       if (on && !active) wait = nextGap(random);
       active = on;
     },
-    step(dt: number): { console: number; chirp: ChirpTone[] } | null {
+    step(dt: number): { console: number; sound: UsedSound } | null {
       if (!active || consoles <= 0) return null;
       wait -= dt;
       if (wait > 0) return null;
       wait = nextGap(random);
       return {
         console: Math.floor(random() * consoles),
-        chirp: makeChirp(random).tones,
+        sound: pick(CHATTER_SOUNDS),
       };
     },
   };

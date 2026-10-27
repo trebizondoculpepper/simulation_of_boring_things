@@ -2,6 +2,7 @@ import { Group } from 'three';
 import { Banner, Frame, List, PageStack, Stack } from '../../../ui2d';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createTouchSurface } from '../../components/industrial-control/views/touch-surface';
+import { recordedTouchSound } from '../../components/sound/audio/console-recordings';
 import type { Annunciator } from '../../components/industrial-control/logic/annunciator';
 import { createPartSet } from '../../components/core/parts/parts';
 import { ALARM_TEXT, ANNUNCIATOR_ALARMS } from '../logic/control-room-demo';
@@ -58,6 +59,8 @@ export function createViewscreen(
         boot: { lastAfter: 2 },
       },
     ],
+    // The bridge's consoles answer with the owner's sounds (2026-10-27).
+    sounds: recordedTouchSound,
   });
   const parts = createPartSet();
   parts.add(surface.part);

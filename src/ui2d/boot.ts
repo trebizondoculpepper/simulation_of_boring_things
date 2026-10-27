@@ -296,6 +296,13 @@ export class BootScreen extends UiNode {
    * through a doorway, say, whose screens must go black on the spot).
    */
   onChange: (() => void) | null = null;
+  /**
+   * Told of each phase a boot reaches as it ticks through it (the emblem,
+   * its fade, black, the draw-in, on), so its host can make its own
+   * sounds; never by a skip or an instant power-up, nor by losing power.
+   */
+  onPhase: ((phase: BootPhase) => void) | null = null;
+  private heard: BootPhase = 'black';
 
   constructor(
     readonly content: UiNode,
@@ -361,6 +368,7 @@ export class BootScreen extends UiNode {
     this.mode = 'waiting';
     this.offset = Math.max(0, offset);
     this.plan = null;
+    this.heard = 'black';
     this.shown = 'black';
     this.markDirty();
     this.onChange?.();
@@ -407,6 +415,10 @@ export class BootScreen extends UiNode {
     }
     if (this.mode === 'running') {
       const s = this.state;
+      if (s.phase !== this.heard) {
+        this.heard = s.phase;
+        this.onPhase?.(s.phase);
+      }
       if (s.phase === 'on') {
         this.mode = 'on';
         this.plan = null;
