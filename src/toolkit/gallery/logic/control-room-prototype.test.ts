@@ -17,6 +17,8 @@ import {
   platformStepAt,
   ringLightCentre,
   RAMP,
+  HORSESHOE,
+  edgeAt,
   STATIONS,
   stationPlaces,
   deskInner,
@@ -255,7 +257,7 @@ describe('walking the prototype', () => {
   });
 
   it('raises the stage over a metre in six risers, and rails the rest of its front and either side of the steps', () => {
-    const edge = platformEdge();
+    const edge = edgeAt(0);
     const g = PLATFORM.going;
     const heights = [-5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5].map((k) =>
       platformStepAt(0, edge + k * g),
@@ -266,9 +268,11 @@ describe('walking the prototype', () => {
     ]);
     expect(PLATFORM.height).toBeGreaterThanOrEqual(1);
     expect(r).toBeLessThanOrEqual(0.22);
-    expect(platformStepAt(PLATFORM.stepWidth, edge - 0.15)).toBe(0);
+    expect(
+      platformStepAt(PLATFORM.stepWidth, edgeAt(PLATFORM.stepWidth) - 0.15),
+    ).toBe(0);
     const rail = platformRail();
-    expect(rail.some((s) => overlaps(s, 4, edge, 0.175))).toBe(true);
+    expect(rail.some((s) => overlaps(s, 4, edgeAt(4), 0.175))).toBe(true);
     expect(rail.some((s) => overlaps(s, 0, edge, 0.175))).toBe(false);
     // Handrails both sides of the steps.
     const half = PLATFORM.stepWidth / 2;
@@ -277,7 +281,7 @@ describe('walking the prototype', () => {
   });
 
   it('makes the stage at least 7 m deep and 10 m wide where the table stands, with room to walk round it', () => {
-    const edge = platformEdge();
+    const edge = edgeAt(0);
     const room2 = roomPolygon();
     expect(room2[4].z - edge).toBeGreaterThanOrEqual(7);
     const t = conferenceTable();
@@ -414,15 +418,16 @@ describe('the bridge: ramps either side up to the stage', () => {
     return y;
   };
 
-  it('climbs each ramp from its low outer end to the stage', () => {
+  it('climbs each ramp, round the horseshoe, from its low outer end to the stage', () => {
     for (const s of [-1, 1]) {
-      const mid = (RAMP.near + platformEdge()) / 2;
+      const along: [number, number][] = [];
+      for (let x = RAMP.low - 0.8; x >= RAMP.end + 0.6; x -= 0.5)
+        along.push([s * x, edgeAt(s * x) - RAMP.depth / 2]);
       const y = walk(
         [
           [s * (RAMP.low - 0.8), 0.2],
-          [s * (RAMP.low - 0.8), mid],
-          [s * (RAMP.end + 0.6), mid],
-          [s * (RAMP.end + 0.6), platformEdge() + 1],
+          ...along,
+          [s * (RAMP.end + 0.6), edgeAt(RAMP.end + 0.6) + 1],
         ],
         STOREY,
       );
@@ -430,12 +435,23 @@ describe('the bridge: ramps either side up to the stage', () => {
     }
   });
 
+  it('curves the stage’s front back round the command area, a horseshoe', () => {
+    expect(edgeAt(0)).toBeCloseTo(platformEdge() + HORSESHOE.sweep);
+    expect(edgeAt(roomPolygon()[3].x)).toBeCloseTo(platformEdge());
+    expect(edgeAt(-5)).toBeCloseTo(edgeAt(5));
+    expect(edgeAt(5)).toBeGreaterThan(edgeAt(8));
+    // The conference table's chairs stand clear of it, on the stage.
+    for (const c of conferenceChairs())
+      expect(platformStepAt(c.x, c.z)).toBe(PLATFORM.height);
+  });
+
   it("guards each ramp's open side, and leaves the lair without ramps or stations", () => {
     const x = (RAMP.open + RAMP.top) / 2;
+    const near = edgeAt(x) - RAMP.depth;
     expect(
-      protoSolids(STOREY, 'bridge').some((s) => overlaps(s, x, RAMP.near, 0.1)),
+      protoSolids(STOREY, 'bridge').some((s) => overlaps(s, x, near, 0.1)),
     ).toBe(true);
-    expect(protoFloorAt(x, RAMP.near + 0.5, STOREY + 0.5, 'lair')).toBe(STOREY);
+    expect(protoFloorAt(x, near + 0.5, STOREY + 0.5, 'lair')).toBe(STOREY);
     expect(
       protoSolids(STOREY, 'lair').some((s) =>
         stationPlaces().some((p) => overlaps(s, p.x, p.z, 0)),

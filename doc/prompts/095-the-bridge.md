@@ -1,6 +1,6 @@
 # 095: The bridge becomes the control room
 
-Status: under way (2026-10-27): stage 1 done, the bridge a game room off the main corridor (`?room=bridge`), the old control room retired and kept by its URL (`?room=control_room`); next, the panels wired. Written 2026-10-27 from the owner's request.
+Status: under way (2026-10-27): stage 1 done, the bridge a game room off the main corridor (`?room=bridge`), the old control room retired and kept by its URL (`?room=control_room`); then the bridge's look after the owner's brief below (2026-10-27); next, the panels wired. Written 2026-10-27 from the owner's request.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first, then missions [092](092-control-room-2010s.md) (the grand control room and its dev rooms dev45 and dev46) and [093](093-bridge-widget-kit.md) (the ui2d kit, the touch surfaces, dev47 and dev48's 69 panels reimagined), and [the Central Control research](../research/central-control-console.md). Markdown is one paragraph per line.
 
@@ -26,3 +26,13 @@ The owner, 2026-10-27, of dev48's reimagined panels: "These are cool. So do you 
 - The corridor's control room door leads up the stair to the bridge; the old control room is no longer reachable from the corridor but kept.
 - The bridge's panels show the live world and their commands change it, local-only controls refused.
 - Central Control shows what the model has; the gaps are in `TODO.md`.
+
+## The bridge's look (the owner, 2026-10-27)
+
+The owner, while it was being built: "light the room like the Star Trek bridge. That means we want cove lighting, big sweeping curves ... soft chairs ... a sort of beige or peach coloured carpet ... how much realism we can add"; then "I have a feeling there's two layers of cove lighting, one pointing inwards to the dome and one pointing outwards to the edges of the room ... there's very little direct lighting on the Enterprise Bridge ... soften some of the corners because it's also a very rounded space." After the 1987 bridge set (Herman Zimmerman, Andrew Probert; references: [Ex Astris Scientia on the Enterprise-D bridge](https://www.ex-astris-scientia.org/inconsistencies/enterprise-d-bridge.htm), [WhatCulture, 10 secrets of the TNG main bridge](https://whatculture.com/tv/star-trek-10-secrets-of-the-next-generation-main-bridge)), as a style cue only, in the game's own design: no names, logos, LCARS artwork or fonts.
+
+- **Lighting:** soft, warm, even and mostly indirect: a lit oval dome over the command area, glossy black panels round it; two concentric coves round the dome, the inner washing up into it, the outer, in a trough further out, washing the ceiling outward; six ribs fanning forward to the big wall, a cove along each; a cove along every wall's top; a light strip over the aft consoles; a row of small chaser lights along the viewscreen's foot running out from the middle. Few real lights (one in the dome, a few just under the ceiling at the coves, a hemisphere fill); no downlights or spots.
+- **Curves:** the stage's front a horseshoe (an arc curving 1.8 m back in the middle round the command area), its parapet a beige plinth with a light oak cap rail with black and silver lines, the ramps either side curving with it, the steps in its middle; a large rounded fillet in every corner of the heptagon, floor to ceiling.
+- **Furnishings:** upholstered chairs (fabric, not leather): the operator's larger, with padded arms and small black insets at their fronts for Central Control's armrest panels; a softer one either side; smaller, taller ones at the stations; the conference table's to match.
+- **Colours:** a warm peach-beige carpet with a fine tuft, a darker ring round the command area, burgundy carpet on the stage's face (the low wall behind the command area); beige walls and ribs; light oak with a strong grain.
+- Built in `views/bridge-dressing.ts`, used by the shared builder for dev46 and the game's bridge. Not yet: rounded edges on the EPCOT desk and the stations, grey fabric in door alcoves (the bridge has none on its level), a coved wall-to-ceiling junction beyond the wall-top cove.

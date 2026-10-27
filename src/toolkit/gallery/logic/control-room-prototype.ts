@@ -336,9 +336,10 @@ export function protoFloorAt(
   previous: number,
   theme: Theme = 'lair',
 ) {
+  const ramp = theme === 'bridge' ? rampHeightAt(x, z) : null;
   const stair = Math.max(
     surfaceFloorAt(stairSurfaces(), x, z, previous),
-    theme === 'bridge' ? surfaceFloorAt(rampSurfaces(), x, z, previous) : 0,
+    ramp !== null && ramp <= previous + STEP_UP ? ramp : 0,
   );
   const { opening } = stairPlan();
   const inOpening =
@@ -367,12 +368,43 @@ export const PLATFORM = {
   stepWidth: 4.0,
 } as const;
 
-/** The platform's front edge, z. */
+/**
+ * The stage's front: a horseshoe (the owner, 2026-10-27, mission 095:
+ * "big sweeping curves", after the starship bridge's wooden rail round its
+ * command area): an arc through the two back side corners, curving back
+ * `sweep` metres in the middle, round the operator's desk and chair.
+ */
+export const HORSESHOE = { sweep: 1.8 } as const;
+
+export function horseshoe() {
+  const corner = roomPolygon()[3];
+  const s = HORSESHOE.sweep;
+  const R = (corner.x * corner.x + s * s) / (2 * s);
+  return { cz: corner.z + s - R, R, half: corner.x, ends: corner.z };
+}
+
+/** The stage's front edge at `x`, z: on the horseshoe. */
+export function edgeAt(x: number) {
+  const h = horseshoe();
+  const a = Math.min(Math.abs(x), h.half);
+  return h.cz + Math.sqrt(h.R * h.R - a * a);
+}
+
+/** The stage's front edge at its ends (the back side corners), z. */
 export const platformEdge = () => roomPolygon()[3].z;
+
+/** The horseshoe from `x0` to `x1`, as points every `step` metres or so. */
+export function horseshoePoints(x0: number, x1: number, step = 0.4): Point[] {
+  const n = Math.max(1, Math.ceil(Math.abs(x1 - x0) / step));
+  return Array.from({ length: n + 1 }, (_, k) => {
+    const x = x0 + ((x1 - x0) * k) / n;
+    return { x, z: edgeAt(x) };
+  });
+}
 
 /** How high the room's floor is at (x, z) over its main floor: on the platform, on a step, or not. */
 export function platformStepAt(x: number, z: number) {
-  const edge = platformEdge();
+  const edge = edgeAt(x);
   if (z >= edge) return PLATFORM.height;
   const { risers, going, stepWidth, height } = PLATFORM;
   if (Math.abs(x) > stepWidth / 2) return 0;
@@ -382,14 +414,27 @@ export function platformStepAt(x: number, z: number) {
   return (k * height) / risers;
 }
 
+/** Thin boxes along the horseshoe from `x0` to `x1`, `T` thick, `back` metres in front of it. */
+function alongHorseshoe(x0: number, x1: number, T: number, back = 0) {
+  const pts = horseshoePoints(x0, x1, 0.3);
+  return pts.slice(1).map((b, i) => {
+    const a = pts[i];
+    return {
+      minX: Math.min(a.x, b.x),
+      maxX: Math.max(a.x, b.x),
+      minZ: Math.min(a.z, b.z) - back - T,
+      maxZ: Math.max(a.z, b.z) - back,
+    };
+  });
+}
+
 /** The rail along the platform's front, either side of its steps. */
 export function platformRail(theme: Theme = 'lair'): Footprint[] {
   const room = roomPolygon();
-  const edge = platformEdge();
   const half = PLATFORM.stepWidth / 2;
   const T = 0.05;
-  const foot = edge - (PLATFORM.risers - 1) * PLATFORM.going;
-  const { top, end, near, open } = RAMP;
+  const treads = PLATFORM.risers - 1;
+  const { top, end, depth, open } = RAMP;
   // The bridge's front: open where each ramp's top landing meets it.
   const front: [number, number][] =
     theme === 'bridge'
@@ -407,83 +452,61 @@ export function platformRail(theme: Theme = 'lair'): Footprint[] {
     theme === 'bridge'
       ? [-1, 1].flatMap((s) => [
           // Each ramp's open side, where it is high enough to fall from,
-          // and its top landing's inner end.
-          {
-            minX: Math.min(s * open, s * end),
-            maxX: Math.max(s * open, s * end),
-            minZ: near - T,
-            maxZ: near,
-          },
+          // following the horseshoe; and its top landing's inner end.
+          ...alongHorseshoe(s * open, s * end, T, depth),
           {
             minX: s > 0 ? end - T : -end,
             maxX: s > 0 ? end : -end + T,
-            minZ: near,
-            maxZ: edge,
+            minZ: edgeAt(end) - depth,
+            maxZ: edgeAt(end),
           },
         ])
       : [];
   return [
-    ...front.map(([a, b]) => ({
-      minX: a,
-      maxX: b,
-      minZ: edge - T,
-      maxZ: edge,
-    })),
+    ...front.flatMap(([a, b]) => alongHorseshoe(a, b, T)),
     ...ramps,
     // The steps' handrails, each side.
-    { minX: -half - T, maxX: -half, minZ: foot, maxZ: edge },
-    { minX: half, maxX: half + T, minZ: foot, maxZ: edge },
+    ...[-half - T, half].map((x) => ({
+      minX: x,
+      maxX: x + T,
+      minZ: edgeAt(half) - treads * PLATFORM.going,
+      maxZ: edgeAt(half),
+    })),
   ];
 }
 
 /**
  * The bridge's ramps, either side of the stage's steps (the owner,
- * 2026-10-27): each along the stage's front, rising inward from `low`
+ * 2026-10-27), curving round the horseshoe (mission 095): each a band
+ * `depth` deep in front of the stage's edge, rising inward from `low`
  * (metres from the axis) to `top`, then a level landing to `end` beside
- * the steps, from which one steps onto the stage; `near` its open side,
- * z, guarded from `open` inward, where it is high enough to fall from;
- * walked onto from the main floor at its low outer end. At about 1:7 it
- * is steeper than Approved Document M's 1:12, for the look (a question
- * for the owner).
+ * the steps, from which one steps onto the stage; guarded on its open
+ * side from `open` inward, where it is high enough to fall from; walked
+ * onto from the main floor at its low outer end. At about 1:7 it is
+ * steeper than Approved Document M's 1:12, for the look (a question for
+ * the owner).
  */
 export const RAMP = {
   low: 11.0,
   top: 4.0,
   end: 2.8,
-  near: 1.0,
+  depth: 1.2,
   open: 9.0,
 } as const;
 
-export function rampSurfaces(): Surface[] {
-  const { low, top, end, near } = RAMP;
-  const edge = platformEdge();
-  const h = STOREY + PLATFORM.height;
-  return [-1, 1].flatMap((s) => [
-    {
-      name: s < 0 ? 'West ramp' : 'East ramp',
-      area: {
-        minX: Math.min(s * low, s * top),
-        maxX: Math.max(s * low, s * top),
-        minZ: near,
-        maxZ: edge,
-      },
-      y: { along: 'x' as const, at0: s * low, y0: STOREY, at1: s * top, y1: h },
-    },
-    {
-      name: s < 0 ? 'West ramp landing' : 'East ramp landing',
-      area: {
-        minX: Math.min(s * top, s * end),
-        maxX: Math.max(s * top, s * end),
-        minZ: near,
-        maxZ: edge,
-      },
-      y: h,
-    },
-  ]);
+/** The bridge's ramps' floor at (x, z), over the ground, if (x, z) is on one. */
+export function rampHeightAt(x: number, z: number): number | null {
+  const { low, top, end, depth } = RAMP;
+  const a = Math.abs(x);
+  if (a < end || a > low) return null;
+  const edge = edgeAt(x);
+  if (z < edge - depth || z > edge) return null;
+  const rise = a >= top ? (low - a) / (low - top) : 1;
+  return STOREY + rise * PLATFORM.height;
 }
 
 /** The conference table on the platform, and its chairs, five a side. */
-export const CONFERENCE = { w: 5.0, d: 1.5, z: 5.8 } as const;
+export const CONFERENCE = { w: 5.0, d: 1.5, z: 6.3 } as const;
 
 export const conferenceTable = (): Footprint => ({
   minX: -CONFERENCE.w / 2,
