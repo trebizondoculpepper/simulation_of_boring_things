@@ -1887,11 +1887,12 @@ export function createDayTankRange(kit: PanelKit) {
       t.paint('#ece9dc', 0.5),
       [
         [cx + dx, dy, dz],
-        [cx + dx, 0.012, dz - 0.1],
-        [cx + dx, 0.012, back],
+        [cx + dx - 0.08, dy - 0.05, dz],
+        [cx + dx - 0.1, 0.012, dz - 0.1],
+        [cx + dx - 0.1, 0.012, back],
       ],
       0.004,
-      0.01,
+      0.02,
     );
     const [px2, py2, pz2] = bottle.powerAt;
     t.rod(

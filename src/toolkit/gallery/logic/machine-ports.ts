@@ -1,4 +1,13 @@
 import { BACKWASH_PIT } from '../../../game/plant/wet-hall';
+import {
+  DAY_TANKS,
+  dayTankSize,
+} from '../../../game/plant/chemical-distribution';
+import {
+  bottleBund,
+  bottleSize,
+  isDoseBottle,
+} from '../../../game/plant/dose-bottle';
 import { WET_HALL_LAYOUT } from './shell-rooms';
 import { spaSandFilterGeometry } from '../../components/plant/logic/spa-sand-filter';
 import { SPA_FILTERS } from '../../../game/plant/spa-filter';
@@ -366,6 +375,89 @@ export function machinePorts(item: Item): MachinePort[] {
       port(
         'supply',
         [0.15, item.h / 2, item.d / 2],
+        [0, 1, 0],
+        0.012,
+        'chemical',
+      ),
+    ];
+  if (kind === 'chem-day') {
+    // A plant room's day tank (plan 085). A dose bottle (`createDoseBottle`):
+    // its fill socket's stub up out of its lid, and its dosing tube's end
+    // beside it, low; both drawn by the bottle. (The Olympic's framed
+    // 1,000 l has its own riser and draw-off.)
+    const litres =
+      DAY_TANKS[arg as 'hypochlorite' | 'acid']?.find(
+        (t) => t.site === item.key.split(':')[2],
+      )?.litres ?? 0;
+    if (!isDoseBottle(litres)) {
+      // The framed tank's station (`createDayTankStation`, centred): its
+      // inlet riser's end and its draw-off's end, both at the back, high.
+      const { L, W, H } = dayTankSize(litres);
+      const bd = W + 0.6;
+      const riser = Math.max(1.65, 0.04 + 0.12 + H + 0.5);
+      const back = -bd / 2 - 0.1 - 0.05;
+      return [
+        {
+          ...port('fill', [-0.05, riser, back], [0, 0, -1], 0.04, 'chemical'),
+          drawn: true,
+        },
+        {
+          ...port(
+            'out',
+            [(L + 0.4) / 2 - 0.1, riser - 0.15, back],
+            [0, 0, -1],
+            0.024,
+            'chemical',
+          ),
+          drawn: true,
+        },
+      ];
+    }
+    const { d, h } = bottleSize(litres);
+    const { sump } = bottleBund(litres);
+    const r = d / 2;
+    const top = sump + h;
+    const hz = Math.min(0, r - 0.15 / 2 - 0.01);
+    const fillX = Math.max(0.2 / 2 + 0.035, r * 0.55);
+    const fillZ = -Math.min(r * 0.45, 0.06);
+    return [
+      {
+        ...port(
+          'fill',
+          [fillX, top + 0.16, fillZ],
+          [0, 1, 0],
+          0.024,
+          'chemical',
+        ),
+        drawn: true,
+      },
+      {
+        ...port(
+          'out',
+          [-0.1 - 0.016, top + 0.065, hz],
+          [-1, 0, 0],
+          0.008,
+          'chemical',
+        ),
+        drawn: true,
+      },
+    ];
+  }
+  if (kind === 'spa-pack' || kind === 'jacuzzi-pack')
+    // A packaged spa cabinet's dosing inlets on its top, at the front, clear
+    // of its jets' discharge at the back: its
+    // day tanks' dosing tubes come in here to its own dosing.
+    return [
+      port(
+        'hypochlorite',
+        [item.w / 2 - 0.15, item.h, item.d / 2 - 0.15],
+        [0, 1, 0],
+        0.012,
+        'chemical',
+      ),
+      port(
+        'acid',
+        [item.w / 2 - 0.3, item.h, item.d / 2 - 0.15],
         [0, 1, 0],
         0.012,
         'chemical',

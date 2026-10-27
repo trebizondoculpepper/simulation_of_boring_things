@@ -94,7 +94,7 @@ describe('the Olympic plant room, plumbed and routed', () => {
     expect(plumbed.runs.filter((r) => r.by === 'router')).toHaveLength(10);
   });
 
-  it('never runs acid or hypochlorite over a walkway: they stay against the south wall, where they come in', () => {
+  it('never runs acid or hypochlorite over a walkway: they stay against the south wall, or cross the room above head height from their day tanks (plan 085)', () => {
     const chemical = plumbed.runs.filter(
       (r) => r.line.startsWith('acid') || r.line.startsWith('hypo'),
     );
@@ -105,7 +105,15 @@ describe('the Olympic plant room, plumbed and routed', () => {
       'hypo-supply',
     ]);
     for (const r of chemical)
-      for (const p of r.points) expect(p[2], r.name).toBeGreaterThan(hz - 0.8);
+      for (let i = 1; i < r.points.length; i++) {
+        const [a, b] = [r.points[i - 1], r.points[i]];
+        // A riser at its day tank, or a run high over the walkways.
+        const rising = a[0] === b[0] && a[2] === b[2];
+        const stub = Math.hypot(a[0] - b[0], a[2] - b[2]) < 0.3;
+        const high = Math.min(a[1], b[1]) >= 2.3;
+        if (rising || high || stub) continue;
+        expect(Math.min(a[2], b[2]), r.name).toBeGreaterThan(hz - 0.8);
+      }
   });
 
   it('doses onto the return main’s spool along the wall by quills on its top, and samples the water off the pump manifold before the filters', () => {

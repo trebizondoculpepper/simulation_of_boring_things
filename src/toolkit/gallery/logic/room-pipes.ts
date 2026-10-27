@@ -1,5 +1,6 @@
 import { chemicalOf, wetHallPlumbing } from './wet-hall-plumbing';
 import { storePlumbing } from './store-plumbing';
+import { dayTankPlumbing } from './day-tank-plumbing';
 import { olympicRoom } from './olympic-plumbing';
 import { retiredPipes } from './retired-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
@@ -1079,23 +1080,9 @@ export function poolPlantPipework(room: string): {
     });
   }
 
-  // ---- Chemicals from the day tanks, down out of the ceiling ---------------
+  // ---- Chemicals: each day tank's branch and dosing tube (plan 085) -------
   const acidPump = by('acid dosing pump');
-  for (const [item, name] of [
-    [by('hypochlorite dosing pumps'), 'Hypochlorite from its day tank'],
-    [acidPump, 'Acid from its day tank'],
-  ] as const) {
-    const p = port(item, 'supply');
-    run({
-      name,
-      kind: 'chemical-tube',
-      od: 0.012,
-      points: [[p.at[0], INTO_CEILING, p.at[2]], p.at],
-      joins: [item.item.label],
-      service: 'hypochlorite',
-      label: name.startsWith('Acid') ? 'ACID' : 'HYPOCHLORITE',
-    });
-  }
+  for (const r of dayTankPlumbing(room).runs) run(r);
   // The acid's dose up into the ceiling and down to its point on the main.
   {
     const p = port(acidPump, 'dose');
@@ -1106,7 +1093,7 @@ export function poolPlantPipework(room: string): {
       od: 0.012,
       points: [p.at, s, [s[0], INTO_CEILING, s[2]]],
       joins: [acidPump.item.label],
-      service: 'hypochlorite',
+      service: 'acid',
       label: 'ACID',
     });
     const at: Vec3 = [pheOut1[0], L.dosing - 0.3, pheOut1[2] + 0.3];
@@ -1121,7 +1108,7 @@ export function poolPlantPipework(room: string): {
         [pheOut1[0], at[1], pheOut1[2]],
       ],
       joins: ['Heat exchanger to the ozone contact tank'],
-      service: 'hypochlorite',
+      service: 'acid',
       label: 'ACID',
     });
   }
@@ -1177,6 +1164,10 @@ export function roomPipes(room: string): PipeRun[] {
   if (room === 'wet_hall') return wetHallPipework().runs;
   if (room === 'hypo_store' || room === 'acid_store')
     return storePlumbing(room).runs;
+  // The small spa rooms' own pipework is their cabinets' (`cabinet-pipes.ts`);
+  // here, their day tanks' (plan 085).
+  if (room === 'plant_pool_03' || room === 'plant_pool_04')
+    return dayTankPlumbing(room).runs;
   // A room being laid out afresh has no pipework yet (`BEING_LAID_OUT`).
   if (BEING_LAID_OUT.includes(room)) return [];
   return room in ROUTED ? poolPlantPipework(room).runs : [];

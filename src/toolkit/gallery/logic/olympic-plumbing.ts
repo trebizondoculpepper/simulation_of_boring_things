@@ -22,7 +22,10 @@ import type {
   PlumbMedium,
   PlumbNode,
 } from '../../../game/plant/plumbing-expansion';
-import { machinePorts } from './machine-ports';
+import { machinePorts, placedPort } from './machine-ports';
+// Called at routing time only, so the cycle through the room layout is safe.
+import { layoutRoom } from './room-equipment';
+import { roomStructure } from './room-structure';
 import type { MachinePort } from './machine-ports';
 import type { Item } from './room-equipment';
 import type { Meter, PipeRun, Valve, WallCrossing } from './room-pipes';
@@ -281,6 +284,8 @@ const TAP = 0.3;
 /** The dosing spool's line in from the south wall, and the height the chemical lines come in at. */
 const SPOOL_OFF = 0.7;
 const CHEMICAL_IN = 2.2;
+/** A day tank's draw-off across the room, above every head (plan 085). */
+const OVERHEAD = 2.6;
 /** How far a dosing quill stands off its main's surface, metres. */
 const QUILL = 0.08;
 /** The open floor's cells, and how near a machine or a wall a run may still be low, metres. */
@@ -303,6 +308,8 @@ const pipeOf: Record<string, { kind: Kind; joint: PipeJoint; medium: Medium }> =
     heating: { kind: 'lagged-heating', joint: 'flange', medium: 'water' },
     makeup: { kind: 'copper', joint: 'socket', medium: 'water' },
     chemical: { kind: 'chemical-tube', joint: 'socket', medium: 'chemical' },
+    // A day tank's branch from the wet hall's selector: PVC-U, rigid.
+    transfer: { kind: 'pvc-pressure', joint: 'socket', medium: 'chemical' },
     ozone: { kind: 'stainless', joint: 'socket', medium: 'gas' },
     power: { kind: 'steel-screwed', joint: 'thread', medium: 'power' },
   };
@@ -627,18 +634,60 @@ export function plumbOlympic(
       0.012,
       [dose.at, [dose.at[0], dose.at[1], spoolZ], [dose.at[0], quillY, spoolZ]],
     );
+    // Its day tank (plan 085): the branch from the wet hall's selector down
+    // out of the ceiling into its fill; its draw-off up to the dosing
+    // height, across, and down into its pump's supply.
     const supply = port(k, 'supply');
-    rule(
-      `${k === 'hypo' ? 'Hypochlorite' : 'Acid'} supply line`,
-      `${k}-supply`,
-      'chemical',
-      0.012,
-      [
-        [supply.at[0], CHEMICAL_IN, hz + 0.3],
+    const chem = k === 'hypo' ? 'hypochlorite' : 'acid';
+    const Name = k === 'hypo' ? 'Hypochlorite' : 'Acid';
+    const day = layoutRoom('plant_pool_02')?.placed.find(
+      (p) => p.item.key === `chem-day:${chem}:pool_02`,
+    );
+    if (day) {
+      const fill = placedPort(day, 'fill');
+      const out = placedPort(day, 'out');
+      const step = (q: typeof fill, d: number): Vec3 => [
+        q.at[0] + q.outward[0] * d,
+        q.at[1] + q.outward[1] * d,
+        q.at[2] + q.outward[2] * d,
+      ];
+      const top = roomStructure('plant_pool_02')!.ceilingZone;
+      const f1 = step(fill, 0.15);
+      rule(
+        `${Name} branch to its day tank`,
+        `${Name} branch to its day tank`,
+        'transfer',
+        0.032,
+        (
+          [
+            [f1[0], top, f1[2]],
+            ...(fill.outward[1] > 0.5 ? [] : [f1]),
+            [...fill.at],
+          ] as Vec3[]
+        ).filter(
+          (p, i, all) =>
+            i === 0 ||
+            p[1] !== all[i - 1][1] ||
+            p[0] !== all[i - 1][0] ||
+            p[2] !== all[i - 1][2],
+        ),
+      );
+      const o1 = step(out, 0.12);
+      // Along the south wall at the chemicals' height if its tank backs onto
+      // it; overhead, above every head, if it stands out in the room.
+      const lift = o1[2] > hz - 0.8 ? CHEMICAL_IN : OVERHEAD;
+      rule(`${Name} supply line`, `${k}-supply`, 'transfer', 0.016, [
+        [...out.at] as Vec3,
+        ...(out.outward[1] > 0.5 ? [] : [o1]),
+        [o1[0], lift, o1[2]],
+        // Across first, then to the wall: clear of the stair.
+        [supply.at[0], lift, o1[2]],
+        [supply.at[0], lift, supply.at[2]],
+        [supply.at[0], CHEMICAL_IN, supply.at[2]],
         [supply.at[0], CHEMICAL_IN, supply.at[2]],
         supply.at,
-      ],
-    );
+      ]);
+    }
   }
 
   // ---- The busbar ring, round the walls, fed from the east ------------------
@@ -916,7 +965,20 @@ export function plumbOlympic(
   // headroom. A run may be low only near the machine it serves or near a
   // wall; elsewhere, a metre's cell of floor reserves its headroom.
   // A cell any part of which comes within `near` of a machine is near it.
+  // Its day tanks (plan 085) stand on floor too: placed with the room's
+  // equipment, not the plan's, so taken from its layout.
+  const dayTanks =
+    layoutRoom('plant_pool_02')
+      ?.placed.filter((p) => p.item.key.startsWith('chem-day:'))
+      .map((p) => p.footprint) ?? [];
   const nearMachine = (x0: number, z0: number, x1: number, z1: number) =>
+    dayTanks.some(
+      (f) =>
+        x1 > f.minX - OPEN_FLOOR.near &&
+        x0 < f.maxX + OPEN_FLOOR.near &&
+        z1 > f.minZ - OPEN_FLOOR.near &&
+        z0 < f.maxZ + OPEN_FLOOR.near,
+    ) ||
     items.some((i) => {
       const f = footprintOf(i);
       return (
