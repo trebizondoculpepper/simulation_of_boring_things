@@ -1290,6 +1290,14 @@ function worldOzoneGenerator(kit: PanelKit, room: ServiceRoom): LiveExhibit {
 }
 
 /**
+ * One of a room's machines built as the room builds it, alone, without its
+ * place, stand or nozzles: for the component benchmark (mission 094,
+ * `views/component-bench.ts`).
+ */
+export const buildRoomItem = (kit: PanelKit, item: Item, room: string) =>
+  modelFor(kit, item, room);
+
+/**
  * A room's machines, placed (`logic/room-equipment.ts`), as one group in
  * metres to stand on the room's floor at `floorY`: and what the room needs
  * of them, their footprints to walk round, their parts to work, and each
