@@ -49,6 +49,7 @@ import type {
   ParodyWidget,
 } from '../logic/parody-trial';
 import type { LiveExhibit } from '../rooms/plant/exhibit';
+import { livePagesFor } from './bridge-pages';
 import type { WorldAction } from '../../../game/world';
 import {
   commandNow,
@@ -457,6 +458,21 @@ export function createParodyPanel(
       { gap: 24 },
     ) as UiNode,
   }));
+  // A wired panel's pages after its own (`PANEL_PAGES`): the bridge's own
+  // pages, reading and asking the same world, refusals across its top.
+  if (live)
+    for (const extra of livePagesFor(spec.code, {
+      world: () => live.context()?.world ?? null,
+      dispatch: (a) => live.dispatch(a),
+      notify: (words, refused) => {
+        if (!refused) return;
+        notice = words;
+        noticeLeft = 4;
+      },
+    })) {
+      pages.push({ name: extra.name, node: extra.node });
+      reads.push((c) => extra.read(c.world, 0));
+    }
   const stack =
     pages.length > 1
       ? new PageStack(Object.fromEntries(pages.map((p) => [p.name, p.node])))

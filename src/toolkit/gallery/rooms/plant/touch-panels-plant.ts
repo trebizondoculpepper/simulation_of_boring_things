@@ -4,6 +4,12 @@ import { galleryWallLayout } from '../../logic/gallery-walls';
 import { PARODY_SPECS } from '../../logic/parody-specs';
 import { createParodyPanel } from '../../views/parody-panel';
 import { SCHEMATIC_EXHIBITS } from './schematic-gallery';
+import {
+  WASHING_PANEL,
+  createOlympicFilterWashingPanel,
+} from '../../views/olympic-filter-washing';
+import { OLYMPIC_FILTER_WASHING } from '../../logic/olympic-filter-washing';
+import { roomWorld } from '../../../save/world-store';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
@@ -37,6 +43,26 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       build: (kit) => createParodyPanel(kit, spec, i),
     };
   }),
+  // The bridge's OLYMPIC FILTER WASHING page (mission 095), live: its
+  // CLEAN NOW washes this tab's Olympic filters.
+  {
+    title: OLYMPIC_FILTER_WASHING.title,
+    reference:
+      'The Olympic’s five filters under the Lidoluxe Wash-O-Tron, live: DIRT %, state, bed pressure and flow, CLEAN NOW, RUN and HOLD',
+    size: {
+      w: WASHING_PANEL.w + 0.1,
+      d: 0.06,
+      h: WASHING_PANEL.h + 0.1,
+      mount: 'wall',
+    },
+    build: (kit) => {
+      const store = typeof window === 'undefined' ? null : roomWorld();
+      return createOlympicFilterWashingPanel(kit, {
+        world: () => store?.world.value ?? null,
+        dispatch: (a) => store?.dispatch(a),
+      });
+    },
+  },
   // The bridge stations' schematics (mission 095; the owner, 2026-10-27:
   // all of them in the gallery, each labelled), live from the world.
   ...SCHEMATIC_EXHIBITS,
