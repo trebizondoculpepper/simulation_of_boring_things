@@ -1,6 +1,6 @@
 # 096: Menus as Penfold control panels
 
-Status: planned (2026-10-27). The feasibility was researched from the code; the findings, the recommended approach and the stages are below. No game code has been written yet. Stage 0, a spike in the dev rooms, is next. Written 2026-10-27 from the owner's request.
+Status: stage 0 done (2026-10-27), for the owner to see: the settings menu as a full-screen instrument panel behind `?menu=panel` (open `?room=dev39&menu=panel`). Its results are under stage 0 below; the owner's rulings, which reshaped it, come next. Written 2026-10-27 from the owner's request.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js that simulates a leisure centre's pool plant (this repository). Read these first:
 
@@ -11,6 +11,19 @@ You are working on "The Pool", a browser game in TypeScript and Three.js that si
 - The cost work, [display-only updates](../research/display-only-updates.md) and [the component cost report](../reports/component-cost-2026-10-27.md).
 
 Markdown is one paragraph per line.
+
+## Owner's rulings (2026-10-27)
+
+These came after the investigation below and override it where they differ.
+
+- **Start with a trial panel.** There are two kinds of menu panel: the opening title menu, which runs alongside the reduced-resolution 3D render of the game, and the in-game menu. The first thing wanted is concept art that works: "what would a fully rendered settings menu actually look like in our game?"
+- **The in-game menu does not pause the game.** It cannot: the game is a simulation tied to time, and unless time is stopped it carries on. Stopping time is a later, separate fix (its own entry in `TODO.md`). The room behind the panel keeps running. This reverses finding 11's "paused"; the DOM menu keeps its present behaviour while it is the default.
+- **Full screen, not a little modal.** The settings menu fills the screen and need not fit on it. Decided in stage 0: the panel scrolls (the wheel, or a drag on an empty part of it, or a touch drag), rather than paging with physical buttons, because one long panel reads as one real panel and paging would bring tabs back by another name.
+- **No sliders.** The widget library has no slider: a continuous value is a knob with its value shown beside it. An on/off choice is an illuminated latching push button in place of a checkbox.
+- **A real control panel layout, not slabs in rows** (the owner): "Imagine how aircraft control panels have lots of little sub-control panels bolted in, each with four screws at each corner." The menu is one big panel into which small modules are bolted, each its own plate with a fastener at each corner and its own engraved title, sized to what it holds, one setting's controls each, grouped by function (GAME, PICTURE, SOUND, CONTROLS, MAINTENANCE) and arranged as an instrument panel is, its sizes varied. This replaces the zone rows of the recommendation below.
+- **Knobs drive meters.** "To adjust the field of view, or the quality from worst to best, maybe a knob connected to a gauge, a meter with a needle, and the needle follows the knob after a few seconds." Each continuous setting's module is a knob and a moving-coil meter whose needle follows with a damped lag of two or three seconds (a real meter's ballistics, slowed to be seen), with a seven-segment readout as well. Render quality's knob turns from worst to best.
+- **Use a variety of our real parts** across the modules: "in a game about control panels, I want my control panel to be a control panel."
+- **A picture first.** The owner asked to see working concept art before any more wiring or measurement: stage 0 stops at the picture and waits for feedback.
 
 Today every menu in the game is flat HTML and CSS laid over the 3D view. This mission replaces those menus with small 3D control panels, drawn with an isometric (orthographic) camera and built from the game's own control parts: real push buttons, knobs, switches, lamps and readouts, each lettered the way such panels really are. The menus become part of the game's world of instruments.
 
@@ -221,6 +234,59 @@ This gives the lettering mix the owner asked for: engraved plates for fixed name
 Each stage is testable on its own and committed after `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build` pass (check their exit status, not a grep of the summary). Pure logic goes in `logic/` folders, tested beside it (`*.test.ts`, importing from `vite-plus/test`). Every notable change goes under Unreleased in `CHANGELOG.md`, and the `TODO.md` entry is updated after each stage.
 
 ### Stage 0: the spike, in the dev rooms
+
+Reshaped by the owner's rulings above: the whole settings menu as a working trial, full screen, behind `?menu=panel`, in place of the two-control spike. The dev39 exhibit and the title box are left for later (the owner asked for a picture first). The plan as first written follows the results.
+
+#### Stage 0 results (2026-10-27)
+
+Open `?room=dev39&menu=panel` (any room works): the panel opens over the room on arrival; RESUME or Esc closes it; Esc (with the mouse free) or the gear opens it again. The DOM menus are untouched and remain the default without the flag.
+
+**What was built.**
+
+- Pure logic in `src/toolkit/menus/logic/`, tested beside it: `settings-panel.ts` (the modules, zone by zone, as offered here; each knob's detents and readout over its setting's range; the meters' scales; the confirm step; the status line), `panel-layout.ts` (modules bolted into groups, the groups packed into centred shelves across a panel of given width; every title within its plate's budget and nothing overlapping, tested at four widths), `iso-view.ts` (the desk view's pose, the panel's width and scale for a screen, the scroll range) and `meter-ballistics.ts` (a damped spring: the needle lags, swings a little past, and settles in two to three seconds).
+- `src/toolkit/menus/views/settings-panel-view.ts` builds the panel from the game's parts; `menu-overlay.ts` is its own transparent full-screen canvas and `WebGLRenderer` (the device's pixel ratio up to 3, not scaled by the render quality), an orthographic camera 14° above and 5° round the face, picking through the parts' uses with `knobDirection`, scrolling, and drawing only on change. `src/main.ts` mounts it when the flag is set.
+- `withLetteringScale` (`core/views/lettering-resolution.ts`) builds a panel's lettering (micro labels, engraved plates, Dymo tape) at three times its usual canvas resolution, so it stays crisp drawn large and close; rooms are unchanged (scale 1).
+
+**Item to part, and what is wired.** Everything is wired to the real settings and actions; nothing is a local model.
+
+| Option (DOM menu)              | Module and part                                                                                                            | Wired to                                |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Resume                         | RESUME: green 30 mm push button                                                                                            | closes the panel                        |
+| Save, and its "Saved at" note  | SAVE: white push button; STATUS: a 24-column VFD ("SAVED 23:31", "SYSTEM READY", "READ ONLY - OTHER TAB")                  | `saveGame`; the world store's `holding` |
+| Copy camera link               | VIEW LINK: blue push button; the VFD says "VIEW LINK COPIED"                                                               | `copyCameraLocation`                    |
+| Quit to title                  | QUIT TO TITLE: red illuminated push button, "PRESS TWICE": lit, with "PRESS AGAIN TO QUIT" on the VFD, for 3 s             | save, then the title                    |
+| Quit to desktop                | QUIT, the same, where offered (not in a browser)                                                                           | —                                       |
+| Render quality 0–10            | RENDER QUALITY: potentiometer (11 detents, worst to best), DH-670 meter QUALITY 0–10, seven-segment ratio beside "1 :"     | `settings.renderLevel`                  |
+| Field of view 40–90            | FIELD OF VIEW: potentiometer (2° detents), meter DEG 0–90 with 40–90 banded green, seven-segment                           | `settings.fov`                          |
+| Master volume                  | MASTER VOLUME: potentiometer (5 % detents), meter %, seven-segment                                                         | `settings.volume`                       |
+| Look sensitivity               | LOOK SENSITIVITY: potentiometer (0.25 detents), meter x 0–3, seven-segment                                                 | `settings.sensitivity`                  |
+| Invert up and down             | INVERT Y: amber latching LED push button, "LIT = ON"                                                                       | `settings.invertY`                      |
+| On-screen controls             | ON-SCREEN CONTROLS: three-position lever selector, AUTO · ON · OFF printed round it                                        | `settings.onScreenControls`             |
+| Noclip                         | NOCLIP: key switch 0 / I, its title on Dymo tape                                                                           | `noclip`, as the DOM menu sets it       |
+| The wrench (developer panel)   | DEV PANEL: black push button, its title on Dymo tape                                                                       | `?dev`                                  |
+| The bindings table, touch help | INSTRUCTIONS: a printed, laminated card in a holder (`BINDINGS`, `controlsHelp('touch')`)                                  | —                                       |
+| The build corner               | an engraved white rating plate, PENFOLD CONTROLS · SYSTEM PANEL SP-1 and `buildLine()`; DEVELOPMENT BUILD on red Dymo tape | —                                       |
+
+Also on it: the engraved SETTINGS · SYSTEM PANEL SP-1 name plate, Penfold's mark top right, silk-screened group outlines and headings, and a red Dymo SITE ADDITION on the MAINTENANCE group.
+
+**Measurements** (Chrome, 1376 × 881 CSS px, device pixel ratio 2, over dev39):
+
+- 167 draw calls a frame for the visible part of the panel (5,032 triangles); 55 textures and 338 geometries for the whole panel.
+- Frame cost (the panel's update and draw, CPU) 0.8–4.4 ms; the first frame 61 ms (shader compilation). Building the panel 7 ms.
+- Idle: no frames drawn in 2 s open and still, so no draws and no uploads. Turning a knob one detent draws about 170 frames (the needle's swing, about 2.8 s), then stops. Closed, the canvas is hidden and nothing runs.
+- WebGL contexts: one more, created the first time the panel opens and kept (3 canvases in the page over dev39). Not yet counted: the title, and after ten room handovers.
+- Text: with lettering at three times resolution, titles, headings, the card's small print and the meters' scales are crisp at ratio 2. Not yet checked at ratios 1 and 3. The seven-segment decimal point is faint (1.00 reads as "100" at a glance): to fix in stage 1.
+- Scale: the panel is drawn at 1.9–2.4 CSS px a millimetre (a module title's capitals about 9 px). At 1376 px wide the panel is 0.69 m wide and about two screens tall. A phone (360 px) gets the narrowest panel, 0.27 m, at about 1.2 px a millimetre: too small to read, and not yet screenshotted. Stage 1 should let a phone zoom or pan sideways.
+
+**Findings for stage 1.**
+
+- Sound: the parts' voices play through `partAudio`, placed at the overlay scene's coordinates relative to the room's listener, so they may be faint or panned oddly. Stage 1 must route them unpositioned under the master volume, as planned (finding 8).
+- Input: picking and knob direction go through the control scheme's `knobDirection`; the wheel and a drag scroll; Esc is read by the overlay's own capture listener (as the DOM menu's is), and while open it keeps the game's keys from the room. Keyboard and gamepad navigation need stage 1's `menu-navigation.ts` and `menu-input.ts`: focus moved between the modules' parts by direction, ACTIVATE, TURN − and +, and a scroll that follows the focus.
+- The potentiometer's printed scale is white, made for dark panels; on the light grey modules it sits on a black dial plate. The meter's own needle easing is bypassed (the ballistics are the panel's).
+- The label fade (`label-visibility.ts`) needs nothing: the orthographic camera stands 1 m from the panel, within the fade's reach.
+- The panel does not touch `paused`, per the ruling.
+
+#### Stage 0 as first planned
 
 1. **The pure modules,** in `src/toolkit/menus/logic/`, each with tests:
    - `menu-model.ts`: a declarative menu. Each item has an id, a kind (`push`, `latch`, `selector`, `pot`, `key`, `readout`, `plate`), a legend, a binding (get and set over a signal), steps or positions, an enabled predicate and a confirm flag. A reducer applies `activate`, `turn(±1)`, `focus` and `back`, and the confirm step (armed, timed out at 3 s).

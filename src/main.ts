@@ -212,6 +212,15 @@ effect(() => {
 // gear among each room's view tools. The world saves itself as it runs
 // (Minecraft's way); Save is for reassurance, and Quit to Title saves first.
 // Until the title screen exists, the title is the room list.
+/**
+ * Mission 096, stage 0: `?menu=panel` shows the settings menu as a
+ * full-screen Penfold instrument panel drawn over the room, in place of
+ * the DOM pause menu (Esc and the gear open it; it opens at once on
+ * arrival). It does not pause the game. The DOM menus stay the default.
+ */
+const menuPanelFlag =
+  new URLSearchParams(location.search).get('menu') === 'panel';
+let menuPanel: { open(): void; readonly isOpen: boolean } | null = null;
 const pauseMenu = createPauseMenu({
   save: saveGame,
   holding: worldStore('dev').holding,
@@ -220,8 +229,9 @@ const pauseMenu = createPauseMenu({
     goTo('');
   },
   // Not on the title screen or the room list: only in a room; and not
-  // while the console is down (its Esc is the console's).
-  canOpen: () => current !== undefined && !consoleOpen.value,
+  // while the console is down (its Esc is the console's). With
+  // `?menu=panel` the panel overlay answers Esc instead.
+  canOpen: () => current !== undefined && !consoleOpen.value && !menuPanelFlag,
   devPanel: () => goTo('?dev'),
   noclip,
   setNoclip(on) {
@@ -234,6 +244,49 @@ const pauseMenu = createPauseMenu({
   },
   copyCamera: () => copyCameraLocation(),
 });
+if (menuPanelFlag)
+  void Promise.all([
+    import('./toolkit/menus/views/menu-overlay'),
+    import('./toolkit/settings/pause-menu'),
+    import('./toolkit/controls/logic/controls'),
+  ]).then(([{ createMenuOverlay }, { BINDINGS }, { controlsHelp }]) => {
+    const overlay = createMenuOverlay({
+      actions: {
+        save: saveGame,
+        holding: worldStore('dev').holding,
+        quitToTitle() {
+          overlay.close();
+          saveGame();
+          goTo('');
+        },
+        devPanel: () => {
+          overlay.close();
+          goTo('?dev');
+        },
+        noclip,
+        setNoclip(on) {
+          if (on) rememberPlayer();
+          noclip.value = on;
+          if (on) {
+            stopSeeing();
+            stopDryPeek();
+          }
+        },
+        copyCamera: () => copyCameraLocation(),
+      },
+      bindings: BINDINGS,
+      touchHelp: controlsHelp('touch'),
+      build: buildLine(),
+      development: import.meta.env.DEV,
+      canOpen: () => current !== undefined && !consoleOpen.value,
+    });
+    menuPanel = overlay;
+    // For measuring the trial from the browser's console.
+    (globalThis as { menuPanel?: unknown }).menuPanel = overlay;
+    const openWhenReady = () =>
+      current !== undefined ? overlay.open() : setTimeout(openWhenReady, 250);
+    openWhenReady();
+  });
 const settingsButton = document.createElement('button');
 settingsButton.type = 'button';
 settingsButton.className = 'hud-button hud-settings';
@@ -243,7 +296,9 @@ settingsButton.setAttribute('aria-label', 'Menu');
 settingsButton.addEventListener('pointerdown', (event) =>
   event.stopPropagation(),
 );
-settingsButton.addEventListener('click', () => pauseMenu.open());
+settingsButton.addEventListener('click', () =>
+  menuPanel ? menuPanel.open() : pauseMenu.open(),
+);
 
 /** Go to a page of the app (`?room=…`, `?dev`, or '' for the title) without reloading. */
 const goTo = (search: string) => {

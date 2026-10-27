@@ -57,7 +57,7 @@ const TABS = ['Game', 'Graphics', 'Audio', 'Controls'] as const;
 type Tab = (typeof TABS)[number];
 
 /** The controls, by keyboard and mouse and by gamepad (`first-person.ts`). */
-const BINDINGS: readonly [string, string, string][] = [
+export const BINDINGS: readonly [string, string, string][] = [
   ['Walk', 'W A S D or arrows', 'Left stick'],
   ['Run', 'Shift', 'Click the left stick'],
   ['Look', 'Click, then move the mouse', 'Right stick'],

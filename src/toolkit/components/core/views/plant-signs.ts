@@ -12,6 +12,7 @@ import { createPs1Material } from '../parts/ps1-material';
 import { brandById } from '../logic/brands';
 import type { BrandId } from '../logic/brands';
 import { drawBrandMark, wordmarkFont } from './brand-logo';
+import { letteringScale } from './lettering-resolution';
 
 /**
  * The plant's other markings, besides the hand-made ones
@@ -70,7 +71,7 @@ export function createEngravedPlate(
   } = {},
 ) {
   const [face, core] = LAMINATES[colour];
-  const px = 640;
+  const px = 640 * letteringScale();
   const ph = Math.round((px * height) / width);
   const { c, texture, material } = canvas(kit, px, ph);
   c.fillStyle = face;
@@ -89,7 +90,7 @@ export function createEngravedPlate(
     c.arc(x * px, y * ph, ph * 0.06, 0, Math.PI * 2);
     c.fill();
     c.strokeStyle = '#555';
-    c.lineWidth = 2;
+    c.lineWidth = 2 * letteringScale();
     c.beginPath();
     c.moveTo(x * px - ph * 0.04, y * ph);
     c.lineTo(x * px + ph * 0.04, y * ph);

@@ -17,6 +17,7 @@ import { createPs1Material } from '../parts/ps1-material';
 import { drawButtonFinish } from './button-finish';
 import { createCanvasTexture } from './screens';
 import { applyLabelFade } from './label-visibility';
+import { letteringScale } from './lettering-resolution';
 
 /**
  * Panel hardware of the mid-1980s refit, for compact control panels: square
@@ -87,12 +88,12 @@ export function createMicroLabel(
     faceCamera = false,
   } = {},
 ) {
-  const px = 16;
+  const px = 16 * letteringScale();
   const lines = text.split('\n');
   const probe = createCanvasTexture(8, 8).context;
   probe.font = `${bold ? 'bold ' : ''}${px}px ${font}`;
   const textWidth = Math.max(...lines.map((l) => probe.measureText(l).width));
-  const pad = 4;
+  const pad = 4 * letteringScale();
   const metresPerPixel = height / (px * 0.72);
   const w = Math.max(
     Math.ceil(textWidth) + pad * 2,

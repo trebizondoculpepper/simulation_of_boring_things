@@ -9,6 +9,7 @@ import {
 } from 'three';
 import type { PanelKit } from './eighties-controls';
 import { createPs1Material } from '../parts/ps1-material';
+import { letteringScale } from './lettering-resolution';
 
 /**
  * The labels a plant's own staff put on things over the years: marker
@@ -352,7 +353,7 @@ export function createDymoLabel(
   { colour = 'black' as keyof typeof DYMO, seed = 5 } = {},
 ) {
   const height = 0.009;
-  const px = 512;
+  const px = 512 * letteringScale();
   const width = Math.max(0.03, text.length * 0.0062 + 0.012);
   const ph = Math.round((px * height) / width);
   const { context, texture, material } = canvasLabel(kit, px, Math.max(24, ph));
@@ -372,7 +373,12 @@ export function createDymoLabel(
   for (const char of text.toUpperCase()) {
     const y = h / 2 + (rand() - 0.5) * h * 0.06;
     c.fillStyle = 'rgba(0,0,0,0.35)';
-    c.fillText(char, x + 1.5, y + 1.5, step);
+    c.fillText(
+      char,
+      x + 1.5 * letteringScale(),
+      y + 1.5 * letteringScale(),
+      step,
+    );
     c.fillStyle = '#f4f4f0';
     c.fillText(char, x, y, step);
     x += step;
