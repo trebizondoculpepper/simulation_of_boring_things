@@ -104,7 +104,8 @@ export function lampSense(label: string): LampSense {
     )
   )
     return 'tripped';
-  if (/\b(STOPPED|SHUT|OFF|CLOSED|STANDBY|READY)\b/.test(l)) return 'stopped';
+  if (/\b(STOP|STOPPED|SHUT|OFF|CLOSED|STANDBY|READY)\b/.test(l))
+    return 'stopped';
   if (
     /\b(RUN|RUNNING|ON|OPEN|HEALTHY|SUPPLY|AVAILABLE|LIVE|FIRING|FLAME|DOSING|SERVICE|AUTO|ENABLED|CALL|FILLING|POWER)\b/.test(
       l,

@@ -106,7 +106,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   },
   // The east wall, where the title card was (the owner: "just see how it
   // looks"): two of dev48's reinterpreted panels.
-  ...['ANN 01', 'XFER 01'].map((code, i): PlantExhibit => {
+  ...['CR-CP2', 'SR-IS3'].map((code, i): PlantExhibit => {
     const spec = PARODY_SPECS.find((p) => p.code === code)!;
     const { w = 1.6, h = 1.0 } = spec.size ?? {};
     return {
