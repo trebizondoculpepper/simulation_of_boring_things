@@ -156,7 +156,10 @@ describe.each(EQUIPPED_ROOMS)('%s', (room) => {
         }),
         `${iso.name} out of reach`,
       ).toBe(true);
-    for (const p of placed)
+    // Every machine and panel; signs are read from afar, not reached.
+    for (const p of placed.filter(
+      (q) => !q.item.key.startsWith('sign:') && q.item.key !== 'store-signs',
+    ))
       expect(reaches(p.access), `${p.item.label} out of reach`).toBe(true);
   });
 

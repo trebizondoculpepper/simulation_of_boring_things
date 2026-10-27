@@ -1,4 +1,5 @@
 import { chemicalOf, wetHallPlumbing } from './wet-hall-plumbing';
+import { storePlumbing } from './store-plumbing';
 import { olympicRoom } from './olympic-plumbing';
 import { retiredPipes } from './retired-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
@@ -1174,6 +1175,8 @@ export function roomPipes(room: string): PipeRun[] {
   if (retired) return retired;
   if (room === 'boiler_house') return boilerHousePipework().runs;
   if (room === 'wet_hall') return wetHallPipework().runs;
+  if (room === 'hypo_store' || room === 'acid_store')
+    return storePlumbing(room).runs;
   // A room being laid out afresh has no pipework yet (`BEING_LAID_OUT`).
   if (BEING_LAID_OUT.includes(room)) return [];
   return room in ROUTED ? poolPlantPipework(room).runs : [];

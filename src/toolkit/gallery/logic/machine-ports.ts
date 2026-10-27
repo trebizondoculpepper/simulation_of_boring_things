@@ -371,6 +371,47 @@ export function machinePorts(item: Item): MachinePort[] {
         'chemical',
       ),
     ];
+  if (kind === 'chem-bulk')
+    // A store's framed bulk tank (`createFramedChemicalTank`, 2.3 × 1.15 m,
+    // set 0.2 m back on its footprint): its draw-off, out of its outlet
+    // valve and turned to its left, low.
+    return [
+      {
+        ...port('out', [-1.1, 0.3, 0.755], [-1, 0, 0], 0.06, 'chemical'),
+        drawn: true,
+      },
+      // Its fill, from the fill point: the end of its fill line, down the
+      // front to its inlet valve (`fillAt`).
+      {
+        ...port('fill', [0.85, 0.45, 0.575], [0, 0, 1], 0.06, 'chemical'),
+        drawn: true,
+      },
+    ];
+  if (kind === 'chem-pump')
+    // A store's transfer skid (`createTransferPumpSkid`): its suction
+    // header's free end, low at the front; its discharge main's, high at
+    // the back.
+    return [
+      {
+        ...port('in', [-0.7, 0.31, 0.32], [-1, 0, 0], 0.056, 'chemical'),
+        drawn: true,
+      },
+      // A tee on the suction header from above for each bulk tank.
+      ...[1, 2, 3].map((k) => ({
+        ...port(
+          `in-${k}`,
+          [-0.5 + 0.4 * (k - 1), 0.34, 0.32],
+          [0, 1, 0],
+          0.05,
+          'chemical',
+        ),
+        drawn: true,
+      })),
+      {
+        ...port('out', [0.7, 0.88, -0.35], [1, 0, 0], 0.056, 'chemical'),
+        drawn: true,
+      },
+    ];
   if (kind === 'chem-selector')
     // The transfer selector (`createTransferSelector`, six outlets at
     // 0.32 m, its header 0.75 m up along x): its main dropping in from
