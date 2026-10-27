@@ -17,6 +17,8 @@ import { cutOpenings, slide } from '../logic/walk-collision';
 import type { Footprint } from '../logic/walk-collision';
 import { climb, ladderToUse } from '../logic/ladder-zone';
 import { smoothStairFloor } from '../logic/stair-smoothing';
+import { standsUp } from '../logic/seat';
+import type { SeatPose } from '../logic/seat';
 import type { LadderZone } from '../logic/ladder-zone';
 import { PAD, deadZone, copyShortcut, noclipShortcut } from '../logic/controls';
 import type { InputMode } from '../logic/controls';
@@ -61,7 +63,8 @@ let sessionInput: InputState | null = null;
  * gamepad, the left stick walks (click it to run), the right stick looks,
  * A uses, LB and RB turn a knob down and up, the triggers zoom and B
  * crouches. A help line at the foot of the screen gives the controls for
- * the input in use.
+ * the input in use. Using a chair seats the walker (`logic/seat.ts`): a
+ * change of stance or any step stands them up again.
  *
  * The numbers match the lab's walker in `start-scene.ts`; keep the two in
  * step if either changes.
@@ -333,6 +336,23 @@ export function createFirstPerson(options: FirstPersonOptions) {
   const tapped = new Set<string>();
   const nudge = { forward: 0, right: 0 };
   let attachedLadder: LadderZone | null = null;
+  /** Seated on a chair (`sit`): where the walker stood before, to stand there again. */
+  let seated: { from: { x: number; z: number } } | null = null;
+  /** Up from a chair, where it sat down from, at its own eye's height. */
+  const stand = () => {
+    if (!seated) return;
+    walker.x = seated.from.x;
+    walker.z = seated.from.z;
+    walker.eyeOffset = 0;
+    walker.crouched = walker.lowCrouched = false;
+    walker.crouch = 0;
+    seated = null;
+  };
+  /** C, V, the crouch button or B: up from a chair, else crouch or stand. */
+  const stance = (low = false) => {
+    if (seated) stand();
+    else changeStance(walker, low);
+  };
   let flying = false;
   let flightY = floorY + EYE_HEIGHT_METRES * metre;
   let flightUp = 0;
@@ -554,9 +574,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
   crouchButton.type = 'button';
   crouchButton.className = 'touch-crouch';
   crouchButton.textContent = 'CROUCH';
-  crouchButton.addEventListener('click', () => {
-    changeStance(walker);
-  });
+  crouchButton.addEventListener('click', () => stance());
   container?.append(crouchButton);
   const inspectButton = document.createElement('button');
   inspectButton.type = 'button';
@@ -659,8 +677,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
         event.preventDefault();
     }
     if (event.repeat) return;
-    if (event.code === 'KeyC' && !noclip.value) changeStance(walker);
-    if (event.code === 'KeyV' && !noclip.value) changeStance(walker, true);
+    if (event.code === 'KeyC' && !noclip.value) stance();
+    if (event.code === 'KeyV' && !noclip.value) stance(true);
     if (event.code === 'KeyR' && noclip.value) walker.roll = 0;
     if (event.code === 'KeyE') use(0, 0);
     if (event.code === 'KeyF') {
@@ -923,9 +941,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     if (went(PAD.knobDown) && !noclip.value) turningKnobs(-1, () => use(0, 0));
     if (went(PAD.knobUp) && !noclip.value) turningKnobs(1, () => use(0, 0));
     if (went(PAD.level) && noclip.value) walker.roll = 0;
-    if (went(PAD.crouch) && !noclip.value) {
-      changeStance(walker);
-    }
+    if (went(PAD.crouch) && !noclip.value) stance();
     if (went(PAD.torch)) torch.toggle();
     // A click of the walk stick runs until the stick comes back to centre.
     if (went(PAD.run)) padRun = true;
@@ -1020,6 +1036,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
         returnTo = null;
       }
       attachedLadder = null;
+      seated = null;
       // Walking, with the eye given: the floor under that eye, not the one
       // stood on before (placed up a storey, the walker stood on the floor
       // below and could not walk down the stair it was over: mission 095).
@@ -1039,6 +1056,35 @@ export function createFirstPerson(options: FirstPersonOptions) {
       walker.lowCrouched = false;
       walker.crouch = 0;
       sticks?.reset();
+    },
+    /**
+     * Sit down (a chair's use, `logic/seat.ts`): the eye at `pose`, in
+     * scene units, until a change of stance or a step stands the walker
+     * up again where it stood. Looking about and using things in reach
+     * keep it seated; nothing pushes it out of the chair meanwhile.
+     */
+    sit(pose: SeatPose) {
+      if (flying || holding) return;
+      if (!seated) seated = { from: { x: walker.x, z: walker.z } };
+      attachedLadder = null;
+      walker.x = pose.x;
+      walker.z = pose.z;
+      walker.yaw = pose.yaw;
+      walker.pitch = clampPitch(pose.pitch);
+      currentFloorY =
+        options.floorAt?.(pose.x, pose.z, currentFloorY) ?? floorY;
+      smoothedFloorY = currentFloorY;
+      walker.eyeOffset = pose.eyeY - eyeY();
+      walker.crouched = walker.lowCrouched = false;
+      walker.crouch = 0;
+      nudge.forward = nudge.right = 0;
+      sticks?.reset();
+    },
+    /** Stand up from a chair, where the walker sat down from. */
+    stand,
+    /** Whether the walker is seated on a chair. */
+    get seated() {
+      return Boolean(seated);
     },
     /**
      * Hold the player still, or let go: while held, no input walks or
@@ -1082,6 +1128,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
       const shouldFly = noclip.value && current();
       if (shouldFly !== flying) {
         if (shouldFly) {
+          // Out of any chair first, to come back on foot.
+          stand();
           returnTo = { walker: { ...walker }, floor: currentFloorY };
           // From the walker's eye, where it stands (or where a link placed
           // it): not the camera's, which is not yet set on a first frame.
@@ -1162,9 +1210,15 @@ export function createFirstPerson(options: FirstPersonOptions) {
             : 'W: climb · S: descend'
           : inspection.shown
             ? inspectionText(inspection.shown)
-            : menuHintVisible(hintUntil, now, false)
-              ? menuHint(input ?? 'mouse')
-              : '';
+            : seated
+              ? input === 'touch'
+                ? 'Seated · CROUCH or walk: stand up'
+                : input === 'gamepad'
+                  ? 'Seated · B or left stick: stand up'
+                  : 'Seated · C or walk: stand up'
+              : menuHintVisible(hintUntil, now, false)
+                ? menuHint(input ?? 'mouse')
+                : '';
       // Only when it changes, so it is not announced again every frame.
       if (help.textContent !== text) help.textContent = text;
       help.classList.toggle('is-inspecting', Boolean(inspection.shown));
@@ -1204,6 +1258,15 @@ export function createFirstPerson(options: FirstPersonOptions) {
           (sticks?.move.x ?? 0) +
           pad.move.x);
       if (ahead || aside || hudHeld * pressing.turn) hintUntil = 0;
+      // Seated: any step stands the walker up, and walks on from there.
+      if (
+        seated &&
+        standsUp({
+          moving: Boolean(ahead || aside || nudge.forward || nudge.right),
+          stance: false,
+        })
+      )
+        stand();
       if (sticks && !holding) {
         // The look stick turns the head, slower as the view zooms in, at
         // the player's sensitivity and the way up they chose.
@@ -1322,23 +1385,25 @@ export function createFirstPerson(options: FirstPersonOptions) {
             speed,
             flightBounds(walker.x, walker.z),
           )
-        : slide(
-            cuts.length
-              ? cutOpenings(options.solids?.() ?? [], cuts)
-              : (options.solids?.() ?? []),
-            walker.x,
-            walker.z,
-            Math.sin(walker.yaw) * forward + Math.cos(walker.yaw) * right,
-            -Math.cos(walker.yaw) * forward + Math.sin(walker.yaw) * right,
-            WALKER_RADIUS_METRES * metre,
-          );
+        : seated
+          ? { x: walker.x, z: walker.z }
+          : slide(
+              cuts.length
+                ? cutOpenings(options.solids?.() ?? [], cuts)
+                : (options.solids?.() ?? []),
+              walker.x,
+              walker.z,
+              Math.sin(walker.yaw) * forward + Math.cos(walker.yaw) * right,
+              -Math.cos(walker.yaw) * forward + Math.sin(walker.yaw) * right,
+              WALKER_RADIUS_METRES * metre,
+            );
       if (flying && 'y' in next && typeof next.y === 'number') flightY = next.y;
       const kept = attachedLadder ? attachedLadder.rung : next;
       walker.stride += Math.hypot(kept.x - walker.x, kept.z - walker.z);
       walker.x = kept.x;
       walker.z = kept.z;
       // The ladder owns height until the walker leaves an end.
-      if (!attachedLadder && !flying)
+      if (!attachedLadder && !flying && !seated)
         currentFloorY =
           options.floorAt?.(walker.x, walker.z, currentFloorY) ?? floorY;
       smoothedFloorY = smoothStairFloor(

@@ -29,14 +29,19 @@ import {
   chaserLights,
   idleScreen,
   upholsteredChair,
+  CHAIR_SIZES,
 } from './bridge-dressing';
 import type { ChairKind } from './bridge-dressing';
+import { declareSeat } from '../../controls/input/seating';
 import {
   createEngravedSign,
   cutLines,
 } from '../../components/general-safety/views/engraved-sign';
 import {
   BRIDGE_FIN,
+  DESK_PANELS,
+  STATION_PANELS,
+  bridgePanelPlaces,
   CONFERENCE,
   CONTROL_ROOM,
   DESK,
@@ -849,6 +854,8 @@ export function createControlRoomPrototype(
       STOREY,
       'Operator chair',
       'command',
+      // On the bridge, facing Central Control on the desk.
+      bridge ? panelAt('CC-01') : undefined,
     ),
   );
   // On the bridge, a pair of chairs either side of the operator's.
@@ -861,6 +868,11 @@ export function createControlRoomPrototype(
           STOREY,
           'Chair',
           'beside',
+          // Facing its command chair's panel on the desk, the nearer.
+          nearestPanel(
+            { x: c.x + dx * 1.15, z: c.z + 0.5 },
+            DESK_PANELS.map((p) => p.code),
+          ),
         ),
       );
   if (bridge) stations();
@@ -1628,6 +1640,8 @@ export function createControlRoomPrototype(
           STOREY,
           'Chair',
           'station',
+          // Facing its station's panel.
+          panelAt(STATION_PANELS[st.system]),
         ),
       );
     }
@@ -1665,23 +1679,31 @@ export function createControlRoomPrototype(
     kit.materials.push(m);
     return m;
   }
-  /** A swivel chair facing `yaw` (0 faces south, π north). */
+  /**
+   * A swivel chair facing `yaw` (0 faces south, π north), declaring its
+   * seat (`controls/logic/seat.ts`): used, it seats the walker, facing
+   * `lookAt` (its console's panel, in the room's plan) if given.
+   */
   function chair(
     m: Material,
     at: { x: number; z: number; yaw: number },
     y: number,
     name = 'Chair',
     kind: ChairKind = 'station',
+    lookAt?: { x: number; y: number; z: number },
   ) {
     // The bridge's are upholstered (mission 095), in warm fabrics.
     if (dressing)
-      return upholsteredChair(
-        dressing,
-        kind === 'command' ? commandFabric! : seatFabric!,
-        kind,
-        at,
-        y,
-        name,
+      return declareSeat(
+        upholsteredChair(
+          dressing,
+          kind === 'command' ? commandFabric! : seatFabric!,
+          kind,
+          at,
+          y,
+          name,
+        ),
+        { height: CHAIR_SIZES[kind].seat, lookAt },
       );
     const c = new Group();
     c.name = name;
@@ -1698,7 +1720,7 @@ export function createControlRoomPrototype(
     box(m, 0.5, 0.1, 0.48, 0, 0.48, 0, c);
     const back = box(m, 0.48, 0.62, 0.08, 0, 0.84, -0.24, c);
     back.rotation.x = -0.12;
-    return c;
+    return declareSeat(c, { height: 0.53, lookAt });
   }
   /** An engraved sign (the owner, 2026-10-26: engraved laminate, white over black). */
   function sign(cw: number, ch: number, text: string[]) {
@@ -1717,4 +1739,21 @@ export function createControlRoomPrototype(
       ),
     );
   }
+}
+
+/** A bridge panel's middle, by its code (`bridgePanelPlaces`): what its chair's sitter faces. */
+function panelAt(code: string) {
+  const p = bridgePanelPlaces().find((q) => q.code === code);
+  return p ? { x: p.x, y: p.y, z: p.z } : undefined;
+}
+
+/** The nearest to `at` of the bridge panels `codes`, its middle. */
+function nearestPanel(at: { x: number; z: number }, codes: readonly string[]) {
+  const near = bridgePanelPlaces()
+    .filter((p) => codes.includes(p.code))
+    .sort(
+      (a, b) =>
+        Math.hypot(a.x - at.x, a.z - at.z) - Math.hypot(b.x - at.x, b.z - at.z),
+    )[0];
+  return near ? { x: near.x, y: near.y, z: near.z } : undefined;
 }

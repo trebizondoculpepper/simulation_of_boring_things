@@ -489,6 +489,17 @@ export function chaserLights(
 /** The kinds of upholstered chair on the bridge. */
 export type ChairKind = 'command' | 'beside' | 'station' | 'conference';
 
+/** Each kind's width, depth, seat height, back and arms, metres (its seat's height what a sitter sits at, `controls/logic/seat.ts`). */
+export const CHAIR_SIZES: Record<
+  ChairKind,
+  { w: number; d: number; seat: number; back: number; arms: boolean }
+> = {
+  command: { w: 0.78, d: 0.72, seat: 0.48, back: 0.82, arms: true },
+  beside: { w: 0.62, d: 0.62, seat: 0.44, back: 0.62, arms: true },
+  station: { w: 0.52, d: 0.52, seat: 0.62, back: 0.5, arms: false },
+  conference: { w: 0.56, d: 0.56, seat: 0.46, back: 0.56, arms: false },
+};
+
 /**
  * An upholstered chair (fabric, not leather) facing `yaw` (0 south):
  * the command chair larger, with padded arms whose fronts carry small
@@ -508,12 +519,7 @@ export function upholsteredChair(
   c.name = name;
   c.position.set(at.x, y, at.z);
   c.rotation.y = at.yaw;
-  const size = {
-    command: { w: 0.78, d: 0.72, seat: 0.48, back: 0.82, arms: true },
-    beside: { w: 0.62, d: 0.62, seat: 0.44, back: 0.62, arms: true },
-    station: { w: 0.52, d: 0.52, seat: 0.62, back: 0.5, arms: false },
-    conference: { w: 0.56, d: 0.56, seat: 0.46, back: 0.56, arms: false },
-  }[kind];
+  const size = CHAIR_SIZES[kind];
   const rb = (w: number, h: number, d: number, r: number, mat: Material) =>
     new Mesh(new RoundedBoxGeometry(w, h, d, 3, r), mat);
   // The base: a black plinth for the command chairs, a pedestal else.

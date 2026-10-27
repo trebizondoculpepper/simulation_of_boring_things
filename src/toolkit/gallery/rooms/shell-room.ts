@@ -49,6 +49,7 @@ import {
   createFirstPerson,
   WALKER_RADIUS_METRES,
 } from '../../controls/input/first-person';
+import { seatDeclared, seatOf } from '../../controls/input/seating';
 import {
   humanLadderLandingAt,
   humanLadderLandingSolids,
@@ -491,6 +492,12 @@ export function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
         return () =>
           touchingAt(hit, () => work(knobDirection(at, hit.point, camera)));
       }
+      // A chair that declares a seat: sat on (`controls/logic/seat.ts`).
+      const seat = seatDeclared(o);
+      if (seat) {
+        const chair = o;
+        return () => walk.sit(seatOf(chair, seat));
+      }
     }
     return null;
   };
@@ -755,7 +762,10 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       x: walk.walker.x / metre,
       z: walk.walker.z / metre,
       floor: standing,
+      seated: walk.seated,
     }),
+    /** Stand up from a chair. */
+    stand: () => walk.stand(),
   };
   (window as unknown as { shellRoom: unknown }).shellRoom = handle;
   const resize = () => {
