@@ -90,6 +90,9 @@ import { EXHIBITS as BALANCE } from '../rooms/plant/balance';
 import { createMainSwitch } from '../../components/plant/views/main-switch';
 import { withIntake } from '../../../game/plant/site-intake';
 import { createChangeoverSwitch } from '../../components/plant/views/changeover-switch';
+import { createFirePoint } from './fire-point';
+import { FIRE_POINT_DEPTH, firePointKinds } from '../logic/fire-point';
+import { switchRoomFloor, MAT } from '../logic/switch-room-floor';
 import type { ChangeoverBinding } from '../../components/plant/views/changeover-switch';
 import {
   changeoverStatus,
@@ -447,6 +450,16 @@ function modelFor(
   }
   // A room's notice or sign (`building-signs.ts`).
   if (kind === 'sign' && arg) return createBuildingSign(kit, arg as SignItemId);
+  // A fire point (prompt 089, item 5): its back on its wall, half its
+  // kept-clear depth behind the middle of its footprint.
+  if (kind === 'fire-point' && arg) {
+    const point = createFirePoint(kit, firePointKinds(arg));
+    point.position.z = -FIRE_POINT_DEPTH / 2;
+    const object = new Group();
+    object.name = item.label;
+    object.add(point);
+    return object;
+  }
   // The engineer's scenario simulator, switching the whole plant.
   if (kind === 'storage-cupboard' && (arg === 'solid' || arg === 'glass')) {
     const cupboard = createEngineerStorageCupboard(
@@ -1423,6 +1436,56 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
         createContainment(kit, olympicRoom().busbar, [], soffit, floorY),
         { name: 'Busbar', model: { link: 'bus' } },
       ),
+    );
+  }
+  // The switch room's floor (prompt 089, item 5): its switchgear's
+  // working spaces marked in yellow, and rubber matting before the main
+  // switchboard.
+  if (room === 'switch_room' && layout) {
+    const floorMarks = switchRoomFloor(placed);
+    const yellow = new MeshStandardMaterial({
+      color: '#e3b51f',
+      roughness: 0.6,
+    });
+    const rubber = new MeshStandardMaterial({
+      color: '#1c1d1e',
+      roughness: 0.95,
+    });
+    kit.materials.push(yellow, rubber);
+    const marks = new Group();
+    marks.name = 'Switch room floor markings and matting';
+    for (const f of floorMarks.lines) {
+      const line = new Mesh(
+        new BoxGeometry(f.maxX - f.minX, 0.003, f.maxZ - f.minZ),
+        yellow,
+      );
+      line.position.set(
+        (f.minX + f.maxX) / 2,
+        floorY + 0.003,
+        (f.minZ + f.maxZ) / 2,
+      );
+      line.name = 'Working space marking';
+      marks.add(line);
+    }
+    for (const f of floorMarks.mats) {
+      const mat = new Mesh(
+        new BoxGeometry(f.maxX - f.minX, MAT.thickness, f.maxZ - f.minZ),
+        rubber,
+      );
+      mat.position.set(
+        (f.minX + f.maxX) / 2,
+        floorY + MAT.thickness / 2,
+        (f.minZ + f.maxZ) / 2,
+      );
+      mat.name = 'Insulating rubber matting (BS EN 61111)';
+      marks.add(mat);
+    }
+    // Set decoration, with the room's services, not a machine.
+    pipework.group.add(
+      markComponent(marks, {
+        name: 'Switch room floor markings and matting',
+        decorative: true,
+      }),
     );
   }
   // The switch room's cable ladder and its switchgear's trunking.

@@ -103,6 +103,7 @@ export const WORLD_BINDINGS: Readonly<Record<string, WorldBinding>> = {
   'store-extract': world('its room’s gas detection and extract'),
   'tanker-stand': passive('a painted bay'),
   'spill-kit': passive('a bin of absorbents'),
+  'fire-point': passive('extinguishers on the wall and a notice'),
   'safety-shower': passive(
     'a shower and eyewash, worked by hand, not modelled',
   ),

@@ -72,6 +72,8 @@ Owner's answer (2026-10-27): the fire point, plus insulating rubber matting alon
 - Make the fire point a layout item (a reusable fire point, its kinds of extinguisher a parameter) placed by `layoutRoom`, and use the same piece for the wet hall's, rather than a second hand-drawn copy; keep it clear of the boards' working space and the door's swing.
 - Check: screenshots in the switch room; the layout tests.
 
+Done (2026-10-27): the fire point is a layout item, `fire-point:<kinds>[:<id>]` (`src/toolkit/gallery/logic/fire-point.ts`, its view `src/toolkit/gallery/views/fire-point.ts`, kind `fire-point`, decorative), a walkable floor item whose footprint is the 1.0 × 0.8 m kept-clear floor: extinguishers on brackets, the fire action notice, a FIRE POINT sign, the red outline. The switch room's (two CO2) is on the south wall west of the door (x −2.35 to −1.35), clear of the door's swing, the feeder isolator and the switchgear's working spaces; the wet hall's three (CO2 and foam) are the same item at `wetHallFirePoints`, where their call points are, and the hand-drawn copy in `views/shell-room.ts` is gone. The floor (`switch-room-floor.ts`): a 50 mm yellow line round the metre's working space before the switchboard, the main switch and the changeover switch, and a 0.8 m rubber mat along the switchboard's front inside it. Tests: `fire-point.test.ts`, `switch-room-floor.test.ts`; checked by eye in the switch room and the wet hall.
+
 ## 6. No generator point in the switch room; a mains/generator changeover switch instead
 
 The owner, 2026-10-27: "The generator terminal should not be in the switch room, but we should probably have a selector switch that switches between mains and generator power."

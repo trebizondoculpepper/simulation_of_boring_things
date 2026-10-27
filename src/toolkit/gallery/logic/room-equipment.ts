@@ -32,6 +32,16 @@ import {
 } from '../../components/plant/logic/booster-set';
 import { LIGHTING_BOARD, MAIN_SWITCH } from './switch-room';
 import { CHANGEOVER_SWITCH } from '../../components/plant/views/changeover-switch';
+import {
+  FIRE_POINT_DEPTH,
+  FIRE_POINT_HEIGHT,
+  firePointFace,
+  firePointKey,
+  firePointMiddle,
+  firePointWidth,
+  wetHallFirePoints,
+} from './fire-point';
+import type { FirePointExtinguisher } from './fire-point';
 import { ROOM_SIGNS, SIGN_ITEMS } from './building-signs';
 import { loungeRoomBox } from './lounge-plant-plan';
 
@@ -572,6 +582,25 @@ const wall = (
   more: Partial<Item> = {},
 ): Item => ({ key, label, w, d, h, y, mount: 'wall', ...more });
 
+/**
+ * A fire point (`fire-point.ts`; prompt 089, item 5): its footprint the
+ * floor kept clear before it, which may be walked on (to reach its
+ * extinguishers and call point), its back on its wall.
+ */
+const firePoint = (
+  kinds: readonly FirePointExtinguisher[],
+  label = 'Fire point',
+  id?: string,
+): Item =>
+  floor(
+    firePointKey(kinds, id),
+    label,
+    firePointWidth(kinds.length),
+    FIRE_POINT_DEPTH,
+    FIRE_POINT_HEIGHT,
+    { back: 0, walkable: true },
+  );
+
 /** A pool plant room's machines: its own circuit, in the order the water goes. */
 function poolPlant(
   room: string,
@@ -898,6 +927,11 @@ export function roomEquipment(
             1.1,
             1.5,
           ),
+          // Its fire points (`wetHallFirePoints`): a CO2 and a foam
+          // extinguisher each, the same layout item as the switch room's.
+          ...wetHallFirePoints().map((f, i) =>
+            firePoint(['co2', 'foam'], `Fire point ${i + 1}`, f.id),
+          ),
         ],
       };
     case 'boiler_house':
@@ -1096,6 +1130,10 @@ export function roomEquipment(
             CHANGEOVER_SWITCH.y,
             { walls: ['east'] },
           ),
+          // Its fire point by the door (prompt 089, item 5): two 5 kg CO2
+          // extinguishers, for live LV gear (BS 5306-8: no water or foam,
+          // and no powder indoors on switchgear).
+          firePoint(['co2', 'co2']),
           wall(
             'earthing-terminal',
             'Main earthing terminal',
@@ -1444,6 +1482,12 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
       put(box, at('changeover-switch'), { wall: 'east', along: -2.3 }),
       put(box, at('earthing-terminal'), { wall: 'west', along: 3.58 }),
       put(box, at('sign:shock-poster'), { wall: 'south', along: 1.75 }),
+      // West of the door on its wall, clear of its swing and of the
+      // switchboard's working space.
+      put(box, at(firePointKey(['co2', 'co2'])), {
+        wall: 'south',
+        along: -1.85,
+      }),
     ];
   },
   // The Olympic's: where its plan stands each machine (`olympic-plan.ts`).
@@ -1538,6 +1582,14 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
         face: 'south',
       }),
       put(box, at('sewer-monitor'), { wall: 'east', along: 5.5 }),
+      // Its fire points, each backed onto its wall (or the bay's
+      // partition), facing into the hall.
+      ...wetHallFirePoints().map((f) =>
+        put(box, at(firePointKey(['co2', 'foam'], f.id)), {
+          ...firePointMiddle(f),
+          face: firePointFace(f.yaw),
+        }),
+      ),
     ];
   },
   // The air plant: its stacks where `air-plant.ts` stands them, under

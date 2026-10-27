@@ -51,8 +51,7 @@ import { roomWorld } from '../../save/world-store';
 import { zoneInAlarm } from '../../../game/plant/fire-alarm';
 import { wetHallBox } from '../logic/room-equipment';
 import { PIT_RAIL } from '../../components/plant/views/backwash-pit';
-import { createExtinguisher } from '../../components/fire/views/fire-fittings';
-import { createFireActionNotice } from '../../components/general-safety/views/safety-notices';
+import { wetHallFirePoints } from '../logic/fire-point';
 import { createSafetySign } from '../../components/general-safety/views/safety-signs';
 import { createCanvasTexture } from '../../components/core/views/screens';
 import { createFloorGully } from '../../components/plant/views/floor-gully';
@@ -841,44 +840,8 @@ export function createWetHall(metre: number, kit: PanelKit) {
     const yellow = paint('#e3b51f', 0.6);
     for (const z of [L.bay.maxZ + t + 1.3, railZ - 1.1])
       box(yellow, 12.4, 0.004, 0.08, -0.4, floorY + 0.003, z);
-    // Fire points (BS 5306-8): a CO2 extinguisher for the electrics and a
-    // foam one, each pair with its fire action notice: in the make-up
-    // bay by its doors; by the stair's foot; and by the ramp's foot.
-    const fireAt = (x: number, z: number, yaw: number) => {
-      const point = new Group();
-      point.position.set(x, floorY + 0.3, z);
-      point.rotation.y = yaw;
-      for (const [k, dx] of [
-        ['co2', -0.22],
-        ['foam', 0.22],
-      ] as const) {
-        const e = createExtinguisher(kit, k);
-        e.group.position.x = dx;
-        point.add(e.group);
-      }
-      // The floor before it kept clear (the owner, 2026-10-26).
-      const clear = new Group();
-      const mark = (w: number, d: number, px: number, pz: number) =>
-        box(
-          paint('#c4231c', 0.6),
-          w,
-          0.004,
-          d,
-          px,
-          -0.3 + 0.003 - 0.001,
-          pz,
-          clear,
-        );
-      mark(1.0, 0.06, 0, 0.8);
-      mark(0.06, 0.8, -0.5, 0.4);
-      mark(0.06, 0.8, 0.5, 0.4);
-      point.add(clear);
-      const notice = createFireActionNotice(kit);
-      notice.position.set(0, 1.45, 0.005);
-      point.add(notice);
-      group.add(point);
-    };
-    for (const f of wetHallFirePoints()) fireAt(f.x, f.z, f.yaw);
+    // Its fire points are layout items (`logic/fire-point.ts`), drawn
+    // with its machines (prompt 089, item 5).
     // Signs: at each way in (the east landing, the west door at the
     // ramp's head) safety footwear, wet floor and no smoking; on the
     // bay's doors no smoking.
@@ -978,21 +941,8 @@ export function createWetHall(metre: number, kit: PanelKit) {
  * the same pair of equipment doors as every plant room's, in the bay's
  * partition, pulled open from the aisle; for its room's parts.
  */
-/**
- * The wet hall's fire points (the owner, 2026-10-26): in the make-up bay
- * by its doors, by the stair's foot, and by the ramp's foot (clear of its
- * rail); each a CO2 and a foam extinguisher, its fire action notice and a
- * manual call point, faces into the room. Room frame, on its walls.
- */
-export function wetHallFirePoints() {
-  const L = WET_HALL_LAYOUT;
-  const R = WET_HALL.side / 2 - SHELL_WALL;
-  return [
-    { id: 'wh-mcp-1', x: -1.5, z: L.bay.maxZ - 0.005, yaw: Math.PI },
-    { id: 'wh-mcp-2', x: R - 0.005, z: 2.6, yaw: -Math.PI / 2 },
-    { id: 'wh-mcp-3', x: -4.0, z: R - 0.005, yaw: Math.PI },
-  ] as const;
-}
+/** The wet hall's fire points: where its call points stand beside them. */
+export { wetHallFirePoints };
 
 /**
  * The wet hall's fire alarm (the owner, 2026-10-26): a manual call point

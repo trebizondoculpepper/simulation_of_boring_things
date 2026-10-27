@@ -369,6 +369,14 @@ export const PLACED_KINDS = {
     class: 'non-plant',
     purpose: 'Provides emergency drenching and eyewash after exposure.',
   },
+  'fire-point': {
+    type: 'Fire point',
+    status: 'none',
+    code: 'FX',
+    class: 'decorative',
+    purpose:
+      'Holds portable extinguishers and the fire action notice, the floor before them kept clear.',
+  },
   'spill-kit': {
     type: 'Spill kit',
     status: 'none',
