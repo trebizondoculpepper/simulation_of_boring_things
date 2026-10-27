@@ -1482,8 +1482,10 @@ export function createControlRoomPrototype(
           gloss,
         ),
       );
-      // A handrail along its open side, 0.9 m over it: oak; a burgundy
-      // carpeted kerb under it where it stands high.
+      // A handrail along its open side, 0.9 m over it, oak, on its guard:
+      // only where the guard is, from `open` up (the owner, 2026-10-27:
+      // it ran on down to the ramp's foot, over-extended, past its guard).
+      if (x0 > open + 1e-6) continue;
       const a = p(x0, depth - 0.05);
       const b = p(x1, depth - 0.05);
       const seg = new Mesh(
@@ -1499,8 +1501,6 @@ export function createControlRoomPrototype(
       seg.lookAt(b.x, y1 + 0.9, b.z);
       seg.rotateX(Math.PI / 2);
       stage.add(seg);
-      if (x0 <= open + 1e-6 && Math.round(x0 * 2) !== Math.round(x1 * 2))
-        box(steel, 0.04, 0.9, 0.04, a.x, y0 + 0.45, a.z, stage);
     }
     // And a glass guard along its open side, where it is high enough to fall from.
     const guardPts = horseshoePoints(s * open, s * end, 0.6).map((q) => ({
