@@ -110,7 +110,9 @@ export function roomWorld(): WorldStore {
  */
 function devSlot(): string | null {
   if (typeof window === 'undefined' || !import.meta.env?.DEV) return null;
-  const slot = new URLSearchParams(window.location.search).get('slot');
+  const search = window.location?.search;
+  if (!search) return null;
+  const slot = new URLSearchParams(search).get('slot');
   return slot && /^[a-z0-9-]{1,24}$/.test(slot) ? slot : null;
 }
 // For trying the world from the console in development only:
