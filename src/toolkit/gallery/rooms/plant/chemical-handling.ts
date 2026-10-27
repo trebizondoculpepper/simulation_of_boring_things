@@ -2,6 +2,7 @@ import type { PlantExhibit } from './exhibit';
 import { layoutSquarePlantRoom } from '../../logic/plant-room-layout';
 import type { ExhibitSize } from '../../logic/plant-room-layout';
 import { createPeristalticDemo } from '../../../components/plant/views/peristaltic-pump';
+import { createLeakDetectionDemo } from '../../../components/plant/views/leak-detection';
 import { createDoseCellDemo } from '../../../components/plant/views/dose-cell-head';
 import {
   createBulkTankDemo,
@@ -100,6 +101,14 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       'The wet hall’s panel, Penfold Controls: each store and day tank on a meter, filling lamps, selector and pump lamps, an annunciator; run by its own trials',
     size: { w: 1.7, d: 0.6, h: 2.1, mount: 'floor' },
     build: (kit) => createDistributionPanelDemo(kit),
+  },
+  {
+    title: 'Leak detection',
+    reference:
+      'A double-contained line’s low point (drain valve, sight tube, conductivity probe after the Raychem TT-MINI-PROBE) and a four-zone monitor after GF’s 918Q: a seep every few minutes; drain it and RESET',
+    size: { w: 1.6, d: 0.6, h: 1.6, mount: 'floor' },
+    maker: 'chlorella',
+    build: (kit) => createLeakDetectionDemo(kit),
   },
   {
     title: 'Chemical pipes',

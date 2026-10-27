@@ -45,6 +45,8 @@ import { createDoseBottle } from './dose-bottle';
 import { chlorellaPlate } from './chlorella-plate';
 import { hose } from './hose';
 import { createPipeMarker } from './pipe-marker';
+import { createLeakPort } from './leak-detection';
+import { newLowPoint } from '../../../../game/plant/leak-monitor';
 import { createPeristalticPump } from './peristaltic-pump';
 import {
   bottleLevel,
@@ -941,18 +943,11 @@ export function createChemicalPipeSamples(kit: PanelKit) {
   t.cyl(group, t.paint('#3b3e41', 0.5), 0.03, 1.7, 0, y1, -0.1, 'x', 20);
   for (const x of [-0.6, -0.2, 0.2])
     t.cyl(group, t.paint('#e5c43a', 0.5), 0.053, 0.02, x, y1, -0.1, 'x', 16);
-  t.cyl(group, abs, 0.018, 0.12, 0.6, y1 - 0.1, -0.1, 'y', 10);
-  t.box(group, t.paint('#2f63a3', 0.5), 0.05, 0.06, 0.05, 0.6, y1 - 0.19, -0.1);
-  f.label(
-    group,
-    'LEAK SENSOR',
-    0.6,
-    y1 - 0.26,
-    -0.07,
-    0.018,
-    '#ffffff',
-    '#2f63a3',
-  );
+  // Its low point: the drain, sight tube and probe (dry here).
+  const port = createLeakPort(kit, 0.057);
+  port.object.position.set(0.6, y1, -0.1);
+  port.show(newLowPoint());
+  group.add(port.object);
   f.label(
     group,
     'DOUBLE-CONTAINED ABS · DN25 IN DN63 · FILL LINES AND TRANSFER MAINS',
