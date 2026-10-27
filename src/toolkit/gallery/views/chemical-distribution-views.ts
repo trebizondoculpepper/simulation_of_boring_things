@@ -209,10 +209,11 @@ function dayBottle(
   };
   return {
     object: bottle.object,
+    parts: bottle.parts,
     update(delta) {
       const s = state();
       trend.sample(s.litres, delta);
-      bottle.show(s);
+      bottle.show(s, true, delta);
     },
     status: () =>
       describeTank(

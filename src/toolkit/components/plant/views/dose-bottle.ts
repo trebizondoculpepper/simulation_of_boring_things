@@ -192,8 +192,9 @@ export function createDoseBottle(
     /** Its footprint's radius, its tray's. */
     radius: trayR,
     /** Shows the bottle `b`'s state on its head. */
-    show: (b: DoseBottle, powered = true) =>
-      cell.show(bottleReadout(b, powered), b),
+    parts: cell.parts,
+    show: (b: DoseBottle, powered = true, delta = 0) =>
+      cell.show(bottleReadout(b, powered), b, delta),
   };
 }
 

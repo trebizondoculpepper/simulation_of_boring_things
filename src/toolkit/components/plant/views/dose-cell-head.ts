@@ -5,14 +5,24 @@ import { tools } from '../../core/views/fitting-tools';
 import { plantTools } from './plant-tools';
 import { chlorellaPlate } from './chlorella-plate';
 import {
-  bottleLcd,
   bottleReadout,
   newDoseBottle,
   stepDoseBottle,
 } from '../../../../game/plant/dose-bottle';
 import { onPlinth } from './plinth';
 import type { DoseBottle } from '../../../../game/plant/dose-bottle';
-import { createCharacterLcd } from '../../industrial-control/views/panel-instruments';
+import { createPartSet, pushButton } from '../../core/parts/parts';
+import {
+  box,
+  dotFrame,
+  fillBox,
+  isLit,
+  text,
+  textWidth,
+} from '../../industrial-control/logic/dot-matrix';
+
+/** Chlorella's colours (`brands.ts`). */
+const CHLORELLA = { green: '#3f9b3a', pale: '#cfe9b0', dark: '#16301a' };
 
 type Readout = ReturnType<typeof bottleReadout>;
 
@@ -25,8 +35,9 @@ export const DOSE_CELL_HEAD = { w: 0.2, h: 0.12, d: 0.15 } as const;
  * alike but for its band (yellow, red). A rounded grey moulding holding
  * the ultrasonic sensor (looking down through the lid), the high and low
  * switches and the motorised dosing pump (its motor's dome on top); on its
- * front a 16 × 2 character LCD (its tag and litres, and a bar of blocks), a row of four small lamps
- * beneath it (HI, LO, CALL, PUMP) and DOSECELL; Chlorella's plate on its
+ * front, in Chlorella's green, a 96 × 40 dot graphic LCD of three pages
+ * (contents, switches, pump), HI, LO, CALL and PUMP lamps, ◄ ► and TEST
+ * keys that work, and DOSECELL; Chlorella's plate on its
  * right side; the pump's discharge gland on its left side and the power
  * gland at its back.
  *
@@ -74,17 +85,86 @@ export function createDoseCellHead(
     20,
   );
 
-  // The display in its dark bezel.
-  const lcd = createCharacterLcd(kit, {
-    columns: 16,
-    rows: 2,
-    cell: 0.0034,
-    backlight: true,
-  });
-  lcd.group.position.set(0, h * 0.64, front + 0.001);
-  group.add(lcd.group);
+  // The front, in Chlorella's livery: a green surround round a dark
+  // membrane panel; a 96 × 40 dot graphic LCD (pale green dots on dark
+  // green); HI, LO, CALL and PUMP lamps; three keys that work: ◄ and ►
+  // turn its pages (contents, switches, pump), TEST lights every lamp.
+  const green = t.paint(CHLORELLA.green, 0.45);
+  t.box(group, green, w * 0.9, h * 0.86, 0.003, 0, h * 0.5, front + 0.0005);
+  t.box(
+    group,
+    t.paint('#1b211d', 0.3),
+    w * 0.84,
+    h * 0.78,
+    0.003,
+    0,
+    h * 0.5,
+    front + 0.003,
+  );
+  const GW = 96;
+  const GH = 40;
+  const lcd = f.printed(0.104, 0.044, () => {}, GW * 4, true);
+  lcd.mesh.position.set(0, h * 0.66, front + 0.0048);
+  lcd.mesh.userData.live = true;
+  group.add(lcd.mesh);
+  let page = 0;
+  let testing = 0;
+  let last: { o: Readout; b: DoseBottle } | null = null;
+  let shown = '';
+  const draw = () => {
+    if (!last) return;
+    const { o, b } = last;
+    const fr = dotFrame(GW, GH);
+    const on = o.powered;
+    if (on) {
+      const level = Math.max(0, Math.min(1, b.litres / b.capacity));
+      fillBox(fr, 0, 0, GW, 9);
+      text(fr, 2, 1, tag.slice(0, 9), 1, false);
+      text(
+        fr,
+        GW - 2 - textWidth(`${page + 1}/3`),
+        1,
+        `${page + 1}/3`,
+        1,
+        false,
+      );
+      if (testing > 0) fillBox(fr, 0, 10, GW, GH - 10);
+      else if (page === 0) {
+        const v = b.litres.toFixed(b.capacity < 100 ? 1 : 0);
+        text(fr, GW - 14 - textWidth(v, 2), 13, v, 2);
+        text(fr, GW - 12, 20, 'L');
+        text(fr, 2, 13, `${Math.round(level * 100)}%`);
+        box(fr, 2, 31, GW - 4, 8);
+        fillBox(fr, 4, 33, Math.round((GW - 8) * level), 4);
+      } else if (page === 1) {
+        text(fr, 2, 13, `HIGH ${o.high ? 'ON ' : 'OFF'}`);
+        text(fr, 2, 22, `LOW  ${o.low ? 'ON ' : 'OFF'}`);
+        text(fr, 2, 31, o.calling ? 'CALLING FILL' : 'NOT CALLING');
+      } else {
+        text(fr, 2, 13, 'DOSING PUMP');
+        text(fr, 2, 24, o.pumping ? 'RUNNING' : 'STANDING', 2);
+      }
+    }
+    const key = `${on}${[...fr.dots].join('')}`;
+    if (key === shown) return;
+    shown = key;
+    const c = lcd.context;
+    const cw = c.canvas.width;
+    const ch = c.canvas.height;
+    const px = cw / GW;
+    const py = ch / GH;
+    c.fillStyle = on ? CHLORELLA.dark : '#070a08';
+    c.fillRect(0, 0, cw, ch);
+    if (on)
+      for (let y = 0; y < GH; y++)
+        for (let x = 0; x < GW; x++) {
+          c.fillStyle = isLit(fr, x, y) ? CHLORELLA.pale : '#1f3a22';
+          c.fillRect(x * px, y * py, px - 1, py - 1);
+        }
+    lcd.texture.needsUpdate = true;
+  };
 
-  // The lamps in a row under the display, each with its legend below it.
+  // The lamps in a row under the display, each with its legend beside it.
   const lamps = (
     [
       ['HI', '#ff4a2e'],
@@ -100,23 +180,62 @@ export function createDoseCellHead(
       roughness: 0.4,
     });
     kit.materials.push(mat);
-    const x = -0.036 + i * 0.024;
-    const lamp = t.cyl(
+    const x = -0.068 + i * 0.026;
+    t.cyl(
       group,
       mat,
-      0.0025,
+      0.0022,
       0.004,
       x,
-      h * 0.36,
-      front + 0.002,
+      h * 0.34,
+      front + 0.005,
       'z',
       12,
+    ).userData.live = true;
+    f.label(
+      group,
+      name,
+      x + 0.0105,
+      h * 0.34,
+      front + 0.0047,
+      0.0036,
+      '#cfd6db',
     );
-    lamp.userData.live = true;
-    f.label(group, name, x, h * 0.28, front + 0.001, 0.0045, '#1b1b1b');
     return mat;
   });
-  f.label(group, 'DOSECELL', 0, h * 0.14, front + 0.001, 0.0065, '#2a2f31');
+  // The keys, small membrane domes, their legends beneath.
+  const parts = createPartSet();
+  (
+    [
+      ['◄', () => (page = (page + 2) % 3)],
+      ['►', () => (page = (page + 1) % 3)],
+      ['TEST', () => (testing = 2)],
+    ] as const
+  ).forEach(([legend, action], i) => {
+    const x = 0.034 + i * 0.019;
+    const b = pushButton(kit, {
+      colour: 'black',
+      legend,
+      action: () => {
+        action();
+        draw();
+      },
+    });
+    b.object.position.set(x, h * 0.22, front + 0.005);
+    b.object.scale.setScalar(0.2);
+    group.add(b.object);
+    parts.add(b);
+    f.label(group, legend, x, h * 0.13, front + 0.0047, 0.0034, '#cfd6db');
+  });
+  f.label(
+    group,
+    'DOSECELL',
+    -0.045,
+    h * 0.17,
+    front + 0.0047,
+    0.0055,
+    CHLORELLA.pale,
+  );
 
   // Chlorella's plate on its right side.
   const plate = chlorellaPlate(kit, d * 0.8, 'CHEMICAL HANDLING');
@@ -135,11 +254,15 @@ export function createDoseCellHead(
     /** Where the power cable leaves it, in its own frame. */
     powerAt: [0.06, h * 0.5, -d / 2 - 0.016] as const,
     /** Its lamps from `o`, its display from the bottle `b` it heads. */
-    show(o: Readout, b: DoseBottle) {
-      const { lines, on: lit } = bottleLcd(tag, b, o.powered);
-      lcd.show(lines, lit);
+    parts,
+    show(o: Readout, b: DoseBottle, delta = 0) {
+      testing = Math.max(0, testing - delta);
+      parts.update(delta);
+      last = { o, b };
+      draw();
+      const t2 = testing > 0;
       const on = [o.high, o.low, o.calling, o.pumping];
-      lamps.forEach((m, i) => (m.emissiveIntensity = on[i] ? 1.6 : 0));
+      lamps.forEach((m, i) => (m.emissiveIntensity = t2 || on[i] ? 1.6 : 0));
     },
   };
 }
@@ -161,13 +284,14 @@ export function createDoseCellDemo(
   let b = newDoseBottle(litres, acid ? 0.35 : 0.8);
   return {
     object,
+    parts: head.parts,
     update(delta: number) {
       b = stepDoseBottle(
         b,
         { fillLpm: b.calling ? litres * 0.6 : 0, doseLpm: litres * 0.25 },
         delta,
       );
-      head.show(bottleReadout(b), b);
+      head.show(bottleReadout(b), b, delta);
     },
     status: () =>
       `DoseCell head (${acid ? 'acid' : 'hypochlorite'}): ${b.litres.toFixed(1)} L of ${litres} L${b.calling ? ', calling' : ''}${b.pumping ? ', pumping' : ''}`,

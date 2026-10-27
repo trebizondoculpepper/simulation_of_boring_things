@@ -1870,6 +1870,7 @@ export function createDayTankRange(kit: PanelKit) {
     });
     bottle.object.position.x = cx;
     root.add(bottle.object);
+    for (const [o, use] of bottle.parts.uses) parts.uses.set(o, use);
     let state = newDoseBottle(litres, 0.25 + 0.1 * i);
     const trend = levelTrend();
     return {
@@ -1882,7 +1883,7 @@ export function createDayTankRange(kit: PanelKit) {
           },
           delta,
         );
-        bottle.show(state);
+        bottle.show(state, true, delta);
         trend.sample(state.litres, delta);
       },
       status: () =>
