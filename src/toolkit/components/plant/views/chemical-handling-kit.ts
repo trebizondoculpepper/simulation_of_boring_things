@@ -1883,3 +1883,72 @@ export function createDayTankRange(kit: PanelKit) {
     },
   };
 }
+
+/**
+ * The wet hall's distribution panel on a dev room's wall, run by two
+ * trials of its own (an ideal store each, its pump, selector and four day
+ * tanks) ten times fast, so its meters, lamps and annunciator work.
+ */
+export function createDistributionPanelDemo(kit: PanelKit) {
+  const stores = {
+    hypochlorite: createTransferStore(),
+    acid: createTransferStore(),
+  };
+  const read = () => {
+    const line = (c: Chemical): DistributionReading => {
+      const s = stores[c].state.value;
+      return {
+        store: 1 - ((s.delivered / 4000) % 0.9),
+        days: s.tanks.map((k) => k.litres / k.capacity),
+        serving: s.serving,
+        mode: s.mode,
+        running: pumpRunning(s),
+        tripped: s.tripped,
+        inAuto: s.hoa === 'auto',
+      };
+    };
+    return { hypochlorite: line('hypochlorite'), acid: line('acid') };
+  };
+  const panel = createDistributionPanel(kit, read);
+  return {
+    ...panel,
+    update(delta: number) {
+      stores.hypochlorite.step(delta * 10);
+      stores.acid.step(delta * 10);
+      panel.update(delta);
+    },
+  };
+}
+
+/**
+ * A store's framed bulk tank on its own, for trying it: its level drawn
+ * down by an unseen transfer and topped up by an unseen delivery, slowly,
+ * so its display and float read.
+ */
+export function createBulkTankDemo(kit: PanelKit, chemical: Chemical) {
+  const litres = 4000;
+  const tag = chemical === 'acid' ? 'AS-T1' : 'HS-T1';
+  const tank = createFramedChemicalTank(kit, {
+    tag,
+    product: PRODUCT[chemical],
+    litres,
+    acid: chemical === 'acid',
+  });
+  const trend = levelTrend();
+  let time = chemical === 'acid' ? 200 : 0;
+  const level = () => 0.55 + 0.35 * Math.sin(time / 90);
+  return {
+    object: tank.object,
+    update(delta: number) {
+      time += delta;
+      tank.setLevel(level());
+      trend.sample(level() * litres, delta);
+    },
+    status: () =>
+      describeTank(
+        `${chemical === 'acid' ? 'Hydrochloric acid' : 'Sodium hypochlorite'} bulk tank ${tag}`,
+        level(),
+        trend.lpm(),
+      ),
+  };
+}

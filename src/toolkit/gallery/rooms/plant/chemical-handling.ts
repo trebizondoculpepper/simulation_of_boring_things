@@ -1,43 +1,50 @@
+import type { PlantExhibit } from './exhibit';
 import { layoutSquarePlantRoom } from '../../logic/plant-room-layout';
 import type { ExhibitSize } from '../../logic/plant-room-layout';
-import type { PlantExhibit } from './exhibit';
 import { createDoseCellDemo } from '../../../components/plant/views/dose-cell-head';
-import { createChemicalDeliveryRig } from '../../../components/plant/views/chemical-delivery-rig';
-import { EXHIBITS as STORE_EXHIBITS } from './chemicals';
 import {
+  createBulkTankDemo,
   createChemicalPipeSamples,
   createDayTankRange,
-  createDayTankStation,
+  createDistributionPanelDemo,
   createTransferPumpSkid,
   createTransferTrial,
 } from '../../../components/plant/views/chemical-handling-kit';
 
-/** Dev44: the live, isolated trial before chemical deliveries reach the site. */
+/**
+ * Dev44: the chemical distribution's components as worked out with the
+ * owner (2026-10-26/27), each real and working: the stores' framed bulk
+ * tanks, the transfer pump skids, the selector and day tanks in a trial,
+ * every day tank size (the DoseCell bottles and the framed 1,000 l), the
+ * DoseCell head alone, the distribution panel and the chemical pipes.
+ */
 export const PURPOSE =
-  'Pre-connected chemical tanker hoses, separate bulk stores, supervised transfer and overfill trips';
+  'The chemical distribution: bulk tanks, transfer pumps, selectors, dose bottles and their panel';
 export const FINISH = { wall: '#bfc6c2', floor: '#777c7b', blockwork: true };
 
 export const EXHIBITS: readonly PlantExhibit[] = [
   {
-    title: 'Hypochlorite bulk delivery trial',
+    title: 'Hypochlorite bulk tank',
     reference:
-      'Three 4,000 L Enduramaxx CTB4000-style bunded tanks; dedicated DN50 fill point; 100 L/min demonstration transfer',
-    size: { w: 9.0, d: 8.5, h: 2.8, mount: 'floor' },
-    build: (kit) => createChemicalDeliveryRig(kit, 'hypochlorite'),
+      'A 4,000 L framed black HDPE tank after DENIOS, ultrasonic level, local display, high-high switch, vent',
+    size: { w: 3.0, d: 2.0, h: 2.6, mount: 'floor' },
+    maker: 'chlorella',
+    build: (kit) => createBulkTankDemo(kit, 'hypochlorite'),
   },
   {
-    title: 'Acid bulk delivery trial',
+    title: 'Acid bulk tank',
     reference:
-      'One 4,000 L Enduramaxx CTB4000-style bunded tank for 10% hydrochloric acid; dedicated DN40 fill point; 60 L/min demonstration transfer',
-    size: { w: 6.0, d: 8.5, h: 2.8, mount: 'floor' },
-    build: (kit) => createChemicalDeliveryRig(kit, 'acid'),
+      'The same tank for 10% hydrochloric acid: 80 GHz radar level, carbon vent filter',
+    size: { w: 3.0, d: 2.0, h: 2.6, mount: 'floor' },
+    maker: 'chlorella',
+    build: (kit) => createBulkTankDemo(kit, 'acid'),
   },
   {
     title: 'Hypochlorite transfer pump',
     reference:
       'A sealless magnetic-drive transfer pump (Iwaki MX class) on a bunded skid; diaphragm-seal gauge, NRV, relief to tank',
     size: { w: 2.1, d: 1.2, h: 1.8, mount: 'floor' },
-    maker: 'grundflow',
+    maker: 'chlorella',
     build: (kit) => createTransferPumpSkid(kit, 'hypochlorite'),
   },
   {
@@ -45,24 +52,8 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     reference:
       'A sealless magnetic-drive transfer pump for 10% hydrochloric acid on a bunded skid',
     size: { w: 2.1, d: 1.2, h: 1.8, mount: 'floor' },
-    maker: 'grundflow',
+    maker: 'chlorella',
     build: (kit) => createTransferPumpSkid(kit, 'acid'),
-  },
-  {
-    title: 'Hypochlorite day tank',
-    reference:
-      '300 L framed HDPE day tank in its bund; low and high switches, actuated inlet, dosing pump, eyewash and PPE',
-    size: { w: 1.9, d: 1.1, h: 2.0, mount: 'floor' },
-    maker: 'chlorella',
-    build: (kit) => createDayTankStation(kit, 'hypochlorite'),
-  },
-  {
-    title: 'Acid day tank',
-    reference:
-      '300 L framed HDPE day tank for 10% hydrochloric acid in its bund, with its switches, inlet, dosing pump and safety gear',
-    size: { w: 1.9, d: 1.1, h: 2.0, mount: 'floor' },
-    maker: 'chlorella',
-    build: (kit) => createDayTankStation(kit, 'acid'),
   },
   {
     title: 'DoseCell head, hypochlorite',
@@ -90,9 +81,16 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Transfer trial: ideal source, selector, four day tanks',
     reference:
-      'An ideal hypochlorite source, the transfer pumps, a six-way transfer selector (two outlets blanked) and four day tanks on one tested state, run ten times fast',
+      'An ideal hypochlorite source, the transfer pump, a six-way transfer selector (two outlets blanked) and four day tanks on one tested state, run ten times fast',
     size: { w: 15.6, d: 2.0, h: 2.4, mount: 'floor' },
     build: (kit) => createTransferTrial(kit, 'hypochlorite'),
+  },
+  {
+    title: 'Chemical distribution panel',
+    reference:
+      'The wet hall’s panel, Penfold Controls: each store and day tank on a meter, filling lamps, selector and pump lamps, an annunciator; run by its own trials',
+    size: { w: 1.7, d: 0.3, h: 1.2, mount: 'wall', y: 1.5 },
+    build: (kit) => createDistributionPanelDemo(kit),
   },
   {
     title: 'Chemical pipes',
@@ -101,15 +99,6 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     size: { w: 2.0, d: 0.5, h: 1.7, mount: 'floor' },
     build: (kit) => createChemicalPipeSamples(kit),
   },
-  ...STORE_EXHIBITS.filter((item) =>
-    [
-      'Chemical spill kit',
-      'Safety shower and eyewash',
-      'PPE cabinet',
-      'Extract and chlorine detection',
-      'Store signs',
-    ].includes(item.title),
-  ),
 ];
 
 /** A square room, its exhibits round all four walls, so less walking (the owner, 2026-10-27). */
