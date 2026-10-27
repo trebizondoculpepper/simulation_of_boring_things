@@ -55,6 +55,8 @@ const TUNDISH_TOP = 0.17;
 const DOOR_HEAD = 2.7;
 /** The flange of a north-wall stub, this far in from the wall's face. */
 const STUB = 0.37;
+/** The south-wall transfer selector's front, z: the walkway strip stops short of it. */
+const SELECTOR_LINE = 8.85;
 /** Headroom kept over a ramp or a stair, metres. */
 const HEADROOM = 2.3;
 
@@ -62,8 +64,16 @@ const nodeKind = new Map(WET_HALL_SCHEMATIC.nodes.map((n) => [n.id, n.kind]));
 
 /** The water links the router lays (the rest are signals and power). */
 export const WET_HALL_ROUTED = WET_HALL_SCHEMATIC.links.filter(
-  (l) => l.medium === 'water',
+  (l) => l.medium === 'water' || l.medium === 'chemical',
 );
+
+/** A chemical line's chemical, by its link's name. */
+export const chemicalOf = (link: string) =>
+  /^Hypochlorite/.test(link)
+    ? ('hypochlorite' as const)
+    : /^Acid/.test(link)
+      ? ('acid' as const)
+      : null;
 
 /** A line that must fall all the way: an overflow, or anything to waste. */
 const isGravity = (link: (typeof WET_HALL_ROUTED)[number]) =>
@@ -81,6 +91,8 @@ function valveName(link: string, fitting: string) {
 
 /** The hall's north wall's inside face, z. */
 const northFace = () => -(WET_HALL.side / 2) + WET_HALL_LAYOUT.northWall;
+/** Its east wall's inside face, x. */
+const eastFace = () => WET_HALL.side / 2 - WET_HALL_LAYOUT.northWall;
 
 /** Each routed link's two ends in the hall, from its machines' ports and boundaries. */
 export function wetHallLines(): WetHallLine[] {
@@ -92,6 +104,8 @@ export function wetHallLines(): WetHallLine[] {
     'break-tank': 'break-tank',
     booster: 'booster-set',
     holding: 'backwash-tank',
+    'hypochlorite-selector': 'chem-selector:hypochlorite',
+    'acid-selector': 'chem-selector:acid',
   };
   const L = WET_HALL_LAYOUT;
   const z0 = northFace() + STUB;
@@ -112,6 +126,24 @@ export function wetHallLines(): WetHallLine[] {
       return { at: [...p.at] as Vec3, outward: [...p.outward] as Vec3 };
     };
     const boundary = (node: string, port: string): PortEnd => {
+      // The chemical mains in from their stores through the east wall,
+      // high, north of the fire point; the branches out to the plant
+      // rooms through the north wall, high over the make-up bay, beside
+      // the make-up main (by compass only: the building is a fantasy).
+      const chem = /^(hypochlorite|acid)-(main|pl(\d))$/.exec(node);
+      if (chem) {
+        const acid = chem[1] === 'acid';
+        if (chem[2] === 'main')
+          return {
+            at: [eastFace() - STUB, acid ? 3.2 : 3.5, acid ? 4.0 : 3.3],
+            outward: [-1, 0, 0],
+          };
+        const r = Number(chem[3]);
+        return {
+          at: [6.0 + (r - 1) * 0.3 + (acid ? 1.3 : 0), acid ? 3.6 : 3.9, z0],
+          outward: [0, 0, 1],
+        };
+      }
       if (node === 'town-main') return stub(L.townMainIn);
       if (node === 'plant-rooms')
         return stub(port === 'make-up' ? L.makeUpMainOut : L.backwashMainIn);
@@ -127,6 +159,17 @@ export function wetHallLines(): WetHallLine[] {
     const end =
       machineEnd(link.targetId, link.targetPort) ??
       boundary(link.targetId, link.targetPort);
+    if (link.medium === 'chemical')
+      return {
+        link: link.id,
+        // PVC-U solvent-welded, DN25: the chemical mains and branches.
+        kind: 'pvc-pressure' as const,
+        od: 0.032,
+        joint: 'socket' as const,
+        start,
+        end,
+        gravity: false,
+      };
     const gravity = isGravity(link);
     const dirty =
       link.sourceId === 'plant-rooms' && link.sourcePort === 'backwash';
@@ -224,8 +267,10 @@ export function wetHallPlumbing() {
       const drop = WET_HALL_LAYOUT.sewerDrop;
       return [
         {
+          // Up to the transfer selectors along the south wall, whose own
+          // risers rise there (plan 085).
           min: [P.minX - 0.5, 0, P.maxZ + 0.5] as Vec3,
-          max: [R, head, R] as Vec3,
+          max: [R, head, SELECTOR_LINE] as Vec3,
           forbids: { runs: true },
         },
         {
@@ -241,15 +286,20 @@ export function wetHallPlumbing() {
   // tank's face, past its ladder's cage.
   const inPit = (end: PortEnd) => end.at[1] < 0.2 && end.outward[1] > 0;
   const lead = (l: WetHallLine, end: PortEnd) =>
-    inPit(end) && end !== sewerEnd(l)
-      ? 1.6
-      : // The booster set's discharge out level far enough for its
-        // motorised valve on the straight, on a floor stand, before it
-        // turns up (the owner, 2026-10-26: it sat on the riser, held by
-        // nothing).
-        l.link === 'Make-up main to the pool plant rooms' && end === l.start
-        ? 0.7
-        : 0.2;
+    // A selector's outlet straight up its riser to high level first.
+    l.kind === 'pvc-pressure' && l.od === 0.032 && end.outward[1] > 0.5
+      ? end.at[1] < 1 // the header's feed: up clear of the outlets' valves
+        ? 1.4
+        : 0.8
+      : inPit(end) && end !== sewerEnd(l)
+        ? 1.6
+        : // The booster set's discharge out level far enough for its
+          // motorised valve on the straight, on a floor stand, before it
+          // turns up (the owner, 2026-10-26: it sat on the riser, held by
+          // nothing).
+          l.link === 'Make-up main to the pool plant rooms' && end === l.start
+          ? 0.7
+          : 0.2;
   const sewerEnd = (l: WetHallLine) =>
     l.link === 'Backwash discharge to the sewer' ? l.end : undefined;
   // Two ports facing each other on one line are joined straight, a

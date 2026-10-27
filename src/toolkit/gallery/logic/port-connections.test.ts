@@ -31,7 +31,8 @@ const KINDS: Record<MachinePort['service'], readonly string[]> = {
   heating: ['lagged-heating', 'copper'],
   ozone: ['stainless'],
   sample: ['chemical-tube'],
-  chemical: ['chemical-tube'],
+  // A dosing pump's tube, or a transfer line's PVC-U main or branch (plan 085).
+  chemical: ['chemical-tube', 'pvc-pressure'],
   power: ['steel-screwed'],
   gas: ['steel-screwed'],
   flue: ['flue'],

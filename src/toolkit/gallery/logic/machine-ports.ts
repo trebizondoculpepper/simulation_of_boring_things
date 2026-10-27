@@ -371,6 +371,26 @@ export function machinePorts(item: Item): MachinePort[] {
         'chemical',
       ),
     ];
+  if (kind === 'chem-selector')
+    // The transfer selector (`createTransferSelector`, six outlets at
+    // 0.32 m, its header 0.75 m up along x): its main dropping in from
+    // above at the header's feed end, each live outlet up out of its riser's top at 1.75 m.
+    return [
+      {
+        ...port('in', [-1.31, 0.75, 0], [0, 1, 0], 0.064, 'chemical'),
+        drawn: true,
+      },
+      ...[1, 2, 3, 4].map((r) => ({
+        ...port(
+          `outlet-${r}`,
+          [-0.8 + (r - 1) * 0.32, 1.75, 0],
+          [0, 1, 0],
+          0.044,
+          'chemical',
+        ),
+        drawn: true,
+      })),
+    ];
   if (kind === 'pump-panel')
     return [port('supply', [0, item.h, 0], [0, 1, 0], 0.05, 'power')];
   if (kind === 'boiler-cascade') {

@@ -1,4 +1,4 @@
-import { wetHallPlumbing } from './wet-hall-plumbing';
+import { chemicalOf, wetHallPlumbing } from './wet-hall-plumbing';
 import { olympicRoom } from './olympic-plumbing';
 import { retiredPipes } from './retired-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
@@ -1852,11 +1852,20 @@ export function wetHallPipework(): { runs: PipeRun[] } {
       kind: l.kind,
       od: l.od,
       points,
-      joins: (joinsOf[l.link] ?? [])
+      joins: (
+        joinsOf[l.link] ??
+        (chemicalOf(l.link) ? [`chem-selector:${chemicalOf(l.link)}`] : [])
+      )
         .map(label)
         .filter((x): x is string => Boolean(x)),
-      service: l.kind === 'copper' ? 'make-up' : 'drainage',
-      label: LABELS[l.link] ?? l.link.toUpperCase(),
+      service:
+        chemicalOf(l.link) ?? (l.kind === 'copper' ? 'make-up' : 'drainage'),
+      label:
+        chemicalOf(l.link) === 'hypochlorite'
+          ? 'SODIUM HYPOCHLORITE 14%'
+          : chemicalOf(l.link) === 'acid'
+            ? 'HYDROCHLORIC ACID 10%'
+            : (LABELS[l.link] ?? l.link.toUpperCase()),
       through: [],
       valves: (l.valves ?? []).map((v) => {
         const axis = axisOf(v.along);
