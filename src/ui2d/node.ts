@@ -112,6 +112,13 @@ export abstract class UiNode {
 
   paint(ctx: CanvasRenderingContext2D, theme: Theme, seconds: number) {
     if (this.hidden) return;
+    // A boot's draw-in (`paintVeiled`): each leaf shown as the veil says.
+    if (activeVeil && this.children.length === 0) {
+      ctx.save();
+      if (activeVeil(this, ctx)) this.draw(ctx, theme, seconds);
+      ctx.restore();
+      return;
+    }
     this.draw(ctx, theme, seconds);
     for (const c of this.children) c.paint(ctx, theme, seconds);
   }
@@ -156,6 +163,32 @@ export abstract class UiNode {
       if (found) return found;
     }
     return null;
+  }
+}
+
+/**
+ * How much of a leaf node a veiled paint shows: whether to draw it at all,
+ * having set the context (a clip, an alpha) as it wants; the context is
+ * saved before and restored after. Used by a boot's draw-in (`boot.ts`).
+ */
+export type Veil = (node: UiNode, ctx: CanvasRenderingContext2D) => boolean;
+
+let activeVeil: Veil | null = null;
+
+/** Paint `node`'s tree with every leaf passed through `veil` first. */
+export function paintVeiled(
+  node: UiNode,
+  ctx: CanvasRenderingContext2D,
+  theme: Theme,
+  seconds: number,
+  veil: Veil,
+) {
+  const before = activeVeil;
+  activeVeil = veil;
+  try {
+    node.paint(ctx, theme, seconds);
+  } finally {
+    activeVeil = before;
   }
 }
 

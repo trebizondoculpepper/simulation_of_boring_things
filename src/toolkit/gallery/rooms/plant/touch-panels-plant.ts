@@ -10,6 +10,7 @@ import {
 } from '../../views/olympic-filter-washing';
 import { OLYMPIC_FILTER_WASHING } from '../../logic/olympic-filter-washing';
 import { roomWorld } from '../../../save/world-store';
+import { BOOT_ALL_PANEL, createBootAllPanel } from '../../views/boot-all-panel';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
@@ -34,6 +35,20 @@ export const FINISH = {
  * them, every schematic of the bridge's stations (mission 095), live.
  */
 export const EXHIBITS: readonly PlantExhibit[] = [
+  // BOOT ALL (the owner, 2026-10-27): the screens' boot, shown.
+  {
+    title: 'Display boot',
+    reference:
+      'BOOT ALL reboots every screen in the room, each a little after the last: black, the emblem, a fade, the interface drawing in; SKIP puts them on',
+    size: {
+      w: BOOT_ALL_PANEL.w + 0.1,
+      d: 0.06,
+      h: BOOT_ALL_PANEL.h + 0.1,
+      mount: 'wall',
+    },
+    // First, so the screens built after it boot as the room is entered.
+    build: (kit) => createBootAllPanel(kit, { onEntry: true }),
+  },
   ...PARODY_SPECS.map((spec, i): PlantExhibit => {
     const { w = 1.6, h = 1.0 } = spec.size ?? {};
     return {

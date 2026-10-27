@@ -8,3 +8,5 @@ export * from './theme';
 export * from './node';
 export * from './components';
 export * from './schematic';
+export * from './emblem';
+export * from './boot';

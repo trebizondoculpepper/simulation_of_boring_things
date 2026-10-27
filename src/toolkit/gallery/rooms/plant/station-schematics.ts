@@ -9,6 +9,7 @@ import {
 import { plantReadingOf } from '../../logic/world-reading';
 import { createStationSchematic } from '../../views/station-schematics';
 import { roomWorld } from '../../../save/world-store';
+import { BOOT_ALL_PANEL, createBootAllPanel } from '../../views/boot-all-panel';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
@@ -43,8 +44,22 @@ function context() {
  * apart so they do not all turn at once, any overview brought up from its
  * sidebar. They read the world; nothing on them changes it.
  */
-export const EXHIBITS: readonly PlantExhibit[] = STATION_NAMES.map(
-  (station, i): PlantExhibit => ({
+export const EXHIBITS: readonly PlantExhibit[] = [
+  // BOOT ALL (the owner, 2026-10-27): the screens' boot, shown.
+  {
+    title: 'Display boot',
+    reference:
+      'BOOT ALL reboots every screen in the room, each a little after the last: black, the emblem, a fade, the interface drawing in; SKIP puts them on',
+    size: {
+      w: BOOT_ALL_PANEL.w + 0.1,
+      d: 0.06,
+      h: BOOT_ALL_PANEL.h + 0.1,
+      mount: 'wall',
+    },
+    // First, so the screens built after it boot as the room is entered.
+    build: (kit) => createBootAllPanel(kit, { onEntry: true }),
+  },
+  ...STATION_NAMES.map((station, i): PlantExhibit => ({
     title: station,
     reference: `${STATION_DUTY[station]} · ${STATION_DESIGNS[station].length} designs`,
     size: { w: SCREEN.w + 0.1, d: 0.06, h: SCREEN.h + 0.1, mount: 'wall' },
@@ -53,8 +68,8 @@ export const EXHIBITS: readonly PlantExhibit[] = STATION_NAMES.map(
         offset: (i * 18) / STATION_NAMES.length,
         pixelsPerMetre: 540,
       }),
-  }),
-);
+  })),
+];
 
 /** One tier round the walls at eye height, the room as big as it needs. */
 export function layoutRoom(sizes: readonly ExhibitSize[]) {

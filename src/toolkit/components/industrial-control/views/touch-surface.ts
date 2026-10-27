@@ -7,8 +7,19 @@ import {
   Vector2,
   Vector3,
 } from 'three';
-import { BLOCK_THEME, UiRoot } from '../../../../ui2d';
-import type { Theme, UiNode, UiSound } from '../../../../ui2d';
+import {
+  BLOCK_THEME,
+  BOOT_HZ,
+  BootGroup,
+  BootScreen,
+  UiRoot,
+} from '../../../../ui2d';
+import type {
+  BootScreenOptions,
+  Theme,
+  UiNode,
+  UiSound,
+} from '../../../../ui2d';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createCanvasTexture } from '../../core/views/screens';
 import { createPs1Material } from '../../core/parts/ps1-material';
@@ -80,8 +91,25 @@ function whenFont(redraw: () => void) {
     .catch(() => {});
 }
 
-/** The most a screen repaints a second on its own (a touch repaints at once). */
+/** The most a screen repaints a second on its own (a touch repaints at once); while booting, `BOOT_HZ`. */
 export const PAINT_HZ = 10;
+
+const bootGroups = new WeakMap<PanelKit, BootGroup>();
+
+/**
+ * The boot of every touch screen made with `kit` (a room's): each screen
+ * is run through a `BootScreen` (on until booted; the owner, 2026-10-27),
+ * so a room can boot them all at scattered offsets (`bootAll`), skip them
+ * (`skipAll`), or boot each as it is built (`autoBoot`).
+ */
+export function bootGroupOf(kit: PanelKit): BootGroup {
+  let group = bootGroups.get(kit);
+  if (!group) {
+    group = new BootGroup();
+    bootGroups.set(kit, group);
+  }
+  return group;
+}
 
 export interface TouchScreenSpec {
   /** Its opening in the frame, metres. */
@@ -90,6 +118,8 @@ export interface TouchScreenSpec {
   theme?: Theme;
   /** Pixels a metre on its canvas (capped at 2048 a side). */
   pixelsPerMetre?: number;
+  /** Its boot (`BootScreen`; on until the kit's `bootGroupOf` boots it), or false for a screen that never boots. */
+  boot?: BootScreenOptions | false;
 }
 
 export interface TouchSurfaceOptions {
@@ -231,7 +261,11 @@ export function createTouchSurface(
     mesh.renderOrder = 2;
     mesh.userData.live = true;
     group.add(mesh);
-    const root = new UiRoot(spec.tree, theme, {
+    // Run through a boot (the owner, 2026-10-27): on until booted.
+    const boot =
+      spec.boot === false ? null : new BootScreen(spec.tree, spec.boot ?? {});
+    if (boot) bootGroupOf(kit).add(boot);
+    const root = new UiRoot(boot ?? spec.tree, theme, {
       width,
       height,
       onSound: (sound: UiSound) => partAudio.play(TOUCH_BLEEPS[sound], mesh),
@@ -243,7 +277,8 @@ export function createTouchSurface(
     // mission 094 found every panel uploading its canvas each frame).
     let painted = -Infinity;
     const repaint = (now = Infinity) => {
-      if (!root.needsPaint || now - painted < 1 / PAINT_HZ) return;
+      const hz = boot?.booting ? BOOT_HZ : PAINT_HZ;
+      if (!root.needsPaint || now - painted < 1 / hz) return;
       painted = Number.isFinite(now) ? now : painted;
       root.paint(context);
       if (cornerPx > 0) clipCorners(context, width, height, cornerPx);
@@ -268,7 +303,7 @@ export function createTouchSurface(
         touchPixel(p.x, p.y);
       }
     });
-    return { root, mesh, repaint, touchPixel, width, height };
+    return { root, mesh, repaint, touchPixel, width, height, boot };
   });
 
   let seconds = 0;
