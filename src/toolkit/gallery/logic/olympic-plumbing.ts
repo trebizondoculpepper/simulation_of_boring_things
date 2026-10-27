@@ -1741,27 +1741,33 @@ function meterName(
 }
 
 const serviceOf = (r: OlympicRun): PipeRun['service'] =>
-  r.kind === 'pvc-drain'
-    ? 'drainage'
-    : r.kind === 'lagged-heating'
-      ? r.line === 'heating-return'
-        ? 'heating return'
-        : 'heating flow'
-      : r.kind === 'copper'
-        ? 'make-up'
-        : r.line === 'sample'
-          ? 'sample'
-          : r.kind === 'chemical-tube'
-            ? r.line.startsWith('acid')
-              ? 'acid'
-              : 'hypochlorite'
-            : r.kind === 'stainless'
-              ? 'ozone'
-              : r.medium === 'power'
-                ? 'electrical'
-                : r.line === 'sample'
-                  ? 'sample'
-                  : 'pool water';
+  // A chemical line in rigid pipe (a day tank's branch or draw-off, plan
+  // 085): its chemical, by its name.
+  r.medium === 'chemical' && r.kind !== 'chemical-tube'
+    ? /^acid|^Acid/.test(r.line) || /^Acid/.test(r.name)
+      ? 'acid'
+      : 'hypochlorite'
+    : r.kind === 'pvc-drain'
+      ? 'drainage'
+      : r.kind === 'lagged-heating'
+        ? r.line === 'heating-return'
+          ? 'heating return'
+          : 'heating flow'
+        : r.kind === 'copper'
+          ? 'make-up'
+          : r.line === 'sample'
+            ? 'sample'
+            : r.kind === 'chemical-tube'
+              ? r.line.startsWith('acid')
+                ? 'acid'
+                : 'hypochlorite'
+              : r.kind === 'stainless'
+                ? 'ozone'
+                : r.medium === 'power'
+                  ? 'electrical'
+                  : r.line === 'sample'
+                    ? 'sample'
+                    : 'pool water';
 
 const LABEL: Record<PipeRun['service'], string> = {
   'pool water': 'POOL WATER',
