@@ -7,3 +7,4 @@ export * from './geometry';
 export * from './theme';
 export * from './node';
 export * from './components';
+export * from './schematic';

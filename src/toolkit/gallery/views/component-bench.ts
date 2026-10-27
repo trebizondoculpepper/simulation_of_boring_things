@@ -122,6 +122,7 @@ const EXHIBIT_MODULES: Record<
   dev44: () => import('../rooms/plant/chemical-handling'),
   dev47: () => import('../rooms/plant/touch-panels'),
   dev48: () => import('../rooms/plant/touch-panels-plant'),
+  dev49: () => import('../rooms/plant/station-schematics'),
 };
 
 /** Every room's placed item keys, and the first of each key with its room. */

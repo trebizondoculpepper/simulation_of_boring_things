@@ -3,10 +3,11 @@ import type { ExhibitSize } from '../../logic/plant-room-layout';
 import { galleryWallLayout } from '../../logic/gallery-walls';
 import { PARODY_SPECS } from '../../logic/parody-specs';
 import { createParodyPanel } from '../../views/parody-panel';
+import { SCHEMATIC_EXHIBITS } from './schematic-gallery';
 
 /** What this room is for, printed on its title card. */
 export const PURPOSE =
-  'Every control panel in the plant, reinterpreted as a 24th-century touch screen (mission 093)';
+  'Every control panel in the plant, reinterpreted as a 24th-century touch screen (mission 093), and every bridge schematic, live (mission 095)';
 
 /** Dim and plain, so the screens glow; its title card small, over the door. */
 export const FINISH = {
@@ -23,10 +24,11 @@ export const FINISH = {
  * fiction style"): one touch screen for each of the game's panels, boards
  * and mimics (`parody-specs.ts`, which lists the inventory), the same
  * controls, lamps and read-outs grandly renamed, each running on its own
- * trial, never the world; hung in two tiers round all four walls.
+ * trial, never the world; hung in two tiers round all four walls. After
+ * them, every schematic of the bridge's stations (mission 095), live.
  */
-export const EXHIBITS: readonly PlantExhibit[] = PARODY_SPECS.map(
-  (spec, i): PlantExhibit => {
+export const EXHIBITS: readonly PlantExhibit[] = [
+  ...PARODY_SPECS.map((spec, i): PlantExhibit => {
     const { w = 1.6, h = 1.0 } = spec.size ?? {};
     return {
       title: spec.title,
@@ -34,8 +36,11 @@ export const EXHIBITS: readonly PlantExhibit[] = PARODY_SPECS.map(
       size: { w: w + 0.2, d: 0.06, h: h + 0.1, mount: 'wall' },
       build: (kit) => createParodyPanel(kit, spec, i),
     };
-  },
-);
+  }),
+  // The bridge stations' schematics (mission 095; the owner, 2026-10-27:
+  // all of them in the gallery, each labelled), live from the world.
+  ...SCHEMATIC_EXHIBITS,
+];
 
 /** Two tiers round four walls, the room as big as they need. */
 export function layoutRoom(sizes: readonly ExhibitSize[]) {
