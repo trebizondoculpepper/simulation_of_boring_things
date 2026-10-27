@@ -22,9 +22,10 @@ describe('the dosing chemicals’ stores', () => {
     const dosing = { hypochlorite: 3000, acid: 3000 };
     stores = stepChemicalStores(stores, dosing, day);
     expect(stores.hypochlorite).toBeCloseTo(12000 - 180, 6);
-    expect(stores.acid).toBeCloseTo(1000 - 72, 6);
-    // The acid's IBC runs dry in a fortnight; the hypochlorite lasts two months.
-    for (let d = 1; d < 14; d++)
+    expect(stores.acid).toBeCloseTo(4000 - 72, 6);
+    // The acid's 4,000 l tank runs dry in eight weeks; the hypochlorite
+    // lasts longer.
+    for (let d = 1; d < 56; d++)
       stores = stepChemicalStores(stores, dosing, day);
     expect(inStock(stores, 'acid')).toBe(false);
     expect(stores.acid).toBe(0);

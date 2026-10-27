@@ -47,6 +47,7 @@ describe('a save', () => {
       plant: newWorld().plant,
       pools: newWorld().pools,
       chemicals: newWorld().chemicals,
+      distribution: newWorld().distribution,
       wetHall: newWorld().wetHall,
       bathers: newWorld().bathers,
       startup: -1,

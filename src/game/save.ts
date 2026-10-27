@@ -151,6 +151,9 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // 43 → 44: the site's intake in the goods yard (prompt 083): older saves
   // start a new world (the owner, 2026-10-26: no migration).
   43: () => ({}),
+  // 44 → 45: the chemical distribution (plan 085): its day tanks part
+  // full (`fillDefaults` adds them); the acid store's 4,000 l tank.
+  44: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

@@ -364,6 +364,8 @@ export const WORLD_HEALTH_COVERAGE = {
   plant: 'services: feeders, sources and isolators',
   pools: 'pools: level, flow, temperature, chemistry, tank, humidity, trips',
   chemicals: 'chemicals: stock against capacity',
+  distribution:
+    'not checked: the day tanks; one run dry shows in its pool’s chemistry',
   wetHall: 'wet hall: booster trip, backwash overflow',
   bathers: 'not health: the visitors, a load on the plant',
   startup: 'not health: a SLOW START sequence’s clock',

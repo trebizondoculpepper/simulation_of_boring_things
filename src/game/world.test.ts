@@ -2,6 +2,21 @@ import { describe, expect, it } from 'vite-plus/test';
 import { advance, appealOf, applyAction, newWorld } from './world';
 import { roomRunning, serviceAvailable } from './plant/services';
 import { POOL_IDS, POOL_TARGET } from './plant/pools';
+import type { World } from './world';
+import type { Chemical } from './plant/chemicals';
+
+/** A chemical run out everywhere: its store and every day tank (plan 085). */
+const runOut = (w: World, c: Chemical, store = 0): World => ({
+  ...w,
+  chemicals: { ...w.chemicals, [c]: store },
+  distribution: {
+    ...w.distribution,
+    [c]: {
+      ...w.distribution[c],
+      tanks: w.distribution[c].tanks.map((t) => ({ ...t, litres: 0 })),
+    },
+  },
+});
 
 describe('the world', () => {
   it('carries the Jacuzzi fibre illuminator controls between rooms', () => {
@@ -120,7 +135,7 @@ describe('the bathers and the water', () => {
     const usual = w.bathers.pools.pool_01.total - before;
     // The next day, with the hypochlorite gone from 08:00.
     w = advance(w, 18 * 3600, 10);
-    w = { ...w, chemicals: { ...w.chemicals, hypochlorite: 0 } };
+    w = runOut(w, 'hypochlorite');
     const from = w.bathers.pools.pool_01.total;
     w = advance(w, 6 * 3600, 10);
     expect(appealOf(w).pool_01).toBe(0);
@@ -200,10 +215,17 @@ describe('the mains water off', () => {
 describe('the dosing chemicals in the world', () => {
   it('run down as the pools are dosed, and a dry acid store lets the pH rise', () => {
     let world = newWorld();
-    world = { ...world, chemicals: { ...world.chemicals, acid: 0.001 } };
+    const day = world.distribution.hypochlorite.tanks[1].litres;
+    // The acid all but gone: its day tanks empty, its store too little to
+    // fill them.
+    world = runOut(world, 'acid', 0.001);
     world = advance(world, 3600, 10);
-    expect(world.chemicals.acid).toBe(0);
-    expect(world.chemicals.hypochlorite).toBeLessThan(12000);
+    // Below its low-level cut-out, the store sends none.
+    expect(world.chemicals.acid).toBe(0.001);
+    expect(world.distribution.acid.tanks.every((t) => t.litres === 0)).toBe(
+      true,
+    );
+    expect(world.distribution.hypochlorite.tanks[1].litres).toBeLessThan(day);
     // Twelve hours with hypochlorite alone: the pH has crept up.
     world = advance(world, 12 * 3600, 10);
     expect(world.pools.pool_02.ph).toBeGreaterThan(7.5);
@@ -211,10 +233,10 @@ describe('the dosing chemicals in the world', () => {
 
   it('with the hypochlorite gone but the acid dosing, drives every pool’s pH down, hour by hour', () => {
     let world = newWorld();
-    world = {
-      ...world,
-      chemicals: { ...world.chemicals, hypochlorite: 0 },
-    };
+    world = runOut(world, 'hypochlorite');
+    const acid = (w: World) =>
+      w.distribution.acid.tanks.reduce((t, k) => t + k.litres, 0);
+    const acidBefore = acid(world);
     for (let hour = 1; hour <= 12; hour++) {
       const before = world.pools;
       world = advance(world, 3600, 10);
@@ -228,8 +250,8 @@ describe('the dosing chemicals in the world', () => {
       expect(world.pools[id].ph, id).toBeGreaterThanOrEqual(6.5);
       expect(world.pools[id].freeChlorine, id).toBe(0);
     }
-    // The acid store has gone on giving.
-    expect(world.chemicals.acid).toBeLessThan(1000);
+    // The acid's day tanks have gone on giving.
+    expect(acid(world)).toBeLessThan(acidBefore);
   });
 
   it('is refilled by a delivery', () => {

@@ -283,6 +283,21 @@ function said(
             ? `pump ${action.action.pump + 1} selected duty`
             : `${action.action.act.toUpperCase()} pressed`,
       };
+    case 'distribution': {
+      const a = action.action;
+      const what =
+        a.act === 'hoa'
+          ? `transfer pump ${a.to.toUpperCase()}`
+          : a.act === 'mode'
+            ? `selector ${a.to.toUpperCase()}`
+            : a.act === 'pick'
+              ? `selector to outlet ${a.outlet + 1}`
+              : 'trip RESET';
+      return {
+        subject: a.chemical === 'acid' ? 'ACID TRANSFER' : 'HYPO TRANSFER',
+        text: what,
+      };
+    }
     case 'intake':
       return {
         subject: 'INTAKE',

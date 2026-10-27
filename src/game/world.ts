@@ -8,6 +8,17 @@ import {
   withIntake,
 } from './plant/site-intake';
 import type { IntakeAction, SiteIntake } from './plant/site-intake';
+import {
+  actOnDistribution,
+  dayTankStock,
+  doseDraw,
+  newChemicalDistribution,
+  stepDistribution,
+} from './plant/chemical-distribution';
+import type {
+  ChemicalDistribution,
+  DistributionAction,
+} from './plant/chemical-distribution';
 import { actOnWashOTron, newWashOTron } from './plant/wash-o-tron';
 import type { WashAction, WashOTron } from './plant/wash-o-tron';
 import { stepWashWorld } from './plant/wash-o-tron-world';
@@ -64,7 +75,7 @@ import {
   poolArea,
   poolVolume,
   circulating,
-  dosedVolumes,
+  dosedByPool,
   poolDepth,
   makeUpDemand,
   newPools,
@@ -107,12 +118,7 @@ import { AMBIENT } from './plant/thermal';
 import type { LightingState, LightingZoneId } from './plant/lighting';
 import { fullOff, fullOn, slowStartAt, slowStartBegin } from './plant/startup';
 import type { BathersState } from './bathers';
-import {
-  deliver,
-  inStock,
-  newChemicalStores,
-  stepChemicalStores,
-} from './plant/chemicals';
+import { STORE_CAPACITY, deliver, newChemicalStores } from './plant/chemicals';
 import type { Chemical, ChemicalStores } from './plant/chemicals';
 import type { PoolId, PoolsState } from './plant/pools';
 import {
@@ -241,7 +247,7 @@ import type {
   StarterAction,
 } from './plant/motor-starters';
 
-export const WORLD_VERSION = 44;
+export const WORLD_VERSION = 45;
 
 /** A pool thermostat's range, °C, set in half degrees. */
 export const SETPOINT_RANGE = { min: 26, max: 40 } as const;
@@ -265,6 +271,11 @@ export interface World {
   pools: PoolsState;
   /** The dosing chemicals left in their stores, litres. */
   chemicals: ChemicalStores;
+  /**
+   * Their distribution (plan 085): each chemical's transfer pump and
+   * selector, and each plant room's day tanks (`plant/chemical-distribution.ts`).
+   */
+  distribution: ChemicalDistribution;
   /** The wet hall's break tank, booster set, meter and backwash tank. */
   wetHall: WetHallState;
   /** The pools' unseen bathers (`bathers.ts`). */
@@ -327,6 +338,7 @@ export function newWorld(): World {
     plant: newPlantServices(),
     pools: newPools(),
     chemicals: newChemicalStores(),
+    distribution: newChemicalDistribution(),
     wetHall: newWetHall(),
     bathers: newBathers(),
     startup: -1,
@@ -414,6 +426,7 @@ export type WorldAction =
   | { type: 'pit-pumps'; action: PitPumpAction }
   | { type: 'wash-o-tron'; action: WashAction }
   | { type: 'intake'; action: IntakeAction }
+  | { type: 'distribution'; action: DistributionAction }
   | { type: 'booster/changeover'; action: ChangeoverAction };
 
 /** The jacuzzi's drain valve, open or shut, and with it its pool's drain-down. */
@@ -578,6 +591,12 @@ export function applyAction(world: World, action: WorldAction): World {
           booster: actOnChangeover(world.wetHall.booster, action.action),
         },
       };
+    case 'distribution': {
+      const distribution = actOnDistribution(world.distribution, action.action);
+      return distribution === world.distribution
+        ? world
+        : { ...world, distribution };
+    }
     case 'intake': {
       const intake = actOnIntake(world.intake, action.action);
       return intake === world.intake ? world : { ...world, intake };
@@ -807,6 +826,31 @@ export function stepWorld(world: World, delta: number): World {
   return { ...next, plant, intake };
 }
 
+/** The stores and the day tanks `delta` seconds on (plan 085). */
+function stepChemicals(
+  world: World,
+  dosed: Partial<Record<PoolId, Record<Chemical, number>>>,
+  delta: number,
+): Pick<World, 'chemicals' | 'distribution'> {
+  const r = stepDistribution(
+    world.distribution,
+    world.chemicals,
+    STORE_CAPACITY,
+    doseDraw(dosed),
+    delta,
+  );
+  return {
+    chemicals: {
+      hypochlorite: Math.max(
+        0,
+        world.chemicals.hypochlorite - r.taken.hypochlorite,
+      ),
+      acid: Math.max(0, world.chemicals.acid - r.taken.acid),
+    },
+    distribution: r.distribution,
+  };
+}
+
 function stepPlant(world: World, delta: number): World {
   // The Wash-O-Tron first: the filters' valves it drives this step.
   world = { ...world, ...stepWashWorld(world, delta) };
@@ -821,12 +865,9 @@ function stepPlant(world: World, delta: number): World {
     world.plant,
     delta,
   );
-  // What the stores have, as the step begins; the pools dose from it, and
-  // the stores give what was dosed.
-  const stock = {
-    hypochlorite: inStock(world.chemicals, 'hypochlorite'),
-    acid: inStock(world.chemicals, 'acid'),
-  };
+  // What each pool's day tanks have, as the step begins: each pool doses
+  // from its own (plan 085), and its tanks give what was dosed.
+  const stock = (id: PoolId) => dayTankStock(world.distribution, id);
   // The Olympic's make-up, on its band at the tank's depth as the step begins.
   const calling = makeUpCalls(
     world.olympicTank,
@@ -1080,9 +1121,11 @@ function stepPlant(world: World, delta: number): World {
       mains: batteryMains(world),
       load: emergencyLoad(world),
     }),
-    chemicals: stepChemicalStores(
-      world.chemicals,
-      dosedVolumes(
+    // The day tanks drawn on by their pools' dosing; the transfer pumps
+    // filling them from the stores.
+    ...stepChemicals(
+      world,
+      dosedByPool(
         world.pools,
         world.plant,
         stock,

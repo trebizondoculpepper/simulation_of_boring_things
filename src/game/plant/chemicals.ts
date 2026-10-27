@@ -2,10 +2,12 @@
  * The dosing chemicals' stores, and what the building takes for given.
  *
  * Two chemicals are stocked and used up: sodium hypochlorite (14 %), in
- * the hypochlorite store's three bulk tanks, and acid for pH correction,
- * in the acid store's one IBC on its spill pallet. Each pool's dosing
- * draws on them while its water circulates; a store run dry stops that
- * chemical's dosing everywhere until a delivery refills it.
+ * the hypochlorite store's three bulk tanks, and hydrochloric acid (10 %)
+ * for pH correction, in the acid store's one bulk tank. Their transfer
+ * pumps send them to each plant room's day tank (`chemical-distribution.ts`),
+ * which its pool's dosing draws on; a store run dry stops its transfers
+ * until a delivery refills it, and each pool doses on until its day tank
+ * runs dry.
  *
  * Some supplies are not modelled but taken as steady (`SUPPLIES`): the
  * incoming electricity and the natural gas.
@@ -23,10 +25,10 @@ export const SUPPLIES = {
 export type Chemical = 'hypochlorite' | 'acid';
 export const CHEMICALS: readonly Chemical[] = ['hypochlorite', 'acid'];
 
-/** Each store's capacity, litres: 3 × 4,000 l tanks; one 1,000 l IBC. */
+/** Each store's capacity, litres: 3 × 4,000 l tanks; one 4,000 l tank (plan 085). */
 export const STORE_CAPACITY: Record<Chemical, number> = {
   hypochlorite: 12000,
-  acid: 1000,
+  acid: 4000,
 };
 
 /**

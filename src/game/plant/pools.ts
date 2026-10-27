@@ -298,7 +298,14 @@ export interface JacuzziCirculation {
 
 /** Whether each chemical is to be had: its store not run dry. */
 export type ChemicalStock = Record<Chemical, boolean>;
+/**
+ * Which chemicals each pool has to dose with: the same for every pool, or
+ * each its own (its day tank, `chemical-distribution.ts`).
+ */
+export type PoolStock = ChemicalStock | ((id: PoolId) => ChemicalStock);
 const ALL_STOCKED: ChemicalStock = { hypochlorite: true, acid: true };
+const stockOf = (stock: PoolStock, id: PoolId) =>
+  typeof stock === 'function' ? stock(id) : stock;
 
 /**
  * The water being dosed with each chemical, m³: every pool whose water
@@ -308,12 +315,31 @@ const ALL_STOCKED: ChemicalStock = { hypochlorite: true, acid: true };
 export function dosedVolumes(
   pools: PoolsState,
   plant: PlantServices,
-  stock: ChemicalStock = ALL_STOCKED,
+  stock: PoolStock = ALL_STOCKED,
   loungeMoving = true,
   motors?: MotorsState,
   jacuzzi?: JacuzziCirculation,
 ): Record<Chemical, number> {
   const out = { hypochlorite: 0, acid: 0 };
+  for (const v of Object.values(
+    dosedByPool(pools, plant, stock, loungeMoving, motors, jacuzzi),
+  )) {
+    out.hypochlorite += v.hypochlorite;
+    out.acid += v.acid;
+  }
+  return out;
+}
+
+/** The water being dosed with each chemical, m³, pool by pool (as `dosedVolumes`). */
+export function dosedByPool(
+  pools: PoolsState,
+  plant: PlantServices,
+  stock: PoolStock = ALL_STOCKED,
+  loungeMoving = true,
+  motors?: MotorsState,
+  jacuzzi?: JacuzziCirculation,
+): Partial<Record<PoolId, Record<Chemical, number>>> {
+  const out: Partial<Record<PoolId, Record<Chemical, number>>> = {};
   for (const id of POOL_IDS) {
     const room = `plant_${id}` as ServiceRoom;
     if (
@@ -322,8 +348,11 @@ export function dosedVolumes(
       !serviceAvailable(plant, room, 'chemical')
     )
       continue;
-    if (stock.hypochlorite) out.hypochlorite += WATER[id].volume;
-    if (stock.acid) out.acid += WATER[id].volume;
+    const s = stockOf(stock, id);
+    out[id] = {
+      hypochlorite: s.hypochlorite ? WATER[id].volume : 0,
+      acid: s.acid ? WATER[id].volume : 0,
+    };
   }
   return out;
 }
@@ -339,7 +368,7 @@ export function stepPools(
   /** The world's time, seconds: for the filters' daily backwash. */
   time = 0,
   /** Which dosing chemicals are in stock. */
-  stock: ChemicalStock = ALL_STOCKED,
+  stock: PoolStock = ALL_STOCKED,
   /**
    * The share of each pool's make-up rate the wet hall's booster set
    * gives (`wet-hall.ts`); by default, all of it while the wet hall has
@@ -380,7 +409,7 @@ export function stepPoolsWater(
   plant: PlantServices,
   dt: number,
   time = 0,
-  stock: ChemicalStock = ALL_STOCKED,
+  stock: PoolStock = ALL_STOCKED,
   makeUp?: number,
   ambient = AMBIENT,
   /**
@@ -502,8 +531,8 @@ export function stepPoolsWater(
     const dosing =
       circulation && loungeMoving && serviceAvailable(plant, room, 'chemical');
     // Each chemical dosed only while its store has some.
-    const hypochlorite = dosing && stock.hypochlorite;
-    const acid = dosing && stock.acid;
+    const hypochlorite = dosing && stockOf(stock, id).hypochlorite;
+    const acid = dosing && stockOf(stock, id).acid;
     // Its treatment's flow: none while it is drained down to the sewer.
     const flow = approach(
       old.flow,
