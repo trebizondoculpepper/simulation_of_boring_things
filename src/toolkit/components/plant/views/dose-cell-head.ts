@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { plantTools } from './plant-tools';
+import { roundedSlab } from './rounded-slab';
 import { chlorellaPlate } from './chlorella-plate';
 import {
   bottleReadout,
@@ -66,7 +67,7 @@ export function createDoseCellHead(
   shell.position.set(0, h / 2, 0);
   group.add(shell);
   const gasket = new Mesh(
-    new RoundedBoxGeometry(w + 0.002, h + 0.002, 0.006, 3, R),
+    roundedSlab(w + 0.002, h + 0.002, 0.006, R + 0.001),
     band,
   );
   gasket.position.set(0, h / 2, -d * 0.15);

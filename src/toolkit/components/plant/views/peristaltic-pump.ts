@@ -12,6 +12,7 @@ import { brandLivery } from '../../core/views/brand-livery';
 import { createPartSet, pushButton } from '../../core/parts/parts';
 import { brandPlate } from './chlorella-plate';
 import { plantTools } from './plant-tools';
+import { roundedSlab } from './rounded-slab';
 import {
   box,
   circle,
@@ -71,7 +72,7 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
   shell.position.set(0, 0.01 + H / 2, 0);
   group.add(shell);
   const seam = new Mesh(
-    new RoundedBoxGeometry(W + 0.002, H + 0.002, 0.004, 4, R),
+    roundedSlab(W + 0.002, H + 0.002, 0.004, R + 0.001),
     t.paint('#3a3f42', 0.6),
   );
   seam.position.set(0, 0.01 + H / 2, -D * 0.12);
