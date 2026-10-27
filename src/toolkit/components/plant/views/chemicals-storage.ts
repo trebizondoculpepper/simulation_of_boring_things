@@ -429,41 +429,55 @@ export function createIbcOnSpillPallet(kit: PanelKit) {
 }
 
 /**
- * The delivery fill cabinet on the outside wall, its door open: a
- * lockable stainless cabinet with each chemical's fill point on its own
- * coupling (2" for hypochlorite, 1½" for acid, so a tanker's hose for one
- * will not fit the other), a drip tray to the bund, and the tank-full
- * alarm the driver watches. After the bunded fill cabinets UK tank makers
- * sell for pool chemical deliveries.
+ * The delivery fill cabinet, on the acid store's wall by the tanker's bay
+ * (the owner, 2026-10-27): a lockable stainless cabinet, its door shut
+ * until opened (`door` in its `userData`, hinged on its right: turn it
+ * by up to 1.75 rad to open), and inside it each chemical's fill point on
+ * its own coupling, facing the tanker's hose (2" for hypochlorite, 1½" for
+ * acid, so a hose for one will not fit the other), each behind its valve;
+ * a drip tray to the bund, and over it the tank-full alarm the driver
+ * watches. The acid goes straight back through the wall into its store;
+ * the hypochlorite up out of the top, to cross the bay to its store.
+ * After the bunded fill cabinets UK tank makers sell for pool chemical
+ * deliveries. Origin on the wall at its back's middle, facing +z.
  */
+export const FILL_CABINET = {
+  w: 0.7,
+  h: 0.9,
+  d: 0.3,
+  /** Each line's way out, in the cabinet's frame: the hypochlorite's up through its top, the acid's back through the wall. */
+  hypochlorite: { at: [-0.17, 0.45, 0.12], outward: [0, 1, 0] },
+  acid: { at: [0.17, 0, 0], outward: [0, 0, -1] },
+  /** The pipes' centre line, out from the back. */
+  pipeZ: 0.12,
+} as const;
+
 export function createFillCabinet(kit: PanelKit) {
   const t = plantTools(kit);
   const group = new Group();
+  group.name = 'Delivery fill cabinet';
   const steel = t.paint(FINISH.stainless, 0.3, 0.85);
-  const W = 0.7,
-    H = 0.9,
-    D = 0.3;
+  const { w: W, h: H, d: D, pipeZ: Z } = FILL_CABINET;
   t.box(group, steel, W, H, 0.01, 0, 0, 0.005);
   t.box(group, steel, W, 0.01, D, 0, H / 2, D / 2);
   t.box(group, steel, W, 0.01, D, 0, -H / 2, D / 2);
   for (const x of [-W / 2, W / 2]) t.box(group, steel, 0.01, H, D, x, 0, D / 2);
-  // The door, swung open about its right hinge.
+  // The door, hinged on its right, shut.
   const door = new Group();
   door.position.set(W / 2, 0, D);
-  door.rotation.y = 1.75;
   group.add(door);
+  group.userData.door = door;
   t.box(door, steel, W, H, 0.015, -W / 2, 0, 0);
-  put(
-    door,
-    createNotice(t, 0.5, 0.3, [
-      'CHEMICAL DELIVERY POINT',
-      'Authorised persons only',
-      'Check the coupling',
-      'before connecting',
-    ]),
-    [-W / 2, 0.15, -0.009],
-    Math.PI,
-  );
+  const notice = [
+    'CHEMICAL DELIVERY POINT',
+    'Authorised persons only',
+    'Check the coupling',
+    'before connecting',
+  ];
+  // Its notice outside, and again inside, read with the door open.
+  put(door, createNotice(t, 0.5, 0.3, notice), [-W / 2, 0.15, 0.009]);
+  put(door, createNotice(t, 0.5, 0.3, notice), [-W / 2, 0.15, -0.009], Math.PI);
+  // Its lock and handle, outside.
   t.cyl(
     door,
     t.paint('#3a3d3f', 0.4),
@@ -471,10 +485,11 @@ export function createFillCabinet(kit: PanelKit) {
     0.02,
     -W + 0.06,
     0,
-    -0.01,
+    0.01,
     'z',
     12,
   );
+  t.box(door, t.paint('#3a3d3f', 0.4), 0.02, 0.12, 0.03, -W + 0.06, -0.1, 0.02);
   // A drip tray across the bottom.
   t.box(
     group,
@@ -486,58 +501,68 @@ export function createFillCabinet(kit: PanelKit) {
     -H / 2 + 0.03,
     D / 2,
   );
-  // The two fill points: a pipe up from below, a valve, a coupling and cap.
-  for (const [x, colour, name] of [
-    [-0.17, CHEMICAL_COLOUR.hypochlorite, 'SODIUM HYPOCHLORITE\n2" CAMLOCK'],
-    [0.17, CHEMICAL_COLOUR.acid, 'HYDROCHLORIC ACID\n1½" CAMLOCK'],
+  // The two fill points: each line's coupling facing out at the hose,
+  // behind it its valve, and its pipe away.
+  for (const [x, colour, name, chemical] of [
+    [
+      -0.17,
+      CHEMICAL_COLOUR.hypochlorite,
+      'SODIUM HYPOCHLORITE\n2" CAMLOCK',
+      'hypochlorite',
+    ],
+    [0.17, CHEMICAL_COLOUR.acid, 'HYDROCHLORIC ACID\n1½" CAMLOCK', 'acid'],
   ] as const) {
-    const small = colour === CHEMICAL_COLOUR.acid;
+    const small = chemical === 'acid';
     const r = small ? 0.024 : 0.032;
-    t.rod(
-      group,
-      t.paint(FINISH.pvc, 0.45),
-      [x, -H / 2, 0.12],
-      [x, 0.1, 0.12],
-      r,
-      16,
-    );
+    const pvc = t.paint(FINISH.pvc, 0.45);
+    // Its pipe away: the acid's back into the wall, the hypochlorite's
+    // up through the top, each through a gland.
+    if (small) {
+      t.rod(group, pvc, [x, 0, Z], [x, 0, 0], r, 16);
+      t.cyl(group, pvc, r * 1.5, 0.02, x, 0, 0.02, 'z', 16);
+    } else {
+      t.rod(group, pvc, [x, 0, Z], [x, H / 2 + 0.05, Z], r, 16);
+      t.cyl(group, pvc, r * 1.5, 0.02, x, H / 2 + 0.01, Z, 'y', 16);
+      t.band(group, 50, [x, 0.25, Z], 'y', colour);
+    }
+    // The valve, its lever in the chemical's colour.
     t.box(
       group,
       t.paint('#d9dad6', 0.4),
       r * 2.6,
-      0.07,
       r * 2.6,
+      0.07,
       x,
-      -0.05,
-      0.12,
+      0,
+      Z + 0.02,
     );
     t.box(
       group,
       t.paint(colour, 0.5),
+      0.02,
       0.12,
       0.02,
-      0.02,
-      x + 0.04,
-      -0.05,
-      0.12 + r * 1.4,
+      x + r * 1.4,
+      0.04,
+      Z + 0.02,
     );
+    // The coupling, and its cap.
     t.rod(
       group,
       t.paint(FINISH.brass, 0.35, 0.7),
-      [x, 0.1, 0.12],
-      [x, 0.14, 0.12],
+      [x, 0, Z + 0.055],
+      [x, 0, Z + 0.1],
       r * 1.25,
       20,
     );
-    t.cyl(group, t.paint(colour, 0.5), r * 1.3, 0.03, x, 0.16, 0.12, 'y', 20);
-    t.band(group, 50, [x, -0.25, 0.12], 'y', colour);
+    t.cyl(group, t.paint(colour, 0.5), r * 1.3, 0.03, x, 0, Z + 0.115, 'z', 20);
     put(
       group,
       createTag(t, name, 0.26, {
         plate: colour,
         ink: small ? '#ffffff' : '#111111',
       }),
-      [x, 0.3, 0.02],
+      [x, -0.25, 0.02],
     );
   }
   // Above it: the tank-full alarm beacon and its acknowledge button.
@@ -546,7 +571,7 @@ export function createFillCabinet(kit: PanelKit) {
     t.paint('#d48a1a', 0.3),
     0.04,
     0.1,
-    -0.15,
+    0.22,
     H / 2 + 0.2,
     0.06,
     'y',
@@ -558,7 +583,7 @@ export function createFillCabinet(kit: PanelKit) {
     0.1,
     0.06,
     0.06,
-    -0.15,
+    0.22,
     H / 2 + 0.12,
     0.04,
   );
@@ -568,7 +593,7 @@ export function createFillCabinet(kit: PanelKit) {
     0.12,
     0.12,
     0.06,
-    0.15,
+    0.05,
     H / 2 + 0.15,
     0.03,
   );
@@ -577,14 +602,14 @@ export function createFillCabinet(kit: PanelKit) {
     t.paint('#2a6fb0', 0.4),
     0.025,
     0.02,
-    0.15,
+    0.05,
     H / 2 + 0.15,
     0.065,
     'z',
     20,
   );
   put(group, createTag(t, 'TANK FULL\nSTOP DELIVERY', 0.2), [
-    -0.15,
+    0.22,
     H / 2 + 0.33,
     0.02,
   ]);
@@ -595,7 +620,7 @@ export function createFillCabinet(kit: PanelKit) {
       0.16,
       0.09,
     ),
-    [-0.14, -H / 2 + 0.12, 0.012],
+    [0, -H / 2 + 0.12, 0.012],
   );
   return group;
 }

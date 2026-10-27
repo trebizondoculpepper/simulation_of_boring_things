@@ -504,6 +504,26 @@ export function machinePorts(item: Item): MachinePort[] {
         drawn: true,
       },
     ];
+  if (kind === 'fill-cabinet')
+    // The delivery fill cabinet (`createFillCabinet`, its `FILL_CABINET`):
+    // the hypochlorite's line up out of its top, the acid's back through
+    // the wall behind it.
+    return [
+      {
+        ...port(
+          'hypochlorite',
+          [-0.17, 0.45, 0.12],
+          [0, 1, 0],
+          0.05,
+          'chemical',
+        ),
+        drawn: true,
+      },
+      {
+        ...port('acid', [0.17, 0, 0], [0, 0, -1], 0.04, 'chemical'),
+        drawn: true,
+      },
+    ];
   if (kind === 'chem-selector')
     // The transfer selector (`createTransferSelector`, six outlets at
     // 0.32 m, its header 0.75 m up along x): its main dropping in from

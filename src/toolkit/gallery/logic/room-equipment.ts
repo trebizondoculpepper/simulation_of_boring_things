@@ -1020,24 +1020,22 @@ export function roomEquipment(
       return {
         box: shellRoomBox('loading_bay'),
         items: [
-          // Each store's fill cabinet on the wall of its own store.
+          // One fill cabinet, by the left bay where the tanker stands, on
+          // the acid store's wall, its two inlets on incompatible
+          // couplings; on the hypochlorite store's wall, by the right bay
+          // where a hired generator stands, its connection cabinet (the
+          // owner, 2026-10-27).
+          wall('fill-cabinet', 'Delivery fill cabinet', 0.7, 0.3, 0.9, 1.2, {
+            walls: ['west'],
+          }),
           wall(
-            'fill-cabinet',
-            'Delivery fill cabinet: hypochlorite',
-            1,
-            1.05,
-            1.7,
-            1.2,
+            'generator-point',
+            'Generator connection cabinet',
+            0.62,
+            0.4,
+            0.77,
+            1.3,
             { walls: ['east'] },
-          ),
-          wall(
-            'fill-cabinet',
-            'Delivery fill cabinet: acid',
-            1,
-            1.05,
-            1.7,
-            1.2,
-            { walls: ['west'] },
           ),
         ],
       };

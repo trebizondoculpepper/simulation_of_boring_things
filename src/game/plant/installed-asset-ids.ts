@@ -5,7 +5,9 @@
  * what works): asset-0064 SR-CP1 (the motor control centre), asset-0067
  * SR-DB3 (a distribution board) and asset-0068 SR-IS2 (sample rotary
  * isolators); asset-0055 AS-T1 (the acid IBC, 2026-10-27: its bulk
- * tank took its place, plan 085). */
+ * tank took its place, plan 085); asset-0061 (the hypochlorite fill
+ * cabinet, 2026-10-27: one cabinet takes both deliveries, and the
+ * generator's connection cabinet its place). */
 export const INSTALLED_ASSET_IDS: Readonly<
   Record<string, { assetId: string; tag: string }>
 > = {
@@ -203,13 +205,13 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0059',
     tag: 'AS-AHU1',
   },
-  'loading_bay|fill-cabinet|Delivery fill cabinet: hypochlorite': {
-    assetId: 'asset-0061',
+  'loading_bay|fill-cabinet|Delivery fill cabinet': {
+    assetId: 'asset-0062',
     tag: 'LB-CAB1',
   },
-  'loading_bay|fill-cabinet|Delivery fill cabinet: acid': {
-    assetId: 'asset-0062',
-    tag: 'LB-CAB2',
+  'loading_bay|generator-point|Generator connection cabinet': {
+    assetId: 'asset-0145',
+    tag: 'LB-FX1',
   },
   'switch_room|lv-switchboard|LV main switchboard': {
     assetId: 'asset-0063',

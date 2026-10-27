@@ -93,30 +93,57 @@ export const ACID_STORE_SCHEMATIC = chemicalStore('acid_store', 'AS', 'acid', [
   machine('tank-1', 'chem-bulk', 'Hydrochloric acid bulk tank'),
 ]);
 
-const fills = (['hypochlorite', 'acid'] as const).map((c) =>
-  machine(`fill-${c}`, 'fill-cabinet', `Delivery fill cabinet: ${c}`),
-);
 export const LOADING_BAY_SCHEMATIC = backRoom(
   'loading_bay',
   'LB',
   // No tanker stand: the tanker is a lorry backed into its channel in the
   // dock (prompt 073), connected in the yard (076, 080).
   [
-    ...fills,
+    // One fill cabinet, its two inlets on incompatible couplings, by the
+    // tanker's bay; the hired generator's connection cabinet by the other
+    // (the owner, 2026-10-27).
+    machine('fill', 'fill-cabinet', 'Delivery fill cabinet'),
+    machine(
+      'generator-point',
+      'generator-point',
+      'Generator connection cabinet',
+    ),
     machine('hypo-store', 'chemical-store', 'Hypochlorite store'),
     machine('acid-store', 'chemical-store', 'Acid store'),
+    // Each store's main passes through the bay on its way to the wet hall
+    // (the owner, 2026-10-27).
+    machine('hypo-main', 'chemical-main', 'Hypochlorite main to the wet hall'),
+    machine('acid-main', 'chemical-main', 'Acid main to the wet hall'),
   ],
   [
     link(
       'Hypochlorite delivery line',
-      ['fill-hypochlorite', 'out'],
+      ['fill', 'hypochlorite'],
       ['hypo-store', 'fill'],
       'chemical',
     ),
     link(
       'Acid delivery line',
-      ['fill-acid', 'out'],
+      ['fill', 'acid'],
       ['acid-store', 'fill'],
+      'chemical',
+    ),
+    link(
+      'Generator cable to the switch room',
+      ['generator-point', 'out'],
+      ['switch-room', 'generator'],
+      'power',
+    ),
+    link(
+      'Hypochlorite main through the bay',
+      ['hypo-store', 'main'],
+      ['hypo-main', 'in'],
+      'chemical',
+    ),
+    link(
+      'Acid main through the bay',
+      ['acid-store', 'main'],
+      ['acid-main', 'in'],
       'chemical',
     ),
   ],

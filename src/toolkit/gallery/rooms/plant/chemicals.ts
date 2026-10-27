@@ -13,7 +13,33 @@ import {
 import { createGasZone } from '../../../components/general-safety/parts/gas-parts';
 import { CHLORINE } from '../../../components/general-safety/logic/gas-detection';
 import { createGasStation } from '../../views/gas-station';
-import type { PlantExhibit } from './exhibit';
+import type { Object3D } from 'three';
+import type { LiveExhibit, PlantExhibit } from './exhibit';
+import { createPartSet } from '../../../components/core/parts/parts';
+import type { PanelKit } from '../../../components/core/views/eighties-controls';
+import { FILL_CABINET } from '../../../components/plant/views/chemicals-storage';
+
+/** The fill cabinet, its door opened and shut with Use. */
+function fillCabinet(kit: PanelKit): LiveExhibit {
+  const object = createFillCabinet(kit);
+  const door = object.userData.door as Object3D;
+  const parts = createPartSet();
+  let target = 0;
+  let open = 0;
+  object.traverse((o) => parts.uses.set(o, () => (target = target ? 0 : 1)));
+  door.traverse((o) => (o.userData.live = true));
+  return {
+    object,
+    parts,
+    update(delta) {
+      open =
+        open < target
+          ? Math.min(target, open + delta * 1.2)
+          : Math.max(target, open - delta * 1.2);
+      door.rotation.y = open * 1.75;
+    },
+  };
+}
 
 /** What this plant room is for, printed on its title card. */
 export const PURPOSE =
@@ -61,8 +87,14 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     title: 'Delivery fill cabinet',
     reference:
       'Lockable stainless cabinet, 2" and 1½" couplings, tank-full alarm',
-    size: { w: 1.0, d: 1.05, h: 1.7, mount: 'wall', y: 1.2 },
-    build: createFillCabinet,
+    size: {
+      w: FILL_CABINET.w,
+      d: FILL_CABINET.d,
+      h: FILL_CABINET.h,
+      mount: 'wall',
+      y: 1.2,
+    },
+    build: fillCabinet,
   },
   {
     title: 'PPE cabinet',

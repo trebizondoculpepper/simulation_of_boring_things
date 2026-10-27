@@ -1,5 +1,6 @@
 import { chemicalOf, wetHallPlumbing } from './wet-hall-plumbing';
 import { storePlumbing } from './store-plumbing';
+import { loadingBayPlumbing } from './loading-bay-plumbing';
 import { dayTankPlumbing } from './day-tank-plumbing';
 import { olympicRoom } from './olympic-plumbing';
 import { retiredPipes } from './retired-rooms';
@@ -1164,6 +1165,7 @@ export function roomPipes(room: string): PipeRun[] {
   if (room === 'wet_hall') return wetHallPipework().runs;
   if (room === 'hypo_store' || room === 'acid_store')
     return storePlumbing(room).runs;
+  if (room === 'loading_bay') return loadingBayPlumbing();
   // The small spa rooms' own pipework is their cabinets' (`cabinet-pipes.ts`);
   // here, their day tanks' (plan 085).
   if (room === 'plant_pool_03' || room === 'plant_pool_04')
