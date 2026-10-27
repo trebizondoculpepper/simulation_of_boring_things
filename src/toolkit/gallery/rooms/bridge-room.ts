@@ -40,6 +40,7 @@ import { BRIDGE_BINDINGS, bridgeSpec } from '../logic/bridge-bindings';
 import { plantReadingOf } from '../logic/world-reading';
 import { createParodyPanel } from '../views/parody-panel';
 import { roomWorld } from '../../save/world-store';
+import { worldAnnunciator } from '../logic/world-annunciator';
 
 /**
  * The bridge's consoles (mission 095): dev48's reimagined panels on its
@@ -47,14 +48,16 @@ import { roomWorld } from '../../save/world-store';
  * boards on its front walls, each wired to the one world
  * (`bridge-bindings.ts`): reading it as their originals do and asking it
  * what their originals' controls ask; local-only controls refused. The
- * annunciator's ACCEPT and RESET are the room's, as the old control
- * room's were its board's, shared by its CR-CP2 copy and Central Control.
+ * annunciator is the world's, shared by its CR-CP2 copy, Central Control
+ * and the old control room's board: accepted at any, accepted at all.
  */
 function installConsoles(kit: PanelKit): Part[] {
   const store = typeof window === 'undefined' ? null : roomWorld();
-  const shared = createAnnunciator(ANNUNCIATOR_ALARMS.length, {
-    manualReset: true,
-  });
+  // The world's annunciator (`game/annunciator.ts`): accepted here, at
+  // CR-CP2 or the old control room's board alike, and kept.
+  const shared = store
+    ? worldAnnunciator(store)
+    : createAnnunciator(ANNUNCIATOR_ALARMS.length, { manualReset: true });
   const context = () => {
     const world = store?.world.value;
     return world ? { world, reading: plantReadingOf(world, 'pool_02') } : null;

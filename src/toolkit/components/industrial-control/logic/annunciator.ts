@@ -34,6 +34,18 @@ export interface Annunciator {
 /** How many times a second a flashing window blinks. */
 export const FLASH_HZ = 2.5;
 
+/** What each window shows at `seconds`: lit, and whether it is in its flash. */
+export function litWindows(
+  states: readonly WindowState[],
+  test: boolean,
+  seconds: number,
+): boolean[] {
+  const blink = Math.floor(seconds * FLASH_HZ * 2) % 2 === 0;
+  return states.map(
+    (state) => test || state === 'steady' || (state === 'flashing' && blink),
+  );
+}
+
 export function createAnnunciator(
   windows: number,
   { manualReset = false } = {},
@@ -61,11 +73,7 @@ export function createAnnunciator(
         if (states[i] === 'steady' && !alarmed[i]) states[i] = 'off';
     },
     lit(seconds) {
-      const blink = Math.floor(seconds * FLASH_HZ * 2) % 2 === 0;
-      return states.map(
-        (state) =>
-          this.test || state === 'steady' || (state === 'flashing' && blink),
-      );
+      return litWindows(states, this.test, seconds);
     },
   };
 }

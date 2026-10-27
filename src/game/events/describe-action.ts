@@ -344,6 +344,15 @@ function said(
             ? 'manual call point operated'
             : 'call point reset with its key',
       };
+    case 'alarms/accept':
+      return {
+        subject: 'ANNUNCIATOR',
+        text: action.alarms
+          ? `ACCEPT ${action.alarms.join(', ')}`
+          : 'ACCEPT pressed',
+      };
+    case 'alarms/reset':
+      return { subject: 'ANNUNCIATOR', text: 'RESET pressed' };
     case 'control-room/mode':
       return {
         subject: 'CONTROL ROOM MODE',

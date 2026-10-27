@@ -141,6 +141,10 @@ export function createParodyPanel(
     return r.counted ? undefined : 'deny';
   };
   const annunciators: ReturnType<typeof createAnnunciator>[] = [];
+  /** Its own annunciators and the room's shared one, each once. */
+  const everyAnnunciator = () => [
+    ...new Set([...annunciators, ...(live?.shared ? [live.shared] : [])]),
+  ];
   let lampTest = 0;
 
   const widget = (w: ParodyWidget): UiNode => {
@@ -185,10 +189,8 @@ export function createParodyPanel(
                       ? 'mariner'
                       : colour(),
               onPress: () => {
-                if (verb === 'accept' || label === 'ACCEPT ALARMS') {
-                  annunciators.forEach((a) => a.acknowledge());
-                  live?.shared?.acknowledge();
-                }
+                if (verb === 'accept' || label === 'ACCEPT ALARMS')
+                  everyAnnunciator().forEach((a) => a.acknowledge());
                 if (verb === 'lamp-test') lampTest = 2;
                 if (B) return command(cmd);
                 if (verb === 'reset') annunciators.forEach((a) => a.reset());
@@ -460,16 +462,14 @@ export function createParodyPanel(
         label: 'ACCEPT',
         colour: 'golden-tanoi',
         onPress: () => {
-          annunciators.forEach((a) => a.acknowledge());
-          live?.shared?.acknowledge();
+          everyAnnunciator().forEach((a) => a.acknowledge());
         },
       }),
       new Button({
         label: 'RESET',
         colour: 'golden-tanoi',
         onPress: () => {
-          annunciators.forEach((a) => a.reset());
-          live?.shared?.reset();
+          everyAnnunciator().forEach((a) => a.reset());
           return B ? undefined : press('RESET');
         },
       }),

@@ -21,6 +21,7 @@ import {
 import { teleprinterInMetres } from '../../industrial-control/views/teleprinter';
 import { createBbcWorkstation } from '../../industrial-control/views/bbc-workstation';
 import { createAnnunciator } from '../../industrial-control/logic/annunciator';
+import type { Annunciator } from '../../industrial-control/logic/annunciator';
 import type { ScreenLine } from '../../industrial-control/logic/bbc-micro';
 import { createPartSet, pushButton } from '../../core/parts/parts';
 import {
@@ -102,6 +103,8 @@ export interface AnnunciatorAssemblyView {
  */
 export function createAnnunciatorAssembly(
   kit: PanelKit,
+  /** Its windows' logic: the world's, shared with every console, where there is one; else its own. */
+  shared?: Annunciator,
 ): AnnunciatorAssemblyView {
   const t = plantTools(kit);
   const group = new Group();
@@ -111,7 +114,8 @@ export function createAnnunciatorAssembly(
   panel.group.position.set(0, 0.08, 0.12);
   panel.group.traverse((o) => (o.userData.live = true));
   group.add(panel.group);
-  const logic = createAnnunciator(labels.length, { manualReset: true });
+  const logic =
+    shared ?? createAnnunciator(labels.length, { manualReset: true });
   const parts = createPartSet();
   const view: AnnunciatorAssemblyView = {
     group,

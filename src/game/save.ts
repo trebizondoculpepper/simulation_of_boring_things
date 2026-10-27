@@ -167,6 +167,10 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // 47 → 48: the bridge's light switch (the owner, 2026-10-27): MAIN
   // LIGHTS on, EMERGENCY LIGHTS off (`fillDefaults` adds it).
   47: (world) => world,
+  // 48 → 49: the control room's annunciator in the world, shared by every
+  // annunciator and console (the owner, 2026-10-27): every window dark
+  // (`fillDefaults` adds it), the plant's alarms in now coming up flashing.
+  48: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

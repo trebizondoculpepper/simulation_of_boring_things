@@ -1,4 +1,6 @@
 import { currentPlant } from './live-plant';
+import { roomWorld } from '../../../save/world-store';
+import { worldAnnunciator } from '../../logic/world-annunciator';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import {
   createBmsOutstation,
@@ -156,7 +158,14 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       '30 windows, ISA sequence M: flashes until ACCEPT, steady until RESET; LAMP TEST; the gas windows from the gas detection',
     size: { w: 0.9, d: 0.2, h: 1.1, mount: 'wall', y: 1.65 },
     build(kit): LiveExhibit {
-      const annunciator = createAnnunciatorAssembly(kit);
+      // The world's annunciator (`game/annunciator.ts`), accepted here or
+      // at any console, the bridge's too; its own only without a world.
+      const annunciator = createAnnunciatorAssembly(
+        kit,
+        typeof window === 'undefined'
+          ? undefined
+          : worldAnnunciator(roomWorld()),
+      );
       annunciator.onEvent = (event, alarm) => {
         if (!alarm) return;
         const text = ALARM_TEXT[alarm];

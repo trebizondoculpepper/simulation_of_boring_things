@@ -76,6 +76,7 @@ describe('a save', () => {
       washOTron: newWorld().washOTron,
       intake: newWorld().intake,
       controlRoomMode: 'old',
+      annunciator: newWorld().annunciator,
     });
   });
 
@@ -141,6 +142,21 @@ describe('a save', () => {
       time: 1,
       controlRoomMode: 'old',
     });
+  });
+
+  it('brings a save from before the world’s annunciator up with every window dark', () => {
+    const { annunciator: _none, ...before } = newWorld();
+    const old = JSON.stringify({
+      format: 'pool-plant-save',
+      version: 48,
+      savedAt: 5,
+      world: { ...before, time: 400 },
+    });
+    const loaded = deserialiseWorld(old);
+    expect(loaded.ok && loaded.world.annunciator).toEqual(
+      newWorld().annunciator,
+    );
+    expect(loaded.ok && loaded.world.time).toBe(400);
   });
 
   it('keeps a field only where its type matches', () => {

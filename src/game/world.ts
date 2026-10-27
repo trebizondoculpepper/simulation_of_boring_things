@@ -249,8 +249,17 @@ import type {
 } from './plant/motor-starters';
 
 import { turnChangeover } from './plant/changeover';
+import {
+  acceptAlarms,
+  newAnnunciator,
+  resetAlarms,
+  senseAlarms,
+} from './annunciator';
+import type { AnnunciatorState } from './annunciator';
+import type { AlarmId } from '../toolkit/gallery/logic/control-room-demo';
+import { plantReadingOf } from '../toolkit/gallery/logic/world-reading';
 
-export const WORLD_VERSION = 48;
+export const WORLD_VERSION = 49;
 
 /**
  * Where the main corridor's control room doors lead (the owner,
@@ -342,6 +351,12 @@ export interface World {
   intake: SiteIntake;
   /** Where the corridor's control room doors lead: the CONTROL ROOM MODE knob. */
   controlRoomMode: ControlRoomMode;
+  /**
+   * The control room's alarm annunciator, shared by every annunciator and
+   * console showing the plant's alarms: which are in, flashing until
+   * accepted, steady until reset (`annunciator.ts`).
+   */
+  annunciator: AnnunciatorState;
 }
 
 export function newWorld(): World {
@@ -380,6 +395,7 @@ export function newWorld(): World {
     washOTron: newWashOTron(),
     intake: newSiteIntake(),
     controlRoomMode: 'old',
+    annunciator: newAnnunciator(),
   };
 }
 
@@ -445,7 +461,11 @@ export type WorldAction =
   | { type: 'distribution'; action: DistributionAction }
   | { type: 'booster/changeover'; action: ChangeoverAction }
   /** The CONTROL ROOM MODE knob turned: where the control room doors lead. */
-  | { type: 'control-room/mode'; mode: ControlRoomMode };
+  | { type: 'control-room/mode'; mode: ControlRoomMode }
+  /** ACCEPT at an annunciator or console: its flashing alarms (only `alarms`, if given) accepted. */
+  | { type: 'alarms/accept'; alarms?: AlarmId[] }
+  /** RESET at an annunciator or console: accepted alarms that have cleared put out. */
+  | { type: 'alarms/reset' };
 
 /** The jacuzzi's drain valve, open or shut, and with it its pool's drain-down. */
 const jacuzziDrainDown = (world: World, open: boolean): World => ({
@@ -798,6 +818,18 @@ export function applyAction(world: World, action: WorldAction): World {
       return world.controlRoomMode === action.mode
         ? world
         : { ...world, controlRoomMode: action.mode };
+    case 'alarms/accept': {
+      const annunciator = acceptAlarms(world.annunciator, action.alarms);
+      return annunciator === world.annunciator
+        ? world
+        : { ...world, annunciator };
+    }
+    case 'alarms/reset': {
+      const annunciator = resetAlarms(world.annunciator);
+      return annunciator === world.annunciator
+        ? world
+        : { ...world, annunciator };
+    }
     case 'plant/feeder':
       return world.plant.feeders[action.room] === action.on
         ? world
@@ -854,7 +886,16 @@ export function stepWorld(world: World, delta: number): World {
     },
     delta,
   );
-  return { ...next, plant, intake };
+  const stepped = { ...next, plant, intake };
+  // The annunciator senses the plant's alarms, whichever room the walker
+  // is in (the reading is kept for the displays that read it after).
+  const annunciator = senseAlarms(
+    stepped.annunciator,
+    plantReadingOf(stepped).alarms,
+  );
+  return annunciator === stepped.annunciator
+    ? stepped
+    : { ...stepped, annunciator };
 }
 
 /**

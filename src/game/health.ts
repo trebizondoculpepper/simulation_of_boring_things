@@ -406,6 +406,8 @@ export const WORLD_HEALTH_COVERAGE = {
     'not checked: the filters’ wash controller; a filter it leaves washing shows in the pool’s flow',
   controlRoomMode:
     'not health: the CONTROL ROOM MODE knob, where the control room doors lead',
+  annunciator:
+    'not health: the control room annunciator, which alarms are in and accepted; the alarms themselves are the plant’s',
 } as const satisfies Record<keyof World, string>;
 
 /**
