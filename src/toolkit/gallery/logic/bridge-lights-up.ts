@@ -58,23 +58,25 @@ export function lightsUpLevels(
   return out;
 }
 
+/** On the first view, the bridge's displays are switched on (`bridgeDisplaysOn`) this long after the doors shut (the owner, 2026-10-27). */
+export const DISPLAYS_ON_AT = 2;
+
 /**
- * The displays booting on the first view (the owner, 2026-10-27,
- * `doc/notes/bridge_reveal.md`): black as the walker comes in; from
- * `from` seconds each display, on its own durations drawn afresh (mean,
+ * Each display's boot as its power rises (the owner, 2026-10-27,
+ * `doc/notes/bridge_reveal.md`): on its own durations drawn afresh (mean,
  * standard deviation): black (4, 0.6), the emblem (7, 2) its 0.3 s
  * fade-in included, black again (2, 0.5) the emblem's 0.5 s fade
  * included, then its interface drawn in over 1 s (`ui2d/boot.ts`).
  */
 export const ENTRANCE_BOOT: BootSpec = {
-  from: 2,
   black: { mean: 4, sd: 0.6 },
   emblem: { mean: 7, sd: 2, min: 0.5 },
   after: { mean: 2, sd: 0.5, min: 0.5 },
 };
 
-/** The first view's displays operational, on average, seconds after arriving. */
-export const entranceBootMean = () => meanBootReady(ENTRANCE_BOOT);
+/** The first view's displays operational, on average, seconds after the doors shut. */
+export const entranceBootMean = () =>
+  DISPLAYS_ON_AT + meanBootReady(ENTRANCE_BOOT);
 
 /**
  * The emergency glow under the consoles in an entrance (the owner,

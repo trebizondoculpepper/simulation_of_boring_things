@@ -407,6 +407,7 @@ export const WORLD_HEALTH_COVERAGE = {
   controlRoomMode:
     'not health: the CONTROL ROOM MODE knob, where the control room doors lead',
   bridgeThemeHeard: 'not health: whether the bridge’s theme has played',
+  bridgeDisplaysOn: 'not health: whether the bridge’s displays are switched on',
   annunciator:
     'not health: the control room annunciator, which alarms are in and accepted; the alarms themselves are the plant’s',
 } as const satisfies Record<keyof World, string>;

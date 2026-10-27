@@ -54,6 +54,8 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
   enter(entrance: Entrance | 'held' | null): void;
   /** A held first view begun (the corridor doors shut behind the walker): `entrance` from now. */
   begin(entrance: Entrance): void;
+  /** The entrance's main lights to begin `at` seconds into it (known once its displays boot). */
+  setLightsAt(at: number): void;
   leave(): void;
   /** Back to the bridge as first found. */
   reset(): void;
@@ -156,6 +158,11 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
       entrance = next;
       since = 0;
       if (mainLit()) rise(0, next.lightsAt);
+    },
+    setLightsAt(lightsAt) {
+      if (!entrance) return;
+      entrance.lightsAt = lightsAt;
+      if (!out && !falling) at = lightsAt;
     },
     leave() {
       present = false;

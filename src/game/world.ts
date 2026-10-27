@@ -259,7 +259,7 @@ import type { AnnunciatorState } from './annunciator';
 import type { AlarmId } from '../toolkit/gallery/logic/control-room-demo';
 import { plantReadingOf } from '../toolkit/gallery/logic/world-reading';
 
-export const WORLD_VERSION = 50;
+export const WORLD_VERSION = 51;
 
 /**
  * Where the main corridor's control room doors lead (the owner,
@@ -354,6 +354,14 @@ export interface World {
   /** Whether the bridge's theme has played, on the walker's first visit (the owner, 2026-10-27). */
   bridgeThemeHeard: boolean;
   /**
+   * Whether the bridge's displays are switched on (the owner, 2026-10-27):
+   * with the control room's supply live, their power. Off as first found
+   * and after the knob plate's RESET; on as the first view boots them (2 s
+   * after the corridor doors shut behind the walker), or at once when the
+   * bridge is reached any other way; on thereafter.
+   */
+  bridgeDisplaysOn: boolean;
+  /**
    * The control room's alarm annunciator, shared by every annunciator and
    * console showing the plant's alarms: which are in, flashing until
    * accepted, steady until reset (`annunciator.ts`).
@@ -398,6 +406,7 @@ export function newWorld(): World {
     intake: newSiteIntake(),
     controlRoomMode: 'old',
     bridgeThemeHeard: false,
+    bridgeDisplaysOn: false,
     annunciator: newAnnunciator(),
   };
 }
@@ -466,6 +475,8 @@ export type WorldAction =
   /** The CONTROL ROOM MODE knob turned: where the control room doors lead. */
   | { type: 'control-room/mode'; mode: ControlRoomMode }
   | { type: 'bridge/theme-heard' }
+  /** The bridge's displays switched on or off (`bridgeDisplaysOn`). */
+  | { type: 'bridge/displays'; on: boolean }
   /** Forget the bridge's first visit: its theme plays again (the knob plate's RESET). */
   | { type: 'bridge/first-visit-reset' }
   /** ACCEPT at an annunciator or console: its flashing alarms (only `alarms`, if given) accepted. */
@@ -828,6 +839,10 @@ export function applyAction(world: World, action: WorldAction): World {
       return world.bridgeThemeHeard
         ? world
         : { ...world, bridgeThemeHeard: true };
+    case 'bridge/displays':
+      return world.bridgeDisplaysOn === action.on
+        ? world
+        : { ...world, bridgeDisplaysOn: action.on };
     case 'bridge/first-visit-reset':
       // The bridge as first found (the owner, 2026-10-27): its theme not
       // yet heard, so the next visit plays the reveal; its MAIN LIGHTS on,
@@ -835,6 +850,7 @@ export function applyAction(world: World, action: WorldAction): World {
       return {
         ...world,
         bridgeThemeHeard: false,
+        bridgeDisplaysOn: false,
         lighting: {
           ...world.lighting,
           switches: {

@@ -19,6 +19,33 @@ import type { EmblemOptions } from './emblem';
 
 export type BootPhase = 'black' | 'emblem' | 'fade' | 'draw' | 'on';
 
+/**
+ * A display's state (the owner, 2026-10-27): UNPOWERED (no supply: black,
+ * no touches), OFF (powered, its own switch off: black), BOOTING (black,
+ * the emblem, black again, the interface drawing in) and RUNNING
+ * (operational).
+ */
+export type DisplayState = 'unpowered' | 'off' | 'booting' | 'running';
+
+/**
+ * A display's next state from its power and its own switch: losing either
+ * blacks it at once; regaining both (from UNPOWERED or OFF) boots it;
+ * otherwise it carries on (BOOTING until booted, RUNNING). Pure.
+ */
+export function nextDisplayState(
+  state: DisplayState,
+  powered: boolean,
+  switchedOn: boolean,
+): DisplayState {
+  if (!powered) return 'unpowered';
+  if (!switchedOn) return 'off';
+  if (state === 'unpowered' || state === 'off') return 'booting';
+  return state;
+}
+
+/** How a display comes on when its power rises: booting (its own drawn plan), or straight to RUNNING. */
+export type PowerUp = { offset: number; timing: BootTiming } | 'instant';
+
 /** Seconds each part of a boot takes. */
 export interface BootTiming {
   /** The emblem shown, its fade-in included. */
@@ -232,7 +259,7 @@ export interface BootScreenOptions {
     t: number,
     theme: Theme,
   ) => void;
-  /** Start black, waiting for `boot()` (default: on, operational). */
+  /** Start unpowered, black, waiting for its power or `boot()` (default: powered, running). */
   dark?: boolean;
 }
 
@@ -247,7 +274,10 @@ export interface BootScreenOptions {
 export class BootScreen extends UiNode {
   /** Its boot's timing: its own options', or a boot's own (`boot`). */
   timing: BootTiming;
-  private mode: 'on' | 'waiting' | 'running' | 'dark';
+  // on: RUNNING; waiting, running: BOOTING; dark: UNPOWERED; off: OFF.
+  private mode: 'on' | 'waiting' | 'running' | 'dark' | 'off';
+  private powered: boolean;
+  private switchedOn = true;
   private offset = 0;
   private start = 0;
   private now = 0;
@@ -267,12 +297,60 @@ export class BootScreen extends UiNode {
     super();
     this.timing = { ...BOOT_TIMING, ...options.timing };
     this.mode = options.dark ? 'dark' : 'on';
+    this.powered = !options.dark;
     this.add(content);
+  }
+
+  /** Its state: UNPOWERED, OFF, BOOTING or RUNNING. */
+  get displayState(): DisplayState {
+    if (this.mode === 'on') return 'running';
+    if (this.mode === 'dark') return 'unpowered';
+    if (this.mode === 'off') return 'off';
+    return 'booting';
+  }
+
+  /** Whether it has power. */
+  get hasPower() {
+    return this.powered;
+  }
+
+  /**
+   * Its power, on or off (a room's supply, say): off blacks it at once
+   * (UNPOWERED); on again boots it (`up`: its drawn plan, or straight to
+   * RUNNING), if its own switch is on.
+   */
+  setPower(on: boolean, up: PowerUp = { offset: 0, timing: this.timing }) {
+    this.powered = on;
+    this.apply(up);
+  }
+
+  /** Its own switch, on or off: off blacks it (OFF); on again boots it, if powered. */
+  setSwitch(on: boolean, up: PowerUp = { offset: 0, timing: this.timing }) {
+    this.switchedOn = on;
+    this.apply(up);
+  }
+
+  private apply(up: PowerUp) {
+    const was = this.displayState;
+    const next = nextDisplayState(was, this.powered, this.switchedOn);
+    if (next === was) return;
+    if (next === 'booting') {
+      if (up === 'instant') this.skip();
+      else this.boot(up.offset, up.timing);
+      return;
+    }
+    this.mode = next === 'unpowered' ? 'dark' : 'off';
+    this.plan = null;
+    this.shown = 'black';
+    this.markDirty();
+    this.onChange?.();
   }
 
   /** Boot: black at once, the emblem `offset` seconds after its next tick; `timing` for this boot only. */
   boot(offset = 0, timing?: Partial<BootTiming>) {
     this.timing = { ...BOOT_TIMING, ...this.options.timing, ...timing };
+    this.powered = true;
+    this.switchedOn = true;
     this.mode = 'waiting';
     this.offset = Math.max(0, offset);
     this.plan = null;
@@ -284,6 +362,8 @@ export class BootScreen extends UiNode {
   /** Straight to on, operational. */
   skip() {
     if (this.mode === 'on') return;
+    this.powered = true;
+    this.switchedOn = true;
     this.mode = 'on';
     this.plan = null;
     this.markDirty();
@@ -419,11 +499,14 @@ export class BootScreen extends UiNode {
 export class BootGroup {
   readonly screens = new Set<BootScreen>();
   private auto: { from: number; spread: number } | null = null;
+  private power = true;
   constructor(private readonly random: () => number = Math.random) {}
 
   add(screen: BootScreen) {
     this.screens.add(screen);
-    if (this.auto)
+    // Joining an unpowered room: unpowered with it.
+    if (!this.power) screen.setPower(false);
+    else if (this.auto)
       screen.boot(this.auto.from + this.random() * this.auto.spread);
     return screen;
   }
@@ -452,6 +535,37 @@ export class BootGroup {
 
   /** Seconds from the last `bootEach` until its last screen was to be operational. */
   readyAt = 0;
+
+  /** Whether the room's displays have power. */
+  get powered() {
+    return this.power;
+  }
+
+  /**
+   * The room's display power (the owner, 2026-10-27: one power signal for
+   * a room's displays). Off: every screen UNPOWERED, black at once. On
+   * (a rising edge): each screen boots with its own durations drawn from
+   * `spec` (`sampleBoot`), or, `'instant'`, goes straight to RUNNING.
+   * Returns the seconds from now until the last is operational (0 if
+   * none boots), also kept as `readyAt`.
+   */
+  setPower(on: boolean, up: BootSpec | 'instant' = 'instant'): number {
+    const rising = on && !this.power;
+    this.power = on;
+    let last = 0;
+    for (const s of this.screens) {
+      if (!on || !rising || up === 'instant') {
+        s.setPower(on, 'instant');
+        continue;
+      }
+      const plan = sampleBoot(up, this.random);
+      s.setPower(true, plan);
+      if (s.booting)
+        last = Math.max(last, plan.offset + bootDuration(plan.timing));
+    }
+    if (rising) this.readyAt = last;
+    return last;
+  }
 
   /** Every screen booted, at offsets scattered over `spread` seconds from `from`; `timing` for this boot only. */
   bootAll(spread = 1.5, from = 0, timing?: Partial<BootTiming>) {

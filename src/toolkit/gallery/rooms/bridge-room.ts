@@ -2,7 +2,7 @@ import { Group, Object3D } from 'three';
 import { partAudio } from '../../components/core/audio/part-audio';
 import type { LoopRecipe } from '../../components/core/audio/part-audio';
 import { musicPlaylist } from '../../components/sound/audio/music-playlist';
-import { effect, signal } from '@preact/signals-core';
+import { computed, effect, signal } from '@preact/signals-core';
 import { createChatter } from '../../components/sound/logic/console-chatter';
 import { startBridgeRoom } from './control-room-prototype';
 import type { Part } from '../../components/core/parts/parts';
@@ -27,6 +27,7 @@ import {
 import { createViewscreen } from '../views/bridge-viewscreen';
 import { createBridgeLightsUp } from '../views/bridge-lights-up';
 import {
+  DISPLAYS_ON_AT,
   ENTRANCE_BOOT,
   displaysOnLeaving,
   LIGHTS_UP,
@@ -41,7 +42,9 @@ import {
 import type { Entrance, RevealTrigger } from '../logic/bridge-lights-up';
 import type { EquipmentDoorsPart } from '../../components/architectural/parts/equipment-doors';
 import { bootGroupOf } from '../../components/industrial-control/views/touch-surface';
-import type { BootGroup } from '../../../ui2d';
+import type { BootGroup, BootSpec } from '../../../ui2d';
+import { roomPowered } from '../views/room-power';
+import { createThemeCue } from '../logic/bridge-theme-cue';
 import { sharedBridgeAmbience } from '../../components/sound/audio/bridge-ambience';
 import { createBridgeEmergencyLights } from '../views/bridge-emergency-lights';
 import {
@@ -242,8 +245,6 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   // Its lights coming up as the walker comes in, while MAIN LIGHTS is on
   // and its way live (the owner, 2026-10-27).
   let lightsOnTimer = 0;
-  // The first view's theme, begun as the room goes black (`THEME_AT`).
-  let themeTimer = 0;
   // Whether the walker is on the bridge now.
   let inside = false;
   const lightsUp = createBridgeLightsUp(() => {
@@ -252,30 +253,56 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   });
   const chatter = installChatter();
   const alarmBleep = installAlarmBleep();
-  // Its displays' boot (the owner, 2026-10-27): every touch screen made with its kit.
+  // The theme: cued once, stopped only by the walker leaving or its end.
+  const theme = createThemeCue({
+    start: () => bridgeTheme.play(),
+    stop: () => bridgeTheme.stop(),
+    setTimeout: (fn, ms) => window.setTimeout(fn, ms),
+    clearTimeout: (id) => window.clearTimeout(id),
+  });
+  // Its displays (the owner, 2026-10-27): every touch screen made with its
+  // kit, on one display power: the control room's supply live and the
+  // bridge's displays switched on in the world (`bridgeDisplaysOn`). Off,
+  // every one is UNPOWERED, black at once, wherever it is seen from (after
+  // RESET, from the corridor); on, each boots on its own drawn durations
+  // (`ENTRANCE_BOOT`), or comes straight on (`'instant'`: arriving by a
+  // reload or a link).
   let displays: BootGroup | null = null;
+  const supply = roomPowered('control_room');
+  const displayPower = computed(() => {
+    const w = store?.world.value;
+    return w ? supply() && w.bridgeDisplaysOn : true;
+  });
+  let powerUp: BootSpec | 'instant' = ENTRANCE_BOOT;
+  // Told, as the displays' power rises, when the last will be operational.
+  let onBooting: ((ready: number) => void) | null = null;
+  const switchDisplays = (on: boolean, up: BootSpec | 'instant') => {
+    if (!store || store.world.value.bridgeDisplaysOn === on) return;
+    powerUp = up;
+    store.dispatch({ type: 'bridge/displays', on });
+    powerUp = ENTRANCE_BOOT;
+  };
   // Its doors to the corridor, and the first view waiting for them to shut
   // behind the walker (the owner, 2026-10-27; `stepReveal`).
   let doors: EquipmentDoorsPart | null = null;
   let reveal: RevealTrigger | null = null;
+  // Seconds since the doors shut, in the first view; whether its displays
+  // have been switched on yet.
+  let sinceDoors = 0;
+  let displaysAsked = false;
   /** The first view begun, the doors shut behind the walker: its t = 0. */
   const beginFirstView = () => {
-    // Every display booting on its own drawn durations; the main lights
-    // `LIGHTS_UP.afterBoot` after the last is operational.
-    const ready = displays
-      ? displays.bootEach(ENTRANCE_BOOT)
-      : entranceBootMean();
-    const entrance: Entrance = {
-      kind: 'first',
-      lightsAt: entranceLightsAt('first', ready),
-    };
+    // The main lights' time known once the displays boot.
+    const entrance: Entrance = { kind: 'first', lightsAt: Infinity };
     lightsUp.begin(entrance);
+    sinceDoors = 0;
+    displaysAsked = false;
     // Heard from now, a save; begun as the room goes black (`THEME_AT`).
     store?.dispatch({ type: 'bridge/theme-heard' });
-    window.clearTimeout(themeTimer);
-    themeTimer = window.setTimeout(() => bridgeTheme.play(), THEME_AT * 1000);
+    theme.cue(THEME_AT);
   };
-  // Each frame: the held first view's trigger, stepped with the doors.
+  // Each frame: the held first view's trigger, stepped with the doors; then
+  // its displays switched on at `DISPLAYS_ON_AT`.
   const revealPart: Part = {
     object: new Group(),
     uses: new Map(),
@@ -283,38 +310,49 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
     setAudible: () => {},
     dispose: () => {},
     update(delta) {
-      if (!reveal || reveal.started) return;
-      const shut = doors ? doors.angle() < 1e-3 : true;
-      reveal = stepReveal(reveal, delta, shut);
-      if (reveal.started) beginFirstView();
+      if (!reveal) return;
+      if (!reveal.started) {
+        const shut = doors ? doors.angle() < 1e-3 : true;
+        reveal = stepReveal(reveal, delta, shut);
+        if (reveal.started) beginFirstView();
+        return;
+      }
+      sinceDoors += delta;
+      if (!displaysAsked && sinceDoors >= DISPLAYS_ON_AT) {
+        displaysAsked = true;
+        // Each display booting on its own drawn durations; the main lights
+        // `LIGHTS_UP.afterBoot` after the last is operational.
+        onBooting = (ready) =>
+          lightsUp.setLightsAt(entranceLightsAt('first', sinceDoors + ready));
+        switchDisplays(true, ENTRANCE_BOOT);
+      }
     },
   };
   const handle = startBridgeRoom(
     canvas,
     (kit) => {
-      displays = bootGroupOf(kit);
-      // Built before the walker comes in (seen through the corridor's doors)
-      // for the first view, its displays are dark, as its lights are, until
-      // the entrance boots them (the owner, 2026-10-27: it was seen already
-      // on from the hall); once seen, they wait on. Dark whenever its theme
-      // is unheard (a first visit, or after RESET), however the page was
-      // opened (a bridge built after RESET was found on); entered any other
-      // way, `enter` puts them on.
-      if (store && !store.world.value.bridgeThemeHeard)
-        displays.autoBoot({ from: Number.POSITIVE_INFINITY, spread: 0 });
+      const group = bootGroupOf(kit);
+      displays = group;
+      // One power for every display, however and whenever built: those
+      // already made, and those to come (they join at the group's power).
+      effect(() => {
+        const on = displayPower.value;
+        if (on === group.powered) return;
+        const ready = group.setPower(on, on ? powerUp : 'instant');
+        powerUp = ENTRANCE_BOOT;
+        if (on && onBooting) {
+          onBooting(ready);
+          onBooting = null;
+        }
+      });
       // Reset to first found (the CONTROL ROOM MODE plate's RESET) while the
-      // walker is away: dark again but for its emergency glow, its displays
-      // black, ready to boot as the walker comes in (the owner, 2026-10-27).
+      // walker is away: dark again but for its emergency glow (its displays
+      // switched off in the world).
       if (store) {
-        const group = displays;
         let heard = store.world.value.bridgeThemeHeard;
         effect(() => {
           const now = store.world.value.bridgeThemeHeard;
-          if (heard && !now && !inside) {
-            lightsUp.reset();
-            group.bootAll(0, Number.POSITIVE_INFINITY);
-            group.autoBoot({ from: Number.POSITIVE_INFINITY, spread: 0 });
-          }
+          if (heard && !now && !inside) lightsUp.reset();
           heard = now;
         });
       }
@@ -341,7 +379,6 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   return Object.assign(dispose, handle, {
     enter: (from: string | null) => {
       inside = true;
-      displays?.autoBoot(null);
       // Which entrance (`doc/notes/bridge_reveal.md`): walked in from the
       // corridor, the first view while the theme is unheard (a first visit,
       // or after RESET), a later visit otherwise; any other way, none.
@@ -351,24 +388,25 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
         ? entranceKind('main_corridor', false, heard)
         : null;
       let entrance: Entrance | null = null;
-      window.clearTimeout(themeTimer);
+      onBooting = null;
       if (kind === 'first') {
-        // Held, as seen from outside (displays black, the glow alone),
-        // until the doors shut behind the walker (`revealPart`).
-        displays?.bootAll(0, Number.POSITIVE_INFINITY);
+        // Held, as seen from outside (displays off, the glow alone), until
+        // the doors shut behind the walker (`revealPart`).
+        switchDisplays(false, ENTRANCE_BOOT);
         reveal = revealWaiting();
         lightsUp.enter('held');
       } else {
         // A later visit, or any other way in: the displays simply on.
         reveal = null;
-        displays?.skipAll();
+        switchDisplays(true, 'instant');
+        if (displays?.powered) displays.skipAll();
         if (kind) entrance = { kind, lightsAt: entranceLightsAt(kind, 0) };
         lightsUp.enter(entrance);
         // A first visit made any other way: the bridge's theme at once,
         // once a save (the owner's, 2026-10-27; `bridgeThemeHeard`).
         if (w0 && !heard) {
           store?.dispatch({ type: 'bridge/theme-heard' });
-          bridgeTheme.play();
+          theme.cue(0);
         }
       }
       // Found with its MAIN LIGHTS off, the bridge puts them on itself
@@ -422,13 +460,17 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
       // Leaving (the owner, 2026-10-27): the theme fades out over 3 s (or
       // never starts); the main lights go out; the displays stay on and
       // the emergency glow stays, as seen from the corridor.
-      window.clearTimeout(themeTimer);
-      bridgeTheme.stop();
+      if (left) theme.leave();
       // Left before the doors shut: nothing started, still the first view
-      // (displays black); otherwise the displays stay on.
+      // (displays off); otherwise the displays stay on, any still booting
+      // put on, any not yet switched on switched on.
       const held = reveal !== null && !reveal.started;
       reveal = null;
-      if (displaysOnLeaving(left, held)) displays?.skipAll();
+      onBooting = null;
+      if (displaysOnLeaving(left, held)) {
+        switchDisplays(true, 'instant');
+        if (displays?.powered) displays.skipAll();
+      }
       window.clearTimeout(lightsOnTimer);
       lightsUp.leave();
       chatter.setActive(false);
@@ -612,11 +654,7 @@ function installAlarmBleep() {
 const THEME_FADE = 3;
 const bridgeTheme = (() => {
   const owner = {};
-  let timer = 0;
-  const stop = () => {
-    window.clearTimeout(timer);
-    partAudio.hold(owner, null);
-  };
+  const stop = () => partAudio.hold(owner, null);
   const playlist = musicPlaylist(
     [
       {
@@ -649,11 +687,11 @@ const bridgeTheme = (() => {
     ];
   };
   return {
+    // Once through, not round again: its end is the cue's
+    // (`bridge-theme-cue.ts`, `THEME_LENGTH`).
     play() {
       stop();
       partAudio.hold(owner, faded);
-      // Once through, not round again.
-      timer = window.setTimeout(stop, 31_000);
     },
     stop,
   };

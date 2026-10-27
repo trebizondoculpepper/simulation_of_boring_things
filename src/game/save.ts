@@ -174,6 +174,16 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // 49 → 50: whether the bridge's theme has played (the owner, 2026-10-27):
   // not yet (`fillDefaults` adds it), so it plays on the next visit.
   49: (world) => world,
+  // 50 → 51: whether the bridge's displays are on (the owner, 2026-10-27):
+  // on where its theme has been heard (seen already), off otherwise.
+  50: (world) =>
+    typeof world === 'object' && world !== null
+      ? {
+          ...world,
+          bridgeDisplaysOn:
+            (world as Record<string, unknown>).bridgeThemeHeard === true,
+        }
+      : world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

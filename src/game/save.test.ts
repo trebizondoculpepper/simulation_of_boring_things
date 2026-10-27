@@ -77,6 +77,7 @@ describe('a save', () => {
       intake: newWorld().intake,
       controlRoomMode: 'old',
       bridgeThemeHeard: false,
+      bridgeDisplaysOn: false,
       annunciator: newWorld().annunciator,
     });
   });

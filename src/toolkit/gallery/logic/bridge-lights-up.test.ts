@@ -14,6 +14,7 @@ import {
   lightsUpLevels,
   lightsUpTotal,
   playsEntrance,
+  DISPLAYS_ON_AT,
   REVEAL_DOORS,
   displaysOnLeaving,
   revealWaiting,
@@ -33,18 +34,35 @@ function seeded(seed: number) {
   };
 }
 
-/** The first view, played over `n` displays with a seeded draw: the screens, and its entrance. */
+/**
+ * The first view over `n` displays with a seeded draw, as the bridge runs
+ * it: the room's displays unpowered (after RESET); the doors shut (t = 0);
+ * at `DISPLAYS_ON_AT` their power rises (`powerUp`, which ticks every
+ * screen then, starting its clock), each booting on its own durations.
+ */
 function firstView(n: number, seed: number) {
   const group = new BootGroup(seeded(seed));
   const screens: BootScreen[] = [];
   for (let i = 0; i < n; i++)
     screens.push(group.add(new BootScreen(new Label(`${i}`))));
-  const ready = group.bootEach(ENTRANCE_BOOT);
-  const entrance: Entrance = {
-    kind: 'first',
-    lightsAt: entranceLightsAt('first', ready),
+  group.setPower(false);
+  const powerUp = () => {
+    const r = group.setPower(true, ENTRANCE_BOOT);
+    for (const s of screens) s.tick(DISPLAYS_ON_AT);
+    const ready = DISPLAYS_ON_AT + r;
+    const entrance: Entrance = {
+      kind: 'first',
+      lightsAt: entranceLightsAt('first', ready),
+    };
+    return { ready, entrance };
   };
-  return { group, screens, ready, entrance };
+  return { group, screens, powerUp };
+}
+
+/** The first view, its displays powered at `DISPLAYS_ON_AT`. */
+function firstViewUp(n: number, seed: number) {
+  const view = firstView(n, seed);
+  return { ...view, ...view.powerUp() };
 }
 
 describe('the bridge’s lights coming up (the owner, 2026-10-27)', () => {
@@ -117,17 +135,25 @@ describe('the first view (the owner, 2026-10-27, doc/notes/bridge_reveal.md)', (
     expect(firstViewGlow(THEME_AT)).toBe(0);
   });
 
-  it('draws each display’s durations afresh: black from 2 s, then black, emblem, black, the interface', () => {
-    expect(ENTRANCE_BOOT.from).toBe(2);
+  it('keeps every display unpowered until 2 s, then draws each one’s durations afresh: black, emblem, black, the interface', () => {
+    expect(DISPLAYS_ON_AT).toBe(2);
     expect(ENTRANCE_BOOT.black).toMatchObject({ mean: 4, sd: 0.6 });
     expect(ENTRANCE_BOOT.emblem).toMatchObject({ mean: 7, sd: 2 });
     expect(ENTRANCE_BOOT.after).toMatchObject({ mean: 2, sd: 0.5 });
-    const { screens, ready } = firstView(12, 7);
+    const { screens, powerUp } = firstView(12, 7);
+    const step = 1 / 30;
+    for (let t = 0; t < DISPLAYS_ON_AT; t += step)
+      for (const s of screens) {
+        s.tick(t);
+        expect(s.displayState).toBe('unpowered');
+        expect(s.phase).toBe('black');
+      }
+    const { ready } = powerUp();
+    for (const s of screens) expect(s.displayState).toBe('booting');
     // Each its own timing: no two emblems alike.
     expect(new Set(screens.map((s) => s.timing.emblem)).size).toBe(12);
-    const step = 1 / 30;
     const changes = screens.map(() => [] as { phase: string; at: number }[]);
-    for (let t = 0; t <= ready + 0.5; t += step)
+    for (let t = DISPLAYS_ON_AT; t <= ready + 0.5; t += step)
       screens.forEach((s, i) => {
         s.tick(t);
         const seen = changes[i];
@@ -160,12 +186,11 @@ describe('the first view (the owner, 2026-10-27, doc/notes/bridge_reveal.md)', (
 
   it('brings the main lights up 2 s after the last display is operational, none before', () => {
     for (const seed of [1, 2, 3, 99]) {
-      const { screens, ready, entrance } = firstView(20, seed);
+      const { screens, ready, entrance } = firstViewUp(20, seed);
       expect(entrance.lightsAt).toBeCloseTo(ready + LIGHTS_UP.afterBoot);
       expect(LIGHTS_UP.afterBoot).toBe(2);
       // Every display operational by `ready`; none of the lights on before
       // `lightsAt`.
-      for (const s of screens) s.tick(0);
       for (const s of screens) s.tick(ready + 1e-6);
       for (const s of screens) expect(s.operational).toBe(true);
       for (const s of LIGHT_STAGES)
@@ -188,7 +213,7 @@ describe('the first view (the owner, 2026-10-27, doc/notes/bridge_reveal.md)', (
     expect(entranceBootMean()).toBeCloseTo(2 + 4 + 7 + 2 + 1);
     const readies = Array.from(
       { length: 40 },
-      (_, i) => firstView(20, i).ready,
+      (_, i) => firstViewUp(20, i).ready,
     );
     const mean = readies.reduce((a, b) => a + b, 0) / readies.length;
     expect(mean).toBeGreaterThan(entranceBootMean());
@@ -196,7 +221,7 @@ describe('the first view (the owner, 2026-10-27, doc/notes/bridge_reveal.md)', (
   });
 
   it('boots the displays apart: the scatter grows through the sequence', () => {
-    const { screens } = firstView(30, 5);
+    const { screens } = firstViewUp(30, 5);
     const ons = screens.map((s) => bootDuration(s.timing));
     expect(Math.max(...ons) - Math.min(...ons)).toBeGreaterThan(2);
   });

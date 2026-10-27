@@ -360,6 +360,11 @@ function said(
       };
     case 'bridge/theme-heard':
       return { subject: 'THE BRIDGE', text: 'theme played, first visit' };
+    case 'bridge/displays':
+      return {
+        subject: 'THE BRIDGE',
+        text: `displays switched ${action.on ? 'on' : 'off'}`,
+      };
     case 'bridge/first-visit-reset':
       return {
         subject: 'CONTROL ROOM MODE',
