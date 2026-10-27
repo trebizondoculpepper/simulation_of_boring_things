@@ -7,8 +7,12 @@ import { markComponent } from '../../components/core/views/component-identity';
 import { ANNUNCIATOR_ALARMS } from '../logic/control-room-demo';
 import {
   bridgePanelPlaces,
+  deskScreenPlaces,
+  stationScreenPlaces,
   viewscreenPlace,
 } from '../logic/control-room-prototype';
+import { stationNamed } from '../logic/station-schematics';
+import { createStationSchematic } from '../views/station-schematics';
 import { createViewscreen } from '../views/bridge-viewscreen';
 import { BRIDGE_BINDINGS, bridgeSpec } from '../logic/bridge-bindings';
 import { plantReadingOf } from '../logic/world-reading';
@@ -71,6 +75,41 @@ function installConsoles(kit: PanelKit): Part[] {
       },
     };
   });
+  // The stations' schematic screens (the owner, 2026-10-27): each forward
+  // station's upper screen, each rear station's on the wall over its
+  // console, and the desk's upstands, each its station's browser turning
+  // through its designs, set apart in time so they do not turn together.
+  const places = [...stationScreenPlaces(), ...deskScreenPlaces()];
+  const schematics = places.flatMap((place, i) => {
+    const station = stationNamed(place.station);
+    if (!station) return [];
+    const screen = createStationSchematic(kit, station, place.size, context, {
+      offset: (i * 18) / places.length,
+      pixelsPerMetre: 600,
+    });
+    const holder = new Group();
+    holder.name = `${station} schematic screen`;
+    holder.position.set(place.x, place.y, place.z);
+    holder.rotation.order = 'YXZ';
+    holder.rotation.set(-place.tilt, place.yaw, 0);
+    holder.add(screen.object);
+    markComponent(holder, {
+      name: holder.name,
+      model: { node: 'operator-desk' },
+      status: () => screen.status?.(),
+    });
+    const parts = screen.parts!;
+    return [
+      {
+        object: holder,
+        uses: parts.uses,
+        update: (delta: number) => screen.update?.(delta),
+        onEvent: parts.onEvent,
+        setAudible: parts.setAudible,
+        dispose: () => parts.dispose(),
+      },
+    ];
+  });
   // The main viewscreen, live, on the big wall (`viewscreenPlace`).
   const vp = viewscreenPlace();
   const screen = createViewscreen(kit, vp.size, context, shared);
@@ -83,6 +122,7 @@ function installConsoles(kit: PanelKit): Part[] {
   const sp = screen.parts!;
   return [
     ...consoles,
+    ...schematics,
     {
       object: screen.object as Group,
       uses: sp.uses,

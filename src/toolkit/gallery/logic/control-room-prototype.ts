@@ -1352,3 +1352,128 @@ export function plaquePlaces() {
   }
   return out;
 }
+
+/**
+ * The bridge's schematic screens (mission 095; the owner, 2026-10-27: the
+ * stations' schematics, turning through their designs, on the stations'
+ * screens and the desk's upstands): where each goes, its middle, its turn
+ * and tilt as `PanelPlace`'s, its glass, and the station whose browser it
+ * shows (`station-schematics.ts`).
+ */
+export interface SchematicScreenPlace {
+  station: string;
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  tilt: number;
+  size: { w: number; h: number };
+}
+
+/** Each desk segment's upstand screens' station: Central Control's in front, the others round it. */
+export const DESK_SCREEN_STATIONS: Record<number, string> = {
+  0: 'CENTRAL CONTROL',
+  1: 'WATER SCIENCE OFFICER',
+  2: 'FLOW NAVIGATOR',
+  5: 'SECURITY CHIEF',
+  6: 'MAIN VIEWSCREEN',
+};
+
+/** The desk's upstand, its raked face: from its foot (0.3 of the way in, 0.9 m) back to its head (0.18 in, 1.45 m). */
+export const DESK_UPSTAND = {
+  foot: 0.3,
+  head: 0.18,
+  low: 0.9,
+  high: 1.45,
+} as const;
+
+/** How many screens a desk segment's upstand holds: one for about every 1.4 m. */
+export const upstandScreens = (len: number) =>
+  Math.max(1, Math.round(len / 1.4));
+
+/** The screens in the desk's upstands, as the room draws their openings (u 0.18–0.82 of each share, v 0.2–0.85 up the face). */
+export function deskScreenPlaces(): SchematicScreenPlace[] {
+  const out: SchematicScreenPlace[] = [];
+  const lerp = (p: Point, q: Point, t: number): Point => ({
+    x: p.x + (q.x - p.x) * t,
+    z: p.z + (q.z - p.z) * t,
+  });
+  const { foot, head, low, high } = DESK_UPSTAND;
+  for (const s of deskSegments()) {
+    const [P0, P1] = s.outer;
+    const [Q0, Q1] = s.inner;
+    const U0 = lerp(P0, Q0, foot);
+    const U1 = lerp(P1, Q1, foot);
+    const R0 = lerp(P0, Q0, head);
+    const R1 = lerp(P1, Q1, head);
+    const n = inward(P0, P1);
+    const len = Math.hypot(P1.x - P0.x, P1.z - P0.z);
+    const screens = upstandScreens(len);
+    // The face leans back by the run from its foot to its head.
+    const run = Math.hypot(U0.x - R0.x, U0.z - R0.z);
+    const rise = high - low;
+    const slant = Math.hypot(run, rise);
+    const edge = Math.min(
+      Math.hypot(U1.x - U0.x, U1.z - U0.z),
+      Math.hypot(R1.x - R0.x, R1.z - R0.z),
+    );
+    for (let k = 0; k < screens; k++) {
+      const u = (k + 0.5) / screens;
+      const v = 0.525;
+      const p = lerp(lerp(U0, U1, u), lerp(R0, R1, u), v);
+      out.push({
+        station: DESK_SCREEN_STATIONS[s.side] ?? 'MAIN VIEWSCREEN',
+        x: p.x,
+        y: STOREY + low + rise * v,
+        z: p.z,
+        yaw: Math.atan2(n.x, n.z),
+        tilt: Math.atan2(run, rise),
+        size: { w: (edge / screens) * 0.64 - 0.03, h: slant * 0.65 - 0.03 },
+      });
+    }
+  }
+  return out;
+}
+
+/** A forward station's upper screen: on a short stalk at its top's far edge, leaning back. */
+export const STATION_SCREEN = {
+  w: 1.0,
+  h: 0.52,
+  stalk: 0.08,
+  lean: 0.35,
+  behind: 0.06,
+} as const;
+
+/** A rear station's screen on the aft wall over its console. */
+export const REAR_SCREEN = { w: 1.7, h: 0.92, middle: 1.75 } as const;
+
+/** The forward stations' upper screens and the rear stations' wall screens. */
+export function stationScreenPlaces(): SchematicScreenPlace[] {
+  const { w, h, stalk, lean, behind } = STATION_SCREEN;
+  const forward = stationPlaces().map((st): SchematicScreenPlace => {
+    const [, , c, d] = st.corners;
+    const f = { x: Math.sin(st.yaw), z: -Math.cos(st.yaw) };
+    const mid = { x: (c.x + d.x) / 2, z: (c.z + d.z) / 2 };
+    const out = behind + (h / 2) * Math.sin(lean);
+    return {
+      station: st.system,
+      x: mid.x + f.x * out,
+      y: STOREY + STATION.high + stalk + (h / 2) * Math.cos(lean),
+      z: mid.z + f.z * out,
+      yaw: -st.yaw,
+      tilt: lean,
+      size: { w, h },
+    };
+  });
+  const rear = rearStationPlaces().map((r): SchematicScreenPlace => ({
+    station: r.role,
+    // On the wall behind its console, a hair out from it.
+    x: r.x - r.n.x * (REAR_CONSOLE.out - 0.01),
+    y: STOREY + PLATFORM.height + REAR_SCREEN.middle,
+    z: r.z - r.n.z * (REAR_CONSOLE.out - 0.01),
+    yaw: Math.atan2(r.n.x, r.n.z),
+    tilt: 0,
+    size: { w: REAR_SCREEN.w, h: REAR_SCREEN.h },
+  }));
+  return [...forward, ...rear];
+}

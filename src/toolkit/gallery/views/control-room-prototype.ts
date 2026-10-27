@@ -49,7 +49,9 @@ import {
   chairPlace,
   DUTIES,
   REAR_CONSOLE,
+  STATION_SCREEN,
   rearStationPlaces,
+  upstandScreens,
   plaquePlaces,
   edgeAt,
   horseshoePoints,
@@ -785,15 +787,18 @@ export function createControlRoomPrototype(
       return [at(bottom, tp, v), y0 + 0.9 + (1.45 - 0.9) * v];
     };
     const len = Math.hypot(P1.x - P0.x, P1.z - P0.z);
-    const screens = Math.max(1, Math.round(len / 1.4));
+    const screens = upstandScreens(len);
     const n = inward(P0, P1);
     for (let k = 0; k < screens; k++) {
       const u0 = (k + 0.18) / screens;
       const u1 = (k + 0.82) / screens;
       const c = [face(u0, 0.2), face(u1, 0.2), face(u1, 0.85), face(u0, 0.85)];
-      desk.add(
-        dressing ? screenQuad(c, n, insetScreen) : inset(c, n, insetScreen),
-      );
+      // In the game the station schematics' screens go there instead
+      // (`deskScreenPlaces`, mounted by the bridge room).
+      if (!game)
+        desk.add(
+          dressing ? screenQuad(c, n, insetScreen) : inset(c, n, insetScreen),
+        );
       // A blank control panel in the top below it.
       const tp = (u: number, v: number): [Point, number] => {
         const outer = at(U0, U1, u);
@@ -1499,6 +1504,26 @@ export function createControlRoomPrototype(
       }
       // Its chair.
       const f = { x: Math.sin(st.yaw), z: -Math.cos(st.yaw) };
+      // In the game, the stalk of its upper screen at its top's far edge
+      // (the screen itself the bridge room's, `stationScreenPlaces`).
+      if (game) {
+        const mid = lerp(c2, d, 0.5);
+        const side = { x: Math.cos(st.yaw), z: Math.sin(st.yaw) };
+        const at = (s1: number, s2: number): Point => ({
+          x: mid.x + side.x * s1 * 0.08 + f.x * (s2 * 0.025 + 0.04),
+          z: mid.z + side.z * s1 * 0.08 + f.z * (s2 * 0.025 + 0.04),
+        });
+        const y1 = STOREY + STATION.high - 0.02;
+        const y2 = STOREY + STATION.high + STATION_SCREEN.stalk + 0.06;
+        g.add(
+          hexa(
+            [at(-1, -1), at(1, -1), at(1, 1), at(-1, 1)],
+            [y1, y1, y1, y1],
+            [y2, y2, y2, y2],
+            black,
+          ),
+        );
+      }
       g.add(
         chair(
           paint('#6f6458', 0.8, 0),
