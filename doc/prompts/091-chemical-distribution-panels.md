@@ -1,6 +1,6 @@
 # 091: WH-CP1 replaced by two modern chemical distribution panels
 
-Status: designed 2026-10-27, with the owner's answers; not started. The second mission after [089](089-layout-improvements.md).
+Status: designed 2026-10-27, with the owner's answers (terminals and a control box agreed the same day); not started. The second mission after [089](089-layout-improvements.md).
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply: real, working, branded engineering items bound to the world; new controls tried on dev0's boards and control assemblies in dev39 first; all input through `src/toolkit/controls/`; pure logic in `logic/` folders with tests; a world shape change bumps `WORLD_VERSION` (45 when this was written) with a migration. Markdown is one paragraph per line.
 
@@ -15,6 +15,12 @@ Owner's answers (2026-10-27):
 - **Litres only on the new panels**: the old panel's meters are not re-scaled; they go when it is replaced.
 - **Wet hall only**: the panels replace WH-CP1 in the wet hall; the control room keeps what it shows now. Setting levels and commanding fills means going to the wet hall.
 
+The owner, 2026-10-27, on how it is built: "a lightweight plastic control panel which is just the user interface. It will link to a control box, elsewhere in the room, which contains the main electronics." And the answers that followed:
+
+- **One control box for both chemicals**, a single point of failure: its supply lost, both lines stop.
+- **The box decides in AUTO**: each transfer selector in AUTO opens the outlet the box tells it; HAND on the selector still overrides locally, so a line can be filled by hand with the box dead (a remote/local arrangement).
+- **At the box**, the player can switch it off and on at its door isolator (a restart that clears a hung controller), open its door to read its controller's RUN, STOP and FAULT and I/O LEDs live, and reset its MCB if it trips. No keypad inside: the terminals are the only way to read and set it.
+
 ## What there is now (checked 2026-10-27)
 
 - WH-CP1 is `createDistributionPanel` (`src/toolkit/components/plant/views/chemical-handling-kit.ts`), Penfold Controls', the `chem-panel` node of `transferSelectors()` (`src/game/plant/schematic-parts.ts`), placed on the wet hall's south wall (`CHEM_AT.wet_hall`, `room-equipment.ts`), 1.6 × 1.1 m, bound by `chemicalModel` (`src/toolkit/gallery/views/chemical-distribution-views.ts`, `readDistribution`). A section per chemical: the store's contents and four day tanks' levels on moving-coil meters as a share of full, an outlet lamp lit while served, the selector's AUTO and HAND, the pump's RUN, IN AUTO and TRIP; an annunciator across the top (a day tank low, a line tripped, a store low) with ACCEPT, RESET and LAMP TEST. It only shows.
@@ -23,16 +29,55 @@ Owner's answers (2026-10-27):
 
 ## Design
 
-Two panels side by side where WH-CP1 is, one for hypochlorite (yellow band) and one for acid (red band), identical but for their chemical. Each a modern wall-mounted controller in a small IP65 enclosure (late 2010s, after a Danfoss MCX or a Siemens LOGO! with its TDE text display), Penfold Controls' with its mark; a 16 × 2 character LCD, backlit; the keys MODE, BACK, SELECT and a four-way D-pad; RUN, CALL and ALARM LEDs; its tag (WH-CP1 hypochlorite, WH-CP2 acid, derived from the model, not written by hand).
+**Two terminals** side by side where WH-CP1 is, one for hypochlorite (yellow band) and one for acid (red band), identical but for their chemical: Penfold Controls' operator terminal of the 1990s to early 2000s (the owner, 2026-10-27; after the Siemens OP3/OP7, the Allen-Bradley DTAM Micro and the Mitsubishi FX-10DU), a light grey moulded case about 200 × 140 × 50 mm screwed to the wall at eye height, Penfold's mark; a 16 × 2 character STN LCD, yellow-green with an LED backlight; a membrane keypad with tactile domes and printed legends: F1 MON, F2 SET, F3 CMD (one key per mode), ESC, ENTER and four separate cursor keys ▲ ◀ ▼ ▶ in an inverted T, as on a PC keyboard of the time (no D-pad: a later, video-game idea, the owner); RUN, CALL and ALARM LEDs; one cable gland underneath, its cable in conduit to the box. No logic in it: it shows what the box sends and sends back its keys. With the box unpowered it is blank; with its link broken it shows `NO COMMS`. Its tag derived from the model, not written by hand (the two terminals and the box each a node).
 
-The menu, the same on both (pure logic, a state machine in a `logic/` file, with tests):
+**The control box** on the wall near the transfer selectors, on the dirty side: a steel enclosure about 600 × 400 × 200 mm, Penfold Controls', its door isolator on the front; inside on DIN rail an MCB, a 24 V power supply, the controller (a small PLC, after a Siemens LOGO! 8 or S7-1200) with its RUN, STOP and FAULT LEDs and an LED for every input and output, a comms module for the terminals, interposing relays for the selectors' outlets and the transfer pumps' remote run, and terminals for the day tanks' level signals; a wiring diagram in the door's pocket. It holds what matters: each tank's low and high levels and its inhibit and fill-now (kept through a power cut, in the world), and the serving logic (which tank in turn). Its door opens; its LEDs are live; its isolator and MCB work.
 
-- **MODE** cycles MONITOR → SET → COMMAND → MONITOR; the top line shows the mode at its right.
-- **LEFT / RIGHT** step through the line's items: STORE, PL1, PL2, PL3, PL4 (wrapping). In MONITOR the screen shows the item: e.g. `PL1 LOUNGE  MON` / `142 L/300 CALL` (its litres, its size, and CALL, FILL, INHIB or OK); the store as `STORE HYPO   MON` / `8420 L  PUMP RUN`.
-- **SELECT** enters the item's menu in the current mode; **BACK** cancels an edit or steps up a level.
-- **SET mode**, a day tank: UP / DOWN choose LOW LEVEL or HIGH LEVEL, SELECT edits it, UP / DOWN change it in litres (steps of 1, 5 or 10 L by tank size), SELECT stores it, BACK abandons. Limits: low at least 10% of the tank, high at most 95% (below the fixed high-high trip at 98%, which stays a safety and is not settable), and high at least 10% above low; the store has nothing settable.
-- **COMMAND mode**, a day tank: UP / DOWN choose FILL NOW, STOP (inhibit) or RESUME (back in service), SELECT asks `CONFIRM? SEL/BCK`, SELECT again does it. FILL NOW makes the tank call at once (filled to its high level in its turn, AUTO); STOP inhibits it (not served, a fill in progress ended, INHIB shown) until RESUME. The store: nothing commanded here (the pump's selector and reset stay at the store).
-- Alarms: a tank at high-high, the line tripped or a store low lights ALARM and shows on the bottom line in MONITOR until accepted (SELECT on the alarm), as the annunciator does now; the trip RESET stays at the store.
+**In the model**: the schematic gains the two terminals and the box: data links terminal to box, control links box to both selectors and both transfer pumps (remote run), signal links from the eight day tanks' level heads to the box, and power from the wet hall's board to the box. The selectors in AUTO follow the box; in HAND they follow their own pick, box or no box. The pumps' HAND · OFF · AUTO and the trip resets stay at the stores (local). Faults the arrangement gives: the box unpowered (both terminals blank, AUTO filling stops on both lines, HAND still works), its MCB tripped (likewise, the cause found inside), a terminal's link broken (that terminal `NO COMMS`, the other carries on).
+
+### The interface (the owner, 2026-10-27)
+
+Defined for these two terminals only (the owner: "really just this"); the older Penfold panels are not retrofitted. The same on both, one per chemical. Pure logic, a state machine in a `logic/` file, with tests of every key in every state.
+
+**Items.** HYPO LINE (or ACID LINE), the line's summary; STORE; PL1 LOUNGE; PL2 OLYMPIC; PL3 JACUZZI; PL4 FOOTBATH.
+
+**Screen.** 16 × 2 characters. The top line names what is shown, its mode in the last three characters (MON, SET, CMD). The bottom line its value and state. A `>` in column 1 marks the line ▲ ▼ act on; a blinking block cursor marks a figure being edited. Quantities in litres, never per cent.
+
+**Keys**, the same meaning everywhere:
+
+- **F1 MON, F2 SET, F3 CMD** go straight to that mode, abandoning any edit.
+- **◀ ▶** step through the items, wrapping, whenever not inside an item's menu.
+- **▲ ▼** step through an item's lines, or change a figure being edited; held, they repeat, faster after 2 s.
+- **ENTER** goes into the item, starts an edit, stores it, or confirms.
+- **ESC** cancels an edit or goes up a level; at the top it does nothing.
+
+**F1 MON, monitor: read only, focused on what is active.**
+
+- Home is what is active (the owner): while a fill runs, the tank being filled and the pump (`PL1 LOUNGE  MON` / `FILL 142L/300L`); when nothing is active, the line's summary (`HYPO LINE    MON` / `STORE 8420L   OK`, or `NEXT PL3    CALL` when a tank is calling and waiting its turn). When a fill starts or ends while MON is on its home, the screen follows it.
+- ◀ ▶ page through every item, active or not: a tank as `PL4 FOOTBATH MON` / `22L/30L  OK` (its state OK, CALL, FILL or INHIB); the store as `STORE HYPO   MON` / `8420L  PUMP RUN` (RUN, STOP or TRIP).
+- ENTER on a tank shows its detail, ▲ ▼ scrolling: low level, high level, last filled, outlet open or shut; ESC back.
+- Alarms: a tank at high-high, the line tripped, or the store low flash ALARM and break into the bottom line in turn (`ALM PL2 HI-HI`); ENTER in MON acknowledges, the lamp then steady until the cause clears. The trip RESET stays at the store.
+
+**F2 SET, settings: each tank's levels.** Needs the access key switch at ON (otherwise `ACCESS LOCKED`).
+
+- ◀ ▶ choose the tank, ENTER opens it; ▲ ▼ choose LOW LEVEL or HIGH LEVEL; ENTER edits it; ▲ ▼ change it in litres (steps of 1, 5 or 10 L by the tank's size); ENTER stores it (a beep; kept through a power cut, by the box); ESC abandons.
+- Limits: low at least 10% of the tank, high at most 95% (below the fixed high-high trip at 98%, which is a safety and not settable), high at least 10% above low; at a limit, `LIMIT` for a second.
+- Nothing is applied while it is being changed. The summary and the store: `NO SETTINGS`.
+
+**F3 CMD, commands.** Needs the access key switch at ON.
+
+- ◀ ▶ choose the tank, ENTER opens it; ▲ ▼ choose FILL NOW (call at once, filled to its high level in its turn), STOP (inhibit: never filled, even below low, a fill in progress ended, INHIB shown) or RESUME (back in service); ENTER asks `CONFIRM? ENT/ESC`; ENTER does it, ESC does not.
+- The summary and the store: `NO COMMANDS` (the pump's HAND · OFF · AUTO and its reset are at the store, local).
+
+**Access.** A small key switch on each terminal, LOCAL ACCESS OFF · ON (the owner: a key switch, a period favourite): at OFF, SET and CMD show `ACCESS LOCKED`, MON works as ever.
+
+**Timeout.** No key for 60 s: any edit abandoned, back to MON's home (what is active), the backlight dimmed until the next key.
+
+**Lamps.** RUN: steady healthy, flashing starting up, out with no comms. CALL: lit while any of the line's tanks calls or fills. ALARM: flashing unacknowledged, steady acknowledged and still present.
+
+**Power-up and comms.** On power-up `PENFOLD OT-216` / `V2.04 SELF TEST`, then MON's home. With its link to the box broken, `NO COMMS` on the bottom line, RUN out, keys dead.
+
+**Logged.** Every stored setting and every command goes in the world's log with the terminal's tag.
 
 The model changes (`chemical-distribution.ts`, `world.ts`): each day tank gains its own low and high setpoints in litres (defaulting to today's 20% and 90%) and an inhibited flag; the calling rule uses the setpoints; an inhibited tank never calls and is not served; FILL NOW sets its call. A `WORLD_VERSION` bump with a migration that fills the defaults. Actions in the world's reducer for setting a level, inhibiting, resuming and filling now; every one logged.
 
@@ -40,7 +85,7 @@ The model changes (`chemical-distribution.ts`, `world.ts`): each day tank gains 
 
 1. The menu logic, pure, and its tests (every key in every state, limits, wrapping, confirm and cancel).
 2. The model's setpoints, inhibit and fill-now, the world version and migration, and tests (a tank calls at its own low, stops at its own high, an inhibited tank is never served, FILL NOW fills it to high, high-high still trips).
-3. The panel, tried on dev0's boards (its LCD and keys) and assembled in dev39, then on the wet hall's south wall in place of WH-CP1, with the schematic's `chem-panel` node split into two (one per chemical), their tags derived; inspection shows each panel's state.
+3. **A prototype in the dev room first** (the owner, 2026-10-27): both terminals and the control box built in dev44, chemical handling (`src/toolkit/gallery/rooms/plant/chemical-handling.ts`), beside today's WH-CP1 demo (`createDistributionPanelDemo`), driven by the same trial of two distribution lines ten times fast, so old and new are compared side by side and every menu, command, fault (box off, MCB tripped, a terminal's link broken) can be tried there; the owner looks at it and agrees it before anything goes into the wet hall. Then both in the wet hall, the terminals in place of WH-CP1 and the box by the selectors, the schematic's `chem-panel` node replaced by the two terminals and the box with their links, their tags derived; inspection shows each one's state (the box's RUN, FAULT, OFF or TRIPPED; a terminal's comms).
 4. The old `createDistributionPanel` retired (its demo too, or kept in a gallery as the old design if the owner wants).
 
 ## Checks
