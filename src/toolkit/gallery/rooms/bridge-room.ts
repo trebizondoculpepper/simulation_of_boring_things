@@ -1,4 +1,6 @@
-import { Group } from 'three';
+import { Group, Object3D } from 'three';
+import { partAudio } from '../../components/core/audio/part-audio';
+import { createChatter } from '../../components/sound/logic/console-chatter';
 import { startBridgeRoom } from './control-room-prototype';
 import type { Part } from '../../components/core/parts/parts';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -216,10 +218,12 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
     const w = world();
     return w ? bridgeMainLit(w) : true;
   });
+  const chatter = installChatter();
   const handle = startBridgeRoom(canvas, (kit) => [
     ...installConsoles(kit),
     installLightSwitch(kit),
     lightsUp,
+    chatter,
   ]);
   // Its hum (`components/sound/audio/bridge-ambience.ts`): heard only
   // with the walker inside, rising with its lights; the room's equipment,
@@ -232,6 +236,7 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   return Object.assign(dispose, handle, {
     enter: (from: string | null) => {
       lightsUp.enter(from);
+      chatter.setActive(true);
       ambience.setPresence(
         { inside: true },
         { after: LIGHTS_UP.dark, rise: lightsUpTotal() - LIGHTS_UP.dark },
@@ -239,6 +244,7 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
     },
     suspend: () => {
       lightsUp.leave();
+      chatter.setActive(false);
       ambience.setPresence({ inside: false });
     },
   });
@@ -315,5 +321,37 @@ function installLightSwitch(kit: PanelKit): Part {
     onEvent: part.onEvent,
     setAudible: part.setAudible,
     dispose: () => part.dispose(),
+  };
+}
+
+/**
+ * The consoles chattering (the owner, 2026-10-27): every so often (a
+ * normal spread of gaps, mean 25 s, deviation 10 s, `console-chatter.ts`)
+ * one of the stations round the room, forward or aft, bleeps or bloops a
+ * chirp made up afresh, heard from where it stands. Only with the walker
+ * on the bridge. Set decoration: it tells of nothing.
+ */
+function installChatter() {
+  const object = new Group();
+  object.name = 'Console chatter';
+  const emitters = stationScreenPlaces().map((p) => {
+    const at = new Object3D();
+    at.position.set(p.x, p.y, p.z);
+    object.add(at);
+    return at;
+  });
+  const clock = createChatter(emitters.length, Math.random);
+  markComponent(object, { name: 'Console chatter', decorative: true });
+  return {
+    object,
+    uses: new Map<Object3D, () => void>(),
+    setActive: (on: boolean) => clock.setActive(on),
+    update(delta: number) {
+      const due = clock.step(delta);
+      if (due) partAudio.play({ tones: due.chirp }, emitters[due.console]);
+    },
+    onEvent: () => () => {},
+    setAudible: () => {},
+    dispose: () => {},
   };
 }
