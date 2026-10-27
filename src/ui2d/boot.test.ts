@@ -353,4 +353,29 @@ describe('a display’s boot (the owner, 2026-10-27)', () => {
     expect(told).toBe(2);
     expect(screen.operational).toBe(true);
   });
+
+  it('boots a screen marked lastAfter that long after the latest of the others has begun', () => {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const group = new BootGroup(seeded(seed));
+      const others = Array.from({ length: 10 }, (_, i) =>
+        group.add(new BootScreen(new Label(`${i}`))),
+      );
+      const main = group.add(
+        new BootScreen(new Label('main'), { lastAfter: 2 }),
+      );
+      group.setPower(false);
+      const ready = group.setPower(true, SPEC);
+      // When each begins its emblem: ticked finely from the power's rise.
+      const began = new Map<BootScreen, number>();
+      const all = [...others, main];
+      for (let t = 0; t <= ready + 0.1; t += 0.01)
+        for (const s of all) {
+          s.tick(t);
+          if (!began.has(s) && s.phase === 'emblem') began.set(s, t);
+        }
+      const latest = Math.max(...others.map((s) => began.get(s)!));
+      expect(began.get(main)!).toBeCloseTo(latest + 2, 1);
+      for (const s of all) expect(s.operational).toBe(true);
+    }
+  });
 });

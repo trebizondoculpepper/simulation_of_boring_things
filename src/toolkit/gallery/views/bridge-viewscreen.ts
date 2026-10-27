@@ -49,7 +49,14 @@ export function createViewscreen(
     // Coarse for its size: it is seen from across the room (fine enough
     // for its browser's list to be read).
     screens: [
-      { rect: { x: 0, y: 0, ...size }, tree: pages, pixelsPerMetre: 150 },
+      {
+        rect: { x: 0, y: 0, ...size },
+        tree: pages,
+        pixelsPerMetre: 150,
+        // Its boot begins 2 s after the last of the room's other displays'
+        // (the owner, 2026-10-27), so it is usually the last up.
+        boot: { lastAfter: 2 },
+      },
     ],
   });
   const parts = createPartSet();

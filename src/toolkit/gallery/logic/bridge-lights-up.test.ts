@@ -4,14 +4,20 @@ import {
   ENTRANCE_BOOT,
   ENTRANCE_GLOW,
   LIGHTS_UP,
-  LIGHT_STAGES,
+  NOMINAL_SWEEP_COUNT,
+  SWEEP,
+  clockwiseAngle,
+  fillLevel,
+  nominalSpan,
+  sweepLevel,
+  sweepSpan,
+  sweepStarts,
   THEME_AT,
   entranceBootMean,
   entranceGlow,
   entranceKind,
   entranceLightsAt,
   firstViewGlow,
-  lightsUpLevels,
   lightsUpTotal,
   playsEntrance,
   DISPLAYS_ON_AT,
@@ -20,7 +26,7 @@ import {
   revealWaiting,
   stepReveal,
 } from './bridge-lights-up';
-import type { Entrance } from './bridge-lights-up';
+import type { Entrance, SweepItem } from './bridge-lights-up';
 
 /** A seeded source of uniform numbers in [0, 1) (mulberry32). */
 function seeded(seed: number) {
@@ -65,43 +71,110 @@ function firstViewUp(n: number, seed: number) {
   return { ...view, ...view.powerUp() };
 }
 
+/** A room's lights for the tests: `NOMINAL_SWEEP_COUNT` round it, evenly, and two of the dome's. */
+const ROOM: SweepItem[] = [
+  ...Array.from({ length: NOMINAL_SWEEP_COUNT }, (_, k) => ({
+    angle: ((k + 0.5) / NOMINAL_SWEEP_COUNT) * 2 * Math.PI,
+    dome: false,
+  })),
+  { angle: 1, dome: true },
+  { angle: 4, dome: true },
+];
+const STARTS = sweepStarts(ROOM);
+/** Every light's level, and the fill's, `t` seconds in, the main lights beginning at `at`. */
+const room = (t: number, at: number) => {
+  const items = STARTS.map((s) => sweepLevel(t, at, s));
+  return { items, fill: fillLevel(items) };
+};
+const domeOf = (items: number[]) => items.filter((_, i) => ROOM[i].dome);
+const othersOf = (items: number[]) => items.filter((_, i) => !ROOM[i].dome);
+
 describe('the bridge’s lights coming up (the owner, 2026-10-27)', () => {
+  it('measures angles clockwise seen from above, from the front (−z)', () => {
+    expect(clockwiseAngle(0, -1, 0, 0)).toBeCloseTo(0);
+    expect(clockwiseAngle(1, 0, 0, 0)).toBeCloseTo(Math.PI / 2);
+    expect(clockwiseAngle(0, 1, 0, 0)).toBeCloseTo(Math.PI);
+    expect(clockwiseAngle(-1, 0, 0, 0)).toBeCloseTo((3 * Math.PI) / 2);
+    expect(clockwiseAngle(5, 3, 5, 4)).toBeCloseTo(0);
+  });
+
+  it('starts each light 0.2 s after the one before it, clockwise, and the dome 5 s after the last of them has started', () => {
+    expect(SWEEP.step).toBe(0.2);
+    expect(SWEEP.domeAfter).toBe(5);
+    const items: SweepItem[] = [
+      { angle: 3, dome: false },
+      { angle: 0.5, dome: false },
+      { angle: 2, dome: true },
+      { angle: 6, dome: false },
+      { angle: 1.5, dome: false },
+    ];
+    const starts = sweepStarts(items);
+    expect(starts[1]).toBeCloseTo(0);
+    expect(starts[4]).toBeCloseTo(0.2);
+    expect(starts[0]).toBeCloseTo(0.4);
+    expect(starts[3]).toBeCloseTo(0.6);
+    expect(starts[2]).toBeCloseTo(0.6 + 5);
+    expect(sweepSpan(starts)).toBeCloseTo(5.6);
+    // The nominal room's span as `nominalSpan` says.
+    expect(sweepSpan(STARTS)).toBeCloseTo(nominalSpan());
+  });
+
   it('is dark until the main lights begin, only a trace of fill left', () => {
     for (const at of [2, 14])
       for (const t of [0, 1, at - 0.01]) {
-        const l = lightsUpLevels(t, at);
-        for (const s of LIGHT_STAGES) expect(l[s], `${s} at ${t}`).toBe(0);
+        const l = room(t, at);
+        for (const v of l.items) expect(v).toBe(0);
         expect(l.fill).toBeCloseTo(LIGHTS_UP.floor);
       }
   });
 
-  it('brings the cove rings up first, then the dome, the walls and the aft strip', () => {
-    const l = lightsUpLevels(5 + 1.0, 5);
-    expect(l.rings).toBeGreaterThan(l.dome);
-    expect(l.dome).toBeGreaterThan(l.walls);
-    expect(l.walls).toBeGreaterThanOrEqual(l.aft);
+  it('comes on round the room, the dome dark until the rest are all on their way', () => {
+    const at = 5;
+    const lastOther = (NOMINAL_SWEEP_COUNT - 1) * SWEEP.step;
+    // Partway round: the first lit, the last not yet.
+    const mid = room(at + lastOther / 2, at).items;
+    const others = othersOf(mid);
+    expect(others[0]).toBeGreaterThan(0);
+    expect(others.at(-1)).toBe(0);
+    for (let k = 1; k < others.length; k++)
+      expect(others[k]).toBeLessThanOrEqual(others[k - 1]);
+    // The dome dark until 5 s after the last of the others started.
+    for (const t of [at + lastOther, at + lastOther + SWEEP.domeAfter - 0.01])
+      for (const d of domeOf(room(t, at).items)) expect(d).toBe(0);
+    for (const d of domeOf(
+      room(at + lastOther + SWEEP.domeAfter + 1, at).items,
+    ))
+      expect(d).toBeGreaterThan(0);
   });
 
-  it('reaches full light 3 to 4 s after the main lights begin, and stays there', () => {
-    const rise = lightsUpTotal(0);
-    expect(rise).toBeGreaterThanOrEqual(3);
-    expect(rise).toBeLessThanOrEqual(4);
-    expect(lightsUpTotal(7)).toBeCloseTo(7 + rise);
+  it('comes on in exactly the same order on a later visit as on the first, only from another time', () => {
+    const first = 17.3;
+    const again = entranceLightsAt('again', 0);
+    for (let dt = 0; dt < nominalSpan() + 3; dt += 0.1) {
+      const a = room(again + dt, again).items;
+      const b = room(first + dt, first).items;
+      a.forEach((v, i) => expect(v).toBeCloseTo(b[i], 9));
+    }
+  });
+
+  it('reaches full light at lightsUpTotal, and stays there', () => {
+    expect(lightsUpTotal(7)).toBeCloseTo(7 + nominalSpan() + LIGHTS_UP.rise);
     for (const t of [lightsUpTotal(7), lightsUpTotal(7) + 60]) {
-      const l = lightsUpLevels(t, 7);
-      for (const s of LIGHT_STAGES) expect(l[s]).toBe(1);
+      const l = room(t, 7);
+      for (const v of l.items) expect(v).toBe(1);
       expect(l.fill).toBe(1);
     }
   });
 
   it('rises without a step', () => {
-    let prev = lightsUpLevels(0, 2);
+    let prev = room(0, 2);
     for (let t = 0.05; t < lightsUpTotal(2) + 0.5; t += 0.05) {
-      const l = lightsUpLevels(t, 2);
-      for (const s of [...LIGHT_STAGES, 'fill'] as const) {
-        expect(l[s]).toBeGreaterThanOrEqual(prev[s]);
-        expect(l[s] - prev[s]).toBeLessThan(0.1);
-      }
+      const l = room(t, 2);
+      l.items.forEach((v, i) => {
+        expect(v).toBeGreaterThanOrEqual(prev.items[i]);
+        expect(v - prev.items[i]).toBeLessThan(0.1);
+      });
+      expect(l.fill - prev.fill).toBeLessThan(0.1);
       prev = l;
     }
   });
@@ -193,10 +266,8 @@ describe('the first view (the owner, 2026-10-27, doc/notes/bridge_reveal.md)', (
       // `lightsAt`.
       for (const s of screens) s.tick(ready + 1e-6);
       for (const s of screens) expect(s.operational).toBe(true);
-      for (const s of LIGHT_STAGES)
-        expect(
-          lightsUpLevels(entrance.lightsAt - 0.01, entrance.lightsAt)[s],
-        ).toBe(0);
+      for (const v of room(entrance.lightsAt - 0.01, entrance.lightsAt).items)
+        expect(v).toBe(0);
       // The glow back well before the lights; faded only after they are full.
       expect(entranceGlow(7, entrance)).toBe(1);
       expect(entranceGlow(lightsUpTotal(entrance.lightsAt), entrance)).toBe(1);
@@ -241,11 +312,9 @@ describe('later visits, and other ways in (the owner, 2026-10-27)', () => {
     expect(entrance.lightsAt).toBe(2);
     for (let t = 0; t <= lightsUpTotal(2); t += 0.25)
       expect(entranceGlow(t, entrance), `at ${t}`).toBe(1);
-    for (const s of LIGHT_STAGES) {
-      expect(lightsUpLevels(1.99, 2)[s]).toBe(0);
-      expect(lightsUpLevels(lightsUpTotal(2), 2)[s]).toBe(1);
-    }
-    expect(lightsUpLevels(2.5, 2).rings).toBeGreaterThan(0);
+    for (const v of room(1.99, 2).items) expect(v).toBe(0);
+    for (const v of room(lightsUpTotal(2), 2).items) expect(v).toBe(1);
+    expect(othersOf(room(2.5, 2).items)[0]).toBeGreaterThan(0);
     expect(entranceGlow(lightsUpTotal(2) + ENTRANCE_GLOW.fade, entrance)).toBe(
       0,
     );

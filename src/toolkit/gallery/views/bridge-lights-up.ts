@@ -1,12 +1,16 @@
-import { Group, Light, Mesh } from 'three';
+import { Group, Light, Mesh, Vector3 } from 'three';
 import type { Material, Object3D } from 'three';
 import type { Part } from '../../components/core/parts/parts';
 import {
   LIGHTS_UP,
+  clockwiseAngle,
   entranceGlow,
-  lightsUpLevels,
+  fillLevel,
   lightsUpTotal,
   playsEntrance,
+  sweepLevel,
+  sweepSpan,
+  sweepStarts,
 } from '../logic/bridge-lights-up';
 import type { Entrance, LightStage } from '../logic/bridge-lights-up';
 
@@ -65,8 +69,20 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
   const object = new Group();
   object.name = 'Bridge lights coming up (presentation)';
   const openedHere = pageOpenedOnBridge();
-  type Levels = Record<LightStage | 'fill', number>;
-  const dark = lightsUpLevels(0);
+  // Each light and lit material of a stage (an item of the sweep), its
+  // start after the main lights begin (`sweepStarts`: clockwise, the dome
+  // last); the fill following their mean.
+  type Levels = { items: number[]; fill: number };
+  let starts: number[] = [];
+  let span = 0;
+  const levelsAt = (t: number, at: number): Levels => {
+    const items = starts.map((s) => sweepLevel(t, at, s));
+    return { items, fill: fillLevel(items) };
+  };
+  const darkLevels = (): Levels => ({
+    items: starts.map(() => 0),
+    fill: LIGHTS_UP.floor,
+  });
   // The walker in the room: from the page opened here, or once entered.
   let present = openedHere;
   // Rising (`t` seconds into the sequence, its main lights beginning at
@@ -75,7 +91,7 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
   let at = 0;
   let falling: { from: Levels; f: number } | null = null;
   let out = !openedHere;
-  let current: Levels = openedHere ? lightsUpLevels(Infinity) : dark;
+  let current: Levels = { items: [], fill: openedHere ? 1 : LIGHTS_UP.floor };
   let first = true;
   // The entrance under way, if any, its glow its own; and the entrance's
   // own clock, seconds since the walker came in, which runs whether or
@@ -84,14 +100,18 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
   // A first view held until the corridor doors shut behind the walker.
   let held = false;
   let since = Infinity;
-  let lights: { light: Light; stage: LightStage | 'fill' }[] | null = null;
-  let glows: { m: Glow; stage: LightStage }[] = [];
+  let lights: { light: Light; item: number | null }[] | null = null;
+  let glows: { m: Glow; item: number }[] = [];
   const collect = () => {
     let root: Object3D = object;
     while (root.parent) root = root.parent;
     if (root === object) return;
-    const found: { light: Light; stage: LightStage | 'fill' }[] = [];
-    const mats = new Map<Glow, LightStage>();
+    root.updateMatrixWorld(true);
+    const found: { light: Light; item: number | null }[] = [];
+    // Each item: its stage and where it is (summed, to average).
+    const items: { stage: LightStage; x: number; z: number; n: number }[] = [];
+    const mats = new Map<Glow, number>();
+    const p = new Vector3();
     root.traverse((o) => {
       if (o instanceof Light) {
         if (
@@ -100,22 +120,51 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
           o.userData.ownSwitching
         )
           return;
-        found.push({
-          light: o,
-          stage: (o.userData.bridgeLightStage as LightStage) ?? 'fill',
-        });
+        const stage = o.userData.bridgeLightStage as LightStage | undefined;
+        if (!stage) {
+          found.push({ light: o, item: null });
+          return;
+        }
+        o.getWorldPosition(p);
+        items.push({ stage, x: p.x, z: p.z, n: 1 });
+        found.push({ light: o, item: items.length - 1 });
       } else if (o instanceof Mesh) {
         const ms = (
           Array.isArray(o.material) ? o.material : [o.material]
         ) as Material[];
         for (const m of ms) {
           const stage = m.userData.bridgeLightStage as LightStage | undefined;
-          if (stage && 'emissiveIntensity' in m) mats.set(m as Glow, stage);
+          if (!stage || !('emissiveIntensity' in m)) continue;
+          o.getWorldPosition(p);
+          let k = mats.get(m as Glow);
+          if (k === undefined) {
+            items.push({ stage, x: 0, z: 0, n: 0 });
+            k = items.length - 1;
+            mats.set(m as Glow, k);
+          }
+          items[k].x += p.x;
+          items[k].z += p.z;
+          items[k].n += 1;
         }
       }
     });
+    // Round the room's middle: the dome's, else all of them.
+    const domes = items.filter((it) => it.stage === 'dome');
+    const about = domes.length ? domes : items;
+    const n = about.reduce((a, it) => a + it.n, 0) || 1;
+    const cx = about.reduce((a, it) => a + it.x, 0) / n;
+    const cz = about.reduce((a, it) => a + it.z, 0) / n;
+    starts = sweepStarts(
+      items.map((it) => ({
+        angle: clockwiseAngle(it.x / (it.n || 1), it.z / (it.n || 1), cx, cz),
+        dome: it.stage === 'dome',
+      })),
+    );
+    span = sweepSpan(starts);
+    if (entrance) entrance.span = span;
     lights = found;
-    glows = [...mats].map(([m, stage]) => ({ m, stage }));
+    glows = [...mats].map(([m, item]) => ({ m, item }));
+    current = out ? darkLevels() : levelsAt(t, at);
   };
   const rise = (from: number, start = 0) => {
     falling = null;
@@ -142,6 +191,7 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
       held = arrival === 'held';
       const next = held ? null : (arrival as Entrance | null);
       entrance = next;
+      if (next && lights) next.span = span;
       since = next ? 0 : Infinity;
       if (held || !mainLit()) {
         // Held, or found with MAIN LIGHTS off: dark but for the glow, until the
@@ -149,13 +199,14 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
         // first view, `AUTO_LIGHTS_ON_MS`).
         falling = null;
         out = true;
-        current = dark;
+        current = darkLevels();
       } else if (next) rise(0, next.lightsAt);
       else rise(Infinity);
     },
     begin(next) {
       held = false;
       entrance = next;
+      if (lights) next.span = span;
       since = 0;
       if (mainLit()) rise(0, next.lightsAt);
     },
@@ -176,7 +227,7 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
       entrance = null;
       falling = null;
       out = true;
-      current = dark;
+      current = darkLevels();
     },
     // Waiting under its emergency lights alone, seen from the corridor
     // (the owner, 2026-10-27); in an entrance, its own curve until the
@@ -194,7 +245,7 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
       // Opened here with MAIN LIGHTS off: dark from the first frame.
       if (first && !on) {
         out = true;
-        current = dark;
+        current = darkLevels();
       }
       first = false;
       since += delta;
@@ -207,28 +258,27 @@ export function createBridgeLightsUp(mainLit: () => boolean): Part & {
         falling.f = Math.max(0, falling.f - delta / LIGHTS_UP.out);
         const { from, f } = falling;
         current = {
-          rings: from.rings * f,
-          dome: from.dome * f,
-          walls: from.walls * f,
-          aft: from.aft * f,
-          fill: dark.fill + (from.fill - dark.fill) * f,
+          items: from.items.map((l) => l * f),
+          fill: LIGHTS_UP.floor + (from.fill - LIGHTS_UP.floor) * f,
         };
         if (f === 0) {
           falling = null;
           out = true;
         }
-      } else if (out) current = dark;
+      } else if (out) current = darkLevels();
       else {
         t += delta;
-        current = lightsUpLevels(t, at);
-        if (t >= lightsUpTotal(at)) {
+        current = levelsAt(t, at);
+        if (t >= lightsUpTotal(at, span)) {
           if (entrance && entranceGlow(since, entrance) === 0) entrance = null;
           return;
         }
       }
       // After the lighting way has set them this frame: scaled.
-      for (const { light, stage } of lights) light.intensity *= current[stage];
-      for (const { m, stage } of glows) m.emissiveIntensity *= current[stage];
+      for (const { light, item } of lights)
+        light.intensity *= item === null ? current.fill : current.items[item];
+      for (const { m, item } of glows)
+        m.emissiveIntensity *= current.items[item];
     },
   };
 }

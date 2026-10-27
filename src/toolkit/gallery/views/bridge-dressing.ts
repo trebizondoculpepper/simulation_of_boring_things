@@ -17,6 +17,7 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { cornerFillets } from '../logic/control-room-prototype';
 import type { Point } from '../logic/control-room-prototype';
 import type { LightStage } from '../logic/bridge-lights-up';
+import { SWEEP } from '../logic/bridge-lights-up';
 
 /**
  * The bridge's dressing (mission 095; the owner, 2026-10-27: "light the
@@ -193,6 +194,12 @@ export function bridgeMaterials(kit: PanelKit) {
       'dome',
     ),
     beige: keep(new MeshStandardMaterial({ color: '#d6c6a8', roughness: 0.8 })),
+    /**
+     * A fitting's own copy of a stage's material, so it can come on in its
+     * turn (the owner, 2026-10-27: the main lights clockwise, one after
+     * another; `SWEEP`).
+     */
+    own: <M extends Material>(m: M) => keep(m.clone() as M),
   };
 }
 export type BridgeMaterials = ReturnType<typeof bridgeMaterials>;
@@ -234,12 +241,34 @@ export function bridgeCeiling(
   dome.scale.set(rx, 0.9, rz);
   dome.position.set(c.x, top + 1.1, c.z);
   g.add(dome);
+  // A cove ring in `SWEEP.segments` arcs, each its own fitting, so they
+  // come on in turn round the room.
+  const coveRing = (
+    tube: number,
+    tubular: number,
+    sx: number,
+    sz: number,
+    y: number,
+  ) => {
+    const n = SWEEP.segments;
+    for (let k = 0; k < n; k++) {
+      const geometry = new TorusGeometry(
+        1,
+        tube,
+        8,
+        Math.ceil(tubular / n),
+        (Math.PI * 2) / n,
+      );
+      geometry.rotateZ((k / n) * Math.PI * 2);
+      const arc = new Mesh(geometry, m.own(m.cove));
+      arc.rotation.x = Math.PI / 2;
+      arc.scale.set(sx, sz, 1);
+      arc.position.set(c.x, y, c.z);
+      g.add(arc);
+    }
+  };
   // Its rim, a ring hiding the cove that washes it.
-  const rim = new Mesh(new TorusGeometry(1, 0.035, 8, 96), m.cove);
-  rim.rotation.x = Math.PI / 2;
-  rim.scale.set(rx + 0.15, rz + 0.15, 1);
-  rim.position.set(c.x, top - 0.02, c.z);
-  g.add(rim);
+  coveRing(0.035, 96, rx + 0.15, rz + 0.15, top - 0.02);
   const lip = new Mesh(new RingGeometry(1, 1.12, 96), m.beige);
   lip.rotation.x = Math.PI / 2;
   lip.scale.set(rx + 0.1, rz + 0.1, 1);
@@ -264,11 +293,7 @@ export function bridgeCeiling(
   troughLip.scale.set(ox * 1.06, 1, oz * 1.06);
   troughLip.position.set(c.x, top - 0.17, c.z);
   g.add(troughLip);
-  const outer = new Mesh(new TorusGeometry(1, 0.03, 8, 128), m.cove);
-  outer.rotation.x = Math.PI / 2;
-  outer.scale.set(ox * 1.03, oz * 1.03, 1);
-  outer.position.set(c.x, top - 0.28, c.z);
-  g.add(outer);
+  coveRing(0.03, 128, ox * 1.03, oz * 1.03, top - 0.28);
   // Glossy black rectangles round it, in a ring.
   for (let k = 0; k < 12; k++) {
     const a = (k / 12) * Math.PI * 2 + Math.PI / 12;
@@ -304,7 +329,7 @@ export function bridgeCeiling(
     for (const s of [-1, 1]) {
       const strip = new Mesh(
         new RoundedBoxGeometry(0.04, 0.03, len, 1, 0.01),
-        m.coveWall,
+        m.own(m.coveWall),
       );
       strip.position.set(0.3 * s, 0.18, 0);
       rib.add(strip);
@@ -341,7 +366,7 @@ export function bridgeCeiling(
     g.add(lip2);
     const strip = new Mesh(
       new RoundedBoxGeometry(len - 0.2, 0.03, 0.05, 1, 0.01),
-      m.coveWall,
+      m.own(m.coveWall),
     );
     strip.position.set(
       (a.x + b.x) / 2 + nx * 0.06,

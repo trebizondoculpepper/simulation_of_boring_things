@@ -261,6 +261,13 @@ export interface BootScreenOptions {
   ) => void;
   /** Start unpowered, black, waiting for its power or `boot()` (default: powered, running). */
   dark?: boolean;
+  /**
+   * Boot after the rest of its group (a room's main screen, the owner,
+   * 2026-10-27): as its group's power rises, its emblem begins this many
+   * seconds after the latest of the others' (its other durations drawn
+   * as theirs). Unset: with the others.
+   */
+  lastAfter?: number;
 }
 
 /**
@@ -553,12 +560,27 @@ export class BootGroup {
     const rising = on && !this.power;
     this.power = on;
     let last = 0;
-    for (const s of this.screens) {
+    // The rest first; then those that boot after them (`lastAfter`).
+    const ordered = [...this.screens].sort(
+      (a, b) =>
+        Number(a.options.lastAfter !== undefined) -
+        Number(b.options.lastAfter !== undefined),
+    );
+    let latestStart = up === 'instant' ? 0 : (up.from ?? 0);
+    let others = false;
+    for (const s of ordered) {
       if (!on || !rising || up === 'instant') {
         s.setPower(on, 'instant');
         continue;
       }
       const plan = sampleBoot(up, this.random);
+      const after = s.options.lastAfter;
+      if (after !== undefined)
+        plan.offset = (others ? latestStart : plan.offset) + after;
+      else {
+        latestStart = others ? Math.max(latestStart, plan.offset) : plan.offset;
+        others = true;
+      }
       s.setPower(true, plan);
       if (s.booting)
         last = Math.max(last, plan.offset + bootDuration(plan.timing));

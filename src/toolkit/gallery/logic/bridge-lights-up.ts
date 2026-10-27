@@ -12,7 +12,7 @@
 import { meanBootReady } from '../../../ui2d/boot';
 import type { BootSpec } from '../../../ui2d/boot';
 
-/** The stages, in the order they come up. */
+/** The stages of the main lights: the dome last (the owner, 2026-10-27). */
 export const LIGHT_STAGES = ['rings', 'dome', 'walls', 'aft'] as const;
 export type LightStage = (typeof LIGHT_STAGES)[number];
 
@@ -21,11 +21,7 @@ export const LIGHTS_UP = {
   afterBoot: 2,
   /** On a later visit, the main lights begin this long after the walker comes in (the owner, 2026-10-27). */
   again: 2,
-  /** Each stage's start after the main lights begin, and its rise, seconds. */
-  starts: { rings: 0, dome: 0.6, walls: 1.2, aft: 1.7 } as Record<
-    LightStage,
-    number
-  >,
+  /** Each luminaire's or segment's rise, seconds. */
   rise: 1.8,
   /** The share of the room's fill light left in the dark: enough to make out its shapes by the panels' glow. */
   floor: 0.04,
@@ -33,29 +29,85 @@ export const LIGHTS_UP = {
   out: 2,
 } as const;
 
-/** How long, from arriving, until every stage is full, the main lights beginning at `at`. */
-export const lightsUpTotal = (at = 0) =>
-  at +
-  Math.max(...LIGHT_STAGES.map((s) => LIGHTS_UP.starts[s])) +
-  LIGHTS_UP.rise;
+/**
+ * The main lights' sweep (the owner, 2026-10-27): every luminaire and
+ * lit segment but the dome's (the cove rings' arcs, the wall coves, the
+ * ribs' strips, the aft strip, their lamps) powers on in turn, clockwise
+ * seen from above, starting at the front over the main viewscreen,
+ * `step` seconds apart; the dome `domeAfter` seconds after the last of
+ * them has started. `segments`: the arcs each cove ring is split into.
+ */
+export const SWEEP = { step: 0.2, domeAfter: 5, segments: 8 } as const;
+
+/** The sweep's span with about this many luminaires and segments, for timing it before the room is seen. */
+export const NOMINAL_SWEEP_COUNT = 40;
+
+/**
+ * Where a point is round `centre`, radians in [0, 2π), clockwise seen from
+ * above: 0 at the front (−z, the main viewscreen's side), π/2 at +x.
+ */
+export function clockwiseAngle(
+  x: number,
+  z: number,
+  cx: number,
+  cz: number,
+): number {
+  const a = Math.atan2(x - cx, -(z - cz));
+  return a < 0 ? a + 2 * Math.PI : a;
+}
+
+/** One luminaire or segment: where it is round the room, and whether it is the dome's. */
+export interface SweepItem {
+  angle: number;
+  dome: boolean;
+}
+
+/**
+ * Each item's start, seconds after the main lights begin: the others
+ * ranked clockwise (`angle`), `SWEEP.step` apart; the dome's all at
+ * `SWEEP.domeAfter` after the last of the others started. Pure.
+ */
+export function sweepStarts(items: readonly SweepItem[]): number[] {
+  const others = items
+    .map((it, i) => ({ it, i }))
+    .filter(({ it }) => !it.dome)
+    .sort((a, b) => a.it.angle - b.it.angle);
+  const starts = new Array<number>(items.length).fill(0);
+  others.forEach(({ i }, rank) => (starts[i] = rank * SWEEP.step));
+  const last = others.length ? (others.length - 1) * SWEEP.step : 0;
+  items.forEach((it, i) => {
+    if (it.dome) starts[i] = last + SWEEP.domeAfter;
+  });
+  return starts;
+}
+
+/** The latest start of a sweep: when its last item begins. */
+export const sweepSpan = (starts: readonly number[]) =>
+  starts.length ? Math.max(...starts) : 0;
+
+/** The span of a sweep of `n` items besides the dome. */
+export const nominalSpan = (n = NOMINAL_SWEEP_COUNT) =>
+  Math.max(0, n - 1) * SWEEP.step + SWEEP.domeAfter;
+
+/** How long, from arriving, until every light is full, the main lights beginning at `at` and their sweep's last start `span` after. */
+export const lightsUpTotal = (at = 0, span = nominalSpan()) =>
+  at + span + LIGHTS_UP.rise;
 
 const smooth = (t: number) => {
   const c = Math.min(1, Math.max(0, t));
   return c * c * (3 - 2 * c);
 };
 
-/** Each stage's share of its normal light `t` seconds after arriving, the main lights beginning at `at` (the rings then, the others after), and the fill's (the room's general light: its share following the stages'). */
-export function lightsUpLevels(
-  t: number,
-  at = 0,
-): Record<LightStage | 'fill', number> {
-  const out = {} as Record<LightStage | 'fill', number>;
-  for (const s of LIGHT_STAGES)
-    out[s] = smooth((t - at - LIGHTS_UP.starts[s]) / LIGHTS_UP.rise);
-  const mean =
-    LIGHT_STAGES.reduce((sum, s) => sum + out[s], 0) / LIGHT_STAGES.length;
-  out.fill = LIGHTS_UP.floor + (1 - LIGHTS_UP.floor) * mean;
-  return out;
+/** An item's share of its normal light `t` seconds after arriving, the main lights beginning at `at` and it `start` after them. */
+export const sweepLevel = (t: number, at: number, start: number) =>
+  smooth((t - at - start) / LIGHTS_UP.rise);
+
+/** The room's fill light's share, following the items' mean (`levels`). */
+export function fillLevel(levels: readonly number[]): number {
+  const mean = levels.length
+    ? levels.reduce((a, b) => a + b, 0) / levels.length
+    : 0;
+  return LIGHTS_UP.floor + (1 - LIGHTS_UP.floor) * mean;
 }
 
 /** On the first view, the bridge's displays are switched on (`bridgeDisplaysOn`) this long after the doors shut (the owner, 2026-10-27). */
@@ -155,6 +207,8 @@ export interface Entrance {
   kind: EntranceKind;
   /** Seconds after arriving that the main lights begin. */
   lightsAt: number;
+  /** Their sweep's last start after `lightsAt`, once the room's lights are known (`nominalSpan` until then). */
+  span?: number;
 }
 
 /** The first view's glow curve `t` seconds after the doors shut behind the walker: on, out over 1 s, black 5 s, back up over 1 s. */
@@ -168,7 +222,11 @@ export function firstViewGlow(t: number): number {
 export function entranceGlow(t: number, entrance: Entrance): number {
   const base = entrance.kind === 'first' ? firstViewGlow(t) : 1;
   const down =
-    1 - smooth((t - lightsUpTotal(entrance.lightsAt)) / ENTRANCE_GLOW.fade);
+    1 -
+    smooth(
+      (t - lightsUpTotal(entrance.lightsAt, entrance.span)) /
+        ENTRANCE_GLOW.fade,
+    );
   return Math.min(base, down);
 }
 

@@ -646,10 +646,11 @@ function installAlarmBleep() {
 
 /**
  * The bridge's theme (the owner's, 2026-10-27): "Boldly Into the Deep End",
- * thirty seconds, through the game's music volume, placed nowhere. Played
- * on a first visit; begun again from the top if the walker comes in once
- * more while the bridge is still as first seen (after the knob plate's
- * RESET); faded out over three seconds if the walker leaves before it ends.
+ * the whole track (2:06.8), through the game's music volume, placed
+ * nowhere. Played on a first visit from its start; faded out over three
+ * seconds after 45 s (`THEME_LENGTH`, `bridge-theme-cue.ts`), or as the
+ * walker leaves, whichever is first; begun again from the top on a first
+ * view after the knob plate's RESET.
  */
 const THEME_FADE = 3;
 const bridgeTheme = (() => {

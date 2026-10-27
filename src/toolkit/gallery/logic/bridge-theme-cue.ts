@@ -1,7 +1,7 @@
 /**
  * The bridge's theme, cued (the owner, 2026-10-27): begun `delay` seconds
  * after it is cued (the first view's `THEME_AT`, after the doors shut),
- * then left to play to its end (`length` seconds) unless the walker
+ * then left to play `length` seconds and faded out unless the walker
  * leaves first, which fades it out. Cueing it again while it is cued or
  * playing changes nothing, so a trigger firing twice cannot cut it off;
  * only `leave` or its own end stops it. Pure but for the clock and the
@@ -15,8 +15,12 @@ export interface ThemeCueIo {
   clearTimeout(id: number): void;
 }
 
-/** The theme's length and a second's grace, seconds. */
-export const THEME_LENGTH = 31;
+/**
+ * Seconds of the theme played (the owner, 2026-10-27): the whole track is
+ * 2:06.8; it plays from the start and its 3 s fade begins here, silent by
+ * 48 s (the stop is the player's fade, `THEME_FADE`, never a cut).
+ */
+export const THEME_LENGTH = 45;
 
 export function createThemeCue(io: ThemeCueIo, length = THEME_LENGTH) {
   let state: 'idle' | 'cued' | 'playing' = 'idle';
