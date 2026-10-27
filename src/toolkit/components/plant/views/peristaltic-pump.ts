@@ -12,6 +12,15 @@ import { brandLivery } from '../../core/views/brand-livery';
 import { createPartSet, pushButton } from '../../core/parts/parts';
 import { brandPlate } from './chlorella-plate';
 import { plantTools } from './plant-tools';
+import {
+  box,
+  circle,
+  dotFrame,
+  fillBox,
+  isLit,
+  text,
+  textWidth,
+} from '../../industrial-control/logic/dot-matrix';
 import { hose } from './hose';
 import { onPlinth } from './plinth';
 
@@ -22,7 +31,8 @@ import { onPlinth } from './plinth';
  * clear hinged guard over a rotor whose three rollers squeeze a loop of
  * reinforced tube against the track, the tube in at the bottom and out at
  * the top through its clamps; Grundflow's (blue, orange, grey): on its
- * front a membrane keypad with a colour TFT (light blue on dark blue) of
+ * front a membrane keypad with a 120 × 72 dot graphic LCD (light blue dots
+ * on dark blue, the controller's 5 × 7 font, a large figure at triple size) of
  * its rate, mode and flow, START, STOP, ▲ and ▼ keys that work, RUN and
  * ALARM lamps and the wordmark; a cable gland at the back. Its rotor
  * turns while it runs, faster for a higher rate.
@@ -160,7 +170,12 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
     panelY,
     front + 0.004,
   );
-  const tft = f.printed(0.1, 0.06, () => {}, 320, true);
+  // A 120 × 72 dot graphic LCD, light blue dots on dark blue, each dot
+  // drawn as a square with a gap, the unlit ones faintly showing.
+  const GW = 120;
+  const GH = 72;
+  const P = 4;
+  const tft = f.printed(0.1, 0.06, () => {}, GW * P, true);
   tft.mesh.position.set(0.01, 0.01 + H * 0.74, front + 0.0058);
   tft.mesh.userData.live = true;
   group.add(tft.mesh);
@@ -171,54 +186,39 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
     alarm: boolean,
     phase: number,
   ) => {
+    const fr = dotFrame(GW, GH);
+    if (on) {
+      fillBox(fr, 0, 0, GW, 10);
+      text(fr, 2, 2, label.slice(0, 12), 1, false);
+      const state = alarm ? 'ALARM' : running ? 'RUN' : 'STOP';
+      text(fr, GW - 2 - textWidth(state), 2, state, 1, false);
+      text(fr, 2, 15, 'MANUAL');
+      text(fr, 2, 26, `${String(Math.round(rate * 100)).padStart(3)}%`);
+      const value = (rate * 30).toFixed(1);
+      text(fr, GW - 3 - textWidth(value, 3), 14, value, 3);
+      text(fr, GW - 3 - textWidth('L/H'), 38, 'L/H');
+      box(fr, 2, 52, 96, 12);
+      fillBox(fr, 4, 54, Math.round(92 * rate), 8);
+      circle(fr, 109, 58, 7);
+      for (let i = 0; i < 3; i++) {
+        const a = phase + (i / 3) * Math.PI * 2;
+        fillBox(fr, 108 + Math.cos(a) * 4, 57 + Math.sin(a) * 4, 2, 2);
+      }
+    }
     const c = tft.context;
     const w = c.canvas.width;
     const h = c.canvas.height;
-    c.fillStyle = on ? '#0b2547' : '#05070a';
+    const px = w / GW;
+    const py = h / GH;
+    c.fillStyle = on ? '#0a2142' : '#05070a';
     c.fillRect(0, 0, w, h);
-    if (!on) {
-      tft.texture.needsUpdate = true;
-      return;
-    }
-    const ink = '#8fd3ff';
-    c.fillStyle = '#123a6b';
-    c.fillRect(0, 0, w, h * 0.2);
-    c.fillStyle = ink;
-    c.font = `bold ${h * 0.13}px sans-serif`;
-    c.textBaseline = 'middle';
-    c.fillText(label.slice(0, 18), w * 0.04, h * 0.1);
-    c.textAlign = 'right';
-    c.fillText(alarm ? 'ALARM' : running ? 'RUN' : 'STOP', w * 0.96, h * 0.1);
-    c.font = `bold ${h * 0.34}px monospace`;
-    c.fillText(`${(rate * 30).toFixed(1)}`, w * 0.76, h * 0.47);
-    c.font = `bold ${h * 0.13}px sans-serif`;
-    c.textAlign = 'left';
-    c.fillText('l/h', w * 0.77, h * 0.52);
-    c.font = `bold ${h * 0.1}px sans-serif`;
-    c.fillText('MANUAL', w * 0.04, h * 0.33);
-    c.fillText(`${Math.round(rate * 100)}%`, w * 0.04, h * 0.5);
-    // The flow bar, and a rotor glyph turning while it runs.
-    c.strokeStyle = ink;
-    c.lineWidth = 2;
-    c.strokeRect(w * 0.04, h * 0.74, w * 0.72, h * 0.14);
-    c.fillRect(w * 0.05, h * 0.76, w * 0.7 * rate, h * 0.1);
-    const cx = w * 0.88;
-    const cy = h * 0.81;
-    c.beginPath();
-    c.arc(cx, cy, h * 0.1, 0, Math.PI * 2);
-    c.stroke();
-    for (let i = 0; i < 3; i++) {
-      const a = phase + (i / 3) * Math.PI * 2;
-      c.beginPath();
-      c.arc(
-        cx + Math.cos(a) * h * 0.06,
-        cy + Math.sin(a) * h * 0.06,
-        h * 0.025,
-        0,
-        Math.PI * 2,
-      );
-      c.fill();
-    }
+    for (let y = 0; y < GH; y++)
+      for (let x = 0; x < GW; x++) {
+        const lit = isLit(fr, x, y);
+        if (!lit && !on) continue;
+        c.fillStyle = lit ? '#9fdcff' : '#10305a';
+        c.fillRect(x * px, y * py, px - 1, py - 1);
+      }
     tft.texture.needsUpdate = true;
   };
   const parts = createPartSet();
