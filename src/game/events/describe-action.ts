@@ -358,6 +358,13 @@ function said(
         subject: 'CONTROL ROOM MODE',
         text: `knob turned to ${action.mode.toUpperCase()}`,
       };
+    case 'bridge/theme-heard':
+      return { subject: 'THE BRIDGE', text: 'theme played, first visit' };
+    case 'bridge/first-visit-reset':
+      return {
+        subject: 'CONTROL ROOM MODE',
+        text: 'RESET: the bridge as first seen',
+      };
     case 'music': {
       const a = action.action;
       return {

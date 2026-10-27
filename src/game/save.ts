@@ -171,6 +171,9 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // annunciator and console (the owner, 2026-10-27): every window dark
   // (`fillDefaults` adds it), the plant's alarms in now coming up flashing.
   48: (world) => world,
+  // 49 → 50: whether the bridge's theme has played (the owner, 2026-10-27):
+  // not yet (`fillDefaults` adds it), so it plays on the next visit.
+  49: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

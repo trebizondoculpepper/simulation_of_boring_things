@@ -45,13 +45,14 @@ export function createControlRoomModeKnob(
   const { object } = a;
   // The plate behind it, light grey steel, four screws.
   const plateW = 0.14;
-  const plateH = 0.13;
+  // Tall enough for its RESET button under the knob.
+  const plateH = 0.17;
   const plateT = 0.004;
   const plate = new Mesh(
     new BoxGeometry(plateW, plateH, plateT),
     kitPaint(kit, '#a9aeb0', 0.3),
   );
-  plate.position.set(0, 0.012, plateT / 2);
+  plate.position.set(0, -0.008, plateT / 2);
   object.add(plate);
   const screw = kitPaint(kit, '#d0d3d3', 0.7);
   for (const sx of [-1, 1])
@@ -63,7 +64,7 @@ export function createControlRoomModeKnob(
       head.rotation.x = Math.PI / 2;
       head.position.set(
         sx * (plateW / 2 - 0.008),
-        0.012 + sy * (plateH / 2 - 0.008),
+        -0.008 + sy * (plateH / 2 - 0.008),
         plateT + 0.0007,
       );
       object.add(head);

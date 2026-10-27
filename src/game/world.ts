@@ -259,7 +259,7 @@ import type { AnnunciatorState } from './annunciator';
 import type { AlarmId } from '../toolkit/gallery/logic/control-room-demo';
 import { plantReadingOf } from '../toolkit/gallery/logic/world-reading';
 
-export const WORLD_VERSION = 49;
+export const WORLD_VERSION = 50;
 
 /**
  * Where the main corridor's control room doors lead (the owner,
@@ -351,6 +351,8 @@ export interface World {
   intake: SiteIntake;
   /** Where the corridor's control room doors lead: the CONTROL ROOM MODE knob. */
   controlRoomMode: ControlRoomMode;
+  /** Whether the bridge's theme has played, on the walker's first visit (the owner, 2026-10-27). */
+  bridgeThemeHeard: boolean;
   /**
    * The control room's alarm annunciator, shared by every annunciator and
    * console showing the plant's alarms: which are in, flashing until
@@ -395,6 +397,7 @@ export function newWorld(): World {
     washOTron: newWashOTron(),
     intake: newSiteIntake(),
     controlRoomMode: 'old',
+    bridgeThemeHeard: false,
     annunciator: newAnnunciator(),
   };
 }
@@ -462,6 +465,9 @@ export type WorldAction =
   | { type: 'booster/changeover'; action: ChangeoverAction }
   /** The CONTROL ROOM MODE knob turned: where the control room doors lead. */
   | { type: 'control-room/mode'; mode: ControlRoomMode }
+  | { type: 'bridge/theme-heard' }
+  /** Forget the bridge's first visit: its theme plays again (the knob plate's RESET). */
+  | { type: 'bridge/first-visit-reset' }
   /** ACCEPT at an annunciator or console: its flashing alarms (only `alarms`, if given) accepted. */
   | { type: 'alarms/accept'; alarms?: AlarmId[] }
   /** RESET at an annunciator or console: accepted alarms that have cleared put out. */
@@ -818,6 +824,14 @@ export function applyAction(world: World, action: WorldAction): World {
       return world.controlRoomMode === action.mode
         ? world
         : { ...world, controlRoomMode: action.mode };
+    case 'bridge/theme-heard':
+      return world.bridgeThemeHeard
+        ? world
+        : { ...world, bridgeThemeHeard: true };
+    case 'bridge/first-visit-reset':
+      return world.bridgeThemeHeard
+        ? { ...world, bridgeThemeHeard: false }
+        : world;
     case 'alarms/accept': {
       const annunciator = acceptAlarms(world.annunciator, action.alarms);
       return annunciator === world.annunciator

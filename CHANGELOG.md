@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The bridge's theme, "Boldly Into the Deep End" (the owner's, Treblo), 30 s, plays once a save on the walker's first visit to the bridge (`bridgeThemeHeard`, WORLD_VERSION 50); the CONTROL ROOM MODE plate gains a RESET button, an amber illuminated push button that lights briefly when pressed (pressed anywhere on it, not only its small cap), that forgets the first visit, so the next one plays it again. The theme is placed nowhere: once begun it plays to its end wherever the walker goes, and starts again from the top on coming in while the bridge is as first seen (the owner, 2026-10-27).
 - Entering the bridge with its MAIN LIGHTS off, they switch on by themselves after 3 s, as with an occupancy sensor (the owner, 2026-10-27).
 - `?room=main_corridor&from=<room>` puts the walker outside that room's doors, facing into the corridor, for every door off the ring; `from=bridge` at the control room's; the wet hall's two pairs told apart by `&door=east` or `&door=west` (the owner, 2026-10-27).
 - The bridge's entrance in three steps (the owner, 2026-10-27): walking in from the corridor, the displays only, then at 1 s the glow under the consoles coming up quickly, then from 3 s the main lights as before (`ENTRANCE_GLOW`, `entranceGlow`, `LIGHTS_UP.dark` now 3.0 s; tested); once the main lights are full the glow fades out again unless EMERGENCY LIGHTS is on.

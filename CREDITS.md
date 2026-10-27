@@ -56,3 +56,5 @@ The bridge's room tone (`src/toolkit/components/sound/audio/bridge-ambience.ts`,
 - **LCARS-Javascript-Framework**, by Perry Spagnola (agent-P): MIT licence. Copyright (c) 2019 Perry Spagnola. The outline of its corner component (`LCARSCorner.prototype.drawShape` in `js/LCARS_Components.js`: column and arm joined by quadratic curves) is adapted into `elbowPath` in `src/ui2d/geometry.ts`; its button proportions, label inset and blink periods into `src/ui2d/theme.ts` and `components.ts`; its full notice is in `src/ui2d/README.md`. Source: https://github.com/agent-P/LCARS-Javascript-Framework
 
 The bridge's room tone, `src/toolkit/components/sound/audio/assets/bridge-room-tone.ogg`, is the owner's own synthesis (2026-10-27), a one-minute loop cut from it (`assets/README.md`).
+
+`resources/sound/music/bridge/boldly-into-the-deep-end.ogg` was supplied by the owner on 2026-10-27 as "Space theme - Boldly Into the Deep End - Treblo.ogg", made by them with a music generator from their own prompt; renamed and cut to its first 30 seconds with a 3-second fade out (Opus). Played once, on the walker's first visit to the bridge.

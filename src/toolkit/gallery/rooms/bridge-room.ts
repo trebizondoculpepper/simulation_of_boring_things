@@ -1,5 +1,7 @@
 import { Group, Object3D } from 'three';
 import { partAudio } from '../../components/core/audio/part-audio';
+import { musicPlaylist } from '../../components/sound/audio/music-playlist';
+import { signal } from '@preact/signals-core';
 import { createChatter } from '../../components/sound/logic/console-chatter';
 import { startBridgeRoom } from './control-room-prototype';
 import type { Part } from '../../components/core/parts/parts';
@@ -249,6 +251,13 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   return Object.assign(dispose, handle, {
     enter: (from: string | null) => {
       lightsUp.enter(from);
+      // The walker's first visit: the bridge's theme, once a save (the
+      // owner's, 2026-10-27; `bridgeThemeHeard`).
+      const first = world();
+      if (first && !first.bridgeThemeHeard) {
+        store?.dispatch({ type: 'bridge/theme-heard' });
+        bridgeTheme.play();
+      }
       // Found with its MAIN LIGHTS off, the bridge puts them on itself a
       // few seconds after the walker comes in (the owner, 2026-10-27), as
       // an occupancy sensor would: the switch is thrown in the world.
@@ -447,3 +456,43 @@ function installAlarmBleep() {
     dispose: () => {},
   };
 }
+
+/**
+ * The bridge's theme (the owner's, 2026-10-27): "Boldly Into the Deep End",
+ * thirty seconds, through the game's music volume, placed nowhere: once
+ * begun it plays to its end wherever the walker goes. Played on a first
+ * visit; begun again from the top if the walker comes in once more while
+ * the bridge is still as first seen (after the knob plate's RESET).
+ */
+const bridgeTheme = (() => {
+  const owner = {};
+  let timer = 0;
+  const stop = () => {
+    window.clearTimeout(timer);
+    partAudio.hold(owner, null);
+  };
+  return {
+    play() {
+      stop();
+      partAudio.hold(
+        owner,
+        musicPlaylist(
+          [
+            {
+              url: new URL(
+                '../../../../resources/sound/music/bridge/boldly-into-the-deep-end.ogg',
+                import.meta.url,
+              ),
+              title: 'Boldly Into the Deep End — Treblo',
+            },
+          ],
+          signal(0.6),
+          () => {},
+        ),
+      );
+      // Once through, not round again.
+      timer = window.setTimeout(stop, 31_000);
+    },
+    stop,
+  };
+})();

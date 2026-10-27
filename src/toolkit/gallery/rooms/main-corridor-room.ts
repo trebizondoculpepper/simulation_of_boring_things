@@ -42,7 +42,8 @@ import {
   createPanelKit,
   disposeKit,
 } from '../../components/core/views/eighties-controls';
-import { createPartSet } from '../../components/core/parts/parts';
+import { createPartSet, pushButton } from '../../components/core/parts/parts';
+import { createDymoLabel } from '../../components/core/views/hand-labels';
 import { knobDirection } from '../../controls/input/knob-turning';
 import {
   activeDoorway,
@@ -119,6 +120,37 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
       controlDoorsOpen,
     ),
   );
+  // Its RESET (the owner, 2026-10-27): back to the bridge as first seen,
+  // its theme and entrance played again on the next visit.
+  {
+    // An illuminated button, lit briefly when pressed (the owner, 2026-10-27).
+    const resetLit = signal(false);
+    let resetTimer = 0;
+    const reset = parts.add(
+      pushButton(kit, {
+        name: 'CONTROL ROOM MODE reset',
+        colour: 'amber',
+        head: 'illuminated',
+        lamp: resetLit,
+        action: () => {
+          world.dispatch({ type: 'bridge/first-visit-reset' });
+          resetLit.value = true;
+          window.clearTimeout(resetTimer);
+          resetTimer = window.setTimeout(() => (resetLit.value = false), 700);
+        },
+      }),
+    );
+    reset.object.scale.setScalar(0.7);
+    // Pressed wherever it is touched, its guard ring and all, not only its
+    // small cap (the owner, 2026-10-27: it did not click).
+    const press = [...reset.uses.values()][0];
+    if (press) parts.uses.set(reset.object, press);
+    reset.object.position.set(0, -0.045, 0.0045);
+    knob.object.add(reset.object);
+    const label = createDymoLabel(kit, 'RESET', { seed: 99 });
+    label.position.set(0.04, -0.045, 0.0044);
+    knob.object.add(label);
+  }
   {
     const k = modeKnobPlace(controlDoor);
     const w = corridorWalls()[k.wall];

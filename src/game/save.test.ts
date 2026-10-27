@@ -76,6 +76,7 @@ describe('a save', () => {
       washOTron: newWorld().washOTron,
       intake: newWorld().intake,
       controlRoomMode: 'old',
+      bridgeThemeHeard: false,
       annunciator: newWorld().annunciator,
     });
   });
