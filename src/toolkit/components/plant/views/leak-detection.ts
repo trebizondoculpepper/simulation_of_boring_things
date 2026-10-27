@@ -4,6 +4,7 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { createPartSet, pushButton } from '../../core/parts/parts';
 import { plantTools } from './plant-tools';
+import { describe } from './describe';
 import { partAudio } from '../../core/audio/part-audio';
 import { ALARM_BUZZER } from '../../core/audio/part-loops';
 import { hose } from './hose';
@@ -104,6 +105,13 @@ export function createLeakPort(kit: PanelKit, R: number) {
   );
   liquid.userData.live = true;
   liquid.visible = false;
+  describe(
+    group,
+    'Leak detection low point: drain valve, sight tube and probe',
+    () =>
+      `${shownLitres > 0.004 ? 'Liquid in the annulus' : 'Dry'}; drain ${open ? 'open' : 'shut'}`,
+  );
+  let shownLitres = 0;
   const parts = createPartSet();
   let open = false;
   let onTurn: ((open: boolean) => void) | null = null;
@@ -120,6 +128,7 @@ export function createLeakPort(kit: PanelKit, R: number) {
     },
     /** Show the low point: its lever, and what stands in the sight tube. */
     show(p: LowPoint) {
+      shownLitres = p.litres;
       lever.rotation.y = p.drainOpen ? -Math.PI / 2 : 0;
       const fill = Math.min(1, p.litres / 0.02);
       liquid.visible = fill > 0.01;
@@ -216,6 +225,14 @@ export function createLeakMonitor(kit: PanelKit) {
   plate.position.set(0.055, -H / 2 + 0.012, z);
   group.add(plate);
   let shown = monitor;
+  describe(group, 'Leak detection monitor LM4', () => {
+    const z = shown.zones
+      .map((q, i) =>
+        q.latched ? `zone ${i + 1} LEAK` : q.fault ? `zone ${i + 1} fault` : '',
+      )
+      .filter(Boolean);
+    return z.length ? z.join(', ') : 'All zones normal';
+  });
   let sounding = false;
   return {
     object: group,

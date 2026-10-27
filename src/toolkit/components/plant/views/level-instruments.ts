@@ -2,6 +2,7 @@ import { Group } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { plantTools } from './plant-tools';
+import { describe } from './describe';
 import { onPlinth } from './plinth';
 
 /**
@@ -33,6 +34,12 @@ export function createLevelTransmitter(kit: PanelKit, radar: boolean) {
     t.cyl(lt, t.paint('#2f63a3', 0.5), 0.052, 0.025, 0, 0.27, 0, 'y', 24);
   }
   t.cyl(lt, dark, 0.014, 0.04, 0.05, 0.17, 0, 'x', 8);
+  describe(
+    lt,
+    radar
+      ? '80 GHz radar level transmitter (after VEGAPULS C 21)'
+      : 'Ultrasonic level transmitter (after Siemens Probe LU)',
+  );
   return lt;
 }
 
@@ -85,6 +92,9 @@ export function createLevelIndicator(
     face.texture.needsUpdate = true;
   };
   draw(0);
+  describe(disp, `Level indicator ${tag}-LI, Kessler-Moody LI-5`, () =>
+    shown < 0 ? undefined : `Reads ${shown.toLocaleString('en-GB')} L`,
+  );
   return {
     object: disp,
     /** Show `fraction` of full. */

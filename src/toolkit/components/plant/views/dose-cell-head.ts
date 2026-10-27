@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { plantTools } from './plant-tools';
+import { describe } from './describe';
 import { roundedSlab } from './rounded-slab';
 import { chlorellaPlate } from './chlorella-plate';
 import {
@@ -268,6 +269,11 @@ export function createDoseCellHead(
   t.cyl(group, dark, 0.009, 0.016, -w / 2 - 0.008, h * 0.5, 0, 'x', 10);
   t.cyl(group, dark, 0.01, 0.016, 0.06, h * 0.5, -d / 2 - 0.008, 'z', 10);
 
+  describe(group, `DoseCell head ${tag}`, () => {
+    if (!last) return undefined;
+    const { o, b } = last;
+    return `${b.litres.toFixed(1)} L; ${o.calling ? 'calling for a fill' : 'not calling'}; pump ${o.pumping ? 'running' : 'standing'}`;
+  });
   return {
     object: group,
     /** Where the dosing tube leaves it, in its own frame. */

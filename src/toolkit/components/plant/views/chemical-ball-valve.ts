@@ -3,6 +3,7 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import { beginPart, createPartSet } from '../../core/parts/parts';
 import { onPlinth } from './plinth';
 import { plantTools } from './plant-tools';
+import { describe } from './describe';
 import type { BallValveView } from './gas-fittings';
 
 /** The sizes the chemical lines use: DN15 for small lines, DN40 at the bulk tanks. */
@@ -116,6 +117,9 @@ export function createChemicalBallValve(
     angle += (target - angle) * Math.min(1, delta * 8);
     lever.rotation.y = angle;
   });
+  describe(a.object, `${name}, DN${dn}`, () =>
+    (binding?.open() ?? open) ? 'Open' : 'Shut',
+  );
   const part = a.part();
   return Object.assign(part, {
     get open() {

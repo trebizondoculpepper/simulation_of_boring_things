@@ -89,22 +89,22 @@ The links were not fetched in this session; check them before quoting.
 
 One `graphics` block in `Settings` (`src/toolkit/settings/logic/settings.ts`): a `preset` (`low`, `medium`, `high`, `ultra`, `custom`) and the individual settings below. Choosing a preset writes all of them; changing any one makes the preset `custom`. Pure, in `logic/`, with tests (`presetSettings(preset)`, `presetOf(settings)`, `cleanSettings` migrating an old save to `high` plus its `renderLevel`).
 
-| Setting | Low | Medium | High (default) | Ultra |
-| --- | --- | --- | --- | --- |
-| Render quality (`renderLevel`, existing) | 6 | 3 | 0 | 0 |
-| Pixel ratio cap | 1 | 1.25 | 1.5 | 2 |
-| Dynamic resolution | on | on | off | off |
-| Anti-aliasing (MSAA) | off | off | on | on |
-| Ambient occlusion (GTAO) | off | off | on | on (full) |
-| Bloom | off | on (half resolution) | on | on |
-| Shadows | off | on, 1024, one caster | on, 2048 | on, 4096 |
-| Shadow updates | once | once | each frame | each frame |
-| Pool reflection probe | 64 px | 128 | 256 | 256 |
-| Pool refraction | off | on | on | on |
-| Lamp lights (per-fitting point lights) | nearest few | nearest half | all | all |
-| Services ceiling | off | sparse | full | full |
-| Instrument redraw rate | 5 Hz | 10 Hz | each change | each change |
-| Frame cap | 30 | 60 | none (vsync) | none |
+| Setting                                  | Low         | Medium               | High (default) | Ultra       |
+| ---------------------------------------- | ----------- | -------------------- | -------------- | ----------- |
+| Render quality (`renderLevel`, existing) | 6           | 3                    | 0              | 0           |
+| Pixel ratio cap                          | 1           | 1.25                 | 1.5            | 2           |
+| Dynamic resolution                       | on          | on                   | off            | off         |
+| Anti-aliasing (MSAA)                     | off         | off                  | on             | on          |
+| Ambient occlusion (GTAO)                 | off         | off                  | on             | on (full)   |
+| Bloom                                    | off         | on (half resolution) | on             | on          |
+| Shadows                                  | off         | on, 1024, one caster | on, 2048       | on, 4096    |
+| Shadow updates                           | once        | once                 | each frame     | each frame  |
+| Pool reflection probe                    | 64 px       | 128                  | 256            | 256         |
+| Pool refraction                          | off         | on                   | on             | on          |
+| Lamp lights (per-fitting point lights)   | nearest few | nearest half         | all            | all         |
+| Services ceiling                         | off         | sparse               | full           | full        |
+| Instrument redraw rate                   | 5 Hz        | 10 Hz                | each change    | each change |
+| Frame cap                                | 30          | 60                   | none (vsync)   | none        |
 
 Defaults: High, as the game looks now (so no player sees it change unasked), except on first run where auto-detection picks lower.
 
@@ -114,22 +114,22 @@ Defaults: High, as the game looks now (so no player sees it change unasked), exc
 
 ## How each setting would be built here
 
-| Setting | Where | Difficulty |
-| --- | --- | --- |
-| Render quality, pixel ratio cap | Already in `createRenderer`; make `MAX_PIXEL_RATIO` a setting. | Small |
-| Dynamic resolution | A second multiplier in `createRenderer`'s wrapped `setPixelRatio`; controller fed from the frame loop. Must not apply to screenshots. | Medium |
-| Anti-aliasing | `antialias` is fixed when the context is made: read the setting in `createRenderer`; a change applies on the next room (or reload). Rooms with a composer could use the composer target's `samples` or an FXAA/SMAA pass instead, which can change live. | Small (reload) to medium (live) |
-| Ambient occlusion, bloom | 14 builders make the same chain by hand: factor it into one `createRoomEffects(renderer, scene, camera, look)` beside `createComposer`, which sets `pass.enabled` from the signal (and bloom's resolution). Removing the repetition is worth it in itself. | Medium (one refactor, then trivial) |
-| Shadows | In `createRenderer`, follow the signal: `shadowMap.enabled`, and a helper the rooms call instead of `mapSize.set(...)` (`shadowSize(wanted)`) that clamps to the preset. Toggling shadows recompiles materials (`material.needsUpdate`), a one-off hitch. Adopt `autoUpdate = false` as `poolrooms-world.ts` does, for still lights. | Medium |
-| Pool reflection probe | `pool-room.ts` 848: size from the setting, rebuilt on change. | Small |
-| Pool refraction | `pool-refraction.ts`: skip its pass, water falls back to the probe. | Small |
-| Lamp lights | Hard in general: lighting is part of what the game models. Keep every lamp's state and emissive face; only the `PointLight` objects beyond the nearest N are turned off, by a per-room light manager. Changes the look, and recompiles shaders as counts change unless fixed counts are kept (switch intensity to 0 instead of removing). | Large |
-| Services ceiling | `src/toolkit/components/site-dressing/`: a density parameter in its generator; set decoration, so safe. | Small |
-| Instrument redraw rate | A shared throttle in `createCanvasTexture` (`src/toolkit/components/core/views/screens`) and an audit of the 84 users so they redraw only on change. | Medium, spread over many files |
-| Frame cap | Rooms already run through `renderer.setAnimationLoop`, wrapped in `createRenderer`: skip callbacks until the frame interval has passed. Simulation time must keep using real time, not frame count. | Small |
-| Vsync | Not controllable in a browser (`requestAnimationFrame` is tied to the display). Do not offer it. | n/a |
-| Texture quality | The game is mostly procedural and canvas-drawn; few image textures. Low value; skip for now. | n/a |
-| Underlay rooms (doorways, dry peeks) | Draw the room seen through a doorway with its effects off and at a lower scale on Low and Medium. | Medium |
+| Setting                              | Where                                                                                                                                                                                                                                                                                                                                     | Difficulty                          |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Render quality, pixel ratio cap      | Already in `createRenderer`; make `MAX_PIXEL_RATIO` a setting.                                                                                                                                                                                                                                                                            | Small                               |
+| Dynamic resolution                   | A second multiplier in `createRenderer`'s wrapped `setPixelRatio`; controller fed from the frame loop. Must not apply to screenshots.                                                                                                                                                                                                     | Medium                              |
+| Anti-aliasing                        | `antialias` is fixed when the context is made: read the setting in `createRenderer`; a change applies on the next room (or reload). Rooms with a composer could use the composer target's `samples` or an FXAA/SMAA pass instead, which can change live.                                                                                  | Small (reload) to medium (live)     |
+| Ambient occlusion, bloom             | 14 builders make the same chain by hand: factor it into one `createRoomEffects(renderer, scene, camera, look)` beside `createComposer`, which sets `pass.enabled` from the signal (and bloom's resolution). Removing the repetition is worth it in itself.                                                                                | Medium (one refactor, then trivial) |
+| Shadows                              | In `createRenderer`, follow the signal: `shadowMap.enabled`, and a helper the rooms call instead of `mapSize.set(...)` (`shadowSize(wanted)`) that clamps to the preset. Toggling shadows recompiles materials (`material.needsUpdate`), a one-off hitch. Adopt `autoUpdate = false` as `poolrooms-world.ts` does, for still lights.      | Medium                              |
+| Pool reflection probe                | `pool-room.ts` 848: size from the setting, rebuilt on change.                                                                                                                                                                                                                                                                             | Small                               |
+| Pool refraction                      | `pool-refraction.ts`: skip its pass, water falls back to the probe.                                                                                                                                                                                                                                                                       | Small                               |
+| Lamp lights                          | Hard in general: lighting is part of what the game models. Keep every lamp's state and emissive face; only the `PointLight` objects beyond the nearest N are turned off, by a per-room light manager. Changes the look, and recompiles shaders as counts change unless fixed counts are kept (switch intensity to 0 instead of removing). | Large                               |
+| Services ceiling                     | `src/toolkit/components/site-dressing/`: a density parameter in its generator; set decoration, so safe.                                                                                                                                                                                                                                   | Small                               |
+| Instrument redraw rate               | A shared throttle in `createCanvasTexture` (`src/toolkit/components/core/views/screens`) and an audit of the 84 users so they redraw only on change.                                                                                                                                                                                      | Medium, spread over many files      |
+| Frame cap                            | Rooms already run through `renderer.setAnimationLoop`, wrapped in `createRenderer`: skip callbacks until the frame interval has passed. Simulation time must keep using real time, not frame count.                                                                                                                                       | Small                               |
+| Vsync                                | Not controllable in a browser (`requestAnimationFrame` is tied to the display). Do not offer it.                                                                                                                                                                                                                                          | n/a                                 |
+| Texture quality                      | The game is mostly procedural and canvas-drawn; few image textures. Low value; skip for now.                                                                                                                                                                                                                                              | n/a                                 |
+| Underlay rooms (doorways, dry peeks) | Draw the room seen through a doorway with its effects off and at a lower scale on Low and Medium.                                                                                                                                                                                                                                         | Medium                              |
 
 Where a setting changes the menu: the pause menu's Graphics section (`src/toolkit/settings/pause-menu.ts`) gets a preset selector at the top and the toggles under it; all input stays in `src/toolkit/controls/`.
 

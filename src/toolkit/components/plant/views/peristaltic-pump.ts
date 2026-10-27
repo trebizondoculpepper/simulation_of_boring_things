@@ -12,6 +12,7 @@ import { brandLivery } from '../../core/views/brand-livery';
 import { createPartSet, pushButton } from '../../core/parts/parts';
 import { brandPlate } from './chlorella-plate';
 import { plantTools } from './plant-tools';
+import { describe } from './describe';
 import { roundedSlab } from './rounded-slab';
 import {
   box,
@@ -324,6 +325,12 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
     0.01,
   );
 
+  describe(
+    group,
+    `${label}: Grundflow PERI 30 peristaltic pump`,
+    () =>
+      `${on ? (wasRunning ? 'Running' : 'Standing by') : 'Stopped'}, ${(rate * 30).toFixed(1)} l/h`,
+  );
   let shown = '';
   let phase = 0;
   let wasRunning = false;

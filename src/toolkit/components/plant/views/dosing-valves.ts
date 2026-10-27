@@ -12,6 +12,7 @@ import {
 } from '../logic/motorised-valve';
 import { plantTools } from './plant-tools';
 import { createChemicalBallValve } from './chemical-ball-valve';
+import { describe } from './describe';
 
 /**
  * The small valves of the chemical lines and dosing (the owner,
@@ -69,35 +70,64 @@ export interface MotorisedChemicalValve extends Part {
 
 export function createMotorisedChemicalValve(
   kit: PanelKit,
-  { initial = false, name = 'Motorised chemical valve, DN15' } = {},
+  {
+    initial = false,
+    dn = 15,
+    name = `Motorised chemical valve, DN${dn}`,
+  }: { initial?: boolean; dn?: 15 | 40; name?: string } = {},
 ): MotorisedChemicalValve {
   const t = plantTools(kit);
   const f = tools(kit);
   const a = beginPart(kit, name);
   const g = a.object;
-  stub(t, g, 0.0105, 0.18);
-  const body = createChemicalBallValve(kit, { dn: 15 });
-  // Its manual handle hidden: the actuator turns this one.
+  stub(t, g, dn === 40 ? 0.025 : 0.0105, dn === 40 ? 0.26 : 0.18);
+  const body = createChemicalBallValve(kit, { dn });
+  // A bigger body stands the actuator a little higher.
+  const lift = dn === 40 ? 0.03 : 0;
+  // Its manual handle hidden: the actuator turns this one; it is
+  // described as the motorised valve, not as a manual one.
+  delete body.object.userData.component;
   body.object.children.forEach((c) => c.userData.live && (c.visible = false));
   g.add(body.object);
   // The actuator: a grey cube on its bracket, a dial on top, lamps and the
   // override knob on its front.
+  const act = new Group();
+  act.position.y = lift;
+  g.add(act);
   const housing = t.paint('#3e4447', 0.4);
-  t.box(g, t.paint('#a9afaf', 0.38, 0.75), 0.03, 0.02, 0.03, 0, 0.04, 0);
-  t.box(g, housing, 0.075, 0.07, 0.07, 0, 0.085, 0);
+  t.box(act, t.paint('#a9afaf', 0.38, 0.75), 0.03, 0.02, 0.03, 0, 0.04, 0);
+  t.box(act, housing, 0.075, 0.07, 0.07, 0, 0.085, 0);
   const dial = new Group();
   dial.position.set(0, 0.121, 0);
   dial.userData.live = true;
-  g.add(dial);
+  act.add(dial);
   t.cyl(dial, t.paint('#f2c500', 0.4), 0.018, 0.004, 0, 0, 0, 'y', 20);
   t.box(dial, t.paint('#111111', 0.5), 0.03, 0.005, 0.005, 0, 0.003, 0);
   const openLamp = lampMaterial(kit, '#3ee05a');
   const shutLamp = lampMaterial(kit, '#ff3a26');
-  t.cyl(g, openLamp, 0.003, 0.003, -0.018, 0.1, 0.036, 'z', 10).userData.live =
-    true;
-  t.cyl(g, shutLamp, 0.003, 0.003, -0.006, 0.1, 0.036, 'z', 10).userData.live =
-    true;
-  f.label(g, 'OPEN SHUT', -0.012, 0.09, 0.0355, 0.0035, '#d8dde0');
+  t.cyl(
+    act,
+    openLamp,
+    0.003,
+    0.003,
+    -0.018,
+    0.1,
+    0.036,
+    'z',
+    10,
+  ).userData.live = true;
+  t.cyl(
+    act,
+    shutLamp,
+    0.003,
+    0.003,
+    -0.006,
+    0.1,
+    0.036,
+    'z',
+    10,
+  ).userData.live = true;
+  f.label(act, 'OPEN SHUT', -0.012, 0.09, 0.0355, 0.0035, '#d8dde0');
   const knob = t.cyl(
     g,
     t.paint('#c8102e', 0.4),
@@ -110,7 +140,7 @@ export function createMotorisedChemicalValve(
     12,
   );
   knob.userData.live = true;
-  f.label(g, 'MAN', 0.02, 0.062, 0.0355, 0.0035, '#d8dde0');
+  f.label(act, 'MAN', 0.02, 0.062, 0.0355, 0.0035, '#d8dde0');
   let state = newMotorisedValve(initial);
   let moving = false;
   a.uses.set(knob, () => (state = { ...state, command: !state.command }));
@@ -124,6 +154,16 @@ export function createMotorisedChemicalValve(
     const lim = motorLimits(state);
     openLamp.emissiveIntensity = lim.open ? 1.5 : 0;
     shutLamp.emissiveIntensity = lim.shut ? 1.5 : 0;
+  });
+  describe(g, name, () => {
+    const lim = motorLimits(state);
+    return lim.open
+      ? 'Open'
+      : lim.shut
+        ? 'Shut'
+        : state.command
+          ? 'Opening'
+          : 'Shutting';
   });
   const part = a.part();
   return Object.assign(part, {
@@ -172,6 +212,9 @@ export function createSolenoidValve(
     partAudio.play(RELAY_CLICK, g);
   });
   a.updates.push(() => (led.emissiveIntensity = energised ? 1.6 : 0));
+  describe(g, name, () =>
+    energised ? 'Energised, open' : 'De-energised, shut',
+  );
   const part = a.part();
   return Object.assign(part, {
     get open() {
@@ -224,6 +267,11 @@ export function createMultifunctionValve(
   let priming = false;
   a.uses.set(grip, () => (priming = !priming));
   a.updates.push(() => (knob.rotation.z = priming ? -Math.PI / 2 : 0));
+  describe(g, name, () =>
+    priming
+      ? 'Priming knob open: bleeding the pump head'
+      : 'Dosing; relief and anti-siphon set',
+  );
   const part = a.part();
   return Object.assign(part, {
     get priming() {
@@ -275,6 +323,13 @@ export function createInjectionValve(
       0.6 + view.scale * 0.6,
     );
   });
+  describe(g, name, () =>
+    view.scale >= 0.95
+      ? 'Blocked with scale'
+      : view.scale > 0.3
+        ? 'Scaling up'
+        : 'Clean',
+  );
   const part = a.part();
   return Object.assign(part, {
     get scale() {
@@ -328,6 +383,7 @@ export function createBackPressureValve(
   let k = 1;
   a.uses.set(cap, () => (k = (k + 1) % SETTINGS.length));
   a.updates.push(() => (knob.rotation.y = -k * (Math.PI / 3)));
+  describe(g, name, () => `Set at ${SETTINGS[k]} bar`);
   const part = a.part();
   return Object.assign(part, {
     get setBar() {
@@ -388,6 +444,7 @@ export function createFootValve(
   t.cyl(g, pvdf, 0.012, 0.003, 0, 0.0, 0, 'y', 16);
   // Its weight ring, so the lance hangs plumb.
   t.cyl(g, t.paint('#b8bcc0', 0.3, 0.7), 0.014, 0.008, 0, 0.05, 0, 'y', 16);
+  describe(g, name, () => 'Suction lance end: strainer and check ball');
   return a.part();
 }
 
@@ -427,6 +484,9 @@ export function createThreeWayValve(
     angle += (target - angle) * Math.min(1, delta * 8);
     lever.rotation.y = angle;
   });
+  describe(g, name, () =>
+    column ? 'Suction from the calibration column' : 'Suction from the tank',
+  );
   const part = a.part();
   return Object.assign(part, {
     get from() {
@@ -489,4 +549,86 @@ export function createDosingValvesDemo(kit: PanelKit) {
     status: () =>
       `Dosing valves: motorised ${mv.open ? 'open' : 'shut'}; solenoid ${sv.open ? 'open' : 'shut'}; multifunction ${mf.priming ? 'priming' : 'dosing'}; injection ${Math.round(iv.scale * 100)}% scaled; back-pressure ${bp.setBar} bar; three-way from ${tw.from}`,
   };
+}
+
+export interface CheckValve extends Part {
+  /** Whether flow holds it open now. */
+  flowing: boolean;
+}
+
+/**
+ * A PVC-U ball check valve (non-return), after GF type 561: a grey union
+ * body, a flow arrow moulded on it, its ball lifted while flow passes and
+ * seated when it stops. Along x, flow toward +x.
+ */
+export function createCheckValve(
+  kit: PanelKit,
+  {
+    dn = 40,
+    name = `Non-return valve, DN${dn}`,
+  }: { dn?: 15 | 40; name?: string } = {},
+): CheckValve {
+  const t = plantTools(kit);
+  const f = tools(kit);
+  const a = beginPart(kit, name);
+  const g = a.object;
+  const r = dn === 40 ? 0.025 : 0.0105;
+  const grey = t.paint(PVC, 0.45);
+  const darker = t.paint('#55585a', 0.5);
+  t.cyl(g, grey, r * 1.9, r * 3.2, 0, 0, 0, 'x', 24);
+  for (const side of [-1, 1])
+    t.cyl(g, darker, r * 1.75, r * 1.2, side * r * 2.4, 0, 0, 'x', 6);
+  f.label(g, '→', 0, r * 1.95, 0, r * 1.2, '#1b1b1b').rotation.x = -Math.PI / 2;
+  const view = { flowing: false };
+  describe(g, name, () => (view.flowing ? 'Flow passing' : 'Seated, no flow'));
+  const part = a.part();
+  return Object.assign(part, {
+    get flowing() {
+      return view.flowing;
+    },
+    set flowing(v: boolean) {
+      view.flowing = v;
+    },
+  });
+}
+
+export interface ReliefValve extends Part {
+  readonly setBar: number;
+  /** Whether it is lifting, passing back to the tank. */
+  lifting: boolean;
+}
+
+/**
+ * A pressure relief valve on a chemical main (after GF type V786): a grey
+ * body, its spring bonnet in yellow, an adjusting screw on top, the
+ * return out of its side; it lifts above its set pressure.
+ */
+export function createReliefValve(
+  kit: PanelKit,
+  {
+    setBar = 4,
+    name = `Pressure relief valve, ${setBar} bar`,
+  }: { setBar?: number; name?: string } = {},
+): ReliefValve {
+  const t = plantTools(kit);
+  const a = beginPart(kit, name);
+  const g = a.object;
+  t.cyl(g, t.paint(PVC, 0.45), 0.03, 0.06, 0, 0.03, 0, 'y', 20);
+  t.cyl(g, t.paint('#c9b437', 0.5), 0.024, 0.07, 0, 0.095, 0, 'y', 20);
+  t.cyl(g, t.paint('#2a2f31', 0.5), 0.008, 0.02, 0, 0.14, 0, 'y', 8);
+  t.cyl(g, t.paint(PVC, 0.45), 0.014, 0.04, 0.035, 0.03, 0, 'x', 12);
+  const view = { lifting: false };
+  describe(g, name, () =>
+    view.lifting ? 'Lifting, passing back to tank' : 'Seated',
+  );
+  const part = a.part();
+  return Object.assign(part, {
+    setBar,
+    get lifting() {
+      return view.lifting;
+    },
+    set lifting(v: boolean) {
+      view.lifting = v;
+    },
+  });
 }

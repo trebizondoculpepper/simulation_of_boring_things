@@ -45,6 +45,12 @@ import { createDoseBottle } from './dose-bottle';
 import { chlorellaPlate } from './chlorella-plate';
 import { hose } from './hose';
 import { createPipeMarker } from './pipe-marker';
+import { createChemicalBallValve } from './chemical-ball-valve';
+import {
+  createCheckValve,
+  createMotorisedChemicalValve,
+  createReliefValve,
+} from './dosing-valves';
 import { createLeakPort } from './leak-detection';
 import { newLowPoint } from '../../../../game/plant/leak-monitor';
 import { createPeristalticPump } from './peristaltic-pump';
@@ -155,7 +161,6 @@ export function createTransferPumpSkid(
   const pp = t.paint('#dcdcd2', 0.6);
   const pvc = t.paint('#5a5f63', 0.55);
   const dark = t.paint('#2a2f31', 0.6);
-  const red = t.paint('#b8261f', 0.5);
   const band = t.paint(BAND[chemical], 0.5);
 
   // The skid and its tray.
@@ -167,6 +172,7 @@ export function createTransferPumpSkid(
     store.pumpOn ?? computed(() => pumpRunning(store.state.value)),
   ];
   const tripped = computed(() => store.state.value.tripped);
+  const checks: ReturnType<typeof createCheckValve>[] = [];
   const gauges: ReturnType<typeof createRoundGauge>[] = [];
   const impellers: Group[] = [];
 
@@ -228,23 +234,23 @@ export function createTransferPumpSkid(
     );
     // Suction: from the header in front, its ball valve.
     t.rod(group, pvc, [x, 0.31, 0.15], [x, 0.31, 0.32], 0.025, 12);
-    t.box(group, pvc, 0.08, 0.08, 0.08, x, 0.31, 0.25);
-    t.box(group, red, 0.02, 0.015, 0.16, x, 0.37, 0.25).rotation.y =
-      Math.PI / 2;
+    const suction = createChemicalBallValve(kit, {
+      dn: 40,
+      name: 'Transfer pump suction valve',
+    });
+    suction.object.rotation.y = Math.PI / 2;
+    suction.object.position.set(x, 0.31, 0.25);
+    group.add(suction.object);
+    parts.add(suction);
     // Discharge: up, its non-return valve, its gauge on a diaphragm seal,
     // its isolating valve, into the common main behind.
     const top = 0.2 + 0.3;
-    t.cyl(group, pvc, 0.035, 0.09, x, top + 0.07, 0.045, 'y', 12);
-    f.label(
-      group,
-      'NRV',
-      x + 0.05,
-      top + 0.07,
-      0.045,
-      0.014,
-      '#ffffff',
-      '#2a2f31',
-    );
+    const nrv = createCheckValve(kit, { dn: 40 });
+    nrv.object.rotation.z = Math.PI / 2;
+    nrv.object.position.set(x, top + 0.07, 0.045);
+    group.add(nrv.object);
+    parts.add(nrv);
+    checks.push(nrv);
     t.rod(group, pvc, [x, top, 0.045], [x, top + 0.38, 0.045], 0.022, 12);
     t.cyl(
       group,
@@ -276,8 +282,14 @@ export function createTransferPumpSkid(
     g.group.traverse((o) => (o.userData.live = true));
     group.add(g.group);
     gauges.push(g);
-    t.box(group, pvc, 0.08, 0.08, 0.08, x, top + 0.3, 0.045);
-    t.box(group, red, 0.16, 0.015, 0.02, x, top + 0.3, 0.1);
+    const discharge = createChemicalBallValve(kit, {
+      dn: 40,
+      name: 'Transfer pump discharge valve',
+    });
+    discharge.object.rotation.z = Math.PI / 2;
+    discharge.object.position.set(x, top + 0.3, 0.045);
+    group.add(discharge.object);
+    parts.add(discharge);
     t.rod(
       group,
       pvc,
@@ -295,40 +307,22 @@ export function createTransferPumpSkid(
     t.cyl(group, band, 0.031, 0.05, x, 0.31, 0.32, 'x', 12);
     t.cyl(group, band, 0.031, 0.05, x, 0.88, -0.35, 'x', 12);
   }
-  t.cyl(group, t.paint('#c9b437', 0.5), 0.03, 0.12, 0.55, 0.98, -0.35, 'y', 12);
+  const prv = createReliefValve(kit, { setBar: 4 });
+  prv.object.position.set(0.55, 0.9, -0.35);
+  group.add(prv.object);
+  parts.add(prv);
   t.rod(group, pvc, [0.55, 1.04, -0.35], [0.66, 1.04, -0.35], 0.016, 8);
   t.rod(group, pvc, [0.66, 1.04, -0.35], [0.66, 0.2, -0.35], 0.016, 8);
-  f.label(
-    group,
-    'PRV 4 bar → TANK',
-    0.55,
-    1.08,
-    -0.31,
-    0.016,
-    '#1b1b1b',
-    '#c9b437',
-  );
-  f.label(
-    group,
-    `${PRODUCT[chemical]} → DAY TANKS`,
-    0,
-    0.94,
-    -0.31,
-    0.02,
-    '#ffffff',
-    BAND[chemical],
-  );
-  f.label(
-    group,
-    `FROM BULK TANKS`,
-    -0.45,
-    0.37,
-    0.36,
-    0.018,
-    '#ffffff',
-    BAND[chemical],
-  );
 
+  // The mains' markers: suction in from the tank, discharge out to the day tanks.
+  for (const [mx, my, mz, flow] of [
+    [-0.3, 0.31, 0.32, 1],
+    [0.15, 0.88, -0.35, 1],
+  ] as const) {
+    const m = createPipeMarker(kit, { r: 0.028, chemical, flow });
+    m.object.position.set(mx, my, mz);
+    group.add(m.object);
+  }
   // The local station on its post: the pump's HAND · OFF · AUTO (HAND runs
   // it for an outlet picked at the selector, AUTO for the day tanks'
   // calls, OFF never), its RUN and TRIP lamps, and the high-high trip's
@@ -401,6 +395,7 @@ export function createTransferPumpSkid(
       if (!shared) store.step(delta);
       parts.update(delta);
       running.forEach((r, i) => {
+        if (checks[i]) checks[i].flowing = r.value;
         gauges[i].set(r.value ? 0.48 : 0.02);
         gauges[i].update(delta);
       });
@@ -740,32 +735,15 @@ export function createDayTankStation(
   t.rod(group, pvc, [ix, top, iz], [ix, riser, iz], 0.02, 10);
   t.rod(group, pvc, [ix, riser, iz], [ix, riser, -bd / 2 - 0.1], 0.02, 10);
   const vy = Math.max(top + 0.25, 1.3);
-  t.box(group, pvc, 0.08, 0.08, 0.08, ix, vy, iz);
-  t.box(group, t.paint('#7b8285', 0.5), 0.12, 0.1, 0.1, ix, vy + 0.1, iz);
-  t.cyl(
-    group,
-    t.paint('#e5c43a', 0.4),
-    0.03,
-    0.03,
-    ix,
-    vy + 0.165,
-    iz,
-    'y',
-    12,
-  );
-  const pointer = t.box(group, dark, 0.05, 0.008, 0.008, ix, vy + 0.185, iz);
-  pointer.userData.live = true;
+  const inlet = createMotorisedChemicalValve(kit, {
+    dn: 40,
+    name: `${tag ?? 'Day tank'} inlet valve`,
+  });
+  inlet.object.rotation.z = Math.PI / 2;
+  inlet.object.position.set(ix, vy, iz);
+  group.add(inlet.object);
+  parts.add(inlet);
   const trend = levelTrend();
-  f.label(
-    group,
-    `${tankTag}-XV`,
-    ix,
-    vy,
-    iz + 0.045,
-    0.016,
-    '#ffffff',
-    '#2a2f31',
-  );
   // Its outlet's draw-off, out to the dosing.
   const oy = 0.04 + 0.12 + Math.min(0.18, H * 0.3);
   const oz = tankZ + W / 2 + 0.38;
@@ -886,7 +864,7 @@ export function createDayTankStation(
       pump?.update(delta, tk.litres > 0 && tk.doseLpm > 0);
       tank.parts.update(delta);
       tank.setLevel(level.value);
-      pointer.rotation.y = fill.value ? Math.PI / 2 : 0;
+      inlet.command(fill.value);
       trend.sample(store.state.value.tanks[index].litres, delta);
     },
     status: () =>
@@ -1304,7 +1282,6 @@ export function createTransferSelector(
   const galv = t.paint('#a9afaf', 0.38, 0.75);
   const pvc = t.paint('#5a5f63', 0.55);
   const dark = t.paint('#2a2f31', 0.6);
-  const red = t.paint('#b8261f', 0.5);
   const band = t.paint(BAND[chemical], 0.5);
   const pitch = 0.32;
   const n = outlets.length;
@@ -1334,7 +1311,8 @@ export function createTransferSelector(
     '#ffffff',
     BAND[chemical],
   );
-  const pointers: Mesh[] = [];
+  const actuated: [number, ReturnType<typeof createMotorisedChemicalValve>][] =
+    [];
   outlets.forEach((name, i) => {
     const x = x0 + i * pitch;
     t.rod(group, pvc, [x, hy, 0], [x, hy + 0.12, 0], 0.022, 12);
@@ -1367,27 +1345,26 @@ export function createTransferSelector(
       );
       return;
     }
-    // The manual isolating valve, its red lever along the pipe while open.
-    t.box(group, pvc, 0.07, 0.07, 0.07, x, hy + 0.17, 0);
-    t.box(group, red, 0.015, 0.14, 0.012, x, hy + 0.17, 0.05);
-    // The actuated valve: its body, its actuator, its dome and pointer.
+    // The manual isolating valve, then the actuated valve the selector
+    // opens for the outlet it serves.
+    const iso = createChemicalBallValve(kit, {
+      dn: 40,
+      name: `Outlet ${i + 1} isolating valve`,
+    });
+    iso.object.rotation.z = Math.PI / 2;
+    iso.object.position.set(x, hy + 0.17, 0);
+    group.add(iso.object);
+    parts.add(iso);
     t.rod(group, pvc, [x, hy + 0.2, 0], [x, hy + 0.5, 0], 0.022, 12);
-    t.box(group, pvc, 0.075, 0.075, 0.075, x, hy + 0.36, 0);
-    t.box(group, t.paint('#7b8285', 0.5), 0.1, 0.09, 0.09, x, hy + 0.36, 0.08);
-    t.cyl(
-      group,
-      t.paint('#e5c43a', 0.4),
-      0.025,
-      0.025,
-      x,
-      hy + 0.36,
-      0.137,
-      'z',
-      12,
-    );
-    const p = t.box(group, dark, 0.008, 0.045, 0.006, x, hy + 0.36, 0.152);
-    p.userData.live = true;
-    pointers.push(p);
+    const act = createMotorisedChemicalValve(kit, {
+      dn: 40,
+      name: `Outlet ${i + 1} actuated valve, ${name}`,
+    });
+    act.object.rotation.z = Math.PI / 2;
+    act.object.position.set(x, hy + 0.36, 0);
+    group.add(act.object);
+    parts.add(act);
+    actuated.push([i, act]);
     // Up to its outlet, banded, its plate.
     t.rod(group, pvc, [x, hy + 0.5, 0], [x, 1.75, 0], 0.022, 12);
     t.cyl(group, band, 0.025, 0.05, x, 1.3, 0, 'y', 12);
@@ -1464,14 +1441,8 @@ export function createTransferSelector(
     /** Where its header takes its feed. */
     inlet: [-w / 2 - 0.2, hy, 0] as const,
     update(delta: number) {
+      for (const [i, v] of actuated) v.command(valveOpen(store.state.value, i));
       parts.update(delta);
-      let k = 0;
-      outlets.forEach((name, i) => {
-        if (!name) return;
-        pointers[k++].rotation.z = valveOpen(store.state.value, i)
-          ? 0
-          : Math.PI / 2;
-      });
     },
     status: () => {
       const s = store.state.value;

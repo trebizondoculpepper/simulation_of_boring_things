@@ -8,6 +8,7 @@ import {
 } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { drawGhs } from './chemicals-signs';
+import { describe } from './describe';
 
 export type MarkedChemical = 'hypochlorite' | 'acid';
 
@@ -164,5 +165,10 @@ export function createPipeMarker(
     }),
   );
   place(violet, plain(VIOLET));
+  describe(
+    group,
+    `Pipe marker: ${name}${contained ? ', double contained' : ''}`,
+    () => `Flow ${flow > 0 ? 'left to right' : 'right to left'} as marked`,
+  );
   return { object: group, length: total };
 }
