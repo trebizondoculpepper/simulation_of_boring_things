@@ -1,0 +1,5 @@
+# Sound assets
+
+| File                   | Source                                                                                                                | Edits                                                                                                                                                                                               |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bridge-room-tone.ogg` | The owner's own synthesised room tone (`ready_room.m4a`, 2026-10-27), used with permission as the bridge's room tone. | 62 s taken from 1:00, halved in level, its last 2 s crossfaded over its first 2 s into a seamless 60 s loop, 44.1 kHz stereo Vorbis. Played at 0.12 (`ROOM_TONE_LEVEL` in `../bridge-ambience.ts`). |

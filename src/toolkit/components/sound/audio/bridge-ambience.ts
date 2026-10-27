@@ -299,6 +299,91 @@ export function bridgeAmbience(
   };
 }
 
+/** The owner's own synthesised room tone (2026-10-27): a minute of it, looped. */
+const ROOM_TONE = new URL('./assets/bridge-room-tone.ogg', import.meta.url);
+/** Its playing level: the recording is far louder than the synthesis. */
+const ROOM_TONE_LEVEL = 0.12;
+const roomToneBuffers = new WeakMap<AudioContext, Promise<AudioBuffer>>();
+
+/**
+ * The bridge's room tone from the owner's recording (`assets/README.md`):
+ * a seamless one-minute loop under the same fader, level and release as
+ * the synthesis, so the room drives either alike.
+ */
+export function bridgeRoomTone(
+  options: {
+    level?: { readonly value: number };
+    fade?: AmbienceFade;
+    release?: number;
+  } = {},
+): LoopRecipe {
+  return (context, out) => {
+    const now = context.currentTime;
+    const fader = context.createGain();
+    const after = now + (options.fade?.after ?? 0);
+    const rise = options.fade?.rise ?? DEFAULT_RISE;
+    fader.gain.setValueAtTime(0, now);
+    fader.gain.setValueAtTime(0, after);
+    fader.gain.linearRampToValueAtTime(1, after + rise);
+    const level = context.createGain();
+    level.gain.value = ROOM_TONE_LEVEL * (options.level?.value ?? 1);
+    fader.connect(level).connect(out);
+    const unwatch = options.level
+      ? effect(() => {
+          const value = ROOM_TONE_LEVEL * options.level!.value;
+          level.gain.setTargetAtTime(value, context.currentTime, 0.25);
+        })
+      : () => {};
+    if (!roomToneBuffers.has(context)) {
+      const pending = fetch(ROOM_TONE)
+        .then((response) => {
+          if (!response.ok) throw new Error(`Sound unavailable: ${ROOM_TONE}`);
+          return response.arrayBuffer();
+        })
+        .then((bytes) => context.decodeAudioData(bytes));
+      roomToneBuffers.set(context, pending);
+      void pending.catch(() => roomToneBuffers.delete(context));
+    }
+    let cancelled = false;
+    let source: AudioBufferSourceNode | undefined;
+    void roomToneBuffers
+      .get(context)!
+      .then((buffer) => {
+        if (cancelled) return;
+        source = context.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+        source.connect(fader);
+        // Somewhere in the minute, so it is not always the same moment.
+        source.start(0, Math.random() * buffer.duration);
+      })
+      .catch((error) => console.warn('The bridge could not hum.', error));
+    const release = options.release ?? DEFAULT_RELEASE;
+    return [
+      {
+        release,
+        stop(when?: number) {
+          cancelled = true;
+          unwatch();
+          const t = context.currentTime;
+          const end = Math.max(when ?? t + release, t + 0.05);
+          fader.gain.cancelScheduledValues(t);
+          fader.gain.setValueAtTime(fader.gain.value, t);
+          fader.gain.linearRampToValueAtTime(0, end);
+          window.setTimeout(
+            () => {
+              source?.stop();
+              fader.disconnect();
+              level.disconnect();
+            },
+            (end - t + 0.3) * 1000,
+          );
+        },
+      },
+    ];
+  };
+}
+
 /**
  * The bridge's ambience for a room to drive. The usual way is
  * `setPresence` every frame (or on each change) with where the walker is:
@@ -316,6 +401,8 @@ export function createBridgeAmbience(
     variant?: BridgeAmbienceId;
     level?: number;
     release?: number;
+    /** The owner's recording (the default, 2026-10-27) or the synthesis. */
+    source?: 'recording' | 'synthesis';
   } = {},
 ) {
   const owner = {};
@@ -340,7 +427,9 @@ export function createBridgeAmbience(
       playing = true;
       partAudio.hold(
         owner,
-        bridgeAmbience(variant, { level, fade, release: options.release }),
+        (options.source ?? 'recording') === 'recording'
+          ? bridgeRoomTone({ level, fade, release: options.release })
+          : bridgeAmbience(variant, { level, fade, release: options.release }),
       );
     },
     /** Die away over the release (default two and a half seconds). */
