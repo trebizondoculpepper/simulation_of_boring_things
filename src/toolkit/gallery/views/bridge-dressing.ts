@@ -1,6 +1,5 @@
 import {
   CanvasTexture,
-  CircleGeometry,
   CylinderGeometry,
   Group,
   Mesh,
@@ -388,16 +387,17 @@ export function carpetRing(
   y: number,
   r: number,
 ) {
-  const ring = new Mesh(new RingGeometry(r - 0.6, r, 96), m.ring);
+  // Its own material, pulled forward in depth so it never fights the
+  // floor's carpet under it (the owner saw a zig-zag, 2026-10-27).
+  const mat = m.ring;
+  mat.polygonOffset = true;
+  mat.polygonOffsetFactor = -2;
+  mat.polygonOffsetUnits = -8;
+  const ring = new Mesh(new RingGeometry(r - 0.6, r, 96), mat);
   ring.rotation.x = -Math.PI / 2;
-  ring.position.set(at.x, y + 0.004, at.z);
+  ring.position.set(at.x, y + 0.01, at.z);
   ring.name = 'Carpet ring';
-  const inner = new Mesh(new CircleGeometry(r - 0.6, 96), m.carpet);
-  inner.rotation.x = -Math.PI / 2;
-  inner.position.set(at.x, y + 0.002, at.z);
-  const g = new Group();
-  g.add(inner, ring);
-  return g;
+  return ring;
 }
 
 /**

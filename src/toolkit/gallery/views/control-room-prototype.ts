@@ -180,12 +180,15 @@ export function createControlRoomPrototype(
   const hcx = (hall.minX + hall.maxX) / 2;
   const hcz = (hall.minZ + hall.maxZ) / 2;
   const t = STAIR.wall;
+  // Its walls stop under the room's floor slab, so their tops never
+  // show through it (they flickered round the stair's opening).
+  const WALL_H = STOREY - 0.32;
   // Its floor.
   box(stone, hw, 0.1, hd, hcx, -0.05, hcz, hallGroup);
   // Its walls, the south round the door.
-  box(hallWall, t, STOREY, hd, hall.minX + t / 2, STOREY / 2, hcz, hallGroup);
-  box(hallWall, t, STOREY, hd, hall.maxX - t / 2, STOREY / 2, hcz, hallGroup);
-  box(hallWall, hw, STOREY, t, hcx, STOREY / 2, hall.minZ + t / 2, hallGroup);
+  box(hallWall, t, WALL_H, hd, hall.minX + t / 2, WALL_H / 2, hcz, hallGroup);
+  box(hallWall, t, WALL_H, hd, hall.maxX - t / 2, WALL_H / 2, hcz, hallGroup);
+  box(hallWall, hw, WALL_H, t, hcx, WALL_H / 2, hall.minZ + t / 2, hallGroup);
   // The game's doorway, or the prototypes' stand-in door.
   const way = game ? bridgeDoor() : door;
   const dw = way.width;
@@ -194,30 +197,30 @@ export function createControlRoomPrototype(
   box(
     hallWall,
     left,
-    STOREY,
+    WALL_H,
     t,
     hall.minX + left / 2,
-    STOREY / 2,
+    WALL_H / 2,
     door.z,
     hallGroup,
   );
   box(
     hallWall,
     right,
-    STOREY,
+    WALL_H,
     t,
     hall.maxX - right / 2,
-    STOREY / 2,
+    WALL_H / 2,
     door.z,
     hallGroup,
   );
   box(
     hallWall,
     dw,
-    STOREY - way.height,
+    WALL_H - way.height,
     t,
     way.x,
-    (STOREY + way.height) / 2,
+    (WALL_H + way.height) / 2,
     door.z,
     hallGroup,
   );
@@ -264,10 +267,10 @@ export function createControlRoomPrototype(
   box(
     hallWall,
     sp.maxX - sp.minX,
-    STOREY,
+    WALL_H,
     sp.maxZ - sp.minZ,
     (sp.minX + sp.maxX) / 2,
-    STOREY / 2,
+    WALL_H / 2,
     (sp.minZ + sp.maxZ) / 2,
     hallGroup,
   );

@@ -78,6 +78,9 @@ function whenFont(redraw: () => void) {
     .catch(() => {});
 }
 
+/** The most a screen repaints a second on its own (a touch repaints at once). */
+export const PAINT_HZ = 10;
+
 export interface TouchScreenSpec {
   /** Its opening in the frame, metres. */
   rect: ScreenRect;
@@ -190,8 +193,14 @@ export function createTouchSurface(
       onSound: (sound: UiSound) => partAudio.play(TOUCH_BLEEPS[sound], mesh),
     });
     whenFont(() => spec.tree.markDirty());
-    const repaint = () => {
-      if (!root.needsPaint) return;
+    // Repainted, and its texture uploaded, only when its tree says it has
+    // changed; its own animations (blinks, moving flows, wandering values)
+    // at most `PAINT_HZ` times a second (mission 095: the benchmark of
+    // mission 094 found every panel uploading its canvas each frame).
+    let painted = -Infinity;
+    const repaint = (now = Infinity) => {
+      if (!root.needsPaint || now - painted < 1 / PAINT_HZ) return;
+      painted = Number.isFinite(now) ? now : painted;
       root.paint(context);
       texture.needsUpdate = true;
     };
@@ -222,7 +231,10 @@ export function createTouchSurface(
     seconds += delta;
     for (const s of screens) {
       s.root.tick(seconds);
-      s.repaint();
+      // By the clock, not by the deltas: however often it is updated.
+      s.repaint(
+        typeof performance === 'undefined' ? seconds : performance.now() / 1000,
+      );
     }
   });
   const part = a.part();
