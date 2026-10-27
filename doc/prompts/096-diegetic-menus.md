@@ -1,0 +1,298 @@
+# 096: Menus as Penfold control panels
+
+Status: planned (2026-10-27). The feasibility was researched from the code; the findings, the recommended approach and the stages are below. No game code has been written yet. Stage 0, a spike in the dev rooms, is next. Written 2026-10-27 from the owner's request.
+
+You are working on "The Pool", a browser game in TypeScript and Three.js that simulates a leisure centre's pool plant (this repository). Read these first:
+
+- `CLAUDE.md`, especially the rules on the one control scheme, the dev rooms (dev0 for single controls, dev39 for assemblies), Penfold Controls, the period mix and the pure `logic/` folders.
+- `doc/design/control-interface-archetypes.md`.
+- `src/toolkit/controls/CLAUDE.md`.
+- `src/ui2d/README.md`.
+- The cost work, [display-only updates](../research/display-only-updates.md) and [the component cost report](../reports/component-cost-2026-10-27.md).
+
+Markdown is one paragraph per line.
+
+Today every menu in the game is flat HTML and CSS laid over the 3D view. This mission replaces those menus with small 3D control panels, drawn with an isometric (orthographic) camera and built from the game's own control parts: real push buttons, knobs, switches, lamps and readouts, each lettered the way such panels really are. The menus become part of the game's world of instruments.
+
+## The request
+
+The owner, 2026-10-27: "At the moment, all of our game start menus and the system menus are two-dimensional rendered things. I wonder if we could try a completely new approach. Imagine if all of the game menus were rendered as isometric 3D components from our control panel widget set, so we actually keep everything in game. For the main in-game control panel, that's easy: it's just an isometrically rendered screen in which we use the control toolkits, and we have some lettering, maybe a combination of the different kinds of lettering we have. For the opening screen, I'd love to keep a little box with the menu options in it, but keep the low-resolution rendered background. Could we start a new mission where we begin to investigate the feasibility of how this will work?" The owner also asked that the result be a prompt with detailed instructions for how it will be done: this file.
+
+## What is known (the investigation, 2026-10-27)
+
+### The menus and 2D surfaces today
+
+Every one of them is DOM and CSS built in TypeScript. None uses canvas 2D, `src/ui2d` or Three.js.
+
+| Surface                                                   | Files                                                                                                                                                                            | What it is and does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Input                                                                                                                                                                                                  | Notes                                                                                                                                                                                                  |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Title screen                                              | `src/toolkit/title/title-screen.ts`, mounted in `src/main.ts` (`createTitleScreen`, `startTitleBackdrop`)                                                                        | A `div.title-screen` (z-index 40). It holds "Boring Simulations Presents:", the title `h1` "The Pool", a `nav` "Main menu" with NEW GAME, CONTINUE (disabled when there is no save), SETTINGS and INSTRUCTIONS, a sound hint ("Click or press a key for sound", `aria-live`), and the build corner (`buildLine()` in `src/game/version.ts`: version, commit, date, "development build", and a "Source code" link).                                                                                                                                                     | Its own keydown handler (arrows, Enter, Space), its own gamepad poll (d-pad, stick, A) and mouse. Only `[` and `]` and the screenshot chord go through `src/toolkit/controls/` (`bindTitleShortcuts`). | Initial focus is on the menu. New game overwrites the save without asking.                                                                                                                             |
+| Title backdrop (the "low-resolution rendered background") | `src/toolkit/title/logic/attract-sequence.ts`, `camera-path.ts`, `title-orbit.ts`; `src/game/attract-scenarios.ts`; `startTitleBackdrop` in `src/main.ts`                        | Each shot builds a real room module on its own cloned canvas with its own `WebGLRenderer`, at a quarter of the resolution each way (`setPixelRatio(full / 4)`). CSS then blurs it, darkens it and scales it by 1.04 (`.on-title #app canvas` in `src/styles/main.css`). Each shot runs its own frozen scenario world, never saved. The DOM `.attract-veil` fades between shots; the title theme plays and game audio is muted.                                                                                                                                         | None.                                                                                                                                                                                                  | `paused` is true throughout. This is kept as it is (the owner).                                                                                                                                        |
+| Pause and settings menu (Esc, gamepad Start, the gear)    | `src/toolkit/settings/pause-menu.ts`; `settings-store.ts` (a signal kept in localStorage `pool-plant:settings`); `logic/settings.ts` (defaults, `RANGES`, `renderScale`)         | A `role=dialog` panel with four `role=tab` pages:<br>• **Game:** RESUME, SAVE (with a "Saved at …" status), NOCLIP (checkbox), COPY CAMERA LINK, QUIT TO TITLE, optional QUIT TO DESKTOP, and a wrench to the dev panel.<br>• **Graphics:** render quality 0–10 (shown as 1:x) and field of view 40–90.<br>• **Audio:** master volume.<br>• **Controls:** look sensitivity, INVERT Y, on-screen controls (automatic, always, never), a bindings table and touch help.<br>Opened from the title with `inGame: false` as SETTINGS or INSTRUCTIONS, the Game page hidden. | Its own capture-phase keydown (Esc, Q and E for tabs) and its own gamepad poll (Start, B, LB/RB, d-pad, A). None of it goes through the control scheme.                                                | No focus trap. Its `BINDINGS` table duplicates `controls.ts`. Opening from the title sets `paused` false (`pause-menu.ts`, `open`): a probable bug, since the title then un-pauses the player's clock. |
+| In-game HUD                                               | `createFirstPerson()` in `src/toolkit/controls/input/first-person.ts`; `showOnTop` and the location overlay in `src/main.ts`; `hud-policy.ts`; `touch-sticks.ts`; `menu-hint.ts` | The crosshair; the amber movement pad and USE (`.hud-movement`); top-right tools (torch, pin/camera link, screenshot, gear); a speed readout "▶▶ 1×" that does not work yet; the room title, top left; touch twin sticks, CROUCH and INSPECT; noclip's altitude buttons and readout; the help line (`.controls-help`, `aria-live`), which shows flight or ladder help, the inspection target, the seated hint or the one-off menu hint.                                                                                                                                | Direct DOM handlers in `first-person.ts`.                                                                                                                                                              | Touch sticks are `aria-hidden`.                                                                                                                                                                        |
+| Console                                                   | `src/toolkit/console/console-view.ts`, `logic/commands.ts`                                                                                                                       | A drop-down command line for developers.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | The console key, Esc and typing.                                                                                                                                                                       | Stays DOM: a developer's tool that needs text entry.                                                                                                                                                   |
+| Manual                                                    | `src/toolkit/manual/plant-manual.ts` (`?manual`, a DOM bill of parts); `src/manual/` (an offline LaTeX PDF)                                                                      | Reference pages.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Links.                                                                                                                                                                                                 | Stays DOM; out of scope.                                                                                                                                                                               |
+| Dev panel                                                 | `#room-index` in `index.html` (`?dev`); several dev rooms' own note divs                                                                                                         | A list of links to rooms.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Links.                                                                                                                                                                                                 | Stays DOM.                                                                                                                                                                                             |
+| Error                                                     | `showError` in `src/main.ts`, `#error` in `index.html`                                                                                                                           | "The game could not start. Please use a browser with WebGL 2 enabled."                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | None.                                                                                                                                                                                                  | Must stay DOM. There is no up-front WebGL check.                                                                                                                                                       |
+| Screenshot notice                                         | `src/main.ts` (`captureView`, the notice)                                                                                                                                        | A status line with an optional SAVE button for downloading.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Mouse.                                                                                                                                                                                                 | Stays DOM: the download needs a user gesture on a real element in some browsers.                                                                                                                       |
+| Dialogs                                                   | none                                                                                                                                                                             | There are no confirmations anywhere. `doc/plans/title-screen.md` plans one for overwriting a save.                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | —                                                                                                                                                                                                      | —                                                                                                                                                                                                      |
+
+There is no loading screen (the attract sequence's black hides build time), no fullscreen, and no save slots (one autosave, kept in two rotating copies, with tab ownership by Web Locks: `src/toolkit/save/world-store.ts`). So no text entry is needed today.
+
+Audio is unlocked by a capture-phase `pointerdown` or `keydown` on the window (`part-audio.ts`). Any click on a canvas counts.
+
+### The parts we would build from
+
+**The part contract** (`src/toolkit/components/core/parts/parts.ts`):
+
+- A `Part` has `object`, `uses: Map<Object3D, (direction?) => void>`, `update(delta)`, `onEvent`, `setAudible` and `dispose`.
+- `beginPart` gives a builder: `voice` (a sound per event, played at the part), `legend` (the engraved plate) and `shows` (feeds the inspection overlay).
+- `createPartSet()` merges parts' uses into one map.
+- Picking is a raycast against `uses.keys()`, walking up the parents of the hit object, then `work(knobDirection(object, hitPoint, camera))`. `knobDirection` (`src/toolkit/controls/input/knob-turning.ts`) projects through any camera, so an orthographic camera works unchanged.
+- State is held in `@preact/signals-core` signals.
+- The behaviours are pure, in `src/toolkit/components/core/logic/world/components.ts` (`createMomentary`, `createLedPushbutton`, `createSwitch`, `createSelector`, …).
+
+**Parts with behaviour, ready to use:**
+
+| Part                                                                  | Factory                                                                                        | Sound                                                          |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 30 mm push button, plain or illuminated                               | `pushButton`                                                                                   | `button-press.wav`                                             |
+| Illuminated latching push button                                      | `ledPushbutton`                                                                                | `button-press.wav`                                             |
+| Studio short-travel switch                                            | `studioSwitch`                                                                                 | synthesised click                                              |
+| Pilot light, push to test                                             | `pilotLight`                                                                                   | `button-press.wav`                                             |
+| Lever, cam, key and XB4 selectors                                     | `selector`                                                                                     | `switch-click.wav` detents; key ratchet; a rattle when refused |
+| Rotary potentiometer, `.share` 0–1, 10 steps by default               | `potentiometer`                                                                                | a quiet click per step                                         |
+| Mushroom stop                                                         | `mushroomStop`                                                                                 | synthesised                                                    |
+| Key switch 0/I                                                        | `keySwitch`                                                                                    | key turn, or a rattle when locked                              |
+| Pushbutton station                                                    | `pushbuttonStation`                                                                            | `button-press.wav`                                             |
+| Drive keypad and operator terminal                                    | `driveKeypad`, `operatorTerminal`                                                              | `key-thock.wav`                                                |
+| Membrane key; illuminated I/O rocker                                  | `membraneKey`, `illuminatedRocker` (`small-parts.ts`)                                          | a quiet press                                                  |
+| The OT-216 terminal: 16 × 2 LCD, nine membrane keys, LOCAL ACCESS key | `createOt216Terminal` (`views/ot216-terminal.ts`), its pure logic in `logic/ot216-terminal.ts` | beeps                                                          |
+
+**Views only (they need part wrappers before use):** toggle (bat handle), rocker, slide switch, the knob styles and keypads in `panel-switchgear.ts`. These are wired by hand today in `src/rendering/effects-console.ts` and `exhibit-panel.ts`, with `stepKnob` and `stepSelector`. There is no fader or slide lever anywhere.
+
+**Displays:**
+
+- `createPanelMeter` (a DH-670 moving-coil meter with an eased needle) and `createRoundGauge`.
+- `createCharacterLcd` (5 × 7 dots, `font-5x7.ts`, repaints only the dots that change), `createVfd`, `createLedMatrix` and `createJewelLamp` (`panel-instruments.ts`).
+- `createSevenSegment` and `createBarGraph` (`core/views/eighties-controls.ts`).
+- `createNixieScreen` (`core/views/screens.ts`).
+- The `ui2d` touch surface (`views/touch-surface.ts`): it repaints when its tree is dirty, at most `PAINT_HZ = 10`.
+
+**Lettering.** Every kind draws a Canvas 2D texture on a plane. There is no SDF text and no text geometry. `createCanvasTexture` sets anisotropy 8 and sRGB.
+
+| Kind                                    | Function                                                                    | Typeface and resolution                          |
+| --------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------ |
+| Printed or silk-screen                  | `createMicroLabel` (`eighties-controls.ts`)                                 | `PANEL_FONT`, 16 px a line; does not take clicks |
+| Black anodised legend plate             | `createLegendPlate`                                                         | —                                                |
+| Engraved traffolyte                     | `createEngravedPlate` (`core/views/plant-signs.ts`, colours in `LAMINATES`) | 640 px wide, Arial Narrow                        |
+| Engraved signs                          | `engrave()` and the signs in `general-safety/views/engraved-sign.ts`        | 1000 px/m                                        |
+| Dymo tape                               | `createDymoLabel` (`core/views/hand-labels.ts`)                             | Arial Narrow bold with per-letter jitter         |
+| Marker pen                              | `core/views/hand-labels.ts`                                                 | Permanent Marker                                 |
+| Stencil                                 | `createStencilText`                                                         | —                                                |
+| Brand wordmarks                         | `brand-logo.ts`                                                             | —                                                |
+| Seven-segment, 5 × 7 dot, VFD and nixie | the displays above                                                          | —                                                |
+| The bridge's parody style               | `ui2d` `BLOCK_THEME`                                                        | Antonio                                          |
+
+`label-visibility.ts` fades small labels by their projected height. Menus must switch that off.
+
+**Assembly:**
+
+- Boards are placed by hand in metres. `createBoard(kit, {title, width, height, scale})` in `src/toolkit/gallery/rooms/test-boards.ts` returns `place(part, x, y, size)` and a caption. The effects console in `effects-console.ts` uses a fixed pitch (52 mm, rows 62 mm).
+- `panelMakerMark` (`core/views/panel-maker-mark.ts`) puts Penfold's badge in the top right corner, or the bottom right where the top right is in use.
+- Objects that change at run time carry `userData.live` so `merge-static.ts` leaves them alone.
+- dev0 is `controls-room.ts` (single controls on test boards). dev39 is `rooms/plant/control-assemblies.ts`, whose `EXHIBITS` hold `PlantExhibit`s (`plant/exhibit.ts`).
+
+### Rendering
+
+- One factory, `createRenderer` (`core/parts/render-style.ts`), makes a renderer per room canvas: antialiased, pixel ratio capped at 2, then multiplied by `renderScale(renderLevel)` (`1/ln(e + level)`). A room's own renderer is therefore deliberately soft at the lower quality settings.
+- Rooms draw every frame in their own `setAnimationLoop`, even while paused. A room seen through a doorway is drawn by a second renderer.
+- The only orthographic cameras are the full-screen passes in `src/rendering/ghost-overlay.ts` and `pattern-overlay.ts`. These are a working precedent for drawing a second scene over a room's frame with the same renderer.
+- Nothing calls `forceContextLoss`, so several WebGL contexts can be alive at once: the room, the doorway room, the title shots. Browsers lose the oldest beyond about 16.
+
+### Costs
+
+From [the report](../reports/component-cost-2026-10-27.md):
+
+- Draw calls dominate, at about 15 µs each. Panels are expensive: the pump panel is 336 draw calls.
+- The budgets for a display: idle, at most 12 uploads and 250 k texels a second; an update at most 200 µs.
+- A menu panel of 20–30 parts is likely to be 300–600 draw calls. That is fine drawn only when something changes, but not every frame on top of a busy room.
+
+## Feasibility: the questions answered
+
+1. **An isometric overlay is feasible.**
+   - A transparent canvas of its own, above the room canvases and below the DOM fallback, with its own `WebGLRenderer` (`alpha: true`, its pixel ratio the device's, not scaled by `renderLevel`, so lettering stays crisp at the lowest render quality).
+   - An `OrthographicCamera` posed by pure maths (`iso-view.ts`, below) and a small scene of its own with a fixed key-and-fill light and a `RoomEnvironment`. The parts use `createPs1Material` and need light to look right.
+   - Drawing into each room's own renderer after the room instead (the ghost overlay's pattern) was weighed and rejected: those renderers are scaled down by the render quality and change at every room handover, and the title's backdrop canvas is blurred by CSS.
+   - The cost of the extra canvas is one persistent WebGL context, which stage 0 must check against the doorway and title canvases (count the contexts live at the title, in a room with a doorway, and after ten room changes).
+2. **Small text at an angle.**
+   - True isometric (35.26° down, 45° round) foreshortens a panel's face too much for 3 mm legends.
+   - Use a "desk" view instead: the camera 30° down and 20–30° round, and the panel's face raked back so it is nearly face-on. The parts and their depth still read as 3D: the caps stand proud, the knobs have skirts, and the bezels cast shading.
+   - Size every lettering canvas from its on-screen size: at least 2 texels per device pixel at the panel's drawn scale, rounded to a power of two, mipmapped, anisotropy 8.
+   - Set the camera's frustum so a panel millimetre is a whole number of CSS pixels where possible (`iso-view.ts` snaps the zoom).
+   - Smallest legend: about 9 CSS px cap height on a 360 px wide phone. Check this at device pixel ratios 1, 2 and 3.
+3. **Picking and navigation through the one control scheme.**
+   - Pointer and touch: raycast with the overlay's camera into the panel's `PartSet` uses, exactly as rooms do (`knobDirection` already works with any camera). A press on the overlay is consumed and never reaches the room.
+   - Keyboard and gamepad: there is no focus or menu-navigation abstraction today. The title and pause menu each poll the gamepad themselves, against `src/toolkit/controls/CLAUDE.md`.
+   - This mission adds one: `src/toolkit/controls/logic/menu-navigation.ts`, pure. It does spatial focus movement over the controls' projected centres (up, down, left, right to the nearest control in that direction's cone), plus ACTIVATE, TURN −/+ (a knob, selector or potentiometer), BACK and HOME. `src/toolkit/controls/input/menu-input.ts` is the one keyboard and gamepad reader for menus: it replaces both pollers and adds the menu's bindings to `CONTROL_SCHEME`, so the help and bindings come from one table.
+   - The focused control shows a diegetic focus mark: a thin amber ring on the panel round it, the HUD's amber, drawn only when the last input was not the pointer.
+4. **Text entry.** None is needed: there are no save slot names. If slots come later, they are a rotary slot selector (numbered positions), each slot's date and room shown on a 16 × 2 character LCD (the OT-216's). Names, if wanted, are entered on the OT-216's cursor keys (letter up and down, cursor left and right), with the DOM mirror's text field (below) for keyboard and screen-reader users.
+5. **Sliders become rotary parts.**
+   - Continuous values become potentiometers with a printed scale (`potentiometer`, `steps` set per setting) and a readout beside them: seven-segment, or the moving-coil meter for the volume.
+   - Choices of three to five become lever or cam selectors.
+   - On or off becomes an illuminated latching push button or a toggle switch.
+   - A fader is not needed. If the owner wants one, it is a new part, tried in dev0 first.
+6. **Accessibility.**
+   - The menu is a pure model with two views: the 3D panel and an accessible DOM mirror. The mirror is visually hidden but in the accessibility tree: real `button`s, `input type=range`, `select` and `role=radiogroup`, with the legends' words as their names.
+   - Keyboard Tab, screen readers and switch access operate the mirror natively. The 3D panel follows its focus and state, and the pointer on the 3D panel drives the same model.
+   - A setting, MENU STYLE (PANEL or PLAIN), shows the mirror as a visible, high-contrast plain menu instead of the panel. It is also the automatic fallback when WebGL is missing or the overlay fails to start.
+   - `prefers-reduced-motion` turns off the panel's slide and the camera's ease; parts still move, their travel being state.
+   - The inspection overlay's "no peeking" rule holds: inspecting a menu control says its legend and what its own lamp, pointer or readout shows, nothing more.
+   - Add the pause dialog's missing focus trap in the mirror.
+7. **Performance.**
+   - The overlay draws only on change: on input, while a part animates (a cap's travel, a needle's ease, a lamp's fade), or when a bound value changes. Then it stops.
+   - Open and idle, it must not upload textures or draw. Closed, its canvas is hidden and its loop stopped.
+   - Statics are merged (`merge-static.ts`), with live parts marked.
+   - Add the panel to `bench.html?bench=components` and hold it to the report's budgets.
+   - The room behind keeps drawing as it does today.
+8. **Sound.**
+   - The parts' own voices play: presses, detents, key ratchets, deny rattles.
+   - Through `partAudio`, positional sound needs a listener. The overlay plays the menu's sounds unpositioned (centre, a fixed level) under the game's master volume. They must be heard on the title, where game audio is muted (`setGameMuted`), so they route like the title theme (`partAudio.hold`).
+   - The volume knob plays a click per step and moves the meter, so the owner hears the level as it is set.
+9. **Labels and their length.** The game is English only. Each plate in the layout has a character budget, checked by a test, so a legend that grows fails the build instead of overflowing its plate. Fixed text is engraved; values are on displays.
+10. **The title's box over the low-res background.**
+    - The backdrop stays exactly as it is: quarter-resolution room canvases, CSS blur, the veil and the theme.
+    - The box is a small panel on the transparent overlay canvas. Only its own rectangle takes pointer input (`pointer-events` on the canvas, with hit-testing outside the panel's projected bounds passed through).
+    - The DOM title nav becomes the hidden mirror.
+11. **How the in-game panel appears.**
+    - Esc (or Start, or the gear) dims the room as the settings backdrop does now. The system panel then slides up into view from below the screen's edge (250 ms, eased), and slides down when RESUME is pressed. With reduced motion it appears at once.
+    - A diegetic panel in the room (walking to it) was weighed and rejected: settings must be reachable anywhere, at once, paused.
+12. **What stays DOM:**
+    - the error message and the no-WebGL fallback;
+    - the console; the manual and the dev panel;
+    - the screenshot notice's SAVE (a real element for the download gesture);
+    - the "Source code" link (the panel's SOURCE button may open it from inside the click handler, which counts as a gesture, but the mirror keeps a real link);
+    - the touch sticks (multi-touch at low latency);
+    - the accessible mirror itself;
+    - any future file input.
+
+    Audio unlock needs nothing new: a click on the overlay canvas is a gesture.
+
+No code spike was run for this write-up. Stage 0 is that spike, and it must answer the measurements above (contexts, legibility at each device pixel ratio, draw calls, idle uploads) before stage 1 starts.
+
+## The recommendation
+
+The approach is a hybrid: a 3D overlay for what is seen, and a DOM mirror for what is accessible and for the fallback, both driven by one pure menu model.
+
+| Option                                 | Verdict                                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| A pure 3D overlay                      | Rejected: it would lose screen readers and keyboard Tab.                                 |
+| A diegetic panel in the room           | Rejected: it is not reachable everywhere, and the camera would have to leave the walker. |
+| DOM menus restyled to look like panels | Rejected: not what the owner asked for.                                                  |
+
+The system panel is one Penfold-made desk panel in the 1980s large-panel archetype, light grey, with engraved traffolyte zone headings and Penfold's mark top right. It has no tabs, because a real panel does not page. Its zones:
+
+| Zone                 | Contents                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GAME                 | • RESUME: a green illuminated push button.<br>• SAVE: a push button. Its status ("SAVED 14:32", "SAVING", "READ ONLY", the last when another tab holds the save) shows on a VFD line.<br>• QUIT TO TITLE: a push button with a confirm step. The first press lights it and shows "PRESS AGAIN TO QUIT" on the VFD for 3 s.<br>• QUIT TO DESKTOP, where available: the same, with a confirm step.<br>• COPY VIEW LINK: a push button; the VFD says "LINK COPIED". |
+| PICTURE              | • RENDER QUALITY: a potentiometer with 11 steps and a printed 0–10 scale, its ratio "1:2.4" on a seven-segment readout.<br>• FIELD OF VIEW: a potentiometer over 40–90 in steps of 5, the degrees on a seven-segment readout.                                                                                                                                                                                                                                    |
+| SOUND                | • MASTER VOLUME: a potentiometer, 0–10.<br>• A DH-670 moving-coil meter beside it reads the game's output level live (an `AnalyserNode` on the master bus: a real, working instrument).                                                                                                                                                                                                                                                                          |
+| CONTROLS             | • LOOK SENSITIVITY: a potentiometer with a seven-segment readout.<br>• INVERT Y: an illuminated latching push button.<br>• ON-SCREEN CONTROLS: a three-position lever selector, AUTO · ON · OFF.                                                                                                                                                                                                                                                                 |
+| MAINTENANCE          | Developers only:<br>• NOCLIP: a key switch.<br>• DEV PANEL: a push button.<br>Both are labelled on Dymo tape: a site addition.                                                                                                                                                                                                                                                                                                                                   |
+| The instruction card | The bindings and touch help, beside the panel: a printed laminated card in a holder, small print in `PANEL_FONT`, generated from `CONTROL_SCHEME`. INSTRUCTIONS on the title focuses and enlarges it.                                                                                                                                                                                                                                                            |
+| The rating plate     | Engraved: PENFOLD CONTROLS · SYSTEM PANEL SP-1 and the version, build and date from `buildLine()` (e.g. SER v0.1.0 · BUILD 3fe13af · 22 OCT 2026). It replaces the title's build corner. "DEVELOPMENT BUILD" is a red Dymo strip under it.                                                                                                                                                                                                                       |
+
+**The title's box:** a small Penfold enclosure, the compact archetype's size, in the lower middle of the screen, over the unchanged backdrop.
+
+- "Boring Simulations Presents:" on Dymo tape across its top.
+- THE POOL on a large engraved traffolyte plate.
+- Four illuminated push buttons:
+  - NEW GAME (with a confirm step when a save exists: "OVERWRITES SAVE · PRESS AGAIN" on a 16 × 2 LCD);
+  - CONTINUE (lit when a save exists; refused with the deny rattle when none does);
+  - SETTINGS (opens the system panel without its GAME zone);
+  - INSTRUCTIONS (the card).
+- An amber pilot lamp, SOUND · PRESS ANY KEY, which blinks until audio runs.
+- The rating plate, small, on its side.
+
+This gives the lettering mix the owner asked for: engraved plates for fixed names, Dymo for site additions, printed small type on the card, segment and character displays for values, and the VFD for messages.
+
+## The work, in stages
+
+Each stage is testable on its own and committed after `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build` pass (check their exit status, not a grep of the summary). Pure logic goes in `logic/` folders, tested beside it (`*.test.ts`, importing from `vite-plus/test`). Every notable change goes under Unreleased in `CHANGELOG.md`, and the `TODO.md` entry is updated after each stage.
+
+### Stage 0: the spike, in the dev rooms
+
+1. **The pure modules,** in `src/toolkit/menus/logic/`, each with tests:
+   - `menu-model.ts`: a declarative menu. Each item has an id, a kind (`push`, `latch`, `selector`, `pot`, `key`, `readout`, `plate`), a legend, a binding (get and set over a signal), steps or positions, an enabled predicate and a confirm flag. A reducer applies `activate`, `turn(±1)`, `focus` and `back`, and the confirm step (armed, timed out at 3 s).
+   - `iso-view.ts`: the camera's pose and frustum, fitted to a panel's bounds and the viewport's aspect with a margin, with the zoom snapped to whole CSS pixels per panel millimetre where possible.
+   - `panel-layout.ts`: places items in zones on a fixed pitch (the effects console's 52 mm by 62 mm as a starting point), sizes the panel, and checks each legend against its plate's character budget.
+2. **The overlay,** in `src/toolkit/menus/views/menu-overlay.ts`:
+   - its own transparent canvas and renderer (pixel ratio the device's, capped at 3), an orthographic camera from `iso-view.ts`, its own scene and lights;
+   - drawn only on change (a `dirty` flag set by input, by bound signals' effects and by animating parts until they settle);
+   - raycast picking into its `PartSet`;
+   - `open`, `close` and `dispose`.
+3. **The builder,** `src/toolkit/menus/views/panel-builder.ts`: builds the parts from the layout with the existing factories (`pushButton`, `ledPushbutton`, `selector`, `potentiometer`, `keySwitch`, `createSevenSegment`, `createVfd`, `createPanelMeter`, `createEngravedPlate`, `createDymoLabel`, `panelMakerMark`), with `applyLabelFade` off.
+4. **dev39:** an exhibit, SYSTEM PANEL SP-1 (a menu panel), standing in the room at true size, with two working controls bound to the real settings: MASTER VOLUME (a potentiometer with a seven-segment readout) and INVERT Y (a latching push button).
+5. **The overlay switch:** a URL flag, `?menu=panel`, that shows the same two-control panel as an overlay over any room (dev39 first). Esc opens it in place of the DOM menu, only while the flag is set.
+6. **Measure and record** in `doc/research/diegetic-menus-spike.md`, with screenshots:
+   - live WebGL contexts (title, a room with a doorway, after ten handovers);
+   - the overlay's draw calls, idle uploads (must be 0) and frame cost open and closed;
+   - legend legibility at device pixel ratios 1, 2 and 3 and at 360 px, 1280 px and 2560 px wide;
+   - the pointer, touch and gamepad paths.
+
+   The owner looks before stage 1.
+
+### Stage 1: the system panel, behind the flag
+
+1. **Navigation:** `src/toolkit/controls/logic/menu-navigation.ts` (spatial focus over projected centres; activate, turn, back, home) and `src/toolkit/controls/input/menu-input.ts` (the one keyboard and gamepad reader for menus). Add the menu's actions to `CONTROL_SCHEME`. Port the title's and the pause menu's own pollers onto them, so the DOM menus also use it: this fixes the existing breach of the control-scheme rule whatever happens to the panels.
+2. **The accessible mirror,** `src/toolkit/menus/views/dom-mirror.ts`: built from the same `menu-model`. It is visually hidden, has a focus trap, and its focus is followed by the panel's focus ring. With MENU STYLE at PLAIN, or when the overlay cannot start, it is shown as a visible, high-contrast plain menu.
+3. **The full system panel:** `src/toolkit/menus/logic/system-panel.ts` (the spec above, built from `settings`, the game session and `buildLine()`), with each zone and the instruction card. Any part not yet behaviour-backed (a toggle switch, if chosen over a latching button) is wrapped as a part and tried on a dev0 board first.
+4. **Sound:** the parts' voices routed unpositioned under the master volume, audible with game audio muted. The volume meter reads the master bus.
+5. **Pausing:** fix the title's un-pausing bug (`open` with `inGame: false` must leave `paused` as it was), with a test.
+6. **Settings:** a new setting, `menuStyle: 'panel' | 'plain'`, in `logic/settings.ts`, defaulting to `plain` until stage 4. `?menu=panel` sets it.
+7. **Checks:**
+   - every item reachable and workable by mouse, touch, keyboard only, gamepad only, and a screen reader (VoiceOver on macOS at least);
+   - every setting's effect the same as through the DOM menu (a test drives both views of the model);
+   - idle uploads 0 and no draws while unchanged (the bench);
+   - screenshots at three widths.
+
+### Stage 2: the title's box
+
+1. `src/toolkit/menus/logic/title-box.ts`: the box's spec (above), and the NEW GAME confirm step when a save exists.
+2. Mount it on the overlay over the unchanged backdrop. Pointer input passes through outside the box. The DOM nav becomes its mirror. The sound lamp blinks until `partAudio.running()`.
+3. SETTINGS opens the system panel without GAME. INSTRUCTIONS opens the card.
+4. Check the backdrop's frame time with the box open (the overlay must draw only on change, so the backdrop's cost is unchanged), and that the theme, veil and shots are untouched.
+
+### Stage 3: the remaining surfaces, each for the owner to rule on
+
+Propose each in dev0 or dev39 and screenshot it. Do not ship it without the owner's word:
+
+- **The help line:** an LED dot-matrix message strip (`createLedMatrix`) at the screen's foot.
+- **The room title:** an engraved plate, top left.
+- **The speed readout:** a seven-segment display, once the speed control works.
+- **The top-right tools:** a small row of push buttons.
+- **The movement pad:** a pendant pushbutton station (`pushbuttonStation`).
+
+These are always visible and drawn every frame, so the cost decides. The touch sticks stay DOM.
+
+### Stage 4: the panels the default
+
+Once parity is proven (the stage 1 checks passing for the system panel and the title box), set `menuStyle` to `panel` by default. Remove the DOM menus' visual styling, keeping the mirror and the plain fallback (no WebGL, or MENU STYLE PLAIN). Update the README's controls section and `doc/design/control-interface-archetypes.md` with the menu panel's archetype, and propose to the owner a `CLAUDE.md` line: menus are Penfold panels drawn over the view, with an accessible mirror.
+
+## Out of scope
+
+- Save slots and naming them (the design is above, for when they come).
+- Fullscreen.
+- Localisation.
+- The console, the manual, the dev panel and the error message.
+- Graphics presets: their own entry in `TODO.md`. When they come, they are a rotary cam selector, LOW · MEDIUM · HIGH · ULTRA, in the PICTURE zone.
+- The attract sequence's shots.
+
+## Acceptance
+
+- The stage 0 spike runs in dev39 and as an overlay with `?menu=panel`. Its measurements are recorded and the owner has seen them.
+- Behind the flag, the system panel works every setting the DOM menu does, by mouse, touch, keyboard only, gamepad only and screen reader, through `src/toolkit/controls/`, with no menu polling input of its own.
+- The title shows the small box over the unchanged low-resolution backdrop, its buttons working, CONTINUE refusing when there is no save, and NEW GAME confirming before overwriting.
+- Open and idle, the overlay neither draws nor uploads. Closed, it costs nothing.
+- Without WebGL, or with MENU STYLE at PLAIN, the plain DOM menu works as today.
+- Lettering is legible at device pixel ratios 1–3 down to a 360 px wide screen, and every legend fits its plate (tested).
