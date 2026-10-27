@@ -142,6 +142,34 @@ export function checkScreens(
 }
 
 /**
+ * A display's corners (the owner, 2026-10-27: "slightly rounded edges so
+ * they don't look like old-fashioned CRTs ... the LCARS style ... puts a
+ * rounded border on everything"): a frame `w` × `h` is rounded by
+ * `share` of its shorter side, at least `min`; so a big display's corners
+ * are larger.
+ */
+export const DISPLAY_CORNER = { share: 0.04, min: 0.015 } as const;
+
+export const cornerRadius = (w: number, h: number) =>
+  Math.max(DISPLAY_CORNER.min, DISPLAY_CORNER.share * Math.min(w, h));
+
+/**
+ * A screen's corner radius, set into a frame rounded by `frame`: the
+ * frame's less its bezel, so the bezel follows the curve, or the screen's
+ * own share if that is larger (a screen not at the frame's corners); no
+ * more than half its shorter side. Sharp (0) in a sharp frame.
+ */
+export function screenCornerRadius(
+  frame: number,
+  bezel: number,
+  rect: { w: number; h: number },
+) {
+  if (frame <= 0) return 0;
+  const own = 0.6 * cornerRadius(rect.w, rect.h);
+  return Math.min(Math.max(frame - bezel, own), Math.min(rect.w, rect.h) / 2);
+}
+
+/**
  * The smallest rounded-rectangle frame round `screens` with `bezel` all
  * round them, its corners rounded by `radius`.
  */

@@ -435,7 +435,6 @@ export function createSchematicSurface(
   const surface = createTouchSurface(kit, {
     name,
     bezel: 0.012,
-    radius: 0.02,
     screens: [
       { rect: { x: 0, y: 0, ...size }, tree: screen.tree, pixelsPerMetre },
     ],

@@ -21,6 +21,8 @@ import {
 } from '../views/station-schematics';
 import { createViewscreen } from '../views/bridge-viewscreen';
 import { createBridgeLightsUp } from '../views/bridge-lights-up';
+import { LIGHTS_UP, lightsUpTotal } from '../logic/bridge-lights-up';
+import { createBridgeAmbience } from '../../components/sound/audio/bridge-ambience';
 import { createBridgeEmergencyLights } from '../views/bridge-emergency-lights';
 import {
   bridgeEmergencyLit,
@@ -219,9 +221,26 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
     installLightSwitch(kit),
     lightsUp,
   ]);
-  return Object.assign(handle, {
-    enter: (from: string | null) => lightsUp.enter(from),
-    suspend: () => lightsUp.leave(),
+  // Its hum (`components/sound/audio/bridge-ambience.ts`): heard only
+  // with the walker inside, rising with its lights; the room's equipment,
+  // so it hums on with the lights off.
+  const ambience = createBridgeAmbience();
+  const dispose = () => {
+    handle();
+    ambience.dispose();
+  };
+  return Object.assign(dispose, handle, {
+    enter: (from: string | null) => {
+      lightsUp.enter(from);
+      ambience.setPresence(
+        { inside: true },
+        { after: LIGHTS_UP.dark, rise: lightsUpTotal() - LIGHTS_UP.dark },
+      );
+    },
+    suspend: () => {
+      lightsUp.leave();
+      ambience.setPresence({ inside: false });
+    },
   });
 }
 

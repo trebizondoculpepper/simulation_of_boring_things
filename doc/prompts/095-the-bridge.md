@@ -146,7 +146,7 @@ Code: `src/toolkit/components/sound/logic/bridge-ambience.ts` (pure: variants, p
 
 ### Hooking it into the bridge
 
-Not yet hooked in (the bridge's own files were being edited). In `startTheBridge` (`rooms/bridge-room.ts`), with `createBridgeAmbience` from `components/sound/audio/bridge-ambience` and `LIGHTS_UP`, `lightsUpTotal` from `logic/bridge-lights-up`:
+Hooked in (2026-10-27) as follows. In `startTheBridge` (`rooms/bridge-room.ts`), with `createBridgeAmbience` from `components/sound/audio/bridge-ambience` and `LIGHTS_UP`, `lightsUpTotal` from `logic/bridge-lights-up`:
 
 ```ts
 const ambience = createBridgeAmbience(); // { variant: 'quiet' | 'standard' | 'busy', level }
@@ -165,3 +165,7 @@ The owner: a two-gang light switch inside the bridge by the corridor doors, gang
 - **In the world:** `lighting.switches.bridge` (`plant/lighting.ts`: `ROOM_SWITCHES`, the bridge on the control room's way, 14), thrown by the `lighting/board` action `{ act: 'switch', room: 'bridge', gang, on }`; `WORLD_VERSION` 48, an identity migration (`fillDefaults` adds MAIN on, EMERGENCY off). `roomLightsOn` (the way lit and MAIN on) drives the lights-up part (`bridgeMainLit`): on, the sequence without its first darkness; off or the way dead, a 2 s fade. The entrance's darkness plays only with MAIN LIGHTS on. The old control room, on the same way, is not switched by it.
 - **The emergency lighting** (`bridgeEmergencyLit`): maintained fittings on the central battery system, lit by EMERGENCY LIGHTS from the way or, without it, the battery; and whatever the switch, lit on the battery when the way's supply fails or the battery is tested (`emergencyLit`, EN 50171). Its extra battery load while switched on is not modelled.
 - **Where the emergency fittings go (a proposal, for the owner to confirm; `emergencyPlan`):** a slim maintained luminaire (330 × 110 mm, cool white lens) over the corridor doors inside; one high on each aft wall, 1.2 m from the back corner, over the stage; low-level cool LED strips on the nosing of each of the stage's six steps and along each ramp's open edge, up its slope; and a faint cool fill for the room (a hemisphere light, 0.16) while they are lit. None on the east wall kept for the ready room.
+
+## Rounded displays (the owner, 2026-10-27)
+
+The owner: "give all of the displays slightly rounded edges so they don't look like old-fashioned CRTs ... suits the LCARS style, which puts a rounded border on everything." Touch surfaces (`components/industrial-control/views/touch-surface.ts`) are now rounded by default: the frame's outline a rounded rectangle, its corner radius 4 % of its shorter side and at least 15 mm (`cornerRadius`, `DISPLAY_CORNER` in its logic, tested), so the big viewscreen's corners are larger (about 0.26 m); each screen rounded to match (`screenCornerRadius`: the frame's less its bezel, so the 4 mm bezel follows the curve), its canvas's corners cleared after each paint and cut away by alpha test, so no square corner shows. `radius: 0` keeps a sharp frame and screens, `screenRadius` overrides the screens'. The explicit radii of the schematic surfaces, dev48's panels, dev47's sidebar frame and the viewscreen were removed so they take the default.

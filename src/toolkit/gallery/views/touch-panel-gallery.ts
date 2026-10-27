@@ -394,7 +394,6 @@ export function sidebarPanel(kit: PanelKit): LiveExhibit {
     {
       name: 'Sidebar frame panel',
       screens: [{ rect: { x: 0, y: 0, w: 1.8, h: 1.0 }, tree }],
-      radius: 0.02,
     },
     animate,
   );

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  DISPLAY_CORNER,
   bend,
   checkScreens,
+  cornerRadius,
   insideOutline,
   outlineAround,
   planeToPixel,
@@ -9,6 +11,7 @@ import {
   rectOutline,
   roundedOutline,
   screenAt,
+  screenCornerRadius,
   screenGrid,
   trapeziumOutline,
   uvToPixel,
@@ -104,5 +107,33 @@ describe('a touch surface’s frame and screens', () => {
     expect(p.x).toBeCloseTo(r * Math.sin(Math.PI / 4));
     expect(p.z).toBeGreaterThan(0);
     expect(bend(-1, r).z).toBeCloseTo(bend(1, r).z);
+  });
+});
+
+describe('displays’ rounded corners (the owner, 2026-10-27)', () => {
+  it('rounds a frame by a share of its shorter side, at least 15 mm', () => {
+    expect(cornerRadius(0.2, 0.1)).toBeCloseTo(DISPLAY_CORNER.min);
+    expect(cornerRadius(1.0, 0.52)).toBeCloseTo(0.0208);
+    // A big viewscreen's are larger.
+    expect(cornerRadius(18.8, 6.5)).toBeGreaterThan(0.2);
+    for (const [w, h] of [
+      [1, 0.52],
+      [3, 1.5],
+      [4.8, 2.6],
+    ]) {
+      const r = cornerRadius(w, h) / Math.min(w, h);
+      expect(r).toBeGreaterThanOrEqual(0.03);
+      expect(r).toBeLessThanOrEqual(0.05);
+    }
+  });
+
+  it('rounds a screen to follow its frame’s curve inside the bezel', () => {
+    const frame = cornerRadius(1.008, 0.528);
+    expect(screenCornerRadius(frame, 0.004, { w: 1, h: 0.52 })).toBeCloseTo(
+      frame - 0.004,
+    );
+    // Sharp in a sharp frame; never more than half its shorter side.
+    expect(screenCornerRadius(0, 0.004, { w: 1, h: 0.5 })).toBe(0);
+    expect(screenCornerRadius(5, 0.004, { w: 1, h: 0.5 })).toBe(0.25);
   });
 });

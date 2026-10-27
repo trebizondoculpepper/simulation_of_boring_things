@@ -502,7 +502,6 @@ export function createParodyPanel(
     name: `${spec.title} (${spec.original})`,
     outline,
     bezel: outline ? 0.004 : 0.012,
-    radius: 0.02,
     // Fewer pixels than a lone panel's: a room holds seventy of them.
     screens: [{ rect: { x: 0, y: 0, w, h }, tree, pixelsPerMetre: 560 }],
   });

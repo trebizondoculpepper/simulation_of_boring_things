@@ -46,7 +46,6 @@ export function createViewscreen(
   const surface = createTouchSurface(kit, {
     name: 'Main viewscreen',
     bezel: 0.02,
-    radius: 0.1,
     // Coarse for its size: it is seen from across the room (fine enough
     // for its browser's list to be read).
     screens: [

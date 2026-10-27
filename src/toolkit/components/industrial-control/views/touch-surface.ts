@@ -18,7 +18,9 @@ import { touchPoint } from '../../../controls/input/touch-point';
 import { TOUCH_BLEEPS } from '../../sound/audio/touch-bleeps';
 import {
   bend,
+  cornerRadius,
   outlineAround,
+  screenCornerRadius,
   planeToPixel,
   uvToPixel,
 } from '../logic/touch-surface';
@@ -96,8 +98,15 @@ export interface TouchSurfaceOptions {
   outline?: readonly Point2[];
   /** The frame left round each screen, metres (default 4 mm; 0 for bezel-less). */
   bezel?: number;
-  /** The default outline's corner radius, metres. */
+  /**
+   * The default outline's corner radius, metres: by default rounded in
+   * proportion to its size (`cornerRadius`), 0 for sharp corners. The
+   * screens are rounded to match (`screenCornerRadius`), their pictures
+   * clipped to their rounded corners.
+   */
   radius?: number;
+  /** The screens' corner radius, metres, if not the frame's less its bezel (0 for sharp). */
+  screenRadius?: number;
   /** The frame's body behind its face, metres (0 for a bare sheet). */
   depth?: number;
   frameColour?: string;
@@ -123,6 +132,28 @@ function bentPlane(
   return g;
 }
 
+/** Clears a canvas's corners outside a rounded rectangle of radius `r` pixels, so they are transparent. */
+function clipCorners(
+  g: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  r: number,
+) {
+  const k = Math.min(r, w / 2, h / 2);
+  g.save();
+  g.globalCompositeOperation = 'destination-out';
+  g.beginPath();
+  g.rect(0, 0, w, h);
+  g.moveTo(k, 0);
+  g.arcTo(w, 0, w, h, k);
+  g.arcTo(w, h, 0, h, k);
+  g.arcTo(0, h, 0, 0, k);
+  g.arcTo(0, 0, w, 0, k);
+  g.closePath();
+  g.fill('evenodd');
+  g.restore();
+}
+
 export function createTouchSurface(
   kit: PanelKit,
   options: TouchSurfaceOptions,
@@ -136,10 +167,15 @@ export function createTouchSurface(
     roughness: 0.5,
   });
   kit.materials.push(frameMaterial);
+  const box = outlineAround(
+    options.screens.map((s) => s.rect),
+    bezel,
+  );
+  const radius = options.radius ?? cornerRadius(box.w, box.h);
   const around = outlineAround(
     options.screens.map((s) => s.rect),
     bezel,
-    options.radius ?? 0,
+    radius,
   );
   // The frame: a curved strip as a bent sheet; a flat one any outline, its
   // body extruded behind its face.
@@ -177,7 +213,15 @@ export function createTouchSurface(
     const height = Math.max(16, Math.round(spec.rect.h * ppm * scale));
     const { context, texture } = createCanvasTexture(width, height);
     kit.textures.push(texture);
-    const material = createPs1Material({ map: texture }, true, true);
+    // Its corners, rounded with the frame's: the picture clipped to them.
+    const cornerPx =
+      (options.screenRadius ?? screenCornerRadius(radius, bezel, spec.rect)) *
+      (width / spec.rect.w);
+    const material = createPs1Material(
+      cornerPx > 0 ? { map: texture, alphaTest: 0.5 } : { map: texture },
+      true,
+      true,
+    );
     // Coplanar with the frame, drawn over it: pulled forward in depth, not in place.
     material.polygonOffset = true;
     material.polygonOffsetFactor = -1;
@@ -202,6 +246,7 @@ export function createTouchSurface(
       if (!root.needsPaint || now - painted < 1 / PAINT_HZ) return;
       painted = Number.isFinite(now) ? now : painted;
       root.paint(context);
+      if (cornerPx > 0) clipCorners(context, width, height, cornerPx);
       texture.needsUpdate = true;
     };
     repaint();
