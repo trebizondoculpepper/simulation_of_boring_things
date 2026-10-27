@@ -1,0 +1,5 @@
+# Door proximity research, mission 090
+
+Traced plant doors, paired equipment doors, the tank-hall gate and development spring doors against `55229c1`. Existing holds cover the threshold only, run after animation, and freeze closing leaves rather than reopen them. A direct state reproduction also shows a final closing step can latch before the subsequent hold. Handover installs closing states, while underneath room cameras follow the active player without updating their parked walkers. Spring portals have separate dwell/hold logic and an arrival snap reset.
+
+Saved the affected-file inventory, pure proximity/controller proposal, handover plan and acceptance matrix in `doc/research/090-door-proximity-hold-open.md`, updated prompt 090 to researched/ready for implementation and retained its unchecked implementation entry in TODO. Proposed 1.5/1.75 m entry/release clearances remain tuning suggestions. No runtime changes or browser acceptance. Existing targeted plant-door, spring-door, equipment-door, doorway and door-join tests: 18 passed; Markdown formatting and diff whitespace checks pass. The owner’s separately drafted prompt 089 is untouched.
