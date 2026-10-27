@@ -61,6 +61,8 @@ export interface Grid<T, G> {
   shelfGap?: number;
   /** Shelf flow: where each shelf sits across the grid. */
   justify?: 'start' | 'center';
+  /** Shelf flow, fitted: the fewest columns it may be (so it does not fit itself too narrow). */
+  minColumns?: number;
   /** Shelf flow: every sub-grid on a shelf as tall as the shelf. */
   stretch?: boolean;
   /** Cover the cells its children leave empty with blanking plates. */
@@ -282,57 +284,60 @@ function plans<T, G>(
     const gap = node.gap ?? 0;
     const band = node.band ?? 0;
     const shelfGap = node.shelfGap ?? 0;
-    const room = node.columns ?? maxColumns;
-    let chosen = node.children.map(
-      (child) => plans(child, unit, room, 0, widestBlank)[0],
-    );
-    // Shelves, as a flex row wraps.
-    const shelves: number[][] = [];
-    chosen.forEach((plan, i) => {
-      const shelf = shelves.at(-1);
-      const used = shelf
-        ? shelf.reduce((n, j) => n + chosen[j].columns + gap, 0)
-        : Infinity;
-      if (shelf && used + plan.columns <= room) shelf.push(i);
-      else shelves.push([i]);
-    });
-    const heights = shelves.map((shelf) =>
-      Math.max(...shelf.map((i) => chosen[i].rows)),
-    );
-    if (node.stretch) {
-      chosen = chosen.map((plan, i) => {
-        const child = node.children[i];
-        if (!isGrid(child)) return plan;
-        const height = heights[shelves.findIndex((s) => s.includes(i))];
-        // The narrowest way it fits the shelf's height, then made that tall.
-        const fits = plans(child, unit, room, 0, widestBlank).filter(
-          (p) => p.rows <= height,
-        );
-        const narrowest = fits.reduce((a, b) =>
-          b.columns < a.columns ? b : a,
-        );
-        return (
-          plans(child, unit, narrowest.columns, height, widestBlank).find(
-            (p) => p.columns === narrowest.columns,
-          ) ?? narrowest
-        );
+    // The shelves laid within `room` columns.
+    const shelfPlan = (room: number): Plan<T, G> => {
+      let chosen = node.children.map(
+        (child) => plans(child, unit, room, 0, widestBlank)[0],
+      );
+      // Shelves, as a flex row wraps.
+      const shelves: number[][] = [];
+      chosen.forEach((plan, i) => {
+        const shelf = shelves.at(-1);
+        const used = shelf
+          ? shelf.reduce((n, j) => n + chosen[j].columns + gap, 0)
+          : Infinity;
+        if (shelf && used + plan.columns <= room) shelf.push(i);
+        else shelves.push([i]);
       });
-    }
-    const spans = shelves.map(
-      (shelf) =>
-        shelf.reduce((n, i) => n + chosen[i].columns, 0) +
-        gap * (shelf.length - 1),
-    );
-    const columns = node.columns ?? Math.max(...spans);
-    const rows = Math.max(
-      fewest,
-      heights.reduce((n, h) => n + h, 0),
-    );
-    const height =
-      shelves.reduce((n, _, s) => n + band + spanOf(unit, 1, heights[s]).h, 0) +
-      shelfGap * (shelves.length - 1);
-    return [
-      {
+      const heights = shelves.map((shelf) =>
+        Math.max(...shelf.map((i) => chosen[i].rows)),
+      );
+      if (node.stretch) {
+        chosen = chosen.map((plan, i) => {
+          const child = node.children[i];
+          if (!isGrid(child)) return plan;
+          const height = heights[shelves.findIndex((s) => s.includes(i))];
+          // The narrowest way it fits the shelf's height, then made that tall.
+          const fits = plans(child, unit, room, 0, widestBlank).filter(
+            (p) => p.rows <= height,
+          );
+          const narrowest = fits.reduce((a, b) =>
+            b.columns < a.columns ? b : a,
+          );
+          return (
+            plans(child, unit, narrowest.columns, height, widestBlank).find(
+              (p) => p.columns === narrowest.columns,
+            ) ?? narrowest
+          );
+        });
+      }
+      const spans = shelves.map(
+        (shelf) =>
+          shelf.reduce((n, i) => n + chosen[i].columns, 0) +
+          gap * (shelf.length - 1),
+      );
+      const columns = node.columns ?? Math.max(...spans);
+      const rows = Math.max(
+        fewest,
+        heights.reduce((n, h) => n + h, 0),
+      );
+      const height =
+        shelves.reduce(
+          (n, _, s) => n + band + spanOf(unit, 1, heights[s]).h,
+          0,
+        ) +
+        shelfGap * (shelves.length - 1);
+      return {
         columns,
         rows,
         height,
@@ -379,8 +384,24 @@ function plans<T, G>(
           );
           for (const child of children) child();
         },
-      },
-    ];
+      };
+    };
+    if (node.columns) return [shelfPlan(node.columns)];
+    // Fitted: the room, from `minColumns` up, whose shelves waste least
+    // (ties to fewer rows), so a blanked panel carries as few blanks as it can.
+    const widest = Math.max(
+      ...node.children.map(
+        (child) =>
+          plans(child, unit, maxColumns, 0, widestBlank).at(-1)!.columns,
+      ),
+    );
+    const from = Math.min(maxColumns, Math.max(widest, node.minColumns ?? 0));
+    const options: Plan<T, G>[] = [];
+    for (let room = from; room <= maxColumns && room < from + 400; room++)
+      options.push(shelfPlan(room));
+    return options.sort(
+      (a, b) => a.columns * a.rows - b.columns * b.rows || a.rows - b.rows,
+    );
   }
 
   // Dense flow: each width the children allow, least waste first.

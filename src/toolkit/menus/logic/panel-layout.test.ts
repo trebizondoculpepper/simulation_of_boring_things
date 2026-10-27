@@ -79,6 +79,17 @@ describe('the panel layout', () => {
       }
     }
   });
+  it('is one continuous field: every rack position a module or a blank', () => {
+    for (const width of [PANEL_WIDTH.min, 0.8, 1.4, PANEL_WIDTH.max]) {
+      const layout = layoutPanel(zones, width);
+      const plates = [...layout.modules, ...layout.blanks];
+      const area = plates.reduce((n, b) => n + b.columns * b.rows, 0);
+      const rows = Math.max(...plates.map((b) => b.row + b.rows));
+      expect(area).toBe(layout.columns * rows);
+      for (const [i, a] of plates.entries())
+        for (const b of plates.slice(i + 1)) expect(overlaps(a, b)).toBe(false);
+    }
+  });
   it('is taller when narrower', () => {
     expect(layoutPanel(zones, PANEL_WIDTH.min).height).toBeGreaterThan(
       layoutPanel(zones, 0.9).height,

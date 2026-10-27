@@ -1,5 +1,14 @@
 import { computed, effect, signal } from '@preact/signals-core';
-import { BoxGeometry, SphereGeometry, Group, Mesh, PlaneGeometry } from 'three';
+import {
+  BoxGeometry,
+  CylinderGeometry,
+  ExtrudeGeometry,
+  Group,
+  Mesh,
+  PlaneGeometry,
+  Shape,
+  SphereGeometry,
+} from 'three';
 import type { Object3D } from 'three';
 import {
   createPartSet,
@@ -31,7 +40,7 @@ import {
 } from '../../components/industrial-control/views/panel-instruments';
 import { PENFOLD_GREY } from '../../components/industrial-control/views/control-cubicle';
 import { settings, updateSettings } from '../../settings/settings-store';
-import { CARD, RACK, SPACING, narrowCard } from '../logic/panel-layout';
+import { CARD, SPACING, narrowCard } from '../logic/panel-layout';
 import type { ModuleBox, PanelLayout } from '../logic/panel-layout';
 import {
   CONFIRM_WINDOW,
@@ -52,9 +61,11 @@ import type { NeedleState } from '../logic/meter-ballistics';
 
 /**
  * The settings menu built as a Penfold instrument panel (mission 096,
- * stage 0): a dark grey panel with a light grey module bolted in for each
- * setting, a quarter-turn fastener at each module's corners and its title
- * engraved along its top, grouped under silk-screened headings. Built from
+ * stage 0): a dark grey bezel round one continuous field of light grey
+ * plates set edge to edge as avionics units are, a module for each setting
+ * and blanking plates in every rack place left over, each plate with
+ * rounded corners, a softened edge, a quarter-turn fastener in from each
+ * corner and (a module) its title engraved along its top. Built from
  * the game's own parts (potentiometers, moving-coil meters, seven-segment
  * readouts, illuminated and latching push buttons, a lever selector, a key
  * switch, a VFD), at true size in metres, facing +z, centred on the origin.
@@ -85,14 +96,21 @@ export interface SettingsPanelView {
   dispose(): void;
 }
 
-/** The panel's paints: its frame, and the silk-screened legends on it. */
+/** The bezel's paint. */
 const FRAME = '#3b3f43';
-const SILK = '#ecebe4';
 /** Lettering drawn at this multiple of its usual resolution: crisp up close. */
 const LETTERING = 3;
 /** A module's plate: how thick it is, and how deep the rack's opening behind it. */
-const PLATE = 0.003;
-const WELL = 0.006;
+const PLATE = 0.0016;
+/** How far the plate's softened edge rounds over, and its corners' radius. */
+const BEVEL = 0.0005;
+const CORNER = 0.0025;
+/** The plate's face, where its parts are mounted. */
+const PLATE_FRONT = PLATE;
+/** The hairline seam left where two plates butt. */
+const SEAM = 0.0004;
+/** How deep the field's opening in the bezel is. */
+const WELL = 0.004;
 
 /** The shared paints of the rack and its fixings, made once per panel. */
 function rackPaints(kit: PanelKit) {
@@ -114,23 +132,91 @@ function rackPaints(kit: PanelKit) {
 type RackPaints = ReturnType<typeof rackPaints>;
 
 /**
- * A quarter-turn (DZUS) fastener: a slightly domed, polished head with a
- * slot across it, at `x`, `y` on a plate's face, turned as it was left.
+ * A quarter-turn (DZUS) fastener, as avionics units are held in their
+ * rails: a slightly domed, polished head with a slot across it, sat in a
+ * shallow dark countersink, at `x`, `y` on a plate's face, each turned as
+ * it was left. Every plate has four, one in from each corner.
  */
 function fastener(paints: RackPaints, parent: Object3D, x: number, y: number) {
-  const r = 0.0036;
+  const r = FASTENER;
+  const sink = new Mesh(
+    new CylinderGeometry(r * 1.25, r * 1.25, 0.0003, 20),
+    paints.slot,
+  );
+  sink.rotation.x = Math.PI / 2;
+  sink.position.set(x, y, 0.00005);
+  parent.add(sink);
   const head = new Mesh(
     new SphereGeometry(r, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2),
     paints.screw,
   );
   head.rotation.x = Math.PI / 2;
-  head.scale.set(1, 0.42, 1);
+  head.scale.set(1, 0.38, 1);
   head.position.set(x, y, 0);
   parent.add(head);
   const slot = new Mesh(new BoxGeometry(r * 1.7, 0.0007, 0.0006), paints.slot);
-  slot.position.set(x, y, r * 0.42 - 0.0001);
+  slot.position.set(x, y, r * 0.38 - 0.0001);
   slot.rotation.z = (Math.abs(x * 997 + y * 631) % 1) * Math.PI;
   parent.add(slot);
+}
+
+/** A fastener's head radius, and how far in from each corner of every plate it sits. */
+const FASTENER = 0.0032;
+const FASTENER_INSET = 0.0058;
+
+/**
+ * Four fasteners, one in from each corner of a plate `w` by `h`; a filler
+ * strip too narrow for two side by side has one at its top and its foot.
+ */
+function fastenAt(paints: RackPaints, face: Object3D, w: number, h: number) {
+  if (w < 4 * FASTENER_INSET) {
+    for (const sy of [1, -1])
+      fastener(paints, face, 0, sy * (h / 2 - FASTENER_INSET));
+    return;
+  }
+  for (const [sx, sy] of [
+    [-1, 1],
+    [1, 1],
+    [-1, -1],
+    [1, -1],
+  ])
+    fastener(
+      paints,
+      face,
+      sx * (w / 2 - FASTENER_INSET),
+      sy * (h / 2 - FASTENER_INSET),
+    );
+}
+
+/**
+ * A sheet-metal plate `w` by `h`, its corners rounded and its edge
+ * softened, centred on the origin, its back at z = 0: a hairline smaller
+ * than its rack cell, so a seam shows where it butts its neighbour.
+ */
+function plateGeometry(w: number, h: number) {
+  const a = w / 2 - SEAM / 2 - BEVEL;
+  const b = h / 2 - SEAM / 2 - BEVEL;
+  const r = Math.min(CORNER, a, b);
+  const shape = new Shape();
+  shape.moveTo(-a + r, -b);
+  shape.lineTo(a - r, -b);
+  shape.quadraticCurveTo(a, -b, a, -b + r);
+  shape.lineTo(a, b - r);
+  shape.quadraticCurveTo(a, b, a - r, b);
+  shape.lineTo(-a + r, b);
+  shape.quadraticCurveTo(-a, b, -a, b - r);
+  shape.lineTo(-a, -b + r);
+  shape.quadraticCurveTo(-a, -b, -a + r, -b);
+  const geometry = new ExtrudeGeometry(shape, {
+    depth: PLATE - BEVEL,
+    bevelEnabled: true,
+    bevelThickness: BEVEL,
+    bevelSize: BEVEL,
+    bevelSegments: 2,
+    curveSegments: 4,
+  });
+  geometry.translate(0, 0, BEVEL);
+  return geometry;
 }
 
 /**
@@ -316,38 +402,41 @@ function build_(
   const px = (x: number) => x - W / 2;
   const py = (y: number) => H / 2 - y;
 
-  // The frame, and in it an opening for each group, a dark well with a
-  // metal lip, into which the modules are bolted; the gutters between the
-  // plates show the well. Each group's legend is silk-screened above it.
+  // The bezel, and in it one opening, a dark well with a metal lip, which
+  // the plates fill edge to edge: one continuous field, as an avionics
+  // panel is (the owner, 2026-10-27).
   const paints = rackPaints(kit);
   const base = new Mesh(new BoxGeometry(W, H, 0.02), paints.frame);
   base.position.z = -0.01;
   group.add(base);
-  const lip = 0.0018;
-  for (const g of layout.groups) {
-    const ow = g.w + 2 * RACK.gutter;
-    const oh = g.h + 2 * RACK.gutter;
-    const well = new Mesh(new BoxGeometry(ow, oh, 0.001), paints.well);
-    well.position.set(px(g.x + g.w / 2), py(g.y + g.h / 2), -WELL);
-    group.add(well);
-    const edge = (x: number, y: number, w: number, h: number) => {
-      const m = new Mesh(new BoxGeometry(w, h, WELL), paints.lip);
-      m.position.set(px(x + w / 2), py(y + h / 2), -WELL / 2 + 0.0003);
-      group.add(m);
-    };
-    const x0 = g.x - RACK.gutter;
-    const y0 = g.y - RACK.gutter;
-    edge(x0 - lip, y0 - lip, ow + 2 * lip, lip);
-    edge(x0 - lip, y0 + oh, ow + 2 * lip, lip);
-    edge(x0 - lip, y0, lip, oh);
-    edge(x0 + ow, y0, lip, oh);
-    const legend = createMicroLabel(kit, g.zone.title, {
-      height: 0.0045,
-      ink: SILK,
-    });
-    legend.position.set(px(g.x + g.w / 2), py(g.legendY - 0.002), 0.0004);
-    group.add(legend);
-  }
+  const plates = [...layout.modules, ...layout.blanks];
+  const fx = Math.min(...plates.map((b) => b.x));
+  const fy = Math.min(...plates.map((b) => b.y));
+  const fw = Math.max(...plates.map((b) => b.x + b.w)) - fx;
+  const fh = Math.max(...plates.map((b) => b.y + b.h)) - fy;
+  const well = new Mesh(new BoxGeometry(fw, fh, 0.001), paints.well);
+  well.position.set(px(fx + fw / 2), py(fy + fh / 2), -WELL);
+  group.add(well);
+  const lip = 0.002;
+  const edge = (x: number, y: number, w: number, h: number) => {
+    const m = new Mesh(new BoxGeometry(w, h, WELL + 0.0006), paints.lip);
+    m.position.set(px(x + w / 2), py(y + h / 2), -WELL / 2 + 0.0003);
+    group.add(m);
+  };
+  edge(fx - lip, fy - lip, fw + 2 * lip, lip);
+  edge(fx - lip, fy + fh, fw + 2 * lip, lip);
+  edge(fx - lip, fy, lip, fh);
+  edge(fx + fw, fy, lip, fh);
+  // Plates of one size share one geometry.
+  const shapes = new Map<string, ExtrudeGeometry>();
+  const sheet = (w: number, h: number) => {
+    const key = `${w.toFixed(5)}x${h.toFixed(5)}`;
+    let geometry = shapes.get(key);
+    if (!geometry) shapes.set(key, (geometry = plateGeometry(w, h)));
+    const mesh = new Mesh(geometry, paints.face);
+    mesh.position.z = -BEVEL;
+    return mesh;
+  };
 
   // The header: the panel's name engraved, Penfold's mark top right.
   const name = createEngravedPlate(kit, ['SETTINGS', 'SYSTEM PANEL SP-1'], {
@@ -451,26 +540,11 @@ function build_(
     group.add(mod);
     // The plate: its edge, darker, and its face a little in from it, so
     // its thickness and bevel show; it stands a hair proud of the frame.
-    const plate = new Mesh(new BoxGeometry(m.w, m.h, PLATE), paints.plate);
-    plate.position.z = -PLATE / 2 + 0.001;
-    mod.add(plate);
-    const facePlate = new Mesh(
-      new BoxGeometry(m.w - 0.0018, m.h - 0.0018, 0.0006),
-      paints.face,
-    );
-    facePlate.position.z = 0.001 + 0.0003;
-    mod.add(facePlate);
+    mod.add(sheet(m.w, m.h));
     const face = new Group();
-    face.position.z = 0.0016;
+    face.position.z = PLATE_FRONT;
     mod.add(face);
-    const inset = 0.0052;
-    for (const [sx, sy] of [
-      [-1, 1],
-      [1, 1],
-      [-1, -1],
-      [1, -1],
-    ])
-      fastener(paints, face, sx * (m.w / 2 - inset), sy * (m.h / 2 - inset));
+    fastenAt(paints, face, m.w, m.h);
     // Its title: engraved, or Dymo tape for a site addition.
     const titleY = m.h / 2 - 0.004 - SPACING.title / 2;
     const dymo = 'dymo' in m.item && m.item.dymo;
@@ -702,26 +776,11 @@ function build_(
     blank.name = `Blanking plate ${b.columns} x ${b.rows}`;
     blank.position.set(px(b.x + b.w / 2), py(b.y + b.h / 2), 0);
     group.add(blank);
-    const plate = new Mesh(new BoxGeometry(b.w, b.h, PLATE), paints.plate);
-    plate.position.z = -PLATE / 2 + 0.001;
-    blank.add(plate);
-    const facePlate = new Mesh(
-      new BoxGeometry(b.w - 0.0018, b.h - 0.0018, 0.0006),
-      paints.face,
-    );
-    facePlate.position.z = 0.0013;
-    blank.add(facePlate);
+    blank.add(sheet(b.w, b.h));
     const face = new Group();
-    face.position.z = 0.0016;
+    face.position.z = PLATE_FRONT;
     blank.add(face);
-    const inset = 0.0052;
-    for (const [sx, sy] of [
-      [-1, 1],
-      [1, 1],
-      [-1, -1],
-      [1, -1],
-    ])
-      fastener(paints, face, sx * (b.w / 2 - inset), sy * (b.h / 2 - inset));
+    fastenAt(paints, face, b.w, b.h);
     const stamp = createMicroLabel(kit, `PN SP1-BLK-${b.columns}${b.rows}`, {
       height: 0.0022,
       ink: '#8b8e8b',

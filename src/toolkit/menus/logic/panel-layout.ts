@@ -4,18 +4,23 @@ import type { Grid, RackUnit } from './rack-grid';
 
 /**
  * The settings panel's layout (mission 096; the owner, 2026-10-27), declared
- * on the rack grid (`rack-grid.ts`): the panel is a shelf-flow grid of
- * groups (GAME, PICTURE, …), one empty column apart, each shelf centred and
- * its groups stretched to its height under a band for their legends; each
- * group is a dense-flow sub-grid of modules, each module a whole number of
- * rack units (`MODULE_UNITS`), and every cell a group leaves empty is
- * blanked off. The width given (it follows the screen) is the most the
+ * on the rack grid (`rack-grid.ts`): the panel is one continuous field of
+ * plates, a shelf-flow grid of groups (GAME, PICTURE, …) set edge to edge,
+ * each shelf's groups stretched to its height; each group is a dense-flow
+ * sub-grid of modules, each module a whole number of rack units
+ * (`MODULE_UNITS`); every cell a group leaves empty, and the end of every
+ * shelf short of the widest, is blanked off, so every row runs full width. The width given (it follows the screen) is the most the
  * panel may take; it is cut to its widest shelf. In metres, x to the right
  * from the panel's left edge, y down from its top edge. Pure.
  */
 
-/** The rack's unit: a column's width and a row's height, and the gutter between plates. */
-export const RACK: RackUnit = { column: 0.02, row: 0.085, gutter: 0.004 };
+/**
+ * The rack's unit: a column's width and a row's height. No gutter: the
+ * plates butt edge to edge, as avionics units do (the owner, 2026-10-27:
+ * "there are no arbitrary gaps in an avionics panel"); the drawing leaves
+ * only a hairline seam where two plates meet.
+ */
+export const RACK: RackUnit = { column: 0.02, row: 0.085, gutter: 0 };
 /** From one column, or one row, to the next. */
 export const PITCH = {
   x: RACK.column + RACK.gutter,
@@ -28,22 +33,22 @@ export const MODULE_UNITS: Record<
   [number, number]
 > = {
   // A knob on its dial, its moving-coil meter and a seven-segment readout.
-  pot: [9, 2],
-  push: [4, 1],
-  latch: [4, 1],
-  key: [4, 1],
+  pot: [11, 2],
+  push: [5, 1],
+  latch: [5, 1],
+  key: [5, 1],
   // A lever selector with its positions printed round it.
-  selector: [5, 1],
-  vfd: [7, 1],
+  selector: [6, 1],
+  vfd: [8, 1],
 };
 
 /** The panel's margins and bands, metres. */
 export const SPACING = {
   margin: 0.02,
-  /** The band above each shelf, for its groups' legends. */
-  legend: 0.016,
+  /** The band above each shelf, for its groups' legends (none: plates butt). */
+  legend: 0,
   /** Between one shelf and the next band. */
-  shelfGap: 0.006,
+  shelfGap: 0,
   /** The band across the top: the panel's name plate and Penfold's mark. */
   header: 0.05,
   /** The band across the foot: the rating plate. */
@@ -53,7 +58,7 @@ export const SPACING = {
 } as const;
 
 /** The instruction card: its columns, line pitch and border. */
-export const CARD = { columns: 13, line: 0.0072, pad: 0.01 } as const;
+export const CARD = { columns: 16, line: 0.0072, pad: 0.01 } as const;
 
 /** A span of whole units' size, metres: n units less the last gutter. */
 export const spanX = (columns: number) => columns * PITCH.x - RACK.gutter;
@@ -80,7 +85,7 @@ export interface ModuleBox {
 export type BlankBox = Omit<ModuleBox, 'item' | 'title'>;
 
 /** The widest blanking plate made, in columns (the knob module's width). */
-export const BLANK_MAX_COLUMNS = 9;
+export const BLANK_MAX_COLUMNS = 11;
 
 export interface GroupBox {
   zone: PanelZone;
@@ -137,10 +142,15 @@ export function panelGrid(
   return {
     grid: null,
     flow: 'shelf',
-    gap: 1,
+    gap: 0,
     band: SPACING.legend,
     shelfGap: SPACING.shelfGap,
-    justify: 'center',
+    justify: 'start',
+    // Fitted to waste least, but no narrower than three fifths of the room,
+    // so the panel stays wider than tall on a wide screen.
+    minColumns: Math.floor(room * 0.6),
+    // Every rack position filled: what the groups leave at a shelf's end is blanked off too.
+    blank: true,
     stretch: true,
     columns: undefined,
     children: zones.map((zone) => ({

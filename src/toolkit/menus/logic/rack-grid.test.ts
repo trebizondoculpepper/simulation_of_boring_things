@@ -132,11 +132,47 @@ describe('the rack grid', () => {
     expect(short.y).toBeCloseTo(0.01, 9);
     for (const g of ['tall', 'short']) expect(covered(cells, g)).toBe(true);
   });
+  it('blanks off the end of a short shelf, so every row runs full width', () => {
+    const root: Grid<string, string> = {
+      grid: 'panel',
+      flow: 'shelf',
+      blank: true,
+      columns: 12,
+      children: [leaf('a', 6, 1), leaf('b', 6, 1), leaf('c', 4, 2)],
+    };
+    const { columns, rows, cells } = layoutGrid(
+      root,
+      { column: 0.02, row: 0.08, gutter: 0 },
+      { maxColumns: 12 },
+    );
+    expect([columns, rows]).toEqual([12, 3]);
+    expect(covered(cells, 'panel')).toBe(true);
+    const c = cells.find((x) => x.item === 'c')!;
+    expect(c.x).toBeCloseTo(0, 9);
+    expect(c.y).toBeCloseTo(0.08, 9);
+  });
+  it('fits a shelf grid to the room that wastes least, no narrower than asked', () => {
+    const root: Grid<string, string> = {
+      grid: 'panel',
+      flow: 'shelf',
+      blank: true,
+      children: [leaf('a', 6, 1), leaf('b', 6, 1), leaf('c', 4, 2)],
+    };
+    const unit = { column: 0.02, row: 0.08, gutter: 0 };
+    // 6 wide: a, b, then c with 2 spare columns beside it: 6 x 4.
+    expect(layoutGrid(root, unit, { maxColumns: 20 }).columns).toBe(6);
+    // Held to at least 10 wide: a, then b and c side by side: 10 x 3.
+    const wide = layoutGrid({ ...root, minColumns: 10 }, unit, {
+      maxColumns: 20,
+    });
+    expect([wide.columns, wide.rows]).toEqual([10, 3]);
+  });
   it('wraps shelves within the room given', () => {
     const root: Grid<string, string> = {
       grid: 'panel',
       flow: 'shelf',
       gap: 1,
+      columns: 13,
       children: [leaf('a', 6, 1), leaf('b', 6, 1), leaf('c', 6, 1)],
     };
     const { columns, rows } = layoutGrid(root, UNIT, { maxColumns: 13 });
