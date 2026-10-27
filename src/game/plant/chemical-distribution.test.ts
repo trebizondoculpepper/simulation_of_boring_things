@@ -188,4 +188,14 @@ describe('the chemical distribution: store, transfer pump, selector, day tanks',
     const r = stepDistribution(short, CAP, CAP, {}, 1);
     expect(r.distribution.acid.tanks).toHaveLength(DAY_TANKS.acid.length);
   });
+
+  it('lets a developer set a day tank nearly empty, to try it', () => {
+    const d = actOnDistribution(newChemicalDistribution(), {
+      act: 'set',
+      chemical: 'hypochlorite',
+      outlet: 1,
+      share: 0.03,
+    });
+    expect(dayLevel('hypochlorite', 1, d.hypochlorite)).toBeCloseTo(0.03, 6);
+  });
 });

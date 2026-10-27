@@ -286,7 +286,12 @@ export type DistributionAction =
   | { act: 'hoa'; chemical: Chemical; to: Hoa }
   | { act: 'mode'; chemical: Chemical; to: 'auto' | 'hand' }
   | { act: 'pick'; chemical: Chemical; outlet: number }
-  | { act: 'reset'; chemical: Chemical };
+  | { act: 'reset'; chemical: Chemical }
+  /**
+   * A developer's and a test's: set day tank `outlet`'s contents to `share`
+   * of full (from the console's `act`), to try a tank nearly empty.
+   */
+  | { act: 'set'; chemical: Chemical; outlet: number; share: number };
 
 export function actOnDistribution(
   d: ChemicalDistribution,
@@ -302,6 +307,22 @@ export function actOnDistribution(
     case 'pick':
       return a.outlet >= 0 && a.outlet < line.tanks.length
         ? set({ ...line, pick: a.outlet })
+        : d;
+    case 'set':
+      return a.outlet >= 0 && a.outlet < line.tanks.length
+        ? set({
+            ...line,
+            tanks: line.tanks.map((t, i) =>
+              i === a.outlet
+                ? {
+                    ...t,
+                    litres:
+                      DAY_TANKS[a.chemical][i].litres *
+                      Math.max(0, Math.min(1, a.share)),
+                  }
+                : t,
+            ),
+          })
         : d;
     case 'reset':
       return line.tanks.every(

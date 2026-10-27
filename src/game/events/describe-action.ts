@@ -292,7 +292,9 @@ function said(
             ? `selector ${a.to.toUpperCase()}`
             : a.act === 'pick'
               ? `selector to outlet ${a.outlet + 1}`
-              : 'trip RESET';
+              : a.act === 'set'
+                ? `day tank ${a.outlet + 1} set to ${Math.round(a.share * 1000) / 10}%`
+                : 'trip RESET';
       return {
         subject: a.chemical === 'acid' ? 'ACID TRANSFER' : 'HYPO TRANSFER',
         text: what,

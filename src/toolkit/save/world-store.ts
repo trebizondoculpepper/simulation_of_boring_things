@@ -100,7 +100,18 @@ export function worldStore(slot: string): WorldStore {
  */
 let roomOverride: WorldStore | null = null;
 export function roomWorld(): WorldStore {
-  return roomOverride ?? worldStore('dev');
+  return roomOverride ?? worldStore(devSlot() ?? 'dev');
+}
+
+/**
+ * In development only, a save slot of its own named by the URL (`?slot=itest`):
+ * a test's world, kept apart from the player's and from any other tab
+ * holding theirs.
+ */
+function devSlot(): string | null {
+  if (typeof window === 'undefined' || !import.meta.env?.DEV) return null;
+  const slot = new URLSearchParams(window.location.search).get('slot');
+  return slot && /^[a-z0-9-]{1,24}$/.test(slot) ? slot : null;
 }
 // For trying the world from the console in development only:
 // `poolWorld.store().dispatch({ type: 'jacuzzi/cabinet', action: { act: 'power', on: false } })`.
