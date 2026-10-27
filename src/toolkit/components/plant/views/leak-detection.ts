@@ -4,6 +4,8 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { createPartSet, pushButton } from '../../core/parts/parts';
 import { plantTools } from './plant-tools';
+import { partAudio } from '../../core/audio/part-audio';
+import { ALARM_BUZZER } from '../../core/audio/part-loops';
 import { hose } from './hose';
 import { chlorellaPlate } from './chlorella-plate';
 import {
@@ -214,6 +216,7 @@ export function createLeakMonitor(kit: PanelKit) {
   plate.position.set(0.055, -H / 2 + 0.012, z);
   group.add(plate);
   let shown = monitor;
+  let sounding = false;
   return {
     object: group,
     parts,
@@ -227,6 +230,10 @@ export function createLeakMonitor(kit: PanelKit) {
       zones.forEach((m, i) => (m.emissiveIntensity = s.leak[i] ? 1.8 : 0));
       fault.emissiveIntensity = s.fault ? 1.6 : 0;
       shown = monitor;
+      if (s.sounder !== sounding) {
+        sounding = s.sounder;
+        partAudio.hold(group, sounding ? ALARM_BUZZER : null, group);
+      }
       return s;
     },
     state: (): LeakMonitor => shown,

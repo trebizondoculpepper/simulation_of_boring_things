@@ -22,6 +22,8 @@ import {
   textWidth,
 } from '../../industrial-control/logic/dot-matrix';
 import { hose } from './hose';
+import { partAudio } from '../../core/audio/part-audio';
+import { PERISTALTIC_PUMP } from '../audio/dosing-pump-sounds';
 import { onPlinth } from './plinth';
 
 /**
@@ -342,6 +344,8 @@ export function createPeristalticPump(kit: PanelKit, label: string) {
     update(delta: number, demand: boolean, alarm = false) {
       parts.update(delta);
       const running = on && demand && !alarm;
+      if (running !== wasRunning)
+        partAudio.hold(group, running ? PERISTALTIC_PUMP : null, group);
       wasRunning = running;
       if (running) {
         rotor.rotation.x -= delta * (2 + rate * 10);

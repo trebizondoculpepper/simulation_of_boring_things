@@ -12,6 +12,8 @@ import {
 import { onPlinth } from './plinth';
 import type { DoseBottle } from '../../../../game/plant/dose-bottle';
 import { createPartSet, pushButton } from '../../core/parts/parts';
+import { partAudio } from '../../core/audio/part-audio';
+import { SUBMERGED_PUMP } from '../audio/dosing-pump-sounds';
 import {
   box,
   dotFrame,
@@ -111,6 +113,7 @@ export function createDoseCellHead(
   let testing = 0;
   let last: { o: Readout; b: DoseBottle } | null = null;
   let shown = '';
+  let heard = false;
   const draw = () => {
     if (!last) return;
     const { o, b } = last;
@@ -259,6 +262,10 @@ export function createDoseCellHead(
       testing = Math.max(0, testing - delta);
       parts.update(delta);
       last = { o, b };
+      if (o.pumping !== heard) {
+        heard = o.pumping;
+        partAudio.hold(group, heard ? SUBMERGED_PUMP : null, group);
+      }
       draw();
       const t2 = testing > 0;
       const on = [o.high, o.low, o.calling, o.pumping];
