@@ -2,6 +2,7 @@ import type { PlantExhibit } from './exhibit';
 import { layoutSquarePlantRoom } from '../../logic/plant-room-layout';
 import type { ExhibitSize } from '../../logic/plant-room-layout';
 import { createPeristalticDemo } from '../../../components/plant/views/peristaltic-pump';
+import { createChemicalValveDemo } from '../../../components/plant/views/chemical-ball-valve';
 import { createLeakDetectionDemo } from '../../../components/plant/views/leak-detection';
 import { createDoseCellDemo } from '../../../components/plant/views/dose-cell-head';
 import {
@@ -101,6 +102,13 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       'The wet hall’s panel, Penfold Controls: each store and day tank on a meter, filling lamps, selector and pump lamps, an annunciator; run by its own trials',
     size: { w: 1.7, d: 0.6, h: 2.1, mount: 'floor' },
     build: (kit) => createDistributionPanelDemo(kit),
+  },
+  {
+    title: 'Chemical isolation valves',
+    reference:
+      'PVC-U true-union ball valves after GF type 546, DN15 for small lines and DN40 at the bulk tanks; red quarter-turn handles that turn',
+    size: { w: 0.6, d: 0.6, h: 1.3, mount: 'floor' },
+    build: (kit) => createChemicalValveDemo(kit),
   },
   {
     title: 'Leak detection',

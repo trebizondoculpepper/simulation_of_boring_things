@@ -708,6 +708,7 @@ export function createDayTankStation(
   });
   tank.object.position.set(0, 0.04, tankZ);
   group.add(tank.object);
+  for (const [o, use] of tank.parts.uses) parts.uses.set(o, use);
   const top = 0.04 + 0.12 + H;
   const fill = computed(() => valveOpen(store.state.value, index));
   const level = computed(() => levelOf(store.state.value.tanks[index]));
@@ -883,6 +884,7 @@ export function createDayTankStation(
       parts.update(delta);
       const tk = store.state.value.tanks[index];
       pump?.update(delta, tk.litres > 0 && tk.doseLpm > 0);
+      tank.parts.update(delta);
       tank.setLevel(level.value);
       pointer.rotation.y = fill.value ? Math.PI / 2 : 0;
       trend.sample(store.state.value.tanks[index].litres, delta);
@@ -1964,7 +1966,9 @@ export function createBulkTankDemo(kit: PanelKit, chemical: Chemical) {
   const level = () => 0.55 + 0.35 * Math.sin(time / 90);
   return {
     object: tank.object,
+    parts: tank.parts,
     update(delta: number) {
+      tank.parts.update(delta);
       time += delta;
       tank.setLevel(level());
       trend.sample(level() * litres, delta);

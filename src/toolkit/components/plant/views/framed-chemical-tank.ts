@@ -6,6 +6,8 @@ import { brandLivery } from '../../core/views/brand-livery';
 import { drawBrandMark, wordmarkFont } from '../../core/views/brand-logo';
 import { plantTools } from './plant-tools';
 import { createChemicalLabel } from './chemicals-signs';
+import { createChemicalBallValve } from './chemical-ball-valve';
+import { createPartSet } from '../../core/parts/parts';
 
 /**
  * A bulk chemical tank in its galvanised frame (the owner, 2026-10-26: the
@@ -66,7 +68,7 @@ export function createFramedChemicalTank(
   const galv = t.paint('#a9afaf', 0.38, 0.75);
   const dark = t.paint('#2a2f31', 0.6);
   const pvc = t.paint('#5a5f63', 0.55);
-  const red = t.paint('#b8261f', 0.5);
+  const valves = createPartSet();
 
   // The body: thick moulded HDPE, its edges well rounded, a shallow
   // moulded rib round it under each steel band.
@@ -176,8 +178,14 @@ export function createFramedChemicalTank(
       [fillX, top + 0.25, fillZ],
       [fillX, 0.45, fillZ],
     ]);
-    t.box(group, pvc, 0.1, 0.1, 0.1, fillX, 0.95, fillZ);
-    t.box(group, red, 0.2, 0.02, 0.03, fillX, 0.95, fillZ + 0.07);
+    const fill = createChemicalBallValve(kit, {
+      dn: 40,
+      name: `${tag}-V1 fill valve`,
+    });
+    fill.object.rotation.z = Math.PI / 2;
+    fill.object.position.set(fillX, 0.95, fillZ);
+    group.add(fill.object);
+    valves.add(fill);
   }
   // The vent: a gooseneck, its mesh to the room; on the acid's (10%, the
   // owner, 2026-10-26: little fume at that strength), through a small
@@ -418,18 +426,14 @@ export function createFramedChemicalTank(
     0.03,
     12,
   );
-  t.box(group, pvc, 0.1, 0.1, 0.1, outX, outY, W / 2 + 0.17);
-  t.cyl(group, pvc, 0.045, 0.03, outX, outY, W / 2 + 0.235, 'z', 8);
-  t.box(
-    group,
-    red,
-    0.03,
-    0.02,
-    0.2,
-    outX,
-    outY + 0.07,
-    W / 2 + 0.17,
-  ).rotation.y = Math.PI / 2;
+  const outlet = createChemicalBallValve(kit, {
+    dn: 40,
+    name: `${tag}-V2 outlet valve`,
+  });
+  outlet.object.rotation.y = Math.PI / 2;
+  outlet.object.position.set(outX, outY, W / 2 + 0.17);
+  group.add(outlet.object);
+  valves.add(outlet);
   t.rod(
     group,
     pvc,
@@ -549,6 +553,8 @@ export function createFramedChemicalTank(
     object: group,
     /** Where its fill line ends at its inlet valve, for the delivery main. */
     fillAt: [fillX, 0.45, fillZ] as const,
+    /** Its fill and outlet valves, which turn. */
+    parts: valves,
     /** Its contents, a fraction of full, as its transmitter reads them. */
     setLevel(fraction: number) {
       const v = Math.max(0, Math.min(1, fraction));

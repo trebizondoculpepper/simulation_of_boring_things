@@ -166,7 +166,9 @@ function bulkTank(kit: PanelKit, c: Chemical, n: number): LiveExhibit {
   };
   return {
     object,
+    parts: tank.parts,
     update(delta) {
+      tank.parts.update(delta);
       const v = level();
       tank.setLevel(v);
       trend.sample(v * each, delta);
