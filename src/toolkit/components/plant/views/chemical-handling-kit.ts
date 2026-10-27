@@ -326,8 +326,10 @@ export function createTransferPumpSkid(
     BAND[chemical],
   );
 
-  // The local station on its post: each pump's selector and lamps, the
-  // duty selector, a stop; a DEMAND key standing in for the day tanks' call.
+  // The local station on its post: the pump's HAND · OFF · AUTO (HAND runs
+  // it for an outlet picked at the selector, AUTO for the day tanks'
+  // calls, OFF never), its RUN and TRIP lamps, and the high-high trip's
+  // reset. The selector's own mode is worked at the selector.
   const post = new Group();
   post.position.set(0.9, 0, 0.25);
   group.add(post);
@@ -373,27 +375,12 @@ export function createTransferPumpSkid(
     parts.add(trip);
   }
 
-  // HAND · AUTO for the transfer selector it feeds.
-  const call = selector(kit, {
-    positions: 2,
-    legend: 'SELECTOR HAND · AUTO',
-    bound: {
-      get value() {
-        return store.state.value.mode === 'auto' ? 1 : 0;
-      },
-      set: (n: number) => store.act({ act: 'mode', to: n ? 'auto' : 'hand' }),
-    },
-  });
-  call.object.position.set(0, -0.07, 0.062);
-  call.object.scale.setScalar(0.8);
-  box.add(call.object);
-  parts.add(call);
   const stop = pushButton(kit, {
     colour: 'blue',
     legend: 'TRIP RESET',
     action: () => store.act({ act: 'reset' }),
   });
-  stop.object.position.set(0, -0.2, 0.062);
+  stop.object.position.set(0, -0.1, 0.062);
   stop.object.scale.setScalar(0.7);
   box.add(stop.object);
   parts.add(stop);
@@ -1446,7 +1433,7 @@ export function createTransferSelector(
     const b = pushButton(kit, {
       colour: name ? 'white' : 'black',
       head: 'illuminated',
-      legend: name ? `${i + 1}` : `${i + 1} SPARE`,
+      legend: name ? (name.split(' ').pop() ?? `${i + 1}`) : 'SPARE',
       lamp: computed(() => !!name && store.state.value.serving === i),
       action: () => {
         if (name) store.act({ act: 'pick', tank: i });
@@ -1658,11 +1645,11 @@ export function createDistributionPanel(
     '#f4f3ee',
   );
   const labels = [
-    'HYPO\nDAY LOW',
+    'HYPO DAY\nLOW LOW',
     'HYPO\nTRIPPED',
     'HYPO\nSTORE LOW',
     'HYPO\nNOT AUTO',
-    'ACID\nDAY LOW',
+    'ACID DAY\nLOW LOW',
     'ACID\nTRIPPED',
     'ACID\nSTORE LOW',
     'ACID\nNOT AUTO',
@@ -1745,11 +1732,11 @@ export function createDistributionPanel(
     });
     (
       [
-        ['AUTO', 'white', sec.auto],
-        ['HAND', 'amber', sec.hand],
-        ['RUN', 'green', sec.run],
-        ['IN AUTO', 'white', sec.inAuto],
-        ['TRIP', 'red', sec.trip],
+        ['SELECTOR\nAUTO', 'white', sec.auto],
+        ['SELECTOR\nHAND', 'amber', sec.hand],
+        ['PUMP\nRUN', 'green', sec.run],
+        ['PUMP\nIN AUTO', 'white', sec.inAuto],
+        ['HIGH-HIGH\nTRIP', 'red', sec.trip],
       ] as const
     ).forEach(([legend, colour, drive], i) => {
       const lamp = pilotLight(kit, { colour, legend, drive });
@@ -1759,7 +1746,7 @@ export function createDistributionPanel(
       parts.add(lamp);
       f.label(
         group,
-        legend,
+        legend.replace('\n', ' '),
         x0 + 0.07 + i * 0.14,
         -0.36,
         z,
@@ -1798,7 +1785,8 @@ export function createDistributionPanel(
           sec.inAuto.value = line.inAuto;
           sec.trip.value = line.tripped;
           alarms.push(
-            line.days.some((v) => v <= 0.2),
+            // Below its call point and still falling: its fill is failing.
+            line.days.some((v) => v <= 0.1),
             line.tripped,
             line.store <= 0.1,
             !line.inAuto,

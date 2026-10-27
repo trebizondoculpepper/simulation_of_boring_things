@@ -1,8 +1,9 @@
-import { Group, MeshStandardMaterial } from 'three';
+import { CylinderGeometry, Group, MeshStandardMaterial } from 'three';
+import type { Mesh, PlaneGeometry } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
-import { brandLivery } from '../../core/views/brand-livery';
 import { plantTools } from './plant-tools';
+import { chlorellaPlate } from './chlorella-plate';
 import { createChemicalLabel } from './chemicals-signs';
 import { bottleBund, bottleSize } from '../../../../game/plant/dose-bottle';
 import type { bottleReadout } from '../../../../game/plant/dose-bottle';
@@ -39,10 +40,11 @@ export function createDoseBottle(
   const { d, h } = bottleSize(litres);
   const r = d / 2;
   const hdpe = t.paint('#1c1e1f', 0.78);
+  // The bottle's moulded body: black but glossy, so its highlights show its shape.
+  const body = t.paint('#1f2224', 0.18, 0.1);
   const dark = t.paint('#2a2f31', 0.6);
   const pvc = t.paint('#5a5f63', 0.55);
   const head = t.paint('#c9ccc8', 0.55);
-  const brand = brandLivery(kit, 'chlorella');
 
   // The spill pallet: a square sump holding 110% of the bottle under a
   // grid deck, the bottle standing on the deck; its rim banded in the
@@ -87,10 +89,10 @@ export function createDoseBottle(
 
   // The bottle: its body, a moulded shoulder and its lid's neck.
   const top = base + h;
-  t.cyl(group, hdpe, r, h - 0.04, 0, base + (h - 0.04) / 2, 0, 'y', 40);
-  t.cyl(group, hdpe, r * 0.93, 0.04, 0, top - 0.02, 0, 'y', 40);
+  t.cyl(group, body, r, h - 0.04, 0, base + (h - 0.04) / 2, 0, 'y', 48);
+  t.cyl(group, body, r * 0.93, 0.04, 0, top - 0.02, 0, 'y', 40);
   for (const y of [base + h * 0.3, base + h * 0.65])
-    t.cyl(group, hdpe, r + 0.006, 0.02, 0, y, 0, 'y', 40);
+    t.cyl(group, body, r + 0.006, 0.02, 0, y, 0, 'y', 48);
 
   // The head: a grey moulded housing on the lid, the motor's dome on it.
   const hw = 0.2;
@@ -98,7 +100,7 @@ export function createDoseBottle(
   const hd = 0.15;
   const hz = Math.min(0, r - hd / 2 - 0.01);
   const headY = top + hh / 2;
-  t.box(group, colour, hw + 0.002, 0.018, hd + 0.002, 0, top + hh - 0.009, hz);
+  t.box(group, colour, hw + 0.002, 0.016, hd + 0.002, 0, top + hh - 0.012, hz);
   t.box(group, head, hw, hh, hd, 0, headY, hz);
   t.cyl(
     group,
@@ -111,7 +113,7 @@ export function createDoseBottle(
     'y',
     24,
   );
-  t.cyl(group, dark, 0.048, 0.012, -0.04, top + hh + 0.006, hz - 0.02, 'y', 24);
+  t.cyl(group, dark, 0.048, 0.012, -0.04, top + hh + 0.007, hz - 0.02, 'y', 24);
   f.label(
     group,
     'PUMP',
@@ -174,12 +176,12 @@ export function createDoseBottle(
       roughness: 0.4,
     });
     kit.materials.push(mat);
-    const y = headY + 0.035 - i * 0.022;
+    const y = headY + 0.03 - i * 0.014;
     const lamp = t.cyl(
       group,
       mat,
-      0.006,
-      0.006,
+      0.0035,
+      0.004,
       0.07,
       y,
       hz + hd / 2 + 0.003,
@@ -187,19 +189,23 @@ export function createDoseBottle(
       12,
     );
     lamp.userData.live = true;
-    f.label(group, name, 0.088, y, hz + hd / 2 + 0.001, 0.008, '#1b1b1b');
+    f.label(group, name, 0.084, y, hz + hd / 2 + 0.001, 0.0055, '#1b1b1b');
     return { mat, colour };
   });
+  // What it is on its front, under the display; whose it is on its side.
   f.label(
     group,
-    'CHLORELLA DOSECELL',
+    'DOSECELL',
     -0.02,
     headY - 0.046,
     hz + hd / 2 + 0.001,
     0.011,
-    brand.palette.onMain,
-    brand.palette.main,
+    '#2a2f31',
   );
+  const plate = chlorellaPlate(kit, hd * 0.85, 'CHEMICAL HANDLING');
+  plate.position.set(hw / 2 + 0.001, headY, hz);
+  plate.rotation.y = Math.PI / 2;
+  group.add(plate);
 
   // The fill socket, its stub turned up for the transfer line to meet.
   const fillX = Math.max(hw / 2 + 0.035, r * 0.55);
@@ -288,18 +294,19 @@ export function createDoseBottle(
   // Its product label on the front, its tag above it.
   const lw = Math.min(0.3, d * 0.7);
   const hazard = createChemicalLabel(t, lw, lw * 0.72, product, acid);
-  hazard.position.set(0, base + h * 0.45, r + 0.004);
-  group.add(hazard);
-  f.label(
+  hazard.position.set(0, base + h * 0.45, 0);
+  group.add(wrapOnBottle(hazard, r + 0.002));
+  const tagLabel = f.label(
     group,
     tag,
     0,
     base + h * 0.45 + lw * 0.36 + 0.03,
-    r + 0.004,
+    0,
     Math.min(0.04, d * 0.12),
     '#ffffff',
     '#2a2f31',
   );
+  wrapOnBottle(tagLabel, r + 0.002);
 
   draw({
     powered: true,
@@ -322,4 +329,29 @@ export function createDoseBottle(
       lamps.forEach((l, i) => (l.mat.emissiveIntensity = on[i] ? 1.6 : 0));
     },
   };
+}
+
+/**
+ * A flat printed label (a plane `width` × `height`) wrapped round the
+ * bottle at radius `r`, centred on its front (+z): the same texture on an
+ * arc of the cylinder, so it lies on the surface rather than standing off
+ * it. Keeps its height; its x and z are the bottle's axis.
+ */
+function wrapOnBottle(mesh: Mesh, r: number): Mesh {
+  const { width, height } = (mesh.geometry as PlaneGeometry).parameters;
+  const arc = Math.min(Math.PI * 1.6, width / r);
+  mesh.geometry.dispose();
+  mesh.geometry = new CylinderGeometry(
+    r,
+    r,
+    height,
+    32,
+    1,
+    true,
+    -arc / 2,
+    arc,
+  );
+  mesh.position.x = 0;
+  mesh.position.z = 0;
+  return mesh;
 }
