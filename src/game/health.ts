@@ -456,6 +456,7 @@ export const KIND_HEALTH_COVERAGE = {
     'not checked: a transfer pump; a day tank it leaves dry shows in its pool’s chemistry',
   'chem-selector':
     'not checked: a transfer selector; a day tank it leaves dry shows in its pool’s chemistry',
+  'chem-panel': 'not checked: a panel; it shows what the distribution does',
   'chem-day': 'pools: chemistry; a dry day tank stops its pool’s dosing',
   'hypo-tank': 'chemicals: hypochlorite stock',
   'acid-ibc': 'chemicals: acid stock',

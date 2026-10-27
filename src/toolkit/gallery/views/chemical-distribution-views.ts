@@ -22,11 +22,15 @@ import { createFramedChemicalTank } from '../../components/plant/views/framed-ch
 import {
   SELECTOR_OUTLETS,
   createDayTankStation,
+  createDistributionPanel,
   createTransferPumpSkid,
   createTransferSelector,
   createTransferStore,
 } from '../../components/plant/views/chemical-handling-kit';
-import type { TransferStore } from '../../components/plant/views/chemical-handling-kit';
+import type {
+  DistributionReading,
+  TransferStore,
+} from '../../components/plant/views/chemical-handling-kit';
 
 /**
  * The chemical distribution's machines in the building (plan 085), each
@@ -105,6 +109,25 @@ function worldTransferStore(c: Chemical): TransferStore {
   };
 }
 
+/** The distribution as its panel shows it, from the world. */
+function readDistribution(): Record<Chemical, DistributionReading> | null {
+  if (typeof window === 'undefined') return null;
+  const w = roomWorld().world.value;
+  const line = (c: Chemical): DistributionReading => {
+    const d = w.distribution[c];
+    return {
+      store: w.chemicals[c] / STORE_CAPACITY[c],
+      days: d.tanks.map((t, i) => t.litres / DAY_TANKS[c][i].litres),
+      serving: d.serving,
+      mode: d.mode,
+      running: transferRunning(d, w.chemicals[c], STORE_CAPACITY[c]),
+      tripped: d.tripped,
+      inAuto: d.hoa === 'auto',
+    };
+  };
+  return { hypochlorite: line('hypochlorite'), acid: line('acid') };
+}
+
 /** One store per chemical, shared by its machines in whichever room is drawn. */
 const stores = new Map<Chemical, TransferStore>();
 const storeOf = (c: Chemical) => {
@@ -149,6 +172,8 @@ function bulkTank(kit: PanelKit, c: Chemical, n: number): LiveExhibit {
 /** The model for a chemical distribution key, bound to the world; null if the key is another's. */
 export function chemicalModel(kit: PanelKit, key: string): LiveExhibit | null {
   const [kind, chemical, arg] = key.split(':');
+  if (kind === 'chem-panel')
+    return createDistributionPanel(kit, readDistribution);
   if (!isChemical(chemical)) return null;
   switch (kind) {
     case 'chem-bulk':

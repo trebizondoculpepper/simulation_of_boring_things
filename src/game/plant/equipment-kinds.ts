@@ -332,6 +332,14 @@ export const PLACED_KINDS = {
     class: 'plant',
     purpose: 'Sends a dosing chemical to each plant room’s day tank in turn.',
   },
+  'chem-panel': {
+    type: 'Control panel',
+    status: 'none',
+    code: 'CP',
+    class: 'plant',
+    purpose:
+      'Shows the chemical distribution: every store and day tank, the outlets served, the transfer pumps.',
+  },
   'chem-day': {
     type: 'Day tank',
     status: 'none',

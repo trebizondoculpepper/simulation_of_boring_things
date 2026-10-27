@@ -157,24 +157,37 @@ export function transferSelectors(): {
   const chemicals = ['hypochlorite', 'acid'] as const;
   const rooms = [1, 2, 3, 4];
   return {
-    nodes: chemicals.flatMap((c) => [
+    nodes: [
       {
-        id: `${c}-main`,
-        kind: 'chemical-main',
-        name: `${CHEMICAL_NAME[c]} main from its store`,
+        id: 'chem-panel',
+        kind: 'chem-panel',
+        name: 'Chemical distribution panel',
       },
-      {
-        id: `${c}-selector`,
-        kind: 'chem-selector',
-        name: `${CHEMICAL_NAME[c]} transfer selector`,
-      },
-      ...rooms.map((r) => ({
-        id: `${c}-pl${r}`,
-        kind: 'chemical-branch',
-        name: `${CHEMICAL_NAME[c]} branch to PL${r}`,
-      })),
-    ]),
+      ...chemicals.flatMap((c) => [
+        {
+          id: `${c}-main`,
+          kind: 'chemical-main',
+          name: `${CHEMICAL_NAME[c]} main from its store`,
+        },
+        {
+          id: `${c}-selector`,
+          kind: 'chem-selector',
+          name: `${CHEMICAL_NAME[c]} transfer selector`,
+        },
+        ...rooms.map((r) => ({
+          id: `${c}-pl${r}`,
+          kind: 'chemical-branch',
+          name: `${CHEMICAL_NAME[c]} branch to PL${r}`,
+        })),
+      ]),
+    ],
     links: chemicals.flatMap((c) => [
+      link(
+        `${CHEMICAL_NAME[c]} selector to the panel`,
+        [`${c}-selector`, 'status'],
+        ['chem-panel', c],
+        'control',
+      ),
       link(
         `${CHEMICAL_NAME[c]} main to its selector`,
         [`${c}-main`, 'out'],

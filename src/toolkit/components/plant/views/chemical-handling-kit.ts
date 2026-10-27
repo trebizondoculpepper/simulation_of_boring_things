@@ -6,7 +6,7 @@ import {
   MeshStandardMaterial,
 } from 'three';
 import { computed, signal } from '@preact/signals-core';
-import type { ReadonlySignal } from '@preact/signals-core';
+import type { ReadonlySignal, Signal } from '@preact/signals-core';
 import {
   actOnTransfer,
   levelOf,
@@ -1579,5 +1579,219 @@ export function createTransferTrial(kit: PanelKit, chemical: Chemical) {
       for (const k of tanks) k.update(delta);
     },
     status: () => `${skid.status()}; selector ${sel.status()}`,
+  };
+}
+
+// ---- The chemical distribution panel --------------------------------------
+
+/** What the distribution panel shows of one chemical's line. */
+export interface DistributionReading {
+  /** The store's contents, a share of full. */
+  store: number;
+  /** Each day tank's level, a share of full, in outlet order. */
+  days: readonly number[];
+  serving: number | null;
+  mode: 'auto' | 'hand';
+  running: boolean;
+  tripped: boolean;
+  /** Its transfer pump in AUTO at its store. */
+  inAuto: boolean;
+}
+
+/**
+ * The wet hall's chemical distribution panel (plan 085), Penfold
+ * Controls': a wall cabinet with a section per chemical, each its store's
+ * contents and its four day tanks' levels on moving-coil meters, a lamp
+ * for each outlet lit while it is served, the selector's AUTO and HAND,
+ * its pump's RUN, IN AUTO and TRIP; and an annunciator across the top (a
+ * day tank low, a line tripped, a store low), ACCEPT, RESET and LAMP TEST.
+ * It shows; the pumps' selectors and their trip resets stay at the stores.
+ */
+export function createDistributionPanel(
+  kit: PanelKit,
+  read: () => Record<Chemical, DistributionReading> | null,
+) {
+  const group = new Group();
+  const t = plantTools(kit);
+  const f = tools(kit);
+  const parts = createPartSet();
+  const W = 1.6;
+  const H = 1.1;
+  t.box(group, t.paint('#d9d4c4', 0.55), W, H, 0.22, 0, 0, 0.11);
+  const z = 0.222;
+  f.label(
+    group,
+    'CHEMICAL DISTRIBUTION',
+    0,
+    H / 2 - 0.05,
+    z,
+    0.03,
+    '#1b1b1b',
+    '#f4f3ee',
+  );
+  const labels = [
+    'HYPO\nDAY LOW',
+    'HYPO\nTRIPPED',
+    'HYPO\nSTORE LOW',
+    'HYPO\nNOT AUTO',
+    'ACID\nDAY LOW',
+    'ACID\nTRIPPED',
+    'ACID\nSTORE LOW',
+    'ACID\nNOT AUTO',
+  ];
+  const panel = createAnnunciatorPanel(kit, labels, { columns: 8, cell: 0.14 });
+  panel.group.position.set(0, H / 2 - 0.17, z);
+  panel.group.traverse((o) => (o.userData.live = true));
+  group.add(panel.group);
+  const logic = createAnnunciator(labels.length, { manualReset: true });
+  let lampTest = 0;
+  (
+    [
+      ['ACCEPT', 'black', () => logic.acknowledge()],
+      ['RESET', 'black', () => logic.reset()],
+      ['LAMP TEST', 'white', () => (lampTest = 2)],
+    ] as const
+  ).forEach(([legend, colour, action], i) => {
+    const p = pushButton(kit, { colour, legend, action });
+    p.object.position.set(W / 2 - 0.32 + i * 0.1, -H / 2 + 0.1, z);
+    p.object.scale.setScalar(0.7);
+    p.object.traverse((o) => (o.userData.live = true));
+    group.add(p.object);
+    parts.add(p);
+  });
+  type Section = {
+    meters: ReturnType<typeof createPanelMeter>[];
+    outlets: Signal<boolean>[];
+    auto: Signal<boolean>;
+    hand: Signal<boolean>;
+    run: Signal<boolean>;
+    inAuto: Signal<boolean>;
+    trip: Signal<boolean>;
+  };
+  const sections = {} as Record<Chemical, Section>;
+  (['hypochlorite', 'acid'] as const).forEach((c, s) => {
+    const x0 = s ? 0.05 : -W / 2 + 0.05;
+    const sec: Section = {
+      meters: [],
+      outlets: [0, 1, 2, 3].map(() => signal(false)),
+      auto: signal(false),
+      hand: signal(false),
+      run: signal(false),
+      inAuto: signal(false),
+      trip: signal(false),
+    };
+    f.label(
+      group,
+      c === 'acid' ? 'ACID 10%' : 'HYPOCHLORITE 14%',
+      x0 + 0.35,
+      0.14,
+      z,
+      0.022,
+      '#ffffff',
+      BAND[c],
+    );
+    ['STORE', 'PL1', 'PL2', 'PL3', 'PL4'].forEach((name, i) => {
+      const m = createPanelMeter(kit, '%', {
+        width: 0.11,
+        scaleMax: 100,
+        redFrom: 0.95,
+      });
+      const x = x0 + 0.07 + i * 0.14;
+      m.group.position.set(x, 0.04, z);
+      m.group.traverse((o) => (o.userData.live = true));
+      group.add(m.group);
+      sec.meters.push(m);
+      f.label(group, name, x, -0.04, z, 0.016, '#1b1b1b', '#f4f3ee');
+      if (i > 0) {
+        const lamp = pilotLight(kit, {
+          colour: 'amber',
+          legend: 'FILLING',
+          drive: sec.outlets[i - 1],
+        });
+        lamp.object.position.set(x, -0.12, z);
+        lamp.object.scale.setScalar(0.55);
+        group.add(lamp.object);
+        parts.add(lamp);
+        f.label(group, 'FILLING', x, -0.17, z, 0.013, '#1b1b1b', '#f4f3ee');
+      }
+    });
+    (
+      [
+        ['AUTO', 'white', sec.auto],
+        ['HAND', 'amber', sec.hand],
+        ['RUN', 'green', sec.run],
+        ['IN AUTO', 'white', sec.inAuto],
+        ['TRIP', 'red', sec.trip],
+      ] as const
+    ).forEach(([legend, colour, drive], i) => {
+      const lamp = pilotLight(kit, { colour, legend, drive });
+      lamp.object.position.set(x0 + 0.07 + i * 0.14, -0.3, z);
+      lamp.object.scale.setScalar(0.6);
+      group.add(lamp.object);
+      parts.add(lamp);
+      f.label(
+        group,
+        legend,
+        x0 + 0.07 + i * 0.14,
+        -0.36,
+        z,
+        0.015,
+        '#1b1b1b',
+        '#f4f3ee',
+      );
+    });
+    sections[c] = sec;
+  });
+  panelMakerMark(kit, group, {
+    width: W,
+    height: H,
+    z,
+    corner: 'bottom-right',
+  });
+  let time = 0;
+  return {
+    object: group,
+    parts,
+    update(delta: number) {
+      time += delta;
+      parts.update(delta);
+      const r = read();
+      if (r) {
+        const alarms: boolean[] = [];
+        for (const c of ['hypochlorite', 'acid'] as const) {
+          const line = r[c];
+          const sec = sections[c];
+          sec.meters[0].set(line.store);
+          line.days.forEach((v, i) => sec.meters[i + 1]?.set(v));
+          sec.outlets.forEach((o, i) => (o.value = line.serving === i));
+          sec.auto.value = line.mode === 'auto';
+          sec.hand.value = line.mode === 'hand';
+          sec.run.value = line.running;
+          sec.inAuto.value = line.inAuto;
+          sec.trip.value = line.tripped;
+          alarms.push(
+            line.days.some((v) => v <= 0.2),
+            line.tripped,
+            line.store <= 0.1,
+            !line.inAuto,
+          );
+        }
+        logic.sense(alarms);
+      }
+      for (const c of ['hypochlorite', 'acid'] as const)
+        for (const m of sections[c].meters) m.update(delta);
+      lampTest = Math.max(0, lampTest - delta);
+      panel.set(lampTest > 0 ? labels.map(() => true) : logic.lit(time));
+    },
+    status: () => {
+      const r = read();
+      if (!r) return 'Chemical distribution panel';
+      const say = (c: Chemical) => {
+        const l = r[c];
+        const at = l.serving === null ? 'idle' : `filling PL${l.serving + 1}`;
+        return `${c === 'acid' ? 'acid' : 'hypochlorite'} ${l.tripped ? 'TRIPPED' : at}`;
+      };
+      return `${say('hypochlorite')}; ${say('acid')}`;
+    },
   };
 }

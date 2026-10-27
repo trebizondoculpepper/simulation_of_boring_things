@@ -385,6 +385,10 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0135',
     tag: 'WH-XS2',
   },
+  'wet_hall|chem-panel|Chemical distribution panel': {
+    assetId: 'asset-0144',
+    tag: 'WH-CP1',
+  },
   'plant_pool_01|chem-day:hypochlorite:pool_01|Hypochlorite day tank': {
     assetId: 'asset-0136',
     tag: 'PL1-DT1',

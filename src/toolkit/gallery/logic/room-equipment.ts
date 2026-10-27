@@ -668,7 +668,7 @@ function chemDays(pool: PoolId): Item[] {
   });
 }
 
-type At = { x: number; z: number; face: Side };
+type At = { x: number; z: number; face: Side } | { wall: Side; along: number };
 /**
  * Where each room's chemical machines stand (plan 085): each plant room's
  * day tanks in floor its machines leave free, acid and hypochlorite apart;
@@ -696,6 +696,7 @@ const CHEM_AT: Record<string, Record<string, At>> = {
     // wall (z 2.6), its sewer monitor and the pit's davit.
     'chem-selector:hypochlorite': { x: 7.4, z: 9.35, face: 'north' },
     'chem-selector:acid': { x: 9.35, z: 7.4, face: 'west' },
+    'chem-panel': { wall: 'south', along: 4.8 },
   },
 };
 
@@ -880,6 +881,15 @@ export function roomEquipment(
             ...SELECTOR,
           ),
           floor('chem-selector:acid', 'Acid transfer selector', ...SELECTOR),
+          // And its panel, between them and the pit (plan 085).
+          wall(
+            'chem-panel',
+            'Chemical distribution panel',
+            1.6,
+            0.22,
+            1.1,
+            1.5,
+          ),
         ],
       };
     case 'boiler_house':
