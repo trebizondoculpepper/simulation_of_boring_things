@@ -98,6 +98,18 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
   const parts = createPartSet();
   const { group: rooms, doors } = createMainCorridor(metre, kit);
   for (const d of doors) parts.add(d.part);
+  // In development, a console handle to work a door by the room it leads
+  // to (`window.mainCorridor.useDoor('control_room')`), for checking what
+  // is seen through it without walking up to it.
+  if (import.meta.env.DEV && typeof window !== 'undefined')
+    (window as unknown as { mainCorridor: unknown }).mainCorridor = {
+      useDoor(to: string) {
+        const d = doors.find((x) => x.door.to === to);
+        const use = d && [...d.part.uses.values()][0];
+        use?.();
+        return Boolean(use);
+      },
+    };
   scene.add(rooms);
   // The CONTROL ROOM MODE knob beside the control room's doors, by their
   // card reader (`control-room-mode.ts`): where those doors lead.
@@ -134,6 +146,8 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
         lamp: resetLit,
         action: () => {
           world.dispatch({ type: 'bridge/first-visit-reset' });
+          // And its doors shut at once (the owner, 2026-10-27).
+          controlDoors.part.swingTo(0);
           resetLit.value = true;
           window.clearTimeout(resetTimer);
           resetTimer = window.setTimeout(() => (resetLit.value = false), 700);
