@@ -28,7 +28,10 @@ import { diffWorld } from '../../game/events/watchers';
  * - **No storage** (some private windows): it runs unsaved, and says so.
  * - **Two tabs**: the first to open a slot holds it (the Web Locks API)
  *   and saves; another tab follows what the first saves and does not save
- *   itself. Its own actions still apply, until the next save arrives.
+ *   itself. Its own actions apply at once and are sent to the holder
+ *   (`BroadcastChannel`), which applies and saves them, so they are not
+ *   undone by its next save; and when the holder goes, a follower takes
+ *   the slot up.
  *
  * localStorage, not IndexedDB, because a save is small and its write is
  * synchronous: one made as the page goes is not cut off.
@@ -60,6 +63,12 @@ export interface WorldStore {
   reset(): void;
   /** Anything the player should know: unsaved, or another tab has it. */
   readonly notice: ReadonlySignal<string | null>;
+}
+
+/** An action done in a follower tab, sent to the tab holding the slot. */
+interface RelayedAction {
+  action: WorldAction;
+  by?: 'you' | 'console';
 }
 
 const SAVE_EVERY = 10_000;
@@ -205,16 +214,26 @@ function openWorldStore(slot: string): WorldStore {
   // Whether this tab holds the slot. Without Web Locks, assume so.
   const holding = signal(!('locks' in navigator));
   let release: () => void = () => {};
+  const hold = () => {
+    holding.value = true;
+    notice.value = null;
+    return new Promise<void>((resolve) => (release = resolve));
+  };
   if ('locks' in navigator)
     void navigator.locks.request(key(slot), { ifAvailable: true }, (lock) => {
-      if (!lock) {
-        notice.value =
-          'Pool Plant is open in another tab: this one follows it and does not save.';
-        return;
-      }
-      holding.value = true;
-      return new Promise<void>((resolve) => (release = resolve));
+      if (lock) return hold();
+      notice.value =
+        'Pool Plant is open in another tab: this one follows it and does not save.';
+      // Held by this tab once the other lets it go (closed or reloaded).
+      void navigator.locks.request(key(slot), hold);
     });
+  // A follower's actions, sent to the holder to apply and save (the owner,
+  // 2026-10-27: the bridge's RESET, pressed in a follower tab, was undone
+  // by the holder's next save, so its displays came back on).
+  const channel =
+    typeof BroadcastChannel === 'undefined'
+      ? null
+      : new BroadcastChannel(key(slot));
   const save = () => {
     if (!s || !holding.value) return false;
     try {
@@ -264,28 +283,38 @@ function openWorldStore(slot: string): WorldStore {
     const loaded = deserialiseWorld(event.newValue);
     if (!loaded.ok) return;
     world.value = loaded.world;
-    // Said in the log, since it can undo what was done here.
+    // Said in the log: the world here is the other tab's.
     events.value = appendEvents(events.value, [
       {
         time: loaded.world.time,
         kind: 'system',
         severity: 'notice',
         subject: 'SAVE',
-        text: 'world taken up from the game open in another tab (it holds the save; changes made here are lost)',
+        text: 'world taken up from the game open in another tab (it holds the save)',
       },
     ]);
+  });
+  const apply = (action: WorldAction, by?: 'you' | 'console') => {
+    const before = world.value;
+    world.value = applyAction(before, action);
+    events.value = appendEvents(events.value, [
+      describeAction(before, action, world.value, by),
+      ...diffWorld(before, world.value),
+    ]);
+    // Saved at once: an action is what a player would mind losing.
+    save();
+  };
+  channel?.addEventListener('message', (event: MessageEvent) => {
+    if (!holding.value) return;
+    const { action, by } = event.data as RelayedAction;
+    apply(action, by);
   });
   return {
     world,
     dispatch(action, by) {
-      const before = world.value;
-      world.value = applyAction(before, action);
-      events.value = appendEvents(events.value, [
-        describeAction(before, action, world.value, by),
-        ...diffWorld(before, world.value),
-      ]);
-      // Saved at once: an action is what a player would mind losing.
-      save();
+      apply(action, by);
+      // Not holding: applied here at once, and by the holder for keeps.
+      if (!holding.value) channel?.postMessage({ action, by });
     },
     events,
     log(...more) {
