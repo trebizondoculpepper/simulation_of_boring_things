@@ -236,7 +236,8 @@ export function fillOrder(seed: number): FindId[] {
   const count = FILL.min + Math.floor(rand() * (FILL.max - FILL.min + 1));
   const rare = rand() < RARE_CHANCE;
   const picked = rest.slice(0, count - 1 - (rare ? 1 : 0));
-  if (rare) picked.splice(Math.floor(rand() * (picked.length + 1)), 0, RARE_FIND);
+  if (rare)
+    picked.splice(Math.floor(rand() * (picked.length + 1)), 0, RARE_FIND);
   return [FIRST_FIND, ...picked];
 }
 
@@ -248,7 +249,10 @@ export type Place =
   | { at: 'skip' };
 
 /** Where the lid is: on its seat, held, or set down on the deck. */
-export type LidPlace = { at: 'on' } | { at: 'held' } | { at: 'deck'; x: number; z: number };
+export type LidPlace =
+  | { at: 'on' }
+  | { at: 'held' }
+  | { at: 'deck'; x: number; z: number };
 
 export interface SkimmerGame {
   seed: number;
@@ -323,10 +327,13 @@ export function actOnSkimmer(g: SkimmerGame, a: SkimmerAction): SkimmerGame {
       if (hands !== null) return say(g, 'Your hands are full.');
       return say(
         { ...g, lid: { at: 'held' } },
-        g.lid.at === 'on' ? 'The lid lifts off. Put it to one side.' : 'The lid.',
+        g.lid.at === 'on'
+          ? 'The lid lifts off. Put it to one side.'
+          : 'The lid.',
       );
     case 'skimmer': {
-      if (hands === 'lid') return say({ ...g, lid: { at: 'on' } }, 'The lid goes back on.');
+      if (hands === 'lid')
+        return say({ ...g, lid: { at: 'on' } }, 'The lid goes back on.');
       if (g.lid.at === 'on') return say(g, 'Lift the lid off first.');
       if (hands !== null) return say(g, 'Your hands are full.');
       const i = nextInBasket(g);
@@ -340,7 +347,10 @@ export function actOnSkimmer(g: SkimmerGame, a: SkimmerAction): SkimmerGame {
           { ...g, lid: { at: 'deck', x: a.besideX, z: a.besideZ } },
           'The skip takes only what came out of the skimmer. The lid stays here.',
         );
-      const next = { ...placeAt(g, hands, { at: 'skip' }), binned: g.binned + 1 };
+      const next = {
+        ...placeAt(g, hands, { at: 'skip' }),
+        binned: g.binned + 1,
+      };
       return cleared(next) ? say(next, CLEARED_LINE(next.binned)) : next;
     }
     case 'deck':
@@ -350,7 +360,10 @@ export function actOnSkimmer(g: SkimmerGame, a: SkimmerAction): SkimmerGame {
     case 'pick': {
       if (hands !== null) return say(g, 'Your hands are full.');
       if (g.places[a.index]?.at !== 'deck') return g;
-      return say(placeAt(g, a.index, { at: 'held' }), findOf(g.order[a.index]).caption);
+      return say(
+        placeAt(g, a.index, { at: 'held' }),
+        findOf(g.order[a.index]).caption,
+      );
     }
   }
 }

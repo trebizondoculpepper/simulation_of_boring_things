@@ -262,7 +262,12 @@ export const DECADES: readonly Decade[] = [
 export const BAY = { w: 2.3, frameW: 0.62, frameH: 0.5, gap: 0.08 } as const;
 
 /** The hall's walls' inner faces (its interior is 15.4 × 13.4 m). */
-export const WALL = { north: -6.66, east: 7.66, south: 6.66, west: -7.66 } as const;
+export const WALL = {
+  north: -6.66,
+  east: 7.66,
+  south: 6.66,
+  west: -7.66,
+} as const;
 
 export interface BayPlace {
   decade: Decade;

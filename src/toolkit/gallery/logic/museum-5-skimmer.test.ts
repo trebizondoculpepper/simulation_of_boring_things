@@ -35,7 +35,11 @@ describe('Hall 5: what’s in the skimmer', () => {
   });
 
   it('hands over one find at a time, the hair clump first', () => {
-    let g = run(newSkimmerGame(2), { type: 'lid' }, { type: 'deck', x: 0, z: 0 });
+    let g = run(
+      newSkimmerGame(2),
+      { type: 'lid' },
+      { type: 'deck', x: 0, z: 0 },
+    );
     g = run(g, { type: 'skimmer' });
     expect(held(g)).toBe(0);
     expect(g.order[0]).toBe(FIRST_FIND);
@@ -66,7 +70,11 @@ describe('Hall 5: what’s in the skimmer', () => {
   });
 
   it('is cleared exactly when the last find lands in the skip', () => {
-    let g = run(newSkimmerGame(5), { type: 'lid' }, { type: 'deck', x: 0, z: 0 });
+    let g = run(
+      newSkimmerGame(5),
+      { type: 'lid' },
+      { type: 'deck', x: 0, z: 0 },
+    );
     for (let k = 0; k < g.order.length; k++) {
       expect(cleared(g)).toBe(false);
       g = run(g, { type: 'skimmer' }, toSkip);

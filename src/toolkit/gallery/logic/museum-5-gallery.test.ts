@@ -7,7 +7,11 @@ describe('Hall 5: a day in the life', () => {
     const years = DECADES.map((d) => Number(d.decade.slice(0, 4)));
     expect([...years].sort((a, b) => a - b)).toEqual(years);
     for (const d of DECADES)
-      expect(d.photos.map((p) => p.when)).toEqual(['Morning', 'Midday', 'Night']);
+      expect(d.photos.map((p) => p.when)).toEqual([
+        'Morning',
+        'Midday',
+        'Night',
+      ]);
   });
 
   it('hangs the earliest decade on the visitor’s left, facing each wall', () => {
@@ -15,8 +19,10 @@ describe('Hall 5: a day in the life', () => {
     const north = bays.filter((b) => b.wall === 'north');
     const east = bays.filter((b) => b.wall === 'east');
     // Facing north (−z), left is west (−x); facing east (+x), left is north (−z).
-    for (let k = 1; k < north.length; k++) expect(north[k].x).toBeGreaterThan(north[k - 1].x);
-    for (let k = 1; k < east.length; k++) expect(east[k].z).toBeGreaterThan(east[k - 1].z);
+    for (let k = 1; k < north.length; k++)
+      expect(north[k].x).toBeGreaterThan(north[k - 1].x);
+    for (let k = 1; k < east.length; k++)
+      expect(east[k].z).toBeGreaterThan(east[k - 1].z);
     // The north wall's decades come first.
     expect(bays.indexOf(north.at(-1)!)).toBeLessThan(bays.indexOf(east[0]));
   });
