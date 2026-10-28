@@ -318,23 +318,6 @@ export function paintedFloorTexture(w: number, d: number, px = 110) {
       for (const end of [x0 + 1.5 * px, x0 + pw - 1.5 * px - 0.2 * px])
         c.fillRect(end, y - 0.5 * px, 0.2 * px, 1.0 * px);
     }
-    // Arrows painted on the deck between the pool and the doorway north
-    // into Hall 1 (the canvas's top is north): where to start (107-1).
-    c.fillStyle = BRAND.colours.accent;
-    for (const tip of [0.75, 1.85]) {
-      const cx = W / 2;
-      const ty = tip * px;
-      c.beginPath();
-      c.moveTo(cx, ty);
-      c.lineTo(cx + 0.42 * px, ty + 0.45 * px);
-      c.lineTo(cx + 0.16 * px, ty + 0.45 * px);
-      c.lineTo(cx + 0.16 * px, ty + 0.95 * px);
-      c.lineTo(cx - 0.16 * px, ty + 0.95 * px);
-      c.lineTo(cx - 0.16 * px, ty + 0.45 * px);
-      c.lineTo(cx - 0.42 * px, ty + 0.45 * px);
-      c.closePath();
-      c.fill();
-    }
   });
 }
 
@@ -548,6 +531,65 @@ export function lifebuoyStickerTexture() {
     }
   });
 }
+/**
+ * Glossy vinyl arrow stickers on the floor, showing the way round (the
+ * owner, 2026-10-28: "arrows on the floor indicating the direction of
+ * travel between each room"): by every archway, two arrows, pointing out
+ * through the way on and in from the way back. In the museum's
+ * coordinates, a few millimetres above the floor; their texture is made by
+ * `floorArrowTexture` and their finish is the lifebuoy sticker's.
+ */
+export const FLOOR_ARROW = { size: 0.9, at: [1.3, 2.6], lift: 0.002 } as const;
+export function floorArrowGeometry(id: MuseumHallId) {
+  const parts: BufferGeometry[] = [];
+  for (const a of hallArches(id)) {
+    // Out through the way on, in from the way back.
+    const dx = a.onward ? -a.into[0] : a.into[0];
+    const dz = a.onward ? -a.into[1] : a.into[1];
+    for (const d of FLOOR_ARROW.at) {
+      const g = new PlaneGeometry(FLOOR_ARROW.size, FLOOR_ARROW.size);
+      // Laid flat, the texture's top towards north (-z), then turned.
+      g.rotateX(-Math.PI / 2);
+      g.rotateY(Math.atan2(-dx, -dz));
+      g.translate(
+        a.at.x + a.into[0] * d,
+        FLOOR_ARROW.lift,
+        a.at.z + a.into[1] * d,
+      );
+      parts.push(g);
+    }
+  }
+  const merged = mergeGeometries(parts);
+  for (const g of parts) g.dispose();
+  return merged;
+}
+export function floorArrowTexture() {
+  const S = 256;
+  return canvasTexture(S, S, (c) => {
+    const m = S / 2;
+    const arrow = () => {
+      c.beginPath();
+      c.moveTo(m, S * 0.06);
+      c.lineTo(m + S * 0.4, S * 0.48);
+      c.lineTo(m + S * 0.16, S * 0.48);
+      c.lineTo(m + S * 0.16, S * 0.94);
+      c.lineTo(m - S * 0.16, S * 0.94);
+      c.lineTo(m - S * 0.16, S * 0.48);
+      c.lineTo(m - S * 0.4, S * 0.48);
+      c.closePath();
+    };
+    // A white printed border round the vinyl, then the brand's colour.
+    c.lineJoin = 'round';
+    c.lineWidth = 14;
+    c.strokeStyle = '#f4f4f0';
+    arrow();
+    c.stroke();
+    c.fillStyle = BRAND.colours.accent;
+    arrow();
+    c.fill();
+  });
+}
+
 export function lifebuoyStickerMaterial(map: Texture) {
   const sticker = new MeshStandardMaterial({
     map,
@@ -1253,6 +1295,16 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
   const floor = new Mesh(floorGeometry, floorMaterial);
   floor.name = welcome ? 'Painted pool floor' : 'Polished concrete floor';
   plan.add(floor);
+
+  // The vinyl arrows by every archway, showing the way round.
+  const arrowMap = floorArrowTexture();
+  textures.push(arrowMap);
+  const arrowMaterial = lifebuoyStickerMaterial(arrowMap);
+  disposables.push(arrowMaterial);
+  const arrows = new Mesh(floorArrowGeometry(id), arrowMaterial);
+  arrows.name = 'Floor arrow stickers';
+  arrows.renderOrder = 1;
+  plan.add(arrows);
 
   // The walls, each as the plan has it; the courtyard and street windows glazed.
   const bars: BufferGeometry[] = [];
