@@ -1,5 +1,9 @@
 import type { PlumbEdge } from '../../../game/plant/plumbing-expansion';
-import { dayTanks } from '../../../game/plant/schematic-parts';
+import {
+  OLYMPIC_CHEMICAL_LINKS,
+  OLYMPIC_CHEMICAL_NODES,
+  olympicChemicalExpansion,
+} from '../../../game/plant/olympic-chemical-schematic';
 
 /**
  * The Olympic plant room's model beyond its plumber's expansion (prompt
@@ -27,13 +31,8 @@ const link = (
   medium,
 });
 
-const DAY_TANKS = dayTanks(
-  {
-    hypochlorite: ['hypo', 'in'],
-    acid: ['acid', 'in'],
-  },
-  'pool_02',
-);
+/** Its chemical lines' nodes, those the room's plumbing does not have already (its UV unit). */
+const CHEMICAL_NODES = OLYMPIC_CHEMICAL_NODES.filter((n) => n.id !== 'uv');
 
 export const OLYMPIC_ANNEX = {
   nodes: [
@@ -48,14 +47,13 @@ export const OLYMPIC_ANNEX = {
       kind: 'dosing-controller',
       name: 'Dosing controller and sample cells',
     },
-    { id: 'hypo', kind: 'hypo-pumps', name: 'Hypochlorite dosing pumps' },
-    { id: 'acid', kind: 'acid-pump', name: 'Acid dosing pump' },
     { id: 'manifold', kind: 'header', name: 'Pump discharge manifold' },
     { id: 'inlet-header', kind: 'header', name: 'Inlet header' },
     { id: 'outlet-header', kind: 'header', name: 'Outlet header' },
     { id: 'backwash-header', kind: 'header', name: 'Backwash header' },
-    // Its day tanks, filled from the wet hall's selectors (plan 085).
-    ...DAY_TANKS.nodes,
+    // Its chemical lines' (prompt 085): its day tanks, filled from the wet
+    // hall's selectors, and its dosing pumps.
+    ...CHEMICAL_NODES,
     { id: 'switch-fuse', kind: 'switch-fuse', name: 'Room supply switch-fuse' },
     { id: 'room-supply', kind: 'room-supply', name: 'Room supply' },
     { id: 'ozone-monitor', kind: 'ozone-monitor', name: 'Ozone monitor' },
@@ -106,19 +104,9 @@ export const OLYMPIC_ANNEX = {
       ['tank', 'mainDrain'],
       'water',
     ),
-    // Each branch into its day tank; each day tank's draw-off its supply
-    // line to its dosing pump, as the room draws it.
-    ...DAY_TANKS.links.filter((l) => l.id.endsWith('to its day tank')),
-    link(
-      'hypo-supply',
-      ['hypochlorite-day', 'out'],
-      ['hypo', 'in'],
-      'chemical',
-    ),
-    link('acid-supply', ['acid-day', 'out'], ['acid', 'in'], 'chemical'),
-    link('hypo-dose', ['hypo', 'out'], ['uv', 'dose'], 'chemical'),
-
-    link('acid-dose', ['acid', 'out'], ['uv', 'dose'], 'chemical'),
+    // Its chemical lines (prompt 085): each branch into its day tank, each
+    // day tank's supply line to its dosing pump, each pump's dose line.
+    ...OLYMPIC_CHEMICAL_LINKS,
     link('sample', ['pumps', 'discharge'], ['controller', 'sample'], 'water'),
     link('ozone', ['generator', 'ozone'], ['contact', 'ozone'], 'gas'),
     // The pumps' drain to the backwash floor channel (the owner, 2026-10-25).
@@ -157,5 +145,7 @@ export const OLYMPIC_ANNEX = {
     'power-uv.tap-off',
     'battery.outlet.regulating',
     'pumps.drain.iso',
+    // Its chemical lines' valves (prompt 085).
+    ...olympicChemicalExpansion().fittings.map((f) => f.id),
   ],
 };

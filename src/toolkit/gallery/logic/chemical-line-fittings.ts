@@ -4,6 +4,10 @@ import type { InlineOptions } from '../../components/core/logic/inline-placement
 import { schematicExpansion } from '../../../game/plant/schematics';
 import { MODEL_VALVES } from '../../../game/plant/model-valves';
 import { EQUIPMENT_VALVES } from '../../../game/plant/chemical-valves';
+import {
+  OLYMPIC_ROOM,
+  olympicChemicalExpansion,
+} from '../../../game/plant/olympic-chemical-schematic';
 import type { CheckFitting, Valve } from './room-pipes';
 
 /**
@@ -22,7 +26,11 @@ export function chemicalLineFittings(
   od: number,
   options: InlineOptions = {},
 ): { valves: Valve[]; checks: CheckFitting[]; problems: string[] } {
-  const along = (schematicExpansion(room)?.along.get(link) ?? []).filter(
+  // The room's enhanced network; the Olympic's chemical lines' their own.
+  const network =
+    schematicExpansion(room) ??
+    (room === OLYMPIC_ROOM ? olympicChemicalExpansion() : undefined);
+  const along = (network?.along.get(link) ?? []).filter(
     (f) =>
       (f.kind === 'isolating-valve' || f.kind === 'non-return-valve') &&
       !EQUIPMENT_VALVES.has(f.id),

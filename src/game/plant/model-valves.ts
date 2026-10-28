@@ -1,6 +1,14 @@
 import type { PlumbEdge } from './plumbing-expansion';
 import { SCHEMATICS, schematicExpansion } from './schematics';
 import type { SchematicFitting, SchematicNode } from './schematics';
+import {
+  OLYMPIC_CHEMICAL_FITTINGS,
+  OLYMPIC_CHEMICAL_LINKS,
+  OLYMPIC_CHEMICAL_NODES,
+  OLYMPIC_CODE,
+  OLYMPIC_ROOM,
+  olympicChemicalExpansion,
+} from './olympic-chemical-schematic';
 
 /**
  * The valves of the rooms built from a schematic (prompt 064), derived
@@ -144,20 +152,29 @@ function roomValves(
   });
 }
 
-/** Every room's model valves, from each schematic in turn. */
-export const MODEL_VALVES: readonly ModelValve[] = Object.values(
-  SCHEMATICS,
-).flatMap((schematic) => {
-  const set = schematicExpansion(schematic.room)!.fittings;
-  return roomValves(
-    schematic.room,
-    schematic.code,
-    schematic.nodes,
-    schematic.links,
-    // As the plumber set them: the schematic's own, in their lines' order.
-    schematic.fittings.filter((f) => set.some((x) => x.id === f.id)),
-  );
-});
+/** Every room's model valves, from each schematic in turn, and the Olympic's chemical lines' (prompt 085). */
+export const MODEL_VALVES: readonly ModelValve[] = [
+  ...Object.values(SCHEMATICS).flatMap((schematic) => {
+    const set = schematicExpansion(schematic.room)!.fittings;
+    return roomValves(
+      schematic.room,
+      schematic.code,
+      schematic.nodes,
+      schematic.links,
+      // As the plumber set them: the schematic's own, in their lines' order.
+      schematic.fittings.filter((f) => set.some((x) => x.id === f.id)),
+    );
+  }),
+  ...roomValves(
+    OLYMPIC_ROOM,
+    OLYMPIC_CODE,
+    OLYMPIC_CHEMICAL_NODES,
+    OLYMPIC_CHEMICAL_LINKS,
+    OLYMPIC_CHEMICAL_FITTINGS.filter((f) =>
+      olympicChemicalExpansion().fittings.some((x) => x.id === f.id),
+    ),
+  ),
+];
 
 /** The valves (not isolators) the world keeps open or shut. */
 export const MODEL_ISOLATING_VALVES = MODEL_VALVES.filter(

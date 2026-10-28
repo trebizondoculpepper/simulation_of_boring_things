@@ -147,7 +147,7 @@ export const LOADING_BAY_SCHEMATIC = backRoom(
     // (the owner, 2026-10-27).
     {
       ...machine('fill', 'fill-cabinet', 'Delivery fill cabinet'),
-      code: 'FC1',
+      code: 'CAB1',
     },
     machine(
       'generator-point',

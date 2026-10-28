@@ -5,6 +5,7 @@ import { INSTALLED_VALVES } from './installed-valves';
 import {
   EQUIPMENT_VALVES,
   bulkTankValves,
+  dayTankValves,
   distributionPaths,
   selectorValves,
   transferPumpValves,
@@ -15,6 +16,10 @@ import {
   stepDistribution,
 } from './chemical-distribution';
 import { STORE_CAPACITY } from './chemicals';
+import {
+  OLYMPIC_CHEMICAL_LINKS,
+  olympicChemicalExpansion,
+} from './olympic-chemical-schematic';
 
 /**
  * Every chemical valve in the schematics (plan 085, prompt 085's gap 1):
@@ -51,6 +56,23 @@ describe('the chemical valves, in the model (plan 085)', () => {
         ).toBe(true);
     });
 
+  it('plant_pool_02: the Olympic’s chemical lines are a schematic too, every link valved, the plumber adding nothing (gap 3)', () => {
+    const x = olympicChemicalExpansion();
+    expect(x.added).toEqual([]);
+    for (const l of OLYMPIC_CHEMICAL_LINKS)
+      expect(
+        x.fittings.some((f) => f.edge === l.id),
+        l.id,
+      ).toBe(true);
+    const hypo = dayTankValves('hypochlorite', 'pool_02');
+    expect(hypo.actuated?.keptBy).toBe('distribution');
+    expect(hypo.inlet?.tag).toBe('PL2-DT1-IV2');
+    expect(dayTankValves('acid', 'pool_02').inlet?.tag).toBe('PL2-DT2-IV1');
+    expect(
+      MODEL_VALVES.filter((v) => v.room === 'plant_pool_02').map((v) => v.tag),
+    ).toContain('PL2-DP2-NRV1');
+  });
+
   it('tags every chemical valve from the model: room, machine, kind and number', () => {
     const chemical = MODEL_VALVES.filter((v) =>
       ['sodium hypochlorite', 'hydrochloric acid'].includes(v.route.medium),
@@ -66,7 +88,7 @@ describe('the chemical valves, in the model (plan 085)', () => {
     expect(bulkTankValves('hypochlorite', 2).outlet.tag).toBe('HS-T2-IV3');
     expect(transferPumpValves('acid').suction.tag).toBe('AS-P1-IV1');
     expect(transferPumpValves('acid').check.tag).toBe('AS-P1-NRV1');
-    expect(selectorValves('acid', 3).isolation.tag).toBe('WH-TS2-IV7');
+    expect(selectorValves('acid', 3).isolation.tag).toBe('WH-XS2-IV7');
     expect(selectorValves('acid', 3).actuated.keptBy).toBe('distribution');
   });
 
@@ -76,12 +98,12 @@ describe('the chemical valves, in the model (plan 085)', () => {
         'loading_bay|Acid delivery line|Acid delivery line valve'
       ],
     ).toMatchObject({
-      tag: 'LB-FC1-IV2',
+      tag: 'LB-CAB1-IV2',
       normal: 'closed',
     });
     const actuated = MODEL_VALVES.filter((v) => v.keptBy === 'distribution');
-    // Each selector outlet's.
-    expect(actuated.length).toBe(8);
+    // Each selector outlet's, and the Olympic's framed day tank's inlet.
+    expect(actuated.length).toBe(8 + 1);
     for (const v of actuated)
       expect(
         Object.values(INSTALLED_VALVES).some((i) => i.assetId === v.id),

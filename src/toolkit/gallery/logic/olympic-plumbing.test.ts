@@ -95,14 +95,14 @@ describe('the Olympic plant room, plumbed and routed', () => {
   });
 
   it('never runs acid or hypochlorite over a walkway: they stay against the south wall, or cross the room above head height from their day tanks (plan 085)', () => {
-    const chemical = plumbed.runs.filter(
-      (r) => r.line.startsWith('acid') || r.line.startsWith('hypo'),
+    const chemical = plumbed.runs.filter((r) =>
+      /^(Acid|Hypochlorite) (dose|supply) line$/.test(r.line),
     );
     expect(chemical.map((r) => r.line).sort()).toEqual([
-      'acid-dose',
-      'acid-supply',
-      'hypo-dose',
-      'hypo-supply',
+      'Acid dose line',
+      'Acid supply line',
+      'Hypochlorite dose line',
+      'Hypochlorite supply line',
     ]);
     for (const r of chemical)
       for (let i = 1; i < r.points.length; i++) {

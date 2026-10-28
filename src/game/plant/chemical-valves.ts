@@ -93,7 +93,9 @@ export const EQUIPMENT_VALVES: ReadonlySet<string> = new Set(
     ),
     ...DAY_TANKS[c].flatMap((t) => {
       const v = dayTankValves(c, t.site);
-      return v.actuated && v.outlet ? [v.actuated.id, v.outlet.id] : [];
+      return v.actuated && v.inlet && v.outlet
+        ? [v.actuated.id, v.inlet.id, v.outlet.id]
+        : [];
     }),
   ]),
 );

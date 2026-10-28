@@ -699,8 +699,12 @@ export function createDayTankStation(
     withGear?: boolean;
     /** Centred on its footprint (`dayTankFootprint`), as a room places it. */
     centred?: boolean;
-    /** Its actuated inlet's and its outlet valve's fittings in its room's model (plan 085). */
-    valves?: { inlet?: BoundChemicalValve; outlet?: BoundChemicalValve };
+    /** Its actuated inlet's, its hand inlet valve's and its outlet valve's fittings in its room's model (plan 085). */
+    valves?: {
+      inlet?: BoundChemicalValve;
+      isolation?: BoundChemicalValve;
+      outlet?: BoundChemicalValve;
+    };
   } = {},
 ) {
   const store = shared ?? createTransferStore();
@@ -783,6 +787,22 @@ export function createDayTankStation(
       : `${tag ?? 'Day tank'} inlet valve`,
   });
   markChemicalValve(inlet.object, valves.inlet);
+  // Its hand isolating valve on the riser above it, where its room's model
+  // gives one (plan 085).
+  if (valves.isolation) {
+    const iso = createChemicalBallValve(kit, {
+      dn: 40,
+      name: `${valves.isolation.tag} · ${valves.isolation.name}`,
+      ...(valves.isolation.binding
+        ? { binding: valves.isolation.binding }
+        : {}),
+    });
+    markChemicalValve(iso.object, valves.isolation);
+    iso.object.rotation.z = Math.PI / 2;
+    iso.object.position.set(ix, Math.min(riser - 0.12, vy + 0.25), iz);
+    group.add(iso.object);
+    parts.add(iso);
+  }
   inlet.object.rotation.z = Math.PI / 2;
   inlet.object.position.set(ix, vy, iz);
   group.add(inlet.object);

@@ -289,7 +289,7 @@ export function storeTransfer(
  * not in the model. Each live outlet's valves, as the selector carries
  * them, from its header outward: its manual isolating valve, then the
  * actuated valve the distribution opens for the outlet it serves. The
- * selectors' codes: TS1 the hypochlorite's, TS2 the acid's.
+ * selectors' codes: XS1 the hypochlorite's, XS2 the acid's.
  */
 export function transferSelectors(): {
   nodes: SchematicNode[];
@@ -317,7 +317,7 @@ export function transferSelectors(): {
           id: `${c}-selector`,
           kind: 'chem-selector',
           name: `${CHEMICAL_NAME[c]} transfer selector`,
-          code: c === 'hypochlorite' ? 'TS1' : 'TS2',
+          code: c === 'hypochlorite' ? 'XS1' : 'XS2',
         },
         ...rooms.map((r) => ({
           id: `${c}-pl${r}`,

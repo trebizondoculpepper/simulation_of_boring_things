@@ -1,4 +1,9 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
+import { chemicalLineFittings } from './chemical-line-fittings';
+import {
+  OLYMPIC_CHEMICAL_LINKS,
+  OLYMPIC_ROOM,
+} from '../../../game/plant/olympic-chemical-schematic';
 import type { PipeJoint, Vec3 } from '../../components/core/logic/pipe-route';
 import { pipeClashes } from '../../components/core/logic/pipe-route';
 import type { DrawnRun } from '../../components/core/logic/pipe-route';
@@ -629,7 +634,7 @@ export function plumbOlympic(
     const dose = port(k, 'dose');
     rule(
       `${k === 'hypo' ? 'Hypochlorite' : 'Acid'} dose line`,
-      `${k}-dose`,
+      `${k === 'hypo' ? 'Hypochlorite' : 'Acid'} dose line`,
       'chemical',
       0.012,
       [dose.at, [dose.at[0], dose.at[1], spoolZ], [dose.at[0], quillY, spoolZ]],
@@ -676,7 +681,7 @@ export function plumbOlympic(
       // Along the south wall at the chemicals' height if its tank backs onto
       // it; overhead, above every head, if it stands out in the room.
       const lift = o1[2] > hz - 0.8 ? CHEMICAL_IN : OVERHEAD;
-      rule(`${Name} supply line`, `${k}-supply`, 'transfer', 0.016, [
+      rule(`${Name} supply line`, `${Name} supply line`, 'transfer', 0.016, [
         [...out.at] as Vec3,
         ...(out.outward[1] > 0.5 ? [] : [o1]),
         [o1[0], lift, o1[2]],
@@ -1758,7 +1763,7 @@ const serviceOf = (r: OlympicRun): PipeRun['service'] =>
           : r.line === 'sample'
             ? 'sample'
             : r.kind === 'chemical-tube'
-              ? r.line.startsWith('acid')
+              ? /^acid|^Acid/.test(r.line)
                 ? 'acid'
                 : 'hypochlorite'
               : r.kind === 'stainless'
@@ -1938,6 +1943,15 @@ export function olympicRoom() {
           } satisfies Valve,
         ];
       });
+    // A chemical line's valves, from its schematic (prompt 085), set in
+    // its run as every room's are.
+    const chemical = OLYMPIC_CHEMICAL_LINKS.some((l) => l.id === r.line)
+      ? chemicalLineFittings(OLYMPIC_ROOM, r.line, r.points, r.od, {
+          // A dose line's out in front of its dosing board, clear of it.
+          ends: /dose line$/.test(r.line) ? 0.2 : 0.08,
+          reach: [0.3, 2.0],
+        })
+      : undefined;
     runs.push({
       name: r.name,
       model: { link: r.line },
@@ -1948,7 +1962,8 @@ export function olympicRoom() {
       service: serviceOf(r),
       label: LABEL[serviceOf(r)],
       through,
-      valves,
+      valves: [...valves, ...(chemical?.valves ?? [])],
+      ...(chemical?.checks.length ? { checks: chemical.checks } : {}),
       ...(meters.length ? { meters } : {}),
     });
   }
@@ -2040,34 +2055,37 @@ export function olympicValveTags(): {
 }[] {
   const seen = new Map<string, number>();
   return olympicRoom().runs.flatMap((r) =>
-    r.valves.map((v) => {
-      const named = valveName(
-        built().fittings.find(
-          (f) => f.run === r.name && valveName(f.id)?.name === v.name,
-        )!.id,
-      )!;
-      const code = named.code;
-      if (named.tag)
+    // A chemical line's valves are its model's (prompt 085), tagged there.
+    r.valves
+      .filter((v) => v.style !== 'chemical-line')
+      .map((v) => {
+        const named = valveName(
+          built().fittings.find(
+            (f) => f.run === r.name && valveName(f.id)?.name === v.name,
+          )!.id,
+        )!;
+        const code = named.code;
+        if (named.tag)
+          return {
+            run: r.name,
+            name: v.name,
+            tag: named.tag,
+            normal: valveNormally(v.name),
+          };
+        const kind = / regulating /.test(v.name)
+          ? 'RV'
+          : / backwash /.test(v.name)
+            ? 'BV'
+            : 'IV';
+        const n = (seen.get(code + kind) ?? 0) + 1;
+        seen.set(code + kind, n);
         return {
           run: r.name,
           name: v.name,
-          tag: named.tag,
+          tag: `PL2-${code}-${kind}${n}`,
           normal: valveNormally(v.name),
         };
-      const kind = / regulating /.test(v.name)
-        ? 'RV'
-        : / backwash /.test(v.name)
-          ? 'BV'
-          : 'IV';
-      const n = (seen.get(code + kind) ?? 0) + 1;
-      seen.set(code + kind, n);
-      return {
-        run: r.name,
-        name: v.name,
-        tag: `PL2-${code}-${kind}${n}`,
-        normal: valveNormally(v.name),
-      };
-    }),
+      }),
   );
 }
 

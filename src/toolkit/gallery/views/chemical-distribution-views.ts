@@ -334,7 +334,11 @@ export function chemicalModel(kit: PanelKit, key: string): LiveExhibit | null {
         withPump: false,
         withGear: false,
         centred: true,
-        valves: { inlet: boundValve(v.actuated), outlet: boundValve(v.outlet) },
+        valves: {
+          inlet: boundValve(v.actuated),
+          isolation: boundValve(v.inlet),
+          outlet: boundValve(v.outlet),
+        },
       });
     }
   }
