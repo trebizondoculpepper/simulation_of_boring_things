@@ -1,0 +1,242 @@
+{
+  "source": "PHREEQC 3.8.6-17100 (USGS, public domain), phreeqc.dat, via the MIT `phreeqc` bindings",
+  "generator": "scripts/water-reference/phreeqc_carbonate.py",
+  "units": "mg/l; alkalinity and hardness as CaCO3; carbonate mmol/l",
+  "waters": {
+    "nominal": {
+      "input": {
+        "ph": 7.4,
+        "alkalinity": 120,
+        "hardness": 200,
+        "temperature": 28
+      },
+      "ph": 7.4,
+      "alkalinity": 120.05055159999999,
+      "carbonate": 2.5677,
+      "hardness": 200.08392170000002,
+      "tds": 929.3194777,
+      "calciteSi": -0.0038,
+      "co2Si": -2.2437,
+      "ionicStrength": 0.0168206
+    },
+    "soft": {
+      "input": {
+        "ph": 7.2,
+        "alkalinity": 80,
+        "hardness": 100,
+        "temperature": 28
+      },
+      "ph": 7.2,
+      "alkalinity": 80.02736216,
+      "carbonate": 1.7882,
+      "hardness": 100.03195215000001,
+      "tds": 799.0907105,
+      "calciteSi": -0.6559,
+      "co2Si": -2.2127,
+      "ionicStrength": 0.0138534
+    },
+    "neglected": {
+      "input": {
+        "ph": 7.0,
+        "alkalinity": 60,
+        "hardness": 60,
+        "temperature": 28
+      },
+      "ph": 7.0,
+      "alkalinity": 60.0102626,
+      "carbonate": 1.4349,
+      "hardness": 60.00916259,
+      "tds": 416.70207416,
+      "calciteSi": -1.1366,
+      "co2Si": -2.1224,
+      "ionicStrength": 0.00700977
+    },
+    "hard": {
+      "input": {
+        "ph": 7.8,
+        "alkalinity": 180,
+        "hardness": 350,
+        "temperature": 28
+      },
+      "ph": 7.8,
+      "alkalinity": 180.12437008,
+      "carbonate": 3.6518,
+      "hardness": 350.2344391,
+      "tds": 1501.181089,
+      "calciteSi": 0.742,
+      "co2Si": -2.4903,
+      "ionicStrength": 0.0277362
+    },
+    "spa": {
+      "input": {
+        "ph": 7.4,
+        "alkalinity": 120,
+        "hardness": 200,
+        "temperature": 37
+      },
+      "ph": 7.4,
+      "alkalinity": 120.05055159999999,
+      "carbonate": 2.5500000000000003,
+      "hardness": 200.08392170000002,
+      "tds": 928.2394768,
+      "calciteSi": 0.1333,
+      "co2Si": -2.1861,
+      "ionicStrength": 0.0167981
+    },
+    "lounge": {
+      "input": {
+        "ph": 7.3,
+        "alkalinity": 100,
+        "hardness": 150,
+        "temperature": 30
+      },
+      "ph": 7.3,
+      "alkalinity": 100.037956,
+      "carbonate": 2.178,
+      "hardness": 150.0504304,
+      "tds": 864.1989076,
+      "calciteSi": -0.265,
+      "co2Si": -2.2067,
+      "ionicStrength": 0.0153363
+    },
+    "mains": {
+      "input": {
+        "ph": 7.6,
+        "alkalinity": 150,
+        "hardness": 200,
+        "temperature": 28
+      },
+      "ph": 7.6,
+      "alkalinity": 150.0344142,
+      "carbonate": 3.1234,
+      "hardness": 200.0438869,
+      "tds": 382.3982272,
+      "calciteSi": 0.371,
+      "co2Si": -2.3307,
+      "ionicStrength": 0.00723037
+    }
+  },
+  "changes": {
+    "hcl-0.073meq": {
+      "water": "nominal",
+      "added": {
+        "hcl": 2.661653
+      },
+      "ph": 7.24473,
+      "alkalinity": 116.39683916000001,
+      "carbonate": 2.5677,
+      "hardness": 200.08392170000002,
+      "tds": 931.8720936999999,
+      "calciteSi": -0.1709,
+      "co2Si": -2.1007,
+      "ionicStrength": 0.0168257
+    },
+    "hcl-0.5meq": {
+      "water": "nominal",
+      "added": {
+        "hcl": 18.2305
+      },
+      "ph": 6.72773,
+      "alkalinity": 95.02755072,
+      "carbonate": 2.5677,
+      "hardness": 200.073913,
+      "tds": 947.0065169,
+      "calciteSi": -0.7732,
+      "co2Si": -1.6701,
+      "ionicStrength": 0.0168397
+    },
+    "bicarbonate-0.2mmol": {
+      "water": "nominal",
+      "added": {
+        "bicarbonate": 16.8014
+      },
+      "ph": 7.43036,
+      "alkalinity": 130.05935159999999,
+      "carbonate": 2.7677,
+      "hardness": 200.08392170000002,
+      "tds": 946.1208777,
+      "calciteSi": 0.0594,
+      "co2Si": -2.2398,
+      "ionicStrength": 0.0170148
+    },
+    "soda-ash-0.1mmol": {
+      "water": "nominal",
+      "added": {
+        "sodaAsh": 10.5988
+      },
+      "ph": 7.72155,
+      "alkalinity": 130.05935159999999,
+      "carbonate": 2.6677,
+      "hardness": 200.08392170000002,
+      "tds": 940.0191777,
+      "calciteSi": 0.3457,
+      "co2Si": -2.5346,
+      "ionicStrength": 0.0170019
+    },
+    "co2-0.2272mmol": {
+      "water": "nominal",
+      "added": {
+        "co2": 9.999072
+      },
+      "ph": 7.05208,
+      "alkalinity": 120.05055159999999,
+      "carbonate": 2.7948999999999997,
+      "hardness": 200.08392170000002,
+      "tds": 943.1825401,
+      "calciteSi": -0.3491,
+      "co2Si": -1.8938,
+      "ionicStrength": 0.0168272
+    },
+    "calcium-chloride-1mmol": {
+      "water": "nominal",
+      "added": {
+        "calciumChloride": 110.98
+      },
+      "ph": 7.38912,
+      "alkalinity": 120.05055159999999,
+      "carbonate": 2.5677,
+      "hardness": 300.1709217,
+      "tds": 1040.3034777,
+      "calciteSi": 0.1416,
+      "co2Si": -2.2382,
+      "ionicStrength": 0.0198033
+    },
+    "air-800ppm": {
+      "water": "nominal",
+      "airCo2": 800,
+      "ph": 8.23298,
+      "alkalinity": 120.05055159999999,
+      "carbonate": 2.3583,
+      "hardness": 200.08392170000002,
+      "tds": 916.5070648999999,
+      "calciteSi": 0.8028,
+      "co2Si": -3.0969,
+      "ionicStrength": 0.0167561
+    },
+    "air-420ppm": {
+      "water": "nominal",
+      "airCo2": 420,
+      "ph": 8.49431,
+      "alkalinity": 120.05005116,
+      "carbonate": 2.2977000000000003,
+      "hardness": 200.08392170000002,
+      "tds": 912.8094347,
+      "calciteSi": 1.0403,
+      "co2Si": -3.3768,
+      "ionicStrength": 0.016701
+    },
+    "mix-third-mains": {
+      "water": "nominal",
+      "mixWith": "mains",
+      "share": 0.3333333333333333,
+      "ph": 7.46855,
+      "alkalinity": 130.0443384,
+      "carbonate": 2.7529,
+      "hardness": 200.06390430000002,
+      "tds": 747.018768,
+      "calciteSi": 0.1212,
+      "co2Si": -2.2729,
+      "ionicStrength": 0.0136255
+    }
+  }
+}
