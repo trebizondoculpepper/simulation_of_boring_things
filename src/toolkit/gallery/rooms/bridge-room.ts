@@ -60,14 +60,12 @@ import {
 import { roomWorld } from '../../save/world-store';
 import { ALARM_BLEEP, createAlarmBleep } from '../logic/alarm-bleep';
 import { unacceptedAlarms } from '../../../game/annunciator';
-import { LOUNGE_ALARMS } from '../../../game/plant/lounge-annunciator';
+import { unacceptedLocationAlarms } from '../../../game/plant/location-annunciators';
 import type { World } from '../../../game/world';
 
-/** Alarms not yet accepted on any annunciator, the main one's and the lounge's (the owner, 2026-10-28). */
+/** Alarms not yet accepted on any annunciator, the main one's and every location's (the owner, 2026-10-28; mission 099). */
 const unacceptedEverywhere = (w: World) =>
-  unacceptedAlarms(w.annunciator).length +
-  LOUNGE_ALARMS.filter((id) => w.loungeAnnunciator.windows[id] === 'flashing')
-    .length;
+  unacceptedAlarms(w.annunciator).length + unacceptedLocationAlarms(w);
 
 /**
  * The bridge, the game's control room (mission 095): dev46's room off the

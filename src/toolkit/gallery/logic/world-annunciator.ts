@@ -2,7 +2,10 @@ import type { World, WorldAction } from '../../../game/world';
 import { litWindows } from '../../components/industrial-control/logic/annunciator';
 import type { Annunciator } from '../../components/industrial-control/logic/annunciator';
 import { ANNUNCIATOR_ALARMS } from './control-room-demo';
-import { LOUNGE_ALARMS } from '../../../game/plant/lounge-annunciator';
+import {
+  LOCATIONS,
+  LOCATION_ANNUNCIATORS,
+} from '../../../game/plant/location-annunciators';
 
 /**
  * An annunciator whose windows are the world's (`game/annunciator.ts`):
@@ -43,39 +46,53 @@ export function worldAnnunciator(store: {
 }
 
 /**
- * The bridge's annunciator: the world's main one and the lounge's
- * (`game/plant/lounge-annunciator.ts`) as one (the owner, 2026-10-28:
- * anything that sounds on any annunciator is a warning on the bridge):
- * its windows the main one's then the lounge's, so its ACCEPT shows while
- * either has a window flashing, and accepts both; RESET resets both.
+ * The bridge's annunciator: the world's main one and every location's
+ * (`game/plant/location-annunciators.ts`: the lounge's, the Olympic's,
+ * the wet hall's) as one (the owner, 2026-10-28: anything that sounds on
+ * any annunciator is a warning on the bridge): its windows the main
+ * one's then each location's in turn, so its ACCEPT shows while any has
+ * a window flashing, and accepts them all; RESET resets them all.
  */
 export function bridgeAnnunciator(store: {
   readonly world: { readonly value: World };
   dispatch(action: WorldAction): void;
 }): Annunciator {
   const main = worldAnnunciator(store);
-  const mainCount = ANNUNCIATOR_ALARMS.length;
+  const mainCount: number = ANNUNCIATOR_ALARMS.length;
   return {
     get states() {
-      const lounge = store.world.value.loungeAnnunciator.windows;
-      return [...main.states, ...LOUNGE_ALARMS.map((id) => lounge[id])];
+      const all = store.world.value.locationAnnunciators;
+      return [
+        ...main.states,
+        ...LOCATIONS.flatMap((location) =>
+          LOCATION_ANNUNCIATORS[location].alarms.map(
+            (id) => all[location].windows[id] ?? 'off',
+          ),
+        ),
+      ];
     },
     test: false,
     sense() {},
     acknowledge(which) {
       if (!which) {
         main.acknowledge();
-        store.dispatch({ type: 'lounge-alarms/accept' });
+        store.dispatch({ type: 'location-alarms/accept' });
         return;
       }
       const mine = which.filter((i) => i < mainCount);
       if (mine.length) main.acknowledge(mine);
-      if (which.some((i) => i >= mainCount))
-        store.dispatch({ type: 'lounge-alarms/accept' });
+      // A location's windows accepted together, as its own board's ACCEPT.
+      let from: number = mainCount;
+      for (const location of LOCATIONS) {
+        const to = from + LOCATION_ANNUNCIATORS[location].alarms.length;
+        if (which.some((i) => i >= from && i < to))
+          store.dispatch({ type: 'location-alarms/accept', location });
+        from = to;
+      }
     },
     reset() {
       main.reset();
-      store.dispatch({ type: 'lounge-alarms/reset' });
+      store.dispatch({ type: 'location-alarms/reset' });
     },
     lit(seconds) {
       return litWindows(this.states, this.test, seconds);

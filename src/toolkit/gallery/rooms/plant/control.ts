@@ -1,6 +1,6 @@
 import { currentPlant } from './live-plant';
 import { roomWorld } from '../../../save/world-store';
-import { createLoungeAnnunciator } from '../../views/lounge-annunciator';
+import { createLocationAnnunciator } from '../../views/location-annunciator';
 import { worldAnnunciator } from '../../logic/world-annunciator';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import {
@@ -198,8 +198,33 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       '16 windows of the lounge plant room’s faults, ISA sequence M with first-out; the twin of the one on its plant room’s wall, one state for both',
     size: { w: 0.9, d: 0.2, h: 1.1, mount: 'wall', y: 1.75 },
     build: (kit) =>
-      createLoungeAnnunciator(
+      createLocationAnnunciator(
         kit,
+        'pool_01',
+        typeof window === 'undefined' ? undefined : roomWorld(),
+      ),
+  },
+  {
+    title: 'Olympic pool annunciator',
+    reference:
+      '24 windows of the Olympic’s plant and hall faults, ISA sequence M with first-out; one state with the bridge (mission 099)',
+    size: { w: 1.25, d: 0.2, h: 1.1, mount: 'wall', y: 1.75 },
+    build: (kit) =>
+      createLocationAnnunciator(
+        kit,
+        'pool_02',
+        typeof window === 'undefined' ? undefined : roomWorld(),
+      ),
+  },
+  {
+    title: 'Wet hall annunciator',
+    reference:
+      '18 windows of the wet hall’s faults (make-up, backwash pit, chemical transfer), ISA sequence M with first-out; the twin of the one in the wet hall, one state for both (mission 099)',
+    size: { w: 1.25, d: 0.2, h: 1.0, mount: 'wall', y: 1.75 },
+    build: (kit) =>
+      createLocationAnnunciator(
+        kit,
+        'wet_hall',
         typeof window === 'undefined' ? undefined : roomWorld(),
       ),
   },

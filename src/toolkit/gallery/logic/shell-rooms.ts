@@ -177,7 +177,9 @@ export const SHELL_ROOMS = {
     id: 'control_room',
     title: 'CONTROL ROOM',
     w: 5.5,
-    d: 8.5,
+    // 1.5 m deeper for the location annunciators (mission 099): the
+    // Olympic's and the wet hall's beside the lounge's.
+    d: 10,
     height: 7,
     ceiling: 'services',
     doors: [corridor()],

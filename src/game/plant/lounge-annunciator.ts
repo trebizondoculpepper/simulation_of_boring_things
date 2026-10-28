@@ -1,4 +1,5 @@
 import type { World } from '../world';
+import type { PoolId } from './pools';
 import { serviceAvailable } from './services';
 import { loungeFlowsOf } from './lounge-valves';
 import { loungeFilterDp } from './lounge-filters';
@@ -6,6 +7,16 @@ import { uvLampOn } from './uv';
 import { WET_HALL_PLANT } from './wet-hall';
 import { DAY_TANKS, DISTRIBUTION } from './chemical-distribution';
 import { CHEMICALS } from './chemicals';
+import {
+  acceptLocationAlarms,
+  newLocationAnnunciator,
+  resetLocationAlarms,
+  senseLocationAlarms,
+} from './location-annunciator';
+import type {
+  LocationAnnunciatorState,
+  LocationWindow,
+} from './location-annunciator';
 
 /**
  * The lounge pool's annunciator (the owner, 2026-10-28): sixteen windows
@@ -13,12 +24,8 @@ import { CHEMICALS } from './chemicals';
  * and an identical one in the control room, sharing one state in the
  * world, so ACCEPT or RESET at either is done at both. Pure.
  *
- * ISA sequence M with first-out: an alarm coming in flashes until it is
- * accepted, then burns steady; an accepted window whose alarm has cleared
- * stays lit until RESET, so the operator sees what tripped; and the first
- * alarm to come in while every window was dark is the first-out, its
- * window flashing faster than the rest, so a cascade (a pump trip, then
- * low flow, then the dosing inhibited) shows what began it.
+ * ISA sequence M with first-out, as every location's annunciator
+ * (`location-annunciator.ts`, mission 099).
  */
 
 export const LOUNGE_ALARMS = [
@@ -84,6 +91,20 @@ function inService(world: World, i: 0 | 1): boolean {
   return at(inlet) && at(outlet) && !at(backwash) && !at(drain);
 }
 
+/** Either of `site`'s day tanks under its low switch and not being filled. */
+export function dayTankLowAt(world: World, site: PoolId): boolean {
+  return CHEMICALS.some((c) => {
+    const i = DAY_TANKS[c].findIndex((t) => t.site === site);
+    const tank = world.distribution[c].tanks[i];
+    return (
+      i >= 0 &&
+      !!tank &&
+      tank.litres < DAY_TANKS[c][i].litres * DISTRIBUTION.low &&
+      world.distribution[c].serving !== i
+    );
+  });
+}
+
 /** The lounge's alarms present in `world` now. */
 export function loungeAlarms(world: World): LoungeAlarmId[] {
   const water = world.pools.pool_01;
@@ -113,94 +134,30 @@ export function loungeAlarms(world: World): LoungeAlarmId[] {
   if (water.freeChlorine < CHLORINE.low || water.freeChlorine > CHLORINE.high)
     alarms.push('chlorine');
   if (water.ph < PH.low || water.ph > PH.high) alarms.push('ph');
-  // Either day tank under its low switch and not being filled.
-  const low = CHEMICALS.some((c) => {
-    const i = DAY_TANKS[c].findIndex((t) => t.site === 'pool_01');
-    const tank = world.distribution[c].tanks[i];
-    return (
-      i >= 0 &&
-      tank &&
-      tank.litres < DAY_TANKS[c][i].litres * DISTRIBUTION.low &&
-      world.distribution[c].serving !== i
-    );
-  });
+  const low = dayTankLowAt(world, 'pool_01');
   if (low) alarms.push('day-tank-low');
   if (!powered) alarms.push('power-fail');
   return alarms;
 }
 
-export type LoungeWindow = 'off' | 'flashing' | 'steady';
+export type LoungeWindow = LocationWindow;
+export type LoungeAnnunciatorState = LocationAnnunciatorState<LoungeAlarmId>;
 
-export interface LoungeAnnunciatorState {
-  windows: Record<LoungeAlarmId, LoungeWindow>;
-  present: Record<LoungeAlarmId, boolean>;
-  /** The first alarm in while every window was dark, until its window goes out. */
-  firstOut: LoungeAlarmId | null;
-}
-
-const each = <T>(value: T) =>
-  Object.fromEntries(LOUNGE_ALARMS.map((id) => [id, value])) as Record<
-    LoungeAlarmId,
-    T
-  >;
-
-export const newLoungeAnnunciator = (): LoungeAnnunciatorState => ({
-  windows: each<LoungeWindow>('off'),
-  present: each(false),
-  firstOut: null,
-});
+export const newLoungeAnnunciator = (): LoungeAnnunciatorState =>
+  newLocationAnnunciator(LOUNGE_ALARMS);
 
 /** The alarms present now: a dark window whose alarm comes in starts flashing. */
-export function senseLoungeAlarms(
+export const senseLoungeAlarms = (
   state: LoungeAnnunciatorState,
   present: readonly LoungeAlarmId[],
-): LoungeAnnunciatorState {
-  const allDark = LOUNGE_ALARMS.every((id) => state.windows[id] === 'off');
-  // The newcomers, in the order the alarms are listed in `present`.
-  const newcomers = present.filter((id) => !state.present[id]);
-  let changed = false;
-  const windows = { ...state.windows };
-  const was = { ...state.present };
-  let firstOut = state.firstOut;
-  for (const id of LOUNGE_ALARMS) {
-    const on = present.includes(id);
-    if (on && !was[id] && windows[id] === 'off') {
-      windows[id] = 'flashing';
-      // The first in, when all was dark: its order in `present` decides a tie.
-      if (allDark && !firstOut) firstOut = newcomers[0] ?? id;
-      changed = true;
-    }
-    if (on !== was[id]) {
-      was[id] = on;
-      changed = true;
-    }
-  }
-  return changed ? { windows, present: was, firstOut } : state;
-}
+): LoungeAnnunciatorState => senseLocationAlarms(LOUNGE_ALARMS, state, present);
 
 /** ACCEPT: flashing windows go steady. */
-export function acceptLoungeAlarms(
+export const acceptLoungeAlarms = (
   state: LoungeAnnunciatorState,
-): LoungeAnnunciatorState {
-  if (!LOUNGE_ALARMS.some((id) => state.windows[id] === 'flashing'))
-    return state;
-  const windows = { ...state.windows };
-  for (const id of LOUNGE_ALARMS)
-    if (windows[id] === 'flashing') windows[id] = 'steady';
-  return { ...state, windows };
-}
+): LoungeAnnunciatorState => acceptLocationAlarms(LOUNGE_ALARMS, state);
 
 /** RESET: accepted windows whose alarms have cleared go dark; the first-out with its window. */
-export function resetLoungeAlarms(
+export const resetLoungeAlarms = (
   state: LoungeAnnunciatorState,
-): LoungeAnnunciatorState {
-  const which = LOUNGE_ALARMS.filter(
-    (id) => state.windows[id] === 'steady' && !state.present[id],
-  );
-  if (!which.length) return state;
-  const windows = { ...state.windows };
-  for (const id of which) windows[id] = 'off';
-  const firstOut =
-    state.firstOut && windows[state.firstOut] !== 'off' ? state.firstOut : null;
-  return { ...state, windows, firstOut };
-}
+): LoungeAnnunciatorState => resetLocationAlarms(LOUNGE_ALARMS, state);

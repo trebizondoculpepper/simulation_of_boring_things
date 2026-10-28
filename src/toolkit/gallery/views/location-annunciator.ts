@@ -15,49 +15,65 @@ import { plantTools } from '../../components/plant/views/plant-tools';
 import { ALARM_BUZZER } from '../../components/core/audio/part-loops';
 import { markComponent } from '../../components/core/views/component-identity';
 import type { World, WorldAction } from '../../../game/world';
-import {
-  LOUNGE_ALARMS,
-  LOUNGE_ALARM_TEXT,
-  newLoungeAnnunciator,
-} from '../../../game/plant/lounge-annunciator';
+import { LOCATION_ANNUNCIATORS } from '../../../game/plant/location-annunciators';
+import type { LocationId } from '../../../game/plant/location-annunciators';
+import { newLocationAnnunciator } from '../../../game/plant/location-annunciator';
 import type { LiveExhibit } from '../rooms/plant/exhibit';
 
 /**
- * The lounge pool's annunciator (the owner, 2026-10-28), one on the wall
- * of its plant room and an identical one in the control room: Penfold's
- * assembly round Warden's sixteen-window annunciator, four by four, with
- * its horn, ACCEPT, RESET, LAMP TEST and MUTE. Its windows are the
- * world's (`game/plant/lounge-annunciator.ts`), so ACCEPT or RESET at one
- * is done at the other. The first-out window flashes twice as fast as the
+ * A location's annunciator (mission 099): the lounge pool's (the owner,
+ * 2026-10-28), the Olympic's and the wet hall's, each one in its own
+ * place and an identical one in the old control room: Penfold's assembly
+ * round Warden's annunciator, sixteen windows four by four, or six
+ * columns on the larger boards, with its horn, ACCEPT, RESET, LAMP TEST
+ * and MUTE. Its windows are the world's
+ * (`game/plant/location-annunciators.ts`), so ACCEPT or RESET at one is
+ * done at the other, and at the bridge. The first-out window flashes twice as fast as the
  * rest. The horn sounds while any window flashes, until ACCEPT, or MUTE,
  * which quiets it until another alarm comes in. Without a world (a
  * gallery), it shows its windows dark. Metres, facing +z, its middle at
  * the origin.
  */
-export function createLoungeAnnunciator(
+export function createLocationAnnunciator(
   kit: PanelKit,
+  location: LocationId,
   store?: {
     readonly world: { readonly value: World };
     dispatch(action: WorldAction): void;
   },
 ): LiveExhibit {
+  const spec = LOCATION_ANNUNCIATORS[location];
+  const ALARMS = spec.alarms;
+  const text = (id: string) => spec.text[id] || 'SPARE';
   const t = plantTools(kit);
   const group = new Group();
-  t.box(group, t.paint('#3b3f42', 0.5), 0.86, 0.84, 0.12, 0, 0, 0.06);
-  const title = createMicroLabel(kit, 'PL1 · LOUNGE POOL PLANT', {
+  // Its housing round its windows (0.17 m wide, 0.119 m tall each): the
+  // lounge's, four by four, 0.86 × 0.84 m.
+  const cell = 0.17;
+  const rows = Math.ceil(ALARMS.length / spec.columns);
+  const W = spec.columns * cell + 0.18;
+  const H = rows * cell * 0.7 + 0.35;
+  t.box(group, t.paint('#3b3f42', 0.5), W, H, 0.12, 0, 0, 0.06);
+  const title = createMicroLabel(kit, spec.title, {
     height: 0.03,
     ink: '#f2f2ee',
   });
-  title.position.set(0, 0.37, 0.121);
+  title.position.set(0, H / 2 - 0.05, 0.121);
   group.add(title);
-  const labels = LOUNGE_ALARMS.map((id) => LOUNGE_ALARM_TEXT[id]);
-  const panel = createAnnunciatorPanel(kit, labels, { columns: 4, cell: 0.17 });
-  panel.group.position.set(0, 0.05, 0.12);
+  const labels = ALARMS.map(text);
+  const panel = createAnnunciatorPanel(kit, labels, {
+    columns: spec.columns,
+    cell,
+  });
+  // Its windows' top 0.12 m under the housing's, under the title.
+  const panelH = rows * cell * 0.7 + 0.012;
+  panel.group.position.set(0, H / 2 - 0.12 - panelH / 2, 0.12);
   panel.group.traverse((o) => (o.userData.live = true));
   group.add(panel.group);
   const parts = createPartSet();
   const state = () =>
-    store?.world.value.loungeAnnunciator ?? newLoungeAnnunciator();
+    store?.world.value.locationAnnunciators[location] ??
+    newLocationAnnunciator(ALARMS);
   let testUntil = 0;
   let now = 0;
   let mutedAt = -1;
@@ -69,28 +85,40 @@ export function createLoungeAnnunciator(
     action: () => void,
   ) => {
     const part = pushButton(kit, { colour, legend, action });
-    part.object.position.set(x, -0.335, 0.12);
+    part.object.position.set(x, -H / 2 + 0.085, 0.12);
     part.object.traverse((o) => (o.userData.live = true));
     group.add(part.object);
     parts.add(part);
   };
   button('ACCEPT', 'black', -0.27, () =>
-    store?.dispatch({ type: 'lounge-alarms/accept' }),
+    store?.dispatch({ type: 'location-alarms/accept', location }),
   );
   button('RESET', 'black', -0.09, () =>
-    store?.dispatch({ type: 'lounge-alarms/reset' }),
+    store?.dispatch({ type: 'location-alarms/reset', location }),
   );
   button('LAMP TEST', 'white', 0.09, () => (testUntil = now + 2));
   button('MUTE', 'red', 0.27, () => (mutedAt = flashingCount));
   // The horn on top.
-  t.cyl(group, t.paint('#c8261c', 0.45), 0.05, 0.06, 0.3, 0.47, 0.06, 'z', 20);
-  t.cyl(group, t.paint('#2a2b2c', 0.5), 0.03, 0.02, 0.3, 0.47, 0.1, 'z', 20);
+  const hornX = W / 2 - 0.13;
+  const hornY = H / 2 + 0.05;
+  t.cyl(
+    group,
+    t.paint('#c8261c', 0.45),
+    0.05,
+    0.06,
+    hornX,
+    hornY,
+    0.06,
+    'z',
+    20,
+  );
+  t.cyl(group, t.paint('#2a2b2c', 0.5), 0.03, 0.02, hornX, hornY, 0.1, 'z', 20);
   const badge = createBrandBadge(kit, 'warden', { height: 0.02 });
-  badge.position.set(-0.3, -0.395, 0.1205);
+  badge.position.set(-W / 2 + 0.13, -H / 2 + 0.025, 0.1205);
   group.add(badge);
   panelMakerMark(kit, group, {
-    width: 0.86,
-    height: 0.84,
+    width: W,
+    height: H,
     z: 0.12,
     corner: 'bottom-right',
   });
@@ -101,18 +129,18 @@ export function createLoungeAnnunciator(
   parts.add(hornPart.part());
   return {
     object: markComponent(group, {
-      name: 'Lounge pool annunciator',
+      name: spec.name,
       part: {
         kind: 'visible',
-        label: 'Lounge pool annunciator',
+        label: spec.name,
         shows: () => {
           const s = state();
-          const lit = LOUNGE_ALARMS.filter((id) => s.windows[id] !== 'off');
+          const lit = ALARMS.filter((id) => (s.windows[id] ?? 'off') !== 'off');
           return lit.length
             ? lit
                 .map(
                   (id) =>
-                    `${LOUNGE_ALARM_TEXT[id].replace('\n', ' ')}${s.windows[id] === 'flashing' ? ' (flashing)' : ''}${s.firstOut === id ? ', first out' : ''}`,
+                    `${text(id).replace('\n', ' ')}${s.windows[id] === 'flashing' ? ' (flashing)' : ''}${s.firstOut === id ? ', first out' : ''}`,
                 )
                 .join('; ')
             : 'all clear';
@@ -127,7 +155,7 @@ export function createLoungeAnnunciator(
       const fast = Math.floor(now * FLASH_HZ * 4) % 2 === 0;
       const test = now < testUntil;
       panel.set(
-        LOUNGE_ALARMS.map(
+        ALARMS.map(
           (id) =>
             test ||
             s.windows[id] === 'steady' ||
@@ -136,7 +164,7 @@ export function createLoungeAnnunciator(
         ),
       );
       // The horn while a window flashes, until MUTE (until another comes in).
-      flashingCount = LOUNGE_ALARMS.filter(
+      flashingCount = ALARMS.filter(
         (id) => s.windows[id] === 'flashing',
       ).length;
       if (flashingCount === 0) mutedAt = -1;

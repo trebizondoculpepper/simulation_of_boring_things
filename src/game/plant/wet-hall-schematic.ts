@@ -42,6 +42,12 @@ const flowmeter = machine(
 );
 const holding = machine('holding', 'backwash-tank', 'Backwash holding tank');
 const mimic = machine('mimic', 'mimic-wet', 'Mimic: wet hall');
+// Its annunciator (mission 099), beside the mimic, on the control bus.
+const annunciator = machine(
+  'annunciator',
+  'annunciator',
+  'Wet hall annunciator',
+);
 // The sewer outfall's monitor (the owner, 2026-10-26): its flowmeter's
 // converter and its chart recorder, on the wall.
 const outfall = machine(
@@ -60,6 +66,7 @@ const electrics = roomElectrics(room, [
   booster,
   flowmeter,
   mimic,
+  annunciator,
   outfall,
   makeUpRecorder,
 ]);
@@ -92,6 +99,7 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
     flowmeter,
     holding,
     mimic,
+    annunciator,
     outfall,
     makeUpRecorder,
     machine('town-main', 'water-main', 'Town main'),

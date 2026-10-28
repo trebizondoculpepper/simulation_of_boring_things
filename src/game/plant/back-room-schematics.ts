@@ -296,6 +296,9 @@ const instruments = [
   machine('mimic-air', 'mimic-air', 'Mimic: air handling'),
   machine('annunciator', 'annunciator', 'Alarm annunciator'),
   machine('annunciator-pl1', 'annunciator', 'Lounge pool annunciator'),
+  // The Olympic's and the wet hall's (mission 099).
+  machine('annunciator-pl2', 'annunciator', 'Olympic pool annunciator'),
+  machine('annunciator-wh', 'annunciator', 'Wet hall annunciator'),
   machine('chart-recorders', 'chart-recorders', 'Chart recorders'),
   machine('readout-board', 'readout-board', 'Readout board'),
   machine('bms-outstation', 'bms-outstation', 'BMS outstation'),

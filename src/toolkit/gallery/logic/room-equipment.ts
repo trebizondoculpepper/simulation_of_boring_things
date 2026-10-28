@@ -901,6 +901,15 @@ export function roomEquipment(
             { back: 0, pit: true },
           ),
           wall('mimic-wet', 'Mimic: wet hall', 2.2, 0.08, 1.2, 1.6),
+          // Its annunciator (mission 099), the twin of the control room's.
+          wall(
+            'annunciator:wet_hall',
+            'Wet hall annunciator',
+            1.25,
+            0.2,
+            0.71,
+            1.75,
+          ),
           // Our own flowmeter, straight after the utility's meter.
           floor(
             'make-up-flowmeter',
@@ -1207,6 +1216,26 @@ export function roomEquipment(
               walls: ['west'],
               over: true,
             },
+          ),
+          // The Olympic's and the wet hall's (mission 099), the lounge's
+          // fellows: the wet hall's the twin of the one in the wet hall.
+          wall(
+            'annunciator:pool_02',
+            'Olympic pool annunciator',
+            1.25,
+            0.2,
+            0.83,
+            1.8,
+            { walls: ['west', 'east'], over: true },
+          ),
+          wall(
+            'annunciator:wet_hall',
+            'Wet hall annunciator',
+            1.25,
+            0.2,
+            0.71,
+            1.75,
+            { walls: ['east', 'west'], over: true },
           ),
           wall('chart-recorders', 'Chart recorders', 1.3, 0.2, 0.6, 1.5),
           wall('readout-board', 'Readout board', 1.3, 0.12, 0.55, 1.5),
@@ -1599,6 +1628,8 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
       // recorder beside it, over the booster set.
       put(box, at('mimic-wet'), { wall: 'north', along: 6.9 }),
       put(box, at('make-up-recorder'), { wall: 'north', along: 4.2 }),
+      // Its annunciator east of the mimic (mission 099).
+      put(box, at('annunciator:wet_hall'), { wall: 'north', along: 8.95 }),
       // Its middle over the opening's, its davit's 0.4 m to the east.
       put(box, at('backwash-tank'), {
         x: (L.pit.minX + L.pit.maxX) / 2 + L.pitDavitShift,

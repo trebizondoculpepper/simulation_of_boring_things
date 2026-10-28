@@ -130,6 +130,8 @@ describe('the lounge annunciator’s sequence', () => {
       },
     };
     w = stepWorld(w, 1);
-    expect(w.loungeAnnunciator.windows['circ-tripped']).toBe('flashing');
+    expect(w.locationAnnunciators.pool_01.windows['circ-tripped']).toBe(
+      'flashing',
+    );
   });
 });

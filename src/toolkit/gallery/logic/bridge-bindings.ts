@@ -24,10 +24,7 @@ import {
   transferRunning,
 } from '../../../game/plant/chemical-distribution';
 import { ANNUNCIATOR_ALARMS, ALARM_TEXT } from './control-room-demo';
-import {
-  LOUNGE_ALARMS,
-  LOUNGE_ALARM_TEXT,
-} from '../../../game/plant/lounge-annunciator';
+import { litLocationWindows } from '../../../game/plant/location-annunciators';
 import type { PlantReading } from './control-room-demo';
 import { airState, heatingState, mainPoolState } from './pool-mimics';
 import type { PumpsShown } from './pool-mimics';
@@ -755,25 +752,19 @@ export const CENTRAL_CONTROL: ParodySpec = {
 /**
  * Every alarm in on any annunciator, as the bridge lists them (the owner,
  * 2026-10-28: anything that sounds on any annunciator is a warning on
- * the bridge): the plant's (`ANNUNCIATOR_ALARMS`), then the lounge's
- * lit windows (its first-out last, as the newest that matters), each its
- * words and the room to go to.
+ * the bridge): the plant's (`ANNUNCIATOR_ALARMS`), then each location's
+ * lit windows, the lounge's, the Olympic's and the wet hall's (each
+ * board's first-out last, as the newest that matters), each its words
+ * and the room to go to.
  */
 function alarmsIn(c: BridgeContext): { words: string; room: string }[] {
   const plant = c.reading.alarms.map((id) => ({
     words: ALARM_TEXT[id].window.replace('\n', ' '),
     room: ALARM_TEXT[id].room,
   }));
-  const lounge = c.world.loungeAnnunciator;
-  const lit = LOUNGE_ALARMS.filter((id) => lounge.windows[id] !== 'off').sort(
-    (a, b) => Number(a === lounge.firstOut) - Number(b === lounge.firstOut),
-  );
   return [
     ...plant,
-    ...lit.map((id) => ({
-      words: `PL1 ${LOUNGE_ALARM_TEXT[id].replace('\n', ' ')}`,
-      room: 'PL1',
-    })),
+    ...litLocationWindows(c.world).map(({ words, room }) => ({ words, room })),
   ];
 }
 

@@ -410,8 +410,8 @@ export const WORLD_HEALTH_COVERAGE = {
   bridgeDisplaysOn: 'not health: whether the bridge’s displays are switched on',
   annunciator:
     'not health: the control room annunciator, which alarms are in and accepted; the alarms themselves are the plant’s',
-  loungeAnnunciator:
-    'not health: a display; its windows read the lounge plant room’s faults',
+  locationAnnunciators:
+    'not health: displays; their windows read the lounge’s, the Olympic’s and the wet hall’s faults',
   bridgeConsoles:
     'not health: what the bridge’s consoles show and whether each is locked',
 } as const satisfies Record<keyof World, string>;

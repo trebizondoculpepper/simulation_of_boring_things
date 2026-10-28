@@ -1,3 +1,4 @@
+import { LOCATION_ANNUNCIATORS } from '../plant/location-annunciators';
 import type { World, WorldAction } from '../world';
 import type { GameEvent } from './game-event';
 import { INSTALLED_VALVES } from '../plant/installed-valves';
@@ -344,10 +345,20 @@ function said(
             ? 'manual call point operated'
             : 'call point reset with its key',
       };
-    case 'lounge-alarms/accept':
-      return { subject: 'PL1 ANNUNCIATOR', text: 'ACCEPT pressed' };
-    case 'lounge-alarms/reset':
-      return { subject: 'PL1 ANNUNCIATOR', text: 'RESET pressed' };
+    case 'location-alarms/accept':
+      return {
+        subject: action.location
+          ? `${LOCATION_ANNUNCIATORS[action.location].tag} ANNUNCIATOR`
+          : 'LOCATION ANNUNCIATORS',
+        text: 'ACCEPT pressed',
+      };
+    case 'location-alarms/reset':
+      return {
+        subject: action.location
+          ? `${LOCATION_ANNUNCIATORS[action.location].tag} ANNUNCIATOR`
+          : 'LOCATION ANNUNCIATORS',
+        text: 'RESET pressed',
+      };
     case 'alarms/accept':
       return {
         subject: 'ANNUNCIATOR',

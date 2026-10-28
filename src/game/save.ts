@@ -220,6 +220,16 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // among the installed valves, each at its normal position
   // (`fillDefaults` adds them).
   54: (world) => world,
+  // 55 → 56: an annunciator for each location (mission 099): the lounge's
+  // kept as the first of them, the Olympic's and the wet hall's dark
+  // (`fillDefaults` adds them).
+  55: (world) => {
+    if (!isRecord(world)) return world;
+    const { loungeAnnunciator, ...rest } = world;
+    return isRecord(loungeAnnunciator)
+      ? { ...rest, locationAnnunciators: { pool_01: loungeAnnunciator } }
+      : rest;
+  },
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

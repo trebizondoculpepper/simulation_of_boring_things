@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { advance, applyAction, newWorld } from '../../../game/world';
 import type { World, WorldAction } from '../../../game/world';
-import { worldAnnunciator } from './world-annunciator';
+import { bridgeAnnunciator, worldAnnunciator } from './world-annunciator';
+import {
+  LOCATIONS,
+  LOCATION_ANNUNCIATORS,
+  unacceptedLocationAlarms,
+} from '../../../game/plant/location-annunciators';
+import { unacceptedAlarms } from '../../../game/annunciator';
 import { ANNUNCIATOR_ALARMS } from './control-room-demo';
 
 /** A world store's least: its world and dispatch. */
@@ -60,5 +66,39 @@ describe('an annunciator on the world’s', () => {
     expect(board.lit(0).every(Boolean)).toBe(true);
     board.test = false;
     expect(board.lit(0).some(Boolean)).toBe(false);
+  });
+});
+
+describe('the bridge’s annunciator (mission 099)', () => {
+  it('carries every location’s windows after the main one’s, and ACCEPT there accepts them all', () => {
+    const store = storeOf(faulted());
+    const bridge = bridgeAnnunciator(store);
+    const locations = LOCATIONS.reduce(
+      (n, id) => n + LOCATION_ANNUNCIATORS[id].alarms.length,
+      0,
+    );
+    expect(bridge.states).toHaveLength(ANNUNCIATOR_ALARMS.length + locations);
+    // The Olympic's room power lost: its own board's window flashes too.
+    expect(unacceptedLocationAlarms(store.world.value)).toBeGreaterThan(0);
+    bridge.acknowledge();
+    expect(bridge.states).not.toContain('flashing');
+    expect(unacceptedLocationAlarms(store.world.value)).toBe(0);
+    const olympic = store.world.value.locationAnnunciators.pool_02;
+    expect(olympic.windows['power-fail']).toBe('steady');
+  });
+
+  it('accepts a location’s windows by index as its own board’s ACCEPT', () => {
+    const store = storeOf(faulted());
+    const bridge = bridgeAnnunciator(store);
+    const from =
+      ANNUNCIATOR_ALARMS.length + LOCATION_ANNUNCIATORS.pool_01.alarms.length;
+    const i = from + LOCATION_ANNUNCIATORS.pool_02.alarms.indexOf('power-fail');
+    expect(bridge.states[i]).toBe('flashing');
+    bridge.acknowledge([i]);
+    expect(bridge.states[i]).toBe('steady');
+    // The main board's windows not asked stay flashing.
+    expect(
+      unacceptedAlarms(store.world.value.annunciator).length,
+    ).toBeGreaterThan(0);
   });
 });

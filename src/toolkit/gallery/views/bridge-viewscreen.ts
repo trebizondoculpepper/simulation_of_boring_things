@@ -7,6 +7,7 @@ import type { Annunciator } from '../../components/industrial-control/logic/annu
 import { createPartSet } from '../../components/core/parts/parts';
 import { ALARM_TEXT, ANNUNCIATOR_ALARMS } from '../logic/control-room-demo';
 import { viewscreenShows } from '../logic/bridge-bindings';
+import { litLocationWindows } from '../../../game/plant/location-annunciators';
 import { stationSchematic } from './station-schematics';
 import type { BridgeContext } from '../logic/bridge-bindings';
 import type { LiveExhibit } from '../rooms/plant/exhibit';
@@ -86,15 +87,20 @@ export function createViewscreen(
     const flashing = ANNUNCIATOR_ALARMS.filter(
       (_, i) => annunciator.states[i] === 'flashing',
     );
-    const mode = viewscreenShows(flashing.length);
+    // And every location annunciator's windows (mission 099): the
+    // bridge's annunciator carries them after the main one's.
+    const locations = litLocationWindows(c.world);
+    const unaccepted =
+      flashing.length + locations.filter((w) => w.flashing).length;
+    const mode = viewscreenShows(unaccepted);
     pages.show(mode === 'SCHEMATIC' && options.blank?.() ? 'BLANK' : mode);
     if (mode === 'ALARMS') {
       banner.set(
-        `${flashing.length} ALARM${flashing.length > 1 ? 'S' : ''} · ACCEPT AT CENTRAL CONTROL`,
+        `${unaccepted} ALARM${unaccepted > 1 ? 'S' : ''} · ACCEPT AT CENTRAL CONTROL`,
         true,
       );
-      list.set(
-        ANNUNCIATOR_ALARMS.filter((id) => c.reading.alarms.includes(id)).map(
+      list.set([
+        ...ANNUNCIATOR_ALARMS.filter((id) => c.reading.alarms.includes(id)).map(
           (id) => ({
             words: ALARM_TEXT[id].window.replace('\n', ' '),
             right: `GO TO ${ALARM_TEXT[id].room}`,
@@ -102,7 +108,13 @@ export function createViewscreen(
             flashing: flashing.includes(id),
           }),
         ),
-      );
+        ...locations.map((w) => ({
+          words: w.words,
+          right: `GO TO ${w.room}`,
+          colour: w.flashing ? 'alert' : 'golden-tanoi',
+          flashing: w.flashing,
+        })),
+      ]);
       return;
     }
     browser.update(c, seconds);

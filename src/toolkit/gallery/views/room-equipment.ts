@@ -281,6 +281,13 @@ export const MODELS: Record<string, PlantExhibit> = {
   cctv: byTitle(CONTROL, 'CCTV monitor'),
 };
 
+/** Each location annunciator's exhibit, by its key's argument. */
+const LOCATION_TITLES: Record<string, string> = {
+  pool_01: 'Lounge pool annunciator',
+  pool_02: 'Olympic pool annunciator',
+  wet_hall: 'Wet hall annunciator',
+};
+
 /** The model a room's machine is drawn from, by its key's kind, if any. */
 export const exhibitFor = (kind: string): PlantExhibit | undefined =>
   MODELS[kind];
@@ -312,9 +319,10 @@ function modelFor(
   const pool = /^plant_(pool_0[1-4])$/.exec(room)?.[1] as PoolId | undefined;
   if (pool && kind === 'pump-pair') return pumpPairExhibit(pool).build(kit);
   if (pool && kind === 'pump-panel') return pumpPanelExhibit(pool).build(kit);
-  // The lounge's annunciator, in its plant room and in the control room.
-  if (kind === 'annunciator' && arg === 'pool_01')
-    return byTitle(CONTROL, 'Lounge pool annunciator').build(kit);
+  // Each location's annunciator (mission 099), in its own place and in
+  // the control room: the lounge's, the Olympic's, the wet hall's.
+  if (kind === 'annunciator' && arg && arg in LOCATION_TITLES)
+    return byTitle(CONTROL, LOCATION_TITLES[arg]).build(kit);
   // The Olympic's balance tank panel, worked on the world's tank.
   if (kind === 'balance-tank-panel' && typeof window !== 'undefined')
     return worldBalanceTankPanel(kit);

@@ -297,6 +297,14 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0148',
     tag: 'CR-CP7',
   },
+  'control_room|annunciator:pool_02|Olympic pool annunciator': {
+    assetId: 'asset-0149',
+    tag: 'CR-CP8',
+  },
+  'control_room|annunciator:wet_hall|Wet hall annunciator': {
+    assetId: 'asset-0150',
+    tag: 'CR-CP9',
+  },
   'control_room|chart-recorders|Chart recorders': {
     assetId: 'asset-0086',
     tag: 'CR-CP3',
@@ -400,6 +408,10 @@ export const INSTALLED_ASSET_IDS: Readonly<
   'wet_hall|chem-panel|Chemical distribution panel': {
     assetId: 'asset-0144',
     tag: 'WH-CP1',
+  },
+  'wet_hall|annunciator:wet_hall|Wet hall annunciator': {
+    assetId: 'asset-0151',
+    tag: 'WH-CP2',
   },
   'plant_pool_01|chem-day:hypochlorite:pool_01|Hypochlorite day tank': {
     assetId: 'asset-0136',

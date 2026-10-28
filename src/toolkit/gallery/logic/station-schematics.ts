@@ -1,7 +1,4 @@
-import {
-  LOUNGE_ALARMS,
-  LOUNGE_ALARM_TEXT,
-} from '../../../game/plant/lounge-annunciator';
+import { litLocationWindows } from '../../../game/plant/location-annunciators';
 import type { Cell, SweepRow } from '../../../ui2d';
 import type { World } from '../../../game/world';
 import { POOL_IDS, POOL_TARGET, poolVolume } from '../../../game/plant/pools';
@@ -234,11 +231,10 @@ export function nextWashHours(w: World): number[] {
 /** The annunciator's alarms in now, as sweep rows (the room to go to at the right). */
 function alarmRows(c: SchematicContext): SweepRow[] {
   const ins = ANNUNCIATOR_ALARMS.filter((id) => c.reading.alarms.includes(id));
-  // And the lounge annunciator's lit windows (the owner, 2026-10-28: any
-  // annunciator's warning is the bridge's).
-  const lounge = c.world.loungeAnnunciator;
-  const pl1 = LOUNGE_ALARMS.filter((id) => lounge.windows[id] !== 'off');
-  if (!ins.length && !pl1.length)
+  // And every location annunciator's lit windows (the owner, 2026-10-28:
+  // any annunciator's warning is the bridge's; mission 099).
+  const lit = litLocationWindows(c.world);
+  if (!ins.length && !lit.length)
     return [{ label: 'ALL SYSTEMS NOMINAL', value: 'NO ALARMS', colour: 'ok' }];
   return [
     ...ins.map((id) => ({
@@ -246,9 +242,9 @@ function alarmRows(c: SchematicContext): SweepRow[] {
       value: ALARM_TEXT[id].room,
       flag: true,
     })),
-    ...pl1.map((id) => ({
-      label: LOUNGE_ALARM_TEXT[id].replace('\n', ' '),
-      value: 'PL1',
+    ...lit.map((w) => ({
+      label: w.words,
+      value: w.room,
       flag: true,
     })),
   ];
