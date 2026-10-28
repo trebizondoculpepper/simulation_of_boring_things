@@ -1,93 +1,66 @@
 /**
- * Graphics quality presets (mission 087, `doc/research/graphics-quality-presets.md`):
- * Low, Medium and High, each a render quality to start from and a set of
- * costly effects left on or switched off. High is the game as it has
- * always looked. The render quality (`renderLevel`) stays the player's own
- * slider: choosing a preset sets it to the preset's level, and it can then
- * be moved freely without leaving the preset. Pure.
+ * The costlier effects' graphics settings (the owner, 2026-10-28;
+ * `doc/research/graphics-quality-presets.md`): ambient occlusion and bloom
+ * each off or at a quality, and a cap on the image's height whatever the
+ * screen. What each choice means for the passes and the pixel ratio. Pure.
  */
 
-export type GraphicsPreset = 'low' | 'medium' | 'high';
+export const EFFECT_LEVELS = ['off', 'low', 'medium', 'high'] as const;
+export type EffectLevel = (typeof EFFECT_LEVELS)[number];
 
-/** The presets, lowest first, as a selector offers them. */
-export const GRAPHICS_PRESETS: readonly GraphicsPreset[] = [
-  'low',
-  'medium',
-  'high',
-];
+export const RESOLUTION_CAPS = ['720', '1080', '1440', 'native'] as const;
+export type ResolutionCap = (typeof RESOLUTION_CAPS)[number];
 
-export const DEFAULT_GRAPHICS: GraphicsPreset = 'high';
-
-/** What a preset draws. */
-export interface GraphicsOptions {
-  /** The render quality (`renderLevel`) the preset starts at. */
-  renderLevel: number;
-  /** The most pixels drawn per CSS pixel, before the render quality scales it. */
-  pixelRatioCap: number;
-  /** Multisample antialiasing on the canvas (taken when a room's renderer is made). */
-  antialias: boolean;
-  /** Ground-truth ambient occlusion (`GTAOPass`), the costliest pass. */
-  ambientOcclusion: boolean;
-  /** Bloom (`UnrealBloomPass`), a chain of blurs. */
-  bloom: boolean;
-  /** The pool's screen-space refraction pass. */
-  refraction: boolean;
-  /** Shadow maps at all. */
-  shadows: boolean;
-  /** The largest shadow map side, pixels: bigger maps a room asks for are cut to it. */
-  shadowMapMax: number;
-}
-
-export const GRAPHICS: Record<GraphicsPreset, GraphicsOptions> = {
-  low: {
-    renderLevel: 6,
-    pixelRatioCap: 1,
-    antialias: false,
-    ambientOcclusion: false,
-    bloom: false,
-    refraction: false,
-    shadows: false,
-    shadowMapMax: 1024,
-  },
-  medium: {
-    renderLevel: 3,
-    pixelRatioCap: 1.25,
-    antialias: false,
-    ambientOcclusion: false,
-    bloom: true,
-    refraction: true,
-    shadows: true,
-    shadowMapMax: 1024,
-  },
-  high: {
-    renderLevel: 0,
-    pixelRatioCap: 2,
-    antialias: true,
-    ambientOcclusion: true,
-    bloom: true,
-    refraction: true,
-    shadows: true,
-    shadowMapMax: 4096,
-  },
+/** How each choice is named in the menu. */
+export const EFFECT_LABELS: Record<EffectLevel, string> = {
+  off: 'Off',
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+};
+export const RESOLUTION_LABELS: Record<ResolutionCap, string> = {
+  '720': '720p',
+  '1080': '1080p',
+  '1440': '1440p',
+  native: 'Native',
 };
 
-/** A preset's options. */
-export const graphicsOptions = (preset: GraphicsPreset): GraphicsOptions =>
-  GRAPHICS[preset];
-
 /**
- * A preset named in text (a URL, a save), or null: the names, any case,
- * and `med` for medium.
+ * Ambient occlusion at `level`: whether it runs, and its samples per pixel
+ * (`full` is the room's own, as tuned: 12 in most, 6 on the bridge). Low
+ * is a third of it and Medium half, never fewer than 4, the fewest GTAO
+ * still looks like occlusion at.
  */
-export function parsePreset(text: unknown): GraphicsPreset | null {
-  if (typeof text !== 'string') return null;
-  const name = text.trim().toLowerCase();
-  if (name === 'med') return 'medium';
-  return (GRAPHICS_PRESETS as readonly string[]).includes(name)
-    ? (name as GraphicsPreset)
-    : null;
+export function ambientOcclusionAt(level: EffectLevel, full = 12) {
+  if (level === 'off') return { enabled: false, samples: full };
+  const share = level === 'low' ? 1 / 3 : level === 'medium' ? 1 / 2 : 1;
+  return {
+    enabled: true,
+    samples: Math.max(4, Math.min(full, Math.round(full * share))),
+  };
 }
 
-/** A shadow map's side, pixels, cut to a preset's largest. */
-export const shadowMapSide = (wanted: number, max: number) =>
-  Math.max(1, Math.min(wanted, max));
+/**
+ * Bloom at `level`: whether it runs, and the share of each side of the
+ * image its blur chain works at (its cost goes with the square).
+ */
+export function bloomAt(level: EffectLevel) {
+  return {
+    enabled: level !== 'off',
+    scale: level === 'low' ? 0.25 : level === 'medium' ? 0.5 : 1,
+  };
+}
+
+/**
+ * The pixel ratio a canvas `height` CSS pixels tall is drawn at, asked
+ * for `wanted`, under `cap`: never more pixels tall than the cap allows.
+ * A cap only ever lowers the ratio.
+ */
+export function cappedPixelRatio(
+  wanted: number,
+  height: number,
+  cap: ResolutionCap,
+): number {
+  if (cap === 'native' || !(height > 0)) return wanted;
+  return Math.min(wanted, Number(cap) / height);
+}

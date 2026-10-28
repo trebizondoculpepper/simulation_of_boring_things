@@ -775,10 +775,10 @@ function build_(
             positions: 3,
             bound: {
               get value() {
-                return selectorIndex(item.id, settings.value);
+                return selectorIndex(settings.value.onScreenControls);
               },
               set: (index: number) =>
-                updateSettings(settingFor(item.id, index)),
+                updateSettings(settingFor('onScreenControls', index)),
             },
           }),
         );

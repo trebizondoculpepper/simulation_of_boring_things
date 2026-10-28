@@ -4,9 +4,8 @@ import { listenMenu } from '../controls/input/menu-input';
 import { controlsHelp } from '../controls/logic/controls';
 import { flightHelp } from '../controls/logic/noclip';
 import type { Readable } from '../components/core/logic/world/components';
-import { RANGES, choosePreset, renderScale } from './logic/settings';
-import { GRAPHICS_PRESETS } from './logic/graphics';
-import type { GraphicsPreset } from './logic/graphics';
+import { RANGES, renderScale } from './logic/settings';
+import { EFFECT_LABELS, RESOLUTION_LABELS } from './logic/graphics';
 import type { Settings } from './logic/settings';
 import { settings, updateSettings } from './settings-store';
 
@@ -272,31 +271,45 @@ export function createPauseMenu(actions: PauseMenuActions) {
   });
 
   // ---- Graphics, Audio, Controls -------------------------------------------
-  // The preset first: choosing one sets the render quality under it too.
-  const preset = document.createElement('select');
-  preset.setAttribute('aria-label', 'Graphics preset');
-  for (const value of GRAPHICS_PRESETS) {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = value[0].toUpperCase() + value.slice(1);
-    preset.append(option);
-  }
-  preset.addEventListener('change', () =>
-    updateSettings(choosePreset(preset.value as GraphicsPreset)),
-  );
-  row('Graphics', 'Graphics preset', preset);
-  shows.push((s) => {
-    preset.value = s.graphics;
-  });
-  const presetNote = document.createElement('p');
-  presetNote.className = 'settings-note';
-  presetNote.textContent =
-    'High is the full look. Medium draws fewer pixels, without ambient occlusion or antialiasing, and with smaller shadows; Low draws fewer still, without shadows, bloom or the pool’s refraction either. Antialiasing changes from the next room you enter.';
-  pages.get('Graphics')!.append(presetNote);
   slider('Graphics', 'renderLevel', 'Render quality', (v) =>
     v === 0 ? '1:1' : `1:${(1 / renderScale(v)).toFixed(2)}`,
   );
   slider('Graphics', 'fov', 'Field of view', (v) => `${Math.round(v)}°`);
+  // The costlier effects, each off or at a quality, and the resolution cap
+  // (the owner, 2026-10-28).
+  const choice = <K extends 'ambientOcclusion' | 'bloom' | 'resolutionCap'>(
+    key: K,
+    label: string,
+    options: Readonly<Record<Settings[K], string>>,
+  ) => {
+    const select = document.createElement('select');
+    select.setAttribute('aria-label', label);
+    for (const [value, name] of Object.entries(options) as [string, string][]) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = name;
+      select.append(option);
+    }
+    select.addEventListener('change', () =>
+      updateSettings({ [key]: select.value } as Partial<Settings>),
+    );
+    row('Graphics', label, select);
+    shows.push((s) => {
+      select.value = s[key];
+    });
+  };
+  choice('ambientOcclusion', 'Ambient occlusion', EFFECT_LABELS);
+  choice('bloom', 'Bloom and glow', EFFECT_LABELS);
+  const film = document.createElement('input');
+  film.type = 'checkbox';
+  film.addEventListener('change', () =>
+    updateSettings({ filmEffects: film.checked }),
+  );
+  row('Graphics', 'Film grain and vignette', film);
+  shows.push((s) => {
+    film.checked = s.filmEffects;
+  });
+  choice('resolutionCap', 'Resolution cap', RESOLUTION_LABELS);
   slider('Audio', 'volume', 'Master volume', (v) => `${Math.round(v * 100)}%`);
   slider(
     'Controls',

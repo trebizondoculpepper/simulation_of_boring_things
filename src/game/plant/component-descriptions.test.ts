@@ -269,14 +269,24 @@ describe('descriptions of the plant', () => {
 
   it('leaves the status out without the world, and for kinds it keeps none of', () => {
     expect(componentDescription('P-101A')).toBe('The 1st pump in Plant Room 2');
-    expect(describeForWorld(newWorld(), 'PL2-F1')).toBe(
-      'The 1st sand filter in Plant Room 2',
+    expect(describeForWorld(newWorld(), 'PL2-HX1')).toBe(
+      'The only heat exchanger in Plant Room 2',
     );
     // A binding that finds nothing gives no status, not Off.
     const s = subject('X-1');
     expect(
       describeComponent(s, new Map([['X-1', 1]]), { status: () => undefined }),
     ).toBe('The 1st pump in Plant Room 2');
+  });
+
+  it('says what a sand filter’s tank is doing, and how it seems', () => {
+    // The Olympic's beds start mid-season, loaded; the lounge's lightly.
+    expect(describeForWorld(newWorld(), 'PL2-F1')).toBe(
+      'The 1st sand filter in Plant Room 2: the tank is filtering, but seems dirty',
+    );
+    expect(describeForWorld(newWorld(), 'PL1-F1')).toMatch(
+      /^The 1st sand filter in Plant Room 1: the tank is \w+, and seems clean$/,
+    );
   });
 
   it('gives tanks their level and switch-fuses the power they isolate', () => {

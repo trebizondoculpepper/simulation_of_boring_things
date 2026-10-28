@@ -410,7 +410,7 @@ export function startPlantCorridorRoom(canvas: HTMLCanvasElement) {
       light.intensity = f && (!inside || through) ? 3 * m * m : 0;
       if (f) light.position.set(f.x * m, f.y * m, f.z * m);
     });
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     if (profile) {
       renderer.info.reset();
       const beforeRender = performance.now();

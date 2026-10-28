@@ -42,6 +42,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import {
   createComposer,
   createRenderer,
+  followEffectSettings,
 } from '../../components/core/parts/render-style';
 import { METRE } from '../../components/core/logic/units';
 import { partAudio } from '../../components/core/audio/part-audio';
@@ -619,7 +620,9 @@ export function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
     distanceExponent: 1.4,
     thickness: 1.2 * metre,
     scale: 1,
-    samples: 12,
+    // The bridge's many live displays make its full-resolution AO costly.
+    // Six samples keep its contact shading while reducing the GPU work.
+    samples: cfg.self === 'bridge' ? 6 : 12,
     radius: look.ao.radius * metre,
   });
   ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6 });
@@ -652,6 +655,12 @@ colour += (rand(vUv * 731.0) - 0.5) * grain;
 gl_FragColor = vec4(colour, sampleColour.a); }`,
   });
   composer.addPass(film);
+  followEffectSettings(composer, {
+    ao,
+    aoSamples: cfg.self === 'bridge' ? 6 : 12,
+    bloom,
+    film,
+  });
 
   const walls = cfg.solids.map(toMetre);
   const machineWalls = machines.solids.map(toMetre);
@@ -820,7 +829,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       }
     }
     roomLights.update(delta);
-    partAudio.listen(camera, metre);
+    partAudio.listen(camera, metre, scene);
     // No pair closes on someone near it: told before the leaves move.
     const actor = doorActor(walk, metre, WALKER_RADIUS_METRES);
     ways.forEach((w, i) => w.part.setNearby(near[i].update(actor)));

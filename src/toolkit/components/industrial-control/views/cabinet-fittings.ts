@@ -954,12 +954,19 @@ export function createAnnunciatorPanel(
     c.fillStyle = '#ffffff';
     c.fillRect(0, 0, 128, 90);
     c.fillStyle = '#1a1a1a';
-    c.font = 'bold 19px Arial, Helvetica, sans-serif';
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     const words = label.split('\n');
+    // Its engraving as large as fits: 19 px, smaller where a line is too
+    // long for the window, inside a margin (the owner, 2026-10-28).
+    const font = (px: number) => `bold ${px}px Arial, Helvetica, sans-serif`;
+    c.font = font(19);
+    const widest = Math.max(...words.map((w) => c.measureText(w).width));
+    const size = Math.max(9, Math.min(19, Math.floor((19 * 112) / widest)));
+    c.font = font(size);
+    const leading = size * 1.16;
     words.forEach((word, k) =>
-      c.fillText(word, 64, 45 + (k - (words.length - 1) / 2) * 22),
+      c.fillText(word, 64, 45 + (k - (words.length - 1) / 2) * leading),
     );
     art.texture.needsUpdate = true;
     const off = createPs1Material({

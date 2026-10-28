@@ -1,3 +1,7 @@
+import {
+  LOUNGE_ALARMS,
+  LOUNGE_ALARM_TEXT,
+} from '../../../game/plant/lounge-annunciator';
 import type { Cell, SweepRow } from '../../../ui2d';
 import type { World } from '../../../game/world';
 import { POOL_IDS, POOL_TARGET, poolVolume } from '../../../game/plant/pools';
@@ -231,13 +235,24 @@ export function nextWashHours(w: World): number[] {
 /** The annunciator's alarms in now, as sweep rows (the room to go to at the right). */
 function alarmRows(c: SchematicContext): SweepRow[] {
   const ins = ANNUNCIATOR_ALARMS.filter((id) => c.reading.alarms.includes(id));
-  if (!ins.length)
+  // And the lounge annunciator's lit windows (the owner, 2026-10-28: any
+  // annunciator's warning is the bridge's).
+  const lounge = c.world.loungeAnnunciator;
+  const pl1 = LOUNGE_ALARMS.filter((id) => lounge.windows[id] !== 'off');
+  if (!ins.length && !pl1.length)
     return [{ label: 'ALL SYSTEMS NOMINAL', value: 'NO ALARMS', colour: 'ok' }];
-  return ins.map((id) => ({
-    label: ALARM_TEXT[id].window.replace('\n', ' '),
-    value: ALARM_TEXT[id].room,
-    flag: true,
-  }));
+  return [
+    ...ins.map((id) => ({
+      label: ALARM_TEXT[id].window.replace('\n', ' '),
+      value: ALARM_TEXT[id].room,
+      flag: true,
+    })),
+    ...pl1.map((id) => ({
+      label: LOUNGE_ALARM_TEXT[id].replace('\n', ' '),
+      value: 'PL1',
+      flag: true,
+    })),
+  ];
 }
 
 const bandColour = (v: number, lo: number, hi: number) =>
@@ -966,18 +981,22 @@ const reservoirs: Design = {
       ],
       [
         w.pools.pool_02.balance,
-        `${fixed(w.pools.pool_02.balance * 100, 0)} %`,
+        // Tripped on low-low, said so, whatever the level now (the owner,
+        // 2026-10-28: the lounge's at 47 % showed no warning).
+        `${fixed(w.pools.pool_02.balance * 100, 0)} %${w.pools.pool_02.tripped ? ' · TRIPPED' : ''}`,
         {
           active: w.pools.pool_02.makeUp,
-          alarm: w.pools.pool_02.balance < 0.2,
+          alarm: w.pools.pool_02.balance < 0.2 || w.pools.pool_02.tripped,
         },
       ],
       [
         w.pools.pool_01.balance,
-        `${fixed(w.pools.pool_01.balance * 100, 0)} %`,
+        // Tripped on low-low, said so, whatever the level now (the owner,
+        // 2026-10-28: the lounge's at 47 % showed no warning).
+        `${fixed(w.pools.pool_01.balance * 100, 0)} %${w.pools.pool_01.tripped ? ' · TRIPPED' : ''}`,
         {
           active: w.pools.pool_01.makeUp,
-          alarm: w.pools.pool_01.balance < 0.2,
+          alarm: w.pools.pool_01.balance < 0.2 || w.pools.pool_01.tripped,
         },
       ],
     ];

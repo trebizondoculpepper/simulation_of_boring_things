@@ -5,29 +5,24 @@ import {
   PCFSoftShadowMap,
   PMREMGenerator,
   Plane,
+  Vector2,
   Vector3,
   WebGLRenderer,
 } from 'three';
-import type {
-  Camera,
-  LightShadow,
-  Object3D,
-  WebGLRenderTarget,
-  Scene,
-} from 'three';
+import type { WebGLRenderTarget, Scene } from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { computed, effect } from '@preact/signals-core';
+import { effect } from '@preact/signals-core';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import type { Pass } from 'three/addons/postprocessing/Pass.js';
-import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { settings } from '../../../settings/settings-store';
 import { renderScale } from '../../../settings/logic/settings';
 import {
-  graphicsOptions,
-  shadowMapSide,
+  ambientOcclusionAt,
+  bloomAt,
+  cappedPixelRatio,
 } from '../../../settings/logic/graphics';
-import type { GraphicsOptions } from '../../../settings/logic/graphics';
+import type { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import type { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import type { Pass } from 'three/addons/postprocessing/Pass.js';
 
 /**
  * How the game is drawn: realistically, at the screen's own resolution
@@ -53,53 +48,6 @@ export const realistic = true;
 
 /** The most pixels per CSS pixel drawn: sharp on a Retina screen, not wasteful. */
 const MAX_PIXEL_RATIO = 2;
-
-/**
- * What the player's graphics preset draws (`graphics.ts`, mission 087):
- * every room renderer and composer follows it, so a preset chosen in the
- * menu or the address reaches every room without the rooms knowing.
- */
-const graphics = computed(() => graphicsOptions(settings.value.graphics));
-
-/** The effects a preset can switch off in a post-processing chain. */
-type GatedEffect = 'ambientOcclusion' | 'bloom' | 'refraction';
-
-/** Passes that declared which effect they are (`markEffect`). */
-const declared = new WeakMap<Pass, GatedEffect>();
-
-/**
- * Declare a post-processing pass one of the effects a graphics preset can
- * switch off (ambient occlusion and bloom are known by their kind).
- */
-export function markEffect<P extends Pass>(pass: P, effect: GatedEffect): P {
-  declared.set(pass, effect);
-  return pass;
-}
-
-/**
- * Gate a pass on the preset: it runs only while the room wants it on and
- * the preset allows it. A room still switches it as before (`pass.enabled
- * = …`); the preset's word is added to the room's.
- */
-function gatePass(pass: Pass) {
-  const effect =
-    declared.get(pass) ??
-    (pass instanceof GTAOPass
-      ? 'ambientOcclusion'
-      : pass instanceof UnrealBloomPass
-        ? 'bloom'
-        : null);
-  if (!effect) return;
-  let wanted = pass.enabled;
-  Object.defineProperty(pass, 'enabled', {
-    configurable: true,
-    enumerable: true,
-    get: () => wanted && graphics.peek()[effect],
-    set: (on: boolean) => {
-      wanted = on;
-    },
-  });
-}
 
 /**
  * Each room's renderer by its canvas, and the frame loop it was given, so
@@ -137,6 +85,15 @@ export function rendererOn(canvas: HTMLCanvasElement) {
  */
 export const inertClip = () => new Plane(new Vector3(0, 1, 0), 1e9);
 
+/**
+ * Whether a screenshot is being drawn (`captureView` in `src/main.ts`):
+ * then the resolution cap stands aside, as the screenshot sizes itself.
+ */
+let capturing = false;
+export function setCapturing(on: boolean) {
+  capturing = on;
+}
+
 /** Each renderer's post-processing chains, to follow its pixel ratio. */
 const composers = new WeakMap<WebGLRenderer, Set<EffectComposer>>();
 
@@ -150,17 +107,6 @@ export function createComposer(
   target?: WebGLRenderTarget,
 ) {
   const composer = new EffectComposer(renderer, target);
-  // Its costly passes follow the player's graphics preset.
-  const add = composer.addPass.bind(composer);
-  composer.addPass = (pass: Pass) => {
-    gatePass(pass);
-    add(pass);
-  };
-  const insert = composer.insertPass.bind(composer);
-  composer.insertPass = (pass: Pass, index: number) => {
-    gatePass(pass);
-    insert(pass, index);
-  };
   let set = composers.get(renderer);
   if (!set) composers.set(renderer, (set = new Set()));
   set.add(composer);
@@ -173,134 +119,121 @@ export function createComposer(
 }
 
 /**
- * Each renderer's ratio drawn exactly, ignoring the player's graphics
- * settings, while a screenshot is taken (`drawAtRatio`).
+ * A room's costlier passes following the player's graphics settings (the
+ * owner, 2026-10-28): its ambient occlusion off or at fewer samples, its
+ * bloom off or on a smaller image, its film grain and vignette off; live,
+ * as the settings change. `aoSamples` is the room's own, as tuned. Stops
+ * following when the composer is disposed.
  */
-const exactRatios = new WeakMap<
-  WebGLRenderer,
-  (ratio: number | null) => void
->();
-
-/**
- * Draw a room's renderer at exactly this pixel ratio, whatever the
- * player's render quality and preset (a screenshot at full quality,
- * `captureView` in `src/main.ts`); null returns it to the settings.
- */
-export function drawAtRatio(renderer: WebGLRenderer, ratio: number | null) {
-  exactRatios.get(renderer)?.(ratio);
-}
-
-/** Each shadow's map size as the room asked for it, before a preset cut it. */
-const askedShadow = new WeakMap<LightShadow, { x: number; y: number }>();
-
-/**
- * Cut a scene's shadow maps to the preset's largest (or give them back
- * their size), freeing any map drawn at the old size. Whether anything
- * changed.
- */
-function fitShadows(scene: Object3D, max: number) {
-  let changed = false;
-  scene.traverse((o) => {
-    const shadow = (o as { shadow?: LightShadow }).shadow;
-    if (!shadow?.mapSize) return;
-    let asked = askedShadow.get(shadow);
-    if (!asked) {
-      asked = { x: shadow.mapSize.x, y: shadow.mapSize.y };
-      askedShadow.set(shadow, asked);
+export function followEffectSettings(
+  composer: EffectComposer,
+  {
+    ao,
+    aoSamples = 12,
+    bloom,
+    film,
+  }: {
+    ao?: GTAOPass;
+    aoSamples?: number;
+    bloom?: UnrealBloomPass;
+    film?: Pass;
+  },
+) {
+  // Bloom's blur chain on a share of the image: its size, scaled.
+  let bloomScale = 1;
+  const full = { w: 1, h: 1 };
+  if (bloom) {
+    const setSize = bloom.setSize.bind(bloom);
+    bloom.setSize = (width: number, height: number) => {
+      full.w = width;
+      full.h = height;
+      setSize(
+        Math.max(1, Math.round(width * bloomScale)),
+        Math.max(1, Math.round(height * bloomScale)),
+      );
+    };
+  }
+  let samples = aoSamples;
+  const stop = effect(() => {
+    const s = settings.value;
+    if (ao) {
+      const at = ambientOcclusionAt(s.ambientOcclusion, aoSamples);
+      ao.enabled = at.enabled;
+      if (at.enabled && at.samples !== samples) {
+        samples = at.samples;
+        ao.updateGtaoMaterial({ samples });
+      }
     }
-    const x = shadowMapSide(asked.x, max);
-    const y = shadowMapSide(asked.y, max);
-    if (shadow.mapSize.x === x && shadow.mapSize.y === y) return;
-    shadow.mapSize.set(x, y);
-    shadow.map?.dispose();
-    shadow.map = null;
-    changed = true;
+    if (bloom) {
+      const at = bloomAt(s.bloom);
+      bloom.enabled = at.enabled;
+      if (at.scale !== bloomScale) {
+        bloomScale = at.scale;
+        bloom.setSize(full.w, full.h);
+      }
+    }
+    if (film) film.enabled = s.filmEffects;
   });
-  return changed;
+  const dispose = composer.dispose.bind(composer);
+  composer.dispose = () => {
+    stop();
+    dispose();
+  };
 }
 
 /** A WebGL renderer for a room (the Hall has its own, hall-pipeline.ts). */
 export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
-  // Antialiasing is fixed when the context is made: a preset's choice
-  // reaches the next room built (or a reload).
-  const options = graphics.peek();
   // A stencil buffer, for doorways that look into a space the room does
   // not build (a door's lobby, drawn only where the doorway is seen).
   const renderer = new WebGLRenderer({
     canvas,
-    antialias: options.antialias,
+    antialias: true,
     stencil: true,
     alpha,
   });
   // The player's graphics quality scales whatever ratio the room asks for
-  // (`settings.ts`), under the preset's cap, now and whenever either
-  // setting changes.
+  // (`settings.ts`), now and whenever the setting changes.
   const setRatio = renderer.setPixelRatio.bind(renderer);
+  const setSize = renderer.setSize.bind(renderer);
   let wanted = Math.min(globalThis.devicePixelRatio ?? 1, MAX_PIXEL_RATIO);
-  let exact: number | null = null;
-  const drawn = () =>
-    exact ??
-    Math.min(wanted, graphics.value.pixelRatioCap) *
-      renderScale(settings.value.renderLevel);
 
   // The room's post-processing chains follow its ratio (`createComposer`).
   const follow = () => {
     for (const composer of composers.get(renderer) ?? [])
       composer.setPixelRatio(renderer.getPixelRatio());
   };
-  const apply = (ratio: number) => {
+  const size = new Vector2();
+  /**
+   * The ratio drawn at: the room's, less the player's render quality, and
+   * under the player's resolution cap for the canvas's height now (not
+   * while a screenshot is taken, which sizes itself).
+   */
+  const ratioNow = () => {
+    const s = settings.value;
+    const ratio = wanted * renderScale(s.renderLevel);
+    if (capturing) return ratio;
+    return cappedPixelRatio(ratio, renderer.getSize(size).y, s.resolutionCap);
+  };
+  const apply = () => {
+    const ratio = ratioNow();
     if (renderer.getPixelRatio() === ratio) return;
     setRatio(ratio);
     follow();
   };
   renderer.setPixelRatio = (ratio: number) => {
     wanted = ratio;
-    setRatio(drawn());
-    follow();
+    apply();
   };
-  exactRatios.set(renderer, (ratio) => {
-    exact = ratio;
-    apply(drawn());
+  // A canvas resized may cross its cap.
+  renderer.setSize = (width, height, updateStyle) => {
+    setSize(width, height, updateStyle);
+    apply();
+  };
+  const stopQuality = effect(() => {
+    void settings.value;
+    apply();
   });
-  const stopQuality = effect(() => apply(drawn()));
   renderer.setPixelRatio(wanted);
-
-  // Shadows: the room turns them on as before (`shadowMap.enabled =
-  // true`); they are drawn only while the preset allows them too.
-  const shadowMap = renderer.shadowMap;
-  let wantsShadows = shadowMap.enabled;
-  Object.defineProperty(shadowMap, 'enabled', {
-    configurable: true,
-    enumerable: true,
-    get: () => wantsShadows && graphics.peek().shadows,
-    set: (on: boolean) => {
-      wantsShadows = on;
-    },
-  });
-  // Each scene drawn, and the preset it was last fitted to: a scene is
-  // fitted when first drawn and again after the preset changes, and its
-  // materials compiled again when shadows came or went (a one-off pause).
-  const fitted = new WeakMap<Object3D, GraphicsOptions>();
-  const render = renderer.render.bind(renderer);
-  renderer.render = (scene: Object3D, camera: Camera) => {
-    const now = graphics.peek();
-    const was = fitted.get(scene);
-    if (was !== now) {
-      fitted.set(scene, now);
-      if (fitShadows(scene, now.shadowMapMax)) shadowMap.needsUpdate = true;
-      if (was && was.shadows !== now.shadows) {
-        scene.traverse((o) => {
-          const material = (o as { material?: unknown }).material;
-          for (const m of Array.isArray(material) ? material : [material])
-            if (m && typeof m === 'object' && 'needsUpdate' in m)
-              (m as { needsUpdate: boolean }).needsUpdate = true;
-        });
-        shadowMap.needsUpdate = true;
-      }
-    }
-    render(scene, camera);
-  };
-
   const dispose = renderer.dispose.bind(renderer);
   renderer.dispose = () => {
     stopQuality();

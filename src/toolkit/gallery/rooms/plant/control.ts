@@ -1,5 +1,6 @@
 import { currentPlant } from './live-plant';
 import { roomWorld } from '../../../save/world-store';
+import { createLoungeAnnunciator } from '../../views/lounge-annunciator';
 import { worldAnnunciator } from '../../logic/world-annunciator';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import {
@@ -181,6 +182,17 @@ export const EXHIBITS: readonly PlantExhibit[] = [
         update: () => annunciator.update(reading(), clock()),
       };
     },
+  },
+  {
+    title: 'Lounge pool annunciator',
+    reference:
+      '16 windows of the lounge plant room’s faults, ISA sequence M with first-out; the twin of the one on its plant room’s wall, one state for both',
+    size: { w: 0.9, d: 0.2, h: 1.1, mount: 'wall', y: 1.75 },
+    build: (kit) =>
+      createLoungeAnnunciator(
+        kit,
+        typeof window === 'undefined' ? undefined : roomWorld(),
+      ),
   },
   {
     title: 'Chart recorders',

@@ -19,8 +19,11 @@ describe('the player’s settings', () => {
       invertY: true,
       fov: 75,
       renderLevel: 6,
-      graphics: 'low',
       onScreenControls: 'never',
+      ambientOcclusion: 'medium',
+      bloom: 'off',
+      filmEffects: false,
+      resolutionCap: '1080',
     };
     expect(cleanSettings(mine)).toEqual(mine);
   });
@@ -54,15 +57,6 @@ describe('the player’s settings', () => {
     expect(s.fov).toBe(DEFAULT_SETTINGS.fov);
     expect(s.renderLevel).toBe(3);
     expect(s.invertY).toBe(DEFAULT_SETTINGS.invertY);
-  });
-
-  it('keep a graphics preset, and give an old or bad save High', () => {
-    expect(cleanSettings({ graphics: 'medium' }).graphics).toBe('medium');
-    expect(cleanSettings({ renderLevel: 4 })).toMatchObject({
-      graphics: 'high',
-      renderLevel: 4,
-    });
-    expect(cleanSettings({ graphics: 'ultra' }).graphics).toBe('high');
   });
 
   it('render at 1:1 at level 0, lower at each step, as 1 / ln(e + level)', () => {

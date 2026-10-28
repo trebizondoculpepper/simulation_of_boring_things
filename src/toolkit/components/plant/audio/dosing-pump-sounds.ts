@@ -11,11 +11,17 @@ import { noiseSource } from '../../core/audio/part-loops';
  * - `PERISTALTIC_PUMP`: a geared servo running easily (the owner,
  *   2026-10-27): a fairly low hum, not a whine, under the rollers'
  *   soft rhythmic squeeze of the tube, three a turn.
+ *
+ * Each about a third (−10 dB) of what they first were (the owner,
+ * 2026-10-28): a diaphragm pump is loud for its size close to (a hard
+ * clack each stroke), but is not to be heard over a circulation pump
+ * across the room; that masking is voice limiting's (prompt 098), not
+ * a quieter pump.
  */
 
 export const SUBMERGED_PUMP: LoopRecipe = (context, out) => {
   const master = context.createGain();
-  master.gain.value = 0.05;
+  master.gain.value = 0.016;
   const muffle = context.createBiquadFilter();
   muffle.type = 'lowpass';
   muffle.frequency.value = 260;
@@ -56,7 +62,7 @@ export const SUBMERGED_PUMP: LoopRecipe = (context, out) => {
 
 export const PERISTALTIC_PUMP: LoopRecipe = (context, out) => {
   const master = context.createGain();
-  master.gain.value = 0.035;
+  master.gain.value = 0.011;
   master.connect(out);
   // The geared servo's low hum, and its gear mesh a little above it.
   const hum = (
@@ -102,7 +108,7 @@ export const PERISTALTIC_PUMP: LoopRecipe = (context, out) => {
  */
 export const SOLENOID_PUMP: LoopRecipe = (context, out) => {
   const master = context.createGain();
-  master.gain.value = 0.045;
+  master.gain.value = 0.014;
   master.connect(out);
   const buzz = context.createOscillator();
   buzz.type = 'sawtooth';
@@ -111,51 +117,91 @@ export const SOLENOID_PUMP: LoopRecipe = (context, out) => {
   buzzLevel.gain.value = 0.03;
   buzz.connect(buzzLevel).connect(master);
   buzz.start();
-  // Each stroke: a short burst of bright noise, gated by a narrow pulse.
-  const noise = noiseSource(context);
+  // Each stroke: a short burst of bright noise, its tick, in a buffer one
+  // stroke long played round and round (1.5 a second). Not a noise gated
+  // by a square wave, which held the gate open for half of every stroke,
+  // a hiss pulsing like a warning beeper (the owner, 2026-10-28, at
+  // DP-101A).
+  const stroke = Math.round(context.sampleRate / 1.5);
+  const tick = context.createBuffer(1, stroke, context.sampleRate);
+  const samples = tick.getChannelData(0);
+  // A hard clack (the owner, 2026-10-28: loud for its size): the
+  // solenoid's bright tick over the diaphragm's low knock, 30 ms.
+  const length = Math.round(context.sampleRate * 0.03);
+  let seed = 7;
+  for (let i = 0; i < length; i++) {
+    seed = (seed * 16807) % 2147483647;
+    const t = i / context.sampleRate;
+    const tickPart =
+      ((seed / 2147483647) * 2 - 1) * Math.exp((-12 * i) / length);
+    const knock =
+      Math.sin(2 * Math.PI * 160 * t) * 1.4 * Math.exp((-5 * i) / length);
+    samples[i] = tickPart + knock;
+  }
+  const ticks = context.createBufferSource();
+  ticks.buffer = tick;
+  ticks.loop = true;
   const band = context.createBiquadFilter();
-  band.type = 'bandpass';
-  band.frequency.value = 1400;
-  band.Q.value = 0.9;
-  const gate = context.createGain();
-  gate.gain.value = 0;
-  const pulse = context.createOscillator();
-  pulse.type = 'square';
-  pulse.frequency.value = 1.5;
-  const shape = context.createWaveShaper();
-  // Only the pulse's very top lets the tick through: a short click.
-  const curve = new Float32Array(256);
-  for (let i = 0; i < 256; i++) curve[i] = i > 250 ? 1 : 0;
-  shape.curve = curve;
-  pulse.connect(shape).connect(gate.gain);
-  noise.connect(band).connect(gate).connect(master);
-  noise.start();
-  pulse.start();
-  return [buzz, noise, pulse];
+  band.type = 'lowpass';
+  band.frequency.value = 3200;
+  ticks.connect(band).connect(master);
+  ticks.start();
+  return [buzz, ticks];
 };
 
 /**
- * A stepper-motor metering pump (prompt 089, item 2): the stepper's soft
- * whirr, its pitch rising and falling with each stroke (a quick suction,
- * a long discharge), and a muffled click of its valves.
+ * A motor-driven diaphragm pump's rattle (the owner, 2026-10-28, after a
+ * recording of a three-chamber diaphragm water pump), used for the
+ * stepper-motor metering pumps (after the Grundfos DDA), the nearest the
+ * plant has: its diaphragms fire 42 times a second (a motor at about 14
+ * turns a second, three chambers), each a short knock, so a hard, buzzing
+ * rattle rich in that pulse's harmonics, strongest from 250 Hz to 1 kHz,
+ * swelling a little six times a second as the motor's load comes and
+ * goes. A second of it, a whole number of pulses and swells, played round
+ * and round. Synthesised from the recording's measurements; nothing of
+ * the recording itself.
  */
 export const STEPPER_PUMP: LoopRecipe = (context, out) => {
   const master = context.createGain();
-  master.gain.value = 0.03;
+  master.gain.value = 0.0095;
   master.connect(out);
-  const whirr = context.createOscillator();
-  whirr.type = 'triangle';
-  whirr.frequency.value = 420;
-  const sweep = context.createOscillator();
-  sweep.type = 'sawtooth';
-  sweep.frequency.value = 1.2;
-  const sweepDepth = context.createGain();
-  sweepDepth.gain.value = 140;
-  sweep.connect(sweepDepth).connect(whirr.frequency);
-  const level = context.createGain();
-  level.gain.value = 0.35;
-  whirr.connect(level).connect(master);
-  whirr.start();
-  sweep.start();
-  return [whirr, sweep];
+  const rate = context.sampleRate;
+  const buffer = context.createBuffer(1, rate, rate);
+  const samples = buffer.getChannelData(0);
+  const pulses = 42;
+  const period = rate / pulses;
+  const knock = Math.round(rate * 0.006);
+  let seed = 13;
+  for (let i = 0; i < rate; i++) {
+    const t = i / rate;
+    const swell = 0.8 + 0.2 * Math.sin(2 * Math.PI * 6 * t);
+    // Within its pulse: a short knock, a little noise and a ring.
+    const k = i % period;
+    let sample = 0;
+    if (k < knock) {
+      seed = (seed * 16807) % 2147483647;
+      const decay = Math.exp((-4 * k) / knock);
+      sample =
+        (((seed / 2147483647) * 2 - 1) * 0.6 +
+          Math.sin((2 * Math.PI * 520 * k) / rate)) *
+        decay;
+    }
+    // The pulse's own fundamental, under it.
+    sample += Math.sin(2 * Math.PI * pulses * t) * 0.15;
+    samples[i] = sample * swell;
+  }
+  const loop = context.createBufferSource();
+  loop.buffer = buffer;
+  loop.loop = true;
+  // Strongest from 250 Hz to 1 kHz, as recorded.
+  const band = context.createBiquadFilter();
+  band.type = 'bandpass';
+  band.frequency.value = 500;
+  band.Q.value = 0.6;
+  const low = context.createGain();
+  low.gain.value = 0.6;
+  loop.connect(band).connect(master);
+  loop.connect(low).connect(master);
+  loop.start();
+  return [loop];
 };

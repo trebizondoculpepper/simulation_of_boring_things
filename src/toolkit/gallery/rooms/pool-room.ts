@@ -147,6 +147,7 @@ import { createFirstPerson } from '../../controls/input/first-person';
 import {
   createComposer,
   createRenderer,
+  followEffectSettings,
 } from '../../components/core/parts/render-style';
 import {
   createPoolUniforms,
@@ -1076,6 +1077,7 @@ void main() {
 }`,
   });
   composer.addPass(film);
+  followEffectSettings(composer, { ao, bloom, film });
 
   // ---- The lectern: LOOK, and nine knobs to turn its quantities ----------
   const parts = createPartSet();
@@ -1377,7 +1379,7 @@ void main() {
         );
       }
     }
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     parts.update(delta);
     apply();

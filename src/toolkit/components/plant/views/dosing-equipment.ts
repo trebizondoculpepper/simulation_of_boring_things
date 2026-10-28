@@ -1,3 +1,4 @@
+import { ACID_PORTS, HYPO_PORTS } from '../logic/dosing-boards';
 import { CylinderGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -117,6 +118,12 @@ export interface DosingBoard {
   status(): string;
 }
 
+/** The suction tubes' plane, just off the board, behind the discharge's (z 0.06). */
+const BOARD_SUCTION_Z = 0.035;
+/** The suction headers' height on each board, above its pumps. */
+const HYPO_SUCTION_Y = 0.32;
+const ACID_SUCTION_Y = 0.2;
+
 /**
  * The hypochlorite dosing set on its backboard: duty and standby pumps
  * (Grundflow solenoid diaphragm pumps, after the ProMinent gamma/ X:
@@ -147,13 +154,16 @@ export function createHypochloriteBoard(kit: PanelKit): DosingBoard {
     put(group, pump.object, [x, -0.24, 0.13]);
     for (const part of pump.keys) parts.add(part);
     put(group, createTag(t, name, 0.18), [x, -0.36, 0.021]);
-    // Suction down and out of the board's foot; discharge up to the header.
+    // Suction back to the board and up to its suction header; discharge
+    // up to the discharge header (the owner, 2026-10-28: the room's day
+    // tank line comes down from overhead, its dose line goes down to the
+    // spool, so the board is piped to meet them).
     const [sx, sy] = pump.suctionAt;
     const [qx, qy] = pump.dischargeAt;
     tube(t, group, [
       [x + sx, -0.24 + sy, 0.13],
-      [x + sx, -0.24 + sy, 0.06],
-      [x + sx, -0.48, 0.06],
+      [x + sx, -0.24 + sy, BOARD_SUCTION_Z],
+      [x + sx, HYPO_SUCTION_Y, BOARD_SUCTION_Z],
     ]);
     tube(t, group, [
       [x + qx, -0.24 + qy, 0.13],
@@ -172,11 +182,21 @@ export function createHypochloriteBoard(kit: PanelKit): DosingBoard {
       16,
     );
   }
-  // The discharge header, to the injection point.
+  // The suction header across over the pumps, and up to the board's top,
+  // where the day tank's line comes down to it (`machinePorts`).
+  tube(t, group, [
+    [-0.25 + pumps[0].suctionAt[0], HYPO_SUCTION_Y, BOARD_SUCTION_Z],
+    [HYPO_PORTS.supply[0], HYPO_SUCTION_Y, BOARD_SUCTION_Z],
+    [HYPO_PORTS.supply[0], HYPO_SUCTION_Y, HYPO_PORTS.supply[2]],
+    [...HYPO_PORTS.supply],
+  ]);
+  // The discharge header, across, out to the board's edge and down to its
+  // foot, where the dose line leaves for its injection point.
   tube(t, group, [
     [-0.345, 0.2, 0.06],
-    [0.5, 0.2, 0.06],
-    [0.5, 0.5, 0.06],
+    [HYPO_PORTS.dose[0], 0.2, 0.06],
+    [HYPO_PORTS.dose[0], HYPO_PORTS.dose[1], 0.06],
+    [...HYPO_PORTS.dose],
   ]);
   // The calibration column on the suction, with its valve.
   t.cyl(group, clear(kit), 0.03, 0.4, -0.5, 0.0, 0.08, 'y', 24);
@@ -199,8 +219,8 @@ export function createHypochloriteBoard(kit: PanelKit): DosingBoard {
     }),
     [0, 0.42, 0.021],
   );
-  put(group, createTag(t, 'FROM BULK TANK ↓', 0.2), [0.0, -0.45, 0.021]);
-  put(group, createTag(t, 'TO INJECTION ↑', 0.18), [0.38, 0.32, 0.021]);
+  put(group, createTag(t, 'FROM DAY TANK ↑', 0.2), [0.1, 0.45, 0.021]);
+  put(group, createTag(t, 'TO INJECTION ↓', 0.18), [0.42, -0.3, 0.021]);
   let asked: DosingPumpState = { running: true, rate: 1.24 };
   return {
     object: group,
@@ -233,13 +253,19 @@ export function createAcidBoard(kit: PanelKit): DosingBoard {
   put(group, pump.object, [0.03, -0.19, 0.14]);
   const [sx, sy] = pump.suctionAt;
   const [qx, qy] = pump.dischargeAt;
+  // Suction back to the board, up and out to its top, where the day tank's
+  // line comes down; discharge out to its edge and down to its foot, to
+  // the injection point (the owner, 2026-10-28), as the hypochlorite's.
   tube(
     t,
     group,
     [
       [0.03 + sx, -0.19 + sy, 0.14],
-      [0.03 + sx, -0.19 + sy, 0.06],
-      [0.03 + sx, -0.38, 0.06],
+      [0.03 + sx, -0.19 + sy, BOARD_SUCTION_Z],
+      [0.03 + sx, ACID_SUCTION_Y, BOARD_SUCTION_Z],
+      [ACID_PORTS.supply[0], ACID_SUCTION_Y, BOARD_SUCTION_Z],
+      [ACID_PORTS.supply[0], ACID_SUCTION_Y, ACID_PORTS.supply[2]],
+      [...ACID_PORTS.supply],
     ],
     '#d9c9c9',
   );
@@ -250,8 +276,9 @@ export function createAcidBoard(kit: PanelKit): DosingBoard {
       [0.03 + qx, -0.19 + qy, 0.14],
       [0.03 + qx, 0.25, 0.14],
       [0.03 + qx, 0.25, 0.06],
-      [0.25, 0.25, 0.06],
-      [0.25, 0.4, 0.06],
+      [ACID_PORTS.dose[0], 0.25, 0.06],
+      [ACID_PORTS.dose[0], ACID_PORTS.dose[1], 0.06],
+      [...ACID_PORTS.dose],
     ],
     '#d9c9c9',
   );

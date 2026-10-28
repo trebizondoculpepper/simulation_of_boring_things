@@ -835,7 +835,7 @@ export function startArchitecturalGalleryRoom(canvas: HTMLCanvasElement) {
     sky.intensity = 0.02 + 0.78 * lit + 0.08 * battery;
     scene.environmentIntensity = environment * (0.08 + 0.92 * lit);
     portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     renderer.render(scene, camera);
   };
   renderer.setAnimationLoop((time) => {

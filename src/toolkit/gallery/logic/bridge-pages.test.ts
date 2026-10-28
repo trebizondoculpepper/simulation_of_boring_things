@@ -7,8 +7,10 @@ import {
 } from '../../../game/bridge-consoles';
 import {
   BRIDGE_PAGES,
+  WIDE_CONSOLES,
   backConsoleId,
   bridgePage,
+  extraWide,
   consolePages,
   pageOf,
   pagerPlace,
@@ -58,7 +60,11 @@ describe('the bridge’s page registry (console paging)', () => {
       expect(page, c.id).toBeDefined();
       expect(page!.suits, c.id).toContain(c.kind);
       const pages = consolePages(c, fresh);
-      expect(pages.length, c.id).toBeGreaterThan(1);
+      // Every console pages, but the extra-wide one, which has as many
+      // pages as there are designs as wide as it (one, today).
+      if (WIDE_CONSOLES.has(c.id))
+        expect(pages.length, c.id).toBeGreaterThan(0);
+      else expect(pages.length, c.id).toBeGreaterThan(1);
       expect(
         pages.every((p) => p.suits.includes(c.kind)),
         c.id,
@@ -198,5 +204,26 @@ describe('the bridge’s page registry (console paging)', () => {
     const b = pagerPlace(2.6, 0.55, 1);
     expect(b.x - b.w / 2).toBeGreaterThan(a.x + a.w / 2);
     expect(b.x + b.w / 2).toBeLessThan(2.6 / 2);
+  });
+});
+
+describe('Central Control, the extra-wide console', () => {
+  it('pages only through designs as wide as it, so ◄ and ► never shrink it', () => {
+    const c = bridgeConsole('central-control.panel')!;
+    const pages = consolePages(c, {});
+    expect(pages.map((p) => p.id)).toEqual(['cc-01']);
+    expect(pages.every(extraWide)).toBe(true);
+    expect(stepPage('central-control.panel', {}, 1)?.id).toBe('cc-01');
+    expect(stepPage('central-control.panel', {}, -1)?.id).toBe('cc-01');
+    // A station's panel chosen there by an older save is not shown.
+    expect(
+      pageOf('central-control.panel', {
+        'central-control.panel': { page: 'adm-01', locked: false },
+      })?.id,
+    ).toBe('cc-01');
+  });
+
+  it('leaves the other consoles their pages, the wide design not among the stations’', () => {
+    expect(BRIDGE_PAGES.filter(extraWide).map((p) => p.id)).toEqual(['cc-01']);
   });
 });

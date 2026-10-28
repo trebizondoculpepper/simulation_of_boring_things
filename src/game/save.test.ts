@@ -79,6 +79,7 @@ describe('a save', () => {
       bridgeThemeHeard: false,
       bridgeDisplaysOn: false,
       annunciator: newWorld().annunciator,
+      loungeAnnunciator: newWorld().loungeAnnunciator,
       bridgeConsoles: newWorld().bridgeConsoles,
     });
   });

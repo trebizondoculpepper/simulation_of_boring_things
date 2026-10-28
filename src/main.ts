@@ -39,9 +39,9 @@ import {
 } from './toolkit/controls/logic/screenshot-size';
 import { METRE } from './toolkit/components/core/logic/units';
 import {
-  drawAtRatio,
   inertClip,
   rendererOn,
+  setCapturing,
 } from './toolkit/components/core/parts/render-style';
 import {
   createScenarioStore,
@@ -597,9 +597,13 @@ const captureView = (): HTMLCanvasElement | null => {
     maxDimension,
   );
   if (ratio === null) return null;
-  // Drawn at exactly this ratio, whatever the render quality and preset.
+  // Each renderer scales the ratio it is given by the render quality.
+  const scale = renderScale(settings.value.renderLevel);
+  const original = layers.map(({ draw }) => draw.renderer.getPixelRatio());
   try {
-    for (const { draw } of layers) drawAtRatio(draw.renderer, ratio);
+    // The player's resolution cap stands aside for a screenshot.
+    setCapturing(true);
+    for (const { draw } of layers) draw.renderer.setPixelRatio(ratio / scale);
     // Each frame the browser runs, run again: a paused room is drawn by
     // the frame of the room over it (`after`).
     for (const { draw } of layers) {
@@ -622,7 +626,10 @@ const captureView = (): HTMLCanvasElement | null => {
     }
     return image;
   } finally {
-    for (const { draw } of layers) drawAtRatio(draw.renderer, null);
+    setCapturing(false);
+    layers.forEach(({ draw }, index) =>
+      draw.renderer.setPixelRatio(original[index] / scale),
+    );
   }
 };
 /**
@@ -1032,6 +1039,9 @@ const importStarter = async (
   if (room === 'dev34')
     return (await import('./toolkit/gallery/rooms/shell-room'))
       .startStairTowerRoom;
+  if (room === 'dev50')
+    return (await import('./toolkit/gallery/rooms/truck-yard-room'))
+      .startTruckYardRoom;
   if (room === 'dev45')
     return (await import('./toolkit/gallery/rooms/control-room-prototype'))
       .startControlRoomPrototype;

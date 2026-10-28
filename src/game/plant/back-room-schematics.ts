@@ -238,6 +238,7 @@ const instruments = [
   machine('mimic-heating', 'mimic-heating', 'Mimic: heating'),
   machine('mimic-air', 'mimic-air', 'Mimic: air handling'),
   machine('annunciator', 'annunciator', 'Alarm annunciator'),
+  machine('annunciator-pl1', 'annunciator', 'Lounge pool annunciator'),
   machine('chart-recorders', 'chart-recorders', 'Chart recorders'),
   machine('readout-board', 'readout-board', 'Readout board'),
   machine('bms-outstation', 'bms-outstation', 'BMS outstation'),

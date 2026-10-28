@@ -268,7 +268,7 @@ export function startTankHall(canvas: HTMLCanvasElement) {
     if (walk.floorY < -0.5 * m) hall.holdLadderGate();
     // Near its doors or gate, they wait: told before they move.
     hall.sense?.(doorActor(walk, m, WALKER_RADIUS_METRES));
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     hall.parts?.update(delta);
     hall.update?.(delta);
     roomLights.update(delta);

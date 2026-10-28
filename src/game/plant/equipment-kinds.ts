@@ -29,7 +29,9 @@ export type StatusPolicy =
   /** A gas detector: its reading. */
   | 'gas'
   /** A UV unit: its lamp lit or not. */
-  | 'uv';
+  | 'uv'
+  /** A sand filter: what it is doing, and how its bed seems (`filter-condition.ts`). */
+  | 'filter';
 
 /**
  * How a kind is described: an isolating valve by what it isolates, an
@@ -71,7 +73,7 @@ export const PLACED_KINDS = {
   },
   'sand-filter': {
     type: 'Sand filter',
-    status: 'none',
+    status: 'filter',
     code: 'F',
     class: 'plant',
     purpose: 'Removes suspended solids from circulating pool water.',

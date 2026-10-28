@@ -770,6 +770,16 @@ export function roomEquipment(
             0.96,
           ),
           ...chemDays('pool_01'),
+          // Its annunciator (the owner, 2026-10-28), on the south wall
+          // east of the door, behind the heat exchanger.
+          wall(
+            'annunciator:pool_01',
+            'Lounge pool annunciator',
+            0.9,
+            0.2,
+            1.1,
+            1.65,
+          ),
         ],
       };
     case 'plant_pool_02':
@@ -1184,6 +1194,20 @@ export function roomEquipment(
             walls: ['west'],
             over: true,
           }),
+          // The lounge pool's, the twin of its plant room's (the owner,
+          // 2026-10-28), beside the plant's.
+          wall(
+            'annunciator:pool_01',
+            'Lounge pool annunciator',
+            0.9,
+            0.2,
+            1.1,
+            1.75,
+            {
+              walls: ['west'],
+              over: true,
+            },
+          ),
           wall('chart-recorders', 'Chart recorders', 1.3, 0.2, 0.6, 1.5),
           wall('readout-board', 'Readout board', 1.3, 0.12, 0.55, 1.5),
           wall('bms-outstation', 'BMS outstation', 0.62, 0.75, 0.78, 1.4),
@@ -1697,6 +1721,15 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
       put(box, acid, {
         wall: 'south',
         along: hypoPlaced.footprint.minX - WALL_GAP - acid.w / 2,
+      }),
+    );
+    // The annunciator on the south wall where the owner put it
+    // (2026-10-28): east of the door, behind the heat exchanger.
+    const annunciator = at('annunciator');
+    out.push(
+      put(box, annunciator, {
+        wall: 'south',
+        along: Math.max(1.63, doorEast + 0.1 + annunciator.w / 2),
       }),
     );
     const panel = at('local control panel');

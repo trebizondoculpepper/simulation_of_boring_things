@@ -188,6 +188,33 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // 2026-10-27): every console on its default page, unlocked
   // (`fillDefaults` adds them).
   51: (world) => world,
+  // 52 → 53: the lounge pool's annunciator (the owner, 2026-10-28), every
+  // window dark (`fillDefaults` adds it).
+  52: (world) => world,
+  // 53 → 54: the main annunciator's new windows, each Olympic filter's
+  // high DP and the Wash-O-Tron out of AUTO (the owner, 2026-10-28):
+  // dark, their alarms not present.
+  53: (world) => {
+    if (typeof world !== 'object' || world === null) return world;
+    const w = world as { annunciator?: { windows?: object; present?: object } };
+    const a = w.annunciator;
+    if (!a || typeof a !== 'object') return world;
+    const added = ['f1-dp', 'f2-dp', 'f3-dp', 'f4-dp', 'f5-dp', 'wot-not-auto'];
+    return {
+      ...world,
+      annunciator: {
+        ...a,
+        windows: {
+          ...Object.fromEntries(added.map((id) => [id, 'off'])),
+          ...a.windows,
+        },
+        present: {
+          ...Object.fromEntries(added.map((id) => [id, false])),
+          ...a.present,
+        },
+      },
+    };
+  },
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

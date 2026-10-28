@@ -109,3 +109,50 @@ export function createInjectionQuillSet(
   group.add(ball.object);
   return { group, quill, check, valve: ball };
 }
+
+/**
+ * A dosing line's injection point where there is no room for its valves
+ * (the owner, 2026-10-28: the tiny tube met the large pipe with no sign of
+ * a seal): the quill alone in its PP clamp saddle, the saddle's two halves
+ * bolted round the main, its boss, the PVDF quill screwed into it, and the
+ * compression nut on its outer end gripping the dosing tube. The main runs
+ * along x through the origin, `mainRadius` its radius; the quill stands up
+ * from its top, +y, `QUILL_LAYOUT.quill` high.
+ */
+export function createInjectionSaddle(kit: PanelKit, mainRadius: number) {
+  const t = plantTools(kit);
+  const group = new Group();
+  group.name = 'Injection quill';
+  const R = mainRadius;
+  const L = QUILL_LAYOUT;
+  const pp = t.paint('#2f3336', 0.6);
+  const pvdf = t.paint('#e8e6dc', 0.4);
+  const steel = t.paint('#9da1a4', 0.35, 0.7);
+  // The saddle's halves, a band round the main, and their bolted lugs.
+  const band = new Mesh(
+    new CylinderGeometry(R + 0.008, R + 0.008, 0.08, 32, 1, true),
+    pp,
+  );
+  band.rotation.z = Math.PI / 2;
+  group.add(band);
+  for (const side of [-1, 1]) {
+    t.box(group, pp, 0.08, 0.03, 0.024, 0, 0, side * (R + 0.02));
+    for (const bx of [-0.025, 0.025])
+      t.cyl(group, steel, 0.005, 0.05, bx, 0, side * (R + 0.02), 'y', 8);
+  }
+  // Its boss on top, the quill's hexagon body, and the tube's nut.
+  t.cyl(group, pp, 0.022, L.boss, 0, R + L.boss / 2, 0, 'y', 20);
+  t.cyl(
+    group,
+    pvdf,
+    0.014,
+    L.quill - L.boss - 0.012,
+    0,
+    R + (L.boss + L.quill - 0.012) / 2,
+    0,
+    'y',
+    6,
+  );
+  t.cyl(group, pvdf, 0.011, 0.012, 0, R + L.quill - 0.006, 0, 'y', 6);
+  return group;
+}
