@@ -31,6 +31,7 @@ import { CONFIRM_WINDOW } from '../logic/settings-panel';
 import { layoutTitleBox, titlePress } from '../logic/title-box';
 import type { TitleAction } from '../logic/title-box';
 import { createMachinedMetal, polishParts } from './machined-metal';
+import { markFrontCentre } from '../../components/core/audio/front-centre';
 import {
   BEVEL,
   PLATE,
@@ -119,6 +120,8 @@ export function createTitleOverlay(actions: TitleOverlayActions) {
   const parts = createPartSet();
   const box = new Group();
   box.name = 'Title menu box';
+  // Its buttons are heard front centre, not in a room.
+  markFrontCentre(box);
   scene.add(box);
   const { width: W, height: H } = layout;
   const run = (id: TitleAction) => {

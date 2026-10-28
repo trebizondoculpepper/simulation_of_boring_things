@@ -31,6 +31,7 @@ These came after the investigation below and override it where they differ.
 - **The title box** (2026-10-28, stage 2): "I just want the menu options: there'll be a single panel with four buttons, and a text legend to the right of each. And I want my title menu options in the bottom left of the screen." This replaces the recommendation's title box (Dymo strip, THE POOL plate, sound lamp, rating plate): the title's own heading, sound hint and build corner stay as they are in the DOM.
 - **The panels the default** (2026-10-28, stage 4 brought forward): "use both of these in place of the existing settings menus." The plain DOM menus remain as the fallback: `?menu=plain`, no WebGL 2, or a panel that fails to start.
 - **Every input** (2026-10-28): "We absolutely need to support touch, mouse, gamepad, and keyboard." Keyboard and gamepad navigation of both panels is part of making them the default, through the one control scheme.
+- **Sound front centre, and the phone** (2026-10-28): "We might have to do an alternative thing for the phone. And we need to place any sound for the buttons and knobs just front centre." The panels' sounds now play unpositioned (below); the phone gets its own presentation, to be designed with the owner (`TODO.md`), not built yet.
 - **A picture first.** The owner asked to see working concept art before any more wiring or measurement: stage 0 stops at the picture and waits for feedback.
 
 Today every menu in the game is flat HTML and CSS laid over the 3D view. This mission replaces those menus with small 3D control panels, drawn with an isometric (orthographic) camera and built from the game's own control parts: real push buttons, knobs, switches, lamps and readouts, each lettered the way such panels really are. The menus become part of the game's world of instruments.
@@ -374,6 +375,10 @@ Open `?menu=panel` with no room: the title as before (the attract sequence, the 
 - **On the panels:** an amber ring (the HUD's amber) round the focused control; SP-1's focus starts on its first control when opened by key or pad, scrolls into view, and hides when the pointer is used; Esc, B or Start close it; on the title box, Enter or A press the ringed button as a click would (NEW GAME still asks again).
 - **Checked in the browser:** the title by arrows and Enter (focus ring, SETTINGS opening SP-1), SP-1 by arrows, Tab and Left (the field of view turned 52 to 50 and back), Esc opening it in a room and Enter on RESUME closing it, the gamepad path through a DEV handle (`menuIntent('toggle', 'gamepad')` and so on: opened, moved, turned render quality and back, closed by B), and `?menu=plain` giving the DOM pause menu on Esc. A real gamepad was not available to the automation.
 - **Still owed:** the accessible DOM mirror (screen readers and switch access; while the box shows, the title's DOM list is hidden), the menu bindings in `CONTROL_SCHEME`'s help text, sounds unpositioned, the phone layout, and the plain menu's title SETTINGS un-pausing bug.
+
+#### Sound front centre (2026-10-28)
+
+`components/core/audio/front-centre.ts` marks a panel's root (`markFrontCentre`); `partAudio` plays any part under a marked root straight to the master bus, centred and at its own level under the master volume, never through a panner placed in the room, and heard on the title, where the game's own sound is muted. Both panels' roots are marked, so every click, detent, clunk and key turn on them is front centre. Tested (`front-centre.test.ts`); in the browser, a mouse press of SAVE and keyboard and gamepad turns of the knobs created no panner node.
 
 #### Stage 2 as first planned
 

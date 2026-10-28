@@ -45,6 +45,7 @@ import { PENFOLD_GREY } from '../../components/industrial-control/views/control-
 import { settings, updateSettings } from '../../settings/settings-store';
 import { CARD, SPACING, narrowCard } from '../logic/panel-layout';
 import { createMachinedMetal, polishParts } from './machined-metal';
+import { markFrontCentre } from '../../components/core/audio/front-centre';
 import type { ModuleBox, PanelLayout } from '../logic/panel-layout';
 import {
   CONFIRM_WINDOW,
@@ -403,6 +404,8 @@ function build_(
   const kit = createPanelKit();
   const group = new Group();
   group.name = 'Settings panel SP-1';
+  // Its parts' clicks and detents are heard front centre, not in the room.
+  markFrontCentre(group);
   const parts = createPartSet();
   const stops: (() => void)[] = [];
   const needles: (() => boolean)[] = [];

@@ -1,5 +1,6 @@
 import { Vector3 } from 'three';
 import type { Camera, Object3D } from 'three';
+import { soundsFrontCentre } from './front-centre';
 
 /**
  * Where parts make their sounds: one audio output for the whole game,
@@ -231,7 +232,10 @@ export const partAudio = {
     awaitGesture();
     const none = () => {};
     if (!context || context.state !== 'running') return none;
-    const out = placed(from);
+    // A menu panel's part sounds front centre, not in the room.
+    const out = soundsFrontCentre(from)
+      ? placed(undefined, true)
+      : placed(from);
     const playTone = (spec: Tone, at: number) => {
       const osc = context!.createOscillator();
       osc.type = spec.type ?? 'square';
@@ -329,12 +333,13 @@ export const partAudio = {
     const gain = ctx.createGain();
     gain.gain.value = 0;
     gain.gain.setTargetAtTime(1, ctx.currentTime, 0.08);
-    const output = placed(from, options?.title);
+    const front = soundsFrontCentre(from);
+    const output = placed(front ? undefined : from, options?.title || front);
     gain.connect(output);
     const sources = recipe(ctx, gain);
     holds.set(owner, {
       update() {
-        if (!from) return;
+        if (!from || front) return;
         from.getWorldPosition(position).divideScalar(metre);
         const panner = output as PannerNode;
         panner.positionX.value = position.x;
