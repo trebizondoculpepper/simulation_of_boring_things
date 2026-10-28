@@ -4,7 +4,9 @@ import { listenMenu } from '../controls/input/menu-input';
 import { controlsHelp } from '../controls/logic/controls';
 import { flightHelp } from '../controls/logic/noclip';
 import type { Readable } from '../components/core/logic/world/components';
-import { RANGES, renderScale } from './logic/settings';
+import { RANGES, choosePreset, renderScale } from './logic/settings';
+import { GRAPHICS_PRESETS } from './logic/graphics';
+import type { GraphicsPreset } from './logic/graphics';
 import type { Settings } from './logic/settings';
 import { settings, updateSettings } from './settings-store';
 
@@ -270,6 +272,27 @@ export function createPauseMenu(actions: PauseMenuActions) {
   });
 
   // ---- Graphics, Audio, Controls -------------------------------------------
+  // The preset first: choosing one sets the render quality under it too.
+  const preset = document.createElement('select');
+  preset.setAttribute('aria-label', 'Graphics preset');
+  for (const value of GRAPHICS_PRESETS) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value[0].toUpperCase() + value.slice(1);
+    preset.append(option);
+  }
+  preset.addEventListener('change', () =>
+    updateSettings(choosePreset(preset.value as GraphicsPreset)),
+  );
+  row('Graphics', 'Graphics preset', preset);
+  shows.push((s) => {
+    preset.value = s.graphics;
+  });
+  const presetNote = document.createElement('p');
+  presetNote.className = 'settings-note';
+  presetNote.textContent =
+    'High is the full look. Medium draws fewer pixels, without ambient occlusion or antialiasing, and with smaller shadows; Low draws fewer still, without shadows, bloom or the pool’s refraction either. Antialiasing changes from the next room you enter.';
+  pages.get('Graphics')!.append(presetNote);
   slider('Graphics', 'renderLevel', 'Render quality', (v) =>
     v === 0 ? '1:1' : `1:${(1 / renderScale(v)).toFixed(2)}`,
   );

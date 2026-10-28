@@ -1,4 +1,6 @@
 import type { OnScreenControls } from '../../controls/logic/hud-policy';
+import { DEFAULT_GRAPHICS, GRAPHICS, parsePreset } from './graphics';
+import type { GraphicsPreset } from './graphics';
 
 /**
  * The player's settings (`doc/plans/title-screen.md`): a placeholder set
@@ -17,6 +19,8 @@ export interface Settings {
   fov: number;
   /** Render quality: 0 draws at full resolution, each step up fewer pixels (`renderScale`). */
   renderLevel: number;
+  /** The graphics preset: which costly effects are drawn (`graphics.ts`). */
+  graphics: GraphicsPreset;
   /** Whether the on-screen controls are shown. */
   onScreenControls: OnScreenControls;
 }
@@ -27,6 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
   invertY: false,
   fov: 52,
   renderLevel: 0,
+  graphics: DEFAULT_GRAPHICS,
   onScreenControls: 'automatic',
 };
 
@@ -51,6 +56,15 @@ export const renderScale = (level: number) => 1 / Math.log(Math.E + level);
 const clamp = (v: number, { min, max }: { min: number; max: number }) =>
   Math.min(max, Math.max(min, v));
 
+/**
+ * Choosing a graphics preset: its effects, and the render quality it
+ * starts at (which the player may then move without leaving the preset).
+ */
+export const choosePreset = (preset: GraphicsPreset): Partial<Settings> => ({
+  graphics: preset,
+  renderLevel: GRAPHICS[preset].renderLevel,
+});
+
 /** Settings from whatever was stored: each value checked, else its default. */
 export function cleanSettings(stored: unknown): Settings {
   const s =
@@ -70,6 +84,8 @@ export function cleanSettings(stored: unknown): Settings {
     fov: num('fov'),
     // Whole steps only. (An older save's low/medium/high falls back to 0.)
     renderLevel: Math.round(num('renderLevel')),
+    // A save from before the presets is High, the look it was playing.
+    graphics: parsePreset(s.graphics) ?? DEFAULT_GRAPHICS,
     // The old enabled default becomes Automatic; an explicit disabled choice stays Never.
     onScreenControls:
       s.onScreenControls === false

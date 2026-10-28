@@ -39,6 +39,7 @@ import {
 } from './toolkit/controls/logic/screenshot-size';
 import { METRE } from './toolkit/components/core/logic/units';
 import {
+  drawAtRatio,
   inertClip,
   rendererOn,
 } from './toolkit/components/core/parts/render-style';
@@ -596,11 +597,9 @@ const captureView = (): HTMLCanvasElement | null => {
     maxDimension,
   );
   if (ratio === null) return null;
-  // Each renderer scales the ratio it is given by the render quality.
-  const scale = renderScale(settings.value.renderLevel);
-  const original = layers.map(({ draw }) => draw.renderer.getPixelRatio());
+  // Drawn at exactly this ratio, whatever the render quality and preset.
   try {
-    for (const { draw } of layers) draw.renderer.setPixelRatio(ratio / scale);
+    for (const { draw } of layers) drawAtRatio(draw.renderer, ratio);
     // Each frame the browser runs, run again: a paused room is drawn by
     // the frame of the room over it (`after`).
     for (const { draw } of layers) {
@@ -623,9 +622,7 @@ const captureView = (): HTMLCanvasElement | null => {
     }
     return image;
   } finally {
-    layers.forEach(({ draw }, index) =>
-      draw.renderer.setPixelRatio(original[index] / scale),
-    );
+    for (const { draw } of layers) drawAtRatio(draw.renderer, null);
   }
 };
 /**

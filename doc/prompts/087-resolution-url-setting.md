@@ -1,6 +1,6 @@
 # 087: Start the game at a lower resolution from the URL
 
-Status: to do (written 2026-10-27 from the owner's request), for another agent. Persistence decided by the owner 2026-10-27; two questions remain open (end). Wider graphics settings are researched in [graphics-quality-presets](../research/graphics-quality-presets.md).
+Status: done 2026-10-28 (COMMIT), widened by the owner 2026-10-28 to graphics presets (see "Done" at the end). Persistence decided by the owner 2026-10-27; the two other questions decided by the owner 2026-10-28 (end). Wider graphics settings are researched in [graphics-quality-presets](../research/graphics-quality-presets.md).
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply: all input goes through `src/toolkit/controls/`, `logic/` folders are pure and tested beside them, and markdown is one paragraph per line.
 
@@ -51,8 +51,21 @@ The alternative, a plain divisor (`resolution=6` meaning one sixth of each side,
 - HUD, menus and inspection text stay crisp; screenshots (Ctrl/Cmd+Shift+K) are full quality.
 - `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build` pass.
 
-## Open questions for the owner
+## Decisions
 
-1. (Decided 2026-10-27: saved; the URL writes the saved settings.)
-2. Is `resolution=6` meaning the existing Render quality level 6 (about a fifth of the pixels) right, or did you mean something lower, a sixth of each side?
-3. Smooth upscaling as now, or a deliberately pixelated look at low resolutions?
+1. Persistence (the owner, 2026-10-27): saved; the URL writes the saved settings.
+2. The scale (the owner, 2026-10-28): `resolution=N` is the existing Render quality level N (0–10), as proposed; not a divisor.
+3. Upscaling (the owner, 2026-10-28): smooth, as now; no pixelated look.
+4. Links (chosen by the implementer, for the owner to check): copy-link and pin links do not carry `graphics` or `resolution`; a link is a place, and the setting is already saved. Room changes (`goTo`) replace the address's search, so the parameters are read once, at start-up.
+
+## Done (2026-10-28)
+
+The owner widened the mission, 2026-10-28: "not just resolution, but maybe graphical options all the way, like low, medium, and high, so that somebody on a low-performance computer can start the game with limited resolution and some specific visual effects disabled."
+
+- Presets (`src/toolkit/settings/logic/graphics.ts`, tested): High is the game as it looked (render quality 0, pixel ratio cap 2, antialiasing, ambient occlusion, bloom, pool refraction, shadows up to 4096 px). Medium: render quality 3, cap 1.25, no antialiasing or ambient occlusion, shadow maps cut to 1024 px. Low: render quality 6, cap 1, and no shadows, bloom or refraction either. The setting is `graphics` in the player's settings; an old save is High. Choosing a preset sets its render quality, which the knob or slider may then move without leaving the preset.
+- Address (`src/toolkit/settings/logic/url-settings.ts`, tested): `?graphics=low|medium|high` (any case, `med` too) and `?resolution=N` (clamped 0–10, rounded; unreadable ignored), resolution over the preset's level. Applied once in `settings-store.ts` as the settings are first read, before any renderer exists, and saved.
+- Applied centrally in `src/toolkit/components/core/parts/render-style.ts`, so no room changed: `createRenderer` caps and scales the pixel ratio, takes antialiasing from the preset when the context is made (a change reaches the next room), gates `shadowMap.enabled` on the preset (the room's own switch kept), and on the first draw of each scene and after each preset change cuts shadow maps to the preset's largest and recompiles materials when shadows come or go; `createComposer` gates every `GTAOPass` and `UnrealBloomPass` added to it, and any pass marked with `markEffect` (the pool's refraction), so a room switching a pass itself still works. Every room renderer comes from `createRenderer` (checked: the rooms that call `setPixelRatio` themselves all do); only the menu panels' and title box's overlay renderers do not, and are left sharp, being the menus.
+- Screenshots: `captureView` now draws at an exact ratio through `drawAtRatio`, past the render quality and the cap, so they stay full resolution (with the preset's effects).
+- Menus: the settings panel's PICTURE zone has a GRAPHICS lever selector, LOW · MED · HIGH, above RENDER QUALITY (the same selector kind as ON-SCREEN CONTROLS, generalised in `settings-panel.ts`), with its accessible copy; the plain menu (`?menu=plain`) has a Graphics preset select and a note on what each does.
+- Checked in the browser (2026-10-28): `?room=main_corridor&graphics=low` drew the corridor at 635 px wide for a 1376 px view (1 × 0.46) from the start, and kept it after a reload without the parameter; Medium 986 px, High 2064 px (1.5 × 1376). In pool_02, switching High → Low → Medium → High live dropped and restored shadows, AO and bloom with no console errors. This machine runs 60 fps at every preset (vsync-bound), so the saving was not measurable here.
+- Not done (in the research, for later): Ultra, dynamic resolution, first-run auto-detect, an FPS readout, lamp lights, services-ceiling density, instrument redraw rate, frame cap, cheaper doorway underlays.

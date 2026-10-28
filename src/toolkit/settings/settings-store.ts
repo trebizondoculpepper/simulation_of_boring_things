@@ -2,6 +2,7 @@ import { signal } from '@preact/signals-core';
 import type { ReadonlySignal } from '@preact/signals-core';
 import { cleanSettings } from './logic/settings';
 import type { Settings } from './logic/settings';
+import { settingsFromUrl } from './logic/url-settings';
 
 /**
  * The player's settings, kept in this browser's storage and shared by the
@@ -33,4 +34,14 @@ export function updateSettings(change: Partial<Settings>) {
   } catch {
     // Storage blocked: kept for this page only.
   }
+}
+
+// Settings in the address (`?graphics=low`, `?resolution=6`, mission 087)
+// are applied once, here, as the settings are first read: before any
+// renderer is made, so no frame is drawn at full cost first. They are
+// saved like a change in the menu, so a returning player keeps them.
+{
+  const fromUrl =
+    typeof location === 'undefined' ? {} : settingsFromUrl(location.search);
+  if (Object.keys(fromUrl).length) updateSettings(fromUrl);
 }

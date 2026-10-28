@@ -1,6 +1,7 @@
 import type { OnScreenControls } from '../../controls/logic/hud-policy';
-import { renderScale } from '../../settings/logic/settings';
+import { choosePreset, renderScale } from '../../settings/logic/settings';
 import type { Settings } from '../../settings/logic/settings';
+import { GRAPHICS_PRESETS } from '../../settings/logic/graphics';
 
 /**
  * The settings menu as a Penfold control panel (mission 096, stage 0): what
@@ -24,6 +25,9 @@ export type CapColour =
 
 /** A setting a potentiometer turns. */
 export type KnobSetting = 'volume' | 'renderLevel' | 'fov' | 'sensitivity';
+
+/** A setting a lever selector chooses among three. */
+export type SelectorSetting = 'onScreenControls' | 'graphics';
 
 /** A push button's action, for the app to supply. */
 export type PanelAction =
@@ -56,7 +60,7 @@ export type PanelItem =
     }
   | {
       kind: 'selector';
-      id: 'onScreenControls';
+      id: SelectorSetting;
       legend: string;
       /** The names printed round it, left to right. */
       positions: readonly string[];
@@ -224,21 +228,33 @@ export const ON_SCREEN_POSITIONS: readonly OnScreenControls[] = [
   'never',
 ];
 
-export const selectorIndex = (value: OnScreenControls) =>
-  Math.max(0, ON_SCREEN_POSITIONS.indexOf(value));
+/** Each selector's settings, left to right: the graphics preset lowest first. */
+const SELECTOR_VALUES: {
+  [K in SelectorSetting]: readonly Settings[K][];
+} = {
+  onScreenControls: ON_SCREEN_POSITIONS,
+  graphics: GRAPHICS_PRESETS,
+};
+
+/** The position a selector stands at for the settings. */
+export function selectorIndex(id: SelectorSetting, now: Settings): number {
+  const values: readonly string[] = SELECTOR_VALUES[id];
+  return Math.max(0, values.indexOf(now[id]));
+}
 
 /** A setting change for a control's new position. */
 export function settingFor(
-  id: KnobSetting | 'onScreenControls',
+  id: KnobSetting | SelectorSetting,
   index: number,
 ): Partial<Settings> {
-  if (id === 'onScreenControls')
-    return {
-      onScreenControls:
-        ON_SCREEN_POSITIONS[
-          Math.max(0, Math.min(ON_SCREEN_POSITIONS.length - 1, index))
-        ],
-    };
+  if (id === 'onScreenControls' || id === 'graphics') {
+    const values = SELECTOR_VALUES[id];
+    const at = Math.max(0, Math.min(values.length - 1, Math.round(index)));
+    // A preset chosen sets its render quality too.
+    return id === 'graphics'
+      ? choosePreset(GRAPHICS_PRESETS[at])
+      : { onScreenControls: ON_SCREEN_POSITIONS[at] };
+  }
   return { [id]: knobValue(id, index) };
 }
 
@@ -289,6 +305,12 @@ export function settingsPanel(offers: PanelOffers): PanelZone[] {
       id: 'picture',
       title: 'PICTURE',
       items: [
+        {
+          kind: 'selector',
+          id: 'graphics',
+          legend: 'GRAPHICS',
+          positions: ['LOW', 'MED', 'HIGH'],
+        },
         {
           kind: 'pot',
           id: 'renderLevel',
