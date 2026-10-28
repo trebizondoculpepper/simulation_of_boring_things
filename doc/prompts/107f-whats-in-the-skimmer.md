@@ -74,7 +74,7 @@ Each a small modelled prop (a few hundred triangles, its own drop profile), with
 | `verruca-sock`   | a verruca sock              | "A verruca sock. Only ever one: where do the other ones go?"                                  |
 | `leaves`         | a handful of leaves         | "Leaves, blown in through the doors."                                                         |
 | `bee`            | a drowned bee               | "A bee. Insects land on the water and can't climb out."                                       |
-| `frog`           | a frog                      | "A frog! They hop in from the grass outside. Lifeguards put them back in the garden."         |
+| `frog`           | a toy frog                  | "A frog! Only a rubber one. Outdoor pools get the real thing."                                |
 | `earring`        | an earring                  | "An earring. Lost property will be pleased."                                                  |
 | `coins`          | a few coins                 | "Coins: 47p. Nobody knows why people swim with money."                                        |
 | `sixpence`       | a pre-1971 sixpence         | "An old sixpence, from before 1971. This has been down here a long time."                     |
@@ -128,7 +128,7 @@ Until the owner places it, build and try it in the next free development room (d
 ## Open questions for the owner (one at a time, in this order)
 
 1. **How many finds a fill:** a random dozen or so from the list, the false teeth one fill in five (recommended), or all of them every time?
-2. **The list:** anything to add or take out (the frog, for instance: real, or a toy frog)?
+2. **The list:** answered in part (the owner, 2026-10-28): "Just a toy, and we will probably have to add all kinds of disgusting things, e.g. sex toys, tampons, etc." The frog is a toy. The list is to grow to what is really found in public pools' skimmers and strainers, adult items included (tampons, a sex toy, and the like), each a plain modelled object with a dry, deadpan caption, never graphic. This changes the brief's "for children, disgusting but not obscene" (line 13 and "Mostly" above); who the hall is for is the owner's next question.
 3. **The caption card:** a line on the screen (recommended), or a little printed label that pops up beside the object in the world?
 4. **The narration:** one clip per object, the cleared moment and an introduction, as listed, recorded by you; any you would like scripted differently from the captions?
 
