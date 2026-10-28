@@ -342,3 +342,20 @@ describe('descriptions of the plant', () => {
     );
   });
 });
+
+it('tells the jacuzzi’s sand filter’s status from its programme (the owner, 2026-10-28: PL3-F1 said none)', () => {
+  const w = newWorld();
+  expect(describeForWorld(w, 'PL3-F1')).toMatch(
+    /the tank is (filtering|standing), and seems clean/,
+  );
+  const washing: World = {
+    ...w,
+    spaFilters: {
+      ...w.spaFilters,
+      pool_03: { ...w.spaFilters.pool_03, phase: 'backwash', phaseTime: 10 },
+    },
+  };
+  expect(describeForWorld(washing, 'PL3-F1')).toMatch(
+    /the tank is (backwashing|standing)/,
+  );
+});
