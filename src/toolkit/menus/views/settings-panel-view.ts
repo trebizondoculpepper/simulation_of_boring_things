@@ -8,6 +8,7 @@ import {
   PlaneGeometry,
   Shape,
   SphereGeometry,
+  TorusGeometry,
 } from 'three';
 import type { Object3D } from 'three';
 import {
@@ -18,7 +19,8 @@ import {
   pushButton,
   selector,
 } from '../../components/core/parts/parts';
-import type { PartSet } from '../../components/core/parts/parts';
+import type { Part, PartSet } from '../../components/core/parts/parts';
+import type { MenuTarget } from '../../controls/logic/menu-navigation';
 import { createPs1Material } from '../../components/core/parts/ps1-material';
 import type { Readable } from '../../components/core/logic/world/components';
 import {
@@ -26,6 +28,7 @@ import {
   createMicroLabel,
   createPanelKit,
   createSevenSegment,
+  kitGlow,
   kitPaint,
 } from '../../components/core/views/eighties-controls';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -94,11 +97,19 @@ export interface SettingsPanelView {
   parts: PartSet;
   /** Advance its parts; whether anything is still moving (so must be drawn). */
   update(delta: number): boolean;
+  /** The controls the focus can rest on, in panel metres (x right, y down). */
+  targets: readonly MenuTarget[];
+  /** Ring the control `id` as focused, or none. */
+  focus(id: string | null): void;
+  /** Turn the control `id` a step, or press it. */
+  work(id: string, direction?: number): void;
   dispose(): void;
 }
 
 /** The bezel's paint. */
 const FRAME = '#3b3f43';
+/** The focus ring's colour: the HUD's amber. */
+const FOCUS = '#ffb43a';
 /** Lettering drawn at this multiple of its usual resolution: crisp up close. */
 const LETTERING = 3;
 /** A module's plate: how thick it is, and how deep the rack's opening behind it. */
@@ -542,6 +553,36 @@ function build_(
   );
 
   // ---- The modules -------------------------------------------------------
+  // The controls the focus can rest on (keyboard and gamepad), each with
+  // an amber ring round it, lit while it has the focus.
+  const targets: (MenuTarget & {
+    use: (direction?: number) => void;
+    ring: Object3D;
+  })[] = [];
+  const ringPaint = kitGlow(kit, FOCUS);
+  const focusable = (
+    m: ModuleBox,
+    face: Object3D,
+    x: number,
+    y: number,
+    radius: number,
+    turns: boolean,
+    part: Part,
+  ) => {
+    const ring = new Mesh(new TorusGeometry(radius, 0.0011, 6, 48), ringPaint);
+    ring.position.set(x, y, 0.0006);
+    ring.visible = false;
+    ring.raycast = () => {};
+    face.add(ring);
+    targets.push({
+      id: m.title,
+      x: m.x + m.w / 2 + x,
+      y: m.y + m.h / 2 - y,
+      turns,
+      use: [...part.uses.values()][0],
+      ring,
+    });
+  };
   const bolt = (m: ModuleBox) => {
     const mod = new Group();
     mod.name = `Module: ${m.title}`;
@@ -613,6 +654,7 @@ function build_(
         );
         place(dial, knobX, centreY).position.z = 0.0003;
         place(knob.object, knobX, centreY);
+        focusable(m, face, knobX, centreY, 0.043, true, knob);
         const readout = createSevenSegment(kit, item.digits, {
           digitHeight: 0.012,
         });
@@ -659,6 +701,7 @@ function build_(
           }),
         );
         place(button.object, 0, centreY - 0.003);
+        focusable(m, face, 0, centreY - 0.003, 0.024, false, button);
         if (item.confirm) {
           const note = createMicroLabel(kit, 'PRESS TWICE', {
             height: 0.0032,
@@ -682,6 +725,7 @@ function build_(
           }),
         );
         place(button.object, 0, centreY - 0.002);
+        focusable(m, face, 0, centreY - 0.002, 0.024, false, button);
         const note = createMicroLabel(kit, 'LIT = ON', {
           height: 0.0032,
           ink: '#202120',
@@ -705,6 +749,7 @@ function build_(
           }),
         );
         place(key.object, 0, centreY - 0.002);
+        focusable(m, face, 0, centreY - 0.002, 0.024, false, key);
         for (const [text, x] of [
           ['0', -0.017],
           ['I', 0.017],
@@ -733,6 +778,7 @@ function build_(
         );
         const cy = centreY - 0.008;
         place(sel.object, 0, cy);
+        focusable(m, face, 0, cy, 0.026, true, sel);
         item.positions.forEach((text, i) => {
           const a = Math.PI / 4 - (i * Math.PI) / 4;
           const l = createMicroLabel(kit, text, {
@@ -806,6 +852,13 @@ function build_(
   return {
     group,
     parts,
+    targets,
+    focus(id) {
+      for (const t of targets) t.ring.visible = t.id === id;
+    },
+    work(id, direction = 1) {
+      targets.find((t) => t.id === id)?.use(direction);
+    },
     update(delta) {
       parts.update(delta);
       for (const step of meterSteps) step(delta);

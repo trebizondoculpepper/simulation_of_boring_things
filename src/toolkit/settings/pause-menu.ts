@@ -1,5 +1,6 @@
 import { effect } from '@preact/signals-core';
 import { paused } from '../controls/logic/paused';
+import { listenMenu } from '../controls/input/menu-input';
 import { controlsHelp } from '../controls/logic/controls';
 import { flightHelp } from '../controls/logic/noclip';
 import type { Readable } from '../components/core/logic/world/components';
@@ -82,19 +83,6 @@ export const BINDINGS: readonly [string, string, string][] = [
   ['Roll / level in noclip', 'Q / E; R to level', 'LB / RB; Y to level'],
   ['This menu', 'Esc with the mouse free', 'Start'],
 ];
-
-/** A gamepad's buttons (standard mapping) the menu uses. */
-const PAD = {
-  a: 0,
-  b: 1,
-  lb: 4,
-  rb: 5,
-  start: 9,
-  up: 12,
-  down: 13,
-  left: 14,
-  right: 15,
-};
 
 export function createPauseMenu(actions: PauseMenuActions) {
   const backdrop = document.createElement('div');
@@ -441,44 +429,31 @@ export function createPauseMenu(actions: PauseMenuActions) {
       el.dispatchEvent(new Event('change', { bubbles: true }));
     }
   };
-  const was = new Set<number>();
-  let stickHeld = false;
-  const poll = () => {
-    requestAnimationFrame(poll);
-    const pad =
-      typeof navigator !== 'undefined' && navigator.getGamepads
-        ? [...navigator.getGamepads()].find((p) => p?.mapping === 'standard')
-        : undefined;
-    if (!pad) return;
-    const went = (i: number) => {
-      const down = pad.buttons[i]?.pressed === true;
-      const fresh = down && !was.has(i);
-      if (down) was.add(i);
-      else was.delete(i);
-      return fresh;
-    };
-    const presses = Object.fromEntries(
-      Object.entries(PAD).map(([name, i]) => [name, went(i)]),
-    ) as Record<keyof typeof PAD, boolean>;
-    if (presses.start) {
-      if (isOpen()) close();
-      else if (actions.canOpen?.() ?? true) open();
-      return;
-    }
-    if (!isOpen()) return;
-    if (presses.b) return close();
-    if (presses.lb) step(-1);
-    if (presses.rb) step(1);
-    const stickY = pad.axes[1] ?? 0;
-    const stick = Math.abs(stickY) > 0.6 ? Math.sign(stickY) : 0;
-    if (presses.up || (stick < 0 && !stickHeld)) moveFocus(-1);
-    if (presses.down || (stick > 0 && !stickHeld)) moveFocus(1);
-    stickHeld = stick !== 0;
-    if (presses.left) nudge(-1);
-    if (presses.right) nudge(1);
-    if (presses.a) (document.activeElement as HTMLElement | null)?.click();
-  };
-  requestAnimationFrame(poll);
+  // The gamepad, through the control scheme's menu input (`menu-input.ts`):
+  // Start toggles the menu; open, the d-pad or stick moves between
+  // controls, left and right change a slider, A works the chosen control,
+  // B closes, LB and RB switch tabs. (Its keys are the browser's own.)
+  listenMenu({
+    intent(intent, from) {
+      if (from !== 'gamepad') return false;
+      if (!isOpen()) {
+        if (intent !== 'toggle' || !(actions.canOpen?.() ?? true)) return false;
+        open();
+        return true;
+      }
+      if (intent === 'toggle' || intent === 'back') close();
+      else if (intent === 'turnDown') step(-1);
+      else if (intent === 'turnUp') step(1);
+      else if (intent === 'up') moveFocus(-1);
+      else if (intent === 'down') moveFocus(1);
+      else if (intent === 'left') nudge(-1);
+      else if (intent === 'right') nudge(1);
+      else if (intent === 'activate')
+        (document.activeElement as HTMLElement | null)?.click();
+      return true;
+    },
+    modal: () => isOpen(),
+  });
 
   document.body.append(backdrop);
   return {

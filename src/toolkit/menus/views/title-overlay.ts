@@ -9,14 +9,21 @@ import {
   PointLight,
   Raycaster,
   Scene,
+  TorusGeometry,
   Vector2,
   Vector3,
   WebGLRenderer,
 } from 'three';
 import type { Object3D } from 'three';
 import { createPartSet, pushButton } from '../../components/core/parts/parts';
+import { listenMenu } from '../../controls/input/menu-input';
+import { menuStep } from '../../controls/logic/menu-navigation';
+import type { MenuTarget } from '../../controls/logic/menu-navigation';
 import { useEnvironment } from '../../components/core/parts/render-style';
-import { createPanelKit } from '../../components/core/views/eighties-controls';
+import {
+  createPanelKit,
+  kitGlow,
+} from '../../components/core/views/eighties-controls';
 import { createEngravedPlate } from '../../components/core/views/plant-signs';
 import { withLetteringScale } from '../../components/core/views/lettering-resolution';
 import { DESK_VIEW } from '../logic/iso-view';
@@ -33,8 +40,8 @@ import {
 } from './settings-panel-view';
 
 /**
- * The title's menu as a Penfold box (mission 096, stage 2, behind
- * `?menu=panel`; the owner, 2026-10-28): one machined plate in the bottom
+ * The title's menu as a Penfold box (mission 096, stage 2, the
+ * default since 2026-10-28; the owner): one machined plate in the bottom
  * left of the screen, four illuminated push buttons in a column, each with
  * its engraved legend to its right, laid out on the rack grid
  * (`title-box.ts`), over the title's low-resolution attract sequence,
@@ -57,6 +64,8 @@ export interface TitleOverlayActions {
   canContinue(): boolean;
   settings(): void;
   instructions(): void;
+  /** Whether something (the settings panel) is open over the title. */
+  covered?(): boolean;
 }
 
 export function createTitleOverlay(actions: TitleOverlayActions) {
@@ -95,6 +104,17 @@ export function createTitleOverlay(actions: TitleOverlayActions) {
   const armed = signal(false);
   let armedTimer: ReturnType<typeof setTimeout> | undefined;
   const armedPlates: Object3D[] = [];
+  /** The buttons the focus can rest on (keyboard and gamepad), each ringed while it has it. */
+  const targets: (MenuTarget & {
+    ring: Object3D;
+    use: (direction?: number) => void;
+  })[] = [];
+  let focused: string | null = null;
+  const showFocus = (id: string | null) => {
+    focused = id;
+    for (const t of targets) t.ring.visible = t.id === id;
+    requestDraw();
+  };
   const kit = createPanelKit();
   const parts = createPartSet();
   const box = new Group();
@@ -129,6 +149,7 @@ export function createTitleOverlay(actions: TitleOverlayActions) {
     box.add(face);
     fastenAt(paints, face, W, H);
     const partsFrom = kit.materials.length;
+    const ringPaint = kitGlow(kit, '#ffb43a');
     for (const cell of layout.cells) {
       const item = cell.item!;
       const x = cell.x + cell.w / 2 - W / 2;
@@ -152,6 +173,21 @@ export function createTitleOverlay(actions: TitleOverlayActions) {
         );
         button.object.position.set(x, y, 0);
         face.add(button.object);
+        const ring = new Mesh(
+          new TorusGeometry(0.0225, 0.0011, 6, 48),
+          ringPaint,
+        );
+        ring.position.set(x, y, 0.0006);
+        ring.visible = false;
+        ring.raycast = () => {};
+        face.add(ring);
+        targets.push({
+          id,
+          x: cell.x + cell.w / 2,
+          y: cell.y + cell.h / 2,
+          ring,
+          use: [...button.uses.values()][0],
+        });
       } else {
         const legend = (text: string) => {
           const plate = createEngravedPlate(kit, [text], {
@@ -260,6 +296,7 @@ export function createTitleOverlay(actions: TitleOverlayActions) {
   canvas.addEventListener('pointerdown', (event) => {
     event.preventDefault();
     event.stopPropagation();
+    showFocus(null);
     const use = pick(event);
     if (use) {
       use(1);
@@ -285,6 +322,22 @@ export function createTitleOverlay(actions: TitleOverlayActions) {
     requestDraw();
   };
   addEventListener('resize', onResize);
+
+  // Keyboard and gamepad, through the control scheme's menu input: the
+  // arrows, d-pad or stick move the ring between the buttons; Enter, Space
+  // or A press the one ringed, as a click would.
+  const stopListening = listenMenu({
+    intent(intent) {
+      if (!open || actions.covered?.()) return false;
+      const step = menuStep(targets, focused, intent);
+      if (step.kind === 'focus') showFocus(step.id);
+      else if (step.kind === 'press') {
+        showFocus(step.id);
+        targets.find((t) => t.id === step.id)?.use(1);
+      } else return false;
+      return true;
+    },
+  });
 
   return {
     show() {
@@ -313,6 +366,7 @@ export function createTitleOverlay(actions: TitleOverlayActions) {
     },
     dispose() {
       this.hide();
+      stopListening();
       removeEventListener('resize', onResize);
       parts.dispose();
       for (const m of kit.materials) m.dispose();

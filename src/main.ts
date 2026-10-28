@@ -213,13 +213,28 @@ effect(() => {
 // (Minecraft's way); Save is for reassurance, and Quit to Title saves first.
 // Until the title screen exists, the title is the room list.
 /**
- * Mission 096, stage 0: `?menu=panel` shows the settings menu as a
- * full-screen Penfold instrument panel drawn over the room, in place of
- * the DOM pause menu (Esc and the gear open it; it opens at once on
- * arrival). It does not pause the game. The DOM menus stay the default.
+ * Mission 096 (stage 4 brought forward by the owner, 2026-10-28): the
+ * menus are Penfold panels by default: the settings panel SP-1 drawn over
+ * the room (Esc, a pad's Start or the gear open it; it does not pause the
+ * game), and the title's box in the bottom left. The plain DOM menus are
+ * the fallback: `?menu=plain`, no WebGL 2, or a panel that fails to start.
  */
-const menuPanelFlag =
-  new URLSearchParams(location.search).get('menu') === 'panel';
+const panelsWanted =
+  new URLSearchParams(location.search).get('menu') !== 'plain' &&
+  typeof WebGL2RenderingContext !== 'undefined';
+let panelsFailed = false;
+const panelsOn = () => panelsWanted && !panelsFailed;
+/** A panel could not start: the plain menus from now on. */
+const panelsFail = (error: unknown) => {
+  console.warn(
+    'The menu panels could not start; using the plain menus.',
+    error,
+  );
+  panelsFailed = true;
+  menuPanel = null;
+  const list = document.querySelector<HTMLElement>('.title-menu');
+  if (list) list.style.display = '';
+};
 let menuPanel: {
   open(options?: { inGame?: boolean }): void;
   readonly isOpen: boolean;
@@ -232,9 +247,9 @@ const pauseMenu = createPauseMenu({
     goTo('');
   },
   // Not on the title screen or the room list: only in a room; and not
-  // while the console is down (its Esc is the console's). With
-  // `?menu=panel` the panel overlay answers Esc instead.
-  canOpen: () => current !== undefined && !consoleOpen.value && !menuPanelFlag,
+  // while the console is down (its Esc is the console's). While the
+  // panels are on, the settings panel answers Esc and Start instead.
+  canOpen: () => current !== undefined && !consoleOpen.value && !panelsOn(),
   devPanel: () => goTo('?dev'),
   noclip,
   setNoclip(on) {
@@ -247,63 +262,96 @@ const pauseMenu = createPauseMenu({
   },
   copyCamera: () => copyCameraLocation(),
 });
-if (menuPanelFlag)
+if (panelsWanted)
   void Promise.all([
     import('./toolkit/menus/views/menu-overlay'),
     import('./toolkit/settings/pause-menu'),
     import('./toolkit/controls/logic/controls'),
-  ]).then(([{ createMenuOverlay }, { BINDINGS }, { controlsHelp }]) => {
-    const overlay = createMenuOverlay({
-      actions: {
-        save: saveGame,
-        holding: worldStore('dev').holding,
-        quitToTitle() {
-          overlay.close();
-          saveGame();
-          goTo('');
+  ])
+    .then(([{ createMenuOverlay }, { BINDINGS }, { controlsHelp }]) => {
+      const overlay = createMenuOverlay({
+        actions: {
+          save: saveGame,
+          holding: worldStore('dev').holding,
+          quitToTitle() {
+            overlay.close();
+            saveGame();
+            goTo('');
+          },
+          devPanel: () => {
+            overlay.close();
+            goTo('?dev');
+          },
+          noclip,
+          setNoclip(on) {
+            if (on) rememberPlayer();
+            noclip.value = on;
+            if (on) {
+              stopSeeing();
+              stopDryPeek();
+            }
+          },
+          copyCamera: () => copyCameraLocation(),
         },
-        devPanel: () => {
-          overlay.close();
-          goTo('?dev');
-        },
-        noclip,
-        setNoclip(on) {
-          if (on) rememberPlayer();
-          noclip.value = on;
-          if (on) {
-            stopSeeing();
-            stopDryPeek();
+        bindings: BINDINGS,
+        touchHelp: controlsHelp('touch'),
+        build: buildLine(),
+        development: import.meta.env.DEV,
+        canOpen: () =>
+          panelsOn() && current !== undefined && !consoleOpen.value,
+        onFail: panelsFail,
+      });
+      menuPanel = {
+        open(options) {
+          try {
+            overlay.open(options);
+          } catch (error) {
+            panelsFail(error);
+            pauseMenu.open(
+              options?.inGame === false ? 'Graphics' : 'Game',
+              options,
+            );
           }
         },
-        copyCamera: () => copyCameraLocation(),
-      },
-      bindings: BINDINGS,
-      touchHelp: controlsHelp('touch'),
-      build: buildLine(),
-      development: import.meta.env.DEV,
-      canOpen: () => current !== undefined && !consoleOpen.value,
-    });
-    menuPanel = overlay;
-    // For measuring the trial from the browser's console.
-    (globalThis as { menuPanel?: unknown }).menuPanel = overlay;
-    const openWhenReady = () =>
-      current !== undefined ? overlay.open() : setTimeout(openWhenReady, 250);
-    if (new URLSearchParams(location.search).has('room')) openWhenReady();
-  });
-// Mission 096, stage 2: with `?menu=panel`, the title's menu is a Penfold
-// box in the bottom left (`title-overlay.ts`) in place of the DOM list,
-// over the same attract sequence; it shows and hides with the title.
-if (menuPanelFlag)
-  void import('./toolkit/menus/views/title-overlay').then(
-    ({ createTitleOverlay }) => {
+        get isOpen() {
+          return overlay.isOpen;
+        },
+      };
+      // For measuring and testing from the browser's console (development).
+      if (import.meta.env.DEV) {
+        (globalThis as { menuPanel?: unknown }).menuPanel = overlay;
+        // Menu intents as a keyboard or gamepad would send them, for testing.
+        void import('./toolkit/controls/input/menu-input').then(
+          ({ sendMenuIntent }) =>
+            ((globalThis as { menuIntent?: unknown }).menuIntent =
+              sendMenuIntent),
+        );
+      }
+    })
+    .catch(panelsFail);
+// Mission 096, stage 2: the title's menu is a Penfold box in the bottom
+// left (`title-overlay.ts`) in place of the DOM list, over the same
+// attract sequence; it shows and hides with the title.
+if (panelsWanted)
+  void import('./toolkit/menus/views/title-overlay')
+    .then(({ createTitleOverlay }) => {
       const box = createTitleOverlay(titleActions);
       const list = document.querySelector<HTMLElement>('.title-menu');
-      if (list) list.style.visibility = 'hidden';
+      if (list) list.style.display = 'none';
       const show = titleScreen.show.bind(titleScreen);
       const hide = titleScreen.hide.bind(titleScreen);
+      const showBox = () => {
+        if (!panelsOn()) return;
+        try {
+          box.show();
+        } catch (error) {
+          box.hide();
+          panelsFail(error);
+        }
+      };
       titleScreen.show = () => {
         show();
-        box.show();
+        showBox();
       };
       titleScreen.hide = () => {
         hide();
@@ -312,9 +360,9 @@ if (menuPanelFlag)
       if (
         document.querySelector<HTMLElement>('.title-screen')?.hidden === false
       )
-        box.show();
-    },
-  );
+        showBox();
+    })
+    .catch(panelsFail);
 const settingsButton = document.createElement('button');
 settingsButton.type = 'button';
 settingsButton.className = 'hud-button hud-settings';

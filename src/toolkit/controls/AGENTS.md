@@ -34,3 +34,5 @@ How inputs work. This is the one control scheme every room in every game built o
 - `input/knob-turning.ts`: which way a use turns a knob.
 - `logic/torch.ts`, `input/torch.ts`: the torch, its beam's lag, and its light in a room's scene.
 - `input/touch-sticks.ts`: the on-screen thumbsticks and CROUCH button for touch.
+- `logic/menu-navigation.ts`, `input/menu-input.ts`: menus on every input: what keys and pad buttons mean to a menu, spatial focus movement, and the one reader that hands them to whichever menu takes them (mission 096). No menu reads a key or polls a pad of its own.
+- `logic/menu-open.ts`: whether a menu panel has the controls, which holds the walker still without pausing the world.

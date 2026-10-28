@@ -39,10 +39,11 @@ import { createTorchLight } from './torch';
 import { settings } from '../../settings/settings-store';
 import { paused } from '../logic/paused';
 import { consoleOpen } from '../logic/console-open';
+import { menuOpen } from '../logic/menu-open';
 import { requestCopy, requestNoclipToggle } from './copy-actions';
 
-/** Whether the walker is to take no input: paused, or the console down. */
-const inputHeld = () => paused.value || consoleOpen.value;
+/** Whether the walker is to take no input: paused, the console down, or a menu panel open. */
+const inputHeld = () => paused.value || consoleOpen.value || menuOpen.value;
 // Capability and last active device survive room changes, not browser sessions.
 let sessionInput: InputState | null = null;
 

@@ -9,6 +9,7 @@ import { partAudio } from '../components/core/audio/part-audio';
  */
 
 import { createTitleMusic } from './title-music';
+import { listenMenu } from '../controls/input/menu-input';
 
 export interface TitleActions {
   newGame(): void;
@@ -106,33 +107,25 @@ export function createTitleScreen(actions: TitleActions) {
     }
   });
 
-  // The gamepad, polled each frame while the title is shown.
-  const was = new Set<number>();
-  let stickHeld = false;
-  const poll = () => {
-    requestAnimationFrame(poll);
-    if (!showing()) return;
-    soundHint.hidden = partAudio.running();
-    const pad =
-      typeof navigator !== 'undefined' && navigator.getGamepads
-        ? [...navigator.getGamepads()].find((p) => p?.mapping === 'standard')
-        : undefined;
-    if (!pad) return;
-    const went = (i: number) => {
-      const down = pad.buttons[i]?.pressed === true;
-      const fresh = down && !was.has(i);
-      if (down) was.add(i);
-      else was.delete(i);
-      return fresh;
-    };
-    const stickY = pad.axes[1] ?? 0;
-    const stick = Math.abs(stickY) > 0.6 ? Math.sign(stickY) : 0;
-    if (went(12) || (stick < 0 && !stickHeld)) move(-1);
-    if (went(13) || (stick > 0 && !stickHeld)) move(1);
-    stickHeld = stick !== 0;
-    if (went(0)) (document.activeElement as HTMLElement | null)?.click();
+  // The sound hint, until sound runs.
+  const watchSound = () => {
+    requestAnimationFrame(watchSound);
+    if (showing()) soundHint.hidden = partAudio.running();
   };
-  requestAnimationFrame(poll);
+  requestAnimationFrame(watchSound);
+  // The gamepad, through the control scheme's menu input (`menu-input.ts`):
+  // the d-pad or stick moves between the items, A works the one chosen.
+  listenMenu({
+    intent(intent, from) {
+      if (from !== 'gamepad' || !showing() || !items().length) return false;
+      if (intent === 'up') move(-1);
+      else if (intent === 'down') move(1);
+      else if (intent === 'activate')
+        (document.activeElement as HTMLElement | null)?.click();
+      else return false;
+      return true;
+    },
+  });
 
   document.body.append(root);
   return {

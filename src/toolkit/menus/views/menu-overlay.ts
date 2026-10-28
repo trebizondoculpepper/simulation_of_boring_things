@@ -14,6 +14,9 @@ import {
 } from 'three';
 import type { Object3D } from 'three';
 import { knobDirection } from '../../controls/input/knob-turning';
+import { listenMenu } from '../../controls/input/menu-input';
+import { menuStep } from '../../controls/logic/menu-navigation';
+import { menuOpen } from '../../controls/logic/menu-open';
 import { useEnvironment } from '../../components/core/parts/render-style';
 import { settings } from '../../settings/settings-store';
 import {
@@ -32,7 +35,7 @@ import type {
 
 /**
  * The settings menu as a full-screen instrument panel over the game
- * (mission 096, stage 0, behind `?menu=panel`): its own transparent canvas
+ * (mission 096; the default menu since 2026-10-28, `?menu=plain` for the DOM one): its own transparent canvas
  * and WebGL renderer, at the device's pixel ratio (not the render
  * quality's), so its lettering stays crisp however coarse the room behind
  * is drawn; an orthographic desk view of the panel (`iso-view.ts`), which
@@ -63,6 +66,7 @@ export function createMenuOverlay({
   build,
   development,
   canOpen,
+  onFail,
 }: {
   actions: Omit<SettingsPanelActions, 'resume'>;
   bindings: readonly (readonly [string, string, string])[];
@@ -71,6 +75,8 @@ export function createMenuOverlay({
   development: boolean;
   /** Whether Esc may open it now (in a room, the console up, …). */
   canOpen: () => boolean;
+  /** The panel could not start (no WebGL): the app falls back to its plain menu. */
+  onFail?: (error: unknown) => void;
 }) {
   const canvas = document.createElement('canvas');
   canvas.className = 'menu-overlay';
@@ -252,6 +258,7 @@ export function createMenuOverlay({
     }
     document.exitPointerLock?.();
     open = true;
+    menuOpen.value = true;
     canvas.style.display = 'block';
     stats.frames = 0;
     stats.worstMs = 0;
@@ -261,6 +268,8 @@ export function createMenuOverlay({
   function close() {
     if (!open) return;
     open = false;
+    menuOpen.value = false;
+    focused = null;
     canvas.style.display = 'none';
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
@@ -303,6 +312,8 @@ export function createMenuOverlay({
   canvas.addEventListener('pointerdown', (event) => {
     event.preventDefault();
     event.stopPropagation();
+    // The pointer works the panel directly: no focus ring.
+    panel?.focus(null);
     const hit = pick(event);
     if (hit) {
       const [object, use, point] = hit;
@@ -350,29 +361,57 @@ export function createMenuOverlay({
     requestDraw(0.05);
   }
 
-  // ---- Keys: Esc opens and closes it; the game hears nothing while it is open.
-  // (Stage 1 moves this into the control scheme's menu input.)
-  const onKey = (event: KeyboardEvent) => {
-    if (!open) {
-      if (
-        event.type === 'keydown' &&
-        event.key === 'Escape' &&
-        !document.pointerLockElement &&
-        canOpen()
-      ) {
-        event.preventDefault();
-        openMenu();
-      }
-      return;
+  // ---- Keyboard and gamepad, through the control scheme's menu input ----
+  // Esc (with the pointer free) or a pad's Start opens it in a room; open,
+  // the arrows, d-pad or stick move a ring of focus between its controls,
+  // Enter, Space or A press, Left and Right (or LB and RB) turn a knob or
+  // selector, and Esc, B or Start close it. Every other key is held back
+  // from the game while it is open (`menu-input.ts`).
+  let focused: string | null = null;
+  const showFocus = (id: string | null) => {
+    focused = id;
+    panel?.focus(id);
+    const target = panel?.targets.find((t) => t.id === id);
+    if (target && range > 0) {
+      // Scrolled so the focused control is in view, centred.
+      const seen = innerHeight / ppm / Math.cos(DESK_VIEW.pitch);
+      scroll = clampScroll(target.y - seen / 2, range);
+      place();
     }
-    if (event.type === 'keydown' && event.key === 'Escape') {
-      event.preventDefault();
-      close();
-    }
-    event.stopImmediatePropagation();
+    requestDraw();
   };
-  addEventListener('keydown', onKey, true);
-  addEventListener('keyup', onKey, true);
+  const stopListening = listenMenu({
+    intent(intent, from) {
+      if (!open) {
+        const opens =
+          intent === 'toggle' || (intent === 'back' && from === 'keyboard');
+        if (!opens || !canOpen()) return false;
+        try {
+          openMenu();
+        } catch (error) {
+          onFail?.(error);
+          return false;
+        }
+        showFocus(panel?.targets[0]?.id ?? null);
+        return true;
+      }
+      if (intent === 'toggle') {
+        close();
+        return true;
+      }
+      const step = menuStep(panel?.targets ?? [], focused, intent);
+      if (step.kind === 'back') close();
+      else if (step.kind === 'focus') showFocus(step.id);
+      else if (step.kind === 'turn' || step.kind === 'press') {
+        if (focused !== step.id) showFocus(step.id);
+        else panel?.focus(step.id);
+        panel?.work(step.id, step.kind === 'turn' ? step.by : 1);
+        requestDraw();
+      }
+      return true;
+    },
+    modal: () => open,
+  });
 
   return {
     open: openMenu,
@@ -387,8 +426,7 @@ export function createMenuOverlay({
       close();
       stopSettings();
       removeEventListener('resize', onResize);
-      removeEventListener('keydown', onKey, true);
-      removeEventListener('keyup', onKey, true);
+      stopListening();
       panel?.dispose();
       freeEnvironment?.();
       renderer?.dispose();
