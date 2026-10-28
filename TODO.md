@@ -41,7 +41,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Performance
 
-- [x] **Bridge ambient occlusion cost** (2026-10-28; `20ba515`): reduced the bridge-only GTAO sample count from 12 to 6 after an isolated browser comparison. At a 2560 × 1426 render size, the test rose from about 47 to 58 fps; the 95th-percentile frame interval fell from about 33 to 17 ms. [Measurements](doc/reports/bridge-render-performance-2026-10-28.md).
+- [x] **Bridge ambient occlusion cost** (2026-10-28; `ef165e4`): reduced the bridge-only GTAO sample count from 12 to 6 after an isolated browser comparison. At a 2560 × 1426 render size, the test rose from about 47 to 58 fps; the 95th-percentile frame interval fell from about 33 to 17 ms. [Measurements](doc/reports/bridge-render-performance-2026-10-28.md).
 - [ ] **Bridge performance on other GPUs:** compare the six-sample look and frame times on lower-power machines; consider lower-resolution AO through the planned graphics presets if the bridge remains slow.
 
 - [ ] **The touch panels redraw on change before any goes into the game** (flagged by [094](doc/reports/component-cost-2026-10-27.md), 2026-10-27; for mission 093's owner): every dev47 and dev48 panel uploads its whole canvas about 60 times a second with nothing changing, 10–70 M texels a second each (dev48's 69 together about 2 G a second). Proposed: the `ui2d` tree marks itself dirty and the touch surface redraws and uploads only then; its animations (blinks, sweeps) at no more than 10 Hz.
