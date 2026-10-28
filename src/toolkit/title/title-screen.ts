@@ -4,8 +4,7 @@ import { partAudio } from '../components/core/audio/part-audio';
  * Presents: The Pool", the main menu (New game, Continue, Settings,
  * Instructions) and the version and build in the bottom right-hand
  * corner. Worked by mouse, arrow keys and Enter, or a gamepad's d-pad (or
- * left stick) and A. Its background is plain for now; later a blurred,
- * slowly cycling render of the game's rooms seen from high up.
+ * left stick) and A. The game's attract sequence runs behind it.
  */
 
 import { createTitleMusic } from './title-music';

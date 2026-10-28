@@ -217,8 +217,8 @@ effect(() => {
  * Mission 096 (stage 4 brought forward by the owner, 2026-10-28): the
  * menus are Penfold panels by default: the settings panel SP-1 drawn over
  * the room (Esc, a pad's Start or the gear open it; it does not pause the
- * game), and the title's box in the bottom left. The plain DOM menus are
- * the fallback: `?menu=plain`, no WebGL 2, or a panel that fails to start.
+ * game). The title keeps its simple text menu. The plain DOM settings menu
+ * is the fallback: `?menu=plain`, no WebGL 2, or a panel that fails to start.
  */
 const panelsWanted =
   new URLSearchParams(location.search).get('menu') !== 'plain' &&
@@ -329,61 +329,6 @@ if (panelsWanted)
         );
       }
     })
-    .catch(panelsFail);
-// Mission 096, stage 2: the title's menu is a Penfold box in the bottom
-// left (`title-overlay.ts`) in place of the DOM list, over the same
-// attract sequence; it shows and hides with the title.
-if (panelsWanted)
-  void Promise.all([
-    import('./toolkit/menus/views/title-overlay'),
-    import('./toolkit/menus/views/dom-mirror'),
-    import('./toolkit/menus/logic/title-box'),
-  ])
-    .then(
-      ([{ createTitleOverlay }, { VISUALLY_HIDDEN }, { TITLE_OPTIONS }]) => {
-        const box = createTitleOverlay(titleActions);
-        // The DOM list stays as the box's accessible copy: hidden from
-        // sight, its focus kept in step with the box's ring both ways.
-        const list = document.querySelector<HTMLElement>('.title-menu');
-        if (list) Object.assign(list.style, VISUALLY_HIDDEN);
-        const items = [
-          ...(list?.querySelectorAll<HTMLButtonElement>('.title-item') ?? []),
-        ];
-        box.onFocus((id) => {
-          const at = TITLE_OPTIONS.findIndex((o) => o.id === id);
-          if (at >= 0 && document.activeElement !== items[at])
-            items[at]?.focus({ preventScroll: true });
-        });
-        items.forEach((item, at) =>
-          item.addEventListener('focus', () =>
-            box.focus(TITLE_OPTIONS[at]?.id ?? null),
-          ),
-        );
-        const show = titleScreen.show.bind(titleScreen);
-        const hide = titleScreen.hide.bind(titleScreen);
-        const showBox = () => {
-          if (!panelsOn()) return;
-          try {
-            box.show();
-          } catch (error) {
-            box.hide();
-            panelsFail(error);
-          }
-        };
-        titleScreen.show = () => {
-          show();
-          showBox();
-        };
-        titleScreen.hide = () => {
-          hide();
-          box.hide();
-        };
-        if (
-          document.querySelector<HTMLElement>('.title-screen')?.hidden === false
-        )
-          showBox();
-      },
-    )
     .catch(panelsFail);
 const settingsButton = document.createElement('button');
 settingsButton.type = 'button';
