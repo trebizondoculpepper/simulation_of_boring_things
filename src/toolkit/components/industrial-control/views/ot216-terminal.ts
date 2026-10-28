@@ -111,10 +111,23 @@ export interface Ot216Reading {
 }
 
 /**
+ * The OT-216's size over the 200 × 140 × 50 mm it was designed at: the
+ * owner, 2026-10-28, "20% bigger", so its LCD reads more easily; the
+ * case 240 × 168 × 60 mm, everything on it scaled with it.
+ */
+export const OT216_SCALE = 1.2;
+/** Its case, metres, as built: width, height and depth. */
+export const OT216_CASE = {
+  w: 0.2 * OT216_SCALE,
+  h: 0.14 * OT216_SCALE,
+  d: 0.05 * OT216_SCALE,
+} as const;
+
+/**
  * Penfold Controls' OT-216 operator terminal (prompt 091; the owner,
  * 2026-10-27; after the Siemens OP3/OP7, the Allen-Bradley DTAM Micro
- * and the Mitsubishi FX-10DU): a light grey moulded case about 200 × 140
- * × 50 mm screwed to a wall, its chemical's band across the top, a 16 × 2
+ * and the Mitsubishi FX-10DU): a light grey moulded case about 240 × 168
+ * × 60 mm (`OT216_CASE`) screwed to a wall, its chemical's band across the top, a 16 × 2
  * STN LCD, RUN, CALL and ALARM LEDs, a membrane keypad with tactile domes
  * (F1 MON, F2 SET, F3 CMD, ESC, ENTER and four cursor keys in an
  * inverted T), a LOCAL ACCESS key switch and one cable gland underneath.
@@ -140,7 +153,11 @@ export function createOt216Terminal(
     send: (command: TerminalCommand) => void;
   },
 ) {
+  const outer = new Group();
+  // Drawn at its design size, then scaled as a whole (`OT216_SCALE`).
   const group = new Group();
+  group.scale.setScalar(OT216_SCALE);
+  outer.add(group);
   const t = tools(kit);
   const parts = createPartSet();
   const W = 0.2;
@@ -277,7 +294,7 @@ export function createOt216Terminal(
     inset: 0.008,
   });
   return {
-    object: group,
+    object: outer,
     parts,
     /** Its access key at ON. */
     access: access.state,

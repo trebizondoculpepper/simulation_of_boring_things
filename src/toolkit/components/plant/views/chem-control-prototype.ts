@@ -5,7 +5,10 @@ import { createPartSet, pushButton, selector } from '../../core/parts/parts';
 import { plantTools } from './plant-tools';
 import { createDistributionPanel } from './chemical-handling-kit';
 import type { DistributionReading } from './chemical-handling-kit';
-import { createOt216Terminal } from '../../industrial-control/views/ot216-terminal';
+import {
+  OT216_SCALE,
+  createOt216Terminal,
+} from '../../industrial-control/views/ot216-terminal';
 import { createChemControlBox } from './chem-control-box';
 import {
   CONTROL,
@@ -195,11 +198,13 @@ export function createChemControlPrototype(
   // Each terminal's cable in conduit, down and along to the box's glands.
   const conduit = p.paint('#5d6265', 0.6);
   terminals.forEach(({ x: tx }, i) => {
-    const gx = tx + 0.06;
+    // Its gland's conduit, as the terminal draws it, ends here.
+    const gx = tx + 0.06 * OT216_SCALE;
+    const top = 1.55 - 0.204 * OT216_SCALE;
     const y = 1.05 - i * 0.04;
     const bx = boxX - 0.2 + i * 0.1;
     const z = wallZ + 0.025;
-    p.rod(root, conduit, [gx, 1.35, z], [gx, y, z], 0.01, 8);
+    p.rod(root, conduit, [gx, top, z], [gx, y, z], 0.01, 8);
     p.rod(root, conduit, [gx, y, z], [bx, y, z], 0.01, 8);
     p.rod(root, conduit, [bx, y, z], [bx, 1.19, z], 0.01, 8);
   });
