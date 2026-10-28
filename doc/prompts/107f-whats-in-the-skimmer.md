@@ -1,5 +1,7 @@
 # 107f: PLANTROOMS, "What's in the Skimmer?": a game of emptying a skimmer
 
+**Now part of [107l, A Day in the Life](107l-a-day-in-the-life.md)** (the owner, 2026-10-28: "Skimmer could be part of A Day in the Life. It's an exhibit about a poolman's duties, which includes cleaning the skimmers"): not a hall of its own but that hall's hands-on exhibit. Everything below still holds; where it speaks of "the hall", read the skimmer's stretch of that hall.
+
 Status: planned 2026-10-28, not started. A sub-prompt of mission 107 (`doc/prompts/107-pool-science-museum.md`), after 107-0 (`doc/prompts/107-0-exhibit-groundwork.md`), which gives a hall its exhibit hook and reset on entry. It is one of the owner's themes for Halls 5 to 12, **not yet given a hall number**: the owner will place it. It is a separate hall from "Gutters You Can Trust" (pool edges through the ages), which may become a hall of its own; the owner is deciding.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first and follow it, above all: all input goes through the one control scheme in `src/toolkit/controls/` (read its `AGENTS.md`), and rooms bind no keys of their own; `logic/` is pure and tested; displays redraw only when they change. Then read mission 107 (Hall 0's painted pool), 107-0, and dev5, "Putting Things in the Bin" (`src/toolkit/gallery/rooms/bin-room.ts`), which already carries objects to a skip.
