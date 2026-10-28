@@ -31,6 +31,7 @@ Then, bringing the first step forward: "Begin by actually defining this as a mis
 1. **Every hall starts from its reset state the moment you step into it.** Its time is set to now, the visitor's real local time, and its exhibit is put in its reset condition. Walking in is the same as pressing its RESET button. No hall's state carries over from an earlier visit.
 2. **Time.** A hall's simulated time starts at now. If the visitor speeds it up, the hall's time display follows. Not every hall needs a clock: halls may show time in different ways, such as a pool clock, a chart recorder's paper, a day-and-night skylight, a log sheet, or a digital readout. Each hall's sub-prompt says which it uses.
 3. **Halls start empty.** Each exhibit space begins with set decoration only (the shell, signage, the safety layer). The exhibit itself is built later, by its sub-prompt.
+4. **One concept per hall** (the owner, 2026-10-28: "each room should teach one concept"): a hall shows only what teaches its own concept; readouts that belong to another hall's concept (Hall 2's energy used, say) are left out.
 
 ### The sub-prompts
 

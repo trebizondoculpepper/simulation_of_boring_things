@@ -30,15 +30,11 @@ The owner, 2026-10-28: "Start planning out each of those rooms. And yes, reuse D
 
 **Leads on:** "The water is warm, clean and clear. But clear is not the same as safe: next, how the plant keeps it free of germs, by itself." (Hall 3.)
 
-## Dev51's heating: keep it, re-signed (recommended)
+## Dev51's heating: simplified (the owner, 2026-10-28)
 
-Hall 1 now teaches heating with a real boiler, so dev51's heating (an ideal LTHW source HS1 feeding a plate exchanger HX1 on the return, the motorised interlock valve HX1-V6, the heat meter HM1 and the kettles sign) overlaps it. Three choices:
+The owner's ruling: "simplified, each room should teach one concept, so we should get rid of the kWh used from hall 2." Hall 2 teaches clean water; energy and its cost are Hall 1's concept. So the hall keeps the plate exchanger HX1, its bypass HX1-V1, the ideal LTHW source HS1 and the interlock valve HX1-V6, because they are part of the circulation and the exchanger after the filter shows a real plant's order. What goes is everything that counts energy: the heat meter HM1's display and the kettles sign (no kWh, no kW, nothing about cost). The exchanger's placard says only: "You met the exchanger in Hall 1. It sits after the filter, so only clean water reaches its thin plates." The schematic is unchanged (HM1 stays in the model, unbound and not drawn), so mission 106's flow, pressure and temperature readings are still the acceptance; only the heat-meter readings drop out.
 
-- **Keep it, re-signed (recommended).** Nothing in the model changes. Station 5's placard and the entrance panel say: "You met the exchanger in Hall 1, fed by a real boiler. Here its hot water comes from an ideal source, so this hall can concentrate on the filter. Notice where the exchanger is: after the filter, so only clean water reaches its thin plates." Reasons: dev51 is the owner's published demo, and its `dev51` link must land in a working exhibit that behaves as it did (every mission 106 reading unchanged is this hall's acceptance); its numbers are tested; the exchanger after the filter teaches something Hall 1 cannot (the order of a real plant); the interlock repeats Hall 1's lesson in a second form; and removing it would cost work, risk the tested readings and change a published demo for no gain.
-- **Simplify it:** drop the heat meter sign and the primary's flow meter, keep the exchanger. Saves little; the sign is popular.
-- **Move it** (take the heating out, leaving the hall purely clean water): breaks the published demo's behaviour, and Hall 1 already has the better heating exhibit.
-
-This is question 1 for the owner.
+This rule, one concept per hall, applies to every hall (the owner, 2026-10-28): a hall's exhibit shows what teaches its own concept, and leaves out readouts that belong to another hall's.
 
 ## The schematic
 
@@ -55,7 +51,7 @@ Dev51's (`IDEAL_PLANT_MIMIC` in `src/toolkit/gallery/logic/ideal-pool-plant-mimi
 Dev51's words (`src/toolkit/gallery/logic/ideal-pool-plant-placards.ts`), restyled to the PLANTROOMS brand (`museum-brand.ts`) and lightly edited so that Hall 1's lessons are named, not repeated:
 
 - **Entrance panel.** Headline "Clean water". Big idea: "Swimmers bring dirt, sweat and skin with them, about three grams each an hour. The plant takes it out by passing all the water through sand, all day." Fact: "This pool's whole volume goes through the filter every two and a half hours." Route: 1 pool, 2 balance tank, 3 pump, 4 filter, 5 heat exchanger (you met it in Hall 1), 6 back to the pool, 7 backwash. RESET pedestal and sign beside it.
-- **Station placards 1 to 7**, the hot-water source's and the mimic's signposts, the pool clock's and the heat-used sign: as dev51's, with "you met this in Hall 1" on the pump's and the exchanger's.
+- **Station placards 1 to 7**, the hot-water source's and the mimic's signposts, the pool clock's: as dev51's (no heat-used sign), with "you met this in Hall 1" on the pump's and the exchanger's.
 - **The activity card** keeps dev51's steps (below).
 
 ## Try it, with the expected results (all from mission 106's browser readings; the model's tests pin them)
@@ -67,7 +63,7 @@ At the normal duty (every valve open, the bypass at notch 3 of 5, heating off): 
 3. **Let the filter foul:** ×3600 for 24 real seconds (24 plant hours): PDI1 0.42 → 0.82 bar, FT1 183 → 160 m³/h.
 4. **Backwash** (pump stopped, then F1-V1 and V2 shut, V3 and V4 opened, pump started): about 196 m³/h up through the bed, BED LIFTED on the mimic, SG1 2,710 g/m³ after 12 s and 13 g/m³ after five minutes; rinse (V5) to 4 g/m³; back in service 183 m³/h and PDI1 0.42 bar. A throttled backwash (V4 at notch 1) does not lift the bed and leaves it dirty.
 5. **Slam a valve with the pump running:** PI2's surge, about 2.3 bar, dying away in under a second.
-6. **Heating on** (HS1-V1 open): FI4 3.07 m³/h, 181 kW; TI2 31.3 °C; the heat meter and the kettles sign count. Bypass HX1-V1 shut: FI3 = FT1 = 104.1 m³/h.
+6. **Heating on** (HS1-V1 open): FI4 3.07 m³/h, 181 kW; TI2 31.3 °C (nothing counts energy in this hall). Bypass HX1-V1 shut: FI3 = FT1 = 104.1 m³/h.
 7. **RESET SIMULATION** (and walking back in): every valve to its normal notch, the pump running, a clean bed, the heating shut, ×1 at the visitor's local time, 27.0 °C.
 
 ## Moving it in
@@ -124,7 +120,7 @@ Each station is dev51's existing machine with the same model address; nothing be
 2. **The balance tank BT1.** Sees: level in the tank; overflow falling in. Plaque: a deck-level pool's surface spills all round into channels, skimming the top film where most of the dirt and grease floats; the tank holds the water bathers displace (about 70 litres each, _indicative_: a body's volume) and the backwash water. Does: nothing to work (dev51's has no controls).
 3. **The pump P1 (Grundflow NKC 150-315, modelled on a Grundfos NK/NKG end-suction 150-315 class, 4-pole, about 15 to 22 kW at this duty, _indicative_).** Sees: suction gauge PI1, discharge gauge PI2 (100 mm dial, 0 to 4 bar, Budenberg or WIKA 232.50 class, _indicative_), its casing temperature, START/STOP and RESET at the pump. Does: start, stop; the dead-head trip (step 2) and local reset. Plaque: "you met this in Hall 1"; and the new fact, that a pump working against a shut valve turns all its power into heat in the little water trapped inside it.
 4. **The filter F1 and its five-valve nest (the main exhibit).** Sees: the vessel (Ø2.8 m, about 3 m tall), PI3/PI4 either side, PDI1 (a differential gauge, 0 to 1.6 bar, WIKA 700-series class, _indicative_), the five valves V1 to V5 with their lever positions, the mimic's BED LIFTED lamp, and sight glass SG1 on the waste. Does: the backwash sequence. Plaque facts: sand of 0.5 to 1.0 mm (the model's note), 1 m deep, 6 m² across; water passes down at 30 m/h (the speed of a slow walk is 3,600 m/h, so the water moves down through the sand at under a centimetre a second, _derived_); medium-rate filters with coagulant catch about 99 % of Cryptosporidium oocysts a pass, without it as few as 10 % ([CoP §8](https://www.gov.gg/CHttpHandler.ashx?id=191649&p=0)); the bed fills, the gauge difference rises, the flow falls; backwash reverses the water so the sand lifts (bed expansion, about 20 % is enough) and the dirt goes to the drain.
-5. **The heat exchanger HX1 and the bypass HX1-V1** (kept, as recommended). Sees: TI1 to TI5, FI2 to FI4, HM1, the kettles sign. Plaque: after the filter, so only clean water reaches the thin plates; the bypass throttle sets how much of the flow is heated.
+5. **The heat exchanger HX1 and the bypass HX1-V1** (kept, simplified: the owner, 2026-10-28). Sees: TI1 to TI5, FI2 to FI4; no heat meter or kettles sign. Plaque: after the filter, so only clean water reaches the thin plates; the bypass throttle sets how much of the flow is heated.
 6. **The return to the pool and FT1.** Sees: the electromagnetic meter FT1 (modelled on Endress+Hauser Proline Promag W 400 DN150, [Instrumart](https://www.instrumart.com/products/45578/eh-proline-promag-w-400-electromagnetic-flow-meter)) reading m³/h and a totaliser. Plaque: Hall 1's mag meter again; here it tells the operator the turnover: flow ÷ volume.
 7. **Backwash to waste (DR1, SG1).** Sees: the sight glass's colour (brown at 2,710 g/m³, clear at 13, polished at 4 after rinse) and a readout of g/m³. Plaque: about 16 m³ goes to drain each backwash, about a bath's worth every two seconds (196 m³/h is 54 litres a second, a bath about 100 litres, _derived_); that water counts towards the pool's fresh-water dilution.
 
@@ -144,6 +140,6 @@ Should the filter placard call F1's 30 m/h rate what it is (fast, at the top of 
 
 ## Open questions for the owner (one at a time, in this order)
 
-1. **Dev51's heating:** keep it as it is, re-signed as "you met this in Hall 1" (recommended), simplify it, or take it out?
+1. **Dev51's heating:** answered (the owner, 2026-10-28): simplified; no energy readouts in Hall 2, one concept per hall.
 2. **The dead-head trip's timing** (mission 106's open question): about six minutes dead-headed to trip and two and a half to cool, in plant time; shorter for the museum?
 3. **Dev51 itself:** retired to the alias (recommended), or kept as a separate development room as well?
