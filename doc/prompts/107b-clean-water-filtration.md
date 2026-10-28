@@ -59,7 +59,7 @@ Dev51's words (`src/toolkit/gallery/logic/ideal-pool-plant-placards.ts`), restyl
 At the normal duty (every valve open, the bypass at notch 3 of 5, heating off): FT1 184.7 m³/h (turnover 2.5 h), FI2 150.7, FI3 34.0, FI4 0; PI2 2.02 bar, PDI1 0.42 bar; 27.0 °C.
 
 1. **Shut the filter outlet F1-V2, notch by notch:** 0.6 open: FT1 178.5, PI2 2.03; 0.4: 156.0, 2.07; 0.2: 67.0, 2.18; shut: 0, 2.21 bar, PDI1 0.
-2. **Leave it shut** (dead-headed) at ×60: the pump's casing heats and it trips after about 371 plant seconds at 45 °C; START is refused; after about 152 plant seconds the casing is below 42 °C and RESET at the pump's station clears it.
+2. **Leave it shut** (dead-headed) at ×60: the pump's casing heats and it trips after about 60 plant seconds at 45 °C; START is refused; after about 30 plant seconds the casing is below 42 °C and RESET at the pump's station clears it.
 3. **Let the filter foul:** ×3600 for 24 real seconds (24 plant hours): PDI1 0.42 → 0.82 bar, FT1 183 → 160 m³/h.
 4. **Backwash** (pump stopped, then F1-V1 and V2 shut, V3 and V4 opened, pump started): about 196 m³/h up through the bed, BED LIFTED on the mimic, SG1 2,710 g/m³ after 12 s and 13 g/m³ after five minutes; rinse (V5) to 4 g/m³; back in service 183 m³/h and PDI1 0.42 bar. A throttled backwash (V4 at notch 1) does not lift the bed and leaves it dirty.
 5. **Slam a valve with the pump running:** PI2's surge, about 2.3 bar, dying away in under a second.
@@ -138,8 +138,12 @@ Every one of the brief's seven steps; plus the throttled backwash (V4 at notch 1
 
 Should the filter placard call F1's 30 m/h rate what it is (fast, at the top of a commercial sand filter's rating), or should the hall keep silent on filtration rates?
 
+## The dead-head trip, shortened (the owner, 2026-10-28)
+
+Mission 106's dead-headed pump took about 371 plant seconds to trip and 152 to cool below its reset temperature: too long for a visitor to wait for. In the museum it trips after about 60 plant seconds dead-headed and can be reset about 30 plant seconds later. Do it by the casing's thermal constants in `pump-deadhead.ts` (its heat capacity and its loss to the room, as a parameter of the pump's model, the museum's value passed in; the trip at 45 °C and reset below 42 °C unchanged), not by speeding the hall's clock, so the pool clock still shows real time. Retest the readings: the trip within 50 to 70 plant seconds of shutting the valve at the normal duty, the reset refused before the casing is below 42 °C and allowed within 25 to 40 seconds after the trip. Whether dev51's own value changes too depends on the third question (dev51 retired to the alias, or kept).
+
 ## Open questions for the owner (one at a time, in this order)
 
 1. **Dev51's heating:** answered (the owner, 2026-10-28): simplified; no energy readouts in Hall 2, one concept per hall.
-2. **The dead-head trip's timing** (mission 106's open question): about six minutes dead-headed to trip and two and a half to cool, in plant time; shorter for the museum?
+2. **The dead-head trip's timing:** answered (the owner, 2026-10-28): shortened for the museum, to about one minute dead-headed to trip and about 30 seconds to cool, in plant time (see "The dead-head trip, shortened").
 3. **Dev51 itself:** retired to the alias (recommended), or kept as a separate development room as well?
