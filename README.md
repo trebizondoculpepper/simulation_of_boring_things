@@ -19,6 +19,7 @@ The development rooms can be opened directly, among them the modelling demonstra
 - [Dev25: a tank filled and drained through one port](https://trebizondoculpepper.github.io/the_pool/?room=dev25)
 - [Dev26: an Olympic filter on its five-valve battery](https://trebizondoculpepper.github.io/the_pool/?room=dev26)
 - [Dev27: heat exchange from a gas boiler, with its mimic board](https://trebizondoculpepper.github.io/the_pool/?room=dev27)
+- [Dev51: the ideal pool plant, a working 3D schematic of a pool's circulation, filtration and heating](https://trebizondoculpepper.github.io/the_pool/?room=dev51)
 
 The room-layout pipeline is described in [`doc/room-layout-guide.md`](doc/room-layout-guide.md), and the test scenarios in [`doc/prompts/scenarios.md`](doc/prompts/scenarios.md).
 

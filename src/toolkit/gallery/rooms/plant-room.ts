@@ -81,7 +81,11 @@ import {
   useEnvironment,
 } from '../../components/core/parts/render-style';
 import { isLive } from './plant/exhibit';
+import { createInspector } from '../views/inspect-pick';
 import type { LiveExhibit, PlantExhibit } from './plant/exhibit';
+
+/** The rooms whose things are marked for the information overlay. */
+const INSPECTED: ReadonlySet<string> = new Set(['dev51']);
 
 /** Each plant room's exhibits, loaded with the room. */
 /** The rooms laid out as exhibits: each equipment room, and dev10. */
@@ -120,7 +124,8 @@ export type ExhibitRoomId =
   | 'dev44'
   | 'dev47'
   | 'dev48'
-  | 'dev49';
+  | 'dev49'
+  | 'dev51';
 
 /** A room's own finish (`FINISH` in its module). */
 export interface RoomFinish {
@@ -199,6 +204,7 @@ const EXHIBITS: Record<
   dev47: () => import('./plant/touch-panels'),
   dev48: () => import('./plant/touch-panels-plant'),
   dev49: () => import('./plant/station-schematics'),
+  dev51: () => import('./plant/ideal-pool-plant'),
 };
 
 /**
@@ -708,6 +714,10 @@ export function startEquipmentRoom(
     ],
     use: (x, y) => useAt(x, y)?.(),
     aimed: () => Boolean(useAt(0, 0)),
+    // The information overlay (prompt 061), where a room's things are marked.
+    ...(INSPECTED.has(id)
+      ? { inspect: createInspector({ root: room, camera, metre: m }) }
+      : {}),
   });
 
   // A development handle for the console: stand anywhere, in metres; and

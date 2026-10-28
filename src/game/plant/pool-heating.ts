@@ -109,7 +109,7 @@ export function newPoolHeating(): PoolHeatingState {
 }
 
 /** A counterflow exchanger's effectiveness, for its two heat capacity rates, kW/K. */
-export function effectiveness(ch: number, cc: number, UA = HEATING.UA) {
+export function effectiveness(ch: number, cc: number, UA: number = HEATING.UA) {
   const cmin = Math.min(ch, cc);
   const cmax = Math.max(ch, cc);
   if (cmin <= 0) return 0;
