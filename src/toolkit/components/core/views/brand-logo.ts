@@ -474,6 +474,34 @@ export function drawBrandMark(
       ctx.fill();
       break;
     }
+    case 'crest': {
+      // A heater shield, a chevron across it, the initial beneath.
+      ctx.fillStyle = main;
+      ctx.strokeStyle = second;
+      ctx.lineWidth = r * 0.08;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.8, -r * 0.88);
+      ctx.lineTo(r * 0.8, -r * 0.88);
+      ctx.lineTo(r * 0.8, -r * 0.1);
+      ctx.quadraticCurveTo(r * 0.78, r * 0.62, 0, r);
+      ctx.quadraticCurveTo(-r * 0.78, r * 0.62, -r * 0.8, -r * 0.1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = second;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.8, -r * 0.18);
+      ctx.lineTo(0, -r * 0.62);
+      ctx.lineTo(r * 0.8, -r * 0.18);
+      ctx.lineTo(r * 0.8, r * 0.04);
+      ctx.lineTo(0, -r * 0.4);
+      ctx.lineTo(-r * 0.8, r * 0.04);
+      ctx.closePath();
+      ctx.fill();
+      ctx.font = `700 ${r * 0.78}px ${SLAB}`;
+      ctx.fillText(brand.name[0], 0, r * 0.32, r * 1.2);
+      break;
+    }
     case 'tile': {
       ctx.fillStyle = main;
       ctx.beginPath();
