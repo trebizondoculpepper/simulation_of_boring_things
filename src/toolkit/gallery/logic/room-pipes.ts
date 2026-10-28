@@ -68,16 +68,28 @@ export interface Valve {
    */
   operator: 'lever' | 'chain' | 'solenoid' | 'motor';
   /**
-   * A water butterfly valve (the default), a gas lever ball valve, or a
-   * dosing quill's DN15 chemical ball valve (drawn with its quill set).
+   * A water butterfly valve (the default), a gas lever ball valve, a
+   * dosing quill's DN15 chemical ball valve (drawn with its quill set), or
+   * a chemical line's PVC-U ball valve, by hand or motorised (plan 085).
    */
-  style?: 'butterfly' | 'gas-ball' | 'chemical-ball';
+  style?: 'butterfly' | 'gas-ball' | 'chemical-ball' | 'chemical-line';
   /**
    * The way it faces in plan, away from its machine: its lever, open,
    * along a level pipe that way; its neck and lever, on a vertical pipe,
    * toward that side.
    */
   facing: Vec3;
+}
+
+/** A non-return valve set into a run, its fitting in its room's model. */
+export interface CheckFitting {
+  /** Its middle, on its run, and the run's way there (its flow). */
+  at: Vec3;
+  along: Vec3;
+  od: number;
+  name: string;
+  tag: string;
+  fitting: string;
 }
 
 /** An electromagnetic flowmeter set into a run (`mag-flowmeter.ts`). */
@@ -130,6 +142,8 @@ export interface PipeRun {
   valves: Valve[];
   /** Its flowmeters, if any. */
   meters?: Meter[];
+  /** Its non-return valves, if any (a chemical fill line's, plan 085). */
+  checks?: CheckFitting[];
   /**
    * What it is drawn for in its room's model (prompt 064), where that is
    * not the link of its own name: the header it is part of, or the link

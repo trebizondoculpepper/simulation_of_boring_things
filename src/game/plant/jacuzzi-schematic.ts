@@ -22,10 +22,14 @@ export const JACUZZI_ROOM = 'plant_pool_03';
 export const JACUZZI_ROOM_CODE = 'PL3';
 
 /** Its day tanks (plan 085), drawn on by the cabinet's own dosing. */
-const JACUZZI_DAY_TANKS = dayTanks({
-  hypochlorite: ['cabinet', 'hypochlorite'],
-  acid: ['cabinet', 'acid'],
-});
+const JACUZZI_DAY_TANKS = dayTanks(
+  {
+    hypochlorite: ['cabinet', 'hypochlorite'],
+    acid: ['cabinet', 'acid'],
+  },
+  'pool_03',
+  { dosingIsolation: true },
+);
 
 export const JACUZZI_NODES: readonly SchematicNode[] = [
   {
@@ -315,7 +319,7 @@ let expanded: Expansion | undefined;
 export function jacuzziExpansion(): Expansion {
   expanded ??= expandForPlumbing(JACUZZI_NODES, JACUZZI_LINKS, {
     ...RULES,
-    given: JACUZZI_FITTINGS,
+    given: [...JACUZZI_FITTINGS, ...JACUZZI_DAY_TANKS.fittings],
   });
   return expanded;
 }
@@ -325,7 +329,7 @@ export const JACUZZI_SCHEMATIC: RoomSchematic = {
   code: JACUZZI_ROOM_CODE,
   nodes: JACUZZI_NODES,
   links: JACUZZI_LINKS,
-  fittings: JACUZZI_FITTINGS,
+  fittings: [...JACUZZI_FITTINGS, ...JACUZZI_DAY_TANKS.fittings],
   rules: RULES,
 };
 

@@ -27,10 +27,13 @@ const link = (
   medium,
 });
 
-const DAY_TANKS = dayTanks({
-  hypochlorite: ['hypo', 'in'],
-  acid: ['acid', 'in'],
-});
+const DAY_TANKS = dayTanks(
+  {
+    hypochlorite: ['hypo', 'in'],
+    acid: ['acid', 'in'],
+  },
+  'pool_02',
+);
 
 export const OLYMPIC_ANNEX = {
   nodes: [

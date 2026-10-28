@@ -14,8 +14,12 @@ describe('the wet hall plumbed by the plumber', () => {
 
   it('sets every one of the schematic’s valves in its line, once', () => {
     const set = lines.flatMap((l) => (l.valves ?? []).map((v) => v.fitting));
+    // But the selectors' outlets' valves, which the selectors carry (plan 085).
     expect([...set].sort()).toEqual(
-      WET_HALL_SCHEMATIC.fittings.map((f) => f.id).sort(),
+      WET_HALL_SCHEMATIC.fittings
+        .filter((f) => !/-selector\.outlet-/.test(f.id))
+        .map((f) => f.id)
+        .sort(),
     );
   });
 

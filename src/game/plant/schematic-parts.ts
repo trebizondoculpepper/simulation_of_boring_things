@@ -1,5 +1,8 @@
 import type { PlumbEdge } from './plumbing-expansion';
-import type { SchematicNode } from './schematics';
+import type { SchematicFitting, SchematicNode } from './schematics';
+import { DAY_TANKS } from './chemical-distribution';
+import type { DayTankSite } from './chemical-distribution';
+import { isDoseBottle } from './dose-bottle';
 
 /** Parts every room's schematic is made of (prompt 064). Pure. */
 
@@ -71,16 +74,79 @@ export function roomElectrics(
 
 const CHEMICAL_NAME = { hypochlorite: 'Hypochlorite', acid: 'Acid' } as const;
 
+/** A chemical line's valve (plan 085): a PVC-U ball valve worked by hand, unless the schematic says otherwise. */
+export const chemicalValve = (
+  id: string,
+  edge: string,
+  end: 'source' | 'target',
+  role: string,
+  {
+    normally = 'open',
+    operator = 'lever',
+    keptBy,
+  }: {
+    normally?: 'open' | 'closed';
+    operator?: SchematicFitting['operator'];
+    keptBy?: SchematicFitting['keptBy'];
+  } = {},
+): SchematicFitting => ({
+  id,
+  kind: 'isolating-valve',
+  edge,
+  end,
+  normally,
+  role,
+  ...(operator ? { operator } : {}),
+  ...(keptBy ? { keptBy } : {}),
+});
+
+/** A chemical line's non-return valve (plan 085). */
+export const chemicalCheck = (
+  id: string,
+  edge: string,
+  end: 'source' | 'target',
+  role: string,
+): SchematicFitting => ({
+  id,
+  kind: 'non-return-valve',
+  edge,
+  end,
+  normally: 'open',
+  role,
+});
+
 /**
  * A plant room's day tanks (plan 085): for each chemical, its branch from
  * the wet hall's transfer selector (a boundary), the day tank it fills,
  * and the day tank's draw-off to `to` (the room's dosing pump, or its
- * packaged cabinet's dosing).
+ * packaged cabinet's dosing). Its valves: each day tank's inlet isolating
+ * valve on its branch, and, on a framed day tank (not a dose bottle), the
+ * actuated inlet valve the distribution opens while it fills; its outlet
+ * isolating valve on its draw-off; and, where `dosingIsolation`, an
+ * isolating valve where the draw-off meets what doses (a spa cabinet's
+ * dosing inlet). Each day tank's code: DT1 the hypochlorite's, DT2 the
+ * acid's.
  */
 export function dayTanks(
   to: Record<'hypochlorite' | 'acid', [string, string]>,
-): { nodes: SchematicNode[]; links: PlumbEdge[] } {
+  site: DayTankSite,
+  { dosingIsolation = false }: { dosingIsolation?: boolean } = {},
+): {
+  nodes: SchematicNode[];
+  links: PlumbEdge[];
+  fittings: SchematicFitting[];
+} {
   const chemicals = ['hypochlorite', 'acid'] as const;
+  const fill = (c: (typeof chemicals)[number]) =>
+    `${CHEMICAL_NAME[c]} branch to its day tank`;
+  const draw = (c: (typeof chemicals)[number]) =>
+    `${CHEMICAL_NAME[c]} from its day tank`;
+  // Its fittings' ids, unique in the building: by the room's code.
+  const room = `PL${site.slice(-1)}`;
+  const framed = (c: (typeof chemicals)[number]) => {
+    const t = DAY_TANKS[c].find((x) => x.site === site);
+    return t !== undefined && !isDoseBottle(t.litres);
+  };
   return {
     nodes: chemicals.flatMap((c) => [
       {
@@ -92,21 +158,53 @@ export function dayTanks(
         id: `${c}-day`,
         kind: 'chem-day',
         name: `${CHEMICAL_NAME[c]} day tank`,
+        code: c === 'hypochlorite' ? 'DT1' : 'DT2',
       },
     ]),
     links: chemicals.flatMap((c) => [
-      link(
-        `${CHEMICAL_NAME[c]} branch to its day tank`,
-        [`${c}-branch`, 'out'],
-        [`${c}-day`, 'fill'],
-        'chemical',
+      link(fill(c), [`${c}-branch`, 'out'], [`${c}-day`, 'fill'], 'chemical'),
+      link(draw(c), [`${c}-day`, 'out'], to[c], 'chemical'),
+    ]),
+    // From each tank outward: its actuated inlet (a framed tank's), its
+    // inlet isolating valve; its outlet isolating valve; the dosing end's.
+    fittings: chemicals.flatMap((c) => [
+      ...(framed(c)
+        ? [
+            chemicalValve(
+              `${room}.${c}-day.fill.actuated`,
+              fill(c),
+              'target',
+              'transfer inlet',
+              {
+                normally: 'closed',
+                operator: 'motor',
+                keptBy: 'distribution',
+              },
+            ),
+          ]
+        : []),
+      chemicalValve(
+        `${room}.${c}-day.fill.iso`,
+        fill(c),
+        'target',
+        'inlet isolation',
       ),
-      link(
-        `${CHEMICAL_NAME[c]} from its day tank`,
-        [`${c}-day`, 'out'],
-        to[c],
-        'chemical',
+      chemicalValve(
+        `${room}.${c}-day.out.iso`,
+        draw(c),
+        'source',
+        'outlet isolation',
       ),
+      ...(dosingIsolation
+        ? [
+            chemicalValve(
+              `${room}.${to[c][0]}.${to[c][1]}.iso`,
+              draw(c),
+              'target',
+              'dosing isolation',
+            ),
+          ]
+        : []),
     ]),
   };
 }
@@ -114,16 +212,33 @@ export function dayTanks(
 /**
  * A chemical store's transfer (plan 085): its tanks' draw-offs into its
  * transfer pump, and the pump's discharge into its main to the wet hall
- * (a boundary).
+ * (a boundary). Its valves, as its skid and tanks carry them: each tank's
+ * draw-off isolating valve; the pump's suction isolating valve, once, on
+ * the header the draw-offs share; its discharge's non-return valve and
+ * isolating valve.
  */
 export function storeTransfer(
   chemical: 'hypochlorite' | 'acid',
   tanks: readonly string[],
-): { nodes: SchematicNode[]; links: PlumbEdge[] } {
+): {
+  nodes: SchematicNode[];
+  links: PlumbEdge[];
+  fittings: SchematicFitting[];
+} {
   const name = CHEMICAL_NAME[chemical];
+  const drawOff = (i: number) =>
+    `${name} bulk tank ${i + 1} to its transfer pump`;
+  const main = `${name} main`;
+  // Its fittings' ids, unique in the building: by the store's code.
+  const store = chemical === 'acid' ? 'AS' : 'HS';
   return {
     nodes: [
-      { id: 'transfer', kind: 'chem-pump', name: `${name} transfer pump` },
+      {
+        id: 'transfer',
+        kind: 'chem-pump',
+        name: `${name} transfer pump`,
+        code: 'P1',
+      },
       {
         id: 'main',
         kind: 'chemical-main',
@@ -132,14 +247,37 @@ export function storeTransfer(
     ],
     links: [
       ...tanks.map((t, i) =>
-        link(
-          `${name} bulk tank ${i + 1} to its transfer pump`,
-          [t, 'out'],
-          ['transfer', 'in'],
-          'chemical',
+        link(drawOff(i), [t, 'out'], ['transfer', 'in'], 'chemical'),
+      ),
+      link(main, ['transfer', 'out'], ['main', 'in'], 'chemical'),
+    ],
+    fittings: [
+      ...tanks.map((t, i) =>
+        chemicalValve(
+          `${store}.${t}.out.iso`,
+          drawOff(i),
+          'source',
+          'outlet isolation',
         ),
       ),
-      link(`${name} main`, ['transfer', 'out'], ['main', 'in'], 'chemical'),
+      chemicalValve(
+        `${store}.transfer.in.iso`,
+        drawOff(0),
+        'target',
+        'pump suction isolation',
+      ),
+      chemicalCheck(
+        `${store}.transfer.out.nrv`,
+        main,
+        'source',
+        'pump discharge non-return',
+      ),
+      chemicalValve(
+        `${store}.transfer.out.iso`,
+        main,
+        'source',
+        'pump discharge isolation',
+      ),
     ],
   };
 }
@@ -148,14 +286,20 @@ export function storeTransfer(
  * The wet hall's transfer selectors (plan 085): for each chemical, its
  * main in from its store (a boundary), its selector, and its live outlets'
  * branches to the four plant rooms (boundaries); its spares blanked, so
- * not in the model.
+ * not in the model. Each live outlet's valves, as the selector carries
+ * them, from its header outward: its manual isolating valve, then the
+ * actuated valve the distribution opens for the outlet it serves. The
+ * selectors' codes: TS1 the hypochlorite's, TS2 the acid's.
  */
 export function transferSelectors(): {
   nodes: SchematicNode[];
   links: PlumbEdge[];
+  fittings: SchematicFitting[];
 } {
   const chemicals = ['hypochlorite', 'acid'] as const;
   const rooms = [1, 2, 3, 4];
+  const branch = (c: (typeof chemicals)[number], r: number) =>
+    `${CHEMICAL_NAME[c]} branch to PL${r}`;
   return {
     nodes: [
       {
@@ -173,6 +317,7 @@ export function transferSelectors(): {
           id: `${c}-selector`,
           kind: 'chem-selector',
           name: `${CHEMICAL_NAME[c]} transfer selector`,
+          code: c === 'hypochlorite' ? 'TS1' : 'TS2',
         },
         ...rooms.map((r) => ({
           id: `${c}-pl${r}`,
@@ -196,12 +341,29 @@ export function transferSelectors(): {
       ),
       ...rooms.map((r) =>
         link(
-          `${CHEMICAL_NAME[c]} branch to PL${r}`,
+          branch(c, r),
           [`${c}-selector`, `outlet-${r}`],
           [`${c}-pl${r}`, 'in'],
           'chemical',
         ),
       ),
     ]),
+    fittings: chemicals.flatMap((c) =>
+      rooms.flatMap((r) => [
+        chemicalValve(
+          `WH.${c}-selector.outlet-${r}.iso`,
+          branch(c, r),
+          'source',
+          'outlet isolation',
+        ),
+        chemicalValve(
+          `WH.${c}-selector.outlet-${r}.actuated`,
+          branch(c, r),
+          'source',
+          'outlet transfer',
+          { normally: 'closed', operator: 'motor', keptBy: 'distribution' },
+        ),
+      ]),
+    ),
   };
 }

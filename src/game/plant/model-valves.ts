@@ -21,17 +21,23 @@ export interface ModelValve {
   link: string;
   /** What it is for, in the schematic's words. */
   role: string;
-  kind: 'isolating-valve' | 'power-isolator';
+  kind: 'isolating-valve' | 'power-isolator' | 'non-return-valve';
   normal: 'open' | 'closed';
   /** How it is worked, as its schematic says. */
   operator?: 'lever' | 'chain' | 'motor' | 'solenoid';
   /** Kept by the identified model, not among the installed valves. */
-  keptBy?: 'identified' | 'register';
+  keptBy?: 'identified' | 'register' | 'distribution';
   /** What it isolates, in a description's words. */
   route: {
     from: string;
     to: string;
-    medium: 'water' | 'heating water' | 'air' | 'gas';
+    medium:
+      | 'water'
+      | 'heating water'
+      | 'air'
+      | 'gas'
+      | 'sodium hypochlorite'
+      | 'hydrochloric acid';
   };
 }
 
@@ -52,9 +58,11 @@ const letters = (
 ) =>
   kind === 'power-isolator'
     ? 'IS'
-    : kindOf(link.targetId) === 'gully'
-      ? 'DV'
-      : 'IV';
+    : kind === 'non-return-valve'
+      ? 'NRV'
+      : kindOf(link.targetId) === 'gully'
+        ? 'DV'
+        : 'IV';
 
 function roomValves(
   room: string,
@@ -67,25 +75,50 @@ function roomValves(
   const kindOf = (id: string) => node.get(id)?.kind;
   const linkOf = new Map(links.map((l) => [l.id, l]));
   const counts = new Map<string, number>();
+  // Several of a kind on one link (a manual and an actuated valve on a
+  // selector's outlet): each named by what it is for as well.
+  const onLink = (f: SchematicFitting) =>
+    fittings.filter((x) => x.edge === f.edge && x.kind === f.kind).length;
   return fittings.flatMap((f) => {
-    if (f.kind !== 'isolating-valve' && f.kind !== 'power-isolator') return [];
+    if (
+      f.kind !== 'isolating-valve' &&
+      f.kind !== 'power-isolator' &&
+      f.kind !== 'non-return-valve'
+    )
+      return [];
     const link = linkOf.get(f.edge)!;
     const serves = node.get(f.end === 'source' ? link.sourceId : link.targetId);
     const kind = f.kind;
     const prefix = `${code}-${serves?.code ?? 'X'}-${letters(kind, link, kindOf)}`;
-    // An identified part's tag is its id there; the rest numbered in turn.
-    const n = f.keptBy ? 0 : (counts.get(prefix) ?? 0) + 1;
-    if (!f.keptBy) counts.set(prefix, n);
+    // An identified part's tag is its id there, a register's its plate;
+    // the rest (the distribution's actuated valves too) numbered in turn.
+    const numbered = !f.keptBy || f.keptBy === 'distribution';
+    const n = numbered ? (counts.get(prefix) ?? 0) + 1 : 0;
+    if (numbered) counts.set(prefix, n);
     const heating = [link.sourceId, link.targetId].some(
       (id) => kindOf(id) === 'heating-main',
     );
+    const word =
+      kind === 'power-isolator'
+        ? 'isolator'
+        : kind === 'non-return-valve'
+          ? 'non-return valve'
+          : 'valve';
+    const chemical = /hypochlorite/i.test(link.id)
+      ? ('sodium hypochlorite' as const)
+      : /acid/i.test(link.id)
+        ? ('hydrochloric acid' as const)
+        : undefined;
     return [
       {
         id: f.id,
         // An identified part's tag is its id; a register's valve keeps its plate there.
-        tag: f.keptBy === 'identified' ? f.id : f.keptBy ? '' : `${prefix}${n}`,
+        tag: f.keptBy === 'identified' ? f.id : numbered ? `${prefix}${n}` : '',
         ...(f.keptBy ? { keptBy: f.keptBy } : {}),
-        name: `${link.id} ${kind === 'power-isolator' ? 'isolator' : 'valve'}`,
+        name:
+          onLink(f) > 1 && f.role
+            ? `${link.id} ${word}, ${f.role}`
+            : `${link.id} ${word}`,
         room,
         link: link.id,
         role: f.role ?? '',
@@ -96,13 +129,15 @@ function roomValves(
           from: words(node.get(link.sourceId)),
           to: words(node.get(link.targetId)),
           medium:
-            link.medium === 'air'
-              ? 'air'
-              : link.medium === 'gas'
-                ? 'gas'
-                : heating
-                  ? 'heating water'
-                  : 'water',
+            link.medium === 'chemical' && chemical
+              ? chemical
+              : link.medium === 'air'
+                ? 'air'
+                : link.medium === 'gas'
+                  ? 'gas'
+                  : heating
+                    ? 'heating water'
+                    : 'water',
         },
       },
     ];

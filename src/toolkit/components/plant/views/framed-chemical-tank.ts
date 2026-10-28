@@ -10,7 +10,11 @@ import {
   createLevelIndicator,
   createLevelTransmitter,
 } from './level-instruments';
-import { createChemicalBallValve } from './chemical-ball-valve';
+import {
+  createChemicalBallValve,
+  markChemicalValve,
+} from './chemical-ball-valve';
+import type { BoundChemicalValve } from './chemical-ball-valve';
 import { createPartSet } from '../../core/parts/parts';
 
 /**
@@ -45,6 +49,7 @@ export function createFramedChemicalTank(
     floatGauge = false,
     fillLine = true,
     outletSide = -1,
+    valves: bound = {},
   }: {
     tag: string;
     product: string;
@@ -58,6 +63,8 @@ export function createFramedChemicalTank(
     fillLine?: boolean;
     /** Which way its draw-off turns from the outlet: −1 left, 1 right. */
     outletSide?: -1 | 1;
+    /** Its fill and outlet valves' fittings in its room's model, and the world's state they show (plan 085). */
+    valves?: { fill?: BoundChemicalValve; outlet?: BoundChemicalValve };
   },
 ) {
   const group = new Group();
@@ -184,8 +191,12 @@ export function createFramedChemicalTank(
     ]);
     const fill = createChemicalBallValve(kit, {
       dn: 40,
-      name: `${tag}-V1 fill valve`,
+      name: bound.fill
+        ? `${bound.fill.tag} · ${bound.fill.name}`
+        : `${tag}-V1 fill valve`,
+      ...(bound.fill?.binding ? { binding: bound.fill.binding } : {}),
     });
+    markChemicalValve(fill.object, bound.fill);
     fill.object.rotation.z = Math.PI / 2;
     fill.object.position.set(fillX, 0.95, fillZ);
     group.add(fill.object);
@@ -382,8 +393,12 @@ export function createFramedChemicalTank(
   );
   const outlet = createChemicalBallValve(kit, {
     dn: 40,
-    name: `${tag}-V2 outlet valve`,
+    name: bound.outlet
+      ? `${bound.outlet.tag} · ${bound.outlet.name}`
+      : `${tag}-V2 outlet valve`,
+    ...(bound.outlet?.binding ? { binding: bound.outlet.binding } : {}),
   });
+  markChemicalValve(outlet.object, bound.outlet);
   outlet.object.rotation.y = Math.PI / 2;
   outlet.object.position.set(outX, outY, W / 2 + 0.17);
   group.add(outlet.object);

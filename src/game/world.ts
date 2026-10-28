@@ -20,6 +20,7 @@ import type {
   DistributionAction,
   DistributionPower,
 } from './plant/chemical-distribution';
+import { distributionPaths } from './plant/chemical-valves';
 import { actOnWashOTron, newWashOTron } from './plant/wash-o-tron';
 import type { WashAction, WashOTron } from './plant/wash-o-tron';
 import { stepWashWorld } from './plant/wash-o-tron-world';
@@ -269,7 +270,7 @@ import { plantReadingOf } from '../toolkit/gallery/logic/world-reading';
 import { chooseConsole, newBridgeConsoles } from './bridge-consoles';
 import type { ConsoleChoice } from './bridge-consoles';
 
-export const WORLD_VERSION = 54;
+export const WORLD_VERSION = 55;
 
 /**
  * Where the main corridor's control room doors lead (the owner,
@@ -1026,6 +1027,7 @@ function stepChemicals(
     doseDraw(dosed),
     delta,
     distributionPower(world.plant),
+    distributionPaths(world.installedValves),
   );
   return {
     chemicals: {

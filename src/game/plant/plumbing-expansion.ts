@@ -140,6 +140,11 @@ export interface ExpandOptions {
    * fitting the rules would put at its end of its link (matched by the
    * node and port it serves, and its kind, so a shared port's is one), and
    * one the rules would not put there is set in its line all the same.
+   * Several at one place (a manual isolating valve and an actuated one on
+   * a selector's outlet) are set in the order given, from the node
+   * outward, the first taking the rule's place. One at a port several
+   * links share (a pump's suction off its header) is on every one of
+   * them, so on their common pipe (plan 085).
    */
   given?: readonly GivenFitting[];
 }
@@ -208,14 +213,20 @@ export function expandForPlumbing(
     end === 'source'
       ? `${e.sourceId}.${e.sourcePort}|source|${kind}`
       : `${e.targetId}.${e.targetPort}|target|${kind}`;
-  const givenAt = new Map<string, Fitting>();
+  // The schematic's fittings at each place, in the order given.
+  const givenAt = new Map<string, Fitting[]>();
+  const givenIds = new Set<string>();
+  // Each given fitting's place and its link's medium.
+  const givenPlace = new Map<string, { key: string; medium: PlumbMedium }>();
   for (const g of given) {
     const e = edgeById.get(g.edge);
     if (!e) throw new Error(`Given fitting ${g.id} is on no link ${g.edge}`);
+    if (givenIds.has(g.id)) throw new Error(`Given fitting ${g.id} twice`);
+    givenIds.add(g.id);
     const key = placeKey(e, g.end, g.kind);
-    if (givenAt.has(key))
-      throw new Error(`Two given fittings at one place: ${g.id}`);
-    givenAt.set(key, {
+    givenPlace.set(g.id, { key, medium: e.medium });
+    if (!givenAt.has(key)) givenAt.set(key, []);
+    givenAt.get(key)!.push({
       id: g.id,
       kind: g.kind,
       edge: g.edge,
@@ -228,13 +239,14 @@ export function expandForPlumbing(
       ...(g.operator ? { operator: g.operator } : {}),
     });
   }
+  const givenById = new Map([...givenAt.values()].flat().map((f) => [f.id, f]));
   const add = (
     e: PlumbEdge,
     end: 'source' | 'target',
     kind: FittingKind,
   ): Fitting => {
     // The schematic's own, where it gives one there.
-    const mine = givenAt.get(placeKey(e, end, kind));
+    const mine = givenAt.get(placeKey(e, end, kind))?.[0];
     if (mine) {
       fittings.push(mine);
       return mine;
@@ -294,10 +306,14 @@ export function expandForPlumbing(
       if (fed && !switchgear.has(target))
         atTarget.push(add(e, 'target', 'power-isolator'));
     }
-    // The schematic's own fittings on this link that no rule put there:
-    // set in its line all the same, at their ends.
-    for (const g of given.filter((x) => x.edge === e.id)) {
-      const f = givenAt.get(placeKey(e, g.end, g.kind))!;
+    // The schematic's own fittings at this link's ends that no rule put
+    // there (its own, and those of a port it shares): set in its line all
+    // the same, at their ends.
+    for (const g of given) {
+      const place = givenPlace.get(g.id)!;
+      if (place.medium !== e.medium || placeKey(e, g.end, g.kind) !== place.key)
+        continue;
+      const f = givenById.get(g.id)!;
       const list = g.end === 'source' ? atSource : atTarget;
       if (!list.includes(f)) {
         fittings.push(f);

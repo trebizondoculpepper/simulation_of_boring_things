@@ -247,11 +247,23 @@ export const ALL_POWERED: DistributionPower = {
 };
 
 /**
+ * How each line's hand valves stand (`chemical-valves.ts`): its way out of
+ * its store (a tank's outlet, the pump's suction and discharge), and on to
+ * each day tank (its selector outlet's isolating valve, the day tank's
+ * inlet valve). All open unless said.
+ */
+export type DistributionValves = Record<
+  Chemical,
+  { store: boolean; outlets: readonly boolean[] }
+>;
+
+/**
  * The distribution `dt` seconds on: each line's switches, its selector,
  * its pump moving litres from its store to the served day tank, and every
  * day tank drawn on by its pool's dosing (`draw`, litres a second); a
- * line without power (`power`) transfers nothing. Gives the litres each
- * store gave.
+ * line without power (`power`) transfers nothing, nor one whose valves
+ * (`valves`) are shut on the way (its pump then runs against them, onto
+ * its relief valve). Gives the litres each store gave.
  */
 export function stepDistribution(
   d: ChemicalDistribution,
@@ -260,6 +272,7 @@ export function stepDistribution(
   draw: Partial<Record<PoolId, Record<Chemical, number>>>,
   dt: number,
   power: DistributionPower = ALL_POWERED,
+  valves?: DistributionValves,
 ): { distribution: ChemicalDistribution; taken: Record<Chemical, number> } {
   const taken = { hypochlorite: 0, acid: 0 };
   const out = { ...d };
@@ -291,9 +304,15 @@ export function stepDistribution(
             DAY_TANKS[c][line.serving].litres * (DISTRIBUTION.high + 0.02) -
               line.tanks[line.serving].litres,
           );
-    const inflow = transferRunning(line, stores[c], capacity[c], power[c])
-      ? Math.min(stores[c], (DISTRIBUTION.pumpLpm * dt) / 60, room)
-      : 0;
+    const way =
+      !valves ||
+      (valves[c].store &&
+        line.serving !== null &&
+        (valves[c].outlets[line.serving] ?? true));
+    const inflow =
+      way && transferRunning(line, stores[c], capacity[c], power[c])
+        ? Math.min(stores[c], (DISTRIBUTION.pumpLpm * dt) / 60, room)
+        : 0;
     taken[c] = inflow;
     tanks = line.tanks.map((t, i) => {
       const site = DAY_TANKS[c][i].site;

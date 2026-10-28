@@ -1,10 +1,36 @@
 import { Group } from 'three';
+import type { Object3D } from 'three';
+import { markComponent } from '../../core/views/component-identity';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { beginPart, createPartSet } from '../../core/parts/parts';
 import { onPlinth } from './plinth';
 import { plantTools } from './plant-tools';
 import { describe } from './describe';
 import type { BallValveView } from './gas-fittings';
+
+/**
+ * A chemical valve a machine carries, bound to its fitting in its room's
+ * model (plan 085): its tag and name as the model derives them, and, for
+ * one worked by hand, the world's state it shows and sets.
+ */
+export interface BoundChemicalValve {
+  tag: string;
+  name: string;
+  fitting: string;
+  binding?: { open(): boolean; set(open: boolean): void };
+}
+
+/** Mark a machine's valve as its model fitting, for the overlay. */
+export function markChemicalValve<T extends Object3D>(
+  object: T,
+  valve: BoundChemicalValve | undefined,
+): T {
+  if (!valve) return object;
+  return markComponent(object, {
+    ...(valve.tag ? { tag: valve.tag } : { name: valve.name }),
+    model: { fitting: valve.fitting },
+  });
+}
 
 /** The sizes the chemical lines use: DN15 for small lines, DN40 at the bulk tanks. */
 export type ChemicalValveSize = 15 | 40;

@@ -272,7 +272,7 @@ describe('the schematic’s own fittings (prompt 064)', () => {
             normally: 'open',
           },
           {
-            id: 'b',
+            id: 'a',
             kind: 'isolating-valve',
             edge: 'suction',
             end: 'source',
@@ -280,6 +280,86 @@ describe('the schematic’s own fittings (prompt 064)', () => {
           },
         ],
       }),
-    ).toThrow(/Two given fittings/);
+    ).toThrow(/twice/);
+  });
+
+  it('sets several given valves at one place in the order given, from the node outward (plan 085)', () => {
+    const x = expandForPlumbing(nodes, water, {
+      ...rules,
+      given: [
+        {
+          id: 'manual',
+          kind: 'isolating-valve',
+          edge: 'suction',
+          end: 'source',
+          normally: 'open',
+        },
+        {
+          id: 'actuated',
+          kind: 'isolating-valve',
+          edge: 'suction',
+          end: 'source',
+          normally: 'closed',
+          operator: 'motor',
+        },
+      ],
+    });
+    expect(
+      x.along
+        .get('suction')!
+        .slice(0, 2)
+        .map((f) => f.id),
+    ).toEqual(['manual', 'actuated']);
+    expect(x.added.some((f) => f.given)).toBe(false);
+  });
+
+  it('sets a given valve at a port several links share once, on their common pipe (plan 085)', () => {
+    const shared: PlumbEdge[] = [
+      {
+        id: 'one',
+        sourceId: 'a',
+        sourcePort: 'out',
+        targetId: 'p',
+        targetPort: 'in',
+        medium: 'chemical',
+      },
+      {
+        id: 'two',
+        sourceId: 'b',
+        sourcePort: 'out',
+        targetId: 'p',
+        targetPort: 'in',
+        medium: 'chemical',
+      },
+    ];
+    const x = expandForPlumbing(
+      [
+        { id: 'a', kind: 'tank' },
+        { id: 'b', kind: 'tank' },
+        { id: 'p', kind: 'pump' },
+      ],
+      shared,
+      {
+        isolate: new Set(),
+        pumps: new Set(),
+        given: [
+          {
+            id: 'suction',
+            kind: 'isolating-valve',
+            edge: 'one',
+            end: 'target',
+            normally: 'open',
+          },
+        ],
+      },
+    );
+    expect(x.fittings.filter((f) => f.id === 'suction')).toHaveLength(1);
+    expect(x.headers).toHaveLength(1);
+    // Both links reach the pump through the one valve.
+    const into = x.edges.filter((e) => e.targetId === 'p');
+    expect(into.map((e) => e.sourceId)).toEqual(['suction']);
+    expect(x.edges.filter((e) => e.targetId === x.headers[0].id)).toHaveLength(
+      2,
+    );
   });
 });

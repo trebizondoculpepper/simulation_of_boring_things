@@ -42,9 +42,11 @@ export type SchematicFitting = GivenFitting & {
    * Where the world keeps it, if not among the model's installed valves:
    * the identified model (`identification.ts`), its id that model's tag;
    * or the installed valves' register (`installed-valves.ts`), under its
-   * asset id and plate, for a room whose valves are not yet retagged.
+   * asset id and plate, for a room whose valves are not yet retagged; or
+   * the chemical distribution (`chemical-distribution.ts`), an actuated
+   * valve it opens and shuts itself (a selector's outlet, plan 085).
    */
-  keptBy?: 'identified' | 'register';
+  keptBy?: 'identified' | 'register' | 'distribution';
 };
 
 export interface RoomSchematic {

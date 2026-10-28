@@ -48,7 +48,11 @@ import { chlorellaPlate } from './chlorella-plate';
 import { hose } from './hose';
 import { describe } from './describe';
 import { createPipeMarker } from './pipe-marker';
-import { createChemicalBallValve } from './chemical-ball-valve';
+import {
+  createChemicalBallValve,
+  markChemicalValve,
+} from './chemical-ball-valve';
+import type { BoundChemicalValve } from './chemical-ball-valve';
 import {
   createCheckValve,
   createMotorisedChemicalValve,
@@ -153,6 +157,12 @@ export function createTransferPumpSkid(
   kit: PanelKit,
   chemical: Chemical,
   shared?: TransferStore,
+  /** Its valves' fittings in its store's model, and the world's state the hand valves show (plan 085). */
+  valves: {
+    suction?: BoundChemicalValve;
+    check?: BoundChemicalValve;
+    discharge?: BoundChemicalValve;
+  } = {},
 ) {
   const store = shared ?? createTransferStore();
   const group = new Group();
@@ -239,8 +249,12 @@ export function createTransferPumpSkid(
     t.rod(group, pvc, [x, 0.31, 0.15], [x, 0.31, 0.32], 0.025, 12);
     const suction = createChemicalBallValve(kit, {
       dn: 40,
-      name: 'Transfer pump suction valve',
+      name: valves.suction
+        ? `${valves.suction.tag} · ${valves.suction.name}`
+        : 'Transfer pump suction valve',
+      ...(valves.suction?.binding ? { binding: valves.suction.binding } : {}),
     });
+    markChemicalValve(suction.object, valves.suction);
     suction.object.rotation.y = Math.PI / 2;
     suction.object.position.set(x, 0.31, 0.25);
     group.add(suction.object);
@@ -248,7 +262,11 @@ export function createTransferPumpSkid(
     // Discharge: up, its non-return valve, its gauge on a diaphragm seal,
     // its isolating valve, into the common main behind.
     const top = 0.2 + 0.3;
-    const nrv = createCheckValve(kit, { dn: 40 });
+    const nrv = createCheckValve(kit, {
+      dn: 40,
+      ...(valves.check ? { name: valves.check.name } : {}),
+    });
+    markChemicalValve(nrv.object, valves.check);
     nrv.object.rotation.z = Math.PI / 2;
     nrv.object.position.set(x, top + 0.07, 0.045);
     group.add(nrv.object);
@@ -287,8 +305,14 @@ export function createTransferPumpSkid(
     gauges.push(g);
     const discharge = createChemicalBallValve(kit, {
       dn: 40,
-      name: 'Transfer pump discharge valve',
+      name: valves.discharge
+        ? `${valves.discharge.tag} · ${valves.discharge.name}`
+        : 'Transfer pump discharge valve',
+      ...(valves.discharge?.binding
+        ? { binding: valves.discharge.binding }
+        : {}),
     });
+    markChemicalValve(discharge.object, valves.discharge);
     discharge.object.rotation.z = Math.PI / 2;
     discharge.object.position.set(x, top + 0.3, 0.045);
     group.add(discharge.object);
@@ -667,6 +691,7 @@ export function createDayTankStation(
     withPump = true,
     withGear = true,
     centred = false,
+    valves = {},
   }: {
     litres?: number;
     tag?: string;
@@ -674,6 +699,8 @@ export function createDayTankStation(
     withGear?: boolean;
     /** Centred on its footprint (`dayTankFootprint`), as a room places it. */
     centred?: boolean;
+    /** Its actuated inlet's and its outlet valve's fittings in its room's model (plan 085). */
+    valves?: { inlet?: BoundChemicalValve; outlet?: BoundChemicalValve };
   } = {},
 ) {
   const store = shared ?? createTransferStore();
@@ -713,6 +740,7 @@ export function createDayTankStation(
     floatGauge: true,
     fillLine: false,
     outletSide: 1,
+    valves: valves.outlet ? { outlet: valves.outlet } : {},
   });
   tank.object.position.set(0, 0.04, tankZ);
   group.add(tank.object);
@@ -750,8 +778,11 @@ export function createDayTankStation(
   const vy = Math.max(top + 0.25, 1.3);
   const inlet = createMotorisedChemicalValve(kit, {
     dn: 40,
-    name: `${tag ?? 'Day tank'} inlet valve`,
+    name: valves.inlet
+      ? `${valves.inlet.tag} · ${valves.inlet.name}`
+      : `${tag ?? 'Day tank'} inlet valve`,
   });
+  markChemicalValve(inlet.object, valves.inlet);
   inlet.object.rotation.z = Math.PI / 2;
   inlet.object.position.set(ix, vy, iz);
   group.add(inlet.object);
@@ -1302,6 +1333,11 @@ export function createTransferSelector(
   chemical: Chemical,
   store: TransferStore,
   outlets: readonly (string | null)[] = SELECTOR_OUTLETS,
+  /** Each live outlet's valves' fittings in the wet hall's model, the hand valve's world state (plan 085). */
+  valvesOf: (outlet: number) => {
+    isolation?: BoundChemicalValve;
+    actuated?: BoundChemicalValve;
+  } = () => ({}),
 ) {
   const group = new Group();
   const t = plantTools(kit);
@@ -1357,10 +1393,15 @@ export function createTransferSelector(
     }
     // The manual isolating valve, then the actuated valve the selector
     // opens for the outlet it serves.
+    const bound = valvesOf(i);
     const iso = createChemicalBallValve(kit, {
       dn: 40,
-      name: `Outlet ${i + 1} isolating valve`,
+      name: bound.isolation
+        ? `${bound.isolation.tag} · ${bound.isolation.name}`
+        : `Outlet ${i + 1} isolating valve`,
+      ...(bound.isolation?.binding ? { binding: bound.isolation.binding } : {}),
     });
+    markChemicalValve(iso.object, bound.isolation);
     iso.object.rotation.z = Math.PI / 2;
     iso.object.position.set(x, hy + 0.17, 0);
     group.add(iso.object);
@@ -1368,8 +1409,11 @@ export function createTransferSelector(
     t.rod(group, pvc, [x, hy + 0.2, 0], [x, hy + 0.5, 0], 0.022, 12);
     const act = createMotorisedChemicalValve(kit, {
       dn: 40,
-      name: `Outlet ${i + 1} actuated valve, ${name}`,
+      name: bound.actuated
+        ? `${bound.actuated.tag} · ${bound.actuated.name}`
+        : `Outlet ${i + 1} actuated valve, ${name}`,
     });
+    markChemicalValve(act.object, bound.actuated);
     act.object.rotation.z = Math.PI / 2;
     act.object.position.set(x, hy + 0.36, 0);
     group.add(act.object);

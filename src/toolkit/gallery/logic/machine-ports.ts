@@ -501,8 +501,9 @@ export function machinePorts(item: Item): MachinePort[] {
     ];
   if (kind === 'fill-cabinet')
     // The delivery fill cabinet (`createFillCabinet`, its `FILL_CABINET`):
-    // the hypochlorite's line up out of its top, the acid's back through
-    // the wall behind it.
+    // both lines up out of its top, each through its port's isolating
+    // valve and non-return valve on its riser (plan 085), the acid's then
+    // back through the wall behind it.
     return [
       {
         ...port(
@@ -515,7 +516,7 @@ export function machinePorts(item: Item): MachinePort[] {
         drawn: true,
       },
       {
-        ...port('acid', [0.17, 0, 0], [0, 0, -1], 0.04, 'chemical'),
+        ...port('acid', [0.17, 0.45, 0.12], [0, 1, 0], 0.04, 'chemical'),
         drawn: true,
       },
     ];

@@ -293,6 +293,12 @@ export function drawnThings(room: string): DrawnThing[] {
               name: v.name,
               ...valveBinding(room, r.name, v.name),
             })),
+            // Its non-return valves, each its fitting (plan 085).
+            ...(r.checks ?? []).map((c) => ({
+              kind: 'valve' as const,
+              name: c.name,
+              binding: { fitting: c.fitting },
+            })),
             ...(r.meters ?? []).map((m) => ({
               kind: 'meter' as const,
               name: m.tag,

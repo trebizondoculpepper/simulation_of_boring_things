@@ -182,6 +182,8 @@ export const WET_HALL_SCHEMATIC: RoomSchematic = {
     ...electrics.links,
   ],
   fittings: [
+    // The selectors' outlets' valves (plan 085).
+    ...SELECTORS.fittings,
     valve(
       'valve-0031',
       'Town main to the meter',

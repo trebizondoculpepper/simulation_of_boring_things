@@ -231,7 +231,11 @@ describe('descriptions of the plant', () => {
             t.startsWith('WH-') ||
             t.startsWith('BH-') ||
             t.startsWith('PL3-') ||
-            t.startsWith('PL4-'),
+            t.startsWith('PL4-') ||
+            // The chemical distribution's (plan 085).
+            t.startsWith('HS-') ||
+            t.startsWith('AS-') ||
+            t.startsWith('LB-'),
         )
         .sort(),
     );

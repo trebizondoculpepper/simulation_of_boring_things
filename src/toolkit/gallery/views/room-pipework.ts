@@ -5,6 +5,7 @@ import {
 } from '../../../game/plant/lounge-valves';
 import type { Object3D } from 'three';
 import { createFloorGully } from '../../components/plant/views/floor-gully';
+import { createChemicalLineFittings } from './chemical-line-fittings';
 import { loungeValveFlows } from '../../../game/plant/lounge-valves';
 import { circulating } from '../../../game/plant/pools';
 import { createActuatedButterflyValve } from '../../components/plant/views/actuated-butterfly-valve';
@@ -142,6 +143,15 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
   const store = typeof window === 'undefined' ? null : roomWorld();
   const lift = <T extends readonly [number, number, number]>([x, y, z]: T) =>
     [x, floorY + y, z] as const;
+  // A chemical line's own valves (plan 085).
+  const chemicalFittings = createChemicalLineFittings(
+    kit,
+    retiredFrom(room) ?? room,
+    store,
+    lift,
+    (part) => parts.add(part),
+  );
+  group.add(chemicalFittings.group);
   for (const r of runs) {
     const points = r.points.map(lift);
     const pipe = createPipe(r.kind, r.od, points, {
@@ -232,9 +242,14 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
         ),
       );
     }
+    for (const c of r.checks ?? []) chemicalFittings.check(r, c);
     for (const v of r.valves) {
       // A dosing quill's ball valve is drawn with its quill set.
       if (v.style === 'chemical-ball') continue;
+      if (v.style === 'chemical-line') {
+        chemicalFittings.valve(r, v);
+        continue;
+      }
       const installed = installedValveFor(own, r.name, v.name);
       const fitting = SCHEMATICS[own]?.fittings.some(
         (f) => f.id === installed.assetId,
@@ -647,6 +662,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     },
     update(delta: number) {
       for (const c of checks) c.check.flowing = c.open();
+      chemicalFittings.update();
       parts.update(delta);
       if (tankGully && store) {
         const world = store.world.value;

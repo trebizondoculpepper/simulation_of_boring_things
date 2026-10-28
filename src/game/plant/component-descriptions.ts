@@ -72,7 +72,13 @@ export type ResolvedStatus =
 export interface ValveRoute {
   from: string;
   to: string;
-  medium: 'water' | 'heating water' | 'air' | 'gas';
+  medium:
+    | 'water'
+    | 'heating water'
+    | 'air'
+    | 'gas'
+    | 'sodium hypochlorite'
+    | 'hydrochloric acid';
 }
 
 /** What a description is built from: one per described component. */

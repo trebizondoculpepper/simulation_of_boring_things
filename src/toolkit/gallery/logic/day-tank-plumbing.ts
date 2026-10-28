@@ -4,6 +4,7 @@ import { SCHEMATICS } from '../../../game/plant/schematics';
 import { layoutRoom } from './room-equipment';
 import { roomStructure } from './room-structure';
 import type { PipeRun } from './room-pipes';
+import { chemicalLineFittings } from './chemical-line-fittings';
 
 /**
  * A plant room's day tanks plumbed (plan 085; the owner, 2026-10-27): each
@@ -61,19 +62,25 @@ export function dayTankPlumbing(room: string): {
     if (/branch to its day tank$/.test(l.id)) {
       const fill = placedPort(bottle, 'fill');
       const [x, y, z] = fill.at;
+      const points: Vec3[] = [
+        [x, structure.ceilingZone, z],
+        [x, y, z],
+      ];
+      // Its inlet isolating valve on the drop, worked from the floor.
+      const set = chemicalLineFittings(room, l.id, points, 0.025, {
+        reach: [0.3, 1.8],
+      });
+      problems.push(...set.problems);
       runs.push({
         name: l.id,
         kind: 'pvc-pressure',
         od: 0.025,
-        points: [
-          [x, structure.ceilingZone, z],
-          [x, y, z],
-        ],
+        points,
         joins: [bottle.item.label],
         service: c,
         label: LABEL[c],
         through: [],
-        valves: [],
+        valves: set.valves,
       });
       continue;
     }
@@ -105,35 +112,42 @@ export function dayTankPlumbing(room: string): {
     const b = placedPort(target, targetPort ?? l.targetPort).at;
     // Each chemical at its own height, so the two never cross.
     const high = Math.max(HIGH, b[1] + 0.3) + (c === 'acid' ? 0.15 : 0);
+    const points = (
+      [
+        [a[0], a[1], a[2]],
+        a1,
+        [a1[0], high, a1[2]],
+        [b[0], high, a1[2]],
+        [b[0], high, b[2]],
+        [b[0], b[1], b[2]],
+      ] as Vec3[]
+    ).filter(
+      (p, i, all) =>
+        i === 0 ||
+        Math.hypot(
+          p[0] - all[i - 1][0],
+          p[1] - all[i - 1][1],
+          p[2] - all[i - 1][2],
+        ) > 1e-6,
+    );
+    // Its outlet isolating valve by its tank, and its dosing end's by what
+    // doses, each on a straight within reach.
+    const set = chemicalLineFittings(room, l.id, points, 0.025, {
+      reach: [0.2, 1.9],
+    });
+    problems.push(...set.problems);
     runs.push({
       name: l.id,
       // The PE dosing tube inside a PVC-U carrier, its containment
       // (secondary containment for a dosing line, as good practice asks).
       kind: 'pvc-pressure',
       od: 0.025,
-      points: (
-        [
-          [a[0], a[1], a[2]],
-          a1,
-          [a1[0], high, a1[2]],
-          [b[0], high, a1[2]],
-          [b[0], high, b[2]],
-          [b[0], b[1], b[2]],
-        ] as Vec3[]
-      ).filter(
-        (p, i, all) =>
-          i === 0 ||
-          Math.hypot(
-            p[0] - all[i - 1][0],
-            p[1] - all[i - 1][1],
-            p[2] - all[i - 1][2],
-          ) > 1e-6,
-      ),
+      points,
       joins: [bottle.item.label, target.item.label],
       service: c,
       label: LABEL[c],
       through: [],
-      valves: [],
+      valves: set.valves,
     });
   }
   return { runs, problems };

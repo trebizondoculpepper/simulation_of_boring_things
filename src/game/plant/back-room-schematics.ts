@@ -1,6 +1,16 @@
 import type { PlumbEdge } from './plumbing-expansion';
-import type { RoomSchematic, SchematicNode } from './schematics';
-import { link, roomElectrics, storeTransfer } from './schematic-parts';
+import type {
+  RoomSchematic,
+  SchematicFitting,
+  SchematicNode,
+} from './schematics';
+import {
+  chemicalCheck,
+  chemicalValve,
+  link,
+  roomElectrics,
+  storeTransfer,
+} from './schematic-parts';
 
 /**
  * The schematics of the building's back rooms that hold no pipework of
@@ -26,6 +36,7 @@ function backRoom(
   nodes: readonly SchematicNode[],
   links: readonly PlumbEdge[],
   powered: readonly SchematicNode[],
+  fittings: readonly SchematicFitting[] = [],
 ): RoomSchematic {
   const electrics = roomElectrics(room, powered);
   return {
@@ -33,7 +44,7 @@ function backRoom(
     code,
     nodes: [...nodes, ...electrics.nodes],
     links: [...links, ...electrics.links],
-    fittings: [],
+    fittings,
     rules: { isolate: new Set(), pumps: new Set() },
   };
 }
@@ -41,7 +52,11 @@ function backRoom(
 /**
  * A chemical store (plan 085): its bulk tanks filled from the loading
  * bay's fill point, drawn by its transfer pump into its main to the wet
- * hall's selector; and its extract.
+ * hall's selector; and its extract. Each tank's fill comes in on its own
+ * line from the delivery line's entry (`out-<n>`), through its actuated
+ * overfill valve (shut by the tank's high-high switch) and its inlet
+ * isolating valve; its draw-off, the pump's and the main's valves are its
+ * transfer's (`storeTransfer`).
  */
 function chemicalStore(
   room: string,
@@ -70,13 +85,37 @@ function chemicalStore(
       machine('outside', 'atmosphere', 'Outside air'),
     ],
     [
-      ...tanks.map((t) =>
-        link(`${t.name} fill`, ['delivery', 'out'], [t.id, 'fill'], 'chemical'),
+      ...tanks.map((t, i) =>
+        link(
+          `${t.name} fill`,
+          ['delivery', `out-${i + 1}`],
+          [t.id, 'fill'],
+          'chemical',
+        ),
       ),
       ...transfer.links,
       link('Store extract', ['extract', 'out'], ['outside', 'in'], 'air'),
     ],
     [extract, transfer.nodes[0]],
+    [
+      // From each tank outward: its inlet valve, then its overfill valve.
+      ...tanks.flatMap((t) => [
+        chemicalValve(
+          `${code}.${t.id}.fill.iso`,
+          `${t.name} fill`,
+          'target',
+          'inlet isolation',
+        ),
+        chemicalValve(
+          `${code}.${t.id}.fill.overfill`,
+          `${t.name} fill`,
+          'target',
+          'overfill shut-off',
+          { operator: 'motor' },
+        ),
+      ]),
+      ...transfer.fittings,
+    ],
   );
 }
 
@@ -84,13 +123,17 @@ export const HYPO_STORE_SCHEMATIC = chemicalStore(
   'hypo_store',
   'HS',
   'hypochlorite',
-  [1, 2, 3].map((n) =>
-    machine(`tank-${n}`, 'chem-bulk', `Sodium hypochlorite bulk tank ${n}`),
-  ),
+  [1, 2, 3].map((n) => ({
+    ...machine(`tank-${n}`, 'chem-bulk', `Sodium hypochlorite bulk tank ${n}`),
+    code: `T${n}`,
+  })),
 );
 
 export const ACID_STORE_SCHEMATIC = chemicalStore('acid_store', 'AS', 'acid', [
-  machine('tank-1', 'chem-bulk', 'Hydrochloric acid bulk tank'),
+  {
+    ...machine('tank-1', 'chem-bulk', 'Hydrochloric acid bulk tank'),
+    code: 'T1',
+  },
 ]);
 
 export const LOADING_BAY_SCHEMATIC = backRoom(
@@ -102,7 +145,10 @@ export const LOADING_BAY_SCHEMATIC = backRoom(
     // One fill cabinet, its two inlets on incompatible couplings, by the
     // tanker's bay; the hired generator's connection cabinet by the other
     // (the owner, 2026-10-27).
-    machine('fill', 'fill-cabinet', 'Delivery fill cabinet'),
+    {
+      ...machine('fill', 'fill-cabinet', 'Delivery fill cabinet'),
+      code: 'FC1',
+    },
     machine(
       'generator-point',
       'generator-point',
@@ -149,6 +195,17 @@ export const LOADING_BAY_SCHEMATIC = backRoom(
     ),
   ],
   [],
+  // Each fill port's isolating valve, kept shut between deliveries, and
+  // its fill line's non-return valve, from the port outward (plan 085).
+  (['hypochlorite', 'acid'] as const).flatMap((c) => {
+    const line = `${c === 'acid' ? 'Acid' : 'Hypochlorite'} delivery line`;
+    return [
+      chemicalValve(`LB.fill.${c}.iso`, line, 'source', 'fill port isolation', {
+        normally: 'closed',
+      }),
+      chemicalCheck(`LB.fill.${c}.nrv`, line, 'source', 'fill non-return'),
+    ];
+  }),
 );
 
 /** The air plant's stacks: their units and the hall they serve (`air_plant`'s layout). */

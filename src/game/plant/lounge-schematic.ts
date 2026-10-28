@@ -22,10 +22,13 @@ const machine = (id: string, kind: string, name: string): SchematicNode => ({
   name,
 });
 
-const DAY_TANKS = dayTanks({
-  hypochlorite: ['hypo-pumps', 'in'],
-  acid: ['acid-pump', 'in'],
-});
+const DAY_TANKS = dayTanks(
+  {
+    hypochlorite: ['hypo-pumps', 'in'],
+    acid: ['acid-pump', 'in'],
+  },
+  'pool_01',
+);
 
 const nodes: SchematicNode[] = [
   machine('pool', 'pool', 'Lounge pool'),
@@ -387,6 +390,8 @@ export const LOUNGE_SCHEMATIC: RoomSchematic = {
         },
       ];
     }),
+    // Its day tanks' inlet and outlet valves (plan 085).
+    ...DAY_TANKS.fittings,
     isolator('P-201A isolator', 'P-201A power'),
     isolator('P-201B isolator', 'P-201B power'),
     isolator('Lounge UV unit isolator', 'UV unit power'),

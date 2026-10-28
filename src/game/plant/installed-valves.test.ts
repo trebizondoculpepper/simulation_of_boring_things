@@ -11,12 +11,19 @@ import {
   newInstalledValveStates,
 } from './installed-valves';
 import { plantInventory } from './equipment-catalogue';
+import { EQUIPMENT_VALVES } from './chemical-valves';
 
 const ROOMS = [
   'plant_pool_01',
   'plant_pool_02',
   'wet_hall',
   'boiler_house',
+  // The chemical distribution's rooms (plan 085).
+  'plant_pool_03',
+  'plant_pool_04',
+  'hypo_store',
+  'acid_store',
+  'loading_bay',
 ].filter((r) => !BEING_LAID_OUT.includes(r));
 /** The registered valves of rooms not being laid out afresh. */
 const REGISTERED = Object.entries(INSTALLED_VALVES).filter(
@@ -48,6 +55,12 @@ describe('installed pipework valves', () => {
     );
     expect(seen.has(hallDrain.assetId)).toBe(false);
     seen.add(hallDrain.assetId);
+    // And the chemical machines' own valves, drawn on them (plan 085).
+    for (const id of EQUIPMENT_VALVES)
+      if (installedValveByCommandId(id)) {
+        expect(seen.has(id)).toBe(false);
+        seen.add(id);
+      }
     expect(seen.size).toBe(REGISTERED.length);
     expect(new Set(REGISTERED.map(([, v]) => v.tag)).size).toBe(seen.size);
     expect(new Set(REGISTERED.map(([, v]) => v.assetId)).size).toBe(seen.size);
@@ -107,6 +120,8 @@ describe('installed pipework valves', () => {
     ];
     const offRoute: string[] = [];
     for (const [key, installed] of REGISTERED) {
+      // A chemical machine's own valve is drawn on it, on no route (plan 085).
+      if (EQUIPMENT_VALVES.has(installed.assetId)) continue;
       const matches = authored.filter(
         ({ room, run, valve }) => `${room}|${run.name}|${valve.name}` === key,
       );

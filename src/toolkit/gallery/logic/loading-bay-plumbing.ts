@@ -2,6 +2,7 @@ import { placedPort } from './machine-ports';
 import { layoutRoom } from './room-equipment';
 import { SHELL_ROOMS } from './shell-rooms';
 import type { PipeRun } from './room-pipes';
+import { chemicalLineFittings } from './chemical-line-fittings';
 
 type Vec3 = [number, number, number];
 
@@ -29,6 +30,8 @@ const WALL = 0.2;
 const OVER_SHUTTERS = 5.6;
 /** The mains' level across the bay, clear of the lorries' tail lifts and the pallets. */
 const MAIN_Y = 4.0;
+/** The acid's delivery line's height back into its store's wall, over its port's valves. */
+const ACID_UP = 2.6;
 /** Where the hypochlorite's delivery line goes into its store's wall. */
 const DELIVERY_IN = -0.3;
 /** Where each main comes out of its store's wall, by the store's door. */
@@ -46,47 +49,66 @@ export function loadingBayPlumbing(): PipeRun[] {
     (p) => p.item.key === 'fill-cabinet',
   );
   if (cabinet) {
-    // The acid: straight back into the wall behind the cabinet.
+    // The acid: up out of the cabinet's top through its port's valves,
+    // then straight back into the wall behind the cabinet (its store's).
     const acid = placedPort(cabinet, 'acid');
     const [ax, ay, az] = acid.at;
-    const [ox, , oz] = acid.outward;
+    const acidPoints: Vec3[] = [
+      [ax, ay, az],
+      [ax, ACID_UP, az],
+      [-X - WALL, ACID_UP, az],
+    ];
+    const acidSet = chemicalLineFittings(
+      'loading_bay',
+      'Acid delivery line',
+      acidPoints,
+      0.04,
+      { reach: [0.3, 2.2] },
+    );
     runs.push({
       name: 'Acid delivery line',
       kind: 'pvc-pressure',
       od: 0.04,
-      points: [
-        [ax - ox * 0.12, ay, az - oz * 0.12],
-        [ax + ox * WALL, ay, az + oz * WALL],
-      ],
+      points: acidPoints,
       joins: [],
       service: 'acid',
       label: LABEL.acid,
       through: [
         {
-          at: [ax + (ox * WALL) / 2, ay, az + (oz * WALL) / 2],
-          normal: [-ox, 0, -oz],
+          at: [-X - WALL / 2, ACID_UP, az],
+          normal: [1, 0, 0],
           thickness: WALL,
           kind: 'fire-collar',
         },
       ],
-      valves: [],
+      valves: acidSet.valves,
+      checks: acidSet.checks,
     });
     // The hypochlorite: up out of the cabinet's top, along the outside
     // wall over the openings, and down the far wall into its store.
     const hypo = placedPort(cabinet, 'hypochlorite');
     const [hx, hy, hz] = hypo.at;
     const along = X - 0.15;
+    const hypoPoints: Vec3[] = [
+      [hx, hy, hz],
+      [hx, OVER_SHUTTERS, hz],
+      [along, OVER_SHUTTERS, hz],
+      [along, OVER_SHUTTERS, DELIVERY_IN],
+      [X + WALL, OVER_SHUTTERS, DELIVERY_IN],
+    ];
+    // Its port's valves on its riser, worked from the floor.
+    const hypoSet = chemicalLineFittings(
+      'loading_bay',
+      'Hypochlorite delivery line',
+      hypoPoints,
+      0.05,
+      { reach: [0.3, 2.2] },
+    );
     runs.push({
       name: 'Hypochlorite delivery line',
       kind: 'pvc-pressure',
       od: 0.05,
-      points: [
-        [hx, hy, hz],
-        [hx, OVER_SHUTTERS, hz],
-        [along, OVER_SHUTTERS, hz],
-        [along, OVER_SHUTTERS, DELIVERY_IN],
-        [X + WALL, OVER_SHUTTERS, DELIVERY_IN],
-      ],
+      points: hypoPoints,
       joins: [],
       service: 'hypochlorite',
       label: LABEL.hypochlorite,
@@ -98,7 +120,8 @@ export function loadingBayPlumbing(): PipeRun[] {
           kind: 'fire-collar',
         },
       ],
-      valves: [],
+      valves: hypoSet.valves,
+      checks: hypoSet.checks,
     });
   }
   for (const [chemical, side, Name] of [

@@ -37,11 +37,26 @@ Every chemical link of the schematics that have them is drawn (`chemical-routing
 
 ### Gaps (in `TODO.md`)
 
-1. Every chemical valve into the schematics as fittings with function, normal state and tag (fill isolating and non-return valves, overfill valve, tank inlet and draw-off, pump suction, discharge, non-return and relief, selector outlets manual and actuated, day tank inlet and outlet), and the scene's valves bound to them. A world shape change (`WORLD_VERSION`).
+1. Every chemical valve into the schematics as fittings with function, normal state and tag (fill isolating and non-return valves, overfill valve, tank inlet and draw-off, pump suction, discharge, non-return and relief, selector outlets manual and actuated, day tank inlet and outlet), and the scene's valves bound to them. A world shape change (`WORLD_VERSION`). **Done 2026-10-28 (COMMIT1)**, but the transfer pumps' relief valves, which the network has no kind for yet: see "Gap 1, closed" below.
 2. The loading bay's chemical lines routed by the plumber from its schematic, in place of `loading-bay-plumbing.ts`'s hand-laid points, and the loading bay added to `chemical-routing.test.ts`; the corridor runs tied to the schematics' cross-room links.
 3. The Olympic's chemical lines and valves in a schematic like the other rooms' (prompt 063).
 4. Deliveries (076), the overfill stop, the circulation interlock, the remaining controls (086's audit), dosing rates from the pools.
 5. The footbath's acid day tank: keep or remove.
+
+## Gap 1, closed — 2026-10-28
+
+Every chemical valve is now a fitting of its room's schematic, given with its role, its normal position and how it is worked; its tag is derived by `model-valves.ts` (room, machine, kind and number; non-return valves now tagged too, NRV). Built in `schematic-parts.ts` (`storeTransfer`, `dayTanks`, `transferSelectors`, `chemicalValve`, `chemicalCheck`) and `back-room-schematics.ts`; found by machine in `src/game/plant/chemical-valves.ts`; tested in `chemical-valves.test.ts`. The plumber adds nothing in any chemical room.
+
+| Room                         | Valves given                                                                                                                                | Where drawn                                                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| loading_bay (LB)             | 4: each fill port's isolating valve (normally shut) and non-return valve                                                                    | in the delivery lines' risers out of the cabinet's top                                                                  |
+| hypo_store (HS)              | 12: each tank's inlet, overfill (motorised) and outlet valves (9); the pump's suction (one, on the shared header), discharge and non-return | inlet and outlet on each framed tank, suction, discharge and non-return on the skid (bound); overfill in each fill line |
+| acid_store (AS)              | 6: as the hypochlorite store's, for its one tank                                                                                            | as above                                                                                                                |
+| wet_hall (WH)                | 16: each live selector outlet's manual valve and actuated valve (kept by the distribution)                                                  | on the selectors (bound)                                                                                                |
+| plant_pool_01 (PL1)          | 4 more: each day tank's inlet and outlet valves (beside the quills' 4, from 089)                                                            | in the branch drops and dosing tubes                                                                                    |
+| plant_pool_03, plant_pool_04 | 6 each: each day tank's inlet and outlet valves, and the cabinet's dosing isolation on each draw-off                                        | in the branch drops and dosing tubes                                                                                    |
+
+How it works: `expandForPlumbing` now takes several given fittings at one place (in order from the node outward) and sets a given fitting at a port several links share once on their common pipe (the transfer pump's suction). The world keeps every hand valve among the installed valves (world version 55); the actuated selector outlets (and, with gap 3, the Olympic's framed day tank's inlet) are the distribution's (`keptBy: 'distribution'`). Shutting a store's tank outlets, its pump's suction or discharge, a selector outlet's manual valve or a day tank's inlet valve stops the transfer to that day tank (`distributionPaths`, `stepDistribution`'s `valves`). Not yet: the relief valves on the skids (no relief-valve fitting kind); the overfill valves are in the model and drawn, motorised, but nothing closes them until the high-high switches are built (gap 4); a shut day tank outlet does not yet stop its pool's dosing.
 
 ## Review checkpoint — 2026-10-26
 

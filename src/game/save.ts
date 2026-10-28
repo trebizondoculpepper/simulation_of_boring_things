@@ -215,6 +215,11 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
       },
     };
   },
+  // 54 → 55: every chemical valve in the model (prompt 085): the fill
+  // ports', the stores', the selectors' and the day tanks' hand valves
+  // among the installed valves, each at its normal position
+  // (`fillDefaults` adds them).
+  54: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

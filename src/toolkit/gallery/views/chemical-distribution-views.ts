@@ -41,6 +41,42 @@ import type {
   DistributionReading,
   TransferStore,
 } from '../../components/plant/views/chemical-handling-kit';
+import type { BoundChemicalValve } from '../../components/plant/views/chemical-ball-valve';
+import {
+  bulkTankValves,
+  dayTankValves,
+  selectorValves,
+  transferPumpValves,
+} from '../../../game/plant/chemical-valves';
+import type { ModelValve } from '../../../game/plant/model-valves';
+import type { DayTankSite } from '../../../game/plant/chemical-distribution';
+
+/**
+ * A machine's valve as its model gives it (plan 085): its tag and name,
+ * its fitting, and, for a valve worked by hand that the world keeps, the
+ * world's state, which its handle sets.
+ */
+function boundValve(v: ModelValve | undefined): BoundChemicalValve | undefined {
+  if (!v) return undefined;
+  const byHand =
+    !v.keptBy && v.kind === 'isolating-valve' && v.operator !== 'motor';
+  return {
+    tag: v.tag,
+    name: v.name,
+    fitting: v.id,
+    ...(byHand && typeof window !== 'undefined'
+      ? {
+          binding: {
+            open: () =>
+              roomWorld().world.value.installedValves[v.id] ??
+              v.normal === 'open',
+            set: (open: boolean) =>
+              roomWorld().dispatch({ type: 'plant/valve', id: v.id, open }),
+          },
+        }
+      : {}),
+  };
+}
 
 /**
  * The chemical distribution's machines in the building (plan 085), each
@@ -158,11 +194,16 @@ const isChemical = (s: string | undefined): s is Chemical =>
 function bulkTank(kit: PanelKit, c: Chemical, n: number): LiveExhibit {
   const each = STORE_CAPACITY[c] / BULK_TANKS[c];
   const tag = `${STORE_CODE[c]}-T${n}`;
+  const valves = bulkTankValves(c, n);
   const tank = createFramedChemicalTank(kit, {
     tag,
     product: PRODUCT[c],
     litres: each,
     acid: c === 'acid',
+    valves: {
+      fill: boundValve(valves.fill),
+      outlet: boundValve(valves.outlet),
+    },
   });
   // Centred on its footprint: its fill line and outlet stand out in front.
   const object = new Group();
@@ -254,11 +295,29 @@ export function chemicalModel(kit: PanelKit, key: string): LiveExhibit | null {
     case 'chem-bulk':
       return bulkTank(kit, chemical, Number(arg) || 1);
     case 'chem-pump': {
-      const skid = createTransferPumpSkid(kit, chemical, storeOf(chemical));
+      const v = transferPumpValves(chemical);
+      const skid = createTransferPumpSkid(kit, chemical, storeOf(chemical), {
+        suction: boundValve(v.suction),
+        check: boundValve(v.check),
+        discharge: boundValve(v.discharge),
+      });
       return { ...skid, update: (d) => skid.update(d) };
     }
     case 'chem-selector': {
-      const sel = createTransferSelector(kit, chemical, storeOf(chemical));
+      const sel = createTransferSelector(
+        kit,
+        chemical,
+        storeOf(chemical),
+        undefined,
+        (i) => {
+          if (i >= DAY_TANKS[chemical].length) return {};
+          const v = selectorValves(chemical, i);
+          return {
+            isolation: boundValve(v.isolation),
+            actuated: boundValve(v.actuated),
+          };
+        },
+      );
       return sel;
     }
     case 'chem-day': {
@@ -268,12 +327,14 @@ export function chemicalModel(kit: PanelKit, key: string): LiveExhibit | null {
       const room = Number(arg?.slice(-1));
       const tag = `PL${room}-DT${chemical === 'acid' ? 2 : 1}`;
       if (isDoseBottle(litres)) return dayBottle(kit, chemical, index, tag);
+      const v = dayTankValves(chemical, arg as DayTankSite);
       return createDayTankStation(kit, chemical, storeOf(chemical), index, {
         litres,
         tag,
         withPump: false,
         withGear: false,
         centred: true,
+        valves: { inlet: boundValve(v.actuated), outlet: boundValve(v.outlet) },
       });
     }
   }

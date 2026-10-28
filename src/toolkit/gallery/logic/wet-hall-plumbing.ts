@@ -381,8 +381,11 @@ export function wetHallPlumbing() {
   const done = lines.map((l): WetHallLine => {
     const points = routed.routes.get(l.link);
     if (!points) return l;
+    // The selectors' outlets' valves are on the selectors themselves,
+    // which draw them (bound to these fittings, plan 085): not set here.
     const fittings = (along.get(l.link) ?? []).filter(
-      (f: { kind: string }) => f.kind === 'isolating-valve',
+      (f: { kind: string; serves: string }) =>
+        f.kind === 'isolating-valve' && !/-selector$/.test(f.serves),
     );
     const placed = placeInline(
       points,

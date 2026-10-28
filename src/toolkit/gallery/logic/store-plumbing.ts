@@ -7,6 +7,7 @@ import { SCHEMATICS } from '../../../game/plant/schematics';
 import { layoutRoom } from './room-equipment';
 import { SHELL_ROOMS } from './shell-rooms';
 import type { PipeRun } from './room-pipes';
+import { chemicalLineFittings } from './chemical-line-fittings';
 
 /**
  * A chemical store plumbed (plan 085; the owner, 2026-10-27): each bulk
@@ -171,17 +172,26 @@ export function storePlumbing(room: StoreId) {
       problems.push(`${l.link}: not routed`);
       return [];
     }
+    const laid = straightened([...l.riser, ...points]);
+    // Its valves the tanks and the skid do not carry: a fill line's
+    // overfill valve, by its tank (plan 085).
+    const set = chemicalLineFittings(room, l.link, laid, l.od, {
+      // Clear of the elbow into its tank's own fill line.
+      ends: 0.3,
+      reach: [0.3, 2.0],
+    });
+    problems.push(...set.problems);
     return [
       {
         name: l.link,
         kind: 'pvc-pressure' as const,
         od: l.od,
-        points: straightened([...l.riser, ...points]),
+        points: laid,
         joins: [],
         service: c,
         label: LABEL[c],
         through: [],
-        valves: [],
+        valves: set.valves,
       },
     ];
   });

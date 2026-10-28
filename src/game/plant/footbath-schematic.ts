@@ -13,10 +13,16 @@ import { dayTanks } from './schematic-parts';
  * overflow, shut, would flood the deck). Pure.
  */
 
-const FOOTBATH_DAY_TANKS = dayTanks({
-  hypochlorite: ['cabinet', 'hypochlorite'],
-  acid: ['cabinet', 'acid'],
-});
+// Its acid day tank too, though plan 085 gave the footbath hypochlorite
+// only: kept until the owner decides (prompt 085's open question).
+const FOOTBATH_DAY_TANKS = dayTanks(
+  {
+    hypochlorite: ['cabinet', 'hypochlorite'],
+    acid: ['cabinet', 'acid'],
+  },
+  'pool_04',
+  { dosingIsolation: true },
+);
 
 const nodes: SchematicNode[] = [
   {
@@ -124,6 +130,7 @@ export const FOOTBATH_SCHEMATIC: RoomSchematic = {
   nodes,
   links,
   fittings: [
+    ...FOOTBATH_DAY_TANKS.fittings,
     {
       id: 'PL4-PW1-RV1',
       kind: 'isolating-valve',

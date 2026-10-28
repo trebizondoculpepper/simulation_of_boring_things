@@ -3,6 +3,7 @@ import {
   JACUZZI_FITTINGS,
   JACUZZI_LINKS,
   JACUZZI_NODES,
+  JACUZZI_SCHEMATIC,
   JACUZZI_VALVE_IDS,
   jacuzziExpansion,
 } from './jacuzzi-schematic';
@@ -22,7 +23,7 @@ describe('the jacuzzi plant room’s schematic (prompt 064)', () => {
     const x = jacuzziExpansion();
     expect(x.added).toEqual([]);
     expect(x.fittings.map((f) => f.id).sort()).toEqual(
-      JACUZZI_FITTINGS.map((f) => f.id).sort(),
+      JACUZZI_SCHEMATIC.fittings.map((f) => f.id).sort(),
     );
     expect(x.fittings.every((f) => f.given)).toBe(true);
   });
