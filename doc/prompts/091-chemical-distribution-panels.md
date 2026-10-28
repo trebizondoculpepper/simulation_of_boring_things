@@ -75,7 +75,7 @@ Defined for these two terminals only (the owner: "really just this"); the older 
 
 **Lamps.** RUN: steady healthy, flashing starting up, out with no comms. CALL: lit while any of the line's tanks calls or fills. ALARM: flashing unacknowledged, steady acknowledged and still present.
 
-**Power-up and comms.** On power-up `PENFOLD OT-216` / `V2.04 SELF TEST`, then MON's home. With its link to the box broken, `NO COMMS` on the bottom line, RUN out, keys dead.
+**Power-up and comms.** On power-up `CHLORELLA OT-216` (`PENFOLD OT-216` until the terminals became Chlorella's, 2026-10-28) / `V2.04 SELF TEST`, then MON's home. With its link to the box broken, `NO COMMS` on the bottom line, RUN out, keys dead.
 
 **Logged.** Every stored setting and every command goes in the world's log with the terminal's tag.
 
@@ -139,3 +139,15 @@ Design questions for the owner, to be asked one at a time:
 4. **An annunciator for each major location.** The old control room has at least three annunciators, one each for the Olympic pool, the lazy pool (`pool_01`) and the wet hall, each showing the fault conditions of its own location. The wet hall's shows everything that can go wrong there, a window each: the drainage (backwash) tank high, the clean water (make-up) tank low, the hypochlorite transfer fault, the acid transfer fault, and the like. It is shown in the wet hall and in the control room. Every one of these fault conditions must also be able to show on the bridge (the owner's standing rule: any change to warning and error states updates the bridge too). Its own mission: [099](099-location-annunciators.md).
 5. **WH-CP1 is kept**, as a working exhibit in a dev room flagged obsolete, once the new panels replace it in the wet hall.
 6. **Press-and-hold for the cursor keys: yes, to try** ("Let's test it out and see if it works. If it doesn't, we'll just have to click very rapidly"): a held input in the one control scheme, for mouse, touch, gamepad and keyboard, driving the terminal's existing repeat.
+
+## The terminals redesigned: Chlorella's, a green clamshell (the owner, 2026-10-28)
+
+After the answers above, the owner changed the terminals' design (2026-10-28), keeping the 20% size increase:
+
+- **Chlorella's, not Penfold's.** "These are specialist Chlorella equipment for automating the distribution of chlorine around a plant." The transfer control system is Chlorella Chemicals' product (`brands.ts`, its livery): the two OT-216 terminals, and the control box's enclosure and tag plate as the system supplier's (its enclosure in Chlorella's green, a green engraved tag plate, Chlorella's maker's plate and rating plate, `CHLORELLA OT-216` on power-up). The bought-in parts inside the box keep their own makers' badges (Quorvane, Voltara, Neumann Dynamik, Fankel, Hartwell & Bligh), as the owner approved. This is a deliberate exception to CLAUDE.md's rule that every mimic, control board and control panel is Penfold's: it is specialist supplier equipment, the way instruments set into a panel keep their own makers.
+- **A moulded clamshell, common in the 2000s**: two shell halves meeting at a parting line round the edge, rounded corners, screw bosses at the corners and a slightly domed front. The shell is pale green moulded plastic with a slightly rough, textured finish.
+- **A printed fascia**: a darker green, smooth printed polyester overlay covering the front, which protects the rougher shell and wipes clean, as industrial equipment of that era had. Chlorella's logo is printed on it.
+- **Membrane keys are not separate buttons**: they are printed patches of the same fascia, each key a printed outline with its legend, very slightly embossed, under one continuous overlay. The LCD sits behind a clear window in the fascia; the lamps are printed LED windows in it.
+- **How it is rendered** (the owner): no modelled or moving key parts. The fascia is one flat mesh; the keys' raised patches, embosses and the window's edges are a subtle bump map with a matching roughness map, drawn procedurally onto canvases as the game's other textures are, so the raised patches catch the light slightly and the smooth fascia is a little glossier than the rough shell. Presses work as before, through hit areas on the flat fascia (`fasciaKey`), with feedback from the key's click and from the LCD or lamp responding rather than from geometry moving. The bump and roughness maps are drawn once and shared by the terminals in a room (`fasciaMaps`); nothing is redrawn each frame.
+
+Built in `industrial-control/views/ot216-terminal.ts` (`OT216_LIVERY`, `FASCIA_KEYS`, `drawFascia`, `fasciaMaps`), `core/parts/small-parts.ts` (`fasciaKey`) and `plant/views/chem-control-box.ts`.

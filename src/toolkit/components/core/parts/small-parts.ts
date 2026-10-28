@@ -1,4 +1,4 @@
-import { Group, MeshBasicMaterial } from 'three';
+import { Group, Mesh, MeshBasicMaterial, PlaneGeometry } from 'three';
 import type { PanelKit } from '../views/eighties-controls';
 import { createMicroLabel } from '../views/eighties-controls';
 import { tools } from '../views/fitting-tools';
@@ -67,6 +67,40 @@ export function membraneKey(
   a.updates.push((delta) => {
     pressed = Math.max(0, pressed - delta);
     cap.position.z = pressed > 0 ? 0.0008 : 0.002;
+  });
+  return a.part();
+}
+
+/**
+ * A printed membrane key's hit area (the owner, 2026-10-28, of the
+ * OT-216: membrane keys are not separate buttons, and nothing on them is
+ * modelled or moves): a patch of a flat fascia, `w` × `h` metres, that
+ * draws nothing of its own (the fascia's maps show the key, its legend
+ * and its emboss). Pressing it clicks and calls `action`; what answers is
+ * the display or lamp it works. Its face at z = 0, facing +z.
+ */
+export function fasciaKey(
+  kit: PanelKit,
+  {
+    w,
+    h,
+    action = () => {},
+    name,
+  }: { w: number; h: number; action?: () => void; name: string },
+): Part {
+  const a = beginPart(kit, name);
+  const material = new MeshBasicMaterial({
+    colorWrite: false,
+    depthWrite: false,
+  });
+  kit.materials.push(material);
+  const area = new Mesh(new PlaneGeometry(w, h), material);
+  area.position.z = 0.0003;
+  area.userData.live = true;
+  a.object.add(area);
+  a.uses.set(area, () => {
+    action();
+    partAudio.play(CLICK, a.object);
   });
   return a.part();
 }

@@ -361,7 +361,7 @@ describe('the OT-216 terminal', () => {
     });
     const on = tickOt216(off, 0.1, feed(), OK);
     const s = ot216Screen(on, feed(), true, OK, 0);
-    expect(s.lines).toEqual(['PENFOLD OT-216  ', 'V2.04 SELF TEST ']);
+    expect(s.lines).toEqual(['CHLORELLA OT-216', 'V2.04 SELF TEST ']);
     expect(ot216Screen(on, feed(), true, OK, 0.6).leds.run).toBe(false);
     expect(press(['F2'], { from: on }).t.mode).toBe('MON');
     const ready = tickOt216(on, OT216.selfTest, feed(), OK);

@@ -1,7 +1,8 @@
 import { Group } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
-import { panelMakerMark } from '../../core/views/panel-maker-mark';
+import { chlorellaPlate } from './chlorella-plate';
+import { brandLivery } from '../../core/views/brand-livery';
 import { createPartSet, disconnectHandle } from '../../core/parts/parts';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import type { BrandId } from '../../core/logic/brands';
@@ -60,11 +61,14 @@ export const BOX_GLANDS = [
 
 /**
  * The chemical distribution's control box (prompt 091; the owner,
- * 2026-10-27), Penfold Controls': a steel wall enclosure about 600 × 400
- * × 200 mm in light grey, its door isolator on the front (after a door-
+ * 2026-10-27), Chlorella Chemicals' (the owner, 2026-10-28: the transfer
+ * control system is Chlorella's specialist product, its terminals and
+ * this box with them; a deliberate exception to the rule that control
+ * panels are Penfold's): a steel wall enclosure about 600 × 400
+ * × 200 mm in Chlorella's green, its door isolator on the front (after a door-
  * mounted rotary switch-disconnector), its door opening on a quarter-turn
  * latch. Inside on DIN rail, each module badged by its maker (CLAUDE.md:
- * the box is Penfold's, what it holds is bought in): Voltara's MCB and
+ * the box is Chlorella's, what it holds is bought in): Voltara's MCB and
  * door isolator, Neumann Dynamik's 24 V power supply with its DC OK LED,
  * the controller (Quorvane's QL-12, a small PLC after a Siemens LOGO! 8)
  * with RUN, STOP and FAULT LEDs and an LED for every input and output,
@@ -102,7 +106,9 @@ export function createChemControlBox(
   const W = 0.6;
   const H = 0.4;
   const D = 0.2;
-  const steel = t.paint('#d7d8d2', 0.5, 0.2);
+  // Its steel enclosure in Chlorella's green, powder coated.
+  const livery = brandLivery(kit, 'chlorella');
+  const steel = t.paint(livery.palette.shade, 0.5, 0.2);
   const wall = 0.002;
   // The case, open at the front.
   t.box(group, steel, W, H, wall, 0, 0, wall / 2);
@@ -510,7 +516,7 @@ export function createChemControlBox(
   const tagPlate = createEngravedPlate(
     kit,
     [tag, 'CHEMICAL TRANSFER CONTROL', 'HYPOCHLORITE · ACID'],
-    { colour: 'black', width: 0.26, height: 0.085 },
+    { colour: 'green', width: 0.26, height: 0.085 },
   );
   tagPlate.position.set(-0.1, 0.115, 0.018);
   door.add(tagPlate);
@@ -535,7 +541,7 @@ export function createChemControlBox(
   // The maker's rating plate, low on the door.
   t.label(
     door,
-    `PENFOLD CONTROLS  TYPE CTC-2\nSERIAL 0312-0447  2003\n230V AC 50Hz  6A  IP65\nWIRING DIAGRAM ${tag}-WD1`,
+    `CHLORELLA CHEMICALS  TYPE CTC-2\nSERIAL 0312-0447  2003\n230V AC 50Hz  6A  IP65\nWIRING DIAGRAM ${tag}-WD1`,
     -0.1,
     -0.1,
     0.019,
@@ -543,7 +549,10 @@ export function createChemControlBox(
     '#1b1b1b',
     '#c9ccc8',
   );
-  panelMakerMark(kit, door, { width: W, height: H, z: 0.019 });
+  // The system supplier's plate, top right.
+  const maker = chlorellaPlate(kit, 0.13, 'CHEMICAL TRANSFER SYSTEMS');
+  maker.position.set(W / 2 - 0.08, H / 2 - 0.04, 0.019);
+  door.add(maker);
   const latch = t.cyl(
     door,
     t.paint('#202224', 0.5),

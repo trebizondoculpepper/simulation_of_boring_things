@@ -405,7 +405,7 @@ export const BRANDS: readonly Brand[] = [
     founded: 1956,
     country: 'United Kingdom',
     makes:
-      'Sodium hypochlorite, pH correction and test reagents, delivered in bulk by its own tankers',
+      'Sodium hypochlorite, pH correction and test reagents, delivered in bulk by its own tankers, and the specialist equipment that distributes them round a plant: transfer controls and their OT-216 terminals',
     promise: 'Safe, sparkling water for every swimmer, every day',
     mark: 'molecule',
     colours: ['#3f9b3a', '#cfe9b0', '#16301a'],

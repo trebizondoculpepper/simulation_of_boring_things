@@ -143,7 +143,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Chemical distribution panels, today’s and the new',
     reference:
-      'WH-CP1 as the wet hall has it today, and its replacement on trial (prompt 091): Penfold OT-216 terminals for hypochlorite and acid (16 × 2 LCD, F1 MON, F2 SET, F3 CMD, ESC, ENTER, cursor keys, LOCAL ACCESS key) and their control box (isolator, MCB, PLC after a LOGO! 8), all on one trial of both lines ten times fast, with a trial station for the local controls and faults',
+      'WH-CP1 as the wet hall has it today, and its replacement on trial (prompt 091): Chlorella OT-216 terminals for hypochlorite and acid (16 × 2 LCD, F1 MON, F2 SET, F3 CMD, ESC, ENTER, cursor keys, LOCAL ACCESS key) and their control box (isolator, MCB, PLC after a LOGO! 8), all on one trial of both lines ten times fast, with a trial station for the local controls and faults',
     size: { w: 4.7, d: 0.8, h: 2.3, mount: 'floor' },
     build: (kit) => createChemControlPrototype(kit, { oldPanel: true }),
   },

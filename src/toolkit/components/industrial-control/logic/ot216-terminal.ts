@@ -1,5 +1,5 @@
 /**
- * Penfold Controls' OT-216 operator terminal, as the chemical distribution's
+ * Chlorella Chemicals' OT-216 operator terminal, as the chemical distribution's
  * two terminals run it (prompt 091; the owner, 2026-10-27): a 16 × 2
  * character LCD and a membrane keypad (F1 MON, F2 SET, F3 CMD, ESC,
  * ENTER and four cursor keys in an inverted T), RUN, CALL and ALARM LEDs
@@ -464,7 +464,7 @@ export function ot216Screen(
   if (t.selfTest > 0)
     return {
       ...blank,
-      lines: [pad('PENFOLD OT-216'), pad('V2.04 SELF TEST')],
+      lines: [pad('CHLORELLA OT-216'), pad('V2.04 SELF TEST')],
       leds: { run: flash, call: false, alarm: false },
       backlight,
     };
