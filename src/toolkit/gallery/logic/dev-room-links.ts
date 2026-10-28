@@ -68,6 +68,7 @@ export type GalleryRoomId =
   | 'dev49'
   | 'dev50'
   | 'dev51'
+  | 'dev52'
   | 'retired0'
   | 'retired1'
   | 'dev_corridor';
@@ -268,6 +269,8 @@ export const ROOMS: readonly RoomId[] = [
   'dev50',
   // By its URL only: the ideal pool plant, a working 3D schematic (mission 106).
   'dev51',
+  // By its URL only: museum stuff, the museum's showcases tried in the dark.
+  'dev52',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   'retired1',
@@ -442,6 +445,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev49: 'DEV49 · STATION SCHEMATICS (24TH CENTURY)',
   dev50: 'DEV50 · THE DELIVERY TRUCKS',
   dev51: 'DEV51 · THE IDEAL POOL PLANT',
+  dev52: 'DEV52 · MUSEUM STUFF',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   retired1: 'RETIRED1 · JACUZZI PLANT ROOM, 2026-10-25',
   dev_corridor: 'DEV CORRIDOR',
@@ -567,6 +571,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev49: '#ffcc66',
   dev50: '#6a6b6d',
   dev51: '#2a5f9e',
+  dev52: '#1a1a1a',
   retired0: '#6d7a6f',
   retired1: '#6d7a6f',
   dev_corridor: '#2d9ca0',

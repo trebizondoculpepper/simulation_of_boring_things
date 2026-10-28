@@ -1,4 +1,11 @@
-import { Group, SRGBColorSpace, TextureLoader } from 'three';
+import {
+  Group,
+  Mesh,
+  SRGBColorSpace,
+  Shape,
+  ShapeGeometry,
+  TextureLoader,
+} from 'three';
 import type { Color, Material, Object3D } from 'three';
 import { signal } from '@preact/signals-core';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
@@ -12,11 +19,6 @@ import {
   pushButton,
 } from '../../../components/core/parts/parts';
 import {
-  CHEMICAL_COLOUR,
-  createFillCabinet,
-} from '../../../components/plant/views/chemicals-storage';
-import {
-  CASE_PLAQUES,
   CHAPTERS,
   CHAPTER_SECONDS,
   DRAMATISATION,
@@ -34,6 +36,20 @@ import type {
   Narration,
 } from '../../logic/museum-8-incident';
 import { createWallPanel } from '../../views/museum-exhibit';
+import { createFillPointsCase, para } from '../../views/fill-points-case';
+import { windowShape } from '../../views/museum-hall';
+import {
+  HALL_TITLE,
+  MUSEUM_ARCH,
+  MUSEUM_SQUARE,
+  MUSEUM_WALL,
+  beyondAt,
+  hallArches,
+  hallOrigin,
+  hallWalls,
+  wallWindows,
+} from '../../logic/museum-plan';
+import type { HallWall } from '../../logic/museum-plan';
 import type { Footprint } from '../../../controls/logic/walk-collision';
 import type { HallExhibit } from './exhibits';
 
@@ -76,40 +92,9 @@ const SOUTH = 6.7;
 const NORTH = -6.7;
 const EAST = 7.7;
 const WEST = -7.7;
-/** The dark lining's height: under the title vinyl and the windows' sills. */
-const LINING_H = 2.55;
+/** The black walls' finish (the owner, 2026-10-28: "Make hall 7, 'Never again' black walls"). */
+const BLACK = '#0d0d0e';
 const SERIF = 'Georgia, "Times New Roman", serif';
-
-const wrap = (c: CanvasRenderingContext2D, text: string, width: number) => {
-  const lines: string[] = [];
-  let line = '';
-  for (const word of text.split(' ')) {
-    const next = line ? `${line} ${word}` : word;
-    if (c.measureText(next).width > width && line) {
-      lines.push(line);
-      line = word;
-    } else line = next;
-  }
-  if (line) lines.push(line);
-  return lines;
-};
-const para = (
-  c: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  width: number,
-  size: number,
-  font: string,
-  lead = 1.25,
-) => {
-  c.font = font.replace('{}', `${size}px`);
-  for (const l of wrap(c, text, width)) {
-    c.fillText(l, x, y);
-    y += size * lead;
-  }
-  return y;
-};
 
 /** A photograph still to come: dark, its chapter's title and time. */
 function paintPlaceholder(ch: Chapter) {
@@ -192,7 +177,15 @@ function paintPlaque(ch: Chapter) {
     c.font = `bold ${h * 0.13}px ${SANS}`;
     c.fillText(`${ch.number} · ${ch.time} · ${ch.title}`, m, h * 0.17);
     c.fillStyle = '#e9e6de';
-    let y = para(c, ch.wrong, m, h * 0.34, w - 2 * m, h * 0.085, `{} ${SANS}`);
+    const y = para(
+      c,
+      ch.wrong,
+      m,
+      h * 0.34,
+      w - 2 * m,
+      h * 0.085,
+      `{} ${SANS}`,
+    );
     c.fillStyle = '#9fd3a8';
     para(
       c,
@@ -264,7 +257,7 @@ function paintOpening(c: CanvasRenderingContext2D, w: number, h: number) {
     `{} ${SANS}`,
   );
   c.fillStyle = '#9fd3a8';
-  y = para(
+  para(
     c,
     OPENING.tryIt,
     m,
@@ -341,30 +334,89 @@ function paintSponsor(c: CanvasRenderingContext2D, w: number, h: number) {
   );
 }
 
-const paintCaseCard =
-  (title: string, body: string) =>
-  (c: CanvasRenderingContext2D, w: number, h: number) => {
-    c.fillStyle = '#f2efe6';
-    c.fillRect(0, 0, w, h);
-    const m = w * 0.04;
-    c.fillStyle = '#16232b';
-    const y = para(
-      c,
-      title,
-      m,
-      h * 0.2,
-      w - 2 * m,
-      h * 0.13,
-      `bold {} ${SANS}`,
-    );
-    para(c, body, m, y + h * 0.02, w - 2 * m, h * 0.085, `{} ${SANS}`);
-  };
-
 const turnTo = (o: Object3D, x: number, y: number, z: number, yaw: number) => {
   o.position.set(x, y, z);
   o.rotation.y = yaw;
   return o;
 };
+
+const HALL = 'museum8';
+/** The paint's lift off the brick, so the two never fight. */
+const PROUD = 0.006;
+
+/**
+ * One wall's black paint, a sheet on its inside face in the wall's own
+ * (along, up), mirrored so it faces into the hall once turned (`placeLining`):
+ * floor to roof deck, its archways notched out and its windows cut out,
+ * and on the street wall a white panel left round the hall's title vinyl,
+ * whose dark letters would be lost on black.
+ */
+function blackWall(wall: HallWall) {
+  const n = [-wall.out[0], -wall.out[1]] as const;
+  const yaw = Math.atan2(n[0], n[1]);
+  // The sheet's x along the wall, after turning: its sign.
+  const dir = Math.round(wall.axis === 'x' ? Math.cos(yaw) : -Math.sin(yaw));
+  const half = MUSEUM_WALL / 2;
+  const [lo, hi] = [wall.from + half, wall.to - half]
+    .map((u) => u * dir)
+    .sort((p, q) => p - q);
+  const top = MUSEUM_SQUARE.h;
+  const shape = new Shape();
+  shape.moveTo(lo, 0);
+  const arches = hallArches(HALL)
+    .filter(
+      (a) =>
+        a.axis === wall.axis &&
+        Math.abs((wall.axis === 'x' ? a.at.z : a.at.x) - wall.line) < 1e-9,
+    )
+    .map((a) => ({ a, u: (wall.axis === 'x' ? a.at.x : a.at.z) * dir }))
+    .sort((p, q) => p.u - q.u);
+  for (const { a, u } of arches) {
+    const r = a.w / 2;
+    shape.lineTo(u - r, 0);
+    if (a.kind === 'arch') {
+      shape.lineTo(u - r, MUSEUM_ARCH.spring);
+      shape.absarc(u, MUSEUM_ARCH.spring, r, Math.PI, 0, true);
+    } else {
+      shape.lineTo(u - r, a.top);
+      shape.lineTo(u + r, a.top);
+    }
+    shape.lineTo(u + r, 0);
+  }
+  shape.lineTo(hi, 0);
+  shape.lineTo(hi, top);
+  shape.lineTo(lo, top);
+  shape.closePath();
+  for (const w of wallWindows(HALL, wall))
+    shape.holes.push(windowShape({ ...w, u: w.u * dir }));
+  const mid = (wall.from + wall.to) / 2;
+  if (beyondAt(wall, mid) === 'street') {
+    const panel = new Shape();
+    const pw = HALL_TITLE.w / 2 + 0.35;
+    // Down to the vinyl's foot only: clear of the picture lights below.
+    const foot = HALL_TITLE.y - HALL_TITLE.h / 2;
+    const head = HALL_TITLE.y + HALL_TITLE.h / 2 + 0.35;
+    const u = mid * dir;
+    panel.moveTo(u - pw, foot);
+    panel.lineTo(u + pw, foot);
+    panel.lineTo(u + pw, head);
+    panel.lineTo(u - pw, head);
+    panel.closePath();
+    shape.holes.push(panel);
+  }
+  return new ShapeGeometry(shape, 24);
+}
+
+/** Stand a wall's black sheet on its inside face, in the hall's frame. */
+function placeLining(sheet: Mesh, wall: HallWall) {
+  const o = hallOrigin(HALL);
+  const n = [-wall.out[0], -wall.out[1]] as const;
+  sheet.rotation.y = Math.atan2(n[0], n[1]);
+  const face =
+    wall.line + (wall.axis === 'x' ? n[1] : n[0]) * (MUSEUM_WALL / 2 + PROUD);
+  if (wall.axis === 'x') sheet.position.set(-o.x, 0, face - o.z);
+  else sheet.position.set(face - o.x, 0, -o.z);
+}
 
 export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const t = tools(kit);
@@ -379,25 +431,19 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const frameMat = t.paint('#0e0f10', 0.6, 0.2);
   const brass = t.paint('#a0803e', 0.35, 0.7);
 
-  // ---- The dark lining: the walls painted charcoal to the sills ----
+  // ---- The black walls: the brick painted matt black, floor to roof ----
   const lining = new Group();
-  const dark = t.paint('#1b1d20', 0.9);
+  const dark = t.paint(BLACK, 0.95);
   const darkMat = dark as Material;
   darkMat.polygonOffset = true;
   darkMat.polygonOffsetFactor = -1;
   darkMat.polygonOffsetUnits = -2;
-  const sheet = (x: number, z: number, w: number, yaw: number) => {
-    const m = t.box(lining, dark, w, LINING_H, 0.002, 0, LINING_H / 2, 0);
-    turnTo(m, x, LINING_H / 2, z, yaw);
-  };
-  sheet(0, SOUTH - 0.006, 15.4, Math.PI);
-  sheet(0, NORTH + 0.006, 15.4, 0);
-  for (const [x, yaw] of [
-    [EAST - 0.006, -Math.PI / 2],
-    [WEST + 0.006, Math.PI / 2],
-  ] as const)
-    for (const z of [-4.25, 4.25]) sheet(x, z, 4.9, yaw);
-  lining.name = 'Dark gallery lining';
+  for (const wall of hallWalls(HALL)) {
+    const sheet = new Mesh(blackWall(wall), dark);
+    placeLining(sheet, wall);
+    lining.add(sheet);
+  }
+  lining.name = 'Black gallery walls';
   object.add(
     still(markComponent(lining, { name: 'Gallery wall', decorative: true })),
   );
@@ -556,157 +602,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   solids.push({ minX: 6.65, maxX: 7.15, minZ: 5.65, maxZ: 6.15 });
 
   // ---- The central case: the two fill points, before and after ----
-  const showcase = new Group();
-  showcase.name = 'The two fill points, before and after';
-  const PLINTH_H = 0.8;
-  const plinth = t.paint('#202326', 0.6);
-  t.box(showcase, plinth, 2.6, PLINTH_H, 1.1, 0, PLINTH_H / 2, 0);
-  t.box(showcase, frameMat, 2.62, 0.08, 1.12, 0, PLINTH_H + 1.39, 0);
-  const glow = t.led(showcase, '#fff4dc', 0.02, 0, PLINTH_H + 1.34, 0, 'y');
-  glow.mesh.scale.set(100, 1, 40);
-  glow.set(1);
-  const glass = t.paint('#cfe3e6', 0.05, 0.1) as Material & {
-    transparent: boolean;
-    opacity: number;
-    depthWrite: boolean;
-  };
-  glass.transparent = true;
-  glass.opacity = 0.12;
-  glass.depthWrite = false;
-  const GH = 1.35;
-  const gy = PLINTH_H + GH / 2;
-  t.box(showcase, glass, 2.6, GH, 0.01, 0, gy, 0.55);
-  t.box(showcase, glass, 2.6, GH, 0.01, 0, gy, -0.55);
-  t.box(showcase, glass, 0.01, GH, 1.1, 1.3, gy, 0);
-  t.box(showcase, glass, 0.01, GH, 1.1, -1.3, gy, 0);
-  t.label(showcase, 'PLANTROOMS', 1.1, PLINTH_H - 0.08, 0.552, 0.03, '#d9d4c6');
-
-  // Before: two identical camlocks in an open recess, labels blank.
-  const before = new Group();
-  before.position.set(-0.65, PLINTH_H, -0.15);
-  showcase.add(before);
-  const steel = t.paint('#7d8387', 0.4, 0.6);
-  t.box(before, steel, 0.8, 0.55, 0.01, 0, 0.5, -0.12);
-  t.box(before, steel, 0.8, 0.01, 0.25, 0, 0.225, 0);
-  t.box(before, steel, 0.8, 0.01, 0.25, 0, 0.775, 0);
-  for (const x of [-0.4, 0.4])
-    t.box(before, steel, 0.01, 0.55, 0.25, x, 0.5, 0);
-  const oldBrass = t.paint('#8c7440', 0.5, 0.6);
-  const faded = t.paint('#e4dccb', 0.9);
-  for (const x of [-0.17, 0.17]) {
-    t.cyl(before, oldBrass, 0.04, 0.12, x, 0.52, -0.06, 'z', 20);
-    t.cyl(before, oldBrass, 0.046, 0.02, x, 0.52, 0.01, 'z', 20);
-    for (const s of [-1, 1])
-      t.box(before, oldBrass, 0.012, 0.09, 0.015, x + s * 0.052, 0.55, 0.0);
-    t.box(before, faded, 0.18, 0.06, 0.004, x, 0.36, -0.115);
-  }
-  // A hose end lying between them, its coupler fitting either.
-  const rubber = t.paint('#1d1d1d', 0.8);
-  t.cyl(before, rubber, 0.03, 0.35, 0.05, 0.03, 0.28, 'x', 16);
-  t.cyl(before, oldBrass, 0.045, 0.1, -0.17, 0.035, 0.28, 'x', 16);
-
-  // After: the game's fill cabinet, doors open, couplings inside.
-  const cabinet = createFillCabinet(kit);
-  const door = cabinet.userData.door as Object3D | undefined;
-  if (door) door.rotation.y = 1.75;
-  cabinet.position.set(0.5, PLINTH_H + 0.5, -0.5);
-  showcase.add(cabinet);
-  t.box(showcase, steel, 0.8, 1.05, 0.01, 0.5, PLINTH_H + 0.53, -0.51);
-  // The matching hose ends beside each.
-  for (const [x, colour, text, small] of [
-    [
-      0.25,
-      CHEMICAL_COLOUR.hypochlorite,
-      'SODIUM HYPOCHLORITE · 2" CAMLOCK',
-      false,
-    ],
-    [0.75, CHEMICAL_COLOUR.acid, 'HYDROCHLORIC ACID · 1½" GUILLEMIN', true],
-  ] as const) {
-    const r = small ? 0.024 : 0.032;
-    t.cyl(showcase, rubber, r, 0.3, x, PLINTH_H + r, 0.3, 'x', 16);
-    const end = small ? t.paint('#d9d4d0', 0.5) : brass;
-    t.cyl(
-      showcase,
-      end,
-      r * 1.5,
-      0.08,
-      x - 0.18,
-      PLINTH_H + r * 1.5,
-      0.3,
-      'x',
-      16,
-    );
-    t.cyl(
-      showcase,
-      t.paint(colour, 0.5),
-      r * 1.05,
-      0.03,
-      x + 0.05,
-      PLINTH_H + r,
-      0.3,
-      'x',
-      16,
-    );
-    t.label(
-      showcase,
-      text,
-      x,
-      PLINTH_H + 0.005,
-      0.42,
-      0.022,
-      '#111111',
-      colour,
-    ).rotation.x = -Math.PI / 2;
-  }
-
-  // The plaques on a sloped rail along its south face.
-  const rail = new Group();
-  rail.position.set(0, PLINTH_H - 0.12, 0.56);
-  rail.rotation.x = -0.6;
-  showcase.add(rail);
-  const card = (
-    w: number,
-    h: number,
-    x: number,
-    draw: Parameters<typeof t.printed>[2],
-  ) => {
-    const p = t.printed(w, h, draw, 700, true);
-    p.mesh.position.set(x, 0, 0.02);
-    rail.add(p.mesh);
-  };
-  card(
-    0.6,
-    0.22,
-    -0.95,
-    paintCaseCard(CASE_PLAQUES.before.title, CASE_PLAQUES.before.body),
-  );
-  card(
-    0.6,
-    0.22,
-    -0.32,
-    paintCaseCard(CASE_PLAQUES.fix, CASE_PLAQUES.frankfurt),
-  );
-  card(
-    0.6,
-    0.22,
-    0.31,
-    paintCaseCard(CASE_PLAQUES.after.title, CASE_PLAQUES.after.body),
-  );
-  card(
-    0.6,
-    0.22,
-    0.94,
-    paintCaseCard('Museum specimens', CASE_PLAQUES.specimen),
-  );
-  object.add(
-    still(
-      markComponent(showcase, {
-        name: 'Museum case: the two fill points, before and after (specimens, connected to nothing)',
-        decorative: true,
-      }),
-    ),
-  );
-  solids.push({ minX: -1.35, maxX: 1.35, minZ: -0.6, maxZ: 0.75 });
+  const showcase = createFillPointsCase(kit);
+  object.add(still(showcase.object));
+  solids.push(showcase.solid);
 
   const show = () => {
     const now = litChapter(narration);

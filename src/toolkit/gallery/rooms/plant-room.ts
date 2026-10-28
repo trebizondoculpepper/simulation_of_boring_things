@@ -125,12 +125,15 @@ export type ExhibitRoomId =
   | 'dev47'
   | 'dev48'
   | 'dev49'
-  | 'dev51';
+  | 'dev51'
+  | 'dev52';
 
 /** A room's own finish (`FINISH` in its module). */
 export interface RoomFinish {
   wall?: string;
   floor?: string | null;
+  /** The painted dado stripe round its walls: its colour, or null for none. */
+  stripe?: string | null;
   /** Breeze-block walls, as the plant rooms have. */
   blockwork?: boolean;
   /** Lit by its own fittings: the room's general light only a little fill. */
@@ -205,6 +208,7 @@ const EXHIBITS: Record<
   dev48: () => import('./plant/touch-panels-plant'),
   dev49: () => import('./plant/station-schematics'),
   dev51: () => import('./plant/ideal-pool-plant'),
+  dev52: () => import('./plant/museum-stuff'),
 };
 
 /**
@@ -420,8 +424,11 @@ export function startEquipmentRoom(
       if (blockwork) mapBlockwork(piece.geometry, at);
     }
     // A painted dado stripe round the walls, as plant rooms are marked.
-    for (const z of [-halfZ + 0.16, halfZ - 0.16])
-      slab(2 * halfX - 0.4, 0.15, 0.01, 0, 1.2, z, stripePaint);
+    if (finish?.stripe !== null) {
+      if (finish?.stripe) stripePaint.color.set(finish.stripe);
+      for (const z of [-halfZ + 0.16, halfZ - 0.16])
+        slab(2 * halfX - 0.4, 0.15, 0.01, 0, 1.2, z, stripePaint);
+    }
     portals = createPortals(id, devPortals(id, bounds, m), 0, m);
     scene.add(portals.group);
 

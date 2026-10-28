@@ -24,6 +24,9 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Dev52, Museum stuff (the owner, 2026-10-28: "a devroom called museum stuff, 90% black walls, minimal lighting"): a dark room (10% grey walls, dark floor and ceiling, a low ambient, a gallery spot over each case) for the museum's fittings. In it a reusable museum showcase (`src/toolkit/gallery/views/museum-showcase.ts`, sized by `logic/museum-showcase.ts`): a plinth with a recessed black kick plate and a shadow gap under its fabric deck, a low-iron glass hood with faint reflections and just-visible bonded edges in a thin bronze-black channel, a lighting attic with warm LED strips and one spot (no shadows), and a small object label on an acrylic wedge, the deck set by an eye-line rule. Hall 8's case of the two fill points now uses it (`views/fill-points-case.ts`), shown in both places, with its plaques on a bracketed rail clear of the plinth and its hose tags no longer overlapping.
+- Hall 8, Never again, has black walls (the owner, 2026-10-28: "Make hall 7, 'Never again' black walls"): matt black from floor to roof deck, round its archways and windows, with a white panel left behind the hall's title vinyl so it stays readable; it replaces the charcoal lining to 2.55 m.
+
 - An oil-wheel projector on Hall 7's 1970s grout (the owner, 2026-10-28): a disco-era effects projector, the Psycholux 250 (`src/toolkit/gallery/views/oil-wheel-projector.ts`, its wheel and oils in `logic/oil-wheel.ts`), its glass wheel of coloured oils turning across the lens and its swimming colours thrown on the avocado specimen; nothing redrawn after it is built, only turned.
 
 - Thirty-three OpenAI-generated reference photographs for the fictional 1997 chlorine-release museum sequence: three variants of each of eleven scenes in `doc/gens/hindenburg/` (the owner, 2026-10-28).
