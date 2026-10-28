@@ -180,6 +180,12 @@ function fastener(paints: RackPaints, parent: Object3D, x: number, y: number) {
 /** A fastener's head radius, and how far in from each corner of every plate it sits. */
 const FASTENER = 0.0032;
 const FASTENER_INSET = 0.0058;
+/**
+ * How far in from a plate's side its title plate stops: past its corner
+ * fasteners' countersinks, with a gap (the owner, 2026-10-28: no plaque
+ * over a screw).
+ */
+const SCREW_CLEAR = FASTENER_INSET + FASTENER * 1.25 + 0.0018;
 
 /**
  * Four fasteners, one in from each corner of a plate `w` by `h`; a filler
@@ -287,7 +293,9 @@ function drawDial(
   c.textAlign = 'center';
   c.textBaseline = 'middle';
   for (const { share, text } of marks) {
-    c.font = `bold ${text.length > 3 ? 34 : 40}px ${PANEL_FONT}`;
+    // Words (WORST, BEST) smaller, inside the dial's edge (the owner,
+    // 2026-10-28: they overprinted it).
+    c.font = `bold ${text.length > 3 ? 28 : 40}px ${PANEL_FONT}`;
     const [x, y] = at(share, radius * 0.86);
     c.fillText(text, x, y);
   }
@@ -595,7 +603,7 @@ function build_(
     const title = dymo
       ? createDymoLabel(kit, m.title, { colour: 'black', seed: m.title.length })
       : createEngravedPlate(kit, [m.title], {
-          width: m.w - 0.02,
+          width: m.w - 2 * SCREW_CLEAR,
           height: SPACING.title,
         });
     title.position.set(0, titleY, 0.0002);
