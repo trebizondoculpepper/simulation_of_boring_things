@@ -1,3 +1,4 @@
+import { cabinetFeeds, dosingStock, feedMessages } from './plant/pool-dosing';
 import {
   actOnIntake,
   newSiteIntake,
@@ -10,7 +11,6 @@ import {
 import type { IntakeAction, SiteIntake } from './plant/site-intake';
 import {
   actOnDistribution,
-  dayTankStock,
   doseDraw,
   newChemicalDistribution,
   stepDistribution,
@@ -1071,16 +1071,7 @@ function stepPlant(world: World, delta: number): World {
   // from its own (plan 085), and its tanks give what was dosed.
   // The lounge doses each through its injection quill (prompt 089, item
   // 4): with the quill's isolating valve shut, none of it goes in.
-  const stock = (id: PoolId) => {
-    const s = dayTankStock(world.distribution, id);
-    if (id !== 'pool_01') return s;
-    const open = (k: string) =>
-      world.installedValves[`${k}-quill.in.iso`] ?? true;
-    return {
-      hypochlorite: s.hypochlorite && open('hypo'),
-      acid: s.acid && open('acid'),
-    };
-  };
+  const stock = (id: PoolId) => dosingStock(world, id);
   // The Olympic's make-up, on its band at the tank's depth as the step begins.
   const calling = makeUpCalls(
     world.olympicTank,
@@ -1473,6 +1464,7 @@ export function jacuzziCabinetPanel(world: World, doorOpen = false) {
       draining: jacuzziDischarging(world),
       doorOpen,
       time: world.time,
+      feeds: feedMessages(cabinetFeeds(world, 'pool_03', flowing)),
     }),
   };
 }

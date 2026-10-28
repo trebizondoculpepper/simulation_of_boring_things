@@ -1,3 +1,4 @@
+import { doseDemand, doseRates } from '../../../game/plant/pool-dosing';
 import { Group } from 'three';
 import { computed } from '@preact/signals-core';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -26,6 +27,8 @@ import { createDoseBottle } from '../../components/plant/views/dose-bottle';
 import {
   BOTTLE,
   bottleLevel,
+  bottlePumpWords,
+  bottleReadout,
   isDoseBottle,
 } from '../../../game/plant/dose-bottle';
 import type { DoseBottle } from '../../../game/plant/dose-bottle';
@@ -246,17 +249,24 @@ function dayBottle(
     acid: c === 'acid',
   });
   const trend = levelTrend();
+  const site = DAY_TANKS[c][index].site;
   const state = (): DoseBottle => {
-    const t =
-      typeof window === 'undefined'
-        ? undefined
-        : roomWorld().world.value.distribution[c].tanks[index];
+    const w =
+      typeof window === 'undefined' ? undefined : roomWorld().world.value;
+    const t = w?.distribution[c].tanks[index];
+    // What its pool's dosing asks of it and what it gives, from the model,
+    // not guessed from its level (the owner, 2026-10-28: the footbath's
+    // draws so little its level never seemed to move).
+    const asked = w ? doseDemand(w, site)[c] : 0;
+    const given = w ? doseRates(w, site)[c] : 0;
+    const litres = t?.litres ?? capacity * 0.7;
     return {
       capacity,
-      litres: t?.litres ?? capacity * 0.7,
+      litres,
       calling: t?.calling ?? false,
-      pumping:
-        trend.lpm() < -1e-4 && (t?.litres ?? 0) > capacity * BOTTLE.empty,
+      pumping: asked > 0 && litres > capacity * BOTTLE.empty,
+      asked,
+      given,
     };
   };
   return {
@@ -266,7 +276,6 @@ function dayBottle(
       const s = state();
       trend.sample(s.litres, delta);
       // Its head on its plant room's supply.
-      const site = DAY_TANKS[c][index].site;
       const powered =
         typeof window === 'undefined' ||
         serviceAvailable(
@@ -276,12 +285,17 @@ function dayBottle(
         );
       bottle.show(s, powered, delta);
     },
-    status: () =>
-      describeTank(
-        `${NAME[c]} dose bottle ${tag}`,
-        bottleLevel(state()),
-        trend.lpm(),
-      ),
+    status: () => {
+      const b = state();
+      const powered =
+        typeof window === 'undefined' ||
+        serviceAvailable(
+          roomWorld().world.value.plant,
+          `plant_${site}` as ServiceRoom,
+          'power',
+        );
+      return `${describeTank(`${NAME[c]} dose bottle ${tag}`, bottleLevel(b), trend.lpm())}; pump ${bottlePumpWords(bottleReadout(b, powered)).toLowerCase()}`;
+    },
   };
 }
 
