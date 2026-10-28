@@ -85,7 +85,7 @@ describe('Hall 6’s pumps', () => {
     const open = hall6Readings(s).flow[9];
     s = act(s, { type: 'notch', id: 'p9.discharge.iso', by: -3 });
     expect(hall6Readings(s).flow[9]).toBeLessThan(open);
-    expect(fillSeconds(9)).toBeCloseTo((3600 / 160), 6);
+    expect(fillSeconds(9)).toBeCloseTo(3600 / 160, 6);
   });
 });
 

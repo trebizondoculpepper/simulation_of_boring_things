@@ -1,9 +1,5 @@
 import { expandForPlumbing } from './plumbing-expansion';
-import type {
-  Expansion,
-  GivenFitting,
-  PlumbEdge,
-} from './plumbing-expansion';
+import type { Expansion, GivenFitting, PlumbEdge } from './plumbing-expansion';
 import type { SchematicNode } from './schematics';
 import { DIAPHRAGM_PUMPS } from '../../toolkit/components/plant/logic/diaphragm-pump';
 import { DMH } from '../../toolkit/components/plant/logic/motor-dosing-pump';
@@ -389,7 +385,10 @@ export const FITTINGS: readonly HallFitting[] = [
         edge: `delivery${p.no}`,
         end: 'source',
         normally: 'open',
-        role: p.family === 'centrifugal' && p.throttle ? 'discharge throttling' : 'discharge isolating',
+        role:
+          p.family === 'centrifugal' && p.throttle
+            ? 'discharge throttling'
+            : 'discharge isolating',
         operator: 'lever',
         body: big ? 'butterfly' : 'ball',
         of: id,
@@ -439,7 +438,11 @@ export const THROTTLES: readonly string[] = FITTINGS.filter(
   (f) => f.role === 'discharge throttling',
 ).map((f) => f.id);
 
-export type InstrumentKind = 'pressure' | 'level-gauge' | 'level' | 'level-switch';
+export type InstrumentKind =
+  | 'pressure'
+  | 'level-gauge'
+  | 'level'
+  | 'level-switch';
 
 export interface Instrument {
   id: string;
@@ -467,9 +470,21 @@ export const INSTRUMENTS: readonly Instrument[] = [
       unit: 'bar',
     },
   ]),
-  { id: 'tank.li', kind: 'level-gauge', role: 'tank sight tube', on: 'tank', unit: 'L' },
+  {
+    id: 'tank.li',
+    kind: 'level-gauge',
+    role: 'tank sight tube',
+    on: 'tank',
+    unit: 'L',
+  },
   { id: 'tank.lt', kind: 'level', role: 'tank level', on: 'tank', unit: 'L' },
-  { id: 'tank.lsh', kind: 'level-switch', role: 'tank high level', on: 'tank', unit: '' },
+  {
+    id: 'tank.lsh',
+    kind: 'level-switch',
+    role: 'tank high level',
+    on: 'tank',
+    unit: '',
+  },
 ];
 
 // ---- Tags, derived -------------------------------------------------------------
@@ -720,8 +735,7 @@ export function deliveries(
 }
 
 /** A pump's delivery alone, m³/h: what its sign's time is worked from. */
-export const deliveryAlone = (no: PumpNo) =>
-  deliveries((n) => n === no)[no];
+export const deliveryAlone = (no: PumpNo) => deliveries((n) => n === no)[no];
 
 /** How long a pump alone takes to fill the tank from empty, seconds. */
 export const fillSeconds = (no: PumpNo) =>

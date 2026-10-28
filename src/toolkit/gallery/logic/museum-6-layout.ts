@@ -179,11 +179,14 @@ function placePumps(): Record<PumpNo, MachinePlace> {
   const used = widths.reduce((a, b) => a + b, 0);
   const gap = Math.max(0.2, (end - start - used) / (PUMPS.length - 1));
   const out = {} as Record<PumpNo, MachinePlace>;
+  // Each fill line clear of the columns' row, where it crosses it.
+  const columnZ = hallColumns('museum6').map((c) => c.z);
   let z = start;
   for (const p of PUMPS) {
     const s = SHAPES[p.no];
-    const zc = z + s.w / 2;
-    z += s.w + s.ahead + gap;
+    let zc = z + s.w / 2;
+    for (const cz of columnZ) if (Math.abs(zc - cz) < 0.5) zc = cz + 0.5;
+    z = zc - s.w / 2 + s.w + s.ahead + gap;
     if (p.family === 'centrifugal' && p.submersible) {
       out[p.no] = { x: TROUGH_FACE + TROUGH.d / 2, z: zc, yaw: 0 };
       continue;
@@ -223,9 +226,9 @@ export const PORTS: Record<MachineId, Record<string, Port>> = {
       const s = SHAPES[p.no];
       return [
         pumpId(p.no),
-        s.suction
+        (s.suction
           ? { suction: s.suction, discharge: s.discharge }
-          : { discharge: s.discharge },
+          : { discharge: s.discharge }) as Record<string, Port>,
       ];
     }),
   ) as Record<`p${PumpNo}`, Record<string, Port>>),
@@ -264,8 +267,8 @@ export const PORTS: Record<MachineId, Record<string, Port>> = {
     drain: { at: [-0.25, 0.22, R + 0.15], out: [0, 0, 1] },
   },
   drain: {
-    'in-1': { at: [0.25, 0.05, 0], out: [0, 1, 0] },
-    'in-2': { at: [-0.25, 0.05, 0], out: [0, 1, 0] },
+    'in-1': { at: [0.25, 0.3, 0], out: [0, 0, -1] },
+    'in-2': { at: [-0.25, 0.22, 0], out: [0, 0, -1] },
   },
 };
 
@@ -321,7 +324,17 @@ export function boxInHall(id: MachineId): { min: Vec3; max: Vec3 } {
 export const odOf = (dn: number) =>
   dn <= 6
     ? 0.008
-    : ({ 25: 0.032, 40: 0.05, 65: 0.075, 150: 0.16, 200: 0.225, 250: 0.28, 300: 0.315 } as Record<number, number>)[dn] ?? dn / 900;
+    : ((
+        {
+          25: 0.032,
+          40: 0.05,
+          65: 0.075,
+          150: 0.16,
+          200: 0.225,
+          250: 0.28,
+          300: 0.315,
+        } as Record<number, number>
+      )[dn] ?? dn / 900);
 
 const SPACING = {
   'isolating-valve': 0.36,
@@ -375,7 +388,9 @@ function itemsOf(expansion: Expansion, edge: string) {
 
 function reach(things: readonly { kind: Spaced }[], dn: number) {
   if (!things.length) return 0.25;
-  return (FIRST + things.reduce((s, t) => s + SPACING[t.kind], 0)) * scale(dn) + 0.1;
+  return (
+    (FIRST + things.reduce((s, t) => s + SPACING[t.kind], 0)) * scale(dn) + 0.1
+  );
 }
 
 const lengthOf = (points: readonly Vec3[]) =>
@@ -384,11 +399,18 @@ const lengthOf = (points: readonly Vec3[]) =>
     .reduce(
       (s, p, k) =>
         s +
-        Math.hypot(p[0] - points[k][0], p[1] - points[k][1], p[2] - points[k][2]),
+        Math.hypot(
+          p[0] - points[k][0],
+          p[1] - points[k][1],
+          p[2] - points[k][2],
+        ),
       0,
     );
 
-function facing(a: { at: Vec3; outward: Vec3 }, b: { at: Vec3; outward: Vec3 }) {
+function facing(
+  a: { at: Vec3; outward: Vec3 },
+  b: { at: Vec3; outward: Vec3 },
+) {
   const d: Vec3 = [b.at[0] - a.at[0], b.at[1] - a.at[1], b.at[2] - a.at[2]];
   const len = Math.hypot(...d);
   if (len < 1e-6) return false;
@@ -427,7 +449,8 @@ export function standOf(no: PumpNo): { x: number; z: number } {
 export function plumbHall6(): Hall6Room {
   const expansion = hall6Expansion();
   // No pipe runs low over the visitors' floor: west of the pumps, below 2.4 m, but round the tank.
-  const westOfPumps = Math.min(...PUMPS.map((p) => boxInHall(pumpId(p.no)).min[0])) - 0.2;
+  const westOfPumps =
+    Math.min(...PUMPS.map((p) => boxInHall(pumpId(p.no)).min[0])) - 0.2;
   const regions: RouterRegion[] = [
     {
       min: [TANK_AT.x + 1.2, 0, interior.minZ],
@@ -438,10 +461,10 @@ export function plumbHall6(): Hall6Room {
   const machines = (Object.keys(PLACES) as MachineId[]).filter(
     (id) => !POINTS.includes(id),
   );
-  const o = hallOrigin('museum6');
+  // The columns, already in the hall's own coordinates.
   const columns = hallColumns('museum6').map((c) => ({
-    min: [c.x - o.x - 0.3, 0, c.z - o.z - 0.3] as Vec3,
-    max: [c.x - o.x + 0.3, ROOM.height, c.z - o.z + 0.3] as Vec3,
+    min: [c.x - 0.3, 0, c.z - 0.3] as Vec3,
+    max: [c.x + 0.3, ROOM.height, c.z + 0.3] as Vec3,
   }));
   const obstacles = [...machines.map((id) => boxInHall(id)), ...columns];
   const requests: RouterLine[] = LINKS.map((l) => {
@@ -459,7 +482,9 @@ export function plumbHall6(): Hall6Room {
       priority: dn / 100,
       startStraight: reach(things.source, dn),
       endStraight: reach(things.target, dn),
-      ...(l.id === 'overflow' || l.id === 'drainLine' ? { gravity: true as const } : {}),
+      ...(l.id === 'overflow' || l.id === 'drainLine'
+        ? { gravity: true as const }
+        : {}),
     };
   });
   const straight = requests.filter((q) => facing(q.start, q.end));
@@ -503,7 +528,10 @@ export function plumbHall6(): Hall6Room {
       list.forEach((thing, k) => {
         if (k > 0)
           d += (SPACING[thing.kind] / 2 + SPACING[list[k - 1].kind] / 2) * sc;
-        const { at, along } = pointAlong(points, end === 'source' ? d : total - d);
+        const { at, along } = pointAlong(
+          points,
+          end === 'source' ? d : total - d,
+        );
         items.push({
           id: thing.id,
           kind: thing.kind,
@@ -517,7 +545,12 @@ export function plumbHall6(): Hall6Room {
   const solids = [
     ...obstacles
       .filter((b) => b.min[1] < 2)
-      .map((b) => ({ minX: b.min[0], maxX: b.max[0], minZ: b.min[2], maxZ: b.max[2] })),
+      .map((b) => ({
+        minX: b.min[0],
+        maxX: b.max[0],
+        minZ: b.min[2],
+        maxZ: b.max[2],
+      })),
     ...lowPipeFootprints(lines),
   ];
   return { expansion, lines, items, regions, problems, solids };
