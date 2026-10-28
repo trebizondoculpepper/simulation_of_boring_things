@@ -1,11 +1,13 @@
 import {
   acidFor,
+  dose,
   mixWaters,
   readings,
   stepChemistry,
   waterFrom,
   MOLAR,
 } from './pool-chemistry';
+import { POOL_CELL_SHARES, exchangeRing } from './circuit';
 import { POOLS } from '../plant-sizing/pools.config';
 import { ASSUME, sizePlant } from '../plant-sizing/sizing';
 import { BALANCE_TANK, volumeOf } from '../plant/balance-tank';
@@ -60,6 +62,11 @@ export interface BenchPool {
   mains: WaterSpec;
   /** The pool's water when first filled and balanced. */
   start: WaterSpec;
+  /**
+   * With two zones, the pool's mixing lag: its volume's shares as cells in
+   * series, return side first (`circuit.ts`); one share, a well-mixed pool.
+   */
+  poolCells?: readonly number[];
 }
 
 /** A 25 m community pool: 25 × 12.5 m, 1.5 m mean depth, a three-hour turnover, UV on. */
@@ -138,8 +145,13 @@ export const PLANT: Plant = {
   acidPump: 4,
   fcSetpoint: 1.5,
   phSetpoint: 7.3,
-  fcBand: 0.3,
-  fcIntegral: 0.5,
+  // Tuned to the loop's dead time, the pool's pass through its mixing lag
+  // (`circuit.ts`): with the first tuning (0.3 mg/l, half an hour) the loop
+  // swung 1.2 to 2.5 mg/l; of bands 0.3, 0.5, 0.8 and integrals 1 to 6 h,
+  // this gave the sample the least mean deviation from setpoint over a
+  // steady day (0.07 mg/l, against 0.34).
+  fcBand: 0.5,
+  fcIntegral: 6,
   phBand: 0.3,
   sampleLag: 60,
   hypoFailed: false,
@@ -168,8 +180,14 @@ export type Circuit = 'one' | 'two';
 export interface BenchState {
   /** Hours since the run began. */
   t: number;
-  /** The pool's water (the whole circuit's, with one volume). */
+  /**
+   * The pool's water (the whole circuit's, with one volume): with two
+   * zones its far side, the last of its cells, as bathers meet it and a
+   * poolside test reads it.
+   */
   pool: PoolChemistry;
+  /** With two zones, the pool's cells before its far side, the return side first. */
+  poolReturn: PoolChemistry[];
   /** The balance tank's, with two volumes. */
   tank: PoolChemistry | null;
   plant: Plant;
@@ -198,6 +216,12 @@ export function newBench(
   return {
     t: 0,
     pool: water,
+    poolReturn:
+      circuit === 'two'
+        ? (pool.poolCells ?? POOL_CELL_SHARES)
+            .slice(1)
+            .map(() => ({ ...water }))
+        : [],
     tank: circuit === 'two' ? { ...water } : null,
     plant,
     cell: { fc: water.freeChlorine, ph: water.ph },
@@ -310,6 +334,7 @@ export function stepBench(
 
   let poolWater: PoolChemistry;
   let tankWater: PoolChemistry | null = null;
+  let poolReturn: PoolChemistry[] = [];
   let fluxes = s.fluxes;
   const visit = { bathers, visitHours: pool.visitHours, agitation };
   if (!s.tank) {
@@ -336,19 +361,27 @@ export function stepBench(
     // Two zones (the owner, 2026-10-28): the pool, with its bathers and
     // its surface, dosed through its return; the balance tank, which takes
     // the make-up, the hand doses, and passes the plant (UV) on its way out.
-    const vPool = pool.volume;
+    // The pool is its cells in series (its mixing lag, `circuit.ts`): the
+    // return side takes the dose, the far side goes over the weir.
+    const shares = pool.poolCells ?? POOL_CELL_SHARES;
     const vTank = pool.balanceTank;
-    const rp = stepChemistry(
-      s.pool,
-      {
-        ...common,
-        ...visit,
-        volume: vPool,
-        surface: pool.surface,
-        circulation: pool.circulation,
-        added: toPool,
-      },
-      dt,
+    const cells = [...s.poolReturn, s.pool];
+    const stepped = cells.map((w, i) =>
+      stepChemistry(
+        w,
+        {
+          ...common,
+          bathers: bathers * shares[i],
+          visitHours: pool.visitHours,
+          agitation,
+          volume: pool.volume * shares[i],
+          surface: pool.surface * shares[i],
+          // Its share of the circulation, so its turnovers are the pool's.
+          circulation: pool.circulation * shares[i],
+          added: i === 0 ? toPool : {},
+        },
+        dt,
+      ),
     );
     const rt = stepChemistry(
       s.tank,
@@ -364,28 +397,20 @@ export function stepBench(
       },
       dt,
     );
-    fluxes = sumFluxes(sumFluxes(fluxes, rp.fluxes), rt.fluxes);
-    // The circulation: overflow pool → tank, return tank → pool, at Q. For
-    // each species the difference between them decays as e^(−Q(1/Vp + 1/Vt)t)
-    // about their volume-weighted mean, exactly.
-    const keep = Math.exp(-pool.circulation * hours * (1 / vPool + 1 / vTank));
-    const mixed = mixWaters(
-      [
-        { water: rp.water, volume: vPool },
-        { water: rt.water, volume: vTank },
-      ],
+    for (const r of stepped) fluxes = sumFluxes(fluxes, r.fluxes);
+    fluxes = sumFluxes(fluxes, rt.fluxes);
+    // The circulation round the ring, exactly: tank → return side → far
+    // side → over the weir to the tank.
+    const ring = exchangeRing(
+      [rt.water, ...stepped.map((r) => r.water)],
+      [vTank, ...shares.map((x) => x * pool.volume)],
+      pool.circulation,
+      hours,
       pool.temperature,
     );
-    const toward = (w: PoolChemistry): PoolChemistry => {
-      const out = { ...w };
-      for (const k of Object.keys(w) as (keyof PoolChemistry)[])
-        if (k !== 'ph') out[k] = mixed[k] + (w[k] - mixed[k]) * keep;
-      return out;
-    };
-    const settle = (w: PoolChemistry) =>
-      mixWaters([{ water: w, volume: 1 }], pool.temperature);
-    poolWater = settle(toward(rp.water));
-    tankWater = settle(toward(rt.water));
+    tankWater = ring[0];
+    poolReturn = ring.slice(1, -1);
+    poolWater = ring[ring.length - 1];
   }
   // The sample: from the pump's suction, the balance tank's water (one volume: the pool's), through the cell's lag.
   const sample = tankWater ?? poolWater;
@@ -398,6 +423,7 @@ export function stepBench(
     ...s,
     t: s.t + hours,
     pool: poolWater,
+    poolReturn,
     tank: tankWater,
     cell,
     integral,
@@ -637,6 +663,13 @@ const set =
   (s: BenchState): BenchState => ({ ...s, plant: { ...s.plant, ...change } });
 
 const STEADY = 48;
+/**
+ * A hand dose's mixing time, hours: one turnover of the bench's pool (3.0
+ * h), after which a dose into the balance tank has shown fully at the
+ * pool's far side (the owner, 2026-10-28; `circuit.ts`). Doses are judged
+ * this long after they go in.
+ */
+const MIXED = (POOL_25M.volume + POOL_25M.balanceTank) / POOL_25M.circulation;
 /** Events every `interval` hours from `from` to `to`. */
 const every = (
   from: number,
@@ -661,6 +694,59 @@ const handAcidIfOver =
           ),
         })
       : s;
+/**
+ * The circuit's water once everything in it has mixed, hand doses waiting
+ * included: what a technician works a dose out for when the pool's own
+ * test cannot yet show a dose just added (the pool's mixing lag,
+ * `circuit.ts`).
+ */
+export function circuitWater(s: BenchState, pool: BenchPool): PoolChemistry {
+  const shares = pool.poolCells ?? POOL_CELL_SHARES;
+  const cells = [...s.poolReturn, s.pool];
+  const parts = s.tank
+    ? [
+        { water: s.tank, volume: pool.balanceTank },
+        ...cells.map((w, i) => ({ water: w, volume: shares[i] * pool.volume })),
+      ]
+    : [{ water: s.pool, volume: pool.volume + pool.balanceTank }];
+  const mixed = mixWaters(parts, pool.temperature);
+  const waiting = s.pending.reduce<Additions>(
+    (a, d) => addInto(a, d.added),
+    {},
+  );
+  return dose(mixed, waiting, pool.volume + pool.balanceTank, pool.temperature);
+}
+/**
+ * TN23's acid with a shock: hydrochloric acid by hand, with the
+ * hypochlorite, to bring the circuit's pH to `to` once both have mixed.
+ */
+const acidWithShock = (to: number) => (s: BenchState, pool: BenchPool) =>
+  handDose(s, {
+    hcl: acidFor(
+      circuitWater(s, pool),
+      to,
+      pool.volume + pool.balanceTank,
+      pool.temperature,
+    ),
+  });
+/** Grams of soda ash that bring a water of `volume` m³ up to `ph` (bisection on the model's pH). */
+export function alkaliFor(
+  w: PoolChemistry,
+  ph: number,
+  volume: number,
+  temperature: number,
+): number {
+  const phWith = (g: number) => dose(w, { sodaAsh: g }, volume, temperature).ph;
+  if (phWith(0) >= ph) return 0;
+  let lo = 0;
+  let hi = 200 * volume; // 200 g/m³: far past any pool's need
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (phWith(mid) < ph) lo = mid;
+    else hi = mid;
+  }
+  return hi;
+}
 /** The same change to the water in every zone. */
 const changeWater = (
   s: BenchState,
@@ -668,6 +754,7 @@ const changeWater = (
 ): BenchState => ({
   ...s,
   pool: f(s.pool),
+  poolReturn: s.poolReturn.map(f),
   tank: s.tank ? f(s.tank) : null,
 });
 /** Grams to raise (or lower) something by `perM3` grams a cubic metre in the whole circuit. */
@@ -715,7 +802,7 @@ export const SCENARIOS: Scenario[] = [
         label: 'setpoint back to 1.5; reopened',
         apply: set({
           fcSetpoint: 1.5,
-          fcBand: 0.3,
+          fcBand: PLANT.fcBand,
           closed: false,
           freshFactor: 1,
         }),
@@ -924,7 +1011,7 @@ export const SCENARIOS: Scenario[] = [
     id: 'acid-overdose',
     title: 'Low pH: the acid pump stuck at full overnight; stop acid, soda ash',
     pool: POOL_25M,
-    hours: STEADY + 12 + 48,
+    hours: STEADY + 12 + 50,
     events: [
       {
         at: STEADY,
@@ -933,29 +1020,40 @@ export const SCENARIOS: Scenario[] = [
         apply: set({ acidStuck: true }),
       },
       {
-        at: STEADY + 10,
+        at: STEADY + 12,
         label:
-          'acid stopped; soda ash to restore alkalinity to 110 (1.06 g/m³ per mg/l)',
+          'acid stopped; soda ash to bring pH back to 7.3, bicarbonate for the rest of the alkalinity to 110',
         phase: 'treatment',
-        apply: (s, pool) =>
-          handDose(set({ acidStuck: false, acidFailed: true })(s), {
-            sodaAsh: grams(pool, Math.max(0, 110 - s.pool.alkalinity) * 1.06),
-          }),
+        apply: (s, pool) => {
+          // Soda ash raises pH, bicarbonate alkalinity (CoP §9.9): soda ash
+          // alone to 110 drives pH to 9.3, as the bench showed.
+          const w = circuitWater(s, pool);
+          const V = pool.volume + pool.balanceTank;
+          const ash = alkaliFor(w, 7.3, V, pool.temperature);
+          const after = dose(w, { sodaAsh: ash }, V, pool.temperature);
+          return handDose(set({ acidStuck: false, acidFailed: true })(s), {
+            sodaAsh: ash,
+            bicarbonate: grams(
+              pool,
+              Math.max(0, 110 - after.alkalinity) * 1.68,
+            ),
+          });
+        },
       },
       {
-        at: STEADY + 22,
+        at: STEADY + 24,
         label: 'acid pump back in auto',
         apply: set({ acidFailed: false }),
       },
     ],
     checks: (run) => {
       const low = minOf(
-        within(run.samples, STEADY, STEADY + 10).map((x) => x.ph),
+        within(run.samples, STEADY, STEADY + 12).map((x) => x.ph),
       );
       const taLow = minOf(
-        within(run.samples, STEADY, STEADY + 10).map((x) => x.alkalinity),
+        within(run.samples, STEADY, STEADY + 12).map((x) => x.alkalinity),
       );
-      const after = within(run.samples, STEADY + 34, STEADY + 58);
+      const after = within(run.samples, STEADY + 36, STEADY + 60);
       const ph = mean(after.map((x) => x.ph));
       const ta = mean(after.map((x) => x.alkalinity));
       return [
@@ -972,9 +1070,9 @@ export const SCENARIOS: Scenario[] = [
         {
           name: 'soda ash recovers it',
           expected:
-            'Stopping acid and adding soda ash brings pH and alkalinity back.',
+            'Stopping acid, soda ash for pH and bicarbonate for alkalinity bring both back.',
           source:
-            'PWTAG CoP glossary (soda ash); `pool-dosing-and-water-chemistry.md` §5.1',
+            'PWTAG CoP glossary (soda ash), §9.9 (bicarbonate); `pool-dosing-and-water-chemistry.md` §5.1',
           threshold: 'the day after: pH 7.2–7.5, alkalinity ≥ 80 mg/l',
           measured: `pH ${fmt(ph)}, TA ${fmt(ta, 0)}`,
           pass: ph >= 7.2 && ph <= 7.5 && ta >= 80,
@@ -1132,19 +1230,22 @@ export const SCENARIOS: Scenario[] = [
     title:
       'Chlorine too high after a shock: sodium thiosulphate before reopening',
     pool: POOL_25M,
-    hours: STEADY + 14 + 12,
+    hours: STEADY + 13 + MIXED + 12,
     events: [
       {
         at: STEADY,
         label:
-          'closed, controllers isolated; shocked to 20 mg/l (TN23: diarrhoea)',
+          'closed, controllers isolated; shocked to 20 mg/l (TN23: diarrhoea), with acid by hand for pH 7.4 once mixed',
         phase: 'problem',
         apply: (s, pool) =>
-          handDose(set({ isolated: true, closed: true, uv: false })(s), {
-            hypochlorite: grams(pool, Math.max(0, 20 - s.pool.freeChlorine)),
-          }),
+          acidWithShock(7.4)(
+            handDose(set({ isolated: true, closed: true, uv: false })(s), {
+              hypochlorite: grams(pool, Math.max(0, 20 - s.pool.freeChlorine)),
+            }),
+            pool,
+          ),
       },
-      ...every(STEADY, STEADY + 12, 2, {
+      ...every(STEADY + 2, STEADY + 12, 2, {
         label: 'two-hourly test: acid by hand to pH 7.4 if over 7.5',
         apply: handAcidIfOver(7.5, 7.4),
       }),
@@ -1162,7 +1263,7 @@ export const SCENARIOS: Scenario[] = [
           }),
       },
       {
-        at: STEADY + 14,
+        at: STEADY + 13 + MIXED,
         label: 'controllers back; UV on; acid by hand to pH 7.4',
         apply: (st, pool) =>
           handAcidIfOver(7.5, 7.4)(
@@ -1171,22 +1272,33 @@ export const SCENARIOS: Scenario[] = [
           ),
       },
       {
-        at: STEADY + 16,
+        at: STEADY + 13 + MIXED + 2,
         label: 'tested in range; reopened',
         apply: set({ closed: false }),
       },
     ],
     checks: (run) => {
-      const hold = within(run.samples, STEADY + 0.5, STEADY + 13);
+      // From a turnover on: the shock goes in at the balance tank and takes the
+      // pool's mixing lag to reach its far side (`MIXED`).
+      const hold = within(run.samples, STEADY + MIXED, STEADY + 13);
       const fcHold = minOf(hold.map((x) => x.freeChlorine));
-      const after = within(run.samples, STEADY + 13.75, STEADY + 14);
+      // A turnover on: the thiosulphate mixed through the pool.
+      const after = within(
+        run.samples,
+        STEADY + 13 + MIXED - 0.25,
+        STEADY + 13 + MIXED,
+      );
       const fcAfter = mean(after.map((x) => x.freeChlorine));
       const thioLeft = maxOf(after.map((x) => x.thiosulphate));
       const phBefore = mean(
         within(run.samples, STEADY + 12.5, STEADY + 13).map((x) => x.ph),
       );
       const phAfter = mean(after.map((x) => x.ph));
-      const back = firstTime(run.samples, STEADY + 14, (x) => x.ph <= 7.5);
+      const back = firstTime(
+        run.samples,
+        STEADY + 13 + MIXED,
+        (x) => x.ph <= 7.5,
+      );
       const so4 =
         mean(after.map((x) => x.sulphate)) -
         mean(within(run.samples, STEADY - 1, STEADY).map((x) => x.sulphate));
@@ -1197,7 +1309,8 @@ export const SCENARIOS: Scenario[] = [
             'Free chlorine stays high through the contact time, with pH held by hand at 7.5 or lower.',
           source:
             'PWTAG TN23 (20 mg/l for 13 h; test two-hourly; pH to 7.5 or lower)',
-          threshold: 'free chlorine ≥ 15 mg/l from 30 min to 13 h',
+          threshold:
+            'free chlorine ≥ 15 mg/l from a turnover (the dose mixed through the pool) to 13 h',
           measured: `min ${fmt(fcHold, 1)} mg/l`,
           pass: fcHold >= 15,
         },
@@ -1207,7 +1320,7 @@ export const SCENARIOS: Scenario[] = [
             'PWTAG’s 5 g/m³ per mg/l, slightly under-dosed, leaves a little free chlorine and no thiosulphate.',
           source: 'PWTAG TN23',
           threshold:
-            'free chlorine 1–3 mg/l, and thiosulphate under 1 % of its dose, within an hour',
+            'free chlorine 1–3 mg/l, and thiosulphate under 1 % of its dose, a turnover after (the dose mixed through the pool)',
           measured: `FC ${fmt(fcAfter)}, thiosulphate ${fmt(thioLeft, 3)} mg/l, sulphate +${fmt(so4, 1)} mg/l`,
           pass: fcAfter >= 1 && fcAfter <= 3 && thioLeft < 0.01 * 5 * 16,
         },
@@ -1226,8 +1339,8 @@ export const SCENARIOS: Scenario[] = [
             'Reopen only when free chlorine and pH are back in range: acid by hand brings pH back.',
           source: 'PWTAG TN23',
           threshold: 'pH ≤ 7.5 within 2 h of the acid, before reopening',
-          measured: `${hoursAfter(back, STEADY + 14)}`,
-          pass: back - (STEADY + 14) <= 2,
+          measured: `${hoursAfter(back, STEADY + 13 + MIXED)}`,
+          pass: back - (STEADY + 13 + MIXED) <= 2,
         },
       ];
     },
@@ -1329,9 +1442,13 @@ export const SCENARIOS: Scenario[] = [
           expected:
             'The controller at full output restores the setpoint, as fast as its pump allows.',
           source: '`pool-dosing-and-water-chemistry.md` §3.2',
-          threshold: 'free chlorine ≥ 1.3 mg/l within 4 h of the repair',
+          // As fast as the pump allows (about 3 h to replace what was lost),
+          // and the pool's mixing lag (about an hour more) for the dose to
+          // reach its far side from the return.
+          threshold:
+            'free chlorine ≥ 1.3 mg/l within 5 h of the repair (the pump’s 3 h and the pool’s mixing lag)',
           measured: `${hoursAfter(back, STEADY + 20)}`,
-          pass: back - (STEADY + 20) <= 4,
+          pass: back - (STEADY + 20) <= 5,
         },
       ];
     },
@@ -1341,28 +1458,34 @@ export const SCENARIOS: Scenario[] = [
     title:
       'A diarrhoeal faecal incident: close, raise chlorine, hold pH ≤ 7.5, filter, dechlorinate',
     pool: POOL_25M,
-    hours: STEADY + 16 + 8,
+    hours: STEADY + 13.5 + MIXED + 8,
     events: [
       {
         at: STEADY,
         label:
-          'diarrhoeal release: closed; UV bypassed; controller setpoint 20 mg/l, pH 7.2',
+          'diarrhoeal release: closed; UV bypassed; controller setpoint 20 mg/l, pH 7.2; acid by hand with the shock',
         phase: 'problem',
         apply: (s, pool) =>
-          handDose(
-            set({
-              closed: true,
-              uv: false,
-              fcSetpoint: 20,
-              fcBand: 3,
-              phSetpoint: 7.2,
-            })(s),
-            {
-              hypochlorite: grams(pool, Math.max(0, 20 - s.pool.freeChlorine)),
-            },
+          acidWithShock(7.2)(
+            handDose(
+              set({
+                closed: true,
+                uv: false,
+                fcSetpoint: 20,
+                fcBand: 3,
+                phSetpoint: 7.2,
+              })(s),
+              {
+                hypochlorite: grams(
+                  pool,
+                  Math.max(0, 20 - s.pool.freeChlorine),
+                ),
+              },
+            ),
+            pool,
           ),
       },
-      ...every(STEADY, STEADY + 12, 2, {
+      ...every(STEADY + 2, STEADY + 12, 2, {
         label: 'two-hourly test: acid by hand to pH 7.2 if over 7.4',
         apply: handAcidIfOver(7.4, 7.2),
       }),
@@ -1371,15 +1494,18 @@ export const SCENARIOS: Scenario[] = [
         label: 'contact time done: setpoint 1.5; thiosulphate to 2.2 mg/l',
         phase: 'treatment',
         apply: (s, pool) =>
-          handDose(set({ fcSetpoint: 1.5, fcBand: 0.3, phSetpoint: 7.3 })(s), {
-            thiosulphate: grams(
-              pool,
-              5 * Math.max(0, s.pool.freeChlorine - 2.2),
-            ),
-          }),
+          handDose(
+            set({ fcSetpoint: 1.5, fcBand: PLANT.fcBand, phSetpoint: 7.3 })(s),
+            {
+              thiosulphate: grams(
+                pool,
+                5 * Math.max(0, s.pool.freeChlorine - 2.2),
+              ),
+            },
+          ),
       },
       {
-        at: STEADY + 15,
+        at: STEADY + 13.5 + MIXED,
         label: 'UV back; reopened',
         apply: set({ uv: true, closed: false }),
       },
@@ -1398,7 +1524,12 @@ export const SCENARIOS: Scenario[] = [
       const turnovers =
         (13.5 * POOL_25M.circulation) /
         (POOL_25M.volume + POOL_25M.balanceTank);
-      const reopen = within(run.samples, STEADY + 15, STEADY + 16);
+      // Reopened a turnover after the thiosulphate, mixed through the pool.
+      const reopen = within(
+        run.samples,
+        STEADY + 13.5 + MIXED,
+        STEADY + 14.5 + MIXED,
+      );
       const fcReopen = mean(reopen.map((x) => x.freeChlorine));
       return [
         {

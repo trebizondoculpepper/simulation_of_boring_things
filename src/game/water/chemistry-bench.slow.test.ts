@@ -47,7 +47,7 @@ describe('the circuit as two zones against one volume', () => {
       expect(c.passTwo, `${sc.id} with two zones`).toBe(c.of);
     }
   }, 120_000);
-  it('a hand dose into the balance tank reaches the pool within one turnover, the tank first', () => {
+  it('a hand dose into the balance tank shows at the pool’s far side over most of a turnover, not at once (its mixing lag)', () => {
     const { one, two } = handDoseThroughTank();
     const turnover =
       (POOL_25M.volume + POOL_25M.balanceTank) / POOL_25M.circulation;
@@ -60,7 +60,9 @@ describe('the circuit as two zones against one volume', () => {
     );
     expect(after - before).toBeGreaterThan(15);
     expect(t63 - 1).toBeLessThan(turnover);
-    expect(t63 - 1).toBeGreaterThan(0);
+    // The mixing lag (`circuit.ts`): about an hour to 63 %, not the
+    // tank's ten minutes.
+    expect(t63 - 1).toBeGreaterThan(turnover / 4);
     // With one volume it is there at once.
     const oneJump = firstTime(
       one.samples,
