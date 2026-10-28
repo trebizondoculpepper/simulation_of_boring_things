@@ -51,7 +51,7 @@ two anonymous inspectors in anoraks with clipboards, seen from behind, examining
 ## Chapter 6: The changes
 
 ```
-a new, clean, lockable steel chemical delivery cabinet on the brick wall of a British leisure centre, two separate compartments with different coloured doors, two different kinds of hose coupling, bright hazard pictogram labels, a padlock, fresh paint, bright daylight, hopeful
+a new, clean, lockable steel chemical delivery cabinet on the brick wall of a British leisure centre, two separate compartments with their different coloured doors standing open, inside each compartment a fill pipe ending in its own kind of hose coupling mounted on the back wall of the cabinet, the doors plain with only bright hazard pictogram labels, a padlock hanging open, fresh paint, bright daylight, hopeful
 ```
 
 ## Extras
@@ -75,7 +75,7 @@ two identical old steel camlock female couplings with dust caps, side by side in
 ```
 
 ```
-two different chemical hose couplings side by side, a steel camlock and a white polypropylene quarter-turn coupling, each in its own lockable compartment with colour-coded doors and hazard labels
+a steel chemical fill cabinet with two lockable compartments, colour-coded doors standing open, inside each compartment on its back wall a fill pipe ending in a different hose coupling, a steel camlock in one and a white polypropylene quarter-turn coupling in the other, the doors plain with hazard labels on their fronts
 ```
 
 ## Using them in the game
@@ -125,7 +125,7 @@ two anonymous inspectors in anoraks with clipboards, seen from behind, examining
 ### Chapter 6: The changes
 
 ```
-a new, clean, lockable steel chemical delivery cabinet on the brick wall of a British leisure centre, two separate compartments with different coloured doors, two different kinds of hose coupling, bright hazard pictogram labels, a padlock, fresh paint, bright daylight, hopeful, 1997 British regional newspaper press photograph, 35mm film, Kodak Tri-X or faded Fujicolor, visible grain, slightly soft focus, documentary, no text, no logos, anonymous unidentifiable people --ar 3:2 --style raw --v 7
+a new, clean, lockable steel chemical delivery cabinet on the brick wall of a British leisure centre, two separate compartments with their different coloured doors standing open, inside each compartment a fill pipe ending in its own kind of hose coupling mounted on the back wall of the cabinet, the doors plain with only bright hazard pictogram labels, a padlock hanging open, fresh paint, bright daylight, hopeful, 1997 British regional newspaper press photograph, 35mm film, Kodak Tri-X or faded Fujicolor, visible grain, slightly soft focus, documentary, no text, no logos, anonymous unidentifiable people --ar 3:2 --style raw --v 7
 ```
 
 ### Extra: the front page, wide
@@ -149,5 +149,5 @@ two identical old steel camlock female couplings with dust caps, side by side in
 ### Central case: after
 
 ```
-two different chemical hose couplings side by side, a steel camlock and a white polypropylene quarter-turn coupling, each in its own lockable compartment with colour-coded doors and hazard labels, museum product photograph, neutral grey background, softbox lighting, no text --ar 4:3 --style raw --v 7
+a steel chemical fill cabinet with two lockable compartments, colour-coded doors standing open, inside each compartment on its back wall a fill pipe ending in a different hose coupling, a steel camlock in one and a white polypropylene quarter-turn coupling in the other, the doors plain with hazard labels on their fronts, museum product photograph, neutral grey background, softbox lighting, no text --ar 4:3 --style raw --v 7
 ```
