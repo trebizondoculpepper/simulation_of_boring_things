@@ -51,7 +51,7 @@ two anonymous inspectors in anoraks with clipboards, seen from behind, examining
 ## Chapter 6: The changes
 
 ```
-a new, clean, lockable steel chemical delivery cabinet on the brick wall of a British leisure centre, two separate compartments with their different coloured doors standing open, inside each compartment a fill pipe ending in its own kind of hose coupling mounted on the back wall of the cabinet, the doors plain with only bright hazard pictogram labels, a padlock hanging open, fresh paint, bright daylight, hopeful
+a new grey steel wall cabinet beside the service yard loading bay of a brick British leisure centre, no swimming pool in view, its two doors (one yellow, one blue) swung wide open flat against the brick wall showing their plain empty backs, inside the open cabinet two separate compartments, in each a short steel fill pipe comes out of the cabinet's back wall and ends in a capped hose coupling, a different kind of coupling in each compartment, no hoses attached, a corrosive hazard diamond on each compartment's inside back panel, an open padlock hanging on the hasp, fresh paint, bright daylight, hopeful
 ```
 
 ## Extras
@@ -125,7 +125,7 @@ two anonymous inspectors in anoraks with clipboards, seen from behind, examining
 ### Chapter 6: The changes
 
 ```
-a new, clean, lockable steel chemical delivery cabinet on the brick wall of a British leisure centre, two separate compartments with their different coloured doors standing open, inside each compartment a fill pipe ending in its own kind of hose coupling mounted on the back wall of the cabinet, the doors plain with only bright hazard pictogram labels, a padlock hanging open, fresh paint, bright daylight, hopeful, 1997 British regional newspaper press photograph, 35mm film, Kodak Tri-X or faded Fujicolor, visible grain, slightly soft focus, documentary, no text, no logos, anonymous unidentifiable people --ar 3:2 --style raw --v 7
+a new grey steel wall cabinet beside the service yard loading bay of a brick British leisure centre, no swimming pool in view, its two doors (one yellow, one blue) swung wide open flat against the brick wall showing their plain empty backs, inside the open cabinet two separate compartments, in each a short steel fill pipe comes out of the cabinet's back wall and ends in a capped hose coupling, a different kind of coupling in each compartment, no hoses attached, a corrosive hazard diamond on each compartment's inside back panel, an open padlock hanging on the hasp, fresh paint, bright daylight, hopeful, 1997 British regional newspaper press photograph, 35mm film, Kodak Tri-X or faded Fujicolor, visible grain, slightly soft focus, documentary, no text, no logos, anonymous unidentifiable people --ar 3:2 --style raw --v 7 --no couplings on doors, hoses, closed doors, swimming pool, oxidiser symbol
 ```
 
 ### Extra: the front page, wide
