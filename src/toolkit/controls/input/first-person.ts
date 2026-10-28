@@ -32,6 +32,9 @@ import {
 import type { InputState } from '../logic/hud-policy';
 import { claimMenuHint } from './menu-hint';
 import { turningKnobs } from './knob-turning';
+import { usingHold } from './use-holding';
+import { TOUCH_HOLD_DELAY, createUseHolds } from '../logic/use-hold';
+import type { HoldSource } from '../logic/use-hold';
 import { createTouchSticks } from './touch-sticks';
 import { bindViewWheel } from './view-wheel';
 import { torch } from '../logic/torch';
@@ -316,6 +319,12 @@ export function createFirstPerson(options: FirstPersonOptions) {
     }
     if (!handling?.use(x, y)) options.use(x, y);
   };
+  // Every use is also a held input (`logic/use-hold.ts`): held until the
+  // button, key or finger that gave it is let go, for a component that
+  // repeats while held (a terminal's cursor keys).
+  const holds = createUseHolds();
+  const heldUse = (source: HoldSource, x: number, y: number) =>
+    usingHold(holds.press(source), () => use(x, y));
   const walker = {
     x: options.start.x,
     z: options.start.z,
@@ -479,8 +488,18 @@ export function createFirstPerson(options: FirstPersonOptions) {
     pad.append(button);
   }
   const useButton = hudButton('E', 'Use', 'hud-use');
-  useButton.addEventListener('pointerdown', (event) => event.stopPropagation());
-  useButton.addEventListener('click', () => use(0, 0));
+  // Pressed, it uses and holds the use until the finger lifts; a click
+  // from the keyboard (Enter or Space on the focused button) only uses.
+  useButton.addEventListener('pointerdown', (event) => {
+    event.stopPropagation();
+    useButton.setPointerCapture?.(event.pointerId);
+    heldUse('hud', 0, 0);
+  });
+  for (const event of ['pointerup', 'pointercancel', 'lostpointercapture'])
+    useButton.addEventListener(event, () => holds.release('hud'));
+  useButton.addEventListener('click', (event) => {
+    if (event.detail === 0) use(0, 0);
+  });
   movement.append(useButton);
   const altitude = document.createElement('div');
   altitude.className = 'noclip-altitude';
@@ -681,13 +700,17 @@ export function createFirstPerson(options: FirstPersonOptions) {
     if (event.code === 'KeyC' && !noclip.value) stance();
     if (event.code === 'KeyV' && !noclip.value) stance(true);
     if (event.code === 'KeyR' && noclip.value) walker.roll = 0;
-    if (event.code === 'KeyE') use(0, 0);
+    if (event.code === 'KeyE') heldUse('key', 0, 0);
     if (event.code === 'KeyF') {
       torch.toggle();
     }
   };
-  const keyup = (event: KeyboardEvent) => keys.delete(event.code);
+  const keyup = (event: KeyboardEvent) => {
+    keys.delete(event.code);
+    if (event.code === 'KeyE') holds.release('key');
+  };
   const forget = () => {
+    holds.releaseAll();
     keys.clear();
     tapped.clear();
     touchInspect = false;
@@ -737,7 +760,15 @@ export function createFirstPerson(options: FirstPersonOptions) {
     moved: boolean;
     previousX: number;
     previousY: number;
+    /** Held still long enough to have used, held, already (`TOUCH_HOLD_DELAY`). */
+    used: boolean;
   } | null = null;
+  // A still press's hold, waiting for its delay.
+  let holdTimer: ReturnType<typeof setTimeout> | null = null;
+  const cancelHoldTimer = () => {
+    if (holdTimer !== null) clearTimeout(holdTimer);
+    holdTimer = null;
+  };
   const screenPoint = (x: number, y: number): [number, number] => {
     const rect = canvas.getBoundingClientRect();
     return [
@@ -776,6 +807,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
       canvas.setPointerCapture(event.pointerId);
       if (fingers.size === 2) {
         // A second finger turns the drag into a pinch.
+        cancelHoldTimer();
+        holds.release('touch');
         drag = null;
         pinch = { distance: spread(), zoom: walker.zoom };
         return;
@@ -785,7 +818,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     if (following) return;
     if (event.pointerType === 'mouse' && !lockRefused) {
       if (event.button !== 0) return;
-      if (locked()) use(0, 0);
+      if (locked()) heldUse('mouse', 0, 0);
       else
         void Promise.resolve(lockTarget.requestPointerLock()).catch(refuseLock);
       return;
@@ -799,7 +832,17 @@ export function createFirstPerson(options: FirstPersonOptions) {
       moved: false,
       previousX: event.clientX,
       previousY: event.clientY,
+      used: false,
     };
+    // Held still, it uses at once and holds the use until it lifts.
+    cancelHoldTimer();
+    const pressed = drag;
+    holdTimer = setTimeout(() => {
+      holdTimer = null;
+      if (drag !== pressed || pressed.moved || fingers.size > 1) return;
+      pressed.used = true;
+      heldUse('touch', ...screenPoint(pressed.x, pressed.y));
+    }, TOUCH_HOLD_DELAY * 1000);
   };
   const move = (event: PointerEvent) => {
     if (event.pointerType === 'mouse' && current() && !inputHeld() && !holding)
@@ -826,7 +869,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
     // before it counts as a drag rather than a tap.
     const slop = event.pointerType === 'mouse' ? 5 : 12;
     if (Math.hypot(dx, dy) > slop) drag.moved = true;
-    if (!drag.moved || holding) return;
+    // A held use stays where it was pressed: the view does not swing.
+    if (!drag.moved || holding || drag.used) return;
     if (!noclip.value && touchInspect && handling?.holding()) {
       handling.rotate(
         (event.clientX - drag.previousX) * 0.004,
@@ -843,10 +887,13 @@ export function createFirstPerson(options: FirstPersonOptions) {
     fingers.delete(event.pointerId);
     // After a pinch, the fingers left behind neither look nor use.
     if (fingers.size < 2) pinch = null;
+    cancelHoldTimer();
+    holds.release('touch');
     if (!drag) return;
     // A tap works what the finger first touched, not where it lifted:
-    // a fingertip wobbles off a small control as it comes away.
-    if (!drag.moved) use(...screenPoint(drag.x, drag.y));
+    // a fingertip wobbles off a small control as it comes away. One held
+    // has used already.
+    if (!drag.moved && !drag.used) use(...screenPoint(drag.x, drag.y));
     drag = null;
   };
   // The wheel zooms and Alt+wheel raises and lowers the eye. A trackpad
@@ -872,12 +919,18 @@ export function createFirstPerson(options: FirstPersonOptions) {
   const lockedDown = (event: Event) => {
     if (event.target === canvas) return;
     const pointer = event as PointerEvent;
-    if (pointer.button === 0 && locked()) use(0, 0);
+    if (pointer.button === 0 && locked()) heldUse('mouse', 0, 0);
+  };
+  // The captured mouse's button let go, wherever it lands.
+  const mouseUp = (event: PointerEvent) => {
+    if (event.pointerType === 'mouse' && event.button === 0)
+      holds.release('mouse');
   };
   if (lockTarget !== canvas)
     lockTarget.addEventListener('pointerdown', lockedDown);
   document.addEventListener('keydown', keydown);
   document.addEventListener('keyup', keyup);
+  document.addEventListener('pointerup', mouseUp);
   window.addEventListener('blur', forget);
   document.addEventListener('mousemove', look);
   document.addEventListener('pointerlockchange', lockChange);
@@ -905,15 +958,22 @@ export function createFirstPerson(options: FirstPersonOptions) {
     roll: 0,
   };
   const readGamepad = () => {
-    if (canvas.parentElement?.hidden || following) return idle;
+    if (canvas.parentElement?.hidden || following) {
+      holds.release('pad');
+      return idle;
+    }
     const pad =
       typeof navigator !== 'undefined' && navigator.getGamepads
         ? [...navigator.getGamepads()].find((p) => p?.mapping === 'standard')
         : undefined;
-    if (!pad) return idle;
+    if (!pad) {
+      holds.release('pad');
+      return idle;
+    }
     // Paused: the pad works the menu. Its buttons held now count as held,
     // so one let go after the menu closes does nothing in the game.
     if (inputHeld()) {
+      holds.release('pad');
       pad.buttons.forEach((b, i) =>
         b.pressed ? pressed.add(i) : pressed.delete(i),
       );
@@ -937,7 +997,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
       Math.abs(zoom) > 0.05 ||
       pad.buttons.some((b) => b.pressed);
     if (active) setInput('gamepad');
-    if (went(PAD.use) && !noclip.value) use(0, 0);
+    if (went(PAD.use) && !noclip.value) heldUse('pad', 0, 0);
+    if (!pad.buttons[PAD.use]?.pressed) holds.release('pad');
     // In noclip the bumpers roll the view instead, and Y levels it.
     if (went(PAD.knobDown) && !noclip.value) turningKnobs(-1, () => use(0, 0));
     if (went(PAD.knobUp) && !noclip.value) turningKnobs(1, () => use(0, 0));
@@ -1496,6 +1557,9 @@ export function createFirstPerson(options: FirstPersonOptions) {
       lockTarget.removeEventListener('pointerdown', lockedDown);
       document.removeEventListener('keydown', keydown);
       document.removeEventListener('keyup', keyup);
+      document.removeEventListener('pointerup', mouseUp);
+      cancelHoldTimer();
+      holds.releaseAll();
       window.removeEventListener('blur', forget);
       document.removeEventListener('mousemove', look);
       document.removeEventListener('pointerlockchange', lockChange);

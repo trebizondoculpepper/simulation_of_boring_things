@@ -8,7 +8,7 @@ How inputs work. This is the one control scheme every room in every game built o
 - **Moving the player**: walking, running, looking, zoom, crouch and eye height, and holding the player still while a scene plays.
 - **The torch**: the player's own light, held in the right hand as Half-Life's flashlight is, switched on and off by its one control in every room and kept on from room to room, its beam easing after the eye a moment late.
 - **Collision**: walkable footprints, sliding along walls, solid things that cannot be walked through.
-- **What a use means**: the click, E, tap or A that uses whatever is aimed at, and knob-turning (a use on a knob's left or right half, or a gamepad's LB and RB, turns it down or up). Components ask which way to turn (`knobDirection`); they never read an input themselves.
+- **What a use means**: the click, E, tap or A that uses whatever is aimed at, and knob-turning (a use on a knob's left or right half, or a gamepad's LB and RB, turns it down or up). Components ask which way to turn (`knobDirection`); they never read an input themselves. Every use is also a held input (prompt 091, 2026-10-28): held until the mouse button, E, the pad's A, the touch Use button or a finger held still (`TOUCH_HOLD_DELAY`, after which it uses at once) is let go; a component that repeats while held asks for the use's hold as it is used (`currentUseHold`) and watches it.
 - **Carrying**: picking up, holding, dropping and letting go, the fall and settling of a dropped object (its drop profile: shape, bounce, friction, roll), and the state of a carried object (installed, held, falling, settled). A component only says that it is portable and how it falls.
 - **Perception helpers**: where to put something so it appears without being seen to appear (`hidden-spot`).
 
@@ -32,6 +32,7 @@ How inputs work. This is the one control scheme every room in every game built o
 - `input/first-person.ts`: the scheme implemented once, for every room.
 - `input/object-handling.ts`: picking up, carrying and dropping, with the fall simulated.
 - `input/knob-turning.ts`: which way a use turns a knob.
+- `logic/use-hold.ts`, `input/use-holding.ts`: a use's hold, from its press until its source is let go, for a component that repeats while held.
 - `logic/torch.ts`, `input/torch.ts`: the torch, its beam's lag, and its light in a room's scene.
 - `input/touch-sticks.ts`: the on-screen thumbsticks and CROUCH button for touch.
 - `logic/menu-navigation.ts`, `input/menu-input.ts`: menus on every input: what keys and pad buttons mean to a menu, spatial focus movement, and the one reader that hands them to whichever menu takes them (mission 096). No menu reads a key or polls a pad of its own.

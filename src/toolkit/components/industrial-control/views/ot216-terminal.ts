@@ -7,8 +7,11 @@ import { createPartSet, keySwitch } from '../../core/parts/parts';
 import { membraneKey } from '../../core/parts/small-parts';
 import { partAudio } from '../../core/audio/part-audio';
 import { bootBeep } from '../../sound/audio/boot-beep';
+import { currentUseHold } from '../../../controls/input/use-holding';
+import type { UseHold } from '../../../controls/logic/use-hold';
 import {
   OT216,
+  heldRepeats,
   newOt216,
   ot216Screen,
   pressOt216,
@@ -237,6 +240,17 @@ export function createOt216Terminal(
     terminal = out.terminal;
     if (out.command) send(out.command);
   };
+  // A cursor key held (the owner, 2026-10-28: press-and-hold, to try):
+  // the use's hold from the control scheme, and how long it has been held;
+  // it repeats as `heldRepeats` gives, faster after 2 s.
+  const CURSOR: ReadonlySet<TerminalKey> = new Set([
+    'UP',
+    'DOWN',
+    'LEFT',
+    'RIGHT',
+  ]);
+  let repeating: { key: TerminalKey; hold: UseHold; held: number } | null =
+    null;
   const keys: [TerminalKey, string, string, number, number][] = [
     ['F1', 'F1 MON', '#3b4f6b', -0.085, -0.01],
     ['F2', 'F2 SET', '#3b4f6b', -0.058, -0.01],
@@ -254,7 +268,12 @@ export function createOt216Terminal(
       legend: ' ',
       colour,
       name: `${tag} ${legend} key`,
-      action: () => press(key),
+      action: () => {
+        press(key);
+        const hold = currentUseHold();
+        repeating =
+          CURSOR.has(key) && hold.held ? { key, hold, held: 0 } : null;
+      },
     });
     k.object.position.set(x, y, z + 0.0012);
     t.label(
@@ -301,6 +320,13 @@ export function createOt216Terminal(
     update(delta: number) {
       time += delta;
       parts.update(delta);
+      if (repeating && !repeating.hold.held) repeating = null;
+      if (repeating) {
+        const from = repeating.held;
+        repeating.held += delta;
+        const n = heldRepeats(from, repeating.held);
+        for (let k = 0; k < n; k++) press(repeating.key);
+      }
       const r = read();
       terminal = tickOt216(terminal, delta, r.feed, r.link);
       const screen = ot216Screen(
@@ -339,6 +365,16 @@ export function createOt216Terminal(
     },
     /** For a test or a script: press a key as a click would. */
     press,
+    /**
+     * For a script: hold a cursor key down for `seconds` of updates, as a
+     * held use would (it repeats as held).
+     */
+    hold(key: TerminalKey, seconds: number) {
+      press(key);
+      const hold = { source: null, held: true };
+      repeating = { key, hold, held: 0 };
+      setTimeout(() => (hold.held = false), seconds * 1000);
+    },
     /** For a script: turn the LOCAL ACCESS key, as a click on it would. */
     turnKey() {
       for (const use of access.uses.values()) use();
