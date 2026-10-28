@@ -94,6 +94,21 @@ export function glassTarget(i: GlassInputs) {
   };
 }
 
+/**
+ * The picture already settled on what `i` asks: as a glass looks that has
+ * shown this state a while. A glass built with its room starts here, not
+ * from a clean bed easing toward its own dirt over the first half minute
+ * (which also redrew it fifteen times a second for that long, mission 094).
+ */
+export function settledGlass(i: GlassInputs): GlassState {
+  const t = glassTarget(i);
+  return {
+    ...t,
+    bubbles: 0,
+    washing: i.mode === 'backwash' ? 6 : -1,
+  };
+}
+
 export function stepSightGlass(
   s: GlassState,
   i: GlassInputs,

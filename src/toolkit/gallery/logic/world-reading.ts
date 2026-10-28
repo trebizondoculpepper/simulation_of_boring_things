@@ -51,6 +51,22 @@ const CLEAN_DP = [0.34, 0.36, 0.36, 0.31] as const;
  */
 const readings = new WeakMap<World, Map<PoolId, PlantReading>>();
 
+/**
+ * The Olympic battery's flows as the world has them, worked out once per
+ * world (mission 094): its five sand filters, its pressure differences
+ * and the overviews each read them every frame.
+ */
+const olympicFlows = new WeakMap<World, ReturnType<typeof olympicFlowsOf>>();
+
+export function olympicFlowsOfWorld(world: World) {
+  let flows = olympicFlows.get(world);
+  if (!flows) {
+    flows = olympicFlowsOf(world);
+    olympicFlows.set(world, flows);
+  }
+  return flows;
+}
+
 export function plantReadingOf(
   world: World,
   pool: PoolId = 'pool_02',
@@ -90,7 +106,7 @@ function readPlant(world: World, pool: PoolId): PlantReading {
   // the others' as clean filters', rising with the square of the flow.
   const filterDp =
     pool === 'pool_02'
-      ? olympicFlowsOf(world).filters.map((f) => f.bedBar)
+      ? olympicFlowsOfWorld(world).filters.map((f) => f.bedBar)
       : pool === 'pool_01'
         ? // The lounge's two beds, by their dirt (`lounge-filters.ts`).
           loungeFilterDp(world.loungeFilters, loungeFlowsOf(world))

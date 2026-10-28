@@ -26,8 +26,8 @@ function createScreen() {
   const height = 500;
   const { context, texture } = createCanvasTexture(width, height);
   let shown: string | undefined;
-  const draw = (lines: readonly ScreenLine[], cursor: boolean) => {
-    const key = JSON.stringify([lines, cursor]);
+  const draw = (lines: readonly ScreenLine[]) => {
+    const key = JSON.stringify(lines);
     if (key === shown) return;
     shown = key;
     // The tube's rounded face, set in its black surround.
@@ -48,10 +48,6 @@ function createScreen() {
       for (const [column, character] of text.slice(0, 40).split('').entries())
         context.fillText(character, 8 + column * 15.6, 6 + i * 19.5, 15.6);
     }
-    if (cursor && lines.length > 0 && lines.length < 25) {
-      context.fillStyle = '#f2f2ee';
-      context.fillRect(8, 6 + lines.length * 19.5 + 17, 14, 2.5);
-    }
     // A faint reflection across the top left of the glass.
     const sheen = context.createLinearGradient(0, 0, width * 0.6, height * 0.6);
     sheen.addColorStop(0, 'rgba(255, 255, 255, 0.10)');
@@ -62,6 +58,35 @@ function createScreen() {
     texture.needsUpdate = true;
   };
   return { texture, draw };
+}
+
+/**
+ * The text cursor, on a layer of its own over the picture: its blink
+ * shows and hides the layer, so the picture is not drawn and uploaded
+ * again twice a second (mission 094); the layer is drawn only when the
+ * cursor moves to another row.
+ */
+function createCursorLayer() {
+  const width = 640;
+  const height = 500;
+  const { context, texture } = createCanvasTexture(width, height);
+  let row: number | null | undefined;
+  return {
+    texture,
+    /** Put the cursor under `lines` lines of text (none past the screen's 25). */
+    place(lines: number) {
+      const at = lines > 0 && lines < 25 ? lines : null;
+      if (at === row) return at !== null;
+      row = at;
+      context.clearRect(0, 0, width, height);
+      if (at !== null) {
+        context.fillStyle = '#f2f2ee';
+        context.fillRect(8, 6 + at * 19.5 + 17, 14, 2.5);
+      }
+      texture.needsUpdate = true;
+      return at !== null;
+    },
+  };
 }
 
 /**
@@ -173,6 +198,29 @@ export function createCubMonitor(worldUnitsPerMetre: number) {
   const screenFaceZ = front + 0.0065;
   face.position.set(0.004 * m, screenY * m, screenFaceZ * m);
   group.add(face);
+  // Its cursor, on the same curved face just in front of the picture.
+  const cursorLayer = createCursorLayer();
+  textures.push(cursorLayer.texture);
+  const cursorGlass = createPs1Material(
+    {
+      map: cursorLayer.texture,
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    },
+    true,
+    true,
+  );
+  materials.push(cursorGlass);
+  const cursor = new Mesh(face.geometry, cursorGlass);
+  cursor.position.copy(face.position);
+  cursor.visible = false;
+  // It blinks: never merged into the room's still geometry.
+  cursor.userData.live = true;
+  group.add(cursor);
+  let powered = true;
   // The badge on a black tab at the bottom left, and the bare red power
   // indicator at the bottom right, just under the tube.
   const badge = createLabelTexture('MICROVITEC', {
@@ -215,10 +263,14 @@ export function createCubMonitor(worldUnitsPerMetre: number) {
     power(on: boolean) {
       lampColour.set(on ? '#ff2a1e' : '#3a1512');
       face.visible = on;
+      powered = on;
+      if (!on) cursor.visible = false;
     },
     /** Redraw the text if it has changed, and blink the cursor about once a second. */
     update(seconds: number, lines: readonly ScreenLine[], showCursor = true) {
-      screen.draw(lines, showCursor && seconds % 1.1 < 0.6);
+      screen.draw(lines);
+      const placed = cursorLayer.place(lines.length);
+      cursor.visible = powered && placed && showCursor && seconds % 1.1 < 0.6;
     },
     dispose() {
       group.traverse((object) => {

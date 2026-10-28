@@ -3,6 +3,7 @@ import {
   BED_LIFTED,
   BED_REST,
   newGlass,
+  settledGlass,
   stepSightGlass,
   surfaceAt,
 } from './sight-glass';
@@ -94,5 +95,17 @@ describe('a filter’s sight glass', () => {
     expect(s.murk).toBeLessThan(0.01);
     s = run(s, { mode: 'rinse', dirt: 0, channelling: 0, murk: 0 }, 60);
     expect(s.bed).toBeCloseTo(BED_REST, 2);
+  });
+
+  it('starts settled on its filter’s state, where it would end up', () => {
+    const inputs = service(1, 0.4);
+    const settled = settledGlass(inputs);
+    const after = run(newGlass(), inputs, 120);
+    for (const k of ['bed', 'crust', 'crustDark', 'rough', 'murk'] as const)
+      expect(settled[k]).toBeCloseTo(after[k], 3);
+    // Settled, a step moves it no further (mission 094: no redraws).
+    const next = stepSightGlass(settled, inputs, 1 / 60);
+    expect(next.crustDark).toBeCloseTo(settled.crustDark, 6);
+    expect(settled.bubbles).toBe(0);
   });
 });

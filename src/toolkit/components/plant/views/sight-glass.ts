@@ -13,7 +13,12 @@ import {
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createCanvasTexture } from '../../core/views/screens';
 import { plantTools } from './plant-tools';
-import { newGlass, stepSightGlass, surfaceAt } from '../logic/sight-glass';
+import {
+  newGlass,
+  settledGlass,
+  stepSightGlass,
+  surfaceAt,
+} from '../logic/sight-glass';
 import type { GlassInputs } from '../logic/sight-glass';
 
 /** A small seeded generator, so each glass's grains lie the same each time. */
@@ -169,6 +174,7 @@ export function createSightGlass(
     r: 2 + rand() * 4,
   }));
   let state = newGlass();
+  let settled = false;
   let time = 0;
   let since = Infinity;
   let drawn = '';
@@ -267,7 +273,11 @@ export function createSightGlass(
     group,
     /** Step the picture `dt` seconds toward what `inputs` ask, and draw it. */
     update(inputs: GlassInputs, dt: number) {
-      state = stepSightGlass(state, inputs, dt);
+      // Its first sight of its filter's state: as it has looked a while.
+      state = settled
+        ? stepSightGlass(state, inputs, dt)
+        : settledGlass(inputs);
+      settled = true;
       time += dt;
       since += dt;
       if (since < 1 / 15) return;

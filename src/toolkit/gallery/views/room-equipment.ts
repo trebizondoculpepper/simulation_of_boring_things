@@ -188,8 +188,8 @@ import {
 import {
   OLYMPIC_DIRT_REF,
   olympicBed,
-  olympicFlowsOf,
 } from '../../../game/plant/olympic-battery';
+import { olympicFlowsOfWorld } from '../logic/world-reading';
 import {
   createAcidBoard,
   createControllerPanel,
@@ -737,7 +737,7 @@ function modelFor(
         object: holder,
         update: (delta) => {
           const w = roomWorld().world.value;
-          const flows = olympicFlowsOf(w);
+          const flows = olympicFlowsOfWorld(w);
           const f = flows.filters[n];
           filter.show(
             flows.pumping

@@ -37,10 +37,8 @@ import { markComponent } from '../../components/core/views/component-identity';
 import { runBinding } from '../logic/world-in-model';
 import { SCHEMATICS } from '../../../game/plant/schematics';
 import { schematicNodeOfKind } from '../../../game/plant/model-valves';
-import {
-  olympicFlowsOf,
-  olympicMeterReadings,
-} from '../../../game/plant/olympic-battery';
+import { olympicMeterReadings } from '../../../game/plant/olympic-battery';
+import { olympicFlowsOfWorld } from '../logic/world-reading';
 import {
   createInlineFitting,
   placeFitting,
@@ -317,7 +315,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     if (room === 'plant_pool_01')
       return loungeMeterReadings(loungeFlowsOf(world));
     if (room !== 'plant_pool_02') return {};
-    return olympicMeterReadings(olympicFlowsOf(world));
+    return olympicMeterReadings(olympicFlowsOfWorld(world));
   }
   function valve(run: PipeRun, v: Valve) {
     // A retired room's valves are the room's it was taken from.

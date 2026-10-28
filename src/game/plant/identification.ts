@@ -241,12 +241,26 @@ export const FOOTBATH = {
   power: 'PL4-CAB1-SW1',
 } as const;
 
+/**
+ * Each model's parts by tag, from one walk. Blocks are immutable (an
+ * update returns a new root), so a root's index holds for as long as the
+ * root does; the displays that read a part every frame share one walk a
+ * world step, not one each a call (mission 094: the foot spa's cabinet
+ * walked the whole model a dozen times a frame).
+ */
+const partIndexes = new WeakMap<Block, Map<string, IdentifiedPart>>();
+
 /** Resolve an operator tag to its model address through the standard walk. */
 export function identifiedPart(
   root: Block,
   id: string,
 ): IdentifiedPart | undefined {
-  return walkIdentified(root).find((part) => part.id === id);
+  let index = partIndexes.get(root);
+  if (!index) {
+    index = new Map(walkIdentified(root).map((part) => [part.id, part]));
+    partIndexes.set(root, index);
+  }
+  return index.get(id);
 }
 
 export function partOpen(root: Block, id: string): boolean {

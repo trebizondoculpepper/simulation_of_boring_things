@@ -9,6 +9,7 @@ import {
   identifiedPart,
   newIdentifiedPlant,
   partOpen,
+  setPartOpen,
   walkIdentified,
 } from './identification';
 
@@ -68,6 +69,20 @@ describe('plant identification pilot', () => {
         expect(partOpen(root, part.id)).toBe(part.normal === 'open');
     }
     expect(identifiedPart(root, FOOTBATH.power)?.normal).toBe('on');
+  });
+
+  it('walks a model once for its parts, and a changed model afresh', () => {
+    const root = newIdentifiedPlant();
+    const part = identifiedPart(root, FOOTBATH.drain);
+    // The same root: the same walk's part (mission 094).
+    expect(identifiedPart(root, FOOTBATH.drain)).toBe(part);
+    const opened = setPartOpen(root, FOOTBATH.drain, true);
+    expect(partOpen(root, FOOTBATH.drain)).toBe(false);
+    expect(partOpen(opened, FOOTBATH.drain)).toBe(true);
+    expect(identifiedPart(opened, FOOTBATH.drain)?.state).toEqual({
+      open: true,
+    });
+    expect(identifiedPart(root, 'PL4-XX9')).toBeUndefined();
   });
 
   it('binds every pilot pipe valve to one model part', () => {

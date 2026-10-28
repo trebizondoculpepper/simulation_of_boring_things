@@ -29,7 +29,7 @@ import {
   hallHandling,
 } from '../../../game/plant/air-handling';
 import type { AirHall } from '../../../game/plant/air-handling';
-import { olympicFlowsOf } from '../../../game/plant/olympic-battery';
+import { olympicFlowsOfWorld } from './world-reading';
 import { loungeFlowsOf } from '../../../game/plant/lounge-valves';
 import { loungeFilterDp } from '../../../game/plant/lounge-filters';
 import type { PlantReading } from './control-room-demo';
@@ -386,7 +386,7 @@ export const OVERVIEWS: readonly OverviewSpec[] = [
       { label: 'WORST FILTER DP', unit: 'bar', colour: 'periwinkle' },
     ],
     read: ({ world: w, reading }) => {
-      const beds = olympicFlowsOf(w).filters;
+      const beds = olympicFlowsOfWorld(w).filters;
       const heating = w.pools.pool_02.heating > 1;
       return {
         members: [

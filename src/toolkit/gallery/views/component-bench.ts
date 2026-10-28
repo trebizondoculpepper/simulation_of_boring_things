@@ -19,13 +19,15 @@ import { EQUIPPED_ROOMS, layoutRoom } from '../logic/room-equipment';
 import type { Item } from '../logic/room-equipment';
 import {
   BUSY_ROOMS,
+  budgetVerdict,
   consoleRows,
   countUsage,
-  overBudget,
   rankSamples,
   rankedTable,
   textureBytes,
+  uploadSize,
   uploadTexels,
+  uploadsBySize,
 } from '../logic/component-bench';
 import type {
   BenchSample,
@@ -313,14 +315,25 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
 
 /** Counters for WebGL uploads and canvas 2D drawing, wrapped round both. */
 function instrument(renderer: WebGLRenderer) {
-  const counts = { uploads: 0, texels: 0, ops2d: 0, mipmaps: 0 };
+  const counts = {
+    uploads: 0,
+    texels: 0,
+    ops2d: 0,
+    mipmaps: 0,
+    /** Level 0 uploads by texture size, `width×height`. */
+    sizes: new Map<string, number>(),
+  };
   const gl = renderer.getContext() as WebGL2RenderingContext;
   for (const method of ['texImage2D', 'texSubImage2D'] as const) {
     const original = gl[method].bind(gl) as (...a: unknown[]) => void;
     (gl as unknown as Record<string, unknown>)[method] = (
       ...args: unknown[]
     ) => {
-      if (args[1] === 0) counts.uploads += 1;
+      if (args[1] === 0) {
+        counts.uploads += 1;
+        const size = uploadSize(method, args);
+        counts.sizes.set(size, (counts.sizes.get(size) ?? 0) + 1);
+      }
       counts.texels += uploadTexels(method, args);
       original(...args);
     };
@@ -443,6 +456,7 @@ export async function runComponentBench(root: HTMLElement) {
   ): Promise<PhaseStats> => {
     let last = await nextFrame();
     const start = { ...counts };
+    counts.sizes.clear();
     const began = performance.now();
     let frames = 0;
     let updateSum = 0;
@@ -472,6 +486,7 @@ export async function runComponentBench(root: HTMLElement) {
       uploadsPerS: (counts.uploads - start.uploads) / elapsed,
       texelsPerS: (counts.texels - start.texels) / elapsed,
       ops2dPerS: (counts.ops2d - start.ops2d) / elapsed,
+      uploadsBy: uploadsBySize(counts.sizes) || undefined,
     };
   };
 
@@ -611,10 +626,31 @@ export async function runComponentBench(root: HTMLElement) {
   });
   output.value = markdown;
   console.table(consoleRows(ranked));
-  const api = { samples, ranked, markdown, baselineRenderMs };
+  // The budgets, failing loudly (mission 094): every component over its
+  // budget and not known to be is an error in the console, a red banner
+  // over the page and the page's title.
+  const verdict = budgetVerdict(samples);
+  const banner = document.createElement('p');
+  Object.assign(banner.style, {
+    padding: '0.6em 1em',
+    font: 'bold 15px system-ui, sans-serif',
+    color: '#fff',
+    background: verdict.passed ? '#1d6b35' : '#b3141b',
+  });
+  banner.textContent = verdict.passed
+    ? `Within budget: every component (${verdict.known.length} known over, listed in the report).`
+    : `OVER BUDGET: ${verdict.failures.length} component${verdict.failures.length === 1 ? '' : 's'}: ${verdict.failures.map((f) => f.label).join('; ')}.`;
+  root.prepend(banner);
+  for (const f of verdict.failures)
+    console.error(
+      `component bench: ${f.label} is over budget: ${f.over.join('; ')}`,
+    );
+  const api = { samples, ranked, markdown, baselineRenderMs, verdict };
   (window as unknown as { componentBench?: typeof api }).componentBench = api;
   console.info('component bench done: window.componentBench.markdown');
-  document.title = 'Component bench: done';
+  document.title = verdict.passed
+    ? 'Component bench: done, within budget'
+    : `Component bench: FAILED, ${verdict.failures.length} over budget`;
   return api;
 }
 
@@ -631,7 +667,7 @@ function reportMarkdown(
   ranked: readonly Ranked[],
   run: { secs: number; baselineRenderMs: number; gpu: string; count: number },
 ) {
-  const over = ranked.filter((r) => overBudget(r.sample).length);
+  const verdict = budgetVerdict(ranked.map((r) => r.sample));
   const errors = ranked.filter((r) => r.sample.error);
   const used = ranked.filter((r) => r.weight > 0);
   const total = used.reduce(
@@ -643,7 +679,11 @@ function reportMarkdown(
     '',
     `Busy rooms (counted ×2): ${BUSY_ROOMS.join(', ')}. The rooms' components together: ${total.toFixed(2)} ms a frame if all were drawn at once (one copy each where used, unweighted).`,
     '',
-    `Over budget: ${over.length ? over.map((r) => `${r.sample.label} (${overBudget(r.sample).join('; ')})`).join('; ') : 'none'}.`,
+    verdict.passed
+      ? '**Budgets: passed.**'
+      : `**Budgets: FAILED.** Over budget: ${verdict.failures.map((f) => `${f.label} (${f.over.join('; ')})`).join('; ')}.`,
+    '',
+    `Over budget but known: ${verdict.known.length ? verdict.known.map((k) => `${k.label} (${k.why})`).join('; ') : 'none'}.`,
     '',
     errors.length
       ? `Not measured: ${errors.map((r) => `${r.sample.label} (${r.sample.error})`).join('; ')}.`

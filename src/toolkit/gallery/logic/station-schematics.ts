@@ -34,11 +34,10 @@ import {
   zoneLit,
 } from '../../../game/plant/lighting';
 import { CAPACITY, CLOSES, OPENS, clock, isOpen } from '../../../game/bathers';
-import { olympicFlowsOf } from '../../../game/plant/olympic-battery';
 import { loungeFlowsOf } from '../../../game/plant/lounge-valves';
 import { loungeFilterDp } from '../../../game/plant/lounge-filters';
 import { ALARM_TEXT, ANNUNCIATOR_ALARMS } from './control-room-demo';
-import { plantReadingOf } from './world-reading';
+import { olympicFlowsOfWorld, plantReadingOf } from './world-reading';
 import {
   BOILER_STAGE_KW,
   boilersFiring,
@@ -265,7 +264,7 @@ const filterBank: Design = {
       ],
       columns: ['MODE', 'BED DP', 'SINCE WASH', 'NEXT WASH'],
       read: ({ world: w }) => {
-        const beds = olympicFlowsOf(w).filters;
+        const beds = olympicFlowsOfWorld(w).filters;
         const next = nextWashHours(w);
         const olympic = w.washOTron.filters.map((f, i): Cell[] => {
           const washing = f.mode === 'backwash' || f.mode === 'rinse';

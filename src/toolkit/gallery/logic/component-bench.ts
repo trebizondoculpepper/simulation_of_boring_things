@@ -27,6 +27,11 @@ export interface PhaseStats {
   texelsPerS: number;
   /** Canvas 2D drawing calls a second (fills, strokes, text, images). */
   ops2dPerS: number;
+  /**
+   * Which textures were uploaded, by size, most first: `512×512 ×72`
+   * (so an over-budget component says which of its displays it is).
+   */
+  uploadsBy?: string;
 }
 
 /** What one component costs, measured on its own. */
@@ -165,6 +170,57 @@ export const DEFAULT_BUDGET: Budget = {
   updateUs: 200,
 };
 
+/**
+ * Components known to be over budget, each flagged for the owner in
+ * `TODO.md` or left with a reason (mission 094), by id or id prefix: the
+ * benchmark still lists them, but as known; anything else over budget
+ * fails the run. Remove an entry once its component is within budget.
+ */
+export const KNOWN_OVER_BUDGET: Readonly<Record<string, string>> = {
+  'exhibit:dev47:':
+    'flagged in TODO.md: the touch panels redraw on change before any goes into the game (mission 093)',
+  'exhibit:dev48:':
+    'flagged in TODO.md: the touch panels redraw on change before any goes into the game (mission 093)',
+  'exhibit:dev44:Peristaltic dosing pump':
+    'flagged in TODO.md: its screen animates its rotor 26 times a second',
+  'exhibit:dev44:Transfer trial':
+    'a development rig of many machines at once, its demonstration stepping every frame',
+  'exhibit:dev44:Day tank sizes':
+    'a development rig of every day tank size at once',
+  'exhibit:dev44:Level instruments':
+    'its demonstration drives its instruments every frame; the world drives them at most ten times a second',
+  'exhibit:dev43:':
+    'its demonstration drives its meters every frame; the world drives them at most ten times a second',
+  'board:cabinet fittings':
+    'dev0: its demonstration drives its fittings every frame',
+  'board:period instruments':
+    'dev0: its demonstration swings its recorders’ pens every frame',
+};
+
+/** Why a sample's overrun is known, if it is (`KNOWN_OVER_BUDGET`). */
+export const knownOverBudget = (id: string) =>
+  Object.entries(KNOWN_OVER_BUDGET).find(([prefix]) =>
+    id.startsWith(prefix),
+  )?.[1];
+
+/** The run's verdict on its budgets: what failed, and what was over but known. */
+export function budgetVerdict(
+  samples: readonly BenchSample[],
+  budget = DEFAULT_BUDGET,
+) {
+  const failures: { id: string; label: string; over: string[] }[] = [];
+  const known: { id: string; label: string; over: string[]; why: string }[] =
+    [];
+  for (const s of samples) {
+    const over = overBudget(s, budget);
+    if (!over.length) continue;
+    const why = knownOverBudget(s.id);
+    if (why) known.push({ id: s.id, label: s.label, over, why });
+    else failures.push({ id: s.id, label: s.label, over });
+  }
+  return { passed: failures.length === 0, failures, known };
+}
+
 /** What a sample does over its budget, in words; empty if within it. */
 export function overBudget(s: BenchSample, budget = DEFAULT_BUDGET): string[] {
   if (s.error) return [];
@@ -183,7 +239,36 @@ export function overBudget(s: BenchSample, budget = DEFAULT_BUDGET): string[] {
     );
   if (s.updateUs > budget.updateUs)
     over.push(`update ${fmt(s.updateUs)} µs (budget ${budget.updateUs} µs)`);
+  // Which of its textures, where it uploads too much.
+  const by = over.some((o) => o.includes('texels') || o.includes('uploads'))
+    ? (s.idle.uploadsBy ?? s.active.uploadsBy)
+    : undefined;
+  if (by) over.push(`uploading ${by}`);
   return over;
+}
+
+/** Upload counts by texture size, most first, as `512×512 ×72, 64×64 ×3`. */
+export function uploadsBySize(sizes: ReadonlyMap<string, number>, top = 3) {
+  return [...sizes]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, top)
+    .map(([size, n]) => `${size} ×${n}`)
+    .join(', ');
+}
+
+/** A texture upload's size, `width×height`, from its call's arguments. */
+export function uploadSize(
+  method: 'texImage2D' | 'texSubImage2D',
+  args: readonly unknown[],
+): string {
+  const n = (v: unknown) => (typeof v === 'number' ? v : 0);
+  const source = (v: unknown) => {
+    const o = (v ?? {}) as { width?: number; height?: number };
+    return `${o.width ?? 0}×${o.height ?? 0}`;
+  };
+  if (method === 'texImage2D')
+    return args.length >= 8 ? `${n(args[3])}×${n(args[4])}` : source(args[5]);
+  return args.length >= 8 ? `${n(args[4])}×${n(args[5])}` : source(args[6]);
 }
 
 /**
@@ -264,7 +349,10 @@ export function rankedTable(ranked: readonly Ranked[], limit = Infinity) {
       s.textures,
       (s.textureBytes / 1e6).toFixed(2),
       fmt(s.buildMs),
-      cell(overBudget(s).join('; ')),
+      cell(
+        (overBudget(s).length && knownOverBudget(s.id) ? 'known: ' : '') +
+          overBudget(s).join('; '),
+      ),
     ];
     return `| ${cols.join(' | ')} |`;
   });

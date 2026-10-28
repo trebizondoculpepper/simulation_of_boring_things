@@ -480,6 +480,44 @@ export function createMimicBoard(
     lit[i] = colour;
     material.color.set(colour);
   };
+  // Its lamps and readouts, as `state` has them.
+  const setLamps = (state: MimicState) => {
+    symbolIndicators.forEach((indicator, i) =>
+      light(
+        i,
+        indicator.material,
+        test.value
+          ? LAMP_COLOURS.white
+          : state.lamps[indicator.open]
+            ? LAMP_COLOURS.green
+            : state.lamps[indicator.shut]
+              ? LAMP_COLOURS.red
+              : LAMP_COLOURS.amber,
+      ),
+    );
+    lamps.forEach((lamp, i) =>
+      light(
+        symbolIndicators.length + i,
+        lamp.material,
+        test.value || state.lamps[lamp.id] ? lamp.colour : '#3a3c3a',
+      ),
+    );
+    for (const r of readouts) {
+      const reading = state.readouts[r.id]?.[mode.value];
+      r.digits.show(test.value ? '8.8.8.8.' : readoutText(reading));
+      r.legend.show(
+        [test.value ? '#'.repeat(LEGEND_COLUMNS) : legendText(reading)],
+        true,
+      );
+    }
+  };
+  // What its lamps and readouts last showed: a state worked out once per
+  // world step (`plantReadingOf`, `loungeFilterMimicOf`) is the same object
+  // until the world steps, so between steps there is nothing to set
+  // (mission 094). Its chaser LEDs run on real time regardless.
+  let shownState: MimicState | null = null;
+  let shownTest = false;
+  let shownMode = '';
   return {
     group,
     parts,
@@ -487,26 +525,16 @@ export function createMimicBoard(
     show(state) {
       clock += 1 / 60;
       test.value = clock < testUntil;
-      symbolIndicators.forEach((indicator, i) =>
-        light(
-          i,
-          indicator.material,
-          test.value
-            ? LAMP_COLOURS.white
-            : state.lamps[indicator.open]
-              ? LAMP_COLOURS.green
-              : state.lamps[indicator.shut]
-                ? LAMP_COLOURS.red
-                : LAMP_COLOURS.amber,
-        ),
-      );
-      lamps.forEach((lamp, i) =>
-        light(
-          symbolIndicators.length + i,
-          lamp.material,
-          test.value || state.lamps[lamp.id] ? lamp.colour : '#3a3c3a',
-        ),
-      );
+      if (
+        state !== shownState ||
+        test.value !== shownTest ||
+        mode.value !== shownMode
+      ) {
+        shownState = state;
+        shownTest = test.value;
+        shownMode = mode.value;
+        setLamps(state);
+      }
       if (leds) {
         // Real time, not the simulation's (prompt 066).
         const phase = chaserPhase(performance.now() / 1000);
@@ -524,14 +552,6 @@ export function createMimicBoard(
           );
           leds.instanceColor!.needsUpdate = true;
         }
-      }
-      for (const r of readouts) {
-        const reading = state.readouts[r.id]?.[mode.value];
-        r.digits.show(test.value ? '8.8.8.8.' : readoutText(reading));
-        r.legend.show(
-          [test.value ? '#'.repeat(LEGEND_COLUMNS) : legendText(reading)],
-          true,
-        );
       }
     },
   };

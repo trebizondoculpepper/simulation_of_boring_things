@@ -370,8 +370,24 @@ export function loungeFilterMimicState(
 /** The lounge's pumps on the board, P-201A as P1 and P-201B as P2. */
 export const LOUNGE_PUMP_TAGS = { p1: 'P-201A', p2: 'P-201B' } as const;
 
+/**
+ * Board states already worked out, by world: the world is immutable, so a
+ * state holds until it steps, and the lounge's two boards (PL1-CP1 and the
+ * control room's) and the overlay share one a step (mission 094).
+ */
+const states = new WeakMap<World, MimicState>();
+
 /** The board's state for a world: its valves, its flows and its starters. */
 export function loungeFilterMimicOf(world: World): MimicState {
+  let state = states.get(world);
+  if (!state) {
+    state = loungeFilterMimicStateOf(world);
+    states.set(world, state);
+  }
+  return state;
+}
+
+function loungeFilterMimicStateOf(world: World): MimicState {
   const shown = (tag: MotorTag): LoungePumpShown => {
     const s = world.motors.starters[tag];
     return { running: s.running, tripped: s.tripped, mode: s.mode };

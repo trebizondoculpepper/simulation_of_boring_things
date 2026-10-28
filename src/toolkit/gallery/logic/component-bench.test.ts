@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   BUSY_WEIGHT,
+  budgetVerdict,
   countUsage,
+  knownOverBudget,
   overBudget,
   rankSamples,
   rankedTable,
   textureBytes,
+  uploadSize,
   uploadTexels,
+  uploadsBySize,
   usageWeight,
 } from './component-bench';
 import type { BenchSample, PhaseStats } from './component-bench';
@@ -130,5 +134,50 @@ describe('component bench', () => {
     for (const line of lines)
       expect(line.split(' | ').length).toBe(lines[0].split(' | ').length);
     expect(table).toContain('no / way');
+  });
+
+  it('fails a run on any component over budget that is not known', () => {
+    const chart = sample(
+      'chart-recorders',
+      {},
+      {
+        uploadsPerS: 60,
+        texelsPerS: 60 * 512 * 512,
+        uploadsBy: '512×512 ×72',
+      },
+    );
+    const panel = sample(
+      'exhibit:dev48:SYSTEMS STATUS BOARD',
+      {},
+      { uploadsPerS: 60, texelsPerS: 1e7 },
+    );
+    const passing = budgetVerdict([sample('a'), panel]);
+    expect(passing.passed).toBe(true);
+    expect(passing.known.map((k) => k.id)).toEqual([panel.id]);
+    const failing = budgetVerdict([sample('a'), panel, chart]);
+    expect(failing.passed).toBe(false);
+    expect(failing.failures.map((f) => f.id)).toEqual(['chart-recorders']);
+    // It says which texture it uploads.
+    expect(failing.failures[0].over.at(-1)).toBe('uploading 512×512 ×72');
+    expect(knownOverBudget('exhibit:dev47:Lectern')).toMatch(/TODO/);
+    expect(knownOverBudget('chart-recorders')).toBeUndefined();
+  });
+
+  it('names an upload by its size', () => {
+    const canvas = { width: 512, height: 256 };
+    expect(uploadSize('texImage2D', [0, 0, 0, 0, 0, canvas])).toBe('512×256');
+    expect(uploadSize('texSubImage2D', [0, 0, 0, 0, 64, 32, 0, 0, null])).toBe(
+      '64×32',
+    );
+    expect(
+      uploadsBySize(
+        new Map([
+          ['8×8', 1],
+          ['512×512', 72],
+          ['64×64', 3],
+          ['4×4', 2],
+        ]),
+      ),
+    ).toBe('512×512 ×72, 64×64 ×3, 4×4 ×2');
   });
 });
