@@ -1,3 +1,4 @@
+import { click } from '../../core/audio/part-audio';
 import type { LoopRecipe } from '../../core/audio/part-audio';
 import { noiseSource } from '../../core/audio/part-loops';
 
@@ -205,3 +206,59 @@ export const STEPPER_PUMP: LoopRecipe = (context, out) => {
   loop.start();
   return [loop];
 };
+
+/**
+ * A motor-driven metering pump (prompt 102, the Grundflow DMH, after the
+ * ProMinent Sigma/ 1), held while it runs: its small four-pole motor's
+ * 100 Hz hum and its shaft's 24 Hz beat, and the faint whine of its worm
+ * gear (about 480 Hz), the rest of its sound being its strokes
+ * (`MOTOR_PUMP_STROKE`), played one by one as they come.
+ */
+export const MOTOR_DIAPHRAGM_PUMP: LoopRecipe = (context, out) => {
+  const master = context.createGain();
+  master.gain.value = 0.012;
+  master.connect(out);
+  const voices = (
+    [
+      [100, 0.5, 'sine'],
+      [200, 0.12, 'sine'],
+      [24, 0.25, 'triangle'],
+      [480, 0.035, 'sawtooth'],
+    ] as const
+  ).map(([hz, level, type]) => {
+    const osc = context.createOscillator();
+    osc.type = type;
+    osc.frequency.value = hz;
+    const g = context.createGain();
+    g.gain.value = level;
+    // The gear's sawtooth lowpassed, so it is the hum's edge, not a tone.
+    if (type === 'sawtooth') {
+      const soft = context.createBiquadFilter();
+      soft.type = 'lowpass';
+      soft.frequency.value = 900;
+      osc.connect(g).connect(soft).connect(master);
+    } else osc.connect(g).connect(master);
+    osc.start();
+    return osc;
+  });
+  return voices;
+};
+
+/**
+ * One of its strokes, as it is heard (prompt 102): delivering, a firm
+ * knock as its discharge stroke meets the line's pressure and its valve
+ * balls seat; gas-locked, the same stroke hollow, a light tick with no
+ * weight behind it, as a pump that has lost its prime sounds; bleeding, a
+ * wet gurgle as gas and liquid go to the return.
+ */
+export const MOTOR_PUMP_STROKE = {
+  delivering: click({
+    band: 1700,
+    q: 2.2,
+    decay: 0.03,
+    level: 0.11,
+    thump: [70, 0.07],
+  }),
+  locked: click({ band: 2600, q: 3, decay: 0.012, level: 0.06 }),
+  bleeding: click({ band: 700, q: 1.2, decay: 0.05, level: 0.06, sweep: 0.18 }),
+} as const;

@@ -423,6 +423,8 @@ const SEGMENTS: Record<string, string> = {
   F: 'afge',
   o: 'gcde',
   S: 'afgcd',
+  t: 'fged',
+  U: 'bcdef',
 };
 
 export interface SevenSegment {

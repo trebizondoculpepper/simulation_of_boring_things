@@ -3,6 +3,7 @@ import { layoutSquarePlantRoom } from '../../logic/plant-room-layout';
 import type { ExhibitSize } from '../../logic/plant-room-layout';
 import { createPeristalticDemo } from '../../../components/plant/views/peristaltic-pump';
 import { createDiaphragmDemo } from '../../../components/plant/views/diaphragm-pump';
+import { createMotorDosingTrial } from '../../../components/plant/views/motor-dosing-trial';
 import {
   createAcidBoard,
   createHypochloriteBoard,
@@ -110,6 +111,17 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     size: { w: 0.6, d: 0.6, h: 1.4, mount: 'floor' },
     maker: 'grundflow',
     build: (kit) => createDiaphragmDemo(kit, 'stepper'),
+  },
+  // Prompt 102: the Olympic's replacement hypochlorite pump, designed
+  // after the ProMinent Sigma/ 1 and tried beside the DMX 1602 it is to
+  // replace, on a demonstration state of its own (not the world's).
+  {
+    title: 'Hypochlorite pump trial: DMX 1602 against DMH 21-10',
+    reference:
+      'Grundflow DMH 21-10, after the ProMinent Sigma/ 1 S1Cb 12017 PVT: motor-driven, 21 l/h at 10 bar, 90 strokes of 3.9 ml, a stroke dial 0–100 %, integral relief and bleed valve, flow monitor, rupture indicator, a four-digit LED fascia; beside the Olympic’s 2.1 l/h DMX 1602, both asked for the Olympic’s dose, with a trial station and pulsation damper',
+    size: { w: 2.2, d: 0.9, h: 2.3, mount: 'floor' },
+    maker: 'grundflow',
+    build: (kit) => createMotorDosingTrial(kit),
   },
   {
     title: 'Hypochlorite dosing set',
