@@ -125,75 +125,83 @@ export const SOLENOID_PUMP: LoopRecipe = (context, out) => {
   const stroke = Math.round(context.sampleRate / 1.5);
   const tick = context.createBuffer(1, stroke, context.sampleRate);
   const samples = tick.getChannelData(0);
-  const length = Math.round(context.sampleRate * 0.015);
+  // A hard clack (the owner, 2026-10-28: loud for its size): the
+  // solenoid's bright tick over the diaphragm's low knock, 30 ms.
+  const length = Math.round(context.sampleRate * 0.03);
   let seed = 7;
   for (let i = 0; i < length; i++) {
     seed = (seed * 16807) % 2147483647;
-    const decay = Math.exp((-6 * i) / length);
-    samples[i] = ((seed / 2147483647) * 2 - 1) * decay;
+    const t = i / context.sampleRate;
+    const tickPart =
+      ((seed / 2147483647) * 2 - 1) * Math.exp((-12 * i) / length);
+    const knock =
+      Math.sin(2 * Math.PI * 160 * t) * 1.4 * Math.exp((-5 * i) / length);
+    samples[i] = tickPart + knock;
   }
   const ticks = context.createBufferSource();
   ticks.buffer = tick;
   ticks.loop = true;
   const band = context.createBiquadFilter();
-  band.type = 'bandpass';
-  band.frequency.value = 1400;
-  band.Q.value = 0.9;
+  band.type = 'lowpass';
+  band.frequency.value = 3200;
   ticks.connect(band).connect(master);
   ticks.start();
   return [buzz, ticks];
 };
 
 /**
- * A stepper-motor metering pump (prompt 089, item 2), after the Grundfos
- * DDA: quiet, a soft electrical whine at its stepping rate whose pitch
- * stays put, louder through the quick suction stroke (a fifth of each
- * stroke, the motor driven hard) than the long, slow discharge, and a
- * muffled click of its valves as each stroke turns. One stroke's sound,
- * 1.2 a second, in a buffer played round and round. (It was a tone swept
- * up and down by a sawtooth, a siren's wail: the owner, 2026-10-28, at
- * DP-102.)
+ * A motor-driven diaphragm pump's rattle (the owner, 2026-10-28, after a
+ * recording of a three-chamber diaphragm water pump), used for the
+ * stepper-motor metering pumps (after the Grundfos DDA), the nearest the
+ * plant has: its diaphragms fire 42 times a second (a motor at about 14
+ * turns a second, three chambers), each a short knock, so a hard, buzzing
+ * rattle rich in that pulse's harmonics, strongest from 250 Hz to 1 kHz,
+ * swelling a little six times a second as the motor's load comes and
+ * goes. A second of it, a whole number of pulses and swells, played round
+ * and round. Synthesised from the recording's measurements; nothing of
+ * the recording itself.
  */
 export const STEPPER_PUMP: LoopRecipe = (context, out) => {
   const master = context.createGain();
   master.gain.value = 0.0095;
   master.connect(out);
   const rate = context.sampleRate;
-  const stroke = Math.round(rate / 1.2);
-  const buffer = context.createBuffer(1, stroke, rate);
+  const buffer = context.createBuffer(1, rate, rate);
   const samples = buffer.getChannelData(0);
-  const suction = Math.round(stroke * 0.2);
-  const click = Math.round(rate * 0.012);
-  // The whine: the step rate's fundamental and two harmonics, a whole
-  // number of cycles a stroke (200 at 240 Hz) so the loop joins cleanly.
-  const f = Math.round(240 / 1.2) * 1.2;
-  let seed = 11;
-  for (let i = 0; i < stroke; i++) {
+  const pulses = 42;
+  const period = rate / pulses;
+  const knock = Math.round(rate * 0.006);
+  let seed = 13;
+  for (let i = 0; i < rate; i++) {
     const t = i / rate;
-    const whine =
-      Math.sin(2 * Math.PI * f * t) * 0.6 +
-      Math.sin(4 * Math.PI * f * t) * 0.25 +
-      Math.sin(6 * Math.PI * f * t) * 0.1;
-    // Louder while it draws (eased in and out), quieter while it pushes.
-    const level =
-      i < suction ? 0.35 + 0.25 * Math.sin((Math.PI * i) / suction) : 0.22;
-    let sample = whine * level;
-    // The valves' muffled click as suction gives way to discharge.
-    const k = i - suction;
-    if (k >= 0 && k < click) {
+    const swell = 0.8 + 0.2 * Math.sin(2 * Math.PI * 6 * t);
+    // Within its pulse: a short knock, a little noise and a ring.
+    const k = i % period;
+    let sample = 0;
+    if (k < knock) {
       seed = (seed * 16807) % 2147483647;
-      sample +=
-        ((seed / 2147483647) * 2 - 1) * 0.5 * Math.exp((-5 * k) / click);
+      const decay = Math.exp((-4 * k) / knock);
+      sample =
+        (((seed / 2147483647) * 2 - 1) * 0.6 +
+          Math.sin((2 * Math.PI * 520 * k) / rate)) *
+        decay;
     }
-    samples[i] = sample;
+    // The pulse's own fundamental, under it.
+    sample += Math.sin(2 * Math.PI * pulses * t) * 0.15;
+    samples[i] = sample * swell;
   }
   const loop = context.createBufferSource();
   loop.buffer = buffer;
   loop.loop = true;
-  const soften = context.createBiquadFilter();
-  soften.type = 'lowpass';
-  soften.frequency.value = 1200;
-  loop.connect(soften).connect(master);
+  // Strongest from 250 Hz to 1 kHz, as recorded.
+  const band = context.createBiquadFilter();
+  band.type = 'bandpass';
+  band.frequency.value = 500;
+  band.Q.value = 0.6;
+  const low = context.createGain();
+  low.gain.value = 0.6;
+  loop.connect(band).connect(master);
+  loop.connect(low).connect(master);
   loop.start();
   return [loop];
 };
