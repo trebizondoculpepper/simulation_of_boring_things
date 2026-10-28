@@ -191,6 +191,12 @@ import {
   olympicFlowsOf,
 } from '../../../game/plant/olympic-battery';
 import {
+  LOUNGE_DIRT_REF,
+  loungeBed,
+  loungeFilterDp,
+} from '../../../game/plant/lounge-filters';
+import { loungeFlowsOf } from '../../../game/plant/lounge-valves';
+import {
   createAcidBoard,
   createControllerPanel,
   createHypochloriteBoard,
@@ -754,6 +760,53 @@ function modelFor(
           const glass = bedGlass(look, {
             bedFlow: f.bed,
             dirt: w.olympic.dirt[n] / OLYMPIC_DIRT_REF,
+          });
+          filter.showGlass(
+            {
+              ...glass,
+              mode:
+                glass.mode === 'service' && bed.unsettled > 0.05
+                  ? 'rinse'
+                  : glass.mode,
+              murk: Math.max(glass.murk, 0.6 * bed.unsettled),
+              channelling: bed.fissuring,
+            },
+            delta,
+          );
+        },
+      };
+    }
+    // One of the lounge's pair: its own bed and its own flow, as the world
+    // has them (`lounge-valves.ts`, `lounge-filters.ts`), so its sight
+    // glass shows a backwash up through it as well as service down, its
+    // dirt, and its bed unsettled after a wash.
+    const lounge = /^Lounge pool sand filter (\d)$/.exec(item.label);
+    if (pool === 'pool_01' && lounge && typeof window !== 'undefined') {
+      const n = Number(lounge[1]) - 1;
+      let look = newBedLook();
+      return {
+        object: holder,
+        update: (delta) => {
+          const w = roomWorld().world.value;
+          const flows = loungeFlowsOf(w);
+          const q = flows.filters[n];
+          const dp = loungeFilterDp(w.loungeFilters, flows)[n];
+          // In service the pumps' pressure over its top, less its bed's
+          // loss below; backwashed, the header's water from below, out to
+          // waste above; still, the static head.
+          filter.show(
+            q > 0
+              ? { inlet: 1.6, outlet: 1.6 - dp }
+              : q < 0
+                ? { inlet: 0.4, outlet: 1.2 }
+                : { inlet: 0.2, outlet: 0.2 },
+            delta,
+          );
+          look = stepBedLook(look, q, delta);
+          const bed = loungeBed(w.loungeFilters, n as 0 | 1);
+          const glass = bedGlass(look, {
+            bedFlow: q,
+            dirt: w.loungeFilters.dirt[n] / LOUNGE_DIRT_REF,
           });
           filter.showGlass(
             {
