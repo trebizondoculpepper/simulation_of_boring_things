@@ -35,7 +35,7 @@ Today every successful `npm run build` advances the patch in `package.json` and 
 
 Ask one at a time.
 
-1. Between releases, should the title screen and itch.io show the last release plus commits since and the commit (`v0.1.710+12 · build 1e0651c`), or something else, such as the next version marked as a development build?
+1. Between releases, should the title screen and itch.io show the last release plus commits since and the commit (`v0.1.710+12 · build 1e0651c`), or something else, such as the next version marked as a development build? **Answered (the owner, 2026-10-28): the recommendation, last release plus commits since and the commit.**
 2. Should `npm run release` push the commit and tag itself, or stop after tagging so you push them?
 3. Should itch.io carry every push to `main` as now, or only releases (with Pages still following `main`)?
 4. When you first release under the new rule, should it be the next patch (0.1.711), or a minor (0.2.0) since much has been added since 0.1.0?
