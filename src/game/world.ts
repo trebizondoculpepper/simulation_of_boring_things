@@ -269,7 +269,7 @@ import { plantReadingOf } from '../toolkit/gallery/logic/world-reading';
 import { chooseConsole, newBridgeConsoles } from './bridge-consoles';
 import type { ConsoleChoice } from './bridge-consoles';
 
-export const WORLD_VERSION = 53;
+export const WORLD_VERSION = 54;
 
 /**
  * Where the main corridor's control room doors lead (the owner,

@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The plant's annunciator has six more windows (the owner, 2026-10-28): FILTER 1 to 5 HIGH DP, each Olympic bed's own pressure difference over the limit, and WASH-O-TRON NOT IN AUTO; on the control room's board, its twin on the bridge, and the bridge's alarm lists. World version 54 gives saved games the new windows dark.
 - The Olympic's dose lines go into the dosing spool through injection quills (the owner, 2026-10-28: the tiny tube met the large pipe with no sign of a seal): a PP clamp saddle bolted round the spool, its boss, the PVDF quill and a compression nut on the tube (`createInjectionSaddle`).
 - A machine's running sound is heard only in its own room (the owner, 2026-10-28: plant room 2's dosing pumps were heard in the corridor): each room tells the sound engine its scene as it listens, and a held sound from another room's scene is quietened until the player is back there.
 - The dosing boards' pipework meets the room's (the owner, 2026-10-28, at PL2-DP1 and PL2-DP2): each board's suction rises to one connection at its top, where its day tank's line comes down from overhead, and its discharge falls to one low at its edge, where the dose line leaves for its injection quill; their machine ports are those points (`dosing-boards.ts`).

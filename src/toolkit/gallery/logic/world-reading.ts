@@ -109,6 +109,15 @@ function readPlant(world: World, pool: PoolId): PlantReading {
   if (s2 ? s2.tripped : water.tripped && !aOn && bOn) alarms.push('p2-trip');
   if (!circulating || share < 0.5) alarms.push('flow-low');
   if (Math.max(...filterDp) > FILTER_DP_LIMIT) alarms.push('filter-dp');
+  // Each filter's own, where the pool has its own beds (the owner,
+  // 2026-10-28): the Olympic's five, the lounge's two.
+  const perFilter = ['f1-dp', 'f2-dp', 'f3-dp', 'f4-dp', 'f5-dp'] as const;
+  filterDp.forEach((dp, i) => {
+    if (i < perFilter.length && dp > FILTER_DP_LIMIT) alarms.push(perFilter[i]);
+  });
+  // The Olympic's Wash-O-Tron with a filter out of AUTO.
+  if (pool === 'pool_02' && world.washOTron.filters.some((f) => !f.auto))
+    alarms.push('wot-not-auto');
   if (circulating && uvIsolator && !plant.isolators[uvIsolator])
     alarms.push('uv-fail');
   if (water.freeChlorine < CHLORINE_LOW) alarms.push('cl-low');
