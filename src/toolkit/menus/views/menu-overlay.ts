@@ -2,8 +2,10 @@ import { effect } from '@preact/signals-core';
 import {
   AmbientLight,
   DirectionalLight,
+  Group,
   NeutralToneMapping,
   OrthographicCamera,
+  PointLight,
   Raycaster,
   Scene,
   Vector2,
@@ -89,11 +91,27 @@ export function createMenuOverlay({
   let renderer: WebGLRenderer | null = null;
   let freeEnvironment: (() => void) | null = null;
   const scene = new Scene();
-  scene.add(new AmbientLight('#f4f6ff', 0.75));
-  const key = new DirectionalLight('#fff8ee', 1.7);
-  key.position.set(-0.4, 0.8, 1);
-  scene.add(key);
   const camera = new OrthographicCamera(-1, 1, 1, -1, 0.01, 4);
+  // The lights (the owner, 2026-10-27: "a light or two behind the camera
+  // that sometimes catches the sheen … of the machined metal as it
+  // moves"): a soft fill, and two small lamps carried with the camera,
+  // above and either side of it, so as the panel scrolls under them their
+  // highlights glide across the plates' score marks; they lean a little
+  // after the pointer, too, and settle when it stops.
+  scene.add(new AmbientLight('#f4f6ff', 0.35));
+  const fill = new DirectionalLight('#fff8ee', 0.8);
+  fill.position.set(-0.4, 0.8, 1);
+  scene.add(fill);
+  const rig = new Group();
+  const warm = new PointLight('#fff1dc', 0.3, 0, 2);
+  warm.position.set(-0.32, 0.26, -0.5);
+  const cool = new PointLight('#e8f0ff', 0.18, 0, 2);
+  cool.position.set(0.38, 0.12, -0.55);
+  rig.add(warm, cool);
+  camera.add(rig);
+  scene.add(camera);
+  /** Where the lamps lean, after the pointer, metres. */
+  const lean = new Vector3();
   const raycaster = new Raycaster();
 
   const stats: MenuOverlayStats = {
@@ -130,7 +148,10 @@ export function createMenuOverlay({
     const delta = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
     const t0 = performance.now();
-    const moving = panel.update(delta);
+    let moving = panel.update(delta);
+    // The lamps ease after the pointer, and are drawn until they settle.
+    rig.position.lerp(lean, Math.min(1, delta * 5));
+    if (rig.position.distanceToSquared(lean) > 1e-8) moving = true;
     renderer.render(scene, camera);
     const ms = performance.now() - t0;
     const info = renderer.info;
@@ -224,7 +245,7 @@ export function createMenuOverlay({
       renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio ?? 1, 3));
       renderer.setClearColor(0x000000, 0);
       renderer.toneMapping = NeutralToneMapping;
-      freeEnvironment = useEnvironment(renderer, scene, 0.35);
+      freeEnvironment = useEnvironment(renderer, scene, 0.6);
     }
     document.exitPointerLock?.();
     open = true;
@@ -290,7 +311,17 @@ export function createMenuOverlay({
     canvas.setPointerCapture(event.pointerId);
   });
   canvas.addEventListener('pointermove', (event) => {
-    if (!drag || drag.id !== event.pointerId) return;
+    if (!drag || drag.id !== event.pointerId) {
+      // No drag: the lamps lean a little after the pointer.
+      const rect = canvas.getBoundingClientRect();
+      lean.set(
+        ((event.clientX - rect.left) / rect.width - 0.5) * 0.5,
+        -((event.clientY - rect.top) / rect.height - 0.5) * 0.36,
+        0,
+      );
+      requestDraw(0.05);
+      return;
+    }
     scrollBy(-(event.clientY - drag.y));
     drag.y = event.clientY;
   });

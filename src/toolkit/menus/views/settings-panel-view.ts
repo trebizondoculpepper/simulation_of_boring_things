@@ -41,6 +41,7 @@ import {
 import { PENFOLD_GREY } from '../../components/industrial-control/views/control-cubicle';
 import { settings, updateSettings } from '../../settings/settings-store';
 import { CARD, SPACING, narrowCard } from '../logic/panel-layout';
+import { createMachinedMetal, polishParts } from './machined-metal';
 import type { ModuleBox, PanelLayout } from '../logic/panel-layout';
 import {
   CONFIRM_WINDOW,
@@ -429,11 +430,14 @@ function build_(
   edge(fx + fw, fy, lip, fh);
   // Plates of one size share one geometry.
   const shapes = new Map<string, ExtrudeGeometry>();
-  const sheet = (w: number, h: number) => {
+  // Each plate machined at its own angle, its tone a shade its own.
+  const metal = createMachinedMetal(kit);
+  base.material = metal.bezel;
+  const sheet = (w: number, h: number, column: number, row: number) => {
     const key = `${w.toFixed(5)}x${h.toFixed(5)}`;
     let geometry = shapes.get(key);
     if (!geometry) shapes.set(key, (geometry = plateGeometry(w, h)));
-    const mesh = new Mesh(geometry, paints.face);
+    const mesh = new Mesh(geometry, metal.plate(column, row));
     mesh.position.z = -BEVEL;
     return mesh;
   };
@@ -540,7 +544,7 @@ function build_(
     group.add(mod);
     // The plate: its edge, darker, and its face a little in from it, so
     // its thickness and bevel show; it stands a hair proud of the frame.
-    mod.add(sheet(m.w, m.h));
+    mod.add(sheet(m.w, m.h, m.column, m.row));
     const face = new Group();
     face.position.z = PLATE_FRONT;
     mod.add(face);
@@ -766,6 +770,7 @@ function build_(
     }
   };
   const meterSteps: ((delta: number) => void)[] = [];
+  const partsFrom = kit.materials.length;
   for (const m of layout.modules) bolt(m);
   // Blanking plates, screwed into every rack place no module takes, as
   // on an aircraft's panel where a unit is missing or not fitted (the
@@ -776,7 +781,7 @@ function build_(
     blank.name = `Blanking plate ${b.columns} x ${b.rows}`;
     blank.position.set(px(b.x + b.w / 2), py(b.y + b.h / 2), 0);
     group.add(blank);
-    blank.add(sheet(b.w, b.h));
+    blank.add(sheet(b.w, b.h, b.column, b.row));
     const face = new Group();
     face.position.z = PLATE_FRONT;
     blank.add(face);
@@ -789,6 +794,9 @@ function build_(
     stamp.position.set(0, -b.h / 2 + 0.006, 0.0002);
     face.add(stamp);
   }
+
+  // The parts' own finishes, polished to catch the lights.
+  polishParts(kit, new Set([paints.well, paints.slot]), partsFrom);
 
   return {
     group,
