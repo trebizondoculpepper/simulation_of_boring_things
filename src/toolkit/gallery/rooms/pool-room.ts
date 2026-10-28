@@ -147,6 +147,7 @@ import { createFirstPerson } from '../../controls/input/first-person';
 import {
   createComposer,
   createRenderer,
+  followEffectSettings,
 } from '../../components/core/parts/render-style';
 import {
   createPoolUniforms,
@@ -1076,6 +1077,7 @@ void main() {
 }`,
   });
   composer.addPass(film);
+  followEffectSettings(composer, { ao, bloom, film });
 
   // ---- The lectern: LOOK, and nine knobs to turn its quantities ----------
   const parts = createPartSet();

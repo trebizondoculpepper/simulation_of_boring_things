@@ -41,6 +41,7 @@ import { METRE } from './toolkit/components/core/logic/units';
 import {
   inertClip,
   rendererOn,
+  setCapturing,
 } from './toolkit/components/core/parts/render-style';
 import {
   createScenarioStore,
@@ -600,6 +601,8 @@ const captureView = (): HTMLCanvasElement | null => {
   const scale = renderScale(settings.value.renderLevel);
   const original = layers.map(({ draw }) => draw.renderer.getPixelRatio());
   try {
+    // The player's resolution cap stands aside for a screenshot.
+    setCapturing(true);
     for (const { draw } of layers) draw.renderer.setPixelRatio(ratio / scale);
     // Each frame the browser runs, run again: a paused room is drawn by
     // the frame of the room over it (`after`).
@@ -623,6 +626,7 @@ const captureView = (): HTMLCanvasElement | null => {
     }
     return image;
   } finally {
+    setCapturing(false);
     layers.forEach(({ draw }, index) =>
       draw.renderer.setPixelRatio(original[index] / scale),
     );

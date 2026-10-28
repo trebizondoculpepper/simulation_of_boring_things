@@ -20,6 +20,10 @@ describe('the player’s settings', () => {
       fov: 75,
       renderLevel: 6,
       onScreenControls: 'never',
+      ambientOcclusion: 'medium',
+      bloom: 'off',
+      filmEffects: false,
+      resolutionCap: '1080',
     };
     expect(cleanSettings(mine)).toEqual(mine);
   });

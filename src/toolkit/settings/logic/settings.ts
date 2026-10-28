@@ -1,4 +1,6 @@
 import type { OnScreenControls } from '../../controls/logic/hud-policy';
+import { EFFECT_LEVELS, RESOLUTION_CAPS } from './graphics';
+import type { EffectLevel, ResolutionCap } from './graphics';
 
 /**
  * The player's settings (`doc/plans/title-screen.md`): a placeholder set
@@ -19,6 +21,14 @@ export interface Settings {
   renderLevel: number;
   /** Whether the on-screen controls are shown. */
   onScreenControls: OnScreenControls;
+  /** Ambient occlusion: off, or its quality (`graphics.ts`). */
+  ambientOcclusion: EffectLevel;
+  /** Bloom, the glow round bright things: off, or its quality. */
+  bloom: EffectLevel;
+  /** Film grain and vignette. */
+  filmEffects: boolean;
+  /** The tallest image drawn, whatever the screen: a cap on the pixel ratio. */
+  resolutionCap: ResolutionCap;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -28,6 +38,11 @@ export const DEFAULT_SETTINGS: Settings = {
   fov: 52,
   renderLevel: 0,
   onScreenControls: 'automatic',
+  // Today's look, as every room was tuned with.
+  ambientOcclusion: 'high',
+  bloom: 'high',
+  filmEffects: true,
+  resolutionCap: 'native',
 };
 
 /** Each number's range and step, as its slider offers it. */
@@ -61,7 +76,11 @@ export function cleanSettings(stored: unknown): Settings {
     typeof s[key] === 'number' && Number.isFinite(s[key])
       ? clamp(s[key] as number, RANGES[key])
       : DEFAULT_SETTINGS[key];
-  const bool = (key: 'invertY') =>
+  const level = (key: 'ambientOcclusion' | 'bloom'): EffectLevel =>
+    EFFECT_LEVELS.includes(s[key] as EffectLevel)
+      ? (s[key] as EffectLevel)
+      : DEFAULT_SETTINGS[key];
+  const bool = (key: 'invertY' | 'filmEffects') =>
     typeof s[key] === 'boolean' ? (s[key] as boolean) : DEFAULT_SETTINGS[key];
   return {
     volume: num('volume'),
@@ -77,5 +96,11 @@ export function cleanSettings(stored: unknown): Settings {
         : ['automatic', 'always', 'never'].includes(String(s.onScreenControls))
           ? (s.onScreenControls as OnScreenControls)
           : 'automatic',
+    ambientOcclusion: level('ambientOcclusion'),
+    bloom: level('bloom'),
+    filmEffects: bool('filmEffects'),
+    resolutionCap: RESOLUTION_CAPS.includes(s.resolutionCap as ResolutionCap)
+      ? (s.resolutionCap as ResolutionCap)
+      : DEFAULT_SETTINGS.resolutionCap,
   };
 }

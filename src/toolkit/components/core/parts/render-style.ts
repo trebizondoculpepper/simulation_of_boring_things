@@ -5,6 +5,7 @@ import {
   PCFSoftShadowMap,
   PMREMGenerator,
   Plane,
+  Vector2,
   Vector3,
   WebGLRenderer,
 } from 'three';
@@ -14,6 +15,14 @@ import { effect } from '@preact/signals-core';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { settings } from '../../../settings/settings-store';
 import { renderScale } from '../../../settings/logic/settings';
+import {
+  ambientOcclusionAt,
+  bloomAt,
+  cappedPixelRatio,
+} from '../../../settings/logic/graphics';
+import type { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import type { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import type { Pass } from 'three/addons/postprocessing/Pass.js';
 
 /**
  * How the game is drawn: realistically, at the screen's own resolution
@@ -76,6 +85,15 @@ export function rendererOn(canvas: HTMLCanvasElement) {
  */
 export const inertClip = () => new Plane(new Vector3(0, 1, 0), 1e9);
 
+/**
+ * Whether a screenshot is being drawn (`captureView` in `src/main.ts`):
+ * then the resolution cap stands aside, as the screenshot sizes itself.
+ */
+let capturing = false;
+export function setCapturing(on: boolean) {
+  capturing = on;
+}
+
 /** Each renderer's post-processing chains, to follow its pixel ratio. */
 const composers = new WeakMap<WebGLRenderer, Set<EffectComposer>>();
 
@@ -100,6 +118,69 @@ export function createComposer(
   return composer;
 }
 
+/**
+ * A room's costlier passes following the player's graphics settings (the
+ * owner, 2026-10-28): its ambient occlusion off or at fewer samples, its
+ * bloom off or on a smaller image, its film grain and vignette off; live,
+ * as the settings change. `aoSamples` is the room's own, as tuned. Stops
+ * following when the composer is disposed.
+ */
+export function followEffectSettings(
+  composer: EffectComposer,
+  {
+    ao,
+    aoSamples = 12,
+    bloom,
+    film,
+  }: {
+    ao?: GTAOPass;
+    aoSamples?: number;
+    bloom?: UnrealBloomPass;
+    film?: Pass;
+  },
+) {
+  // Bloom's blur chain on a share of the image: its size, scaled.
+  let bloomScale = 1;
+  const full = { w: 1, h: 1 };
+  if (bloom) {
+    const setSize = bloom.setSize.bind(bloom);
+    bloom.setSize = (width: number, height: number) => {
+      full.w = width;
+      full.h = height;
+      setSize(
+        Math.max(1, Math.round(width * bloomScale)),
+        Math.max(1, Math.round(height * bloomScale)),
+      );
+    };
+  }
+  let samples = aoSamples;
+  const stop = effect(() => {
+    const s = settings.value;
+    if (ao) {
+      const at = ambientOcclusionAt(s.ambientOcclusion, aoSamples);
+      ao.enabled = at.enabled;
+      if (at.enabled && at.samples !== samples) {
+        samples = at.samples;
+        ao.updateGtaoMaterial({ samples });
+      }
+    }
+    if (bloom) {
+      const at = bloomAt(s.bloom);
+      bloom.enabled = at.enabled;
+      if (at.scale !== bloomScale) {
+        bloomScale = at.scale;
+        bloom.setSize(full.w, full.h);
+      }
+    }
+    if (film) film.enabled = s.filmEffects;
+  });
+  const dispose = composer.dispose.bind(composer);
+  composer.dispose = () => {
+    stop();
+    dispose();
+  };
+}
+
 /** A WebGL renderer for a room (the Hall has its own, hall-pipeline.ts). */
 export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
   // A stencil buffer, for doorways that look into a space the room does
@@ -113,6 +194,7 @@ export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
   // The player's graphics quality scales whatever ratio the room asks for
   // (`settings.ts`), now and whenever the setting changes.
   const setRatio = renderer.setPixelRatio.bind(renderer);
+  const setSize = renderer.setSize.bind(renderer);
   let wanted = Math.min(globalThis.devicePixelRatio ?? 1, MAX_PIXEL_RATIO);
 
   // The room's post-processing chains follow its ratio (`createComposer`).
@@ -120,16 +202,36 @@ export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
     for (const composer of composers.get(renderer) ?? [])
       composer.setPixelRatio(renderer.getPixelRatio());
   };
-  renderer.setPixelRatio = (ratio: number) => {
-    wanted = ratio;
-    setRatio(ratio * renderScale(settings.value.renderLevel));
+  const size = new Vector2();
+  /**
+   * The ratio drawn at: the room's, less the player's render quality, and
+   * under the player's resolution cap for the canvas's height now (not
+   * while a screenshot is taken, which sizes itself).
+   */
+  const ratioNow = () => {
+    const s = settings.value;
+    const ratio = wanted * renderScale(s.renderLevel);
+    if (capturing) return ratio;
+    return cappedPixelRatio(ratio, renderer.getSize(size).y, s.resolutionCap);
+  };
+  const apply = () => {
+    const ratio = ratioNow();
+    if (renderer.getPixelRatio() === ratio) return;
+    setRatio(ratio);
     follow();
   };
+  renderer.setPixelRatio = (ratio: number) => {
+    wanted = ratio;
+    apply();
+  };
+  // A canvas resized may cross its cap.
+  renderer.setSize = (width, height, updateStyle) => {
+    setSize(width, height, updateStyle);
+    apply();
+  };
   const stopQuality = effect(() => {
-    const scale = renderScale(settings.value.renderLevel);
-    if (renderer.getPixelRatio() === wanted * scale) return;
-    setRatio(wanted * scale);
-    follow();
+    void settings.value;
+    apply();
   });
   renderer.setPixelRatio(wanted);
   const dispose = renderer.dispose.bind(renderer);

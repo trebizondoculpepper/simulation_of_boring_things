@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Graphics settings for the costlier effects (the owner, 2026-10-28): Ambient occlusion and Bloom and glow each Off, Low, Medium or High (fewer AO samples; bloom's blur on a quarter or half of the image), Film grain and vignette on or off, and a Resolution cap of 720p, 1080p, 1440p or Native, which limits the image's height whatever the screen (screenshots ignore it). Live from the pause menu's Graphics tab; every room with post-processing follows them through one shared `followEffectSettings`. Defaults keep today's look.
 - The bridge uses six GTAO ambient-occlusion samples instead of twelve, retaining its contact shadows with less GPU work at high render resolutions.
 
 - The Lidoluxe spa cabinet's upper row of controls (POWER, its lamps, JETS) moved 1.5 cm down and 2 cm left, clear of the foot spa's DRAINING and FILLING strip, which overprinted it (the owner, 2026-10-28); the jacuzzi's cabinet, built the same, moves with it.
