@@ -102,9 +102,9 @@ const FRAME = '#3b3f43';
 /** Lettering drawn at this multiple of its usual resolution: crisp up close. */
 const LETTERING = 3;
 /** A module's plate: how thick it is, and how deep the rack's opening behind it. */
-const PLATE = 0.0016;
+export const PLATE = 0.0016;
 /** How far the plate's softened edge rounds over, and its corners' radius. */
-const BEVEL = 0.0005;
+export const BEVEL = 0.0005;
 const CORNER = 0.0025;
 /** The plate's face, where its parts are mounted. */
 const PLATE_FRONT = PLATE;
@@ -114,7 +114,7 @@ const SEAM = 0.0004;
 const WELL = 0.004;
 
 /** The shared paints of the rack and its fixings, made once per panel. */
-function rackPaints(kit: PanelKit) {
+export function rackPaints(kit: PanelKit) {
   return {
     frame: kitPaint(kit, FRAME),
     well: kitPaint(kit, '#0c0d0e'),
@@ -130,7 +130,7 @@ function rackPaints(kit: PanelKit) {
     })(),
   };
 }
-type RackPaints = ReturnType<typeof rackPaints>;
+export type RackPaints = ReturnType<typeof rackPaints>;
 
 /**
  * A quarter-turn (DZUS) fastener, as avionics units are held in their
@@ -169,7 +169,12 @@ const FASTENER_INSET = 0.0058;
  * Four fasteners, one in from each corner of a plate `w` by `h`; a filler
  * strip too narrow for two side by side has one at its top and its foot.
  */
-function fastenAt(paints: RackPaints, face: Object3D, w: number, h: number) {
+export function fastenAt(
+  paints: RackPaints,
+  face: Object3D,
+  w: number,
+  h: number,
+) {
   if (w < 4 * FASTENER_INSET) {
     for (const sy of [1, -1])
       fastener(paints, face, 0, sy * (h / 2 - FASTENER_INSET));
@@ -194,7 +199,7 @@ function fastenAt(paints: RackPaints, face: Object3D, w: number, h: number) {
  * softened, centred on the origin, its back at z = 0: a hairline smaller
  * than its rack cell, so a seam shows where it butts its neighbour.
  */
-function plateGeometry(w: number, h: number) {
+export function plateGeometry(w: number, h: number) {
   const a = w / 2 - SEAM / 2 - BEVEL;
   const b = h / 2 - SEAM / 2 - BEVEL;
   const r = Math.min(CORNER, a, b);

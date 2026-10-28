@@ -277,7 +277,13 @@ export function settingsPanel(offers: PanelOffers): PanelZone[] {
       });
     game.push({ kind: 'vfd', id: 'status', columns: STATUS_COLUMNS });
     zones.push({ id: 'game', title: 'GAME', items: game });
-  }
+  } else
+    // Opened from the title: no game to resume, but a way back to it.
+    zones.push({
+      id: 'back',
+      title: 'MENU',
+      items: [{ kind: 'push', id: 'resume', legend: 'BACK', colour: 'green' }],
+    });
   zones.push(
     {
       id: 'picture',

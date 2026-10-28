@@ -220,7 +220,10 @@ effect(() => {
  */
 const menuPanelFlag =
   new URLSearchParams(location.search).get('menu') === 'panel';
-let menuPanel: { open(): void; readonly isOpen: boolean } | null = null;
+let menuPanel: {
+  open(options?: { inGame?: boolean }): void;
+  readonly isOpen: boolean;
+} | null = null;
 const pauseMenu = createPauseMenu({
   save: saveGame,
   holding: worldStore('dev').holding,
@@ -285,8 +288,33 @@ if (menuPanelFlag)
     (globalThis as { menuPanel?: unknown }).menuPanel = overlay;
     const openWhenReady = () =>
       current !== undefined ? overlay.open() : setTimeout(openWhenReady, 250);
-    openWhenReady();
+    if (new URLSearchParams(location.search).has('room')) openWhenReady();
   });
+// Mission 096, stage 2: with `?menu=panel`, the title's menu is a Penfold
+// box in the bottom left (`title-overlay.ts`) in place of the DOM list,
+// over the same attract sequence; it shows and hides with the title.
+if (menuPanelFlag)
+  void import('./toolkit/menus/views/title-overlay').then(
+    ({ createTitleOverlay }) => {
+      const box = createTitleOverlay(titleActions);
+      const list = document.querySelector<HTMLElement>('.title-menu');
+      if (list) list.style.visibility = 'hidden';
+      const show = titleScreen.show.bind(titleScreen);
+      const hide = titleScreen.hide.bind(titleScreen);
+      titleScreen.show = () => {
+        show();
+        box.show();
+      };
+      titleScreen.hide = () => {
+        hide();
+        box.hide();
+      };
+      if (
+        document.querySelector<HTMLElement>('.title-screen')?.hidden === false
+      )
+        box.show();
+    },
+  );
 const settingsButton = document.createElement('button');
 settingsButton.type = 'button';
 settingsButton.className = 'hud-button hud-settings';
@@ -315,7 +343,7 @@ const goTo = (search: string) => {
 // nominal operating conditions and starts in the footbath; Continue
 // restores the last playable view. Settings and Instructions are the pause menu's
 // tabs, opened without its Game tab.
-const titleScreen = createTitleScreen({
+const titleActions: Parameters<typeof createTitleScreen>[0] = {
   newGame: () => {
     const destination = gameSession.start();
     // A fresh page also clears room-local demonstrations and cached camera poses.
@@ -334,11 +362,18 @@ const titleScreen = createTitleScreen({
     );
   },
   noContinue: 'Start a new game first',
-  settings: () => pauseMenu.open('Graphics', { inGame: false }),
-  instructions: () => pauseMenu.open('Controls', { inGame: false }),
-  covered: () => pauseMenu.isOpen,
+  settings: () =>
+    menuPanel
+      ? menuPanel.open({ inGame: false })
+      : pauseMenu.open('Graphics', { inGame: false }),
+  instructions: () =>
+    menuPanel
+      ? menuPanel.open({ inGame: false })
+      : pauseMenu.open('Controls', { inGame: false }),
+  covered: () => pauseMenu.isOpen || (menuPanel?.isOpen ?? false),
   build: buildLine(),
-});
+};
+const titleScreen = createTitleScreen(titleActions);
 const positionStatus = document.createElement('span');
 positionStatus.setAttribute('role', 'status');
 positionOverlay.append(roomName, positionStatus);

@@ -131,6 +131,7 @@ export function createMenuOverlay({
   let scroll = 0;
   let range = 0;
   let open = false;
+  let inGame = true;
 
   // ---- Drawing, only on change --------------------------------------------
   let raf = 0;
@@ -204,7 +205,7 @@ export function createMenuOverlay({
   const rebuild = () => {
     const t0 = performance.now();
     const fit = fitPanel(innerWidth);
-    const key = `${fit.panelWidth}`;
+    const key = `${fit.panelWidth} ${inGame}`;
     ppm = fit.pixelsPerMillimetre * 1000;
     if (key !== builtFor || !panel) {
       if (panel) {
@@ -212,7 +213,7 @@ export function createMenuOverlay({
         panel.dispose();
       }
       const zones = settingsPanel({
-        inGame: true,
+        inGame,
         noclip: !!actions.noclip,
         copyLink: !!actions.copyCamera,
         devPanel: !!actions.devPanel,
@@ -238,8 +239,10 @@ export function createMenuOverlay({
   };
 
   // ---- Opening and closing -----------------------------------------------------
-  function openMenu() {
+  /** Open it; from the title (`inGame` false) it has no GAME zone. */
+  function openMenu({ inGame: game = true } = {}) {
     if (open) return;
+    inGame = game;
     if (!renderer) {
       renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
       renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio ?? 1, 3));
