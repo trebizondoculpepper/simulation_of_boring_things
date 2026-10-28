@@ -79,7 +79,9 @@ export function createCorridorServices(kit: PanelKit) {
   };
   for (const r of runs) {
     const od = outerOf(r);
-    const pipe = createPipe(r.kind, od, r.points, {
+    // A chemical line in its containment, drawn as the containment.
+    const kind = r.contained ? 'double-contained' : r.kind;
+    const pipe = createPipe(kind, od, r.points, {
       through: r.through.map((t) => ({
         at: t.at,
         normal: t.normal,

@@ -1,6 +1,6 @@
 # 081: How acid is supplied
 
-Status: incomplete, for planning (opened 2026-10-26 with the owner, from Codex's review of [076](076-chemical-delivery.md)). Decided: bulk tanker delivery (below); the rest to settle.
+Status: for the future, a new module of the game (the owner, 2026-10-28); no work on it now. Opened 2026-10-26 with the owner, from Codex's review of [076](076-chemical-delivery.md), for planning. Decided: bulk tanker delivery (below); the rest to settle when the module is taken up.
 
 ## Review checkpoint — 2026-10-26
 

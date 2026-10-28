@@ -1,6 +1,7 @@
 import {
   BoxGeometry,
   CanvasTexture,
+  CylinderGeometry,
   Group,
   Mesh,
   MeshBasicMaterial,
@@ -26,6 +27,8 @@ import {
   createSpiralDuct,
 } from '../../components/plant/views/ductwork';
 import { createServiceCeiling } from '../../components/site-dressing/views/service-ceiling';
+import { createLeakPort } from '../../components/plant/views/leak-detection';
+import { newLowPoint } from '../../../game/plant/leak-monitor';
 
 /**
  * pipes_n_dreams ("Pipes'n Dreams"): a development room showing every
@@ -60,6 +63,7 @@ const KIND_ORDER: readonly PipeKindId[] = [
   'twin-wall-flue',
   'chemical-tube',
   'pressure-hose',
+  'double-contained',
 ];
 
 /** The stands' footprints, for walking collision. */
@@ -174,6 +178,8 @@ export function createPipesRoom(metre: number) {
     return s;
   };
 
+  const kit = createPanelKit();
+
   // ---- The pipe kinds, one a stand -----------------------------------------
   const slots = [
     ...xs(9).map((x) => [x, NORTH_Z] as const),
@@ -215,13 +221,44 @@ export function createPipesRoom(metre: number) {
           [0.05, y0 + 0.9, -0.25],
           [1.05, y0 + 0.9, -0.25],
         ];
+    if (kind.carrier) {
+      // Pipe in pipe, cut away: the containment cut back from the run's
+      // start so the carrier shows, a spacer at the cut and another on
+      // the bare carrier, and the leak detection port at the low point.
+      const cut = 0.35;
+      const [sx, sy, sz] = route[0];
+      s.add(
+        createPipe(id, od, [[sx + cut, sy, sz], ...route.slice(1)], {
+          lengths: 0.55,
+        }),
+      );
+      const inner = nearestSize(kind.carrier.kind, od * kind.carrier.share);
+      s.add(createPipe(kind.carrier.kind, inner, route, { lengths: 0.55 }));
+      const spacer = new MeshStandardMaterial({
+        color: '#e5c43a',
+        roughness: 0.5,
+      });
+      for (const [x, r] of [
+        [sx + cut + 0.004, od / 2 - 0.004],
+        [sx + 0.12, od / 2 - 0.008],
+      ] as const) {
+        const ring = new Mesh(new CylinderGeometry(r, r, 0.012, 24), spacer);
+        ring.rotation.z = Math.PI / 2;
+        ring.position.set(x, sy, sz);
+        s.add(ring);
+      }
+      const port = createLeakPort(kit, od / 2);
+      port.object.position.set(sx + cut + 0.35, sy, sz);
+      port.show(newLowPoint());
+      s.add(port.object);
+      return;
+    }
     const run = createPipe(id, od, route, { lengths: 0.55 });
     // Short pipes are joined in the demonstration, to show the joints.
     s.add(run);
   });
 
   // ---- Ductwork: the plant's duct specimens ---------------------------------
-  const kit = createPanelKit();
   const ducts: [string, string, (k: typeof kit) => Object3D][] = [
     [
       'Rectangular ductwork',

@@ -199,7 +199,7 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
       if (contained && r.od >= 0.024)
         group.add(
           bind(
-            createPipe('pvc-pressure', outer, points, {
+            createPipe('double-contained', outer, points, {
               through: [],
             }),
           ),

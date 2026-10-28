@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The double-contained chemical pipe as a pipe kind (`double-contained` in `PIPE_KINDS`, prompt 086): a PVC-U containment round an ABS carrier, with a cut-away stand in pipes_n_dreams showing the carrier, a spacer and the leak detection port at the low point; the rooms' and corridors' contained chemical lines are now drawn as that kind. The fill cabinet's two ports are now of different types, not only sizes: a 2" brass camlock for hypochlorite, a 1½" polypropylene Guillemin for acid.
 - The Lidoluxe spa cabinet's upper row of controls (POWER, its lamps, JETS) moved 1.5 cm down and 2 cm left, clear of the foot spa's DRAINING and FILLING strip, which overprinted it (the owner, 2026-10-28); the jacuzzi's cabinet, built the same, moves with it.
 - The menu panels have accessible copies for screen readers and switch access (mission 096): the settings panel as a hidden dialog of real buttons, ranges, a select and a live status line, built from the same menu model; the title's list kept, hidden, beside its box; focus kept in step with the panels' focus rings both ways. The menu bindings are in the control scheme's help and the bindings table.
 - The menu panels' sounds (button presses, knob detents, selector and key clicks) are heard front centre, not placed in the room (the owner, 2026-10-28), and on the title too (`front-centre.ts`).

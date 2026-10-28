@@ -1,6 +1,47 @@
 # 085: Chemical distribution, from the fill ports to the dosing points
 
-Status: to do (written 2026-10-26 with the owner).
+Status: in progress (written 2026-10-26 with the owner). Audited 2026-10-28 (below): not done. Both paths are in the schematics end to end and drawn, but almost none of their valves are in the enhanced network, the loading bay's and the corridors' lines are laid by hand rather than routed from a schematic, and deliveries, the overfill stop, the circulation interlock and the remaining controls are not built.
+
+## Audit — 2026-10-28
+
+The owner thought this done; checked against the code, with the room schematics expanded by the plumber (`schematicExpansion`, `src/game/plant/schematics.ts`).
+
+**The paths are in the schematics, end to end.** Loading bay (`LOADING_BAY_SCHEMATIC`, `src/game/plant/back-room-schematics.ts`): one `fill-cabinet` node with `hypochlorite` and `acid` ports, the two delivery lines to the stores (boundary nodes), and the two mains through the bay. Each store (`chemicalStore`): a `delivery` boundary filling each bulk tank, the tanks' draw-offs into the transfer pump, its main out (`storeTransfer`, `src/game/plant/schematic-parts.ts`). The wet hall (`transferSelectors`): each main into its six-way selector, four branches out. The plant rooms (`dayTanks`): each branch into its day tank, the day tank's draw-off to the dosing pumps (lounge) or the packaged cabinet (jacuzzi, footbath); the lounge's dosing pumps on to their injection quills. The Olympic is plumbed by its own pipeline (`src/toolkit/gallery/logic/olympic-plumbing.ts`), not `SCHEMATICS`, and draws its branches, day tanks and dose lines.
+
+**Every valve tagged: no.** The expanded networks give these fittings on chemical links:
+
+| Room                         | Chemical links                         | Valves in the network                                                                                      |
+| ---------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| loading_bay                  | 4 (two delivery lines, two mains)      | none                                                                                                       |
+| hypo_store                   | 7 (three fills, three draw-offs, main) | none                                                                                                       |
+| acid_store                   | 3                                      | none                                                                                                       |
+| wet_hall                     | 10 (two mains, eight branches)         | none                                                                                                       |
+| plant_pool_01                | 8                                      | only the two quills' non-return and isolating valves (`acid-quill.in.nrv`, `.iso`, and the hypochlorite's) |
+| plant_pool_03, plant_pool_04 | 4 each                                 | none                                                                                                       |
+
+Missing from the model, though several are drawn on the components: each port's isolating valve and each fill line's non-return valve; the actuated overfill valve; each bulk tank's inlet and draw-off valves (they turn on `createFramedChemicalTank`, their state their own); the transfer pump's suction, discharge, non-return and relief valves (on the skid, `createTransferPumpSkid`); each selector outlet's manual and actuated valves (on `createTransferSelector`, driven by the distribution model but not fittings of the network); the day tanks' inlet and outlet valves. The plumber adds nothing (`added` is empty everywhere) only because the backrooms' rules isolate nothing.
+
+**Routed by the plumber: partly.**
+
+- The wet hall's chemical lines: routed by its plumber from the schematic (`wet-hall-plumbing.ts`, `wetHallPipework` in `room-pipes.ts`).
+- The stores: routed by the voxel router from the schematic's links (`src/toolkit/gallery/logic/store-plumbing.ts`).
+- The jacuzzi's and footbath's, and the lounge's day tank lines: laid from the schematic's links by `day-tank-plumbing.ts`.
+- The loading bay's fill lines and mains: hand-laid polylines (`src/toolkit/gallery/logic/loading-bay-plumbing.ts`), not routed, with `valves: []`; and the loading bay is not among the rooms `chemical-routing.test.ts` checks.
+- The corridors' mains and branches: hand-laid along the corridor's tiers (`src/toolkit/gallery/logic/corridor-services.ts`), double-contained and fire-stopped, tested, but from no schematic.
+
+Every chemical link of the schematics that have them is drawn (`chemical-routing.test.ts`), double-contained between rooms and marked to BS 1710.
+
+**The model.** The transfer works across the building (`src/game/plant/chemical-distribution.ts`, `world.distribution`: store, selector, day tanks, a high-high trip), the wet hall's panel shows it, and 091 is replacing that panel. Not built: deliveries into the bulk tanks (076); the bulk tanks' high and high-high switches and the overfill stop; the circulation flow interlock on dosing; the stores' handling panels, the plant rooms' day tank panels and the control room's mimic page; dosing rates from the pools' bather load.
+
+**A departure from the plan.** The footbath (`plant_pool_04`) has an acid day tank (`dayTanks` gives every room both; `DAY_TANKS` acid 15 L), where the plan says hypochlorite only. To confirm with the owner.
+
+### Gaps (in `TODO.md`)
+
+1. Every chemical valve into the schematics as fittings with function, normal state and tag (fill isolating and non-return valves, overfill valve, tank inlet and draw-off, pump suction, discharge, non-return and relief, selector outlets manual and actuated, day tank inlet and outlet), and the scene's valves bound to them. A world shape change (`WORLD_VERSION`).
+2. The loading bay's chemical lines routed by the plumber from its schematic, in place of `loading-bay-plumbing.ts`'s hand-laid points, and the loading bay added to `chemical-routing.test.ts`; the corridor runs tied to the schematics' cross-room links.
+3. The Olympic's chemical lines and valves in a schematic like the other rooms' (prompt 063).
+4. Deliveries (076), the overfill stop, the circulation interlock, the remaining controls (086's audit), dosing rates from the pools.
+5. The footbath's acid day tank: keep or remove.
 
 ## Review checkpoint — 2026-10-26
 

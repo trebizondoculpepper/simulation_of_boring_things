@@ -510,7 +510,7 @@ export function createFillCabinet(kit: PanelKit) {
       'SODIUM HYPOCHLORITE\n2" CAMLOCK',
       'hypochlorite',
     ],
-    [0.17, CHEMICAL_COLOUR.acid, 'HYDROCHLORIC ACID\n1½" CAMLOCK', 'acid'],
+    [0.17, CHEMICAL_COLOUR.acid, 'HYDROCHLORIC ACID\n1½" GUILLEMIN', 'acid'],
   ] as const) {
     const small = chemical === 'acid';
     const r = small ? 0.024 : 0.032;
@@ -546,16 +546,54 @@ export function createFillCabinet(kit: PanelKit) {
       0.04,
       Z + 0.02,
     );
-    // The coupling, and its cap.
-    t.rod(
-      group,
-      t.paint(FINISH.brass, 0.35, 0.7),
-      [x, 0, Z + 0.055],
-      [x, 0, Z + 0.1],
-      r * 1.25,
-      20,
-    );
-    t.cyl(group, t.paint(colour, 0.5), r * 1.3, 0.03, x, 0, Z + 0.115, 'z', 20);
+    // The coupling, and its cap: a different type for each chemical, not
+    // only a different size (prompt 086), so neither hose fits the other's
+    // port: the hypochlorite's a brass camlock adaptor, its cam grooves
+    // round it; the acid's a polypropylene Guillemin, symmetrical, its two
+    // lugs out either side.
+    if (small) {
+      const pp = t.paint('#d9dad6', 0.5);
+      t.rod(group, pp, [x, 0, Z + 0.055], [x, 0, Z + 0.09], r * 1.2, 20);
+      t.cyl(group, pp, r * 1.6, 0.02, x, 0, Z + 0.1, 'z', 20);
+      for (const s of [-1, 1])
+        t.box(group, pp, 0.025, 0.018, 0.02, x + s * r * 1.9, 0, Z + 0.1);
+      t.cyl(
+        group,
+        t.paint(colour, 0.5),
+        r * 1.5,
+        0.02,
+        x,
+        0,
+        Z + 0.12,
+        'z',
+        20,
+      );
+    } else {
+      const brass = t.paint(FINISH.brass, 0.35, 0.7);
+      t.rod(group, brass, [x, 0, Z + 0.055], [x, 0, Z + 0.1], r * 1.25, 20);
+      t.cyl(
+        group,
+        t.paint('#7a6630', 0.5),
+        r * 1.18,
+        0.008,
+        x,
+        0,
+        Z + 0.085,
+        'z',
+        20,
+      );
+      t.cyl(
+        group,
+        t.paint(colour, 0.5),
+        r * 1.3,
+        0.03,
+        x,
+        0,
+        Z + 0.115,
+        'z',
+        20,
+      );
+    }
     put(
       group,
       createTag(t, name, 0.26, {

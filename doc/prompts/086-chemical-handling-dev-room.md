@@ -1,6 +1,84 @@
 # 086: dev44, the chemical handling room
 
-Status: to do (written 2026-10-26 with the owner), a sub-mission of [085](085-chemical-distribution.md), for another agent.
+Status: in progress (written 2026-10-26 with the owner, a sub-mission of [085](085-chemical-distribution.md)). Audited 2026-10-28 (below): dev44 exists and most of the master list is built; the double-contained pipe is now a pipe kind and stands in `pipes_n_dreams`; what remains is listed under "Still missing" and in `TODO.md`.
+
+## Audit — 2026-10-28
+
+The owner, 2026-10-28: "86 is mostly done. Just have a double check what we don't have." Each item of the master list checked against the code. dev44 is `src/toolkit/gallery/rooms/plant/chemical-handling.ts`; the kit is `src/toolkit/components/plant/views/chemical-handling-kit.ts` (_kit_ below). Some items were overtaken by the owner's later rulings (2026-10-26/27): one transfer pump per chemical, not a duty and standby pair; Chlorella DoseCell bottles as the day tanks, their head carrying the level switches and the pump, the actuated inlet valves moved to the wet hall's transfer selectors; the wet hall's distribution panel (and its replacement, 091) in place of per-room day tank panels. [x] have, [~] partly, [ ] missing.
+
+### At the fill point
+
+- [x] Delivery fill cabinet: `createFillCabinet` in `src/toolkit/components/plant/views/chemicals-storage.ts` (the world's loading bay, and dev_chemicals) and another in `src/toolkit/components/loading-dock/views/yard-kit.ts` (the loading gallery). Lockable, its door opens. Not in dev44 itself.
+- [x] Two ports of different types: built 2026-10-28 in `chemicals-storage.ts`, the hypochlorite's a 2" brass camlock, the acid's a 1½" polypropylene Guillemin with its two lugs, labelled so (`yard-kit.ts`'s already differed). Each has its valve, cap, tag and the cabinet's drip tray; no dust-cap chain.
+- [ ] Tank-full beacon and sounder per port, driven by its bulk tank's high level, with a mute: missing. The cabinet's beacon and button are static, one for both ports (`chemicals-storage.ts`).
+- [ ] Contents indicator at the port: missing.
+- [ ] Delivery emergency stop: missing.
+- [ ] Delivery enable key switch: missing.
+
+### Bulk storage
+
+- [x] Hypochlorite bulk tank: `createFramedChemicalTank` (`src/toolkit/components/plant/views/framed-chemical-tank.ts`, after DENIOS, Chlorella's, opaque black HDPE), in dev44 as `createBulkTankDemo` (_kit_) and in the store.
+- [x] Acid bulk tank: the same tank for 10% HCl, radar level, carbon vent filter.
+- [x] Acid IBC on spill pallet: `createIbc`, `createIbcOnSpillPallet` (`chemicals-storage.ts`), kept in dev_chemicals.
+- [x] Level transmitter and local gauge: on the framed tank (ultrasonic on hypochlorite, 80 GHz radar on acid, local display); the instruments alone in `src/toolkit/components/plant/views/level-instruments.ts` (dev44's "Level instruments").
+- [~] High and high-high switches: the framed tank has its independent high-level float switch, drawn; no separate high switch, and neither is a modelled input (the world's distribution trips on a day tank's high-high only, `src/game/plant/chemical-distribution.ts`).
+- [ ] Actuated overfill valve on the fill line, shut by high-high: missing.
+- [x] Tank inlet and draw-off valves: the framed tank's fill and outlet valves turn (`parts` of `createFramedChemicalTank`); PVC-U ball valves in `src/toolkit/components/plant/views/chemical-ball-valve.ts`. Not yet nodes of the store's schematic (see 085).
+- [~] Tank vent: a gooseneck on each tank, to the room, not piped outside.
+- [x] Fume scrubber: the acid tank's activated-carbon vent filter pot (`framed-chemical-tank.ts`); drawn, no state.
+- [ ] Bund leak detector: missing (only an annunciator window on the unused store panel).
+- [ ] Bund sump and hand pump: missing. Bund floor markings are built (`src/toolkit/gallery/views/bund-marking.ts`, in dev44).
+- [x] Store extract and chlorine detection: `createStoreVentilation`, `STORE_DETECTION`, kept.
+- [x] Spill kit, PPE cabinet, safety shower and eyewash: `chemicals-storage.ts`, decoration.
+- [x] Store signs, hazard labels, tags: `createStoreSigns`, `chemicals-signs.ts`; the framed tanks carry their own labels and tags.
+
+### Transfer
+
+- [x] Chemical transfer pump: `createTransferPumpSkid` (_kit_), a sealless magnetic-drive pump (Iwaki MX class) on a bunded skid, one per chemical by the owner's ruling; the duty and standby pair kept as `createDualTransferPumpSkid` (_kit_, not shown).
+- [x] Suction, discharge and non-return valves: on the skid.
+- [x] Pressure relief valve back to the tank: on the skid; also `createReliefValve` (`dosing-valves.ts`).
+- [x] Pressure gauge with a diaphragm seal: on the skid.
+- [x] Interstitial leak detector: `createLeakPort`, `createLeakDetectionDemo` (`src/toolkit/components/plant/views/leak-detection.ts`) and its tested logic `src/game/plant/leak-monitor.ts`; dev44's "Leak detection". Not yet watching a leak model in the world.
+
+### Day tanks
+
+- [x] Day tanks, hypochlorite and acid: Chlorella DoseCell bottles, 15 to 500 L (`src/toolkit/components/plant/views/dose-bottle.ts`, `dose-cell-head.ts`, logic `src/game/plant/dose-bottle.ts`), and the framed 1,000 L; every size in dev44's "Day tank sizes" (`createDayTankRange`); the earlier framed day tank station (`createDayTankStation`, _kit_) used by the transfer trial.
+- [x] Low and high level switches: in the DoseCell head (HI, LO, CALL lamps), and on the day tank station.
+- [x] Actuated inlet valve: moved to each outlet of the transfer selector (`createTransferSelector`, _kit_), and on the day tank station.
+- [~] Outlet isolating valve: on the day tank station; a DoseCell bottle has none (its pump is in its head).
+
+### Dosing
+
+- [x] Hypochlorite dosing pumps: `createHypochloriteBoard`, `createSolenoidPump`, `createDigitalPump` (`dosing-equipment.ts`), rebuilt to the peristaltic pump's standard (`diaphragm-pump.ts`, `peristaltic-pump.ts`), in dev44.
+- [x] Acid dosing pump: `createAcidBoard`, in dev44.
+- [~] Dosing controller and sample cells: `createControllerPanel` (`dosing-equipment.ts`); it has not gained the circulation interlock's input and lamp.
+- [x] Injection points: `createInjectionRun`, `injection-quill.ts`; the lounge's quills in its schematic with their non-return and isolating valves.
+- [ ] Circulation flow switch interlock (no flow, no dosing, shown on the controller): missing. The sample cell's flow switch (`src/game/plant/sampling.ts`) is not it.
+- [x] CO₂ station: `createCo2Station`, kept.
+- [x] Test shelf and log: `createTestShelf`, decoration.
+
+### Pipe
+
+- [x] ABS chemical pipe: `abs-chemical` (`src/toolkit/components/core/views/pipe-kinds.ts`).
+- [x] Polyethylene dosing tube: `chemical-tube`.
+- [x] Double-contained chemical pipe: built 2026-10-28 as the `double-contained` kind in `PIPE_KINDS` (a PVC-U containment, its `carrier` an ABS pipe of half its size), its stand in `pipes_n_dreams` cut away to show the carrier, a spacer and the leak detection port (`src/toolkit/gallery/views/pipes-n-dreams.ts`); the rooms' and corridors' contained chemical lines now drawn as that kind (`room-pipework.ts`, `corridor-services.ts`). Already on dev44's pipe stand (`createChemicalPipeSamples`).
+- [x] Line labels: `createPipeMarker` (`pipe-marker.ts`, BS 1710 bands, legend, flow arrow), placed along every chemical run in the rooms and the corridor.
+
+### Controls
+
+- [ ] Fill cabinet controls (contents gauge, beacon and sounder with mute, emergency stop, key switch): missing, as above.
+- [~] Chemical handling panel per store: built as `createStoreHandlingPanel` (_kit_: tank meter, annunciator with high, high-high and overfill, bund leak, pipe leak, pump trip, gas, delivery; ACCEPT, RESET, LAMP TEST, TEST key) but shown nowhere, not in dev44 or the stores, and bound to nothing. The pump's HAND · OFF · AUTO, RUN, TRIP and reset are on the skid's local station instead.
+- [~] Day tank panel per dosing plant room: built as `createDayTankPanel` (_kit_) but shown nowhere; the DoseCell heads' lamps and the wet hall's panel (and 091's terminals) now do most of its work. Its CIRCULATION PROVEN lamp and dosing inhibit key have no home.
+- [ ] Control room mimic page of the chemical path: missing in the old control room. The bridge (095) has a CHEMICAL STOCKS station.
+
+### Still missing (in `TODO.md`)
+
+1. The fill cabinet made a working component: per-port tank-full beacon and sounder driven by its bulk tank's level, mute, contents indicator, delivery emergency stop, enable key switch; tried in dev44, then in the loading bay (with 076's deliveries).
+2. The bulk tanks' high-level switch (a high alarm apart from high-high) as model inputs, and the actuated overfill valve on each fill line shut by high-high.
+3. A bund leak detector and a bund sump with hand pump in each store.
+4. The circulation flow switch interlock, its input and lamp on the dosing controller.
+5. Decide the fate of the store handling panel and the day tank panel (show and bind them, or retire them in favour of 091's terminals and the DoseCell heads), and the control room's chemical mimic page.
+6. Minor: tank vents piped outside; a dust cap on a chain at each port.
 
 ## Review checkpoint — 2026-10-26
 
