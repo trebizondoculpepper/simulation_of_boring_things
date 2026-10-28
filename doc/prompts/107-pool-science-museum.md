@@ -32,6 +32,7 @@ Then, bringing the first step forward: "Begin by actually defining this as a mis
 2. **Time.** A hall's simulated time starts at now. If the visitor speeds it up, the hall's time display follows. Not every hall needs a clock: halls may show time in different ways, such as a pool clock, a chart recorder's paper, a day-and-night skylight, a log sheet, or a digital readout. Each hall's sub-prompt says which it uses.
 3. **Halls start empty.** Each exhibit space begins with set decoration only (the shell, signage, the safety layer). The exhibit itself is built later, by its sub-prompt.
 4. **One concept per hall** (the owner, 2026-10-28: "each room should teach one concept"): a hall shows only what teaches its own concept; readouts that belong to another hall's concept (Hall 2's energy used, say) are left out.
+5. **Left to right** (the owner, 2026-10-28): a hall's process reads from left to right as the visitor faces it, its inputs (gas, mains water, chemicals) on the left and the pool on the right; the mimic, lecterns and placards follow the same order. Where the hall's route allows, the visitor walks with the flow.
 
 ### The sub-prompts
 
@@ -184,7 +185,7 @@ Every hall's exhibit follows mission 106's pattern: an ideal-source schematic fi
 - **Schematic, instruments, mimic, panels:** dev51's as mission 106 built them (pool, tank, pump, sand filter F1 with its five-valve nest, PDI1, the sight glass, the heat exchanger, the heat meter, the pool clock, the dead-head trip and the heating interlock).
 - **Moving it in (stage 3).** The museum hall's shell (walls, ceiling, signs, archways) wrapped round dev51's plant, scaled to it; dev51's room module started inside `museum2`, its entrance panel restyled to the brand; the alias `dev51` → `museum2`; Museum 1's lessons not repeated. Whether its heating moves to Museum 3 is the owner's question 1.
 - **Teaches, and leads on.** Filtration, fouling and differential pressure, backwash. "Clean water still has to be warm enough to swim in."
-- **New.** Nothing beyond the shell and the alias.
+- **New.** Superseded (the owner, 2026-10-28): dev51 is kept, and Hall 2 is a smaller plant of its own; see 107b.
 - **Acceptance.** Every mission 106 reading unchanged in the hall; the old link lands in Museum 2; the handover works at both its archways.
 
 ### Museum 3, "Warm water"
@@ -229,7 +230,7 @@ The owner's new order (2026-10-28) replaces the earlier stages 3 to 7. Stages 1 
 2. **The brand (done with stage 1):** PLANTROOMS in `brands.ts`, `brand-logo.ts` and `museum-brand.ts`.
 3. **The groundwork, [107-0](107-0-exhibit-groundwork.md):** the halls re-signed to the new order, the exhibit hook, reset on entry, the hall clock. Small to medium. First: every hall's stage needs it.
 4. **Hall 1, Warm water, [107a](107a-warm-water-heating.md).** Large (the boiler's gas line, flue, cover, thermostat, cost display and losses board are new). After 3.
-5. **Hall 2, Clean water, [107b](107b-clean-water-filtration.md):** dev51 moved in, the `dev51` link an alias. Medium. After 3, independent of 4.
+5. **Hall 2, Clean water, [107b](107b-clean-water-filtration.md):** a smaller, focused clean-water plant of its own, built from dev51's models and laid out left to right; dev51 kept as it is (the owner, 2026-10-28). Medium. After 3, independent of 4.
 6. **Hall 3, Safe water, [107c](107c-safe-water-automatic-dosing.md).** Large (the test kit, the fault pedestal, the chart on plant time). After 3.
 7. **Hall 4, The chemistry of pools, [107d](107d-chemistry-lab.md).** Large (the dosing desk, the ideal tanks, the readout, the challenge cards). After 3.
 8. **The new shell, [107-1](107-1-ring-shell.md):** the owner's ring of 14 round a courtyard two rooms by three, Hall 0 in the south-west corner with its floor arrows, rooms `museum6` to `museum13`, Halls 5 to 12 empty and signed "coming soon" (rule 3) and Hall 13 kept for the finale, the hand-over and the safety layer carried over; the empty hall as a component (side and corner), only the current hall and its neighbours drawn in full and every hall beyond drawn empty. Large. Independent of 4 to 7 if they keep to 107-0's hook (halls found by number, not coordinates); before 9, so the finale is laid out in its real hall.
