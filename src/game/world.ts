@@ -14,6 +14,7 @@ import {
   doseDraw,
   newChemicalDistribution,
   stepDistribution,
+  transferRunning,
 } from './plant/chemical-distribution';
 import type {
   ChemicalDistribution,
@@ -21,6 +22,13 @@ import type {
   DistributionPower,
 } from './plant/chemical-distribution';
 import { distributionPaths } from './plant/chemical-valves';
+import {
+  actOnChemControl,
+  controllerRunning,
+  newChemControlBox,
+  stepChemControlBox,
+} from './plant/chem-control';
+import type { ChemControlAction, ChemControlBox } from './plant/chem-control';
 import { actOnWashOTron, newWashOTron } from './plant/wash-o-tron';
 import type { WashAction, WashOTron } from './plant/wash-o-tron';
 import { stepWashWorld } from './plant/wash-o-tron-world';
@@ -272,7 +280,7 @@ import { plantReadingOf } from '../toolkit/gallery/logic/world-reading';
 import { chooseConsole, newBridgeConsoles } from './bridge-consoles';
 import type { ConsoleChoice } from './bridge-consoles';
 
-export const WORLD_VERSION = 56;
+export const WORLD_VERSION = 57;
 
 /**
  * Where the main corridor's control room doors lead (the owner,
@@ -309,6 +317,13 @@ export interface World {
    * selector, and each plant room's day tanks (`plant/chemical-distribution.ts`).
    */
   distribution: ChemicalDistribution;
+  /**
+   * The wet hall's chemical transfer control box (prompt 091): its door
+   * isolator, MCB, controller and each terminal's link
+   * (`plant/chem-control.ts`); the day tanks' levels, inhibits and FILL
+   * NOWs it keeps are in `distribution`.
+   */
+  chemControl: ChemControlBox;
   /** The wet hall's break tank, booster set, meter and backwash tank. */
   wetHall: WetHallState;
   /** The pools' unseen bathers (`bathers.ts`). */
@@ -403,6 +418,7 @@ export function newWorld(): World {
     pools: newPools(),
     chemicals: newChemicalStores(),
     distribution: newChemicalDistribution(),
+    chemControl: newChemControlBox(),
     wetHall: newWetHall(),
     bathers: newBathers(),
     startup: -1,
@@ -499,6 +515,8 @@ export type WorldAction =
   | { type: 'wash-o-tron'; action: WashAction }
   | { type: 'intake'; action: IntakeAction }
   | { type: 'distribution'; action: DistributionAction }
+  /** The chemical transfer control box worked: a terminal's command, its isolator or MCB, or a fault. */
+  | { type: 'chem-control'; action: ChemControlAction }
   | { type: 'booster/changeover'; action: ChangeoverAction }
   /** The CONTROL ROOM MODE knob turned: where the control room doors lead. */
   | { type: 'control-room/mode'; mode: ControlRoomMode }
@@ -687,6 +705,19 @@ export function applyAction(world: World, action: WorldAction): World {
           booster: actOnChangeover(world.wetHall.booster, action.action),
         },
       };
+    case 'chem-control': {
+      const r = actOnChemControl(
+        world.distribution,
+        world.chemControl,
+        serviceAvailable(world.plant, 'wet_hall', 'power'),
+        world.time,
+        action.action,
+      );
+      return r.distribution === world.distribution &&
+        r.box === world.chemControl
+        ? world
+        : { ...world, distribution: r.distribution, chemControl: r.box };
+    }
     case 'distribution': {
       const distribution = actOnDistribution(world.distribution, action.action);
       return distribution === world.distribution
@@ -1026,12 +1057,32 @@ export function distributionPower(plant: PlantServices): DistributionPower {
   };
 }
 
+/** Whether the wet hall's chemical transfer control box's controller runs now (prompt 091). */
+export const chemControlRunning = (world: World) =>
+  controllerRunning(
+    world.chemControl,
+    serviceAvailable(world.plant, 'wet_hall', 'power'),
+  );
+
+/** Whether `c`'s transfer pump runs now: its power, its trip, its store, and in AUTO the control box. */
+export const transferRunsIn = (world: World, c: Chemical) =>
+  transferRunning(
+    world.distribution[c],
+    world.chemicals[c],
+    STORE_CAPACITY[c],
+    distributionPower(world.plant)[c],
+    chemControlRunning(world),
+  );
+
 /** The stores and the day tanks `delta` seconds on (plan 085). */
 function stepChemicals(
   world: World,
   dosed: Partial<Record<PoolId, Record<Chemical, number>>>,
   delta: number,
-): Pick<World, 'chemicals' | 'distribution'> {
+): Pick<World, 'chemicals' | 'distribution' | 'chemControl'> {
+  // The control box first: whether its controller runs this step.
+  const hall = serviceAvailable(world.plant, 'wet_hall', 'power');
+  const chemControl = stepChemControlBox(world.chemControl, hall, delta);
   const r = stepDistribution(
     world.distribution,
     world.chemicals,
@@ -1040,8 +1091,10 @@ function stepChemicals(
     delta,
     distributionPower(world.plant),
     distributionPaths(world.installedValves),
+    { running: controllerRunning(chemControl, hall), now: world.time },
   );
   return {
+    chemControl,
     chemicals: {
       hypochlorite: Math.max(
         0,

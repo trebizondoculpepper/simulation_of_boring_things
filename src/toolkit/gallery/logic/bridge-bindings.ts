@@ -886,11 +886,11 @@ export function outOfBand(name: string, value: number): boolean {
   return false;
 }
 
-/** WH-CP1: the chemical distribution panel in the wet hall. */
+/** WH-CP3: the chemical transfer control box in the wet hall (prompt 091), its lines as WH-CP1, the panel it replaced, showed them. */
 function distributionPanel(): PanelBinding {
   const page = (chemical: Chemical, name: string) => {
     const line = (c: BridgeContext) => c.world.distribution[chemical];
-    const AT = `WH-CP1, the chemical distribution panel in the wet hall`;
+    const AT = `WH-CP3, the chemical transfer control box in the wet hall`;
     const gauges: Record<string, Read<readonly [number, string]>> = {
       [`${name}/0/BULK STORE`]: (c) =>
         [
@@ -936,8 +936,8 @@ function distributionPanel(): PanelBinding {
   const hypo = page('hypochlorite', 'HYPOCHLORITE');
   const acid = page('acid', 'ACID');
   return {
-    code: 'WH-CP1',
-    model: { room: 'wet_hall', node: 'chem-panel' },
+    code: 'WH-CP3',
+    model: { room: 'wet_hall', node: 'control-box' },
     gauges: { ...hypo.gauges, ...acid.gauges },
     lamps: { ...hypo.lamps, ...acid.lamps },
     windows: (c) => [...hypo.windows(c), ...acid.windows(c)],

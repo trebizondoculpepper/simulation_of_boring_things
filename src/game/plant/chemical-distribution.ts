@@ -12,15 +12,22 @@ import { bottleBund, bottleSize, isDoseBottle } from './dose-bottle';
  *
  * - The bulk stores are the world's `chemicals` (litres each store holds);
  *   transfer draws them down, deliveries fill them.
- * - A day tank calls at its low switch (20%) and stops calling at its high
- *   switch (90%).
+ * - The wet hall's chemical transfer control box (prompt 091,
+ *   `chem-control.ts`) runs both lines in AUTO: a day tank calls at its
+ *   own low level and stops at its own high (litres, set at the
+ *   terminals: today's 20% and 90% to begin with); FILL NOW calls it at
+ *   once, to be filled to its high in its turn; an inhibited tank (STOP)
+ *   never calls and is not served. With the box's controller not running
+ *   nothing is called or served in AUTO, and a pump in AUTO (on the box's
+ *   remote-run relay) does not run.
  * - Its selector in AUTO serves the calling day tanks one at a time, in
- *   turn; in HAND, the one picked while it is below high. Only the served
- *   outlet's valve is open.
+ *   turn; in HAND, the one picked while it is below its fixed high switch
+ *   (90%), box or no box. Only the served outlet's valve is open.
  * - The pump (one, not a duty and standby pair: light work, and soon
- *   swapped) runs in AUTO or HAND while an outlet is served and its store
- *   has chemical above its low-level cut-out; in OFF, never. Any day tank's
- *   high-high (98%) trips it and shuts its selector until RESET.
+ *   swapped) runs in AUTO (the box running) or HAND while an outlet is
+ *   served and its store has chemical above its low-level cut-out; in OFF,
+ *   never. Any day tank's high-high (98%), hard-wired and not settable,
+ *   trips it and shuts its selector until RESET.
  * - Each day tank is drawn down by its pool's dosing.
  */
 
@@ -101,9 +108,63 @@ export type Hoa = 'hand' | 'off' | 'auto';
 
 export interface DayTank {
   litres: number;
-  /** Its low switch has called, and its high switch not yet stopped it. */
+  /** It has called (at its low, or FILL NOW), and not yet been filled to its high. */
   calling: boolean;
+  /** Its low and high levels, litres: set at its terminal, kept by the control box through a power cut. */
+  lowL: number;
+  highL: number;
+  /** STOP at its terminal: never filled until RESUME. */
+  inhibited: boolean;
+  /** FILL NOW at its terminal: calling at once, to be filled to its high. */
+  fillNow: boolean;
+  /** World seconds its last fill ended; null before its first. */
+  lastFilled: number | null;
 }
+
+/** The setting limits for a day tank's levels, shares of the tank (prompt 091). */
+export const LEVEL_LIMITS = {
+  minLow: 0.1,
+  maxHigh: 0.95,
+  minBand: 0.1,
+} as const;
+
+/** A new day tank's levels: today's switches, 20% and 90%, in whole litres. */
+export const defaultLevels = (capacity: number) => ({
+  lowL: Math.round(capacity * DISTRIBUTION.low),
+  highL: Math.round(capacity * DISTRIBUTION.high),
+});
+
+/** A day tank of `capacity` litres holding `litres`, its levels the defaults. */
+export const newDayTank = (capacity: number, litres: number): DayTank => ({
+  litres,
+  calling: false,
+  ...defaultLevels(capacity),
+  inhibited: false,
+  fillNow: false,
+  lastFilled: null,
+});
+
+/** A day tank's limits for its low and high levels, whole litres. */
+export function levelLimits(
+  capacity: number,
+  t: Pick<DayTank, 'lowL' | 'highL'>,
+) {
+  const band = Math.ceil(capacity * LEVEL_LIMITS.minBand);
+  return {
+    low: {
+      min: Math.ceil(capacity * LEVEL_LIMITS.minLow),
+      max: t.highL - band,
+    },
+    high: {
+      min: t.lowL + band,
+      max: Math.floor(capacity * LEVEL_LIMITS.maxHigh),
+    },
+  };
+}
+
+/** The step a level changes by on a terminal, litres, by the tank's size. */
+export const levelStep = (capacity: number) =>
+  capacity <= 60 ? 1 : capacity <= 300 ? 5 : 10;
 
 export interface ChemicalLine {
   /** Its day tanks, in its selector's outlet order (`DAY_TANKS`). */
@@ -128,7 +189,7 @@ function fitted(c: Chemical, line: ChemicalLine): ChemicalLine {
   return {
     ...line,
     tanks: DAY_TANKS[c].map(
-      (t, i) => line.tanks[i] ?? { litres: t.litres * 0.7, calling: false },
+      (t, i) => line.tanks[i] ?? newDayTank(t.litres, t.litres * 0.7),
     ),
     serving: line.serving !== null && line.serving < want ? line.serving : null,
   };
@@ -146,10 +207,9 @@ const START: Partial<Record<Chemical, Partial<Record<DayTankSite, number>>>> = {
 
 export function newChemicalDistribution(): ChemicalDistribution {
   const line = (c: Chemical): ChemicalLine => ({
-    tanks: DAY_TANKS[c].map((t) => ({
-      litres: t.litres * (START[c]?.[t.site] ?? 0.7),
-      calling: false,
-    })),
+    tanks: DAY_TANKS[c].map((t) =>
+      newDayTank(t.litres, t.litres * (START[c]?.[t.site] ?? 0.7)),
+    ),
     mode: 'auto',
     pick: 0,
     serving: null,
@@ -174,12 +234,14 @@ export function transferRunning(
   store: number,
   capacity: number,
   powered = true,
+  controlRunning = true,
 ): boolean {
   return (
     powered &&
     !line.tripped &&
     line.serving !== null &&
-    line.hoa !== 'off' &&
+    // In AUTO it runs on the control box's remote-run relay.
+    (line.hoa === 'hand' || (line.hoa === 'auto' && controlRunning)) &&
     store > capacity * DISTRIBUTION.storeLow
   );
 }
@@ -187,22 +249,39 @@ export function transferRunning(
 /** Whether outlet `i`'s valve is open. */
 export const outletOpen = (line: ChemicalLine, i: number) => line.serving === i;
 
-function serve(c: Chemical, line: ChemicalLine): number | null {
+function serve(
+  c: Chemical,
+  line: ChemicalLine,
+  controlRunning: boolean,
+): number | null {
   if (line.tripped) return null;
   const n = line.tanks.length;
   if (line.mode === 'hand')
     return line.pick < n && dayLevel(c, line.pick, line) < DISTRIBUTION.high
       ? line.pick
       : null;
-  if (line.serving !== null && line.tanks[line.serving]?.calling)
-    return line.serving;
+  // AUTO follows the control box: with its controller down, no outlet.
+  if (!controlRunning) return null;
+  const ok = (i: number) =>
+    line.tanks[i]?.calling === true && !line.tanks[i].inhibited;
+  if (line.serving !== null && ok(line.serving)) return line.serving;
   const from = line.serving === null ? 0 : line.serving + 1;
   for (let k = 0; k < n; k++) {
     const i = (from + k) % n;
-    if (line.tanks[i].calling) return i;
+    if (ok(i)) return i;
   }
   return null;
 }
+
+/**
+ * The control box as the distribution sees it each step (`chem-control.ts`):
+ * whether its controller runs, and the world's time, for each fill's end.
+ */
+export interface DistributionControl {
+  running: boolean;
+  now: number;
+}
+export const CONTROL_RUNNING: DistributionControl = { running: true, now: 0 };
 
 /**
  * What each pool's dosing takes from its day tanks, litres a second, from
@@ -273,35 +352,51 @@ export function stepDistribution(
   dt: number,
   power: DistributionPower = ALL_POWERED,
   valves?: DistributionValves,
+  control: DistributionControl = CONTROL_RUNNING,
 ): { distribution: ChemicalDistribution; taken: Record<Chemical, number> } {
   const taken = { hypochlorite: 0, acid: 0 };
   const out = { ...d };
   for (const c of CHEMICALS) {
     let line = fitted(c, d[c]);
-    // The switches.
+    // The hard-wired high-high trips whatever the box is doing; the box's
+    // levels call and stop each tank only while its controller runs.
     let tripped = line.tripped;
     let tanks = line.tanks.map((t, i) => {
       const level = t.litres / DAY_TANKS[c][i].litres;
       if (level >= DISTRIBUTION.highHigh) tripped = true;
-      if (level >= DISTRIBUTION.high)
-        return t.calling ? { ...t, calling: false } : t;
-      if (level <= DISTRIBUTION.low)
+      if (!control.running) return t;
+      const done = (k: DayTank) =>
+        k.calling || k.fillNow ? { ...k, calling: false, fillNow: false } : k;
+      if (t.inhibited || t.litres >= t.highL) return done(t);
+      if (t.litres <= t.lowL || t.fillNow)
         return t.calling ? t : { ...t, calling: true };
       return t;
     });
     line = { ...line, tanks, tripped };
-    line = { ...line, serving: serve(c, line) };
+    const was = line.serving;
+    line = { ...line, serving: serve(c, line, control.running) };
+    if (was !== null && was !== line.serving && line.tanks[was])
+      line = {
+        ...line,
+        tanks: line.tanks.map((t, i) =>
+          i === was ? { ...t, lastFilled: control.now } : t,
+        ),
+      };
     // The transfer, never more than the store has.
     // Its high switch shuts the inlet as the level reaches it, however long
     // the step: a small bottle filled at 20 l a minute is not overfilled
     // into its high-high trip in one step. It may pass the switch a little,
     // as a real one does, so it is sure to stop calling.
+    // In AUTO to the box's high for the tank, in HAND to the fixed switch.
     const room =
       line.serving === null
         ? 0
         : Math.max(
             0,
-            DAY_TANKS[c][line.serving].litres * (DISTRIBUTION.high + 0.02) -
+            (line.mode === 'hand'
+              ? DAY_TANKS[c][line.serving].litres * DISTRIBUTION.high
+              : line.tanks[line.serving].highL) +
+              DAY_TANKS[c][line.serving].litres * 0.02 -
               line.tanks[line.serving].litres,
           );
     const way =
@@ -310,7 +405,8 @@ export function stepDistribution(
         line.serving !== null &&
         (valves[c].outlets[line.serving] ?? true));
     const inflow =
-      way && transferRunning(line, stores[c], capacity[c], power[c])
+      way &&
+      transferRunning(line, stores[c], capacity[c], power[c], control.running)
         ? Math.min(stores[c], (DISTRIBUTION.pumpLpm * dt) / 60, room)
         : 0;
     taken[c] = inflow;

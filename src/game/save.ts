@@ -1,5 +1,6 @@
 import { WORLD_VERSION, newWorld } from './world';
 import type { World } from './world';
+import { DAY_TANKS, newDayTank } from './plant/chemical-distribution';
 import {
   FOOTBATH,
   newIdentifiedPlant,
@@ -229,6 +230,42 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
     return isRecord(loungeAnnunciator)
       ? { ...rest, locationAnnunciators: { pool_01: loungeAnnunciator } }
       : rest;
+  },
+  // 56 → 57: the chemical transfer control box (prompt 091): each day
+  // tank's own low and high levels (today's 20% and 90%), not inhibited,
+  // no FILL NOW, no fill yet recorded; the box on and running
+  // (`fillDefaults` adds it). A saved tank array is kept whole by
+  // `fillDefaults`, so its new fields are filled here. The wet hall
+  // annunciator's six new windows for the box (`fillDefaults` adds them,
+  // dark); a bridge console left on WH-CP1's page moved to WH-CP3's.
+  56: (world) => {
+    if (!isRecord(world) || !isRecord(world.distribution)) return world;
+    const distribution: Record<string, unknown> = { ...world.distribution };
+    for (const c of ['hypochlorite', 'acid'] as const) {
+      const line = distribution[c];
+      if (!isRecord(line) || !Array.isArray(line.tanks)) continue;
+      distribution[c] = {
+        ...line,
+        tanks: line.tanks.map((t: unknown, i) => {
+          const capacity = DAY_TANKS[c][i]?.litres;
+          if (!isRecord(t) || !capacity) return t;
+          return { ...newDayTank(capacity, 0), ...t };
+        }),
+      };
+    }
+    // The bridge's page of the distribution follows WH-CP1's retirement:
+    // now the control box's, WH-CP3.
+    const consoles = isRecord(world.bridgeConsoles)
+      ? Object.fromEntries(
+          Object.entries(world.bridgeConsoles).map(([id, choice]) => [
+            id,
+            isRecord(choice) && choice.page === 'wh-cp1'
+              ? { ...choice, page: 'wh-cp3' }
+              : choice,
+          ]),
+        )
+      : world.bridgeConsoles;
+    return { ...world, distribution, bridgeConsoles: consoles };
   },
 };
 

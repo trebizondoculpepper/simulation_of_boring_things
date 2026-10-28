@@ -1,6 +1,6 @@
 # 099: An annunciator for each location, in the control room and on the bridge
 
-Status: done 2026-10-28 (written the same day from the owner's answers to [091](091-chemical-distribution-panels.md)'s design questions); see "What was done" below. The chemical control box's windows wait for 091 to put its faults in the world (`TODO.md`).
+Status: done 2026-10-28 (written the same day from the owner's answers to [091](091-chemical-distribution-panels.md)'s design questions); see "What was done" below. The chemical control box's windows came with 091's installation (2026-10-28): WH's fourth row, read from `chemControlFaults` in `src/game/plant/chem-control.ts` (supply lost, MCB tripped, controller fault, each terminal's comms lost, AUTO stopped; see 091's "Installed in the wet hall").
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply, above all that the game has one world state and that rooms only show it, that status words need a failure model, and that the control room has two forms behind the CONTROL ROOM MODE knob: the old control room (the default) and the bridge ([095](095-the-bridge.md)). Markdown is one paragraph per line.
 
@@ -38,4 +38,4 @@ The owner, 2026-10-28: "In the old style control room, I want an annunciator for
 
 Seen in the browser: the control room's PL2 and WH boards flashing (NO PUMP IN AUTO first-out; PIT PUMP NOT IN AUTO, ACID TRANSFER NOT IN AUTO), ACCEPT at the WH board turning them steady, the faults put right and the windows held until RESET put them out; WH-CP2 in the wet hall flashing HYPO TRANSFER NOT IN AUTO; the bridge's viewscreen with `4 ALARMS · ACCEPT AT CENTRAL CONTROL`, among them `WH CHEM TRANSFER NO SUPPLY` and `WH HYPO TRANSFER NOT IN AUTO`. Camera URLs: `?room=control_room&noclip=true&x=0.3&y=1.6&z=-0.8&yaw=90&pitch=0` (PL2 and WH), `?room=wet_hall&noclip=true&x=8.3&y=1.75&z=-5.0&yaw=0&pitch=-3` (WH-CP2 beside the mimic), `?room=bridge&noclip=true&x=-12.31&y=9.8&z=-1.58&yaw=15&pitch=3` (the viewscreen and CR-CP2).
 
-Left for later (`TODO.md`): the chemical control box's windows once 091 models its faults; the faults wanted but not yet modelled.
+Left for later (`TODO.md`): the faults wanted but not yet modelled. The chemical control box's windows were added by 091 (2026-10-28): a fourth row of six on WH, from `chemControlFaults` (`chem-control.ts`).

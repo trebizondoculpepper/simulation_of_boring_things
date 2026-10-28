@@ -2,16 +2,23 @@ import { Group } from 'three';
 import { computed } from '@preact/signals-core';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import type { LiveExhibit } from '../rooms/plant/exhibit';
-import { distributionPower } from '../../../game/world';
+import { chemControlRunning, transferRunsIn } from '../../../game/world';
+import { newWorld } from '../../../game/world';
+import type { World, WorldAction } from '../../../game/world';
+import { createOt216Terminal } from '../../components/industrial-control/views/ot216-terminal';
+import { createChemControlBox } from '../../components/plant/views/chem-control-box';
+import { boxLive } from '../../../game/plant/chem-control';
+import { installedTagOf } from '../../../game/plant/installed-asset-ids';
+import {
+  worldTerminalFeed,
+  worldTerminalLink,
+} from '../logic/chem-terminal-feed';
 import { serviceAvailable } from '../../../game/plant/services';
 import type { ServiceRoom } from '../../../game/plant/services';
 import { roomWorld } from '../../save/world-store';
 import { STORE_CAPACITY } from '../../../game/plant/chemicals';
 import type { Chemical } from '../../../game/plant/chemicals';
-import {
-  DAY_TANKS,
-  transferRunning,
-} from '../../../game/plant/chemical-distribution';
+import { DAY_TANKS } from '../../../game/plant/chemical-distribution';
 import type { DistributionAction } from '../../../game/plant/chemical-distribution';
 import {
   describeTank,
@@ -32,15 +39,11 @@ import type { DoseBottle } from '../../../game/plant/dose-bottle';
 import {
   SELECTOR_OUTLETS,
   createDayTankStation,
-  createDistributionPanel,
   createTransferPumpSkid,
   createTransferSelector,
   createTransferStore,
 } from '../../components/plant/views/chemical-handling-kit';
-import type {
-  DistributionReading,
-  TransferStore,
-} from '../../components/plant/views/chemical-handling-kit';
+import type { TransferStore } from '../../components/plant/views/chemical-handling-kit';
 import type { BoundChemicalValve } from '../../components/plant/views/chemical-ball-valve';
 import {
   bulkTankValves,
@@ -87,6 +90,8 @@ function boundValve(v: ModelValve | undefined): BoundChemicalValve | undefined {
  * - `chem-bulk:<chemical>:<n>`: a store's bulk tank, its level the store's;
  * - `chem-pump:<chemical>`: its transfer pump on its skid;
  * - `chem-selector:<chemical>`: its six-way transfer selector;
+ * - `chem-terminal:<chemical>`: its line's OT-216 operator terminal;
+ * - `chem-control-box`: the transfer control box both terminals link to;
  * - `chem-day:<chemical>:<pool>`: a plant room's day tank.
  */
 
@@ -135,15 +140,7 @@ function worldTransferStore(c: Chemical): TransferStore {
     world.dispatch({ type: 'distribution', action });
   return {
     state,
-    pumpOn: computed(() => {
-      const w = world.world.value;
-      return transferRunning(
-        w.distribution[c],
-        w.chemicals[c],
-        STORE_CAPACITY[c],
-        distributionPower(w.plant)[c],
-      );
-    }),
+    pumpOn: computed(() => transferRunsIn(world.world.value, c)),
     act(a: TransferAction) {
       if (a.act === 'hoa') send({ act: 'hoa', chemical: c, to: a.to });
       else if (a.act === 'mode') send({ act: 'mode', chemical: c, to: a.to });
@@ -156,28 +153,109 @@ function worldTransferStore(c: Chemical): TransferStore {
   };
 }
 
+/** A world for a model built without one (a test, the manual): a new one, made once. */
+let fresh: World | null = null;
+const built = () => (fresh ??= newWorld());
+
+/** Each line's band on its terminal, and its chemical across it. */
+const TERMINAL: Record<Chemical, { title: string; band: string }> = {
+  hypochlorite: { title: 'HYPOCHLORITE', band: '#d2ae20' },
+  acid: { title: 'ACID', band: '#b92b24' },
+};
+
 /**
- * The distribution as its panel shows it, from the world; null, the panel
- * dark, while the wet hall, where it hangs, has no power.
+ * A line's OT-216 terminal (prompt 091), bound to the world: it shows
+ * what the world's control box sends it and sends back what is set and
+ * commanded there, logged under its tag (the register's).
  */
-function readDistribution(): Record<Chemical, DistributionReading> | null {
-  if (typeof window === 'undefined') return null;
-  const w = roomWorld().world.value;
-  if (!serviceAvailable(w.plant, 'wet_hall', 'power')) return null;
-  const power = distributionPower(w.plant);
-  const line = (c: Chemical): DistributionReading => {
-    const d = w.distribution[c];
-    return {
-      store: w.chemicals[c] / STORE_CAPACITY[c],
-      days: d.tanks.map((t, i) => t.litres / DAY_TANKS[c][i].litres),
-      serving: d.serving,
-      mode: d.mode,
-      running: transferRunning(d, w.chemicals[c], STORE_CAPACITY[c], power[c]),
-      tripped: d.tripped,
-      inAuto: d.hoa === 'auto',
-    };
+function chemTerminal(kit: PanelKit, c: Chemical): LiveExhibit {
+  const tag = installedTagOf('wet_hall', `chem-terminal:${c}`) ?? '';
+  const live = typeof window !== 'undefined';
+  const now = (): World => roomWorld().world.value;
+  const term = createOt216Terminal(kit, {
+    ...TERMINAL[c],
+    tag,
+    read: () =>
+      live
+        ? {
+            feed: worldTerminalFeed(now(), c),
+            link: worldTerminalLink(now(), c),
+          }
+        : {
+            feed: worldTerminalFeed(built(), c),
+            link: { powered: false, comms: false },
+          },
+    send: (command) =>
+      roomWorld().dispatch({
+        type: 'chem-control',
+        action: { act: 'terminal', chemical: c, tag, command },
+      }),
+  });
+  return term;
+}
+
+/**
+ * The chemical transfer control box (prompt 091), bound to the world's:
+ * its door isolator and MCB the world's, its controller's LEDs, its I/O
+ * and its comms ports showing the world's lines.
+ */
+function chemControlBox(kit: PanelKit): LiveExhibit {
+  const tag = installedTagOf('wet_hall', 'chem-control-box') ?? '';
+  const live = typeof window !== 'undefined';
+  const now = (): World => (live ? roomWorld().world.value : built());
+  const dispatch = (action: WorldAction) => {
+    if (live) roomWorld().dispatch(action);
   };
-  return { hypochlorite: line('hypochlorite'), acid: line('acid') };
+  const box = createChemControlBox(kit, {
+    tag,
+    fedFrom: 'WET HALL DISTRIBUTION',
+    isolatorBinding: {
+      get value() {
+        return now().chemControl.isolator ? 'on' : 'off';
+      },
+      set: (v) =>
+        dispatch({
+          type: 'chem-control',
+          action: { act: 'isolator', on: v === 'on' },
+        }),
+    },
+    mcbBinding: {
+      get value() {
+        return now().chemControl.mcbTripped ? 'tripped' : 'on';
+      },
+      set: (v) =>
+        dispatch({
+          type: 'chem-control',
+          action: { act: 'mcb', tripped: v !== 'on' },
+        }),
+    },
+    read: () => {
+      const w = now();
+      const hall = serviceAvailable(w.plant, 'wet_hall', 'power');
+      const h = w.distribution.hypochlorite;
+      const a = w.distribution.acid;
+      const outlets = (l: typeof h) =>
+        [0, 1, 2, 3].map((i) => l.mode === 'auto' && l.serving === i);
+      const run = (l: typeof h) =>
+        l.serving !== null && l.mode === 'auto' && !l.tripped;
+      return {
+        live: boxLive(w.chemControl, hall),
+        running: chemControlRunning(w),
+        hung: w.chemControl.hung,
+        inputs: [
+          h.mode === 'auto',
+          h.hoa === 'auto',
+          !h.tripped,
+          a.mode === 'auto',
+          a.hoa === 'auto',
+          !a.tripped,
+        ],
+        outputs: [run(h), ...outlets(h), run(a), ...outlets(a)],
+        links: [w.chemControl.links.hypochlorite, w.chemControl.links.acid],
+      };
+    },
+  });
+  return box;
 }
 
 /** One store per chemical, shared by its machines in whichever room is drawn. */
@@ -288,9 +366,9 @@ function dayBottle(
 /** The model for a chemical distribution key, bound to the world; null if the key is another's. */
 export function chemicalModel(kit: PanelKit, key: string): LiveExhibit | null {
   const [kind, chemical, arg] = key.split(':');
-  if (kind === 'chem-panel')
-    return createDistributionPanel(kit, readDistribution);
+  if (kind === 'chem-control-box') return chemControlBox(kit);
   if (!isChemical(chemical)) return null;
+  if (kind === 'chem-terminal') return chemTerminal(kit, chemical);
   switch (kind) {
     case 'chem-bulk':
       return bulkTank(kit, chemical, Number(arg) || 1);

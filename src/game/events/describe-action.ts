@@ -1,4 +1,5 @@
 import { LOCATION_ANNUNCIATORS } from '../plant/location-annunciators';
+import { describeTankCommand } from '../plant/chem-control';
 import type { World, WorldAction } from '../world';
 import type { GameEvent } from './game-event';
 import { INSTALLED_VALVES } from '../plant/installed-valves';
@@ -310,6 +311,26 @@ function said(
       return {
         subject: a.chemical === 'acid' ? 'ACID TRANSFER' : 'HYPO TRANSFER',
         text: what,
+      };
+    }
+    case 'chem-control': {
+      // Every setting stored and command given at a terminal, under the
+      // terminal's tag (prompt 091); the box's own switches and faults.
+      const a = action.action;
+      if (a.act === 'terminal')
+        return { subject: a.tag, text: describeTankCommand(a.command) };
+      return {
+        subject: 'CHEM CONTROL BOX',
+        text:
+          a.act === 'isolator'
+            ? `door isolator ${a.on ? 'ON' : 'OFF'}`
+            : a.act === 'mcb'
+              ? a.tripped
+                ? 'MCB tripped'
+                : 'MCB reset'
+              : a.act === 'hang'
+                ? 'controller hung'
+                : `${a.chemical === 'acid' ? 'acid' : 'hypochlorite'} terminal link ${a.ok ? 'restored' : 'broken'}`,
       };
     }
     case 'intake':

@@ -16,6 +16,8 @@ import { link, roomElectrics, transferSelectors } from './schematic-parts';
  */
 
 const room = 'wet_hall';
+// The chemical distribution's selectors and their transfer control (plan 085, prompt 091).
+const SELECTOR_PARTS = transferSelectors();
 const machine = (id: string, kind: string, name: string): SchematicNode => ({
   id,
   kind,
@@ -62,7 +64,10 @@ const makeUpRecorder = machine(
   'make-up-recorder',
   'Make-up water recorder',
 );
+// The chemical transfer control box (prompt 091), on the hall's supply.
+const controlBox = SELECTOR_PARTS.nodes.find((n) => n.id === 'control-box')!;
 const electrics = roomElectrics(room, [
+  controlBox,
   booster,
   flowmeter,
   mimic,
@@ -87,7 +92,7 @@ const valve = (
   keptBy: 'register',
 });
 
-const SELECTORS = transferSelectors();
+const SELECTORS = SELECTOR_PARTS;
 
 export const WET_HALL_SCHEMATIC: RoomSchematic = {
   room,

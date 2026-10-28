@@ -72,7 +72,7 @@ export const PANEL_PAGE_ORDER: readonly { code: string; short: string }[] = [
   { code: 'CR-CP3', short: 'RECORDERS' },
   { code: 'WH-T2', short: 'PIT PUMPS' },
   { code: 'LB-CAB1', short: 'FILL CABINET' },
-  { code: 'WH-CP1', short: 'DISTRIBUTION' },
+  { code: 'WH-CP3', short: 'DISTRIBUTION' },
 ];
 
 const STATION_SHORT: Record<string, string> = {
@@ -262,7 +262,7 @@ export const ROLE_PAGES: Readonly<Record<string, readonly string[]>> = {
     'schematics.operations-officer',
   ],
   'operations-officer': [
-    'wh-cp1',
+    'wh-cp3',
     'schematics.operations-officer',
     'schematics.loading-bay-chief',
     'overview.make-up',

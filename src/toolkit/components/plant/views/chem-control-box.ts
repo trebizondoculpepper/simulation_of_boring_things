@@ -2,10 +2,13 @@ import { Group } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { chlorellaPlate } from './chlorella-plate';
-import { brandLivery } from '../../core/views/brand-livery';
 import { createPartSet, disconnectHandle } from '../../core/parts/parts';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import type { BrandId } from '../../core/logic/brands';
+import type {
+  Binding,
+  HandlePosition,
+} from '../../core/logic/world/components';
 import { createEngravedPlate } from '../../core/views/plant-signs';
 import { createSafetySign } from '../../general-safety/views/safety-signs';
 import { plantTools } from './plant-tools';
@@ -49,12 +52,14 @@ export const BOX_OUTPUTS = [
 /**
  * The cable glands underneath, left to right (the owner, 2026-10-28: "two
  * serial inputs from the terminals entering through glands"): each one's
- * x on the box, metres from its middle, and the legend on its label.
+ * x on the box, metres from its middle, and the legend on its label. Its
+ * supply comes in at the top, through a gland of its own, as its feed
+ * drops to it down the wall (`room-services.ts`).
  */
 export const BOX_GLANDS = [
   { x: -0.2, legend: 'OT1 HYPO\nRS-485' },
   { x: -0.1, legend: 'OT2 ACID\nRS-485' },
-  { x: 0, legend: 'SUPPLY\n230V AC' },
+  { x: 0, legend: 'SPARE\nBLANKED' },
   { x: 0.1, legend: 'LEVEL\nSIGNALS' },
   { x: 0.2, legend: 'OUTLETS\n& PUMPS' },
 ] as const;
@@ -92,9 +97,14 @@ export function createChemControlBox(
     tag,
     read,
     fedFrom = 'WET HALL DISTRIBUTION',
+    isolatorBinding,
+    mcbBinding,
   }: {
     tag: string;
     read: () => ControlBoxReading;
+    /** Its door isolator and MCB bound to the world's box, where it has one. */
+    isolatorBinding?: Binding<HandlePosition>;
+    mcbBinding?: Binding<HandlePosition>;
     /** Where its supply comes from, on its door's label. */
     fedFrom?: string;
   },
@@ -106,9 +116,9 @@ export function createChemControlBox(
   const W = 0.6;
   const H = 0.4;
   const D = 0.2;
-  // Its steel enclosure in Chlorella's green, powder coated.
-  const livery = brandLivery(kit, 'chlorella');
-  const steel = t.paint(livery.palette.shade, 0.5, 0.2);
+  // Its steel enclosure powder coated in Chlorella's green, a shade
+  // deeper than its livery's main green (`brands.ts`), as RAL 6001 is.
+  const steel = t.paint('#2f7a2c', 0.5, 0.2);
   const wall = 0.002;
   // The case, open at the front.
   t.box(group, steel, W, H, wall, 0, 0, wall / 2);
@@ -177,6 +187,7 @@ export function createChemControlBox(
     modules: 1,
     initial: 'on',
     name: `${tag} MCB`,
+    bound: mcbBinding,
   });
   // A DIN module's body behind its dolly.
   t.box(group, moduleGrey, 0.018, 0.085, 0.06, -0.25, topY, front + 0.03);
@@ -437,6 +448,19 @@ export function createChemControlBox(
   const nut = t.paint('#2a2c2d', 0.45, 0.3);
   const cableColour = (i: number) =>
     i < 2 ? '#6a4c93' : i === 2 ? '#2d2f31' : '#3c4a5a';
+  // The supply's gland on top, its cable down into the upper duct and
+  // across to the MCB.
+  t.cyl(group, dark, 0.012, 0.016, 0, H / 2 + 0.008, D / 2);
+  t.cyl(group, nut, 0.015, 0.006, 0, H / 2 + 0.0005, D / 2, 'y', 6);
+  const supplyLabel = createEngravedPlate(kit, ['SUPPLY', '230V AC 6A'], {
+    colour: 'white',
+    width: 0.075,
+    height: 0.034,
+  });
+  // On the wall beside the box's top corner, no higher than its top, so
+  // its feed's drop meets the gland.
+  supplyLabel.position.set(W / 2 + 0.045, H / 2 - 0.03, 0.001);
+  group.add(supplyLabel);
   BOX_GLANDS.forEach(({ x, legend }, i) => {
     t.cyl(group, dark, 0.01, 0.016, x, -H / 2 - 0.008, D / 2);
     t.cyl(group, nut, 0.013, 0.006, x, -H / 2 - 0.0005, D / 2, 'y', 6);
@@ -468,8 +492,8 @@ export function createChemControlBox(
         8,
       );
     } else if (i === 2) {
-      // The supply, up the right into the lower duct (on to the MCB).
-      p.rod(group, cable, [x, -H / 2 + 0.008, z], [x, -0.1, z], r, 8);
+      // A spare entry, blanked off with its plug.
+      t.cyl(group, nut, 0.008, 0.004, x, -H / 2 - 0.018, D / 2, 'y', 12);
     } else {
       // The field multicores, up into the terminal rail's underside.
       p.rod(
@@ -506,6 +530,7 @@ export function createChemControlBox(
     initial: 'on',
     sound: 'soft-click',
     name: `${tag} door isolator`,
+    bound: isolatorBinding,
   });
   isolator.object.position.set(0.17, -0.02, 0.018);
   door.add(isolator.object);

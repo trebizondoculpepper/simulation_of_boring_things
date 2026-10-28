@@ -290,6 +290,13 @@ export function storeTransfer(
  * them, from its header outward: its manual isolating valve, then the
  * actuated valve the distribution opens for the outlet it serves. The
  * selectors' codes: XS1 the hypochlorite's, XS2 the acid's.
+ *
+ * Their transfer control (prompt 091): an OT-216 terminal for each line,
+ * a serial data link from each to the control box; the box's control
+ * links to both selectors (the outlet to open in AUTO) and to both
+ * transfer pumps' remote run at their stores (boundaries), the day tanks'
+ * level signals in from the plant rooms (boundaries), and its power from
+ * the hall's distribution (`wet-hall-schematic.ts`).
  */
 export function transferSelectors(): {
   nodes: SchematicNode[];
@@ -303,11 +310,26 @@ export function transferSelectors(): {
   return {
     nodes: [
       {
-        id: 'chem-panel',
-        kind: 'chem-panel',
-        name: 'Chemical distribution panel',
+        id: 'control-box',
+        kind: 'chem-control-box',
+        name: 'Chemical transfer control box',
       },
       ...chemicals.flatMap((c) => [
+        {
+          id: `${c}-terminal`,
+          kind: 'chem-terminal',
+          name: `${CHEMICAL_NAME[c]} transfer terminal`,
+        },
+        {
+          id: `${c}-pump-run`,
+          kind: 'remote-signal',
+          name: `${CHEMICAL_NAME[c]} transfer pump's remote run, at its store`,
+        },
+        {
+          id: `${c}-levels`,
+          kind: 'remote-signal',
+          name: `${CHEMICAL_NAME[c]} day tanks' level signals, from the plant rooms`,
+        },
         {
           id: `${c}-main`,
           kind: 'chemical-main',
@@ -328,9 +350,27 @@ export function transferSelectors(): {
     ],
     links: chemicals.flatMap((c) => [
       link(
-        `${CHEMICAL_NAME[c]} selector to the panel`,
-        [`${c}-selector`, 'status'],
-        ['chem-panel', c],
+        `${CHEMICAL_NAME[c]} terminal's data link to the control box`,
+        [`${c}-terminal`, 'data'],
+        ['control-box', `data-${c}`],
+        'control',
+      ),
+      link(
+        `Control box to the ${CHEMICAL_NAME[c].toLowerCase()} selector`,
+        ['control-box', `selector-${c}`],
+        [`${c}-selector`, 'control'],
+        'control',
+      ),
+      link(
+        `Control box to the ${CHEMICAL_NAME[c].toLowerCase()} pump's remote run`,
+        ['control-box', `pump-${c}`],
+        [`${c}-pump-run`, 'in'],
+        'control',
+      ),
+      link(
+        `${CHEMICAL_NAME[c]} day tanks' levels to the control box`,
+        [`${c}-levels`, 'out'],
+        ['control-box', `levels-${c}`],
         'control',
       ),
       link(

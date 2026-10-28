@@ -81,7 +81,7 @@ export const BRIDGE_CONSOLES: readonly BridgeConsole[] = [
   panel('water-science-officer.panel', 'CR-CP3'),
   panel('drainage-officer.panel', 'WH-T2'),
   panel('loading-bay-chief.panel', 'LB-CAB1'),
-  panel('operations-officer.panel', 'WH-CP1'),
+  panel('operations-officer.panel', 'WH-CP3'),
   // The stations' schematic screens: forward stations' upper screens, rear stations' on the wall.
   screen('flow-navigator.screen', 'flow-navigator', 'flow-navigator'),
   screen(

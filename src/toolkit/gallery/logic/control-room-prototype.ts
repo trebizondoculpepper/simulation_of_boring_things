@@ -1099,7 +1099,7 @@ export const REAR_STATIONS = [
   { role: 'WATER SCIENCE OFFICER', side: 4, at: 0.45, panel: 'CR-CP3' },
   { role: 'DRAINAGE OFFICER', side: 4, at: 0.6, panel: 'WH-T2' },
   { role: 'LOADING BAY CHIEF', side: 3, at: 0.4, panel: 'LB-CAB1' },
-  { role: 'OPERATIONS OFFICER', side: 3, at: 0.55, panel: 'WH-CP1' },
+  { role: 'OPERATIONS OFFICER', side: 3, at: 0.55, panel: 'WH-CP3' },
 ] as const;
 
 /** A rear station's console: standing height, its top sloping up to the wall. */

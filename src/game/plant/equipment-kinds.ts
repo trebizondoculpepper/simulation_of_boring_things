@@ -334,13 +334,24 @@ export const PLACED_KINDS = {
     class: 'plant',
     purpose: 'Sends a dosing chemical to each plant room’s day tank in turn.',
   },
-  'chem-panel': {
+  // WH-CP1, the chemical distribution panel, was retired from the wet
+  // hall (prompt 091, 2026-10-28): the terminals and box below took its
+  // place; it is kept working in dev44 as an obsolete exhibit.
+  'chem-terminal': {
+    type: 'Operator terminal',
+    status: 'none',
+    code: 'OT',
+    class: 'plant',
+    purpose:
+      'Reads and sets one chemical line’s transfer: each day tank’s litres and levels, FILL NOW, STOP and RESUME, from the control box.',
+  },
+  'chem-control-box': {
     type: 'Control panel',
     status: 'none',
     code: 'CP',
     class: 'plant',
     purpose:
-      'Shows the chemical distribution: every store and day tank, the outlets served, the transfer pumps.',
+      'Runs both chemical lines’ transfer in AUTO: calls each day tank at its own levels and tells each selector which outlet to open.',
   },
   'chem-day': {
     type: 'Day tank',

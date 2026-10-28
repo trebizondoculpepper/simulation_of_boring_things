@@ -104,7 +104,7 @@ export function roomSupportRuns(
       od: r.od,
       radius: r.od / 2,
       points: r.points,
-      conduit: r.utility === 'power',
+      conduit: r.utility === 'power' || r.utility === 'control',
     });
   return runs;
 }

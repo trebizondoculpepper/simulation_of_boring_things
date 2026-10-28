@@ -13,6 +13,10 @@ import {
   isDoseBottle,
 } from '../../../game/plant/dose-bottle';
 import { WET_HALL_LAYOUT } from './shell-rooms';
+import { OT216_SIZE } from '../../components/industrial-control/logic/ot216-terminal';
+
+/** The OT-216's scale over its design size (its view's `OT216_SCALE`). */
+const TERMINAL_SCALE = OT216_SIZE.w / 0.2;
 import { spaSandFilterGeometry } from '../../components/plant/logic/spa-sand-filter';
 import { SPA_FILTERS } from '../../../game/plant/spa-filter';
 import {
@@ -542,6 +546,39 @@ export function machinePorts(item: Item): MachinePort[] {
     ];
   if (kind === 'pump-panel')
     return [port('supply', [0, item.h, 0], [0, 1, 0], 0.05, 'power')];
+  if (kind === 'chem-terminal')
+    // An OT-216 terminal (prompt 091): its serial cable out of its one
+    // gland underneath, in its conduit, down to where it turns away.
+    return [
+      {
+        ...port(
+          'data',
+          // On the wall's conduit saddles, 35 mm out (its gland 30 mm).
+          [0.06 * TERMINAL_SCALE, -0.204 * TERMINAL_SCALE, 0.035],
+          [0, -1, 0],
+          0.02,
+          'control',
+        ),
+        drawn: true,
+      },
+    ];
+  if (kind === 'chem-control-box')
+    // The chemical transfer control box (`chem-control-box.ts`'s
+    // `BOX_GLANDS`): the two terminals' serial cables' glands underneath
+    // (its supply drops into its top; its field wiring is not drawn).
+    return [
+      ['data-hypochlorite', -0.2, 'control'],
+      ['data-acid', -0.1, 'control'],
+    ].map(([name, x, service]) => ({
+      ...port(
+        name as string,
+        [x as number, -item.h / 2 - 0.016, 0.1],
+        [0, -1, 0],
+        0.02,
+        service as MachinePort['service'],
+      ),
+      drawn: true,
+    }));
   if (kind === 'boiler-cascade') {
     // Two condensing boilers on a plinth (`createBoilerCascade`): each a
     // body 0.8 × 0.657 × 1.662 m standing 0.1 m up and 0.1 m forward,

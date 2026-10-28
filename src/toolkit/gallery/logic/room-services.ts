@@ -10,12 +10,14 @@ import type { Placed, Side } from './room-equipment';
 import { machinePorts, placedPort } from './machine-ports';
 import { roomStructure } from './room-structure';
 import { controlBus, isControlDevice } from './control-bus';
+import { chemControlConduits } from './chem-control-conduits';
 import type { PipeKindId } from '../../components/core/views/pipe-kinds';
 
 export type Point3 = readonly [number, number, number];
 export interface ServiceRoute {
   name: string;
-  utility: Utility;
+  /** What it carries: a room service, or a control or data cable (`control`). */
+  utility: Utility | 'control';
   kind: PipeKindId | 'rectangular-duct' | 'flex-cable';
   od: number;
   points: Point3[];
@@ -33,7 +35,7 @@ export const fedByItsPanel = (room: string, key: string) =>
   room === 'plant_pool_01' && key === 'annunciator:pool_01';
 
 const active = (key: string) =>
-  /^(pump-pair|pump-panel|uv-unit|ozone-generator|dosing-controller|hypo-pumps|acid-pump|booster-set|make-up-flowmeter|level-instruments|boiler-cascade|lthw-pumps|pressurisation|gas-safety|combustion-panel|mimic-gas|store-extract|lv-switchboard|mcc|central-battery|distribution-board|rotary-isolators|generator-point|ahu|operator-desk|alarm-printer|mimic-|annunciator|chart-recorders|readout-board|bms-outstation|fire-repeater|cctv)/.test(
+  /^(pump-pair|pump-panel|uv-unit|ozone-generator|dosing-controller|hypo-pumps|acid-pump|booster-set|make-up-flowmeter|level-instruments|boiler-cascade|lthw-pumps|pressurisation|gas-safety|combustion-panel|mimic-gas|store-extract|lv-switchboard|mcc|central-battery|distribution-board|rotary-isolators|generator-point|ahu|operator-desk|alarm-printer|mimic-|annunciator|chart-recorders|readout-board|bms-outstation|fire-repeater|cctv|chem-control-box)/.test(
     key,
   );
 
@@ -375,6 +377,10 @@ export function roomServiceRoutes(
   // The control devices' conduits, each to the nearest point of the
   // room's control bus.
   routes.push(...(controlBus(room)?.stubs ?? []));
+
+  // The wet hall's chemical transfer terminals' data conduits to their
+  // control box (prompt 091).
+  routes.push(...chemControlConduits(room));
 
   // The pool plant rooms' process pipework is routed port to port in
   // `room-pipes.ts`.

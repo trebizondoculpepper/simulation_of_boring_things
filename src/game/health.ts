@@ -366,6 +366,8 @@ export const WORLD_HEALTH_COVERAGE = {
   chemicals: 'chemicals: stock against capacity',
   distribution:
     'not checked: the day tanks; one run dry shows in its pool’s chemistry',
+  chemControl:
+    'not health: the chemical transfer control box; its faults are the wet hall annunciator’s',
   wetHall: 'wet hall: booster trip, backwash overflow',
   bathers: 'not health: the visitors, a load on the plant',
   startup: 'not health: a SLOW START sequence’s clock',
@@ -466,7 +468,10 @@ export const KIND_HEALTH_COVERAGE = {
     'not checked: a transfer pump; a day tank it leaves dry shows in its pool’s chemistry',
   'chem-selector':
     'not checked: a transfer selector; a day tank it leaves dry shows in its pool’s chemistry',
-  'chem-panel': 'not checked: a panel; it shows what the distribution does',
+  'chem-terminal':
+    'not checked: an operator terminal; it shows what the control box sends',
+  'chem-control-box':
+    'not health: the chemical transfer control box; its faults are the wet hall annunciator’s',
   'chem-day': 'pools: chemistry; a dry day tank stops its pool’s dosing',
   'hypo-tank': 'chemicals: hypochlorite stock',
   'acid-ibc': 'chemicals: acid stock',

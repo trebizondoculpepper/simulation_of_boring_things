@@ -339,9 +339,9 @@ export const PARODY_SPECS: readonly ParodySpec[] = [
     ],
   },
   {
-    original: 'WH-CP1, THE CHEMICAL DISTRIBUTION PANEL (WET HALL)',
+    original: 'WH-CP3, THE CHEMICAL TRANSFER CONTROL BOX (WET HALL)',
     title: 'MOLECULAR DISTRIBUTION NEXUS',
-    code: 'WH-CP1',
+    code: 'WH-CP3',
     pages: [
       {
         name: 'HYPOCHLORITE',

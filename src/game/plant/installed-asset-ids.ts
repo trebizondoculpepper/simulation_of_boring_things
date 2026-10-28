@@ -9,7 +9,10 @@
  * cabinet, 2026-10-27: one cabinet takes both deliveries, and the
  * generator's connection cabinet its place); asset-0070 SR-FX1 (the
  * switch room's generator connection point, 2026-10-27: a duplicate of
- * the loading bay's cabinet, prompt 089). */
+ * the loading bay's cabinet, prompt 089); asset-0144 WH-CP1 (the wet
+ * hall's chemical distribution panel, 2026-10-28: replaced by the OT-216
+ * terminals and the control box, prompt 091; kept working in dev44 as an
+ * obsolete exhibit). */
 export const INSTALLED_ASSET_IDS: Readonly<
   Record<string, { assetId: string; tag: string }>
 > = {
@@ -405,9 +408,17 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0135',
     tag: 'WH-XS2',
   },
-  'wet_hall|chem-panel|Chemical distribution panel': {
-    assetId: 'asset-0144',
-    tag: 'WH-CP1',
+  'wet_hall|chem-terminal:hypochlorite|Hypochlorite transfer terminal': {
+    assetId: 'asset-0152',
+    tag: 'WH-OT1',
+  },
+  'wet_hall|chem-terminal:acid|Acid transfer terminal': {
+    assetId: 'asset-0153',
+    tag: 'WH-OT2',
+  },
+  'wet_hall|chem-control-box|Chemical transfer control box': {
+    assetId: 'asset-0154',
+    tag: 'WH-CP3',
   },
   'wet_hall|annunciator:wet_hall|Wet hall annunciator': {
     assetId: 'asset-0151',
@@ -446,3 +457,11 @@ export const INSTALLED_ASSET_IDS: Readonly<
     tag: 'PL4-DT2',
   },
 };
+
+/** The tag of the machine `key` placed in `room`, from the register, if it has one. */
+export function installedTagOf(room: string, key: string): string | undefined {
+  const prefix = `${room}|${key}|`;
+  for (const [k, v] of Object.entries(INSTALLED_ASSET_IDS))
+    if (k.startsWith(prefix)) return v.tag;
+  return undefined;
+}

@@ -1,4 +1,5 @@
 import { CHEMICALS } from '../../../game/plant/chemicals';
+import { OT216_SIZE } from '../../components/industrial-control/logic/ot216-terminal';
 import {
   DAY_TANKS,
   dayTankFootprint,
@@ -733,7 +734,14 @@ const CHEM_AT: Record<string, Record<string, At>> = {
     // wall (z 2.6), its sewer monitor and the pit's davit.
     'chem-selector:hypochlorite': { x: 7.4, z: 9.35, face: 'north' },
     'chem-selector:acid': { x: 9.35, z: 7.4, face: 'west' },
-    'chem-panel': { wall: 'south', along: 4.8 },
+    // The transfer control's two terminals where WH-CP1 was (prompt 091),
+    // at eye height side by side, the hypochlorite's on the left as one
+    // faces them, as on every panel; its control box on the dirty side by
+    // the manifolds, on the east wall north of the acid selector, between
+    // the fire point and the sewer monitor.
+    'chem-terminal:hypochlorite': { wall: 'south', along: 4.75 },
+    'chem-terminal:acid': { wall: 'south', along: 4.35 },
+    'chem-control-box': { wall: 'east', along: 4.25 },
   },
 };
 
@@ -937,14 +945,31 @@ export function roomEquipment(
             ...SELECTOR,
           ),
           floor('chem-selector:acid', 'Acid transfer selector', ...SELECTOR),
-          // And its panel, between them and the pit (plan 085).
+          // Its transfer control (prompt 091): an OT-216 terminal for each
+          // line, and the control box they link to.
           wall(
-            'chem-panel',
-            'Chemical distribution panel',
+            'chem-terminal:hypochlorite',
+            'Hypochlorite transfer terminal',
+            OT216_SIZE.w,
+            OT216_SIZE.d,
+            OT216_SIZE.h,
             1.6,
+          ),
+          wall(
+            'chem-terminal:acid',
+            'Acid transfer terminal',
+            OT216_SIZE.w,
+            OT216_SIZE.d,
+            OT216_SIZE.h,
+            1.6,
+          ),
+          wall(
+            'chem-control-box',
+            'Chemical transfer control box',
+            0.6,
             0.22,
-            1.1,
-            1.5,
+            0.4,
+            1.45,
           ),
           // Its fire points (`wetHallFirePoints`): a CO2 and a foam
           // extinguisher each, the same layout item as the switch room's.

@@ -27,6 +27,12 @@ export type TerminalKey =
 
 export type TerminalMode = 'MON' | 'SET' | 'CMD';
 
+/**
+ * The terminal's case, metres (the owner, 2026-10-28: "20% bigger" than
+ * the 200 × 140 × 50 mm it was designed at): width, height and depth.
+ */
+export const OT216_SIZE = { w: 0.24, h: 0.168, d: 0.06 } as const;
+
 export const OT216 = {
   width: 16,
   /** Seconds of its power-up self test. */

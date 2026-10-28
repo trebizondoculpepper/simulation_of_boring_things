@@ -157,7 +157,9 @@ export function roomStructure(
         )
       : box(
           p.item.label,
-          'machine',
+          // An operator terminal's moulded plastic case (prompt 091) is
+          // nothing to bracket a conduit off: kept clear, not fixed to.
+          p.item.key.startsWith('chem-terminal') ? 'clear' : 'machine',
           p.footprint,
           p.y - p.item.h / 2,
           p.y + p.item.h / 2,

@@ -531,8 +531,9 @@ export function createOt216Terminal(
   group.add(glass);
   // RUN, CALL and ALARM, flat behind their printed windows.
   const leds = LED_ROWS.map(([, y], i) => {
-    const led = t.led(group, LED_COLOURS[i], 0.0026, 0.055, y, z + 0.0001);
-    led.mesh.scale.z = 0.1;
+    const led = t.led(group, LED_COLOURS[i], 0.0026, 0.055, y, z + 0.0004);
+    // Flat behind its window: its length is the mesh's y, turned to face out.
+    led.mesh.scale.y = 0.3;
     led.mesh.userData.live = true;
     return led;
   });

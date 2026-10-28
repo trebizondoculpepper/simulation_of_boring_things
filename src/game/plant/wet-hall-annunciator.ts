@@ -8,22 +8,24 @@ import { STORE_CAPACITY } from './chemicals';
 import type { Chemical } from './chemicals';
 import { zoneInAlarm } from './fire-alarm';
 import { installedValveOpen } from './installed-valves';
+import { chemControlFaults } from './chem-control';
 
 /**
  * The wet hall's annunciator (mission 099; the owner, 2026-10-28: "a wet
  * room annunciator ... that would show things that could go wrong with
  * that location. For example, the drainage tank overfilling, the clean
- * water tank underfilling, the chemical transfer failing"): eighteen
- * windows, six by three, one on the wet hall's wall and its twin in the
+ * water tank underfilling, the chemical transfer failing"): twenty-four
+ * windows, six by four, one on the wet hall's wall and its twin in the
  * old control room, one state in the world for both
  * (`location-annunciator.ts` for its sequence). Every window is a fault
  * the world models: the make-up's break tank, its booster set tripped
  * or stopped or isolated, and the town main; the backwash pit's levels, its overflow, its pumps and the
  * sewer's consent; each chemical line's high-high trip, its store at
  * its low-level cut-out, and its selector or pump out of AUTO; the
- * transfer's supplies, the hall's own power and its fire zone. The
- * chemical control box's faults (mission 091) come once the world has
- * them (`TODO.md`). Pure.
+ * transfer's supplies, the hall's own power and its fire zone; and, its
+ * fourth row, the chemical transfer control box's faults (mission 091,
+ * `chemControlFaults`): its supply lost, its MCB tripped, its controller
+ * hung, each terminal's link broken, and AUTO filling stopped. Pure.
  */
 
 export const WET_HALL_ALARMS = [
@@ -45,6 +47,12 @@ export const WET_HALL_ALARMS = [
   'power-fail',
   'fire',
   'booster-off',
+  'chem-box-supply',
+  'chem-box-mcb',
+  'chem-controller',
+  'hypo-terminal-comms',
+  'acid-terminal-comms',
+  'chem-auto-stopped',
 ] as const;
 export type WetHallAlarmId = (typeof WET_HALL_ALARMS)[number];
 
@@ -68,6 +76,12 @@ export const WET_HALL_ALARM_TEXT: Record<WetHallAlarmId, string> = {
   'power-fail': 'WET HALL\nPOWER FAIL',
   fire: 'FIRE ALARM\nWET HALL',
   'booster-off': 'BOOSTER SET\nSTOPPED / ISOL',
+  'chem-box-supply': 'CHEM BOX\nSUPPLY FAIL',
+  'chem-box-mcb': 'CHEM BOX\nMCB TRIPPED',
+  'chem-controller': 'CHEM CONTROL\nCONTROLLER FAULT',
+  'hypo-terminal-comms': 'HYPO TERMINAL\nNO COMMS',
+  'acid-terminal-comms': 'ACID TERMINAL\nNO COMMS',
+  'chem-auto-stopped': 'CHEM TRANSFER\nAUTO STOPPED',
 };
 
 /** A chemical line's windows: tripped, its store at its cut-out, out of AUTO. */
@@ -94,6 +108,8 @@ export function wetHallAlarmsIn(world: World): WetHallAlarmId[] {
   const storesPowered =
     serviceAvailable(plant, 'hypo_store', 'power') &&
     serviceAvailable(plant, 'acid_store', 'power');
+  // The chemical control box on the hall's own supply.
+  const box = chemControlFaults(world.chemControl, powered);
   const on: Record<WetHallAlarmId, boolean> = {
     'break-tank-low': lamps.breakTankLow,
     'booster-trip': lamps.boosterLowWater,
@@ -118,6 +134,12 @@ export function wetHallAlarmsIn(world: World): WetHallAlarmId[] {
       !hall.booster.run ||
       !installedValveOpen(world.installedValves, 'WH-T1-IV1') ||
       !installedValveOpen(world.installedValves, 'WH-MU1-IV2'),
+    'chem-box-supply': box.supplyLost,
+    'chem-box-mcb': box.mcbTripped,
+    'chem-controller': box.controllerFault,
+    'hypo-terminal-comms': box.commsLost.hypochlorite,
+    'acid-terminal-comms': box.commsLost.acid,
+    'chem-auto-stopped': box.stopped,
   };
   return WET_HALL_ALARMS.filter((id) => on[id]);
 }

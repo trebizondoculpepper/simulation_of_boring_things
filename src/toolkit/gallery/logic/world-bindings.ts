@@ -94,7 +94,10 @@ export const WORLD_BINDINGS: Readonly<Record<string, WorldBinding>> = {
   'chem-selector': world(
     'its chemical’s distribution: its mode, pick and outlet served',
   ),
-  'chem-panel': world(
+  'chem-terminal': world(
+    'its line from the world’s control box: its tanks’ litres, levels and states',
+  ),
+  'chem-control-box': world(
     'the chemical distribution: stores, day tanks, selectors, pumps',
   ),
   'chem-day': world('its day tank’s litres and its inlet'),
