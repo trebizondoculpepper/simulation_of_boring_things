@@ -22,8 +22,23 @@ import {
   sharedWall,
   MUSEUM_HALLS,
 } from '../logic/museum-plan';
-import type { HallWall, MuseumHallId } from '../logic/museum-plan';
-import { FLOOR_TILE, placeOnLine, wallRun, windowShape } from './museum-hall';
+import type {
+  HallWall,
+  MuseumHallId,
+  NeighbourDraw,
+} from '../logic/museum-plan';
+import {
+  FLOOR_TILE,
+  hall0TrimGeometry,
+  lifebuoyStickerGeometry,
+  lifebuoyStickerMaterial,
+  lifebuoyStickerTexture,
+  paintedFloorTexture,
+  placeOnLine,
+  wallRun,
+  windowShape,
+} from './museum-hall';
+import { HALL0_BANDS, hallBounds } from '../logic/museum-plan';
 import type { MuseumMaterials, Opening } from './museum-hall';
 
 /**
@@ -57,7 +72,11 @@ export type EmptyPart =
   | 'floor'
   | 'deck'
   | 'ceiling'
-  | 'glass';
+  | 'glass'
+  | 'band0'
+  | 'band1'
+  | 'band2'
+  | 'sticker';
 
 export interface EmptyHallMaterials {
   parts: Record<EmptyPart, Material>;
@@ -82,14 +101,27 @@ const behind = <M extends Material>(m: M): M => {
 export function createEmptyHallMaterials(
   base: MuseumMaterials,
 ): EmptyHallMaterials {
+  // Hall 0's floor as its full self has it: the painted dry pool and the
+  // tiled deck round it, the same painting at a lower resolution.
+  const b0 = hallBounds('museum0');
+  const deckTiles = paintedFloorTexture(
+    b0.maxX - b0.minX,
+    b0.maxZ - b0.minZ,
+    40,
+  );
+  const stickerMap = lifebuoyStickerTexture();
+  const band = (k: number) =>
+    new MeshStandardMaterial({ color: HALL0_BANDS[k].colour, roughness: 0.25 });
   const parts: Record<EmptyPart, Material> = {
     paint: behind(base.paint.clone()),
     rawBrick: behind(base.rawBrick.clone()),
     tile: behind(base.tile.clone()),
     floor: behind(base.floor.clone()),
-    deck: behind(
-      new MeshStandardMaterial({ color: '#c9d4d1', roughness: 0.5 }),
-    ),
+    deck: behind(new MeshStandardMaterial({ map: deckTiles, roughness: 0.5 })),
+    band0: behind(band(0)),
+    band1: behind(band(1)),
+    band2: behind(band(2)),
+    sticker: lifebuoyStickerMaterial(stickerMap),
     ceiling: behind(
       new MeshStandardMaterial({
         color: '#d8d5ce',
@@ -116,6 +148,8 @@ export function createEmptyHallMaterials(
     dispose() {
       for (const m of Object.values(parts)) m.dispose();
       occluder.dispose();
+      deckTiles.dispose();
+      stickerMap.dispose();
     },
   };
 }
@@ -167,8 +201,10 @@ export function emptyHallParts(
   floor.translate((b.minX + b.maxX) / 2, 0, (b.minZ + b.maxZ) / 2);
   const pos = floor.attributes.position;
   const uv = floor.attributes.uv;
-  for (let i = 0; i < pos.count; i++)
-    uv.setXY(i, pos.getX(i) / FLOOR_TILE, -pos.getZ(i) / FLOOR_TILE);
+  // Hall 0's painted floor spans it once (the plane's own UVs).
+  if (!welcome)
+    for (let i = 0; i < pos.count; i++)
+      uv.setXY(i, pos.getX(i) / FLOOR_TILE, -pos.getZ(i) / FLOOR_TILE);
   add(parts, welcome ? 'deck' : 'floor', floor);
   const lid = new PlaneGeometry(b.maxX - b.minX - t, b.maxZ - b.minZ - t);
   lid.rotateX(Math.PI / 2);
@@ -222,6 +258,15 @@ export function emptyHallParts(
       add(parts, 'glass', pane.geometry);
     }
   }
+  if (welcome) {
+    // Its pool-hall trim, as the full hall's: bands and the tiled cove.
+    const trim = hall0TrimGeometry();
+    trim.bands.forEach((list, k) => {
+      for (const g of list) add(parts, `band${k}` as EmptyPart, g);
+    });
+    for (const g of trim.coves) add(parts, 'tile', g);
+    add(parts, 'sticker', lifebuoyStickerGeometry());
+  }
 }
 
 /** Merge `parts` into one mesh a material. */
@@ -237,6 +282,7 @@ function meshes(parts: Parts, materials: EmptyHallMaterials, name: string) {
     const mesh = new Mesh(merged, materials.parts[key]);
     mesh.name = `${name}: ${key}`;
     mesh.userData.part = key;
+    if (key === 'sticker') mesh.renderOrder = 1;
     group.add(mesh);
   }
   markComponent(group, { decorative: true });
@@ -313,8 +359,13 @@ const onShared = (id: MuseumHallId, other: MuseumHallId, wall: HallWall) => {
 /** The empty halls drawn in one hall's scene: its two neighbours, each on its own, and the halls beyond each. */
 export interface RingShells {
   group: Group;
-  /** The neighbour `to` is drawn in full through its archway (true), or not: its side stands aside. */
-  see(to: MuseumHallId, on: boolean): void;
+  /**
+   * How the neighbour `to` is drawn (`neighbourDraw`): `under`, through
+   * its archway, its empty hall and those beyond it standing aside;
+   * `full`, by a full copy in this scene, its empty hall put away;
+   * `empty`, its empty hall seen.
+   */
+  show(to: MuseumHallId, how: NeighbourDraw): void;
   dispose(): void;
 }
 
@@ -364,8 +415,12 @@ export function createRingShells(
   }
   return {
     group,
-    see(to, onOff) {
-      for (const halls of sides.get(to) ?? []) halls.setOccluding(onOff);
+    show(to, how) {
+      const [near, beyond] = sides.get(to) ?? [];
+      if (!near || !beyond) return;
+      near.setOccluding(how === 'under');
+      beyond.setOccluding(how === 'under');
+      near.group.visible = how !== 'full';
     },
     dispose() {
       for (const list of sides.values()) for (const h of list) h.dispose();

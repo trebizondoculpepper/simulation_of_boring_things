@@ -32,6 +32,7 @@ import {
   BENCH,
   COLUMN_FOOT,
   FINALE,
+  HALL0_BANDS,
   HALL_BRIEFS,
   HALL_TITLE,
   MUSEUM_ARCH,
@@ -53,6 +54,7 @@ import {
   hallOrigin,
   hallSize,
   hallWalls,
+  insideFaceRuns,
   wallWindows,
 } from '../logic/museum-plan';
 import type {
@@ -63,6 +65,10 @@ import type {
 } from '../logic/museum-plan';
 import { MUSEUM_EXHIBITION as BRAND } from '../logic/museum-brand';
 import { createMuseumSafety } from './museum-safety';
+import {
+  COVE_RADIUS,
+  coveStrip,
+} from '../../components/architectural/views/room-coves';
 
 /**
  * A room of the pool science museum, PLANTROOMS (mission 107): the five
@@ -236,8 +242,7 @@ function wallTileTexture() {
  * coping and the gutter's grille all paint (the owner, 2026-10-28: "a
  * fake pool, a dry exhibit"). Over the room's wall lines.
  */
-function paintedFloorTexture(w: number, d: number) {
-  const px = 110;
+export function paintedFloorTexture(w: number, d: number, px = 110) {
   const W = Math.round(w * px);
   const H = Math.round(d * px);
   return canvasTexture(W, H, (c) => {
@@ -427,6 +432,133 @@ export function createMuseumMaterials(): MuseumMaterials {
     }),
     textures: [painted, bare, concrete, tiles],
   };
+}
+
+/**
+ * Hall 0's pool-hall trim, in the museum's coordinates (the owner,
+ * 2026-10-28: "make the welcome hall look like a pool room with a tiled
+ * floor and wall"): its bands of coloured tiles round the walls
+ * (`HALL0_BANDS`, a geometry list a band) and the tiled quarter-round cove
+ * at the foot of every wall and up every corner (CLAUDE.md: pool rooms
+ * are coved), broken at the doorways and windows. Shared by the full
+ * hall and its empty model, so Hall 0 looks the same from afar.
+ */
+export function hall0TrimGeometry(): {
+  bands: BufferGeometry[][];
+  coves: BufferGeometry[];
+} {
+  const id = 'museum0';
+  const t = MUSEUM_WALL / 2;
+  const face = (wall: HallWall, off: number) => {
+    // The inside face's line, `off` proud of it.
+    const n = wall.axis === 'x' ? wall.out[1] : wall.out[0];
+    return wall.line - n * (t + off);
+  };
+  const bands = HALL0_BANDS.map((band) =>
+    insideFaceRuns(id, band.y, band.h).map(({ wall, from, to }) => {
+      const g =
+        wall.axis === 'x'
+          ? new BoxGeometry(to - from, band.h, 0.012)
+          : new BoxGeometry(0.012, band.h, to - from);
+      const mid = (from + to) / 2;
+      const at = face(wall, 0.006);
+      if (wall.axis === 'x') g.translate(mid, band.y + band.h / 2, at);
+      else g.translate(at, band.y + band.h / 2, mid);
+      return g;
+    }),
+  );
+  const coves: BufferGeometry[] = [];
+  for (const { wall, from, to } of insideFaceRuns(id, 0)) {
+    const g = coveStrip(to - from);
+    const mid = (from + to) / 2;
+    const at = face(wall, 0);
+    const n = wall.axis === 'x' ? wall.out[1] : wall.out[0];
+    // The profile's x into the room: turned to face away from the wall.
+    if (wall.axis === 'z') {
+      if (n > 0) g.rotateY(Math.PI);
+      g.translate(at, 0, mid);
+    } else {
+      g.rotateY(n > 0 ? Math.PI / 2 : -Math.PI / 2);
+      g.translate(mid, 0, at);
+    }
+    coves.push(g);
+  }
+  // Up each inside corner, the deck to the ceiling.
+  const inner = hallInterior(id);
+  const h = MUSEUM_HALL0.h;
+  for (const [x, z, turn] of [
+    [inner.minX, inner.minZ, 0],
+    [inner.maxX, inner.minZ, -Math.PI / 2],
+    [inner.maxX, inner.maxZ, Math.PI],
+    [inner.minX, inner.maxZ, Math.PI / 2],
+  ] as const)
+    coves.push(
+      coveStrip(h, COVE_RADIUS)
+        .rotateX(Math.PI / 2)
+        .rotateY(turn)
+        .translate(x, h / 2, z),
+    );
+  return { bands, coves };
+}
+
+/**
+ * A glossy sticker of a lifebuoy on Hall 0's west wall (the owner,
+ * 2026-10-28): set decoration, not a real lifebuoy, 0.75 m across, red and
+ * white quarters and its grab line, 1 mm proud of the tiles and drawn after
+ * them (renderOrder, polygon offset) so it never z-fights. In the museum's
+ * coordinates; its texture is made by `lifebuoyStickerTexture`.
+ */
+export const LIFEBUOY_STICKER = { size: 0.75, y: 1.95, along: 2.5 } as const;
+export function lifebuoyStickerGeometry() {
+  const west = hallWalls('museum0').find((w) => w.side === 'west')!;
+  const u = (west.from + west.to) / 2 + LIFEBUOY_STICKER.along;
+  const g = new PlaneGeometry(LIFEBUOY_STICKER.size, LIFEBUOY_STICKER.size);
+  // Facing east, into the hall.
+  g.rotateY(Math.PI / 2);
+  g.translate(west.line + MUSEUM_WALL / 2 + 0.001, LIFEBUOY_STICKER.y, u);
+  return g;
+}
+export function lifebuoyStickerTexture() {
+  const S = 256;
+  return canvasTexture(S, S, (c) => {
+    const m = S / 2;
+    const outer = S * 0.44;
+    const inner = S * 0.27;
+    for (let k = 0; k < 8; k++) {
+      c.fillStyle = k % 2 ? '#f4f4f0' : '#d8261c';
+      c.beginPath();
+      c.arc(m, m, outer, (k * Math.PI) / 4, ((k + 1) * Math.PI) / 4);
+      c.arc(m, m, inner, ((k + 1) * Math.PI) / 4, (k * Math.PI) / 4, true);
+      c.closePath();
+      c.fill();
+    }
+    // The grab line, looped round the ring at four points.
+    c.strokeStyle = '#2b2b2b';
+    c.lineWidth = 4;
+    c.beginPath();
+    c.arc(m, m, (outer + inner) / 2 + 2, 0, Math.PI * 2);
+    c.stroke();
+    c.lineWidth = 7;
+    for (let k = 0; k < 4; k++) {
+      const a = Math.PI / 8 + (k * Math.PI) / 2;
+      c.beginPath();
+      c.moveTo(m + Math.cos(a) * (inner - 4), m + Math.sin(a) * (inner - 4));
+      c.lineTo(m + Math.cos(a) * (outer + 8), m + Math.sin(a) * (outer + 8));
+      c.stroke();
+    }
+  });
+}
+export function lifebuoyStickerMaterial(map: Texture) {
+  const sticker = new MeshStandardMaterial({
+    map,
+    transparent: true,
+    alphaTest: 0.5,
+    roughness: 0.12,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -4,
+  });
+  return sticker;
 }
 
 /** An opening knocked through a wall: its middle along it, as the plan gives it. */
@@ -1177,6 +1309,36 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     const towards = id === 'museum0' ? -1 : 1;
     const out = wall.axis === 'x' ? wall.out[1] : wall.out[0];
     plan.add(tiledFace(wall, out * towards));
+  }
+  if (welcome) {
+    // Pool-hall trim: coloured bands of tiles and a tiled cove (107-1).
+    const trim = hall0TrimGeometry();
+    trim.bands.forEach((list, k) => {
+      const band = new MeshStandardMaterial({
+        color: HALL0_BANDS[k].colour,
+        roughness: 0.25,
+      });
+      disposables.push(band);
+      plan.add(new Mesh(mergeGeometries(list), band));
+      for (const g of list) g.dispose();
+    });
+    plan.add(
+      new Mesh(
+        mergeGeometries(
+          trim.coves.map((g) => (g.index ? g.toNonIndexed() : g)),
+        ),
+        m.tile,
+      ),
+    );
+    for (const g of trim.coves) g.dispose();
+    const stickerMap = lifebuoyStickerTexture();
+    textures.push(stickerMap);
+    const stickerMaterial = lifebuoyStickerMaterial(stickerMap);
+    disposables.push(stickerMaterial);
+    const sticker = new Mesh(lifebuoyStickerGeometry(), stickerMaterial);
+    sticker.name = 'Lifebuoy sticker';
+    sticker.renderOrder = 1;
+    plan.add(sticker);
   }
   if (bars.length) {
     plan.add(new Mesh(mergeGeometries(bars), m.steel));

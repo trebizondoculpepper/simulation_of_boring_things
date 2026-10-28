@@ -1,5 +1,6 @@
 import {
   ACESFilmicToneMapping,
+  Mesh,
   AmbientLight,
   DirectionalLight,
   HalfFloatType,
@@ -10,6 +11,7 @@ import {
   Vector2,
   WebGLRenderTarget,
 } from 'three';
+import type { Material } from 'three';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -36,6 +38,9 @@ import {
   hallArches,
   hallOrigin,
   hallSolids,
+  neighbourDraw,
+  neighbourFade,
+  ringNeighbours,
   startOf,
 } from '../logic/museum-plan';
 import type { MuseumHallId } from '../logic/museum-plan';
@@ -91,6 +96,71 @@ export function startMuseumHallRoom(
   const o = hallOrigin(id);
   shells.group.position.set(-o.x, 0, -o.z);
   hall.group.add(shells.group);
+  // Both neighbours in full (the owner, 2026-10-28: "only the rooms
+  // adjacent to the room we're in render"): each a full copy at its true
+  // place, seen while its own room is not drawn through its archway
+  // (`neighbourDraw`), so both are full even when both archways are in
+  // view; shown empty while this hall is itself drawn under another.
+  const copies = new Map(
+    ringNeighbours(id).map((n) => {
+      const copy = createMuseumHall(n);
+      const on = hallOrigin(n);
+      copy.group.position.set(on.x - o.x, 0, on.z - o.z);
+      hall.group.add(copy.group);
+      return [n, copy] as const;
+    }),
+  );
+  let peekFrom: MuseumHallId | null = null;
+  // Each copy's fade (`neighbourFade`), and its materials, gathered once:
+  // while part faded in, they are drawn see-through over its empty hall.
+  const fade = new Map<MuseumHallId, number>();
+  const fadeMaterials = new Map(
+    [...copies].map(([n, copy]) => {
+      const list = new Set<Material & { opacity: number }>();
+      copy.group.traverse((obj) => {
+        if (obj instanceof Mesh)
+          for (const mat of [obj.material].flat() as Material[]) list.add(mat);
+      });
+      return [
+        n,
+        [...list].map((mat) => ({
+          mat,
+          opacity: mat.opacity,
+          transparent: mat.transparent,
+        })),
+      ] as const;
+    }),
+  );
+  const applyFade = (n: MuseumHallId, f: number) => {
+    for (const m of fadeMaterials.get(n) ?? []) {
+      const blend = f < 1 || m.transparent;
+      if (m.mat.transparent !== blend) {
+        m.mat.transparent = blend;
+        m.mat.needsUpdate = true;
+      }
+      m.mat.opacity = m.opacity * f;
+    }
+  };
+  const redraw = () => {
+    for (const [n, copy] of copies) {
+      const how = neighbourDraw(id, n, { seen, peekFrom });
+      const f = fade.get(n) ?? 1;
+      copy.group.visible = how === 'full' && f > 0;
+      // The empty hall stays underneath until the copy is fully in.
+      shells.show(n, how === 'full' && f < 1 ? 'empty' : how);
+    }
+  };
+  const fadeTo = (pose: { x: number; z: number }) => {
+    let changed = false;
+    for (const n of copies.keys()) {
+      const f = neighbourFade(id, n, pose);
+      if (fade.get(n) === f) continue;
+      fade.set(n, f);
+      applyFade(n, f);
+      changed = true;
+    }
+    if (changed) redraw();
+  };
   const { h } = hallSize(id);
   const axes = hallAxes(id);
   const welcome = id === 'museum0';
@@ -195,9 +265,13 @@ export function startMuseumHallRoom(
       opening: () => ({ minX: 1e9, maxX: 1e9, minZ: 1e9, maxZ: 1e9 }),
       see: (on) => {
         seen[a.to] = on;
-        shells.see(a.to, on);
+        redraw();
       },
-      peek: () => {},
+      // Drawn under hall `a.to`, seen through its archway.
+      peek: (on) => {
+        peekFrom = on ? a.to : peekFrom === a.to ? null : peekFrom;
+        redraw();
+      },
     });
   });
 
@@ -228,6 +302,7 @@ export function startMuseumHallRoom(
       const pose = walk.pose();
       const now = { x: pose.x / metre, z: pose.z / metre };
       looking = archToSee(id, { ...now, yaw: pose.yaw }, looking);
+      fadeTo(now);
       const into = was && !handing ? crossedInto(id, was, now) : null;
       was = now;
       if (into && seen[into]) {
@@ -246,6 +321,7 @@ export function startMuseumHallRoom(
       composer.dispose();
       walk.dispose();
       hall.dispose();
+      for (const copy of copies.values()) copy.dispose();
       shells.dispose();
       shellMaterials.dispose();
       freeEnvironment();

@@ -9,6 +9,12 @@ import {
   MUSEUM_SQUARE,
   MUSEUM_WALL,
   BUILDING,
+  HALL0_BANDS,
+  hallInterior,
+  insideFaceRuns,
+  neighbourDraw,
+  neighbourFade,
+  ringView,
   archToSee,
   detailSets,
   emptyHallShape,
@@ -331,5 +337,75 @@ describe('the pool science museum', () => {
       );
       expect(shape.walls).toHaveLength(4);
     }
+  });
+});
+
+describe('the museum’s neighbours and Hall 0’s tiles (107-1, 2026-10-28)', () => {
+  it('draws both neighbours in full and everything further empty, from every hall looking through every archway', () => {
+    for (const visitor of MUSEUM_HALLS)
+      for (const a of hallArches(visitor)) {
+        const view = ringView(visitor, a.to);
+        const full = MUSEUM_HALLS.filter((h) => view[h] === 'full');
+        expect(full.sort()).toEqual(
+          [visitor, ...ringNeighbours(visitor)].sort(),
+        );
+        for (const h of MUSEUM_HALLS)
+          if (ringDistance(visitor, h) > 1) expect(view[h]).toBe('empty');
+      }
+  });
+
+  it('copies the neighbour not drawn under into the scene, and shows it empty from a room drawn under', () => {
+    for (const id of MUSEUM_HALLS) {
+      const [back, on] = ringNeighbours(id);
+      expect(neighbourDraw(id, back)).toBe('full');
+      expect(neighbourDraw(id, on, { seen: { [on]: true } })).toBe('under');
+      expect(neighbourDraw(id, back, { seen: { [on]: true } })).toBe('full');
+      expect(neighbourDraw(id, back, { peekFrom: on })).toBe('empty');
+    }
+    expect(() => neighbourDraw('museum0', 'museum5')).toThrow();
+  });
+
+  it('runs Hall 0’s cove and bands round its walls, broken at its doorways and windows', () => {
+    const inner = hallInterior('museum0');
+    const perimeter = 2 * (inner.maxX - inner.minX + inner.maxZ - inner.minZ);
+    const length = (runs: { from: number; to: number }[]) =>
+      runs.reduce((s, r) => s + r.to - r.from, 0);
+    const doors = hallArches('museum0').reduce((s, a) => s + a.w, 0);
+    expect(length(insideFaceRuns('museum0', 0))).toBeCloseTo(
+      perimeter - doors,
+      6,
+    );
+    for (const r of insideFaceRuns('museum0', 0))
+      expect(r.to).toBeGreaterThan(r.from);
+    // Above the doorways' heads, only the windows break a band.
+    const high = HALL0_BANDS[2];
+    const windows = hallWalls('museum0')
+      .flatMap((w) => wallWindows('museum0', w))
+      .filter((w) => high.y + high.h >= w.sill && high.y <= w.head)
+      .reduce((s, w) => s + w.w, 0);
+    expect(length(insideFaceRuns('museum0', high.y, high.h))).toBeCloseTo(
+      perimeter - windows,
+      6,
+    );
+  });
+});
+
+describe('fading a neighbour in across the threshold (2026-10-28)', () => {
+  it('is empty at the archway from the hall left, full 1 m in, and back again', () => {
+    for (const id of MUSEUM_HALLS)
+      for (const arch of hallArches(id)) {
+        const beyond = ringNeighbours(id).find((n) => n !== arch.to)!;
+        const at = (d: number) => ({
+          x: arch.frame.x + arch.into[0] * d,
+          z: arch.frame.z + arch.into[1] * d,
+        });
+        expect(neighbourFade(id, beyond, at(0))).toBe(0);
+        expect(neighbourFade(id, beyond, at(-0.5))).toBe(0);
+        expect(neighbourFade(id, beyond, at(0.5))).toBe(0.5);
+        expect(neighbourFade(id, beyond, at(1))).toBe(1);
+        expect(neighbourFade(id, beyond, at(3))).toBe(1);
+        // The hall just left stays full.
+        expect(neighbourFade(id, arch.to, at(0.2))).toBe(1);
+      }
   });
 });

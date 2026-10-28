@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum (107-1, the owner 2026-10-28): from any hall both ring neighbours are drawn in full, even when both archways are in view (each a full copy in the hall's scene, its own room drawn through the archway looked at); every hall further away is its empty model, never missing. A neighbour coming into range fades in from the archway's line to 1 m into the new hall, and out again walking back, over its empty hall. Hall 0 is a tiled pool hall: coloured tile bands, a tiled cove at every wall foot and corner, a glossy lifebuoy sticker on its west wall; its empty model carries the same tiles, bands, cove, sticker and the painted dry pool floor.
+
 ### Changed
 
 - The museum's courtyard windows show only a plain white sky, opaque, so no other hall is ever seen through them (the owner, 2026-10-28: "you never see the other rooms, just white skybox"); the sky box and its stencil pass are gone.

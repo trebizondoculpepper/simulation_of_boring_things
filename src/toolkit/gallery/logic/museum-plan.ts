@@ -1005,3 +1005,131 @@ export function emptyHallShape(id: MuseumHallId) {
 export function sharedWall(a: MuseumHallId, b: MuseumHallId) {
   return sharedEdge(BOUNDS[a], BOUNDS[b]);
 }
+
+/**
+ * How a hall's scene draws one of its two neighbours (the owner,
+ * 2026-10-28: "only the rooms adjacent to the room we're in render";
+ * anything further seen down the ring is the empty model): `under`, the
+ * neighbour's own room drawn through its archway on the canvas underneath
+ * (`door-joins.ts`), its empty hall and those beyond it standing aside;
+ * `full`, a full copy of the neighbour built into this scene at its true
+ * place, so both neighbours are full even when both archways are in view
+ * (a corner hall) or the one looked away from is seen; `empty`, its empty
+ * hall, when this scene is itself drawn under the visitor's hall
+ * (`peekFrom`) and so the neighbour is two halls from the visitor.
+ */
+export type NeighbourDraw = 'under' | 'full' | 'empty';
+export function neighbourDraw(
+  id: MuseumHallId,
+  neighbour: MuseumHallId,
+  state: {
+    seen?: Partial<Record<MuseumHallId, boolean>>;
+    peekFrom?: MuseumHallId | null;
+  } = {},
+): NeighbourDraw {
+  if (!ringNeighbours(id).includes(neighbour))
+    throw new Error(`${neighbour} is not next to ${id}`);
+  if (state.seen?.[neighbour]) return 'under';
+  if (state.peekFrom) return 'empty';
+  return 'full';
+}
+
+/**
+ * What the visitor in `visitor`, its archway to `looking` drawn through,
+ * sees of every hall: its own and the two neighbours in full (one drawn
+ * under, the other copied into the visitor's scene), every other hall
+ * as its empty model, from whichever scene draws it. The empty model is
+ * kept, never dropped, so looking down a side the halls go on.
+ */
+export function ringView(
+  visitor: MuseumHallId,
+  looking: MuseumHallId,
+): Record<MuseumHallId, HallDetail> {
+  const out = {} as Record<MuseumHallId, HallDetail>;
+  for (const h of MUSEUM_HALLS) out[h] = 'empty';
+  out[visitor] = 'full';
+  for (const n of ringNeighbours(visitor)) {
+    const here = neighbourDraw(visitor, n, { seen: { [looking]: true } });
+    if (here === 'full' || here === 'under') out[n] = 'full';
+  }
+  // The room drawn under: its far neighbour as its scene draws it.
+  for (const n of ringNeighbours(looking))
+    if (
+      n !== visitor &&
+      neighbourDraw(looking, n, { peekFrom: visitor }) !== 'empty'
+    )
+      out[n] = 'full';
+  return out;
+}
+
+/**
+ * Hall 0's tiled trim (the owner, 2026-10-28: "make the welcome hall look
+ * like a pool room with a tiled floor and wall"): the runs along the
+ * inside face of each of its walls from height `y` up `h`, in the museum's plan,
+ * broken where a doorway or window crosses that height (a band, or the
+ * cove at the deck, `y` 0, broken by the doorways).
+ */
+export function insideFaceRuns(
+  id: MuseumHallId,
+  y: number,
+  h = 0,
+): { wall: HallWall; from: number; to: number }[] {
+  const t = MUSEUM_WALL / 2;
+  const out: { wall: HallWall; from: number; to: number }[] = [];
+  for (const wall of hallWalls(id)) {
+    const gaps: [number, number][] = [];
+    for (const a of hallArches(id))
+      if (
+        a.axis === wall.axis &&
+        Math.abs((wall.axis === 'x' ? a.at.z : a.at.x) - wall.line) < 1e-9 &&
+        y < a.top
+      ) {
+        const u = wall.axis === 'x' ? a.at.x : a.at.z;
+        gaps.push([u - a.w / 2, u + a.w / 2]);
+      }
+    for (const w of wallWindows(id, wall))
+      if (y + h >= w.sill && y <= w.head)
+        gaps.push([w.u - w.w / 2, w.u + w.w / 2]);
+    gaps.sort((p, q) => p[0] - q[0]);
+    let at = wall.from + t;
+    for (const [a, b] of gaps) {
+      if (a > at) out.push({ wall, from: at, to: a });
+      at = Math.max(at, b);
+    }
+    if (wall.to - t > at) out.push({ wall, from: at, to: wall.to - t });
+  }
+  return out;
+}
+
+/** Hall 0's two bands of coloured tiles round its walls: their foot and depth, metres. */
+export const HALL0_BANDS = [
+  { y: 1.2, h: 0.15, colour: '#1f6f8b' },
+  { y: 1.4, h: 0.05, colour: '#5fb3c4' },
+  { y: 6.4, h: 0.3, colour: '#1f6f8b' },
+] as const;
+
+/**
+ * How far a neighbour's full copy has faded in, 0 to 1 (the owner,
+ * 2026-10-28: the change from the empty model to the full room "fades in
+ * as you cross the threshold ... fully rendered when you have walked 1 m
+ * into the room, but it fades out as you walk back to the threshold"):
+ * the walker's depth into hall `id` past its archway from its other
+ * neighbour, the one just left, over 1 m. At that archway's middle line
+ * the hall beyond `id` is still as the hall left behind sees it (empty);
+ * 1 m in, it is full. In the hall's own coordinates, as `archToSee`.
+ * Stepped to twentieths, so a copy is touched only when the change shows.
+ */
+export const FADE_DEPTH = 1;
+export function neighbourFade(
+  id: MuseumHallId,
+  neighbour: MuseumHallId,
+  pose: { x: number; z: number },
+): number {
+  const other = ringNeighbours(id).find((n) => n !== neighbour);
+  const arch = hallArches(id).find((a) => a.to === other);
+  if (!arch) return 1;
+  const depth =
+    (pose.x - arch.frame.x) * arch.into[0] +
+    (pose.z - arch.frame.z) * arch.into[1];
+  return Math.round(Math.min(1, Math.max(0, depth / FADE_DEPTH)) * 20) / 20;
+}
