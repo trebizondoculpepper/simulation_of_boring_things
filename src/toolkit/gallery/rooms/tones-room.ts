@@ -38,6 +38,7 @@ import {
   kitPaint,
 } from '../../components/core/views/eighties-controls';
 import { createPortals } from '../views/portals';
+import { PIEZO_BENCH, createPiezoTestSet } from '../views/piezo-test-set';
 import { knobDirection } from '../../controls/input/knob-turning';
 import { createCanvasTexture } from '../../components/core/views/screens';
 import { createFirstPerson } from '../../controls/input/first-person';
@@ -100,6 +101,12 @@ const SPA_PLACES = [7.5, 9.6].map((x) => ({
   z: FLOOR.minZ + OFF_WALL,
   yaw: 0,
 }));
+/**
+ * The piezo test set's bench (mission 100), in the middle of the room,
+ * facing south towards the way in, so the library's beeps are heard
+ * from a place in the room as they would be in play.
+ */
+const PIEZO_PLACE = { x: 2, z: 0, yaw: 0 };
 /** The SPEED knob's steps, and the rates they give: 0.5× to 2×. */
 const SPEED_STEPS = 8;
 const rateOf = (share: number) => 2 ** (share * 2 - 1);
@@ -115,7 +122,9 @@ const HALF = 0.2;
  * a SPEED knob that plays it from half to twice its speed, its fan
  * spinning with it, so a tone can be heard as a bigger, slower machine or
  * a smaller, faster one before it is given to a part. At the north
- * wall's east end, the spa's sounds, each with its RUN button.
+ * wall's east end, the spa's sounds, each with its RUN button. In the
+ * middle, on a bench, the piezo test set (mission 100): the piezo beep
+ * library by pitch, meaning and room, on its TEST button.
  */
 export function startTonesRoom(canvas: HTMLCanvasElement) {
   const m = METRE;
@@ -421,6 +430,18 @@ export function startTonesRoom(canvas: HTMLCanvasElement) {
     return { x, z, yaw };
   });
   stands.push(...(spaStands as typeof stands));
+  // ---- The piezo test set ---------------------------------------------------
+  const piezo = createPiezoTestSet(kit, parts);
+  piezo.group.position.set(PIEZO_PLACE.x, 0, PIEZO_PLACE.z);
+  piezo.group.rotation.y = PIEZO_PLACE.yaw;
+  room.add(piezo.group);
+  {
+    const { x, z } = PIEZO_PLACE;
+    const spot = new SpotLight('#fff3e2', 12 * m * m, 0, 0.4, 0.6, 2);
+    spot.position.set(x * m, (CEILING - 0.1) * m, (z + 1.2) * m);
+    spot.target.position.set(x * m, 0.85 * m, z * m);
+    scene.add(spot, spot.target);
+  }
   room.updateMatrixWorld(true);
 
   // ---- Walking and working -----------------------------------------------
@@ -449,6 +470,13 @@ export function startTonesRoom(canvas: HTMLCanvasElement) {
     { x: number; z: number; yaw: number; pitch: number; y?: number }
   > = {
     room: { x: 0, z: 2.6 * m, yaw: 0, pitch: -0.12 },
+    // At the piezo test set, facing its panel.
+    piezo: {
+      x: PIEZO_PLACE.x * m,
+      z: (PIEZO_PLACE.z + 0.75) * m,
+      yaw: 0,
+      pitch: -0.75,
+    },
   };
   // Each stand close up, standing at its panel and facing it: `?view=1`
   // and on (forward is (sin yaw, −cos yaw), the stand's front its own).
@@ -486,6 +514,12 @@ export function startTonesRoom(canvas: HTMLCanvasElement) {
         minZ: (z - HALF) * m,
         maxZ: (z + HALF) * m,
       })),
+      {
+        minX: (PIEZO_PLACE.x - PIEZO_BENCH.width / 2) * m,
+        maxX: (PIEZO_PLACE.x + PIEZO_BENCH.width / 2) * m,
+        minZ: (PIEZO_PLACE.z - PIEZO_BENCH.depth / 2) * m,
+        maxZ: (PIEZO_PLACE.z + PIEZO_BENCH.depth / 2) * m,
+      },
     ],
     use: (x, y) => usableAt(x, y)?.(),
     aimed: () => Boolean(usableAt(0, 0)),
@@ -517,6 +551,12 @@ export function startTonesRoom(canvas: HTMLCanvasElement) {
     speed: (n: number | string, steps: number) =>
       runs.get(String(n))?.speed(steps),
     tones: () => MACHINE_TONES.map((t, i) => `${i + 1} ${t.id}`),
+    /** The piezo test set: turn its selectors, press TEST, read its setting. */
+    piezo: {
+      set: piezo.set,
+      test: piezo.test,
+      setting: piezo.setting,
+    },
   };
 
   // ---- Each frame ----------------------------------------------------------

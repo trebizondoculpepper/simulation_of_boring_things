@@ -1,6 +1,6 @@
 # 100: A library of piezo beeps, by pitch, meaning and reverb
 
-Status: to do (written 2026-10-28 from the research in [piezo-beeper-sounds](../research/piezo-beeper-sounds.md); its prototype heard by the owner first).
+Status: built 2026-10-28 (written the same day from the research in [piezo-beeper-sounds](../research/piezo-beeper-sounds.md); its prototype heard by the owner first): the library, the typed lookup and dev7's piezo test set are done; the cadences await the owner's ear, and which candidates switch (work step 4) is the owner's to choose.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply, above all that `logic/` folders are pure and tested beside them, that all sound goes through the part audio, and that Markdown is one paragraph per line. Read the research note [doc/research/piezo-beeper-sounds.md](../research/piezo-beeper-sounds.md) before starting: it explains why a cheap piezo sounds as it does and gives the synthesis method and its parameters.
 
@@ -88,6 +88,28 @@ export function piezoLoop(
 ```
 
 defaults `pitch: 'high'`, `room: 'dry'`. Typed so that a loop meaning cannot be played as a one-shot or the reverse. `piezoLoop` needs a looping recorded `LoopRecipe`; see whether `core/audio/recorded-loop.ts` already gives one and use it. A device's pitch and room are its own, set where it is built (a keypad's `{ pitch: 'high', room: 'small' }`), and the meaning comes from its event.
+
+## How to use it
+
+For a device with its own sounder (a keypad, a pump's fascia, a terminal), from `src/toolkit/components/sound/audio/piezo-recordings.ts`:
+
+```ts
+import { piezoSounder } from '../../sound/audio/piezo-recordings';
+
+// Once, where the device is built: its pitch, and the room it stands in
+// (dry close up or in a soft room, small for a plant room, cubicle or
+// corridor, large for a big tiled plant room or a pool hall).
+const sounder = piezoSounder({ pitch: 'high', room: 'small' }, fascia);
+
+sounder.key(); // every key press: the 35 ms entry chirp
+sounder.play('error'); // a key not allowed now, a limit reached
+sounder.play('confirm'); // a value stored
+part.holdWhile(alarmed, sounder.loop('alarm')); // held while alarmed
+```
+
+Or as recipes, for `a.voice(component, { press: piezoBeep('entry', voice) })` or `partAudio.play`: `piezoBeep(meaning, { pitch, room, level })` gives a one-shot `SoundRecipe`, `piezoLoop(meaning, ...)` a seamless `LoopRecipe` for `partAudio.hold`; defaults `pitch: 'high'`, `room: 'dry'`, and the meaning's level from `PIEZO_LEVELS` (`sound/logic/piezo-beeps.ts`: a key 0.12, an alarm 0.24; about as loud as the old `BEEP` at 0.12). `playPiezo(meaning, voice, from)` plays one from where `from` stands. The one-shot meanings are `entry`, `confirm`, `done`, `error`, `deny`, `ready`, `fault`, `priority-high`, `priority-medium`; the loops `countdown`, `hurry`, `warning`, `alarm`; TypeScript refuses a loop meaning to `piezoBeep` and the reverse. To hear any of them in the game: dev7's piezo test set, `?room=dev7&view=piezo` (the console has `devTones.piezo.set({ meaning, pitch, room })` and `devTones.piezo.test()`).
+
+To change a cadence or the sounder, edit `resources/sound/effects/piezo/generate.py` and rerun `python3 -I generate.py .` from that folder; `piezo-beeps.ts` names the meanings and loop cycles, and its test checks them against the new `manifest.json`.
 
 ## Which sounds might switch to it
 
