@@ -4,6 +4,10 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Fixed
+
+- The Release workflow fetches its tag again after checkout, which had replaced the annotated tag with a lightweight one and failed v0.2.0's "not annotated" check; it can now be run by hand for an existing tag (`gh workflow run release.yml -f tag=vX.Y.Z`) to publish a failed release again with the same checks, keeping a GitHub release that already exists.
+
 ## [0.2.0] - 2026-10-28
 
 ### Added
