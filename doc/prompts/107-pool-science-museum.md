@@ -33,6 +33,7 @@ Then, bringing the first step forward: "Begin by actually defining this as a mis
 3. **Halls start empty.** Each exhibit space begins with set decoration only (the shell, signage, the safety layer). The exhibit itself is built later, by its sub-prompt.
 4. **One concept per hall** (the owner, 2026-10-28: "each room should teach one concept"): a hall shows only what teaches its own concept; readouts that belong to another hall's concept (Hall 2's energy used, say) are left out.
 5. **Left to right** (the owner, 2026-10-28): a hall's process reads from left to right as the visitor faces it, its inputs (gas, mains water, chemicals) on the left and the pool on the right; the mimic, lecterns and placards follow the same order. Where the hall's route allows, the visitor walks with the flow.
+6. **Every control can be worked** (the owner, 2026-10-28: "let users play with all the controls"): a visitor can work every control an exhibit's machines have (switches, setpoints, modes, valves), not just look at them; RESET SIMULATION puts them all back.
 
 ### The sub-prompts
 
