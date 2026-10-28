@@ -273,7 +273,9 @@ export type SkimmerAction =
   | { type: 'skimmer' }
   | { type: 'skip'; besideX: number; besideZ: number }
   | { type: 'deck'; x: number; z: number }
-  | { type: 'pick'; index: number };
+  | { type: 'pick'; index: number }
+  /** A find lands in the skip, tossed from the hands (107f carrying). */
+  | { type: 'land'; index: number };
 
 export function newSkimmerGame(seed: number): SkimmerGame {
   const order = fillOrder(seed);
@@ -357,6 +359,15 @@ export function actOnSkimmer(g: SkimmerGame, a: SkimmerAction): SkimmerGame {
       if (hands === null) return g;
       if (hands === 'lid') return { ...g, lid: { at: 'deck', x: a.x, z: a.z } };
       return placeAt(g, hands, { at: 'deck', x: a.x, z: a.z });
+    case 'land': {
+      const p = g.places[a.index];
+      if (!p || p.at === 'skip' || p.at === 'basket') return g;
+      const next = {
+        ...placeAt(g, a.index, { at: 'skip' }),
+        binned: g.binned + 1,
+      };
+      return cleared(next) ? say(next, CLEARED_LINE(next.binned)) : next;
+    }
     case 'pick': {
       if (hands !== null) return say(g, 'Your hands are full.');
       if (g.places[a.index]?.at !== 'deck') return g;

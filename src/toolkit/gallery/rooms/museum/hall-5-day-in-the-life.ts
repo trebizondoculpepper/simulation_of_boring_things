@@ -1,4 +1,4 @@
-import { Group, Mesh, Quaternion, Raycaster, Vector2, Vector3 } from 'three';
+import { Box3, Group, PerspectiveCamera, Quaternion, Vector3 } from 'three';
 import type { Camera, Material, Object3D } from 'three';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
 import { createPartSet } from '../../../components/core/parts/parts';
@@ -6,16 +6,16 @@ import { mergeTree } from '../../../components/core/views/merge-static';
 import { markComponent } from '../../../components/core/views/component-identity';
 import { tools } from '../../../components/core/views/fitting-tools';
 import { createPoolClock } from '../../../components/architectural/views/pool-clock';
-import {
-  createSkip,
-  SKIP_SHAPE,
-} from '../../../components/site-dressing/views/skip';
-import {
-  BIN_REACH,
-  arcSeconds,
-  binArc,
-} from '../../../components/site-dressing/logic/bin-toss';
-import type { Point3 } from '../../../components/site-dressing/logic/bin-toss';
+import { createSkip } from '../../../components/site-dressing/views/skip';
+import { createBinTossing } from '../../../components/site-dressing/parts/bin-tossing';
+import type { TossBin } from '../../../components/site-dressing/parts/bin-tossing';
+import { objectImpact } from '../../../components/core/audio/object-impact';
+import { METRE } from '../../../components/core/logic/units';
+import { createPortableBoard } from '../../../controls/logic/portable-board';
+import { createDropProfile } from '../../../controls/logic/drop-profile';
+import type { DropProfile } from '../../../controls/logic/drop-profile';
+import type { PortableObject } from '../../../controls/input/object-handling';
+import type { PlacementTarget } from '../../../controls/input/placement-target';
 import {
   click,
   partAudio,
@@ -33,7 +33,11 @@ import {
   inBasket,
   newSkimmerGame,
 } from '../../logic/museum-5-skimmer';
-import type { SkimmerAction, SkimmerGame } from '../../logic/museum-5-skimmer';
+import type {
+  FindId,
+  SkimmerAction,
+  SkimmerGame,
+} from '../../logic/museum-5-skimmer';
 import {
   BAY,
   OPENING_CHECKS,
@@ -55,7 +59,7 @@ import {
   paintResetSign,
 } from '../../views/museum-exhibit';
 import { createFindProps } from './hall-5-finds';
-import type { HallExhibit } from './exhibits';
+import type { CarryingExhibit, ExhibitHands } from './exhibit-carrying';
 
 /**
  * Hall 5, "A Day in the Life" (107l): a poolman's duties through the
@@ -67,11 +71,10 @@ import type { HallExhibit } from './exhibits';
  * (`museum-5-skimmer.ts`); the words and places too
  * (`museum-5-gallery.ts`). In the hall's frame, metres.
  *
- * Carrying: the museum's halls have no object handling of their own
- * (`museum-hall-room.ts` gives an exhibit only its clicks), so the hall
- * carries for itself, through those clicks: the thing held is drawn in
- * front of the visitor's eye (the camera, read as the hall is drawn), and
- * a click on the deck or the skip lets it go there.
+ * Carrying is the control scheme's own pick-up, carry and drop, through
+ * the museum's exhibit hook (`exhibit-carrying.ts`): the lid and the finds
+ * are portable objects, the skimmer hands its next find over (`give`), and
+ * the skip takes finds tossed into it (`bin-tossing.ts`), not the lid.
  */
 
 const FACE_NORTH = Math.PI;
@@ -94,13 +97,19 @@ const PICK_UP: SoundRecipe = click({
   decay: 0.06,
   level: 0.25,
 });
-const CLANG: SoundRecipe = click({
-  band: 900,
-  q: 6,
-  decay: 0.4,
-  level: 0.5,
-  thump: [70, 0.15],
-});
+/** The finds are drawn a little larger than life, to be seen on the deck. */
+const FIND_SCALE = 1.6;
+/** The lid: a flat plastic disc 250 mm across. */
+const LID_DROP = createDropProfile('flat', 0.25, 'plastic');
+/** Finds that ring when dropped. */
+const METAL_FINDS = new Set<FindId>([
+  'coins',
+  'sixpence',
+  'wedding-ring',
+  'earring',
+  'car-key',
+  'hair-grips',
+]);
 const CHIME: SoundRecipe = {
   tones: [
     { at: 0, hz: 784, seconds: 0.18, level: 0.2, type: 'sine' },
@@ -378,7 +387,7 @@ function paintPoolside(c: CanvasRenderingContext2D, w: number, h: number) {
   c.fillRect(tx, Z(water.minZ + face * 0.55), 0.24 * sx, face * 0.2 * sz);
 }
 
-export function buildHallExhibit(kit: PanelKit): HallExhibit {
+export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   let game: SkimmerGame = newSkimmerGame(1);
   let sinceReset = 0;
   const object = new Group();
@@ -539,7 +548,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   object.add(markComponent(lid, { name: `${SKIMMER_TAGS.lid} skimmer lid` }));
 
   // ---- The skip, and its sign ----
-  const skip = createSkip(kit).group;
+  const skipModel = createSkip(kit);
+  const skip = skipModel.group;
   skip.position.set(sp.x, 0, sp.z);
   object.add(
     markComponent(skip, {
@@ -602,30 +612,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const findsGroup = new Group();
   findsGroup.userData.live = true;
   object.add(findsGroup);
-  const flights = new Map<
-    number,
-    { from: Point3; to: Point3; t: number; s: number }
-  >();
-  const skipSlot = (n: number): Point3 => {
-    const a = n * 2.39996;
-    const r = 0.15 + ((n * 37) % 10) * 0.035;
-    return {
-      x:
-        sp.x +
-        Math.max(
-          -SKIP_SHAPE.halfX,
-          Math.min(SKIP_SHAPE.halfX, Math.cos(a) * r * 1.4),
-        ),
-      y: SKIP_SHAPE.floor + 0.01 + n * 0.004,
-      z:
-        sp.z +
-        Math.max(
-          -SKIP_SHAPE.halfZ,
-          Math.min(SKIP_SHAPE.halfZ, Math.sin(a) * r),
-        ),
-    };
-  };
-  const skipSlots: number[] = [];
 
   // The caption card: shown before the eye, a few seconds or until the next.
   const card = t.printed(0.36, 0.07, () => {}, 768);
@@ -668,90 +654,125 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     stopVoice = partAudio.play(recording(url, 1), voice);
   };
 
-  // ---- Working it ----
-  const ray = new Raycaster();
-  const centre = new Vector2(0, 0);
-  const aimedAtDeck = () => {
-    if (!eye) return null;
-    ray.setFromCamera(centre, eye);
-    const hit = ray.intersectObject(floor.mesh, false)[0];
-    if (!hit) return null;
-    const p = object.worldToLocal(hit.point.clone());
-    return { x: p.x, z: p.z };
-  };
-  const heldAt = (): Point3 => {
-    const p = heldMarker.getWorldPosition(new Vector3());
-    const l = object.worldToLocal(p);
-    return { x: l.x, y: l.y, z: l.z };
-  };
-  // Where the held thing sits before the eye, as a child of nothing: worked out each frame.
-  const heldMarker = new Group();
-  object.add(heldMarker);
+  // ---- Working it: the control scheme's pick-up, carry and drop ----
+  // The lid and the finds are portable objects; the skip takes finds
+  // tossed into it (`bin-tossing.ts`), the skimmer's seat takes the lid
+  // back, and the skimmer hands over its next find (`give`). The game
+  // follows what the hands do.
+  let hands: ExhibitHands | null = null;
   let hadIntro = false;
   const act = (a: SkimmerAction) => {
-    const before = game;
-    const wasHeld = held(before);
+    const wasHeld = held(game);
     game = actOnSkimmer(game, a);
     const now = held(game);
-    if (now !== null && now !== wasHeld) partAudio.play(PICK_UP, voice);
     if (a.type === 'lid' && !hadIntro) {
       hadIntro = true;
       speak('intro');
     }
     if (typeof now === 'number' && now !== wasHeld) speak(game.order[now]);
-    if (typeof wasHeld === 'number' && game.places[wasHeld].at === 'skip') {
-      const to = skipSlot(skipSlots.length);
-      skipSlots.push(wasHeld);
-      const from = heldAt();
-      flights.set(wasHeld, {
-        from,
-        to,
-        t: 0,
-        s: arcSeconds(Math.hypot(to.x - from.x, to.z - from.z)),
-      });
-    }
-    if (typeof wasHeld === 'number' && game.places[wasHeld].at === 'deck')
-      partAudio.play(PICK_UP, voice);
     refresh();
   };
-  const atSkip = (x: number, z: number) =>
-    Math.max(Math.abs(x - sp.x) - 0.92, 0) ** 2 +
-      Math.max(Math.abs(z - sp.z) - 0.61, 0) ** 2 <
-    BIN_REACH ** 2;
-  const beside = { besideX: sp.x - 1.4, besideZ: sp.z + 0.9 };
-  const onDeck = () => {
-    const at = aimedAtDeck();
-    if (!at) return;
-    if (atSkip(at.x, at.z)) return act({ type: 'skip', ...beside });
-    const x = Math.max(deck.minX + 0.2, Math.min(deck.maxX - 0.2, at.x));
-    const z = Math.max(deck.minZ + 0.2, Math.min(deck.maxZ - 0.2, at.z));
-    act({ type: 'deck', x, z });
+  /** Where an object lies on the hall's floor plan, metres. */
+  const plan = (o: Object3D) => {
+    const p = object.worldToLocal(o.getWorldPosition(new Vector3()));
+    return { x: p.x, z: p.z };
+  };
+  const portable = (
+    o: Object3D,
+    profile: DropProfile,
+    events: { pickUp(): void; drop(): void },
+  ) => {
+    const component = createPortableBoard(profile);
+    component.onEvent((e) => {
+      if (e === 'pick-up') {
+        partAudio.play(PICK_UP, voice);
+        events.pickUp();
+      } else if (e === 'drop') events.drop();
+      else {
+        const sound = objectImpact(
+          profile,
+          component.impactSpeed.value,
+          component.impacts.value,
+        );
+        if (sound) partAudio.play(sound, o);
+      }
+    });
+    o.userData.portable = {
+      component,
+      flat: 'upright',
+      detach() {},
+    } satisfies PortableObject;
+    return component;
+  };
+  const lidCarry = portable(lid, LID_DROP, {
+    pickUp: () => {
+      if (game.lid.at !== 'held') act({ type: 'lid' });
+    },
+    drop: () => {
+      if (game.lid.at === 'held') act({ type: 'deck', ...plan(lid) });
+    },
+  });
+  const seatLid = () => {
+    object.attach(lid);
+    lid.position.set(sk.x, 0.004, sk.z);
+    lid.rotation.set(0, 0, 0);
+    lid.scale.setScalar(1);
+  };
+  // The skimmer's seat takes the lid back, nothing else.
+  skimmerGroup.userData.placementTarget = {
+    accepts: (o) => o === lid,
+    place: (_lid, p) => {
+      act({ type: 'skimmer' });
+      p.component.drop();
+      p.component.settle();
+      seatLid();
+    },
+  } satisfies PlacementTarget;
+  // The skip: finds tossed in land and count; the lid is refused.
+  const tossing = createBinTossing({
+    camera: new PerspectiveCamera(),
+    metre: METRE,
+    onLanded: (o) => {
+      const i = props.indexOf(o as Group);
+      if (i < 0) return;
+      act({ type: 'land', index: i });
+      if (cleared(game)) {
+        partAudio.play(CHIME, voice);
+        speak('cleared');
+      }
+    },
+  });
+  const bin: TossBin = {
+    name: 'skip',
+    group: skip,
+    shape: skipModel.shape,
+    footprint: skipModel.footprint,
+    x: sp.x,
+    z: sp.z,
+    takes: (o) => props.includes(o as Group),
+  };
+  tossing.add(bin);
+  // Reaching into the skimmer: the next find, handed over.
+  const workSkimmer = () => {
+    if (hands?.holding()) return;
+    const was = held(game);
+    act({ type: 'skimmer' });
+    const now = held(game);
+    if (typeof now !== 'number' || now === was) return;
+    const prop = props[now];
+    prop.position.set(sk.x, 0.05, sk.z);
+    prop.visible = true;
+    // No hands (not the hall walked in): back it goes.
+    if (!hands?.give(prop))
+      game = {
+        ...game,
+        places: game.places.map((q, k) => (k === now ? { at: 'basket' } : q)),
+      };
+    refresh();
   };
   const uses = parts.uses;
-  const workLid = () => act({ type: 'lid' });
-  const workSkimmer = () => act({ type: 'skimmer' });
-  const workSkip = () => act({ type: 'skip', ...beside });
+  uses.set(skimmerGroup, workSkimmer);
   const refresh = () => {
-    const hands = held(game);
-    const set = (o: Object3D, on: boolean, use: () => void) => {
-      if (on) uses.set(o, use);
-      else uses.delete(o);
-    };
-    set(lid, game.lid.at !== 'held' && hands === null, workLid);
-    set(skimmerGroup, game.lid.at !== 'on' || hands === 'lid', workSkimmer);
-    set(skip, hands !== null, workSkip);
-    set(floor.mesh, hands !== null, onDeck);
-    props.forEach((p, i) =>
-      set(p, hands === null && game.places[i].at === 'deck', () =>
-        act({ type: 'pick', index: i }),
-      ),
-    );
-    // Where everything lies.
-    lid.visible = true;
-    if (game.lid.at === 'on') lid.position.set(sk.x, 0.004, sk.z);
-    else if (game.lid.at === 'deck')
-      lid.position.set(game.lid.x, 0.004, game.lid.z);
-    lid.rotation.set(0, 0, 0);
     basket.visible = game.lid.at !== 'on';
     inside.clear();
     const next = game.places.findIndex((p) => p.at === 'basket');
@@ -762,13 +783,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       inside.add(peek);
     }
     game.places.forEach((p, i) => {
-      const prop = props[i];
-      prop.visible = p.at !== 'basket';
-      if (p.at === 'deck') {
-        prop.position.set(p.x, 0.005, p.z);
-        prop.rotation.set(0, i * 1.7, 0);
-        prop.scale.setScalar(1.6);
-      }
+      props[i].visible = p.at !== 'basket';
     });
     drawSign();
   };
@@ -777,17 +792,41 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     sinceReset = 0;
     hadIntro = false;
     stopVoice();
-    flights.clear();
-    skipSlots.length = 0;
     cardFor = game.saidCount;
     card.mesh.visible = false;
+    // Everything out of the hands and back in its place.
+    hands?.forget(lid);
+    lidCarry.reset();
+    seatLid();
+    tossing.remove(bin);
+    tossing.add(bin);
     for (const p of props) {
-      for (const [o] of uses) if (o === p) uses.delete(o);
-      findsGroup.remove(p);
+      hands?.forget(p);
+      p.removeFromParent();
+      (p.userData.portable as PortableObject).component.dispose();
     }
     props = game.order.map((id, i) => {
       const prop = propOf(id);
       prop.visible = false;
+      prop.scale.setScalar(FIND_SCALE);
+      const size = new Box3().setFromObject(prop).getSize(new Vector3());
+      portable(
+        prop,
+        createDropProfile(
+          'flat',
+          Math.max(size.x, size.y, size.z, 0.02),
+          METAL_FINDS.has(id) ? 'metal' : 'plastic',
+        ),
+        {
+          pickUp: () => {
+            if (game.places[i].at === 'deck') act({ type: 'pick', index: i });
+          },
+          drop: () => {
+            if (game.places[i].at === 'held')
+              act({ type: 'deck', ...plan(prop) });
+          },
+        },
+      );
       findsGroup.add(
         markComponent(prop, {
           name: findOf(id).name,
@@ -1014,70 +1053,26 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         : `${game.binned} of ${game.order.length} in the skip`,
     solids: () => solids,
     reset: () => reset(),
+    carrying: {
+      bind(h) {
+        hands = h;
+      },
+      divert: (o, p) => tossing.divert(o, p),
+      nearbyTargetFeedback: (o) => tossing.targetFeedback(o),
+    },
     update(delta) {
       sinceReset += delta;
-      // The held thing, before the eye.
-      const hands = held(game);
+      // The caption card, before the eye.
       const cam = eye as Camera | null;
       if (cam) {
         const parentQ = object.getWorldQuaternion(new Quaternion()).invert();
         const scale = object.getWorldScale(new Vector3()).x;
-        const place = (o: Object3D, x: number, y: number, z: number) => {
-          const p = cam.localToWorld(
-            new Vector3(x * scale, y * scale, z * scale),
-          );
-          o.position.copy(object.worldToLocal(p));
-          o.quaternion.copy(parentQ).multiply(cam.quaternion);
-        };
-        place(heldMarker, 0.1, -0.12, -0.42);
-        const heldThing =
-          hands === 'lid'
-            ? lid
-            : typeof hands === 'number'
-              ? props[hands]
-              : null;
-        if (heldThing) {
-          heldThing.position.copy(heldMarker.position);
-          heldThing.quaternion.copy(heldMarker.quaternion);
-          heldThing.rotateX(0.5);
-          heldThing.scale.setScalar(hands === 'lid' ? 1 : 1.8);
-          heldThing.visible = true;
-          noRay(heldThing);
-        }
-        place(card.mesh, 0, -0.17, -0.5);
+        const p = cam.localToWorld(new Vector3(0, -0.17 * scale, -0.5 * scale));
+        card.mesh.position.copy(object.worldToLocal(p));
+        card.mesh.quaternion.copy(parentQ).multiply(cam.quaternion);
       }
-      // A thing let go on the deck takes clicks again.
-      for (const [i, p] of game.places.entries())
-        if (
-          p.at === 'deck' &&
-          props[i].children[0]?.raycast !== Mesh.prototype.raycast
-        )
-          props[i].traverse((m) => {
-            if (m instanceof Mesh) m.raycast = Mesh.prototype.raycast;
-          });
-      if (
-        game.lid.at !== 'held' &&
-        lid.children[0]?.raycast !== Mesh.prototype.raycast
-      )
-        lid.traverse((m) => {
-          if (m instanceof Mesh) m.raycast = Mesh.prototype.raycast;
-        });
-      // Things flying into the skip.
-      for (const [i, f] of flights) {
-        f.t += delta / f.s;
-        const at = binArc(f.from, f.to, f.t);
-        props[i].position.set(at.x, at.y, at.z);
-        props[i].scale.setScalar(1.6);
-        if (f.t >= 1) {
-          flights.delete(i);
-          props[i].rotation.set(0, i * 1.3, 0);
-          partAudio.play(CLANG, skip);
-          if (cleared(game) && flights.size === 0) {
-            partAudio.play(CHIME, voice);
-            speak('cleared');
-          }
-        }
-      }
+      // Finds on their way into the skip.
+      tossing.update(delta);
       // The caption card: freshly said, shown a few seconds.
       if (game.saidCount !== cardFor) {
         cardFor = game.saidCount;

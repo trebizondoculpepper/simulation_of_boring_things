@@ -22,6 +22,8 @@ export interface TossBin {
   footprint: { x: number; z: number };
   x: number;
   z: number;
+  /** What it takes, if not everything (a skip for the skimmer's finds only). */
+  takes?: (object: Object3D) => boolean;
 }
 
 // Landing in a steel skip: a hollow clang.
@@ -141,7 +143,9 @@ export function createBinTossing({
   };
   /** Shared by the cue, the aimed placement and the magnetic release. */
   const accepts = (object: Object3D, bin: TossBin) =>
-    available(bin) && distance(object, bin) <= BIN_MAGNET_REACH;
+    available(bin) &&
+    (bin.takes?.(object) ?? true) &&
+    distance(object, bin) <= BIN_MAGNET_REACH;
   const nearest = (object: Object3D) => {
     camera.getWorldPosition(eye).divideScalar(m);
     return bins

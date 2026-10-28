@@ -343,6 +343,33 @@ export function createObjectHandling(
     });
     held = null;
   };
+  /** Into the hands, as if grabbed at `point` (world). */
+  const take = (object: Object3D, portable: PortableObject, point: Vector3) => {
+    if (!records.has(object))
+      records.set(object, {
+        parent: object.parent!,
+        portable,
+        position: object.position.clone(),
+        rotation: object.quaternion.clone(),
+        scale: object.scale.clone(),
+      });
+    assertDropProfile(portable.component.dropProfile);
+    portable.component.pickUp();
+    portable.detach();
+    root.attach(object);
+    falling.delete(object);
+    object.updateMatrixWorld(true);
+    camera.getWorldQuaternion(cameraRotation);
+    held = {
+      object,
+      grab: camera.worldToLocal(point.clone()),
+      offset: object.worldToLocal(point.clone()),
+      rotation: cameraRotation
+        .clone()
+        .invert()
+        .multiply(object.getWorldQuaternion(new Quaternion())),
+    };
+  };
   return {
     holding: () => held !== null,
     heldObject: () => held?.object ?? null,
@@ -391,31 +418,36 @@ export function createObjectHandling(
       if (!found || !found.portable.component.canPickUp.value) return false;
       const { object, portable } = found;
       if (allowPickup && !allowPickup(object, portable)) return false;
-      if (!records.has(object))
-        records.set(object, {
-          parent: object.parent!,
-          portable,
-          position: object.position.clone(),
-          rotation: object.quaternion.clone(),
-          scale: object.scale.clone(),
-        });
-      assertDropProfile(portable.component.dropProfile);
-      portable.component.pickUp();
-      portable.detach();
-      root.attach(object);
-      falling.delete(object);
-      object.updateMatrixWorld(true);
-      camera.getWorldQuaternion(cameraRotation);
-      held = {
-        object,
-        grab: camera.worldToLocal(hit.point.clone()),
-        offset: object.worldToLocal(hit.point.clone()),
-        rotation: cameraRotation
-          .clone()
-          .invert()
-          .multiply(object.getWorldQuaternion(new Quaternion())),
-      };
+      take(object, portable, hit.point);
       return true;
+    },
+    /**
+     * Put a portable object straight into the hands (a find handed over
+     * from a container, which the visitor did not pick off the floor): it
+     * must be in the scene under `root`, with `userData.portable`. Held
+     * as if picked up at its middle, with its pick-up event. False if the
+     * hands are full or it cannot be picked up.
+     */
+    give(object: Object3D) {
+      const portable = object.userData.portable as PortableObject | undefined;
+      if (held || !portable || !object.parent) return false;
+      if (!portable.component.canPickUp.value) return false;
+      object.updateMatrixWorld(true);
+      take(
+        object,
+        portable,
+        new Box3().setFromObject(object).getCenter(new Vector3()),
+      );
+      return true;
+    },
+    /**
+     * Let go of an object without dropping it (a room resetting): it is no
+     * longer held, falling or remembered, and stays where it is.
+     */
+    forget(object: Object3D) {
+      records.delete(object);
+      falling.delete(object);
+      if (held?.object === object) held = null;
     },
     aimed() {
       const hit = hitAt(0, 0);

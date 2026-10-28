@@ -265,3 +265,40 @@ it('gives an aimed socket priority over a clickable control behind it', () => {
   expect(f.handling.holding()).toBe(false);
   f.handling.dispose();
 });
+
+it('gives an object straight into the hands, then drops it like any other', () => {
+  const f = fixture();
+  const events: string[] = [];
+  f.component.onEvent((e) => events.push(e));
+  // Out of sight, behind the camera: handed over, not aimed at.
+  f.object.position.set(0, 0.6, 3);
+  expect(f.handling.give(f.object)).toBe(true);
+  expect(f.component.phase.value).toBe('held');
+  expect(f.detached()).toBe(true);
+  expect(events).toEqual(['pick-up']);
+  expect(f.handling.heldObject()).toBe(f.object);
+  for (let i = 0; i < 20; i++) f.handling.update(1 / 60);
+  const ahead = f.object.position.clone().sub(f.camera.position).normalize();
+  expect(ahead.dot(f.camera.getWorldDirection(new Vector3()))).toBeGreaterThan(
+    0.8,
+  );
+  // Full hands take nothing more.
+  expect(f.handling.give(f.object)).toBe(false);
+  f.handling.use(0.9, -0.9);
+  expect(f.component.phase.value).toBe('falling');
+  f.handling.dispose();
+});
+
+it('refuses to give what cannot be picked up, and forgets on request', () => {
+  const f = fixture();
+  f.component.setLocked(true);
+  expect(f.handling.give(f.object)).toBe(false);
+  f.component.setLocked(false);
+  expect(f.handling.give(f.object)).toBe(true);
+  f.handling.forget(f.object);
+  expect(f.handling.holding()).toBe(false);
+  const at = f.object.position.clone();
+  f.handling.update(1 / 60);
+  expect(f.object.position.equals(at)).toBe(true);
+  f.handling.dispose();
+});

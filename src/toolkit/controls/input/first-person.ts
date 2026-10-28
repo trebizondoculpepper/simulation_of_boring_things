@@ -1025,6 +1025,17 @@ export function createFirstPerson(options: FirstPersonOptions) {
   const controller = {
     walker,
     metre,
+    /**
+     * The hands of the shared pick-up and carry (`objects` given), for a
+     * room that hands things over (`give`) or resets them (`forget`).
+     */
+    hands: handling
+      ? {
+          give: handling.give,
+          forget: handling.forget,
+          holding: handling.heldObject,
+        }
+      : null,
     get floorY() {
       return currentFloorY;
     },

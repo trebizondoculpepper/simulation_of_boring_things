@@ -102,4 +102,24 @@ describe('Hall 5: what’s in the skimmer', () => {
     for (const f of FINDS) expect(f.caption.length).toBeGreaterThan(5);
     expect(SKIMMER_TAGS.skimmer).toBe('M5-SK1');
   });
+
+  it('counts a find landing in the skip, tossed from the deck, once', () => {
+    let g = run(
+      newSkimmerGame(4),
+      { type: 'lid' },
+      { type: 'deck', x: 0, z: 0 },
+      { type: 'skimmer' },
+      { type: 'deck', x: 1, z: 1 },
+      { type: 'land', index: 0 },
+      { type: 'land', index: 0 },
+      { type: 'land', index: 1 },
+    );
+    expect(g.places[0].at).toBe('skip');
+    expect(g.binned).toBe(1);
+    expect(g.places[1].at).toBe('basket');
+    for (let i = 1; i < g.order.length; i++)
+      g = run(g, { type: 'skimmer' }, { type: 'land', index: i });
+    expect(cleared(g)).toBe(true);
+    expect(g.said).toBe(CLEARED_LINE(g.order.length));
+  });
 });

@@ -98,3 +98,15 @@ it('keeps magnetic-range feedback when not aimed at the bin, and forgets removed
   expect(f.bin.group.userData.placementTarget).toBeUndefined();
   f.handling.dispose();
 });
+
+it('lets a bin refuse what it does not take: it is dropped beside it', () => {
+  const f = fixture();
+  f.bin.takes = (o) => o !== f.object;
+  expect(f.handling.targetFeedback(0, 0)).toBeNull();
+  f.handling.use(0, 0);
+  expect(f.handling.holding()).toBe(false);
+  expect(f.tossing.incoming(f.bin)).toBe(false);
+  expect(f.portable.component.phase.value).toBe('falling');
+  f.bin.takes = () => true;
+  f.handling.dispose();
+});

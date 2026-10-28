@@ -62,6 +62,8 @@ import { createInspector } from '../views/inspect-pick';
 import { localNow } from '../logic/museum-time';
 import { HALL_EXHIBITS } from './museum/exhibits';
 import type { HallExhibit } from './museum/exhibits';
+import { partOf } from './museum/exhibit-carrying';
+import type { CarryingExhibit } from './museum/exhibit-carrying';
 
 /**
  * The museum's ambient occlusion samples per pixel, at High (the owner,
@@ -127,7 +129,7 @@ export function startMuseumHallRoom(
   // drawn in its reset state and never stepped (rule 1: a hall's time
   // starts when the visitor crosses in).
   const kit = createPanelKit();
-  let exhibit: HallExhibit | null = null;
+  let exhibit: CarryingExhibit | null = null;
   const copyExhibits: HallExhibit[] = [];
   let disposed = false;
   const loadExhibit = (n: MuseumHallId, into: Group) =>
@@ -141,7 +143,10 @@ export function startMuseumHallRoom(
       return built;
     });
   void loadExhibit(id, hall.group)?.then((built) => {
-    if (built) exhibit = built;
+    if (!built) return;
+    exhibit = built;
+    // The exhibit's carrying (107f), through the control scheme's hands.
+    if (walk.hands) exhibit.carrying?.bind(walk.hands);
   });
   for (const [n, copy] of copies)
     void loadExhibit(n, copy.group)?.then((built) => {
@@ -300,6 +305,21 @@ export function startMuseumHallRoom(
     floorY: 0,
     start: { x: start.x * metre, z: start.z * metre, yaw: start.yaw },
     floorAt: () => 0,
+    // Carrying (107f): the control scheme's pick-up, carry and drop, for
+    // the exhibit's portable objects (`exhibit-carrying.ts`), in the
+    // scene's frame; a neighbour's copy's are never picked up.
+    objects: scene,
+    allowPickup: (object) =>
+      Boolean(
+        exhibit?.carrying &&
+        active &&
+        (partOf(object, exhibit.object) || !partOf(object, hall.group)),
+      ),
+    divert: (object, portable) =>
+      Boolean(active && exhibit?.carrying?.divert?.(object, portable)),
+    nearbyTargetFeedback: (object, portable) =>
+      (active && exhibit?.carrying?.nearbyTargetFeedback?.(object, portable)) ||
+      null,
     solids: () =>
       [
         ...hallSolids(id, seen),
@@ -312,7 +332,7 @@ export function startMuseumHallRoom(
     use: (x, y) => useAt(x, y)?.(),
     aimed: () => Boolean(useAt(0, 0)),
     // The information overlay: each thing says only what it shows itself.
-    inspect: createInspector({ root: hall.group, camera, metre }),
+    inspect: createInspector({ root: scene, camera, metre }),
   });
 
   const withdraw = hallArches(id).map((a) => {
