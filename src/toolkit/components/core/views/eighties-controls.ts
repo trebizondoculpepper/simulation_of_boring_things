@@ -425,6 +425,12 @@ const SEGMENTS: Record<string, string> = {
   S: 'afgcd',
   t: 'fged',
   U: 'bcdef',
+  // The dosing controllers' words (prompt 105): Hi, HAnd, Auto, Good, bUSY.
+  i: 'c',
+  n: 'ceg',
+  u: 'cde',
+  G: 'acdef',
+  Y: 'bcdfg',
 };
 
 export interface SevenSegment {

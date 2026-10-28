@@ -4,6 +4,7 @@ import type { ExhibitSize } from '../../logic/plant-room-layout';
 import { createPeristalticDemo } from '../../../components/plant/views/peristaltic-pump';
 import { createDiaphragmDemo } from '../../../components/plant/views/diaphragm-pump';
 import { createMotorDosingTrial } from '../../../components/plant/views/motor-dosing-trial';
+import { createDosingControllerTrial } from '../../../components/plant/views/dosing-controller-trial';
 import {
   createAcidBoard,
   createHypochloriteBoard,
@@ -122,6 +123,16 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     size: { w: 2.2, d: 0.9, h: 2.3, mount: 'floor' },
     maker: 'grundflow',
     build: (kit) => createMotorDosingTrial(kit),
+  },
+  // Prompt 105: the two pool groups' dosing controllers, designed and
+  // working on demonstration pools of their own (not the world's).
+  {
+    title: 'Dosing controller trial: CX-7 and DC-1',
+    reference:
+      'Chlorella CX-7 (the Olympic’s), after ProMinent DULCOMARIN 3 and W&T DEPOLOX Pool: a 7" touch screen, free and combined chlorine, pH, redox, temperature, trends, alarms, calibration, interlocks; and the Lounge’s Chlorella DC-1 pair, after ProMinent DULCOMETER D1C: LED readouts and membrane keys; each over its sample cell (after ProMinent DGMa), driving two Grundflow dosing pumps on a demonstration pool, its relays to a marshalling box TO CONTROL ROOM',
+    size: { w: 4.9, d: 1.5, h: 2.5, mount: 'floor' },
+    maker: 'chlorella',
+    build: (kit) => createDosingControllerTrial(kit),
   },
   {
     title: 'Hypochlorite dosing set',
