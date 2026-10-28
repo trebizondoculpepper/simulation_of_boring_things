@@ -211,3 +211,5 @@ Each card's goal check uses the green bands above, plus the card's own goal. Tim
 ### Question for the owner
 
 Should sulphate (from the dry acid) get its own meter on the readout, given PWTAG's 360 mg/l grout limit, or stay a log-sheet line only?
+
+Answered (the owner, 2026-10-28): "Sounds fun, let's give it a try." Sulphate gets its own meter on the pool's readout, read from the model's `sulphate` (mg/l as SO₄, already tracked in `pool-chemistry.ts`): a scale of 0 to 600 mg/l, green to 360 and red above, the grout limit marked on the dial as "GROUT". Its placard: dry acid (sodium bisulphate) adds sulphate every time it lowers the pH; above about 360 mg/l sulphate attacks cement grout, and only fresh mains water brings it down; "see what it does to grout in the Grout hall." It is also logged on the log sheet. A challenge card to go with it: a season of dry acid has pushed sulphate to about 400 mg/l; bring it back under the limit (the answer: dilution with mains water, and change to hydrochloric acid or CO₂ for pH), its numbers run through the bench before it ships.
