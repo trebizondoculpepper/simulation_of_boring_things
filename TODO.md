@@ -276,6 +276,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [ ] **The diary entry for 2026-10-23** (`diary/`): the Olympic plant room's redo, the tank hall, the solenoid valves, the five-valve battery, the world's battery and tank, the water effects.
 - [ ] **The room-name overlay after a hand-over through a door:** check it updates (it did when walking into the tank hall on 2026-10-23).
 - [x] **Legacy identification-pilot review retired** (superseded 2026-10-26, archive commit `1e2d855`): [007](doc/prompts/obsolete/007-identification-pilot-review.md) yields to the enhanced-network work; the unresolved compatibility and metadata questions remain in the follow-up below.
+- [ ] **Bump the version only when releasing** ([104](doc/prompts/104-release-only-versioning.md), [research](doc/research/104-release-only-versioning.md), the owner, 2026-10-28): a plain `npm run build` (the pre-commit check and CI's) writes nothing; one `npm run release` bumps, moves Unreleased, commits and tags after a successful bundle; CI deploys `main` with no `[skip ci]` bump commit; builds between releases are labelled with the release and commit; sessions stop committing `package.json` and the lockfile. Five questions for the owner first, one at a time.
 - [ ] **The stray `retired0` git tag:** a non-release tag made on 2026-10-23, harmless to CI; remove it if the owner wishes.
 
 ## Remaining work from mostly completed archived missions
