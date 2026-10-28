@@ -21,6 +21,7 @@ import {
 import type { PrinterStandView } from '../../../components/plant/views/control-panels';
 import { ALARM_TEXT } from '../../logic/control-room-demo';
 import type { PlantReading } from '../../logic/control-room-demo';
+import type { MimicState } from '../../../components/industrial-control/logic/mimic';
 import {
   AIR_MIMIC,
   HEATING_MIMIC,
@@ -139,16 +140,24 @@ export const EXHIBITS: readonly PlantExhibit[] = [
       const board = createMimicBoard(kit, spec, {
         press: (id) => pressPump(id),
       });
+      // Its state worked out once per world step: the reading is the same
+      // object until the world steps (`plantReadingOf`), and the board sets
+      // nothing for a state it has shown (mission 094).
+      let shownReading: PlantReading | null = null;
+      let shown: MimicState | null = null;
       return {
         object: board.group,
         parts: board.parts,
         update: () => {
           const now = reading();
-          board.show(
-            spec === MAIN_POOL_MIMIC
-              ? mainPoolState(now, pumpsShown(now))
-              : state(now),
-          );
+          if (now !== shownReading || !shown) {
+            shownReading = now;
+            shown =
+              spec === MAIN_POOL_MIMIC
+                ? mainPoolState(now, pumpsShown(now))
+                : state(now);
+          }
+          board.show(shown);
         },
       };
     },

@@ -4,6 +4,8 @@ import {
   budgetVerdict,
   countUsage,
   knownOverBudget,
+  medianOf,
+  starved,
   overBudget,
   rankSamples,
   rankedTable,
@@ -138,7 +140,7 @@ describe('component bench', () => {
 
   it('fails a run on any component over budget that is not known', () => {
     const chart = sample(
-      'chart-recorders',
+      'mimic-pool',
       {},
       {
         uploadsPerS: 60,
@@ -156,11 +158,11 @@ describe('component bench', () => {
     expect(passing.known.map((k) => k.id)).toEqual([panel.id]);
     const failing = budgetVerdict([sample('a'), panel, chart]);
     expect(failing.passed).toBe(false);
-    expect(failing.failures.map((f) => f.id)).toEqual(['chart-recorders']);
+    expect(failing.failures.map((f) => f.id)).toEqual(['mimic-pool']);
     // It says which texture it uploads.
     expect(failing.failures[0].over.at(-1)).toBe('uploading 512×512 ×72');
     expect(knownOverBudget('exhibit:dev47:Lectern')).toMatch(/TODO/);
-    expect(knownOverBudget('chart-recorders')).toBeUndefined();
+    expect(knownOverBudget('mimic-pool')).toBeUndefined();
   });
 
   it('names an upload by its size', () => {
@@ -179,5 +181,24 @@ describe('component bench', () => {
         ]),
       ),
     ).toBe('512×512 ×72, 64×64 ×3, 4×4 ×2');
+  });
+
+  it('takes the median, so one pause does not fail a budget', () => {
+    expect(medianOf([5, 6, 5, 4000, 6, 5])).toBe(5.5);
+    expect(medianOf([3, 1, 2])).toBe(2);
+    expect(medianOf([])).toBe(0);
+  });
+
+  it('knows a sample measured with the page starved of frames', () => {
+    expect(starved(sample('a'), 1)).toBe(false);
+    expect(starved(sample('a', { frames: 3 }), 1.2)).toBe(true);
+    expect(starved(sample('a', {}, { frames: 8 }), 1.2)).toBe(true);
+  });
+
+  it('does not judge a sample starved of frames, but lists it', () => {
+    const slow = sample('mimic-pool', { frames: 2 }, { uploadsPerS: 60 });
+    const verdict = budgetVerdict([slow], undefined, 1.2);
+    expect(verdict.passed).toBe(true);
+    expect(verdict.unsteady.map((u) => u.id)).toEqual(['mimic-pool']);
   });
 });

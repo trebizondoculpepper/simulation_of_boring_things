@@ -19,8 +19,11 @@ import { EQUIPPED_ROOMS, layoutRoom } from '../logic/room-equipment';
 import type { Item } from '../logic/room-equipment';
 import {
   BUSY_ROOMS,
+  DEFAULT_BUDGET,
   budgetVerdict,
   consoleRows,
+  medianOf,
+  starved,
   countUsage,
   rankSamples,
   rankedTable,
@@ -535,77 +538,93 @@ export async function runComponentBench(root: HTMLElement) {
   for (const [n, c] of list.entries()) {
     if (done.has(c.id)) continue;
     status.textContent = `${n + 1} / ${list.length}: ${c.label}`;
-    const kit = createPanelKit();
-    const sample: BenchSample = {
-      id: c.id,
-      label: c.label,
-      source: c.source,
-      room: c.room,
-      buildMs: 0,
-      updateUs: 0,
-      idle: empty(),
-      active: empty(),
-      drawCalls: 0,
-      triangles: 0,
-      materials: 0,
-      textures: 0,
-      textureBytes: 0,
-      live: false,
-    };
-    let built: Built | null = null;
-    try {
-      clockStopped.value = false;
-      const t0 = performance.now();
-      built = c.build(kit);
-      sample.buildMs = performance.now() - t0;
-      sample.live = !!built.update;
-      holder.add(built.object);
-      // Framed whole, from in front.
-      const box = new Box3().setFromObject(built.object);
-      const size = box.getSize(new Vector3());
-      const middle = box.getCenter(new Vector3());
-      const reach = Math.max(size.x, size.y, 0.05) * 1.3 + size.z;
-      camera.position.set(middle.x, middle.y, box.max.z + reach);
-      camera.near = Math.max(0.001, reach / 100);
-      camera.far = reach * 10 + size.z * 2;
-      camera.updateProjectionMatrix();
-      camera.lookAt(middle);
-      const update = built.update?.bind(built);
-      // Warm: its first uploads and shader compiles, the world running.
-      await phase(update, 0.3);
-      renderer.info.autoReset = true;
-      renderer.render(scene, camera);
-      sample.drawCalls = renderer.info.render.calls;
-      sample.triangles = renderer.info.render.triangles;
-      const r = resources(built.object);
-      sample.materials = r.materials.size;
-      sample.textures = r.textures.size;
-      sample.textureBytes = r.bytes;
-      // Idle: the world's clock stopped, so nothing it shows changes.
-      clockStopped.value = true;
-      sample.idle = await phase(update, secs);
-      // Its update back to back, the world still: precise where frames are not.
-      if (update) {
-        const calls = 120;
-        const t = performance.now();
-        for (let i = 0; i < calls; i++) update(1 / 60);
-        sample.updateUs = ((performance.now() - t) / calls) * 1000;
+    // Measured again, up to twice, if the page was starved of frames
+    // (a game in another tab, the development server rebuilding): a
+    // budget fails on the component, not on the machine (mission 094).
+    let sample!: BenchSample;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const kit = createPanelKit();
+      sample = {
+        id: c.id,
+        label: c.label,
+        source: c.source,
+        room: c.room,
+        buildMs: 0,
+        updateUs: 0,
+        idle: empty(),
+        active: empty(),
+        drawCalls: 0,
+        triangles: 0,
+        materials: 0,
+        textures: 0,
+        textureBytes: 0,
+        live: false,
+      };
+      let built: Built | null = null;
+      try {
+        clockStopped.value = false;
+        const t0 = performance.now();
+        built = c.build(kit);
+        sample.buildMs = performance.now() - t0;
+        sample.live = !!built.update;
+        holder.add(built.object);
+        // Framed whole, from in front.
+        const box = new Box3().setFromObject(built.object);
+        const size = box.getSize(new Vector3());
+        const middle = box.getCenter(new Vector3());
+        const reach = Math.max(size.x, size.y, 0.05) * 1.3 + size.z;
+        camera.position.set(middle.x, middle.y, box.max.z + reach);
+        camera.near = Math.max(0.001, reach / 100);
+        camera.far = reach * 10 + size.z * 2;
+        camera.updateProjectionMatrix();
+        camera.lookAt(middle);
+        const update = built.update?.bind(built);
+        // Warm: its first uploads and shader compiles, the world running.
+        await phase(update, 0.3);
+        renderer.info.autoReset = true;
+        renderer.render(scene, camera);
+        sample.drawCalls = renderer.info.render.calls;
+        sample.triangles = renderer.info.render.triangles;
+        const r = resources(built.object);
+        sample.materials = r.materials.size;
+        sample.textures = r.textures.size;
+        sample.textureBytes = r.bytes;
+        // Idle: the world's clock stopped, so nothing it shows changes.
+        clockStopped.value = true;
+        sample.idle = await phase(update, secs);
+        // Its update back to back, the world still: precise where frames are not.
+        // The median of six batches of twenty, so one pause (a collection,
+        // the development server's reload of another file) does not count
+        // as the component's cost and fail its budget.
+        if (update) {
+          const batches: number[] = [];
+          for (let b = 0; b < 6; b++) {
+            const t = performance.now();
+            for (let i = 0; i < 20; i++) update(1 / 60);
+            batches.push(((performance.now() - t) / 20) * 1000);
+          }
+          sample.updateUs = medianOf(batches);
+        }
+        // Active: the world running, as in the game.
+        clockStopped.value = false;
+        sample.active = await phase(update, secs);
+      } catch (error) {
+        sample.error = error instanceof Error ? error.message : String(error);
+        clockStopped.value = false;
       }
-      // Active: the world running, as in the game.
-      clockStopped.value = false;
-      sample.active = await phase(update, secs);
-    } catch (error) {
-      sample.error = error instanceof Error ? error.message : String(error);
-      clockStopped.value = false;
-    }
-    try {
-      built?.dispose?.();
-      if (built) {
-        holder.remove(built.object);
-        disposeAll(built.object, kit);
+      try {
+        built?.dispose?.();
+        if (built) {
+          holder.remove(built.object);
+          disposeAll(built.object, kit);
+        }
+      } catch (error) {
+        console.warn(`component bench: disposing ${c.id}`, error);
       }
-    } catch (error) {
-      console.warn(`component bench: disposing ${c.id}`, error);
+      if (!starved(sample, secs)) break;
+      console.warn(
+        `component bench: ${c.id} starved of frames, measured again`,
+      );
     }
     samples.push(sample);
     try {
@@ -629,7 +648,7 @@ export async function runComponentBench(root: HTMLElement) {
   // The budgets, failing loudly (mission 094): every component over its
   // budget and not known to be is an error in the console, a red banner
   // over the page and the page's title.
-  const verdict = budgetVerdict(samples);
+  const verdict = budgetVerdict(samples, DEFAULT_BUDGET, secs);
   const banner = document.createElement('p');
   Object.assign(banner.style, {
     padding: '0.6em 1em',
@@ -667,7 +686,11 @@ function reportMarkdown(
   ranked: readonly Ranked[],
   run: { secs: number; baselineRenderMs: number; gpu: string; count: number },
 ) {
-  const verdict = budgetVerdict(ranked.map((r) => r.sample));
+  const verdict = budgetVerdict(
+    ranked.map((r) => r.sample),
+    DEFAULT_BUDGET,
+    run.secs,
+  );
   const errors = ranked.filter((r) => r.sample.error);
   const used = ranked.filter((r) => r.weight > 0);
   const total = used.reduce(
@@ -682,6 +705,8 @@ function reportMarkdown(
     verdict.passed
       ? '**Budgets: passed.**'
       : `**Budgets: FAILED.** Over budget: ${verdict.failures.map((f) => `${f.label} (${f.over.join('; ')})`).join('; ')}.`,
+    '',
+    `Not judged, the page starved of frames even when measured again (rerun them with \`only\`): ${verdict.unsteady.length ? verdict.unsteady.map((u) => u.label).join('; ') : 'none'}.`,
     '',
     `Over budget but known: ${verdict.known.length ? verdict.known.map((k) => `${k.label} (${k.why})`).join('; ') : 'none'}.`,
     '',

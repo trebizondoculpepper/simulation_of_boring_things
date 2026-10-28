@@ -443,9 +443,14 @@ export function createSevenSegment(
   const cellH = 64;
   const w = cellW * digits + 16;
   const h = cellH + 16;
-  // Drawn four times over, so each segment's pointed ends and its glow are
-  // smooth up close: an LED digit, not a block of pixels.
-  const S = 4;
+  // Drawn several times over, so each segment's pointed ends and its glow
+  // are smooth up close: an LED digit, not a block of pixels. At least
+  // eight texels a millimetre of its glass, as the largest (a boiler's
+  // 26 mm digits, four times over) has; a small one needs fewer, and
+  // uploads a quarter of the texels when its reading changes (mission 094:
+  // the spa UV's 12 mm hours counter uploaded 864 × 320 every second).
+  const cellMm = (digitHeight * 1000 * cellH) / (cellH - 16);
+  const S = Math.min(4, Math.max(2, Math.ceil((8 * cellMm) / cellH)));
   const { context, texture } = createCanvasTexture(w * S, h * S);
   kit.textures.push(texture);
   const group = new Group();

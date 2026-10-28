@@ -44,7 +44,7 @@ export interface BenchSample {
   /** The room it was built for, if a room item. */
   room?: string;
   buildMs: number;
-  /** `update` called back to back, µs a call, the world frozen (precise where the frame timer is not). */
+  /** `update` called back to back, µs a call, the world frozen: the median of six batches of twenty (precise where the frame timer is not). */
   updateUs: number;
   idle: PhaseStats;
   active: PhaseStats;
@@ -195,6 +195,30 @@ export const KNOWN_OVER_BUDGET: Readonly<Record<string, string>> = {
     'dev0: its demonstration drives its fittings every frame',
   'board:period instruments':
     'dev0: its demonstration swings its recorders’ pens every frame',
+  'chart-recorders':
+    'left (2026-10-27): its two strip charts’ paper advances four times a second, a real change',
+  'part:strip-chart':
+    'left (2026-10-27): its paper advances four times a second, a real change',
+  'part:circular-chart':
+    'driven by the benchmark’s fast test signal, far faster than the hall’s air in the game; with the world still it uploads nothing',
+  'hypo-pumps':
+    'left (2026-10-28): each pump’s LCD shows its stroke as it strokes, about twice a second, a real change; just over',
+  'exhibit:dev44:Hypochlorite dosing set':
+    'left (2026-10-28): its pumps’ LCDs show each stroke, a real change; just over',
+  'exhibit:dev44:Stepper diaphragm dosing pump':
+    'left (2026-10-28): its LCD shows each stroke, a real change',
+  'exhibit:dev39:Chemical distribution terminals':
+    'flagged in TODO.md: the OT-216 terminals redraw with nothing changing (prompt 091)',
+  'exhibit:dev44:Chemical distribution panels':
+    'flagged in TODO.md: the OT-216 terminals redraw with nothing changing (prompt 091)',
+  'exhibit:dev44:Hypochlorite bulk tank':
+    'its demonstration drives its level instrument every frame; the world drives it at most ten times a second',
+  'exhibit:dev44:Acid bulk tank':
+    'its demonstration drives its level instrument every frame; the world drives it at most ten times a second',
+  'boiler-cascade:1':
+    'left (2026-10-28): its two controllers’ 26 mm displays show the flow temperature as it climbs, each change 704 × 320; running only',
+  'exhibit:dev49:':
+    'flagged in TODO.md: the station schematics redraw their 1026 × 578 screens about ten times a second (mission 095)',
 };
 
 /** Why a sample's overrun is known, if it is (`KNOWN_OVER_BUDGET`). */
@@ -207,18 +231,26 @@ export const knownOverBudget = (id: string) =>
 export function budgetVerdict(
   samples: readonly BenchSample[],
   budget = DEFAULT_BUDGET,
+  /** Each phase's seconds: a sample starved of frames is not judged. */
+  secs = 1.2,
 ) {
   const failures: { id: string; label: string; over: string[] }[] = [];
   const known: { id: string; label: string; over: string[]; why: string }[] =
     [];
+  // Starved of frames even when measured again: not judged, but listed.
+  const unsteady: { id: string; label: string }[] = [];
   for (const s of samples) {
+    if (starved(s, secs)) {
+      unsteady.push({ id: s.id, label: s.label });
+      continue;
+    }
     const over = overBudget(s, budget);
     if (!over.length) continue;
     const why = knownOverBudget(s.id);
     if (why) known.push({ id: s.id, label: s.label, over, why });
     else failures.push({ id: s.id, label: s.label, over });
   }
-  return { passed: failures.length === 0, failures, known };
+  return { passed: failures.length === 0, failures, known, unsteady };
 }
 
 /** What a sample does over its budget, in words; empty if within it. */
@@ -245,6 +277,23 @@ export function overBudget(s: BenchSample, budget = DEFAULT_BUDGET): string[] {
     : undefined;
   if (by) over.push(`uploading ${by}`);
   return over;
+}
+
+/**
+ * Whether a sample was measured with the page starved of frames (fewer
+ * than twenty a second in either phase): its numbers are the machine's,
+ * not the component's, and it is measured again.
+ */
+export const starved = (s: BenchSample, secs: number) =>
+  !s.error &&
+  (s.idle.frames < 20 * secs * 0.9 || s.active.frames < 20 * secs * 0.9);
+
+/** The median of some numbers (0 for none). */
+export function medianOf(values: readonly number[]) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 /** Upload counts by texture size, most first, as `512×512 ×72, 64×64 ×3`. */

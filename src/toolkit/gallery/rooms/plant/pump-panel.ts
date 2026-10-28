@@ -28,6 +28,7 @@ import { MAIN_POOL_MIMIC, mainPoolState } from '../../logic/pool-mimics';
 import { createLoungeFilterMimic } from '../../views/lounge-filter-mimic';
 import { roomWorld } from '../../../save/world-store';
 import type { PumpsShown } from '../../logic/pool-mimics';
+import type { MimicState } from '../../../components/industrial-control/logic/mimic';
 import { MOTORS, POOL_MOTORS } from '../../../../game/plant/motor-starters';
 import type {
   MotorTag,
@@ -314,6 +315,8 @@ export const pumpPanelExhibit = (pool: PoolId = 'pool_02'): PlantExhibit => ({
     face.add(stop.object);
     const group = new Group();
     group.add(cubicle.group);
+    let mimicReading: PlantReading | null = null;
+    let mimicState: MimicState | null = null;
     return {
       object: group,
       parts,
@@ -333,7 +336,12 @@ export const pumpPanelExhibit = (pool: PoolId = 'pool_02'): PlantExhibit => ({
         }
         if (lounge) lounge.update(delta);
         else {
-          mimic.show(mainPoolState(reading, shown));
+          // Its mimic's state once per world step (mission 094).
+          if (reading !== mimicReading || !mimicState) {
+            mimicReading = reading;
+            mimicState = mainPoolState(reading, shown);
+          }
+          mimic.show(mimicState);
           mimic.parts.update(delta);
         }
       },

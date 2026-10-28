@@ -169,12 +169,21 @@ export function createAirMimic(kit: PanelKit) {
         });
     },
   });
+  // Its state once per world step: the world is immutable, and the board
+  // sets nothing for a state it has shown (mission 094).
+  let shownWorld: unknown = null;
+  let shown: ReturnType<typeof airMimicState> | null = null;
   return {
     object: board.group,
     parts: board.parts,
     update() {
       if (!store) return;
       const world = store.world.value;
+      if (world === shownWorld && shown) {
+        board.show(shown);
+        return;
+      }
+      shownWorld = world;
       const rh = hallRhOf(world.pools);
       const units: AirReading['units'] = Object.fromEntries(
         AIR_UNITS.map((u) => {
@@ -183,9 +192,8 @@ export function createAirMimic(kit: PanelKit) {
           return [u.tag, { ...l, speed: s.speed, hallRh: s.hallRh }];
         }),
       );
-      board.show(
-        airMimicState({ units, occupied: world.airHandling.occupied }),
-      );
+      shown = airMimicState({ units, occupied: world.airHandling.occupied });
+      board.show(shown);
     },
   };
 }

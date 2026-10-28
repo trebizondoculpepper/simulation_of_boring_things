@@ -1,5 +1,6 @@
 import { markComponent } from '../../../components/core/views/component-identity';
 import { computed, signal } from '@preact/signals-core';
+import { clockStopped, paused } from '../../../controls/logic/paused';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import {
   createPartSet,
@@ -178,8 +179,10 @@ export function createLiveBoilerCascade(
     parts,
     update(delta) {
       // One cascade advances the shared model once; each physical pair
-      // displays only its own boiler controllers.
-      if (first === 0) {
+      // displays only its own boiler controllers. The model stands still
+      // with the world's clock (the menu, the console's pause), as the
+      // world does: its displays then have nothing new to show (mission 094).
+      if (first === 0 && !paused.value && !clockStopped.value) {
         house.seconds += delta;
         settle();
         const plant = currentPlant();
