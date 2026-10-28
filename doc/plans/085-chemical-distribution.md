@@ -65,7 +65,7 @@ The ring corridor is 28 × 28 m around the sunken wet hall (20 × 20 m, its floo
   - a header fed from its main;
   - per live outlet: a manual isolating valve, an actuated ball valve with position dome, and a plate.
   - Spares are blanked and tagged.
-- **Outlets.** Hypochlorite: 1 Lounge, 2 Olympic, 3 Jacuzzi, 4 Footbath, 5–6 spare. Acid: 1 Lounge, 2 Olympic, 3 Jacuzzi, 4–6 spare (the footbath doses no acid).
+- **Outlets.** Hypochlorite: 1 Lounge, 2 Olympic, 3 Jacuzzi, 4 Footbath, 5–6 spare. Acid: 1 Lounge, 2 Olympic, 3 Jacuzzi, 4 Footbath, 5–6 spare (the footbath doses both, as every pool does: see "Why every pool doses both" below).
 - **Each manifold's safety:** eyewash on the wall by it, a never-mix notice, its chemical's hazard signs.
 - **The chemical distribution panel** (Penfold) on the aisle side between them; see Control below.
 - The mains come down the west wall at high level and along the south wall at about 5 m, the acid's ending at the south-west manifold and the hypochlorite's continuing round to the south-east one. The branches rise from each manifold's outlets back up to high level.
@@ -76,12 +76,12 @@ Approximate, by compass direction only.
 
 All branches are double-contained, at high level, the two chemicals on separate brackets.
 
-| Branch       | Route                                                                                                                       | Approx. length              |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| PL1 Lounge   | Out the hall's south wall near x −7.8, across the corridor's south arm into PL1                                             | 8–12 m                      |
-| PL2 Olympic  | Up and over the make-up bay's partition (3.6 m) at about 5 m, out the north wall near x −2.8, across the north arm into PL2 | 20–25 m                     |
-| PL3 Jacuzzi  | Out the west wall near z +10, south along the corridor's west arm, into PL3                                                 | 12–18 m                     |
-| PL4 Footbath | Out the west wall near z +3, across the west arm into PL4                                                                   | 10–15 m (hypochlorite only) |
+| Branch       | Route                                                                                                                       | Approx. length           |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| PL1 Lounge   | Out the hall's south wall near x −7.8, across the corridor's south arm into PL1                                             | 8–12 m                   |
+| PL2 Olympic  | Up and over the make-up bay's partition (3.6 m) at about 5 m, out the north wall near x −2.8, across the north arm into PL2 | 20–25 m                  |
+| PL3 Jacuzzi  | Out the west wall near z +10, south along the corridor's west arm, into PL3                                                 | 12–18 m                  |
+| PL4 Footbath | Out the west wall near z +3, across the west arm into PL4                                                                   | 10–15 m (both chemicals) |
 
 ### The plant rooms
 
@@ -100,9 +100,26 @@ The exact spot in each room is found by the room's layout tools (`doc/room-layou
 | PL2 Olympic  | 1,000 L framed, about 1.3 × 0.85 × 1.1 m, bund about 1.1 m³ | 500 L framed  | The biggest use (roughly 50–150 L/day of hypochlorite): about a week's stock |
 | PL1 Lounge   | 300 L framed (as dev44's)                                   | 200 L framed  |                                                                              |
 | PL3 Jacuzzi  | 60 L drum-size bunded tank                                  | 30 L          | Feeds the packaged spa cabinet's own dosing, re-pointed                      |
-| PL4 Footbath | 30 L                                                        | none          | Hypochlorite only                                                            |
+| PL4 Footbath | 30 L                                                        | 15 L          | Feeds the footbath cabinet's two peristaltic pumps (the owner, 2026-10-28)   |
 
 Use differs by orders of magnitude, so the same 20 L/min transfer fills the footbath's tank in about a minute and the Olympic's in about an hour. Each fill is ended by the tank's high switch whatever its size.
+
+## Design rationale
+
+### Why every pool doses both (the owner, 2026-10-28)
+
+The footbath doses acid as well as hypochlorite, like every pool, and has a 15 L acid day tank on the acid selector's fourth outlet. An earlier draft of this plan gave it hypochlorite only. That was an assumption made while its schematic had no dosing, not a ruling, and the footbath cabinet's design, with an inlet and a peristaltic pump for each chemical, has since overtaken it. The reasons:
+
+- Sodium hypochlorite is strongly alkaline, so dosing it alone drives the pH up.
+- Chlorine's strength depends on pH: at 7.2 about two-thirds of the free chlorine is hypochlorous acid, the active form; at 8.0 only about a fifth. Above the range, the same chlorine reading disinfects far less.
+- A footbath carries the heaviest soiling and the risk of verrucas and fungal infection, runs warm (28 °C) and holds little water, so its pH and chlorine drift fastest of all. Acid dosing holds it at pH 7.2–7.4, where hypochlorite works best.
+- Hypochlorite alone only suits a footbath that is drain-to-waste and constantly refilled with fresh water, or one fed with a pool's already treated water. Ours recirculates through its own cabinet, so it needs both.
+
+### Why the transfer pump stands at the store (2026-10-28)
+
+Each chemical has one pump, the transfer pump on its skid in its store, pushing through the main, the wet hall's selector and the branch to every day tank. There is no booster, and none is needed. Worst case, hypochlorite to the Olympic: about 55 m of line (25–30 m to the selector, 20–25 m on), a high point about 6 m up (the wet hall's 1.75 m-lower floor adds nothing, since what goes down comes back up), and 20 L/min in a 20 mm bore at about 1 m/s, giving about 5 m of friction for hypochlorite (specific gravity about 1.2, a little more viscous than water) and about 1 m more for the valves, selector and elbows: roughly 12 m of head, 1.4 bar. A magnetic-drive centrifugal pump of the Iwaki MX class gives 10–20 m at that flow; a 25 mm bore would cut the friction below 2 m.
+
+The pump must not move to the selectors. It would then have to pull the chemical 25–30 m from the store over the 6 m high point. A magnetic-drive centrifugal pump cannot prime itself and needs a flooded suction; 6 m is near any pump's suction limit; and hypochlorite gives off gas, which collects at a suction line's high point and stops the flow. So, as on real sites, the transfer pump stands beside the bulk tanks and pushes. A booster by the selectors would only be worth it on runs several times longer.
 
 ## Showing the flow
 

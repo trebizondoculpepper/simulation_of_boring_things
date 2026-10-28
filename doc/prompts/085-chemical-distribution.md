@@ -1,6 +1,6 @@
 # 085: Chemical distribution, from the fill ports to the dosing points
 
-Status: in progress (written 2026-10-26 with the owner). Audited 2026-10-28 (below): not done. Gaps 1 and 3 closed 2026-10-28 (every chemical valve in the model; the Olympic's chemical schematic); gap 2 closed for the loading bay, not for the corridors. Open for the owner: the footbath's acid day tank (gap 5), kept as it is. Both paths are in the schematics end to end and drawn, but almost none of their valves are in the enhanced network, the loading bay's and the corridors' lines are laid by hand rather than routed from a schematic, and deliveries, the overfill stop, the circulation interlock and the remaining controls are not built.
+Status: in progress (written 2026-10-26 with the owner). Audited 2026-10-28 (below): not done. Gaps 1 and 3 closed 2026-10-28 (every chemical valve in the model; the Olympic's chemical schematic); gap 2 closed for the loading bay, not for the corridors. The footbath's acid day tank (gap 5) kept: the owner, 2026-10-28, the footbath doses both, as every pool does (the plan's "Design rationale"). Both paths are in the schematics end to end and drawn, but almost none of their valves are in the enhanced network, the loading bay's and the corridors' lines are laid by hand rather than routed from a schematic, and deliveries, the overfill stop, the circulation interlock and the remaining controls are not built.
 
 ## Audit — 2026-10-28
 
@@ -33,7 +33,7 @@ Every chemical link of the schematics that have them is drawn (`chemical-routing
 
 **The model.** The transfer works across the building (`src/game/plant/chemical-distribution.ts`, `world.distribution`: store, selector, day tanks, a high-high trip), the wet hall's panel shows it, and 091 is replacing that panel. Not built: deliveries into the bulk tanks (076); the bulk tanks' high and high-high switches and the overfill stop; the circulation flow interlock on dosing; the stores' handling panels, the plant rooms' day tank panels and the control room's mimic page; dosing rates from the pools' bather load.
 
-**A departure from the plan.** The footbath (`plant_pool_04`) has an acid day tank (`dayTanks` gives every room both; `DAY_TANKS` acid 15 L), where the plan says hypochlorite only. To confirm with the owner.
+**A departure from the plan.** The footbath (`plant_pool_04`) has an acid day tank (`dayTanks` gives every room both; `DAY_TANKS` acid 15 L), where the plan said hypochlorite only. Decided 2026-10-28 (the owner): kept, the footbath dosing both chemicals like every pool; the plan is corrected and gives the reasons under "Design rationale".
 
 ### Gaps (in `TODO.md`)
 
@@ -41,7 +41,7 @@ Every chemical link of the schematics that have them is drawn (`chemical-routing
 2. The loading bay's chemical lines routed by the plumber from its schematic, in place of `loading-bay-plumbing.ts`'s hand-laid points, and the loading bay added to `chemical-routing.test.ts`; the corridor runs tied to the schematics' cross-room links. **The bay's done 2026-10-28 (c27152e)**: `loadingBayLines` takes the bay's chemical links from its schematic and lays the hypochlorite's delivery line and both mains with the voxel router between their wall sleeves, round the cabinets, clear of the lorries' bays (below 4.9 m where their bodies stand, the dock's north half; below 3.2 m the whole depth) and the doors' clear ways, each carried on through its wall; the acid's delivery line, a riser out of the cabinet's top and an elbow into the wall behind, by rule; the fill ports' valves set in their risers by the plumber; tested in `loading-bay-plumbing.test.ts`, and the bay is in `chemical-routing.test.ts`. The mains' sleeves are now at 3.6 m (they cross at 3.8 m), the hypochlorite's delivery line enters its store at 5.0 m (it crosses at 5.3 m). **Not done: the corridor runs.** `corridor-services.ts` lays the mains and branches by hand on its own tiers (2.9 m and 3.0 m, in the corridor's frame) from no schematic, and they meet neither the bay's sleeves nor the rooms' exactly. Tying them needs: each cross-room link's wall sleeve (its wall, position and height) held once as shared data that both rooms' plumbing and the corridor read; the corridor's chemical runs derived from the schematics' boundary links (each store's `main`, the wet hall's `*-main` and `*-plN`, each plant room's `*-branch`) rather than its own list; and the corridor's tiers moved, or the rooms' sleeves, so they agree. Not trivial; left for 088's merging of the geometry.
 3. The Olympic's chemical lines and valves in a schematic like the other rooms' (prompt 063). **Done 2026-10-28 (69574be)**: `src/game/plant/olympic-chemical-schematic.ts` holds its branches, day tanks, supply lines and dose lines (renamed to the runs' names, `Hypochlorite supply line` and the rest) with their 7 isolating valves (the 1,000 l hypochlorite day tank's actuated and hand inlet valves and its outlet valve, the acid bottle's inlet and outlet valves, each dose line's isolation) and 2 non-return valves, tagged PL2-DT1-IV1 to PL2-DP2-NRV1; the room's annex takes its nodes, links and fittings from it, so the Olympic's enhanced network has them; the plumber adds nothing. The framed day tank draws its three; the rest are set in their runs.
 4. Deliveries (076), the overfill stop, the circulation interlock, the remaining controls (086's audit), dosing rates from the pools.
-5. The footbath's acid day tank: keep or remove.
+5. The footbath's acid day tank: kept (the owner, 2026-10-28).
 
 ## Gap 1, closed — 2026-10-28
 
@@ -163,7 +163,7 @@ The owner, 2026-10-26: a list, room by room, of what this work puts there. "Has"
 
 **Footbath plant room (`plant_pool_04`)**
 
-- To decide: its schematic has no dosing. A footbath is usually chlorinated, either fed from a pool's treated water or dosed itself. If it is dosed, a hypochlorite metering pump from a small local container (no acid); if not, nothing new here.
+- To decide: its schematic has no dosing. A footbath is usually chlorinated, either fed from a pool's treated water or dosed itself. Since decided (the owner, 2026-10-28): it is dosed by its own cabinet, with both hypochlorite and acid, from its two day tanks.
 
 **Control room**
 

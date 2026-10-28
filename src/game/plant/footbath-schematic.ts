@@ -13,8 +13,8 @@ import { dayTanks } from './schematic-parts';
  * overflow, shut, would flood the deck). Pure.
  */
 
-// Its acid day tank too, though plan 085 gave the footbath hypochlorite
-// only: kept until the owner decides (prompt 085's open question).
+// Its acid day tank too: the footbath doses both, as every pool does
+// (the owner, 2026-10-28; plan 085's "Design rationale").
 const FOOTBATH_DAY_TANKS = dayTanks(
   {
     hypochlorite: ['cabinet', 'hypochlorite'],
