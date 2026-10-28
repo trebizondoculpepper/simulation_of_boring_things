@@ -17,6 +17,12 @@ import {
 } from '../../../components/loading-dock/audio/shutter-run';
 import { plantTools } from '../../../components/plant/views/plant-tools';
 import {
+  createClass8Placard,
+  createHazchemPlate,
+  createOrangePlate,
+} from '../../../components/general-safety/views/dangerous-goods';
+import { TANK_CHEMICAL } from '../../../components/plant/logic/iso-tank';
+import {
   PALLET,
   createChainRun,
   createDockBuffer,
@@ -266,6 +272,58 @@ function metering<T extends { group: Group }>(
   };
 }
 
+/**
+ * A board of the marks a chemical tanker carries: both chemicals' Hazchem
+ * plates across the top, below them the class 8 placard and the orange
+ * plates, numbered for each chemical and plain. Facing +z, its middle at
+ * the origin.
+ */
+function createDangerousGoodsBoard(kit: PanelKit) {
+  const t = plantTools(kit);
+  const group = new Group();
+  // Its face 3 cm off the wall, clear of the wall's own face.
+  t.box(group, t.paint('#3b3f43', 0.7), 2.6, 1.5, 0.03, 0, 0, 0.015);
+  const at = (o: Object3D, x: number, y: number) => {
+    o.position.set(x, y, 0.032);
+    group.add(o);
+  };
+  for (const [i, chemical] of (['hypochlorite', 'acid'] as const).entries()) {
+    const info = TANK_CHEMICAL[chemical];
+    at(
+      createHazchemPlate(kit, {
+        eac: info.eac,
+        un: info.un,
+        phone: '01632 960 179',
+        company: 'Chlorella Chemicals',
+      }),
+      i === 0 ? -0.62 : 0.62,
+      0.33,
+    );
+    at(
+      createOrangePlate(kit, { hazard: info.hazard, un: info.un }),
+      i === 0 ? -0.55 : 0.05,
+      -0.45,
+    );
+  }
+  at(createClass8Placard(kit, 0.3), -1.05, -0.45);
+  at(createOrangePlate(kit), 0.65, -0.45);
+  const legend = (text: string, x: number, y: number) => {
+    const label = createMicroLabel(kit, text, {
+      height: 0.035,
+      ink: '#f2f2ee',
+    });
+    label.position.set(x, y, 0.033);
+    group.add(label);
+  };
+  legend('HYPOCHLORITE · HAZCHEM', -0.62, 0.68);
+  legend('HYDROCHLORIC ACID · HAZCHEM', 0.62, 0.68);
+  legend('ADR CLASS 8', -1.05, -0.66);
+  legend('80 / 1791', -0.55, -0.66);
+  legend('80 / 1789', 0.05, -0.66);
+  legend('CAB FRONT', 0.65, -0.66);
+  return group;
+}
+
 export const EXHIBITS: readonly PlantExhibit[] = [
   {
     title: 'Insulated roller shutter, its controller and dock light',
@@ -418,6 +476,12 @@ export const EXHIBITS: readonly PlantExhibit[] = [
     'A 205 L drum on a two-drum bunded pallet',
     { w: 1.35, d: 0.8, h: 1.25, mount: 'floor' },
     createDrumOnSpillPallet,
+  ),
+  still(
+    'Dangerous goods marks on a chemical tanker',
+    'What a tanker of the site’s chemicals shows (prompt 097): UK Hazchem plates on its sides and rear, 800 × 500 mm (sodium hypochlorite 2X, UN 1791; hydrochloric acid 2R, UN 1789), the ADR class 8 placard, the orange plates with hazard and UN numbers, and the plain orange plate on the cab’s front',
+    { w: 2.6, d: 0.06, h: 1.5, mount: 'wall', y: 1.95 },
+    createDangerousGoodsBoard,
   ),
   {
     title: 'Chemical delivery fill cabinet',
