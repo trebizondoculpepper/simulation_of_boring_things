@@ -143,15 +143,11 @@ export function createSettingsMirror({
             select.append(option);
           });
           select.addEventListener('change', () =>
-            updateSettings(
-              settingFor('onScreenControls', Number(select.value)),
-            ),
+            updateSettings(settingFor(item.id, Number(select.value))),
           );
           stops.push(
             effect(() => {
-              select.value = String(
-                selectorIndex(settings.value.onScreenControls),
-              );
+              select.value = String(selectorIndex(item.id, settings.value));
             }),
           );
           section.append(track(id, select));

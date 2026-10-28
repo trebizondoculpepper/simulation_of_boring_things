@@ -1,6 +1,12 @@
 import type { OnScreenControls } from '../../controls/logic/hud-policy';
-import { EFFECT_LEVELS, RESOLUTION_CAPS } from './graphics';
-import type { EffectLevel, ResolutionCap } from './graphics';
+import {
+  DEFAULT_GRAPHICS,
+  EFFECT_LEVELS,
+  PRESET_CHOICES,
+  RESOLUTION_CAPS,
+  parsePreset,
+} from './graphics';
+import type { EffectLevel, GraphicsPreset, ResolutionCap } from './graphics';
 
 /**
  * The player's settings (`doc/plans/title-screen.md`): a placeholder set
@@ -29,6 +35,8 @@ export interface Settings {
   filmEffects: boolean;
   /** The tallest image drawn, whatever the screen: a cap on the pixel ratio. */
   resolutionCap: ResolutionCap;
+  /** The graphics preset (`graphics.ts`, mission 087): the effects with no setting of their own. */
+  graphics: GraphicsPreset;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -43,6 +51,7 @@ export const DEFAULT_SETTINGS: Settings = {
   bloom: 'high',
   filmEffects: true,
   resolutionCap: 'native',
+  graphics: DEFAULT_GRAPHICS,
 };
 
 /** Each number's range and step, as its slider offers it. */
@@ -65,6 +74,15 @@ export const renderScale = (level: number) => 1 / Math.log(Math.E + level);
 
 const clamp = (v: number, { min, max }: { min: number; max: number }) =>
   Math.min(max, Math.max(min, v));
+
+/**
+ * Choosing a graphics preset: the preset, and the settings it starts the
+ * player's own at (which can then be changed one by one).
+ */
+export const choosePreset = (preset: GraphicsPreset): Partial<Settings> => ({
+  graphics: preset,
+  ...PRESET_CHOICES[preset],
+});
 
 /** Settings from whatever was stored: each value checked, else its default. */
 export function cleanSettings(stored: unknown): Settings {
@@ -102,5 +120,7 @@ export function cleanSettings(stored: unknown): Settings {
     resolutionCap: RESOLUTION_CAPS.includes(s.resolutionCap as ResolutionCap)
       ? (s.resolutionCap as ResolutionCap)
       : DEFAULT_SETTINGS.resolutionCap,
+    // A save from before the presets is High, the look it was playing.
+    graphics: parsePreset(s.graphics) ?? DEFAULT_GRAPHICS,
   };
 }

@@ -1,6 +1,22 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { ambientOcclusionAt, bloomAt, cappedPixelRatio } from './graphics';
-import { DEFAULT_SETTINGS, cleanSettings } from './settings';
+import {
+  DEFAULT_GRAPHICS,
+  EFFECT_LEVELS,
+  GRAPHICS,
+  GRAPHICS_PRESETS,
+  PRESET_CHOICES,
+  ambientOcclusionAt,
+  bloomAt,
+  cappedPixelRatio,
+  parsePreset,
+  shadowMapSide,
+} from './graphics';
+import {
+  DEFAULT_SETTINGS,
+  RANGES,
+  choosePreset,
+  cleanSettings,
+} from './settings';
 
 describe('the costlier effects’ settings', () => {
   it('run ambient occlusion at fewer samples as its quality falls', () => {
@@ -58,5 +74,91 @@ describe('the costlier effects’ settings', () => {
       filmEffects: false,
       resolutionCap: '720',
     });
+  });
+});
+
+describe('graphics presets', () => {
+  it('default to High, the look the game has always had', () => {
+    expect(DEFAULT_GRAPHICS).toBe('high');
+    expect(DEFAULT_SETTINGS.graphics).toBe('high');
+    expect(GRAPHICS.high).toMatchObject({
+      pixelRatioCap: 2,
+      antialias: true,
+      refraction: true,
+      shadows: true,
+    });
+    // High chooses the player's own settings at their defaults.
+    for (const [key, value] of Object.entries(PRESET_CHOICES.high))
+      expect(DEFAULT_SETTINGS[key as keyof typeof DEFAULT_SETTINGS]).toBe(
+        value,
+      );
+  });
+
+  it('cost less at each step down', () => {
+    const rank = (l: string) => EFFECT_LEVELS.indexOf(l as never);
+    for (let i = 1; i < GRAPHICS_PRESETS.length; i++) {
+      const [lower, higher] = [GRAPHICS_PRESETS[i - 1], GRAPHICS_PRESETS[i]];
+      const [lo, hi] = [GRAPHICS[lower], GRAPHICS[higher]];
+      expect(lo.pixelRatioCap).toBeLessThan(hi.pixelRatioCap);
+      expect(lo.shadowMapMax).toBeLessThanOrEqual(hi.shadowMapMax);
+      for (const key of ['antialias', 'refraction', 'shadows'] as const)
+        if (lo[key]) expect(hi[key]).toBe(true);
+      const [a, b] = [PRESET_CHOICES[lower], PRESET_CHOICES[higher]];
+      expect(a.renderLevel).toBeGreaterThan(b.renderLevel);
+      expect(rank(a.ambientOcclusion)).toBeLessThanOrEqual(
+        rank(b.ambientOcclusion),
+      );
+      expect(rank(a.bloom)).toBeLessThanOrEqual(rank(b.bloom));
+    }
+  });
+
+  it('switch off the costly effects on Low', () => {
+    expect(GRAPHICS.low).toMatchObject({
+      antialias: false,
+      refraction: false,
+      shadows: false,
+    });
+    expect(PRESET_CHOICES.low).toMatchObject({
+      ambientOcclusion: 'off',
+      bloom: 'off',
+      filmEffects: false,
+    });
+  });
+
+  it('start at render levels the slider offers, chosen with the preset', () => {
+    for (const p of GRAPHICS_PRESETS) {
+      const level = PRESET_CHOICES[p].renderLevel;
+      expect(level).toBeGreaterThanOrEqual(RANGES.renderLevel.min);
+      expect(level).toBeLessThanOrEqual(RANGES.renderLevel.max);
+      expect(choosePreset(p)).toEqual({ graphics: p, ...PRESET_CHOICES[p] });
+      // What it chooses survives cleaning.
+      expect(
+        cleanSettings({ ...DEFAULT_SETTINGS, ...choosePreset(p) }),
+      ).toEqual({ ...DEFAULT_SETTINGS, ...choosePreset(p) });
+    }
+  });
+
+  it('are read from text in any case, med for medium', () => {
+    expect(parsePreset('LOW')).toBe('low');
+    expect(parsePreset(' med ')).toBe('medium');
+    expect(parsePreset('high')).toBe('high');
+    expect(parsePreset('ultra')).toBeNull();
+    expect(parsePreset(3)).toBeNull();
+    expect(parsePreset(null)).toBeNull();
+  });
+
+  it('cut shadow maps to the preset’s largest', () => {
+    expect(shadowMapSide(4096, 1024)).toBe(1024);
+    expect(shadowMapSide(512, 1024)).toBe(512);
+    expect(shadowMapSide(4096, 4096)).toBe(4096);
+  });
+
+  it('give an old or bad save High', () => {
+    expect(cleanSettings({ renderLevel: 4 })).toMatchObject({
+      graphics: 'high',
+      renderLevel: 4,
+    });
+    expect(cleanSettings({ graphics: 'ultra' }).graphics).toBe('high');
+    expect(cleanSettings({ graphics: 'medium' }).graphics).toBe('medium');
   });
 });

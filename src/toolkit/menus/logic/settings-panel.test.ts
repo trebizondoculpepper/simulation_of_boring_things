@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { DEFAULT_SETTINGS, RANGES } from '../../settings/logic/settings';
+import {
+  DEFAULT_SETTINGS,
+  RANGES,
+  choosePreset,
+} from '../../settings/logic/settings';
 import {
   KNOBS,
   METERS,
@@ -44,6 +48,7 @@ describe('the settings panel', () => {
       'sensitivity',
       'invertY',
       'onScreenControls',
+      'graphics',
       'bindings',
     ])
       expect(items).toContain(id);
@@ -119,7 +124,27 @@ describe('knobs', () => {
     expect(settingFor('onScreenControls', 2)).toEqual({
       onScreenControls: 'never',
     });
-    expect(selectorIndex('always')).toBe(1);
+    expect(
+      selectorIndex('onScreenControls', {
+        ...DEFAULT_SETTINGS,
+        onScreenControls: 'always',
+      }),
+    ).toBe(1);
+  });
+  it('choose a graphics preset, lowest left, with its render quality', () => {
+    expect(settingFor('graphics', 0)).toEqual(choosePreset('low'));
+    expect(settingFor('graphics', 2)).toEqual(choosePreset('high'));
+    expect(
+      selectorIndex('graphics', { ...DEFAULT_SETTINGS, graphics: 'medium' }),
+    ).toBe(1);
+    const picture = settingsPanel({ inGame: true }).find(
+      (z) => z.id === 'picture',
+    );
+    expect(picture?.items[0]).toMatchObject({
+      kind: 'selector',
+      id: 'graphics',
+      positions: ['LOW', 'MED', 'HIGH'],
+    });
   });
 });
 

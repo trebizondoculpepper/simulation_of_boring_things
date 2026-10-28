@@ -24,6 +24,7 @@ describe('the player’s settings', () => {
       bloom: 'off',
       filmEffects: false,
       resolutionCap: '1080',
+      graphics: 'low',
     };
     expect(cleanSettings(mine)).toEqual(mine);
   });
