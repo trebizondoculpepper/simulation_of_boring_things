@@ -17,24 +17,28 @@ concurrency:
 jobs:
   check:
     name: Typecheck, lint, test and build
-    permissions:
-      contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    outputs:
-      version: ${{ steps.version.outputs.version }}
     steps:
-      # Main builds use the latest persisted package version, including
-      # version commits made by earlier queued builds.
+      # The commit pushed, with all its history and tags: the build derives
+      # its version from them (mission 104) and fails without them.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.ref == 'refs/heads/main' && 'main' || github.ref }}
+          fetch-tags: true
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
+      # Only a release changes the version: every pushed commit checked.
+      - name: Check no commit changed the version outside a release
+        if: github.event_name == 'push'
+        run: node scripts/version-guard.ts "${{ github.event.before }}" "${{ github.sha }}"
+      - name: Check this pull request's commits likewise
+        if: github.event_name == 'pull_request'
+        run: node scripts/version-guard.ts "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check
@@ -42,31 +46,15 @@ jobs:
       # The build's name on the title screen: the commit and the date.
       - name: Name the build
         run: echo "VITE_BUILD=$(git rev-parse --short HEAD) · $(date -u +'%-d %b %Y')" >> "$GITHUB_ENV"
+      # At the next patch, derived; it writes and commits nothing.
       - run: npm run build
-      - name: Read the successful build version
-        id: version
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-      - name: Save the successful build version
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package.json package-lock.json
-          git commit -m "Build v${{ steps.version.outputs.version }} [skip ci]"
-          git pull --rebase origin main
-          git push origin HEAD:main
       # The built site, for the deploy job; only pushes to main deploy.
+      # GitHub Pages is the bleeding edge; only a release reaches itch.io
+      # (release.yml; the owner, 2026-10-28).
       - if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
-      # The same site, plain, for the itch.io job.
-      - if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: site
-          path: dist
-          retention-days: 1
 
   deploy:
     name: Deploy to GitHub Pages
@@ -83,30 +71,3 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
-
-  itch:
-    name: Push to itch.io
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # Its own queue, so a slow upload never holds up the Pages deploy.
-    concurrency:
-      group: itch
-      cancel-in-progress: false
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: site
-          path: dist
-      # butler, itch.io's uploader, logs in with the BUTLER_API_KEY secret.
-      - name: Install butler
-        run: |
-          curl -fsSL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
-          unzip -q butler.zip -d butler
-          chmod +x butler/butler
-          echo "$PWD/butler" >> "$GITHUB_PATH"
-      - name: Push the build
-        env:
-          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
-        run: butler push dist salimfadhley/the-pool:html5 --userversion "${{ needs.check.outputs.version }}"

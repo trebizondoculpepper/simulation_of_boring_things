@@ -2,12 +2,13 @@ import { version } from '../../package.json';
 
 /**
  * The game's version: semantic versioning (https://semver.org),
- * MAJOR.MINOR.PATCH with an optional pre-release after a hyphen. Every
- * successful build advances package.json's patch and the lockfile together.
- * The build uses that next version (`VITE_VERSION`) and writes it only
- * after bundling succeeds. Tagged releases keep their exact version.
- * Releases are git tags
- * `vMAJOR.MINOR.PATCH` (README, "Versions and releases"); the title screen
+ * MAJOR.MINOR.PATCH with an optional pre-release after a hyphen (mission
+ * 104; README, "Versions and releases"). Every push to `main` is the next
+ * patch, derived by the build (`scripts/build.ts`: `package.json`'s plus
+ * the commits since it last changed) and passed in as `VITE_VERSION`;
+ * every release, `npm run release`, the next minor, written to
+ * `package.json` and tagged `vMAJOR.MINOR.PATCH`; a major only when the
+ * owner asks. The dev server shows `package.json`'s. The title screen
  * shows `versionLabel()`.
  *
  * - MAJOR: a save that can no longer be carried forward (a dropped

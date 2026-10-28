@@ -15,9 +15,7 @@
     "preview": "vp preview --host 127.0.0.1",
     "check": "vp check",
     "manual": "MANUAL=1 vp test run scripts/build-manual.test.ts && latexmk -lualatex -interaction=nonstopmode -halt-on-error -cd build/manual/manual.tex",
-    "release:patch": "npm version patch -m \"Release v%s\"",
-    "release:minor": "npm version minor -m \"Release v%s\"",
-    "release:major": "npm version major -m \"Release v%s\""
+    "release": "node scripts/release.ts"
   },
   "type": "module",
   "dependencies": {

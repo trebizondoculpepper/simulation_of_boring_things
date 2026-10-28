@@ -1,7 +1,9 @@
 name: Release
 
-# A release is a tag vMAJOR.MINOR.PATCH (optionally -prerelease) on main,
-# made with `npm run release:patch` (or minor, major); see the README.
+# A release is an annotated tag vMAJOR.MINOR.PATCH on main, made and pushed
+# by `npm run release` (the next minor; a major only when the owner asks;
+# mission 104, see the README). It is the only way to itch.io: GitHub
+# Pages follows every push to main, itch.io carries releases.
 on:
   push:
     tags: ['v*.*.*']
@@ -15,18 +17,38 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # All the history and tags, to check where the tag points.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
-      # The tag must be the version in package.json, with its changelog section.
-      - name: Check the tag against package.json and CHANGELOG.md
+      # The tag must be annotated, on the commit built, that commit on
+      # main, and the version in package.json and both of the lockfile's
+      # fields, with its changelog section.
+      - name: Check the tag against main, package.json, the lockfile and CHANGELOG.md
         run: |
+          if [ "$(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")" != tag ]; then
+            echo "Tag ${GITHUB_REF_NAME} is not annotated (made by npm run release?)" >&2
+            exit 1
+          fi
+          if [ "$(git rev-parse "${GITHUB_REF_NAME}^{commit}")" != "$(git rev-parse HEAD)" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not point at the commit checked out" >&2
+            exit 1
+          fi
+          git fetch --quiet origin main
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "Tag ${GITHUB_REF_NAME} is not on main" >&2
+            exit 1
+          fi
           version="$(node -p "require('./package.json').version")"
-          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match package.json version ${version}" >&2
+          lock="$(node -p "const l=require('./package-lock.json'); l.version + ' ' + l.packages[''].version")"
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ] || [ "${lock}" != "${version} ${version}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match package.json ${version} and the lockfile ${lock}" >&2
             exit 1
           fi
           if ! grep -q "^## \[${version}\]" CHANGELOG.md; then
@@ -56,3 +78,19 @@ jobs:
           flags=()
           case "$version" in *-*) flags+=(--prerelease) ;; esac
           gh release create "$GITHUB_REF_NAME" --title "Pool Plant $GITHUB_REF_NAME" --notes-file notes.md "${flags[@]}"
+      # butler, itch.io's uploader, logs in with the BUTLER_API_KEY secret.
+      - name: Install butler
+        run: |
+          curl -fsSL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d butler
+          chmod +x butler/butler
+          echo "$PWD/butler" >> "$GITHUB_PATH"
+      - name: Push the release to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          if [ -z "$BUTLER_API_KEY" ]; then
+            echo "BUTLER_API_KEY is not set: the release cannot reach itch.io" >&2
+            exit 1
+          fi
+          butler push dist salimfadhley/the-pool:html5 --userversion "${GITHUB_REF_NAME#v}"

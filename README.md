@@ -69,21 +69,16 @@ Slow tests (over about 1.5 s, or simulating long stretches of world time) live i
 
 Player-facing daily updates follow the [devlog workflow](doc/devlogs/README.md). Drafts are compiled on request in `doc/devlogs/`; publishing a devlog is a separate step from uploading a game build.
 
-The game uses [semantic versioning](https://semver.org/). Every successful `npm run build` advances the patch version in `package.json` and the two root version fields in `package-lock.json`. The bundler uses that next version, and the files are updated only after bundling succeeds; a failed build leaves them unchanged. For example, a successful build at 0.1.241 becomes 0.1.242. The development server shows the current package version without incrementing it. The title screen's bottom-right corner shows the version, source commit and UTC build date, marks development builds and uncommitted changes, and links to the GitHub source.
+The game uses [semantic versioning](https://semver.org/) (mission 104; the owner, 2026-10-28): every push to `main` is the next patch, every release the next minor, and a major only when the owner asks. GitHub Pages follows every push to `main`, the bleeding edge; itch.io carries releases only, usually a few a day.
 
-CI runs the same build command and commits successful version updates on `main` as `Build vX.Y.Z [skip ci]`, so the next build starts from the persisted version without triggering another build for the version commit. GitHub Pages and itch.io receive the same built version. Local builds leave the version updates in the working tree for the owner's next commit. Automatic build numbering does not create release tags or GitHub releases. Below 1.0.0 the game is in development.
+Only a release changes the version in `package.json`. Every other build derives its version, once, in `scripts/build.ts`: `package.json`'s with its patch moved on by the first-parent commits since the commit that last changed it (`scripts/versioning.ts`). So after `Release v0.2.0`, the twelfth commit on `main` builds as 0.2.12. A build writes no tracked file, so building never dirties the tree and parallel sessions never conflict on the package files; CI makes no commit of its own. In CI the build fails if it cannot read the history; locally, without git, it builds at `package.json`'s version. The development server shows `package.json`'s version, marked as a development build. The title screen's bottom-right corner shows the version, source commit and UTC build date, marks development builds and uncommitted changes, and links to the GitHub source. Below 1.0.0 the game is in development.
 
-The levels below guide deliberate releases, which move `package.json` to a new MAJOR or MINOR (or a deliberate PATCH) and tag it. The Release workflow uses `npm run build -- --release` to rebuild at the tag's exact version, without advancing it.
+Never stage `package.json` or `package-lock.json` with ordinary work: only with a dependency change, or in a release. CI fails a push in which any commit other than a `Release vX.Y.Z` commit changes the version (`scripts/version-guard.ts`).
 
-- **MAJOR:** a save that can no longer be carried forward (a migration dropped from `src/game/save.ts`), or a change that breaks how the game is played or packaged.
-- **MINOR:** new rooms, machines, systems or features, including a new save version with its migration (`WORLD_VERSION`, which counts the save's shape, not releases).
-- **PATCH:** fixes, performance and wording only.
+Every change goes under Unreleased in `CHANGELOG.md` as it is made. A release is cut only when the owner asks, on a clean `main` level with `origin/main`:
 
-Every change goes under Unreleased in `CHANGELOG.md` as it is made. To release, on a clean, up-to-date `main`:
-
-1. In `CHANGELOG.md`, rename Unreleased to the new version and date (`## [0.2.0] - 2026-11-01`), add a fresh empty Unreleased above it, and commit.
-2. Run `npm run release:patch`, `release:minor` or `release:major`: it bumps `package.json` and `package-lock.json`, commits "Release vX.Y.Z" and tags `vX.Y.Z`.
-3. Push with `git push --follow-tags`. The Release workflow (`.github/workflows/release.yml`) checks that the tag matches `package.json` and has its changelog section, runs the checks and publishes a GitHub release with that section as its notes. CI deploys the site from `main` as usual.
+- `npm run release` releases the next minor (`npm run release -- major` only when the owner asks, or `-- x.y.z` for an exact version). It runs the typecheck, lint, format check and tests, bundles at the new version, and only then writes `package.json`, the lockfile and `CHANGELOG.md` (Unreleased becomes `## [x.y.z] - date`, with a fresh Unreleased above and the compare links updated), commits them as `Release vX.Y.Z`, makes the annotated tag `vX.Y.Z`, checks again that `origin/main` has not moved, and pushes the branch and tag together (`git push --atomic`). If any step fails it undoes what it did, leaving the tree as it was, so it can be run again.
+- The tag starts the Release workflow (`.github/workflows/release.yml`). It checks that the tag is annotated, points at the commit it builds, is on `main`, and matches `package.json`, both of the lockfile's version fields and a changelog section; runs the checks; rebuilds at the tag's exact version (`npm run build -- --release`); publishes a GitHub release with that section as its notes; and uploads the build to itch.io with butler (`--userversion` the release's version).
 
 ## Reused from the Encabulator
 

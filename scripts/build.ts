@@ -1,18 +1,39 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import {
+  commitsSinceVersionChange,
+  derivedVersion,
+  gitIn,
+  versionParts,
+} from './versioning.ts';
 
 interface BuildOptions {
   root?: string;
+  /** A release's build: exactly `version`, or `package.json`'s. */
   release?: boolean;
+  version?: string;
+  /** Commits since the version last changed, or null if unknown (`versioning.ts`). */
+  since?: () => number | null;
+  /** In CI, where an unknown history must fail rather than guess. */
+  ci?: boolean;
   run?: (env: NodeJS.ProcessEnv) => void;
 }
 
-/** Build with the next patch, recording it only after the bundler succeeds. */
+/**
+ * Build the game at its effective version (mission 104), passed to the
+ * bundle as `VITE_VERSION`, the one place it is worked out: a release's
+ * exact version, or `package.json`'s with its patch moved on by the commits
+ * since it last changed. Writes no tracked file, so a build never dirties
+ * the tree; only `npm run release` changes the version.
+ */
 export function buildProject({
   root = resolve(import.meta.dirname, '..'),
   release = false,
+  version: exact,
+  since = () => commitsSinceVersionChange(gitIn(root)),
+  ci = !!process.env.CI && process.env.CI !== 'false',
   run = (env) =>
     execFileSync(resolve(root, 'node_modules/.bin/vp'), ['build'], {
       cwd: root,
@@ -20,36 +41,27 @@ export function buildProject({
       stdio: 'inherit',
     }),
 }: BuildOptions = {}) {
-  const packagePath = resolve(root, 'package.json');
-  const lockPath = resolve(root, 'package-lock.json');
-  const packageText = readFileSync(packagePath, 'utf8');
-  const lockText = readFileSync(lockPath, 'utf8');
-  const manifest = JSON.parse(packageText);
-  const lock = JSON.parse(lockText);
-  const parts = /^(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/.exec(manifest.version);
-  if (!parts) throw new Error(`Invalid package version: ${manifest.version}`);
-  const version = release
-    ? manifest.version
-    : `${parts[1]}.${parts[2]}.${Number(parts[3]) + 1}${parts[4] ? `-${parts[4]}` : ''}`;
-  run({ ...process.env, VITE_VERSION: version });
-  if (!release) {
-    // Do not overwrite a version changed by another build or editor meanwhile.
-    if (
-      readFileSync(packagePath, 'utf8') !== packageText ||
-      readFileSync(lockPath, 'utf8') !== lockText
-    )
-      throw new Error(
-        'Package files changed during the build; version not saved.',
-      );
-    manifest.version = version;
-    lock.version = version;
-    lock.packages[''].version = version;
-    writeFileSync(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
-    writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
-  }
-  console.info(
-    `Built Pool Plant ${version}${release ? ' (tagged release)' : ''}`,
+  const manifest = JSON.parse(
+    readFileSync(resolve(root, 'package.json'), 'utf8'),
   );
+  versionParts(manifest.version);
+  let version: string;
+  if (release) version = exact ?? manifest.version;
+  else {
+    const commits = since();
+    if (commits === null) {
+      if (ci)
+        throw new Error(
+          'Cannot read the history to derive the version (a shallow clone?); fetch it all.',
+        );
+      console.warn(
+        'No git history: building at package.json’s version unchanged.',
+      );
+    }
+    version = derivedVersion(manifest.version, commits ?? 0);
+  }
+  run({ ...process.env, VITE_VERSION: version });
+  console.info(`Built Pool Plant ${version}${release ? ' (release)' : ''}`);
   return version;
 }
 
