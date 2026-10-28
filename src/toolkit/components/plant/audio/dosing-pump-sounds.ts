@@ -139,27 +139,55 @@ export const SOLENOID_PUMP: LoopRecipe = (context, out) => {
 };
 
 /**
- * A stepper-motor metering pump (prompt 089, item 2): the stepper's soft
- * whirr, its pitch rising and falling with each stroke (a quick suction,
- * a long discharge), and a muffled click of its valves.
+ * A stepper-motor metering pump (prompt 089, item 2), after the Grundfos
+ * DDA: quiet, a soft electrical whine at its stepping rate whose pitch
+ * stays put, louder through the quick suction stroke (a fifth of each
+ * stroke, the motor driven hard) than the long, slow discharge, and a
+ * muffled click of its valves as each stroke turns. One stroke's sound,
+ * 1.2 a second, in a buffer played round and round. (It was a tone swept
+ * up and down by a sawtooth, a siren's wail: the owner, 2026-10-28, at
+ * DP-102.)
  */
 export const STEPPER_PUMP: LoopRecipe = (context, out) => {
   const master = context.createGain();
   master.gain.value = 0.03;
   master.connect(out);
-  const whirr = context.createOscillator();
-  whirr.type = 'triangle';
-  whirr.frequency.value = 420;
-  const sweep = context.createOscillator();
-  sweep.type = 'sawtooth';
-  sweep.frequency.value = 1.2;
-  const sweepDepth = context.createGain();
-  sweepDepth.gain.value = 140;
-  sweep.connect(sweepDepth).connect(whirr.frequency);
-  const level = context.createGain();
-  level.gain.value = 0.35;
-  whirr.connect(level).connect(master);
-  whirr.start();
-  sweep.start();
-  return [whirr, sweep];
+  const rate = context.sampleRate;
+  const stroke = Math.round(rate / 1.2);
+  const buffer = context.createBuffer(1, stroke, rate);
+  const samples = buffer.getChannelData(0);
+  const suction = Math.round(stroke * 0.2);
+  const click = Math.round(rate * 0.012);
+  // The whine: the step rate's fundamental and two harmonics, a whole
+  // number of cycles a stroke (200 at 240 Hz) so the loop joins cleanly.
+  const f = Math.round(240 / 1.2) * 1.2;
+  let seed = 11;
+  for (let i = 0; i < stroke; i++) {
+    const t = i / rate;
+    const whine =
+      Math.sin(2 * Math.PI * f * t) * 0.6 +
+      Math.sin(4 * Math.PI * f * t) * 0.25 +
+      Math.sin(6 * Math.PI * f * t) * 0.1;
+    // Louder while it draws (eased in and out), quieter while it pushes.
+    const level =
+      i < suction ? 0.35 + 0.25 * Math.sin((Math.PI * i) / suction) : 0.22;
+    let sample = whine * level;
+    // The valves' muffled click as suction gives way to discharge.
+    const k = i - suction;
+    if (k >= 0 && k < click) {
+      seed = (seed * 16807) % 2147483647;
+      sample +=
+        ((seed / 2147483647) * 2 - 1) * 0.5 * Math.exp((-5 * k) / click);
+    }
+    samples[i] = sample;
+  }
+  const loop = context.createBufferSource();
+  loop.buffer = buffer;
+  loop.loop = true;
+  const soften = context.createBiquadFilter();
+  soften.type = 'lowpass';
+  soften.frequency.value = 1200;
+  loop.connect(soften).connect(master);
+  loop.start();
+  return [loop];
 };
