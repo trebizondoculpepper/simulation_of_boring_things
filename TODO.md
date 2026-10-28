@@ -92,6 +92,13 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Architectural features
 
+- [ ] **Mission 107: the pool science museum** ([107](doc/prompts/107-pool-science-museum.md), the owner, 2026-10-28: "a series of exhibits in a science museum, all of them collectively about how swimming pools work … five in total"): five exhibit halls, `museum1` to `museum5` (Moving water, Clean water (dev51), Warm water, Safe water, The whole plant), each its own room and scene, joined by open archways in a converted warehouse.
+  - [x] Stage 1, the shell (2026-10-28): the five halls, archways with seamless hand-over, painted brick, polished concrete, cast-iron columns, the services ceiling, factory windows, track lights, benches, the title wall, wayfinding and a "coming soon" panel in each; `?room=museum1`.
+  - [ ] Stage 2: the owner's brand choice (three options in the prompt) into `museum-brand.ts` and `brands.ts`.
+  - [ ] Stage 3: dev51 moved into Museum 2, the `dev51` link kept as an alias (after mission 106's session is done with it).
+  - [ ] Stages 4–6: the Moving water, Warm water and Safe water exhibits (can run in parallel).
+  - [ ] Stage 7: The whole plant, with its mimic, annunciator and random-fault button.
+  - [ ] The owner's questions in the prompt, one at a time (brand first).
 - [x] **Doors stay open while the player is nearby** ([090](doc/prompts/done/090-door-proximity-hold-open.md), requested 2026-10-27): implemented 2026-10-27, `ef0c221` (mostly complete): shared 1.5/1.75 m proximity with hysteresis applied before each door step, closing leaves reopen smoothly, handed-over doors wait a full hold, only the active walker counts; plant doors, equipment pairs, ladder gate and spring portals. Exceptions recorded in the prompt. Then by distance (the owner, 2026-10-27): walked away from (beyond 1.75 m), a door closes almost at once and briskly (0.3 s hold, 1.6 rad/s sweep); development spring doors not yet.
   - [ ] Browser acceptance still to do: plant side, paired doorways (`main_corridor` ↔ `wet_hall`, `plant_pool_02` ↔ `tank_hall`), ladder gate, a development spring doorway, return during closing, walk-through handover and sounds; owner to confirm the 1.5/1.75 m distances.
 

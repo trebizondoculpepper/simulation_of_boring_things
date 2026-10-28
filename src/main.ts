@@ -917,6 +917,17 @@ const importStarter = async (
     return (await import('./toolkit/gallery/rooms/ceiling-lab-room'))
       .startCeilingLabRoom;
   if (
+    room === 'museum1' ||
+    room === 'museum2' ||
+    room === 'museum3' ||
+    room === 'museum4' ||
+    room === 'museum5'
+  ) {
+    const { startMuseumHallRoom } =
+      await import('./toolkit/gallery/rooms/museum-hall-room');
+    return (surface) => startMuseumHallRoom(surface, room);
+  }
+  if (
     room === 'pool_01' ||
     room === 'pool_02' ||
     room === 'pool_03' ||

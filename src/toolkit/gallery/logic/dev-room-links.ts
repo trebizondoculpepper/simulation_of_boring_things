@@ -1,4 +1,6 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
+import { MUSEUM_HALLS, hallName } from './museum-plan';
+import type { MuseumHallId } from './museum-plan';
 
 /**
  * How the rooms join. The development rooms are separate rooms, each with a
@@ -130,6 +132,7 @@ export type RoomId =
   | 'pipes_n_dreams'
   | 'plant_corridor'
   | 'shared_plant_layout'
+  | MuseumHallId
   | PlantFitRoomId;
 export type PortalSide = 'north' | 'south' | 'east' | 'west';
 export interface Portal {
@@ -326,6 +329,9 @@ export const ROOMS: readonly RoomId[] = [
   // the pipes and ducts overhead. Its doors open into nothing yet.
   'plant_corridor',
   'shared_plant_layout',
+  // The pool science museum's five exhibit halls, joined by archways
+  // (mission 107): by their URLs, museum1 first.
+  ...MUSEUM_HALLS,
   // The main plant room alone, at each size being compared.
   ...PLANT_FIT_ROOMS,
 ];
@@ -448,6 +454,11 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev_electrical: 'DEV · ELECTRICAL',
   dev_control: 'DEV · CONTROL CENTRE',
   dev_ozone: 'DEV · OZONE',
+  museum1: hallName('museum1'),
+  museum2: hallName('museum2'),
+  museum3: hallName('museum3'),
+  museum4: hallName('museum4'),
+  museum5: hallName('museum5'),
 };
 /** Each room's portal colour, so a portal says where it goes. */
 export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
@@ -563,6 +574,11 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev_electrical: '#d47f1f',
   dev_control: '#5c6f86',
   dev_ozone: '#4b5fc1',
+  museum1: '#0b6fa4',
+  museum2: '#0b6fa4',
+  museum3: '#0b6fa4',
+  museum4: '#0b6fa4',
+  museum5: '#0b6fa4',
 };
 /** How thick a room's walls are, metres. */
 export const WALL_THICKNESS = 0.3;
