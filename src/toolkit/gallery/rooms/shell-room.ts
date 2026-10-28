@@ -619,7 +619,9 @@ export function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
     distanceExponent: 1.4,
     thickness: 1.2 * metre,
     scale: 1,
-    samples: 12,
+    // The bridge's many live displays make its full-resolution AO costly.
+    // Six samples keep its contact shading while reducing the GPU work.
+    samples: cfg.self === 'bridge' ? 6 : 12,
     radius: look.ao.radius * metre,
   });
   ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6 });

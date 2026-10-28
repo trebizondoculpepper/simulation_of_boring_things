@@ -6,6 +6,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The bridge uses six GTAO ambient-occlusion samples instead of twelve, retaining its contact shadows with less GPU work at high render resolutions.
+
 - The Lidoluxe spa cabinet's upper row of controls (POWER, its lamps, JETS) moved 1.5 cm down and 2 cm left, clear of the foot spa's DRAINING and FILLING strip, which overprinted it (the owner, 2026-10-28); the jacuzzi's cabinet, built the same, moves with it.
 - The menu panels have accessible copies for screen readers and switch access (mission 096): the settings panel as a hidden dialog of real buttons, ranges, a select and a live status line, built from the same menu model; the title's list kept, hidden, beside its box; focus kept in step with the panels' focus rings both ways. The menu bindings are in the control scheme's help and the bindings table.
 - The menu panels' sounds (button presses, knob detents, selector and key clicks) are heard front centre, not placed in the room (the owner, 2026-10-28), and on the title too (`front-centre.ts`).
