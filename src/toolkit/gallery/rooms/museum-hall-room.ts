@@ -46,6 +46,7 @@ import {
 } from '../logic/museum-plan';
 import type { MuseumHallId } from '../logic/museum-plan';
 import { createMuseumHall } from '../views/museum-hall';
+import { projectorWhereabouts } from '../views/caustics-projector';
 import {
   createEmptyHallMaterials,
   createRingShells,
@@ -414,8 +415,14 @@ export function startMuseumHallRoom(
       exhibit.parts?.update(delta);
       exhibit.update?.(delta);
     }
-    // The hall's own moving parts (Hall 0's projector), while walked in.
-    if (active) hall.update(delta);
+    // The hall's own moving parts (Hall 0's projector), while walked in;
+    // and Hall 0's projector seen from a neighbour, going out after the
+    // walker leaves it (the owner, 2026-10-28).
+    if (active) {
+      projectorWhereabouts.walkerIn(id, performance.now() / 1000);
+      hall.update(delta);
+      copies.get('museum0')?.update(delta);
+    }
     if (active && !walk.following) {
       const pose = walk.pose();
       const now = { x: pose.x / metre, z: pose.z / metre };

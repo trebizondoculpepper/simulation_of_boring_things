@@ -10,15 +10,19 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
   PlaneGeometry,
+  OrthographicCamera,
+  Scene,
   ShaderMaterial,
   SphereGeometry,
-  SpotLight,
   SRGBColorSpace,
+  WebGLRenderTarget,
 } from 'three';
 import type { Material } from 'three';
 import {
   CAUSTICS_PROJECTOR,
   createCausticsClock,
+  createWalkerWhereabouts,
+  projectedLanes,
   projectorState,
 } from '../logic/caustics-projector';
 import { brandById } from '../../components/core/logic/brands';
@@ -36,6 +40,10 @@ const CAUSTICS_FRAGMENT = /* glsl */ `
 uniform float uPhase;
 uniform float uOn;
 uniform vec2 uSize;
+uniform float uLaneV[8];
+uniform int uLanes;
+uniform vec4 uLaneDims; // u0, u1, half width v, T half length v
+uniform float uLaneHalfU;
 varying vec2 vUv;
 const float TAU = 6.28318530718;
 float caustic(vec2 p, float t) {
@@ -60,17 +68,40 @@ void main() {
   // The picture's edge: soft, a throw that just covers the pool.
   vec2 e = smoothstep(0.0, 0.03, vUv) * smoothstep(0.0, 0.03, 1.0 - vUv);
   vec3 water = vec3(0.03, 0.09, 0.14) + light * vec3(0.55, 0.8, 0.9);
+  // The lane lines with their T ends, thrown in the picture: dark blue,
+  // wobbling a little as if seen through the moving water.
+  vec2 q = vUv + 0.0025 * vec2(sin(vUv.y * 40.0 + t), cos(vUv.x * 30.0 - t)) + light * 0.002;
+  float lane = 0.0;
+  for (int k = 0; k < 8; k++) {
+    if (k >= uLanes) break;
+    float dv = abs(q.y - uLaneV[k]);
+    float along = step(uLaneDims.x, q.x) * step(q.x, uLaneDims.y);
+    float bar = step(dv, uLaneDims.z) * along;
+    float te = step(dv, uLaneDims.w) * (step(abs(q.x - uLaneDims.x), uLaneHalfU) + step(abs(q.x - uLaneDims.y), uLaneHalfU));
+    lane = max(lane, max(bar, min(te, 1.0)));
+  }
+  water = mix(water, vec3(0.008, 0.02, 0.07), lane);
   gl_FragColor = vec4(water * e.x * e.y * uOn, 1.0);
 }
 `;
 
-const CAUSTICS_VERTEX = /* glsl */ `
+/** The picture's quad, filling its target. */
+const CAUSTICS_QUAD_VERTEX = /* glsl */ `
 varying vec2 vUv;
 void main() {
   vUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  gl_Position = vec4(position.xy, 0.0, 1.0);
 }
 `;
+
+/** The beam's opacity in the air, fully lit. */
+const BEAM_OPACITY = 0.035;
+
+/** Where the walker is, for the projector: one per page, kept across the hand-over between hall scenes. */
+export const projectorWhereabouts = createWalkerWhereabouts();
+
+/** The width (px) of the picture's target; its height follows the pool. */
+const PICTURE_PX = 512;
 
 export interface CausticsProjector {
   group: Group;
@@ -90,6 +121,7 @@ export interface CausticsProjector {
 export function createCausticsProjector(
   ceilingY: number,
   pool: { w: number; d: number },
+  laneCount = 0,
 ): CausticsProjector {
   const P = CAUSTICS_PROJECTOR;
   const brand = brandById(P.maker as BrandId);
@@ -97,7 +129,7 @@ export function createCausticsProjector(
   group.name = `${brand.name} ${P.model}`;
   const materials: Material[] = [];
   const keep = <M extends Material>(m: M) => (materials.push(m), m);
-  const state = projectorState(true, true);
+  let state = projectorState(true, true);
 
   // Its plate on the ceiling, the drop pole, and the cradle round the body.
   const steel = keep(
@@ -173,32 +205,25 @@ export function createCausticsProjector(
     ),
   );
   barrel.position.y = lensY - 0.06;
+  const glassMaterial = keep(
+    new MeshBasicMaterial({
+      color: state.projecting ? '#9fd8ff' : '#0b0d10',
+    }),
+  );
   const glass = new Mesh(
     new CylinderGeometry(0.06, 0.06, 0.005, 24),
-    keep(
-      new MeshBasicMaterial({
-        color: state.projecting ? '#9fd8ff' : '#0b0d10',
-      }),
-    ),
+    glassMaterial,
   );
   glass.position.y = lensY - 0.122;
   group.add(barrel, glass);
 
   // Its status LED, on the face seen from the welcome.
-  const led = new Mesh(
-    new SphereGeometry(0.008, 10, 8),
-    keep(
-      new MeshBasicMaterial({
-        color:
-          state.lamp === 'green'
-            ? '#3dff6e'
-            : state.lamp === 'amber'
-              ? '#ffb020'
-              : '#202020',
-        toneMapped: false,
-      }),
-    ),
+  const lampColour = (lamp: string) =>
+    lamp === 'green' ? '#3dff6e' : lamp === 'amber' ? '#ffb020' : '#202020';
+  const ledMaterial = keep(
+    new MeshBasicMaterial({ color: lampColour(state.lamp), toneMapped: false }),
   );
+  const led = new Mesh(new SphereGeometry(0.008, 10, 8), ledMaterial);
   led.position.set(
     P.body.w / 2 - 0.05,
     bodyY + P.body.l / 2 - 0.05,
@@ -208,18 +233,19 @@ export function createCausticsProjector(
 
   // The beam in the air, barely there: a four-sided cone to the pool's corners.
   const throwH = lensY - 0.13;
+  const beamMaterial = keep(
+    new MeshBasicMaterial({
+      color: '#4f86a6',
+      transparent: true,
+      opacity: BEAM_OPACITY,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      side: DoubleSide,
+    }),
+  );
   const beam = new Mesh(
     new ConeGeometry(Math.SQRT1_2, 1, 4, 1, true),
-    keep(
-      new MeshBasicMaterial({
-        color: '#4f86a6',
-        transparent: true,
-        opacity: 0.035,
-        blending: AdditiveBlending,
-        depthWrite: false,
-        side: DoubleSide,
-      }),
-    ),
+    beamMaterial,
   );
   beam.geometry.rotateY(Math.PI / 4);
   beam.scale.set(pool.w, throwH, pool.d);
@@ -227,20 +253,52 @@ export function createCausticsProjector(
   beam.visible = state.projecting;
   group.add(beam);
 
-  // The picture on the white pool: its light added to the paint.
+  // The picture on the white pool: its light added to the paint. The
+  // caustics shader is drawn into a small target only when the loop's frame
+  // changes (at most 10 Hz) and shown on the pool by a plain textured plane:
+  // drawing it at full resolution every frame made Hall 0 slow (2026-10-28).
+  const lanes = projectedLanes(pool.w, pool.d, laneCount);
+  const laneV = new Array(8).fill(0);
+  lanes.lines.forEach((l, k) => (laneV[k] = l.v));
+  const first = lanes.lines[0];
   const uniforms = {
     uPhase: { value: 0 },
     uOn: { value: state.projecting ? 1 : 0 },
     uSize: { value: [pool.w, pool.d] },
+    uLaneV: { value: laneV },
+    uLanes: { value: lanes.lines.length },
+    uLaneDims: {
+      value: [first?.u0 ?? 0, first?.u1 ?? 0, lanes.halfWidthV, lanes.tHalfV],
+    },
+    uLaneHalfU: { value: lanes.halfWidthU },
   };
-  const pictureMaterial = keep(
+  const target = new WebGLRenderTarget(
+    PICTURE_PX,
+    Math.round((PICTURE_PX * pool.d) / pool.w),
+    { depthBuffer: false },
+  );
+  const drawMaterial = keep(
     new ShaderMaterial({
       uniforms,
-      vertexShader: CAUSTICS_VERTEX,
+      vertexShader: CAUSTICS_QUAD_VERTEX,
       fragmentShader: CAUSTICS_FRAGMENT,
+      depthTest: false,
+      depthWrite: false,
+    }),
+  );
+  const drawScene = new Scene();
+  const quad = new Mesh(new PlaneGeometry(2, 2), drawMaterial);
+  quad.frustumCulled = false;
+  drawScene.add(quad);
+  const drawCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  let dirty = true;
+  const pictureMaterial = keep(
+    new MeshBasicMaterial({
+      map: target.texture,
       blending: AdditiveBlending,
       transparent: true,
       depthWrite: false,
+      toneMapped: false,
       polygonOffset: true,
       polygonOffsetFactor: -3,
     }),
@@ -251,27 +309,43 @@ export function createCausticsProjector(
   picture.name = 'Projected caustics';
   picture.position.y = 0.004;
   picture.renderOrder = 2;
+  // Redraw the picture, if its frame changed, just before it is drawn.
+  picture.onBeforeRender = (renderer) => {
+    if (!dirty) return;
+    dirty = false;
+    const previous = renderer.getRenderTarget();
+    const xr = renderer.xr.enabled;
+    renderer.xr.enabled = false;
+    renderer.setRenderTarget(target);
+    renderer.render(drawScene, drawCamera);
+    renderer.setRenderTarget(previous);
+    renderer.xr.enabled = xr;
+  };
   group.add(picture);
-
-  // Its spill: the light off the picture lifting the deck round the pool a little.
-  const spill = new SpotLight(
-    '#9fd3ec',
-    0.5,
-    0,
-    Math.atan(pool.w / 2 / throwH) * 1.15,
-    0.6,
-    0,
-  );
-  spill.position.y = lensY;
-  spill.target.position.set(0, 0, 0);
-  group.add(spill, spill.target);
 
   const clock = createCausticsClock();
   return {
     group,
     update(delta) {
+      // On, fading or off, as the walker's whereabouts have it (shared by
+      // every scene drawing Hall 0, so leaving it does not reset them).
+      const p = projectorWhereabouts.presence(performance.now() / 1000);
+      if (p.projecting !== state.projecting) {
+        state = projectorState(true, p.projecting);
+        ledMaterial.color.set(lampColour(state.lamp));
+        glassMaterial.color.set(state.projecting ? '#9fd8ff' : '#0b0d10');
+        beam.visible = picture.visible = state.projecting;
+      }
+      // Off: nothing more drawn into its picture at all.
       if (!state.projecting) return;
-      if (clock.step(delta)) uniforms.uPhase.value = clock.phase;
+      // Fading: the picture's plane dimmed, not its texture redrawn.
+      beamMaterial.opacity = BEAM_OPACITY * p.brightness;
+      pictureMaterial.color.setScalar(p.brightness);
+      // The picture redrawn only on a new frame of the loop (at most 10 Hz).
+      if (clock.step(delta)) {
+        uniforms.uPhase.value = clock.phase;
+        dirty = true;
+      }
     },
     status() {
       return state.lamp === 'green'
@@ -285,12 +359,14 @@ export function createCausticsProjector(
         if (o instanceof Mesh) o.geometry.dispose();
       });
       for (const m of materials) m.dispose();
+      quad.geometry.dispose();
+      target.dispose();
     },
   };
 }
 
 /** The margin (m) of a poster's cove glow beyond its edges on the wall. */
-export const POSTER_GLOW_MARGIN = 0.32;
+export const POSTER_GLOW_MARGIN = 0.1;
 
 /**
  * The warm white (about 2800 K) glow on the wall round a poster `w` by `h` m
@@ -299,7 +375,7 @@ export const POSTER_GLOW_MARGIN = 0.32;
  */
 export function posterGlowTexture(w: number, h: number) {
   const m = POSTER_GLOW_MARGIN;
-  const px = 40;
+  const px = 80;
   const W = Math.max(8, Math.round((w + 2 * m) * px));
   const H = Math.max(8, Math.round((h + 2 * m) * px));
   const canvas = document.createElement('canvas');
@@ -316,7 +392,8 @@ export function posterGlowTexture(w: number, h: number) {
       image.data[k] = 255;
       image.data[k + 1] = 196;
       image.data[k + 2] = 132;
-      image.data[k + 3] = Math.round(255 * f * f);
+      // A gentle backlight, not a bright patch (the owner, 2026-10-28).
+      image.data[k + 3] = Math.round(85 * f * f);
     }
   c.putImageData(image, 0, 0);
   const map = new CanvasTexture(canvas);

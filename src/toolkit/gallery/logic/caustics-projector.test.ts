@@ -4,6 +4,9 @@ import {
   causticsFrame,
   causticsPhase,
   createCausticsClock,
+  createWalkerWhereabouts,
+  projectedLanes,
+  projectorPresence,
   projectorState,
 } from './caustics-projector';
 
@@ -42,5 +45,51 @@ describe('the caustics projector', () => {
     // Ten seconds at 60 fps: a hundred frames, not six hundred.
     expect(redraws).toBeGreaterThanOrEqual(99);
     expect(redraws).toBeLessThanOrEqual(101);
+  });
+});
+
+describe('the projected lane lines', () => {
+  it('spaces the lines evenly across the pool, stopping 2 m short of each end', () => {
+    const lanes = projectedLanes(9.4, 6.5, 4);
+    expect(lanes.lines.map((l) => l.v)).toEqual([0.2, 0.4, 0.6, 0.8]);
+    expect(lanes.lines[0].u0).toBeCloseTo(2 / 9.4);
+    expect(lanes.lines[0].u1).toBeCloseTo(1 - 2 / 9.4);
+  });
+  it('makes the lines 0.2 m wide and their T bars 1 m long', () => {
+    const lanes = projectedLanes(9.4, 6.5, 4);
+    expect(lanes.halfWidthV * 6.5).toBeCloseTo(0.1);
+    expect(lanes.tHalfV * 6.5).toBeCloseTo(0.5);
+    expect(lanes.halfWidthU * 9.4).toBeCloseTo(0.1);
+  });
+  it('draws none for no lanes', () => {
+    expect(projectedLanes(9.4, 6.5, 0).lines).toEqual([]);
+  });
+});
+
+describe('the projector going out when the walker leaves', () => {
+  it('holds 5 s, fades over 5 s, then switches off', () => {
+    expect(projectorPresence(false, 4.9)).toEqual({
+      projecting: true,
+      brightness: 1,
+    });
+    expect(projectorPresence(false, 7.5).brightness).toBeCloseTo(0.5);
+    expect(projectorPresence(false, 10)).toEqual({
+      projecting: false,
+      brightness: 0,
+    });
+  });
+  it('fades up over 1 s on coming back', () => {
+    expect(projectorPresence(true, 0.5).brightness).toBeCloseTo(0.5);
+    expect(projectorPresence(true, 3).brightness).toBe(1);
+  });
+  it('keeps the leaving time across halls', () => {
+    const w = createWalkerWhereabouts();
+    expect(w.presence(0).brightness).toBe(1);
+    w.walkerIn('museum1', 100);
+    w.walkerIn('museum1', 103);
+    expect(w.presence(107.5).brightness).toBeCloseTo(0.5);
+    expect(w.presence(111).projecting).toBe(false);
+    w.walkerIn('museum0', 200);
+    expect(w.presence(200.25).brightness).toBeCloseTo(0.25);
   });
 });

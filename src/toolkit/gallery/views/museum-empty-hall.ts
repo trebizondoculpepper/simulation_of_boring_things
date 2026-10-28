@@ -127,8 +127,8 @@ export function createEmptyHallMaterials(
         roughness: 0.5,
       }),
     ),
-    // The warm cove light round its posters.
-    glow: behind(new MeshBasicMaterial({ color: '#ffc58a' })),
+    // The gentle warm cove light round its title wall, its only one (2026-10-28).
+    glow: behind(new MeshBasicMaterial({ color: '#6e553c' })),
     band0: behind(band(0)),
     band1: behind(band(1)),
     band2: behind(band(2)),
@@ -309,15 +309,25 @@ export interface EmptyHalls {
   dispose(): void;
 }
 
+/** Drawn before everything else while standing aside, so it hides what lies behind it whatever the draw order; else as built. */
+export const OCCLUDER_RENDER_ORDER = -10;
+export const occluderRenderOrder = (on: boolean, part: EmptyPart) =>
+  on ? OCCLUDER_RENDER_ORDER : part === 'sticker' ? 1 : 0;
+
 function emptyHalls(group: Group, materials: EmptyHallMaterials): EmptyHalls {
   return {
     group,
     setOccluding(on) {
       group.traverse((o) => {
-        if (o instanceof Mesh)
-          o.material = on
-            ? materials.occluder
-            : materials.parts[o.userData.part as EmptyPart];
+        if (!(o instanceof Mesh)) return;
+        o.material = on
+          ? materials.occluder
+          : materials.parts[o.userData.part as EmptyPart];
+        // A depth-only occluder hides only what is drawn after it: drawn
+        // first, or the empty halls beyond it, drawn earlier, show
+        // through its walls (the owner, 2026-10-28: Halls 3 and 4 seen
+        // through Hall 9 from Hall 0).
+        o.renderOrder = occluderRenderOrder(on, o.userData.part as EmptyPart);
       });
     },
     dispose() {
