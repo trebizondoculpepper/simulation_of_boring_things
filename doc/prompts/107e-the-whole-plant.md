@@ -40,18 +40,18 @@ A new pure model, `src/game/plant/museum-13-plant.ts` (tested), joining the hall
 
 **The fault model** (new, pure, tested: `src/game/plant/museum-13-faults.ts`): a list of faults, each with what it does to the model (only through the model's own inputs: a fouled strainer's resistance, a valve's opening frozen, a probe's sensitivity), the symptoms it produces on the plant's own instruments and annunciator, and its fix (the action, at the machine, that clears it). A fault is cleared only by its fix. The list (question 3 for additions):
 
-| Fault                     | Done to the model                            | First symptoms (on the plant's own displays)                                                            | Fix, and where                                           |
-| ------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Blocked strainer          | ST1's resistance rises                       | PI1 falls below zero, FT1 falls; LOW FLOW                                                               | Pump off, isolate, clean the basket (at ST1)             |
-| Filter needs a backwash   | F1's bed at its dirt for PDI1 0.9 bar        | PDI1 high, FT1 low; FILTER DP HIGH                                                                      | Backwash and rinse (F1's five valves)                    |
-| Pump overload trip        | P1's starter trips                           | P1 stops, every flow 0, RUN out; PUMP TRIPPED, then LOW FLOW, then the interlocks                       | Reset the overload at the starter, start                 |
-| Stuck valve               | F1-V2 frozen at 20 %                         | FT1 low, PDI1 low (the difference from a dirty bed); LOW FLOW                                           | Free it at the valve (work its lever through its travel) |
-| Heating valve failed shut | M13-HX1-V2's actuator fails                  | TC1 calling, B1 idle, TI2 = TI1, the pool slowly cools; POOL TEMP LOW after hours                       | Manual override on the actuator, then replace (at HX1)   |
-| Boiler lockout            | low gas pressure: GS1 drops to 15 mbar       | B1 locks out (its code), FQ1 still; BOILER LOCKOUT                                                      | Restore the gas (GS1-V1 was nudged), RESET at B1         |
-| Out of chemical           | DT1 empty                                    | DP1 strokes dry, chlorine falls; DAY TANK LOW, then CHLORINE LOW                                        | Fill DT1 from CS1 (at DT1), bleed DP1                    |
-| Gas-locked pump           | gas in DP1's head (`actOnDosingPumps` `gas`) | DP1 `Er F`, chlorine falls; DOSING PUMP FAULT                                                           | Bleed and acknowledge (at DP1)                           |
-| Sample flow fail          | SC1-V2 blocked                               | FS2 drops, dosing stops after 120 s; SAMPLE FLOW FAIL                                                   | Clear the needle valve (at SC1)                          |
-| Drifted chlorine probe    | AE1 at `DRIFTED_PROBES` (70 % sensitive)     | DC1 reads low (0.94 where DPD 1 reads 1.40, mission 105's check), doses more; CHLORINE HIGH only on TK1 | Test with TK1, calibrate DC1 against it (at DC1)         |
+| Fault                     | Done to the model                            | First symptoms (on the plant's own displays)                                                                                                                         | Fix, and where                                           |
+| ------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Blocked strainer          | ST1's resistance rises                       | PI1 falls below zero, FT1 falls; LOW FLOW                                                                                                                            | Pump off, isolate, clean the basket (at ST1)             |
+| Filter needs a backwash   | F1's bed at its dirt for PDI1 0.9 bar        | PDI1 high, FT1 low; FILTER DP HIGH                                                                                                                                   | Backwash and rinse (F1's five valves)                    |
+| Pump overload trip        | P1's starter trips                           | P1 stops, every flow 0, RUN out; PUMP TRIPPED, then LOW FLOW, then the interlocks                                                                                    | Reset the overload at the starter, start                 |
+| Stuck valve               | F1-V2 frozen at 20 %                         | FT1 low, PDI1 low (the difference from a dirty bed); LOW FLOW                                                                                                        | Free it at the valve (work its lever through its travel) |
+| Heating valve failed shut | M13-HX1-V2's actuator fails                  | TC1 calling, B1 idle, TI2 = TI1, the pool slowly cools; POOL TEMP LOW after hours                                                                                    | Manual override on the actuator, then replace (at HX1)   |
+| Boiler lockout            | low gas pressure: GS1 drops to 15 mbar       | B1 locks out (its code), FQ1 still; BOILER LOCKOUT                                                                                                                   | Restore the gas (GS1-V1 was nudged), RESET at B1         |
+| Out of chemical           | DT1 empty                                    | DP1 strokes dry, chlorine falls; DAY TANK LOW, then CHLORINE LOW                                                                                                     | Fill DT1 from CS1 (at DT1), bleed DP1                    |
+| Gas-locked pump           | gas in DP1's head (`actOnDosingPumps` `gas`) | DP1 `Er F`, chlorine falls; DOSING PUMP FAULT                                                                                                                        | Bleed and acknowledge (at DP1)                           |
+| Sample flow fail          | SC1-V2 blocked                               | FS2 drops, dosing stops after 120 s; SAMPLE FLOW FAIL                                                                                                                | Clear the needle valve (at SC1)                          |
+| Drifted chlorine probe    | AE1 at `DRIFTED_PROBES` (70 % sensitive)     | DC1 reads low (0.94 where DPD 1 reads 1.40, mission 105's check), doses more; the display reads low, no window from the true water, only TK1 shows the chlorine high | Test with TK1, calibrate DC1 against it (at DC1)         |
 
 ## Control: the desk, the mimic and the annunciator
 
@@ -107,6 +107,14 @@ The finale has the most plant in the museum: dev51 alone took 18 × 13 m, and th
 2. **The controller:** the CX-7 touch screen here (recommended, with the DC-1 pair in Hall 3, so the museum shows both), or the DC-1 again?
 3. **More faults?** The ten above, or others (a burst dosing tube, a leaking flange, a mains failure)?
 4. **The space:** if the plant does not fit in one bay of the new ring, enlarge every bay, or give the finale's hall a double bay?
+
+## The water's readouts and alarms (the owner, 2026-10-28)
+
+"Let's have some read-outs, for example a display showing the chemical values of the water, and an annunciator showing some of the failure conditions, e.g. high pH, low pH."
+
+- **A water-quality display** on the control desk: free chlorine, pH, and the other values the model measures by instrument (temperature, flow), each read from its probe or transmitter, never from the model's true water (the no-peeking rule). A drifted probe therefore shows its drifted value.
+- **The annunciator carries the water's alarms** beside the plant's: CHLORINE HIGH, CHLORINE LOW, pH HIGH, pH LOW, SAMPLE FLOW LOW, POOL TEMP HIGH, POOL TEMP LOW, each lit by its instrument's reading crossing its limit (the limits from 107c's PWTAG figures: chlorine below 0.5 or above 2.0 mg/l, pH below 7.2 or above 7.6, indicative bands to be confirmed against 107c's research).
+- **The drifted probe (fault 10), so answered:** no window is lit from the true water. The probe reads low, so the display shows chlorine looking fine or low, the controller doses more, and if the probe's reading falls far enough CHLORINE LOW may even light, the opposite of the truth. The visitor finds the fault only by testing with TK1 and seeing it disagree with the display, then calibrating DC1. The fault table's "CHLORINE HIGH only on TK1" means only that the kit shows it, not a window.
 
 ## Research: what the hall holds
 
