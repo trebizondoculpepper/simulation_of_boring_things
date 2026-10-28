@@ -28,9 +28,17 @@ import {
   createPaddleWheelMeter,
 } from '../../../components/plant/views/small-flowmeters';
 import { createIdealVessel } from '../../../components/plant/views/ideal-vessel';
+import { createPipeSightGlass } from '../../../components/plant/views/pipe-sight-glass';
+import { createHeatMeter } from '../../../components/plant/views/heat-meter';
 import { markPipe } from '../../../components/plant/views/pipe-markers';
 import { createExperimentalSourceView } from '../../../components/plant/views/experimental-source';
 import { createMimicBoard } from '../../../components/industrial-control/views/mimic-board';
+import { createCharacterLcd } from '../../../components/industrial-control/views/panel-instruments';
+import {
+  createMicroLabel,
+  createSevenSegment,
+} from '../../../components/core/views/eighties-controls';
+import { createPoolClock } from '../../../components/architectural/views/pool-clock';
 import {
   createExperimentalSink,
   createExperimentalSource,
@@ -43,7 +51,12 @@ import {
   actOnPlant,
   fittingById,
   fittingName,
+  NODES,
+  clockText,
+  gaugeReading,
+  networkKey,
   newIdealPlant,
+  plantClock,
   plantReadings,
   shortTag,
   solvePlant,
@@ -64,6 +77,7 @@ import {
   PORTS,
   POOL_SHAPE,
   TANK_SHAPE,
+  TEES,
   cutLine,
   distanceAlong,
   inRoom,
@@ -82,6 +96,7 @@ import {
 import {
   RESET_SIGN,
   activityCard,
+  kettlesOf,
   entrancePanel,
   placards,
 } from '../../logic/ideal-pool-plant-placards';
@@ -119,18 +134,36 @@ export const START = { x: -3.6, z: 5.2, yaw: (15 * Math.PI) / 180 };
  * is worked out a few times a second, so it redraws only then.
  */
 
-let state: IdealPlantState = newIdealPlant();
+/** The visitor's time now, seconds after their local midnight: the plant's clock starts there. */
+const localNow = () => {
+  const d = new Date();
+  return (
+    d.getHours() * 3600 +
+    d.getMinutes() * 60 +
+    d.getSeconds() +
+    d.getMilliseconds() / 1000
+  );
+};
+
+let state: IdealPlantState = newIdealPlant(localNow());
 let flows: PlantFlows = solvePlant(state);
+let solvedFor = networkKey(state);
 let room: IdealPlantRoom | null = null;
 
+/** Solve the water again if what it depends on has changed. */
+function resolve() {
+  const key = networkKey(state);
+  if (key === solvedFor) return;
+  solvedFor = key;
+  flows = solvePlant(state);
+}
+
 function act(a: IdealPlantAction) {
-  const before = state;
-  state = actOnPlant(state, a);
-  if (
-    state.pumpRunning !== before.pumpRunning ||
-    state.opening !== before.opening
-  )
-    flows = solvePlant(state);
+  state = actOnPlant(
+    state,
+    a.type === 'reset' ? { ...a, clock: localNow() } : a,
+  );
+  resolve();
   mimicDue = 0;
 }
 let mimicDue = 0;
@@ -141,8 +174,9 @@ export function layoutRoom() {
 }
 
 export function prepareRoom() {
-  state = newIdealPlant();
+  state = newIdealPlant(localNow());
   flows = solvePlant(state);
+  solvedFor = networkKey(state);
   room ??= plumbIdealPlantRoom();
 }
 
@@ -269,7 +303,7 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
   );
   updates.push((delta) => {
     pump.gauges.suction.set(flows.gauge['pump.suction.pi']);
-    pump.gauges.discharge.set(flows.gauge['pump.discharge.pi']);
+    pump.gauges.discharge.set(gaugeReading(state, flows, 'pump.discharge.pi'));
     pump.gauges.suction.update(delta);
     pump.gauges.discharge.update(delta);
   });
@@ -278,6 +312,8 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
     start: () => act({ type: 'pump', run: true }),
     stop: () => act({ type: 'pump', run: false }),
     running: () => state.pumpRunning,
+    tripped: () => state.tripped,
+    resetTrip: () => act({ type: 'trip-reset' }),
   });
   station.group.position.set(-1.25, 0, -3.75);
   object.add(station.group);
@@ -300,6 +336,23 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
       { node: 'filter' },
     ),
   );
+  // The nest's other three nozzles, flanged stubs from the shell to their ports.
+  {
+    const stub = t.paint('#2c5f8a', 0.45);
+    for (const port of ['backwash-out', 'backwash-in', 'rinse']) {
+      const p = PORTS.filter[port];
+      const a = inRoom('filter', [p.at[0], p.at[1], p.at[2] - 0.22]);
+      const b = inRoom('filter', p.at);
+      const pipe = createPipe('steel-flanged', OD[150], [a, b], {});
+      void stub;
+      object.add(
+        markComponent(pipe, {
+          name: `Sand filter nozzle (${port})`,
+          model: { node: 'filter' },
+        }),
+      );
+    }
+  }
   const dp = createDialGauge(kit, {
     dia: 0.1,
     min: 0,
@@ -372,9 +425,14 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
     id: 'ipp.heatReturn',
     substance: 'lthw',
   });
+  const drain = createExperimentalSink({
+    id: 'ipp.drain',
+    substance: 'dirty-water',
+  });
   for (const [id, terminal] of [
     ['heat', source],
     ['heatReturn', sink],
+    ['drain', drain],
   ] as const) {
     const view = createExperimentalSourceView(kit, terminal);
     const holder = atMachine(new Group(), id);
@@ -383,7 +441,11 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
       describe(
         holder,
         id,
-        id === 'heat' ? 'Ideal hot-water source' : 'Ideal hot-water return',
+        id === 'heat'
+          ? 'Ideal hot-water source'
+          : id === 'drain'
+            ? 'Ideal drain'
+            : 'Ideal hot-water return',
         { node: id },
       ),
     );
@@ -391,11 +453,16 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
 
   // ---- The pipes, their tees and markings ----
   const rotameter = plumbed.items.find((i) => i.id === 'heat.out-1.meter');
+  const sightGlass = plumbed.items.find((i) => i.id === 'backwashOut.sg');
   for (const line of plumbed.lines) {
     let runs = [line.points];
-    if (rotameter && line.edge === rotameter.edge) {
-      const d = distanceAlong(line.points, rotameter.at);
-      runs = cutLine(line.points, d - 0.2, d + 0.2);
+    // Where a glass takes the pipe's place, the pipe stops either side of it.
+    const glass = [rotameter, sightGlass].find(
+      (g) => g && g.edge === line.edge,
+    );
+    if (glass) {
+      const d = distanceAlong(line.points, glass.at);
+      runs = cutLine(line.points, d - 0.17, d + 0.17);
     }
     for (const points of runs) {
       const pipe = createPipe(
@@ -427,22 +494,40 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
       }),
     );
   }
-  for (const [id, main, branch] of [
-    ['split', [1, 0, 0], [0, 1, 0]],
-    ['join', [0, 1, 0], [1, 0, 0]],
-  ] as const) {
-    const centre = inRoom(id, [0, id === 'split' ? 0.52 : 2.55, 0]);
+  // The tees: each at the meeting of its ports, its main through two that face apart.
+  for (const id of TEES) {
+    const ports = Object.values(PORTS[id]);
+
+    const opposite = ports.find((a) =>
+      ports.some(
+        (b) => a !== b && a.out.every((v, k) => Math.abs(v + b.out[k]) < 1e-9),
+      ),
+    )!;
+    const branchPort = ports.find(
+      (b) =>
+        !ports.some(
+          (a) =>
+            a !== b && a.out.every((v, k) => Math.abs(v + b.out[k]) < 1e-9),
+        ),
+    )!;
+    // The three ports' mean lies a third of the branch's reach out from the middle.
+    const mean = [0, 1, 2].map(
+      (n) =>
+        ports.reduce((sum, p) => sum + p.at[n], 0) / 3 -
+        (branchPort.out[n] * 0.15) / 3,
+    ) as [number, number, number];
+    const centre = inRoom(id, mean);
     const tee = createPipeTee(
       'pvc-pressure',
       OD[150],
-      OD[100],
+      id === 'split' || id === 'join' ? OD[100] : OD[150],
       centre,
-      main,
-      branch,
+      opposite.out,
+      branchPort.out,
     );
     object.add(
       markComponent(tee, {
-        name: `${TAGS[id]} ${id === 'split' ? 'Bypass tee' : 'Return tee'}`,
+        name: `${TAGS[id]} ${NODES.find((n) => n.id === id)!.name}`,
         model: { node: id },
       }),
     );
@@ -464,6 +549,29 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
       ];
     const tag = TAGS[item.id];
     const short = shortTag(item.id);
+    if (f?.kind === 'isolating-valve' && f.operator === 'motor') {
+      // The interlock's motorised valve: worked by the plant, not the visitor.
+      const mv = createInlineFitting(
+        kit,
+        { kind: 'remote-valve', medium: 'water', operator: 'motor', od },
+        { open: () => state.interlock > 0.5, set: () => {} },
+      );
+      placeFitting(mv.object, 'remote-valve', item.at, item.along, [0, 1]);
+      object.add(
+        markComponent(mv.object, {
+          name: `${tag} ${fittingName(f)} (motorised)`,
+          model: { fitting: f.id },
+          status: () =>
+            state.interlock >= 0.98
+              ? 'indicator at OPEN'
+              : state.interlock <= 0.02
+                ? 'indicator at SHUT'
+                : 'actuator moving',
+        }),
+      );
+      updates.push(mv.update);
+      return;
+    }
     if (f?.kind === 'isolating-valve') {
       const id = f.id as ValveId;
       const dn = od >= 0.15 ? 150 : od >= 0.1 ? 100 : 50;
@@ -515,6 +623,22 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
       );
       return;
     }
+    if (f?.kind === 'flowmeter' && f.meter === 'heat') {
+      const way = facingVisitors(item.along);
+      const meter = createHeatMeter(kit, { od, tag: short });
+      placeFitting(meter.group, 'flowmeter', item.at, way.along, [0, 1]);
+      object.add(
+        markComponent(meter.group, {
+          name: `${tag} ${fittingName(f)}`,
+          model: { fitting: f.id },
+          status: () => `shows ${state.heatKWh.toFixed(1)} kWh`,
+        }),
+      );
+      updates.push((delta) =>
+        meter.show(state.heatKWh, plantReadings(state, flows).duty, delta),
+      );
+      return;
+    }
     if (f?.kind === 'flowmeter') {
       const way = facingVisitors(item.along);
       if (f.meter === 'electromagnetic') {
@@ -563,6 +687,30 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
         );
         updates.push((delta) => meter.show(flowOf(f.id), delta));
       }
+      return;
+    }
+    if (item.id === 'backwashOut.sg') {
+      const glass = createPipeSightGlass(kit, { od, tag: short });
+      placeFitting(
+        glass.group,
+        'flowmeter',
+        item.at,
+        facingVisitors(item.along).along,
+        [0, 1],
+      );
+      object.add(
+        markComponent(glass.group, {
+          name: `${tag} sight glass on the backwash waste`,
+          model: { node: 'filter' },
+          status: () =>
+            state.wasteDirt > 100
+              ? 'the water in it murky'
+              : state.wasteDirt > 10
+                ? 'the water in it cloudy'
+                : 'the water in it clear',
+        }),
+      );
+      updates.push(() => glass.show(state.wasteDirt));
       return;
     }
     // A thermometer: digital on the pool water, a bimetal dial on the heating.
@@ -647,13 +795,14 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
     tank: { x: -5.3, z: -2.3, yaw: 0 },
     pump: { x: -2.7, z: -2.6, yaw: 0 },
     filter: { x: -0.9, z: -1.7, yaw: 0 },
+    backwash: { x: 0.65, z: -1.55, yaw: 0 },
     meters: { x: 2.2, z: -1.6, yaw: 0 },
     hx: { x: 5.6, z: -2.3, yaw: 0 },
     heat: { x: 7.6, z: -3.0, yaw: -0.3 },
   };
   const all = placards();
   for (const p of all) {
-    const at = LECTERNS[p.of];
+    const at = LECTERNS[p.station === 7 ? 'backwash' : p.of];
     if (!at) continue;
     const lectern = createLectern(kit, p);
     lectern.position.set(at.x, 0, at.z);
@@ -679,11 +828,11 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
   const card = createWallPanel(
     kit,
     'Activity card',
-    1.1,
-    1.5,
+    1.6,
+    2.0,
     paintActivity(activityCard()),
   );
-  card.position.set(-1.6, 1.55, 6.33);
+  card.position.set(-1.6, 1.58, 6.33);
   card.rotation.y = Math.PI;
   object.add(still(card));
   const resetSign = createWallPanel(
@@ -705,6 +854,155 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
   object.add(reset.group);
   for (const [o, use] of reset.parts.uses) parts.uses.set(o, use);
   updates.push(reset.update);
+
+  // ---- The plant's clock, high on the north wall, in the main shot ----
+  const clock = createPoolClock(kit, { dia: 0.75 });
+  clock.group.position.set(2.6, 4.35, -6.33);
+  object.add(
+    markComponent(clock.group, {
+      name: 'Pool clock, showing the plant’s time',
+      status: () => `shows ${clockText(state).slice(0, 5)}`,
+    }),
+  );
+  const timeBox = new Group();
+  timeBox.position.set(3.45, 4.5, -6.33);
+  t.box(timeBox, t.paint('#25343a', 0.5), 0.62, 0.22, 0.04, 0, 0, 0.02);
+  const timeLcd = createCharacterLcd(kit, {
+    columns: 16,
+    rows: 2,
+    cell: 0.02,
+    backlight: true,
+  });
+  timeLcd.group.position.z = 0.042;
+  timeBox.add(timeLcd.group);
+  object.add(
+    markComponent(timeBox, {
+      name: 'Plant time display',
+      status: () => `shows ${clockText(state)} at TIME ×${state.speed}`,
+    }),
+  );
+  const clockPlaque = createWallPanel(
+    kit,
+    'Clock placard',
+    0.9,
+    0.26,
+    (c, w, h) => {
+      c.fillStyle = '#f6f4ec';
+      c.fillRect(0, 0, w, h);
+      c.fillStyle = '#16232b';
+      c.font = `bold ${h * 0.26}px Arial`;
+      c.fillText('THE PLANT’S TIME', w * 0.04, h * 0.34);
+      c.font = `${h * 0.2}px Arial`;
+      c.fillText(
+        'Press a TIME button on the mimic and watch it race.',
+        w * 0.04,
+        h * 0.72,
+        w * 0.92,
+      );
+    },
+  );
+  clockPlaque.position.set(3.55, 4.16, -6.33);
+  object.add(still(clockPlaque));
+  let timeShown = '';
+  let timeDue = 0;
+  updates.push((delta) => {
+    clock.show(
+      plantClock(state),
+      state.speed,
+      delta > 0 ? Math.min(240, 1 / delta) : 60,
+    );
+    // Its display, a few times a second at most: never a texture a frame.
+    timeDue -= delta;
+    if (timeDue > 0) return;
+    timeDue = 0.25;
+    const lines = [
+      `PLANT ${clockText(state)}`,
+      `TIME x${state.speed}`.padEnd(16),
+    ];
+    const key = lines.join('|');
+    if (key === timeShown) return;
+    timeShown = key;
+    timeLcd.show(lines);
+  });
+
+  // ---- The heat used since the demo started: the heat meter's total, repeated ----
+  const heatSign = new Group();
+  heatSign.position.set(6.6, 3.45, -6.33);
+  heatSign.add(
+    still(
+      createWallPanel(kit, 'Heat used sign', 1.5, 0.78, (c, w, h) => {
+        c.fillStyle = '#f6f4ec';
+        c.fillRect(0, 0, w, h);
+        c.fillStyle = '#b5401f';
+        c.fillRect(0, 0, w, h * 0.2);
+        c.fillStyle = '#ffffff';
+        c.font = `bold ${h * 0.11}px Arial`;
+        c.fillText(
+          'HEAT USED SINCE THE DEMO STARTED',
+          w * 0.04,
+          h * 0.135,
+          w * 0.92,
+        );
+        c.fillStyle = '#16232b';
+        c.font = `${h * 0.065}px Arial`;
+        c.fillText(
+          `From heat meter ${shortTag('hx.primary-out.heat')} on the hot water's return. One kettle: 1.7 litres boiled from 15 °C.`,
+          w * 0.04,
+          h * 0.93,
+          w * 0.92,
+        );
+      }),
+    ),
+  );
+  // Its counters: the total in big red digits, the power now, and its kettles.
+  const totalDigits = createSevenSegment(kit, 7, { digitHeight: 0.1 });
+  totalDigits.group.position.set(-0.12, 0.08, 0.04);
+  heatSign.add(totalDigits.group);
+  const nowDigits = createSevenSegment(kit, 4, { digitHeight: 0.05 });
+  nowDigits.group.position.set(-0.34, -0.14, 0.04);
+  heatSign.add(nowDigits.group);
+  const units = createMicroLabel(kit, 'kWh', { height: 0.07, ink: '#16232b' });
+  units.position.set(0.5, 0.08, 0.041);
+  heatSign.add(units);
+  const nowUnits = createMicroLabel(kit, 'kW now', {
+    height: 0.04,
+    ink: '#16232b',
+  });
+  nowUnits.position.set(-0.08, -0.14, 0.041);
+  heatSign.add(nowUnits);
+  const kettleLcd = createCharacterLcd(kit, {
+    columns: 14,
+    rows: 1,
+    cell: 0.016,
+    backlight: true,
+  });
+  kettleLcd.group.position.set(0.36, -0.14, 0.04);
+  heatSign.add(kettleLcd.group);
+  object.add(
+    markComponent(heatSign, {
+      name: 'Heat used since the demo started',
+      status: () => `shows ${state.heatKWh.toFixed(1)} kWh`,
+    }),
+  );
+  let heatShown = '';
+  let heatDue = 0;
+  updates.push((delta) => {
+    heatDue -= delta;
+    if (heatDue > 0) return;
+    heatDue = 0.25;
+    const kW = plantReadings(state, flows).duty;
+    const total = state.heatKWh.toFixed(state.heatKWh < 100000 ? 1 : 0);
+    const now = kW.toFixed(0);
+    const kettles = `${kettlesOf(state.heatKWh).toLocaleString('en-GB')} kettles`;
+    const key = `${total}|${now}|${kettles}`;
+    // Only the digits that changed are drawn again.
+    if (key === heatShown) return;
+    const [t0, n0, k0] = heatShown.split('|');
+    heatShown = key;
+    if (total !== t0) totalDigits.show(total);
+    if (now !== n0) nowDigits.show(now);
+    if (kettles !== k0) kettleLcd.show([kettles]);
+  });
 
   // The route on the floor: a painted band from the entrance past each station.
   const route: [number, number][] = [
@@ -742,6 +1040,8 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
     status: () => (state.pumpRunning ? 'circulating' : 'stopped'),
     update(delta) {
       state = stepIdealPlant(state, flows, delta);
+      // A trip or the interlock's valve may have changed the water.
+      resolve();
       mimicDue -= delta;
       if (mimicDue <= 0) {
         mimicState = idealPlantMimicState(state, flows);

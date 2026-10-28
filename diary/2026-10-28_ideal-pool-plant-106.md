@@ -29,3 +29,7 @@ Model first: one schematic module holding every machine, link, valve, meter and 
 ## Next Steps
 
 The owner's review of the framings, and the four open questions in the prompt.
+
+## Second round, the same afternoon
+
+The owner answered the four questions (trip yes, interlock yes, keep the layout, add ×3600) and then asked for a pool clock, backwash and a heat meter. The dead-head trip became its own pure model (`pump-deadhead.ts`); the interlock a motorised valve in the schematic; backwash used the ideal filter's own bed model, solved twice as its rig does (settled, then lifted if the upflow is enough). Two lessons: Vite's hot reload resets the room's module state, so a browser check must not straddle an edit (one trip test was silently voided that way); and the network solver will happily return small circulating flows in a loop joined to only one reservoir, so `solveWithDeadEnds` now keeps only the parts of the network joining two reservoirs or more. Canvas text scales with a panel's height, so a card that overflows needs width, not height.

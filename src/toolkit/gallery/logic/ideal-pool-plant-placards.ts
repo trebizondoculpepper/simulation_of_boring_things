@@ -1,6 +1,7 @@
 import {
   FILTER_SPEC,
   FITTINGS,
+  INTERLOCK_VALVE,
   NODES,
   PLANT,
   TAGS,
@@ -19,6 +20,7 @@ import type {
   PlantFitting,
 } from '../../../game/plant/ideal-pool-plant';
 import { filterSizing } from '../../../game/plant/ideal-filter';
+import { secondsToTrip } from '../../../game/plant/pump-deadhead';
 
 /**
  * The exhibit's words (dev51, mission 106; the owner, 2026-10-28): the
@@ -103,6 +105,8 @@ export function plantFacts() {
     hxShare: f.hxSecondary / f.circulation,
     fullDuty: plantReadings(hot, hf).duty,
     sourceC: PLANT.sourceC,
+    tripMinutes: secondsToTrip(PLANT.startC, PLANT.roomC) / 60,
+    cleanPdi: f.gauge['filter.pdi'],
   };
 }
 
@@ -142,10 +146,10 @@ export function placards(): Placard[] {
       headline: 'The heart of the plant',
       title: titleOf('pump'),
       joins: joins('pump'),
-      body: 'One electric pump does all the work, pushing the water through the filter and the heater and back to the pool. The gauge on its inlet reads the suction; the one on top reads the pressure it makes.',
+      body: `One electric pump does all the work, pushing the water through the filter and the heater and back to the pool. The gauge on its inlet reads the suction; the one on top reads the pressure it makes. Run against a shut valve, it heats its own water: after about ${round(k.tripMinutes)} minutes its thermostat trips it, and the red TRIPPED lamp lights.`,
       fact: `It moves about ${round(k.flow)} m³ an hour: the whole pool through the filter every ${round(k.turnover, 1)} hours.`,
       tryIt:
-        'Press STOP on its control box and watch every flow on the mimic fall to nothing; START puts it back.',
+        'Press STOP on its control box and watch every flow on the mimic fall to nothing; START puts it back. If it trips, let it cool, then press RESET and START.',
     },
     {
       station: 4,
@@ -165,7 +169,7 @@ export function placards(): Placard[] {
       headline: 'Warming without mixing',
       title: titleOf('hx'),
       joins: joins('hx'),
-      body: 'Hot water from the boilers and pool water flow past each other on either side of thin steel plates, so heat passes across but the two waters never mix. Only part of the pool water goes through it; the rest takes the bypass beside it.',
+      body: `Hot water from the boilers and pool water flow past each other on either side of thin steel plates, so heat passes across but the two waters never mix. Only part of the pool water goes through it; the rest takes the bypass. A motorised valve, ${shortTag(INTERLOCK_VALVE)}, shuts the hot water off by itself whenever the pump stops or too little pool water passes.`,
       fact: `About ${round(k.hxShare * 100)} % of the flow goes through it; flat out it passes about ${round(k.fullDuty)} kW, as much as ${round(k.fullDuty / 3)} electric kettles (3 kW each).`,
       tryIt: `Open ${v('heat.out-1.valve')} to turn the heating on, then throttle it and watch the return temperature on the mimic.`,
     },
@@ -179,6 +183,19 @@ export function placards(): Placard[] {
       body: `Four kinds of meter, each suited to its pipe: an electromagnetic meter on the main flow (${shortTag('filter.outlet.meter')}), a paddle wheel to the heat exchanger (${shortTag('hx.secondary.meter')}), and floats in tapered tubes on the bypass (${shortTag('bypass.meter')}) and the hot water (${shortTag('heat.out-1.meter')}). The bypass and the exchanger always add up to the main flow.`,
       fact: 'The electromagnetic meter has no moving parts: moving water makes a voltage in its magnetic field.',
       tryIt: `Turn ${v('bypass.valve')} towards shut and watch ${shortTag('bypass.meter')} fall as ${shortTag('hx.secondary.meter')} rises.`,
+    },
+    {
+      station: 7,
+      of: 'filter',
+      icon: 'filter',
+      headline: 'Washing the sand: the backwash',
+      title: `Five valves round ${TAGS.filter}: ${['filter.inlet.iso', 'filter.outlet.iso', 'filter.backwash-in.iso', 'filter.backwash-out.iso', 'filter.rinse.iso'].map(shortTag).join(', ')}`,
+      joins:
+        'Backwash and rinse water go to the ideal drain, past sight glass ' +
+        shortTag('backwashOut.sg'),
+      body: 'As the sand fills with dirt the water struggles through it, and the filter’s pressure difference (PDI1) climbs. Then the flow is reversed: up through the bed, lifting and scrubbing the sand, out to waste until the sight glass runs clear. A short rinse settles the bed, and it goes back to work.',
+      fact: `Operators backwash at about 0.4 to 0.5 bar above the clean filter’s ${round(k.cleanPdi, 2)} bar; here the bed fouls in about a day of bathers’ dirt (seconds at TIME ×3600).`,
+      tryIt: `Follow steps ${backwashSteps()} on the activity card. Always STOP the pump before changing these valves.`,
     },
     {
       of: 'heat',
@@ -198,9 +215,16 @@ export function placards(): Placard[] {
       body: 'Every pipe in the room is drawn here. Lights run along each pipe the way its water flows; each valve’s light is green when open, red when shut and amber in between. Every gauge and thermometer in the room is repeated on it.',
       fact: 'Before computer screens, every plant room had a board like this.',
       tryIt:
-        'Press TIME ×600 to watch the pool warm in minutes instead of hours.',
+        'Press TIME ×600 or ×3600 and watch the clock on the far wall race: at ×3600 its minute hand goes round once a second.',
     },
   ];
+}
+
+/** Which of the activity card's steps are the backwash's: "8 to 10". */
+function backwashSteps() {
+  const steps = activityCard().steps;
+  const first = steps.findIndex((x) => x.startsWith('Backwash, step 1')) + 1;
+  return `${first} to ${first + 2}`;
 }
 
 /** The entrance panel: the exhibit's title, its introduction and its route. */
@@ -233,8 +257,13 @@ export function activityCard() {
       `Throttle ${v('heat.out-1.valve')} back a notch or two: less hot water, a cooler return.`,
       `Close the bypass ${v('bypass.valve')}: more water is forced through the heat exchanger (${v('hx.secondary.meter')} rises, ${v('bypass.meter')} falls).`,
       'Press STOP on the pump: every flow goes to zero, and the lights on the mimic stop running.',
-      'Press TIME ×600 on the mimic and watch the pool warm up (or cool down).',
+      `Shut ${v('filter.outlet.iso')} and leave the pump running: after a few minutes it trips (the red TRIPPED lamp). Open the valve, let the pump cool, then press RESET and START on its control box.`,
+      'Press TIME ×600 or ×3600 on the mimic: the clock races and the pool warms up (or cools down), and the filter slowly fouls: watch PDI1 climb.',
+      `Backwash, step 1: press STOP on the pump. Shut ${v('filter.inlet.iso')} and ${v('filter.outlet.iso')}; open ${v('filter.backwash-in.iso')} and ${v('filter.backwash-out.iso')}. Press START and watch sight glass ${v('backwashOut.sg')} run murky, then clear.`,
+      `Backwash, step 2 (rinse): STOP. Shut ${v('filter.backwash-in.iso')} and ${v('filter.backwash-out.iso')}; open ${v('filter.inlet.iso')} and ${v('filter.rinse.iso')}. START for a minute or two.`,
+      `Back to service: STOP, shut ${v('filter.rinse.iso')}, open ${v('filter.outlet.iso')}, START. PDI1 is back to clean.`,
     ],
+    warning: `Why stop the pump first? Swinging a valve on moving water stops it suddenly: a pressure surge, “water hammer”, that can split pipes. Try it with the pump running and watch ${v('pump.discharge.pi')} kick.`,
     reset:
       'Got in a muddle? Press the big red RESET SIMULATION button: everything goes back to the start.',
   };
@@ -245,3 +274,20 @@ export const RESET_SIGN = {
   headline: 'Don’t worry, you can’t break anything!',
   body: 'This is a simulation. If you get the plant into a muddle, press this button and everything goes back to the start.',
 } as const;
+
+/** One kettle: 1.7 litres from 15 °C to the boil, kWh. */
+export const KETTLE_KWH = (1.7 * 4.186 * 85) / 3600;
+
+/** How many kettles the heat would boil. */
+export const kettlesOf = (kWh: number) =>
+  Math.floor(Math.max(0, kWh) / KETTLE_KWH);
+
+/** The heat sign's words: the heat meter's total, the power now, and what it would do. */
+export function heatSignLines(kWh: number, kW: number): [string, string] {
+  return [
+    `${kWh.toFixed(1).padStart(8)} kWh ${kW.toFixed(0).padStart(4)} kW`,
+    `=${Math.floor(kWh / KETTLE_KWH)
+      .toLocaleString('en-GB')
+      .padStart(8)} kettles`,
+  ];
+}

@@ -58,7 +58,9 @@ describe('dev51, the ideal pool plant’s room', () => {
     const ids = room.items.map((i) => i.id).sort();
     const wanted = [
       ...FITTINGS.map((f) => f.id),
-      ...INSTRUMENTS.filter((i) => i.kind === 'temperature').map((i) => i.id),
+      ...INSTRUMENTS.filter(
+        (i) => i.kind === 'temperature' || i.kind === 'sight-glass',
+      ).map((i) => i.id),
     ].sort();
     expect(ids).toEqual(wanted);
     for (const item of room.items) {

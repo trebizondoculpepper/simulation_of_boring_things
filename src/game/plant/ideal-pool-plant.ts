@@ -7,8 +7,17 @@ import type {
 } from './plumbing-expansion';
 import type { SchematicNode } from './schematics';
 import { effectiveness } from './pool-heating';
-import { filterSizing } from './ideal-filter';
+import {
+  bedLifted,
+  bedPasses,
+  filterSizing,
+  newIdealFilter,
+  stepFilterBed,
+  washedOut,
+} from './ideal-filter';
+import type { IdealFilterState } from './ideal-filter';
 import { gaugeBar, solveNetwork } from '../sim/hydraulics';
+import { deadheadTrips, resetAllowed, stepCasing } from './pump-deadhead';
 import type { NetLink, NetNode } from '../sim/hydraulics';
 
 /**
@@ -46,7 +55,10 @@ export type MachineId =
   | 'join'
   | 'hx'
   | 'heat'
-  | 'heatReturn';
+  | 'heatReturn'
+  | 'dischargeTee'
+  | 'wasteTee'
+  | 'drain';
 
 export const NODES: readonly (SchematicNode & { id: MachineId })[] = [
   { id: 'pool', kind: 'ideal-pool', code: 'IP1', name: 'Ideal pool' },
@@ -83,6 +95,11 @@ export const NODES: readonly (SchematicNode & { id: MachineId })[] = [
     code: 'HS2',
     name: 'Ideal hot-water return',
   },
+  // The filter's backwash (the owner, 2026-10-28): the tee that feeds its
+  // top or its underdrain, and its waste to an ideal drain.
+  { id: 'dischargeTee', kind: 'tee', code: 'TE3', name: 'Filter feed tee' },
+  { id: 'wasteTee', kind: 'tee', code: 'TE4', name: 'Waste tee' },
+  { id: 'drain', kind: 'ideal-drain', code: 'DR1', name: 'Ideal drain' },
 ];
 
 export type LinkId =
@@ -95,7 +112,12 @@ export type LinkId =
   | 'hxOut'
   | 'returnMain'
   | 'primaryFlow'
-  | 'primaryReturn';
+  | 'primaryReturn'
+  | 'toInlet'
+  | 'toUnderdrain'
+  | 'backwashOut'
+  | 'rinse'
+  | 'waste';
 
 const link = (
   id: LinkId,
@@ -114,7 +136,9 @@ const link = (
 export const LINKS: readonly (PlumbEdge & { id: LinkId })[] = [
   link('overflow', ['pool', 'overflow'], ['tank', 'inlet']),
   link('suction', ['tank', 'outlet'], ['pump', 'suction']),
-  link('discharge', ['pump', 'discharge'], ['filter', 'inlet']),
+  link('discharge', ['pump', 'discharge'], ['dischargeTee', 'in']),
+  link('toInlet', ['dischargeTee', 'run'], ['filter', 'inlet']),
+  link('toUnderdrain', ['dischargeTee', 'branch'], ['filter', 'backwash-in']),
   link('filtered', ['filter', 'outlet'], ['split', 'in']),
   link('bypass', ['split', 'run'], ['join', 'run']),
   link('hxIn', ['split', 'branch'], ['hx', 'secondary-in']),
@@ -122,6 +146,9 @@ export const LINKS: readonly (PlumbEdge & { id: LinkId })[] = [
   link('returnMain', ['join', 'out'], ['pool', 'return']),
   link('primaryFlow', ['heat', 'out-1'], ['hx', 'primary-in']),
   link('primaryReturn', ['hx', 'primary-out'], ['heatReturn', 'in-1']),
+  link('backwashOut', ['filter', 'backwash-out'], ['wasteTee', 'run']),
+  link('rinse', ['filter', 'rinse'], ['wasteTee', 'branch']),
+  link('waste', ['wasteTee', 'out'], ['drain', 'in-1']),
 ];
 
 /** What each link carries, in words, for its pipe's label. */
@@ -136,6 +163,11 @@ export const LINK_NAMES: Record<LinkId, string> = {
   returnMain: 'Return to pool',
   primaryFlow: 'LTHW flow',
   primaryReturn: 'LTHW return',
+  toInlet: 'Filter inlet',
+  toUnderdrain: 'Backwash supply',
+  backwashOut: 'Backwash to waste',
+  rinse: 'Rinse to waste',
+  waste: 'Waste',
 };
 
 /** Each link's pipe: its nominal bore, mm. */
@@ -150,6 +182,11 @@ export const LINK_DN: Record<LinkId, 40 | 100 | 150> = {
   returnMain: 150,
   primaryFlow: 40,
   primaryReturn: 40,
+  toInlet: 150,
+  toUnderdrain: 150,
+  backwashOut: 150,
+  rinse: 150,
+  waste: 150,
 };
 
 export type ValveId =
@@ -158,25 +195,30 @@ export type ValveId =
   | 'pump.discharge.iso'
   | 'filter.inlet.iso'
   | 'filter.outlet.iso'
+  | 'filter.backwash-in.iso'
+  | 'filter.backwash-out.iso'
+  | 'filter.rinse.iso'
   | 'bypass.valve'
   | 'hx.secondary-in.iso'
   | 'hx.secondary-out.iso'
   | 'heat.out-1.valve'
   | 'hx.primary-in.iso'
-  | 'hx.primary-out.iso';
+  | 'hx.primary-out.iso'
+  | 'hx.primary.mv';
 
 export type MeterId =
   | 'filter.outlet.meter'
   | 'bypass.meter'
   | 'hx.secondary.meter'
-  | 'heat.out-1.meter';
+  | 'heat.out-1.meter'
+  | 'hx.primary-out.heat';
 
 /** A schematic fitting with what the room needs of it: the machine its tag hangs from. */
 export interface PlantFitting extends GivenFitting {
   /** The machine whose tag it extends (a valve), or none (an instrument, tagged by its loop). */
   of?: MachineId;
   /** A meter's kind of instrument, after the product it is modelled on. */
-  meter?: 'electromagnetic' | 'paddle-wheel' | 'variable-area';
+  meter?: 'electromagnetic' | 'paddle-wheel' | 'variable-area' | 'heat';
   /** A valve's openings the visitor can set it to (a notch plate), or none: on or off. */
   throttles?: boolean;
   /** A valve's normal opening, 0 to 1, where it is not simply open or shut. */
@@ -237,7 +279,7 @@ export const FITTINGS: readonly PlantFitting[] = [
     of: 'pump',
   },
   valve('pump.discharge.iso', 'discharge', 'source', 'pump discharge', 'pump'),
-  valve('filter.inlet.iso', 'discharge', 'target', 'filter inlet', 'filter'),
+  valve('filter.inlet.iso', 'toInlet', 'target', 'filter inlet', 'filter'),
   valve('filter.outlet.iso', 'filtered', 'source', 'filter outlet', 'filter'),
   meter(
     'filter.outlet.meter',
@@ -245,6 +287,34 @@ export const FITTINGS: readonly PlantFitting[] = [
     'source',
     'circulation',
     'electromagnetic',
+  ),
+  // The rest of the filter's five-valve nest: closed in service.
+  valve(
+    'filter.backwash-in.iso',
+    'toUnderdrain',
+    'target',
+    'filter backwash inlet',
+    'filter',
+    { normally: 'closed', normalOpening: 0 },
+  ),
+  valve(
+    'filter.backwash-out.iso',
+    'backwashOut',
+    'source',
+    'filter backwash outlet',
+    'filter',
+    { normally: 'closed', normalOpening: 0 },
+  ),
+  valve(
+    'filter.rinse.iso',
+    'rinse',
+    'source',
+    'filter rinse to waste',
+    'filter',
+    {
+      normally: 'closed',
+      normalOpening: 0,
+    },
   ),
   valve('bypass.valve', 'bypass', 'source', 'exchanger bypass', 'hx', {
     normalOpening: 0.6,
@@ -303,14 +373,46 @@ export const FITTINGS: readonly PlantFitting[] = [
     'exchanger primary outlet',
     'hx',
   ),
+  // The heating's interlock (the owner, 2026-10-28): a motorised valve on
+  // the primary, shut whenever the pump stops or too little pool water
+  // passes the exchanger, open again when it flows.
+  {
+    id: 'hx.primary.mv',
+    kind: 'isolating-valve',
+    edge: 'primaryFlow',
+    end: 'target',
+    normally: 'open',
+    role: 'heating interlock',
+    operator: 'motor',
+    of: 'hx',
+  },
+  // A heat meter on the primary's return (the owner, 2026-10-28): its
+  // flow sensor in the line, its two temperature sensors on the flow and
+  // return, its calculator totting up the heat passed.
+  {
+    id: 'hx.primary-out.heat',
+    kind: 'flowmeter',
+    edge: 'primaryReturn',
+    end: 'source',
+    normally: 'open',
+    role: 'heating energy',
+    meter: 'heat',
+  },
 ];
 
-/** The valves a visitor works: every fitting but the meters and the non-return valve. */
-export const VALVES = FITTINGS.filter((f) => f.kind === 'isolating-valve').map(
-  (f) => f.id as ValveId,
-);
+/** The motorised interlock valve: its id. */
+export const INTERLOCK_VALVE = 'hx.primary.mv' as const;
 
-export type InstrumentKind = 'pressure' | 'differential' | 'temperature';
+/** The valves a visitor works: every fitting but the meters and the non-return valve. */
+export const VALVES = FITTINGS.filter(
+  (f) => f.kind === 'isolating-valve' && f.operator !== 'motor',
+).map((f) => f.id as ValveId);
+
+export type InstrumentKind =
+  | 'pressure'
+  | 'differential'
+  | 'temperature'
+  | 'sight-glass';
 
 /** A gauge or thermometer: where it reads, and what. */
 export interface Instrument {
@@ -404,6 +506,13 @@ export const INSTRUMENTS: readonly Instrument[] = [
     role: 'exchanger primary outlet',
     edge: 'primaryReturn',
   },
+  {
+    id: 'backwashOut.sg',
+    kind: 'sight-glass',
+    reads: 'waste',
+    role: 'backwash water',
+    edge: 'backwashOut',
+  },
 ];
 
 // ---- Tags, derived -------------------------------------------------------------
@@ -417,13 +526,19 @@ export const machineTag = (id: MachineId) =>
 /** The ISA letters of an instrument or meter: FT, FI, PI, PDI, TI. */
 function instrumentLetters(f: PlantFitting | Instrument): string {
   if ('meter' in f && f.meter)
-    return f.meter === 'electromagnetic' ? 'FT' : 'FI';
+    return f.meter === 'electromagnetic'
+      ? 'FT'
+      : f.meter === 'heat'
+        ? 'HM'
+        : 'FI';
   const i = f as Instrument;
   return i.kind === 'pressure'
     ? 'PI'
     : i.kind === 'differential'
       ? 'PDI'
-      : 'TI';
+      : i.kind === 'sight-glass'
+        ? 'SG'
+        : 'TI';
 }
 
 /**
@@ -444,8 +559,9 @@ export const TAGS: Readonly<Record<string, string>> = (() => {
   for (const f of FITTINGS) {
     if (f.kind === 'flowmeter') {
       const letters = instrumentLetters(f);
-      // Flow instruments share one loop numbering: FT1, FI2, FI3…
-      tags[f.id] = `${ROOM_CODE}-${letters}${next('F')}`;
+      // Flow instruments share one loop numbering: FT1, FI2, FI3…; a heat meter its own.
+      tags[f.id] =
+        `${ROOM_CODE}-${letters}${next(letters === 'HM' ? 'HM' : 'F')}`;
     } else {
       const letter = f.kind === 'non-return-valve' ? 'NRV' : 'V';
       tags[f.id] = `${machineTag(f.of!)}-${letter}${next(`${f.of}.${letter}`)}`;
@@ -466,6 +582,8 @@ export const shortTag = (id: string) => TAGS[id].slice(ROOM_CODE.length + 1);
 export function fittingName(f: PlantFitting): string {
   const role = f.role ?? '';
   const words = role.charAt(0).toUpperCase() + role.slice(1);
+  if (f.kind === 'flowmeter' && f.meter === 'heat')
+    return `${words} meter (ultrasonic heat meter)`;
   if (f.kind === 'flowmeter')
     return `${words} flowmeter (${
       f.meter === 'electromagnetic'
@@ -527,6 +645,14 @@ export const PLANT = {
   hxUA: 12,
   /** The pool's heat loss to its hall: kW per kelvin over this, °C. */
   poolUA: 12.5,
+  /** The pool water's suspended solids as it reaches the filter, g/m³: bathers' dirt, held steady by the ideal pool. */
+  poolDirt: 3,
+  /** The waste's sight glass: how fast its water's look follows the water, s. */
+  glassLag: 4,
+  /** A valve worked under flow: the main's length and a notch's closing time, for its surge (Joukowsky, slowed by the closure). */
+  surgeMain: 20,
+  surgeClose: 0.5,
+  surgeLag: 0.4,
   hallReference: 20,
   /** The plant room's air, °C: still water in a pipe drifts to it. */
   roomC: 22,
@@ -536,6 +662,9 @@ export const PLANT = {
   stillLag: 900,
   /** The water at the start, °C. */
   startC: 27,
+  /** The heating interlock: the least pool-water flow through the exchanger, m³/h; its valve's stroke, s (after the Belimo LR24A, 35 s). */
+  interlockFlow: 5,
+  interlockStroke: 35,
 } as const;
 
 /** A resistance that loses `metres` at `flow`. */
@@ -557,6 +686,9 @@ export const RESISTANCE = {
   hxSecondary: r(3, 50),
   /** The return main and the pool's inlets. */
   returnMain: r(7, 150),
+  /** The waste run to the drain, sized so a full backwash lifts and heals the bed (about 32 m/h). */
+  wasteRun: r(17.5, 200),
+  feedPipe: r(0.2, 150),
   /** The hot-water source's own, taking half its pressure at its most (as an experimental source's). */
   source: r((PLANT.sourceBar * 10.2) / 2, PLANT.sourceMax),
   primaryPipe: r(1.4, 3),
@@ -572,8 +704,11 @@ export const valveCharacteristic = (opening: number) =>
 /** The openings a valve's notch plate holds: shut, four throttled notches and open. */
 export const NOTCHES: readonly number[] = [0, 0.2, 0.4, 0.6, 0.8, 1];
 
-export type TimeSpeed = 1 | 60 | 600;
-export const SPEEDS: readonly TimeSpeed[] = [1, 60, 600];
+export type TimeSpeed = 1 | 60 | 600 | 3600;
+export const SPEEDS: readonly TimeSpeed[] = [1, 60, 600, 3600];
+
+/** The plant's clock at the start, seconds after midnight: 08:00. */
+export const START_TIME = 8 * 3600;
 
 export interface IdealPlantState {
   /** Each valve's opening, 0 shut to 1 open. */
@@ -595,8 +730,23 @@ export interface IdealPlantState {
   speed: TimeSpeed;
   /** Seconds of plant time since the start. */
   seconds: number;
+  /** The plant's clock at the start, seconds after local midnight: the visitor's time when the room was built or RESET. */
+  clockStart: number;
   /** Real seconds since the last reset, for the button's light. */
   sinceReset: number;
+  /** The pump's casing water, °C, and its thermostat's latch (`pump-deadhead.ts`). */
+  casingC: number;
+  tripped: boolean;
+  /** The interlock's motorised valve: its opening, 0 to 1, travelling to its command. */
+  interlock: number;
+  /** The sand bed: its dirt, fissuring and unsettling (`ideal-filter.ts`). */
+  bed: IdealFilterState;
+  /** The water in the waste's sight glass, g/m³ of solids. */
+  wasteDirt: number;
+  /** A valve's surge on the pump's discharge, bar, dying away. */
+  surge: number;
+  /** The heat meter's total, kWh: from the demo's start, through RESET. */
+  heatKWh: number;
 }
 
 const valveById = new Map(FITTINGS.map((f) => [f.id, f]));
@@ -608,7 +758,9 @@ export const normalOpening = (id: ValveId) => {
 };
 
 /** The plant as it starts: every valve at its normal position, the pump running, the heating off, the water at 27 °C. */
-export function newIdealPlant(): IdealPlantState {
+export function newIdealPlant(
+  clockStart: number = START_TIME,
+): IdealPlantState {
   const c = PLANT.startC;
   return {
     opening: Object.fromEntries(
@@ -634,7 +786,15 @@ export function newIdealPlant(): IdealPlantState {
     ),
     speed: 1,
     seconds: 0,
+    clockStart,
     sinceReset: Infinity,
+    casingC: c,
+    tripped: false,
+    interlock: 1,
+    bed: newIdealFilter(),
+    wasteDirt: 0,
+    surge: 0,
+    heatKWh: 0,
   };
 }
 
@@ -644,7 +804,10 @@ export type IdealPlantAction =
   | { type: 'notch'; id: ValveId; by: 1 | -1 }
   | { type: 'pump'; run: boolean }
   | { type: 'speed'; speed: TimeSpeed }
-  | { type: 'reset' };
+  /** RESET on the pump's local station: clears its trip once the casing has cooled. */
+  | { type: 'trip-reset' }
+  /** RESET SIMULATION: everything to the start, its clock to `clock` (the visitor's time now, seconds after midnight). */
+  | { type: 'reset'; clock?: number };
 
 export function actOnPlant(
   s: IdealPlantState,
@@ -652,10 +815,10 @@ export function actOnPlant(
 ): IdealPlantState {
   switch (a.type) {
     case 'valve':
-      return {
+      return withSurge(s, {
         ...s,
         opening: { ...s.opening, [a.id]: Math.max(0, Math.min(1, a.opening)) },
-      };
+      });
     case 'notch': {
       const now = s.opening[a.id];
       const i = NOTCHES.reduce(
@@ -664,21 +827,67 @@ export function actOnPlant(
         0,
       );
       const k = Math.max(0, Math.min(NOTCHES.length - 1, i + a.by));
-      return { ...s, opening: { ...s.opening, [a.id]: NOTCHES[k] } };
+      return withSurge(s, {
+        ...s,
+        opening: { ...s.opening, [a.id]: NOTCHES[k] },
+      });
     }
     case 'pump':
-      return { ...s, pumpRunning: a.run };
+      // A tripped pump will not start until its trip is reset.
+      return a.run && s.tripped ? s : { ...s, pumpRunning: a.run };
+    case 'trip-reset':
+      return s.tripped && resetAllowed(s.casingC)
+        ? { ...s, tripped: false }
+        : s;
     case 'speed':
       return { ...s, speed: a.speed };
     case 'reset':
-      return { ...newIdealPlant(), sinceReset: 0 };
+      // The heat meter counts on through RESET: "since the demo started".
+      return {
+        ...newIdealPlant(a.clock ?? s.clockStart),
+        sinceReset: 0,
+        heatKWh: s.heatKWh,
+      };
   }
 }
 
+/** The main's bore's area, m² (DN150 PVC-U). */
+const MAIN_AREA = (Math.PI * 0.15 ** 2) / 4;
+
+/**
+ * A valve worked while the pump runs: the pump's flow changes at once, and
+ * the water in the main, stopped or started in a notch's closing time, gives
+ * a surge (Joukowsky's rise slowed by a closure longer than the pipe's
+ * period: Δp ≈ 2ρLΔv / t), felt at the pump's discharge gauge as a kick.
+ */
+function withSurge(before: IdealPlantState, after: IdealPlantState) {
+  if (!before.pumpRunning) return after;
+  const dq = Math.abs(
+    solvePlant(before).circulation - solvePlant(after).circulation,
+  );
+  const dv = dq / 3600 / MAIN_AREA;
+  const bar = (2 * 1000 * PLANT.surgeMain * dv) / PLANT.surgeClose / 1e5;
+  return { ...after, surge: Math.max(before.surge, bar) };
+}
+
+/** A pressure gauge's reading, bar: the network's, and a surge on the discharge. */
+export const gaugeReading = (s: IdealPlantState, f: PlantFlows, id: string) =>
+  (f.gauge[id] ?? 0) + (id === 'pump.discharge.pi' ? s.surge : 0);
+
 /** The water network's solution: every flow and every gauge's reading. */
 export interface PlantFlows {
-  /** Through the pump and filter (the circulation), the bypass, the exchanger's secondary, its primary, m³/h. */
+  /** Through the pump (the circulation), the bypass, the exchanger's secondary, its primary, m³/h. */
   circulation: number;
+  /** Filtered water on to the pool; down through the bed (+) or up (−); to waste by the backwash outlet and the rinse, m³/h. */
+  toPool: number;
+  bed: number;
+  backwash: number;
+  rinse: number;
+  /** From the feed tee to the filter's top (V1) and its underdrain (V3), m³/h. */
+  feedTop: number;
+  feedBottom: number;
+  /** Whether the bed is lifted (a backwash fast enough). */
+  lifted: boolean;
   bypass: number;
   hxSecondary: number;
   primary: number;
@@ -696,6 +905,44 @@ function valveR(s: IdealPlantState, id: ValveId, dn: 40 | 100 | 150) {
   const k = valveCharacteristic(s.opening[id]);
   return k <= 1e-6 ? null : RESISTANCE.valveOpen[dn] / (k * k);
 }
+
+/** The interlock valve's step of travel the network sees: a twentieth of its stroke. */
+const interlockStep = (opening: number) => Math.round(opening * 20) / 20;
+
+/** The interlock valve's resistance (a motorised ball valve, the primary's bore), or none shut. */
+function interlockR(s: IdealPlantState) {
+  const k = valveCharacteristic(interlockStep(s.interlock));
+  return k <= 1e-6 ? null : RESISTANCE.valveOpen[40] / (k * k);
+}
+
+/** The bed's dirt as the network sees it: in fiftieths of its dirt reference. */
+const dirtStep = (bed: IdealFilterState) => {
+  const ref = filterSizing(FILTER_SPEC).dirtRef;
+  return (Math.round((bed.dirt / ref) * 50) / 50) * ref;
+};
+
+/**
+ * The bed's resistance, as the ideal filter's: a clean bed's, raised by
+ * its dirt and lowered by its fissures; lifted by a backwash, about its
+ * depth of head at its wash flow whatever its dirt.
+ */
+function bedResistance(bed: IdealFilterState, lifted: boolean) {
+  const z = filterSizing(FILTER_SPEC);
+  if (lifted) return z.bedDepth / (z.washFlow * z.washFlow);
+  return (
+    (z.cleanHead / (z.designFlow * z.designFlow)) *
+    (1 + dirtStep(bed) / z.dirtRef) *
+    (1 - 0.6 * bed.fissuring)
+  );
+}
+
+/** What the water network depends on: when this changes, it must be solved again. */
+export const networkKey = (s: IdealPlantState) =>
+  `${s.pumpRunning ? 1 : 0}|${interlockStep(s.interlock)}|${dirtStep(s.bed).toFixed(4)}|${Math.round(s.bed.fissuring * 50)}|${VALVES.map((v) => s.opening[v]).join(',')}`;
+
+/** Whether the interlock lets the heating run: the pump running and enough pool water through the exchanger. */
+export const interlockPermits = (s: IdealPlantState, f: PlantFlows) =>
+  s.pumpRunning && f.hxSecondary >= PLANT.interlockFlow;
 
 /** A run of resistances in series, closed if any valve on it is shut. */
 function series(
@@ -747,6 +994,25 @@ export function solveWithDeadEnds(
     const kept = live.filter((l) => !leaf(l.from) && !leaf(l.to));
     if (kept.length === live.length) break;
     live = kept;
+  }
+  // A loop that reaches only one reservoir (the bypass and the exchanger,
+  // the filter shut off before them) carries nothing either: only the parts
+  // of the network joining two reservoirs or more are solved.
+  {
+    const parent = new Map<string, string>();
+    const find = (x: string): string => {
+      while (parent.has(x) && parent.get(x) !== x) x = parent.get(x)!;
+      return x;
+    };
+    for (const l of live) {
+      for (const id of [l.from, l.to]) if (!parent.has(id)) parent.set(id, id);
+      parent.set(find(l.from), find(l.to));
+    }
+    const reservoirs = new Map<string, number>();
+    for (const id of fixed)
+      if (parent.has(id))
+        reservoirs.set(find(id), (reservoirs.get(find(id)) ?? 0) + 1);
+    live = live.filter((l) => (reservoirs.get(find(l.from)) ?? 0) >= 2);
   }
   const inLive = new Set(live.flatMap((l) => [l.from, l.to]));
   const reservoirsJoined =
@@ -811,15 +1077,18 @@ export function solvePlant(s: IdealPlantState): PlantFlows {
   const nodes: NetNode[] = [
     { id: 'tank', head: PLANT.tankHead },
     { id: 'pool', head: PLANT.poolHead },
+    { id: 'waste', head: 0 },
     { id: 'pumpIn' },
     { id: 'pumpOut' },
     { id: 'checked' },
+    { id: 'feed' },
     { id: 'filterIn' },
     { id: 'filterOut' },
     { id: 'split' },
     { id: 'join' },
   ];
-  const links: NetLink[] = [
+  const z = filterSizing(FILTER_SPEC);
+  const network = (lifted: boolean): NetLink[] => [
     series('suction', 'tank', 'pumpIn', [
       R.suctionPipe,
       valveR(s, 'pump.suction.iso', 150),
@@ -840,21 +1109,38 @@ export function solvePlant(s: IdealPlantState): PlantFlows {
       to: 'checked',
       r: R.nonReturn,
     },
-    series('discharge', 'checked', 'filterIn', [
+    series('discharge', 'checked', 'feed', [
       R.dischargePipe,
       valveR(s, 'pump.discharge.iso', 150),
+    ]),
+    // The five-valve nest: V1 to the top, V3 to the underdrain, V2 on to
+    // the pool, V4 from the top to waste, V5 from the underdrain to waste.
+    series('toInlet', 'feed', 'filterIn', [
+      R.feedPipe,
       valveR(s, 'filter.inlet.iso', 150),
+    ]),
+    series('toUnderdrain', 'feed', 'filterOut', [
+      R.feedPipe,
+      valveR(s, 'filter.backwash-in.iso', 150),
     ]),
     {
       id: 'bed',
       kind: 'resistance',
       from: 'filterIn',
       to: 'filterOut',
-      r: R.filterBed,
+      r: bedResistance(s.bed, lifted),
     },
     series('filtered', 'filterOut', 'split', [
       R.filteredPipe,
       valveR(s, 'filter.outlet.iso', 150),
+    ]),
+    series('backwashOut', 'filterIn', 'waste', [
+      R.wasteRun,
+      valveR(s, 'filter.backwash-out.iso', 150),
+    ]),
+    series('rinse', 'filterOut', 'waste', [
+      R.wasteRun,
+      valveR(s, 'filter.rinse.iso', 150),
     ]),
     series('bypass', 'split', 'join', [
       R.bypassPipe,
@@ -874,7 +1160,15 @@ export function solvePlant(s: IdealPlantState): PlantFlows {
       r: R.returnMain,
     },
   ];
-  const c = solveWithDeadEnds(nodes, links, PLANT.poolHead);
+  // As the ideal filter's rig does: solved with the bed settled; if that
+  // sends enough water up through it to lift it, solved again lifted.
+  let c = solveWithDeadEnds(nodes, network(false), PLANT.poolHead);
+  let lifted = false;
+  if (bedLifted(FILTER_SPEC, c.flows.bed ?? 0)) {
+    c = solveWithDeadEnds(nodes, network(true), PLANT.poolHead);
+    lifted = true;
+  }
+  void z;
   const sourceHead = PLANT.sourceBar * 10.2;
   const p = solveWithDeadEnds(
     [
@@ -888,6 +1182,7 @@ export function solvePlant(s: IdealPlantState): PlantFlows {
         R.primaryPipe / 2,
         valveR(s, 'heat.out-1.valve', 40),
         valveR(s, 'hx.primary-in.iso', 40),
+        interlockR(s),
       ]),
       series('primaryReturn', 'hxIn', 'sink', [
         R.hxPrimary,
@@ -900,6 +1195,10 @@ export function solvePlant(s: IdealPlantState): PlantFlows {
   // Leakage past a shut valve (the solver's anchor) is no flow at all.
   const clean = (q: number) => (Math.abs(q) < 0.05 ? 0 : q);
   const circulation = clean(c.flows.suction);
+  const toPool = clean(c.flows.filtered);
+  const bedFlow = clean(c.flows.bed);
+  const backwash = clean(c.flows.backwashOut);
+  const rinse = clean(c.flows.rinse);
   const bypass = clean(c.flows.bypass);
   const hxSecondary = clean(c.flows.hx);
   const primary = clean(Math.min(p.flows.primaryFlow, p.flows.primaryReturn));
@@ -913,14 +1212,22 @@ export function solvePlant(s: IdealPlantState): PlantFlows {
   };
   return {
     circulation,
+    toPool,
+    bed: bedFlow,
+    backwash,
+    rinse,
+    feedTop: clean(c.flows.toInlet),
+    feedBottom: clean(c.flows.toUnderdrain),
+    lifted,
     bypass,
     hxSecondary,
     primary,
     meter: {
-      'filter.outlet.meter': circulation,
+      'filter.outlet.meter': toPool,
       'bypass.meter': bypass,
       'hx.secondary.meter': hxSecondary,
       'heat.out-1.meter': primary,
+      'hx.primary-out.heat': primary,
     },
     gauge,
     pumpHead: h.pumpOut - h.pumpIn,
@@ -974,10 +1281,18 @@ export function stepIdealPlant(
 ): IdealPlantState {
   if (!(dt > 0)) return state;
   let s = { ...state, sinceReset: state.sinceReset + dt };
+  let f = flows;
+  let key = networkKey(s);
   let left = dt * s.speed;
   while (left > 1e-9) {
     const h = Math.min(left, 0.5);
-    s = stepOnce(s, flows, h);
+    s = stepOnce(s, f, h);
+    // The pump tripped or the interlock moved: the water flows anew.
+    const next = networkKey(s);
+    if (next !== key) {
+      key = next;
+      f = solvePlant(s);
+    }
     left -= h;
   }
   return s;
@@ -1052,6 +1367,63 @@ function stepOnce(
     point,
     thermometer,
     seconds: s.seconds + dt,
+    heatKWh: s.heatKWh + (Math.max(0, x.q) * dt) / 3600,
+    ...pumpAndInterlock(s, f, dt),
+    ...filterBed(s, f, dt),
+  };
+}
+
+/**
+ * The sand bed `dt` seconds on, by the ideal filter's physics: loading in
+ * service with the pool's dirt, washing out lifted in a backwash, settling
+ * in a rinse; the waste's sight glass following what goes to waste (the
+ * bed's washings in a backwash, what it lets past in a rinse); a surge
+ * dying away.
+ */
+function filterBed(s: IdealPlantState, f: PlantFlows, dt: number) {
+  const bed = stepFilterBed(FILTER_SPEC, s.bed, f.bed, PLANT.poolDirt, dt);
+  const toWaste = f.backwash + f.rinse;
+  const dirt =
+    toWaste <= 0
+      ? s.wasteDirt
+      : (f.backwash * washedOut(FILTER_SPEC, s.bed, f.bed) +
+          f.rinse * bedPasses(FILTER_SPEC, s.bed, PLANT.poolDirt)) /
+        toWaste;
+  return {
+    bed,
+    wasteDirt: ease(s.wasteDirt, dirt, PLANT.glassLag, dt),
+    surge: s.surge * Math.exp(-dt / PLANT.surgeLag),
+  };
+}
+
+/**
+ * The pump's casing and its thermostat, and the heating's interlock, `dt`
+ * seconds on: the casing heats as `pump-deadhead.ts` says and trips the
+ * pump (latched) above its setting; the interlock valve travels toward
+ * open while the pump runs with enough pool water through the exchanger,
+ * toward shut otherwise.
+ */
+function pumpAndInterlock(s: IdealPlantState, f: PlantFlows, dt: number) {
+  const casingC = stepCasing(
+    s.casingC,
+    {
+      running: s.pumpRunning,
+      flow: f.circulation,
+      head: f.pumpHead,
+      inletC: s.tankC,
+      roomC: PLANT.roomC,
+    },
+    dt,
+  );
+  const trip = s.pumpRunning && deadheadTrips(casingC);
+  const travel = dt / PLANT.interlockStroke;
+  const interlock = interlockPermits(s, f)
+    ? Math.min(1, s.interlock + travel)
+    : Math.max(0, s.interlock - travel);
+  return {
+    casingC,
+    interlock,
+    ...(trip ? { tripped: true, pumpRunning: false } : {}),
   };
 }
 
@@ -1071,6 +1443,17 @@ export function plantReadings(
     duty: x.q,
     poolLoss: PLANT.poolUA * (s.poolC - PLANT.hallReference),
   };
+}
+
+/** The plant's clock, seconds after midnight (wrapping at a day). */
+export const plantClock = (s: IdealPlantState) =>
+  (s.clockStart + s.seconds) % 86400;
+
+/** The plant's clock as a display shows it: HH:MM:SS. */
+export function clockText(s: IdealPlantState) {
+  const t = Math.floor(plantClock(s));
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${two(Math.floor(t / 3600))}:${two(Math.floor(t / 60) % 60)}:${two(t % 60)}`;
 }
 
 /** How long the pool takes to pass once through the plant at a flow, hours. */

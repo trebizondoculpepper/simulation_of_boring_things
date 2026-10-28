@@ -56,4 +56,14 @@ describe('the ideal pool plant’s mimic', () => {
     expect(mimicAction('speed/600')).toEqual({ type: 'speed', speed: 600 });
     expect(mimicAction('speed/7')).toBeNull();
   });
+
+  it('lights TRIPPED for a tripped pump, and the interlock valve’s lens by where it stands', () => {
+    const tripped = { ...s, tripped: true, pumpRunning: false, interlock: 0 };
+    const t = idealPlantMimicState(tripped, solvePlant(tripped));
+    expect(t.lamps['pump-tripped']).toBe(true);
+    expect(t.lamps['mv-shut']).toBe(true);
+    expect(state.lamps['mv-open']).toBe(true);
+    expect(state.lamps['pump-tripped']).toBe(false);
+    expect(mimicAction('speed/3600')).toEqual({ type: 'speed', speed: 3600 });
+  });
 });

@@ -348,32 +348,59 @@ export function paintActivity(card: {
   title: string;
   steps: readonly string[];
   reset: string;
+  warning?: string;
 }) {
   return (c: CanvasRenderingContext2D, w: number, h: number) => {
     c.fillStyle = '#fffdf3';
     c.fillRect(0, 0, w, h);
     c.fillStyle = ACCENT;
-    c.fillRect(0, 0, w, h * 0.11);
+    c.fillRect(0, 0, w, h * 0.08);
     const m = w * 0.06;
     c.fillStyle = '#ffffff';
-    c.font = `bold ${h * 0.065}px ${SANS}`;
-    c.fillText(card.title, m, h * 0.078);
-    c.font = `bold ${h * 0.024}px ${SANS}`;
-    c.fillText('ACTIVITY CARD', w * 0.62, h * 0.07);
-    let y = h * 0.17;
+    c.font = `bold ${h * 0.05}px ${SANS}`;
+    c.fillText(card.title, m, h * 0.058);
+    c.font = `bold ${h * 0.02}px ${SANS}`;
+    c.fillText('ACTIVITY CARD', w * 0.66, h * 0.052);
+    let y = h * 0.12;
     card.steps.forEach((s, k) => {
       c.fillStyle = TEAL;
-      c.font = `bold ${h * 0.034}px ${SANS}`;
+      c.font = `bold ${h * 0.026}px ${SANS}`;
       c.fillText(`${k + 1}`, m, y);
       c.fillStyle = INK;
-      y = paragraph(c, s, m + w * 0.07, y, w - 2 * m - w * 0.07, h * 0.029);
-      y += h * 0.02;
+      y = paragraph(c, s, m + w * 0.06, y, w - 2 * m - w * 0.06, h * 0.02);
+      y += h * 0.01;
     });
+    if (card.warning) {
+      // Its box sized to its lines.
+      const size = h * 0.019;
+      c.font = `bold ${size}px ${SANS}`;
+      const count = wrap(c, card.warning, w - 2 * m).length;
+      const top = y + h * 0.005;
+      c.fillStyle = '#ffd21f';
+      c.fillRect(
+        m * 0.5,
+        top - size * 1.1,
+        w - m,
+        count * size * 1.25 + size * 0.6,
+      );
+      c.fillStyle = INK;
+      y = paragraph(c, card.warning, m, top, w - 2 * m, size, 'bold');
+      y += h * 0.02;
+    }
+    // The RESET line in its red strip, sized to its lines, after the rest.
+    const size = h * 0.02;
+    c.font = `bold ${size}px ${SANS}`;
+    const count = wrap(c, card.reset, w - 2 * m).length;
+    const top = y + h * 0.015;
     c.fillStyle = '#b22a22';
-    const top = Math.max(y, h * 0.86);
-    c.fillRect(m * 0.5, top - h * 0.035, w - m, h - top);
+    c.fillRect(
+      m * 0.5,
+      top - size * 1.1,
+      w - m,
+      count * size * 1.25 + size * 0.6,
+    );
     c.fillStyle = '#ffffff';
-    paragraph(c, card.reset, m, top + h * 0.005, w - 2 * m, h * 0.028, 'bold');
+    paragraph(c, card.reset, m, top, w - 2 * m, size, 'bold');
   };
 }
 
@@ -462,7 +489,11 @@ export function createResetPedestal(
   };
 }
 
-/** A local pump control station's push buttons and RUN lamp: START and STOP, worked through the room's actions. */
+/**
+ * A pump's local control station: START and STOP and its RUN lamp on the
+ * left, its TRIPPED lamp and the trip's RESET on the right, worked through
+ * the room's actions.
+ */
 export function createPumpStation(
   kit: PanelKit,
   {
@@ -470,11 +501,15 @@ export function createPumpStation(
     start,
     stop,
     running,
+    tripped,
+    resetTrip,
   }: {
     tag: string;
     start: () => void;
     stop: () => void;
     running: () => boolean;
+    tripped: () => boolean;
+    resetTrip: () => void;
   },
 ) {
   const t = tools(kit);
@@ -483,56 +518,92 @@ export function createPumpStation(
   const grey = t.paint('#c9ccc6', 0.55);
   // A post and the station's enclosure on it, facing +z.
   t.box(group, t.paint('#55616a', 0.5), 0.06, 1.2, 0.06, 0, 0.6, -0.05);
-  t.box(group, grey, 0.2, 0.32, 0.1, 0, 1.3, 0);
+  t.box(group, grey, 0.3, 0.34, 0.1, 0, 1.3, 0);
   const run = signal(running());
+  const trip = signal(tripped());
   const parts = createPartSet();
   const face = new Group();
   face.position.set(0, 1.3, 0.05);
   group.add(face);
-  const lamp = parts.add(
-    pilotLight(kit, {
-      colour: 'green',
-      legend: 'RUN',
-      drive: run,
-      name: `${tag} RUN lamp`,
-    }),
+  const put = <P extends { object: Group }>(part: P, x: number, y: number) => {
+    part.object.position.set(x, y, 0.002);
+    face.add(part.object);
+    return part;
+  };
+  put(
+    parts.add(
+      pilotLight(kit, {
+        colour: 'green',
+        legend: 'RUN',
+        drive: run,
+        name: `${tag} RUN lamp`,
+      }),
+    ),
+    -0.07,
+    0.09,
   );
-  lamp.object.position.set(0, 0.09, 0.002);
-  face.add(lamp.object);
-  const startButton = parts.add(
-    pushButton(kit, {
-      colour: 'green',
-      legend: 'START',
-      action: start,
-      name: `${tag} START`,
-    }),
+  put(
+    parts.add(
+      pushButton(kit, {
+        colour: 'green',
+        legend: 'START',
+        action: start,
+        name: `${tag} START`,
+      }),
+    ),
+    -0.07,
+    0,
   );
-  startButton.object.position.set(0, 0.0, 0.002);
-  face.add(startButton.object);
-  const stopButton = parts.add(
-    pushButton(kit, {
-      colour: 'red',
-      legend: 'STOP',
-      action: stop,
-      name: `${tag} STOP`,
-    }),
+  put(
+    parts.add(
+      pushButton(kit, {
+        colour: 'red',
+        legend: 'STOP',
+        action: stop,
+        name: `${tag} STOP`,
+      }),
+    ),
+    -0.07,
+    -0.09,
   );
-  stopButton.object.position.set(0, -0.09, 0.002);
-  face.add(stopButton.object);
+  put(
+    parts.add(
+      pilotLight(kit, {
+        colour: 'red',
+        legend: 'TRIPPED',
+        drive: trip,
+        name: `${tag} TRIPPED lamp`,
+      }),
+    ),
+    0.07,
+    0.09,
+  );
+  put(
+    parts.add(
+      pushButton(kit, {
+        colour: 'black',
+        legend: 'RESET',
+        action: resetTrip,
+        name: `${tag} trip RESET`,
+      }),
+    ),
+    0.07,
+    0,
+  );
   const tagPlate = createMicroLabel(kit, `${tag}  CIRCULATION PUMP`, {
-    height: 0.014,
+    height: 0.016,
     ink: '#16191b',
     plate: '#f4f3ee',
-    maxWidth: 0.18,
+    maxWidth: 0.26,
   });
-  tagPlate.position.set(0, 0.145, 0.052);
+  tagPlate.position.set(0, 0.155, 0.052);
   face.add(tagPlate);
   const pushTag = createMicroLabel(kit, 'PUSH', {
     height: 0.022,
     ink: '#111111',
     plate: '#ffd21f',
   });
-  pushTag.position.set(0.0, -0.19, 0.052);
+  pushTag.position.set(0.07, -0.09, 0.052);
   face.add(pushTag);
   return {
     group,
@@ -540,6 +611,8 @@ export function createPumpStation(
     update(delta: number) {
       const on = running();
       if (run.value !== on) run.value = on;
+      const off = tripped();
+      if (trip.value !== off) trip.value = off;
       parts.update(delta);
     },
   };

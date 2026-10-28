@@ -73,6 +73,10 @@ export const PLACES: Record<MachineId, MachinePlace> = {
   join: { x: 3.6, z: -4.78, yaw: 0 },
   heat: { x: 7.6, z: -4.9, yaw: 0 },
   heatReturn: { x: 6.1, z: -5.95, yaw: 0 },
+  // The backwash: the feed tee in the discharge's drop, the waste tee over the drain.
+  dischargeTee: { x: -0.9, z: -2.75, yaw: 0 },
+  wasteTee: { x: 3.05, z: -5.95, yaw: 0 },
+  drain: { x: 3.05, z: -5.95, yaw: 0 },
 };
 
 export interface Port {
@@ -81,6 +85,11 @@ export interface Port {
 }
 
 const filterNozzles = sandFilterGeometry(FILTER_SHAPE.dia, FILTER_SHAPE.shell);
+/** A nozzle's flange on the filter's face at `x`, z in its frame. */
+const nozzleZ = (x: number) =>
+  -0.35 + Math.sqrt((FILTER_SHAPE.dia / 2) ** 2 - x * x) + 0.1;
+/** The tees' centres' heights, m. */
+export const TEE_Y = { dischargeTee: 1.45, wasteTee: 2.0 } as const;
 const studTop = SOURCE_SHAPE.height + SOURCE_SHAPE.stud;
 
 /** Each machine's ports in its own frame (`createEndSuctionPump`, `sandFilterGeometry`, `createPlateHeatExchanger`, the experimental source's studs). */
@@ -105,6 +114,25 @@ export const PORTS: Record<MachineId, Record<string, Port>> = {
         filterNozzles.inlet.y,
         filterNozzles.inlet.flange,
       ],
+      out: [0, 0, 1],
+    },
+    // The rest of the five-valve nest: backwash out from the top, opposite
+    // the inlet; backwash in to the underdrain beside the outlet; rinse to
+    // waste from the underdrain on the right.
+    'backwash-out': {
+      at: [
+        -filterNozzles.inlet.x,
+        filterNozzles.inlet.y,
+        filterNozzles.inlet.flange,
+      ],
+      out: [0, 0, 1],
+    },
+    'backwash-in': {
+      at: [-0.85, filterNozzles.outlet.y, nozzleZ(-0.85)],
+      out: [0, 0, 1],
+    },
+    rinse: {
+      at: [0.85, filterNozzles.outlet.y, nozzleZ(0.85)],
       out: [0, 0, 1],
     },
     outlet: {
@@ -134,6 +162,17 @@ export const PORTS: Record<MachineId, Record<string, Port>> = {
     'primary-in': { at: [-0.2, HX_PLINTH + 0.884, -0.12], out: [-1, 0, 0] },
     'primary-out': { at: [-0.2, HX_PLINTH + 0.22, -0.12], out: [-1, 0, 0] },
   },
+  dischargeTee: {
+    in: { at: [0, 0.15 + TEE_Y.dischargeTee, 0], out: [0, 1, 0] },
+    run: { at: [0.15, TEE_Y.dischargeTee, 0], out: [1, 0, 0] },
+    branch: { at: [0, TEE_Y.dischargeTee - 0.15, 0], out: [0, -1, 0] },
+  },
+  wasteTee: {
+    run: { at: [0, TEE_Y.wasteTee + 0.15, 0], out: [0, 1, 0] },
+    branch: { at: [0, TEE_Y.wasteTee, 0.15], out: [0, 0, 1] },
+    out: { at: [0, TEE_Y.wasteTee - 0.15, 0], out: [0, -1, 0] },
+  },
+  drain: { 'in-1': { at: [0, studTop, 0], out: [0, 1, 0] } },
   heat: { 'out-1': { at: [0, studTop, 0], out: [0, 1, 0] } },
   heatReturn: { 'in-1': { at: [0, studTop, 0], out: [0, 1, 0] } },
 };
@@ -168,7 +207,21 @@ export const BOXES: Record<MachineId, { min: Vec3; max: Vec3 }> = {
     min: [-SOURCE_SHAPE.radius, 0, -SOURCE_SHAPE.radius],
     max: [SOURCE_SHAPE.radius, SOURCE_SHAPE.height, SOURCE_SHAPE.radius],
   },
+  dischargeTee: { min: [0, 0, 0], max: [0, 0, 0] },
+  wasteTee: { min: [0, 0, 0], max: [0, 0, 0] },
+  drain: {
+    min: [-SOURCE_SHAPE.radius, 0, -SOURCE_SHAPE.radius],
+    max: [SOURCE_SHAPE.radius, SOURCE_SHAPE.height, SOURCE_SHAPE.radius],
+  },
 };
+
+/** The tees: points in their lines, not machines to route round. */
+export const TEES: readonly MachineId[] = [
+  'split',
+  'join',
+  'dischargeTee',
+  'wasteTee',
+];
 
 const round = (v: number) => Math.round(v * 1e4) / 1e4;
 const turn = ([x, y, z]: Vec3, yaw: number): Vec3 => [
@@ -218,13 +271,18 @@ export const OD: Record<40 | 100 | 150, number> = {
 
 /** How far from its port each fitting or instrument stands, metres, in the order from it outward. */
 const SPACING: Record<
-  'isolating-valve' | 'non-return-valve' | 'flowmeter' | 'thermometer',
+  | 'isolating-valve'
+  | 'non-return-valve'
+  | 'flowmeter'
+  | 'thermometer'
+  | 'sight-glass',
   number
 > = {
   'isolating-valve': 0.36,
   'non-return-valve': 0.32,
   flowmeter: 0.5,
   thermometer: 0.3,
+  'sight-glass': 0.4,
 };
 /** What stands on a line. */
 type Spaced = keyof typeof SPACING;
@@ -234,7 +292,7 @@ const FIRST = 0.32;
 export interface PlacedItem {
   /** A fitting's id, or an instrument's. */
   id: string;
-  kind: PlantFitting['kind'] | 'thermometer';
+  kind: PlantFitting['kind'] | 'thermometer' | 'sight-glass';
   edge: LinkId;
   at: Vec3;
   /** The pipe's way through it there, in the way the water flows. */
@@ -279,14 +337,14 @@ function itemsOf(expansion: Expansion, edge: LinkId) {
   const target = along.filter((f) => f.end === 'target').reverse();
   const thermometer = INSTRUMENTS.filter(
     (i): i is Instrument & { edge: LinkId } =>
-      i.kind === 'temperature' && i.edge === edge,
+      (i.kind === 'temperature' || i.kind === 'sight-glass') && i.edge === edge,
   );
   // A thermometer goes on the line's far end from the machine whose water it reads.
   const atTarget =
     edge === 'suction' || edge === 'primaryFlow' || edge === 'returnMain';
   const t = thermometer.map((i) => ({
     id: i.id,
-    kind: 'thermometer' as const,
+    kind: (i.kind === 'sight-glass' ? 'sight-glass' : 'thermometer') as Spaced,
   }));
   return {
     source: [
@@ -362,7 +420,7 @@ export function plumbIdealPlantRoom(): IdealPlantRoom {
     },
   ];
   const machines = (Object.keys(PLACES) as MachineId[]).filter(
-    (id) => id !== 'split' && id !== 'join',
+    (id) => !TEES.includes(id),
   );
   const obstacles = machines.map((id) => boxInRoom(id));
   const requests: RouterLine[] = LINKS.map((l) => {

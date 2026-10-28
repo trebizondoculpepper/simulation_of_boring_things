@@ -7,9 +7,11 @@ import type {
 import { flowState } from '../../components/industrial-control/logic/mimic-chaser';
 import {
   INSTRUMENTS,
+  INTERLOCK_VALVE,
   SPEEDS,
   TAGS,
   VALVES,
+  gaugeReading,
   plantReadings,
   shortTag,
 } from '../../../game/plant/ideal-pool-plant';
@@ -33,6 +35,7 @@ import type {
 
 const WATER = '#2a5f9e';
 const HOT = '#c0392b';
+const WASTE = '#7a5a2a';
 
 /** Where each valve stands on its line, and its legend. */
 const VALVE_AT: Partial<Record<ValveId, Point>> = {
@@ -40,11 +43,14 @@ const VALVE_AT: Partial<Record<ValveId, Point>> = {
   'pump.discharge.iso': [-0.75, -0.02],
   'filter.inlet.iso': [-0.52, 0.12],
   'filter.outlet.iso': [-0.05, -0.42],
+  'filter.backwash-in.iso': [-0.62, -0.1],
+  'filter.backwash-out.iso': [-0.18, 0.2],
+  'filter.rinse.iso': [0.08, -0.15],
   'bypass.valve': [0.2, -0.1],
   'hx.secondary-in.iso': [0.5, -0.42],
   'hx.secondary-out.iso': [0.85, -0.05],
-  'heat.out-1.valve': [1.17, -0.42],
-  'hx.primary-in.iso': [1.03, -0.42],
+  'heat.out-1.valve': [1.22, -0.42],
+  'hx.primary-in.iso': [1.0, -0.42],
   'hx.primary-out.iso': [1.03, -0.62],
 };
 
@@ -63,10 +69,11 @@ const READOUTS: readonly { id: string; at: Point }[] = [
   { id: 'filter.outlet.pi', at: [-0.52, -0.25] },
   { id: 'filter.pdi', at: [-0.52, -0.6] },
   { id: 'filter.outlet.meter', at: [-0.25, -0.62] },
-  { id: 'bypass.meter', at: [0.02, 0.05] },
+  { id: 'bypass.meter', at: [0.36, 0.0] },
+  { id: 'backwashOut.sg', at: [-0.45, 0.62] },
   { id: 'hx.secondary.meter', at: [0.4, -0.6] },
   { id: 'hxOut.ti', at: [0.62, 0.05] },
-  { id: 'returnMain.ti', at: [-0.2, 0.62] },
+  { id: 'returnMain.ti', at: [0.0, 0.62] },
   { id: 'heat.out-1.meter', at: [1.3, -0.12] },
   { id: 'primaryFlow.ti', at: [1.3, 0.12] },
   { id: 'primaryReturn.ti', at: [0.82, -0.62] },
@@ -83,7 +90,13 @@ const READOUT_LEGEND: Record<string, string> = Object.fromEntries(
       : id === 'pool'
         ? 'POOL °C'
         : `${shortTag(id)} ${
-            id.endsWith('.meter') ? 'm³/h' : id.endsWith('.ti') ? '°C' : 'bar'
+            id.endsWith('.meter')
+              ? 'm³/h'
+              : id.endsWith('.ti')
+                ? '°C'
+                : id.endsWith('.sg')
+                  ? 'SIGHT g/m³'
+                  : 'bar'
           }`,
   ]),
 );
@@ -104,9 +117,39 @@ export const IDEAL_PLANT_MIMIC: MimicSpec = {
     line('discharge', [
       [-0.75, -0.24],
       [-0.75, 0.12],
+      [-0.62, 0.12],
+    ]),
+    line('toInlet', [
+      [-0.62, 0.12],
       [-0.25, 0.12],
       [-0.25, 0.06],
     ]),
+    line('toUnderdrain', [
+      [-0.62, 0.12],
+      [-0.62, -0.3],
+      [-0.32, -0.3],
+      [-0.32, -0.23],
+    ]),
+    line(
+      'backwashOut',
+      [
+        [-0.18, 0.04],
+        [-0.18, 0.3],
+        [-0.1, 0.3],
+      ],
+      WASTE,
+    ),
+    line(
+      'rinse',
+      [
+        [-0.12, -0.24],
+        [-0.12, -0.32],
+        [0.08, -0.32],
+        [0.08, 0.3],
+        [0.0, 0.3],
+      ],
+      WASTE,
+    ),
     line('filtered', [
       [-0.25, -0.26],
       [-0.25, -0.42],
@@ -182,6 +225,14 @@ export const IDEAL_PLANT_MIMIC: MimicSpec = {
     },
     { symbol: 'boiler', at: [1.38, -0.42], size: 0.1, label: 'HOT WATER IN' },
     { symbol: 'tank', at: [1.38, -0.62], size: 0.07, label: 'HOT WATER OUT' },
+    { symbol: 'tank', at: [-0.05, 0.3], size: 0.07, label: 'WASTE' },
+    // The heating's interlock: a motorised valve, its lens lit by where it stands.
+    {
+      symbol: 'valve' as const,
+      at: [1.11, -0.42] as Point,
+      size: 0.05,
+      indicator: { open: 'mv-open', shut: 'mv-shut' },
+    },
     ...VALVES.map((v) => ({
       symbol: 'valve' as const,
       at: VALVE_AT[v]!,
@@ -204,14 +255,26 @@ export const IDEAL_PLANT_MIMIC: MimicSpec = {
     { text: 'BYPASS', at: [0.29, 0.14], size: 0.55 },
     { text: 'RETURN TO POOL', at: [-0.55, 0.53], size: 0.6 },
     { text: 'OVERFLOW', at: [-1.18, -0.12], size: 0.5 },
-    { text: 'TIME', at: [0.6, -0.7], size: 0.6 },
+    { text: 'TIME', at: [0.47, 0.64], size: 0.7 },
+    {
+      text: `${shortTag(INTERLOCK_VALVE)} AUTO`,
+      at: [1.11, -0.48],
+      size: 0.45,
+    },
   ],
   lamps: [
     { id: 'pump-run', at: [-0.62, -0.32], colour: 'green', label: 'RUN' },
+    {
+      id: 'bed-lifted',
+      at: [-0.1, -0.02],
+      colour: 'amber',
+      label: 'BED LIFTED',
+    },
+    { id: 'pump-tripped', at: [-0.52, -0.32], colour: 'red', label: 'TRIPPED' },
     { id: 'heating', at: [1.17, -0.27], colour: 'amber', label: 'HEATING' },
     ...SPEEDS.map((s, k) => ({
       id: `speed-${s}`,
-      at: [0.75 + k * 0.17, -0.7] as Point,
+      at: [0.62 + k * 0.19, 0.69] as Point,
       colour: 'white' as const,
       label: `×${s}`,
     })),
@@ -222,7 +285,7 @@ export const IDEAL_PLANT_MIMIC: MimicSpec = {
     { id: 'pump/stop', at: [-0.52, -0.42], colour: 'red', legend: 'STOP' },
     ...SPEEDS.map((s, k) => ({
       id: `speed/${s}`,
-      at: [0.75 + k * 0.17, -0.76] as Point,
+      at: [0.62 + k * 0.19, 0.6] as Point,
       colour: 'white' as const,
       legend: `TIME ×${s}`,
     })),
@@ -259,7 +322,9 @@ export function instrumentReading(
   const name = TAGS[id] ? shortTag(id) : id;
   if (id in f.meter)
     return reading(f.meter[id as keyof typeof f.meter], 'm3/h', name);
-  if (id in f.gauge) return reading(f.gauge[id], 'bar', name, 2);
+  if (id in f.gauge) return reading(gaugeReading(s, f, id), 'bar', name, 2);
+  // The sight glass: how much dirt the waste water carries, as it looks.
+  if (id === 'backwashOut.sg') return reading(s.wasteDirt, 'g/m3', name, 0);
   if (id in s.thermometer) return reading(s.thermometer[id], 'C', name);
   return undefined;
 }
@@ -289,6 +354,10 @@ export function idealPlantMimicState(
         ]),
       ),
       'pump-run': s.pumpRunning,
+      'pump-tripped': s.tripped,
+      'bed-lifted': f.lifted,
+      'mv-open': s.interlock >= 0.98,
+      'mv-shut': s.interlock <= 0.02,
       heating: f.primary > 0,
       ...Object.fromEntries(SPEEDS.map((x) => [`speed-${x}`, s.speed === x])),
     },
@@ -297,11 +366,15 @@ export function idealPlantMimicState(
       overflow: flowState(f.circulation),
       suction: flowState(f.circulation),
       discharge: flowState(f.circulation),
-      filtered: flowState(f.circulation),
+      toInlet: flowState(f.feedTop),
+      toUnderdrain: flowState(f.feedBottom),
+      backwashOut: flowState(f.backwash),
+      rinse: flowState(f.rinse),
+      filtered: flowState(f.toPool),
       bypass: flowState(f.bypass),
       hxIn: flowState(f.hxSecondary),
       hxOut: flowState(f.hxSecondary),
-      returnMain: flowState(f.circulation),
+      returnMain: flowState(f.toPool),
       primaryFlow: flowState(f.primary * 10),
       primaryReturn: flowState(f.primary * 10),
     },

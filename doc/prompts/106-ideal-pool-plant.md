@@ -85,9 +85,38 @@ Frame rate on the owner's machine: about 97 fps on high, 106 on medium, 119 on l
 - The activity card and RESET: `?room=dev51&x=-2.8&y=1.6&z=3.4&yaw=190&pitch=-8`
 - The entrance panel: `?room=dev51&x=-6.3&y=1.65&z=4.1&yaw=270&pitch=0`
 
+## The owner's answers to the first build's questions (2026-10-28)
+
+1. **Dead-head trip: yes.** The pump's water heating at shut-off is a pure model (`src/game/plant/pump-deadhead.ts`, tested): the shaft's power less its useful work (ρgQH) goes into the casing's water (about 167 kJ/K), carried away by any flow; above 45 °C its casing thermostat trips the pump, latched, a TRIPPED lamp on the local station and the mimic, START refused; RESET at the pump's station, accepted once the casing is below 42 °C. Dead-headed from 27 °C it trips in about six minutes of plant time; stopped it cools enough in about two and a half. A step and a placard line added.
+2. **Heating interlock: yes.** A motorised valve on the primary, IPP-HX1-V6 (after a Belimo LR24A, 35 s stroke), in the schematic, shuts whenever the pump stops or less than 5 m³/h of pool water passes the exchanger, and opens again when it flows; its lens on the mimic (HX1-V6 AUTO), a line on the exchanger's placard. The manual valves stay manual.
+3. **Layout: the hand placement stays.**
+4. **Speed: ×3600 added** as a fourth TIME button. The plant steps in half-second slices and solves the water again whenever a trip, the interlock's travel or the bed's dirt changes it; at ×3600 a frame is a minute of plant time, the pool warms smoothly and the network converges (tested).
+
+## Added the same day
+
+- **The pool clock** (`architectural/views/pool-clock.ts`, its hands' angles pure and tested): a 750 mm sweep-second wall clock by Poolguard, high on the north wall in the main shot, driven by the plant's time; at ×3600 the minute hand goes round once a second; when the second hand would turn more than an eighth of a turn a frame it gives way to a faint red blur, so nothing strobes. The dial is printed once; the hands are meshes. A PLANT TIME display beside it (time and speed, redrawn at most four times a second when its text changes) and a placard. The owner's correction: the clock starts at the visitor's real local time when the room loads, and RESET sets it to the time then.
+- **Backwash** (on `ideal-filter.ts`'s physics: `stepFilterBed`, `washedOut`, `bedPasses`, `bedLifted`): the full five-valve nest round F1 (V1 inlet, V2 outlet, V3 backwash in to the underdrain, V4 backwash out from the top, V5 rinse to waste), each a manual lever with its TURN tag, in the schematic with its function, normal state and tag, routed by the router through a feed tee (TE3) and a waste tee (TE4) to an ideal drain (DR1, an experimental sink); sight glass SG1 on the backwash waste, its water brown to clear as the bed washes (a material's colour, no texture). The bed fouls with the pool's dirt (3 g/m³): about 0.4 bar above clean in a day, seconds at ×3600. A full backwash (about 196 m³/h, 32 m/h) lifts the bed and washes it out in four or five minutes; a throttled one (V4 at notch 1) does not lift it and leaves it dirty; a rinse settles it; back in service PDI1 is back to clean. Losing media to too fierce a backwash is not modelled. Working a valve with the pump running gives a surge on PI2 (Joukowsky's rise slowed by a half-second closure, 2ρLΔv/t, dying away in under a second): about 2.3 bar for a slam shut. The mimic shows the reversed flow, the waste lines, BED LIFTED and SG1's reading. Station 7's placard gives the trigger (0.4–0.5 bar above clean); the activity card has the steps and the warning.
+- **Heat used since the demo started:** an ultrasonic heat meter on the primary's return, IPP-HM1 (Splashonomics, after the Kamstrup MULTICAL 603), its own LCD showing kWh and kW; a sign on the north wall above the heating repeats its total in big red digits with the power now and "N kettles" (1.7 litres boiled from 15 °C, 0.168 kWh each), each display redrawn only when its digits change, at most four times a second. It counts from page load and **counts on through RESET**, as "since the demo started" says.
+- The RESET pedestal's column lowered clear of its button's head, the OVERFLOW label moved clear of its line, and the clock's display moved beside the clock, clear of the return main.
+
+## Readings after these (browser, 2026-10-28)
+
+- Dead-headed (F1-V2 shut) at ×60 with the heating on: the interlock shut at once (no pool water through the exchanger), the pump tripped after 371 plant seconds at 45.0 °C; RESET refused hot, START refused tripped; after 152 plant seconds the casing was below 42 °C, the station's RESET (clicked) cleared it, START (clicked) ran it, 184.7 m³/h, the interlock reopened, the hot water back at 3.04 m³/h.
+- RESET SIMULATION after a trip at ×600: everything back, the clock set to the visitor's time (16:06).
+- Fouling at ×3600 for 24 s (24 plant hours): PDI1 0.42 → 0.82 bar, the flow 183 → 160 m³/h.
+- Backwash (F1-V3 opened by clicking its lever, notch by notch): 196 m³/h up, bed lifted, PDI1 −0.11, SG1 2710 g/m³ after 12 s, 13 g/m³ after five minutes, bed dirt 10.8 → 0.04 kg. Rinse: 182 m³/h to waste, SG1 to 4 g/m³, the bed settled; back in service 183 m³/h, PDI1 0.42. RESET SIMULATION from mid-backwash: a clean bed and every valve normal.
+- Heating on at ×600: HM1 and the sign at 179 kW, 149.6 kWh after five real seconds.
+- Frame rate at ×3600, heating on: 120 fps on high, medium and low (the display's limit).
+
+## Camera links (added)
+
+- The clock in the main shot: `?room=dev51&x=0.2&y=2.6&z=2.6&yaw=355&pitch=-6`
+- The sight glass on the backwash waste: `?room=dev51&x=2.4&y=1.6&z=-1.9&yaw=320&pitch=3`
+- The pump's local station (TRIPPED, RESET): `?room=dev51&x=-0.75&y=1.5&z=-2.85&yaw=330&pitch=-8`
+- The heat-used sign: `?room=dev51&x=5.6&y=2.4&z=-2.2&yaw=20&pitch=8`
+- The activity card: `?room=dev51&x=-1.6&y=1.5&z=3.6&yaw=180&pitch=-4`
+
 ## Open questions
 
-1. Placement is by hand, in the water's order, not by `layoutSizedPlantRoom`'s annealing: the route and the camera framings wanted a fixed, readable row. Should the room go through the sizer and placement search instead (it would move the machines with every change)?
-2. The pump runs dead-headed for as long as F1-V2 is shut; nothing models its heating up. Should the demo trip it (a thermal cut-out) after a while?
-3. With the pump stopped the hot water keeps flowing through the exchanger; a real plant interlocks the heating to the circulation. Add the interlock, or leave it for visitors to discover?
-4. The pool's warming is slow at ×1 (about 0.1 K an hour with the heating on); TIME ×600 shows it. Is ×600 enough for the video, or is ×3600 wanted?
+1. Should a too-fierce backwash lose sand (the bed's depth falling, its clean head with it)? Not modelled yet.
+2. The pump trips at 45 °C and resets below 42 °C: about six minutes dead-headed, two and a half to cool. Shorter for the video?
