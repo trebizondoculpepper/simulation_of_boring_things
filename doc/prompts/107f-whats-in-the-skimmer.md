@@ -10,7 +10,7 @@ The owner, 2026-10-28: "a room that has a simulated poolside, which is obviously
 
 And, of narration: "Anytime you pull out an object, I might actually do some voiced sections for this."
 
-The objects: those commonly found in pool skimmers, historical and sometimes disgusting, for children: disgusting, but not obscene.
+The objects: those really found in pool skimmers, historical and often disgusting. The game is for adults, not children, and always was (the owner, 2026-10-28); the finds include adult items, shown plainly with deadpan captions, never graphic.
 
 ## Rules for every hall (the owner, 2026-10-28)
 
@@ -24,7 +24,7 @@ The objects: those commonly found in pool skimmers, historical and sometimes dis
 
 **Teaches, lightly:** a pool's surface carries most of its dirt (hair, skin, sun cream, leaves, insects all float), so pools skim it: a skimmer draws off the top of the water and its basket catches the big things before they reach the pump; emptying the baskets is one of the first jobs of a pool's day. (Hall 2's deck-level pool does the same job by overflowing all round its edge into the balance tank; the panel says so if Hall 2 comes before it on the route.)
 
-**Mostly:** a small, satisfying game for children, with a lot of disgusting things in it.
+**Mostly:** a small, satisfying game for adults, with a lot of disgusting things in it.
 
 ## The room
 
@@ -128,7 +128,7 @@ Until the owner places it, build and try it in the next free development room (d
 ## Open questions for the owner (one at a time, in this order)
 
 1. **How many finds a fill:** a random dozen or so from the list, the false teeth one fill in five (recommended), or all of them every time?
-2. **The list:** answered in part (the owner, 2026-10-28): "Just a toy, and we will probably have to add all kinds of disgusting things, e.g. sex toys, tampons, etc." The frog is a toy. The list is to grow to what is really found in public pools' skimmers and strainers, adult items included (tampons, a sex toy, and the like), each a plain modelled object with a dry, deadpan caption, never graphic. This changes the brief's "for children, disgusting but not obscene" (line 13 and "Mostly" above); who the hall is for is the owner's next question.
+2. **The list:** answered in part (the owner, 2026-10-28): "Just a toy, and we will probably have to add all kinds of disgusting things, e.g. sex toys, tampons, etc." The frog is a toy. The list is to grow to what is really found in public pools' skimmers and strainers, adult items included (tampons, a sex toy, and the like), each a plain modelled object with a dry, deadpan caption, never graphic. This changes the brief's "for children, disgusting but not obscene" (line 13 and "Mostly" above); answered: the game is for adults, not children, and always was (the owner, 2026-10-28).
 3. **The caption card:** a line on the screen (recommended), or a little printed label that pops up beside the object in the world?
 4. **The narration:** one clip per object, the cleared moment and an introduction, as listed, recorded by you; any you would like scripted differently from the captions?
 
@@ -186,7 +186,7 @@ About twenty, keeping the brief's ids and adding a few. A plausible basis is giv
 | `contact-lens`   | a contact lens              | "A contact lens. Very hard to spot. Well found!"                                              | _indicative_                                                                                                                            |
 | `false-teeth`    | false teeth (the rare find) | "FALSE TEETH! The rarest find of all. Somebody laughed too hard on the flume."                | _indicative_ (a classic of pool lore, not sourced)                                                                                      |
 
-Left out on purpose: the snakes, skunk and drowned squirrels of the American stories (too frightening or too sad for children), and anything bodily beyond hair and plasters.
+Left out on purpose: the snakes, skunk and drowned squirrels of the American stories (too sad), and anything bodily beyond hair and plasters.
 
 ### Research conflicts
 
