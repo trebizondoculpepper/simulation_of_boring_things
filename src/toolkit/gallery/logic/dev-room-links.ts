@@ -329,8 +329,9 @@ export const ROOMS: readonly RoomId[] = [
   // the pipes and ducts overhead. Its doors open into nothing yet.
   'plant_corridor',
   'shared_plant_layout',
-  // The pool science museum's five exhibit halls, joined by archways
-  // (mission 107): by their URLs, museum1 first.
+  // The pool science museum (mission 107): its welcome, museum0, where
+  // every visit starts, and its five exhibit halls round a courtyard,
+  // joined by archways.
   ...MUSEUM_HALLS,
   // The main plant room alone, at each size being compared.
   ...PLANT_FIT_ROOMS,
@@ -454,6 +455,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev_electrical: 'DEV · ELECTRICAL',
   dev_control: 'DEV · CONTROL CENTRE',
   dev_ozone: 'DEV · OZONE',
+  museum0: hallName('museum0'),
   museum1: hallName('museum1'),
   museum2: hallName('museum2'),
   museum3: hallName('museum3'),
@@ -574,11 +576,12 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev_electrical: '#d47f1f',
   dev_control: '#5c6f86',
   dev_ozone: '#4b5fc1',
-  museum1: '#0b6fa4',
-  museum2: '#0b6fa4',
-  museum3: '#0b6fa4',
-  museum4: '#0b6fa4',
-  museum5: '#0b6fa4',
+  museum0: '#2a9d96',
+  museum1: '#2a9d96',
+  museum2: '#2a9d96',
+  museum3: '#2a9d96',
+  museum4: '#2a9d96',
+  museum5: '#2a9d96',
 };
 /** How thick a room's walls are, metres. */
 export const WALL_THICKNESS = 0.3;

@@ -74,7 +74,9 @@ export type BrandMark =
   /** A pendant shade throwing a cone of light. */
   | 'shade'
   /** A heater shield, a chevron across it like a road's camber, the initial below. */
-  | 'crest';
+  | 'crest'
+  /** A three-by-three panel of pale tiles, one missing, a pipe and its valve behind it. */
+  | 'tiles';
 
 /** Every brand's id: a part names its maker by one of these. */
 export type BrandId =
@@ -107,7 +109,8 @@ export type BrandId =
   | 'trioxa'
   | 'ironside'
   | 'lumenhaus'
-  | 'haulmark';
+  | 'haulmark'
+  | 'plantrooms';
 
 export interface Brand {
   id: BrandId;
@@ -516,6 +519,25 @@ export const BRANDS: readonly Brand[] = [
     mark: 'crest',
     colours: ['#1d3b5c', '#c9a227', '#14181d'],
     type: 'slab',
+  },
+  {
+    // The pool science museum's exhibition (mission 107; the owner,
+    // 2026-10-28): The Dyehouse's marketing department chasing young
+    // visitors with a meme, for an earnest exhibition about real plant
+    // rooms. Its exhibit cases, lecterns and RESET pedestals are its own
+    // make; the plant inside them keeps its makers. Our own design.
+    id: 'plantrooms',
+    name: 'Plantrooms',
+    wordmark: 'PLANTROOMS',
+    tagline: 'The real backrooms of the Poolrooms',
+    founded: 2025,
+    country: 'England',
+    makes:
+      "The Dyehouse museum's exhibition on how swimming pools work, and its fit-out: lecterns, cases and RESET pedestals",
+    promise: 'Every room is real, and every machine in it works',
+    mark: 'tiles',
+    colours: ['#2a9d96', '#cdeee9', '#0f3236'],
+    type: 'sans',
   },
 ];
 

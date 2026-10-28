@@ -29,6 +29,10 @@ Each hall is its own room and scene, joined to the next by the machinery the poo
 - A gotcha: a hall built after a key went down never hears that keydown, so a walker handed into it stands still until the key repeats. Real keyboards repeat, so players are unaffected, but a scripted walk must resend keydown.
 - Another: the archway to see through first switched only 4 m clear of the last one, leaving the far archway on its stand-in for a long time; the zone is now just the archway's own depth plus a step.
 
+## Later the same day: the courtyard, PLANTROOMS and Hall 0
+
+The owner asked for the halls round a square with a central courtyard, chose the brand (PLANTROOMS, "The real backrooms of the Poolrooms", a museum marketing department chasing a meme), and added Hall 0, a dry tiled pool hall where the visit starts. The row became a pinwheel: each side one long hall running past its corner, so every turn is an archway in one hall's end wall opening into the next hall's side; the street side split between Museum 1 and Museum 5, so the route closes its loop back into Museum 1; Hall 0 on the street in front of Museum 1. The decisive simplification was not to turn any room: each room's coordinates are the museum's, moved to its middle, so a heading carries through every corner unchanged and every wall can be built in the museum's coordinates, identical whichever room builds it. The courtyard is drawn in every hall's scene but only through that hall's own windows, by a stencil the window openings write, because otherwise it would show through the walls of a neighbouring hall seen through an archway (the room on top always wins, whatever the depth). Walked the whole route from Hall 0 round the ring and back into Museum 1 in the browser.
+
 ## Next Steps
 
 The owner's brand choice, then dev51 moved into Museum 2 (once mission 106's session is done with its files), then the exhibits of Museums 1, 3 and 4 in parallel, and the finale.

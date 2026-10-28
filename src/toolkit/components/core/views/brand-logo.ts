@@ -522,6 +522,50 @@ export function drawBrandMark(
       ctx.fillText(brand.name[0], 0, r * 0.32, r * 1.2);
       break;
     }
+    case 'tiles': {
+      // Nine pale tiles in their grout, the bottom right one gone: behind
+      // it, in the dark, a pipe bends round to a valve's handwheel.
+      const cell = (r * 1.7) / 3;
+      const gap = cell * 0.1;
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.85, -r * 0.85, r * 1.7, r * 1.7, r * 0.12);
+      ctx.fill();
+      for (let row = 0; row < 3; row++)
+        for (let col = 0; col < 3; col++) {
+          if (row === 2 && col === 2) continue;
+          ctx.fillStyle = (row + col) % 2 ? second : '#f3f8f6';
+          ctx.beginPath();
+          ctx.roundRect(
+            -r * 0.85 + col * cell + gap / 2,
+            -r * 0.85 + row * cell + gap / 2,
+            cell - gap,
+            cell - gap,
+            cell * 0.12,
+          );
+          ctx.fill();
+        }
+      const cx = -r * 0.85 + 2.5 * cell;
+      const cy = -r * 0.85 + 2.5 * cell;
+      ctx.strokeStyle = main;
+      ctx.lineWidth = cell * 0.18;
+      ctx.beginPath();
+      ctx.moveTo(cx - cell * 0.5, cy - cell * 0.15);
+      ctx.lineTo(cx - cell * 0.05, cy - cell * 0.15);
+      ctx.quadraticCurveTo(
+        cx + cell * 0.15,
+        cy - cell * 0.15,
+        cx + cell * 0.15,
+        cy + cell * 0.05,
+      );
+      ctx.lineTo(cx + cell * 0.15, cy + cell * 0.5);
+      ctx.stroke();
+      ctx.lineWidth = cell * 0.06;
+      ctx.beginPath();
+      ctx.arc(cx - cell * 0.22, cy - cell * 0.15, cell * 0.16, 0, Math.PI * 2);
+      ctx.stroke();
+      break;
+    }
     case 'tile': {
       ctx.fillStyle = main;
       ctx.beginPath();

@@ -917,6 +917,7 @@ const importStarter = async (
     return (await import('./toolkit/gallery/rooms/ceiling-lab-room'))
       .startCeilingLabRoom;
   if (
+    room === 'museum0' ||
     room === 'museum1' ||
     room === 'museum2' ||
     room === 'museum3' ||

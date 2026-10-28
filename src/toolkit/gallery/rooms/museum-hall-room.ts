@@ -7,7 +7,6 @@ import {
   PerspectiveCamera,
   PointLight,
   Scene,
-  SpotLight,
   Vector2,
   WebGLRenderTarget,
 } from 'three';
@@ -29,7 +28,8 @@ import type { DoorFrame } from '../logic/door-joins';
 import { enterDevRoom } from '../logic/dev-room-links';
 import type { RoomId } from '../logic/dev-room-links';
 import {
-  MUSEUM_SIZES,
+  hallAxes,
+  hallSize,
   archToSee,
   arrivalFrom,
   crossedInto,
@@ -41,7 +41,7 @@ import type { MuseumHallId } from '../logic/museum-plan';
 import { createMuseumHall } from '../views/museum-hall';
 
 /**
- * A hall of the pool science museum (mission 107), in its own scene: its
+ * A room of the pool science museum, PLANTROOMS (mission 107), in its own scene: its
  * archways are doorways the app sees through (`door-joins.ts`), always
  * open, one at a time (the one the visitor is at, or looking towards:
  * `archToSee`); the other shows a plain stand-in. Crossing an archway's
@@ -68,40 +68,52 @@ export function startMuseumHallRoom(
   const hall = createMuseumHall(id);
   hall.group.scale.setScalar(metre);
   scene.add(hall.group);
-  const { d, h } = MUSEUM_SIZES[id];
+  const { h } = hallSize(id);
+  const axes = hallAxes(id);
+  const welcome = id === 'museum0';
 
-  // Daylight through the west windows and the soft light of a white room;
-  // the same in every hall, so an archway's reveal is lit alike either side.
-  scene.add(new AmbientLight('#f4f1ea', 0.12));
-  scene.add(new HemisphereLight('#eef3f6', '#8c8579', 0.55));
-  const sun = new DirectionalLight('#fff3df', 0.7);
+  // The soft light of a white room and the daylight, the same in every
+  // hall, so an archway's reveal is lit alike either side; Hall 0's
+  // fluorescent, cool and a little green, as an empty pool hall's.
+  scene.add(new AmbientLight(welcome ? '#eefaf4' : '#f4f1ea', 0.12));
+  scene.add(
+    new HemisphereLight(
+      welcome ? '#effaf6' : '#eef3f6',
+      welcome ? '#8fa39d' : '#8c8579',
+      welcome ? 0.75 : 0.55,
+    ),
+  );
+  const sun = new DirectionalLight('#fff3df', welcome ? 0.25 : 0.7);
   sun.position.set(-10 * metre, 14 * metre, 3 * metre);
   scene.add(sun);
-  // The gallery lights: four warm pools of light, each 5 m in from an end wall.
-  for (const x of [-4, 4])
-    for (const z of [-d / 2 + 5, d / 2 - 5]) {
-      const lamp = new PointLight('#ffe9c8', 9 * metre * metre, 16 * metre, 2);
-      lamp.position.set(x * metre, (h - 2.6) * metre, z * metre);
+  // The gallery lights: four pools of light, 5 m in from the hall's ends,
+  // towards its courtyard side: warm in the halls, fluorescent in Hall 0.
+  for (const s of [-1, 1])
+    for (const c of [-1, 1]) {
+      const along = s * Math.max(0, axes.length / 2 - 5);
+      const across = c * (axes.width / 4);
+      const lamp = new PointLight(
+        welcome ? '#effff4' : '#ffe9c8',
+        (welcome ? 5 : 9) * metre * metre,
+        16 * metre,
+        2,
+      );
+      lamp.position.set(
+        (axes.along[0] * along + axes.across[0] * across) * metre,
+        (h - (welcome ? 0.6 : 2.6)) * metre,
+        (axes.along[1] * along + axes.across[1] * across) * metre,
+      );
       scene.add(lamp);
     }
-  if (id === 'museum1') {
-    // The title wall, washed by its own spot.
-    const wash = new SpotLight(
-      '#fff4e0',
-      220 * metre * metre,
-      22 * metre,
-      0.7,
-      0.6,
-      2,
-    );
-    wash.position.set(0, (h - 2.5) * metre, (d / 2 - 9) * metre);
-    wash.target.position.set(0, 3.5 * metre, (d / 2) * metre);
-    scene.add(wash, wash.target);
-  }
 
   const composer = createComposer(
     renderer,
-    new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 4 }),
+    new WebGLRenderTarget(1, 1, {
+      type: HalfFloatType,
+      samples: 4,
+      // The courtyard is drawn only through the windows (a stencil).
+      stencilBuffer: true,
+    }),
   );
   const base = new RenderPass(scene, camera);
   base.clearAlpha = 0;
