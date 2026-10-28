@@ -1,6 +1,6 @@
 # 107d: PLANTROOMS Hall 4, "The chemistry of pools": a hands-on chemistry lab
 
-Status: planned 2026-10-28, not started. A sub-prompt of mission 107 (`doc/prompts/107-pool-science-museum.md`), after 107-0 (`doc/prompts/107-0-exhibit-groundwork.md`). Hall 4 is reached from Hall 3 (Safe water) and leads on to Hall 5 (The whole plant). The idea is the owner's.
+Status: planned 2026-10-28, not started. A sub-prompt of mission 107 (`doc/prompts/107-pool-science-museum.md`), after 107-0 (`doc/prompts/107-0-exhibit-groundwork.md`). Hall 4 is reached from Hall 3 (Safe water); it is the ring's north-west corner, turning east into Hall 5, whose theme is still to come. The finale, The whole plant (107e), is Hall 13. The idea is the owner's.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first and follow it. Then read mission 107, 107-0, 107c (`doc/prompts/107c-safe-water-automatic-dosing.md`, what the visitor has just learnt), `doc/research/water-chemistry-models.md` (the model's sources, its validation against PHREEQC and the scenarios' results) and the chemistry model itself, `src/game/water/pool-chemistry.ts` and `chemistry-bench.ts`. **Use the tested chemistry model and nothing invented:** every number the hall shows comes from it.
 
@@ -27,7 +27,7 @@ The owner, 2026-10-28: "I think maybe we could have an exhibit about the chemist
 - **Every chemical has side effects:** hypochlorite adds salt (TDS) and alkalinity; thiosulphate takes chlorine away and pushes the pH up; acid takes alkalinity away.
 - **Treatments for real problems**, as challenge cards.
 
-**Leads on:** "You have warmed, cleaned, disinfected and balanced the water. Next door, the whole plant together: and something is about to go wrong." (Hall 5.)
+**Leads on:** "You have warmed, cleaned, disinfected and balanced the water. At the end of the route, the whole plant together: and something is about to go wrong." (Hall 13, the finale; the halls between have their own themes, to come.)
 
 ## The schematic
 
@@ -93,7 +93,7 @@ Numbers marked "model" are the model's tested ones (`pool-chemistry.test.ts`, th
 
 ## The challenges
 
-A ten-position CHALLENGE selector on the station and START. Each card sets the pool to its problem water (the bench scenario's state at the end of its problem phase, `runScenario` in `chemistry-bench.ts`), prints the symptoms on the log, and names the goal; the visitor treats it with the station (and FW1); the card is met when the readout is in range and stays so for an hour of plant time, and the log prints "PUT RIGHT 2 h 40 min". The hall's cards are the bench's scenarios that are about the water (the plant's own faults, the weak delivery and the loss of dosing, are Hall 3's and Hall 5's):
+A ten-position CHALLENGE selector on the station and START. Each card sets the pool to its problem water (the bench scenario's state at the end of its problem phase, `runScenario` in `chemistry-bench.ts`), prints the symptoms on the log, and names the goal; the visitor treats it with the station (and FW1); the card is met when the readout is in range and stays so for an hour of plant time, and the log prints "PUT RIGHT 2 h 40 min". The hall's cards are the bench's scenarios that are about the water (the plant's own faults, the weak delivery and the loss of dosing, are Hall 3's and the finale's, Hall 13):
 
 | Card              | Starts with (model)                                                       | The model's treatment and result                                                                      |
 | ----------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
@@ -117,7 +117,7 @@ A ten-position CHALLENGE selector on the station and START. Each card sets the p
 
 - The model test: each Try it step's numbers equal the chemistry model's (the PHREEQC-checked ones to the research doc's precision); each challenge's problem water is its scenario's, and the scenario's own treatment applied through the station meets the card; conservation holds; RESET and entry identical.
 - Nothing invented: no chemistry in the hall's code beyond calls into `pool-chemistry.ts` and `chemistry-bench.ts` (a review check).
-- **Walking in from Hall 3:** Hall 4 at its reset water with a new log sheet at the visitor's local time; on to Hall 5 and back, and it is reset again.
+- **Walking in from Hall 3:** Hall 4 at its reset water with a new log sheet at the visitor's local time; on into Hall 5 and back, and it is reset again.
 - Browser checks on high, medium and low; screenshots and camera links recorded here.
 
 ## Performance budget

@@ -99,7 +99,7 @@ Numbers from the chemistry bench's tested scenarios (`SCENARIOS` in `chemistry-b
 ## Acceptance
 
 - The schematic test: every fitting given and tagged, nothing added by the plumber; the chemistry conserved (`CONSERVED`); each Try it step's numbers pinned with this hall's controller and pumps; RESET and entry identical.
-- The controller's readings are the model's water through the probes (ideal probes here; the drifted probes are kept for Hall 5), and nothing on the mimic, the board or the overlay shows the water's truth except TK1's test.
+- The controller's readings are the model's water through the probes (ideal probes here; the drifted probes are kept for the finale, Hall 13), and nothing on the mimic, the board or the overlay shows the water's truth except TK1's test.
 - **Walking in from Hall 2:** Hall 3 at its reset state with a fresh chart at the visitor's local time; on to Hall 4 and back, and it is reset again.
 - Browser checks on high, medium and low; the pumps' bleeps and ticks heard only in this hall; screenshots and camera links recorded here.
 
@@ -109,6 +109,6 @@ As 107a: every component within mission 094's `DEFAULT_BUDGET`, nothing added to
 
 ## Open questions for the owner (one at a time, in this order)
 
-1. **The controller:** the DC-1 pair (hands-on, period, single-purpose: recommended here, and the CX-7 touch screen in Hall 5), or the CX-7 here?
+1. **The controller:** the DC-1 pair (hands-on, period, single-purpose: recommended here, and the CX-7 touch screen in the finale, Hall 13), or the CX-7 here?
 2. **The faults' buttons:** a fault pedestal the visitor presses (recommended: the museum shows what it is doing), or faults that happen by themselves at random times?
 3. **Real chemical stores** (IBCs on spill pallets, `createIbcOnSpillPallet`) drawn round the ideal sources, or the ideal sources shown as they are?
