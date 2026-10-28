@@ -233,7 +233,7 @@ const panelsFail = (error: unknown) => {
   panelsFailed = true;
   menuPanel = null;
   const list = document.querySelector<HTMLElement>('.title-menu');
-  if (list) list.style.display = '';
+  if (list) list.removeAttribute('style');
 };
 let menuPanel: {
   open(options?: { inGame?: boolean }): void;
@@ -333,35 +333,56 @@ if (panelsWanted)
 // left (`title-overlay.ts`) in place of the DOM list, over the same
 // attract sequence; it shows and hides with the title.
 if (panelsWanted)
-  void import('./toolkit/menus/views/title-overlay')
-    .then(({ createTitleOverlay }) => {
-      const box = createTitleOverlay(titleActions);
-      const list = document.querySelector<HTMLElement>('.title-menu');
-      if (list) list.style.display = 'none';
-      const show = titleScreen.show.bind(titleScreen);
-      const hide = titleScreen.hide.bind(titleScreen);
-      const showBox = () => {
-        if (!panelsOn()) return;
-        try {
-          box.show();
-        } catch (error) {
+  void Promise.all([
+    import('./toolkit/menus/views/title-overlay'),
+    import('./toolkit/menus/views/dom-mirror'),
+    import('./toolkit/menus/logic/title-box'),
+  ])
+    .then(
+      ([{ createTitleOverlay }, { VISUALLY_HIDDEN }, { TITLE_OPTIONS }]) => {
+        const box = createTitleOverlay(titleActions);
+        // The DOM list stays as the box's accessible copy: hidden from
+        // sight, its focus kept in step with the box's ring both ways.
+        const list = document.querySelector<HTMLElement>('.title-menu');
+        if (list) Object.assign(list.style, VISUALLY_HIDDEN);
+        const items = [
+          ...(list?.querySelectorAll<HTMLButtonElement>('.title-item') ?? []),
+        ];
+        box.onFocus((id) => {
+          const at = TITLE_OPTIONS.findIndex((o) => o.id === id);
+          if (at >= 0 && document.activeElement !== items[at])
+            items[at]?.focus({ preventScroll: true });
+        });
+        items.forEach((item, at) =>
+          item.addEventListener('focus', () =>
+            box.focus(TITLE_OPTIONS[at]?.id ?? null),
+          ),
+        );
+        const show = titleScreen.show.bind(titleScreen);
+        const hide = titleScreen.hide.bind(titleScreen);
+        const showBox = () => {
+          if (!panelsOn()) return;
+          try {
+            box.show();
+          } catch (error) {
+            box.hide();
+            panelsFail(error);
+          }
+        };
+        titleScreen.show = () => {
+          show();
+          showBox();
+        };
+        titleScreen.hide = () => {
+          hide();
           box.hide();
-          panelsFail(error);
-        }
-      };
-      titleScreen.show = () => {
-        show();
-        showBox();
-      };
-      titleScreen.hide = () => {
-        hide();
-        box.hide();
-      };
-      if (
-        document.querySelector<HTMLElement>('.title-screen')?.hidden === false
-      )
-        showBox();
-    })
+        };
+        if (
+          document.querySelector<HTMLElement>('.title-screen')?.hidden === false
+        )
+          showBox();
+      },
+    )
     .catch(panelsFail);
 const settingsButton = document.createElement('button');
 settingsButton.type = 'button';

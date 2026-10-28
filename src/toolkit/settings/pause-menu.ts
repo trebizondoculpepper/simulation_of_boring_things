@@ -81,7 +81,12 @@ export const BINDINGS: readonly [string, string, string][] = [
     'Left stick; A up, B down',
   ],
   ['Roll / level in noclip', 'Q / E; R to level', 'LB / RB; Y to level'],
-  ['This menu', 'Esc with the mouse free', 'Start'],
+  ['This menu', 'Esc with the mouse free, or the gear', 'Start'],
+  [
+    'In a menu: move, press, turn, back',
+    'Arrows or Tab, Enter, Left / Right, Esc',
+    'D-pad or stick, A, LB / RB, B',
+  ],
 ];
 
 export function createPauseMenu(actions: PauseMenuActions) {

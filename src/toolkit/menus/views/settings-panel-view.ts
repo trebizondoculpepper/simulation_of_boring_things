@@ -1,4 +1,5 @@
 import { computed, effect, signal } from '@preact/signals-core';
+import type { ReadonlySignal } from '@preact/signals-core';
 import {
   BoxGeometry,
   CylinderGeometry,
@@ -100,6 +101,8 @@ export interface SettingsPanelView {
   update(delta: number): boolean;
   /** The controls the focus can rest on, in panel metres (x right, y down). */
   targets: readonly MenuTarget[];
+  /** What the GAME zone's status line shows. */
+  status: ReadonlySignal<string>;
   /** Ring the control `id` as focused, or none. */
   focus(id: string | null): void;
   /** Turn the control `id` a step, or press it. */
@@ -856,6 +859,7 @@ function build_(
     group,
     parts,
     targets,
+    status,
     focus(id) {
       for (const t of targets) t.ring.visible = t.id === id;
     },

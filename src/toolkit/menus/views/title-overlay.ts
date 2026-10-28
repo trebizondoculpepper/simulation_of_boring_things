@@ -111,10 +111,16 @@ export function createTitleOverlay(actions: TitleOverlayActions) {
     use: (direction?: number) => void;
   })[] = [];
   let focused: string | null = null;
-  const showFocus = (id: string | null) => {
+  /** Who hears the focus move (the title's accessible list, to follow it). */
+  const focusListeners = new Set<(id: TitleAction | null) => void>();
+  const ring = (id: string | null) => {
     focused = id;
     for (const t of targets) t.ring.visible = t.id === id;
     requestDraw();
+  };
+  const showFocus = (id: string | null) => {
+    ring(id);
+    for (const listener of focusListeners) listener(id as TitleAction | null);
   };
   const kit = createPanelKit();
   const parts = createPartSet();
@@ -366,6 +372,15 @@ export function createTitleOverlay(actions: TitleOverlayActions) {
     },
     get isOpen() {
       return open;
+    },
+    /** Ring the button for `id` (the accessible list's focus moved), without telling anyone. */
+    focus(id: TitleAction | null) {
+      if (focused !== id) ring(id);
+    },
+    /** Hear the focus move. */
+    onFocus(listener: (id: TitleAction | null) => void) {
+      focusListeners.add(listener);
+      return () => focusListeners.delete(listener);
     },
     dispose() {
       this.hide();

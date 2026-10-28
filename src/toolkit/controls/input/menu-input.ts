@@ -22,6 +22,8 @@ export interface MenuListener {
 
 const listeners: MenuListener[] = [];
 let started = false;
+/** Keys whose keydown a menu took: their keyup is held back too. */
+const taken = new Set<string>();
 
 /** Whether a key is being typed into a field, which menus leave alone. */
 const typing = (target: EventTarget | null) =>
@@ -49,6 +51,9 @@ function start() {
       if (intent && free && dispatch(intent, 'keyboard')) {
         event.preventDefault();
         event.stopImmediatePropagation();
+        // Its keyup too, so a focused button (the accessible copy's) does
+        // not also click on Space's release.
+        taken.add(event.code);
         return;
       }
       if (modal()) event.stopImmediatePropagation();
@@ -58,6 +63,11 @@ function start() {
   window.addEventListener(
     'keyup',
     (event) => {
+      if (taken.delete(event.code)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
       if (modal() && !typing(event.target)) event.stopImmediatePropagation();
     },
     true,

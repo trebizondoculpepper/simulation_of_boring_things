@@ -30,7 +30,9 @@ export type ControlAction =
   | 'copyReference'
   | 'copyPosition'
   | 'screenshot'
-  | 'noclip';
+  | 'noclip'
+  | 'menu'
+  | 'menuNavigate';
 
 /** Each action's binding on each input, or null where it has none. */
 const POINTER_SCHEME: Record<
@@ -117,6 +119,19 @@ const POINTER_SCHEME: Record<
     touch: null,
     gamepad: null,
   },
+  // The menus (mission 096, `menu-navigation.ts`, `input/menu-input.ts`).
+  menu: {
+    mouse: 'Esc (cursor free) or the gear: menu',
+    touch: 'Gear: menu',
+    gamepad: 'Start: menu',
+  },
+  menuNavigate: {
+    mouse:
+      'in a menu, click a control, or arrows / Tab to move, Enter to press, Left / Right to turn, Esc to go back',
+    touch: 'in a menu, tap a control',
+    gamepad:
+      'in a menu, d-pad or stick to move, A to press, LB / RB to turn, B to go back',
+  },
 };
 
 /** Keyboard and pointer share bindings, but have different automatic HUD layouts. */
@@ -144,6 +159,8 @@ const ORDER: readonly ControlAction[] = [
   'screenshot',
   'noclip',
   'release',
+  'menu',
+  'menuNavigate',
 ];
 
 /** The controls help line for an input, the same in every room. */

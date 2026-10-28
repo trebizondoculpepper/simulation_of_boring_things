@@ -28,6 +28,8 @@ import {
 import { layoutPanel } from '../logic/panel-layout';
 import { settingsPanel } from '../logic/settings-panel';
 import { buildSettingsPanel } from './settings-panel-view';
+import { createSettingsMirror } from './dom-mirror';
+import type { SettingsMirror } from './dom-mirror';
 import type {
   SettingsPanelActions,
   SettingsPanelView,
@@ -131,6 +133,7 @@ export function createMenuOverlay({
     buildMs: 0,
   };
   let panel: SettingsPanelView | null = null;
+  let mirror: SettingsMirror | null = null;
   let builtFor = '';
   let panelHeight = 0;
   let ppm = 1000;
@@ -237,6 +240,25 @@ export function createMenuOverlay({
         development,
         onChange: () => requestDraw(),
       });
+      mirror?.dispose();
+      const built = panel;
+      mirror = createSettingsMirror({
+        zones,
+        work: (id) => {
+          built.work(id);
+          requestDraw();
+        },
+        status: built.status,
+        noclip: actions.noclip,
+        bindings,
+        onFocus: (id) => {
+          if (focused === id) return;
+          focused = id;
+          built.focus(id);
+          requestDraw();
+        },
+      });
+      mirror.show(open);
       scene.add(panel.group);
       builtFor = key;
       stats.buildMs = performance.now() - t0;
@@ -263,6 +285,7 @@ export function createMenuOverlay({
     stats.frames = 0;
     stats.worstMs = 0;
     rebuild();
+    mirror?.show(true);
     requestDraw(1);
   }
   function close() {
@@ -270,6 +293,7 @@ export function createMenuOverlay({
     open = false;
     menuOpen.value = false;
     focused = null;
+    mirror?.show(false);
     canvas.style.display = 'none';
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
@@ -371,6 +395,7 @@ export function createMenuOverlay({
   const showFocus = (id: string | null) => {
     focused = id;
     panel?.focus(id);
+    mirror?.focus(id);
     const target = panel?.targets.find((t) => t.id === id);
     if (target && range > 0) {
       // Scrolled so the focused control is in view, centred.
@@ -428,6 +453,7 @@ export function createMenuOverlay({
       removeEventListener('resize', onResize);
       stopListening();
       panel?.dispose();
+      mirror?.dispose();
       freeEnvironment?.();
       renderer?.dispose();
       canvas.remove();

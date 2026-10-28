@@ -380,6 +380,13 @@ Open `?menu=panel` with no room: the title as before (the attract sequence, the 
 
 `components/core/audio/front-centre.ts` marks a panel's root (`markFrontCentre`); `partAudio` plays any part under a marked root straight to the master bus, centred and at its own level under the master volume, never through a panner placed in the room, and heard on the title, where the game's own sound is muted. Both panels' roots are marked, so every click, detent, clunk and key turn on them is front centre. Tested (`front-centre.test.ts`); in the browser, a mouse press of SAVE and keyboard and gamepad turns of the knobs created no panner node.
 
+#### The accessible copy and the menu bindings (2026-10-28)
+
+- **SP-1's copy** (`src/toolkit/menus/views/dom-mirror.ts`): a visually hidden `role=dialog` built from the same menu model (`settingsPanel`), shown while the panel is open: each push, latching button and key switch a `button` (the latching ones with `aria-pressed`) that presses the panel's own part; each knob an `input type=range` over its detents with `aria-valuetext` from its readout ("80 %"); the selector a `select`; the status line a `role=status`, `aria-live=polite`; the controls card a list. Focus is kept in step both ways: the panel's ring moving (keyboard, gamepad) puts the document's focus on the copy's control, and the copy's focus moving (a screen reader's) rings the panel's control. Focus goes back where it was when the panel closes. Checked in the browser: arrows to FIELD OF VIEW focused the copy's range ("Field of view, 52 DEG"); focusing the copy's Master volume ringed the panel's knob; setting its value wrote the volume (0.8 to 0.7 and back).
+- **The title's copy:** the title's DOM list stays, visually hidden, as the box's accessible copy, its focus kept in step with the box's ring both ways. A key a menu takes holds back its keyup too (`menu-input.ts`), so Space on a focused copy never presses twice.
+- **Help:** the menu bindings are in `CONTROL_SCHEME` (`menu`, `menuNavigate`, for every input) and in the bindings table the plain menu and the controls card print.
+- **Still owed:** a screen-reader pass with VoiceOver (not available to the automation), and the plain menu's title SETTINGS un-pausing bug.
+
 #### Stage 2 as first planned
 
 1. `src/toolkit/menus/logic/title-box.ts`: the box's spec (above), and the NEW GAME confirm step when a save exists.
