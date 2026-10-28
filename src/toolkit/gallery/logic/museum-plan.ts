@@ -822,6 +822,7 @@ export const BENCH = { w: 0.5, l: 2.0, h: 0.45 } as const;
 export const EXHIBIT_HALLS: ReadonlySet<MuseumHallId> = new Set([
   'museum1',
   'museum2',
+  'museum3',
   'museum5',
   'museum7',
   'museum8',

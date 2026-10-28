@@ -6,11 +6,7 @@ import type {
   PlumbMedium,
 } from './plumbing-expansion';
 import type { SchematicNode } from './schematics';
-import {
-  readings,
-  stepChemistry,
-  waterFrom,
-} from '../water/pool-chemistry';
+import { readings, stepChemistry, waterFrom } from '../water/pool-chemistry';
 import type { PoolChemistry } from '../water/pool-chemistry';
 import { POOL_CELL_SHARES, exchangeRing } from '../water/circuit';
 import { POOL_25M, batherProfile } from '../water/chemistry-bench';
@@ -195,10 +191,20 @@ export const LINKS: readonly (PlumbEdge & { id: LinkId })[] = [
   link('sampleDrain', ['sampleCell', 'out'], ['drain', 'in']),
   link('hypoFill', ['hypoStore', 'out-1'], ['hypoTank', 'in'], 'chemical'),
   link('hypoSuction', ['hypoTank', 'out'], ['hypoPump', 'suction'], 'chemical'),
-  link('hypoDose', ['hypoPump', 'discharge'], ['hypoInjection', 'dose'], 'chemical'),
+  link(
+    'hypoDose',
+    ['hypoPump', 'discharge'],
+    ['hypoInjection', 'dose'],
+    'chemical',
+  ),
   link('acidFill', ['acidStore', 'out-1'], ['acidTank', 'in'], 'chemical'),
   link('acidSuction', ['acidTank', 'out'], ['acidPump', 'suction'], 'chemical'),
-  link('acidDose', ['acidPump', 'discharge'], ['acidInjection', 'dose'], 'chemical'),
+  link(
+    'acidDose',
+    ['acidPump', 'discharge'],
+    ['acidInjection', 'dose'],
+    'chemical',
+  ),
 ];
 
 export const LINK_NAMES: Record<LinkId, string> = {
@@ -238,7 +244,11 @@ export const LINK_DN: Record<LinkId, 15 | 150> = {
 
 /** The chemical a link carries, if any. */
 export const chemicalOf = (id: LinkId): DoseChannel | null =>
-  id.startsWith('hypo') ? 'hypochlorite' : id.startsWith('acid') ? 'acid' : null;
+  id.startsWith('hypo')
+    ? 'hypochlorite'
+    : id.startsWith('acid')
+      ? 'acid'
+      : null;
 
 export type ValveId =
   | 'poolPump.suction.iso'
@@ -285,7 +295,13 @@ const valve = (
  * bleed valve; the circulation's flowmeter.
  */
 export const FITTINGS: readonly HallFitting[] = [
-  valve('poolPump.suction.iso', 'suction', 'target', 'pump suction', 'poolPump'),
+  valve(
+    'poolPump.suction.iso',
+    'suction',
+    'target',
+    'pump suction',
+    'poolPump',
+  ),
   {
     id: 'poolPump.nrv',
     kind: 'non-return-valve',
@@ -375,10 +391,25 @@ export interface Instrument {
 /** The instruments, in tag order: none set into a line (the cell's are in the cell). */
 export const INSTRUMENTS: readonly Instrument[] = [
   { id: 'cell.fs', kind: 'flow-switch', role: 'sample flow', on: 'sampleCell' },
-  { id: 'cell.cl', kind: 'analyser', role: 'free chlorine probe', on: 'sampleCell' },
+  {
+    id: 'cell.cl',
+    kind: 'analyser',
+    role: 'free chlorine probe',
+    on: 'sampleCell',
+  },
   { id: 'cell.ph', kind: 'analyser', role: 'pH probe', on: 'sampleCell' },
-  { id: 'cell.tap', kind: 'sample-point', role: 'sample tap', on: 'sampleCell' },
-  { id: 'hypoTank.li', kind: 'level', role: 'hypochlorite level', on: 'hypoTank' },
+  {
+    id: 'cell.tap',
+    kind: 'sample-point',
+    role: 'sample tap',
+    on: 'sampleCell',
+  },
+  {
+    id: 'hypoTank.li',
+    kind: 'level',
+    role: 'hypochlorite level',
+    on: 'hypoTank',
+  },
   { id: 'acidTank.li', kind: 'level', role: 'acid level', on: 'acidTank' },
   { id: 'board.cl', kind: 'quality', role: 'free chlorine meter' },
   { id: 'board.ph', kind: 'quality', role: 'pH meter' },
@@ -482,7 +513,12 @@ export const BLEED_SECONDS = 5;
 export const GAS_ML = 5;
 
 export type Swimmers = 'closed' | 'quiet' | 'normal' | 'crowd';
-export const SWIMMERS: readonly Swimmers[] = ['closed', 'quiet', 'normal', 'crowd'];
+export const SWIMMERS: readonly Swimmers[] = [
+  'closed',
+  'quiet',
+  'normal',
+  'crowd',
+];
 /** QUIET's swimmers in the water; CROWD's (100 in the hour, an hour's visit each). */
 export const QUIET_BATHERS = 20;
 export const CROWD_BATHERS = 100;
@@ -506,9 +542,11 @@ export function bathersFor(swimmers: Swimmers, secondsOfDay: number): number {
       return CROWD_BATHERS;
     case 'normal': {
       // The bench's day: 600 swimmers, open 06:30 to 22:00, busiest 17:00 to 20:00.
-      const hours = (17 - 6.5) + 3 * 2 + 2;
+      const hours = 17 - 6.5 + 3 * 2 + 2;
       return (
-        (POOL.bathersPerDay * POOL.visitHours * batherProfile(secondsOfDay / 3600)) /
+        (POOL.bathersPerDay *
+          POOL.visitHours *
+          batherProfile(secondsOfDay / 3600)) /
         hours
       );
     }
@@ -516,10 +554,18 @@ export function bathersFor(swimmers: Swimmers, secondsOfDay: number): number {
 }
 
 /** The pumps' models. */
+/**
+ * The pumps' models. Deviation from the brief (DMX on hypochlorite, DDS on
+ * acid): on this pool the DMX's 2.1 l/h has no headroom (the evening's
+ * swimmers hold it near 100 %, and after any loss of dosing it cannot
+ * catch up inside DC1's two-hour limit, which latches it off again), so
+ * the hypochlorite has the DDS 7.5-16 and the acid the DMX 1602.
+ */
 export const PUMPS = {
-  hypochlorite: keyedDiaphragmPump('solenoid'),
-  acid: keyedDiaphragmPump('stepper'),
+  hypochlorite: keyedDiaphragmPump('stepper'),
+  acid: keyedDiaphragmPump('solenoid'),
 } as const;
+export const PUMP_KIND = { hypochlorite: 'stepper', acid: 'solenoid' } as const;
 
 export interface DosePump {
   state: KeyedDiaphragmState;
@@ -549,7 +595,12 @@ export interface Hall3State {
   tank: PoolChemistry;
   pool: PoolChemistry[];
   /** Litres of each chemical, and seconds, since the chemistry was last stepped. */
-  pending: { seconds: number; hypochlorite: number; acid: number; strength: number };
+  pending: {
+    seconds: number;
+    hypochlorite: number;
+    acid: number;
+    strength: number;
+  };
   /** Plant seconds not yet given the controller and pumps. */
   due: number;
   cell: SampleCellState;
@@ -602,11 +653,9 @@ const sampleOf = (w: PoolChemistry): SampleWater => ({
 
 const newPump = (c: DoseChannel): DosePump => ({
   // The DMX with its auto-degassing head (as the gamma/ X's), which vents
-  // the gas its hypochlorite gives off overnight; the DDS deaerates itself.
+  // what gathers in its head overnight; the DDS deaerates itself.
   state:
-    c === 'hypochlorite'
-      ? newKeyedDiaphragmState('degassing')
-      : PUMPS[c].initial(),
+    c === 'acid' ? newKeyedDiaphragmState('degassing') : PUMPS[c].initial(),
   running: false,
   fault: null,
   spm: 0,
@@ -648,7 +697,12 @@ export function newHall3(now = 0): Hall3State {
         today: 0,
         yesterday: null,
       },
-      acid: { litres: DAY_TANK_L, strength: STRENGTH.acid, today: 0, yesterday: null },
+      acid: {
+        litres: DAY_TANK_L,
+        strength: STRENGTH.acid,
+        today: 0,
+        yesterday: null,
+      },
     },
     open,
     poolPump: true,
@@ -666,7 +720,9 @@ export const timeOfDay = (s: Hall3State) => (s.start + s.seconds) % DAY;
 
 /** The circulation's flow, m³/h. */
 export const circulation = (s: Hall3State) =>
-  s.poolPump && s.open['poolPump.suction.iso'] && s.open['poolPump.discharge.iso']
+  s.poolPump &&
+  s.open['poolPump.suction.iso'] &&
+  s.open['poolPump.discharge.iso']
     ? CIRCULATION
     : 0;
 
@@ -712,7 +768,8 @@ export function actOnHall3(s: Hall3State, a: Hall3Action): Hall3State {
   switch (a.type) {
     case 'valve': {
       let next: Hall3State = { ...s, open: { ...s.open, [a.id]: a.open } };
-      if (a.id === 'hypoPump.bleed') next = withBleed(next, 'hypochlorite', a.open);
+      if (a.id === 'hypoPump.bleed')
+        next = withBleed(next, 'hypochlorite', a.open);
       if (a.id === 'acidPump.bleed') next = withBleed(next, 'acid', a.open);
       return next;
     }
@@ -741,7 +798,10 @@ export function actOnHall3(s: Hall3State, a: Hall3Action): Hall3State {
     case 'controller':
       return { ...s, controller: a.state };
     case 'controller-act':
-      return { ...s, controller: actOnController(s.controller, a.action).state };
+      return {
+        ...s,
+        controller: actOnController(s.controller, a.action).state,
+      };
     case 'air': {
       const next = setPump(s, 'hypochlorite', (p) => ({
         ...p,
@@ -771,7 +831,8 @@ function stepWater(s: Hall3State): Hall3State {
   const hours = dt / 3600;
   const bathers = bathersNow(s);
   const agitation = Math.min(1, (2 * bathers) / POOL.maxBathers);
-  const hypo = p.hypochlorite * (p.hypochlorite > 0 ? p.strength / p.hypochlorite : 0);
+  const hypo =
+    p.hypochlorite * (p.hypochlorite > 0 ? p.strength / p.hypochlorite : 0);
   const added = {
     hypochlorite: hypo,
     chlorate: hypo * STRENGTH.chlorate,
@@ -783,22 +844,23 @@ function stepWater(s: Hall3State): Hall3State {
     mains: waterFrom(POOL.mains),
     airCo2: POOL.airCo2,
   };
-  const stepped = [...s.pool].map((w, i) =>
-    stepChemistry(
-      w,
-      {
-        ...common,
-        bathers: bathers * POOL_CELL_SHARES[i],
-        visitHours: POOL.visitHours,
-        agitation,
-        volume: POOL.volume * POOL_CELL_SHARES[i],
-        surface: POOL.surface * POOL_CELL_SHARES[i],
-        circulation: POOL.circulation * POOL_CELL_SHARES[i],
-        // The dose reaches the pool's return side only while the water flows.
-        added: i === 0 && flow > 0 ? added : {},
-      },
-      dt,
-    ).water,
+  const stepped = [...s.pool].map(
+    (w, i) =>
+      stepChemistry(
+        w,
+        {
+          ...common,
+          bathers: bathers * POOL_CELL_SHARES[i],
+          visitHours: POOL.visitHours,
+          agitation,
+          volume: POOL.volume * POOL_CELL_SHARES[i],
+          surface: POOL.surface * POOL_CELL_SHARES[i],
+          circulation: POOL.circulation * POOL_CELL_SHARES[i],
+          // The dose reaches the pool's return side only while the water flows.
+          added: i === 0 && flow > 0 ? added : {},
+        },
+        dt,
+      ).water,
   );
   const visits = (bathers / POOL.visitHours) * hours;
   const tank = stepChemistry(
@@ -879,7 +941,10 @@ function stepControl(s0: Hall3State, dt: number): Hall3State {
     };
     tanks[c] = {
       ...tank,
-      litres: tank.litres - drawn + (r.returnedL > 0 ? Math.min(r.returnedL, drawn) : 0),
+      litres:
+        tank.litres -
+        drawn +
+        (r.returnedL > 0 ? Math.min(r.returnedL, drawn) : 0),
       today: midnight ? 0 : tank.today + delivered,
       yesterday: midnight ? tank.today + delivered : tank.yesterday,
     };
@@ -922,7 +987,8 @@ function stepControl(s0: Hall3State, dt: number): Hall3State {
     dt,
   );
   const head = pumps.hypochlorite.state.head;
-  const airFault = s.airFault && (head.gasMl > 1e-6 || pumps.hypochlorite.fault !== null);
+  const airFault =
+    s.airFault && (head.gasMl > 0.1 || pumps.hypochlorite.fault !== null);
   return { ...s, pumps, tanks, pending, controller, airFault };
 }
 

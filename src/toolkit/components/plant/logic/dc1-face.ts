@@ -90,10 +90,7 @@ export interface Dc1Face {
   tuning?: boolean;
 }
 
-export const newDc1Face = (
-  channel: DoseChannel,
-  tuning = false,
-): Dc1Face => ({
+export const newDc1Face = (channel: DoseChannel, tuning = false): Dc1Face => ({
   channel,
   ...(tuning ? { tuning } : {}),
   menu: 'meas',
@@ -438,9 +435,7 @@ export function dc1Display(f: Dc1Face, c: ControllerState): Dc1Display {
         alternate ? 'SEt' : dc1Number(c.settings[SETTING.set[ch]], ch),
       );
     case 'xp':
-      return show(
-        alternate ? 'XP' : dc1Number(c.settings[SETTING.xp[ch]], ch),
-      );
+      return show(alternate ? 'XP' : dc1Number(c.settings[SETTING.xp[ch]], ch));
     case 'tn':
       return show(
         alternate ? 'tn' : settingText('tn', c.settings.chlorineIntegral, ch),

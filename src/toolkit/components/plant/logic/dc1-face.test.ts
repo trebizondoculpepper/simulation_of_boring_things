@@ -164,3 +164,26 @@ describe('the DC-1 face', () => {
     expect(r.controller.alarms.every((a) => a.acked)).toBe(true);
   });
 });
+
+describe('a DC-1 with its tuning menus open (Hall 3)', () => {
+  it('steps SEt, XP and tn, and changes the band and the integral time', () => {
+    const c0 = newController(PLANT_SETTINGS);
+    let f = newDc1Face('hypochlorite', true);
+    let c = c0;
+    const go = (...keys: Dc1Key[]) => {
+      for (const k of keys) {
+        const r = pressDc1(f, c, k);
+        f = r.face;
+        c = r.controller;
+      }
+    };
+    go('change', 'change', 'change');
+    expect(f.menu).toBe('xp');
+    expect(dc1Display(f, c).lamps.set).toBe(true);
+    go('enter', 'up', 'up', 'enter');
+    expect(c.settings.chlorineBand).toBeCloseTo(0.6, 9);
+    go('change', 'enter', 'down', 'enter');
+    expect(c.settings.chlorineIntegral).toBe(5.5);
+    expect(newDc1Face('hypochlorite').tuning).toBeUndefined();
+  });
+});

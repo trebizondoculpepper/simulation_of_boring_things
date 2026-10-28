@@ -156,3 +156,25 @@ Researched 2026-10-28 from the repo's notes (`doc/research/plant-products-chemic
 - PWTAG technical note on pH and chlorine (TN52): https://www.pwtag.org/lowering-ph-no-problem-tn52/
 - Swim England pool guidance: https://www.swimming.org/library/documents/5231/download
 - Product sources (ProMinent DGMa, DULCOMARIN, gamma/ X, PVT; Grundfos DDA 7.5-16; Palintest Lumiso; Evoqua DEPOLOX Pool Compact manual) as listed in `doc/research/plant-products-chemicals-dosing.md` and `doc/research/pool-dosing-and-water-chemistry.md`.
+
+## Built (2026-10-28)
+
+- Model `src/game/plant/museum-3-dosing.ts` (tested, fast and `.slow`): nodes IP1, BT1, P1, TE1, IJ1, IJ2, SC1, DR1, CS1, CS2, DT1, DT2, DP1, DP2; every fitting given, `added` empty. The pool is `POOL_25M` as the bench steps it (three cells and the balance tank, `exchangeRing`), chemistry every 10 s, cell, controller and pumps every 1 s of plant time; the real `dosing-controller.ts` (`PLANT_SETTINGS`), `sample-cell.ts` (ideal probes) and `metering-pump.ts` heads. A plant day costs about 2.5 s of CPU, so ×3600 uses about a tenth of a core.
+- Derived tags (the derivation wins): P1-V1, P1-NRV1, P1-V2, FT1; SC1-V1, SC1-V2; DT1-V1, DT2-V1; injection valves DP1-NRV1, DP2-NRV1; bleed valves DP1-V1, DP2-V1; FS1, AE1, AE2, SP1, LI1, LI2, QI1, QI2, DC1, QR1, TK1; the museum's BA1 (SWIMMERS) and FP1 (fault pedestal).
+- Deviations:
+  - **Pumps swapped.** On this pool the DMX 1602's 2.1 l/h has no headroom. The evening's swimmers hold it near 100 %, and after any loss of dosing it cannot catch up within DC1's two-hour limit, which latches it off again. So hypochlorite is on the DDS 7.5-16 and acid on the DMX 1602.
+  - **The DDS clears its own gas.** It deaerates in standby, so after AIR IN THE PUMP it shows `Er F`, and pressing START (which acknowledges) is enough. The bleed valve still works: it clears the head in about 5 s. The acid DMX has the auto-degassing head, because the standard head's overnight off-gassing locked it by itself each morning.
+  - **CROWD lasts one hour.** It is 100 swimmers in the hour after the dial is turned, then the normal day.
+  - **Start state.** The controller starts with its integral at 0.1, and the water is the Lounge's settled water at 1.3 mg/l and pH 7.3. The 120-day `warmedUp` is not used, because it is too slow for every entry.
+  - **Tuning on the DC-1.** It gains optional tuning menus, `XP` (band) and `tn` (integral, h), after SEt (`newDc1Face(channel, true)`). The world's units are unchanged.
+  - **Pump keys.** `createDiaphragmPump` takes an optional `bound` keys binding, so the pump's keys work the model.
+  - **New views.** The day tanks are a small new view (`createSmallDayTank`), not `createDayTankStation`. QI2 (pH) is a 6.5 to 8.0 dial gauge, because the panel meter cannot start a scale above 0. The chart recorder is a new 24-hour one (`createDayChartRecorder`), because the old one does not follow a clock.
+  - **Sample valves.** SC1-V1 and SC1-V2 are the sample panel's own valve and regulator, so nothing is drawn on the line for them.
+- Readings pinned (`museum-3-dosing.slow.test.ts`):
+  1. A normal day from 08:00 keeps the far side at 1.12 to 1.84 mg/l.
+  2. A crowd takes DC1's reading from 1.28 to 1.11 within the hour, and it recovers to about 1.8 (it overshoots) within four hours.
+  3. Air in the pump: DC1 reads below 0.8 after 3.5 h. Once acknowledged, it is back to 1.3 within 1.5 h, then overshoots to about 2.7 (the integral wound up; the high alarm sounds).
+  4. Weak delivery: the refilled tank mixes to 103 g/l, and the day's use is 22.6 litres against 17.4 (1.30×). The far side stays at 1.11 to 1.62 and nothing alarms.
+  5. Sample loss: dosing stops after 120 s, the display falls below 0.1 in about 10 minutes while the pool stays above 1.1, and it recovers once the valve is reopened.
+- Layout `museum-3-layout.ts` (voxel router, tested: all routed, no clashes, nothing on the visitors' floor), measured from `hallInterior('museum3')` so it follows the ring's resize. Chemicals are on the west (left facing the north wall), the sample cell and DC1 on the wall in the middle, and BT1, P1 and the pool on the east. The mimic, the chemistry board (QI1, QI2, QR1, PLANT TIME), the entrance panel and RESET are on the south wall. It fits the 15.4 m hall and has room to spare at 23.4 m.
+- Browser: it renders on the owner's dev server with no console errors. Camera: `?room=museum3&x=-1&y=1.7&z=5.5&yaw=0&pitch=-8` (from the south, looking north at the plant). Not done: clicking through every Try-it step, the presets' frame rates and draw calls, and the component benchmark entries for the new displays (`component-bench.ts` is shared; not added).

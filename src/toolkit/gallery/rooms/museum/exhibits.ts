@@ -25,6 +25,7 @@ export const HALL_EXHIBITS: Partial<
 > = {
   museum1: () => import('./hall-1-warm-water'),
   museum2: () => import('./hall-2-clean-water'),
+  museum3: () => import('./hall-3-safe-water'),
   museum5: () => import('./hall-5-day-in-the-life'),
   museum7: () => import('./hall-7-grout'),
   museum8: () => import('./hall-8-never-again'),
