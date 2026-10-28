@@ -16,6 +16,7 @@ import { markComponent } from '../../../components/core/views/component-identity
 import { METRE } from '../../../components/core/logic/units';
 import { createWallPanel } from '../../views/museum-exhibit';
 import { createGroutSpecimens } from '../../views/grout-specimen';
+import { createOilWheelProjector } from '../../views/oil-wheel-projector';
 import {
   BENCH,
   CLOSING_CARD,
@@ -24,6 +25,7 @@ import {
   NOTHING_TO_RESET,
   PLINTHS,
   ROW,
+  SPECIMEN,
   TIMELINE,
   TITLE_WALL,
   hall7Solids,
@@ -352,6 +354,28 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     }),
   );
 
+  // ---- The 1970s' oil-wheel projector, its colours on the avocado ----
+  // (the owner, 2026-10-28): on a floor stand beside its plaque, outside
+  // the rope, aimed at the specimen's tiled face (north, at the joints'
+  // middle height).
+  const seventies = PLINTHS.find((p) => p.grout === 'avocado')!;
+  const projectorAt = {
+    x: plinthX(seventies.n) + 0.6,
+    z: ROW.lecternZ + 0.1,
+  };
+  const projector = createOilWheelProjector(kit, {
+    at: [projectorAt.x, 1.6, projectorAt.z],
+    target: [
+      plinthX(seventies.n),
+      ph + 0.06 + SPECIMEN.size / 2,
+      ROW.z - SPECIMEN.tileThick,
+    ],
+    normal: [0, 0, -1],
+    width: SPECIMEN.size,
+    height: SPECIMEN.size,
+  });
+  object.add(projector.object);
+
   // ---- The plaques, each on a bronze lectern before its plinth ----
   for (const p of PLINTHS) {
     const lectern = new Group();
@@ -597,7 +621,17 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   return {
     object,
     status: () => 'reverently lit',
-    solids: () => hall7Solids(),
+    solids: () => [
+      ...hall7Solids(),
+      // The projector's stand.
+      {
+        minX: projectorAt.x - 0.18,
+        maxX: projectorAt.x + 0.18,
+        minZ: projectorAt.z - 0.18,
+        maxZ: projectorAt.z + 0.18,
+      },
+    ],
+    update: (delta: number) => projector.update(delta),
     // There is nothing to reset. Grout endures.
     reset: () => {},
   };

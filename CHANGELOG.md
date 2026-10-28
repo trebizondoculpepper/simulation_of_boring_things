@@ -22,6 +22,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- An oil-wheel projector on Hall 7's 1970s grout (the owner, 2026-10-28): a disco-era effects projector, the Psycholux 250 (`src/toolkit/gallery/views/oil-wheel-projector.ts`, its wheel and oils in `logic/oil-wheel.ts`), its glass wheel of coloured oils turning across the lens and its swimming colours thrown on the avocado specimen; nothing redrawn after it is built, only turned.
+
 - Thirty-three OpenAI-generated reference photographs for the fictional 1997 chlorine-release museum sequence: three variants of each of eleven scenes in `doc/gens/hindenburg/` (the owner, 2026-10-28).
 
 - The empty hall as a component (`src/toolkit/gallery/views/museum-empty-hall.ts`; the owner, 2026-10-28): generic, side and corner, the architecture only, merged by material; each hall's scene draws every hall beyond its neighbours empty at its true place, replacing the plain stand-ins, with the ring's adjacency and full/empty sets pure and tested in `museum-plan.ts`.
