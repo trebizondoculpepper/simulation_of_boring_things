@@ -445,8 +445,11 @@ canvas {
 }
 .settings-panel {
   box-sizing: border-box;
-  width: min(460px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
+  /* Half as large again, to be read easily (the owner, 2026-10-28): its
+     limits divided by the zoom, so it still fits a small window. */
+  zoom: 1.5;
+  width: min(460px, calc((100vw - 32px) / 1.5));
+  max-height: calc((100vh - 32px) / 1.5);
   overflow: auto;
   padding: 18px 20px;
   border: 2px solid var(--hud-amber);

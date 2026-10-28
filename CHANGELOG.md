@@ -6,6 +6,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The bridge warns of every annunciator's alarms (the owner, 2026-10-28): its ACCEPT, alarm bleep, ALARMS IN, NEWEST and GO TO and its alarm sweep take in the lounge annunciator's windows as well as the plant's, ACCEPT ALARMS accepting both; the tank levels page flags a pool's balance tank tripped on low-low ("47 % · TRIPPED") whatever its level now.
+- The pause menu half as large again, to be read easily (the owner, 2026-10-28).
 - The lounge pool's annunciator (the owner, 2026-10-28): sixteen windows of its plant room's faults (balance tank low; circulation tripped on low-low; either pump tripped; no pump in AUTO; flow low; each filter off-line; filter DP high; backwash pit high; UV lamp fail; ozone in air; chlorine and pH out of range; day tank low; room power fail), ISA sequence M with a first-out window flashing twice as fast, a horn with MUTE, ACCEPT, RESET and LAMP TEST; on the plant room's south wall and, its twin, in the control room, one state in the world for both. Annunciator windows' legends now shrink to fit.
 - Every dosing pump about a third as loud (−10 dB) (the owner, 2026-10-28): plainly heard at its board, as a diaphragm pump is loud for its size; masking it under the circulation pumps across a room is voice limiting's (prompt 098).
 - The stepper dosing pumps (DP-102, the acid pump) rattle like a motor-driven diaphragm pump (the owner, 2026-10-28, from a recording he gave): 42 knocks a second rich in harmonics from 250 Hz to 1 kHz, swelling slightly, synthesised from the recording's measurements; their sound was a tone swept up and down, a siren's wail. The solenoid pumps' tick is now a hard clack, a bright tick over a low knock.

@@ -24,6 +24,10 @@ import {
   transferRunning,
 } from '../../../game/plant/chemical-distribution';
 import { ANNUNCIATOR_ALARMS, ALARM_TEXT } from './control-room-demo';
+import {
+  LOUNGE_ALARMS,
+  LOUNGE_ALARM_TEXT,
+} from '../../../game/plant/lounge-annunciator';
 import type { PlantReading } from './control-room-demo';
 import { airState, heatingState, mainPoolState } from './pool-mimics';
 import type { PumpsShown } from './pool-mimics';
@@ -748,6 +752,31 @@ export const CENTRAL_CONTROL: ParodySpec = {
   ],
 };
 
+/**
+ * Every alarm in on any annunciator, as the bridge lists them (the owner,
+ * 2026-10-28: anything that sounds on any annunciator is a warning on
+ * the bridge): the plant's (`ANNUNCIATOR_ALARMS`), then the lounge's
+ * lit windows (its first-out last, as the newest that matters), each its
+ * words and the room to go to.
+ */
+function alarmsIn(c: BridgeContext): { words: string; room: string }[] {
+  const plant = c.reading.alarms.map((id) => ({
+    words: ALARM_TEXT[id].window.replace('\n', ' '),
+    room: ALARM_TEXT[id].room,
+  }));
+  const lounge = c.world.loungeAnnunciator;
+  const lit = LOUNGE_ALARMS.filter((id) => lounge.windows[id] !== 'off').sort(
+    (a, b) => Number(a === lounge.firstOut) - Number(b === lounge.firstOut),
+  );
+  return [
+    ...plant,
+    ...lit.map((id) => ({
+      words: `PL1 ${LOUNGE_ALARM_TEXT[id].replace('\n', ' ')}`,
+      room: 'PL1',
+    })),
+  ];
+}
+
 /** The bridge's shared annunciator, ACCEPTed from Central Control or CR-CP2 alike (the view's, as the original's). */
 export const ACCEPT_ALARMS = 'ACCEPT ALARMS';
 
@@ -837,15 +866,9 @@ function centralControl(): PanelBinding {
       'ACID TRANSFER': transfer('acid'),
     },
     rows: {
-      'ALARMS IN': (c) => String(c.reading.alarms.length),
-      NEWEST: (c) => {
-        const id = c.reading.alarms[c.reading.alarms.length - 1];
-        return id ? ALARM_TEXT[id].window.replace('\n', ' ') : '—';
-      },
-      'GO TO': (c) => {
-        const id = c.reading.alarms[c.reading.alarms.length - 1];
-        return id ? ALARM_TEXT[id].room : '—';
-      },
+      'ALARMS IN': (c) => String(alarmsIn(c).length),
+      NEWEST: (c) => alarmsIn(c).at(-1)?.words ?? '—',
+      'GO TO': (c) => alarmsIn(c).at(-1)?.room ?? '—',
     },
     banners: {
       'FIRE ALARM · EVACUATE BY THE NEAREST EXIT': anyFire,

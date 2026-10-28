@@ -24,7 +24,7 @@ import type { ConsoleClass } from '../../../game/bridge-consoles';
 import { createAnnunciator } from '../../components/industrial-control/logic/annunciator';
 import { ANNUNCIATOR_ALARMS } from '../logic/control-room-demo';
 import { roomWorld } from '../../save/world-store';
-import { worldAnnunciator } from '../logic/world-annunciator';
+import { bridgeAnnunciator } from '../logic/world-annunciator';
 import { plantReadingOf } from '../logic/world-reading';
 import { createViewscreen } from './bridge-viewscreen';
 import {
@@ -484,7 +484,7 @@ export function installBridgeConsoles(kit: PanelKit): Part[] {
   // The world's annunciator (`game/annunciator.ts`): accepted here, at
   // CR-CP2 or the old control room's board alike, and kept.
   const shared = store
-    ? worldAnnunciator(store)
+    ? bridgeAnnunciator(store)
     : createAnnunciator(ANNUNCIATOR_ALARMS.length, { manualReset: true });
   const context = () => {
     const world = store?.world.value;
