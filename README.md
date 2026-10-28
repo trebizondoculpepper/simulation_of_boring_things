@@ -82,6 +82,10 @@ Every change goes under Unreleased in `CHANGELOG.md` as it is made. A release is
 - The tag starts the Release workflow (`.github/workflows/release.yml`). It checks that the tag is annotated, points at the commit it builds, is on `main`, and matches `package.json`, both of the lockfile's version fields and a changelog section; runs the checks; rebuilds at the tag's exact version (`npm run build -- --release`); publishes a GitHub release with that section as its notes; and uploads the build to itch.io with butler (`--userversion` the release's version).
 - If the Release workflow fails after the tag is pushed, do not move, delete or remake the tag, and do not re-run the failed run (a re-run uses the workflow file at the tag's commit). Fix the cause on `main`, then publish the same tag again with main's workflow: `gh workflow run release.yml -f tag=vX.Y.Z` (watch it with `gh run watch`). It checks out that tag and makes every check the tag push makes; a GitHub release that already exists is kept, and the build goes on to itch.io.
 
+## Error reporting
+
+The published builds, GitHub Pages and itch.io, send their errors to Sentry (`src/toolkit/errors/error-reporting.ts`): uncaught errors, unhandled rejections and the errors the game catches itself, each tagged with the version, the room and the graphics preset. Errors only: no tracing, profiling or replays, no cookies and no personal data. The dev server, local previews and `?dev` never report.
+
 ## Reused from the Encabulator
 
 The build tooling (Vite+, TypeScript 7, Oxlint, Oxfmt) and the first-person control scheme come from the neighbouring `encabulator` project; see `doc/reuse-inventory.md`.

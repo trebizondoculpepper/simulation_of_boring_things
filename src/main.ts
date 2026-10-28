@@ -1,3 +1,7 @@
+import {
+  reportError,
+  startErrorReporting,
+} from './toolkit/errors/error-reporting';
 import { bindTitleShortcuts } from './toolkit/controls/input/title-shortcuts';
 import { createJacuzziAmbience } from './toolkit/gallery/views/jacuzzi-ambience';
 import { jacuzziApproachGain } from './toolkit/gallery/logic/jacuzzi-acoustics';
@@ -126,7 +130,12 @@ const app = document.querySelector<HTMLElement>('#app');
 if (!directory || !directoryShell || !app)
   throw new Error('Room page is incomplete.');
 
+// Errors from the published builds go to Sentry (`error-reporting.ts`):
+// started before anything else, so a failure to start is caught too.
+startErrorReporting();
+
 const showError = (error: unknown) => {
+  reportError(error);
   const message = document.querySelector<HTMLParagraphElement>('#error');
   if (message) {
     message.hidden = false;

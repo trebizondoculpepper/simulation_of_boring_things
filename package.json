@@ -20,6 +20,7 @@
   "type": "module",
   "dependencies": {
     "@preact/signals-core": "1.14.4",
+    "@sentry/browser": "10.78.0",
     "three": "0.186.1"
   },
   "devDependencies": {
