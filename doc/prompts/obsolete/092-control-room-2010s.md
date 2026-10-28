@@ -1,6 +1,6 @@
 # 092: The control room, a bit of every era
 
-Status: stage 0 under way (2026-10-27): the walkable prototype in two versions on one geometry, dev45 the Bond villain's lair (`?room=dev45`) and dev46 the starship bridge (`?room=dev46`, with its stations for each pool system and its ramps), to the owner's chosen layout as it grew the same day (below, "The chosen layout"); refinements next. Written 2026-10-27 from the owner's request; its layout and the screens question settled by the owner the same day.
+Status: obsolete (the owner, 2026-10-28): overtaken by [095](../095-the-bridge.md), the bridge, which took its prototype on (dev46's starship bridge) behind the CONTROL ROOM MODE knob; nothing more will be done under 092. Moved to `obsolete/` the same day. Its status when stopped: stage 0 under way (2026-10-27): the walkable prototype in two versions on one geometry, dev45 the Bond villain's lair (`?room=dev45`) and dev46 the starship bridge (`?room=dev46`, with its stations for each pool system and its ramps), to the owner's chosen layout as it grew the same day (below, "The chosen layout"); refinements next. Written 2026-10-27 from the owner's request; its layout and the screens question settled by the owner the same day.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first, and `doc/design/control-interface-archetypes.md`. Markdown is one paragraph per line.
 

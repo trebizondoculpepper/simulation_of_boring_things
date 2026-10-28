@@ -36,6 +36,7 @@ export type PipeKindId =
   | 'pvc-pressure'
   | 'pvc-drain'
   | 'abs-chemical'
+  | 'double-contained'
   | 'copper'
   | 'steel-screwed'
   | 'steel-flanged'
@@ -71,6 +72,12 @@ export interface PipeKind {
   flexible?: boolean;
   /** Square, its "diameter" its width: trunking, drawn by `createTrunkingRun`. */
   square?: boolean;
+  /**
+   * Double-contained: the kind of the carrier pipe inside it, and the
+   * carrier's outside diameter as a share of its own. Only the
+   * containment shows on a run; a cut-away (`pipes_n_dreams`) shows both.
+   */
+  carrier?: { kind: PipeKindId; share: number };
 }
 
 export const PIPE_KINDS: Record<PipeKindId, PipeKind> = {
@@ -120,6 +127,21 @@ export const PIPE_KINDS: Record<PipeKindId, PipeKind> = {
     roughness: 0.4,
     metalness: 0,
     sizes: [0.016, 0.02, 0.025, 0.032],
+  },
+  // Double-contained chemical pipe (prompt 086; after GF's CONTAIN-IT and
+  // Asahi/America's Duo-Pro): a solvent-welded ABS carrier inside a PVC-U
+  // containment pipe on spacers, its interstice watched for leaks at each
+  // low point (`leak-detection.ts`). Every chemical fill line and transfer
+  // main through the building is laid in it.
+  'double-contained': {
+    name: 'Double-contained chemical pipe',
+    carries: 'chemical fill lines and transfer mains, pipe in pipe',
+    joint: 'socket',
+    colour: '#8c9295',
+    roughness: 0.45,
+    metalness: 0,
+    sizes: [0.05, 0.063, 0.075, 0.09],
+    carrier: { kind: 'abs-chemical', share: 0.5 },
   },
   copper: {
     name: 'Copper tube, capillary fittings',

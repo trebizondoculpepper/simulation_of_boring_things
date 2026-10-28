@@ -113,7 +113,8 @@ export function supportSpacing(
         [Infinity, 3.0, 3.6],
       ]);
     case 'pvc-pressure':
-    case 'abs-chemical': {
+    case 'abs-chemical':
+    case 'double-contained': {
       const s = band(od, [
         [0.032, 0.9, 1.8],
         [0.05, 1.1, 2.2],
