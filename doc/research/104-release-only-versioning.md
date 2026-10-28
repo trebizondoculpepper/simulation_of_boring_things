@@ -1,5 +1,7 @@
 # 104 research: versions bumped only by a release
 
+> **Superseded in part (2026-10-28):** the owner's decisions and Codex's review, recorded in [mission 104](../prompts/104-release-only-versioning.md), replace this note's proposals where they differ: a release bumps the minor (not the patch), a push to `main` gets a derived patch counted from the last version change (not `+N` labels), and only releases reach itch.io.
+
 Checked 2026-10-28 against `1e0651ce` (package version 0.1.710). This is research and a proposal, not an implemented change: no build, CI or versioning code has been touched. [Mission 104](../prompts/104-release-only-versioning.md) turns it into work and acceptance criteria.
 
 ## The request
