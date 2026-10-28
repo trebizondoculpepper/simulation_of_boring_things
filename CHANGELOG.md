@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-28
+
 ### Added
 
 - Versions bumped only by a release (mission 104; the owner, 2026-10-28; reviewed by Codex, `doc/reviews/2026-10-28-codex-review-104.md`): a push to `main` is the next patch, derived by the build from the commits since `package.json`'s version last changed (`scripts/versioning.ts`), so a build writes no file and CI makes no `[skip ci]` version commit; `npm run release` (the next minor, a major only when asked) checks, bundles, then writes the version and changelog, commits `Release vX.Y.Z`, tags and pushes atomically, undoing itself on any failure; GitHub Pages follows every push to `main`, and only a release reaches itch.io, from the Release workflow, which now checks the tag is annotated, on `main` and matches `package.json` and the lockfile. CI fails a commit that changes the version outside a release (`scripts/version-guard.ts`). The `release:patch|minor|major` scripts are gone.
@@ -670,5 +672,6 @@ The first release. It has no operator's manual yet: that comes in a later releas
 - Walking from one room to the next no longer recompiles every shader of the room arrived in.
 - The corridor posters load on the published site.
 
-[Unreleased]: https://github.com/trebizondoculpepper/the_pool/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/trebizondoculpepper/the_pool/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/trebizondoculpepper/the_pool/releases/tag/v0.1.0
