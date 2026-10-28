@@ -1,3 +1,7 @@
+import {
+  ACID_PORTS,
+  HYPO_PORTS,
+} from '../../components/plant/logic/dosing-boards';
 import { BACKWASH_PIT } from '../../../game/plant/wet-hall';
 import {
   DAY_TANKS,
@@ -357,28 +361,19 @@ export function machinePorts(item: Item): MachinePort[] {
     ];
   if (kind === 'dosing-controller')
     return [port('sample', [0, 0, item.d], [0, 0, 1], 0.012, 'sample')];
+  // Each dosing board where its own pipework ends (`HYPO_PORTS`,
+  // `ACID_PORTS`; the owner, 2026-10-28: the pipes did not meet them): its
+  // suction in at its top edge, from its day tank's line overhead; its dose
+  // out of its face at its foot, then down to its injection point.
   if (kind === 'hypo-pumps')
     return [
-      port('dose', [0, 0, item.d], [0, 0, 1], 0.012, 'chemical'),
-      // Its suction from the store's line, in at its top.
-      port(
-        'supply',
-        [0.3, item.h / 2, item.d / 2],
-        [0, 1, 0],
-        0.012,
-        'chemical',
-      ),
+      port('dose', [...HYPO_PORTS.dose], [0, 0, 1], 0.012, 'chemical'),
+      port('supply', [...HYPO_PORTS.supply], [0, 1, 0], 0.012, 'chemical'),
     ];
   if (kind === 'acid-pump')
     return [
-      port('dose', [0, 0, item.d], [0, 0, 1], 0.012, 'chemical'),
-      port(
-        'supply',
-        [0.15, item.h / 2, item.d / 2],
-        [0, 1, 0],
-        0.012,
-        'chemical',
-      ),
+      port('dose', [...ACID_PORTS.dose], [0, 0, 1], 0.012, 'chemical'),
+      port('supply', [...ACID_PORTS.supply], [0, 1, 0], 0.012, 'chemical'),
     ];
   if (kind === 'chem-day') {
     // A plant room's day tank (plan 085). A dose bottle (`createDoseBottle`):

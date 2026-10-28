@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The dosing boards' pipework meets the room's (the owner, 2026-10-28, at PL2-DP1 and PL2-DP2): each board's suction rises to one connection at its top, where its day tank's line comes down from overhead, and its discharge falls to one low at its edge, where the dose line leaves for its injection quill; their machine ports are those points (`dosing-boards.ts`).
 - Turning a bridge console's page (◄ or ►) is just a little chirp, two quiet rising blips (the owner, 2026-10-28): the recorded cue it played was too disturbing for something done so often.
 - Central Control's extra-wide console pages only through designs as wide as it (the owner, 2026-10-28): a station's smaller panel no longer shrinks into the middle of it; today that is its own page only.
 - The bridge warns of every annunciator's alarms (the owner, 2026-10-28): its ACCEPT, alarm bleep, ALARMS IN, NEWEST and GO TO and its alarm sweep take in the lounge annunciator's windows as well as the plant's, ACCEPT ALARMS accepting both; the tank levels page flags a pool's balance tank tripped on low-low ("47 % · TRIPPED") whatever its level now.
