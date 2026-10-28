@@ -91,6 +91,23 @@ const clipFor = (name: string) => {
   return key ? new URL(CLIPS[key], location.href) : null;
 };
 
+/**
+ * The gallery's photographs (the owner's, made with Midjourney; `CREDITS.md`),
+ * `resources/images/day-in-the-life/<decade>-<morning|midday|night>.jpg`,
+ * found at build time; a missing one keeps its placeholder.
+ */
+const PHOTOS = import.meta.glob(
+  '../../../../../resources/images/day-in-the-life/*.{jpg,png,webp}',
+  { eager: true, query: '?url', import: 'default' },
+) as Record<string, string>;
+const photoFor = (d: Decade, when: string) => {
+  const name = `${d.decade}-${when.toLowerCase()}`;
+  const key = Object.keys(PHOTOS).find((k) =>
+    k.slice(k.lastIndexOf('/') + 1).startsWith(`${name}.`),
+  );
+  return key ? new URL(PHOTOS[key], location.href).href : null;
+};
+
 const PICK_UP: SoundRecipe = click({
   band: 1800,
   q: 1.2,
@@ -175,8 +192,11 @@ function wrapText(c: CanvasRenderingContext2D, text: string, width: number) {
   return lines;
 }
 
-/** A decade's bay: its heading, three placeholder photographs with their captions, and its stretch of the timeline. */
-function paintBay(d: Decade) {
+/** A decade's bay: its heading, three photographs (a placeholder where none is loaded yet) with their captions, and its stretch of the timeline. */
+function paintBay(
+  d: Decade,
+  prints: ReadonlyMap<string, HTMLImageElement> = new Map(),
+) {
   return (c: CanvasRenderingContext2D, w: number, h: number) => {
     const look = LOOKS[d.look];
     c.fillStyle = '#f6f4ec';
@@ -201,37 +221,56 @@ function paintBay(d: Decade) {
       const py = top + m;
       const pw = fw - 2 * m;
       const ph = fh - 2 * m;
-      const grad = c.createLinearGradient(0, py, 0, py + ph);
-      grad.addColorStop(0, look.light);
-      grad.addColorStop(1, look.mid);
-      c.fillStyle = grad;
-      c.fillRect(px, py, pw, ph);
-      // A poolside, a figure at work: the shape of the picture to come.
-      c.fillStyle = look.mid;
-      c.fillRect(px, py + ph * 0.62, pw, ph * 0.38);
-      c.fillStyle = look.paper;
-      c.fillRect(px, py + ph * 0.6, pw, ph * 0.04);
-      c.fillStyle = look.dark;
-      const fx = px + pw * (0.3 + 0.2 * k);
-      c.beginPath();
-      c.arc(fx, py + ph * 0.3, ph * 0.06, 0, Math.PI * 2);
-      c.fill();
-      c.fillRect(fx - ph * 0.05, py + ph * 0.36, ph * 0.1, ph * 0.24);
-      c.globalAlpha = 0.85;
-      c.fillStyle = look.paper;
-      c.fillRect(px, py + ph * 0.78, pw, ph * 0.22);
-      c.globalAlpha = 1;
-      c.fillStyle = look.dark;
-      c.font = `bold ${ph * 0.1}px ${SANS}`;
-      c.textAlign = 'center';
-      c.fillText(
-        `${d.decade} · ${p.when.toUpperCase()}`,
-        px + pw / 2,
-        py + ph * 0.86,
-      );
-      c.font = `${ph * 0.07}px ${SANS}`;
-      c.fillText('PHOTOGRAPH TO COME', px + pw / 2, py + ph * 0.95);
-      c.textAlign = 'left';
+      const print = prints.get(p.when);
+      if (print) {
+        // The photograph, cropped to fill its print.
+        const scale = Math.max(pw / print.width, ph / print.height);
+        const sw = pw / scale;
+        const sh = ph / scale;
+        c.drawImage(
+          print,
+          (print.width - sw) / 2,
+          (print.height - sh) / 2,
+          sw,
+          sh,
+          px,
+          py,
+          pw,
+          ph,
+        );
+      } else {
+        const grad = c.createLinearGradient(0, py, 0, py + ph);
+        grad.addColorStop(0, look.light);
+        grad.addColorStop(1, look.mid);
+        c.fillStyle = grad;
+        c.fillRect(px, py, pw, ph);
+        // A poolside, a figure at work: the shape of the picture to come.
+        c.fillStyle = look.mid;
+        c.fillRect(px, py + ph * 0.62, pw, ph * 0.38);
+        c.fillStyle = look.paper;
+        c.fillRect(px, py + ph * 0.6, pw, ph * 0.04);
+        c.fillStyle = look.dark;
+        const fx = px + pw * (0.3 + 0.2 * k);
+        c.beginPath();
+        c.arc(fx, py + ph * 0.3, ph * 0.06, 0, Math.PI * 2);
+        c.fill();
+        c.fillRect(fx - ph * 0.05, py + ph * 0.36, ph * 0.1, ph * 0.24);
+        c.globalAlpha = 0.85;
+        c.fillStyle = look.paper;
+        c.fillRect(px, py + ph * 0.78, pw, ph * 0.22);
+        c.globalAlpha = 1;
+        c.fillStyle = look.dark;
+        c.font = `bold ${ph * 0.1}px ${SANS}`;
+        c.textAlign = 'center';
+        c.fillText(
+          `${d.decade} · ${p.when.toUpperCase()}`,
+          px + pw / 2,
+          py + ph * 0.86,
+        );
+        c.font = `${ph * 0.07}px ${SANS}`;
+        c.fillText('PHOTOGRAPH TO COME', px + pw / 2, py + ph * 0.95);
+        c.textAlign = 'left';
+      }
       // Its caption below.
       c.fillStyle = '#16232b';
       c.font = `bold ${h * 0.04}px ${SANS}`;
@@ -426,7 +465,21 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     const bay = new Group();
     bay.name = `${b.decade.decade} photographs`;
     const H = 1.25;
-    const face = t.printed(BAY.w, H, paintBay(b.decade), 1024);
+    const face = t.printed(BAY.w, H, paintBay(b.decade), 2048);
+    // Its photographs, painted into the bay as each one loads.
+    const prints = new Map<string, HTMLImageElement>();
+    for (const p of b.decade.photos) {
+      const url = photoFor(b.decade, p.when);
+      if (!url) continue;
+      const img = new Image();
+      img.onload = () => {
+        prints.set(p.when, img);
+        const { canvas } = face.context;
+        paintBay(b.decade, prints)(face.context, canvas.width, canvas.height);
+        face.texture.needsUpdate = true;
+      };
+      img.src = url;
+    }
     face.mesh.position.set(0, 0, 0.012);
     bay.add(face.mesh);
     t.box(
@@ -456,7 +509,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     turnTo(bay, b.x, 1.65, b.z, b.yaw);
     object.add(
       markComponent(still(bay), {
-        name: `Photographs: ${b.decade.decade}, ${b.decade.strap} (placeholders: the pictures are still to be made)`,
+        name: `Photographs: ${b.decade.decade}, ${b.decade.strap}`,
         decorative: true,
       }),
     );

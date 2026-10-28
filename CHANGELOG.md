@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Hall 5's gallery shows the owner's thirty photographs of Reg the poolman, decade by decade (`resources/images/day-in-the-life/`), painted into each bay as they load; a missing one keeps its placeholder.
 - Museum: the empty halls across the courtyard no longer show through a neighbour drawn through its archway (seen from Hall 0 through Hall 9): an empty hall standing aside as a depth-only occluder is now drawn before everything else.
 - Hall 0 faster and its pool lanes projected: the caustics are drawn into a small texture at most ten times a second instead of by a heavy shader over the whole pool every frame, and the projector's spill light is gone; the lane lines (with their T ends) are part of the projected picture on a plain white pool; only the title wall has cove light, now a gentle narrow halo; the projector fades out 5 s after the walker leaves Hall 0 (over 5 s, then standby) and fades back up on return.
 - Hall 0 relit: the painted pool is now white, lit by moving water caustics from a ceiling-hung Lumenhaus laser projector (10 Hz frames, status LED); the room is darkened, and its title wall and archway signs stand 50 mm off the walls with warm cove light behind them.
