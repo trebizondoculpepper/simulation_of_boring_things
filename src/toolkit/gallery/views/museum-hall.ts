@@ -65,6 +65,7 @@ import type {
   MuseumWindow,
 } from '../logic/museum-plan';
 import { MUSEUM_EXHIBITION as BRAND } from '../logic/museum-brand';
+import { createMuseumSafety } from './museum-safety';
 
 /**
  * A room of the pool science museum, PLANTROOMS (mission 107): the five
@@ -1696,6 +1697,11 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
 
   for (const child of [...group.children, ...plan.children])
     markComponent(child, { decorative: true });
+  // The safety and services layer: sockets, the fire alarm, escape signs, and the rest.
+  const safety = createMuseumSafety(id);
+  plan.add(safety.group);
+  group.updateMatrixWorld(true);
+  safety.merge();
   group.traverse((obj) => {
     if (obj instanceof Mesh) {
       obj.castShadow = false;
@@ -1717,6 +1723,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
       });
       for (const mat of disposables) mat.dispose();
       for (const tex of textures) tex.dispose();
+      safety.dispose();
     },
   };
 }

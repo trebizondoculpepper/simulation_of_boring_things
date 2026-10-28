@@ -728,7 +728,7 @@ export function comingSoonPanel(id: MuseumHallId) {
  * painted edge nearest the doorway, its rails coming down to stop at the
  * floor. The paint is walked over; the ladder is not.
  */
-export const PAINTED_POOL = { w: 10, d: 6.5, lanes: 4 } as const;
+export const PAINTED_POOL = { w: 9.4, d: 6.5, lanes: 4 } as const;
 export function hall0Ladder() {
   return { x: 2.4, z: -PAINTED_POOL.d / 2, yaw: 0 };
 }

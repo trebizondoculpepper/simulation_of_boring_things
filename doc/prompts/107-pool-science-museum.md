@@ -1,6 +1,6 @@
 # 107: PLANTROOMS, the pool science museum: a welcome hall and five exhibit halls round a courtyard
 
-Status: written 2026-10-28. Stage 1 (the shell: Hall 0, the welcome, and five empty exhibit halls round a courtyard, joined by archways, their finishes, lighting, the PLANTROOMS brand and signs) is today's work and is built (see "Stage 1, built"). The owner has chosen the brand (stage 2 done with it). The open questions below wait for the owner; stages 3 to 7 wait for them.
+Status: written 2026-10-28. Stage 1, with its safety and services layer, (the shell: Hall 0, the welcome, and five empty exhibit halls round a courtyard, joined by archways, their finishes, lighting, the PLANTROOMS brand and signs) is today's work and is built (see "Stage 1, built"). The owner has chosen the brand (stage 2 done with it). The open questions below wait for the owner; stages 3 to 7 wait for them.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first and follow it, above all: the enhanced network is the one source of truth (every room's schematic first, with every valve, its function, normal state and derived tag; the plumber routes the pipes; nothing is drawn that is not in the model); every engineering item is real, working and branded; the inspection overlay says only what a thing's own display, lamp or position shows (no peeking); displays redraw only when what they show changes; all input goes through `src/toolkit/controls/`; `logic/` is pure and tested beside it. Then read `doc/plant-model.md`, `doc/room-layout-guide.md` and mission 106 (`doc/prompts/106-ideal-pool-plant.md`), whose dev51 is this museum's first working exhibit.
 
@@ -100,6 +100,35 @@ The museum is **The Dyehouse, Museum of Science and Work** (a converted dye work
 
 **Performance.** Each room draws two scenes while a doorway is seen through (itself and the room beyond), as the pool loop does; the courtyard adds a few draw calls, drawn only through the windows. The halls' geometry is merged by material (columns, tracks, benches, glazing bars; the services ceiling merges its own), with no shadows; the passes follow the preset (`followEffectSettings`: AO and bloom off or cut on low and medium). Budgets (mission 094): each hall's draw calls and frame time measured on high, medium and low, and the services ceiling's density cut on low if it is the cost.
 
+## The safety and services layer (built 2026-10-28)
+
+The owner, 2026-10-28: "Add some UK type power sockets at the appropriate height and a fire point in every other hall. Actually, look up what kind of safety gear you'd expect a museum to have, and implement that as a layer of realism." And: "Perhaps we can have some fire exit signs that lead back to hall zero. And ground floor. … what other things museums would typically have in order to be safe spaces."
+
+**What a UK public museum carries**, from current practice: the Regulatory Reform (Fire Safety) Order 2005 makes the operator's fire risk assessment the basis of it all, and requires escape routes, warning, firefighting equipment, signs and emergency lighting proportionate to it; Approved Document B (fire safety: escape routes and travel distances, a public building's assembly use); BS 5839-1 (fire detection and alarm: a manual call point at every storey exit and final exit, at 1.4 m ± 0.2 m, within 45 m of anyone; audible and visual warning); BS 5266-1 (emergency lighting: luminaires at every exit door, change of direction and fire alarm call point, maintained exit signs where the public gathers); BS 5499-4 and BS ISO 3864 / ISO 7010 (escape signs: the green running figure E001/E002 with an arrow, at every change of direction, mounted about 2.0–2.5 m, legible at their viewing distance; FIRE DOOR KEEP SHUT; E003 first aid; E010 the defibrillator); BS 5306-8 (portable extinguishers: water or foam for the galleries and CO₂ for electrics, at fire points by the exits, their ID signs, a fire action notice beside the call point); BS 1363 twin switched sockets, with Approved Document M's 400 mm to 1,000 mm for outlets and switches (450 mm usual); the Equality Act 2010 and Approved Document M for access (hearing loops and their sign, accessible toilets and the lift signed in wayfinding); the Surveillance Camera Code and the UK GDPR for CCTV (a sign wherever images are recorded, saying who controls the scheme); and the museum's own visitor notices (please do not touch, maximum occupancy from the fire risk assessment, staff-only doors kept shut).
+
+**Built** (`src/toolkit/gallery/logic/museum-safety.ts`, pure, placement tested in `museum-safety.test.ts`; `src/toolkit/gallery/views/museum-safety.ts`, the game's own fittings, merged by material, a few draw calls a room): static set decoration, as CLAUDE.md allows for what is not plant.
+
+- **Escape route** (`EXIT_WAY`): every room's way out leads back to Hall 0 the shorter way round the ring: Museum 1 to Hall 0; 2 to 1; 3 by 2 (three doorways, against four by 4 and 5); 4 by 5; 5 to 1; and from Hall 0 through its fire exit door to the stair. Beside the doorway each room leaves by, a maintained exit box sign at 2.4 m (arrow straight on); along each exhibit hall, two escape signs hung from the street side's lighting track at 3.0 m, facing those walking to the way out, arrow straight on, their backs plain; inside Hall 0's doorway, a back-to-back pair (to those coming in, the fire exit on their right; to those by the pool, ahead and to the left).
+- **Hall 0's fire exit** (the owner, 2026-10-28: the end of the escape route): on its west wall by the doorway, a push-bar (panic bar) door, 1.1 × 2.1 m, with PUSH BAR TO OPEN, FIRE EXIT KEEP CLEAR and FIRE DOOR KEEP SHUT on its leaf, the final exit sign over it (E001 with its arrow and FIRE EXIT), an emergency bulkhead over that, the call point beside it, and the green EXIT · stairs · Ground floor ↓ sign. **Set decoration, shut, not walkable** (the owner cancelled a walkable fire exit earlier): the stair beyond is not built. To change: make it a door joint to a stair room, as the plant rooms' doors are.
+- **Fire detection and warning**: a call point at 1.4 m beside every room's way out; a sounder-beacon in each room at 2.4 m; smoke detectors and sprinkler heads come with the services ceiling in the exhibit halls, and Hall 0's tiled ceiling has its own two detectors and five sprinklers.
+- **Fire points in every other hall** (Museums 1, 3 and 5), on a free-standing board (no drilling of the old brick), near the way out on the street wall: water and CO₂ extinguishers, their ID signs, FIRE POINT, and the fire action notice.
+- **Emergency lighting**: a bulkhead by every doorway at 2.6 m, and over Hall 0's fire exit.
+- **Power**: white BS 1363 twin switched sockets at 450 mm on each exhibit hall's long walls, about every 6 m, never under a window's glass; two floor boxes per hall on its middle line, where the exhibits' plinths will stand.
+- **Security**: a CCTV dome high on each room's wall, a PIR in a corner; IMAGES ARE BEING RECORDED in Hall 0.
+- **Medical** (Hall 0, by the fire exit): the defibrillator in its green wall cabinet (E010, AED, Defibrillator), the first-aid sign (E003) and kit.
+- **Access and notices**: the hearing loop sign and the maximum occupancy notice (150) by Hall 0's doorway; a wayfinding sign (way out and stairs, toilets and accessible toilet, cloakroom, café and shop on the ground floor; the exhibition); PLEASE DO NOT TOUCH (P010, except where the hand sign is) at each exhibit hall's way in; a STAFF ONLY door, kept shut, in Museum 3.
+- **Kept clear**: the halls' middles (the exhibits' space), the title wall, the panels, and Hall 0's lift wall (below).
+
+A question for the owner: sockets are static here; CLAUDE.md wants all electrics modelled where they are plant. If the museum's sockets should be live (switched, on a circuit), that is a later stage.
+
+## The goods lift (later; reserved now)
+
+The owner, 2026-10-28: a lift on the inside of Hall 0 that leads into the rest of the game, and a matching lift somewhere on the main corridor, serving level −1 (the utility corridor, the plant level), the main corridor's floor, and the fourth floor, the museum. It is a large goods lift with double doors, from the loading bay up to the museum, for moving equipment: big enough for two roll cage trolleys (about 0.8 × 0.7 × 1.7 m each) and a person standing aside.
+
+**Sized** from BS EN 81-20's goods and passenger-goods lifts: about 2,500 kg, a car about 2.0 m wide and 2.7 m deep (two roll cages side by side across its width with a person beside them, or one behind the other with room to stand), landing doors of about 2.0 m clear opening (two-panel, centre or side opening), and a landing zone of at least 2.5 m in front.
+
+**Reserved** (`LIFT_RESERVED` in `museum-safety.ts`): Hall 0's east wall, in its middle (from 0.2 m south of the room's middle line to 3.0 m: 3.2 m of wall for the doors and their surround), with the landing 2.5 m deep in front of it clear of everything; the painted pool was made 9.4 m long so its painted gutter ends short of the landing. The shaft would stand outside Hall 0's east wall. A test keeps every fitting out of it. Not designed or built yet: a future mission (TODO).
+
 ## Each hall in detail (stages 2 to 6)
 
 Every hall's exhibit follows mission 106's pattern: an ideal-source schematic first (`src/game/plant/museum-<n>-….ts`, tested: nodes, links, every fitting given with its function, normal state and derived tag, the plumber adding nothing); the layout and plumbing by the router; a Penfold mimic captioned as the map; lecterns with a headline, the key idea, one memorable fact and a "Try it" box; visitor controls tagged PUSH or TURN; the RESET pedestal; the overlay on every machine, valve and instrument; tags derived (`M1-P1`, `M1-P1-V1`, `M1-FT1`). Each hall's state is its own (fresh on load, as the dev rooms), not the world's.
@@ -193,6 +222,7 @@ Camera links:
 - The corner seen from Museum 2, Museum 1 and Hall 0's doorway beyond: `?room=museum2&x=2&y=1.6&z=3&yaw=125&pitch=4`
 - The courtyard from Museum 3: `?room=museum3&x=4&y=1.6&z=3.5&yaw=160&pitch=6`
 - Museum 3 towards its corner into Museum 4: `?room=museum3&x=-6&y=1.6&z=0&yaw=120&pitch=2`
+- The safety layer: Museum 3's fire point `?room=museum3&x=-8.4&y=1.6&z=-4.0&yaw=350&pitch=-14`; a twin socket at 450 mm `?room=museum3&x=-4&y=1.0&z=-5.9&yaw=0&pitch=-28&noclip=true`; Museum 2's escape signs `?room=museum2&x=0.5&y=1.7&z=0&yaw=180&pitch=10`; Hall 0's fire exit, AED and first aid `?room=museum0&x=-3.0&y=1.6&z=-1.6&yaw=275&pitch=2`; Hall 0's notices by the doorway `?room=museum0&x=-1.5&y=1.6&z=-3.5&yaw=345&pitch=4`; the hanging sign from the pool `?room=museum0&x=2&y=1.6&z=2.5&yaw=330&pitch=4`
 
 ## Open questions for the owner (ask one at a time, in this order)
 
@@ -202,4 +232,5 @@ Camera links:
 4. **Museum 4's controller:** the Lounge's DC-1 pair (hands-on, period) or the Olympic's CX-7 touch screen?
 5. **Museum 5's faults:** visitors' random only, or also an attendant's key switch to choose one (for a demonstration)?
 6. **The courtyard, walkable?** A door out into it from one hall (its own room and scene), or seen only, as now?
-7. **The sizes:** the square at 46 m with a 14 m ring (halls 14 m wide, 16 to 32 m long), 9.5 m tall, and Hall 0 at 16 × 14 m, are provisional; resize now, or once each exhibit is laid out?
+7. **The sockets:** static set decoration, or live electrics on a circuit as the plant's are?
+8. **The sizes:** the square at 46 m with a 14 m ring (halls 14 m wide, 16 to 32 m long), 9.5 m tall, and Hall 0 at 16 × 14 m, are provisional; resize now, or once each exhibit is laid out?

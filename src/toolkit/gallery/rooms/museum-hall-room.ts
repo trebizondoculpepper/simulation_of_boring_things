@@ -39,6 +39,7 @@ import {
 } from '../logic/museum-plan';
 import type { MuseumHallId } from '../logic/museum-plan';
 import { createMuseumHall } from '../views/museum-hall';
+import { safetySolids } from '../logic/museum-safety';
 
 /**
  * The museum's ambient occlusion samples per pixel, at High (the owner,
@@ -151,6 +152,8 @@ export function startMuseumHallRoom(
     minZ: f.minZ * metre,
     maxZ: f.maxZ * metre,
   });
+  // The fire point boards and the staff door, stood against the walls.
+  const fittings = safetySolids(id);
   const start = startOf(id);
   const walk = createFirstPerson({
     scene,
@@ -160,7 +163,7 @@ export function startMuseumHallRoom(
     floorY: 0,
     start: { x: start.x * metre, z: start.z * metre, yaw: start.yaw },
     floorAt: () => 0,
-    solids: () => hallSolids(id, seen).map(toScene),
+    solids: () => [...hallSolids(id, seen), ...fittings].map(toScene),
     use: () => {},
   });
 
