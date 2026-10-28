@@ -26,7 +26,15 @@ import type { WaterCondition } from '../water/water-condition';
  *   through: a rinse down to waste settles it before it goes back into
  *   service.
  * - **Cleaning.** Maintenance (a chemical clean or new media) takes its dirt
- *   and fissures away.
+ *   and fissures away, and puts back any sand it has lost.
+ * - **Sand loss** (an option, off by default; the owner, 2026-10-28: "make
+ *   it so our ideal filter model can have sand loss disabled"). With a
+ *   filter's `sandLoss` on, a backwash rising faster than the bed's safe
+ *   rate (`FILTER_PHYSICS.safeRiseRate`) expands it past its freeboard and
+ *   carries sand to waste, in proportion to the excess. The bed is then
+ *   shallower: less clean head, less room for dirt, and less depth to catch
+ *   it with. Off, nothing is ever lost, as before; nothing in the game
+ *   turns it on yet (dev51 keeps it off: "do what's simplest").
  *
  * Its rig: an ideal clean source and an ideal dirty one, each through its
  * own valve into a supply header; the five valves of a filter's face (V1
@@ -47,6 +55,8 @@ export interface IdealFilterSpec {
   diameter: number;
   /** Its sand bed's depth, m (`FILTER_PHYSICS.bedDepth` unless given). */
   bedDepth?: number;
+  /** Whether a too-fierce backwash washes its sand away (off unless given). */
+  sandLoss?: boolean;
 }
 
 /**
@@ -78,6 +88,15 @@ export const FILTER_PHYSICS = {
   /** The bed lifts at this share of its wash flow, upwards; fissures heal only from this share. */
   liftShare: 0.5,
   healShare: 0.8,
+  /**
+   * Sand loss (when a filter's `sandLoss` is on): the fastest a backwash
+   * may rise, m/h, before the bed expands past its freeboard (sand of
+   * 0.5–1 mm, its wash rate 30 m/h); above it, the share of the bed lost a
+   * second for each share the rate is over, and the least of it left.
+   */
+  safeRiseRate: 40,
+  sandLossRate: 1 / 600,
+  leastSand: 0.2,
 } as const;
 
 /** A Ø1.2 m filter, as the lounge's. */
@@ -102,6 +121,25 @@ export function filterSizing(spec: IdealFilterSpec) {
   };
 }
 
+/**
+ * A bed's sizing as it stands, its sand partly lost: its depth, media, clean
+ * head, dirt reference and capacity in proportion to the sand left; its
+ * area, and so its flows, as its vessel's. With all its sand, its size's.
+ */
+export function bedSizing(spec: IdealFilterSpec, f: IdealFilterState) {
+  const z = filterSizing(spec);
+  const sand = f.sand ?? 1;
+  if (sand === 1) return z;
+  return {
+    ...z,
+    bedDepth: z.bedDepth * sand,
+    media: z.media * sand,
+    cleanHead: z.cleanHead * sand,
+    dirtRef: z.dirtRef * sand,
+    capacity: z.capacity * sand,
+  };
+}
+
 /** The rig's valves: the two sources' and the filter's five. */
 export const RIG_VALVES = [
   'clean',
@@ -121,6 +159,8 @@ export interface IdealFilterState {
   fissuring: number;
   /** How unsettled after a wash, 0 settled to 1 just lifted. */
   unsettled: number;
+  /** The share of its sand left, 0 to 1 (all of it unless given): kept only where sand loss is on. */
+  sand?: number;
 }
 
 export const newIdealFilter = (): IdealFilterState => ({
@@ -197,8 +237,8 @@ const BAR = 1 / 10.2;
 
 /** The rig's network and its flows, as its valves stand. */
 export function rigFlows(rig: FilterRig): RigFlows {
-  const z = filterSizing(rig.spec);
   const f = rig.filter;
+  const z = bedSizing(rig.spec, f);
   const q = z.designFlow;
   const r = (loss: number, flow = q) => loss / (flow * flow);
   // A sound bed's resistance, raised by its dirt, lowered by its fissures;
@@ -336,10 +376,17 @@ export function bedPasses(
   f: IdealFilterState,
   dirt: number,
 ): number {
-  const z = filterSizing(spec);
+  const z = bedSizing(spec, f);
   // Near its capacity, dirt breaks through.
   const room = Math.max(0, 1 - (f.dirt / z.capacity) ** 3);
-  const capture = FILTER_PHYSICS.capture * room * (1 - f.fissuring);
+  // A shallower bed (sand lost) lets more past: what gets through a full
+  // depth, to the power of the share of the depth left.
+  const sand = f.sand ?? 1;
+  const sound =
+    sand === 1
+      ? FILTER_PHYSICS.capture
+      : 1 - (1 - FILTER_PHYSICS.capture) ** sand;
+  const capture = sound * room * (1 - f.fissuring);
   return dirt * (1 - capture) + FILTER_PHYSICS.fines * f.unsettled;
 }
 
@@ -365,8 +412,9 @@ export function stepFilterBed(
   dt: number,
 ): IdealFilterState {
   if (!(dt > 0)) return bedState;
-  const z = filterSizing(spec);
+  const z = bedSizing(spec, bedState);
   let { dirt, fissuring, unsettled } = bedState;
+  let sand = bedState.sand ?? 1;
   const down = Math.max(0, bed);
   const up = Math.max(0, -bed);
   const lifted = bedLifted(spec, bed);
@@ -391,6 +439,14 @@ export function stepFilterBed(
     // Only a proper lift heals fissures.
     if (up >= FILTER_PHYSICS.healShare * z.washFlow)
       fissuring *= Math.exp(-dt / FILTER_PHYSICS.healTime);
+    // Too fierce, with sand loss on: the bed expands past its freeboard.
+    const rate = up / z.area;
+    const over = rate / FILTER_PHYSICS.safeRiseRate - 1;
+    if (spec.sandLoss && over > 0)
+      sand = Math.max(
+        FILTER_PHYSICS.leastSand,
+        sand * Math.exp(-over * FILTER_PHYSICS.sandLossRate * dt),
+      );
   } else
     // Loaded and not being washed, the bed cracks and channels.
     fissuring = Math.min(
@@ -399,7 +455,10 @@ export function stepFilterBed(
         ((1 - fissuring) * (dirt / z.dirtRef) * 0.5 * dt) /
           FILTER_PHYSICS.fissureTime,
     );
-  return { dirt, fissuring, unsettled };
+  // Off, nothing is lost and no sand is kept: the state is as it always was.
+  return spec.sandLoss || bedState.sand !== undefined
+    ? { dirt, fissuring, unsettled, sand }
+    : { dirt, fissuring, unsettled };
 }
 
 /** What a lifted bed washes out into the water going up through it, g/m³. */
@@ -479,7 +538,7 @@ export const commandProcess = (
  * fines it is settling.
  */
 export function idealGlass(rig: FilterRig, flows: RigFlows): GlassInputs {
-  const z = filterSizing(rig.spec);
+  const z = bedSizing(rig.spec, rig.filter);
   const mode =
     Math.abs(flows.bed) < 1
       ? 'stopped'

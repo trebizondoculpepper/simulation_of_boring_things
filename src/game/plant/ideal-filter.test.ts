@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   FILTER_PHYSICS,
+  bedPasses,
+  bedSizing,
   cleanFilter,
   commandProcess,
   filterSizing,
   newFilterRig,
+  newIdealFilter,
+  stepFilterBed,
   rigFlows,
   stepFilterRig,
 } from './ideal-filter';
@@ -113,5 +117,58 @@ describe('the ideal filter', () => {
     expect(f.supply.temperature - f.outlet.temperature).toBeLessThan(0.05);
     expect(f.outlet.freeChlorine).toBe(f.supply.freeChlorine);
     expect(f.outlet.organics).toBe(f.supply.organics);
+  });
+});
+
+describe('sand loss, an option of the model', () => {
+  const spec = { diameter: 1.2 };
+  const lossy = { ...spec, sandLoss: true };
+  const z = filterSizing(spec);
+  /** A backwash rising at `rate` m/h for `seconds`. */
+  const wash = (s: typeof spec, rate: number, seconds: number) => {
+    let f = newIdealFilter();
+    for (let t = 0; t < seconds; t++)
+      f = stepFilterBed(s, f, -rate * z.area, 0, 1);
+    return f;
+  };
+
+  it('is off unless asked for: nothing lost, the state as it always was', () => {
+    const f = wash(spec, 60, 600);
+    expect(f.sand).toBeUndefined();
+    expect(Object.keys(f).sort()).toEqual(['dirt', 'fissuring', 'unsettled']);
+    expect(bedSizing(spec, f)).toEqual(z);
+  });
+
+  it('on, loses nothing at or below the safe rise rate', () => {
+    expect(wash(lossy, 30, 600).sand).toBe(1);
+    expect(wash(lossy, FILTER_PHYSICS.safeRiseRate, 600).sand).toBe(1);
+  });
+
+  it('on, loses sand above it, the more the fiercer, never all of it', () => {
+    const a = wash(lossy, 50, 600).sand!;
+    const b = wash(lossy, 70, 600).sand!;
+    expect(a).toBeLessThan(1);
+    expect(b).toBeLessThan(a);
+    expect(wash(lossy, 200, 36000).sand).toBeCloseTo(
+      FILTER_PHYSICS.leastSand,
+      6,
+    );
+  });
+
+  it('leaves a shallower bed: less clean head, less room for dirt, more let past', () => {
+    const half = { ...newIdealFilter(), sand: 0.5 };
+    const s = bedSizing(lossy, half);
+    expect(s.cleanHead).toBeCloseTo(z.cleanHead / 2, 9);
+    expect(s.capacity).toBeCloseTo(z.capacity / 2, 9);
+    expect(s.washFlow).toBe(z.washFlow);
+    expect(bedPasses(lossy, half, 10)).toBeGreaterThan(
+      bedPasses(lossy, newIdealFilter(), 10),
+    );
+  });
+
+  it('is put back by maintenance: new media', () => {
+    const rig = { ...newFilterRig({ diameter: 1.2, sandLoss: true }) };
+    const worn = { ...rig, filter: { ...rig.filter, sand: 0.6 } };
+    expect(cleanFilter(worn).filter.sand ?? 1).toBe(1);
   });
 });
