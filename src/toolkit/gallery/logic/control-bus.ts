@@ -1,3 +1,4 @@
+import { fedByItsPanel } from './room-services';
 import { machinePorts, placedPort } from './machine-ports';
 import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
 import type { Placed, Side } from './room-equipment';
@@ -68,7 +69,9 @@ export function controlBus(room: string): ControlBus | null {
   const { box, placed } = layout;
   const hw = box.w / 2;
   const hd = box.d / 2;
-  const devices = placed.filter((p) => isControlDevice(p.item.key));
+  const devices = placed.filter(
+    (p) => isControlDevice(p.item.key) && !fedByItsPanel(room, p.item.key),
+  );
   if (!devices.length) return null;
   const problems: string[] = [];
 

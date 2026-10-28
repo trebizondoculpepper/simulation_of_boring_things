@@ -188,6 +188,9 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
   // 2026-10-27): every console on its default page, unlocked
   // (`fillDefaults` adds them).
   51: (world) => world,
+  // 52 → 53: the lounge pool's annunciator (the owner, 2026-10-28), every
+  // window dark (`fillDefaults` adds it).
+  52: (world) => world,
 };
 
 export function serialiseWorld(world: World, savedAt: number): string {

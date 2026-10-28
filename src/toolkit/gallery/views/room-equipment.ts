@@ -312,6 +312,9 @@ function modelFor(
   const pool = /^plant_(pool_0[1-4])$/.exec(room)?.[1] as PoolId | undefined;
   if (pool && kind === 'pump-pair') return pumpPairExhibit(pool).build(kit);
   if (pool && kind === 'pump-panel') return pumpPanelExhibit(pool).build(kit);
+  // The lounge's annunciator, in its plant room and in the control room.
+  if (kind === 'annunciator' && arg === 'pool_01')
+    return byTitle(CONTROL, 'Lounge pool annunciator').build(kit);
   // The Olympic's balance tank panel, worked on the world's tank.
   if (kind === 'balance-tank-panel' && typeof window !== 'undefined')
     return worldBalanceTankPanel(kit);
