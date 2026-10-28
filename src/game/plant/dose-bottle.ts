@@ -14,6 +14,9 @@
  * - Its pump runs while dosing is asked of it and it is not empty: it cuts
  *   out at 2%, as a lance's float would, so it never runs dry.
  * - Unpowered, it neither reads, calls nor pumps: its display is dark.
+ * - Its pump's state (`bottleReadout`): dosing at a rate, off, unpowered,
+ *   dry at its cut-out, or faulty-looking, asked but nothing drawn (its
+ *   outlet's way shut).
  */
 
 export const BOTTLE = {
@@ -30,7 +33,17 @@ export interface DoseBottle {
   calling: boolean;
   /** Its pump is running now. */
   pumping: boolean;
+  /**
+   * What its pool's dosing asks of it, and what it gives, litres a second
+   * (the owner, 2026-10-28: its head says DOSING at a rate, OFF, or that it
+   * seems faulty): asked but not given, its outlet's way is shut.
+   */
+  asked?: number;
+  given?: number;
 }
+
+/** Its pump's state, as its head tells it. */
+export type BottlePump = 'dosing' | 'off' | 'unpowered' | 'dry' | 'fault';
 
 export function newDoseBottle(capacity: number, share = 0.7): DoseBottle {
   return {
@@ -46,6 +59,19 @@ export const bottleLevel = (b: DoseBottle) => b.litres / b.capacity;
 /** What its head shows: its reading, its switches' lamps, its pump. */
 export function bottleReadout(b: DoseBottle, powered = true) {
   const level = bottleLevel(b);
+  const asked = b.asked ?? (b.pumping ? 1 : 0);
+  const given = b.given ?? (b.pumping ? asked : 0);
+  // Asked, and empty to its cut-out: dry; asked and not giving: its way
+  // shut, its pump running against it (faulty, as it looks from outside).
+  const pump: BottlePump = !powered
+    ? 'unpowered'
+    : asked <= 0
+      ? 'off'
+      : level <= BOTTLE.empty
+        ? 'dry'
+        : given > 0
+          ? 'dosing'
+          : 'fault';
   return {
     powered,
     litres: powered ? b.litres : null,
@@ -53,8 +79,30 @@ export function bottleReadout(b: DoseBottle, powered = true) {
     high: powered && level >= BOTTLE.high,
     low: powered && level <= BOTTLE.low,
     calling: powered && b.calling,
-    pumping: powered && b.pumping,
+    pumping: powered && (pump === 'dosing' || pump === 'fault'),
+    pump,
+    /** What it doses, millilitres an hour. */
+    mlPerHour: pump === 'dosing' ? given * 3.6e6 : 0,
   };
+}
+
+/** Its pump in words, for its head's display and the information overlay. */
+export function bottlePumpWords(o: {
+  pump: BottlePump;
+  mlPerHour: number;
+}): string {
+  switch (o.pump) {
+    case 'dosing':
+      return `Dosing at ${o.mlPerHour < 10 ? o.mlPerHour.toFixed(1) : Math.round(o.mlPerHour)} ml/h`;
+    case 'off':
+      return 'Off';
+    case 'unpowered':
+      return 'Unpowered';
+    case 'dry':
+      return 'Stopped: tank empty';
+    case 'fault':
+      return 'Appears to be faulty: running, nothing drawn';
+  }
 }
 
 /**

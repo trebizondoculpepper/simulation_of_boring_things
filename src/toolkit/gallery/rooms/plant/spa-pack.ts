@@ -1,3 +1,4 @@
+import { cabinetFeeds, feedMessages } from '../../../../game/plant/pool-dosing';
 import { computed, signal } from '@preact/signals-core';
 import { createLouvres } from '../../../components/industrial-control/views/cabinet-fittings';
 import { Group } from 'three';
@@ -845,6 +846,8 @@ export function buildSpaPack(
   // whole panel is dead, its lamps dark and its pump stopped. The room
   // sets it (`object.userData.supply`); on its own, it is always fed.
   const supplied = signal(true);
+  /** Its chemical feeds' messages, for its display (`feedMessages`). */
+  let feedWords: string[] = [];
   object.userData.supply = supplied;
   const trialLowWater = signal(false);
   // Its pump's cutout: the foot spa's on low water; the jacuzzi's its
@@ -1101,8 +1104,23 @@ export function buildSpaPack(
       // The foot spa's surge vessel; the jacuzzi's tank is outside.
       vessel?.update(delta, moving);
       exchanger.update();
-      // Its peristaltic pumps stop while it washes.
-      dosing.update(delta, moving && (wash.value?.dosing ?? true), 1.8, 7.3);
+      // Its peristaltic pumps stop while it washes, and each while its
+      // chemical cannot reach it (the owner, 2026-10-28: they turned with
+      // the footbath's feeds shut); its readouts its water's.
+      const dosingOn = moving && (wash.value?.dosing ?? true);
+      const wd = store?.world.value;
+      const feeds = wd ? cabinetFeeds(wd, pool, dosingOn) : null;
+      dosing.update(
+        delta,
+        dosingOn,
+        wd ? wd.pools[pool].freeChlorine : 1.8,
+        wd ? wd.pools[pool].ph : 7.3,
+        [
+          dosingOn && !feeds?.fault.includes('hypochlorite'),
+          dosingOn && !feeds?.fault.includes('acid'),
+        ],
+      );
+      feedWords = feeds ? feedMessages(feeds) : [];
       // Its mimic, as the world has its water (an exhibit: as if in service).
       const w = store?.world.value;
       const trial = external?.state();
@@ -1179,11 +1197,19 @@ export function buildSpaPack(
                       bootText ??
                       (filterBinding?.washing()
                         ? filterBinding.line()
-                        : trial?.draining || lineup?.draining
-                          ? 'DRAINING'
-                          : on
-                            ? 'RUNNING  UV ON'
-                            : 'STOPPED')
+                        : // Its state, and in turn any feed's message, 2 s
+                          // each, as the jacuzzi's display does.
+                          [
+                            trial?.draining || lineup?.draining
+                              ? 'DRAINING'
+                              : on
+                                ? 'RUNNING  UV ON'
+                                : 'STOPPED',
+                            ...feedWords,
+                          ][
+                            Math.floor((w?.time ?? 0) / 2) %
+                              (1 + feedWords.length)
+                          ])
                     ).padEnd(16),
                   ] as const)
                 : null,

@@ -10,6 +10,7 @@ import {
   bottleReadout,
   newDoseBottle,
   stepDoseBottle,
+  bottlePumpWords,
 } from '../../../../game/plant/dose-bottle';
 import { onPlinth } from './plinth';
 import { hose } from './hose';
@@ -182,7 +183,23 @@ export function createDoseCellHead(
         text(fr, 2, 31, o.calling ? 'CALLING FILL' : 'NOT CALLING');
       } else {
         text(fr, 2, 13, 'DOSING PUMP');
-        text(fr, 2, 24, o.pumping ? 'RUNNING' : 'STANDING', 2);
+        // Its pump's state (the owner, 2026-10-28): dosing at its rate, or
+        // off, empty or faulty-looking, large.
+        if (o.pump === 'dosing') {
+          text(fr, 2, 22, 'DOSING');
+          const rate =
+            o.mlPerHour < 10
+              ? o.mlPerHour.toFixed(1)
+              : String(Math.round(o.mlPerHour));
+          text(fr, 2, 31, `${rate} ML/H`);
+        } else
+          text(
+            fr,
+            2,
+            24,
+            o.pump === 'dry' ? 'EMPTY' : o.pump === 'fault' ? 'FAULT' : 'OFF',
+            2,
+          );
       }
     }
     const key = `${on}${[...fr.dots].join('')}`;
@@ -290,7 +307,7 @@ export function createDoseCellHead(
   describe(group, `DoseCell head ${tag}`, () => {
     if (!last) return undefined;
     const { o, b } = last;
-    return `${b.litres.toFixed(1)} L; ${o.calling ? 'calling for a fill' : 'not calling'}; pump ${o.pumping ? 'running' : 'standing'}`;
+    return `${b.litres.toFixed(1)} L; ${o.calling ? 'calling for a fill' : 'not calling'}; pump ${bottlePumpWords(o).toLowerCase()}`;
   });
   return {
     object: group,

@@ -169,6 +169,8 @@ export interface JacuzziDisplayInputs {
   doorOpen: boolean;
   /** The world's time, s, for cycling several messages. */
   time: number;
+  /** Its chemical feeds' faults and lows, as words (`feedMessages`). */
+  feeds?: readonly string[];
 }
 
 /** A line of the display, 16 characters, padded. */
@@ -189,6 +191,9 @@ export function jacuzziCabinetDisplay(d: JacuzziDisplayInputs): {
   if (d.cabinet.trip === 'no-flow')
     messages.push('TRIP: NO FLOW', 'CHECK VALVES+RST');
   if (d.tank.low) messages.push('TRIP: TANK LOW');
+  // A chemical not reaching it, or its tank nearly empty (the owner,
+  // 2026-10-28).
+  messages.push(...(d.feeds ?? []));
   // Heat wanted but not coming: the heat service off, or a valve shut.
   const wantsHeat = d.waterC < d.setC - 0.2;
   if (d.flowing && wantsHeat && !d.heatSupply) messages.push('NO HEAT');

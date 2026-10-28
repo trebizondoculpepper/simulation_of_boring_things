@@ -496,11 +496,22 @@ export function createSpaDosingController(kit: PanelKit) {
     group,
     /** Where the dosing tubes leave the pump heads, to run on to the pipework. */
     outlets,
-    /** Show the readings, and turn the pumps while dosing. */
-    update(delta: number, on: boolean, chlorine: number, ph: number) {
+    /**
+     * Show the readings while on, and turn each pump while its chemical is
+     * dosed (`pumps`, hypochlorite then acid; both while on, if not given).
+     */
+    update(
+      delta: number,
+      on: boolean,
+      chlorine: number,
+      ph: number,
+      pumps: readonly [boolean, boolean] = [on, on],
+    ) {
       readouts[0].show(on ? chlorine.toFixed(2) : '');
       readouts[1].show(on ? ph.toFixed(1) : '');
-      if (on) for (const r of rotors) r.rotation.z -= delta * 3;
+      rotors.forEach((r, i) => {
+        if (on && pumps[i]) r.rotation.z -= delta * 3;
+      });
     },
   };
 }
