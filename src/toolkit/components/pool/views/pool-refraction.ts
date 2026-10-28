@@ -3,7 +3,6 @@ import type { PerspectiveCamera } from 'three';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import type { PoolUniforms } from './pool-surfaces';
 import { POOL_RIPPLE_GLSL } from './pool-ripples';
-import { markEffect } from '../../core/parts/render-style';
 
 /** Warp the existing scene image below water; no second scene render. */
 export function createPoolRefraction(
@@ -107,6 +106,5 @@ void main() {
     material.uniforms.tDepth.value = read.depthTexture;
     render(renderer, write, read, delta, mask);
   };
-  // Off on a Low graphics preset: the water falls back to its probe.
-  return markEffect(pass, 'refraction');
+  return pass;
 }

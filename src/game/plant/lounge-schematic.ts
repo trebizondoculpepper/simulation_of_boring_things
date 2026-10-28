@@ -49,6 +49,8 @@ const nodes: SchematicNode[] = [
     'Lounge pool dosing controller and sample cells',
   ),
   machine('panel', 'pump-panel', 'Lounge pool local control panel'),
+  // Its annunciator (the owner, 2026-10-28; `lounge-annunciator.ts`).
+  machine('annunciator', 'annunciator', 'Lounge pool annunciator'),
   machine('ozone-monitor', 'ozone-monitor', 'Ozone monitor'),
   machine('suction-header', 'header', 'Pump suction header'),
   machine('discharge-header', 'header', 'Pump discharge header'),

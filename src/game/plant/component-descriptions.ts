@@ -8,6 +8,8 @@ import type { PoolId } from './pools';
 import { equipmentKind } from './equipment-kinds';
 import type { KindId, StatusPolicy } from './equipment-kinds';
 
+import { filterConditionWords } from './filter-condition';
+import type { FilterCondition } from './filter-condition';
 /**
  * What each component is for, inferred rather than written item by item
  * (prompt 060; the owner, 2026-10-25: "Most of the time purpose should be
@@ -43,7 +45,9 @@ export type StatusBinding =
   /** A gas detector, by its room's gas zone. */
   | { gasZone: GasZoneId }
   /** A UV unit, by its pool. */
-  | { uv: PoolId };
+  | { uv: PoolId }
+  /** A sand filter, by its battery's pool and its place in it (from 0). */
+  | { filter: { pool: 'pool_01' | 'pool_02'; index: number } };
 
 /** An item's live state, resolved from the world, ready for its kind's wording. */
 export type ResolvedStatus =
@@ -61,7 +65,8 @@ export type ResolvedStatus =
   | { policy: 'switch'; on: boolean }
   | { policy: 'valve'; open: boolean; partly?: true }
   | { policy: 'gas'; shown: string }
-  | { policy: 'uv'; lit: boolean };
+  | { policy: 'uv'; lit: boolean }
+  | { policy: 'filter'; condition: FilterCondition };
 
 /** What a valve's link in its room's enhanced network says it isolates, in a description's words. */
 export interface ValveRoute {
@@ -143,6 +148,14 @@ export function statusBindingFor(subject: {
         : undefined;
     case 'cabinet-switch':
       return { part: subject.tag };
+    case 'sand-filter': {
+      // The lounge's pair and the Olympic's battery keep their beds in the
+      // world, each by its number in its tag (PL1-F2: the lounge's second).
+      const n = /-F(\d+)$/.exec(subject.tag);
+      return n && (pool === 'pool_01' || pool === 'pool_02')
+        ? { filter: { pool, index: Number(n[1]) - 1 } }
+        : undefined;
+    }
     default:
       return undefined;
   }
@@ -286,6 +299,10 @@ export function formatStatus(
       // On or Off: no fault is modelled, so never operational, tripped or
       // faulty (the owner, 2026-10-25: those words only for things that can fail).
       return onOff(resolved.lit);
+    case 'filter': {
+      const words = filterConditionWords(resolved.condition);
+      return words[0].toUpperCase() + words.slice(1);
+    }
     case 'gas':
       // As its detector's display shows it: ppm, or O-R over its range.
       return resolved.shown === 'O-R'
@@ -320,10 +337,19 @@ export function describeComponent(
     return subject.powerFor ? powerPurpose(subject.powerFor) : '';
   const place = places.get(subject.key);
   if (subject.unranked || !subject.location || !place) return '';
+  // A filter says what the tank is doing in a clause of its own (the
+  // owner, 2026-10-28: "the tank is filtering, and seems clean").
+  const resolved = context.status?.(subject);
+  if (kind.status === 'filter' && resolved?.policy === 'filter')
+    return `${equipmentLine(
+      place,
+      kind.type,
+      subject.location,
+      undefined,
+      ofKind.get(places)?.get(subject.key),
+    )}: the tank is ${filterConditionWords(resolved.condition)}`;
   const status =
-    kind.status === 'none'
-      ? undefined
-      : formatStatus(kind.status, context.status?.(subject));
+    kind.status === 'none' ? undefined : formatStatus(kind.status, resolved);
   return equipmentLine(
     place,
     kind.type,

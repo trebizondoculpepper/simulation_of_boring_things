@@ -35,6 +35,10 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0006',
     tag: 'PL1-CP1',
   },
+  'plant_pool_01|annunciator:pool_01|Lounge pool annunciator': {
+    assetId: 'asset-0147',
+    tag: 'PL1-CP3',
+  },
   'plant_pool_01|heat-exchanger|Lounge pool plate heat exchanger': {
     assetId: 'asset-0007',
     tag: 'PL1-HX1',
@@ -288,6 +292,10 @@ export const INSTALLED_ASSET_IDS: Readonly<
   'control_room|annunciator|Alarm annunciator': {
     assetId: 'asset-0085',
     tag: 'CR-CP2',
+  },
+  'control_room|annunciator:pool_01|Lounge pool annunciator': {
+    assetId: 'asset-0148',
+    tag: 'CR-CP7',
   },
   'control_room|chart-recorders|Chart recorders': {
     assetId: 'asset-0086',

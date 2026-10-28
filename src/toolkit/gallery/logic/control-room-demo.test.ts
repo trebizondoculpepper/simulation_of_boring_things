@@ -41,7 +41,8 @@ describe('the control room demonstration', () => {
       expect(ALARM_TEXT[alarm].window.length).toBeGreaterThan(0);
       expect(ALARM_TEXT[alarm].room.length).toBeGreaterThan(0);
     }
-    expect(ANNUNCIATOR_ALARMS).toHaveLength(30);
+    // Thirty, and six for the Olympic's filters and Wash-O-Tron (2026-10-28).
+    expect(ANNUNCIATOR_ALARMS).toHaveLength(36);
   });
 
   it('keeps readings in their instruments’ ranges', () => {
@@ -82,4 +83,33 @@ describe('the annunciator’s gas windows', () => {
     });
     expect(gasAlarmIds(w)).toContain('extract-fail');
   });
+});
+
+it('lights a window for each Olympic filter over its DP limit, and the Wash-O-Tron out of AUTO', async () => {
+  const { newWorld } = await import('../../../game/world');
+  const { plantReadingOf } = await import('./world-reading');
+  const w = newWorld();
+  const manual = {
+    ...w,
+    washOTron: {
+      ...w.washOTron,
+      filters: w.washOTron.filters.map((f, i) =>
+        i === 2 ? { ...f, auto: false } : f,
+      ),
+    },
+  };
+  expect(plantReadingOf(manual, 'pool_02').alarms).toContain('wot-not-auto');
+  expect(plantReadingOf(w, 'pool_02').alarms).not.toContain('wot-not-auto');
+  // A bed loaded well past its reference: its own window, and the summary.
+  const dirty = {
+    ...w,
+    olympic: {
+      ...w.olympic,
+      dirt: w.olympic.dirt.map((d, i) => (i === 3 ? d * 6 : d)),
+    },
+  };
+  const alarms = plantReadingOf(dirty, 'pool_02').alarms;
+  expect(alarms).toContain('f4-dp');
+  expect(alarms).toContain('filter-dp');
+  expect(alarms).not.toContain('f1-dp');
 });

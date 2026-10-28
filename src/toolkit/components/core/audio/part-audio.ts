@@ -226,6 +226,15 @@ const burst = (spec: Click, at: number, out: AudioNode) => {
   }
 };
 
+/** The scene the listener is in now, if its room said (`listen`); null hears every room. */
+let listenedScene: Object3D | null = null;
+/** The top of `o`'s tree: its room's scene. */
+const rootOf = (o: Object3D) => {
+  let top = o;
+  while (top.parent) top = top.parent;
+  return top;
+};
+
 export const partAudio = {
   /** Play a part's sound once, from where `from` stands. */
   play(recipe: SoundRecipe, from?: Object3D): () => void {
@@ -335,11 +344,22 @@ export const partAudio = {
     gain.gain.setTargetAtTime(1, ctx.currentTime, 0.08);
     const front = soundsFrontCentre(from);
     const output = placed(front ? undefined : from, options?.title || front);
-    gain.connect(output);
+    // Quieted while its room is not the one listened from (`listen`).
+    const scope = ctx.createGain();
+    gain.connect(scope).connect(output);
+    let heard = true;
     const sources = recipe(ctx, gain);
     holds.set(owner, {
       update() {
         if (!from || front) return;
+        // A sound held in another room's scene than the listener's is
+        // not heard here (the owner, 2026-10-28: plant room 2's dosing
+        // pumps were heard in the corridor).
+        const here = !listenedScene || rootOf(from) === listenedScene;
+        if (here !== heard) {
+          heard = here;
+          scope.gain.setTargetAtTime(here ? 1 : 0, ctx.currentTime, 0.05);
+        }
         from.getWorldPosition(position).divideScalar(metre);
         const panner = output as PannerNode;
         panner.positionX.value = position.x;
@@ -363,11 +383,12 @@ export const partAudio = {
    * Where the listener is: the room's camera, each frame, and how many
    * scene units make a metre.
    */
-  listen(camera: Camera, metreInScene: number) {
+  listen(camera: Camera, metreInScene: number, scene?: Object3D) {
     // A room drawn under another, seen through a doorway, does not hear.
     if (camera.userData.following) return;
     awaitGesture();
     metre = metreInScene;
+    listenedScene = scene ?? null;
     if (!context) return;
     for (const held of holds.values()) held.update();
     camera.getWorldPosition(position).divideScalar(metre);

@@ -18,6 +18,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import {
   createComposer,
   createRenderer,
+  followEffectSettings,
 } from '../../components/core/parts/render-style';
 import { METRE } from '../../components/core/logic/units';
 import { createFirstPerson } from '../../controls/input/first-person';
@@ -111,6 +112,7 @@ colour += (rand(vUv * 731.0) - 0.5) * grain;
 gl_FragColor = vec4(colour, sampleColour.a); }`,
   });
   composer.addPass(film);
+  followEffectSettings(composer, { ao, bloom, film });
 
   const midZ = (DRY_PASSAGE.nearZ + DRY_PASSAGE.farZ) / 2;
 

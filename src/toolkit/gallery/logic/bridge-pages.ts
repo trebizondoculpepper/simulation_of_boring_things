@@ -292,6 +292,23 @@ const from = (pages: BridgePage[], first: string) => {
 
 type Choices = Readonly<Record<string, ConsoleChoice>>;
 
+/** The extra-wide consoles: Central Control's, 3 m across the operator's desk. */
+export const WIDE_CONSOLES: ReadonlySet<string> = new Set([
+  'central-control.panel',
+]);
+
+/**
+ * Whether a page was designed for an extra-wide console: a wired panel at
+ * least 3.5 times as wide as it is high (Central Control's is 3.0 by
+ * 0.62 m). The rest are laid out for the stations' displays.
+ */
+export function extraWide(page: BridgePage): boolean {
+  if (page.kind !== 'panel') return false;
+  const size = (bridgeSpec(page.source) as { size?: { w: number; h: number } })
+    .size;
+  return Boolean(size && size.w / size.h >= 3.5);
+}
+
 /** An upper display's place among its lower console's uppers, from 0. */
 const slotOf = (c: BridgeConsole) =>
   BRIDGE_CONSOLES.filter((k) => k.governor === c.governor).indexOf(c);
@@ -311,6 +328,11 @@ export function roleOf(id: string, choices: Choices): string | undefined {
  * default first.
  */
 export function consolePages(c: BridgeConsole, choices: Choices): BridgePage[] {
+  // Central Control's extra-wide console shows only the designs made as
+  // wide as it (the owner, 2026-10-28: a station's smaller panel there
+  // shrank into the middle of it).
+  if (WIDE_CONSOLES.has(c.id))
+    return from(BRIDGE_PAGES.filter(extraWide), c.defaultPage);
   if (c.role) return from(pagesOf(ROLES.map((r) => r.panel)), c.defaultPage);
   if (c.governor) {
     const role = roleOf(c.governor, choices);

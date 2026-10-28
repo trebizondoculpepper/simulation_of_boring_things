@@ -84,6 +84,14 @@ export const ANNUNCIATOR_ALARMS = [
   'ozone-high',
   'gas-purge',
   'extract-fail',
+  // Each Olympic filter's bed dirty, its DP over the limit, and the
+  // Wash-O-Tron out of AUTO (the owner, 2026-10-28).
+  'f1-dp',
+  'f2-dp',
+  'f3-dp',
+  'f4-dp',
+  'f5-dp',
+  'wot-not-auto',
   'spare',
 ] as const;
 export type AlarmId = (typeof ANNUNCIATOR_ALARMS)[number];
@@ -119,6 +127,15 @@ export const ALARM_TEXT: Record<AlarmId, { window: string; room: string }> = {
   'ozone-high': { window: 'OZONE\nGAS HIGH', room: 'POOL PLANT ROOM' },
   'gas-purge': { window: 'GAS EXTRACT\nPURGING', room: 'GAS ROOMS' },
   'extract-fail': { window: 'GAS EXTRACT\nNO SUPPLY', room: 'GAS ROOMS' },
+  'f1-dp': { window: 'FILTER 1\nHIGH DP', room: 'OLYMPIC PLANT ROOM' },
+  'f2-dp': { window: 'FILTER 2\nHIGH DP', room: 'OLYMPIC PLANT ROOM' },
+  'f3-dp': { window: 'FILTER 3\nHIGH DP', room: 'OLYMPIC PLANT ROOM' },
+  'f4-dp': { window: 'FILTER 4\nHIGH DP', room: 'OLYMPIC PLANT ROOM' },
+  'f5-dp': { window: 'FILTER 5\nHIGH DP', room: 'OLYMPIC PLANT ROOM' },
+  'wot-not-auto': {
+    window: 'WASH-O-TRON\nNOT IN AUTO',
+    room: 'OLYMPIC PLANT ROOM',
+  },
   spare: { window: 'SPARE', room: 'NONE (SPARE WAY)' },
 };
 

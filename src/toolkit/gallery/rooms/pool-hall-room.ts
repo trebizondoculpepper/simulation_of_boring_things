@@ -33,6 +33,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import {
   createComposer,
   createRenderer,
+  followEffectSettings,
 } from '../../components/core/parts/render-style';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { METRE } from '../../components/core/logic/units';
@@ -208,6 +209,7 @@ colour += (rand(vUv * 731.0) - 0.5) * grain;
 gl_FragColor = vec4(colour, sampleColour.a); }`,
   });
   composer.addPass(film);
+  followEffectSettings(composer, { ao, bloom, film });
 
   const half = 0.6;
   // Its place in the pool loop, and the loop's corridors in its scene.
@@ -737,7 +739,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       u.caustics.value = base.caustics * k * w;
       u.reflected.value = base.reflected * k * w;
     }
-    partAudio.listen(camera, metre);
+    partAudio.listen(camera, metre, scene);
     if (spaTub && 'object' in spaTub) spaTub.update?.(delta);
     if (spaPanel && 'object' in spaPanel) spaPanel.parts?.update(delta);
     // Near a door, it waits, told before it moves.

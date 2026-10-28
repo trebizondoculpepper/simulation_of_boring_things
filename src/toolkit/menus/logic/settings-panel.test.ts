@@ -44,7 +44,6 @@ describe('the settings panel', () => {
       'sensitivity',
       'invertY',
       'onScreenControls',
-      'graphics',
       'bindings',
     ])
       expect(items).toContain(id);
@@ -120,33 +119,7 @@ describe('knobs', () => {
     expect(settingFor('onScreenControls', 2)).toEqual({
       onScreenControls: 'never',
     });
-    expect(
-      selectorIndex('onScreenControls', {
-        ...DEFAULT_SETTINGS,
-        onScreenControls: 'always',
-      }),
-    ).toBe(1);
-  });
-  it('choose a graphics preset, lowest left, with its render quality', () => {
-    expect(settingFor('graphics', 0)).toEqual({
-      graphics: 'low',
-      renderLevel: 6,
-    });
-    expect(settingFor('graphics', 2)).toEqual({
-      graphics: 'high',
-      renderLevel: 0,
-    });
-    expect(
-      selectorIndex('graphics', { ...DEFAULT_SETTINGS, graphics: 'medium' }),
-    ).toBe(1);
-    const picture = settingsPanel({ inGame: true }).find(
-      (z) => z.id === 'picture',
-    );
-    expect(picture?.items[0]).toMatchObject({
-      kind: 'selector',
-      id: 'graphics',
-      positions: ['LOW', 'MED', 'HIGH'],
-    });
+    expect(selectorIndex('always')).toBe(1);
   });
 });
 

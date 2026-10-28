@@ -9,7 +9,10 @@ import { loungeValveFlows } from '../../../game/plant/lounge-valves';
 import { circulating } from '../../../game/plant/pools';
 import { createActuatedButterflyValve } from '../../components/plant/views/actuated-butterfly-valve';
 import { createSampleTakeoff } from '../../components/plant/views/sample-takeoff';
-import { createInjectionQuillSet } from '../../components/plant/views/injection-quill';
+import {
+  createInjectionQuillSet,
+  createInjectionSaddle,
+} from '../../components/plant/views/injection-quill';
 import { retiredFrom } from '../logic/retired-rooms';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -271,6 +274,24 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     }
   }
   if ((retiredFrom(room) ?? room) === 'plant_pool_02') {
+    // Each dose line's quill sealed into the dosing spool's top, where the
+    // line comes down onto it (the owner, 2026-10-28).
+    const spool = olympicRoom().runs.find((r) => r.name === 'Dosing spool');
+    for (const r of olympicRoom().runs.filter((x) =>
+      /dose line$/.test(x.name),
+    )) {
+      if (!spool) break;
+      const end = r.points.at(-1)!;
+      const radius = spool.od / 2;
+      const saddle = createInjectionSaddle(kit, radius);
+      saddle.position.set(...lift([end[0], spool.points.at(-1)![1], end[2]]));
+      group.add(
+        markComponent(saddle, {
+          name: `${r.name.replace(/ dose line$/, '')} injection quill`,
+          model: r.model ?? { link: r.name },
+        }),
+      );
+    }
     for (const r of olympicRoom().reducers)
       group.add(
         markComponent(

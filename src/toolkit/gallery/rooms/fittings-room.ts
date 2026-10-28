@@ -841,7 +841,7 @@ export function startFittingsRoom(canvas: HTMLCanvasElement) {
         ? (0.4 + F.flames.value * 2) * m * m * (0.85 + Math.random() * 0.3)
         : 0;
     portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     renderer.render(scene, camera);
   });
   const dispose = () => {

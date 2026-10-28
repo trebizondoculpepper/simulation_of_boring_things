@@ -80,6 +80,20 @@ export const playConsoleSound = (
 
 const pickTouch = createPicker(Math.random);
 
-/** The recorded answer to a touch (the parody consoles' palette): its file chosen afresh each press. */
+/**
+ * A page turned (◄ or ►): just a little chirp, two quick rising blips,
+ * quieter than a touch (the owner, 2026-10-28: the recording was too
+ * disturbing for something done so often).
+ */
+export const PAGE_CHIRP: SoundRecipe = {
+  tones: [
+    { at: 0, hz: 2200, seconds: 0.025, level: 0.008, type: 'sine' },
+    { at: 0.03, hz: 2900, seconds: 0.03, level: 0.008, type: 'sine' },
+  ],
+};
+
+/** The recorded answer to a touch (the parody consoles' palette): its file chosen afresh each press; a page turned, a chirp. */
 export const recordedTouchSound = (sound: UiSound): SoundRecipe =>
-  consoleRecording(pickTouch(TOUCH_SOUNDS[sound]), LEVELS.touch);
+  sound === 'page'
+    ? PAGE_CHIRP
+    : consoleRecording(pickTouch(TOUCH_SOUNDS[sound]), LEVELS.touch);

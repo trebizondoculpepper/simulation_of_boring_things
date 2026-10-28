@@ -466,7 +466,7 @@ export function startDevCorridorRoom(
     placeLights(vx, vz, seen);
     goThrough(here.x, here.z);
     portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     renderer.info.reset();
     renderer.clear();
     if (drawn.corridor) renderer.render(scene, camera);

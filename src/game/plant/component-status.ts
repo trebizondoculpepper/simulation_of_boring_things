@@ -21,6 +21,14 @@ import type {
 import { identifiedPart } from './identification';
 import { WET_HALL_PLANT } from './wet-hall';
 
+import { filterCondition } from './filter-condition';
+import { LOUNGE_DIRT_REF, loungeBed } from './lounge-filters';
+import { loungeFlowsOf } from './lounge-valves';
+import {
+  OLYMPIC_DIRT_REF,
+  olympicBed,
+  olympicFlowsOf,
+} from './olympic-battery';
 /**
  * Components' live status, read from the world (prompt 060): the context
  * that gives a description its "currently …". Where the world keeps an
@@ -80,6 +88,34 @@ export function resolveStatus(
     };
   }
   if ('uv' in b) return { policy: 'uv', lit: uvLampOn(world, b.uv) };
+  if ('filter' in b) {
+    // Its bed as its battery keeps it, and the flow through it now.
+    const i = b.filter.index;
+    if (b.filter.pool === 'pool_01') {
+      if (i > 1) return undefined;
+      const bed = loungeBed(world.loungeFilters, i as 0 | 1);
+      return {
+        policy: 'filter',
+        condition: filterCondition({
+          flow: loungeFlowsOf(world).filters[i],
+          dirt: bed.dirt / LOUNGE_DIRT_REF,
+          fissuring: bed.fissuring,
+          unsettled: bed.unsettled,
+        }),
+      };
+    }
+    if (i >= world.olympic.dirt.length) return undefined;
+    const bed = olympicBed(world.olympic, i);
+    return {
+      policy: 'filter',
+      condition: filterCondition({
+        flow: olympicFlowsOf(world).filters[i]?.bed ?? 0,
+        dirt: bed.dirt / OLYMPIC_DIRT_REF,
+        fissuring: bed.fissuring,
+        unsettled: bed.unsettled,
+      }),
+    };
+  }
   if ('gasZone' in b)
     // As its detector's display shows it (`gasDisplay`).
     return {

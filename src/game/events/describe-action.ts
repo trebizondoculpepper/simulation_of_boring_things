@@ -344,6 +344,10 @@ function said(
             ? 'manual call point operated'
             : 'call point reset with its key',
       };
+    case 'lounge-alarms/accept':
+      return { subject: 'PL1 ANNUNCIATOR', text: 'ACCEPT pressed' };
+    case 'lounge-alarms/reset':
+      return { subject: 'PL1 ANNUNCIATOR', text: 'RESET pressed' };
     case 'alarms/accept':
       return {
         subject: 'ANNUNCIATOR',

@@ -256,12 +256,20 @@ import {
   senseAlarms,
 } from './annunciator';
 import type { AnnunciatorState } from './annunciator';
+import {
+  acceptLoungeAlarms,
+  loungeAlarms,
+  newLoungeAnnunciator,
+  resetLoungeAlarms,
+  senseLoungeAlarms,
+} from './plant/lounge-annunciator';
+import type { LoungeAnnunciatorState } from './plant/lounge-annunciator';
 import type { AlarmId } from '../toolkit/gallery/logic/control-room-demo';
 import { plantReadingOf } from '../toolkit/gallery/logic/world-reading';
 import { chooseConsole, newBridgeConsoles } from './bridge-consoles';
 import type { ConsoleChoice } from './bridge-consoles';
 
-export const WORLD_VERSION = 52;
+export const WORLD_VERSION = 54;
 
 /**
  * Where the main corridor's control room doors lead (the owner,
@@ -370,6 +378,12 @@ export interface World {
    */
   annunciator: AnnunciatorState;
   /**
+   * The lounge pool's annunciator (the owner, 2026-10-28): its plant
+   * room's and its twin's in the control room, one state
+   * (`lounge-annunciator.ts`).
+   */
+  loungeAnnunciator: LoungeAnnunciatorState;
+  /**
    * What each of the bridge's consoles shows and whether it is locked
    * there (the owner, 2026-10-27), by console id (`bridge-consoles.ts`);
    * the main viewscreen's, chosen from Central Control, among them.
@@ -416,6 +430,7 @@ export function newWorld(): World {
     bridgeThemeHeard: false,
     bridgeDisplaysOn: false,
     annunciator: newAnnunciator(),
+    loungeAnnunciator: newLoungeAnnunciator(),
     bridgeConsoles: newBridgeConsoles(),
   };
 }
@@ -498,7 +513,10 @@ export type WorldAction =
   /** ACCEPT at an annunciator or console: its flashing alarms (only `alarms`, if given) accepted. */
   | { type: 'alarms/accept'; alarms?: AlarmId[] }
   /** RESET at an annunciator or console: accepted alarms that have cleared put out. */
-  | { type: 'alarms/reset' };
+  | { type: 'alarms/reset' }
+  /** ACCEPT or RESET at the lounge's annunciator, in its plant room or the control room. */
+  | { type: 'lounge-alarms/accept' }
+  | { type: 'lounge-alarms/reset' };
 
 /** The jacuzzi's drain valve, open or shut, and with it its pool's drain-down. */
 const jacuzziDrainDown = (world: World, open: boolean): World => ({
@@ -891,6 +909,18 @@ export function applyAction(world: World, action: WorldAction): World {
         ? world
         : { ...world, annunciator };
     }
+    case 'lounge-alarms/accept': {
+      const loungeAnnunciator = acceptLoungeAlarms(world.loungeAnnunciator);
+      return loungeAnnunciator === world.loungeAnnunciator
+        ? world
+        : { ...world, loungeAnnunciator };
+    }
+    case 'lounge-alarms/reset': {
+      const loungeAnnunciator = resetLoungeAlarms(world.loungeAnnunciator);
+      return loungeAnnunciator === world.loungeAnnunciator
+        ? world
+        : { ...world, loungeAnnunciator };
+    }
     case 'alarms/reset': {
       const annunciator = resetAlarms(world.annunciator);
       return annunciator === world.annunciator
@@ -960,9 +990,15 @@ export function stepWorld(world: World, delta: number): World {
     stepped.annunciator,
     plantReadingOf(stepped).alarms,
   );
-  return annunciator === stepped.annunciator
+  // The lounge's annunciator senses its plant room's faults, likewise.
+  const loungeAnnunciator = senseLoungeAlarms(
+    stepped.loungeAnnunciator,
+    loungeAlarms(stepped),
+  );
+  return annunciator === stepped.annunciator &&
+    loungeAnnunciator === stepped.loungeAnnunciator
     ? stepped
-    : { ...stepped, annunciator };
+    : { ...stepped, annunciator, loungeAnnunciator };
 }
 
 /**

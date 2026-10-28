@@ -15,6 +15,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import {
   createComposer,
   createRenderer,
+  followEffectSettings,
 } from '../../components/core/parts/render-style';
 import {
   createPanelKit,
@@ -89,15 +90,15 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
   scene.add(hall);
   const composer = createComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(
-    new UnrealBloomPass(
-      new Vector2(1, 1),
-      look.bloom.strength,
-      look.bloom.radius,
-      look.bloom.threshold,
-    ),
+  const bloom = new UnrealBloomPass(
+    new Vector2(1, 1),
+    look.bloom.strength,
+    look.bloom.radius,
+    look.bloom.threshold,
   );
+  composer.addPass(bloom);
   composer.addPass(new OutputPass());
+  followEffectSettings(composer, { bloom });
   const walls = [
     ...hallSolids(spec),
     {
@@ -180,7 +181,7 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
     plate.parts?.update(delta);
     effects.update(delta);
     fibreWall.update(time / 1000, fibreState);
-    partAudio.listen(camera, metre);
+    partAudio.listen(camera, metre, scene);
     composer.render(delta);
   });
   return () => {

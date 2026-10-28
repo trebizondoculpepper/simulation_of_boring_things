@@ -769,7 +769,7 @@ export function startEquipmentRoom(
     last = time;
     ps1Uniforms.time.value = time / 1000;
     walk.update(delta);
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     portals?.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     // Near an exhibit's doors, they wait: told before they move.
     const actor = doorActor(walk, m, WALKER_RADIUS_METRES);
