@@ -1,6 +1,6 @@
 # 107i: PLANTROOMS, "Never again: putting safety first": the chlorination disaster that nearly was (sponsored by Chlorella)
 
-Status: planned 2026-10-28, not started. A sub-prompt of mission 107 (`doc/prompts/107-pool-science-museum.md`), after 107-0 (`doc/prompts/107-0-exhibit-groundwork.md`). One of the owner's themes for Halls 5 to 12, **not yet given a hall number**: the owner will place it.
+Status: built as Hall 8, 2026-10-28 (see Built). A sub-prompt of mission 107 (`doc/prompts/107-pool-science-museum.md`), after 107-0 (`doc/prompts/107-0-exhibit-groundwork.md`). One of the owner's themes for Halls 5 to 12, **not yet given a hall number**: the owner will place it.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first and follow it. Then read mission 107 (the PLANTROOMS brand and its joke), 107-0, missions 085 and 086 (`doc/prompts/085-chemical-distribution.md`, `doc/prompts/086-chemical-handling-dev-room.md`: the game's chemical deliveries, the fill cabinet and its couplings) and the memory note that all safety signage is current UK style.
 
@@ -168,3 +168,15 @@ HSE press release, Circle Health Group, 2023: https://press.hse.gov.uk/?p=5101 Â
 2. **Whose tanker:** Chlorella's own green livery on the tanker in the photographs (the sponsor's joke made sharper, never mentioned on its panel), or a haulier's?
 3. **The names:** Pellingford and the Evening Lamp, or names of your own?
 4. **The narration:** one account, or a clip per chapter as well?
+
+## Built (2026-10-28, Hall 8)
+
+- The words and narration timing, pure and tested: `src/toolkit/gallery/logic/museum-8-incident.ts` (chapters with time, caption, what went wrong, the lesson, clipping and narration; the opening panel, the case's plaques, Chlorella's panel and seven lessons; `pressNarration`, `stepNarration`, `litChapter`), `museum-8-incident.test.ts` (order, headlines, no real venue, paper, firm or real fine named).
+- The hall: `src/toolkit/gallery/rooms/museum/hall-8-never-again.ts`, registered as `museum8` in `exhibits.ts` and `EXHIBIT_HALLS`. The route runs east to west. Chapters 1 to 3 on the street (south) wall, read left to right (east to west); 4 to 6 on the courtyard (north) wall, read left to right (west to east); each a framed photograph with a picture light, its clipping beside it on the right and its plaque below. Opening panel on the east wall south of the way in, the HEAR WHAT HAPPENED button in the south-east corner by chapter 1, the central case between the columns, Chlorella's panel with the lessons on the west wall north of the way out.
+- The narration: press to start, again to stop; chapters light in turn (20 s each, the others dimmed), silent with no clips; `account.mp3` or `chapter-N.mp3` in `resources/sound/voice/never-again/` play when present (an HTML audio element, non-spatial, so heard front centre); script in `resources/sound/voice/never-again/index.md`. Walking in stops it (`reset`).
+- Photographs: placeholders (dark, the chapter's time and title, "photograph to come", its caption). Drop images in as `resources/images/never-again/chapter-<n>.jpg` (or .png, .webp): found by `import.meta.glob` and swapped onto the frame with no code change. The owner's Midjourney images in `doc/gens/hindenburg/` were not used or committed.
+- "Pellingford" checked by web search: no real place of that name found (2026-10-28).
+
+**Deviations.** The walls are lined dark only to 2.55 m (below the title vinyl and the windows' sills); the room's shared lighting is unchanged, so the frames are self-lit (glow materials) with decorative picture lights rather than spot lights. Chapter 4 has no clipping (the brief gives five headlines for six chapters). No station clock in a photograph yet (placeholders). The hall's brief in `HALL_BRIEFS` still says "Coming soon" (its test pins Halls 5 to 8 to that; the owner's call when to re-sign it). No gas-tight-suit or foil-blanket figures and no offline photograph script: the photographs come from the owner. Frame time not measured (the owner: "get them all built first"); browser checks on high, medium and low still to do.
+
+**Camera link:** `?room=museum8` from the east archway, yaw 270 (west) to see the case and both walls; yaw 180 (south) at x 4.9, z 4.5 for chapter 1.
