@@ -206,7 +206,19 @@ export function createChemControlPrototype(
     const z = wallZ + 0.025;
     p.rod(root, conduit, [gx, top, z], [gx, y, z], 0.01, 8);
     p.rod(root, conduit, [gx, y, z], [bx, y, z], 0.01, 8);
-    p.rod(root, conduit, [bx, y, z], [bx, 1.19, z], 0.01, 8);
+    // Up the wall, then out to its gland under the box.
+    const out = wallZ + 0.1;
+    const under = 1.4 - 0.2 - 0.016;
+    p.rod(root, conduit, [bx, y, z], [bx, under - 0.06, z], 0.01, 8);
+    p.rod(
+      root,
+      conduit,
+      [bx, under - 0.06, z],
+      [bx, under - 0.06, out],
+      0.01,
+      8,
+    );
+    p.rod(root, conduit, [bx, under - 0.06, out], [bx, under, out], 0.01, 8);
   });
   x += 0.85;
 

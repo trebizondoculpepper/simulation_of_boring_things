@@ -5,6 +5,9 @@ import { panelMakerMark } from '../../core/views/panel-maker-mark';
 import { createPartSet, disconnectHandle } from '../../core/parts/parts';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import type { BrandId } from '../../core/logic/brands';
+import { createEngravedPlate } from '../../core/views/plant-signs';
+import { createSafetySign } from '../../general-safety/views/safety-signs';
+import { plantTools } from './plant-tools';
 
 /** What the control box shows of itself: its supply, its controller and its I/O. */
 export interface ControlBoxReading {
@@ -43,6 +46,19 @@ export const BOX_OUTPUTS = [
 ] as const;
 
 /**
+ * The cable glands underneath, left to right (the owner, 2026-10-28: "two
+ * serial inputs from the terminals entering through glands"): each one's
+ * x on the box, metres from its middle, and the legend on its label.
+ */
+export const BOX_GLANDS = [
+  { x: -0.2, legend: 'OT1 HYPO\nRS-485' },
+  { x: -0.1, legend: 'OT2 ACID\nRS-485' },
+  { x: 0, legend: 'SUPPLY\n230V AC' },
+  { x: 0.1, legend: 'LEVEL\nSIGNALS' },
+  { x: 0.2, legend: 'OUTLETS\n& PUMPS' },
+] as const;
+
+/**
  * The chemical distribution's control box (prompt 091; the owner,
  * 2026-10-27), Penfold Controls': a steel wall enclosure about 600 × 400
  * × 200 mm in light grey, its door isolator on the front (after a door-
@@ -57,16 +73,31 @@ export const BOX_OUTPUTS = [
  * and terminals for the day tanks' level signals; an I/O schedule card
  * beside the controller naming every LED, and the wiring diagram in the
  * door's pocket. No keypad: the terminals are the only way to read and
- * set it.
+ * set it. Labelled up as a control box is (the owner, 2026-10-28): its
+ * engraved tag plate on the door, a rating plate, the electrical danger
+ * sign and where it is fed from; a labelled gland for each cable entry
+ * (`BOX_GLANDS`), the two terminals' serial cables seen inside running up
+ * to the comms module's ports, the supply's to the MCB and the field
+ * wiring's to the terminal rail.
  *
  * Origin at the middle of its back, its front toward +z.
  */
 export function createChemControlBox(
   kit: PanelKit,
-  { tag, read }: { tag: string; read: () => ControlBoxReading },
+  {
+    tag,
+    read,
+    fedFrom = 'WET HALL DISTRIBUTION',
+  }: {
+    tag: string;
+    read: () => ControlBoxReading;
+    /** Where its supply comes from, on its door's label. */
+    fedFrom?: string;
+  },
 ) {
   const group = new Group();
   const t = tools(kit);
+  const p = plantTools(kit);
   const parts = createPartSet();
   const W = 0.6;
   const H = 0.4;
@@ -282,8 +313,8 @@ export function createChemControlBox(
   );
   schedule.mesh.position.set(0.185, topY, front + 0.0085);
   group.add(schedule.mesh);
-  const comms = [0, 1].map((p) => {
-    const y = topY + 0.012 - p * 0.03;
+  const comms = [0, 1].map((port) => {
+    const y = topY + 0.012 - port * 0.03;
     t.box(
       group,
       dark,
@@ -296,7 +327,7 @@ export function createChemControlBox(
     );
     t.label(
       group,
-      `PORT ${p + 1}`,
+      `P${port + 1} OT${port + 1}`,
       commsX - 0.008,
       y,
       front + 0.0612,
@@ -395,9 +426,64 @@ export function createChemControlBox(
     '#1b1b1b',
     '#f4f3ee',
   );
-  // Glands underneath: the terminals' cables, the supply, the field wiring.
-  for (const x of [-0.2, -0.1, 0, 0.1, 0.2])
+  // Glands underneath, each with its locknut inside and its label tied on
+  // below it: the terminals' serial cables, the supply, the field wiring.
+  const nut = t.paint('#2a2c2d', 0.45, 0.3);
+  const cableColour = (i: number) =>
+    i < 2 ? '#6a4c93' : i === 2 ? '#2d2f31' : '#3c4a5a';
+  BOX_GLANDS.forEach(({ x, legend }, i) => {
     t.cyl(group, dark, 0.01, 0.016, x, -H / 2 - 0.008, D / 2);
+    t.cyl(group, nut, 0.013, 0.006, x, -H / 2 - 0.0005, D / 2, 'y', 6);
+    t.cyl(group, nut, 0.013, 0.005, x, -H / 2 + 0.0045, D / 2, 'y', 6);
+    const plate = createEngravedPlate(kit, legend.split('\n'), {
+      colour: 'white',
+      width: 0.075,
+      height: 0.034,
+    });
+    // Tied on the cable, in front of its gland and conduit, as a fitter
+    // labels each entry.
+    plate.position.set(x, -H / 2 - 0.045, D / 2 + 0.02);
+    group.add(plate);
+    // Its cable inside, up from the gland.
+    const cable = p.paint(cableColour(i), 0.7);
+    const z = D / 2;
+    const r = i < 2 ? 0.0035 : 0.0045;
+    if (i < 2) {
+      // The serial cables: up the left of the plate into the lower duct,
+      // and out of the upper duct up to the comms module's port.
+      const portY = topY + 0.002 - i * 0.03;
+      p.rod(group, cable, [x, -H / 2 + 0.008, z], [x, -0.1, z], r, 8);
+      p.rod(
+        group,
+        cable,
+        [commsX - 0.008, topY - 0.075, front + 0.062],
+        [commsX - 0.008, portY - 0.01, front + 0.062],
+        r,
+        8,
+      );
+    } else if (i === 2) {
+      // The supply, up the right into the lower duct (on to the MCB).
+      p.rod(group, cable, [x, -H / 2 + 0.008, z], [x, -0.1, z], r, 8);
+    } else {
+      // The field multicores, up into the terminal rail's underside.
+      p.rod(
+        group,
+        cable,
+        [x - 0.12, -H / 2 + 0.008, z * 0.6],
+        [x - 0.12, termY - 0.024, z * 0.6],
+        r,
+        8,
+      );
+      p.rod(
+        group,
+        cable,
+        [x, -H / 2 + 0.008, z * 0.6],
+        [x - 0.12, -H / 2 + 0.008, z * 0.6],
+        r,
+        8,
+      );
+    }
+  });
 
   // The door, hinged on the left, its isolator and latch on the front.
   const hinge = new Group();
@@ -420,25 +506,42 @@ export function createChemControlBox(
   parts.add(isolator);
   t.label(door, 'ISOLATOR', 0.17, -0.085, 0.019, 0.01, '#1b1b1b', '#f4f3ee');
   badge('voltara', 0.17, -0.11, 0.019, 0.008, 0.08, door);
-  t.label(
-    door,
-    `CHEMICAL DISTRIBUTION CONTROL\n${tag}`,
-    -0.08,
-    0.1,
-    0.019,
-    0.014,
-    '#1b1b1b',
-    '#f4f3ee',
+  // Its engraved tag plate, as every panel in the plant has.
+  const tagPlate = createEngravedPlate(
+    kit,
+    [tag, 'CHEMICAL TRANSFER CONTROL', 'HYPOCHLORITE · ACID'],
+    { colour: 'black', width: 0.26, height: 0.085 },
   );
+  tagPlate.position.set(-0.1, 0.115, 0.018);
+  door.add(tagPlate);
+  // The electrical danger sign (ISO 7010 W012), and where it is fed from.
+  const danger = createSafetySign(
+    kit,
+    ['electricity'],
+    ['DANGER', '230 V'],
+    'landscape',
+    0.12,
+    0.06,
+  );
+  danger.position.set(-0.17, 0.02, 0.0185);
+  door.add(danger);
+  const fed = createEngravedPlate(kit, ['FED FROM', fedFrom], {
+    colour: 'white',
+    width: 0.12,
+    height: 0.032,
+  });
+  fed.position.set(-0.03, 0.02, 0.018);
+  door.add(fed);
+  // The maker's rating plate, low on the door.
   t.label(
     door,
-    '⚠ 230V\nISOLATE ELSEWHERE\nBEFORE WORK',
-    -0.08,
-    -0.08,
+    `PENFOLD CONTROLS  TYPE CTC-2\nSERIAL 0312-0447  2003\n230V AC 50Hz  6A  IP65\nWIRING DIAGRAM ${tag}-WD1`,
+    -0.1,
+    -0.1,
     0.019,
-    0.011,
+    0.0075,
     '#1b1b1b',
-    '#f5d22b',
+    '#c9ccc8',
   );
   panelMakerMark(kit, door, { width: W, height: H, z: 0.019 });
   const latch = t.cyl(
