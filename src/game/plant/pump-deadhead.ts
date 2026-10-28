@@ -30,6 +30,17 @@ export const DEADHEAD = {
   resetC: 42,
 } as const;
 
+/**
+ * A casing's thermal constants: its heat capacity and its loss to the
+ * room. A parameter of the pump's model (107b; the owner, 2026-10-28), so
+ * a hall can shorten the wait for a trip without speeding its clock;
+ * dev51 keeps `DEADHEAD`'s.
+ */
+export interface CasingThermal {
+  casingKJperK: number;
+  casingUA: number;
+}
+
 /** The shaft's power at a flow, kW. */
 export const shaftKW = (flow: number) =>
   DEADHEAD.shutoffKW +
@@ -70,13 +81,14 @@ export function stepCasing(
     roomC: number;
   },
   dt: number,
+  thermal: CasingThermal = DEADHEAD,
 ): number {
   if (!(dt > 0)) return casingC;
   const q = pumpHeatKW(running, flow, head);
   const cf = capacity(flow);
-  const ua = DEADHEAD.casingUA;
+  const ua = thermal.casingUA;
   const equilibrium = (q + cf * inletC + ua * roomC) / (cf + ua);
-  const tau = DEADHEAD.casingKJperK / (cf + ua);
+  const tau = thermal.casingKJperK / (cf + ua);
   return equilibrium + (casingC - equilibrium) * Math.exp(-dt / tau);
 }
 
@@ -87,15 +99,39 @@ export const deadheadTrips = (casingC: number) => casingC > DEADHEAD.tripC;
 export const resetAllowed = (casingC: number) => casingC < DEADHEAD.resetC;
 
 /** How long a dead-headed pump runs before it trips, from `fromC`, seconds (for the placards). */
-export function secondsToTrip(fromC: number, roomC = 22) {
+export function secondsToTrip(
+  fromC: number,
+  roomC = 22,
+  thermal: CasingThermal = DEADHEAD,
+) {
   let c = fromC;
   for (let t = 0; t < 3600; t++) {
     c = stepCasing(
       c,
       { running: true, flow: 0, head: 22, inletC: fromC, roomC },
       1,
+      thermal,
     );
     if (deadheadTrips(c)) return t + 1;
+  }
+  return Infinity;
+}
+
+/** How long a tripped pump's casing takes to cool from `fromC` until a reset is accepted, seconds (for the placards). */
+export function secondsToReset(
+  fromC: number,
+  roomC = 22,
+  thermal: CasingThermal = DEADHEAD,
+) {
+  let c = fromC;
+  for (let t = 0; t < 3600; t++) {
+    c = stepCasing(
+      c,
+      { running: false, flow: 0, head: 0, inletC: roomC, roomC },
+      1,
+      thermal,
+    );
+    if (resetAllowed(c)) return t + 1;
   }
   return Infinity;
 }
