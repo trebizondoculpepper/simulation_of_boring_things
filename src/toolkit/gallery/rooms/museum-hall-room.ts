@@ -97,7 +97,11 @@ export function startMuseumHallRoom(
   renderer.setClearColor('#f4f2ec', 0);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   const camera = new PerspectiveCamera(68, 1, 0.05 * metre, 90 * metre);
-  const freeEnvironment = useEnvironment(renderer, scene, 0.2);
+  const freeEnvironment = useEnvironment(
+    renderer,
+    scene,
+    id === 'museum0' ? 0.1 : 0.2,
+  );
 
   const hall = createMuseumHall(id);
   hall.group.scale.setScalar(metre);
@@ -223,16 +227,20 @@ export function startMuseumHallRoom(
 
   // The soft light of a white room and the daylight, the same in every
   // hall, so an archway's reveal is lit alike either side; Hall 0's
-  // fluorescent, cool and a little green, as an empty pool hall's.
-  scene.add(new AmbientLight(welcome ? '#eefaf4' : '#f4f1ea', 0.12));
+  // fluorescent, cool and a little green, as an empty pool hall's, and
+  // darkened (the owner, 2026-10-28): the projected pool its main light,
+  // the posters lit by their own coves.
+  scene.add(
+    new AmbientLight(welcome ? '#dfe9f2' : '#f4f1ea', welcome ? 0.04 : 0.12),
+  );
   scene.add(
     new HemisphereLight(
-      welcome ? '#effaf6' : '#eef3f6',
-      welcome ? '#8fa39d' : '#8c8579',
-      welcome ? 0.75 : 0.55,
+      welcome ? '#cfe2ee' : '#eef3f6',
+      welcome ? '#4a5552' : '#8c8579',
+      welcome ? 0.22 : 0.55,
     ),
   );
-  const sun = new DirectionalLight('#fff3df', welcome ? 0.25 : 0.7);
+  const sun = new DirectionalLight('#fff3df', welcome ? 0.08 : 0.7);
   sun.position.set(-10 * metre, 14 * metre, 3 * metre);
   scene.add(sun);
   // The gallery lights: four pools of light, 5 m in from the hall's ends,
@@ -243,7 +251,7 @@ export function startMuseumHallRoom(
       const across = c * (axes.width / 4);
       const lamp = new PointLight(
         welcome ? '#effff4' : '#ffe9c8',
-        (welcome ? 5 : 9) * metre * metre,
+        (welcome ? 1 : 9) * metre * metre,
         16 * metre,
         2,
       );
@@ -406,6 +414,8 @@ export function startMuseumHallRoom(
       exhibit.parts?.update(delta);
       exhibit.update?.(delta);
     }
+    // The hall's own moving parts (Hall 0's projector), while walked in.
+    if (active) hall.update(delta);
     if (active && !walk.following) {
       const pose = walk.pose();
       const now = { x: pose.x / metre, z: pose.z / metre };

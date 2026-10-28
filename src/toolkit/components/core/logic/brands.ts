@@ -499,7 +499,7 @@ export const BRANDS: readonly Brand[] = [
     founded: 1979,
     country: 'Germany',
     makes:
-      'Architectural lighting: halo panels, cove and slot lights, grazers, luminous ceilings and fibre-optic starlight',
+      'Architectural lighting: halo panels, cove and slot lights, grazers, luminous ceilings, fibre-optic starlight and large-venue laser projectors',
     promise: 'Rooms remembered for the way they were lit',
     mark: 'shade',
     colours: ['#d9a441', '#f6ecd2', '#24201a'],

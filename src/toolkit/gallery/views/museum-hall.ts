@@ -66,6 +66,11 @@ import type {
 import { MUSEUM_EXHIBITION as BRAND } from '../logic/museum-brand';
 import { createMuseumSafety } from './museum-safety';
 import {
+  POSTER_GLOW_MARGIN,
+  createCausticsProjector,
+  posterGlowTexture,
+} from './caustics-projector';
+import {
   COVE_RADIUS,
   coveStrip,
 } from '../../components/architectural/views/room-coves';
@@ -237,10 +242,10 @@ function wallTileTexture() {
 }
 
 /**
- * Hall 0's floor, painted once: tiled deck round a painted pool, its
- * water a deepening blue with light ripples and four lane lines, its
- * coping and the gutter's grille all paint (the owner, 2026-10-28: "a
- * fake pool, a dry exhibit"). Over the room's wall lines.
+ * Hall 0's floor, painted once: tiled deck round a painted pool, white
+ * with four faint lane lines, for the projector overhead to throw its
+ * caustics on (the owner, 2026-10-28), its coping and the gutter's grille
+ * all paint ("a fake pool, a dry exhibit"). Over the room's wall lines.
  */
 export function paintedFloorTexture(w: number, d: number, px = 110) {
   const W = Math.round(w * px);
@@ -278,7 +283,8 @@ export function paintedFloorTexture(w: number, d: number, px = 110) {
     }
     c.fillStyle = '#f4f7f6';
     c.fillRect(x0 - 0.2 * px, y0 - 0.2 * px, pw + 0.4 * px, pd + 0.4 * px);
-    // The water: deeper towards the middle.
+    // The pool: white, a screen for the projector's caustics overhead
+    // (the owner, 2026-10-28), faintly shaded to its middle.
     const g = c.createRadialGradient(
       x0 + pw / 2,
       y0 + pd / 2,
@@ -287,31 +293,12 @@ export function paintedFloorTexture(w: number, d: number, px = 110) {
       y0 + pd / 2,
       pw * 0.6,
     );
-    g.addColorStop(0, '#3f9fc0');
-    g.addColorStop(0.7, '#69bfd2');
-    g.addColorStop(1, '#93d6dd');
+    g.addColorStop(0, '#fbfcfc');
+    g.addColorStop(1, '#eef2f2');
     c.fillStyle = g;
     c.fillRect(x0, y0, pw, pd);
-    // The light's ripples, painted: a net of soft bright lines.
-    c.lineWidth = 2.5;
-    for (let k = 0; k < 320; k++) {
-      const x = x0 + rand() * pw;
-      const y = y0 + rand() * pd;
-      const len = (0.3 + rand() * 0.6) * px;
-      const a = rand() * Math.PI;
-      c.strokeStyle = `rgba(230, 250, 255, ${0.18 + rand() * 0.25})`;
-      c.beginPath();
-      c.moveTo(x, y);
-      c.quadraticCurveTo(
-        x + Math.cos(a) * len * 0.5 + (rand() - 0.5) * 20,
-        y + Math.sin(a) * len * 0.5 + (rand() - 0.5) * 20,
-        Math.min(x0 + pw, Math.max(x0, x + Math.cos(a) * len)),
-        Math.min(y0 + pd, Math.max(y0, y + Math.sin(a) * len)),
-      );
-      c.stroke();
-    }
-    // The lane lines, with their T ends, a little blurred by the "water".
-    c.fillStyle = 'rgba(20, 50, 90, 0.75)';
+    // The lane lines, with their T ends, pale grey on the white.
+    c.fillStyle = 'rgba(70, 90, 110, 0.22)';
     for (let k = 1; k <= PAINTED_POOL.lanes; k++) {
       const y = y0 + (k * pd) / (PAINTED_POOL.lanes + 1);
       c.fillRect(x0 + 1.5 * px, y - 0.1 * px, pw - 3 * px, 0.2 * px);
@@ -1243,6 +1230,8 @@ export interface MuseumHall {
   group: Group;
   /** Its finishes, shared with the empty halls drawn beyond it (`museum-empty-hall.ts`). */
   materials: MuseumMaterials;
+  /** Step what moves in the hall itself (Hall 0's projector); nothing elsewhere. */
+  update(delta: number): void;
   dispose(): void;
 }
 
@@ -1253,6 +1242,78 @@ function onWall(mesh: Mesh, wall: HallWall, u: number, y: number, off = 0.015) {
   if (wall.axis === 'x') mesh.position.set(u, y, wall.line + n[1] * through);
   else mesh.position.set(wall.line + n[0] * through, y, u);
   mesh.rotation.y = Math.atan2(n[0], n[1]);
+}
+
+/** How far Hall 0's posters stand off their walls, on the cove light behind them (the owner, 2026-10-28). */
+export const POSTER_STANDOFF = 0.05;
+
+/**
+ * Stand a poster off its wall and light it from behind: a thin dark
+ * backing between it and the wall, and a warm white glow (the cove LED
+ * strip's) on the wall round its edges; its face lit a little more, as
+ * by the spill. `mesh` is placed already, `POSTER_STANDOFF` off the wall.
+ */
+function coveLit(
+  mesh: Mesh,
+  w: number,
+  h: number,
+  textures: Texture[],
+  disposables: Material[],
+) {
+  (mesh.material as MeshStandardMaterial).emissiveIntensity = 0.55;
+  const glowMap = posterGlowTexture(w, h);
+  textures.push(glowMap);
+  const glowMaterial = new MeshBasicMaterial({
+    map: glowMap,
+    color: '#ffffff',
+    transparent: true,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+  });
+  disposables.push(glowMaterial);
+  const m = POSTER_GLOW_MARGIN;
+  const glow = new Mesh(new PlaneGeometry(w + 2 * m, h + 2 * m), glowMaterial);
+  glow.name = 'Poster cove glow';
+  glow.position.z = -(POSTER_STANDOFF - 0.004);
+  const backingMaterial = new MeshStandardMaterial({
+    color: '#1c1d1f',
+    roughness: 0.8,
+  });
+  disposables.push(backingMaterial);
+  const backing = new Mesh(
+    new BoxGeometry(w - 0.12, h - 0.12, POSTER_STANDOFF - 0.01),
+    backingMaterial,
+  );
+  backing.position.z = -POSTER_STANDOFF / 2;
+  mesh.add(glow, backing);
+}
+
+/**
+ * The cove glow round Hall 0's title wall, as warm strips on the wall, for
+ * the hall drawn empty from afar (`museum-empty-hall.ts`), in the museum's
+ * coordinates: its posters are not drawn there, their light is.
+ */
+export function hall0PosterGlowGeometry(): BufferGeometry[] {
+  const south = hallWalls('museum0').find((w) => w.side === 'south')!;
+  const [w, h, y] = [10.4, 3.4, 2.45];
+  const band = 0.12;
+  const out: BufferGeometry[] = [];
+  for (const [u, v, sw, sh] of [
+    [0, h / 2 + band / 2, w + 2 * band, band],
+    [0, -h / 2 - band / 2, w + 2 * band, band],
+    [-w / 2 - band / 2, 0, band, h],
+    [w / 2 + band / 2, 0, band, h],
+  ]) {
+    const strip = new Mesh(new PlaneGeometry(sw, sh));
+    onWall(strip, south, (south.from + south.to) / 2, y, 0.01);
+    strip.translateX(u);
+    strip.translateY(v);
+    strip.updateMatrix();
+    strip.geometry.applyMatrix4(strip.matrix);
+    out.push(strip.geometry);
+  }
+  return out;
 }
 
 /** Build room `id`, in metres (scale the group by the scene's metre), in its own coordinates. */
@@ -1273,6 +1334,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
   const inner = hallInterior(id);
   const welcome = id === 'museum0';
   const arches = hallArches(id);
+  let projector: ReturnType<typeof createCausticsProjector> | null = null;
 
   // The floor, out to its wall lines, laid from the museum's origin; Hall 0's painted once.
   const floorGeometry = new PlaneGeometry(
@@ -1555,7 +1617,12 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
         g.translate(x, h - 0.03, z);
         strips.push(g);
       }
-    group.add(new Mesh(mergeGeometries(strips), m.fluorescent));
+    // Dimmed: the room darkened, the projected pool its main light.
+    const dimmed = m.fluorescent.clone();
+    dimmed.emissiveIntensity = 0.12;
+    dimmed.color.set('#7d8580');
+    disposables.push(dimmed);
+    group.add(new Mesh(mergeGeometries(strips), dimmed));
     for (const g of strips) g.dispose();
     // The ladder: two rails rising from the deck, over the painted edge,
     // down into the "pool", and simply stopping at the floor; two treads.
@@ -1587,6 +1654,9 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
       banner.rotation.y = Math.PI;
       group.add(banner);
     }
+    // The projector overhead, throwing caustics on the white pool.
+    projector = createCausticsProjector(h, PAINTED_POOL);
+    group.add(projector.group);
   }
 
   // The panel: "coming soon" in an exhibit hall still empty, the welcome
@@ -1632,7 +1702,8 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
   if (welcome) {
     const south = walls.find((w) => w.side === 'south')!;
     const wall = signMesh(10.4, 3.4, paintTitleWall, textures, 150);
-    onWall(wall, south, (south.from + south.to) / 2, 2.45);
+    onWall(wall, south, (south.from + south.to) / 2, 2.45, POSTER_STANDOFF);
+    coveLit(wall, 10.4, 3.4, textures, disposables);
     plan.add(wall);
   } else if (street && id === FINALE) {
     const mid = (street.from + street.to) / 2;
@@ -1665,17 +1736,32 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
       240,
     );
     const lift = a.kind === 'door' ? 0.55 : 0.95;
+    const off = welcome ? POSTER_STANDOFF : 0.015;
     sign.position.set(
-      a.at.x + a.into[0] * (t / 2 + 0.015),
+      a.at.x + a.into[0] * (t / 2 + off),
       a.top + lift,
-      a.at.z + a.into[1] * (t / 2 + 0.015),
+      a.at.z + a.into[1] * (t / 2 + off),
     );
     sign.rotation.y = Math.atan2(a.into[0], a.into[1]);
+    if (welcome)
+      coveLit(
+        sign,
+        a.kind === 'door' ? 3.6 : 5.2,
+        a.kind === 'door' ? 0.8 : 1.1,
+        textures,
+        disposables,
+      );
     plan.add(sign);
   }
 
   for (const child of [...group.children, ...plan.children])
     markComponent(child, { decorative: true });
+  // The projector works: named, its status its LED's.
+  if (projector)
+    markComponent(projector.group, {
+      name: projector.group.name,
+      status: () => projector?.status(),
+    });
   // The safety and services layer: sockets, the fire alarm, escape signs, and the rest.
   const safety = createMuseumSafety(id);
   plan.add(safety.group);
@@ -1690,6 +1776,9 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
   return {
     group,
     materials: m,
+    update(delta) {
+      projector?.update(delta);
+    },
     dispose() {
       group.traverse((obj) => {
         if (obj instanceof Mesh) {
@@ -1703,6 +1792,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
       for (const mat of disposables) mat.dispose();
       for (const tex of textures) tex.dispose();
       safety.dispose();
+      projector?.dispose();
     },
   };
 }

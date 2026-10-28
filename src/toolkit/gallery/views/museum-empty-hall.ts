@@ -29,6 +29,7 @@ import type {
 } from '../logic/museum-plan';
 import {
   FLOOR_TILE,
+  hall0PosterGlowGeometry,
   hall0TrimGeometry,
   lifebuoyStickerGeometry,
   lifebuoyStickerMaterial,
@@ -76,7 +77,8 @@ export type EmptyPart =
   | 'band0'
   | 'band1'
   | 'band2'
-  | 'sticker';
+  | 'sticker'
+  | 'glow';
 
 export interface EmptyHallMaterials {
   parts: Record<EmptyPart, Material>;
@@ -117,7 +119,16 @@ export function createEmptyHallMaterials(
     rawBrick: behind(base.rawBrick.clone()),
     tile: behind(base.tile.clone()),
     floor: behind(base.floor.clone()),
-    deck: behind(new MeshStandardMaterial({ map: deckTiles, roughness: 0.5 })),
+    // Its white pool and deck, darkened as the full hall is (2026-10-28).
+    deck: behind(
+      new MeshStandardMaterial({
+        map: deckTiles,
+        color: '#8d9496',
+        roughness: 0.5,
+      }),
+    ),
+    // The warm cove light round its posters.
+    glow: behind(new MeshBasicMaterial({ color: '#ffc58a' })),
     band0: behind(band(0)),
     band1: behind(band(1)),
     band2: behind(band(2)),
@@ -266,6 +277,7 @@ export function emptyHallParts(
     });
     for (const g of trim.coves) add(parts, 'tile', g);
     add(parts, 'sticker', lifebuoyStickerGeometry());
+    for (const g of hall0PosterGlowGeometry()) add(parts, 'glow', g);
   }
 }
 
