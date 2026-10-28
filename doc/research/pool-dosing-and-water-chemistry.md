@@ -512,6 +512,11 @@ To be asked one at a time, in this order:
 11. **Should coagulant (PAC) be added as a third dosing chemical?** With its own peristaltic pump and container: the basis of a Cryptosporidium scenario.
 12. **Should bathers drive chlorine demand** from `world.bathers` (busy evenings use more), replacing the fixed daily dose?
 
+### The owner's answers (2026-10-28)
+
+1. **Sensors read the true water, for now** ("For now, let's cheat"): the controllers' sensors and every display and alarm reflect the true water state; drift, fouling and failure are left for later.
+2. **The full chemistry set, built and tested in the abstract first** ("take an existing study and then write our own version of the model and test it in the abstract"): our own pure model, after a published study's scheme and constants, run on a headless bench of scripted scenarios before it is installed in the world ([water-chemistry-models](water-chemistry-models.md)).
+
 ## 12. Sources
 
 - Pool Water Treatment Advisory Group, _Code of Practice_, July 2021 (the Guernsey government's copy): https://www.gov.gg/CHttpHandler.ashx?id=191649&p=0 (read in full).
