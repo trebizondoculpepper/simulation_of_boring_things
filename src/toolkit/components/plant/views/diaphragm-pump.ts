@@ -3,7 +3,9 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { brandLivery } from '../../core/views/brand-livery';
-import { createPartSet, pushButton } from '../../core/parts/parts';
+import { createPartSet } from '../../core/parts/parts';
+import { keyLegend, membraneKey } from './membrane-key';
+import { piezoSounder } from '../../sound/audio/piezo-recordings';
 import type { Part } from '../../core/parts/parts';
 import { brandPlate } from './chlorella-plate';
 import { plantTools } from './plant-tools';
@@ -327,37 +329,38 @@ export function createDiaphragmPump(
   const keyParts: Part[] = [];
   let state = newDiaphragmState();
   const K = s.keys;
-  // Its keys light grey on the dark fascia, their marks dark on the caps
-  // (the owner, 2026-10-28: black keys on black were hard to see); START
-  // green and STOP red.
-  const keys: [DiaphragmKey, 'green' | 'red' | 'white', string, string][] = [
+  // Its sounder behind the fascia (mission 100): Grundflow's pitch.
+  const beeper = piezoSounder({ pitch: 'high', room: 'small' }, group);
+  let faultHeard: string | null = null;
+  // Its keys: plain grey membrane keys, START's green bar and STOP's red,
+  // their legends printed on the fascia above them (the owner, 2026-10-28;
+  // `membrane-key.ts`).
+  const keys: [DiaphragmKey, 'green' | 'red' | undefined, string, string][] = [
     ['start', 'green', 'START', 'START'],
     ['stop', 'red', 'STOP', 'STOP'],
-    ['up', 'white', 'UP', '▲'],
-    ['down', 'white', 'DOWN', '▼'],
-    ['mode', 'white', 'P', 'P'],
+    ['up', undefined, 'UP', '▲'],
+    ['down', undefined, 'DOWN', '▼'],
+    ['mode', undefined, 'P', 'P'],
   ];
-  keys.forEach(([k, colour, legend, mark], i) => {
-    const b = pushButton(kit, {
-      colour,
-      legend,
+  keys.forEach(([k, accent, legend, mark], i) => {
+    const b = membraneKey(kit, {
+      legend: mark,
+      accent,
       name: `${label} ${legend}`,
-      symbol: colour === 'white' ? mark : undefined,
-      action: () => (state = pressKey(state, k)),
+      action: () => {
+        const next = pressKey(state, k);
+        // Its piezo: a chirp for each key, a confirm for START, the error
+        // bleep for a key that changes nothing (▲ at its most, ▼ at its least).
+        if (k === 'start') beeper.play('confirm');
+        else if ((k === 'up' || k === 'down') && next.manual === state.manual)
+          beeper.play('error');
+        else beeper.key();
+        state = next;
+      },
     });
-    b.object.position.set(K.x[i], K.y + 0.003, front + 0.005);
-    b.object.scale.setScalar(K.scale);
+    b.object.position.set(K.x[i], K.y, front + 0.0056);
     group.add(b.object);
-    f.label(
-      group,
-      mark,
-      K.x[i],
-      K.y - 0.0125,
-      // Clear of the fascia's face (front + 0.0055), so it does not flicker into it.
-      front + 0.0064,
-      0.0042,
-      '#cfd6db',
-    );
+    keyLegend(kit, group, mark, K.x[i], K.y, front + 0.0064);
     parts.add(b);
     keyParts.push(b);
   });
@@ -451,6 +454,10 @@ export function createDiaphragmPump(
         powered,
       );
       errorLamp.emissiveIntensity = powered && fault ? 1.6 : 0;
+      if ((fault ?? null) !== faultHeard) {
+        if (fault && powered) beeper.play('error');
+        faultHeard = fault ?? null;
+      }
       if (out.running !== heard) {
         heard = out.running;
         partAudio.hold(group, out.running ? sound : null, group);

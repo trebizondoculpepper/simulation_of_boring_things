@@ -28,7 +28,9 @@ describe('the bathers and the water', () => {
     // Its chlorine falls at its bathers' own demand (mission 101), about
     // 0.1 mg/l an hour, so the pool empties some hours in: fewer than six
     // tenths of the usual come.
-    expect(w.bathers.pools.pool_01.total - from).toBeLessThan(sameMorning * 0.6);
+    expect(w.bathers.pools.pool_01.total - from).toBeLessThan(
+      sameMorning * 0.6,
+    );
     // A day and more of the world, simulated: slow beside the whole suite.
   }, 30_000);
 });

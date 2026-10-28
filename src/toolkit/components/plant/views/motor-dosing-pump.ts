@@ -4,7 +4,9 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import { createSevenSegment } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { brandLivery } from '../../core/views/brand-livery';
-import { beginPart, createPartSet, pushButton } from '../../core/parts/parts';
+import { beginPart, createPartSet } from '../../core/parts/parts';
+import { keyLegend, membraneKey } from './membrane-key';
+import { piezoSounder } from '../../sound/audio/piezo-recordings';
 import type { Part } from '../../core/parts/parts';
 import { click, partAudio } from '../../core/audio/part-audio';
 import { plantTools } from './plant-tools';
@@ -430,32 +432,49 @@ export function createMotorDosingPump(
   );
   const parts = createPartSet();
   const partList: Part[] = [];
+  // Its sounder behind the fascia (mission 100): lower than Grundflow's
+  // other pumps, the older control module's.
+  const beeper = piezoSounder({ pitch: 'mid', room: 'small' }, group);
+  let errorHeard: string | null = null;
   const add = (p: Part) => partList.push(parts.add(p));
   add(dialPart.part());
   add(bleedPart.part());
-  // Light grey keys with their marks dark on the caps, STOP/START red
-  // (the owner, 2026-10-28, of the DMX's black keys on black).
-  const keys: [MotorPumpKey, 'red' | 'white', string, string][] = [
+  // Plain grey membrane keys, STOP/START's red bar, their legends printed
+  // on the fascia above them (the owner, 2026-10-28).
+  const keys: [MotorPumpKey, 'red' | undefined, string, string][] = [
     ['startStop', 'red', 'STOP/START', 'STOP/START'],
-    ['mode', 'white', 'P', 'P'],
-    ['info', 'white', 'i', 'i'],
-    ['up', 'white', 'UP', '▲'],
-    ['down', 'white', 'DOWN', '▼'],
+    ['mode', undefined, 'P', 'P'],
+    ['info', undefined, 'i', 'i'],
+    ['up', undefined, 'UP', '▲'],
+    ['down', undefined, 'DOWN', '▼'],
   ];
-  const keyY = cm.y - 0.028;
-  keys.forEach(([k, colour, legend, mark], i) => {
-    const x = cm.x - 0.058 + i * 0.026;
-    // Membrane keys: printed beneath, no engraved plate above.
-    const b: Part = pushButton(kit, {
-      colour,
+  const keyY = cm.y - 0.03;
+  keys.forEach(([k, accent, legend, mark], i) => {
+    const x = cm.x - 0.054 + i * 0.026;
+    const b: Part = membraneKey(kit, {
+      legend: mark,
+      accent,
       name: `${label} ${legend}`,
-      symbol: colour === 'white' ? mark : undefined,
-      action: () => bind.change((s) => pressMotorKey(s, k)),
+      action: () => {
+        const before = bind.state();
+        const after = pressMotorKey(before, k);
+        // Its piezo: a confirm as STOP/START starts it, the error bleep for
+        // a key that changes nothing or a start its fault refuses, else a
+        // chirp.
+        const refused =
+          ((k === 'up' || k === 'down') && after.manual === before.manual) ||
+          (k === 'startStop' && after.on && !!after.error);
+        if (refused) beeper.play('error');
+        else if (k === 'startStop' && after.on && !before.on)
+          beeper.play('confirm');
+        else beeper.key();
+        bind.change(() => after);
+      },
+      w: i === 0 ? 0.02 : 0.014,
     });
-    b.object.position.set(x, keyY, front + 0.002);
-    b.object.scale.setScalar(0.22);
+    b.object.position.set(x, keyY, front - 0.0004);
     group.add(b.object);
-    f.label(group, mark, x, keyY - 0.012, front + 0.0005, 0.0025, ink);
+    keyLegend(kit, group, mark, x, keyY, front + 0.0005);
     add(b);
   });
 
@@ -475,6 +494,10 @@ export function createMotorDosingPump(
     const s = bind.state();
     const i = bind.inputs();
     const d = motorPumpDisplay(s, i);
+    if (s.error !== errorHeard) {
+      if (s.error && i.powered) beeper.play('error');
+      errorHeard = s.error;
+    }
     readout.show(d ? d.text : '');
     for (const [k, led] of Object.entries(units))
       led.set(d?.unit === k ? 1 : 0);

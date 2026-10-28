@@ -508,7 +508,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Changed
 
-- The DMX 1602 and DDS 7.5-16 keys, and the DMH's, light grey with their marks dark on the caps, START green and STOP red (the owner, 2026-10-28: black keys on a black fascia were hard to see); their printed labels lifted clear of the fascia, where they had flickered into it. Dev44's trial DMX is labelled DP-101A, as the Olympic's.
+- The DMX 1602, DDS 7.5-16 and DMH keys are plain grey membrane keys (`membrane-key.ts`, about 14 × 10 mm, a darker border and a highlight; START's green bar, STOP's red), their legends printed on the fascia above them (the owner, 2026-10-28: "can you make the buttons grey"; "Put the symbol above"); each press dips the key with a light thock and the pump's piezo sounder (mission 100): a chirp, a confirm on START, the error bleep on a refused key or a fault appearing, Grundflow's DMX and DDS high, the DMH mid. Dev44's trial DMX is labelled DP-101A, as the Olympic's.
 - `world.slow.test.ts`'s bathers test counts the morning without hypochlorite against the same morning with it, from the same draws of the bathers' generator, rather than against another day's, which any change in another pool's water moved.
 - Slow tests run only locally (the owner, 2026-10-28): the tests over about 1.5 s, or simulating long stretches of world time (the mains water off, the bathers, the air handling, the Wash-O-Tron's AUTO washes, the drain-down, the cooled pool's heating, the layout scorers and the inspection coverage), are moved into `*.slow.test.ts` files, which `vite.config.ts` excludes when `CI` is set, so GitHub's checks stay fast; `npm test` still runs them all, and `npm run test:fast` runs the fast set alone.
 
