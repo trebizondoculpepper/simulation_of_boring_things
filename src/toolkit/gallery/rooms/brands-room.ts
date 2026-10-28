@@ -56,7 +56,8 @@ const ALONG = [-9.6, -4.8, 0, 4.8, 9.6];
 // The north wall, clear of portals, takes one more.
 const NORTH = [-10, -6, -2, 2, 6, 10];
 const ENDS = [-4.5, -1.5, 1.5];
-const MIDDLE = [-8.8, -4.4, 0, 4.4, 8.8];
+// Seven, so every brand has a board (thirty, with Haulmark, prompt 097).
+const MIDDLE = [-9, -6, -3, 0, 3, 6, 9];
 /** How far each face of a freestanding board stands off its middle. */
 const STAND_OFF = 0.03;
 const HANGS: Hang[] = [
@@ -77,9 +78,9 @@ const HANGS: Hang[] = [
     facing: Math.PI / 2,
     off: WALL_OFF,
   })),
-  // The pool trade's brands, on five freestanding double-sided boards
-  // down the middle of the room: their south faces west to east, then
-  // their north faces east to west.
+  // The pool trade's brands and those after, on seven freestanding
+  // double-sided boards down the middle of the room: their south faces
+  // west to east, then their north faces east to west.
   ...MIDDLE.map((x) => ({ x, z: 0, facing: 0, off: STAND_OFF })),
   ...[...MIDDLE]
     .reverse()

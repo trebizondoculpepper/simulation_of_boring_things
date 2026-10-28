@@ -72,7 +72,9 @@ export type BrandMark =
   /** A door standing ajar in its frame, its hinge side heavy. */
   | 'doorset'
   /** A pendant shade throwing a cone of light. */
-  | 'shade';
+  | 'shade'
+  /** A heater shield, a chevron across it like a road's camber, the initial below. */
+  | 'crest';
 
 /** Every brand's id: a part names its maker by one of these. */
 export type BrandId =
@@ -104,7 +106,8 @@ export type BrandId =
   | 'penfold'
   | 'trioxa'
   | 'ironside'
-  | 'lumenhaus';
+  | 'lumenhaus'
+  | 'haulmark';
 
 export interface Brand {
   id: BrandId;
@@ -235,7 +238,7 @@ export const BRANDS: readonly Brand[] = [
     tagline: 'Switchgear you can lean on',
     founded: 1979,
     country: 'Ireland',
-    makes: 'Isolators and switchgear',
+    makes: 'Isolators and switchgear; containerised generators for hire',
     promise: 'Safe isolation, every single time',
     mark: 'hexagon',
     colours: ['#f2c014', '#222222', '#111111'],
@@ -401,7 +404,8 @@ export const BRANDS: readonly Brand[] = [
     tagline: 'Clear water, clear conscience',
     founded: 1956,
     country: 'United Kingdom',
-    makes: 'Sodium hypochlorite, pH correction and test reagents',
+    makes:
+      'Sodium hypochlorite, pH correction and test reagents, delivered in bulk by its own tankers',
     promise: 'Safe, sparkling water for every swimmer, every day',
     mark: 'molecule',
     colours: ['#3f9b3a', '#cfe9b0', '#16301a'],
@@ -497,6 +501,21 @@ export const BRANDS: readonly Brand[] = [
     mark: 'shade',
     colours: ['#d9a441', '#f6ecd2', '#24201a'],
     type: 'sans',
+  },
+  {
+    // The lorries that bring the plant its deliveries (prompt 097): the
+    // tractor units the suppliers' fleets run.
+    id: 'haulmark',
+    name: 'Haulmark',
+    wordmark: 'HAULMARK',
+    tagline: 'Built for the long haul',
+    founded: 1948,
+    country: 'England',
+    makes: 'Lorries: tractor units and rigid chassis',
+    promise: 'Every load delivered, every mile',
+    mark: 'crest',
+    colours: ['#1d3b5c', '#c9a227', '#14181d'],
+    type: 'slab',
   },
 ];
 
