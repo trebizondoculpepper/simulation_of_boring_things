@@ -29,6 +29,7 @@ import {
   selector,
 } from '../../core/parts/parts';
 import type { PartSet } from '../../core/parts/parts';
+import type { Binding } from '../../core/logic/world/components';
 import {
   TRI_STATES,
   triStateIndicator,
@@ -172,7 +173,19 @@ export function createOzoneGenerator(
     setpoint: (share: number) => void;
   },
   /** Installed and in service: its MAINS switch ON from the start. */
-  { inService = false }: { inService?: boolean } = {},
+  {
+    inService = false,
+    model = 'OZ-160',
+    rated = 160,
+    bound,
+  }: {
+    inService?: boolean;
+    /** Its model name and rating, g/h, on its band and its output meter's scale. */
+    model?: string;
+    rated?: number;
+    /** Its MAINS switch (0 off, 1 on) and OUTPUT SET knob (its detent, 0 to 20) bound to a world value. */
+    bound?: { mains: Binding<number>; setpoint: Binding<number> };
+  } = {},
 ): OzoneMachineView {
   const t = tools(kit);
   const W = 1.6,
@@ -199,12 +212,16 @@ export function createOzoneGenerator(
   });
   badge.position.set(-W / 2 + 0.22, H - 0.1, D / 2 + 0.004);
   group.add(badge);
-  const model = createMicroLabel(kit, 'OZ-160  OZONE GENERATOR  160 g/h', {
-    height: 0.022,
-    ink: '#ffffff',
-  });
-  model.position.set(0.3, H - 0.1, D / 2 + 0.004);
-  group.add(model);
+  const modelLabel = createMicroLabel(
+    kit,
+    `${model}  OZONE GENERATOR  ${rated} g/h`,
+    {
+      height: 0.022,
+      ink: '#ffffff',
+    },
+  );
+  modelLabel.position.set(0.3, H - 0.1, D / 2 + 0.004);
+  group.add(modelLabel);
   // Door seams.
   const seam = t.paint('#9a9e9b', 0.6);
   t.box(
@@ -224,7 +241,7 @@ export function createOzoneGenerator(
   face.position.set(-0.41, 1.3, D / 2);
   group.add(face);
   t.box(face, t.paint('#c7cbc5', 0.5), 0.7, 0.66, 0.006, 0, 0, 0.003);
-  const plate = createEngravedPlate(kit, ['OZONE GENERATOR OZ-160'], {
+  const plate = createEngravedPlate(kit, [`OZONE GENERATOR ${model}`], {
     colour: 'white',
     width: 0.4,
     height: 0.04,
@@ -235,9 +252,10 @@ export function createOzoneGenerator(
   message.group.position.set(-0.08, 0.2, 0.006);
   message.group.traverse((o) => (o.userData.live = true));
   face.add(message.group);
+  const meterMax = rated > 160 ? Math.ceil((rated * 1.25) / 100) * 100 : 200;
   const meter = createPanelMeter(kit, 'g/h', {
     width: 0.09,
-    scaleMax: 200,
+    scaleMax: meterMax,
     redFrom: 0.9,
   });
   meter.group.position.set(0.24, 0.19, 0.006);
@@ -255,9 +273,11 @@ export function createOzoneGenerator(
   const set = parts.add(
     potentiometer(kit, {
       legend: 'OUTPUT SET',
-      steps: 21,
-      initial: 20,
+      // Bound, a detent every 5 %: 0 to 20.
+      steps: bound ? 20 : 21,
+      initial: bound ? 1 : 20,
       name: 'Ozone output setting',
+      ...(bound ? { bound: bound.setpoint } : {}),
     }),
   );
   set.object.position.set(-0.24, -0.1, 0.006);
@@ -285,6 +305,7 @@ export function createOzoneGenerator(
       initial: inService ? 1 : 0,
       legend: 'MAINS  OFF · ON',
       name: 'Ozone generator mains',
+      ...(bound ? { bound: bound.mains } : {}),
     }),
   );
   mains.object.position.set(0, -0.24, 0.006);
@@ -385,23 +406,24 @@ export function createOzoneGenerator(
     group,
     parts,
     show(s, delta) {
-      if (mains.position.value !== mainsShown) {
+      if (!bound && mains.position.value !== mainsShown) {
         mainsShown = mains.position.value;
         controls.mains(mainsShown === 1);
       }
-      if (set.share.value !== setShown) {
+      if (!bound && set.share.value !== setShown) {
         setShown = set.share.value;
         controls.setpoint(setShown);
       }
       message.show(s.message, s.powered);
-      meter.set(s.output / 200);
+      meter.set(s.output / meterMax);
       meter.update(delta);
       shown.show(s.powered ? fixed(s.output, 0) : '    ');
       power.value = s.powered;
       ozoneOn.value = s.producing;
       alarm.value = s.alarm;
       glow.opacity = s.producing
-        ? 0.25 + 0.5 * Math.min(1, s.output / 160) * (0.9 + 0.1 * Math.random())
+        ? 0.25 +
+          0.5 * Math.min(1, s.output / rated) * (0.9 + 0.1 * Math.random())
         : 0;
       float.position.y = -0.14 + 0.28 * Math.min(1, s.coolingFlow / 400);
       thermo.set(s.coolingTemp);

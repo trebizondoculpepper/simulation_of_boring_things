@@ -1099,8 +1099,16 @@ export function createSandFilter(
 export function createUvUnit(kit: PanelKit) {
   const t = plantTools(kit);
   const group = new Group() as Group & {
-    /** Its lamp on (water flowing) or off, its screen and lamps showing it. */
-    show(s: { on: boolean; flowing: boolean }): void;
+    /**
+     * Its lamp on (water flowing) or off, its screen and lamps showing it:
+     * its sensor's intensity, W/m², and its lamp's hours, if given.
+     */
+    show(s: {
+      on: boolean;
+      flowing: boolean;
+      intensity?: number;
+      hours?: number;
+    }): void;
   };
   const ss = t.paint(FINISH.stainless, 0.25, 0.85);
   const y = 0.8,
@@ -1243,8 +1251,11 @@ export function createUvUnit(kit: PanelKit) {
   }
   badge(kit, panel, 'lidoluxe', [0.1, 1.17, 0.102], 0.03);
   screen.mesh.userData.live = true;
-  group.show = ({ on, flowing }) => {
-    draw(on ? ['UV 87 W/m2', 'LAMP 6120 h'] : ['UV  0 W/m2', 'LAMP OFF']);
+  group.show = ({ on, flowing, intensity = 87, hours = 6120 }) => {
+    const uv = `UV ${Math.round(on ? intensity : 0)
+      .toString()
+      .padStart(3)} W/m2`;
+    draw(on ? [uv, `LAMP ${Math.floor(hours)} h`] : [uv, 'LAMP OFF']);
     green.emissiveIntensity = on ? 1.2 : 0;
     red.emissiveIntensity = flowing && !on ? 1.2 : 0;
   };

@@ -24,6 +24,7 @@ export const HALL_EXHIBITS: Partial<
   Record<MuseumHallId, () => Promise<HallExhibitModule>>
 > = {
   museum1: () => import('./hall-1-warm-water'),
+  museum2: () => import('./hall-2-clean-water'),
   museum5: () => import('./hall-5-day-in-the-life'),
   museum7: () => import('./hall-7-grout'),
   museum8: () => import('./hall-8-never-again'),

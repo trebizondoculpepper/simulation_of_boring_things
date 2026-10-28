@@ -1,17 +1,21 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
-  HALL_NEEDED,
+  END_CLEAR,
+  LEGS,
   PLACES,
-  PLANT_EDGE,
   PLANT_LENGTH,
   POINTS,
   ROOM,
+  VISITOR_FLOOR,
   boxInHall,
   hall2PipeClashes,
+  legOf,
+  onPlantFloor,
   plumbHall2,
   portInHall,
   sizerEstimate,
 } from './museum-2-layout';
+import { hallArches, hallSize } from './museum-plan';
 import {
   FITTINGS,
   INSTRUMENTS,
@@ -50,19 +54,43 @@ describe('Hall 2’s plant, laid out and plumbed', () => {
     }
   });
 
-  it('keeps every pipe and machine off the visitors’ floor and inside the hall', () => {
+  it('keeps every pipe and machine on the L, off the visitors’ floor, inside the hall', () => {
     for (const l of room.lines)
       for (const p of l.points) {
-        expect(p[0], l.edge).toBeLessThanOrEqual(PLANT_EDGE);
+        expect(onPlantFloor(p[0], p[2]), `${l.edge} at ${p.join(', ')}`).toBe(
+          true,
+        );
+        expect(Math.abs(p[0]), l.edge).toBeLessThan(ROOM.halfX);
         expect(Math.abs(p[2]), l.edge).toBeLessThan(ROOM.halfZ);
         expect(p[1], l.edge).toBeLessThan(ROOM.height);
       }
     for (const n of NODES) {
       const b = boxInHall(n.id);
-      expect(b.max[0], n.id).toBeLessThanOrEqual(PLANT_EDGE);
+      const clear =
+        b.max[0] <= VISITOR_FLOOR.minX + 1e-6 ||
+        b.max[2] <= VISITOR_FLOOR.minZ + 1e-6;
+      expect(clear, n.id).toBe(true);
       expect(b.min[0], n.id).toBeGreaterThanOrEqual(-ROOM.halfX);
+      expect(b.max[0], n.id).toBeLessThanOrEqual(ROOM.halfX);
       expect(Math.abs(b.min[2]), n.id).toBeLessThanOrEqual(ROOM.halfZ);
       expect(Math.abs(b.max[2]), n.id).toBeLessThanOrEqual(ROOM.halfZ);
+    }
+  });
+
+  it('fits the corner hall and keeps both archways and the way between them clear', () => {
+    const size = hallSize('museum2');
+    expect(ROOM.halfX * 2).toBeCloseTo(size.w, 6);
+    expect(ROOM.halfZ * 2).toBeCloseTo(size.d, 6);
+    expect(LEGS.west.from).toBeLessThanOrEqual(ROOM.halfZ - END_CLEAR + 1e-6);
+    expect(LEGS.north.to).toBeLessThanOrEqual(ROOM.halfX - END_CLEAR + 1e-6);
+    // Each archway's opening, a metre into the hall, is on the visitors' floor.
+    for (const a of hallArches('museum2')) {
+      const along = a.axis === 'x' ? [1, 0] : [0, 1];
+      for (const u of [-a.w / 2, 0, a.w / 2]) {
+        const x = a.frame.x + a.into[0] + along[0] * u;
+        const z = a.frame.z + a.into[1] + along[1] * u;
+        expect(onPlantFloor(x, z), `${a.to} at ${x}, ${z}`).toBe(false);
+      }
     }
   });
 
@@ -81,30 +109,35 @@ describe('Hall 2’s plant, laid out and plumbed', () => {
       }
   });
 
-  it('reads left to right, south to north: the inputs first, the pool last', () => {
-    const z = (id: MachineId) => PLACES[id].z;
-    const order: MachineId[] = [
-      'mains',
-      'tank',
-      'filter',
-      'generator',
-      'contact',
-      'carbon',
-      'uv',
-      'pool',
-    ];
-    for (let k = 1; k < order.length; k++)
-      expect(z(order[k]), order[k]).toBeLessThan(z(order[k - 1]));
-    expect(z('air')).toBeGreaterThan(z('tank'));
+  it('reads left to right round the L: the inputs first up the west wall, the pool last along the north', () => {
+    const west: MachineId[] = ['mains', 'tank', 'filter', 'generator'];
+    const north: MachineId[] = ['contact', 'carbon', 'uv', 'pool'];
+    for (const id of west) expect(legOf(id), id).toBe('west');
+    for (const id of north) expect(legOf(id), id).toBe('north');
+    for (let k = 1; k < west.length; k++)
+      expect(PLACES[west[k]].z, west[k]).toBeLessThan(PLACES[west[k - 1]].z);
+    for (let k = 1; k < north.length; k++)
+      expect(PLACES[north[k]].x, north[k]).toBeGreaterThan(
+        PLACES[north[k - 1]].x,
+      );
+    expect(PLACES.air.z).toBeGreaterThan(PLACES.tank.z);
+    // The pool by the way on to Hall 3, in the hall's east half.
+    expect(PLACES.pool.x).toBeGreaterThan(3);
   });
 
-  it('runs the overflow, the one line going right to left, low along the back', () => {
+  it('runs the overflow, the one line going right to left, low along the backs of both walls', () => {
     const overflow = room.lines.find((l) => l.edge === 'overflow')!;
     for (const p of overflow.points) expect(p[1]).toBeLessThan(1.5);
-    const back = overflow.points.filter(
-      (p, k) => k > 0 && Math.abs(p[2] - overflow.points[k - 1][2]) > 5,
-    );
-    for (const p of back) expect(p[0]).toBeLessThan(-7);
+    const long = overflow.points
+      .slice(1)
+      .map((p, k) => [overflow.points[k], p] as const)
+      .filter(([a, b]) => Math.hypot(b[0] - a[0], b[2] - a[2]) > 4);
+    expect(long.length).toBeGreaterThan(0);
+    for (const [a, b] of long) {
+      const alongWest = Math.abs(b[2] - a[2]) > 4;
+      if (alongWest) expect(a[0]).toBeLessThan(-7);
+      else expect(a[2]).toBeLessThan(-6);
+    }
   });
 
   it('sets every fitting and line instrument on its line, each once, within reach', () => {
@@ -123,12 +156,11 @@ describe('Hall 2’s plant, laid out and plumbed', () => {
     }
   });
 
-  it('needs a hall about 20.5 m long for its row, longer than the museum’s provisional 13.4 m', () => {
-    expect(PLANT_LENGTH).toBeCloseTo(20.5, 1);
-    expect(HALL_NEEDED.d).toBe(20.5);
-    // The sizer, by floor area alone, would put it in a 10 × 10 m room:
-    // the row along one wall is what makes it long.
+  it('folds its 20.7 m row round the corner', () => {
+    expect(PLANT_LENGTH).toBeCloseTo(20.7, 1);
+    // The sizer, by floor area alone, would put it in a smaller room: the
+    // row along the walls is what needs the corner.
     const size = sizerEstimate();
-    expect(size.w * size.d).toBeLessThan(HALL_NEEDED.w * HALL_NEEDED.d);
+    expect(size.w * size.d).toBeLessThan(ROOM.halfX * 2 * ROOM.halfZ * 2);
   });
 });

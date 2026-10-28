@@ -26,28 +26,29 @@ import type { RoomSize } from './room-sizer';
 import { pointAlong } from './source-sink-plumbing';
 
 /**
- * Hall 2's plant, laid out (107b, stage 1): the schematic's machines
- * placed by hand in one row along the hall's outer (west) wall, in the
- * process's order, so that the visitor facing them reads it left (south,
- * +z) to right (north, −z): the ideal mains and dry air, the balance tank,
- * the pump, the sand filter and its drain, the ozone bay (the generator
- * against the wall, its booster and venturi in front), the contact tank
- * with its off-gas destructor on top, the carbon deozoniser, the UV unit,
- * and the pool. Every pipe is routed between its machines' ports by the
- * voxel router, clear of the visitors' floor and of every machine; every
- * fitting is set into its line in the plumber's order. The pool's
- * overflow, the one line that runs right to left, keeps low along the
- * back. Pure; metres, in the hall's frame (its middle at the origin, y up,
- * north −z), the hall's length along z sized to the plant
- * (`HALL_NEEDED`), its width the museum's 15.4 m.
+ * Hall 2's plant, laid out (107b): the schematic's machines placed by hand
+ * in an L round the corner hall's two outer walls (the owner, 2026-10-28),
+ * in the process's order, so the visitor walking round with the water
+ * reads it left to right: along the west wall from the south, where they
+ * come in from Hall 1, the ideal mains and dry air, the balance tank, the
+ * pump, the sand filter and its drain, and the ozone bay (the generator
+ * against the wall, its booster and venturi in front); then, turning along
+ * the north wall towards the way on to Hall 3, the contact tank with its
+ * off-gas destructor on top, the carbon deozoniser, the UV unit, and the
+ * pool. Every pipe is routed between its machines' ports by the voxel
+ * router, clear of the visitors' floor and of every machine; every fitting
+ * is set into its line in the plumber's order. The pool's overflow, the
+ * one line that runs right to left, keeps low along the back of both
+ * walls. Pure; metres, in the hall's frame (its middle at the origin, y
+ * up, north −z), the hall `museum2`'s 15.4 × 13.4 m inside.
  */
 
-/** Each machine faces east (+x), its back to the west wall: its own +x runs north, the visitor's right. */
+/** Along the west wall each machine faces east (+x), its own +x running north, the visitor's right. */
 const FACING_EAST = Math.PI / 2;
 
 /** Clear behind each machine, for the overflow's run along the back and for access, m. */
 export const BEHIND = 0.6;
-/** Clear at each end of the row, m. */
+/** Clear at each end of the L, m. */
 export const END_CLEAR = 0.6;
 
 /** The filter: dev51's, Ø2.8 m, a 1.2 m shell. */
@@ -55,8 +56,8 @@ export const FILTER_SHAPE = { dia: 2.8, shell: 1.2 } as const;
 /** The ideal balance tank, and the ideal pool turned with its short side along the row (w along the row, d deep). */
 export const TANK_SHAPE = { w: 2.0, d: 1.4, h: 1.6 } as const;
 export const POOL_SHAPE = { w: 2.2, d: 3.0, h: 1.9 } as const;
-/** The ozone generator's cabinet: a compact 240 g/h air-fed unit, of the Ozonia OZAT CFS-7's class (indicative size). */
-export const GENERATOR_SHAPE = { w: 1.2, d: 0.6, h: 1.9 } as const;
+/** The ozone generator's cabinet: Trioxa's, after the BONa and Ozonia CFS-7 class (`ozone-plant.ts`'s cabinet). */
+export const GENERATOR_SHAPE = { w: 1.6, d: 0.5, h: 1.95 } as const;
 /** The contact tank (7 m³: Ø1.85 m, 2.6 m of water) and the destructor on its top. */
 export const CONTACT_SHAPE = { dia: 1.85, h: 2.6 } as const;
 export const DESTRUCTOR_SHAPE = {
@@ -67,8 +68,8 @@ export const DESTRUCTOR_SHAPE = {
 } as const;
 /** The carbon deozoniser: Ø2.5 m (about 37 m/h at the normal flow), 2.4 m tall. */
 export const CARBON_SHAPE = { dia: 2.5, h: 2.4 } as const;
-/** The UV unit: its chamber along the row on its stand, its axis 1.0 m up. */
-export const UV_SHAPE = { w: 1.2, d: 0.6, h: 1.3, axis: 1.0 } as const;
+/** The UV unit (`createUvUnit`, after the VGE Pro 2000-219): its chamber along the row on its stands, its axis 0.8 m up, its panel on a stand in front. */
+export const UV_SHAPE = { w: 1.6, d: 0.95, h: 1.55, axis: 0.8 } as const;
 /** The booster pump (Grundflow, a small end-suction set). */
 export const BOOSTER_SHAPE = { w: 0.95, d: 0.44, h: 0.9, axis: 0.6 } as const;
 
@@ -76,72 +77,116 @@ const filterNozzles = sandFilterGeometry(FILTER_SHAPE.dia, FILTER_SHAPE.shell);
 const FILTER_BACK = 0.35 + FILTER_SHAPE.dia / 2;
 const studTop = SOURCE_SHAPE.height + SOURCE_SHAPE.stud;
 
-/** The row's slots, left to right: what stands in each, how wide along the row, and how deep from its back. */
-const SLOTS: readonly { ids: MachineId[]; w: number }[] = [
-  { ids: ['air', 'mains'], w: 2 * SOURCE_SHAPE.radius + 0.2 },
-  { ids: ['tank', 'pump'], w: TANK_SHAPE.w },
-  { ids: ['filter', 'feedTee', 'wasteTee', 'drain'], w: FILTER_SHAPE.dia },
+/** The hall's inside, m (`museum2`, the north-west corner: 15.4 × 13.4 m). */
+export const HALL_WIDTH = 15.4;
+export const HALL_DEPTH = 13.4;
+
+/** The router's room: the hall up to its roof deck's services. */
+export const ROOM = {
+  halfX: HALL_WIDTH / 2,
+  halfZ: HALL_DEPTH / 2,
+  height: 5.2,
+} as const;
+const WEST = -ROOM.halfX;
+const NORTH = -ROOM.halfZ;
+
+/** The L's legs: along the west wall (read south to north) and along the north wall (read west to east). */
+export type Leg = 'west' | 'north';
+
+/** The row's slots, left to right: what stands in each, how wide along the row, and on which wall. */
+const SLOTS: readonly { ids: MachineId[]; w: number; leg: Leg }[] = [
+  { ids: ['air', 'mains'], w: 2 * SOURCE_SHAPE.radius + 0.2, leg: 'west' },
+  { ids: ['tank', 'pump'], w: TANK_SHAPE.w, leg: 'west' },
+  {
+    ids: ['filter', 'feedTee', 'wasteTee', 'drain'],
+    w: FILTER_SHAPE.dia,
+    leg: 'west',
+  },
   {
     ids: ['generator', 'sideTee', 'booster', 'injector', 'mixTee'],
     w: GENERATOR_SHAPE.w,
+    leg: 'west',
   },
-  { ids: ['contact', 'destructor'], w: CONTACT_SHAPE.dia },
-  { ids: ['carbon'], w: CARBON_SHAPE.dia },
-  { ids: ['uv'], w: UV_SHAPE.w },
-  { ids: ['pool'], w: POOL_SHAPE.w },
+  { ids: ['contact', 'destructor'], w: CONTACT_SHAPE.dia, leg: 'north' },
+  { ids: ['carbon'], w: CARBON_SHAPE.dia, leg: 'north' },
+  { ids: ['uv'], w: UV_SHAPE.w, leg: 'north' },
+  { ids: ['pool'], w: POOL_SHAPE.w, leg: 'north' },
 ];
 
-/** The gap between slots, m: the sizer's between machines, more where a line with fittings crosses it. */
+/** The gap after each slot on its leg, m: the sizer's between machines, more where a line with fittings crosses it. */
 const GAP_AFTER: readonly number[] = [
   0.3,
   0.9,
   MACHINE_GAP,
-  MACHINE_GAP,
+  0,
   MACHINE_GAP,
   MACHINE_GAP,
   1.25,
 ];
 
-/** The plant's length along the wall, m: its slots, its gaps and its ends. */
+/** Where the north leg's first slot starts, x: past the ozone bay's reach from the west wall. */
+export const NORTH_START = -3.75;
+
+/** Each slot's centre along its wall: z on the west leg (left, south, is +z), x on the north (left, west, is −x). */
+const SLOT_AT: readonly number[] = (() => {
+  let z = ROOM.halfZ - END_CLEAR;
+  let x = NORTH_START;
+  return SLOTS.map((slot, k) => {
+    const gap = GAP_AFTER[k] ?? 0;
+    if (slot.leg === 'west') {
+      const centre = z - slot.w / 2;
+      z -= slot.w + gap;
+      return Math.round(centre * 1000) / 1000;
+    }
+    const centre = x + slot.w / 2;
+    x += slot.w + gap;
+    return Math.round(centre * 1000) / 1000;
+  });
+})();
+const slotOf = (id: MachineId) => SLOTS.findIndex((s) => s.ids.includes(id));
+
+/** The wall a machine stands against. */
+export const legOf = (id: MachineId): Leg => SLOTS[slotOf(id)].leg;
+
+/** Each leg's extent along its wall, m: the west leg's z from its south end to its north, the north leg's x from its west end to its east. */
+export const LEGS = (() => {
+  const west = SLOTS.map((s, k) => ({ s, at: SLOT_AT[k] })).filter(
+    (x) => x.s.leg === 'west',
+  );
+  const north = SLOTS.map((s, k) => ({ s, at: SLOT_AT[k] })).filter(
+    (x) => x.s.leg === 'north',
+  );
+  return {
+    west: {
+      from: west[0].at + west[0].s.w / 2,
+      to: west.at(-1)!.at - west.at(-1)!.s.w / 2,
+    },
+    north: {
+      from: north[0].at - north[0].s.w / 2,
+      to: north.at(-1)!.at + north.at(-1)!.s.w / 2,
+    },
+  };
+})();
+
+/** The plant's length along its walls, m: its slots, its gaps and its ends. */
 export const PLANT_LENGTH =
   SLOTS.reduce((s, x) => s + x.w, 0) +
   GAP_AFTER.reduce((s, g) => s + g, 0) +
   2 * END_CLEAR;
 
-/** The hall's width, m (the museum's halls, 107-1), and the length Hall 2 needs for this plant. */
-export const HALL_WIDTH = 15.4;
-export const HALL_NEEDED = {
-  w: HALL_WIDTH,
-  d: Math.ceil(PLANT_LENGTH * 2) / 2,
-} as const;
-
-/** The router's room: the hall as this plant needs it, up to its roof deck. */
-export const ROOM = {
-  halfX: HALL_WIDTH / 2,
-  halfZ: HALL_NEEDED.d / 2,
-  height: 5.2,
-} as const;
-const WALL = -ROOM.halfX;
-
-/** The plant's floor along the west wall; east of it, the visitors' floor, where no pipe goes. */
+/** The plant's floor: along the west wall to this x, along the north wall to this z; the rest is the visitors', where no pipe goes. */
 export const PLANT_EDGE = -2.5;
+export const PLANT_EDGE_NORTH = -2.4;
 export const VISITOR_FLOOR = {
   minX: PLANT_EDGE,
   maxX: ROOM.halfX,
-  minZ: -ROOM.halfZ,
+  minZ: PLANT_EDGE_NORTH,
   maxZ: ROOM.halfZ,
 } as const;
 
-/** Each slot's centre along the row, z (left, south, is +z). */
-const SLOT_Z: readonly number[] = (() => {
-  let z = ROOM.halfZ - END_CLEAR;
-  return SLOTS.map((slot, k) => {
-    const centre = z - slot.w / 2;
-    z -= slot.w + (GAP_AFTER[k] ?? 0);
-    return Math.round(centre * 1000) / 1000;
-  });
-})();
-const slotOf = (id: MachineId) => SLOTS.findIndex((s) => s.ids.includes(id));
+/** Whether a point in plan is on the plant's floor (the L), not the visitors'. */
+export const onPlantFloor = (x: number, z: number) =>
+  x <= PLANT_EDGE + 1e-9 || z <= PLANT_EDGE_NORTH + 1e-9;
 
 export interface MachinePlace {
   x: number;
@@ -149,7 +194,12 @@ export interface MachinePlace {
   yaw: number;
 }
 
-/** A place `along` m right of its slot's centre, its back `back` m from its own centre, `forward` m off the wall's clearance. */
+/**
+ * A place `along` m right of its slot's centre, its back `back` m from its
+ * own centre, `forward` m off the wall's clearance, turned `yaw` as on the
+ * west wall (facing east): on the north wall it is turned a quarter less,
+ * to face south.
+ */
 function place(
   id: MachineId,
   back: number,
@@ -157,11 +207,12 @@ function place(
   forward = 0,
   yaw = FACING_EAST,
 ): MachinePlace {
-  return {
-    x: Math.round((WALL + BEHIND + back + forward) * 1000) / 1000,
-    z: Math.round((SLOT_Z[slotOf(id)] - along) * 1000) / 1000,
-    yaw,
-  };
+  const r = (v: number) => Math.round(v * 1000) / 1000;
+  const at = SLOT_AT[slotOf(id)];
+  const out = BEHIND + back + forward;
+  return legOf(id) === 'west'
+    ? { x: r(WEST + out), z: r(at - along), yaw }
+    : { x: r(at + along), z: r(NORTH + out), yaw: yaw - Math.PI / 2 };
 }
 
 /**
@@ -195,7 +246,7 @@ export const PLACES: Record<MachineId, MachinePlace> = {
   contact: place('contact', CONTACT_SHAPE.dia / 2),
   destructor: place('destructor', CONTACT_SHAPE.dia / 2),
   carbon: place('carbon', CARBON_SHAPE.dia / 2),
-  uv: place('uv', UV_SHAPE.d / 2, 0, 1.0),
+  uv: place('uv', 0.2, 0, 1.0),
   pool: place('pool', POOL_SHAPE.d / 2),
 };
 
@@ -369,9 +420,10 @@ export const BOXES: Record<MachineId, { min: Vec3; max: Vec3 }> = {
   drain: source,
   generator: box(GENERATOR_SHAPE.w, GENERATOR_SHAPE.d, GENERATOR_SHAPE.h),
   sideTee: point,
+  // Its volute under the venturi, its motor on beyond it, toward the generator.
   booster: {
     min: [-0.45, 0, -BOOSTER_SHAPE.d / 2],
-    max: [0.5, BOOSTER_SHAPE.h, BOOSTER_SHAPE.d / 2],
+    max: [0.9, BOOSTER_SHAPE.h, BOOSTER_SHAPE.d / 2],
   },
   injector: point,
   mixTee: point,
@@ -383,7 +435,10 @@ export const BOXES: Record<MachineId, { min: Vec3; max: Vec3 }> = {
     CONTACT_SHAPE.h + DESTRUCTOR_SHAPE.above,
   ),
   carbon: box(CARBON_SHAPE.dia, CARBON_SHAPE.dia, CARBON_SHAPE.h),
-  uv: box(UV_SHAPE.w, UV_SHAPE.d, UV_SHAPE.h),
+  uv: {
+    min: [-UV_SHAPE.w / 2, 0, -0.2],
+    max: [UV_SHAPE.w / 2, UV_SHAPE.h, UV_SHAPE.d - 0.2],
+  },
   pool: box(POOL_SHAPE.w, POOL_SHAPE.d, POOL_SHAPE.h),
 };
 
