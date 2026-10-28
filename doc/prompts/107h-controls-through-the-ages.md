@@ -1,6 +1,6 @@
 # 107h: PLANTROOMS, "Controls from the 1920s to the Present Day, and Beyond": one pool, run from every era
 
-**Parked (the owner, 2026-10-28):** replaced among the museum's themed halls by [107l, A Day in the Life](107l-a-day-in-the-life.md). This brief and its research are kept for a later hall or the development rooms.
+**Parked (the owner, 2026-10-28):** not one of the museum's halls for now. This brief and its research are kept for a later hall or the development rooms.
 
 Status: planned 2026-10-28, not started. A sub-prompt of mission 107 (`doc/prompts/107-pool-science-museum.md`), after 107-0 (`doc/prompts/107-0-exhibit-groundwork.md`). One of the owner's themes for Halls 5 to 12, **not yet given a hall number**: the owner will place it.
 
