@@ -49,6 +49,28 @@ function random(seed: number) {
   };
 }
 
+/**
+ * The loop's corridors' tile, the same in every room's scene. A corridor is
+ * drawn twice, once in each room it joins, and the walker is handed from
+ * one copy to the other part way along it: were each copy tiled as its own
+ * room is (the jacuzzi's small blue mosaic, the other halls' white), the
+ * walls would change their tile at the handover, which reads as the view
+ * zooming (the owner, 2026-10-28). Each copy's grid is laid from the
+ * corridor's own start (`corridorTileFrame`), so they match tile for tile.
+ */
+export const CORRIDOR_TILE = { colour: '#f3f5f1', size: 0.125 } as const;
+
+/**
+ * Where a corridor copy's tiling grid starts and how it is turned (quarter
+ * turns about the upright, `createTileMaterial`'s `origin` and `turn`): at
+ * the corridor's start, along its heading, so every copy of a corridor is
+ * tiled from the same point of it the same way round, tile for tile.
+ */
+export function corridorTileFrame(copy: CorridorCopy) {
+  const { x, y, z, heading } = copy.start;
+  return { origin: [x, y, z] as const, turn: heading as number };
+}
+
 /** The kit's straights: the long corridor, and the short one at each door. */
 export const LONG: CorridorPiece = { kind: 'straight', length: 4 };
 export const SHORT: CorridorPiece = { kind: 'straight', length: 1 };

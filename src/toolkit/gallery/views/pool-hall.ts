@@ -64,7 +64,11 @@ import {
   createCorridorRun,
 } from '../../components/architectural/views/corridor';
 import { pieceLength } from '../../components/architectural/logic/corridor-path';
-import { roomCorridors } from '../logic/pool-loop';
+import {
+  CORRIDOR_TILE,
+  corridorTileFrame,
+  roomCorridors,
+} from '../logic/pool-loop';
 import { PLANT_DOORWAY, PLANT_SILL } from '../logic/plant-rooms';
 
 /** The plant room door's frame head over the deck, metres. */
@@ -176,15 +180,26 @@ export function createPoolHall(
     tile: s.tile.size,
   });
   tile.side = DoubleSide;
-  // The corridors are dry rooms: their tile is the hall's, but with no
-  // water to tint it or throw caustics on it, however low they go.
+  // The corridors are dry rooms, with no water to tint their tile or throw
+  // caustics on it, however low they go. Their tile is the corridors' own,
+  // not the hall's: each is drawn in both rooms it joins, and must look
+  // the same in either, or it seems to zoom at the handover.
   const dryUniforms = createPoolUniforms(metre, -100, []);
   dryUniforms.caustics.value = dryUniforms.reflected.value = 0;
-  const dry = createTileMaterial(dryUniforms, {
-    colour: s.tile.colour,
-    tile: s.tile.size,
-  });
-  dry.side = DoubleSide;
+  // Each loop corridor's tiling starts at its own start and runs with its
+  // heading, wherever and however this room's copy of it lies, so both
+  // copies are tiled alike, tile for tile.
+  const dryAt = (origin?: readonly [number, number, number], turn = 0) => {
+    const material = createTileMaterial(dryUniforms, {
+      colour: CORRIDOR_TILE.colour,
+      tile: CORRIDOR_TILE.size,
+      origin,
+      turn,
+    });
+    material.side = DoubleSide;
+    return material;
+  };
+  const dry = dryAt();
   const add = (mesh: Mesh, name: string) => {
     mesh.name = name;
     group.add(mesh);
@@ -1011,9 +1026,18 @@ export function createPoolHall(
   // Each with its doorway, the corridors' section, through its tiles.
   const door = s.doorX ?? 0;
   const gap = CORRIDOR_SECTION.width / 2;
+  // The doorway's reveal, through the wall's thickness, is the corridor's
+  // own lining (its walls and ceiling run on to the hall's face), so the
+  // wall stands clear of it: drawn into it as well, the two would fight
+  // there, and the reveal would show the hall's tile in the hall's scene
+  // but the corridor's in the next room's, changing at the handover. On
+  // the hall's face, a skin of its tile over the lining's ends.
+  const lining = CORRIDOR_SECTION.wall;
+  const skin = 0.002;
   const endWall = (z: number, height: number) => {
-    const left = door - gap - (-hx - WALL);
-    const right = hx + WALL - (door + gap);
+    const edge = gap + lining;
+    const left = door - edge - (-hx - WALL);
+    const right = hx + WALL - (door + edge);
     add(
       new Mesh(new BoxGeometry(left, tiled, WALL), tile),
       'wall',
@@ -1021,12 +1045,24 @@ export function createPoolHall(
     add(
       new Mesh(new BoxGeometry(right, tiled, WALL), tile),
       'wall',
-    ).position.set(door + gap + right / 2, tiled / 2, z);
-    const head = tiled - CORRIDOR_SECTION.height;
+    ).position.set(door + edge + right / 2, tiled / 2, z);
+    const over = CORRIDOR_SECTION.height + lining;
+    const head = tiled - over;
     add(
-      new Mesh(new BoxGeometry(2 * gap, head, WALL), tile),
+      new Mesh(new BoxGeometry(2 * edge, head, WALL), tile),
       'door head',
-    ).position.set(door, CORRIDOR_SECTION.height + head / 2, z);
+    ).position.set(door, over + head / 2, z);
+    // The skin, just proud of the face, toward the hall's middle.
+    const face = z - Math.sign(z) * (WALL / 2 + skin / 2);
+    for (const side of [-1, 1])
+      add(
+        new Mesh(new BoxGeometry(lining, over, skin), tile),
+        'door surround',
+      ).position.set(door + side * (gap + lining / 2), over / 2, face);
+    add(
+      new Mesh(new BoxGeometry(2 * gap, lining, skin), tile),
+      'door surround',
+    ).position.set(door, CORRIDOR_SECTION.height + lining / 2, face);
     const up = height + roofT - tiled;
     if (height > tiled)
       add(
@@ -1584,7 +1620,10 @@ export function createPoolHall(
     panel.userData.lightFitting = true;
     panel.userData.lightZone = 'corridors';
     for (const copy of [leaving, arriving]) {
-      group.add(createCorridorRun(copy.placed, dry));
+      const frame = corridorTileFrame(copy);
+      group.add(
+        createCorridorRun(copy.placed, dryAt(frame.origin, frame.turn)),
+      );
       for (const p of copy.placed) {
         // A lamp in each piece but the turns and the short straights.
         if (

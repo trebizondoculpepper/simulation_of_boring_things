@@ -9,9 +9,11 @@ import {
   MeshPhysicalMaterial,
   PlaneGeometry,
   ShaderMaterial,
+  Vector2,
+  Vector3,
   Vector4,
 } from 'three';
-import type { IUniform, Texture, Vector3 } from 'three';
+import type { IUniform, Texture } from 'three';
 import {
   ABSORPTION,
   CAUSTIC_FOCUS,
@@ -193,6 +195,19 @@ export interface TileOptions {
    */
   plain?: boolean;
   metalness?: number;
+  /**
+   * Where the tiling's grid starts, metres, in the scene. The tiles are
+   * laid in world space from here: a thing drawn in two scenes at two
+   * places (a pool-loop corridor, in both rooms it joins) is tiled alike
+   * in both when each copy's grid starts at the same point of it.
+   */
+  origin?: readonly [number, number, number];
+  /**
+   * The grid's turn about the upright from the scene's axes, in quarter
+   * turns (a corridor copy's heading): with `origin`, a thing drawn turned
+   * in one scene and not in another is still tiled tile for tile alike.
+   */
+  turn?: number;
 }
 
 /** A glazed tile material on `uniforms`' water. */
@@ -210,6 +225,8 @@ export function createTileMaterial(
     bump = 1,
     plain = false,
     metalness = 0,
+    origin = [0, 0, 0],
+    turn = 0,
   } = options;
   const material = new MeshPhysicalMaterial({
     color: colour,
@@ -226,6 +243,14 @@ export function createTileMaterial(
     roughHigh: { value: roughness[1] },
     tileBump: { value: bump },
     tilePlain: { value: plain ? 1 : 0 },
+    tileOrigin: { value: new Vector3(...origin) },
+    // Scene to grid: turned back by `turn` quarter turns (cos, sin).
+    tileTurn: {
+      value: new Vector2(
+        Math.round(Math.cos((-turn * Math.PI) / 2)),
+        Math.round(Math.sin((-turn * Math.PI) / 2)),
+      ),
+    },
   };
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, {
@@ -275,6 +300,13 @@ uniform vec4 poolFlowRect;
 uniform float poolFlowMax, poolFlowPeriod, poolFlowOn;
 uniform float tileSize, tileJoint, roughLow, roughHigh, tileBump, tilePlain;
 uniform vec3 groutColour;
+uniform vec3 tileOrigin;
+uniform vec2 tileTurn;
+// Scene to the tiling's grid (\`dir\` -1: back again), turned about y.
+vec3 tileTurned(vec3 v, float dir) {
+  float c = tileTurn.x, s = tileTurn.y * dir;
+  return vec3(v.x * c + v.z * s, v.y, -v.x * s + v.z * c);
+}
 ${COMMON}`,
       )
       .replace(
@@ -283,15 +315,18 @@ ${COMMON}`,
 // The tile under this fragment, on the plane the surface most faces.
 vec3 tileP = vTileWorld / poolMetre;
 vec3 tileN = normalize(vTileNormal);
-vec3 tileA = abs(tileN);
+vec3 tileA = abs(tileTurned(tileN, 1.0));
 vec2 tileUv; vec3 tileU; vec3 tileV; float tileAxis;
+vec3 tileQ = tileTurned(tileP - tileOrigin, 1.0);
 if (tileA.y >= tileA.x && tileA.y >= tileA.z) {
-  tileUv = tileP.xz; tileU = vec3(1.0, 0.0, 0.0); tileV = vec3(0.0, 0.0, 1.0); tileAxis = 0.0;
+  tileUv = tileQ.xz; tileU = vec3(1.0, 0.0, 0.0); tileV = vec3(0.0, 0.0, 1.0); tileAxis = 0.0;
 } else if (tileA.x >= tileA.z) {
-  tileUv = tileP.zy; tileU = vec3(0.0, 0.0, 1.0); tileV = vec3(0.0, 1.0, 0.0); tileAxis = 1.0;
+  tileUv = tileQ.zy; tileU = vec3(0.0, 0.0, 1.0); tileV = vec3(0.0, 1.0, 0.0); tileAxis = 1.0;
 } else {
-  tileUv = tileP.xy; tileU = vec3(1.0, 0.0, 0.0); tileV = vec3(0.0, 1.0, 0.0); tileAxis = 2.0;
+  tileUv = tileQ.xy; tileU = vec3(1.0, 0.0, 0.0); tileV = vec3(0.0, 1.0, 0.0); tileAxis = 2.0;
 }
+tileU = tileTurned(tileU, -1.0);
+tileV = tileTurned(tileV, -1.0);
 vec2 tileG = tileUv / tileSize;
 vec2 tileCell = floor(tileG);
 vec2 tileF = fract(tileG) - 0.5;

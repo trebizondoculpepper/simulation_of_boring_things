@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vite-plus/test';
 import { layoutCorridor } from '../../components/architectural/logic/corridor-path';
 import {
   carry,
+  CORRIDOR_TILE,
+  corridorTileFrame,
   intoCorridor,
   joints,
   legPieces,
@@ -358,5 +360,58 @@ describe('loading round the loop', () => {
       expect(r.handTo).toBe(leg.from);
       expect(r.state.arriving).toBe(true);
     }
+  });
+});
+
+describe('a corridor seen from either of its rooms', () => {
+  // Each corridor is drawn in both rooms it joins and the walker is handed
+  // from one copy to the other part way along it: the two must look the
+  // same, or the view seems to jump (the owner, 2026-10-28).
+  it('is tiled alike in both, whatever tile either hall has', () => {
+    // The jacuzzi's mosaic is not the corridors' tile: were the halls'
+    // tiles used for their corridors, its two would change at handover.
+    expect(POOL_HALLS.pool_03.tile.size).not.toBe(CORRIDOR_TILE.size);
+  });
+  it('tiles both copies from the same point of it, the same way round', () => {
+    // The shader's scene-to-grid step (`pool-surfaces.ts`), in plan.
+    const toGrid = (
+      frame: ReturnType<typeof corridorTileFrame>,
+      x: number,
+      z: number,
+    ) => {
+      const t = (-frame.turn * Math.PI) / 2;
+      const [c, s] = [Math.round(Math.cos(t)), Math.round(Math.sin(t))];
+      const [dx, dz] = [x - frame.origin[0], z - frame.origin[2]];
+      return [dx * c + dz * s, -dx * s + dz * c];
+    };
+    let turned = 0;
+    for (const leg of LOOP_LEGS) {
+      const a = roomCorridors(leg.from).leaving;
+      const b = roomCorridors(leg.to).arriving;
+      if (a.start.heading !== b.start.heading) turned++;
+      const fa = corridorTileFrame(a);
+      const fb = corridorTileFrame(b);
+      for (const [along, across] of [
+        [0.3, 0.1],
+        [2.7, -0.45],
+        [5.06, 0.33],
+      ]) {
+        const pose = {
+          x: a.start.x + along,
+          z: a.start.z + across,
+          y: 0,
+          yaw: 0,
+        };
+        const there = carry(pose, a, b);
+        const [u, v] = toGrid(fa, pose.x, pose.z);
+        const [u2, v2] = toGrid(fb, there.x, there.z);
+        expect(u2).toBeCloseTo(u, 9);
+        expect(v2).toBeCloseTo(v, 9);
+      }
+      // Height too: the grid's floor is each copy's start.
+      expect(b.start.y - fb.origin[1]).toBeCloseTo(a.start.y - fa.origin[1], 9);
+    }
+    // At least one corridor is turned between its two copies.
+    expect(turned).toBeGreaterThan(0);
   });
 });

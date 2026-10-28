@@ -1721,6 +1721,9 @@ const handOver = (to: RoomId, from: RoomId) => {
   // Where the walker was, as the doorway carries it, the door with it.
   toWalk.place(there.x, there.z, there.yaw, eye.pitch, there.y ?? eye.y);
   toWalk.roll = eye.roll ?? 0;
+  // And its zoom: the room beyond was drawn at this eye's field of view,
+  // and goes on at it rather than at whatever zoom it was last left at.
+  toWalk.zoom = fromWalk.zoom;
   far.swingTo(-angle);
   entry.handle.resume?.();
   // The room left behind is drawn underneath from the next frame.
