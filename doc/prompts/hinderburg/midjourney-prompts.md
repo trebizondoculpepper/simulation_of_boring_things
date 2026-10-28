@@ -149,5 +149,5 @@ two identical old steel camlock female couplings with dust caps, side by side in
 ### Central case: after
 
 ```
-a steel chemical fill cabinet with two lockable compartments, colour-coded doors standing open, inside each compartment on its back wall a fill pipe ending in a different hose coupling, a steel camlock in one and a white polypropylene quarter-turn coupling in the other, the doors plain with hazard labels on their fronts, museum product photograph, neutral grey background, softbox lighting, no text --ar 4:3 --style raw --v 7
+a steel chemical fill cabinet with two lockable compartments, colour-coded doors swung wide open showing their plain empty backs, inside each compartment on its back wall a fill pipe ending in a different capped hose coupling, a steel camlock in one and a white polypropylene quarter-turn coupling in the other, no hoses attached, museum product photograph, neutral grey background, softbox lighting, no text --ar 4:3 --style raw --v 7 --no couplings on doors, hoses, closed doors
 ```
