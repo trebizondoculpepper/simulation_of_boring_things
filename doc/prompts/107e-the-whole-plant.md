@@ -1,0 +1,105 @@
+# 107e: PLANTROOMS Hall 5, "The whole plant": control and fault finding, the finale
+
+Status: planned 2026-10-28, not started. A sub-prompt of mission 107 (`doc/prompts/107-pool-science-museum.md`), after 107-0 and after 107a to 107d, whose models it joins. Hall 5 is reached from Hall 4 (the chemistry lab, at the north-west corner) and, in the owner's new ring of 14 (mission 107, "The new layout"), is the first hall along the north side, leading on east to Hall 6, whose theme is still to come. The finale would normally come last, as Hall 13, the hall before the way back into Hall 0: that is question 1. Everything below holds wherever it goes; only its neighbours change.
+
+You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first and follow it, above all: the enhanced network is the one source of truth; some controls are only local, so putting a fault right means going to the machine; the overlay says only what a thing's own display shows. Then read mission 107, 107-0 and all four hall sub-prompts (107a to 107d), mission 099 (`doc/prompts/099-location-annunciators.md`, the annunciators and their rule that every window is backed by a modelled fault), and `doc/plant-model.md` and `doc/room-layout-guide.md`.
+
+## The owner's request
+
+The owner, 2026-10-28, of the museum: "… that teach the principles of how a swimming pool works … from basic to advanced". Of this plan: "Each needs to build on the understanding of the previous one. … And like all the other exhibits, you can reset it at the end." The finale as agreed in mission 107: Halls 1 to 4 joined into one small working plant, with a mimic, an annunciator and alarms, and a "cause a random fault" button, so visitors diagnose and put it right: the game in miniature.
+
+## Rules for every hall (the owner, 2026-10-28)
+
+1. **Every hall starts from its reset state the moment you step into it.** Its time is set to now, the visitor's real local time, and its exhibit is put in its reset condition. Walking in is the same as pressing its RESET button. No hall's state carries over from an earlier visit. (So the scoreboard, below, is this visit's only.)
+2. **Time.** A hall's simulated time starts at now. If the visitor speeds it up, the hall's time display follows. Halls may show time in different ways. **Hall 5 shows it as a digital readout on the control desk:** an LED station clock, "PLANT TIME 14:32 DAY 1", beside the annunciator, with the TIME buttons ×1, ×60, ×600 and ×3600; the scoreboard's stopwatch counts plant time from the fault. (Every hall before has used a different display: the pool clock, the same in Hall 2, the chart recorder, the log sheet; the finale's is the control room's.)
+3. **Halls start empty.** The hall begins with set decoration only; this sub-prompt builds its exhibit.
+
+## What the hall teaches, and what it builds on
+
+**Assumes everything before:** the pump, flow and pressure, the boiler and exchanger, the thermostat and the interlock, losses (Hall 1); the balance tank, the filter, its fouling and backwash, the dead-head trip (Hall 2); the sample, the controller, the metering pumps and their faults (Hall 3); the water's chemistry and its treatments (Hall 4).
+
+**Adds:**
+
+- **The plant as one system:** every part in its place in a single loop, each affecting the others (a dirty filter cuts the flow, which starves the exchanger, which lets the pool cool; a drifted probe overdoses).
+- **Reading the plant:** the mimic as the map, the annunciator as the first warning, the first-out window as the first cause; accept, then find, then fix, then reset.
+- **Cause and effect:** a symptom on one instrument, its cause somewhere else; diagnose from the plant's own displays, as a real operator must (no peeking).
+- **Local and central:** the desk shows everything and works what its mimic carries (pump START and STOP, valve OPEN and SHUT where they are motorised), but resets, mode selectors and hand valves are at the machines.
+
+**Leads on:** to Hall 6, whatever its theme. If it moves to Hall 13 (question 1), it ends the route instead: "You found the plant room. The way out is straight on", into Hall 0.
+
+## The schematic
+
+A new pure model, `src/game/plant/museum-5-plant.ts` (tested), joining the halls' models: room code `M5`; tags derived (expected below; the derivation wins). One of everything:
+
+- **Water:** the ideal pool IP1 (470 m³) overflowing to the ideal balance tank BT1 (Hall 2's); a suction strainer ST1 (new: a basket strainer on the pump's suction, with its lid and basket, fouling with hair and plasters, its own small fouling model) and M5-P1-V1; pump P1 (Grundflow NKC 150-315) with its non-return M5-P1-V2 and discharge M5-P1-V3, on a starter with HAND · OFF · AUTO and an overload (`motor-starters.ts`' pattern); the sand filter F1 with its five valves M5-F1-V1 to V5, PDI1 and the backwash to the ideal drain DR1 with SG1 (Hall 2's, `ideal-filter.ts`); FT1; the exchanger HX1 with its bypass M5-HX1-V1 (Hall 2's split).
+- **Heat:** Hall 1's real Hamwarmy HW 160 B1 with its gas line from the ideal gas main GS1 (FQ1, M5-GS1-V1, PI3, M5-B1-V1), its flue to AT1, the primary pump P2 (twin-head), PU1, the motorised valve M5-HX1-V2 on the primary (thermostat TC1 and flow interlock FS1), HM1.
+- **Chemistry:** the pool's water a `PoolChemistry` on `POOL_25M` through the circuit's cells (Hall 3's); the sample line M5-SC1-V1, V2 to the sample cell SC1 (FS2, AE1, AE2, SP1) and DR1; the controller DC1, a Chlorella CX-7 (`createCx7Controller`, `cx7-hmi.ts`; question 3), on `dosing-controller.ts`; the Grundflow DMX 1602 DP1 (hypochlorite) and DDS 7.5-16 DP2 (acid) with their bleeds and injection valves; the day tanks DT1 and DT2 with their fill valves from the ideal stores CS1 and CS2 (Hall 3's); the test kit TK1 at SP1.
+- **Swimmers:** BA1 at the bench's 600 a day (`BATHER`), and their dirt for the filter (3 g/m³, `ideal-filter.ts`) and strainer.
+
+**Instruments, all listed:** PI1 (compound, suction), PI2, PDI1, FT1, SG1; TI1 to TI5 (Hall 1's), FQ1, PI3, HM1, B1's own display; FS1, FS2; DC1's screen; the pumps' own displays; LI1, LI2; TK1; the station clock.
+
+**The fault model** (new, pure, tested: `src/game/plant/museum-5-faults.ts`): a list of faults, each with what it does to the model (only through the model's own inputs: a fouled strainer's resistance, a valve's opening frozen, a probe's sensitivity), the symptoms it produces on the plant's own instruments and annunciator, and its fix (the action, at the machine, that clears it). A fault is cleared only by its fix. The list (question 4 for additions):
+
+| Fault                     | Done to the model                            | First symptoms (on the plant's own displays)                                                            | Fix, and where                                           |
+| ------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Blocked strainer          | ST1's resistance rises                       | PI1 falls below zero, FT1 falls; LOW FLOW                                                               | Pump off, isolate, clean the basket (at ST1)             |
+| Filter needs a backwash   | F1's bed at its dirt for PDI1 0.9 bar        | PDI1 high, FT1 low; FILTER DP HIGH                                                                      | Backwash and rinse (F1's five valves)                    |
+| Pump overload trip        | P1's starter trips                           | P1 stops, every flow 0, RUN out; PUMP TRIPPED, then LOW FLOW, then the interlocks                       | Reset the overload at the starter, start                 |
+| Stuck valve               | F1-V2 frozen at 20 %                         | FT1 low, PDI1 low (the difference from a dirty bed); LOW FLOW                                           | Free it at the valve (work its lever through its travel) |
+| Heating valve failed shut | M5-HX1-V2's actuator fails                   | TC1 calling, B1 idle, TI2 = TI1, the pool slowly cools; POOL TEMP LOW after hours                       | Manual override on the actuator, then replace (at HX1)   |
+| Boiler lockout            | low gas pressure: GS1 drops to 15 mbar       | B1 locks out (its code), FQ1 still; BOILER LOCKOUT                                                      | Restore the gas (GS1-V1 was nudged), RESET at B1         |
+| Out of chemical           | DT1 empty                                    | DP1 strokes dry, chlorine falls; DAY TANK LOW, then CHLORINE LOW                                        | Fill DT1 from CS1 (at DT1), bleed DP1                    |
+| Gas-locked pump           | gas in DP1's head (`actOnDosingPumps` `gas`) | DP1 `Er F`, chlorine falls; DOSING PUMP FAULT                                                           | Bleed and acknowledge (at DP1)                           |
+| Sample flow fail          | SC1-V2 blocked                               | FS2 drops, dosing stops after 120 s; SAMPLE FLOW FAIL                                                   | Clear the needle valve (at SC1)                          |
+| Drifted chlorine probe    | AE1 at `DRIFTED_PROBES` (70 % sensitive)     | DC1 reads low (0.94 where DPD 1 reads 1.40, mission 105's check), doses more; CHLORINE HIGH only on TK1 | Test with TK1, calibrate DC1 against it (at DC1)         |
+
+## Control: the desk, the mimic and the annunciator
+
+- **The mimic:** a Penfold mimic of the whole plant (`src/toolkit/gallery/logic/museum-5-mimic.ts`, `checkMimic`), the largest in the museum, captioned "The map of the whole plant": every line lit with its flow, every machine's state, every instrument repeated, each valve's lens. It carries P1 and P2 START and STOP, and the motorised valve's OPEN and SHUT; nothing else (CLAUDE.md, local-only controls).
+- **The annunciator:** a Penfold location annunciator for the hall (`createLocationAnnunciator`, `src/toolkit/gallery/views/location-annunciator.ts`; logic `src/game/plant/location-annunciator.ts`, ISA sequence M with first-out), its windows each backed by a modelled condition (mission 099's rule): LOW FLOW, SUCTION LOW, FILTER DP HIGH, PUMP TRIPPED, POOL TEMP LOW, BOILER LOCKOUT, HEATING NO FLOW, CHLORINE LOW, CHLORINE HIGH, PH HIGH, PH LOW, SAMPLE FLOW FAIL, DOSING PUMP FAULT, DAY TANK LOW, and spares. Its buttons as built: ACCEPT, RESET, LAMP TEST and MUTE (mission 107's plan said SILENCE; the board's MUTE does that job), and its horn. Today the board is bound to the world's state (`LOCATIONS`, `world.locationAnnunciators`); it needs an adapter to read the hall's state instead (new).
+- **The fault pedestal:** a big PLANTROOMS pedestal, "CAUSE A RANDOM FAULT" (a mushroom push button under a flip cover), with a key switch for an attendant to choose one (question 2); the scoreboard above it.
+- **The scoreboard:** a seven-segment board: the fault's number (not its name), the time from the fault to the first alarm accepted, and to put right (every window clear and the fix done), in plant time; this visit's best (rule 1: it starts empty on entry).
+
+## The museum panels (text outline)
+
+- **Entrance panel.** Headline "The whole plant". Big idea: "Everything you have seen, working together. When something goes wrong, the plant tells you, if you read it from cause to effect." Fact: "A real pool plant room is often looked after by one person on a shift." Route: 1 the desk, 2 the water, 3 the heat, 4 the chemistry, 5 the fault button. RESET pedestal and sign.
+- **1, The desk:** "The mimic shows everything. The annunciator tells you something is wrong. But most things are put right at the machine." Try it: "Press LAMP TEST: every window lights."
+- **2 to 4,** one placard per part, each pointing back to its hall: "You met the filter in Hall 2."
+- **5, The fault button:** "Press it. Something will go wrong. Read the alarm, find it, fix it, reset." Fact: "The first window to light is usually nearest the cause."
+
+## Try it, with the expected results
+
+The steady plant's numbers are the joined models' and must be pinned in `museum-5-plant.test.ts`; for orientation, Hall 2's normal duty (FT1 about 185 m³/h, PI2 about 2.0 bar, PDI1 0.42 bar), Hall 1's heating (TI3 80 °C, the pool at 28 °C held), Hall 3's chemistry (free chlorine about 1.3, pH 7.3).
+
+1. **Read the plant.** At reset every window dark, every lamp normal; LAMP TEST lights every window.
+2. **Cause a fault and put it right**, for each fault in the table, at ×60 or faster: the first symptoms in the table appear (pinned in the fault model's test, with the plant time each alarm takes); the first-out window is the fault's nearest; the fix clears it, and only the fix: no other action clears any fault (tested for every pair).
+3. **The slow ones:** the heating valve failed shut takes plant hours before POOL TEMP LOW (the pool's 547 kWh/K over its losses), so the visitor learns to read TC1's CALL lamp and TI2 against TI1 rather than wait; the drifted probe raises no window at all until the free chlorine passes 2.5 mg/l, and is found only by testing.
+4. **RESET SIMULATION** (and walking back in): every fault cleared, the plant at its steady state, the scoreboard empty, the clock at the visitor's local time.
+
+## Reuses (paths checked 2026-10-28)
+
+Everything of 107a to 107d and mission 106, through their models (the joined model imports theirs, it does not copy them); and `src/toolkit/components/industrial-control/logic/annunciator.ts` (`createAnnunciator`, `awaitingAccept`), `src/game/plant/location-annunciator.ts` (`newLocationAnnunciator`, `senseLocationAlarms`, `acceptLocationAlarms`, `resetLocationAlarms`), `src/toolkit/gallery/views/location-annunciator.ts`; `src/game/plant/motor-starters.ts` (`StarterMode`, `stepMotors`, `actOnStarter`); `src/game/plant/pump-deadhead.ts`; `src/toolkit/components/plant/logic/sample-cell.ts` (`DRIFTED_PROBES`); `src/toolkit/components/plant/logic/cx7-hmi.ts` and `views/cx7-controller.ts`; `createMimicBoard` and `checkMimic`; `createSevenSegment`; the control-part kit (`mushroomStop`, `keySwitch`, `pushButton`).
+
+**New:** the joined model, the fault model, the strainer ST1, the annunciator's hall-state adapter, the fault pedestal and the scoreboard, the station clock, and the mimic, placards and layout.
+
+## Acceptance
+
+- The models' tests: every fitting given and tagged, the plumber adds nothing; every fault reachable, showing its symptoms on the plant's own instruments and windows, cleared only by its fix (tested); every window backed by a modelled condition; RESET and entry identical.
+- **Walking in from Hall 4:** Hall 5 at its steady state, clock at the visitor's local time; walking on into Hall 6 (or, in today's shell, Museum 5's way on into Museum 1) and back into Hall 5, it is reset again.
+- Browser checks on high, medium and low, every fault caused and put right once; screenshots and camera links recorded here.
+
+## Performance budget
+
+This is the museum's largest exhibit: every component within `DEFAULT_BUDGET`, nothing added to `KNOWN_OVER_BUDGET`; pipes, supports and valve bodies merged by material; the network solved only when a valve, pump, trip or fault changes it; the chemistry every 10 s of plant time; displays on change only; at least 60 fps on medium and 50 on high, looking through either of its archways. Draw calls measured on each preset and recorded here; if the hall cannot meet it, the cheapest cut is the low preset's services ceiling density (mission 107's note).
+
+## The space
+
+The finale has the most plant in the museum: dev51 alone took 18 × 13 m, and this adds a boiler and a dosing plant. In today's shell `museum5` is 15.4 × 13.4 m inside (`hallSize`), the smallest hall; in the new ring every hall is one bay, its size set when the shell is rebuilt. Lay the plant out first with the room sizer (`doc/room-layout-guide.md`), and give the result to the shell's rebuild as this hall's need; if a bay cannot hold it, enlarge the ring's bays rather than crowd it. This is question 5.
+
+## Open questions for the owner (one at a time, in this order)
+
+1. **Where the finale goes:** Hall 5 for now, as you set it, or Hall 13, the last hall before the way back into Hall 0, where a finale normally comes (recommended, once the halls between have themes)?
+2. **The attendant's key switch:** visitors' random faults only, or also a key switch to choose one (for a demonstration)?
+3. **The controller:** the CX-7 touch screen here (recommended, with the DC-1 pair in Hall 3, so the museum shows both), or the DC-1 again?
+4. **More faults?** The ten above, or others (a burst dosing tube, a leaking flange, a mains failure)?
+5. **The space:** if the plant does not fit in one bay of the new ring, enlarge every bay, or give the finale's hall a double bay?
