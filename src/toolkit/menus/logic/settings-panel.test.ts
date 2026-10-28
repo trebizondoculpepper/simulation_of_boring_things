@@ -173,3 +173,17 @@ describe('the confirm step and the status line', () => {
     expect(savedMessage(true, new Date(2026, 9, 27, 9, 5))).toBe('SAVED 09:05');
   });
 });
+
+it('says SYSTEM READY and its version in turn while idle (the owner, 2026-10-28)', () => {
+  const idle = {
+    armedQuit: null,
+    message: null,
+    holding: true,
+    version: '0.1.712',
+  };
+  expect(statusLine(idle)).toBe('SYSTEM READY');
+  expect(statusLine({ ...idle, showVersion: true })).toBe('VER. 0.1.712');
+  expect(
+    statusLine({ ...idle, showVersion: true, message: 'saved 14:32' }),
+  ).toBe('SAVED 14:32');
+});

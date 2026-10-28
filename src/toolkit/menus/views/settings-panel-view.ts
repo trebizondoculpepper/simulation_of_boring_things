@@ -1,3 +1,4 @@
+import { VERSION } from '../../../game/version';
 import { computed, effect, signal } from '@preact/signals-core';
 import type { ReadonlySignal } from '@preact/signals-core';
 import {
@@ -179,6 +180,12 @@ function fastener(paints: RackPaints, parent: Object3D, x: number, y: number) {
 /** A fastener's head radius, and how far in from each corner of every plate it sits. */
 const FASTENER = 0.0032;
 const FASTENER_INSET = 0.0058;
+/**
+ * How far in from a plate's side its title plate stops: past its corner
+ * fasteners' countersinks, with a gap (the owner, 2026-10-28: no plaque
+ * over a screw).
+ */
+const SCREW_CLEAR = FASTENER_INSET + FASTENER * 1.25 + 0.0018;
 
 /**
  * Four fasteners, one in from each corner of a plate `w` by `h`; a filler
@@ -286,7 +293,9 @@ function drawDial(
   c.textAlign = 'center';
   c.textBaseline = 'middle';
   for (const { share, text } of marks) {
-    c.font = `bold ${text.length > 3 ? 34 : 40}px ${PANEL_FONT}`;
+    // Words (WORST, BEST) smaller, inside the dial's edge (the owner,
+    // 2026-10-28: they overprinted it).
+    c.font = `bold ${text.length > 3 ? 28 : 40}px ${PANEL_FONT}`;
     const [x, y] = at(share, radius * 0.86);
     c.fillText(text, x, y);
   }
@@ -464,37 +473,15 @@ function build_(
     return mesh;
   };
 
-  // The header: the panel's name engraved, Penfold's mark top right.
-  const name = createEngravedPlate(kit, ['SETTINGS', 'SYSTEM PANEL SP-1'], {
-    width: 0.15,
-    height: 0.036,
+  // Penfold's mark top right, in the margin above the modules (the owner,
+  // 2026-10-28: no name plate, rating plate or build tape, for room).
+  panelMakerMark(kit, group, {
+    width: W,
+    height: H,
+    z: 0,
+    size: 0.013,
+    inset: 0.004,
   });
-  name.position.set(px(SPACING.margin + 0.075), py(SPACING.margin + 0.02), 0);
-  group.add(name);
-  panelMakerMark(kit, group, { width: W, height: H, z: 0, size: 0.016 });
-
-  // The rating plate, engraved, along the foot; a Dymo strip on a development build.
-  const plateW = Math.min(0.3, W - 2 * SPACING.margin);
-  const rating = createEngravedPlate(
-    kit,
-    ['PENFOLD CONTROLS · SYSTEM PANEL SP-1', build.toUpperCase()],
-    { colour: 'white', width: plateW, height: 0.026 },
-  );
-  rating.position.set(
-    px(SPACING.margin + plateW / 2),
-    py(H - SPACING.margin - 0.016),
-    0,
-  );
-  group.add(rating);
-  if (development) {
-    const tape = createDymoLabel(kit, 'DEVELOPMENT BUILD', { colour: 'red' });
-    tape.position.set(
-      px(Math.min(W - SPACING.margin - 0.06, SPACING.margin + plateW + 0.07)),
-      py(H - SPACING.margin - (plateW + 0.14 > W ? 0.036 : 0.016)),
-      0.0004,
-    );
-    group.add(tape);
-  }
 
   // The GAME zone's status line, and what feeds it.
   const message = signal<string | null>(null);
@@ -506,11 +493,20 @@ function build_(
       if (message.peek() === text) message.value = null;
     });
   };
+  // Idle, it says SYSTEM READY and its version in turn, 3 s each.
+  const versionTurn = signal(false);
+  const turning = setInterval(
+    () => (versionTurn.value = !versionTurn.value),
+    3000,
+  );
+  stops.push(() => clearInterval(turning));
   const status = computed(() =>
     statusLine({
       armedQuit: armedQuit.value,
       message: message.value,
       holding: actions.holding?.value ?? true,
+      version: VERSION,
+      showVersion: versionTurn.value,
     }),
   );
   const doAction = (id: PanelAction) => {
@@ -607,7 +603,7 @@ function build_(
     const title = dymo
       ? createDymoLabel(kit, m.title, { colour: 'black', seed: m.title.length })
       : createEngravedPlate(kit, [m.title], {
-          width: m.w - 0.02,
+          width: m.w - 2 * SCREW_CLEAR,
           height: SPACING.title,
         });
     title.position.set(0, titleY, 0.0002);
@@ -797,7 +793,11 @@ function build_(
         break;
       }
       case 'vfd': {
-        const vfd = createVfd(kit, { columns: item.columns, height: 0.009 });
+        const vfd = createVfd(kit, {
+          columns: item.columns,
+          height: 0.009,
+          dots: true,
+        });
         place(vfd.group, 0, centreY);
         stops.push(effect(() => vfd.show([status.value])));
         break;
@@ -833,6 +833,13 @@ function build_(
   // on an aircraft's panel where a unit is missing or not fitted (the
   // owner, 2026-10-27): the same plate, seam and fasteners, nothing on it
   // but a small stamped part number.
+  // The largest carries the panel's own name plate instead (the owner,
+  // 2026-10-28): screwed on, black laminate engraved through to white,
+  // its build stamped below it and, on a development build, a Dymo strip.
+  const named = layout.blanks.reduce<(typeof layout.blanks)[number] | null>(
+    (best, b) => (!best || b.w * b.h > best.w * best.h ? b : best),
+    null,
+  );
   for (const b of layout.blanks) {
     const blank = new Group();
     blank.name = `Blanking plate ${b.columns} x ${b.rows}`;
@@ -843,11 +850,32 @@ function build_(
     face.position.z = PLATE_FRONT;
     blank.add(face);
     fastenAt(paints, face, b.w, b.h);
-    const stamp = createMicroLabel(kit, `PN SP1-BLK-${b.columns}${b.rows}`, {
-      height: 0.0022,
-      ink: '#8b8e8b',
-      bold: false,
-    });
+    if (b === named) {
+      const w = Math.min(0.15, b.w - 0.02);
+      const plate = createEngravedPlate(
+        kit,
+        ['SP-1 · IN GAME CONTROLLER', 'PENFOLD CONTROL SYSTEMS'],
+        { width: w, height: Math.min(0.036, b.h - 0.02, w * 0.24) },
+      );
+      plate.position.set(0, development ? 0.006 : 0, 0.0004);
+      face.add(plate);
+      if (development) {
+        const tape = createDymoLabel(kit, 'DEVELOPMENT BUILD', {
+          colour: 'red',
+        });
+        tape.position.set(0, -0.022, 0.0004);
+        face.add(tape);
+      }
+    }
+    const stamp = createMicroLabel(
+      kit,
+      b === named ? build.toUpperCase() : `PN SP1-BLK-${b.columns}${b.rows}`,
+      {
+        height: 0.0022,
+        ink: '#8b8e8b',
+        bold: false,
+      },
+    );
     stamp.position.set(0, -b.h / 2 + 0.006, 0.0002);
     face.add(stamp);
   }

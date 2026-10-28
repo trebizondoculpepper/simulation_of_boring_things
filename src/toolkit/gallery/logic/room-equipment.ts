@@ -1753,7 +1753,10 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
         face: 'north',
       }),
     );
-    let x = doorEast + 0.6 + phe.w + 0.6;
+    // The dosing boards 0.2 m further apart each (the owner, 2026-10-28),
+    // leaving wall between them for a dosing controller.
+    const apart = 0.2;
+    let x = doorEast + 0.6 + phe.w + 0.6 + apart;
     const hypo = at('hypochlorite dosing pumps');
     const hypoPlaced = put(box, hypo, { wall: 'south', along: x + hypo.w / 2 });
     out.push(hypoPlaced);
@@ -1776,7 +1779,7 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
     out.push(
       put(box, acid, {
         wall: 'south',
-        along: hypoPlaced.footprint.minX - WALL_GAP - acid.w / 2,
+        along: hypoPlaced.footprint.minX - WALL_GAP - 2 * apart - acid.w / 2,
       }),
     );
     // The annunciator on the south wall where the owner put it

@@ -532,13 +532,20 @@ export function createCharacterLcd(
  */
 export function createVfd(
   kit: PanelKit,
-  { columns = 10, height = 0.009 } = {},
+  {
+    columns = 10,
+    height = 0.009,
+    // Each character a 5 × 7 matrix of dots (the owner, 2026-10-28), drawn
+    // at three times the resolution so its dots stay round up close.
+    dots = false,
+  } = {},
 ): TextDisplay {
   const group = new Group();
-  const cw = 14;
-  const ph = 24;
-  const art = createCanvasTexture(columns * cw + 10, ph);
-  const width = ((columns * cw + 10) / ph) * height;
+  const res = dots ? 3 : 1;
+  const cw = 14 * res;
+  const ph = 24 * res;
+  const art = createCanvasTexture(columns * cw + 10 * res, ph);
+  const width = ((columns * cw + 10 * res) / ph) * height;
   add(
     group,
     new BoxGeometry(width + 0.008, height + 0.008, 0.004),
@@ -564,6 +571,29 @@ export function createVfd(
     const c = art.context;
     c.fillStyle = '#05100e';
     c.fillRect(0, 0, c.canvas.width, ph);
+    if (dots) {
+      // Every dot of every cell, dim; a character's lit.
+      const pitch = ph / 9;
+      for (let k = 0; k < columns; k++) {
+        const x0 = 5 * res + k * cw + (cw - 5 * pitch) / 2;
+        const ch = on ? (text[k] ?? ' ') : ' ';
+        for (let col = 0; col < 5; col++)
+          for (let row = 0; row < 7; row++) {
+            c.fillStyle = dot(ch, col, row) ? '#6ff7d8' : '#0d2a26';
+            c.beginPath();
+            c.arc(
+              x0 + (col + 0.5) * pitch,
+              pitch * (row + 1.5),
+              pitch * 0.38,
+              0,
+              Math.PI * 2,
+            );
+            c.fill();
+          }
+      }
+      art.texture.needsUpdate = true;
+      return;
+    }
     c.font = `bold 18px ${PANEL_FONT}`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';

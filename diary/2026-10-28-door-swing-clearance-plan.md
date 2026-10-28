@@ -1,0 +1,7 @@
+# Door swing clearance: research and mission 103
+
+The owner asked for a new mission: when opening a door would sweep through the walker, move them to a safe position first so they cannot be trapped by door geometry. Pulled `main` to `c37c7c75`, then audited the existing single and paired door controllers, mission 090's proximity hold, the active walker and collision footprints. The rooms currently use a thin near-shut leaf stop, while the visible leaf rotates; the broad hold rule does not prevent an opening sweep into someone standing on the pull side.
+
+External primary references gave distinct alternatives: The Dark Mod stops a door blocked by the player by default and makes pushing optional; Half-Life reverses a blocked door; Source chooses a rotating door's direction from the activator when the door is allowed to swing either way. None of the sources established an existing game that moves the player to a validated safe point before a door animates. The research note records that limit and proposes a short, collision-checked step before opening, with a blocked-door fallback if no reachable spot exists.
+
+Mission 103 is an active implementation plan. Its first step is a browser reproduction with pin URLs; geometry, path checking, bindings and acceptance follow. No runtime code changed in this session. Another working-tree edit to `src/toolkit/components/plant/views/dosing-equipment.ts` appeared while planning and is unrelated to this mission; it was left alone.

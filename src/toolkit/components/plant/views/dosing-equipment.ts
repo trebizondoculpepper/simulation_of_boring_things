@@ -221,7 +221,8 @@ export function createHypochloriteBoard(kit: PanelKit): DosingBoard {
     }),
     [0, 0.42, 0.021],
   );
-  put(group, createTag(t, 'FROM DAY TANK ↑', 0.2), [0.1, 0.45, 0.021]);
+  // Above the yellow plate, below the board's top edge (y 0.5), not over it.
+  put(group, createTag(t, 'FROM DAY TANK ↑', 0.2), [0.1, 0.469, 0.021]);
   put(group, createTag(t, 'TO INJECTION ↓', 0.18), [0.42, -0.3, 0.021]);
   let asked: DosingPumpState = { running: true, rate: 1.24 };
   return {

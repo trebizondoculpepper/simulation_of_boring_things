@@ -49,10 +49,13 @@ export const SPACING = {
   legend: 0,
   /** Between one shelf and the next band. */
   shelfGap: 0,
-  /** The band across the top: the panel's name plate and Penfold's mark. */
-  header: 0.05,
-  /** The band across the foot: the rating plate. */
-  footer: 0.05,
+  /**
+   * The bands across the top and foot: none (the owner, 2026-10-28: the
+   * name plate and the rating plate gone, so more fits on the screen);
+   * Penfold's mark sits in the top margin.
+   */
+  header: 0,
+  footer: 0,
   /** A module's title plate, along its top. */
   title: 0.012,
 } as const;

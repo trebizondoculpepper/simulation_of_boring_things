@@ -22,6 +22,10 @@ import { identifiedPart } from './identification';
 import { WET_HALL_PLANT } from './wet-hall';
 
 import { filterCondition } from './filter-condition';
+import { filtering, spaFilterFlows } from './spa-filter';
+import { filterSizing } from './ideal-filter';
+import { POOL_TARGET } from './pools';
+import { cabinetReady } from './cabinet-boot';
 import { LOUNGE_DIRT_REF, loungeBed } from './lounge-filters';
 import { loungeFlowsOf } from './lounge-valves';
 import {
@@ -91,6 +95,30 @@ export function resolveStatus(
   if ('filter' in b) {
     // Its bed as its battery keeps it, and the flow through it now.
     const i = b.filter.index;
+    if (b.filter.pool === 'pool_03') {
+      // The jacuzzi's, in its cabinet's programme (`spa-filter.ts`): down
+      // through it while the water circulates, up while it backwashes, down
+      // to drain while it rinses, its pump running for a wash while its
+      // controller is.
+      if (i > 0) return undefined;
+      const f = world.spaFilters.pool_03;
+      const pump = filtering(f)
+        ? jacuzziCabinetPanel(world).flowing
+          ? POOL_TARGET.pool_03.flow
+          : 0
+        : cabinetReady(world.cabinets.pool_03)
+          ? POOL_TARGET.pool_03.flow
+          : 0;
+      return {
+        policy: 'filter',
+        condition: filterCondition({
+          flow: spaFilterFlows(f, pump, 0).bed,
+          dirt: f.bed.dirt / filterSizing(f.spec).dirtRef,
+          fissuring: f.bed.fissuring,
+          unsettled: f.bed.unsettled,
+        }),
+      };
+    }
     if (b.filter.pool === 'pool_01') {
       if (i > 1) return undefined;
       const bed = loungeBed(world.loungeFilters, i as 0 | 1);
