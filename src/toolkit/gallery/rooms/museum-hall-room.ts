@@ -134,8 +134,6 @@ export function startMuseumHallRoom(
     new WebGLRenderTarget(1, 1, {
       type: HalfFloatType,
       samples: 4,
-      // The courtyard is drawn only through the windows (a stencil).
-      stencilBuffer: true,
     }),
   );
   const base = new RenderPass(scene, camera);

@@ -1,5 +1,4 @@
 import {
-  AlwaysStencilFunc,
   BackSide,
   BoxGeometry,
   BufferGeometry,
@@ -7,7 +6,6 @@ import {
   CatmullRomCurve3,
   CylinderGeometry,
   DoubleSide,
-  EqualStencilFunc,
   ExtrudeGeometry,
   Group,
   Mesh,
@@ -15,7 +13,6 @@ import {
   MeshStandardMaterial,
   PlaneGeometry,
   RepeatWrapping,
-  ReplaceStencilOp,
   SRGBColorSpace,
   Shape,
   ShapeGeometry,
@@ -34,7 +31,6 @@ import {
 import {
   BENCH,
   COLUMN_FOOT,
-  COURTYARD,
   FINALE,
   HALL_BRIEFS,
   HALL_TITLE,
@@ -85,10 +81,8 @@ import { createMuseumSafety } from './museum-safety';
  * the same geometry and brick, and the floors' joints are laid from the
  * museum's origin in one orientation: nothing changes at a hand-over, at
  * a corner or a straight (the pool loop's lesson, `8656cf1`). The
- * courtyard (paving, two trees, a pond and its fountain, the far halls'
- * walls, the sky) is drawn in every exhibit hall's scene, but only where
- * that hall's own courtyard windows are seen (a stencil), so it never
- * shows through another hall's walls seen through an archway.
+ * courtyard is never seen: its windows are high and their panes a plain
+ * white sky, opaque, so no other hall shows through them.
  */
 
 export const FLOOR_TILE = 4;
@@ -236,18 +230,6 @@ function wallTileTexture() {
   return t;
 }
 
-function skyTexture() {
-  const t = canvasTexture(8, 256, (c) => {
-    const g = c.createLinearGradient(0, 256, 0, 0);
-    g.addColorStop(0, '#e9f0f2');
-    g.addColorStop(0.35, '#c7dcea');
-    g.addColorStop(1, '#8fb6d6');
-    c.fillStyle = g;
-    c.fillRect(0, 0, 8, 256);
-  });
-  return t;
-}
-
 /**
  * Hall 0's floor, painted once: tiled deck round a painted pool, its
  * water a deepening blue with light ripples and four lane lines, its
@@ -370,14 +352,6 @@ export interface MuseumMaterials {
   textures: Texture[];
 }
 
-/** Drawn only where a courtyard window of this room is seen. */
-function throughWindows<M extends Material>(m: M): M {
-  m.stencilWrite = true;
-  m.stencilRef = 1;
-  m.stencilFunc = EqualStencilFunc;
-  return m;
-}
-
 export function createMuseumMaterials(): MuseumMaterials {
   const painted = brickTexture(true);
   const bare = brickTexture(false);
@@ -408,15 +382,13 @@ export function createMuseumMaterials(): MuseumMaterials {
       roughness: 0.6,
       side: DoubleSide,
     }),
-    // A courtyard window's opening: marks where the courtyard is seen.
+    // A courtyard window's pane: a plain white sky, unlit and opaque, so
+    // no other hall is ever seen through it (the owner, 2026-10-28: "you
+    // never see the other rooms, just white skybox").
     mask: new MeshBasicMaterial({
-      colorWrite: false,
-      depthWrite: false,
+      color: '#ffffff',
       side: DoubleSide,
-      stencilWrite: true,
-      stencilRef: 1,
-      stencilFunc: AlwaysStencilFunc,
-      stencilZPass: ReplaceStencilOp,
+      toneMapped: false,
     }),
     tint: new MeshStandardMaterial({
       color: '#dff1f0',
@@ -563,13 +535,9 @@ function glaze(
     placeOnLine(glass, wall.axis, wall.line);
     group.add(glass);
   } else {
-    const mask = new Mesh(pane, m.mask);
-    mask.renderOrder = -1;
-    placeOnLine(mask, wall.axis, wall.line);
-    group.add(mask);
-    const tint = new Mesh(pane.clone(), m.tint);
-    placeOnLine(tint, wall.axis, wall.line);
-    group.add(tint);
+    const sky = new Mesh(pane, m.mask);
+    placeOnLine(sky, wall.axis, wall.line);
+    group.add(sky);
   }
   // Glazing bars: three mullions and transoms every 0.6 m.
   const height = w.head - w.sill + 0.2;
@@ -1105,39 +1073,6 @@ function onWall(mesh: Mesh, wall: HallWall, u: number, y: number, off = 0.015) {
   mesh.rotation.y = Math.atan2(n[0], n[1]);
 }
 
-/**
- * What the courtyard windows show: only the sky (the owner, 2026-10-28:
- * "Can you change the windows on the inside so the courtyard is not
- * visible ... Only the skybox is visible"). A sky box round the hall,
- * drawn only where this room's courtyard windows are seen (their stencil)
- * and over whatever stands beyond them, so no paving, tree or far wall is
- * ever seen through them.
- */
-function buildCourtyard(
-  _id: MuseumHallId,
-  _m: MuseumMaterials,
-  textures: Texture[],
-  disposables: Material[],
-) {
-  const group = new Group();
-  group.name = 'Sky (seen through the courtyard windows)';
-  const sky = skyTexture();
-  textures.push(sky);
-  const material = throughWindows(
-    new MeshBasicMaterial({ map: sky, side: BackSide, depthTest: false }),
-  );
-  disposables.push(material);
-  const box = new Mesh(new BoxGeometry(400, 400, 400), material);
-  box.position.set(
-    (COURTYARD.minX + COURTYARD.maxX) / 2,
-    0,
-    (COURTYARD.minZ + COURTYARD.maxZ) / 2,
-  );
-  box.renderOrder = 1;
-  group.add(box);
-  return group;
-}
-
 /** Build room `id`, in metres (scale the group by the scene's metre), in its own coordinates. */
 export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
   const m = createMuseumMaterials();
@@ -1361,14 +1296,6 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     group.add(new Mesh(mergeGeometries(benchParts), m.oak));
     group.add(new Mesh(mergeGeometries(frames), m.steel));
     for (const g of [...benchParts, ...frames]) g.dispose();
-
-    // The courtyard beyond the windows, if it has any (not the corners).
-    if (
-      hallWalls(id).some((w) =>
-        wallWindows(id, w).some((x) => x.kind === 'courtyard'),
-      )
-    )
-      plan.add(buildCourtyard(id, m, textures, disposables));
   } else {
     // Hall 0: a tiled ceiling, its fluorescent strips, and the fake ladder.
     const lid = new PlaneGeometry(
