@@ -375,7 +375,11 @@ export function createPipeReducer(
   return group;
 }
 
-/** A visible three-way fitting centred where a branch meets a straight main. */
+/**
+ * A visible three-way fitting centred where a branch meets a straight main.
+ * `reach`, when given, is how far its ports stand from its centre, where the
+ * pipes end: its sleeves reach them, so no gap shows between fitting and pipe.
+ */
 export function createPipeTee(
   id: PipeKindId,
   mainOd: number,
@@ -383,6 +387,7 @@ export function createPipeTee(
   at: Vec3,
   mainDirection: Vec3,
   branchDirection: Vec3,
+  reach = 0,
 ) {
   const main = new Vector3(...mainDirection).normalize();
   const branch = new Vector3(...branchDirection).normalize();
@@ -413,8 +418,10 @@ export function createPipeTee(
     mesh.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), direction);
     group.add(mesh);
   };
-  sleeve(mainOd, mainOd * 2.2, main, 0);
-  sleeve(branchOd, branchOd * 1.1, branch, branchOd * 0.55);
+  const mainLength = Math.max(mainOd * 2.2, reach * 2);
+  const branchLength = Math.max(branchOd * 1.1, reach);
+  sleeve(mainOd, mainLength, main, 0);
+  sleeve(branchOd, branchLength, branch, branchLength / 2);
   return group;
 }
 

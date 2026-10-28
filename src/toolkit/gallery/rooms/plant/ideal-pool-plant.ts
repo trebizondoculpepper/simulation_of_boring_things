@@ -524,6 +524,7 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
       centre,
       opposite.out,
       branchPort.out,
+      0.15,
     );
     object.add(
       markComponent(tee, {

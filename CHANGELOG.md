@@ -28,6 +28,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Fixed
 
+- Pipe tees reach their ports: a tee's sleeves were sized from the pipe's diameter alone, so where the plumber ends each pipe 0.15 m from the tee's centre a gap showed between fitting and pipe (Museum Hall 1's bypass tees, most visibly; the ideal pool plant's tees too). `createPipeTee` takes how far its ports stand out, and Hall 1 and the ideal plant pass it.
+
 - The Release workflow fetches its tag again after checkout, which had replaced the annotated tag with a lightweight one and failed v0.2.0's "not annotated" check; it can now be run by hand for an existing tag (`gh workflow run release.yml -f tag=vX.Y.Z`) to publish a failed release again with the same checks, keeping a GitHub release that already exists. Release notes longer than GitHub's 125,000-character limit (v0.2.0's were) are cut at a line and link to the full `CHANGELOG.md` at the tag.
 
 ## [0.2.0] - 2026-10-28

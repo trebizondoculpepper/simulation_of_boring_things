@@ -497,6 +497,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       [p.x + centre[0], centre[1], p.z + centre[2]],
       main.out,
       branch.out,
+      // Its ports, where the pipes end, stand 0.15 m out (`PORTS`).
+      0.15,
     );
     object.add(describe(tee, id, nodeName(id), { node: id }));
   }
