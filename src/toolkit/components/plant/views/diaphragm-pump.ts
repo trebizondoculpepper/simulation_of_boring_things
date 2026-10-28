@@ -83,7 +83,17 @@ export interface DiaphragmPump {
   /** What it does now. */
   output(): DiaphragmOutput;
   /** A step on: `demand` its controller's, `powered` its supply's. */
-  update(delta: number, demand: Demand, powered?: boolean): void;
+  /**
+   * A step on: `demand` its controller's, `powered` its supply's, `fault`
+   * what it has stopped for, as the world's pump model has it (prompt 102:
+   * its gas detection's `flow`), lighting ERROR and stopping it.
+   */
+  update(
+    delta: number,
+    demand: Demand,
+    powered?: boolean,
+    fault?: string | null,
+  ): void;
   status(): string;
 }
 
@@ -317,18 +327,22 @@ export function createDiaphragmPump(
   const keyParts: Part[] = [];
   let state = newDiaphragmState();
   const K = s.keys;
-  const keys: [DiaphragmKey, 'green' | 'red' | 'black', string, string][] = [
+  // Its keys light grey on the dark fascia, their marks dark on the caps
+  // (the owner, 2026-10-28: black keys on black were hard to see); START
+  // green and STOP red.
+  const keys: [DiaphragmKey, 'green' | 'red' | 'white', string, string][] = [
     ['start', 'green', 'START', 'START'],
     ['stop', 'red', 'STOP', 'STOP'],
-    ['up', 'black', 'UP', '▲'],
-    ['down', 'black', 'DOWN', '▼'],
-    ['mode', 'black', 'P', 'P'],
+    ['up', 'white', 'UP', '▲'],
+    ['down', 'white', 'DOWN', '▼'],
+    ['mode', 'white', 'P', 'P'],
   ];
   keys.forEach(([k, colour, legend, mark], i) => {
     const b = pushButton(kit, {
       colour,
       legend,
       name: `${label} ${legend}`,
+      symbol: colour === 'white' ? mark : undefined,
       action: () => (state = pressKey(state, k)),
     });
     b.object.position.set(K.x[i], K.y + 0.003, front + 0.005);
@@ -339,7 +353,8 @@ export function createDiaphragmPump(
       mark,
       K.x[i],
       K.y - 0.0125,
-      front + 0.0055,
+      // Clear of the fascia's face (front + 0.0055), so it does not flicker into it.
+      front + 0.0064,
       0.0042,
       '#cfd6db',
     );
@@ -379,7 +394,7 @@ export function createDiaphragmPump(
   };
   const strokeLamp = lamp('#3ee05a', s.lamps.y[0], 'STROKE');
   lamp('#ffcc33', s.lamps.y[1], 'WARN');
-  lamp('#ff4a2e', s.lamps.y[2], 'ERROR');
+  const errorLamp = lamp('#ff4a2e', s.lamps.y[2], 'ERROR');
   const plate = brandPlate(kit, 'grundflow', s.plate.w, spec.model);
   plate.position.set(s.plate.x, s.plate.y + 0.003, front + 0.0056);
   group.add(plate);
@@ -428,8 +443,14 @@ export function createDiaphragmPump(
     suctionAt: [H.x, s.suction.tube, 0],
     dischargeAt: [H.x, s.discharge.tube, 0],
     output: () => out,
-    update(delta, demand, powered = true) {
-      out = diaphragmOutput(kind, state, demand, powered);
+    update(delta, demand, powered = true, fault = null) {
+      out = diaphragmOutput(
+        kind,
+        state,
+        fault ? { ...demand, running: false } : demand,
+        powered,
+      );
+      errorLamp.emissiveIntensity = powered && fault ? 1.6 : 0;
       if (out.running !== heard) {
         heard = out.running;
         partAudio.hold(group, out.running ? sound : null, group);
@@ -442,7 +463,8 @@ export function createDiaphragmPump(
       strokeLamp.emissiveIntensity = flash ? 1.8 : 0;
       // The diaphragm's cover pushes out a little on each discharge stroke.
       cover.position.x = H.x - H.len / 2 - (flash ? 0.0025 : 0);
-      const lines = diaphragmDisplay(label, state, out, powered);
+      const shown0 = diaphragmDisplay(label, state, out, powered);
+      const lines = shown0 && fault ? { ...shown0, state: 'ERR' } : shown0;
       const k = `${JSON.stringify(lines)}${flash}`;
       if (k === shown) return;
       shown = k;

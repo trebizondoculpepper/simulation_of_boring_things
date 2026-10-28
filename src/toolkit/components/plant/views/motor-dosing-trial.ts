@@ -56,7 +56,7 @@ export function createMotorDosingTrial(kit: PanelKit) {
   let trial = newDosingTrial();
 
   // The DMX 1602, as the Olympic has it.
-  const dmx = createDiaphragmPump(kit, 'OLYMPIC DMX', 'solenoid');
+  const dmx = createDiaphragmPump(kit, 'DP-101A', 'solenoid');
   const dmxStand = onPlinth(kit, dmx.object, 0.36);
   dmxStand.position.set(-0.6, 0, 0.1);
   root.add(dmxStand);

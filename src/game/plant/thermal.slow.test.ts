@@ -31,5 +31,6 @@ describe('the pools’ heat in the world', () => {
       POOL_TARGET.pool_03.temp,
       0,
     );
-  });
+    // Some hours of the world: give it room under a full parallel run.
+  }, 20_000);
 });

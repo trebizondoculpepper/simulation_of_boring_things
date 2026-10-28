@@ -11,19 +11,26 @@ describe('the bathers and the water', () => {
     const before = w.bathers.pools.pool_01.total;
     w = advance(w, 6 * 3600, 10);
     const usual = w.bathers.pools.pool_01.total - before;
-    // The next day, with the hypochlorite gone from 08:00.
+    // The next day, with the hypochlorite gone from 08:00; beside it the
+    // same morning with its hypochlorite, so the two are counted from the
+    // same draws of the bathers' generator (prompt 102: one day's count
+    // against another's turned on the generator's stream, which any
+    // change in another pool's water moves).
     w = advance(w, 18 * 3600, 10);
+    const stocked = advance(w, 6 * 3600, 10);
     w = runOut(w, 'hypochlorite');
     const from = w.bathers.pools.pool_01.total;
     w = advance(w, 6 * 3600, 10);
+    const sameMorning = stocked.bathers.pools.pool_01.total - from;
+    expect(sameMorning).toBeGreaterThan(usual * 0.5);
     expect(appealOf(w).pool_01).toBe(0);
     expect(w.bathers.pools.pool_01.now).toBe(0);
     // Its chlorine falls at its bathers' own demand (mission 101), about
     // 0.1 mg/l an hour, so the pool empties some hours in: fewer than six
     // tenths of the usual come.
-    expect(w.bathers.pools.pool_01.total - from).toBeLessThan(usual * 0.6);
+    expect(w.bathers.pools.pool_01.total - from).toBeLessThan(sameMorning * 0.6);
     // A day and more of the world, simulated: slow beside the whole suite.
-  }, 20_000);
+  }, 30_000);
 });
 
 describe('the bathers and the halls', () => {

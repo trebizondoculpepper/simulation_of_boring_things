@@ -383,10 +383,18 @@ function modelFor(
             },
             status: b.status,
           };
+    // The boards' duty pumps show what the world's pump is set to and what
+    // it has stopped for (prompt 102), not what it delivers: a gas-locked
+    // pump still shows its rate, as a real one does.
+    const pumpShown = (chemical: 'hypochlorite' | 'acid') => () => {
+      const p = world().dosingPumps?.[pool]?.[chemical];
+      if (!p) return dosing(chemical)();
+      return { running: p.running || !!p.fault, rate: p.setLh, fault: p.fault };
+    };
     if (kind === 'hypo-pumps')
-      return board(createHypochloriteBoard(kit), dosing('hypochlorite'));
+      return board(createHypochloriteBoard(kit), pumpShown('hypochlorite'));
     if (kind === 'acid-pump')
-      return board(createAcidBoard(kit), dosing('acid'));
+      return board(createAcidBoard(kit), pumpShown('acid'));
     if (kind === 'uv-unit') {
       // As its exhibit stands it, 0.3 m back.
       const uv = createUvUnit(kit);

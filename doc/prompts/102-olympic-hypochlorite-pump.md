@@ -1,6 +1,6 @@
 # 102: The Olympic's new hypochlorite pump, installed
 
-Status: to do; waits for the owner (written 2026-10-28). The pump is designed and working in dev44 (see "Built so far"); installing it waits until the owner has seen the before picture of the undersized pump, which mission 101 (the chemistry model in the world, another agent's) is making by keeping the DMX 1602 and watching how the Olympic goes wrong.
+Status: partly done (2026-10-28): designed, built in dev44, and the pump family linked to the world; installing the DMH waits for the owner. The pump is designed and working in dev44 (see "Built so far"); installing it waits until the owner has seen the before picture of the undersized pump, which mission 101 (the chemistry model in the world, another agent's) is making by keeping the DMX 1602 and watching how the Olympic goes wrong.
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply, above all that the enhanced network is the one source of truth (every valve in the schematic before anything is drawn, tags derived, never written), that the world state lives in `src/game/world.ts` with a migration for any change of shape, that `logic/` folders are pure and tested beside them, and that displays redraw only when what they show changes.
 
@@ -73,14 +73,17 @@ In dev44, "Hypochlorite pump trial: DMX 1602 against DMH 21-10", on a small stat
 
 Checked in the browser: at the Olympic's average (Yout 25 %, 3.13 l/h asked) the DMX gives its 2.1 l/h flat out and falls behind, the DMH keeps up; on a standard head a slug of air gas-locks the DMH (still showing 3.15, the flow lamp stopped) and its flow monitor stops it with `Er F`.
 
-## Next: the family linked to the world
+## The family linked to the world (done 2026-10-28)
 
-Waiting for mission 101's `src/game/plant/water-treatment.ts` (its `DOSING_PUMPS` and `pumpRates()`, the ideal cap) to be on origin/main; until then `water-treatment.ts`, `pools.ts` and `world.ts` are 101's to edit. Then:
+On mission 101's `water-treatment.ts` (`50f90566`), as the owner asked ("link it to our ideal pump model so it behaves as expected"):
 
-1. `pumpRates` asks each pool's real pump model (`meteringPump(kind)`) for its litres instead of demand × the cap: the Olympic keeps its undersized DMX 1602 (`solenoid`), so the owner can watch it fail; the other pools get the pumps their rooms draw (the hypochlorite boards' DMX 1602s, the acid boards' DDS 7.5-16, the PERI 30 where one is drawn; the spa DoseCell heads' own pumps stay ideal until they have a model).
-2. Each pump's state (gas in its head, its keys, its tube's hours, its error) lives in the world, keyed by its tag, with a `WORLD_VERSION` bump and a migration filling new states from `initial()`.
-3. The pump views (`diaphragm-pump.ts`, `peristaltic-pump.ts`, `motor-dosing-pump.ts`) and the DoseCell heads read those states; their keys write them through the world's actions, so stopping a pump at its keys stops its dosing (the TODO from prompt 089).
-4. The error relay of each pump to its dosing controller and annunciator; the acknowledgement stays at the pump.
+- `src/game/plant/dosing-pumps.ts` (and its tests): each pool's pumps as real metering pumps (`POOL_PUMP_KINDS`): the lounge's and the Olympic's hypochlorite the DMX 1602 (`solenoid`), their acid the DDS 7.5-16 (`stepper`); the spa heads stay ideal at mission 101's sizes until their pumps are chosen. Each stepped with the world: released while its pool may be dosed, asked its controller's output, against 2 bar at its quill. What it delivers is the day tank's draw and the water's dose (`world.ts`).
+- Their states in the world, `world.dosingPumps` (gas in the head, keys, flow monitor, fault, what each has delivered), WORLD_VERSION 59 (58 → 59 filled from a new world's defaults).
+- A world action, `dosing-pump`: a fault acknowledged, the bleed opened or shut, gas let into a head (a scenario's or the console's).
+- `pumpRates` gives a real pump's delivered rate (averaged over 20 s) to the displays that show a flow (`doseRates`); the hypochlorite and acid boards show what the world's duty pump is set to and its fault (ERROR lit, `ERR` on its LCD), never what it delivers, so a gas-locked pump still reads its rate.
+- The Olympic, before and after: before, its pump gave exactly its controller's ask capped at 2.1 l/h; now the DMX 1602 runs flat out at about 2.09 l/h (the gas each stroke carries costs it under 1 %), so it still falls behind as mission 101 shows. A slug of gas (or a night standing on its standard head) gas-locks it; its own detection stops it (`flow`) and its pool's chlorine sags until it is bled and acknowledged. Checked in the browser on slot `p102`: 1 ml of gas into PL2's pump, and within 15 s it had stopped, `fault: flow`, its board's ERROR lit.
+- The other pools: the lounge's DMX doses what it is asked, less under 1 %; both acid pumps likewise; the spas unchanged.
+- Left: the boards' keys still drive their view's own copy (prompt 089's TODO); they should write the world's pump state through `dosing-pump` actions. The standby DMX on each board is not modelled; it stands as drawn.
 
 ## What installing it means
 

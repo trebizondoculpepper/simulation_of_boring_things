@@ -61,13 +61,15 @@ type DosingWorld = Pick<
   | 'plant'
   | 'motors'
   | 'treatment'
->;
+> &
+  Partial<Pick<World, 'dosingPumps'>>;
 
 /** Litres a second, from a pool's pumps' l/h as its controller sets them, while `stock` lets it dose. */
 function drawn(
   world: DosingWorld,
   id: PoolId,
   stock: (pool: PoolId) => Record<Chemical, boolean>,
+  real = false,
 ): Record<Chemical, number> {
   const dosed = dosedByPool(
     world.pools,
@@ -78,7 +80,14 @@ function drawn(
   );
   const control = world.treatment?.circuits[id]?.control;
   if (!control) return { hypochlorite: 0, acid: 0 };
-  const r = pumpRates(control, id, dosed[id]);
+  // What its pumps deliver (prompt 102), where it is asked what it gives;
+  // what its controller asks, where it is asked its demand.
+  const r = pumpRates(
+    control,
+    id,
+    dosed[id],
+    real ? world.dosingPumps?.[id] : undefined,
+  );
   return { hypochlorite: r.hypochlorite / 3600, acid: r.acid / 3600 };
 }
 
@@ -93,7 +102,7 @@ export function doseRates(
   world: DosingWorld,
   id: PoolId,
 ): Record<Chemical, number> {
-  return drawn(world, id, (pool) => dosingStock(world, pool));
+  return drawn(world, id, (pool) => dosingStock(world, pool), true);
 }
 
 /**

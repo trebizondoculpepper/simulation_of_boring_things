@@ -270,6 +270,9 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
       : world.bridgeConsoles;
     return { ...world, distribution, bridgeConsoles: consoles };
   },
+  // 58 → 59: each pool's dosing pumps as real metering pumps (prompt
+  // 102), new and primed (`fillDefaults` adds them).
+  58: (world) => world,
   // 57 → 58: each pool's water as the chemistry model's state (mission
   // 101): its balance tank and its pool's three cells, nominal water
   // (each pool's settled alkalinity, hardness and TDS) with its present pH, free

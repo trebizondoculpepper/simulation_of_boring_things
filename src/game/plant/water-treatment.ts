@@ -11,6 +11,7 @@ import { CAPACITY, STAY } from '../bathers';
 import { POOL_IDS, poolArea, poolTankCapacity, poolVolume } from './pools';
 import type { PoolId, PoolWaterState, PoolsState } from './pools';
 import type { Chemical } from './chemicals';
+import type { DosingPump } from './dosing-pumps';
 
 /**
  * Each pool's water treatment in the world (mission 101, stage 1): its
@@ -311,9 +312,25 @@ export function pumpRates(
   control: DosingControl,
   id: PoolId,
   allowed: Partial<Record<Chemical, number>> | undefined,
+  /**
+   * Its pumps as the world has them (prompt 102): a real pump's rate is
+   * what it delivers (averaged, `meanLh`), not its ask; without them, or
+   * for an ideal pump, its controller's output times its most.
+   */
+  real?: Record<Chemical, DosingPump>,
 ): Record<Chemical, number> {
   const pumps = DOSING_PUMPS[id];
   const on = (c: Chemical) => (allowed?.[c] ?? 0) > 0;
+  const delivered = (c: Chemical) =>
+    real?.[c] && real[c].kind !== 'ideal'
+      ? on(c)
+        ? real[c].meanLh
+        : 0
+      : undefined;
+  const hypo = delivered('hypochlorite');
+  const acid = delivered('acid');
+  if (hypo !== undefined && acid !== undefined)
+    return { hypochlorite: hypo, acid };
   return {
     hypochlorite: on('hypochlorite')
       ? Math.min(1, Math.max(0, control.hypochlorite)) * pumps.hypochlorite

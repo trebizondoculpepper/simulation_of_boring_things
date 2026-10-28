@@ -30,3 +30,7 @@ Later the same day the owner asked for the pumps as a family on the ideal pump: 
 ## Next Steps
 
 Once mission 101's `water-treatment.ts` is on main, link the family to the world (each pool's real pump; the Olympic keeps its DMX 1602). Then, when the owner asks, install the DMH one for one (schematic first), asking the open questions one at a time.
+
+## Later: the family in the world
+
+Once mission 101's `water-treatment.ts` landed, the pumps became real in the world (`src/game/plant/dosing-pumps.ts`, `world.dosingPumps`, WORLD_VERSION 59): the DMX 1602s and DDS 7.5-16s are stepped stroke by stroke and what they deliver is the dose, so the Olympic's DMX now gives about 2.09 l/h flat out, and a gas slug stops it until it is bled and acknowledged. Two lessons. A flow monitor that counts while the bleed is open trips during priming, so it now rests while priming. And `world.slow.test.ts`'s bathers test compared one day's bathers with another's; any change to any pool's water moved the bathers' shared random stream and failed it, so it now compares the same morning with and without hypochlorite. The owner also asked for lighter keys on the pumps (now light grey with dark marks) and piezo bleeps, which wait for mission 100's library.

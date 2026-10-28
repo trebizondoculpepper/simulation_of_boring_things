@@ -1,6 +1,11 @@
 import { cabinetFeeds, dosingStock, feedMessages } from './plant/pool-dosing';
 import {
-  allPumpRates,
+  actOnDosingPumps,
+  newDosingPumps,
+  stepDosingPumps,
+} from './plant/dosing-pumps';
+import type { DosingPumpAction, DosingPumps } from './plant/dosing-pumps';
+import {
   newWaterTreatment,
   pumpDraw,
   stepWaterTreatment,
@@ -287,7 +292,7 @@ import { plantReadingOf } from '../toolkit/gallery/logic/world-reading';
 import { chooseConsole, newBridgeConsoles } from './bridge-consoles';
 import type { ConsoleChoice } from './bridge-consoles';
 
-export const WORLD_VERSION = 58;
+export const WORLD_VERSION = 59;
 
 /**
  * Where the main corridor's control room doors lead (the owner,
@@ -324,6 +329,13 @@ export interface World {
    * read from it.
    */
   treatment: WaterTreatment;
+  /**
+   * Each pool's dosing pumps (prompt 102): each a real metering pump of the
+   * family (`plant/dosing-pumps.ts`), its state (gas in its head, its keys,
+   * its fault) kept here, what it delivers the day tanks' draw and the
+   * water's dose.
+   */
+  dosingPumps: DosingPumps;
   /** The dosing chemicals left in their stores, litres. */
   chemicals: ChemicalStores;
   /**
@@ -431,6 +443,7 @@ export function newWorld(): World {
     plant: newPlantServices(),
     pools: newPools(),
     treatment: newWaterTreatment(newPools()),
+    dosingPumps: newDosingPumps(),
     chemicals: newChemicalStores(),
     distribution: newChemicalDistribution(),
     chemControl: newChemControlBox(),
@@ -530,6 +543,8 @@ export type WorldAction =
   | { type: 'wash-o-tron'; action: WashAction }
   | { type: 'intake'; action: IntakeAction }
   | { type: 'distribution'; action: DistributionAction }
+  /** A pool's dosing pump worked at its keys: its fault acknowledged, its bleed valve; or gas let into its head. */
+  | { type: 'dosing-pump'; action: DosingPumpAction }
   /** The chemical transfer control box worked: a terminal's command, its isolator or MCB, or a fault. */
   | { type: 'chem-control'; action: ChemControlAction }
   | { type: 'booster/changeover'; action: ChangeoverAction }
@@ -732,6 +747,12 @@ export function applyAction(world: World, action: WorldAction): World {
         r.box === world.chemControl
         ? world
         : { ...world, distribution: r.distribution, chemControl: r.box };
+    }
+    case 'dosing-pump': {
+      const dosingPumps = actOnDosingPumps(world.dosingPumps, action.action);
+      return dosingPumps === world.dosingPumps
+        ? world
+        : { ...world, dosingPumps };
     }
     case 'distribution': {
       const distribution = actOnDistribution(world.distribution, action.action);
@@ -1284,11 +1305,15 @@ function stepPlant(world: World, delta: number): World {
     jacuzzi,
     spaWash,
   );
-  // Each pool's dosing pumps, at their controller's rates while their pool
-  // may be dosed (circulating, its chemical service, its day tank's stock
-  // and open path); its water's chemistry, a step on (mission 101).
-  const pumps = allPumpRates(
-    world.treatment,
+  // Each pool's dosing pumps while their pool may be dosed (circulating,
+  // its chemical service, its day tank's stock and open path); its water's
+  // chemistry, a step on (mission 101). Each pump stepped on: released while its pool may be dosed, asked its
+  // controller's output; what it delivers is the dose (prompt 102).
+  const dosing = stepDosingPumps(
+    world.dosingPumps,
+    Object.fromEntries(
+      POOL_IDS.map((id) => [id, world.treatment.circuits[id].control]),
+    ) as unknown as Record<PoolId, { hypochlorite: number; acid: number }>,
     dosedByPool(
       world.pools,
       world.plant,
@@ -1297,7 +1322,9 @@ function stepPlant(world: World, delta: number): World {
       motors,
       jacuzzi,
     ),
+    delta,
   );
+  const pumps = dosing.rates;
   const pools = withSolids(world, water.pools, delta);
   const treatment = stepWaterTreatment(
     world.treatment,
@@ -1336,6 +1363,7 @@ function stepPlant(world: World, delta: number): World {
     ),
     pools: withWaterReadings(pools, treatment, world.treatment),
     treatment,
+    dosingPumps: dosing.pumps,
     airHandling,
     motors,
     jacuzzi: stepJacuzzi(

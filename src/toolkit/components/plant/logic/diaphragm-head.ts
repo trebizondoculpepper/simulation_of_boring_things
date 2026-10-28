@@ -127,7 +127,8 @@ const MAX_STROKES = 2000;
 
 /**
  * `count` strokes of `volume` ml against `bar`. A flow monitor (`flow`)
- * trips after `FLOW_STROKES` short strokes in a row, stopping the run.
+ * trips after `FLOW_STROKES` short strokes in a row, stopping the run; it
+ * does not count while the bleed is open (priming).
  */
 export function runStrokes(
   spec: HeadSpec,
@@ -149,6 +150,8 @@ export function runStrokes(
     s.gasMl = Math.max(0, s.gasMl - r.gasOut);
     delivered += r.delivered;
     returned += r.returned;
+    // Priming with its bleed open, its flow monitor is not counting.
+    if (s.bleedOpen) continue;
     if (r.delivered >= volume * FLOW_SHARE) {
       delivering++;
       s.short = 0;

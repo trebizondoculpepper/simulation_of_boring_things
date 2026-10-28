@@ -433,12 +433,14 @@ export function createMotorDosingPump(
   const add = (p: Part) => partList.push(parts.add(p));
   add(dialPart.part());
   add(bleedPart.part());
-  const keys: [MotorPumpKey, 'green' | 'red' | 'black', string, string][] = [
+  // Light grey keys with their marks dark on the caps, STOP/START red
+  // (the owner, 2026-10-28, of the DMX's black keys on black).
+  const keys: [MotorPumpKey, 'red' | 'white', string, string][] = [
     ['startStop', 'red', 'STOP/START', 'STOP/START'],
-    ['mode', 'black', 'P', 'P'],
-    ['info', 'black', 'i', 'i'],
-    ['up', 'black', 'UP', '▲'],
-    ['down', 'black', 'DOWN', '▼'],
+    ['mode', 'white', 'P', 'P'],
+    ['info', 'white', 'i', 'i'],
+    ['up', 'white', 'UP', '▲'],
+    ['down', 'white', 'DOWN', '▼'],
   ];
   const keyY = cm.y - 0.028;
   keys.forEach(([k, colour, legend, mark], i) => {
@@ -447,6 +449,7 @@ export function createMotorDosingPump(
     const b: Part = pushButton(kit, {
       colour,
       name: `${label} ${legend}`,
+      symbol: colour === 'white' ? mark : undefined,
       action: () => bind.change((s) => pressMotorKey(s, k)),
     });
     b.object.position.set(x, keyY, front + 0.002);

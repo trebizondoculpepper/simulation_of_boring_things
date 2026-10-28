@@ -365,6 +365,8 @@ export const WORLD_HEALTH_COVERAGE = {
   pools: 'pools: level, flow, temperature, chemistry, tank, humidity, trips',
   treatment:
     'not checked itself: the pools’ water chemistry and dosing; its readings are the pools’ chemistry, checked there',
+  dosingPumps:
+    'not checked itself: the dosing pumps; one gas-locked or worn shows in its pool’s chemistry',
   chemicals: 'chemicals: stock against capacity',
   distribution:
     'not checked: the day tanks; one run dry shows in its pool’s chemistry',

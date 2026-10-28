@@ -81,6 +81,8 @@ function liveLcd(
 export interface DosingPumpState {
   running: boolean;
   rate: number;
+  /** What its duty pump has stopped for, as the world's pump has it (prompt 102). */
+  fault?: string | null;
 }
 
 /** A clear plastic material, for sample cells and calibration pots. */
@@ -227,7 +229,7 @@ export function createHypochloriteBoard(kit: PanelKit): DosingBoard {
     parts,
     show: (s) => (asked = s),
     update(delta, powered = true) {
-      pumps[0].update(delta, asked, powered);
+      pumps[0].update(delta, asked, powered, asked.fault);
       // The standby is never asked while its duty runs.
       pumps[1].update(delta, { running: false, rate: asked.rate }, powered);
     },
@@ -296,7 +298,8 @@ export function createAcidBoard(kit: PanelKit): DosingBoard {
     object: group,
     parts: pump.parts,
     show: (s) => (asked = s),
-    update: (delta, powered = true) => pump.update(delta, asked, powered),
+    update: (delta, powered = true) =>
+      pump.update(delta, asked, powered, asked.fault),
     status: pump.status,
   };
 }

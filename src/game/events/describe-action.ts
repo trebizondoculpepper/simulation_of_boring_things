@@ -296,6 +296,19 @@ function said(
             ? `pump ${action.action.pump + 1} selected duty`
             : `${action.action.act.toUpperCase()} pressed`,
       };
+    case 'dosing-pump': {
+      const a = action.action;
+      const what =
+        a.act === 'acknowledge'
+          ? 'fault acknowledged'
+          : a.act === 'bleed'
+            ? `bleed valve ${openShut(a.open)}`
+            : `${a.ml} ml of gas let into its head`;
+      return {
+        subject: `${a.pool} ${a.chemical} pump`,
+        text: `${a.pool} ${a.chemical} dosing pump: ${what}`,
+      };
+    }
     case 'distribution': {
       const a = action.action;
       const what =
