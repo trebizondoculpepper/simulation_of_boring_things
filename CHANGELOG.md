@@ -4,9 +4,17 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Changed
+
+- The museum rebuilt as the owner's ring (mission 107-1): 14 halls, `museum0` to `museum13`, round a courtyard two rooms wide and three deep (the building four rooms by five, 16 × 14 m each, provisional), Hall 0 in the south-west corner with arrows on its floor pointing north into Hall 1, the route round to Hall 13 and back into Hall 0; Halls 1 to 4 and 13 signed with their themes (Warm water, Clean water, Safe water, The chemistry of pools, The whole plant), Halls 5 to 12 "coming soon"; the safety layer recomputed for the ring (exits to Hall 0 the shorter way, fire points in the odd-numbered halls, the lift's place moved along Hall 0's east wall beside the new doorway from Hall 13). Every hall is now the same height, Hall 0 included, and the courtyard windows are high clerestories that show only the sky (the owner, 2026-10-28): the courtyard's paving, trees, pond and far walls are no longer drawn.
+
+### Added
+
+- The empty hall as a component (`src/toolkit/gallery/views/museum-empty-hall.ts`; the owner, 2026-10-28): generic, side and corner, the architecture only, merged by material; each hall's scene draws every hall beyond its neighbours empty at its true place, replacing the plain stand-ins, with the ring's adjacency and full/empty sets pure and tested in `museum-plan.ts`.
+
 ### Fixed
 
-- The Release workflow fetches its tag again after checkout, which had replaced the annotated tag with a lightweight one and failed v0.2.0's "not annotated" check; it can now be run by hand for an existing tag (`gh workflow run release.yml -f tag=vX.Y.Z`) to publish a failed release again with the same checks, keeping a GitHub release that already exists.
+- The Release workflow fetches its tag again after checkout, which had replaced the annotated tag with a lightweight one and failed v0.2.0's "not annotated" check; it can now be run by hand for an existing tag (`gh workflow run release.yml -f tag=vX.Y.Z`) to publish a failed release again with the same checks, keeping a GitHub release that already exists. Release notes longer than GitHub's 125,000-character limit (v0.2.0's were) are cut at a line and link to the full `CHANGELOG.md` at the tag.
 
 ## [0.2.0] - 2026-10-28
 

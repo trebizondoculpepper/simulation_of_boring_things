@@ -97,6 +97,14 @@ jobs:
             on && /^## \[/ { exit }
             on { print }
           ' CHANGELOG.md > notes.md
+          # GitHub takes at most 125000 characters of notes: a longer
+          # section is cut at a line and points to the changelog itself.
+          if [ "$(wc -c < notes.md)" -gt 120000 ]; then
+            head -c 120000 notes.md | sed '$d' > notes.cut
+            printf '\n…\n\nThe full notes are in [CHANGELOG.md](%s/%s/blob/%s/CHANGELOG.md).\n' \
+              "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$TAG" >> notes.cut
+            mv notes.cut notes.md
+          fi
           flags=()
           case "$version" in *-*) flags+=(--prerelease) ;; esac
           if gh release view "$TAG" > /dev/null 2>&1; then
