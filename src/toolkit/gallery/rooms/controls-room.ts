@@ -626,7 +626,7 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     for (const fitting of fittings)
       fitting.update(time / 1000, delta, reducedMotion?.matches ?? false);
     dazzle.update(delta);
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     renderer.render(scene, camera);
   };
   renderer.setAnimationLoop((time) => {

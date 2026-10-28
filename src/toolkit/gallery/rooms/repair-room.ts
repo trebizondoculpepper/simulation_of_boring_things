@@ -803,7 +803,7 @@ export function startRepairRoom(canvas: HTMLCanvasElement) {
           : '#b32b21',
     );
     portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     renderer.render(scene, camera);
   });
   const dispose = () => {

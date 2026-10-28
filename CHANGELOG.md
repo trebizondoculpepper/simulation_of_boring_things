@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- A machine's running sound is heard only in its own room (the owner, 2026-10-28: plant room 2's dosing pumps were heard in the corridor): each room tells the sound engine its scene as it listens, and a held sound from another room's scene is quietened until the player is back there.
 - The dosing boards' pipework meets the room's (the owner, 2026-10-28, at PL2-DP1 and PL2-DP2): each board's suction rises to one connection at its top, where its day tank's line comes down from overhead, and its discharge falls to one low at its edge, where the dose line leaves for its injection quill; their machine ports are those points (`dosing-boards.ts`).
 - Turning a bridge console's page (◄ or ►) is just a little chirp, two quiet rising blips (the owner, 2026-10-28): the recorded cue it played was too disturbing for something done so often.
 - Central Control's extra-wide console pages only through designs as wide as it (the owner, 2026-10-28): a station's smaller panel no longer shrinks into the middle of it; today that is its own page only.

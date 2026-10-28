@@ -181,7 +181,7 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
     plate.parts?.update(delta);
     effects.update(delta);
     fibreWall.update(time / 1000, fibreState);
-    partAudio.listen(camera, metre);
+    partAudio.listen(camera, metre, scene);
     composer.render(delta);
   });
   return () => {

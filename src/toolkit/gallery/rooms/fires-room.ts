@@ -475,7 +475,7 @@ export function startFiresRoom(canvas: HTMLCanvasElement) {
         (0.85 +
           0.15 * Math.sin(seconds * 13 + i * 2) * Math.sin(seconds * 7.3));
     });
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     renderer.render(scene, camera);
   };
   renderer.setAnimationLoop((time) => {

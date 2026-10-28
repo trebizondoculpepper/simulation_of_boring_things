@@ -829,7 +829,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       }
     }
     roomLights.update(delta);
-    partAudio.listen(camera, metre);
+    partAudio.listen(camera, metre, scene);
     // No pair closes on someone near it: told before the leaves move.
     const actor = doorActor(walk, metre, WALKER_RADIUS_METRES);
     ways.forEach((w, i) => w.part.setNearby(near[i].update(actor)));

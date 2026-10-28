@@ -336,7 +336,7 @@ export function startBrandsRoom(canvas: HTMLCanvasElement) {
     ps1Uniforms.time.value = time / 1000;
     walk.update(delta);
     portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     renderer.render(scene, camera);
   });
   const dispose = () => {

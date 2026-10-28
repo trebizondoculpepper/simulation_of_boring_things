@@ -299,7 +299,7 @@ export function startTruckYardRoom(canvas: HTMLCanvasElement) {
     last = time;
     walk.update(delta);
     parts.update(delta);
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     renderer.render(scene, camera);
   });
   const dispose = () => {

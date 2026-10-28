@@ -1379,7 +1379,7 @@ void main() {
         );
       }
     }
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
     parts.update(delta);
     apply();

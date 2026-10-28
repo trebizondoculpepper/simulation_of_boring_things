@@ -403,7 +403,7 @@ export function startBinRoom(canvas: HTMLCanvasElement) {
       if (!effect.update(delta)) appearing.delete(effect);
     parts.update(delta);
     portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     renderer.render(scene, camera);
   });
   const dispose = () => {

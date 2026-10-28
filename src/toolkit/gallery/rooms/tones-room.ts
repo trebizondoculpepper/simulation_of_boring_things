@@ -532,7 +532,7 @@ export function startTonesRoom(canvas: HTMLCanvasElement) {
     walk.update(delta);
     parts.update(delta);
     portals.update(delta, walk.walker.x, walk.walker.z, !walk.following);
-    partAudio.listen(camera, m);
+    partAudio.listen(camera, m, scene);
     renderer.render(scene, camera);
   });
   const dispose = () => {

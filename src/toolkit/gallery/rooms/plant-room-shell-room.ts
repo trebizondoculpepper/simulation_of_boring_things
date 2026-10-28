@@ -523,7 +523,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     last = time;
     walk.update(delta);
     roomLights.update(delta);
-    partAudio.listen(camera, metre);
+    partAudio.listen(camera, metre, scene);
     // A door never closes on someone near it: told before it moves.
     const actor = doorActor(walk, metre, WALKER_RADIUS_METRES);
     door.setNearby(northNear.update(actor));

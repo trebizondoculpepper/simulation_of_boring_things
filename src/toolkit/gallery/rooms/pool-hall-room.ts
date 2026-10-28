@@ -739,7 +739,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       u.caustics.value = base.caustics * k * w;
       u.reflected.value = base.reflected * k * w;
     }
-    partAudio.listen(camera, metre);
+    partAudio.listen(camera, metre, scene);
     if (spaTub && 'object' in spaTub) spaTub.update?.(delta);
     if (spaPanel && 'object' in spaPanel) spaPanel.parts?.update(delta);
     // Near a door, it waits, told before it moves.
