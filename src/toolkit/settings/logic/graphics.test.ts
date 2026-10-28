@@ -28,6 +28,9 @@ describe('the costlier effects’ settings', () => {
     expect(ambientOcclusionAt('high', 6).samples).toBe(6);
     expect(ambientOcclusionAt('medium', 6).samples).toBe(4);
     expect(ambientOcclusionAt('low', 6).samples).toBe(4);
+    // A room tuned below the floor keeps its own (the museum's 3).
+    expect(ambientOcclusionAt('high', 3).samples).toBe(3);
+    expect(ambientOcclusionAt('low', 3).samples).toBe(3);
   });
 
   it('run bloom on a smaller image as its quality falls', () => {

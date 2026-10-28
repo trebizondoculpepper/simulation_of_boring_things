@@ -41,6 +41,14 @@ import type { MuseumHallId } from '../logic/museum-plan';
 import { createMuseumHall } from '../views/museum-hall';
 
 /**
+ * The museum's ambient occlusion samples per pixel, at High (the owner,
+ * 2026-10-28: "set ambient occlusion to something quite low, maybe 2 or
+ * 3, and see if that makes it run even faster"); its big plain walls
+ * need little.
+ */
+const MUSEUM_AO_SAMPLES = 3;
+
+/**
  * A room of the pool science museum, PLANTROOMS (mission 107), in its own scene: its
  * archways are doorways the app sees through (`door-joins.ts`), always
  * open, one at a time (the one the visitor is at, or looking towards:
@@ -123,7 +131,7 @@ export function startMuseumHallRoom(
     distanceExponent: 1.4,
     thickness: 1.2 * metre,
     scale: 1,
-    samples: 12,
+    samples: MUSEUM_AO_SAMPLES,
     radius: 0.6 * metre,
   });
   ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6 });
@@ -132,7 +140,7 @@ export function startMuseumHallRoom(
   const bloom = new UnrealBloomPass(new Vector2(1, 1), 0.25, 0.4, 0.92);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
-  followEffectSettings(composer, { ao, bloom });
+  followEffectSettings(composer, { ao, aoSamples: MUSEUM_AO_SAMPLES, bloom });
 
   // Which archway's hall is drawn through it, and which are being seen.
   const seen: Partial<Record<MuseumHallId, boolean>> = {};

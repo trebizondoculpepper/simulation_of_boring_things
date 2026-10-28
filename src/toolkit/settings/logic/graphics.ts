@@ -27,16 +27,17 @@ export const RESOLUTION_LABELS: Record<ResolutionCap, string> = {
 
 /**
  * Ambient occlusion at `level`: whether it runs, and its samples per pixel
- * (`full` is the room's own, as tuned: 12 in most, 6 on the bridge). Low
- * is a third of it and Medium half, never fewer than 4, the fewest GTAO
- * still looks like occlusion at.
+ * (`full` is the room's own, as tuned: 12 in most, 6 on the bridge, 3 in
+ * the museum). Low is a third of it and Medium half, never fewer than 4,
+ * the fewest GTAO still looks like occlusion at, unless the room's own is
+ * fewer still.
  */
 export function ambientOcclusionAt(level: EffectLevel, full = 12) {
   if (level === 'off') return { enabled: false, samples: full };
   const share = level === 'low' ? 1 / 3 : level === 'medium' ? 1 / 2 : 1;
   return {
     enabled: true,
-    samples: Math.max(4, Math.min(full, Math.round(full * share))),
+    samples: Math.min(full, Math.max(4, Math.round(full * share))),
   };
 }
 
