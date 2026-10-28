@@ -103,3 +103,18 @@ Very cheap: the ten specimens two draw calls (two instance groups), the plinths 
 1. **The shade:** avocado (recommended) or harvest gold?
 2. **The plinths:** the ten above, or fewer?
 3. **The hush:** silence and the lowered room tone, or a faint organ-like drone of our own?
+
+## Built (2026-10-28)
+
+The owner placed it as Hall 7 (`museum7`, a corner hall: in from the north archway walking south, out by the west archway). Files: `src/toolkit/gallery/logic/museum-7-grout.ts` (the plaques' words, the title wall, introduction and cards, the plan and solids, the joint-length fact; tested), `src/toolkit/gallery/views/grout-specimen.ts` (the one specimen geometry, three groups, two `InstancedMesh`es sharing it, nine grey and one avocado; tested), `src/toolkit/gallery/rooms/museum/hall-7-grout.ts` (the hall), registered in `HALL_EXHIBITS` and `EXHIBIT_HALLS`.
+
+- **The row** runs east to west across the hall's south half (z = 3.6), 1840 at the east, today at the west, so it reads left to right as the visitor faces it (rule 5) and walking on towards the way out walks forward in time; plaques on bronze lecterns on the north (visitor's) side, red ropes on brass posts both sides, a bronze timeline in the floor between lecterns and rope with a tick each decade, gilt years at 1850, 1900, 1950 and 2000, and a stud at each plinth's first year.
+- **The plaques** follow "Research: what the hall holds" with the conflicts applied: no "thick joints" on plinth 1; Aspdin's 1824 patent and the hotter-burned 1840s cement on plinth 2; epoxy "from the 1940s; in pools from about the 1960s"; indicative dates hedged ("from about"). No real makers named, and none needed.
+- **The title wall** is gilt serif on a dark ground, high on the south wall straight ahead of the way in, with the PLANTROOMS mark; the introduction (with the computed 5.7 km of joint and the standards) on the east wall by the entrance; "There is nothing to reset. Grout endures." on a small card on the north wall beside the arch; the bench at the row's west end facing back along it, the closing card above it on the west wall.
+- **The mood:** walls, ceiling and floor lined dark blue-grey (the lining cut round both archways), ten lamp heads on drop rods over the plinths, three real spotlights down the row and one wash on the title wall, no shadows.
+
+Deviations: the room's own gallery lights, hemisphere and sun stay on (dimming them needs `museum-hall-room.ts`, a shared file); the dark lining keeps the hall dim instead. The introduction is on the east wall rather than beside the title wall (which stands behind the roped row). Three spotlights, not ten, plus ten unlit lamp heads; no low-preset baked pools. No room-tone change or drone (question 3 open). The museum catalogue's `museum7` entry still says `waiting(7)` (shared file, left alone). Avocado chosen as recommended (question 1 still the owner's).
+
+Checks: typecheck, lint, format, tests and build run. Not done: browser walk-through, screenshots, frame-time measurement on the presets (the owner: "get them all built first").
+
+Camera: `?room=museum7&x=0&y=1.6&z=-5&yaw=180&pitch=0` (just in from the north archway, looking south at the row and the title wall).

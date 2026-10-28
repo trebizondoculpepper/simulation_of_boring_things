@@ -97,15 +97,17 @@ export function hallId(n: number): MuseumHallId {
 /**
  * The building, provisional (the owner, 2026-10-28: "we can resize them
  * later"; question 8 in 107): a grid of rooms `cols` east–west by `rows`
- * north–south, each room `cellW` along x by `cellD` along z between its
- * wall lines (Hall 0 keeps stage 1's 16 × 14 m), and the height to the
- * roof deck's underside.
+ * north–south, each column `colW[c]` along x and each row `rowD[r]` along
+ * z between its wall lines (Hall 0 keeps stage 1's 16 × 14 m), and the
+ * height to the roof deck's underside. Non-uniform (the owner, 2026-10-28:
+ * "make one room on each side 50% bigger"): column 1 (Halls 3 and 9, the
+ * finale) is 24 m wide and the middle row (Halls 1 and 6) 21 m deep.
  */
 export const MUSEUM_SQUARE = {
   cols: 4,
   rows: 3,
-  cellW: 16,
-  cellD: 14,
+  colW: [16, 24, 16, 16],
+  rowD: [14, 21, 14],
   h: 9.5,
 } as const;
 
@@ -130,8 +132,16 @@ export interface Rect {
   maxZ: number;
 }
 
-const HALF_W = (MUSEUM_SQUARE.cols * MUSEUM_SQUARE.cellW) / 2;
-const HALF_D = (MUSEUM_SQUARE.rows * MUSEUM_SQUARE.cellD) / 2;
+const sum = (xs: readonly number[]) => xs.reduce((a, b) => a + b, 0);
+const HALF_W = sum(MUSEUM_SQUARE.colW) / 2;
+const HALF_D = sum(MUSEUM_SQUARE.rowD) / 2;
+/** The wall lines' x (west to east) and z (north to south). */
+const X_LINES = MUSEUM_SQUARE.colW.map(
+  (_, c) => -HALF_W + sum(MUSEUM_SQUARE.colW.slice(0, c)),
+);
+const Z_LINES = MUSEUM_SQUARE.rowD.map(
+  (_, r) => -HALF_D + sum(MUSEUM_SQUARE.rowD.slice(0, r)),
+);
 
 /** Each hall's cell, column (0 west) and row (0 north), in the visitor's order round the ring. */
 const CELLS: readonly (readonly [number, number])[] = [
@@ -148,10 +158,10 @@ const CELLS: readonly (readonly [number, number])[] = [
 ];
 
 const cellRect = (c: number, r: number): Rect => ({
-  minX: -HALF_W + c * MUSEUM_SQUARE.cellW,
-  maxX: -HALF_W + (c + 1) * MUSEUM_SQUARE.cellW,
-  minZ: -HALF_D + r * MUSEUM_SQUARE.cellD,
-  maxZ: -HALF_D + (r + 1) * MUSEUM_SQUARE.cellD,
+  minX: X_LINES[c],
+  maxX: X_LINES[c] + MUSEUM_SQUARE.colW[c],
+  minZ: Z_LINES[r],
+  maxZ: Z_LINES[r] + MUSEUM_SQUARE.rowD[r],
 });
 
 /** Each hall's wall lines (the middles of its walls), in the museum's plan. */
@@ -161,10 +171,10 @@ const BOUNDS = Object.fromEntries(
 
 /** The courtyard's wall lines. */
 export const COURTYARD: Rect = {
-  minX: -HALF_W + MUSEUM_SQUARE.cellW,
-  maxX: HALF_W - MUSEUM_SQUARE.cellW,
-  minZ: -HALF_D + MUSEUM_SQUARE.cellD,
-  maxZ: HALF_D - MUSEUM_SQUARE.cellD,
+  minX: -HALF_W + MUSEUM_SQUARE.colW[0],
+  maxX: HALF_W - MUSEUM_SQUARE.colW[MUSEUM_SQUARE.cols - 1],
+  minZ: -HALF_D + MUSEUM_SQUARE.rowD[0],
+  maxZ: HALF_D - MUSEUM_SQUARE.rowD[MUSEUM_SQUARE.rows - 1],
 };
 /** The whole building's outer wall lines. */
 export const BUILDING: Rect = {
@@ -809,7 +819,11 @@ export const BENCH = { w: 0.5, l: 2.0, h: 0.45 } as const;
  * sub-prompt): their floor is the exhibit's, so they have no benches and
  * no "coming soon" panel.
  */
-export const EXHIBIT_HALLS: ReadonlySet<MuseumHallId> = new Set(['museum1']);
+export const EXHIBIT_HALLS: ReadonlySet<MuseumHallId> = new Set([
+  'museum1',
+  'museum7',
+  'museum8',
+]);
 
 /** A hall's room code, the first part of its exhibit's tags: M1, M2 … (107-0: the hall's number, not its room id). */
 export const hallRoomCode = (id: MuseumHallId) => `M${hallNumber(id)}`;

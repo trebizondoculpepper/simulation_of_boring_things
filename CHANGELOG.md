@@ -12,10 +12,13 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Changed
 
+- The museum's ring is no longer a uniform grid (the owner, 2026-10-28: "make one room on each side 50% bigger, we will need the whole plant room to be bigger"): column 1 (Hall 3 and Hall 9, the finale) is 24 m wide and the middle row (Hall 1 and Hall 6) 21 m deep, the building now 72 × 49 m; Hall 0 and the corner halls keep 16 × 14 m (`MUSEUM_SQUARE.colW`, `rowD`). Hall 1's exhibit stays centred along its west wall.
 - The museum's courtyard windows show only a plain white sky, opaque, so no other hall is ever seen through them (the owner, 2026-10-28: "you never see the other rooms, just white skybox"); the sky box and its stencil pass are gone.
 - The museum rebuilt as the owner's ring (mission 107-1): 10 halls, `museum0` to `museum9`, four rooms east–west by three north–south round a courtyard two rooms wide and one deep (16 × 14 m rooms, provisional; the owner, 2026-10-28: "the 4x3 room layout"), Hall 0 in the south-west corner with arrows on its floor pointing north into Hall 1, the route round to Hall 9 and back into Hall 0; Halls 1 to 4 and 9 signed with their themes (Warm water, Clean water, Safe water, The chemistry of pools, The whole plant), Halls 5 to 8 "coming soon"; the safety layer recomputed for the ring (exits to Hall 0 the shorter way, fire points in the odd-numbered halls, the lift's place moved along Hall 0's east wall beside the new doorway from Hall 9). Every hall is now the same height, Hall 0 included, and the courtyard windows are high clerestories that show only the sky (the owner, 2026-10-28): the courtyard's paving, trees, pond and far walls are no longer drawn.
 
 ### Added
+
+- Thirty-three OpenAI-generated reference photographs for the fictional 1997 chlorine-release museum sequence: three variants of each of eleven scenes in `doc/gens/hindenburg/` (the owner, 2026-10-28).
 
 - The empty hall as a component (`src/toolkit/gallery/views/museum-empty-hall.ts`; the owner, 2026-10-28): generic, side and corner, the architecture only, merged by material; each hall's scene draws every hall beyond its neighbours empty at its true place, replacing the plain stand-ins, with the ring's adjacency and full/empty sets pure and tested in `museum-plan.ts`.
 

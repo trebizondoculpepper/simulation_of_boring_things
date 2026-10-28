@@ -68,9 +68,12 @@ export function createDc1Unit(
     channel,
     state,
     change,
+    tuning = false,
   }: {
     tag: string;
     channel: DoseChannel;
+    /** Its tuning menus open (`DC1_TUNING_MENUS`). */
+    tuning?: boolean;
     state: () => ControllerState;
     change: (c: ControllerState) => void;
   },
@@ -169,7 +172,7 @@ export function createDc1Unit(
     }),
   );
   // Its keys, their legends printed above.
-  let face: Dc1Face = newDc1Face(channel);
+  let face: Dc1Face = newDc1Face(channel, tuning);
   for (const k of KEYS) {
     const key = membraneKey(kit, {
       legend: k.legend,
@@ -263,6 +266,7 @@ export function createDc1Pair(
     tag: string;
     state: () => ControllerState;
     change: (c: ControllerState) => void;
+    tuning?: boolean;
   },
 ) {
   const t = tools(kit);

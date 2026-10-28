@@ -36,6 +36,7 @@ import type {
   DiaphragmKey,
   DiaphragmKind,
   DiaphragmOutput,
+  DiaphragmState,
 } from '../logic/diaphragm-pump';
 
 /**
@@ -122,6 +123,11 @@ export function createDiaphragmPump(
   kit: PanelKit,
   label: string,
   kind: DiaphragmKind,
+  /** Its keys bound to a model's state (the museum's Hall 3), or kept here. */
+  bound?: {
+    state: () => DiaphragmState;
+    press: (key: DiaphragmKey) => void;
+  },
 ): DiaphragmPump {
   const s = SHAPES[kind];
   const spec = DIAPHRAGM_PUMPS[kind];
@@ -329,7 +335,8 @@ export function createDiaphragmPump(
   // Its keys.
   const parts = createPartSet();
   const keyParts: Part[] = [];
-  let state = newDiaphragmState();
+  let own = newDiaphragmState();
+  const keyState = () => (bound ? bound.state() : own);
   const K = s.keys;
   // Its sounder behind the fascia (mission 100): Grundflow's pitch.
   const beeper = piezoSounder({ pitch: 'high', room: 'small' }, group);
@@ -352,6 +359,7 @@ export function createDiaphragmPump(
       w: kind === 'stepper' ? 0.012 : 0.014,
       name: `${label} ${legend}`,
       action: () => {
+        const state = keyState();
         const next = pressKey(state, k);
         // Its piezo: a chirp for each key, a confirm for START, the error
         // bleep for a key that changes nothing (▲ at its most, ▼ at its least).
@@ -359,7 +367,8 @@ export function createDiaphragmPump(
         else if ((k === 'up' || k === 'down') && next.manual === state.manual)
           beeper.play('error');
         else beeper.key();
-        state = next;
+        if (bound) bound.press(k);
+        else own = next;
       },
     });
     b.object.position.set(K.x[i], K.y, front + 0.0056);
@@ -436,13 +445,13 @@ export function createDiaphragmPump(
   let heard = false;
   const sound = kind === 'solenoid' ? SOLENOID_PUMP : STEPPER_PUMP;
   const words = () =>
-    `${state.on ? (out.running ? 'Dosing' : 'Paused, not asked') : 'Stopped'}, ${out.rate.toFixed(2)} l/h, ${state.mode === 'auto' ? 'AUTO' : 'MANUAL'}, ${out.spm} strokes a minute`;
+    `${keyState().on ? (out.running ? 'Dosing' : 'Paused, not asked') : 'Stopped'}, ${out.rate.toFixed(2)} l/h, ${keyState().mode === 'auto' ? 'AUTO' : 'MANUAL'}, ${out.spm} strokes a minute`;
   describe(
     group,
     `${label}: Grundflow ${spec.model} diaphragm dosing pump`,
     words,
   );
-  drawLcd(diaphragmDisplay(label, state, out), false);
+  drawLcd(diaphragmDisplay(label, keyState(), out), false);
   return {
     object: group,
     parts,
@@ -453,7 +462,7 @@ export function createDiaphragmPump(
     update(delta, demand, powered = true, fault = null) {
       out = diaphragmOutput(
         kind,
-        state,
+        keyState(),
         fault ? { ...demand, running: false } : demand,
         powered,
       );
@@ -474,7 +483,7 @@ export function createDiaphragmPump(
       strokeLamp.emissiveIntensity = flash ? 1.8 : 0;
       // The diaphragm's cover pushes out a little on each discharge stroke.
       cover.position.x = H.x - H.len / 2 - (flash ? 0.0025 : 0);
-      const shown0 = diaphragmDisplay(label, state, out, powered);
+      const shown0 = diaphragmDisplay(label, keyState(), out, powered);
       const lines = shown0 && fault ? { ...shown0, state: 'ERR' } : shown0;
       const k = `${JSON.stringify(lines)}${flash}`;
       if (k === shown) return;

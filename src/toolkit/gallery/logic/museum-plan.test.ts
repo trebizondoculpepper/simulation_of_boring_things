@@ -53,6 +53,16 @@ const overlapArea = (a: Rect, b: Rect) =>
   Math.max(0, Math.min(a.maxZ, b.maxZ) - Math.max(a.minZ, b.minZ));
 
 describe('the pool science museum', () => {
+  it('makes one hall on each side half as big again (the owner, 2026-10-28)', () => {
+    const size = (n: number) => {
+      const b = hallBounds(hallId(n));
+      return [b.maxX - b.minX, b.maxZ - b.minZ];
+    };
+    expect(size(0)).toEqual([16, 14]);
+    for (const n of [1, 6]) expect(size(n)).toEqual([16, 21]);
+    for (const n of [3, 9]) expect(size(n)).toEqual([24, 14]);
+    for (const n of [2, 4, 5, 7, 8]) expect(size(n)).toEqual([16, 14]);
+  });
   it('has the welcome and thirteen halls, each reached by its own link and named', () => {
     expect(MUSEUM_HALLS).toHaveLength(10);
     MUSEUM_HALLS.forEach((id, n) => {
@@ -99,10 +109,12 @@ describe('the pool science museum', () => {
       0,
     );
     expect(ring).toBeCloseTo(area(BUILDING) - area(COURTYARD), 9);
-    expect(BUILDING.maxX - BUILDING.minX).toBe(4 * MUSEUM_SQUARE.cellW);
-    expect(BUILDING.maxZ - BUILDING.minZ).toBe(3 * MUSEUM_SQUARE.cellD);
-    expect(COURTYARD.maxX - COURTYARD.minX).toBe(2 * MUSEUM_SQUARE.cellW);
-    expect(COURTYARD.maxZ - COURTYARD.minZ).toBe(1 * MUSEUM_SQUARE.cellD);
+    expect(MUSEUM_SQUARE.colW).toEqual([16, 24, 16, 16]);
+    expect(MUSEUM_SQUARE.rowD).toEqual([14, 21, 14]);
+    expect(BUILDING.maxX - BUILDING.minX).toBe(72);
+    expect(BUILDING.maxZ - BUILDING.minZ).toBe(49);
+    expect(COURTYARD.maxX - COURTYARD.minX).toBe(40);
+    expect(COURTYARD.maxZ - COURTYARD.minZ).toBe(21);
     // Hall 0 in the south-west corner; 2, 5 and 7 the other corners.
     const corner = (id: MuseumHallId) => {
       const r = hallBounds(id);

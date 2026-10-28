@@ -62,7 +62,20 @@ export const DC1_MENUS = [
   'mode',
   'cal',
 ] as const;
-export type Dc1Menu = (typeof DC1_MENUS)[number];
+/**
+ * With its tuning menus opened (the museum's Hall 3; the owner,
+ * 2026-10-28: "let users play with all the controls"): after SEt, the
+ * band `XP` and, on the chlorine unit, the integral time `tn` (hours), as
+ * the D1C's control parameters.
+ */
+export const DC1_TUNING_MENUS: Record<
+  DoseChannel,
+  readonly (Dc1Menu | 'xp' | 'tn')[]
+> = {
+  hypochlorite: ['meas', 'out', 'set', 'xp', 'tn', 'lo', 'hi', 'mode', 'cal'],
+  acid: ['meas', 'out', 'set', 'xp', 'lo', 'hi', 'mode', 'cal'],
+};
+export type Dc1Menu = (typeof DC1_MENUS)[number] | 'xp' | 'tn';
 
 export interface Dc1Face {
   channel: DoseChannel;
@@ -73,10 +86,16 @@ export interface Dc1Face {
   flash: { text: string; until: number } | null;
   /** The face's own clock, s. */
   time: number;
+  /** Its tuning menus open (`DC1_TUNING_MENUS`). */
+  tuning?: boolean;
 }
 
-export const newDc1Face = (channel: DoseChannel): Dc1Face => ({
+export const newDc1Face = (
+  channel: DoseChannel,
+  tuning = false,
+): Dc1Face => ({
   channel,
+  ...(tuning ? { tuning } : {}),
   menu: 'meas',
   editing: null,
   flash: null,
@@ -85,13 +104,22 @@ export const newDc1Face = (channel: DoseChannel): Dc1Face => ({
 
 /** Which setting each menu edits, by channel. */
 const SETTING: Record<
-  'set' | 'lo' | 'hi',
+  'set' | 'lo' | 'hi' | 'xp' | 'tn',
   Record<DoseChannel, keyof ControllerSettings>
 > = {
   set: { hypochlorite: 'chlorineSet', acid: 'pHSet' },
   lo: { hypochlorite: 'chlorineLow', acid: 'pHLow' },
   hi: { hypochlorite: 'chlorineHigh', acid: 'pHHigh' },
+  xp: { hypochlorite: 'chlorineBand', acid: 'pHBand' },
+  tn: { hypochlorite: 'chlorineIntegral', acid: 'chlorineIntegral' },
 };
+
+const isSetting = (m: Dc1Menu): m is 'set' | 'lo' | 'hi' | 'xp' | 'tn' =>
+  m === 'set' || m === 'lo' || m === 'hi' || m === 'xp' || m === 'tn';
+
+/** A setting's value as the unit shows it: the integral time in hours to 0.1. */
+const settingText = (m: Dc1Menu, v: number, ch: DoseChannel) =>
+  m === 'tn' ? v.toFixed(1) : dc1Number(v, ch);
 
 const reading = (c: ControllerState, ch: DoseChannel) =>
   ch === 'hypochlorite' ? c.measured.free : c.measured.ph;
@@ -227,7 +255,7 @@ export function pressDc1(
         );
       return none();
     }
-    if (f.menu === 'set' || f.menu === 'lo' || f.menu === 'hi') {
+    if (isSetting(f.menu)) {
       const k = SETTING[f.menu][ch];
       const r = SETTING_RANGES[k];
       if (key === 'up' || key === 'down')
@@ -248,10 +276,13 @@ export function pressDc1(
   }
   if (key === 'back') return none({ ...f, menu: 'meas', flash: null });
   if (key === 'change') {
-    const i = DC1_MENUS.indexOf(f.menu);
+    const menus: readonly Dc1Menu[] = f.tuning
+      ? DC1_TUNING_MENUS[ch]
+      : DC1_MENUS;
+    const i = menus.indexOf(f.menu);
     return none({
       ...f,
-      menu: DC1_MENUS[(i + 1) % DC1_MENUS.length],
+      menu: menus[(i + 1) % menus.length],
       flash: null,
     });
   }
@@ -265,6 +296,8 @@ export function pressDc1(
           ? none({ ...f, editing: c.manual[ch] })
           : none();
       case 'set':
+      case 'xp':
+      case 'tn':
       case 'lo':
       case 'hi':
         return none({ ...f, editing: c.settings[SETTING[f.menu][ch]] });
@@ -348,7 +381,7 @@ export function dc1Display(f: Dc1Face, c: ControllerState): Dc1Display {
   const lamps: Dc1Lamps = {
     meas: f.menu === 'meas' || f.menu === 'cal',
     out: f.menu === 'out',
-    set: f.menu === 'set' || f.menu === 'lo' || f.menu === 'hi',
+    set: isSetting(f.menu),
     auto: c.mode[ch] === 'auto',
     man: c.mode[ch] === 'manual',
     dose: c.release[ch] && c.yout[ch] > 0 ? 0.4 + 0.6 * c.yout[ch] : 0,
@@ -382,7 +415,7 @@ export function dc1Display(f: Dc1Face, c: ControllerState): Dc1Display {
       return show(editingShown(f.editing ? 'HAnd' : 'Auto'));
     if (f.menu === 'out')
       return show(editingShown(`H ${dc1Number(f.editing, 'percent')}`));
-    return show(editingShown(dc1Number(f.editing, ch)));
+    return show(editingShown(settingText(f.menu, f.editing, ch)));
   }
   switch (f.menu) {
     case 'meas': {
@@ -403,6 +436,14 @@ export function dc1Display(f: Dc1Face, c: ControllerState): Dc1Display {
     case 'set':
       return show(
         alternate ? 'SEt' : dc1Number(c.settings[SETTING.set[ch]], ch),
+      );
+    case 'xp':
+      return show(
+        alternate ? 'XP' : dc1Number(c.settings[SETTING.xp[ch]], ch),
+      );
+    case 'tn':
+      return show(
+        alternate ? 'tn' : settingText('tn', c.settings.chlorineIntegral, ch),
       );
     case 'lo':
       return show(alternate ? 'Lo' : dc1Number(c.settings[SETTING.lo[ch]], ch));

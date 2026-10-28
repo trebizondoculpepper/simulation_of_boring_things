@@ -75,3 +75,5 @@ Large. After 107-0 (so exhibits are found by number), before 107e (so the finale
 - **Hall 0's empty model**: the same bands, cove and sticker (one quad), and its floor the full hall's painted floor (the same painting at 40 px/m).
 
 **Browser check: not done.** The connected Chrome again showed an error page for the dev server on 127.0.0.1.
+
+**Resized (the owner, 2026-10-28: "make one room on each side 50% bigger, we will need the whole plant room to be bigger"):** the grid is non-uniform, `MUSEUM_SQUARE.colW = [16, 24, 16, 16]` and `rowD = [14, 21, 14]` replacing `cellW`/`cellD`: column 1 (Halls 3 and 9, the finale) 24 m wide, the middle row (Halls 1 and 6) 21 m deep; the building 72 × 49 m, the courtyard 40 × 21 m, Hall 0 unchanged at 16 × 14 m; everything else (joins, archways mid-wall, windows, safety, empty halls, detail sets) follows from the hall bounds.
