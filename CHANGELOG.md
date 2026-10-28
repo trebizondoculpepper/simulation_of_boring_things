@@ -33,6 +33,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Thirty original period-style photographs for Hall 5's “A Day in the Life” gallery, three scenes in each of ten decades from the 1920s to the 2020s, generated into `doc/gens/day-in-the-life/` for later selection and installation.
 - Error reporting with Sentry (the owner, 2026-10-28): the published builds on GitHub Pages and itch.io send uncaught errors, unhandled rejections and the errors the game shows to the project's Sentry, tagged with the version, room and graphics preset; no tracing, profiling, cookies or personal data, and nothing from the dev server or `?dev`.
 
 - Dev52, Museum stuff (the owner, 2026-10-28: "a devroom called museum stuff, 90% black walls, minimal lighting"): a dark room (10% grey walls, dark floor and ceiling, a low ambient, a gallery spot over each case) for the museum's fittings. In it a reusable museum showcase (`src/toolkit/gallery/views/museum-showcase.ts`, sized by `logic/museum-showcase.ts`): a plinth with a recessed black kick plate and a shadow gap under its fabric deck, a low-iron glass hood with faint reflections and just-visible bonded edges in a thin bronze-black channel, a lighting attic with warm LED strips and one spot (no shadows), and a small object label on an acrylic wedge, the deck set by an eye-line rule. Hall 8's case of the two fill points now uses it (`views/fill-points-case.ts`), shown in both places, with its plaques on a bracketed rail clear of the plinth and its hose tags no longer overlapping.

@@ -31,6 +31,6 @@ Deviations:
 - **The skimmer is placed in the middle of the floor**, not among the morning photographs on a wall; every bay's first photograph is its morning, and the 1950s, 1980s, 1990s and 2020s mornings show the skimmer job.
 - No schematic node in `src/game/plant/`: the skimmer's tags (M5-SK1, -L, -B) are derived from the hall's room code in the game logic.
 
-Still to do: a walkthrough emptying the skimmer on high, medium and low; frame-time measurement and the component benchmark; the real photographs; voice clips.
+Still to do: a walkthrough emptying the skimmer on high, medium and low; frame-time measurement and the component benchmark; choose, resize and install the 30 original generated photographs ([image prompts and completion record](day-in-the-life/midjourney-prompts.md), `doc/gens/day-in-the-life/`); voice clips.
 
 Camera: `?room=museum5&x=-1&y=1.6&z=-3&yaw=150&pitch=-30&noclip=true` (the skimmer and skip); the gallery `?room=museum5&x=1&y=1.6&z=0&yaw=30&pitch=0&noclip=true`.

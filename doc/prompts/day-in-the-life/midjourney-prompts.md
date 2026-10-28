@@ -1,10 +1,14 @@
 # Midjourney prompts: "A Day in the Life" of Reg the poolman
 
+Status: done 2026-10-28. All 30 scenes below have one generated photograph in `doc/gens/day-in-the-life/`, 1536 × 1024 pixels, made with the built-in image generator. Files use the `_a.png` variant except `2000s-night_b.png`, which replaced a first attempt that missed the at-home setting. The images were visually reviewed together; this completes the image generation task. Selecting, resizing and installing them in Hall 5 remains part of [107l](../107l-a-day-in-the-life.md).
+
 Prompts for Hall 5's photograph gallery ([107l](../107l-a-day-in-the-life.md); the scenes are the hall's captions in `src/toolkit/gallery/logic/museum-5-gallery.ts`), written 2026-10-28. Every decade has its Reg: the pool's man of all work, a different Reg in each decade's dress, the same name and the same jobs (an archetype, not one man aging a century). Three photographs a decade: morning, midday and night.
 
-**Where the results go:** `doc/gens/day-in-the-life/`, named `<decade>-<time>_<variant>.png` (for example `1950s-morning_a.png`), as `doc/gens/hindenburg/` is. The chosen ones are later resized into `resources/images/day-in-the-life/<decade>-<time>.jpg` for the hall.
+**Where the results are:** `doc/gens/day-in-the-life/`, named `<decade>-<time>_<variant>.png` (for example `1950s-morning_a.png`), as `doc/gens/hindenburg/` is. The chosen ones are later resized into `resources/images/day-in-the-life/<decade>-<time>.jpg` for the hall.
 
 Rules for every image: a British municipal swimming baths or leisure centre of the decade, indoors unless the scene says otherwise; no real place, firm, brand or logo; Reg seen working, his face ordinary and unremarkable; nobody else identifiable; no readable text. Each prompt below is complete, ready to paste.
+
+Generation used each scene prompt without the Midjourney flags, prefixed with “original 3:2 horizontal photograph for a fictional British swimming-baths museum gallery” and followed by “Single candid moment of Reg at work. Nobody else identifiable. No real place, firm, brand, logo, readable text or watermark.” The three 1930s prompts' photographic date was corrected from 1920s to 1930s. The 2000s night image was retried with its home kitchen and pager stated explicitly; its chosen file is `_b`.
 
 ## 1920s
 
@@ -31,19 +35,19 @@ Reg, a wiry baths attendant in his twenties with a neat moustache, in a white co
 ### 1930s, morning (`1930s-morning`)
 
 ```
-Reg, a baths attendant in his thirties with slicked hair, in a white jacket and dark trousers, sleeves rolled, at work in a British public swimming baths in the 1930s: the scum channel round the pool hosed clean, its strainer emptied into a bucket before the first swimmers. Candid, mid-task, period-correct equipment, clothing and building, 1920s sepia photograph, glass-plate camera, soft focus, scratches and vignetting, faded brown tones, no text, no logos --ar 3:2 --style raw --v 7
+Reg, a baths attendant in his thirties with slicked hair, in a white jacket and dark trousers, sleeves rolled, at work in a British public swimming baths in the 1930s: the scum channel round the pool hosed clean, its strainer emptied into a bucket before the first swimmers. Candid, mid-task, period-correct equipment, clothing and building, 1930s sepia photograph, glass-plate camera, soft focus, scratches and vignetting, faded brown tones, no text, no logos --ar 3:2 --style raw --v 7
 ```
 
 ### 1930s, midday (`1930s-midday`)
 
 ```
-Reg, a baths attendant in his thirties with slicked hair, in a white jacket and dark trousers, sleeves rolled, at work in a British public swimming baths in the 1930s: an enamel jug of bleach tipped into the balance tank; the bigger baths already dose chlorine gas. Candid, mid-task, period-correct equipment, clothing and building, 1920s sepia photograph, glass-plate camera, soft focus, scratches and vignetting, faded brown tones, no text, no logos --ar 3:2 --style raw --v 7
+Reg, a baths attendant in his thirties with slicked hair, in a white jacket and dark trousers, sleeves rolled, at work in a British public swimming baths in the 1930s: an enamel jug of bleach tipped into the balance tank; the bigger baths already dose chlorine gas. Candid, mid-task, period-correct equipment, clothing and building, 1930s sepia photograph, glass-plate camera, soft focus, scratches and vignetting, faded brown tones, no text, no logos --ar 3:2 --style raw --v 7
 ```
 
 ### 1930s, night (`1930s-night`)
 
 ```
-Reg, a baths attendant in his thirties with slicked hair, in a white jacket and dark trousers, sleeves rolled, at work in a British public swimming baths in the 1930s: backwashing the pressure filters: the valves turned in their order by hand, the dirty water run to waste. Candid, mid-task, period-correct equipment, clothing and building, 1920s sepia photograph, glass-plate camera, soft focus, scratches and vignetting, faded brown tones, no text, no logos --ar 3:2 --style raw --v 7
+Reg, a baths attendant in his thirties with slicked hair, in a white jacket and dark trousers, sleeves rolled, at work in a British public swimming baths in the 1930s: backwashing the pressure filters: the valves turned in their order by hand, the dirty water run to waste. Candid, mid-task, period-correct equipment, clothing and building, 1930s sepia photograph, glass-plate camera, soft focus, scratches and vignetting, faded brown tones, no text, no logos --ar 3:2 --style raw --v 7
 ```
 
 ## 1950s
@@ -163,7 +167,7 @@ Reg, a leisure centre duty technician in his fifties, in a navy polo shirt and h
 ### 2000s, night (`2000s-night`)
 
 ```
-Reg, a leisure centre duty technician in his fifties, in a navy polo shirt and hi-vis waistcoat, a radio on his belt, at work in a British public swimming baths in the 2000s: the pager goes off at home: the building has rung someone up because it is unhappy. Candid, mid-task, period-correct equipment, clothing and building, early 2000s compact digital camera photograph, slightly noisy, flat flash lighting, low dynamic range, no text, no logos --ar 3:2 --style raw --v 7
+Reg, a leisure centre duty technician in his fifties, in a navy polo shirt, at home in his modest British kitchen late at night in the 2000s: his work pager goes off while he makes tea; he looks down at it with mild concern, his hi-vis waistcoat hanging over a chair. The pool building is nowhere in sight. Candid, mid-task, period-correct equipment, clothing and home interior, early 2000s compact digital camera photograph, slightly noisy, flat flash lighting, low dynamic range, no text, no logos --ar 3:2 --style raw --v 7
 ```
 
 ## 2010s
