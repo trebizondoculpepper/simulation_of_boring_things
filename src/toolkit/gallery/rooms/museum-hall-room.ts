@@ -150,7 +150,21 @@ export function startMuseumHallRoom(
   });
   for (const [n, copy] of copies)
     void loadExhibit(n, copy.group)?.then((built) => {
-      if (built) copyExhibits.push(built);
+      if (!built) return;
+      copyExhibits.push(built);
+      // It fades in with its hall: on its own materials, since an
+      // exhibit's are often shared (a pipe kind's, cached), and this
+      // hall's own exhibit is not to fade with it.
+      const own = ownMaterials(built.object);
+      copyMaterials.push(...own);
+      fadeMaterials.get(n)?.push(
+        ...own.map((mat) => ({
+          mat,
+          opacity: mat.opacity,
+          transparent: mat.transparent,
+        })),
+      );
+      applyFade(n, fade.get(n) ?? 1);
     });
   // Each copy's fade (`neighbourFade`), and its materials, gathered once:
   // while part faded in, they are drawn see-through over its empty hall.
@@ -172,6 +186,7 @@ export function startMuseumHallRoom(
       ] as const;
     }),
   );
+  const copyMaterials: Material[] = [];
   const applyFade = (n: MuseumHallId, f: number) => {
     for (const m of fadeMaterials.get(n) ?? []) {
       const blend = f < 1 || m.transparent;
@@ -421,6 +436,7 @@ export function startMuseumHallRoom(
       walk.dispose();
       hall.dispose();
       for (const copy of copies.values()) copy.dispose();
+      for (const m of copyMaterials) m.dispose();
       shells.dispose();
       shellMaterials.dispose();
       freeEnvironment();
@@ -452,4 +468,33 @@ export function startMuseumHallRoom(
       },
     },
   );
+}
+
+/**
+ * Gives every mesh under `root` its own copy of each material it draws
+ * with (one copy of a material however many meshes share it), so the
+ * copies can be faded without touching anything else drawn with the
+ * originals; returns the copies. A copy keeps its original's shader hooks
+ * (a PS1 material's) and shares its `userData` and textures.
+ */
+function ownMaterials(root: Object3D): Material[] {
+  const copies = new Map<Material, Material>();
+  const own = (original: Material) => {
+    let made = copies.get(original);
+    if (!made) {
+      made = original.clone();
+      made.onBeforeCompile = original.onBeforeCompile;
+      made.customProgramCacheKey = original.customProgramCacheKey;
+      made.userData = original.userData;
+      copies.set(original, made);
+    }
+    return made;
+  };
+  root.traverse((obj) => {
+    if (obj instanceof Mesh)
+      obj.material = Array.isArray(obj.material)
+        ? obj.material.map(own)
+        : own(obj.material);
+  });
+  return [...copies.values()];
 }
