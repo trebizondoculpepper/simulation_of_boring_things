@@ -224,9 +224,21 @@ export function createChemControlPrototype(
     part: P,
     px: number,
     py: number,
+    caption: string,
   ) => {
     part.object.position.set(px, py, 0.042);
     station.add(part.object);
+    // Printed under it, large enough to read from the floor.
+    t.label(
+      station,
+      caption,
+      px,
+      py - 0.07,
+      0.041,
+      0.011,
+      '#1b1b1b',
+      '#f4f3ee',
+    );
     return part;
   };
   type Synced = () => void;
@@ -253,6 +265,7 @@ export function createChemControlPrototype(
         }),
         -0.22,
         y,
+        'SELECTOR\nHAND · AUTO',
       ),
     );
     const pick = parts.add(
@@ -265,6 +278,7 @@ export function createChemControlPrototype(
         }),
         -0.08,
         y,
+        'SELECTOR\nPICK PL1–4',
       ),
     );
     const hoa = parts.add(
@@ -277,6 +291,7 @@ export function createChemControlPrototype(
         }),
         0.08,
         y,
+        'PUMP\nHAND·OFF·AUTO',
       ),
     );
     parts.add(
@@ -289,6 +304,7 @@ export function createChemControlPrototype(
         }),
         0.2,
         y,
+        'PUMP TRIP\nRESET',
       ),
     );
     const link = parts.add(
@@ -301,6 +317,7 @@ export function createChemControlPrototype(
         }),
         0.33,
         y,
+        'TERMINAL\nLINK CUT · OK',
       ),
     );
     syncs.push(() => {
@@ -326,6 +343,7 @@ export function createChemControlPrototype(
       }),
       -0.3,
       faultY,
+      'WET HALL\nPOWER',
     ),
   );
   syncs.push(() => {
@@ -342,6 +360,7 @@ export function createChemControlPrototype(
       }),
       -0.12,
       faultY,
+      'TRIP\nBOX MCB',
     ),
   );
   parts.add(
@@ -354,6 +373,7 @@ export function createChemControlPrototype(
       }),
       0.04,
       faultY,
+      'HANG\nCONTROLLER',
     ),
   );
   parts.add(
@@ -367,6 +387,7 @@ export function createChemControlPrototype(
       }),
       0.2,
       faultY,
+      'OVERFILL\nHYPO PL4',
     ),
   );
   // The box's own isolator and MCB drive the trial.
@@ -377,11 +398,19 @@ export function createChemControlPrototype(
     if (state.box.mcbTripped !== tripped) act({ act: 'mcb', tripped });
   });
 
-  // For a script in the browser (development only): the trial now.
+  // For a script in the browser (development only): the trial now, and
+  // the terminals' keys and access keys, as clicks would work them.
   if (typeof window !== 'undefined')
-    (
-      window as unknown as { chemControlTrial?: () => ChemControlTrial }
-    ).chemControlTrial = () => state;
+    Object.assign(window, {
+      chemControlTrial: () => state,
+      chemControlTerminals: Object.fromEntries(
+        terminals.map(({ c, term }) => [
+          c,
+          { press: term.press, turnKey: term.turnKey, status: term.status },
+        ]),
+      ),
+      chemControlBox: { open: (to = true) => box.setOpen(to) },
+    });
 
   return {
     object: root,

@@ -3,6 +3,8 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
 import { panelMakerMark } from '../../core/views/panel-maker-mark';
 import { createPartSet, disconnectHandle } from '../../core/parts/parts';
+import { createBrandBadge } from '../../core/views/brand-badge';
+import type { BrandId } from '../../core/logic/brands';
 
 /** What the control box shows of itself: its supply, its controller and its I/O. */
 export interface ControlBoxReading {
@@ -45,13 +47,17 @@ export const BOX_OUTPUTS = [
  * 2026-10-27), Penfold Controls': a steel wall enclosure about 600 × 400
  * × 200 mm in light grey, its door isolator on the front (after a door-
  * mounted rotary switch-disconnector), its door opening on a quarter-turn
- * latch. Inside on DIN rail: an MCB, a 24 V power supply with its DC OK
- * LED, the controller (a small PLC, after a Siemens LOGO! 8) with RUN,
- * STOP and FAULT LEDs and an LED for every input and output, a comms
- * module for the two terminals, ten interposing relays (the selectors'
- * outlets and the pumps' remote run), and terminals for the day tanks'
- * level signals; the wiring diagram in the door's pocket. No keypad: the
- * terminals are the only way to read and set it.
+ * latch. Inside on DIN rail, each module badged by its maker (CLAUDE.md:
+ * the box is Penfold's, what it holds is bought in): Voltara's MCB and
+ * door isolator, Neumann Dynamik's 24 V power supply with its DC OK LED,
+ * the controller (Quorvane's QL-12, a small PLC after a Siemens LOGO! 8)
+ * with RUN, STOP and FAULT LEDs and an LED for every input and output,
+ * Fankel's comms module for the two terminals, Hartwell & Bligh's ten
+ * interposing relays (the selectors' outlets and the pumps' remote run),
+ * and terminals for the day tanks' level signals; an I/O schedule card
+ * beside the controller naming every LED, and the wiring diagram in the
+ * door's pocket. No keypad: the terminals are the only way to read and
+ * set it.
  *
  * Origin at the middle of its back, its front toward +z.
  */
@@ -110,6 +116,20 @@ export function createChemControlBox(
     );
   const moduleGrey = t.paint('#e3e2dc', 0.6);
   const dark = t.paint('#3a3d3f', 0.6);
+  /** A maker's badge printed on a module's face. */
+  const badge = (
+    id: BrandId,
+    x: number,
+    y: number,
+    z: number,
+    height: number,
+    maxWidth: number,
+    parent: Group = group,
+  ) => {
+    const b = createBrandBadge(kit, id, { height, maxWidth });
+    b.position.set(x, y, z);
+    parent.add(b);
+  };
   // Top rail: MCB, PSU, controller, comms module.
   const topY = 0.11;
   rail(topY);
@@ -136,6 +156,7 @@ export function createChemControlBox(
     '#1b1b1b',
     '#f4f3ee',
   );
+  badge('voltara', -0.25, topY - 0.059, front + 0.061, 0.005, 0.03);
   // The 24 V supply.
   t.box(
     group,
@@ -166,6 +187,7 @@ export function createChemControlBox(
   );
   dcOk.mesh.userData.live = true;
   t.label(group, 'DC OK', -0.19, topY - 0.03, front + 0.0585, 0.004, '#1b1b1b');
+  badge('neumann-dynamik', -0.19, topY + 0.038, front + 0.0585, 0.006, 0.048);
   // The controller.
   const plcX = -0.07;
   t.box(group, moduleGrey, 0.144, 0.09, 0.06, plcX, topY, front + 0.03);
@@ -179,10 +201,11 @@ export function createChemControlBox(
     topY + 0.032,
     front + 0.0606,
   );
+  badge('quorvane', plcX - 0.04, topY + 0.032, front + 0.0613, 0.008, 0.06);
   t.label(
     group,
-    'PENFOLD PC-12',
-    plcX - 0.035,
+    'QL-12/24RC',
+    plcX + 0.04,
     topY + 0.032,
     front + 0.0613,
     0.006,
@@ -222,15 +245,43 @@ export function createChemControlBox(
   // The comms module: a port and TX/RX LEDs for each terminal.
   const commsX = 0.06;
   t.box(group, moduleGrey, 0.05, 0.09, 0.06, commsX, topY, front + 0.03);
+  badge('fankel', commsX, topY + 0.038, front + 0.0606, 0.006, 0.044);
   t.label(
     group,
     'CM-485',
     commsX,
-    topY + 0.032,
+    topY + 0.028,
     front + 0.0606,
     0.005,
     '#1b1b1b',
   );
+  // The I/O schedule card beside the controller: every LED named, as a
+  // fitter would want when the door is open.
+  const schedule = t.printed(
+    0.17,
+    0.11,
+    (c, w, h) => {
+      c.fillStyle = '#f4f2e8';
+      c.fillRect(0, 0, w, h);
+      c.fillStyle = '#1b1b1b';
+      c.font = `bold ${h * 0.075}px Arial`;
+      c.fillText(`${tag}  QL-12 I/O`, w * 0.04, h * 0.1);
+      c.font = `${h * 0.058}px Arial`;
+      BOX_INPUTS.forEach((legend, i) =>
+        c.fillText(`I${i + 1}  ${legend}`, w * 0.04, h * (0.22 + i * 0.075)),
+      );
+      BOX_OUTPUTS.forEach((legend, i) =>
+        c.fillText(
+          `Q${i + 1}  ${legend}  (K${i + 1})`,
+          w * 0.5,
+          h * (0.22 + i * 0.075),
+        ),
+      );
+    },
+    512,
+  );
+  schedule.mesh.position.set(0.185, topY, front + 0.0085);
+  group.add(schedule.mesh);
   const comms = [0, 1].map((p) => {
     const y = topY + 0.012 - p * 0.03;
     t.box(
@@ -312,12 +363,13 @@ export function createChemControlBox(
     group,
     'INTERPOSING RELAYS',
     0.17,
-    relayY,
+    relayY + 0.008,
     front + 0.01,
     0.006,
     '#1b1b1b',
     '#f4f3ee',
   );
+  badge('hartwell-bligh', 0.17, relayY - 0.01, front + 0.01, 0.007, 0.1);
   duct(-0.1);
   // Bottom rail: the field terminals, the day tanks' level signals among them.
   const termY = -0.15;
@@ -366,7 +418,8 @@ export function createChemControlBox(
   isolator.object.position.set(0.17, -0.02, 0.018);
   door.add(isolator.object);
   parts.add(isolator);
-  t.label(door, 'ISOLATOR', 0.17, 0.07, 0.019, 0.01, '#1b1b1b', '#f4f3ee');
+  t.label(door, 'ISOLATOR', 0.17, -0.085, 0.019, 0.01, '#1b1b1b', '#f4f3ee');
+  badge('voltara', 0.17, -0.11, 0.019, 0.008, 0.08, door);
   t.label(
     door,
     `CHEMICAL DISTRIBUTION CONTROL\n${tag}`,

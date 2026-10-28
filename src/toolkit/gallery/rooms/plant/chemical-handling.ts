@@ -193,6 +193,11 @@ export const EXHIBITS: readonly PlantExhibit[] = [
   },
 ];
 
-/** A square room, its exhibits round all four walls, so less walking (the owner, 2026-10-27). */
+/**
+ * A square room, its exhibits round all four walls, so less walking (the
+ * owner, 2026-10-27); 22 m a side and fitted, since the transfer trial
+ * and the day tank range each want most of a wall, and at 20 m the trial
+ * ran into the distribution panels in the corner (2026-10-28).
+ */
 export const layoutRoom = (sizes: readonly ExhibitSize[]) =>
-  layoutSquarePlantRoom(sizes);
+  layoutSquarePlantRoom(sizes, [], { side: 22, fit: true });

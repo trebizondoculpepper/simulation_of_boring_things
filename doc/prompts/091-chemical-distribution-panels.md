@@ -1,6 +1,6 @@
 # 091: WH-CP1 replaced by two modern chemical distribution panels
 
-Status: in progress. Stages 1 to 3 built in the dev rooms only (2026-10-27, `5f64d77`, `3b2f63d`, `b8bbdb7`), awaiting the owner's look at dev44; the wet hall, the world and WH-CP1's retirement are a later step (the owner, 2026-10-27: "mostly a design task", nothing in the real game world yet). Designed 2026-10-27, with the owner's answers (terminals and a control box agreed the same day). The second mission after [089](089-layout-improvements.md).
+Status: in progress. Stages 1 to 3 built in the dev rooms only (2026-10-27, `5f64d77`, `3b2f63d`, `b8bbdb7`), finished and polished for the owner's look at dev44 (2026-10-28, see "For the owner to look at" below), awaiting that look; the wet hall, the world and WH-CP1's retirement are a later step (the owner, 2026-10-27: "mostly a design task", nothing in the real game world yet). Designed 2026-10-27, with the owner's answers (terminals and a control box agreed the same day). The second mission after [089](089-layout-improvements.md).
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply: real, working, branded engineering items bound to the world; new controls tried on dev0's boards and control assemblies in dev39 first; all input through `src/toolkit/controls/`; pure logic in `logic/` folders with tests; a world shape change bumps `WORLD_VERSION` (45 when this was written) with a migration. Markdown is one paragraph per line.
 
@@ -101,3 +101,32 @@ The owner narrowed the scope while it was being built (2026-10-27): the end resu
 - **Stage 3, the prototype** (`b8bbdb7`): the terminal (`industrial-control/views/ot216-terminal.ts`, with the character LCD `createCharacterLcd`), the box (`plant/views/chem-control-box.ts`: its door opens on its latch, isolator, MCB, controller, comms, relays and terminals all live, the wiring diagram in the door's pocket) and the prototype assembly (`plant/views/chem-control-prototype.ts`) with a trial station for the local controls and the faults. In dev44 it stands beside today's WH-CP1, both driven by the same trial ten times fast, in place of the old panel's own demo; in dev39 without WH-CP1; the character LCD and cursor keys have a board of their own in dev0. Without the wet hall's power both the old panel and the new terminals go dark and nothing is transferred. Tags are `PROTO-OT1`, `PROTO-OT2` and `PROTO-CB1` until the wet hall's model gives them theirs. In a browser walk through the menus: PL4's high level set to 25 L, FILL NOW on PL1 (calling, waiting its turn behind PL2), STOP and RESUME on PL3, each seen in the trial and in its log; the MCB tripped and both lines stopped.
 
 Left for later (in `TODO.md`): the owner's review of the dev44 prototype; installing it in the wet hall (the schematic's `chem-panel` node replaced by the two terminals and the box with their links and derived tags, the world's setpoints, inhibit and fill-now with a `WORLD_VERSION` bump and migration, the selectors in AUTO following the box, inspection); retiring `createDistributionPanel`; press-and-hold for the cursor keys if the control scheme gains it.
+
+## For the owner to look at (2026-10-28)
+
+The owner, 2026-10-28: "I'd like you to design those control panels and show them to me in the chemical room." Dev44 (`?room=dev44`) now shows them, still in the dev rooms only: the wet hall keeps WH-CP1 until the owner agrees the design.
+
+What changed overnight:
+
+- **Dev44 laid out without overlaps.** The square layout gave every wall five exhibits, so the 15.6 m transfer trial's wall ran past the corner and its pump panel stood in front of the control box and the trial station. Dev44 is now 22 m square and laid out with `fit` (`layoutSquarePlantRoom(sizes, links, { side, fit })` in `plant-room-layout.ts`: exhibits may move from one wall to the next and any two footprints overlapping count as a fault; off by default, so other rooms keep their places), with a test. The panels are on the south wall, at its east end.
+- **The control box's contents carry their makers' badges** (CLAUDE.md: the box is Penfold's, what it holds is bought in): Voltara's MCB and door isolator, Neumann Dynamik's 24 V supply, Quorvane's QL-12/24RC controller (after a LOGO! 8; it said PENFOLD PC-12 before), Fankel's CM-485 comms module and Hartwell & Bligh's interposing relays. An I/O schedule card beside the controller names every input and output LED (I1 to I6, Q1 to Q10, and each output's relay).
+- **Small fixes**: the terminal's `OT-216 PROTO-OTn` no longer runs off its band; the box's ISOLATOR plate moved below the handle, which covered it; each trial station control has a printed caption readable from the floor.
+- **For a script in the browser** (development only): `window.chemControlTerminals.hypochlorite.press('F2')`, `.turnKey()` and `.status()` (and the same for `acid`), and `window.chemControlBox.open()`, beside `window.chemControlTrial()`.
+
+What to look at (camera URLs, each with `&noclip=true`; screenshots taken 2026-10-28):
+
+1. **Old and new side by side**: `?room=dev44&x=7.2&y=1.5&z=6.8&yaw=180&pitch=-6`. Today's WH-CP1 on the left (its meters in per cent), the two OT-216 terminals, the control box PROTO-CB1 with their conduits into its glands, and the trial station, all driven by one trial ten times fast.
+2. **The two terminals close up**: `?room=dev44&x=7.09&y=1.55&z=9.45&yaw=180&pitch=-2`. Turn a terminal's LOCAL ACCESS key, then F1 MON, F2 SET, F3 CMD, ◀ ▶ through the tanks, ENTER, ESC. Seen in the walk: MON's home following the fill in progress (`PL2 OLYMPIC  MON` / `FILL 184L/1000L`), `ACCESS LOCKED` with the key at OFF, SET on PL4 editing its high level with the block cursor (`HIGH LEVEL  26L`), and CMD's `CONFIRM? ENT/ESC`.
+3. **Inside the control box**: `?room=dev44&x=6.25&y=1.42&z=9.25&yaw=180&pitch=-4`, then click its door. The controller's RUN, STOP and FAULT, its I/O LEDs, the relays' LEDs and the comms ports' TX and RX flicker live; the MCB trips and resets; the door isolator switches the box off (both terminals blank, AUTO filling stops) and on (`PENFOLD OT-216` / `V2.04 SELF TEST`, then MON).
+4. **The trial station**: `?room=dev44&x=5.4&y=1.35&z=8.7&yaw=180&pitch=-8`. Each line's selector HAND · AUTO and pick, the pump's HAND · OFF · AUTO and trip RESET, each terminal's link (CUT gives `NO COMMS`), the wet hall's power, TRIP BOX MCB, HANG CONTROLLER (FAULT flashes; switch the isolator off and on to clear it) and OVERFILL HYPO PL4 (high-high: the line trips, ALARM flashes, RESET at the store).
+
+Screenshots for the owner, in the session's scratchpad: `091-1-overview.jpg`, `091-2-terminals.jpg`, `091-3-control-box-open.jpg`, `091-4-trial-station.jpg`.
+
+Design questions for the owner, to be asked one at a time:
+
+1. Is the terminal right as it is, a real 200 × 140 mm OT-216 at eye height with a membrane keypad and one LOCAL ACCESS key each, or should it be larger or simpler?
+2. In the wet hall, should the control box stand by the transfer selectors on the dirty side, as designed, with the terminals' conduits running to it, or beside the terminals where WH-CP1 is now?
+3. Are the box's bought-in makers right (Quorvane controller, Voltara MCB and isolator, Neumann Dynamik supply, Fankel comms, Hartwell & Bligh relays)?
+4. Should the control room learn anything of the new arrangement, a CHEM CONTROL BOX FAULT window on its annunciator for instance, or keep exactly what it shows now, as agreed on 2026-10-27?
+5. Once the wet hall has the new panels, should WH-CP1 be deleted, or kept in a gallery as the old design?
+6. Is press-and-hold for the cursor keys (faster after 2 s, already in the terminal's logic) worth adding to the control scheme, or is one step a click enough?

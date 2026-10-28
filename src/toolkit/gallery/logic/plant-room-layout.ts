@@ -139,10 +139,23 @@ export function layoutPlantRoom(
   };
 }
 
+/**
+ * How a square room may be laid out: `side`, its walls' length (20 m by
+ * default); `fit`, whether its search may also move exhibits from one
+ * wall to the next (a long exhibit taking a wall nearly to itself) and
+ * counts any two footprints that overlap, in a corner most likely, as a
+ * fault (off by default, so rooms laid out before keep their places).
+ */
+export interface SquareLayoutOptions {
+  side?: number;
+  fit?: boolean;
+}
+
 /** Square development plant with machines on four walls and connected neighbours nearby. */
 export function layoutSquarePlantRoom(
   sizes: readonly ExhibitSize[],
   links: readonly (readonly [number, number, number])[] = [],
+  { side = 20, fit = false }: SquareLayoutOptions = {},
 ): PlantRoomLayout {
   const quarter = Math.floor(sizes.length / 4);
   const counts = [
@@ -162,7 +175,6 @@ export function layoutSquarePlantRoom(
       return row;
     });
   };
-  const side = 20;
   const half = side / 2;
   const arrange = (order: readonly number[]) => {
     const places: ExhibitPlace[] = Array(sizes.length);
@@ -196,14 +208,29 @@ export function layoutSquarePlantRoom(
     });
     return { rows, places, solids };
   };
+  const overlaps = (solids: readonly Footprint[]) => {
+    let sum = 0;
+    for (let a = 0; a < solids.length; a++)
+      for (let b = a + 1; b < solids.length; b++) {
+        const x =
+          Math.min(solids[a].maxX, solids[b].maxX) -
+          Math.max(solids[a].minX, solids[b].minX);
+        const z =
+          Math.min(solids[a].maxZ, solids[b].maxZ) -
+          Math.max(solids[a].minZ, solids[b].minZ);
+        if (x > 0 && z > 0) sum += (x * z + 1) * 1000;
+      }
+    return sum;
+  };
   const score = (order: readonly number[]) => {
-    const { rows, places } = arrange(order);
+    const { rows, places, solids } = arrange(order);
     const overflow = rows.reduce(
       (sum, row) => sum + Math.max(0, rowLength(row) - (side - 3)) ** 2 * 1000,
       0,
     );
     return (
       overflow +
+      (fit ? overlaps(solids) : 0) +
       links.reduce(
         (sum, [a, b, weight]) =>
           sum +
@@ -215,7 +242,7 @@ export function layoutSquarePlantRoom(
   };
   const order = sizes.map((_, index) => index);
   let best = score(order);
-  for (let pass = 0; pass < 8; pass++) {
+  for (let pass = 0; pass < (fit ? 24 : 8); pass++) {
     let improved = false;
     for (let a = 0; a < order.length - 1; a++) {
       for (let b = a + 1; b < order.length; b++) {
@@ -227,6 +254,22 @@ export function layoutSquarePlantRoom(
         } else [order[a], order[b]] = [order[b], order[a]];
       }
     }
+    // With `fit`, an exhibit may also move to the next wall round.
+    if (fit)
+      for (let bank = 0; bank < 3; bank++)
+        for (const step of [1, -1]) {
+          if (counts[bank] - step < 0 || counts[bank + 1] + step < 0) continue;
+          counts[bank] -= step;
+          counts[bank + 1] += step;
+          const next = score(order);
+          if (next + 0.001 < best) {
+            best = next;
+            improved = true;
+          } else {
+            counts[bank] += step;
+            counts[bank + 1] -= step;
+          }
+        }
     if (!improved) break;
   }
   const { places, solids } = arrange(order);

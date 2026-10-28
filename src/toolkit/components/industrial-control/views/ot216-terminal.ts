@@ -173,10 +173,10 @@ export function createOt216Terminal(
   t.label(
     group,
     `OT-216  ${tag}`,
-    0.065,
+    0.056,
     H / 2 - 0.012,
     z + 0.0016,
-    0.005,
+    0.0045,
     '#ffffff',
   );
   // The LCD in its black bezel.
@@ -322,6 +322,10 @@ export function createOt216Terminal(
     },
     /** For a test or a script: press a key as a click would. */
     press,
+    /** For a script: turn the LOCAL ACCESS key, as a click on it would. */
+    turnKey() {
+      for (const use of access.uses.values()) use();
+    },
     /** The width of its display, characters. */
     columns: OT216.width,
   };
