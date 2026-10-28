@@ -64,6 +64,7 @@ import type {
   MuseumWindow,
 } from '../logic/museum-plan';
 import { MUSEUM_EXHIBITION as BRAND } from '../logic/museum-brand';
+import { CLOSING_WALL } from '../logic/museum-9-placards';
 import { createMuseumSafety } from './museum-safety';
 import {
   POSTER_GLOW_MARGIN,
@@ -1194,36 +1195,28 @@ function paintBanner(c: CanvasRenderingContext2D, w: number, h: number) {
   c.textAlign = 'left';
 }
 
-/** Hall 9's end of the route, the finale's closing words. */
+/** Hall 9's end of the route, the closing wall (107e; the owner's message, 2026-10-28). */
 function paintEndWall(c: CanvasRenderingContext2D, w: number, h: number) {
+  const W = CLOSING_WALL;
   c.fillStyle = BRAND.colours.ground;
   c.fillRect(0, 0, w, h);
   c.fillStyle = BRAND.colours.main;
   c.fillRect(0, 0, w * 0.02, h);
+  const x = w * 0.05;
+  const span = w * 0.9;
   c.fillStyle = BRAND.colours.ink;
-  c.font = font(h * 0.13, 800);
-  c.fillText('Thank you for visiting', w * 0.06, h * 0.25);
+  let y = paragraph(c, W.headline, x, h * 0.12, span, h * 0.075, 800);
   c.fillStyle = BRAND.colours.main;
-  c.font = font(h * 0.075, 600);
-  c.fillText(
-    `${BRAND.name}: ${BRAND.subtitle.toLowerCase()}`,
-    w * 0.06,
-    h * 0.38,
-  );
+  y = paragraph(c, W.message, x, y + h * 0.03, span, h * 0.06, 700);
   c.fillStyle = BRAND.colours.ink;
-  paragraph(
-    c,
-    'Now you’ve seen it, now you understand how a swimming pool works, you probably won’t take it for granted anymore, will you? The way out is straight on, into the welcome hall.',
-    w * 0.06,
-    h * 0.52,
-    w * 0.86,
-    h * 0.052,
-    500,
-  );
-  drawBrandMark(c, PLANTROOMS, w * 0.06 + h * 0.06, h * 0.88, h * 0.06);
+  y = paragraph(c, W.paragraph, x, y + h * 0.03, span, h * 0.032, 500);
+  y = paragraph(c, W.wayOn, x, y + h * 0.03, span, h * 0.036, 700);
+  c.fillStyle = '#4c5a62';
+  paragraph(c, W.wink, x, y + h * 0.005, span, h * 0.03, 500);
+  drawBrandMark(c, PLANTROOMS, x + h * 0.05, h * 0.9, h * 0.05);
   c.fillStyle = BRAND.colours.accent;
-  c.font = font(h * 0.055, 800);
-  c.fillText(BRAND.hashtag, w * 0.06 + h * 0.16, h * 0.9);
+  c.font = font(h * 0.05, 800);
+  c.fillText(BRAND.hashtag, x + h * 0.14, h * 0.92);
 }
 
 export interface MuseumHall {

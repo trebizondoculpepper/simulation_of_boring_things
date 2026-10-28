@@ -16,7 +16,11 @@ import { ALARM_BUZZER } from '../../components/core/audio/part-loops';
 import { markComponent } from '../../components/core/views/component-identity';
 import type { World, WorldAction } from '../../../game/world';
 import { LOCATION_ANNUNCIATORS } from '../../../game/plant/location-annunciators';
-import type { LocationId } from '../../../game/plant/location-annunciators';
+import type {
+  LocationAnnunciatorSpec,
+  LocationId,
+} from '../../../game/plant/location-annunciators';
+import type { LocationAnnunciatorState } from '../../../game/plant/location-annunciator';
 import { newLocationAnnunciator } from '../../../game/plant/location-annunciator';
 import type { LiveExhibit } from '../rooms/plant/exhibit';
 
@@ -43,6 +47,35 @@ export function createLocationAnnunciator(
   },
 ): LiveExhibit {
   const spec = LOCATION_ANNUNCIATORS[location];
+  return createAnnunciatorBoard(kit, spec, {
+    state: () =>
+      store?.world.value.locationAnnunciators[location] ??
+      newLocationAnnunciator(spec.alarms),
+    accept: () => store?.dispatch({ type: 'location-alarms/accept', location }),
+    reset: () => store?.dispatch({ type: 'location-alarms/reset', location }),
+  });
+}
+
+/** What a board's windows read and what its ACCEPT and RESET do: the world's, or a hall's own state (107e). */
+export interface AnnunciatorSource {
+  state(): LocationAnnunciatorState<string>;
+  accept(): void;
+  reset(): void;
+}
+
+/**
+ * The same board on any source of windows: the world's location
+ * annunciators, or a museum hall's own (Hall 9's, read from its own
+ * instruments). Metres, facing +z, its middle at the origin.
+ */
+export function createAnnunciatorBoard(
+  kit: PanelKit,
+  spec: Pick<
+    LocationAnnunciatorSpec,
+    'title' | 'name' | 'alarms' | 'text' | 'columns'
+  >,
+  source: AnnunciatorSource,
+): LiveExhibit {
   const ALARMS = spec.alarms;
   const text = (id: string) => spec.text[id] || 'SPARE';
   const t = plantTools(kit);
@@ -71,9 +104,7 @@ export function createLocationAnnunciator(
   panel.group.traverse((o) => (o.userData.live = true));
   group.add(panel.group);
   const parts = createPartSet();
-  const state = () =>
-    store?.world.value.locationAnnunciators[location] ??
-    newLocationAnnunciator(ALARMS);
+  const state = source.state;
   let testUntil = 0;
   let now = 0;
   let mutedAt = -1;
@@ -90,12 +121,8 @@ export function createLocationAnnunciator(
     group.add(part.object);
     parts.add(part);
   };
-  button('ACCEPT', 'black', -0.27, () =>
-    store?.dispatch({ type: 'location-alarms/accept', location }),
-  );
-  button('RESET', 'black', -0.09, () =>
-    store?.dispatch({ type: 'location-alarms/reset', location }),
-  );
+  button('ACCEPT', 'black', -0.27, source.accept);
+  button('RESET', 'black', -0.09, source.reset);
   button('LAMP TEST', 'white', 0.09, () => (testUntil = now + 2));
   button('MUTE', 'red', 0.27, () => (mutedAt = flashingCount));
   // The horn on top.

@@ -209,9 +209,13 @@ export function createExperimentalSourceView(
       ink: '#ecf1ed',
       plate: '#283237',
       maxWidth: 0.1,
-      faceCamera: true,
     });
-    tag.position.set(p.at[0], p.at[1] + 0.05, p.at[2] + 0.05);
+    // Printed on its side under the stud, flush with the cylinder (the
+    // owner, 2026-10-28: a label on the bottle, not a sign on a post).
+    const along = Math.max(-r * 0.6, Math.min(r * 0.6, p.at[0]));
+    const z = Math.sqrt(Math.max(0, r * r - along * along));
+    tag.position.set(along, SOURCE_SHAPE.height - 0.03, z + 0.002);
+    tag.rotation.y = Math.atan2(along, z);
     group.add(tag);
   }
   // The control port's value, with its unit, on a backlit dot-matrix

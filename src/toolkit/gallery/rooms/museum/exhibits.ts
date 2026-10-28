@@ -26,7 +26,10 @@ export const HALL_EXHIBITS: Partial<
   museum1: () => import('./hall-1-warm-water'),
   museum2: () => import('./hall-2-clean-water'),
   museum3: () => import('./hall-3-safe-water'),
+  museum4: () => import('./hall-4-chemistry'),
   museum5: () => import('./hall-5-day-in-the-life'),
+  museum6: () => import('./hall-6-world-of-pumps'),
   museum7: () => import('./hall-7-grout'),
   museum8: () => import('./hall-8-never-again'),
+  museum9: () => import('./hall-9-whole-plant'),
 };

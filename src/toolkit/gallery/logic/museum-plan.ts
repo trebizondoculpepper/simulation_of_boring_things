@@ -823,9 +823,12 @@ export const EXHIBIT_HALLS: ReadonlySet<MuseumHallId> = new Set([
   'museum1',
   'museum2',
   'museum3',
+  'museum4',
   'museum5',
+  'museum6',
   'museum7',
   'museum8',
+  'museum9',
 ]);
 
 /** A hall's room code, the first part of its exhibit's tags: M1, M2 … (107-0: the hall's number, not its room id). */
