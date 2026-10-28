@@ -4,11 +4,21 @@ import { DEV_ROOM_NAMES, ROOMS, resolveRoomId } from './dev-room-links';
 import {
   COURTYARD,
   HALL_BRIEFS,
-  MUSEUM_EXHIBITS,
   MUSEUM_HALLS,
   MUSEUM_JOINS,
+  MUSEUM_SQUARE,
   MUSEUM_WALL,
+  BUILDING,
   archToSee,
+  detailSets,
+  emptyHallShape,
+  hallDetail,
+  hallId,
+  hallKind,
+  hallNumber,
+  ringDistance,
+  ringNeighbours,
+  ringSide,
   beyondAt,
   crossedInto,
   hallArches,
@@ -37,81 +47,117 @@ const overlapArea = (a: Rect, b: Rect) =>
   Math.max(0, Math.min(a.maxZ, b.maxZ) - Math.max(a.minZ, b.minZ));
 
 describe('the pool science museum', () => {
-  it('has the welcome and five halls, each reached by its own link and named', () => {
-    expect(MUSEUM_HALLS).toEqual([
-      'museum0',
-      'museum1',
-      'museum2',
-      'museum3',
-      'museum4',
-      'museum5',
-    ]);
-    for (const id of MUSEUM_HALLS) {
+  it('has the welcome and thirteen halls, each reached by its own link and named', () => {
+    expect(MUSEUM_HALLS).toHaveLength(10);
+    MUSEUM_HALLS.forEach((id, n) => {
+      expect(id).toBe(`museum${n}`);
+      expect(hallNumber(id)).toBe(n);
+      expect(hallId(n)).toBe(id);
+      expect(HALL_BRIEFS[id].number).toBe(n);
       expect(ROOMS).toContain(id);
       expect(resolveRoomId(id)).toBe(id);
       expect(DEV_ROOM_NAMES[id]).toContain(HALL_BRIEFS[id].title.toUpperCase());
       expect(DEV_ROOM_NAMES[id]).toContain('PLANTROOMS');
+    });
+    expect(hallId(10)).toBe('museum0');
+    expect(hallId(-1)).toBe('museum9');
+  });
+
+  it('signs the halls in the owner’s order: 1 to 4 and 9 themed, 5 to 8 coming soon', () => {
+    expect(
+      ['museum1', 'museum2', 'museum3', 'museum4', 'museum9'].map(
+        (id) => HALL_BRIEFS[id as MuseumHallId].title,
+      ),
+    ).toEqual([
+      'Warm water',
+      'Clean water',
+      'Safe water',
+      'The chemistry of pools',
+      'The whole plant',
+    ]);
+    for (let n = 5; n <= 8; n++) {
+      expect(HALL_BRIEFS[hallId(n)].themed).toBe(false);
+      expect(HALL_BRIEFS[hallId(n)].title).toBe('Coming soon');
     }
   });
 
-  it('rings the courtyard with the five halls, the welcome on the street, none overlapping', () => {
+  it('rings the courtyard with ten halls, four by three, tiling the building less the courtyard with nothing overlapping', () => {
+    const area = (r: Rect) => (r.maxX - r.minX) * (r.maxZ - r.minZ);
     for (const a of MUSEUM_HALLS) {
       expect(overlapArea(hallBounds(a), COURTYARD)).toBe(0);
       for (const b of MUSEUM_HALLS)
         if (a !== b) expect(overlapArea(hallBounds(a), hallBounds(b))).toBe(0);
     }
-    // The ring's halls together are the square less the courtyard.
-    const ring = MUSEUM_EXHIBITS.reduce((sum, id) => {
+    const ring = MUSEUM_HALLS.reduce(
+      (sum, id) => sum + area(hallBounds(id)),
+      0,
+    );
+    expect(ring).toBeCloseTo(area(BUILDING) - area(COURTYARD), 9);
+    expect(BUILDING.maxX - BUILDING.minX).toBe(4 * MUSEUM_SQUARE.cellW);
+    expect(BUILDING.maxZ - BUILDING.minZ).toBe(3 * MUSEUM_SQUARE.cellD);
+    expect(COURTYARD.maxX - COURTYARD.minX).toBe(2 * MUSEUM_SQUARE.cellW);
+    expect(COURTYARD.maxZ - COURTYARD.minZ).toBe(1 * MUSEUM_SQUARE.cellD);
+    // Hall 0 in the south-west corner; 2, 5 and 7 the other corners.
+    const corner = (id: MuseumHallId) => {
       const r = hallBounds(id);
-      return sum + (r.maxX - r.minX) * (r.maxZ - r.minZ);
-    }, 0);
-    const square = 46 * 46 - (COURTYARD.maxX - COURTYARD.minX) ** 2;
-    expect(ring).toBeCloseTo(square, 9);
-    // Each exhibit hall has a wall onto the courtyard (Museum 5's only a short one).
-    for (const id of MUSEUM_EXHIBITS)
-      expect(
-        hallWalls(id).some(
-          (w) =>
-            [0.25, 0.5, 0.75].some(
-              (f) => beyondAt(w, w.from + f * (w.to - w.from)) === 'courtyard',
-            ) ||
-            beyondAt(w, w.from + 1) === 'courtyard' ||
-            beyondAt(w, w.to - 1) === 'courtyard',
-        ),
-      ).toBe(true);
+      return `${r.minZ === BUILDING.minZ ? 'n' : r.maxZ === BUILDING.maxZ ? 's' : '-'}${r.minX === BUILDING.minX ? 'w' : r.maxX === BUILDING.maxX ? 'e' : '-'}`;
+    };
+    expect(corner('museum0')).toBe('sw');
+    expect(corner('museum2')).toBe('nw');
+    expect(corner('museum5')).toBe('ne');
+    expect(corner('museum7')).toBe('se');
+    // The side halls each have a wall onto the courtyard; the corners none.
+    for (const id of MUSEUM_HALLS) {
+      const onto = hallWalls(id).some(
+        (w) => beyondAt(w, (w.from + w.to) / 2) === 'courtyard',
+      );
+      expect(onto, id).toBe(hallKind(id) === 'side');
+    }
+    expect(MUSEUM_HALLS.filter((id) => hallKind(id) === 'corner')).toEqual([
+      'museum2',
+      'museum5',
+      'museum7',
+    ]);
+    expect(hallKind('museum0')).toBe('welcome');
   });
 
-  it('leads from the welcome round the ring, and from Museum 5 back to Museum 1', () => {
-    expect(MUSEUM_JOINS.map(([a, b]) => `${a}>${b}`)).toEqual([
-      'museum0>museum1',
-      'museum1>museum2',
-      'museum2>museum3',
-      'museum3>museum4',
-      'museum4>museum5',
-      'museum5>museum1',
-    ]);
-    expect(nextHall('museum0')).toBe('museum1');
-    expect(nextHall('museum5')).toBe('museum1');
-    expect(previousHall('museum1')).toBe('museum0');
-    expect(previousHall('museum0')).toBe(null);
-    for (const [a, b] of MUSEUM_JOINS) {
+  it('leads from the welcome north round the ring, and from Hall 9 back into the welcome', () => {
+    expect(MUSEUM_JOINS).toHaveLength(10);
+    MUSEUM_JOINS.forEach(([a, b], n) => {
+      expect(a).toBe(hallId(n));
+      expect(b).toBe(hallId(n + 1));
       expect(archTo(a, b).onward).toBe(true);
       expect(archTo(b, a).onward).toBe(false);
-    }
-    // The welcome's is a doorway; the rest archways.
+      // Rooms that join share a wall.
+      expect(hallArches(a).length).toBe(2);
+    });
+    expect(nextHall('museum9')).toBe('museum0');
+    expect(previousHall('museum0')).toBe('museum9');
+    expect(previousHall('museum1')).toBe('museum0');
+    // The welcome's are doorways; the rest archways.
     expect(archTo('museum0', 'museum1').kind).toBe('door');
-    expect(archTo('museum1', 'museum0').kind).toBe('door');
+    expect(archTo('museum9', 'museum0').kind).toBe('door');
     expect(archTo('museum2', 'museum3').kind).toBe('arch');
+    // North from the welcome into Hall 1; into the welcome from the east.
+    expect(archTo('museum0', 'museum1').into).toEqual([0, 1]);
+    expect(archTo('museum0', 'museum9').into).toEqual([-1, 0]);
+    const headings = MUSEUM_HALLS.map((id) => hallAxes(id).along.join(','));
+    expect(headings.slice(0, 2)).toEqual(Array(2).fill('0,-1'));
+    expect(headings.slice(2, 5)).toEqual(Array(3).fill('1,0'));
+    expect(headings.slice(5, 7)).toEqual(Array(2).fill('0,1'));
+    expect(headings.slice(7)).toEqual(Array(3).fill('-1,0'));
   });
 
-  it('turns the route 90° at each corner, and goes straight on from Museum 5 into Museum 1', () => {
-    const turns = MUSEUM_JOINS.map(([a, b]) => {
-      const p = hallAxes(a).along;
-      const q = hallAxes(b).along;
-      return Math.round(p[0] * q[0] + p[1] * q[1]) + 0;
-    });
-    // museum0>1 turns (north, then west), 1>2, 2>3, 3>4, 4>5 turn, 5>1 straight.
-    expect(turns).toEqual([0, 0, 0, 0, 0, 1]);
+  it('turns the route 90° in every corner and goes straight through every side hall', () => {
+    for (const id of MUSEUM_HALLS) {
+      const [inArch, outArch] = [
+        archTo(id, previousHall(id)),
+        archTo(id, nextHall(id)),
+      ];
+      const dot =
+        inArch.into[0] * outArch.into[0] + inArch.into[1] * outArch.into[1];
+      expect(dot + 0, id).toBe(hallKind(id) === 'side' ? -1 : 0);
+    }
   });
 
   it('puts both sides of each doorway at the same place in the museum, facing each other', () => {
@@ -235,9 +281,10 @@ describe('the pool science museum', () => {
   });
 
   it('sees through the doorway the visitor is at, or looking towards', () => {
-    // In Museum 2 (heading north): its exit north, its way in from Museum 1 in its east wall.
+    // In Hall 2 (heading north): on north into Hall 3, back south into Hall 1.
     const id: MuseumHallId = 'museum2';
     expect(archToSee(id, { x: 0, z: 0, yaw: 0 })).toBe('museum3');
+    expect(archToSee(id, { x: 0, z: 0, yaw: Math.PI })).toBe('museum1');
     const back = archTo(id, 'museum1');
     expect(
       archToSee(id, {
@@ -246,13 +293,43 @@ describe('the pool science museum', () => {
         yaw: 0,
       }),
     ).toBe('museum1');
-    // In Museum 1, three ways: the welcome behind (south), on to Museum 2 west, Museum 5 east.
-    expect(archToSee('museum1', { x: 0, z: 0, yaw: -Math.PI / 2 })).toBe(
-      'museum2',
+    // In the welcome: north to Hall 1, east to Hall 9.
+    expect(archToSee('museum0', { x: 0, z: 0, yaw: 0 })).toBe('museum1');
+    expect(archToSee('museum0', { x: 0, z: 0, yaw: Math.PI / 2 })).toBe(
+      'museum9',
     );
-    expect(archToSee('museum1', { x: 0, z: 0, yaw: Math.PI / 2 })).toBe(
-      'museum5',
-    );
-    expect(archToSee('museum1', { x: 0, z: 0, yaw: Math.PI })).toBe('museum0');
+  });
+
+  it('draws the visitor’s hall and its neighbours in full and every hall further away empty', () => {
+    for (const visitor of MUSEUM_HALLS) {
+      const { full, empty } = detailSets(visitor);
+      const [back, on] = ringNeighbours(visitor);
+      expect([...full].sort()).toEqual([visitor, back, on].sort());
+      expect(empty).toHaveLength(7);
+      expect(hallDetail(visitor, visitor)).toBe('full');
+      for (const h of empty) {
+        expect(ringDistance(visitor, h)).toBeGreaterThan(1);
+        // Beyond one neighbour or the other, the shorter way.
+        const side = ringSide(visitor, h);
+        const d = (hallNumber(h) - hallNumber(visitor) + 10) % 10;
+        expect(side).toBe(d <= 5 ? 'onward' : 'back');
+      }
+    }
+    // Two halls down a side: from Hall 1, Halls 0 and 2 full, Hall 3 empty.
+    expect(hallDetail('museum1', 'museum3')).toBe('empty');
+    expect(hallDetail('museum1', 'museum2')).toBe('full');
+    expect(ringDistance('museum0', 'museum9')).toBe(1);
+    expect(ringDistance('museum0', 'museum5')).toBe(5);
+  });
+
+  it('gives every empty hall its kind and its archways, as the full hall has them', () => {
+    for (const id of MUSEUM_HALLS) {
+      const shape = emptyHallShape(id);
+      expect(shape.kind).toBe(hallKind(id));
+      expect(shape.arches.map((a) => a.to).sort()).toEqual(
+        [previousHall(id), nextHall(id)].sort(),
+      );
+      expect(shape.walls).toHaveLength(4);
+    }
   });
 });

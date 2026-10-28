@@ -330,8 +330,8 @@ export const ROOMS: readonly RoomId[] = [
   'plant_corridor',
   'shared_plant_layout',
   // The pool science museum (mission 107): its welcome, museum0, where
-  // every visit starts, and its five exhibit halls round a courtyard,
-  // joined by archways.
+  // every visit starts, and its nine exhibit halls in a ring round a
+  // courtyard, joined by archways (107-1).
   ...MUSEUM_HALLS,
   // The main plant room alone, at each size being compared.
   ...PLANT_FIT_ROOMS,
@@ -461,6 +461,10 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   museum3: hallName('museum3'),
   museum4: hallName('museum4'),
   museum5: hallName('museum5'),
+  museum6: hallName('museum6'),
+  museum7: hallName('museum7'),
+  museum8: hallName('museum8'),
+  museum9: hallName('museum9'),
 };
 /** Each room's portal colour, so a portal says where it goes. */
 export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
@@ -582,6 +586,10 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   museum3: '#2a9d96',
   museum4: '#2a9d96',
   museum5: '#2a9d96',
+  museum6: '#2a9d96',
+  museum7: '#2a9d96',
+  museum8: '#2a9d96',
+  museum9: '#2a9d96',
 };
 /** How thick a room's walls are, metres. */
 export const WALL_THICKNESS = 0.3;

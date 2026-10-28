@@ -10,7 +10,6 @@ import {
   EqualStencilFunc,
   ExtrudeGeometry,
   Group,
-  IcosahedronGeometry,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -36,7 +35,9 @@ import {
   BENCH,
   COLUMN_FOOT,
   COURTYARD,
+  FINALE,
   HALL_BRIEFS,
+  HALL_TITLE,
   MUSEUM_ARCH,
   MUSEUM_EXHIBITS,
   MUSEUM_HALL0,
@@ -90,7 +91,7 @@ import { createMuseumSafety } from './museum-safety';
  * shows through another hall's walls seen through an archway.
  */
 
-const FLOOR_TILE = 4;
+export const FLOOR_TILE = 4;
 /** The brick texture's repeat: three bricks along, eight courses up. */
 const BRICK = { w: 0.69, h: 0.6 };
 /** Hall 0's wall tiles: eight 150 mm tiles a repeat. */
@@ -235,26 +236,6 @@ function wallTileTexture() {
   return t;
 }
 
-/** Courtyard paving: 600 mm stone flags. */
-function pavingTexture() {
-  const S = 512;
-  const t = canvasTexture(S, S, (c) => {
-    const rand = seeded(53);
-    c.fillStyle = '#6f6b64';
-    c.fillRect(0, 0, S, S);
-    const n = 4;
-    const cell = S / n;
-    for (let i = 0; i < n; i++)
-      for (let j = 0; j < n; j++) {
-        c.fillStyle = `hsl(35, 6%, ${58 + rand() * 10}%)`;
-        c.fillRect(i * cell + 3, j * cell + 3, cell - 6, cell - 6);
-      }
-  });
-  t.wrapS = t.wrapT = RepeatWrapping;
-  return t;
-}
-
-/** The sky over the courtyard: pale at the horizon, bluer overhead. */
 function skyTexture() {
   const t = canvasTexture(8, 256, (c) => {
     const g = c.createLinearGradient(0, 256, 0, 0);
@@ -349,6 +330,23 @@ function paintedFloorTexture(w: number, d: number) {
       c.fillRect(x0 + 1.5 * px, y - 0.1 * px, pw - 3 * px, 0.2 * px);
       for (const end of [x0 + 1.5 * px, x0 + pw - 1.5 * px - 0.2 * px])
         c.fillRect(end, y - 0.5 * px, 0.2 * px, 1.0 * px);
+    }
+    // Arrows painted on the deck between the pool and the doorway north
+    // into Hall 1 (the canvas's top is north): where to start (107-1).
+    c.fillStyle = BRAND.colours.accent;
+    for (const tip of [0.75, 1.85]) {
+      const cx = W / 2;
+      const ty = tip * px;
+      c.beginPath();
+      c.moveTo(cx, ty);
+      c.lineTo(cx + 0.42 * px, ty + 0.45 * px);
+      c.lineTo(cx + 0.16 * px, ty + 0.45 * px);
+      c.lineTo(cx + 0.16 * px, ty + 0.95 * px);
+      c.lineTo(cx - 0.16 * px, ty + 0.95 * px);
+      c.lineTo(cx - 0.16 * px, ty + 0.45 * px);
+      c.lineTo(cx - 0.42 * px, ty + 0.45 * px);
+      c.closePath();
+      c.fill();
     }
   });
 }
@@ -460,7 +458,7 @@ export function createMuseumMaterials(): MuseumMaterials {
 }
 
 /** An opening knocked through a wall: its middle along it, as the plan gives it. */
-interface Opening {
+export interface Opening {
   u: number;
   arch: MuseumArch;
 }
@@ -474,7 +472,7 @@ interface Opening {
  * doorway; its windows holes, segmental-headed. Faces in `faces`, the
  * reveals in `reveals`.
  */
-function wallRun(
+export function wallRun(
   axis: 'x' | 'z',
   line: number,
   from: number,
@@ -515,7 +513,7 @@ function wallRun(
 }
 
 /** A window's opening, in a wall's (along, up). */
-function windowShape(w: MuseumWindow) {
+export function windowShape(w: MuseumWindow) {
   const hole = new Shape();
   const r = w.w / 2;
   hole.moveTo(w.u - r, w.sill);
@@ -527,7 +525,7 @@ function windowShape(w: MuseumWindow) {
 }
 
 /** Stand a thing drawn in a wall's (along, up, through) on its line, in the museum's coordinates. */
-function placeOnLine(
+export function placeOnLine(
   object: { position: Vector3; rotation: { y: number } },
   axis: 'x' | 'z',
   line: number,
@@ -735,11 +733,20 @@ function routeStrip(
     c.fillStyle = BRAND.colours.ink;
     c.font = font(r * 0.62, on ? 800 : 600);
     c.textAlign = 'center';
-    c.fillText(b.title, cx, y + r * 2.3);
+    // Thirteen halls: titled where they have a theme, numbered only while they wait.
+    if (b.themed || on) {
+      const words = b.title.split(' ');
+      const cut = Math.ceil(words.length / 2);
+      const lines =
+        c.measureText(b.title).width > step * 0.95
+          ? [words.slice(0, cut).join(' '), words.slice(cut).join(' ')]
+          : [b.title];
+      lines.forEach((l, k) => c.fillText(l, cx, y + r * (2.3 + k * 0.75)));
+    }
     if (on) {
       c.font = font(r * 0.5, 600);
       c.fillStyle = BRAND.colours.accent;
-      c.fillText('You are here', cx, y + r * 3.1);
+      c.fillText('You are here', cx, y - r * 1.6);
     }
     c.textAlign = 'left';
   });
@@ -827,33 +834,34 @@ function paintComingSoon(id: MuseumHallId) {
 /** Over an archway, on this room's side: where it leads. */
 function paintArchHeader(from: MuseumHallId, a: MuseumArch) {
   const b = HALL_BRIEFS[a.to];
-  const kicker =
-    from === 'museum0'
+  const fromWelcome = from === 'museum0';
+  const toWelcome = a.to === 'museum0';
+  const kicker = fromWelcome
+    ? a.onward
       ? 'THROUGH HERE'
-      : a.to === 'museum0'
-        ? 'BACK TO THE'
-        : from === 'museum5' && a.onward
-          ? 'BACK TO THE START'
-          : from === 'museum1' && a.to === 'museum5'
-            ? 'THE ROUTE ENDS HERE'
-            : a.onward
-              ? 'NEXT EXHIBIT'
-              : 'BACK TO';
+      : 'THE ROUTE ENDS HERE'
+    : toWelcome
+      ? a.onward
+        ? 'THE WAY OUT · BACK TO THE'
+        : 'BACK TO THE'
+      : a.onward
+        ? 'NEXT EXHIBIT'
+        : 'BACK TO';
   const title =
-    from === 'museum0'
+    fromWelcome && a.onward
       ? 'What’s behind the tiles'
-      : a.to === 'museum0'
+      : toWelcome
         ? 'Welcome hall'
         : b.title;
   const subject =
-    from === 'museum0' ? `1 · ${HALL_BRIEFS.museum1.title}` : b.subject;
+    fromWelcome && a.onward ? `1 · ${HALL_BRIEFS.museum1.title}` : b.subject;
+  const mark = (fromWelcome && a.onward) || toWelcome;
   const forward = a.onward;
   return (c: CanvasRenderingContext2D, w: number, h: number) => {
     c.fillStyle = forward ? BRAND.colours.main : BRAND.colours.ground;
     c.fillRect(0, 0, w, h);
     const ink = forward ? '#ffffff' : BRAND.colours.ink;
-    if (from === 'museum0' || a.to === 'museum0')
-      drawBrandMark(c, PLANTROOMS, h * 0.5, h * 0.5, h * 0.34);
+    if (mark) drawBrandMark(c, PLANTROOMS, h * 0.5, h * 0.5, h * 0.34);
     else
       numberDisc(
         c,
@@ -1049,7 +1057,7 @@ function paintBanner(c: CanvasRenderingContext2D, w: number, h: number) {
   c.textAlign = 'left';
 }
 
-/** Museum 5's end of the route. */
+/** Hall 9's end of the route, the finale's closing words. */
 function paintEndWall(c: CanvasRenderingContext2D, w: number, h: number) {
   c.fillStyle = BRAND.colours.ground;
   c.fillRect(0, 0, w, h);
@@ -1068,7 +1076,7 @@ function paintEndWall(c: CanvasRenderingContext2D, w: number, h: number) {
   c.fillStyle = BRAND.colours.ink;
   paragraph(
     c,
-    'Next time you swim, look for the grilles along the pool edge where the water spills away, and remember the plant room behind the wall, turning the whole pool over every few hours. You found the plant room. The way out is straight on, back through Moving water to the welcome hall.',
+    'Now you’ve seen it, now you understand how a swimming pool works, you probably won’t take it for granted anymore, will you? The way out is straight on, into the welcome hall.',
     w * 0.06,
     h * 0.52,
     w * 0.86,
@@ -1083,8 +1091,8 @@ function paintEndWall(c: CanvasRenderingContext2D, w: number, h: number) {
 
 export interface MuseumHall {
   group: Group;
-  /** The plain stand-in seen through each archway while the room beyond is not drawn through it. */
-  standIns: Map<MuseumHallId, Group>;
+  /** Its finishes, shared with the empty halls drawn beyond it (`museum-empty-hall.ts`). */
+  materials: MuseumMaterials;
   dispose(): void;
 }
 
@@ -1097,202 +1105,36 @@ function onWall(mesh: Mesh, wall: HallWall, u: number, y: number, off = 0.015) {
   mesh.rotation.y = Math.atan2(n[0], n[1]);
 }
 
-/** The courtyard: paving, two trees, the pond and its fountain, the far halls' courtyard walls and the sky; drawn only through this room's courtyard windows. */
+/**
+ * What the courtyard windows show: only the sky (the owner, 2026-10-28:
+ * "Can you change the windows on the inside so the courtyard is not
+ * visible ... Only the skybox is visible"). A sky box round the hall,
+ * drawn only where this room's courtyard windows are seen (their stencil)
+ * and over whatever stands beyond them, so no paving, tree or far wall is
+ * ever seen through them.
+ */
 function buildCourtyard(
-  id: MuseumHallId,
-  m: MuseumMaterials,
+  _id: MuseumHallId,
+  _m: MuseumMaterials,
   textures: Texture[],
   disposables: Material[],
 ) {
   const group = new Group();
-  group.name = 'Courtyard (seen through the windows)';
-  const t = MUSEUM_WALL / 2;
-  const r = {
-    minX: COURTYARD.minX + t,
-    maxX: COURTYARD.maxX - t,
-    minZ: COURTYARD.minZ + t,
-    maxZ: COURTYARD.maxZ - t,
-  };
-  const mat = <M extends Material>(x: M) => {
-    disposables.push(x);
-    return throughWindows(x);
-  };
-  const paving = pavingTexture();
-  paving.repeat.set(1 / 2.4, 1 / 2.4);
-  textures.push(paving);
-  const floor = new PlaneGeometry(r.maxX - r.minX, r.maxZ - r.minZ);
-  floor.rotateX(-Math.PI / 2);
-  floor.translate((r.minX + r.maxX) / 2, 0, (r.minZ + r.maxZ) / 2);
-  const fp = floor.attributes.position;
-  const fu = floor.attributes.uv;
-  for (let i = 0; i < fp.count; i++) fu.setXY(i, fp.getX(i), -fp.getZ(i));
-  group.add(
-    new Mesh(
-      floor,
-      mat(new MeshStandardMaterial({ map: paving, roughness: 0.8 })),
-    ),
-  );
-  // The pond: a stone kerb, dark water, a fountain's jet.
-  const stone = mat(
-    new MeshStandardMaterial({ color: '#b7b1a6', roughness: 0.7 }),
-  );
-  const water = mat(
-    new MeshStandardMaterial({
-      color: '#2f5a62',
-      roughness: 0.05,
-      metalness: 0.3,
-    }),
-  );
-  const kerb: BufferGeometry[] = [];
-  const pw = 6;
-  const pd = 3.4;
-  for (const [sx, sz, x, z] of [
-    [pw + 0.4, 0.2, 0, -pd / 2 - 0.1],
-    [pw + 0.4, 0.2, 0, pd / 2 + 0.1],
-    [0.2, pd, -pw / 2 - 0.1, 0],
-    [0.2, pd, pw / 2 + 0.1, 0],
-  ] as const) {
-    const g = new BoxGeometry(sx, 0.45, sz);
-    g.translate(x, 0.225, z);
-    kerb.push(g);
-  }
-  const basin = new CylinderGeometry(0.5, 0.6, 0.6, 20);
-  basin.translate(0, 0.3, 0);
-  kerb.push(basin);
-  group.add(new Mesh(mergeGeometries(kerb), stone));
-  for (const g of kerb) g.dispose();
-  const pond = new PlaneGeometry(pw, pd);
-  pond.rotateX(-Math.PI / 2);
-  pond.translate(0, 0.35, 0);
-  group.add(new Mesh(pond, water));
-  const jet = new Mesh(
-    new CylinderGeometry(0.03, 0.12, 1.6, 10, 1, true),
-    mat(
-      new MeshStandardMaterial({
-        color: '#e8f6f8',
-        transparent: true,
-        opacity: 0.55,
-        roughness: 0.1,
-      }),
-    ),
-  );
-  jet.position.y = 0.6 + 0.8;
-  group.add(jet);
-  // Two trees, in the courtyard's far corners from each other.
-  const bark = mat(
-    new MeshStandardMaterial({ color: '#5b4a3a', roughness: 0.9 }),
-  );
-  const leaves = mat(
-    new MeshStandardMaterial({
-      color: '#5e8a4f',
-      roughness: 0.85,
-      flatShading: true,
-    }),
-  );
-  for (const [x, z, s] of [
-    [r.minX + 3.2, r.minZ + 3.2, 1],
-    [r.maxX - 3.4, r.maxZ - 3.0, 0.85],
-  ] as const) {
-    const trunk = new Mesh(
-      new CylinderGeometry(0.14 * s, 0.22 * s, 4.2 * s, 10),
-      bark,
-    );
-    trunk.position.set(x, 2.1 * s, z);
-    group.add(trunk);
-    const crown: BufferGeometry[] = [];
-    const rand = seeded(Math.round(x * 13 + z * 7));
-    for (let k = 0; k < 6; k++) {
-      const g = new IcosahedronGeometry((1.3 + rand() * 0.6) * s, 1);
-      g.translate(
-        x + (rand() - 0.5) * 2.2 * s,
-        (4.4 + rand() * 1.6) * s,
-        z + (rand() - 0.5) * 2.2 * s,
-      );
-      crown.push(g);
-    }
-    group.add(new Mesh(mergeGeometries(crown), leaves));
-    for (const g of crown) g.dispose();
-  }
-  // The far halls' courtyard walls, as each builds them, with dark glass.
-  const facePaint = mat(m.paint.clone());
-  const faceBrick = mat(m.rawBrick.clone());
-  const dark = mat(
-    new MeshStandardMaterial({
-      color: '#2b3437',
-      roughness: 0.08,
-      metalness: 0.6,
-    }),
-  );
-  const edges = [
-    {
-      axis: 'x' as const,
-      line: COURTYARD.minZ,
-      from: COURTYARD.minX,
-      to: COURTYARD.maxX,
-    },
-    {
-      axis: 'x' as const,
-      line: COURTYARD.maxZ,
-      from: COURTYARD.minX,
-      to: COURTYARD.maxX,
-    },
-    {
-      axis: 'z' as const,
-      line: COURTYARD.minX,
-      from: COURTYARD.minZ,
-      to: COURTYARD.maxZ,
-    },
-    {
-      axis: 'z' as const,
-      line: COURTYARD.maxX,
-      from: COURTYARD.minZ,
-      to: COURTYARD.maxZ,
-    },
-  ];
-  for (const other of MUSEUM_EXHIBITS) {
-    if (other === id) continue;
-    for (const wall of hallWalls(other)) {
-      const e = edges.find(
-        (q) => q.axis === wall.axis && Math.abs(q.line - wall.line) < 1e-9,
-      );
-      if (!e) continue;
-      const from = Math.max(e.from, wall.from) - t;
-      const to = Math.min(e.to, wall.to) + t;
-      if (to - from <= 2 * t) continue;
-      const windows = wallWindows(other, wall).filter(
-        (w) => w.kind === 'courtyard' && w.u > from && w.u < to,
-      );
-      group.add(
-        wallRun(
-          wall.axis,
-          wall.line,
-          from,
-          to,
-          [],
-          windows,
-          facePaint,
-          faceBrick,
-        ),
-      );
-      for (const w of windows) {
-        const pane = new Mesh(new ShapeGeometry(windowShape(w)), dark);
-        placeOnLine(pane, wall.axis, wall.line);
-        group.add(pane);
-      }
-    }
-  }
-  // The sky over it, from the parapets up.
+  group.name = 'Sky (seen through the courtyard windows)';
   const sky = skyTexture();
   textures.push(sky);
-  const box = new Mesh(
-    new BoxGeometry(r.maxX - r.minX + 2 * t, 50, r.maxZ - r.minZ + 2 * t),
-    mat(new MeshBasicMaterial({ map: sky, side: BackSide })),
+  const material = throughWindows(
+    new MeshBasicMaterial({ map: sky, side: BackSide, depthTest: false }),
   );
-  box.position.set((r.minX + r.maxX) / 2, WALL_TOP + 25, (r.minZ + r.maxZ) / 2);
+  disposables.push(material);
+  const box = new Mesh(new BoxGeometry(400, 400, 400), material);
+  box.position.set(
+    (COURTYARD.minX + COURTYARD.maxX) / 2,
+    0,
+    (COURTYARD.minZ + COURTYARD.maxZ) / 2,
+  );
+  box.renderOrder = 1;
   group.add(box);
-  group.traverse((o) => {
-    o.renderOrder = 1;
-  });
   return group;
 }
 
@@ -1520,8 +1362,13 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     group.add(new Mesh(mergeGeometries(frames), m.steel));
     for (const g of [...benchParts, ...frames]) g.dispose();
 
-    // The courtyard beyond the windows.
-    plan.add(buildCourtyard(id, m, textures, disposables));
+    // The courtyard beyond the windows, if it has any (not the corners).
+    if (
+      hallWalls(id).some((w) =>
+        wallWindows(id, w).some((x) => x.kind === 'courtyard'),
+      )
+    )
+      plan.add(buildCourtyard(id, m, textures, disposables));
   } else {
     // Hall 0: a tiled ceiling, its fluorescent strips, and the fake ladder.
     const lid = new PlaneGeometry(
@@ -1620,7 +1467,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
   }
   group.add(panel);
 
-  // Signs on the street wall: Hall 0's title wall; an exhibit's own title; Museum 5's end.
+  // Signs on the street wall: Hall 0's title wall; an exhibit's own title; Hall 9's end.
   const walls = hallWalls(id);
   const street = walls.find(
     (w) => beyondAt(w, (w.from + w.to) / 2) === 'street',
@@ -1630,13 +1477,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     const wall = signMesh(10.4, 3.4, paintTitleWall, textures, 150);
     onWall(wall, south, (south.from + south.to) / 2, 2.45);
     plan.add(wall);
-  } else if (id === 'museum1') {
-    // Beside the doorway from the welcome.
-    const south = walls.find((w) => w.side === 'south')!;
-    const title = signMesh(5.0, 1.7, paintHallTitle(id), textures, 180, true);
-    onWall(title, south, 3.6, 3.4);
-    plan.add(title);
-  } else if (street && id === 'museum5') {
+  } else if (street && id === FINALE) {
     const mid = (street.from + street.to) / 2;
     const title = signMesh(6.0, 2.0, paintHallTitle(id), textures, 170, true);
     onWall(title, street, mid + 3.6, 3.6);
@@ -1645,8 +1486,15 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     onWall(end, street, mid - 4.0, 2.4);
     plan.add(end);
   } else if (street) {
-    const title = signMesh(7.2, 2.4, paintHallTitle(id), textures, 160, true);
-    onWall(title, street, (street.from + street.to) / 2, 3.6);
+    const title = signMesh(
+      HALL_TITLE.w,
+      HALL_TITLE.h,
+      paintHallTitle(id),
+      textures,
+      160,
+      true,
+    );
+    onWall(title, street, (street.from + street.to) / 2, HALL_TITLE.y);
     plan.add(title);
   }
 
@@ -1669,32 +1517,6 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     plan.add(sign);
   }
 
-  // Beyond each archway, a plain stand-in for the room there, shown while it is not drawn through it.
-  const standIns = new Map<MuseumHallId, Group>();
-  for (const a of arches) {
-    const deep = 6;
-    const width = 10;
-    const inner2 = new Group();
-    const room = new Mesh(new BoxGeometry(width, a.top + 3, deep), m.plaster);
-    const cx = a.at.x - a.into[0] * (t / 2 + deep / 2);
-    const cz = a.at.z - a.into[1] * (t / 2 + deep / 2);
-    room.position.set(cx, (a.top + 3) / 2, cz);
-    room.rotation.y = Math.atan2(a.into[0], a.into[1]);
-    inner2.add(room);
-    const standFloor = new PlaneGeometry(width, deep);
-    standFloor.rotateX(-Math.PI / 2);
-    standFloor.rotateY(Math.atan2(a.into[0], a.into[1]));
-    standFloor.translate(cx, 0.002, cz);
-    const fp = standFloor.attributes.position;
-    const fu = standFloor.attributes.uv;
-    for (let i = 0; i < fp.count; i++)
-      fu.setXY(i, fp.getX(i) / FLOOR_TILE, -fp.getZ(i) / FLOOR_TILE);
-    inner2.add(new Mesh(standFloor, m.floor));
-    inner2.name = `Stand-in for ${a.to}`;
-    standIns.set(a.to, inner2);
-    plan.add(inner2);
-  }
-
   for (const child of [...group.children, ...plan.children])
     markComponent(child, { decorative: true });
   // The safety and services layer: sockets, the fire alarm, escape signs, and the rest.
@@ -1710,7 +1532,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
   });
   return {
     group,
-    standIns,
+    materials: m,
     dispose() {
       group.traverse((obj) => {
         if (obj instanceof Mesh) {

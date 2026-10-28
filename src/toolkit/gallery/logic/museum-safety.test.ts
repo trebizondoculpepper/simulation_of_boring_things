@@ -28,7 +28,7 @@ describe('the museum’s safety and services layer', () => {
       const route = escapeRoute(id);
       expect(route.at(-1)).toBe('stair');
       expect(route.at(-2)).toBe('museum0');
-      expect(route.length).toBeLessThanOrEqual(5);
+      expect(route.length).toBeLessThanOrEqual(7);
       for (let k = 0; k + 1 < route.length - 1; k++) {
         const [a, b] = [route[k], route[k + 1]];
         expect(
@@ -39,9 +39,12 @@ describe('the museum’s safety and services layer', () => {
         ).toBe(true);
       }
     }
-    // Both ways round the loop are used: Museum 3 by 2, Museum 4 by 5.
+    // Both ways round the ring are used: Hall 3 by 2, Hall 5 back by 4
+    // (as far either way), Hall 6 on by 7, Hall 9 straight into Hall 0.
     expect(EXIT_WAY.museum3).toBe('museum2');
-    expect(EXIT_WAY.museum4).toBe('museum5');
+    expect(EXIT_WAY.museum5).toBe('museum4');
+    expect(EXIT_WAY.museum6).toBe('museum7');
+    expect(EXIT_WAY.museum9).toBe('museum0');
   });
 
   it('signs the way out over every room’s exit doorway, and points every hanging sign along the hall to it', () => {
@@ -84,7 +87,13 @@ describe('the museum’s safety and services layer', () => {
         FIRE_POINT_HALLS.includes(id),
       );
     }
-    expect(FIRE_POINT_HALLS).toEqual(['museum1', 'museum3', 'museum5']);
+    expect(FIRE_POINT_HALLS).toEqual([
+      'museum1',
+      'museum3',
+      'museum5',
+      'museum7',
+      'museum9',
+    ]);
   });
 
   it('fits sockets at 450 mm, within Approved Document M’s 400 to 1,000 mm, never in a window', () => {

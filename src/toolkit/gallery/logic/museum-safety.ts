@@ -1,13 +1,19 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
 import {
-  MUSEUM_EXHIBITS,
+  FINALE,
+  HALL_TITLE,
+  MUSEUM_HALLS,
   MUSEUM_WALL,
   beyondAt,
   hallArches,
   hallAxes,
   hallOrigin,
   hallSize,
+  hallNumber,
   hallWalls,
+  nextHall,
+  previousHall,
+  ringDistance,
   wallWindows,
 } from './museum-plan';
 import type { HallWall, MuseumArch, MuseumHallId } from './museum-plan';
@@ -33,7 +39,7 @@ import type { HallWall, MuseumArch, MuseumHallId } from './museum-plan';
  *   1.4 m beside every room's way out (at every storey and final exit), a
  *   sounder-beacon in each room at 2.4 m; smoke detectors and sprinkler
  *   heads come with the services ceiling (Hall 0 has its own).
- * - **Fire points** (BS 5306-8), in every other hall (1, 3 and 5, the
+ * - **Fire points** (BS 5306-8), in every other hall (the odd-numbered, the
  *   owner's "every other hall"), on a free-standing board (no drilling of
  *   heritage brick): water and CO₂, their ID signs, the fire action
  *   notice.
@@ -44,7 +50,7 @@ import type { HallWall, MuseumArch, MuseumHallId } from './museum-plan';
  *   cabinet, the first-aid kit and sign, the CCTV notice, the hearing loop
  *   sign, the lift, toilets and ground floor sign, maximum occupancy;
  *   in every room a CCTV dome and a PIR; "please do not touch" at each
- *   hall's way in; a staff-only door in Museum 3.
+ *   hall's way in; a staff-only door in Hall 3.
  *
  * Hall 0's east wall is kept clear for the lift that will come (the
  * owner, 2026-10-28; `LIFT_RESERVED`). Metres, in the museum's
@@ -115,18 +121,22 @@ export const HEIGHTS = {
 
 /**
  * Each room's way towards the final exit: the next room on the escape
- * route, the shorter way round the ring back to Hall 0 (Museum 3 by Museum
- * 2, three doorways, rather than by 4 and 5, four); from Hall 0, out
- * through its fire exit door to the stair.
+ * route, the shorter way round the ring back to Hall 0 (Halls 1 to 4 back
+ * the way the visitor came, Hall 5, as far either way, among them; Halls 6
+ * to 9 on round the ring); from Hall 0, out through its fire exit door to
+ * the stair.
  */
-export const EXIT_WAY: Record<MuseumHallId, MuseumHallId | 'stair'> = {
-  museum0: 'stair',
-  museum1: 'museum0',
-  museum2: 'museum1',
-  museum3: 'museum2',
-  museum4: 'museum5',
-  museum5: 'museum1',
-};
+export const EXIT_WAY = Object.fromEntries(
+  MUSEUM_HALLS.map((id) => {
+    if (id === 'museum0') return [id, 'stair'];
+    const back = previousHall(id);
+    const on = nextHall(id);
+    return [
+      id,
+      ringDistance(on, 'museum0') < ringDistance(back, 'museum0') ? on : back,
+    ];
+  }),
+) as Record<MuseumHallId, MuseumHallId | 'stair'>;
 export const exitWay = (id: MuseumHallId) => EXIT_WAY[id];
 
 /** The doorway a room is left by on the escape route. */
@@ -137,7 +147,7 @@ export function exitArch(id: MuseumHallId): MuseumArch | null {
     : (hallArches(id).find((a) => a.to === to) ?? null);
 }
 
-/** Hall 0's fire exit door, to the stair down: on its west wall, by the doorway from Museum 1. */
+/** Hall 0's fire exit door, to the stair down: on its west wall, by the doorway into Hall 1. */
 export const FIRE_EXIT = { wall: 'west' as const, along: -3.2, w: 1.1, h: 2.1 };
 
 /**
@@ -151,11 +161,13 @@ export const FIRE_EXIT = { wall: 'west' as const, along: -3.2, w: 1.1, h: 2.1 };
  * its middle, clear of the painted pool, the title wall, the welcome
  * panel and the doorway: along the wall from Hall 0's middle, the wall
  * kept clear for its doors and their surround, and the landing zone kept
- * clear in front of it. The shaft would stand outside the east wall.
+ * clear in front of it. The shaft would stand outside the east wall. In
+ * the ring (107-1) the east wall's middle is the doorway from Hall 9, so
+ * the lift's place moves south along the same wall, beside it.
  */
 export const LIFT_RESERVED = {
   wall: 'east' as const,
-  along: 1.4,
+  along: 4.4,
   w: 3.2,
   depth: 2.5,
   doorClear: 2.0,
@@ -186,22 +198,27 @@ const sameWall = (a: HallWall, b: HallWall) =>
 
 /**
  * The signs the hall's view hangs on its street wall (`views/museum-hall.ts`):
- * its title vinyl, and Museum 5's end of the route; kept clear.
+ * its title vinyl, and Hall 9's end of the route; kept clear.
  */
 function hallSignsTaken(id: MuseumHallId, wall: HallWall): Taken[] {
   const mid = (wall.from + wall.to) / 2;
   if (id === 'museum0') return [];
-  if (id === 'museum1')
-    return wall.side === 'south'
-      ? [{ wall, u0: 1.1, u1: 6.1, y0: 2.5, y1: 4.3 }]
-      : [];
   if (beyondAt(wall, mid) !== 'street') return [];
-  if (id === 'museum5')
+  if (id === FINALE)
     return [
       { wall, u0: mid - 6.3, u1: mid - 1.7, y0: 1.2, y1: 3.6 },
       { wall, u0: mid + 0.6, u1: mid + 6.6, y0: 2.5, y1: 4.7 },
     ];
-  return [{ wall, u0: mid - 3.6, u1: mid + 3.6, y0: 2.3, y1: 4.9 }];
+  const half = HALL_TITLE.w / 2;
+  return [
+    {
+      wall,
+      u0: mid - half,
+      u1: mid + half,
+      y0: HALL_TITLE.y - HALL_TITLE.h / 2,
+      y1: HALL_TITLE.y + HALL_TITLE.h / 2,
+    },
+  ];
 }
 
 /** What a stretch of wall at height `y0` to `y1`, `u ± half`, would hit: an opening, a window, a corner, a sign, a fitting already there. */
@@ -276,12 +293,10 @@ function wallOf(id: MuseumHallId, a: MuseumArch) {
 }
 const uOf = (a: MuseumArch) => (a.axis === 'x' ? a.at.x : a.at.z);
 
-/** The halls with a fire point: every other one. */
-export const FIRE_POINT_HALLS: readonly MuseumHallId[] = [
-  'museum1',
-  'museum3',
-  'museum5',
-];
+/** The halls with a fire point: every other one, the odd-numbered. */
+export const FIRE_POINT_HALLS: readonly MuseumHallId[] = MUSEUM_HALLS.filter(
+  (id) => hallNumber(id) % 2 === 1,
+);
 
 /** A fire point's board, on its feet against the wall: its footprint out from the wall. */
 export const FIRE_POINT_BOARD = { w: 0.7, depth: 0.45 };
@@ -468,7 +483,7 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
     // Medical, by the fire exit: the defibrillator, the first-aid kit and its sign.
     put('aed', west, doorU + 3.6, HEIGHTS.aed);
     put('first-aid', west, doorU + 4.8, HEIGHTS.notice);
-    // Hung inside the doorway from Museum 1, back to back: to those coming
+    // Hung inside the doorway into Hall 1, back to back: to those coming
     // in from the museum, the fire exit on their right; to those by the
     // pool, ahead and to the left.
     for (const [yaw, arrow] of [
@@ -511,7 +526,7 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
       [3, -3],
       [0, 0],
       [-6, -5],
-      [6, 5],
+      [-6, 5],
     ])
       out.push({
         kind: 'sprinkler',
@@ -549,7 +564,7 @@ export function safetySolids(id: MuseumHallId): Footprint[] {
 export function escapeRoute(id: MuseumHallId): (MuseumHallId | 'stair')[] {
   const route: (MuseumHallId | 'stair')[] = [id];
   let at: MuseumHallId | 'stair' = id;
-  for (let k = 0; k < 10 && at !== 'stair'; k++) {
+  for (let k = 0; k < MUSEUM_HALLS.length && at !== 'stair'; k++) {
     at = EXIT_WAY[at];
     route.push(at);
   }
@@ -557,7 +572,4 @@ export function escapeRoute(id: MuseumHallId): (MuseumHallId | 'stair')[] {
 }
 
 /** All the rooms' layers. */
-export const ALL_SAFETY_ROOMS: readonly MuseumHallId[] = [
-  'museum0',
-  ...MUSEUM_EXHIBITS,
-];
+export const ALL_SAFETY_ROOMS: readonly MuseumHallId[] = MUSEUM_HALLS;

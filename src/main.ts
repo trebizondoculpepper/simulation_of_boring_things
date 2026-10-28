@@ -14,6 +14,7 @@ import type {
   EquipmentRoomId,
   RoomId,
 } from './toolkit/gallery/logic/dev-room-links';
+import { isMuseumHall } from './toolkit/gallery/logic/museum-plan';
 import {
   jointOf,
   lazyNeighbours,
@@ -916,14 +917,7 @@ const importStarter = async (
   if (room === 'ceiling_lab')
     return (await import('./toolkit/gallery/rooms/ceiling-lab-room'))
       .startCeilingLabRoom;
-  if (
-    room === 'museum0' ||
-    room === 'museum1' ||
-    room === 'museum2' ||
-    room === 'museum3' ||
-    room === 'museum4' ||
-    room === 'museum5'
-  ) {
+  if (isMuseumHall(room)) {
     const { startMuseumHallRoom } =
       await import('./toolkit/gallery/rooms/museum-hall-room');
     return (surface) => startMuseumHallRoom(surface, room);

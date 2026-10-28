@@ -2,49 +2,50 @@ import type { Footprint } from '../../controls/logic/walk-collision';
 import { MUSEUM_EXHIBITION } from './museum-brand';
 
 /**
- * The pool science museum (mission 107; the owner, 2026-10-28): five
- * exhibit halls in a converted warehouse built round a square with a
- * central courtyard, each hall its own room and scene, joined by open
- * archways knocked through the old brick walls, with no doors. Walking
- * through an archway hands the visitor into the next hall's scene
- * (`door-joins.ts`, `handOver` in `src/main.ts`), as the pool loop's
- * corridors do.
+ * The pool science museum (mission 107; the owner, 2026-10-28): a ring of
+ * ten halls in a converted warehouse round a courtyard, each hall its
+ * own room and scene, joined by open archways knocked through the old
+ * brick walls, with no doors. Walking through an archway hands the visitor
+ * into the next hall's scene (`door-joins.ts`, `handOver` in
+ * `src/main.ts`), as the pool loop's corridors do.
  *
- * The plan, north up (x east, z south):
+ * The plan (mission 107-1, the owner's layout, 2026-10-28: "the 4x3 room
+ * layout, 4 rooms on the long side, 3 on the short", Hall 0 in a corner),
+ * north up (x east, z south): four rooms east–west by three north–south,
+ * a ring of ten round a courtyard two rooms wide and one deep, the
+ * corners counted once:
  *
  * ```
- *   +---------------------------------+---------+
- *   | 3  Warm water            ->     |    4    |
- *   |                                 |  Safe   |
- *   +---------+=======================+  water  |
- *   |    2    |                       |         |
- *   |  Clean  |       courtyard       |    |    |
- *   |  water  |     (open to sky)     |    v    |
- *   |    ^    |                       |         |
- *   |    |    +===============+-------+---------+
- *   |         | 1 Moving water|  5 The whole    |
- *   |         |  <- entrance  |    plant <-     |
- *   +---------+---------------+-----------------+
- *                  street
+ *   +------+------+------+------+
+ *   |  2 ->|  3 ->|  4 ->|  5   |
+ *   |  ^   |      |      |  v   |
+ *   +------+------+------+------+
+ *   |  1   |  courtyard  |  6   |
+ *   |  ^   |  (sky only) |  v   |
+ *   +------+------+------+------+
+ *   |  0   |<- 9  |<- 8  |<- 7  |
+ *   |welcome      |      |      |
+ *   +------+------+------+------+
+ *                street
  * ```
  *
- * A pinwheel: each side of the square is one long hall that runs past
- * its corner, so every turn of the route is an archway in the end wall
- * of one hall, opening into the side of the next, and the visitor turns
- * 90° there. Five halls on four sides: the south (street) side is split
- * into the entrance hall, Museum 1, and the finale, Museum 5, so the
- * route closes its loop: from Museum 5 straight on into Museum 1, back
- * at the entrance where it began.
+ * Hall 0, the welcome, is in the south-west corner: the visit runs north
+ * into Hall 1, Hall 2 the north-west corner, east through Halls 3 and 4,
+ * Hall 5 the north-east corner, south to Hall 6, Hall 7 the south-east
+ * corner, and west through Halls 8 and 9, back into Hall 0. A side hall's
+ * archways are in line, at both its ends; a corner hall's on two adjacent
+ * walls, the route turning 90° in it.
  *
- * No hall is turned: each hall's own coordinates are the museum's,
- * moved to the hall's middle (`hallOrigin`), so a heading carries
- * unchanged through every archway, the corners too, and the floor's
- * joints and the walls' brick, laid in the museum's coordinates, line up
- * round every turn. Each wall line carries one brick wall `MUSEUM_WALL`
- * thick, centred on it; both halls at an archway build that wall from
- * the same function and the same coordinates, so nothing changes at the
- * hand-over (the perspective-jump fix, `8656cf1`). The square's sizes are
- * constants (`MUSEUM_SQUARE`), provisional: the owner will resize them.
+ * No hall is turned: each hall's own coordinates are the museum's, moved
+ * to the hall's middle (`hallOrigin`), so a heading carries unchanged
+ * through every archway, the corners too, and the floor's joints and the
+ * walls' brick, laid in the museum's coordinates, line up round every
+ * turn. Each wall line carries one brick wall `MUSEUM_WALL` thick,
+ * centred on it; both halls at an archway build that wall from the same
+ * function and the same coordinates, so nothing changes at the hand-over
+ * (the perspective-jump fix, `8656cf1`). The sizes are constants
+ * (`MUSEUM_SQUARE`), provisional: the owner will resize them. Halls are
+ * found by their number (`hallId`, `hallNumber`), never by coordinates.
  * Pure; metres; y up from the floor.
  */
 
@@ -54,18 +55,13 @@ export type MuseumHallId =
   | 'museum2'
   | 'museum3'
   | 'museum4'
-  | 'museum5';
+  | 'museum5'
+  | 'museum6'
+  | 'museum7'
+  | 'museum8'
+  | 'museum9';
 
-/** The five exhibit halls, in the visitor's order: the route returns from the last to the first. */
-export const MUSEUM_EXHIBITS: readonly MuseumHallId[] = [
-  'museum1',
-  'museum2',
-  'museum3',
-  'museum4',
-  'museum5',
-];
-
-/** Every room of the museum: Hall 0, the welcome, where every visit starts, then the five exhibits. */
+/** Every room of the museum, in the visitor's order round the ring: Hall 0, the welcome, where every visit starts and ends, then the nine exhibit halls. */
 export const MUSEUM_HALLS: readonly MuseumHallId[] = [
   'museum0',
   'museum1',
@@ -73,25 +69,50 @@ export const MUSEUM_HALLS: readonly MuseumHallId[] = [
   'museum3',
   'museum4',
   'museum5',
+  'museum6',
+  'museum7',
+  'museum8',
+  'museum9',
 ];
 
-/**
- * The square, provisional (the owner, 2026-10-28: "we can resize them
- * later"): its side, the depth of the ring of halls round the courtyard,
- * where the street side is split between Museum 1 and Museum 5 (x of
- * the wall between them), and the height to the roof deck's underside.
- */
-export const MUSEUM_SQUARE = { side: 46, depth: 14, split: 7, h: 9.5 } as const;
+/** The nine exhibit halls, in the visitor's order: the route returns from the last into Hall 0. */
+export const MUSEUM_EXHIBITS: readonly MuseumHallId[] = MUSEUM_HALLS.slice(1);
+
+/** The halls round the ring. */
+export const RING_SIZE = MUSEUM_HALLS.length;
+
+/** The finale, the last hall before the welcome (the owner, 2026-10-28: "the whole plant"). */
+export const FINALE: MuseumHallId = 'museum9';
+
+/** A hall's number, as signed (Hall 0 to Hall 9). */
+export function hallNumber(id: MuseumHallId): number {
+  return MUSEUM_HALLS.indexOf(id);
+}
+
+/** The hall signed with this number (round the ring, so 10 is Hall 0 again). */
+export function hallId(n: number): MuseumHallId {
+  return MUSEUM_HALLS[((n % RING_SIZE) + RING_SIZE) % RING_SIZE];
+}
 
 /**
- * Hall 0, the welcome (the owner, 2026-10-28): a dry, tiled pastiche of a
- * pool hall, its water painted on the floor, outside the square on the
- * street, in front of Museum 1 and as wide as it, joined to it by one
- * doorway in Museum 1's street wall: its depth and its lower ceiling.
+ * The building, provisional (the owner, 2026-10-28: "we can resize them
+ * later"; question 8 in 107): a grid of rooms `cols` east–west by `rows`
+ * north–south, each room `cellW` along x by `cellD` along z between its
+ * wall lines (Hall 0 keeps stage 1's 16 × 14 m), and the height to the
+ * roof deck's underside.
  */
-export const MUSEUM_HALL0 = { depth: 14, h: 4.5 } as const;
+export const MUSEUM_SQUARE = {
+  cols: 4,
+  rows: 3,
+  cellW: 16,
+  cellD: 14,
+  h: 9.5,
+} as const;
 
-/** The doorway from Hall 0 into Museum 1: square-headed, tiled room to brick. */
+/** Hall 0's tiled ceiling: as high as every other hall's (the owner, 2026-10-28: "The rooms on both sides should be the same height"). */
+export const MUSEUM_HALL0 = { h: MUSEUM_SQUARE.h } as const;
+
+/** The doorways into Hall 0: square-headed, tiled room to brick. */
 export const MUSEUM_DOOR = { w: 2.4, h: 3.0 } as const;
 
 /** The old brick walls: their thickness, centred on each wall line. */
@@ -109,41 +130,87 @@ export interface Rect {
   maxZ: number;
 }
 
-const A = MUSEUM_SQUARE.side / 2;
-const C = A - MUSEUM_SQUARE.depth;
-const S = MUSEUM_SQUARE.split;
+const HALF_W = (MUSEUM_SQUARE.cols * MUSEUM_SQUARE.cellW) / 2;
+const HALF_D = (MUSEUM_SQUARE.rows * MUSEUM_SQUARE.cellD) / 2;
+
+/** Each hall's cell, column (0 west) and row (0 north), in the visitor's order round the ring. */
+const CELLS: readonly (readonly [number, number])[] = [
+  [0, 2],
+  [0, 1],
+  [0, 0],
+  [1, 0],
+  [2, 0],
+  [3, 0],
+  [3, 1],
+  [3, 2],
+  [2, 2],
+  [1, 2],
+];
+
+const cellRect = (c: number, r: number): Rect => ({
+  minX: -HALF_W + c * MUSEUM_SQUARE.cellW,
+  maxX: -HALF_W + (c + 1) * MUSEUM_SQUARE.cellW,
+  minZ: -HALF_D + r * MUSEUM_SQUARE.cellD,
+  maxZ: -HALF_D + (r + 1) * MUSEUM_SQUARE.cellD,
+});
 
 /** Each hall's wall lines (the middles of its walls), in the museum's plan. */
-const BOUNDS: Record<MuseumHallId, Rect> = {
-  museum0: { minX: -C, maxX: S, minZ: A, maxZ: A + MUSEUM_HALL0.depth },
-  museum1: { minX: -C, maxX: S, minZ: C, maxZ: A },
-  museum2: { minX: -A, maxX: -C, minZ: -C, maxZ: A },
-  museum3: { minX: -A, maxX: C, minZ: -A, maxZ: -C },
-  museum4: { minX: C, maxX: A, minZ: -A, maxZ: C },
-  museum5: { minX: S, maxX: A, minZ: C, maxZ: A },
-};
+const BOUNDS = Object.fromEntries(
+  MUSEUM_HALLS.map((id, n) => [id, cellRect(...CELLS[n])]),
+) as Record<MuseumHallId, Rect>;
 
 /** The courtyard's wall lines. */
-export const COURTYARD: Rect = { minX: -C, maxX: C, minZ: -C, maxZ: C };
+export const COURTYARD: Rect = {
+  minX: -HALF_W + MUSEUM_SQUARE.cellW,
+  maxX: HALF_W - MUSEUM_SQUARE.cellW,
+  minZ: -HALF_D + MUSEUM_SQUARE.cellD,
+  maxZ: HALF_D - MUSEUM_SQUARE.cellD,
+};
 /** The whole building's outer wall lines. */
-export const BUILDING: Rect = { minX: -A, maxX: A, minZ: -A, maxZ: A };
+export const BUILDING: Rect = {
+  minX: -HALF_W,
+  maxX: HALF_W,
+  minZ: -HALF_D,
+  maxZ: HALF_D,
+};
 
 export type Heading = 'north' | 'east' | 'south' | 'west';
-/** Which way the route runs through each hall. */
-export const HALL_HEADING: Record<MuseumHallId, Heading> = {
-  museum0: 'north',
-  museum1: 'west',
-  museum2: 'north',
-  museum3: 'east',
-  museum4: 'south',
-  museum5: 'west',
-};
 const UNIT: Record<Heading, readonly [number, number]> = {
   north: [0, -1],
   east: [1, 0],
   south: [0, 1],
   west: [-1, 0],
 };
+const headingOf = (dx: number, dz: number): Heading =>
+  Math.abs(dx) > Math.abs(dz)
+    ? dx > 0
+      ? 'east'
+      : 'west'
+    : dz > 0
+      ? 'south'
+      : 'north';
+
+/**
+ * Which way the route runs through each hall: the way it leaves, towards
+ * the next hall (so a corner hall's runs along its way out, Hall 4's east).
+ */
+export const HALL_HEADING = Object.fromEntries(
+  MUSEUM_HALLS.map((id, n) => {
+    const [c, r] = CELLS[n];
+    const [c2, r2] = CELLS[(n + 1) % RING_SIZE];
+    return [id, headingOf(c2 - c, r2 - r)];
+  }),
+) as Record<MuseumHallId, Heading>;
+
+/** A hall's shape on the ring: the welcome, a side hall (archways in line), or a corner (the route turns 90°). */
+export type HallKind = 'welcome' | 'side' | 'corner';
+export function hallKind(id: MuseumHallId): HallKind {
+  if (id === 'museum0') return 'welcome';
+  const n = hallNumber(id);
+  const [c0, r0] = CELLS[(n + RING_SIZE - 1) % RING_SIZE];
+  const [c2, r2] = CELLS[(n + 1) % RING_SIZE];
+  return c0 === c2 || r0 === r2 ? 'side' : 'corner';
+}
 
 export function hallBounds(id: MuseumHallId): Rect {
   return BOUNDS[id];
@@ -210,10 +277,12 @@ export function hallPoint(id: MuseumHallId, along: number, across: number) {
 export interface HallBrief {
   id: MuseumHallId;
   number: number;
-  /** Its title, as signed: "Moving water". */
+  /** Its title, as signed: "Warm water". */
   title: string;
   /** What it is about, in a few words. */
   subject: string;
+  /** Whether the owner has given it a theme yet (Halls 5 to 8 wait for theirs). */
+  themed: boolean;
   /** The one big idea. */
   bigIdea: string;
   /** What the exhibit will show. */
@@ -222,34 +291,52 @@ export interface HallBrief {
   tryIt: readonly string[];
 }
 
+/** A hall still waiting for its theme (the owner, 2026-10-28: Halls 5 to 8). */
+const waiting = (n: number): HallBrief => ({
+  id: hallId(n),
+  number: n,
+  title: 'Coming soon',
+  subject: 'Its theme is still to be chosen',
+  themed: false,
+  bigIdea:
+    'Every hall of the museum teaches one idea about how a swimming pool works.',
+  willShow:
+    'This hall is waiting for its exhibit. Its theme is still being chosen: carry on round the ring to the next hall.',
+  tryIt: [
+    'Carry on round the ring: the route goes on through the next archway.',
+  ],
+});
+
 export const HALL_BRIEFS: Record<MuseumHallId, HallBrief> = {
   museum0: {
     id: 'museum0',
     number: 0,
     title: 'Welcome',
     subject: 'Behind the tiles',
+    themed: true,
     bigIdea:
       'The simplest thing in the world, diving in, takes a world of engineering to make.',
     willShow:
       'Nothing we take for granted more than a swimming pool: its user interface is the simplest there could be. Dive in, and the water is simply there, clean, clear and warm. Behind the tiles lives a world of pumps, filters, boilers and chemistry, working all day and all night so that it stays that simple.',
     tryIt: [
       'Look for the water in this room. (There is none: it is paint.)',
-      'Go through the doorway and find out what is behind the tiles.',
+      'Follow the arrows north through the doorway and find out what is behind the tiles.',
     ],
   },
   museum1: {
     id: 'museum1',
     number: 1,
-    title: 'Moving water',
-    subject: 'Circulation',
+    title: 'Warm water',
+    subject: 'Heating, energy and a first pump',
+    themed: true,
     bigIdea:
-      'A pool is never still: a pump pulls every drop of it round the plant and back, again and again, all day and all night.',
+      'To warm a pool we must move its water: a pump carries it through a heat exchanger, where a boiler’s heat passes into it without the two waters ever mixing.',
     willShow:
-      'A working pool that spills over its edge into a balance tank, one pump, its pipes and valves, and gauges that show the flow and the pressure.',
+      'A real gas boiler and a heat exchanger connected to an ideal pool, with one pump to move the water, and the thermometers that show the heat going in.',
     tryIt: [
-      'Close a valve a notch at a time and watch the flow fall as the pressure rises.',
-      'Stop the pump and see the water settle back in the pool and the tank.',
-      'Time how long the pump takes to turn the whole pool over.',
+      'Turn the heating on and watch the pool warm, a fraction of a degree at a time.',
+      'Stop the pump and see the heat stop reaching the pool.',
+      'Change the setpoint and watch the boiler answer.',
     ],
   },
   museum2: {
@@ -257,6 +344,7 @@ export const HALL_BRIEFS: Record<MuseumHallId, HallBrief> = {
     number: 2,
     title: 'Clean water',
     subject: 'Filtration and backwash',
+    themed: true,
     bigIdea:
       'A bed of sand catches the dirt the swimmers bring in, and once it is full we wash it out by running the water backwards.',
     willShow:
@@ -270,42 +358,49 @@ export const HALL_BRIEFS: Record<MuseumHallId, HallBrief> = {
   museum3: {
     id: 'museum3',
     number: 3,
-    title: 'Warm water',
-    subject: 'Heating and energy',
+    title: 'Safe water',
+    subject: 'Automatic disinfection',
+    themed: true,
     bigIdea:
-      'A pool loses most of its heat from its surface, as water evaporates into the air: a cover at night saves more than any boiler can.',
+      'Chlorine keeps the water safe, but swimmers use it up: a controller measures it all day long and doses just enough, at the right pH.',
     willShow:
-      'A heat source, a heat exchanger that warms the pool water without mixing with it, a pool losing heat to the air, a pool cover, and a meter counting the energy and what it costs.',
+      'A pool with its chemistry: free and combined chlorine, pH, the pollution swimmers bring, and a dosing controller with its sample cell and metering pumps.',
     tryIt: [
-      'Turn the heating on and watch the pool warm, a fraction of a degree at a time.',
-      'Pull the cover over the pool and see how much heat it saves.',
-      'Read the meter and work out what a day of heating costs.',
+      'Send in a crowd of swimmers and watch the chlorine fall and the dosing pumps answer.',
+      'Change the controller’s setpoints and see the water follow.',
+      'Read the controller and the gauges, and say whether the water is safe.',
     ],
   },
   museum4: {
     id: 'museum4',
     number: 4,
-    title: 'Safe water',
-    subject: 'Disinfection and chemistry',
+    title: 'The chemistry of pools',
+    subject: 'A hands-on chemistry lab',
+    themed: true,
     bigIdea:
-      'Chlorine keeps the water safe, but swimmers use it up: the trick is keeping just enough, at the right pH, all day long.',
+      'Every chemical added to a pool changes its water: the art is in the balance.',
     willShow:
-      'A pool with its chemistry: free and combined chlorine, pH, the pollution swimmers bring, a dosing controller with its sample cell and metering pumps, and a test kit you can use yourself.',
+      'A set of ideal tanks, a dosing station with buttons to add chemicals of your choice, and a readout in a simulated swimming pool of the chemistry your choices produced.',
     tryIt: [
-      'Test the water with the kit and compare it with the controller.',
-      'Send in a crowd of swimmers and watch the chlorine fall and the dosing pumps answer.',
-      'Solve the pool problems on the challenge cards, from cloudy water to a smell of chlorine.',
+      'Add chemicals with the dosing station’s buttons and read what they did to the pool.',
+      'Make the water safe, clear and comfortable, then try to upset it.',
+      'Reset it at the end and try again.',
     ],
   },
-  museum5: {
-    id: 'museum5',
-    number: 5,
+  museum5: waiting(5),
+  museum6: waiting(6),
+  museum7: waiting(7),
+  museum8: waiting(8),
+  museum9: {
+    id: 'museum9',
+    number: 9,
     title: 'The whole plant',
     subject: 'Control and fault finding',
+    themed: true,
     bigIdea:
       'Every part you have met works together, and when something goes wrong the plant tells you: if you know how to listen.',
     willShow:
-      'The first four exhibits joined into one small working plant, with a mimic of the whole system, an alarm panel and its alarms.',
+      'A working model of an entire swimming pool, all of its major components put together, with a mimic of the whole system, an alarm panel and its alarms.',
     tryIt: [
       'Press the fault button to cause a random fault somewhere in the plant.',
       'Read the alarms and the mimic, and track down what has gone wrong.',
@@ -321,27 +416,20 @@ export function hallName(id: MuseumHallId) {
 }
 
 /**
- * The museum's doorways, each from one room on the route to the next:
- * from the welcome into Museum 1, round the ring, and from Museum 5 back
- * into Museum 1, so the visit ends where it began, by the way out.
+ * The museum's doorways, each from one room on the route to the next,
+ * round the ring: from the welcome into Hall 1, on round to Hall 9, and
+ * from Hall 9 back into the welcome, so the visit ends where it began,
+ * by the way out.
  */
 export const MUSEUM_JOINS: readonly (readonly [MuseumHallId, MuseumHallId])[] =
-  [
-    ['museum0', 'museum1'],
-    ['museum1', 'museum2'],
-    ['museum2', 'museum3'],
-    ['museum3', 'museum4'],
-    ['museum4', 'museum5'],
-    ['museum5', 'museum1'],
-  ];
+  MUSEUM_HALLS.map((id, n) => [id, hallId(n + 1)] as const);
 
-/** The room after this one on the route (Museum 5's is Museum 1, closing the loop), and the one before (Museum 1's is the welcome). */
-export function nextHall(id: MuseumHallId): MuseumHallId | null {
-  return MUSEUM_JOINS.find(([a]) => a === id)?.[1] ?? null;
+/** The room after this one on the route (Hall 9's is the welcome, closing the ring), and the one before (the welcome's is Hall 13). */
+export function nextHall(id: MuseumHallId): MuseumHallId {
+  return hallId(hallNumber(id) + 1);
 }
-export function previousHall(id: MuseumHallId): MuseumHallId | null {
-  // Museum 1 is entered from the welcome first (and from Museum 5 at the end).
-  return MUSEUM_JOINS.find(([, b]) => b === id)?.[0] ?? null;
+export function previousHall(id: MuseumHallId): MuseumHallId {
+  return hallId(hallNumber(id) - 1);
 }
 
 export function isMuseumHall(id: string): id is MuseumHallId {
@@ -505,49 +593,63 @@ export const WINDOW = {
   w: 2.4,
   every: 4,
   streetSill: 3.2,
-  courtSill: 0.9,
+  courtSill: 2.6,
   headBelowDeck: 2.2,
 } as const;
 
-/** The street wall's middle kept blank, for the hall's title (whole for the short halls on the street). */
-const BLANK_HALF = 5;
+/** A hall's title on its street wall, as gallery vinyl: kept clear of windows. */
+export const HALL_TITLE = { w: 6.0, h: 2.0, y: 3.6 } as const;
 
 /**
- * A wall's tall factory windows, on a 4 m grid from the museum's origin:
- * clear glass where the wall looks onto the courtyard (their sills low,
- * to see out), obscured glass where it looks onto the street, none where
- * another hall is beyond; never within a pier's width of the wall's ends,
- * and none in the street wall's middle, kept for the hall's title. The
- * same for a wall whichever hall's scene builds it (the courtyard's far
- * walls are built from it in every hall's scene).
+ * A wall's tall factory windows. Onto the courtyard: clear glass, high
+ * (clerestories, showing only the sky), on a 4 m grid from the museum's origin, never within a
+ * pier's width of the wall's ends. Onto the street: obscured glass, high,
+ * one either side of the wall's middle (kept for the hall's title), as
+ * near the ends as the piers allow; none on Hall 9's street wall, kept
+ * whole for the finale's closing words. None where another hall is
+ * beyond, and none in Hall 0, tiled all round. The same for a wall
+ * whichever hall's scene builds it (the courtyard's far walls and the
+ * empty halls are built from it in every hall's scene).
  */
 export function wallWindows(id: MuseumHallId, wall: HallWall): MuseumWindow[] {
   const out: MuseumWindow[] = [];
-  // The welcome is tiled all round: no windows.
   if (id === 'museum0') return out;
   const half = WINDOW.w / 2;
   const lo = wall.from + MUSEUM_WALL / 2 + 0.8;
   const hi = wall.to - MUSEUM_WALL / 2 - 0.8;
   const mid = (wall.from + wall.to) / 2;
-  const shortStreet = id === 'museum1' || id === 'museum5';
+  const head = MUSEUM_SQUARE.h - WINDOW.headBelowDeck;
+  const kindAt = (u: number) => {
+    const kinds = [u - half, u, u + half].map((p) => beyondAt(wall, p));
+    return kinds.every((b) => b === kinds[0]) ? kinds[0] : 'hall';
+  };
+  if (beyondAt(wall, mid) === 'street') {
+    if (id === FINALE) return out;
+    for (const s of [-1, 1]) {
+      const u = mid + s * (hi - mid - half - 0.3);
+      if (Math.abs(u - mid) - half < HALL_TITLE.w / 2 + 0.15) continue;
+      if (kindAt(u) !== 'street') continue;
+      out.push({
+        u,
+        w: WINDOW.w,
+        sill: WINDOW.streetSill,
+        head,
+        kind: 'street',
+      });
+    }
+    return out;
+  }
   for (let k = Math.ceil((lo + half - 2) / WINDOW.every); ; k++) {
     const u = k * WINDOW.every + 2;
     if (u + half > hi) break;
     if (u - half < lo) continue;
-    const kinds = [u - half, u, u + half].map((p) => beyondAt(wall, p));
-    if (!kinds.every((b) => b === kinds[0]) || kinds[0] === 'hall') continue;
-    if (
-      kinds[0] === 'street' &&
-      (shortStreet || Math.abs(u - mid) < BLANK_HALF + half)
-    )
-      continue;
-    const head = MUSEUM_SQUARE.h - WINDOW.headBelowDeck;
+    if (kindAt(u) !== 'courtyard') continue;
     out.push({
       u,
       w: WINDOW.w,
-      sill: kinds[0] === 'street' ? WINDOW.streetSill : WINDOW.courtSill,
+      sill: WINDOW.courtSill,
       head,
-      kind: kinds[0],
+      kind: 'courtyard',
     });
   }
   return out;
@@ -829,4 +931,77 @@ export function startOf(id: MuseumHallId): {
     return { x: l.x - 1.6, z: l.z - 1.4, yaw: Math.PI };
   }
   return arrivalFrom(id, previousHall(id));
+}
+
+/**
+ * How many doorways apart two halls are round the ring, the shorter way.
+ */
+export function ringDistance(a: MuseumHallId, b: MuseumHallId): number {
+  const d = (hallNumber(b) - hallNumber(a) + RING_SIZE) % RING_SIZE;
+  return Math.min(d, RING_SIZE - d);
+}
+
+/** A hall's two neighbours on the ring: the hall before it and the hall after it. */
+export function ringNeighbours(id: MuseumHallId): [MuseumHallId, MuseumHallId] {
+  return [previousHall(id), nextHall(id)];
+}
+
+/**
+ * How much of a hall is drawn, seen from the hall the visitor is in (the
+ * owner, 2026-10-28: "The halls adjacent to the one we are in should be
+ * rendered, but anything more distant should be rendered as a completely
+ * empty space"): the visitor's own hall and its neighbours on the ring in
+ * full (dressing, signs and exhibit); every hall further away as its empty
+ * component only, at its true place.
+ */
+export type HallDetail = 'full' | 'empty';
+export function hallDetail(
+  visitor: MuseumHallId,
+  id: MuseumHallId,
+): HallDetail {
+  return ringDistance(visitor, id) <= 1 ? 'full' : 'empty';
+}
+
+/** The halls drawn in full and those drawn empty, from the hall the visitor is in. */
+export function detailSets(visitor: MuseumHallId) {
+  const full = MUSEUM_HALLS.filter((h) => hallDetail(visitor, h) === 'full');
+  const empty = MUSEUM_HALLS.filter((h) => hallDetail(visitor, h) === 'empty');
+  return { full, empty };
+}
+
+/**
+ * Which of the visitor's two neighbours a further hall lies beyond, round
+ * the ring the shorter way (the hall opposite, as far either way, counts
+ * as onward): `onward` beyond the next hall, `back` beyond the one before.
+ * The scene of the visitor's hall shows each side's empty halls through
+ * that neighbour's archway, and stops drawing them (keeping only their
+ * depth) while the neighbour itself is drawn through it.
+ */
+export function ringSide(
+  visitor: MuseumHallId,
+  id: MuseumHallId,
+): 'onward' | 'back' | null {
+  if (id === visitor) return null;
+  const d = (hallNumber(id) - hallNumber(visitor) + RING_SIZE) % RING_SIZE;
+  return d <= RING_SIZE - d ? 'onward' : 'back';
+}
+
+/** An empty hall: its kind, its walls' lines and its archways, for the empty component (`views/museum-empty-hall.ts`). */
+export function emptyHallShape(id: MuseumHallId) {
+  return {
+    id,
+    kind: hallKind(id),
+    bounds: hallBounds(id),
+    h: hallSize(id).h,
+    arches: hallArches(id),
+    walls: hallWalls(id).map((wall) => ({
+      wall,
+      windows: wallWindows(id, wall),
+    })),
+  };
+}
+
+/** Whether two halls share a wall line (an archway's wall), and which. */
+export function sharedWall(a: MuseumHallId, b: MuseumHallId) {
+  return sharedEdge(BOUNDS[a], BOUNDS[b]);
 }

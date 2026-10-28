@@ -34,11 +34,16 @@ import {
   arrivalFrom,
   crossedInto,
   hallArches,
+  hallOrigin,
   hallSolids,
   startOf,
 } from '../logic/museum-plan';
 import type { MuseumHallId } from '../logic/museum-plan';
 import { createMuseumHall } from '../views/museum-hall';
+import {
+  createEmptyHallMaterials,
+  createRingShells,
+} from '../views/museum-empty-hall';
 import { safetySolids } from '../logic/museum-safety';
 
 /**
@@ -53,7 +58,8 @@ const MUSEUM_AO_SAMPLES = 3;
  * A room of the pool science museum, PLANTROOMS (mission 107), in its own scene: its
  * archways are doorways the app sees through (`door-joins.ts`), always
  * open, one at a time (the one the visitor is at, or looking towards:
- * `archToSee`); the other shows a plain stand-in. Crossing an archway's
+ * `archToSee`); the other shows its hall's empty component, as do the
+ * halls beyond (`museum-empty-hall.ts`, 107-1). Crossing an archway's
  * middle line hands the visitor over to the next hall (`handOver` in
  * `src/main.ts`), its eye and zoom carried through. Lazy joints: both
  * neighbours are built while this hall is shown, so the hand-over is
@@ -77,6 +83,14 @@ export function startMuseumHallRoom(
   const hall = createMuseumHall(id);
   hall.group.scale.setScalar(metre);
   scene.add(hall.group);
+  // Every other hall of the ring as its empty component, at its true
+  // place (107-1): the neighbours' seen through their archways until their
+  // full rooms are drawn there, the halls beyond them always empty.
+  const shellMaterials = createEmptyHallMaterials(hall.materials);
+  const shells = createRingShells(id, shellMaterials);
+  const o = hallOrigin(id);
+  shells.group.position.set(-o.x, 0, -o.z);
+  hall.group.add(shells.group);
   const { h } = hallSize(id);
   const axes = hallAxes(id);
   const welcome = id === 'museum0';
@@ -183,8 +197,7 @@ export function startMuseumHallRoom(
       opening: () => ({ minX: 1e9, maxX: 1e9, minZ: 1e9, maxZ: 1e9 }),
       see: (on) => {
         seen[a.to] = on;
-        const standIn = hall.standIns.get(a.to);
-        if (standIn) standIn.visible = !on;
+        shells.see(a.to, on);
       },
       peek: () => {},
     });
@@ -235,6 +248,8 @@ export function startMuseumHallRoom(
       composer.dispose();
       walk.dispose();
       hall.dispose();
+      shells.dispose();
+      shellMaterials.dispose();
       freeEnvironment();
       renderer.dispose();
     },
