@@ -14,7 +14,7 @@ Today every successful `npm run build` advances the patch in `package.json` and 
 
 "Every release to main bumps the patch version, and any actual release bumps the minor. Majors only on user demand."
 
-- A push to `main` (GitHub Pages, the bleeding edge) is the next patch: `0.2.1`, `0.2.2`, … Proposed, to keep the gains below: the patch is not committed but derived at build time, the number of commits on `main` since the last release tag (`git describe --tags --match 'v*'`), so no bot commit, no conflicts on the package files, and every push a distinct, rising version. `package.json` holds the last release's version (`x.y.0`).
+- A push to `main` (GitHub Pages, the bleeding edge) is the next patch: `0.2.1`, `0.2.2`, … Decided (the owner, 2026-10-28: "derived is fine"): the patch is not committed but derived at build time, the number of commits on `main` since the last release tag (`git describe --tags --match 'v*'`), so no bot commit, no conflicts on the package files, and every push a distinct, rising version. `package.json` holds the last release's version (`x.y.0`).
 - A release (`npm run release`, selected builds for itch.io, a few a day) bumps the minor and resets the patch: `0.2.12` on Pages → release `0.3.0`, committed with the changelog, tagged and pushed.
 - A major only when the owner asks: `npm run release -- major`.
 - The first release under the rule is `0.2.0`.
