@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { Matrix4, MeshBasicMaterial } from 'three';
 import { createGroutSpecimens } from './grout-specimen';
-import { PLINTHS, plinthX } from '../logic/museum-7-grout';
+import { PLACES, PLINTHS } from '../logic/museum-7-grout';
 
 describe('Hall 7 grout specimens', () => {
   const materials = {
@@ -12,7 +12,7 @@ describe('Hall 7 grout specimens', () => {
   };
   const built = createGroutSpecimens(
     PLINTHS.map((p) => ({
-      matrix: new Matrix4().makeTranslation(plinthX(p.n), 1.15, 3.6),
+      matrix: new Matrix4().makeTranslation(PLACES[p.n].x, 1.15, PLACES[p.n].z),
       coloured: p.grout === 'avocado',
     })),
     materials,

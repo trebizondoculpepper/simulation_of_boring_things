@@ -34,8 +34,10 @@ import type { OilBlob } from '../logic/oil-wheel';
 export function createOilWheelProjector(
   kit: PanelKit,
   options: {
-    /** Where the stand stands, on the floor (y is the lens's height). */
+    /** Where it hangs or stands: its tilting pivot, the lamp house's middle. */
     at: Vec3;
+    /** On a floor stand (the default), or hung on a rod from a ceiling `ceiling` metres up. */
+    mount?: 'floor' | { ceiling: number };
     /** The middle of the face it lights. */
     target: Vec3;
     /** The lit face's outward normal (towards the projector's side). */
@@ -50,32 +52,53 @@ export function createOilWheelProjector(
   const t = tools(kit);
   const root = new Group();
   root.name = options.name ?? 'Oil-wheel projector';
-  const [x, lensY, z] = options.at;
+  const [x, y, z] = options.at;
   const target = new Vector3(...options.target);
+  const mount = options.mount ?? 'floor';
 
-  // ---- The stand: a weighted round foot, a pole, a yoke ----
+  // ---- Its mount: a yoke turned towards the target, on a stand or a rod ----
   const steel = t.paint('#1c1d20', 0.45, 0.6);
   const chrome = t.paint('#c9ccd0', 0.25, 0.9);
-  t.cyl(root, steel, 0.16, 0.025, x, 0.0125, z, 'y', 24);
-  t.cyl(root, chrome, 0.014, lensY - 0.14, x, (lensY - 0.14) / 2, z, 'y', 10);
+  const aim = target.clone().sub(new Vector3(x, y, z));
+  const yoke = new Group();
+  yoke.position.set(x, y, z);
+  yoke.rotation.y = Math.atan2(aim.x, aim.z);
+  root.add(yoke);
+  // The yoke: a U round the lamp house's sides, pivoting it on two bolts,
+  // open downwards to a ceiling rod or upwards from a stand's pole.
+  const arm = mount === 'floor' ? -0.13 : 0.22;
+  t.box(yoke, steel, 0.222, 0.012, 0.03, 0, arm, 0);
+  for (const side of [-1, 1]) {
+    t.box(yoke, steel, 0.012, Math.abs(arm), 0.03, side * 0.105, arm / 2, 0);
+    t.cyl(yoke, chrome, 0.012, 0.012, side * 0.113, 0, 0, 'x', 10);
+  }
+  if (mount === 'floor') {
+    t.cyl(root, steel, 0.16, 0.025, x, 0.0125, z, 'y', 24);
+    t.cyl(root, chrome, 0.014, y + arm, x, (y + arm) / 2, z, 'y', 10);
+  } else {
+    const top = mount.ceiling;
+    const from = y + arm;
+    t.cyl(root, chrome, 0.014, top - from, x, (top + from) / 2, z, 'y', 10);
+    t.cyl(root, steel, 0.06, 0.012, x, top - 0.006, z, 'y', 16);
+  }
 
-  // ---- The head, turned to face the target (its +z) ----
+  // ---- The head, tilted in the yoke to face the target (its +z) ----
   const head = new Group();
-  head.position.set(x, lensY, z);
-  head.lookAt(target);
-  root.add(head);
-  // The yoke: a U from the pole's top round the lamp house's sides.
-  t.box(head, steel, 0.21, 0.012, 0.03, 0, -0.13, -0.08);
-  for (const side of [-1, 1])
-    t.box(head, steel, 0.012, 0.11, 0.03, side * 0.105, -0.075, -0.08);
+  head.rotation.x = Math.atan2(-aim.y, Math.hypot(aim.x, aim.z));
+  yoke.add(head);
+  // Its parts are laid out from the lens's end: the lamp house's middle,
+  // where it pivots, is 0.09 m behind.
+  const body = new Group();
+  body.position.z = 0.09;
+  head.add(body);
   // The lamp house: a black box, louvred both sides, a handle over it.
   const black = t.paint('#151516', 0.55, 0.2);
-  t.box(head, black, 0.17, 0.2, 0.3, 0, 0, -0.09);
+  t.box(body, black, 0.17, 0.2, 0.3, 0, 0, -0.09);
   const louvre = t.paint('#050506', 0.9);
   for (const side of [-1, 1])
     for (let k = 0; k < 6; k++)
       t.box(
-        head,
+        body,
         louvre,
         0.004,
         0.012,
@@ -85,8 +108,8 @@ export function createOilWheelProjector(
         -0.1,
       );
   for (const dz of [-0.17, -0.01])
-    t.box(head, chrome, 0.012, 0.045, 0.012, 0, 0.122, dz);
-  t.box(head, chrome, 0.012, 0.012, 0.172, 0, 0.145, -0.09);
+    t.box(body, chrome, 0.012, 0.045, 0.012, 0, 0.122, dz);
+  t.box(body, chrome, 0.012, 0.012, 0.172, 0, 0.145, -0.09);
   // Its maker's plate on the left flank.
   const plate = t.printed(
     0.1,
@@ -104,13 +127,13 @@ export function createOilWheelProjector(
   );
   plate.mesh.position.set(-0.0865, -0.08, -0.12);
   plate.mesh.rotation.y = -Math.PI / 2;
-  head.add(plate.mesh);
+  body.add(plate.mesh);
   // The lens: a barrel out of the front, its glass lit by the lamp.
-  t.cyl(head, black, 0.042, 0.11, 0, 0, 0.115, 'z', 20);
-  t.cyl(head, chrome, 0.045, 0.012, 0, 0, 0.165, 'z', 20);
+  t.cyl(body, black, 0.042, 0.11, 0, 0, 0.115, 'z', 20);
+  t.cyl(body, chrome, 0.045, 0.012, 0, 0, 0.165, 'z', 20);
   const glass = createPs1Material({ color: '#fff1cf' }, true, true);
   kit.materials.push(glass);
-  t.cyl(head, glass, 0.034, 0.004, 0, 0, 0.171, 'z', 20);
+  t.cyl(body, glass, 0.034, 0.004, 0, 0, 0.171, 'z', 20);
 
   // ---- The effects rotator: a bracket, a motor, the wheel ----
   // The wheel's hub stands to one side, so the lens looks through its oils
@@ -118,10 +141,10 @@ export function createOilWheelProjector(
   const radius = OIL_WHEEL.diameter / 2;
   const hubX = radius * 0.6;
   const wheelZ = 0.19;
-  t.box(head, steel, 0.012, 0.012, 0.06, hubX + 0.02, 0, 0.17);
-  t.box(head, steel, 0.03, 0.012, 0.012, hubX + 0.005, 0, 0.2);
+  t.box(body, steel, 0.012, 0.012, 0.06, hubX + 0.02, 0, 0.17);
+  t.box(body, steel, 0.03, 0.012, 0.012, hubX + 0.005, 0, 0.2);
   const motor = t.paint('#3a3d42', 0.5, 0.5);
-  t.cyl(head, motor, 0.022, 0.035, hubX, 0, wheelZ + 0.022, 'z', 16);
+  t.cyl(body, motor, 0.022, 0.035, hubX, 0, wheelZ + 0.022, 'z', 16);
   const wheelFace = createCanvasTexture(256, 256);
   paintWheel(wheelFace.context, 256, oilBlobs());
   wheelFace.texture.needsUpdate = true;
@@ -141,7 +164,7 @@ export function createOilWheelProjector(
   const spin = new Group();
   spin.position.set(hubX, 0, wheelZ);
   spin.add(wheel);
-  head.add(spin);
+  body.add(spin);
 
   // ---- The light it throws: two layers on the face, and the beam ----
   const normal = new Vector3(...options.normal).normalize();
@@ -180,7 +203,7 @@ export function createOilWheelProjector(
   // The beam: a faint, open cone from the lens to the face.
   // (The root is not yet placed: its world is its own frame.)
   root.updateMatrixWorld(true);
-  const lens = head.localToWorld(new Vector3(0, 0, 0.175));
+  const lens = body.localToWorld(new Vector3(0, 0, 0.175));
   const reach = lens.distanceTo(target);
   const beamMaterial = new MeshBasicMaterial({
     color: '#ffd9a8',

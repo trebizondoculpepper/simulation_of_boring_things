@@ -563,7 +563,15 @@ export function floorArrowGeometry(id: MuseumHallId) {
   for (const g of parts) g.dispose();
   return merged;
 }
-export function floorArrowTexture() {
+/**
+ * The halls whose arrows are black vinyl in their white border, not the
+ * brand's colour (the owner, 2026-10-28: "Make the arrows ... black vinyl
+ * with a white outline"): the dark grout hall's.
+ */
+export const BLACK_ARROW_HALLS: ReadonlySet<MuseumHallId> = new Set([
+  'museum7',
+]);
+export function floorArrowTexture(fill: string = BRAND.colours.accent) {
   const S = 256;
   return canvasTexture(S, S, (c) => {
     const m = S / 2;
@@ -584,7 +592,7 @@ export function floorArrowTexture() {
     c.strokeStyle = '#f4f4f0';
     arrow();
     c.stroke();
-    c.fillStyle = BRAND.colours.accent;
+    c.fillStyle = fill;
     arrow();
     c.fill();
   });
@@ -1297,7 +1305,9 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
   plan.add(floor);
 
   // The vinyl arrows by every archway, showing the way round.
-  const arrowMap = floorArrowTexture();
+  const arrowMap = floorArrowTexture(
+    BLACK_ARROW_HALLS.has(id) ? '#0d0d0e' : BRAND.colours.accent,
+  );
   textures.push(arrowMap);
   const arrowMaterial = lifebuoyStickerMaterial(arrowMap);
   disposables.push(arrowMaterial);

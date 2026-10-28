@@ -211,30 +211,72 @@ export const SPECIMEN = {
   recess: 0.0015,
 } as const;
 
-/** The row: plinths east (1840) to west (today), along z = ROW.z. */
-export const ROW = {
-  z: 3.6,
-  east: 5.85,
-  pitch: 1.25,
-  plinth: { w: 0.55, h: 1.15 },
-  /** The plaques' lecterns, on the visitor's side (north), facing north. */
-  lecternZ: 2.45,
-  /** The ropes, either side of the plinths. */
-  ropeNorth: 2.95,
-  ropeSouth: 4.25,
-  /** The bronze timeline set into the floor, between lecterns and rope. */
-  timelineZ: 2.78,
-} as const;
+/** The plinths' size, metres. */
+export const PLINTH = { w: 0.55, h: 1.15 } as const;
 
-/** Where plinth `n` (1 to 10) stands, its x. */
-export const plinthX = (n: number) => ROW.east - (n - 1) * ROW.pitch;
+/** Which way a plinth's specimen and plaque face: towards its visitor. */
+export type Facing = 'north' | 'south' | 'east' | 'west';
 
-/** The timeline's span, 1840 to today, east to west along the row. */
+/** A facing as a unit step in the hall's frame, x and z. */
+export const facingStep = (f: Facing): [number, number] =>
+  f === 'north'
+    ? [0, -1]
+    : f === 'south'
+      ? [0, 1]
+      : f === 'east'
+        ? [1, 0]
+        : [-1, 0];
+
+/** The turn about y that faces a model built facing +z this way. */
+export const facingYaw = (f: Facing) => {
+  const [dx, dz] = facingStep(f);
+  return Math.atan2(dx, dz);
+};
+
+/**
+ * Where each plinth stands (the owner, 2026-10-28: "grout plinths around
+ * the edge, with a few in the centre"), in date order round the hall:
+ * 1 to 3 along the east wall, facing in; 4 to 6 an island in the middle,
+ * facing the way in, the 1970s' at its centre under the oil-wheel
+ * projector; 7 to 9 along the south wall, under the title; 10, the coda,
+ * on the west wall beside the way out.
+ */
+export const PLACES: Readonly<
+  Record<number, { x: number; z: number; facing: Facing }>
+> = {
+  1: { x: 6.8, z: -2.6, facing: 'west' },
+  2: { x: 6.8, z: 0.1, facing: 'west' },
+  3: { x: 6.8, z: 2.8, facing: 'west' },
+  4: { x: 2.7, z: 0.9, facing: 'north' },
+  5: { x: 0, z: 0.9, facing: 'north' },
+  6: { x: -2.7, z: 0.9, facing: 'north' },
+  7: { x: 4.4, z: 5.8, facing: 'north' },
+  8: { x: 0, z: 5.8, facing: 'north' },
+  9: { x: -4.4, z: 5.8, facing: 'north' },
+  10: { x: -6.8, z: 4.2, facing: 'east' },
+};
+
+/** Plinth `n`'s place. */
+export const plinthPlace = (n: number) => PLACES[n];
+
+/** How far before its plinth a plaque's lectern stands, and how far out the rope runs round it. */
+export const LECTERN_OUT = 1.15;
+export const ROPE_HALF = 0.55;
+
+/** Where plinth `n`'s plaque stands: before it, on its visitor's side. */
+export function lecternAt(n: number) {
+  const p = PLACES[n];
+  const [dx, dz] = facingStep(p.facing);
+  return { x: p.x + dx * LECTERN_OUT, z: p.z + dz * LECTERN_OUT };
+}
+
+/** The bronze timeline set in the floor across the way in, 1840 (east) to today (west), before the island. */
 export const TIMELINE = {
   from: 1840,
   to: 2026,
-  east: plinthX(1) + 0.6,
-  west: plinthX(10) - 0.6,
+  east: 5.0,
+  west: -5.0,
+  z: -1.5,
 } as const;
 
 /** Where a year falls on the timeline, its x. */
@@ -246,28 +288,30 @@ export const timelineX = (year: number) =>
 /** The hall's inside half-sizes (16 × 14 m cell less its walls). */
 export const HALL7 = { halfX: 7.7, halfZ: 6.7, h: 9.5 } as const;
 
-/** The bench at the row's west end, facing back along it (east). */
-export const BENCH = { x: -6.55, z: ROW.z, length: 1.6, depth: 0.45 } as const;
+/** The bench against the west wall, north of the way out, facing east into the hall. */
+export const BENCH = { x: -6.9, z: -4.0, length: 1.6, depth: 0.45 } as const;
+
+/** The oil-wheel projector, hung high over the island, aimed down at the 1970s' specimen. */
+export const PROJECTOR = { x: 0, y: 4.4, z: -0.7, ceiling: HALL7.h } as const;
 
 /** Places where the walker may not go, metres in the hall's frame. */
 export function hall7Solids() {
-  const lo = plinthX(10) - ROW.plinth.w / 2 - 0.1;
-  const hi = plinthX(1) + ROW.plinth.w / 2 + 0.1;
   return [
-    // The roped row, posts and all.
-    {
-      minX: lo,
-      maxX: hi,
-      minZ: ROW.ropeNorth - 0.05,
-      maxZ: ROW.ropeSouth + 0.05,
-    },
-    // The lecterns, one per plinth.
-    ...PLINTHS.map((p) => ({
-      minX: plinthX(p.n) - 0.25,
-      maxX: plinthX(p.n) + 0.25,
-      minZ: ROW.lecternZ - 0.2,
-      maxZ: ROW.lecternZ + 0.15,
-    })),
+    // Each plinth, roped round.
+    ...PLINTHS.map((p) => {
+      const { x, z } = PLACES[p.n];
+      return {
+        minX: x - ROPE_HALF - 0.05,
+        maxX: x + ROPE_HALF + 0.05,
+        minZ: z - ROPE_HALF - 0.05,
+        maxZ: z + ROPE_HALF + 0.05,
+      };
+    }),
+    // Its plaque's lectern.
+    ...PLINTHS.map((p) => {
+      const { x, z } = lecternAt(p.n);
+      return { minX: x - 0.22, maxX: x + 0.22, minZ: z - 0.22, maxZ: z + 0.22 };
+    }),
     // The bench.
     {
       minX: BENCH.x - BENCH.depth / 2,
