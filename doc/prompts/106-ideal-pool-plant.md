@@ -118,5 +118,5 @@ Frame rate on the owner's machine: about 97 fps on high, 106 on medium, 119 on l
 
 ## Open questions
 
-1. Should a too-fierce backwash lose sand (the bed's depth falling, its clean head with it)? Not modelled yet.
+1. ~~Should a too-fierce backwash lose sand?~~ Answered by the owner, 2026-10-28: "do what's simplest". No sand loss and no flow limiter: a fierce backwash simply works. (A flow-limiting orifice plate was considered and dropped.)
 2. The pump trips at 45 °C and resets below 42 °C: about six minutes dead-headed, two and a half to cool. Shorter for the video?
