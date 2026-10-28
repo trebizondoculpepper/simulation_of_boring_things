@@ -1,6 +1,6 @@
 # 087: Start the game at a lower resolution from the URL
 
-Status: done 2026-10-28 (COMMIT), widened by the owner 2026-10-28 to graphics presets (see "Done" at the end). Persistence decided by the owner 2026-10-27; the two other questions decided by the owner 2026-10-28 (end). Wider graphics settings are researched in [graphics-quality-presets](../research/graphics-quality-presets.md).
+Status: done 2026-10-28 (`f77eb17`), widened by the owner 2026-10-28 to graphics presets (see "Done" at the end). Persistence decided by the owner 2026-10-27; the two other questions decided by the owner 2026-10-28 (end). Wider graphics settings are researched in [graphics-quality-presets](../research/graphics-quality-presets.md).
 
 You are working on "The Pool", a browser game in TypeScript and Three.js simulating a leisure centre's pool plant (this repository). Read `CLAUDE.md` first; its rules apply: all input goes through `src/toolkit/controls/`, `logic/` folders are pure and tested beside them, and markdown is one paragraph per line.
 
