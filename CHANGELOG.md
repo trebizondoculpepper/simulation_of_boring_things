@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Every dosing pump a tenth as loud (−20 dB) (the owner, 2026-10-28): heard only close to, never over a circulation pump.
 - The stepper dosing pumps (DP-102, the acid pump) whine softly at a steady pitch, louder on each quick suction stroke, with a muffled valve click (the owner, 2026-10-28): their sound was a tone swept up and down, a siren's wail.
 - The solenoid dosing pumps (DP-101A and the like) tick once a stroke, as meant (the owner, 2026-10-28): their tick was a noise gated by a square wave, open half of every stroke, so they sounded like a pulsing warning beeper.
 - Sand filters say what their tank is doing (the owner, 2026-10-28): the lounge's and the Olympic's filters' descriptions and inspection headings read from each bed in the world, "the tank is backwashing", "rinsing", "filtering, and seems clean", "filtering, but seems dirty", "filtering, but seems very dirty and the sand is pitted", or standing (`filter-condition.ts`).

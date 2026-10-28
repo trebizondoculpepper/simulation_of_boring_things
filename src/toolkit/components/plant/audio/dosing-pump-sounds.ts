@@ -11,11 +11,14 @@ import { noiseSource } from '../../core/audio/part-loops';
  * - `PERISTALTIC_PUMP`: a geared servo running easily (the owner,
  *   2026-10-27): a fairly low hum, not a whine, under the rollers'
  *   soft rhythmic squeeze of the tube, three a turn.
+ *
+ * All a tenth (−20 dB) of what they were (the owner, 2026-10-28): a
+ * dosing pump is heard only close to, never over a circulation pump.
  */
 
 export const SUBMERGED_PUMP: LoopRecipe = (context, out) => {
   const master = context.createGain();
-  master.gain.value = 0.05;
+  master.gain.value = 0.005;
   const muffle = context.createBiquadFilter();
   muffle.type = 'lowpass';
   muffle.frequency.value = 260;
@@ -56,7 +59,7 @@ export const SUBMERGED_PUMP: LoopRecipe = (context, out) => {
 
 export const PERISTALTIC_PUMP: LoopRecipe = (context, out) => {
   const master = context.createGain();
-  master.gain.value = 0.035;
+  master.gain.value = 0.0035;
   master.connect(out);
   // The geared servo's low hum, and its gear mesh a little above it.
   const hum = (
@@ -102,7 +105,7 @@ export const PERISTALTIC_PUMP: LoopRecipe = (context, out) => {
  */
 export const SOLENOID_PUMP: LoopRecipe = (context, out) => {
   const master = context.createGain();
-  master.gain.value = 0.045;
+  master.gain.value = 0.0045;
   master.connect(out);
   const buzz = context.createOscillator();
   buzz.type = 'sawtooth';
@@ -150,7 +153,7 @@ export const SOLENOID_PUMP: LoopRecipe = (context, out) => {
  */
 export const STEPPER_PUMP: LoopRecipe = (context, out) => {
   const master = context.createGain();
-  master.gain.value = 0.03;
+  master.gain.value = 0.003;
   master.connect(out);
   const rate = context.sampleRate;
   const stroke = Math.round(rate / 1.2);
