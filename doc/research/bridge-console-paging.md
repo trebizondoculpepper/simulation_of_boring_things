@@ -301,21 +301,21 @@ Built 2026-10-27. The owner saw it live while it was built and ruled several tim
 
 The first entry is the role's panel (the lower console's page); the rest are the upper displays' pages (those suiting a screen).
 
-| Role | Lower (panel) | Upper displays |
-| --- | --- | --- |
-| Flow Navigator | PL2-CP1 | FLOW NAVIGATOR browser, OLYMPIC FILTER WASHING, overviews olympic, lounge, jacuzzi, footbath, backwash; displays MAIN POOLS, SMALL POOLS |
-| Disinfection Tactical | PL2-CP2 | DISINFECTION TACTICAL and WATER SCIENCE OFFICER browsers; overviews olympic, lounge; MAIN POOLS |
-| Boiler Helmsman | CR-MP2 | BOILER HELMSMAN browser; overviews heating, gas; HEAT AND GAS |
-| Life Support Officer | CR-MP3 | LIFE SUPPORT OFFICER browser; overview air; AIR AND POWER |
-| Chief Electrical Engineer | SR-IS3 | CHIEF ELECTRICAL ENGINEER browser; overview power; AIR AND POWER |
-| Security Chief | CR-CP6 | SECURITY CHIEF browser; overview gas; SITE STATUS |
-| Central Control | CC-01 | CENTRAL CONTROL and MAIN VIEWSCREEN browsers; SITE STATUS, THE WHOLE PLANT |
-| Assistant Duty Manager | ADM-01 | CENTRAL CONTROL browser; SITE STATUS, THE WHOLE PLANT |
-| Bather Welfare Counsellor | BWC-01 | MAIN VIEWSCREEN browser; MAIN POOLS, SMALL POOLS |
-| Water Science Officer | CR-CP3 | WATER SCIENCE OFFICER and DISINFECTION TACTICAL browsers; overviews olympic, lounge, jacuzzi, footbath; MAIN POOLS, SMALL POOLS |
-| Drainage Officer | WH-T2 | DRAINAGE OFFICER browser; overviews backwash, make-up |
-| Loading Bay Chief | LB-CAB1 | LOADING BAY CHIEF and OPERATIONS OFFICER browsers |
-| Operations Officer | WH-CP1 | OPERATIONS OFFICER and LOADING BAY CHIEF browsers; overview make-up |
+| Role                      | Lower (panel) | Upper displays                                                                                                                           |
+| ------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Flow Navigator            | PL2-CP1       | FLOW NAVIGATOR browser, OLYMPIC FILTER WASHING, overviews olympic, lounge, jacuzzi, footbath, backwash; displays MAIN POOLS, SMALL POOLS |
+| Disinfection Tactical     | PL2-CP2       | DISINFECTION TACTICAL and WATER SCIENCE OFFICER browsers; overviews olympic, lounge; MAIN POOLS                                          |
+| Boiler Helmsman           | CR-MP2        | BOILER HELMSMAN browser; overviews heating, gas; HEAT AND GAS                                                                            |
+| Life Support Officer      | CR-MP3        | LIFE SUPPORT OFFICER browser; overview air; AIR AND POWER                                                                                |
+| Chief Electrical Engineer | SR-IS3        | CHIEF ELECTRICAL ENGINEER browser; overview power; AIR AND POWER                                                                         |
+| Security Chief            | CR-CP6        | SECURITY CHIEF browser; overview gas; SITE STATUS                                                                                        |
+| Central Control           | CC-01         | CENTRAL CONTROL and MAIN VIEWSCREEN browsers; SITE STATUS, THE WHOLE PLANT                                                               |
+| Assistant Duty Manager    | ADM-01        | CENTRAL CONTROL browser; SITE STATUS, THE WHOLE PLANT                                                                                    |
+| Bather Welfare Counsellor | BWC-01        | MAIN VIEWSCREEN browser; MAIN POOLS, SMALL POOLS                                                                                         |
+| Water Science Officer     | CR-CP3        | WATER SCIENCE OFFICER and DISINFECTION TACTICAL browsers; overviews olympic, lounge, jacuzzi, footbath; MAIN POOLS, SMALL POOLS          |
+| Drainage Officer          | WH-T2         | DRAINAGE OFFICER browser; overviews backwash, make-up                                                                                    |
+| Loading Bay Chief         | LB-CAB1       | LOADING BAY CHIEF and OPERATIONS OFFICER browsers                                                                                        |
+| Operations Officer        | WH-CP1        | OPERATIONS OFFICER and LOADING BAY CHIEF browsers; overview make-up                                                                      |
 
 Which lower console governs which upper displays (`governor` in `game/bridge-consoles.ts`): each forward and rear station's screen its own station's panel; the desk's four front screens and its right-rear and left-rear screens Central Control's; its right screen the Assistant Duty Manager's; its left screen the Bather Welfare Counsellor's. A lower console pages through the thirteen roles' panels, its own default first. The front walls' panels, the back walls' displays and the viewscreen are no workstation's: each pages through every page that suits it, its default first. An upper display's default stays today's page where its role (at the start, its station's own) lists it.
 
