@@ -111,27 +111,31 @@ export const SOLENOID_PUMP: LoopRecipe = (context, out) => {
   buzzLevel.gain.value = 0.03;
   buzz.connect(buzzLevel).connect(master);
   buzz.start();
-  // Each stroke: a short burst of bright noise, gated by a narrow pulse.
-  const noise = noiseSource(context);
+  // Each stroke: a short burst of bright noise, its tick, in a buffer one
+  // stroke long played round and round (1.5 a second). Not a noise gated
+  // by a square wave, which held the gate open for half of every stroke,
+  // a hiss pulsing like a warning beeper (the owner, 2026-10-28, at
+  // DP-101A).
+  const stroke = Math.round(context.sampleRate / 1.5);
+  const tick = context.createBuffer(1, stroke, context.sampleRate);
+  const samples = tick.getChannelData(0);
+  const length = Math.round(context.sampleRate * 0.015);
+  let seed = 7;
+  for (let i = 0; i < length; i++) {
+    seed = (seed * 16807) % 2147483647;
+    const decay = Math.exp((-6 * i) / length);
+    samples[i] = ((seed / 2147483647) * 2 - 1) * decay;
+  }
+  const ticks = context.createBufferSource();
+  ticks.buffer = tick;
+  ticks.loop = true;
   const band = context.createBiquadFilter();
   band.type = 'bandpass';
   band.frequency.value = 1400;
   band.Q.value = 0.9;
-  const gate = context.createGain();
-  gate.gain.value = 0;
-  const pulse = context.createOscillator();
-  pulse.type = 'square';
-  pulse.frequency.value = 1.5;
-  const shape = context.createWaveShaper();
-  // Only the pulse's very top lets the tick through: a short click.
-  const curve = new Float32Array(256);
-  for (let i = 0; i < 256; i++) curve[i] = i > 250 ? 1 : 0;
-  shape.curve = curve;
-  pulse.connect(shape).connect(gate.gain);
-  noise.connect(band).connect(gate).connect(master);
-  noise.start();
-  pulse.start();
-  return [buzz, noise, pulse];
+  ticks.connect(band).connect(master);
+  ticks.start();
+  return [buzz, ticks];
 };
 
 /**

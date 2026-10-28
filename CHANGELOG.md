@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- The solenoid dosing pumps (DP-101A and the like) tick once a stroke, as meant (the owner, 2026-10-28): their tick was a noise gated by a square wave, open half of every stroke, so they sounded like a pulsing warning beeper.
 - Sand filters say what their tank is doing (the owner, 2026-10-28): the lounge's and the Olympic's filters' descriptions and inspection headings read from each bed in the world, "the tank is backwashing", "rinsing", "filtering, and seems clean", "filtering, but seems dirty", "filtering, but seems very dirty and the sand is pitted", or standing (`filter-condition.ts`).
 - Graphics settings for the costlier effects (the owner, 2026-10-28): Ambient occlusion and Bloom and glow each Off, Low, Medium or High (fewer AO samples; bloom's blur on a quarter or half of the image), Film grain and vignette on or off, and a Resolution cap of 720p, 1080p, 1440p or Native, which limits the image's height whatever the screen (screenshots ignore it). Live from the pause menu's Graphics tab; every room with post-processing follows them through one shared `followEffectSettings`. Defaults keep today's look.
 - The bridge uses six GTAO ambient-occlusion samples instead of twelve, retaining its contact shadows with less GPU work at high render resolutions.
