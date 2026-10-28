@@ -18,7 +18,10 @@ describe('the bathers and the water', () => {
     w = advance(w, 6 * 3600, 10);
     expect(appealOf(w).pool_01).toBe(0);
     expect(w.bathers.pools.pool_01.now).toBe(0);
-    expect(w.bathers.pools.pool_01.total - from).toBeLessThan(usual / 2);
+    // Its chlorine falls at its bathers' own demand (mission 101), about
+    // 0.1 mg/l an hour, so the pool empties some hours in: fewer than six
+    // tenths of the usual come.
+    expect(w.bathers.pools.pool_01.total - from).toBeLessThan(usual * 0.6);
     // A day and more of the world, simulated: slow beside the whole suite.
   }, 20_000);
 });
@@ -32,7 +35,8 @@ describe('the bathers and the halls', () => {
     expect(appealOf(w).pool_01).toBe(0);
     w = advance(w, 600, 10);
     expect(w.bathers.pools.pool_01.now).toBe(0);
-  });
+    // A day and a half of world: slow under a full parallel run.
+  }, 20_000);
 
   it('let a hall cool without its air handling, and fewer bathers come', () => {
     let w = advance(newWorld(), 24 * 3600 + 8 * 3600, 10);

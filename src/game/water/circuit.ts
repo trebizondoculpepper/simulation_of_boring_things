@@ -1,4 +1,4 @@
-import { mixWaters } from './pool-chemistry';
+import { CONSERVED, mixWaters } from './pool-chemistry';
 import type { PoolChemistry } from './pool-chemistry';
 
 /**
@@ -118,24 +118,7 @@ function transferOf(
 }
 
 /** The species that the circulation carries, every one but pH. */
-const CARRIED = [
-  'freeChlorine',
-  'chloramine',
-  'organicChloramine',
-  'trichloramine',
-  'ammonia',
-  'urea',
-  'demand',
-  'demandSlow',
-  'alkalinity',
-  'carbonate',
-  'hardness',
-  'tds',
-  'sulphate',
-  'chlorate',
-  'cyanuric',
-  'thiosulphate',
-] as const satisfies readonly (keyof PoolChemistry)[];
+const CARRIED = CONSERVED;
 
 /**
  * The ring's cells `hours` on by the circulation alone, each cell's pH

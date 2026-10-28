@@ -363,6 +363,8 @@ export const WORLD_HEALTH_COVERAGE = {
   demo: 'not health: dev14’s demonstration button',
   plant: 'services: feeders, sources and isolators',
   pools: 'pools: level, flow, temperature, chemistry, tank, humidity, trips',
+  treatment:
+    'not checked itself: the pools’ water chemistry and dosing; its readings are the pools’ chemistry, checked there',
   chemicals: 'chemicals: stock against capacity',
   distribution:
     'not checked: the day tanks; one run dry shows in its pool’s chemistry',

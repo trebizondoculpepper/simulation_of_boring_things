@@ -511,8 +511,8 @@ const zeroFluxes = (): ChemistryFluxes => ({
   co2ToAir: 0,
 });
 
-/** The species that mix and dilute as plain concentrations (everything but pH). */
-const CONSERVED = [
+/** The species that mix and dilute as plain concentrations (everything but pH): what the circulation carries. */
+export const CONSERVED = [
   'freeChlorine',
   'chloramine',
   'organicChloramine',

@@ -126,26 +126,35 @@ describe('the dosing chemicals in the world', () => {
       true,
     );
     expect(world.distribution.hypochlorite.tanks[0].litres).toBeLessThan(day);
-    // Twelve hours with hypochlorite alone: the pH has crept up.
+    // Twelve hours with hypochlorite alone: the pH has crept up as CO₂
+    // leaves the water (mission 101: Wojtowicz's loss, fastest where a
+    // pool's surface is large for its volume; the Olympic, deep, slowest).
+    const before = world.pools;
     world = advance(world, 12 * 3600, 10);
-    expect(world.pools.pool_02.ph).toBeGreaterThan(7.5);
+    expect(world.pools.pool_01.ph).toBeGreaterThan(7.5);
+    for (const id of POOL_IDS)
+      expect(world.pools[id].ph, id).toBeGreaterThan(before[id].ph);
   });
 
-  it('with the hypochlorite gone but the acid dosing, drives every pool’s pH down, hour by hour', () => {
+  it('with the hypochlorite gone, lets every pool’s chlorine fall hour by hour while its acid holds the pH', () => {
+    // Mission 101: the chlorine is used up by the bathers, the UV and the
+    // light; the acid controller doses only while pH is over its setpoint,
+    // so it holds pH rather than driving it down as the old model did.
     let world = newWorld();
     world = runOut(world, 'hypochlorite');
     for (let hour = 1; hour <= 12; hour++) {
       const before = world.pools;
       world = advance(world, 3600, 10);
       for (const id of POOL_IDS)
-        expect(world.pools[id].ph, `${id}, hour ${hour}`).toBeLessThan(
-          before[id].ph,
-        );
+        expect(
+          world.pools[id].freeChlorine,
+          `${id}, hour ${hour}`,
+        ).toBeLessThanOrEqual(before[id].freeChlorine);
     }
     for (const id of POOL_IDS) {
-      expect(world.pools[id].ph, id).toBeLessThan(6.6);
-      expect(world.pools[id].ph, id).toBeGreaterThanOrEqual(6.5);
-      expect(world.pools[id].freeChlorine, id).toBe(0);
+      expect(world.pools[id].freeChlorine, id).toBeLessThan(1);
+      expect(world.pools[id].ph, id).toBeGreaterThan(7.2);
+      expect(world.pools[id].ph, id).toBeLessThan(7.45);
     }
     // The acid has gone on giving: its store sent the lounge's day tank
     // its fill.

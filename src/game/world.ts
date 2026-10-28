@@ -1,5 +1,13 @@
 import { cabinetFeeds, dosingStock, feedMessages } from './plant/pool-dosing';
 import {
+  allPumpRates,
+  newWaterTreatment,
+  pumpDraw,
+  stepWaterTreatment,
+  withWaterReadings,
+} from './plant/water-treatment';
+import type { StepFlows, WaterTreatment } from './plant/water-treatment';
+import {
   actOnIntake,
   newSiteIntake,
   restoreInside,
@@ -11,7 +19,6 @@ import {
 import type { IntakeAction, SiteIntake } from './plant/site-intake';
 import {
   actOnDistribution,
-  doseDraw,
   newChemicalDistribution,
   stepDistribution,
   transferRunning,
@@ -280,7 +287,7 @@ import { plantReadingOf } from '../toolkit/gallery/logic/world-reading';
 import { chooseConsole, newBridgeConsoles } from './bridge-consoles';
 import type { ConsoleChoice } from './bridge-consoles';
 
-export const WORLD_VERSION = 57;
+export const WORLD_VERSION = 58;
 
 /**
  * Where the main corridor's control room doors lead (the owner,
@@ -310,6 +317,13 @@ export interface World {
   };
   plant: PlantServices;
   pools: PoolsState;
+  /**
+   * Each pool's water treatment (mission 101): its circuit's chemistry, the
+   * balance tank and the pool's three cells, and its dosing controller
+   * (`plant/water-treatment.ts`). The pools' pH, chlorine and redox are
+   * read from it.
+   */
+  treatment: WaterTreatment;
   /** The dosing chemicals left in their stores, litres. */
   chemicals: ChemicalStores;
   /**
@@ -416,6 +430,7 @@ export function newWorld(): World {
     demo: { on: false, presses: 0 },
     plant: newPlantServices(),
     pools: newPools(),
+    treatment: newWaterTreatment(newPools()),
     chemicals: newChemicalStores(),
     distribution: newChemicalDistribution(),
     chemControl: newChemControlBox(),
@@ -1074,10 +1089,13 @@ export const transferRunsIn = (world: World, c: Chemical) =>
     chemControlRunning(world),
   );
 
-/** The stores and the day tanks `delta` seconds on (plan 085). */
+/**
+ * The stores and the day tanks `delta` seconds on (plan 085), each day
+ * tank drawn by the litres its pool's pumps give (`pumps`, l/h; mission 101).
+ */
 function stepChemicals(
   world: World,
-  dosed: Partial<Record<PoolId, Record<Chemical, number>>>,
+  pumps: Record<PoolId, Record<Chemical, number>>,
   delta: number,
 ): Pick<World, 'chemicals' | 'distribution' | 'chemControl'> {
   // The control box first: whether its controller runs this step.
@@ -1087,7 +1105,7 @@ function stepChemicals(
     world.distribution,
     world.chemicals,
     STORE_CAPACITY,
-    doseDraw(dosed),
+    pumpDraw(pumps),
     delta,
     distributionPower(world.plant),
     distributionPaths(world.installedValves),
@@ -1266,6 +1284,39 @@ function stepPlant(world: World, delta: number): World {
     jacuzzi,
     spaWash,
   );
+  // Each pool's dosing pumps, at their controller's rates while their pool
+  // may be dosed (circulating, its chemical service, its day tank's stock
+  // and open path); its water's chemistry, a step on (mission 101).
+  const pumps = allPumpRates(
+    world.treatment,
+    dosedByPool(
+      world.pools,
+      world.plant,
+      stock,
+      loungeValveFlows(loungeValvePositions, true).toPool > 0,
+      motors,
+      jacuzzi,
+    ),
+  );
+  const pools = withSolids(world, water.pools, delta);
+  const treatment = stepWaterTreatment(
+    world.treatment,
+    Object.fromEntries(
+      POOL_IDS.map((id) => [
+        id,
+        {
+          flow: pools[id].flow,
+          treated: water.flows[id].uv,
+          madeUp: water.flows[id].madeUp,
+          evaporated: water.flows[id].evaporated,
+          bathers: world.bathers.pools[id].now,
+          pumps: pumps[id],
+        },
+      ]),
+    ) as Record<PoolId, StepFlows>,
+    delta,
+    pools,
+  );
   const wetHall = stepWetHall(
     world.wetHall,
     world.plant,
@@ -1283,7 +1334,8 @@ function stepPlant(world: World, delta: number): World {
       delta,
       serviceAvailable(world.plant, 'plant_pool_03', 'power'),
     ),
-    pools: withSolids(world, water.pools, delta),
+    pools: withWaterReadings(pools, treatment, world.treatment),
+    treatment,
     airHandling,
     motors,
     jacuzzi: stepJacuzzi(
@@ -1378,20 +1430,9 @@ function stepPlant(world: World, delta: number): World {
       mains: batteryMains(world),
       load: emergencyLoad(world),
     }),
-    // The day tanks drawn on by their pools' dosing; the transfer pumps
-    // filling them from the stores.
-    ...stepChemicals(
-      world,
-      dosedByPool(
-        world.pools,
-        world.plant,
-        stock,
-        loungeValveFlows(loungeValvePositions, true).toPool > 0,
-        motors,
-        jacuzzi,
-      ),
-      delta,
-    ),
+    // The day tanks drawn on by their pools' dosing pumps; the transfer
+    // pumps filling them from the stores.
+    ...stepChemicals(world, pumps, delta),
   };
 }
 

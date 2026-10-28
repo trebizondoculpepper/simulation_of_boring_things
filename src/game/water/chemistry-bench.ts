@@ -13,6 +13,7 @@ import { ASSUME, sizePlant } from '../plant-sizing/sizing';
 import { BALANCE_TANK, volumeOf } from '../plant/balance-tank';
 import { JACUZZI_BALANCE_TANK } from '../plant/spa-balance-tank';
 import { POOL_IDS, POOL_TARGET } from '../plant/pools';
+import { CONTROLLER, DOSING_PUMPS, STRENGTH } from '../plant/water-treatment';
 import type {
   Additions,
   ChemistryFluxes,
@@ -122,6 +123,8 @@ export interface Plant {
   phBand: number;
   /** The sample cell's lag, s (`water-sampling.md`: a minute or so). */
   sampleLag: number;
+  /** Chlorine dosing stops with pH this far from its setpoint (DEPOLOX's lockout); Infinity, none. */
+  phLockout: number;
   /** Faults and settings a scenario changes. */
   hypoFailed: boolean;
   acidFailed: boolean;
@@ -154,6 +157,7 @@ export const PLANT: Plant = {
   fcIntegral: 6,
   phBand: 0.3,
   sampleLag: 60,
+  phLockout: Infinity,
   hypoFailed: false,
   acidFailed: false,
   acidStuck: false,
@@ -296,15 +300,19 @@ export function stepBench(
   const hours = dt / 3600;
   // The controller: PI on chlorine, P on pH, from the cell's readings.
   const fcError = p.fcSetpoint - s.cell.fc;
+  const locked = Math.abs(s.cell.ph - p.phSetpoint) > p.phLockout;
   const integral = p.isolated
     ? 0
-    : Math.min(
-        p.fcBand,
-        Math.max(-p.fcBand, s.integral + (fcError * hours) / p.fcIntegral),
-      );
-  const hypoOut = p.isolated
-    ? 0
-    : Math.min(1, Math.max(0, (fcError + integral) / p.fcBand));
+    : locked
+      ? s.integral
+      : Math.min(
+          p.fcBand,
+          Math.max(-p.fcBand, s.integral + (fcError * hours) / p.fcIntegral),
+        );
+  const hypoOut =
+    p.isolated || locked
+      ? 0
+      : Math.min(1, Math.max(0, (fcError + integral) / p.fcBand));
   const acidOut = p.acidStuck
     ? 1
     : p.isolated
@@ -1654,17 +1662,29 @@ export function gamePools(data: {
 }
 
 /**
- * Each game pool's plant for the bench: its pumps sized at about twice
- * the bench's own average need, since the game's are not yet sized by
- * demand (`pool-dosing-and-water-chemistry.md` §3.4, question 9); the
- * jacuzzi held at 4 mg/l (HSG282: 3 to 5).
+ * Each game pool's plant for the bench, as the world runs it (mission 101,
+ * `plant/water-treatment.ts`): its drawn pumps (the Olympic's undersized
+ * DMX 1602 kept, the owner, 2026-10-28), its controller's setpoints.
  */
-export const GAME_PLANTS: Record<string, Partial<Plant>> = {
-  pool_01: { hypoPump: 3, acidPump: 3 },
-  pool_02: { hypoPump: 12.5, acidPump: 12.5 },
-  pool_03: { hypoPump: 0.5, acidPump: 0.5, fcSetpoint: 4, fcBand: 0.5 },
-  pool_04: { hypoPump: 0.1, acidPump: 0.1 },
-};
+export const GAME_PLANTS: Record<string, Partial<Plant>> = Object.fromEntries(
+  POOL_IDS.map((id) => [
+    id,
+    {
+      hypoPump: DOSING_PUMPS[id].hypochlorite,
+      acidPump: DOSING_PUMPS[id].acid,
+      hypoStrength: STRENGTH.hypochlorite,
+      acidStrength: STRENGTH.acid,
+      hypoChlorate: STRENGTH.chlorate,
+      fcSetpoint: CONTROLLER.chlorineSet,
+      fcBand: CONTROLLER.chlorineBand,
+      fcIntegral: CONTROLLER.chlorineIntegral,
+      phSetpoint: CONTROLLER.pHSet,
+      phBand: CONTROLLER.pHBand,
+      sampleLag: CONTROLLER.sampleLag,
+      phLockout: CONTROLLER.pHLockout,
+    },
+  ]),
+);
 
 // ---- One zone against two -----------------------------------------------------------
 

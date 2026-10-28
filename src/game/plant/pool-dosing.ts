@@ -1,7 +1,8 @@
 import type { World } from '../world';
 import type { PoolId } from './pools';
 import type { Chemical } from './chemicals';
-import { DAY_TANKS, dayTankStock, doseDraw } from './chemical-distribution';
+import { DAY_TANKS, dayTankStock } from './chemical-distribution';
+import { pumpRates } from './water-treatment';
 import { dosedByPool } from './pools';
 import { BOTTLE } from './dose-bottle';
 import { serviceAvailable } from './services';
@@ -17,7 +18,8 @@ import type { ServiceRoom } from './services';
  *   end's isolating valve, the lounge's injection quill's (prompt 089,
  *   item 4).
  * - It doses it now as the world's step does: its water circulating and
- *   its room's chemical service on (`dosedByPool`).
+ *   its room's chemical service on (`dosedByPool`), at its pumps' rates as
+ *   its controller sets them (`water-treatment.ts`, mission 101).
  * - Its day tank is low for its cabinet's display (LOW HYPOCHLORITE) once
  *   down to the DoseCell's dry-run cut-out.
  */
@@ -50,27 +52,48 @@ export function dosingStock(
   };
 }
 
-/**
- * What pool `id` draws from each of its day tanks now, litres a second:
- * the world's own dosing (`dosedByPool`, `doseDraw`), its water
- * circulating, its room's chemical service on, each chemical while its
- * tank has some; nothing for a chemical it is not dosing.
- */
-export function doseRates(
-  world: Pick<
-    World,
-    'distribution' | 'installedValves' | 'pools' | 'plant' | 'motors'
-  >,
+/** The world as the dosing's readers need it. */
+type DosingWorld = Pick<
+  World,
+  | 'distribution'
+  | 'installedValves'
+  | 'pools'
+  | 'plant'
+  | 'motors'
+  | 'treatment'
+>;
+
+/** Litres a second, from a pool's pumps' l/h as its controller sets them, while `stock` lets it dose. */
+function drawn(
+  world: DosingWorld,
   id: PoolId,
+  stock: (pool: PoolId) => Record<Chemical, boolean>,
 ): Record<Chemical, number> {
   const dosed = dosedByPool(
     world.pools,
     world.plant,
-    (pool) => dosingStock(world, pool),
+    stock,
     true,
     world.motors,
   );
-  return doseDraw(dosed)[id] ?? { hypochlorite: 0, acid: 0 };
+  const control = world.treatment?.circuits[id]?.control;
+  if (!control) return { hypochlorite: 0, acid: 0 };
+  const r = pumpRates(control, id, dosed[id]);
+  return { hypochlorite: r.hypochlorite / 3600, acid: r.acid / 3600 };
+}
+
+/**
+ * What pool `id` draws from each of its day tanks now, litres a second:
+ * its dosing pumps' rates as its controller sets them (mission 101), while
+ * its water circulates, its room's chemical service is on, and each
+ * chemical's tank has some and its way is open; nothing for a chemical it
+ * is not dosing.
+ */
+export function doseRates(
+  world: DosingWorld,
+  id: PoolId,
+): Record<Chemical, number> {
+  return drawn(world, id, (pool) => dosingStock(world, pool));
 }
 
 /**
@@ -79,28 +102,15 @@ export function doseRates(
  * counting. Asked but not given (`doseRates` nothing), its way is shut.
  */
 export function doseDemand(
-  world: Pick<
-    World,
-    'distribution' | 'installedValves' | 'pools' | 'plant' | 'motors'
-  >,
+  world: DosingWorld,
   id: PoolId,
 ): Record<Chemical, number> {
-  const dosed = dosedByPool(
-    world.pools,
-    world.plant,
-    (pool) => dayTankStock(world.distribution, pool),
-    true,
-    world.motors,
-  );
-  return doseDraw(dosed)[id] ?? { hypochlorite: 0, acid: 0 };
+  return drawn(world, id, (pool) => dayTankStock(world.distribution, pool));
 }
 
 /** Whether each chemical is being dosed into pool `id` now. */
 export function dosingNow(
-  world: Pick<
-    World,
-    'distribution' | 'installedValves' | 'pools' | 'plant' | 'motors'
-  >,
+  world: DosingWorld,
   id: PoolId,
 ): Record<Chemical, boolean> {
   const r = doseRates(world, id);

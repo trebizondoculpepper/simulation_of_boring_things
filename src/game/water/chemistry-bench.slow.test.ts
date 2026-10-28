@@ -81,12 +81,21 @@ describe('the circuit as two zones against one volume', () => {
 
 describe('the game’s four pools on the bench (their own volumes and flows)', () => {
   for (const [id, pool] of Object.entries(GAME_POOLS))
-    it(`${pool.name}: comes to a steady state with its chlorine in range`, () => {
+    it(`${pool.name}: comes to a steady state, its chlorine in range (the Olympic’s undersized pump: far below)`, () => {
       const plant = { ...PLANT, ...GAME_PLANTS[id] };
       const run = runBench(warmedUp(pool, plant), pool, 48);
       expect(steadyCheck(run.samples).pass).toBe(true);
-      const fc = mean(within(run.samples, 24, 48).map((x) => x.freeChlorine));
+      const day = within(run.samples, 24, 48);
+      const fc = mean(day.map((x) => x.freeChlorine));
       const target = plant.fcSetpoint;
+      if (id === 'pool_02') {
+        // Its drawn pump, a DMX 1602 of 2.1 l/h, kept undersized (the owner,
+        // 2026-10-28; mission 101): pinned at full, its chlorine far below
+        // its setpoint and PWTAG's 1 mg/l. The before picture for a larger pump.
+        expect(mean(day.map((x) => x.hypoOut))).toBeGreaterThan(0.99);
+        expect(fc).toBeLessThan(1);
+        return;
+      }
       expect(fc).toBeGreaterThan(target - 0.3);
       expect(fc).toBeLessThan(target + 1);
     }, 60_000);

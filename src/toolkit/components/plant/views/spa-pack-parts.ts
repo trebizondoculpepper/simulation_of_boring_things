@@ -498,7 +498,9 @@ export function createSpaDosingController(kit: PanelKit) {
     outlets,
     /**
      * Show the readings while on, and turn each pump while its chemical is
-     * dosed (`pumps`, hypochlorite then acid; both while on, if not given).
+     * dosed (`pumps`, hypochlorite then acid; both while on, if not given),
+     * at `speeds`, each a share of its most (its rate over its rating; all
+     * of it, if not given): a peristaltic pump's rate is its rotor's speed.
      */
     update(
       delta: number,
@@ -506,11 +508,13 @@ export function createSpaDosingController(kit: PanelKit) {
       chlorine: number,
       ph: number,
       pumps: readonly [boolean, boolean] = [on, on],
+      speeds: readonly [number, number] = [1, 1],
     ) {
       readouts[0].show(on ? chlorine.toFixed(2) : '');
       readouts[1].show(on ? ph.toFixed(1) : '');
       rotors.forEach((r, i) => {
-        if (on && pumps[i]) r.rotation.z -= delta * 3;
+        if (on && pumps[i])
+          r.rotation.z -= delta * 3 * Math.min(1, Math.max(0, speeds[i]));
       });
     },
   };

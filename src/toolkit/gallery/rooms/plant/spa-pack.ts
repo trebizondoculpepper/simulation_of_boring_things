@@ -1,4 +1,9 @@
-import { cabinetFeeds, feedMessages } from '../../../../game/plant/pool-dosing';
+import {
+  cabinetFeeds,
+  doseRates,
+  feedMessages,
+} from '../../../../game/plant/pool-dosing';
+import { DOSING_PUMPS } from '../../../../game/plant/water-treatment';
 import { computed, signal } from '@preact/signals-core';
 import { createLouvres } from '../../../components/industrial-control/views/cabinet-fittings';
 import { Group } from 'three';
@@ -1110,15 +1115,29 @@ export function buildSpaPack(
       const dosingOn = moving && (wash.value?.dosing ?? true);
       const wd = store?.world.value;
       const feeds = wd ? cabinetFeeds(wd, pool, dosingOn) : null;
+      // Each head at its controller's rate (mission 101), turning only
+      // while it doses; an exhibit with no world, at full.
+      const rates = wd ? doseRates(wd, pool) : null;
+      const pumpsMost = DOSING_PUMPS[pool];
       dosing.update(
         delta,
         dosingOn,
         wd ? wd.pools[pool].freeChlorine : 1.8,
         wd ? wd.pools[pool].ph : 7.3,
         [
-          dosingOn && !feeds?.fault.includes('hypochlorite'),
-          dosingOn && !feeds?.fault.includes('acid'),
+          dosingOn &&
+            !feeds?.fault.includes('hypochlorite') &&
+            (!rates || rates.hypochlorite > 0),
+          dosingOn &&
+            !feeds?.fault.includes('acid') &&
+            (!rates || rates.acid > 0),
         ],
+        rates
+          ? [
+              (rates.hypochlorite * 3600) / pumpsMost.hypochlorite,
+              (rates.acid * 3600) / pumpsMost.acid,
+            ]
+          : [1, 1],
       );
       feedWords = feeds ? feedMessages(feeds) : [];
       // Its mimic, as the world has its water (an exhibit: as if in service).

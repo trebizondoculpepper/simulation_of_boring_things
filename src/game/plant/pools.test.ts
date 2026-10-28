@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { newPools, stepPools } from './pools';
+import { newPools, stepPools, stepPoolsWater } from './pools';
 import { newPlantServices } from './services';
 import type { PlantServices } from './services';
 
@@ -49,7 +49,9 @@ describe('the pools as the world runs them', () => {
     expect(run(both, 0.1).pool_02.flow).toBeLessThan(10);
   });
 
-  it('let the chloramines build up while the UV and ozone are both isolated', () => {
+  it('say the Olympic’s UV and ozone are out while both are isolated, for its chemistry', () => {
+    // The chloramines' build-up itself is the chemistry's (mission 101,
+    // `water-treatment.test.ts`); the pools tell it whether the UV is lit.
     const plant = newPlantServices();
     const off = {
       ...plant,
@@ -59,13 +61,9 @@ describe('the pools as the world runs them', () => {
         'Ozone generator isolator': false,
       },
     };
-    const start = newPools();
-    expect(run(off, 0.5, start).pool_02.combinedChlorine).toBeGreaterThan(
-      start.pool_02.combinedChlorine,
-    );
-    expect(run(plant, 0.5, start).pool_02.combinedChlorine).toBeLessThan(
-      start.pool_02.combinedChlorine,
-    );
+    const pools = newPools();
+    expect(stepPoolsWater(pools, off, 1).flows.pool_02.uv).toBe(false);
+    expect(stepPoolsWater(pools, plant, 1).flows.pool_02.uv).toBe(true);
   });
 
   it('stop the jacuzzi when its cabinet is isolated', () => {

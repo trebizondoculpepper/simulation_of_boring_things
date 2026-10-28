@@ -59,7 +59,11 @@ describe('the default new game', () => {
         Math.abs(pool.temperature - POOL_TARGET[id].temp),
         id,
       ).toBeLessThan(0.5);
-      expect(pool.ph, id).toBeCloseTo(7.4, 1);
+      // Its controller holds pH at its 7.3 setpoint (mission 101): the
+      // pool's far side a little over it, within PWTAG's 7.2 to 7.4.
+      expect(pool.ph, id).toBeGreaterThan(7.2);
+      expect(pool.ph, id).toBeLessThan(7.45);
+      expect(pool.freeChlorine, id).toBeGreaterThan(1);
     }
   });
 });

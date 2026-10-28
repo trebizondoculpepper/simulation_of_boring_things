@@ -177,6 +177,7 @@ import { WET_HALL_LAYOUT } from '../logic/shell-rooms';
 import { pumpPairExhibit } from '../rooms/plant/pumps';
 import { pumpPanelExhibit } from '../rooms/plant/pump-panel';
 import { currentPlant } from '../rooms/plant/live-plant';
+import { doseRates } from '../../../game/plant/pool-dosing';
 import { cabinetBodyIn } from '../logic/cabinet-pipes';
 import { createBalanceTankPanel } from '../../components/plant/views/balance-tank-panel';
 import { volumeOf } from '../../../game/plant/balance-tank';
@@ -356,11 +357,13 @@ function modelFor(
       typeof window === 'undefined'
         ? { object }
         : { object, update: () => object.show(read()) };
-    // Dosing while its pool is dosed and its chemical's store holds some.
-    const dosing = (chemical: 'hypochlorite' | 'acid', rate: number) => () => ({
-      running: currentPlant(pool).dosing && world().chemicals[chemical] > 0,
-      rate,
-    });
+    // Dosing at the rate its pool's controller sets (mission 101), while
+    // its pool may be dosed: circulating, its chemical service on, its day
+    // tank stocked and its way open (`doseRates`).
+    const dosing = (chemical: 'hypochlorite' | 'acid') => () => {
+      const lh = doseRates(world(), pool)[chemical] * 3600;
+      return { running: lh > 1e-6, rate: lh };
+    };
     if (kind === 'dosing-controller')
       return live(createControllerPanel(kit), () => world().pools[pool]);
     // Its dosing pumps (prompt 089, item 2): asked to dose as its pool is
@@ -381,9 +384,9 @@ function modelFor(
             status: b.status,
           };
     if (kind === 'hypo-pumps')
-      return board(createHypochloriteBoard(kit), dosing('hypochlorite', 1.24));
+      return board(createHypochloriteBoard(kit), dosing('hypochlorite'));
     if (kind === 'acid-pump')
-      return board(createAcidBoard(kit), dosing('acid', 0.62));
+      return board(createAcidBoard(kit), dosing('acid'));
     if (kind === 'uv-unit') {
       // As its exhibit stands it, 0.3 m back.
       const uv = createUvUnit(kit);

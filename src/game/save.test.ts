@@ -46,6 +46,7 @@ describe('a save', () => {
       demo: { on: true, presses: 0 },
       plant: newWorld().plant,
       pools: newWorld().pools,
+      treatment: newWorld().treatment,
       chemicals: newWorld().chemicals,
       distribution: newWorld().distribution,
       chemControl: newWorld().chemControl,
@@ -244,5 +245,28 @@ describe('a save', () => {
     expect(catchUpSeconds(0, 90_000)).toBe(90);
     expect(catchUpSeconds(0, 10 * 3600_000)).toBe(CATCH_UP_LIMIT);
     expect(catchUpSeconds(5000, 0)).toBe(0);
+  });
+});
+
+describe('the water chemistry migration (57 → 58, mission 101)', () => {
+  it('fills each pool’s circuit with nominal water at its present readings', () => {
+    const { treatment: _t, ...rest } = newWorld();
+    const pools = {
+      ...rest.pools,
+      pool_02: { ...rest.pools.pool_02, freeChlorine: 0.8, ph: 7.6 },
+    };
+    const v57 = MIGRATIONS[57]({ ...rest, pools }) as ReturnType<
+      typeof newWorld
+    >;
+    const olympic = v57.treatment.circuits.pool_02;
+    expect(olympic.pool).toHaveLength(3);
+    for (const w of [olympic.tank, ...olympic.pool]) {
+      expect(w.freeChlorine).toBeCloseTo(0.8, 9);
+      expect(w.ph).toBeCloseTo(7.6, 6);
+    }
+    expect(v57.treatment.circuits.pool_01.pool[2].freeChlorine).toBeCloseTo(
+      rest.pools.pool_01.freeChlorine,
+      9,
+    );
   });
 });

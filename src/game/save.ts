@@ -1,6 +1,9 @@
 import { WORLD_VERSION, newWorld } from './world';
 import type { World } from './world';
 import { DAY_TANKS, newDayTank } from './plant/chemical-distribution';
+import { POOL_IDS, newPools } from './plant/pools';
+import type { PoolsState } from './plant/pools';
+import { newWaterTreatment } from './plant/water-treatment';
 import {
   FOOTBATH,
   newIdentifiedPlant,
@@ -266,6 +269,36 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
         )
       : world.bridgeConsoles;
     return { ...world, distribution, bridgeConsoles: consoles };
+  },
+  // 57 → 58: each pool's water as the chemistry model's state (mission
+  // 101): its balance tank and its pool's three cells, nominal water
+  // (each pool's settled alkalinity, hardness and TDS) with its present pH, free
+  // and combined chlorine; its controller at rest.
+  57: (world) => {
+    if (!isRecord(world) || !isRecord(world.pools)) return world;
+    const pools = world.pools;
+    const num = (v: unknown, fallback: number) =>
+      typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+    const fresh = newPools();
+    const readings = Object.fromEntries(
+      POOL_IDS.map((id) => {
+        const p = isRecord(pools[id]) ? pools[id] : {};
+        return [
+          id,
+          {
+            ...fresh[id],
+            ph: num(p.ph, fresh[id].ph),
+            freeChlorine: num(p.freeChlorine, fresh[id].freeChlorine),
+            combinedChlorine: num(
+              p.combinedChlorine,
+              fresh[id].combinedChlorine,
+            ),
+            temperature: num(p.temperature, fresh[id].temperature),
+          },
+        ];
+      }),
+    ) as PoolsState;
+    return { ...world, treatment: newWaterTreatment(readings) };
   },
 };
 

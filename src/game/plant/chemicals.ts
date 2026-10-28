@@ -3,7 +3,8 @@
  *
  * Two chemicals are stocked and used up: sodium hypochlorite (14 %), in
  * the hypochlorite store's three bulk tanks, and hydrochloric acid (10 %)
- * for pH correction, in the acid store's one bulk tank. Their transfer
+ * for pH correction, in the acid store's one bulk tank. What they do to
+ * the water is the chemistry model's (`water-treatment.ts`). Their transfer
  * pumps send them to each plant room's day tank (`chemical-distribution.ts`),
  * which its pool's dosing draws on; a store run dry stops its transfers
  * until a delivery refills it, and each pool doses on until its day tank
@@ -32,9 +33,11 @@ export const STORE_CAPACITY: Record<Chemical, number> = {
 };
 
 /**
- * What each pool's dosing uses, litres a day per m³ of water: about
- * 60 ml of 14 % hypochlorite, and four tenths as much acid, a typical
- * pool's daily demand at its usual bathing load.
+ * A typical pool's daily use, litres a day per m³ of water: about 60 ml
+ * of 14 % hypochlorite, and four tenths as much acid, at its usual bathing
+ * load. An estimate only, for the stores' days left on the schematics: the
+ * dosing itself is each pool's controller's, and each day tank is drawn by
+ * the litres its pumps give (`water-treatment.ts`, mission 101).
  */
 export const DOSE_PER_M3_DAY: Record<Chemical, number> = {
   hypochlorite: 0.06,
@@ -77,17 +80,3 @@ export const deliver = (
   ...stores,
   [chemical]: Math.min(STORE_CAPACITY[chemical], stores[chemical] + litres),
 });
-
-/**
- * Where a pool's pH heads, given what is dosed into it: both chemicals
- * hold it at 7.4; hypochlorite alone (it is alkaline, and carbon dioxide
- * leaves the water) lets it rise toward 8.2; acid alone, its pump still
- * dosing at the rate that balanced the hypochlorite, drives it down
- * toward 6.5; neither, it drifts up toward 7.9 as the water degasses.
- */
-export function phTarget(hypochlorite: boolean, acid: boolean): number {
-  if (hypochlorite && acid) return 7.4;
-  if (hypochlorite) return 8.2;
-  if (acid) return 6.5;
-  return 7.9;
-}

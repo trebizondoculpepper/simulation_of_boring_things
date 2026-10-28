@@ -272,7 +272,7 @@ The owner: "Does adding the full set of water chemistry change our complexity mu
 
 ## 10. For the installing mission
 
-Not done here, by the owner's instruction; for the mission that installs the model:
+Not done here, by the owner's instruction; for the mission that installs the model. **Stage 1 of that mission, [101](../prompts/101-water-chemistry-in-the-world.md), installed items 1, 3, 4 (the bench's controller, not `sampling.ts`'s blocks yet) and 7 on 2026-10-28; the pumps stay as drawn (the owner), the Olympic's undersized.**
 
 1. **Two zones a circuit in the world** (the owner's decision): pool and balance tank, each with its full chemistry, the pool as its three cells (§5.1), exchanging the flows the world already models (overflow and main drains into the tank, the pumps' return), make-up into the tank, a `WORLD_VERSION` bump and a migration filling nominal values.
 2. **Hand dosing at every balance tank** (the owner: only the Olympic has a hand-dosing point now): a hatch, the chemical store's sacks, a scale, the world action `pool/hand-dose` (earlier note §7.5). A game change for that mission, not this one.

@@ -5,7 +5,6 @@ import { stepWater } from '../water/water-balance';
 import type { PoolWater } from '../water/water-balance';
 import { POOLS } from '../plant-sizing/pools.config';
 import { ASSUME, sizePlant } from '../plant-sizing/sizing';
-import { phTarget } from './chemicals';
 import { BALANCE_TANK, volumeOf } from './balance-tank';
 import { JACUZZI_BALANCE_TANK, JACUZZI_TANK_DRAIN } from './spa-balance-tank';
 import { AMBIENT, stepThermal, thermalParams } from './thermal';
@@ -54,6 +53,13 @@ export interface PoolWaterState {
 }
 
 export type PoolsState = Record<PoolId, PoolWaterState>;
+
+/** A pool's water during a step, for its chemistry: make-up and evaporation, m³; its UV (or ozone) lit. */
+export interface PoolStepFlows {
+  madeUp: number;
+  evaporated: number;
+  uv: boolean;
+}
 
 /**
  * Each pool hall's design air temperature, °C: a pool hall's about 1 °C
@@ -223,6 +229,8 @@ export const poolMakeUpCalling = (
 /** Each pool's volume brimming, m³, and its surface's area, m². */
 export const poolVolume = (id: PoolId) => WATER[id].volume;
 export const poolArea = (id: PoolId) => WATER[id].area;
+/** Each pool's balance tank's capacity, m³ (its balance is the share of it full). */
+export const poolTankCapacity = (id: PoolId) => WATER[id].tank;
 
 /** Each pool and its hall's thermal parameters (`thermal.ts`). */
 const HEAT: Record<PoolId, ThermalParams> = Object.fromEntries(
@@ -241,8 +249,6 @@ const HEAT: Record<PoolId, ThermalParams> = Object.fromEntries(
 
 const approach = (value: number, target: number, rate: number, dt: number) =>
   value + (target - value) * Math.min(1, rate * dt);
-const clamp = (value: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, value));
 
 /**
  * Whether a pool's water is circulating, and so treated and dosed: its
@@ -409,7 +415,8 @@ export function stepPoolsWater(
   plant: PlantServices,
   dt: number,
   time = 0,
-  stock: PoolStock = ALL_STOCKED,
+  /** Unused since the chemistry left this step (mission 101): dosing is `water-treatment.ts`'s. */
+  _stock: PoolStock = ALL_STOCKED,
   makeUp?: number,
   ambient = AMBIENT,
   /**
@@ -462,6 +469,11 @@ export function stepPoolsWater(
   backwashed: number;
   /** Pumped to the sewer by pools draining down, m³. */
   drained: number;
+  /**
+   * Each pool's water this step, for its chemistry (`water-treatment.ts`):
+   * its make-up and evaporation, m³, and whether its UV (or ozone) was lit.
+   */
+  flows: Record<PoolId, PoolStepFlows>;
 } {
   const share =
     makeUp ?? (serviceAvailable(plant, 'wet_hall', 'water') ? 1 : 0);
@@ -486,6 +498,7 @@ export function stepPoolsWater(
   const toSewer = draining.filter((id) => !INTO_THE_PIT.has(id));
   const drainRate = toSewer.length ? sewer / toSewer.length : 0;
   const next = {} as PoolsState;
+  const flows = {} as Record<PoolId, PoolStepFlows>;
   for (const id of POOL_IDS) {
     const room = `plant_${id}` as ServiceRoom;
     const old = pools[id];
@@ -528,11 +541,6 @@ export function stepPoolsWater(
       serviceAvailable(plant, room, 'heat') &&
       // The jacuzzi's heat exchanger, through its heating valves.
       (id !== 'pool_03' || !jacuzzi || jacuzzi.heat);
-    const dosing =
-      circulation && loungeMoving && serviceAvailable(plant, room, 'chemical');
-    // Each chemical dosed only while its store has some.
-    const hypochlorite = dosing && stockOf(stock, id).hypochlorite;
-    const acid = dosing && stockOf(stock, id).acid;
     // Its treatment's flow: none while it is drained down to the sewer.
     const flow = approach(
       old.flow,
@@ -616,32 +624,9 @@ export function stepPoolsWater(
     const balance = water.tankVolume / params.tank;
     const tripped = water.tripped && balance < params.float * 0.8;
     const level = water.level;
-    const freeChlorine = clamp(
-      old.freeChlorine +
-        // Undosed, chlorine is used up by the bathers and the light: about
-        // 0.36 mg/l an hour, gone from 1.4 in four hours (the owner,
-        // 2026-10-27: 80 minutes was too harsh).
-        (hypochlorite ? (1.4 - old.freeChlorine) * 0.001 : -0.0001) * dt,
-      0,
-      5,
-    );
-    // Held at 7.4 by both chemicals; pushed down by acid alone, up by
-    // hypochlorite alone, over hours; drifting up slowly with neither.
-    const ph = clamp(
-      approach(
-        old.ph,
-        phTarget(hypochlorite, acid),
-        hypochlorite && acid ? 0.001 : hypochlorite || acid ? 0.0001 : 0.00003,
-        dt,
-      ),
-      6,
-      9,
-    );
-    const combinedChlorine = clamp(
-      old.combinedChlorine + (uv ? -0.000002 : 0.000006) * dt,
-      0,
-      2,
-    );
+    // Its water's chemistry is its circuit's (`water-treatment.ts`, mission
+    // 101): the world steps it, and sets these readings from it.
+    flows[id] = { madeUp: water.madeUp, evaporated: water.evaporated, uv };
     // The water's and the hall's heat (`thermal.ts`): the water heated
     // while it circulates and the heating is on; the hall's air while its
     // air handling and the heating are on, by its units' coils in
@@ -686,10 +671,10 @@ export function stepPoolsWater(
       hallAir,
       hallRh,
       heating,
-      ph,
-      freeChlorine,
-      combinedChlorine,
-      redox: clamp(620 + freeChlorine * 72 - (ph - 7.4) * 45, 0, 999),
+      ph: old.ph,
+      freeChlorine: old.freeChlorine,
+      combinedChlorine: old.combinedChlorine,
+      redox: old.redox,
       flow,
       tripped,
       drainDown,
@@ -697,5 +682,5 @@ export function stepPoolsWater(
       setpoint: old.setpoint ?? POOL_TARGET[id].temp,
     };
   }
-  return { pools: next, drawn, backwashed, drained };
+  return { pools: next, drawn, backwashed, drained, flows };
 }

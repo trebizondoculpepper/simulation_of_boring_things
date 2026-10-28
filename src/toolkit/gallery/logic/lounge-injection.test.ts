@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { LOUNGE_SCHEMATIC } from '../../../game/plant/lounge-schematic';
 import { schematicExpansion } from '../../../game/plant/schematics';
-import { applyAction, newWorld, stepWorld } from '../../../game/world';
+import { advance, applyAction, newWorld } from '../../../game/world';
 import { REACH, roomInjections, roomPipes } from './room-pipes';
 
 /**
@@ -62,14 +62,14 @@ describe('the lounge’s injection points', () => {
   });
 
   it('stops the dose with the quill’s valve shut', () => {
-    const open = stepWorld(newWorld(), 3600);
+    const open = advance(newWorld(), 3600, 10);
     let shut = applyAction(newWorld(), {
       type: 'plant/valve',
       id: 'hypo-quill.in.iso',
       open: false,
     });
     expect(shut.installedValves['hypo-quill.in.iso']).toBe(false);
-    shut = stepWorld(shut, 3600);
+    shut = advance(shut, 3600, 10);
     // Undosed, its chlorine falls behind the dosed pool's.
     expect(shut.pools.pool_01.freeChlorine).toBeLessThan(
       open.pools.pool_01.freeChlorine - 0.05,

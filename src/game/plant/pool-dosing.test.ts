@@ -11,9 +11,29 @@ import {
 } from './pool-dosing';
 import { bottlePumpWords, bottleReadout } from './dose-bottle';
 import { DAY_TANKS } from './chemical-distribution';
+import { nominalCircuit } from './water-treatment';
 
+/**
+ * Half a minute in, the footbath's water a little short of chlorine and
+ * over its pH (its controller then asks for both: mission 101, its pumps
+ * dosing at its controller's rates).
+ */
 const settled = (): World => {
   let w = newWorld();
+  w = {
+    ...w,
+    treatment: {
+      ...w.treatment,
+      circuits: {
+        ...w.treatment.circuits,
+        pool_04: nominalCircuit('pool_04', {
+          ...w.pools.pool_04,
+          freeChlorine: 1,
+          ph: 7.5,
+        }),
+      },
+    },
+  };
   for (let t = 0; t < 30; t++) w = stepWorld(w, 1);
   return w;
 };

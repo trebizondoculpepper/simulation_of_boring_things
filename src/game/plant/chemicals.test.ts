@@ -3,7 +3,6 @@ import {
   deliver,
   inStock,
   newChemicalStores,
-  phTarget,
   STORE_CAPACITY,
   stepChemicalStores,
 } from './chemicals';
@@ -45,14 +44,5 @@ describe('the dosing chemicals’ stores', () => {
     expect(
       deliver(newChemicalStores(), 'hypochlorite', 5000).hypochlorite,
     ).toBe(12000);
-  });
-});
-
-describe('pH, by what is dosed', () => {
-  it('holds at 7.4 with both, falls with acid alone, rises without it', () => {
-    expect(phTarget(true, true)).toBe(7.4);
-    expect(phTarget(false, true)).toBeLessThan(7.0);
-    expect(phTarget(true, false)).toBeGreaterThan(7.8);
-    expect(phTarget(false, false)).toBeGreaterThan(7.4);
   });
 });

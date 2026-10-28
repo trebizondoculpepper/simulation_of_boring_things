@@ -1,6 +1,6 @@
 import type { PoolId } from './pools';
 import type { Chemical } from './chemicals';
-import { CHEMICALS, DOSE_PER_M3_DAY } from './chemicals';
+import { CHEMICALS } from './chemicals';
 import { bottleBund, bottleSize, isDoseBottle } from './dose-bottle';
 
 /**
@@ -282,25 +282,6 @@ export interface DistributionControl {
   now: number;
 }
 export const CONTROL_RUNNING: DistributionControl = { running: true, now: 0 };
-
-/**
- * What each pool's dosing takes from its day tanks, litres a second, from
- * the volume of its water being dosed with each chemical (m³).
- */
-export function doseDraw(
-  dosed: Partial<Record<PoolId, Record<Chemical, number>>>,
-) {
-  const out: Partial<Record<PoolId, Record<Chemical, number>>> = {};
-  for (const [id, v] of Object.entries(dosed) as [
-    PoolId,
-    Record<Chemical, number>,
-  ][])
-    out[id] = {
-      hypochlorite: (DOSE_PER_M3_DAY.hypochlorite * v.hypochlorite) / 86400,
-      acid: (DOSE_PER_M3_DAY.acid * v.acid) / 86400,
-    };
-  return out;
-}
 
 /** Which chemicals each pool has to dose with: its day tank not empty. */
 export function dayTankStock(
