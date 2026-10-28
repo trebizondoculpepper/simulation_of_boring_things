@@ -46,7 +46,7 @@ import { createGasBallValve } from '../../../components/plant/views/gas-fittings
 import { createRotaryGasMeter } from '../../../components/plant/views/utility-meters';
 import {
   createControlSelector,
-  createCostDisplay,
+  createGasBurnDisplay,
   createCoverStation,
   createLossesBoard,
   createPoolThermostat,
@@ -55,7 +55,6 @@ import {
 import { createExperimentalSource } from '../../../../game/plant/experimental-source';
 import {
   BOILER_KW,
-  GAS_PENCE,
   LINK_NAMES,
   NODES,
   NOTCHES,
@@ -888,22 +887,19 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   updates.push(resetButton.update);
   footprint(EAST - 0.45, 3.45, 0.25);
 
-  const cost = createCostDisplay(kit, {
+  const cost = createGasBurnDisplay(kit, {
     tag: shortTag('cost'),
-    pence: GAS_PENCE,
-    scale: 1000,
+    scale: 200,
   });
   turnTo(cost.group, EAST, 1.55, -4.6, FACE_WEST);
   object.add(
     markComponent(cost.group, {
-      name: `${TAGS['cost']} energy cost display`,
+      name: `${TAGS['cost']} gas burn display`,
       status: () =>
-        `£${(readings.pence / 100).toFixed(2)} since you came in; needle at ${readings.pencePerHour.toFixed(0)} p/h`,
+        `shows ${readings.gasFlow.toFixed(1)} m³/h; needle at ${readings.gasKW.toFixed(0)} kW`,
     }),
   );
-  updates.push((delta) =>
-    cost.show(readings.pencePerHour, readings.pence / 100, delta),
-  );
+  updates.push((delta) => cost.show(readings.gasKW, readings.gasFlow, delta));
 
   // ---- The losses board, by the pool ----
   const losses = createLossesBoard(kit, {

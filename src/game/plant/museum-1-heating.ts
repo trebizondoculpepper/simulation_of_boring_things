@@ -602,8 +602,6 @@ export const TC_RANGE = { min: 20, max: 35 } as const;
 /** The gas: its supply pressure, mbar, its drop at full fire, mbar. */
 export const GAS_MBAR = 21;
 export const GAS_DROP = 2;
-/** The illustrative price on EC1's face, pence per kWh of gas (the owner's question 2: a round figure). */
-export const GAS_PENCE = 6;
 
 /** The pool pump's curve (Grundflow NKC 150-315): H = shutoff − k·Q². */
 export const PUMP = { shutoff: 22, k: 4 / 300 ** 2, axis: 0.68 } as const;
@@ -883,8 +881,6 @@ export function hall1Readings(s: Hall1State) {
     gasKW,
     gasMbar: gas.mbar,
     gasAvailable: gas.gas,
-    pencePerHour: gasKW * GAS_PENCE,
-    pence: s.gasM3 * GAS_ENERGY * GAS_PENCE,
     losses,
     temps: {
       'hxIn.ti': s.poolC,

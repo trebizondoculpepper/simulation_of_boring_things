@@ -228,12 +228,14 @@ describe('Hall 1, the boiler’s protections (Try it 5)', () => {
   });
 });
 
-describe('Hall 1, cost (Try it 6)', () => {
-  it('prices the gas burnt at the stated rate', () => {
-    const s = runHall1(newHall1(), 3600);
+describe('Hall 1, the gas being burnt (Try it 6)', () => {
+  it('shows the gas burnt now: its flow and its heat input, live', () => {
+    const s = runHall1(newHall1(), 600);
     const r = hall1Readings(s);
-    expect(r.pence).toBeCloseTo(s.gasM3 * GAS_ENERGY * 6, 9);
-    expect(r.pencePerHour).toBeCloseTo(r.gasKW * 6, 9);
+    expect(r.gasKW).toBeCloseTo(r.gasFlow * GAS_ENERGY, 9);
+    expect(r.gasKW).toBeCloseTo(r.output / BOILER_EFFICIENCY, 9);
+    const off = runHall1(act(s, { type: 'boiler', key: 'power' }), 1);
+    expect(hall1Readings(off).gasKW).toBe(0);
   });
 });
 

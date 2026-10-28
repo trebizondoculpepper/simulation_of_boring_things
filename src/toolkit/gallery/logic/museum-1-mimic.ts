@@ -19,7 +19,7 @@ import type { TimeSpeed } from './museum-time';
  * flow; each valve's lens is lit by where it stands; the boiler's FIRING
  * and LOCKOUT, both pumps' RUN, the thermostat's CALL, the flow switch,
  * and the cover's limit switches; a readout at every instrument it
- * repeats, the losses and the cost. Its only buttons are the TIME speeds:
+ * repeats, the losses and the gas burnt now. Its only buttons are the TIME speeds:
  * the pumps, the boiler's RESET and the cover are worked where they are
  * (local controls). Pure.
  */
@@ -54,7 +54,7 @@ const READOUTS: readonly { id: string; at: Point; legend: string }[] = [
     at: [-1.45, 0.42],
     legend: `${shortTag('gas.meter')} m³/h`,
   },
-  { id: 'cost', at: [-1.2, 0.42], legend: `${shortTag('cost')} p/h` },
+  { id: 'cost', at: [-1.2, 0.42], legend: `${shortTag('cost')} GAS kW` },
   {
     id: 'boilerFlow.ti',
     at: [-0.85, 0.42],
@@ -309,7 +309,7 @@ export function hall1Reading(id: string, s: Hall1State): Reading | undefined {
     case 'gas.meter':
       return reading(r.gasFlow, 'm3/h', name);
     case 'cost':
-      return reading(r.pencePerHour, 'p/h', name, 0);
+      return reading(r.gasKW, 'kW', name, 0);
     case 'hx.primary.heat':
       return reading(Math.max(0, r.duty), 'kW', name, 0);
     case 'poolDischarge.meter':

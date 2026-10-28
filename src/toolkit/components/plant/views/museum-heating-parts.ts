@@ -253,18 +253,18 @@ export function createPoolThermostat(
 }
 
 /**
- * The energy-cost display EC1 (Splashonomics): a big moving-coil meter in
- * pence per hour, and red LED digits counting pounds since the visitor
- * came in, the gas price printed on its face. `show` draws the digits only
- * when they change.
+ * The gas-burn display EC1 (Splashonomics): the gas being burnt right now,
+ * a big moving-coil meter of the heat going in, kW, and red LED digits of
+ * the gas's flow, m³/h, from the gas meter's pulses. `show` draws the
+ * digits only when they change.
  */
-export function createCostDisplay(
+export function createGasBurnDisplay(
   kit: PanelKit,
-  { tag, pence, scale }: { tag: string; pence: number; scale: number },
+  { tag, scale }: { tag: string; scale: number },
 ) {
   const t = tools(kit);
   const group = new Group();
-  group.name = `${tag} energy cost display`;
+  group.name = `${tag} gas burn display`;
   t.box(group, t.paint('#1f2a30', 0.5), 0.9, 0.62, 0.06, 0, 0, 0.03);
   const face = t.printed(
     0.86,
@@ -274,25 +274,20 @@ export function createCostDisplay(
       c.fillRect(0, 0, w, h);
       c.fillStyle = '#16232b';
       c.font = `bold ${h * 0.07}px Arial`;
-      c.fillText(`${tag}  WHAT THE GAS COSTS`, w * 0.04, h * 0.1, w * 0.92);
+      c.fillText(`${tag}  GAS BEING BURNT NOW`, w * 0.04, h * 0.1, w * 0.92);
       c.font = `${h * 0.05}px Arial`;
-      c.fillText(
-        `At ${pence} p per kWh of gas (an illustrative price)`,
-        w * 0.04,
-        h * 0.95,
-        w * 0.92,
-      );
-      c.fillText('£ SINCE YOU CAME IN', w * 0.55, h * 0.58, w * 0.42);
+      c.fillText('Heat going in, kW', w * 0.04, h * 0.95, w * 0.45);
+      c.fillText('GAS FLOW  m³/h', w * 0.55, h * 0.58, w * 0.42);
     },
     512,
   );
   face.mesh.position.z = 0.061;
   group.add(face.mesh);
-  const meter = createPanelMeter(kit, 'p/h', { width: 0.07, scaleMax: scale });
+  const meter = createPanelMeter(kit, 'kW', { width: 0.07, scaleMax: scale });
   meter.group.scale.setScalar(4);
   meter.group.position.set(-0.2, 0.0, 0.065);
   group.add(meter.group);
-  const digits = createSevenSegment(kit, 6, { digitHeight: 0.07 });
+  const digits = createSevenSegment(kit, 5, { digitHeight: 0.07 });
   digits.group.position.set(0.22, 0.02, 0.065);
   digits.group.traverse((o) => (o.userData.live = true));
   group.add(digits.group);
@@ -300,10 +295,10 @@ export function createCostDisplay(
   let shown = '';
   return {
     group,
-    show(pencePerHour: number, poundsSince: number, delta: number) {
-      meter.set(pencePerHour / scale);
+    show(kW: number, m3h: number, delta: number) {
+      meter.set(kW / scale);
       meter.update(delta);
-      const text = poundsSince.toFixed(2).padStart(6);
+      const text = m3h.toFixed(1).padStart(5);
       if (text === shown) return;
       shown = text;
       digits.show(text);

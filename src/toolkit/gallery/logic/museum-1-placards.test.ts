@@ -10,7 +10,7 @@ describe('Hall 1’s words', () => {
       [4, 'The pump'],
       [5, 'The pool'],
       [6, 'Where the heat goes'],
-      [7, 'What it costs'],
+      [7, 'The gas it burns'],
     ]);
   });
 

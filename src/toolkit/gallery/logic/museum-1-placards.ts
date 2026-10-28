@@ -1,7 +1,6 @@
 import {
   BOILER_KW,
   COVER_SAVING,
-  GAS_PENCE,
   NODES,
   POOL,
   POOL_KJ_PER_K,
@@ -58,7 +57,6 @@ export function hall1Facts() {
     busyFactor: busy.evaporation / at28.evaporation,
     coverSaving: COVER_SAVING,
     perDay: (at28.total / BOILER_EFFICIENCY) * 24,
-    pence: GAS_PENCE,
   };
 }
 
@@ -133,11 +131,12 @@ export function hall1Placards(): Placard[] {
       station: 7,
       of: 'cost',
       icon: 'meter',
-      headline: 'What it costs',
-      title: `Energy cost display · ${TAGS['cost']}`,
-      body: `Every kWh of heat in the pool came from gas the meter counted. Holding this pool at 28 °C takes about ${round(k.perDay)} kWh of gas a day. The heat meter ${v('hx.primary.heat')} counts what reached the pool; the difference is the boiler’s loss.`,
-      fact: `At ${k.pence} p per kWh (an illustrative price), that is about £${round((k.perDay * k.pence) / 100)} a day, just to stand still.`,
-      tryIt: 'Press TIME ×3600 and watch the pounds add up.',
+      headline: 'The gas it burns',
+      title: `Gas burnt now · ${TAGS['cost']}`,
+      body: `Every kWh of heat in the pool came from gas the meter counted. This display shows the gas the boiler is burning right now, in cubic metres an hour and as kilowatts of heat going in; watch it drop as the boiler turns itself down, or stop when it cycles off. The heat meter ${v('hx.primary.heat')} counts what reached the pool; the difference is the boiler’s loss.`,
+      fact: `Holding this pool at 28 °C takes about ${round(k.perDay)} kWh of gas a day, just to stand still.`,
+      tryIt:
+        'Press TIME ×3600, close the cover, and watch the gas fall as the pool needs less.',
     },
   ];
 }
