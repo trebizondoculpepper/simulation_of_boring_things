@@ -62,6 +62,8 @@ The proposed definition of a healthy New Game and its repeatable audit are in [H
 
 `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build`. CI (`.github/workflows/ci.yml`) runs the same five and deploys the build to GitHub Pages.
 
+Slow tests (over about 1.5 s, or simulating long stretches of world time) live in `*.slow.test.ts` files beside their fast siblings. `npm test` runs everything and is run locally before every commit; on GitHub, where `CI` is set, `vite.config.ts` excludes the slow files so the checks stay quick. `npm run test:fast` runs the fast set alone locally.
+
 ## Versions and releases
 
 Player-facing daily updates follow the [devlog workflow](doc/devlogs/README.md). Drafts are compiled on request in `doc/devlogs/`; publishing a devlog is a separate step from uploading a game build.

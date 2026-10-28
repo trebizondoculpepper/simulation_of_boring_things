@@ -1,22 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { advance, applyAction, newWorld } from '../world';
-import type { World } from '../world';
 import { installedValveByCommandId } from './installed-valves';
-import { OLYMPIC_DIRT_REF, olympicBed } from './olympic-battery';
 import { filterValves } from './wash-o-tron-world';
-import type { WashAction } from './wash-o-tron';
-
-const act = (w: World, action: WashAction) =>
-  applyAction(w, { type: 'wash-o-tron', action });
-
-/** Every filter due a wash: last washed long ago. */
-const allDue = (w: World): World => ({
-  ...w,
-  washOTron: {
-    ...w.washOTron,
-    filters: w.washOTron.filters.map((f) => ({ ...f, lastWash: -1e9 })),
-  },
-});
+import { act, allDue } from './wash-o-tron.test-support';
 
 describe('the Lidoluxe Wash-O-Tron', () => {
   it('sets a filter’s state from its button: its old path shut first, then its new opened and proved', () => {
@@ -38,29 +24,6 @@ describe('the Lidoluxe Wash-O-Tron', () => {
       mode: 'backwash',
       phase: 'steady',
     });
-  });
-
-  it('washes due filters in turn in AUTO, one at a time, each to clean, the pit never spilling', () => {
-    let w = act(allDue(newWorld()), { act: 'run' });
-    const washed = new Set<number>();
-    let most = 0;
-    for (let t = 0; t < 3 * 3600; t += 10) {
-      w = advance(w, 10, 1);
-      const busy = w.washOTron.filters.filter(
-        (f) => f.mode !== 'filter' || f.phase !== 'steady',
-      ).length;
-      most = Math.max(most, busy);
-      w.washOTron.filters.forEach((f, i) => {
-        if (f.lastWash > 0) washed.add(i);
-      });
-    }
-    expect(washed.size).toBeGreaterThanOrEqual(3);
-    expect(most).toBe(1);
-    expect(w.wetHall.spilt).toBe(0);
-    for (const i of washed)
-      expect(olympicBed(w.olympic, i).dirt).toBeLessThan(
-        0.3 * OLYMPIC_DIRT_REF,
-      );
   });
 
   it('waits for room in the pit before starting a wash', () => {

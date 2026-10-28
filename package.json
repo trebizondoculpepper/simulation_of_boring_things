@@ -1,6 +1,6 @@
 {
   "name": "simulation-of-boring-things",
-  "version": "0.1.697",
+  "version": "0.1.698",
   "description": "A first-person leisure-centre pool plant engineering game.",
   "scripts": {
     "dev": "vp dev --host 127.0.0.1",
@@ -9,6 +9,7 @@
     "format": "vp fmt .",
     "format:check": "vp fmt --check .",
     "test": "vp test run --passWithNoTests",
+    "test:fast": "FAST_TESTS_ONLY=1 vp test run --passWithNoTests",
     "test:watch": "vp test",
     "build": "npm run typecheck && node scripts/build.ts",
     "preview": "vp preview --host 127.0.0.1",

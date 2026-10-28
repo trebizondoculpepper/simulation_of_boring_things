@@ -263,15 +263,6 @@ describe('the jacuzzi cabinet, with its external balance tank', () => {
     expect(t.volume / poolVolume('pool_03')).toBeGreaterThan(0.35);
   });
 
-  it('holds its level through a day’s running, the make-up keeping it at its float', () => {
-    const w = advance(start, 24 * 3600, 10);
-    expect(w.pools.pool_03.tripped).toBe(false);
-    expect(w.pools.pool_03.balance).toBeGreaterThan(
-      JACUZZI_BALANCE_TANK.lowLow,
-    );
-    expect(jacuzziCabinetPanel(w).flowing).toBe(true);
-  });
-
   it('takes the tub’s gutter water back when the pump stops, and gives it out again when it restarts', () => {
     const off = advance(
       applyAction(start, {

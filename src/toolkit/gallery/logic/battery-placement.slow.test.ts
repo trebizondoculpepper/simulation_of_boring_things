@@ -45,7 +45,7 @@ describe('like machines stand together', () => {
     const battery = withThreeFilters(true);
     expect(battery.layout.problems).toEqual([]);
     // The battery rule only encourages; pre-assembled blocks
-    // (`block-layout.test.ts`) are what make a battery by construction.
+    // (`block-layout.slow.test.ts`) are what make a battery by construction.
     expect(battery.spread).toBeLessThan(loose.spread + 1);
   }, 120000);
 });

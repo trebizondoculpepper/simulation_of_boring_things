@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite-plus';
+import { configDefaults, defineConfig } from 'vite-plus';
 import { execFileSync } from 'node:child_process';
 import { version } from './package.json';
 
@@ -20,7 +20,21 @@ const localBuild = commit
   ? `${commit}${dirty} · ${new Date().toISOString().slice(0, 10)}`
   : `local · ${new Date().toISOString().slice(0, 10)}`;
 
+/**
+ * Slow tests (over about 1.5 s, or simulating long stretches of world time)
+ * live in `*.slow.test.ts` files. They run locally with `npm test`, and are
+ * skipped on CI (GitHub Actions sets `CI=true`) and by `npm run test:fast`.
+ */
+const truthy = (v: string | undefined) => !!v && v !== '0' && v !== 'false';
+const fastOnly = truthy(process.env.CI) || truthy(process.env.FAST_TESTS_ONLY);
+
 export default defineConfig({
+  test: {
+    exclude: [
+      ...configDefaults.exclude,
+      ...(fastOnly ? ['**/*.slow.test.ts'] : []),
+    ],
+  },
   define: {
     'import.meta.env.VITE_VERSION': JSON.stringify(
       process.env.VITE_VERSION || version,
