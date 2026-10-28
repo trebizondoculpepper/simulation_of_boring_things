@@ -118,3 +118,37 @@ No per-room budget exists yet in the game (mission 094 budgets per component: `D
 3. **Radiation.** Leave it out (the panel says so), or add a sourced radiation loss to the models (it would also change the game's pool halls)?
 4. **Heat recovery** (the earlier plan's run-around coil): leave it out of Hall 1, or a later addition?
 5. **The boiler's flue** through the warehouse's roof: shown rising to the roof deck, or out through the wall?
+
+## Research: what the hall holds
+
+Researched 2026-10-28 from the repo's product notes (`doc/research/plant-products-boiler-air.md`, `doc/research/plant-products-pumps-balance.md`), the models the brief cites, and web search. Anything not verified against a primary source is marked indicative.
+
+### Exhibits, in route order
+
+| #   | Exhibit                                                   | Modelled after (UK market)                                                                                                       | Key specs and readings                                                                                                                                                                                 | What the visitor does                                       |
+| --- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| 1   | FQ1 rotary gas meter, GS1-V1 emergency control valve, PI3 | A commercial rotary (Roots-type) meter, G65 class (indicative; maker not verified); ECV a yellow-levered quarter-turn ball valve | Reads m³ on a mechanical register with a fast test dial; about 16 m³/h at full fire (160 / 0.95 / 10.55, model); PI3 0 to 40 mbar dial, 21 mbar nominal G20 supply, boiler trips below 17 mbar (model) | Watches the test dial speed up when B1 fires; shuts the ECV |
+| 2   | B1 Hamwarmy HW 160 and FL1 flue                           | Remeha Gas 220 Ace 160 (Baxi), 800 W × 1662 H × 657 D mm (repo note); panel after Remeha Gas 310 ECO                             | Flow 80 °C, return about 60 °C, 1.5 bar on its 63 mm gauge, 0.8 bar minimum; 95 % (model, gross-to-net simplified); purge 6 s, ignition 4 s, 3 tries, fault codes 2 and 5                              | Shuts M1-B1-V1 to see lockout; RESET at the panel           |
+| 3   | HX1 plate heat exchanger                                  | Alfa Laval M10-BFG, frame 1084 H × 470 W mm, depth with plate count (repo note)                                                  | UA 12 kW/K (model); primary 20 K drop at 7 m³/h; secondary rise about 0.75 K at 185 m³/h (indicative)                                                                                                  | Reads TI1 to TI4 either side                                |
+| 4   | P1 primary twin-head pump                                 | Grundfos MAGNA3 D 65-120 F, 340 mm port to port (repo note)                                                                      | About 7 m³/h (model)                                                                                                                                                                                   | Sees duty/standby lamps                                     |
+| 5   | P2 pool pump, valves, FT1, FS1                            | Grundfos NK 150-315 (repo note: DN200 suction, DN150 discharge, 30 kW, 641 kg)                                                   | 22 m shut-off, 18 m at 300 m³/h (model); FS1 makes above 5 m³/h                                                                                                                                        | Throttles M1-P2-V3 notch by notch                           |
+| 6   | IP1 pool, TI5 big display, TC1 thermostat                 | Capillary immersion thermostat, 20 to 35 °C dial (indicative)                                                                    | 25 × 12.5 × 1.5 m, 470 m³, 547 kWh/K; 27.0 °C at reset, set 28 °C                                                                                                                                      | Turns TC1's dial                                            |
+| 7   | Losses board QI1 to QI4, SWIMMERS dial, CV1 cover         | Cover: a slatted motorised cover on an end roller (generic; Certikind)                                                           | Evaporation about 21 kW calm at 28 °C (indicative), ground 3.4 kW, convection about −1.25 kW (hall 29 °C); cover cuts evaporation by about nine-tenths                                                 | Turns SWIMMERS; key switch OPEN/CLOSE                       |
+| 8   | EC1 cost display, HM1 heat meter                          | HM1 after Kamstrup MULTICAL 603                                                                                                  | About 25 kW gas holding 28 °C, about 600 kWh a day (indicative)                                                                                                                                        | Reads p/h and £ since you came in                           |
+
+### Facts for the plaques
+
+- Pool water and hall air: UK practice keeps hall air about 1 K above the water to limit evaporation and condensation (the brief's 29 °C over 28 °C follows it); PWTAG publishes recommended maximum water temperatures by activity, but its exact competition figure was not retrieved here (indicative: 27 to 29 °C for general swimming, from a university reply citing guidance).
+- 547 kWh per degree is about 3,250 kettles (1.7 l from 15 to 100 °C is about 0.168 kWh): checked.
+- Covers: a solid cover in use cut evaporation by about 95 % in a 2025 study of UAE pools (reported secondhand); Southampton University's Jubilee Sports Centre cover saved 169,000 kWh, £5,000 and 31 t CO₂ a year (University case study). The brief's "about nine-tenths" is a fair, slightly conservative constant; tag it "sourced" against these.
+
+### Sources
+
+- [Southampton University, Jubilee Sports Centre pool cover case study](https://www.southampton.ac.uk/susdev/our-approach/case-studies/cmp007-jubilee-sports-centre-pool-cover.page)
+- [York University Middle East environment report on pool covers (UAE study, about 95 %)](https://mideastenvironment.apps01.yorku.ca/?p=23441)
+- [Aberystwyth University response on pool temperature guidance](https://www.aber.ac.uk/en/student/your-voice-matters/tell-us-now/our-response/sportscentre/name-241524-en.html)
+- Product specs: the repo notes cited above (Baxi Remeha Gas 220 Ace, Grundfos MAGNA3 D and NK 150-315, Alfa Laval M10-BFG).
+
+### Research conflicts
+
+- **TC1's differential.** The brief calls TC1 "on and off with a 0.1 K differential, `THERMAL.band`", but `THERMAL.band` in `src/game/plant/thermal.ts` is a proportional band ("full output this far below its setting"), not an on/off differential. Either TC1 gets its own on/off differential constant (a real capillary thermostat's is typically 0.5 to 1 K, indicative), or the panel text should say it modulates. Left unchanged pending the owner.

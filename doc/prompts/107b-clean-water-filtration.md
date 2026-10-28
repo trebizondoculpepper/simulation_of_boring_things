@@ -94,6 +94,54 @@ Everything of mission 106: `src/game/plant/ideal-pool-plant.ts`, `ideal-filter.t
 
 Dev51 alone ran at about 97, 106 and 119 fps on high, medium and low; in the hall, with the shell and a neighbour seen through an archway, it must keep at least 60 fps on medium and 50 on high, within mission 094's `DEFAULT_BUDGET` for every component, nothing added to `KNOWN_OVER_BUDGET`; the neighbour halls' exhibits drawn at their reset state, not stepped (107-0). Draw calls measured on each preset and recorded here.
 
+## Research: what the hall holds
+
+Researched 2026-10-28 from the repository's notes (`doc/research/plant-products-pumps-balance.md`, `doc/research/pool-dosing-and-water-chemistry.md`, which cites the PWTAG Code of Practice as reproduced by the States of Guernsey, [CoP](https://www.gov.gg/CHttpHandler.ashx?id=191649&p=0)), the model's constants (`FILTER_PHYSICS` in `src/game/plant/ideal-filter.ts`) and web searches. Two web searches for PWTAG's filtration and backwash velocities returned no PWTAG text, only general filter guidance (bed expansion of at least 20 %, [Washington DOH](https://doh.wa.gov/Portals/1/Documents/Pubs/331-624.pdf); 15 to 20 % often enough, 30 to 50 % in manuals, [WVU brief](https://actat.wvu.edu/files/d/638db309-5274-42c9-a8c3-7f8be496c607/filter-backwashing.pdf)). Figures marked _indicative_ are from general trade knowledge and not checked against a source here; _derived_ figures are worked from the model.
+
+### The numbers behind the hall (derived from the model)
+
+| Quantity                             | Value                                                                                                                                 | How                                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Pool IP1                             | 470 m³, about a 25 × 12.5 m six-lane pool, 1.5 m average depth _(derived)_                                                            | 25 × 12.5 × 1.5 = 469                                                    |
+| Filter F1 bed area                   | 6.16 m²                                                                                                                               | π × 2.8² / 4                                                             |
+| Sand in the bed                      | 6.16 m³, about 9 t at about 1.5 t/m³ bulk _(indicative density)_                                                                      | area × 1 m                                                               |
+| Filtration velocity, clean           | 30.0 m/h                                                                                                                              | 184.7 / 6.16                                                             |
+| Filtration velocity, fouled (24 h)   | 26 m/h                                                                                                                                | 160 / 6.16                                                               |
+| Model's design rate and wash rate    | 25 and 30 m/h                                                                                                                         | `FILTER_PHYSICS`                                                         |
+| Backwash velocity                    | 31.8 m/h                                                                                                                              | 196 / 6.16                                                               |
+| Turnover                             | 2.54 h                                                                                                                                | 470 / 184.7                                                              |
+| Water to waste per 5-minute backwash | about 16 m³, plus the rinse _(derived)_                                                                                               | 196 × 5/60                                                               |
+| Clean-bed ΔP                         | 0.42 bar (4.3 m)                                                                                                                      | PDI1; the model's 3 m per m of bed plus the vessel's laterals and valves |
+| Backwash trigger                     | about 0.8 bar ΔP, or about +0.4 bar over clean _(indicative: UK practice backwashes on a rise of 0.3 to 0.5 bar, or at least weekly)_ | step 3 reaches 0.82                                                      |
+
+**Real benchmark.** The repo's reference filter, the Waterco SMDD2000 (Ø2042 mm, 3.14 m², 94 m³/h nominal, 126 max, 1.2 m bed, 6,090 kg sand, 4 bar, [Bosta datasheet](https://www.bosta.com/datasheet/download/07ea3e4001d4b06ea7f6bd7f645260d5)), is rated at 30 m/h nominal: F1 is the same range scaled to Ø2.8 m and runs at the same 30 m/h. One such filter for a 470 m³ pool is plausible; a real UK pool of this size would more often have two or three filters for medium-rate filtration and redundancy _(indicative)_.
+
+### Exhibits, station by station
+
+Each station is dev51's existing machine with the same model address; nothing below needs a new component.
+
+1. **The pool IP1 (a cut-away tank edge and the pool clock).** What the visitor sees: the Poolguard clock high on the wall (plant time, ×1 to ×3600) and the deck-level overflow grating. Plaque facts: a bather brings in dirt, sweat, skin and cosmetics (the brief's "about three grams an hour" is _indicative_: I found no source for the figure; PWTAG's related, sourced rule is 30 litres of fresh water per bather, [CoP §3.6](https://www.gov.gg/CHttpHandler.ashx?id=191649&p=0)). Turnover 2.5 h means each drop goes round about ten times a day.
+2. **The balance tank BT1.** Sees: level in the tank; overflow falling in. Plaque: a deck-level pool's surface spills all round into channels, skimming the top film where most of the dirt and grease floats; the tank holds the water bathers displace (about 70 litres each, _indicative_: a body's volume) and the backwash water. Does: nothing to work (dev51's has no controls).
+3. **The pump P1 (Grundflow NKC 150-315, modelled on a Grundfos NK/NKG end-suction 150-315 class, 4-pole, about 15 to 22 kW at this duty, _indicative_).** Sees: suction gauge PI1, discharge gauge PI2 (100 mm dial, 0 to 4 bar, Budenberg or WIKA 232.50 class, _indicative_), its casing temperature, START/STOP and RESET at the pump. Does: start, stop; the dead-head trip (step 2) and local reset. Plaque: "you met this in Hall 1"; and the new fact, that a pump working against a shut valve turns all its power into heat in the little water trapped inside it.
+4. **The filter F1 and its five-valve nest (the main exhibit).** Sees: the vessel (Ø2.8 m, about 3 m tall), PI3/PI4 either side, PDI1 (a differential gauge, 0 to 1.6 bar, WIKA 700-series class, _indicative_), the five valves V1 to V5 with their lever positions, the mimic's BED LIFTED lamp, and sight glass SG1 on the waste. Does: the backwash sequence. Plaque facts: sand of 0.5 to 1.0 mm (the model's note), 1 m deep, 6 m² across; water passes down at 30 m/h (the speed of a slow walk is 3,600 m/h, so the water moves down through the sand at under a centimetre a second, _derived_); medium-rate filters with coagulant catch about 99 % of Cryptosporidium oocysts a pass, without it as few as 10 % ([CoP §8](https://www.gov.gg/CHttpHandler.ashx?id=191649&p=0)); the bed fills, the gauge difference rises, the flow falls; backwash reverses the water so the sand lifts (bed expansion, about 20 % is enough) and the dirt goes to the drain.
+5. **The heat exchanger HX1 and the bypass HX1-V1** (kept, as recommended). Sees: TI1 to TI5, FI2 to FI4, HM1, the kettles sign. Plaque: after the filter, so only clean water reaches the thin plates; the bypass throttle sets how much of the flow is heated.
+6. **The return to the pool and FT1.** Sees: the electromagnetic meter FT1 (modelled on Endress+Hauser Proline Promag W 400 DN150, [Instrumart](https://www.instrumart.com/products/45578/eh-proline-promag-w-400-electromagnetic-flow-meter)) reading m³/h and a totaliser. Plaque: Hall 1's mag meter again; here it tells the operator the turnover: flow ÷ volume.
+7. **Backwash to waste (DR1, SG1).** Sees: the sight glass's colour (brown at 2,710 g/m³, clear at 13, polished at 4 after rinse) and a readout of g/m³. Plaque: about 16 m³ goes to drain each backwash, about a bath's worth every two seconds (196 m³/h is 54 litres a second, a bath about 100 litres, _derived_); that water counts towards the pool's fresh-water dilution.
+
+### Interactions the game already simulates (no new model)
+
+Every one of the brief's seven steps; plus the throttled backwash (V4 at notch 1: below the lift share, half the wash flow in `FILTER_PHYSICS.liftShare`, the bed does not lift and the dirt stays), which is the hall's best "why the order matters" lesson and could earn a line on the activity card.
+
+### Research conflicts
+
+- **Filtration velocity versus "medium rate".** F1 runs at 30.0 m/h clean, above the model's own design rate of 25 m/h (`FILTER_PHYSICS.filtrationRate`) and, as I recall PWTAG's classification, above its medium-rate band (up to 25 m/h) and into high rate _(indicative: not verified against the CoP text in this session)_. It matches the Waterco range's nominal 30 m/h, so it is a real product's rating, not an error in the model. Not changed. If the hall's plaque says "medium-rate", it should say "about 30 m/h, the top of the commercial range", or the duty should fall to 154 m³/h (25 m/h, turnover 3.05 h), which would change every mission 106 reading; I do not recommend that.
+- **"About three grams each an hour"** (entrance panel): no source found; keep it marked as an illustration, or drop the number.
+- **Backwash at 31.8 m/h** is above the model's 30 m/h wash rate and below its 40 m/h safe-rise limit, so sand loss (off anyway) would not occur: consistent.
+
+### Question for the owner
+
+Should the filter placard call F1's 30 m/h rate what it is (fast, at the top of a commercial sand filter's rating), or should the hall keep silent on filtration rates?
+
 ## Open questions for the owner (one at a time, in this order)
 
 1. **Dev51's heating:** keep it as it is, re-signed as "you met this in Hall 1" (recommended), simplify it, or take it out?

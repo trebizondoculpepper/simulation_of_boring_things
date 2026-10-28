@@ -43,6 +43,29 @@ The history must be researched and written truthfully before the plaques are fin
 9. **Modern rapid-setting, anti-microbial cement grout** (today: class CG2, often WA, water-repellent and abrasion-resistant): Benefits: quick to return to service, less water absorption, mould inhibitors. Drawbacks: still cement where the water is aggressive; epoxy remains the pool's choice in the water.
 10. **Coda: the movement joint** (not grout at all): a flexible sealant (silicone, polysulphide or polyurethane) in the joints that must move, at corners, changes of plane and across the structure's joints. Its plaque: "Not grout. But grout could not do its work without it." Its specimen the same panel, one joint drawn as sealant (the same grey: the deadpan holds).
 
+## Research: what the hall holds
+
+Researched 2026-10-28 into `doc/research/grout-history.md` (sources S1 to S11 there). Every specimen remains the same panel (white 150 mm tiles, 3 mm grey joints) except plinth 5. Dates marked indicative are not yet confirmed from a primary source and the plaques should hedge them ("by the …", "from about …").
+
+1. **Lime mortar and lime putty**, about 1840 to 1900 (indicative). Specimen: the standard panel. Plaque: lime and sand, setting slowly as it takes up carbon dioxide; workable and forgiving; soft, and dissolved by soft or acid water, so it needed renewing. Joints in Victorian glazed tiling were generally fine, not thick (see conflicts). Reverence: "It was there first."
+2. **Early Portland cement grout**, about 1850 to 1950 (indicative). Plaque: Aspdin's patent of 1824, the hotter-burned cement of the 1840s, neat cement or cement and fine sand; hard, cheap, durable; porous, brittle, leached by water low in calcium or with a negative saturation index (S9, S10).
+3. **Sanded cement grout**, twentieth century to today. Plaque: graded sand for wider joints (about 3 mm and up, a trade rule of thumb), resisting shrinkage cracking; porous and absorbent (S4).
+4. **Unsanded cement grout**, twentieth century to today. Plaque: for fine joints of glazed tiles and mosaic (BS 5385 guidance of about 2 mm on walls, S2); smooth; shrinks and cracks if used too wide; porous.
+5. **Coloured cement grout, the 1970s** (the one avocado specimen). Plaque: pigmented to match the coloured bathroom suites of the decade; as any cement grout, and pigment can set patchy or fade (indicative). "The museum presents this specimen without comment."
+6. **Latex- and polymer-modified cement grout**, from about the 1960s (indicative). Plaque: latex admixture in place of water, later factory premixed, now the most popular type (S4); denser, less absorbent, better bond; still cement, so still attacked by aggressive water and acid cleaners (S2).
+7. **Furan resin grout**, from the 1940s (S5). Plaque: chemically resistant reaction resin for dairies, chemical plants and some pools; hard to apply, and generally black (indicative). "Furan grouts are generally black. The museum regrets that its specimen is not."
+8. **Epoxy grout**, epoxy emulsions from the 1940s (S5), true epoxy grouts in general use by the 1960s and 70s (indicative); class RG under BS EN 13888 (S1); the pool's choice where water is soft or aggressive (S2), some rated for seawater (S7). Drawbacks: costly, two-part, short pot life, unforgiving (S6). Fill the pool no sooner than 21 days after (S8).
+9. **Modern CG2WA cement grout**, today. Plaque: improved cementitious grout, reduced water absorption (W), abrasion-resistant (A) (S1, S3), often with mould inhibitors and rapid setting; suits pools with balanced hard water and the surrounds, not aggressive water (S2); the pool waits three weeks to fill (BS 5385-4, S3).
+10. **Coda: the movement joint**. Plaque: flexible sealant (silicone, polysulphide, polyurethane) at perimeters, changes of plane and structural joints, to BS 5385-4 (S2). "Not grout. But grout could not do its work without it."
+
+**The title wall's basis:** the line is an opinion, held reverently, and needs no source. The introduction's fact is computed in the research: a 25 × 12.5 × 1.5 m tank is 425 m² of tile, 13.3 m of joint per m² of 150 mm tiles, about 5.7 km of grout joint ("nearly six kilometres" holds). The standards to name on the wall: BS EN 13888 (classes) and BS 5385-4 (pools).
+
+### Research conflicts
+
+- Plinth 1 says lime was "laid in thick joints"; Victorian glazed tiling was usually close-jointed (indicative). Suggest dropping "thick".
+- Plinth 2 says "Portland cement (patented 1824)": true of the name and patent, but Aspdin's product was not modern Portland cement; the plaque should say the cement that resembles today's dates from the 1840s.
+- Plinth 8 says epoxy is "from about the 1960s"; epoxy emulsion grouts date from the 1940s (S5). Suggest "from the 1940s, in pools from about the 1960s (indicative)".
+
 ## The schematic and the mimic
 
 None: no plant, no simulation, no controls. The hall is set decoration (CLAUDE.md allows static set decoration for what is not plant).

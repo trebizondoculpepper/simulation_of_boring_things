@@ -112,3 +112,47 @@ As 107a: every component within mission 094's `DEFAULT_BUDGET`, nothing added to
 1. **The controller:** the DC-1 pair (hands-on, period, single-purpose: recommended here, and the CX-7 touch screen in the finale, Hall 13), or the CX-7 here?
 2. **The faults' buttons:** a fault pedestal the visitor presses (recommended: the museum shows what it is doing), or faults that happen by themselves at random times?
 3. **Real chemical stores** (IBCs on spill pallets, `createIbcOnSpillPallet`) drawn round the ideal sources, or the ideal sources shown as they are?
+
+## Research: what the hall holds
+
+Researched 2026-10-28 from the repo's notes (`doc/research/plant-products-chemicals-dosing.md`, `doc/research/pool-dosing-and-water-chemistry.md`, `doc/research/water-sampling.md`, `doc/research/water-chemistry-models.md`) and a web check of PWTAG guidance. Figures from the game's own tested model are marked _(model)_; anything not checked against a primary source is marked _(indicative)_. In-game makers are the game's own (Grundflow, Chlorella, Kessler-Moody, Penfold); the real product each is after is named so the builder can match size and behaviour.
+
+### The target numbers (the hall's green bands)
+
+- **Free chlorine:** PWTAG's code of practice gives free chlorine "1 mg/l or below" where treatment is good, with an absolute minimum of 0.5 mg/l at pH 7.2; busy or warm pools run higher, commonly up to about 1.5 to 2 mg/l _(indicative for the upper figure)_. The hall's setpoint of 1.3 mg/l and alarms at 0.8 and 2.5 mg/l sit within this. QI1's green band: 0.8 to 2.0 mg/l.
+- **Combined chlorine:** less than half the free chlorine, ideally as near zero as possible, and never more than 1 mg/l whatever the free chlorine (PWTAG). TK1's comparator shows combined as DPD 3 minus DPD 1; its plaque gives "below 0.5, and below half the free".
+- **pH:** 7.2 to 7.4 is the target with chlorine (PWTAG); the controller's 7.0 and 7.6 alarms are the outer limits. QI2's green band: 7.2 to 7.4, amber 7.0 to 7.2 and 7.4 to 7.6.
+- **Why pH matters:** the active HOCl share of free chlorine falls as pH rises (pKa about 7.5 near 28 °C _(indicative)_): the model's 0.571 at 7.3 and 0.406 at 7.64 _(model)_ go on the pH plaque as a simple bar ("at 7.3, more than half is the strong kind; at 7.6, less than half").
+- **Bather load:** PWTAG's design figure is about one bather per 2.2 m² of water 1 to 1.5 m deep _(indicative)_, so the 312.5 m² pool holds about 140 at once; the bench's 600 swimmers a day is a modest public day. SWIMMERS dial positions: CLOSED (0), QUIET (about 20 an hour), NORMAL (the bench's 600 a day, shaped by the hour), CROWD (100 in the next hour).
+- **Daily checks:** PWTAG asks for controller readings to be checked against a manual DPD test daily; recalibrate pH if the difference exceeds 0.2, chlorine if over 15 % (`pool-dosing-and-water-chemistry.md`). Pool tests at least three times a day while open.
+
+### The exhibits, station by station
+
+1. **The swimmers (BA1, SWIMMERS dial).** A big four-position rotary switch on a pedestal (Penfold-built, mark top right), a lit counter "SWIMMERS THIS HOUR" (seven-segment) and a small diagram of what one swimmer brings: 3.7 g of chlorine demand, about 25 mg of nitrogen (sweat and urine), 1 g of dissolved solids (`BATHER`, _(model)_). Interaction: turn the dial; the counter and the mimic's swimmers' rate follow.
+2. **The sample (SC1, after the ProMinent DGMa bypass armature: clear modular cells, PG 13.5 probes, float flow monitor).** The visitor sees water trickling through a clear cell, the flow float riding at 40 l/h on its scale (0 to 60 l/h), FS1's green lamp, the two probe heads, the sample tap SP1. Interaction: the isolating valve M3-SC1-V1 (Try it 6) and the needle valve (sample flow 20 to 60 l/h; below 20 the lamp goes out).
+3. **The controller (DC1, the Chlorella DC-1 pair, after a ProMinent DULCOMETER D1C-period single-parameter controller with segment displays; the DEPOLOX Pool Compact is the modern alternative, PI on chlorine, P on pH).** Two units side by side: each a red LED reading (Cl 1.30 mg/l; pH 7.30), a bar of output %, ALARM and DOSE lamps, keys to view setpoint and band. The plaque's figures: setpoint 1.3, band 0.5, integral 6 h; pH 7.3, band 0.3; sample-flow loss stops dosing after 120 s; two hours at 100 % latches off. Interaction: view the settings (not change them; question below), RESET a latch.
+4. **The chemistry board (QI1, QI2 and the chart recorder).** Two 144 mm moving-coil meters (Kessler-Moody, after a period DIN 144 panel meter) scaled 0 to 3 mg/l and pH 6.5 to 8.0 with the green bands above, and a 24-hour circular chart recorder (after a Chessell/Eurotherm-style circular recorder _(indicative)_), two pens: red chlorine, blue pH. Read only.
+5. **The pumps (DP1, DP2).** DP1, the Grundflow DMX 1602 (2.1 l/h, solenoid, 180 strokes/min, after the ProMinent gamma/ X or Grundfos DDE class; the name follows the game's DMX family, see conflicts): the stroke lamp blinks with each stroke; at 100 % output 180 a minute, so each stroke is about 0.19 ml (2.1 l/h ÷ 10 800 strokes/h) _(derived)_; at the average demand of 0.94 l/h about 45 % output. DP2, the Grundflow DDS 7.5-16 (after the Grundfos SMART Digital DDA 7.5-16: 7.5 l/h at up to 16 bar, stepper motor, AutoFlowAdapt deaeration). Each with its display (output %, l/h, `Er F` on flow fault), bleed valve, injection valve (after the ProMinent PVT spring-loaded injection valve, PVDF, R½). Interaction: watch, bleed, acknowledge.
+6. **The day tanks and stores (DT1, DT2, CS1, CS2).** Two 60 l bunded polyethylene tanks with sight-tube level gauges in litres, hazard labels (CLP: corrosive; hypochlorite also "contact with acids liberates toxic gas", EUH031), and the two ideal stores behind. Hypochlorite as delivered in the UK is about 14 to 15 % available chlorine (140 to 150 g/l) and loses strength in store, faster when warm _(indicative)_; hence the weak-delivery fault. Plaque: "Never let acid and hypochlorite meet: they make chlorine gas. That is why they have separate tanks, pumps, colours and injection points." Interaction: the push-to-fill valves.
+7. **The test kit (TK1, after the Palintest comparator with DPD 1, DPD 3 and phenol red tablets; the Palintest Lumiso Pooltest photometer is the modern equivalent).** A lectern with the comparator, its three colour discs (DPD free chlorine 0 to 3 mg/l in steps such as 0.2, 0.5, 1.0, 1.5, 2.0, 3.0; phenol red pH 6.8 to 8.2 in 0.2 steps _(indicative steps)_), and PRESS TO TEST: the tube colours fill (pale to deep magenta for chlorine, yellow to red for pH), the matching disc segment lights, and a ticket-style readout gives free, total, combined and pH. Plaque: how to do it for real (10 ml sample, crush tablet, read within seconds for DPD 1, two minutes for DPD 3).
+8. **When it goes wrong (the fault pedestal).** Two mushroom-headed buttons with lamps, "AIR IN THE PUMP" and "WEAK DELIVERY", as in Try it 4 and 5; each lamp stays lit while its fault is active, and RESET SIMULATION clears them.
+
+### Facts for the plaques (checked)
+
+- Combined chlorine (chloramines) causes the "pool smell" and sore eyes; PWTAG wants it below half the free and never above 1 mg/l.
+- pH 7.2 to 7.4 is the target; above it chlorine works less well, below it the water becomes corrosive and stings.
+- Readings are checked by hand against the controller every day; a probe is never trusted unchecked.
+- Hypochlorite raises pH (it is made with caustic soda); acid brings it back.
+
+### Research conflicts
+
+- **"DMX" for a solenoid pump.** Grundfos's real DMX is a motor-driven diaphragm pump (the small solenoid family is DDE/DME, earlier DMI); the game's Grundflow DMX 1602 (2.1 l/h, solenoid) is the game's own family name already in `DIAPHRAGM_PUMPS`, so no change, but the plaque should not call it "a DMX like Grundfos's".
+- **"The smell means too little chlorine".** The entrance panel's fact is a popular simplification: the smell is chloramines (true), which come from too much pollution for the chlorine and treatment (too few swimmers showering, too little fresh water, too little chlorine at times). Suggested wording: "it means the water has more dirt than its chlorine can deal with, not too much chlorine."
+- **Free chlorine upper level.** PWTAG's 2017 wording prefers 1 mg/l or below where treatment is good; the hall's 1.3 setpoint is acceptable for a busy, warm pool without UV, but the plaque should say "about 1 to 1.5 mg/l" rather than imply 1.3 is the standard.
+
+### Sources
+
+- PWTAG code of practice, as reproduced by ALS (2017): https://www.alsenvironmental.co.uk/media-uk/pdf/datasheets/micro-lp/als_micro_pool-water-treatment-advisory-group-code-of-practice_2017.pdf
+- PWTAG technical note on pH and chlorine (TN52): https://www.pwtag.org/lowering-ph-no-problem-tn52/
+- Swim England pool guidance: https://www.swimming.org/library/documents/5231/download
+- Product sources (ProMinent DGMa, DULCOMARIN, gamma/ X, PVT; Grundfos DDA 7.5-16; Palintest Lumiso; Evoqua DEPOLOX Pool Compact manual) as listed in `doc/research/plant-products-chemicals-dosing.md` and `doc/research/pool-dosing-and-water-chemistry.md`.

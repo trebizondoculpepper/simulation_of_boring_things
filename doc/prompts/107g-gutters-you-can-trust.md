@@ -85,3 +85,24 @@ Static: every section merged by material (tile, grout, concrete, grating, paint)
 1. **The sections:** the seven above (with the roll-out gutter if the sources support it), or fewer and larger?
 2. **The water:** painted, as chosen, or the dev17 sections' style if they differ?
 3. **Racing:** a note on wave-quelling (deck-level edges and lane ropes) on the timeline, or a section of its own?
+
+## Research: what the hall holds
+
+Researched 2026-10-28 into `doc/research/pool-edges-history.md` (sources S1 to S15 there). Dimensions marked indicative are drawing figures, not quoted from a standard; plaques must not state them as fact.
+
+1. **Before the plant: fill and empty** (plaque only). Facts: before the Ministry of Health's 1925 report on swimming-bath water, most British baths were emptied and refilled weekly, dirtier each day [S1]; Liverpool filtered continuously from 1909 [S1]; filtration and chlorination spread in the late 1920s and 1930s [S1].
+2. **Freeboard pool with a scum channel** (1930s on; plaque "by the 1930s"). Profile (indicative): water 200 mm below deck; glazed channel 150 mm wide × 120 mm deep in the wall, lip at water line, under a 60 mm overhanging coping handhold. Return: inlets at the deep end, surface to the channel (often to waste: indicative), draw-off at the shallow end. Plaque facts: West Bromwich's 1934 pool had a tiled scum channel and a new filter plant [S2]; at St Annes the filtered water came in at the bottom and pushed the surface into the channel [S3]; gutters flooded in surges and washed scum back [S15].
+3. **Roll-out gutter**: no British or European source; timeline note only ("American practice", indicative) unless the owner wants it kept.
+4. **Skimmer pool** (mid-century, private pools; date indicative). Profile: water 150 mm below the coping; skimmer mouth 300 × 150 mm with floating weir and basket [S8, S11]; main drain. Return: wall inlets. Plaque: few skimmers take less of the surface than a weir all round [S8].
+5. **Deck-level: Finnish** — sloping beach-like edge with handhold, water raised to it, covered channel with coved gutter tile, edge tiles 150 and 119 mm [S5, S6, S7]; low wave rebound. **Zurich** — a raised overflow edge that is itself the handhold, channel behind with coved gutter tile [S5, S7]. **Wiesbaden** — one large gutter stone combining handhold and channel at the pool's edge, under a cover grating [S5]. Return for all: gravity to a balance tank, pumped through filters, back by floor inlets [S8, S9]. Channel sizes indicative (about 200 mm wide × 150 mm deep). Dates not sourced: plaque says "late twentieth century" or nothing. The existing `deck-overflow` profile (tiled nosing, slope, ceramic grating) best matches the **Wiesbaden Style** (ceramic cover grating, [S5]): indicative.
+6. **Grated channel and balance tank** (contemporary). Profile: water flush with deck, slot/grating, gutter below [S8]. Balance tank cut-away: top level just below the channel's base, surge at 80 litres a bather for half the bathing load, minimum level for backwash without the pumps drawing air [S9, S10]. Plaque: "ten swimmers push out about 750 litres" [S8].
+7. **Infinity edge** coda: John Lautner's Silvertop, Los Angeles, late 1950s (dates vary 1956–63) [S12, S13, S14]; popular from the late 1980s [S14]; a deck-level overflow on one side with a balance tank.
+
+**Timeline notes (sourced):** 1909 Liverpool's first continuous filter plant; 1925 Ministry of Health report; 1931–36 Liverpool installs 17 plants; 1934 West Bromwich purification plant and scum channel; late 1940s breakpoint chlorination [S1]; late 1950s Silvertop; 1971 "Diamonds Are Forever" vanishing edge; late 1980s infinity edges spread; PWTAG Technical Note 32 on balance tanks [S10]. Still unsourced (leave off): the UK surface draw-off percentage for the entrance panel, FINA racing-edge rules, the deck-level systems' dates.
+
+### Research conflicts
+
+- **dev17 `scum-trough` dated "1960s"** (`edge-profiles.ts`, and the room's header comment): wrong as a date of origin; scum channels were in British baths by 1934 [S2, S3]. The brief's "1920s–30s, and for decades after" stands, safest as "1930s".
+- **dev17 `rollout` dated "1940s"**: unverified; no source puts it in British or European practice.
+- **dev17 `deck-overflow` dated "1980s"**: unsourced; neither confirmed nor refuted.
+- **Entrance panel fact** (share of circulation off the surface): not found for the UK; US codes range 50–80 %, not usable for a British pool.

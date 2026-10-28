@@ -117,6 +117,51 @@ None.
 
 Static: photographs and clippings as textures drawn once (sized for legibility at two metres, not more: mind the texture memory of a dozen large frames), frames and case merged by material, picture lights as a few spot lights or baked pools of light; within `DEFAULT_BUDGET`; at least 60 fps on medium and 50 on high through an archway.
 
+## Research: what the hall holds
+
+Researched 2026-10-28 into `doc/research/pool-chlorine-releases.md`, which marks each fact verified or indicative. Everything below that tells the story is fiction; everything stated as real-world fact comes from that note.
+
+### The opening panel
+
+As above. The memorable fact is reworded to what a source actually says: "Accidentally adding acid to hypochlorite is the commonest cause of chlorine release incidents in pool buildings" (HSE inspector, 2023; verified). "Usually at a delivery" is not in that source and is dropped from the quoted line; the panel may add in its own voice "Deliveries are one of the moments it can happen."
+
+### The six chapters (fictional; each plaque: time, what went wrong, the real lesson)
+
+1. **The delivery, 07:42.** Photograph: a tanker at the loading bay, the open fill recess. Plaque: the tanker came before the duty technician; nobody met it. Lesson: every delivery is met by a trained member of staff who checks the delivery note against the tank (indicative as PWTAG wording; the Frankfurt and CSB cases show the failure). Clipping: "GAS ALERT AT THE BATHS".
+2. **The mix-up, 07:51.** Photograph: a gloved hand coupling a hose to one of two identical fittings, labels faded. Plaque: either hose fitted either point. Lesson: fill points must be impossible to confuse (Frankfurt, 2007: a separate hypochlorite pipe with left-hand threads; verified). Clipping: "WHO CHECKED THE TANKER?".
+3. **The gas, 07:58.** Photograph: the plant room, a faint haze at the tank vent, a gas detector with its cable hanging. Plaque: the detector had been disconnected (fictional detail, not drawn from any cited case). Lesson: gas detection in plant room and stores, alarmed, with ventilation. Clipping: "'IT CAME UP LIKE A GREEN FOG'".
+4. **The evacuation, 08:05.** Photograph: the car park, foil blankets, gas-tight suits. Plaque: early swimmers and staff out; a handful treated for breathing difficulties; nobody died. Lesson: a written, rehearsed evacuation plan. The real scale for comparison may be given unnamed: "In a real incident in 2022, about 200 people were evacuated and 29 taken to hospital" (verified; do not name the venue).
+5. **The inquiry, weeks later.** Photograph: a closed sign on the doors. Plaque: the inspectors found no risk assessment for deliveries, untrained staff and a contractor unchecked; a fictional fine "of £40,000" (1997 money, of the order of real fines; it must not echo a real case's figure). Lesson: competence and risk assessment, as in the real Basingstoke prosecution (verified, unnamed on the panel or named only as "a 2021 case prosecuted by HSE"). Clipping: "BATHS SHUT FOR SIX WEEKS".
+6. **The changes.** Photograph: the redesigned fill cabinet. Plaque: separate lockable cabinets, different couplings, labels, a met delivery, gas detection, separate bunded stores. Clipping: "NEW SAFETY RULES AFTER BATHS SCARE".
+
+### The central case
+
+- **Before (1997):** two identical 2-inch camlock female ports (cam arms and dust caps) side by side in an open steel recess, one acid, one hypochlorite, their paper labels sun-faded to blank, with one hose end lying between them. Plaque: "Either hose fitted either point."
+- **After (now):** `createFillCabinet` as specified: hypochlorite a 2-inch camlock (EN 14420-7, indicative), acid a 1½-inch polypropylene Guillemin (NF E 29-572, symmetrical, quarter-turn; indicative), each in its own lockable compartment, colour-coded and labelled with CLP hazard pictograms (corrosive; for hypochlorite also environment), matching hose ends beside each. A small real-world note: "After a fatal mix-up at a German chemical depot in 2007, the hypochlorite fill was given left-hand threads so no other hose could fit, and every fill point was locked and labelled" (verified). Plaque: "The fix: make the mistake impossible."
+
+### The sponsor's panel and lessons (each traced to the research note)
+
+1. Accidentally adding acid to hypochlorite is the commonest cause of chlorine releases in pool buildings (HSE; verified).
+2. Fill points cannot be confused: a different coupling for each chemical, labelled and locked (Frankfurt; verified).
+3. Every delivery is met by trained staff, who check the note and the tank before anything is connected (indicative, PWTAG).
+4. Only trained, competent people handle pool chemicals (Basingstoke; verified).
+5. Acid and hypochlorite are stored apart, each in its own bund (indicative, PWTAG).
+6. Chlorine gas detection, alarmed, with ventilation (indicative).
+7. A written, rehearsed emergency plan (indicative).
+
+Then the dramatisation line. No real person, firm, newspaper or venue is named; Chlorella and Pellingford remain fictional (a name check for Pellingford is still to do).
+
+### Sources
+
+HSE press release, Circle Health Group, 2023: https://press.hse.gov.uk/?p=5101 · PWTAG on London Aquatics Centre 2022: https://www.pwtag.org/olympic-park-major-gas-leak-london-aquatic-centre/ · ARIA 35830, Frankfurt 2007: https://www.aria.developpement-durable.gouv.fr/accident/35830_en/?lang=en · HSE HSG179 page: https://www.hse.gov.uk/pubns/books/hsg179.htm · FECC coupling guideline: https://www.fecc.org/wp-content/uploads/2020/01/121119-Guidelines-for-Couplings.pdf · the rest in the research note.
+
+### Research conflicts
+
+- **HSG179 as a source for the lessons:** the current HSG179 (4th edition, 2018, updated 2024) says it no longer covers pool water treatment and defers to PWTAG; the brief's "cite HSG179 from its text" for delivery lessons cannot be met from the current edition. Cite PWTAG (once its text is read) and HSE's 2023 statement instead.
+- **"Usually at a delivery"** is not supported by the HSE quote; reworded above.
+- **Wells 1989, Hednesford, Sheffield, Edinburgh, St Andrews:** not re-verified (the Hong Kong annex is now 404); kept in the research note as indicative and not used on any panel.
+- **London 2022:** the reports give no chemicals or finding; the brief's line is correct but the panel must not imply a cause.
+
 ## Open questions for the owner (one at a time, in this order)
 
 1. **The hall's title:** "Never again: putting safety first" as its title, with "The Hindenburg of aquatics centres" kept as our working description, or a title of its own on the wall (for instance "The Pellingford Incident")?
