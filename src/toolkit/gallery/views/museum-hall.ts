@@ -243,9 +243,9 @@ function wallTileTexture() {
 }
 
 /**
- * Hall 0's floor, painted once: tiled deck round a painted pool, white
- * with four faint lane lines, for the projector overhead to throw its
- * caustics on (the owner, 2026-10-28), its coping and the gutter's grille
+ * Hall 0's floor, painted once: tiled deck round a painted pool, plain
+ * white (its lane lines are in the projector's picture), for the projector
+ * overhead to throw its caustics on (the owner, 2026-10-28), its coping and the gutter's grille
  * all paint ("a fake pool, a dry exhibit"). Over the room's wall lines.
  */
 export function paintedFloorTexture(w: number, d: number, px = 110) {
@@ -298,14 +298,6 @@ export function paintedFloorTexture(w: number, d: number, px = 110) {
     g.addColorStop(1, '#eef2f2');
     c.fillStyle = g;
     c.fillRect(x0, y0, pw, pd);
-    // The lane lines, with their T ends, pale grey on the white.
-    c.fillStyle = 'rgba(70, 90, 110, 0.22)';
-    for (let k = 1; k <= PAINTED_POOL.lanes; k++) {
-      const y = y0 + (k * pd) / (PAINTED_POOL.lanes + 1);
-      c.fillRect(x0 + 1.5 * px, y - 0.1 * px, pw - 3 * px, 0.2 * px);
-      for (const end of [x0 + 1.5 * px, x0 + pw - 1.5 * px - 0.2 * px])
-        c.fillRect(end, y - 0.5 * px, 0.2 * px, 1.0 * px);
-    }
   });
 }
 
@@ -1237,7 +1229,7 @@ function onWall(mesh: Mesh, wall: HallWall, u: number, y: number, off = 0.015) {
   mesh.rotation.y = Math.atan2(n[0], n[1]);
 }
 
-/** How far Hall 0's posters stand off their walls, on the cove light behind them (the owner, 2026-10-28). */
+/** How far Hall 0's title wall stands off their walls, on the cove light behind them (the owner, 2026-10-28). */
 export const POSTER_STANDOFF = 0.05;
 
 /**
@@ -1290,7 +1282,7 @@ function coveLit(
 export function hall0PosterGlowGeometry(): BufferGeometry[] {
   const south = hallWalls('museum0').find((w) => w.side === 'south')!;
   const [w, h, y] = [10.4, 3.4, 2.45];
-  const band = 0.12;
+  const band = 0.05;
   const out: BufferGeometry[] = [];
   for (const [u, v, sw, sh] of [
     [0, h / 2 + band / 2, w + 2 * band, band],
@@ -1648,7 +1640,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
       group.add(banner);
     }
     // The projector overhead, throwing caustics on the white pool.
-    projector = createCausticsProjector(h, PAINTED_POOL);
+    projector = createCausticsProjector(h, PAINTED_POOL, PAINTED_POOL.lanes);
     group.add(projector.group);
   }
 
@@ -1729,7 +1721,9 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
       240,
     );
     const lift = a.kind === 'door' ? 0.55 : 0.95;
-    const off = welcome ? POSTER_STANDOFF : 0.015;
+    // Flat on the wall, no cove glow: only the title wall has that (the
+    // owner, 2026-10-28); lit a little from within to read in the dim hall.
+    const off = 0.015;
     sign.position.set(
       a.at.x + a.into[0] * (t / 2 + off),
       a.top + lift,
@@ -1737,13 +1731,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     );
     sign.rotation.y = Math.atan2(a.into[0], a.into[1]);
     if (welcome)
-      coveLit(
-        sign,
-        a.kind === 'door' ? 3.6 : 5.2,
-        a.kind === 'door' ? 0.8 : 1.1,
-        textures,
-        disposables,
-      );
+      (sign.material as MeshStandardMaterial).emissiveIntensity = 0.55;
     plan.add(sign);
   }
 
