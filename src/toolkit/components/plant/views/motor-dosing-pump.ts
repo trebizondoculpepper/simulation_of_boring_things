@@ -355,7 +355,9 @@ export function createMotorDosingPump(
   );
 
   // The control module on the motor: a grey box, its membrane fascia.
-  const cm = { x: 0.085, y: 0.2, w: 0.17, h: 0.11, d: 0.1 };
+  // Clear of the gearbox to its left (its right face at x 0.01), so the
+  // module and its fascia meet nothing (the owner, 2026-10-28).
+  const cm = { x: 0.094, y: 0.2, w: 0.165, h: 0.11, d: 0.1 };
   const module = new Mesh(
     new RoundedBoxGeometry(cm.w, cm.h, cm.d, 3, 0.01),
     t.paint('#c9c6bd', 0.55),
@@ -363,8 +365,20 @@ export function createMotorDosingPump(
   module.position.set(cm.x, cm.y, 0.015);
   group.add(module);
   const face = 0.015 + cm.d / 2 + 0.001;
+  // The fascia and all it carries, scaled 95 % about its middle so it sits
+  // wholly on the module's flat face, clear of the gearbox at its bottom
+  // left (the owner, 2026-10-28).
+  const FASCIA_SCALE = 0.95;
+  const fascia = new Group();
+  fascia.position.set(
+    cm.x * (1 - FASCIA_SCALE),
+    cm.y * (1 - FASCIA_SCALE),
+    face * (1 - FASCIA_SCALE),
+  );
+  fascia.scale.setScalar(FASCIA_SCALE);
+  group.add(fascia);
   t.box(
-    group,
+    fascia,
     maker.paint.main,
     cm.w - 0.01,
     cm.h - 0.01,
@@ -374,7 +388,7 @@ export function createMotorDosingPump(
     face,
   );
   t.box(
-    group,
+    fascia,
     t.paint('#2a2b2d', 0.35),
     cm.w - 0.02,
     cm.h - 0.02,
@@ -387,7 +401,7 @@ export function createMotorDosingPump(
   const readout = createSevenSegment(kit, 4, { digitHeight: 0.012 });
   readout.group.position.set(cm.x - 0.03, cm.y + 0.024, front);
   readout.group.userData.live = true;
-  group.add(readout.group);
+  fascia.add(readout.group);
   const ink = '#d8d4cc';
   const lamp = (
     colour: string,
@@ -396,10 +410,10 @@ export function createMotorDosingPump(
     name: string,
     right = true,
   ) => {
-    const led = t.led(group, colour, 0.0028, x, y, front + 0.001);
+    const led = t.led(fascia, colour, 0.0028, x, y, front + 0.001);
     led.mesh.userData.live = true;
     f.label(
-      group,
+      fascia,
       name,
       // Set beside its lamp by its width (about 3.2 mm a letter at this size).
       x + (right ? 1 : -1) * (0.0045 + name.length * 0.0016),
@@ -422,7 +436,7 @@ export function createMotorDosingPump(
   const man = lamp('#ffcc33', cm.x - 0.06, cm.y - 0.008, 'MAN');
   const ext = lamp('#ffcc33', cm.x - 0.03, cm.y - 0.008, 'EXT');
   f.label(
-    group,
+    fascia,
     'Er F FLOW · Er L LEVEL · Er d DIAPH.',
     cm.x - 0.03,
     cm.y + 0.0395,
@@ -474,8 +488,8 @@ export function createMotorDosingPump(
       w: i === 0 ? 0.02 : 0.014,
     });
     b.object.position.set(x, keyY, front - 0.0004);
-    group.add(b.object);
-    keyLegend(kit, group, mark, x, keyY, front + 0.0005);
+    fascia.add(b.object);
+    keyLegend(kit, fascia, mark, x, keyY, front + 0.0005);
     add(b);
   });
 
