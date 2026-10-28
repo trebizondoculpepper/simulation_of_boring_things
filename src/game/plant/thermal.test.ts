@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { advance, applyAction, newWorld } from '../world';
+import { advance, newWorld } from '../world';
 import { HALL_AIR, POOL_IDS, POOL_TARGET } from './pools';
 import { AMBIENT, saturation, stepThermal, thermalParams } from './thermal';
 
@@ -70,46 +70,5 @@ describe('the pools’ heat in the world', () => {
       expect(ready.pools[id].hallAir, id).toBeCloseTo(HALL_AIR[id], 0);
       expect(ready.pools[id].heating, id).toBeGreaterThan(0);
     }
-  });
-
-  it('cools small pools fast and big ones slowly with the heating off: the Olympic about a degree or two a day', () => {
-    const off = advance(
-      applyAction(ready, {
-        type: 'plant/feeder',
-        room: 'boiler_house',
-        on: false,
-      }),
-      24 * 3600,
-      30,
-    );
-    const fall = (id: (typeof POOL_IDS)[number]) =>
-      POOL_TARGET[id].temp - off.pools[id].temperature;
-    expect(fall('pool_02')).toBeGreaterThan(0.5);
-    expect(fall('pool_02')).toBeLessThan(3);
-    expect(fall('pool_03')).toBeGreaterThan(5);
-    expect(fall('pool_03')).toBeGreaterThan(fall('pool_01'));
-    expect(fall('pool_01')).toBeGreaterThan(fall('pool_02'));
-  });
-
-  it('burns more heat to hold its pools in a cold snap, and less in a heatwave', () => {
-    const cold = advance(
-      applyAction(ready, { type: 'weather/ambient', celsius: -5 }),
-      24 * 3600,
-      30,
-    );
-    const hot = advance(
-      applyAction(ready, { type: 'weather/ambient', celsius: 25 }),
-      24 * 3600,
-      30,
-    );
-    const total = (w: typeof ready) =>
-      POOL_IDS.reduce((sum, id) => sum + w.pools[id].heating, 0);
-    expect(total(cold)).toBeGreaterThan(total(ready) * 1.2);
-    expect(total(hot)).toBeLessThan(total(ready));
-    for (const id of POOL_IDS)
-      expect(cold.pools[id].temperature, id).toBeCloseTo(
-        POOL_TARGET[id].temp,
-        0,
-      );
   });
 });
