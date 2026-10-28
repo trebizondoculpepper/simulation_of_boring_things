@@ -757,6 +757,7 @@ export function hallSolids(
     });
   }
   const p = comingSoonPanel(id);
+  if (!p) return out;
   const across = Math.abs(Math.sin(p.yaw)) > 0.5;
   const pw = PANEL.w / 2 + 0.1;
   out.push(
@@ -803,9 +804,19 @@ export function hallColumns(id: MuseumHallId): { x: number; z: number }[] {
 /** A gallery bench: its width and its length (along the hall). */
 export const BENCH = { w: 0.5, l: 2.0, h: 0.45 } as const;
 
+/**
+ * The halls whose exhibits are built (107-0's hook; each by its
+ * sub-prompt): their floor is the exhibit's, so they have no benches and
+ * no "coming soon" panel.
+ */
+export const EXHIBIT_HALLS: ReadonlySet<MuseumHallId> = new Set(['museum1']);
+
+/** A hall's room code, the first part of its exhibit's tags: M1, M2 … (107-0: the hall's number, not its room id). */
+export const hallRoomCode = (id: MuseumHallId) => `M${hallNumber(id)}`;
+
 /** Two benches on the street side's column line, between the columns, along the hall. */
 export function hallBenches(id: MuseumHallId): { x: number; z: number }[] {
-  if (id === 'museum0') return [];
+  if (id === 'museum0' || EXHIBIT_HALLS.has(id)) return [];
   const { width } = hallAxes(id);
   return [hallPoint(id, 3, -width / 4), hallPoint(id, -3, -width / 4)];
 }
@@ -813,6 +824,7 @@ export function hallBenches(id: MuseumHallId): { x: number; z: number }[] {
 /** The "coming soon" panel: free-standing on the courtyard side's column line, facing back along the route, the way visitors come. */
 export const PANEL = { w: 2.4, h: 2.3 } as const;
 export function comingSoonPanel(id: MuseumHallId) {
+  if (EXHIBIT_HALLS.has(id)) return null;
   const { width, along } = hallAxes(id);
   if (id === 'museum0') {
     // The welcome panel, by the doorway, facing back into the room.

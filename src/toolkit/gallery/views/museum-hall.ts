@@ -1507,8 +1507,11 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
         frames.push(leg);
       }
     }
-    group.add(new Mesh(mergeGeometries(benchParts), m.oak));
-    group.add(new Mesh(mergeGeometries(frames), m.steel));
+    // None in a hall whose floor is its exhibit's (107-0).
+    if (benchParts.length) {
+      group.add(new Mesh(mergeGeometries(benchParts), m.oak));
+      group.add(new Mesh(mergeGeometries(frames), m.steel));
+    }
     for (const g of [...benchParts, ...frames]) g.dispose();
   } else {
     // Hall 0: a tiled ceiling, its fluorescent strips, and the fake ladder.
@@ -1576,37 +1579,40 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     }
   }
 
-  // The panel: "coming soon" in an exhibit hall, the welcome in Hall 0.
+  // The panel: "coming soon" in an exhibit hall still empty, the welcome
+  // in Hall 0; none where the exhibit is built (107-0).
   const p = comingSoonPanel(id);
-  const panel = new Group();
-  panel.position.set(p.x, 0, p.z);
-  panel.rotation.y = p.yaw;
-  const boardMaterial = new MeshStandardMaterial({
-    color: BRAND.colours.main,
-    roughness: 0.7,
-  });
-  disposables.push(boardMaterial);
-  const board = new Mesh(
-    new BoxGeometry(PANEL.w, PANEL.h, 0.08),
-    boardMaterial,
-  );
-  board.position.y = 0.15 + PANEL.h / 2;
-  panel.add(board);
-  const face = signMesh(
-    PANEL.w - 0.16,
-    PANEL.h - 0.16,
-    welcome ? paintWelcome : paintComingSoon(id),
-    textures,
-    400,
-  );
-  face.position.set(0, board.position.y, 0.048);
-  panel.add(face);
-  for (const side of [-1, 1]) {
-    const foot = new Mesh(new BoxGeometry(0.08, 0.15, 0.6), m.steel);
-    foot.position.set(side * (PANEL.w / 2 - 0.3), 0.075, 0);
-    panel.add(foot);
+  if (p) {
+    const panel = new Group();
+    panel.position.set(p.x, 0, p.z);
+    panel.rotation.y = p.yaw;
+    const boardMaterial = new MeshStandardMaterial({
+      color: BRAND.colours.main,
+      roughness: 0.7,
+    });
+    disposables.push(boardMaterial);
+    const board = new Mesh(
+      new BoxGeometry(PANEL.w, PANEL.h, 0.08),
+      boardMaterial,
+    );
+    board.position.y = 0.15 + PANEL.h / 2;
+    panel.add(board);
+    const face = signMesh(
+      PANEL.w - 0.16,
+      PANEL.h - 0.16,
+      welcome ? paintWelcome : paintComingSoon(id),
+      textures,
+      400,
+    );
+    face.position.set(0, board.position.y, 0.048);
+    panel.add(face);
+    for (const side of [-1, 1]) {
+      const foot = new Mesh(new BoxGeometry(0.08, 0.15, 0.6), m.steel);
+      foot.position.set(side * (PANEL.w / 2 - 0.3), 0.075, 0);
+      panel.add(foot);
+    }
+    group.add(panel);
   }
-  group.add(panel);
 
   // Signs on the street wall: Hall 0's title wall; an exhibit's own title; Hall 9's end.
   const walls = hallWalls(id);

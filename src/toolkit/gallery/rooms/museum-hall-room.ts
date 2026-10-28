@@ -7,11 +7,12 @@ import {
   HemisphereLight,
   PerspectiveCamera,
   PointLight,
+  Raycaster,
   Scene,
   Vector2,
   WebGLRenderTarget,
 } from 'three';
-import type { Material } from 'three';
+import type { Group, Material, Object3D } from 'three';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -50,6 +51,17 @@ import {
   createRingShells,
 } from '../views/museum-empty-hall';
 import { safetySolids } from '../logic/museum-safety';
+import {
+  createPanelKit,
+  disposeKit,
+} from '../../components/core/views/eighties-controls';
+import { knobDirection } from '../../controls/input/knob-turning';
+import { touchingAt } from '../../controls/input/touch-point';
+import { partAudio } from '../../components/core/audio/part-audio';
+import { createInspector } from '../views/inspect-pick';
+import { localNow } from '../logic/museum-time';
+import { HALL_EXHIBITS } from './museum/exhibits';
+import type { HallExhibit } from './museum/exhibits';
 
 /**
  * The museum's ambient occlusion samples per pixel, at High (the owner,
@@ -111,6 +123,30 @@ export function startMuseumHallRoom(
     }),
   );
   let peekFrom: MuseumHallId | null = null;
+  // The hall's exhibit (107-0), loaded with it; and each neighbour's copy's,
+  // drawn in its reset state and never stepped (rule 1: a hall's time
+  // starts when the visitor crosses in).
+  const kit = createPanelKit();
+  let exhibit: HallExhibit | null = null;
+  const copyExhibits: HallExhibit[] = [];
+  let disposed = false;
+  const loadExhibit = (n: MuseumHallId, into: Group) =>
+    HALL_EXHIBITS[n]?.().then((m) => {
+      if (disposed) return null;
+      const built = m.buildHallExhibit(kit);
+      built.reset(localNow());
+      // Drawn once, in its reset state.
+      built.update?.(0);
+      into.add(built.object);
+      return built;
+    });
+  void loadExhibit(id, hall.group)?.then((built) => {
+    if (built) exhibit = built;
+  });
+  for (const [n, copy] of copies)
+    void loadExhibit(n, copy.group)?.then((built) => {
+      if (built) copyExhibits.push(built);
+    });
   // Each copy's fade (`neighbourFade`), and its materials, gathered once:
   // while part faded in, they are drawn see-through over its empty hall.
   const fade = new Map<MuseumHallId, number>();
@@ -237,6 +273,25 @@ export function startMuseumHallRoom(
   // The fire point boards and the staff door, stood against the walls.
   const fittings = safetySolids(id);
   const start = startOf(id);
+  // Working the exhibit: whatever part of it is aimed at, within reach,
+  // through the control scheme (`knob-turning`, `touch-point`).
+  const raycaster = new Raycaster();
+  const pointer = new Vector2();
+  const useAt = (x: number, y: number) => {
+    if (!exhibit || !active) return null;
+    raycaster.setFromCamera(pointer.set(x, y), camera);
+    const hit = raycaster.intersectObject(exhibit.object, true)[0];
+    if (!hit || hit.distance > 4 * metre) return null;
+    for (let o: Object3D | null = hit.object; o; o = o.parent) {
+      const work = exhibit.parts?.uses.get(o);
+      if (work) {
+        const at = o;
+        return () =>
+          touchingAt(hit, () => work(knobDirection(at, hit.point, camera)));
+      }
+    }
+    return null;
+  };
   const walk = createFirstPerson({
     scene,
     canvas,
@@ -245,8 +300,19 @@ export function startMuseumHallRoom(
     floorY: 0,
     start: { x: start.x * metre, z: start.z * metre, yaw: start.yaw },
     floorAt: () => 0,
-    solids: () => [...hallSolids(id, seen), ...fittings].map(toScene),
-    use: () => {},
+    solids: () =>
+      [
+        ...hallSolids(id, seen),
+        ...fittings,
+        ...(exhibit?.solids?.({
+          x: walk.walker.x / metre,
+          z: walk.walker.z / metre,
+        }) ?? []),
+      ].map(toScene),
+    use: (x, y) => useAt(x, y)?.(),
+    aimed: () => Boolean(useAt(0, 0)),
+    // The information overlay: each thing says only what it shows itself.
+    inspect: createInspector({ root: hall.group, camera, metre }),
   });
 
   const withdraw = hallArches(id).map((a) => {
@@ -298,6 +364,13 @@ export function startMuseumHallRoom(
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);
+    exhibit?.parts?.setAudible(active);
+    // The exhibit runs only while its hall is the one walked in.
+    if (exhibit && active) {
+      partAudio.listen(camera, metre, scene);
+      exhibit.parts?.update(delta);
+      exhibit.update?.(delta);
+    }
     if (active && !walk.following) {
       const pose = walk.pose();
       const now = { x: pose.x / metre, z: pose.z / metre };
@@ -315,8 +388,14 @@ export function startMuseumHallRoom(
 
   return Object.assign(
     () => {
+      disposed = true;
       renderer.setAnimationLoop(null);
       for (const off of withdraw) off();
+      for (const e of [exhibit, ...copyExhibits]) {
+        e?.parts?.dispose();
+        e?.dispose?.();
+      }
+      disposeKit(kit, hall.group);
       observer.disconnect();
       composer.dispose();
       walk.dispose();
@@ -334,6 +413,8 @@ export function startMuseumHallRoom(
       // Arrived by a link from another hall, not seen through: inside its archway.
       enter(from: string | null) {
         active = true;
+        // Walking in is pressing RESET: the exhibit from the start, its clock at now.
+        exhibit?.reset(localNow());
         handing = false;
         was = null;
         if (from && hallArches(id).some((a) => a.to === from)) {

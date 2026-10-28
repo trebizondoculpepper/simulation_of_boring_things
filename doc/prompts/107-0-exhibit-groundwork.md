@@ -66,3 +66,12 @@ Another session built the museum's safety and services layer (`museum-safety.ts`
 ## Open questions for the owner (one at a time)
 
 1. **The titles.** "Warm water", "Clean water", "Safe water", "The chemistry of pools", "The whole plant": keep, or would you like Hall 1 signed "Warmth" as you called it?
+
+## Built (2026-10-28)
+
+- Step 1 (re-signing) was already done by 107-1; skipped.
+- The hook: `src/toolkit/gallery/rooms/museum/exhibits.ts` (`HallExhibit` = `LiveExhibit` + `reset(now)`, `HALL_EXHIBITS` by room id, lazy). `museum-hall-room.ts` loads it into the hall, raycasts `parts.uses` through `knob-turning`/`touch-point`, adds the inspector and the exhibit's solids, steps it only while the hall is the one walked in, and calls `reset(localNow())` on `enter` (every hand-over and direct load). Neighbours' full copies carry their exhibits too, built in reset state and never stepped (they do not take part in the 1 m fade; they appear with the copy).
+- The clock: `src/toolkit/gallery/logic/museum-time.ts` (`newHallClock`, `slices` ≤ 0.5 s, `hallSession`, `runSession`, `localNow`; `TimeSpeed`/`SPEEDS` re-exported from dev51's model), tested.
+- Room codes: `hallRoomCode` in `museum-plan.ts`; `EXHIBIT_HALLS` drops the benches and the coming-soon panel from a hall that has its exhibit.
+- Shared fittings: the RESET sign text is dev51's (`RESET_SIGN`), already the owner's words; no new PUSH/TURN tags were needed.
+- Not done: no separate test exhibit (Hall 1 serves); the walk round all halls was not re-checked in the browser.

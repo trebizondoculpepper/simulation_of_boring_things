@@ -47,7 +47,7 @@ export interface Placard {
   /** Its station's number on the route, or none for a signpost off it. */
   station?: number;
   /** What it stands by. */
-  of: MachineId | 'meters' | 'mimic';
+  of: MachineId | 'meters' | 'mimic' | (string & {});
   icon: PlacardIcon;
   headline: string;
   /** The machine's name and tag, from the model. */
