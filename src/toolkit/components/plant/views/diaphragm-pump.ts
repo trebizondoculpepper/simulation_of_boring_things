@@ -56,9 +56,11 @@ const SHAPES = {
     discharge: { y: 0.15, len: 0.04, tube: 0.17 },
     fascia: { x: 0.025, y: 0.095, w: 0.138, h: 0.118 },
     lcd: { x: 0.005, y: 0.125, w: 0.07, h: 0.035, gw: 96, gh: 48 },
-    keys: { y: 0.074, x: [-0.032, -0.008, 0.016, 0.04, 0.064], scale: 0.22 },
+    // Centred on its fascia (the owner, 2026-10-28).
+    keys: { y: 0.074, x: [-0.023, 0.001, 0.025, 0.049, 0.073], scale: 0.22 },
     lamps: { x: 0.066, y: [0.142, 0.127, 0.112] },
-    plate: { x: 0.05, y: 0.045, w: 0.05 },
+    // Within its fascia's dark panel, clear of the border (the owner).
+    plate: { x: 0.05, y: 0.0515, w: 0.05 },
   },
   stepper: {
     body: { x: 0.02, y: 0.132, z: -0.01, w: 0.15, h: 0.24, d: 0.17, r: 0.02 },
@@ -68,7 +70,7 @@ const SHAPES = {
     discharge: { y: 0.185, len: 0.04, tube: 0.19 },
     fascia: { x: 0.02, y: 0.14, w: 0.106, h: 0.196 },
     lcd: { x: 0.02, y: 0.2, w: 0.078, h: 0.046, gw: 96, gh: 56 },
-    keys: { y: 0.138, x: [-0.018, 0.002, 0.022, 0.042, 0.062], scale: 0.2 },
+    keys: { y: 0.138, x: [-0.02, 0, 0.02, 0.04, 0.06], scale: 0.2 },
     lamps: { x: -0.018, y: [0.105, 0.09, 0.075] },
     plate: { x: 0.035, y: 0.06, w: 0.06 },
   },
@@ -346,6 +348,8 @@ export function createDiaphragmPump(
     const b = membraneKey(kit, {
       legend: mark,
       accent,
+      // The stepper's narrower fascia takes narrower keys, with a margin.
+      w: kind === 'stepper' ? 0.012 : 0.014,
       name: `${label} ${legend}`,
       action: () => {
         const next = pressKey(state, k);

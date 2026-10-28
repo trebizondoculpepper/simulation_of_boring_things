@@ -12,5 +12,6 @@ describe('the jacuzzi cabinet, with its external balance tank', () => {
       JACUZZI_BALANCE_TANK.lowLow,
     );
     expect(jacuzziCabinetPanel(w).flowing).toBe(true);
-  });
+    // A day of the world: give it room under a full parallel run.
+  }, 20_000);
 });

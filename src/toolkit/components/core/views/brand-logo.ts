@@ -1,6 +1,6 @@
 import type { CanvasTexture } from 'three';
 import type { Brand } from '../logic/brands';
-import { brandPalette } from '../logic/brand-palette';
+import { brandPalette, contrast } from '../logic/brand-palette';
 import { createCanvasTexture } from './screens';
 
 type Ctx = CanvasRenderingContext2D;
@@ -41,9 +41,28 @@ function polygon(
   ctx.closePath();
 }
 
+/** The light the marks are reversed out in, on a dark ground. */
+export const REVERSED_MARK = '#f6f3ea';
+
+/**
+ * A brand's mark colours on `ground`: its own, or reversed (the owner,
+ * 2026-10-28: Grundflow's blue impeller was lost on its own blue plate) —
+ * its main colour cream and its ink its main, as a brand's guidelines give
+ * a light-on-dark version, wherever its main colour would not show.
+ */
+export function markColours(
+  brand: Pick<Brand, 'colours'>,
+  ground?: string,
+): readonly [string, string, string] {
+  const [main, second] = brand.colours;
+  if (!ground || contrast(ground, main) >= 2) return brand.colours;
+  return [REVERSED_MARK, second, main];
+}
+
 /**
  * Draw `brand`'s mark, centred at (x, y), `r` from its middle to its edge:
- * the symbol alone, without the name.
+ * the symbol alone, without the name; reversed out light where `ground`,
+ * the colour it is drawn on, would hide it (`markColours`).
  */
 export function drawBrandMark(
   ctx: Ctx,
@@ -51,8 +70,9 @@ export function drawBrandMark(
   x: number,
   y: number,
   r: number,
+  ground?: string,
 ) {
-  const [main, second, ink] = brand.colours;
+  const [main, second, ink] = markColours(brand, ground);
   ctx.save();
   ctx.translate(x, y);
   ctx.lineJoin = 'round';

@@ -619,7 +619,7 @@ function headerArt(kit: PanelKit, id: BrandId, colour: string, width: number) {
   c.fillRect(0, 0, px, 48);
   c.fillStyle = brand.colours[0];
   c.fillRect(0, 38, px, 4);
-  drawBrandMark(c, brand, 26, 20, 14);
+  drawBrandMark(c, brand, 26, 20, 14, colour);
   // A light name on a dark header, the maker's own ink on a light one.
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(colour.slice(i, i + 2), 16));
   c.fillStyle =

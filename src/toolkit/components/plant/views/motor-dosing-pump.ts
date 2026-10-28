@@ -450,7 +450,8 @@ export function createMotorDosingPump(
   ];
   const keyY = cm.y - 0.03;
   keys.forEach(([k, accent, legend, mark], i) => {
-    const x = cm.x - 0.054 + i * 0.026;
+    // Centred on the fascia: the wide STOP/START key first.
+    const x = cm.x - 0.0505 + i * 0.026;
     const b: Part = membraneKey(kit, {
       legend: mark,
       accent,

@@ -73,7 +73,14 @@ export function brandLivery(kit: PanelKit, id: BrandId): BrandLivery {
           c.fillRect(0, 0, cw, ch);
           c.fillStyle = palette.main;
           c.fillRect(0, 0, cw, band);
-          drawBrandMark(c, brand, band * 0.6, band / 2, band * 0.38);
+          drawBrandMark(
+            c,
+            brand,
+            band * 0.6,
+            band / 2,
+            band * 0.38,
+            palette.main,
+          );
           c.fillStyle = palette.onMain;
           c.textAlign = 'left';
           c.textBaseline = 'middle';

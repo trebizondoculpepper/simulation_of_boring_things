@@ -429,7 +429,7 @@ export function createFramedChemicalTank(
     (c, w, h) => {
       c.fillStyle = brand.palette.main;
       c.fillRect(0, 0, w, h);
-      drawBrandMark(c, brand.brand, 34, h / 2, 22);
+      drawBrandMark(c, brand.brand, 34, h / 2, 22, brand.palette.main);
       c.fillStyle = brand.palette.onMain;
       c.font = wordmarkFont(brand.brand, 34);
       c.textBaseline = 'middle';

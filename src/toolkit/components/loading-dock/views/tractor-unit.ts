@@ -327,7 +327,7 @@ export function createTractorUnit(
       h,
       (c, cw, ch) => {
         c.clearRect(0, 0, cw, ch);
-        drawBrandMark(c, op, ch * 0.5, ch / 2, ch * 0.42);
+        drawBrandMark(c, op, ch * 0.5, ch / 2, ch * 0.42, cabColour);
         c.fillStyle = livery.palette.ink === cabColour ? '#ffffff' : stripe;
         c.textAlign = 'left';
         c.textBaseline = 'middle';
