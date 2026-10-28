@@ -13,7 +13,15 @@ describe('a sand filter’s condition, in words', () => {
     expect(words({ ...bed, dirt: 2.5, fissuring: 0.4 })).toBe(
       'filtering, but seems very dirty and the sand is pitted',
     );
-    expect(words({ ...bed, unsettled: 0.3 })).toBe('rinsing');
+    expect(words({ ...bed, toWaste: 45 })).toBe('rinsing');
+  });
+
+  it('rinses only when its flow goes to waste, not back into service unrinsed (the owner, 2026-10-28)', () => {
+    // Straight back to filtering after a backwash, its bed still unsettled.
+    expect(words({ ...bed, unsettled: 0.3 })).toBe(
+      'filtering, and seems clean',
+    );
+    expect(words({ ...bed, unsettled: 0.3, toWaste: 45 })).toBe('rinsing');
   });
 
   it('stands while nothing flows, and still says how it seems', () => {

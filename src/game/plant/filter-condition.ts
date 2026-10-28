@@ -4,8 +4,11 @@
  * its bed as the world has it (`ideal-filter.ts`). Pure.
  *
  * - Backwashing while water runs up through its bed; rinsing while it runs
- *   down through a bed still unsettled from its wash; filtering while it
- *   runs down through a settled bed; standing while nothing runs.
+ *   down through it to waste, a rinse (its valves set so, as an operator
+ *   sees them); filtering while it runs down through it back to the pool,
+ *   even a bed still unsettled from its wash (the owner, 2026-10-28: put
+ *   straight back into service without a rinse, it is not rinsing);
+ *   standing while nothing runs.
  * - Its dirt against its bed's reference (the dirt that doubles its
  *   resistance): clean below the reference, dirty below twice it, very
  *   dirty beyond; its sand pitted once it has fissured (channelled) enough
@@ -27,8 +30,6 @@ export interface FilterCondition {
 
 /** Under this flow either way, m³/h, a bed is standing. */
 const STILL = 0.5;
-/** A bed this unsettled or more is still rinsing after its wash. */
-const UNSETTLED = 0.05;
 /** Fissuring from which its sand shows pitted. */
 const PITTED = 0.2;
 
@@ -39,12 +40,14 @@ export function filterCondition(bed: {
   dirt: number;
   fissuring: number;
   unsettled: number;
+  /** Of its downward flow, how much goes to waste (a rinse), m³/h. */
+  toWaste?: number;
 }): FilterCondition {
   const activity: FilterActivity =
     bed.flow < -STILL
       ? 'backwashing'
       : bed.flow > STILL
-        ? bed.unsettled > UNSETTLED
+        ? (bed.toWaste ?? 0) > STILL
           ? 'rinsing'
           : 'filtering'
         : 'standing';

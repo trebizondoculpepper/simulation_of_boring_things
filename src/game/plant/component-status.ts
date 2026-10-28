@@ -116,6 +116,8 @@ export function resolveStatus(
           dirt: f.bed.dirt / filterSizing(f.spec).dirtRef,
           fissuring: f.bed.fissuring,
           unsettled: f.bed.unsettled,
+          // Its programme's rinse runs down through it to drain.
+          toWaste: f.phase === 'rinse' ? spaFilterFlows(f, pump, 0).bed : 0,
         }),
       };
     }
@@ -126,6 +128,7 @@ export function resolveStatus(
         policy: 'filter',
         condition: filterCondition({
           flow: loungeFlowsOf(world).filters[i],
+          toWaste: loungeFlowsOf(world).drains[i],
           dirt: bed.dirt / LOUNGE_DIRT_REF,
           fissuring: bed.fissuring,
           unsettled: bed.unsettled,
@@ -138,6 +141,8 @@ export function resolveStatus(
       policy: 'filter',
       condition: filterCondition({
         flow: olympicFlowsOf(world).filters[i]?.bed ?? 0,
+        // Its rinse valve V5, down through the bed to waste.
+        toWaste: olympicFlowsOf(world).filters[i]?.valve.v5 ?? 0,
         dirt: bed.dirt / OLYMPIC_DIRT_REF,
         fissuring: bed.fissuring,
         unsettled: bed.unsettled,
