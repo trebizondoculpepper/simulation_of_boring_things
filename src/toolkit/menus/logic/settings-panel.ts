@@ -428,14 +428,21 @@ export function statusLine({
   armedQuit,
   message,
   holding,
+  version,
+  showVersion = false,
 }: {
   armedQuit: PanelAction | null;
   message: string | null;
   holding: boolean;
+  /** The game's version, shown in turn with SYSTEM READY (the owner, 2026-10-28). */
+  version?: string;
+  /** Its turn to show the version, rather than SYSTEM READY. */
+  showVersion?: boolean;
 }): string {
+  const ready = showVersion && version ? `VER. ${version}` : 'SYSTEM READY';
   const line = armedQuit
     ? 'PRESS AGAIN TO QUIT'
-    : (message ?? (holding ? 'SYSTEM READY' : 'READ ONLY - OTHER TAB'));
+    : (message ?? (holding ? ready : 'READ ONLY - OTHER TAB'));
   return line.toUpperCase().slice(0, STATUS_COLUMNS);
 }
 

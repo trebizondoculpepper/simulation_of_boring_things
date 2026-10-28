@@ -22,10 +22,18 @@ import { settings } from '../../settings/settings-store';
 import {
   DESK_VIEW,
   clampScroll,
-  fitPanel,
+  fitPanelToScreen,
+  plateView,
+  viewBetween,
+  ZOOM_SECONDS,
   scrollRange,
 } from '../logic/iso-view';
 import { layoutPanel } from '../logic/panel-layout';
+import type { PanelLayout } from '../logic/panel-layout';
+import type { DeskView } from '../logic/iso-view';
+
+/** A plate a click zooms to: a module's or a blank's box, panel metres. */
+type PlateBox = { x: number; y: number; w: number; h: number };
 import { settingsPanel } from '../logic/settings-panel';
 import { buildSettingsPanel } from './settings-panel-view';
 import { createSettingsMirror } from './dom-mirror';
@@ -136,8 +144,41 @@ export function createMenuOverlay({
   let mirror: SettingsMirror | null = null;
   let builtFor = '';
   let panelHeight = 0;
+  /** The panel's layout as built, for the plates a click can zoom to. */
+  let layoutNow: PanelLayout | null = null;
   let ppm = 1000;
   let scroll = 0;
+  /**
+   * The zoom (the owner, 2026-10-28): the plate zoomed to, if any; the
+   * view now, while zoomed or easing; and the ease under way, from, to
+   * and how far through (s).
+   */
+  let zoomed: PlateBox | null = null;
+  let view: DeskView | null = null;
+  let zoom: { from: DeskView; to: DeskView | null; t: number } | null = null;
+  /** The view of the whole panel, as `place` frames it unzoomed. */
+  const wholeView = (): DeskView => {
+    const cos = Math.cos(DESK_VIEW.pitch);
+    const halfH = innerHeight / 2 / ppm;
+    return {
+      x: 0,
+      y:
+        range > 0 ? panelHeight / 2 + 16 / ppm / cos - halfH / cos - scroll : 0,
+      scale: ppm,
+    };
+  };
+  /** Ease to the plate `box`, or out to the whole panel (`null`). */
+  const zoomTo = (box: PlateBox | null) => {
+    if (!layoutNow || box === zoomed) return;
+    const from = view ?? wholeView();
+    zoomed = box;
+    zoom = {
+      from,
+      to: box ? plateView(box, layoutNow, innerWidth, innerHeight) : null,
+      t: 0,
+    };
+    requestDraw();
+  };
   let range = 0;
   let open = false;
   let inGame = true;
@@ -159,6 +200,18 @@ export function createMenuOverlay({
     last = now;
     const t0 = performance.now();
     let moving = panel.update(delta);
+    if (zoom) {
+      zoom.t = Math.min(1, zoom.t + delta / ZOOM_SECONDS);
+      const to = zoom.to ?? wholeView();
+      view = viewBetween(zoom.from, to, zoom.t);
+      if (zoom.t >= 1) {
+        // Arrived: held there zoomed, or back to the whole panel's own.
+        view = zoom.to;
+        zoom = null;
+      }
+      place();
+      moving = true;
+    }
     // The lamps ease after the pointer, and are drawn until they settle.
     rig.position.lerp(lean, Math.min(1, delta * 5));
     if (rig.position.distanceToSquared(lean) > 1e-8) moving = true;
@@ -183,8 +236,11 @@ export function createMenuOverlay({
     const w = innerWidth;
     const h = innerHeight;
     renderer!.setSize(w, h, false);
-    const halfW = w / 2 / ppm;
-    const halfH = h / 2 / ppm;
+    // Zoomed to a plate, or easing to or from one: its view; else the
+    // whole panel's.
+    const k = view?.scale ?? ppm;
+    const halfW = w / 2 / k;
+    const halfH = h / 2 / k;
     Object.assign(camera, {
       left: -halfW,
       right: halfW,
@@ -199,7 +255,9 @@ export function createMenuOverlay({
     // scrolled down its face; centred when it fits.
     const targetY =
       range > 0 ? panelHeight / 2 + 16 / ppm / cos - halfH / cos - scroll : 0;
-    const target = new Vector3(0, targetY, 0);
+    const target = view
+      ? new Vector3(view.x, view.y, 0)
+      : new Vector3(0, targetY, 0);
     const toward = new Vector3(
       Math.sin(DESK_VIEW.yaw) * Math.cos(DESK_VIEW.pitch),
       Math.sin(DESK_VIEW.pitch),
@@ -211,26 +269,44 @@ export function createMenuOverlay({
     camera.updateMatrixWorld();
   };
 
+  // Its layouts by width, worked out once for the way it is opened (in
+  // the game, or from the title), to find the width drawn largest with all
+  // of it on the screen.
+  const zonesNow = () =>
+    settingsPanel({
+      inGame,
+      noclip: !!actions.noclip,
+      copyLink: !!actions.copyCamera,
+      devPanel: !!actions.devPanel,
+      quitToDesktop: !!actions.quitToDesktop,
+    });
+  let layouts: { inGame: boolean; at: Map<number, PanelLayout> } | null = null;
+  const layoutAt = (width: number) => {
+    if (layouts?.inGame !== inGame) layouts = { inGame, at: new Map() };
+    const k = Math.round(width * 100);
+    let l = layouts.at.get(k);
+    if (!l)
+      layouts.at.set(
+        k,
+        (l = layoutPanel(zonesNow(), width, {
+          cardLines: bindings.length + 2,
+        })),
+      );
+    return l;
+  };
   const rebuild = () => {
     const t0 = performance.now();
-    const fit = fitPanel(innerWidth);
-    const key = `${fit.panelWidth} ${inGame}`;
+    const zones = zonesNow();
+    const fit = fitPanelToScreen(innerWidth, innerHeight, layoutAt);
+    const key = `${fit.panelWidth.toFixed(2)} ${inGame}`;
     ppm = fit.pixelsPerMillimetre * 1000;
     if (key !== builtFor || !panel) {
       if (panel) {
         scene.remove(panel.group);
         panel.dispose();
       }
-      const zones = settingsPanel({
-        inGame,
-        noclip: !!actions.noclip,
-        copyLink: !!actions.copyCamera,
-        devPanel: !!actions.devPanel,
-        quitToDesktop: !!actions.quitToDesktop,
-      });
-      const layout = layoutPanel(zones, fit.panelWidth, {
-        cardLines: bindings.length + 2,
-      });
+      const layout = layoutAt(fit.panelWidth);
+      layoutNow = layout;
       panelHeight = layout.height;
       panel = buildSettingsPanel(layout, {
         actions: { ...actions, resume: () => close() },
@@ -292,6 +368,7 @@ export function createMenuOverlay({
     if (!open) return;
     open = false;
     menuOpen.value = false;
+    zoomed = view = zoom = null;
     focused = null;
     mirror?.show(false);
     canvas.style.display = 'none';
@@ -306,6 +383,7 @@ export function createMenuOverlay({
   });
   const onResize = () => {
     if (!open) return;
+    zoomed = view = zoom = null;
     rebuild();
     requestDraw();
   };
@@ -332,6 +410,27 @@ export function createMenuOverlay({
     }
     return null;
   };
+  /** The plate (a module or a blank) under the pointer, if any. */
+  const plateAt = (event: PointerEvent): PlateBox | null => {
+    if (!panel || !layoutNow) return null;
+    const rect = canvas.getBoundingClientRect();
+    ndc.set(
+      ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      -((event.clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    raycaster.setFromCamera(ndc, camera);
+    const hit = raycaster.intersectObject(panel.group, true)[0];
+    if (!hit) return null;
+    const l = layoutNow;
+    // Panel metres, from its top left, y down.
+    const x = hit.point.x + l.width / 2;
+    const y = l.height / 2 - hit.point.y;
+    return (
+      [...l.modules, ...l.blanks].find(
+        (b) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h,
+      ) ?? null
+    );
+  };
   let drag: { id: number; y: number } | null = null;
   canvas.addEventListener('pointerdown', (event) => {
     event.preventDefault();
@@ -345,6 +444,13 @@ export function createMenuOverlay({
       requestDraw();
       return;
     }
+    // A plate's bare face: zoom to it.
+    const plate = plateAt(event);
+    if (plate) {
+      zoomTo(plate);
+      return;
+    }
+    if (view) return;
     drag = { id: event.pointerId, y: event.clientY };
     canvas.setPointerCapture(event.pointerId);
   });
@@ -375,6 +481,7 @@ export function createMenuOverlay({
     { passive: false },
   );
   function scrollBy(cssPixels: number) {
+    if (view) return;
     const before = scroll;
     scroll = clampScroll(
       scroll + cssPixels / ppm / Math.cos(DESK_VIEW.pitch),
@@ -425,7 +532,9 @@ export function createMenuOverlay({
         return true;
       }
       const step = menuStep(panel?.targets ?? [], focused, intent);
-      if (step.kind === 'back') close();
+      // Zoomed, back eases out to the whole panel; then it closes.
+      if (step.kind === 'back' && zoomed) zoomTo(null);
+      else if (step.kind === 'back') close();
       else if (step.kind === 'focus') showFocus(step.id);
       else if (step.kind === 'turn' || step.kind === 'press') {
         if (focused !== step.id) showFocus(step.id);
