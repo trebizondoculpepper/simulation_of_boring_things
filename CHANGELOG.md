@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Added
 
+- Central Control's extra-wide console pages only through designs as wide as it (the owner, 2026-10-28): a station's smaller panel no longer shrinks into the middle of it; today that is its own page only.
 - The bridge warns of every annunciator's alarms (the owner, 2026-10-28): its ACCEPT, alarm bleep, ALARMS IN, NEWEST and GO TO and its alarm sweep take in the lounge annunciator's windows as well as the plant's, ACCEPT ALARMS accepting both; the tank levels page flags a pool's balance tank tripped on low-low ("47 % · TRIPPED") whatever its level now.
 - The pause menu half as large again, to be read easily (the owner, 2026-10-28).
 - The lounge pool's annunciator (the owner, 2026-10-28): sixteen windows of its plant room's faults (balance tank low; circulation tripped on low-low; either pump tripped; no pump in AUTO; flow low; each filter off-line; filter DP high; backwash pit high; UV lamp fail; ozone in air; chlorine and pH out of range; day tank low; room power fail), ISA sequence M with a first-out window flashing twice as fast, a horn with MUTE, ACCEPT, RESET and LAMP TEST; on the plant room's south wall and, its twin, in the control room, one state in the world for both. Annunciator windows' legends now shrink to fit.
