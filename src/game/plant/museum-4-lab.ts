@@ -777,7 +777,11 @@ export const CARDS: readonly Card[] = [
         VOLUME,
         TEMPERATURE,
       );
-      return waterFrom({ ...RESET_WATER, sulphate: dosed.sulphate, tds: dosed.tds });
+      return waterFrom({
+        ...RESET_WATER,
+        sulphate: dosed.sulphate,
+        tds: dosed.tds,
+      });
     },
     met: (r) => r.so4 < 360 && inPh(r),
   },
@@ -987,7 +991,9 @@ export function actOnHall4(s: Hall4State, a: Hall4Action): Hall4State {
         const done =
           s.delivering.amount * (1 - s.delivering.left / DOSE_SECONDS);
         return print(
-          { ...s, delivering: null },
+          t.addition
+            ? { ...s, delivering: null }
+            : refill({ ...s, delivering: null }, done),
           `CANCEL ${t.code} AFTER ${done.toFixed(1)} ${t.unit}`,
         );
       }
@@ -1089,6 +1095,24 @@ function chemistry(s: Hall4State, dt: number): Hall4State {
   return n;
 }
 
+/** `m` cubic metres drained and made up from the mains (`mixWaters`). */
+function refill(s: Hall4State, m: number): Hall4State {
+  const units = Math.min(VOLUME, Math.max(0, m));
+  return {
+    ...s,
+    bench: {
+      ...s.bench,
+      pool: mixWaters(
+        [
+          { water: s.bench.pool, volume: VOLUME - units },
+          { water: waterFrom({ ...MAINS }), volume: units },
+        ],
+        TEMPERATURE,
+      ),
+    },
+  };
+}
+
 /** The lab `h` plant seconds on. */
 export function stepHall4(s: Hall4State, h: number): Hall4State {
   if (!(h > 0)) return s;
@@ -1106,30 +1130,15 @@ export function stepHall4(s: Hall4State, h: number): Hall4State {
         ...n,
         bench: handDose(n.bench, { [t.addition]: units * t.perUnit }, 'pool'),
       };
-    else {
-      const mains = waterFrom({ ...MAINS });
-      n = {
-        ...n,
-        bench: {
-          ...n.bench,
-          pool: mixWaters(
-            [
-              { water: n.bench.pool, volume: VOLUME - units },
-              { water: mains, volume: units },
-            ],
-            TEMPERATURE,
-          ),
-        },
-      };
-    }
     const left = d.left - h;
     n = { ...n, delivering: left > 1e-9 ? { ...d, left } : null };
+    // Fresh water: that much drained, then the pool refilled from the mains.
+    if (!n.delivering && !t.addition) n = refill(n, d.amount);
     if (!n.delivering) force = finished = true;
   }
   if (force || n.due >= CHEMISTRY_STEP) {
     n = chemistry(n, n.due);
-    if (finished)
-      n = print(n, waterLine(n.bench.pool));
+    if (finished) n = print(n, waterLine(n.bench.pool));
   }
   const hour = Math.floor((n.start + n.seconds) / 3600);
   if (hour !== n.hour) n = print({ ...n, hour }, waterLine(n.bench.pool));
