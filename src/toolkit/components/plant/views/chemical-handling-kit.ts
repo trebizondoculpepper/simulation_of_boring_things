@@ -1652,6 +1652,12 @@ export interface DistributionReading {
 }
 
 /**
+ * OBSOLETE (prompt 091, 2026-10-28): WH-CP1, retired from the wet hall
+ * and replaced there by the OT-216 terminals and the chemical transfer
+ * control box (WH-OT1, WH-OT2, WH-CP3); kept, working, only as dev44's
+ * exhibit of the old design, flagged obsolete there (the owner: "kept, as
+ * a working exhibit in a dev room"). Do not place it in the game.
+ *
  * The wet hall's chemical distribution panel (plan 085), Penfold
  * Controls': a wall cabinet with a section per chemical, each its store's
  * contents and its four day tanks' levels on moving-coil meters, a lamp

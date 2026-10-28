@@ -10,6 +10,7 @@ import {
   createOt216Terminal,
 } from '../../industrial-control/views/ot216-terminal';
 import { createChemControlBox } from './chem-control-box';
+import { createEngravedPlate } from '../../core/views/plant-signs';
 import {
   CONTROL,
   TRIAL_CHEMICALS,
@@ -49,8 +50,10 @@ const HOA: readonly Hoa[] = ['hand', 'off', 'auto'];
  * · OFF · AUTO and trip RESET) and to make the faults the arrangement
  * gives (the wet hall's power, the MCB tripped, the controller hung, a
  * terminal's link broken, a day tank overfilled to high-high). With
- * `oldPanel`, today's WH-CP1 beside them, driven by the same trial, so
- * old and new can be compared side by side.
+ * `oldPanel`, WH-CP1 beside them, driven by the same trial, so old and
+ * new can be compared side by side: retired from the wet hall
+ * (2026-10-28) and kept here as a working exhibit, flagged OBSOLETE on a
+ * red plate.
  *
  * On the floor at the middle of its footprint, a wall section behind,
  * its front toward +z.
@@ -102,16 +105,19 @@ export function createChemControlPrototype(
     old.object.position.set(x + 0.8, 1.5, wallZ);
     root.add(old.object);
     for (const [o, use] of old.parts.uses) parts.uses.set(o, use);
-    t.label(
-      root,
-      'TODAY: WH-CP1, CHEMICAL DISTRIBUTION PANEL',
-      x + 0.8,
-      0.85,
-      wallZ + 0.002,
-      0.03,
-      '#1b1b1b',
-      '#f4f3ee',
+    // Flagged obsolete (prompt 091, 2026-10-28): retired from the wet
+    // hall, kept here working as the old design.
+    const obsolete = createEngravedPlate(
+      kit,
+      [
+        'OBSOLETE · WH-CP1 CHEMICAL DISTRIBUTION PANEL',
+        'RETIRED FROM THE WET HALL 2026-10-28 · REPLACED BY WH-OT1, WH-OT2 AND WH-CP3',
+        'KEPT WORKING HERE AS AN EXHIBIT OF THE OLD DESIGN',
+      ],
+      { colour: 'red', width: 1.5, height: 0.16 },
     );
+    obsolete.position.set(x + 0.8, 0.82, wallZ + 0.001);
+    root.add(obsolete);
     x += 1.9;
   }
 
@@ -194,7 +200,7 @@ export function createChemControlPrototype(
   box.object.position.set(boxX, 1.4, wallZ);
   root.add(box.object);
   for (const [o, use] of box.parts.uses) parts.uses.set(o, use);
-  t.label(root, BOX_TAG, boxX, 1.65, wallZ + 0.002, 0.02, '#1b1b1b', '#f4f3ee');
+  t.label(root, BOX_TAG, boxX, 1.71, wallZ + 0.002, 0.02, '#1b1b1b', '#f4f3ee');
   // Each terminal's cable in conduit, down and along to the box's glands.
   const conduit = p.paint('#5d6265', 0.6);
   terminals.forEach(({ x: tx }, i) => {
