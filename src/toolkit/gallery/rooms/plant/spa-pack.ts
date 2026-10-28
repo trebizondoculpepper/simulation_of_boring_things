@@ -121,6 +121,14 @@ const FAULT_BEEP = tone({
 const JACUZZI_CABINET = { w: 2.8, d: 1.0, h: 2.1, wall: 0.03 } as const;
 /** The jets' bay at the cabinet's right end, its width. */
 const JETS_BAY = 1.1;
+/**
+ * The cabinet's upper row of controls under its mimic (POWER, its lamps,
+ * JETS), moved down and left clear of the mimic's DRAINING and FILLING
+ * strip, which overprinted it (the owner, 2026-10-28: 1.5 cm down, 2 cm
+ * left), m.
+ */
+const ROW_NUDGE = { x: -0.02, y: -0.015 } as const;
+
 /** Its drain's stub, in the skid's frame (over the skid's top). */
 export const SPA_DRAIN = { x: 0.05, y: 0.05 } as const;
 /** Its supply gland on the roof, in the body's frame: at its left end, toward its back. */
@@ -794,7 +802,7 @@ export function buildSpaPack(
       name: 'Spa set power',
     }),
   );
-  power.object.position.set(-0.15 + shift, 0.06, 0);
+  power.object.position.set(-0.15 + shift + ROW_NUDGE.x, 0.06 + ROW_NUDGE.y, 0);
   power.object.scale.setScalar(0.8);
   front.add(power.object);
   const latches = ([left, right] as const).map((door, i) => {
@@ -930,7 +938,11 @@ export function buildSpaPack(
         name: `Spa set ${legend.toLowerCase()} lamp`,
       }),
     );
-    lamp.object.position.set(0.02 + shift + i * 0.1, 0.06, 0);
+    lamp.object.position.set(
+      0.02 + shift + i * 0.1 + ROW_NUDGE.x,
+      0.06 + ROW_NUDGE.y,
+      0,
+    );
     lamp.object.scale.setScalar(0.8);
     front.add(lamp.object);
   });
@@ -1024,7 +1036,12 @@ export function buildSpaPack(
                 ),
           on: false,
         });
-      button.object.position.set(0.26, 0.06 - i * 0.17, 0);
+      // JETS in the upper row, nudged with it; AIR below, where it was.
+      button.object.position.set(
+        0.26 + (i ? 0 : ROW_NUDGE.x),
+        i ? -0.11 : 0.06 + ROW_NUDGE.y,
+        0,
+      );
       button.object.scale.setScalar(0.8);
       front.add(button.object);
     });
