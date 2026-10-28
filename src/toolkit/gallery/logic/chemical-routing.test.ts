@@ -11,6 +11,7 @@ import { runBinding } from './world-in-model';
  */
 describe('the chemical lines, plumbed in every room', () => {
   for (const room of [
+    'loading_bay',
     'wet_hall',
     'hypo_store',
     'acid_store',
@@ -51,6 +52,7 @@ describe('the chemical lines, plumbed in every room', () => {
 
   it('draws every chemical run as its own chemical, never as water', () => {
     for (const room of [
+      'loading_bay',
       'wet_hall',
       'hypo_store',
       'acid_store',
