@@ -32,6 +32,8 @@ import { synthTouchSound } from '../../sound/audio/touch-bleeps';
 import {
   bend,
   cornerRadius,
+  frameTouch,
+  unbend,
   outlineAround,
   screenCornerRadius,
   planeToPixel,
@@ -232,6 +234,7 @@ export function createTouchSurface(
   );
   // The frame: a curved strip as a bent sheet; a flat one any outline, its
   // body extruded behind its face.
+  let frameMesh: Mesh;
   if (options.curve) {
     const strip = {
       x: around.centre[0],
@@ -241,6 +244,7 @@ export function createTouchSurface(
     };
     const sheet = new Mesh(bentPlane(strip, options.curve, 48), frameMaterial);
     group.add(sheet);
+    frameMesh = sheet;
   } else {
     const outline = options.outline ?? around.outline;
     const shape = new Shape(outline.map(([x, y]) => new Vector2(x, y)));
@@ -253,6 +257,7 @@ export function createTouchSurface(
     );
     body.position.z = -Math.max(1e-4, depth);
     group.add(body);
+    frameMesh = body;
   }
 
   // The surface's clock, seconds, advanced by its updates.
@@ -344,6 +349,24 @@ export function createTouchSurface(
       }
     });
     return { root, mesh, repaint, touchPixel, width, height, boot };
+  });
+
+  // A use on the frame within a screen's opening is a touch on that
+  // screen: the screens lie in the frame's face, coplanar with it, and a
+  // ray may strike the frame first at the same distance (mission 105).
+  const rects = options.screens.map((s) => s.rect);
+  a.uses.set(frameMesh, () => {
+    const t = touchPoint(frameMesh);
+    if (!t?.point) return;
+    const local = group.worldToLocal(
+      new Vector3(t.point.x, t.point.y, t.point.z),
+    );
+    const x = options.curve ? unbend(local.x, local.z, options.curve) : local.x;
+    const hit = frameTouch(rects, x, local.y);
+    if (!hit) return;
+    const s = screens[hit.screen];
+    const p = planeToPixel(rects[hit.screen], hit.x, hit.y, s.width, s.height);
+    s.touchPixel(p.x, p.y);
   });
 
   a.updates.push((delta) => {

@@ -4,6 +4,7 @@ import {
   bend,
   checkScreens,
   cornerRadius,
+  frameTouch,
   insideOutline,
   outlineAround,
   planeToPixel,
@@ -14,6 +15,7 @@ import {
   screenCornerRadius,
   screenGrid,
   trapeziumOutline,
+  unbend,
   uvToPixel,
 } from './touch-surface';
 
@@ -135,5 +137,50 @@ describe('displays’ rounded corners (the owner, 2026-10-27)', () => {
     // Sharp in a sharp frame; never more than half its shorter side.
     expect(screenCornerRadius(0, 0.004, { w: 1, h: 0.5 })).toBe(0);
     expect(screenCornerRadius(5, 0.004, { w: 1, h: 0.5 })).toBe(0.25);
+  });
+});
+
+describe('a touch on the frame', () => {
+  const screens = [
+    { x: -0.3, y: 0, w: 0.4, h: 0.3 },
+    { x: 0.3, y: 0, w: 0.4, h: 0.3 },
+  ];
+
+  it('is the screen’s where it falls within a screen’s opening, the edges included', () => {
+    // Coplanar with the frame, a screen's touch may strike the frame first.
+    expect(frameTouch(screens, 0.35, 0.05)).toEqual({
+      screen: 1,
+      x: 0.35,
+      y: 0.05,
+    });
+    expect(frameTouch(screens, -0.5, 0.15)).toEqual({
+      screen: 0,
+      x: -0.5,
+      y: 0.15,
+    });
+    // A hair past the edge, by rounding, brought inside it.
+    const edge = frameTouch(screens, 0.50005, -0.15005);
+    expect(edge?.screen).toBe(1);
+    expect(edge?.x).toBe(0.5);
+    expect(edge?.y).toBe(-0.15);
+    // Its pixel is at the screen's own corner.
+    const p = planeToPixel(screens[1], edge!.x, edge!.y, 800, 600);
+    expect(p.x).toBeCloseTo(800, 9);
+    expect(p.y).toBeCloseTo(600, 9);
+  });
+
+  it('is nobody’s on the bezel or between the screens', () => {
+    expect(frameTouch(screens, 0, 0)).toBeNull();
+    expect(frameTouch(screens, 0.3, 0.16)).toBeNull();
+    expect(frameTouch(screens, 0.52, 0)).toBeNull();
+  });
+
+  it('finds a curved strip’s flat point by unbending it', () => {
+    for (const x of [-0.6, -0.1, 0, 0.25, 0.7]) {
+      const b = bend(x, 1.5);
+      expect(unbend(b.x, b.z, 1.5)).toBeCloseTo(x, 12);
+    }
+    expect(unbend(0.4, 0, 0)).toBe(0.4);
+    expect(unbend(0.4, 0, Infinity)).toBe(0.4);
   });
 });

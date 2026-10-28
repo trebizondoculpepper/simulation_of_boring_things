@@ -47,7 +47,7 @@ In dev44, "Dosing controller trial: CX-7 and DC-1" (`views/dosing-controller-tri
 
 Checked in the browser: with the Olympic's suction shut the chlorine sags, Yout winds to 100 %, and after two hours at full the dosing time trips (`Maximum dosing time, hypochlorite: check pump`, CHLORINE low after it); a soda ash slug locks chlorine out (`PAUS` on the DC-1, `E Hi` on the pH unit); drifted probes overdose (DPD 1 reads 1.40 where the controller reads 0.94); the CX-7's chlorine calibration (zero with the sample shut, slope against the photometer's DPD 1) brings its reading back; the DC-1 pH unit's two-buffer calibration finds slope 94 %, zero 18 mV, and its reading back to the water's.
 
-A finding for the touch-surface kit: a screen lies in its frame's face, and a ray can strike the frame first at the same distance, so a use on the screen is lost; the CX-7 answers a use on its frame within the screen's opening as a touch there. Other touch panels may want the same.
+A finding for the touch-surface kit: a screen lies in its frame's face, and a ray can strike the frame first at the same distance, so a use on the screen is lost; fixed in the kit itself (2026-10-28): a use on a frame within a screen's opening (a hair's tolerance past its edge, a curved strip's point unbent first) is a touch on that screen at that point (`frameTouch`, `unbend` in `industrial-control/logic/touch-surface.ts`), for every touch panel, and the CX-7's own workaround removed.
 
 ## What installing them means
 

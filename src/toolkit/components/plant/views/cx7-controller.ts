@@ -1,4 +1,4 @@
-import { Group, Mesh, Vector3 } from 'three';
+import { Group, Mesh } from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { BLOCK_THEME, UiNode } from '../../../../ui2d';
 import type { PressOutcome, Theme } from '../../../../ui2d';
@@ -7,8 +7,6 @@ import { tools } from '../../core/views/fitting-tools';
 import { drawBrandMark, wordmarkFont } from '../../core/views/brand-logo';
 import { brandLivery } from '../../core/views/brand-livery';
 import { createTouchSurface } from '../../industrial-control/views/touch-surface';
-import { planeToPixel } from '../../industrial-control/logic/touch-surface';
-import { touchPoint } from '../../../controls/input/touch-point';
 import { OT216_LIVERY } from '../../industrial-control/views/ot216-terminal';
 import { describe } from './describe';
 import {
@@ -232,23 +230,6 @@ export function createCx7Controller(
   });
   surface.group.position.set(SCREEN.x, SCREEN.y, z + 0.0005);
   object.add(surface.group);
-  // The screen lies in its frame's face, coplanar with it, and a ray may
-  // strike the frame first: a touch there, within the screen's opening,
-  // is a touch on the screen at that point.
-  const screen = surface.screens[0];
-  for (const child of surface.group.children)
-    if (child !== screen.mesh && child instanceof Mesh)
-      surface.part.uses.set(child, () => {
-        const at = touchPoint(child);
-        if (!at?.point) return;
-        const p = surface.group.worldToLocal(
-          new Vector3(at.point.x, at.point.y, at.point.z),
-        );
-        const rect = { x: 0, y: 0, w: SCREEN.w, h: SCREEN.h };
-        if (Math.abs(p.x) > rect.w / 2 || Math.abs(p.y) > rect.h / 2) return;
-        const px = planeToPixel(rect, p.x, p.y, screen.width, screen.height);
-        screen.touchPixel(px.x, px.y);
-      });
   // Cable glands along its foot: probes, pumps, relays, mains.
   const gland = t.paint('#2a2d2e', 0.6);
   for (let i = 0; i < 7; i++)

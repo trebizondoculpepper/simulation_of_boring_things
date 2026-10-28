@@ -254,6 +254,32 @@ export function screenAt(
   return i < 0 ? null : i;
 }
 
+/**
+ * A use that struck the frame at its plane's point `(x, y)`: the screen
+ * it falls within (by `tolerance` metres at most past its edge), and the
+ * point brought inside that screen, or null for a touch on the frame
+ * itself. The screens lie in the frame's own face, coplanar with it, so a
+ * ray may strike the frame first at the same distance; a touch there is
+ * the screen's.
+ */
+export function frameTouch(
+  screens: readonly ScreenRect[],
+  x: number,
+  y: number,
+  tolerance = 1e-4,
+): { screen: number; x: number; y: number } | null {
+  const i = screens.findIndex(
+    (s) =>
+      Math.abs(x - s.x) <= s.w / 2 + tolerance &&
+      Math.abs(y - s.y) <= s.h / 2 + tolerance,
+  );
+  if (i < 0) return null;
+  const s = screens[i];
+  const clamp = (v: number, mid: number, half: number) =>
+    Math.min(mid + half, Math.max(mid - half, v));
+  return { screen: i, x: clamp(x, s.x, s.w / 2), y: clamp(y, s.y, s.h / 2) };
+}
+
 /** The pixel of screen `s` (`width` × `height` pixels) under the frame-plane point `(x, y)`. */
 export function planeToPixel(
   s: ScreenRect,
@@ -280,4 +306,10 @@ export function bend(x: number, radius: number): { x: number; z: number } {
   if (!Number.isFinite(radius) || radius <= 0) return { x, z: 0 };
   const a = x / radius;
   return { x: radius * Math.sin(a), z: radius * (1 - Math.cos(a)) };
+}
+
+/** Where along the flat strip a bent point `(x, z)` lies: `bend`'s inverse. */
+export function unbend(x: number, z: number, radius: number): number {
+  if (!Number.isFinite(radius) || radius <= 0) return x;
+  return radius * Math.atan2(x, radius - z);
 }
