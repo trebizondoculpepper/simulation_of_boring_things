@@ -351,6 +351,14 @@ export function futureBayPlace() {
 }
 
 /** The dry poolside: its painted water, its deck, and the skimmer in its north edge, the bin along the deck. */
+/**
+ * The painted poolside's height over the museum's floor, metres (the
+ * owner, 2026-10-29): a layer of its own, 2 mm up, and everything
+ * standing on it (the bin, its sign, the reset point, the lectern, the
+ * skimmer, the floor's arrows and the hall's fittings) lifted with it.
+ */
+export const DECK_LIFT = 0.002;
+
 export const POOLSIDE = {
   water: { minX: -4.6, maxX: 3.4, minZ: 0.2, maxZ: 4.6 },
   deck: { minX: -5.6, maxX: 4.6, minZ: -3.2, maxZ: 5.4 },

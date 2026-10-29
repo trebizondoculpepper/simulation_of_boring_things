@@ -56,6 +56,7 @@ import {
   BAY,
   OPENING_CHECKS,
   POOLSIDE,
+  DECK_LIFT,
   SKIMMER_PLACARD,
   BIN_SIGN,
   WALL,
@@ -567,9 +568,16 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   floor.mesh.rotation.x = -Math.PI / 2;
   floor.mesh.position.set(
     (deck.minX + deck.maxX) / 2,
-    0.004,
+    DECK_LIFT,
     (deck.minZ + deck.maxZ) / 2,
   );
+  // A layer of its own over the museum's floor (the owner, 2026-10-29):
+  // pulled a little toward the eye too, so the two never fight from afar.
+  for (const m of [floor.mesh.material].flat() as Material[]) {
+    m.polygonOffset = true;
+    m.polygonOffsetFactor = -1;
+    m.polygonOffsetUnits = -1;
+  }
   floor.mesh.name = 'Painted poolside';
   floor.mesh.userData.live = true;
   // The eye that sees the hall, read as it is drawn: where the held thing goes.
@@ -593,7 +601,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   const certikind = t.paint('#f2f1ec', 0.45);
   const dark = t.paint('#15191b', 0.9);
   const skimmerGroup = new Group();
-  skimmerGroup.position.set(sk.x, 0.005, sk.z);
+  skimmerGroup.position.set(sk.x, DECK_LIFT, sk.z);
   const grime = seededRandom(5);
   const well = createSkimmerWell({
     reach: POOLSIDE.water.minZ - sk.z + 0.3,
@@ -640,7 +648,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   // ---- The bin, and its sign (the owner, 2026-10-29: a waste bin, not a skip) ----
   const binModel = createWasteBin(kit);
   const binGroup = binModel.group;
-  binGroup.position.set(sp.x, 0, sp.z);
+  binGroup.position.set(sp.x, DECK_LIFT, sp.z);
   object.add(
     markComponent(binGroup, {
       name: 'Waste bin (for things found in the skimmer)',
@@ -654,7 +662,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   signFace.mesh.position.set(0, 1.25, 0);
   signPost.add(signFace.mesh);
   t.box(signPost, t.paint('#2b3438', 0.5), 0.63, 0.45, 0.02, 0, 1.25, -0.012);
-  turnTo(signPost, sp.x - 1, 0, sp.z - 0.2, FACE_EAST - 0.6);
+  turnTo(signPost, sp.x - 1, DECK_LIFT, sp.z - 0.2, FACE_EAST - 0.6);
   object.add(
     markComponent(signPost, {
       name: 'Bin sign',
@@ -1032,7 +1040,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     }
     // No film (not the hall walked in): straight into the hands, or back.
     const prop = props[now];
-    prop.position.set(sk.x, 0.05, sk.z);
+    prop.position.set(sk.x, DECK_LIFT + 0.05, sk.z);
     game = { ...game, lid: { at: 'on' } };
     if (hands?.give(prop)) speak(game.order[now]);
     else
@@ -1137,14 +1145,14 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     reset: () => reset(),
     lit: () => sinceReset < 2.5,
   });
-  turnTo(resetButton.group, WALL.west + 0.45, 0, 3.5, FACE_EAST);
+  turnTo(resetButton.group, WALL.west + 0.45, DECK_LIFT, 3.5, FACE_EAST);
   object.add(resetButton.group);
   for (const [o, use] of resetButton.parts.uses) uses.set(o, use);
   updates.push(resetButton.update);
   footprint(WALL.west + 0.45, 3.5, 0.25);
 
   const lectern = createLectern(kit, SKIMMER_PLACARD);
-  turnTo(lectern, -4.9, 0, -1.1, -Math.PI / 2);
+  turnTo(lectern, -4.9, DECK_LIFT, -1.1, -Math.PI / 2);
   object.add(still(lectern));
   footprint(-4.9, -1.1, 0.2);
 

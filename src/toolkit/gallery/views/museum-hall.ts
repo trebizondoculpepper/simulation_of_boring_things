@@ -69,6 +69,7 @@ import type {
 import { MUSEUM_EXHIBITION as BRAND } from '../logic/museum-brand';
 import { CLOSING_WALL } from '../logic/museum-9-placards';
 import { createMuseumSafety } from './museum-safety';
+import { DECK_LIFT } from '../logic/museum-5-gallery';
 import {
   POSTER_GLOW_MARGIN,
   createCausticsProjector,
@@ -1548,6 +1549,9 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
   const arrows = new Mesh(floorArrowGeometry(id), arrowMaterial);
   arrows.name = 'Floor arrow stickers';
   arrows.renderOrder = 1;
+  // Hall 5's painted poolside lies 2 mm up: what stands on it is lifted with it.
+  const onDeck = id === 'museum5' ? DECK_LIFT : 0;
+  arrows.position.y = onDeck;
   plan.add(arrows);
 
   // The walls, each as the plan has it; the courtyard and street windows glazed.
@@ -1973,6 +1977,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     });
   // The safety and services layer: sockets, the fire alarm, escape signs, and the rest.
   const safety = createMuseumSafety(id);
+  safety.group.position.y = onDeck;
   plan.add(safety.group);
   group.updateMatrixWorld(true);
   safety.merge();
