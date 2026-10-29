@@ -314,11 +314,16 @@ function paintBay(d: Decade) {
         c.fillText(line, x, top + fh + h * 0.11 + n * h * 0.045),
       );
     });
-    // The timeline rail's stretch, the decade marked on it.
+    // The timeline rail's stretch, pointing on in time: to the visitor's
+    // right, where the next decade hangs (the owner, 2026-10-29: its dot
+    // at the left end read as an arrowhead pointing back).
     c.fillStyle = '#0f6f7c';
-    c.fillRect(0, h * 0.94, w, h * 0.02);
+    c.fillRect(0, h * 0.94, w * 0.97, h * 0.02);
     c.beginPath();
-    c.arc(w * 0.03, h * 0.95, h * 0.022, 0, Math.PI * 2);
+    c.moveTo(w, h * 0.95);
+    c.lineTo(w * 0.96, h * 0.92);
+    c.lineTo(w * 0.96, h * 0.98);
+    c.closePath();
     c.fill();
   };
 }

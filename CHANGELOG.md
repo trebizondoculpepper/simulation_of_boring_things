@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 5: the green timeline line under each decade's photographs now points on in time, an arrowhead at its right end where the next decade hangs; its dot at the left end had read as an arrow pointing back.
+
 - Museum, Hall 5: the skimmer and its lid sit back from the water, in the deck's tiles 7 cm beyond the white coping (the owner, 2026-10-29), its throat running on under the coping to the pool's wall.
 
 - Museum, Hall 5: the painted poolside (its deck tiles, coping and painted water, the skimmer's throat painted into its tile face) is a layer of its own 2 mm above the museum's floor (`DECK_LIFT`), pulled toward the eye so the two never fight from afar; everything standing on it is lifted with it: the skimmer's well and lid, the bin and its sign, the reset point, the lectern, the hall's floor arrows and its safety fittings.
