@@ -1,6 +1,7 @@
 import {
   BackSide,
   BoxGeometry,
+  BufferAttribute,
   BufferGeometry,
   CanvasTexture,
   CatmullRomCurve3,
@@ -305,6 +306,8 @@ export function paintedFloorTexture(w: number, d: number, px = 110) {
 export interface MuseumMaterials {
   paint: MeshStandardMaterial;
   rawBrick: MeshStandardMaterial;
+  /** The insides of the archways: the posters' flat green. */
+  archGreen: MeshStandardMaterial;
   floor: MeshStandardMaterial;
   iron: MeshStandardMaterial;
   steel: MeshStandardMaterial;
@@ -328,6 +331,10 @@ export function createMuseumMaterials(): MuseumMaterials {
   return {
     paint: new MeshStandardMaterial({ map: painted, roughness: 0.9 }),
     rawBrick: new MeshStandardMaterial({ map: bare, roughness: 0.95 }),
+    archGreen: new MeshStandardMaterial({
+      color: BRAND.colours.main,
+      roughness: 0.85,
+    }),
     floor: new MeshStandardMaterial({
       map: concrete,
       roughness: 0.32,
@@ -604,7 +611,9 @@ export interface Opening {
  * so its brick is laid the same whichever room builds it; its openings
  * notched up from the floor, round-headed archways or the square-headed
  * doorway; its windows holes, segmental-headed. Faces in `faces`, the
- * reveals in `reveals`.
+ * reveals in `reveals`; with `openingReveals`, the insides of its archways
+ * and doorways in that instead (the owner, 2026-10-29: the posters' flat
+ * green, not brick).
  */
 export function wallRun(
   axis: 'x' | 'z',
@@ -615,6 +624,7 @@ export function wallRun(
   windows: readonly MuseumWindow[],
   faces: Material,
   reveals: Material,
+  openingReveals?: Material,
 ) {
   const shape = new Shape();
   shape.moveTo(from, 0);
@@ -641,9 +651,63 @@ export function wallRun(
     curveSegments: 28,
   });
   geometry.translate(0, 0, -MUSEUM_WALL / 2);
+  if (openingReveals) {
+    splitOpeningReveals(geometry, openings);
+    const mesh = new Mesh(geometry, [faces, reveals, openingReveals]);
+    placeOnLine(mesh, axis, line);
+    return mesh;
+  }
   const mesh = new Mesh(geometry, [faces, reveals]);
   placeOnLine(mesh, axis, line);
   return mesh;
+}
+
+/**
+ * Give the reveal faces inside an opening (those within its width, below
+ * its top) a group of their own, material 2, after the faces' and the
+ * other reveals': the triangles reordered so each group is one run.
+ */
+function splitOpeningReveals(
+  geometry: BufferGeometry,
+  openings: readonly Opening[],
+) {
+  const position = geometry.getAttribute('position');
+  const reveal = geometry.groups.find((g) => g.materialIndex === 1);
+  if (!reveal || geometry.index) return;
+  const inOpening = (tri: number) => {
+    let u = 0;
+    let v = 0;
+    for (let k = 0; k < 3; k++) {
+      u += position.getX(tri * 3 + k) / 3;
+      v += position.getY(tri * 3 + k) / 3;
+    }
+    return openings.some(
+      (o) => Math.abs(u - o.u) <= o.arch.w / 2 + 1e-3 && v <= o.arch.top + 1e-3,
+    );
+  };
+  const order: number[][] = [[], [], []];
+  for (const g of geometry.groups)
+    for (let t = g.start / 3; t < (g.start + g.count) / 3; t++)
+      order[
+        g.materialIndex === 1 && inOpening(t) ? 2 : (g.materialIndex ?? 0)
+      ].push(t);
+  const triangles = order.flat();
+  for (const name of Object.keys(geometry.attributes)) {
+    const attr = geometry.getAttribute(name);
+    const size = attr.itemSize;
+    const out = new Float32Array(attr.array.length);
+    triangles.forEach((t, i) => {
+      for (let k = 0; k < 3 * size; k++)
+        out[i * 3 * size + k] = attr.array[t * 3 * size + k] as number;
+    });
+    geometry.setAttribute(name, new BufferAttribute(out, size));
+  }
+  geometry.clearGroups();
+  let start = 0;
+  order.forEach((list, index) => {
+    if (list.length) geometry.addGroup(start, list.length * 3, index);
+    start += list.length * 3;
+  });
 }
 
 /** A window's opening, in a wall's (along, up). */
@@ -1380,6 +1444,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
         windows,
         tiledBoth ? m.tile : m.paint,
         tiledBoth ? m.tile : m.rawBrick,
+        m.archGreen,
       ),
     );
     for (const w of windows) glaze(m, wall, w, plan, bars);

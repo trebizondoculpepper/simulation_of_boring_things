@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum: the insides of the archways and doorways are the posters' flat green, not brick (the owner, 2026-10-29); window reveals keep their brick.
+
 - Museum: a hall seen through an archway is drawn at a quarter of its resolution, blurred, with its exhibit as its far version, coming clear as the walker nears the archway: half resolution within 5 m, full resolution and its real exhibit within 2.5 m, the blur gone by 1.5 m (the owner, 2026-10-29; `scaleRatio` in `render-style.ts`). Hall 1 on High: 420 to 244 draw calls per render callback.
 
 - Museum: the copies of the neighbouring halls' exhibits are drawn as far versions (the owner, 2026-10-29; `far-version.ts`): every visible opaque part baked and merged into one mesh for each of a few flat colours, no textures, screens as dark glass, no writing, small parts and see-through ones left out, a handful of draw calls an exhibit.
