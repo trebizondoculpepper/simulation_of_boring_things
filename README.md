@@ -21,6 +21,7 @@ The development rooms can be opened directly, among them the modelling demonstra
 - [Dev27: heat exchange from a gas boiler, with its mimic board](https://trebizondoculpepper.github.io/the_pool/?room=dev27)
 - [Dev51: the ideal pool plant, a working 3D schematic of a pool's circulation, filtration and heating](https://trebizondoculpepper.github.io/the_pool/?room=dev51)
 - [Dev52: museum stuff, the museum's showcases tried in a dark room](https://trebizondoculpepper.github.io/the_pool/?room=dev52)
+- [Dev53: the skimmer reveal, Hall 5's skimmer as a film: gold caustics, an orbit, a jump cut and a fanfare](https://trebizondoculpepper.github.io/the_pool/?room=dev53)
 
 The room-layout pipeline is described in [`doc/room-layout-guide.md`](doc/room-layout-guide.md), and the test scenarios in [`doc/prompts/scenarios.md`](doc/prompts/scenarios.md).
 

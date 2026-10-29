@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Dev53, the skimmer reveal: Hall 5's skimmer reveal tried as a film. Using the lid lifts it aside and gold caustics rise at once from the rim, tapering upward; the camera orbits the skimmer, sinking, through the suspense cue; then a jump cut to a look diagonally up, the big-item cue, and a Pepperdyne card picked at random turning above with its banner; then back where the walker stood as the lid goes back on.
+
 - Museum, Hall 5: each find now appears to the big-item reveal cue (`reveal-big-item.mp3`, 3.1 s) instead of the short fanfare, and stays above the walker for its whole length; more hair, the last, keeps the deflated fanfare.
 
 - Museum, Hall 5: the suspense cue now uses the complete 7.60-second opening phrase of the owner's newly supplied treasure-chest piano reference, resynthesized with ACE-Step; the reveal and fallback wait for the full phrase. The earlier four-second cut ended mid-phrase, and the earlier excerpts were item-reveal phrases rather than the suspense motif.

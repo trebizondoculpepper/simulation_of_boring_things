@@ -993,6 +993,9 @@ const importStarter = async (
   if (room === 'dev34')
     return (await import('./toolkit/gallery/rooms/shell-room'))
       .startStairTowerRoom;
+  if (room === 'dev53')
+    return (await import('./toolkit/gallery/rooms/skimmer-reveal-room'))
+      .startSkimmerRevealRoom;
   if (room === 'dev50')
     return (await import('./toolkit/gallery/rooms/truck-yard-room'))
       .startTruckYardRoom;
