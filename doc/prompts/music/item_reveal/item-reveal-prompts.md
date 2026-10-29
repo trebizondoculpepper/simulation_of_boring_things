@@ -10,7 +10,7 @@ Rules for every cue: instrumental only, no vocals, no lyrics, no speech; starts 
 
 ## 1. The suspense (`reveal-suspense`)
 
-Plays as the walker reaches into the skimmer and looks up: originally about 2.5 seconds, extended to 3.05 seconds on 2026-10-29 to include more of the rising arpeggio, ending unresolved so the fanfare can land on the next beat.
+Plays as the walker reaches into the skimmer and looks up: the current recording is the 1.10-second rising arpeggio alone (the owner, 2026-10-29), ending before the fanfare. The earlier 2.5- and 3.05-second briefs remain below as historical prompts.
 
 ```
 Original short video-game music cue, 2.5 seconds, instrumental, no vocals. A mysterious, slowly rising phrase that builds suspense as a treasure chest creaks open: a soft shimmering string tremolo underneath, a harp or celesta climbing upward one note at a time in an eerie, unresolved minor-to-whole-tone pattern, a faint glassy synth pad swelling, getting slightly louder and brighter as it rises. Late-1990s console adventure game sound, warm sampled orchestra, slightly lo-fi like a cartridge soundtrack. Ends hanging on an unresolved suspended note, as if holding its breath, with no final chord and no fade-out. Tempo about 90 bpm, key centred on D. Entirely original melody, not based on any existing game, film or song.

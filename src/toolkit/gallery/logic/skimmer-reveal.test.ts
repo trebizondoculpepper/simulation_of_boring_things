@@ -8,10 +8,10 @@ import {
 } from './skimmer-reveal';
 
 describe('the skimmer’s item reveal', () => {
-  it('holds the reveal for the extended suspense phrase', () => {
-    expect(REVEAL.suspense).toBe(3.05);
-    expect(revealFrame(3, 0).phase).toBe('suspense');
-    expect(revealFrame(3.05, 0).phase).toBe('fanfare');
+  it('holds the reveal for the rising arpeggio', () => {
+    expect(REVEAL.suspense).toBe(1.1);
+    expect(revealFrame(1, 0).phase).toBe('suspense');
+    expect(revealFrame(1.1, 0).phase).toBe('fanfare');
   });
 
   it('looks up during the suspense, the find not yet shown', () => {
