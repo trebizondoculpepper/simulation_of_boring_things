@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   DISPLAY_LEAVE,
   DISPLAY_PROFILES,
-  SIGN_FULL,
-  SIGN_HEADINGS,
+  SIGN_CUTOFFS,
   letteringShown,
-  signDetail,
+  signStep,
   mayRefresh,
   withinRoomLimits,
   DISPLAY_REACH,
@@ -107,17 +106,17 @@ describe('display reach', () => {
     expect(mayRefresh(DISPLAY_PROFILES.printed, 0, 1)).toBe(true);
   });
 
-  it('draws a sign as regions far off, headings nearer, everything close', () => {
-    expect(signDetail('full', SIGN_HEADINGS + 2)).toBe('regions');
-    expect(signDetail('regions', SIGN_HEADINGS - 1)).toBe('headings');
-    expect(signDetail('headings', SIGN_FULL - 1)).toBe('full');
-    expect(signDetail('full', SIGN_FULL + 0.5)).toBe('full');
+  it('shows a big title from much further than small print', () => {
+    // 0.1 degrees: 10 cm lettering from about 57 m, 1 cm from about 5.7 m.
+    const at = (metres: number) => SIGN_CUTOFFS[signStep(0, metres)];
+    expect(letteringShown(at(40), 'bold 100px Arial', 1000)).toBe(true);
+    expect(letteringShown(at(40), '10px Arial', 1000)).toBe(false);
+    expect(letteringShown(at(3), '10px Arial', 1000)).toBe(true);
   });
 
-  it('keeps large lettering at headings detail and drops small', () => {
-    expect(letteringShown('headings', 'bold 60px Arial', 1000)).toBe(true);
-    expect(letteringShown('headings', '20px Arial', 1000)).toBe(false);
-    expect(letteringShown('regions', 'bold 200px Arial', 1000)).toBe(false);
-    expect(letteringShown('full', '8px Arial', 1000)).toBe(true);
+  it('loses detail only once past a step', () => {
+    const near = signStep(0, 10);
+    expect(signStep(near, 10)).toBe(near);
+    expect(signStep(0, 400)).toBe(SIGN_CUTOFFS.length - 1);
   });
 });

@@ -4,7 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
-- Static signs draw their lettering by distance (the owner, 2026-10-29; `watchSign`, `signDetail`): beyond 12 m only their regions of colour, within 12 m their headings (lettering 4 cm or larger on the sign) too, within 5 m everything, each stage drawn once by running the sign's drawing again without the lettering it leaves out. Covers the museum's signs (`signMesh`) and every printed face made with the fitting tools (`printed`: placards, wall panels).
+- Static signs draw their lettering by the angle it subtends (the owner, 2026-10-29; `watchSign`, `signStep`): each size of lettering is drawn once it subtends 0.1° from the eye, so a big title shows from across a hall and small print only close to, and a sign too far for any of its lettering shows only its regions of colour; each step drawn once, by running the sign's drawing again without the lettering it leaves out. Covers the museum's signs (`signMesh`) and every printed face made with the fitting tools (`printed`: placards, wall panels).
 
 - Far versions keep static signs as they are, their pictures and all, one draw each (the owner, 2026-10-29: static signs should always be visible); Hall 2's lecterns seen from Hall 3 were black backing plates.
 

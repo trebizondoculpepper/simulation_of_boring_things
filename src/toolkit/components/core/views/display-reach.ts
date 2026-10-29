@@ -8,7 +8,6 @@ import type {
 } from 'three';
 import { METRE } from '../logic/units';
 import type {
-  SignDetail,
   DisplayKind,
   DisplaySighting,
   RoomDisplayLimits,
@@ -17,8 +16,9 @@ import {
   DISPLAY_PROFILES,
   displayVisibility,
   isLiveDisplay,
+  SIGN_CUTOFFS,
   letteringShown,
-  signDetail,
+  signStep,
   mayRefresh,
   withinRoomLimits,
   meanColour,
@@ -193,7 +193,7 @@ function setLevel(w: Watched, level: number) {
 }
 
 /**
- * A static sign drawn in stages by distance (`signDetail`): its drawing
+ * A static sign drawn in stages by distance (`signStep`): its drawing
  * run again, on canvases of its own size, through a context that leaves
  * out the lettering a stage does not show.
  */
@@ -202,9 +202,10 @@ interface Sign {
   canvas: HTMLCanvasElement;
   draw: (c: CanvasRenderingContext2D) => void;
   pixelsPerMetre: number;
-  detail: SignDetail;
+  /** Its step of `SIGN_CUTOFFS`: 0 everything. */
+  step: number;
   holdUntil: number;
-  stages: Partial<Record<SignDetail, HTMLCanvasElement>>;
+  stages: Map<number, HTMLCanvasElement>;
 }
 const signs = new WeakMap<Texture, Sign>();
 
@@ -226,22 +227,23 @@ export function watchSign(
     canvas,
     draw,
     pixelsPerMetre,
-    detail: 'full',
+    step: 0,
     holdUntil: 0,
-    stages: {},
+    stages: new Map(),
   });
   install();
 }
 
-function stageOf(sign: Sign, detail: SignDetail) {
-  if (detail === 'full') return sign.canvas;
-  let stage = sign.stages[detail];
+function stageOf(sign: Sign, step: number) {
+  if (step === 0) return sign.canvas;
+  let stage = sign.stages.get(step);
   if (stage) return stage;
   stage = document.createElement('canvas');
   stage.width = sign.canvas.width;
   stage.height = sign.canvas.height;
   const real = stage.getContext('2d')!;
-  const shown = () => letteringShown(detail, real.font, sign.pixelsPerMetre);
+  const shown = () =>
+    letteringShown(SIGN_CUTOFFS[step], real.font, sign.pixelsPerMetre);
   const context = new Proxy(real, {
     get(target, key) {
       if (key === 'fillText' || key === 'strokeText')
@@ -257,18 +259,16 @@ function stageOf(sign: Sign, detail: SignDetail) {
     },
   });
   sign.draw(context);
-  sign.stages[detail] = stage;
+  sign.stages.set(step, stage);
   return stage;
 }
 
-function setDetail(sign: Sign, detail: SignDetail) {
-  if (sign.detail === detail) return;
-  sign.detail = detail;
-  sign.texture.image = stageOf(sign, detail);
+function setStep(sign: Sign, step: number) {
+  if (sign.step === step) return;
+  sign.step = step;
+  sign.texture.image = stageOf(sign, step);
   upload.call(sign.texture, true);
 }
-
-const RANK: Record<SignDetail, number> = { regions: 0, headings: 1, full: 2 };
 
 interface SceneWatch {
   signs: Map<Sign, Object3D[]>;
@@ -337,13 +337,13 @@ function check(scene: Scene, camera: Camera) {
       at.setFromMatrixPosition(o.matrixWorld);
       nearest = Math.min(nearest, eye.distanceTo(at) / METRE);
     }
-    const detail = signDetail(sign.detail, nearest);
+    const step = signStep(sign.step, nearest);
     // As for displays: a sighting holds a while, so another renderer
     // seeing it from further off does not take its detail away at once.
-    if (RANK[detail] >= RANK[sign.detail]) {
+    if (step <= sign.step) {
       sign.holdUntil = now + SIGHTING;
-      setDetail(sign, detail);
-    } else if (now >= sign.holdUntil) setDetail(sign, detail);
+      setStep(sign, step);
+    } else if (now >= sign.holdUntil) setStep(sign, step);
   }
   for (const [w, objects] of s.shown) {
     if (!isLiveDisplay(w.updates)) continue;

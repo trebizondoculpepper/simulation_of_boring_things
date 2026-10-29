@@ -178,31 +178,36 @@ export function meanColour(data: ArrayLike<number>): string {
 }
 
 /**
- * How much of a static sign is drawn (the owner, 2026-10-29): beyond
- * `SIGN_HEADINGS` metres only its regions of colour, no writing; nearer,
- * its large lettering too; within `SIGN_FULL`, everything. A sign must go
- * `DISPLAY_LEAVE` past an edge to lose detail again, so it does not
- * flicker there.
+ * Which lettering of a static sign is drawn (the owner, 2026-10-29: "a
+ * function of the font size and the angle subtended"): lettering is drawn
+ * once it subtends `SIGN_MIN_ARC` degrees (its font's size on the sign,
+ * seen from where the eye is), so a big title shows from across a hall
+ * and small print only close to; a sign too far for any of its lettering
+ * shows only its regions of colour. The smallest size drawn is stepped on
+ * `SIGN_CUTOFFS` (metres), each step one drawing of the sign.
  */
-export type SignDetail = 'regions' | 'headings' | 'full';
-export const SIGN_HEADINGS = 12;
-export const SIGN_FULL = 5;
-/** Lettering at least this tall, metres (its font's size on the sign), is a heading. */
-export const SIGN_HEADING_SIZE = 0.04;
+export const SIGN_MIN_ARC = 0.1;
+export const SIGN_CUTOFFS = [0, 0.005, 0.01, 0.02, 0.04, 0.08, 0.16, 0.32];
 
-const DETAIL_RANK: Record<SignDetail, number> = {
-  regions: 0,
-  headings: 1,
-  full: 2,
-};
+/** The smallest lettering (metres) that subtends enough from `metres` away. */
+export function smallestReadable(metres: number): number {
+  return metres * Math.tan((SIGN_MIN_ARC * Math.PI) / 180);
+}
 
-/** A sign's detail seen from `metres` away, given its detail before. */
-export function signDetail(was: SignDetail, metres: number): SignDetail {
-  const margin = (edge: number, rank: number) =>
-    DETAIL_RANK[was] >= rank ? edge + DISPLAY_LEAVE : edge;
-  if (metres < margin(SIGN_FULL, 2)) return 'full';
-  if (metres < margin(SIGN_HEADINGS, 1)) return 'headings';
-  return 'regions';
+/**
+ * The step of `SIGN_CUTOFFS` a sign is drawn at from `metres` away, given
+ * the step it was at: the largest cutoff not above the smallest readable
+ * size (so it shows a little more, never less, than can be read); going
+ * to less detail only once 15% past a step, so it does not flicker there.
+ */
+export function signStep(was: number, metres: number): number {
+  const need = smallestReadable(metres);
+  let step = 0;
+  for (let k = 0; k < SIGN_CUTOFFS.length; k++)
+    if (SIGN_CUTOFFS[k] <= need) step = k;
+  if (step > was && need < SIGN_CUTOFFS[step] * 1.15)
+    step = Math.max(was, step - 1);
+  return step;
 }
 
 /** The size in pixels a CSS font string gives, or null. */
@@ -211,14 +216,13 @@ export function fontPixels(font: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
-/** Whether lettering in `font` is drawn at `detail`, on a sign of `pixelsPerMetre`. */
+/** Whether lettering in `font` is drawn with cutoff `cutoff` (metres), on a sign of `pixelsPerMetre`. */
 export function letteringShown(
-  detail: SignDetail,
+  cutoff: number,
   font: string,
   pixelsPerMetre: number,
 ): boolean {
-  if (detail === 'full') return true;
-  if (detail === 'regions') return false;
+  if (cutoff <= 0) return true;
   const px = fontPixels(font);
-  return px !== null && px / pixelsPerMetre >= SIGN_HEADING_SIZE;
+  return px !== null && px / pixelsPerMetre >= cutoff;
 }
