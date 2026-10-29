@@ -12,7 +12,7 @@ This is the recording script for the museum (rooms `museum0` to `museum9`): ever
 
 ## Halls with no voice lines
 
-Halls 0 (Welcome), 1 (Warm water), 2 (Clean water), 3 (Safe water), 4 (The chemistry of pools), 6 (World of pumps), 7 (Grout) and 9 (The whole plant) play no recorded voice. Their words are read on panels and placards only.
+Halls 0 (Welcome), 1 (Warm water), 2 (Clean water), 3 (Safe water), 4 (The chemistry of pools), 6 (World of pumps) and 9 (The whole plant) play no recorded voice. Their words are read on panels and placards only.
 
 ## Hall 5: A Day in the Life, What's in the Skimmer?
 
@@ -42,6 +42,29 @@ Optional, for later: six further finds are being tried in dev53 (`src/toolkit/ga
 | `goggles.mp3`      | Swimming goggles, the strap snapped. Lost property has had them twice already.    |
 | `crisp-packet.mp3` | A crisp packet, ready salted, empty. No eating on poolside, and yet.              |
 
+## Hall 7: Grout, the Unsung Hero of the Aquatics World
+
+Folder: `resources/sound/voice/grout/`. Source of the facts: `src/toolkit/gallery/logic/museum-7-grout.ts` (`PLINTHS`, `TITLE_WALL`, `CLOSING_CARD`); the plaques there carry the same history in writing. All of these lines are **new** (the owner, 2026-10-29): the game does not play them yet; wiring them in follows when they are recorded (TODO.md).
+
+When they play: `enter` as the visitor steps into the hall; `exit` as they leave it by either archway, once they have heard at least one plinth; each plinth's line the first time the visitor comes to that plinth's lectern (the same nearest-lectern choice that lights its spotlight), once per visit, never again until the hall is re-entered. A plinth's line waits for one already playing to finish, and is skipped if the visitor has moved on before it can start. The era music under each plinth (`doc/prompts/art/grout-music.md`) dips while a line plays.
+
+Direction: a hushed, reverent cathedral audio guide, speaking of grout as others speak of saints; absolutely sincere, never winking. The joke is the reverence, so it must never be played for laughs. Slow, warm, low, with room to breathe; about 10 to 15 seconds a plinth. Where a line ends on the plaque's own closing sentence (in italics on the plaques), a small pause before it. Dates as spoken: "eighteen-forty", "the nineteen-seventies". Standards as letters and numbers: "B S five three eight five", "B S E N thirteen eight eight eight", "C G two W A".
+
+| File            | When it plays                                                 | Words                                                                                                                                                                                                                                                                                                 |
+| --------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enter.mp3`     | Stepping into the hall                                        | Welcome. Please, lower your voice. You are standing in the presence of grout. Every tile in every swimming pool you have ever loved has been held in place, quietly, faithfully, by the substance you are about to meet. Take your time. Grout has.                                                   |
+| `plinth-1.mp3`  | First at plinth 1: lime mortar and lime putty                 | Lime and sand. From about eighteen-forty, the Victorians set their glazed tiles close, with the finest of joints, and lime filled them, setting slowly as it drew carbon dioxide from the very air. It was there first.                                                                               |
+| `plinth-2.mp3`  | First at plinth 2: early Portland cement grout                | In eighteen twenty-four, Joseph Aspdin patented Portland cement. By the eighteen-forties it was burned hotter, and became the cement we would know. For a century it held the public baths of Britain together. It set the standard. And then, it set.                                                |
+| `plinth-3.mp3`  | First at plinth 3: sanded cement grout                        | Where the joints grew wider, three millimetres and more, cement took sand into its keeping, and went where finer grouts could not. It filled the gaps others could not.                                                                                                                               |
+| `plinth-4.mp3`  | First at plinth 4: unsanded cement grout                      | For the finest joints, the glazed tile and the mosaic, about two millimetres on a wall, cement was used alone, unsanded, unadorned. It asked for nothing.                                                                                                                                             |
+| `plinth-5.mp3`  | First at plinth 5: coloured cement grout, under the oil wheel | The nineteen-seventies. Britain chose its bathroom suites in colours, and grout was pigmented to match them. Avocado was among the decade's defining shades. (A long pause.) The museum presents this specimen without comment.                                                                       |
+| `plinth-6.mp3`  | First at plinth 6: latex- and polymer-modified cement grout   | From about the nineteen-sixties, installers mixed their grout with a latex admixture in place of water. In time it came ready mixed from the factory, and today it is the most popular grout of all. It made cement better, and did not pretend otherwise.                                            |
+| `plinth-7.mp3`  | First at plinth 7: furan resin grout                          | Furan resin. From the nineteen-forties, a grout of great chemical resistance, trusted in dairies, in chemical plants, and in some pools. Furan grouts are generally black. (A pause.) The museum regrets that its specimen is not.                                                                    |
+| `plinth-8.mp3`  | First at plinth 8: epoxy grout                                | Epoxy. Its emulsions came in the nineteen-forties; true epoxy grouts were in general use by the sixties and seventies. Class R G, under B S E N thirteen eight eight eight: the pool's choice where the water is soft, or aggressive. Some are rated even for the sea. It is what the water deserves. |
+| `plinth-9.mp3`  | First at plinth 9: improved cement grout, CG2WA               | Today. Class C G two W A: improved cement, absorbing less water, resisting the scrub of brush and foot, often guarding itself against mould. The old way, made as good as it can be.                                                                                                                  |
+| `plinth-10.mp3` | First at plinth 10: the coda, the movement joint              | And finally, a confession. This is not grout. It is a movement joint: a flexible sealant where the pool must be allowed to move, at its edges and over its structure's own joints. Not grout. But grout could not do its work without it.                                                             |
+| `exit.mp3`      | Leaving by either archway, after at least one plinth          | Thank you for visiting. As you go back out into the world, and into the water, spare a thought for the joints between the tiles. They never ask to be noticed. That is why we notice them.                                                                                                            |
+
 ## Hall 8: Never again, putting safety first
 
 Folder: `resources/sound/voice/never-again/`. Source of the words: `src/toolkit/gallery/logic/museum-8-incident.ts` (`CHAPTERS`, each chapter's `narration`); played by `src/toolkit/gallery/rooms/museum/hall-8-never-again.ts`.
@@ -63,4 +86,4 @@ The earlier single recording of the whole account (`account.mp3`) is no longer u
 
 ## Checklist for the session
 
-Hall 5: `intro`, `hair-clump`, `leaves`, `dead-rat`, `dildo`, `butt-plug`, `more-hair`, `cleared` (8 clips), and optionally the six further finds. Hall 8: `chapter-1` to `chapter-6` (6 clips). Fourteen clips in all, about three minutes of finished audio.
+Hall 5: `intro`, `hair-clump`, `leaves`, `dead-rat`, `dildo`, `butt-plug`, `more-hair`, `cleared` (8 clips), and optionally the six further finds. Hall 7: `enter`, `plinth-1` to `plinth-10`, `exit` (12 clips, all new). Hall 8: `chapter-1` to `chapter-6` (6 clips). Twenty-six clips in all, about six minutes of finished audio.
