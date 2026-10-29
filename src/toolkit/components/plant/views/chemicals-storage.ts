@@ -106,7 +106,16 @@ function ring(
  */
 export function createIbc(
   kit: PanelKit,
-  { liquid: colour, handle }: { liquid: string; handle: string },
+  {
+    liquid: colour,
+    handle,
+    outletDn = 50,
+  }: {
+    liquid: string;
+    handle: string;
+    /** Its bottom outlet's bore: the standard DN50, or the DN150 some carry for fast emptying. */
+    outletDn?: 50 | 150;
+  },
 ) {
   const t = plantTools(kit);
   const ibc = new Group();
@@ -115,9 +124,9 @@ export function createIbc(
   const bottle = t.box(
     ibc,
     translucent(t),
-    1.12,
+    1.15,
     0.96,
-    0.94,
+    0.97,
     0,
     0.15 + 0.48,
     0,
@@ -126,11 +135,11 @@ export function createIbc(
   const contents = t.box(
     ibc,
     t.paint(colour, 0.25),
-    1.1,
-    0.93,
-    0.92,
+    1.13,
+    IBC.depth,
+    0.95,
     0,
-    0.16,
+    IBC.floor,
     0,
   );
   const setLevel = liquid(contents, IBC.floor, IBC.depth);
@@ -149,10 +158,13 @@ export function createIbc(
       t.rod(ibc, cage, [x, y, -0.49], [x, y, 0.49], 0.01, 8);
   }
   t.cyl(ibc, t.paint('#d0d2cf', 0.4), 0.08, 0.04, 0, 1.13, 0, 'y', 24);
-  // The bottom outlet: a DN50 butterfly valve, its lever on a pivot.
-  t.cyl(ibc, t.paint('#d0d2cf', 0.4), 0.035, 0.1, 0.62, 0.22, 0, 'x', 16);
+  // The bottom outlet: a butterfly valve, its lever on a pivot.
+  const big = outletDn === 150;
+  const r = big ? 0.085 : 0.035;
+  const oy = big ? 0.25 : IBC.outlet[1];
+  t.cyl(ibc, t.paint('#d0d2cf', 0.4), r, 0.1, 0.62, oy, 0, 'x', 16);
   const lever = new Group();
-  lever.position.set(0.66, 0.25, 0);
+  lever.position.set(0.66, oy + r - 0.005, 0);
   ibc.add(lever);
   t.box(lever, t.paint(handle, 0.5), 0.02, 0.08, 0.02, 0, 0.04, 0);
   lever.userData.live = true;
@@ -160,7 +172,9 @@ export function createIbc(
     // Open, the lever lies along the pipe.
     lever.rotation.z = open ? -Math.PI / 2 : 0;
   };
-  return { group: ibc, setLevel, setOpen, lever };
+  /** Its outlet's face, in its own frame. */
+  const outlet: Point = [0.67, oy, 0];
+  return { group: ibc, setLevel, setOpen, lever, outlet };
 }
 
 /**

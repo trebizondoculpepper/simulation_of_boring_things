@@ -121,12 +121,12 @@ describe('Hall 6’s tank', () => {
     expect(s.overflowedL).toBeGreaterThan(0);
   });
 
-  it('RESET drains it in seconds and ends where entry starts', () => {
+  it('RESET drains it through the IBC’s outlet in under a minute and ends where entry starts', () => {
     let s = runHall6(act(newHall6(), { type: 'run', no: 11 }), 8);
     s = act(s, { type: 'reset' });
     expect(s.draining).toBe(true);
     expect(s.tripped).toBe(false);
-    s = runHall6(s, 15);
+    s = runHall6(s, 60);
     expect({ ...s, sinceReset: 0, refused: 0 }).toEqual(newHall6());
   });
 });

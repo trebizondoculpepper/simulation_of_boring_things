@@ -68,7 +68,8 @@ const SUCTION_X = TROUGH_FACE - 0.85;
 export const HEADER = { x: 2.7, y: 3.7, od: 0.32 } as const;
 /** The tank's place, on the visitors' floor's west side. */
 export const TANK_AT = { x: -1.6, z: 0 } as const;
-export const TANK_TOP = TANK.stand + 1.25;
+/** The IBC's top (its cage), m. */
+export const TANK_TOP = 1.16;
 /** The drain gully, at the tank's foot. */
 export const GULLY_AT = { x: -1.6, z: 1.7 } as const;
 
@@ -206,7 +207,8 @@ export const PLACES: Record<MachineId, MachinePlace> = {
   ) as Record<`p${PumpNo}`, MachinePlace>),
   source: { x: TROUGH_FACE + TROUGH.d / 2, z: 0, yaw: 0 },
   header: { x: HEADER.x, z: 0, yaw: 0 },
-  tank: { x: TANK_AT.x, z: TANK_AT.z, yaw: 0 },
+  // Turned so its bottom outlet faces +z, toward the gully.
+  tank: { x: TANK_AT.x, z: TANK_AT.z, yaw: -Math.PI / 2 },
   drain: { x: GULLY_AT.x, z: GULLY_AT.z, yaw: 0 },
 };
 
@@ -216,8 +218,6 @@ export const HEADER_SPAN = {
   minZ: Math.min(...PUMPS.map((p) => zOf(p.no))) - 0.3,
   maxZ: Math.max(...PUMPS.map((p) => zOf(p.no))) + 0.3,
 };
-
-const R = TANK.diameter / 2;
 
 /** Each machine's ports, in its own frame. */
 export const PORTS: Record<MachineId, Record<string, Port>> = {
@@ -258,17 +258,20 @@ export const PORTS: Record<MachineId, Record<string, Port>> = {
     ),
     out: { at: [-HEADER.od / 2, HEADER.y, 0], out: [-1, 0, 0] },
   },
+  // The IBC (its own frame: outlet toward +x): the fill down into its top
+  // filler, the overflow out of its bottle's shoulder, the drain from its
+  // bottom outlet valve's face.
   tank: {
-    inlet: { at: [0, TANK_TOP + 0.15, 0], out: [0, 1, 0] },
+    inlet: { at: [0, TANK.inletM, 0], out: [0, 1, 0] },
     overflow: {
-      at: [0.25, TANK.stand + TANK.overflowM, R + 0.15],
-      out: [0, 0, 1],
+      at: [0.6, TANK.floorM + TANK.overflowM - 0.06, -0.3],
+      out: [1, 0, 0],
     },
-    drain: { at: [-0.25, 0.22, R + 0.15], out: [0, 0, 1] },
+    drain: { at: [0.72, 0.25, 0], out: [1, 0, 0] },
   },
   drain: {
     'in-1': { at: [0.25, 0.3, 0], out: [0, 0, -1] },
-    'in-2': { at: [-0.25, 0.22, 0], out: [0, 0, -1] },
+    'in-2': { at: [0, 0.25, 0], out: [0, 0, -1] },
   },
 };
 
@@ -284,7 +287,7 @@ export const BOXES: Record<MachineId, { min: Vec3; max: Vec3 }> = {
     min: [-HEADER.od / 2, HEADER.y - HEADER.od / 2, HEADER_SPAN.minZ],
     max: [HEADER.od / 2, HEADER.y + HEADER.od / 2, HEADER_SPAN.maxZ],
   },
-  tank: { min: [-R - 0.1, 0, -R - 0.1], max: [R + 0.1, TANK_TOP, R + 0.1] },
+  tank: { min: [-0.62, 0, -0.52], max: [0.62, TANK_TOP, 0.52] },
   drain: { min: [0, 0, 0], max: [0, 0, 0] },
 };
 
@@ -438,11 +441,51 @@ export function lowPipeFootprints(lines: readonly HallLine[], below = 2.0) {
   return out;
 }
 
-/** Where each pump's RUN stand and plaque stand: in front of it, on the visitors' side. */
+/**
+ * Where each pump's RUN stand and plaque stand: in front of it, on the
+ * visitors' side; beside its discharge where that leaves toward the
+ * visitors (the plaque would stand in its pipe), and clear of a column's
+ * line, so it is seen from the walkway past both.
+ */
 export function standOf(no: PumpNo): { x: number; z: number } {
   const b = boxInHall(pumpId(no));
-  const x = (no === 6 ? TROUGH_FACE : b.min[0]) - 0.55;
-  return { x: Math.min(x, TROUGH_FACE - 0.55), z: PUMP_PLACES[no].z };
+  const x = Math.min(
+    (no === 6 ? TROUGH_FACE : b.min[0]) - 0.55,
+    TROUGH_FACE - 0.55,
+  );
+  const columnZ = hallColumns('museum6').map((c) => c.z);
+  const clearance = (z: number) =>
+    Math.min(...columnZ.map((c) => Math.abs(z - c)));
+  const d = portInHall(pumpId(no), 'discharge');
+  let z = PUMP_PLACES[no].z;
+  if (d.out[0] <= -0.5) {
+    // Beside its discharge, on the side further from the columns.
+    const sides = [d.at[2] - STAND_ASIDE, d.at[2] + STAND_ASIDE];
+    z = clearance(sides[1]) > clearance(sides[0]) ? sides[1] : sides[0];
+  }
+  // Clear of the column line's shadow, seen from either side.
+  for (const c of columnZ)
+    if (Math.abs(z - c) < COLUMN_CLEAR)
+      z = c + Math.sign(z - c || 1) * COLUMN_CLEAR;
+  return { x, z: round(z) };
+}
+/** How far a plaque stands from a column's line, so it is seen from either side, m. */
+const COLUMN_CLEAR = 0.9;
+/** How far a stand stands aside of a discharge that leaves toward the visitors, m. */
+const STAND_ASIDE = 0.6;
+
+/** A plaque's face: its centre's height and its half-width, m (`createRunStand`). */
+export const PLAQUE = { y: 1.08, half: 0.32 } as const;
+/** The visitors' walkway: how far west of the stands they stand to read the plaques, and their eye's height, m. */
+export const READER = { back: 1.5, eye: 1.6 } as const;
+
+/** Each stand's keep-clear zone: from its reader to just behind its plaque, no pipe run through it. */
+export function standClearZone(no: PumpNo): { min: Vec3; max: Vec3 } {
+  const s = standOf(no);
+  return {
+    min: [s.x - READER.back, 0, s.z - PLAQUE.half - 0.1],
+    max: [s.x + 0.15, 2.2, s.z + PLAQUE.half + 0.1],
+  };
 }
 
 /** Lay out and plumb Hall 6. */
@@ -457,6 +500,8 @@ export function plumbHall6(): Hall6Room {
       max: [westOfPumps, 2.4, interior.maxZ],
       forbids: { runs: true },
     },
+    // Nor in front of any pump's plaque.
+    ...PUMPS.map((p) => ({ ...standClearZone(p.no), forbids: { runs: true } })),
   ];
   const machines = (Object.keys(PLACES) as MachineId[]).filter(
     (id) => !POINTS.includes(id),

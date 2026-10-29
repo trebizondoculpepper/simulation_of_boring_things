@@ -7,8 +7,8 @@
 export const IBC = {
   /** Its bottle's inside: floor height and depth of liquid when full, metres. */
   floor: 0.165,
-  depth: 0.93,
-  /** Its plan, inside: 1.1 × 0.92 m. */
-  area: 1.1 * 0.92,
+  depth: 0.94,
+  /** Its plan, inside: 1.13 × 0.95 m, so brimful it holds about 1,009 litres. */
+  area: 1.13 * 0.95,
   outlet: [0.67, 0.22, 0] as const,
 } as const;

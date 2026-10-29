@@ -15,8 +15,8 @@ import { createDialGauge } from '../../industrial-control/views/dial-gauge';
 
 /**
  * The parts Hall 6 ("Grundflow's Amazing World of Pumps", 107j) needs
- * that the game had no view of: the 1,000-litre test tank with its sight
- * tube, level readout and float switch; the Olympic-sized split-case
+ * that the game had no view of: the test tank's (an IBC's) litres scale,
+ * level readout and float switch; the Olympic-sized split-case
  * pump; a small magnetic-drive transfer pump; a submersible sump pump;
  * and each pump's RUN stand (its lit RUN button, its flow readout and its
  * plaque). Each draws what it is told and redraws only on change.
@@ -24,111 +24,83 @@ import { createDialGauge } from '../../industrial-control/views/dial-gauge';
  */
 
 /**
- * The test tank, after a 1,000-litre GRP sectional water tank on a
- * galvanised stand: a pale-green cylinder `diameter` across, its water a
- * single mesh scaled to its level inside a clear upper band (a window in
- * the shell so the visitor sees it rise), a sight tube LI1 on its front
- * marked every 100 litres, LT1's big seven-segment readout on a post, and
- * LSH1's float switch on its rim with its amber lamp. Grundflow's TEST
- * TANK plate. Front toward +z.
+ * The test tank's own instruments, for the game's standard IBC
+ * (`createIbc`) that is Hall 6's tank: LI1, a litres scale on the
+ * bottle's −z face (toward the visitors) marked every 100 litres from its
+ * floor; LSH1's float switch on the cage top with its amber lamp; and the
+ * TEST TANK plate with Grundflow's badge. In the IBC's frame; `show` sets
+ * the lamp, which redraws only on change.
  */
-export function createTestTank(
+export function createTankInstruments(
   kit: PanelKit,
   {
-    diameter,
-    height,
-    stand,
+    area,
+    floor,
     fullL,
-    overflowM,
     tags,
   }: {
-    diameter: number;
-    height: number;
-    stand: number;
+    area: number;
+    floor: number;
     fullL: number;
-    overflowM: number;
     tags: { li: string; lt: string; lsh: string };
   },
 ) {
   const t = tools(kit);
   const group = new Group();
-  group.name = 'Test tank';
-  const R = diameter / 2;
-  const galv = t.paint('#a9afaf', 0.4, 0.7);
-  const grp = t.paint('#9fb7a2', 0.6);
-  const clear = t.paint('#cfe3ea', 0.15);
-  clear.transparent = true;
-  clear.opacity = 0.28;
-  // The stand: four legs and a ring beam.
-  for (const [x, z] of [
-    [R * 0.7, R * 0.7],
-    [-R * 0.7, R * 0.7],
-    [R * 0.7, -R * 0.7],
-    [-R * 0.7, -R * 0.7],
-  ])
-    t.box(group, galv, 0.06, stand, 0.06, x, stand / 2, z);
-  t.cyl(group, galv, R + 0.02, 0.05, 0, stand - 0.025, 0);
-  // The shell: GRP below, a clear band above so the water shows.
-  const band = 0.45 * height;
-  t.cyl(group, grp, R, height - band, 0, stand + (height - band) / 2, 0);
-  t.cyl(group, clear, R, band, 0, stand + height - band / 2, 0);
-  t.cyl(group, grp, R + 0.02, 0.04, 0, stand + height + 0.02, 0);
-  // The water: one mesh, scaled to the level.
-  const waterPaint = t.paint('#3d86b8', 0.2);
-  waterPaint.transparent = true;
-  waterPaint.opacity = 0.8;
-  const water = t.cyl(group, waterPaint, R - 0.015, 1, 0, 0, 0) as Mesh;
-  water.userData.live = true;
-  // The sight tube LI1: a clear tube on the front, its float of water, marked every 100 litres.
-  const area = Math.PI * R * R;
-  const fullH = fullL / 1000 / area;
-  const tubeZ = R + 0.06;
-  t.cyl(group, clear, 0.018, height, 0.32, stand + height / 2, tubeZ);
-  const tubeWater = t.cyl(group, waterPaint, 0.014, 1, 0.32, 0, tubeZ) as Mesh;
-  tubeWater.userData.live = true;
+  group.name = 'Test tank instruments';
+  // The face toward −z, drawn facing +z and turned round.
+  const face = new Group();
+  face.rotation.y = Math.PI;
+  face.position.set(0, 0, -0.5);
+  group.add(face);
   const scale = new Group();
-  scale.position.set(0.39, stand, tubeZ);
-  group.add(scale);
+  scale.position.set(-0.3, floor, 0);
+  face.add(scale);
+  const ink = t.paint('#16191b', 0.5);
   for (let l = 0; l <= fullL; l += 100) {
     const y = l / 1000 / area;
-    t.box(
-      scale,
-      t.paint('#16191b', 0.5),
-      l % 500 === 0 ? 0.05 : 0.03,
-      0.004,
-      0.004,
-      0,
-      y,
-      0,
-    );
+    t.box(scale, ink, l % 500 === 0 ? 0.08 : 0.05, 0.006, 0.004, 0, y, 0);
     if (l % 200 === 0) {
       const label = createMicroLabel(kit, `${l}`, {
-        height: 0.022,
+        height: 0.03,
         ink: '#16191b',
         plate: '#f4f3ee',
       });
-      label.position.set(0.06, y, 0.005);
+      label.position.set(0.09, y, 0.003);
       scale.add(label);
     }
   }
   const liTag = createMicroLabel(kit, `${tags.li} LITRES`, {
-    height: 0.02,
+    height: 0.03,
     ink: '#16191b',
     plate: '#f4f3ee',
   });
-  liTag.position.set(0.32, stand + height + 0.08, tubeZ);
-  group.add(liTag);
-  // The overflow weir's mark and the full line.
+  liTag.position.set(-0.3, floor + fullL / 1000 / area + 0.1, 0.003);
+  face.add(liTag);
   const full = createMicroLabel(kit, 'FULL', {
-    height: 0.025,
+    height: 0.03,
     ink: '#ffffff',
     plate: '#b22a22',
   });
-  full.position.set(-0.2, stand + fullH, R + 0.005);
-  group.add(full);
-  // LSH1 on the rim: a float switch body and its amber lamp.
+  full.position.set(-0.47, floor + fullL / 1000 / area, 0.003);
+  face.add(full);
+  const badge = createBrandBadge(kit, 'grundflow', {
+    height: 0.07,
+    plate: '#ffffff',
+  });
+  badge.position.set(0.25, 0.75, 0.005);
+  face.add(badge);
+  const plate = createMicroLabel(kit, `TEST TANK  ${fullL} L`, {
+    height: 0.04,
+    ink: '#16191b',
+    plate: '#f4f3ee',
+  });
+  plate.position.set(0.25, 0.62, 0.005);
+  face.add(plate);
+  // LSH1 on the cage top: a float switch body and its amber lamp, toward the visitors.
   const lsh = new Group();
-  lsh.position.set(-0.3, stand + height + 0.04, R - 0.1);
+  lsh.position.set(0.3, 1.16, -0.38);
+  lsh.rotation.y = Math.PI;
   group.add(lsh);
   t.box(lsh, t.paint('#2b3438', 0.5), 0.12, 0.1, 0.1, 0, 0.05, 0);
   const high = signal(false);
@@ -145,33 +117,11 @@ export function createTestTank(
   lamp.object.position.set(0, 0.05, 0.052);
   lamp.object.scale.setScalar(0.8);
   lsh.add(lamp.object);
-  const badge = createBrandBadge(kit, 'grundflow', {
-    height: 0.06,
-    plate: '#ffffff',
-  });
-  badge.position.set(0, stand + 0.25, R + 0.01);
-  group.add(badge);
-  const plate = createMicroLabel(kit, `TEST TANK  ${fullL} L`, {
-    height: 0.035,
-    ink: '#16191b',
-    plate: '#f4f3ee',
-  });
-  plate.position.set(0, stand + 0.15, R + 0.01);
-  group.add(plate);
-  void overflowM;
-  let shown = -1;
   return {
     group,
     parts,
-    show(litres: number, isHigh: boolean) {
+    show(isHigh: boolean) {
       if (high.value !== isHigh) high.value = isHigh;
-      const level = Math.max(0.002, litres / 1000 / area);
-      if (Math.abs(level - shown) < 1e-4) return;
-      shown = level;
-      water.scale.y = level;
-      water.position.y = stand + level / 2;
-      tubeWater.scale.y = level;
-      tubeWater.position.y = stand + level / 2;
     },
   };
 }

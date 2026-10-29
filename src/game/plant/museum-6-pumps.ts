@@ -5,6 +5,7 @@ import { DIAPHRAGM_PUMPS } from '../../toolkit/components/plant/logic/diaphragm-
 import { DMH } from '../../toolkit/components/plant/logic/motor-dosing-pump';
 import { PERI_30 } from '../../toolkit/components/plant/logic/metering-pump';
 import { PUMP_CURVE } from './circulation';
+import { IBC } from '../../toolkit/components/plant/logic/ibc';
 
 /**
  * Hall 6 of the museum, "Grundflow's Amazing World of Pumps" (107j; the
@@ -14,15 +15,15 @@ import { PUMP_CURVE } from './circulation';
  * 1,000-litre test tank (TK1) through their own fill lines and a shared
  * inlet header (HD1). The visitor runs any of them; the tank's level is
  * shared and cumulative; at full, the high-level float switch LSH1 trips
- * every pump, and a press then only bleeps; RESET opens the drain valve
- * and empties the tank to the ideal drain (DR1).
+ * every pump, and a press then only bleeps; RESET opens the IBC's bottom outlet
+ * valve and empties the tank to the ideal drain (DR1).
  *
  * The positive-displacement pumps deliver their stroke volume, a little
  * less against pressure; the centrifugal pumps run on their curves
  * against the lift to the header, their fill lines and the shared
  * header, solved together, each line's commissioning valve set so that,
  * alone, the pump runs at its rated duty (107j's research: on their
- * curves alone against a 1.7 m lift they would run off the end of them).
+ * curves alone against the lift they would run off the end of them).
  *
  * Every fitting is given, so the plumber adds nothing; tags derived (room
  * code M6). Pure; litres, m³/h, metres of head, bar, seconds.
@@ -263,7 +264,7 @@ export const NODES: readonly (SchematicNode & { id: MachineId })[] = [
     name: `${p.model} ${p.kind}`,
   })),
   { id: 'header', kind: 'manifold', code: 'HD1', name: 'Tank inlet header' },
-  { id: 'tank', kind: 'test-tank', code: 'TK1', name: '1,000-litre test tank' },
+  { id: 'tank', kind: 'test-tank', code: 'TK1', name: '1,000-litre test tank (IBC)' },
   { id: 'drain', kind: 'ideal-drain', code: 'DR1', name: 'Ideal drain' },
 ];
 
@@ -324,9 +325,9 @@ export const LINK_NAMES: Record<string, string> = Object.fromEntries([
 export const LINK_DN: Record<string, number> = Object.fromEntries([
   ...PUMPS.map((p) => [`suction${p.no}`, p.dn === 6 ? 6 : p.dn]),
   ...PUMPS.map((p) => [`delivery${p.no}`, p.dn]),
-  ['fill', 300],
+  ['fill', 150],
   ['overflow', 150],
-  ['drainLine', 300],
+  ['drainLine', 150],
 ]);
 
 export interface HallFitting extends GivenFitting {
@@ -473,7 +474,7 @@ export const INSTRUMENTS: readonly Instrument[] = [
   {
     id: 'tank.li',
     kind: 'level-gauge',
-    role: 'tank sight tube',
+    role: 'tank level scale',
     on: 'tank',
     unit: 'L',
   },
@@ -561,20 +562,26 @@ export function hall6Expansion(): Expansion {
 
 // ---- The physics -------------------------------------------------------------
 
-/** The tank: 1.1 m across; full (LSH1) at 1,000 litres; its overflow weir at 1.15 m. */
+/**
+ * The tank: the game's standard 1,000-litre IBC (`IBC`), its bottle's
+ * plan and floor; full (LSH1) at 1,000 litres; brimful, over its
+ * overflow, at its bottle's depth. Its fill enters through its top
+ * filler, `inletM` above the hall's floor.
+ */
 export const TANK = {
-  diameter: 1.1,
   fullL: 1000,
-  overflowM: 1.15,
-  /** Its stand's height, m, and the header's inlet above the floor, m. */
-  stand: 0.3,
+  overflowM: IBC.depth,
+  /** Its bottle's floor above the hall's floor, m. */
+  floorM: IBC.floor,
+  /** The fill's inlet, on its top filler, above the hall's floor, m. */
+  inletM: 1.25,
 } as const;
-export const TANK_AREA = Math.PI * (TANK.diameter / 2) ** 2;
+export const TANK_AREA = IBC.area;
 export const levelOf = (litres: number) => litres / 1000 / TANK_AREA;
 export const OVERFLOW_L = TANK.overflowM * TANK_AREA * 1000;
 
-/** The lift every pump pumps against: from the reservoir's surface (the floor) to the header over the tank, m. */
-export const LIFT = 1.7;
+/** The lift every pump pumps against: from the reservoir's surface (the floor) to the fill's inlet on the tank's top, m. */
+export const LIFT = TANK.inletM;
 /** Metres of water to bar. */
 export const BAR_PER_M = 0.0981;
 /** A displacement pump's slip: its delivery falls this share at its rated pressure (indicative). */
@@ -583,8 +590,8 @@ export const SLIP = 0.1;
 export const HEADER_R = 1 / 625 ** 2;
 /** An open butterfly's share of a big pump's fill line loss at duty, m. */
 export const VALVE_OPEN_M = 0.15;
-/** The drain: DN300 through the tank's floor, its coefficient of discharge. */
-export const DRAIN = { area: Math.PI * 0.15 ** 2, cd: 0.6 } as const;
+/** The drain: the IBC's DN150 bottom outlet valve, its coefficient of discharge. */
+export const DRAIN = { area: Math.PI * 0.075 ** 2, cd: 0.6 } as const;
 
 /** The notches a butterfly's plate holds, and its characteristic (Hall 1's). */
 export const NOTCHES: readonly number[] = [0, 0.2, 0.4, 0.6, 0.8, 1];

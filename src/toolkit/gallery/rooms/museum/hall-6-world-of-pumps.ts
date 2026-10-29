@@ -40,8 +40,9 @@ import {
   createRunStand,
   createSplitCasePump,
   createSubmersiblePump,
-  createTestTank,
+  createTankInstruments,
 } from '../../../components/plant/views/museum-pump-parts';
+import { createIbc } from '../../../components/plant/views/chemicals-storage';
 import {
   LINK_NAMES,
   NODES,
@@ -49,7 +50,9 @@ import {
   PUMPS,
   TAGS,
   TANK,
+  TANK_AREA,
   actOnHall6,
+  levelOf,
   fittingById,
   fittingName,
   hall6Readings,
@@ -442,29 +445,51 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       model: { node: 'header' },
     }),
   );
-  const tank = createTestTank(kit, {
-    diameter: TANK.diameter,
-    height: 1.25,
-    stand: TANK.stand,
+  // TK1: the game's standard 1,000-litre IBC, its water showing through
+  // its bottle; its bottom outlet valve is the drain valve RESET opens.
+  const ibc = createIbc(kit, {
+    liquid: '#3d86b8',
+    handle: '#1f5fa8',
+    outletDn: 150,
+  });
+  const tank = createTankInstruments(kit, {
+    area: TANK_AREA,
+    floor: TANK.floorM,
     fullL: TANK.fullL,
-    overflowM: TANK.overflowM,
     tags: {
       li: shortTag('tank.li'),
       lt: shortTag('tank.lt'),
       lsh: shortTag('tank.lsh'),
     },
   });
+  ibc.group.add(tank.group);
   object.add(
-    markComponent(still(atMachine(tank.group, 'tank')), {
+    markComponent(still(atMachine(ibc.group, 'tank'), new Set([ibc.lever])), {
       name: `${TAGS['tank']} ${nodeName('tank')}`,
       model: { node: 'tank' },
       status: () =>
-        `its sight tube at ${Math.round(state().litres)} litres; ${TAGS['tank.lsh']} lamp ${readings.high ? 'lit' : 'out'}`,
+        `its water at the ${Math.round(state().litres)} litre mark; ${TAGS['tank.lsh']} lamp ${readings.high ? 'lit' : 'out'}`,
     }),
   );
+  markComponent(ibc.lever, {
+    name: `${TAGS['tank.drain.mv']} ${fittingName(fittingById('tank.drain.mv')!)}`,
+    model: { fitting: 'tank.drain.mv' },
+    status: () =>
+      state().draining ? 'lever along the pipe: open' : 'lever across: shut',
+  });
   take(tank.parts);
+  let shownLevel = -1;
+  let shownOpen: boolean | null = null;
   updates.push((delta) => {
-    tank.show(state().litres, readings.high);
+    tank.show(readings.high);
+    // Redrawn only when the water moves by a visible millimetre, or the valve turns.
+    const level = Math.round(levelOf(state().litres) * 1000) / 1000;
+    if (level !== shownLevel) {
+      shownLevel = level;
+      ibc.setLevel(level / TANK.overflowM);
+    }
+    const open = state().draining;
+    if (open !== shownOpen) ibc.setOpen((shownOpen = open));
     tank.parts.update(delta);
   });
   const litres = createLitresDisplay(kit, shortTag('tank.lt'));
@@ -534,6 +559,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     const short = shortTag(item.id);
     const west: [number, number] = [-1, 0];
     const no = Number(f.of.slice(1)) as PumpNo;
+    // The tank's drain valve is the IBC's own bottom outlet valve, drawn with it.
+    if (f.of === 'tank') return;
     if (f.body === 'motorised') {
       const mv = createInlineFitting(
         kit,
