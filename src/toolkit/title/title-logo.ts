@@ -4,7 +4,9 @@
  * draws in, then the title "The Pool" appears over its top, feet dipping
  * into the water, white with a blue outline and a black drop shadow,
  * reflected in the water beneath it; the water and the reflection ripple,
- * and the filter vessel's sight glass shows its water swirling over sand.
+ * the filter vessel's sight glass shows its water swirling over sand, and
+ * the gauges' needles tremble. The logo is the vector drawing
+ * `the-pool-logo.svg`, drawn sharp at twice the art's size.
  * Two canvases, redrawn only when the ripple's frame changes (at most
  * 10 Hz); each appears by unblurring as it fades in, a CSS animation of its
  * canvas, so it runs smoothly on the compositor. The title is live text,
@@ -12,8 +14,9 @@
  * screen readers).
  */
 
-import logoUrl from '../../../resources/images/title/the-pool-logo.png?url';
+import logoUrl from '../../../resources/images/title/the-pool-logo.svg?url';
 import {
+  GAUGES,
   LOGO_ART,
   LOGO_REVEAL_AT_S,
   LOGO_REVEAL_S,
@@ -24,6 +27,7 @@ import {
   TITLE_TEXT,
   rippleFrame,
   rippleShift,
+  gaugeNeedle,
   sightGlassView,
 } from './logic/title-logo';
 
@@ -33,8 +37,10 @@ const FONT_FAMILY = '"The Pool Title", "Arial Narrow", sans-serif';
 const TEXT_SCALE = 2;
 const WHITE = '#ffffff';
 const OUTLINE = '#0d47a1';
-/** The logo's own line colour, for the sight glass. */
-const LINE = '#02223a';
+/** The logo's own line colour, for the sight glass and the gauges. */
+const LINE = '#02213a';
+/** The art canvas's resolution over the art's, the vector drawn sharp. */
+const ART_SCALE = 2;
 /** The height of a ripple strip, in pixels of the canvas drawn into. */
 const STRIP = 2;
 
@@ -44,8 +50,8 @@ export function createTitleLogo() {
   root.className = 'title-logo';
   const art = document.createElement('canvas');
   art.className = 'title-logo-art';
-  art.width = W;
-  art.height = H;
+  art.width = W * ART_SCALE;
+  art.height = H * ART_SCALE;
   const lettering = document.createElement('canvas');
   lettering.className = 'title-logo-lettering';
   lettering.width = W * TEXT_SCALE;
@@ -59,10 +65,19 @@ export function createTitleLogo() {
     typeof matchMedia === 'function' &&
     matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // The vector logo (`resources/images/title/the-pool-logo.svg`, made by
+  // `scripts/title-logo.ts`), drawn once at the art canvas's resolution,
+  // the source its ripple strips are cut from.
   const image = new Image();
+  const source = document.createElement('canvas');
+  source.width = W * ART_SCALE;
+  source.height = H * ART_SCALE;
   let imageReady = false;
   image.decoding = 'async';
   image.addEventListener('load', () => {
+    source
+      .getContext('2d')!
+      .drawImage(image, 0, 0, W * ART_SCALE, H * ART_SCALE);
     imageReady = true;
     lastArt = -1;
   });
@@ -211,19 +226,60 @@ export function createTitleLogo() {
     ctx.restore();
   };
 
+  // The pressure gauges' faces, redrawn over the logo's with their needles
+  // trembling about their readings.
+  const drawGauges = (ctx: CanvasRenderingContext2D, frame: number) => {
+    GAUGES.forEach((g, k) => {
+      ctx.beginPath();
+      ctx.arc(g.x, g.y, g.r - 1.6, 0, Math.PI * 2);
+      ctx.fillStyle = WHITE;
+      ctx.fill();
+      ctx.beginPath();
+      for (let n = 0; n <= 8; n++) {
+        const a = ((-225 + n * 33.75) * Math.PI) / 180;
+        ctx.moveTo(
+          g.x + Math.cos(a) * (g.r - 5),
+          g.y + Math.sin(a) * (g.r - 5),
+        );
+        ctx.lineTo(
+          g.x + Math.cos(a) * (g.r - 2.5),
+          g.y + Math.sin(a) * (g.r - 2.5),
+        );
+      }
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = LINE;
+      ctx.stroke();
+      const a = (gaugeNeedle(k, frame) * Math.PI) / 180;
+      ctx.beginPath();
+      ctx.moveTo(g.x, g.y);
+      ctx.lineTo(g.x + Math.cos(a) * (g.r - 4), g.y + Math.sin(a) * (g.r - 4));
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(g.x, g.y, 2.2, 0, Math.PI * 2);
+      ctx.fillStyle = LINE;
+      ctx.fill();
+    });
+  };
+
   const artCtx = art.getContext('2d')!;
   const drawArt = (frame: number) => {
-    artCtx.clearRect(0, 0, W, H);
-    artCtx.drawImage(image, 0, 0);
+    const A = ART_SCALE;
+    artCtx.setTransform(1, 0, 0, 1, 0, 0);
+    artCtx.clearRect(0, 0, W * A, H * A);
+    artCtx.drawImage(source, 0, 0);
+    artCtx.setTransform(A, 0, 0, A, 0, 0);
     artCtx.save();
     clipToRoundel(artCtx, 1);
     for (let y = LOGO_ART.waterTop; y < LOGO_ART.waterBottom; y += STRIP) {
       const dx = rippleShift(y + STRIP / 2, frame);
       if (Math.abs(dx) < 0.02) continue;
-      artCtx.drawImage(image, 0, y, W, STRIP, dx, y, W, STRIP);
+      artCtx.drawImage(source, 0, y * A, W * A, STRIP * A, dx, y, W, STRIP);
     }
     artCtx.restore();
     drawSightGlass(artCtx, frame);
+    drawGauges(artCtx, frame);
   };
 
   const textCtx = lettering.getContext('2d')!;

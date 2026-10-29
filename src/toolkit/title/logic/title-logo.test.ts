@@ -13,6 +13,11 @@ import {
   rippleShift,
   SIGHT_GLASS,
   sightGlassView,
+  GAUGES,
+  LOOP_S,
+  NEEDLE_TREMBLE_DEG,
+  NEEDLE_WANDER_DEG,
+  gaugeNeedle,
 } from './title-logo';
 
 describe('the title logo', () => {
@@ -75,5 +80,49 @@ describe('the filter’s sight glass', () => {
     expect(sightGlassView(0).grains[0]).not.toEqual(
       sightGlassView(5).grains[0],
     );
+  });
+});
+
+describe('the gauges’ needles', () => {
+  it('tremble about their readings, never sweeping', () => {
+    GAUGES.forEach((g, k) => {
+      for (let f = 0; f < 200; f++)
+        expect(Math.abs(gaugeNeedle(k, f) - g.angle)).toBeLessThanOrEqual(
+          NEEDLE_WANDER_DEG + NEEDLE_TREMBLE_DEG + 1e-9,
+        );
+      // Noticeably, within a second.
+      const second = Array.from({ length: 11 }, (_, f) => gaugeNeedle(k, f));
+      expect(Math.max(...second) - Math.min(...second)).toBeGreaterThan(2);
+    });
+  });
+});
+
+describe('the animated loop', () => {
+  it('comes back exactly where it began, needles and sight glass', () => {
+    const end = LOOP_S * RIPPLE_HZ;
+    GAUGES.forEach((_, k) =>
+      expect(gaugeNeedle(k, end)).toBeCloseTo(gaugeNeedle(k, 0), 9),
+    );
+    const [a, b] = [sightGlassView(0), sightGlassView(end)];
+    expect(b.sandY).toBeCloseTo(a.sandY, 9);
+    expect(b.sandTilt).toBeCloseTo(a.sandTilt, 9);
+    b.grains.forEach((g, i) => {
+      expect(g.dx).toBeCloseTo(a.grains[i]!.dx, 9);
+      expect(g.dy).toBeCloseTo(a.grains[i]!.dy, 9);
+    });
+  });
+});
+
+describe('the gauges, together', () => {
+  it('do not move in step', () => {
+    const a = Array.from(
+      { length: 40 },
+      (_, f) => gaugeNeedle(1, f) - GAUGES[1].angle,
+    );
+    const b = Array.from(
+      { length: 40 },
+      (_, f) => gaugeNeedle(2, f) - GAUGES[2].angle,
+    );
+    expect(a.some((v, i) => Math.abs(v - b[i]!) > 2)).toBe(true);
   });
 });
