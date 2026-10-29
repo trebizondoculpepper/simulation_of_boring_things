@@ -53,6 +53,13 @@ describe('Hall 5: a day in the life', () => {
     expect(deck.maxZ).toBeLessThan(6.7 - 1);
     expect(skimmer.z).toBeLessThan(water.minZ);
   });
+
+  it('sets the skimmer in the tiles, 7 cm clear of the coping', () => {
+    const { water, coping, skimmer } = POOLSIDE;
+    const lidRadius = 0.13;
+    const clear = water.minZ - coping - (skimmer.z + lidRadius);
+    expect(clear).toBeCloseTo(0.07, 3);
+  });
 });
 
 describe('the Pool of the Future? bay', () => {

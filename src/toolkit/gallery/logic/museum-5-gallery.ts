@@ -364,8 +364,13 @@ export const POOLSIDE = {
   deck: { minX: -5.6, maxX: 4.6, minZ: -3.2, maxZ: 5.4 },
   /** The coping's width, along the water's edge. */
   coping: 0.3,
-  /** The skimmer's lid, in the coping of the north edge. */
-  skimmer: { x: -0.6, z: 0.05 },
+  /**
+   * The skimmer's lid (0.13 m round), in the deck's tiles beyond the
+   * coping of the north edge, its nearest edge 7 cm past the coping (the
+   * owner, 2026-10-29: not so close to the water); its throat runs on
+   * under the coping to the pool's wall.
+   */
+  skimmer: { x: -0.6, z: -0.3 },
   /** The waste bin (the owner, 2026-10-29: a bin, not a skip). */
   skip: { x: 2.6, z: -1.9 },
 } as const;
