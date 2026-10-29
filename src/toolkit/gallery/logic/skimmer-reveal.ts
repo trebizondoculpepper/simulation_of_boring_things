@@ -18,7 +18,7 @@ export interface RevealTiming {
 }
 
 export const REVEAL: RevealTiming = {
-  suspense: 2.5,
+  suspense: 3.05,
   fanfare: 2.5,
   settle: 0.5,
 };

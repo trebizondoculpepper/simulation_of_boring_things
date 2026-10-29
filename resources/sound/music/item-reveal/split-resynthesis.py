@@ -8,7 +8,7 @@ import tempfile
 
 
 OUT = Path(__file__).resolve().parent
-CUES = (("reveal-suspense", 4.40), ("reveal-fanfare", 7.92))
+CUES = (("reveal-suspense", 3.85, 3.05), ("reveal-fanfare", 7.92, 2.5))
 
 
 def run(*args: str) -> subprocess.CompletedProcess[str]:
@@ -16,14 +16,15 @@ def run(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(args, capture_output=True, text=True, check=True)
 
 
-def render(source: Path, name: str, start: float) -> None:
-    """Extract, peak-set and encode one 2.5-second mono cue."""
+def render(source: Path, name: str, start: float, duration: float) -> None:
+    """Extract, peak-set and encode one mono cue."""
     with tempfile.TemporaryDirectory() as temp:
         cut = Path(temp) / "cut.wav"
         filters = (
-            f"atrim=start={start}:duration=2.5,asetpts=PTS-STARTPTS,"
-            "pan=mono|c0=0.5*c0+0.5*c1,apad=pad_dur=2.5,atrim=duration=2.5,"
-            "afade=t=in:st=0:d=0.005,afade=t=out:st=2.47:d=0.03"
+            f"atrim=start={start}:duration={duration},asetpts=PTS-STARTPTS,"
+            f"pan=mono|c0=0.5*c0+0.5*c1,apad=pad_dur={duration},"
+            f"atrim=duration={duration},"
+            f"afade=t=in:st=0:d=0.005,afade=t=out:st={duration - 0.03}:d=0.03"
         )
         run("ffmpeg", "-v", "error", "-y", "-i", str(source), "-af", filters,
             "-ar", "48000", str(cut))
@@ -40,5 +41,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path, help="selected full-length stereo cover WAV")
     args = parser.parse_args()
-    for cue, offset in CUES:
-        render(args.source, cue, offset)
+    for cue, offset, duration in CUES:
+        render(args.source, cue, offset, duration)
