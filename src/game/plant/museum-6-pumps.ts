@@ -264,7 +264,12 @@ export const NODES: readonly (SchematicNode & { id: MachineId })[] = [
     name: `${p.model} ${p.kind}`,
   })),
   { id: 'header', kind: 'manifold', code: 'HD1', name: 'Tank inlet header' },
-  { id: 'tank', kind: 'test-tank', code: 'TK1', name: '1,000-litre test tank (IBC)' },
+  {
+    id: 'tank',
+    kind: 'test-tank',
+    code: 'TK1',
+    name: '1,000-litre test tank (IBC)',
+  },
   { id: 'drain', kind: 'ideal-drain', code: 'DR1', name: 'Ideal drain' },
 ];
 
