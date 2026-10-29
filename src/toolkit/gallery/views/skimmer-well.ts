@@ -50,6 +50,7 @@ const FLOOR = 3;
 const LEDGE = 3.5;
 const BASKET_FAR = 4;
 const BASKET_FLOOR = 4.1;
+const SLUDGE = 4.12;
 const GLOW = 4.15;
 const BASKET_NEAR = 4.2;
 const BASKET_RIM = 4.3;
@@ -75,6 +76,95 @@ export interface SkimmerWellOptions {
   glow?: string;
   /** For the grime's blots; the same seed, the same dirt. */
   random?: () => number;
+}
+
+/**
+ * Sludge, seen from above: dark brown and fibrous, a felt of rotted leaf
+ * and hair, darker and lighter in lumps, with leaf scraps and pale hairs.
+ */
+function paintSludge(
+  c: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  random: () => number,
+) {
+  c.fillStyle = '#26190c';
+  c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 120; i++) {
+    const x = random() * w;
+    const y = random() * h;
+    const r = (0.04 + 0.1 * random()) * w;
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(
+      0,
+      random() < 0.5 ? 'rgba(70, 48, 22, 0.6)' : 'rgba(12, 8, 4, 0.6)',
+    );
+    g.addColorStop(1, 'rgba(38, 25, 12, 0)');
+    c.fillStyle = g;
+    c.fillRect(x - r, y - r, 2 * r, 2 * r);
+  }
+  // Fibres: short curls of rotted leaf and hair, matted every which way.
+  c.lineCap = 'round';
+  const fibres = ['#120c06', '#3a2814', '#4e3719', '#1d140a', '#5e4a2a'];
+  for (let i = 0; i < 1400; i++) {
+    const x = random() * w;
+    const y = random() * h;
+    const a = random() * Math.PI * 2;
+    const l = 4 + random() * 18;
+    c.strokeStyle = fibres[i % fibres.length];
+    c.globalAlpha = 0.4 + 0.5 * random();
+    c.lineWidth = 0.5 + random() * 1.2;
+    c.beginPath();
+    c.moveTo(x, y);
+    c.quadraticCurveTo(
+      x + Math.cos(a + 0.8) * l * 0.6,
+      y + Math.sin(a + 0.8) * l * 0.6,
+      x + Math.cos(a) * l,
+      y + Math.sin(a) * l,
+    );
+    c.stroke();
+  }
+  c.globalAlpha = 1;
+  // Scraps of leaf.
+  for (let i = 0; i < 10; i++) {
+    c.save();
+    c.translate(random() * w, random() * h);
+    c.rotate(random() * Math.PI);
+    c.fillStyle = ['#3e3216', '#4a3a18', '#2e2a12'][i % 3];
+    c.beginPath();
+    c.ellipse(0, 0, 5 + random() * 8, 2 + random() * 3, 0, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
+  // A few pale hairs on top.
+  for (let i = 0; i < 12; i++) {
+    const x = random() * w;
+    const y = random() * h;
+    c.strokeStyle = 'rgba(150, 120, 74, 0.7)';
+    c.lineWidth = 0.7;
+    c.beginPath();
+    c.moveTo(x, y);
+    c.quadraticCurveTo(
+      x + (random() - 0.5) * 50,
+      y + (random() - 0.5) * 50,
+      x + (random() - 0.5) * 70,
+      y + (random() - 0.5) * 70,
+    );
+    c.stroke();
+  }
+}
+
+/** A disc `r` across, lumpy: its inner points lifted and sunk by up to `bump`. */
+function lumpyDisc(r: number, bump: number, random: () => number) {
+  const geometry = new RingGeometry(0.0001, r, 40, 8);
+  const at = geometry.attributes.position;
+  for (let i = 0; i < at.count; i++) {
+    const out = Math.hypot(at.getX(i), at.getY(i)) / r;
+    // Flat at the rim, where it meets the basket.
+    at.setZ(i, (random() - 0.5) * 2 * bump * (1 - out * out));
+  }
+  geometry.computeVertexNormals();
+  return geometry;
 }
 
 /**
@@ -355,7 +445,8 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   // The ledge round the wall below the throat, and the basket sitting
   // on it: open at the top, its handle across, the glow in it.
   const seat = -0.17;
-  const basketRadius = radius * 0.84;
+  // A little narrower than the shaft, to lift out.
+  const basketRadius = radius * 0.9;
   const basketDepth = 0.13;
   // Where the silt settles: the dirtiest of all.
   const ledgeMaterial = own(
@@ -417,6 +508,22 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   bottom.rotation.x = -Math.PI / 2;
   bottom.position.y = seat - basketDepth;
   group.add(bottom);
+  // The sludge it fills with: dark brown, fibrous, uneven. Shown
+  // or not (`sludge`).
+  const muck = createCanvasTexture(256, 256);
+  paintSludge(muck.context, 256, 256, random);
+  muck.texture.needsUpdate = true;
+  const sludgeMaterial = own(
+    createPs1Material({ map: muck.texture, roughness: 0.9 }),
+  );
+  const sludge = inside(
+    sludgeMaterial,
+    SLUDGE,
+    new Mesh(lumpyDisc(basketRadius * 0.97, 0.012, random), sludgeMaterial),
+  );
+  sludge.rotation.x = -Math.PI / 2;
+  sludge.position.y = seat - 0.025;
+  group.add(sludge);
   // The glow in the basket, under the caustics.
   const glowMaterial = own(
     new MeshBasicMaterial({
@@ -432,7 +539,10 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
     new Mesh(new CircleGeometry(basketRadius * 0.9, 40), glowMaterial),
   );
   shine.rotation.x = -Math.PI / 2;
-  shine.position.y = seat - basketDepth + 0.002;
+  const floorOfBasket = seat - basketDepth + 0.002;
+  let full = false;
+  let glowAt = 0;
+  shine.position.y = floorOfBasket;
   group.add(shine);
   const rimMaterial = own(
     createPs1Material({ color: colours.basket, roughness: 0.6 }),
@@ -475,9 +585,18 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
 
   return {
     group,
+    /** The basket dirty, full of brown sludge, or clean (only its walls' grime). */
+    sludge(dirty: boolean) {
+      sludge.visible = dirty;
+      full = dirty;
+      glowMaterial.opacity = glowAt * (full ? 0.15 : 0.6);
+      shine.position.y = dirty ? sludge.position.y + 0.002 : floorOfBasket;
+    },
     /** The glow on the well's floor, 0–1. */
     glow(level: number) {
-      glowMaterial.opacity = 0.6 * level;
+      glowAt = level;
+      // Faint on sludge, which would otherwise shine like gold.
+      glowMaterial.opacity = level * (full ? 0.15 : 0.6);
       shine.visible = level > 0;
     },
     /**
@@ -494,6 +613,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
       mark.texture.dispose();
       grime.texture.dispose();
       basketGrime.texture.dispose();
+      muck.texture.dispose();
     },
   };
 }

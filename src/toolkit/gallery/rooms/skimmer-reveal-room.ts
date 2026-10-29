@@ -58,8 +58,8 @@ const FLOOR = { minX: -4, maxX: 4, minZ: -4, maxZ: 4 };
 const CEILING = 3;
 /** The skimmer, in the deck by the pool's edge. */
 const SK = { x: 0, z: -1.9 };
-/** The skip, on the deck to the skimmer's east. */
-const SKIP = { x: 2, z: -0.6 };
+/** The skip, across the deck from the skimmer, by the east wall. */
+const SKIP = { x: 3, z: 1.8 };
 /** The pool's edge, metres north. */
 const EDGE = -2.6;
 /** The find shown: its size across and how far before the eye, metres. */
@@ -171,6 +171,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   room.add(skimmer);
   // Its throat runs back under the deck to beyond the pool's edge.
   const well = createSkimmerWell({ reach: SK.z - EDGE + 0.1, random });
+  well.sludge(true);
   skimmer.add(well.group);
   const caustics = createSkimmerCaustics({ radius: 0.135, random });
   skimmer.add(caustics.mesh);
@@ -214,11 +215,6 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
         'plastic',
       ),
     );
-    prop.userData.portable = {
-      component,
-      flat: 'upright',
-      detach() {},
-    } satisfies PortableObject;
     return {
       prop,
       component,
@@ -230,7 +226,13 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   type Shown = ReturnType<typeof makeFind>;
   /** Out of the pivot and into the walker's hands, as Hall 5 shows it. */
   const handOver = (shown: Shown) => {
-    const { prop, pivot } = shown;
+    const { prop, pivot, component } = shown;
+    // Only now a thing to carry: shown, it is not to be grabbed.
+    prop.userData.portable = {
+      component,
+      flat: 'upright',
+      detach() {},
+    } satisfies PortableObject;
     pivot.remove(prop);
     pivot.removeFromParent();
     prop.position.copy(pivot.position);
@@ -329,6 +331,8 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
       fov: camera.fov,
     };
     walk.hold(true);
+    // Full again: whatever comes out comes out of the sludge.
+    well.sludge(true);
     drawBanner(find.find);
     partAudio.play(revealCue('reveal-suspense'), voice);
   };
@@ -349,8 +353,11 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     useLens();
     if (f.phase !== film.phase) {
       film.phase = f.phase;
-      if (f.phase === 'reveal')
+      // The find out, the sludge with it: the basket left clean.
+      if (f.phase === 'reveal') {
         partAudio.play(revealCue('reveal-big-item'), voice);
+        well.sludge(false);
+      }
       // Back where the walker stood, looking at the skimmer as the lid
       // goes on, the find in hand.
       if (f.phase === 'replace') {
@@ -434,6 +441,8 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     scene,
     nearbyTargetFeedback: tossing.targetFeedback,
     divert: tossing.divert,
+    // Nothing is picked up while the film runs.
+    allowPickup: () => !film,
     canvas,
     camera,
     metre: m,
@@ -480,6 +489,14 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
       if (film) film.t = t;
       frozen = hold;
     },
+    /** Stand at (x, z) metres, facing `yaw`, looking `pitch` up. */
+    place(x: number, z: number, yaw = 0, pitch = 0) {
+      walk.place(x * m, z * m, yaw, pitch);
+    },
+    /** The basket dirty, full of sludge, or clean. */
+    sludge: (dirty: boolean) => well.sludge(dirty),
+    /** How many things are in the skip. */
+    inSkip: () => skip.filled,
     /** What the walker holds, by name, or null. */
     held: () => walk.hands?.holding()?.name ?? null,
     /** Where the film is: its phase and time, or null. */
