@@ -1314,6 +1314,47 @@ const startTitleBackdrop = async () => {
   };
   frame = requestAnimationFrame(fly);
 };
+/**
+ * An attract shot played end to end for recording (`?record=<shot id>`,
+ * the owner, 2026-10-29: each fly-by whole, for the itch.io page and
+ * trailer; `scripts/record-attract.ts`): its room on its scenario's world
+ * at full resolution, with no title, veil, blur or HUD. The recorder drives
+ * it: `window.attractRecording.at(seconds)` puts the camera there, and the
+ * recorder steps the page's clock and takes each frame from `canvas`.
+ */
+const startAttractRecording = async (id: string) => {
+  const shot = ATTRACT_SHOTS.find((s) => s.id === id);
+  const room = shot && resolveRoomId(shot.room);
+  if (!shot || !room) throw new Error(`No attract shot ${id}`);
+  partAudio.setGameMuted(true);
+  paused.value = true;
+  titleScreen.hide();
+  directory.hidden = true;
+  const start = await starter(room);
+  const store = createScenarioStore(attractScenario(shot.scenario));
+  setRoomWorld(store);
+  const surface = canvas.cloneNode() as HTMLCanvasElement;
+  surface.id = `record-${shot.id}`;
+  surface.hidden = false;
+  surface.style.display = 'block';
+  Object.assign(surface.style, { position: 'fixed', inset: '0' });
+  document.body.append(surface);
+  start(surface);
+  const walk = firstPersonOn(surface);
+  const draw = rendererOn(surface);
+  if (!walk || !draw) throw new Error(`Shot ${id} has no view`);
+  drawAtRatio(draw.renderer, Number(urlParams().get('scale') ?? 1));
+  torch.on = !!shot.torch;
+  store.run(true);
+  placeShot(walk, shot, 0);
+  const seconds = shot.path?.period ?? shot.seconds;
+  (window as unknown as { attractRecording: unknown }).attractRecording = {
+    seconds,
+    canvas: surface,
+    at: (t: number) => placeShot(walk, shot, t),
+  };
+};
+const urlParams = () => new URLSearchParams(location.search);
 const stopTitleBackdrop = () => {
   titleBackdrop?.stop();
   titleBackdrop = null;
@@ -1364,6 +1405,9 @@ const openRoom = async () => {
       );
       directory.hidden = false;
       document.title = 'The Pool — Plant manual';
+    } else if (params.has('record')) {
+      stopTitleBackdrop();
+      void startAttractRecording(params.get('record')!).catch(showError);
     } else if (params.has('dev')) {
       stopTitleBackdrop();
       titleScreen.hide();
