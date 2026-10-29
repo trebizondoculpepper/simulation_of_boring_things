@@ -79,22 +79,26 @@ describe('the pool science museum', () => {
     expect(hallId(-1)).toBe('museum9');
   });
 
-  it('signs the halls in the owner’s order: 1 to 4 and 9 themed, 5 to 8 coming soon', () => {
+  it('signs every hall with its real title, none coming soon', () => {
     expect(
-      ['museum1', 'museum2', 'museum3', 'museum4', 'museum9'].map(
-        (id) => HALL_BRIEFS[id as MuseumHallId].title,
-      ),
+      Array.from({ length: 10 }, (_, n) => HALL_BRIEFS[hallId(n)].title),
     ).toEqual([
+      'Welcome',
       'Warm water',
       'Clean water',
       'Safe water',
       'The chemistry of pools',
+      'A Day in the Life',
+      'Grundflow’s Amazing World of Pumps',
+      'Grout: The Unsung Hero of the Aquatics World',
+      'Never again: putting safety first',
       'The whole plant',
     ]);
-    for (let n = 5; n <= 8; n++) {
-      expect(HALL_BRIEFS[hallId(n)].themed).toBe(false);
-      expect(HALL_BRIEFS[hallId(n)].title).toBe('Coming soon');
+    for (let n = 0; n <= 9; n++) {
+      expect(HALL_BRIEFS[hallId(n)].themed).toBe(true);
+      expect(HALL_BRIEFS[hallId(n)].title).not.toMatch(/coming soon/i);
     }
+    expect(HALL_BRIEFS.museum6.subject).toBe('We Keep Water Moving');
   });
 
   it('rings the courtyard with ten halls, four by three, tiling the building less the courtyard with nothing overlapping', () => {

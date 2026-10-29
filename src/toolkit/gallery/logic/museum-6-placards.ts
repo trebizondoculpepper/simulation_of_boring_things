@@ -118,7 +118,7 @@ export function hall6Entrance() {
   const ratio = Math.round(k.ratio / 10000) * 10000;
   return {
     title: 'Grundflow’s Amazing World of Pumps',
-    subtitle: 'Hall 6: pumps for every occasion',
+    subtitle: 'Hall 6: We Keep Water Moving',
     introduction: `A swimming pool needs pumps of every size, from one that pushes out a few drops a minute to one that could empty a swimming pool in an afternoon. Press any pump’s button and watch the tank. Each sign tells you how long that pump would take to fill it. The biggest pump here moves water about ${ratio.toLocaleString('en-GB')} times faster than the smallest. When the tank is full, the pumps stop: press RESET to empty it.`,
     route: PUMPS.map((p) => ({
       station: p.no,

@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum: every hall's title card shows its real title (Halls 5 to 8 no longer "Coming soon"); Hall 6's subtitle is "We Keep Water Moving"; Hall 5's stray leaf-net and hook boxes on the south wall removed, and that wall carries a last bay, "The Pool of the Future?" (photographs `future-1` to `future-3`, placeholders until supplied).
 - Hall 4's map above the dosing desk shows a dose happening (the owner, 2026-10-29): from the model's delivery, the dosing tank's lamp and the pot's DOSING lamp light, its line's chaser runs from the tank along the header and injection into the pool, and DOSED SO FAR counts up, all going still when the dose ends. Mimic chasers may set a larger LED size (`flow.size`) for boards read from a distance; Hall 4's use it.
 - Halls 3 and 9: the day tanks' lids no longer z-fight (a screw cap sunk into the drum, the liquid never level with its top); their labels are printed round the front in two lines with the CLP corrosive pictogram; each has a bulkhead outlet and fill lance reaching its ports, so the suction hose meets the tank. Experimental sources letter their substance and role round their front in two large lines (the owner's bugs, 2026-10-29). Hall 3's STAFF ONLY door is now a glossy vinyl sticker on the wall.
 - Hall 5's picture lights hang above each decade's bay, no longer across the top of its print (the owner's bug, 2026-10-29).

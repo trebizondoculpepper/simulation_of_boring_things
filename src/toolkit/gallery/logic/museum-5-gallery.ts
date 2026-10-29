@@ -20,8 +20,10 @@ export type PhotoLook =
   | 'digital';
 
 export interface Photograph {
-  /** The time of day it shows. */
-  when: 'Morning' | 'Midday' | 'Night';
+  /** The time of day it shows, or (the future's bay) its number in the series. */
+  when: 'Morning' | 'Midday' | 'Night' | 'One' | 'Two' | 'Three';
+  /** Its image's file name, without extension, where not `<decade>-<when>`. */
+  file?: string;
   /** The caption: the scene, as a gallery label says it. */
   caption: string;
 }
@@ -276,7 +278,7 @@ export interface BayPlace {
   z: number;
   /** Its face's yaw (+z of its group out into the hall). */
   yaw: number;
-  wall: 'north' | 'east';
+  wall: 'north' | 'east' | 'south';
 }
 
 /**
@@ -304,6 +306,48 @@ export function bayPlaces(): BayPlace[] {
       wall: 'east' as const,
     };
   });
+}
+
+/**
+ * The last bay (the owner, 2026-10-29): "The Pool of the Future?", on the
+ * south wall east of the No running sign, the end of the walk after the
+ * 2020s; its photographs `future-1.jpg` to `future-3.jpg`.
+ */
+export const FUTURE: Decade = {
+  decade: 'The Pool of the Future?',
+  look: 'digital',
+  strap: 'Some things never change',
+  photos: [
+    {
+      when: 'One',
+      file: 'future-1',
+      caption:
+        'A cybernetically augmented poolman in VR goggles, before Escher-like baths whose stairs and water defy gravity.',
+    },
+    {
+      when: 'Two',
+      file: 'future-2',
+      caption:
+        'The same poolman in cyberspace, among cubes of water floating in mid-air like Minecraft blocks.',
+    },
+    {
+      when: 'Three',
+      file: 'future-3',
+      caption:
+        'Back in the baths of the future, he reaches into a skimmer and pulls out the usual. Some things never change.',
+    },
+  ],
+};
+
+/** The future's bay: on the south wall, facing north into the hall, clear of the No running sign (x 1.9) and the east wall. */
+export function futureBayPlace() {
+  return {
+    decade: FUTURE,
+    x: 4.6,
+    z: WALL.south,
+    yaw: Math.PI,
+    wall: 'south' as const,
+  };
 }
 
 /** The dry poolside: its painted water, its deck, and the skimmer in its north edge, the skip along the deck. */

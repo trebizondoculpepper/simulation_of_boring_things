@@ -291,7 +291,7 @@ export interface HallBrief {
   title: string;
   /** What it is about, in a few words. */
   subject: string;
-  /** Whether the owner has given it a theme yet (Halls 5 to 8 wait for theirs). */
+  /** Whether the owner has given it a theme (all ten have, 2026-10-29). */
   themed: boolean;
   /** The one big idea. */
   bigIdea: string;
@@ -300,22 +300,6 @@ export interface HallBrief {
   /** What visitors will be able to try. */
   tryIt: readonly string[];
 }
-
-/** A hall still waiting for its theme (the owner, 2026-10-28: Halls 5 to 8). */
-const waiting = (n: number): HallBrief => ({
-  id: hallId(n),
-  number: n,
-  title: 'Coming soon',
-  subject: 'Its theme is still to be chosen',
-  themed: false,
-  bigIdea:
-    'Every hall of the museum teaches one idea about how a swimming pool works.',
-  willShow:
-    'This hall is waiting for its exhibit. Its theme is still being chosen: carry on round the ring to the next hall.',
-  tryIt: [
-    'Carry on round the ring: the route goes on through the next archway.',
-  ],
-});
 
 export const HALL_BRIEFS: Record<MuseumHallId, HallBrief> = {
   museum0: {
@@ -397,10 +381,60 @@ export const HALL_BRIEFS: Record<MuseumHallId, HallBrief> = {
       'Reset it at the end and try again.',
     ],
   },
-  museum5: waiting(5),
-  museum6: waiting(6),
-  museum7: waiting(7),
-  museum8: waiting(8),
+  museum5: {
+    id: 'museum5',
+    number: 5,
+    title: 'A Day in the Life',
+    subject: 'A poolman’s duties through the decades',
+    themed: true,
+    bigIdea:
+      'For a hundred years the day has run the same way; the tools changed, the skimmer basket did not.',
+    willShow:
+      'Photographs of a poolman’s morning, midday and night, decade by decade from the 1920s to today, and a skimmer to empty.',
+    tryIt: [
+      'Walk the photographs from the 1920s to today.',
+      'Empty the skimmer into the skip.',
+    ],
+  },
+  museum6: {
+    id: 'museum6',
+    number: 6,
+    title: 'Grundflow’s Amazing World of Pumps',
+    subject: 'We Keep Water Moving',
+    themed: true,
+    bigIdea:
+      'A swimming pool needs pumps of every size, from a few drops a minute to an Olympic pool’s worth an afternoon.',
+    willShow:
+      'Pumps of every size round a 1,000-litre tank, from a peristaltic dosing pump to a multi-kilowatt giant.',
+    tryIt: [
+      'Press a pump’s button and see how long it takes to fill the tank.',
+      'Press RESET to empty it and try another.',
+    ],
+  },
+  museum7: {
+    id: 'museum7',
+    number: 7,
+    title: 'Grout: The Unsung Hero of the Aquatics World',
+    subject: 'Grout through the ages',
+    themed: true,
+    bigIdea:
+      'Perhaps no substance is more important to a swimming pool than grout.',
+    willShow:
+      'A reverent gallery of grout specimens, from the earliest cement grouts to modern epoxies, each with its plaque.',
+    tryIt: ['Read the plaques.', 'There is nothing to reset. Grout endures.'],
+  },
+  museum8: {
+    id: 'museum8',
+    number: 8,
+    title: 'Never again: putting safety first',
+    subject: 'The chlorination disaster that nearly was',
+    themed: true,
+    bigIdea:
+      'Every safety rule in a plant room was written because something once went wrong.',
+    willShow:
+      'The story of a chlorination incident, chapter by chapter, in photographs, clippings and the lessons learnt.',
+    tryIt: ['Walk the chapters round the walls.', 'Press HEAR WHAT HAPPENED.'],
+  },
   museum9: {
     id: 'museum9',
     number: 9,

@@ -46,6 +46,7 @@ import {
   SKIP_SIGN,
   WALL,
   bayPlaces,
+  futureBayPlace,
   hall5Entrance,
 } from '../../logic/museum-5-gallery';
 import type { Decade, PhotoLook } from '../../logic/museum-5-gallery';
@@ -101,7 +102,8 @@ const PHOTOS = import.meta.glob(
   { eager: true, query: '?url', import: 'default' },
 ) as Record<string, string>;
 const photoFor = (d: Decade, when: string) => {
-  const name = `${d.decade}-${when.toLowerCase()}`;
+  const p = d.photos.find((q) => q.when === when);
+  const name = p?.file ?? `${d.decade}-${when.toLowerCase()}`;
   const key = Object.keys(PHOTOS).find((k) =>
     k.slice(k.lastIndexOf('/') + 1).startsWith(`${name}.`),
   );
@@ -204,9 +206,11 @@ function paintBay(
     c.fillStyle = '#16232b';
     c.font = `bold ${h * 0.085}px ${SANS}`;
     c.fillText(d.decade, w * 0.02, h * 0.09);
+    // The strap after the heading (a long one, the future's, pushes it on).
+    const strapX = Math.max(w * 0.2, w * 0.05 + c.measureText(d.decade).width);
     c.font = `italic ${h * 0.045}px ${SANS}`;
     c.fillStyle = '#4c5a62';
-    c.fillText(d.strap, w * 0.2, h * 0.085, w * 0.78);
+    c.fillText(d.strap, strapX, h * 0.085, w * 0.98 - strapX);
     const fw = (BAY.frameW / BAY.w) * w;
     const gap = (w - 3 * fw) / 4;
     const top = h * 0.14;
@@ -263,7 +267,9 @@ function paintBay(
         c.font = `bold ${ph * 0.1}px ${SANS}`;
         c.textAlign = 'center';
         c.fillText(
-          `${d.decade} · ${p.when.toUpperCase()}`,
+          p.file
+            ? `${p.file.toUpperCase().replace('-', ' ')}`
+            : `${d.decade} · ${p.when.toUpperCase()}`,
           px + pw / 2,
           py + ph * 0.86,
         );
@@ -461,7 +467,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   // ---- The gallery: the decades' bays, the timeline rail, picture lights ----
   const frameWood = t.paint('#2a2420', 0.5);
   const brass = t.paint('#b08a3e', 0.35, 0.8);
-  for (const b of bayPlaces()) {
+  for (const b of [...bayPlaces(), futureBayPlace()]) {
     const bay = new Group();
     bay.name = `${b.decade.decade} photographs`;
     const H = 1.25;
@@ -1011,7 +1017,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     clock.show(localNow(), 1, delta > 0 ? Math.min(240, 1 / delta) : 60),
   );
 
-  // ---- Set decoration: the lifeguard's chair, bench, net and hook, gloves, lost property ----
+  // ---- Set decoration: the lifeguard's chair, bench, gloves, lost property ----
   const deco = new Group();
   const white = t.paint('#eef0ee', 0.4);
   const steel = t.paint('#a8b0b4', 0.3, 0.8);
@@ -1053,20 +1059,6 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     bench.z + 0.03,
   );
   footprint(bench.x, bench.z, 0.95, 0.25);
-  // The leaf net and the basket hook, on brackets on the south wall.
-  t.box(deco, steel, 3.0, 0.03, 0.03, 4.0, 1.4, WALL.south - 0.06);
-  t.box(
-    deco,
-    t.paint('#2a5a8a', 0.8),
-    0.45,
-    0.3,
-    0.02,
-    5.6,
-    1.4,
-    WALL.south - 0.06,
-  );
-  t.box(deco, steel, 1.6, 0.025, 0.025, 4.2, 1.1, WALL.south - 0.06);
-  t.box(deco, steel, 0.025, 0.12, 0.025, 3.42, 1.06, WALL.south - 0.06);
   // The lost property box beside the chair.
   t.box(
     deco,

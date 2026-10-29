@@ -1,4 +1,4 @@
-# 107j: PLANTROOMS, "Grundflow's Amazing World of Pumps: Pumps for every occasion"
+# 107j: PLANTROOMS, "Grundflow's Amazing World of Pumps: We Keep Water Moving"
 
 Status: planned 2026-10-28, not started. A sub-prompt of mission 107 (`doc/prompts/107-pool-science-museum.md`), after 107-0 (`doc/prompts/107-0-exhibit-groundwork.md`). One of the owner's themes for Halls 5 to 12, **not yet given a hall number**: the owner will place it. Grundflow's sponsored hall.
 
@@ -159,3 +159,5 @@ Placed by the owner as Hall 6 (room code M6). Model `src/game/plant/museum-6-pum
 - **Still to do:** the browser walk-through on high, medium and low (every Try it step, sounds, the error bleep), frame-time measurement, and the component benchmark for the new displays (the litres display and RUN stand's LCD); screenshots.
 - **Camera:** `?room=museum6&x=-3&y=1.7&z=0&yaw=90&pitch=-5&noclip=true` (west of the tank, looking east at the pump row).
 - **Owner question, answered (the owner, 2026-10-28): nameplate.** The commissioning valves stay, each centrifugal pump running at its rated duty, so the signs match the plates.
+
+**Subtitle (the owner, 2026-10-29):** "We Keep Water Moving" replaces "Pumps for every occasion" on the title card (`HALL_BRIEFS.museum6.subject`) and the entrance panel (`hall6Entrance`). Grundflow's brand tagline in `brands.ts` stays "Keep it moving" (already set; the new line would near-duplicate it).

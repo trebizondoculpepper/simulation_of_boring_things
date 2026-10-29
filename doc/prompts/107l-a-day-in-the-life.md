@@ -34,3 +34,5 @@ Deviations:
 Still to do: a walkthrough emptying the skimmer on high, medium and low; frame-time measurement and the component benchmark; choose, resize and install the 30 original generated photographs ([image prompts and completion record](day-in-the-life/midjourney-prompts.md), `doc/gens/day-in-the-life/`); voice clips.
 
 Camera: `?room=museum5&x=-1&y=1.6&z=-3&yaw=150&pitch=-30&noclip=true` (the skimmer and skip); the gallery `?room=museum5&x=1&y=1.6&z=0&yaw=30&pitch=0&noclip=true`.
+
+**2026-10-29 (the owner):** the "weird stuff" on the south wall was the leaf net and basket hook, steel bars and a blue box that read as nothing; removed. That wall, the end of the walk after the 2020s, now holds a last bay, "The Pool of the Future?" (`FUTURE`, `futureBayPlace()` in `museum-5-gallery.ts`, x 4.6 on the south wall facing north), same frames and look as the decades', its photographs `resources/images/day-in-the-life/future-1.jpg` to `future-3.jpg` (placeholders until dropped in). The hall's catalogue entry is no longer `waiting(5)`: its title card reads "A Day in the Life". Camera: `?room=museum5&x=1.85&y=1.81&z=3.13&yaw=155.4&pitch=-2.2`.
