@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   DISPLAY_LEAVE,
   DISPLAY_PROFILES,
+  SIGN_FULL,
+  SIGN_HEADINGS,
+  letteringShown,
+  signDetail,
   mayRefresh,
   withinRoomLimits,
   DISPLAY_REACH,
@@ -101,5 +105,19 @@ describe('display reach', () => {
     expect(mayRefresh(DISPLAY_PROFILES.lcd, 0, 200)).toBe(true);
     expect(mayRefresh(DISPLAY_PROFILES.crt, 0, 40)).toBe(true);
     expect(mayRefresh(DISPLAY_PROFILES.printed, 0, 1)).toBe(true);
+  });
+
+  it('draws a sign as regions far off, headings nearer, everything close', () => {
+    expect(signDetail('full', SIGN_HEADINGS + 2)).toBe('regions');
+    expect(signDetail('regions', SIGN_HEADINGS - 1)).toBe('headings');
+    expect(signDetail('headings', SIGN_FULL - 1)).toBe('full');
+    expect(signDetail('full', SIGN_FULL + 0.5)).toBe('full');
+  });
+
+  it('keeps large lettering at headings detail and drops small', () => {
+    expect(letteringShown('headings', 'bold 60px Arial', 1000)).toBe(true);
+    expect(letteringShown('headings', '20px Arial', 1000)).toBe(false);
+    expect(letteringShown('regions', 'bold 200px Arial', 1000)).toBe(false);
+    expect(letteringShown('full', '8px Arial', 1000)).toBe(true);
   });
 });

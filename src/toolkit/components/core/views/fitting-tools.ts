@@ -10,6 +10,7 @@ import { createPs1Material } from '../parts/ps1-material';
 import { createMicroLabel, kitGlow } from './eighties-controls';
 import type { PanelKit } from './eighties-controls';
 import { createCanvasTexture } from './screens';
+import { watchSign } from './display-reach';
 
 /**
  * Shared drawing tools for building fittings (fire, general safety and
@@ -114,6 +115,12 @@ export function tools(kit: PanelKit) {
     );
     draw(context, context.canvas.width, context.canvas.height);
     texture.needsUpdate = true;
+    // Its lettering drawn by distance (the owner, 2026-10-29).
+    watchSign(
+      texture,
+      (c) => draw(c, c.canvas.width, c.canvas.height),
+      pixels / w,
+    );
     kit.textures.push(texture);
     const material = createPs1Material({ map: texture }, glow, glow);
     kit.materials.push(material);

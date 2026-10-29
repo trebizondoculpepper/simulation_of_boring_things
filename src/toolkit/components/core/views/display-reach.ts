@@ -8,6 +8,7 @@ import type {
 } from 'three';
 import { METRE } from '../logic/units';
 import type {
+  SignDetail,
   DisplayKind,
   DisplaySighting,
   RoomDisplayLimits,
@@ -16,6 +17,8 @@ import {
   DISPLAY_PROFILES,
   displayVisibility,
   isLiveDisplay,
+  letteringShown,
+  signDetail,
   mayRefresh,
   withinRoomLimits,
   meanColour,
@@ -189,7 +192,86 @@ function setLevel(w: Watched, level: number) {
   upload.call(w.texture, true);
 }
 
+/**
+ * A static sign drawn in stages by distance (`signDetail`): its drawing
+ * run again, on canvases of its own size, through a context that leaves
+ * out the lettering a stage does not show.
+ */
+interface Sign {
+  texture: Texture;
+  canvas: HTMLCanvasElement;
+  draw: (c: CanvasRenderingContext2D) => void;
+  pixelsPerMetre: number;
+  detail: SignDetail;
+  holdUntil: number;
+  stages: Partial<Record<SignDetail, HTMLCanvasElement>>;
+}
+const signs = new WeakMap<Texture, Sign>();
+
+/**
+ * Draw a static sign in stages by distance: `draw` paints it on any
+ * context (it is run again for each stage, so it must draw the same each
+ * time); `pixelsPerMetre` is its canvas's, so lettering is judged by its
+ * size on the sign.
+ */
+export function watchSign(
+  texture: Texture,
+  draw: (c: CanvasRenderingContext2D) => void,
+  pixelsPerMetre: number,
+) {
+  const canvas = texture.image as HTMLCanvasElement;
+  if (!canvas?.getContext) return;
+  signs.set(texture, {
+    texture,
+    canvas,
+    draw,
+    pixelsPerMetre,
+    detail: 'full',
+    holdUntil: 0,
+    stages: {},
+  });
+  install();
+}
+
+function stageOf(sign: Sign, detail: SignDetail) {
+  if (detail === 'full') return sign.canvas;
+  let stage = sign.stages[detail];
+  if (stage) return stage;
+  stage = document.createElement('canvas');
+  stage.width = sign.canvas.width;
+  stage.height = sign.canvas.height;
+  const real = stage.getContext('2d')!;
+  const shown = () => letteringShown(detail, real.font, sign.pixelsPerMetre);
+  const context = new Proxy(real, {
+    get(target, key) {
+      if (key === 'fillText' || key === 'strokeText')
+        return (...args: unknown[]) => {
+          if (shown())
+            (target[key] as (...a: unknown[]) => void).apply(target, args);
+        };
+      const value = Reflect.get(target, key) as unknown;
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+    set(target, key, value) {
+      return Reflect.set(target, key, value);
+    },
+  });
+  sign.draw(context);
+  sign.stages[detail] = stage;
+  return stage;
+}
+
+function setDetail(sign: Sign, detail: SignDetail) {
+  if (sign.detail === detail) return;
+  sign.detail = detail;
+  sign.texture.image = stageOf(sign, detail);
+  upload.call(sign.texture, true);
+}
+
+const RANK: Record<SignDetail, number> = { regions: 0, headings: 1, full: 2 };
+
 interface SceneWatch {
+  signs: Map<Sign, Object3D[]>;
   shown: Map<Watched, Object3D[]>;
   scanned: number;
   checked: number;
@@ -205,12 +287,19 @@ function texturesOf(material: Material): Texture[] {
 
 function scan(scene: Scene, s: SceneWatch) {
   s.shown.clear();
+  s.signs.clear();
   scene.traverseVisible((object) => {
     const material = (object as Object3D & { material?: Material | Material[] })
       .material;
     if (!material) return;
     for (const m of Array.isArray(material) ? material : [material])
       for (const t of texturesOf(m)) {
+        const sign = signs.get(t);
+        if (sign) {
+          let list = s.signs.get(sign);
+          if (!list) s.signs.set(sign, (list = []));
+          if (!list.includes(object)) list.push(object);
+        }
         const w = watched.get(t);
         if (!w) continue;
         let list = s.shown.get(w);
@@ -227,7 +316,12 @@ function check(scene: Scene, camera: Camera) {
   if (!s)
     scenes.set(
       scene,
-      (s = { shown: new Map(), scanned: -SCAN, checked: -CHECK }),
+      (s = {
+        shown: new Map(),
+        signs: new Map(),
+        scanned: -SCAN,
+        checked: -CHECK,
+      }),
     );
   if (now - s.checked < CHECK) return;
   s.checked = now;
@@ -236,6 +330,21 @@ function check(scene: Scene, camera: Camera) {
     scan(scene, s);
   }
   camera.getWorldPosition(eye);
+  for (const [sign, objects] of s.signs) {
+    if (displayIsLive(sign.texture)) continue;
+    let nearest = Infinity;
+    for (const o of objects) {
+      at.setFromMatrixPosition(o.matrixWorld);
+      nearest = Math.min(nearest, eye.distanceTo(at) / METRE);
+    }
+    const detail = signDetail(sign.detail, nearest);
+    // As for displays: a sighting holds a while, so another renderer
+    // seeing it from further off does not take its detail away at once.
+    if (RANK[detail] >= RANK[sign.detail]) {
+      sign.holdUntil = now + SIGHTING;
+      setDetail(sign, detail);
+    } else if (now >= sign.holdUntil) setDetail(sign, detail);
+  }
   for (const [w, objects] of s.shown) {
     if (!isLiveDisplay(w.updates)) continue;
     const profile = withinRoomLimits(

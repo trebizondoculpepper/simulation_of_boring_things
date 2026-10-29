@@ -176,3 +176,49 @@ export function meanColour(data: ArrayLike<number>): string {
   }
   return `rgb(${Math.round(r / n)},${Math.round(g / n)},${Math.round(b / n)})`;
 }
+
+/**
+ * How much of a static sign is drawn (the owner, 2026-10-29): beyond
+ * `SIGN_HEADINGS` metres only its regions of colour, no writing; nearer,
+ * its large lettering too; within `SIGN_FULL`, everything. A sign must go
+ * `DISPLAY_LEAVE` past an edge to lose detail again, so it does not
+ * flicker there.
+ */
+export type SignDetail = 'regions' | 'headings' | 'full';
+export const SIGN_HEADINGS = 12;
+export const SIGN_FULL = 5;
+/** Lettering at least this tall, metres (its font's size on the sign), is a heading. */
+export const SIGN_HEADING_SIZE = 0.04;
+
+const DETAIL_RANK: Record<SignDetail, number> = {
+  regions: 0,
+  headings: 1,
+  full: 2,
+};
+
+/** A sign's detail seen from `metres` away, given its detail before. */
+export function signDetail(was: SignDetail, metres: number): SignDetail {
+  const margin = (edge: number, rank: number) =>
+    DETAIL_RANK[was] >= rank ? edge + DISPLAY_LEAVE : edge;
+  if (metres < margin(SIGN_FULL, 2)) return 'full';
+  if (metres < margin(SIGN_HEADINGS, 1)) return 'headings';
+  return 'regions';
+}
+
+/** The size in pixels a CSS font string gives, or null. */
+export function fontPixels(font: string): number | null {
+  const m = /(\d+(?:\.\d+)?)px/.exec(font);
+  return m ? Number(m[1]) : null;
+}
+
+/** Whether lettering in `font` is drawn at `detail`, on a sign of `pixelsPerMetre`. */
+export function letteringShown(
+  detail: SignDetail,
+  font: string,
+  pixelsPerMetre: number,
+): boolean {
+  if (detail === 'full') return true;
+  if (detail === 'regions') return false;
+  const px = fontPixels(font);
+  return px !== null && px / pixelsPerMetre >= SIGN_HEADING_SIZE;
+}

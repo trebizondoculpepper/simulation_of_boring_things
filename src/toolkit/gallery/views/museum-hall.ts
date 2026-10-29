@@ -23,6 +23,7 @@ import {
 import type { Material, Texture } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { markComponent } from '../../components/core/views/component-identity';
+import { watchSign } from '../../components/core/views/display-reach';
 import { drawBrandMark } from '../../components/core/views/brand-logo';
 import { brandById } from '../../components/core/logic/brands';
 import {
@@ -797,6 +798,8 @@ function signMesh(
   const w = Math.round(widthM * px);
   const h = Math.round(heightM * px);
   const map = canvasTexture(w, h, (c) => draw(c, w, h));
+  // Its lettering drawn by distance (the owner, 2026-10-29).
+  watchSign(map, (c) => draw(c, w, h), px);
   textures.push(map);
   const material = new MeshStandardMaterial({
     map,
