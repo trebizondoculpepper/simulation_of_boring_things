@@ -76,6 +76,8 @@ import {
   settledDoorTo,
 } from '../logic/control-room-mode';
 import { createControlRoomModeKnob } from '../views/control-room-mode-knob';
+import { installLiftLanding } from '../views/lift-landing';
+import { CORRIDOR_LIFT } from '../logic/main-corridor';
 
 /**
  * main_corridor: the ring of plant corridor (`logic/main-corridor.ts`),
@@ -179,6 +181,28 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
     knob.object.rotation.y = Math.atan2(w.into[0], w.into[1]);
     rooms.add(knob.object);
   }
+  // The freight lift's B2 landing in the north wall (mission 108).
+  const liftLanding = installLiftLanding({
+    room: 'main_corridor',
+    lift: 'freight',
+    floor: 'b2',
+    place: CORRIDOR_LIFT,
+    kit,
+    parts,
+    parent: rooms,
+    metre,
+    store: world,
+    walk: {
+      get following() {
+        return walk.following;
+      },
+      get walker() {
+        return walk.walker;
+      },
+    },
+    sign: 'GOODS LIFT · B2 PLANT LEVEL',
+    headerTo: MAIN_CORRIDOR.height,
+  });
   const raycaster = new Raycaster();
   const pointer = new Vector2();
   const usableAt = (x: number, y: number) => {
@@ -457,6 +481,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
           ),
         )
         .map(toMetre),
+      ...liftLanding.solids().map(toMetre),
     ],
     use: (x, y) => usableAt(x, y)?.(),
     aimed: () => Boolean(usableAt(0, 0)),
@@ -504,6 +529,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     controlDoorsOpen.value = controlDoors.part.open();
     parts.update(delta);
     settleDestinations();
+    liftLanding.update();
     hearBridge();
     // Each pair's card readers show green while it stands open, beeping
     // only when it is opened here, not when it is found open on arrival.
@@ -543,6 +569,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       observer.disconnect();
       composer.dispose();
       for (const g of groups) g.withdraw();
+      liftLanding.dispose();
       ambience.corridor(null);
       parts.dispose();
       disposeKit(kit, rooms as never);
@@ -556,9 +583,11 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       resume() {
         leaving = false;
         wasOpen.fill(null);
+        liftLanding.resume();
       },
       suspend() {
         ambience.corridor(null);
+        liftLanding.suspend();
       },
       setVisual(enabled: boolean) {
         visual = enabled;

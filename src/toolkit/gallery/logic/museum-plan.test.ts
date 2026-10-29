@@ -12,6 +12,8 @@ import {
   HALL0_BANDS,
   hallInterior,
   insideFaceRuns,
+  hallLiftOpening,
+  hallLiftPlace,
   neighbourDraw,
   neighbourFade,
   ringView,
@@ -386,7 +388,10 @@ describe('the museum’s neighbours and Hall 0’s tiles (107-1, 2026-10-28)', (
     const perimeter = 2 * (inner.maxX - inner.minX + inner.maxZ - inner.minZ);
     const length = (runs: { from: number; to: number }[]) =>
       runs.reduce((s, r) => s + r.to - r.from, 0);
-    const doors = hallArches('museum0').reduce((s, a) => s + a.w, 0);
+    // Its doorways, and the freight lift's opening (mission 108).
+    const doors =
+      hallArches('museum0').reduce((s, a) => s + a.w, 0) +
+      (hallLiftOpening('museum0')?.w ?? 0);
     expect(length(insideFaceRuns('museum0', 0))).toBeCloseTo(
       perimeter - doors,
       6,
@@ -450,5 +455,28 @@ describe('the black boxes (the owner, 2026-10-29)', () => {
     // Their neighbours keep theirs.
     expect(isBlackBox('museum6')).toBe(false);
     expect(hallColumns('museum6').length).toBeGreaterThan(0);
+  });
+});
+
+describe('the freight lift’s landing in Hall 0 (mission 108)', () => {
+  it('stands on its east wall, facing into the hall, only in Hall 0', () => {
+    const place = hallLiftPlace('museum0')!;
+    const inner = hallInterior('museum0');
+    const o = hallOrigin('museum0');
+    expect(place.x + o.x).toBeCloseTo(inner.maxX);
+    // Facing west, into the hall: +z turned to −x.
+    expect(Math.sin(place.yaw)).toBeCloseTo(-1);
+    expect(hallLiftPlace('museum1')).toBeNull();
+  });
+  it('leaves its opening out of the walls a walker meets', () => {
+    const place = hallLiftPlace('museum0')!;
+    const lift = hallLiftOpening('museum0')!;
+    const solids = hallSolids('museum0');
+    const blocked = (x: number, z: number) =>
+      solids.some((f) => x > f.minX && x < f.maxX && z > f.minZ && z < f.maxZ);
+    // Just behind the face in the middle of the opening: open.
+    expect(blocked(place.x + 0.1, place.z)).toBe(false);
+    // Beside it, beyond the frame: wall.
+    expect(blocked(place.x + 0.1, place.z + lift.w / 2 + 0.2)).toBe(true);
   });
 });

@@ -54,6 +54,7 @@ import {
   STOREY,
   bridgeDoor,
   ENTRY,
+  entryGaps,
   entryWallPieces,
   chairPlace,
   DUTIES,
@@ -553,10 +554,18 @@ export function createControlRoomPrototype(
     };
     if (game && i === ENTRY.side) {
       // The game's west wall, its doorway to the corridor cut through it.
-      const [[p0, q0], [p1, q1]] = entryWallPieces();
-      piece(p0 - T, q0, STOREY, STOREY + H + 0.3);
-      piece(p1, q1 + T, STOREY, STOREY + H + 0.3);
-      piece(q0, p1, STOREY + bridgeDoor().height, STOREY + H + 0.3);
+      // And the freight lift's opening beside the doorway (mission 108).
+      const pieces = entryWallPieces();
+      pieces.forEach(([p, q], k) =>
+        piece(
+          k === 0 ? p - T : p,
+          k === pieces.length - 1 ? q + T : q,
+          STOREY,
+          STOREY + H + 0.3,
+        ),
+      );
+      for (const g of entryGaps())
+        piece(g.from, g.to, STOREY + g.head, STOREY + H + 0.3);
     } else piece(-T, len + T, STOREY, STOREY + H + 0.3);
     // A skirting of brass, and a fin every 2.4 m raked back toward the top.
     const sk = box(

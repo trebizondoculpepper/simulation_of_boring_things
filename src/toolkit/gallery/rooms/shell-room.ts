@@ -445,6 +445,17 @@ export interface ShellConfig {
    * opening while seen through, and whether a walker has gone out by it.
    */
   doorway?: (door: ShellDoor) => CustomDoorway | undefined;
+  /**
+   * More a room installs once its walker exists (a lift landing, mission
+   * 108): its solids (metres), its frame's update, and being in charge.
+   */
+  extras?: (ctx: {
+    kit: ReturnType<typeof createPanelKit>;
+    parts: ReturnType<typeof createPartSet>;
+    rooms: Group;
+    metre: number;
+    walk: { following: boolean; walker: { x: number; z: number } };
+  }) => ShellExtras;
 }
 
 /**
@@ -455,6 +466,15 @@ export interface ShellConfig {
  * doorway in use. Every card reader in the room shows green while any of
  * its doors stands open, beeping as one is opened here.
  */
+/** What a room's `extras` give its runner. */
+export interface ShellExtras {
+  solids(): Footprint[];
+  update(): void;
+  resume(): void;
+  suspend(): void;
+  dispose(): void;
+}
+
 export function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
   const metre = METRE;
   const scene = new Scene();
@@ -664,6 +684,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   });
 
   const walls = cfg.solids.map(toMetre);
+  let extras: ShellExtras | null = null;
   const machineWalls = machines.solids.map(toMetre);
   // The height of the floor the walker stands on, metres: up on a gantry, or not.
   let standing = cfg.floorAt(cfg.start.x, cfg.start.z, 0);
@@ -737,6 +758,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       ...(onLadderLanding ? [] : machineWalls),
       ...(onLadderLanding ? humanLadderLandingSolids(rooms) : []),
       ...(cfg.levelSolids?.(standing) ?? []).map(toMetre),
+      ...(extras?.solids() ?? []).map(toMetre),
       ...machines
         .movingSolids({ x: walk.walker.x / metre, z: walk.walker.z / metre })
         .map(toMetre),
@@ -808,6 +830,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   let lastMotionX = NaN;
   let lastMotionZ = NaN;
   let lastMotionYaw = NaN;
+  extras = cfg.extras?.({ kit, parts, rooms, metre, walk }) ?? null;
   renderer.setAnimationLoop((time) => {
     parts.setAudible(!canvas.parentElement?.hidden && !walk.following);
     machines.setAudible(!canvas.parentElement?.hidden && !walk.following);
@@ -835,6 +858,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     const actor = doorActor(walk, metre, WALKER_RADIUS_METRES);
     ways.forEach((w, i) => w.part.setNearby(near[i].update(actor)));
     parts.update(delta);
+    extras?.update();
     machines.update(delta);
     const r = doorReaders(
       wasOpen,
@@ -873,6 +897,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       observer.disconnect();
       composer.dispose();
       for (const w of withdrawals) w();
+      extras?.dispose();
       parts.dispose();
       machines.dispose();
       disposeKit(kit, rooms as never);
@@ -888,7 +913,11 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       resume() {
         leaving = false;
         wasOpen = null;
+        extras?.resume();
         (window as unknown as { shellRoom: unknown }).shellRoom = handle;
+      },
+      suspend() {
+        extras?.suspend();
       },
       setVisual(enabled: boolean) {
         visual = enabled;

@@ -1,4 +1,6 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
+import { landingArrival, LIFT_DOOR } from './lift-doorway';
+import type { LiftPlace } from './lift-doorway';
 
 /**
  * The main corridor: a square ring of plant corridor at plant-floor level,
@@ -95,6 +97,23 @@ export const CORRIDOR_DOORS: readonly CorridorDoor[] = [
 ];
 
 /**
+ * The freight lift's B2 landing (mission 108; the owner, 2026-10-29: the
+ * north wall): in the middle of the free stretch of the north wall
+ * between the Olympic plant room's doors and the engineers' office's
+ * (x 12.2 to 23.6), facing into the corridor.
+ */
+export const CORRIDOR_LIFT: LiftPlace & { wall: CorridorWall; at: number } = {
+  wall: 'north',
+  at: 17.9,
+  x: 17.9,
+  z: 0,
+  yaw: 0,
+};
+
+/** The lift landing's structural opening in its wall: its frame's width. */
+export const LIFT_OPENING = LIFT_DOOR.clear + 2 * LIFT_DOOR.frame;
+
+/**
  * Where each wall stands: its line (z for walls running east-west, x for
  * those running north-south), the extent it runs along (the wall itself
  * running a thickness further at each end, to close the corners), and
@@ -168,14 +187,19 @@ export function wallPieces(wall: CorridorWall): [number, number][] {
   const { from, to } = corridorWalls()[wall];
   const t = C.wall;
   const half = C.opening / 2;
-  const doors = CORRIDOR_DOORS.filter((d) => d.wall === wall)
-    .map((d) => d.at)
-    .sort((a, b) => a - b);
+  const gaps: [number, number][] = [
+    ...CORRIDOR_DOORS.filter((d) => d.wall === wall).map(
+      (d) => [d.at, half] as [number, number],
+    ),
+    ...(CORRIDOR_LIFT.wall === wall
+      ? [[CORRIDOR_LIFT.at, LIFT_OPENING / 2] as [number, number]]
+      : []),
+  ].sort((a, b) => a[0] - b[0]);
   let start = from - t;
   const pieces: [number, number][] = [];
-  for (const at of doors) {
-    pieces.push([start, at - half]);
-    start = at + half;
+  for (const [at, h] of gaps) {
+    pieces.push([start, at - h]);
+    start = at + h;
   }
   pieces.push([start, to + t]);
   return pieces;
@@ -259,7 +283,8 @@ export function dadoPieces(
  * The bridge comes back through the control room's doors (the CONTROL
  * ROOM MODE knob's, `control-room-mode.ts`). A room with more than one
  * pair of doors here (the wet hall's east and west) is told which by
- * `side` (`?door=east` or `west`, the wall's side), else the first. Null
+ * `side` (`?door=east` or `west`, the wall's side), else the first. The
+ * freight lift's car comes back through its landing. Null
  * for a room with no door here. Metres, the corridor's frame; yaw as the
  * walker's (0 looks −z).
  */
@@ -268,6 +293,8 @@ export function corridorArrival(
   side?: string | null,
 ): { x: number; z: number; yaw: number } | null {
   if (!from) return null;
+  // Out of the freight lift, at its B2 landing.
+  if (from === 'freight_lift') return landingArrival(CORRIDOR_LIFT);
   const to = from === 'bridge' ? 'control_room' : from;
   const doors = CORRIDOR_DOORS.filter((d) => d.to === to);
   const door =

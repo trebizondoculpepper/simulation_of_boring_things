@@ -323,6 +323,9 @@ describe('later visits, and other ways in (the owner, 2026-10-27)', () => {
   it('plays nothing on a reload or a link straight onto the bridge', () => {
     expect(playsEntrance('main_corridor', false)).toBe(true);
     expect(playsEntrance('main_corridor', true)).toBe(false);
+    // Out of the freight lift, as through the corridor's doors (mission 108).
+    expect(playsEntrance('freight_lift', false)).toBe(true);
+    expect(playsEntrance('freight_lift', true)).toBe(false);
     expect(playsEntrance(null, false)).toBe(false);
     for (const heard of [false, true]) {
       expect(entranceKind('main_corridor', true, heard)).toBeNull();

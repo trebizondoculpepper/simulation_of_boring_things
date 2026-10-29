@@ -1,4 +1,6 @@
 import type { Footprint } from '../../controls/logic/walk-collision';
+import { LIFT_DOOR } from './lift-doorway';
+import type { LiftPlace } from './lift-doorway';
 import { MUSEUM_EXHIBITION } from './museum-brand';
 
 /**
@@ -750,14 +752,22 @@ export function hallSolids(
           a.axis === wall.axis &&
           (wall.axis === 'x' ? a.at.z : a.at.x) === wall.line,
       )
-      .map((a) => ({ arch: a, u: wall.axis === 'x' ? a.at.x : a.at.z }))
-      .sort((p, q) => p.u - q.u);
+      .map((a) => ({
+        arch: a as MuseumArch | null,
+        w: a.w,
+        u: wall.axis === 'x' ? a.at.x : a.at.z,
+      }));
+    // The lift landing's opening: its doors and stops are the landing's.
+    const lift = hallLiftOpening(id);
+    if (lift && lift.wall.side === wall.side)
+      cuts.push({ arch: null, w: lift.w, u: lift.u });
+    cuts.sort((p, q) => p.u - q.u);
     let start = wall.from - t;
     for (const c of cuts) {
-      const half = c.arch.w / 2;
+      const half = c.w / 2;
       out.push(box(wall.axis, wall.line, start, c.u - half, -t, t));
       start = c.u + half;
-      if (!seen[c.arch.to]) {
+      if (c.arch && !seen[c.arch.to]) {
         // The stop: the far half of the wall's thickness, beyond its middle.
         const away = wall.axis === 'x' ? -c.arch.into[1] : -c.arch.into[0];
         out.push(
@@ -1145,6 +1155,40 @@ export function ringView(
 }
 
 /**
+ * The freight lift's floor-4 landing (mission 108): on Hall 0's east wall,
+ * where its place was kept clear (`LIFT_RESERVED` in `museum-safety.ts`,
+ * 4.4 m south of the wall's middle, beside the doorway from Hall 9), its
+ * frame's opening knocked through the wall, square-headed. In the
+ * museum's plan: the wall, the opening's middle along it (`u`), its width
+ * and head; null for every other hall.
+ */
+export function hallLiftOpening(id: MuseumHallId) {
+  if (id !== 'museum0') return null;
+  const wall = hallWalls(id).find((w) => w.side === 'east')!;
+  return {
+    wall,
+    u: (wall.from + wall.to) / 2 + 4.4,
+    w: LIFT_DOOR.clear + 2 * LIFT_DOOR.frame,
+    top: LIFT_DOOR.height + LIFT_DOOR.frame,
+  };
+}
+
+/** The lift landing's place in the hall's own coordinates (`lift-doorway.ts`): on the wall's inside face, facing into the hall. */
+export function hallLiftPlace(id: MuseumHallId): LiftPlace | null {
+  const lift = hallLiftOpening(id);
+  if (!lift) return null;
+  const o = hallOrigin(id);
+  const { wall } = lift;
+  const n = wall.axis === 'x' ? wall.out[1] : wall.out[0];
+  const face = wall.line - n * (MUSEUM_WALL / 2);
+  // Into the hall: against the wall's way out.
+  const into = wall.axis === 'x' ? [0, -n] : [-n, 0];
+  return wall.axis === 'x'
+    ? { x: lift.u - o.x, z: face - o.z, yaw: Math.atan2(into[0], into[1]) }
+    : { x: face - o.x, z: lift.u - o.z, yaw: Math.atan2(into[0], into[1]) };
+}
+
+/**
  * Hall 0's tiled trim (the owner, 2026-10-28: "make the welcome hall look
  * like a pool room with a tiled floor and wall"): the runs along the
  * inside face of each of its walls from height `y` up `h`, in the museum's plan,
@@ -1172,6 +1216,9 @@ export function insideFaceRuns(
     for (const w of wallWindows(id, wall))
       if (y + h >= w.sill && y <= w.head)
         gaps.push([w.u - w.w / 2, w.u + w.w / 2]);
+    const lift = hallLiftOpening(id);
+    if (lift && lift.wall.side === wall.side && y < lift.top)
+      gaps.push([lift.u - lift.w / 2, lift.u + lift.w / 2]);
     gaps.sort((p, q) => p[0] - q[0]);
     let at = wall.from + t;
     for (const [a, b] of gaps) {

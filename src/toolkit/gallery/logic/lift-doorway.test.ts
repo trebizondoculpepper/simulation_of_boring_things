@@ -7,6 +7,18 @@ import {
   liftWorld,
   lookingOut,
 } from './lift-doorway';
+import {
+  CORRIDOR_LIFT,
+  corridorArrival,
+  LIFT_OPENING,
+  wallPieces,
+} from './main-corridor';
+import {
+  BRIDGE_LIFT,
+  entryGaps,
+  entryWallPieces,
+} from './control-room-prototype';
+import { lightSwitchPlace } from './bridge-lighting';
 
 const ahead = (yaw: number) => ({ x: Math.sin(yaw), z: -Math.cos(yaw) });
 
@@ -43,5 +55,36 @@ describe('a lift doorway (mission 108)', () => {
       const o = ahead(lookingOut(place));
       expect(liftLocal(place, place.x + o.x, place.z + o.z).v).toBeCloseTo(-1);
     }
+  });
+});
+
+describe('the freight lift’s landings (mission 108)', () => {
+  it('B2: a gap in the corridor’s north wall, in the free stretch, and the way back out of the car', () => {
+    const half = LIFT_OPENING / 2;
+    expect(CORRIDOR_LIFT.at - half).toBeGreaterThan(12.2);
+    expect(CORRIDOR_LIFT.at + half).toBeLessThan(23.6);
+    const pieces = wallPieces('north');
+    expect(
+      pieces.some(
+        ([a, b]) =>
+          a < CORRIDOR_LIFT.at + half - 1e-6 &&
+          b > CORRIDOR_LIFT.at - half + 1e-6,
+      ),
+    ).toBe(false);
+    const a = corridorArrival('freight_lift')!;
+    expect(a.x).toBeCloseTo(CORRIDOR_LIFT.x);
+    expect(a.z).toBeCloseTo(1.5);
+  });
+  it('3: on the bridge’s west wall, clear of the corridor’s doorway and the light switch', () => {
+    const gaps = entryGaps();
+    expect(gaps).toHaveLength(2);
+    expect(gaps[0].to).toBeLessThanOrEqual(gaps[1].from);
+    const lift = gaps.find((g) => g.head === BRIDGE_LIFT.top)!;
+    const along = lightSwitchPlace().along;
+    expect(along < lift.from || along > lift.to).toBe(true);
+    // Every piece of wall between the gaps, none across them.
+    const pieces = entryWallPieces();
+    expect(pieces).toHaveLength(3);
+    for (const [p, q] of pieces) expect(q).toBeGreaterThan(p);
   });
 });

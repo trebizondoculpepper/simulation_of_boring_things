@@ -43,6 +43,10 @@ The car's floor, its doors and its calls in the world state (`src/game/world.ts`
 
 ## Open questions for the owner
 
-- G (reception): an unlit dead button until reception exists, or no button?
-- The car's maker and rated load.
-- Is the lift a place to linger (the alarm, a service key, an inspection certificate to read), or a quick hop?
+- G (reception): an unlit dead button until reception exists, or no button? For now (implementer's choice, 2026-10-29): fitted, unlit, dead, its legend RECEPTION.
+- The car's maker and rated load. For now: Stannard Lifts (a new brand, `brands.ts`), 2000 kg, 26 persons.
+- Is the lift a place to linger (the alarm, a service key, an inspection certificate to read), or a quick hop? For now both: the alarm rings a bell, the independent-service key turns but does nothing, the LOLER certificate can be read; the ride is never under 7 s and lasts as long as the floor ahead takes to build.
+
+## The ride masks loading (the owner, 2026-10-29)
+
+While the car runs, the floor ahead's room is built and warmed unseen (`room-readiness.ts`, set by `src/main.ts`): its module imported, its scene built, one frame drawn from just inside its landing. The car never arrives until it is ready: it waits short of the floor, the indicator on the level before, the motor running. A ride is never under 7 s (`LIFT_TIMING.minRide`). The trial lift (`dev54`, floors `dev54_1` to `dev54_4`) tries it; `?liftDelay=8` holds every floor back eight seconds more.

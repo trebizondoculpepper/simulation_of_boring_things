@@ -2,6 +2,8 @@ import type { Footprint } from '../../controls/logic/walk-collision';
 import { STEP_UP, surfaceFloorAt } from './stair-run';
 import type { Surface } from './stair-run';
 import { MAIN_CORRIDOR } from './main-corridor';
+import { LIFT_DOOR } from './lift-doorway';
+import type { LiftPlace } from './lift-doorway';
 
 /**
  * The control room's prototype (mission 092, stage 0; dev45), to the
@@ -824,15 +826,63 @@ export function bridgeDoorway() {
   };
 }
 
-/** The wall pieces either side of the doorway along its side: [from, to] distances along it. */
+/**
+ * The freight lift's floor-3 landing (mission 108; the owner, 2026-10-29:
+ * "since we don't have a turbo lift, we're going to send the elevator to
+ * the bridge as well"): on the west wall, in the stretch kept clear for an
+ * elevator beyond the corridor's doors (the light switch is on their other
+ * side), its frame's opening `at` metres along the wall from its start;
+ * the same goods lift doors as every floor's, a deliberate anachronism.
+ */
+export const BRIDGE_LIFT = {
+  side: ENTRY.side,
+  at: 5.73,
+  w: LIFT_DOOR.clear + 2 * LIFT_DOOR.frame,
+  top: LIFT_DOOR.height + LIFT_DOOR.frame,
+} as const;
+
+/** The lift landing's place on the bridge (`lift-doorway.ts`): on the west wall's inner face, facing into the room; its floor the bridge's (`STOREY`). */
+export function bridgeLiftPlace(): LiftPlace {
+  const [a, b] = sides(roomPolygon())[BRIDGE_LIFT.side];
+  const len = Math.hypot(b.x - a.x, b.z - a.z);
+  const u = { x: (b.x - a.x) / len, z: (b.z - a.z) / len };
+  const n = inward(a, b);
+  return {
+    x: a.x + u.x * BRIDGE_LIFT.at,
+    z: a.z + u.z * BRIDGE_LIFT.at,
+    yaw: Math.atan2(n.x, n.z),
+  };
+}
+
+/**
+ * The wall pieces along the west wall, round the corridor's doorway and
+ * the lift's opening: [from, to] distances along it; and the gaps between
+ * them, each with its head's height above the floor.
+ */
 export function entryWallPieces(): [number, number][] {
   const [a, b] = sides(roomPolygon())[ENTRY.side];
   const len = Math.hypot(b.x - a.x, b.z - a.z);
+  const pieces: [number, number][] = [];
+  let start = 0;
+  for (const g of entryGaps()) {
+    pieces.push([start, g.from]);
+    start = g.to;
+  }
+  pieces.push([start, len]);
+  return pieces;
+}
+
+/** The west wall's openings: the corridor's doorway and the lift's, in order along it. */
+export function entryGaps() {
   const half = MAIN_CORRIDOR.opening / 2;
   return [
-    [0, ENTRY.at - half],
-    [ENTRY.at + half, len],
-  ];
+    { from: ENTRY.at - half, to: ENTRY.at + half, head: bridgeDoor().height },
+    {
+      from: BRIDGE_LIFT.at - BRIDGE_LIFT.w / 2,
+      to: BRIDGE_LIFT.at + BRIDGE_LIFT.w / 2,
+      head: BRIDGE_LIFT.top,
+    },
+  ].sort((p, q) => p.from - q.from);
 }
 
 /** Where the walker arrives on the bridge: just inside the doorway, facing into the room. */

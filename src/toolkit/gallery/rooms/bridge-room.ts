@@ -83,6 +83,8 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   let lightsOnTimer = 0;
   // Whether the walker is on the bridge now.
   let inside = false;
+  /** The way the walker came in: the corridor's doors or the freight lift. */
+  let cameBy: string | null = null;
   const lightsUp = createBridgeLightsUp(() => {
     const w = world();
     return w ? bridgeMainLit(w) : true;
@@ -148,7 +150,18 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
     update(delta) {
       if (!reveal) return;
       if (!reveal.started) {
-        const shut = doors ? doors.angle() < 1e-3 : true;
+        // Shut behind the walker: the corridor's doors, or, come by the
+        // freight lift, its doors at floor 3 (mission 108).
+        const lift = world()?.lifts.freight;
+        const shut =
+          cameBy === 'freight_lift'
+            ? !lift ||
+              lift.trip !== null ||
+              lift.floor !== '3' ||
+              lift.open <= 0
+            : doors
+              ? doors.angle() < 1e-3
+              : true;
         reveal = stepReveal(reveal, delta, shut);
         if (reveal.started) beginFirstView();
         return;
@@ -218,13 +231,14 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
   return Object.assign(dispose, handle, {
     enter: (from: string | null) => {
       inside = true;
+      cameBy = from;
       // Which entrance (`doc/notes/bridge_reveal.md`): walked in from the
       // corridor, the first view while the theme is unheard (a first visit,
       // or after RESET), a later visit otherwise; any other way, none.
       const w0 = world();
       const heard = w0?.bridgeThemeHeard ?? false;
       const kind = lightsUp.plays(from)
-        ? entranceKind('main_corridor', false, heard)
+        ? entranceKind(from, false, heard)
         : null;
       let entrance: Entrance | null = null;
       onBooting = null;
@@ -291,6 +305,8 @@ export function startTheBridge(canvas: HTMLCanvasElement) {
       );
     },
     suspend: () => {
+      // The runner's own (the lift landing's), then the bridge's.
+      handle.suspend?.();
       // Suspended also when merely drawn beyond the corridor's doors
       // (`startSeeing` in `main.ts`), never having been entered: only a
       // walker leaving changes what it shows.

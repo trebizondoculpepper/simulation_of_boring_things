@@ -1,3 +1,5 @@
+import { installLiftLanding } from '../views/lift-landing';
+import { roomWorld } from '../../save/world-store';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import { runShell } from './shell-room';
 import { createControlRoomPrototype } from '../views/control-room-prototype';
@@ -15,6 +17,7 @@ import {
   bridgeArrival,
   bridgeDoor,
   bridgeDoorway,
+  bridgeLiftPlace,
   protoBounds,
   protoFloorAt,
   protoSolids,
@@ -147,5 +150,25 @@ export function startBridgeRoom(
     lightsOf: 'control_room',
     powered: roomPowered('control_room'),
     start: bridgeArrival(),
+    // The freight lift's floor-3 landing beside the corridor's doors
+    // (mission 108): always the bridge, whatever the CONTROL ROOM MODE
+    // knob says; its call button on the frame's jamb, the wall beside it
+    // narrow.
+    extras: ({ kit, parts, rooms, metre, walk }) =>
+      installLiftLanding({
+        room: 'bridge',
+        lift: 'freight',
+        floor: '3',
+        place: bridgeLiftPlace(),
+        kit,
+        parts,
+        parent: rooms,
+        metre,
+        store: roomWorld(),
+        walk,
+        floorY: STOREY,
+        callOn: 'jamb',
+        sign: 'GOODS LIFT · 3 CONTROL ROOM',
+      }),
   });
 }

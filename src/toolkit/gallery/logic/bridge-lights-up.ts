@@ -252,12 +252,14 @@ export function entranceLightsAt(kind: EntranceKind, ready: number): number {
 
 /**
  * Whether an entry into the bridge plays the entrance: walked in from the
- * corridor, but not the page opened (or reloaded) on the bridge itself,
- * which only names where it was entered from.
+ * corridor, or out of the freight lift at floor 3 (mission 108; the owner,
+ * 2026-10-29: the lift gives the bridge's arrival as the doors do, its
+ * first visit the first view), but not the page opened (or reloaded) on
+ * the bridge itself, which only names where it was entered from.
  */
 export function playsEntrance(
   from: string | null,
   openedHere: boolean,
 ): boolean {
-  return from === 'main_corridor' && !openedHere;
+  return (from === 'main_corridor' || from === 'freight_lift') && !openedHere;
 }

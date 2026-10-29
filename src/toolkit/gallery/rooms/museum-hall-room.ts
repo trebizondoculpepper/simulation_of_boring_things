@@ -31,6 +31,11 @@ import type { Footprint } from '../../controls/logic/walk-collision';
 import { registerJoint } from '../logic/door-joins';
 import type { DoorFrame } from '../logic/door-joins';
 import { enterDevRoom } from '../logic/dev-room-links';
+import { installLiftLanding } from '../views/lift-landing';
+import { createPartSet } from '../../components/core/parts/parts';
+import { landingArrival } from '../logic/lift-doorway';
+import { hallLiftPlace } from '../logic/museum-plan';
+import { roomWorld } from '../../save/world-store';
 import type { RoomId } from '../logic/dev-room-links';
 import {
   hallAxes,
@@ -124,7 +129,7 @@ export function startMuseumHallRoom(
   // view; shown empty while this hall is itself drawn under another.
   const copies = new Map(
     ringNeighbours(id).map((n) => {
-      const copy = createMuseumHall(n);
+      const copy = createMuseumHall(n, undefined, id);
       const on = hallOrigin(n);
       copy.group.position.set(on.x - o.x, 0, on.z - o.z);
       hall.group.add(copy.group);
@@ -363,12 +368,16 @@ export function startMuseumHallRoom(
   const raycaster = new Raycaster();
   const pointer = new Vector2();
   const useAt = (x: number, y: number) => {
-    if (!exhibit || !active) return null;
+    if (!active) return null;
     raycaster.setFromCamera(pointer.set(x, y), camera);
-    const hit = raycaster.intersectObject(exhibit.object, true)[0];
+    const targets = [
+      ...(exhibit ? [exhibit.object] : []),
+      ...(liftLanding ? [liftLanding.root] : []),
+    ];
+    const hit = raycaster.intersectObjects(targets, true)[0];
     if (!hit || hit.distance > 4 * metre) return null;
     for (let o: Object3D | null = hit.object; o; o = o.parent) {
-      const work = exhibit.parts?.uses.get(o);
+      const work = exhibit?.parts?.uses.get(o) ?? liftParts.uses.get(o);
       if (work) {
         const at = o;
         return () =>
@@ -377,6 +386,9 @@ export function startMuseumHallRoom(
     }
     return null;
   };
+  // The lift landing's call button, worked like the exhibit's parts.
+  const liftParts = createPartSet();
+  let liftLanding: ReturnType<typeof installLiftLanding> | null = null;
   const walk = createFirstPerson({
     scene,
     canvas,
@@ -408,12 +420,32 @@ export function startMuseumHallRoom(
           x: walk.walker.x / metre,
           z: walk.walker.z / metre,
         }) ?? []),
+        ...(liftLanding?.solids() ?? []),
       ].map(toScene),
     use: (x, y) => useAt(x, y)?.(),
     aimed: () => Boolean(useAt(0, 0)),
     // The information overlay: each thing says only what it shows itself.
     inspect: createInspector({ root: scene, camera, metre }),
   });
+
+  // The freight lift's floor-4 landing on Hall 0's east wall (mission 108):
+  // the museum's way in that is not a link.
+  const liftPlace = hallLiftPlace(id);
+  liftLanding = liftPlace
+    ? installLiftLanding({
+        room: id as RoomId,
+        lift: 'freight',
+        floor: '4',
+        place: liftPlace,
+        kit,
+        parts: liftParts,
+        parent: hall.group,
+        metre,
+        store: roomWorld(),
+        walk,
+        sign: 'GOODS LIFT · 4 MUSEUM',
+      })
+    : null;
 
   const withdraw = hallArches(id).map((a) => {
     const frame: DoorFrame = {
@@ -533,6 +565,8 @@ export function startMuseumHallRoom(
       hall.update(delta);
       copies.get('museum0')?.update(delta);
     }
+    liftParts.update(delta);
+    liftLanding?.update();
     if (active && !walk.following) {
       const pose = walk.pose();
       const now = { x: pose.x / metre, z: pose.z / metre };
@@ -554,6 +588,8 @@ export function startMuseumHallRoom(
       disposed = true;
       renderer.setAnimationLoop(null);
       for (const off of withdraw) off();
+      liftLanding?.dispose();
+      liftParts.dispose();
       exhibit?.parts?.dispose();
       exhibit?.dispose?.();
       disposeKit(kit, hall.group);
@@ -585,15 +621,21 @@ export function startMuseumHallRoom(
         if (from && hallArches(id).some((a) => a.to === from)) {
           const at = arrivalFrom(id, from);
           walk.place(at.x * metre, at.z * metre, at.yaw, 0);
+        } else if (from === 'freight_lift' && liftPlace) {
+          // Out of the lift by a link: in front of its landing.
+          const at = landingArrival(liftPlace);
+          walk.place(at.x * metre, at.z * metre, at.yaw, 0);
         }
       },
       // Ambient occlusion only in the hall walked in, not one drawn under it.
       suspend() {
         active = false;
         effects.allowAmbientOcclusion(false);
+        liftLanding?.suspend();
       },
       resume() {
         active = true;
+        liftLanding?.resume();
         effects.allowAmbientOcclusion(true);
         handing = false;
         was = null;

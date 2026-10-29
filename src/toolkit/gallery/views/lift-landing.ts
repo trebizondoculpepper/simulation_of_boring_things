@@ -1,5 +1,11 @@
 import { signal } from '@preact/signals-core';
-import { BoxGeometry, Group, Mesh } from 'three';
+import {
+  BoxGeometry,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  PlaneGeometry,
+} from 'three';
 import type { Object3D } from 'three';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -117,6 +123,10 @@ export interface LiftLandingOptions {
   sign?: string;
   /** The wall's height over the doors, filled by the landing's own header plate (default none: the room's wall covers it). */
   headerTo?: number;
+  /** The landing's floor, metres up (the bridge's is a storey up). */
+  floorY?: number;
+  /** The call button on the wall beside the frame (default), or on the frame's jamb where the wall beside it is narrow. */
+  callOn?: 'wall' | 'jamb';
 }
 
 /**
@@ -137,7 +147,8 @@ export function installLiftLanding(o: LiftLandingOptions) {
   const doorway = liftDoorway(place);
   const root = new Group();
   root.name = `Lift landing ${floor.label}`;
-  root.position.set(place.x, 0, place.z);
+  const floorY = o.floorY ?? 0;
+  root.position.set(place.x, floorY, place.z);
   root.rotation.y = place.yaw;
   o.parent.add(root);
   const doors = createLiftDoors(kit);
@@ -149,6 +160,19 @@ export function installLiftLanding(o: LiftLandingOptions) {
   );
   lobby.position.set(0, LIFT_DOOR.height / 2, -LIFT_DOOR.depth - 0.4);
   root.add(lobby);
+  // While the car is seen through the doors, a pane over the doorway that
+  // draws only depth, first: whatever of this room stands behind the
+  // doorway (a neighbouring hall's copy, a wall's reveal) is not drawn
+  // there, and the car, drawn underneath, shows through.
+  const punch = new Mesh(
+    new PlaneGeometry(LIFT_DOOR.clear, LIFT_DOOR.height),
+    new MeshBasicMaterial({ colorWrite: false }),
+  );
+  kit.materials.push(punch.material as MeshBasicMaterial);
+  punch.position.set(0, LIFT_DOOR.height / 2, -0.004);
+  punch.renderOrder = -1000;
+  punch.visible = false;
+  root.add(punch);
   if (o.headerTo && o.headerTo > LIFT_DOOR.height + LIFT_DOOR.frame) {
     const top = LIFT_DOOR.height + LIFT_DOOR.frame;
     const h = o.headerTo - top;
@@ -199,7 +223,11 @@ export function installLiftLanding(o: LiftLandingOptions) {
         store.dispatch({ type: 'lift/call', lift: o.lift, floor: o.floor }),
     }),
   );
-  call.object.position.set(callPlate.position.x, 1.1, 0.013);
+  call.object.position.set(
+    callPlate.position.x,
+    1.1,
+    callPlate.position.z + 0.007,
+  );
   root.add(call.object);
 
   // Its side of the doorway (`door-joins.ts`).
@@ -215,7 +243,7 @@ export function installLiftLanding(o: LiftLandingOptions) {
       x: doorway.frame.x * metre,
       z: doorway.frame.z * metre,
       yaw: doorway.frame.yaw,
-      y: 0,
+      y: floorY * metre,
     },
     onOpen: true,
     open: () => openAt(lift(), o.floor),
@@ -225,6 +253,7 @@ export function installLiftLanding(o: LiftLandingOptions) {
     see: (on) => {
       seen = on;
       lobby.visible = !on;
+      punch.visible = on;
     },
     peek: (on) => {
       doors.leaves.visible = !on && lift().open < 0.999;

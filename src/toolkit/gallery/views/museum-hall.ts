@@ -48,6 +48,7 @@ import {
   comingSoonPanel,
   hall0Ladder,
   hallArches,
+  hallLiftOpening,
   hallAxes,
   hallBenches,
   hallBounds,
@@ -798,15 +799,54 @@ export function placeOnLine(
   }
 }
 
-/** A wall's openings, from the plan's archways on its line. */
-function openingsOn(id: MuseumHallId, wall: HallWall): Opening[] {
-  return hallArches(id)
+/**
+ * A wall's openings, from the plan's archways on its line, and the lift
+ * landing's opening (Hall 0's east wall, mission 108): square-headed, its
+ * frame and doors the landing's.
+ */
+function openingsOn(
+  id: MuseumHallId,
+  wall: HallWall,
+  /** Whose lift opening to cut, where it falls on this wall: a neighbour's copy drawn from that hall cuts it too. */
+  liftOf: MuseumHallId = id,
+): Opening[] {
+  const arches = hallArches(id)
     .filter(
       (a) =>
         a.axis === wall.axis &&
         Math.abs((wall.axis === 'x' ? a.at.z : a.at.x) - wall.line) < 1e-9,
     )
     .map((arch) => ({ arch, u: wall.axis === 'x' ? arch.at.x : arch.at.z }));
+  const lift = hallLiftOpening(liftOf);
+  if (
+    !lift ||
+    lift.wall.axis !== wall.axis ||
+    Math.abs(lift.wall.line - wall.line) > 1e-9 ||
+    lift.u < Math.min(wall.from, wall.to) ||
+    lift.u > Math.max(wall.from, wall.to)
+  )
+    return arches;
+  const at =
+    wall.axis === 'x'
+      ? { x: lift.u, z: wall.line }
+      : { x: wall.line, z: lift.u };
+  return [
+    ...arches,
+    {
+      u: lift.u,
+      arch: {
+        to: id,
+        onward: false,
+        kind: 'door',
+        w: lift.w,
+        top: lift.top,
+        axis: wall.axis,
+        at,
+        into: [-wall.out[0], -wall.out[1]],
+        frame: { x: 0, z: 0, yaw: 0 },
+      },
+    },
+  ];
 }
 
 /** A window's glass and bars, in the museum's coordinates. */
@@ -1500,7 +1540,12 @@ export function hall0PosterGlowGeometry(): BufferGeometry[] {
 }
 
 /** Build room `id`, in metres (scale the group by the scene's metre), in its own coordinates. */
-export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
+export function createMuseumHall(
+  id: MuseumHallId,
+  density = 0.8,
+  /** The hall this is drawn from, if a neighbour's copy: its lift opening cut through a shared wall (mission 108). */
+  viewer: MuseumHallId = id,
+): MuseumHall {
   const m = createMuseumMaterials();
   const textures: Texture[] = [...m.textures];
   const disposables: Material[] = [];
@@ -1576,7 +1621,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
   // The walls, each as the plan has it; the courtyard and street windows glazed.
   const bars: BufferGeometry[] = [];
   for (const wall of hallWalls(id)) {
-    const openings = openingsOn(id, wall);
+    const openings = openingsOn(id, wall, viewer);
     const windows = wallWindows(id, wall);
     const beyond = beyondAt(wall, (wall.from + wall.to) / 2);
     const tiledBoth = welcome && beyond !== 'hall';
@@ -1602,7 +1647,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     const from = wall.from + t / 2;
     const to = wall.to - t / 2;
     shape.moveTo(from, 0);
-    for (const op of openingsOn(id, wall)) {
+    for (const op of openingsOn(id, wall, viewer)) {
       const a = op.arch.w / 2;
       shape.lineTo(op.u - a, 0);
       shape.lineTo(op.u - a, op.arch.top);
@@ -1621,7 +1666,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     return face;
   };
   for (const wall of hallWalls(id)) {
-    const toWelcome = openingsOn(id, wall).some(
+    const toWelcome = openingsOn(id, wall, viewer).some(
       (op) => op.arch.to === 'museum0' || id === 'museum0',
     );
     if (!toWelcome) continue;
