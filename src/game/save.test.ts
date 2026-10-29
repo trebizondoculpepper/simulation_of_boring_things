@@ -84,7 +84,7 @@ describe('a save', () => {
       annunciator: newWorld().annunciator,
       locationAnnunciators: newWorld().locationAnnunciators,
       bridgeConsoles: newWorld().bridgeConsoles,
-      lift: newWorld().lift,
+      lifts: newWorld().lifts,
     });
   });
 

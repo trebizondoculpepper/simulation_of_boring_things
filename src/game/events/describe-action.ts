@@ -1,3 +1,4 @@
+import { LIFTS } from '../../toolkit/gallery/logic/freight-lift';
 import { LOCATION_ANNUNCIATORS } from '../plant/location-annunciators';
 import { describeTankCommand } from '../plant/chem-control';
 import type { World, WorldAction } from '../world';
@@ -404,22 +405,22 @@ function said(
       return { subject: 'ANNUNCIATOR', text: 'RESET pressed' };
     case 'lift/call':
       return {
-        subject: 'FREIGHT LIFT',
+        subject: LIFTS[action.lift].name,
         text: `called at ${action.floor.toUpperCase()}`,
       };
     case 'lift/press':
       return {
-        subject: 'FREIGHT LIFT',
+        subject: LIFTS[action.lift].name,
         text: `${action.button.toUpperCase()} pressed in the car`,
       };
     case 'lift/hold':
       return {
-        subject: 'FREIGHT LIFT',
+        subject: LIFTS[action.lift].name,
         text: action.held ? 'doorway occupied' : 'doorway clear',
       };
     case 'lift/ready':
       return {
-        subject: 'FREIGHT LIFT',
+        subject: LIFTS[action.lift].name,
         text: `floor ${action.floor.toUpperCase()} ready`,
       };
     case 'control-room/mode':

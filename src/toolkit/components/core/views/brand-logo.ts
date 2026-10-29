@@ -522,6 +522,38 @@ export function drawBrandMark(
       ctx.fillText(brand.name[0], 0, r * 0.32, r * 1.2);
       break;
     }
+    case 'sheave': {
+      // A traction sheave, its rope grooves, two ropes down to a car.
+      ctx.strokeStyle = main;
+      ctx.lineWidth = r * 0.14;
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.3, r * 0.52, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = r * 0.05;
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.3, r * 0.34, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = main;
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.3, r * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = r * 0.06;
+      for (const x of [-r * 0.52, r * 0.52]) {
+        ctx.beginPath();
+        ctx.moveTo(x, -r * 0.3);
+        ctx.lineTo(x * 0.6, r * 0.5);
+        ctx.stroke();
+      }
+      ctx.fillStyle = second;
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = r * 0.05;
+      ctx.beginPath();
+      ctx.rect(-r * 0.45, r * 0.5, r * 0.9, r * 0.45);
+      ctx.fill();
+      ctx.stroke();
+      break;
+    }
     case 'tiles': {
       // Nine pale tiles in their grout, the bottom right one gone: behind
       // it, in the dark, a pipe bends round to a valve's handwheel.

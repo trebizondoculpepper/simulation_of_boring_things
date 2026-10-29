@@ -55,6 +55,10 @@ import {
   worldStore,
 } from './toolkit/save/world-store';
 import { attractScenario } from './game/attract-scenarios';
+import {
+  prepareRoom,
+  setRoomPreparer,
+} from './toolkit/gallery/logic/room-readiness';
 import { torch } from './toolkit/controls/logic/torch';
 import { createGameSession } from './toolkit/save/game-session';
 import { GAS_ZONE_IDS } from './game/plant/gas';
@@ -1032,6 +1036,17 @@ const importStarter = async (
   if (room === 'dev34')
     return (await import('./toolkit/gallery/rooms/shell-room'))
       .startStairTowerRoom;
+  if (room === 'dev54' || room === 'freight_lift') {
+    const { startLiftCarRoom } =
+      await import('./toolkit/gallery/rooms/lift-rooms');
+    return (surface) =>
+      startLiftCarRoom(surface, room === 'dev54' ? 'trial' : 'freight');
+  }
+  if (room.startsWith('dev54_')) {
+    const { startLiftTrialFloor } =
+      await import('./toolkit/gallery/rooms/lift-rooms');
+    return (surface) => startLiftTrialFloor(surface, room.slice(6));
+  }
   if (room === 'dev53')
     return (await import('./toolkit/gallery/rooms/skimmer-reveal-room'))
       .startSkimmerRevealRoom;
@@ -1748,6 +1763,93 @@ const watchDoors = () => {
   );
 };
 requestAnimationFrame(watchDoors);
+// ---- The lift's floor ahead, prepared unseen (mission 108) ----------------
+// While a lift's car runs, the room ahead is built (its joint from the car
+// is lazy, so `checkDoors` builds it) and warmed: one frame drawn unseen,
+// its eye just inside its landing looking into the room, so its shaders
+// are compiled and its textures uploaded before the doors open on it. The
+// car does not arrive until this resolves (`room-readiness.ts`). Each
+// room's time to build and warm is kept, for sizing the rides.
+const liftTimings: { room: string; builtMs: number; warmedMs: number }[] = [];
+(window as unknown as { liftTimings: unknown }).liftTimings = liftTimings;
+if (import.meta.env.DEV)
+  Object.assign(window, {
+    /** `prepareRoom('museum0')`: build and warm a room unseen, timed. */
+    prepareRoom: (room: string) => prepareRoom(room),
+    /** `setLiftDelay(8)`: the floor ahead ready that much later. */
+    setLiftDelay: (seconds: number) => (liftDelaySeconds = seconds),
+  });
+const warmRoom = async (room: RoomId) => {
+  const entry = rooms.get(keyOf(room));
+  const surface = surfaceOf(keyOf(room));
+  if (!entry || !surface) return;
+  const handle = entry.handle as RoomHandle & { warm?: () => unknown };
+  await handle.warm?.();
+  if (keyOf(room) === current || seeing?.under === room) return;
+  const draw = rendererOn(surface);
+  const walk = firstPersonOn(surface);
+  const car = (['freight_lift', 'dev54'] as RoomId[]).find((c) =>
+    jointOf(room, c),
+  );
+  const frame = car && jointOf(room, car)?.frame;
+  if (walk && frame) {
+    // 2 m in, looking into the room: clear of its doorway's curtain.
+    const pitch = walk.pose().pitch;
+    walk.place(
+      frame.x + Math.sin(frame.yaw) * 2 * METRE,
+      frame.z + Math.cos(frame.yaw) * 2 * METRE,
+      Math.PI - frame.yaw,
+      pitch,
+    );
+  }
+  const hidden = entry.root.hidden;
+  entry.root.hidden = false;
+  entry.root.style.visibility = 'hidden';
+  try {
+    draw?.loop?.(draw.time);
+  } finally {
+    entry.root.style.visibility = '';
+    entry.root.hidden = hidden;
+  }
+};
+/**
+ * In development, `?liftDelay=8` keeps every floor ahead loading that many
+ * seconds longer, to see the car linger short of it (mission 108).
+ */
+const liftDelay = () =>
+  import.meta.env.DEV
+    ? Math.max(
+        0,
+        Number(new URLSearchParams(location.search).get('liftDelay')) || 0,
+      )
+    : 0;
+let liftDelaySeconds = liftDelay();
+setRoomPreparer(
+  (name) =>
+    new Promise<void>((resolve) => {
+      const room = name as RoomId;
+      const t0 = performance.now();
+      const extra = liftDelaySeconds * 1000;
+      const wait = () => {
+        if (!ensureBuilt(room)) return void window.setTimeout(wait, 50);
+        const built = performance.now();
+        void warmRoom(room)
+          .catch(() => {})
+          .then(() => {
+            const warmed = performance.now();
+            const timing = {
+              room,
+              builtMs: Math.round(built - t0),
+              warmedMs: Math.round(warmed - built),
+            };
+            liftTimings.push(timing);
+            console.info('[lift] floor ahead ready', timing);
+            window.setTimeout(resolve, extra);
+          });
+      };
+      wait();
+    }),
+);
 /** Walked through from `from` into `to`, seen through: hand over at once. */
 const handOver = (to: RoomId, from: RoomId) => {
   if (!seeing || seeing.top !== from || seeing.under !== to) return false;

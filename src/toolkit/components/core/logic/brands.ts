@@ -76,7 +76,9 @@ export type BrandMark =
   /** A heater shield, a chevron across it like a road's camber, the initial below. */
   | 'crest'
   /** A three-by-three panel of pale tiles, one missing, a pipe and its valve behind it. */
-  | 'tiles';
+  | 'tiles'
+  /** A traction sheave, its ropes hanging down to a car. */
+  | 'sheave';
 
 /** Every brand's id: a part names its maker by one of these. */
 export type BrandId =
@@ -110,7 +112,8 @@ export type BrandId =
   | 'ironside'
   | 'lumenhaus'
   | 'haulmark'
-  | 'plantrooms';
+  | 'plantrooms'
+  | 'stannard';
 
 export interface Brand {
   id: BrandId;
@@ -538,6 +541,23 @@ export const BRANDS: readonly Brand[] = [
     mark: 'tiles',
     colours: ['#2a9d96', '#cdeee9', '#0f3236'],
     type: 'sans',
+  },
+  {
+    // The freight lift's maker (mission 108, the owner, 2026-10-29): a
+    // British goods lift firm of the old school, its car, doors and
+    // controller the plant's age (around 2000). Our own invention.
+    id: 'stannard',
+    name: 'Stannard Lifts',
+    wordmark: 'STANNARD',
+    tagline: 'Up and down since 1934',
+    founded: 1934,
+    country: 'England',
+    makes:
+      'Goods and service lifts: traction machines, cars, vertical bi-parting doors and their controllers',
+    promise: 'Two tonnes up, two tonnes down, every working day',
+    mark: 'sheave',
+    colours: ['#b8322a', '#e8e2d0', '#1c1c1e'],
+    type: 'slab',
   },
 ];
 

@@ -55,6 +55,47 @@ export const LIFT_FLOORS: readonly LiftFloor[] = [
   { id: '4', label: '4', legend: 'MUSEUM', level: '4', room: 'museum0' },
 ];
 
+/**
+ * The trial lift's floors (dev54, mission 108 stage 2; the owner,
+ * 2026-10-29): four dev floors, each a room of its own, alike but for
+ * their colours and their big painted numbers, to try the ride masking
+ * the floor ahead's loading.
+ */
+export const TRIAL_FLOORS: readonly LiftFloor[] = [1, 2, 3, 4].map((n) => ({
+  id: String(n),
+  label: String(n),
+  legend: `DEV FLOOR ${n}`,
+  level: String(n) as LiftLevel,
+  room: `dev54_${n}`,
+}));
+
+/** The lifts: the freight lift, and the trial lift of the dev floors. */
+export type LiftId = 'freight' | 'trial';
+
+/** Each lift's car (a room of its own) and its floors. */
+export const LIFTS: Record<
+  LiftId,
+  { car: string; floors: readonly LiftFloor[]; name: string }
+> = {
+  freight: { car: 'freight_lift', floors: LIFT_FLOORS, name: 'FREIGHT LIFT' },
+  trial: { car: 'dev54', floors: TRIAL_FLOORS, name: 'TRIAL LIFT' },
+};
+
+export const LIFT_IDS = Object.keys(LIFTS) as LiftId[];
+
+/** The lift whose car is `room`, if any. */
+export const liftOfCar = (room: string) =>
+  LIFT_IDS.find((id) => LIFTS[id].car === room) ?? null;
+
+/** The lift and floor whose landing is in `room`, if any. */
+export function landingOfRoom(room: string) {
+  for (const id of LIFT_IDS) {
+    const floor = LIFTS[id].floors.find((f) => f.room === room);
+    if (floor) return { lift: id, floor };
+  }
+  return null;
+}
+
 /** The lift's timings (seconds): a slow, heavy goods lift, shortened for play; the ride's length set by the floor ahead being ready. */
 export const LIFT_TIMING = {
   /** Each door's full travel, open or shut. */
@@ -134,10 +175,10 @@ export interface LiftState {
   alarm: number;
 }
 
-/** The lift as first found: at B2, its doors shut, nobody calling. */
-export function newLift(): LiftState {
+/** The lift as first found: at its lowest floor, its doors shut, nobody calling. */
+export function newLift(floors = LIFT_FLOORS): LiftState {
   return {
-    floor: LIFT_FLOORS[0].id,
+    floor: floors[0].id,
     doors: 'shut',
     open: 0,
     dwell: 0,

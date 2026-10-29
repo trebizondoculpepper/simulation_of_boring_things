@@ -70,6 +70,11 @@ export type GalleryRoomId =
   | 'dev51'
   | 'dev52'
   | 'dev53'
+  | 'dev54'
+  | 'dev54_1'
+  | 'dev54_2'
+  | 'dev54_3'
+  | 'dev54_4'
   | 'retired0'
   | 'retired1'
   | 'dev_corridor';
@@ -120,6 +125,7 @@ export type RoomId =
   | 'air_plant'
   | 'control_room'
   | 'bridge'
+  | 'freight_lift'
   | 'engineers_office'
   | 'duty_managers_office'
   | 'plant_room_tiny'
@@ -274,6 +280,14 @@ export const ROOMS: readonly RoomId[] = [
   'dev52',
   // By its URL only: the skimmer reveal as a film, tried on its own.
   'dev53',
+  // By its URL only: the trial lift (mission 108), its car and four dev
+  // floors, each a room of its own, the ride masking the floor ahead's
+  // loading.
+  'dev54',
+  'dev54_1',
+  'dev54_2',
+  'dev54_3',
+  'dev54_4',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   'retired1',
@@ -316,6 +330,9 @@ export const ROOMS: readonly RoomId[] = [
   // knob beside its doors at NEW, the bridge (mission 095).
   'bridge',
   'control_room',
+  // The freight lift's car (mission 108): from the corridor's north wall
+  // (B2) to the bridge (3) and the museum (4).
+  'freight_lift',
   'engineers_office',
   'duty_managers_office',
   'plant_room_tiny',
@@ -375,6 +392,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   air_plant: 'AIR HANDLING PLANT',
   control_room: 'CONTROL ROOM',
   bridge: 'THE BRIDGE',
+  freight_lift: 'THE FREIGHT LIFT',
   engineers_office: 'ENGINEER’S OFFICE',
   duty_managers_office: 'DUTY MANAGER’S OFFICE',
   plant_room_tiny: 'PLANT ROOM · TINY · 5 × 5 M',
@@ -450,6 +468,11 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev51: 'DEV51 · THE IDEAL POOL PLANT',
   dev52: 'DEV52 · MUSEUM STUFF',
   dev53: 'DEV53 · THE SKIMMER REVEAL',
+  dev54: 'DEV54 · THE TRIAL LIFT',
+  dev54_1: 'DEV54 · TRIAL FLOOR 1',
+  dev54_2: 'DEV54 · TRIAL FLOOR 2',
+  dev54_3: 'DEV54 · TRIAL FLOOR 3',
+  dev54_4: 'DEV54 · TRIAL FLOOR 4',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   retired1: 'RETIRED1 · JACUZZI PLANT ROOM, 2026-10-25',
   dev_corridor: 'DEV CORRIDOR',
@@ -502,6 +525,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   air_plant: '#6d7a6f',
   control_room: '#6d7a6f',
   bridge: '#c890c8',
+  freight_lift: '#b8322a',
   engineers_office: '#6d7a6f',
   duty_managers_office: '#7e8975',
   plant_room_tiny: '#6d7a6f',
@@ -577,6 +601,11 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev51: '#2a5f9e',
   dev52: '#1a1a1a',
   dev53: '#c9a227',
+  dev54: '#b8322a',
+  dev54_1: '#5f7f96',
+  dev54_2: '#6f9068',
+  dev54_3: '#a3865a',
+  dev54_4: '#8a6a8f',
   retired0: '#6d7a6f',
   retired1: '#6d7a6f',
   dev_corridor: '#2d9ca0',

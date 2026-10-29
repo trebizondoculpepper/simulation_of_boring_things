@@ -420,7 +420,7 @@ export const WORLD_HEALTH_COVERAGE = {
     'not health: displays; their windows read the lounge’s, the Olympic’s and the wet hall’s faults',
   bridgeConsoles:
     'not health: what the bridge’s consoles show and whether each is locked',
-  lift: 'not health: the freight lift, where its car is and its doors',
+  lifts: 'not health: the lifts, where each car is and its doors',
 } as const satisfies Record<keyof World, string>;
 
 /**

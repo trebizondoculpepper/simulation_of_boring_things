@@ -294,6 +294,8 @@ import type { ConsoleChoice } from './bridge-consoles';
 import {
   callLift,
   holdLift,
+  LIFT_IDS,
+  LIFTS,
   liftReady,
   newLift,
   pressLift,
@@ -301,6 +303,7 @@ import {
 } from '../toolkit/gallery/logic/freight-lift';
 import type {
   LiftButton,
+  LiftId,
   LiftState,
 } from '../toolkit/gallery/logic/freight-lift';
 
@@ -447,11 +450,18 @@ export interface World {
    */
   bridgeConsoles: Record<string, ConsoleChoice>;
   /**
-   * The freight lift (mission 108): where its car is, its doors, its
-   * calls and its trip (`freight-lift.ts`).
+   * The lifts (mission 108), the freight lift and the dev floors' trial
+   * lift: where each car is, its doors, its calls and its trip
+   * (`freight-lift.ts`).
    */
-  lift: LiftState;
+  lifts: Record<LiftId, LiftState>;
 }
+
+/** Each lift as first found (`freight-lift.ts`). */
+const newLifts = () =>
+  Object.fromEntries(
+    LIFT_IDS.map((id) => [id, newLift(LIFTS[id].floors)]),
+  ) as Record<LiftId, LiftState>;
 
 export function newWorld(): World {
   return {
@@ -497,7 +507,7 @@ export function newWorld(): World {
     annunciator: newAnnunciator(),
     locationAnnunciators: newLocationAnnunciators(),
     bridgeConsoles: newBridgeConsoles(),
-    lift: newLift(),
+    lifts: newLifts(),
   };
 }
 
@@ -569,10 +579,10 @@ export type WorldAction =
   /** The CONTROL ROOM MODE knob turned: where the control room doors lead. */
   | { type: 'control-room/mode'; mode: ControlRoomMode }
   /** The freight lift (mission 108): a landing's call, a car button, the doorway held, the floor ahead built. */
-  | { type: 'lift/call'; floor: string }
-  | { type: 'lift/press'; button: LiftButton }
-  | { type: 'lift/hold'; held: boolean }
-  | { type: 'lift/ready'; floor: string }
+  | { type: 'lift/call'; lift: LiftId; floor: string }
+  | { type: 'lift/press'; lift: LiftId; button: LiftButton }
+  | { type: 'lift/hold'; lift: LiftId; held: boolean }
+  | { type: 'lift/ready'; lift: LiftId; floor: string }
   | { type: 'bridge/theme-heard' }
   /** The bridge's displays switched on or off (`bridgeDisplaysOn`). */
   | { type: 'bridge/displays'; on: boolean }
@@ -966,15 +976,19 @@ export function applyAction(world: World, action: WorldAction): World {
     case 'lift/press':
     case 'lift/hold':
     case 'lift/ready': {
+      const was = world.lifts[action.lift];
+      const floors = LIFTS[action.lift].floors;
       const lift =
         action.type === 'lift/call'
-          ? callLift(world.lift, action.floor)
+          ? callLift(was, action.floor, floors)
           : action.type === 'lift/press'
-            ? pressLift(world.lift, action.button)
+            ? pressLift(was, action.button, floors)
             : action.type === 'lift/hold'
-              ? holdLift(world.lift, action.held)
-              : liftReady(world.lift, action.floor);
-      return lift === world.lift ? world : { ...world, lift };
+              ? holdLift(was, action.held)
+              : liftReady(was, action.floor);
+      return lift === was
+        ? world
+        : { ...world, lifts: { ...world.lifts, [action.lift]: lift } };
     }
     case 'control-room/mode':
       return world.controlRoomMode === action.mode
@@ -1100,8 +1114,8 @@ export function stepWorld(world: World, delta: number): World {
     },
     delta,
   );
-  const lift = stepLift(world.lift, delta);
-  const stepped = { ...next, plant, intake, lift };
+  const lifts = stepLifts(world.lifts, delta);
+  const stepped = { ...next, plant, intake, lifts };
   // The annunciator senses the plant's alarms, whichever room the walker
   // is in (the reading is kept for the displays that read it after).
   const annunciator = senseAlarms(
@@ -1117,6 +1131,16 @@ export function stepWorld(world: World, delta: number): World {
     locationAnnunciators === stepped.locationAnnunciators
     ? stepped
     : { ...stepped, annunciator, locationAnnunciators };
+}
+
+/** Each lift `delta` seconds on: the same record back while every lift rests. */
+function stepLifts(lifts: Record<LiftId, LiftState>, delta: number) {
+  let out = lifts;
+  for (const id of LIFT_IDS) {
+    const next = stepLift(lifts[id], delta, LIFTS[id].floors);
+    if (next !== lifts[id]) out = { ...out, [id]: next };
+  }
+  return out;
 }
 
 /**
