@@ -27,7 +27,8 @@ import {
  * `the-pool-logo-titled.svg` (with "The Pool" as SVG text in embedded
  * Antonio Bold, outlined, shadowed and reflected, for marketing) and
  * `the-pool-logo-animated.svg` (no lettering; the sight glass's grains
- * swirl over its stirring sand and the gauges' needles tremble, by SMIL,
+ * swirl over its stirring sand, the gauges' needles tremble and the waves
+ * roll and bob, by SMIL,
  * looping every `LOOP_S` seconds, the motion the title screen draws). The art's
  * 760 × 743 space is the one `logic/title-logo.ts` places the title, the
  * ripple and the sight glass in. Run `node scripts/title-logo.ts`.
@@ -69,7 +70,39 @@ const fmt = (n: number) => String(Math.round(n * 10) / 10);
 
 // --- The upper section ---------------------------------------------------
 
-function upperSection() {
+/** The swell's points' spacing, and the seconds it takes to travel a wave. */
+const SWELL_STEP = 8;
+const SWELL_PERIOD_S = 4;
+/**
+ * The shorter wave strokes' motion in the animated logo: each drifts a few
+ * pixels sideways and bobs, and its crest rises and falls, each at its own
+ * period (every one dividing `LOOP_S`) and phase.
+ */
+const STROKE_DRIFT_PX = 5;
+const STROKE_BOB_PX = 1.2;
+const STROKE_PERIODS_S = [4, 3.2, 8 / 3, 16 / 5, 2, 16 / 3];
+
+/** A wave stroke from `a` to `b` at height `y`, still or moving. */
+function waveStroke(
+  y: number,
+  a: number,
+  b: number,
+  k: number,
+  animated: boolean,
+) {
+  const mid = (a + b) / 2;
+  const crest = (h: number) => `M ${a},${y} Q ${mid},${fmt(y - h)} ${b},${y}`;
+  if (!animated) return `<path d="${crest(3)}"/>`;
+  const period = STROKE_PERIODS_S[k % STROKE_PERIODS_S.length]!;
+  const begin = -((k * 0.37) % 1) * period;
+  const drift = Array.from({ length: 9 }, (_, n) => {
+    const a2 = (2 * Math.PI * n) / 8;
+    return `${fmt(STROKE_DRIFT_PX * Math.sin(a2))} ${fmt(STROKE_BOB_PX * Math.sin(2 * a2))}`;
+  });
+  return `<path d="${crest(3)}"><animate attributeName="d" values="${[3, 1.5, 3, 4.2, 3].map(crest).join(';')}" dur="${fmt(period / 2)}s" begin="${fmt(begin)}s" repeatCount="indefinite"/><animateTransform attributeName="transform" type="translate" values="${drift.join(';')}" dur="${fmt(period)}s" begin="${fmt(begin)}s" repeatCount="indefinite"/></path>`;
+}
+
+function upperSection(animated: boolean) {
   const half = Math.sqrt(KEY_R ** 2 - (BAND_TOP - CY) ** 2);
   const [l, r] = [CX - half, CX + half];
   const dome = `M ${fmt(l)},${BAND_TOP} A ${KEY_R} ${KEY_R} 0 0 1 ${fmt(r)},${BAND_TOP} Z`;
@@ -81,12 +114,16 @@ function upperSection() {
   const inner = (y: number) =>
     Math.sqrt((LOGO_ART.innerRadius - 6) ** 2 - (y - CY) ** 2);
   const swellY = TITLE_TEXT.waterline + 2;
-  const swell: string[] = [];
   const reach = inner(swellY);
-  for (let x = CX - reach; x <= CX + reach; x += 6)
-    swell.push(
-      `${fmt(x)},${fmt(swellY + 2.2 * Math.sin(((x - CX) / 64) * Math.PI))}`,
-    );
+  // The swell's shape at a phase of its travel (0–1), its points fixed.
+  const swellAt = (phase: number) => {
+    const points: string[] = [];
+    for (let x = CX - reach; x <= CX + reach; x += SWELL_STEP)
+      points.push(
+        `${fmt(x)},${fmt(swellY + 2.2 * Math.sin(((x - CX) / 64) * Math.PI - 2 * Math.PI * phase))}`,
+      );
+    return points.join(' ');
+  };
   const strokes: [number, number, number][] = [
     [262, 70, 160],
     [262, 236, 340],
@@ -104,9 +141,15 @@ function upperSection() {
   return `
   <g id="upper">
     <path d="${dome}" fill="${BLUE}"/>
-    <polyline points="${swell.join(' ')}" fill="none" stroke="${WHITE}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <g stroke="${WHITE}" stroke-width="3.5" stroke-linecap="round">
-      ${strokes.map(([y, a, b]) => `<path d="M ${a},${y} Q ${(a + b) / 2},${y - 3} ${b},${y}"/>`).join('\n      ')}
+    <g clip-path="url(#dome)">
+    <polyline points="${swellAt(0)}" fill="none" stroke="${WHITE}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">${
+      animated
+        ? `<animate attributeName="points" values="${Array.from({ length: 9 }, (_, k) => swellAt(k / 8)).join(';')}" dur="${SWELL_PERIOD_S}s" repeatCount="indefinite"/>`
+        : ''
+    }</polyline>
+    <g stroke="${WHITE}" stroke-width="3.5" stroke-linecap="round" fill="none">
+      ${strokes.map(([y, a, b], k) => waveStroke(y, a, b, k, animated)).join('\n      ')}
+    </g>
     </g>
     <rect x="${fmt(l)}" y="${BAND_TOP}" width="${fmt(r - l)}" height="${BAND_FOOT - BAND_TOP}" fill="${WHITE}"/>
     <path d="${tiles.join(' ')}" stroke="${NAVY}" stroke-width="2.5"/>
@@ -488,8 +531,9 @@ function logo(title: string, animated = false) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <title>The Pool</title>
   <defs>
+    <clipPath id="dome"><circle cx="${CX}" cy="${CY}" r="${LOGO_ART.innerRadius}"/></clipPath>
     <clipPath id="glass"><circle cx="${g.x}" cy="${g.y}" r="${g.radius}"/></clipPath>${title ? titleDefs() : ''}
-  </defs>${upperSection()}${structure()}
+  </defs>${upperSection(animated)}${structure()}
   <g id="plant" stroke-linejoin="round">${pipework(animated)}${filter(animated)}${strainer()}${pump()}${heatExchanger()}
   </g>${title}
 </svg>
