@@ -436,7 +436,11 @@ export function createCharacterLcd(
   const cw = 12;
   const ch = 18;
   const S = 4;
-  const art = createCanvasTexture((columns * cw + 8) * S, (rows * ch + 8) * S);
+  const art = createCanvasTexture(
+    (columns * cw + 8) * S,
+    (rows * ch + 8) * S,
+    'lcd',
+  );
   const width = (columns * cw + 8) * (cell / cw) * 1.6;
   const height = (rows * ch + 8) * (cell / cw) * 1.6;
   add(
@@ -544,7 +548,7 @@ export function createVfd(
   const res = dots ? 3 : 1;
   const cw = 14 * res;
   const ph = 24 * res;
-  const art = createCanvasTexture(columns * cw + 10 * res, ph);
+  const art = createCanvasTexture(columns * cw + 10 * res, ph, 'vfd');
   const width = ((columns * cw + 10 * res) / ph) * height;
   add(
     group,
@@ -625,7 +629,7 @@ export function createLedMatrix(
 ): LedMatrix {
   const group = new Group();
   const px = 10;
-  const art = createCanvasTexture(columns * px, rows * px);
+  const art = createCanvasTexture(columns * px, rows * px, 'led');
   const width = columns * pitch;
   const height = rows * pitch;
   add(

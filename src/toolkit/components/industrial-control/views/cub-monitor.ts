@@ -24,7 +24,7 @@ import {
 function createScreen() {
   const width = 640;
   const height = 500;
-  const { context, texture } = createCanvasTexture(width, height);
+  const { context, texture } = createCanvasTexture(width, height, 'crt');
   let shown: string | undefined;
   const draw = (lines: readonly ScreenLine[]) => {
     const key = JSON.stringify(lines);
@@ -69,7 +69,7 @@ function createScreen() {
 function createCursorLayer() {
   const width = 640;
   const height = 500;
-  const { context, texture } = createCanvasTexture(width, height);
+  const { context, texture } = createCanvasTexture(width, height, 'crt');
   let row: number | null | undefined;
   return {
     texture,

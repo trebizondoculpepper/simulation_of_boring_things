@@ -7,9 +7,10 @@ import type {
   Object3D,
 } from 'three';
 import { METRE } from '../logic/units';
-import type { DisplaySighting } from '../logic/display-reach';
+import type { DisplayKind, DisplaySighting } from '../logic/display-reach';
 import {
-  displayInReach,
+  DISPLAY_PROFILES,
+  displayVisibility,
   isLiveDisplay,
   meanColour,
 } from '../logic/display-reach';
@@ -19,9 +20,10 @@ import {
  * Every canvas texture made by `createCanvasTexture` is watched: once it
  * is live (redrawn after its first drawing), it shows a flat canvas of its
  * own average colour whenever no camera is within reach of a mesh showing
- * it, or none sees it from in front, near enough its normal and large
- * enough to read, and its redraws meanwhile are held back, uploaded once it is in
- * reach again. The component drawing it is untouched: it keeps drawing
+ * it, or none sees it from in front and large enough to read, and its
+ * redraws meanwhile are held back, uploaded once it is shown again;
+ * as the view comes round towards its face's normal it fades up from
+ * flat to full, over angles set by its kind (an LCD's 70° to 65°). The component drawing it is untouched: it keeps drawing
  * into its own canvas, which is put back when in reach. Rooms need do
  * nothing: every render is watched, at most five times a second per scene.
  */
@@ -29,12 +31,14 @@ import {
 interface Watched {
   texture: CanvasTexture;
   canvas: HTMLCanvasElement;
+  kind: DisplayKind;
   updates: number;
-  inReach: boolean;
-  /** Until when (ms) some camera has seen it within reach. */
+  /** How much of it is shown: 0 flat, 1 in full, between a fade. */
+  level: number;
+  /** Until when (ms) the last sighting of it holds. */
   seenUntil: number;
-  pending: boolean;
-  flat: HTMLCanvasElement | null;
+  /** Its flat or faded stand-in, while it is not shown in full. */
+  stand: HTMLCanvasElement | null;
 }
 
 const upload = Object.getOwnPropertyDescriptor(
@@ -51,15 +55,16 @@ const SCAN = 1000;
 export function watchDisplay(
   texture: CanvasTexture,
   canvas: HTMLCanvasElement,
+  kind: DisplayKind,
 ) {
   const w: Watched = {
     texture,
     canvas,
+    kind,
     updates: 0,
-    inReach: true,
+    level: 1,
     seenUntil: 0,
-    pending: false,
-    flat: null,
+    stand: null,
   };
   watched.set(texture, w);
   Object.defineProperty(texture, 'needsUpdate', {
@@ -67,40 +72,66 @@ export function watchDisplay(
     set(value: boolean) {
       if (value !== true) return;
       w.updates++;
-      if (w.inReach) upload.call(texture, true);
-      else w.pending = true;
+      // In full, uploaded; fading, faded again; flat, held back, its
+      // canvas put back when it is shown.
+      if (w.level === 1) upload.call(texture, true);
+      else if (w.level > 0) compose(w);
     },
   });
   install();
 }
 
-function flatOf(canvas: HTMLCanvasElement) {
-  const small = document.createElement('canvas');
-  small.width = small.height = 8;
-  const c = small.getContext('2d', { willReadFrequently: true })!;
-  c.drawImage(canvas, 0, 0, 8, 8);
-  const colour = meanColour(c.getImageData(0, 0, 8, 8).data);
-  const flat = document.createElement('canvas');
-  flat.width = canvas.width;
-  flat.height = canvas.height;
-  const f = flat.getContext('2d')!;
-  f.fillStyle = colour;
-  f.fillRect(0, 0, flat.width, flat.height);
-  return flat;
+/** Say what kind of screen a canvas texture is, if not the one it was made as. */
+export function setDisplayKind(texture: CanvasTexture, kind: DisplayKind) {
+  const w = watched.get(texture);
+  if (w) w.kind = kind;
 }
 
-function setInReach(w: Watched, inReach: boolean) {
-  if (w.inReach === inReach) return;
-  w.inReach = inReach;
-  if (inReach) {
-    w.texture.image = w.canvas;
-    w.flat = null;
-    w.pending = false;
-  } else {
-    // Same size as the display, so it goes into the same texture storage.
-    w.flat = flatOf(w.canvas);
-    w.texture.image = w.flat;
+let smallContext: CanvasRenderingContext2D | null = null;
+/** An 8 × 8 canvas the stand-ins' average colours are taken on, made when first wanted. */
+function averager() {
+  if (!smallContext) {
+    const small = document.createElement('canvas');
+    small.width = small.height = 8;
+    smallContext = small.getContext('2d', { willReadFrequently: true })!;
   }
+  return smallContext;
+}
+
+/**
+ * Its stand-in drawn and uploaded: its canvas under its own average
+ * colour, as opaque as it is not shown. Same size as the display, so it
+ * goes into the same texture storage.
+ */
+function compose(w: Watched) {
+  if (!w.stand) {
+    w.stand = document.createElement('canvas');
+    w.stand.width = w.canvas.width;
+    w.stand.height = w.canvas.height;
+  }
+  const small = averager();
+  small.clearRect(0, 0, 8, 8);
+  small.drawImage(w.canvas, 0, 0, 8, 8);
+  const c = w.stand.getContext('2d')!;
+  c.globalAlpha = 1;
+  if (w.level > 0) c.drawImage(w.canvas, 0, 0);
+  c.globalAlpha = 1 - w.level;
+  c.fillStyle = meanColour(small.getImageData(0, 0, 8, 8).data);
+  c.fillRect(0, 0, w.stand.width, w.stand.height);
+  c.globalAlpha = 1;
+  w.texture.image = w.stand;
+  upload.call(w.texture, true);
+}
+
+function setLevel(w: Watched, level: number) {
+  if (w.level === level) return;
+  w.level = level;
+  if (level < 1) {
+    compose(w);
+    return;
+  }
+  w.texture.image = w.canvas;
+  w.stand = null;
   upload.call(w.texture, true);
 }
 
@@ -152,9 +183,16 @@ function check(scene: Scene, camera: Camera) {
   camera.getWorldPosition(eye);
   for (const [w, objects] of s.shown) {
     if (!isLiveDisplay(w.updates)) continue;
-    if (objects.some((o) => displayInReach(w.inReach, sighting(o))))
-      w.seenUntil = now + SIGHTING;
-    setInReach(w, now < w.seenUntil);
+    const profile = DISPLAY_PROFILES[w.kind];
+    const level = Math.max(
+      ...objects.map((o) =>
+        displayVisibility(w.level > 0, sighting(o), profile),
+      ),
+    );
+    // A sighting holds a while, so another renderer drawing it that
+    // cannot see it does not flatten it at once.
+    if (level > 0) w.seenUntil = now + SIGHTING;
+    setLevel(w, level > 0 || now >= w.seenUntil ? level : w.level);
   }
 }
 

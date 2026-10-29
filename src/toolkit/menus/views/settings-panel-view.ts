@@ -259,7 +259,7 @@ function drawDial(
   marks: readonly { share: number; text: string }[],
 ) {
   const size = 512;
-  const { context: c, texture } = createCanvasTexture(size, size);
+  const { context: c, texture } = createCanvasTexture(size, size, 'ui');
   kit.textures.push(texture);
   const m = size / 2;
   const scale = m / radius;
@@ -325,7 +325,7 @@ function drawCard(
   const perMetre = 9000;
   const w = Math.round(width * perMetre);
   const h = Math.round(height * perMetre);
-  const { context: c, texture } = createCanvasTexture(w, h);
+  const { context: c, texture } = createCanvasTexture(w, h, 'ui');
   kit.textures.push(texture);
   c.fillStyle = '#f3f1e8';
   c.fillRect(0, 0, w, h);

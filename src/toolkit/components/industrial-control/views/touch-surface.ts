@@ -271,7 +271,7 @@ export function createTouchSurface(
     );
     const width = Math.max(16, Math.round(spec.rect.w * ppm * scale));
     const height = Math.max(16, Math.round(spec.rect.h * ppm * scale));
-    const { context, texture } = createCanvasTexture(width, height);
+    const { context, texture } = createCanvasTexture(width, height, 'lcars');
     kit.textures.push(texture);
     // Its corners, rounded with the frame's: the picture clipped to them.
     const cornerPx =

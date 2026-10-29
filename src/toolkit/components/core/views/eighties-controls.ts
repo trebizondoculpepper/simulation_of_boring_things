@@ -464,7 +464,7 @@ export function createSevenSegment(
   // the spa UV's 12 mm hours counter uploaded 864 × 320 every second).
   const cellMm = (digitHeight * 1000 * cellH) / (cellH - 16);
   const S = Math.min(4, Math.max(2, Math.ceil((texelsPerMm * cellMm) / cellH)));
-  const { context, texture } = createCanvasTexture(w * S, h * S);
+  const { context, texture } = createCanvasTexture(w * S, h * S, 'led');
   kit.textures.push(texture);
   const group = new Group();
   const scale = digitHeight / (cellH - 16);

@@ -1,8 +1,17 @@
 import { CanvasTexture, SRGBColorSpace } from 'three';
+import type { DisplayKind } from '../logic/display-reach';
 import { watchDisplay } from './display-reach';
 
-/** A small canvas texture for lettering and screens. */
-export function createCanvasTexture(width: number, height: number) {
+/**
+ * A small canvas texture for lettering and screens; `kind` says what kind
+ * of screen it is, so it is drawn only where it could be read
+ * (`display-reach.ts`); `printed` for anything that is not a screen.
+ */
+export function createCanvasTexture(
+  width: number,
+  height: number,
+  kind: DisplayKind = 'printed',
+) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -12,7 +21,7 @@ export function createCanvasTexture(width: number, height: number) {
   texture.anisotropy = 8;
   texture.colorSpace = SRGBColorSpace;
   // Flat beyond reading distance (the owner, 2026-10-29).
-  watchDisplay(texture, canvas);
+  watchDisplay(texture, canvas, kind);
   return { canvas, context, texture };
 }
 
@@ -70,7 +79,7 @@ export function createDialTexture(redline: number | null = null) {
 
 /** A phosphor oscilloscope screen redrawn every frame from a sampler. */
 export function createScopeScreen(width = 128, height = 96) {
-  const { context, texture } = createCanvasTexture(width, height);
+  const { context, texture } = createCanvasTexture(width, height, 'crt');
   const draw = (points: [number, number][], on: boolean) => {
     context.fillStyle = '#0b1a0f';
     context.fillRect(0, 0, width, height);
@@ -107,7 +116,7 @@ export function createScopeScreen(width = 128, height = 96) {
 export function createNixieScreen() {
   const width = 192;
   const height = 48;
-  const { context, texture } = createCanvasTexture(width, height);
+  const { context, texture } = createCanvasTexture(width, height, 'nixie');
   let last = '';
   const draw = (digits: string, on: boolean) => {
     const key = `${digits}${on}`;
