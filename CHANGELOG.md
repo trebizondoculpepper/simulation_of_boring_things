@@ -4,6 +4,10 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum: the signs over the archways cast a tiny drop shadow on the wall, their green printed matte and their orange in glossy vinyl, as the floor's arrows.
+
+- Museum, Hall 8 (Never again): HEAR WHAT HAPPENED now tells the chapter whose photograph you stand nearest, each chapter its own clip (`chapter-1.mp3` to `chapter-6.mp3`), lit alone and silent for 20 seconds while its clip is unrecorded; every voice line the museum needs recorded, with its file name, cue and words, is in `doc/scripts/museum-narration.md`.
+
 - Museum, Hall 6: the test tank is open-topped, the fill pipe running down through it to an open end just over the brim, its water the pools' own rippling surface; what leaves the pipe follows the delivery (drops at a dosing pump, as often as the flow fills a 0.05 ml drop, up to 20 drawn a second; a stream from about 9 l/h, widening as the root of the flow to the pipe's full bore at P11), with splash rings, foam and spray where it lands; DR1 is a tundish, a chamfered stainless funnel let into the floor under a grille.
 
 - Museum, Hall 0: leaving it, the caustics projector fades to black over the 4 seconds after the threshold and then stops being drawn (it held 5 seconds and faded over 5 before).

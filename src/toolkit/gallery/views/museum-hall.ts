@@ -794,6 +794,15 @@ function signMesh(
   textures: Texture[],
   px = 220,
   transparent = false,
+  {
+    glossy,
+    shadow = false,
+  }: {
+    /** A colour it prints in glossy vinyl, the rest matte (the owner, 2026-10-29). */
+    glossy?: string;
+    /** A tiny drop shadow on the wall behind it. */
+    shadow?: boolean;
+  } = {},
 ) {
   const w = Math.round(widthM * px);
   const h = Math.round(heightM * px);
@@ -806,12 +815,72 @@ function signMesh(
     emissiveMap: map,
     emissive: '#ffffff',
     emissiveIntensity: 0.18,
-    roughness: 0.85,
+    roughness: glossy ? 1 : 0.85,
     transparent,
     polygonOffset: true,
     polygonOffsetFactor: -2,
   });
-  return new Mesh(new PlaneGeometry(widthM, heightM), material);
+  if (glossy) {
+    // Its roughness drawn from its own picture: the glossy colour's fills
+    // smooth, as the floor's vinyl (0.12), everything else matte (0.9).
+    const rough = canvasTexture(w, h, (c) =>
+      draw(roughnessOf(c, glossy), w, h),
+    );
+    textures.push(rough);
+    material.roughnessMap = rough;
+  }
+  const mesh = new Mesh(new PlaneGeometry(widthM, heightM), material);
+  if (shadow) mesh.add(dropShadow(widthM, heightM, textures));
+  return mesh;
+}
+
+/**
+ * A drawing context that paints roughness instead of colour: fills and
+ * strokes in `glossy` as smooth (0.12, the floor vinyl's), every other
+ * colour as matte (0.9); lettering, images and the like matte too.
+ */
+function roughnessOf(
+  c: CanvasRenderingContext2D,
+  glossy: string,
+): CanvasRenderingContext2D {
+  const smooth = '#1f1f1f';
+  const matte = '#e6e6e6';
+  const same = (a: unknown) =>
+    typeof a === 'string' && a.toLowerCase() === glossy.toLowerCase();
+  return new Proxy(c, {
+    set(target, key, value) {
+      if (key === 'fillStyle' || key === 'strokeStyle')
+        value = same(value) ? smooth : matte;
+      (target as unknown as Record<string | symbol, unknown>)[key] = value;
+      return true;
+    },
+    get(target, key) {
+      const v = (target as unknown as Record<string | symbol, unknown>)[key];
+      return typeof v === 'function' ? v.bind(target) : v;
+    },
+  });
+}
+
+/** A sign's tiny drop shadow: a soft dark rectangle a little down and right of it, on the wall behind. */
+function dropShadow(widthM: number, heightM: number, textures: Texture[]) {
+  const blur = 0.02;
+  const px = 200;
+  const w = Math.round((widthM + 4 * blur) * px);
+  const h = Math.round((heightM + 4 * blur) * px);
+  const map = canvasTexture(w, h, (c) => {
+    c.clearRect(0, 0, w, h);
+    c.filter = `blur(${blur * px * 0.5}px)`;
+    c.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    c.fillRect(2 * blur * px, 2 * blur * px, widthM * px, heightM * px);
+  });
+  textures.push(map);
+  const shade = new Mesh(
+    new PlaneGeometry(widthM + 4 * blur, heightM + 4 * blur),
+    new MeshBasicMaterial({ map, transparent: true, depthWrite: false }),
+  );
+  shade.position.set(0.012, -0.016, -0.012);
+  shade.name = 'Drop shadow';
+  return shade;
 }
 
 const font = (size: number, weight = 600) =>
@@ -1787,6 +1856,8 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
       paintArchHeader(id, a),
       textures,
       240,
+      false,
+      { glossy: BRAND.colours.accent, shadow: true },
     );
     const lift = a.kind === 'door' ? 0.55 : 0.95;
     // Flat on the wall, no cove glow: only the title wall has that (the
