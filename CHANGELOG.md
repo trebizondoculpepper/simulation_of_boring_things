@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-29
+
 - Museum, Hall 6: the mimic's water lines carry bright blue chaser LEDs, chasing the way the water goes along the running pump's path only (the reservoir's main up to it, its suction and fill line, the header from it on to the tank) and down the drain while it drains, dark otherwise; mimic lines may now give their chasers a lit colour of their own.
 
 - Museum, Hall 7 (Grout): the oil-wheel projector lights only while the visitor is at the 1970s plinth's lectern, as each plinth's spotlight does (the approach light now actually follows the visitor, by the lectern nearest, and is gentler); the dark lining sits behind the room's sign instead of over it, and the title line stands clear above that sign.
@@ -825,7 +827,8 @@ The first release. It has no operator's manual yet: that comes in a later releas
 - Walking from one room to the next no longer recompiles every shader of the room arrived in.
 - The corridor posters load on the published site.
 
-[Unreleased]: https://github.com/trebizondoculpepper/the_pool/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/trebizondoculpepper/the_pool/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.1.0...v0.2.0
