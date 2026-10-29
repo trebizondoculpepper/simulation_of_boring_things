@@ -15,9 +15,11 @@ export const DISPLAY_LEAVE = 1;
  * The kinds of screen, each seen as its technology allows (the owner,
  * 2026-10-29): `lcd` (a twisted-nematic panel, washing out to its
  * background well off its normal), `crt`, `plasma`, `vfd`, `led` and
- * `nixie` (emitting their own light, readable at wider angles), `printed`
+ * `nixie` (emitting their own light, readable at wider angles), `touch`
+ * (a modern touch screen's panel, readable widely), `printed`
  * (a canvas that is not a screen: a dial face, a chart, a label), and
- * `lcars`, the bridge's touch screens, and `ui`, the game's own panels,
+ * `lcars`, the bridge's touch screens (a touch screen of their own kind,
+ * with properties no other has), and `ui`, the game's own panels,
  * which are always drawn in full.
  */
 export type DisplayKind =
@@ -27,6 +29,7 @@ export type DisplayKind =
   | 'vfd'
   | 'led'
   | 'nixie'
+  | 'touch'
   | 'printed'
   | 'lcars'
   | 'ui';
@@ -35,35 +38,48 @@ export type DisplayKind =
  * How a kind of screen is seen: drawn in full only within `reach` metres,
  * subtending more than `minSubtended` degrees, and in front of its face;
  * fading up from flat at `maxOffNormal` degrees off its face's normal to
- * full at `fullOffNormal`. `always` is never flattened.
+ * full at `fullOffNormal`. `always` is never flattened. `maxHz` is the
+ * most times a second it shows a new picture (the owner, 2026-10-29: a
+ * CRT about 25, a 1990s two-line LCD about 5; more is both wasted work
+ * and unrealistic): a redraw sooner than that waits its turn.
  */
 export interface DisplayProfile {
   always: boolean;
+  maxHz: number;
   reach: number;
   minSubtended: number;
   maxOffNormal: number;
   fullOffNormal: number;
 }
 
-const seen = (maxOffNormal: number, fullOffNormal: number): DisplayProfile => ({
+const seen = (
+  maxHz: number,
+  maxOffNormal: number,
+  fullOffNormal: number,
+): DisplayProfile => ({
   always: false,
+  maxHz,
   reach: DISPLAY_REACH,
   minSubtended: 1,
   maxOffNormal,
   fullOffNormal,
 });
-const ALWAYS: DisplayProfile = { ...seen(90, 90), always: true };
+const always = (maxHz: number): DisplayProfile => ({
+  ...seen(maxHz, 90, 90),
+  always: true,
+});
 
 export const DISPLAY_PROFILES: Record<DisplayKind, DisplayProfile> = {
-  lcd: seen(70, 65),
-  crt: seen(85, 80),
-  plasma: seen(85, 80),
-  vfd: seen(85, 80),
-  led: seen(85, 80),
-  nixie: seen(85, 80),
-  printed: seen(90, 88),
-  lcars: ALWAYS,
-  ui: ALWAYS,
+  lcd: seen(5, 70, 65),
+  crt: seen(25, 85, 80),
+  plasma: seen(30, 85, 80),
+  vfd: seen(10, 85, 80),
+  led: seen(10, 85, 80),
+  nixie: seen(5, 85, 80),
+  touch: seen(30, 85, 80),
+  printed: seen(Infinity, 90, 88),
+  lcars: always(30),
+  ui: always(Infinity),
 };
 
 /**
@@ -88,12 +104,17 @@ export function withinRoomLimits(
   if (!limits || profile.always) return profile;
   const narrow = Math.max(0, limits.narrowBy ?? 0);
   return {
-    always: false,
+    ...profile,
     reach: Math.min(profile.reach, limits.reach ?? Infinity),
     minSubtended: Math.max(profile.minSubtended, limits.minSubtended ?? 0),
     maxOffNormal: profile.maxOffNormal - narrow,
     fullOffNormal: profile.fullOffNormal - narrow,
   };
+}
+
+/** Whether a display last shown at `last` ms may show a new picture at `now`. */
+export function mayRefresh(profile: DisplayProfile, last: number, now: number) {
+  return now - last >= 1000 / profile.maxHz;
 }
 
 /** The fade's steps, each one upload. */

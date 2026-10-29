@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   DISPLAY_LEAVE,
   DISPLAY_PROFILES,
+  mayRefresh,
   withinRoomLimits,
   DISPLAY_REACH,
   displayVisibility,
@@ -93,5 +94,12 @@ describe('display reach', () => {
       DISPLAY_PROFILES.lcars,
     );
     expect(displayVisibility(false, seen(6), tight)).toBe(0);
+  });
+
+  it('shows a new picture no more often than its kind could', () => {
+    expect(mayRefresh(DISPLAY_PROFILES.lcd, 0, 150)).toBe(false);
+    expect(mayRefresh(DISPLAY_PROFILES.lcd, 0, 200)).toBe(true);
+    expect(mayRefresh(DISPLAY_PROFILES.crt, 0, 40)).toBe(true);
+    expect(mayRefresh(DISPLAY_PROFILES.printed, 0, 1)).toBe(true);
   });
 });

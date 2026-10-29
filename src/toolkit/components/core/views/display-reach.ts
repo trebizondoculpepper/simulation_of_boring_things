@@ -16,6 +16,7 @@ import {
   DISPLAY_PROFILES,
   displayVisibility,
   isLiveDisplay,
+  mayRefresh,
   withinRoomLimits,
   meanColour,
 } from '../logic/display-reach';
@@ -42,6 +43,9 @@ interface Watched {
   level: number;
   /** Until when (ms) the last sighting of it holds. */
   seenUntil: number;
+  /** When it last showed a new picture, ms, and whether one is waiting. */
+  shownAt: number;
+  waiting: boolean;
   /** Its flat or faded stand-in, while it is not shown in full. */
   stand: HTMLCanvasElement | null;
 }
@@ -69,6 +73,8 @@ export function watchDisplay(
     updates: 0,
     level: 1,
     seenUntil: 0,
+    shownAt: -Infinity,
+    waiting: false,
     stand: null,
   };
   watched.set(texture, w);
@@ -77,10 +83,7 @@ export function watchDisplay(
     set(value: boolean) {
       if (value !== true) return;
       w.updates++;
-      // In full, uploaded; fading, faded again; flat, held back, its
-      // canvas put back when it is shown.
-      if (w.level === 1) upload.call(texture, true);
-      else if (w.level > 0) compose(w);
+      refresh(w);
     },
   });
   install();
@@ -138,6 +141,31 @@ function compose(w: Watched) {
   upload.call(w.texture, true);
 }
 
+const waiting = new Set<Watched>();
+
+/**
+ * A new picture shown: in full, uploaded; fading, faded again; flat, held
+ * back, its canvas put back when it is shown. No sooner than its kind
+ * allows: else it waits, and is shown at the first render after its turn.
+ */
+function refresh(w: Watched) {
+  if (w.level === 0) {
+    waiting.delete(w);
+    return;
+  }
+  const now = performance.now();
+  if (!mayRefresh(DISPLAY_PROFILES[w.kind], w.shownAt, now)) {
+    w.waiting = true;
+    waiting.add(w);
+    return;
+  }
+  w.shownAt = now;
+  w.waiting = false;
+  waiting.delete(w);
+  if (w.level === 1) upload.call(w.texture, true);
+  else compose(w);
+}
+
 function setLevel(w: Watched, level: number) {
   if (w.level === level) return;
   w.level = level;
@@ -182,6 +210,7 @@ function scan(scene: Scene, s: SceneWatch) {
 }
 
 function check(scene: Scene, camera: Camera) {
+  for (const w of waiting) refresh(w);
   const now = performance.now();
   let s = scenes.get(scene);
   if (!s)

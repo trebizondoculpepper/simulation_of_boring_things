@@ -147,8 +147,8 @@ export interface TouchScreenSpec {
 
 export interface TouchSurfaceOptions {
   screens: readonly TouchScreenSpec[];
-  /** What kind of screen its glass is, for when it is drawn (`display-reach.ts`): an LCD unless it is the bridge's LCARS. */
-  kind?: 'lcd' | 'lcars';
+  /** What kind of screen its glass is, for when it is drawn (`display-reach.ts`): an ordinary touch screen unless it is the bridge's LCARS. */
+  kind?: 'touch' | 'lcars';
   /** The frame's outline in its plane; by default a rectangle round the screens and their bezels. */
   outline?: readonly Point2[];
   /** The frame left round each screen, metres (default 4 mm; 0 for bezel-less). */
@@ -276,7 +276,7 @@ export function createTouchSurface(
     const { context, texture } = createCanvasTexture(
       width,
       height,
-      options.kind ?? 'lcd',
+      options.kind ?? 'touch',
     );
     kit.textures.push(texture);
     // Its corners, rounded with the frame's: the picture clipped to them.
