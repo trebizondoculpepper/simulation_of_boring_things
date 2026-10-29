@@ -67,13 +67,13 @@ describe('the projected lane lines', () => {
 });
 
 describe('the projector going out when the walker leaves', () => {
-  it('holds 5 s, fades over 5 s, then switches off', () => {
-    expect(projectorPresence(false, 4.9)).toEqual({
+  it('fades to black over the 4 s after the threshold, then switches off', () => {
+    expect(projectorPresence(false, 0)).toEqual({
       projecting: true,
       brightness: 1,
     });
-    expect(projectorPresence(false, 7.5).brightness).toBeCloseTo(0.5);
-    expect(projectorPresence(false, 10)).toEqual({
+    expect(projectorPresence(false, 2).brightness).toBeCloseTo(0.5);
+    expect(projectorPresence(false, 4)).toEqual({
       projecting: false,
       brightness: 0,
     });
@@ -87,7 +87,7 @@ describe('the projector going out when the walker leaves', () => {
     expect(w.presence(0).brightness).toBe(1);
     w.walkerIn('museum1', 100);
     w.walkerIn('museum1', 103);
-    expect(w.presence(107.5).brightness).toBeCloseTo(0.5);
+    expect(w.presence(102).brightness).toBeCloseTo(0.5);
     expect(w.presence(111).projecting).toBe(false);
     w.walkerIn('museum0', 200);
     expect(w.presence(200.25).brightness).toBeCloseTo(0.25);

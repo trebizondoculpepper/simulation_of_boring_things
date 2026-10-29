@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 0: leaving it, the caustics projector fades to black over the 4 seconds after the threshold and then stops being drawn (it held 5 seconds and faded over 5 before).
+
 - Museum, Hall 7 (Grout): coming near a plinth turns a spotlight on over its specimen and its plaque, from the lamp head above it, fading out as you leave (one light serves the hall, moved to the plinth approached); the title wall's line is half a metre higher, clear of the room's sign; prompts for an era-appropriate music loop for each plinth (`doc/prompts/art/grout-music.md`).
 
 - Museum, Hall 6 (World of Pumps): the dosing pumps (P1 to P4) are now heard when running, each its own sound raised to about the circulators' level (P1's solenoid tick had been some 18 dB under them, too quiet to hear); RUN runs one pump at a time, starting one stopping the last; each plaque has its own groan-worthy Grundflow slogan; and the RUN stand's card sits clear of its controls, RUN and PUSH smaller and 5 mm either side of the button.

@@ -116,10 +116,14 @@ export function projectedLanes(
 
 /** How the projector goes out when the walker leaves Hall 0, and comes back on (the owner, 2026-10-28). */
 export const PROJECTOR_FADE = {
-  /** Seconds it carries on projecting after the walker crosses out. */
-  hold: 5,
+  /**
+   * Seconds it carries on projecting after the walker crosses out: none;
+   * it fades to black over the 4 s after the threshold, then stops being
+   * drawn (the owner, 2026-10-29; it held 5 s and faded over 5 before).
+   */
+  hold: 0,
   /** Seconds it then takes to fade to black, before switching off. */
-  fadeOut: 5,
+  fadeOut: 4,
   /** Seconds it takes to fade up again when the walker comes back (our choice). */
   fadeIn: 1,
 } as const;
