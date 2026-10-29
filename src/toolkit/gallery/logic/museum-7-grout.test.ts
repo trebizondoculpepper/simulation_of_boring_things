@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  APPROACH_FAR,
   BENCH,
+  approachedPlinth,
   HALL7,
   PLACES,
   PLINTHS,
@@ -89,5 +91,16 @@ describe('Hall 7, grout', () => {
           ).toBe(true);
         }
     expect(BENCH.x).toBeLessThan(-HALL7.halfX + 1);
+  });
+});
+
+describe('the approach light', () => {
+  it('lights the plinth approached, holds it to the far edge, and lets go', () => {
+    const at = lecternAt(5);
+    expect(approachedPlinth(at.x, at.z, null)).toBe(5);
+    expect(approachedPlinth(0, -6, null)).toBeNull();
+    // Held a little past the near edge, so it does not flicker.
+    expect(approachedPlinth(at.x, at.z - 2.5, 5)).toBe(5);
+    expect(approachedPlinth(at.x, at.z - APPROACH_FAR - 0.1, 5)).toBeNull();
   });
 });

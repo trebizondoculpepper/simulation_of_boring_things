@@ -321,3 +321,33 @@ export function hall7Solids() {
     },
   ];
 }
+
+/**
+ * The approach light (the owner, 2026-10-29): coming near a plinth turns
+ * a spotlight on, over its specimen and its plaque's lectern. One light
+ * serves the hall, moved to the plinth approached (a light switched in
+ * and out would make every material recompile). Within `APPROACH_NEAR` m
+ * of a plinth's lectern it is that plinth's; it lets go only past
+ * `APPROACH_FAR`, so it does not flicker at the edge.
+ */
+export const APPROACH_NEAR = 2.2;
+export const APPROACH_FAR = 2.8;
+
+/** The plinth whose light is on for a visitor at `x`, `z`, given the one lit before; null for none. */
+export function approachedPlinth(
+  x: number,
+  z: number,
+  lit: number | null,
+): number | null {
+  const away = (n: number) => {
+    const at = lecternAt(n);
+    return Math.hypot(x - at.x, z - at.z);
+  };
+  if (lit !== null && away(lit) < APPROACH_FAR) return lit;
+  let best: number | null = null;
+  for (const p of PLINTHS) {
+    const d = away(p.n);
+    if (d < APPROACH_NEAR && (best === null || d < away(best))) best = p.n;
+  }
+  return best;
+}
