@@ -288,7 +288,11 @@ export function startMuseumHallRoom(
   const bloom = new UnrealBloomPass(new Vector2(1, 1), 0.25, 0.4, 0.92);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
-  followEffectSettings(composer, { ao, aoSamples: MUSEUM_AO_SAMPLES, bloom });
+  const effects = followEffectSettings(composer, {
+    ao,
+    aoSamples: MUSEUM_AO_SAMPLES,
+    bloom,
+  });
 
   // Which archway's hall is drawn through it, and which are being seen.
   const seen: Partial<Record<MuseumHallId, boolean>> = {};
@@ -466,6 +470,7 @@ export function startMuseumHallRoom(
       // Arrived by a link from another hall, not seen through: inside its archway.
       enter(from: string | null) {
         active = true;
+        effects.allowAmbientOcclusion(true);
         // Walking in is pressing RESET: the exhibit from the start, its clock at now.
         exhibit?.reset(localNow());
         handing = false;
@@ -475,11 +480,14 @@ export function startMuseumHallRoom(
           walk.place(at.x * metre, at.z * metre, at.yaw, 0);
         }
       },
+      // Ambient occlusion only in the hall walked in, not one drawn under it.
       suspend() {
         active = false;
+        effects.allowAmbientOcclusion(false);
       },
       resume() {
         active = true;
+        effects.allowAmbientOcclusion(true);
         handing = false;
         was = null;
       },

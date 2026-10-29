@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum: ambient occlusion runs only in the hall the player is in, not in a neighbouring hall drawn through an archway (the owner, 2026-10-29); in Hall 1 on High this cuts draw calls by about a third (617 to 420 per render callback) and frame time by about a fifth.
+
 ## [0.4.0] - 2026-10-29
 
 - Performance pass (the owner, 2026-10-29; [report](doc/research/2026-10-29-performance-pass.md)): the museum halls' exhibits are in the component benchmark; Hall 1 no longer uploads 2 MB of textures a second with nothing changing (its mimic's readouts take a reading a second, its gas-burn digits and thermometers likewise); every mimic board's readouts are drawn at a board's texel density, a quarter of the texels; Halls 3, 4 and 9 build less each frame. Hall 3's lecterns 2 and 7 stand clear of the columns, and Hall 9's fault pedestal is no longer hidden behind one.

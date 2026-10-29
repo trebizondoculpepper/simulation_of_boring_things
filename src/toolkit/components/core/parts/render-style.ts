@@ -176,7 +176,10 @@ export function createComposer(
  * owner, 2026-10-28): its ambient occlusion off or at fewer samples, its
  * bloom off or on a smaller image, its film grain and vignette off; live,
  * as the settings change. `aoSamples` is the room's own, as tuned. Stops
- * following when the composer is disposed.
+ * following when the composer is disposed. Returns `allowAmbientOcclusion`,
+ * which turns the occlusion off while the room is only drawn under another
+ * through a doorway, whatever the settings say: it is on only in the room
+ * the player is in (the owner, 2026-10-29).
  */
 export function followEffectSettings(
   composer: EffectComposer,
@@ -207,11 +210,14 @@ export function followEffectSettings(
     };
   }
   let samples = aoSamples;
+  let aoAllowed = true;
+  let aoWanted = false;
   const stop = effect(() => {
     const s = settings.value;
     if (ao) {
       const at = ambientOcclusionAt(s.ambientOcclusion, aoSamples);
-      ao.enabled = at.enabled;
+      aoWanted = at.enabled;
+      ao.enabled = aoWanted && aoAllowed;
       if (at.enabled && at.samples !== samples) {
         samples = at.samples;
         ao.updateGtaoMaterial({ samples });
@@ -231,6 +237,12 @@ export function followEffectSettings(
   composer.dispose = () => {
     stop();
     dispose();
+  };
+  return {
+    allowAmbientOcclusion(allowed: boolean) {
+      aoAllowed = allowed;
+      if (ao) ao.enabled = aoWanted && aoAllowed;
+    },
   };
 }
 
