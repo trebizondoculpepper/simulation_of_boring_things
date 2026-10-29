@@ -44,6 +44,7 @@ import {
 } from '../../logic/museum-5-skimmer';
 import type { SkimmerAction, SkimmerGame } from '../../logic/museum-5-skimmer';
 import { bannerLine, fanfareOf } from '../../logic/skimmer-reveal';
+import { filmStep, skimmerFilmUrl } from '../../logic/skimmer-film-url';
 import {
   LENS_50_FOV,
   cinematicFrame,
@@ -881,7 +882,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   };
   const stepFilm = (delta: number, cam: Camera | null) => {
     if (!film || !view?.film) return;
-    film.t += delta;
+    film.t += filmStep(filmUrl, delta);
     const f = cinematicFrame(film.t, film.start);
     const i = film.index;
     const prop = props[i];
@@ -953,6 +954,13 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
       banner.mesh.quaternion.copy(parentQ).multiply(cam.quaternion);
     }
   };
+  /**
+   * `?room=museum5&skimmer=reveal` plays the film at once, from where the
+   * walker stands; `&filmSpeed=0.25` slows it, `&filmFps=10` advances it
+   * 1/10 s per frame drawn, for capturing it (`skimmer-film-url.ts`).
+   */
+  const filmUrl = skimmerFilmUrl(location.search);
+  let autoPlayed = false;
   let hadIntro = false;
   const act = (a: SkimmerAction) => {
     const wasHeld = held(game);
@@ -1356,6 +1364,10 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
       }
       cardTime -= delta;
       card.mesh.visible = cardTime > 0 && cam !== null && !film;
+      if (filmUrl.reveal && !autoPlayed && hands && cam && view?.film) {
+        autoPlayed = true;
+        workSkimmer();
+      }
       stepFilm(delta, cam);
       // The throat drawn only when its mouth faces the eye.
       if (cam)

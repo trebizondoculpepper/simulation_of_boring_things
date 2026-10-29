@@ -59,7 +59,11 @@ varying vec2 vUv;
 varying float vPhase;
 void main() {
   // Brightest at the rim, gone at the tip; soft at the shaft's edges.
-  float fade = pow(1.0 - vUv.y, 1.4);
+  // Clamped: under multisampling a varying is read a little outside its
+  // triangle (past the tip, vUv.y > 1), and pow of a negative is NaN,
+  // which a hall's bloom spreads into black rectangles (the owner,
+  // 2026-10-29).
+  float fade = pow(clamp(1.0 - vUv.y, 0.0, 1.0), 1.4);
   float edge = 1.0 - abs(vUv.x * 2.0 - 1.0);
   edge *= edge;
   // Light running up the shaft, and the whole shaft flickering.

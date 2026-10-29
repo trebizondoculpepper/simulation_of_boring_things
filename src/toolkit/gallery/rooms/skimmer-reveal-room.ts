@@ -36,6 +36,7 @@ import {
   layoutSize,
 } from '../../components/core/parts/render-style';
 import { bannerLine, fanfareOf } from '../logic/skimmer-reveal';
+import { filmStep, skimmerFilmUrl } from '../logic/skimmer-film-url';
 import {
   LENS_50_FOV,
   cinematicFrame,
@@ -317,6 +318,9 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   const skimmerAt = new Vector3(SK.x * m, 0, SK.z * m);
   /** The film held still where it is (`devSkimmer.seek`), for a look. */
   let frozen = false;
+  /** `?skimmer=reveal`, `filmSpeed`, `filmFps` (`skimmer-film-url.ts`). */
+  const filmUrl = skimmerFilmUrl(location.search);
+  let autoPlayed = false;
   const play = () => {
     if (film) return;
     // Whatever was in hand goes back in the skimmer.
@@ -384,7 +388,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
   const stepFilm = (delta: number, time: number) => {
     if (!film) return false;
-    if (!frozen) film.t += delta;
+    if (!frozen) film.t += filmStep(filmUrl, delta);
     const f = cinematicFrame(film.t, film.start);
     const find = film.find;
     lens = f.phase === 'done' ? null : lerp(film.fov, LENS_50_FOV, f.zoom);
@@ -558,6 +562,11 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     ps1Uniforms.time.value = time / 1000;
+    // `?skimmer=reveal`: the film at once, from where the walker stands.
+    if (filmUrl.reveal && !autoPlayed && delta > 0) {
+      autoPlayed = true;
+      play();
+    }
     if (!stepFilm(delta, time / 1000)) walk.update(delta);
     // The walker's controller sets its own field of view: the film's wins.
     useLens();
