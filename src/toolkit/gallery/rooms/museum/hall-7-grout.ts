@@ -4,10 +4,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   Object3D,
-  Path,
   PlaneGeometry,
-  Shape,
-  ShapeGeometry,
   SpotLight,
   Vector3,
 } from 'three';
@@ -42,7 +39,6 @@ import {
   timelineX,
 } from '../../logic/museum-7-grout';
 import type { GroutPlinth } from '../../logic/museum-7-grout';
-import { MUSEUM_ARCH } from '../../logic/museum-plan';
 import type { HallExhibit } from './exhibits';
 
 /**
@@ -51,7 +47,7 @@ import type { HallExhibit } from './exhibits';
  * south half, each with the same tiled specimen (one instanced model; the
  * 1970s' grout alone in avocado), a plaque on a bronze lectern before it,
  * a rope on brass posts either side and a bronze timeline in the floor,
- * 1840 to today; the walls lined dark, a few spotlights, the title wall
+ * 1840 to today; in a black box (the hall shell's, `isBlackBox`), a few spotlights, the title wall
  * gilt on the south wall ahead of the way in. Nothing moves and nothing
  * resets: everything is drawn once and merged. In the hall's frame, metres
  * (the logic file has its plan).
@@ -60,7 +56,6 @@ import type { HallExhibit } from './exhibits';
 const SERIF = 'Georgia, "Times New Roman", serif';
 const GILT = '#c9a54e';
 const GROUND = '#141a22';
-const WALL = '#1f2a33';
 
 /** Wrap and fill `text` at `size` px, returning the y it ends at. */
 function serifParagraph(
@@ -144,35 +139,6 @@ function paintPlaque(
   }
 }
 
-/** A dark wall's lining, `w` × `h`, with an archway's hole at `holeX` along it if given. */
-function lining(w: number, h: number, holeX: number | null) {
-  const s = new Shape();
-  s.moveTo(-w / 2, 0);
-  s.lineTo(w / 2, 0);
-  s.lineTo(w / 2, h);
-  s.lineTo(-w / 2, h);
-  s.closePath();
-  if (holeX !== null) {
-    const r = MUSEUM_ARCH.w / 2;
-    const hole = new Path();
-    hole.moveTo(holeX - r, 0.001);
-    hole.lineTo(holeX + r, 0.001);
-    hole.lineTo(holeX + r, MUSEUM_ARCH.spring);
-    hole.absellipse(
-      holeX,
-      MUSEUM_ARCH.spring,
-      r,
-      MUSEUM_ARCH.rise,
-      0,
-      Math.PI,
-      false,
-    );
-    hole.lineTo(holeX - r, 0.001);
-    s.holes.push(hole);
-  }
-  return new ShapeGeometry(s, 24);
-}
-
 export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const object = new Group();
   object.name = 'Hall 7: Grout';
@@ -182,50 +148,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     return thing;
   };
 
-  const wallPaint = t.paint(WALL, 0.9);
+  const { halfX, halfZ, h } = HALL7;
   const stone = t.paint('#3d4246', 0.85);
   const bronze = t.paint('#8a6a32', 0.4, 0.8);
   const brass = t.paint('#b8963e', 0.3, 0.9);
   const velvet = t.paint('#5a1420', 0.95);
   const wood = t.paint('#2a1c14', 0.7);
-
-  // ---- The chapel: the walls, ceiling and floor lined dark ----
-  const shell = new Group();
-  const { halfX, halfZ, h } = HALL7;
-  // Behind the museum's signs (15 mm off their walls), never in front (the
-  // owner, 2026-10-29: it fought the room's sign).
-  const inset = 0.005;
-  const north = new Mesh(lining(2 * halfX, h, 0), wallPaint);
-  north.position.set(0, 0, -halfZ + inset);
-  const south = new Mesh(lining(2 * halfX, h, null), wallPaint);
-  south.position.set(0, 0, halfZ - inset);
-  south.rotation.y = Math.PI;
-  const east = new Mesh(lining(2 * halfZ, h, null), wallPaint);
-  east.position.set(halfX - inset, 0, 0);
-  east.rotation.y = -Math.PI / 2;
-  // The west wall faces east; along it, +x of the shape runs to −z.
-  const west = new Mesh(lining(2 * halfZ, h, 0), wallPaint);
-  west.position.set(-halfX + inset, 0, 0);
-  west.rotation.y = Math.PI / 2;
-  const ceiling = new Mesh(
-    new PlaneGeometry(2 * halfX, 2 * halfZ),
-    t.paint('#151b22', 0.95),
-  );
-  ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.y = h - inset;
-  const floor = new Mesh(
-    new PlaneGeometry(2 * halfX, 2 * halfZ),
-    t.paint('#22262a', 0.8),
-  );
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.y = 0.004;
-  shell.add(north, south, east, west, ceiling, floor);
-  object.add(
-    markComponent(still(shell), {
-      name: 'The gallery’s dark lining',
-      decorative: true,
-    }),
-  );
 
   // ---- The plinths, each roped round; the timeline; merged ----
   const row = new Group();
@@ -639,7 +567,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   let level = 0;
   let eye: Camera | null = null;
   // The eye, caught as a mesh is drawn: one of its own, drawn always and
-  // writing nothing (the lining is merged, its floor never drawn itself).
+  // writing nothing (the rest is merged, and may not be drawn).
   const watcher = new Mesh(
     new PlaneGeometry(0.01, 0.01),
     new MeshBasicMaterial({ colorWrite: false, depthWrite: false }),

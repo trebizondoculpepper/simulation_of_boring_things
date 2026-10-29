@@ -57,6 +57,7 @@ import {
   hallSize,
   hallWalls,
   insideFaceRuns,
+  isBlackBox,
   wallWindows,
 } from '../logic/museum-plan';
 import type {
@@ -551,14 +552,6 @@ export function floorArrowGeometry(id: MuseumHallId) {
   for (const g of parts) g.dispose();
   return merged;
 }
-/**
- * The halls whose arrows are black vinyl in their white border, not the
- * brand's colour (the owner, 2026-10-28: "Make the arrows ... black vinyl
- * with a white outline"): the dark grout hall's.
- */
-export const BLACK_ARROW_HALLS: ReadonlySet<MuseumHallId> = new Set([
-  'museum7',
-]);
 export function floorArrowTexture(fill: string = BRAND.colours.accent) {
   const S = 256;
   return canvasTexture(S, S, (c) => {
@@ -709,6 +702,54 @@ function splitOpeningReveals(
     if (list.length) geometry.addGroup(start, list.length * 3, index);
     start += list.length * 3;
   });
+}
+
+/** A black box's finishes (`isBlackBox`): matt black walls, floor and roof deck. */
+export const BLACK_BOX = {
+  walls: '#0d0d0e',
+  floor: '#141416',
+  deck: '#0a0a0b',
+  /** The paint's lift off the brick, so the two never fight. */
+  proud: 0.006,
+} as const;
+
+/**
+ * A black box's paint on one wall's inside face, in the museum's
+ * coordinates: floor to roof deck, its archways and doorways notched out.
+ */
+export function blackBoxSheet(id: MuseumHallId, wall: HallWall) {
+  const half = MUSEUM_WALL / 2;
+  const shape = new Shape();
+  const from = wall.from + half;
+  const to = wall.to - half;
+  shape.moveTo(from, 0);
+  for (const o of openingsOn(id, wall).sort((p, q) => p.u - q.u)) {
+    const a = o.arch.w / 2;
+    shape.lineTo(o.u - a, 0);
+    if (o.arch.kind === 'arch') {
+      shape.lineTo(o.u - a, MUSEUM_ARCH.spring);
+      shape.absarc(o.u, MUSEUM_ARCH.spring, a, Math.PI, 0, true);
+    } else {
+      shape.lineTo(o.u - a, o.arch.top);
+      shape.lineTo(o.u + a, o.arch.top);
+    }
+    shape.lineTo(o.u + a, 0);
+  }
+  shape.lineTo(to, 0);
+  shape.lineTo(to, MUSEUM_SQUARE.h);
+  shape.lineTo(from, MUSEUM_SQUARE.h);
+  shape.closePath();
+  const g = new ShapeGeometry(shape, 24);
+  // On the inside face, into the hall (drawn both sides, so either way round).
+  const n = wall.axis === 'x' ? -wall.out[1] : -wall.out[0];
+  const at = wall.line + n * (half + BLACK_BOX.proud);
+  if (wall.axis === 'x') g.translate(0, 0, at);
+  else {
+    // Along z: the shape's x becomes z.
+    g.rotateY(-Math.PI / 2);
+    g.translate(at, 0, 0);
+  }
+  return g;
 }
 
 /** A window's opening, in a wall's (along, up). */
@@ -1165,16 +1206,17 @@ function paintArchHeader(from: MuseumHallId, a: MuseumArch) {
   };
 }
 
-/** A hall's own title, big, on its street wall, as gallery vinyl. */
-function paintHallTitle(id: MuseumHallId) {
+/** A hall's own title, big, on its street wall, as gallery vinyl: its dark lettering white on a black box's wall. */
+function paintHallTitle(id: MuseumHallId, onBlack = false) {
   const b = HALL_BRIEFS[id];
+  const ink = onBlack ? '#f2f1ec' : BRAND.colours.ink;
   return (c: CanvasRenderingContext2D, w: number, h: number) => {
     c.clearRect(0, 0, w, h);
     c.fillStyle = BRAND.colours.main;
     c.font = font(h * 0.62, 800);
     c.fillText(String(b.number), 0, h * 0.62);
     const nw = c.measureText(String(b.number)).width + h * 0.12;
-    c.fillStyle = BRAND.colours.ink;
+    c.fillStyle = ink;
     let size = h * 0.3;
     c.font = font(size, 800);
     if (c.measureText(b.title).width > w - nw) {
@@ -1187,7 +1229,7 @@ function paintHallTitle(id: MuseumHallId) {
     c.fillText(b.subject, nw, h * 0.62);
     c.fillStyle = BRAND.colours.accent;
     c.fillRect(nw, h * 0.72, h * 0.6, h * 0.035);
-    c.fillStyle = BRAND.colours.ink;
+    c.fillStyle = ink;
     c.font = font(h * 0.08, 600);
     c.fillText(`${BRAND.name} · ${BRAND.subtitle}`, nw, h * 0.86);
   };
@@ -1454,6 +1496,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
   const bounds = hallBounds(id);
   const inner = hallInterior(id);
   const welcome = id === 'museum0';
+  const blackBox = isBlackBox(id);
   const arches = hallArches(id);
   let projector: ReturnType<typeof createCausticsProjector> | null = null;
 
@@ -1477,6 +1520,12 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     textures.push(paint);
     floorMaterial = new MeshStandardMaterial({ map: paint, roughness: 0.5 });
     disposables.push(floorMaterial);
+  } else if (blackBox) {
+    floorMaterial = new MeshStandardMaterial({
+      color: BLACK_BOX.floor,
+      roughness: 0.9,
+    });
+    disposables.push(floorMaterial);
   } else {
     const pos = floorGeometry.attributes.position;
     const uv = floorGeometry.attributes.uv;
@@ -1484,13 +1533,15 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
       uv.setXY(i, pos.getX(i) / FLOOR_TILE, -pos.getZ(i) / FLOOR_TILE);
   }
   const floor = new Mesh(floorGeometry, floorMaterial);
-  floor.name = welcome ? 'Painted pool floor' : 'Polished concrete floor';
+  floor.name = welcome
+    ? 'Painted pool floor'
+    : blackBox
+      ? 'Black floor'
+      : 'Polished concrete floor';
   plan.add(floor);
 
   // The vinyl arrows by every archway, showing the way round.
-  const arrowMap = floorArrowTexture(
-    BLACK_ARROW_HALLS.has(id) ? '#0d0d0e' : BRAND.colours.accent,
-  );
+  const arrowMap = floorArrowTexture(BRAND.colours.accent);
   textures.push(arrowMap);
   const arrowMaterial = lifebuoyStickerMaterial(arrowMap);
   disposables.push(arrowMaterial);
@@ -1586,6 +1637,44 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     sticker.renderOrder = 1;
     plan.add(sticker);
   }
+  if (blackBox) {
+    // The brick painted matt black on its inside faces, a sheet a few
+    // millimetres proud, so the wall the next hall builds alike never
+    // fights it; and the roof deck black too.
+    const black = new MeshStandardMaterial({
+      color: BLACK_BOX.walls,
+      roughness: 0.95,
+      side: DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -2,
+    });
+    disposables.push(black);
+    plan.add(
+      new Mesh(
+        mergeGeometries(hallWalls(id).map((w) => blackBoxSheet(id, w))),
+        black,
+      ),
+    );
+    const deck = new PlaneGeometry(
+      bounds.maxX - bounds.minX,
+      bounds.maxZ - bounds.minZ,
+    );
+    deck.rotateX(Math.PI / 2);
+    deck.translate(
+      (bounds.minX + bounds.maxX) / 2,
+      h,
+      (bounds.minZ + bounds.maxZ) / 2,
+    );
+    const deckMaterial = new MeshStandardMaterial({
+      color: BLACK_BOX.deck,
+      roughness: 0.95,
+    });
+    disposables.push(deckMaterial);
+    const roof = new Mesh(deck, deckMaterial);
+    roof.name = 'Black roof deck';
+    plan.add(roof);
+  }
   if (bars.length) {
     plan.add(new Mesh(mergeGeometries(bars), m.steel));
     for (const b of bars) b.dispose();
@@ -1600,7 +1689,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     maxZ: inner.maxZ - o.z,
   };
 
-  if (!welcome) {
+  if (!welcome && !blackBox) {
     // The roof deck, its two steel beams along the hall, and the services under it.
     const hx = (localInner.maxX - localInner.minX) / 2;
     const hz = (localInner.maxZ - localInner.minZ) / 2;
@@ -1707,7 +1796,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
       group.add(new Mesh(mergeGeometries(frames), m.steel));
     }
     for (const g of [...benchParts, ...frames]) g.dispose();
-  } else {
+  } else if (welcome) {
     // Hall 0: a tiled ceiling, its fluorescent strips, and the fake ladder.
     const lid = new PlaneGeometry(
       localInner.maxX - localInner.minX,
@@ -1839,7 +1928,7 @@ export function createMuseumHall(id: MuseumHallId, density = 0.8): MuseumHall {
     const title = signMesh(
       HALL_TITLE.w,
       HALL_TITLE.h,
-      paintHallTitle(id),
+      paintHallTitle(id, blackBox),
       textures,
       160,
       true,

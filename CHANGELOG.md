@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Halls 7 and 8 are plain black boxes (the owner, 2026-10-29: "just have two black rooms with no windows ... very simple black rooms"): a per-hall flag in the museum plan (`BLACK_BOX_HALLS`, `isBlackBox`) gives them windowless walls painted matt black, a black floor and roof deck, no columns, services ceiling or gallery track, and no fire safety kit, keeping their archways, archway signs, title (now white lettering) and floor arrows (back to the brand's orange); the walls and archways are unchanged, so the ring still joins up. Hall 7's dark lining and Hall 8's black wall sheets are gone.
+
 ## [0.5.0] - 2026-10-29
 
 - Museum, Hall 6: the mimic's water lines carry bright blue chaser LEDs, chasing the way the water goes along the running pump's path only (the reservoir's main up to it, its suction and fill line, the header from it on to the tank) and down the drain while it drains, dark otherwise; mimic lines may now give their chasers a lit colour of their own.

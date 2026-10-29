@@ -425,3 +425,30 @@ describe('fading a neighbour in across the threshold (2026-10-28)', () => {
       }
   });
 });
+
+describe('the black boxes (the owner, 2026-10-29)', () => {
+  it('makes Hall 7 and Hall 8 black boxes: no windows, no columns, no fire kit, their walls and archways kept', async () => {
+    const {
+      BLACK_BOX_HALLS,
+      hallArches,
+      hallColumns,
+      hallWalls,
+      isBlackBox,
+      wallWindows,
+    } = await import('./museum-plan');
+    const { safetyLayer, ALL_SAFETY_ROOMS } = await import('./museum-safety');
+    expect([...BLACK_BOX_HALLS].sort()).toEqual(['museum7', 'museum8']);
+    for (const id of BLACK_BOX_HALLS) {
+      expect(isBlackBox(id)).toBe(true);
+      for (const wall of hallWalls(id))
+        expect(wallWindows(id, wall)).toEqual([]);
+      expect(hallColumns(id)).toEqual([]);
+      expect(safetyLayer(id)).toEqual([]);
+      expect(ALL_SAFETY_ROOMS).not.toContain(id);
+      expect(hallArches(id).length).toBe(2);
+    }
+    // Their neighbours keep theirs.
+    expect(isBlackBox('museum6')).toBe(false);
+    expect(hallColumns('museum6').length).toBeGreaterThan(0);
+  });
+});

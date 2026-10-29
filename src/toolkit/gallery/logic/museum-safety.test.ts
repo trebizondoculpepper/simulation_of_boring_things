@@ -91,7 +91,6 @@ describe('the museum’s safety and services layer', () => {
       'museum1',
       'museum3',
       'museum5',
-      'museum7',
       'museum9',
     ]);
   });

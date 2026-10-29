@@ -657,7 +657,7 @@ export const HALL_TITLE = { w: 6.0, h: 2.0, y: 3.6 } as const;
  */
 export function wallWindows(id: MuseumHallId, wall: HallWall): MuseumWindow[] {
   const out: MuseumWindow[] = [];
-  if (id === 'museum0') return out;
+  if (id === 'museum0' || isBlackBox(id)) return out;
   const half = WINDOW.w / 2;
   const lo = wall.from + MUSEUM_WALL / 2 + 0.8;
   const hi = wall.to - MUSEUM_WALL / 2 - 0.8;
@@ -829,7 +829,7 @@ function archAlong(id: MuseumHallId, a: MuseumArch) {
  * In the hall's own coordinates.
  */
 export function hallColumns(id: MuseumHallId): { x: number; z: number }[] {
-  if (id === 'museum0') return [];
+  if (id === 'museum0' || isBlackBox(id)) return [];
   const { length, width } = hallAxes(id);
   const sideArches = hallArches(id).filter((a) => {
     const { across } = hallAxes(id);
@@ -864,6 +864,22 @@ export const EXHIBIT_HALLS: ReadonlySet<MuseumHallId> = new Set([
   'museum8',
   'museum9',
 ]);
+
+/**
+ * The black boxes (the owner, 2026-10-29: "just have two black rooms with
+ * no windows ... very simple black rooms"): Hall 7, grout, and Hall 8,
+ * Never again. The same walls and archways as every hall, so the ring
+ * still joins up, but no windows, no columns, no services ceiling and no
+ * fire safety kit: walls, floor and roof deck plain matt black, lit only
+ * by the exhibit's own lamps.
+ */
+export const BLACK_BOX_HALLS: ReadonlySet<MuseumHallId> = new Set([
+  'museum7',
+  'museum8',
+]);
+export function isBlackBox(id: MuseumHallId): boolean {
+  return BLACK_BOX_HALLS.has(id);
+}
 
 /** A hall's room code, the first part of its exhibit's tags: M1, M2 … (107-0: the hall's number, not its room id). */
 export const hallRoomCode = (id: MuseumHallId) => `M${hallNumber(id)}`;

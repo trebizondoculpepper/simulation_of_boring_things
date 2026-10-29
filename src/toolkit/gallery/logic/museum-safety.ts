@@ -11,6 +11,7 @@ import {
   hallSize,
   hallNumber,
   hallWalls,
+  isBlackBox,
   nextHall,
   previousHall,
   ringDistance,
@@ -295,7 +296,7 @@ const uOf = (a: MuseumArch) => (a.axis === 'x' ? a.at.x : a.at.z);
 
 /** The halls with a fire point: every other one, the odd-numbered. */
 export const FIRE_POINT_HALLS: readonly MuseumHallId[] = MUSEUM_HALLS.filter(
-  (id) => hallNumber(id) % 2 === 1,
+  (id) => hallNumber(id) % 2 === 1 && !isBlackBox(id),
 );
 
 /** A fire point's board, on its feet against the wall: its footprint out from the wall. */
@@ -304,6 +305,8 @@ export const FIRE_POINT_BOARD = { w: 0.7, depth: 0.45 };
 /** Everything in a room's safety and services layer. */
 export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
   const out: SafetyFitting[] = [];
+  // None in a black box: the owner wants them very simple (2026-10-29).
+  if (isBlackBox(id)) return out;
   const taken: Taken[] = [];
   const free = (
     wall: HallWall,
@@ -571,5 +574,7 @@ export function escapeRoute(id: MuseumHallId): (MuseumHallId | 'stair')[] {
   return route;
 }
 
-/** All the rooms' layers. */
-export const ALL_SAFETY_ROOMS: readonly MuseumHallId[] = MUSEUM_HALLS;
+/** Every room with a safety layer: all but the black boxes. */
+export const ALL_SAFETY_ROOMS: readonly MuseumHallId[] = MUSEUM_HALLS.filter(
+  (id) => !isBlackBox(id),
+);

@@ -1,4 +1,4 @@
-import { Group, Mesh, Shape, ShapeGeometry, Vector3 } from 'three';
+import { Group, Vector3 } from 'three';
 import type { Camera, Color, Material, Object3D } from 'three';
 import { signal } from '@preact/signals-core';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
@@ -32,20 +32,7 @@ import type {
 } from '../../logic/museum-8-incident';
 import { createWallPanel } from '../../views/museum-exhibit';
 import { createFillPointsCase, para } from '../../views/fill-points-case';
-import { windowShape } from '../../views/museum-hall';
 import { showPhoto } from '../../views/photo-print';
-import {
-  HALL_TITLE,
-  MUSEUM_ARCH,
-  MUSEUM_SQUARE,
-  MUSEUM_WALL,
-  beyondAt,
-  hallArches,
-  hallOrigin,
-  hallWalls,
-  wallWindows,
-} from '../../logic/museum-plan';
-import type { HallWall } from '../../logic/museum-plan';
 import type { Footprint } from '../../../controls/logic/walk-collision';
 import type { HallExhibit } from './exhibits';
 
@@ -99,8 +86,6 @@ const SOUTH = 6.7;
 const NORTH = -6.7;
 const EAST = 7.7;
 const WEST = -7.7;
-/** The black walls' finish (the owner, 2026-10-28: "Make hall 7, 'Never again' black walls"). */
-const BLACK = '#0d0d0e';
 const SERIF = 'Georgia, "Times New Roman", serif';
 
 /** A photograph still to come: dark, its chapter's title and time. */
@@ -347,84 +332,6 @@ const turnTo = (o: Object3D, x: number, y: number, z: number, yaw: number) => {
   return o;
 };
 
-const HALL = 'museum8';
-/** The paint's lift off the brick, so the two never fight. */
-const PROUD = 0.006;
-
-/**
- * One wall's black paint, a sheet on its inside face in the wall's own
- * (along, up), mirrored so it faces into the hall once turned (`placeLining`):
- * floor to roof deck, its archways notched out and its windows cut out,
- * and on the street wall a white panel left round the hall's title vinyl,
- * whose dark letters would be lost on black.
- */
-function blackWall(wall: HallWall) {
-  const n = [-wall.out[0], -wall.out[1]] as const;
-  const yaw = Math.atan2(n[0], n[1]);
-  // The sheet's x along the wall, after turning: its sign.
-  const dir = Math.round(wall.axis === 'x' ? Math.cos(yaw) : -Math.sin(yaw));
-  const half = MUSEUM_WALL / 2;
-  const [lo, hi] = [wall.from + half, wall.to - half]
-    .map((u) => u * dir)
-    .sort((p, q) => p - q);
-  const top = MUSEUM_SQUARE.h;
-  const shape = new Shape();
-  shape.moveTo(lo, 0);
-  const arches = hallArches(HALL)
-    .filter(
-      (a) =>
-        a.axis === wall.axis &&
-        Math.abs((wall.axis === 'x' ? a.at.z : a.at.x) - wall.line) < 1e-9,
-    )
-    .map((a) => ({ a, u: (wall.axis === 'x' ? a.at.x : a.at.z) * dir }))
-    .sort((p, q) => p.u - q.u);
-  for (const { a, u } of arches) {
-    const r = a.w / 2;
-    shape.lineTo(u - r, 0);
-    if (a.kind === 'arch') {
-      shape.lineTo(u - r, MUSEUM_ARCH.spring);
-      shape.absarc(u, MUSEUM_ARCH.spring, r, Math.PI, 0, true);
-    } else {
-      shape.lineTo(u - r, a.top);
-      shape.lineTo(u + r, a.top);
-    }
-    shape.lineTo(u + r, 0);
-  }
-  shape.lineTo(hi, 0);
-  shape.lineTo(hi, top);
-  shape.lineTo(lo, top);
-  shape.closePath();
-  for (const w of wallWindows(HALL, wall))
-    shape.holes.push(windowShape({ ...w, u: w.u * dir }));
-  const mid = (wall.from + wall.to) / 2;
-  if (beyondAt(wall, mid) === 'street') {
-    const panel = new Shape();
-    const pw = HALL_TITLE.w / 2 + 0.35;
-    // Down to the vinyl's foot only: clear of the picture lights below.
-    const foot = HALL_TITLE.y - HALL_TITLE.h / 2;
-    const head = HALL_TITLE.y + HALL_TITLE.h / 2 + 0.35;
-    const u = mid * dir;
-    panel.moveTo(u - pw, foot);
-    panel.lineTo(u + pw, foot);
-    panel.lineTo(u + pw, head);
-    panel.lineTo(u - pw, head);
-    panel.closePath();
-    shape.holes.push(panel);
-  }
-  return new ShapeGeometry(shape, 24);
-}
-
-/** Stand a wall's black sheet on its inside face, in the hall's frame. */
-function placeLining(sheet: Mesh, wall: HallWall) {
-  const o = hallOrigin(HALL);
-  const n = [-wall.out[0], -wall.out[1]] as const;
-  sheet.rotation.y = Math.atan2(n[0], n[1]);
-  const face =
-    wall.line + (wall.axis === 'x' ? n[1] : n[0]) * (MUSEUM_WALL / 2 + PROUD);
-  if (wall.axis === 'x') sheet.position.set(-o.x, 0, face - o.z);
-  else sheet.position.set(face - o.x, 0, -o.z);
-}
-
 export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const t = tools(kit);
   const object = new Group();
@@ -437,23 +344,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   };
   const frameMat = t.paint('#0e0f10', 0.6, 0.2);
   const brass = t.paint('#a0803e', 0.35, 0.7);
-
-  // ---- The black walls: the brick painted matt black, floor to roof ----
-  const lining = new Group();
-  const dark = t.paint(BLACK, 0.95);
-  const darkMat = dark as Material;
-  darkMat.polygonOffset = true;
-  darkMat.polygonOffsetFactor = -1;
-  darkMat.polygonOffsetUnits = -2;
-  for (const wall of hallWalls(HALL)) {
-    const sheet = new Mesh(blackWall(wall), dark);
-    placeLining(sheet, wall);
-    lining.add(sheet);
-  }
-  lining.name = 'Black gallery walls';
-  object.add(
-    still(markComponent(lining, { name: 'Gallery wall', decorative: true })),
-  );
 
   // ---- The six chapters ----
   const photoMats: { color: Color }[] = [];
