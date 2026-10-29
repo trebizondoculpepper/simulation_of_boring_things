@@ -27,6 +27,12 @@ export interface Settings {
   renderLevel: number;
   /** Whether the on-screen controls are shown. */
   onScreenControls: OnScreenControls;
+  /**
+   * The size of everything drawn over the view (the help line, the HUD,
+   * the crosshair, readouts and notices), as a multiple of the usual: larger
+   * for recording on a high-resolution screen (the owner, 2026-10-29).
+   */
+  overlayScale: number;
   /** Ambient occlusion: off, or its quality (`graphics.ts`). */
   ambientOcclusion: EffectLevel;
   /** Bloom, the glow round bright things: off, or its quality. */
@@ -46,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fov: 52,
   renderLevel: 0,
   onScreenControls: 'automatic',
+  overlayScale: 1,
   // Today's look, as every room was tuned with.
   ambientOcclusion: 'high',
   bloom: 'high',
@@ -60,6 +67,7 @@ export const RANGES = {
   sensitivity: { min: 0.25, max: 3, step: 0.05 },
   fov: { min: 40, max: 90, step: 1 },
   renderLevel: { min: 0, max: 10, step: 1 },
+  overlayScale: { min: 0.75, max: 2.5, step: 0.05 },
 } as const satisfies Partial<
   Record<keyof Settings, { min: number; max: number; step: number }>
 >;
@@ -114,6 +122,7 @@ export function cleanSettings(stored: unknown): Settings {
         : ['automatic', 'always', 'never'].includes(String(s.onScreenControls))
           ? (s.onScreenControls as OnScreenControls)
           : 'automatic',
+    overlayScale: num('overlayScale'),
     ambientOcclusion: level('ambientOcclusion'),
     bloom: level('bloom'),
     filmEffects: bool('filmEffects'),

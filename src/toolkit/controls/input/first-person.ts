@@ -425,7 +425,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
     top: '50%',
     width: '10px',
     height: '10px',
-    transform: 'translate(-50%, -50%)',
+    transform: 'translate(-50%, -50%) scale(var(--overlay-scale, 1))',
     border: '2px solid #f5f1df',
     borderRadius: '50%',
     boxShadow: '0 0 0 2px #182327',

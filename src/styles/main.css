@@ -1011,3 +1011,21 @@ canvas {
   color: var(--hud-amber);
   font: inherit;
 }
+
+/* The overlay scale (Settings, Graphics; src/main.ts sets --overlay-scale):
+   everything drawn over the view, larger or smaller, for recording on a
+   high-resolution screen. Only the outermost pieces, since zoom compounds;
+   the crosshair, placed at the pointer, scales by its transform instead. */
+.room-name,
+.controls-help,
+.location-overlay,
+.hud-movement,
+.hud-tools,
+.hud-speed,
+.touch-crouch,
+.touch-sticks,
+.noclip-readout,
+.noclip-altitude,
+.screenshot-notice {
+  zoom: var(--overlay-scale, 1);
+}

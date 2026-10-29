@@ -20,6 +20,7 @@ describe('the player’s settings', () => {
       fov: 75,
       renderLevel: 6,
       onScreenControls: 'never',
+      overlayScale: 1.75,
       ambientOcclusion: 'medium',
       bloom: 'off',
       filmEffects: false,
@@ -65,5 +66,14 @@ describe('the player’s settings', () => {
     expect(renderScale(6)).toBeCloseTo(0.4619, 3);
     for (let n = 1; n <= RANGES.renderLevel.max; n++)
       expect(renderScale(n)).toBeLessThan(renderScale(n - 1));
+  });
+});
+
+describe('overlay scale', () => {
+  it('defaults to 1 and keeps a stored value within its range', () => {
+    expect(cleanSettings({}).overlayScale).toBe(1);
+    expect(cleanSettings({ overlayScale: 1.5 }).overlayScale).toBe(1.5);
+    expect(cleanSettings({ overlayScale: 9 }).overlayScale).toBe(2.5);
+    expect(cleanSettings({ overlayScale: 'big' }).overlayScale).toBe(1);
   });
 });

@@ -218,6 +218,10 @@ effect(() => {
     'hide-onscreen-controls',
     s.onScreenControls === 'never',
   );
+  document.documentElement.style.setProperty(
+    '--overlay-scale',
+    String(s.overlayScale),
+  );
 });
 // The pause menu: Esc once the mouse is free, a gamepad's Start, or the
 // gear among each room's view tools. The world saves itself as it runs

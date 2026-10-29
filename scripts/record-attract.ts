@@ -89,6 +89,17 @@ const CLOCK = `(() => {
 })();`;
 
 /** A connection to one page over the Chrome DevTools Protocol. */
+/** What the protocol answers, as far as the recorder reads it. */
+interface CdpReply {
+  id?: number;
+  error?: { message: string };
+  result?: CdpResult;
+}
+interface CdpResult {
+  exceptionDetails?: { text: string; exception?: { description?: string } };
+  result?: { value?: unknown };
+}
+
 async function connect(wsUrl: string) {
   const ws = new WebSocket(wsUrl);
   await new Promise((resolve, reject) => {
@@ -96,23 +107,23 @@ async function connect(wsUrl: string) {
     ws.onerror = reject;
   });
   let id = 0;
-  const waiting = new Map<number, (m: any) => void>();
+  const waiting = new Map<number, (m: CdpReply) => void>();
   ws.onmessage = (e) => {
-    const m = JSON.parse(String(e.data));
+    const m = JSON.parse(String(e.data)) as CdpReply;
     if (m.id && waiting.has(m.id)) {
       waiting.get(m.id)!(m);
       waiting.delete(m.id);
     }
   };
   const send = (method: string, params: object = {}) =>
-    new Promise<any>((resolve, reject) => {
+    new Promise<CdpResult>((resolve, reject) => {
       const n = ++id;
       waiting.set(n, (m) =>
-        m.error ? reject(new Error(m.error.message)) : resolve(m.result),
+        m.error ? reject(new Error(m.error.message)) : resolve(m.result ?? {}),
       );
       ws.send(JSON.stringify({ id: n, method, params }));
     });
-  const evaluate = async (expression: string) => {
+  const evaluate = async <T = unknown>(expression: string): Promise<T> => {
     const r = await send('Runtime.evaluate', {
       expression,
       awaitPromise: true,
@@ -122,7 +133,7 @@ async function connect(wsUrl: string) {
       throw new Error(
         r.exceptionDetails.exception?.description ?? r.exceptionDetails.text,
       );
-    return r.result.value;
+    return r.result?.value as T;
   };
   return { send, evaluate, close: () => ws.close() };
 }
@@ -202,7 +213,7 @@ async function main() {
       for (let i = 0; i < 240 && !seconds; i++) {
         await sleep(500);
         seconds = await page
-          .evaluate('window.attractRecording?.seconds ?? 0')
+          .evaluate<number>('window.attractRecording?.seconds ?? 0')
           .catch(() => 0);
       }
       if (!seconds) throw new Error(`Shot ${shot.id} did not load`);
@@ -250,7 +261,7 @@ async function main() {
       const started = Date.now();
       for (let f = 0; f < frames; f++) {
         const t = Math.min(seconds, f / FPS);
-        const png: string = await page.evaluate(
+        const png: string = await page.evaluate<string>(
           `(() => { attractRecording.at(${t}); recordClock.step(${1000 / FPS}); return attractRecording.canvas.toDataURL('image/png'); })()`,
         );
         const data = Buffer.from(png.slice(png.indexOf(',') + 1), 'base64');

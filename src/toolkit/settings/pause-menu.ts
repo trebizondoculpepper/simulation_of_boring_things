@@ -302,6 +302,12 @@ export function createPauseMenu(actions: PauseMenuActions) {
     v === 0 ? '1:1' : `1:${(1 / renderScale(v)).toFixed(2)}`,
   );
   slider('Graphics', 'fov', 'Field of view', (v) => `${Math.round(v)}°`);
+  slider(
+    'Graphics',
+    'overlayScale',
+    'Overlay scale',
+    (v) => `${v.toFixed(2)}×`,
+  );
   // The costlier effects, each off or at a quality, and the resolution cap
   // (the owner, 2026-10-28).
   const choice = <K extends 'ambientOcclusion' | 'bloom' | 'resolutionCap'>(
