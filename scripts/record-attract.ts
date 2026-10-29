@@ -9,7 +9,8 @@
  *
  * Options (environment): RECORD_URL (the dev server, started if not
  * running; default http://127.0.0.1:5175), RECORD_GRAPHICS (default
- * high), RECORD_SCALE (render scale, default 1; 2 draws at twice the size
+ * high), RECORD_HEIGHT (frame height, 16:9; default 2160, 1080 for half
+ * size), RECORD_SCALE (render scale, default 1; 2 draws at twice the size
  * and ffmpeg scales it down), RECORD_SETTLE (seconds to let a room load
  * before recording, default 8), CHROME (its path).
  *
@@ -26,8 +27,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const WIDTH = 3840;
-const HEIGHT = 2160;
+const HEIGHT = Number(process.env.RECORD_HEIGHT ?? 2160);
+const WIDTH = Math.round((HEIGHT * 16) / 9);
 const FPS = 30;
 const OUT = join(import.meta.dirname, '..', 'doc', 'marketing', 'tmp', 'video');
 const URL_BASE = process.env.RECORD_URL ?? 'http://127.0.0.1:5175';
@@ -269,7 +270,13 @@ async function main() {
   } finally {
     chrome.kill();
     server?.kill();
-    rmSync(profile, { recursive: true, force: true });
+    // Chrome may still be writing its profile as it closes.
+    await sleep(1000);
+    try {
+      rmSync(profile, { recursive: true, force: true });
+    } catch {
+      // Left in the system's temporary folder.
+    }
   }
 }
 
