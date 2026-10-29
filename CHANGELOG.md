@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-29
+
 - Museum, Hall 5: an orange floor arrow (the museum's own sticker) on the deck points the visitor to the skimmer.
 
 - Museum, Hall 5: using the skimmer with its basket empty plays the same film, to the small-item fanfare, its banner reading THE BASKET IS EMPTY (`revealCueOf`, `EMPTY_BANNER` in `skimmer-reveal.ts`); nothing is counted or handed over.
@@ -847,7 +849,8 @@ The first release. It has no operator's manual yet: that comes in a later releas
 - Walking from one room to the next no longer recompiles every shader of the room arrived in.
 - The corridor posters load on the published site.
 
-[Unreleased]: https://github.com/trebizondoculpepper/the_pool/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/trebizondoculpepper/the_pool/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.2.0...v0.3.0
