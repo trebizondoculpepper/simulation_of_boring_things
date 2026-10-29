@@ -2,6 +2,7 @@ import {
   Group,
   Matrix4,
   Mesh,
+  MeshBasicMaterial,
   Object3D,
   Path,
   PlaneGeometry,
@@ -191,7 +192,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   // ---- The chapel: the walls, ceiling and floor lined dark ----
   const shell = new Group();
   const { halfX, halfZ, h } = HALL7;
-  const inset = 0.02;
+  // Behind the museum's signs (15 mm off their walls), never in front (the
+  // owner, 2026-10-29: it fought the room's sign).
+  const inset = 0.005;
   const north = new Mesh(lining(2 * halfX, h, 0), wallPaint);
   north.position.set(0, 0, -halfZ + inset);
   const south = new Mesh(lining(2 * halfX, h, null), wallPaint);
@@ -453,8 +456,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     c.textAlign = 'right';
     c.fillText('PLANTROOMS', w * 0.97, hh * 0.94);
   });
-  // Half a metre higher than it was, clear of the room's sign (the owner, 2026-10-29).
-  title.position.set(0, 5.1, halfZ - 0.03);
+  // Clear above the room's sign (its top 4.6 m; the owner, 2026-10-29).
+  title.position.set(0, 6.0, halfZ - 0.03);
   title.rotation.y = Math.PI;
   object.add(still(title));
 
@@ -621,21 +624,31 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   spot(0, 6.5, -0.8, PLACES[5].x, ph, PLACES[5].z, 40, 0.6);
   spot(0, 6.5, 3.8, PLACES[8].x, ph, PLACES[8].z, 48, 0.75);
   spot(-5.0, 6.5, PLACES[10].z, PLACES[10].x, ph, PLACES[10].z, 22, 0.36);
-  spot(0, 8.6, halfZ - 3.5, 0, 5.1, halfZ, 14, 0.7);
+  spot(0, 8.6, halfZ - 3.5, 0, 6.0, halfZ, 14, 0.7);
 
   // The approach light (the owner, 2026-10-29): one spotlight, from the
   // lamp head over the plinth approached, over its specimen and its
   // lectern, faded up as the visitor comes near and out as they leave.
   const approach = new SpotLight('#fff1d8', 0, 0, 0.26, 0.45, 2);
   object.add(approach, approach.target);
-  const APPROACH_POWER = 55 * METRE * METRE;
+  const APPROACH_POWER = 14 * METRE * METRE;
+  /** The plinth under the oil wheel: the 1970s' coloured grout. */
+  const OIL_WHEEL_PLINTH = 5;
   let lit: number | null = null;
   let shown: number | null = null;
   let level = 0;
   let eye: Camera | null = null;
-  floor.onBeforeRender = (_r, _s, camera) => {
+  // The eye, caught as a mesh is drawn: one of its own, drawn always and
+  // writing nothing (the lining is merged, its floor never drawn itself).
+  const watcher = new Mesh(
+    new PlaneGeometry(0.01, 0.01),
+    new MeshBasicMaterial({ colorWrite: false, depthWrite: false }),
+  );
+  watcher.frustumCulled = false;
+  watcher.onBeforeRender = (_r, _s, camera) => {
     eye = camera;
   };
+  object.add(watcher);
   const seen = new Vector3();
   const aim = (n: number) => {
     const place = PLACES[n];
@@ -672,8 +685,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     status: () => 'reverently lit',
     solids: () => hall7Solids(),
     update: (delta: number) => {
-      projector.update(delta);
       lightApproach(delta);
+      // The oil wheel lit only for the 1970s' plinth, as its spotlight is
+      // (the owner, 2026-10-29).
+      projector.update(delta, shown === OIL_WHEEL_PLINTH ? level : 0);
     },
     // There is nothing to reset. Grout endures.
     reset: () => {},

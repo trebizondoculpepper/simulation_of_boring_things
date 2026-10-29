@@ -878,7 +878,7 @@ function dropShadow(widthM: number, heightM: number, textures: Texture[]) {
     new PlaneGeometry(widthM + 4 * blur, heightM + 4 * blur),
     new MeshBasicMaterial({ map, transparent: true, depthWrite: false }),
   );
-  shade.position.set(0.012, -0.016, -0.012);
+  shade.position.set(0.012, -0.016, -0.008);
   shade.name = 'Drop shadow';
   return shade;
 }

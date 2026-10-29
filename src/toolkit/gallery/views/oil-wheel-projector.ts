@@ -169,6 +169,8 @@ export function createOilWheelProjector(
   // ---- The light it throws: two layers on the face, and the beam ----
   const normal = new Vector3(...options.normal).normalize();
   const up = new Vector3(...(options.up ?? [0, 1, 0]));
+  // Each lit layer and the beam, with its full opacity, for `level`.
+  const lit: { mesh: Mesh; material: MeshBasicMaterial; full: number }[] = [];
   const layer = (seed: number, lift: number, opacity: number) => {
     const { context, texture } = createCanvasTexture(256, 256);
     paintThrow(context, 256, oilBlobs(seed, 16));
@@ -193,6 +195,7 @@ export function createOilWheelProjector(
     mesh.lookAt(mesh.position.clone().add(normal));
     mesh.renderOrder = 2;
     root.add(mesh);
+    lit.push({ mesh, material, full: opacity });
     return texture;
   };
   const throws: Texture[] = [
@@ -233,6 +236,7 @@ export function createOilWheelProjector(
   );
   beam.renderOrder = 2;
   root.add(beam);
+  lit.push({ mesh: beam, material: beamMaterial, full: 0.012 });
 
   markComponent(root, {
     name: 'Oil-wheel projector: Psycholux 250, effects rotator and liquid wheel',
@@ -240,10 +244,23 @@ export function createOilWheelProjector(
   });
 
   let seconds = 0;
+  let shownLevel = 1;
   return {
     object: root,
-    /** Turns the wheel and the light it throws on by `delta` seconds. */
-    update(delta: number) {
+    /**
+     * Turns the wheel and the light it throws on by `delta` seconds, its
+     * lamp at `level` (0 off, 1 full): off, nothing it throws is drawn and
+     * its wheel stands still.
+     */
+    update(delta: number, level = 1) {
+      if (level !== shownLevel) {
+        shownLevel = level;
+        for (const l of lit) {
+          l.mesh.visible = level > 0;
+          l.material.opacity = l.full * level;
+        }
+      }
+      if (level <= 0) return;
       seconds += delta;
       const a = wheelAngle(seconds);
       spin.rotation.z = a;
