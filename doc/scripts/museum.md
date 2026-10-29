@@ -1188,7 +1188,7 @@ Source: `toolkit/gallery/logic/museum-8-incident.ts:191` (`OPENING`), drawn by `
 - Assumes: Pools are dosed with sodium hypochlorite, to disinfect, and with acid, to hold the pH. Both are delivered by tanker into bulk tanks.
 - Fact: “The accidental addition of acid to hypochlorite is the commonest cause of chlorine release incidents in pool buildings.” HSE inspector, 2023.
 - Own voice: Deliveries are one of the moments it can happen.
-- Try it: Press HEAR WHAT HAPPENED and follow the story round the walls. Then look in the case: could you connect the wrong hose?
+- Try it: Press HEAR WHAT HAPPENED to hear the story of the photograph you stand nearest. Then look in the case: could you connect the wrong hose?
 - Footer: Sponsored by Chlorella Chemicals. A dramatisation based on real incidents. The people, places and newspaper are fictional. (`SPONSOR.maker` and `DRAMATISATION`, `museum-8-incident.ts:14`)
 
 ### The narration button
@@ -1200,7 +1200,7 @@ Source: `toolkit/gallery/rooms/museum/hall-8-never-again.ts:532`, `:540`
 
 ### The chapters round the walls
 
-Source: `toolkit/gallery/logic/museum-8-incident.ts:53` (`CHAPTERS`). Each chapter has a photograph placeholder (`paintPlaceholder`, `hall-8-never-again.ts:115`: time, title, `photograph to come`, caption), a newspaper clipping where there is one (`paintClipping`, `:139`: THE PELLINGFORD EVENING LAMP, date, `{page} · 28p`, headline, standfirst, body; paper from `PAPER`, `museum-8-incident.ts:18`), and a plaque (`paintPlaque`, `:186`: `{n} · {time} · {title}`, What went wrong, then `Lesson: ` and the lesson). The Narration is the script read aloud by the HEAR WHAT HAPPENED button: one clip `resources/sound/voice/never-again/account.mp3`, or `chapter-1.mp3` to `chapter-6.mp3`, none recorded yet; a reading copy is kept in `resources/sound/voice/never-again/index.md`, so an edit here must be made there too. Each chapter lights for 20 seconds (`CHAPTER_SECONDS`).
+Source: `toolkit/gallery/logic/museum-8-incident.ts:53` (`CHAPTERS`). Each chapter has a photograph placeholder (`paintPlaceholder`, `hall-8-never-again.ts:115`: time, title, `photograph to come`, caption), a newspaper clipping where there is one (`paintClipping`, `:139`: THE PELLINGFORD EVENING LAMP, date, `{page} · 28p`, headline, standfirst, body; paper from `PAPER`, `museum-8-incident.ts:18`), and a plaque (`paintPlaque`, `:186`: `{n} · {time} · {title}`, What went wrong, then `Lesson: ` and the lesson). The Narration is the script read aloud by the HEAR WHAT HAPPENED button for the chapter whose photograph the visitor stands nearest (`nearestChapter`): its clip `resources/sound/voice/never-again/chapter-1.mp3` to `chapter-6.mp3`, none recorded yet; reading copies are kept in `resources/sound/voice/never-again/index.md` and `doc/scripts/museum-narration.md`, so an edit here must be made there too. With no clip, the chapter lights alone for 20 seconds (`CHAPTER_SECONDS`).
 
 #### Chapter 1 · 07:42 · The delivery
 

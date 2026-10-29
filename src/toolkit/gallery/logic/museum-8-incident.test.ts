@@ -6,6 +6,8 @@ import {
   OPENING,
   SPONSOR,
   litChapter,
+  narrationClip,
+  nearestChapter,
   pressNarration,
   stepNarration,
 } from './museum-8-incident';
@@ -43,13 +45,39 @@ describe('Hall 8, Never again', () => {
     expect(SPONSOR.lessons).toHaveLength(7);
   });
 
-  it('lights the chapters in turn, then stops; pressing again stops it', () => {
-    let n = pressNarration(NARRATION_OFF);
-    expect(litChapter(n)).toBe(0);
-    n = stepNarration(n, CHAPTER_SECONDS * 2.5);
-    expect(litChapter(n)).toBe(2);
-    expect(pressNarration(n)).toEqual(NARRATION_OFF);
-    n = stepNarration(n, CHAPTER_SECONDS * 4);
+  it('tells the chapter it is started on, then stops; pressing again stops it', () => {
+    let n = pressNarration(NARRATION_OFF, 3);
+    expect(litChapter(n)).toBe(3);
+    n = stepNarration(n, CHAPTER_SECONDS / 2);
+    expect(litChapter(n)).toBe(3);
+    expect(pressNarration(n, 0)).toEqual(NARRATION_OFF);
+    n = stepNarration(n, CHAPTER_SECONDS);
     expect(litChapter(n)).toBeNull();
+  });
+
+  it('picks the photograph the visitor stands nearest', () => {
+    const photos = [
+      { x: 4.5, z: -6 },
+      { x: -0.2, z: -6 },
+      { x: -4.9, z: -6 },
+      { x: -4.1, z: 6 },
+      { x: 0.6, z: 6 },
+      { x: 5.3, z: 6 },
+    ];
+    expect(nearestChapter({ x: 6.9, z: 5.9 }, photos)).toBe(5);
+    expect(nearestChapter({ x: 0, z: -3 }, photos)).toBe(1);
+    expect(nearestChapter({ x: -5, z: 2 }, photos)).toBe(3);
+    expect(nearestChapter({ x: 4, z: -1 }, photos)).toBe(0);
+  });
+
+  it('gives each chapter its own clip', () => {
+    expect(CHAPTERS.map(narrationClip)).toEqual([
+      'chapter-1',
+      'chapter-2',
+      'chapter-3',
+      'chapter-4',
+      'chapter-5',
+      'chapter-6',
+    ]);
   });
 });

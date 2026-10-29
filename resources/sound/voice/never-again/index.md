@@ -1,6 +1,6 @@
 # Never again: the narrated account (Hall 8)
 
-The script for the owner to record for Hall 8's HEAR WHAT HAPPENED button (mission 107i). Record the whole as `account.mp3` (about two minutes, about 20 seconds a chapter, as the chapters light in turn every 20 s), or each chapter as `chapter-1.mp3` … `chapter-6.mp3`. Missing clips are simply absent: the button then lights the chapters silently. The words are kept in `src/toolkit/gallery/logic/museum-8-incident.ts`; this copy is for reading aloud.
+The script for the owner to record for Hall 8's HEAR WHAT HAPPENED button (mission 107i). Pressing the button tells the chapter whose photograph the visitor stands nearest: record each chapter as `chapter-1.mp3` … `chapter-6.mp3` (about 20 seconds each). A missing clip is simply absent: the button then lights that chapter's photograph alone for 20 seconds, silently. The words are kept in `src/toolkit/gallery/logic/museum-8-incident.ts`; the whole museum's lines are in `doc/scripts/museum-narration.md`.
 
 ## Chapter 1
 

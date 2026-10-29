@@ -1,5 +1,5 @@
-import { Group, Mesh, Shape, ShapeGeometry } from 'three';
-import type { Color, Material, Object3D } from 'three';
+import { Group, Mesh, Shape, ShapeGeometry, Vector3 } from 'three';
+import type { Camera, Color, Material, Object3D } from 'three';
 import { signal } from '@preact/signals-core';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
 import { createMicroLabel } from '../../../components/core/views/eighties-controls';
@@ -20,6 +20,8 @@ import {
   PAPER,
   SPONSOR,
   litChapter,
+  narrationClip,
+  nearestChapter,
   pressNarration,
   stepNarration,
 } from '../../logic/museum-8-incident';
@@ -455,6 +457,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
 
   // ---- The six chapters ----
   const photoMats: { color: Color }[] = [];
+  const photoMeshes: Object3D[] = [];
+  // The visitor's eye, caught as a photograph is drawn (as Hall 7 does).
+  let eye: Camera | null = null;
   const plaqueMats: { color: Color }[] = [];
   const lamps: { set(l: boolean | number): void }[] = [];
   const PLACES = [
@@ -476,6 +481,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     const photo = t.printed(1.5, 1.0, paintPlaceholder(ch), 768, true);
     photo.mesh.position.set(px, 1.85, 0.052);
     photo.mesh.userData.live = true;
+    photo.mesh.onBeforeRender = (_r, _s, camera) => {
+      eye = camera;
+    };
+    photoMeshes.push(photo.mesh);
     unit.add(photo.mesh);
     const mat = photo.mesh.material as unknown as Material & {
       color: Color;
@@ -537,6 +546,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   object.add(still(sponsor));
 
   // ---- The narration button, by chapter 1 ----
+  // It tells the chapter whose photograph the visitor stands nearest: its
+  // clip if recorded (until the clip ends), else its photograph lit alone
+  // for CHAPTER_SECONDS, silently.
   let narration: Narration = NARRATION_OFF;
   let shown: number | null | undefined;
   let audio: HTMLAudioElement | null = null;
@@ -544,17 +556,36 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     audio?.pause();
     audio = null;
   };
-  const playClip = (name: string) => {
+  const playClip = (name: string): boolean => {
     stopAudio();
     const url = CLIP_URLS.get(name);
-    if (!url || typeof Audio === 'undefined') return;
-    audio = new Audio(new URL(url, import.meta.url).href);
-    void audio.play().catch(() => {});
+    if (!url || typeof Audio === 'undefined') return false;
+    const clip = new Audio(new URL(url, import.meta.url).href);
+    clip.addEventListener('ended', () => {
+      if (audio !== clip) return;
+      audio = null;
+      narration = NARRATION_OFF;
+      show();
+    });
+    audio = clip;
+    void clip.play().catch(() => {});
+    return true;
+  };
+  /** How long the chapter playing lasts: its clip's length, or CHAPTER_SECONDS. */
+  let seconds = CHAPTER_SECONDS;
+  const seen = new Vector3();
+  /** On the hall's floor plan, metres. */
+  const plan = (o: Object3D) => {
+    object.worldToLocal(o.getWorldPosition(seen));
+    return { x: seen.x, z: seen.z };
   };
   const press = () => {
-    narration = pressNarration(narration);
-    if (narration.playing) playClip('account');
-    else stopAudio();
+    const chapter = eye ? nearestChapter(plan(eye), photoMeshes.map(plan)) : 0;
+    narration = pressNarration(narration, chapter);
+    if (narration.playing) {
+      const heard = playClip(narrationClip(CHAPTERS[chapter]));
+      seconds = heard ? Infinity : CHAPTER_SECONDS;
+    } else stopAudio();
   };
   const pedestal = new Group();
   pedestal.name = 'HEAR WHAT HAPPENED button';
@@ -600,7 +631,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     markComponent(pedestal, {
       name: 'HEAR WHAT HAPPENED push button',
       status: () =>
-        narration.playing ? 'lit: the account is playing' : 'unlit',
+        narration.playing
+          ? `lit: chapter ${narration.chapter + 1} is told`
+          : 'unlit',
     }),
   );
   solids.push({ minX: 6.65, maxX: 7.15, minZ: 5.65, maxZ: 6.15 });
@@ -613,15 +646,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const show = () => {
     const now = litChapter(narration);
     if (now === shown) return;
-    if (
-      narration.playing &&
-      now !== null &&
-      now > 0 &&
-      !CLIP_URLS.has('account')
-    )
-      playClip(`chapter-${now + 1}`);
-    else if (narration.playing && now === 0 && !CLIP_URLS.has('account'))
-      playClip('chapter-1');
     shown = now;
     lit.value = narration.playing;
     CHAPTERS.forEach((_, k) => {
@@ -646,12 +670,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       show();
     },
     update(delta) {
-      narration = stepNarration(
-        narration,
-        delta,
-        CHAPTER_SECONDS * CHAPTERS.length,
-      );
-      if (!narration.playing && audio && !CLIP_URLS.has('account')) stopAudio();
+      narration = stepNarration(narration, delta, seconds);
+      if (!narration.playing && audio) stopAudio();
       show();
     },
     dispose() {

@@ -197,7 +197,7 @@ export const OPENING = {
   fact: '“The accidental addition of acid to hypochlorite is the commonest cause of chlorine release incidents in pool buildings.” HSE inspector, 2023.',
   ownVoice: 'Deliveries are one of the moments it can happen.',
   tryIt:
-    'Press HEAR WHAT HAPPENED and follow the story round the walls. Then look in the case: could you connect the wrong hose?',
+    'Press HEAR WHAT HAPPENED to hear the story of the photograph you stand nearest. Then look in the case: could you connect the wrong hose?',
 } as const;
 
 /** The central case's plaques. */
@@ -235,34 +235,58 @@ export const SPONSOR = {
   ],
 } as const;
 
-/** How long the narration dwells on each chapter, seconds, with no clip of its own: about two minutes in all. */
+/** How long the narration dwells on its chapter, seconds, with no clip of its own. */
 export const CHAPTER_SECONDS = 20;
 
-/** The narration: off, or playing, `t` seconds in. */
-export type Narration = { playing: false } | { playing: true; t: number };
+/** Each chapter's narration clip, `resources/sound/voice/never-again/<id>.mp3`. */
+export const narrationClip = (ch: Pick<Chapter, 'number'>): string =>
+  `chapter-${ch.number}`;
+
+/** The narration: off, or playing one chapter (its index), `t` seconds in. */
+export type Narration =
+  | { playing: false }
+  | { playing: true; chapter: number; t: number };
 
 export const NARRATION_OFF: Narration = { playing: false };
 
-/** The button pressed: start from the first chapter, or stop. */
-export const pressNarration = (n: Narration): Narration =>
-  n.playing ? NARRATION_OFF : { playing: true, t: 0 };
+/**
+ * The button pressed: tell the chapter the visitor stands nearest
+ * (`nearestChapter`), or, if one is playing, stop.
+ */
+export const pressNarration = (n: Narration, chapter: number): Narration =>
+  n.playing ? NARRATION_OFF : { playing: true, chapter, t: 0 };
 
-/** Time passes; after the last chapter it stops itself. */
+/** Time passes; after its chapter (`seconds` long) it stops itself. */
 export function stepNarration(
   n: Narration,
   delta: number,
-  seconds: number = CHAPTER_SECONDS * CHAPTERS.length,
+  seconds: number = CHAPTER_SECONDS,
 ): Narration {
   if (!n.playing) return n;
   const t = n.t + delta;
-  return t >= seconds ? NARRATION_OFF : { playing: true, t };
+  return t >= seconds ? NARRATION_OFF : { ...n, t };
 }
 
 /** The chapter lit (its index), or null while the narration is off. */
-export function litChapter(
-  n: Narration,
-  seconds: number = CHAPTER_SECONDS,
-): number | null {
-  if (!n.playing) return null;
-  return Math.min(CHAPTERS.length - 1, Math.floor(n.t / seconds));
+export const litChapter = (n: Narration): number | null =>
+  n.playing ? n.chapter : null;
+
+/**
+ * The photograph nearest the visitor, its index, measured on the floor
+ * plan (x and z, metres, in the hall's frame); the first on a tie.
+ */
+export function nearestChapter(
+  at: { x: number; z: number },
+  photos: readonly { x: number; z: number }[],
+): number {
+  let best = 0;
+  let bestD = Infinity;
+  photos.forEach((p, k) => {
+    const d = (p.x - at.x) ** 2 + (p.z - at.z) ** 2;
+    if (d < bestD) {
+      best = k;
+      bestD = d;
+    }
+  });
+  return best;
 }
