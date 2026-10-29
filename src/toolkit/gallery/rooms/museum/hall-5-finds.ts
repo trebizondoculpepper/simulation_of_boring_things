@@ -1,251 +1,388 @@
-import { Group } from 'three';
-import type { Material, Object3D } from 'three';
+import {
+  Box3,
+  CatmullRomCurve3,
+  DoubleSide,
+  Group,
+  LatheGeometry,
+  Mesh,
+  Shape,
+  ShapeGeometry,
+  SphereGeometry,
+  TubeGeometry,
+  Vector2,
+  Vector3,
+} from 'three';
+import type { BufferGeometry, Material, Object3D } from 'three';
+import { createPs1Material } from '../../../components/core/parts/ps1-material';
 import type { tools as toolsOf } from '../../../components/core/views/fitting-tools';
 import type { FindId } from '../../logic/museum-5-skimmer';
 
 type Tools = ReturnType<typeof toolsOf>;
 
 /**
- * Hall 5's skimmer finds (107f), each a small prop of a few boxes and
- * cylinders, plain and simple, about its true size (a little larger where
- * the true thing would vanish on the deck). Origin at the middle of its
- * underside, so it lies on the deck at y = 0. Adult items are shown
- * plainly, never graphically (the owner, 2026-10-28).
+ * Hall 5's skimmer finds (the owner, 2026-10-29: "all the objects are
+ * modelled and disgusting"): a clump of hair, rotting leaves, a dead rat,
+ * a dildo, a butt plug and more hair, each modelled at about its true
+ * size, wet, matted and grimy, the adult ones plain rather than graphic.
+ * Each is revealed above the walker, turning, so is seen from all round.
+ * Origin at the middle of its underside, so it lies on the deck at y = 0.
  */
-export function createFindProps(t: Tools) {
+export function createFindProps(t: Tools, materials: Material[]) {
   const paints = new Map<string, Material>();
-  const p = (colour: string, rough = 0.6, metal = 0) => {
-    const key = `${colour}|${rough}|${metal}`;
-    if (!paints.has(key)) paints.set(key, t.paint(colour, rough, metal));
-    return paints.get(key)!;
-  };
-  const gold = () => p('#d4a640', 0.3, 0.9);
-  const silver = () => p('#c0c4c8', 0.3, 0.9);
-
-  const ring = (g: Object3D, m: Material, r: number, y: number, n = 10) => {
-    for (let k = 0; k < n; k++) {
-      const a = (k / n) * Math.PI * 2;
-      const b = t.box(
-        g,
-        m,
-        (r * 2 * Math.PI) / n + 0.002,
-        0.006,
-        0.006,
-        Math.cos(a) * r,
-        y,
-        Math.sin(a) * r,
-      );
-      b.rotation.y = -a + Math.PI / 2;
+  /** A paint, shared; `double` for thin sheets seen from both sides. */
+  const p = (colour: string, rough = 0.6, metal = 0, double = false) => {
+    const key = `${colour}|${rough}|${metal}|${double}`;
+    let m = paints.get(key);
+    if (!m) {
+      m = double
+        ? createPs1Material({
+            color: colour,
+            roughness: rough,
+            metalness: metal,
+            side: DoubleSide,
+          })
+        : t.paint(colour, rough, metal);
+      if (double) materials.push(m);
+      paints.set(key, m);
     }
+    return m;
+  };
+  const mesh = (
+    g: Object3D,
+    geometry: BufferGeometry,
+    material: Material,
+    x = 0,
+    y = 0,
+    z = 0,
+  ) => {
+    const m = new Mesh(geometry, material);
+    m.position.set(x, y, z);
+    g.add(m);
+    return m;
+  };
+  /** A blob: a sphere squashed to `sx` × `sy` × `sz` metres across. */
+  const blob = (
+    g: Object3D,
+    material: Material,
+    sx: number,
+    sy: number,
+    sz: number,
+    x = 0,
+    y = 0,
+    z = 0,
+  ) => {
+    const m = mesh(g, new SphereGeometry(0.5, 14, 10), material, x, y, z);
+    m.scale.set(sx, sy, sz);
+    return m;
+  };
+  /** A strand along `points`, `r` thick. */
+  const strand = (
+    g: Object3D,
+    material: Material,
+    points: readonly (readonly [number, number, number])[],
+    r: number,
+  ) =>
+    mesh(
+      g,
+      new TubeGeometry(
+        new CatmullRomCurve3(points.map(([x, y, z]) => new Vector3(x, y, z))),
+        Math.max(8, points.length * 4),
+        r,
+        4,
+        false,
+      ),
+      material,
+    );
+  /** A seeded random, so every fill's hair is the same tangle. */
+  const random = (seed: number) => () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+
+  /**
+   * A wet tangle of hair round a grey scummy core: long strands looping
+   * round it and trailing off, dark, mousy and a few blond, with lint.
+   */
+  const tangle = (g: Object3D, seed: number, size: number) => {
+    const rand = random(seed);
+    blob(g, p('#2a2119', 0.25), size, size * 0.42, size * 0.85, 0, size * 0.2);
+    blob(
+      g,
+      p('#7c8268', 0.3),
+      size * 0.45,
+      size * 0.2,
+      size * 0.4,
+      size * 0.15,
+      size * 0.32,
+      -size * 0.1,
+    );
+    const hairs = [
+      p('#1c1612', 0.35),
+      p('#3b2a1c', 0.35),
+      p('#5c4630', 0.4),
+      p('#b89a5c', 0.4),
+    ];
+    for (let k = 0; k < 34; k++) {
+      const turns = 1 + rand() * 1.5;
+      const a0 = rand() * Math.PI * 2;
+      const points: [number, number, number][] = [];
+      for (let s = 0; s <= 6; s++) {
+        const a = a0 + (s / 6) * turns * Math.PI;
+        const r = size * (0.35 + rand() * 0.3);
+        points.push([
+          Math.cos(a) * r,
+          size * (0.08 + rand() * 0.32),
+          Math.sin(a) * r * 0.8,
+        ]);
+      }
+      // Some trail off across the deck.
+      if (k % 4 === 0) {
+        const [x, , z] = points.at(-1)!;
+        points.push([x * 2.2, 0.002, z * 2.2], [x * 3, 0.001, z * 2.6]);
+      }
+      strand(g, hairs[k % 7 === 0 ? 3 : k % 3], points, 0.0009);
+    }
+    // Grey lint and skin flakes caught in it.
+    for (let k = 0; k < 6; k++)
+      blob(
+        g,
+        p('#b9b6ad', 0.95),
+        size * 0.12,
+        size * 0.05,
+        size * 0.1,
+        (rand() - 0.5) * size,
+        size * 0.38,
+        (rand() - 0.5) * size * 0.8,
+      );
+  };
+
+  /** A leaf's outline, `l` long, `w` wide, its tip at +x. */
+  const leafShape = (l: number, w: number) => {
+    const s = new Shape();
+    s.moveTo(-l / 2, 0);
+    s.quadraticCurveTo(0, w, l / 2, 0);
+    s.quadraticCurveTo(0, -w, -l / 2, 0);
+    return s;
+  };
+
+  /** Lathed about its long axis, laid along +x, from `profile` (radius, along). */
+  const lathe = (
+    g: Object3D,
+    material: Material,
+    profile: readonly (readonly [number, number])[],
+  ) => {
+    const m = mesh(
+      g,
+      new LatheGeometry(
+        profile.map(([r, y]) => new Vector2(r, y)),
+        20,
+      ),
+      material,
+    );
+    m.rotation.z = -Math.PI / 2;
+    return m;
   };
 
   const build: Record<FindId, (g: Group) => void> = {
-    'hair-clump': (g) => {
-      for (let k = 0; k < 9; k++) {
-        const s = t.box(
-          g,
-          p(k % 2 ? '#3a2a1c' : '#5a4330', 0.9),
-          0.11,
-          0.008,
-          0.012,
-          Math.sin(k * 2.3) * 0.02,
-          0.006 + k * 0.002,
-          Math.cos(k * 1.7) * 0.025,
-        );
-        s.rotation.y = k * 0.7;
-      }
-    },
-    'hair-bobble': (g) => ring(g, p('#d8337a', 0.7), 0.022, 0.004),
-    'hair-grips': (g) => {
-      for (let k = 0; k < 3; k++) {
-        const s = t.box(
-          g,
-          p('#2a2626', 0.4, 0.6),
-          0.06,
-          0.003,
-          0.005,
-          0,
-          0.003,
-          (k - 1) * 0.015,
-        );
-        s.rotation.y = k * 0.4;
-      }
-    },
-    plaster: (g) => {
-      t.box(g, p('#d9a582', 0.8), 0.075, 0.002, 0.022, 0, 0.001, 0);
-      t.box(g, p('#f2eee8', 0.8), 0.025, 0.003, 0.018, 0, 0.002, 0);
-    },
-    'verruca-sock': (g) => {
-      t.box(g, p('#2c5aa0', 0.9), 0.06, 0.02, 0.15, 0, 0.01, 0);
-      t.box(g, p('#2c5aa0', 0.9), 0.06, 0.06, 0.05, 0, 0.03, -0.05);
+    'hair-clump': (g) => tangle(g, 11, 0.06),
+    'more-hair': (g) => {
+      tangle(g, 29, 0.085);
+      // A plaster, peeled off and caught in it.
+      const plaster = new Group();
+      t.box(plaster, p('#c99a78', 0.8), 0.07, 0.002, 0.02, 0, 0, 0);
+      t.box(plaster, p('#d8d2c2', 0.9), 0.024, 0.003, 0.016, 0, 0.001, 0);
+      plaster.position.set(0.01, 0.04, 0.012);
+      plaster.rotation.set(0.5, 0.7, 0.3);
+      g.add(plaster);
     },
     leaves: (g) => {
-      for (let k = 0; k < 5; k++) {
-        const l = t.box(
+      const rand = random(7);
+      const colours = ['#5a4a22', '#3e3a1a', '#6b5428', '#4a5224', '#33291a'];
+      for (let k = 0; k < 7; k++) {
+        const l = 0.07 + rand() * 0.04;
+        const leaf = mesh(
           g,
-          p(k % 2 ? '#6b4a1f' : '#8a6a2a', 0.9),
-          0.07,
-          0.003,
-          0.04,
-          Math.sin(k * 2) * 0.03,
-          0.002 + k * 0.003,
-          Math.cos(k * 3) * 0.03,
+          new ShapeGeometry(leafShape(l, l * 0.42), 6),
+          p(colours[k % colours.length], 0.3, 0, true),
+          (rand() - 0.5) * 0.06,
+          0.004 + k * 0.004,
+          (rand() - 0.5) * 0.05,
         );
-        l.rotation.y = k * 1.1;
+        leaf.rotation.set(-Math.PI / 2 + (rand() - 0.5) * 0.6, 0, rand() * 6);
+        // Black rot spots.
+        for (let s = 0; s < 3; s++)
+          blob(
+            leaf,
+            p('#141008', 0.4),
+            l * 0.14,
+            l * 0.1,
+            0.002,
+            (rand() - 0.5) * l * 0.6,
+            (rand() - 0.5) * l * 0.2,
+            0.001,
+          );
+        // Its stalk.
+        strand(
+          g,
+          p('#3a2e18', 0.6),
+          [
+            [leaf.position.x, leaf.position.y, leaf.position.z],
+            [
+              leaf.position.x - l * 0.6,
+              leaf.position.y + 0.004,
+              leaf.position.z + 0.01,
+            ],
+          ],
+          0.0012,
+        );
       }
+      // The green slime they stewed in.
+      blob(g, p('#4f5c26', 0.15), 0.05, 0.005, 0.035, 0.01, 0.002, 0);
     },
-    bee: (g) => {
-      for (let k = 0; k < 4; k++)
+    'dead-rat': (g) => {
+      // On its back, legs in the air: matted wet fur, a paler belly.
+      const fur = p('#4d443c', 0.9);
+      const wet = p('#2e2823', 0.3);
+      blob(g, fur, 0.17, 0.065, 0.075, 0, 0.034, 0);
+      blob(g, wet, 0.1, 0.03, 0.05, -0.02, 0.05, 0.012);
+      blob(g, p('#9a8c7c', 0.85), 0.11, 0.02, 0.05, 0.005, 0.066, 0);
+      // The head, its snout pointed, its teeth showing.
+      blob(g, fur, 0.07, 0.045, 0.05, 0.1, 0.03, 0);
+      blob(g, fur, 0.045, 0.026, 0.03, 0.14, 0.024, 0);
+      blob(g, p('#d58b8b', 0.5), 0.01, 0.01, 0.012, 0.162, 0.024, 0);
+      t.box(g, p('#e8c75a', 0.4), 0.004, 0.008, 0.008, 0.155, 0.012, 0);
+      for (const side of [-1, 1]) {
+        // An ear, and an eye shut for good.
+        blob(
+          g,
+          p('#b88a86', 0.7),
+          0.022,
+          0.03,
+          0.006,
+          0.085,
+          0.05,
+          side * 0.022,
+        );
         t.box(
           g,
-          p(k % 2 ? '#141414' : '#e2b31b', 0.6),
-          0.008,
-          0.016,
-          0.016,
-          (k - 1.5) * 0.008,
-          0.008,
-          0,
+          p('#100c0a', 0.4),
+          0.012,
+          0.002,
+          0.002,
+          0.122,
+          0.04,
+          side * 0.021,
         );
-      t.box(g, p('#cfe0ea', 0.2), 0.012, 0.002, 0.03, 0, 0.017, 0);
-    },
-    frog: (g) => {
-      const green = p('#3e9a3a', 0.4);
-      t.box(g, green, 0.06, 0.03, 0.07, 0, 0.015, 0);
-      t.box(g, green, 0.045, 0.025, 0.03, 0, 0.03, 0.035);
-      t.cyl(g, p('#f6f2d0', 0.3), 0.008, 0.01, -0.015, 0.045, 0.04);
-      t.cyl(g, p('#f6f2d0', 0.3), 0.008, 0.01, 0.015, 0.045, 0.04);
-      t.box(g, green, 0.02, 0.012, 0.05, -0.04, 0.006, -0.01);
-      t.box(g, green, 0.02, 0.012, 0.05, 0.04, 0.006, -0.01);
-    },
-    earring: (g) => {
-      ring(g, gold(), 0.012, 0.003, 8);
-      t.cyl(g, p('#7ab7e0', 0.2), 0.005, 0.006, 0, 0.004, 0.012);
-    },
-    coins: (g) => {
-      t.cyl(g, p('#a8642c', 0.4, 0.8), 0.01, 0.002, -0.015, 0.001, 0);
-      t.cyl(g, silver(), 0.012, 0.002, 0.012, 0.001, 0.01);
-      t.cyl(g, silver(), 0.013, 0.002, 0.005, 0.003, -0.012);
-    },
-    sixpence: (g) =>
-      t.cyl(g, p('#b8b4a8', 0.4, 0.8), 0.0097, 0.0015, 0, 0.001, 0, 'y', 16),
-    'wedding-ring': (g) => ring(g, gold(), 0.011, 0.003, 12),
-    'car-key': (g) => {
-      ring(g, p('#e04a2a', 0.6), 0.035, 0.005, 12);
-      t.box(g, silver(), 0.04, 0.003, 0.012, 0.05, 0.002, 0);
-      t.cyl(g, p('#e04a2a', 0.6), 0.012, 0.006, 0.075, 0.003, 0);
-    },
-    'goggle-lens': (g) => {
-      t.cyl(g, p('#3a6fd0', 0.1), 0.022, 0.012, 0, 0.006, 0);
-      t.box(g, p('#1d1d1d', 0.7), 0.06, 0.003, 0.006, 0.035, 0.002, 0);
-    },
-    'nose-clip': (g) => {
-      t.box(g, p('#1d1d1d', 0.4), 0.004, 0.03, 0.02, 0, 0.015, 0);
-      t.cyl(g, p('#f2ae3a', 0.6), 0.007, 0.012, -0.008, 0.006, 0);
-      t.cyl(g, p('#f2ae3a', 0.6), 0.007, 0.012, 0.008, 0.006, 0);
-    },
-    earplug: (g) => t.cyl(g, p('#e8d96a', 0.8), 0.007, 0.018, 0, 0.007, 0, 'x'),
-    'swimming-badge': (g) => {
-      t.cyl(g, p('#1b3f8a', 0.9), 0.035, 0.003, 0, 0.0015, 0, 'y', 24);
-      t.cyl(g, p('#f4f0e0', 0.9), 0.025, 0.004, 0, 0.002, 0, 'y', 24);
-      t.label(g, '25m', 0, 0.0045, 0, 0.012).rotation.x = -Math.PI / 2;
-    },
-    dummy: (g) => {
-      t.box(g, p('#6ac2e8', 0.4), 0.045, 0.006, 0.03, 0, 0.003, 0);
-      t.cyl(g, p('#e8c070', 0.5), 0.008, 0.025, 0, 0.012, 0.015, 'z');
-      ring(g, p('#6ac2e8', 0.4), 0.014, 0.012, 8);
-    },
-    dinosaur: (g) => {
-      const m = p('#7d4bb5', 0.5);
-      t.box(g, m, 0.07, 0.03, 0.025, 0, 0.025, 0);
-      t.box(g, m, 0.012, 0.045, 0.012, 0.035, 0.05, 0);
-      t.box(g, m, 0.05, 0.01, 0.01, -0.05, 0.02, 0);
-      for (const [x, z] of [
-        [-0.02, -0.008],
-        [-0.02, 0.008],
-        [0.02, -0.008],
-        [0.02, 0.008],
-      ])
-        t.box(g, m, 0.01, 0.012, 0.01, x, 0.006, z);
-    },
-    'rubber-duck': (g) => {
-      const y = p('#f6d10c', 0.4);
-      t.box(g, y, 0.08, 0.05, 0.06, 0, 0.025, 0);
-      t.box(g, y, 0.04, 0.04, 0.04, 0.025, 0.065, 0);
-      t.box(g, p('#f07a0c', 0.4), 0.02, 0.01, 0.025, 0.055, 0.06, 0);
-    },
-    grapes: (g) => {
-      for (let k = 0; k < 9; k++)
-        t.cyl(
-          g,
-          p('#5a2a5a', 0.3),
-          0.009,
-          0.016,
-          Math.sin(k * 1.3) * 0.02,
-          0.008 + (k % 3) * 0.004,
-          (k - 4) * 0.008,
-          'y',
-          8,
-        );
-      t.box(g, p('#5a7a2a', 0.8), 0.003, 0.003, 0.03, 0, 0.012, 0.045);
-    },
-    'crisp-packet': (g) => {
-      t.box(g, p('#d7262a', 0.3, 0.4), 0.12, 0.01, 0.16, 0, 0.005, 0);
-      t.box(g, p('#2c55c8', 0.3, 0.4), 0.09, 0.011, 0.05, 0, 0.005, 0.02);
-    },
-    'contact-lens': (g) =>
-      t.cyl(g, p('#cfe8f4', 0.1), 0.009, 0.002, 0, 0.001, 0, 'y', 16),
-    tampon: (g) => {
-      t.cyl(g, p('#f4f2ee', 0.9), 0.007, 0.045, 0, 0.007, 0, 'x', 12);
-      t.box(g, p('#c4d4e4', 0.9), 0.06, 0.002, 0.002, 0.05, 0.002, 0);
-    },
-    vibrator: (g) => {
-      t.cyl(g, p('#e36aa6', 0.3), 0.013, 0.11, 0, 0.013, 0, 'x', 16);
-      t.cyl(
+        // Its legs, stiff, its pink feet up.
+        for (const along of [-0.05, 0.045]) {
+          strand(
+            g,
+            fur,
+            [
+              [along, 0.06, side * 0.026],
+              [along + 0.006, 0.09, side * 0.032],
+            ],
+            0.006,
+          );
+          blob(
+            g,
+            p('#c99490', 0.6),
+            0.016,
+            0.008,
+            0.012,
+            along + 0.008,
+            0.096,
+            side * 0.033,
+          );
+        }
+      }
+      // The long naked tail, curled across the deck.
+      strand(
         g,
-        p('#c0c4c8', 0.3, 0.8),
-        0.0135,
-        0.012,
-        -0.058,
-        0.013,
-        0,
-        'x',
-        16,
+        p('#b9918a', 0.5),
+        [
+          [-0.08, 0.03, 0],
+          [-0.13, 0.012, 0.02],
+          [-0.18, 0.004, 0.0],
+          [-0.21, 0.003, -0.05],
+          [-0.19, 0.002, -0.09],
+        ],
+        0.004,
       );
     },
-    'condom-wrapper': (g) => {
-      t.box(g, p('#2a3a8a', 0.3, 0.5), 0.05, 0.003, 0.05, 0, 0.0015, 0);
-      t.box(
+    dildo: (g) => {
+      // Pink, on its side: its suction-cup base, its shaft, its rounded end;
+      // a hair stuck to it, and grime.
+      lathe(g, p('#e07a9a', 0.35), [
+        [0, 0],
+        [0.032, 0],
+        [0.034, 0.004],
+        [0.02, 0.012],
+        [0.017, 0.02],
+        [0.018, 0.1],
+        [0.017, 0.14],
+        [0.02, 0.155],
+        [0.019, 0.168],
+        [0.012, 0.178],
+        [0, 0.181],
+      ]).position.set(-0.09, 0.034, 0);
+      strand(
         g,
-        p('#2a3a8a', 0.3, 0.5),
-        0.02,
-        0.003,
-        0.05,
-        0.03,
-        0.0045,
-        0,
-      ).rotation.z = 0.4;
+        p('#1c1612', 0.35),
+        [
+          [-0.04, 0.052, 0.008],
+          [0.0, 0.053, -0.006],
+          [0.03, 0.052, 0.01],
+          [0.06, 0.04, 0.03],
+          [0.08, 0.004, 0.05],
+        ],
+        0.0009,
+      );
+      blob(g, p('#8a8a6a', 0.3), 0.05, 0.006, 0.02, 0.0, 0.05, 0.004);
     },
-    'false-teeth': (g) => {
-      t.box(g, p('#d97a86', 0.4), 0.06, 0.012, 0.05, 0, 0.006, 0);
-      for (let k = 0; k < 8; k++)
-        t.box(
-          g,
-          p('#f4f0e2', 0.3),
-          0.006,
-          0.01,
-          0.006,
-          (k - 3.5) * 0.007,
-          0.016,
-          0.022 - Math.abs(k - 3.5) * 0.003,
-        );
-      t.box(g, p('#d97a86', 0.4), 0.06, 0.012, 0.05, 0, 0.03, -0.004);
+    'butt-plug': (g) => {
+      // Black silicone, on its side: its teardrop, its neck, its flat
+      // base; a rotting leaf stuck to it.
+      const plug = new Group();
+      lathe(plug, p('#141416', 0.3), [
+        [0, 0.012],
+        [0.007, 0.014],
+        [0.007, 0.024],
+        [0.017, 0.042],
+        [0.021, 0.056],
+        [0.017, 0.072],
+        [0.008, 0.084],
+        [0, 0.088],
+      ]);
+      blob(plug, p('#141416', 0.3), 0.012, 0.06, 0.04, 0.008, 0, 0);
+      plug.position.set(-0.044, 0.021, 0);
+      g.add(plug);
+      const leaf = mesh(
+        g,
+        new ShapeGeometry(leafShape(0.05, 0.02), 6),
+        p('#3e3a1a', 0.3, 0, true),
+        0.0,
+        0.042,
+        0.0,
+      );
+      leaf.rotation.set(-Math.PI / 2 + 0.3, 0, 0.6);
+      blob(g, p('#7c8268', 0.3), 0.03, 0.004, 0.018, 0.01, 0.04, -0.008);
     },
   };
 
   return (id: FindId) => {
     const g = new Group();
     g.name = id;
-    build[id](g);
+    const inner = new Group();
+    build[id](inner);
+    // Its underside's middle at the origin.
+    const box = new Box3().setFromObject(inner);
+    inner.position.set(
+      -(box.min.x + box.max.x) / 2,
+      -box.min.y,
+      -(box.min.z + box.max.z) / 2,
+    );
+    g.add(inner);
     return g;
   };
 }

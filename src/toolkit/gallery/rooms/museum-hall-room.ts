@@ -151,7 +151,13 @@ export function startMuseumHallRoom(
     if (!built) return;
     exhibit = built;
     // The exhibit's carrying (107f), through the control scheme's hands.
-    if (walk.hands) exhibit.carrying?.bind(walk.hands);
+    if (walk.hands)
+      exhibit.carrying?.bind(walk.hands, {
+        pitch: () => walk.pose().pitch,
+        hold: (on) => walk.hold(on),
+        look: (pitch) =>
+          walk.place(walk.walker.x, walk.walker.z, walk.pose().yaw, pitch),
+      });
   });
   // A neighbour's exhibit is only ever seen from another hall, so it is
   // drawn as its far version (the owner, 2026-10-29): flat colours, the

@@ -16,6 +16,20 @@ export interface ExhibitHands {
 }
 
 /**
+ * The visitor's eye, for an exhibit that takes it over a moment (the
+ * skimmer's reveal, the owner, 2026-10-29): the walker held still
+ * (`first-person.ts`'s `hold`), its look set, then let go.
+ */
+export interface ExhibitView {
+  /** How far up it looks, radians. */
+  pitch(): number;
+  /** Hold the walker still, or let go. */
+  hold(on: boolean): void;
+  /** Look `pitch` radians up, facing as it does, where it stands. */
+  look(pitch: number): void;
+}
+
+/**
  * An exhibit's carrying (107f): its portable objects are any part of its
  * model with `userData.portable` (a `PortableObject`), its drop targets any
  * with `userData.placementTarget` (`placement-target.ts`), as in any room;
@@ -26,7 +40,7 @@ export interface ExhibitHands {
  */
 export interface ExhibitCarrying {
   /** Called once, when the exhibit is loaded into the hall walked in. */
-  bind(hands: ExhibitHands): void;
+  bind(hands: ExhibitHands, view?: ExhibitView): void;
   divert?(object: Object3D, portable: PortableObject): boolean;
   nearbyTargetFeedback?(
     object: Object3D,

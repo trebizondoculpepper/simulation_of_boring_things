@@ -45,7 +45,7 @@ Source: `toolkit/gallery/views/museum-hall.ts:1111` (`paintWelcome`); words from
 - List heading: TRY THIS FIRST
 - Try 1 (`tryIt[0]`): Look for the water in this room. (There is none: it is paint.)
 - Try 2 (`tryIt[1]`): Follow the arrows north through the doorway and find out what is behind the tiles.
-- Route heading (`museum-hall.ts:1168`): THE ROUTE: FIVE HALLS ROUND THE COURTYARD, AND BACK HERE
+- Route heading (`museum-hall.ts:1168`): THE ROUTE: FIVE HALLS ROUND THE COURTYARD, AND BACK HERE [Don't we hav 8 halls now?]
 - Route strip (`routeStrip`, `museum-hall.ts:848`): the nine halls as numbered discs, titled only where the hall has a theme: 1 Warm water, 2 Clean water, 3 Safe water, 4 The chemistry of pools, 5, 6, 7, 8 (numbers only), 9 The whole plant.
 
 Subject line, used on the doorway sign back into Hall 0 (`HALL_BRIEFS.museum0.subject`): Behind the tiles
@@ -89,7 +89,7 @@ Source: `toolkit/gallery/views/museum-hall.ts:1045` (`paintHallTitle`); words fr
 - Subject: Heating, energy and a first pump
 - Footer: PLANTROOMS · How a swimming pool really works
 
-The brief's other fields (`bigIdea`, `willShow`, `tryIt`, `museum-plan.ts:342` to `:349`) are shown only while a hall has no exhibit, so Hall 1's are not seen. They are: Big idea: To warm a pool we must move its water: a pump carries it through a heat exchanger, where a boiler’s heat passes into it without the two waters ever mixing. Will show: A real gas boiler and a heat exchanger connected to an ideal pool, with one pump to move the water, and the thermometers that show the heat going in. Try: Turn the heating on and watch the pool warm, a fraction of a degree at a time. / Stop the pump and see the heat stop reaching the pool. / Change the setpoint and watch the boiler answer.
+The brief's other fields (`bigIdea`, `willShow`, `tryIt`, `museum-plan.ts:342` to `:349`) are shown only while a hall has no exhibit, so Hall 1's are not seen. They are: Big idea: To warm a pool we must move its water: a pump carries it through a heat exchanger, where a boiler’s heat passes into it without the two circuits ever mixing. Will show: A real gas boiler and a heat exchanger connected to an ideal pool, with one pump to move the water, and the thermometers that show the heat going in. Try: Turn the heating on and watch the pool warm, a fraction of a degree at a time. / Stop the pump and see the heat stop reaching the pool. / Change the setpoint and watch the boiler answer.
 
 ### Entrance panel
 
@@ -789,41 +789,20 @@ Source: `toolkit/gallery/logic/museum-5-gallery.ts:352` (`SKIP_SIGN`), drawn at 
 - Headline: For things found in the skimmer
 - Body: In real life, a bin bag. Here, a skip, because there’s so much of it.
 - Count: In the skip: 0 (live)
-- When the skimmer is empty, the sign turns yellow: SKIMMER CLEARED! / You took out 14 things. Lovely. (`CLEARED_LINE`, `toolkit/gallery/logic/museum-5-skimmer.ts:310`; the number is the count of finds, 12 to 15)
+- When the skimmer is empty, the sign turns yellow: SKIMMER CLEARED! / You took out 6 things. Lovely. (`CLEARED_LINE`, `toolkit/gallery/logic/museum-5-skimmer.ts`; the number is the count of finds, 6)
 
-### What’s in the Skimmer? The finds (caption card and voice clip)
+### What’s in the Skimmer? The finds (reveal banner, caption card and voice clip)
 
-Source: `toolkit/gallery/logic/museum-5-skimmer.ts:50` (`FINDS`); each caption is shown on the caption card (`hall-5-day-in-the-life.ts:618`) when the find is picked up, and is also the script for its voice clip `resources/sound/voice/skimmer/<id>.mp3` (none recorded yet; `resources/sound/voice/skimmer/index.md`). A fill holds 12 to 15 finds; the hair clump is always on top; the false teeth turn up one time in five. The Name column is used in the overlay.
+Source: `toolkit/gallery/logic/museum-5-skimmer.ts` (`FINDS`). The six come out in this order, every time (the owner, 2026-10-29). Each is revealed above the walker with a fanfare (`logic/skimmer-reveal.ts`): the banner reads "You got <Banner>!" over its caption; the caption is also the script for its voice clip `resources/sound/voice/skimmer/<id>.mp3` (none recorded yet; `resources/sound/voice/skimmer/index.md`). The Name column is used in the overlay.
 
-| Id (line)               | Name                        | Caption                                                                                     |
-| ----------------------- | --------------------------- | ------------------------------------------------------------------------------------------- |
-| hair-clump (`:52`)      | a clump of hair             | A clump of hair. Hair floats, so the skimmer catches lots of it. Yuck.                      |
-| hair-bobble (`:58`)     | a hair bobble               | A hair bobble. Somebody’s ponytail came undone.                                             |
-| hair-grips (`:63`)      | hair grips                  | Hair grips. They sink, rust and stain the tiles, so we’re glad to catch these.              |
-| plaster (`:69`)         | a sticking plaster          | A plaster. Warm water makes them peel off. Ew.                                              |
-| verruca-sock (`:74`)    | a verruca sock              | A verruca sock. Only ever one: where do the other ones go?                                  |
-| leaves (`:79`)          | a handful of leaves         | Leaves, blown in through the doors.                                                         |
-| bee (`:84`)             | a drowned bee               | A bee. Insects land on the water and can’t climb out.                                       |
-| frog (`:89`)            | a rubber frog               | A frog! Only a rubber one. Outdoor pools get the real thing.                                |
-| earring (`:94`)         | an earring                  | An earring. Lost property will be pleased.                                                  |
-| coins (`:99`)           | a few coins                 | Coins: 47p. Nobody knows why people swim with money.                                        |
-| sixpence (`:104`)       | an old sixpence             | An old sixpence. They stopped making these over fifty years ago.                            |
-| wedding-ring (`:109`)   | a wedding ring              | A wedding ring! Cold water shrinks fingers and rings slip off. Somebody will be very happy. |
-| car-key (`:115`)        | a locker key on a wristband | A locker key. Somebody is standing in a towel, waiting.                                     |
-| goggle-lens (`:120`)    | a goggle lens               | Half a pair of goggles.                                                                     |
-| nose-clip (`:125`)      | a nose clip                 | A nose clip, for synchronised swimmers and people who hate water up their nose.             |
-| earplug (`:131`)        | an earplug                  | An earplug. It’s been in someone’s ear.                                                     |
-| swimming-badge (`:136`) | a cloth swimming badge      | A 25 metres badge, sewn on and come off. Well done, whoever you are.                        |
-| dummy (`:142`)          | a baby’s dummy              | A dummy. Somebody small is very upset about this.                                           |
-| dinosaur (`:147`)       | a toy dinosaur              | A toy dinosaur. It’s extinct now.                                                           |
-| rubber-duck (`:152`)    | a rubber duck               | A rubber duck, where it belongs, nearly.                                                    |
-| grapes (`:157`)         | a bunch of grapes           | Grapes. Somebody brought a picnic into the pool.                                            |
-| crisp-packet (`:162`)   | a crisp packet              | A crisp packet. No eating on the poolside!                                                  |
-| contact-lens (`:167`)   | a contact lens              | A contact lens. Very hard to spot. Well found!                                              |
-| tampon (`:172`)         | a tampon                    | A tampon. They do not flush, and they do not swim either. Into the skip.                    |
-| vibrator (`:178`)       | a small pink vibrator       | A small pink vibrator. Waterproof, as advertised. Nobody has asked at lost property.        |
-| condom-wrapper (`:184`) | an empty condom wrapper     | An empty condom wrapper. The pool closes at ten. We will not be asking.                     |
-| false-teeth (`:190`)    | a set of false teeth        | FALSE TEETH! The rarest find of all. Somebody laughed too hard on the flume.                |
+| Id         | Name                        | Banner          | Caption                                                                                                |
+| ---------- | --------------------------- | --------------- | ------------------------------------------------------------------------------------------------------ |
+| hair-clump | a clump of hair             | a CLUMP OF HAIR | A clump of hair. Hair floats, so the skimmer catches lots of it. Yuck.                                 |
+| leaves     | a handful of rotting leaves | ROTTING LEAVES  | Leaves, blown in through the doors and left to stew. They smell of pond.                               |
+| dead-rat   | a dead rat                  | a DEAD RAT      | A dead rat. It came up through the drains, and the drains won. Hold it by the tail.                    |
+| dildo      | a dildo                     | a DILDO         | A dildo. Waterproof, as advertised. Nobody has asked at lost property.                                 |
+| butt-plug  | a butt plug                 | a BUTT PLUG     | A butt plug. How it got into the skimmer is a question for the CCTV, and nobody wants to ask the CCTV. |
+| more-hair  | more hair                   | MORE HAIR       | More hair. There is always more hair.                                                                  |
 
 ### The skimmer's other spoken lines
 
@@ -838,7 +817,7 @@ Source: `toolkit/gallery/logic/museum-5-skimmer.ts:324` (`actOnSkimmer`), shown 
 | `:339`                  | Lift the lid off first.                                               |
 | `:342`                  | The basket is empty.                                                  |
 | `:350`                  | The skip takes only what came out of the skimmer. The lid stays here. |
-| `:310` (`CLEARED_LINE`) | SKIMMER CLEARED! You took out 14 things. Lovely.                      |
+| `:310` (`CLEARED_LINE`) | SKIMMER CLEARED! You took out 6 things. Lovely.                       |
 
 The voice clip list (`resources/sound/voice/skimmer/index.md`) also names an optional `intro` clip, played the first time the lid is lifted, with no script yet.
 

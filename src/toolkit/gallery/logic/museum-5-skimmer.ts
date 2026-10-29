@@ -10,187 +10,69 @@ import { hallRoomCode } from './museum-plan';
 
 export type FindId =
   | 'hair-clump'
-  | 'hair-bobble'
-  | 'hair-grips'
-  | 'plaster'
-  | 'verruca-sock'
   | 'leaves'
-  | 'bee'
-  | 'frog'
-  | 'earring'
-  | 'coins'
-  | 'sixpence'
-  | 'wedding-ring'
-  | 'car-key'
-  | 'goggle-lens'
-  | 'nose-clip'
-  | 'earplug'
-  | 'swimming-badge'
-  | 'dummy'
-  | 'dinosaur'
-  | 'rubber-duck'
-  | 'grapes'
-  | 'crisp-packet'
-  | 'contact-lens'
-  | 'tampon'
-  | 'vibrator'
-  | 'condom-wrapper'
-  | 'false-teeth';
+  | 'dead-rat'
+  | 'dildo'
+  | 'butt-plug'
+  | 'more-hair';
 
 export interface Find {
   /** Its id, and its voice clip's name. */
   id: FindId;
   /** What it is, for the overlay. */
   name: string;
+  /** What the reveal's banner calls it: "You got …!" */
+  got: string;
   /** Its caption, and the script for its voice clip. */
   caption: string;
 }
 
-/** Every find the skimmer may hold (107f's research, the owner's rulings). */
+/**
+ * Every find, in the order they come out (the owner, 2026-10-29): each
+ * revealed above the walker as a treasure is (`skimmer-reveal.ts`), each
+ * modelled, and each disgusting.
+ */
 export const FINDS: readonly Find[] = [
   {
     id: 'hair-clump',
     name: 'a clump of hair',
+    got: 'a CLUMP OF HAIR',
     caption:
       'A clump of hair. Hair floats, so the skimmer catches lots of it. Yuck.',
   },
   {
-    id: 'hair-bobble',
-    name: 'a hair bobble',
-    caption: 'A hair bobble. Somebody’s ponytail came undone.',
-  },
-  {
-    id: 'hair-grips',
-    name: 'hair grips',
-    caption:
-      'Hair grips. They sink, rust and stain the tiles, so we’re glad to catch these.',
-  },
-  {
-    id: 'plaster',
-    name: 'a sticking plaster',
-    caption: 'A plaster. Warm water makes them peel off. Ew.',
-  },
-  {
-    id: 'verruca-sock',
-    name: 'a verruca sock',
-    caption: 'A verruca sock. Only ever one: where do the other ones go?',
-  },
-  {
     id: 'leaves',
-    name: 'a handful of leaves',
-    caption: 'Leaves, blown in through the doors.',
-  },
-  {
-    id: 'bee',
-    name: 'a drowned bee',
-    caption: 'A bee. Insects land on the water and can’t climb out.',
-  },
-  {
-    id: 'frog',
-    name: 'a rubber frog',
-    caption: 'A frog! Only a rubber one. Outdoor pools get the real thing.',
-  },
-  {
-    id: 'earring',
-    name: 'an earring',
-    caption: 'An earring. Lost property will be pleased.',
-  },
-  {
-    id: 'coins',
-    name: 'a few coins',
-    caption: 'Coins: 47p. Nobody knows why people swim with money.',
-  },
-  {
-    id: 'sixpence',
-    name: 'an old sixpence',
-    caption: 'An old sixpence. They stopped making these over fifty years ago.',
-  },
-  {
-    id: 'wedding-ring',
-    name: 'a wedding ring',
+    name: 'a handful of rotting leaves',
+    got: 'ROTTING LEAVES',
     caption:
-      'A wedding ring! Cold water shrinks fingers and rings slip off. Somebody will be very happy.',
+      'Leaves, blown in through the doors and left to stew. They smell of pond.',
   },
   {
-    id: 'car-key',
-    name: 'a locker key on a wristband',
-    caption: 'A locker key. Somebody is standing in a towel, waiting.',
-  },
-  {
-    id: 'goggle-lens',
-    name: 'a goggle lens',
-    caption: 'Half a pair of goggles.',
-  },
-  {
-    id: 'nose-clip',
-    name: 'a nose clip',
+    id: 'dead-rat',
+    name: 'a dead rat',
+    got: 'a DEAD RAT',
     caption:
-      'A nose clip, for synchronised swimmers and people who hate water up their nose.',
+      'A dead rat. It came up through the drains, and the drains won. Hold it by the tail.',
   },
   {
-    id: 'earplug',
-    name: 'an earplug',
-    caption: 'An earplug. It’s been in someone’s ear.',
-  },
-  {
-    id: 'swimming-badge',
-    name: 'a cloth swimming badge',
+    id: 'dildo',
+    name: 'a dildo',
+    got: 'a DILDO',
     caption:
-      'A 25 metres badge, sewn on and come off. Well done, whoever you are.',
+      'A dildo. Waterproof, as advertised. Nobody has asked at lost property.',
   },
   {
-    id: 'dummy',
-    name: 'a baby’s dummy',
-    caption: 'A dummy. Somebody small is very upset about this.',
-  },
-  {
-    id: 'dinosaur',
-    name: 'a toy dinosaur',
-    caption: 'A toy dinosaur. It’s extinct now.',
-  },
-  {
-    id: 'rubber-duck',
-    name: 'a rubber duck',
-    caption: 'A rubber duck, where it belongs, nearly.',
-  },
-  {
-    id: 'grapes',
-    name: 'a bunch of grapes',
-    caption: 'Grapes. Somebody brought a picnic into the pool.',
-  },
-  {
-    id: 'crisp-packet',
-    name: 'a crisp packet',
-    caption: 'A crisp packet. No eating on the poolside!',
-  },
-  {
-    id: 'contact-lens',
-    name: 'a contact lens',
-    caption: 'A contact lens. Very hard to spot. Well found!',
-  },
-  {
-    id: 'tampon',
-    name: 'a tampon',
+    id: 'butt-plug',
+    name: 'a butt plug',
+    got: 'a BUTT PLUG',
     caption:
-      'A tampon. They do not flush, and they do not swim either. Into the skip.',
+      'A butt plug. How it got into the skimmer is a question for the CCTV, and nobody wants to ask the CCTV.',
   },
   {
-    id: 'vibrator',
-    name: 'a small pink vibrator',
-    caption:
-      'A small pink vibrator. Waterproof, as advertised. Nobody has asked at lost property.',
-  },
-  {
-    id: 'condom-wrapper',
-    name: 'an empty condom wrapper',
-    caption:
-      'An empty condom wrapper. The pool closes at ten. We will not be asking.',
-  },
-  {
-    id: 'false-teeth',
-    name: 'a set of false teeth',
-    caption:
-      'FALSE TEETH! The rarest find of all. Somebody laughed too hard on the flume.',
+    id: 'more-hair',
+    name: 'more hair',
+    got: 'MORE HAIR',
+    caption: 'More hair. There is always more hair.',
   },
 ];
 
@@ -198,11 +80,6 @@ export const findOf = (id: FindId) => FINDS.find((f) => f.id === id)!;
 
 /** The find always on top, because it always is. */
 export const FIRST_FIND: FindId = 'hair-clump';
-/** The rare find, and its chance in a fill. */
-export const RARE_FIND: FindId = 'false-teeth';
-export const RARE_CHANCE = 0.2;
-/** How many finds in a fill, the hair clump and any false teeth included. */
-export const FILL = { min: 12, max: 15 } as const;
 
 /** The skimmer's tags, derived from the hall's room code (107-0). */
 export const SKIMMER_TAGS = {
@@ -210,36 +87,6 @@ export const SKIMMER_TAGS = {
   lid: `${hallRoomCode('museum5')}-SK1-L`,
   basket: `${hallRoomCode('museum5')}-SK1-B`,
 } as const;
-
-/** A seeded random in [0, 1) (mulberry32). */
-export function seeded(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** A fill of the basket, top first: the hair clump, then a shuffled dozen or so, the false teeth one fill in five. */
-export function fillOrder(seed: number): FindId[] {
-  const rand = seeded(seed);
-  const rest = FINDS.map((f) => f.id).filter(
-    (id) => id !== FIRST_FIND && id !== RARE_FIND,
-  );
-  for (let i = rest.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [rest[i], rest[j]] = [rest[j], rest[i]];
-  }
-  const count = FILL.min + Math.floor(rand() * (FILL.max - FILL.min + 1));
-  const rare = rand() < RARE_CHANCE;
-  const picked = rest.slice(0, count - 1 - (rare ? 1 : 0));
-  if (rare)
-    picked.splice(Math.floor(rand() * (picked.length + 1)), 0, RARE_FIND);
-  return [FIRST_FIND, ...picked];
-}
 
 /** Where a thing is: in the basket, in the visitor's hands, on the deck, in the skip. */
 export type Place =
@@ -255,7 +102,6 @@ export type LidPlace =
   | { at: 'deck'; x: number; z: number };
 
 export interface SkimmerGame {
-  seed: number;
   /** The fill, top first; each find's place by its index here. */
   order: readonly FindId[];
   places: readonly Place[];
@@ -277,10 +123,9 @@ export type SkimmerAction =
   /** A find lands in the skip, tossed from the hands (107f carrying). */
   | { type: 'land'; index: number };
 
-export function newSkimmerGame(seed: number): SkimmerGame {
-  const order = fillOrder(seed);
+export function newSkimmerGame(): SkimmerGame {
+  const order = FINDS.map((f) => f.id);
   return {
-    seed,
     order,
     places: order.map(() => ({ at: 'basket' }) as const),
     lid: { at: 'on' },

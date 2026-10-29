@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   CLEARED_LINE,
-  FILL,
   FINDS,
   FIRST_FIND,
-  RARE_FIND,
   SKIMMER_TAGS,
   actOnSkimmer,
   cleared,
-  fillOrder,
   held,
   inBasket,
   newSkimmerGame,
@@ -21,7 +18,7 @@ const toSkip: SkimmerAction = { type: 'skip', besideX: 1, besideZ: 1 };
 
 describe('Hall 5: what’s in the skimmer', () => {
   it('starts full, lid on, skip empty, hands empty', () => {
-    const g = newSkimmerGame(7);
+    const g = newSkimmerGame();
     expect(g.lid.at).toBe('on');
     expect(inBasket(g)).toBe(g.order.length);
     expect(g.binned).toBe(0);
@@ -29,14 +26,14 @@ describe('Hall 5: what’s in the skimmer', () => {
   });
 
   it('cannot be reached into with the lid on', () => {
-    const g = run(newSkimmerGame(1), { type: 'skimmer' });
+    const g = run(newSkimmerGame(), { type: 'skimmer' });
     expect(held(g)).toBeNull();
     expect(g.said).toMatch(/lid/i);
   });
 
   it('hands over one find at a time, the hair clump first', () => {
     let g = run(
-      newSkimmerGame(2),
+      newSkimmerGame(),
       { type: 'lid' },
       { type: 'deck', x: 0, z: 0 },
     );
@@ -50,7 +47,7 @@ describe('Hall 5: what’s in the skimmer', () => {
 
   it('counts a find only in the skip; dropped on the deck it can be picked up again', () => {
     let g = run(
-      newSkimmerGame(3),
+      newSkimmerGame(),
       { type: 'lid' },
       { type: 'deck', x: 0, z: 0 },
       { type: 'skimmer' },
@@ -64,14 +61,14 @@ describe('Hall 5: what’s in the skimmer', () => {
   });
 
   it('never takes the lid into the skip', () => {
-    const g = run(newSkimmerGame(4), { type: 'lid' }, toSkip);
+    const g = run(newSkimmerGame(), { type: 'lid' }, toSkip);
     expect(g.lid).toEqual({ at: 'deck', x: 1, z: 1 });
     expect(g.binned).toBe(0);
   });
 
   it('is cleared exactly when the last find lands in the skip', () => {
     let g = run(
-      newSkimmerGame(5),
+      newSkimmerGame(),
       { type: 'lid' },
       { type: 'deck', x: 0, z: 0 },
     );
@@ -83,29 +80,29 @@ describe('Hall 5: what’s in the skimmer', () => {
     expect(g.said).toBe(CLEARED_LINE(g.order.length));
   });
 
-  it('a fill is a dozen or so, no find twice, the false teeth about one fill in five', () => {
-    let rare = 0;
-    const n = 2000;
-    for (let s = 0; s < n; s++) {
-      const o = fillOrder(s);
-      expect(o.length).toBeGreaterThanOrEqual(FILL.min);
-      expect(o.length).toBeLessThanOrEqual(FILL.max);
-      expect(new Set(o).size).toBe(o.length);
-      expect(o[0]).toBe(FIRST_FIND);
-      if (o.includes(RARE_FIND)) rare++;
-    }
-    expect(rare / n).toBeGreaterThan(0.15);
-    expect(rare / n).toBeLessThan(0.25);
+  it('holds the six finds in their order, hair first and last', () => {
+    expect(newSkimmerGame().order).toEqual([
+      'hair-clump',
+      'leaves',
+      'dead-rat',
+      'dildo',
+      'butt-plug',
+      'more-hair',
+    ]);
+    expect(newSkimmerGame().order[0]).toBe(FIRST_FIND);
   });
 
   it('has a caption for every find, and tags from the hall’s room code', () => {
-    for (const f of FINDS) expect(f.caption.length).toBeGreaterThan(5);
+    for (const f of FINDS) {
+      expect(f.caption.length).toBeGreaterThan(5);
+      expect(f.got).toBe(f.got.trim());
+    }
     expect(SKIMMER_TAGS.skimmer).toBe('M5-SK1');
   });
 
   it('counts a find landing in the skip, tossed from the deck, once', () => {
     let g = run(
-      newSkimmerGame(4),
+      newSkimmerGame(),
       { type: 'lid' },
       { type: 'deck', x: 0, z: 0 },
       { type: 'skimmer' },

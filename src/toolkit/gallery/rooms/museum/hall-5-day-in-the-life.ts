@@ -43,11 +43,9 @@ import {
   inBasket,
   newSkimmerGame,
 } from '../../logic/museum-5-skimmer';
-import type {
-  FindId,
-  SkimmerAction,
-  SkimmerGame,
-} from '../../logic/museum-5-skimmer';
+import type { SkimmerAction, SkimmerGame } from '../../logic/museum-5-skimmer';
+import { bannerLine, fanfareOf, revealFrame } from '../../logic/skimmer-reveal';
+import type { RevealPhase } from '../../logic/skimmer-reveal';
 import {
   BAY,
   OPENING_CHECKS,
@@ -70,7 +68,12 @@ import {
   paintResetSign,
 } from '../../views/museum-exhibit';
 import { createFindProps } from './hall-5-finds';
-import type { CarryingExhibit, ExhibitHands } from './exhibit-carrying';
+import { revealCue } from './hall-5-reveal-music';
+import type {
+  CarryingExhibit,
+  ExhibitHands,
+  ExhibitView,
+} from './exhibit-carrying';
 
 /**
  * Hall 5, "A Day in the Life" (107l): a poolman's duties through the
@@ -158,22 +161,9 @@ const PICK_UP: SoundRecipe = click({
 const FIND_SCALE = 1.6;
 /** The lid: a flat plastic disc 250 mm across. */
 const LID_DROP = createDropProfile('flat', 0.25, 'plastic');
-/** Finds that ring when dropped. */
-const METAL_FINDS = new Set<FindId>([
-  'coins',
-  'sixpence',
-  'wedding-ring',
-  'earring',
-  'car-key',
-  'hair-grips',
-]);
-const CHIME: SoundRecipe = {
-  tones: [
-    { at: 0, hz: 784, seconds: 0.18, level: 0.2, type: 'sine' },
-    { at: 0.16, hz: 988, seconds: 0.18, level: 0.2, type: 'sine' },
-    { at: 0.32, hz: 1175, seconds: 0.4, level: 0.2, type: 'sine' },
-  ],
-};
+/** How big a find looks turning above the walker, metres across, and how far before the eye. */
+const REVEAL_SIZE = 0.2;
+const REVEAL_AHEAD = 0.42;
 
 /** A photograph's colours by its decade's look. */
 const LOOKS: Record<
@@ -454,7 +444,7 @@ function paintPoolside(c: CanvasRenderingContext2D, w: number, h: number) {
 }
 
 export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
-  let game: SkimmerGame = newSkimmerGame(1);
+  let game: SkimmerGame = newSkimmerGame();
   let sinceReset = 0;
   const object = new Group();
   object.name = 'Hall 5: A Day in the Life';
@@ -606,11 +596,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   }
   t.box(basket, grey, 0.17, 0.008, 0.01, 0, 0.012, 0);
   skimmerGroup.add(basket);
-  // What shows in the basket: the next find on top.
-  const inside = new Group();
-  inside.userData.live = true;
-  inside.position.y = 0.006;
-  skimmerGroup.add(inside);
+  // The basket shows nothing of what is in it: what will it be?
   object.add(
     markComponent(skimmerGroup, {
       name: `${SKIMMER_TAGS.skimmer} wall skimmer (Certikind; dry, its suction capped)`,
@@ -691,7 +677,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   };
 
   // ---- The finds ----
-  const propOf = createFindProps(t);
+  const propOf = createFindProps(t, kit.materials);
   let props: Group[] = [];
   const findsGroup = new Group();
   findsGroup.userData.live = true;
@@ -744,6 +730,113 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   // back, and the skimmer hands over its next find (`give`). The game
   // follows what the hands do.
   let hands: ExhibitHands | null = null;
+  let view: ExhibitView | null = null;
+
+  // ---- The reveal (the owner, 2026-10-29), `skimmer-reveal.ts` ----
+  // Reaching in, the walker is held and looks up while the suspense
+  // plays; the find appears above, turning, with a fanfare and a banner;
+  // then it is in the hands and the walker free to carry it to the skip.
+  let reveal: {
+    index: number;
+    t: number;
+    from: number;
+    phase: RevealPhase;
+  } | null = null;
+  /** Each find's size across, and its middle's height, at scale 1, metres. */
+  const sizes: { across: number; middle: number }[] = [];
+  const banner = t.printed(0.42, 0.11, () => {}, 1024, true);
+  banner.mesh.name = 'Reveal banner';
+  banner.mesh.userData.live = true;
+  banner.mesh.renderOrder = 10;
+  for (const m of [banner.mesh.material].flat() as Material[]) {
+    m.depthTest = false;
+    m.transparent = true;
+  }
+  banner.mesh.visible = false;
+  object.add(banner.mesh);
+  noRay(banner.mesh);
+  const drawBanner = (i: number) => {
+    const find = findOf(game.order[i]);
+    const c = banner.context;
+    const { width: w, height: h } = c.canvas;
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = 'rgba(10,16,40,0.86)';
+    c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#e8c45a';
+    c.lineWidth = h * 0.03;
+    c.strokeRect(h * 0.04, h * 0.04, w - h * 0.08, h * 0.92);
+    c.fillStyle = '#ffe9a0';
+    c.font = `bold ${h * 0.24}px ${SANS}`;
+    c.textAlign = 'center';
+    c.fillText(bannerLine(find.got), w / 2, h * 0.34, w * 0.9);
+    c.fillStyle = '#ffffff';
+    c.font = `${h * 0.15}px ${SANS}`;
+    wrapText(c, find.caption, w * 0.88)
+      .slice(0, 3)
+      .forEach((l, n) => c.fillText(l, w / 2, h * (0.58 + n * 0.17)));
+    c.textAlign = 'left';
+    banner.texture.needsUpdate = true;
+  };
+  const startReveal = (i: number) => {
+    if (!view) return;
+    reveal = { index: i, t: 0, from: view.pitch(), phase: 'suspense' };
+    view.hold(true);
+    partAudio.play(revealCue('reveal-suspense'), voice);
+    drawBanner(i);
+  };
+  const endReveal = () => {
+    if (!reveal) return;
+    reveal = null;
+    banner.mesh.visible = false;
+    view?.hold(false);
+  };
+  const stepReveal = (delta: number, cam: Camera | null) => {
+    if (!reveal || !view) return;
+    reveal.t += delta;
+    const f = revealFrame(reveal.t, reveal.from);
+    view.look(f.pitch);
+    const i = reveal.index;
+    const prop = props[i];
+    if (f.phase !== reveal.phase) {
+      reveal.phase = f.phase;
+      if (f.phase === 'fanfare')
+        partAudio.play(revealCue(fanfareOf(game.order[i])), voice);
+      if (f.phase === 'settle') {
+        // Into the hands, life size, to be carried to the skip.
+        prop.scale.setScalar(FIND_SCALE);
+        prop.rotation.set(0, 0, 0);
+        if (!hands?.give(prop)) {
+          game = {
+            ...game,
+            places: game.places.map((q, k) => (k === i ? { at: 'basket' } : q)),
+          };
+          refresh();
+        }
+      }
+      if (f.phase === 'done') {
+        endReveal();
+        return;
+      }
+    }
+    banner.mesh.visible = f.banner && cam !== null;
+    if (f.phase !== 'suspense' && f.phase !== 'fanfare') return;
+    prop.visible = f.size > 0;
+    if (!cam || f.size <= 0) return;
+    // Above the walker, before the eye looking up, turning.
+    const scale = object.getWorldScale(new Vector3()).x;
+    const { across, middle } = sizes[i];
+    const shown = (REVEAL_SIZE / across) * f.size;
+    const at = object.worldToLocal(
+      cam.localToWorld(new Vector3(0, 0, -REVEAL_AHEAD * scale)),
+    );
+    prop.position.set(at.x, at.y - middle * shown, at.z);
+    prop.rotation.set(0, f.spin, 0);
+    prop.scale.setScalar(shown);
+    const parentQ = object.getWorldQuaternion(new Quaternion()).invert();
+    const b = cam.localToWorld(new Vector3(0, -0.13 * scale, -0.5 * scale));
+    banner.mesh.position.copy(object.worldToLocal(b));
+    banner.mesh.quaternion.copy(parentQ).multiply(cam.quaternion);
+  };
   let hadIntro = false;
   const act = (a: SkimmerAction) => {
     const wasHeld = held(game);
@@ -821,7 +914,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
       if (i < 0) return;
       act({ type: 'land', index: i });
       if (cleared(game)) {
-        partAudio.play(CHIME, voice);
+        partAudio.play(revealCue('skimmer-cleared'), voice);
         speak('cleared');
       }
     },
@@ -838,11 +931,17 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   tossing.add(bin);
   // Reaching into the skimmer: the next find, handed over.
   const workSkimmer = () => {
-    if (hands?.holding()) return;
+    if (reveal || hands?.holding()) return;
     const was = held(game);
     act({ type: 'skimmer' });
     const now = held(game);
     if (typeof now !== 'number' || now === was) return;
+    // In the hall walked in, it is revealed above the walker first.
+    if (hands && view) {
+      startReveal(now);
+      refresh();
+      return;
+    }
     const prop = props[now];
     prop.position.set(sk.x, 0.05, sk.z);
     prop.visible = true;
@@ -858,21 +957,14 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   uses.set(skimmerGroup, workSkimmer);
   const refresh = () => {
     basket.visible = game.lid.at !== 'on';
-    inside.clear();
-    const next = game.places.findIndex((p) => p.at === 'basket');
-    if (basket.visible && next >= 0) {
-      const peek = propOf(game.order[next]);
-      peek.scale.setScalar(0.9);
-      noRay(peek);
-      inside.add(peek);
-    }
     game.places.forEach((p, i) => {
       props[i].visible = p.at !== 'basket';
     });
     drawSign();
   };
   const reset = () => {
-    game = newSkimmerGame(Math.floor(Math.random() * 2 ** 31));
+    endReveal();
+    game = newSkimmerGame();
     sinceReset = 0;
     hadIntro = false;
     stopVoice();
@@ -891,6 +983,12 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     }
     props = game.order.map((id, i) => {
       const prop = propOf(id);
+      // Measured on its own, before it joins the hall.
+      const own = new Box3().setFromObject(prop).getSize(new Vector3());
+      sizes[i] = {
+        across: Math.max(own.x, own.y, own.z, 0.02),
+        middle: own.y / 2,
+      };
       prop.visible = false;
       prop.scale.setScalar(FIND_SCALE);
       const size = new Box3().setFromObject(prop).getSize(new Vector3());
@@ -899,7 +997,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
         createDropProfile(
           'flat',
           Math.max(size.x, size.y, size.z, 0.02),
-          METAL_FINDS.has(id) ? 'metal' : 'plastic',
+          'plastic',
         ),
         {
           pickUp: () => {
@@ -1113,7 +1211,6 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   );
 
   reset();
-
   return {
     object,
     parts,
@@ -1124,8 +1221,9 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     solids: () => solids,
     reset: () => reset(),
     carrying: {
-      bind(h) {
+      bind(h, v) {
         hands = h;
+        view = v ?? null;
       },
       divert: (o, p) => tossing.divert(o, p),
       nearbyTargetFeedback: (o) => tossing.targetFeedback(o),
@@ -1153,7 +1251,8 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
         drawCard(game.said);
       }
       cardTime -= delta;
-      card.mesh.visible = cardTime > 0 && cam !== null;
+      card.mesh.visible = cardTime > 0 && cam !== null && !reveal;
+      stepReveal(delta, cam);
       for (const u of updates) u(delta);
     },
   };
