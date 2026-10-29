@@ -18,10 +18,6 @@ import type { Material } from 'three';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { markFrontCentre } from '../../components/core/audio/front-centre';
 import { devWalls } from '../logic/dev-room-links';
-import {
-  CARD_DESIGNATIONS,
-  EXPANSION_CARD_KINDS,
-} from '../../components/industrial-control/logic/machine-components';
 import { METRE } from '../../components/core/logic/units';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import { createSectionBoard } from '../../components/core/views/signage';
@@ -32,7 +28,6 @@ import {
 } from '../../components/core/views/eighties-controls';
 import { tools } from '../../components/core/views/fitting-tools';
 import { createFirstPerson } from '../../controls/input/first-person';
-import { machineComponent } from '../../components/industrial-control/parts/machine-components';
 import { createPartSet } from '../../components/core/parts/parts';
 import { ps1Uniforms } from '../../components/core/parts/ps1-material';
 import {
@@ -50,6 +45,12 @@ import type { CinematicPhase, Pose } from '../logic/skimmer-cinematic';
 import { createSkimmerCaustics } from '../views/skimmer-caustics';
 import { createSkimmerWell, drawOver } from '../views/skimmer-well';
 import { revealCue } from './museum/hall-5-reveal-music';
+import { createFindProps } from './museum/hall-5-finds';
+import { FINDS } from '../logic/museum-5-skimmer';
+import type { Find } from '../logic/museum-5-skimmer';
+import { createPortableBoard } from '../../controls/logic/portable-board';
+import { createDropProfile } from '../../controls/logic/drop-profile';
+import type { PortableObject } from '../../controls/input/object-handling';
 
 const FLOOR = { minX: -4, maxX: 4, minZ: -4, maxZ: 4 };
 const CEILING = 3;
@@ -60,6 +61,8 @@ const EDGE = -2.6;
 /** The find shown: its size across and how far before the eye, metres. */
 const REVEAL_SIZE = 0.24;
 const REVEAL_AHEAD = 0.9;
+/** Held, as Hall 5's are: a little larger than life (its `FIND_SCALE`). */
+const FIND_SCALE = 1.6;
 /** The field of view the banner's place is set for, degrees: it keeps its size on screen through the zoom. */
 const BANNER_FOV = 62;
 const SANS = 'Arial, Helvetica, sans-serif';
@@ -82,7 +85,7 @@ function seeded(seed: number) {
  * (the owner, 2026-10-29). Use the lid and it comes off with gold
  * caustics rising from the rim; the camera orbits the skimmer, sinking,
  * through the suspense cue; a jump cut to a look diagonally up, the
- * big-item cue, and a Pepperdyne card chosen at random turning above
+ * big-item cue, and one of Hall 5's finds chosen at random turning above
  * with its banner; then back to where the walker stood as the lid goes
  * back on (`logic/skimmer-cinematic.ts`). By its URL only.
  */
@@ -185,43 +188,55 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     lid.rotation.z = p.tilt;
   };
 
-  // ---- The finds: the Pepperdyne cards, one at random each time -----------
-  // Each film's is a fresh card, shown turning, then handed over: it is
-  // a portable thing, to be carried off or dropped.
-  const makeFind = (kind: (typeof EXPANSION_CARD_KINDS)[number]) => {
-    const device = parts.add(
-      machineComponent(kit, kind, { attachment: 'detachable' }),
-    );
+  // ---- The finds: Hall 5's, one at random each time ------------------------
+  // Each film's is a fresh one (`hall-5-finds.ts`), shown turning, then
+  // handed over: a portable thing, to be carried off or dropped.
+  const propOf = createFindProps(t, kit.materials);
+  const makeFind = (find: Find) => {
+    const prop = propOf(find.id);
     const pivot = new Group();
-    device.object.updateMatrixWorld(true);
-    const box = new Box3().setFromObject(device.object);
+    prop.updateMatrixWorld(true);
+    const box = new Box3().setFromObject(prop);
+    const size = box.getSize(new Vector3());
     // Turning about its own middle.
-    device.object.position.sub(box.getCenter(new Vector3()));
-    pivot.add(device.object);
+    prop.position.sub(box.getCenter(new Vector3()));
+    pivot.add(prop);
     pivot.visible = false;
     room.add(pivot);
-    const size = box.getSize(new Vector3());
+    const component = createPortableBoard(
+      createDropProfile(
+        'flat',
+        Math.max(size.x, size.y, size.z, 0.02) * FIND_SCALE,
+        'plastic',
+      ),
+    );
+    prop.userData.portable = {
+      component,
+      flat: 'upright',
+      detach() {},
+    } satisfies PortableObject;
     return {
-      device,
+      prop,
+      component,
       pivot,
-      across: Math.max(size.x, size.y, size.z),
-      name: CARD_DESIGNATIONS[kind].name,
+      across: Math.max(size.x, size.y, size.z, 0.02),
+      find,
     };
   };
-  type Find = ReturnType<typeof makeFind>;
-  /** Out of the pivot and into the walker's hands, life size. */
-  const handOver = (find: Find) => {
-    const card = find.device.object;
-    find.pivot.remove(card);
-    find.pivot.removeFromParent();
-    card.position.copy(find.pivot.position);
-    card.rotation.set(0, 0, 0);
-    card.scale.setScalar(1);
-    room.add(card);
-    if (!walk.hands?.give(card)) card.removeFromParent();
+  type Shown = ReturnType<typeof makeFind>;
+  /** Out of the pivot and into the walker's hands, as Hall 5 shows it. */
+  const handOver = (shown: Shown) => {
+    const { prop, pivot } = shown;
+    pivot.remove(prop);
+    pivot.removeFromParent();
+    prop.position.copy(pivot.position);
+    prop.rotation.set(0, 0, 0);
+    prop.scale.setScalar(FIND_SCALE);
+    room.add(prop);
+    if (!walk.hands?.give(prop)) prop.removeFromParent();
   };
   let lastFind = -1;
-  const banner = t.printed(0.42, 0.11, () => {}, 1024, true);
+  const banner = t.printed(0.42, 0.13, () => {}, 1024, true);
   banner.mesh.name = 'Reveal banner';
   banner.mesh.renderOrder = 10;
   for (const material of [banner.mesh.material].flat() as Material[]) {
@@ -230,7 +245,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   }
   banner.mesh.visible = false;
   room.add(banner.mesh);
-  const drawBanner = (name: string) => {
+  const drawBanner = (find: Find) => {
     const c = banner.context;
     const { width: w, height: h } = c.canvas;
     c.clearRect(0, 0, w, h);
@@ -242,15 +257,20 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     c.textAlign = 'center';
     c.fillStyle = '#ffe9a0';
     c.font = `bold ${h * 0.24}px ${SANS}`;
-    c.fillText(bannerLine(`a ${name.toUpperCase()}`), w / 2, h * 0.42, w * 0.9);
+    c.fillText(bannerLine(find.got), w / 2, h * 0.34, w * 0.9);
     c.fillStyle = '#ffffff';
-    c.font = `${h * 0.15}px ${SANS}`;
-    c.fillText(
-      'A Pepperdyne card. Nobody knows how it got in there.',
-      w / 2,
-      h * 0.72,
-      w * 0.88,
-    );
+    c.font = `${h * 0.12}px ${SANS}`;
+    // Its caption, in up to three lines.
+    const lines: string[] = [];
+    for (const word of find.caption.split(' ')) {
+      const line = lines.length ? `${lines[lines.length - 1]} ${word}` : word;
+      if (lines.length && c.measureText(line).width <= w * 0.88)
+        lines[lines.length - 1] = line;
+      else lines.push(word);
+    }
+    lines
+      .slice(0, 3)
+      .forEach((l, n) => c.fillText(l, w / 2, h * (0.56 + n * 0.14), w * 0.9));
     banner.texture.needsUpdate = true;
   };
   const voice = new Group();
@@ -262,7 +282,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     t: number;
     start: Pose;
     from: { x: number; z: number; yaw: number; pitch: number };
-    find: Find;
+    find: Shown;
     phase: CinematicPhase;
     /** The walker's own field of view, degrees, to zoom from and back to. */
     fov: number;
@@ -276,12 +296,15 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     const held = walk.hands?.holding();
     if (held) {
       walk.hands!.forget(held);
+      (
+        held.userData.portable as PortableObject | undefined
+      )?.component.dispose();
       held.removeFromParent();
     }
     const pose = walk.pose();
-    const kind = pickAnother(EXPANSION_CARD_KINDS.length, lastFind, random);
-    lastFind = kind;
-    const find = makeFind(EXPANSION_CARD_KINDS[kind]);
+    const pick = pickAnother(FINDS.length, lastFind, random);
+    lastFind = pick;
+    const find = makeFind(FINDS[pick]);
     film = {
       t: 0,
       start: {
@@ -302,7 +325,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
       fov: camera.fov,
     };
     walk.hold(true);
-    drawBanner(find.name);
+    drawBanner(find.find);
     partAudio.play(revealCue('reveal-suspense'), voice);
   };
   /** The film's field of view now, degrees, or null for the walker's own. */
@@ -438,6 +461,8 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
       if (film) film.t = t;
       frozen = hold;
     },
+    /** What the walker holds, by name, or null. */
+    held: () => walk.hands?.holding()?.name ?? null,
     /** Where the film is: its phase and time, or null. */
     film: () => (film ? { phase: film.phase, t: film.t } : null),
   };
