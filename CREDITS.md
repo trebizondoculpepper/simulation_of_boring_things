@@ -10,9 +10,9 @@ The program is licensed under the GNU General Public License, version 3 or later
 
 The six Still Water Garden MP3s in `resources/sound/music/jacuzzi/` were supplied by the owner on 2026-10-24, unchanged from their Downloads folder. Their filenames identify Treblo as the artist. The tracks are Bamboo and Morning Mist, Glass Water Garden, Pavilion at First Light, Petals on Slow Water, Softly, Slowly Rising and The Weightless Hour. They are used only for the jacuzzi programme. Licence and additional provenance have not been specified; the software's GPL notice does not establish a separate licence for these recordings.
 
-## Skimmer item-reveal music: original synthesis
+## Skimmer item-reveal music
 
-The four cues in `resources/sound/music/item-reveal/` were made for this project on 2026-10-29 by direct additive synthesis from an original score, following `doc/prompts/music/item_reveal/item-reveal-prompts.md`. `resources/sound/music/item-reveal/generate.py` is the complete generator; the folder's README records the file timings and encoding. No music model, source recording, sample, existing melody or reference audio was used.
+`reveal-suspense.mp3` and `reveal-fanfare.mp3` were made on 2026-10-29 with ACE-Step 1.5's cover mode from the owner's `doc/reference/music/item_get/oot_item_get.mp3`, a recording of the _Ocarina of Time_ item-get music. They were cut and mastered by `resources/sound/music/item-reveal/split-resynthesis.py`. They retain musical material from the reference; their third-party rights have not been established. The full render and request are in the adjacent ACE-Step workspace's `work/projects/item-get-resynthesis/`. `reveal-fanfare-deflated.mp3` and `skimmer-cleared.mp3` are this project's original direct synthesis from `resources/sound/music/item-reveal/generate.py`, without a recording, sample, existing melody or reference audio. The folder's README has the timings and encoding.
 
 ## The bridge's ambience: original synthesis
 

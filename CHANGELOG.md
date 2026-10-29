@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 5: the suspense and triumphant fanfare cues are replaced by 2.5-second excerpts from an ACE-Step resynthesis of the owner's supplied item-get reference; the full render and split recipe are retained for review.
+
 - Museum, Hall 5: four original, precisely timed skimmer reveal music cues replace the synthesized stand-ins: suspense, heroic fanfare, deflated fanfare and skimmer-cleared jingle. The score generator and provenance are kept with the MP3s.
 
 - Museum, Hall 5: three variants of each Pool of the Future scene are saved; the matching `b` set now hangs in the gallery, with captions that follow Reg's opening round, water-model inspection and closing skimmer check.

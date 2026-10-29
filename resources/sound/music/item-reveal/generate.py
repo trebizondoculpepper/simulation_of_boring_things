@@ -1,4 +1,4 @@
-"""Render the four original, precisely timed skimmer reveal cues."""
+"""Render the original deflated fanfare and skimmer-cleared cues."""
 
 from pathlib import Path
 import subprocess
@@ -135,8 +135,6 @@ def write_mp3(name: str, samples: np.ndarray) -> None:
 
 
 if __name__ == "__main__":
-    for cue, data in (("reveal-suspense", suspense()),
-                      ("reveal-fanfare", fanfare()),
-                      ("reveal-fanfare-deflated", fanfare(True)),
+    for cue, data in (("reveal-fanfare-deflated", fanfare(True)),
                       ("skimmer-cleared", cleared())):
         write_mp3(cue, data)
