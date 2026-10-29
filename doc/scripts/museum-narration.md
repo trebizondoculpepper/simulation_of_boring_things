@@ -46,7 +46,7 @@ Optional, for later: six further finds are being tried in dev53 (`src/toolkit/ga
 
 Folder: `resources/sound/voice/never-again/`. Source of the words: `src/toolkit/gallery/logic/museum-8-incident.ts` (`CHAPTERS`, each chapter's `narration`); played by `src/toolkit/gallery/rooms/museum/hall-8-never-again.ts`.
 
-When they play: the visitor presses the green HEAR WHAT HAPPENED button, and hears the chapter whose photograph they are standing nearest; that photograph's picture light stays up while the others dim, until the clip ends. Pressing again stops it. Each chapter stands alone, so each clip must make sense heard on its own, in any order.
+When they play: the visitor presses the green HEAR WHAT HAPPENED button on the lectern before a photograph, and hears that chapter; that photograph's picture light stays up while the others dim, until the clip ends. Pressing again stops it. Each chapter stands alone, so each clip must make sense heard on its own, in any order.
 
 Direction: a sober documentary narrator, unhurried, about 20 seconds a chapter. Present tense for the morning itself (chapters 1 to 4), plainly; quieter and slower for chapter 4's "Nobody dies." The last two words of chapter 6, "Never again.", are the exhibit's title: a pause before them, and no flourish. Numbers as written: "seventeen minutes to eight", "four hundred litres", "forty thousand pounds".
 
@@ -59,7 +59,7 @@ Direction: a sober documentary narrator, unhurried, about 20 seconds a chapter. 
 | `chapter-5.mp3` | 5 · Weeks later · The inquiry (north wall, middle)         | Weeks later, the inspectors report. There was no risk assessment for deliveries. The staff had not been trained to handle the chemicals. Nobody had checked the contractor. The council is fined forty thousand pounds, and the baths are shut for six weeks.                                                                  |
 | `chapter-6.mp3` | 6 · The changes · Never again (north wall, by the way out) | Pellingford Baths reopened with its fill points rebuilt: a different coupling for each chemical, each in its own locked cabinet, clearly labelled. Every delivery is met. The gas detector works, and the stores are apart. The fix is to make the mistake impossible. Never again.                                            |
 
-The earlier single recording of the whole account (`account.mp3`) is no longer used: the button now plays one chapter at a time.
+The earlier single recording of the whole account (`account.mp3`) is no longer used: each lectern's button plays its own chapter.
 
 ## Checklist for the session
 

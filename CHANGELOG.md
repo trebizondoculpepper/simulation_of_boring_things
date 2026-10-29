@@ -16,6 +16,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 - Museum, Hall 5: the painted poolside (its deck tiles, coping and painted water, the skimmer's throat painted into its tile face) is a layer of its own 2 mm above the museum's floor (`DECK_LIFT`), pulled toward the eye so the two never fight from afar; everything standing on it is lifted with it: the skimmer's well and lid, the bin and its sign, the reset point, the lectern, the hall's floor arrows and its safety fittings.
 
+- Museum, Hall 8 (Never again): a small lectern before each of the six photographs, each with its own HEAR WHAT HAPPENED button telling its chapter (again to stop); the lectern the visitor stands at lights its photograph and dims the others, chosen with 0.5 m of hysteresis so it does not flicker (`nearestLectern`). The single button by chapter 1 is gone.
+
 - Museum, Halls 7 and 8 are plain black boxes (the owner, 2026-10-29: "just have two black rooms with no windows ... very simple black rooms"): a per-hall flag in the museum plan (`BLACK_BOX_HALLS`, `isBlackBox`) gives them windowless walls painted matt black, a black floor and roof deck, no columns, services ceiling or gallery track, and no fire safety kit, keeping their archways, archway signs, title (now white lettering) and floor arrows (back to the brand's orange); the walls and archways are unchanged, so the ring still joins up. Hall 7's dark lining and Hall 8's black wall sheets are gone.
 
 ## [0.5.0] - 2026-10-29

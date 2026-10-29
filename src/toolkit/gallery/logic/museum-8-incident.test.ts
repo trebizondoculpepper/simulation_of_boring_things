@@ -8,6 +8,8 @@ import {
   litChapter,
   narrationClip,
   nearestChapter,
+  nearestLectern,
+  shownChapter,
   pressNarration,
   stepNarration,
 } from './museum-8-incident';
@@ -50,7 +52,8 @@ describe('Hall 8, Never again', () => {
     expect(litChapter(n)).toBe(3);
     n = stepNarration(n, CHAPTER_SECONDS / 2);
     expect(litChapter(n)).toBe(3);
-    expect(pressNarration(n, 0)).toEqual(NARRATION_OFF);
+    expect(litChapter(pressNarration(n, 0))).toBe(0);
+    expect(pressNarration(n, 3)).toEqual(NARRATION_OFF);
     n = stepNarration(n, CHAPTER_SECONDS);
     expect(litChapter(n)).toBeNull();
   });
@@ -68,6 +71,23 @@ describe('Hall 8, Never again', () => {
     expect(nearestChapter({ x: 0, z: -3 }, photos)).toBe(1);
     expect(nearestChapter({ x: -5, z: 2 }, photos)).toBe(3);
     expect(nearestChapter({ x: 4, z: -1 }, photos)).toBe(0);
+  });
+
+  it('keeps the lectern chosen until another is clearly nearer', () => {
+    const lecterns = [
+      { x: 0, z: 0 },
+      { x: 2, z: 0 },
+    ];
+    expect(nearestLectern({ x: 0.2, z: 0 }, lecterns, null)).toBe(0);
+    expect(nearestLectern({ x: 1.1, z: 0 }, lecterns, 0)).toBe(0);
+    expect(nearestLectern({ x: 0.9, z: 0 }, lecterns, 1)).toBe(1);
+    expect(nearestLectern({ x: 1.4, z: 0 }, lecterns, 0)).toBe(1);
+    expect(nearestLectern({ x: 0.6, z: 0 }, lecterns, 1)).toBe(0);
+  });
+
+  it('lights the chapter told, else the lectern’s', () => {
+    expect(shownChapter(NARRATION_OFF, 4)).toBe(4);
+    expect(shownChapter(pressNarration(NARRATION_OFF, 2), 4)).toBe(2);
   });
 
   it('gives each chapter its own clip', () => {

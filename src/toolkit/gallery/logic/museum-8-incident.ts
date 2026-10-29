@@ -197,7 +197,7 @@ export const OPENING = {
   fact: '“The accidental addition of acid to hypochlorite is the commonest cause of chlorine release incidents in pool buildings.” HSE inspector, 2023.',
   ownVoice: 'Deliveries are one of the moments it can happen.',
   tryIt:
-    'Press HEAR WHAT HAPPENED to hear the story of the photograph you stand nearest. Then look in the case: could you connect the wrong hose?',
+    'Each photograph has its lectern: the one you stand at lights its photograph. Press its HEAR WHAT HAPPENED button to hear that chapter, again to stop. Then look in the case: could you connect the wrong hose?',
 } as const;
 
 /** The central case's plaques. */
@@ -250,11 +250,13 @@ export type Narration =
 export const NARRATION_OFF: Narration = { playing: false };
 
 /**
- * The button pressed: tell the chapter the visitor stands nearest
- * (`nearestChapter`), or, if one is playing, stop.
+ * A lectern's button pressed: tell its chapter; pressed again while its
+ * chapter plays, stop. Another lectern's button starts its own chapter.
  */
 export const pressNarration = (n: Narration, chapter: number): Narration =>
-  n.playing ? NARRATION_OFF : { playing: true, chapter, t: 0 };
+  n.playing && n.chapter === chapter
+    ? NARRATION_OFF
+    : { playing: true, chapter, t: 0 };
 
 /** Time passes; after its chapter (`seconds` long) it stops itself. */
 export function stepNarration(
@@ -290,3 +292,31 @@ export function nearestChapter(
   });
   return best;
 }
+
+/** How much nearer, metres, another lectern must be before it takes over. */
+export const LECTERN_MARGIN = 0.5;
+
+/**
+ * The lectern the visitor is at, its index: the nearest on the floor plan,
+ * but the one already chosen (`current`) is kept until another is nearer
+ * by `margin` metres, so the choice does not flicker between two.
+ */
+export function nearestLectern(
+  at: { x: number; z: number },
+  lecterns: readonly { x: number; z: number }[],
+  current: number | null,
+  margin: number = LECTERN_MARGIN,
+): number {
+  const best = nearestChapter(at, lecterns);
+  if (current === null || current === best || !lecterns[current]) return best;
+  const d = (k: number) =>
+    Math.hypot(lecterns[k].x - at.x, lecterns[k].z - at.z);
+  return d(best) < d(current) - margin ? best : current;
+}
+
+/**
+ * The photograph lit (its index): the one being told, else the one at the
+ * visitor's lectern; the others dimmed.
+ */
+export const shownChapter = (n: Narration, lectern: number): number =>
+  n.playing ? n.chapter : lectern;

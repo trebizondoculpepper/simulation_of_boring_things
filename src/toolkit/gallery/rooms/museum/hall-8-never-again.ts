@@ -21,7 +21,8 @@ import {
   SPONSOR,
   litChapter,
   narrationClip,
-  nearestChapter,
+  nearestLectern,
+  shownChapter,
   pressNarration,
   stepNarration,
 } from '../../logic/museum-8-incident';
@@ -43,8 +44,8 @@ import type { HallExhibit } from './exhibits';
  * Hall 9. Chapters 1 to 3 hang on the street (south) wall, read left to
  * right, east to west; 4 to 6 on the courtyard (north) wall, read left to
  * right, west to east; the case of the two fill points in the middle,
- * between the columns; the opening panel and the narration button by the
- * way in; Chlorella's panel and the lessons by the way out. Static but for
+ * between the columns; a lectern before each photograph, whose button
+ * tells its chapter; the opening panel by the way in; Chlorella's panel and the lessons by the way out. Static but for
  * the narration. In the hall's frame, metres.
  *
  * Photographs: placeholders until images are dropped in as
@@ -347,7 +348,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
 
   // ---- The six chapters ----
   const photoMats: { color: Color }[] = [];
-  const photoMeshes: Object3D[] = [];
   // The visitor's eye, caught as a photograph is drawn (as Hall 7 does).
   let eye: Camera | null = null;
   const plaqueMats: { color: Color }[] = [];
@@ -374,7 +374,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     photo.mesh.onBeforeRender = (_r, _s, camera) => {
       eye = camera;
     };
-    photoMeshes.push(photo.mesh);
     unit.add(photo.mesh);
     const mat = photo.mesh.material as unknown as Material & {
       color: Color;
@@ -435,12 +434,14 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   turnTo(sponsor, WEST, 1.55, -4.3, Math.PI / 2);
   object.add(still(sponsor));
 
-  // ---- The narration button, by chapter 1 ----
-  // It tells the chapter whose photograph the visitor stands nearest: its
-  // clip if recorded (until the clip ends), else its photograph lit alone
-  // for CHAPTER_SECONDS, silently.
+  // ---- The lecterns, one before each photograph ----
+  // The lectern the visitor is at lights its photograph (the others dim);
+  // its button tells that chapter: its clip if recorded (until the clip
+  // ends), else its photograph lit alone for CHAPTER_SECONDS, silently.
   let narration: Narration = NARRATION_OFF;
-  let shown: number | null | undefined;
+  /** The lectern the visitor is at (`nearestLectern`). */
+  let lectern: number | null = null;
+  let shown: number | undefined;
   let audio: HTMLAudioElement | null = null;
   const stopAudio = () => {
     audio?.pause();
@@ -469,64 +470,79 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     object.worldToLocal(o.getWorldPosition(seen));
     return { x: seen.x, z: seen.z };
   };
-  const press = () => {
-    const chapter = eye ? nearestChapter(plan(eye), photoMeshes.map(plan)) : 0;
+  const press = (chapter: number) => {
     narration = pressNarration(narration, chapter);
     if (narration.playing) {
       const heard = playClip(narrationClip(CHAPTERS[chapter]));
       seconds = heard ? Infinity : CHAPTER_SECONDS;
     } else stopAudio();
+    show();
   };
-  const pedestal = new Group();
-  pedestal.name = 'HEAR WHAT HAPPENED button';
   const yellow = t.paint('#f2c418', 0.5);
-  t.box(pedestal, frameMat, 0.42, 0.04, 0.42, 0, 0.02, 0);
-  t.box(pedestal, yellow, 0.28, 0.7, 0.28, 0, 0.39, -0.03);
-  const top = new Group();
-  top.position.set(0, 0.92, 0.04);
-  top.rotation.x = -0.5;
-  pedestal.add(top);
-  t.box(top, yellow, 0.34, 0.26, 0.06, 0, 0, -0.03);
-  const lit = signal(false);
-  const button = parts.add(
-    pushButton(kit, {
-      colour: 'green',
-      head: 'illuminated',
-      lamp: lit,
-      name: 'HEAR WHAT HAPPENED',
-      action: press,
-    }),
-  );
-  button.object.scale.setScalar(3.2);
-  button.object.position.set(0, -0.01, 0.002);
-  top.add(button.object);
-  const legend = createMicroLabel(kit, 'HEAR WHAT HAPPENED', {
-    height: 0.03,
-    ink: '#ffffff',
-    plate: '#1f2a2e',
-    maxWidth: 0.32,
+  /** Out from the wall to the lectern, metres. */
+  const OUT = 1.25;
+  const LECTERNS = PLACES.map((at) => {
+    // The photograph's centre is 0.37 m left of its unit's origin.
+    const side = at.yaw === 0 ? 1 : -1;
+    return { x: at.x - 0.37 * side, z: at.z + OUT * side, yaw: at.yaw };
   });
-  legend.position.set(0, 0.1, 0.002);
-  top.add(legend);
-  const push = createMicroLabel(kit, 'PUSH · AGAIN TO STOP', {
-    height: 0.024,
-    ink: '#111111',
-    plate: '#ffffff',
+  const buttonLamps = CHAPTERS.map(() => signal(false));
+  CHAPTERS.forEach((ch, k) => {
+    const stand = new Group();
+    stand.name = `Chapter ${ch.number} lectern`;
+    t.box(stand, frameMat, 0.36, 0.04, 0.36, 0, 0.02, 0);
+    t.box(stand, yellow, 0.22, 0.7, 0.22, 0, 0.39, -0.02);
+    const top = new Group();
+    top.position.set(0, 0.92, 0.03);
+    top.rotation.x = -0.5;
+    stand.add(top);
+    t.box(top, yellow, 0.34, 0.26, 0.06, 0, 0, -0.03);
+    const button = parts.add(
+      pushButton(kit, {
+        colour: 'green',
+        head: 'illuminated',
+        lamp: buttonLamps[k],
+        name: `HEAR WHAT HAPPENED, chapter ${ch.number}`,
+        action: () => press(k),
+      }),
+    );
+    button.object.scale.setScalar(3.2);
+    button.object.position.set(0, -0.01, 0.002);
+    top.add(button.object);
+    const legend = createMicroLabel(kit, 'HEAR WHAT HAPPENED', {
+      height: 0.03,
+      ink: '#ffffff',
+      plate: '#1f2a2e',
+      maxWidth: 0.32,
+    });
+    legend.position.set(0, 0.1, 0.002);
+    top.add(legend);
+    const push = createMicroLabel(
+      kit,
+      `CHAPTER ${ch.number} · PUSH · AGAIN TO STOP`,
+      { height: 0.022, ink: '#111111', plate: '#ffffff', maxWidth: 0.32 },
+    );
+    push.position.set(0, -0.105, 0.002);
+    top.add(push);
+    markFrontCentre(stand);
+    const at = LECTERNS[k];
+    turnTo(stand, at.x, 0, at.z, at.yaw);
+    object.add(
+      markComponent(stand, {
+        name: `HEAR WHAT HAPPENED push button, chapter ${ch.number}`,
+        status: () =>
+          narration.playing && narration.chapter === k
+            ? `lit: chapter ${ch.number} is told`
+            : 'unlit',
+      }),
+    );
+    solids.push({
+      minX: at.x - 0.2,
+      maxX: at.x + 0.2,
+      minZ: at.z - 0.2,
+      maxZ: at.z + 0.2,
+    });
   });
-  push.position.set(0, -0.105, 0.002);
-  top.add(push);
-  markFrontCentre(pedestal);
-  turnTo(pedestal, 6.9, 0, 5.9, (-3 * Math.PI) / 4);
-  object.add(
-    markComponent(pedestal, {
-      name: 'HEAR WHAT HAPPENED push button',
-      status: () =>
-        narration.playing
-          ? `lit: chapter ${narration.chapter + 1} is told`
-          : 'unlit',
-    }),
-  );
-  solids.push({ minX: 6.65, maxX: 7.15, minZ: 5.65, maxZ: 6.15 });
 
   // ---- The central case: the two fill points, before and after ----
   const showcase = createFillPointsCase(kit);
@@ -534,12 +550,14 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   solids.push(showcase.solid);
 
   const show = () => {
-    const now = litChapter(narration);
+    if (eye) lectern = nearestLectern(plan(eye), LECTERNS, lectern);
+    const now = shownChapter(narration, lectern ?? 0);
+    const told = litChapter(narration);
+    buttonLamps.forEach((l, k) => (l.value = told === k));
     if (now === shown) return;
     shown = now;
-    lit.value = narration.playing;
     CHAPTERS.forEach((_, k) => {
-      const level = now === null || now === k ? 1 : 0.3;
+      const level = now === k ? 1 : 0.3;
       photoMats[k].color.setScalar(level);
       plaqueMats[k].color.setScalar(level);
       lamps[k].set(level);
