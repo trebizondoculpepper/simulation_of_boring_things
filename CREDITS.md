@@ -92,4 +92,4 @@ The thirty photographs in `resources/images/day-in-the-life/` (`<decade>-<mornin
 
 ## The title logo: the owner's own
 
-The title screen's logo, `resources/images/title/the-pool-logo.png`, is the owner's own (2026-10-29), from `doc/marketing/logos/05-circle-notext.png` (kept there unchanged; see that folder's `README.md`), cropped, shrunk and its lower backdrop made transparent by `scripts/title-logo.ts`. The title lettered over it is drawn live in Antonio (see Fonts).
+The title screen's logo, `resources/images/title/the-pool-logo.png`, is the owner's own (2026-10-29), from `doc/marketing/logos/05-circle-notext.png` (kept there unchanged; see that folder's `README.md`), cropped, shrunk and its lower backdrop made transparent by `scripts/title-logo.ts`. The title lettered over it is drawn live in Antonio (see Fonts). The same script writes `the-pool-logo.svg` beside it, which embeds that PNG and Antonio (as the SIL Open Font Licence allows, the font unmodified).

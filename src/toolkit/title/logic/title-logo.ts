@@ -44,15 +44,16 @@ export const SECTION_LIFT_PX = 8;
 
 /**
  * In the art's pixels (760 × 743): the roundel's centre and inner radius
- * (inside its dark rim), and the band of water that ripples (the open
+ * (inside its dark rim; as `scripts/title-logo.ts` measures them, less the
+ * lift), and the band of water that ripples (the open
  * water and the waves, above the tiled edge).
  */
 export const LOGO_ART = {
   width: 760,
   height: 743,
   centreX: 380,
-  centreY: 373 - SECTION_LIFT_PX,
-  innerRadius: 352,
+  centreY: 382 - SECTION_LIFT_PX,
+  innerRadius: 362,
   waterTop: 18 - SECTION_LIFT_PX,
   waterBottom: 312 - SECTION_LIFT_PX,
 } as const;

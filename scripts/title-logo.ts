@@ -3,6 +3,11 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deflateSync, inflateSync } from 'node:zlib';
+import {
+  LOGO_ART,
+  SECTION_LIFT_PX,
+  TITLE_TEXT,
+} from '../src/toolkit/title/logic/title-logo.ts';
 
 /**
  * The title logo's art (the owner, 2026-10-29): the roundel
@@ -16,7 +21,8 @@ import { deflateSync, inflateSync } from 'node:zlib';
  * so no blue fringe is left. The upper section (the water dome and the
  * tiled band) is then closed in the dome's keyline and lifted by its
  * thickness (`closeUpperSection`). Written to
- * `resources/images/title/the-pool-logo.png`, for `title-logo.ts`. Run
+ * `resources/images/title/the-pool-logo.png`, for `title-logo.ts`, and the
+ * whole logo, title and all, as `the-pool-logo.svg` beside it (`logoSvg`). Run
  * `node scripts/title-logo.ts` to make it again (`--probe x,y ...` prints
  * the colours at those pixels of the result instead, `--probe-source x,y
  * ...` of the art before its backdrop is cleared).
@@ -24,6 +30,8 @@ import { deflateSync, inflateSync } from 'node:zlib';
 
 const SOURCE = 'doc/marketing/logos/05-circle-notext.png';
 const OUT = 'resources/images/title/the-pool-logo.png';
+const SVG_OUT = 'resources/images/title/the-pool-logo.svg';
+const FONT = 'src/toolkit/components/core/assets/fonts/Antonio-Variable.ttf';
 /** The roundel in the source: crop (x, y, width, height), then the width. */
 const CROP = { x: 60, y: 270, width: 1165, height: 1140 };
 const WIDTH = 760;
@@ -31,6 +39,10 @@ const WIDTH = 760;
 const PLANT_TOP = 320;
 /** The column the rim and the tiled band are measured down. */
 const BAND_PROBE_X = 380;
+/** Rows across the dome its inner edge is measured on, and a clear stretch of sky. */
+const SKY_ROWS = [150, 250];
+/** The water between the waves, whose blue the sky takes so the two meet unseen. */
+const SKY_SAMPLE = { x0: 300, x1: 460, y0: 255, y1: 295 };
 /** A row in the water, above the tiled band, to look for the band from. */
 const WATER_BELOW = 280;
 /** The backdrop's colour is found as the commonest colour in the plant's region. */
@@ -353,10 +365,10 @@ function clearBackdrop(image: Image) {
  * below the water on that column; the whole section lifted by the
  * keyline's thickness, and the keyline carried down both sides of the band
  * and along its foot, into the rows the lift left, so it covers none of the
- * plant below. Returns the lift, which `logic/title-logo.ts`'s constants
+ * plant below. Returns the lift (and the line's colour); the lift `logic/title-logo.ts`'s constants
  * (`SECTION_LIFT_PX`) must match.
  */
-function closeUpperSection(image: Image): number {
+function closeUpperSection(image: Image): { lift: number; colour: number[] } {
   const { width, rgba } = image;
   const at = (x: number, y: number) => (y * width + x) * 4;
   const alpha = (x: number, y: number) => rgba[at(x, y) + 3]!;
@@ -431,7 +443,196 @@ function closeUpperSection(image: Image): number {
     `keyline rgb(${line.join(', ')}), ${lift} px; band ${bandTop}–${foot}, ` +
       `x ${left}–${right}; section lifted ${lift} px`,
   );
-  return lift;
+  return { lift, colour: line };
+}
+
+/**
+ * The filter's stand finished (the owner, 2026-10-29): the source's
+ * roundel cuts off its two left legs and the left of its foot rail. They
+ * are drawn on, mirroring the right-hand side about the stand's middle
+ * (x 173.5), a little past where the roundel's edge was: the legs as the
+ * drawing draws them (a pale grey line in a dark outline), the rail as a
+ * copy of its own cross-section (`STAND.railFrom`), with a dark end.
+ * Measured in the art's pixels, below the lifted section, so unmoved.
+ */
+const STAND = {
+  /** The left legs, top to foot: the outer and the inner (back) one. */
+  legs: [
+    { x0: 133, y0: 619, x1: 119.5, y1: 651 },
+    { x0: 138.5, y0: 619, x1: 128, y1: 651 },
+  ],
+  /** The rail's cross-section is copied from this column… */
+  railFrom: 200,
+  railTop: 649,
+  railBottom: 657,
+  /** …across these, and ended in the outline's colour. */
+  railX0: 119,
+  railX1: 157,
+  legCore: [200, 206, 213],
+  legHalf: 1.1,
+  outlineHalf: 2.3,
+} as const;
+
+function completeFilterStand(image: Image, line: readonly number[]) {
+  const { width, rgba } = image;
+  const at = (x: number, y: number) => (y * width + x) * 4;
+  const over = (
+    x: number,
+    y: number,
+    rgb: readonly number[],
+    cover: number,
+  ) => {
+    if (cover <= 0) return;
+    const i = at(x, y);
+    const a = rgba[i + 3]! / 255;
+    const out = cover + a * (1 - cover);
+    for (let k = 0; k < 3; k++)
+      rgba[i + k] = Math.round(
+        (rgb[k]! * cover + rgba[i + k]! * a * (1 - cover)) / out,
+      );
+    rgba[i + 3] = Math.round(out * 255);
+  };
+  const segment = (
+    { x0, y0, x1, y1 }: { x0: number; y0: number; x1: number; y1: number },
+    half: number,
+    rgb: readonly number[],
+  ) => {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const len2 = dx * dx + dy * dy;
+    for (
+      let y = Math.floor(Math.min(y0, y1) - half - 1);
+      y <= Math.max(y0, y1) + half + 1;
+      y++
+    )
+      for (
+        let x = Math.floor(Math.min(x0, x1) - half - 1);
+        x <= Math.max(x0, x1) + half + 1;
+        x++
+      ) {
+        const t = Math.max(
+          0,
+          Math.min(1, ((x - x0) * dx + (y - y0) * dy) / len2),
+        );
+        const d = Math.hypot(x - (x0 + t * dx), y - (y0 + t * dy));
+        over(x, y, rgb, Math.min(1, Math.max(0, half + 0.5 - d)));
+      }
+  };
+  for (const leg of STAND.legs) segment(leg, STAND.outlineHalf, line);
+  for (const leg of STAND.legs) segment(leg, STAND.legHalf, STAND.legCore);
+  for (let y = STAND.railTop; y <= STAND.railBottom; y++) {
+    const from = at(STAND.railFrom, y);
+    for (let x = STAND.railX0; x <= STAND.railX1; x++)
+      rgba.copyWithin(at(x, y), from, from + 4);
+  }
+  for (let y = STAND.railTop + 1; y < STAND.railBottom; y++) {
+    over(STAND.railX0 - 1, y, line, 1);
+    over(STAND.railX0 - 2, y, line, 0.45);
+  }
+}
+
+/**
+ * The sky (the open water of the dome, behind the title) made one flat,
+ * opaque light blue (the owner, 2026-10-29), in place of the source's dark
+ * cloud and the see-through patch in it. The dome's inner edge is measured
+ * (where the water begins, down the middle and across two rows), the blue
+ * is the mean of the water between the waves below, and each column is
+ * filled from the dome's edge (blended over its anti-aliased pixel) down to
+ * the first wave line.
+ */
+function flattenSky(image: Image) {
+  const { width, rgba } = image;
+  const at = (x: number, y: number) => (y * width + x) * 4;
+  const water = (x: number, y: number) =>
+    rgba[at(x, y) + 3]! >= 128 && rgba[at(x, y) + 1]! > 120;
+  let top = 0;
+  while (!water(BAND_PROBE_X, top)) top++;
+  const fits = SKY_ROWS.map((y) => {
+    let left = 0;
+    while (!water(left, y)) left++;
+    let right = width - 1;
+    while (!water(right, y)) right--;
+    const half = (right - left + 1) / 2;
+    const cx = (left + right) / 2;
+    const cy =
+      (half * half + y * y - (top - 0.5) ** 2) / (2 * (y - (top - 0.5)));
+    return { cx, cy };
+  });
+  const cx = fits.reduce((s, f) => s + f.cx, 0) / fits.length;
+  const cy = fits.reduce((s, f) => s + f.cy, 0) / fits.length;
+  const r = cy - (top - 0.5);
+
+  const sum = [0, 0, 0];
+  let n = 0;
+  for (let y = SKY_SAMPLE.y0; y <= SKY_SAMPLE.y1; y++)
+    for (let x = SKY_SAMPLE.x0; x <= SKY_SAMPLE.x1; x++) {
+      const i = at(x, y);
+      if (rgba[i + 3]! < 250 || rgba[i]! > 40) continue; // not a wave
+      for (let k = 0; k < 3; k++) sum[k]! += rgba[i + k]!;
+      n++;
+    }
+  const sky = sum.map((v) => Math.round(v / n));
+
+  for (let x = 0; x < width; x++)
+    for (let y = Math.max(0, Math.floor(cy - r)); y < WATER_BELOW; y++) {
+      const i = at(x, y);
+      const d = Math.hypot(x - cx, y - cy);
+      const cover = Math.min(1, Math.max(0, r - d + 0.5));
+      if (d < r && rgba[i + 3]! >= 128 && rgba[i]! > 45) break; // a wave
+      if (cover <= 0) continue;
+      const a = rgba[i + 3]! / 255;
+      const out = cover + a * (1 - cover);
+      for (let k = 0; k < 3; k++)
+        rgba[i + k] = Math.round(
+          (sky[k]! * cover + rgba[i + k]! * a * (1 - cover)) / out,
+        );
+      rgba[i + 3] = Math.round(out * 255);
+    }
+  console.info(
+    `sky rgb(${sky.join(', ')}); dome centre ${cx.toFixed(1)}, ${cy.toFixed(1)}, inner radius ${r.toFixed(1)}`,
+  );
+}
+
+/**
+ * The logo as one self-contained SVG (the owner, 2026-10-29): the finished
+ * roundel embedded as its PNG (still raster: no tracer is to hand), and
+ * over it the title as real SVG text, placed and sized as the title screen
+ * draws it (`title-logo.ts`, from `TITLE_TEXT`): Antonio Bold, embedded,
+ * white with the blue outline behind the fill and the black drop shadow,
+ * and its reflection still, a mirrored, darkened copy fading into the
+ * water above the tiles.
+ */
+function logoSvg(png: Buffer, { width, height }: Image) {
+  const t = TITLE_TEXT;
+  const font = readFileSync(FONT).toString('base64');
+  const reflectTop = t.baselineY + t.reflectionGapPx;
+  const reflectDepth = t.sizePx * t.reflectionScale;
+  const text = (attrs: string) => `<text x="0" y="0" ${attrs}>The Pool</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <title>The Pool</title>
+  <defs>
+    <style>
+      @font-face { font-family: "The Pool Title"; font-weight: 100 700; src: url(data:font/ttf;base64,${font}) format("truetype"); }
+      .title { font-family: "The Pool Title", "Arial Narrow", sans-serif; font-weight: 700; font-size: ${t.sizePx}px; text-anchor: middle; stroke-width: 11; stroke-linejoin: round; paint-order: stroke fill; }
+    </style>
+    <filter id="shadow" x="-10%" y="-30%" width="120%" height="160%">
+      <feDropShadow dx="3" dy="5" stdDeviation="3.5" flood-color="#000" flood-opacity="1"/>
+    </filter>
+    <linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="${reflectTop}" x2="0" y2="${reflectTop + reflectDepth}">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="1" stop-color="#000"/>
+    </linearGradient>
+    <mask id="reflection-fade" maskUnits="userSpaceOnUse" x="0" y="0" width="${width}" height="${height}">
+      <rect x="0" y="${reflectTop}" width="${width}" height="${Math.min(reflectDepth, LOGO_ART.waterBottom - reflectTop)}" fill="url(#fade)"/>
+    </mask>
+  </defs>
+  <image width="${width}" height="${height}" href="data:image/png;base64,${png.toString('base64')}"/>
+  <g mask="url(#reflection-fade)" opacity="${t.reflectionAlpha}">
+    ${text(`class="title" transform="translate(${LOGO_ART.centreX} ${reflectTop}) scale(1 ${-t.reflectionScale})" fill="#8f9eb0" stroke="#0a397d"`)}
+  </g>
+  ${text(`class="title" transform="translate(${LOGO_ART.centreX} ${t.baselineY})" fill="#fff" stroke="#0d47a1" filter="url(#shadow)"`)}
+</svg>
+`;
 }
 
 const probe = process.argv.findIndex((a) => a.startsWith('--probe'));
@@ -448,7 +649,16 @@ if (probe >= 0) {
 } else {
   const image = cropAndShrink();
   clearBackdrop(image);
-  closeUpperSection(image);
-  writeFileSync(OUT, encodePng(image));
+  flattenSky(image);
+  const line = closeUpperSection(image);
+  if (line.lift !== SECTION_LIFT_PX)
+    throw new Error(
+      `the keyline is ${line.lift} px: set SECTION_LIFT_PX in logic/title-logo.ts to match`,
+    );
+  completeFilterStand(image, line.colour);
+  const png = encodePng(image);
+  writeFileSync(OUT, png);
   console.info(`wrote ${OUT} (${image.width} × ${image.height})`);
+  writeFileSync(SVG_OUT, logoSvg(png, image));
+  console.info(`wrote ${SVG_OUT}`);
 }
