@@ -64,6 +64,7 @@ import {
   DAY_TANK,
   LECTERNS,
   LECTERN_Z,
+  TEST_KIT_X,
   NORTH,
   OD,
   PANEL_Y,
@@ -623,7 +624,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     tag: shortTag('testKit'),
     test: () => act({ type: 'test' }),
   });
-  turnTo(kitTk.group, PLACES.sampleCell.x - 0.9, 0, PLANT_EDGE + 0.4, 0);
+  turnTo(kitTk.group, TEST_KIT_X, 0, LECTERN_Z, 0);
   object.add(
     markComponent(kitTk.group, {
       name: `${TAGS['testKit']} DPD test kit`,
@@ -640,7 +641,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     kitTk.show(state().test);
     kitTk.parts.update(delta);
   });
-  footprint(PLACES.sampleCell.x - 0.9, PLANT_EDGE + 0.4, 0.3);
+  footprint(TEST_KIT_X, LECTERN_Z, 0.3);
 
   const faults = createFaultPedestal(kit, {
     tag: shortTag('faults'),

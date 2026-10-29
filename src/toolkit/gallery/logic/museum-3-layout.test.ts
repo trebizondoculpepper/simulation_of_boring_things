@@ -93,4 +93,17 @@ describe('Hall 3’s lecterns, seen from the visitors’ floor', () => {
         }
     expect(blocked).toEqual([]);
   });
+
+  it('stands the test kit clear of every lectern and column', async () => {
+    const { LECTERNS, LECTERN_Z, TEST_KIT_X } =
+      await import('./museum-3-layout');
+    const { hallColumns } = await import('./museum-plan');
+    for (const [station, x] of Object.entries(LECTERNS))
+      expect(Math.abs(x - TEST_KIT_X), `lectern ${station}`).toBeGreaterThan(
+        0.6,
+      );
+    for (const c of hallColumns('museum3'))
+      if (Math.abs(c.z - LECTERN_Z) < 0.6)
+        expect(Math.abs(c.x - TEST_KIT_X)).toBeGreaterThan(0.6);
+  });
 });

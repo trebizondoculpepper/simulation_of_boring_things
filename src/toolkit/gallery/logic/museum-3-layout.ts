@@ -495,3 +495,10 @@ export const LECTERNS: Record<number, number> = {
   6: PLACES.sampleCell.x - 2.1,
   7: W + 6.7,
 };
+
+/**
+ * The DPD test kit's place on the lecterns' line: just west of its own
+ * placard (station 6), clear of every other lectern and column (2026-10-29:
+ * it had stood where lectern 2, The sample, moved to).
+ */
+export const TEST_KIT_X = LECTERNS[6] - 0.8;
