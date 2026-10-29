@@ -12,6 +12,7 @@ import {
   lidPose,
   lookAt,
   pickAnother,
+  pickFind,
 } from './skimmer-cinematic';
 
 /** Standing 1.5 m south of the skimmer, looking at it. */
@@ -137,5 +138,16 @@ describe('dev53’s skimmer cinematic', () => {
         expect(pickAnother(5, last, () => r)).not.toBe(last);
     expect(pickAnother(5, -1, () => 0.999)).toBe(3);
     expect(pickAnother(1, 0, () => 0.5)).toBe(0);
+  });
+
+  it('pulls more hair only after the hair', () => {
+    const ids = ['hair-clump', 'leaves', 'more-hair'];
+    for (const r of [0, 0.3, 0.6, 0.99])
+      expect(pickFind(ids, -1, new Set(), () => r)).not.toBe(2);
+    const seen = new Set<number>();
+    for (const r of [0, 0.3, 0.6, 0.99])
+      seen.add(pickFind(ids, 1, new Set(['hair-clump']), () => r));
+    expect(seen.has(2)).toBe(true);
+    expect(seen.has(1)).toBe(false);
   });
 });

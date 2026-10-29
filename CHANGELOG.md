@@ -4,6 +4,10 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Skimmer reveal: the big-item cue and the fanfare now take turns, reveal by reveal (more hair keeps its deflated fanfare), in Hall 5 and dev53.
+
+- Dev53: six more finds on trial beside Hall 5's six, at random: a dead frog, a used plaster, a pair of hoop earrings and a bottle cap from free models (credited in `CREDITS.md`, files in `resources/models/skimmer/`), and the project's own swimming goggles and crisp packet. More hair comes out only once the hair has.
+
 - The aiming reticle is slightly larger and has a light ring with a dark outer edge, so it stays visible against pale surfaces; the amber aim and green acceptance rings keep that edge, and the red rejection cross has a dark outline.
 
 - Museum, Hall 5 (and dev53): the hair finds are matte, not glossy, and their matted core is a felt of fine crossing strands.

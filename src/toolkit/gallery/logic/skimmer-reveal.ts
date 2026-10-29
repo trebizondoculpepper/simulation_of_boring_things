@@ -1,5 +1,3 @@
-import type { FindId } from './museum-5-skimmer';
-
 /**
  * The skimmer's item reveal (the owner, 2026-10-29), a parody of the
  * treasure-chest moment in a 1990s 3D adventure game: reaching into the
@@ -88,9 +86,17 @@ export function revealFrame(
   return { phase: 'done', pitch: from, size: 0, spin: 0, banner: false };
 }
 
-/** The cue a find appears to: the big-item reveal; the last, more hair, a deflated fanfare. */
-export const fanfareOf = (id: FindId) =>
-  id === 'more-hair' ? 'reveal-fanfare-deflated' : 'reveal-big-item';
+/**
+ * The cue a find appears to (the owner, 2026-10-29): the big-item reveal
+ * and the fanfare by turns, the `n`th reveal (from 0) the big item when
+ * even; the last, more hair, a deflated fanfare.
+ */
+export const fanfareOf = (id: string, n: number) =>
+  id === 'more-hair'
+    ? 'reveal-fanfare-deflated'
+    : n % 2 === 0
+      ? 'reveal-big-item'
+      : 'reveal-fanfare';
 
 /** The banner's words. */
 export const bannerLine = (got: string) => `You got ${got}!`;

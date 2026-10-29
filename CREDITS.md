@@ -14,6 +14,17 @@ The six Still Water Garden MP3s in `resources/sound/music/jacuzzi/` were supplie
 
 `reveal-suspense.mp3` was made on 2026-10-29 with ACE-Step 1.5's cover mode from the opening of [Hari Sivan's piano rendition of Open Treasure Chest & Item Catch](https://www.youtube.com/watch?v=i3yV2xbJs6Q); the exact cut is in the adjacent ACE-Step workspace's `work/projects/item-get-resynthesis/split_chest_piano.py`. `reveal-fanfare.mp3` and the optional `reveal-big-item.mp3` use earlier ACE-Step covers of [mrpianoman's piano cover](https://www.youtube.com/watch?v=Dq4uIlQI3A0), cut by `split_piano_cover.py` in the same workspace. These cues retain material from their piano performances and the underlying _Ocarina of Time_ music; permission to distribute them has not been established. `reveal-fanfare-deflated.mp3` and `skimmer-cleared.mp3` are this project's original direct synthesis from `resources/sound/music/item-reveal/generate.py`, without a recording, sample, existing melody or reference audio. The folder's README has the timings and encoding.
 
+## Skimmer finds: models
+
+Four of the things found in the skimmer (`resources/models/skimmer/`, tried in dev53, `src/toolkit/gallery/logic/skimmer-extras.ts`) are other people's models, downloaded unchanged from [Poly Pizza](https://poly.pizza) on 2026-10-29; the game only scales them to true size and, for the frog, turns it on its back.
+
+- `dead-frog.glb`: [Frog](https://poly.pizza/m/9Z2V8fpazF) by Quaternius, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+- `plaster.glb`: [Bandage](https://poly.pizza/m/1NDBCuuP_W4) by Poly by Google, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+- `earring.glb`: [Hoop Earrings](https://poly.pizza/m/e0bs2OQ8rzJ) by Jarlan Perez, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+- `bottle-cap.glb`: [Bottlecap](https://poly.pizza/m/7HsR9BPZpi6) by Poly by Google, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+
+The goggles and the crisp packet, like Hall 5's own six finds, are the project's own models (`src/toolkit/gallery/rooms/museum/hall-5-extra-finds.ts`, `hall-5-finds.ts`).
+
 ## The bridge's ambience: original synthesis
 
 The bridge's room tone (`src/toolkit/components/sound/audio/bridge-ambience.ts`, `src/toolkit/components/sound/logic/bridge-ambience.ts`, mission 095) is the project's own work, synthesised live in Web Audio from oscillators, generated noise, filters and a seeded chirp scheduler. No recording is sampled, copied or downloaded: nothing from Star Trek or any upload taken from it. It was written in the spirit of the Next Generation bridge's background, from published descriptions of it. For character only, not sampled: the description of [control_room.wav](https://freesound.org/people/Diboz/sounds/211683/) by [Diboz](https://freesound.org/people/Diboz/) (CC0), "ambient sound akin to the bridge of a starship".

@@ -34,12 +34,12 @@ import {
   createRenderer,
   useEnvironment,
 } from '../../components/core/parts/render-style';
-import { bannerLine } from '../logic/skimmer-reveal';
+import { bannerLine, fanfareOf } from '../logic/skimmer-reveal';
 import {
   LENS_50_FOV,
   cinematicFrame,
   lidPose,
-  pickAnother,
+  pickFind,
 } from '../logic/skimmer-cinematic';
 import type { CinematicPhase, Pose } from '../logic/skimmer-cinematic';
 import { createSkimmerCaustics } from '../views/skimmer-caustics';
@@ -49,7 +49,8 @@ import { createSkimmerWell, drawOver } from '../views/skimmer-well';
 import { revealCue } from './museum/hall-5-reveal-music';
 import { createFindProps } from './museum/hall-5-finds';
 import { FINDS } from '../logic/museum-5-skimmer';
-import type { Find } from '../logic/museum-5-skimmer';
+import { EXTRA_FINDS } from '../logic/skimmer-extras';
+import { createExtraFinds } from './museum/hall-5-extra-finds';
 import { createPortableBoard } from '../../controls/logic/portable-board';
 import { createDropProfile } from '../../controls/logic/drop-profile';
 import type { PortableObject } from '../../controls/input/object-handling';
@@ -70,6 +71,13 @@ const FIND_SCALE = 1.6;
 /** The field of view the banner's place is set for, degrees: it keeps its size on screen through the zoom. */
 const BANNER_FOV = 62;
 const SANS = 'Arial, Helvetica, sans-serif';
+/** A find the film can show: its banner's words, its caption, and a fresh one of it (null while its model loads). */
+interface Find {
+  id: string;
+  got: string;
+  caption: string;
+  prop: () => Group | null;
+}
 const GOLD = '#ffc44a';
 
 /** A seeded random number generator (mulberry32). */
@@ -196,9 +204,21 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   // ---- The finds: Hall 5's, one at random each time ------------------------
   // Each film's is a fresh one (`hall-5-finds.ts`), shown turning, then
   // handed over: a portable thing, to be carried off or dropped.
+  // Hall 5's six and the further finds on trial (`skimmer-extras.ts`),
+  // these from models still loading at first.
   const propOf = createFindProps(t, kit.materials);
-  const makeFind = (find: Find) => {
-    const prop = propOf(find.id);
+  const extras = createExtraFinds(t);
+  const POOL: readonly Find[] = [
+    ...FINDS.map((f) => ({ ...f, prop: () => propOf(f.id) })),
+    ...EXTRA_FINDS.map((f) => ({ ...f, prop: () => extras.propOf(f) })),
+  ];
+  /** The next film's find, by id, chosen (`devSkimmer.choose`), or null for chance. */
+  let nextFind: string | null = null;
+  /** Every find shown so far, for those that come only after another (`pickFind`). */
+  const found = new Set<string>();
+  /** How many films have run, for the cues' turns (`fanfareOf`). */
+  let films = 0;
+  const makeFind = (find: Find, prop: Group) => {
     const pivot = new Group();
     prop.updateMatrixWorld(true);
     const box = new Box3().setFromObject(prop);
@@ -308,9 +328,26 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
       held.removeFromParent();
     }
     const pose = walk.pose();
-    const pick = pickAnother(FINDS.length, lastFind, random);
+    const chosen = POOL.findIndex((f) => f.id === nextFind);
+    nextFind = null;
+    let pick =
+      chosen >= 0
+        ? chosen
+        : pickFind(
+            POOL.map((f) => f.id),
+            lastFind,
+            found,
+            random,
+          );
+    // One whose model is still loading gives way to the first of the hall's.
+    let prop = POOL[pick].prop();
+    if (!prop) {
+      pick = 0;
+      prop = POOL[0].prop()!;
+    }
     lastFind = pick;
-    const find = makeFind(FINDS[pick]);
+    found.add(POOL[pick].id);
+    const find = makeFind(POOL[pick], prop);
     film = {
       t: 0,
       start: {
@@ -355,7 +392,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
       film.phase = f.phase;
       // The find out, the sludge with it: the basket left clean.
       if (f.phase === 'reveal') {
-        partAudio.play(revealCue('reveal-big-item'), voice);
+        partAudio.play(revealCue(fanfareOf(film.find.find.id, films++)), voice);
         well.sludge(false);
       }
       // Back where the walker stood, looking at the skimmer as the lid
@@ -497,6 +534,12 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     sludge: (dirty: boolean) => well.sludge(dirty),
     /** How many things are in the skip. */
     inSkip: () => skip.filled,
+    /** Choose the next film's find, by id. */
+    choose(id: string) {
+      nextFind = id;
+    },
+    /** Every find the film can show, by id. */
+    finds: () => POOL.map((f) => f.id),
     /** What the walker holds, by name, or null. */
     held: () => walk.hands?.holding()?.name ?? null,
     /** Where the film is: its phase and time, or null. */

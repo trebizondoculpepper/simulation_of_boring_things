@@ -47,9 +47,14 @@ describe('the skimmer’s item reveal', () => {
     expect(revealFrame(4.9, 0, timing).phase).toBe('fanfare');
   });
 
+  it('alternates the big-item cue and the fanfare', () => {
+    expect(fanfareOf('hair-clump', 0)).toBe('reveal-big-item');
+    expect(fanfareOf('leaves', 1)).toBe('reveal-fanfare');
+    expect(fanfareOf('dead-rat', 2)).toBe('reveal-big-item');
+  });
+
   it('deflates the fanfare for more hair', () => {
-    expect(fanfareOf('dead-rat')).toBe('reveal-big-item');
-    expect(fanfareOf('more-hair')).toBe('reveal-fanfare-deflated');
+    expect(fanfareOf('more-hair', 5)).toBe('reveal-fanfare-deflated');
     expect(bannerLine('a DEAD RAT')).toBe('You got a DEAD RAT!');
   });
 });

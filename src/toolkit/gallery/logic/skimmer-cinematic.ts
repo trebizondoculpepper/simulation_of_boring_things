@@ -245,3 +245,22 @@ export function pickAnother(count: number, last: number, random: () => number) {
   const k = Math.floor(random() * (count - 1));
   return last >= 0 && k >= last ? k + 1 : k;
 }
+
+/**
+ * The next find, by index into `ids`, at random but never `last` again:
+ * one with a prerequisite (`after`: more hair after the hair) only once
+ * that has been `found` (the owner, 2026-10-29).
+ */
+export function pickFind(
+  ids: readonly string[],
+  last: number,
+  found: ReadonlySet<string>,
+  random: () => number,
+  after: Readonly<Record<string, string>> = { 'more-hair': 'hair-clump' },
+) {
+  const open = ids
+    .map((id, i) => ({ id, i }))
+    .filter(({ id }) => !after[id] || found.has(after[id]));
+  const at = open.findIndex(({ i }) => i === last);
+  return open[pickAnother(open.length, at, random)].i;
+}

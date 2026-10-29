@@ -800,7 +800,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     if (f.phase !== reveal.phase) {
       reveal.phase = f.phase;
       if (f.phase === 'fanfare')
-        partAudio.play(revealCue(fanfareOf(game.order[i])), voice);
+        partAudio.play(revealCue(fanfareOf(game.order[i], i)), voice);
       if (f.phase === 'settle') {
         // Into the hands, life size, to be carried to the skip.
         prop.scale.setScalar(FIND_SCALE);
