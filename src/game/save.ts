@@ -270,6 +270,9 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
       : world.bridgeConsoles;
     return { ...world, distribution, bridgeConsoles: consoles };
   },
+  // 59 → 60: the freight lift (mission 108): at B2, its doors shut,
+  // nobody calling (`fillDefaults` adds it).
+  59: (world) => world,
   // 58 → 59: each pool's dosing pumps as real metering pumps (prompt
   // 102), new and primed (`fillDefaults` adds them).
   58: (world) => world,

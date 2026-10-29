@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- The freight lift's logic (mission 108, stage 1): its floor list (B2 the plant corridor, G reception not yet built, 3 the bridge, 4 the museum), a goods lift's state machine under collective control (landing and car calls lit until answered, a 3 s dwell after a car call and 5 s after a landing call, the light curtain reopening the doors, nudging shut with a buzzer when held 20 s, a warning tone before closing), and a ride never under 7 s that waits short of a floor until its room reports ready, so the walker never sees it load; in the world as `lift` (`WORLD_VERSION` 60), with `lift/call`, `lift/press`, `lift/hold` and `lift/ready`.
 - Museum, Hall 5: the skimmer's lectern is gone; the orange floor arrow pointing at the skimmer now reads TRY ME (`floorArrowTexture` takes a label). The lifeguard's chair (its rungs read as a pool ladder) and the lost property box are gone too.
 
 ## [0.6.0] - 2026-10-29

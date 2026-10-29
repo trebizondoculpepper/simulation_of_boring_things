@@ -291,8 +291,20 @@ import type { AlarmId } from '../toolkit/gallery/logic/control-room-demo';
 import { plantReadingOf } from '../toolkit/gallery/logic/world-reading';
 import { chooseConsole, newBridgeConsoles } from './bridge-consoles';
 import type { ConsoleChoice } from './bridge-consoles';
+import {
+  callLift,
+  holdLift,
+  liftReady,
+  newLift,
+  pressLift,
+  stepLift,
+} from '../toolkit/gallery/logic/freight-lift';
+import type {
+  LiftButton,
+  LiftState,
+} from '../toolkit/gallery/logic/freight-lift';
 
-export const WORLD_VERSION = 59;
+export const WORLD_VERSION = 60;
 
 /**
  * Where the main corridor's control room doors lead (the owner,
@@ -434,6 +446,11 @@ export interface World {
    * the main viewscreen's, chosen from Central Control, among them.
    */
   bridgeConsoles: Record<string, ConsoleChoice>;
+  /**
+   * The freight lift (mission 108): where its car is, its doors, its
+   * calls and its trip (`freight-lift.ts`).
+   */
+  lift: LiftState;
 }
 
 export function newWorld(): World {
@@ -480,6 +497,7 @@ export function newWorld(): World {
     annunciator: newAnnunciator(),
     locationAnnunciators: newLocationAnnunciators(),
     bridgeConsoles: newBridgeConsoles(),
+    lift: newLift(),
   };
 }
 
@@ -550,6 +568,11 @@ export type WorldAction =
   | { type: 'booster/changeover'; action: ChangeoverAction }
   /** The CONTROL ROOM MODE knob turned: where the control room doors lead. */
   | { type: 'control-room/mode'; mode: ControlRoomMode }
+  /** The freight lift (mission 108): a landing's call, a car button, the doorway held, the floor ahead built. */
+  | { type: 'lift/call'; floor: string }
+  | { type: 'lift/press'; button: LiftButton }
+  | { type: 'lift/hold'; held: boolean }
+  | { type: 'lift/ready'; floor: string }
   | { type: 'bridge/theme-heard' }
   /** The bridge's displays switched on or off (`bridgeDisplaysOn`). */
   | { type: 'bridge/displays'; on: boolean }
@@ -939,6 +962,20 @@ export function applyAction(world: World, action: WorldAction): World {
         ? world
         : { ...world, plant: { ...world.plant, changeover } };
     }
+    case 'lift/call':
+    case 'lift/press':
+    case 'lift/hold':
+    case 'lift/ready': {
+      const lift =
+        action.type === 'lift/call'
+          ? callLift(world.lift, action.floor)
+          : action.type === 'lift/press'
+            ? pressLift(world.lift, action.button)
+            : action.type === 'lift/hold'
+              ? holdLift(world.lift, action.held)
+              : liftReady(world.lift, action.floor);
+      return lift === world.lift ? world : { ...world, lift };
+    }
     case 'control-room/mode':
       return world.controlRoomMode === action.mode
         ? world
@@ -1063,7 +1100,8 @@ export function stepWorld(world: World, delta: number): World {
     },
     delta,
   );
-  const stepped = { ...next, plant, intake };
+  const lift = stepLift(world.lift, delta);
+  const stepped = { ...next, plant, intake, lift };
   // The annunciator senses the plant's alarms, whichever room the walker
   // is in (the reading is kept for the displays that read it after).
   const annunciator = senseAlarms(
