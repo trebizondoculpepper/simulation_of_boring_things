@@ -98,5 +98,19 @@ export const fanfareOf = (id: string, n: number) =>
       ? 'reveal-big-item'
       : 'reveal-fanfare';
 
+/**
+ * The cue a film plays to: a find's (`fanfareOf`), or, with the basket
+ * empty (`null`), the small-item fanfare (the owner, 2026-10-29), the
+ * same film moment with nothing in it.
+ */
+export const revealCueOf = (id: string | null, n: number) =>
+  id === null ? 'reveal-fanfare' : fanfareOf(id, n);
+
+/** The banner shown when the film finds the basket empty, and its line beneath. */
+export const EMPTY_BANNER = {
+  headline: 'THE BASKET IS EMPTY',
+  caption: 'Nothing left in it. The skimmer is clear.',
+};
+
 /** The banner's words. */
 export const bannerLine = (got: string) => `You got ${got}!`;

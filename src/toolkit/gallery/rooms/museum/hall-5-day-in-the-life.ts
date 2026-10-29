@@ -43,7 +43,11 @@ import {
   newSkimmerGame,
 } from '../../logic/museum-5-skimmer';
 import type { SkimmerAction, SkimmerGame } from '../../logic/museum-5-skimmer';
-import { bannerLine, fanfareOf } from '../../logic/skimmer-reveal';
+import {
+  bannerLine,
+  EMPTY_BANNER,
+  revealCueOf,
+} from '../../logic/skimmer-reveal';
 import { filmStep, skimmerFilmUrl } from '../../logic/skimmer-film-url';
 import {
   LENS_50_FOV,
@@ -773,7 +777,8 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   // the walker's own eye as the lid goes on, the find in hand
   // (`skimmer-cinematic.ts`).
   let film: {
-    index: number;
+    /** The find shown, or null: the basket empty, its banner says so. */
+    index: number | null;
     t: number;
     start: Pose;
     phase: CinematicPhase;
@@ -795,8 +800,8 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   banner.mesh.visible = false;
   object.add(banner.mesh);
   noRay(banner.mesh);
-  const drawBanner = (i: number) => {
-    const find = findOf(game.order[i]);
+  const drawBanner = (i: number | null) => {
+    const find = i === null ? null : findOf(game.order[i]);
     const c = banner.context;
     const { width: w, height: h } = c.canvas;
     c.clearRect(0, 0, w, h);
@@ -808,10 +813,15 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     c.fillStyle = '#ffe9a0';
     c.font = `bold ${h * 0.24}px ${SANS}`;
     c.textAlign = 'center';
-    c.fillText(bannerLine(find.got), w / 2, h * 0.34, w * 0.9);
+    c.fillText(
+      find ? bannerLine(find.got) : EMPTY_BANNER.headline,
+      w / 2,
+      h * 0.34,
+      w * 0.9,
+    );
     c.fillStyle = '#ffffff';
     c.font = `${h * 0.15}px ${SANS}`;
-    wrapText(c, find.caption, w * 0.88)
+    wrapText(c, find ? find.caption : EMPTY_BANNER.caption, w * 0.88)
       .slice(0, 3)
       .forEach((l, n) => c.fillText(l, w / 2, h * (0.58 + n * 0.17)));
     c.textAlign = 'left';
@@ -827,7 +837,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
       Math.sin(pitch),
       -Math.cos(yaw) * Math.cos(pitch),
     );
-  const startFilm = (i: number, cam: Camera) => {
+  const startFilm = (i: number | null, cam: Camera) => {
     if (!view?.film) return false;
     const at = object.worldToLocal(cam.getWorldPosition(new Vector3()));
     const into = object.getWorldQuaternion(new Quaternion()).invert();
@@ -844,12 +854,16 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
       },
       phase: 'suspense',
       fov: (cam as PerspectiveCamera).fov,
-      portable: props[i].userData.portable as PortableObject | undefined,
+      portable:
+        i === null
+          ? undefined
+          : (props[i].userData.portable as PortableObject | undefined),
     };
-    delete props[i].userData.portable;
+    if (i !== null) delete props[i].userData.portable;
     view.hold(true);
     well.open(true);
-    well.sludge(true);
+    // Empty, the basket is clean: nothing comes out of the sludge.
+    well.sludge(i !== null);
     partAudio.play(revealCue('reveal-suspense'), voice);
     drawBanner(i);
     return true;
@@ -871,7 +885,8 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   };
   const endFilm = () => {
     if (!film) return;
-    if (film.portable) props[film.index].userData.portable = film.portable;
+    if (film.portable && film.index !== null)
+      props[film.index].userData.portable = film.portable;
     film = null;
     banner.mesh.visible = false;
     caustics.update(0, 0, 0);
@@ -885,15 +900,24 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     film.t += filmStep(filmUrl, delta);
     const f = cinematicFrame(film.t, film.start);
     const i = film.index;
-    const prop = props[i];
+    const prop = i === null ? null : props[i];
     if (f.phase !== film.phase) {
       film.phase = f.phase;
       // The find out, the sludge with it: the basket left clean.
       if (f.phase === 'reveal') {
-        partAudio.play(revealCue(fanfareOf(game.order[i], i)), voice);
+        partAudio.play(
+          revealCue(revealCueOf(i === null ? null : game.order[i], i ?? 0)),
+          voice,
+        );
         well.sludge(false);
       }
-      if (f.phase === 'replace') handOver(i);
+      if (f.phase === 'replace') {
+        if (i !== null) handOver(i);
+        else {
+          game = { ...game, lid: { at: 'on' } };
+          refresh();
+        }
+      }
       if (f.phase === 'done') {
         endFilm();
         return;
@@ -903,7 +927,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     caustics.update(film.t, f.rise, f.glow);
     well.glow(f.glow);
     banner.mesh.visible = f.banner && cam !== null;
-    if (f.phase === 'suspense' || f.phase === 'reveal')
+    if (prop && (f.phase === 'suspense' || f.phase === 'reveal'))
       prop.visible = f.size > 0;
     if (!cam) return;
     const fov = film.fov + (LENS_50_FOV - film.fov) * f.zoom;
@@ -926,7 +950,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
         fov,
       });
     }
-    if (f.size > 0 && f.rest) {
+    if (prop && i !== null && f.size > 0 && f.rest) {
       // Where the whip comes to rest, before the eye, turning.
       const r = f.rest;
       const d = toward(r.yaw, r.pitch);
@@ -1040,9 +1064,12 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     g = actOnSkimmer(g, { type: 'skimmer' });
     const now = held(g);
     if (typeof now !== 'number' || now === was) {
-      // Nothing left in it: said so, and the lid stays on.
+      // Nothing left in it: said so, and the lid stays on; walked in,
+      // the same film, its banner saying the basket is empty (the owner,
+      // 2026-10-29), nothing counted or handed over.
       game = { ...g, lid: { at: 'on' } };
       refresh();
+      if (hands && eye) startFilm(null, eye);
       return;
     }
     game = g;

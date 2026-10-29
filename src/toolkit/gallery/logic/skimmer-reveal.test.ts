@@ -4,6 +4,7 @@ import {
   REVEAL,
   bannerLine,
   fanfareOf,
+  revealCueOf,
   revealFrame,
 } from './skimmer-reveal';
 
@@ -56,5 +57,14 @@ describe('the skimmer’s item reveal', () => {
   it('deflates the fanfare for more hair', () => {
     expect(fanfareOf('more-hair', 5)).toBe('reveal-fanfare-deflated');
     expect(bannerLine('a DEAD RAT')).toBe('You got a DEAD RAT!');
+  });
+});
+
+describe('revealCueOf', () => {
+  it('plays the small-item fanfare for an empty basket, a find its own', () => {
+    expect(revealCueOf(null, 0)).toBe('reveal-fanfare');
+    expect(revealCueOf(null, 1)).toBe('reveal-fanfare');
+    expect(revealCueOf('hair-clump', 0)).toBe('reveal-big-item');
+    expect(revealCueOf('more-hair', 5)).toBe('reveal-fanfare-deflated');
   });
 });
