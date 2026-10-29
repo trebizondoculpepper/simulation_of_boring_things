@@ -5,6 +5,7 @@ import {
   SIGN_CUTOFFS,
   letteringShown,
   signStep,
+  smallestReadable,
   mayRefresh,
   withinRoomLimits,
   DISPLAY_REACH,
@@ -106,17 +107,34 @@ describe('display reach', () => {
     expect(mayRefresh(DISPLAY_PROFILES.printed, 0, 1)).toBe(true);
   });
 
+  const view = (metres: number, offNormal: number | null = 0) => ({
+    metres,
+    fov: 60,
+    zoom: 1,
+    screenPixels: 1000,
+    offNormal,
+  });
+
   it('shows a big title from much further than small print', () => {
-    // 0.1 degrees: 10 cm lettering from about 57 m, 1 cm from about 5.7 m.
-    const at = (metres: number) => SIGN_CUTOFFS[signStep(0, metres)];
-    expect(letteringShown(at(40), 'bold 100px Arial', 1000)).toBe(true);
-    expect(letteringShown(at(40), '10px Arial', 1000)).toBe(false);
-    expect(letteringShown(at(3), '10px Arial', 1000)).toBe(true);
+    const at = (metres: number) =>
+      SIGN_CUTOFFS[signStep(0, smallestReadable(view(metres)))];
+    expect(letteringShown(at(15), 'bold 100px Arial', 1000)).toBe(true);
+    expect(letteringShown(at(15), '10px Arial', 1000)).toBe(false);
+    expect(letteringShown(at(1), '10px Arial', 1000)).toBe(true);
+  });
+
+  it('needs bigger lettering seen obliquely or on a smaller screen', () => {
+    expect(smallestReadable(view(10, 70))).toBeGreaterThan(
+      smallestReadable(view(10, 0)),
+    );
+    expect(smallestReadable({ ...view(10), screenPixels: 500 })).toBeCloseTo(
+      smallestReadable(view(10)) * 2,
+    );
   });
 
   it('loses detail only once past a step', () => {
-    const near = signStep(0, 10);
-    expect(signStep(near, 10)).toBe(near);
-    expect(signStep(0, 400)).toBe(SIGN_CUTOFFS.length - 1);
+    const near = signStep(0, 0.03);
+    expect(signStep(near, 0.03)).toBe(near);
+    expect(signStep(0, 10)).toBe(SIGN_CUTOFFS.length - 1);
   });
 });

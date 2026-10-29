@@ -178,30 +178,51 @@ export function meanColour(data: ArrayLike<number>): string {
 }
 
 /**
- * Which lettering of a static sign is drawn (the owner, 2026-10-29: "a
- * function of the font size and the angle subtended"): lettering is drawn
- * once it subtends `SIGN_MIN_ARC` degrees (its font's size on the sign,
- * seen from where the eye is), so a big title shows from across a hall
- * and small print only close to; a sign too far for any of its lettering
- * shows only its regions of colour. The smallest size drawn is stepped on
- * `SIGN_CUTOFFS` (metres), each step one drawing of the sign.
+ * Which lettering of a static sign is drawn (the owner, 2026-10-29: never
+ * worth drawing a line of text that covers too few pixels on the screen,
+ * which depends on the screen, the view and the angle it is seen at, not
+ * on a fixed distance): lettering is drawn once its height would cover
+ * `SIGN_MIN_PIXELS` on the screen, seen as it is (its distance, the
+ * camera's field of view and zoom, the screen's height in pixels, and how
+ * obliquely its face is seen); a sign whose lettering would all be
+ * smaller shows only its regions of colour. The smallest size drawn is
+ * stepped on `SIGN_CUTOFFS` (metres), each step one drawing of the sign.
  */
-export const SIGN_MIN_ARC = 0.1;
+export const SIGN_MIN_PIXELS = 5;
 export const SIGN_CUTOFFS = [0, 0.005, 0.01, 0.02, 0.04, 0.08, 0.16, 0.32];
 
-/** The smallest lettering (metres) that subtends enough from `metres` away. */
-export function smallestReadable(metres: number): number {
-  return metres * Math.tan((SIGN_MIN_ARC * Math.PI) / 180);
+/** How a sign is seen, for its lettering. */
+export interface SignView {
+  metres: number;
+  /** The camera's vertical field of view, degrees, and zoom. */
+  fov: number;
+  zoom: number;
+  /** The screen's height, pixels. */
+  screenPixels: number;
+  /** Degrees off its face's normal, or null if it has no flat face. */
+  offNormal: number | null;
+}
+
+/** The smallest lettering (metres) that covers `SIGN_MIN_PIXELS` on the screen, seen so. */
+export function smallestReadable(v: SignView): number {
+  const halfHeight =
+    (v.metres * Math.tan((v.fov * Math.PI) / 360)) / Math.max(v.zoom, 1e-6);
+  const pixelsPerMetre = v.screenPixels / (2 * halfHeight);
+  const slant =
+    v.offNormal === null
+      ? 1
+      : Math.max(0.05, Math.cos((Math.min(v.offNormal, 90) * Math.PI) / 180));
+  return SIGN_MIN_PIXELS / (pixelsPerMetre * slant);
 }
 
 /**
- * The step of `SIGN_CUTOFFS` a sign is drawn at from `metres` away, given
- * the step it was at: the largest cutoff not above the smallest readable
- * size (so it shows a little more, never less, than can be read); going
- * to less detail only once 15% past a step, so it does not flicker there.
+ * The step of `SIGN_CUTOFFS` a sign is drawn at, needing lettering of
+ * `need` metres to be read, given the step it was at: the largest cutoff
+ * not above `need` (so it shows a little more, never less, than can be
+ * read); going to less detail only once 15% past a step, so it does not
+ * flicker there.
  */
-export function signStep(was: number, metres: number): number {
-  const need = smallestReadable(metres);
+export function signStep(was: number, need: number): number {
   let step = 0;
   for (let k = 0; k < SIGN_CUTOFFS.length; k++)
     if (SIGN_CUTOFFS[k] <= need) step = k;

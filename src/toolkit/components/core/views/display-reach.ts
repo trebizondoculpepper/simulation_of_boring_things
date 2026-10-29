@@ -5,6 +5,7 @@ import type {
   CanvasTexture,
   Material,
   Object3D,
+  PerspectiveCamera,
 } from 'three';
 import { METRE } from '../logic/units';
 import type {
@@ -19,6 +20,7 @@ import {
   SIGN_CUTOFFS,
   letteringShown,
   signStep,
+  smallestReadable,
   mayRefresh,
   withinRoomLimits,
   meanColour,
@@ -309,7 +311,7 @@ function scan(scene: Scene, s: SceneWatch) {
   });
 }
 
-function check(scene: Scene, camera: Camera) {
+function check(scene: Scene, camera: Camera, screenPixels: number) {
   for (const w of waiting) refresh(w);
   const now = performance.now();
   let s = scenes.get(scene);
@@ -332,12 +334,22 @@ function check(scene: Scene, camera: Camera) {
   camera.getWorldPosition(eye);
   for (const [sign, objects] of s.signs) {
     if (displayIsLive(sign.texture)) continue;
-    let nearest = Infinity;
+    // The finest lettering any of its faces needs, seen as it is.
+    let need = Infinity;
     for (const o of objects) {
-      at.setFromMatrixPosition(o.matrixWorld);
-      nearest = Math.min(nearest, eye.distanceTo(at) / METRE);
+      const seen = sighting(o);
+      need = Math.min(
+        need,
+        smallestReadable({
+          metres: seen.metres,
+          fov: (camera as PerspectiveCamera).fov ?? 60,
+          zoom: (camera as PerspectiveCamera).zoom ?? 1,
+          screenPixels,
+          offNormal: seen.offNormal,
+        }),
+      );
     }
-    const step = signStep(sign.step, nearest);
+    const step = signStep(sign.step, need);
     // As for displays: a sighting holds a while, so another renderer
     // seeing it from further off does not take its detail away at once.
     if (step <= sign.step) {
@@ -403,7 +415,7 @@ function install() {
   // `render` is its own, not its prototype's, so it cannot be wrapped).
   const before = Scene.prototype.onBeforeRender;
   Scene.prototype.onBeforeRender = function (...args) {
-    check(this, args[2]);
+    check(this, args[2], args[0].domElement.height);
     before.apply(this, args);
   };
 }
