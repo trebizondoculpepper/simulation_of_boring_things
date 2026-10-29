@@ -10,6 +10,10 @@ The program is licensed under the GNU General Public License, version 3 or later
 
 The six Still Water Garden MP3s in `resources/sound/music/jacuzzi/` were supplied by the owner on 2026-10-24, unchanged from their Downloads folder. Their filenames identify Treblo as the artist. The tracks are Bamboo and Morning Mist, Glass Water Garden, Pavilion at First Light, Petals on Slow Water, Softly, Slowly Rising and The Weightless Hour. They are used only for the jacuzzi programme. Licence and additional provenance have not been specified; the software's GPL notice does not establish a separate licence for these recordings.
 
+## Skimmer item-reveal music: original synthesis
+
+The four cues in `resources/sound/music/item-reveal/` were made for this project on 2026-10-29 by direct additive synthesis from an original score, following `doc/prompts/music/item_reveal/item-reveal-prompts.md`. `resources/sound/music/item-reveal/generate.py` is the complete generator; the folder's README records the file timings and encoding. No music model, source recording, sample, existing melody or reference audio was used.
+
 ## The bridge's ambience: original synthesis
 
 The bridge's room tone (`src/toolkit/components/sound/audio/bridge-ambience.ts`, `src/toolkit/components/sound/logic/bridge-ambience.ts`, mission 095) is the project's own work, synthesised live in Web Audio from oscillators, generated noise, filters and a seeded chirp scheduler. No recording is sampled, copied or downloaded: nothing from Star Trek or any upload taken from it. It was written in the spirit of the Next Generation bridge's background, from published descriptions of it. For character only, not sampled: the description of [control_room.wav](https://freesound.org/people/Diboz/sounds/211683/) by [Diboz](https://freesound.org/people/Diboz/) (CC0), "ambient sound akin to the bridge of a starship".

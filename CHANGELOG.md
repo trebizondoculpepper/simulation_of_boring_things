@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 5: four original, precisely timed skimmer reveal music cues replace the synthesized stand-ins: suspense, heroic fanfare, deflated fanfare and skimmer-cleared jingle. The score generator and provenance are kept with the MP3s.
+
 - Museum, Hall 5: three variants of each Pool of the Future scene are saved; the matching `b` set now hangs in the gallery, with captions that follow Reg's opening round, water-model inspection and closing skimmer check.
 
 - Static signs draw each size of their lettering only once it would cover 5 pixels of the screen, seen as it is: its distance, the camera's field of view and zoom, the screen's height and how obliquely the sign is seen (the owner, 2026-10-29; `watchSign`, `signStep`, `smallestReadable`): so a big title shows from across a hall and small print only close to, and a sign too far for any of its lettering shows only its regions of colour; each step drawn once, by running the sign's drawing again without the lettering it leaves out. Covers the museum's signs (`signMesh`) and every printed face made with the fitting tools (`printed`: placards, wall panels).
