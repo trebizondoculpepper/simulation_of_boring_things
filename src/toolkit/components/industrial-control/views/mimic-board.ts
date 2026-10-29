@@ -378,7 +378,9 @@ export function createMimicBoard(
           id: line.flow!.id,
           scale: (line.flow!.size ?? CHASER_SIZE) / CHASER_SIZE,
           colour: new Color(
-            line.flow!.amber ? LAMP_COLOURS.amber : line.colour,
+            line.flow!.amber
+              ? LAMP_COLOURS.amber
+              : (line.flow!.lit ?? line.colour),
           ),
         }))
       : [],

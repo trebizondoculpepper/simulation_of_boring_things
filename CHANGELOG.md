@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 6: the mimic's water lines carry bright blue chaser LEDs, chasing the way the water goes along the running pump's path only (the reservoir's main up to it, its suction and fill line, the header from it on to the tank) and down the drain while it drains, dark otherwise; mimic lines may now give their chasers a lit colour of their own.
+
 - Museum, Hall 7 (Grout): the oil-wheel projector lights only while the visitor is at the 1970s plinth's lectern, as each plinth's spotlight does (the approach light now actually follows the visitor, by the lectern nearest, and is gentler); the dark lining sits behind the room's sign instead of over it, and the title line stands clear above that sign.
 
 - Museum, Hall 5: the skimmer film no longer glitches. The hall's render target now has a stencil buffer, so the skimmer's inside is painted only through its opening (it had been painted over the deck and the water); the ambient occlusion pass skips the skimmer's inside and the caustics (which it had drawn as solid, darkening the shafts); and the film now plays through the walker's own eye (`first-person.ts`'s `film`), so the eye others follow (a hall drawn through an archway) is the shot, not the walker's turn at the shot's place.

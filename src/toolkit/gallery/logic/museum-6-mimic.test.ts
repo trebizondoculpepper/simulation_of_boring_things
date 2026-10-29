@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { checkMimic } from '../../components/industrial-control/logic/mimic';
 import { mimicLayoutProblems } from '../../components/industrial-control/logic/mimic-layout';
-import { HALL6_MIMIC, hall6MimicState } from './museum-6-mimic';
+import { HALL6_MIMIC, hall6Flows, hall6MimicState } from './museum-6-mimic';
 import {
   actOnHall6,
   newHall6,
@@ -26,5 +26,36 @@ describe('Hall 6’s mimic', () => {
     expect(full.lamps.locked).toBe(true);
     expect(full.lamps.lsh).toBe(true);
     expect(full.readouts['tank.lt'].live.value).toBe(1000);
+  });
+
+  it('chases only the running pump’s path into the tank, and the drain while it drains', () => {
+    expect(
+      Object.values(hall6Flows(newHall6())).every((f) => f === 'still'),
+    ).toBe(true);
+    const f = hall6Flows(actOnHall6(newHall6(), { type: 'run', no: 1 }));
+    expect(f.main0).toBe('forward');
+    expect(f.main1).toBe('still');
+    expect(f.suction1).toBe('forward');
+    expect(f.delivery1).toBe('forward');
+    expect(f.delivery2).toBe('still');
+    for (let k = 1; k <= 10; k++) expect(f[`header${k}`]).toBe('forward');
+    expect(f.fill).toBe('forward');
+    expect(f.drain).toBe('still');
+    const g = hall6Flows(actOnHall6(newHall6(), { type: 'run', no: 6 }));
+    expect([g.main0, g.main5, g.main6]).toEqual([
+      'forward',
+      'forward',
+      'still',
+    ]);
+    expect([g.header5, g.header6, g.header10]).toEqual([
+      'still',
+      'forward',
+      'forward',
+    ]);
+    // Run a while, then drain.
+    const full = runHall6(actOnHall6(newHall6(), { type: 'run', no: 11 }), 4);
+    const d = hall6Flows(actOnHall6(full, { type: 'reset' }));
+    expect(d.drain).toBe('forward');
+    expect(d.fill).toBe('still');
   });
 });

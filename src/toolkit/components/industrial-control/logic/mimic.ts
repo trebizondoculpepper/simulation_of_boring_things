@@ -56,7 +56,13 @@ export interface MimicSpec {
      * without one is drawn plain, as before. `size`, the LEDs' diameter in
      * metres, for a board read from across a room (default CHASER_SIZE).
      */
-    flow?: { id: string; amber?: boolean; size?: number };
+    flow?: {
+      id: string;
+      amber?: boolean;
+      size?: number;
+      /** Its LEDs' lit colour, if not the line's own (or amber). */
+      lit?: string;
+    };
   }[];
   /** The equipment, drawn as symbols with a label under each. */
   shapes: readonly {

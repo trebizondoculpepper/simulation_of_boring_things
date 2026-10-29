@@ -5,6 +5,7 @@ import type {
   Reading,
 } from '../../components/industrial-control/logic/mimic';
 import { flowState } from '../../components/industrial-control/logic/mimic-chaser';
+import type { FlowState } from '../../components/industrial-control/logic/mimic-chaser';
 import {
   PUMPS,
   PUMP_NOS,
@@ -26,6 +27,10 @@ import type { Hall6State, PumpNo } from '../../../game/plant/museum-6-pumps';
  */
 
 const WATER = '#2a5f9e';
+/** The chaser LEDs' blue, bright against the line's. */
+export const CHASER = '#5ec8ff';
+/** Its LEDs: that blue, and larger than the default, to read across the hall. */
+const CHASE = { lit: CHASER, size: 0.012 } as const;
 const x = (no: PumpNo) => -1.3 + (no - 1) * 0.21;
 const PUMP_Y = -0.3;
 const SOURCE_Y = -0.55;
@@ -38,20 +43,30 @@ export const HALL6_MIMIC: MimicSpec = {
   width: 3.6,
   height: 1.6,
   lines: [
+    // The reservoir's main, in a length to each pump, each chasing with what passes it.
     {
       colour: WATER,
       points: [
         [-1.6, SOURCE_Y],
-        [0.85, SOURCE_Y],
+        [x(1), SOURCE_Y],
       ],
+      flow: { id: 'main0', ...CHASE },
     },
+    ...PUMPS.slice(1).map((p) => ({
+      colour: WATER,
+      points: [
+        [x((p.no - 1) as PumpNo), SOURCE_Y],
+        [x(p.no), SOURCE_Y],
+      ] as Point[],
+      flow: { id: `main${p.no - 1}`, ...CHASE },
+    })),
     ...PUMPS.map((p) => ({
       colour: WATER,
       points: [
         [x(p.no), SOURCE_Y],
         [x(p.no), PUMP_Y - 0.05],
       ] as Point[],
-      flow: { id: `suction${p.no}` },
+      flow: { id: `suction${p.no}`, ...CHASE },
     })),
     ...PUMPS.map((p) => ({
       colour: WATER,
@@ -59,16 +74,25 @@ export const HALL6_MIMIC: MimicSpec = {
         [x(p.no), PUMP_Y + 0.05],
         [x(p.no), HEADER_Y],
       ] as Point[],
-      flow: { id: `delivery${p.no}` },
+      flow: { id: `delivery${p.no}`, ...CHASE },
+    })),
+    // The header, in a length from each pump to the next, then on to the tank.
+    ...PUMPS.slice(1).map((p) => ({
+      colour: WATER,
+      points: [
+        [x((p.no - 1) as PumpNo), HEADER_Y],
+        [x(p.no), HEADER_Y],
+      ] as Point[],
+      flow: { id: `header${p.no - 1}`, ...CHASE },
     })),
     {
       colour: WATER,
       points: [
-        [x(1), HEADER_Y],
+        [x(11), HEADER_Y],
         [TANK_AT[0], HEADER_Y],
         [TANK_AT[0], TANK_AT[1] + 0.16],
       ],
-      flow: { id: 'fill' },
+      flow: { id: 'fill', ...CHASE },
     },
     {
       colour: WATER,
@@ -76,7 +100,7 @@ export const HALL6_MIMIC: MimicSpec = {
         [TANK_AT[0] - 0.08, TANK_AT[1] - 0.16],
         [TANK_AT[0] - 0.08, -0.6],
       ],
-      flow: { id: 'drain' },
+      flow: { id: 'drain', ...CHASE },
     },
     {
       colour: WATER,
@@ -85,7 +109,7 @@ export const HALL6_MIMIC: MimicSpec = {
         [1.62, TANK_AT[1] + 0.1],
         [1.62, -0.6],
       ],
-      flow: { id: 'overflow' },
+      flow: { id: 'overflow', ...CHASE },
     },
   ],
   shapes: [
@@ -167,6 +191,33 @@ export function hall6Reading(id: string, s: Hall6State): Reading | undefined {
   return undefined;
 }
 
+/**
+ * Which way each chased line runs, from the hall's state: the reservoir's
+ * main up to the running pump, its suction and fill line, the header from
+ * it to the tank, and the drain while the drain valve is open; every other
+ * line still. Each length carries what passes it: the main from CW1 to
+ * pump n all the pumps from n on, the header from pump n to n + 1 all the
+ * pumps up to n. A delivery, however small, shows (at least the chaser's
+ * threshold).
+ */
+export function hall6Flows(s: Hall6State): Record<string, FlowState> {
+  const r = hall6Readings(s);
+  const shown = (q: number) => flowState(q > 1e-9 ? Math.max(1, q) : 0);
+  const flows: Record<string, FlowState> = {};
+  let before = 0;
+  for (const n of PUMP_NOS) {
+    flows[`main${n - 1}`] = shown(r.total - before);
+    flows[`suction${n}`] = shown(r.flow[n]);
+    flows[`delivery${n}`] = shown(r.flow[n]);
+    before += r.flow[n];
+    if (n < 11) flows[`header${n}`] = shown(before);
+  }
+  flows.fill = shown(r.total);
+  flows.drain = flowState(r.drainLps * 3.6);
+  flows.overflow = flowState(0);
+  return flows;
+}
+
 /** The board's state, from the hall's. */
 export function hall6MimicState(s: Hall6State): MimicState {
   const r = hall6Readings(s);
@@ -174,15 +225,7 @@ export function hall6MimicState(s: Hall6State): MimicState {
   const readouts: Record<string, Record<string, Reading>> = {};
   for (const id of ['tank.lt', 'total'])
     readouts[id] = { live: hall6Reading(id, s)! };
-  const flows: Record<string, ReturnType<typeof flowState>> = {};
-  for (const n of PUMP_NOS) {
-    const q = r.flow[n] > 0 ? Math.max(1, r.flow[n]) : 0;
-    flows[`suction${n}`] = flowState(q);
-    flows[`delivery${n}`] = flowState(q);
-  }
-  flows.fill = flowState(r.total > 0 ? Math.max(1, r.total) : 0);
-  flows.drain = flowState(r.drainLps * 3.6);
-  flows.overflow = flowState(0);
+  const flows = hall6Flows(s);
   return {
     lamps: {
       ...Object.fromEntries(PUMP_NOS.map((n) => [`run-${n}`, isRunning(s, n)])),
