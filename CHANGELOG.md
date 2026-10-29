@@ -4,6 +4,10 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 5: the suspense cue now uses the complete 7.60-second opening phrase of the owner's newly supplied treasure-chest piano reference, resynthesized with ACE-Step; the reveal and fallback wait for the full phrase. The earlier four-second cut ended mid-phrase, and the earlier excerpts were item-reveal phrases rather than the suspense motif.
+
+- Museum, Hall 5: corrected the suspense cue to the rising suspense passage in the piano-cover resynthesis (4.35–7.40 s of its trimmed render); the previous 1.10-second cut was the short item-get flourish. The reveal again waits 3.05 seconds before the fanfare.
+
 - Museum, Hall 5: the suspense cue is now only the 1.10-second rising piano arpeggio; the reveal and fallback sound follow that shorter phrase before the fanfare.
 
 - Museum, Hall 5: replaced the suspense excerpt with a higher-retention take of the preferred piano-cover reference, keeping its rising piano phrase closer to the source while preserving the 3.05-second reveal timing; the fanfare remains unchanged.

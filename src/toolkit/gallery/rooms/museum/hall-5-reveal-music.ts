@@ -44,17 +44,17 @@ const C6 = 15;
 
 type Timed = Tone & { at: number };
 
-/** About 1.1 s: a low drone and a short whole-tone climb, left hanging. */
+/** About 7.6 s: a low drone and a slow whole-tone climb, left hanging. */
 function suspense(): Timed[] {
   const out: Timed[] = [
-    { at: 0, hz: note(D3), seconds: 1.1, level: 0.05, type: 'sine' },
+    { at: 0, hz: note(D3), seconds: 7.6, level: 0.05, type: 'sine' },
   ];
-  for (let k = 0; k < 4; k++)
+  for (let k = 0; k < 13; k++)
     out.push({
-      at: k * 0.25,
+      at: k * 0.58,
       hz: note(D4 + k * 2),
-      seconds: 0.35,
-      level: 0.06 + k * 0.025,
+      seconds: 0.64,
+      level: 0.06 + k * 0.009,
       type: 'triangle',
     });
   return out;
