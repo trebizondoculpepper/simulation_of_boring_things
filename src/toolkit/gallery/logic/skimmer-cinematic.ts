@@ -41,8 +41,8 @@ export const ORBIT_MIN = 0.6;
 /** Where the eye whips to for the reveal: out from the skimmer, and up. */
 export const REVEAL_EYE = { radius: 0.9, height: 0.5 };
 /** Seconds the whip from the orbit's end up to the reveal takes, overshoot and correction included. */
-// 15% slower than the first 0.35 s, twice over (the owner, 2026-10-29).
-export const WHIP = 0.35 / 0.85 / 0.85;
+// Slowed three times at the owner's word (2026-10-29), from 0.35 s.
+export const WHIP = 0.8;
 /** How far the whip overshoots: a back-out ease's constant (1.70158 is about 10%). */
 export const OVERSHOOT = 1.70158;
 /**

@@ -186,8 +186,12 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   };
 
   // ---- The finds: the Pepperdyne cards, one at random each time -----------
-  const finds = EXPANSION_CARD_KINDS.map((kind) => {
-    const device = parts.add(machineComponent(kit, kind));
+  // Each film's is a fresh card, shown turning, then handed over: it is
+  // a portable thing, to be carried off or dropped.
+  const makeFind = (kind: (typeof EXPANSION_CARD_KINDS)[number]) => {
+    const device = parts.add(
+      machineComponent(kit, kind, { attachment: 'detachable' }),
+    );
     const pivot = new Group();
     device.object.updateMatrixWorld(true);
     const box = new Box3().setFromObject(device.object);
@@ -198,11 +202,24 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     room.add(pivot);
     const size = box.getSize(new Vector3());
     return {
+      device,
       pivot,
       across: Math.max(size.x, size.y, size.z),
       name: CARD_DESIGNATIONS[kind].name,
     };
-  });
+  };
+  type Find = ReturnType<typeof makeFind>;
+  /** Out of the pivot and into the walker's hands, life size. */
+  const handOver = (find: Find) => {
+    const card = find.device.object;
+    find.pivot.remove(card);
+    find.pivot.removeFromParent();
+    card.position.copy(find.pivot.position);
+    card.rotation.set(0, 0, 0);
+    card.scale.setScalar(1);
+    room.add(card);
+    if (!walk.hands?.give(card)) card.removeFromParent();
+  };
   let lastFind = -1;
   const banner = t.printed(0.42, 0.11, () => {}, 1024, true);
   banner.mesh.name = 'Reveal banner';
@@ -245,7 +262,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     t: number;
     start: Pose;
     from: { x: number; z: number; yaw: number; pitch: number };
-    find: number;
+    find: Find;
     phase: CinematicPhase;
     /** The walker's own field of view, degrees, to zoom from and back to. */
     fov: number;
@@ -255,9 +272,16 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   let frozen = false;
   const play = () => {
     if (film) return;
+    // Whatever was in hand goes back in the skimmer.
+    const held = walk.hands?.holding();
+    if (held) {
+      walk.hands!.forget(held);
+      held.removeFromParent();
+    }
     const pose = walk.pose();
-    const find = pickAnother(finds.length, lastFind, random);
-    lastFind = find;
+    const kind = pickAnother(EXPANSION_CARD_KINDS.length, lastFind, random);
+    lastFind = kind;
+    const find = makeFind(EXPANSION_CARD_KINDS[kind]);
     film = {
       t: 0,
       start: {
@@ -278,7 +302,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
       fov: camera.fov,
     };
     walk.hold(true);
-    drawBanner(finds[find].name);
+    drawBanner(find.name);
     partAudio.play(revealCue('reveal-suspense'), voice);
   };
   /** The film's field of view now, degrees, or null for the walker's own. */
@@ -293,17 +317,19 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     if (!film) return false;
     if (!frozen) film.t += delta;
     const f = cinematicFrame(film.t, film.start);
-    const find = finds[film.find];
+    const find = film.find;
     lens = f.phase === 'done' ? null : lerp(film.fov, LENS_50_FOV, f.zoom);
     useLens();
     if (f.phase !== film.phase) {
       film.phase = f.phase;
       if (f.phase === 'reveal')
         partAudio.play(revealCue('reveal-big-item'), voice);
-      // Back where the walker stood, held while the lid goes on.
+      // Back where the walker stood, looking at the skimmer as the lid
+      // goes on, the find in hand.
       if (f.phase === 'replace') {
         const { x, z, yaw, pitch } = film.from;
         walk.place(x, z, yaw, pitch);
+        handOver(find);
       }
     }
     placeLid(f.lid);
