@@ -423,11 +423,12 @@ export function createFirstPerson(options: FirstPersonOptions) {
     position: 'absolute',
     left: '50%',
     top: '50%',
-    width: '8px',
-    height: '8px',
-    margin: '-4px 0 0 -4px',
-    border: '2px solid rgba(233, 225, 200, 0.85)',
+    width: '10px',
+    height: '10px',
+    transform: 'translate(-50%, -50%)',
+    border: '2px solid #f5f1df',
     borderRadius: '50%',
+    boxShadow: '0 0 0 2px #182327',
     pointerEvents: 'none',
   });
   canvas.parentElement?.appendChild(crosshair);
@@ -1541,10 +1542,10 @@ export function createFirstPerson(options: FirstPersonOptions) {
         Object.assign(crosshair.style, {
           left: cursorAim ? `${hoverPosition[0]}px` : '50%',
           top: cursorAim ? `${hoverPosition[1]}px` : '50%',
-          width: target ? '18px' : '8px',
-          height: target ? '18px' : '8px',
-          margin: target ? '-9px 0 0 -9px' : '-4px 0 0 -4px',
+          width: target ? '18px' : '10px',
+          height: target ? '18px' : '10px',
           borderRadius: target === 'reject' ? '0' : '50%',
+          boxShadow: target === 'reject' ? 'none' : '0 0 0 2px #182327',
           borderColor:
             target === 'accept'
               ? '#44df70'
@@ -1552,8 +1553,10 @@ export function createFirstPerson(options: FirstPersonOptions) {
                 ? 'transparent'
                 : handling?.aimed() || options.aimed?.()
                   ? '#ffb43a'
-                  : 'rgba(233, 225, 200, 0.85)',
+                  : '#f5f1df',
           color: '#f04b43',
+          textShadow:
+            '1px 0 #182327, -1px 0 #182327, 0 1px #182327, 0 -1px #182327',
           fontSize: '26px',
           fontWeight: 'bold',
           lineHeight: '14px',
