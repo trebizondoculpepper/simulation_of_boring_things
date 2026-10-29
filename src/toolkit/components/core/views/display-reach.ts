@@ -99,6 +99,11 @@ export function setRoomDisplayLimits(scene: Scene, limits: RoomDisplayLimits) {
   roomLimits.set(scene, limits);
 }
 
+/** What kind of screen a canvas texture was made as, if it is watched. */
+export function displayKindOf(texture: Texture): DisplayKind | undefined {
+  return watched.get(texture)?.kind;
+}
+
 /** Say what kind of screen a canvas texture is, if not the one it was made as. */
 export function setDisplayKind(texture: CanvasTexture, kind: DisplayKind) {
   const w = watched.get(texture);

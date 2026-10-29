@@ -62,7 +62,7 @@ import { partAudio } from '../../components/core/audio/part-audio';
 import { createInspector } from '../views/inspect-pick';
 import { localNow } from '../logic/museum-time';
 import { HALL_EXHIBITS } from './museum/exhibits';
-import type { HallExhibit } from './museum/exhibits';
+import { createFarVersion } from '../../components/core/views/far-version';
 import { partOf } from './museum/exhibit-carrying';
 import type { CarryingExhibit } from './museum/exhibit-carrying';
 
@@ -135,7 +135,6 @@ export function startMuseumHallRoom(
   // starts when the visitor crosses in).
   const kit = createPanelKit();
   let exhibit: CarryingExhibit | null = null;
-  const copyExhibits: HallExhibit[] = [];
   let disposed = false;
   const loadExhibit = (n: MuseumHallId, into: Group) =>
     HALL_EXHIBITS[n]?.().then((m) => {
@@ -153,14 +152,23 @@ export function startMuseumHallRoom(
     // The exhibit's carrying (107f), through the control scheme's hands.
     if (walk.hands) exhibit.carrying?.bind(walk.hands);
   });
+  // A neighbour's exhibit is only ever seen from another hall, so it is
+  // drawn as its far version (the owner, 2026-10-29): flat colours, the
+  // approximate shape, no screens, a handful of draws however many parts.
+  const farCopies: { dispose(): void }[] = [];
   for (const [n, copy] of copies)
-    void loadExhibit(n, copy.group)?.then((built) => {
-      if (!built) return;
-      copyExhibits.push(built);
-      // It fades in with its hall: on its own materials, since an
-      // exhibit's are often shared (a pipe kind's, cached), and this
-      // hall's own exhibit is not to fade with it.
-      const own = ownMaterials(built.object);
+    void HALL_EXHIBITS[n]?.().then((m) => {
+      if (disposed) return;
+      const built = m.buildHallExhibit(kit);
+      built.reset(localNow());
+      built.update?.(0);
+      const far = createFarVersion(built.object, { name: `${n} exhibit` });
+      built.parts?.dispose();
+      built.dispose?.();
+      farCopies.push(far);
+      copy.group.add(far.group);
+      // It fades in with its hall, on its own materials.
+      const own = far.materials;
       copyMaterials.push(...own);
       fadeMaterials.get(n)?.push(
         ...own.map((mat) => ({
@@ -447,16 +455,15 @@ export function startMuseumHallRoom(
       disposed = true;
       renderer.setAnimationLoop(null);
       for (const off of withdraw) off();
-      for (const e of [exhibit, ...copyExhibits]) {
-        e?.parts?.dispose();
-        e?.dispose?.();
-      }
+      exhibit?.parts?.dispose();
+      exhibit?.dispose?.();
       disposeKit(kit, hall.group);
       observer.disconnect();
       composer.dispose();
       walk.dispose();
       hall.dispose();
       for (const copy of copies.values()) copy.dispose();
+      for (const far of farCopies) far.dispose();
       for (const m of copyMaterials) m.dispose();
       shells.dispose();
       shellMaterials.dispose();
@@ -493,33 +500,4 @@ export function startMuseumHallRoom(
       },
     },
   );
-}
-
-/**
- * Gives every mesh under `root` its own copy of each material it draws
- * with (one copy of a material however many meshes share it), so the
- * copies can be faded without touching anything else drawn with the
- * originals; returns the copies. A copy keeps its original's shader hooks
- * (a PS1 material's) and shares its `userData` and textures.
- */
-function ownMaterials(root: Object3D): Material[] {
-  const copies = new Map<Material, Material>();
-  const own = (original: Material) => {
-    let made = copies.get(original);
-    if (!made) {
-      made = original.clone();
-      made.onBeforeCompile = original.onBeforeCompile;
-      made.customProgramCacheKey = original.customProgramCacheKey;
-      made.userData = original.userData;
-      copies.set(original, made);
-    }
-    return made;
-  };
-  root.traverse((obj) => {
-    if (obj instanceof Mesh)
-      obj.material = Array.isArray(obj.material)
-        ? obj.material.map(own)
-        : own(obj.material);
-  });
-  return [...copies.values()];
 }
