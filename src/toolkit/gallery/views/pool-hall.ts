@@ -970,14 +970,7 @@ export function createPoolHall(
   }
 
   // The water over each basin, out over its gutter.
-  const waterMaterial = new MeshPhysicalMaterial({
-    color: '#83d7d9',
-    transparent: true,
-    opacity: 0.6,
-    roughness: 0.1,
-    depthWrite: false,
-    side: DoubleSide,
-  });
+  const waterMaterial = poolWaterMaterial();
   // Each basin's water surface, to follow the pool's level (`setWaterDrop`).
   const waters: Mesh[] = [];
   s.basins.forEach((b, k) => {
@@ -1766,5 +1759,21 @@ function laneNumber(lane: number) {
     c.textBaseline = 'middle';
     c.font = `bold ${h * 0.8}px Arial, Helvetica, sans-serif`;
     c.fillText(String(lane), w / 2, h * 0.55);
+  });
+}
+
+/**
+ * The pools' water surface's material, before its ripples
+ * (`rippleWater`): shared with any other open water that should look
+ * like the pools' (Hall 6's tank).
+ */
+export function poolWaterMaterial() {
+  return new MeshPhysicalMaterial({
+    color: '#83d7d9',
+    transparent: true,
+    opacity: 0.6,
+    roughness: 0.1,
+    depthWrite: false,
+    side: DoubleSide,
   });
 }

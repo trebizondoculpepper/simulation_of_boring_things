@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 6: the test tank is open-topped, the fill pipe running down through it to an open end just over the brim, its water the pools' own rippling surface; what leaves the pipe follows the delivery (drops at a dosing pump, as often as the flow fills a 0.05 ml drop, up to 20 drawn a second; a stream from about 9 l/h, widening as the root of the flow to the pipe's full bore at P11), with splash rings, foam and spray where it lands; DR1 is a tundish, a chamfered stainless funnel let into the floor under a grille.
+
 - Museum, Hall 0: leaving it, the caustics projector fades to black over the 4 seconds after the threshold and then stops being drawn (it held 5 seconds and faded over 5 before).
 
 - Museum, Hall 7 (Grout): coming near a plinth turns a spotlight on over its specimen and its plaque, from the lamp head above it, fading out as you leave (one light serves the hall, moved to the plinth approached); the title wall's line is half a metre higher, clear of the room's sign; prompts for an era-appropriate music loop for each plinth (`doc/prompts/art/grout-music.md`).

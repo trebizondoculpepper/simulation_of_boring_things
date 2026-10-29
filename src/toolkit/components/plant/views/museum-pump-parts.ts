@@ -97,9 +97,9 @@ export function createTankInstruments(
   });
   plate.position.set(0.25, 0.62, 0.005);
   face.add(plate);
-  // LSH1 on the cage top: a float switch body and its amber lamp, toward the visitors.
+  // LSH1 on the cage's top rail: a float switch body and its amber lamp, toward the visitors.
   const lsh = new Group();
-  lsh.position.set(0.3, 1.16, -0.38);
+  lsh.position.set(0.3, 1.16, -0.49);
   lsh.rotation.y = Math.PI;
   group.add(lsh);
   t.box(lsh, t.paint('#2b3438', 0.5), 0.12, 0.1, 0.1, 0, 0.05, 0);

@@ -110,28 +110,44 @@ export function createIbc(
     liquid: colour,
     handle,
     outletDn = 50,
+    openTop = false,
   }: {
     liquid: string;
     handle: string;
     /** Its bottom outlet's bore: the standard DN50, or the DN150 some carry for fast emptying. */
     outletDn?: 50 | 150;
+    /** Its bottle's top cut away, as a display tank's, to see into it (no filler). */
+    openTop?: boolean;
   },
 ) {
   const t = plantTools(kit);
   const ibc = new Group();
   t.box(ibc, t.paint('#3a3c3d', 0.7), 1.2, 0.15, 1.0, 0, 0.075, 0);
   // Its bottle, translucent PE-HD, the liquid showing through to its level.
-  const bottle = t.box(
-    ibc,
-    translucent(t),
-    1.15,
-    0.96,
-    0.97,
-    0,
-    0.15 + 0.48,
-    0,
-  );
-  bottle.renderOrder = 1;
+  if (openTop) {
+    // Its floor and four walls, 5 mm thick, open at the top.
+    const pe = translucent(t);
+    const walls = [
+      t.box(ibc, pe, 1.15, 0.005, 0.97, 0, 0.1525, 0),
+      t.box(ibc, pe, 1.15, 0.96, 0.005, 0, 0.63, -0.4825),
+      t.box(ibc, pe, 1.15, 0.96, 0.005, 0, 0.63, 0.4825),
+      t.box(ibc, pe, 0.005, 0.96, 0.96, -0.5725, 0.63, 0),
+      t.box(ibc, pe, 0.005, 0.96, 0.96, 0.5725, 0.63, 0),
+    ];
+    for (const w of walls) w.renderOrder = 1;
+  } else {
+    const bottle = t.box(
+      ibc,
+      translucent(t),
+      1.15,
+      0.96,
+      0.97,
+      0,
+      0.15 + 0.48,
+      0,
+    );
+    bottle.renderOrder = 1;
+  }
   const contents = t.box(
     ibc,
     t.paint(colour, 0.25),
@@ -157,7 +173,8 @@ export function createIbc(
     for (const x of [-0.59, 0.59])
       t.rod(ibc, cage, [x, y, -0.49], [x, y, 0.49], 0.01, 8);
   }
-  t.cyl(ibc, t.paint('#d0d2cf', 0.4), 0.08, 0.04, 0, 1.13, 0, 'y', 24);
+  if (!openTop)
+    t.cyl(ibc, t.paint('#d0d2cf', 0.4), 0.08, 0.04, 0, 1.13, 0, 'y', 24);
   // The bottom outlet: a butterfly valve, its lever on a pivot.
   const big = outletDn === 150;
   const r = big ? 0.085 : 0.035;

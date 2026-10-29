@@ -69,6 +69,11 @@ import {
 } from '../../../components/plant/views/museum-pump-parts';
 import { createIbc } from '../../../components/plant/views/chemicals-storage';
 import {
+  createOutflow,
+  createTankSurface,
+  createTundish,
+} from '../../views/museum-6-tank';
+import {
   LINK_NAMES,
   NODES,
   NOTCHES,
@@ -78,6 +83,7 @@ import {
   TANK_AREA,
   actOnHall6,
   levelOf,
+  deliveryAlone,
   fittingById,
   fittingName,
   hall6Readings,
@@ -496,6 +502,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     liquid: '#3d86b8',
     handle: '#1f5fa8',
     outletDn: 150,
+    openTop: true,
   });
   const tank = createTankInstruments(kit, {
     area: TANK_AREA,
@@ -537,6 +544,56 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     if (open !== shownOpen) ibc.setOpen((shownOpen = open));
     tank.parts.update(delta);
   });
+  // Its open water, the pools' own surface, at the model's level.
+  const surface = createTankSurface(1.12, 0.94);
+  const tankFrame = atMachine(new Group(), 'tank');
+  tankFrame.userData.live = true;
+  tankFrame.add(surface.object);
+  object.add(tankFrame);
+  // The fill pipe carries on down through the open top to its open end
+  // just over the brim, the water out of it as the model delivers it.
+  const fill = plumbed.lines.find((l) => l.edge === 'fill')!;
+  const [ix, iy, iz] = fill.points[fill.points.length - 1];
+  const MOUTH_Y = TANK.floorM + TANK.overflowM - 0.02;
+  object.add(
+    markComponent(
+      createPipe(
+        'pvc-pressure',
+        fill.od,
+        [
+          [ix, iy, iz],
+          [ix, MOUTH_Y, iz],
+        ],
+        { colour: '#4d5a63' },
+      ),
+      { name: `Pipe: ${LINK_NAMES.fill}`, model: { link: 'fill' } },
+    ),
+  );
+  // A galvanised strap across the cage's top rails holds it.
+  const strap = new Group();
+  t.box(strap, t.paint('#b8bcbc', 0.4, 0.6), 1.0, 0.008, 0.04, 0, 1.165, 0);
+  t.box(
+    strap,
+    t.paint('#b8bcbc', 0.4, 0.6),
+    fill.od + 0.03,
+    0.03,
+    fill.od + 0.03,
+    0,
+    1.18,
+    0,
+  );
+  strap.position.set(ix, 0, iz);
+  object.add(still(strap));
+  const outflow = createOutflow(fill.od * 0.9, deliveryAlone(11));
+  outflow.group.position.set(ix, MOUTH_Y, iz);
+  object.add(outflow.group);
+  updates.push((delta) => {
+    const level = levelOf(state().litres);
+    const wet = state().litres > 0.5;
+    surface.show(TANK.floorM + level + 0.002, wet);
+    const landing = wet ? TANK.floorM + level : TANK.floorM - 0.01;
+    outflow.update(delta, readings.total, MOUTH_Y - landing);
+  });
   const litres = createLitresDisplay(kit, shortTag('tank.lt'));
   const litresPost = new Group();
   t.box(
@@ -560,11 +617,11 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   );
   updates.push(() => litres.show(state().litres));
   footprint(TANK_AT.x, TANK_AT.z - 1.0, 0.15);
-  const gully = new Group();
-  t.box(gully, t.paint('#2d2f30', 0.6, 0.4), 0.9, 0.03, 0.5, 0, 0.015, 0);
+  // DR1: a tundish let into the floor under a grille, the drain and overflow falling into it.
+  const tundish = createTundish();
   object.add(
-    markComponent(still(atMachine(gully, 'drain')), {
-      name: `${TAGS['drain']} ${nodeName('drain')} (floor gully)`,
+    markComponent(atMachine(tundish.group, 'drain'), {
+      name: `${TAGS['drain']} ${nodeName('drain')} (tundish)`,
       model: { node: 'drain' },
     }),
   );
