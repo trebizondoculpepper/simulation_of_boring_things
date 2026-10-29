@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 5: three variants of each Pool of the Future scene are saved; the matching `b` set now hangs in the gallery, with captions that follow Reg's opening round, water-model inspection and closing skimmer check.
+
 - Static signs draw each size of their lettering only once it would cover 5 pixels of the screen, seen as it is: its distance, the camera's field of view and zoom, the screen's height and how obliquely the sign is seen (the owner, 2026-10-29; `watchSign`, `signStep`, `smallestReadable`): so a big title shows from across a hall and small print only close to, and a sign too far for any of its lettering shows only its regions of colour; each step drawn once, by running the sign's drawing again without the lettering it leaves out. Covers the museum's signs (`signMesh`) and every printed face made with the fitting tools (`printed`: placards, wall panels).
 
 - Far versions keep static signs as they are, their pictures and all, one draw each (the owner, 2026-10-29: static signs should always be visible); Hall 2's lecterns seen from Hall 3 were black backing plates.

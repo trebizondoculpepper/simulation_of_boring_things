@@ -4,8 +4,8 @@
  * stands. Pure. Each decade is a bay of three photographs (morning,
  * midday, night), hung earliest on the visitor's left as they walk round:
  * along the north wall west to east, then down the east wall north to
- * south. No picture exists yet: each frame is a placeholder carrying its
- * decade and the caption of its scene. The scenes follow 107h's research
+ * south. Each frame has a placeholder carrying its decade and caption
+ * until its photograph loads. The scenes follow 107h's research
  * (the yellow orthotolidine comparator before the 1960s, the pink DPD
  * after, cells on the controller from the 1990s) and the pool's day.
  */
@@ -20,8 +20,8 @@ export type PhotoLook =
   | 'digital';
 
 export interface Photograph {
-  /** The time of day it shows, or (the future's bay) its number in the series. */
-  when: 'Morning' | 'Midday' | 'Night' | 'One' | 'Two' | 'Three';
+  /** The time of day it shows, or the future bay's stage of the round. */
+  when: 'Morning' | 'Midday' | 'Night' | 'Opening' | 'Testing' | 'Closing';
   /** Its image's file name, without extension, where not `<decade>-<when>`. */
   file?: string;
   /** The caption: the scene, as a gallery label says it. */
@@ -319,22 +319,22 @@ export const FUTURE: Decade = {
   strap: 'Some things never change',
   photos: [
     {
-      when: 'One',
+      when: 'Opening',
       file: 'future-1',
       caption:
-        'Opening, some year yet to come. The plant runs itself; the technician walks the baths through his goggles, checking water that no longer keeps to the floor.',
+        'Reg makes his round through a bath where pools climb the walls and water runs overhead. He still checks every basin.',
     },
     {
-      when: 'Two',
+      when: 'Testing',
       file: 'future-2',
       caption:
-        'Testing: the pool’s water as the model holds it, a cube at a time, each one turned in the hand and read; every reading agrees.',
+        'Reg reaches into the water model, checking one glowing cube at a time. The readings are instant; the round still takes time.',
     },
     {
-      when: 'Three',
+      when: 'Closing',
       file: 'future-3',
       caption:
-        'Closing: the skimmer basket, emptied by hand, as ever: hair, a plaster and a hair grip. Some things never change.',
+        'Reg checks the skimmer and finds hair, a plaster and a hair grip. Some things never change.',
     },
   ],
 };

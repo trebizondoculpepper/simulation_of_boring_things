@@ -2,7 +2,7 @@
 
 Prompts for the last bay of Hall 5's photograph gallery ([107l](../107l-a-day-in-the-life.md); the captions are `FUTURE` in `src/toolkit/gallery/logic/museum-5-gallery.ts`). The decades' prompts, and the rules every image follows, are in [midjourney-prompts.md](midjourney-prompts.md).
 
-The hall's last wall (the owner, 2026-10-29): "the Pool of the Future?", three photographs of a future Reg, the same poolman in each. Name the results `future-1_<variant>.png`, `future-2_…`, `future-3_…` in `doc/gens/day-in-the-life/`. Generated 2026-10-29 by Codex's built-in image generator, the prompts used as the decades' were (flags dropped, the same prefix and ending), Future 1 the reference for Reg in the other two; each first variant, `_a`, was kept, and resized to `resources/images/day-in-the-life/future-<n>.jpg`.
+The hall's last wall (the owner, 2026-10-29): "the Pool of the Future?", three photographs of a future Reg, the same poolman in each. Generated 2026-10-29 by Codex's built-in image generator: three variants (`_a`, `_b`, `_c`) of each scene are saved as `future-<n>_<variant>.png` in `doc/gens/day-in-the-life/`. Future 1 provided the visual reference for Reg in the other two scenes; each variant's Reg follows the corresponding Future 1. The `_b` set was selected, resized to 900 × 600, and installed as `resources/images/day-in-the-life/future-<n>.jpg`, with low-resolution copies in `lo/`. This image task is done. The prompts used for the first variants were (flags dropped, the same prefix and ending):
 
 ## Future 1: the augmented poolman (`future-1`)
 
