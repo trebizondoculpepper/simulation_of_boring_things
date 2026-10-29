@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 5: the suspense and fanfare now use a resynthesis of mrpianoman's piano cover of the item-get theme, cut to the reveal's 3.05-second suspense and 2.50-second fanfare timing; the prior source-conditioned cues remain recoverable in git.
+
 - Museum, Hall 5: the skimmer reveal's suspense cue begins 0.55 seconds earlier in the selected source render, extending its rising arpeggio to 3.05 seconds; the reveal and fallback cue now wait for the full phrase before showing the find.
 
 - Museum, Hall 5: the suspense and triumphant fanfare cues are replaced by 2.5-second excerpts from an ACE-Step resynthesis of the owner's supplied item-get reference; the full render and split recipe are retained for review.
