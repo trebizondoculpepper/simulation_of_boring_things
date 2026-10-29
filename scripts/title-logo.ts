@@ -13,8 +13,9 @@ import { deflateSync, inflateSync } from 'node:zlib';
  * so the attract sequence shows through between the motors, valves and
  * pipes. The plant keeps a thin dark outline (the drawing's own
  * line colour), and the pixels at its edges are unmixed from the backdrop,
- * so no blue fringe is left. The water above, the tiled edge and the rim
- * round them stay as they are. Written to
+ * so no blue fringe is left. The upper section (the water dome and the
+ * tiled band) is then closed in the dome's keyline and lifted by its
+ * thickness (`closeUpperSection`). Written to
  * `resources/images/title/the-pool-logo.png`, for `title-logo.ts`. Run
  * `node scripts/title-logo.ts` to make it again (`--probe x,y ...` prints
  * the colours at those pixels of the result instead, `--probe-source x,y
@@ -28,6 +29,10 @@ const CROP = { x: 60, y: 270, width: 1165, height: 1140 };
 const WIDTH = 760;
 /** The first row below the tiled edge, where the backdrop begins. */
 const PLANT_TOP = 320;
+/** The column the rim and the tiled band are measured down. */
+const BAND_PROBE_X = 380;
+/** A row in the water, above the tiled band, to look for the band from. */
+const WATER_BELOW = 280;
 /** The backdrop's colour is found as the commonest colour in the plant's region. */
 /** Colour distance at or under which a pixel is all backdrop, and over which all plant. */
 const KEY_NEAR = 26;
@@ -341,6 +346,94 @@ function clearBackdrop(image: Image) {
     }
 }
 
+/**
+ * The upper section (the water dome and the tiled band under it) closed in
+ * the dome's own keyline (the owner, 2026-10-29): the rim's colour and
+ * thickness measured down the middle column from the top; the band found
+ * below the water on that column; the whole section lifted by the
+ * keyline's thickness, and the keyline carried down both sides of the band
+ * and along its foot, into the rows the lift left, so it covers none of the
+ * plant below. Returns the lift, which `logic/title-logo.ts`'s constants
+ * (`SECTION_LIFT_PX`) must match.
+ */
+function closeUpperSection(image: Image): number {
+  const { width, rgba } = image;
+  const at = (x: number, y: number) => (y * width + x) * 4;
+  const alpha = (x: number, y: number) => rgba[at(x, y) + 3]!;
+  const x = BAND_PROBE_X;
+
+  // The rim: from the first solid pixel down the middle to the water.
+  let top = 0;
+  while (alpha(x, top) < 128) top++;
+  const solid: number[][] = [];
+  let y = top;
+  for (; ; y++) {
+    const i = at(x, y);
+    const rgb = [rgba[i]!, rgba[i + 1]!, rgba[i + 2]!];
+    if (
+      solid.length &&
+      Math.hypot(
+        rgb[0]! - solid[0]![0]!,
+        rgb[1]! - solid[0]![1]!,
+        rgb[2]! - solid[0]![2]!,
+      ) > 24
+    )
+      break;
+    solid.push(rgb);
+  }
+  const lift = y - top;
+  const line = [0, 1, 2].map((k) =>
+    Math.round(solid.reduce((sum, c) => sum + c[k]!, 0) / solid.length),
+  );
+
+  // The band: its top the first dark row below the water, its foot the
+  // last opaque row before the backdrop's (now clear) space.
+  let bandTop = WATER_BELOW;
+  const dark = (yy: number) => {
+    const i = at(x, yy);
+    return (
+      Math.hypot(
+        rgba[i]! - line[0]!,
+        rgba[i + 1]! - line[1]!,
+        rgba[i + 2]! - line[2]!,
+      ) < 40
+    );
+  };
+  while (!dark(bandTop)) bandTop++;
+  let foot = bandTop;
+  while (alpha(x, foot + 1) >= 128) foot++;
+  // Where the dome's rim meets the band: its outer edges on that row.
+  const join = bandTop - 1;
+  let left = 0;
+  while (alpha(left, join) < 128) left++;
+  let right = width - 1;
+  while (alpha(right, join) < 128) right--;
+
+  // Lift rows 0 – foot by the keyline's thickness.
+  rgba.copyWithin(0, at(0, lift), at(0, foot + 1));
+  rgba.fill(0, at(0, foot + 1 - lift), at(0, foot + 1));
+  // The keyline down the band's sides and along its foot.
+  const paint = (x0: number, x1: number, y0: number, y1: number) => {
+    for (let yy = y0; yy <= y1; yy++)
+      for (let xx = x0; xx <= x1; xx++) {
+        const i = at(xx, yy);
+        rgba[i] = line[0]!;
+        rgba[i + 1] = line[1]!;
+        rgba[i + 2] = line[2]!;
+        rgba[i + 3] = 255;
+      }
+  };
+  const footTop = foot + 1 - lift;
+  paint(left, left + lift - 1, join - lift, foot);
+  paint(right - lift + 1, right, join - lift, foot);
+  paint(left, right, footTop, foot);
+  console.info(
+    `keyline rgb(${line.join(', ')}), ${lift} px; band ${bandTop}–${foot}, ` +
+      `x ${left}–${right}; section lifted ${lift} px`,
+  );
+  return lift;
+}
+
 const probe = process.argv.findIndex((a) => a.startsWith('--probe'));
 if (probe >= 0) {
   const image =
@@ -355,6 +448,7 @@ if (probe >= 0) {
 } else {
   const image = cropAndShrink();
   clearBackdrop(image);
+  closeUpperSection(image);
   writeFileSync(OUT, encodePng(image));
   console.info(`wrote ${OUT} (${image.width} × ${image.height})`);
 }

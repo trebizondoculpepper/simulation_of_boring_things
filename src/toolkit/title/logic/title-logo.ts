@@ -35,6 +35,14 @@ export const RIPPLE_WAVELENGTH_PX = 34;
 export const RIPPLE_PERIOD_S = 2.4;
 
 /**
+ * How far `scripts/title-logo.ts` lifts the logo's upper section (the water
+ * dome and the tiled band) to close it in its keyline: the rim's measured
+ * thickness, which the script prints. Everything in that section below is
+ * placed where it was in the source, less this.
+ */
+export const SECTION_LIFT_PX = 8;
+
+/**
  * In the art's pixels (760 × 743): the roundel's centre and inner radius
  * (inside its dark rim), and the band of water that ripples (the open
  * water and the waves, above the tiled edge).
@@ -43,10 +51,10 @@ export const LOGO_ART = {
   width: 760,
   height: 743,
   centreX: 380,
-  centreY: 373,
+  centreY: 373 - SECTION_LIFT_PX,
   innerRadius: 352,
-  waterTop: 18,
-  waterBottom: 312,
+  waterTop: 18 - SECTION_LIFT_PX,
+  waterBottom: 312 - SECTION_LIFT_PX,
 } as const;
 
 /**
@@ -57,8 +65,8 @@ export const LOGO_ART = {
  */
 export const TITLE_TEXT = {
   sizePx: 137,
-  waterline: 250,
-  baselineY: 258,
+  waterline: 250 - SECTION_LIFT_PX,
+  baselineY: 258 - SECTION_LIFT_PX,
   /** How far below the baseline the reflection begins. */
   reflectionGapPx: 2,
   /** Its height as a share of the title's (foreshortened on the water). */

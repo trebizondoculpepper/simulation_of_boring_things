@@ -5,8 +5,10 @@ import {
   LOGO_REVEAL_S,
   RIPPLE_AMPLITUDE_PX,
   RIPPLE_HZ,
+  SECTION_LIFT_PX,
   TITLE_AT_S,
   TITLE_FADE_S,
+  TITLE_TEXT,
   rippleFrame,
   rippleShift,
   SIGHT_GLASS,
@@ -42,6 +44,16 @@ describe('the title logo', () => {
         );
     }
     expect(rippleShift(160, 0)).not.toBe(rippleShift(160, 3));
+  });
+});
+
+describe('the title over the lifted dome', () => {
+  it('moves with the section, its feet just in the water above the tiles', () => {
+    expect(SECTION_LIFT_PX).toBe(8);
+    expect(TITLE_TEXT.waterline).toBe(242);
+    expect(TITLE_TEXT.baselineY).toBeGreaterThan(TITLE_TEXT.waterline);
+    expect(TITLE_TEXT.baselineY - TITLE_TEXT.waterline).toBeLessThan(12);
+    expect(TITLE_TEXT.baselineY).toBeLessThan(LOGO_ART.waterBottom);
   });
 });
 
