@@ -5,6 +5,8 @@ import {
   LID_ASIDE,
   ORBIT_END,
   REVEAL_EYE,
+  WHIP,
+  backOut,
   cinematicFrame,
   lidPose,
   lookAt,
@@ -49,11 +51,41 @@ describe('dev53’s skimmer cinematic', () => {
     expect(late.pitch).toBeLessThan(0);
   });
 
-  it('cuts to a look diagonally up, the find shown with the banner', () => {
+  it('whips up from the orbit’s end, overshooting and correcting', () => {
+    const was = cinematicFrame(suspense - 1e-6, START).eye!;
+    const first = cinematicFrame(suspense, START).eye!;
+    expect(first.pitch).toBeCloseTo(was.pitch, 3);
+    expect(first.y).toBeCloseTo(was.y, 3);
+    let most = -Infinity;
+    for (let s = 0; s <= WHIP; s += WHIP / 50)
+      most = Math.max(most, cinematicFrame(suspense + s, START).eye!.pitch);
+    expect(most).toBeGreaterThan(LOOK_UP + 0.03);
+    expect(most).toBeLessThan(LOOK_UP + 0.2);
+    expect(cinematicFrame(suspense + WHIP, START).eye!.pitch).toBeCloseTo(
+      LOOK_UP,
+    );
+  });
+
+  it('shows the find where the whip comes to rest, the banner once it has', () => {
+    const during = cinematicFrame(suspense + WHIP / 2, START);
+    expect(during.banner).toBe(false);
+    expect(during.rest).toEqual(cinematicFrame(suspense + 2, START).rest);
+    expect(during.rest!.pitch).toBe(LOOK_UP);
+    expect(cinematicFrame(suspense + WHIP + 0.01, START).banner).toBe(true);
+    expect(cinematicFrame(1, START).rest).toBeNull();
+  });
+
+  it('eases out past the end and back', () => {
+    expect(backOut(0)).toBeCloseTo(0);
+    expect(backOut(1)).toBe(1);
+    expect(backOut(0.7)).toBeGreaterThan(1);
+  });
+
+  it('looks diagonally up, the find shown with the banner', () => {
     const f = cinematicFrame(suspense + 1, START);
     expect(f.phase).toBe('reveal');
-    expect(f.eye!.pitch).toBe(LOOK_UP);
-    expect(f.eye!.y).toBe(REVEAL_EYE.height);
+    expect(f.eye!.pitch).toBeCloseTo(LOOK_UP);
+    expect(f.eye!.y).toBeCloseTo(REVEAL_EYE.height);
     expect(f.size).toBe(1);
     expect(f.banner).toBe(true);
     expect(cinematicFrame(suspense + 1.5, START).spin).toBeGreaterThan(f.spin);

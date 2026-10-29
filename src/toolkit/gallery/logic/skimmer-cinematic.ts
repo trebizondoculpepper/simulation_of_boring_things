@@ -5,7 +5,8 @@ import { LOOK_UP, REVEAL, revealFrame } from './skimmer-reveal';
  * skimmer reveal as a film: the lid comes off and gold caustics rise at
  * once from the skimmer's rim, tapering upward; while the suspense
  * builds, the camera orbits the skimmer's vertical axis, sinking as it
- * goes; then a jump cut to a look diagonally up, the fanfare, and a find
+ * goes; then a sudden whip up to a look diagonally up, overshooting and
+ * correcting, the fanfare, and a find
  * turning above; then back to the walker as the lid goes back on. Pure:
  * where the eye is and what shows, at a time. Positions are metres from
  * the skimmer's middle at deck level.
@@ -37,8 +38,13 @@ export const SWEEP = Math.PI * 2;
 export const ORBIT_END = { radius: 0.8, height: 0.4 };
 /** The orbit's least starting radius, metres. */
 export const ORBIT_MIN = 0.6;
-/** Where the eye is cut to for the reveal: out from the skimmer, and up. */
+/** Where the eye whips to for the reveal: out from the skimmer, and up. */
 export const REVEAL_EYE = { radius: 0.9, height: 0.5 };
+/** Seconds the whip from the orbit's end up to the reveal takes, overshoot and correction included. */
+// 15% slower than the first 0.35 s (the owner, 2026-10-29).
+export const WHIP = 0.35 / 0.85;
+/** How far the whip overshoots: a back-out ease's constant (1.70158 is about 10%). */
+export const OVERSHOOT = 1.70158;
 /** Where the lid lies when off: beside the skimmer, metres along +x. */
 export const LID_ASIDE = 0.35;
 
@@ -58,6 +64,8 @@ export interface CinematicFrame {
   phase: CinematicPhase;
   /** The eye, or null for the walker's own (back where it stood). */
   eye: Pose | null;
+  /** The eye the reveal's whip comes to rest at, the find before it; null outside the reveal. */
+  rest: Pose | null;
   /** The lid: 0 on its seat, 1 lying aside. */
   lid: number;
   /** The caustics: how far risen (0–1) and how bright (0–1). */
@@ -75,6 +83,11 @@ const ease = (x: number) => {
   return t * t * (3 - 2 * t);
 };
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+/** Out fast, past the end, and back to it: 0 at 0, 1 at 1, over 1 between. */
+export const backOut = (x: number, c = OVERSHOOT) => {
+  const u = clamp01(x) - 1;
+  return 1 + (c + 1) * u * u * u + c * u * u;
+};
 /** From angle `a` to `b` the short way round. */
 const lerpAngle = (a: number, b: number, t: number) => {
   const d = Math.atan2(Math.sin(b - a), Math.cos(b - a));
@@ -112,7 +125,8 @@ export function cinematicFrame(
   const from = Math.atan2(start.x, start.z);
   const r0 = Math.max(ORBIT_MIN, Math.hypot(start.x, start.z));
   const end = from + SWEEP;
-  if (t < suspense) {
+  /** The orbit's eye `t` seconds in. */
+  const orbit = (t: number): Pose => {
     const k = ease(t / suspense);
     const a = from + SWEEP * k;
     const at = {
@@ -123,12 +137,16 @@ export function cinematicFrame(
     const look = lookAt(at, MOUTH);
     const b = ease(t / BLEND);
     return {
+      ...at,
+      yaw: lerpAngle(start.yaw, look.yaw, b),
+      pitch: lerp(start.pitch, look.pitch, b),
+    };
+  };
+  if (t < suspense) {
+    return {
       phase: 'suspense',
-      eye: {
-        ...at,
-        yaw: lerpAngle(start.yaw, look.yaw, b),
-        pitch: lerp(start.pitch, look.pitch, b),
-      },
+      eye: orbit(t),
+      rest: null,
       lid: ease(t / LIFT),
       rise: ease(t / RISE),
       glow: 1,
@@ -139,23 +157,35 @@ export function cinematicFrame(
   }
   const shown = t - suspense;
   if (shown < reveal) {
-    // A jump cut: out from the skimmer where the orbit ended, looking up
-    // across it. The find pops and turns as the reveal's does.
+    // A sudden whip from where the orbit ended, out from the skimmer and
+    // up to look across it, overshooting a little and correcting. The
+    // find pops and turns as the reveal's does.
     const f = revealFrame(REVEAL.suspense + shown, 0);
-    const at = {
+    const was = orbit(suspense);
+    const to = {
       x: Math.sin(end) * REVEAL_EYE.radius,
       y: REVEAL_EYE.height,
       z: Math.cos(end) * REVEAL_EYE.radius,
     };
+    const rest = { ...to, yaw: lookAt(to, MOUTH).yaw, pitch: LOOK_UP };
+    const k = backOut(shown / WHIP);
     return {
       phase: 'reveal',
-      eye: { ...at, yaw: lookAt(at, MOUTH).yaw, pitch: LOOK_UP },
+      eye: {
+        x: lerp(was.x, to.x, k),
+        y: lerp(was.y, to.y, k),
+        z: lerp(was.z, to.z, k),
+        yaw: lerpAngle(was.yaw, rest.yaw, k),
+        pitch: lerp(was.pitch, LOOK_UP, k),
+      },
+      rest,
       lid: 1,
       rise: 1,
       glow: 1,
       size: f.size,
       spin: f.spin,
-      banner: true,
+      // Up once the whip has settled.
+      banner: shown >= WHIP,
     };
   }
   const back = shown - reveal;
@@ -164,6 +194,7 @@ export function cinematicFrame(
     return {
       phase: 'replace',
       eye: null,
+      rest: null,
       lid: 1 - k,
       rise: 1,
       glow: 1 - k,
@@ -175,6 +206,7 @@ export function cinematicFrame(
   return {
     phase: 'done',
     eye: null,
+    rest: null,
     lid: 0,
     rise: 0,
     glow: 0,

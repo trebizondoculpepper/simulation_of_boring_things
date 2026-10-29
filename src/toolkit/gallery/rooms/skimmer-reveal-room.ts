@@ -1,13 +1,10 @@
 import {
-  AdditiveBlending,
   AmbientLight,
   Box3,
   BoxGeometry,
-  CircleGeometry,
   Group,
   HemisphereLight,
   Mesh,
-  MeshBasicMaterial,
   PerspectiveCamera,
   PlaneGeometry,
   PointLight,
@@ -50,6 +47,7 @@ import {
 } from '../logic/skimmer-cinematic';
 import type { CinematicPhase, Pose } from '../logic/skimmer-cinematic';
 import { createSkimmerCaustics } from '../views/skimmer-caustics';
+import { createSkimmerWell, drawOver } from '../views/skimmer-well';
 import { revealCue } from './museum/hall-5-reveal-music';
 
 const FLOOR = { minX: -4, maxX: 4, minZ: -4, maxZ: 4 };
@@ -153,42 +151,16 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   light.target.position.set(SK.x * m, 0, SK.z * m);
   scene.add(light, light.target);
 
-  // ---- The skimmer: collar, mouth, basket, lid (as Hall 5's) ---------------
+  // ---- The skimmer: a hole in the deck, its basket, its lid ---------------
+  // The well is painted over the flat deck where its opening is seen
+  // (`skimmer-well.ts`); the lid is drawn after it.
   const certikind = t.paint('#f2f1ec', 0.45);
   const dark = t.paint('#15191b', 0.9);
   const skimmer = new Group();
   skimmer.position.set(SK.x, 0, SK.z);
   room.add(skimmer);
-  t.cyl(skimmer, certikind, 0.155, 0.008, 0, 0.004, 0, 'y', 32);
-  t.cyl(skimmer, dark, 0.13, 0.002, 0, 0.0085, 0, 'y', 32);
-  const grey = t.paint('#8a9498', 0.6);
-  for (let k = 0; k < 16; k++) {
-    const a = (k / 16) * Math.PI * 2;
-    const seg = t.box(
-      skimmer,
-      grey,
-      0.05,
-      0.01,
-      0.008,
-      Math.cos(a) * 0.09,
-      0.009,
-      Math.sin(a) * 0.09,
-    );
-    seg.rotation.y = -a + Math.PI / 2;
-  }
-  t.box(skimmer, grey, 0.17, 0.008, 0.01, 0, 0.012, 0);
-  // The glow in its mouth, under the shafts.
-  const mouthGlow = new MeshBasicMaterial({
-    color: GOLD,
-    transparent: true,
-    opacity: 0,
-    blending: AdditiveBlending,
-    depthWrite: false,
-  });
-  const mouth = new Mesh(new CircleGeometry(0.128, 32), mouthGlow);
-  mouth.rotation.x = -Math.PI / 2;
-  mouth.position.y = 0.0105;
-  skimmer.add(mouth);
+  const well = createSkimmerWell();
+  skimmer.add(well.group);
   const caustics = createSkimmerCaustics({ radius: 0.135, random });
   skimmer.add(caustics.mesh);
   const goldLight = new PointLight(GOLD, 0, 3 * m, 2);
@@ -201,6 +173,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   t.cyl(lid, dark, 0.012, 0.013, 0.05, 0.006, 0, 'y', 12);
   t.label(lid, 'CERTIKIND', 0, 0.0125, 0.07, 0.016, '#5a6266').rotation.x =
     -Math.PI / 2;
+  drawOver(lid);
   skimmer.add(lid);
   const placeLid = (k: number) => {
     const p = lidPose(k);
@@ -316,7 +289,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     }
     placeLid(f.lid);
     caustics.update(time, f.rise, f.glow);
-    mouthGlow.opacity = 0.3 * f.glow;
+    well.glow(f.glow);
     goldLight.intensity = 2.5 * m * m * f.glow;
     find.pivot.visible = f.size > 0;
     banner.mesh.visible = f.banner;
@@ -334,10 +307,14 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
       camera.position.z - Math.cos(e.yaw) * Math.cos(e.pitch),
     );
     camera.updateMatrixWorld();
-    if (f.size > 0) {
-      // Before the eye looking up, turning.
-      const at = room.worldToLocal(
-        camera.localToWorld(new Vector3(0, 0.02 * m, -REVEAL_AHEAD * m)),
+    if (f.size > 0 && f.rest) {
+      // Where the whip comes to rest, before the eye: the camera swings
+      // onto it, past it a little, and back.
+      const r = f.rest;
+      const at = new Vector3(
+        SK.x + r.x + Math.sin(r.yaw) * Math.cos(r.pitch) * REVEAL_AHEAD,
+        r.y + Math.sin(r.pitch) * REVEAL_AHEAD + 0.02,
+        SK.z + r.z - Math.cos(r.yaw) * Math.cos(r.pitch) * REVEAL_AHEAD,
       );
       find.pivot.position.copy(at);
       find.pivot.rotation.set(0, f.spin, 0);
@@ -430,8 +407,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     walk.dispose();
     parts.dispose();
     caustics.dispose();
-    mouth.geometry.dispose();
-    mouthGlow.dispose();
+    well.dispose();
     disposeKit(kit, scene as unknown as Group);
     freeEnvironment();
     renderer.dispose();
