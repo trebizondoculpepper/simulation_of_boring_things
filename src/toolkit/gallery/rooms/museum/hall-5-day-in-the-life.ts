@@ -15,6 +15,11 @@ import { markComponent } from '../../../components/core/views/component-identity
 import { tools } from '../../../components/core/views/fitting-tools';
 import { createPs1Material } from '../../../components/core/parts/ps1-material';
 import { showPhoto } from '../../views/photo-print';
+import { MUSEUM_EXHIBITION } from '../../logic/museum-brand';
+import {
+  floorArrowTexture,
+  lifebuoyStickerMaterial,
+} from '../../views/museum-hall';
 import { createPoolClock } from '../../../components/architectural/views/pool-clock';
 import { createWasteBin } from '../../../components/site-dressing/views/waste-bin';
 import { createBinTossing } from '../../../components/site-dressing/parts/bin-tossing';
@@ -635,6 +640,20 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
           : `lid on; ${inBasket(game) === 0 ? 'basket empty' : 'basket has things in it'}`,
     }),
   );
+
+  // An orange floor arrow, the museum's own sticker, pointing the visitor
+  // to the skimmer from the deck (the owner, 2026-10-29).
+  const arrowMap = floorArrowTexture(MUSEUM_EXHIBITION.colours.accent);
+  kit.textures.push(arrowMap);
+  const arrowMaterial = lifebuoyStickerMaterial(arrowMap);
+  kit.materials.push(arrowMaterial);
+  const arrow = new Mesh(new PlaneGeometry(0.45, 0.45), arrowMaterial);
+  arrow.name = 'Floor arrow to the skimmer';
+  // Laid flat, its tip (the texture's top) turned from north to south.
+  arrow.rotation.set(-Math.PI / 2, 0, Math.PI);
+  arrow.position.set(sk.x, DECK_LIFT + 0.002, sk.z - POOLSIDE.skimmerArrow);
+  arrow.renderOrder = 1;
+  object.add(markComponent(arrow, { name: 'Floor arrow', decorative: true }));
 
   const lid = new Group();
   lid.name = 'Skimmer lid';

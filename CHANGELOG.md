@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 5: an orange floor arrow (the museum's own sticker) on the deck points the visitor to the skimmer.
+
 - Museum, Hall 5: using the skimmer with its basket empty plays the same film, to the small-item fanfare, its banner reading THE BASKET IS EMPTY (`revealCueOf`, `EMPTY_BANNER` in `skimmer-reveal.ts`); nothing is counted or handed over.
 
 - Museum, Hall 7: each plinth's era music (`resources/sound/music/grout/`, prompts in `doc/prompts/art/grout-music.md`) plays quietly and looped, from above its plinth, while its lectern is the one approached, changing as the approach light does and silent with none; a loop not yet supplied is simply silent.

@@ -371,6 +371,8 @@ export const POOLSIDE = {
    * under the coping to the pool's wall.
    */
   skimmer: { x: -0.6, z: -0.3 },
+  /** The floor arrow pointing the visitor to it, this far north of it. */
+  skimmerArrow: 0.75,
   /** The waste bin (the owner, 2026-10-29: a bin, not a skip). */
   skip: { x: 2.6, z: -1.9 },
 } as const;

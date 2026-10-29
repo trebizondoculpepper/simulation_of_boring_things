@@ -52,6 +52,8 @@ describe('Hall 5: a day in the life', () => {
     expect(deck.minX).toBeGreaterThan(-7.7 + 1.5);
     expect(deck.maxZ).toBeLessThan(6.7 - 1);
     expect(skimmer.z).toBeLessThan(water.minZ);
+    // On the deck, its collar (0.155 m) clear of the coping.
+    expect(skimmer.z + 0.155).toBeLessThan(water.minZ - POOLSIDE.coping);
   });
 
   it('sets the skimmer in the tiles, 7 cm clear of the coping', () => {
