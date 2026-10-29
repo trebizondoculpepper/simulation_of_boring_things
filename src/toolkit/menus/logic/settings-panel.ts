@@ -65,6 +65,12 @@ export type PanelItem =
       /** The names printed round it, left to right. */
       positions: readonly string[];
     }
+  /**
+   * A rotary switch stepping through a list (the owner, 2026-10-29: the
+   * maximum resolution, 640 × 480 up to the viewport), a character LCD
+   * under it naming the choice.
+   */
+  | { kind: 'switch'; id: 'resolutionCap'; legend: string }
   | { kind: 'key'; id: 'noclip'; legend: string; dymo?: boolean }
   /** A vacuum fluorescent message line across its zone. */
   | { kind: 'vfd'; id: 'status'; columns: number }
@@ -325,6 +331,7 @@ export function settingsPanel(offers: PanelOffers): PanelZone[] {
           unit: 'DEG',
           digits: 2,
         },
+        { kind: 'switch', id: 'resolutionCap', legend: 'MAX RESOLUTION' },
       ],
     },
     {

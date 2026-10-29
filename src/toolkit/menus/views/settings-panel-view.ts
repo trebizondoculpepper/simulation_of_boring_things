@@ -40,9 +40,11 @@ import { panelMakerMark } from '../../components/core/views/panel-maker-mark';
 import { createCanvasTexture } from '../../components/core/views/screens';
 import { withLetteringScale } from '../../components/core/views/lettering-resolution';
 import {
+  createCharacterLcd,
   createPanelMeter,
   createVfd,
 } from '../../components/industrial-control/views/panel-instruments';
+import { RESOLUTION_CAPS, RESOLUTION_LCD } from '../../settings/logic/graphics';
 import { PENFOLD_GREY } from '../../components/industrial-control/views/control-cubicle';
 import { settings, updateSettings } from '../../settings/settings-store';
 import { CARD, SPACING, narrowCard } from '../logic/panel-layout';
@@ -790,6 +792,57 @@ function build_(
           place(l, -Math.sin(a) * 0.03, cy + Math.cos(a) * 0.025).position.z =
             0.0004;
         });
+        break;
+      }
+      case 'switch': {
+        // Smallest at the left of its sweep, the viewport at the right.
+        const steps = RESOLUTION_CAPS.length - 1;
+        const knob = parts.add(
+          potentiometer(kit, {
+            name: `${item.legend} switch`,
+            steps,
+            bound: {
+              get value() {
+                return Math.max(
+                  0,
+                  RESOLUTION_CAPS.indexOf(settings.value.resolutionCap),
+                );
+              },
+              set: (index: number) =>
+                updateSettings({
+                  resolutionCap:
+                    RESOLUTION_CAPS[
+                      Math.max(0, Math.min(steps, Math.round(index)))
+                    ],
+                }),
+            },
+          }),
+        );
+        knob.object.traverse((o) => {
+          if (o.name.startsWith('Label 0')) o.visible = false;
+        });
+        const cy = body - 0.045;
+        const dial = drawDial(kit, paints.dial, 0.034, steps, [
+          { share: 0, text: 'LOW' },
+          { share: 1, text: 'MAX' },
+        ]);
+        place(dial, 0, cy).position.z = 0.0003;
+        place(knob.object, 0, cy);
+        focusable(m, face, 0, cy, 0.04, true, knob);
+        // Its LCD immediately below, naming the choice.
+        const lcd = createCharacterLcd(kit, {
+          columns: 16,
+          rows: 2,
+          cell: 0.003,
+          backlight: true,
+        });
+        place(lcd.group, 0, -m.h / 2 + 0.022);
+        stops.push(
+          effect(() => {
+            const [size, what] = RESOLUTION_LCD[settings.value.resolutionCap];
+            lcd.show([size, what]);
+          }),
+        );
         break;
       }
       case 'vfd': {

@@ -342,7 +342,7 @@ export function createPauseMenu(actions: PauseMenuActions) {
   shows.push((s) => {
     film.checked = s.filmEffects;
   });
-  choice('resolutionCap', 'Resolution cap', RESOLUTION_LABELS);
+  choice('resolutionCap', 'Maximum resolution', RESOLUTION_LABELS);
   slider('Audio', 'volume', 'Master volume', (v) => `${Math.round(v * 100)}%`);
   slider(
     'Controls',

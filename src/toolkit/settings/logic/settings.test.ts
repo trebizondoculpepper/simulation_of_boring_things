@@ -24,7 +24,7 @@ describe('the player’s settings', () => {
       ambientOcclusion: 'medium',
       bloom: 'off',
       filmEffects: false,
-      resolutionCap: '1080',
+      resolutionCap: '1920x1080',
       graphics: 'low',
     };
     expect(cleanSettings(mine)).toEqual(mine);

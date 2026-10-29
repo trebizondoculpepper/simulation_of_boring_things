@@ -39,6 +39,8 @@ export const MODULE_UNITS: Record<
   key: [5, 1],
   // A lever selector with its positions printed round it.
   selector: [6, 1],
+  // A rotary switch, its LCD under it.
+  switch: [6, 2],
   vfd: [8, 1],
 };
 

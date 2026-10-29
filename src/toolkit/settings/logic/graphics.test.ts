@@ -40,14 +40,29 @@ describe('the costlier effects’ settings', () => {
     expect(bloomAt('off').enabled).toBe(false);
   });
 
-  it('caps the image’s height, only ever lowering the ratio', () => {
-    // A 1080 px tall window on a Retina screen: 2160 tall at 2x.
-    expect(cappedPixelRatio(2, 1080, 'native')).toBe(2);
-    expect(cappedPixelRatio(2, 1080, '1440')).toBeCloseTo(1440 / 1080);
-    expect(cappedPixelRatio(2, 1080, '720')).toBeCloseTo(720 / 1080);
+  it('caps the image’s width and height, only ever lowering the ratio', () => {
+    // A 1920 × 1080 window on a Retina screen: 3840 × 2160 at 2x.
+    expect(cappedPixelRatio(2, 1920, 1080, 'native')).toBe(2);
+    expect(cappedPixelRatio(2, 1920, 1080, '2560x1440')).toBeCloseTo(
+      1440 / 1080,
+    );
+    expect(cappedPixelRatio(2, 1920, 1080, '1280x720')).toBeCloseTo(720 / 1080);
+    // The Steam Deck's 1280 × 800 in a 16:9 window: its width is the limit.
+    expect(cappedPixelRatio(2, 1920, 1080, '1280x800')).toBeCloseTo(
+      1280 / 1920,
+    );
     // A small window is not drawn larger than it asked.
-    expect(cappedPixelRatio(1, 600, '1080')).toBe(1);
-    expect(cappedPixelRatio(1.5, 0, '720')).toBe(1.5);
+    expect(cappedPixelRatio(1, 1000, 600, '1920x1080')).toBe(1);
+    expect(cappedPixelRatio(1.5, 0, 0, '1280x720')).toBe(1.5);
+  });
+
+  it('reads an old height-only cap as its resolution', () => {
+    expect(cleanSettings({ resolutionCap: '1080' }).resolutionCap).toBe(
+      '1920x1080',
+    );
+    expect(cleanSettings({ resolutionCap: '720' }).resolutionCap).toBe(
+      '1280x720',
+    );
   });
 
   it('keep today’s look for an old save, and refuse nonsense', () => {
@@ -69,13 +84,13 @@ describe('the costlier effects’ settings', () => {
       ambientOcclusion: 'off',
       bloom: 'low',
       filmEffects: false,
-      resolutionCap: '720',
+      resolutionCap: '1280x800',
     });
     expect(good).toMatchObject({
       ambientOcclusion: 'off',
       bloom: 'low',
       filmEffects: false,
-      resolutionCap: '720',
+      resolutionCap: '1280x800',
     });
   });
 });

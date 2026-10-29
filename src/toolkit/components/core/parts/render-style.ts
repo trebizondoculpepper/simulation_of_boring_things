@@ -333,15 +333,16 @@ export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
   const size = new Vector2();
   /**
    * The ratio drawn at: the room's, under the preset's cap, less the
-   * player's render quality, and under the player's resolution cap for the
-   * canvas's height now; or exactly a screenshot's (`drawAtRatio`).
+   * player's render quality, and under the player's maximum resolution for
+   * the canvas's size now; or exactly a screenshot's (`drawAtRatio`).
    */
   const ratioNow = () => {
     const s = settings.value;
     const cap = graphics.value.pixelRatioCap;
     if (exact !== null) return exact;
     const ratio = Math.min(wanted, cap) * renderScale(s.renderLevel) * scale;
-    return cappedPixelRatio(ratio, renderer.getSize(size).y, s.resolutionCap);
+    renderer.getSize(size);
+    return cappedPixelRatio(ratio, size.x, size.y, s.resolutionCap);
   };
   const apply = () => {
     const ratio = ratioNow();

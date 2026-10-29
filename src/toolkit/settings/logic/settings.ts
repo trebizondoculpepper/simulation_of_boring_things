@@ -3,8 +3,8 @@ import {
   DEFAULT_GRAPHICS,
   EFFECT_LEVELS,
   PRESET_CHOICES,
-  RESOLUTION_CAPS,
   parsePreset,
+  parseResolutionCap,
 } from './graphics';
 import type { EffectLevel, GraphicsPreset, ResolutionCap } from './graphics';
 
@@ -126,9 +126,9 @@ export function cleanSettings(stored: unknown): Settings {
     ambientOcclusion: level('ambientOcclusion'),
     bloom: level('bloom'),
     filmEffects: bool('filmEffects'),
-    resolutionCap: RESOLUTION_CAPS.includes(s.resolutionCap as ResolutionCap)
-      ? (s.resolutionCap as ResolutionCap)
-      : DEFAULT_SETTINGS.resolutionCap,
+    // An old height-only cap becomes its resolution.
+    resolutionCap:
+      parseResolutionCap(s.resolutionCap) ?? DEFAULT_SETTINGS.resolutionCap,
     // A save from before the presets is High, the look it was playing.
     graphics: parsePreset(s.graphics) ?? DEFAULT_GRAPHICS,
   };
