@@ -322,19 +322,19 @@ export const FUTURE: Decade = {
       when: 'One',
       file: 'future-1',
       caption:
-        'A cybernetically augmented poolman in VR goggles, before Escher-like baths whose stairs and water defy gravity.',
+        'Opening, some year yet to come. The plant runs itself; the technician walks the baths through his goggles, checking water that no longer keeps to the floor.',
     },
     {
       when: 'Two',
       file: 'future-2',
       caption:
-        'The same poolman in cyberspace, among cubes of water floating in mid-air like Minecraft blocks.',
+        'Testing: the pool’s water as the model holds it, a cube at a time, each one turned in the hand and read; every reading agrees.',
     },
     {
       when: 'Three',
       file: 'future-3',
       caption:
-        'Back in the baths of the future, he reaches into a skimmer and pulls out the usual. Some things never change.',
+        'Closing: the skimmer basket, emptied by hand, as ever: hair, a plaster and a hair grip. Some things never change.',
     },
   ],
 };
