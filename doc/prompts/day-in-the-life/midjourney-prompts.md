@@ -212,7 +212,7 @@ Reg, a leisure centre plant technician in his sixties, white hair, reading glass
 
 ## The Pool of the Future
 
-The hall's last wall (the owner, 2026-10-29): "the Pool of the Future?", three photographs of a future Reg, the same poolman in each. Name the results `future-1_<variant>.png`, `future-2_…`, `future-3_…` in `doc/gens/day-in-the-life/`.
+The hall's last wall (the owner, 2026-10-29): "the Pool of the Future?", three photographs of a future Reg, the same poolman in each. Name the results `future-1_<variant>.png`, `future-2_…`, `future-3_…` in `doc/gens/day-in-the-life/`. Generated 2026-10-29 by Codex's built-in image generator, the prompts used as the decades' were (flags dropped, the same prefix and ending), Future 1 the reference for Reg in the other two; each first variant, `_a`, was kept, and resized to `resources/images/day-in-the-life/future-<n>.jpg`.
 
 ### Future 1: the augmented poolman (`future-1`)
 
