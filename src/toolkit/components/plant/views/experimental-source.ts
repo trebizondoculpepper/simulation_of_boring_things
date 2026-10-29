@@ -1,23 +1,26 @@
-import { CylinderGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
+import { Group } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
 import { tools } from '../../core/views/fitting-tools';
-import { createCanvasTexture } from '../../core/views/screens';
+import { createWrappedLettering } from '../../core/views/wrapped-lettering';
 import {
   SOURCE_SHAPE,
   SUBSTANCES,
   lcdLines,
-  ratingLines,
+  letteringLines,
 } from '../../../../game/plant/experimental-source';
 import { createCharacterLcd } from '../../industrial-control/views/panel-instruments';
 import type { ExperimentalTerminal } from '../../../../game/plant/experimental-source';
 
 /**
- * Arc and heights of the lettering, set below the display near the top
- * (the owner, 2026-10-23); the positions in `paintedLettering` are given
- * as before and dropped by `drop`.
+ * Where the lettering wraps round the front: 160° of the curve, between
+ * the code bands and the display (the owner, 2026-10-29).
  */
-const LETTERING = { arc: 1.7, bottom: 0.45, top: 0.93, drop: 0.13 } as const;
+const LETTERING = {
+  arc: (160 * Math.PI) / 180,
+  bottom: 0.5,
+  top: 0.88,
+} as const;
 
 /** Ink that reads on `body`: near-black on a light colour, near-white on a dark one. */
 function inkFor(body: string) {
@@ -27,108 +30,12 @@ function inkFor(body: string) {
 }
 
 /**
- * The lettering painted straight onto the cylinder's front, as a stencil
- * would put it: the source or sink symbol (a ring with an arrow leaving it,
- * or an arrow entering it to a dot) and its word, EXPERIMENTAL SOURCE (or
- * SINK) and the substance, and the rating lines. One transparent texture
- * on a curved skin a hair off the body, so it follows the curve.
- */
-function paintedLettering(
-  kit: PanelKit,
-  terminal: ExperimentalTerminal,
-  radius: number,
-  ink: string,
-) {
-  const { arc, bottom, top } = LETTERING;
-  const width = radius * arc;
-  const height = top - bottom;
-  const scale = 1400; // pixels a metre
-  const W = Math.round(width * scale);
-  const H = Math.round(height * scale);
-  const { context: c, texture } = createCanvasTexture(W, H);
-  kit.textures.push(texture);
-  c.clearRect(0, 0, W, H);
-  c.strokeStyle = ink;
-  c.fillStyle = ink;
-  c.textAlign = 'center';
-  c.textBaseline = 'middle';
-  const yAt = (metres: number) => (top - (metres - LETTERING.drop)) * scale;
-  const cx = W / 2;
-  // The symbol.
-  const role = terminal.role;
-  const sy = yAt(0.985);
-  const ring = 0.03 * scale;
-  c.lineWidth = 0.006 * scale;
-  c.beginPath();
-  c.arc(cx, sy, ring, 0, Math.PI * 2);
-  c.stroke();
-  const dot = () => {
-    c.beginPath();
-    c.arc(cx, sy, 0.007 * scale, 0, Math.PI * 2);
-    c.fill();
-  };
-  const arrow = (x0: number, x1: number) => {
-    c.beginPath();
-    c.moveTo(x0, sy);
-    c.lineTo(x1, sy);
-    c.stroke();
-    const head = 0.017 * scale;
-    const d = Math.sign(x1 - x0);
-    c.beginPath();
-    c.moveTo(x1, sy);
-    c.lineTo(x1 - d * head, sy - head * 0.5);
-    c.lineTo(x1 - d * head, sy + head * 0.5);
-    c.closePath();
-    c.fill();
-  };
-  dot();
-  if (role === 'source') arrow(cx, cx + 0.065 * scale);
-  else arrow(cx - 0.07 * scale, cx - 0.009 * scale);
-  const font = (metres: number, weight = 'bold') =>
-    `${weight} ${Math.round(metres * scale)}px Helvetica, Arial, sans-serif`;
-  c.font = font(0.019);
-  c.fillText(role === 'source' ? 'SOURCE' : 'SINK', cx, yAt(0.935));
-  // Its name.
-  const { label } = SUBSTANCES[terminal.spec.substance];
-  c.font = font(0.024);
-  c.fillText(`EXPERIMENTAL ${role.toUpperCase()}`, cx, yAt(0.875));
-  c.fillText(label, cx, yAt(0.845));
-  // Its rating.
-  c.font = font(0.021, 'normal');
-  ratingLines(terminal).forEach((line, k) =>
-    c.fillText(line, cx, yAt(0.795 - k * 0.03)),
-  );
-  texture.needsUpdate = true;
-  const skin = new Mesh(
-    new CylinderGeometry(
-      radius + 0.0015,
-      radius + 0.0015,
-      height,
-      32,
-      1,
-      true,
-      -arc / 2,
-      arc,
-    ),
-    new MeshStandardMaterial({
-      map: texture,
-      transparent: true,
-      roughness: 0.6,
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-    }),
-  );
-  skin.position.y = bottom + height / 2;
-  skin.name = `Lettering: experimental ${role}, ${label}`;
-  return skin;
-}
-
-/**
  * An experimental source or sink, always drawn the same way so that it
  * reads as a placeholder (`game/plant/experimental-source.ts`): a cylinder
  * in its substance's basic identification colour (BS 1710; power banded
  * in its IEC 60309 voltage colour), with its code bands round it, and
- * its symbol, name and rating lettered straight onto its front. Each port
+ * its substance, role and maximum flow lettered round its front in two
+ * lines. Each port
  * is drawn where the model puts it: an upright steel stud across its top
  * for each typed output or input, ending at its port, and a cable gland on
  * its back for its control
@@ -150,7 +57,9 @@ export function createExperimentalSourceView(
   const steel = t.paint('#c9cfcf', 0.4, 0.5);
   const { radius: r, height: h, stud: length, gland } = SOURCE_SHAPE;
   t.cyl(group, body, r, h, 0, h / 2, 0, 'y', 32);
-  t.cyl(group, body, r * 0.98, 0.02, 0, h + 0.01, 0, 'y', 32);
+  // Its lid, sunk 2 cm into the body so no face of it lies on the body's
+  // top (the owner, 2026-10-29: it z-fought when it sat on it).
+  t.cyl(group, body, r * 0.98, 0.03, 0, h - 0.005, 0, 'y', 32);
   // Its code bands, round it, top to bottom (BS 1710).
   const bandH = 0.05;
   bands.forEach((band, k) =>
@@ -167,7 +76,15 @@ export function createExperimentalSourceView(
     ),
   );
   // Its lettering, painted on its front and again on its back.
-  const front = paintedLettering(kit, terminal, r, inkFor(colour));
+  const front = createWrappedLettering(kit, {
+    radius: r,
+    arc: LETTERING.arc,
+    bottom: LETTERING.bottom,
+    height: LETTERING.top - LETTERING.bottom,
+    lines: letteringLines(terminal),
+    ink: inkFor(colour),
+    name: `Lettering: experimental ${role}, ${label}`,
+  });
   const back = front.clone();
   back.rotation.y = Math.PI;
   group.add(front, back);

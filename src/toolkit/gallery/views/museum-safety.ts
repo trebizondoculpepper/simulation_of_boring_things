@@ -1,4 +1,4 @@
-import { Group, Mesh, Points, SphereGeometry } from 'three';
+import { Group, Mesh, PlaneGeometry, Points, SphereGeometry } from 'three';
 import type { Object3D } from 'three';
 import { createPanelKit } from '../../components/core/views/eighties-controls';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -36,6 +36,8 @@ import type { SafetyFitting } from '../logic/museum-safety';
 import { MUSEUM_HALL0, MUSEUM_SQUARE } from '../logic/museum-plan';
 import type { MuseumHallId } from '../logic/museum-plan';
 import { MUSEUM_EXHIBITION as BRAND } from '../logic/museum-brand';
+import { createCanvasTexture } from '../../components/core/views/screens';
+import { lifebuoyStickerMaterial } from './museum-hall';
 
 /**
  * The museum's safety and services layer (mission 107, `logic/museum-safety.ts`),
@@ -51,6 +53,86 @@ import { MUSEUM_EXHIBITION as BRAND } from '../logic/museum-brand';
 const GREEN = '#00894a';
 const SAFE_BLUE = '#005ca8';
 const RED = '#c4231c';
+
+/**
+ * The STAFF ONLY door, a joke on the visitor: not a door at all but a
+ * full-size glossy vinyl graphic of one stuck flat on the wall (the owner,
+ * 2026-10-29), its frame, leaf, kick plate, handle and its STAFF ONLY ·
+ * NO ENTRY and FIRE DOOR KEEP SHUT signs all printed, with a sheen
+ * across it. 1.5 mm proud, drawn after the wall with the lifebuoy
+ * sticker's glossy material, so it never fights it. Facing +z.
+ */
+function staffDoorSticker(kit: PanelKit) {
+  const W = 1.04;
+  const H = 2.14;
+  const px = 400; // pixels a metre
+  const { context: c, texture } = createCanvasTexture(
+    Math.round(W * px),
+    Math.round(H * px),
+  );
+  kit.textures.push(texture);
+  const m = (v: number) => v * px;
+  const cw = m(W);
+  const ch = m(H);
+  // The frame, the leaf, the kick plate, the handle.
+  c.fillStyle = '#3c4447';
+  c.fillRect(0, 0, cw, ch);
+  const leaf = { x: m(0.06), y: m(0.08), w: m(0.92), h: m(2.06) };
+  c.fillStyle = '#8a9a96';
+  c.fillRect(leaf.x, leaf.y, leaf.w, leaf.h);
+  c.strokeStyle = 'rgba(0,0,0,0.35)';
+  c.lineWidth = m(0.008);
+  c.strokeRect(leaf.x, leaf.y, leaf.w, leaf.h);
+  c.fillStyle = '#c6cacb';
+  c.fillRect(m(0.09), ch - m(0.27), m(0.86), m(0.25));
+  c.fillStyle = '#d9dcdc';
+  c.fillRect(m(0.8), ch - m(1.02), m(0.14), m(0.03));
+  c.fillStyle = 'rgba(0,0,0,0.3)';
+  c.fillRect(m(0.8), ch - m(0.99), m(0.14), m(0.008));
+  // STAFF ONLY · NO ENTRY: a blue mandatory-style panel (ISO 7010 colours).
+  const sx = m(0.22);
+  const sw = m(0.6);
+  const sy = m(0.38);
+  const sh = m(0.3);
+  c.fillStyle = '#ffffff';
+  c.fillRect(sx - m(0.01), sy - m(0.01), sw + m(0.02), sh + m(0.02));
+  c.fillStyle = SAFE_BLUE;
+  c.fillRect(sx, sy, sw, sh);
+  lines(c, ['STAFF ONLY'], cw / 2, sy + sh * 0.32, sh * 0.26);
+  lines(c, ['NO ENTRY'], cw / 2, sy + sh * 0.72, sh * 0.22);
+  // FIRE DOOR KEEP SHUT: the blue disc and its words, below it.
+  const fy = m(0.82);
+  c.fillStyle = '#ffffff';
+  c.fillRect(m(0.35), fy, m(0.34), m(0.22));
+  c.fillStyle = SAFE_BLUE;
+  c.beginPath();
+  c.arc(cw / 2, fy + m(0.075), m(0.055), 0, Math.PI * 2);
+  c.fill();
+  lines(
+    c,
+    ['FIRE DOOR', 'KEEP SHUT'],
+    cw / 2,
+    fy + m(0.165),
+    m(0.03),
+    'bold',
+    SAFE_BLUE,
+  );
+  // A sheen: the light catching the vinyl.
+  const sheen = c.createLinearGradient(0, 0, cw, ch * 0.6);
+  sheen.addColorStop(0, 'rgba(255,255,255,0)');
+  sheen.addColorStop(0.45, 'rgba(255,255,255,0.10)');
+  sheen.addColorStop(0.55, 'rgba(255,255,255,0)');
+  c.fillStyle = sheen;
+  c.fillRect(0, 0, cw, ch);
+  texture.needsUpdate = true;
+  const material = lifebuoyStickerMaterial(texture);
+  kit.materials.push(material);
+  const mesh = new Mesh(new PlaneGeometry(W, H), material);
+  mesh.position.set(0, H / 2, 0.0015);
+  mesh.renderOrder = 1;
+  mesh.name = 'STAFF ONLY door sticker (vinyl)';
+  return mesh;
+}
 
 /** A printed sign `w` × `h` on a thin plate, facing +z. */
 function sign(
@@ -427,35 +509,8 @@ function build(kit: PanelKit, f: SafetyFitting, top: number): Object3D {
       g.add(s);
       return g;
     }
-    case 'staff-door': {
-      // A plain single door, kept shut, with its signs and a keypad.
-      const g = new Group();
-      t.box(g, t.paint('#3c4447', 0.45), 1.04, 2.14, 0.05, 0, 1.07, 0.025);
-      t.box(g, t.paint('#8a9a96', 0.5), 0.92, 2.06, 0.045, 0, 1.03, 0.05);
-      t.box(g, t.paint('#c6cacb', 0.3, 0.8), 0.86, 0.25, 0.004, 0, 0.14, 0.075);
-      t.box(
-        g,
-        t.paint('#c6cacb', 0.3, 0.8),
-        0.14,
-        0.025,
-        0.06,
-        0.34,
-        1.0,
-        0.09,
-      );
-      const staff = sign(kit, 0.3, 0.1, (c, w, h) => {
-        c.fillStyle = SAFE_BLUE;
-        c.fillRect(0, 0, w, h);
-        lines(c, ['STAFF ONLY'], w / 2, h * 0.5, h * 0.5);
-      });
-      staff.position.set(0, 1.62, 0.074);
-      g.add(staff);
-      const shut = createFireDoorSign(kit);
-      shut.position.set(0, 1.4, 0.072);
-      g.add(shut);
-      t.box(g, t.paint('#2a2a2a', 0.4), 0.08, 0.12, 0.03, 0.7, 1.2, 0.015);
-      return g;
-    }
+    case 'staff-door':
+      return staffDoorSticker(kit);
     case 'smoke-detector':
       return createSmokeDetector(kit).group;
     case 'sprinkler': {

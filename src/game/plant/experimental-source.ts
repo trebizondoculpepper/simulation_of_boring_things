@@ -702,6 +702,17 @@ export function ratingLines(t: ExperimentalTerminal): string[] {
 }
 
 /**
+ * The two lines lettered round the front of a source or sink (the owner,
+ * 2026-10-29): its substance, then its role and its maximum flow, both
+ * from the model.
+ */
+export function letteringLines(t: ExperimentalTerminal): [string, string] {
+  const { label, unit, medium } = SUBSTANCES[t.spec.substance];
+  const rate = `${sig(t.flow.maxRate)} ${medium === 'power' ? 'kW' : `${unit}/h`}`;
+  return [label, `EXPERIMENTAL ${t.role.toUpperCase()} · MAX ${rate}`];
+}
+
+/**
  * Move a substance from `source` to `sink` for `dt` seconds through a line
  * that is `open` (both its valves): at the potential difference over the
  * two internal resistances in series, never more than either's maximum

@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Halls 3 and 9: the day tanks' lids no longer z-fight (a screw cap sunk into the drum, the liquid never level with its top); their labels are printed round the front in two lines with the CLP corrosive pictogram; each has a bulkhead outlet and fill lance reaching its ports, so the suction hose meets the tank. Experimental sources letter their substance and role round their front in two large lines (the owner's bugs, 2026-10-29). Hall 3's STAFF ONLY door is now a glossy vinyl sticker on the wall.
 - Hall 5's picture lights hang above each decade's bay, no longer across the top of its print (the owner's bug, 2026-10-29).
 - A sand filter says it is rinsing only while its flow goes to waste (a rinse), not when it is put straight back into service after a backwash with its bed still unsettled (the owner's bug, 2026-10-28, at the Wash-O-Tron).
 - Hall 5's gallery shows the owner's thirty photographs of Reg the poolman, decade by decade (`resources/images/day-in-the-life/`), painted into each bay as they load; a missing one keeps its placeholder.

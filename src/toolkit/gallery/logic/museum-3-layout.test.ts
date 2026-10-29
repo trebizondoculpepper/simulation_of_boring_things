@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  DAY_TANK,
   PLANT_EDGE,
+  PORTS,
   hall3PipeClashes,
   plumbHall3,
   portInHall,
@@ -16,6 +18,25 @@ describe('Hall 3’s plant, laid out and plumbed', () => {
     expect(room.lines.map((l) => l.edge).sort()).toEqual(
       LINKS.map((l) => l.id).sort(),
     );
+  });
+
+  it('puts each day tank’s ports on fittings on the tank itself', () => {
+    // The view draws a bulkhead from the wall out to `out` and a lance
+    // through the lid up to `in` (the owner, 2026-10-29: the hose stopped
+    // short of the tank), so each must be square to its face, on its axis.
+    const { r, h, bund } = DAY_TANK;
+    for (const id of ['hypoTank', 'acidTank'] as const) {
+      const { in: inlet, out } = PORTS[id];
+      expect(out.out).toEqual([1, 0, 0]);
+      expect(out.at[0]).toBeGreaterThan(r);
+      expect(out.at[0]).toBeLessThanOrEqual(r + 0.08);
+      expect(out.at[1]).toBeGreaterThan(bund + 0.03);
+      expect(out.at[1]).toBeLessThan(bund + h - 0.1);
+      expect(out.at[2]).toBe(0);
+      expect(inlet.out).toEqual([0, 1, 0]);
+      expect([inlet.at[0], inlet.at[2]]).toEqual([0, 0]);
+      expect(inlet.at[1]).toBeGreaterThan(bund + h);
+    }
   });
 
   it('lays every pipe clear of every other', () => {

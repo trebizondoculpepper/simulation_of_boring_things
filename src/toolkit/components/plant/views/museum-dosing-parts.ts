@@ -14,6 +14,10 @@ import {
 } from '../../core/parts/parts';
 import { panelMakerMark } from '../../core/views/panel-maker-mark';
 import { createBrandBadge } from '../../core/views/brand-badge';
+import {
+  corrosivePictogram,
+  createWrappedLettering,
+} from '../../core/views/wrapped-lettering';
 import { dpdColour, phenolColour } from '../logic/dpd-colours';
 
 /**
@@ -457,6 +461,8 @@ export function createSmallDayTank(
     h,
     bund,
     litres,
+    inlet,
+    outlet,
   }: {
     tag: string;
     chemical: 'hypochlorite' | 'acid';
@@ -464,6 +470,10 @@ export function createSmallDayTank(
     h: number;
     bund: number;
     litres: number;
+    /** Its fill port above the lid, on its axis, in its own frame. */
+    inlet: readonly [number, number, number];
+    /** Its outlet port, out of its +x wall, in its own frame. */
+    outlet: readonly [number, number, number];
   },
 ) {
   const t = tools(kit);
@@ -492,6 +502,60 @@ export function createSmallDayTank(
     roughness: 0.3,
   });
   const fill = t.cyl(group, liquid, r * 0.94, 1, 0, bund, 0, 'y', 24);
+  // Never quite full, so the liquid's top never lies on the drum's.
+  const brim = h - 0.012;
+  // Its screw cap, in its band colour, sunk 1 cm into the drum's top so
+  // none of its faces lies on it (the owner, 2026-10-29: it z-fought),
+  // and the fill lance up through it to its inlet port.
+  const capTop = bund + h + 0.025;
+  t.cyl(
+    group,
+    t.paint(band, 0.5),
+    r * 0.45,
+    capTop - (bund + h - 0.01),
+    0,
+    (capTop + bund + h - 0.01) / 2,
+    0,
+    'y',
+    24,
+  );
+  const fitting = t.paint('#d8d6cc', 0.5);
+  t.cyl(
+    group,
+    fitting,
+    0.012,
+    inlet[1] - capTop + 0.005,
+    inlet[0],
+    (inlet[1] + capTop - 0.005) / 2,
+    inlet[2],
+    'y',
+    12,
+  );
+  // Its outlet: a bulkhead fitting through the wall, its nut on the face,
+  // its tail out to the port, so the suction hose meets the tank.
+  const wall = Math.sqrt(r * r - outlet[2] * outlet[2]);
+  t.cyl(
+    group,
+    fitting,
+    0.032,
+    0.012,
+    wall + 0.004,
+    outlet[1],
+    outlet[2],
+    'x',
+    16,
+  );
+  t.cyl(
+    group,
+    fitting,
+    0.014,
+    outlet[0] - wall + 0.01,
+    (outlet[0] + wall - 0.01) / 2,
+    outlet[1],
+    outlet[2],
+    'x',
+    12,
+  );
   t.cyl(
     group,
     t.paint(band, 0.5),
@@ -544,13 +608,25 @@ export function createSmallDayTank(
   );
   scale.mesh.position.set(r + 0.08, bund + h / 2, 0.08);
   group.add(scale.mesh);
-  const label = createMicroLabel(
-    kit,
-    `${tag} ${chemical === 'hypochlorite' ? 'SODIUM HYPOCHLORITE 14%' : 'HYDROCHLORIC ACID 10%'} · CORROSIVE`,
-    { height: 0.016, ink: '#16191b', plate: '#f4f3ee', maxWidth: 2 * r },
+  // Its label printed round its front in two lines, with its CLP
+  // corrosive pictogram (the owner, 2026-10-29: not a strip in the air).
+  group.add(
+    createWrappedLettering(kit, {
+      radius: r,
+      arc: (150 * Math.PI) / 180,
+      bottom: bund + h * 0.42,
+      height: 0.13,
+      lines: [
+        chemical === 'hypochlorite'
+          ? 'SODIUM HYPOCHLORITE 14%'
+          : 'HYDROCHLORIC ACID 10%',
+        `${tag} · CORROSIVE`,
+      ],
+      ink: '#16191b',
+      name: `${tag} label`,
+      mark: corrosivePictogram,
+    }),
   );
-  label.position.set(0, bund + h * 0.55, r + 0.003);
-  group.add(label);
   const maker = createBrandBadge(kit, 'grundflow', { height: 0.018 });
   maker.position.set(0, bund + h * 0.3, r + 0.004);
   group.add(maker);
@@ -562,8 +638,8 @@ export function createSmallDayTank(
       const k = Math.round(share * 200);
       if (k === shown) return;
       shown = k;
-      fill.scale.y = share * h;
-      fill.position.y = bund + (share * h) / 2;
+      fill.scale.y = share * brim;
+      fill.position.y = bund + (share * brim) / 2;
       tubeLevel.scale.y = share * h;
       tubeLevel.position.y = bund + (share * h) / 2;
     },

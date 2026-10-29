@@ -546,7 +546,7 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
 export function safetySolids(id: MuseumHallId): Footprint[] {
   const o = hallOrigin(id);
   return safetyLayer(id)
-    .filter((f) => f.kind === 'fire-point' || f.kind === 'staff-door')
+    .filter((f) => f.kind === 'fire-point')
     .map((f) => {
       const nx = Math.sin(f.yaw);
       const nz = Math.cos(f.yaw);

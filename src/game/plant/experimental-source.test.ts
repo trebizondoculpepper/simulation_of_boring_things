@@ -10,6 +10,7 @@ import {
   lcdLines,
   ledText,
   ratingLines,
+  letteringLines,
   transfer,
 } from './experimental-source';
 
@@ -137,6 +138,19 @@ describe('experimental sources', () => {
     expect(open.accept(1e6, 60)).toBeCloseTo(1, 6);
     expect(canAccept(open, 'water', 'dirty-water')).toBe(true);
     expect(canAccept(open, 'water', 'pool-water')).toBe(false);
+  });
+
+  it('letters two lines round its front, from the model', () => {
+    expect(
+      letteringLines(
+        createExperimentalSource({ id: 't', substance: 'mains-water' }),
+      ),
+    ).toEqual(['MAINS WATER', 'EXPERIMENTAL SOURCE · MAX 5 m³/h']);
+    expect(
+      letteringLines(
+        createExperimentalSource({ id: 't', substance: 'power-230v' }),
+      )[1],
+    ).toBe('EXPERIMENTAL SOURCE · MAX 7.4 kW');
   });
 
   it('letters a rating plate in each medium’s own units', () => {

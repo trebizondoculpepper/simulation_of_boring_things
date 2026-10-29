@@ -745,6 +745,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       chemical,
       ...DAY_TANK,
       litres: 60,
+      inlet: PORTS[id].in.at,
+      outlet: PORTS[id].out.at,
     });
     object.add(
       describe(
