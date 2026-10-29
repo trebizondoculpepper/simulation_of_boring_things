@@ -157,6 +157,15 @@ export function startMuseumHallRoom(
         hold: (on) => walk.hold(on),
         look: (pitch) =>
           walk.place(walk.walker.x, walk.walker.z, walk.pose().yaw, pitch),
+        film: ({ from, to, fov }) => {
+          camera.position.copy(from);
+          camera.lookAt(to);
+          if (camera.fov !== fov) {
+            camera.fov = fov;
+            camera.updateProjectionMatrix();
+          }
+          camera.updateMatrixWorld();
+        },
       });
   });
   // A neighbour's exhibit is only ever seen from another hall, so it is

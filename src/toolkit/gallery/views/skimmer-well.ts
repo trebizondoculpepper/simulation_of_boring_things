@@ -1,5 +1,8 @@
 import {
-  AdditiveBlending,
+  CustomBlending,
+  OneFactor,
+  SrcAlphaFactor,
+  ZeroFactor,
   AlwaysStencilFunc,
   BackSide,
   CircleGeometry,
@@ -289,6 +292,9 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = 0.002;
   group.add(ring);
+  // Everything below the collar: shown only while the lid is off (`open`).
+  const inner = new Group();
+  group.add(inner);
 
   // The opening, into the stencil only, where it is seen (it tests depth,
   // so whatever stands before it hides the hole).
@@ -309,7 +315,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   mask.rotation.x = -Math.PI / 2;
   mask.position.y = 0.001;
   mask.renderOrder = MASK;
-  group.add(mask);
+  inner.add(mask);
   // A backstop over the whole opening, so that no sliver between the
   // layers below (their edges snap to the PS1 grid) shows the deck.
   const backstopMaterial = own(
@@ -322,7 +328,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   );
   backstop.rotation.x = -Math.PI / 2;
   backstop.position.y = -depth * 0.5;
-  group.add(backstop);
+  inner.add(backstop);
 
   // The walls, seen from within: only the far side faces the eye. Dirty,
   // the more so the deeper.
@@ -349,7 +355,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
     ),
   );
   walls.position.y = -depth / 2;
-  group.add(walls);
+  inner.add(walls);
 
   // The throat: a rectangular duct at the water's level, from the well's
   // wall back under the deck to the pool, its far end beyond the pool's
@@ -360,7 +366,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   // faces the eye.
   const throat = new Group();
   throat.position.set(0, -0.085, -radius);
-  group.add(throat);
+  inner.add(throat);
   const wide = 0.15;
   const high = 0.1;
   // Its mouth, into the stencil: the duct is drawn only through it.
@@ -440,7 +446,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   );
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -depth;
-  group.add(floor);
+  inner.add(floor);
 
   // The ledge round the wall below the throat, and the basket sitting
   // on it: open at the top, its handle across, the glow in it.
@@ -459,7 +465,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   );
   ledge.rotation.x = -Math.PI / 2;
   ledge.position.y = seat;
-  group.add(ledge);
+  inner.add(ledge);
   const basketShape = new CylinderGeometry(
     basketRadius,
     basketRadius * 0.92,
@@ -485,7 +491,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
     new Mesh(basketShape, farMaterial),
   );
   far.position.y = seat - basketDepth / 2;
-  group.add(far);
+  inner.add(far);
   const nearMaterial = own(
     createPs1Material({ map: basketGrime.texture, roughness: 0.75 }),
   );
@@ -495,7 +501,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
     new Mesh(basketShape, nearMaterial),
   );
   near.position.y = seat - basketDepth / 2;
-  group.add(near);
+  inner.add(near);
   // Silt settled in its bottom.
   const bottomMaterial = own(
     createPs1Material({ color: '#4d3d26', roughness: 0.95 }),
@@ -507,7 +513,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   );
   bottom.rotation.x = -Math.PI / 2;
   bottom.position.y = seat - basketDepth;
-  group.add(bottom);
+  inner.add(bottom);
   // The sludge it fills with: dark brown, fibrous, uneven. Shown
   // or not (`sludge`).
   const muck = createCanvasTexture(256, 256);
@@ -523,14 +529,19 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   );
   sludge.rotation.x = -Math.PI / 2;
   sludge.position.y = seat - 0.025;
-  group.add(sludge);
+  inner.add(sludge);
   // The glow in the basket, under the caustics.
   const glowMaterial = own(
     new MeshBasicMaterial({
       color: glow,
       transparent: true,
       opacity: 0,
-      blending: AdditiveBlending,
+      // Added light, the target's alpha untouched (`skimmer-caustics.ts`).
+      blending: CustomBlending,
+      blendSrc: SrcAlphaFactor,
+      blendDst: OneFactor,
+      blendSrcAlpha: ZeroFactor,
+      blendDstAlpha: OneFactor,
     }),
   );
   const shine = inside(
@@ -543,7 +554,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   let full = false;
   let glowAt = 0;
   shine.position.y = floorOfBasket;
-  group.add(shine);
+  inner.add(shine);
   const rimMaterial = own(
     createPs1Material({ color: colours.basket, roughness: 0.6 }),
   );
@@ -554,14 +565,14 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   );
   rim.rotation.x = Math.PI / 2;
   rim.position.y = seat + 0.003;
-  group.add(rim);
+  inner.add(rim);
   const handle = inside(
     rimMaterial,
     BASKET_RIM,
     new Mesh(new BoxGeometry(basketRadius * 2, 0.008, 0.022), rimMaterial),
   );
   handle.position.y = seat + 0.01;
-  group.add(handle);
+  inner.add(handle);
   // The maker's name moulded on the handle, so the basket is a branded thing.
   const mark = createCanvasTexture(512, 64);
   const c = mark.context;
@@ -581,10 +592,14 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   );
   name.rotation.x = -Math.PI / 2;
   name.position.y = seat + 0.0145;
-  group.add(name);
+  inner.add(name);
 
   return {
     group,
+    /** Open, its inside shown, or shut, only its collar (and the lid over it). */
+    open(on: boolean) {
+      inner.visible = on;
+    },
     /** The basket dirty, full of brown sludge, or clean (only its walls' grime). */
     sludge(dirty: boolean) {
       sludge.visible = dirty;

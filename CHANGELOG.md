@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 5: the skimmer game now plays dev53's film. Using the skimmer lifts its lid with gold caustics rising from the rim, the camera orbits the skimmer (from no further off than 1.6 m) through the suspense, eases to a 50 mm lens, whips up to the find turning above with its banner, then returns to the walker's eye as the lid goes back on, the find in hand; the skimmer is a hole in the deck with its throat toward the water, a grimy basket full of sludge until the find is out, and shut it is only a white circle (so from neighbouring halls too). The finds are thrown into a grey commercial waste bin (Rubbermate, the game's own maker, of the Rubbermaid Brute kind) instead of the skip; the sign and the how-to say bin. The museum's exhibit hook gains `film`, a shot the exhibit gives each frame (`exhibit-carrying.ts`).
+
 - Attract shots recorded as videos (`node scripts/record-attract.ts [shot…]`): each title fly-by played end to end at `?record=<shot>` (full resolution, no title, fade, blur or HUD) and rendered frame by frame on a stepped clock, so it is smooth however slowly it draws; 3840 × 2160, 30 fps, H.264, no sound, into `doc/marketing/tmp/video/` (not versioned), for the itch.io page and the trailer.
 
 - Skimmer reveal: the big-item cue and the fanfare now take turns, reveal by reveal (more hair keeps its deflated fanfare), in Hall 5 and dev53.

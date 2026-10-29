@@ -16,7 +16,7 @@ import { tools } from '../../../components/core/views/fitting-tools';
 import { createPs1Material } from '../../../components/core/parts/ps1-material';
 import { showPhoto } from '../../views/photo-print';
 import { createPoolClock } from '../../../components/architectural/views/pool-clock';
-import { createSkip } from '../../../components/site-dressing/views/skip';
+import { createWasteBin } from '../../../components/site-dressing/views/waste-bin';
 import { createBinTossing } from '../../../components/site-dressing/parts/bin-tossing';
 import type { TossBin } from '../../../components/site-dressing/parts/bin-tossing';
 import { objectImpact } from '../../../components/core/audio/object-impact';
@@ -25,7 +25,6 @@ import { createPortableBoard } from '../../../controls/logic/portable-board';
 import { createDropProfile } from '../../../controls/logic/drop-profile';
 import type { DropProfile } from '../../../controls/logic/drop-profile';
 import type { PortableObject } from '../../../controls/input/object-handling';
-import type { PlacementTarget } from '../../../controls/input/placement-target';
 import {
   click,
   partAudio,
@@ -44,14 +43,21 @@ import {
   newSkimmerGame,
 } from '../../logic/museum-5-skimmer';
 import type { SkimmerAction, SkimmerGame } from '../../logic/museum-5-skimmer';
-import { bannerLine, fanfareOf, revealFrame } from '../../logic/skimmer-reveal';
-import type { RevealPhase } from '../../logic/skimmer-reveal';
+import { bannerLine, fanfareOf } from '../../logic/skimmer-reveal';
+import {
+  LENS_50_FOV,
+  cinematicFrame,
+  lidPose,
+} from '../../logic/skimmer-cinematic';
+import type { CinematicPhase, Pose } from '../../logic/skimmer-cinematic';
+import { createSkimmerWell, drawOver } from '../../views/skimmer-well';
+import { createSkimmerCaustics } from '../../views/skimmer-caustics';
 import {
   BAY,
   OPENING_CHECKS,
   POOLSIDE,
   SKIMMER_PLACARD,
-  SKIP_SIGN,
+  BIN_SIGN,
   WALL,
   bayPlaces,
   futureBayPlace,
@@ -91,6 +97,17 @@ import type {
  * the skip takes finds tossed into it (`bin-tossing.ts`), not the lid.
  */
 
+/** A seeded random (mulberry32), so the skimmer's grime is always the same. */
+function seededRandom(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 const FACE_NORTH = Math.PI;
 const FACE_EAST = Math.PI / 2;
 const SANS = 'Arial, Helvetica, sans-serif';
@@ -160,10 +177,9 @@ const PICK_UP: SoundRecipe = click({
 /** The finds are drawn a little larger than life, to be seen on the deck. */
 const FIND_SCALE = 1.6;
 /** The lid: a flat plastic disc 250 mm across. */
-const LID_DROP = createDropProfile('flat', 0.25, 'plastic');
 /** How big a find looks turning above the walker, metres across, and how far before the eye. */
-const REVEAL_SIZE = 0.2;
-const REVEAL_AHEAD = 0.42;
+const REVEAL_SIZE = 0.24;
+const REVEAL_AHEAD = 0.9;
 
 /** A photograph's colours by its decade's look. */
 const LOOKS: Record<
@@ -569,79 +585,83 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     }),
   );
 
-  // ---- The skimmer: collar, lid, basket ----
+  // ---- The skimmer: a hole in the deck, its basket, its lid (dev53) ----
+  // The well is painted over the deck where its opening is seen
+  // (`skimmer-well.ts`), its throat toward the water; the lid comes off
+  // and goes back on in the film (below), not by hand. On the painted
+  // floor, so the opening's mask is not under it.
   const certikind = t.paint('#f2f1ec', 0.45);
   const dark = t.paint('#15191b', 0.9);
   const skimmerGroup = new Group();
-  skimmerGroup.position.set(sk.x, 0, sk.z);
-  t.cyl(skimmerGroup, certikind, 0.155, 0.008, 0, 0.004, 0, 'y', 32);
-  t.cyl(skimmerGroup, dark, 0.13, 0.002, 0, 0.0085, 0, 'y', 32);
-  // The basket's rim and handle, seen with the lid off.
-  const basket = new Group();
-  basket.userData.live = true;
-  const grey = t.paint('#8a9498', 0.6);
-  for (let k = 0; k < 16; k++) {
-    const a = (k / 16) * Math.PI * 2;
-    const seg = t.box(
-      basket,
-      grey,
-      0.05,
-      0.01,
-      0.008,
-      Math.cos(a) * 0.09,
-      0.009,
-      Math.sin(a) * 0.09,
-    );
-    seg.rotation.y = -a + Math.PI / 2;
-  }
-  t.box(basket, grey, 0.17, 0.008, 0.01, 0, 0.012, 0);
-  skimmerGroup.add(basket);
-  // The basket shows nothing of what is in it: what will it be?
+  skimmerGroup.position.set(sk.x, 0.005, sk.z);
+  const grime = seededRandom(5);
+  const well = createSkimmerWell({
+    reach: POOLSIDE.water.minZ - sk.z + 0.3,
+    random: grime,
+  });
+  // Its throat (−z in its own frame) toward the water, south.
+  well.group.rotation.y = Math.PI;
+  well.group.userData.live = true;
+  well.sludge(true);
+  // Shut: only its collar and lid, a white circle (and so from afar).
+  well.open(false);
+  skimmerGroup.add(well.group);
+  const caustics = createSkimmerCaustics({ radius: 0.135, random: grime });
+  skimmerGroup.add(caustics.mesh);
   object.add(
     markComponent(skimmerGroup, {
       name: `${SKIMMER_TAGS.skimmer} wall skimmer (Certikind; dry, its suction capped)`,
       status: () =>
-        game.lid.at === 'on'
-          ? 'lid on'
-          : `lid off; ${inBasket(game) === 0 ? 'basket empty' : 'basket has things in it'}`,
+        film
+          ? 'lid off'
+          : `lid on; ${inBasket(game) === 0 ? 'basket empty' : 'basket has things in it'}`,
     }),
   );
 
   const lid = new Group();
   lid.name = 'Skimmer lid';
   lid.userData.live = true;
-  t.cyl(lid, certikind, 0.125, 0.012, 0, 0.006, 0, 'y', 32);
+  t.cyl(lid, certikind, 0.13, 0.012, 0, 0.006, 0, 'y', 32);
   t.cyl(lid, dark, 0.012, 0.013, -0.05, 0.006, 0, 'y', 12);
   t.cyl(lid, dark, 0.012, 0.013, 0.05, 0.006, 0, 'y', 12);
   t.label(lid, 'CERTIKIND', 0, 0.0125, 0.07, 0.016, '#5a6266').rotation.x =
     -Math.PI / 2;
-  object.add(markComponent(lid, { name: `${SKIMMER_TAGS.lid} skimmer lid` }));
+  drawOver(lid);
+  skimmerGroup.add(
+    markComponent(lid, { name: `${SKIMMER_TAGS.lid} skimmer lid` }),
+  );
+  /** The lid, `k` from on its seat (0) to lying aside (1). */
+  const placeLid = (k: number) => {
+    const p = lidPose(k);
+    lid.position.set(p.x, p.y, 0);
+    lid.rotation.set(0, 0, p.tilt);
+  };
 
-  // ---- The skip, and its sign ----
-  const skipModel = createSkip(kit);
-  const skip = skipModel.group;
-  skip.position.set(sp.x, 0, sp.z);
+  // ---- The bin, and its sign (the owner, 2026-10-29: a waste bin, not a skip) ----
+  const binModel = createWasteBin(kit);
+  const binGroup = binModel.group;
+  binGroup.position.set(sp.x, 0, sp.z);
   object.add(
-    markComponent(skip, {
-      name: 'Mini skip (for things found in the skimmer)',
+    markComponent(binGroup, {
+      name: 'Waste bin (for things found in the skimmer)',
       status: () => `${game.binned} thing${game.binned === 1 ? '' : 's'} in it`,
     }),
   );
-  footprint(sp.x, sp.z, 0.98, 0.68);
+  footprint(sp.x, sp.z, 0.3);
   const signPost = new Group();
   t.box(signPost, t.paint('#2b3438', 0.5), 0.05, 1.1, 0.05, 0, 0.55, -0.03);
   const signFace = t.printed(0.6, 0.42, () => {}, 512);
   signFace.mesh.position.set(0, 1.25, 0);
   signPost.add(signFace.mesh);
   t.box(signPost, t.paint('#2b3438', 0.5), 0.63, 0.45, 0.02, 0, 1.25, -0.012);
-  turnTo(signPost, sp.x - 1.3, 0, sp.z - 0.2, FACE_EAST - 0.6);
+  turnTo(signPost, sp.x - 1, 0, sp.z - 0.2, FACE_EAST - 0.6);
   object.add(
     markComponent(signPost, {
-      name: 'Skip sign',
-      status: () => (cleared(game) ? 'SKIMMER CLEARED!' : SKIP_SIGN.headline),
+      name: 'Bin sign',
+      status: () => (cleared(game) ? 'SKIMMER CLEARED!' : BIN_SIGN.headline),
     }),
   );
-  footprint(sp.x - 1.3, sp.z - 0.2, 0.08);
+  footprint(sp.x - 1, sp.z - 0.2, 0.08);
   let signShown = '';
   const drawSign = () => {
     const done = cleared(game);
@@ -663,15 +683,15 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
         w * 0.88,
       ).forEach((l, n) => c.fillText(l, w * 0.06, h * 0.45 + n * h * 0.12));
     } else {
-      wrapText(c, SKIP_SIGN.headline, w * 0.88).forEach((l, n) =>
+      wrapText(c, BIN_SIGN.headline, w * 0.88).forEach((l, n) =>
         c.fillText(l, w * 0.06, h * 0.2 + n * h * 0.14),
       );
       c.font = `${h * 0.075}px ${SANS}`;
-      wrapText(c, SKIP_SIGN.body, w * 0.88).forEach((l, n) =>
+      wrapText(c, BIN_SIGN.body, w * 0.88).forEach((l, n) =>
         c.fillText(l, w * 0.06, h * 0.55 + n * h * 0.1),
       );
       c.font = `bold ${h * 0.09}px ${SANS}`;
-      c.fillText(`In the skip: ${game.binned}`, w * 0.06, h * 0.92);
+      c.fillText(`In the bin: ${game.binned}`, w * 0.06, h * 0.92);
     }
     signFace.texture.needsUpdate = true;
   };
@@ -732,15 +752,21 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   let hands: ExhibitHands | null = null;
   let view: ExhibitView | null = null;
 
-  // ---- The reveal (the owner, 2026-10-29), `skimmer-reveal.ts` ----
-  // Reaching in, the walker is held and looks up while the suspense
-  // plays; the find appears above, turning, with a fanfare and a banner;
-  // then it is in the hands and the walker free to carry it to the skip.
-  let reveal: {
+  // ---- The film (the owner, 2026-10-29; tried in dev53) ----
+  // Using the skimmer: the lid comes off and gold caustics rise from its
+  // rim; the camera orbits it, sinking, through the suspense; a whip up
+  // to the find turning above, with a fanfare and a banner; then back to
+  // the walker's own eye as the lid goes on, the find in hand
+  // (`skimmer-cinematic.ts`).
+  let film: {
     index: number;
     t: number;
-    from: number;
-    phase: RevealPhase;
+    start: Pose;
+    phase: CinematicPhase;
+    /** The walker's field of view, degrees, to zoom from and back to. */
+    fov: number;
+    /** The find's carrying, put by while it is shown, so it is not grabbed. */
+    portable: PortableObject | undefined;
   } | null = null;
   /** Each find's size across, and its middle's height, at scale 1, metres. */
   const sizes: { across: number; middle: number }[] = [];
@@ -777,65 +803,140 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     c.textAlign = 'left';
     banner.texture.needsUpdate = true;
   };
-  const startReveal = (i: number) => {
-    if (!view) return;
-    reveal = { index: i, t: 0, from: view.pitch(), phase: 'suspense' };
+  /** A point `x`, `y`, `z` metres from the skimmer's middle (the hall's axes), in the world. */
+  const worldAt = (x: number, y: number, z: number) =>
+    object.localToWorld(new Vector3(sk.x + x, y, sk.z + z));
+  /** Which way a yaw and pitch look, in the hall's frame. */
+  const toward = (yaw: number, pitch: number) =>
+    new Vector3(
+      Math.sin(yaw) * Math.cos(pitch),
+      Math.sin(pitch),
+      -Math.cos(yaw) * Math.cos(pitch),
+    );
+  const startFilm = (i: number, cam: Camera) => {
+    if (!view?.film) return false;
+    const at = object.worldToLocal(cam.getWorldPosition(new Vector3()));
+    const into = object.getWorldQuaternion(new Quaternion()).invert();
+    const d = cam.getWorldDirection(new Vector3()).applyQuaternion(into);
+    film = {
+      index: i,
+      t: 0,
+      start: {
+        x: at.x - sk.x,
+        y: at.y,
+        z: at.z - sk.z,
+        yaw: Math.atan2(d.x, -d.z),
+        pitch: Math.asin(Math.max(-1, Math.min(1, d.y))),
+      },
+      phase: 'suspense',
+      fov: (cam as PerspectiveCamera).fov,
+      portable: props[i].userData.portable as PortableObject | undefined,
+    };
+    delete props[i].userData.portable;
     view.hold(true);
+    well.open(true);
+    well.sludge(true);
     partAudio.play(revealCue('reveal-suspense'), voice);
     drawBanner(i);
+    return true;
   };
-  const endReveal = () => {
-    if (!reveal) return;
-    reveal = null;
+  /** The find out of the film and into the hands, life size. */
+  const handOver = (i: number) => {
+    const prop = props[i];
+    prop.scale.setScalar(FIND_SCALE);
+    prop.rotation.set(0, 0, 0);
+    if (film?.portable) prop.userData.portable = film.portable;
+    game = { ...game, lid: { at: 'on' } };
+    if (hands?.give(prop)) speak(game.order[i]);
+    else
+      game = {
+        ...game,
+        places: game.places.map((q, k) => (k === i ? { at: 'basket' } : q)),
+      };
+    refresh();
+  };
+  const endFilm = () => {
+    if (!film) return;
+    if (film.portable) props[film.index].userData.portable = film.portable;
+    film = null;
     banner.mesh.visible = false;
+    caustics.update(0, 0, 0);
+    well.glow(0);
+    well.open(false);
+    placeLid(0);
     view?.hold(false);
   };
-  const stepReveal = (delta: number, cam: Camera | null) => {
-    if (!reveal || !view) return;
-    reveal.t += delta;
-    const f = revealFrame(reveal.t, reveal.from);
-    view.look(f.pitch);
-    const i = reveal.index;
+  const stepFilm = (delta: number, cam: Camera | null) => {
+    if (!film || !view?.film) return;
+    film.t += delta;
+    const f = cinematicFrame(film.t, film.start);
+    const i = film.index;
     const prop = props[i];
-    if (f.phase !== reveal.phase) {
-      reveal.phase = f.phase;
-      if (f.phase === 'fanfare')
+    if (f.phase !== film.phase) {
+      film.phase = f.phase;
+      // The find out, the sludge with it: the basket left clean.
+      if (f.phase === 'reveal') {
         partAudio.play(revealCue(fanfareOf(game.order[i], i)), voice);
-      if (f.phase === 'settle') {
-        // Into the hands, life size, to be carried to the skip.
-        prop.scale.setScalar(FIND_SCALE);
-        prop.rotation.set(0, 0, 0);
-        if (!hands?.give(prop)) {
-          game = {
-            ...game,
-            places: game.places.map((q, k) => (k === i ? { at: 'basket' } : q)),
-          };
-          refresh();
-        }
+        well.sludge(false);
       }
+      if (f.phase === 'replace') handOver(i);
       if (f.phase === 'done') {
-        endReveal();
+        endFilm();
         return;
       }
     }
+    placeLid(f.lid);
+    caustics.update(film.t, f.rise, f.glow);
+    well.glow(f.glow);
     banner.mesh.visible = f.banner && cam !== null;
-    if (f.phase !== 'suspense' && f.phase !== 'fanfare') return;
-    prop.visible = f.size > 0;
-    if (!cam || f.size <= 0) return;
-    // Above the walker, before the eye looking up, turning.
-    const scale = object.getWorldScale(new Vector3()).x;
-    const { across, middle } = sizes[i];
-    const shown = (REVEAL_SIZE / across) * f.size;
-    const at = object.worldToLocal(
-      cam.localToWorld(new Vector3(0, 0, -REVEAL_AHEAD * scale)),
-    );
-    prop.position.set(at.x, at.y - middle * shown, at.z);
-    prop.rotation.set(0, f.spin, 0);
-    prop.scale.setScalar(shown);
-    const parentQ = object.getWorldQuaternion(new Quaternion()).invert();
-    const b = cam.localToWorld(new Vector3(0, -0.13 * scale, -0.5 * scale));
-    banner.mesh.position.copy(object.worldToLocal(b));
-    banner.mesh.quaternion.copy(parentQ).multiply(cam.quaternion);
+    if (f.phase === 'suspense' || f.phase === 'reveal')
+      prop.visible = f.size > 0;
+    if (!cam) return;
+    const fov = film.fov + (LENS_50_FOV - film.fov) * f.zoom;
+    if (f.eye) {
+      const e = f.eye;
+      const d = toward(e.yaw, e.pitch);
+      view.film({
+        from: worldAt(e.x, e.y, e.z),
+        to: worldAt(e.x + d.x, e.y + d.y, e.z + d.z),
+        fov,
+      });
+    } else {
+      // The walker's own eye, its lens easing back.
+      const from = cam.getWorldPosition(new Vector3());
+      view.film({
+        from,
+        to: from.clone().add(cam.getWorldDirection(new Vector3())),
+        fov,
+      });
+    }
+    if (f.size > 0 && f.rest) {
+      // Where the whip comes to rest, before the eye, turning.
+      const r = f.rest;
+      const d = toward(r.yaw, r.pitch);
+      const { across, middle } = sizes[i];
+      const shown = (REVEAL_SIZE / across) * f.size;
+      prop.position.set(
+        sk.x + r.x + d.x * REVEAL_AHEAD,
+        r.y + d.y * REVEAL_AHEAD + 0.02 - middle * shown,
+        sk.z + r.z + d.z * REVEAL_AHEAD,
+      );
+      prop.rotation.set(0, f.spin, 0);
+      prop.scale.setScalar(shown);
+    }
+    if (f.banner) {
+      // As far off as keeps its size and place on screen through the zoom.
+      const scale = object.getWorldScale(new Vector3()).x;
+      const k =
+        Math.tan((31 * Math.PI) / 180) /
+        Math.tan((((cam as PerspectiveCamera).fov / 2) * Math.PI) / 180);
+      const parentQ = object.getWorldQuaternion(new Quaternion()).invert();
+      const b = cam.localToWorld(
+        new Vector3(0, -0.13 * scale, -0.5 * scale * k),
+      );
+      banner.mesh.position.copy(object.worldToLocal(b));
+      banner.mesh.quaternion.copy(parentQ).multiply(cam.quaternion);
+    }
   };
   let hadIntro = false;
   const act = (a: SkimmerAction) => {
@@ -881,31 +982,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     } satisfies PortableObject;
     return component;
   };
-  const lidCarry = portable(lid, LID_DROP, {
-    pickUp: () => {
-      if (game.lid.at !== 'held') act({ type: 'lid' });
-    },
-    drop: () => {
-      if (game.lid.at === 'held') act({ type: 'deck', ...plan(lid) });
-    },
-  });
-  const seatLid = () => {
-    object.attach(lid);
-    lid.position.set(sk.x, 0.004, sk.z);
-    lid.rotation.set(0, 0, 0);
-    lid.scale.setScalar(1);
-  };
-  // The skimmer's seat takes the lid back, nothing else.
-  skimmerGroup.userData.placementTarget = {
-    accepts: (o) => o === lid,
-    place: (_lid, p) => {
-      act({ type: 'skimmer' });
-      p.component.drop();
-      p.component.settle();
-      seatLid();
-    },
-  } satisfies PlacementTarget;
-  // The skip: finds tossed in land and count; the lid is refused.
+  // The bin: finds tossed in land and count.
   const tossing = createBinTossing({
     camera: new PerspectiveCamera(),
     metre: METRE,
@@ -920,33 +997,43 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     },
   });
   const bin: TossBin = {
-    name: 'skip',
-    group: skip,
-    shape: skipModel.shape,
-    footprint: skipModel.footprint,
+    name: 'bin',
+    group: binGroup,
+    shape: binModel.shape,
+    footprint: binModel.footprint,
     x: sp.x,
     z: sp.z,
     takes: (o) => props.includes(o as Group),
   };
   tossing.add(bin);
-  // Reaching into the skimmer: the next find, handed over.
+  // Using the skimmer: the lid off and aside, the next find out, as the
+  // game's own steps; in the hall walked in, as a film, the lid going
+  // back on at its end.
   const workSkimmer = () => {
-    if (reveal || hands?.holding()) return;
-    const was = held(game);
-    act({ type: 'skimmer' });
-    const now = held(game);
-    if (typeof now !== 'number' || now === was) return;
-    // In the hall walked in, it is revealed above the walker first.
-    if (hands && view) {
-      startReveal(now);
+    if (film || hands?.holding()) return;
+    let g = actOnSkimmer(game, { type: 'lid' });
+    g = actOnSkimmer(g, { type: 'deck', x: sk.x + 0.35, z: sk.z });
+    const was = held(g);
+    g = actOnSkimmer(g, { type: 'skimmer' });
+    const now = held(g);
+    if (typeof now !== 'number' || now === was) {
+      // Nothing left in it: said so, and the lid stays on.
+      game = { ...g, lid: { at: 'on' } };
       refresh();
       return;
     }
+    game = g;
+    refresh();
+    if (hands && eye && startFilm(now, eye)) {
+      props[now].visible = false;
+      return;
+    }
+    // No film (not the hall walked in): straight into the hands, or back.
     const prop = props[now];
     prop.position.set(sk.x, 0.05, sk.z);
-    prop.visible = true;
-    // No hands (not the hall walked in): back it goes.
-    if (!hands?.give(prop))
+    game = { ...game, lid: { at: 'on' } };
+    if (hands?.give(prop)) speak(game.order[now]);
+    else
       game = {
         ...game,
         places: game.places.map((q, k) => (k === now ? { at: 'basket' } : q)),
@@ -956,24 +1043,22 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   const uses = parts.uses;
   uses.set(skimmerGroup, workSkimmer);
   const refresh = () => {
-    basket.visible = game.lid.at !== 'on';
     game.places.forEach((p, i) => {
       props[i].visible = p.at !== 'basket';
     });
     drawSign();
   };
   const reset = () => {
-    endReveal();
+    endFilm();
     game = newSkimmerGame();
     sinceReset = 0;
     hadIntro = false;
     stopVoice();
     cardFor = game.saidCount;
     card.mesh.visible = false;
-    // Everything out of the hands and back in its place.
-    hands?.forget(lid);
-    lidCarry.reset();
-    seatLid();
+    // Everything out of the hands and back in its place; the basket full.
+    placeLid(0);
+    well.sludge(true);
     tossing.remove(bin);
     tossing.add(bin);
     for (const p of props) {
@@ -1015,7 +1100,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
           status: () => {
             const p = game.places[i];
             return p.at === 'skip'
-              ? 'in the skip'
+              ? 'in the bin'
               : p.at === 'held'
                 ? 'in your hands'
                 : 'on the deck';
@@ -1217,9 +1302,13 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     status: () =>
       cleared(game)
         ? 'skimmer cleared'
-        : `${game.binned} of ${game.order.length} in the skip`,
+        : `${game.binned} of ${game.order.length} in the bin`,
     solids: () => solids,
     reset: () => reset(),
+    dispose() {
+      well.dispose();
+      caustics.dispose();
+    },
     carrying: {
       bind(h, v) {
         hands = h;
@@ -1251,8 +1340,13 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
         drawCard(game.said);
       }
       cardTime -= delta;
-      card.mesh.visible = cardTime > 0 && cam !== null && !reveal;
-      stepReveal(delta, cam);
+      card.mesh.visible = cardTime > 0 && cam !== null && !film;
+      stepFilm(delta, cam);
+      // The throat drawn only when its mouth faces the eye.
+      if (cam)
+        well.seenFrom(
+          well.group.worldToLocal(cam.getWorldPosition(new Vector3())),
+        );
       for (const u of updates) u(delta);
     },
   };

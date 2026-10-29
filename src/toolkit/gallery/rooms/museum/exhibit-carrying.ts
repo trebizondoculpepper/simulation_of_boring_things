@@ -1,4 +1,4 @@
-import type { Object3D } from 'three';
+import type { Object3D, Vector3 } from 'three';
 import type { PortableObject } from '../../../controls/input/object-handling';
 import type { HallExhibit } from './exhibits';
 
@@ -27,6 +27,14 @@ export interface ExhibitView {
   hold(on: boolean): void;
   /** Look `pitch` radians up, facing as it does, where it stands. */
   look(pitch: number): void;
+  /**
+   * Take the camera for a film (the skimmer's, dev53's, the owner,
+   * 2026-10-29), each frame it is wanted: the eye at `from`, looking at
+   * `to`, both in the world's frame, with a vertical field of view of
+   * `fov` degrees. Given each frame after the walker has placed the
+   * camera, it wins; not given, the walker's own eye comes back.
+   */
+  film?(shot: { from: Vector3; to: Vector3; fov: number }): void;
 }
 
 /**

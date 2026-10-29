@@ -36,8 +36,9 @@ export const BLEND = 0.6;
 export const SWEEP = Math.PI * 2;
 /** The orbit's end: its radius and the eye's height, metres. */
 export const ORBIT_END = { radius: 0.8, height: 0.4 };
-/** The orbit's least starting radius, metres. */
+/** The orbit's least and greatest starting radius, metres: from across a hall it starts no further off than this. */
 export const ORBIT_MIN = 0.6;
+export const ORBIT_MAX = 1.6;
 /** Where the eye whips to for the reveal: out from the skimmer, and up. */
 export const REVEAL_EYE = { radius: 0.9, height: 0.5 };
 /** Seconds the whip from the orbit's end up to the reveal takes, overshoot and correction included. */
@@ -133,7 +134,10 @@ export function cinematicFrame(
   const { suspense, reveal, replace } = timing;
   // Round the skimmer from where the walker stands.
   const from = Math.atan2(start.x, start.z);
-  const r0 = Math.max(ORBIT_MIN, Math.hypot(start.x, start.z));
+  const r0 = Math.min(
+    ORBIT_MAX,
+    Math.max(ORBIT_MIN, Math.hypot(start.x, start.z)),
+  );
   const end = from + SWEEP;
   /** The orbit's eye `t` seconds in. */
   const orbit = (t: number): Pose => {

@@ -1,5 +1,7 @@
 import {
-  AdditiveBlending,
+  CustomBlending,
+  OneFactor,
+  ZeroFactor,
   BufferGeometry,
   Color,
   DoubleSide,
@@ -133,7 +135,13 @@ export function createSkimmerCaustics(options: SkimmerCausticsOptions) {
     fragmentShader,
     transparent: true,
     depthWrite: false,
-    blending: AdditiveBlending,
+    // Light added, the target's alpha left alone: a hall's passes read
+    // alpha (Hall 5's), and an additive alpha would darken the shafts.
+    blending: CustomBlending,
+    blendSrc: OneFactor,
+    blendDst: OneFactor,
+    blendSrcAlpha: ZeroFactor,
+    blendDstAlpha: OneFactor,
     side: DoubleSide,
   });
   const mesh = new Mesh(geometry, material);

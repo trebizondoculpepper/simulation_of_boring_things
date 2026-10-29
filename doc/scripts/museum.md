@@ -759,7 +759,7 @@ Source: `toolkit/gallery/logic/museum-5-gallery.ts:339` (`SKIMMER_PLACARD`), on 
 - Title: Why skimmers matter
 - Body: Most of a pool’s dirt floats: hair, skin, sun cream, leaves and insects. A skimmer draws off the top few millimetres of water, and its basket stops the big things before they reach the pump and the filter. Somebody has to empty it. Today, that’s you.
 - Fact: Emptying the skimmer baskets is one of the first jobs on a pool’s morning checklist, and has been since skimmers were invented.
-- Try it: Lift the lid and put it to one side. Click the skimmer to take something out. Put it in the skip. Empty the skimmer!
+- Try it: Click the skimmer to take something out. Throw it in the bin. Empty the skimmer!
 
 ### Skimmer cut-away panel
 
@@ -782,18 +782,18 @@ Source: `hall-5-day-in-the-life.ts:891`; items from `toolkit/gallery/logic/museu
 - Rescue equipment in place
 - Poolside clean, no glass
 
-### The skip's sign
+### The bin's sign
 
-Source: `toolkit/gallery/logic/museum-5-gallery.ts:352` (`SKIP_SIGN`), drawn at `hall-5-day-in-the-life.ts:575`
+Source: `toolkit/gallery/logic/museum-5-gallery.ts:352` (`BIN_SIGN`), drawn at `hall-5-day-in-the-life.ts:575`
 
 - Headline: For things found in the skimmer
-- Body: In real life, a bin bag. Here, a skip, because there’s so much of it.
-- Count: In the skip: 0 (live)
+- Body: Lined with a bin bag, emptied daily, and never, ever reached into.
+- Count: In the bin: 0 (live)
 - When the skimmer is empty, the sign turns yellow: SKIMMER CLEARED! / You took out 6 things. Lovely. (`CLEARED_LINE`, `toolkit/gallery/logic/museum-5-skimmer.ts`; the number is the count of finds, 6)
 
 ### What’s in the Skimmer? The finds (reveal banner, caption card and voice clip)
 
-Source: `toolkit/gallery/logic/museum-5-skimmer.ts` (`FINDS`). The six come out in this order, every time (the owner, 2026-10-29). Each is revealed above the walker with a fanfare (`logic/skimmer-reveal.ts`): the banner reads "You got <Banner>!" over its caption; the caption is also the script for its voice clip `resources/sound/voice/skimmer/<id>.mp3` (none recorded yet; `resources/sound/voice/skimmer/index.md`). The Name column is used in the overlay.
+Source: `toolkit/gallery/logic/museum-5-skimmer.ts` (`FINDS`). The six come out in this order, every time (the owner, 2026-10-29). Each is revealed in the skimmer's film (`logic/skimmer-cinematic.ts`, tried in dev53): the lid comes off with gold caustics, the camera orbits the skimmer through the suspense, then whips up to the find turning above with the big-item cue or the fanfare by turns (`logic/skimmer-reveal.ts`), and the lid goes back on with the find in hand, to be thrown in the waste bin; the banner reads "You got <Banner>!" over its caption; the caption is also the script for its voice clip `resources/sound/voice/skimmer/<id>.mp3` (none recorded yet; `resources/sound/voice/skimmer/index.md`). The Name column is used in the overlay.
 
 | Id         | Name                        | Banner          | Caption                                                                                                |
 | ---------- | --------------------------- | --------------- | ------------------------------------------------------------------------------------------------------ |

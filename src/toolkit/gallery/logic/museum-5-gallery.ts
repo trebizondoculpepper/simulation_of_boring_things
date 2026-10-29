@@ -350,7 +350,7 @@ export function futureBayPlace() {
   };
 }
 
-/** The dry poolside: its painted water, its deck, and the skimmer in its north edge, the skip along the deck. */
+/** The dry poolside: its painted water, its deck, and the skimmer in its north edge, the bin along the deck. */
 export const POOLSIDE = {
   water: { minX: -4.6, maxX: 3.4, minZ: 0.2, maxZ: 4.6 },
   deck: { minX: -5.6, maxX: 4.6, minZ: -3.2, maxZ: 5.4 },
@@ -358,7 +358,7 @@ export const POOLSIDE = {
   coping: 0.3,
   /** The skimmer's lid, in the coping of the north edge. */
   skimmer: { x: -0.6, z: 0.05 },
-  /** The skip, its length along x. */
+  /** The waste bin (the owner, 2026-10-29: a bin, not a skip). */
   skip: { x: 2.6, z: -1.9 },
 } as const;
 
@@ -389,13 +389,13 @@ export const SKIMMER_PLACARD = {
   body: 'Most of a pool’s dirt floats: hair, skin, sun cream, leaves and insects. A skimmer draws off the top few millimetres of water, and its basket stops the big things before they reach the pump and the filter. Somebody has to empty it. Today, that’s you.',
   fact: 'Emptying the skimmer baskets is one of the first jobs on a pool’s morning checklist, and has been since skimmers were invented.',
   tryIt:
-    'Lift the lid and put it to one side. Click the skimmer to take something out. Put it in the skip. Empty the skimmer!',
+    'Click the skimmer to take something out. Throw it in the bin. Empty the skimmer!',
 };
 
-/** The skip's sign. */
-export const SKIP_SIGN = {
+/** The bin's sign. */
+export const BIN_SIGN = {
   headline: 'For things found in the skimmer',
-  body: 'In real life, a bin bag. Here, a skip, because there’s so much of it.',
+  body: 'Lined with a bin bag, emptied daily, and never, ever reached into.',
 };
 
 /** The laminated opening checks sheet on the wall. */
