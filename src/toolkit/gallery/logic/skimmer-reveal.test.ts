@@ -48,7 +48,7 @@ describe('the skimmer’s item reveal', () => {
   });
 
   it('deflates the fanfare for more hair', () => {
-    expect(fanfareOf('dead-rat')).toBe('reveal-fanfare');
+    expect(fanfareOf('dead-rat')).toBe('reveal-big-item');
     expect(fanfareOf('more-hair')).toBe('reveal-fanfare-deflated');
     expect(bannerLine('a DEAD RAT')).toBe('You got a DEAD RAT!');
   });

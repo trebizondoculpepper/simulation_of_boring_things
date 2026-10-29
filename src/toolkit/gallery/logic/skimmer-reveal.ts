@@ -19,7 +19,7 @@ export interface RevealTiming {
 
 export const REVEAL: RevealTiming = {
   suspense: 7.6,
-  fanfare: 2.5,
+  fanfare: 3.1,
   settle: 0.5,
 };
 
@@ -88,9 +88,9 @@ export function revealFrame(
   return { phase: 'done', pitch: from, size: 0, spin: 0, banner: false };
 }
 
-/** The fanfare a find gets: the last, more hair, a deflated one. */
+/** The cue a find appears to: the big-item reveal; the last, more hair, a deflated fanfare. */
 export const fanfareOf = (id: FindId) =>
-  id === 'more-hair' ? 'reveal-fanfare-deflated' : 'reveal-fanfare';
+  id === 'more-hair' ? 'reveal-fanfare-deflated' : 'reveal-big-item';
 
 /** The banner's words. */
 export const bannerLine = (got: string) => `You got ${got}!`;

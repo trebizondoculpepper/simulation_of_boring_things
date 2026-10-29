@@ -15,6 +15,7 @@ import type {
 
 export type RevealCue =
   | 'reveal-suspense'
+  | 'reveal-big-item'
   | 'reveal-fanfare'
   | 'reveal-fanfare-deflated'
   | 'skimmer-cleared';
@@ -152,6 +153,7 @@ function cleared(): Timed[] {
 
 const STAND_INS: Record<RevealCue, () => Timed[]> = {
   'reveal-suspense': suspense,
+  'reveal-big-item': fanfare,
   'reveal-fanfare': fanfare,
   'reveal-fanfare-deflated': deflated,
   'skimmer-cleared': cleared,

@@ -5,8 +5,8 @@ The suspense cue for Hall 5 comes from an ACE-Step 1.5 resynthesis of the openin
 | File                          | Use                          | Duration |
 | ----------------------------- | ---------------------------- | -------: |
 | `reveal-suspense.mp3`         | Complete opening suspense    |   7.60 s |
-| `reveal-big-item.mp3`         | Big-item reveal, optional    |   3.05 s |
-| `reveal-fanfare.mp3`          | Triumphant item appearance   |   2.50 s |
+| `reveal-big-item.mp3`         | Each find appearing          |   3.10 s |
+| `reveal-fanfare.mp3`          | Unused, kept as alternative  |   2.50 s |
 | `reveal-fanfare-deflated.mp3` | Last find, more hair         |   2.50 s |
 | `skimmer-cleared.mp3`         | Last find placed in the skip |   3.00 s |
 
