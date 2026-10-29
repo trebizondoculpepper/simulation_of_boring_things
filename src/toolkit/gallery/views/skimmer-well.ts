@@ -73,6 +73,69 @@ export interface SkimmerWellOptions {
     throat: string;
   };
   glow?: string;
+  /** For the grime's blots; the same seed, the same dirt. */
+  random?: () => number;
+}
+
+/**
+ * The grime on the well's wall, painted as the capacitor soot is
+ * (`industrial-devices.ts`): soft blots, each brown at its heart, yellow
+ * round it and clear at its edge, more and heavier the lower down, over
+ * a stain darkening toward the bottom; a tide line at the water's level
+ * (`water`, a fraction of the depth down) and drips running down from it.
+ * The canvas wraps the wall: across is round it, down is down it.
+ */
+function paintGrime(
+  c: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  base: string,
+  water: number,
+  random: () => number,
+) {
+  c.fillStyle = base;
+  c.fillRect(0, 0, w, h);
+  const wash = c.createLinearGradient(0, 0, 0, h);
+  wash.addColorStop(0, 'rgba(150, 120, 50, 0)');
+  wash.addColorStop(water, 'rgba(150, 120, 50, 0.12)');
+  wash.addColorStop(1, 'rgba(90, 62, 28, 0.75)');
+  c.fillStyle = wash;
+  c.fillRect(0, 0, w, h);
+  const blot = (x: number, y: number, r: number, alpha: number) => {
+    // Round the seam, so the wrap does not show.
+    for (const dx of [-w, 0, w]) {
+      const g = c.createRadialGradient(x + dx, y, 0, x + dx, y, r);
+      g.addColorStop(0, `rgba(82, 54, 22, ${alpha})`);
+      g.addColorStop(0.45, `rgba(176, 142, 58, ${alpha * 0.6})`);
+      g.addColorStop(1, 'rgba(200, 170, 80, 0)');
+      c.fillStyle = g;
+      c.fillRect(x + dx - r, y - r, 2 * r, 2 * r);
+    }
+  };
+  for (let i = 0; i < 320; i++) {
+    // Down the wall, more of them the lower.
+    const down = Math.sqrt(random());
+    blot(
+      random() * w,
+      down * h,
+      (0.04 + 0.08 * random()) * h * (0.6 + down),
+      0.2 + 0.7 * down * random(),
+    );
+  }
+  // The tide line, where the water stands, and what ran down from it.
+  const tide = water * h;
+  c.fillStyle = 'rgba(120, 92, 36, 0.45)';
+  c.fillRect(0, tide - h * 0.012, w, h * 0.024);
+  c.lineCap = 'round';
+  for (let i = 0; i < 40; i++) {
+    const x = random() * w;
+    c.strokeStyle = `rgba(100, 72, 30, ${0.15 + 0.3 * random()})`;
+    c.lineWidth = 1 + random() * 3;
+    c.beginPath();
+    c.moveTo(x, tide);
+    c.lineTo(x + (random() - 0.5) * 4, tide + random() * (h - tide) * 0.8);
+    c.stroke();
+  }
 }
 
 /**
@@ -115,6 +178,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
       throat: '#1a2226',
     },
     glow = '#ffc44a',
+    random = Math.random,
   } = options;
   const group = new Group();
   group.name = 'Skimmer well';
@@ -167,9 +231,20 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   backstop.position.y = -depth * 0.5;
   group.add(backstop);
 
-  // The walls, seen from within: only the far side faces the eye.
+  // The walls, seen from within: only the far side faces the eye. Dirty,
+  // the more so the deeper.
+  const grime = createCanvasTexture(512, 256);
+  paintGrime(
+    grime.context,
+    512,
+    256,
+    colours.inside,
+    (0.085 + 0.05) / depth,
+    random,
+  );
+  grime.texture.needsUpdate = true;
   const wallMaterial = own(
-    createPs1Material({ color: colours.inside, roughness: 0.6 }),
+    createPs1Material({ map: grime.texture, roughness: 0.7 }),
   );
   wallMaterial.side = BackSide;
   const walls = inside(
@@ -279,8 +354,9 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   const seat = -0.17;
   const basketRadius = radius * 0.84;
   const basketDepth = 0.13;
+  // Where the silt settles: the dirtiest of all.
   const ledgeMaterial = own(
-    createPs1Material({ color: colours.inside, roughness: 0.6 }),
+    createPs1Material({ color: '#8a7550', roughness: 0.9 }),
   );
   const ledge = inside(
     ledgeMaterial,
@@ -407,6 +483,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
       group.traverse((o) => (o as Mesh).geometry?.dispose());
       for (const m of materials) m.dispose();
       mark.texture.dispose();
+      grime.texture.dispose();
     },
   };
 }

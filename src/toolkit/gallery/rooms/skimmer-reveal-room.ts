@@ -170,7 +170,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   skimmer.position.set(SK.x, 0, SK.z);
   room.add(skimmer);
   // Its throat runs back under the deck to beyond the pool's edge.
-  const well = createSkimmerWell({ reach: SK.z - EDGE + 0.1 });
+  const well = createSkimmerWell({ reach: SK.z - EDGE + 0.1, random });
   skimmer.add(well.group);
   const caustics = createSkimmerCaustics({ radius: 0.135, random });
   skimmer.add(caustics.mesh);
