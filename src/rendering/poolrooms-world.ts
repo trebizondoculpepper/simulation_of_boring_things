@@ -36,7 +36,10 @@ import {
 } from 'three';
 import type { Material, Object3D, Texture } from 'three';
 import { METRE } from '../toolkit/components/core/logic/units';
-import { createRenderer } from '../toolkit/components/core/parts/render-style';
+import {
+  createRenderer,
+  layoutSize,
+} from '../toolkit/components/core/parts/render-style';
 import { createFirstPerson } from '../toolkit/controls/input/first-person';
 import type { Footprint } from '../toolkit/controls/logic/walk-collision';
 import {
@@ -1460,7 +1463,7 @@ export function startPoolroomsWorld(canvas: HTMLCanvasElement) {
   walk.place(0, 52 * m, 0, 0);
 
   const resize = () => {
-    const { width: w, height: h } = canvas.getBoundingClientRect();
+    const { width: w, height: h } = layoutSize(canvas);
     if (!w || !h) return;
     renderer.setSize(Math.round(w), Math.round(h), false);
     camera.aspect = w / h;

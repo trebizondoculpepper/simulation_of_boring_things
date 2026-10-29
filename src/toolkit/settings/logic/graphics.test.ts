@@ -8,6 +8,7 @@ import {
   ambientOcclusionAt,
   bloomAt,
   cappedPixelRatio,
+  frameLayout,
   parsePreset,
   shadowMapSide,
 } from './graphics';
@@ -54,6 +55,37 @@ describe('the costlier effects’ settings', () => {
     // A small window is not drawn larger than it asked.
     expect(cappedPixelRatio(1, 1000, 600, '1920x1080')).toBe(1);
     expect(cappedPixelRatio(1.5, 0, 0, '1280x720')).toBe(1.5);
+  });
+
+  it('lays a capped image out in a window of another shape', () => {
+    // 1024 × 768 (4:3) in a 1920 × 1080 window at 1x.
+    expect(frameLayout(1920, 1080, 1, '1024x768', 'fill')).toBeNull();
+    expect(frameLayout(1920, 1080, 1, 'native', 'letterbox')).toBeNull();
+    expect(frameLayout(1920, 1080, 1, '1024x768', 'centre')).toEqual({
+      width: 1024,
+      height: 768,
+      x: 448,
+      y: 156,
+      scaleX: 1,
+      scaleY: 1,
+    });
+    expect(frameLayout(1920, 1080, 1, '1024x768', 'letterbox')).toEqual({
+      width: 1440,
+      height: 1080,
+      x: 240,
+      y: 0,
+      scaleX: 1,
+      scaleY: 1,
+    });
+    const stretched = frameLayout(1920, 1080, 1, '1024x768', 'stretch')!;
+    expect(stretched.width * stretched.scaleX).toBeCloseTo(1920);
+    expect(stretched.height * stretched.scaleY).toBeCloseTo(1080);
+    // Centre shrinks, keeping its shape, only when the window is smaller.
+    const small = frameLayout(800, 600, 1, '1920x1080', 'centre')!;
+    expect(small.width).toBeCloseTo(800);
+    expect(small.height).toBeCloseTo(450);
+    // On a 2x screen, actual size is half as many CSS pixels.
+    expect(frameLayout(1920, 1080, 2, '1024x768', 'centre')!.width).toBe(512);
   });
 
   it('reads an old height-only cap as its resolution', () => {

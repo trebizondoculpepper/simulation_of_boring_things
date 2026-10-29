@@ -32,6 +32,7 @@ import {
   createComposer,
   createRenderer,
   followEffectSettings,
+  layoutSize,
 } from '../../components/core/parts/render-style';
 import { METRE } from '../../components/core/logic/units';
 import {
@@ -388,7 +389,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     camera.updateProjectionMatrix();
   };
   const resize = () => {
-    const { width, height } = canvas.getBoundingClientRect();
+    const { width, height } = layoutSize(canvas);
     resizeTo(width, height);
   };
   const observer = new ResizeObserver(resize);

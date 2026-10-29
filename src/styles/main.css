@@ -848,6 +848,11 @@ canvas {
 .on-title #app canvas {
   filter: blur(3px) brightness(0.82) saturate(1.05);
   transform: scale(1.04);
+  /* The title's backdrop always fills the window. */
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  transform-origin: 50% 50%;
 }
 .on-title #app .hud-movement,
 .on-title #app .hud-tools,
@@ -1028,4 +1033,19 @@ canvas {
 .noclip-altitude,
 .screenshot-notice {
   zoom: var(--overlay-scale, 1);
+}
+
+/* The rooms' image under a maximum resolution of another shape than the
+   window (src/main.ts, layOutFrame): centred, letterboxed in black, or
+   stretched to fill; unset, it fills the window. */
+#app {
+  background: #000;
+}
+#app canvas {
+  width: var(--frame-w, 100%);
+  height: var(--frame-h, 100%);
+  margin-left: var(--frame-x, 0);
+  margin-top: var(--frame-y, 0);
+  transform-origin: 0 0;
+  transform: var(--frame-transform, none);
 }

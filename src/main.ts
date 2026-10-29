@@ -1,3 +1,4 @@
+import { frameLayout } from './toolkit/settings/logic/graphics';
 import {
   reportError,
   startErrorReporting,
@@ -208,6 +209,39 @@ screenshotButton.textContent = '▣';
 screenshotButton.title = 'Copy a screenshot (Ctrl/Cmd+Shift+K)';
 screenshotButton.setAttribute('aria-label', 'Copy screenshot without overlays');
 screenshotButton.className = 'location-pin-button screenshot-button';
+/**
+ * Where the rooms' image is laid out (the owner, 2026-10-29): under a
+ * maximum resolution of another shape than the window, centred, letterboxed
+ * or stretched (`frameLayout`), as CSS variables `#app canvas` reads.
+ */
+const layOutFrame = () => {
+  const s = settings.peek();
+  const frame = frameLayout(
+    innerWidth,
+    innerHeight,
+    devicePixelRatio || 1,
+    s.resolutionCap,
+    s.aspectFit,
+  );
+  const root = document.documentElement.style;
+  if (!frame) {
+    for (const name of ['--frame-w', '--frame-h', '--frame-x', '--frame-y'])
+      root.removeProperty(name);
+    root.removeProperty('--frame-transform');
+    return;
+  }
+  root.setProperty('--frame-w', `${frame.width}px`);
+  root.setProperty('--frame-h', `${frame.height}px`);
+  root.setProperty('--frame-x', `${frame.x}px`);
+  root.setProperty('--frame-y', `${frame.y}px`);
+  root.setProperty(
+    '--frame-transform',
+    frame.scaleX === 1 && frame.scaleY === 1
+      ? 'none'
+      : `scale(${frame.scaleX}, ${frame.scaleY})`,
+  );
+};
+addEventListener('resize', layOutFrame);
 // The player's settings that are the app's to apply: the master volume,
 // and whether the on-screen controls are shown. (Look, field of view and
 // graphics quality are applied where they are used.)
@@ -222,6 +256,7 @@ effect(() => {
     '--overlay-scale',
     String(s.overlayScale),
   );
+  layOutFrame();
 });
 // The pause menu: Esc once the mouse is free, a gamepad's Start, or the
 // gear among each room's view tools. The world saves itself as it runs

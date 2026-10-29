@@ -136,6 +136,81 @@ export function cappedPixelRatio(
   return ratio;
 }
 
+/**
+ * What is done when the maximum resolution's shape is not the window's
+ * (the owner, 2026-10-29): `fill`, the window's own shape drawn with no
+ * more pixels than the cap (no borders); `centre`, the cap's size shown
+ * as it is, centred, shrunk in proportion only if the window is smaller;
+ * `letterbox`, scaled up or down to fit, its shape kept, black bars
+ * either side; `stretch`, scaled to fill the window, its shape not kept.
+ */
+export const ASPECT_FITS = ['fill', 'centre', 'letterbox', 'stretch'] as const;
+export type AspectFit = (typeof ASPECT_FITS)[number];
+
+export const ASPECT_FIT_LABELS: Record<AspectFit, string> = {
+  fill: 'Fill (the window’s shape)',
+  centre: 'Centre (actual size)',
+  letterbox: 'Letterbox (fit, keep shape)',
+  stretch: 'Stretch (fill, ignore shape)',
+};
+
+/** Each on the menu's 16-character LCD. */
+export const ASPECT_FIT_LCD: Record<AspectFit, readonly [string, string]> = {
+  fill: ['FILL', 'WINDOW SHAPE'],
+  centre: ['CENTRE', 'ACTUAL SIZE'],
+  letterbox: ['LETTERBOX', 'FIT, KEEP SHAPE'],
+  stretch: ['STRETCH', 'FILL, ANY SHAPE'],
+};
+
+/**
+ * Where the image is laid out in a `viewW` × `viewH` window (CSS pixels,
+ * `dpr` device pixels to each), under `cap` and `fit`: its laid-out box,
+ * offset to centre it, and the scale it is then drawn at each way (only
+ * Stretch's is not 1). Null to fill the window as it is.
+ */
+export function frameLayout(
+  viewW: number,
+  viewH: number,
+  dpr: number,
+  cap: ResolutionCap,
+  fit: AspectFit,
+): {
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  scaleX: number;
+  scaleY: number;
+} | null {
+  if (cap === 'native' || fit === 'fill' || !(viewW > 0 && viewH > 0))
+    return null;
+  const [w, h] = cap.split('x').map(Number);
+  // The cap's size in CSS pixels, so Centre shows it pixel for pixel.
+  const cssW = w / Math.max(dpr, 1e-6);
+  const cssH = h / Math.max(dpr, 1e-6);
+  const fitScale = Math.min(viewW / cssW, viewH / cssH);
+  const scale = fit === 'centre' ? Math.min(1, fitScale) : fitScale;
+  const width = cssW * scale;
+  const height = cssH * scale;
+  if (fit === 'stretch')
+    return {
+      width,
+      height,
+      x: 0,
+      y: 0,
+      scaleX: viewW / width,
+      scaleY: viewH / height,
+    };
+  return {
+    width,
+    height,
+    x: (viewW - width) / 2,
+    y: (viewH - height) / 2,
+    scaleX: 1,
+    scaleY: 1,
+  };
+}
+
 // ---- Presets (mission 087) --------------------------------------------------
 
 /**

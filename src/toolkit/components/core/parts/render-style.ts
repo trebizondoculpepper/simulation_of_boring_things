@@ -470,3 +470,13 @@ export function useEnvironment(
     target.dispose();
   };
 }
+
+/**
+ * A canvas's size as laid out, CSS pixels, before any transform: what a
+ * room sizes its renderer and camera to. Its on-screen rectangle may
+ * differ, stretched to the window (`aspectFit`, the owner, 2026-10-29).
+ */
+export const layoutSize = (canvas: HTMLCanvasElement) => ({
+  width: canvas.clientWidth,
+  height: canvas.clientHeight,
+});

@@ -27,7 +27,10 @@ import type { Footprint } from '../../controls/logic/walk-collision';
 import { METRE } from '../../components/core/logic/units';
 import { createPortals } from '../views/portals';
 import { createFirstPerson } from '../../controls/input/first-person';
-import { createRenderer } from '../../components/core/parts/render-style';
+import {
+  createRenderer,
+  layoutSize,
+} from '../../components/core/parts/render-style';
 import { Water } from '../../vendor/threejs-water/Water';
 import { Renderer as WaterRenderer } from '../../vendor/threejs-water/Renderer';
 import { NO_WATER_OPTICS } from '../../vendor/threejs-water/water/WaterOptics';
@@ -375,7 +378,7 @@ export function startWaterRoom(canvas: HTMLCanvasElement) {
   const eye = new PerspectiveCamera();
   let sized = false;
   const resize = () => {
-    const { width: w, height: h } = canvas.getBoundingClientRect();
+    const { width: w, height: h } = layoutSize(canvas);
     if (!w || !h) {
       // Built unseen, for its camera: sized for that until it is shown.
       if (!sized) optics.setSize(640, 480);

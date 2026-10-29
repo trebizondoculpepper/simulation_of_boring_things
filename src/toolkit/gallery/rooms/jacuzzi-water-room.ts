@@ -16,6 +16,7 @@ import {
   createComposer,
   createRenderer,
   followEffectSettings,
+  layoutSize,
 } from '../../components/core/parts/render-style';
 import {
   createPanelKit,
@@ -157,7 +158,7 @@ export function startJacuzziWaterRoom(canvas: HTMLCanvasElement) {
     aimed: () => Boolean(useAt(0, 0)),
   });
   const resize = () => {
-    const { width, height } = canvas.getBoundingClientRect();
+    const { width, height } = layoutSize(canvas);
     if (!width || !height) return;
     renderer.setSize(Math.round(width), Math.round(height), false);
     composer.setPixelRatio(renderer.getPixelRatio());

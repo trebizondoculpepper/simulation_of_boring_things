@@ -6,6 +6,7 @@ import { flightHelp } from '../controls/logic/noclip';
 import type { Readable } from '../components/core/logic/world/components';
 import { RANGES, choosePreset, renderScale } from './logic/settings';
 import {
+  ASPECT_FIT_LABELS,
   EFFECT_LABELS,
   GRAPHICS_PRESETS,
   RESOLUTION_LABELS,
@@ -310,7 +311,9 @@ export function createPauseMenu(actions: PauseMenuActions) {
   );
   // The costlier effects, each off or at a quality, and the resolution cap
   // (the owner, 2026-10-28).
-  const choice = <K extends 'ambientOcclusion' | 'bloom' | 'resolutionCap'>(
+  const choice = <
+    K extends 'ambientOcclusion' | 'bloom' | 'resolutionCap' | 'aspectFit',
+  >(
     key: K,
     label: string,
     options: Readonly<Record<Settings[K], string>>,
@@ -343,6 +346,7 @@ export function createPauseMenu(actions: PauseMenuActions) {
     film.checked = s.filmEffects;
   });
   choice('resolutionCap', 'Maximum resolution', RESOLUTION_LABELS);
+  choice('aspectFit', 'Aspect ratio mismatch', ASPECT_FIT_LABELS);
   slider('Audio', 'volume', 'Master volume', (v) => `${Math.round(v * 100)}%`);
   slider(
     'Controls',

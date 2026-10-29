@@ -1,6 +1,7 @@
 import {
   createRenderer,
   useEnvironment,
+  layoutSize,
 } from '../../components/core/parts/render-style';
 import {
   AmbientLight,
@@ -551,7 +552,7 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
   });
   canvas.parentElement?.append(notes);
   const resize = () => {
-    const { width, height: tall } = canvas.getBoundingClientRect();
+    const { width, height: tall } = layoutSize(canvas);
     if (!width || !tall) return;
     const scale = 1;
     const w = Math.round(width * scale);

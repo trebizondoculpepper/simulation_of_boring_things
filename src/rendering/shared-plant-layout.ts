@@ -34,7 +34,10 @@ import {
   createPanelKit,
   disposeKit,
 } from '../toolkit/components/core/views/eighties-controls';
-import { createRenderer } from '../toolkit/components/core/parts/render-style';
+import {
+  createRenderer,
+  layoutSize,
+} from '../toolkit/components/core/parts/render-style';
 import { createFirstPerson } from '../toolkit/controls/input/first-person';
 import { METRE } from '../toolkit/components/core/logic/units';
 import type { Footprint } from '../toolkit/controls/logic/walk-collision';
@@ -463,7 +466,7 @@ export function startSharedPlantLayout(canvas: HTMLCanvasElement) {
   };
   window.addEventListener('keydown', shortcuts);
   const resize = () => {
-    const { width, height } = canvas.getBoundingClientRect();
+    const { width, height } = layoutSize(canvas);
     if (!width || !height) return;
     renderer.setSize(Math.round(width), Math.round(height), false);
     camera.aspect = width / height;

@@ -18,6 +18,7 @@ import {
   createComposer,
   createRenderer,
   followEffectSettings,
+  layoutSize,
 } from '../../components/core/parts/render-style';
 import { METRE } from '../../components/core/logic/units';
 import { createFirstPerson } from '../../controls/input/first-person';
@@ -139,7 +140,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     use: () => {},
   });
   const resize = () => {
-    const { width, height } = canvas.getBoundingClientRect();
+    const { width, height } = layoutSize(canvas);
     if (!width || !height) return;
     renderer.setSize(Math.round(width), Math.round(height), false);
     composer.setSize(Math.round(width), Math.round(height));

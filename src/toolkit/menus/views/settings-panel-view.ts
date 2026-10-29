@@ -44,7 +44,6 @@ import {
   createPanelMeter,
   createVfd,
 } from '../../components/industrial-control/views/panel-instruments';
-import { RESOLUTION_CAPS, RESOLUTION_LCD } from '../../settings/logic/graphics';
 import { PENFOLD_GREY } from '../../components/industrial-control/views/control-cubicle';
 import { settings, updateSettings } from '../../settings/settings-store';
 import { CARD, SPACING, narrowCard } from '../logic/panel-layout';
@@ -54,6 +53,7 @@ import type { ModuleBox, PanelLayout } from '../logic/panel-layout';
 import {
   CONFIRM_WINDOW,
   METERS,
+  SWITCHES,
   dialScale,
   knobIndex,
   knobReadout,
@@ -795,54 +795,60 @@ function build_(
         break;
       }
       case 'switch': {
-        // Smallest at the left of its sweep, the viewport at the right.
-        const steps = RESOLUTION_CAPS.length - 1;
-        const knob = parts.add(
-          potentiometer(kit, {
-            name: `${item.legend} switch`,
-            steps,
-            bound: {
-              get value() {
-                return Math.max(
-                  0,
-                  RESOLUTION_CAPS.indexOf(settings.value.resolutionCap),
-                );
+        // Side by side, each its own share of the module's width.
+        const share = m.w / item.switches.length;
+        item.switches.forEach((sw, i) => {
+          const x = -m.w / 2 + share * (i + 0.5);
+          // Its first position at the left of its sweep, its last at the right.
+          const { values, lcd: names } = SWITCHES[sw.id] as {
+            values: readonly string[];
+            lcd: Record<string, readonly [string, string]>;
+          };
+          const steps = values.length - 1;
+          const knob = parts.add(
+            potentiometer(kit, {
+              name: `${sw.legend} switch`,
+              steps,
+              bound: {
+                get value() {
+                  return Math.max(0, values.indexOf(settings.value[sw.id]));
+                },
+                set: (index: number) =>
+                  updateSettings({
+                    [sw.id]:
+                      values[Math.max(0, Math.min(steps, Math.round(index)))],
+                  }),
               },
-              set: (index: number) =>
-                updateSettings({
-                  resolutionCap:
-                    RESOLUTION_CAPS[
-                      Math.max(0, Math.min(steps, Math.round(index)))
-                    ],
-                }),
-            },
-          }),
-        );
-        knob.object.traverse((o) => {
-          if (o.name.startsWith('Label 0')) o.visible = false;
+            }),
+          );
+          knob.object.traverse((o) => {
+            if (o.name.startsWith('Label 0')) o.visible = false;
+          });
+          const cy = body - 0.05;
+          const legend = createMicroLabel(kit, sw.legend, {
+            height: 0.0042,
+            ink: '#202120',
+          });
+          place(legend, x, body - 0.008).position.z = 0.0004;
+          const dial = drawDial(kit, paints.dial, 0.034, steps, []);
+          place(dial, x, cy).position.z = 0.0003;
+          place(knob.object, x, cy);
+          focusable(m, face, x, cy, 0.04, true, knob);
+          // Its LCD immediately below, naming the choice.
+          const lcd = createCharacterLcd(kit, {
+            columns: 16,
+            rows: 2,
+            cell: 0.003,
+            backlight: true,
+          });
+          place(lcd.group, x, -m.h / 2 + 0.022);
+          stops.push(
+            effect(() => {
+              const [first, second] = names[settings.value[sw.id]];
+              lcd.show([first, second]);
+            }),
+          );
         });
-        const cy = body - 0.045;
-        const dial = drawDial(kit, paints.dial, 0.034, steps, [
-          { share: 0, text: 'LOW' },
-          { share: 1, text: 'MAX' },
-        ]);
-        place(dial, 0, cy).position.z = 0.0003;
-        place(knob.object, 0, cy);
-        focusable(m, face, 0, cy, 0.04, true, knob);
-        // Its LCD immediately below, naming the choice.
-        const lcd = createCharacterLcd(kit, {
-          columns: 16,
-          rows: 2,
-          cell: 0.003,
-          backlight: true,
-        });
-        place(lcd.group, 0, -m.h / 2 + 0.022);
-        stops.push(
-          effect(() => {
-            const [size, what] = RESOLUTION_LCD[settings.value.resolutionCap];
-            lcd.show([size, what]);
-          }),
-        );
         break;
       }
       case 'vfd': {

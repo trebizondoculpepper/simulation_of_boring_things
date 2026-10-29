@@ -33,6 +33,7 @@ import { ps1Uniforms } from '../../components/core/parts/ps1-material';
 import {
   createRenderer,
   useEnvironment,
+  layoutSize,
 } from '../../components/core/parts/render-style';
 import { bannerLine, fanfareOf } from '../logic/skimmer-reveal';
 import {
@@ -499,7 +500,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     aimed: () => Boolean(usableAt(0, 0)),
   });
   const resize = () => {
-    const { width, height } = canvas.getBoundingClientRect();
+    const { width, height } = layoutSize(canvas);
     if (!width || !height) return;
     renderer.setSize(Math.round(width), Math.round(height), false);
     ps1Uniforms.resolution.value.set(width, height);

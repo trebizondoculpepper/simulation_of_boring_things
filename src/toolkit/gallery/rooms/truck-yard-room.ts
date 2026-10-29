@@ -24,6 +24,7 @@ import { createPartSet } from '../../components/core/parts/parts';
 import {
   createRenderer,
   useEnvironment,
+  layoutSize,
 } from '../../components/core/parts/render-style';
 import { knobDirection } from '../../controls/input/knob-turning';
 import { createFirstPerson } from '../../controls/input/first-person';
@@ -278,7 +279,7 @@ export function startTruckYardRoom(canvas: HTMLCanvasElement) {
     aimed: () => Boolean(usableAt(0, 0)),
   });
   const resize = () => {
-    const { width, height } = canvas.getBoundingClientRect();
+    const { width, height } = layoutSize(canvas);
     if (!width || !height) return;
     renderer.setSize(Math.round(width), Math.round(height), false);
     camera.aspect = width / height;

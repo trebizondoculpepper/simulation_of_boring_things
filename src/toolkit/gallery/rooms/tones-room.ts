@@ -55,6 +55,7 @@ import {
 import {
   createRenderer,
   useEnvironment,
+  layoutSize,
 } from '../../components/core/parts/render-style';
 
 const FLOOR = { minX: -7, maxX: 11, minZ: -5, maxZ: 5 };
@@ -525,7 +526,7 @@ export function startTonesRoom(canvas: HTMLCanvasElement) {
     aimed: () => Boolean(usableAt(0, 0)),
   });
   const resize = () => {
-    const { width, height } = canvas.getBoundingClientRect();
+    const { width, height } = layoutSize(canvas);
     if (!width || !height) return;
     renderer.setSize(Math.round(width), Math.round(height), false);
     ps1Uniforms.resolution.value.set(width, height);

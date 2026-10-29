@@ -1,7 +1,13 @@
 import type { OnScreenControls } from '../../controls/logic/hud-policy';
 import { choosePreset, renderScale } from '../../settings/logic/settings';
 import type { Settings } from '../../settings/logic/settings';
-import { GRAPHICS_PRESETS } from '../../settings/logic/graphics';
+import {
+  ASPECT_FITS,
+  ASPECT_FIT_LCD,
+  GRAPHICS_PRESETS,
+  RESOLUTION_CAPS,
+  RESOLUTION_LCD,
+} from '../../settings/logic/graphics';
 
 /**
  * The settings menu as a Penfold control panel (mission 096, stage 0): what
@@ -28,6 +34,20 @@ export type KnobSetting = 'volume' | 'renderLevel' | 'fov' | 'sensitivity';
 
 /** A setting a lever selector chooses among three. */
 export type SelectorSetting = 'onScreenControls' | 'graphics';
+
+/** A setting a rotary switch with an LCD steps through. */
+export type SwitchSetting = 'resolutionCap' | 'aspectFit';
+
+/** Each switch's positions, left to right, and how its LCD names each. */
+export const SWITCHES: {
+  [K in SwitchSetting]: {
+    values: readonly Settings[K][];
+    lcd: Record<Settings[K], readonly [string, string]>;
+  };
+} = {
+  resolutionCap: { values: RESOLUTION_CAPS, lcd: RESOLUTION_LCD },
+  aspectFit: { values: ASPECT_FITS, lcd: ASPECT_FIT_LCD },
+};
 
 /** A push button's action, for the app to supply. */
 export type PanelAction =
@@ -66,11 +86,18 @@ export type PanelItem =
       positions: readonly string[];
     }
   /**
-   * A rotary switch stepping through a list (the owner, 2026-10-29: the
-   * maximum resolution, 640 × 480 up to the viewport), a character LCD
-   * under it naming the choice.
+   * Rotary switches side by side in one module, each stepping through a
+   * list with a character LCD under it naming the choice (the owner,
+   * 2026-10-29: the maximum resolution, 640 × 480 up to the viewport, and
+   * the scaling mode, what is done when its shape is not the window's,
+   * together, since they belong together).
    */
-  | { kind: 'switch'; id: 'resolutionCap'; legend: string }
+  | {
+      kind: 'switch';
+      id: 'display';
+      legend: string;
+      switches: readonly { id: SwitchSetting; legend: string }[];
+    }
   | { kind: 'key'; id: 'noclip'; legend: string; dymo?: boolean }
   /** A vacuum fluorescent message line across its zone. */
   | { kind: 'vfd'; id: 'status'; columns: number }
@@ -331,7 +358,15 @@ export function settingsPanel(offers: PanelOffers): PanelZone[] {
           unit: 'DEG',
           digits: 2,
         },
-        { kind: 'switch', id: 'resolutionCap', legend: 'MAX RESOLUTION' },
+        {
+          kind: 'switch',
+          id: 'display',
+          legend: 'DISPLAY',
+          switches: [
+            { id: 'resolutionCap', legend: 'MAX RESOLUTION' },
+            { id: 'aspectFit', legend: 'SCALING MODE' },
+          ],
+        },
       ],
     },
     {

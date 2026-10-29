@@ -23,6 +23,7 @@ import {
   scaleRatio,
   followEffectSettings,
   useEnvironment,
+  layoutSize,
 } from '../../components/core/parts/render-style';
 import { METRE } from '../../components/core/logic/units';
 import { createFirstPerson } from '../../controls/input/first-person';
@@ -414,7 +415,7 @@ export function startMuseumHallRoom(
   });
 
   const resize = () => {
-    const { width, height } = canvas.getBoundingClientRect();
+    const { width, height } = layoutSize(canvas);
     if (!width || !height) return;
     renderer.setSize(Math.round(width), Math.round(height), false);
     composer.setSize(Math.round(width), Math.round(height));

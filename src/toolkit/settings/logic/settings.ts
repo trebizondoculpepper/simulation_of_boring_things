@@ -5,8 +5,14 @@ import {
   PRESET_CHOICES,
   parsePreset,
   parseResolutionCap,
+  ASPECT_FITS,
 } from './graphics';
-import type { EffectLevel, GraphicsPreset, ResolutionCap } from './graphics';
+import type {
+  AspectFit,
+  EffectLevel,
+  GraphicsPreset,
+  ResolutionCap,
+} from './graphics';
 
 /**
  * The player's settings (`doc/plans/title-screen.md`): a placeholder set
@@ -41,6 +47,8 @@ export interface Settings {
   filmEffects: boolean;
   /** The tallest image drawn, whatever the screen: a cap on the pixel ratio. */
   resolutionCap: ResolutionCap;
+  /** How the maximum resolution meets a window of another shape (`frameLayout`). */
+  aspectFit: AspectFit;
   /** The graphics preset (`graphics.ts`, mission 087): the effects with no setting of their own. */
   graphics: GraphicsPreset;
 }
@@ -60,6 +68,7 @@ export const DEFAULT_SETTINGS: Settings = {
   bloom: 'high',
   filmEffects: true,
   resolutionCap: '1024x768',
+  aspectFit: 'letterbox',
   graphics: DEFAULT_GRAPHICS,
 };
 
@@ -131,6 +140,9 @@ export function cleanSettings(stored: unknown): Settings {
     // An old height-only cap becomes its resolution.
     resolutionCap:
       parseResolutionCap(s.resolutionCap) ?? DEFAULT_SETTINGS.resolutionCap,
+    aspectFit: ASPECT_FITS.includes(s.aspectFit as AspectFit)
+      ? (s.aspectFit as AspectFit)
+      : DEFAULT_SETTINGS.aspectFit,
     // A save from before the presets is High, the look it was playing.
     graphics: parsePreset(s.graphics) ?? DEFAULT_GRAPHICS,
   };

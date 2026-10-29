@@ -1,6 +1,7 @@
 import {
   createRenderer,
   useEnvironment,
+  layoutSize,
 } from '../toolkit/components/core/parts/render-style';
 import { devPortals, devWalls } from '../toolkit/gallery/logic/dev-room-links';
 import { createPortals } from '../toolkit/gallery/views/portals';
@@ -1564,7 +1565,7 @@ export function startEffectsPlaygroundRoom(canvas: HTMLCanvasElement) {
 
   // ---- Running ------------------------------------------------------------
   const resize = () => {
-    const { width, height } = canvas.getBoundingClientRect();
+    const { width, height } = layoutSize(canvas);
     if (!width || !height) return;
     const scale = 1;
     const rw = Math.max(1, Math.round(width * scale));

@@ -79,6 +79,7 @@ import {
 import {
   createRenderer,
   useEnvironment,
+  layoutSize,
 } from '../../components/core/parts/render-style';
 import { isLive } from './plant/exhibit';
 import { createInspector } from '../views/inspect-pick';
@@ -763,7 +764,7 @@ export function startEquipmentRoom(
   );
 
   const resize = () => {
-    const { width, height } = canvas.getBoundingClientRect();
+    const { width, height } = layoutSize(canvas);
     if (!width || !height) return;
     renderer.setSize(Math.round(width), Math.round(height), false);
     ps1Uniforms.resolution.value.set(width, height);

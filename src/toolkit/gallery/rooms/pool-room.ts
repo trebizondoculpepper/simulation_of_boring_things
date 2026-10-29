@@ -148,6 +148,7 @@ import {
   createComposer,
   createRenderer,
   followEffectSettings,
+  layoutSize,
 } from '../../components/core/parts/render-style';
 import {
   createPoolUniforms,
@@ -1339,7 +1340,7 @@ void main() {
   };
 
   const resize = () => {
-    const { width: w, height: h } = canvas.getBoundingClientRect();
+    const { width: w, height: h } = layoutSize(canvas);
     if (!w || !h) return;
     renderer.setSize(Math.round(w), Math.round(h), false);
     composer.setPixelRatio(renderer.getPixelRatio());
