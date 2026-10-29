@@ -53,9 +53,10 @@ export interface MimicSpec {
     /**
      * Its LED chaser (prompt 066): the id of the flow it shows, running
      * along its points when forward; LEDs in its colour, or amber. A line
-     * without one is drawn plain, as before.
+     * without one is drawn plain, as before. `size`, the LEDs' diameter in
+     * metres, for a board read from across a room (default CHASER_SIZE).
      */
-    flow?: { id: string; amber?: boolean };
+    flow?: { id: string; amber?: boolean; size?: number };
   }[];
   /** The equipment, drawn as symbols with a label under each. */
   shapes: readonly {

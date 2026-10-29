@@ -371,6 +371,7 @@ export function createMimicBoard(
           at,
           index,
           id: line.flow!.id,
+          scale: (line.flow!.size ?? CHASER_SIZE) / CHASER_SIZE,
           colour: new Color(
             line.flow!.amber ? LAMP_COLOURS.amber : line.colour,
           ),
@@ -394,7 +395,12 @@ export function createMimicBoard(
     kit.materials.push(leds.material as MeshBasicMaterial);
     const m = new Matrix4();
     chased.forEach((led, i) => {
-      leds.setMatrixAt(i, m.makeTranslation(led.at[0], led.at[1], z));
+      leds.setMatrixAt(
+        i,
+        m
+          .makeScale(led.scale, led.scale, 1)
+          .setPosition(led.at[0], led.at[1], z),
+      );
       leds.setColorAt(i, dark);
     });
     leds.userData.live = true;

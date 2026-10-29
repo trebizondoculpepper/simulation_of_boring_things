@@ -5,7 +5,13 @@ import type {
   Reading,
 } from '../../components/industrial-control/logic/mimic';
 import { flowState } from '../../components/industrial-control/logic/mimic-chaser';
-import { TANKS, readWater, shortTag } from '../../../game/plant/museum-4-lab';
+import {
+  DOSE_SECONDS,
+  TANKS,
+  readWater,
+  shortTag,
+  tankById,
+} from '../../../game/plant/museum-4-lab';
 import type { Hall4State, TankId } from '../../../game/plant/museum-4-lab';
 
 /**
@@ -15,7 +21,16 @@ import type { Hall4State, TankId } from '../../../game/plant/museum-4-lab';
  * the injection point on the pool's return, the pool, the swimmers'
  * arrow; repeats of free chlorine, pH and the balance index. No buttons:
  * everything is worked at the station. Pure.
+ *
+ * While a dose is delivered (the owner, 2026-10-29: "the map ... animates
+ * when you start dosing"), the model's delivery, not the button, lights the
+ * dosing tank's lamp and the pot's DOSING lamp, runs the chasers from that
+ * tank along the header and the injection into the pool, and counts the
+ * dose on DOSED; all go still and dark when the delivery ends.
  */
+
+/** The chasers' LEDs on this board, big enough to see from the desk. */
+const LED = 0.014;
 
 const CHEM = '#c9a227';
 const WATER = '#2a5f9e';
@@ -29,6 +44,7 @@ const valveAt = (id: TankId): Point =>
     : [tankX(CHEMICALS.findIndex((t) => t.id === id)), -0.18];
 
 const READOUTS: readonly { id: string; at: Point; legend: string }[] = [
+  { id: 'dose', at: [0.2, -0.55], legend: 'DOSED SO FAR' },
   {
     id: 'fc',
     at: [0.72, -0.55],
@@ -50,7 +66,7 @@ export const HALL4_MIMIC: MimicSpec = {
         [tankX(k), 0.0],
         [tankX(k), HEADER_Y],
       ] as Point[],
-      flow: { id: `dose.${t.id}` },
+      flow: { id: `dose.${t.id}`, size: LED },
     })),
     {
       colour: CHEM,
@@ -58,7 +74,7 @@ export const HALL4_MIMIC: MimicSpec = {
         [tankX(0), HEADER_Y],
         [0.15, HEADER_Y],
       ],
-      flow: { id: 'header' },
+      flow: { id: 'header', size: LED },
     },
     {
       colour: CHEM,
@@ -67,7 +83,7 @@ export const HALL4_MIMIC: MimicSpec = {
         [0.45, HEADER_Y],
         [0.45, -0.1],
       ],
-      flow: { id: 'injection' },
+      flow: { id: 'injection', size: LED },
     },
     {
       colour: WATER,
@@ -75,7 +91,7 @@ export const HALL4_MIMIC: MimicSpec = {
         [0.3, 0.18],
         [0.95, 0.18],
       ],
-      flow: { id: 'dose.fresh' },
+      flow: { id: 'dose.fresh', size: LED },
     },
     {
       colour: WATER,
@@ -85,7 +101,7 @@ export const HALL4_MIMIC: MimicSpec = {
         [0.45, -0.05],
         [0.45, 0.0],
       ],
-      flow: { id: 'circulation' },
+      flow: { id: 'circulation', size: LED },
     },
     {
       colour: WATER,
@@ -94,7 +110,7 @@ export const HALL4_MIMIC: MimicSpec = {
         [0.45, 0.05],
         [0.95, 0.05],
       ],
-      flow: { id: 'return' },
+      flow: { id: 'return', size: LED },
     },
   ],
   shapes: [
@@ -138,12 +154,39 @@ export const HALL4_MIMIC: MimicSpec = {
   lamps: [
     { id: 'swimmers', at: [1.25, 0.38], colour: 'amber', label: 'GROUP' },
     { id: 'p1-run', at: [0.85, -0.2], colour: 'green', label: 'P1 RUN' },
+    { id: 'pot-dosing', at: [0.05, -0.42], colour: 'amber', label: 'DOSING' },
+    ...CHEMICALS.map((t, k) => ({
+      id: `${t.id}-dosing`,
+      at: [tankX(k), 0.24] as Point,
+      colour: 'amber' as const,
+    })),
+    {
+      id: 'fresh-dosing',
+      at: [0.22, 0.3] as Point,
+      colour: 'amber' as const,
+    },
   ],
   readouts: READOUTS.map(({ id, at }) => ({ id, at })),
   modes: [{ id: 'live', legend: 'READINGS' }],
 };
 
+/** How much of the dose running has gone in so far, in its tank's unit; 0 when none. */
+export function dosedSoFar(s: Hall4State): number {
+  const d = s.delivering;
+  if (!d) return 0;
+  return d.amount * Math.min(1, Math.max(0, 1 - d.left / DOSE_SECONDS));
+}
+
 export function hall4Reading(id: string, s: Hall4State): Reading | undefined {
+  if (id === 'dose') {
+    const unit = s.delivering ? tankById(s.delivering.tank).unit : '';
+    return {
+      value: dosedSoFar(s),
+      unit: unit === 'm3' ? 'm³' : unit,
+      name: 'Dosed so far',
+      places: 1,
+    };
+  }
   const r = readWater(s.bench.pool);
   const name = shortTag(`meter.${id}`);
   switch (id) {
@@ -173,6 +216,10 @@ export function hall4MimicState(s: Hall4State, groupLit = false): MimicState {
       ),
       swimmers: groupLit || s.group > 0,
       'p1-run': true,
+      'pot-dosing': chem > 0,
+      ...Object.fromEntries(
+        TANKS.map((t) => [`${t.id}-dosing`, dosing === t.id]),
+      ),
     },
     readouts,
     flows: {
