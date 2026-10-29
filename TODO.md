@@ -54,6 +54,9 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Gameplay features
 
+- [x] **High-contrast aiming reticle** (the owner, 2026-10-29; done 2026-10-29, `aae85cee`): a slightly larger hollow light ring with a dark outer edge, retained on amber and green target feedback, and a dark outline on the red rejection cross.
+- [ ] **Review reticle contrast in the live game** against cream tile, dark plant rooms, and amber, green and red feedback; automated browser capture was unavailable during the implementation.
+
 - [x] **Research and plan door swing clearance** (done 2026-10-28, `f4986b9b`): compared documented behaviour in The Dark Mod, Half-Life and Source; audited Pool Plant's door and walker collision; wrote [research](doc/research/103-door-swing-clearance.md) and [mission 103](doc/prompts/103-door-swing-clearance.md). Implementation remains below.
 - [ ] **Step clear of a swinging door** ([103](doc/prompts/103-door-swing-clearance.md), [research](doc/research/103-door-swing-clearance.md), the owner, 2026-10-28): when an opening or reopening leaf would sweep through the walker, find a reachable safe step on the same side of the doorway, move the walker clear before the leaf moves, then open; if no step exists, hold the door and ask the walker to step clear. Reproduce and browser-check single doors and pairs, obstacles, level changes and handover.
 - [ ] **Voice limiting** ([098](doc/prompts/098-audio-voice-limiting.md), the owner, 2026-10-28): only the loudest five running sounds at the listener (and any within 20 dB of the loudest) are heard; the rest fade out and stop until approached; alarms and one-off sounds always heard.
