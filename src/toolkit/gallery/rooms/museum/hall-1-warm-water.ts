@@ -919,23 +919,23 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     meters: [
       {
         id: 'loss.evaporation',
-        label: `${shortTag('loss.evaporation')} EVAPORATION`,
+        label: `${shortTag('loss.evaporation')}\nEVAPORATION`,
         scale: 50,
       },
       {
         id: 'loss.convection',
-        label: `${shortTag('loss.convection')} TO THE AIR ±10`,
+        label: `${shortTag('loss.convection')}\nTO THE AIR ±10`,
         scale: 10,
         signed: true,
       },
       {
         id: 'loss.ground',
-        label: `${shortTag('loss.ground')} TO THE GROUND`,
+        label: `${shortTag('loss.ground')}\nTO THE GROUND`,
         scale: 10,
       },
       {
         id: 'loss.total',
-        label: `${shortTag('loss.total')} TOTAL LOST`,
+        label: `${shortTag('loss.total')}\nTOTAL LOST`,
         scale: 50,
       },
     ],

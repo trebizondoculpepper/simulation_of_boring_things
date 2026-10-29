@@ -8,6 +8,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 - Far versions keep static signs as they are, their pictures and all, one draw each (the owner, 2026-10-29: static signs should always be visible); Hall 2's lecterns seen from Hall 3 were black backing plates.
 
+- Museum, Hall 1: the losses board's meter labels are smaller, on two lines (tag, then name) and no wider than their meters, sat close under each, and SWIMMERS is smaller and beside its dial, so each label plainly belongs to its own instrument (the owner, 2026-10-29).
+
 - Museum: the insides of the archways and doorways are the posters' flat green, not brick (the owner, 2026-10-29); window reveals keep their brick.
 
 - Museum: a hall seen through an archway is drawn at a quarter of its resolution, blurred, with its exhibit as its far version, coming clear as the walker nears the archway: half resolution within 10 m, full resolution and its real exhibit within 5 m, the blur, at most 3 px, gone by 4 m (the owner, 2026-10-29, who then asked for it to come clear sooner and blur half as much; `scaleRatio` in `render-style.ts`). Hall 1 on High: 420 to 244 draw calls per render callback.

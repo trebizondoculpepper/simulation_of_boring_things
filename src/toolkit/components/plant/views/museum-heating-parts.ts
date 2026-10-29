@@ -374,12 +374,14 @@ export function createLossesBoard(
     const x = -W / 2 + 0.2 + k * 0.3;
     meter.group.position.set(x, 0.07, 0.065);
     group.add(meter.group);
+    // Kept within its meter's width, so each label is plainly its own.
     const label = createMicroLabel(kit, m.label, {
-      height: 0.024,
+      height: 0.018,
       ink: '#16191b',
       plate: '#f4f3ee',
+      maxWidth: 0.24,
     });
-    label.position.set(x, -0.14, 0.062);
+    label.position.set(x, -0.1, 0.062);
     group.add(label);
     return { ...m, meter };
   });
@@ -395,11 +397,12 @@ export function createLossesBoard(
   dial.object.scale.setScalar(1.8);
   dial.object.position.set(0.25, -0.3, 0.062);
   group.add(dial.object);
+  // Just left of its dial, no bigger than the meters' labels.
   const dialLabel = createMicroLabel(kit, 'SWIMMERS', {
-    height: 0.03,
+    height: 0.02,
     ink: '#16191b',
   });
-  dialLabel.position.set(-0.1, -0.3, 0.062);
+  dialLabel.position.set(0.1, -0.3, 0.062);
   group.add(dialLabel);
   panelMakerMark(kit, group, {
     width: W,
