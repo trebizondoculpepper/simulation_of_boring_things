@@ -18,7 +18,8 @@ const SHARE = 4;
 
 for (const gallery of readdirSync(ROOT)) {
   const dir = join(ROOT, gallery);
-  if (!statSync(dir).isDirectory()) continue;
+  // The title logo is not a museum photograph (`scripts/title-logo.ts`).
+  if (gallery === 'title' || !statSync(dir).isDirectory()) continue;
   const lo = join(dir, 'lo');
   for (const name of readdirSync(dir)) {
     if (!/\.(jpe?g|png|webp)$/i.test(name)) continue;

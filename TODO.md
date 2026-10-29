@@ -20,6 +20,9 @@ The project's one to-do list (the owner, 2026-10-23): every task not yet finishe
   - [ ] **A filter sight-glass shot:** the camera panning past a filter's observation glass with its animation running, in a preset that has the filter doing something worth seeing.
   - [ ] **Shot props: floating objects** placed in a pool for a shot only, drifting with the water, for the camera to pan alongside; part of the shot, never of the player's world.
   - [ ] **The next scene prepared in the background:** built and drawn before its turn rather than during the black, with frame gaps measured; loading failures recovered with a fallback shot.
+  - [x] **The title logo** (the owner, 2026-10-29; done 2026-10-29, COMMIT): the roundel `05-circle-notext.png` (made into `resources/images/title/the-pool-logo.png` by `scripts/title-logo.ts`, its lower backdrop and rim transparent) appears 4 s into the sequence, unblurring as it fades in over 2 s; "The Pool" 2 s later the same way, live Antonio lettering in white with a blue outline and black drop shadow, feet in the water, with a rippling reflection; rippling water and an animated sight glass on the filter vessel at no more than 10 Hz (`title-logo.ts`, `logic/title-logo.ts`).
+  - [ ] **The logo's see-through patch:** the source PNG (`05-circle-notext.png`) is partly transparent in a cloud-shaped patch in the open water above the title, so the attract scene shows through there as a dark smudge behind "The"; ask the owner whether to fill it with the water's blue in `scripts/title-logo.ts` or get a corrected source.
+  - [ ] **The logo's reveal under load:** its timings run from when the title screen opens, while the first attract room is still being built; on a slow machine (headless Chrome here) the main thread stalls long enough that the 4 s / 6 s reveals are skipped through. Consider starting the clock when the first shot is ready.
 
 ## Now: the Olympic plant room, working (prompt 035)
 

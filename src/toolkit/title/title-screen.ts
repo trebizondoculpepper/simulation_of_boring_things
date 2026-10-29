@@ -9,6 +9,7 @@ import { partAudio } from '../components/core/audio/part-audio';
 
 import { createTitleMusic } from './title-music';
 import { listenMenu } from '../controls/input/menu-input';
+import { createTitleLogo } from './title-logo';
 
 export interface TitleActions {
   newGame(): void;
@@ -39,10 +40,9 @@ export function createTitleScreen(actions: TitleActions) {
   const presents = document.createElement('p');
   presents.className = 'title-presents';
   presents.textContent = 'Boring Simulations Presents:';
-  const name = document.createElement('h1');
-  name.className = 'title-name';
-  name.textContent = 'The Pool';
-  head.append(presents, name);
+  // The logo, drawing in and then its title (`title-logo.ts`).
+  const logo = createTitleLogo();
+  head.append(presents, logo.element);
   root.append(head);
 
   const menu = document.createElement('nav');
@@ -130,6 +130,7 @@ export function createTitleScreen(actions: TitleActions) {
   return {
     show() {
       music.show();
+      logo.start();
       const can = actions.canContinue();
       continueItem.disabled = !can;
       continueItem.title = can ? '' : (actions.noContinue ?? '');
@@ -139,6 +140,7 @@ export function createTitleScreen(actions: TitleActions) {
     },
     hide() {
       music.hide();
+      logo.stop();
       root.hidden = true;
     },
   };
