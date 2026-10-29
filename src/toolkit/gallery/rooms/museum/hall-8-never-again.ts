@@ -1,11 +1,4 @@
-import {
-  Group,
-  Mesh,
-  SRGBColorSpace,
-  Shape,
-  ShapeGeometry,
-  TextureLoader,
-} from 'three';
+import { Group, Mesh, Shape, ShapeGeometry } from 'three';
 import type { Color, Material, Object3D } from 'three';
 import { signal } from '@preact/signals-core';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
@@ -38,6 +31,7 @@ import type {
 import { createWallPanel } from '../../views/museum-exhibit';
 import { createFillPointsCase, para } from '../../views/fill-points-case';
 import { windowShape } from '../../views/museum-hall';
+import { showPhoto } from '../../views/photo-print';
 import {
   HALL_TITLE,
   MUSEUM_ARCH,
@@ -85,6 +79,17 @@ const byName = (files: Record<string, string>) =>
     ]),
   );
 const PHOTO_URLS = byName(PHOTOS);
+/** Their low-resolution copies (`scripts/photo-lows.ts`). */
+const LOW_URLS = byName(
+  import.meta.glob<string>(
+    '../../../../../resources/images/never-again/lo/*.jpg',
+    {
+      eager: true,
+      query: '?url',
+      import: 'default',
+    },
+  ),
+);
 const CLIP_URLS = byName(CLIPS);
 
 /** The walls' room faces. */
@@ -474,17 +479,16 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     unit.add(photo.mesh);
     const mat = photo.mesh.material as unknown as Material & {
       color: Color;
-      map: unknown;
-      needsUpdate: boolean;
     };
     photoMats.push(mat);
+    // Its low-resolution copy until looked at close to (`photo-print.ts`).
     const url = PHOTO_URLS.get(`chapter-${ch.number}`);
-    if (url)
-      new TextureLoader().load(new URL(url, import.meta.url).href, (tex) => {
-        tex.colorSpace = SRGBColorSpace;
-        kit.textures.push(tex);
-        mat.map = tex;
-        mat.needsUpdate = true;
+    const low = LOW_URLS.get(`chapter-${ch.number}`);
+    if (url && low)
+      showPhoto(photo.mesh, {
+        low: new URL(low, import.meta.url).href,
+        full: new URL(url, import.meta.url).href,
+        textures: kit.textures,
       });
     // Its picture light above it.
     t.box(unit, brass, 0.9, 0.04, 0.05, px, 2.5, 0.2);

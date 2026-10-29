@@ -1,10 +1,20 @@
-import { Box3, Group, PerspectiveCamera, Quaternion, Vector3 } from 'three';
+import {
+  Box3,
+  Group,
+  Mesh,
+  PerspectiveCamera,
+  PlaneGeometry,
+  Quaternion,
+  Vector3,
+} from 'three';
 import type { Camera, Material, Object3D } from 'three';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
 import { createPartSet } from '../../../components/core/parts/parts';
 import { mergeTree } from '../../../components/core/views/merge-static';
 import { markComponent } from '../../../components/core/views/component-identity';
 import { tools } from '../../../components/core/views/fitting-tools';
+import { createPs1Material } from '../../../components/core/parts/ps1-material';
+import { showPhoto } from '../../views/photo-print';
 import { createPoolClock } from '../../../components/architectural/views/pool-clock';
 import { createSkip } from '../../../components/site-dressing/views/skip';
 import { createBinTossing } from '../../../components/site-dressing/parts/bin-tossing';
@@ -101,14 +111,42 @@ const PHOTOS = import.meta.glob(
   '../../../../../resources/images/day-in-the-life/*.{jpg,png,webp}',
   { eager: true, query: '?url', import: 'default' },
 ) as Record<string, string>;
+/** Their low-resolution copies (`scripts/photo-lows.ts`). */
+const LOWS = import.meta.glob(
+  '../../../../../resources/images/day-in-the-life/lo/*.jpg',
+  { eager: true, query: '?url', import: 'default' },
+) as Record<string, string>;
 const photoFor = (d: Decade, when: string) => {
   const p = d.photos.find((q) => q.when === when);
   const name = p?.file ?? `${d.decade}-${when.toLowerCase()}`;
   const key = Object.keys(PHOTOS).find((k) =>
     k.slice(k.lastIndexOf('/') + 1).startsWith(`${name}.`),
   );
-  return key ? new URL(PHOTOS[key], location.href).href : null;
+  const low = Object.keys(LOWS).find((k) => k.endsWith(`/lo/${name}.jpg`));
+  return key && low
+    ? {
+        full: new URL(PHOTOS[key], location.href).href,
+        low: new URL(LOWS[low], location.href).href,
+      }
+    : null;
 };
+
+/**
+ * Where print `k` (0 to 2) of a bay `height` tall lies on it, metres from
+ * its middle: inside its frame's mount, as `paintBay` lays it out.
+ */
+function printPlace(k: number, height: number) {
+  const fw = BAY.frameW;
+  const gap = (BAY.w - 3 * fw) / 4;
+  const mount = fw * 0.07;
+  const top = height * 0.14;
+  return {
+    x: -BAY.w / 2 + gap + k * (fw + gap) + fw / 2,
+    y: height / 2 - top - BAY.frameH / 2,
+    width: fw - 2 * mount,
+    height: BAY.frameH - 2 * mount,
+  };
+}
 
 const PICK_UP: SoundRecipe = click({
   band: 1800,
@@ -194,11 +232,13 @@ function wrapText(c: CanvasRenderingContext2D, text: string, width: number) {
   return lines;
 }
 
-/** A decade's bay: its heading, three photographs (a placeholder where none is loaded yet) with their captions, and its stretch of the timeline. */
-function paintBay(
-  d: Decade,
-  prints: ReadonlyMap<string, HTMLImageElement> = new Map(),
-) {
+/**
+ * A decade's bay: its heading, three prints' placeholders with their
+ * captions, and its stretch of the timeline. The photographs are not
+ * painted in: each is its own print over its placeholder
+ * (`photo-print.ts`), so the bay stays a still sign, never redrawn.
+ */
+function paintBay(d: Decade) {
   return (c: CanvasRenderingContext2D, w: number, h: number) => {
     const look = LOOKS[d.look];
     c.fillStyle = '#f6f4ec';
@@ -225,58 +265,39 @@ function paintBay(
       const py = top + m;
       const pw = fw - 2 * m;
       const ph = fh - 2 * m;
-      const print = prints.get(p.when);
-      if (print) {
-        // The photograph, cropped to fill its print.
-        const scale = Math.max(pw / print.width, ph / print.height);
-        const sw = pw / scale;
-        const sh = ph / scale;
-        c.drawImage(
-          print,
-          (print.width - sw) / 2,
-          (print.height - sh) / 2,
-          sw,
-          sh,
-          px,
-          py,
-          pw,
-          ph,
-        );
-      } else {
-        const grad = c.createLinearGradient(0, py, 0, py + ph);
-        grad.addColorStop(0, look.light);
-        grad.addColorStop(1, look.mid);
-        c.fillStyle = grad;
-        c.fillRect(px, py, pw, ph);
-        // A poolside, a figure at work: the shape of the picture to come.
-        c.fillStyle = look.mid;
-        c.fillRect(px, py + ph * 0.62, pw, ph * 0.38);
-        c.fillStyle = look.paper;
-        c.fillRect(px, py + ph * 0.6, pw, ph * 0.04);
-        c.fillStyle = look.dark;
-        const fx = px + pw * (0.3 + 0.2 * k);
-        c.beginPath();
-        c.arc(fx, py + ph * 0.3, ph * 0.06, 0, Math.PI * 2);
-        c.fill();
-        c.fillRect(fx - ph * 0.05, py + ph * 0.36, ph * 0.1, ph * 0.24);
-        c.globalAlpha = 0.85;
-        c.fillStyle = look.paper;
-        c.fillRect(px, py + ph * 0.78, pw, ph * 0.22);
-        c.globalAlpha = 1;
-        c.fillStyle = look.dark;
-        c.font = `bold ${ph * 0.1}px ${SANS}`;
-        c.textAlign = 'center';
-        c.fillText(
-          p.file
-            ? `${p.file.toUpperCase().replace('-', ' ')}`
-            : `${d.decade} · ${p.when.toUpperCase()}`,
-          px + pw / 2,
-          py + ph * 0.86,
-        );
-        c.font = `${ph * 0.07}px ${SANS}`;
-        c.fillText('PHOTOGRAPH TO COME', px + pw / 2, py + ph * 0.95);
-        c.textAlign = 'left';
-      }
+      const grad = c.createLinearGradient(0, py, 0, py + ph);
+      grad.addColorStop(0, look.light);
+      grad.addColorStop(1, look.mid);
+      c.fillStyle = grad;
+      c.fillRect(px, py, pw, ph);
+      // A poolside, a figure at work: the shape of the picture to come.
+      c.fillStyle = look.mid;
+      c.fillRect(px, py + ph * 0.62, pw, ph * 0.38);
+      c.fillStyle = look.paper;
+      c.fillRect(px, py + ph * 0.6, pw, ph * 0.04);
+      c.fillStyle = look.dark;
+      const fx = px + pw * (0.3 + 0.2 * k);
+      c.beginPath();
+      c.arc(fx, py + ph * 0.3, ph * 0.06, 0, Math.PI * 2);
+      c.fill();
+      c.fillRect(fx - ph * 0.05, py + ph * 0.36, ph * 0.1, ph * 0.24);
+      c.globalAlpha = 0.85;
+      c.fillStyle = look.paper;
+      c.fillRect(px, py + ph * 0.78, pw, ph * 0.22);
+      c.globalAlpha = 1;
+      c.fillStyle = look.dark;
+      c.font = `bold ${ph * 0.1}px ${SANS}`;
+      c.textAlign = 'center';
+      c.fillText(
+        p.file
+          ? `${p.file.toUpperCase().replace('-', ' ')}`
+          : `${d.decade} · ${p.when.toUpperCase()}`,
+        px + pw / 2,
+        py + ph * 0.86,
+      );
+      c.font = `${ph * 0.07}px ${SANS}`;
+      c.fillText('PHOTOGRAPH TO COME', px + pw / 2, py + ph * 0.95);
+      c.textAlign = 'left';
       // Its caption below.
       c.fillStyle = '#16232b';
       c.font = `bold ${h * 0.04}px ${SANS}`;
@@ -472,22 +493,25 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     bay.name = `${b.decade.decade} photographs`;
     const H = 1.25;
     const face = t.printed(BAY.w, H, paintBay(b.decade), 2048);
-    // Its photographs, painted into the bay as each one loads.
-    const prints = new Map<string, HTMLImageElement>();
-    for (const p of b.decade.photos) {
-      const url = photoFor(b.decade, p.when);
-      if (!url) continue;
-      const img = new Image();
-      img.onload = () => {
-        prints.set(p.when, img);
-        const { canvas } = face.context;
-        paintBay(b.decade, prints)(face.context, canvas.width, canvas.height);
-        face.texture.needsUpdate = true;
-      };
-      img.src = url;
-    }
     face.mesh.position.set(0, 0, 0.012);
     bay.add(face.mesh);
+    // Its photographs, each its own print over its placeholder: the
+    // low-resolution copy until looked at close to (`photo-print.ts`).
+    b.decade.photos.forEach((p, k) => {
+      const urls = photoFor(b.decade, p.when);
+      if (!urls) return;
+      const print = printPlace(k, H);
+      const mesh = new Mesh(
+        new PlaneGeometry(print.width, print.height),
+        createPs1Material({ color: '#ffffff' }),
+      );
+      kit.materials.push(mesh.material);
+      mesh.name = `Photograph: ${b.decade.decade}, ${p.when}`;
+      mesh.position.set(print.x, print.y, 0.013);
+      mesh.userData.live = true;
+      bay.add(mesh);
+      showPhoto(mesh, { ...urls, print, textures: kit.textures, hidden: true });
+    });
     t.box(
       bay,
       t.paint('#e9e5da', 0.8),
