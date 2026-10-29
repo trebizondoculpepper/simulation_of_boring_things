@@ -158,14 +158,21 @@ export function startMuseumHallRoom(
         hold: (on) => walk.hold(on),
         look: (pitch) =>
           walk.place(walk.walker.x, walk.walker.z, walk.pose().yaw, pitch),
+        // Through the walker's own eye (`first-person.ts`'s `film`), so
+        // a hall drawn through an archway follows the shot, not the walker.
         film: ({ from, to, fov }) => {
-          camera.position.copy(from);
-          camera.lookAt(to);
-          if (camera.fov !== fov) {
-            camera.fov = fov;
-            camera.updateProjectionMatrix();
-          }
-          camera.updateMatrixWorld();
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const dz = to.z - from.z;
+          walk.film({
+            x: from.x,
+            y: from.y,
+            z: from.z,
+            yaw: Math.atan2(dx, -dz),
+            pitch: Math.atan2(dy, Math.hypot(dx, dz)),
+            fov,
+          });
+          filmed = true;
         },
       });
   });
@@ -291,9 +298,12 @@ export function startMuseumHallRoom(
 
   const composer = createComposer(
     renderer,
+    // A stencil buffer, for what is drawn only where it is seen through
+    // an opening (Hall 5's skimmer, `skimmer-well.ts`).
     new WebGLRenderTarget(1, 1, {
       type: HalfFloatType,
       samples: 4,
+      stencilBuffer: true,
     }),
   );
   const base = new RenderPass(scene, camera);
@@ -309,6 +319,23 @@ export function startMuseumHallRoom(
   });
   ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6 });
   ao.blendIntensity = 0.8;
+  // Things that are not solid where they are drawn (light, and what is
+  // only painted through an opening) cast no ambient occlusion: the pass
+  // draws its normals with them hidden, as it hides points and lines.
+  const aoHides = ao as unknown as {
+    _overrideVisibility(): void;
+    _visibilityCache: Object3D[];
+  };
+  const hideLines = aoHides._overrideVisibility.bind(ao);
+  aoHides._overrideVisibility = () => {
+    hideLines();
+    scene.traverse((o) => {
+      if (o.userData.noAmbientOcclusion && o.visible) {
+        o.visible = false;
+        aoHides._visibilityCache.push(o);
+      }
+    });
+  };
   composer.addPass(ao);
   const bloom = new UnrealBloomPass(new Vector2(1, 1), 0.25, 0.4, 0.92);
   composer.addPass(bloom);
@@ -480,6 +507,8 @@ export function startMuseumHallRoom(
   let active = true;
   let handing = false;
   let was: { x: number; z: number } | null = null;
+  /** Whether the exhibit gave a film's shot this frame. */
+  let filmed = false;
   let last = 0;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
@@ -488,11 +517,14 @@ export function startMuseumHallRoom(
     walk.update(delta);
     exhibit?.parts?.setAudible(active);
     // The exhibit runs only while its hall is the one walked in.
+    filmed = false;
     if (exhibit && active) {
       partAudio.listen(camera, metre, scene);
       exhibit.parts?.update(delta);
       exhibit.update?.(delta);
     }
+    // A film not shot this frame has ended: the walker's eye back.
+    if (!filmed) walk.film(null);
     // The hall's own moving parts (Hall 0's projector), while walked in;
     // and Hall 0's projector seen from a neighbour, going out after the
     // walker leaves it (the owner, 2026-10-28).

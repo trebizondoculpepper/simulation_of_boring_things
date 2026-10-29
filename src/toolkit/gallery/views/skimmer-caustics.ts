@@ -149,6 +149,8 @@ export function createSkimmerCaustics(options: SkimmerCausticsOptions) {
   // Its shafts rise from nothing: never culled by their unrisen bounds.
   mesh.frustumCulled = false;
   mesh.visible = false;
+  // Light, not a surface: no ambient occlusion from it.
+  mesh.userData.noAmbientOcclusion = true;
   return {
     mesh,
     /** The shafts at `time` seconds, risen `rise` (0–1), `glow` bright (0–1). */

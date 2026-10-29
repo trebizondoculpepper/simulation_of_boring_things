@@ -294,6 +294,9 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   group.add(ring);
   // Everything below the collar: shown only while the lid is off (`open`).
   const inner = new Group();
+  // Painted through the opening, not solid where it is drawn: no ambient
+  // occlusion from it (`museum-hall-room.ts`).
+  inner.userData.noAmbientOcclusion = true;
   group.add(inner);
 
   // The opening, into the stencil only, where it is seen (it tests depth,

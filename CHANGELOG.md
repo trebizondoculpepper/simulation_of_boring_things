@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 5: the skimmer film no longer glitches. The hall's render target now has a stencil buffer, so the skimmer's inside is painted only through its opening (it had been painted over the deck and the water); the ambient occlusion pass skips the skimmer's inside and the caustics (which it had drawn as solid, darkening the shafts); and the film now plays through the walker's own eye (`first-person.ts`'s `film`), so the eye others follow (a hall drawn through an archway) is the shot, not the walker's turn at the shot's place.
+
 - Museum: the signs over the archways cast a tiny drop shadow on the wall, their green printed matte and their orange in glossy vinyl, as the floor's arrows.
 
 - Museum, Hall 8 (Never again): HEAR WHAT HAPPENED now tells the chapter whose photograph you stand nearest, each chapter its own clip (`chapter-1.mp3` to `chapter-6.mp3`), lit alone and silent for 20 seconds while its clip is unrecorded; every voice line the museum needs recorded, with its file name, cue and words, is in `doc/scripts/museum-narration.md`.

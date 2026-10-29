@@ -902,11 +902,13 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
         fov,
       });
     } else {
-      // The walker's own eye, its lens easing back.
-      const from = cam.getWorldPosition(new Vector3());
+      // The walker's own eye, where it was when the film began (it has
+      // been held still), its lens easing back.
+      const e = film.start;
+      const d = toward(e.yaw, e.pitch);
       view.film({
-        from,
-        to: from.clone().add(cam.getWorldDirection(new Vector3())),
+        from: worldAt(e.x, e.y, e.z),
+        to: worldAt(e.x + d.x, e.y + d.y, e.z + d.z),
         fov,
       });
     }

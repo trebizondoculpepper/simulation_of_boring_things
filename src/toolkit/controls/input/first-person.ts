@@ -325,6 +325,21 @@ export function createFirstPerson(options: FirstPersonOptions) {
   const holds = createUseHolds();
   const heldUse = (source: HoldSource, x: number, y: number) =>
     usingHold(holds.press(source), () => use(x, y));
+  /** A scene's shot while one plays (`film`), or null. */
+  let shot: Omit<EyePose, 'roll'> | null = null;
+  const aimAt = (at: Omit<EyePose, 'roll'>) => {
+    camera.position.set(at.x, at.y, at.z);
+    camera.lookAt(
+      at.x + Math.sin(at.yaw) * Math.cos(at.pitch),
+      at.y + Math.sin(at.pitch),
+      at.z - Math.cos(at.yaw) * Math.cos(at.pitch),
+    );
+    if (camera.fov !== at.fov) {
+      camera.fov = at.fov;
+      camera.updateProjectionMatrix();
+    }
+    camera.updateMatrixWorld();
+  };
   const walker = {
     x: options.start.x,
     z: options.start.z,
@@ -1041,8 +1056,9 @@ export function createFirstPerson(options: FirstPersonOptions) {
       return currentFloorY;
     },
     locked,
-    /** Where the eye is now, and how it looks. */
+    /** Where the eye is now, and how it looks: a scene's shot, while one plays. */
     pose(): EyePose {
+      if (shot) return { ...shot, roll: 0 };
       return {
         x: camera.position.x,
         y: camera.position.y,
@@ -1159,6 +1175,17 @@ export function createFirstPerson(options: FirstPersonOptions) {
     /** Whether the walker is seated on a chair. */
     get seated() {
       return Boolean(seated);
+    },
+    /**
+     * Play a scene's shot (the skimmer's film, the owner, 2026-10-29): the
+     * camera put at `next` (scene units, radians, degrees) and reported by
+     * `pose` as the eye, so anything that follows the eye (a room drawn
+     * through a doorway) sees what the camera sees; null gives the eye
+     * back to the walker, who has not moved. Hold the walker meanwhile.
+     */
+    film(next: Omit<EyePose, 'roll'> | null) {
+      shot = next;
+      if (shot) aimAt(shot);
     },
     /**
      * Hold the player still, or let go: while held, no input walks or
@@ -1519,6 +1546,8 @@ export function createFirstPerson(options: FirstPersonOptions) {
         camera.fov = fov;
         camera.updateProjectionMatrix();
       }
+      // A scene's shot, while one plays (`film`), in place of the eye.
+      if (shot) aimAt(shot);
       torchIcon.classList.toggle('is-lit', torch.on);
       torchLight.update(
         { x: walker.x, y, z: walker.z },
