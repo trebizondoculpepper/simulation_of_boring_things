@@ -104,6 +104,12 @@ export function displayKindOf(texture: Texture): DisplayKind | undefined {
   return watched.get(texture)?.kind;
 }
 
+/** Whether a watched canvas texture has changed since it was first drawn. */
+export function displayIsLive(texture: Texture): boolean {
+  const w = watched.get(texture);
+  return !!w && isLiveDisplay(w.updates);
+}
+
 /** Say what kind of screen a canvas texture is, if not the one it was made as. */
 export function setDisplayKind(texture: CanvasTexture, kind: DisplayKind) {
   const w = watched.get(texture);

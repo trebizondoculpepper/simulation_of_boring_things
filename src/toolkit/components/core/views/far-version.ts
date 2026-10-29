@@ -11,17 +11,19 @@ import {
 } from 'three';
 import type { Material, Object3D, Texture } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { displayKindOf } from './display-reach';
+import { displayIsLive, displayKindOf } from './display-reach';
+
+const isLive = displayIsLive;
 
 /**
  * A model's far version (the owner, 2026-10-29: "no textures, just flat
  * colours, no working screens, just the approximate shape"): every
  * visible, opaque mesh under `root` above `minRadius` (its bounding
  * sphere's, in `root`'s units), baked where it is now, merged into one
- * mesh for each of a few flat colours. Screens show as dark glass; no
- * writing (the owner, 2026-10-29): labels, signs, lettering and anything
- * else drawn on a canvas that is not a screen are left out, as are glass
- * and other see-through parts, lines, points and sprites. It draws in a handful of calls however
+ * mesh for each of a few flat colours. Screens show as dark glass, and
+ * changing printed canvases (a chart, a dial face) are left out; static
+ * signs are kept as they are (the owner, 2026-10-29), one draw each; glass
+ * and other see-through parts, lines, points and sprites are left out. It draws in a handful of calls however
  * many parts the model has, shows nothing that moves or changes, and is
  * placed as `root` is: add it to `root`'s parent.
  */
@@ -39,20 +41,39 @@ export function createFarVersion(
   const sphere = new Sphere();
   const scale = new Vector3();
 
+  const materials: Material[] = [];
   const take = (mesh: Mesh, at: Matrix4) => {
-    const colour = flatColour(mesh.material);
-    if (colour === null) return;
     const geometry = mesh.geometry;
     if (!geometry.boundingSphere) geometry.computeBoundingSphere();
     sphere.copy(geometry.boundingSphere!);
     scale.setFromMatrixScale(at);
     if (sphere.radius * Math.max(scale.x, scale.y, scale.z) < minRadius) return;
+    // A static sign is kept as it is, its picture and all (the owner,
+    // 2026-10-29: static signs should always be visible): it never
+    // changes, so it costs one draw and nothing more.
+    if (isSign(mesh.material)) {
+      const own = [mesh.material].flat().map((m) => {
+        const copy = m.clone();
+        copy.opacity = 1;
+        materials.push(copy);
+        return copy;
+      });
+      const sign = new Mesh(geometry, own.length === 1 ? own[0] : own);
+      sign.matrixAutoUpdate = false;
+      sign.matrix.copy(at);
+      sign.name = `${mesh.name} (far)`;
+      signs.push(sign);
+      return;
+    }
+    const colour = flatColour(mesh.material);
+    if (colour === null) return;
     const baked = bare(geometry).applyMatrix4(at);
     let list = byColour.get(colour);
     if (!list) byColour.set(colour, (list = []));
     list.push(baked);
   };
 
+  const signs: Mesh[] = [];
   root.traverseVisible((object) => {
     if (object instanceof InstancedMesh) {
       for (let i = 0; i < object.count; i++) {
@@ -67,7 +88,6 @@ export function createFarVersion(
     take(object, matrix);
   });
 
-  const materials: Material[] = [];
   for (const [colour, geometries] of byColour) {
     const merged = mergeGeometries(geometries, false);
     for (const g of geometries) g.dispose();
@@ -79,6 +99,7 @@ export function createFarVersion(
     mesh.matrixAutoUpdate = false;
     group.add(mesh);
   }
+  for (const sign of signs) group.add(sign);
   // Where `root` is, in its parent's frame.
   root.updateMatrix();
   group.matrix.copy(root.matrix);
@@ -88,10 +109,31 @@ export function createFarVersion(
     materials,
     dispose() {
       for (const child of group.children)
-        if (child instanceof Mesh) child.geometry.dispose();
+        if (child instanceof Mesh && !signs.includes(child))
+          child.geometry.dispose();
       for (const m of materials) m.dispose();
     },
   };
+}
+
+/**
+ * Whether a mesh is a static sign: drawn from a canvas that is not a
+ * screen (printed lettering, a label, a poster, made by
+ * `createCanvasTexture` as `printed` or straight as a `CanvasTexture`)
+ * that has not changed since it was first drawn.
+ */
+function isSign(material: Material | Material[]) {
+  return [material].flat().some((m) =>
+    [
+      (m as { map?: Texture | null }).map,
+      (m as { emissiveMap?: Texture | null }).emissiveMap,
+    ].some((t) => {
+      if (!(t as { isCanvasTexture?: boolean } | null)?.isCanvasTexture)
+        return false;
+      const kind = displayKindOf(t!);
+      return (kind === undefined || kind === 'printed') && !isLive(t!);
+    }),
+  );
 }
 
 /** Dark glass, for any screen or canvas. */
