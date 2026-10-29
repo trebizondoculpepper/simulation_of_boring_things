@@ -503,8 +503,9 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
       t.box(bay, frameWood, fw + 0.03, 0.025, 0.03, x, fy - fh / 2, 0.02);
       t.box(bay, frameWood, 0.025, fh, 0.03, x - fw / 2, fy, 0.02);
       t.box(bay, frameWood, 0.025, fh, 0.03, x + fw / 2, fy, 0.02);
-      // A picture light over each frame (set decoration: the hall's own lamps light it).
-      t.box(bay, brass, fw * 0.6, 0.03, 0.05, x, fy + fh / 2 + 0.08, 0.06);
+      // A picture light over each frame, above the bay's top edge so it
+      // never covers the print (set decoration: the hall's own lamps light it).
+      t.box(bay, brass, fw * 0.6, 0.03, 0.05, x, H / 2 + 0.06, 0.06);
     }
     turnTo(bay, b.x, 1.65, b.z, b.yaw);
     object.add(
