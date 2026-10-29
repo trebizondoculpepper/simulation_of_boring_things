@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { LOOK_UP } from './skimmer-reveal';
 import {
   CINEMATIC,
+  LENS_50_FOV,
   LID_ASIDE,
   ORBIT_END,
   REVEAL_EYE,
@@ -101,6 +102,18 @@ describe('dev53’s skimmer cinematic', () => {
     expect(done.phase).toBe('done');
     expect(done.lid).toBe(0);
     expect(done.glow).toBe(0);
+  });
+
+  it('eases to a 50 mm lens over the first second, and back as the lid goes on', () => {
+    expect(LENS_50_FOV).toBeCloseTo(26.99, 2);
+    expect(cinematicFrame(0, START).zoom).toBe(0);
+    expect(cinematicFrame(0.5, START).zoom).toBeCloseTo(0.5);
+    expect(cinematicFrame(1, START).zoom).toBe(1);
+    expect(cinematicFrame(suspense + 1, START).zoom).toBe(1);
+    expect(
+      cinematicFrame(suspense + reveal + replace / 2, START).zoom,
+    ).toBeCloseTo(0.5);
+    expect(cinematicFrame(suspense + reveal + replace + 1, START).zoom).toBe(0);
   });
 
   it('turns the eye as the walker’s does: 0 north, positive east', () => {

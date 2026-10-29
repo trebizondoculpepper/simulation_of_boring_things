@@ -41,6 +41,7 @@ import {
 } from '../../components/core/parts/render-style';
 import { bannerLine } from '../logic/skimmer-reveal';
 import {
+  LENS_50_FOV,
   cinematicFrame,
   lidPose,
   pickAnother,
@@ -58,7 +59,9 @@ const SK = { x: 0, z: -1.9 };
 const EDGE = -2.6;
 /** The find shown: its size across and how far before the eye, metres. */
 const REVEAL_SIZE = 0.24;
-const REVEAL_AHEAD = 0.5;
+const REVEAL_AHEAD = 0.9;
+/** The field of view the banner's place is set for, degrees: it keeps its size on screen through the zoom. */
+const BANNER_FOV = 62;
 const SANS = 'Arial, Helvetica, sans-serif';
 const GOLD = '#ffc44a';
 
@@ -159,7 +162,8 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   const skimmer = new Group();
   skimmer.position.set(SK.x, 0, SK.z);
   room.add(skimmer);
-  const well = createSkimmerWell();
+  // Its throat runs back under the deck to beyond the pool's edge.
+  const well = createSkimmerWell({ reach: SK.z - EDGE + 0.1 });
   skimmer.add(well.group);
   const caustics = createSkimmerCaustics({ radius: 0.135, random });
   skimmer.add(caustics.mesh);
@@ -243,8 +247,12 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     from: { x: number; z: number; yaw: number; pitch: number };
     find: number;
     phase: CinematicPhase;
+    /** The walker's own field of view, degrees, to zoom from and back to. */
+    fov: number;
   } | null = null;
   const skimmerAt = new Vector3(SK.x * m, 0, SK.z * m);
+  /** The film held still where it is (`devSkimmer.seek`), for a look. */
+  let frozen = false;
   const play = () => {
     if (film) return;
     const pose = walk.pose();
@@ -267,16 +275,27 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
       },
       find,
       phase: 'suspense',
+      fov: camera.fov,
     };
     walk.hold(true);
     drawBanner(finds[find].name);
     partAudio.play(revealCue('reveal-suspense'), voice);
   };
+  /** The film's field of view now, degrees, or null for the walker's own. */
+  let lens: number | null = null;
+  const useLens = () => {
+    if (lens === null || camera.fov === lens) return;
+    camera.fov = lens;
+    camera.updateProjectionMatrix();
+  };
+  const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
   const stepFilm = (delta: number, time: number) => {
     if (!film) return false;
-    film.t += delta;
+    if (!frozen) film.t += delta;
     const f = cinematicFrame(film.t, film.start);
     const find = finds[film.find];
+    lens = f.phase === 'done' ? null : lerp(film.fov, LENS_50_FOV, f.zoom);
+    useLens();
     if (f.phase !== film.phase) {
       film.phase = f.phase;
       if (f.phase === 'reveal')
@@ -290,7 +309,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     placeLid(f.lid);
     caustics.update(time, f.rise, f.glow);
     well.glow(f.glow);
-    goldLight.intensity = 2.5 * m * m * f.glow;
+    goldLight.intensity = 1.2 * m * m * f.glow;
     find.pivot.visible = f.size > 0;
     banner.mesh.visible = f.banner;
     if (f.phase === 'done') {
@@ -321,7 +340,11 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
       find.pivot.scale.setScalar((REVEAL_SIZE / find.across) * f.size);
     }
     if (f.banner) {
-      const b = camera.localToWorld(new Vector3(0, -0.13 * m, -0.5 * m));
+      // As far off as keeps its size and place on screen through the zoom.
+      const k =
+        Math.tan(((BANNER_FOV / 2) * Math.PI) / 180) /
+        Math.tan(((camera.fov / 2) * Math.PI) / 180);
+      const b = camera.localToWorld(new Vector3(0, -0.13 * m, -0.5 * m * k));
       banner.mesh.position.copy(room.worldToLocal(b));
       banner.mesh.quaternion.copy(camera.quaternion);
     }
@@ -345,6 +368,8 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     room: { x: 0, z: 2.5 * m, yaw: 0, pitch: -0.2 },
     // Just south of the skimmer, looking down at it.
     skimmer: { x: SK.x * m, z: (SK.z + 1.2) * m, yaw: 0, pitch: -0.85 },
+    // Over the skimmer's south edge, looking down into it.
+    into: { x: SK.x * m, z: (SK.z + 0.55) * m, yaw: 0, pitch: -1.2 },
   };
   const params = new URLSearchParams(location.search);
   const walk = createFirstPerson({
@@ -377,16 +402,22 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     },
     /** Pull the lid, as a use on it does. */
     play,
-    /** Jump the film to `t` seconds in, pulling the lid first if need be. */
-    seek(t: number) {
+    /** Lift the lid aside, or put it back, with no film: to look into the well. */
+    peek(off = true) {
+      if (!film) placeLid(off ? 1 : 0);
+    },
+    /** Jump the film to `t` seconds in, pulling the lid first if need be; `hold` to stop it there. */
+    seek(t: number, hold = false) {
       play();
       if (film) film.t = t;
+      frozen = hold;
     },
     /** Where the film is: its phase and time, or null. */
     film: () => (film ? { phase: film.phase, t: film.t } : null),
   };
 
   // ---- Each frame ----------------------------------------------------------
+  const eyeAt = new Vector3();
   let last = 0;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) {
@@ -397,6 +428,9 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     last = time;
     ps1Uniforms.time.value = time / 1000;
     if (!stepFilm(delta, time / 1000)) walk.update(delta);
+    // The walker's controller sets its own field of view: the film's wins.
+    useLens();
+    well.seenFrom(skimmer.worldToLocal(eyeAt.copy(camera.position)));
     parts.update(delta);
     partAudio.listen(camera, m, scene);
     renderer.render(scene, camera);

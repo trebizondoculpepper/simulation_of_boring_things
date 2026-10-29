@@ -41,10 +41,18 @@ export const ORBIT_MIN = 0.6;
 /** Where the eye whips to for the reveal: out from the skimmer, and up. */
 export const REVEAL_EYE = { radius: 0.9, height: 0.5 };
 /** Seconds the whip from the orbit's end up to the reveal takes, overshoot and correction included. */
-// 15% slower than the first 0.35 s (the owner, 2026-10-29).
-export const WHIP = 0.35 / 0.85;
+// 15% slower than the first 0.35 s, twice over (the owner, 2026-10-29).
+export const WHIP = 0.35 / 0.85 / 0.85;
 /** How far the whip overshoots: a back-out ease's constant (1.70158 is about 10%). */
 export const OVERSHOOT = 1.70158;
+/**
+ * The film's lens (the owner, 2026-10-29): a 50 mm lens's view on a
+ * 35 mm frame (24 mm tall), as a vertical field of view, degrees (about
+ * 27°); the eye eases to it over `ZOOM` seconds as the film starts, and
+ * back to its own as the lid goes on.
+ */
+export const LENS_50_FOV = (2 * Math.atan(24 / 2 / 50) * 180) / Math.PI;
+export const ZOOM = 1;
 /** Where the lid lies when off: beside the skimmer, metres along +x. */
 export const LID_ASIDE = 0.35;
 
@@ -66,6 +74,8 @@ export interface CinematicFrame {
   eye: Pose | null;
   /** The eye the reveal's whip comes to rest at, the find before it; null outside the reveal. */
   rest: Pose | null;
+  /** How far to the film's lens (`LENS_50_FOV`): 0 the walker's own, 1 the lens. */
+  zoom: number;
   /** The lid: 0 on its seat, 1 lying aside. */
   lid: number;
   /** The caustics: how far risen (0–1) and how bright (0–1). */
@@ -147,6 +157,7 @@ export function cinematicFrame(
       phase: 'suspense',
       eye: orbit(t),
       rest: null,
+      zoom: ease(t / ZOOM),
       lid: ease(t / LIFT),
       rise: ease(t / RISE),
       glow: 1,
@@ -179,6 +190,7 @@ export function cinematicFrame(
         pitch: lerp(was.pitch, LOOK_UP, k),
       },
       rest,
+      zoom: 1,
       lid: 1,
       rise: 1,
       glow: 1,
@@ -195,6 +207,7 @@ export function cinematicFrame(
       phase: 'replace',
       eye: null,
       rest: null,
+      zoom: 1 - k,
       lid: 1 - k,
       rise: 1,
       glow: 1 - k,
@@ -207,6 +220,7 @@ export function cinematicFrame(
     phase: 'done',
     eye: null,
     rest: null,
+    zoom: 0,
     lid: 0,
     rise: 0,
     glow: 0,
