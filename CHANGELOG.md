@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Displays are drawn only where they could be read (the owner, 2026-10-29): every live canvas display (one redrawn after it was first drawn, made by `createCanvasTexture`) shows a flat rectangle of its own average colour, and its redraws are not uploaded, unless some camera sees it within 8 m, from in front, within 70° of its face's normal, and subtending more than 1°; with margins so it does not flicker at an edge (`display-reach.ts`). Texture uploads with the world running: Hall 1 from about 560k texels a second to none, Hall 9 from 398k to 14k.
+
 - Museum: ambient occlusion runs only in the hall the player is in, not in a neighbouring hall drawn through an archway (the owner, 2026-10-29); in Hall 1 on High this cuts draw calls by about a third (617 to 420 per render callback) and frame time by about a fifth.
 
 ## [0.4.0] - 2026-10-29

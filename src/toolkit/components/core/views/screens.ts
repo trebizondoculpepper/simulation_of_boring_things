@@ -1,4 +1,5 @@
 import { CanvasTexture, SRGBColorSpace } from 'three';
+import { watchDisplay } from './display-reach';
 
 /** A small canvas texture for lettering and screens. */
 export function createCanvasTexture(width: number, height: number) {
@@ -10,6 +11,8 @@ export function createCanvasTexture(width: number, height: number) {
   // Smooth, sharp lettering at any distance and angle.
   texture.anisotropy = 8;
   texture.colorSpace = SRGBColorSpace;
+  // Flat beyond reading distance (the owner, 2026-10-29).
+  watchDisplay(texture, canvas);
   return { canvas, context, texture };
 }
 
