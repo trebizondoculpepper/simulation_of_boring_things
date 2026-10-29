@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-29
+
 - Performance pass (the owner, 2026-10-29; [report](doc/research/2026-10-29-performance-pass.md)): the museum halls' exhibits are in the component benchmark; Hall 1 no longer uploads 2 MB of textures a second with nothing changing (its mimic's readouts take a reading a second, its gas-burn digits and thermometers likewise); every mimic board's readouts are drawn at a board's texel density, a quarter of the texels; Halls 3, 4 and 9 build less each frame. Hall 3's lecterns 2 and 7 stand clear of the columns, and Hall 9's fault pedestal is no longer hidden behind one.
 
 ## [0.3.0] - 2026-10-29
@@ -735,7 +737,8 @@ The first release. It has no operator's manual yet: that comes in a later releas
 - Walking from one room to the next no longer recompiles every shader of the room arrived in.
 - The corridor posters load on the published site.
 
-[Unreleased]: https://github.com/trebizondoculpepper/the_pool/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/trebizondoculpepper/the_pool/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/trebizondoculpepper/the_pool/releases/tag/v0.1.0
