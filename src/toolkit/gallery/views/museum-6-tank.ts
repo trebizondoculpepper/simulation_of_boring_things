@@ -98,7 +98,7 @@ function streakTexture() {
     g.fillStyle = '#d4d4d4';
     g.fillRect(0, 0, 64, 128);
     let seed = 7;
-    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     for (let i = 0; i < 60; i++) {
       const v = 235 + Math.floor(rnd() * 20);
       g.fillStyle = `rgb(${v},${v},${v})`;
@@ -446,7 +446,11 @@ export function createTundish(w = 0.7, d = 0.5, depth = 0.3) {
           0.002,
           d / 2 + kerbW / 2,
         ),
-        new BoxGeometry(kerbW, 0.004, d).translate(-w / 2 - kerbW / 2, 0.002, 0),
+        new BoxGeometry(kerbW, 0.004, d).translate(
+          -w / 2 - kerbW / 2,
+          0.002,
+          0,
+        ),
         new BoxGeometry(kerbW, 0.004, d).translate(w / 2 + kerbW / 2, 0.002, 0),
       ]),
       steel,
