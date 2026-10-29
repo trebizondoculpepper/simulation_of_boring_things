@@ -11,6 +11,31 @@ import { markFrontCentre } from '../../../components/core/audio/front-centre';
 import { playPiezo } from '../../../components/sound/audio/piezo-recordings';
 import { pumpSound } from '../../../components/plant/views/pump-sound';
 import { CIRCULATION_PUMP } from '../../../components/plant/logic/pump-sound';
+import {
+  MOTOR_DIAPHRAGM_PUMP,
+  PERISTALTIC_PUMP,
+  SOLENOID_PUMP,
+  STEPPER_PUMP,
+} from '../../../components/plant/audio/dosing-pump-sounds';
+import type { LoopRecipe } from '../../../components/core/audio/part-audio';
+
+/** Each dosing pump's sound and how much it is raised here, dB. */
+const DOSING_SOUNDS: Record<1 | 2 | 3 | 4, readonly [LoopRecipe, number]> = {
+  1: [SOLENOID_PUMP, 12],
+  2: [STEPPER_PUMP, 10],
+  3: [MOTOR_DIAPHRAGM_PUMP, 3],
+  4: [PERISTALTIC_PUMP, 6],
+};
+
+/** A held sound made `dB` louder. */
+const louder =
+  (recipe: LoopRecipe, dB: number): LoopRecipe =>
+  (context, out) => {
+    const gain = context.createGain();
+    gain.gain.value = 10 ** (dB / 20);
+    gain.connect(out);
+    return recipe(context, gain);
+  };
 import { createEndSuctionPump } from '../../../components/plant/views/pumps-plant';
 import { createTwinHeadPump } from '../../../components/plant/views/boiler-plant';
 import { createSpaPump } from '../../../components/plant/views/spa-pack-parts';
@@ -397,6 +422,26 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         runUp: p.kW >= 7 ? 3 : 1,
         coastDown: p.kW >= 20 ? 9 : 3,
       });
+      let heard = false;
+      updates.push(() => {
+        if (on() !== heard) {
+          heard = on();
+          partAudio.hold(from, heard ? sound : null, from);
+        }
+      });
+    }
+    // The dosing pumps' sound, here louder than in a plant room (the owner,
+    // 2026-10-29: P1 seemed silent; a solenoid pump's tick is about 18 dB
+    // under the smallest circulator's hum): each its own sound, raised to
+    // about the level of the circulators beside it, over the quiet one its
+    // view already holds.
+    if (p.family === 'displacement') {
+      const from = new Group();
+      atMachine(from, pumpId(no));
+      from.position.y = 1;
+      object.add(from);
+      const [recipe, dB] = DOSING_SOUNDS[no as 1 | 2 | 3 | 4];
+      const sound = louder(recipe, dB);
       let heard = false;
       updates.push(() => {
         if (on() !== heard) {

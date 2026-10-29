@@ -1,4 +1,4 @@
-import { Group } from 'three';
+import { Box3, Group, Vector3 } from 'three';
 import type { Mesh, Object3D } from 'three';
 import { signal } from '@preact/signals-core';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -366,7 +366,8 @@ export function createRunStand(
   group.add(head);
   t.box(head, t.paint('#2b3438', 0.5, 0.3), 0.64, 0.66, 0.03, 0, 0, -0.016);
   const face = t.printed(0.6, 0.42, paint, 768);
-  face.mesh.position.set(0, 0.1, 0.0005);
+  // Its card clear of the RUN legend below it (the owner, 2026-10-29).
+  face.mesh.position.set(0, 0.115, 0.0005);
   head.add(face.mesh);
   const lamp = signal(false);
   const parts = createPartSet();
@@ -380,21 +381,32 @@ export function createRunStand(
     }),
   );
   button.object.scale.setScalar(1.8);
-  button.object.position.set(-0.17, -0.2, 0.002);
+  button.object.position.set(-0.17, -0.22, 0.002);
   head.add(button.object);
+  // RUN above it and PUSH below, each 5 mm clear of its 27 mm radius
+  // (the owner, 2026-10-29).
   const runLabel = createMicroLabel(kit, 'RUN', {
-    height: 0.03,
+    height: 0.021,
     ink: '#ffffff',
     plate: '#2c7a3a',
   });
-  runLabel.position.set(-0.17, -0.11, 0.002);
+  // Placed by its plate's own height, measured: its lettering's is smaller.
+  const plateHalf = (o: Object3D) => {
+    o.updateMatrixWorld(true);
+    return new Box3().setFromObject(o).getSize(new Vector3()).y / 2;
+  };
+  runLabel.position.set(
+    -0.17,
+    -0.22 + 0.027 + 0.005 + plateHalf(runLabel),
+    0.002,
+  );
   head.add(runLabel);
   const push = createMicroLabel(kit, 'PUSH', {
-    height: 0.022,
+    height: 0.0154,
     ink: '#111111',
     plate: '#ffd21f',
   });
-  push.position.set(-0.17, -0.29, 0.002);
+  push.position.set(-0.17, -0.22 - 0.027 - 0.005 - plateHalf(push), 0.002);
   head.add(push);
   const lcd = createCharacterLcd(kit, {
     columns: 12,
@@ -402,7 +414,7 @@ export function createRunStand(
     cell: 0.012,
     backlight: true,
   });
-  lcd.group.position.set(0.12, -0.2, 0.004);
+  lcd.group.position.set(0.12, -0.22, 0.004);
   head.add(lcd.group);
   let shown = '';
   return {

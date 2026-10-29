@@ -89,9 +89,19 @@ describe('Hall 6’s pumps', () => {
   });
 });
 
+describe('Hall 6’s RUN buttons', () => {
+  it('run one pump at a time: starting one stops the last', () => {
+    let s = act(newHall6(), { type: 'run', no: 9 });
+    s = act(s, { type: 'run', no: 1 });
+    expect(PUMP_NOS.filter((n) => s.running[n])).toEqual([1]);
+    s = act(s, { type: 'run', no: 1 });
+    expect(PUMP_NOS.some((n) => s.running[n])).toBe(false);
+  });
+});
+
 describe('Hall 6’s tank', () => {
   it('fills from the showpiece in about six seconds, then trips every pump', () => {
-    let s = act(newHall6(), { type: 'run', no: 11 }, { type: 'run', no: 1 });
+    let s = act(newHall6(), { type: 'run', no: 11 });
     s = runHall6(s, 5);
     expect(s.tripped).toBe(false);
     s = runHall6(s, 1.5);

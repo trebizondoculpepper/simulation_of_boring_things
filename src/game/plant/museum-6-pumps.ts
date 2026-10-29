@@ -671,7 +671,14 @@ export function actOnHall6(s: Hall6State, a: Hall6Action): Hall6State {
     case 'run':
       // Locked out at full: a press is refused (the bleep), nothing else.
       if (s.tripped) return { ...s, refused: s.refused + 1 };
-      return { ...s, running: { ...s.running, [a.no]: !s.running[a.no] } };
+      // One pump at a time (the owner, 2026-10-29): starting one stops
+      // whichever ran before; pressing the running one stops it.
+      return s.running[a.no]
+        ? { ...s, running: { ...s.running, [a.no]: false } }
+        : {
+            ...s,
+            running: { ...allStopped(), [a.no]: true },
+          };
     case 'notch': {
       const at = NOTCHES.findIndex((n) => Math.abs(n - s.opening[a.id]) < 1e-6);
       const to = Math.max(

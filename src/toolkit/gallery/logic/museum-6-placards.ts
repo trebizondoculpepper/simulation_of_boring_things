@@ -67,11 +67,19 @@ const WORDS: Record<PumpNo, { how: string; fact: string }> = {
   },
 };
 
-/** The sponsor's slogans, one per plaque in turn. */
+/** The sponsor's slogans, a different groaner on each plaque (the owner, 2026-10-29). */
 const SLOGANS = [
   'Grundflow: we’ve got your back-pressure.',
-  'Grundflow: every drop counts.',
+  'Grundflow: every drop counts. We counted.',
+  'Grundflow: small strokes, big impression.',
+  'Grundflow: we squeeze so you don’t have to.',
+  'Grundflow: magnetically attracted to your business.',
+  'Grundflow: always there when things go down the drain.',
+  'Grundflow: the spa-tacular choice.',
+  'Grundflow: two heads are better than one.',
+  'Grundflow: we never lose our head.',
   'Grundflow: under pressure since 1952.',
+  'Grundflow: splitting the difference since forever.',
 ];
 
 /** A power in friendly units: watts below a kilowatt. */
@@ -99,7 +107,7 @@ export function pumpPlaque(no: PumpNo): Placard {
     title: `${no}. ${p.model} · ${TAGS[pumpId(no)]}`,
     body: `${family(p)}: ${p.kind}. ${w.how} In a pool: ${p.job}. ${powerText(p.kW)}; here it delivers ${flowText(deliveryAlone(no))}.`,
     fact: w.fact,
-    tryIt: `Press RUN. ${SLOGANS[(no - 1) % SLOGANS.length]}`,
+    tryIt: `Press RUN. ${SLOGANS[no - 1]}`,
   };
 }
 
