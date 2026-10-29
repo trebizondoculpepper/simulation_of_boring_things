@@ -14,6 +14,7 @@ import {
 } from 'three';
 import type { BufferGeometry, Material, Object3D } from 'three';
 import { createPs1Material } from '../../../components/core/parts/ps1-material';
+import { createCanvasTexture } from '../../../components/core/views/screens';
 import type { tools as toolsOf } from '../../../components/core/views/fitting-tools';
 import type { FindId } from '../../logic/museum-5-skimmer';
 
@@ -93,6 +94,44 @@ export function createFindProps(t: Tools, materials: Material[]) {
       ),
       material,
     );
+  /**
+   * The matted core's material, made once: a canvas of fine crossing
+   * strands, dark, mousy and a few blond, over a dark ground, rough, so
+   * it reads as a felt of fibres rather than a glossy lump.
+   */
+  let mat: Material | null = null;
+  const matted = () => {
+    if (mat) return mat;
+    const { context: c, texture } = createCanvasTexture(256, 256);
+    c.fillStyle = '#21190f';
+    c.fillRect(0, 0, 256, 256);
+    const rand = random(5);
+    const inks = ['#0f0b08', '#3b2a1c', '#5c4630', '#4a3624', '#b89a5c'];
+    c.lineCap = 'round';
+    for (let k = 0; k < 900; k++) {
+      const x = rand() * 256;
+      const y = rand() * 256;
+      const a = rand() * Math.PI;
+      const l = 20 + rand() * 70;
+      c.strokeStyle = inks[k % 11 === 0 ? 4 : k % 4];
+      c.globalAlpha = 0.5 + 0.5 * rand();
+      c.lineWidth = 0.6 + rand() * 1.2;
+      c.beginPath();
+      c.moveTo(x, y);
+      c.quadraticCurveTo(
+        x + Math.cos(a + 0.6) * l * 0.5,
+        y + Math.sin(a + 0.6) * l * 0.5,
+        x + Math.cos(a) * l,
+        y + Math.sin(a) * l,
+      );
+      c.stroke();
+    }
+    c.globalAlpha = 1;
+    texture.needsUpdate = true;
+    mat = createPs1Material({ map: texture, roughness: 0.95 });
+    materials.push(mat);
+    return mat;
+  };
   /** A seeded random, so every fill's hair is the same tangle. */
   const random = (seed: number) => () => {
     seed = (seed * 16807) % 2147483647;
@@ -105,7 +144,8 @@ export function createFindProps(t: Tools, materials: Material[]) {
    */
   const tangle = (g: Object3D, seed: number, size: number) => {
     const rand = random(seed);
-    blob(g, p('#2a2119', 0.25), size, size * 0.42, size * 0.85, 0, size * 0.2);
+    // The matted core: dull, and all fibres.
+    blob(g, matted(), size, size * 0.42, size * 0.85, 0, size * 0.2);
     blob(
       g,
       p('#7c8268', 0.3),
@@ -116,11 +156,12 @@ export function createFindProps(t: Tools, materials: Material[]) {
       size * 0.32,
       -size * 0.1,
     );
+    // Dull: wet hair is dark, not glossy.
     const hairs = [
-      p('#1c1612', 0.35),
-      p('#3b2a1c', 0.35),
-      p('#5c4630', 0.4),
-      p('#b89a5c', 0.4),
+      p('#1c1612', 0.9),
+      p('#3b2a1c', 0.9),
+      p('#5c4630', 0.9),
+      p('#b89a5c', 0.85),
     ];
     for (let k = 0; k < 34; k++) {
       const turns = 1 + rand() * 1.5;

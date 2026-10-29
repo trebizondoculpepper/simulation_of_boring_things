@@ -82,7 +82,8 @@ export interface SkimmerWellOptions {
  * (`industrial-devices.ts`): soft blots, each brown at its heart, yellow
  * round it and clear at its edge, more and heavier the lower down, over
  * a stain darkening toward the bottom; a tide line at the water's level
- * (`water`, a fraction of the depth down) and drips running down from it.
+ * (`water`, a fraction of the depth down, or null for none: the basket,
+ * under water) and drips running down from it.
  * The canvas wraps the wall: across is round it, down is down it.
  */
 function paintGrime(
@@ -90,14 +91,15 @@ function paintGrime(
   w: number,
   h: number,
   base: string,
-  water: number,
+  water: number | null,
   random: () => number,
 ) {
   c.fillStyle = base;
   c.fillRect(0, 0, w, h);
   const wash = c.createLinearGradient(0, 0, 0, h);
-  wash.addColorStop(0, 'rgba(150, 120, 50, 0)');
-  wash.addColorStop(water, 'rgba(150, 120, 50, 0.12)');
+  // Clean above the water; under it (the basket), stained from the top.
+  wash.addColorStop(0, `rgba(150, 120, 50, ${water === null ? 0.35 : 0})`);
+  if (water !== null) wash.addColorStop(water, 'rgba(150, 120, 50, 0.12)');
   wash.addColorStop(1, 'rgba(90, 62, 28, 0.75)');
   c.fillStyle = wash;
   c.fillRect(0, 0, w, h);
@@ -123,6 +125,7 @@ function paintGrime(
     );
   }
   // The tide line, where the water stands, and what ran down from it.
+  if (water === null) return;
   const tide = water * h;
   c.fillStyle = 'rgba(120, 92, 36, 0.45)';
   c.fillRect(0, tide - h * 0.012, w, h * 0.024);
@@ -376,8 +379,13 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   );
   // Its far side seen from within, and its near side from without: two
   // meshes, so each is painted in its turn.
+  // As grimy as the wall above it, all the way down: it is always under
+  // water, so no tide line.
+  const basketGrime = createCanvasTexture(512, 128);
+  paintGrime(basketGrime.context, 512, 128, colours.basket, null, random);
+  basketGrime.texture.needsUpdate = true;
   const farMaterial = own(
-    createPs1Material({ color: colours.basket, roughness: 0.6 }),
+    createPs1Material({ map: basketGrime.texture, roughness: 0.75 }),
   );
   farMaterial.side = BackSide;
   const far = inside(
@@ -388,7 +396,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   far.position.y = seat - basketDepth / 2;
   group.add(far);
   const nearMaterial = own(
-    createPs1Material({ color: colours.basket, roughness: 0.6 }),
+    createPs1Material({ map: basketGrime.texture, roughness: 0.75 }),
   );
   const near = inside(
     nearMaterial,
@@ -397,8 +405,9 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
   );
   near.position.y = seat - basketDepth / 2;
   group.add(near);
+  // Silt settled in its bottom.
   const bottomMaterial = own(
-    createPs1Material({ color: colours.floor, roughness: 0.9 }),
+    createPs1Material({ color: '#4d3d26', roughness: 0.95 }),
   );
   const bottom = inside(
     bottomMaterial,
@@ -484,6 +493,7 @@ export function createSkimmerWell(options: SkimmerWellOptions = {}) {
       for (const m of materials) m.dispose();
       mark.texture.dispose();
       grime.texture.dispose();
+      basketGrime.texture.dispose();
     },
   };
 }
