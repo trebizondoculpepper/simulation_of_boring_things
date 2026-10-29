@@ -209,3 +209,25 @@ Reg, a leisure centre plant technician in his sixties, white hair, reading glass
 ```
 Reg, a leisure centre plant technician in his sixties, white hair, reading glasses on a cord, in a navy softshell jacket, at work in a British public swimming baths in the 2020s: last round: the plant room's gauges read, the lights off, the pool left still and dark until six. Candid, mid-task, period-correct equipment, clothing and building, modern digital photograph, natural light, documentary, sharp, no text, no logos --ar 3:2 --style raw --v 7
 ```
+
+## The Pool of the Future
+
+The hall's last wall (the owner, 2026-10-29): "the Pool of the Future?", three photographs of a future Reg, the same poolman in each. Name the results `future-1_<variant>.png`, `future-2_…`, `future-3_…` in `doc/gens/day-in-the-life/`.
+
+### Future 1: the augmented poolman (`future-1`)
+
+```
+Reg, a cybernetically augmented pool technician of the future, middle-aged, a chrome prosthetic arm and a glowing implant at his temple, wearing sleek VR goggles and a navy technician's jumpsuit with hi-vis piping, standing calmly in the foreground of an impossible Escher-like swimming baths: pools on the walls and ceiling, staircases and diving boards at every angle, water flowing upward and sideways defying gravity, white tiles and blue lane lines in every direction, clean soft daylight, sharp modern digital photograph, cinematic, wide angle, no text, no logos --ar 3:2 --style raw --v 7
+```
+
+### Future 2: the poolman in cyberspace (`future-2`)
+
+```
+the same augmented pool technician Reg, VR goggles, chrome arm, navy jumpsuit, standing inside cyberspace: a vast dark digital void with a faint glowing grid floor, giant cubic voxel blocks of clear blue pool water floating in mid-air like a blocky Minecraft-style world, water cubes casting wobbling caustic light, small floating cubes drifting, he reaches out to touch one, glowing cyan rim light, sharp digital render look, no text, no logos --ar 3:2 --style raw --v 7
+```
+
+### Future 3: some things never change (`future-3`)
+
+```
+the same augmented pool technician Reg, VR goggles pushed up on his forehead, chrome arm, navy jumpsuit, kneeling on the deck of a gleaming futuristic swimming baths with curved white surfaces, holographic lane markers and floating light panels, reaching into an ordinary old-fashioned wall skimmer and pulling out a dripping handful of hair, a plaster and a hair grip with a weary expression, some things never change, bright clean daylight, sharp modern digital photograph, gently humorous, no text, no logos --ar 3:2 --style raw --v 7
+```
