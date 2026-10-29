@@ -351,3 +351,34 @@ export function approachedPlinth(
   }
   return best;
 }
+
+/**
+ * Each plinth's era loop, by its number (`doc/prompts/art/grout-music.md`):
+ * the file it plays from `resources/sound/music/grout/`, while its lectern
+ * is the one approached.
+ */
+export const MUSIC_FILES: Readonly<Record<number, string>> = {
+  1: '1-lime.ogg',
+  2: '2-portland.ogg',
+  3: '3-sanded.ogg',
+  4: '4-unsanded.ogg',
+  5: '5-coloured.ogg',
+  6: '6-polymer.ogg',
+  7: '7-furan.ogg',
+  8: '8-epoxy.ogg',
+  9: '9-cg2wa.ogg',
+  10: '10-movement-joint.ogg',
+};
+
+/** How loud the era loops play: quiet, beneath the reading of a plaque. */
+export const MUSIC_LEVEL = 0.22;
+
+/** The loop to play for the plinth shown (null for none), among the files that exist; null where its file is missing. */
+export function musicFor(
+  shown: number | null,
+  present: ReadonlySet<string>,
+): string | null {
+  if (shown === null) return null;
+  const file = MUSIC_FILES[shown];
+  return file && present.has(file) ? file : null;
+}

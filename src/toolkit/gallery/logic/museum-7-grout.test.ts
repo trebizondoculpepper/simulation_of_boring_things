@@ -11,6 +11,8 @@ import {
   TIMELINE,
   hall7Solids,
   jointLength,
+  MUSIC_FILES,
+  musicFor,
   lecternAt,
   timelineX,
 } from './museum-7-grout';
@@ -102,5 +104,18 @@ describe('the approach light', () => {
     // Held a little past the near edge, so it does not flicker.
     expect(approachedPlinth(at.x, at.z - 2.5, 5)).toBe(5);
     expect(approachedPlinth(at.x, at.z - APPROACH_FAR - 0.1, 5)).toBeNull();
+  });
+});
+
+describe('the era music', () => {
+  it('names one loop for each plinth', () => {
+    expect(PLINTHS.map((p) => MUSIC_FILES[p.n]).every(Boolean)).toBe(true);
+    expect(new Set(Object.values(MUSIC_FILES)).size).toBe(PLINTHS.length);
+  });
+  it("plays the shown plinth's loop only where its file exists", () => {
+    const present = new Set(['5-coloured.ogg']);
+    expect(musicFor(5, present)).toBe('5-coloured.ogg');
+    expect(musicFor(4, present)).toBeNull();
+    expect(musicFor(null, present)).toBeNull();
   });
 });

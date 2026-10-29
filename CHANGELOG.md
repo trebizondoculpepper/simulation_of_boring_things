@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 7: each plinth's era music (`resources/sound/music/grout/`, prompts in `doc/prompts/art/grout-music.md`) plays quietly and looped, from above its plinth, while its lectern is the one approached, changing as the approach light does and silent with none; a loop not yet supplied is simply silent.
+
 - Museum, Hall 5 and dev53: the skimmer film no longer goes black. The rising gold shafts' shader took `pow` of a negative number where multisampling read past a shaft's tip, a NaN the hall's bloom spread into black rectangles over the start of the film and the whip up to the find, hiding the find and its banner; it is clamped. The film can be started from the URL (`?room=museum5&skimmer=reveal`, `?room=dev53&skimmer=reveal`), slowed (`&filmSpeed=0.25`) or stepped a fixed 1/fps per frame drawn (`&filmFps=10`) for capturing it (README).
 
 - Museum, Hall 6: the water falling from the fill pipe is a white, aerated stream, its streaks running down at the speed it falls, never drawn thinner than 7 mm, so it shows at every stream size; the tundish (DR1) reads as an angular cut, a bright stainless kerb round it, a chamfer down to the grille in its rebate and the funnel shading dark into its throat through the more open grille; the mimic's blue chaser LEDs are 24 mm across at a 50 mm pitch (a new `pitch` on a line's flow), unshaded, so they read as running lights from 2–3 m.

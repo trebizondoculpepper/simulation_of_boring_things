@@ -35,11 +35,31 @@ import {
   facingStep,
   facingYaw,
   hall7Solids,
+  MUSIC_LEVEL,
   lecternAt,
+  musicFor,
   timelineX,
 } from '../../logic/museum-7-grout';
+import { partAudio } from '../../../components/core/audio/part-audio';
+import { recordedLoop } from '../../../components/core/audio/recorded-loop';
 import type { GroutPlinth } from '../../logic/museum-7-grout';
 import type { HallExhibit } from './exhibits';
+
+/**
+ * The era loops that exist (`resources/sound/music/grout/`, prompts in
+ * `doc/prompts/art/grout-music.md`), by file name: a plinth whose file is
+ * missing is simply silent, nothing fetched.
+ */
+const MUSIC = Object.fromEntries(
+  Object.entries(
+    import.meta.glob('../../../../../resources/sound/music/grout/*.ogg', {
+      eager: true,
+      query: '?url',
+      import: 'default',
+    }) as Record<string, string>,
+  ).map(([path, url]) => [path.slice(path.lastIndexOf('/') + 1), url]),
+);
+const MUSIC_PRESENT: ReadonlySet<string> = new Set(Object.keys(MUSIC));
 
 /**
  * Hall 7, "Grout: The Unsung Hero of the Aquatics World" (107k): a
@@ -589,6 +609,29 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       (place.z + at.z) / 2,
     );
   };
+  // The era loop of the plinth shown, heard from above it: changed as its
+  // light goes out and comes in on another, silent with none. Held from
+  // the hall's own scene, it is hushed when the hall is left.
+  const speaker = new Object3D();
+  object.add(speaker);
+  let playing: string | null = null;
+  const play = (n: number | null) => {
+    const file = musicFor(n, MUSIC_PRESENT);
+    if (file === playing) return;
+    playing = file;
+    if (file !== null && n !== null) {
+      const place = PLACES[n];
+      speaker.position.set(place.x, 3.0, place.z);
+    }
+    partAudio.hold(
+      speaker,
+      file === null
+        ? null
+        : recordedLoop(new URL(MUSIC[file], location.href), MUSIC_LEVEL),
+      speaker,
+    );
+  };
+
   const lightApproach = (delta: number) => {
     if (eye) {
       object.worldToLocal(eye.getWorldPosition(seen));
@@ -599,6 +642,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     if (want === 0 && level === 0 && lit !== shown) {
       shown = lit;
       if (shown !== null) aim(shown);
+      play(shown);
     }
     if (level === want) return;
     level =
@@ -618,6 +662,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       // (the owner, 2026-10-29).
       projector.update(delta, shown === OIL_WHEEL_PLINTH ? level : 0);
     },
+    dispose: () => play(null),
     // There is nothing to reset. Grout endures.
     reset: () => {},
   };
