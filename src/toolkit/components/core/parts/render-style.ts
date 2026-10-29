@@ -264,6 +264,17 @@ export function drawAtRatio(renderer: WebGLRenderer, ratio: number | null) {
   exactRatios.get(renderer)?.(ratio);
 }
 
+const ratioScales = new WeakMap<WebGLRenderer, (scale: number) => void>();
+
+/**
+ * Draw a room's renderer at a share of the ratio its settings give it (a
+ * hall seen through an archway at a quarter, the owner, 2026-10-29); 1
+ * returns it to the settings' ratio.
+ */
+export function scaleRatio(renderer: WebGLRenderer, scale: number) {
+  ratioScales.get(renderer)?.(scale);
+}
+
 /** Each shadow's map size as the room asked for it, before a preset cut it. */
 const askedShadow = new WeakMap<LightShadow, { x: number; y: number }>();
 
@@ -312,6 +323,7 @@ export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
   const setSize = renderer.setSize.bind(renderer);
   let wanted = Math.min(globalThis.devicePixelRatio ?? 1, MAX_PIXEL_RATIO);
   let exact: number | null = null;
+  let scale = 1;
 
   // The room's post-processing chains follow its ratio (`createComposer`).
   const follow = () => {
@@ -328,7 +340,7 @@ export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
     const s = settings.value;
     const cap = graphics.value.pixelRatioCap;
     if (exact !== null) return exact;
-    const ratio = Math.min(wanted, cap) * renderScale(s.renderLevel);
+    const ratio = Math.min(wanted, cap) * renderScale(s.renderLevel) * scale;
     return cappedPixelRatio(ratio, renderer.getSize(size).y, s.resolutionCap);
   };
   const apply = () => {
@@ -348,6 +360,10 @@ export function createRenderer(canvas: HTMLCanvasElement, alpha = false) {
   };
   exactRatios.set(renderer, (ratio) => {
     exact = ratio;
+    apply();
+  });
+  ratioScales.set(renderer, (share) => {
+    scale = share;
     apply();
   });
   const stopQuality = effect(() => {

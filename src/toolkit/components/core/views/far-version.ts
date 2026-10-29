@@ -23,7 +23,7 @@ import { displayKindOf } from './display-reach';
  * else drawn on a canvas that is not a screen are left out, as are glass
  * and other see-through parts, lines, points and sprites. It draws in a handful of calls however
  * many parts the model has, shows nothing that moves or changes, and is
- * given back in `root`'s own frame: add it where `root` is.
+ * placed as `root` is: add it to `root`'s parent.
  */
 export function createFarVersion(
   root: Object3D,
@@ -79,6 +79,9 @@ export function createFarVersion(
     mesh.matrixAutoUpdate = false;
     group.add(mesh);
   }
+  // Where `root` is, in its parent's frame.
+  root.updateMatrix();
+  group.matrix.copy(root.matrix);
   group.matrixAutoUpdate = false;
   return {
     group,

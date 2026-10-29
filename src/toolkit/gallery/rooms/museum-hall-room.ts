@@ -20,6 +20,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import {
   createComposer,
   createRenderer,
+  scaleRatio,
   followEffectSettings,
   useEnvironment,
 } from '../../components/core/parts/render-style';
@@ -409,6 +410,54 @@ export function startMuseumHallRoom(
   observer.observe(canvas);
   resize();
 
+  // Seen through an archway from the hall walked in (the owner,
+  // 2026-10-29): drawn at a quarter of its resolution, blurred, and with
+  // its exhibit as its far version, coming clear as the walker nears the
+  // archway: half resolution within 5 m, full and its real exhibit within
+  // 2.5 m, the blur fading out by 1.5 m.
+  let farExhibit: ReturnType<typeof createFarVersion> | null = null;
+  let seenShare = 1;
+  let seenBlur = 0;
+  let seenFar = false;
+  const seeFrom = (metres: number | null) => {
+    const share =
+      metres === null ? 1 : metres > 5 ? 0.25 : metres > 2.5 ? 0.5 : 1;
+    const blur =
+      metres === null
+        ? 0
+        : Math.round(Math.max(0, Math.min(1, (metres - 1.5) / 4.5)) * 6 * 2) /
+          2;
+    const useFar = metres !== null && metres > 2.5 && exhibit !== null;
+    if (share !== seenShare) {
+      seenShare = share;
+      scaleRatio(renderer, share);
+    }
+    if (blur !== seenBlur) {
+      seenBlur = blur;
+      canvas.style.filter = blur > 0 ? `blur(${blur}px)` : '';
+    }
+    if (useFar !== seenFar && exhibit) {
+      seenFar = useFar;
+      if (useFar && !farExhibit) {
+        farExhibit = createFarVersion(exhibit.object, {
+          name: `${id} exhibit`,
+        });
+        exhibit.object.parent?.add(farExhibit.group);
+      }
+      exhibit.object.visible = !useFar;
+      if (farExhibit) farExhibit.group.visible = useFar;
+    }
+  };
+  /** How far the eye drawn under another hall is from this hall's nearest archway, metres. */
+  const archwayDistance = () => {
+    const pose = walk.pose();
+    const x = pose.x / metre;
+    const z = pose.z / metre;
+    return Math.min(
+      ...hallArches(id).map((a) => Math.hypot(x - a.frame.x, z - a.frame.z)),
+    );
+  };
+
   let visual = true;
   // Whether this hall is the one walked in (not drawn under another).
   let active = true;
@@ -447,6 +496,7 @@ export function startMuseumHallRoom(
         enterDevRoom(into as RoomId, id as RoomId, true);
       }
     }
+    seeFrom(active ? null : archwayDistance());
     if (visual) composer.render(delta);
   });
 
@@ -464,6 +514,7 @@ export function startMuseumHallRoom(
       hall.dispose();
       for (const copy of copies.values()) copy.dispose();
       for (const far of farCopies) far.dispose();
+      farExhibit?.dispose();
       for (const m of copyMaterials) m.dispose();
       shells.dispose();
       shellMaterials.dispose();
