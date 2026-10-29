@@ -372,7 +372,7 @@ export function createMimicBoard(
   // instances of one LED, so a board of many lines stays cheap.
   const chased = spec.lines.flatMap((line) =>
     line.flow
-      ? chaserPositions(line.points).map((at, index) => ({
+      ? chaserPositions(line.points, line.flow.pitch).map((at, index) => ({
           at,
           index,
           id: line.flow!.id,
@@ -392,9 +392,10 @@ export function createMimicBoard(
           CHASER_SIZE / 2,
           CHASER_SIZE / 2,
           0.003,
-          8,
+          12,
         ).rotateX(Math.PI / 2),
-        new MeshBasicMaterial(),
+        // Unlit by the room and not tone-mapped: an LED shows its own colour.
+        new MeshBasicMaterial({ toneMapped: false }),
         chased.length,
       )
     : undefined;

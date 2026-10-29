@@ -17,6 +17,9 @@ import {
   ShapeGeometry,
   SphereGeometry,
   BoxGeometry,
+  CanvasTexture,
+  RepeatWrapping,
+  SRGBColorSpace,
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createPoolUniforms } from '../../components/pool/views/pool-surfaces';
@@ -77,6 +80,36 @@ export function createTankSurface(w: number, d: number) {
 }
 
 const RINGS = 16;
+/** The thinnest a stream is drawn, metres across. */
+const STREAM_DRAWN_M = 0.007;
+/** How far down a stream its streak pattern repeats, metres. */
+const STREAK_M = 0.35;
+
+/**
+ * Streaks of air down a falling stream: drawn once, a white canvas with
+ * brighter and fainter vertical lines, its alpha the same pattern.
+ */
+function streakTexture() {
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 128;
+  const g = c.getContext('2d');
+  if (g) {
+    g.fillStyle = '#d4d4d4';
+    g.fillRect(0, 0, 64, 128);
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < 60; i++) {
+      const v = 235 + Math.floor(rnd() * 20);
+      g.fillStyle = `rgb(${v},${v},${v})`;
+      g.fillRect(rnd() * 64, rnd() * 128, 1 + rnd() * 3, 10 + rnd() * 50);
+    }
+  }
+  const t = new CanvasTexture(c);
+  t.wrapS = t.wrapT = RepeatWrapping;
+  t.colorSpace = SRGBColorSpace;
+  return t;
+}
 const DROPS = 32;
 const SPRAY = 40;
 
@@ -97,11 +130,26 @@ export function createOutflow(bore: number, fullM3h: number) {
     clearcoat: 1,
     depthWrite: false,
   });
-  // The stream: an open cylinder, its top at the mouth, scaled to its width and fall.
+  // The stream: an open cylinder, its top at the mouth, scaled to its width
+  // and fall, white with entrained air and streaked, the streaks running
+  // down it (the owner, 2026-10-29: a clear, glassy stream was barely seen).
+  const streaks = streakTexture();
+  const streamLook = new MeshStandardMaterial({
+    color: '#ffffff',
+    map: streaks,
+    alphaMap: streaks,
+    transparent: true,
+    opacity: 1,
+    roughness: 0.25,
+    metalness: 0,
+    emissive: '#b9d3df',
+    emissiveIntensity: 0.8,
+    depthWrite: false,
+  });
   const stream = live(
     new Mesh(
       new CylinderGeometry(0.5, 0.5, 1, 24, 1, true).translate(0, -0.5, 0),
-      waterLook,
+      streamLook,
     ),
   );
   stream.renderOrder = 2;
@@ -215,7 +263,15 @@ export function createOutflow(bore: number, fullM3h: number) {
       foam.visible = flowing;
       if (out.kind === 'stream') {
         const w = out.diameter;
-        stream.scale.set(w, Math.max(drop, 0.001), w);
+        // Never drawn thinner than STREAM_DRAWN_M, so the thinnest still shows.
+        const drawn = Math.max(w, STREAM_DRAWN_M);
+        const fall = Math.max(drop, 0.001);
+        stream.scale.set(drawn, fall, drawn);
+        // The streaks repeat every STREAK_M down the stream and run at its speed.
+        streaks.repeat.set(1, fall / STREAK_M);
+        streaks.offset.y =
+          (streaks.offset.y + (h * (1 + Math.sqrt(2 * G * fall))) / STREAK_M) %
+          1;
         const jitter = 1 + 0.08 * Math.sin(performance.now() / 37);
         const spread = w * (1.1 + 0.6 * out.share) * jitter + 0.004;
         foam.scale.set(spread, 1, spread);
@@ -270,10 +326,13 @@ export function createOutflow(bore: number, fullM3h: number) {
 }
 
 /**
- * A tundish in the floor (the owner, 2026-10-29): a stainless funnel let
- * into the floor, its opening `w` by `d` metres with a chamfered lip,
- * its sides sloping `depth` down to a square outlet, under a flush
- * stainless grille. The floor is one plane, so the hole is made in
+ * A tundish in the floor (the owner, 2026-10-29: "a proper tundish, an
+ * angular cut into the floor covered by a grille"): a stainless funnel
+ * let into the floor, its opening `w` by `d` metres inside a bright
+ * stainless kerb, a 45° chamfer down from the kerb to a rebate the grille
+ * sits in, then the funnel's sides sloping `depth` down to a square
+ * outlet, lit at the top and darkening into the throat so the cut reads
+ * through the open grille. The floor is one plane, so the hole is made in
  * depth: the funnel and grille are drawn first, then an invisible mask
  * over the opening writes the floor's depth there, so the floor (drawn
  * after) is not drawn over them, while whatever stands nearer still is.
@@ -282,21 +341,23 @@ export function createTundish(w = 0.7, d = 0.5, depth = 0.3) {
   const group = live(new Group());
   group.name = 'Tundish';
   const steel = new MeshStandardMaterial({
-    color: '#a3a9ac',
-    metalness: 0.6,
-    roughness: 0.35,
+    color: '#c9cfd2',
+    metalness: 0.7,
+    roughness: 0.25,
     side: DoubleSide,
   });
-  const dark = new MeshBasicMaterial({ color: '#0b0c0d' });
-  const lip = 0.03;
-  const chamfer = 0.04;
+  const dark = new MeshBasicMaterial({ color: '#050606' });
+  const chamfer = 0.045;
+  const seat = 0.03;
   const out = 0.08;
-  // The lip, its chamfer, the funnel and the outlet's throat, as rings of quads.
-  const rings: [number, number, number][] = [
-    [w / 2, d / 2, 0],
-    [w / 2 - chamfer, d / 2 - chamfer, -lip],
-    [out, out, -depth],
-    [out, out, -depth - 0.04],
+  // The chamfer, the rebate's wall, the funnel and the outlet's throat, as
+  // rings of quads, each ring with its shade (light at the kerb, dark below).
+  const rings: [number, number, number, number][] = [
+    [w / 2, d / 2, 0, 0.95],
+    [w / 2 - chamfer, d / 2 - chamfer, -chamfer, 0.8],
+    [w / 2 - chamfer, d / 2 - chamfer, -chamfer - seat, 0.55],
+    [out, out, -depth, 0.12],
+    [out, out, -depth - 0.04, 0.04],
   ];
   const corner = (hw: number, hd: number, y: number, k: number) => {
     const cs = [
@@ -308,26 +369,37 @@ export function createTundish(w = 0.7, d = 0.5, depth = 0.3) {
     return [cs[0], y, cs[1]];
   };
   const position: number[] = [];
+  const colour: number[] = [];
   for (let r = 0; r + 1 < rings.length; r++)
     for (let k = 0; k < 4; k++) {
-      const a = corner(...rings[r], k);
-      const b = corner(...rings[r], k + 1);
-      const c = corner(...rings[r + 1], k + 1);
-      const e = corner(...rings[r + 1], k);
+      const [hw0, hd0, y0, s0] = rings[r];
+      const [hw1, hd1, y1, s1] = rings[r + 1];
+      const a = corner(hw0, hd0, y0, k);
+      const b = corner(hw0, hd0, y0, k + 1);
+      const c = corner(hw1, hd1, y1, k + 1);
+      const e = corner(hw1, hd1, y1, k);
       position.push(...a, ...b, ...c, ...a, ...c, ...e);
+      // The two long sides a shade darker than the ends, so the angles show.
+      const side = k % 2 === 0 ? 1 : 0.8;
+      for (const v of [s0, s0, s1, s0, s1, s1]) {
+        const g = v * side;
+        colour.push(g, g, g);
+      }
     }
   const funnelGeometry = new BufferGeometry();
   funnelGeometry.setAttribute(
     'position',
     new Float32BufferAttribute(position, 3),
   );
+  funnelGeometry.setAttribute('color', new Float32BufferAttribute(colour, 3));
   funnelGeometry.computeVertexNormals();
   const funnel = live(
     new Mesh(
       funnelGeometry,
       new MeshStandardMaterial({
-        color: '#6c7377',
-        metalness: 0.5,
+        color: '#b4bbbf',
+        vertexColors: true,
+        metalness: 0.55,
         roughness: 0.3,
         side: DoubleSide,
       }),
@@ -339,24 +411,47 @@ export function createTundish(w = 0.7, d = 0.5, depth = 0.3) {
   );
   throat.position.y = -depth - 0.04;
   throat.renderOrder = -2;
-  // The grille: a frame round the opening and bars across it, their tops 3 mm proud.
+  // The grille, set in the rebate below the chamfer: a frame and bars
+  // across it, open enough to see the funnel through.
+  const gw = w - 2 * chamfer;
+  const gd = d - 2 * chamfer;
+  const top = -chamfer - 0.002;
+  const barD = 0.022;
   const bars: BufferGeometry[] = [];
-  const top = 0.003;
-  const barD = 0.025;
-  for (const z of [-d / 2 + 0.01, d / 2 - 0.01])
-    bars.push(new BoxGeometry(w, barD, 0.02).translate(0, top - barD / 2, z));
-  for (const x of [-w / 2 + 0.01, w / 2 - 0.01])
-    bars.push(new BoxGeometry(0.02, barD, d).translate(x, top - barD / 2, 0));
-  for (let x = -w / 2 + 0.035; x < w / 2 - 0.02; x += 0.04)
+  for (const z of [-gd / 2 + 0.01, gd / 2 - 0.01])
+    bars.push(new BoxGeometry(gw, barD, 0.02).translate(0, top - barD / 2, z));
+  for (const x of [-gw / 2 + 0.01, gw / 2 - 0.01])
+    bars.push(new BoxGeometry(0.02, barD, gd).translate(x, top - barD / 2, 0));
+  for (let x = -gw / 2 + 0.05; x < gw / 2 - 0.03; x += 0.05)
     bars.push(
-      new BoxGeometry(0.005, barD, d - 0.02).translate(x, top - barD / 2, 0),
+      new BoxGeometry(0.006, barD, gd - 0.02).translate(x, top - barD / 2, 0),
     );
-  for (const z of [-d / 6, d / 6])
-    bars.push(
-      new BoxGeometry(w - 0.02, 0.006, 0.006).translate(0, top - 0.015, z),
-    );
+  bars.push(
+    new BoxGeometry(gw - 0.02, 0.008, 0.008).translate(0, top - 0.016, 0),
+  );
   const grille = live(new Mesh(mergeGeometries(bars), steel));
   grille.renderOrder = -2;
+  // The kerb: a bright stainless band on the floor round the cut.
+  const kerbW = 0.035;
+  const kerb = live(
+    new Mesh(
+      mergeGeometries([
+        new BoxGeometry(w + 2 * kerbW, 0.004, kerbW).translate(
+          0,
+          0.002,
+          -d / 2 - kerbW / 2,
+        ),
+        new BoxGeometry(w + 2 * kerbW, 0.004, kerbW).translate(
+          0,
+          0.002,
+          d / 2 + kerbW / 2,
+        ),
+        new BoxGeometry(kerbW, 0.004, d).translate(-w / 2 - kerbW / 2, 0.002, 0),
+        new BoxGeometry(kerbW, 0.004, d).translate(w / 2 + kerbW / 2, 0.002, 0),
+      ]),
+      steel,
+    ),
+  );
   // The mask, just above the floor, writing depth only.
   const mask = live(
     new Mesh(
@@ -366,6 +461,6 @@ export function createTundish(w = 0.7, d = 0.5, depth = 0.3) {
   );
   mask.position.y = 0.0005;
   mask.renderOrder = -1;
-  group.add(funnel, throat, grille, mask);
+  group.add(funnel, throat, grille, kerb, mask);
   return { group, grille };
 }

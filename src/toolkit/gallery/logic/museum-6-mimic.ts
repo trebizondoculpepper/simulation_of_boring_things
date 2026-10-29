@@ -28,9 +28,12 @@ import type { Hall6State, PumpNo } from '../../../game/plant/museum-6-pumps';
 
 const WATER = '#2a5f9e';
 /** The chaser LEDs' blue, bright against the line's. */
-export const CHASER = '#5ec8ff';
-/** Its LEDs: that blue, and larger than the default, to read across the hall. */
-const CHASE = { lit: CHASER, size: 0.012 } as const;
+export const CHASER = '#1fb6ff';
+/**
+ * Its LEDs: that blue, big and widely spaced, so they read as running
+ * lights from 2–3 m (the owner, 2026-10-29).
+ */
+const CHASE = { lit: CHASER, size: 0.024, pitch: 0.05 } as const;
 const x = (no: PumpNo) => -1.3 + (no - 1) * 0.21;
 const PUMP_Y = -0.3;
 const SOURCE_Y = -0.55;

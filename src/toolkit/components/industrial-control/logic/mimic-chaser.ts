@@ -24,16 +24,19 @@ export const CHASER_THRESHOLD = 1;
 export const flowState = (flow: number): FlowState =>
   Math.abs(flow) < CHASER_THRESHOLD ? 'still' : flow > 0 ? 'forward' : 'back';
 
-/** The LEDs' centres along a line's points, at the chaser's pitch, from its start. */
-export function chaserPositions(points: readonly Point[]): Point[] {
+/** The LEDs' centres along a line's points, at the chaser's pitch (or `pitch`), from its start. */
+export function chaserPositions(
+  points: readonly Point[],
+  pitch = CHASER_PITCH,
+): Point[] {
   const out: Point[] = [];
-  let carry = CHASER_PITCH / 2;
+  let carry = pitch / 2;
   for (let i = 1; i < points.length; i++) {
     const [ax, ay] = points[i - 1];
     const [bx, by] = points[i];
     const length = Math.hypot(bx - ax, by - ay);
     let d = carry;
-    for (; d <= length; d += CHASER_PITCH) {
+    for (; d <= length; d += pitch) {
       const t = d / length;
       out.push([ax + (bx - ax) * t, ay + (by - ay) * t]);
     }

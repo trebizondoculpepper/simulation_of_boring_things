@@ -60,6 +60,8 @@ export interface MimicSpec {
       id: string;
       amber?: boolean;
       size?: number;
+      /** The LEDs' spacing along the line, metres (default CHASER_PITCH). */
+      pitch?: number;
       /** Its LEDs' lit colour, if not the line's own (or amber). */
       lit?: string;
     };

@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 6: the water falling from the fill pipe is a white, aerated stream, its streaks running down at the speed it falls, never drawn thinner than 7 mm, so it shows at every stream size; the tundish (DR1) reads as an angular cut, a bright stainless kerb round it, a chamfer down to the grille in its rebate and the funnel shading dark into its throat through the more open grille; the mimic's blue chaser LEDs are 24 mm across at a 50 mm pitch (a new `pitch` on a line's flow), unshaded, so they read as running lights from 2–3 m.
+
 - Museum, Hall 5: the green timeline line under each decade's photographs now points on in time, an arrowhead at its right end where the next decade hangs; its dot at the left end had read as an arrow pointing back.
 
 - Museum, Hall 5: the skimmer and its lid sit back from the water, in the deck's tiles 7 cm beyond the white coping (the owner, 2026-10-29), its throat running on under the coping to the pool's wall.
