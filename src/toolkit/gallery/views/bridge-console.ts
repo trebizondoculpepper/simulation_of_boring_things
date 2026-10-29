@@ -346,6 +346,7 @@ export function createBridgeConsole(
       });
       const at = pagerPlace(spec.glass.w, spec.glass.h, slot);
       const surface = createTouchSurface(kit, {
+        kind: 'lcars',
         name: `${spec.name} pager${prefix ? ` (${prefix.trim()})` : ''}`,
         bezel: 0,
         depth: 0.002,

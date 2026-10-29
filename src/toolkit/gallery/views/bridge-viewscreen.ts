@@ -54,6 +54,7 @@ export function createViewscreen(
     BLANK: new Stack('column', []),
   });
   const surface = createTouchSurface(kit, {
+    kind: 'lcars',
     name: 'Main viewscreen',
     bezel: 0.02,
     // Coarse for its size: it is seen from across the room (fine enough

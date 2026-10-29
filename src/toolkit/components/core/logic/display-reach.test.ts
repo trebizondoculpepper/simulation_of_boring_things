@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   DISPLAY_LEAVE,
   DISPLAY_PROFILES,
+  withinRoomLimits,
   DISPLAY_REACH,
   displayVisibility,
   isLiveDisplay,
@@ -73,5 +74,24 @@ describe('display reach', () => {
       'rgb(100,50,25)',
     );
     expect(meanColour([])).toBe('rgb(0,0,0)');
+  });
+
+  it('lets a room only tighten a kind of screen, never loosen it', () => {
+    const tight = withinRoomLimits(DISPLAY_PROFILES.lcd, {
+      reach: 5,
+      minSubtended: 2,
+      narrowBy: 10,
+    });
+    expect(tight).toMatchObject({
+      reach: 5,
+      minSubtended: 2,
+      maxOffNormal: 60,
+      fullOffNormal: 55,
+    });
+    expect(withinRoomLimits(DISPLAY_PROFILES.lcd, { reach: 20 }).reach).toBe(8);
+    expect(withinRoomLimits(DISPLAY_PROFILES.lcars, { reach: 1 })).toBe(
+      DISPLAY_PROFILES.lcars,
+    );
+    expect(displayVisibility(false, seen(6), tight)).toBe(0);
   });
 });

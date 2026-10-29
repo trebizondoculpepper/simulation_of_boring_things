@@ -7,11 +7,16 @@ import type {
   Object3D,
 } from 'three';
 import { METRE } from '../logic/units';
-import type { DisplayKind, DisplaySighting } from '../logic/display-reach';
+import type {
+  DisplayKind,
+  DisplaySighting,
+  RoomDisplayLimits,
+} from '../logic/display-reach';
 import {
   DISPLAY_PROFILES,
   displayVisibility,
   isLiveDisplay,
+  withinRoomLimits,
   meanColour,
 } from '../logic/display-reach';
 
@@ -79,6 +84,16 @@ export function watchDisplay(
     },
   });
   install();
+}
+
+const roomLimits = new WeakMap<Scene, RoomDisplayLimits>();
+
+/**
+ * A room's own limits on its displays, tightening every kind's profile
+ * for the screens drawn in its scene (`RoomDisplayLimits`).
+ */
+export function setRoomDisplayLimits(scene: Scene, limits: RoomDisplayLimits) {
+  roomLimits.set(scene, limits);
 }
 
 /** Say what kind of screen a canvas texture is, if not the one it was made as. */
@@ -183,7 +198,10 @@ function check(scene: Scene, camera: Camera) {
   camera.getWorldPosition(eye);
   for (const [w, objects] of s.shown) {
     if (!isLiveDisplay(w.updates)) continue;
-    const profile = DISPLAY_PROFILES[w.kind];
+    const profile = withinRoomLimits(
+      DISPLAY_PROFILES[w.kind],
+      roomLimits.get(scene),
+    );
     const level = Math.max(
       ...objects.map((o) =>
         displayVisibility(w.level > 0, sighting(o), profile),

@@ -66,6 +66,36 @@ export const DISPLAY_PROFILES: Record<DisplayKind, DisplayProfile> = {
   ui: ALWAYS,
 };
 
+/**
+ * A room's own limits on its displays (the owner, 2026-10-29: a very
+ * complicated room may draw fewer screens): a shorter reach, a larger
+ * angle a display must subtend, or a narrower view off its normal. Each
+ * only tightens a kind's profile, never loosens it; a screen always drawn
+ * in full stays so.
+ */
+export interface RoomDisplayLimits {
+  reach?: number;
+  minSubtended?: number;
+  /** Degrees taken off a kind's viewing angles (its fade moves with them). */
+  narrowBy?: number;
+}
+
+/** A kind's profile under a room's limits. */
+export function withinRoomLimits(
+  profile: DisplayProfile,
+  limits: RoomDisplayLimits | undefined,
+): DisplayProfile {
+  if (!limits || profile.always) return profile;
+  const narrow = Math.max(0, limits.narrowBy ?? 0);
+  return {
+    always: false,
+    reach: Math.min(profile.reach, limits.reach ?? Infinity),
+    minSubtended: Math.max(profile.minSubtended, limits.minSubtended ?? 0),
+    maxOffNormal: profile.maxOffNormal - narrow,
+    fullOffNormal: profile.fullOffNormal - narrow,
+  };
+}
+
 /** The fade's steps, each one upload. */
 export const DISPLAY_FADE_STEPS = 4;
 
