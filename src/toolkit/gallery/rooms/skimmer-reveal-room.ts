@@ -43,6 +43,8 @@ import {
 } from '../logic/skimmer-cinematic';
 import type { CinematicPhase, Pose } from '../logic/skimmer-cinematic';
 import { createSkimmerCaustics } from '../views/skimmer-caustics';
+import { createBinTossing } from '../../components/site-dressing/parts/bin-tossing';
+import { createSkip } from '../../components/site-dressing/views/skip';
 import { createSkimmerWell, drawOver } from '../views/skimmer-well';
 import { revealCue } from './museum/hall-5-reveal-music';
 import { createFindProps } from './museum/hall-5-finds';
@@ -56,6 +58,8 @@ const FLOOR = { minX: -4, maxX: 4, minZ: -4, maxZ: 4 };
 const CEILING = 3;
 /** The skimmer, in the deck by the pool's edge. */
 const SK = { x: 0, z: -1.9 };
+/** The skip, on the deck to the skimmer's east. */
+const SKIP = { x: 2, z: -0.6 };
 /** The pool's edge, metres north. */
 const EDGE = -2.6;
 /** The find shown: its size across and how far before the eye, metres. */
@@ -400,6 +404,11 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     return true;
   };
 
+  // ---- The skip, for throwing finds away (`bin-tossing.ts`) ---------------
+  const tossing = createBinTossing({ camera, metre: m, random });
+  const skip = tossing.add({ name: 'skip', ...createSkip(kit), ...SKIP });
+  room.add(skip.group);
+
   // ---- Walking and working ------------------------------------------------
   const raycaster = new Raycaster();
   const pointer = new Vector2();
@@ -423,13 +432,23 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
   const params = new URLSearchParams(location.search);
   const walk = createFirstPerson({
     scene,
+    nearbyTargetFeedback: tossing.targetFeedback,
+    divert: tossing.divert,
     canvas,
     camera,
     metre: m,
     floorY: 0,
     objects: scene,
     start: views[params.get('view') ?? ''] ?? views.skimmer,
-    solids: () => outer,
+    solids: () => [
+      ...outer,
+      ...tossing.bins.map((bin) => ({
+        minX: (bin.x - bin.footprint.x / 2 - 0.05) * m,
+        maxX: (bin.x + bin.footprint.x / 2 + 0.05) * m,
+        minZ: (bin.z - bin.footprint.z / 2 - 0.05) * m,
+        maxZ: (bin.z + bin.footprint.z / 2 + 0.05) * m,
+      })),
+    ],
     use: (x, y) => usableAt(x, y)?.(),
     aimed: () => Boolean(usableAt(0, 0)),
   });
@@ -482,6 +501,7 @@ export function startSkimmerRevealRoom(canvas: HTMLCanvasElement) {
     // The walker's controller sets its own field of view: the film's wins.
     useLens();
     well.seenFrom(skimmer.worldToLocal(eyeAt.copy(camera.position)));
+    tossing.update(delta);
     parts.update(delta);
     partAudio.listen(camera, m, scene);
     renderer.render(scene, camera);
