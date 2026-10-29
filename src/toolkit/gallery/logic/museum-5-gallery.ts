@@ -394,19 +394,6 @@ export function hall5Entrance() {
   };
 }
 
-/** The skimmer's placard, by the poolside. */
-export const SKIMMER_PLACARD = {
-  station: 3,
-  of: 'skimmer',
-  icon: 'pool' as const,
-  headline: 'What’s in the Skimmer?',
-  title: 'Why skimmers matter',
-  body: 'Most of a pool’s dirt floats: hair, skin, sun cream, leaves and insects. A skimmer draws off the top few millimetres of water, and its basket stops the big things before they reach the pump and the filter. Somebody has to empty it. Today, that’s you.',
-  fact: 'Emptying the skimmer baskets is one of the first jobs on a pool’s morning checklist, and has been since skimmers were invented.',
-  tryIt:
-    'Click the skimmer to take something out. Throw it in the bin. Empty the skimmer!',
-};
-
 /** The bin's sign. */
 export const BIN_SIGN = {
   headline: 'For things found in the skimmer',

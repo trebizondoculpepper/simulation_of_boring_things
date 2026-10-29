@@ -67,7 +67,6 @@ import {
   OPENING_CHECKS,
   POOLSIDE,
   DECK_LIFT,
-  SKIMMER_PLACARD,
   BIN_SIGN,
   WALL,
   bayPlaces,
@@ -78,7 +77,6 @@ import type { Decade, PhotoLook } from '../../logic/museum-5-gallery';
 import { RESET_SIGN } from '../../logic/ideal-pool-plant-placards';
 import { localNow } from '../../logic/museum-time';
 import {
-  createLectern,
   createResetPedestal,
   createWallPanel,
   paintEntrance,
@@ -642,8 +640,12 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   );
 
   // An orange floor arrow, the museum's own sticker, pointing the visitor
-  // to the skimmer from the deck (the owner, 2026-10-29).
-  const arrowMap = floorArrowTexture(MUSEUM_EXHIBITION.colours.accent);
+  // to the skimmer from the deck, reading TRY ME, in place of a lectern
+  // (the owner, 2026-10-29).
+  const arrowMap = floorArrowTexture(
+    MUSEUM_EXHIBITION.colours.accent,
+    'TRY ME',
+  );
   kit.textures.push(arrowMap);
   const arrowMaterial = lifebuoyStickerMaterial(arrowMap);
   kit.materials.push(arrowMaterial);
@@ -1210,11 +1212,6 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   updates.push(resetButton.update);
   footprint(WALL.west + 0.45, 3.5, 0.25);
 
-  const lectern = createLectern(kit, SKIMMER_PLACARD);
-  turnTo(lectern, -4.9, DECK_LIFT, -1.1, -Math.PI / 2);
-  object.add(still(lectern));
-  footprint(-4.9, -1.1, 0.2);
-
   const cutaway = createWallPanel(
     kit,
     'Skimmer cut-away',
@@ -1293,23 +1290,9 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     clock.show(localNow(), 1, delta > 0 ? Math.min(240, 1 / delta) : 60),
   );
 
-  // ---- Set decoration: the lifeguard's chair, bench, gloves, lost property ----
+  // ---- Set decoration: the bench and the gloves on it ----
   const deco = new Group();
-  const white = t.paint('#eef0ee', 0.4);
   const steel = t.paint('#a8b0b4', 0.3, 0.8);
-  const chairAt = { x: 4.05, z: 2.4 };
-  for (const [dx, dz] of [
-    [-0.3, -0.3],
-    [0.3, -0.3],
-    [-0.3, 0.3],
-    [0.3, 0.3],
-  ])
-    t.box(deco, steel, 0.04, 1.6, 0.04, chairAt.x + dx, 0.8, chairAt.z + dz);
-  t.box(deco, white, 0.7, 0.05, 0.7, chairAt.x, 1.6, chairAt.z);
-  t.box(deco, white, 0.7, 0.6, 0.05, chairAt.x + 0.0, 1.9, chairAt.z + 0.33);
-  for (let k = 1; k < 5; k++)
-    t.box(deco, steel, 0.6, 0.03, 0.03, chairAt.x, k * 0.3, chairAt.z - 0.32);
-  footprint(chairAt.x, chairAt.z, 0.4);
   const bench = { x: -2.6, z: 5.05 };
   t.box(deco, t.paint('#3a6e8a', 0.6), 1.8, 0.05, 0.4, bench.x, 0.45, bench.z);
   t.box(deco, steel, 0.05, 0.45, 0.35, bench.x - 0.8, 0.22, bench.z);
@@ -1335,28 +1318,6 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     bench.z + 0.03,
   );
   footprint(bench.x, bench.z, 0.95, 0.25);
-  // The lost property box beside the chair.
-  t.box(
-    deco,
-    t.paint('#4a7a3a', 0.7),
-    0.5,
-    0.35,
-    0.4,
-    chairAt.x,
-    0.175,
-    chairAt.z + 0.9,
-  );
-  t.label(
-    deco,
-    'LOST PROPERTY',
-    chairAt.x,
-    0.3,
-    chairAt.z + 1.101,
-    0.05,
-    '#ffffff',
-    '#2a4a22',
-  );
-  footprint(chairAt.x, chairAt.z + 0.9, 0.28, 0.22);
   object.add(
     markComponent(still(deco), {
       name: 'Poolside furniture',

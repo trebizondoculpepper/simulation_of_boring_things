@@ -553,7 +553,15 @@ export function floorArrowGeometry(id: MuseumHallId) {
   for (const g of parts) g.dispose();
   return merged;
 }
-export function floorArrowTexture(fill: string = BRAND.colours.accent) {
+/**
+ * A floor arrow's texture, pointing up the canvas (north when laid). With
+ * a `label` (Hall 5's TRY ME by the skimmer, the owner, 2026-10-29), the
+ * words are printed in white along its shaft, reading toward the point.
+ */
+export function floorArrowTexture(
+  fill: string = BRAND.colours.accent,
+  label?: string,
+) {
   const S = 256;
   return canvasTexture(S, S, (c) => {
     const m = S / 2;
@@ -577,6 +585,17 @@ export function floorArrowTexture(fill: string = BRAND.colours.accent) {
     c.fillStyle = fill;
     arrow();
     c.fill();
+    if (label) {
+      c.save();
+      c.translate(m, S * 0.72);
+      c.rotate(-Math.PI / 2);
+      c.fillStyle = '#ffffff';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.font = `800 ${S * 0.2}px ${BRAND.font}`;
+      c.fillText(label, 0, 0, S * 0.44);
+      c.restore();
+    }
   });
 }
 

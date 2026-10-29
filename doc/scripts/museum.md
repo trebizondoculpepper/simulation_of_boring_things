@@ -750,16 +750,11 @@ Source: `museum-5-gallery.ts:238`
 - Midday: Water samples logged on a phone; the pool test kit and its pink tablets still in the plant room drawer.
 - Night: Last round: the plant room’s gauges read, the lights off, the pool left still and dark until six.
 
-### Placard: What’s in the Skimmer?
+### TRY ME floor arrow
 
-Source: `toolkit/gallery/logic/museum-5-gallery.ts:339` (`SKIMMER_PLACARD`), on a lectern at `hall-5-day-in-the-life.ts:877`
+Source: `hall-5-day-in-the-life.ts` (`arrow`), the museum's orange vinyl floor arrow (`floorArrowTexture` in `views/museum-hall.ts`) on the deck north of the skimmer, pointing at it. In place of the skimmer's lectern (removed, the owner, 2026-10-29); the entrance panel carries the instruction.
 
-- Station: 3
-- Headline: What’s in the Skimmer?
-- Title: Why skimmers matter
-- Body: Most of a pool’s dirt floats: hair, skin, sun cream, leaves and insects. A skimmer draws off the top few millimetres of water, and its basket stops the big things before they reach the pump and the filter. Somebody has to empty it. Today, that’s you.
-- Fact: Emptying the skimmer baskets is one of the first jobs on a pool’s morning checklist, and has been since skimmers were invented.
-- Try it: Click the skimmer to take something out. Throw it in the bin. Empty the skimmer!
+- Text: TRY ME
 
 ### Skimmer cut-away panel
 
@@ -826,7 +821,6 @@ The voice clip list (`resources/sound/voice/skimmer/index.md`) also names an opt
 | Where               | Source                                                | Text                     |
 | ------------------- | ----------------------------------------------------- | ------------------------ |
 | No running sign     | `hall-5-day-in-the-life.ts:921`                       | No running               |
-| Lost property chair | `hall-5-day-in-the-life.ts:1029`                      | LOST PROPERTY            |
 | Skimmer lid         | `hall-5-day-in-the-life.ts:546`                       | CERTIKIND (maker's mark) |
 | Swimming badge find | `toolkit/gallery/rooms/museum/hall-5-finds.ts:150`    | 25m                      |
 | RESET pedestal      | `toolkit/gallery/views/museum-exhibit.ts:466`, `:474` | RESET SIMULATION, PUSH   |

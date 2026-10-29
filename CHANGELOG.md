@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 5: the skimmer's lectern is gone; the orange floor arrow pointing at the skimmer now reads TRY ME (`floorArrowTexture` takes a label). The lifeguard's chair (its rungs read as a pool ladder) and the lost property box are gone too.
+
 ## [0.6.0] - 2026-10-29
 
 - Museum, Hall 5: an orange floor arrow (the museum's own sticker) on the deck points the visitor to the skimmer.
