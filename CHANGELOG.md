@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Settings: a new player starts at a middling render quality (Medium's) and a maximum resolution of 1024 × 768 (XGA, new on the switch), so a first run is light on any machine; saved settings are kept.
+
 - Settings: Maximum resolution (was Resolution cap) caps the image's width and height, not only its height. On the menu panel it is a rotary switch, MAX RESOLUTION, stepping from 640 × 480 (VGA) through the common PC gaming resolutions (720p, the Steam Deck's 1280 × 800, 1366 × 768, 900p, 1080p, 1920 × 1200, 2560 × 1080 and 3440 × 1440 ultrawide, 1440p, 2560 × 1600, 4K) to Viewport, which draws at the window's own size; a backlit character LCD under it names the choice. An old 720p, 1080p or 1440p cap carries over.
 
 - Settings, Graphics: Overlay scale (0.75× to 2.5×) sizes everything drawn over the view (the help line naming what is pointed at, the HUD buttons, the crosshair, readouts and notices), so it reads clearly in gameplay recorded on a high-resolution screen.

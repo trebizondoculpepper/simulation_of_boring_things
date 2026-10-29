@@ -50,14 +50,16 @@ export const DEFAULT_SETTINGS: Settings = {
   sensitivity: 1,
   invertY: false,
   fov: 52,
-  renderLevel: 0,
+  // Middling by default (Medium's), and drawn no larger than 1024 × 768
+  // (the owner, 2026-10-29), so a first run is light on any machine.
+  renderLevel: 3,
   onScreenControls: 'automatic',
   overlayScale: 1,
   // Today's look, as every room was tuned with.
   ambientOcclusion: 'high',
   bloom: 'high',
   filmEffects: true,
-  resolutionCap: 'native',
+  resolutionCap: '1024x768',
   graphics: DEFAULT_GRAPHICS,
 };
 

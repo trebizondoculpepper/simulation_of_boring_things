@@ -69,7 +69,7 @@ describe('the costlier effects’ settings', () => {
     expect(cleanSettings({ renderLevel: 2 }).ambientOcclusion).toBe('high');
     expect(cleanSettings({}).bloom).toBe('high');
     expect(cleanSettings({}).filmEffects).toBe(true);
-    expect(cleanSettings({}).resolutionCap).toBe('native');
+    expect(cleanSettings({}).resolutionCap).toBe('1024x768');
     const bad = cleanSettings({
       ambientOcclusion: 'ultra',
       bloom: 3,
@@ -79,7 +79,7 @@ describe('the costlier effects’ settings', () => {
     expect(bad.ambientOcclusion).toBe(DEFAULT_SETTINGS.ambientOcclusion);
     expect(bad.bloom).toBe(DEFAULT_SETTINGS.bloom);
     expect(bad.filmEffects).toBe(true);
-    expect(bad.resolutionCap).toBe('native');
+    expect(bad.resolutionCap).toBe('1024x768');
     const good = cleanSettings({
       ambientOcclusion: 'off',
       bloom: 'low',
@@ -105,11 +105,16 @@ describe('graphics presets', () => {
       refraction: true,
       shadows: true,
     });
-    // High chooses the player's own settings at their defaults.
+    // High chooses the player's own settings at their defaults, but for
+    // render quality, middling (Medium's) by default (the owner, 2026-10-29).
     for (const [key, value] of Object.entries(PRESET_CHOICES.high))
-      expect(DEFAULT_SETTINGS[key as keyof typeof DEFAULT_SETTINGS]).toBe(
-        value,
-      );
+      if (key !== 'renderLevel')
+        expect(DEFAULT_SETTINGS[key as keyof typeof DEFAULT_SETTINGS]).toBe(
+          value,
+        );
+    expect(DEFAULT_SETTINGS.renderLevel).toBe(
+      PRESET_CHOICES.medium.renderLevel,
+    );
   });
 
   it('cost less at each step down', () => {

@@ -17,6 +17,7 @@ export type EffectLevel = (typeof EFFECT_LEVELS)[number];
  */
 export const RESOLUTION_CAPS = [
   '640x480',
+  '1024x768',
   '1280x720',
   '1280x800',
   '1366x768',
@@ -55,6 +56,7 @@ export const EFFECT_LABELS: Record<EffectLevel, string> = {
 };
 export const RESOLUTION_LABELS: Record<ResolutionCap, string> = {
   '640x480': '640 × 480 (VGA)',
+  '1024x768': '1024 × 768 (XGA)',
   '1280x720': '1280 × 720 (720p)',
   '1280x800': '1280 × 800 (Steam Deck)',
   '1366x768': '1366 × 768 (laptop)',
@@ -73,6 +75,7 @@ export const RESOLUTION_LABELS: Record<ResolutionCap, string> = {
 export const RESOLUTION_LCD: Record<ResolutionCap, readonly [string, string]> =
   {
     '640x480': ['640 x 480', 'VGA'],
+    '1024x768': ['1024 x 768', 'XGA'],
     '1280x720': ['1280 x 720', '720p'],
     '1280x800': ['1280 x 800', 'STEAM DECK'],
     '1366x768': ['1366 x 768', 'LAPTOP'],
