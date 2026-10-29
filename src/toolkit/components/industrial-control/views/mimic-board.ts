@@ -349,7 +349,12 @@ export function createMimicBoard(
       y - 0.025,
       z - 0.002,
     );
-    const digits = createSevenSegment(kit, 4, { digitHeight: 0.03 });
+    // Half the density of a close-up instrument's digits: a board is read
+    // from a step back, and its readouts change often (2026-10-29).
+    const digits = createSevenSegment(kit, 4, {
+      digitHeight: 0.03,
+      texelsPerMm: 3,
+    });
     digits.group.position.set(x, y, z + 0.004);
     live(digits.group);
     holder.add(digits.group);

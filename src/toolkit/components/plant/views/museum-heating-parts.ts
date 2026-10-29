@@ -293,11 +293,18 @@ export function createGasBurnDisplay(
   group.add(digits.group);
   badge(kit, group, 'splashonomics', [0.3, 0.2, 0.062], 0.035);
   let shown = '';
+  // The digits take a reading once a second, as a pulse-counting display
+  // does (2026-10-29 performance pass: a modulating burner's flow changed
+  // its last digit, and uploaded its 864 × 320 texture, every frame).
+  let due = 0;
   return {
     group,
     show(kW: number, m3h: number, delta: number) {
       meter.set(kW / scale);
       meter.update(delta);
+      due -= delta;
+      if (due > 0 && shown) return;
+      due = 1;
       const text = m3h.toFixed(1).padStart(5);
       if (text === shown) return;
       shown = text;

@@ -669,7 +669,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     ports: Object.values(PORTS.balanceTank).map((p) => ({ ...p, od: OD[150] })),
   });
   machine(bt.group, 'balanceTank', `${nodeName('balanceTank')} (30 m³)`);
-  updates.push(() => bt.show(['BALANCE TANK', '30m3   IDEAL']));
+  // Fixed words: shown once, not every frame (2026-10-29 performance pass).
+  bt.show(['BALANCE TANK', '30m3   IDEAL']);
 
   const pool = createIdealVessel(kit, {
     ...POOL_SHAPE,
@@ -1230,16 +1231,22 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     },
   });
   let waterShown = '';
+  let waterNumbers = '';
   let clockShown = '';
   updates.push(() => {
-    const lines = [
-      `FREE Cl ${readings.free.toFixed(2).padStart(5)} mg/l`,
-      `pH      ${readings.ph.toFixed(2).padStart(5)}`,
-      `POOL    ${readings.ti.ti5.toFixed(1).padStart(5)} C`,
-      `FLOW    ${readings.flow.toFixed(0).padStart(5)} m3/h`,
-    ].map((l) => l.padEnd(20).slice(0, 20));
-    const key = lines.join('|');
-    if (key !== waterShown) water.show((waterShown = key).split('|'));
+    // Compared as the shown numbers before any text is built (2026-10-29).
+    const nk = `${Math.round(readings.free * 100)} ${Math.round(readings.ph * 100)} ${Math.round(readings.ti.ti5 * 10)} ${Math.round(readings.flow)}`;
+    if (nk !== waterNumbers) {
+      waterNumbers = nk;
+      const lines = [
+        `FREE Cl ${readings.free.toFixed(2).padStart(5)} mg/l`,
+        `pH      ${readings.ph.toFixed(2).padStart(5)}`,
+        `POOL    ${readings.ti.ti5.toFixed(1).padStart(5)} C`,
+        `FLOW    ${readings.flow.toFixed(0).padStart(5)} m3/h`,
+      ].map((l) => l.padEnd(20).slice(0, 20));
+      const key = lines.join('|');
+      if (key !== waterShown) water.show((waterShown = key).split('|'));
+    }
     const c = stationClock(hall());
     const ck = `${c.time}|${c.day}`;
     if (ck !== clockShown) {

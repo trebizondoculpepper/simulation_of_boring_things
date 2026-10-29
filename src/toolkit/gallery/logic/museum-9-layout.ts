@@ -103,7 +103,7 @@ export const DESK = {
   w: 4.6,
 } as const;
 /** The fault pedestal with its scoreboard, beside the desk. */
-export const PEDESTAL = { x: W + 5.55, z: SOUTH - 1.9, yaw: Math.PI } as const;
+export const PEDESTAL = { x: W + 6.9, z: SOUTH - 1.9, yaw: Math.PI } as const;
 /** The hall's title vinyl high on the street wall (`museum-hall.ts`), kept clear of pipes. */
 export const TITLE = { minX: 0.4, maxX: 6.8, minY: 2.3, maxY: 4.9 } as const;
 

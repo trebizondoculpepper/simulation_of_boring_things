@@ -217,6 +217,16 @@ export const KNOWN_OVER_BUDGET: Readonly<Record<string, string>> = {
     'its demonstration drives its level instrument every frame; the world drives it at most ten times a second',
   'boiler-cascade:1':
     'left (2026-10-28): its two controllers’ 26 mm displays show the flow temperature as it climbs, each change 704 × 320; running only',
+  'exhibit:museum1':
+    'flagged in TODO.md (2026-10-29 performance pass): running, its mimic readouts follow the hall’s own sped-up model, 352 × 160 each change; idle now 92k',
+  'operator-desk':
+    'flagged in TODO.md (2026-10-29 performance pass): POOLMON’s 640 × 500 screen uploads about once a second with nothing changing, 266k texels/s, just over',
+  'make-up-recorder':
+    'flagged in TODO.md (2026-10-29 performance pass): its 800 × 176 chart advances while running, 578k–1.1M texels/s, a real change like the strip charts',
+  'exhibit:dev44:Dosing controller trial':
+    'flagged in TODO.md (2026-10-29 performance pass): a development rig, its CX-7 and DC-1 screens stepped by its demonstration every frame, 2.7M texels/s idle',
+  'exhibit:dev44:Hypochlorite pump trial':
+    'flagged in TODO.md (2026-10-29 performance pass): a development rig, its pumps’ LCDs (384 × 192 ×8) stepped by its demonstration, 490k texels/s',
   'exhibit:dev49:':
     'flagged in TODO.md: the station schematics redraw their 1026 × 578 screens about ten times a second (mission 095)',
 };

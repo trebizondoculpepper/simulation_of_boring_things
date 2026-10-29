@@ -374,3 +374,21 @@ export function hall1MimicState(s: Hall1State, speed: TimeSpeed): MimicState {
     },
   };
 }
+
+/** How often the board's readouts take a new reading, s: a real mimic's panel meters update about once a second (2026-10-29 performance pass). */
+export const READOUT_PERIOD = 1;
+
+/**
+ * The board's state with its readouts held from `previous` unless `refresh`:
+ * the lamps and chasers follow the plant at the board's own rate, the
+ * readouts once a `READOUT_PERIOD`, so its 30 mm digits are not redrawn and
+ * uploaded four times a second as the last digit flickers.
+ */
+export function withHeldReadouts(
+  fresh: MimicState,
+  previous: MimicState | null,
+  refresh: boolean,
+): MimicState {
+  if (refresh || !previous) return fresh;
+  return { ...fresh, readouts: previous.readouts };
+}

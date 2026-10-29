@@ -70,3 +70,29 @@ describe('Hall 9’s plant, laid out and plumbed', () => {
     );
   });
 });
+
+describe('Hall 9’s fault pedestal, seen from the visitors’ floor', () => {
+  it('shows its fault card clear of the columns', async () => {
+    const { PEDESTAL } = await import('./museum-9-layout');
+    const { hallColumns } = await import('./museum-plan');
+    const { sightBlockers } = await import('./sight-lines');
+    const columns = hallColumns('museum9').map((c, k) => ({
+      name: `column ${k}`,
+      min: [c.x - 0.3, 0, c.z - 0.3] as const,
+      max: [c.x + 0.3, 6, c.z + 0.3] as const,
+    }));
+    const blocked: string[] = [];
+    // The card faces north: read from the visitors' floor north of it.
+    for (const back of [1.2, 2.0, 2.8])
+      for (const dx of [-0.6, 0, 0.6]) {
+        const hit = sightBlockers(
+          [PEDESTAL.x + dx, 1.6, PEDESTAL.z - back],
+          [PEDESTAL.x, 1.0, PEDESTAL.z - 0.1],
+          [],
+          columns,
+        );
+        if (hit.length) blocked.push(`(${back}, ${dx}): ${hit.join(', ')}`);
+      }
+    expect(blocked).toEqual([]);
+  });
+});

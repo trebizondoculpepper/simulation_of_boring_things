@@ -478,3 +478,20 @@ export const fitsHall = () => E - W >= 15.2 + 1.2;
 
 export const fittingOf = (id: string): HallFitting | undefined =>
   FITTINGS.find((f) => f.id === id);
+
+/**
+ * Each station's lectern along the visitors' side of the plant (its x; all
+ * stand at `PLANT_EDGE + 0.4`, facing south), each clear of the hall's
+ * columns, which stand on the same line (2026-10-29: lecterns 2 and 7 had
+ * stood inside columns).
+ */
+export const LECTERN_Z = PLANT_EDGE + 0.4;
+export const LECTERNS: Record<number, number> = {
+  1: E - 2.0,
+  2: PLACES.sampleCell.x - 0.95,
+  3: PLACES.sampleCell.x + 1.0,
+  4: PLACES.hypoPump.x,
+  5: PLACES.hypoTank.x,
+  6: PLACES.sampleCell.x - 2.1,
+  7: W + 6.7,
+};

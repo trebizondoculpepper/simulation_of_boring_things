@@ -62,6 +62,8 @@ import type {
 import type { DoseChannel } from '../../../components/plant/logic/dosing-controller';
 import {
   DAY_TANK,
+  LECTERNS,
+  LECTERN_Z,
   NORTH,
   OD,
   PANEL_Y,
@@ -401,7 +403,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       },
     ),
   );
-  updates.push(() => bt.show(['BALANCE TANK', '30m3   IDEAL']));
+  // Fixed words: shown once, not every frame (2026-10-29 performance pass).
+  bt.show(['BALANCE TANK', '30m3   IDEAL']);
 
   const pump = createEndSuctionPump(kit);
   object.add(
@@ -788,21 +791,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   footprint(W + 5.0, SOUTH - 0.45, 0.25);
 
   // ---- The placards, before the plant ----
-  const LECTERNS: Record<number, number> = {
-    1: E - 2.0,
-    2: PLACES.sampleCell.x - 0.1,
-    3: PLACES.sampleCell.x + 1.0,
-    4: PLACES.hypoPump.x,
-    5: PLACES.hypoTank.x,
-    6: PLACES.sampleCell.x - 1.7,
-    7: W + 5.9,
-  };
   for (const p of hall3Placards()) {
     const x = LECTERNS[p.station!];
     const lectern = createLectern(kit, p);
-    turnTo(lectern, x, 0, PLANT_EDGE + 0.4, 0);
+    turnTo(lectern, x, 0, LECTERN_Z, 0);
     object.add(still(lectern));
-    footprint(x, PLANT_EDGE + 0.4, 0.2);
+    footprint(x, LECTERN_Z, 0.2);
   }
 
   return {

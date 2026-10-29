@@ -88,6 +88,8 @@ import type { PlacedItem } from '../../logic/museum-1-layout';
 import {
   HALL1_MIMIC,
   hall1MimicState,
+  READOUT_PERIOD,
+  withHeldReadouts,
   hall1Reading,
   mimicSpeed,
 } from '../../logic/museum-1-mimic';
@@ -143,6 +145,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   let readings = hall1Readings(session.state);
   let mimicState: MimicState = hall1MimicState(session.state, 1);
   let mimicDue = 0;
+  let readoutDue = 0;
   const state = () => session.state;
   const act = (a: Hall1Action) => {
     session = { ...session, state: actOnHall1(session.state, a) };
@@ -153,6 +156,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     session = hallSession(HALL1_MODEL, now);
     readings = hall1Readings(session.state);
     mimicDue = 0;
+    readoutDue = 0;
   };
 
   const object = new Group();
@@ -692,7 +696,14 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
           name: `${tag} thermometer`,
           status: () => `shows ${read().toFixed(1)} °C`,
         });
-        updates.push(() => tt.show(read()));
+        // A reading a second, as the real head samples (2026-10-29).
+        let due = 0;
+        updates.push((delta) => {
+          due -= delta;
+          if (due > 0) return;
+          due = 1;
+          tt.show(read());
+        });
       }
     } else if (item.kind === 'flow-switch') {
       // A paddle flow switch: its head on the pipe, its LED lit while made.
@@ -1020,7 +1031,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       readings = hall1Readings(session.state);
       mimicDue -= delta;
       if (mimicDue <= 0) {
-        mimicState = hall1MimicState(session.state, session.clock.speed);
+        readoutDue -= 0.25 - mimicDue;
+        mimicState = withHeldReadouts(
+          hall1MimicState(session.state, session.clock.speed),
+          mimicState,
+          readoutDue <= 0,
+        );
+        if (readoutDue <= 0) readoutDue = READOUT_PERIOD;
         mimicDue = 0.25;
       }
       board.parts.update(delta);

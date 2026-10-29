@@ -402,12 +402,15 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         `reads free chlorine ${reading.fc.toFixed(2)}, combined ${reading.cc.toFixed(2)}, pH ${reading.ph.toFixed(2)}, alkalinity ${reading.ta.toFixed(0)}, hardness ${reading.ch.toFixed(0)}, sulphate ${reading.so4.toFixed(0)}, balance ${reading.lsi.toFixed(2)}`,
     }),
   );
-  updates.push((delta) =>
-    readout.show(
-      Object.fromEntries(METERS.map((m) => [m, meterValue(reading, m)])),
-      delta,
-    ),
-  );
+  // One values record, refilled each frame rather than rebuilt (2026-10-29).
+  const meterValues = Object.fromEntries(METERS.map((m) => [m, 0])) as Record<
+    (typeof METERS)[number],
+    number
+  >;
+  updates.push((delta) => {
+    for (const m of METERS) meterValues[m] = meterValue(reading, m);
+    readout.show(meterValues, delta);
+  });
 
   // ---- The Balance Beam ----
   const beam = createBalanceBeam(kit, BEAM_PLAQUE);

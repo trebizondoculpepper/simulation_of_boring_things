@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Performance pass (the owner, 2026-10-29; [report](doc/research/2026-10-29-performance-pass.md)): the museum halls' exhibits are in the component benchmark; Hall 1 no longer uploads 2 MB of textures a second with nothing changing (its mimic's readouts take a reading a second, its gas-burn digits and thermometers likewise); every mimic board's readouts are drawn at a board's texel density, a quarter of the texels; Halls 3, 4 and 9 build less each frame. Hall 3's lecterns 2 and 7 stand clear of the columns, and Hall 9's fault pedestal is no longer hidden behind one.
+
 ## [0.3.0] - 2026-10-29
 
 - Hall 6's test tank is the game's standard 1,000-litre IBC (the owner, 2026-10-29): its water shows through the bottle to the shared level (redrawn only when it moves a visible millimetre), LI1's litres scale, LSH1's lamp and the TEST TANK plate on its visitors' face; the fill drops into its top filler, the overflow leaves its shoulder, and RESET opens its bottom outlet valve (a DN150 butterfly, its lever turning) to drain in under a minute; the lift falls from 1.7 m to the filler's 1.25 m, the signs' fill times derived from it. The game's IBC is sized to a real one (1,009 litres brimful). The pumps' plaques stand clear of the columns and of their own discharge pipes, with keep-clear zones the router respects and a sight-line test (`sight-lines.ts`); `createTestTank` removed.

@@ -258,6 +258,23 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
       });
     }
   }
+  // The museum halls' exhibits (2026-10-29 performance pass), each hall's
+  // whole exhibit as one component, put back to its reset state.
+  const { HALL_EXHIBITS } = await import('../rooms/museum/exhibits');
+  for (const [hall, load] of Object.entries(HALL_EXHIBITS)) {
+    if (!load) continue;
+    const { buildHallExhibit } = await load();
+    list.push({
+      id: `exhibit:${hall}`,
+      label: `${hall} · hall exhibit`,
+      source: 'exhibit',
+      build: (kit) => {
+        const built = buildHallExhibit(kit);
+        built.reset(12 * 3600);
+        return fromExhibit(built);
+      },
+    });
+  }
   // Dev0's boards and plinths.
   const boards = await import('../rooms/test-boards');
   const { createRearFittingsBoard } =

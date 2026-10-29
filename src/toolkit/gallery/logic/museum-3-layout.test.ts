@@ -67,3 +67,30 @@ describe('Hall 3’s plant, laid out and plumbed', () => {
     }
   });
 });
+
+describe('Hall 3’s lecterns, seen from the visitors’ floor', () => {
+  it('shows every lectern’s face clear of the columns', async () => {
+    const { LECTERNS, LECTERN_Z } = await import('./museum-3-layout');
+    const { hallColumns } = await import('./museum-plan');
+    const { sightBlockers } = await import('./sight-lines');
+    const columns = hallColumns('museum3').map((c, k) => ({
+      name: `column ${k}`,
+      min: [c.x - 0.3, 0, c.z - 0.3] as const,
+      max: [c.x + 0.3, 6, c.z + 0.3] as const,
+    }));
+    const blocked: string[] = [];
+    for (const [station, x] of Object.entries(LECTERNS))
+      for (const dx of [-0.8, 0, 0.8])
+        for (const edge of [-0.45, 0, 0.45]) {
+          const hit = sightBlockers(
+            [x + dx, 1.6, LECTERN_Z + 1.4],
+            [x + edge, 1.0, LECTERN_Z + 0.05],
+            [],
+            columns,
+          );
+          if (hit.length)
+            blocked.push(`${station} (${dx}, ${edge}): ${hit.join(', ')}`);
+        }
+    expect(blocked).toEqual([]);
+  });
+});
