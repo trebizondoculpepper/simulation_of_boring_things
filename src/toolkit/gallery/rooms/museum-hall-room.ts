@@ -428,7 +428,7 @@ export function startMuseumHallRoom(
     inspect: createInspector({ root: scene, camera, metre }),
   });
 
-  // The freight lift's floor-4 landing on Hall 0's east wall (mission 108):
+  // The freight lift's floor-4 landing on Hall 0's west wall (mission 108):
   // the museum's way in that is not a link.
   const liftPlace = hallLiftPlace(id);
   liftLanding = liftPlace

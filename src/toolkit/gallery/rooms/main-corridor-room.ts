@@ -201,7 +201,6 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
       },
     },
     sign: 'GOODS LIFT · B2 PLANT LEVEL',
-    headerTo: MAIN_CORRIDOR.height,
   });
   const raycaster = new Raycaster();
   const pointer = new Vector2();

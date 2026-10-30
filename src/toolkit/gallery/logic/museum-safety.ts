@@ -53,8 +53,8 @@ import type { HallWall, MuseumArch, MuseumHallId } from './museum-plan';
  *   in every room a CCTV dome and a PIR; "please do not touch" at each
  *   hall's way in; a staff-only door in Hall 3.
  *
- * Hall 0's east wall is kept clear for the lift that will come (the
- * owner, 2026-10-28; `LIFT_RESERVED`). Metres, in the museum's
+ * The lift's place on Hall 0's west wall, south of the fire exit, is kept
+ * clear (the owner, 2026-10-28 and 2026-10-30; `LIFT_RESERVED`). Metres, in the museum's
  * coordinates; a fitting on a wall faces into its room.
  */
 
@@ -158,16 +158,17 @@ export const FIRE_EXIT = { wall: 'west' as const, along: -3.2, w: 1.1, h: 2.1 };
  * (the museum), big enough for two roll cages (about 0.8 × 0.7 × 1.7 m
  * each) and a person standing aside: about 2,500 kg, its car about 2.0 m
  * wide and 2.7 m deep (BS EN 81-20's goods and passenger-goods sizes),
- * its landing doors about 2.0 m clear. Reserved on Hall 0's east wall, in
- * its middle, clear of the painted pool, the title wall, the welcome
- * panel and the doorway: along the wall from Hall 0's middle, the wall
- * kept clear for its doors and their surround, and the landing zone kept
- * clear in front of it. The shaft would stand outside the east wall. In
- * the ring (107-1) the east wall's middle is the doorway from Hall 9, so
- * the lift's place moves south along the same wall, beside it.
+ * its landing doors about 2.0 m clear. Reserved on Hall 0's west wall,
+ * the fire exit's (the owner, 2026-10-30; it was on the east wall, beside
+ * the doorway from Hall 9), at its south end, clear of the painted pool,
+ * the fire exit, the defibrillator and the first-aid kit: along the wall
+ * from Hall 0's middle, the wall kept clear for its doors and their
+ * surround, and the landing zone kept clear in front of it. The shaft
+ * stands outside the west wall. The freight lift's landing is built here
+ * (`hallLiftOpening` in `museum-plan.ts`).
  */
 export const LIFT_RESERVED = {
-  wall: 'east' as const,
+  wall: 'west' as const,
   along: 4.4,
   w: 3.2,
   depth: 2.5,
@@ -474,7 +475,6 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
   // ---- Hall 0: the way out, the lift's place, medical, notices ----
   if (welcome) {
     const west = walls.find((w) => w.side === FIRE_EXIT.wall)!;
-    const east = walls.find((w) => w.side === LIFT_RESERVED.wall)!;
     const doorU = o.z + FIRE_EXIT.along;
     put('fire-exit-door', west, doorU, 0);
     put('final-exit-sign', west, doorU, FIRE_EXIT.h + 0.3);
@@ -539,8 +539,6 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
         z: o.z + lz,
         yaw: 0,
       });
-    // The lift's place on the east wall stays clear (nothing is put there).
-    void east;
   }
   return out;
 }

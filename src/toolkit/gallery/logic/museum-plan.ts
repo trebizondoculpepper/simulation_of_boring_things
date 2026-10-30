@@ -1155,16 +1155,18 @@ export function ringView(
 }
 
 /**
- * The freight lift's floor-4 landing (mission 108): on Hall 0's east wall,
- * where its place was kept clear (`LIFT_RESERVED` in `museum-safety.ts`,
- * 4.4 m south of the wall's middle, beside the doorway from Hall 9), its
- * frame's opening knocked through the wall, square-headed. In the
+ * The freight lift's floor-4 landing (mission 108): on Hall 0's west wall,
+ * the fire exit's (the owner, 2026-10-30; it was on the east wall, beside
+ * the doorway from Hall 9), where its place is kept clear (`LIFT_RESERVED`
+ * in `museum-safety.ts`, 4.4 m south of the wall's middle, past the
+ * defibrillator and the first-aid kit), its frame's opening knocked
+ * through the wall, square-headed. In the
  * museum's plan: the wall, the opening's middle along it (`u`), its width
  * and head; null for every other hall.
  */
 export function hallLiftOpening(id: MuseumHallId) {
   if (id !== 'museum0') return null;
-  const wall = hallWalls(id).find((w) => w.side === 'east')!;
+  const wall = hallWalls(id).find((w) => w.side === 'west')!;
   return {
     wall,
     u: (wall.from + wall.to) / 2 + 4.4,

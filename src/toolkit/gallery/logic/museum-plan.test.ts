@@ -459,13 +459,13 @@ describe('the black boxes (the owner, 2026-10-29)', () => {
 });
 
 describe('the freight lift’s landing in Hall 0 (mission 108)', () => {
-  it('stands on its east wall, facing into the hall, only in Hall 0', () => {
+  it('stands on its west wall, the fire exit’s, facing into the hall, only in Hall 0', () => {
     const place = hallLiftPlace('museum0')!;
     const inner = hallInterior('museum0');
     const o = hallOrigin('museum0');
-    expect(place.x + o.x).toBeCloseTo(inner.maxX);
-    // Facing west, into the hall: +z turned to −x.
-    expect(Math.sin(place.yaw)).toBeCloseTo(-1);
+    expect(place.x + o.x).toBeCloseTo(inner.minX);
+    // Facing east, into the hall: +z turned to +x.
+    expect(Math.sin(place.yaw)).toBeCloseTo(1);
     expect(hallLiftPlace('museum1')).toBeNull();
   });
   it('leaves its opening out of the walls a walker meets', () => {
@@ -475,8 +475,8 @@ describe('the freight lift’s landing in Hall 0 (mission 108)', () => {
     const blocked = (x: number, z: number) =>
       solids.some((f) => x > f.minX && x < f.maxX && z > f.minZ && z < f.maxZ);
     // Just behind the face in the middle of the opening: open.
-    expect(blocked(place.x + 0.1, place.z)).toBe(false);
+    expect(blocked(place.x - 0.1, place.z)).toBe(false);
     // Beside it, beyond the frame: wall.
-    expect(blocked(place.x + 0.1, place.z + lift.w / 2 + 0.2)).toBe(true);
+    expect(blocked(place.x - 0.1, place.z + lift.w / 2 + 0.2)).toBe(true);
   });
 });

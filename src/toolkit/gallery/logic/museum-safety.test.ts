@@ -136,12 +136,16 @@ describe('the museum’s safety and services layer', () => {
     const o = hallOrigin('museum0');
     const liftZ = o.z + LIFT_RESERVED.along;
     for (const f of layer) {
-      const onEast = f.x > r.maxX - LIFT_RESERVED.depth;
+      const onWest = f.x < r.minX + LIFT_RESERVED.depth;
       const inLift = Math.abs(f.z - liftZ) < LIFT_RESERVED.w / 2 + 0.3;
-      expect(onEast && inLift, `${f.kind} in the lift's place`).toBe(false);
+      // The ceiling's detectors and sprinklers, high above it, are no matter.
+      const low = f.y < 4;
+      expect(onWest && inLift && low, `${f.kind} in the lift's place`).toBe(
+        false,
+      );
     }
     // The lift's place is clear of the painted pool.
-    expect(r.maxX - LIFT_RESERVED.depth - o.x).toBeGreaterThan(
+    expect(o.x - r.minX - LIFT_RESERVED.depth).toBeGreaterThan(
       PAINTED_POOL.w / 2 + 0.45,
     );
   });

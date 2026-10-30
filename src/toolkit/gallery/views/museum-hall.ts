@@ -476,20 +476,21 @@ export function hall0TrimGeometry(): {
 }
 
 /**
- * A glossy sticker of a lifebuoy on Hall 0's west wall (the owner,
- * 2026-10-28): set decoration, not a real lifebuoy, 0.75 m across, red and
+ * A glossy sticker of a lifebuoy on Hall 0's east wall (the owner,
+ * 2026-10-28; moved from the west wall for the lift, 2026-10-30), south
+ * of the doorway from Hall 9: set decoration, not a real lifebuoy, 0.75 m across, red and
  * white quarters and its grab line, 1 mm proud of the tiles and drawn after
  * them (renderOrder, polygon offset) so it never z-fights. In the museum's
  * coordinates; its texture is made by `lifebuoyStickerTexture`.
  */
 export const LIFEBUOY_STICKER = { size: 0.75, y: 1.95, along: 2.5 } as const;
 export function lifebuoyStickerGeometry() {
-  const west = hallWalls('museum0').find((w) => w.side === 'west')!;
-  const u = (west.from + west.to) / 2 + LIFEBUOY_STICKER.along;
+  const east = hallWalls('museum0').find((w) => w.side === 'east')!;
+  const u = (east.from + east.to) / 2 + LIFEBUOY_STICKER.along;
   const g = new PlaneGeometry(LIFEBUOY_STICKER.size, LIFEBUOY_STICKER.size);
-  // Facing east, into the hall.
-  g.rotateY(Math.PI / 2);
-  g.translate(west.line + MUSEUM_WALL / 2 + 0.001, LIFEBUOY_STICKER.y, u);
+  // Facing west, into the hall.
+  g.rotateY(-Math.PI / 2);
+  g.translate(east.line - MUSEUM_WALL / 2 - 0.001, LIFEBUOY_STICKER.y, u);
   return g;
 }
 export function lifebuoyStickerTexture() {
@@ -801,7 +802,7 @@ export function placeOnLine(
 
 /**
  * A wall's openings, from the plan's archways on its line, and the lift
- * landing's opening (Hall 0's east wall, mission 108): square-headed, its
+ * landing's opening (Hall 0's west wall, mission 108): square-headed, its
  * frame and doors the landing's.
  */
 function openingsOn(

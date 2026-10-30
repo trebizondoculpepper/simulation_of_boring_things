@@ -27,14 +27,17 @@ import {
 } from '../../../scene/wall-batten';
 import {
   CORRIDOR_DOORS,
+  CORRIDOR_LIFT,
   CORRIDOR_WALLS,
   corridorWalls,
   CORRIDOR_QUADRANTS,
   dadoPieces,
   doorPlace,
+  LIFT_OPENING,
   MAIN_CORRIDOR,
   wallPieces,
 } from '../logic/main-corridor';
+import { LIFT_DOOR } from '../logic/lift-doorway';
 import type { CorridorDoor, CorridorQuadrant } from '../logic/main-corridor';
 import { signTo, warningsFor } from './shell-room';
 import { createCorridorPosters } from './corridor-posters';
@@ -134,6 +137,15 @@ export function createMainCorridor(metre: number, kit: PanelKit) {
     }
     for (const d of CORRIDOR_DOORS.filter((d) => d.wall === wall))
       along(d.at - half, d.at + half, openingH, H, block);
+    // Over the lift landing's frame, the wall's own blockwork.
+    if (CORRIDOR_LIFT.wall === wall)
+      along(
+        CORRIDOR_LIFT.at - LIFT_OPENING / 2,
+        CORRIDOR_LIFT.at + LIFT_OPENING / 2,
+        LIFT_DOOR.height + LIFT_DOOR.frame,
+        H,
+        block,
+      );
   }
 
   // The doors: each pushed from the corridor, so its pull side (+z)
