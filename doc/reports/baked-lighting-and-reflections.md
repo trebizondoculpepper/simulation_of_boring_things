@@ -32,6 +32,7 @@ Reflections: extend the pool room's existing capture-on-light-change to every ro
 1. No live ambient occlusion while a bake is pending: live AO (GTAO) is too slow. A room shows no AO until its bake finishes in the background, then the baked AO fades in (about half a second).
 2. Bakes are cached persistently (IndexedDB on the web, files on the desktop), keyed by the geometry hash; returning to a room never re-bakes unless its geometry changed.
 3. A background worker bakes ahead the rooms the walker is likely to enter next: in the museum the adjacent halls; elsewhere the rooms beyond the current room's doorways; during a freight-lift ride, the destination floor.
+4. Performance comes first: the default for most rooms (pool halls, plant rooms, the museum, corridors) is no AO until the bake is ready, then the baked AO fades in and stays static. No live GTAO in any preset by default, including for moving parts. A room that truly needs an exception is listed for the owner to approve.
 
 ## What the game does now
 
@@ -73,9 +74,9 @@ Planar lightmaps, for the big flat surfaces: see 1a. The combination avoids subd
 - Canvas-textured displays (LCDs, mimics) are not receivers, so readouts are not darkened.
 - Lights: this is ambient occlusion only, independent of which lamps are on, so switching hall lights or emergency lighting never invalidates a bake.
 
-### Live GTAO on High: should it stay?
+### No live GTAO (the owner, 2026-10-30)
 
-The earlier draft kept half-resolution GTAO on High for the contact shadows of moving parts. Reconsidered in light of the owner's ruling that live AO is too slow: recommend dropping GTAO from every preset once baking is in. What it would add is small (a door leaf's shadow on its frame, a handwheel's on its valve body), these parts are few and mostly small on screen, and even half-resolution GTAO still renders the scene a second time for normals, which is where most of its cost lies (the bridge's 815 against 398 draw calls). Where a moving part needs grounding, bake its AO into the part itself in its rest pose (its own crevices, which do not change as it moves), and give the few large movers (doors, the lift car) a cheap blob or contact-shadow decal if anything looks floating. The owner should decide whether High keeps GTAO at all, or whether it becomes an "Ultra" option off by default for players with fast GPUs (question 1).
+Settled by the owner: no live GTAO in any preset by default, moving parts included; performance comes first. Moving parts carry AO baked into the part itself in its rest pose (its own crevices, which do not change as it moves); the few large movers (doors, the lift car) may take a cheap contact-shadow decal if anything looks floating. Candidate exceptions, for the owner to approve or refuse, none recommended: the bridge, if its glossy consoles read flat without contact shadows (but it is the room where GTAO cost most, 47 against 60 fps); and the freight-lift car, whose interior moves with the walker and cannot share a room bake (bake the car as its own static object instead, which makes the exception unnecessary). Rooms still unbaked, those in development or with irregular shells before xatlas support, simply show no AO.
 
 ### How it combines with materials and post effects
 
@@ -200,7 +201,7 @@ Most: the pool halls (water, glazed tiles, stainless rails and ladders), balance
 | Technique                                 | Low                           | Medium                | High                                              |
 | ----------------------------------------- | ----------------------------- | --------------------- | ------------------------------------------------- |
 | Baked AO (per vertex and shell lightmaps) | on                            | on                    | on                                                |
-| Live GTAO                                 | off                           | off                   | off (recommended; owner to decide, question 1)    |
+| Live GTAO                                 | off                           | off                   | off (the owner, 2026-10-30)                       |
 | Room probe (PMREM environment)            | 64 px, no box projection      | 128 px, box-projected | 256 px, box-projected, extra probes in long rooms |
 | Water reflection probe                    | 64 px                         | 128 px                | 256 px                                            |
 | Bake ahead                                | on (off on battery if chosen) | on                    | on                                                |
@@ -253,7 +254,7 @@ Estimates: the Steam Deck's Zen 2 core is perhaps two to three times slower, so 
 ## Staged plan
 
 1. Bake harness in a dev room: a pure `logic/` module for hemisphere sampling and hashing (tested), a worker running three-mesh-bvh, per-vertex AO applied to one plant room and one museum hall through a shared material patch, with the fade-in and no AO while pending. Measure in Chrome and on the Steam Deck. About 3 days.
-2. Exclusions (moving, clickable, instanced, displays) and wiring through `mergeStatic`; drop GTAO in baked rooms on every preset (pending question 1). About 2 days.
+2. Exclusions (moving, clickable, instanced, displays) and wiring through `mergeStatic`; remove GTAO from every preset and room (the owner, 2026-10-30). About 2 days.
 3. The persistent cache: IndexedDB and desktop files, size limit, LRU eviction with pinned hubs, in-memory fallback, dev miss counter. About 2–3 days.
 4. Baking ahead: the priority queue and sliced worker, frame-budget throttling and pauses; sources in order of ease: the lift's `prepareRoom`, the museum's neighbour halls, then doorway neighbours (which depend on the incremental room preparation work). About 3–4 days, plus the doorway part's share of incremental preparation.
 5. Planar shell lightmaps: UV2 and atlas packing for walls, floors, ceilings, pool tanks and coves in the shell builders; shell texels in the same bake; dilation. About 3–4 days.
@@ -265,7 +266,7 @@ Total about 19–23 days. The AO stages (1–5) and reflection stages (6–7) ar
 
 ## Questions for the owner
 
-1. Should High keep any live ambient occlusion for moving parts once rooms are baked? Recommended: no, on every preset; at most an Ultra option, off by default, for fast GPUs.
+1. Should any room be an exception to no live AO? Recommended: none; candidates listed under "No live GTAO" (the bridge; the lift car, better baked as its own object).
 2. Should rooms' shiny surfaces reflect the room itself (a captured probe) in place of the present neutral studio, accepting that dark rooms then reflect less?
 3. Is per-vertex AO first, then planar shell lightmaps (with xatlas only for irregular shells), acceptable in place of whole-room xatlas lightmaps, given the prototype's 14.5 s unwrap and untexelled small triangles?
 
