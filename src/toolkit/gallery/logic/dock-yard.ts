@@ -82,14 +82,31 @@ export const YARD_DRESSING = [
   { kind: 'pallets', x: 15.4, z: -9.8, yaw: 0.3, w: 1.2, d: 1.2 },
 ] as const;
 
+/**
+ * The CO₂ cylinder cage (mission 109, stage 1; the owner, 2026-10-30:
+ * beside the gas cage): against the wall east of the propane cage and the
+ * grit bin, its middle at `x`, facing the yard; its footprint, the cage
+ * and its wall inlet port beyond its west end (its own right, facing
+ * out), from `minX` to `maxX` along the wall and `d` out from it.
+ */
+export const YARD_CO2 = { x: 20.0, minX: 17.35, maxX: 21.8, d: 1.4 } as const;
+
 /** What the dressing stands in the way of. */
 export function dressingSolids(): Footprint[] {
-  return YARD_DRESSING.map((p) => ({
-    minX: p.x - p.w / 2,
-    maxX: p.x + p.w / 2,
-    minZ: p.z - p.d / 2,
-    maxZ: p.z + p.d / 2,
-  }));
+  return [
+    ...YARD_DRESSING.map((p) => ({
+      minX: p.x - p.w / 2,
+      maxX: p.x + p.w / 2,
+      minZ: p.z - p.d / 2,
+      maxZ: p.z + p.d / 2,
+    })),
+    {
+      minX: YARD_CO2.minX,
+      maxX: YARD_CO2.maxX,
+      minZ: INTAKE.wallZ - YARD_CO2.d,
+      maxZ: INTAKE.wallZ,
+    },
+  ];
 }
 
 export interface DockFrame {

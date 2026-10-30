@@ -78,7 +78,9 @@ export type BrandMark =
   /** A three-by-three panel of pale tiles, one missing, a pipe and its valve behind it. */
   | 'tiles'
   /** A traction sheave, its ropes hanging down to a car. */
-  | 'sheave';
+  | 'sheave'
+  /** A gas cylinder, its shoulder banded. */
+  | 'cylinder';
 
 /** Every brand's id: a part names its maker by one of these. */
 export type BrandId =
@@ -113,7 +115,8 @@ export type BrandId =
   | 'lumenhaus'
   | 'haulmark'
   | 'plantrooms'
-  | 'stannard';
+  | 'stannard'
+  | 'arncliffe';
 
 export interface Brand {
   id: BrandId;
@@ -558,6 +561,23 @@ export const BRANDS: readonly Brand[] = [
     mark: 'sheave',
     colours: ['#b8322a', '#e8e2d0', '#1c1c1e'],
     type: 'slab',
+  },
+  {
+    // The CO₂ supplier (mission 109, the owner, 2026-10-30): an industrial
+    // gas company renting cylinders and delivering them by lorry, after
+    // BOC. Our own invention.
+    id: 'arncliffe',
+    name: 'Arncliffe Gases',
+    wordmark: 'ARNCLIFFE',
+    tagline: 'Gas, delivered',
+    founded: 1921,
+    country: 'England',
+    makes:
+      'Industrial gases in rented cylinders: carbon dioxide, nitrogen, argon, oxygen; manifolds and regulators',
+    promise: 'A full cylinder on site before the last one is empty',
+    mark: 'cylinder',
+    colours: ['#1f5f8b', '#9aa0a3', '#14181b'],
+    type: 'sans',
   },
 ];
 

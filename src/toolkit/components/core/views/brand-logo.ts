@@ -554,6 +554,31 @@ export function drawBrandMark(
       ctx.stroke();
       break;
     }
+    case 'cylinder': {
+      // A gas cylinder upright in a ring, its shoulder banded, its valve.
+      ctx.strokeStyle = main;
+      ctx.lineWidth = r * 0.1;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.24, -r * 0.42, r * 0.48, r * 1.12, r * 0.2);
+      ctx.fill();
+      ctx.fillStyle = second;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.24, -r * 0.42, r * 0.48, r * 0.3, [
+        r * 0.2,
+        r * 0.2,
+        0,
+        0,
+      ]);
+      ctx.fill();
+      ctx.fillStyle = main;
+      ctx.fillRect(-r * 0.07, -r * 0.62, r * 0.14, r * 0.2);
+      ctx.fillRect(-r * 0.16, -r * 0.66, r * 0.32, r * 0.07);
+      break;
+    }
     case 'tiles': {
       // Nine pale tiles in their grout, the bottom right one gone: behind
       // it, in the dark, a pipe bends round to a valve's handwheel.

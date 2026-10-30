@@ -1,7 +1,15 @@
 import { createYardDressing } from '../views/yard-dressing';
+import { createCo2SupplyPart } from '../../components/plant/parts/co2-supply';
+import { CO2_CAGE } from '../../components/plant/views/co2-cage';
 import { yardIntake } from '../views/yard-intake';
 import { dockDoor } from '../views/dock-door';
-import { YARD, dockFloorAt, dockYardSolids } from '../logic/dock-yard';
+import {
+  INTAKE,
+  YARD,
+  YARD_CO2,
+  dockFloorAt,
+  dockYardSolids,
+} from '../logic/dock-yard';
 import { createDockSafety, dockFireAlarm } from '../views/dock-safety';
 import {
   createDockFittings,
@@ -172,6 +180,8 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
               door.part,
               // The site's intake on the outside wall (prompt 083).
               ...yardIntake(kit),
+              // The CO₂ cylinder cage beside the gas cage (mission 109).
+              yardCo2Cage(kit),
             ];
           },
           // Out through the pier door, down the steps, onto the tarmac.
@@ -924,4 +934,20 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       },
     },
   );
+}
+
+/**
+ * The CO₂ cylinder cage in the goods yard (mission 109, stage 1), against
+ * the wall beside the gas cage, facing the yard; working, its state its
+ * own until the world holds it.
+ */
+function yardCo2Cage(kit: ReturnType<typeof createPanelKit>): Part {
+  const part = createCo2SupplyPart(kit);
+  part.object.position.set(
+    YARD_CO2.x,
+    YARD.level,
+    INTAKE.wallZ - CO2_CAGE.gap - CO2_CAGE.d / 2,
+  );
+  part.object.rotation.y = Math.PI;
+  return part;
 }

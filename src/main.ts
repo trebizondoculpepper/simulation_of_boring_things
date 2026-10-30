@@ -1047,6 +1047,9 @@ const importStarter = async (
       await import('./toolkit/gallery/rooms/lift-rooms');
     return (surface) => startLiftTrialFloor(surface, room.slice(6));
   }
+  if (room === 'dev55')
+    return (await import('./toolkit/gallery/rooms/co2-cage-room'))
+      .startCo2CageRoom;
   if (room === 'dev53')
     return (await import('./toolkit/gallery/rooms/skimmer-reveal-room'))
       .startSkimmerRevealRoom;
