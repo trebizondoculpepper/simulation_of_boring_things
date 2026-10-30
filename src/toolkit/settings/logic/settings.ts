@@ -63,8 +63,9 @@ export const DEFAULT_SETTINGS: Settings = {
   renderLevel: 3,
   onScreenControls: 'automatic',
   overlayScale: 1,
-  // Today's look, as every room was tuned with.
-  ambientOcclusion: 'high',
+  // No live ambient occlusion in any preset (the owner, 2026-10-30): rooms
+  // show their baked occlusion (`baking/baked-ao.ts`) once it is ready.
+  ambientOcclusion: 'off',
   bloom: 'high',
   filmEffects: true,
   resolutionCap: '1024x768',

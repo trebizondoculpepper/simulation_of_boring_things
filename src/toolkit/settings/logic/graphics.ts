@@ -270,7 +270,8 @@ export const PRESET_CHOICES: Record<GraphicsPreset, PresetChoices> = {
   },
   high: {
     renderLevel: 0,
-    ambientOcclusion: 'high',
+    // Live GTAO is off in every preset (the owner, 2026-10-30): baked instead.
+    ambientOcclusion: 'off',
     bloom: 'high',
     filmEffects: true,
   },

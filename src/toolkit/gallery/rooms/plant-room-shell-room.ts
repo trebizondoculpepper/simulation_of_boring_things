@@ -87,6 +87,7 @@ import {
 } from '../../components/architectural/logic/door-proximity';
 import { zoneOfRoom } from '../../../game/plant/lighting';
 import { bindRoomPower, roomPowered } from '../views/room-power';
+import { bakeRoomAo, reportFrameTime } from '../../baking/baked-ao';
 import type { ServiceRoom } from '../../../game/plant/services';
 
 /**
@@ -146,6 +147,18 @@ export function startPlantRoomShell(
     equipmentRoom,
   } = buildPlantRoomContents(plan, metre, size, hall, { equipment, title });
   scene.add(rooms);
+  // Baked ambient occlusion (the owner, 2026-10-30): the shell's static
+  // pieces (its walls, floors, ceilings, set decoration) and every machine's
+  // merged static meshes; never its doors. No AO until the bake is ready.
+  door.object.userData.bakeAo = false;
+  equipmentDoors.object.userData.bakeAo = false;
+  if (tankDoors) tankDoors.object.userData.bakeAo = false;
+  for (const child of rooms.children)
+    if (componentOf(child)?.decorative) child.userData.bakeAo ??= true;
+  const bakedAo = bakeRoomAo(rooms, {
+    roomId: hall ? `plant_${hall}` : `plant_room_${size}`,
+    unit: metre,
+  });
   const supply = machines
     ? (() => {
         let found: { value: boolean } | null = null;
@@ -520,6 +533,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     machines?.setAudible(!canvas.parentElement?.hidden && !walk.following);
     services?.setAudible(!canvas.parentElement?.hidden && !walk.following);
     if (canvas.parentElement?.hidden) return;
+    if (last && visual) reportFrameTime(time - last);
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);
@@ -596,6 +610,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       renderer.setAnimationLoop(null);
       observer.disconnect();
       composer.dispose();
+      bakedAo.dispose();
       withdraw();
       withdrawSouth();
       withdrawWest();
@@ -621,6 +636,8 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       setVisual(enabled: boolean) {
         visual = enabled;
       },
+      /** Its baked ambient occlusion (measurements, the dev overlay). */
+      bakedAo,
     },
   );
 }

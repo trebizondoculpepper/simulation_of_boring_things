@@ -83,7 +83,12 @@ export const bakeStats: {
   cached: boolean;
 }[] = [];
 // For measurements in the browser: every bake this session.
-Object.assign(globalThis, { bakedAoStats: bakeStats });
+/** The rooms' bakes shown now, latest last (to compare, in the browser). */
+const shownBakes: { setShown(on: boolean): void; roomId: string }[] = [];
+Object.assign(globalThis, {
+  bakedAoStats: bakeStats,
+  bakedAoRooms: shownBakes,
+});
 
 function startWorker() {
   if (worker) return worker;
@@ -460,7 +465,8 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
     bakeStats.push(stat);
     return stat;
   })();
-  return {
+  const handle = {
+    roomId,
     hash,
     receivers: receivers.length,
     occluders: meshes.length - receivers.length,
@@ -478,9 +484,13 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
     },
     dispose() {
       disposed = true;
+      const at = shownBakes.indexOf(handle);
+      if (at >= 0) shownBakes.splice(at, 1);
       if (raf) cancelAnimationFrame(raf);
       for (const [mesh, material] of originals) mesh.material = material;
       for (const m of materials.values()) m.dispose();
     },
   };
+  shownBakes.push(handle);
+  return handle;
 }
