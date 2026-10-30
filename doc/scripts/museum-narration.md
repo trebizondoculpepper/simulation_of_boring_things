@@ -10,11 +10,25 @@ This is the recording script for the museum (rooms `museum0` to `museum9`): ever
 - Every clip plays front centre, close to the listener, so record close to the microphone, in a dry room, with no music or effects.
 - Status: none of these lines is recorded yet. A line marked **new** has no words in the game yet; the words here are proposed and should be added to the code when recorded.
 
-## Halls with no voice lines
+## Which halls are narrated
 
-Halls 0 (Welcome), 1 (Warm water), 2 (Clean water), 3 (Safe water), 4 (The chemistry of pools), 6 (World of pumps) and 9 (The whole plant) play no recorded voice. Their words are read on panels and placards only.
+Only three (the owner, 2026-10-30): Hall 0 (Welcome), Hall 7 (Grout) and Hall 8 (Never again). Every other hall, Hall 5's skimmer included, plays no recorded voice; its words are read on panels, placards and caption cards only. The plain words alone, numbered, are in `doc/scripts/museum-narration.txt`.
 
-## Hall 5: A Day in the Life, What's in the Skimmer?
+## Hall 0: Welcome
+
+Folder: `resources/sound/voice/welcome/`. All three lines are **new** (proposed 2026-10-30, from the title wall and welcome panel, `doc/scripts/museum.md`): the game does not play them yet. `enter` plays the first time the visitor stands in Hall 0 on a visit; `look` a few seconds after it, or when the visitor first comes to the painted pool's edge; `return` when the visitor comes back into Hall 0 from Hall 9 at the end of the route.
+
+Direction: warm and welcoming, a museum's own voice, unhurried; about 15 to 20 seconds each.
+
+| File         | When it plays                 | Words                                                                                                                                                                                                                                                                                                        |
+| ------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `enter.mp3`  | First standing in Hall 0      | Welcome to Plantrooms, at the Dyehouse. Look around you. A swimming pool: the simplest thing in the world. You dive in, and the water is simply there, clean, clear and warm. You have never had to think about it. That is the point.                                                                       |
+| `look.mp3`   | After `enter`, or at the pool | Look closer. There is no water in this pool. It is paint, and light. The real pool, the one that works, lives behind the tiles: pumps, filters, boilers and careful chemistry, running all day and all night so that diving in stays this simple. Follow the arrows through the doorway, and go and find it. |
+| `return.mp3` | Back into Hall 0 from Hall 9  | Welcome back. You have seen what lives behind the tiles. The next time you dive in, and the water is simply there, you will know what it took. Thank you for visiting Plantrooms.                                                                                                                            |
+
+## Hall 5: A Day in the Life, What's in the Skimmer? (not narrated)
+
+Not to be recorded (the owner, 2026-10-30): only Halls 0, 7 and 8 are narrated. The lines below are kept for their words, which the hall shows on its caption cards.
 
 Folder: `resources/sound/voice/skimmer/`. Source of the words: `src/toolkit/gallery/logic/museum-5-skimmer.ts` (`FINDS`, `CLEARED_LINE`); played by `src/toolkit/gallery/rooms/museum/hall-5-day-in-the-life.ts` (`speak`).
 
@@ -86,4 +100,4 @@ The earlier single recording of the whole account (`account.mp3`) is no longer u
 
 ## Checklist for the session
 
-Hall 5: `intro`, `hair-clump`, `leaves`, `dead-rat`, `dildo`, `butt-plug`, `more-hair`, `cleared` (8 clips), and optionally the six further finds. Hall 7: `enter`, `plinth-1` to `plinth-10`, `exit` (12 clips, all new). Hall 8: `chapter-1` to `chapter-6` (6 clips). Twenty-six clips in all, about six minutes of finished audio.
+Hall 0: `enter`, `look`, `return` (3 clips, all new). Hall 7: `enter`, `plinth-1` to `plinth-10`, `exit` (12 clips, all new). Hall 8: `chapter-1` to `chapter-6` (6 clips). Twenty-one clips in all, about five and a half minutes of finished audio.
