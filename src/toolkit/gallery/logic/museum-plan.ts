@@ -716,41 +716,64 @@ export const WINDOW = {
 export const HALL_TITLE = { w: 6.0, h: 2.0, y: 3.6 } as const;
 
 /**
- * A wall's tall factory windows. Onto the courtyard: clear glass, high
- * (clerestories, showing only the sky), on a 4 m grid from the museum's origin, never within a
- * pier's width of the wall's ends. Onto the street: obscured glass, high,
- * one either side of the wall's middle (kept for the hall's title), as
- * near the ends as the piers allow; none on Hall 9's street wall, kept
- * whole for the finale's closing words. None where another hall is
- * beyond, and none in Hall 0, tiled all round. The same for a wall
- * whichever hall's scene builds it (the courtyard's far walls and the
- * empty halls are built from it in every hall's scene).
+ * Which way a hall's wall looks as the hall stands in layout C: out of the
+ * ring (the street round the building), into it (the courtyard), or along
+ * the ring towards a neighbour.
+ */
+export function wallOutlook(
+  id: MuseumHallId,
+  wall: HallWall,
+): 'outside' | 'inside' | 'along' {
+  const p = HALL_PLACES[hallNumber(id)];
+  const [x, z] = standing(id, wall.out);
+  const side = (Object.keys(UNIT) as Heading[]).find(
+    (h) => UNIT[h][0] === x && UNIT[h][1] === z,
+  )!;
+  if (p.sides.includes(side)) return 'outside';
+  if (p.sides.some((s) => UNIT[s][0] === -x && UNIT[s][1] === -z))
+    return 'inside';
+  return 'along';
+}
+
+/** Whether a corridor's doorway is in this wall. */
+const doorIn = (id: MuseumHallId, wall: HallWall) =>
+  hallArches(id).some(
+    (a) =>
+      a.axis === wall.axis &&
+      Math.abs((wall.axis === 'x' ? a.at.z : a.at.x) - wall.line) < 1e-9,
+  );
+
+/**
+ * A wall's tall factory windows (the owner, 2026-10-30: "the windows
+ * shouldn't be in the same wall as the corridor ... facing the outside of
+ * the building or facing the imaginary courtyard"): only in a wall that
+ * looks out of the ring or into it (`wallOutlook`) and has no corridor's
+ * doorway; obscured glass out of the ring, clear onto the courtyard (the
+ * sky), high. On the hall's title wall (its street wall as built), one
+ * either side of the title, as near the ends as the piers allow; on any
+ * other, on a 4 m grid from the museum's origin, never within a pier's
+ * width of the wall's ends. None on Hall 9's title wall, kept whole for
+ * the finale's closing words; none in Hall 0, tiled all round, nor in
+ * the black boxes.
  */
 export function wallWindows(id: MuseumHallId, wall: HallWall): MuseumWindow[] {
   const out: MuseumWindow[] = [];
   if (id === 'museum0' || isBlackBox(id)) return out;
+  const outlook = wallOutlook(id, wall);
+  if (outlook === 'along' || doorIn(id, wall)) return out;
+  const kind = outlook === 'outside' ? 'street' : 'courtyard';
+  const sill = kind === 'street' ? WINDOW.streetSill : WINDOW.courtSill;
   const half = WINDOW.w / 2;
   const lo = wall.from + MUSEUM_WALL / 2 + 0.8;
   const hi = wall.to - MUSEUM_WALL / 2 - 0.8;
   const mid = (wall.from + wall.to) / 2;
   const head = MUSEUM_SQUARE.h - WINDOW.headBelowDeck;
-  const kindAt = (u: number) => {
-    const kinds = [u - half, u, u + half].map((p) => beyondAt(wall, p));
-    return kinds.every((b) => b === kinds[0]) ? kinds[0] : 'hall';
-  };
-  if (beyondAt(wall, mid) === 'street') {
+  if (beyondAt(wall) === 'street') {
     if (id === FINALE) return out;
     for (const s of [-1, 1]) {
       const u = mid + s * (hi - mid - half - 0.3);
       if (Math.abs(u - mid) - half < HALL_TITLE.w / 2 + 0.15) continue;
-      if (kindAt(u) !== 'street') continue;
-      out.push({
-        u,
-        w: WINDOW.w,
-        sill: WINDOW.streetSill,
-        head,
-        kind: 'street',
-      });
+      out.push({ u, w: WINDOW.w, sill, head, kind });
     }
     return out;
   }
@@ -758,14 +781,7 @@ export function wallWindows(id: MuseumHallId, wall: HallWall): MuseumWindow[] {
     const u = k * WINDOW.every + 2;
     if (u + half > hi) break;
     if (u - half < lo) continue;
-    if (kindAt(u) !== 'courtyard') continue;
-    out.push({
-      u,
-      w: WINDOW.w,
-      sill: WINDOW.courtSill,
-      head,
-      kind: 'courtyard',
-    });
+    out.push({ u, w: WINDOW.w, sill, head, kind });
   }
   return out;
 }

@@ -28,6 +28,7 @@ import {
   previousHall,
   startOf,
   toMuseum,
+  wallOutlook,
   wallWindows,
 } from './museum-plan';
 import type { MuseumHallId } from './museum-plan';
@@ -275,15 +276,28 @@ describe('the pool science museum', () => {
     }
   });
 
-  it('glazes the courtyard walls clear and the street walls obscured, and never where a hall is beyond', () => {
+  it('glazes only walls looking out of the ring (obscured) or into the courtyard (clear), never one with a corridor’s doorway', () => {
     let court = 0;
+    let street = 0;
     for (const id of MUSEUM_HALLS)
-      for (const wall of hallWalls(id))
-        for (const w of wallWindows(id, wall)) {
-          expect(beyondAt(wall, w.u)).toBe(w.kind);
+      for (const wall of hallWalls(id)) {
+        const windows = wallWindows(id, wall);
+        const doors = hallArches(id).filter(
+          (a) =>
+            a.axis === wall.axis &&
+            Math.abs((wall.axis === 'x' ? a.at.z : a.at.x) - wall.line) < 1e-9,
+        );
+        if (doors.length) expect(windows, `${id} ${wall.side}`).toEqual([]);
+        for (const w of windows) {
+          const outlook = wallOutlook(id, wall);
+          expect(outlook).not.toBe('along');
+          expect(w.kind).toBe(outlook === 'outside' ? 'street' : 'courtyard');
           if (w.kind === 'courtyard') court++;
+          else street++;
         }
-    expect(court).toBeGreaterThan(8);
+      }
+    expect(court).toBeGreaterThan(4);
+    expect(street).toBeGreaterThan(4);
     // The welcome is tiled all round.
     for (const wall of hallWalls('museum0'))
       expect(wallWindows('museum0', wall)).toEqual([]);

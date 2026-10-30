@@ -1969,13 +1969,25 @@ export function createMuseumHall(
       { glossy: BRAND.colours.accent, shadow: true },
     );
     const lift = a.kind === 'door' ? 0.55 : 0.95;
+    // Over its doorway, but slid along towards the wall's middle as far as
+    // it must to clear the corner: a corridor's doorway stands near its
+    // wall's end (layout C).
+    const signW = a.kind === 'door' ? 3.6 : 5.2;
+    const wallOfA = hallWalls(id).find(
+      (w) =>
+        w.axis === a.axis &&
+        Math.abs((w.axis === 'x' ? a.at.z : a.at.x) - w.line) < 1e-9,
+    )!;
+    const u0 = a.axis === 'x' ? a.at.x : a.at.z;
+    const room = signW / 2 + t / 2 + 0.3;
+    const u = Math.min(Math.max(u0, wallOfA.from + room), wallOfA.to - room);
     // Flat on the wall, no cove glow: only the title wall has that (the
     // owner, 2026-10-28); lit a little from within to read in the dim hall.
     const off = 0.015;
     sign.position.set(
-      a.at.x + a.into[0] * (t / 2 + off),
+      (a.axis === 'x' ? u : a.at.x) + a.into[0] * (t / 2 + off),
       a.top + lift,
-      a.at.z + a.into[1] * (t / 2 + off),
+      (a.axis === 'z' ? u : a.at.z) + a.into[1] * (t / 2 + off),
     );
     sign.rotation.y = Math.atan2(a.into[0], a.into[1]);
     if (welcome)
