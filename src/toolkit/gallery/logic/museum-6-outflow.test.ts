@@ -10,7 +10,7 @@ import {
 import { PUMP_NOS, deliveryAlone } from '../../../game/plant/museum-6-pumps';
 
 const BORE = 0.15;
-const FULL = deliveryAlone(8);
+const FULL = deliveryAlone(2);
 
 describe('Hall 6’s tank inlet outflow', () => {
   it('shows nothing without flow', () => {

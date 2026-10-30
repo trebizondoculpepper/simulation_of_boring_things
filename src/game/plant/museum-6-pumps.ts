@@ -1,25 +1,23 @@
 import { expandForPlumbing } from './plumbing-expansion';
 import type { Expansion, GivenFitting, PlumbEdge } from './plumbing-expansion';
 import type { SchematicNode } from './schematics';
-import { DIAPHRAGM_PUMPS } from '../../toolkit/components/plant/logic/diaphragm-pump';
-import { DMH } from '../../toolkit/components/plant/logic/motor-dosing-pump';
-import { PERI_30 } from '../../toolkit/components/plant/logic/metering-pump';
-import { PUMP_CURVE } from './circulation';
 import { IBC } from '../../toolkit/components/plant/logic/ibc';
 
 /**
  * Hall 6 of the museum, "Grundflow's Amazing World of Pumps" (107j; the
- * owner, 2026-10-28: "Pumps for every occasion"). Eight of the game's
- * pumps, from a 2 l/h solenoid dosing pump to a 45 kW split-case pump,
+ * owner, 2026-10-28: "Pumps for every occasion"). Two pumps found nowhere
+ * else in the game (the owner, 2026-10-30: the hall shows none that appear
+ * elsewhere), a 0.4 kW magnetic-drive pump and a 45 kW split-case pump,
  * each draw from an ideal clean-water reservoir (CW1) and fill one
  * 1,000-litre test tank (TK1) through their own fill lines and a shared
- * inlet header (HD1). The visitor runs any of them; the tank's level is
+ * inlet header (HD1). The visitor runs either; the tank's level is
  * shared and cumulative; at full, the high-level float switch LSH1 trips
  * every pump, and a press then only bleeps; RESET opens the IBC's bottom outlet
  * valve and empties the tank to the ideal drain (DR1).
  *
- * The positive-displacement pumps deliver their stroke volume, a little
- * less against pressure; the centrifugal pumps run on their curves
+ * A positive-displacement pump (the model keeps them, though the hall
+ * shows none now) delivers its stroke volume, a little less against
+ * pressure; the centrifugal pumps run on their curves
  * against the lift to the header, their fill lines and the shared
  * header, solved together, each line's commissioning valve set so that,
  * alone, the pump runs at its rated duty (107j's research: on their
@@ -34,8 +32,8 @@ import { IBC } from '../../toolkit/components/plant/logic/ibc';
 /** The hall's room code: its number (107-0). */
 export const ROOM_CODE = 'M6';
 
-export type PumpNo = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-export const PUMP_NOS: readonly PumpNo[] = [1, 2, 3, 4, 5, 6, 7, 8];
+export type PumpNo = 1 | 2;
+export const PUMP_NOS: readonly PumpNo[] = [1, 2];
 
 export type PumpFamily = 'displacement' | 'centrifugal';
 
@@ -89,64 +87,12 @@ const curve = (
 });
 
 /**
- * The eight, smallest to largest (107j's table, its research's figures;
+ * The two, smaller first (107j's table, its research's figures;
  * where the brief and the game's own models disagree, the game's win).
  */
 export const PUMPS: readonly HallPump[] = [
   {
     no: 1,
-    family: 'displacement',
-    model: `Grundflow ${DIAPHRAGM_PUMPS.solenoid.model}`,
-    kind: 'solenoid diaphragm dosing pump',
-    node: 'diaphragm-pump',
-    job: 'dosing hypochlorite',
-    kW: 0.02,
-    ratedLh: DIAPHRAGM_PUMPS.solenoid.maxLh,
-    maxBar: 16,
-    source: 'the game’s DMX 1602 (after ProMinent gamma/ X GMXa 1602)',
-    dn: 6,
-  },
-  {
-    no: 2,
-    family: 'displacement',
-    model: `Grundflow ${DIAPHRAGM_PUMPS.stepper.model}`,
-    kind: 'stepper diaphragm dosing pump',
-    node: 'diaphragm-pump',
-    job: 'dosing acid',
-    kW: 0.025,
-    ratedLh: DIAPHRAGM_PUMPS.stepper.maxLh,
-    maxBar: 16,
-    source: 'the game’s DDS 7.5-16 (after Grundfos SMART Digital DDA 7.5-16)',
-    dn: 6,
-  },
-  {
-    no: 3,
-    family: 'displacement',
-    model: `Grundflow ${DMH.model}`,
-    kind: 'motor-driven diaphragm dosing pump',
-    node: 'diaphragm-pump',
-    job: 'a big pool’s hypochlorite',
-    kW: 0.11,
-    ratedLh: DMH.maxLh,
-    maxBar: DMH.maxBar,
-    source: 'the game’s DMH 21-10 (after ProMinent Sigma/ 1), 110 W motor',
-    dn: 6,
-  },
-  {
-    no: 4,
-    family: 'displacement',
-    model: `Grundflow ${PERI_30.model}`,
-    kind: 'peristaltic dosing pump',
-    node: 'peristaltic-pump',
-    job: 'dosing flocculant',
-    kW: 0.1,
-    ratedLh: PERI_30.maxLh,
-    maxBar: PERI_30.maxBar,
-    source: 'the game’s PERI 30 (after Watson-Marlow Qdos 30)',
-    dn: 6,
-  },
-  {
-    no: 5,
     family: 'centrifugal',
     model: 'Grundflow MX 6',
     kind: 'magnetic-drive centrifugal pump',
@@ -159,33 +105,7 @@ export const PUMPS: readonly HallPump[] = [
     dn: 25,
   },
   {
-    no: 6,
-    family: 'centrifugal',
-    model: 'Grundflow NKC 125-250',
-    kind: 'end-suction centrifugal pump',
-    node: 'end-suction-pump',
-    job: 'a 25 m pool’s circulation',
-    kW: 7.5,
-    ...curve(PUMP_CURVE.shutoff, 160, 9.6),
-    throttle: true,
-    source: 'the game’s lounge pool pump (PUMP_CURVE, circulation.ts)',
-    dn: 150,
-  },
-  {
-    no: 7,
-    family: 'centrifugal',
-    model: 'Grundflow NKC 150-315',
-    kind: 'end-suction centrifugal pump',
-    node: 'end-suction-pump',
-    job: 'a big pool’s circulation',
-    kW: 22,
-    ...curve(22, 300, 18),
-    throttle: true,
-    source: 'the game’s NKC 150-315 (dev51’s and Hall 1’s curve)',
-    dn: 200,
-  },
-  {
-    no: 8,
+    no: 2,
     family: 'centrifugal',
     model: 'Grundflow HSC 250-500',
     kind: 'horizontal split-case pump',

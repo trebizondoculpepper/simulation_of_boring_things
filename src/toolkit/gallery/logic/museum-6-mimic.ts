@@ -18,7 +18,7 @@ import type { Hall6State, PumpNo } from '../../../game/plant/museum-6-pumps';
 
 /**
  * Hall 6's mimic (107j): a Penfold board in the sponsor's colours. The
- * ideal reservoir along the bottom, the eight pumps in a row above it
+ * ideal reservoir along the bottom, the pumps in a row above it
  * with their RUN lamps, each line chasing while its pump delivers, the
  * header along the top into the tank; the tank's level as a column of
  * lamps, LSH1 and TANK FULL · PUMPS LOCKED OUT, the overflow and the
@@ -34,7 +34,8 @@ export const CHASER = '#1fb6ff';
  * lights from 2–3 m (the owner, 2026-10-29).
  */
 const CHASE = { lit: CHASER, size: 0.024, pitch: 0.05 } as const;
-const x = (no: PumpNo) => -1.3 + (no - 1) * 0.21;
+/** Two pumps, spread across the board. */
+const x = (no: PumpNo) => -0.8 + (no - 1) * 1.2;
 const PUMP_Y = -0.3;
 const SOURCE_Y = -0.55;
 const HEADER_Y = 0.15;
@@ -91,7 +92,7 @@ export const HALL6_MIMIC: MimicSpec = {
     {
       colour: WATER,
       points: [
-        [x(8), HEADER_Y],
+        [x(PUMPS.length as PumpNo), HEADER_Y],
         [TANK_AT[0], HEADER_Y],
         [TANK_AT[0], TANK_AT[1] + 0.16],
       ],
@@ -213,7 +214,7 @@ export function hall6Flows(s: Hall6State): Record<string, FlowState> {
     flows[`suction${n}`] = shown(r.flow[n]);
     flows[`delivery${n}`] = shown(r.flow[n]);
     before += r.flow[n];
-    if (n < 8) flows[`header${n}`] = shown(before);
+    if (n < PUMPS.length) flows[`header${n}`] = shown(before);
   }
   flows.fill = shown(r.total);
   flows.drain = flowState(r.drainLps * 3.6);

@@ -29,7 +29,7 @@ import { hallColumns, hallInterior, hallOrigin } from './museum-plan';
 
 /**
  * Hall 6's plant, laid out (107j). The ideal reservoir CW1 is a long
- * trough against the street (east) wall; the eight pumps stand in a row
+ * trough against the street (east) wall; the pumps stand in a row
  * in front of it, smallest at the north (where the visitor comes in) to
  * the split-case showpiece at the south, each drawing straight from the
  * trough; each fill line rises from its pump to the overhead inlet header
@@ -178,11 +178,13 @@ function placePumps(): Record<PumpNo, MachinePlace> {
   const end = interior.maxZ - 0.8;
   const widths = PUMPS.map((p) => SHAPES[p.no].w + SHAPES[p.no].ahead);
   const used = widths.reduce((a, b) => a + b, 0);
-  const gap = Math.max(0.2, (end - start - used) / (PUMPS.length - 1));
+  // Spread evenly, the ends' margins the same as the gaps between (two
+  // pumps since 2026-10-30, so each has its own stretch of the hall).
+  const gap = Math.max(0.2, (end - start - used) / (PUMPS.length + 1));
   const out = {} as Record<PumpNo, MachinePlace>;
   // Each fill line clear of the columns' row, where it crosses it.
   const columnZ = hallColumns('museum6').map((c) => c.z);
-  let z = start;
+  let z = start + gap;
   for (const p of PUMPS) {
     const s = SHAPES[p.no];
     let zc = z + s.w / 2;
@@ -488,9 +490,12 @@ export function standClearZone(no: PumpNo): { min: Vec3; max: Vec3 } {
 /** Lay out and plumb Hall 6. */
 export function plumbHall6(): Hall6Room {
   const expansion = hall6Expansion();
-  // No pipe runs low over the visitors' floor: west of the pumps, below 2.4 m, but round the tank.
+  // No pipe runs low over the visitors' floor: west of the pumps, below 2.4
+  // m, but round the tank. Its edge 0.9 m west of the pumps, where the
+  // split case's DN250 line turns up (the end-suction pumps' bodies set it
+  // there until they went, 2026-10-30).
   const westOfPumps =
-    Math.min(...PUMPS.map((p) => boxInHall(pumpId(p.no)).min[0])) - 0.2;
+    Math.min(...PUMPS.map((p) => boxInHall(pumpId(p.no)).min[0])) - 0.9;
   const regions: RouterRegion[] = [
     {
       min: [TANK_AT.x + 1.2, 0, interior.minZ],

@@ -12,39 +12,6 @@ import { playPiezo } from '../../../components/sound/audio/piezo-recordings';
 import { pumpSound } from '../../../components/plant/views/pump-sound';
 import { CIRCULATION_PUMP } from '../../../components/plant/logic/pump-sound';
 import {
-  MOTOR_DIAPHRAGM_PUMP,
-  PERISTALTIC_PUMP,
-  SOLENOID_PUMP,
-  STEPPER_PUMP,
-} from '../../../components/plant/audio/dosing-pump-sounds';
-import type { LoopRecipe } from '../../../components/core/audio/part-audio';
-
-/** Each dosing pump's sound and how much it is raised here, dB. */
-const DOSING_SOUNDS: Record<1 | 2 | 3 | 4, readonly [LoopRecipe, number]> = {
-  1: [SOLENOID_PUMP, 12],
-  2: [STEPPER_PUMP, 10],
-  3: [MOTOR_DIAPHRAGM_PUMP, 3],
-  4: [PERISTALTIC_PUMP, 6],
-};
-
-/** A held sound made `dB` louder. */
-const louder =
-  (recipe: LoopRecipe, dB: number): LoopRecipe =>
-  (context, out) => {
-    const gain = context.createGain();
-    gain.gain.value = 10 ** (dB / 20);
-    gain.connect(out);
-    return recipe(context, gain);
-  };
-import { createEndSuctionPump } from '../../../components/plant/views/pumps-plant';
-import { createDiaphragmPump } from '../../../components/plant/views/diaphragm-pump';
-import { createMotorDosingPump } from '../../../components/plant/views/motor-dosing-pump';
-import {
-  DMH,
-  newMotorPumpState,
-} from '../../../components/plant/logic/motor-dosing-pump';
-import { createPeristalticPump } from '../../../components/plant/views/peristaltic-pump';
-import {
   createInlineFitting,
   placeFitting,
 } from '../../../components/plant/views/inline-fittings';
@@ -136,8 +103,9 @@ import type { MimicState } from '../../../components/industrial-control/logic/mi
 import type { HallExhibit } from './exhibits';
 
 /**
- * Hall 6, "Grundflow's Amazing World of Pumps" (107j): eight pumps,
- * smallest at the north to the split-case showpiece at the south, in a
+ * Hall 6, "Grundflow's Amazing World of Pumps" (107j): two pumps
+ * found nowhere else in the game, the small mag-drive pump to the north and
+ * the split-case showpiece to the south, in a
  * row along the street (east) wall in front of the ideal reservoir's
  * trough, each filling the 1,000-litre test tank in the hall's middle
  * through the overhead inlet header; each with its RUN stand, plaque and
@@ -274,7 +242,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     name: 'Ideal clean-water reservoir',
     ports: Object.entries(PORTS.source).map(([k, p]) => ({
       ...p,
-      od: odOf(Number(k.slice(4)) <= 4 ? 6 : PUMPS[Number(k.slice(4)) - 1].dn),
+      od: odOf(PUMPS[Number(k.slice(4)) - 1].dn),
     })),
   });
   trough.show(['CLEAN WATER  IDEAL', 'ATMOSPHERIC  CW1']);
@@ -293,96 +261,17 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       status: () =>
         isRunning(state(), no) ? 'running, its RUN lamp lit' : 'stopped',
     });
-  const dosingStand = (no: PumpNo, child: Object3D) => {
-    const g = new Group();
-    t.box(g, t.paint('#a9afaf', 0.4, 0.7), 0.5, 0.04, 0.44, 0, 0.88, 0);
-    for (const [x, z] of [
-      [0.22, 0.19],
-      [-0.22, 0.19],
-      [0.22, -0.19],
-      [-0.22, -0.19],
-    ])
-      t.box(g, t.paint('#a9afaf', 0.4, 0.7), 0.04, 0.88, 0.04, x, 0.44, z);
-    child.position.y = 0.9;
-    // The pump faces the visitors (west).
-    child.rotation.y = FACE_WEST;
-    g.add(child);
-    return atMachine(g, pumpId(no));
-  };
   for (const p of PUMPS) {
     const no = p.no;
     const on = () => isRunning(state(), no);
-    if (no === 1 || no === 2) {
-      const pump = createDiaphragmPump(
-        kit,
-        `P${no}`,
-        no === 1 ? 'solenoid' : 'stepper',
-      );
-      object.add(describePump(dosingStand(no, pump.object), no));
-      updates.push((delta) =>
-        pump.update(delta, {
-          running: on(),
-          rate: p.family === 'displacement' ? p.ratedLh : 0,
-        }),
-      );
-    } else if (no === 3) {
-      // The DMH at full stroke, its own rate (MAN), started by RUN; its strokes counted here.
-      const base = {
-        ...newMotorPumpState(),
-        mode: 'manual' as const,
-        manual: 1,
-        strokeLength: 1,
-      };
-      const pump = createMotorDosingPump(kit, 'P3', {
-        state: () => ({ ...base, on: on() }),
-        change: () => {},
-        inputs: () => ({
-          powered: true,
-          release: true,
-          signalMa: 4,
-          level: 'ok',
-          dischargeBar: 0.17,
-        }),
-      });
-      object.add(describePump(dosingStand(no, pump.object), no));
-      let phase = 0;
-      updates.push((delta) => {
-        phase += on() ? (delta * DMH.maxSpm) / 60 : 0;
-        const began = Math.floor(phase);
-        phase -= began;
-        pump.show(delta, { began, delivering: began });
-      });
-    } else if (no === 4) {
-      const pump = createPeristalticPump(kit, 'P4');
-      object.add(describePump(dosingStand(no, pump.object), no));
-      updates.push((delta) => pump.update(delta, on()));
-    } else if (no === 5) {
+    if (no === 1) {
       const pump = createMagDrivePump(kit);
       object.add(describePump(still(atMachine(pump.group, pumpId(no))), no));
       updates.push((delta) => pump.update(delta, on()));
-    } else if (no === 6 || no === 7) {
-      const pump = createEndSuctionPump(kit);
-      object.add(describePump(still(atMachine(pump, pumpId(no))), no));
-      const g = (
-        pump as unknown as {
-          gauges?: {
-            suction: { set(v: number): void; update(d: number): void };
-            discharge: { set(v: number): void; update(d: number): void };
-          };
-        }
-      ).gauges;
-      if (g)
-        updates.push((delta) => {
-          const r = readings.gauges[no];
-          g.suction.set(r.suctionBar);
-          g.discharge.set(r.dischargeBar);
-          g.suction.update(delta);
-          g.discharge.update(delta);
-        });
     } else {
       const pump = createSplitCasePump(kit, {
         axis: SPLIT.axis,
-        label: PUMPS[7].model.replace('Grundflow ', ''),
+        label: PUMPS[1].model.replace('Grundflow ', ''),
       });
       // Lit: a plinth lamp's glow on its base.
       object.add(describePump(still(atMachine(pump.group, pumpId(no))), no));
@@ -408,26 +297,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         runUp: p.kW >= 7 ? 3 : 1,
         coastDown: p.kW >= 20 ? 9 : 3,
       });
-      let heard = false;
-      updates.push(() => {
-        if (on() !== heard) {
-          heard = on();
-          partAudio.hold(from, heard ? sound : null, from);
-        }
-      });
-    }
-    // The dosing pumps' sound, here louder than in a plant room (the owner,
-    // 2026-10-29: P1 seemed silent; a solenoid pump's tick is about 18 dB
-    // under the smallest circulator's hum): each its own sound, raised to
-    // about the level of the circulators beside it, over the quiet one its
-    // view already holds.
-    if (p.family === 'displacement') {
-      const from = new Group();
-      atMachine(from, pumpId(no));
-      from.position.y = 1;
-      object.add(from);
-      const [recipe, dB] = DOSING_SOUNDS[no as 1 | 2 | 3 | 4];
-      const sound = louder(recipe, dB);
       let heard = false;
       updates.push(() => {
         if (on() !== heard) {
@@ -564,7 +433,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   );
   strap.position.set(ix, 0, iz);
   object.add(still(strap));
-  const outflow = createOutflow(fill.od * 0.9, deliveryAlone(8));
+  const outflow = createOutflow(fill.od * 0.9, deliveryAlone(2));
   outflow.group.position.set(ix, MOUTH_Y, iz);
   object.add(outflow.group);
   updates.push((delta) => {
