@@ -1021,15 +1021,15 @@ The brief has not been updated for the exhibit, so the street wall, the route st
 
 ### The exhibit's own title wall
 
-Source: `toolkit/gallery/logic/museum-7-grout.ts:171` (`TITLE_WALL`), drawn at `hall-7-grout.ts:410`
+Source: `toolkit/gallery/logic/museum-7-grout.ts:171` (`TITLE_WALL`), drawn at `hall-7-grout.ts:293`
 
 - Line: Perhaps no substance is more important to a swimming pool than grout.
 - Title: Grout: The Unsung Hero of the Aquatics World
-- Corner mark (`hall-7-grout.ts:437`): PLANTROOMS
+- Corner mark (`hall-7-grout.ts:320`): PLANTROOMS
 
 ### Introduction panel
 
-Source: `toolkit/gallery/logic/museum-7-grout.ts:185` (`INTRODUCTION`), drawn at `hall-7-grout.ts:444`
+Source: `toolkit/gallery/logic/museum-7-grout.ts:185` (`INTRODUCTION`), drawn at `hall-7-grout.ts:331`
 
 - Heading: Grout
 - Paragraph 1: A swimming pool is held together by its grout. Every tile is set in it; every joint is filled with it; every day it is soaked, scrubbed, chlorinated and stood on. Here, for the first time, grout takes its rightful place in the history of aquatics.
@@ -1037,18 +1037,11 @@ Source: `toolkit/gallery/logic/museum-7-grout.ts:185` (`INTRODUCTION`), drawn at
 - Paragraph 3: A 25-metre pool, 12.5 metres wide and 1.5 metres deep, has about 425 square metres of tile. In 150 mm tiles that is nearly six kilometres of grout joint (about 5.7 km), in the tank alone. (5.7 computed by `jointLength()`, `museum-7-grout.ts:177`)
 - Paragraph 4: Grouts today are classed by BS EN 13888; tiling for swimming pools is guided by BS 5385-4.
 - Paragraph 5: Walk slowly. Look closely. Can you tell them apart?
-- Corner mark (`hall-7-grout.ts:475`): PLANTROOMS
-
-### Card in place of a RESET button
-
-Source: `toolkit/gallery/logic/museum-7-grout.ts:196` (`NOTHING_TO_RESET`), drawn at `hall-7-grout.ts:483`
-
-- Headline: There is nothing to reset.
-- Body: Grout endures.
+- Corner mark (`hall-7-grout.ts:360`): PLANTROOMS
 
 ### The plaques
 
-Source: `toolkit/gallery/logic/museum-7-grout.ts:33` (`PLINTHS`), drawn by `paintPlaque` (`hall-7-grout.ts:85`), which prints the number, the name, the years, What, then `In its favour: ` followed by both Benefits, `Against it: ` followed by both Drawbacks, and the Reverence line. The plinths stand in date order round the hall. As extracted, a bronze timeline in the floor was marked 1850, 1900, 1950 and 2000 (`hall-7-grout.ts:310`); the hall's layout was being rearranged in the working tree at the time (uncommitted changes to `museum-7-grout.ts`), so check whether it survives.
+Source: `toolkit/gallery/logic/museum-7-grout.ts:33` (`PLINTHS`), drawn by `paintPlaque` (`hall-7-grout.ts:120`), which prints the number, the name, the years, What, then `In its favour: ` followed by both Benefits, `Against it: ` followed by both Drawbacks, and the Reverence line. The plinths stand in date order round the hall. As extracted, a bronze timeline in the floor was marked 1850, 1900, 1950 and 2000 (`hall-7-grout.ts:310`); the hall's layout was being rearranged in the working tree at the time (uncommitted changes to `museum-7-grout.ts`), so check whether it survives.
 
 #### Plaque 1: Lime mortar and lime putty
 
@@ -1152,7 +1145,7 @@ Source: `museum-7-grout.ts:159`
 
 ### Closing card (by the way out)
 
-Source: `toolkit/gallery/logic/museum-7-grout.ts:201` (`CLOSING_CARD`), drawn at `hall-7-grout.ts:537`
+Source: `toolkit/gallery/logic/museum-7-grout.ts:196` (`CLOSING_CARD`), drawn at `hall-7-grout.ts:390`
 
 - Next time you swim, look down. The grout is looking after you.
 
@@ -1279,7 +1272,7 @@ Source: `toolkit/gallery/logic/museum-8-incident.ts:204` (`CASE_PLAQUES`), drawn
 - Card 2, title: The fix: make the mistake impossible.
 - Card 2, body: After a fatal mix-up at a German chemical depot in 2007, the hypochlorite fill was given left-hand threads so no other hose could fit, and every fill point was locked and labelled.
 - Card 3, title: After (now)
-- Card 3, body: Hypochlorite: a 2-inch brass camlock. Acid: a 1½-inch polypropylene Guillemin. Each in its own lockable cabinet, colour-coded and labelled. The acid’s hose cannot couple to the hypochlorite’s port.
+- Card 3, body: Hypochlorite: a 2-inch polypropylene camlock (hypochlorite eats brass). Acid: a 1½-inch polypropylene Guillemin. Each in its own lockable cabinet, colour-coded and labelled. The acid’s hose cannot couple to the hypochlorite’s port.
 - Card 4, title (written in the scene, `hall-8-never-again.ts:699`): Museum specimens
 - Card 4, body: Museum specimens: connected to nothing. You will find these in the leisure centre’s own loading bay.
 - Labels in the case (`hall-8-never-again.ts:620`, `:623`): SODIUM HYPOCHLORITE · 2" CAMLOCK; HYDROCHLORIC ACID · 1½" GUILLEMIN

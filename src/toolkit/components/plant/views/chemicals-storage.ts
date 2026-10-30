@@ -10,6 +10,11 @@ import type { PanelKit } from '../../core/views/eighties-controls';
 import { brandLivery } from '../../core/views/brand-livery';
 import { IBC } from '../logic/ibc';
 import { FINISH, plantTools } from './plant-tools';
+import {
+  createCamlockAdaptor,
+  createCamlockCoupler,
+  createGuilleminHalf,
+} from './chemical-couplings';
 import type { Point } from './plant-tools';
 import {
   createEmergencySign,
@@ -579,51 +584,34 @@ export function createFillCabinet(kit: PanelKit) {
     );
     // The coupling, and its cap: a different type for each chemical, not
     // only a different size (prompt 086), so neither hose fits the other's
-    // port: the hypochlorite's a brass camlock adaptor, its cam grooves
-    // round it; the acid's a polypropylene Guillemin, symmetrical, its two
-    // lugs out either side.
+    // port (`chemical-couplings.ts`): the hypochlorite's a 2" camlock
+    // adaptor, polypropylene (hypochlorite eats brass), under its dust cap
+    // in its colour; the acid's a 1½" polypropylene Guillemin, its blank
+    // in its colour locked on a quarter turned. Each threaded into its
+    // valve.
     if (small) {
-      const pp = t.paint('#d9dad6', 0.5);
-      t.rod(group, pp, [x, 0, Z + 0.055], [x, 0, Z + 0.09], r * 1.2, 20);
-      t.cyl(group, pp, r * 1.6, 0.02, x, 0, Z + 0.1, 'z', 20);
-      for (const s of [-1, 1])
-        t.box(group, pp, 0.025, 0.018, 0.02, x + s * r * 1.9, 0, Z + 0.1);
-      t.cyl(
-        group,
-        t.paint(colour, 0.5),
-        r * 1.5,
-        0.02,
-        x,
-        0,
-        Z + 0.12,
-        'z',
-        20,
-      );
+      const half = createGuilleminHalf(kit, { size: 1.5 });
+      half.object.position.set(x, 0, Z + 0.03);
+      group.add(half.object);
+      const blank = createGuilleminHalf(kit, {
+        size: 1.5,
+        blank: true,
+        colour,
+      });
+      blank.object.position.set(x, 0, Z + 0.03 + half.face + blank.face);
+      blank.object.rotation.set(0, Math.PI, Math.PI / 2);
+      group.add(blank.object);
     } else {
-      const brass = t.paint(FINISH.brass, 0.35, 0.7);
-      t.rod(group, brass, [x, 0, Z + 0.055], [x, 0, Z + 0.1], r * 1.25, 20);
-      t.cyl(
-        group,
-        t.paint('#7a6630', 0.5),
-        r * 1.18,
-        0.008,
-        x,
-        0,
-        Z + 0.085,
-        'z',
-        20,
-      );
-      t.cyl(
-        group,
-        t.paint(colour, 0.5),
-        r * 1.3,
-        0.03,
-        x,
-        0,
-        Z + 0.115,
-        'z',
-        20,
-      );
+      const adaptor = createCamlockAdaptor(kit, {
+        size: 2,
+        material: 'polypropylene',
+      });
+      adaptor.position.set(x, 0, Z + 0.04);
+      group.add(adaptor);
+      const cap = createCamlockCoupler(kit, { size: 2, cap: true, colour });
+      cap.object.position.set(x, 0, Z + 0.04 + 0.079 + 0.022);
+      cap.object.rotation.y = Math.PI;
+      group.add(cap.object);
     }
     put(
       group,
@@ -689,7 +677,9 @@ export function createFillCabinet(kit: PanelKit) {
       0.16,
       0.09,
     ),
-    [0, -H / 2 + 0.12, 0.012],
+    // Near the top of its back plate, clear of the lines' tags below (the
+    // owner, 2026-10-30: they printed over it).
+    [0, H / 2 - 0.08, 0.012],
   );
   return group;
 }

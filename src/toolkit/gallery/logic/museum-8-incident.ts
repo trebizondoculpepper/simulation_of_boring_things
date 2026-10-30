@@ -208,7 +208,7 @@ export const CASE_PLAQUES = {
   },
   after: {
     title: 'After (now)',
-    body: 'Hypochlorite: a 2-inch brass camlock. Acid: a 1½-inch polypropylene Guillemin. Each in its own lockable cabinet, colour-coded and labelled. The acid’s hose cannot couple to the hypochlorite’s port.',
+    body: 'Hypochlorite: a 2-inch polypropylene camlock (hypochlorite eats brass). Acid: a 1½-inch polypropylene Guillemin. Each in its own lockable cabinet, colour-coded and labelled. The acid’s hose cannot couple to the hypochlorite’s port.',
   },
   fix: 'The fix: make the mistake impossible.',
   frankfurt:

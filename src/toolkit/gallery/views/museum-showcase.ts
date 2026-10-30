@@ -181,7 +181,9 @@ export function createMuseumShowcase(
       s * (d / 2 - 0.006),
     );
 
-  // The attic's diffuser, and its two warm LED strips glowing through it.
+  // The attic's diffuser, and its two warm LED strips glowing through it:
+  // hung 2 mm under the attic's underside, so their faces never meet
+  // (the owner, 2026-10-30: it z-fought).
   const diffuser = t.paint('#d9d4ca', 0.9);
   t.box(
     object,
@@ -190,7 +192,7 @@ export function createMuseumShowcase(
     0.004,
     d - 2 * g - 0.01,
     0,
-    atticY + 0.002,
+    atticY,
     0,
   );
   const strip = kitGlow(kit, '#ffe6c0');
@@ -202,7 +204,7 @@ export function createMuseumShowcase(
       0.004,
       0.025,
       0,
-      atticY - 0.001,
+      atticY - 0.0045,
       s * (d / 2 - 0.06),
     );
   const spot = options.spot ?? 1.5;
