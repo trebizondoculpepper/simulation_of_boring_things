@@ -20,7 +20,7 @@ Our rooms are built in code from known rectangles (`src/game/facility-plan.ts`, 
 
 ### 2.1 Lightmaps with baked AO (Quake, Source, Unity, Unreal Lightmass)
 
-Quake's `light` compile tool works out lighting and shadow from the map's light entities and stores the result as lightmaps in the BSP; a `_minlight` key sets a floor across the whole map ([QuakeWiki, Light](https://quakewiki.org/wiki/Light_(map_compiling)); [ericw-tools light docs](https://ericw-tools.readthedocs.io/en/latest/light.html)). Q3Map2 added a "dirty" ambient occlusion pass to lightmaps, which the Quake community has discussed adding to Quake compilers ([InsideQC forum](https://forums.insideqc.com/viewtopic.php?p=23797)). Valve's Source engine lit world geometry with radiosity lightmaps and models with an "ambient cube", six colours sampled at the model's position ([Mitchell, McTaggart and Green, Shading in Valve's Source Engine, SIGGRAPH 2006](https://advances.realtimerendering.com/s2006/Chapter7-Shading_in_Valve's_Source_Engine.pdf); [McTaggart, Half-Life 2 shading, GDC 2004](https://drivers.amd.com/developer/gdc/d3dtutorial10_half-life2_shading.pdf)). Unity bakes AO into lightmaps when baked global illumination is on ([Unity manual, Baked ambient occlusion](https://docs.unity3d.com/es//Manual/LightingBakedAmbientOcclusion.html)); Three.js reads such a map through `aoMap`, which needs a second UV set ([three.js, MeshStandardMaterial](https://threejs.org/docs/pages/MeshStandardMaterial.html)).
+Quake's `light` compile tool works out lighting and shadow from the map's light entities and stores the result as lightmaps in the BSP; a `_minlight` key sets a floor across the whole map ([QuakeWiki, Light](<https://quakewiki.org/wiki/Light_(map_compiling)>); [ericw-tools light docs](https://ericw-tools.readthedocs.io/en/latest/light.html)). Q3Map2 added a "dirty" ambient occlusion pass to lightmaps, which the Quake community has discussed adding to Quake compilers ([InsideQC forum](https://forums.insideqc.com/viewtopic.php?p=23797)). Valve's Source engine lit world geometry with radiosity lightmaps and models with an "ambient cube", six colours sampled at the model's position ([Mitchell, McTaggart and Green, Shading in Valve's Source Engine, SIGGRAPH 2006](https://advances.realtimerendering.com/s2006/Chapter7-Shading_in_Valve's_Source_Engine.pdf); [McTaggart, Half-Life 2 shading, GDC 2004](https://drivers.amd.com/developer/gdc/d3dtutorial10_half-life2_shading.pdf)). Unity bakes AO into lightmaps when baked global illumination is on ([Unity manual, Baked ambient occlusion](https://docs.unity3d.com/es//Manual/LightingBakedAmbientOcclusion.html)); Three.js reads such a map through `aoMap`, which needs a second UV set ([three.js, MeshStandardMaterial](https://threejs.org/docs/pages/MeshStandardMaterial.html)).
 
 Cost: an offline bake per level (minutes to hours), nothing per frame but a texture fetch. Look: the best of all, contact shading everywhere. Limits: needs a lightmap UV unwrap and an offline compiler; our rooms are generated at load, so the bake would run at load, which is exactly the cost the owner has ruled out. Fit: poor.
 
@@ -78,17 +78,17 @@ SSAO and its successors (Alchemy, GTAO, which the museum already has as a live o
 
 ## 3. How each fits Pool Plant
 
-| Technique | Load | Per frame | Separate pieces meeting | Fit |
-|---|---|---|---|---|
-| Lightmap bake | minutes | texture fetch | yes | poor (UVs, bake time) |
-| Vertex cavity / Minecraft rule | ms | none | no | detail only |
-| Analytic box SDF AO in shader | < 1 ms | ~128 box distances a pixel | yes | best |
-| Analytic sphere/box occluders (Quílez) | < 1 ms | per shape per pixel | yes | good |
-| AO fields per object | offline | 3D fetch per object | yes | later |
-| Decals / contact strips | ms | blended quads | yes | good, more geometry |
-| Occlusion volume texture | tens of ms | 3D fetch | yes | moderate |
-| Height-map world AO | ms | 2D fetch | partly | poor indoors |
-| Light-distance weight | none | ≤ 16 distances a pixel | n/a | very good, add-on |
+| Technique                              | Load       | Per frame                  | Separate pieces meeting | Fit                   |
+| -------------------------------------- | ---------- | -------------------------- | ----------------------- | --------------------- |
+| Lightmap bake                          | minutes    | texture fetch              | yes                     | poor (UVs, bake time) |
+| Vertex cavity / Minecraft rule         | ms         | none                       | no                      | detail only           |
+| Analytic box SDF AO in shader          | < 1 ms     | ~128 box distances a pixel | yes                     | best                  |
+| Analytic sphere/box occluders (Quílez) | < 1 ms     | per shape per pixel        | yes                     | good                  |
+| AO fields per object                   | offline    | 3D fetch per object        | yes                     | later                 |
+| Decals / contact strips                | ms         | blended quads              | yes                     | good, more geometry   |
+| Occlusion volume texture               | tens of ms | 3D fetch                   | yes                     | moderate              |
+| Height-map world AO                    | ms         | 2D fetch                   | partly                  | poor indoors          |
+| Light-distance weight                  | none       | ≤ 16 distances a pixel     | n/a                     | very good, add-on     |
 
 The hook would be the same shape as the bake's: a separate module that copies each opaque, lit material once with an `onBeforeCompile` patch at `#include <aomap_fragment>` (darkening `indirectDiffuse` and a share of `directDiffuse`), plus a single call in each room with its interior rectangles from its plan. Box occluders can be taken from each mesh's world bounding box, dropping the shell's own slabs and anything small or already inside a bigger box.
 
