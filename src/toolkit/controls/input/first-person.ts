@@ -75,6 +75,19 @@ let sessionInput: InputState | null = null;
  */
 
 export const EYE_HEIGHT_METRES = 1.8034;
+/** How far Alt+wheel may lower or raise the walking eye from standing, metres. */
+export const EYE_LOWER_METRES = 1.1;
+export const EYE_RAISE_METRES = 0.7;
+
+/**
+ * Whether a walker placed with its eye `offset` from standing (scene
+ * units) keeps it: only within the reach of Alt+wheel. A link's eye
+ * outside it (`y=0`, the floor's height, typed by hand) is not a stance
+ * a walker can take, so the walker stands at its own eye height instead.
+ */
+export const reachableEyeOffset = (offset: number, metre: number) =>
+  offset >= -EYE_LOWER_METRES * metre - 1e-6 &&
+  offset <= EYE_RAISE_METRES * metre + 1e-6;
 export const WALK_METRES_PER_SECOND = 2;
 /** An on-screen button held longer than this walks or turns on, ms. */
 const HOLD_MS = 250;
@@ -920,9 +933,9 @@ export function createFirstPerson(options: FirstPersonOptions) {
     const scale = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : 1;
     if (event.altKey) {
       walker.eyeOffset = Math.max(
-        -1.1 * metre,
+        -EYE_LOWER_METRES * metre,
         Math.min(
-          0.7 * metre,
+          EYE_RAISE_METRES * metre,
           walker.eyeOffset - event.deltaY * scale * 0.004 * metre,
         ),
       );
@@ -1127,6 +1140,19 @@ export function createFirstPerson(options: FirstPersonOptions) {
       }
       attachedLadder = null;
       seated = null;
+      // Walking, an eye no stance can reach is dropped: the walker stands.
+      // (A camera link opens in noclip before `flying` catches up.)
+      if (
+        y !== undefined &&
+        !noclip.value &&
+        !reachableEyeOffset(
+          y -
+            (options.floorAt?.(x, z, y - EYE_HEIGHT_METRES * metre) ?? floorY) -
+            EYE_HEIGHT_METRES * metre,
+          metre,
+        )
+      )
+        y = undefined;
       // Walking, with the eye given: the floor under that eye, not the one
       // stood on before (placed up a storey, the walker stood on the floor
       // below and could not walk down the stair it was over: mission 095).

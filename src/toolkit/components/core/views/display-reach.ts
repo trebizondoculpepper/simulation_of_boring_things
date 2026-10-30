@@ -449,17 +449,22 @@ const DEG = 180 / Math.PI;
  * subtends.
  */
 function sighting(o: Object3D): DisplaySighting {
-  at.setFromMatrixPosition(o.matrixWorld);
+  const geometry = (o as Object3D & { geometry?: BufferGeometry }).geometry;
+  if (geometry && !geometry.boundingSphere) geometry.computeBoundingSphere();
+  // From the middle of what it draws, not its origin: a sign merged with
+  // others of its material (`merge-static.ts`) has its origin at the
+  // room's, metres from the sign itself.
+  if (geometry?.boundingSphere)
+    at.copy(geometry.boundingSphere.center).applyMatrix4(o.matrixWorld);
+  else at.setFromMatrixPosition(o.matrixWorld);
   toEye.subVectors(eye, at);
   const distance = toEye.length();
-  const geometry = (o as Object3D & { geometry?: BufferGeometry }).geometry;
   let offNormal: number | null = null;
   if (geometry?.type === 'PlaneGeometry' && distance > 0) {
     normal.setFromMatrixColumn(o.matrixWorld, 2).normalize();
     offNormal =
       Math.acos(Math.max(-1, Math.min(1, normal.dot(toEye) / distance))) * DEG;
   }
-  if (geometry && !geometry.boundingSphere) geometry.computeBoundingSphere();
   scale.setFromMatrixScale(o.matrixWorld);
   const radius =
     (geometry?.boundingSphere?.radius ?? 0) *

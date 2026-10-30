@@ -5,7 +5,20 @@ import {
   pinchZoom,
   wheelZoom,
   changeStance,
+  reachableEyeOffset,
 } from './first-person';
+
+describe('an eye placed by a link', () => {
+  it('keeps an eye Alt+wheel could reach, and drops one no stance can', () => {
+    expect(reachableEyeOffset(0, 1)).toBe(true);
+    expect(reachableEyeOffset(-1.1, 1)).toBe(true);
+    expect(reachableEyeOffset(0.7, 1)).toBe(true);
+    expect(reachableEyeOffset(-0.4 * 100, 100)).toBe(true);
+    // y=0 on a floor at 0: the eye on the floor.
+    expect(reachableEyeOffset(-1.8034, 1)).toBe(false);
+    expect(reachableEyeOffset(0.8, 1)).toBe(false);
+  });
+});
 
 describe('wheel zoom', () => {
   it('zooms in when scrolling up and out when scrolling down', () => {
