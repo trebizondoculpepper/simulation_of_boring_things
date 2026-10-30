@@ -600,6 +600,11 @@ export function startMuseumHallRoom(
       projectorWhereabouts.walkerIn(id, performance.now() / 1000);
       hall.update(delta);
       copies.get('museum0')?.update(delta);
+    } else {
+      // Drawn from a neighbour (its real room seen through a doorway): its
+      // projector still follows the walker's whereabouts, so it is off
+      // unless the walker is in Hall 0 (the owner, 2026-10-30).
+      hall.update(delta);
     }
     liftParts.update(delta);
     liftLanding?.update();

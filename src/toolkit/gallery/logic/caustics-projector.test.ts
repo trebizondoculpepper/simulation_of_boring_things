@@ -84,7 +84,12 @@ describe('the projector going out when the walker leaves', () => {
   });
   it('keeps the leaving time across halls', () => {
     const w = createWalkerWhereabouts();
-    expect(w.presence(0).brightness).toBe(1);
+    // Off until the walker first enters Hall 0, then faded up.
+    expect(w.presence(0).projecting).toBe(false);
+    w.walkerIn('museum1', 50);
+    expect(w.presence(60).projecting).toBe(false);
+    w.walkerIn('museum0', 90);
+    expect(w.presence(95).brightness).toBe(1);
     w.walkerIn('museum1', 100);
     w.walkerIn('museum1', 103);
     expect(w.presence(102).brightness).toBeCloseTo(0.5);

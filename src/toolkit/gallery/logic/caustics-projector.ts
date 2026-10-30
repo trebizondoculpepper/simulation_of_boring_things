@@ -157,11 +157,13 @@ export function projectorPresence(
 /**
  * Where the walker is, as the projector knows it, kept across the hand-over
  * between hall scenes (one per page): which hall they are in and when (s,
- * on any steady clock) they last crossed in or out of Hall 0. Starts in
- * Hall 0 fully lit, as if long since arrived.
+ * on any steady clock) they last crossed in or out of Hall 0. Starts
+ * outside it, the projector off, as if long since left (the owner,
+ * 2026-10-30: seen from Hall 1 or Hall 9 it is off until the walker
+ * enters Hall 0, where it fades up).
  */
 export function createWalkerWhereabouts() {
-  let inHall0 = true;
+  let inHall0 = false;
   let since = -Infinity;
   return {
     /** The walker is in hall `hall` at time `t`. */

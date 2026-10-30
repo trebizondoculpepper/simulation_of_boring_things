@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum, Hall 0: its caustics projector is off when the hall is seen from Hall 1 or Hall 9 and fades up only once the walker enters (the owner, 2026-10-30); Hall 0's own room seen through a doorway never ran its projector's update, so it stayed on.
+
 - Museum: a neighbouring hall seen through a doorway now sharpens from a quarter of its resolution 10 m from the doorway to full within 5 m (it was 5 m to 2 m; the owner, 2026-10-30).
 
 - Museum level of detail (the owner, 2026-10-30): a neighbouring hall seen through its doorway is drawn with no blur, at a quarter of its resolution from 5 m out and full within 2 m of the doorway, eased between by a smoothstep in 24 steps (`museum-lod.ts`); its exhibit no longer swaps to the far version at 5 m. Each exhibit component more than 30 m from the eye is drawn as its low-poly version, back within 28 m; signs, banners, black boxes and architecture are exempt (`LOD_EXEMPT`) and always drawn as they are. `window.museumLod` shows each hall's resolution share and how many components are low poly.

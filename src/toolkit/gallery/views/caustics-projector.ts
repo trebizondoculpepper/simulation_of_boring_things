@@ -129,7 +129,8 @@ export function createCausticsProjector(
   group.name = `${brand.name} ${P.model}`;
   const materials: Material[] = [];
   const keep = <M extends Material>(m: M) => (materials.push(m), m);
-  let state = projectorState(true, true);
+  // Off until the walker's whereabouts say otherwise (the owner, 2026-10-30).
+  let state = projectorState(true, false);
 
   // Its plate on the ceiling, the drop pole, and the cradle round the body.
   const steel = keep(
@@ -306,6 +307,7 @@ export function createCausticsProjector(
   const pictureGeometry = new PlaneGeometry(pool.w, pool.d);
   pictureGeometry.rotateX(-Math.PI / 2);
   const picture = new Mesh(pictureGeometry, pictureMaterial);
+  picture.visible = state.projecting;
   picture.name = 'Projected caustics';
   picture.position.y = 0.004;
   picture.renderOrder = 2;
@@ -335,6 +337,8 @@ export function createCausticsProjector(
         ledMaterial.color.set(lampColour(state.lamp));
         glassMaterial.color.set(state.projecting ? '#9fd8ff' : '#0b0d10');
         beam.visible = picture.visible = state.projecting;
+        uniforms.uOn.value = state.projecting ? 1 : 0;
+        dirty = true;
       }
       // Off: nothing more drawn into its picture at all.
       if (!state.projecting) return;
