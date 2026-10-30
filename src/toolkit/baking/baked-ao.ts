@@ -219,12 +219,18 @@ effect(() => {
 /**
  * In development, a small note at the foot of the screen while the
  * walker's own room is still baking ("AO BAKING"), so a room without its
- * occlusion yet is not taken for one whose bake failed.
+ * occlusion yet is not taken for one whose bake failed. Only for BAKED,
+ * the slow ray-traced bake: SIMPLE takes about a second and is never
+ * announced (the owner, 2026-10-30).
  */
 let note: HTMLElement | null = null;
 function showBaking() {
   if (!import.meta.env.DEV || typeof document === 'undefined') return;
-  const on = baking() && focused !== null && currentPending();
+  const on =
+    playerSettings.value.aoMode === 'rays' &&
+    baking() &&
+    focused !== null &&
+    currentPending();
   if (!on && !note) return;
   if (!note) {
     note = document.createElement('div');
