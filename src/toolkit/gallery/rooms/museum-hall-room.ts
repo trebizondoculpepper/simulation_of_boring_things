@@ -130,6 +130,7 @@ import { partAudio } from '../../components/core/audio/part-audio';
 import { createInspector } from '../views/inspect-pick';
 import { localNow } from '../logic/museum-time';
 import { HALL_EXHIBITS } from './museum/exhibits';
+import { FarHallPass, setFarLayer } from '../views/far-hall-pass';
 import { createFarVersion } from '../../components/core/views/far-version';
 import { partOf } from './museum/exhibit-carrying';
 import type { CarryingExhibit } from './museum/exhibit-carrying';
@@ -215,6 +216,7 @@ export function startMuseumHallRoom(
       placed.position.set(on.x - o.x, 0, on.z - o.z);
       placed.updateMatrix();
       placed.matrixAutoUpdate = false;
+      setFarLayer(placed, true);
       hall.group.add(placed);
       beyond.get(side)?.push(placed);
       redraw();
@@ -341,6 +343,20 @@ export function startMuseumHallRoom(
       if (far) far.visible = how === 'empty' || (how === 'full' && f > 0);
       // The halls beyond it, low poly, unless its own room draws them.
       for (const b of beyond.get(n) ?? []) b.visible = how !== 'under';
+      // What is two or more halls from the walker goes in the far pass:
+      // the halls beyond this neighbour (unless standing aside for its
+      // room), and, while this hall is seen through an archway, its
+      // other neighbour.
+      const shell = shells.parts(n);
+      if (shell) setFarLayer(shell.beyond, how !== 'under');
+      for (const b of beyond.get(n) ?? []) setFarLayer(b, true);
+      const twoAway = how === 'empty' && peekFrom !== null && n !== peekFrom;
+      if (shell) setFarLayer(shell.near, twoAway);
+      // A neighbour copied into this scene is drawn in the same pass: it
+      // is seen only past the walker's back or through a doorway at
+      // least 10 m off, where its own room would be at a quarter too.
+      if (far) setFarLayer(far, twoAway || how === 'full');
+      setFarLayer(copy.group, how === 'full');
       // The empty hall stays underneath until the copy is fully in.
       shells.show(n, how === 'full' && f < 1 ? 'empty' : how);
     }
@@ -413,6 +429,12 @@ export function startMuseumHallRoom(
   );
   const base = new RenderPass(scene, camera);
   base.clearAlpha = 0;
+  // The halls two or more away first, at their own quarter resolution;
+  // the scene drawn over them, keeping their colour, clearing depth.
+  const farPass = new FarHallPass(scene, camera);
+  composer.addPass(farPass);
+  base.clear = false;
+  base.clearDepth = true;
   composer.addPass(base);
   const ao = new GTAOPass(scene, camera, 1, 1);
   ao.updateGtaoMaterial({
@@ -595,6 +617,7 @@ export function startMuseumHallRoom(
     if (share !== seenShare) {
       seenShare = share;
       scaleRatio(renderer, share);
+      farPass.shareNow = share;
     }
     lodState.scale = share;
   };
@@ -743,6 +766,7 @@ export function startMuseumHallRoom(
       disposeKit(kit, hall.group);
       observer.disconnect();
       composer.dispose();
+      farPass.dispose();
       walk.dispose();
       hall.dispose();
       for (const copy of copies.values()) copy.dispose();

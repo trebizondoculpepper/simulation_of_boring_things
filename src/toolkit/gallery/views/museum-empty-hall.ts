@@ -388,6 +388,8 @@ export interface RingShells {
    * `empty`, its empty hall seen.
    */
   show(to: MuseumHallId, how: NeighbourDraw): void;
+  /** The empty halls on `to`'s side: `to`'s own, and those beyond it. */
+  parts(to: MuseumHallId): { near: Group; beyond: Group } | null;
   dispose(): void;
 }
 
@@ -443,6 +445,10 @@ export function createRingShells(
       near.setOccluding(how === 'under');
       beyond.setOccluding(how === 'under');
       near.group.visible = how !== 'full';
+    },
+    parts(to) {
+      const [near, beyond] = sides.get(to) ?? [];
+      return near && beyond ? { near: near.group, beyond: beyond.group } : null;
     },
     dispose() {
       for (const list of sides.values()) for (const h of list) h.dispose();
