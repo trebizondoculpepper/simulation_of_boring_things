@@ -5,6 +5,7 @@ import {
   BufferGeometry,
   CanvasTexture,
   CatmullRomCurve3,
+  Color,
   CylinderGeometry,
   DoubleSide,
   ExtrudeGeometry,
@@ -13,6 +14,7 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
   PlaneGeometry,
+  PointLight,
   RepeatWrapping,
   SRGBColorSpace,
   Shape,
@@ -26,7 +28,6 @@ import { markComponent } from '../../components/core/views/component-identity';
 import { watchSign } from '../../components/core/views/display-reach';
 import { drawBrandMark } from '../../components/core/views/brand-logo';
 import { brandById } from '../../components/core/logic/brands';
-import { createCorridorRun } from '../../components/architectural/views/corridor';
 import {
   BEAM_DEPTH,
   createServiceCeiling,
@@ -70,6 +71,11 @@ import type {
   MuseumWindow,
 } from '../logic/museum-plan';
 import { MUSEUM_EXHIBITION as BRAND } from '../logic/museum-brand';
+import { CORRIDOR } from '../logic/museum-layout';
+import { createPendantLamps } from '../../components/architectural/views/pendant-lamps';
+
+/** A corridor's pendant: its dome's rim, m up, and its size (Lamp Copper's model E). */
+const CORRIDOR_LAMP = { rim: 3.8, size: 0.6 } as const;
 import { CLOSING_WALL } from '../logic/museum-9-placards';
 import { createMuseumSafety } from './museum-safety';
 import { DECK_LIFT } from '../logic/museum-5-gallery';
@@ -1590,18 +1596,74 @@ export function createMuseumHall(
   arrows.position.y = onDeck;
   plan.add(arrows);
 
-  // Its two corridors (layout C), in its own coordinates: the kit's
-  // section, painted as the halls are; the hall beyond builds the same.
-  const corridorPaint = new MeshStandardMaterial({
-    color: MUSEUM_WALL_GREY,
-    roughness: 0.95,
-    // The kit's turns are lathed, their faces outward for one hand.
-    side: DoubleSide,
+  // Its two corridors (layout C), in its own coordinates: plain board-
+  // marked concrete, square in section, a hard corner (the owner,
+  // 2026-10-30: "big and industrial ... a little bit more brutalist"),
+  // on the halls' polished floor; the hall beyond builds the same.
+  const concrete = new MeshStandardMaterial({
+    color: '#a3a19c',
+    roughness: 0.92,
   });
-  disposables.push(corridorPaint);
+  disposables.push(concrete);
+  const corridorBulb = new MeshBasicMaterial({
+    color: new Color(2.2, 2.0, 1.7),
+  });
+  corridorBulb.toneMapped = false;
+  disposables.push(corridorBulb);
+  const pendantSets: ReturnType<typeof createPendantLamps>[] = [];
   for (const c of hallCorridors(id)) {
-    const run = createCorridorRun(c.placed, corridorPaint);
+    const run = new Group();
     run.name = `Corridor to ${c.to}`;
+    const H = CORRIDOR.height;
+    const slabs: BufferGeometry[] = [];
+    for (const w of c.walls) {
+      const g = new BoxGeometry(w.maxX - w.minX, H, w.maxZ - w.minZ);
+      g.translate((w.minX + w.maxX) / 2, H / 2, (w.minZ + w.maxZ) / 2);
+      slabs.push(g);
+    }
+    // The ceiling, a slab over each leg, the corner under the first.
+    for (const f of c.floor) {
+      const g = new BoxGeometry(f.maxX - f.minX, 0.3, f.maxZ - f.minZ);
+      g.translate((f.minX + f.maxX) / 2, H + 0.15, (f.minZ + f.maxZ) / 2);
+      slabs.push(g);
+    }
+    run.add(new Mesh(mergeGeometries(slabs), concrete));
+    for (const g of slabs) g.dispose();
+    const floors = c.floor.map((f) => {
+      const g = new PlaneGeometry(f.maxX - f.minX, f.maxZ - f.minZ);
+      g.rotateX(-Math.PI / 2);
+      g.translate((f.minX + f.maxX) / 2, 0.002, (f.minZ + f.maxZ) / 2);
+      // Laid from the museum's origin, as the halls' floors are.
+      const pos = g.attributes.position;
+      const uv = g.attributes.uv;
+      for (let k = 0; k < pos.count; k++)
+        uv.setXY(
+          k,
+          (pos.getX(k) + o.x) / FLOOR_TILE,
+          -(pos.getZ(k) + o.z) / FLOOR_TILE,
+        );
+      return g;
+    });
+    run.add(new Mesh(mergeGeometries(floors), m.floor));
+    for (const g of floors) g.dispose();
+    // A pendant in each leg (the owner, 2026-10-30: "a pair of industrial
+    // lights in each, one in each leg"), the Encabulator's, on its chain
+    // from the ceiling, each with a warm light of short reach.
+    const places = c.floor.map((f) => ({
+      x: (f.minX + f.maxX) / 2,
+      z: (f.minZ + f.maxZ) / 2,
+      y: CORRIDOR_LAMP.rim,
+      top: H,
+      size: CORRIDOR_LAMP.size,
+    }));
+    const lamps = createPendantLamps(places, corridorBulb);
+    run.add(lamps.group);
+    pendantSets.push(lamps);
+    for (const p of places) {
+      const light = new PointLight('#ffd9a8', 6, 9, 2);
+      light.position.set(p.x, p.y - 0.2, p.z);
+      run.add(light);
+    }
     group.add(run);
   }
 
@@ -1968,7 +2030,8 @@ export function createMuseumHall(
       false,
       { glossy: BRAND.colours.accent, shadow: true },
     );
-    const lift = a.kind === 'door' ? 0.55 : 0.95;
+    // Over the exit box straight over the archway (`EXIT_OVER_ARCH`).
+    const lift = a.kind === 'door' ? 0.55 : 1.25;
     // Over its doorway, but slid along towards the wall's middle as far as
     // it must to clear the corner: a corridor's doorway stands near its
     // wall's end (layout C).
@@ -2035,6 +2098,7 @@ export function createMuseumHall(
       for (const tex of textures) tex.dispose();
       safety.dispose();
       projector?.dispose();
+      for (const lamps of pendantSets) lamps.dispose();
     },
   };
 }

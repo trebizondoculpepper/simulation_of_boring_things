@@ -146,8 +146,14 @@ export function exitArch(id: MuseumHallId): MuseumArch | null {
     : (hallArches(id).find((a) => a.to === to) ?? null);
 }
 
-/** Hall 0's fire exit door, to the stair down: on its west wall, by the doorway into Hall 1. */
-export const FIRE_EXIT = { wall: 'west' as const, along: -3.2, w: 1.1, h: 2.1 };
+/**
+ * Hall 0's fire exit door, to the stair down: on its north wall, opposite
+ * the PLANTROOMS title wall, with the lift (the owner, 2026-10-30: "the
+ * door to room one is much too close to the fire exit ... put ... the fire
+ * exit, and the elevator on the same side"), east of its middle; along
+ * the wall from the hall's middle.
+ */
+export const FIRE_EXIT = { wall: 'north' as const, along: 1.4, w: 1.1, h: 2.1 };
 
 /**
  * Where the lift will be (the owner, 2026-10-28; not built yet): a large
@@ -156,18 +162,18 @@ export const FIRE_EXIT = { wall: 'west' as const, along: -3.2, w: 1.1, h: 2.1 };
  * (the museum), big enough for two roll cages (about 0.8 × 0.7 × 1.7 m
  * each) and a person standing aside: about 2,500 kg, its car about 2.0 m
  * wide and 2.7 m deep (BS EN 81-20's goods and passenger-goods sizes),
- * its landing doors about 2.0 m clear. Reserved on Hall 0's west wall,
- * the fire exit's (the owner, 2026-10-30; it was on the east wall, beside
- * the doorway from Hall 9), at its south end, clear of the painted pool,
- * the fire exit, the defibrillator and the first-aid kit: along the wall
- * from Hall 0's middle, the wall kept clear for its doors and their
+ * its landing doors about 2.0 m clear. Reserved on Hall 0's north wall,
+ * the fire exit's (the owner, 2026-10-30, layout C: it was on the west
+ * wall, by the doorway into Hall 1), west of it, clear of the painted
+ * pool, the fire exit, the defibrillator and the first-aid kit: along the
+ * wall from Hall 0's middle, the wall kept clear for its doors and their
  * surround, and the landing zone kept clear in front of it. The shaft
- * stands outside the west wall. The freight lift's landing is built here
+ * stands outside the north wall. The freight lift's landing is built here
  * (`hallLiftOpening` in `museum-plan.ts`).
  */
 export const LIFT_RESERVED = {
-  wall: 'west' as const,
-  along: 4.4,
+  wall: 'north' as const,
+  along: -4.0,
   w: 3.2,
   depth: 2.5,
   doorClear: 2.0,
@@ -303,6 +309,9 @@ export const FIRE_POINT_HALLS: readonly MuseumHallId[] = [];
 export const FIRE_POINT_BOARD = { w: 0.7, depth: 0.45 };
 
 /** Everything in a room's safety and services layer. */
+/** An exit box's middle over its archway's crown, m. */
+export const EXIT_OVER_ARCH = 0.3;
+
 export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
   const out: SafetyFitting[] = [];
   // None in a black box: the owner wants them very simple (2026-10-29).
@@ -336,26 +345,29 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
   if (exit) {
     const wall = wallOf(id, exit);
     const u = uOf(exit);
-    // Whichever side of the doorway has wall for it: a doorway stands near
-    // its wall's end (layout C), and a wall's middle may be kept (Hall 9's
-    // closing words); towards the middle if both.
+    // The maintained exit box straight over the archway (the owner,
+    // 2026-10-30: no windows over the doorways, so the signs go over
+    // them), arrow straight on.
+    const top = exit.top + EXIT_OVER_ARCH;
+    taken.push({
+      wall,
+      u0: u - 0.3,
+      u1: u + 0.3,
+      y0: top - 0.2,
+      y1: top + 0.2,
+    });
+    put('exit-box', wall, u, top, { arrow: 'up' });
+    // Beside the opening: towards the wall's middle unless there is no
+    // room there (a doorway stands near its wall's end, layout C).
     const middle = Math.sign((wall.from + wall.to) / 2 - u) || 1;
     const fits = (side: number) =>
-      !blocked(id, wall, u + side * (exit.w / 2 + 0.55), 0.2, 2.2, 2.6, taken);
-    const inward = fits(middle) || !fits(-middle) ? middle : -middle;
-    // The maintained exit box beside the opening, arrow straight on, at 2.4 m.
-    put(
-      'exit-box',
-      wall,
-      free(wall, u + inward * (exit.w / 2 + 0.55), 0.2, 2.2, 2.6),
-      HEIGHTS.exitSign,
-      { arrow: 'up' },
-    );
-    // The call point at 1.4 m, on the other side of the opening.
+      !blocked(id, wall, u + side * (exit.w / 2 + 0.45), 0.06, 1.3, 1.5, taken);
+    const inward = fits(-middle) || !fits(middle) ? -middle : middle;
+    // The call point at 1.4 m, beside the opening.
     put(
       'call-point',
       wall,
-      free(wall, u - inward * (exit.w / 2 + 0.45), 0.06, 1.3, 1.5),
+      free(wall, u + inward * (exit.w / 2 + 0.45), 0.06, 1.3, 1.5),
       HEIGHTS.callPoint,
     );
   }
@@ -480,43 +492,71 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
 
   // ---- Hall 0: the way out, the lift's place, medical, notices ----
   if (welcome) {
-    const west = walls.find((w) => w.side === FIRE_EXIT.wall)!;
-    const doorU = o.z + FIRE_EXIT.along;
-    put('fire-exit-door', west, doorU, 0);
-    put('final-exit-sign', west, doorU, FIRE_EXIT.h + 0.3);
+    const exitWall = walls.find((w) => w.side === FIRE_EXIT.wall)!;
+    const doorU = (exitWall.axis === 'x' ? o.x : o.z) + FIRE_EXIT.along;
+    put('fire-exit-door', exitWall, doorU, 0);
+    put('final-exit-sign', exitWall, doorU, FIRE_EXIT.h + 0.3);
     // On the door's leaf, at eye height.
-    put('door-keep-shut', west, doorU, 1.8);
-    put('bulkhead', west, doorU, FIRE_EXIT.h + 0.62);
-    put('ground-floor-sign', west, doorU + FIRE_EXIT.w / 2 + 0.75, 1.7);
-    put('call-point', west, doorU - FIRE_EXIT.w / 2 - 0.35, HEIGHTS.callPoint);
+    put('door-keep-shut', exitWall, doorU, 1.8);
+    put('bulkhead', exitWall, doorU, FIRE_EXIT.h + 0.62);
+    put('ground-floor-sign', exitWall, doorU + FIRE_EXIT.w / 2 + 0.75, 1.7);
+    put(
+      'call-point',
+      exitWall,
+      doorU - FIRE_EXIT.w / 2 - 0.35,
+      HEIGHTS.callPoint,
+    );
     // Medical, by the fire exit: the defibrillator, the first-aid kit and its sign.
-    put('aed', west, doorU + 3.6, HEIGHTS.aed);
-    put('first-aid', west, doorU + 4.8, HEIGHTS.notice);
+    put('aed', exitWall, doorU + 3.6, HEIGHTS.aed);
+    put('first-aid', exitWall, doorU + 4.8, HEIGHTS.notice);
     // Hung inside the doorway into Hall 1, back to back: to those coming
-    // in from the museum, the fire exit on their right; to those by the
-    // pool, ahead and to the left.
+    // in from the museum, the fire exit on their left; to those by the
+    // pool, ahead and to the right.
+    const toHall1 = hallArches(id)[0];
+    const hang = {
+      x: o.x + toHall1.frame.x + toHall1.into[0] * 1.2,
+      z: o.z + toHall1.frame.z + toHall1.into[1] * 1.2,
+    };
+    const facingIn = Math.atan2(toHall1.into[0], toHall1.into[1]);
     for (const [yaw, arrow] of [
-      [Math.PI, 'right'],
-      [0, 'up-left'],
+      [facingIn + Math.PI, 'left'],
+      [facingIn, 'up-right'],
     ] as const)
       out.push({
         kind: 'exit-hanging',
         room: id,
-        x: o.x - 3.2,
+        x: hang.x,
         y: 2.6,
-        z: o.z - 5.2,
+        z: hang.z,
         yaw,
         arrow,
       });
-    // Notices by the doorway into the museum: CCTV, hearing loop, occupancy, wayfinding.
-    const north = walls.find((w) => w.side === 'north')!;
-    const door = hallArches(id)[0];
+    // Notices by the doorway into the museum, on its wall: CCTV, hearing
+    // loop, occupancy, wayfinding.
+    const door = toHall1;
+    const doorWall = wallOf(id, door);
     const du = uOf(door);
-    put('occupancy', north, du - door.w / 2 - 0.55, HEIGHTS.notice);
-    put('cctv-notice', north, du - door.w / 2 - 1.15, HEIGHTS.notice);
-    put('hearing-loop', north, du + door.w / 2 + 0.55, HEIGHTS.notice);
-    put('wayfinding', north, du - door.w / 2 - 2.6, 1.9);
-    put('sounder', north, du + door.w / 2 + 1.6, HEIGHTS.sounder);
+    const inward = Math.sign((doorWall.from + doorWall.to) / 2 - du) || 1;
+    put(
+      'occupancy',
+      doorWall,
+      du + inward * (door.w / 2 + 0.55),
+      HEIGHTS.notice,
+    );
+    put(
+      'cctv-notice',
+      doorWall,
+      du + inward * (door.w / 2 + 1.15),
+      HEIGHTS.notice,
+    );
+    put(
+      'hearing-loop',
+      doorWall,
+      du + inward * (door.w / 2 + 1.75),
+      HEIGHTS.notice,
+    );
+    put('wayfinding', doorWall, du + inward * (door.w / 2 + 3.2), 1.9);
+    put('sounder', doorWall, du + inward * (door.w / 2 + 1.6), HEIGHTS.sounder);
     // The tiled ceiling's own detectors and sprinklers.
     for (const [lx, lz] of [
       [-4, -2],

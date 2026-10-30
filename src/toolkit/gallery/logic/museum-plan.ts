@@ -3,19 +3,11 @@ import { LIFT_DOOR } from './lift-doorway';
 import type { LiftPlace } from './lift-doorway';
 import { MUSEUM_EXHIBITION } from './museum-brand';
 import {
-  CORRIDOR_HEIGHT,
-  CORRIDOR_WIDTH,
-  corridorFootprints,
-  layoutCorridor,
-} from '../../components/architectural/logic/corridor-path';
-import type {
-  Heading as CorridorHeading,
-  PlacedPiece,
-} from '../../components/architectural/logic/corridor-path';
-import {
+  CORRIDOR,
   HALL_PLACES,
   LAYOUT_CORRIDORS,
   LAYOUT_WALL,
+  corridorShape,
   layoutBounds,
 } from './museum-layout';
 import type { LayoutCorridor } from './museum-layout';
@@ -512,9 +504,9 @@ function doorOf(
   return {
     to: hallId(onward ? c.b : c.a),
     onward,
-    kind: 'door',
-    w: CORRIDOR_WIDTH,
-    top: CORRIDOR_HEIGHT,
+    kind: 'arch',
+    w: MUSEUM_ARCH.w,
+    top: ARCH_CROWN,
     axis: ox === 0 ? 'x' : 'z',
     at,
     into,
@@ -537,32 +529,28 @@ export function hallArches(id: MuseumHallId): MuseumArch[] {
 }
 
 /**
- * A hall's corridor to a neighbour, in the hall's own coordinates: the
- * kit's pieces laid from this hall's doorway (`corridor-path.ts`), and
- * the hand-over, the line across it at its turn where the visitor passes
- * to the other hall's scene: its middle and the way across it towards
- * the other hall. Both halls build the same corridor, so nothing moves at
- * the hand-over (the pool loop's way, `pool-loop.ts`).
+ * A hall's corridor to a neighbour, in the hall's own coordinates: its
+ * path (the middle of its floor from this hall's doorway, on its wall's
+ * outside face, to its corner and on to the other hall's), its walls and
+ * floor (`corridorShape`), and its hand-over, the line across it at its
+ * corner where the visitor passes to the other hall's scene: its middle
+ * and the way across it towards the other hall. Both halls build the same
+ * corridor, so nothing moves at the hand-over.
  */
 export interface HallCorridor {
   to: MuseumHallId;
   onward: boolean;
-  placed: PlacedPiece[];
+  path: readonly [
+    { x: number; z: number },
+    { x: number; z: number },
+    { x: number; z: number },
+  ];
+  walls: Footprint[];
+  floor: Footprint[];
   handOver: { x: number; z: number; toward: readonly [number, number] };
   /** As `door-joins.ts` has it: the hand-over's middle, +z into this hall's side of it. */
   frame: { x: number; z: number; yaw: number };
 }
-
-const HEADINGS: readonly (readonly [number, number])[] = [
-  [1, 0],
-  [0, -1],
-  [-1, 0],
-  [0, 1],
-];
-const headingOf = (v: readonly [number, number]) =>
-  HEADINGS.findIndex(
-    (h) => Math.abs(h[0] - v[0]) < 1e-9 && Math.abs(h[1] - v[1]) < 1e-9,
-  ) as CorridorHeading;
 
 export function hallCorridors(id: MuseumHallId): HallCorridor[] {
   const n = hallNumber(id);
@@ -572,43 +560,27 @@ export function hallCorridors(id: MuseumHallId): HallCorridor[] {
     { c: LAYOUT_CORRIDORS[n], onward: true },
     { c: LAYOUT_CORRIDORS[(n - 1 + k) % k], onward: false },
   ].map(({ c, onward }) => {
-    // Laid in the museum from a; from b, the same pieces reversed, turns swapped.
-    const { end } = layoutCorridor(c.pieces, c.start);
-    const pieces = onward
-      ? c.pieces
-      : [...c.pieces]
-          .reverse()
-          .map((p) =>
-            p.kind === 'left'
-              ? { kind: 'right' as const }
-              : p.kind === 'right'
-                ? { kind: 'left' as const }
-                : p,
-          );
-    const back = HEADINGS[(end.heading + 2) % 4];
-    const start = onward
-      ? { x: c.start.x, z: c.start.z, v: HEADINGS[c.start.heading] }
-      : { x: end.x, z: end.z, v: back };
-    const s = ownPoint(id, start.x, start.z);
-    const placed = layoutCorridor(pieces, {
-      x: s.x - o.x,
-      z: s.z - o.z,
-      heading: headingOf(ownDirection(id, start.v)),
-    }).placed;
-    const ho = ownPoint(id, c.handOver.x, c.handOver.z);
+    const local = (q: { x: number; z: number }) => {
+      const p = ownPoint(id, q.x, q.z);
+      return { x: p.x - o.x, z: p.z - o.z };
+    };
+    const [a, m, b] = c.path.map(local);
+    const path = (onward ? [a, m, b] : [b, m, a]) as HallCorridor['path'];
+    const { walls, floor } = corridorShape(path);
+    const ho = local(c.handOver);
     const tb = ownDirection(id, c.handOver.towardB);
-    const toward: readonly [number, number] = onward ? tb : [-tb[0], -tb[1]];
+    const toward: readonly [number, number] = onward
+      ? tb
+      : [-tb[0] + 0, -tb[1] + 0];
     const into: readonly [number, number] = [-toward[0], -toward[1]];
     return {
       to: hallId(onward ? c.b : c.a),
       onward,
-      placed,
-      handOver: { x: ho.x - o.x, z: ho.z - o.z, toward },
-      frame: {
-        x: ho.x - o.x,
-        z: ho.z - o.z,
-        yaw: Math.atan2(into[0], into[1]),
-      },
+      path,
+      walls,
+      floor,
+      handOver: { ...ho, toward },
+      frame: { ...ho, yaw: Math.atan2(into[0], into[1]) },
     };
   });
 }
@@ -857,10 +829,10 @@ export function hallSolids(
   // Its corridors' walls; and across each, at its hand-over, a stop while
   // the hall beyond is not yet seen, so the visitor waits there until it is.
   for (const c of hallCorridors(id)) {
-    out.push(...corridorFootprints(c.placed));
+    out.push(...c.walls);
     if (seen[c.to]) continue;
     const { x, z, toward } = c.handOver;
-    const half = CORRIDOR_WIDTH / 2 + 0.3;
+    const half = CORRIDOR.width / 2 + 0.3;
     const a = { x: x + toward[0] * 0.05, z: z + toward[1] * 0.05 };
     const b = { x: x + toward[0] * 0.45, z: z + toward[1] * 0.45 };
     const across = [-toward[1], toward[0]];
@@ -1036,7 +1008,7 @@ export function crossedInto(
   for (const c of hallCorridors(id)) {
     const p = handOverLocal(c, was);
     const q = handOverLocal(c, now);
-    if (Math.abs(q.side) >= CORRIDOR_WIDTH / 2 + 0.2) continue;
+    if (Math.abs(q.side) >= CORRIDOR.width / 2 + 0.2) continue;
     if (p.ahead < 0 && q.ahead >= 0) return c.to;
   }
   return null;
@@ -1117,21 +1089,20 @@ export function ringNeighbours(id: MuseumHallId): [MuseumHallId, MuseumHallId] {
 }
 
 /**
- * The freight lift's floor-4 landing (mission 108): on Hall 0's west wall,
- * the fire exit's (the owner, 2026-10-30; it was on the east wall, beside
- * the doorway from Hall 9), where its place is kept clear (`LIFT_RESERVED`
- * in `museum-safety.ts`, 4.4 m south of the wall's middle, past the
- * defibrillator and the first-aid kit), its frame's opening knocked
- * through the wall, square-headed. In the
- * museum's plan: the wall, the opening's middle along it (`u`), its width
- * and head; null for every other hall.
+ * The freight lift's floor-4 landing (mission 108): on Hall 0's north
+ * wall, with the fire exit (the owner, 2026-10-30, layout C: it was on the
+ * west wall, now the doorway into Hall 1's), 4 m west of the wall's
+ * middle, where its place is kept clear (`LIFT_RESERVED` in
+ * `museum-safety.ts`), its frame's opening knocked through the wall,
+ * square-headed. In the museum's plan: the wall, the opening's middle
+ * along it (`u`), its width and head; null for every other hall.
  */
 export function hallLiftOpening(id: MuseumHallId) {
   if (id !== 'museum0') return null;
-  const wall = hallWalls(id).find((w) => w.side === 'west')!;
+  const wall = hallWalls(id).find((w) => w.side === 'north')!;
   return {
     wall,
-    u: (wall.from + wall.to) / 2 + 4.4,
+    u: (wall.from + wall.to) / 2 - 4.0,
     w: LIFT_DOOR.clear + 2 * LIFT_DOOR.frame,
     top: LIFT_DOOR.height + LIFT_DOOR.frame,
   };

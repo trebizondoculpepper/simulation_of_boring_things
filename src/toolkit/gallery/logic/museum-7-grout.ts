@@ -269,7 +269,13 @@ export const HALL7 = (() => {
   };
 })();
 
-/** The plinths as first set out in the 15.4 × 13.4 m hall (107k), scaled to its size now. */
+/** A coordinate set out in a hall `was` half wide, in one `now` half wide: as far from the wall if near it, else scaled. */
+const grown = (v: number, was: number, now: number) =>
+  was - Math.abs(v) < 1.5
+    ? Math.sign(v) * (now - (was - Math.abs(v)))
+    : (v * now) / was;
+
+/** The plinths as first set out in the 15.4 × 13.4 m hall (107k), moved out with its walls. */
 const SET_OUT: Readonly<
   Record<number, { x: number; z: number; facing: Facing }>
 > = {
@@ -289,7 +295,7 @@ export const PLACES: Readonly<
 > = Object.fromEntries(
   Object.entries(SET_OUT).map(([n, p]) => [
     n,
-    { ...p, x: (p.x * HALL7.halfX) / 7.7, z: (p.z * HALL7.halfZ) / 6.7 },
+    { ...p, x: grown(p.x, 7.7, HALL7.halfX), z: grown(p.z, 6.7, HALL7.halfZ) },
   ]),
 );
 
