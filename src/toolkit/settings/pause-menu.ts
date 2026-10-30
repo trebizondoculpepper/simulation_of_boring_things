@@ -8,6 +8,7 @@ import { RANGES, choosePreset, renderScale } from './logic/settings';
 import {
   ASPECT_FIT_LABELS,
   EFFECT_LABELS,
+  AO_MODE_LABELS,
   GRAPHICS_PRESETS,
   RESOLUTION_LABELS,
 } from './logic/graphics';
@@ -297,7 +298,7 @@ export function createPauseMenu(actions: PauseMenuActions) {
   const presetNote = document.createElement('p');
   presetNote.className = 'settings-note';
   presetNote.textContent =
-    'High is the full look. Medium draws fewer pixels, without ambient occlusion or antialiasing, with lighter bloom and smaller shadows; Low draws fewer still, without shadows, bloom, film grain or the pool’s refraction either. A preset sets the choices below, which you can then change one by one; antialiasing changes from the next room you enter.';
+    'High is the full look. Medium draws fewer pixels, without antialiasing, with lighter bloom and smaller shadows; Low draws fewer still, without shadows, bloom, film grain, ambient occlusion or the pool’s refraction either. Ambient occlusion is One-time by default: baked once per room in the background, then faded in; Live draws it every frame, at a cost. A preset sets the choices below, which you can then change one by one; antialiasing changes from the next room you enter.';
   pages.get('Graphics')!.append(presetNote);
   slider('Graphics', 'renderLevel', 'Render quality', (v) =>
     v === 0 ? '1:1' : `1:${(1 / renderScale(v)).toFixed(2)}`,
@@ -311,9 +312,7 @@ export function createPauseMenu(actions: PauseMenuActions) {
   );
   // The costlier effects, each off or at a quality, and the resolution cap
   // (the owner, 2026-10-28).
-  const choice = <
-    K extends 'ambientOcclusion' | 'bloom' | 'resolutionCap' | 'aspectFit',
-  >(
+  const choice = <K extends 'aoMode' | 'bloom' | 'resolutionCap' | 'aspectFit'>(
     key: K,
     label: string,
     options: Readonly<Record<Settings[K], string>>,
@@ -334,7 +333,9 @@ export function createPauseMenu(actions: PauseMenuActions) {
       select.value = s[key];
     });
   };
-  choice('ambientOcclusion', 'Ambient occlusion', EFFECT_LABELS);
+  // LIVE, ONE-TIME (baked) or OFF (the owner, 2026-10-30); LIVE's quality
+  // is the preset's.
+  choice('aoMode', 'Ambient occlusion', AO_MODE_LABELS);
   choice('bloom', 'Bloom and glow', EFFECT_LABELS);
   const film = document.createElement('input');
   film.type = 'checkbox';

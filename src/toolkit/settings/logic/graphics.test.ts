@@ -98,8 +98,7 @@ describe('the costlier effects’ settings', () => {
   });
 
   it('keep today’s look for an old save, and refuse nonsense', () => {
-    // No live ambient occlusion unless chosen (the owner, 2026-10-30).
-    expect(cleanSettings({ renderLevel: 2 }).ambientOcclusion).toBe('off');
+    expect(cleanSettings({ renderLevel: 2 }).ambientOcclusion).toBe('high');
     expect(cleanSettings({}).bloom).toBe('high');
     expect(cleanSettings({}).filmEffects).toBe(true);
     expect(cleanSettings({}).resolutionCap).toBe('1024x768');
@@ -175,7 +174,7 @@ describe('graphics presets', () => {
       shadows: false,
     });
     expect(PRESET_CHOICES.low).toMatchObject({
-      ambientOcclusion: 'off',
+      aoMode: 'off',
       bloom: 'off',
       filmEffects: false,
     });

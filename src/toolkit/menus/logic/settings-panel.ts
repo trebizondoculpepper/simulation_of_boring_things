@@ -4,6 +4,8 @@ import type { Settings } from '../../settings/logic/settings';
 import {
   ASPECT_FITS,
   ASPECT_FIT_LCD,
+  AO_MODES,
+  AO_MODE_LCD,
   GRAPHICS_PRESETS,
   RESOLUTION_CAPS,
   RESOLUTION_LCD,
@@ -36,7 +38,7 @@ export type KnobSetting = 'volume' | 'renderLevel' | 'fov' | 'sensitivity';
 export type SelectorSetting = 'onScreenControls' | 'graphics';
 
 /** A setting a rotary switch with an LCD steps through. */
-export type SwitchSetting = 'resolutionCap' | 'aspectFit';
+export type SwitchSetting = 'resolutionCap' | 'aspectFit' | 'aoMode';
 
 /** Each switch's positions, left to right, and how its LCD names each. */
 export const SWITCHES: {
@@ -47,6 +49,8 @@ export const SWITCHES: {
 } = {
   resolutionCap: { values: RESOLUTION_CAPS, lcd: RESOLUTION_LCD },
   aspectFit: { values: ASPECT_FITS, lcd: ASPECT_FIT_LCD },
+  // LIVE, ONE-TIME (baked) and OFF, left to right (the owner, 2026-10-30).
+  aoMode: { values: AO_MODES, lcd: AO_MODE_LCD },
 };
 
 /** A push button's action, for the app to supply. */
@@ -94,7 +98,7 @@ export type PanelItem =
    */
   | {
       kind: 'switch';
-      id: 'display';
+      id: 'display' | 'lighting';
       legend: string;
       switches: readonly { id: SwitchSetting; legend: string }[];
     }
@@ -366,6 +370,12 @@ export function settingsPanel(offers: PanelOffers): PanelZone[] {
             { id: 'resolutionCap', legend: 'MAX RESOLUTION' },
             { id: 'aspectFit', legend: 'SCALING MODE' },
           ],
+        },
+        {
+          kind: 'switch',
+          id: 'lighting',
+          legend: 'LIGHTING',
+          switches: [{ id: 'aoMode', legend: 'AMBIENT OCCLUSION' }],
         },
       ],
     },

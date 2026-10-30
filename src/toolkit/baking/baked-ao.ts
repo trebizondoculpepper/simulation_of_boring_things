@@ -43,6 +43,11 @@ import {
   mayBake,
 } from './logic/ao-cache-policy';
 import { loadBake, storeBake } from './ao-cache';
+import { effect } from '@preact/signals-core';
+import { settings as playerSettings } from '../settings/settings-store';
+
+/** Whether the player has ONE-TIME (baked) ambient occlusion chosen. */
+const baking = () => playerSettings.value.aoMode === 'bake';
 import type {
   BakeMeshPayload,
   BakeReply,
@@ -112,7 +117,8 @@ const send = (message: BakeRequest, transfer: Transferable[] = []) =>
   startWorker().postMessage(message, transfer);
 
 function pump() {
-  if (active) return;
+  // Not ONE-TIME: queued bakes wait, none is started.
+  if (active || !baking()) return;
   const item = queue.take();
   if (!item) return;
   const bake = pending.get(item.hash);
@@ -130,12 +136,18 @@ function pump() {
 
 /** Pause or resume the worker by the frame budget and hand-overs. */
 function throttle() {
-  const allowed = mayBake(performance.now(), pausedUntil, frames);
+  const allowed = baking() && mayBake(performance.now(), pausedUntil, frames);
   if (!worker) return;
   if (allowed === !workerPaused) return;
   workerPaused = !allowed;
   send({ type: allowed ? 'resume' : 'pause' });
 }
+// The mode changed in the menu: a running bake pauses or goes on, a queued one starts.
+effect(() => {
+  void playerSettings.value.aoMode;
+  throttle();
+  pump();
+});
 setInterval(() => {
   if (active) throttle();
 }, 250);
@@ -372,16 +384,30 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
   const fade = () => {
     raf = 0;
     if (disposed) return;
-    const target = shown ? 1 : 0;
+    const on = shown && baking();
+    const target = on ? 1 : 0;
     const t = Math.min(
       1,
       (performance.now() - fadeFrom) / (BAKED_AO_FADE * 1000),
     );
-    strength.value = shown ? t : 0;
+    strength.value = on ? t : 0;
     if (strength.value !== target) raf = requestAnimationFrame(fade);
   };
+  // LIVE or OFF in the menu: the bake goes at once; back to ONE-TIME, it fades in.
+  let applied = false;
+  let wasBaking = baking();
+  const stopFollowing = effect(() => {
+    const now = playerSettings.value.aoMode === 'bake';
+    if (now === wasBaking) return;
+    wasBaking = now;
+    if (!applied) return;
+    fadeFrom = performance.now();
+    strength.value = 0;
+    if (!raf) raf = requestAnimationFrame(fade);
+  });
   const apply = (ao: Uint8Array[]) => {
     if (disposed) return false;
+    applied = true;
     if (ao.length !== receivers.length) return false;
     receivers.forEach((mesh, i) => {
       const g = mesh.geometry as BufferGeometry;
@@ -484,6 +510,7 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
     },
     dispose() {
       disposed = true;
+      stopFollowing();
       const at = shownBakes.indexOf(handle);
       if (at >= 0) shownBakes.splice(at, 1);
       if (raf) cancelAnimationFrame(raf);

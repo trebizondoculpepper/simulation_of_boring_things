@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   DEFAULT_SETTINGS,
   RANGES,
+  choosePreset,
   cleanSettings,
   renderScale,
 } from './settings';
@@ -21,6 +22,7 @@ describe('the player’s settings', () => {
       renderLevel: 6,
       onScreenControls: 'never',
       overlayScale: 1.75,
+      aoMode: 'live',
       ambientOcclusion: 'medium',
       bloom: 'off',
       filmEffects: false,
@@ -76,5 +78,34 @@ describe('overlay scale', () => {
     expect(cleanSettings({ overlayScale: 1.5 }).overlayScale).toBe(1.5);
     expect(cleanSettings({ overlayScale: 9 }).overlayScale).toBe(2.5);
     expect(cleanSettings({ overlayScale: 'big' }).overlayScale).toBe(1);
+  });
+});
+
+describe('the ambient occlusion mode (the owner, 2026-10-30)', () => {
+  it('is ONE-TIME (baked) by default', () => {
+    expect(cleanSettings(null).aoMode).toBe('bake');
+  });
+  it('turns an old save’s live level into ONE-TIME, and keeps an old off', () => {
+    for (const level of ['low', 'medium', 'high'])
+      expect(cleanSettings({ ambientOcclusion: level }).aoMode).toBe('bake');
+    expect(cleanSettings({ ambientOcclusion: 'off' }).aoMode).toBe('off');
+  });
+  it('keeps a chosen mode, and refuses nonsense', () => {
+    expect(cleanSettings({ aoMode: 'live' }).aoMode).toBe('live');
+    expect(
+      cleanSettings({ aoMode: 'off', ambientOcclusion: 'high' }).aoMode,
+    ).toBe('off');
+    expect(cleanSettings({ aoMode: 'ultra' }).aoMode).toBe('bake');
+  });
+  it('is set by a preset: OFF on Low, ONE-TIME otherwise, LIVE’s quality with it', () => {
+    expect(choosePreset('low')).toMatchObject({
+      aoMode: 'off',
+      ambientOcclusion: 'low',
+    });
+    expect(choosePreset('medium')).toMatchObject({ aoMode: 'bake' });
+    expect(choosePreset('high')).toMatchObject({
+      aoMode: 'bake',
+      ambientOcclusion: 'high',
+    });
   });
 });

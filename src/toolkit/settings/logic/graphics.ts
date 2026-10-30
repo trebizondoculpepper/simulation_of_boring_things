@@ -233,9 +233,32 @@ export const GRAPHICS_PRESETS: readonly GraphicsPreset[] = [
 
 export const DEFAULT_GRAPHICS: GraphicsPreset = 'high';
 
+/**
+ * How ambient occlusion is drawn (the owner, 2026-10-30): LIVE, screen-space
+ * GTAO every frame at `ambientOcclusion`'s quality; ONE-TIME (`bake`), the
+ * baked per-vertex occlusion, faded in once ready; or OFF, neither.
+ */
+export type AoMode = 'live' | 'bake' | 'off';
+export const AO_MODES: readonly AoMode[] = ['live', 'bake', 'off'];
+export const AO_MODE_LABELS: Record<AoMode, string> = {
+  live: 'Live',
+  bake: 'One-time',
+  off: 'Off',
+};
+
+/** The settings panel's AMBIENT OCCLUSION switch: each mode's LCD lines. */
+export const AO_MODE_LCD: Record<AoMode, readonly [string, string]> = {
+  live: ['LIVE', 'EVERY FRAME'],
+  bake: ['ONE-TIME', 'BAKED, KEPT'],
+  off: ['OFF', 'NONE'],
+};
+
 /** What choosing a preset writes into the player's own settings. */
 export interface PresetChoices {
   renderLevel: number;
+  /** Ambient occlusion's mode: ONE-TIME (baked), or OFF on Low (the owner, 2026-10-30). */
+  aoMode: AoMode;
+  /** LIVE ambient occlusion's quality, should LIVE be chosen. */
   ambientOcclusion: EffectLevel;
   bloom: EffectLevel;
   filmEffects: boolean;
@@ -258,20 +281,22 @@ export interface GraphicsOptions {
 export const PRESET_CHOICES: Record<GraphicsPreset, PresetChoices> = {
   low: {
     renderLevel: 6,
-    ambientOcclusion: 'off',
+    aoMode: 'off',
+    ambientOcclusion: 'low',
     bloom: 'off',
     filmEffects: false,
   },
   medium: {
     renderLevel: 3,
-    ambientOcclusion: 'off',
+    aoMode: 'bake',
+    ambientOcclusion: 'medium',
     bloom: 'medium',
     filmEffects: true,
   },
   high: {
     renderLevel: 0,
-    // Live GTAO is off in every preset (the owner, 2026-10-30): baked instead.
-    ambientOcclusion: 'off',
+    aoMode: 'bake',
+    ambientOcclusion: 'high',
     bloom: 'high',
     filmEffects: true,
   },

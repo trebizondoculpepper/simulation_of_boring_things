@@ -216,7 +216,8 @@ export function followEffectSettings(
     const s = settings.value;
     if (ao) {
       const at = ambientOcclusionAt(s.ambientOcclusion, aoSamples);
-      aoWanted = at.enabled;
+      // Only in LIVE mode (the owner, 2026-10-30): ONE-TIME is baked, OFF is none.
+      aoWanted = at.enabled && s.aoMode === 'live';
       ao.enabled = aoWanted && aoAllowed;
       if (at.enabled && at.samples !== samples) {
         samples = at.samples;

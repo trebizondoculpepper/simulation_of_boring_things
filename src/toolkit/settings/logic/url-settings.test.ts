@@ -33,7 +33,7 @@ describe('settings from the address', () => {
     expect(settingsFromUrl('?graphics=low')).toMatchObject({
       graphics: 'low',
       renderLevel: 6,
-      ambientOcclusion: 'off',
+      aoMode: 'off',
       bloom: 'off',
     });
     expect(settingsFromUrl('?graphics=Medium')).toEqual(choosePreset('medium'));

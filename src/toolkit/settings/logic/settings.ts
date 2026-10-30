@@ -3,11 +3,13 @@ import {
   DEFAULT_GRAPHICS,
   EFFECT_LEVELS,
   PRESET_CHOICES,
+  AO_MODES,
   parsePreset,
   parseResolutionCap,
   ASPECT_FITS,
 } from './graphics';
 import type {
+  AoMode,
   AspectFit,
   EffectLevel,
   GraphicsPreset,
@@ -39,7 +41,9 @@ export interface Settings {
    * for recording on a high-resolution screen (the owner, 2026-10-29).
    */
   overlayScale: number;
-  /** Ambient occlusion: off, or its quality (`graphics.ts`). */
+  /** Ambient occlusion: LIVE, ONE-TIME (baked) or OFF (`AoMode`). */
+  aoMode: AoMode;
+  /** LIVE ambient occlusion's quality (`graphics.ts`), set by the preset. */
   ambientOcclusion: EffectLevel;
   /** Bloom, the glow round bright things: off, or its quality. */
   bloom: EffectLevel;
@@ -63,9 +67,10 @@ export const DEFAULT_SETTINGS: Settings = {
   renderLevel: 3,
   onScreenControls: 'automatic',
   overlayScale: 1,
-  // No live ambient occlusion in any preset (the owner, 2026-10-30): rooms
-  // show their baked occlusion (`baking/baked-ao.ts`) once it is ready.
-  ambientOcclusion: 'off',
+  // Baked ambient occlusion by default (the owner, 2026-10-30): no live GTAO.
+  aoMode: 'bake',
+  // LIVE's quality, should it be chosen: the look every room was tuned with.
+  ambientOcclusion: 'high',
   bloom: 'high',
   filmEffects: true,
   resolutionCap: '1024x768',
@@ -135,6 +140,13 @@ export function cleanSettings(stored: unknown): Settings {
           ? (s.onScreenControls as OnScreenControls)
           : 'automatic',
     overlayScale: num('overlayScale'),
+    // A save from before the modes (the owner, 2026-10-30): any live level
+    // becomes ONE-TIME, the faster default; an old off stays OFF.
+    aoMode: AO_MODES.includes(s.aoMode as AoMode)
+      ? (s.aoMode as AoMode)
+      : s.ambientOcclusion === 'off'
+        ? 'off'
+        : DEFAULT_SETTINGS.aoMode,
     ambientOcclusion: level('ambientOcclusion'),
     bloom: level('bloom'),
     filmEffects: bool('filmEffects'),
