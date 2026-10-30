@@ -170,7 +170,7 @@ Since January 2024 every game answers an AI section of the content survey, and V
 
 Each stage is a separate request from the owner, and each ends with the game still deploying to GitHub Pages and itch.io as it does now.
 
-1. **Electron prototype, unsigned, local** (about 1 to 2 days): `desktop/` with the main process, preload, custom protocol and electron-builder config; the release `dist/` wrapped; fullscreen, pointer lock, audio autoplay and GPU switches; run on the owner's Mac and a Windows machine. Check frame rates against Chrome in each plant room and the museum.
+1. **Electron prototype, unsigned, local** (about 1 to 2 days): `desktop/` with the main process, preload, custom protocol and electron-builder config; the release `dist/` wrapped; fullscreen, pointer lock, audio autoplay and GPU switches; run first as a Linux AppImage on the owner's Steam Deck (added as a non-Steam game), then on the owner's Mac and a Windows machine. Check frame rates against Chrome in each plant room and the museum.
 2. **Desktop adaptations in the game** (about 2 to 3 days): the bridge; saves to files with atomic writes and a backup, behind `world-store.ts` (tested in `logic/`, as every store is); Sentry's `steam`/desktop environment and platform tags; windowed and fullscreen settings; a quit item in the menu. All of it inert on the web.
 3. **CI packaging** (about 2 days): a matrix on the release tag building Windows, macOS and Linux packages as release artifacts and, optionally, itch.io desktop channels; still unsigned.
 4. **Signing** (about 1 to 2 days, after the accounts exist): macOS Developer ID and notarisation; Windows signing by whichever route the owner chooses.
@@ -184,7 +184,7 @@ In all, about three to four weeks of work, and several weeks of calendar time fo
 
 ## Decisions for the owner
 
-1. **Which platforms first**: Windows and macOS, with the Deck on Proton (recommended), or also native Linux from the start?
+1. **Which platforms first**: decided (the owner, 2026-10-30): all platforms in time (Windows, macOS, Linux), but the Steam Deck first. The first target is a native Linux build (an AppImage for side-loading as a non-Steam game, then a Steam depot run under the Steam Linux Runtime), tested on the owner's Deck; the Windows build under Proton is kept as the fallback if the native build misbehaves. Stage 1's prototype is therefore built for Linux and tried on the Deck before the Mac and Windows builds.
 2. **Individual or company**: decided (the owner, 2026-10-30): published through the owner's company, Team Rocket Limited (UK). The Steamworks partner is the company, its tax form is the W-8BEN-E, and Microsoft's Artifact Signing is open to it for Windows.
 3. **Windows signing**: Artifact Signing (via a company), an OV certificate, or unsigned at first.
 4. **The licence and the Steamworks SDK**: the game is GPL-3.0-or-later, and the Steamworks SDK is proprietary. As sole copyright holder the owner may ship a Steam build linked to it, but any GPL code from others in the game would need an exception; the owner should decide whether to add a linking exception for the Steamworks SDK, or keep Steam support in a separately licensed part.
