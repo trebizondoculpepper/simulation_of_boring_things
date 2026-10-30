@@ -50,16 +50,14 @@ import { partAudio } from '../../components/core/audio/part-audio';
 import { createCanvasTexture } from '../../components/core/views/screens';
 import { createBrandBadge } from '../../components/core/views/brand-badge';
 import { createEngravedNameSign } from '../../components/general-safety/views/engraved-sign';
-import {
-  createCarGate,
-  createLiftDoors,
-} from '../../components/architectural/views/lift-doors';
+import { createLiftDoors } from '../../components/architectural/views/lift-doors';
 import {
   ALARM_BELL,
   ARRIVAL_CHIME,
   BRAKE_CLUNK,
   CLOSING_WARNING,
-  DOOR_CLANK,
+  DOOR_THUD,
+  DOOR_WHIRR,
   MOTOR_RUN,
   NUDGE_BUZZER,
 } from '../../components/sound/audio/lift-sounds';
@@ -272,15 +270,19 @@ function certificate(kit: PanelKit, name: string) {
   return g;
 }
 
+/** How far into the car its front stands behind its sill's edge: the car door's panels run there. */
+const FRONT = 0.12;
+
 /**
  * A lift's car (`freight_lift`, or the trial lift's `dev54`): a heavy steel
- * goods car about 2.0 m wide, 2.8 m deep and 2.4 m clear, its doorway at
- * the north end (z 0), its chequer-plate floor, steel walls and buffer
- * rails, a fluorescent fitting, the car's gate, a floor indicator over the
- * doorway, the car operating panel on the right as one faces out, the
- * rated-load plate and the inspection certificate. Through its open gate,
- * the floor it stands at is seen (its room, drawn under); while it runs,
- * the shaft wall going by.
+ * goods car 2.2 m wide, 2.8 m deep and 2.4 m clear, its doorway at the
+ * north end (z 0), its chequer-plate floor, steel walls and buffer rails,
+ * a fluorescent fitting, the car's door (centre-opening, four stainless
+ * panels, a light curtain down its leading edges; the owner, 2026-10-30:
+ * solid, so the shaft is never seen while riding), a floor indicator
+ * over the doorway, the car operating panel on the right as one faces
+ * out, the rated-load plate and the inspection certificate. Through its
+ * open doors the floor it stands at is seen (its room, drawn under).
  */
 export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
   const r = rig(canvas);
@@ -313,7 +315,10 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
   box(wall, W, H, 0.04, 0, H / 2, D + 0.02, body);
   for (const y of [0.3, 0.9])
     box(rail, W - 0.1, 0.14, 0.05, 0, y, D - 0.025, body);
-  // The front: returns either side of the doorway and the panel over it.
+  // The front: returns either side of the doorway and the panel over it,
+  // set back `FRONT` from the car's sill edge, the door's panels running
+  // between (inside the car's side of its doorway, so they are drawn when
+  // the car is seen from a landing).
   const ret = (W - LIFT_DOOR.clear) / 2;
   for (const s of [-1, 1])
     box(
@@ -323,7 +328,7 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
       0.04,
       s * (LIFT_DOOR.clear / 2 + ret / 2),
       H / 2,
-      0.02,
+      FRONT + 0.02,
       body,
     );
   box(
@@ -333,7 +338,7 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
     0.04,
     0,
     (H + LIFT_DOOR.height) / 2,
-    0.02,
+    FRONT + 0.02,
     body,
   );
   // The ceiling, and its fluorescent fitting.
@@ -343,9 +348,24 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
   const tube = new PointLight('#eef6ff', 3.5 * metre * metre, 0, 2);
   tube.position.set(0, (H - 0.2) * metre, (D / 2) * metre);
   scene.add(tube);
-  // The gate, in the doorway.
-  const gate = createCarGate(kit);
-  body.add(gate.group);
+  // The car's door, in the doorway, its panels stacking behind the front
+  // returns.
+  // Its sill under them, grooved aluminium.
+  box(
+    kitPaint(kit, '#a9aeb0', 0.5),
+    W,
+    0.012,
+    FRONT,
+    0,
+    0.006,
+    FRONT / 2,
+    body,
+  );
+  const carDoor = createLiftDoors(kit, { frame: false, curtain: true });
+  carDoor.group.position.z = FRONT;
+  body.add(carDoor.group);
+  const whirr = {};
+  let whirring = false;
   // Beyond it, while the floor's room is not seen: the landing doors, as
   // the car stands at them, or the shaft wall going by as it runs.
   const outside = new Group();
@@ -382,7 +402,7 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
   outside.add(shaft);
   // The indicator over the doorway.
   const indicator = createLiftIndicator(kit, 0.04);
-  indicator.group.position.set(0, LIFT_DOOR.height + 0.1, 0.045);
+  indicator.group.position.set(0, LIFT_DOOR.height + 0.1, FRONT + 0.045);
   body.add(indicator.group);
   // The car operating panel, on the right-hand wall as one faces out (+x
   // in the car's frame is east; facing north, the right).
@@ -492,9 +512,10 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
         seen = on;
         outside.visible = !on;
       },
-      peek: (on) => {
-        gate.group.visible = !on;
-      },
+      // Seen from the landing, the car's door stays: it and the landing's
+      // move as a pair, and the landing's own panels are hidden while the
+      // car is seen through them.
+      peek: () => {},
     });
   let registered: { to: RoomId; lazy: boolean; withdraw: () => void } | null =
     null;
@@ -516,8 +537,18 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
     { minX: -W / 2 - 0.2, maxX: -W / 2, minZ: -0.2, maxZ: D + 0.2 },
     { minX: W / 2, maxX: W / 2 + 0.2, minZ: -0.2, maxZ: D + 0.2 },
     { minX: -W / 2, maxX: W / 2, minZ: D, maxZ: D + 0.2 },
-    { minX: -W / 2, maxX: -LIFT_DOOR.clear / 2, minZ: -0.2, maxZ: 0.04 },
-    { minX: LIFT_DOOR.clear / 2, maxX: W / 2, minZ: -0.2, maxZ: 0.04 },
+    {
+      minX: -W / 2,
+      maxX: -LIFT_DOOR.clear / 2,
+      minZ: -0.2,
+      maxZ: FRONT + 0.04,
+    },
+    {
+      minX: LIFT_DOOR.clear / 2,
+      maxX: W / 2,
+      minZ: -0.2,
+      maxZ: FRONT + 0.04,
+    },
   ];
   const params = new URLSearchParams(location.search);
   const from = params.get('from');
@@ -587,9 +618,10 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
     walk.update(delta);
     const l = lift();
     settleJoint(l);
-    // The doors and gate, as the world has them; the shaft going by.
+    // The doors, as the world has them; the shaft going by.
     const here = !l.trip;
-    gate.setOpen(here ? l.open : 0);
+    carDoor.setOpen(here ? l.open : 0);
+    carDoor.setCurtain(here && l.held && l.doors !== 'shut');
     landing.setOpen(here ? l.open : 0);
     landing.group.visible = here;
     shaft.visible = !here;
@@ -636,7 +668,7 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
           partAudio.play(ARRIVAL_CHIME, indicator.group);
         }
         if (was.doors !== l.doors && (l.doors === 'open' || l.doors === 'shut'))
-          partAudio.play(DOOR_CLANK, gate.group);
+          partAudio.play(DOOR_THUD, carDoor.group);
         const warning = closingWarning(l);
         if (warning && !warned)
           partAudio.play(
@@ -647,6 +679,11 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
         if (l.alarm > was.alarm + 0.5) partAudio.play(ALARM_BELL, cop);
       }
       was = l;
+      const moving = here && (l.doors === 'opening' || l.doors === 'closing');
+      if (moving !== whirring) {
+        whirring = moving;
+        partAudio.hold(whirr, moving ? DOOR_WHIRR : null, carDoor.group);
+      }
       // Out through the open doors onto the floor: handed over.
       const to = roomOf(l.floor);
       if (!leaving && here && seen && to && doorway.through(w.x, w.z)) {
@@ -659,6 +696,8 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
       }
     } else {
       partAudio.hold(motorOwner, null);
+      if (whirring) partAudio.hold(whirr, null);
+      whirring = false;
       was = null;
     }
     if (visual) r.composer.render(delta);
@@ -666,6 +705,7 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
   return Object.assign(
     () => {
       partAudio.hold(motorOwner, null);
+      partAudio.hold(whirr, null);
       registered?.withdraw();
       parts.dispose();
       disposeKit(kit, group as never);
@@ -680,6 +720,8 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
       },
       suspend() {
         partAudio.hold(motorOwner, null);
+        partAudio.hold(whirr, null);
+        whirring = false;
       },
       setVisual(enabled: boolean) {
         visual = enabled;

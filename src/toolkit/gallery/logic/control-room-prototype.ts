@@ -833,6 +833,9 @@ export function bridgeDoorway() {
  * elevator beyond the corridor's doors (the light switch is on their other
  * side), its frame's opening `at` metres along the wall from its start;
  * the same goods lift doors as every floor's, a deliberate anachronism.
+ * The owner, 2026-10-30: centre-opening four-panel doors, the landing
+ * left where it was; the opening (`LIFT_DOOR.clear`) is the widest whose
+ * stack fits between the corridor's doorway and the wall's end.
  */
 export const BRIDGE_LIFT = {
   side: ENTRY.side,

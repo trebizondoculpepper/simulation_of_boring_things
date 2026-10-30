@@ -13,19 +13,73 @@ export interface LiftPlace {
   yaw: number;
 }
 
-/** The doors' sizes: a goods lift's vertical bi-parting doors (BS EN 81-20's goods sizes). */
+/**
+ * The doors' sizes: a goods lift's centre-opening, four-panel telescopic
+ * doors (the owner, 2026-10-30), two panels each side, the fast one
+ * travelling twice as far as the slow, both stacking behind the wall
+ * either side; the car's door and every landing's the same.
+ */
 export const LIFT_DOOR = {
   /** Clear opening, wide and tall. */
-  clear: 1.8,
+  // The widest the bridge's west wall takes (the owner, 2026-10-30): its
+  // landing's middle 1.06 m from the corridor's doorway and 1.17 m from
+  // the wall's end, so the stack (three quarters of this and the lap) is
+  // at most 1.06 m; 1.35 m clear stacks 1.04 m. It sets every landing's.
+  clear: 1.35,
   height: 2.2,
   /** The steel frame's jambs and head, each side. */
   frame: 0.1,
   /** How deep the doorway's reveal is, behind the face: where the leaves (or the car's gate) run. */
   depth: 0.14,
+  /** Each panel's overlap: the fast over the slow, the slow into the frame. */
+  lap: 0.03,
+  /** The two tracks' depths behind the face: the fast panel's (nearer) and the slow's. */
+  fastTrack: 0.035,
+  slowTrack: 0.085,
 } as const;
 
-/** The car (inside): wide, deep and clear high (the owner: about 2.0 × 2.8 × 2.4). */
-export const LIFT_CAR = { w: 2.0, d: 2.8, h: 2.4 } as const;
+/** One door panel's width: a quarter of the opening, and its overlap. */
+export const PANEL_WIDTH = LIFT_DOOR.clear / 4 + LIFT_DOOR.lap;
+
+/**
+ * How far from the doorway's middle the panels reach, open, each side:
+ * the stack behind the wall (three quarters of the opening and the lap).
+ * The wall either side of a landing must be solid this far out.
+ */
+export const DOOR_STACK = (3 * LIFT_DOOR.clear) / 4 + LIFT_DOOR.lap;
+
+/**
+ * The door operator's motion: how far along its travel a door stands
+ * when its opening (the world's `open`, which runs evenly) is `k`; eased
+ * in and out (smoothstep), as a variable-speed operator starts and stops
+ * gently.
+ */
+export function doorTravel(k: number): number {
+  const t = Math.min(1, Math.max(0, k));
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * Each panel's middle, `u` from the doorway's middle, on the right-hand
+ * side (+u; the left mirrors it), when the doors stand `k` open: shut,
+ * the fast panel meets its fellow at the middle and the slow one laps the
+ * frame; open, both stack beside the opening, the fast panel having
+ * travelled twice as far as the slow (half the opening, and a quarter).
+ */
+export function doorPanels(k: number): { fast: number; slow: number } {
+  const t = doorTravel(k);
+  const c = LIFT_DOOR.clear;
+  const shutFast = PANEL_WIDTH / 2;
+  const shutSlow = c / 4 + PANEL_WIDTH / 2;
+  return { fast: shutFast + t * (c / 2), slow: shutSlow + t * (c / 4) };
+}
+
+/**
+ * The car (inside): wide, deep and clear high. The owner, 2026-10-30:
+ * wide enough for the four-panel doors to stack behind its front returns, a 2000 kg, 26-person goods car; its
+ * front returns either side of the doorway as wide as the doors' stack.
+ */
+export const LIFT_CAR = { w: 2.2, d: 2.8, h: 2.4 } as const;
 
 /** The walker's half-width given to the light curtain: within this of the doorway, it is held. */
 const CURTAIN_REACH = 0.35;

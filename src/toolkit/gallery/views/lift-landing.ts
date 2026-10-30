@@ -18,12 +18,12 @@ import { pushButton } from '../../components/core/parts/parts';
 import type { PartSet } from '../../components/core/parts/parts';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { createEngravedNameSign } from '../../components/general-safety/views/engraved-sign';
-import { createBrandBadge } from '../../components/core/views/brand-badge';
 import { createLiftDoors } from '../../components/architectural/views/lift-doors';
 import {
   ARRIVAL_CHIME,
   CLOSING_WARNING,
-  DOOR_CLANK,
+  DOOR_THUD,
+  DOOR_WHIRR,
   NUDGE_BUZZER,
 } from '../../components/sound/audio/lift-sounds';
 import type { WorldStore } from '../../save/world-store';
@@ -130,14 +130,16 @@ export interface LiftLandingOptions {
 }
 
 /**
- * A lift landing in a room (mission 108): the landing doors (vertical
- * bi-parting), the indicator over them, a call button beside them (lit
+ * A lift landing in a room (mission 108): the landing doors (centre-
+ * opening, four panels, the owner, 2026-10-30), the indicator over them, a call button beside them (lit
  * while called), a dark lobby behind them until the car is seen through
  * them, and the sign; its side of the doorway registered with the app, so
  * the car is drawn through the open doors and the walker handed over
  * walking through. Its room adds its `solids` to its walk and calls
  * `update` each frame. The room must leave a gap in its wall the frame's
- * width (`LIFT_DOOR.clear + 2 × frame`) and at least the doors' height.
+ * width (`LIFT_DOOR.clear + 2 × frame`) and at least the doors' height,
+ * and solid wall at least `DOOR_STACK` either side of the doorway's
+ * middle, deeper than the reveal, for the panels to stack behind.
  */
 export function installLiftLanding(o: LiftLandingOptions) {
   const { place, kit, metre, store } = o;
@@ -151,7 +153,7 @@ export function installLiftLanding(o: LiftLandingOptions) {
   root.position.set(place.x, floorY, place.z);
   root.rotation.y = place.yaw;
   o.parent.add(root);
-  const doors = createLiftDoors(kit);
+  const doors = createLiftDoors(kit, { floor: floor.label });
   root.add(doors.group);
   // Behind them, dark, until the car is seen through them.
   const lobby = new Mesh(
@@ -195,11 +197,9 @@ export function installLiftLanding(o: LiftLandingOptions) {
   );
   sign.position.set(0, LIFT_DOOR.height + 0.62, 0.012);
   root.add(sign);
-  const badge = createBrandBadge(kit, 'stannard', { height: 0.035 });
-  badge.position.set(0, LIFT_DOOR.height + 0.16, 0.012);
-  root.add(badge);
   // The call button, to the right of the doors as one faces them, on a
-  // stainless plate at 1.1 m.
+  // stainless plate at 1.1 m: on the wall beside the frame, or on the
+  // frame's jamb where the wall is narrow.
   const lift = () => store.world.value.lifts[o.lift];
   const called = signal(false);
   const callPlate = new Mesh(
@@ -207,10 +207,13 @@ export function installLiftLanding(o: LiftLandingOptions) {
     kitPaint(kit, '#b9bec0', 0.7),
   );
   callPlate.position.set(
-    -(LIFT_DOOR.clear / 2 + LIFT_DOOR.frame + 0.25),
+    o.callOn === 'jamb'
+      ? -(LIFT_DOOR.clear / 2 + LIFT_DOOR.frame / 2)
+      : -(LIFT_DOOR.clear / 2 + LIFT_DOOR.frame + 0.25),
     1.1,
-    0.006,
+    o.callOn === 'jamb' ? 0.021 : 0.006,
   );
+  if (o.callOn === 'jamb') callPlate.scale.set(0.8, 1, 1);
   root.add(callPlate);
   const call = o.parts.add(
     pushButton(kit, {
@@ -267,6 +270,8 @@ export function installLiftLanding(o: LiftLandingOptions) {
   let active = false;
   let was: LiftState | null = null;
   let warned = false;
+  const whirr = {};
+  let whirring = false;
   const atWalker = () => ({
     x: o.walk.walker.x / metre,
     z: o.walk.walker.z / metre,
@@ -297,10 +302,13 @@ export function installLiftLanding(o: LiftLandingOptions) {
       doors.setOpen(here ? l.open : 0);
       if (seen) doors.leaves.visible = false;
       called.value = callLit(l, o.floor);
+      const moving = here && (l.doors === 'opening' || l.doors === 'closing');
       const shown = indicatorOf(l, o.lift);
       indicator.show(shown.label, here || l.trip ? shown.way : null);
       // Only the room the walker is in works the lift and makes its sounds.
       if (o.walk.following || leaving || !active) {
+        if (whirring) partAudio.hold(whirr, null);
+        whirring = false;
         was = l;
         return;
       }
@@ -322,12 +330,16 @@ export function installLiftLanding(o: LiftLandingOptions) {
             was.doors !== l.doors &&
             (l.doors === 'open' || l.doors === 'shut')
           )
-            partAudio.play(DOOR_CLANK, root);
+            partAudio.play(DOOR_THUD, root);
           const warning = closingWarning(l);
           if (warning && !warned)
             partAudio.play(l.nudging ? NUDGE_BUZZER : CLOSING_WARNING, root);
           warned = warning;
         }
+      }
+      if (moving !== whirring) {
+        whirring = moving;
+        partAudio.hold(whirr, moving ? DOOR_WHIRR : null, root);
       }
       was = l;
       // Walked out through the open doors into the car: handed over.
@@ -350,8 +362,11 @@ export function installLiftLanding(o: LiftLandingOptions) {
     /** Left: no longer in charge. */
     suspend() {
       active = false;
+      if (whirring) partAudio.hold(whirr, null);
+      whirring = false;
     },
     dispose() {
+      if (whirring) partAudio.hold(whirr, null);
       withdraw();
       o.parent.remove(root);
     },

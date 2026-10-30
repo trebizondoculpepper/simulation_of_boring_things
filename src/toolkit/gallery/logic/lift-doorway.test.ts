@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  DOOR_STACK,
+  doorPanels,
+  doorTravel,
   landingArrival,
+  LIFT_CAR,
   LIFT_DOOR,
+  PANEL_WIDTH,
   liftDoorway,
   liftLocal,
   liftWorld,
@@ -19,6 +24,7 @@ import {
   entryWallPieces,
 } from './control-room-prototype';
 import { lightSwitchPlace } from './bridge-lighting';
+import { hallArches, hallLiftOpening, MUSEUM_WALL } from './museum-plan';
 
 const ahead = (yaw: number) => ({ x: Math.sin(yaw), z: -Math.cos(yaw) });
 
@@ -58,6 +64,42 @@ describe('a lift doorway (mission 108)', () => {
   });
 });
 
+describe('the four-panel centre-opening doors (the owner, 2026-10-30)', () => {
+  it('a sensible opening in a car wide enough to hide the stack', () => {
+    expect(LIFT_DOOR.clear).toBeGreaterThanOrEqual(1.1);
+    expect(LIFT_CAR.w).toBeGreaterThanOrEqual(2.0);
+    expect(DOOR_STACK).toBeLessThanOrEqual(LIFT_CAR.w / 2);
+  });
+  it('the operator eases in and out', () => {
+    expect(doorTravel(0)).toBe(0);
+    expect(doorTravel(1)).toBe(1);
+    expect(doorTravel(0.5)).toBeCloseTo(0.5);
+    expect(doorTravel(0.1)).toBeLessThan(0.1);
+    expect(doorTravel(-1)).toBe(0);
+    expect(doorTravel(2)).toBe(1);
+  });
+  it('shut, the fast panels meet in the middle and the slow lap the frame', () => {
+    const { fast, slow } = doorPanels(0);
+    expect(fast - PANEL_WIDTH / 2).toBeCloseTo(0);
+    expect(slow + PANEL_WIDTH / 2).toBeCloseTo(
+      LIFT_DOOR.clear / 2 + LIFT_DOOR.lap,
+    );
+    // The fast panel laps the slow.
+    expect(fast + PANEL_WIDTH / 2).toBeGreaterThan(slow - PANEL_WIDTH / 2);
+  });
+  it('the fast panel travels twice as far as the slow, and both stack clear of the opening', () => {
+    for (const k of [0.25, 0.5, 0.8, 1]) {
+      const a = doorPanels(0);
+      const b = doorPanels(k);
+      expect(b.fast - a.fast).toBeCloseTo(2 * (b.slow - a.slow));
+    }
+    const open = doorPanels(1);
+    expect(open.fast).toBeCloseTo(open.slow);
+    expect(open.fast - PANEL_WIDTH / 2).toBeCloseTo(LIFT_DOOR.clear / 2);
+    expect(open.fast + PANEL_WIDTH / 2).toBeCloseTo(DOOR_STACK);
+  });
+});
+
 describe('the freight lift’s landings (mission 108)', () => {
   it('B2: a gap in the corridor’s north wall, in the free stretch, and the way back out of the car', () => {
     const half = LIFT_OPENING / 2;
@@ -86,5 +128,34 @@ describe('the freight lift’s landings (mission 108)', () => {
     const pieces = entryWallPieces();
     expect(pieces).toHaveLength(3);
     for (const [p, q] of pieces) expect(q).toBeGreaterThan(p);
+    // The doors' near stack clear of the corridor's doorway.
+    const doorway = gaps.find((g) => g !== lift)!;
+    expect(BRIDGE_LIFT.at - DOOR_STACK).toBeGreaterThan(doorway.to);
+    // And the far stack short of the wall's end.
+    const end = entryWallPieces().at(-1)![1];
+    expect(BRIDGE_LIFT.at + DOOR_STACK).toBeLessThan(end);
+  });
+  it('B2: the doors stack behind solid wall either side', () => {
+    const pieces = wallPieces('north');
+    for (const s of [-1, 1]) {
+      const edge = CORRIDOR_LIFT.at + (s * LIFT_OPENING) / 2;
+      const end = CORRIDOR_LIFT.at + s * DOOR_STACK;
+      expect(
+        pieces.some(
+          ([a, b]) => a <= Math.min(edge, end) && b >= Math.max(edge, end),
+        ),
+      ).toBe(true);
+    }
+  });
+  it('4: the doors stack behind solid wall either side, clear of the doorway from Hall 9', () => {
+    const lift = hallLiftOpening('museum0')!;
+    const t = MUSEUM_WALL / 2;
+    expect(lift.u - DOOR_STACK).toBeGreaterThan(lift.wall.from + t);
+    expect(lift.u + DOOR_STACK).toBeLessThan(lift.wall.to - t);
+    for (const a of hallArches('museum0'))
+      if (a.axis === lift.wall.axis && a.at.x === lift.wall.line) {
+        const u = a.at.z;
+        expect(Math.abs(u - lift.u) - a.w / 2 - DOOR_STACK).toBeGreaterThan(0);
+      }
   });
 });
