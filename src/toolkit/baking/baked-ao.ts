@@ -43,8 +43,8 @@ import type {
   WebGLRenderer,
 } from 'three';
 import { effect } from '@preact/signals-core';
-import { DEFAULT_BAKE } from './logic/ao-geometry';
-import type { BakeSettings } from './logic/ao-geometry';
+import { AO_LOOKS } from './logic/ao-geometry';
+import type { AoLook, BakeSettings } from './logic/ao-geometry';
 import {
   BAKE_PRIORITY,
   createBakeQueue,
@@ -108,6 +108,28 @@ const shownBakes: { setShown(on: boolean): void; roomId: string }[] = [];
 Object.assign(globalThis, {
   bakedAoStats: bakeStats,
   bakedAoRooms: shownBakes,
+  /**
+   * Diagnostics, in the browser (`bakedAo.report()`): bakes queued, under
+   * way and done, and each room's state (applied, meshes patched, strength).
+   */
+  bakedAo: {
+    report: () => ({
+      queued: queue.size,
+      active,
+      waiting: [...jobs.values()].map((j) => j.roomId),
+      done: bakeStats.map((s) => ({
+        roomId: s.roomId,
+        cached: s.cached,
+        bakeMs: Math.round(s.bakeMs),
+        vertices: s.vertices,
+      })),
+      rooms: shownBakes.map((r) => ({
+        roomId: r.roomId,
+        ...(r as { state?: object }).state,
+      })),
+      mode: playerSettings.value.aoMode,
+    }),
+  },
 });
 
 function startWorker() {
@@ -343,11 +365,14 @@ function subdividable(g: BufferGeometry) {
 
 const VERTEX_HEAD = 'attribute float aoBake;\nvarying float vBakedAo;\n';
 const FRAGMENT_HEAD =
-  'uniform float bakedAoStrength;\nvarying float vBakedAo;\n';
+  'uniform float bakedAoStrength;\nuniform float bakedAoDepth;\nuniform float bakedAoDirect;\nvarying float vBakedAo;\n';
 const FRAGMENT_APPLY = `{
-  float bakedAo = mix( 1.0, vBakedAo, bakedAoStrength );
+  float bakedAo = mix( 1.0, clamp( 1.0 - ( 1.0 - vBakedAo ) * bakedAoDepth, 0.0, 1.0 ), bakedAoStrength );
   reflectedLight.indirectDiffuse *= bakedAo;
   reflectedLight.indirectSpecular *= bakedAo;
+  // A share of the lamps' own light too, so it shows in rooms lit mostly
+  // by lamps (still the lights-on bake: no light's state enters it).
+  reflectedLight.directDiffuse *= mix( 1.0, bakedAo, bakedAoDirect );
 }
 #include <aomap_fragment>`;
 
@@ -356,7 +381,12 @@ const FRAGMENT_APPLY = `{
  * attribute `aoBake`, faded by `strength` (0 none, 1 all); any patch the
  * material already had runs first.
  */
-function bakedAoMaterial(material: Material, strength: { value: number }) {
+function bakedAoMaterial(
+  material: Material,
+  strength: { value: number },
+  depth: { value: number },
+  direct: { value: number },
+) {
   const copy = material.clone();
   const own = material.onBeforeCompile;
   const ownKey = material.customProgramCacheKey.bind(material);
@@ -367,6 +397,8 @@ function bakedAoMaterial(material: Material, strength: { value: number }) {
   ) {
     own.call(this, shader, renderer);
     shader.uniforms.bakedAoStrength = strength;
+    shader.uniforms.bakedAoDepth = depth;
+    shader.uniforms.bakedAoDirect = direct;
     shader.vertexShader =
       VERTEX_HEAD +
       shader.vertexShader.replace(
@@ -391,6 +423,8 @@ export interface BakedAoOptions {
   priority?: number;
   /** Scene units a metre. */
   unit?: number;
+  /** Its kind of room's look (`AO_LOOKS`): how it is baked and how deep. */
+  look?: AoLook;
   settings?: BakeSettings;
   /** Bake again even if cached (`?bake=fresh`). */
   fresh?: boolean;
@@ -435,8 +469,26 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
       ? BAKE_PRIORITY.current
       : BAKE_PRIORITY.neighbour,
     unit = 1,
-    settings = DEFAULT_BAKE,
   } = options;
+  // Its look, or another asked for in the address to compare
+  // (`?aolook=standard`, `?aodepth=1.5`).
+  const params = new URLSearchParams(globalThis.location?.search ?? '');
+  const askedLook = params.get('aolook');
+  const look =
+    AO_LOOKS[
+      askedLook && askedLook in AO_LOOKS
+        ? (askedLook as AoLook)
+        : (options.look ?? 'standard')
+    ];
+  const settings = options.settings ?? look.bake;
+  const depth = {
+    value: Number(params.get('aodepth')) || look.depth,
+  };
+  const direct = {
+    value: params.has('aodirect')
+      ? Number(params.get('aodirect'))
+      : look.direct,
+  };
   const fresh = options.fresh ?? asked === 'fresh';
   root.updateMatrixWorld(true);
   const receivers: Mesh[] = [];
@@ -527,7 +579,10 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
     const material = mesh.material as Material;
     let patched = materials.get(material);
     if (!patched)
-      materials.set(material, (patched = bakedAoMaterial(material, strength)));
+      materials.set(
+        material,
+        (patched = bakedAoMaterial(material, strength, depth, direct)),
+      );
     if (!originals.has(mesh)) originals.set(mesh, { material, geometry: old });
     mesh.geometry = geometry;
     mesh.material = patched;
@@ -563,7 +618,7 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
           if (!patched)
             materials.set(
               material,
-              (patched = bakedAoMaterial(material, strength)),
+              (patched = bakedAoMaterial(material, strength, depth, direct)),
             );
           const key = `${patched.type}|${patched.customProgramCacheKey()}|${(patched as MeshStandardMaterial).map ? 'm' : ''}|${mesh.receiveShadow}|${mesh.castShadow}|${patched.side}`;
           if (kinds.has(key)) continue;
@@ -724,6 +779,7 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
         maxEdge: settings.maxEdge,
         unit,
         rays: settings.rays,
+        smooth: settings.smooth !== false,
       },
       fresh,
     };
@@ -763,6 +819,24 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
     },
     get strength() {
       return strength.value;
+    },
+    /** How deep the bake darkens (`AO_LOOKS`' depth), changed at once. */
+    setDepth(value: number) {
+      depth.value = value;
+    },
+    /** How much of the lamps' direct light it darkens too, 0–1. */
+    setDirect(value: number) {
+      direct.value = value;
+    },
+    /** For checking in the browser: whether shown, and how strongly. */
+    get state() {
+      return {
+        applied,
+        strength: strength.value,
+        depth: depth.value,
+        direct: direct.value,
+        meshesPatched: originals.size,
+      };
     },
     dispose() {
       disposed = true;

@@ -226,7 +226,7 @@ async function prepare(message: Extract<BakeRequest, { type: 'prepare' }>) {
           index: m.source.index,
           receiver: m.source.receiver,
         })),
-      { rays, distance, maxEdge },
+      { rays, distance, maxEdge, smooth: message.settings.smooth },
       unit,
     );
   const placements = packed.matrices;
@@ -582,12 +582,11 @@ async function bake(job: Job) {
     );
     if (!done) return;
     rays += done.rays;
-    const smooth = smoothVertexAo(
-      world.positions,
-      world.normals,
-      done.result,
-      done.buried,
-    );
+    // Smoothed (a clean look), or the rays' variation kept (grime), buried
+    // vertices left unoccluded either way.
+    const smooth = job.settings.smooth
+      ? smoothVertexAo(world.positions, world.normals, done.result, done.buried)
+      : done.result.map((v, i) => (done.buried[i] ? 255 : v));
     out.push({ ...fine, ao: smooth, sphere: null });
     bakes.push(smooth);
     masks.push(mask);

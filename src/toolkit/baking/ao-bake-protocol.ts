@@ -94,6 +94,8 @@ export interface BakeSettingsPayload {
   unit: number;
   /** Rays a vertex at most (big rooms take fewer). */
   rays: number;
+  /** One smoothing pass, or the variation left in. */
+  smooth: boolean;
 }
 
 export type BakeRequest =

@@ -19,13 +19,41 @@ export interface BakeSettings {
   distance: number;
   /** The longest edge a receiving triangle keeps, metres; longer edges are split. */
   maxEdge: number;
+  /** One smoothing pass over the result (a clean look), or the rays' own variation left in (grime). */
+  smooth?: boolean;
 }
 
 export const DEFAULT_BAKE: BakeSettings = {
   rays: 32,
   distance: 1.5,
   maxEdge: 0.5,
+  smooth: true,
 };
+
+/**
+ * Each kind of room's look (the owner, 2026-10-30): how it is baked, and
+ * `depth`, how strongly the bake darkens (1 as baked; above 1 deepens it:
+ * light = 1 - (1 - bake) × depth), and `direct`, the share of the
+ * lamps' direct light it darkens as well as the ambient (0 none, 1 all):
+ * rooms lit mostly by lamps show it only so. Plant rooms are grimy and strong: few
+ * rays, a coarse grid and no smoothing leave the blotchy variation the
+ * owner liked ("lived in and dirty"); the museum is smooth but clearly
+ * shown (the owner, 2026-10-30: stronger, in corners, under plinths and
+ * round exhibits, on its plain 95 % grey walls).
+ */
+export const AO_LOOKS = {
+  plant: {
+    bake: { rays: 12, distance: 1.5, maxEdge: 1.0, smooth: false },
+    depth: 2,
+    direct: 0.5,
+  },
+  standard: { bake: DEFAULT_BAKE, depth: 1, direct: 0 },
+  museum: { bake: DEFAULT_BAKE, depth: 3, direct: 0.8 },
+} as const satisfies Record<
+  string,
+  { bake: BakeSettings; depth: number; direct: number }
+>;
+export type AoLook = keyof typeof AO_LOOKS;
 
 /** One mesh of a room's static geometry, in world space (scene units). */
 export interface BakeMeshData {
@@ -76,6 +104,7 @@ export function geometryHash(
   unit = 1,
 ): string {
   const h = createHasher();
+  h.text(settings.smooth === false ? 'grime|' : '');
   h.text(
     `ao${BAKE_VERSION}|${settings.rays}|${settings.distance}|${settings.maxEdge}`,
   );

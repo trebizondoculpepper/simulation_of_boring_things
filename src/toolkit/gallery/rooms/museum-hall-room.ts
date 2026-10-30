@@ -249,12 +249,12 @@ export function startMuseumHallRoom(
   void loadExhibit(id, hall.group)?.then((built) => {
     if (!built) return;
     exhibit = built;
-    // Baked once its exhibit is in (`baking/baked-ao.ts`); held back for
-    // now (it slowed the museum, 2026-10-30) unless asked for (`?bake=museum`).
-    if (new URLSearchParams(location.search).get('bake') === 'museum')
+    // Baked once its exhibit is in (`baking/baked-ao.ts`).
+    if (new URLSearchParams(location.search).get('bake') !== 'nomuseum')
       bakedAo = bakeRoomAo(hall.group, {
         roomId: id,
         unit: metre,
+        look: 'museum',
         compile: (object) => renderer.compileAsync(object, camera, scene),
       });
     // The exhibit's carrying (107f), through the control scheme's hands.

@@ -145,7 +145,7 @@ export function startBakedAoRoom(canvas: HTMLCanvasElement) {
       );
   });
   Object.assign(window, {
-    bakedAo: {
+    dev56Ao: {
       handle: ao,
       scene,
       stats: bakeStats,

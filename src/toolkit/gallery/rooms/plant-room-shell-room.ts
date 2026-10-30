@@ -163,6 +163,8 @@ export function startPlantRoomShell(
   const bakedAo = bakeRoomAo(rooms, {
     roomId: hall ? `plant_${hall}` : `plant_room_${size}`,
     unit: metre,
+    // Grimy and strong (the owner, 2026-10-30): "lived in and dirty".
+    look: 'plant',
     compile: (object) => renderer.compileAsync(object, camera, scene),
   });
   const supply = machines
