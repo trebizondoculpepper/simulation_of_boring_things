@@ -1,4 +1,4 @@
-import { Group, LatheGeometry, Mesh, Vector2 } from 'three';
+import { Group } from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
@@ -10,6 +10,9 @@ import { markPipe } from './pipe-markers';
 import { CO2_MANIFOLD } from '../logic/co2-supply';
 import type { MeshCageSpec } from '../../architectural/logic/mesh-cage';
 import type { Co2Bank, Co2Flag } from '../logic/co2-supply';
+import { createGasCylinder } from './gas-cylinder';
+import type { GasCylinderView } from './gas-cylinder';
+import type { Contents } from '../logic/gas-cylinders';
 
 /**
  * The CO₂ supply's cage (mission 109, stage 1), drawing only: a galvanised
@@ -55,104 +58,20 @@ export const CO2_CAGE_SPEC: MeshCageSpec = {
 };
 
 /** The 50 l cylinder: its body's radius and its height to the valve's top. */
-export const CO2_BOTTLE = { r: 0.115, h: 1.58 } as const;
+export const CO2_BOTTLE = { r: 0.115, h: 1.55 } as const;
 
 /** Where each bank's cylinders stand along the back, x. */
 export const bankCylinderX = (bank: Co2Bank, i: number) =>
   (bank === 'left' ? -1 : 1) * (1.45 - i * 0.3);
 
 /**
- * A CO₂ cylinder, 50 litres, 34 kg: a black body, its shoulder grey (BS EN
- * 1089-3's colour for carbon dioxide), its valve with a side outlet, its
- * supplier's collar label and a product label. Origin on the floor at its
- * middle; the labels face +z.
+ * A CO₂ cylinder, 50 litres, 34 kg, from the shared cylinder builder
+ * (`gas-cylinder.ts`): black, its shoulder grey (BS EN 1089-3), its
+ * labels, valve, guard and tags. Origin on the floor at its middle; the
+ * labels face +z.
  */
-export function createCo2Cylinder(kit: PanelKit, seed = 0) {
-  const t = plantTools(kit);
-  const g = new Group();
-  g.name = 'CO₂ cylinder, 50 l, 34 kg';
-  const R = CO2_BOTTLE.r;
-  const black = t.paint('#18191a', 0.55, 0.2);
-  const grey = t.paint('#8e9396', 0.5, 0.2);
-  // The body, turned: a domed foot, straight sides to the shoulder.
-  const body = new Mesh(
-    new LatheGeometry(
-      [
-        [0, 0.0],
-        [R * 0.8, 0.0],
-        [R, 0.05],
-        [R, 1.2],
-        [0, 1.2],
-      ].map(([r, y]) => new Vector2(r, y)),
-      24,
-    ),
-    black,
-  );
-  g.add(body);
-  const shoulder = new Mesh(
-    new LatheGeometry(
-      [
-        [R, 1.2],
-        [R * 0.97, 1.3],
-        [R * 0.8, 1.38],
-        [R * 0.45, 1.44],
-        [0.03, 1.46],
-        [0, 1.46],
-      ].map(([r, y]) => new Vector2(r, y)),
-      24,
-    ),
-    grey,
-  );
-  g.add(shoulder);
-  // The valve: a brass body on the neck, its handwheel, its side outlet.
-  const brass = t.paint('#b08d45', 0.35, 0.8);
-  t.cyl(g, brass, 0.028, 0.09, 0, 1.5, 0, 'y', 12);
-  t.cyl(g, brass, 0.013, 0.05, 0.035, 1.5, 0, 'x', 10);
-  t.cyl(g, t.paint('#2a2a2a', 0.6), 0.032, 0.012, 0, CO2_BOTTLE.h - 0.01, 0);
-  // The supplier's collar label and the product label, on the front.
-  const collar = createMicroLabel(kit, 'CARBON DIOXIDE', {
-    height: 0.022,
-    ink: '#14181b',
-    plate: '#f2f2ee',
-  });
-  collar.position.set(0, 1.08, R + 0.002);
-  g.add(collar);
-  const badge = createBrandBadge(kit, 'arncliffe', {
-    height: 0.035,
-    plate: '#f2f2ee',
-  });
-  badge.position.set(0, 1.02, R + 0.002);
-  g.add(badge);
-  const un = createMicroLabel(kit, 'UN 1013 · 2.2\nCO₂ 34 kg', {
-    height: 0.016,
-    ink: '#14181b',
-    plate: '#f4d21f',
-  });
-  un.position.set(0, 0.96, R + 0.002);
-  g.add(un);
-  // A worn patch, as rented cylinders have.
-  t.box(
-    g,
-    t.paint('#55585b', 0.8, 0.4),
-    0.04,
-    0.03,
-    0.002,
-    -0.04 + (seed % 3) * 0.03,
-    0.3 + (seed % 4) * 0.12,
-    R,
-  );
-  return g;
-}
-
-/** A cardboard cylinder tag on a string: FULL, IN USE or EMPTY. */
-function cylinderTag(kit: PanelKit, text: string, colour: string) {
-  const tag = createMicroLabel(kit, text, {
-    height: 0.03,
-    ink: '#111111',
-    plate: colour,
-  });
-  return tag;
-}
+export const createCo2Cylinder = (kit: PanelKit, contents: Contents = 'full') =>
+  createGasCylinder(kit, { gas: 'co2', size: 'L50', contents });
 
 /** A panel's flag window: green IN USE, grey STANDBY, red EMPTY. */
 const FLAG_COLOURS: Record<
@@ -182,6 +101,8 @@ export interface Co2CageView {
   /** What a click works: the lever's and the isolation valve's handles. */
   leverHandle: Object3D;
   isolationHandle: Object3D;
+  /** The connected cylinders, each bank's in order along the manifold: their tags show their contents. */
+  bankCylinders: Record<Co2Bank, GasCylinderView[]>;
 }
 
 export function createCo2Cage(kit: PanelKit): Co2CageView {
@@ -212,15 +133,19 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
   const header = 1.86;
   const copper = t.paint('#b06a3a', 0.35, 0.7);
   const hose = t.paint('#1e1e1e', 0.7);
-  let seed = 0;
+  const bankCylinders: Record<Co2Bank, GasCylinderView[]> = {
+    left: [],
+    right: [],
+  };
   for (const bank of ['left', 'right'] as const) {
     const xs = Array.from({ length: CO2_MANIFOLD.perBank }, (_, i) =>
       bankCylinderX(bank, i),
     );
     for (const x of xs) {
-      const cyl = createCo2Cylinder(kit, seed++);
-      cyl.position.set(x, 0.05, rowZ);
-      g.add(cyl);
+      const cyl = createCo2Cylinder(kit);
+      cyl.group.position.set(x, 0.05, rowZ);
+      g.add(cyl.group);
+      bankCylinders[bank].push(cyl);
       // Its pigtail: a short armoured hose from its outlet up to the header.
       t.rod(
         g,
@@ -230,9 +155,6 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
         0.008,
         6,
       );
-      const tag = cylinderTag(kit, 'IN USE', '#e5c43a');
-      tag.position.set(x, 1.3, rowZ + CO2_BOTTLE.r + 0.004);
-      g.add(tag);
     }
     // The bank's chain rail on the back posts, its chain across the cylinders.
     const inner = Math.min(...xs.map(Math.abs)) - 0.15;
@@ -515,19 +437,17 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
     tagText: string,
     colour: string,
     ink: string,
+    contents: Contents,
   ) => {
     const mid = (side * (CO2_CAGE.bay + W / 2)) / 2;
     const xs = [mid - 0.27, mid + 0.27];
     for (let i = 0; i < count; i++) {
       const x = xs[i % 2];
       const z = back + 0.2 + Math.floor(i / 2) * 0.42;
-      const cyl = createCo2Cylinder(kit, seed++);
-      cyl.position.set(x, 0.05, z);
-      if (side > 0) cyl.rotation.y = 0.5 * (i + 1);
-      g.add(cyl);
-      const tag = cylinderTag(kit, tagText, colour);
-      tag.position.set(x, 1.3, z + CO2_BOTTLE.r + 0.004);
-      g.add(tag);
+      const cyl = createCo2Cylinder(kit, contents);
+      cyl.group.position.set(x, 0.05, z);
+      if (side > 0) cyl.group.rotation.y = 0.5 * (i + 1);
+      g.add(cyl.group);
       // Each row's chain across, between the bay's partition and its end.
       if (i % 2 === 0)
         t.box(
@@ -549,8 +469,8 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
     sign.position.set(mid, 2.0, D / 2 + 0.03);
     g.add(sign);
   };
-  bay(-1, 4, 'FULL', '#3f9b3a', '#111111');
-  bay(1, 2, 'EMPTY', '#c42b23', '#f2f2ee');
+  bay(-1, 4, 'FULL', '#3f9b3a', '#111111', 'full');
+  bay(1, 2, 'EMPTY', '#c42b23', '#f2f2ee', 'empty');
   const banks = createMicroLabel(kit, 'CONNECTED · LEFT BANK | RIGHT BANK', {
     height: 0.035,
     ink: '#f2f2ee',
@@ -581,5 +501,6 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
     },
     leverHandle: handle,
     isolationHandle: isoHandle,
+    bankCylinders,
   };
 }

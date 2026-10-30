@@ -3,7 +3,7 @@ import { createMicroLabel } from '../../core/views/eighties-controls';
 import { createMeshCagePart } from '../../architectural/parts/mesh-cage';
 import type { MeshCagePart } from '../../architectural/parts/mesh-cage';
 import type { MeshCageSpec } from '../../architectural/logic/mesh-cage';
-import { createLpgCylinder } from '../views/yard-kit';
+import { createGasCylinder } from '../../plant/views/gas-cylinder';
 
 /** The propane cage: 1.5 × 0.8 × 1.8 m, its door the middle of its front. */
 export const LPG_CAGE_SPEC: MeshCageSpec = {
@@ -17,7 +17,8 @@ export const LPG_CAGE_SPEC: MeshCageSpec = {
 
 /**
  * A locked mesh cage of forklift propane cylinders (18 kg, the forklift
- * kind, red), the spent ones for collection: the shared welded-mesh cage
+ * kind, red, from the shared cylinder builder, `gas-cylinder.ts`), the
+ * spent ones for collection, each tagged EMPTY: the shared welded-mesh cage
  * (`architectural/parts/mesh-cage.ts`), its door working, its sign on the
  * door. Origin on the floor at its middle, its front facing +z.
  */
@@ -29,13 +30,17 @@ export function createLpgCagePart(kit: PanelKit): MeshCagePart {
   // The cylinders: two rows of three, each turned as a real 18 kg forklift
   // cylinder is (the owner, 2026-10-26: the first were terrible).
   for (let i = 0; i < 6; i++) {
-    const c = createLpgCylinder(kit, i);
+    const c = createGasCylinder(kit, {
+      gas: 'propane',
+      size: 'F18',
+      contents: 'empty',
+    }).group;
     c.position.set(
       -0.45 + (i % 3) * 0.45,
       0.01,
       i < 3 ? -D / 4 + 0.02 : D / 4 - 0.07,
     );
-    c.rotation.y = i * 1.3;
+    c.rotation.y = i * 1.3 - 2;
     part.object.add(c);
   }
   const sign = createMicroLabel(

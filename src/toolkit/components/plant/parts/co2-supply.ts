@@ -4,6 +4,7 @@ import type { Part } from '../../core/parts/parts';
 import type { PartEvent } from '../../core/logic/world/components';
 import {
   CO2_BANKS,
+  CO2_CYLINDER,
   bankFlag,
   bankPressure,
   co2Pressures,
@@ -13,6 +14,7 @@ import {
   throwLever,
 } from '../logic/co2-supply';
 import type { Co2Supply } from '../logic/co2-supply';
+import { contentsFrom } from '../logic/gas-cylinders';
 import { CO2_CAGE_SPEC, createCo2Cage } from '../views/co2-cage';
 import { createMeshCagePart } from '../../architectural/parts/mesh-cage';
 import type { MeshCagePart } from '../../architectural/parts/mesh-cage';
@@ -53,7 +55,17 @@ export function createCo2SupplyPart(
   const show = () => {
     for (const bank of CO2_BANKS) {
       view.bankGauges[bank].set(bankPressure(supply, bank));
-      view.setFlag(bank, bankFlag(supply, bank));
+      const flag = bankFlag(supply, bank);
+      view.setFlag(bank, flag);
+      // Each cylinder's tag, as the operator would hang it: EMPTY on a
+      // spent bank, FULL on one not yet drawn from, otherwise IN USE.
+      supply.banks[bank].forEach((c, i) =>
+        view.bankCylinders[bank][i].setContents(
+          flag === 'empty'
+            ? 'empty'
+            : contentsFrom(c.kg, CO2_CYLINDER.contents),
+        ),
+      );
     }
     const p = co2Pressures(supply);
     view.outletGauge.set(p.outlet);
