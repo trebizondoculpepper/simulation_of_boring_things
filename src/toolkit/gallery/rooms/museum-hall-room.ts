@@ -53,7 +53,6 @@ import {
   MUSEUM_HALLS,
   ringDistance,
   ringSide,
-  neighbourFade,
   ringNeighbours,
   startOf,
 } from '../logic/museum-plan';
@@ -69,6 +68,8 @@ type MuseumLod = {
   calls?: number;
   triangles?: number;
   cpuMs?: number;
+  /** Each LOD component's distance from the eye, metres. */
+  distances?: number[];
 };
 
 const farKit = createPanelKit();
@@ -347,7 +348,10 @@ export function startMuseumHallRoom(
   const fadeTo = (pose: { x: number; z: number }) => {
     let changed = false;
     for (const n of copies.keys()) {
-      const f = neighbourFade(id, n, pose);
+      // No fade in from an empty white hall any more (the owner,
+      // 2026-10-30): a neighbour's copy is always there in full.
+      void pose;
+      const f = 1;
       if (fade.get(n) === f) continue;
       fade.set(n, f);
       applyFade(n, f);
@@ -641,6 +645,9 @@ export function startMuseumHallRoom(
       if (l.low) count++;
     }
     lodState.lowPoly = count;
+    lodState.distances = lods.map((l) =>
+      Math.round(eye.distanceTo(l.centre) / metre),
+    );
     lodState.components = lods.length;
   };
   /** How far the eye drawn under another hall is from this hall's nearest archway, metres. */
@@ -649,7 +656,11 @@ export function startMuseumHallRoom(
     const x = pose.x / metre;
     const z = pose.z / metre;
     return Math.min(
-      ...hallArches(id).map((a) => Math.hypot(x - a.frame.x, z - a.frame.z)),
+      // The doorway into the hall walked in, when known (the owner,
+      // 2026-10-30), not whichever is nearest.
+      ...hallArches(id)
+        .filter((a) => !peekFrom || a.to === peekFrom)
+        .map((a) => Math.hypot(x - a.frame.x, z - a.frame.z)),
     );
   };
 
