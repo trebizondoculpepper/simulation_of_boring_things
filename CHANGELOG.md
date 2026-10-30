@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum walls featureless matte 80% grey (#cccccc; the owner, 2026-10-30): no brick texture, the reveals the same; the far shells and neighbour copies follow, as they share the material. Halls 7 and 8 stay black; Hall 0's tiles, the floors and ceilings are unchanged.
 - Annunciator push buttons are no longer black on black (the owner, 2026-10-30): on every annunciator (the control room's Warden assembly, each location annunciator in its plant room and its twin in the control room, and the two on the chemical handling kit) ACCEPT is yellow, RESET light grey (a new `grey` operator colour), LAMP TEST stays white and MUTE is blue, after the usual alarm-panel convention (yellow acknowledge, blue silence, grey reset, white test), their legends white on black plates above them.
 - Lounge filters: a filter with its inlet and drain open and its outlet shut is now rinsed, the pumps' water running down through its bed to the drain at up to its service flow, and its status reads Rinsing, not Standing (the owner, 2026-10-30, PL1-F2).
 

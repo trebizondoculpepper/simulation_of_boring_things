@@ -103,8 +103,6 @@ import {
  */
 
 export const FLOOR_TILE = 4;
-/** The brick texture's repeat: three bricks along, eight courses up. */
-const BRICK = { w: 0.69, h: 0.6 };
 /** Hall 0's wall tiles: eight 150 mm tiles a repeat. */
 const TILE_REPEAT = 1.2;
 /** Every wall's height: the roof deck's parapet. */
@@ -135,44 +133,6 @@ function seeded(seed: number) {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-/** Old brick, three along and eight courses up, painted white or bare. */
-function brickTexture(painted: boolean) {
-  const W = 512;
-  const H = 448;
-  const t = canvasTexture(W, H, (c) => {
-    const rand = seeded(painted ? 7 : 11);
-    c.fillStyle = painted ? '#e4e1da' : '#8e8478';
-    c.fillRect(0, 0, W, H);
-    const course = H / 8;
-    const brick = W / 3;
-    for (let row = 0; row < 8; row++) {
-      const shift = row % 2 ? brick / 2 : 0;
-      for (let k = -1; k < 4; k++) {
-        const x = k * brick + shift;
-        const tone = rand();
-        c.fillStyle = painted
-          ? `hsl(40, 12%, ${92 + tone * 5}%)`
-          : `hsl(${12 + tone * 14}, ${38 + tone * 14}%, ${30 + tone * 14}%)`;
-        c.fillRect(x + 3, row * course + 3, brick - 6, course - 6);
-        for (let s = 0; s < 6; s++) {
-          c.fillStyle = painted
-            ? `rgba(120, 110, 95, ${0.04 + rand() * 0.05})`
-            : `rgba(20, 10, 5, ${0.08 + rand() * 0.1})`;
-          c.fillRect(
-            x + 3 + rand() * (brick - 14),
-            row * course + 3 + rand() * (course - 10),
-            4 + rand() * 10,
-            2 + rand() * 4,
-          );
-        }
-      }
-    }
-  });
-  t.wrapS = t.wrapT = RepeatWrapping;
-  t.repeat.set(1 / BRICK.w, 1 / BRICK.h);
-  return t;
 }
 
 /** Polished concrete, a 4 m bay: a soft cloud, faint trowel arcs, aggregate, and saw cuts at its edges. */
@@ -327,14 +287,23 @@ export interface MuseumMaterials {
   textures: Texture[];
 }
 
+/** The museum's walls: plain matte 80% grey (sRGB 204). */
+export const MUSEUM_WALL_GREY = '#cccccc';
+
 export function createMuseumMaterials(): MuseumMaterials {
-  const painted = brickTexture(true);
-  const bare = brickTexture(false);
   const concrete = concreteTexture();
   const tiles = wallTileTexture();
   return {
-    paint: new MeshStandardMaterial({ map: painted, roughness: 0.9 }),
-    rawBrick: new MeshStandardMaterial({ map: bare, roughness: 0.95 }),
+    // Featureless matte walls, 80% grey (the owner, 2026-10-30): no
+    // brick, no texture; the reveals the same.
+    paint: new MeshStandardMaterial({
+      color: MUSEUM_WALL_GREY,
+      roughness: 0.95,
+    }),
+    rawBrick: new MeshStandardMaterial({
+      color: MUSEUM_WALL_GREY,
+      roughness: 0.95,
+    }),
     archGreen: new MeshStandardMaterial({
       color: BRAND.colours.main,
       roughness: 0.85,
@@ -404,7 +373,7 @@ export function createMuseumMaterials(): MuseumMaterials {
       emissive: '#eefff1',
       emissiveIntensity: 1.6,
     }),
-    textures: [painted, bare, concrete, tiles],
+    textures: [concrete, tiles],
   };
 }
 
