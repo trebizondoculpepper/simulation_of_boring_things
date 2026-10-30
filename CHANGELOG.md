@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Bridge: every LCARS screen is drawn in full wherever it is seen from in front, however far off or obliquely (the owner, 2026-10-30): the pages on the bridge's consoles and walls (schematics, mimics, readouts) were made as ordinary LCD and touch screens, so went flat beyond 8 m and faded off-axis; they are now `lcars`, never flattened or faded, only hidden from behind.
 - Museum: the empty shells of Halls 7 and 8, seen from afar, keep their black-box finish (black walls, floor and roof), not the white halls'.
 - Museum: halls two or more away from the walker are drawn in their own pass at a fixed quarter resolution (`far-hall-pass.ts`), laid behind the scene, so they never take the resolution of the hall they are seen through; a neighbour copied into the scene goes in the same pass, so what lies ahead no longer sharpens and then softens across a hand-over.
 - Museum tiers simplified (the owner, 2026-10-30): a hall next door is always drawn in full detail (no 30 m rule there), its resolution eased by the distance to its doorway; halls two or more away are low poly; the walker's own hall keeps the 30 m rule.

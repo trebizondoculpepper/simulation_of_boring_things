@@ -1,5 +1,6 @@
 import { Group, Vector3 } from 'three';
-import type { Material, Mesh, Object3D, Texture } from 'three';
+import type { CanvasTexture, Material, Mesh, Object3D, Texture } from 'three';
+import { setDisplayKind } from '../../components/core/views/display-reach';
 import { ConsolePager, PAGER_PIXELS } from '../../../ui2d';
 import type { BootScreen } from '../../../ui2d';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
@@ -232,6 +233,12 @@ function tracked<T>(kit: PanelKit, build: () => T) {
     textures: kit.textures.slice(textures),
     materials: kit.materials.slice(materials),
   };
+  // Every screen on a page is the bridge's LCARS glass, whatever kind its
+  // component made it as (the owner, 2026-10-30): never flattened or faded
+  // by distance or angle, only hidden from behind.
+  for (const t of added.textures)
+    if ((t as CanvasTexture).isCanvasTexture)
+      setDisplayKind(t as CanvasTexture, 'lcars');
   return {
     built,
     free(object: Object3D) {
