@@ -265,6 +265,14 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Wiring the plant rooms' machines to the world
 
+- [ ] **Museum plant halls bound to their own models** ([doc](doc/museum-hall-model.md), the owner, 2026-10-30): `museum-bindings.test.ts` fails for each until it is in line; mark display items decorative, bind every control, gauge and plate to the hall's model, draw every instrument and fitting.
+  - [ ] museum1: 72 owners unbound (pipe plates, labels, panel parts), 10 instruments undrawn.
+  - [ ] museum2: 70 unbound (plates, line markings, panel parts), 13 undrawn.
+  - [ ] museum3: 63 unbound (the DC1 controllers, the chemistry board), 13 undrawn (sample fittings, instruments).
+  - [ ] museum4: 37 unbound (the challenge desk), 15 undrawn (the header, the tanks' valves).
+  - [ ] museum6: 28 unbound (plates, labels, lamp test, clock), 5 undrawn (P2 gauges, tank level instruments).
+  - [ ] museum9: 47 unbound (DC1, the fault key switch, the thermometer board), 25 undrawn (sample fittings, instruments).
+  - [ ] The facing rule checked: each machine declares its front, and a test checks it faces the room.
 - [ ] **Heat lost from the jacuzzi's balance tank** ([057](doc/prompts/057-balance-tank-thermal-losses.md), the owner, 2026-10-24): until then the tank is ideal, a finite quantity of water with no losses. Model its wall and lid losses to the plant room, insulated (foam GRP) and bare, so the jacuzzi's heating carries them and the insulation is worth having; draw the insulated tank to match.
 - [x] **The jacuzzi's balance tank** (done 2026-10-24; [056](doc/prompts/done/056-jacuzzi-balance-tank.md), the owner, 2026-10-24): a deck-level spa cannot work without one.
   - [x] **Stage 1, the model:** (done 2026-10-24, 1305a28) a spa balance tank sized by its allowances (1.3 m³ for the jacuzzi); the cabinet's controller given its tank as an input, tested against an ideal tank and then the world's.
