@@ -66,7 +66,16 @@ export default defineConfig({
     env: {
       builtin: true,
     },
-    ignorePatterns: ['dist/**', 'node_modules/**', '.*/**', 'coverage/**'],
+    // desktop/ is the Electron wrapper (mission 111), with its own packages
+    // and tsconfig; it is checked by its own compile, not here, so CI need
+    // not install Electron.
+    ignorePatterns: [
+      'dist/**',
+      'node_modules/**',
+      '.*/**',
+      'coverage/**',
+      'desktop/**',
+    ],
     rules: {
       'constructor-super': 'error',
       'for-direction': 'error',
