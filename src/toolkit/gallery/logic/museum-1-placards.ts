@@ -1,6 +1,5 @@
 import {
   BOILER_KW,
-  COVER_SAVING,
   NODES,
   POOL,
   POOL_KJ_PER_K,
@@ -55,7 +54,6 @@ export function hall1Facts() {
     evaporation: at28.evaporation,
     lost: at28.total,
     busyFactor: busy.evaporation / at28.evaporation,
-    coverSaving: COVER_SAVING,
     perDay: (at28.total / BOILER_EFFICIENCY) * 24,
   };
 }
@@ -123,9 +121,8 @@ export function hall1Placards(): Placard[] {
       headline: 'Where the heat goes',
       title: `The pool’s heat balance · ${TAGS['loss.evaporation']} to ${TAGS['loss.total']}`,
       body: `Most of a pool’s heat leaves from its surface, as water evaporates: about ${round(k.evaporation)} kW of the ${round(k.lost)} kW this pool loses at 28 °C. A little goes into the ground; a warm hall gives a little back. (These meters are the museum’s model of the heat balance: no real plant measures them. Heat lost as radiation is left out.)`,
-      fact: `Swimmers splashing roughly ${round(k.busyFactor)}× the evaporation; a cover cuts it by about ${round(k.coverSaving * 10)}-tenths.`,
-      tryIt:
-        'Turn the SWIMMERS dial, then close the cover (key switch, CLOSE) and watch the evaporation needle drop.',
+      fact: `Busy swimmers splash up roughly ${round(k.busyFactor)}× the evaporation of a calm pool.`,
+      tryIt: 'Turn the SWIMMERS dial and watch the evaporation needle move.',
     },
     {
       station: 7,
@@ -136,7 +133,7 @@ export function hall1Placards(): Placard[] {
       body: `Every kWh of heat in the pool came from gas the meter counted. This display shows the gas the boiler is burning right now, in cubic metres an hour and as kilowatts of heat going in; watch it drop as the boiler turns itself down, or stop when it cycles off. The heat meter ${v('hx.primary.heat')} counts what reached the pool; the difference is the boiler’s loss.`,
       fact: `Holding this pool at 28 °C takes about ${round(k.perDay)} kWh of gas a day, just to stand still.`,
       tryIt:
-        'Press TIME ×3600, close the cover, and watch the gas fall as the pool needs less.',
+        'Press TIME ×3600, turn the SWIMMERS dial down, and watch the gas fall as the pool needs less.',
     },
   ];
 }

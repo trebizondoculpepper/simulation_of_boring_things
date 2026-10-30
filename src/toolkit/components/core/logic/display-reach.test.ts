@@ -9,6 +9,7 @@ import {
   mayRefresh,
   withinRoomLimits,
   DISPLAY_REACH,
+  GIANT_LED_REACH,
   displayVisibility,
   isLiveDisplay,
   meanColour,
@@ -23,6 +24,17 @@ describe('display reach', () => {
   it('draws a display in full within reach and flat beyond it', () => {
     expect(displayVisibility(false, seen(DISPLAY_REACH - 0.1))).toBe(1);
     expect(displayVisibility(false, seen(DISPLAY_REACH + 0.1))).toBe(0);
+  });
+
+  it('draws a giant LED readout in full across a whole hall', () => {
+    const giant = DISPLAY_PROFILES['giant-led'];
+    // Hall 1's TI5 from the hall's far corner: 0.81 m wide at 18.5 m.
+    const across = seen(18.5, 30, 2.5);
+    expect(displayVisibility(false, across, giant)).toBe(1);
+    expect(displayVisibility(false, across, DISPLAY_PROFILES.led)).toBe(0);
+    expect(displayVisibility(false, seen(GIANT_LED_REACH + 0.1), giant)).toBe(
+      0,
+    );
   });
 
   it('keeps a display in full until it is past the margin', () => {

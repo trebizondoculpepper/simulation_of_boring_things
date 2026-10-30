@@ -450,6 +450,8 @@ export function createSevenSegment(
     colour = '#ff3b24',
     /** Texels a millimetre of its glass; a board's readouts, read from a step or two back, need fewer (2026-10-29). */
     texelsPerMm = 8,
+    /** How far off it is drawn in full (`display-reach.ts`): `giant-led` for one read across a hall. */
+    kind = 'led' as 'led' | 'giant-led',
   } = {},
 ): SevenSegment {
   const cellW = 40;
@@ -464,7 +466,7 @@ export function createSevenSegment(
   // the spa UV's 12 mm hours counter uploaded 864 × 320 every second).
   const cellMm = (digitHeight * 1000 * cellH) / (cellH - 16);
   const S = Math.min(4, Math.max(2, Math.ceil((texelsPerMm * cellMm) / cellH)));
-  const { context, texture } = createCanvasTexture(w * S, h * S, 'led');
+  const { context, texture } = createCanvasTexture(w * S, h * S, kind);
   kit.textures.push(texture);
   const group = new Group();
   const scale = digitHeight / (cellH - 16);

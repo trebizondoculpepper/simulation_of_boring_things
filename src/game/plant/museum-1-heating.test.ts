@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   BOILER_KW,
-  COVER_SAVING,
   FITTINGS,
   INSTRUMENTS,
   NOTCHES,
@@ -181,20 +180,12 @@ describe('Hall 1, where the heat goes (Try it 4)', () => {
     expect(l.ground).toBeCloseTo(3.375, 9);
   });
 
-  it('doubles its evaporation with busy swimmers, and the cover cuts it by nine-tenths', () => {
+  it('doubles its evaporation with busy swimmers', () => {
     const calm = poolLosses(newHall1()).evaporation;
     const busy = poolLosses(
       act(newHall1(), { type: 'swimmers', swimmers: 'busy' }),
     );
     expect(busy.evaporation).toBeCloseTo(2 * calm, 9);
-    let s = act(newHall1(), { type: 'cover', drive: 1 });
-    s = runHall1(s, 200);
-    expect(s.cover).toBe(1);
-    expect(s.coverDrive).toBe(0);
-    expect(poolLosses(s).evaporation).toBeCloseTo(
-      poolLosses({ ...s, cover: 0 }).evaporation * (1 - COVER_SAVING),
-      9,
-    );
   });
 });
 
@@ -250,7 +241,6 @@ describe('Hall 1, reset (Try it 7, and rule 1)', () => {
         session.state,
         { type: 'pump', run: false },
         { type: 'tc-set', celsius: 33 },
-        { type: 'cover', drive: 1 },
       ),
     };
     session = runSession(HALL1_MODEL, session, 2);
@@ -264,7 +254,6 @@ describe('Hall 1, reset (Try it 7, and rule 1)', () => {
     expect(s.mode).toBe('modulating');
     expect(s.boiler.on).toBe(true);
     expect(s.poolPump).toBe(true);
-    expect(s.cover).toBe(0);
     expect(s.swimmers).toBe('few');
     expect(s.heatKWh + s.gasM3).toBe(0);
   });

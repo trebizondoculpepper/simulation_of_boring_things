@@ -47,10 +47,8 @@ import { createRotaryGasMeter } from '../../../components/plant/views/utility-me
 import {
   createControlSelector,
   createGasBurnDisplay,
-  createCoverStation,
   createLossesBoard,
   createPoolThermostat,
-  createPoolCover,
 } from '../../../components/plant/views/museum-heating-parts';
 import { createExperimentalSource } from '../../../../game/plant/experimental-source';
 import {
@@ -85,6 +83,7 @@ import {
   plumbHall1,
 } from '../../logic/museum-1-layout';
 import type { PlacedItem } from '../../logic/museum-1-layout';
+import { HALL_TITLE, hallInterior, hallOrigin } from '../../logic/museum-plan';
 import {
   HALL1_MIMIC,
   hall1MimicState,
@@ -130,6 +129,8 @@ import type { HallExhibit } from './exhibits';
 
 /** The east wall's face, where its panels hang, facing west. */
 const EAST = 7.66;
+/** The street (west) wall's inside face, in the hall's frame. */
+const WEST_FACE = hallInterior('museum1').minX - hallOrigin('museum1').x;
 const FACE_WEST = -Math.PI / 2;
 const FACE_EAST = Math.PI / 2;
 
@@ -353,12 +354,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     name: 'Ideal pool',
     ports: Object.values(PORTS.pool).map((p) => ({ ...p, od: OD[150] })),
   });
-  const cover = createPoolCover(kit, {
-    w: POOL_SHAPE.w,
-    d: POOL_SHAPE.d,
-    y: POOL_SHAPE.h,
-  });
-  pool.group.add(cover.group);
   object.add(
     describe(
       still(atMachine(pool.group, 'pool')),
@@ -373,21 +368,34 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       `WATER ${state().poolC.toFixed(1).padStart(5)}C 470m3`,
       `IN ${readings.flow.toFixed(0).padStart(4)}m3/h   IDEAL`,
     ]);
-    cover.show(state().cover);
   });
-  // The pool's big display, TI5, on the wall behind it.
+  // The pool's big display, TI5, on the street (west) wall just below
+  // the hall's title (the owner, 2026-10-30): its digits (a window 0.81
+  // × 0.37 m) across the top, the unit and tag in a line of their own
+  // beneath them, never over them.
   const big = new Group();
-  turnTo(big, -5.3, 2.75, -6.66, 0);
-  t.box(big, t.paint('#1b2328', 0.5), 1.1, 0.44, 0.05, 0, 0, 0.025);
-  const bigDigits = createSevenSegment(kit, 4, { digitHeight: 0.22 });
-  bigDigits.group.position.set(-0.08, 0.02, 0.052);
+  const bigH = 0.58;
+  turnTo(
+    big,
+    WEST_FACE + 0.01,
+    HALL_TITLE.y - HALL_TITLE.h / 2 - 0.12 - bigH / 2,
+    0,
+    FACE_EAST,
+  );
+  t.box(big, t.paint('#1b2328', 0.5), 1.1, bigH, 0.05, 0, 0, 0.025);
+  // Read from anywhere in the hall: drawn in full from its far end.
+  const bigDigits = createSevenSegment(kit, 4, {
+    digitHeight: 0.22,
+    kind: 'giant-led',
+  });
+  bigDigits.group.position.set(0, 0.07, 0.052);
   bigDigits.group.traverse((o) => (o.userData.live = true));
   big.add(bigDigits.group);
   const bigUnit = createMicroLabel(kit, `°C  POOL ${shortTag('pool.ti')}`, {
     height: 0.05,
     ink: '#f4f3ee',
   });
-  bigUnit.position.set(0.4, -0.15, 0.052);
+  bigUnit.position.set(0, -0.2, 0.052);
   big.add(bigUnit);
   object.add(
     markComponent(big, {
@@ -401,35 +409,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     const text = state().poolC.toFixed(1).padStart(5);
     if (text !== bigShown) bigDigits.show((bigShown = text));
   });
-
-  // The cover's station.
-  const coverStation = createCoverStation(kit, {
-    tag: shortTag('cover'),
-    key: {
-      get value() {
-        return state().coverKey;
-      },
-      set: (on: boolean) => act({ type: 'cover-key', on }),
-    },
-    drive: (to) => act({ type: 'cover', drive: to }),
-    open: () => state().cover <= 0,
-    closed: () => state().cover >= 1,
-  });
-  turnTo(coverStation.group, -3.3, 0, -3.75, FACE_EAST);
-  object.add(
-    markComponent(coverStation.group, {
-      name: `${TAGS['cover']} pool cover station`,
-      status: () =>
-        state().cover <= 0
-          ? 'OPEN lamp lit'
-          : state().cover >= 1
-            ? 'CLOSED lamp lit'
-            : 'cover moving, neither lamp lit',
-    }),
-  );
-  take(coverStation.parts);
-  updates.push(coverStation.update);
-  footprint(-3.3, -3.75, 0.2);
 
   // ---- The pipes and tees ----
   const SERVICE: Partial<

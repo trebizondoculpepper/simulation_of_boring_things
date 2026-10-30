@@ -93,7 +93,7 @@ The brief's other fields (`bigIdea`, `willShow`, `tryIt`, `museum-plan.ts:342` t
 
 ### Entrance panel
 
-Source: `toolkit/gallery/logic/museum-1-placards.ts:145` (`hall1Entrance`); drawn at `toolkit/gallery/rooms/museum/hall-1-warm-water.ts:864` with the heading `Hall 1 · Warm water`
+Source: `toolkit/gallery/logic/museum-1-placards.ts:145` (`hall1Entrance`); drawn at `toolkit/gallery/rooms/museum/hall-1-warm-water.ts:855` with the heading `Hall 1 · Warm water`
 
 - Title: Warm water
 - Subtitle: Hall 1: heating, energy and a first pump
@@ -103,7 +103,7 @@ Source: `toolkit/gallery/logic/museum-1-placards.ts:145` (`hall1Entrance`); draw
 
 ### RESET sign (beside the RESET pedestal)
 
-Source: `toolkit/gallery/logic/ideal-pool-plant-placards.ts:273` (`RESET_SIGN`), drawn at `hall-1-warm-water.ts:873`; the same sign stands in Halls 1 to 6
+Source: `toolkit/gallery/logic/ideal-pool-plant-placards.ts:273` (`RESET_SIGN`), drawn at `hall-1-warm-water.ts:864`; the same sign stands in Halls 1 to 6
 
 - Headline: Don’t worry, you can’t break anything!
 - Body: This is a simulation. If you get the plant into a muddle, press this button and everything goes back to the start.
@@ -165,8 +165,8 @@ Source: `toolkit/gallery/logic/museum-1-placards.ts:120` (station 6)
 - Headline: Where the heat goes
 - Title: The pool’s heat balance · M1-QI1 to M1-QI4
 - Body: Most of a pool’s heat leaves from its surface, as water evaporates: about 21 kW of the 23 kW this pool loses at 28 °C. A little goes into the ground; a warm hall gives a little back. (These meters are the museum’s model of the heat balance: no real plant measures them. Heat lost as radiation is left out.) (21 and 23 computed by `poolLosses`)
-- Fact: Swimmers splashing roughly 2× the evaporation; a cover cuts it by about 9-tenths. (2× and 9-tenths computed; the sentence seems to lack a verb, "double" perhaps)
-- Try it: Turn the SWIMMERS dial, then close the cover (key switch, CLOSE) and watch the evaporation needle drop.
+- Fact: Busy swimmers splash up roughly 2× the evaporation of a calm pool. (2× computed)
+- Try it: Turn the SWIMMERS dial and watch the evaporation needle move.
 
 ### Placard 7: The gas it burns
 
@@ -176,18 +176,18 @@ Source: `toolkit/gallery/logic/museum-1-placards.ts:131` (station 7)
 - Title: Gas burnt now · M1-EC1
 - Body: Every kWh of heat in the pool came from gas the meter counted. This display shows the gas the boiler is burning right now, in cubic metres an hour and as kilowatts of heat going in; watch it drop as the boiler turns itself down, or stop when it cycles off. The heat meter HM1 counts what reached the pool; the difference is the boiler’s loss.
 - Fact: Holding this pool at 28 °C takes about 591 kWh of gas a day, just to stand still. (591 computed)
-- Try it: Press TIME ×3600, close the cover, and watch the gas fall as the pool needs less.
+- Try it: Press TIME ×3600, turn the SWIMMERS dial down, and watch the gas fall as the pool needs less.
 
 ### Clock placard
 
-Source: `toolkit/gallery/rooms/museum/hall-1-warm-water.ts:821`
+Source: `toolkit/gallery/rooms/museum/hall-1-warm-water.ts:817`
 
 - Heading: THE HALL’S TIME
 - Line: Press a TIME button on the map and watch it race.
 
 ### The losses board's header
 
-Source: `toolkit/components/plant/views/museum-heating-parts.ts:348`
+Source: `toolkit/components/plant/views/museum-heating-parts.ts:205`
 
 - Heading: WHERE THE HEAT GOES
 - Line: The museum’s model of the pool’s heat balance: no real plant measures these.
@@ -199,17 +199,16 @@ Source: `toolkit/components/plant/views/museum-heating-parts.ts:348`
 | Mimic title               | `toolkit/gallery/logic/museum-1-mimic.ts:106` (`HALL1_MIMIC`) | THE MAP: HOW THE HEAT GETS FROM THE GAS TO THE POOL                                                                                      |
 | Mimic captions            | `museum-1-mimic.ts` `labels`                                  | GAS, FLUE, WHERE THE HEAT GOES, TIME                                                                                                     |
 | Mimic readout legends     | `museum-1-mimic.ts:51` (`READOUTS`)                           | FQ1 m³/h, EC1 GAS kW, TI3 °C, TI4 °C, HM1 kW, TI1 °C, TI2 °C, FT1 m³/h, POOL TI5 °C, QI1 EVAP kW, QI2 AIR kW, QI3 GROUND kW, QI4 LOST kW |
-| Mimic lamps               | `museum-1-mimic.ts` `lamps`                                   | FIRING, LOCKOUT, P1 RUN, FS1, P2 RUN, TC1 CALL, COVER OFF, COVER ON                                                                      |
+| Mimic lamps               | `museum-1-mimic.ts` `lamps`                                   | FIRING, LOCKOUT, P1 RUN, FS1, P2 RUN, TC1 CALL                                                                                           |
 | Mimic buttons             | `museum-1-mimic.ts`                                           | ×1, ×60, ×600, ×3600, READINGS                                                                                                           |
-| Losses board meters       | `hall-1-warm-water.ts:910`                                    | QI1 EVAPORATION, QI2 TO THE AIR ±10, QI3 TO THE GROUND, QI4 TOTAL LOST                                                                   |
-| Losses board dial         | `museum-heating-parts.ts:383`, `:391`                         | SWIMMERS: NONE · A FEW · BUSY · GALA                                                                                                     |
-| Boiler's control selector | `museum-heating-parts.ts:433`, `:441`                         | CONTROL: ON-OFF · MODULATING                                                                                                             |
-| Pool thermostat           | `museum-heating-parts.ts:207`, `:224`, `:231`                 | SET °C 20–35 (range from `TC_RANGE`), CALL, TC1 THERMOSTAT                                                                               |
-| Pool cover station        | `museum-heating-parts.ts:110` to `:157`                       | KEY, OPEN, CLOSE, OPEN (lamp), CLOSED (lamp), CV1 POOL COVER                                                                             |
-| Gas burn display          | `museum-heating-parts.ts:277` to `:280`                       | EC1 GAS BEING BURNT NOW; Heat going in, kW; GAS FLOW m³/h                                                                                |
-| Pool temperature display  | `hall-1-warm-water.ts:382`                                    | °C POOL TI5                                                                                                                              |
-| Pool's own display        | `hall-1-warm-water.ts:369`                                    | WATER 27.0C 470m3 / IN 185m3/h IDEAL (values live)                                                                                       |
-| Plant time display        | `hall-1-warm-water.ts:855`                                    | TIME hh:mm:ss / SPEED x1 (values live)                                                                                                   |
+| Losses board meters       | `hall-1-warm-water.ts:897`                                    | QI1 EVAPORATION, QI2 TO THE AIR ±10, QI3 TO THE GROUND, QI4 TOTAL LOST                                                                   |
+| Losses board dial         | `museum-heating-parts.ts:242`, `:251`                         | SWIMMERS: NONE · A FEW · BUSY · GALA                                                                                                     |
+| Boiler's control selector | `museum-heating-parts.ts:293`, `:301`                         | CONTROL: ON-OFF · MODULATING                                                                                                             |
+| Pool thermostat           | `museum-heating-parts.ts:57`, `:74`, `:81`                    | SET °C 20–35 (range from `TC_RANGE`), CALL, TC1 THERMOSTAT                                                                               |
+| Gas burn display          | `museum-heating-parts.ts:127` to `:130`                       | EC1 GAS BEING BURNT NOW; Heat going in, kW; GAS FLOW m³/h                                                                                |
+| Pool temperature display  | `hall-1-warm-water.ts:390`                                    | °C POOL TI5                                                                                                                              |
+| Pool's own display        | `hall-1-warm-water.ts:368`                                    | WATER 27.0C 470m3 / IN 185m3/h IDEAL (values live)                                                                                       |
+| Plant time display        | `hall-1-warm-water.ts:841`                                    | TIME hh:mm:ss / SPEED x1 (values live)                                                                                                   |
 | Pump station              | `toolkit/gallery/views/museum-exhibit.ts:537` to `:601`       | RUN, START, STOP, TRIPPED, RESET, P2 CIRCULATION PUMP, PUSH                                                                              |
 | RESET pedestal            | `museum-exhibit.ts:466`, `:474`                               | RESET SIMULATION, PUSH                                                                                                                   |
 

@@ -38,7 +38,7 @@ import type {
  * chooses; the boiler fires only while it calls and the pool's water is
  * flowing (FS1). The pool loses heat by evaporation (vapour pressure, as
  * `thermal.ts`), convection to its hall's air and conduction to the
- * ground; a cover cuts its evaporation; swimmers raise it.
+ * ground; swimmers raise its evaporation.
  *
  * Every fitting is given with its role and normal state, so the plumber
  * adds nothing; tags are derived (room code M1). Pure; °C, kW, m³/h,
@@ -487,7 +487,6 @@ export const TAGS: Readonly<Record<string, string>> = (() => {
     'total',
   ].entries())
     tags[`loss.${id}`] = `${ROOM_CODE}-QI${k + 1}`;
-  tags['cover'] = `${ROOM_CODE}-CV1`;
   return tags;
 })();
 
@@ -551,17 +550,6 @@ export const EVAPORATION_COEF = thermalParams({
   water: 28,
   air: HALL_AIR.celsius,
 }).evaporation;
-
-/**
- * A closed cover's saving on evaporation: nine-tenths. Sourced: a solid
- * cover cut evaporation by about 95 % in a 2025 study of UAE pools, and
- * Southampton University's Jubilee Sports Centre cover saved 169,000 kWh a
- * year; a little short of the best, for a cover that does not quite seal.
- */
-export const COVER_SAVING = 0.9;
-
-/** How long the cover's motor takes to roll it fully out or in, seconds. */
-export const COVER_TRAVEL = 120;
 
 export type Swimmers = 'none' | 'few' | 'busy' | 'gala';
 export const SWIMMERS: readonly Swimmers[] = ['none', 'few', 'busy', 'gala'];
@@ -655,11 +643,6 @@ export interface Hall1State {
   tcSet: number;
   mode: ControlMode;
   calling: boolean;
-  /** The cover: 0 rolled up, 1 fully over the pool; its motor's drive. */
-  cover: number;
-  coverDrive: -1 | 0 | 1;
-  /** The cover's key switch, turned on. */
-  coverKey: boolean;
   swimmers: Swimmers;
   /** The pool, °C; the boiler's flow and return, °C. */
   poolC: number;
@@ -695,9 +678,6 @@ export function newHall1(): Hall1State {
     tcSet: START_SET,
     mode: 'modulating',
     calling: true,
-    cover: 0,
-    coverDrive: 0,
-    coverKey: true,
     swimmers: 'few',
     poolC: START_C,
     flowC: 60,
@@ -718,8 +698,6 @@ export type Hall1Action =
   | { type: 'boiler-setpoint'; celsius: number }
   | { type: 'tc-set'; celsius: number }
   | { type: 'mode'; mode: ControlMode }
-  | { type: 'cover'; drive: -1 | 0 | 1 }
-  | { type: 'cover-key'; on: boolean }
   | { type: 'swimmers'; swimmers: Swimmers }
   | { type: 'reset' };
 
@@ -756,10 +734,6 @@ export function actOnHall1(s: Hall1State, a: Hall1Action): Hall1State {
       };
     case 'mode':
       return { ...s, mode: a.mode };
-    case 'cover':
-      return s.coverKey ? { ...s, coverDrive: a.drive } : s;
-    case 'cover-key':
-      return { ...s, coverKey: a.on, coverDrive: a.on ? s.coverDrive : 0 };
     case 'swimmers':
       return { ...s, swimmers: a.swimmers };
     case 'reset':
@@ -824,8 +798,7 @@ export function poolLosses(s: Hall1State) {
     saturation(s.poolC) - HALL_AIR.humidity * saturation(HALL_AIR.celsius),
   );
   const activity = ACTIVITY_FACTOR[SWIMMER_ACTIVITY[s.swimmers]];
-  const kgPerS =
-    EVAPORATION_COEF * drive * activity * (1 - COVER_SAVING * s.cover);
+  const kgPerS = EVAPORATION_COEF * drive * activity;
   const evaporation = (kgPerS * THERMAL.latent) / 1000;
   const convection =
     (THERMAL.surfaceH * POOL_AREA * (s.poolC - HALL_AIR.celsius)) / 1000;
@@ -963,14 +936,6 @@ export function stepHall1(state: Hall1State, h: number): Hall1State {
   if (s.flowC > 95 && !b.lockout)
     b = { ...b, lockout: 'overheat', rate: 0, code: 0, timer: 0 };
   s.boiler = b;
-  // The cover's motor, to its limit switches.
-  if (s.coverDrive !== 0) {
-    s.cover = Math.max(
-      0,
-      Math.min(1, s.cover + (s.coverDrive * h) / COVER_TRAVEL),
-    );
-    if (s.cover <= 0 || s.cover >= 1) s.coverDrive = 0;
-  }
   return s;
 }
 

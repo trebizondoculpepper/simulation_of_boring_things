@@ -17,11 +17,10 @@ import type { TimeSpeed } from './museum-time';
  * (rule 5): the gas, the boiler and its flue, the heating circuit through
  * the exchanger, the pool's own loop, the pool. Every line chases its
  * flow; each valve's lens is lit by where it stands; the boiler's FIRING
- * and LOCKOUT, both pumps' RUN, the thermostat's CALL, the flow switch,
- * and the cover's limit switches; a readout at every instrument it
- * repeats, the losses and the gas burnt now. Its only buttons are the TIME speeds:
- * the pumps, the boiler's RESET and the cover are worked where they are
- * (local controls). Pure.
+ * and LOCKOUT, both pumps' RUN, the thermostat's CALL and the flow
+ * switch; a readout at every instrument it repeats, the losses and the
+ * gas burnt now. Its only buttons are the TIME speeds: the pumps and the
+ * boiler's RESET are worked where they are (local controls). Pure.
  */
 
 const GAS = '#c9a227';
@@ -262,8 +261,6 @@ export const HALL1_MIMIC: MimicSpec = {
       colour: 'amber',
       label: `${shortTag('poolOut.tc')} CALL`,
     },
-    { id: 'cover-open', at: [1.2, -0.65], colour: 'white', label: 'COVER OFF' },
-    { id: 'cover-shut', at: [1.42, -0.65], colour: 'white', label: 'COVER ON' },
     ...SPEEDS.map((s, k) => ({
       id: `speed-${s}`,
       at: [-1.45 + k * 0.17, 0.2] as Point,
@@ -354,8 +351,6 @@ export function hall1MimicState(s: Hall1State, speed: TimeSpeed): MimicState {
       'p2-run': s.poolPump && !s.tripped,
       fs1: r.flowSwitch,
       call: s.calling,
-      'cover-open': s.cover <= 0,
-      'cover-shut': s.cover >= 1,
       ...Object.fromEntries(SPEEDS.map((x) => [`speed-${x}`, speed === x])),
     },
     readouts,

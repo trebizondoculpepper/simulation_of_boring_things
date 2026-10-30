@@ -8,10 +8,8 @@ import {
 import { tools } from '../../core/views/fitting-tools';
 import {
   createPartSet,
-  keySwitch,
   pilotLight,
   potentiometer,
-  pushButton,
   selector,
 } from '../../core/parts/parts';
 import { badge } from './air-handling';
@@ -20,159 +18,11 @@ import { createPanelMeter } from '../../industrial-control/views/panel-instrumen
 
 /**
  * The working fittings Hall 1 of the museum adds to the plant (107a): the
- * pool's motorised cover and its key-switch station, the pool's capillary
- * thermostat, the energy-cost display and the museum's losses board with
+ * pool's capillary thermostat, the energy-cost display and the museum's losses board with
  * its SWIMMERS dial. Each is a real, worked component: its parts are
  * worked through the control scheme, and it shows only what it is given.
  * Displays draw only when what they show changes. In metres.
  */
-
-/**
- * A motorised slatted pool cover (Certikind), on a roller across one end
- * of the pool: `show(fraction)` rolls it out over the water, 0 rolled up,
- * 1 over all of it. In its own frame: the pool's top at `y`, `w` along x,
- * the roller at z = −d/2, rolling out toward +z.
- */
-export function createPoolCover(
-  kit: PanelKit,
-  { w, d, y }: { w: number; d: number; y: number },
-) {
-  const t = tools(kit);
-  const group = new Group();
-  group.name = 'Motorised pool cover';
-  const white = t.paint('#e9ecea', 0.5);
-  const slat = t.paint('#4f8fc4', 0.35);
-  // The roller's housing and its drive's end box, Certikind's badge on it.
-  t.cyl(group, white, 0.16, w + 0.1, 0, y + 0.18, -d / 2 + 0.1, 'x', 24);
-  const drive = new Group();
-  drive.position.set(w / 2 + 0.2, y + 0.18, -d / 2 + 0.1);
-  group.add(drive);
-  t.box(drive, white, 0.28, 0.36, 0.36, 0, 0, 0);
-  badge(kit, drive, 'certikind', [0, 0.05, 0.182], 0.04);
-  // The slats, a blind of one piece scaled out from the roller.
-  const blind = new Group();
-  blind.userData.live = true;
-  blind.position.set(0, y - 0.04, -d / 2 + 0.1);
-  group.add(blind);
-  const sheet = t.box(blind, slat, w - 0.12, 0.025, 1, 0, 0, 0.5);
-  sheet.userData.live = true;
-  let shown = -1;
-  return {
-    group,
-    show(fraction: number) {
-      const f = Math.round(Math.max(0, Math.min(1, fraction)) * 100) / 100;
-      if (f === shown) return;
-      shown = f;
-      blind.visible = f > 0.005;
-      blind.scale.z = Math.max(0.001, f * (d - 0.2));
-    },
-  };
-}
-
-/**
- * The cover's station on its post: a key switch, OPEN and CLOSE push
- * buttons, and lamps at its limit switches, OPEN and CLOSED (Certikind).
- */
-export function createCoverStation(
-  kit: PanelKit,
-  {
-    tag,
-    key,
-    drive,
-    open,
-    closed,
-  }: {
-    tag: string;
-    key: { value: boolean; set(on: boolean): void };
-    drive: (to: -1 | 1) => void;
-    open: () => boolean;
-    closed: () => boolean;
-  },
-) {
-  const t = tools(kit);
-  const group = new Group();
-  group.name = `${tag} cover control station`;
-  t.box(group, t.paint('#55616a', 0.5), 0.06, 1.2, 0.06, 0, 0.6, -0.05);
-  t.box(group, t.paint('#d8dbd6', 0.5), 0.3, 0.36, 0.1, 0, 1.32, 0);
-  const face = new Group();
-  face.position.set(0, 1.32, 0.05);
-  group.add(face);
-  const parts = createPartSet();
-  const isOpen = signal(open());
-  const isClosed = signal(closed());
-  const put = <P extends { object: Group }>(part: P, x: number, y: number) => {
-    part.object.position.set(x, y, 0.002);
-    face.add(part.object);
-    return parts.add(part as never) as P;
-  };
-  put(
-    keySwitch(kit, {
-      legend: 'KEY',
-      name: `${tag} cover key switch`,
-      bound: key,
-    }) as never,
-    0,
-    0.1,
-  );
-  put(
-    pushButton(kit, {
-      colour: 'green',
-      legend: 'OPEN',
-      name: `${tag} cover OPEN`,
-      action: () => drive(-1),
-    }) as never,
-    -0.08,
-    -0.03,
-  );
-  put(
-    pushButton(kit, {
-      colour: 'black',
-      legend: 'CLOSE',
-      name: `${tag} cover CLOSE`,
-      action: () => drive(1),
-    }) as never,
-    0.08,
-    -0.03,
-  );
-  put(
-    pilotLight(kit, {
-      colour: 'white',
-      legend: 'OPEN',
-      drive: isOpen,
-      name: `${tag} cover OPEN lamp`,
-    }) as never,
-    -0.08,
-    -0.12,
-  );
-  put(
-    pilotLight(kit, {
-      colour: 'white',
-      legend: 'CLOSED',
-      drive: isClosed,
-      name: `${tag} cover CLOSED lamp`,
-    }) as never,
-    0.08,
-    -0.12,
-  );
-  const plate = createMicroLabel(kit, `${tag}  POOL COVER`, {
-    height: 0.016,
-    ink: '#16191b',
-    plate: '#f4f3ee',
-    maxWidth: 0.26,
-  });
-  plate.position.set(0, 0.165, 0.002);
-  face.add(plate);
-  badge(kit, group, 'certikind', [0, 1.08, 0.052], 0.025);
-  return {
-    group,
-    parts,
-    update(delta: number) {
-      if (isOpen.value !== open()) isOpen.value = open();
-      if (isClosed.value !== closed()) isClosed.value = closed();
-      parts.update(delta);
-    },
-  };
-}
 
 /**
  * The pool's capillary immersion thermostat (TC1), its box on the pipe

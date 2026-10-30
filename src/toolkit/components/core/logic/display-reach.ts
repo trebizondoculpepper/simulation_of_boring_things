@@ -9,13 +9,17 @@
  * must go past to go flat again, so it does not flicker at the edge.
  */
 export const DISPLAY_REACH = 8;
+/** A giant LED readout's reach: any hall, end to end. */
+export const GIANT_LED_REACH = 30;
 export const DISPLAY_LEAVE = 1;
 
 /**
  * The kinds of screen, each seen as its technology allows (the owner,
  * 2026-10-29): `lcd` (a twisted-nematic panel, washing out to its
  * background well off its normal), `crt`, `plasma`, `vfd`, `led` and
- * `nixie` (emitting their own light, readable at wider angles), `touch`
+ * `nixie` (emitting their own light, readable at wider angles),
+ * `giant-led` (a wall-sized LED readout, its digits a hand high, meant to
+ * be read across a whole hall: Hall 1's TI5, the owner, 2026-10-30), `touch`
  * (a modern touch screen's panel, readable widely), `printed`
  * (a canvas that is not a screen: a dial face, a chart, a label), and
  * `lcars`, the bridge's touch screens (a touch screen of their own kind,
@@ -28,6 +32,7 @@ export type DisplayKind =
   | 'plasma'
   | 'vfd'
   | 'led'
+  | 'giant-led'
   | 'nixie'
   | 'touch'
   | 'printed'
@@ -75,6 +80,7 @@ export const DISPLAY_PROFILES: Record<DisplayKind, DisplayProfile> = {
   plasma: seen(30, 85, 80),
   vfd: seen(10, 85, 80),
   led: seen(10, 85, 80),
+  'giant-led': { ...seen(10, 85, 80), reach: GIANT_LED_REACH },
   nixie: seen(5, 85, 80),
   touch: seen(30, 85, 80),
   printed: seen(Infinity, 90, 88),
