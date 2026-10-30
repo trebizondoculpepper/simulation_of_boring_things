@@ -19,7 +19,7 @@ export interface GroutPlinth {
   readonly name: string;
   /** The years on the plaque, hedged where the research is indicative. */
   readonly years: string;
-  /** Where its years start, for the floor's timeline. */
+  /** Where its years start. */
   readonly from: number;
   readonly what: string;
   readonly benefits: readonly [string, string];
@@ -193,11 +193,6 @@ export const INTRODUCTION = {
   ],
 } as const;
 
-export const NOTHING_TO_RESET = {
-  headline: 'There is nothing to reset.',
-  body: 'Grout endures.',
-} as const;
-
 export const CLOSING_CARD =
   'Next time you swim, look down. The grout is looking after you.';
 
@@ -214,98 +209,108 @@ export const SPECIMEN = {
 /** The plinths' size, metres. */
 export const PLINTH = { w: 0.55, h: 1.15 } as const;
 
-/** Which way a plinth's specimen and plaque face: towards its visitor. */
-export type Facing = 'north' | 'south' | 'east' | 'west';
+/** Which way a plinth's specimen and plaque face, towards its visitor: a wall's way, or (in a corner) the middle of the hall. */
+export type Facing = 'north' | 'south' | 'east' | 'west' | 'middle';
 
-/** A facing as a unit step in the hall's frame, x and z. */
-export const facingStep = (f: Facing): [number, number] =>
-  f === 'north'
+/** A facing as a unit step in the hall's frame, x and z, for a plinth at `x`, `z`. */
+export const facingStep = (f: Facing, x = 0, z = 0): [number, number] => {
+  if (f === 'middle') {
+    const d = Math.hypot(x, z) || 1;
+    return [-x / d, -z / d];
+  }
+  return f === 'north'
     ? [0, -1]
     : f === 'south'
       ? [0, 1]
       : f === 'east'
         ? [1, 0]
         : [-1, 0];
+};
 
-/** The turn about y that faces a model built facing +z this way. */
-export const facingYaw = (f: Facing) => {
-  const [dx, dz] = facingStep(f);
+/** The turn about y that faces a model built facing +z this way, at `x`, `z`. */
+export const facingYaw = (f: Facing, x = 0, z = 0) => {
+  const [dx, dz] = facingStep(f, x, z);
   return Math.atan2(dx, dz);
 };
 
+/** Plinth `n`'s facing as a unit step. */
+export const stepOf = (n: number) => {
+  const p = PLACES[n];
+  return facingStep(p.facing, p.x, p.z);
+};
+
+/** Plinth `n`'s turn about y. */
+export const yawOf = (n: number) => {
+  const p = PLACES[n];
+  return facingYaw(p.facing, p.x, p.z);
+};
+
 /**
- * Where each plinth stands (the owner, 2026-10-28: "grout plinths around
- * the edge, with a few in the centre"), in date order round the hall:
- * 1 to 3 along the east wall, facing in; 4 to 6 an island in the middle,
- * facing the way in, the 1970s' at its centre under the oil-wheel
- * projector; 7 to 9 along the south wall, under the title; 10, the coda,
- * on the west wall beside the way out.
+ * Where each plinth stands, all round the edge of the hall (the owner,
+ * 2026-10-30; it had a few in the middle, 2026-10-28), one in each corner
+ * facing the middle of the hall, in date order round it from the way in
+ * (north): 1 on the north wall east of the way in, its lectern where the
+ * owner stood for it; 2 in the north-east corner; 3 and 4 on the east
+ * wall, either side of the introduction; 5, the 1970s', in the south-east
+ * corner under the oil-wheel projector; 6 and 7 on the south wall, under
+ * the title; 8 in the south-west corner; 9 on the west wall south of the
+ * way out; 10, the coda, in the north-west corner, past the way out and
+ * the bench.
  */
 export const PLACES: Readonly<
   Record<number, { x: number; z: number; facing: Facing }>
 > = {
-  1: { x: 6.8, z: -2.6, facing: 'west' },
-  2: { x: 6.8, z: 0.1, facing: 'west' },
-  3: { x: 6.8, z: 2.8, facing: 'west' },
-  4: { x: 2.7, z: 0.9, facing: 'north' },
-  5: { x: 0, z: 0.9, facing: 'north' },
-  6: { x: -2.7, z: 0.9, facing: 'north' },
-  7: { x: 4.4, z: 5.8, facing: 'north' },
-  8: { x: 0, z: 5.8, facing: 'north' },
-  9: { x: -4.4, z: 5.8, facing: 'north' },
-  10: { x: -6.8, z: 4.2, facing: 'east' },
+  1: { x: 2.45, z: -5.75, facing: 'south' },
+  2: { x: 6.8, z: -5.8, facing: 'middle' },
+  3: { x: 6.8, z: -2.4, facing: 'west' },
+  4: { x: 6.8, z: 2.4, facing: 'west' },
+  5: { x: 6.8, z: 5.8, facing: 'middle' },
+  6: { x: 2.2, z: 5.8, facing: 'north' },
+  7: { x: -2.2, z: 5.8, facing: 'north' },
+  8: { x: -6.8, z: 5.8, facing: 'middle' },
+  9: { x: -6.8, z: 3.2, facing: 'east' },
+  10: { x: -6.8, z: -5.8, facing: 'middle' },
 };
 
 /** Plinth `n`'s place. */
 export const plinthPlace = (n: number) => PLACES[n];
 
-/** How far before its plinth a plaque's lectern stands, and how far out the rope runs round it. */
+/** How far before its plinth a plaque's lectern stands. */
 export const LECTERN_OUT = 1.15;
-export const ROPE_HALF = 0.55;
+/** Half a plinth's footprint, its foot included (no rope round it: the owner, 2026-10-30). */
+export const PLINTH_HALF = (PLINTH.w + 0.08) / 2;
 
 /** Where plinth `n`'s plaque stands: before it, on its visitor's side. */
 export function lecternAt(n: number) {
   const p = PLACES[n];
-  const [dx, dz] = facingStep(p.facing);
+  const [dx, dz] = stepOf(n);
   return { x: p.x + dx * LECTERN_OUT, z: p.z + dz * LECTERN_OUT };
 }
-
-/** The bronze timeline set in the floor across the way in, 1840 (east) to today (west), before the island. */
-export const TIMELINE = {
-  from: 1840,
-  to: 2026,
-  east: 5.0,
-  west: -5.0,
-  z: -1.5,
-} as const;
-
-/** Where a year falls on the timeline, its x. */
-export const timelineX = (year: number) =>
-  TIMELINE.east +
-  ((year - TIMELINE.from) / (TIMELINE.to - TIMELINE.from)) *
-    (TIMELINE.west - TIMELINE.east);
 
 /** The hall's inside half-sizes (16 × 14 m cell less its walls). */
 export const HALL7 = { halfX: 7.7, halfZ: 6.7, h: 9.5 } as const;
 
-/** The bench against the west wall, north of the way out, facing east into the hall. */
-export const BENCH = { x: -6.9, z: -4.0, length: 1.6, depth: 0.45 } as const;
+/** The bench against the west wall, between the way out and the coda's corner, facing east into the hall. */
+export const BENCH = { x: -6.9, z: -3.4, length: 1.6, depth: 0.45 } as const;
 
-/** The oil-wheel projector, hung high over the island, aimed down at the 1970s' specimen. */
-export const PROJECTOR = { x: 0, y: 4.4, z: -0.7, ceiling: HALL7.h } as const;
+/** The oil-wheel projector, hung high before the 1970s' plinth (5), on its visitor's side, aimed down at its specimen. */
+export const PROJECTOR = (() => {
+  const p = PLACES[5];
+  const [dx, dz] = stepOf(5);
+  return { x: p.x + dx * 1.9, y: 4.4, z: p.z + dz * 1.9, ceiling: HALL7.h };
+})();
 
 /** Places where the walker may not go, metres in the hall's frame. */
 export function hall7Solids() {
   return [
-    // Each plinth, roped round.
+    // Each plinth, turned with it: the box round its footprint.
     ...PLINTHS.map((p) => {
       const { x, z } = PLACES[p.n];
-      return {
-        minX: x - ROPE_HALF - 0.05,
-        maxX: x + ROPE_HALF + 0.05,
-        minZ: z - ROPE_HALF - 0.05,
-        maxZ: z + ROPE_HALF + 0.05,
-      };
+      const yaw = yawOf(p.n);
+      const r =
+        (PLINTH_HALF + 0.05) *
+        (Math.abs(Math.cos(yaw)) + Math.abs(Math.sin(yaw)));
+      return { minX: x - r, maxX: x + r, minZ: z - r, maxZ: z + r };
     }),
     // Its plaque's lectern.
     ...PLINTHS.map((p) => {
@@ -323,10 +328,9 @@ export function hall7Solids() {
 }
 
 /**
- * The approach light (the owner, 2026-10-29): coming near a plinth turns
- * a spotlight on, over its specimen and its plaque's lectern. One light
- * serves the hall, moved to the plinth approached (a light switched in
- * and out would make every material recompile). Within `APPROACH_NEAR` m
+ * The approach (the owner, 2026-10-29): coming near a plinth brightens
+ * its spotlight, over its specimen and its plaque's lectern (each plinth
+ * has its own, always on: 2026-10-30). Within `APPROACH_NEAR` m
  * of a plinth's lectern it is that plinth's; it lets go only past
  * `APPROACH_FAR`, so it does not flicker at the edge.
  */

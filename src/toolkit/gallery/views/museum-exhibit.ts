@@ -28,6 +28,9 @@ const INK = '#16232b';
 const ACCENT = '#e5631c';
 const TEAL = '#0f6f7c';
 
+/** How far a museum panel's or placard's lettering is drawn in full, metres: any hall, end to end. */
+export const WALL_PANEL_REACH = 25;
+
 /** Wrap `text` to `width` px in the context's font; returns the lines. */
 function wrap(c: CanvasRenderingContext2D, text: string, width: number) {
   const lines: string[] = [];
@@ -254,7 +257,15 @@ export function createLectern(kit: PanelKit, p: Placard) {
   head.rotation.x = -0.62;
   group.add(head);
   t.box(head, frame, W + 0.04, H + 0.04, 0.03, 0, 0, -0.016);
-  const face = t.printed(W, H, (c, w, h) => paintPlacard(c, p, w, h), 1024);
+  // Its lettering drawn in full anywhere in its hall, there to read on arrival.
+  const face = t.printed(
+    W,
+    H,
+    (c, w, h) => paintPlacard(c, p, w, h),
+    1024,
+    false,
+    WALL_PANEL_REACH,
+  );
   face.mesh.position.z = 0.0005;
   head.add(face.mesh);
   markComponent(group, { name: `Placard: ${p.headline}`, decorative: true });
@@ -282,7 +293,8 @@ export function createWallPanel(
     0,
     0.0125,
   );
-  const face = t.printed(w, h, draw, 1400);
+  // Its lettering drawn in full anywhere in its hall (the owner, 2026-10-30).
+  const face = t.printed(w, h, draw, 1400, false, WALL_PANEL_REACH);
   face.mesh.position.z = 0.026;
   group.add(face.mesh);
   markComponent(group, { name, decorative: true });

@@ -208,6 +208,12 @@ interface Sign {
   step: number;
   holdUntil: number;
   stages: Map<number, HTMLCanvasElement>;
+  /** Within this many metres all its lettering is drawn, however small. */
+  reach: number;
+  /** A change of step under way: the stage it leaves, and when it began, ms. */
+  fade: { from: HTMLCanvasElement; since: number } | null;
+  /** The canvas a fade is drawn on. */
+  blend: HTMLCanvasElement | null;
 }
 const signs = new WeakMap<Texture, Sign>();
 
@@ -221,6 +227,8 @@ export function watchSign(
   texture: Texture,
   draw: (c: CanvasRenderingContext2D) => void,
   pixelsPerMetre: number,
+  /** Within this many metres all its lettering is drawn (a poster read across a room). */
+  reach = 0,
 ) {
   const canvas = texture.image as HTMLCanvasElement;
   if (!canvas?.getContext) return;
@@ -232,6 +240,9 @@ export function watchSign(
     step: 0,
     holdUntil: 0,
     stages: new Map(),
+    reach,
+    fade: null,
+    blend: null,
   });
   install();
 }
@@ -265,10 +276,55 @@ function stageOf(sign: Sign, step: number) {
   return stage;
 }
 
-function setStep(sign: Sign, step: number) {
+/**
+ * How long a sign's lettering takes to fade in or out as its step changes
+ * (the owner, 2026-10-30: it appeared all at once), ms; drawn at each
+ * check, five times a second, within the ten a display may animate at.
+ */
+export const SIGN_FADE = 1200;
+
+function setStep(sign: Sign, step: number, now: number) {
   if (sign.step === step) return;
+  // Fading from whatever is shown now, part-way through a fade or not.
+  sign.fade = {
+    from: (sign.texture.image as HTMLCanvasElement) ?? stageOf(sign, sign.step),
+    since: now,
+  };
+  if (sign.fade.from === sign.blend) {
+    // Keep the half-faded picture as the one it leaves.
+    const kept = document.createElement('canvas');
+    kept.width = sign.blend.width;
+    kept.height = sign.blend.height;
+    kept.getContext('2d')!.drawImage(sign.blend, 0, 0);
+    sign.fade.from = kept;
+  }
   sign.step = step;
-  sign.texture.image = stageOf(sign, step);
+  stepFade(sign, now);
+}
+
+/** A fade's next frame: the stage it leaves, the new one over it at its share. */
+function stepFade(sign: Sign, now: number) {
+  const fade = sign.fade;
+  if (!fade) return;
+  const to = stageOf(sign, sign.step);
+  const k = Math.min(1, (now - fade.since) / SIGN_FADE);
+  if (k >= 1) {
+    sign.fade = null;
+    sign.texture.image = to;
+  } else {
+    if (!sign.blend) {
+      sign.blend = document.createElement('canvas');
+      sign.blend.width = sign.canvas.width;
+      sign.blend.height = sign.canvas.height;
+    }
+    const c = sign.blend.getContext('2d')!;
+    c.globalAlpha = 1;
+    c.drawImage(fade.from, 0, 0);
+    c.globalAlpha = k * k * (3 - 2 * k);
+    c.drawImage(to, 0, 0);
+    c.globalAlpha = 1;
+    sign.texture.image = sign.blend;
+  }
   upload.call(sign.texture, true);
 }
 
@@ -334,10 +390,16 @@ function check(scene: Scene, camera: Camera, screenPixels: number) {
   camera.getWorldPosition(eye);
   for (const [sign, objects] of s.signs) {
     if (displayIsLive(sign.texture)) continue;
-    // The finest lettering any of its faces needs, seen as it is.
+    stepFade(sign, now);
+    // The finest lettering any of its faces needs, seen as it is: all of
+    // it within its reach.
     let need = Infinity;
     for (const o of objects) {
       const seen = sighting(o);
+      if (seen.metres <= sign.reach) {
+        need = 0;
+        break;
+      }
       need = Math.min(
         need,
         smallestReadable({
@@ -354,8 +416,8 @@ function check(scene: Scene, camera: Camera, screenPixels: number) {
     // seeing it from further off does not take its detail away at once.
     if (step <= sign.step) {
       sign.holdUntil = now + SIGHTING;
-      setStep(sign, step);
-    } else if (now >= sign.holdUntil) setStep(sign, step);
+      setStep(sign, step, now);
+    } else if (now >= sign.holdUntil) setStep(sign, step, now);
   }
   for (const [w, objects] of s.shown) {
     if (!isLiveDisplay(w.updates)) continue;

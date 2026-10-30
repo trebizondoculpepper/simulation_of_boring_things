@@ -486,31 +486,22 @@ export function startMuseumHallRoom(
   resize();
 
   // Seen through an archway from the hall walked in (the owner,
-  // 2026-10-29): drawn at a quarter of its resolution, blurred, and with
-  // its exhibit as its far version, coming clear as the walker nears the
-  // archway: half resolution within 10 m, full and its real exhibit within
-  // 5 m, the blur (at most 3 px) fading out by 4 m. The owner, 2026-10-29,
-  // asked for it to come clear sooner, so the distances are doubled, and
-  // for half as much blur.
+  // 2026-10-29): drawn at a quarter of its resolution, with its exhibit as
+  // its far version, coming clear as the walker nears the archway: half
+  // resolution within 10 m, full and its real exhibit within 5 m. The
+  // owner, 2026-10-29, asked for it to come clear sooner, so the distances
+  // are doubled; and, 2026-10-30, for no blur over it: the far version and
+  // the lower resolution stay.
   let farExhibit: ReturnType<typeof createFarVersion> | null = null;
   let seenShare = 1;
-  let seenBlur = 0;
   let seenFar = false;
   const seeFrom = (metres: number | null) => {
     const share =
       metres === null ? 1 : metres > 10 ? 0.25 : metres > 5 ? 0.5 : 1;
-    const blur =
-      metres === null
-        ? 0
-        : Math.round(Math.max(0, Math.min(1, (metres - 4) / 8)) * 3 * 2) / 2;
     const useFar = metres !== null && metres > 5 && exhibit !== null;
     if (share !== seenShare) {
       seenShare = share;
       scaleRatio(renderer, share);
-    }
-    if (blur !== seenBlur) {
-      seenBlur = blur;
-      canvas.style.filter = blur > 0 ? `blur(${blur}px)` : '';
     }
     if (useFar !== seenFar && exhibit) {
       seenFar = useFar;

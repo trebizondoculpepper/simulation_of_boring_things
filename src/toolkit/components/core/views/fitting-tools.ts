@@ -108,6 +108,8 @@ export function tools(kit: PanelKit) {
     draw: (c: CanvasRenderingContext2D, cw: number, ch: number) => void,
     pixels = 256,
     glow = false,
+    /** Within this many metres all its lettering is drawn (`watchSign`). */
+    reach = 0,
   ) => {
     const { context, texture } = createCanvasTexture(
       pixels,
@@ -120,6 +122,7 @@ export function tools(kit: PanelKit) {
       texture,
       (c) => draw(c, c.canvas.width, c.canvas.height),
       pixels / w,
+      reach,
     );
     kit.textures.push(texture);
     const material = createPs1Material({ map: texture }, glow, glow);

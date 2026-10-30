@@ -14,7 +14,7 @@ import { tools } from '../../../components/core/views/fitting-tools';
 import { mergeTree } from '../../../components/core/views/merge-static';
 import { markComponent } from '../../../components/core/views/component-identity';
 import { METRE } from '../../../components/core/logic/units';
-import { createWallPanel } from '../../views/museum-exhibit';
+import { WALL_PANEL_REACH, createWallPanel } from '../../views/museum-exhibit';
 import { createGroutSpecimens } from '../../views/grout-specimen';
 import { createOilWheelProjector } from '../../views/oil-wheel-projector';
 import {
@@ -22,23 +22,19 @@ import {
   CLOSING_CARD,
   HALL7,
   INTRODUCTION,
-  NOTHING_TO_RESET,
   PLACES,
   PLINTH,
   PLINTHS,
   PROJECTOR,
-  ROPE_HALF,
   SPECIMEN,
-  TIMELINE,
   TITLE_WALL,
   approachedPlinth,
-  facingStep,
-  facingYaw,
+  stepOf,
+  yawOf,
   hall7Solids,
   MUSIC_LEVEL,
   lecternAt,
   musicFor,
-  timelineX,
 } from '../../logic/museum-7-grout';
 import { partAudio } from '../../../components/core/audio/part-audio';
 import { recordedLoop } from '../../../components/core/audio/recorded-loop';
@@ -63,12 +59,11 @@ const MUSIC_PRESENT: ReadonlySet<string> = new Set(Object.keys(MUSIC));
 
 /**
  * Hall 7, "Grout: The Unsung Hero of the Aquatics World" (107k): a
- * reverent, static gallery. Ten plinths in date order across the hall's
- * south half, each with the same tiled specimen (one instanced model; the
- * 1970s' grout alone in avocado), a plaque on a bronze lectern before it,
- * a rope on brass posts either side and a bronze timeline in the floor,
- * 1840 to today; in a black box (the hall shell's, `isBlackBox`), a few spotlights, the title wall
- * gilt on the south wall ahead of the way in. Nothing moves and nothing
+ * reverent, static gallery. Ten plinths in date order round its walls,
+ * each with the same tiled specimen (one instanced model; the 1970s'
+ * grout alone in avocado) and a plaque on a bronze lectern before it; in
+ * a black box (the hall shell's, `isBlackBox`), a round spotlight over
+ * each plinth, the title wall gilt high on the south wall. Nothing moves and nothing
  * resets: everything is drawn once and merged. In the hall's frame, metres
  * (the logic file has its plan).
  */
@@ -107,6 +102,21 @@ function serifParagraph(
   return y;
 }
 
+/** The title wall's middle, metres up: 8 × 2.4 m, its top 1 m under the roof. */
+const TITLE_Y = 7.3;
+/** The spots' lamp heads, metres up. */
+const LAMP_Y = 5.0;
+/** Each plinth's pool of light on the floor: its radius to the outside of its fading edge, metres, and the share of its cone that fades. */
+const POOL = { radius: 1.5, penumbra: 0.6 } as const;
+/** Each pool's light, and what the approach adds to it. */
+const POOL_POWER = 28 * METRE * METRE;
+const APPROACH_POWER = 20 * METRE * METRE;
+
+/** A plaque's face, metres. */
+const PLAQUE = { w: 0.6, h: 0.42 } as const;
+/** How far the index number stands above the text's flow, metres (the owner, 2026-10-30). */
+const INDEX_LIFT = 0.005;
+
 function paintPlaque(
   c: CanvasRenderingContext2D,
   p: GroutPlinth,
@@ -127,7 +137,9 @@ function paintPlaque(
     const s = (k: number) => h * k * scale;
     c.fillStyle = '#5b4520';
     let y = m + s(0.05);
-    y = serifParagraph(c, `${p.n}`, m, y, width, s(0.05), 'bold');
+    // The index number raised by `INDEX_LIFT`, the text after it where it was.
+    const lift = (h * INDEX_LIFT) / PLAQUE.h;
+    y = serifParagraph(c, `${p.n}`, m, y - lift, width, s(0.05), 'bold') + lift;
     c.fillStyle = '#1c1812';
     y = serifParagraph(c, p.name, m, y, width, s(0.07), 'bold');
     c.fillStyle = '#5b4520';
@@ -171,129 +183,27 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const { halfX, halfZ, h } = HALL7;
   const stone = t.paint('#3d4246', 0.85);
   const bronze = t.paint('#8a6a32', 0.4, 0.8);
-  const brass = t.paint('#b8963e', 0.3, 0.9);
-  const velvet = t.paint('#5a1420', 0.95);
   const wood = t.paint('#2a1c14', 0.7);
 
-  // ---- The plinths, each roped round; the timeline; merged ----
+  // ---- The plinths; merged ----
   const row = new Group();
   const { w: pw, h: ph } = PLINTH;
-  const post = (x: number, z: number) => {
-    t.cyl(row, brass, 0.018, 0.9, x, 0.45, z, 'y', 12);
-    t.cyl(row, brass, 0.11, 0.025, x, 0.0125, z, 'y', 16);
-    t.cyl(row, brass, 0.03, 0.05, x, 0.92, z, 'y', 12);
-  };
-  // A rope slung between posts, as two straight lengths to its sag.
-  const rope = (x0: number, z0: number, x1: number, z1: number) => {
-    const sag = 0.1;
-    const length = Math.hypot(x1 - x0, z1 - z0);
-    const half = new Group();
-    half.position.set((x0 + x1) / 2, 0, (z0 + z1) / 2);
-    half.rotation.y = Math.atan2(x1 - x0, z1 - z0);
-    // In the half's frame the rope runs along z, −length/2 to +length/2.
-    for (const [za, ya, zb, yb] of [
-      [-length / 2, 0.86, 0, 0.86 - sag],
-      [0, 0.86 - sag, length / 2, 0.86],
-    ]) {
-      const piece = t.cyl(
-        half,
-        velvet,
-        0.016,
-        Math.hypot(zb - za, yb - ya),
-        0,
-        (ya + yb) / 2,
-        (za + zb) / 2,
-        'y',
-        8,
-      );
-      // Its axis (y) turned onto the length.
-      piece.rotation.x = Math.atan2(zb - za, yb - ya);
-    }
-    row.add(half);
-  };
+  // Each plinth turned to face its visitor (a corner's, the middle).
   for (const p of PLINTHS) {
     const { x, z } = PLACES[p.n];
-    t.box(row, stone, pw, ph, pw, x, ph / 2, z);
-    t.box(row, stone, pw + 0.08, 0.06, pw + 0.08, x, 0.03, z);
-    const r = ROPE_HALF;
-    const corners: [number, number][] = [
-      [x - r, z - r],
-      [x + r, z - r],
-      [x + r, z + r],
-      [x - r, z + r],
-    ];
-    for (const [cx, cz] of corners) post(cx, cz);
-    for (let k = 0; k < 4; k++) {
-      const [x0, z0] = corners[k];
-      const [x1, z1] = corners[(k + 1) % 4];
-      rope(x0, z0, x1, z1);
-    }
+    const plinth = new Group();
+    plinth.position.set(x, 0, z);
+    plinth.rotation.y = yawOf(p.n);
+    row.add(plinth);
+    t.box(plinth, stone, pw, ph, pw, 0, ph / 2, 0);
+    t.box(plinth, stone, pw + 0.08, 0.06, pw + 0.08, 0, 0.03, 0);
   }
-  // The timeline: a bronze strip in the floor, a tick each decade, longer each half-century.
-  const span = TIMELINE.east - TIMELINE.west;
-  t.box(
-    row,
-    bronze,
-    span,
-    0.004,
-    0.025,
-    (TIMELINE.east + TIMELINE.west) / 2,
-    0.006,
-    TIMELINE.z,
-  );
-  for (let year = 1840; year <= TIMELINE.to; year += 10) {
-    const long = year % 50 === 0;
-    t.box(
-      row,
-      bronze,
-      0.012,
-      0.004,
-      long ? 0.16 : 0.08,
-      timelineX(year),
-      0.006,
-      TIMELINE.z,
-    );
-  }
-  // Each plinth's first year marked by a stud on the line.
-  for (const p of PLINTHS)
-    t.cyl(
-      row,
-      brass,
-      0.022,
-      0.005,
-      timelineX(p.from),
-      0.007,
-      TIMELINE.z,
-      'y',
-      12,
-    );
   object.add(
     markComponent(still(row), {
-      name: 'Ten plinths of grout in date order, roped; the bronze timeline, 1840 to today',
+      name: 'Ten plinths of grout in date order',
       decorative: true,
     }),
   );
-  // The timeline's years, cut in the floor beside it, read from the way in.
-  for (const year of [1850, 1900, 1950, 2000]) {
-    const label = t.printed(
-      0.3,
-      0.1,
-      (c, w, hh) => {
-        c.fillStyle = '#22262a';
-        c.fillRect(0, 0, w, hh);
-        c.fillStyle = GILT;
-        c.font = `bold ${hh * 0.7}px ${SERIF}`;
-        c.textAlign = 'center';
-        c.textBaseline = 'middle';
-        c.fillText(`${year}`, w / 2, hh / 2);
-      },
-      128,
-    );
-    label.mesh.rotation.x = -Math.PI / 2;
-    label.mesh.position.set(timelineX(year), 0.007, TIMELINE.z - 0.15);
-    object.add(label.mesh);
-  }
-
   // ---- The specimens: one model, instanced, each facing its visitor ----
   const specimens = createGroutSpecimens(
     PLINTHS.map((p) => {
@@ -301,7 +211,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       return {
         matrix: new Matrix4()
           .makeTranslation(place.x, ph, place.z)
-          .multiply(new Matrix4().makeRotationY(facingYaw(place.facing))),
+          .multiply(new Matrix4().makeRotationY(yawOf(p.n))),
         coloured: p.grout === 'avocado',
       };
     }),
@@ -323,12 +233,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     }),
   );
 
-  // ---- The 1970s' oil-wheel projector, high over the island ----
+  // ---- The 1970s' oil-wheel projector, high before its plinth ----
   // (the owner, 2026-10-28: "high in the ceiling, focusing down on the
   // 1970s exhibit"): hung on a rod from the roof, aimed down at the
   // avocado specimen's tiled face.
-  const seventies = PLACES[PLINTHS.find((p) => p.grout === 'avocado')!.n];
-  const [fx, fz] = facingStep(seventies.facing);
+  const seventiesN = PLINTHS.find((p) => p.grout === 'avocado')!.n;
+  const seventies = PLACES[seventiesN];
+  const [fx, fz] = stepOf(seventiesN);
   const projector = createOilWheelProjector(kit, {
     at: [PROJECTOR.x, PROJECTOR.y, PROJECTOR.z],
     mount: { ceiling: PROJECTOR.ceiling },
@@ -354,18 +265,22 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     head.rotation.x = -0.65;
     lectern.add(head);
     t.box(head, bronze, 0.64, 0.46, 0.02, 0, 0, -0.011);
+    // Its lettering drawn in full anywhere in the hall, so it is there to
+    // read as the visitor arrives (the owner, 2026-10-30: it came too late).
     const face = t.printed(
-      0.6,
-      0.42,
+      PLAQUE.w,
+      PLAQUE.h,
       (c, w, hh) => paintPlaque(c, p, w, hh),
       768,
+      false,
+      WALL_PANEL_REACH,
     );
     face.mesh.position.z = 0.0005;
     head.add(face.mesh);
     // In its own frame the reader stands on +z; turn it to face its visitor.
     const at = lecternAt(p.n);
     lectern.position.set(at.x, 0, at.z);
-    lectern.rotation.y = facingYaw(PLACES[p.n].facing);
+    lectern.rotation.y = yawOf(p.n);
     object.add(
       markComponent(still(lectern), {
         name: `Plaque ${p.n}: ${p.name}`,
@@ -404,12 +319,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     c.textAlign = 'right';
     c.fillText('PLANTROOMS', w * 0.97, hh * 0.94);
   });
-  // Clear above the room's sign (its top 4.6 m; the owner, 2026-10-29).
-  title.position.set(0, 6.0, halfZ - 0.03);
+  // High over the plinths below it (the owner, 2026-10-30; it was at
+  // 6.0 m, clear above the room's sign, its top 4.6 m, 2026-10-29).
+  title.position.set(0, TITLE_Y, halfZ - 0.03);
   title.rotation.y = Math.PI;
   object.add(still(title));
 
-  // ---- The introduction, on the east wall by the way in ----
+  // ---- The introduction, high in the middle of the east wall ----
   const intro = createWallPanel(
     kit,
     'Introduction: Grout',
@@ -444,44 +360,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       c.fillText('PLANTROOMS', w * 0.94, hh * 0.97);
     },
   );
-  intro.position.set(halfX - 0.03, 1.65, -5.0);
+  // In the middle of the wall, a metre above eye level (the owner, 2026-10-30).
+  intro.position.set(halfX - 0.03, 2.65, 0);
   intro.rotation.y = -Math.PI / 2;
   object.add(still(intro));
-
-  // ---- Where the RESET pedestal would stand: a small card ----
-  const card = createWallPanel(
-    kit,
-    'Card: nothing to reset',
-    0.42,
-    0.28,
-    (c, w, hh) => {
-      c.fillStyle = '#efe7d3';
-      c.fillRect(0, 0, w, hh);
-      c.fillStyle = '#1c1812';
-      serifParagraph(
-        c,
-        NOTHING_TO_RESET.headline,
-        w / 2,
-        hh * 0.42,
-        w * 0.9,
-        hh * 0.13,
-        '',
-        'center',
-      );
-      serifParagraph(
-        c,
-        NOTHING_TO_RESET.body,
-        w / 2,
-        hh * 0.7,
-        w * 0.9,
-        hh * 0.13,
-        'italic',
-        'center',
-      );
-    },
-  );
-  card.position.set(2.9, 1.3, -halfZ + 0.03);
-  object.add(still(card));
 
   // ---- The bench at the row's end, facing back along it, and the closing card ----
   const bench = new Group();
@@ -528,16 +410,24 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   closing.rotation.y = Math.PI / 2;
   object.add(still(closing));
 
-  // ---- The light: a lamp head over each plinth, four spots on its groups and a wash on the title wall, no shadows ----
+  // ---- The light (the owner, 2026-10-30): over each plinth a lamp head
+  // and its round spot, straight down from above the middle of its plinth
+  // and lectern, so it casts a circle on the floor with a soft, fading
+  // edge, taking in the specimen's tiles, the lectern and the floor round
+  // them; brighter over the plinth approached; a wash on the title wall;
+  // no shadows ----
   const lampHeads = new Group();
   const lampPaint = t.paint('#111418', 0.6, 0.4);
+  /** Where a plinth's pool of light falls: between its plinth and its lectern. */
+  const poolAt = (n: number) => {
+    const place = PLACES[n];
+    const at = lecternAt(n);
+    return { x: (place.x + at.x) / 2, z: (place.z + at.z) / 2 };
+  };
   for (const p of PLINTHS) {
-    const place = PLACES[p.n];
-    const [dx, dz] = facingStep(place.facing);
-    const x = place.x + dx * 0.4;
-    const z = place.z + dz * 0.4;
-    t.cyl(lampHeads, lampPaint, 0.07, 0.18, x, 5.0, z, 'y', 12);
-    t.cyl(lampHeads, bronze, 0.006, h - 5.0, x, (h + 5.0) / 2, z, 'y', 6);
+    const { x, z } = poolAt(p.n);
+    t.cyl(lampHeads, lampPaint, 0.07, 0.18, x, LAMP_Y, z, 'y', 12);
+    t.cyl(lampHeads, bronze, 0.006, h - LAMP_Y, x, (h + LAMP_Y) / 2, z, 'y', 6);
   }
   object.add(
     markComponent(still(lampHeads), {
@@ -545,42 +435,31 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       decorative: true,
     }),
   );
-  const spot = (
-    x: number,
-    y: number,
-    z: number,
-    tx: number,
-    ty: number,
-    tz: number,
-    power: number,
-    angle: number,
-  ) => {
+  const pools = new Map<number, SpotLight>();
+  for (const p of PLINTHS) {
+    const { x, z } = poolAt(p.n);
     const light = new SpotLight(
       '#ffe7c2',
-      power * METRE * METRE,
+      POOL_POWER,
       0,
-      angle,
-      0.6,
+      Math.atan(POOL.radius / LAMP_Y),
+      POOL.penumbra,
       2,
     );
-    light.position.set(x, y, z);
-    light.target.position.set(tx, ty, tz);
+    light.position.set(x, LAMP_Y - 0.1, z);
+    light.target.position.set(x, 0, z);
     object.add(light, light.target);
-  };
-  // The east wall's three, the island, the south wall's three, the coda.
-  spot(4.6, 6.5, 0.1, PLACES[2].x, ph, PLACES[2].z, 40, 0.6);
-  spot(0, 6.5, -0.8, PLACES[5].x, ph, PLACES[5].z, 40, 0.6);
-  spot(0, 6.5, 3.8, PLACES[8].x, ph, PLACES[8].z, 48, 0.75);
-  spot(-5.0, 6.5, PLACES[10].z, PLACES[10].x, ph, PLACES[10].z, 22, 0.36);
-  spot(0, 8.6, halfZ - 3.5, 0, 6.0, halfZ, 14, 0.7);
+    pools.set(p.n, light);
+  }
+  // The title wall's wash.
+  const wash = new SpotLight('#ffe7c2', 14 * METRE * METRE, 0, 0.7, 0.6, 2);
+  wash.position.set(0, h - 0.4, halfZ - 3.5);
+  wash.target.position.set(0, TITLE_Y, halfZ);
+  object.add(wash, wash.target);
 
-  // The approach light (the owner, 2026-10-29): one spotlight, from the
-  // lamp head over the plinth approached, over its specimen and its
-  // lectern, faded up as the visitor comes near and out as they leave.
-  const approach = new SpotLight('#fff1d8', 0, 0, 0.26, 0.45, 2);
-  object.add(approach, approach.target);
-  const APPROACH_POWER = 14 * METRE * METRE;
-  /** The plinth under the oil wheel: the 1970s' coloured grout. */
+  // The approach (the owner, 2026-10-29): the pool over the plinth
+  // approached brightens as the visitor comes near and dims as they leave.
+  /** The 1970s' coloured grout's plinth, under the oil wheel. */
   const OIL_WHEEL_PLINTH = 5;
   let lit: number | null = null;
   let shown: number | null = null;
@@ -598,17 +477,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   };
   object.add(watcher);
   const seen = new Vector3();
-  const aim = (n: number) => {
-    const place = PLACES[n];
-    const [dx, dz] = facingStep(place.facing);
-    const at = lecternAt(n);
-    approach.position.set(place.x + dx * 0.4, 5.0, place.z + dz * 0.4);
-    approach.target.position.set(
-      (place.x + at.x) / 2,
-      0.9,
-      (place.z + at.z) / 2,
-    );
-  };
   // The era loop of the plinth shown, heard from above it: changed as its
   // light goes out and comes in on another, silent with none. Held from
   // the hall's own scene, it is hushed when the hall is left.
@@ -641,7 +509,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     const want = lit !== null && lit === shown ? 1 : 0;
     if (want === 0 && level === 0 && lit !== shown) {
       shown = lit;
-      if (shown !== null) aim(shown);
       play(shown);
     }
     if (level === want) return;
@@ -649,7 +516,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       want > level
         ? Math.min(1, level + delta / 0.6)
         : Math.max(0, level - delta / 0.3);
-    approach.intensity = APPROACH_POWER * level;
+    const pool = shown === null ? undefined : pools.get(shown);
+    if (pool) pool.intensity = POOL_POWER + APPROACH_POWER * level;
   };
 
   return {

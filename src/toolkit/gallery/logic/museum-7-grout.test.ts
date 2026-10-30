@@ -7,14 +7,12 @@ import {
   PLACES,
   PLINTHS,
   PROJECTOR,
-  ROPE_HALF,
-  TIMELINE,
+  PLINTH_HALF,
   hall7Solids,
   jointLength,
   MUSIC_FILES,
   musicFor,
   lecternAt,
-  timelineX,
 } from './museum-7-grout';
 
 describe('Hall 7, grout', () => {
@@ -23,17 +21,14 @@ describe('Hall 7, grout', () => {
     for (const p of PLINTHS) expect(PLACES[p.n]).toBeDefined();
   });
 
-  it('stands some round the edge and a few in the middle, the 1970s’ among them', () => {
-    const edge = (n: number) => {
-      const { x, z } = PLACES[n];
-      return HALL7.halfX - Math.abs(x) < 1.2 || HALL7.halfZ - Math.abs(z) < 1.2;
-    };
-    const middle = PLINTHS.filter((p) => !edge(p.n)).map((p) => p.n);
-    expect(middle.length).toBeGreaterThanOrEqual(2);
-    expect(middle.length).toBeLessThanOrEqual(4);
-    expect(middle).toContain(5);
-    // Every plaque stands on the hall's side of its plinth, not in a wall.
+  it('stands every plinth round the edge, its plaque on the hall’s side', () => {
     for (const p of PLINTHS) {
+      const { x, z } = PLACES[p.n];
+      expect(
+        HALL7.halfX - Math.abs(x) < 1.2 || HALL7.halfZ - Math.abs(z) < 1.2,
+        `plinth ${p.n}`,
+      ).toBe(true);
+      // Its plaque stands on the hall's side of it, not in a wall.
       const l = lecternAt(p.n);
       expect(Math.abs(l.x)).toBeLessThan(HALL7.halfX - 0.5);
       expect(Math.abs(l.z)).toBeLessThan(HALL7.halfZ - 0.5);
@@ -67,9 +62,6 @@ describe('Hall 7, grout', () => {
   });
 
   it('keeps everything inside the hall and clear of both archways and of each other', () => {
-    expect(TIMELINE.east).toBeLessThan(HALL7.halfX);
-    expect(timelineX(1840)).toBeCloseTo(TIMELINE.east);
-    expect(timelineX(2026)).toBeCloseTo(TIMELINE.west);
     const solids = hall7Solids();
     for (const s of solids) {
       expect(s.minX).toBeGreaterThan(-HALL7.halfX);
@@ -81,15 +73,15 @@ describe('Hall 7, grout', () => {
       const north = s.minZ < -HALL7.halfZ + 2 && s.maxX > -1.8 && s.minX < 1.8;
       expect(west || north).toBe(false);
     }
-    // No two plinths' ropes overlap.
+    // No two plinths overlap.
     for (const a of PLINTHS)
       for (const b of PLINTHS)
         if (a.n < b.n) {
           const pa = PLACES[a.n];
           const pb = PLACES[b.n];
           expect(
-            Math.abs(pa.x - pb.x) > 2 * ROPE_HALF ||
-              Math.abs(pa.z - pb.z) > 2 * ROPE_HALF,
+            Math.abs(pa.x - pb.x) > 2 * PLINTH_HALF ||
+              Math.abs(pa.z - pb.z) > 2 * PLINTH_HALF,
           ).toBe(true);
         }
     expect(BENCH.x).toBeLessThan(-HALL7.halfX + 1);
@@ -98,12 +90,13 @@ describe('Hall 7, grout', () => {
 
 describe('the approach light', () => {
   it('lights the plinth approached, holds it to the far edge, and lets go', () => {
-    const at = lecternAt(5);
-    expect(approachedPlinth(at.x, at.z, null)).toBe(5);
+    // Plinth 6, on the south wall, facing north into the hall.
+    const at = lecternAt(6);
+    expect(approachedPlinth(at.x, at.z, null)).toBe(6);
     expect(approachedPlinth(0, -6, null)).toBeNull();
     // Held a little past the near edge, so it does not flicker.
-    expect(approachedPlinth(at.x, at.z - 2.5, 5)).toBe(5);
-    expect(approachedPlinth(at.x, at.z - APPROACH_FAR - 0.1, 5)).toBeNull();
+    expect(approachedPlinth(at.x, at.z - 2.5, 6)).toBe(6);
+    expect(approachedPlinth(at.x, at.z - APPROACH_FAR - 0.1, 6)).toBeNull();
   });
 });
 
