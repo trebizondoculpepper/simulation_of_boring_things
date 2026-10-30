@@ -298,7 +298,7 @@ export function createPauseMenu(actions: PauseMenuActions) {
   const presetNote = document.createElement('p');
   presetNote.className = 'settings-note';
   presetNote.textContent =
-    'High is the full look. Medium draws fewer pixels, without antialiasing, with lighter bloom and smaller shadows; Low draws fewer still, without shadows, bloom, film grain, ambient occlusion or the pool’s refraction either. Ambient occlusion is One-time by default: baked once per room in the background, then faded in; Live draws it every frame, at a cost. A preset sets the choices below, which you can then change one by one; antialiasing changes from the next room you enter.';
+    'High is the full look. Medium draws fewer pixels, without antialiasing, with lighter bloom and smaller shadows; Low draws fewer still, without shadows, bloom, film grain, ambient occlusion or the pool’s refraction either. Ambient occlusion is Simple by default: worked out once per room from its shape in a moment, then faded in; Baked ray traces it once per room in the background, slower but finer; Live draws it every frame, at a cost. A preset sets the choices below, which you can then change one by one; antialiasing changes from the next room you enter.';
   pages.get('Graphics')!.append(presetNote);
   slider('Graphics', 'renderLevel', 'Render quality', (v) =>
     v === 0 ? '1:1' : `1:${(1 / renderScale(v)).toFixed(2)}`,
@@ -333,7 +333,7 @@ export function createPauseMenu(actions: PauseMenuActions) {
       select.value = s[key];
     });
   };
-  // LIVE, ONE-TIME (baked) or OFF (the owner, 2026-10-30); LIVE's quality
+  // LIVE, BAKED (ray traced), SIMPLE or OFF (the owner, 2026-10-30); LIVE's quality
   // is the preset's.
   choice('aoMode', 'Ambient occlusion', AO_MODE_LABELS);
   choice('bloom', 'Bloom and glow', EFFECT_LABELS);

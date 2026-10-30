@@ -7,6 +7,8 @@
  * thread beyond handing over buffers).
  */
 
+import type { SimpleAoLook } from './logic/simple-ao';
+
 /** A geometry's own arrays, in its own space: handed over once however many meshes share it. */
 export interface BakeGeometryPayload {
   positions: Float32Array;
@@ -98,6 +100,18 @@ export interface BakeSettingsPayload {
   rays: number;
   /** One smoothing pass, or the variation left in. */
   smooth: boolean;
+  /**
+   * SIMPLE occlusion (`logic/simple-ao.ts`) instead of rays: worked out from
+   * the room's boxes, no rays cast. Part of the cache key, so the two
+   * methods' bakes never mix.
+   */
+  simple?: {
+    /** The room's free space, world units, six numbers a box (min then max); none: the shell's bounds. */
+    interiors: number[];
+    /** Its lamps' world positions, three numbers each. */
+    lights: number[];
+    look: SimpleAoLook;
+  };
 }
 
 export type BakeRequest =

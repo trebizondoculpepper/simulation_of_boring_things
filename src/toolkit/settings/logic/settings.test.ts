@@ -82,12 +82,16 @@ describe('overlay scale', () => {
 });
 
 describe('the ambient occlusion mode (the owner, 2026-10-30)', () => {
-  it('is ONE-TIME (baked) by default', () => {
-    expect(cleanSettings(null).aoMode).toBe('bake');
+  it('is SIMPLE by default', () => {
+    expect(cleanSettings(null).aoMode).toBe('simple');
   });
-  it('turns an old save’s live level into ONE-TIME, and keeps an old off', () => {
+  it('turns an old ONE-TIME into SIMPLE and keeps BAKED', () => {
+    expect(cleanSettings({ aoMode: 'bake' }).aoMode).toBe('simple');
+    expect(cleanSettings({ aoMode: 'rays' }).aoMode).toBe('rays');
+  });
+  it('turns an old save’s live level into SIMPLE, and keeps an old off', () => {
     for (const level of ['low', 'medium', 'high'])
-      expect(cleanSettings({ ambientOcclusion: level }).aoMode).toBe('bake');
+      expect(cleanSettings({ ambientOcclusion: level }).aoMode).toBe('simple');
     expect(cleanSettings({ ambientOcclusion: 'off' }).aoMode).toBe('off');
   });
   it('keeps a chosen mode, and refuses nonsense', () => {
@@ -95,16 +99,16 @@ describe('the ambient occlusion mode (the owner, 2026-10-30)', () => {
     expect(
       cleanSettings({ aoMode: 'off', ambientOcclusion: 'high' }).aoMode,
     ).toBe('off');
-    expect(cleanSettings({ aoMode: 'ultra' }).aoMode).toBe('bake');
+    expect(cleanSettings({ aoMode: 'ultra' }).aoMode).toBe('simple');
   });
-  it('is set by a preset: OFF on Low, ONE-TIME otherwise, LIVE’s quality with it', () => {
+  it('is set by a preset: OFF on Low, SIMPLE otherwise, LIVE’s quality with it', () => {
     expect(choosePreset('low')).toMatchObject({
       aoMode: 'off',
       ambientOcclusion: 'low',
     });
-    expect(choosePreset('medium')).toMatchObject({ aoMode: 'bake' });
+    expect(choosePreset('medium')).toMatchObject({ aoMode: 'simple' });
     expect(choosePreset('high')).toMatchObject({
-      aoMode: 'bake',
+      aoMode: 'simple',
       ambientOcclusion: 'high',
     });
   });

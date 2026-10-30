@@ -30,6 +30,14 @@ import {
   spreadSubdivision,
   subdivideLongEdges,
 } from './logic/ao-geometry';
+import {
+  MAX_LIGHTS,
+  boundsOf,
+  chooseOccluders,
+  occludersNear,
+  simpleVertexAo,
+} from './logic/simple-ao';
+import type { Box, SimpleAoScene } from './logic/simple-ao';
 import { loadBake, storeBake } from './ao-cache';
 import { unpackGeometry } from './ao-bake-protocol';
 import type {
@@ -74,6 +82,8 @@ interface WorldMesh {
   radius: number;
   /** Too small to matter (a bolt): neither baked nor occluding. */
   tiny: boolean;
+  /** Its world bounding box. */
+  bounds: Box;
 }
 
 /** Below this radius, metres, a mesh is left out; below `SMALL`, where it stands does not count. */
@@ -202,6 +212,7 @@ async function prepare(message: Extract<BakeRequest, { type: 'prepare' }>) {
       normalMatrix,
       radius,
       tiny: radius < TINY * message.settings.unit,
+      bounds: [lo[0], lo[1], lo[2], hi[0], hi[1], hi[2]] as Box,
     };
   });
   let triangles = 0;
@@ -214,9 +225,13 @@ async function prepare(message: Extract<BakeRequest, { type: 'prepare' }>) {
   // where they stand, so a part that moves a little as the plant runs (a
   // float, a level, a needle) does not make the room miss; where each
   // stands is kept with the bake and compared (`placedAlike`).
+  // SIMPLE bakes are kept under keys of their own (and their room's boxes
+  // and lamps), so a ray-traced bake is never taken for one, nor one for it.
+  const simple = message.settings.simple;
   const hash =
     message.roomId +
     ':' +
+    (simple ? `simple1|${JSON.stringify(simple)}|` : '') +
     geometryHash(
       meshes
         .filter((m) => !m.tiny)
@@ -406,11 +421,179 @@ async function run(
   };
 }
 
+/**
+ * A SIMPLE bake (`logic/simple-ao.ts`): no BVH, no rays. Large faces are
+ * probed at their corners, edge midpoints and centre and subdivided where
+ * the occlusion varies (near a junction), as for rays; then every vertex
+ * is worked out from the room's boxes. Well under a second for a room.
+ */
+async function bakeSimple(job: Job, scene: SimpleAoScene, started: number) {
+  const { unit, maxEdge } = job.settings;
+  const out: BakedMesh[] = [];
+  const bakes: Uint8Array[] = [];
+  const masks: (Uint8Array | null)[] = [];
+  let sliceFrom = performance.now();
+  for (const m of job.meshes) {
+    if (!m.source.receiver) continue;
+    if (m.tiny) {
+      const none = new Uint8Array(0);
+      out.push({
+        positions: null,
+        normals: null,
+        uvs: null,
+        ao: none,
+        sphere: null,
+      });
+      bakes.push(none);
+      masks.push(null);
+      continue;
+    }
+    const near = occludersNear(m.bounds, scene);
+    if (!m.source.subdivide) {
+      const ao = simpleVertexAo(m.positions, m.normals, scene, near);
+      out.push({ positions: null, normals: null, uvs: null, ao, sphere: null });
+      bakes.push(ao);
+      masks.push(null);
+    } else {
+      const soup = soupOf(m);
+      const edge = (maxEdge * unit) / m.scale;
+      const mask = probeFaces(m, soup, edge, (positions, normals) =>
+        simpleVertexAo(positions, normals, scene, near),
+      );
+      const fine = subdivideLongEdges(soup, edge, 400_000, mask);
+      const world = toWorld(
+        fine.positions,
+        fine.normals,
+        m.matrix,
+        m.normalMatrix,
+      );
+      const ao = simpleVertexAo(world.positions, world.normals, scene, near);
+      out.push({ ...fine, ao, sphere: null });
+      bakes.push(ao);
+      masks.push(mask);
+    }
+    // Give way to messages now and then.
+    if (performance.now() - sliceFrom > 8) {
+      await calm();
+      if (!jobs.has(job.id)) return;
+      sliceFrom = performance.now();
+    }
+  }
+  jobs.delete(job.id);
+  const bakeMs = performance.now() - started;
+  void storeBake({
+    hash: job.hash,
+    roomId: job.roomId,
+    bytes:
+      bakes.reduce((s, a) => s + a.byteLength, 0) +
+      masks.reduce((s, a) => s + (a?.byteLength ?? 0), 0),
+    lastUsed: Date.now(),
+    ao: bakes.map((a) => a.slice()),
+    masks,
+    placements: job.placements,
+  });
+  reply(job, out, false, 0, bakeMs, 0);
+}
+
+/**
+ * Which of a soup's large faces need subdividing: `sample` at each one's
+ * corners, edge midpoints and centre (world space); a face wholly buried
+ * or wholly open is left whole. The mask, spread to neighbours.
+ */
+function probeFaces(
+  m: WorldMesh,
+  soup: { positions: Float32Array; normals: Float32Array },
+  edge: number,
+  sample: (positions: Float32Array, normals: Float32Array) => Uint8Array,
+) {
+  const p = soup.positions;
+  const count = p.length / 9;
+  const mask = new Uint8Array(count);
+  const big: number[] = [];
+  const e2 = edge * edge;
+  for (let t = 0; t < count; t++) {
+    const o = t * 9;
+    const d = (a: number, b: number) =>
+      (p[o + a] - p[o + b]) ** 2 +
+      (p[o + a + 1] - p[o + b + 1]) ** 2 +
+      (p[o + a + 2] - p[o + b + 2]) ** 2;
+    if (d(0, 3) > e2 || d(3, 6) > e2 || d(6, 0) > e2) big.push(t);
+  }
+  if (!big.length) return mask;
+  const samples = new Float32Array(big.length * 21);
+  const sampleNormals = new Float32Array(big.length * 21);
+  const v = new Vector3();
+  const n = new Vector3();
+  // Corners, edge midpoints, centre, as weights of the three corners.
+  const W = [
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1],
+    [0.5, 0.5, 0],
+    [0, 0.5, 0.5],
+    [0.5, 0, 0.5],
+    [1 / 3, 1 / 3, 1 / 3],
+  ];
+  big.forEach((t, b) => {
+    const o = t * 9;
+    n.set(0, 0, 0);
+    for (let k = 0; k < 3; k++) {
+      n.x += soup.normals[o + k * 3];
+      n.y += soup.normals[o + k * 3 + 1];
+      n.z += soup.normals[o + k * 3 + 2];
+    }
+    n.applyMatrix3(m.normalMatrix).normalize();
+    W.forEach((w, k) => {
+      v.set(0, 0, 0);
+      for (let c = 0; c < 3; c++) {
+        v.x += w[c] * p[o + c * 3];
+        v.y += w[c] * p[o + c * 3 + 1];
+        v.z += w[c] * p[o + c * 3 + 2];
+      }
+      v.applyMatrix4(m.matrix);
+      const s = (b * 7 + k) * 3;
+      samples.set([v.x, v.y, v.z], s);
+      sampleNormals.set([n.x, n.y, n.z], s);
+    });
+  });
+  const probe = sample(samples, sampleNormals);
+  big.forEach((t, b) => {
+    mask[t] = needsDetail(probe.subarray(b * 7, b * 7 + 7)) ? 1 : 0;
+  });
+  spreadSubdivision(soup.positions, soup.normals, mask, edge);
+  return mask;
+}
+
+/** A room described for SIMPLE occlusion: its interiors, biggest solids and lamps. */
+function simpleScene(job: Job): SimpleAoScene | null {
+  const simple = job.settings.simple;
+  if (!simple) return null;
+  const { unit } = job.settings;
+  const solid = job.meshes.filter((m) => !m.tiny).map((m) => m.bounds);
+  const interiors: Box[] = [];
+  for (let i = 0; i + 5 < simple.interiors.length; i += 6)
+    interiors.push(simple.interiors.slice(i, i + 6) as unknown as Box);
+  // No plan: the shell's own bounds.
+  if (!interiors.length) {
+    const shell = boundsOf(solid);
+    if (shell) interiors.push(shell);
+  }
+  return {
+    interiors,
+    occluders: chooseOccluders(solid, interiors, 0.3 * unit),
+    lights: simple.lights.slice(0, MAX_LIGHTS * 3),
+    unit,
+    look: simple.look,
+  };
+}
+
 async function bake(job: Job) {
   const started = performance.now();
   const { unit, maxEdge } = job.settings;
   const distance = job.settings.distance * unit;
   const bias = 0.002 * unit;
+  const scene = simpleScene(job);
+  if (scene) return bakeSimple(job, scene, started);
   // Every mesh occludes: one BVH of all their triangles, in world space.
   const soups = job.meshes
     .filter((m) => !m.tiny)

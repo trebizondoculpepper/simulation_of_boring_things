@@ -24,6 +24,7 @@
  * blackout.
  */
 import {
+  Box3,
   BufferAttribute,
   BufferGeometry,
   DoubleSide,
@@ -52,6 +53,9 @@ import {
   mayBakeAhead,
 } from './logic/ao-cache-policy';
 import { settings as playerSettings } from '../settings/settings-store';
+import { isBakedAo } from '../settings/logic/graphics';
+import { SIMPLE_AO_LOOKS } from './logic/simple-ao';
+import type { Box } from './logic/simple-ao';
 import type {
   BakeReply,
   BakeRequest,
@@ -66,8 +70,8 @@ const APPLY_BUDGET = 2;
 /** Vertices swapped in a frame at most, so their upload to the GPU is spread too. */
 const APPLY_VERTICES = 100_000;
 
-/** Whether the player has ONE-TIME (baked) ambient occlusion chosen. */
-const baking = () => playerSettings.value.aoMode === 'bake';
+/** Whether the player has a kept bake chosen: BAKED (rays) or SIMPLE. */
+const baking = () => isBakedAo(playerSettings.value.aoMode);
 
 // ---- The worker and its queue ------------------------------------------------
 
@@ -469,6 +473,12 @@ export interface BakedAoOptions {
   /** Bake again even if cached (`?bake=fresh`). */
   fresh?: boolean;
   /**
+   * The room's free space for SIMPLE occlusion, boxes in `root`'s own
+   * frame (min x, y, z, max x, y, z), from its plan; none: the shell's
+   * bounds.
+   */
+  interiors?: Box[];
+  /**
    * Compile shaders without blocking (`renderer.compileAsync(object, camera,
    * scene)`): the baked materials are compiled on stand-ins before they are
    * swapped in, so their first frame does not stall.
@@ -477,6 +487,43 @@ export interface BakedAoOptions {
 }
 
 export type BakeStat = (typeof bakeStats)[number];
+
+/** Boxes in `root`'s frame as world boxes, six numbers each. */
+function worldInteriors(root: Object3D, boxes: readonly Box[]) {
+  const out: number[] = [];
+  for (const b of boxes) {
+    const box = new Box3(
+      new Vector3(b[0], b[1], b[2]),
+      new Vector3(b[3], b[4], b[5]),
+    ).applyMatrix4(root.matrixWorld);
+    out.push(box.min.x, box.min.y, box.min.z, box.max.x, box.max.y, box.max.z);
+  }
+  return out;
+}
+
+/**
+ * The room's lamps (point, spot and area lights) anywhere in its scene,
+ * world positions, three numbers each: SIMPLE occlusion darkens more far
+ * from them in plant rooms. Their state does not count, only where they are.
+ */
+function lampPositions(root: Object3D) {
+  let top = root;
+  while (top.parent) top = top.parent;
+  const out: number[] = [];
+  const v = new Vector3();
+  top.traverse((o) => {
+    const l = o as Object3D & {
+      isPointLight?: boolean;
+      isSpotLight?: boolean;
+      isRectAreaLight?: boolean;
+    };
+    if (l.isPointLight || l.isSpotLight || l.isRectAreaLight) {
+      o.getWorldPosition(v);
+      out.push(v.x, v.y, v.z);
+    }
+  });
+  return out;
+}
 
 /**
  * Bake `root`'s static meshes' ambient occlusion, or take it from the
@@ -520,9 +567,25 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
         ? (askedLook as AoLook)
         : (options.look ?? 'standard')
     ];
+  // How it is worked out: the method chosen when the room is built
+  // (SIMPLE unless BAKED is chosen, or `?aomethod=rays|simple`); shown
+  // only while that mode is chosen, the other's waiting for the next room.
+  const askedMethod = params.get('aomethod');
+  const method: 'rays' | 'simple' =
+    askedMethod === 'rays' || askedMethod === 'simple'
+      ? askedMethod
+      : playerSettings.value.aoMode === 'rays'
+        ? 'rays'
+        : 'simple';
+  const lookName: AoLook =
+    askedLook && askedLook in AO_LOOKS
+      ? (askedLook as AoLook)
+      : (options.look ?? 'standard');
+  const simpleLook = SIMPLE_AO_LOOKS[lookName];
   const settings = options.settings ?? look.bake;
   const depth = {
-    value: Number(params.get('aodepth')) || look.depth,
+    value:
+      Number(params.get('aodepth')) || (method === 'simple' ? 1 : look.depth),
   };
   const direct = {
     value: params.has('aodirect')
@@ -558,7 +621,7 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
   const fade = () => {
     raf = 0;
     if (disposed) return;
-    const on = shown && baking();
+    const on = shown && playerSettings.value.aoMode === method;
     const target = on ? 1 : 0;
     const t = Math.min(
       1,
@@ -572,10 +635,10 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
     strength.value = 0;
     if (!raf) raf = requestAnimationFrame(fade);
   };
-  // LIVE or OFF in the menu: the bake goes at once; back to ONE-TIME, it fades in.
-  let wasBaking = baking();
+  // Another mode in the menu: the bake goes at once; back to its own, it fades in.
+  let wasBaking = playerSettings.value.aoMode === method;
   const stopFollowing = effect(() => {
-    const now = playerSettings.value.aoMode === 'bake';
+    const now = playerSettings.value.aoMode === method;
     if (now === wasBaking) return;
     wasBaking = now;
     if (applied) startFade();
@@ -837,6 +900,16 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
         unit,
         rays: settings.rays,
         smooth: settings.smooth !== false,
+        ...(method === 'simple'
+          ? {
+              maxEdge: simpleLook.maxEdge,
+              simple: {
+                interiors: worldInteriors(root, options.interiors ?? []),
+                lights: lampPositions(root),
+                look: simpleLook,
+              },
+            }
+          : {}),
       },
       fresh,
     };

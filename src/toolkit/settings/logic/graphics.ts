@@ -235,28 +235,35 @@ export const DEFAULT_GRAPHICS: GraphicsPreset = 'high';
 
 /**
  * How ambient occlusion is drawn (the owner, 2026-10-30): LIVE, screen-space
- * GTAO every frame at `ambientOcclusion`'s quality; ONE-TIME (`bake`), the
- * baked per-vertex occlusion, faded in once ready; or OFF, neither.
+ * GTAO every frame at `ambientOcclusion`'s quality; BAKED (`rays`), the
+ * ray-traced per-vertex occlusion, faded in once ready; SIMPLE (`simple`,
+ * the default since 2026-10-30), the same per-vertex occlusion worked out
+ * analytically from the room's boxes in well under a second
+ * (`baking/logic/simple-ao.ts`); or OFF, none.
  */
-export type AoMode = 'live' | 'bake' | 'off';
-export const AO_MODES: readonly AoMode[] = ['live', 'bake', 'off'];
+export type AoMode = 'live' | 'rays' | 'simple' | 'off';
+export const AO_MODES: readonly AoMode[] = ['live', 'rays', 'simple', 'off'];
 export const AO_MODE_LABELS: Record<AoMode, string> = {
   live: 'Live',
-  bake: 'One-time',
+  rays: 'Baked',
+  simple: 'Simple',
   off: 'Off',
 };
+/** Whether a mode is one of the two kept per-vertex bakes. */
+export const isBakedAo = (mode: AoMode) => mode === 'rays' || mode === 'simple';
 
 /** The settings panel's AMBIENT OCCLUSION switch: each mode's LCD lines. */
 export const AO_MODE_LCD: Record<AoMode, readonly [string, string]> = {
   live: ['LIVE', 'EVERY FRAME'],
-  bake: ['ONE-TIME', 'BAKED, KEPT'],
+  rays: ['BAKED', 'RAY TRACED'],
+  simple: ['SIMPLE', 'QUICK, KEPT'],
   off: ['OFF', 'NONE'],
 };
 
 /** What choosing a preset writes into the player's own settings. */
 export interface PresetChoices {
   renderLevel: number;
-  /** Ambient occlusion's mode: ONE-TIME (baked), or OFF on Low (the owner, 2026-10-30). */
+  /** Ambient occlusion's mode: SIMPLE, or OFF on Low (the owner, 2026-10-30). */
   aoMode: AoMode;
   /** LIVE ambient occlusion's quality, should LIVE be chosen. */
   ambientOcclusion: EffectLevel;
@@ -288,14 +295,14 @@ export const PRESET_CHOICES: Record<GraphicsPreset, PresetChoices> = {
   },
   medium: {
     renderLevel: 3,
-    aoMode: 'bake',
+    aoMode: 'simple',
     ambientOcclusion: 'medium',
     bloom: 'medium',
     filmEffects: true,
   },
   high: {
     renderLevel: 0,
-    aoMode: 'bake',
+    aoMode: 'simple',
     ambientOcclusion: 'high',
     bloom: 'high',
     filmEffects: true,

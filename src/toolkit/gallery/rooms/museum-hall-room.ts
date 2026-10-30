@@ -255,6 +255,12 @@ export function startMuseumHallRoom(
         roomId: id,
         unit: metre,
         look: 'museum',
+        // Its free space, for SIMPLE occlusion (the hall's own frame, metres).
+        interiors: [
+          (({ w, d, h }) => [-w / 2, 0, -d / 2, w / 2, h, d / 2] as const)(
+            hallSize(id),
+          ),
+        ],
         compile: (object) => renderer.compileAsync(object, camera, scene),
       });
     // The exhibit's carrying (107f), through the control scheme's hands.

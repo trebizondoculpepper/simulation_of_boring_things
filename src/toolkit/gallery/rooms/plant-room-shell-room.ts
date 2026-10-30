@@ -165,6 +165,17 @@ export function startPlantRoomShell(
     unit: metre,
     // Grimy and strong (the owner, 2026-10-30): "lived in and dirty".
     look: 'plant',
+    // Its free space, for SIMPLE occlusion: the plan's box.
+    interiors: [
+      [
+        -plan.hx * metre,
+        plan.floor * metre,
+        -plan.hz * metre,
+        plan.hx * metre,
+        plan.roof * metre,
+        plan.hz * metre,
+      ],
+    ],
     compile: (object) => renderer.compileAsync(object, camera, scene),
   });
   const supply = machines
