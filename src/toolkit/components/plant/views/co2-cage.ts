@@ -16,6 +16,7 @@ import { createBrandBadge } from '../../core/views/brand-badge';
 import { createSafetySign } from '../../general-safety/views/safety-signs';
 import type { DialGaugeView } from '../../industrial-control/views/dial-gauge';
 import { BS1710_BASIC, plantTools } from './plant-tools';
+import { markPipe } from './pipe-markers';
 import { CO2_MANIFOLD } from '../logic/co2-supply';
 import type { Co2Bank, Co2Flag } from '../logic/co2-supply';
 
@@ -39,13 +40,15 @@ import type { Co2Bank, Co2Flag } from '../logic/co2-supply';
  */
 
 export const CO2_CAGE = {
-  w: 3.4,
+  w: 5.7,
   d: 1.2,
   h: 2.2,
+  /** The bays' partitions either side of the connected banks, x: full bay west, empty bay east. */
+  bay: 1.7,
   /** From the cage's back to the wall's face. */
   gap: 0.08,
   /** The wall inlet port beyond the cage's right-hand end, x and height. */
-  inletX: 2.05,
+  inletX: 3.3,
   inletY: 1.45,
 } as const;
 
@@ -190,7 +193,9 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
   // ---- The cage: its frame, its mesh, its roof, its gate ----------------
   for (const [x, zs] of [
     [-W / 2, [-D / 2, D / 2]],
+    [-CO2_CAGE.bay, [-D / 2, D / 2]],
     [0, [-D / 2]],
+    [CO2_CAGE.bay, [-D / 2, D / 2]],
     [W / 2, [-D / 2, D / 2]],
   ] as const)
     for (const z of zs) t.box(g, galv, 0.05, H, 0.05, x, H / 2, z);
@@ -241,14 +246,19 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
     return p;
   };
   const gateW = 1.0;
-  // The front, but for the gate at its right-hand end.
-  panel(W - gateW, H - 0.1, -gateW / 2, H / 2 + 0.05, D / 2, 0);
-  for (const s of [-1, 1])
-    panel(D, H - 0.1, (s * W) / 2, H / 2 + 0.05, 0, Math.PI / 2);
+  const gateX = 0.45;
+  // The front, but for the gate in the middle section, right of the manifold.
+  const front = (from: number, to: number) =>
+    panel(to - from, H - 0.1, (from + to) / 2, H / 2 + 0.05, D / 2, 0);
+  front(-W / 2, gateX);
+  front(gateX + gateW, W / 2);
+  // The ends, and the partitions that close off the full and empty bays.
+  for (const x of [-W / 2, -CO2_CAGE.bay, CO2_CAGE.bay, W / 2])
+    panel(D, H - 0.1, x, H / 2 + 0.05, 0, Math.PI / 2);
   panel(W, D, 0, H, 0, 0, -Math.PI / 2);
   // The gate, shut, its padlock and hasp.
   const gate = new Group();
-  gate.position.set(W / 2 - gateW, 0, D / 2 + 0.03);
+  gate.position.set(gateX, 0, D / 2 + 0.03);
   g.add(gate);
   t.box(gate, galv, 0.04, H - 0.15, 0.04, 0.02, H / 2, 0);
   t.box(gate, galv, 0.04, H - 0.15, 0.04, gateW - 0.04, H / 2, 0);
@@ -289,7 +299,7 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
   notice.position.set(gateW / 2, 1.55, 0.03);
   gate.add(notice);
   const noSmoking = createSafetySign(kit, ['no-smoking'], ['No smoking']);
-  noSmoking.position.set(-0.35, 1.95, D / 2 + 0.03);
+  noSmoking.position.set(-1.2, 1.65, D / 2 + 0.03);
   g.add(noSmoking);
   // A level concrete base, a little proud of the tarmac.
   t.box(g, t.paint('#9d9a92', 0.95), W + 0.3, 0.08, D + 0.2, 0, -0.03, 0);
@@ -297,7 +307,6 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
   // ---- The connected cylinders, chained, on their pigtails ----------------
   const rowZ = back + 0.2;
   const header = 1.86;
-  const steel = BS1710_BASIC.gases;
   const copper = t.paint('#b06a3a', 0.35, 0.7);
   const hose = t.paint('#1e1e1e', 0.7);
   let seed = 0;
@@ -348,7 +357,8 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
         rowZ + CO2_BOTTLE.r + 0.012,
       );
     }
-    // The bank's header: copper, along the cylinders' heads to the manifold.
+    // The bank's header: copper, along the cylinders' heads to the manifold,
+    // at the cylinders' full pressure: its legend says so.
     t.rod(
       g,
       copper,
@@ -356,6 +366,22 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
       [sx * 0.33, header, rowZ - 0.05],
       0.011,
       8,
+    );
+    g.add(
+      markPipe(
+        kit,
+        [
+          [sx * outer, header, rowZ - 0.05],
+          [sx * 0.33, header, rowZ - 0.05],
+        ],
+        {
+          radius: 0.011,
+          service: 'gas',
+          text: 'CO₂ HIGH PRESSURE 60 bar',
+          lettering: 'stencil',
+          ink: '#111111',
+        },
+      ),
     );
   }
 
@@ -469,8 +495,10 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
   const wallZ = back - CO2_CAGE.gap;
   const runZ = wallZ + 0.05;
   const lineY = H + 0.25;
-  // 15 mm steel tube, painted gas yellow ochre (BS 1710), its bends swept.
-  const tube = t.paint(steel, 0.5, 0.3);
+  // 15 mm galvanised steel tube, its bends swept; identified to BS 1710
+  // by yellow ochre bands (gases other than air, BS 4800 08 C 35) and
+  // legends, never red (fire fighting's) nor the cylinders' grey.
+  const tube = t.paint('#a9aeae', 0.45, 0.6);
   const pipe = (pts: [number, number, number][]) => {
     for (let i = 0; i < pts.length - 1; i++)
       t.rod(g, tube, pts[i], pts[i + 1], 0.011, 8);
@@ -484,14 +512,31 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
     [CO2_CAGE.inletX, lineY, runZ],
     [CO2_CAGE.inletX, CO2_CAGE.inletY, runZ],
   ]);
-  // Its identification: gas yellow ochre, "CO₂", every run.
-  const ident = createMicroLabel(kit, 'CO₂ · 4 bar ▶', {
-    height: 0.03,
-    ink: '#111111',
-    plate: '#c99a2e',
-  });
-  ident.position.set(1.0, lineY - 0.05, runZ + 0.025);
-  g.add(ident);
+  // Its identification (BS 1710:2014): bands on every straight run of
+  // over a metre, 0.4 m from each end and at most 4 m apart (`markPipe`),
+  // its legend on the longest run with an arrow the way it flows; and
+  // bands of their own at the manifold's outlet, either side of the
+  // isolation valve and at the wall.
+  const runs: [number, number, number][] = [
+    [0, 1.1, back - 0.04],
+    [0, 1.1, runZ],
+    [0, lineY, runZ],
+    [CO2_CAGE.inletX, lineY, runZ],
+    [CO2_CAGE.inletX, CO2_CAGE.inletY, runZ],
+  ];
+  g.add(
+    markPipe(kit, runs, {
+      radius: 0.011,
+      service: 'gas',
+      text: 'CARBON DIOXIDE · CO₂ 4 bar',
+    }),
+  );
+  const ochre = t.paint(BS1710_BASIC.gases, 0.6);
+  const band = (at: [number, number, number], axis: 'x' | 'y' | 'z') =>
+    t.cyl(g, ochre, 0.014, 0.15, ...at, axis, 16);
+  band([0, 1.1, back - 0.12], 'z');
+  band([CO2_CAGE.inletX, CO2_CAGE.inletY + 0.55, runZ], 'y');
+  band([CO2_CAGE.inletX, CO2_CAGE.inletY + 0.21, runZ], 'y');
   // The emergency isolation valve: a lever ball valve, its handle red.
   const isolation = new Group();
   isolation.position.set(CO2_CAGE.inletX, CO2_CAGE.inletY + 0.35, runZ);
@@ -500,9 +545,10 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
   const isoLever = new Group();
   isoLever.position.set(0, 0, 0.04);
   isolation.add(isoLever);
+  // Its handle yellow, as gas isolation valves' are (red is fire fighting's).
   const isoHandle = t.box(
     isoLever,
-    t.paint('#c42b23', 0.5),
+    t.paint('#e5c43a', 0.5),
     0.02,
     0.15,
     0.015,
@@ -513,8 +559,8 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
   isoHandle.name = 'CO₂ emergency isolation valve';
   const isoSign = createMicroLabel(kit, 'CO₂ EMERGENCY\nISOLATION VALVE', {
     height: 0.035,
-    ink: '#f2f2ee',
-    plate: '#c42b23',
+    ink: '#111111',
+    plate: '#f2f2ee',
   });
   isoSign.position.set(
     CO2_CAGE.inletX + 0.32,
@@ -547,6 +593,7 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
     [CO2_CAGE.inletX, CO2_CAGE.inletY, runZ],
     [CO2_CAGE.inletX, CO2_CAGE.inletY, wallZ - 0.1],
   ]);
+  band([CO2_CAGE.inletX, CO2_CAGE.inletY, runZ - 0.0], 'z');
   const port = createMicroLabel(kit, 'CO₂ INLET', {
     height: 0.03,
     ink: '#111111',
@@ -555,51 +602,59 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
   port.position.set(CO2_CAGE.inletX, CO2_CAGE.inletY - 0.1, wallZ + 0.005);
   g.add(port);
 
-  // ---- In front: the full spares and the empties -------------------------
-  for (let i = 0; i < 4; i++) {
-    const x = -1.45 + i * 0.3;
-    const cyl = createCo2Cylinder(kit, seed++);
-    cyl.position.set(x, 0.05, 0.25);
-    g.add(cyl);
-    const tag = cylinderTag(kit, 'FULL', '#3f9b3a');
-    tag.position.set(x, 1.3, 0.25 + CO2_BOTTLE.r + 0.004);
-    g.add(tag);
-  }
-  for (let i = 0; i < 2; i++) {
-    const x = 0.8 + i * 0.3;
-    const cyl = createCo2Cylinder(kit, seed++);
-    cyl.position.set(x, 0.05, 0.25);
-    cyl.rotation.y = 0.4 * (i + 1);
-    g.add(cyl);
-    const tag = cylinderTag(kit, 'EMPTY', '#c42b23');
-    tag.position.set(x, 1.3, 0.25 + CO2_BOTTLE.r + 0.004);
-    g.add(tag);
-  }
-  // The front row's chain rail across the cage's front posts.
-  t.box(
-    g,
-    t.paint('#4a4a4a', 0.5, 0.7),
-    2.0,
-    0.012,
-    0.012,
-    -0.65,
-    1.0,
-    0.25 + CO2_BOTTLE.r + 0.012,
-  );
-  const rows = createMicroLabel(kit, 'FULL', {
-    height: 0.05,
-    ink: '#111111',
-    plate: '#3f9b3a',
-  });
-  rows.position.set(-1.0, 2.0, D / 2 + 0.03);
-  g.add(rows);
-  const rowsE = createMicroLabel(kit, 'EMPTY', {
-    height: 0.05,
+  // ---- The full bay (west) and the empty bay (east) ---------------------
+  // Free-standing, chained upright, on no pigtail: a full cylinder joins a
+  // bank only when it is exchanged for a spent one.
+  const chain = t.paint('#4a4a4a', 0.5, 0.7);
+  const bay = (
+    side: -1 | 1,
+    count: number,
+    tagText: string,
+    colour: string,
+    ink: string,
+  ) => {
+    const mid = (side * (CO2_CAGE.bay + W / 2)) / 2;
+    const xs = [mid - 0.27, mid + 0.27];
+    for (let i = 0; i < count; i++) {
+      const x = xs[i % 2];
+      const z = back + 0.2 + Math.floor(i / 2) * 0.42;
+      const cyl = createCo2Cylinder(kit, seed++);
+      cyl.position.set(x, 0.05, z);
+      if (side > 0) cyl.rotation.y = 0.5 * (i + 1);
+      g.add(cyl);
+      const tag = cylinderTag(kit, tagText, colour);
+      tag.position.set(x, 1.3, z + CO2_BOTTLE.r + 0.004);
+      g.add(tag);
+      // Each row's chain across, between the bay's partition and its end.
+      if (i % 2 === 0)
+        t.box(
+          g,
+          chain,
+          W / 2 - CO2_CAGE.bay - 0.1,
+          0.012,
+          0.012,
+          mid,
+          1.0,
+          z + CO2_BOTTLE.r + 0.012,
+        );
+    }
+    const sign = createMicroLabel(kit, tagText, {
+      height: 0.06,
+      ink,
+      plate: colour,
+    });
+    sign.position.set(mid, 2.0, D / 2 + 0.03);
+    g.add(sign);
+  };
+  bay(-1, 4, 'FULL', '#3f9b3a', '#111111');
+  bay(1, 2, 'EMPTY', '#c42b23', '#f2f2ee');
+  const banks = createMicroLabel(kit, 'CONNECTED · LEFT BANK | RIGHT BANK', {
+    height: 0.035,
     ink: '#f2f2ee',
-    plate: '#c42b23',
+    plate: '#1f5f8b',
   });
-  rowsE.position.set(1.1, 2.0, D / 2 + 0.03);
-  g.add(rowsE);
+  banks.position.set(-0.75, 2.0, D / 2 + 0.03);
+  g.add(banks);
 
   return {
     group: g,

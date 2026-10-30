@@ -115,7 +115,7 @@ export function startCo2CageRoom(canvas: HTMLCanvasElement) {
     -WALL.t / 2,
   );
   const lpg = createLpgCage(kit);
-  lpg.position.set(-3.2, 0, 0.45);
+  lpg.position.set(-4.6, 0, 0.45);
   room.add(lpg);
   const cageZ = CO2_CAGE.gap + CO2_CAGE.d / 2;
   let co2 = parts.add(createCo2SupplyPart(kit));
@@ -156,8 +156,8 @@ export function startCo2CageRoom(canvas: HTMLCanvasElement) {
     room.add(label);
     parts.uses.set(button, use);
   };
-  trial(3.3, 'TRIAL: DRAW 20 kg', '#e3b51f', () => co2.draw(20));
-  trial(3.9, 'TRIAL: FULL AGAIN', '#3f9b3a', () => {
+  trial(4.4, 'TRIAL: DRAW 20 kg', '#e3b51f', () => co2.draw(20));
+  trial(5.0, 'TRIAL: FULL AGAIN', '#3f9b3a', () => {
     parts.remove(co2);
     room.remove(co2.object);
     co2 = parts.add(createCo2SupplyPart(kit, newCo2Supply()));
@@ -190,11 +190,11 @@ export function startCo2CageRoom(canvas: HTMLCanvasElement) {
     { x: number; z: number; yaw: number; pitch: number }
   > = {
     // Out in the yard, the wall and both cages.
-    room: { x: 0, z: 6 * m, yaw: 0, pitch: -0.08 },
+    room: { x: 0, z: 7.5 * m, yaw: 0, pitch: -0.08 },
     // At the cage's front, the manifold through the mesh.
     close: { x: 0, z: 3.0 * m, yaw: 0, pitch: -0.1 },
     // By the wall inlet and its isolation valve.
-    inlet: { x: 3.4 * m, z: 3.4 * m, yaw: -0.55, pitch: 0 },
+    inlet: { x: 4.6 * m, z: 3.6 * m, yaw: -0.55, pitch: 0 },
   };
   const params = new URLSearchParams(location.search);
   const reach = 30 * m;

@@ -89,7 +89,7 @@ export const YARD_DRESSING = [
  * and its wall inlet port beyond its west end (its own right, facing
  * out), from `minX` to `maxX` along the wall and `d` out from it.
  */
-export const YARD_CO2 = { x: 20.0, minX: 17.35, maxX: 21.8, d: 1.4 } as const;
+export const YARD_CO2 = { x: 21.3, minX: 17.3, maxX: 24.2, d: 1.4 } as const;
 
 /** What the dressing stands in the way of. */
 export function dressingSolids(): Footprint[] {
