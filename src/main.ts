@@ -135,7 +135,7 @@ const app = document.querySelector<HTMLElement>('#app');
 if (!directory || !directoryShell || !app)
   throw new Error('Room page is incomplete.');
 
-// Errors from the published builds go to Sentry (`error-reporting.ts`):
+// Errors go to Sentry, each run under its own environment (`error-reporting.ts`):
 // started before anything else, so a failure to start is caught too.
 startErrorReporting();
 

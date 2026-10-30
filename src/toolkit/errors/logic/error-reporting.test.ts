@@ -2,30 +2,26 @@ import { describe, expect, it } from 'vite-plus/test';
 import { reportingEnvironment, roomOf, shouldReport } from './error-reporting';
 
 describe('error reporting', () => {
-  it('reports from the published builds only', () => {
-    const page = { production: true, search: '' };
-    expect(
-      shouldReport({ ...page, host: 'trebizondoculpepper.github.io' }),
-    ).toBe(true);
-    expect(shouldReport({ ...page, host: 'html-classic.itch.zone' })).toBe(
+  it('reports from every run but the dev panel and an automated browser', () => {
+    expect(shouldReport({ search: '', automated: false })).toBe(true);
+    expect(shouldReport({ search: '?room=museum1', automated: false })).toBe(
       true,
     );
-    expect(shouldReport({ ...page, host: '127.0.0.1:5175' })).toBe(false);
-    expect(shouldReport({ ...page, host: 'localhost:4173' })).toBe(false);
+    expect(shouldReport({ search: '?dev', automated: false })).toBe(false);
+    expect(shouldReport({ search: '', automated: true })).toBe(false);
   });
 
-  it('never from a development build or the dev panel', () => {
-    const host = 'trebizondoculpepper.github.io';
-    expect(shouldReport({ production: false, host, search: '' })).toBe(false);
-    expect(shouldReport({ production: true, host, search: '?dev' })).toBe(
-      false,
-    );
-  });
-
-  it('names where a report came from, and its room', () => {
-    expect(reportingEnvironment('x.github.io')).toBe('pages');
+  it('tells the releases on itch.io from Pages, the dev server and local builds', () => {
     expect(reportingEnvironment('html-classic.itch.zone')).toBe('itch');
-    expect(reportingEnvironment('example.com')).toBeNull();
+    expect(reportingEnvironment('trebizondoculpepper.github.io')).toBe('pages');
+    expect(reportingEnvironment('127.0.0.1:5175', false)).toBe('development');
+    expect(reportingEnvironment('localhost:4173')).toBe('local');
+    expect(reportingEnvironment('example.com')).toBe('local');
+    // The dev server is development wherever it is served.
+    expect(reportingEnvironment('x.github.io', false)).toBe('development');
+  });
+
+  it('names the room a report came from', () => {
     expect(roomOf('?room=museum7&x=1')).toBe('museum7');
     expect(roomOf('')).toBe('title');
   });

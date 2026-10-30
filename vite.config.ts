@@ -1,6 +1,11 @@
 import { configDefaults, defineConfig } from 'vite-plus';
 import { execFileSync } from 'node:child_process';
 import { version } from './package.json';
+import {
+  commitsSinceVersionChange,
+  derivedVersion,
+  gitIn,
+} from './scripts/versioning.ts';
 
 /** Build identity for both local and CI builds, beside the package version. */
 const git = (...args: string[]) => {
@@ -16,6 +21,16 @@ const git = (...args: string[]) => {
 };
 const commit = git('rev-parse', '--short', 'HEAD');
 const dirty = git('status', '--porcelain') ? ' (uncommitted changes)' : '';
+/**
+ * The version a build passes in (`scripts/build.ts`), or, on the dev server
+ * and in tests, the same derived here: `package.json`'s with its patch
+ * moved on by the commits since it last changed, so a local run reports
+ * the release it is (Sentry's `release`), not the last one tagged.
+ */
+const localVersion = derivedVersion(
+  version,
+  commitsSinceVersionChange(gitIn(import.meta.dirname)) ?? 0,
+);
 const localBuild = commit
   ? `${commit}${dirty} · ${new Date().toISOString().slice(0, 10)}`
   : `local · ${new Date().toISOString().slice(0, 10)}`;
@@ -37,7 +52,7 @@ export default defineConfig({
   },
   define: {
     'import.meta.env.VITE_VERSION': JSON.stringify(
-      process.env.VITE_VERSION || version,
+      process.env.VITE_VERSION || localVersion,
     ),
     'import.meta.env.VITE_BUILD': JSON.stringify(
       process.env.VITE_BUILD || localBuild,
