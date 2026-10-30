@@ -15,7 +15,7 @@ import {
  * profiling, no replays, no personal data (Sentry's browser SDK sets no
  * cookies, and is told not to send the player's address). Each report
  * carries the release (`the-pool@` the version, as the build derived it),
- * where it ran (itch, pages, development or local), its build (the commit,
+ * where it ran (prod, pre-release or dev), its build (the commit,
  * marked if it had uncommitted changes), the room it came from and the
  * graphics preset.
  */

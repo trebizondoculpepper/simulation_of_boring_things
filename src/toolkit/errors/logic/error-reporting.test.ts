@@ -12,13 +12,15 @@ describe('error reporting', () => {
   });
 
   it('tells the releases on itch.io from Pages, the dev server and local builds', () => {
-    expect(reportingEnvironment('html-classic.itch.zone')).toBe('itch');
-    expect(reportingEnvironment('trebizondoculpepper.github.io')).toBe('pages');
-    expect(reportingEnvironment('127.0.0.1:5175', false)).toBe('development');
-    expect(reportingEnvironment('localhost:4173')).toBe('local');
-    expect(reportingEnvironment('example.com')).toBe('local');
-    // The dev server is development wherever it is served.
-    expect(reportingEnvironment('x.github.io', false)).toBe('development');
+    expect(reportingEnvironment('html-classic.itch.zone')).toBe('prod');
+    expect(reportingEnvironment('trebizondoculpepper.github.io')).toBe(
+      'pre-release',
+    );
+    expect(reportingEnvironment('127.0.0.1:5175', false)).toBe('dev');
+    expect(reportingEnvironment('localhost:4173')).toBe('dev');
+    expect(reportingEnvironment('example.com')).toBe('dev');
+    // The dev server is dev wherever it is served.
+    expect(reportingEnvironment('x.github.io', false)).toBe('dev');
   });
 
   it('names the room a report came from', () => {

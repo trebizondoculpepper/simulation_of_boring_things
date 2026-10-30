@@ -87,7 +87,7 @@ Every change goes under Unreleased in `CHANGELOG.md` as it is made. A release is
 
 ## Error reporting
 
-Every run sends its errors to Sentry (`src/toolkit/errors/error-reporting.ts`): uncaught errors, unhandled rejections and the errors the game catches itself. Each carries its release, `the-pool@` and the version (the build's derived version; on the dev server the same, worked out from git by `vite.config.ts`), and its environment, so runs are told apart: `itch` (releases on itch.io), `pages` (GitHub Pages), `development` (the dev server) and `local` (a production build served anywhere else); and tags for its build (commit and date, marked if it had uncommitted changes), the room and the graphics preset. Errors only: no tracing, profiling or replays, no cookies and no personal data. `?dev` and automated browsers (`navigator.webdriver`, the headless checks) never report.
+Every run sends its errors to Sentry (`src/toolkit/errors/error-reporting.ts`): uncaught errors, unhandled rejections and the errors the game catches itself. Each carries its release, `the-pool@` and the version (the build's derived version; on the dev server the same, worked out from git by `vite.config.ts`), and its environment, so runs are told apart: `prod` (releases on itch.io), `pre-release` (GitHub Pages) and `dev` (the dev server, or a build served anywhere else); and tags for its build (commit and date, marked if it had uncommitted changes), the room and the graphics preset. Errors only: no tracing, profiling or replays, no cookies and no personal data. `?dev` and automated browsers (`navigator.webdriver`, the headless checks) never report.
 
 ## Reused from the Encabulator
 
