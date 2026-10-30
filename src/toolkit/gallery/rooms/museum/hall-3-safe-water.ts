@@ -100,6 +100,7 @@ import {
 import {
   createLectern,
   createPumpStation,
+  heldPumpSound,
   createResetPedestal,
   createWallPanel,
   paintEntrance,
@@ -424,6 +425,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     pump.gauges.suction.update(delta);
     pump.gauges.discharge.update(delta);
   });
+  // Its sound, while it runs.
+  updates.push(heldPumpSound(pump, () => readings.flow > 0));
   const station = createPumpStation(kit, {
     tag: shortTag('poolPump'),
     start: () => act({ type: 'pump', run: true }),

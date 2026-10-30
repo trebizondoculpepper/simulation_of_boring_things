@@ -108,11 +108,13 @@ import {
 import {
   createLectern,
   createPumpStation,
+  heldPumpSound,
   createResetPedestal,
   createWallPanel,
   paintEntrance,
   paintResetSign,
 } from '../../views/museum-exhibit';
+import { HEATING_CIRCULATOR } from '../../../components/plant/logic/pump-sound';
 import type { MimicState } from '../../../components/industrial-control/logic/mimic';
 import type { HallExhibit } from './exhibits';
 
@@ -297,6 +299,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     const on = readings.primaryFlow > 0;
     if (on !== p1Shown) p1.show((p1Shown = on));
   });
+  // Its sound: a heating circulator's, small and quick.
+  updates.push(
+    heldPumpSound(p1, () => readings.primaryFlow > 0, HEATING_CIRCULATOR, 0.5),
+  );
 
   // ---- The exchanger, the pool pump, the pool ----
   const hx = new Group();
@@ -333,6 +339,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     pump.gauges.suction.update(delta);
     pump.gauges.discharge.update(delta);
   });
+  // Its sound, while it runs.
+  updates.push(heldPumpSound(pump, () => state().poolPump && !state().tripped));
   // The pool pump's local station: START, STOP, RUN, TRIPPED and its trip RESET.
   const station = createPumpStation(kit, {
     tag: shortTag('poolPump'),

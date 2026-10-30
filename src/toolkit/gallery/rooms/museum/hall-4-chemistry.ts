@@ -87,6 +87,7 @@ import {
   createLectern,
   createResetPedestal,
   createWallPanel,
+  heldPumpSound,
   paintEntrance,
   paintResetSign,
 } from '../../views/museum-exhibit';
@@ -354,6 +355,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     pump.gauges.suction.update(delta);
     pump.gauges.discharge.update(delta);
   });
+  // Its sound: it always runs, as its gauges and status say.
+  updates.push(heldPumpSound(pump, () => true));
   const pool = createIdealVessel(kit, {
     w: POOL.w,
     d: POOL.d,

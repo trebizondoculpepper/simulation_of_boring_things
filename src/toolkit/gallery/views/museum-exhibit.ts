@@ -1,4 +1,8 @@
 import { Group } from 'three';
+import type { Object3D } from 'three';
+import { partAudio } from '../../components/core/audio/part-audio';
+import { pumpSound } from '../../components/plant/views/pump-sound';
+import type { PumpSet } from '../../components/plant/logic/pump-sound';
 import { signal } from '@preact/signals-core';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createMicroLabel } from '../../components/core/views/eighties-controls';
@@ -490,6 +494,34 @@ export function createResetPedestal(
 }
 
 /**
+ * A centrifugal pump's sound (`pumpSound`), held at `pump` (at its motor,
+ * `y` up) while `running` says it runs: run up when started, coasted down
+ * when stopped. Returns the update a hall calls each frame, heard only
+ * once its hall runs (a neighbour's copy, drawn once at 0, is silent); the pump's
+ * set (`PumpSet`) says how it sounds, the 30 kW circulation pump's by
+ * default.
+ */
+export function heldPumpSound(
+  pump: Object3D,
+  running: () => boolean,
+  set?: PumpSet,
+  y = 0.6,
+) {
+  const at = new Group();
+  at.name = 'Pump sound';
+  at.position.y = y;
+  pump.add(at);
+  const sound = pumpSound(set);
+  let heard = false;
+  return (delta: number) => {
+    // Only in the hall walked in: a neighbour's copy is drawn once, at 0.
+    if (delta <= 0 || running() === heard) return;
+    heard = !heard;
+    partAudio.hold(at, heard ? sound : null, at);
+  };
+}
+
+/**
  * A pump's local control station: START and STOP and its RUN lamp on the
  * left, its TRIPPED lamp and the trip's RESET on the right, worked through
  * the room's actions.
@@ -516,9 +548,10 @@ export function createPumpStation(
   const group = new Group();
   group.name = `${tag} local control station`;
   const grey = t.paint('#c9ccc6', 0.55);
-  // A post and the station's enclosure on it, facing +z.
+  // A post and the station's enclosure on it, facing +z: tall enough for
+  // its title in a strip of its own over the lamps' legends.
   t.box(group, t.paint('#55616a', 0.5), 0.06, 1.2, 0.06, 0, 0.6, -0.05);
-  t.box(group, grey, 0.3, 0.34, 0.1, 0, 1.3, 0);
+  t.box(group, grey, 0.3, 0.38, 0.1, 0, 1.32, 0);
   const run = signal(running());
   const trip = signal(tripped());
   const parts = createPartSet();
@@ -596,14 +629,16 @@ export function createPumpStation(
     plate: '#f4f3ee',
     maxWidth: 0.26,
   });
-  tagPlate.position.set(0, 0.155, 0.052);
+  // Flat on the face, as the parts are (it stood 5 cm proud, and from eye
+  // height hid the lamps' legends below it).
+  tagPlate.position.set(0, 0.18, 0.003);
   face.add(tagPlate);
   const pushTag = createMicroLabel(kit, 'PUSH', {
     height: 0.022,
     ink: '#111111',
     plate: '#ffd21f',
   });
-  pushTag.position.set(0.07, -0.09, 0.052);
+  pushTag.position.set(0.07, -0.09, 0.003);
   face.add(pushTag);
   return {
     group,
