@@ -30,12 +30,25 @@ export const LIFT_DOOR = {
   frame: 0.1,
   /** How deep the doorway's reveal is, behind the face: where the leaves (or the car's gate) run. */
   depth: 0.14,
+  /**
+   * A landing's doors set back behind its wall's face (the owner,
+   * 2026-10-30: at least a brick's depth, room for the mechanism), in a
+   * reveal lined round its jambs and head, a sill plate across it.
+   */
+  recess: 0.15,
   /** Each panel's overlap: the fast over the slow, the slow into the frame. */
   lap: 0.03,
   /** The two tracks' depths behind the face: the fast panel's (nearer) and the slow's. */
   fastTrack: 0.035,
   slowTrack: 0.085,
 } as const;
+
+/**
+ * How far behind a landing's wall face the car's sill edge stands: the
+ * recess, then the landing doors' tracks (`depth`), the landing sill and
+ * the car sill meeting with a small running gap within it.
+ */
+export const LANDING_SET = LIFT_DOOR.recess + LIFT_DOOR.depth;
 
 /** One door panel's width: a quarter of the opening, and its overlap. */
 export const PANEL_WIDTH = LIFT_DOOR.clear / 4 + LIFT_DOOR.lap;
@@ -128,32 +141,38 @@ function box(
  * is, its jambs, whether a point has gone out through it, and whether one
  * is in it (the light curtain).
  */
-export function liftDoorway(place: LiftPlace) {
+export function liftDoorway(place: LiftPlace, landing = false) {
   const half = LIFT_DOOR.clear / 2;
   const d = LIFT_DOOR.depth;
-  const frame: DoorFrame = { x: place.x, z: place.z, yaw: place.yaw, y: 0 };
+  // A landing's doors stand in its recess, the car's sill edge (where the
+  // two rooms join) `LANDING_SET` behind its face; the car's own doorway
+  // is its sill edge.
+  const back = landing ? LIFT_DOOR.recess : 0;
+  const set = landing ? LANDING_SET : 0;
+  const edge = liftWorld(place, 0, -set);
+  const frame: DoorFrame = { x: edge.x, z: edge.z, yaw: place.yaw, y: 0 };
   return {
     frame,
     half,
-    leaf: box(place, -half, half, -d, 0),
-    beyond: box(place, -half, half, -d - 0.3, -d),
-    opening: box(place, -half, half, -2.5, 0.4),
-    /** The frame's jambs either side, solid. */
+    leaf: box(place, -half, half, -back - d, -back),
+    beyond: box(place, -half, half, -back - d - 0.3, -back - d),
+    opening: box(place, -half, half, -set - 2.5, 0.4),
+    /** The frame's jambs (a landing's, its reveal's linings) either side, solid. */
     jambs: [
-      box(place, -half - LIFT_DOOR.frame, -half, -d, 0),
-      box(place, half, half + LIFT_DOOR.frame, -d, 0),
+      box(place, -half - LIFT_DOOR.frame, -half, -Math.max(set, d), 0),
+      box(place, half, half + LIFT_DOOR.frame, -Math.max(set, d), 0),
     ],
-    /** Gone out past the face, within the opening. */
+    /** Gone out past the sill's edge, within the opening. */
     through(x: number, z: number) {
       const { u, v } = liftLocal(place, x, z);
-      return v < -0.05 && Math.abs(u) < half;
+      return v < -set - 0.05 && Math.abs(u) < half;
     },
     /** In the doorway, or near enough the face for the light curtain. */
     inDoorway(x: number, z: number, radius = 0.3) {
       const { u, v } = liftLocal(place, x, z);
       return (
         Math.abs(u) < half + radius * 0.5 &&
-        v > -d - radius &&
+        v > -set - d - radius &&
         v < CURTAIN_REACH
       );
     },

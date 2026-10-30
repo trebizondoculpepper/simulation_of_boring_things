@@ -154,7 +154,7 @@ export function startBridgeRoom(
     // facing the corridor's doors across the room (mission 108; the owner,
     // 2026-10-30): always the bridge, whatever the CONTROL ROOM MODE knob
     // says.
-    extras: ({ kit, parts, rooms, metre, walk }) =>
+    extras: ({ kit, parts, rooms, metre, walk, camera }) =>
       installLiftLanding({
         room: 'bridge',
         lift: 'freight',
@@ -166,6 +166,7 @@ export function startBridgeRoom(
         metre,
         store: roomWorld(),
         walk,
+        camera,
         floorY: STOREY,
         sign: 'GOODS LIFT · 3 CONTROL ROOM',
       }),

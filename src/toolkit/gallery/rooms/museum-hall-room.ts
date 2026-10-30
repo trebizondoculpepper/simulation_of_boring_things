@@ -565,6 +565,7 @@ export function startMuseumHallRoom(
         metre,
         store: roomWorld(),
         walk,
+        camera,
         sign: 'GOODS LIFT · 4 MUSEUM',
       })
     : null;

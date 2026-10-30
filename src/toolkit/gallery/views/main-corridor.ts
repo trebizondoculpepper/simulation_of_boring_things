@@ -28,6 +28,7 @@ import {
 import {
   CORRIDOR_DOORS,
   CORRIDOR_LIFT,
+  bufferRailRuns,
   CORRIDOR_WALLS,
   corridorWalls,
   CORRIDOR_QUADRANTS,
@@ -262,19 +263,10 @@ export function createMainCorridor(metre: number, kit: PanelKit) {
   // A galvanised buffer rail along the walls at trolley height, on
   // stand-offs, broken at each doorway and stopping short of the corners.
   for (const wall of CORRIDOR_WALLS) {
-    const { line, from, to, into, alongX } = walls[wall];
+    const { line, into, alongX } = walls[wall];
     const inward = alongX ? into[1] : into[0];
     const at = line + inward * 0.12;
-    const cuts = CORRIDOR_DOORS.filter((d) => d.wall === wall).map((d) => d.at);
-    let start = from + 0.4;
-    const runs: [number, number][] = [];
-    for (const c of cuts.sort((a, b) => a - b)) {
-      runs.push([start, c - half - 0.3]);
-      start = c + half + 0.3;
-    }
-    runs.push([start, to - 0.4]);
-    for (const [a, b] of runs) {
-      if (b - a < 0.5) continue;
+    for (const [a, b] of bufferRailRuns(wall)) {
       const len = b - a;
       if (alongX) {
         box(galv, len, 0.15, 0.04, (a + b) / 2, 0.45, at);

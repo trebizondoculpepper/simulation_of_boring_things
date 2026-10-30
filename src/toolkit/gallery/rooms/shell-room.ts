@@ -43,7 +43,7 @@ import {
   Vector2,
   WebGLRenderTarget,
 } from 'three';
-import type { Object3D } from 'three';
+import type { Camera, Object3D } from 'three';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -469,6 +469,7 @@ export interface ShellConfig {
     rooms: Group;
     metre: number;
     walk: { following: boolean; walker: { x: number; z: number } };
+    camera: Camera;
   }) => ShellExtras;
 }
 
@@ -844,7 +845,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   let lastMotionX = NaN;
   let lastMotionZ = NaN;
   let lastMotionYaw = NaN;
-  extras = cfg.extras?.({ kit, parts, rooms, metre, walk }) ?? null;
+  extras = cfg.extras?.({ kit, parts, rooms, metre, walk, camera }) ?? null;
   renderer.setAnimationLoop((time) => {
     parts.setAudible(!canvas.parentElement?.hidden && !walk.following);
     machines.setAudible(!canvas.parentElement?.hidden && !walk.following);

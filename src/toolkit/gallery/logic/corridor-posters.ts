@@ -1,4 +1,10 @@
-import { CORRIDOR_DOORS, CORRIDOR_WALLS, corridorWalls } from './main-corridor';
+import {
+  CORRIDOR_DOORS,
+  CORRIDOR_LIFT,
+  CORRIDOR_WALLS,
+  LIFT_CLEAR,
+  corridorWalls,
+} from './main-corridor';
 import type { CorridorWall } from './main-corridor';
 
 /** An A1 (594 × 841 mm) campaign, printed at life size in the plant corridor. */
@@ -48,6 +54,10 @@ export interface PosterPlacement {
 }
 
 /** Distribute 30 frames over all eight corridor faces, away from doors and corners. */
+/** Whether a point `at` along `wall` is clear of the freight lift's landing (mission 108). */
+const clearOfLift = (wall: CorridorWall, at: number) =>
+  CORRIDOR_LIFT.wall !== wall || Math.abs(at - CORRIDOR_LIFT.at) > LIFT_CLEAR;
+
 export function corridorPosterPlacements(): PosterPlacement[] {
   const counts = [4, 4, 4, 4, 4, 4, 3, 3] as const;
   const walls = corridorWalls();
@@ -59,7 +69,11 @@ export function corridorPosterPlacements(): PosterPlacement[] {
     );
     const safe: number[] = [];
     for (let at = from + 1; at <= to - 1; at += 0.1) {
-      if (doors.every((door) => Math.abs(at - door) > 1.55)) safe.push(at);
+      if (
+        doors.every((door) => Math.abs(at - door) > 1.55) &&
+        clearOfLift(wall, at)
+      )
+        safe.push(at);
     }
     const count = counts[index];
     return Array.from({ length: count }, (_, i) => ({
@@ -93,7 +107,8 @@ export function corridorFirePoints(): { wall: CorridorWall; at: number }[] {
       const at = (ats[i] + ats[i + 1]) / 2;
       if (
         ats.every((p) => Math.abs(p - at) >= FIRE_POINT.clear) &&
-        doors.every((d) => Math.abs(d - at) > 1.55)
+        doors.every((d) => Math.abs(d - at) > 1.55) &&
+        clearOfLift(wall, at)
       )
         return [{ wall, at }];
     }

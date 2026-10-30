@@ -12,7 +12,9 @@ import { createCanvasTexture } from '../../core/views/screens';
 import { createEngravedNameSign } from '../../general-safety/views/engraved-sign';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import {
+  DOOR_STACK,
   doorPanels,
+  LANDING_SET as SET,
   LIFT_DOOR,
   PANEL_WIDTH,
 } from '../../../gallery/logic/lift-doorway';
@@ -37,9 +39,14 @@ import {
 const H = LIFT_DOOR.height;
 const W = LIFT_DOOR.clear;
 const F = LIFT_DOOR.frame;
-const D = LIFT_DOOR.depth;
 /** A panel's thickness. */
 const T = 0.028;
+/**
+ * The shadow gap between a landing reveal's back edge and the face of its
+ * nearer (fast) panel: 21 mm (6 mm the least the owner allows; deeper so
+ * it reads at a walker's distance).
+ */
+export const SHADOW_GAP = LIFT_DOOR.fastTrack - T / 2;
 
 const textures = new Map<string, ReturnType<typeof createCanvasTexture>>();
 /** A canvas texture drawn once and shared. */
@@ -157,17 +164,40 @@ export function createLiftDoors(
     for (const s of [-1, 1])
       block(frame, F, H + F, 0.03, s * (W / 2 + F / 2), (H + F) / 2, 0, group);
     block(frame, W + 2 * F, F, 0.03, 0, H + F / 2, 0, group);
-    // The sill, its grooved aluminium across the reveal, flush with the floor.
+    // The reveal (the owner, 2026-10-30): the doors set back `recess`
+    // behind the face, its jambs' and head's stainless linings returning
+    // into the opening to the car's sill edge, `LANDING_SET` back, and a
+    // grooved sill plate across it, flush with the floor.
+    const lining = stainless(kit);
+    const R = LIFT_DOOR.recess;
+    for (const s of [-1, 1])
+      block(lining, 0.02, H, R, s * (W / 2 + 0.01), H / 2, -R / 2, group);
+    block(lining, W + 0.04, 0.02, R, 0, H + 0.01, -R / 2, group);
     block(
       kitPaint(kit, '#a9aeb0', 0.5),
       W + 2 * F,
       0.012,
-      D + 0.03,
+      SET,
       0,
       0.006,
-      -D / 2 + 0.015,
+      -SET / 2,
       group,
     );
+    // The pockets the panels stack into either side, behind the wall
+    // (closing it where the wall is thinner than the reveal).
+    const pocket = kitPaint(kit, '#2a2d2f', 0.3);
+    const reach = DOOR_STACK + 0.05 - W / 2 - 0.02;
+    for (const s of [-1, 1])
+      block(
+        pocket,
+        reach,
+        H + 0.1,
+        SET - 0.03,
+        s * (W / 2 + 0.02 + reach / 2),
+        (H + 0.1) / 2,
+        -0.03 - (SET - 0.03) / 2,
+        group,
+      );
     // The landing face: the floor's number on each jamb at eye level,
     // the maker's mark on the head.
     if (options.floor)
@@ -180,6 +210,27 @@ export function createLiftDoors(
     badge.position.set(0, H + F / 2, 0.017);
     group.add(badge);
   }
+  const back = framed ? LIFT_DOOR.recess : 0;
+  // The shadow line round the panels, sides and head (the owner,
+  // 2026-10-30, every lift doorway, landing and car alike): they run in
+  // their track a clear gap (`SHADOW_GAP`) behind the reveal's back edge
+  // (a landing's) or the car's front returns, a black cavity round them.
+  {
+    const cavity = kitPaint(kit, '#050506', 0);
+    const gap = SHADOW_GAP + 0.004;
+    for (const s of [-1, 1])
+      block(
+        cavity,
+        0.03,
+        H + 0.03,
+        gap,
+        s * (W / 2 + 0.015),
+        (H + 0.03) / 2,
+        -back - gap / 2,
+        group,
+      );
+    block(cavity, W + 0.06, 0.03, gap, 0, H + 0.015, -back - gap / 2, group);
+  }
   const steel = stainless(kit);
   const kick = kitPaint(kit, '#8c9295', 0.5);
   const leaves = new Group();
@@ -187,8 +238,8 @@ export function createLiftDoors(
   const sides = [-1, 1].map((s) => {
     const fast = panel(steel, kick);
     const slow = panel(steel, kick);
-    fast.position.z = -LIFT_DOOR.fastTrack;
-    slow.position.z = -LIFT_DOOR.slowTrack;
+    fast.position.z = -back - LIFT_DOOR.fastTrack;
+    slow.position.z = -back - LIFT_DOOR.slowTrack;
     leaves.add(fast, slow);
     return { s, fast, slow };
   });

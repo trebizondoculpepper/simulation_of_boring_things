@@ -97,18 +97,21 @@ export const CORRIDOR_DOORS: readonly CorridorDoor[] = [
 ];
 
 /**
- * The freight lift's B2 landing (mission 108; the owner, 2026-10-29: the
- * north wall): in the middle of the free stretch of the north wall
- * between the Olympic plant room's doors and the engineers' office's
- * (x 12.2 to 23.6), facing into the corridor.
+ * The freight lift's B2 landing (mission 108): first in the north wall
+ * (the owner, 2026-10-29); moved (the owner, 2026-10-30) to the south
+ * arm's inside wall (`inner-south`, z 24, with no doors in it), centred
+ * at x 19.4, facing south into the corridor.
  */
 export const CORRIDOR_LIFT: LiftPlace & { wall: CorridorWall; at: number } = {
-  wall: 'north',
-  at: 17.9,
-  x: 17.9,
-  z: 0,
+  wall: 'inner-south',
+  at: 19.4,
+  x: 19.4,
+  z: MAIN_CORRIDOR.side - MAIN_CORRIDOR.width,
   yaw: 0,
 };
+
+/** How far a poster or fire point keeps its middle from the lift landing's middle: its frame, its call button and a margin. */
+export const LIFT_CLEAR = 1.75;
 
 /** The lift landing's structural opening in its wall: its frame's width. */
 export const LIFT_OPENING = LIFT_DOOR.clear + 2 * LIFT_DOOR.frame;
@@ -180,6 +183,33 @@ function behind(wall: CorridorWall, a: number, b: number): Footprint {
   return alongX
     ? { minX: a, maxX: b, minZ: p, maxZ: q }
     : { minX: p, maxX: q, minZ: a, maxZ: b };
+}
+
+/**
+ * The galvanised buffer rail along a wall (the corridor's skirting-height
+ * rail, 0.45 m up): its runs, [from, to] along it, broken 0.3 m clear of
+ * each doorway and of the freight lift's landing frame (derived from
+ * `CORRIDOR_LIFT`, so it follows the landing), and stopping 0.4 m short
+ * of the corners; runs under 0.5 m dropped.
+ */
+export function bufferRailRuns(wall: CorridorWall): [number, number][] {
+  const { from, to } = corridorWalls()[wall];
+  const cuts: [number, number][] = [
+    ...CORRIDOR_DOORS.filter((d) => d.wall === wall).map(
+      (d) => [d.at, C.opening / 2] as [number, number],
+    ),
+    ...(CORRIDOR_LIFT.wall === wall
+      ? [[CORRIDOR_LIFT.at, LIFT_OPENING / 2] as [number, number]]
+      : []),
+  ].sort((a, b) => a[0] - b[0]);
+  let start = from + 0.4;
+  const runs: [number, number][] = [];
+  for (const [c, h] of cuts) {
+    runs.push([start, c - h - 0.3]);
+    start = c + h + 0.3;
+  }
+  runs.push([start, to - 0.4]);
+  return runs.filter(([a, b]) => b - a >= 0.5);
 }
 
 /** Each wall's solid pieces, from end to end, split round its doorways. */

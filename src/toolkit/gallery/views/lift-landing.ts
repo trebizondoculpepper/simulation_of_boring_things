@@ -6,7 +6,7 @@ import {
   MeshBasicMaterial,
   PlaneGeometry,
 } from 'three';
-import type { Object3D } from 'three';
+import type { Camera, Object3D } from 'three';
 import type { Footprint } from '../../controls/logic/walk-collision';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import {
@@ -38,12 +38,21 @@ import {
   openAt,
 } from '../logic/freight-lift';
 import type { LiftId, LiftState } from '../logic/freight-lift';
-import { LIFT_DOOR, liftDoorway } from '../logic/lift-doorway';
+import { LANDING_SET, LIFT_DOOR, liftDoorway } from '../logic/lift-doorway';
 import type { LiftPlace } from '../logic/lift-doorway';
 import { registerJoint } from '../logic/door-joins';
 import { doorwayStops, overlaps } from '../logic/doorway';
 import { enterDevRoom } from '../logic/dev-room-links';
 import type { RoomId } from '../logic/dev-room-links';
+
+/**
+ * The lift sounds started at landings, in order (`room:sound`): a record
+ * for checking in a browser, where headless runs hear nothing
+ * (`window.liftSounds` in development). Kept short.
+ */
+export const liftSoundLog: string[] = [];
+if (import.meta.env.DEV && typeof window !== 'undefined')
+  (window as unknown as { liftSounds: string[] }).liftSounds = liftSoundLog;
 
 /** What an indicator shows a label as on its seven segments: B2 as b2. */
 export const segmentsOf = (label: string) => label.replace('B', 'b');
@@ -118,6 +127,12 @@ export interface LiftLandingOptions {
   /** Scene units a metre. */
   metre: number;
   store: WorldStore;
+  /**
+   * The room's camera: the landing places the listener there while it is
+   * in charge, so its sounds (the arrival chime above all) are heard in
+   * every room that installs one, whatever else the room listens for.
+   */
+  camera: Camera;
   /** The walker, as the room's first-person controls have it (scene units). */
   walk: { following: boolean; walker: { x: number; z: number } };
   /** Its sign over the doors, if not the floor's label and legend. */
@@ -147,7 +162,7 @@ export function installLiftLanding(o: LiftLandingOptions) {
   const spec = LIFTS[o.lift];
   const floor = spec.floors.find((f) => f.id === o.floor)!;
   const car = spec.car as RoomId;
-  const doorway = liftDoorway(place);
+  const doorway = liftDoorway(place, true);
   const root = new Group();
   root.name = `Lift landing ${floor.label}`;
   const floorY = o.floorY ?? 0;
@@ -161,7 +176,7 @@ export function installLiftLanding(o: LiftLandingOptions) {
     new BoxGeometry(LIFT_DOOR.clear, LIFT_DOOR.height, 0.05),
     kitPaint(kit, '#050505'),
   );
-  lobby.position.set(0, LIFT_DOOR.height / 2, -LIFT_DOOR.depth - 0.4);
+  lobby.position.set(0, LIFT_DOOR.height / 2, -LANDING_SET - 0.4);
   root.add(lobby);
   // While the car is seen through the doors, a pane over the doorway that
   // draws only depth, first: whatever of this room stands behind the
@@ -172,7 +187,7 @@ export function installLiftLanding(o: LiftLandingOptions) {
     new MeshBasicMaterial({ colorWrite: false }),
   );
   kit.materials.push(punch.material as MeshBasicMaterial);
-  punch.position.set(0, LIFT_DOOR.height / 2, -0.004);
+  punch.position.set(0, LIFT_DOOR.height / 2, -LANDING_SET + 0.004);
   punch.renderOrder = -1000;
   punch.visible = false;
   root.add(punch);
@@ -260,9 +275,7 @@ export function installLiftLanding(o: LiftLandingOptions) {
       lobby.visible = !on;
       punch.visible = on;
     },
-    peek: (on) => {
-      doors.leaves.visible = !on && lift().open < 0.999;
-    },
+    peek: () => {},
   });
 
   let held = false;
@@ -303,12 +316,20 @@ export function installLiftLanding(o: LiftLandingOptions) {
       const here = !l.trip && l.floor === o.floor;
       // Carried on between the world's steps, so the doors move smoothly.
       doors.setOpen(here ? smooth(l, performance.now() / 1000).open : 0);
-      if (seen) doors.leaves.visible = false;
+      // Its own panels always (the owner, 2026-10-30: two pairs of
+      // doors): the landing's, in this room and lit only by its lights,
+      // moving in step with the car's, which are the car room's, lit by
+      // the car's light and seen behind them across the sill gap.
       called.value = callLit(l, o.floor);
       const moving = here && (l.doors === 'opening' || l.doors === 'closing');
       const shown = indicatorOf(l, o.lift);
       indicator.show(shown.label, here || l.trip ? shown.way : null);
       // Only the room the walker is in works the lift and makes its sounds.
+      if (!o.walk.following && !leaving && active) {
+        let scene: Object3D = root;
+        while (scene.parent) scene = scene.parent;
+        partAudio.listen(o.camera, metre, scene);
+      }
       if (o.walk.following || leaving || !active) {
         if (whirring) partAudio.hold(whirr, null);
         whirring = false;
@@ -327,7 +348,10 @@ export function installLiftLanding(o: LiftLandingOptions) {
         store.dispatch({ type: 'lift/ready', lift: o.lift, floor: l.trip.to });
       if (was) {
         const arrived = was.trip && !l.trip && l.floor === o.floor;
-        if (arrived) partAudio.play(ARRIVAL_CHIME, root);
+        if (arrived) {
+          partAudio.play(ARRIVAL_CHIME, root);
+          liftSoundLog.push(`${o.room}:arrival`);
+        }
         if (here) {
           if (
             was.doors !== l.doors &&

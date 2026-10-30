@@ -181,7 +181,7 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
     knob.object.rotation.y = Math.atan2(w.into[0], w.into[1]);
     rooms.add(knob.object);
   }
-  // The freight lift's B2 landing in the north wall (mission 108).
+  // The freight lift's B2 landing in the south arm's inside wall (mission 108).
   const liftLanding = installLiftLanding({
     room: 'main_corridor',
     lift: 'freight',
@@ -200,6 +200,7 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
         return walk.walker;
       },
     },
+    camera,
     sign: 'GOODS LIFT · B2 PLANT LEVEL',
   });
   const raycaster = new Raycaster();

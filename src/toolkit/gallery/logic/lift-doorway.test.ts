@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   DOOR_STACK,
+  LANDING_SET,
   doorPanels,
   doorTravel,
   landingArrival,
@@ -16,6 +17,7 @@ import {
   CORRIDOR_LIFT,
   corridorArrival,
   LIFT_OPENING,
+  bufferRailRuns,
   wallPieces,
 } from './main-corridor';
 import {
@@ -26,6 +28,10 @@ import {
   bridgeWallPieces,
 } from './control-room-prototype';
 import { lightSwitchPlace } from './bridge-lighting';
+import {
+  corridorFirePoints,
+  corridorPosterPlacements,
+} from './corridor-posters';
 import { hallArches, hallLiftOpening, MUSEUM_WALL } from './museum-plan';
 
 const ahead = (yaw: number) => ({ x: Math.sin(yaw), z: -Math.cos(yaw) });
@@ -50,6 +56,25 @@ describe('a lift doorway (mission 108)', () => {
     expect(d.through(20, -0.2)).toBe(false);
     expect(d.inDoorway(17.9, 0.2)).toBe(true);
     expect(d.inDoorway(17.9, 1.5)).toBe(false);
+  });
+  it('a landing’s doors recessed at least 15 cm, the car joined at the sill’s edge behind them (the owner, 2026-10-30)', () => {
+    expect(LIFT_DOOR.recess).toBeGreaterThanOrEqual(0.15);
+    const place = { x: 19.4, z: 24, yaw: 0 };
+    const d = liftDoorway(place, true);
+    // The rooms join at the car's sill edge, LANDING_SET behind the face.
+    expect(d.frame.z).toBeCloseTo(24 - LANDING_SET);
+    // The leaves' stop inside the recess.
+    expect(d.leaf.maxZ).toBeCloseTo(24 - LIFT_DOOR.recess);
+    expect(d.leaf.minZ).toBeCloseTo(24 - LANDING_SET);
+    // Not through until past the sill's edge.
+    expect(d.through(19.4, 24 - 0.2)).toBe(false);
+    expect(d.through(19.4, 24 - LANDING_SET - 0.1)).toBe(true);
+    // The reveal's linings solid to the sill's edge.
+    for (const j of d.jambs) expect(j.minZ).toBeCloseTo(24 - LANDING_SET);
+    // The panels' tracks within the recess's depth.
+    expect(LIFT_DOOR.recess + LIFT_DOOR.slowTrack + 0.02).toBeLessThan(
+      LANDING_SET,
+    );
   });
   it('arrives facing into the room, and looks out the other way', () => {
     for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
@@ -103,11 +128,12 @@ describe('the four-panel centre-opening doors (the owner, 2026-10-30)', () => {
 });
 
 describe('the freight lift’s landings (mission 108)', () => {
-  it('B2: a gap in the corridor’s north wall, in the free stretch, and the way back out of the car', () => {
+  it('B2: a gap in the south arm’s inside wall at x 19.4 (the owner, 2026-10-30), and the way back out of the car', () => {
     const half = LIFT_OPENING / 2;
-    expect(CORRIDOR_LIFT.at - half).toBeGreaterThan(12.2);
-    expect(CORRIDOR_LIFT.at + half).toBeLessThan(23.6);
-    const pieces = wallPieces('north');
+    expect(CORRIDOR_LIFT.wall).toBe('inner-south');
+    expect(CORRIDOR_LIFT.at).toBeCloseTo(19.4);
+    expect(CORRIDOR_LIFT.z).toBe(24);
+    const pieces = wallPieces('inner-south');
     expect(
       pieces.some(
         ([a, b]) =>
@@ -117,7 +143,26 @@ describe('the freight lift’s landings (mission 108)', () => {
     ).toBe(false);
     const a = corridorArrival('freight_lift')!;
     expect(a.x).toBeCloseTo(CORRIDOR_LIFT.x);
-    expect(a.z).toBeCloseTo(1.5);
+    expect(a.z).toBeCloseTo(25.5);
+    // Facing into the corridor, away from the doors (south, +z).
+    expect(Math.cos(a.yaw)).toBeCloseTo(-1);
+    // The old north-wall landing gone: the north wall whole but for its doorways.
+    expect(wallPieces('north')).toHaveLength(3);
+  });
+  it('B2: the buffer rail is cut across the landing’s whole opening, frame included', () => {
+    const half = LIFT_OPENING / 2;
+    for (const [a, b] of bufferRailRuns(CORRIDOR_LIFT.wall))
+      expect(b <= CORRIDOR_LIFT.at - half || a >= CORRIDOR_LIFT.at + half).toBe(
+        true,
+      );
+    expect(bufferRailRuns(CORRIDOR_LIFT.wall).length).toBeGreaterThan(1);
+  });
+  it('B2: no poster or fire point over the landing', () => {
+    for (const p of [...corridorPosterPlacements(), ...corridorFirePoints()])
+      if (p.wall === CORRIDOR_LIFT.wall)
+        expect(Math.abs(p.at - CORRIDOR_LIFT.at)).toBeGreaterThan(
+          LIFT_OPENING / 2 + 0.5,
+        );
   });
   it('3: in the middle of the bridge’s east wall, the doors stacking behind solid wall within its corner fillets', () => {
     expect(BRIDGE_LIFT.side).not.toBe(ENTRY.side);
@@ -136,7 +181,7 @@ describe('the freight lift’s landings (mission 108)', () => {
     expect(along).toBeGreaterThan(0);
   });
   it('B2: the doors stack behind solid wall either side', () => {
-    const pieces = wallPieces('north');
+    const pieces = wallPieces(CORRIDOR_LIFT.wall);
     for (const s of [-1, 1]) {
       const edge = CORRIDOR_LIFT.at + (s * LIFT_OPENING) / 2;
       const end = CORRIDOR_LIFT.at + s * DOOR_STACK;

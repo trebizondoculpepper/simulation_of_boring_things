@@ -20,22 +20,28 @@ describe('the main corridor’s wayfinding signs', () => {
     for (const d of CORRIDOR_DOORS) expect(named).toContain(d.to);
   });
 
-  it('shows the way to the service lift, on the north side and round to it', () => {
-    const north = signs.filter((s) => s.wall === 'north');
-    expect(north).toHaveLength(2);
-    for (const s of north) expect(s.along).toContain('freight_lift');
-    // Between the Olympic plant room's doors and the engineers' office's.
-    const nw = north.find((s) => s.corner === 'north-west')!;
-    expect(nw.along).toEqual([
-      'plant_pool_02',
+  it('shows the way to the service lift, on the south side and round to it (the owner, 2026-10-30)', () => {
+    const south = signs.filter((s) => s.wall === 'south');
+    expect(south).toHaveLength(2);
+    for (const s of south) expect(s.along).toContain('freight_lift');
+    // Between the boiler house's doors and the switch room's.
+    const sw = south.find((s) => s.corner === 'south-west')!;
+    expect(sw.along).toEqual([
+      'plant_pool_01',
+      'boiler_house',
       'freight_lift',
-      'engineers_office',
+      'switch_room',
     ]);
-    // Coming up the east and west sides, it is round the corner.
+    const se = south.find((s) => s.corner === 'south-east')!;
+    expect(se.along.slice(0, 2)).toEqual(['switch_room', 'freight_lift']);
+    // No longer on the north side.
+    for (const s of signs.filter((s) => s.wall === 'north'))
+      expect(s.along).not.toContain('freight_lift');
+    // Coming down the east and west sides, it is round the corner.
     for (const s of signs.filter(
       (s) =>
-        (s.wall === 'east' && s.corner === 'south-east') ||
-        (s.wall === 'west' && s.corner === 'south-west'),
+        (s.wall === 'east' && s.corner === 'north-east') ||
+        (s.wall === 'west' && s.corner === 'north-west'),
     ))
       expect(s.then).toContain('freight_lift');
   });

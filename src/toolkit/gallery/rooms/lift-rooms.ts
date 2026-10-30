@@ -78,6 +78,7 @@ import {
 import type { LiftId, LiftState } from '../logic/freight-lift';
 import {
   landingArrival,
+  LANDING_SET,
   LIFT_CAR,
   LIFT_DOOR,
   liftDoorway,
@@ -389,9 +390,13 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
   // Beyond it, while the floor's room is not seen: the landing doors, as
   // the car stands at them, or the shaft wall going by as it runs.
   const outside = new Group();
-  outside.position.z = -LIFT_DOOR.depth - 0.02;
   group.add(outside);
+  // The landing as it stands across the running gap: its face (the wall's)
+  // `LANDING_SET` out, turned to face away from the car, its doors in
+  // its recess nearest the car's sill.
   const landing = createLiftDoors(kit);
+  landing.group.position.z = -LANDING_SET;
+  landing.group.rotation.y = Math.PI;
   outside.add(landing.group);
   const shaftTex = (() => {
     const { context: c, texture } = createCanvasTexture(64, 256);
@@ -884,6 +889,7 @@ export function startLiftTrialFloor(canvas: HTMLCanvasElement, n: string) {
     metre,
     store,
     walk,
+    camera,
   });
   const usableAt = aiming(camera, group, parts.uses, metre);
   let visual = true;
