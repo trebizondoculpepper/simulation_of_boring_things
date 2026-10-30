@@ -8,33 +8,33 @@ import {
 } from './museum-lod';
 
 describe('neighbourScale', () => {
-  it('is a quarter from 5 m out and full within 2 m', () => {
-    expect(neighbourScale(5)).toBe(0.25);
+  it('is a quarter from 10 m out and full within 5 m', () => {
+    expect(neighbourScale(10)).toBe(0.25);
     expect(neighbourScale(12)).toBe(0.25);
-    expect(neighbourScale(2)).toBe(1);
+    expect(neighbourScale(5)).toBe(1);
     expect(neighbourScale(0)).toBe(1);
   });
-  it('eases in and out, half-way at 3.5 m', () => {
-    expect(neighbourScale(3.5)).toBeCloseTo(0.625);
-    // Gentle at the ends: little change in the first and last 0.3 m.
-    expect(neighbourScale(4.7) - 0.25).toBeLessThan(0.05);
-    expect(1 - neighbourScale(2.3)).toBeLessThan(0.05);
+  it('eases in and out, half-way at 7.5 m', () => {
+    expect(neighbourScale(7.5)).toBeCloseTo(0.625);
+    // Gentle at the ends: little change in the first and last 0.5 m.
+    expect(neighbourScale(9.5) - 0.25).toBeLessThan(0.05);
+    expect(1 - neighbourScale(5.5)).toBeLessThan(0.05);
   });
   it('never decreases as the walker nears', () => {
     let last = 0;
-    for (let d = 8; d >= 0; d -= 0.05) {
+    for (let d = 14; d >= 0; d -= 0.05) {
       const s = neighbourScale(d);
       expect(s).toBeGreaterThanOrEqual(last);
       last = s;
     }
   });
   it('quantises to small steps', () => {
-    for (let d = 1; d <= 6; d += 0.01)
+    for (let d = 3; d <= 12; d += 0.01)
       expect(
         Math.abs(quantisedScale(d) - neighbourScale(d)),
       ).toBeLessThanOrEqual(0.75 / 48 + 1e-9);
-    expect(quantisedScale(10)).toBe(0.25);
-    expect(quantisedScale(1)).toBe(1);
+    expect(quantisedScale(14)).toBe(0.25);
+    expect(quantisedScale(3)).toBe(1);
   });
 });
 

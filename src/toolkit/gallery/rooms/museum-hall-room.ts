@@ -499,8 +499,8 @@ export function startMuseumHallRoom(
   resize();
 
   // Seen through a doorway from the hall walked in (the owner,
-  // 2026-10-30): no blur, drawn at a quarter of its resolution from 5 m
-  // out, full within 2 m of the doorway, eased between (`museum-lod.ts`),
+  // 2026-10-30): no blur, drawn at a quarter of its resolution from 10 m
+  // out, full within 5 m of the doorway, eased between (`museum-lod.ts`),
   // in small steps so the buffers are not resized every frame.
   let seenShare = 1;
   const seeFrom = (metres: number | null) => {

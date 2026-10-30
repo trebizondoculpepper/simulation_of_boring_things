@@ -9,15 +9,16 @@ export const LOD_FAR = 30;
 /** Within this, metres, a low-poly component comes back full (hysteresis). */
 export const LOD_NEAR = 28;
 /** A neighbouring hall at or beyond this, metres from its doorway, is drawn at a quarter. */
-export const SCALE_FAR = 5;
+export const SCALE_FAR = 10;
 /** A neighbouring hall at or within this, metres from its doorway, is drawn in full. */
-export const SCALE_NEAR = 2;
+export const SCALE_NEAR = 5;
 /** The fewest resolution steps between a quarter and full, so targets are not resized every frame. */
 export const SCALE_STEPS = 24;
 
 /**
  * The share of full resolution a neighbouring hall is drawn at, `d` metres
- * from the centre of its doorway: a quarter from 5 m out, full within 2 m,
+ * from the centre of its doorway: a quarter from 10 m out, full within 5 m (the owner, 2026-10-30; it was
+ * 5 m to 2 m),
  * smoothstep between, so it never jumps.
  */
 export function neighbourScale(d: number): number {

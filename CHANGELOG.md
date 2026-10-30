@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum: a neighbouring hall seen through a doorway now sharpens from a quarter of its resolution 10 m from the doorway to full within 5 m (it was 5 m to 2 m; the owner, 2026-10-30).
+
 - Museum level of detail (the owner, 2026-10-30): a neighbouring hall seen through its doorway is drawn with no blur, at a quarter of its resolution from 5 m out and full within 2 m of the doorway, eased between by a smoothstep in 24 steps (`museum-lod.ts`); its exhibit no longer swaps to the far version at 5 m. Each exhibit component more than 30 m from the eye is drawn as its low-poly version, back within 28 m; signs, banners, black boxes and architecture are exempt (`LOD_EXEMPT`) and always drawn as they are. `window.museumLod` shows each hall's resolution share and how many components are low poly.
 - Desktop builds (mission 111; the owner, 2026-10-30): the game as an Electron app (`desktop/`, its own package and lockfile), serving the release's web build unchanged on an `app://game/` protocol, fullscreen, with the title music free to start at once and the GPU blocklist off; every release now attaches a Linux AppImage and tarball (for the Steam Deck too), a universal macOS disk image and zip, and a Windows installer and zip to its GitHub release, with checksums and build attestations, all unsigned for now. A Desktop check workflow packages them from any branch by hand. Sentry reports desktop runs as a `desktop` environment.
 - Licence: an additional permission under the GPL's section 7 lets the game be linked with game platform libraries (Steamworks, Epic Online Services, GOG Galaxy) without bringing them under the GPL (`LICENSE-EXCEPTION.md`).
