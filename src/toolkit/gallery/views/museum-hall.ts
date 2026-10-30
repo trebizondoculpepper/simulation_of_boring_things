@@ -287,8 +287,8 @@ export interface MuseumMaterials {
   textures: Texture[];
 }
 
-/** The museum's walls: plain matte 80% grey (sRGB 204). */
-export const MUSEUM_WALL_GREY = '#cccccc';
+/** The museum's walls: plain matte 95% grey (sRGB 242; the owner, 2026-10-30, was 80%). */
+export const MUSEUM_WALL_GREY = '#f2f2f2';
 
 export function createMuseumMaterials(): MuseumMaterials {
   const concrete = concreteTexture();
