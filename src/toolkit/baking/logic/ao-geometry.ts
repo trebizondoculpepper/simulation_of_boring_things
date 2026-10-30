@@ -44,14 +44,12 @@ export interface BakeMeshData {
 export function createHasher() {
   let a = 0x811c9dc5;
   let b = 0x01000193 ^ 0x5bd1e995;
+  // A word at a time (not byte by byte): a room's hundreds of thousands
+  // of vertices hash in milliseconds.
   const word = (value: number) => {
-    let v = value | 0;
-    for (let i = 0; i < 4; i++) {
-      const byte = v & 0xff;
-      v >>>= 8;
-      a = Math.imul(a ^ byte, 0x01000193);
-      b = Math.imul(b ^ byte, 0x01000193) ^ (b >>> 15);
-    }
+    a = Math.imul(a ^ value, 0x01000193);
+    b = Math.imul(b ^ value, 0x5bd1e995);
+    b ^= b >>> 15;
   };
   return {
     word,

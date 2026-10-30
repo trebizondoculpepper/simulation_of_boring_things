@@ -21,7 +21,8 @@
   "dependencies": {
     "@preact/signals-core": "1.14.4",
     "@sentry/browser": "10.78.0",
-    "three": "0.186.1"
+    "three": "0.186.1",
+    "three-mesh-bvh": "0.9.17"
   },
   "devDependencies": {
     "@statelyai/graph": "2.6.0",
