@@ -451,56 +451,6 @@ export function createLpgCylinder(kit: PanelKit, seed = 0) {
   return g;
 }
 
-/**
- * A locked mesh cage of forklift propane cylinders (18 kg, the forklift
- * kind, red and yellow), the spent ones for collection.
- */
-export function createLpgCage(kit: PanelKit) {
-  const t = plantTools(kit);
-  const g = new Group();
-  g.name = 'LPG cylinder cage';
-  const galv = t.paint('#a9aeae', 0.45, 0.6);
-  const W = 1.5;
-  const D = 0.8;
-  const H = 1.8;
-  for (const x of [-W / 2, W / 2])
-    for (const z of [-D / 2, D / 2]) t.box(g, galv, 0.04, H, 0.04, x, H / 2, z);
-  for (const y of [0.1, H]) {
-    t.box(g, galv, W, 0.04, 0.04, 0, y, -D / 2);
-    t.box(g, galv, W, 0.04, 0.04, 0, y, D / 2);
-    t.box(g, galv, 0.04, 0.04, D, -W / 2, y, 0);
-    t.box(g, galv, 0.04, 0.04, D, W / 2, y, 0);
-  }
-  // Its mesh: thin bars on every face but the back.
-  for (let x = -W / 2; x <= W / 2 + 1e-6; x += 0.1)
-    t.box(g, galv, 0.006, H - 0.1, 0.006, x, H / 2 + 0.05, D / 2);
-  for (let y = 0.2; y < H; y += 0.15)
-    t.box(g, galv, W, 0.006, 0.006, 0, y, D / 2);
-  for (const sx of [-1, 1])
-    for (let z = -D / 2; z <= D / 2 + 1e-6; z += 0.1)
-      t.box(g, galv, 0.006, H - 0.1, 0.006, (sx * W) / 2, H / 2 + 0.05, z);
-  // The cylinders: two rows of three, each turned as a real 18 kg forklift
-  // cylinder is (the owner, 2026-10-26: the first were terrible).
-  for (let i = 0; i < 6; i++) {
-    const c = createLpgCylinder(kit, i);
-    c.position.set(-0.5 + (i % 3) * 0.5, 0.1, i < 3 ? -0.17 : 0.17);
-    c.rotation.y = i * 1.3;
-    g.add(c);
-  }
-  const sign = createMicroLabel(
-    kit,
-    'LPG · HIGHLY FLAMMABLE\nNO SMOKING · EMPTIES',
-    {
-      height: 0.05,
-      ink: '#111111',
-      plate: '#e0b81c',
-    },
-  );
-  sign.position.set(0, 1.45, D / 2 + 0.01);
-  g.add(sign);
-  return g;
-}
-
 /** A tired planter: a square tub and a half-dead shrub. */
 export function createSadPlanter(kit: PanelKit, seed = 1) {
   const t = plantTools(kit);

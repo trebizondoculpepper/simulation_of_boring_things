@@ -13,13 +13,17 @@ import {
   throwLever,
 } from '../logic/co2-supply';
 import type { Co2Supply } from '../logic/co2-supply';
-import { createCo2Cage } from '../views/co2-cage';
+import { CO2_CAGE_SPEC, createCo2Cage } from '../views/co2-cage';
+import { createMeshCagePart } from '../../architectural/parts/mesh-cage';
+import type { MeshCagePart } from '../../architectural/parts/mesh-cage';
 
 export interface Co2SupplyPart extends Part {
   /** The supply as it stands. */
   readonly supply: Co2Supply;
   /** Draw `kg` of CO₂ through the line (a trial's stand-in for a dosing plant room). */
   draw(kg: number): void;
+  /** The cage round it, its door working. */
+  readonly cage: MeshCagePart;
 }
 
 /**
@@ -36,6 +40,11 @@ export function createCo2SupplyPart(
   initial: Co2Supply = newCo2Supply(),
 ): Co2SupplyPart {
   const view = createCo2Cage(kit);
+  // The cage round it, its door working.
+  const cage = createMeshCagePart(kit, CO2_CAGE_SPEC, {
+    name: 'CO₂ cylinder cage',
+  });
+  view.group.add(cage.object);
   let supply = initial;
   const listeners = new Set<(event: PartEvent, name: string) => void>();
   const emit = (event: PartEvent) => {
@@ -71,9 +80,11 @@ export function createCo2SupplyPart(
       },
     ],
   ]);
+  for (const [o, use] of cage.uses) uses.set(o, use);
   return {
     object: view.group,
     uses,
+    cage,
     get supply() {
       return supply;
     },
@@ -82,6 +93,7 @@ export function createCo2SupplyPart(
       show();
     },
     update(delta) {
+      cage.update(delta);
       for (const bank of CO2_BANKS) view.bankGauges[bank].update(delta);
       view.outletGauge.update(delta);
       view.lineGauge.update(delta);
@@ -92,6 +104,7 @@ export function createCo2SupplyPart(
     },
     setAudible() {},
     dispose() {
+      cage.dispose();
       listeners.clear();
     },
   };

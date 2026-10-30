@@ -1,14 +1,4 @@
-import {
-  CanvasTexture,
-  DoubleSide,
-  Group,
-  LatheGeometry,
-  Mesh,
-  MeshStandardMaterial,
-  PlaneGeometry,
-  RepeatWrapping,
-  Vector2,
-} from 'three';
+import { Group, LatheGeometry, Mesh, Vector2 } from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { createMicroLabel } from '../../core/views/eighties-controls';
@@ -18,6 +8,7 @@ import type { DialGaugeView } from '../../industrial-control/views/dial-gauge';
 import { BS1710_BASIC, plantTools } from './plant-tools';
 import { markPipe } from './pipe-markers';
 import { CO2_MANIFOLD } from '../logic/co2-supply';
+import type { MeshCageSpec } from '../../architectural/logic/mesh-cage';
 import type { Co2Bank, Co2Flag } from '../logic/co2-supply';
 
 /**
@@ -51,6 +42,17 @@ export const CO2_CAGE = {
   inletX: 3.3,
   inletY: 1.45,
 } as const;
+
+/** The cage: the shared welded-mesh cage, its door in the middle section right of the manifold, its full and empty bays closed off by partitions. */
+export const CO2_CAGE_SPEC: MeshCageSpec = {
+  w: CO2_CAGE.w,
+  d: CO2_CAGE.d,
+  h: CO2_CAGE.h,
+  door: { side: 'front', at: 0.95, width: 1.0, hinge: 'left', opens: 'out' },
+  partitions: [-CO2_CAGE.bay, CO2_CAGE.bay],
+  roof: true,
+  base: 'plates',
+};
 
 /** The 50 l cylinder: its body's radius and its height to the valve's top. */
 export const CO2_BOTTLE = { r: 0.115, h: 1.58 } as const;
@@ -190,116 +192,17 @@ export function createCo2Cage(kit: PanelKit): Co2CageView {
   const back = -D / 2;
   const galv = t.paint('#a9aeae', 0.45, 0.6);
 
-  // ---- The cage: its frame, its mesh, its roof, its gate ----------------
-  for (const [x, zs] of [
-    [-W / 2, [-D / 2, D / 2]],
-    [-CO2_CAGE.bay, [-D / 2, D / 2]],
-    [0, [-D / 2]],
-    [CO2_CAGE.bay, [-D / 2, D / 2]],
-    [W / 2, [-D / 2, D / 2]],
-  ] as const)
-    for (const z of zs) t.box(g, galv, 0.05, H, 0.05, x, H / 2, z);
-  for (const y of [0.05, H]) {
-    for (const z of [-D / 2, D / 2]) t.box(g, galv, W, 0.05, 0.05, 0, y, z);
-    for (const x of [-W / 2, W / 2]) t.box(g, galv, 0.05, 0.05, D, x, y, 0);
-  }
-  // Its mesh: a 50 mm weld mesh, drawn on a canvas, see-through.
-  const art = document.createElement('canvas');
-  art.width = art.height = 64;
-  const c = art.getContext('2d')!;
-  c.clearRect(0, 0, 64, 64);
-  c.strokeStyle = '#b4b9b9';
-  c.lineWidth = 4;
-  c.strokeRect(2, 2, 60, 60);
-  const mesh = new CanvasTexture(art);
-  mesh.wrapS = mesh.wrapT = RepeatWrapping;
-  kit.textures.push(mesh);
-  const meshMaterial = (u: number, v: number) => {
-    const map = mesh.clone();
-    map.repeat.set(u / 0.05, v / 0.05);
-    map.needsUpdate = true;
-    kit.textures.push(map);
-    const m = new MeshStandardMaterial({
-      map,
-      alphaTest: 0.5,
-      transparent: false,
-      side: DoubleSide,
-      metalness: 0.5,
-      roughness: 0.5,
-    });
-    kit.materials.push(m);
-    return m;
-  };
-  const panel = (
-    w: number,
-    h: number,
-    x: number,
-    y: number,
-    z: number,
-    yaw: number,
-    pitch = 0,
-  ) => {
-    const p = new Mesh(new PlaneGeometry(w, h), meshMaterial(w, h));
-    p.position.set(x, y, z);
-    p.rotation.set(pitch, yaw, 0);
-    g.add(p);
-    return p;
-  };
-  const gateW = 1.0;
-  const gateX = 0.45;
-  // The front, but for the gate in the middle section, right of the manifold.
-  const front = (from: number, to: number) =>
-    panel(to - from, H - 0.1, (from + to) / 2, H / 2 + 0.05, D / 2, 0);
-  front(-W / 2, gateX);
-  front(gateX + gateW, W / 2);
-  // The ends, and the partitions that close off the full and empty bays.
-  for (const x of [-W / 2, -CO2_CAGE.bay, CO2_CAGE.bay, W / 2])
-    panel(D, H - 0.1, x, H / 2 + 0.05, 0, Math.PI / 2);
-  panel(W, D, 0, H, 0, 0, -Math.PI / 2);
-  // The gate, shut, its padlock and hasp.
-  const gate = new Group();
-  gate.position.set(gateX, 0, D / 2 + 0.03);
-  g.add(gate);
-  t.box(gate, galv, 0.04, H - 0.15, 0.04, 0.02, H / 2, 0);
-  t.box(gate, galv, 0.04, H - 0.15, 0.04, gateW - 0.04, H / 2, 0);
-  for (const y of [0.12, H / 2, H - 0.1])
-    t.box(gate, galv, gateW, 0.04, 0.04, gateW / 2, y, 0);
-  const gm = new Mesh(
-    new PlaneGeometry(gateW, H - 0.2),
-    meshMaterial(gateW, H - 0.2),
-  );
-  gm.position.set(gateW / 2, H / 2, 0);
-  gate.add(gm);
-  t.box(
-    gate,
-    t.paint('#c9a227', 0.35, 0.8),
-    0.045,
-    0.055,
-    0.02,
-    0.06,
-    1.1,
-    0.03,
-  );
-  t.box(
-    gate,
-    t.paint('#3a3a3a', 0.5, 0.6),
-    0.06,
-    0.02,
-    0.02,
-    0.03,
-    1.15,
-    0.025,
-  );
-  // The gate's signs: compressed gas, asphyxiant, keep locked.
+  // The cage itself is the shared welded-mesh cage (`CO2_CAGE_SPEC`),
+  // built with its working door by the part; here, its signs.
   const notice = createMicroLabel(
     kit,
     'CARBON DIOXIDE · COMPRESSED GAS\nRISK OF ASPHYXIATION\nAUTHORISED PERSONS ONLY · KEEP LOCKED\nARNCLIFFE GASES 24 h: 0800 111 333',
     { height: 0.03, ink: '#111111', plate: '#f2f2ee' },
   );
-  notice.position.set(gateW / 2, 1.55, 0.03);
-  gate.add(notice);
+  notice.position.set(-0.75, 1.5, D / 2 + 0.035);
+  g.add(notice);
   const noSmoking = createSafetySign(kit, ['no-smoking'], ['No smoking']);
-  noSmoking.position.set(-1.2, 1.65, D / 2 + 0.03);
+  noSmoking.position.set(1.95, 1.6, D / 2 + 0.035);
   g.add(noSmoking);
   // A level concrete base, a little proud of the tarmac.
   t.box(g, t.paint('#9d9a92', 0.95), W + 0.3, 0.08, D + 0.2, 0, -0.03, 0);

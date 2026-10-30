@@ -1,5 +1,6 @@
 import { createYardDressing } from '../views/yard-dressing';
 import { createCo2SupplyPart } from '../../components/plant/parts/co2-supply';
+import { createLpgCagePart } from '../../components/loading-dock/parts/lpg-cage';
 import { CO2_CAGE } from '../../components/plant/views/co2-cage';
 import { yardIntake } from '../views/yard-intake';
 import { dockDoor } from '../views/dock-door';
@@ -7,6 +8,7 @@ import {
   INTAKE,
   YARD,
   YARD_CO2,
+  YARD_DRESSING,
   dockFloorAt,
   dockYardSolids,
 } from '../logic/dock-yard';
@@ -180,7 +182,9 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
               door.part,
               // The site's intake on the outside wall (prompt 083).
               ...yardIntake(kit),
-              // The CO₂ cylinder cage beside the gas cage (mission 109).
+              // The propane cage, and the CO₂ cylinder cage beside it
+              // (mission 109): their doors work.
+              yardLpgCage(kit),
               yardCo2Cage(kit),
             ];
           },
@@ -934,6 +938,15 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       },
     },
   );
+}
+
+/** The forklift propane cage in the goods yard, where its dressing places it. */
+function yardLpgCage(kit: ReturnType<typeof createPanelKit>): Part {
+  const at = YARD_DRESSING.find((p) => p.kind === 'lpg')!;
+  const part = createLpgCagePart(kit);
+  part.object.position.set(at.x, YARD.level, at.z);
+  part.object.rotation.y = at.yaw;
+  return part;
 }
 
 /**

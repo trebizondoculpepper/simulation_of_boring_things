@@ -8,6 +8,10 @@ You are working on "The Pool", a browser game in TypeScript and Three.js simulat
 
 Carbon dioxide lowers pH without adding chloride or sulphate and without a liquid acid's handling hazards; it is the usual alternative to hydrochloric acid on larger UK pools (PWTAG Code of Practice). It also keeps alkalinity up (dissolved CO₂ adds carbonate, not acid), so a pool dosed with hypochlorite and CO₂ drifts towards high alkalinity and may need some acid from time to time, a real operating trade-off the chemistry model already supports (`src/game/water/pool-chemistry.ts` carries total carbonate and CO₂ loss to air). It suits a large, still pool: in an aerated pool (a spa) the CO₂ is stripped out as fast as it is added.
 
+## Deferred: the pH gameplay
+
+The owner, 2026-10-30: the gameplay of regulating a pool's pH with CO₂ (the Olympic's controller driving the solenoid, the dose into the water, pH alarms and the faults that follow from them) is deferred. The supply, the cage and its working parts go ahead; the open questions below stay open.
+
 ## The water chemistry already there
 
 The chemistry model already handles CO₂ (`src/game/water/pool-chemistry.ts`): `dose(water, { co2: grams }, volume, temperature)` adds the CO₂ to total carbonate without changing alkalinity and lowers pH (tested in `pool-chemistry.test.ts`, "carbon dioxide adds carbonate, not alkalinity, and lowers pH"), and each step loses CO₂ to the hall's air (`co2ToAir`, `co2LossConstant`, after Wojtowicz), checked against PHREEQC. What is missing is only the wiring: no pool's controller or dosing (`dosing-pumps.ts`, `water-treatment.ts`) has a CO₂ output, so nothing yet feeds `co2` into a pool's `added` doses.

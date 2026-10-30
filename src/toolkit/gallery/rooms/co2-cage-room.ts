@@ -32,7 +32,7 @@ import type { Footprint } from '../../controls/logic/walk-collision';
 import { createSkyDome } from '../../../scene/sky-dome';
 import { createSkyChanger } from '../../../game/skies';
 import { tarmacMaterial } from '../views/dock-outside';
-import { createLpgCage } from '../../components/loading-dock/views/yard-kit';
+import { createLpgCagePart } from '../../components/loading-dock/parts/lpg-cage';
 import { createCo2SupplyPart } from '../../components/plant/parts/co2-supply';
 import { CO2_CAGE } from '../../components/plant/views/co2-cage';
 import { createMicroLabel } from '../../components/core/views/eighties-controls';
@@ -114,9 +114,9 @@ export function startCo2CageRoom(canvas: HTMLCanvasElement) {
     WALL.h / 2,
     -WALL.t / 2,
   );
-  const lpg = createLpgCage(kit);
-  lpg.position.set(-4.6, 0, 0.45);
-  room.add(lpg);
+  const lpg = parts.add(createLpgCagePart(kit));
+  lpg.object.position.set(-4.6, 0, 0.45);
+  room.add(lpg.object);
   const cageZ = CO2_CAGE.gap + CO2_CAGE.d / 2;
   let co2 = parts.add(createCo2SupplyPart(kit));
   co2.object.position.set(0, 0, cageZ);
@@ -166,7 +166,12 @@ export function startCo2CageRoom(canvas: HTMLCanvasElement) {
   });
   const stateFor = () => co2.supply;
   Object.assign(window, {
-    co2Supply: { state: stateFor, draw: (kg: number) => co2.draw(kg) },
+    co2Supply: {
+      state: stateFor,
+      draw: (kg: number) => co2.draw(kg),
+      door: (open: boolean) => co2.cage.setOpen(open),
+      lpgDoor: (open: boolean) => lpg.setOpen(open),
+    },
   });
 
   // ---- Walking and working ------------------------------------------------
@@ -194,6 +199,10 @@ export function startCo2CageRoom(canvas: HTMLCanvasElement) {
     // At the cage's front, the manifold through the mesh.
     close: { x: 0, z: 3.0 * m, yaw: 0, pitch: -0.1 },
     // By the wall inlet and its isolation valve.
+    // The west end and the front from outside, a corner between.
+    corner: { x: -4.2 * m, z: 3.4 * m, yaw: 0.75, pitch: -0.12 },
+    // The east end, the empty bay's side, from outside.
+    east: { x: 5.2 * m, z: 2.6 * m, yaw: -0.95, pitch: -0.1 },
     inlet: { x: 4.6 * m, z: 3.6 * m, yaw: -0.55, pitch: 0 },
   };
   const params = new URLSearchParams(location.search);

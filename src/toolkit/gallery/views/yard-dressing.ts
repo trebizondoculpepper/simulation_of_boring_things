@@ -22,7 +22,6 @@ import {
   createCone,
   createCrateStack,
   createGritBin,
-  createLpgCage,
   createPalletStack,
   createSadPlanter,
   createWheelieBin,
@@ -50,7 +49,6 @@ export function createYardDressing(
     cardboard: () => createCardboardStack(kit),
     crates: () => createCrateStack(kit, 5, '#2a6fa8'),
     'crates-green': () => createCrateStack(kit, 4, '#3b7a3a'),
-    lpg: () => createLpgCage(kit),
     grit: () => createGritBin(kit),
     skip: () => {
       // The game's skip (from the Encabulator): a random hire firm's name,
@@ -63,6 +61,9 @@ export function createYardDressing(
     pallets: () => createPalletStack(kit, 5),
   } as const;
   YARD_DRESSING.forEach((p, k) => {
+    // The propane cage is a working part, installed by the room
+    // (`createLpgCagePart`); its signs and the litter round it are here.
+    if (p.kind === 'lpg') return;
     const thing = make[p.kind](k);
     thing.position.set(p.x, YARD.level, p.z);
     thing.rotation.y = p.yaw;
