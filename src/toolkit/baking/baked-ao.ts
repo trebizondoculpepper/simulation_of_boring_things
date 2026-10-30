@@ -210,6 +210,37 @@ effect(() => {
   pump();
 });
 
+/**
+ * In development, a small note at the foot of the screen while the
+ * walker's own room is still baking ("AO BAKING"), so a room without its
+ * occlusion yet is not taken for one whose bake failed.
+ */
+let note: HTMLElement | null = null;
+function showBaking() {
+  if (!import.meta.env.DEV || typeof document === 'undefined') return;
+  const on = baking() && focused !== null && currentPending();
+  if (!on && !note) return;
+  if (!note) {
+    note = document.createElement('div');
+    note.textContent = 'AO BAKING';
+    note.setAttribute('aria-hidden', 'true');
+    Object.assign(note.style, {
+      position: 'fixed',
+      left: '50%',
+      bottom: '40px',
+      transform: 'translateX(-50%)',
+      font: '11px monospace',
+      color: '#f5a623',
+      background: 'rgba(0,0,0,0.5)',
+      padding: '2px 6px',
+      zIndex: '50',
+      pointerEvents: 'none',
+    });
+    document.body.append(note);
+  }
+  note.hidden = !on;
+}
+
 // Every room's frames, measured here (whatever room draws them): the baker
 // works only while the recent ones are within budget.
 let lastFrame = 0;
@@ -221,6 +252,7 @@ function watchFrames(time: number) {
   lastFrame = time;
   if (active !== null) throttle();
   else if (queue.size) pump();
+  showBaking();
   requestAnimationFrame(watchFrames);
 }
 if (typeof requestAnimationFrame === 'function')
@@ -335,7 +367,15 @@ function staticKind(
   )
     return 'skip:arrays';
   const material = mesh.material;
-  if (Array.isArray(material)) return 'occluder:materials';
+  // Several materials (a hall's walls, paint and brick): each patched, if
+  // every one can be.
+  if (Array.isArray(material))
+    return material.every(
+      (m) =>
+        PATCHABLE(m) && !m.transparent && !m.userData.live && m.opacity >= 1,
+    )
+      ? 'receiver'
+      : 'occluder:materials';
   // Custom shaders (the pools' water, light shafts, caustics): neither.
   if ((material as { isShaderMaterial?: boolean }).isShaderMaterial)
     return 'skip:shader';
@@ -508,7 +548,7 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
   const materials = new Map<Material, Material>();
   const originals = new Map<
     Mesh,
-    { material: Material; geometry: BufferGeometry }
+    { material: Material | Material[]; geometry: BufferGeometry }
   >();
   let disposed = false;
   let shown = true;
@@ -576,16 +616,33 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
         new Vector3(baked.sphere[0], baked.sphere[1], baked.sphere[2]),
         baked.sphere[3],
       );
-    const material = mesh.material as Material;
-    let patched = materials.get(material);
-    if (!patched)
-      materials.set(
-        material,
-        (patched = bakedAoMaterial(material, strength, depth, direct)),
-      );
+    // Its material groups carried across the subdivision.
+    if (baked.positions && baked.starts && old.groups.length) {
+      const at = (i: number) =>
+        baked.starts![Math.min(baked.starts!.length - 1, Math.floor(i / 3))] *
+        3;
+      for (const g of old.groups)
+        geometry.addGroup(
+          at(g.start),
+          at(g.start + g.count) - at(g.start),
+          g.materialIndex,
+        );
+    }
+    const material = mesh.material as Material | Material[];
+    const patch = (m: Material) => {
+      let patched = materials.get(m);
+      if (!patched)
+        materials.set(
+          m,
+          (patched = bakedAoMaterial(m, strength, depth, direct)),
+        );
+      return patched;
+    };
     if (!originals.has(mesh)) originals.set(mesh, { material, geometry: old });
     mesh.geometry = geometry;
-    mesh.material = patched;
+    mesh.material = Array.isArray(material)
+      ? material.map(patch)
+      : patch(material);
   };
   const ready = new Promise<Ready | null>((resolve) => {
     jobs.set(id, { roomId, priority, done: resolve });
@@ -612,22 +669,22 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
         // compiled one a frame: linking a program can take tens of
         // milliseconds, so never many at once.
         const kinds = new Map<string, Mesh>();
-        for (const mesh of receivers) {
-          const material = mesh.material as Material;
-          let patched = materials.get(material);
-          if (!patched)
-            materials.set(
-              material,
-              (patched = bakedAoMaterial(material, strength, depth, direct)),
-            );
-          const key = `${patched.type}|${patched.customProgramCacheKey()}|${(patched as MeshStandardMaterial).map ? 'm' : ''}|${mesh.receiveShadow}|${mesh.castShadow}|${patched.side}`;
-          if (kinds.has(key)) continue;
-          const proxy = new Mesh(tiny, patched);
-          // Shadows change the program: as the mesh has them.
-          proxy.receiveShadow = mesh.receiveShadow;
-          proxy.castShadow = mesh.castShadow;
-          kinds.set(key, proxy);
-        }
+        for (const mesh of receivers)
+          for (const material of ([] as Material[]).concat(mesh.material)) {
+            let patched = materials.get(material);
+            if (!patched)
+              materials.set(
+                material,
+                (patched = bakedAoMaterial(material, strength, depth, direct)),
+              );
+            const key = `${patched.type}|${patched.customProgramCacheKey()}|${(patched as MeshStandardMaterial).map ? 'm' : ''}|${mesh.receiveShadow}|${mesh.castShadow}|${patched.side}`;
+            if (kinds.has(key)) continue;
+            const proxy = new Mesh(tiny, patched);
+            // Shadows change the program: as the mesh has them.
+            proxy.receiveShadow = mesh.receiveShadow;
+            proxy.castShadow = mesh.castShadow;
+            kinds.set(key, proxy);
+          }
         for (const proxy of kinds.values()) {
           if (disposed) break;
           stand.clear();

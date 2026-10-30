@@ -83,6 +83,8 @@ export interface BakedMesh {
   uvs: Float32Array | null;
   /** One byte a vertex (of the new geometry, if any, else of its own). */
   ao: Uint8Array;
+  /** Where each original triangle's pieces begin, if subdivided (to carry material groups across). */
+  starts?: Uint32Array | null;
   /** Its bounding sphere in its own space (centre, radius), worked out here so the game need not. */
   sphere: Float32Array | null;
 }

@@ -359,7 +359,7 @@ function reply(
     r++;
     if (m.sphere) transfer.push(m.sphere.buffer);
     vertices += m.ao.length;
-    for (const a of [m.positions, m.normals, m.uvs, m.ao])
+    for (const a of [m.positions, m.normals, m.uvs, m.ao, m.starts])
       if (a) transfer.push(a.buffer);
   }
   post(
