@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum corridors built as the halls are (the owner, 2026-10-30: "the same style for the windows in the corridors as ... in the hall ... that curved top, and it's slightly inset"): their walls by the halls' own wall builder (`wallRun`), in the halls' paint, the windows cut through them with round heads, glazed in their reveals with the halls' glazing bars.
 - Museum windows all far above head height (the owner, 2026-10-30): every window in the halls and the corridors from 4.2 m to 7.3 m (`WINDOW_SILL`, `WINDOW_HEAD`), the corridors' as wide as the halls' (2.4 m).
 - Museum corridors as tall as the halls (the owner, 2026-10-30: "the same height as the rooms that they connect ... the same ceiling style, and the same windows"): 9.5 m, under the halls' metal roof deck and cellular beams with a few services, their windows the halls' tall gridded street windows, 2.4 m wide from 3.2 m up, all above head height; the pendants hung lower from the deck, larger.
 - Museum, Hall 0: the way-out sign (stairs, toilets, cloakroom, the exhibition) moves to the north wall, between the lift and the fire exit, its arrows turned to suit (the owner, 2026-10-30).

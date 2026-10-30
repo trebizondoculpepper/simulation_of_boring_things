@@ -1615,14 +1615,39 @@ export function createMuseumHall(
     const run = new Group();
     run.name = `Corridor to ${c.to}`;
     const H = CORRIDOR.height;
-    const slabs: BufferGeometry[] = [];
-    for (const w of c.walls) {
-      const g = new BoxGeometry(w.maxX - w.minX, H, w.maxZ - w.minZ);
-      g.translate((w.minX + w.maxX) / 2, H / 2, (w.minZ + w.maxZ) / 2);
-      slabs.push(g);
+    // Its walls, built as the halls' are (`wallRun`), its windows cut
+    // through them with their round heads and glazed as the halls' are.
+    const cut = CORRIDOR.wall / 2;
+    const bars: BufferGeometry[] = [];
+    for (const f of c.walls) {
+      const axis = f.maxX - f.minX >= f.maxZ - f.minZ ? 'x' : 'z';
+      const line = axis === 'x' ? (f.minZ + f.maxZ) / 2 : (f.minX + f.maxX) / 2;
+      const [from, to] = axis === 'x' ? [f.minX, f.maxX] : [f.minZ, f.maxZ];
+      const windows: MuseumWindow[] = c.windows
+        .filter((win) => {
+          const across = axis === 'x' ? win.z : win.x;
+          const along = axis === 'x' ? win.x : win.z;
+          return (
+            Math.abs(Math.abs(across - line) - cut) < 1e-6 &&
+            along > from &&
+            along < to
+          );
+        })
+        .map((win) => ({
+          u: axis === 'x' ? win.x : win.z,
+          w: CORRIDOR_WINDOW.w,
+          sill: CORRIDOR_WINDOW.sill,
+          head: CORRIDOR_WINDOW.head,
+          kind: 'street' as const,
+        }));
+      run.add(wallRun(axis, line, from, to, [], windows, m.paint, m.rawBrick));
+      for (const w of windows) glaze(m, { axis, line }, w, run, bars);
     }
-    run.add(new Mesh(mergeGeometries(slabs), concrete));
-    for (const g of slabs) g.dispose();
+    if (bars.length) {
+      run.add(new Mesh(mergeGeometries(bars), m.steel));
+      for (const g of bars) g.dispose();
+    }
+
     // The halls' roof deck and beams over each leg, the corner under the
     // first, its services sparse.
     c.floor.forEach((f, k) => {
@@ -1653,38 +1678,6 @@ export function createMuseumHall(
     });
     run.add(new Mesh(mergeGeometries(floors), m.floor));
     for (const g of floors) g.dispose();
-    // Its windows, white with the sky, in steel frames: a mullion and a
-    // transom, set in the wall's inside face (`corridorWindows`).
-    const { w: ww, sill, head } = CORRIDOR_WINDOW;
-    const panes: BufferGeometry[] = [];
-    const frames: BufferGeometry[] = [];
-    for (const win of c.windows) {
-      const yaw = Math.atan2(win.into[0], win.into[1]);
-      const at = (g: BufferGeometry, x: number, y: number, z = 0) => {
-        g.translate(x, y, z);
-        g.rotateY(yaw);
-        g.translate(win.x + win.into[0] * 0.01, 0, win.z + win.into[1] * 0.01);
-        return g;
-      };
-      const hgt = head - sill;
-      panes.push(at(new PlaneGeometry(ww, hgt), 0, sill + hgt / 2));
-      const bar = 0.06;
-      // A steel grid, as the halls' factory windows: four lights across,
-      // a transom every 0.6 m or so.
-      const rows = Math.round(hgt / 0.6);
-      const grid: (readonly [number, number, number, number])[] = [];
-      for (let k = 0; k <= 4; k++)
-        grid.push([bar, hgt, -ww / 2 + (ww * k) / 4, sill + hgt / 2]);
-      for (let k = 0; k <= rows; k++)
-        grid.push([ww + bar, bar, 0, sill + (hgt * k) / rows]);
-      for (const [w, h, x, y] of grid)
-        frames.push(at(new BoxGeometry(w, h, 0.05), x, y, 0.02));
-    }
-    if (panes.length) {
-      run.add(new Mesh(mergeGeometries(panes), m.mask));
-      run.add(new Mesh(mergeGeometries(frames), m.steel));
-      for (const g of [...panes, ...frames]) g.dispose();
-    }
     // A pendant in each leg (the owner, 2026-10-30: "a pair of industrial
     // lights in each, one in each leg"), the Encabulator's, on its chain
     // from the ceiling, each with a warm light of short reach.
