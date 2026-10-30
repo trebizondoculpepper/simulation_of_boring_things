@@ -22,7 +22,7 @@ import type {
 import { pipeClashes } from '../../components/core/logic/pipe-route';
 import type { PipeJoint, Vec3 } from '../../components/core/logic/pipe-route';
 import { pointAlong } from './source-sink-plumbing';
-import { hallColumns, hallInterior, hallOrigin } from './museum-plan';
+import { columnKeepOut, hallInterior, hallOrigin } from './museum-plan';
 
 /**
  * Hall 1's plant, laid out (107a): the schematic's machines placed by hand
@@ -398,11 +398,8 @@ export function plumbHall1(): Hall1Room {
   const machines = (Object.keys(PLACES) as MachineId[]).filter(
     (id) => !POINTS.includes(id),
   );
-  const o = hallOrigin('museum1');
-  const columns = hallColumns('museum1').map((c) => ({
-    min: [c.x - o.x - 0.3, 0, c.z - o.z - 0.3] as Vec3,
-    max: [c.x - o.x + 0.3, ROOM.height, c.z - o.z + 0.3] as Vec3,
-  }));
+  // The columns, kept clear by a margin (`columnKeepOut`).
+  const columns = columnKeepOut('museum1', ROOM.height);
   const obstacles = [...machines.map((id) => boxInHall(id)), ...columns];
   const requests: RouterLine[] = LINKS.map((l) => {
     const dn = LINK_DN[l.id];

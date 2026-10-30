@@ -894,6 +894,29 @@ export function hallSolids(
 
 /** Half a cast-iron column's base, for walking round it. */
 export const COLUMN_FOOT = 0.22;
+/** Half the widest part of a column, its abacus under the beam (0.66 m square, `museum-hall.ts`). */
+export const COLUMN_SPAN = 0.33;
+/** Kept clear round every column, beyond its widest part, by pipes and plant (the owner, 2026-10-30: "at least 10 centimeters outside of their bounding cylinder"). */
+export const COLUMN_CLEARANCE = 0.1;
+
+/**
+ * A hall's columns as the pipe router's keep-out boxes, in the hall's own
+ * coordinates (as `hallColumns` gives them: never moved by the hall's
+ * origin again), from the floor to `height`: each column's widest part
+ * and `COLUMN_CLEARANCE` all round. Every hall's plumber marks these
+ * before it routes (the owner, 2026-10-30), so no pipe or machine is set
+ * through a column.
+ */
+export function columnKeepOut(
+  id: MuseumHallId,
+  height: number,
+): { min: [number, number, number]; max: [number, number, number] }[] {
+  const r = COLUMN_SPAN + COLUMN_CLEARANCE;
+  return hallColumns(id).map((c) => ({
+    min: [c.x - r, 0, c.z - r],
+    max: [c.x + r, height, c.z + r],
+  }));
+}
 
 /** An archway's distance along its hall's route, from the hall's middle. */
 function archAlong(id: MuseumHallId, a: MuseumArch) {
