@@ -22,6 +22,7 @@ import {
   createBakeQueue,
   isPinnedRoom,
   mayBake,
+  mayBakeAhead,
   planEviction,
 } from './ao-cache-policy';
 
@@ -351,5 +352,20 @@ describe('subdividing only where it shows', () => {
     expect(out[2]).toBe(out[3]);
     expect(out[0]).toBeGreaterThan(0);
     expect(out[5]).toBeLessThan(255);
+  });
+});
+
+describe('baking ahead only when idle (the owner, 2026-10-30)', () => {
+  const calm = Array.from({ length: 60 }, () => 8);
+  it('waits while the walker’s own room is still to bake', () => {
+    expect(mayBakeAhead(1000, 0, calm, true)).toBe(false);
+    expect(mayBakeAhead(1000, 0, calm, false)).toBe(true);
+  });
+  it('waits through a hand-over and until frames have been calm a while', () => {
+    expect(mayBakeAhead(1000, 2000, calm, false)).toBe(false);
+    expect(mayBakeAhead(1000, 0, calm.slice(0, 20), false)).toBe(false);
+  });
+  it('stops at once when a frame has little headroom', () => {
+    expect(mayBakeAhead(1000, 0, [...calm, 25], false)).toBe(false);
   });
 });

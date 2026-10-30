@@ -145,3 +145,28 @@ export function mayBake(
   const mean = frames.reduce((s, f) => s + f, 0) / frames.length;
   return mean <= budget;
 }
+
+/**
+ * Whether a room other than the walker's may be baked now (the owner,
+ * 2026-10-30: only the room the walker is in really matters). Only when
+ * the game is truly idle: the walker's own room has nothing left to bake,
+ * no hand-over is settling (`pausedUntil`), and the last couple of
+ * seconds of frames (`frames`, ms, at least `calm` of them) all had
+ * plenty of headroom, under `share` of the budget. Any frame over that,
+ * as when the walker moves and the view changes, stops it at once.
+ */
+export function mayBakeAhead(
+  now: number,
+  pausedUntil: number,
+  frames: readonly number[],
+  currentPending: boolean,
+  budget = 1000 / 30,
+  share = 0.6,
+  calm = 60,
+) {
+  if (currentPending || now < pausedUntil) return false;
+  if (frames.length < calm) return false;
+  for (let i = frames.length - calm; i < frames.length; i++)
+    if (frames[i] > budget * share) return false;
+  return true;
+}

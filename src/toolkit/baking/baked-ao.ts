@@ -15,6 +15,13 @@
  * an object marked `userData.bakeAo = true`; never anything under one
  * marked `userData.bakeAo = false`, nor instanced meshes, hidden meshes,
  * transparent or live (lamp) materials.
+ *
+ * Occlusion is baked for the room with every light on (the owner,
+ * 2026-10-30): lights take no part in it (only geometry does), lamps'
+ * meshes count as present and lit however the room is lit, and nothing
+ * about the lighting enters the cache key, so the bake comes out the same
+ * whether the room is entered lit, dark, in emergency lighting or in a
+ * blackout.
  */
 import {
   BufferAttribute,
@@ -42,6 +49,7 @@ import {
   BAKE_PRIORITY,
   createBakeQueue,
   mayBake,
+  mayBakeAhead,
 } from './logic/ao-cache-policy';
 import { settings as playerSettings } from '../settings/settings-store';
 import type {
@@ -127,13 +135,32 @@ function startWorker() {
 const send = (message: BakeRequest, transfer: Transferable[] = []) =>
   startWorker().postMessage(message, transfer);
 
+/** Whether a job is for the room the walker is in (or nobody is placed yet). */
+const isCurrent = (id: number) => {
+  const job = jobs.get(id);
+  return Boolean(job) && (focused === null || job!.roomId === focused);
+};
+/** Whether the walker's own room still has a bake to come. */
+const currentPending = () => [...jobs.keys()].some(isCurrent);
+
 function pump() {
   // Not ONE-TIME: queued bakes wait, none is started.
   if (active !== null || !baking()) return;
-  const item = queue.take();
+  const item = queue.peek();
   if (!item) return;
   const id = Number(item.hash);
-  if (!jobs.has(id)) return pump();
+  if (!jobs.has(id)) {
+    queue.take();
+    return pump();
+  }
+  // Another room's bake (a neighbour, the lift's destination) starts only
+  // when the game is truly idle (the owner, 2026-10-30).
+  if (
+    !isCurrent(id) &&
+    !mayBakeAhead(performance.now(), pausedUntil, frames, currentPending())
+  )
+    return;
+  queue.take();
   active = id;
   send({ type: 'bake', id });
   throttle();
@@ -141,7 +168,14 @@ function pump() {
 
 /** Pause or resume the worker by the frame budget, hand-overs and the mode. */
 function throttle() {
-  const allowed = baking() && mayBake(performance.now(), pausedUntil, frames);
+  const now = performance.now();
+  // The walker's room's bake by the frame budget; any other's only while
+  // the game stays idle, stopped the moment frames rise or a hand-over begins.
+  const allowed =
+    baking() &&
+    (active !== null && isCurrent(active)
+      ? mayBake(now, pausedUntil, frames)
+      : mayBakeAhead(now, pausedUntil, frames, currentPending()));
   if (!worker) return;
   if (allowed === !workerPaused) return;
   workerPaused = !allowed;
@@ -164,6 +198,7 @@ function watchFrames(time: number) {
   }
   lastFrame = time;
   if (active !== null) throttle();
+  else if (queue.size) pump();
   requestAnimationFrame(watchFrames);
 }
 if (typeof requestAnimationFrame === 'function')
@@ -195,6 +230,25 @@ export function focusRoom(roomId: string) {
 
 // ---- Swapping results in, a few a frame ------------------------------------
 
+/**
+ * Run `work` when the main thread is idle (`requestIdleCallback`, lowest
+ * priority), or within a second at most; a frame later where there is no
+ * idle callback.
+ */
+function whenIdle(work: () => void): number {
+  const idle = (
+    globalThis as {
+      requestIdleCallback?: (
+        cb: () => void,
+        options?: { timeout: number },
+      ) => number;
+    }
+  ).requestIdleCallback;
+  return idle
+    ? idle(work, { timeout: 1000 })
+    : requestAnimationFrame(() => work());
+}
+
 const applying: { work: () => void; vertices: number }[] = [];
 let applyFrame = 0;
 function applySome() {
@@ -210,11 +264,11 @@ function applySome() {
     vertices += next.vertices;
     next.work();
   }
-  if (applying.length) applyFrame = requestAnimationFrame(applySome);
+  if (applying.length) applyFrame = whenIdle(applySome);
 }
 function later(work: () => void, vertices = 0) {
   applying.push({ work, vertices });
-  if (!applyFrame) applyFrame = requestAnimationFrame(applySome);
+  if (!applyFrame) applyFrame = whenIdle(applySome);
 }
 
 // ---- Gathering a room's static geometry -----------------------------------
@@ -232,14 +286,21 @@ function staticKind(
   if (mesh instanceof InstancedMesh) return 'skip:instanced';
   let marked: boolean | undefined;
   let merged = false;
+  let hidden = false;
   for (let o: Object3D | null = mesh; o; o = o.parent) {
-    if (!o.visible) return 'skip:hidden';
+    if (!o.visible) hidden = true;
     if (o.userData.bakeAo === false) return 'skip:excluded';
     if (o.userData.bakeAo === true) marked ??= true;
     if (o.name === 'Merged') merged = true;
     if (o === root) break;
   }
   if (!marked && !merged) return 'skip:not static';
+  // Baked for the room with every light on (the owner, 2026-10-30): a
+  // lamp's own meshes (its live materials) occlude whether lit and shown
+  // or not, so how the room is lit never changes the bake or its key.
+  const lamp =
+    !Array.isArray(mesh.material) && Boolean(mesh.material.userData.live);
+  if (hidden) return lamp ? 'occluder:lamp' : 'skip:hidden';
   const g = mesh.geometry as BufferGeometry;
   const position = g.attributes.position as BufferAttribute | undefined;
   const normal = g.attributes.normal as BufferAttribute | undefined;
@@ -476,7 +537,7 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
   })
     .then(async (reply) => {
       // The baked materials compiled first, on stand-ins, without blocking.
-      if (reply && options.compile && !disposed) {
+      if (reply && options.compile && !disposed && asked !== 'late-nocompile') {
         const stand = new Group();
         const tiny = new BufferGeometry();
         tiny.setAttribute(
@@ -492,6 +553,10 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
           'aoBake',
           new BufferAttribute(new Uint8Array(3), 1, true),
         );
+        // One stand-in for each kind of program (material and shadows),
+        // compiled one a frame: linking a program can take tens of
+        // milliseconds, so never many at once.
+        const kinds = new Map<string, Mesh>();
         for (const mesh of receivers) {
           const material = mesh.material as Material;
           let patched = materials.get(material);
@@ -500,16 +565,24 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
               material,
               (patched = bakedAoMaterial(material, strength)),
             );
+          const key = `${patched.type}|${patched.customProgramCacheKey()}|${(patched as MeshStandardMaterial).map ? 'm' : ''}|${mesh.receiveShadow}|${mesh.castShadow}|${patched.side}`;
+          if (kinds.has(key)) continue;
           const proxy = new Mesh(tiny, patched);
           // Shadows change the program: as the mesh has them.
           proxy.receiveShadow = mesh.receiveShadow;
           proxy.castShadow = mesh.castShadow;
-          stand.add(proxy);
+          kinds.set(key, proxy);
         }
-        try {
-          await options.compile(stand);
-        } catch {
-          // Compiled on first use instead.
+        for (const proxy of kinds.values()) {
+          if (disposed) break;
+          stand.clear();
+          stand.add(proxy);
+          try {
+            await options.compile(stand);
+          } catch {
+            // Compiled on first use instead.
+          }
+          await new Promise((next) => requestAnimationFrame(next));
         }
         tiny.dispose();
       }
@@ -624,7 +697,7 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
     gatherMs += spent;
     gatherMaxMs = Math.max(gatherMaxMs, spent);
     if (!packed || copied < unique.length) {
-      requestAnimationFrame(gatherSome);
+      whenIdle(gatherSome);
       return;
     }
     const t = performance.now();
@@ -668,7 +741,11 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
     gatherMs += handOver;
     gatherMaxMs = Math.max(gatherMaxMs, handOver);
   };
-  gatherSome();
+  // `?bake=late`: begun 8 s after the room, to measure its own cost apart
+  // from the room's loading.
+  if (asked === 'late' || asked === 'late-nocompile')
+    setTimeout(gatherSome, 8000);
+  else gatherSome();
   const handle = {
     roomId,
     /** What it bakes (to look into in the browser). */

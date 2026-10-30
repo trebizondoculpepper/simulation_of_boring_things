@@ -1,4 +1,5 @@
 import { signal } from '@preact/signals-core';
+import { bakeRoomAo } from '../../baking/baked-ao';
 import {
   ACESFilmicToneMapping,
   AmbientLight,
@@ -115,6 +116,15 @@ export function startMainCorridorRoom(canvas: HTMLCanvasElement) {
       },
     };
   scene.add(rooms);
+  // Baked ambient occlusion (the owner, 2026-10-30): the corridor, a hub
+  // (never evicted from the cache), its doors left out.
+  rooms.userData.bakeAo = true;
+  for (const d of doors) d.part.object.userData.bakeAo = false;
+  const bakedAo = bakeRoomAo(rooms, {
+    roomId: 'main_corridor',
+    unit: metre,
+    compile: (object) => renderer.compileAsync(object, camera, scene),
+  });
   // The CONTROL ROOM MODE knob beside the control room's doors, by their
   // card reader (`control-room-mode.ts`): where those doors lead.
   const world = roomWorld();
@@ -568,6 +578,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       renderer.setAnimationLoop(null);
       observer.disconnect();
       composer.dispose();
+      bakedAo.dispose();
       for (const g of groups) g.withdraw();
       liftLanding.dispose();
       ambience.corridor(null);

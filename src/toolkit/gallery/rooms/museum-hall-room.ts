@@ -15,6 +15,7 @@ import {
   Vector2,
   WebGLRenderTarget,
 } from 'three';
+import { bakeRoomAo } from '../../baking/baked-ao';
 import type { Group, Material, Object3D } from 'three';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
@@ -184,6 +185,10 @@ export function startMuseumHallRoom(
   const o = hallOrigin(id);
   shells.group.position.set(-o.x, 0, -o.z);
   hall.group.add(shells.group);
+  // Baked ambient occlusion: this hall and its exhibit only (each other
+  // hall is baked when built as its own room, next door or walked into).
+  hall.group.userData.bakeAo = true;
+  shells.group.userData.bakeAo = false;
   // Both neighbours in full (the owner, 2026-10-28: "only the rooms
   // adjacent to the room we're in render"): each a full copy at its true
   // place, seen while its own room is not drawn through its archway
@@ -194,6 +199,7 @@ export function startMuseumHallRoom(
       const copy = createMuseumHall(n, undefined, id);
       const on = hallOrigin(n);
       copy.group.position.set(on.x - o.x, 0, on.z - o.z);
+      copy.group.userData.bakeAo = false;
       hall.group.add(copy.group);
       return [n, copy] as const;
     }),
@@ -217,6 +223,7 @@ export function startMuseumHallRoom(
       placed.updateMatrix();
       placed.matrixAutoUpdate = false;
       setFarLayer(placed, true);
+      placed.userData.bakeAo = false;
       hall.group.add(placed);
       beyond.get(side)?.push(placed);
       redraw();
@@ -228,6 +235,7 @@ export function startMuseumHallRoom(
   const kit = createPanelKit();
   let exhibit: CarryingExhibit | null = null;
   let disposed = false;
+  let bakedAo: ReturnType<typeof bakeRoomAo> | null = null;
   const loadExhibit = (n: MuseumHallId, into: Group) =>
     HALL_EXHIBITS[n]?.().then((m) => {
       if (disposed) return null;
@@ -241,6 +249,14 @@ export function startMuseumHallRoom(
   void loadExhibit(id, hall.group)?.then((built) => {
     if (!built) return;
     exhibit = built;
+    // Baked once its exhibit is in (`baking/baked-ao.ts`); held back for
+    // now (it slowed the museum, 2026-10-30) unless asked for (`?bake=museum`).
+    if (new URLSearchParams(location.search).get('bake') === 'museum')
+      bakedAo = bakeRoomAo(hall.group, {
+        roomId: id,
+        unit: metre,
+        compile: (object) => renderer.compileAsync(object, camera, scene),
+      });
     // The exhibit's carrying (107f), through the control scheme's hands.
     if (walk.hands)
       exhibit.carrying?.bind(walk.hands, {
@@ -286,6 +302,7 @@ export function startMuseumHallRoom(
       // exhibit's own placement within its hall.)
       const holder = new GroupClass();
       holder.position.copy(copy.group.position);
+      holder.userData.bakeAo = false;
       holder.add(far.group);
       hall.group.add(holder);
       farOf.set(n, holder);
@@ -758,6 +775,7 @@ export function startMuseumHallRoom(
   return Object.assign(
     () => {
       disposed = true;
+      bakedAo?.dispose();
       renderer.setAnimationLoop(null);
       for (const off of withdraw) off();
       liftLanding?.dispose();

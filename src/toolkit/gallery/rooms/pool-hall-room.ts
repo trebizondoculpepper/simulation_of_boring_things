@@ -60,6 +60,7 @@ import type { RoomId } from '../logic/dev-room-links';
 import { enterDevRoom } from '../logic/dev-room-links';
 import { DEFAULT_POOL_LOOK, POOL_LOOKS } from '../logic/pool-looks';
 import { createPoolHall } from '../views/pool-hall';
+import { bakeRoomAo } from '../../baking/baked-ao';
 import { humanLadderZones } from '../../components/architectural/views/human-ladder';
 import { createPanelKit } from '../../components/core/views/eighties-controls';
 import { createPoolInfoSign } from '../../components/pool/views/pool-info-sign';
@@ -164,6 +165,15 @@ export function startPoolHallRoom(
   } = buildPoolHallContents(id, metre, { gallery: Boolean(gallery), devRoom });
   const world = roomWorld();
   scene.add(rooms);
+  // Baked ambient occlusion (the owner, 2026-10-30): the hall itself (its
+  // shell, tank, coves and decoration); its water, a shader, takes none.
+  for (const child of rooms.children)
+    if (componentOf(child)?.decorative) child.userData.bakeAo ??= true;
+  const bakedAo = bakeRoomAo(rooms, {
+    roomId: gallery ? 'pool_02_gallery' : id,
+    unit: metre,
+    compile: (object) => renderer.compileAsync(object, camera, scene),
+  });
 
   const composer = createComposer(
     renderer,
@@ -861,6 +871,7 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       for (const w of withdraw) w();
       observer.disconnect();
       composer.dispose();
+      bakedAo.dispose();
       musicSpeaker?.dispose();
       drainAudio?.dispose();
       makeUpStreams?.dispose();
