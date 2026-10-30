@@ -8,6 +8,7 @@ import {
   LAYOUT_WALL,
   blindL,
   corridorShape,
+  corridorWindows,
   innerLegs,
   placeRect,
 } from './museum-layout';
@@ -125,6 +126,24 @@ describe('the museum’s layout C', () => {
               p.z > w.minZ + 1e-6 &&
               p.z < w.maxZ - 1e-6,
           ).toBe(false);
+    }
+  });
+
+  it('glazes only the leg along the ring, both its walls, never the leg leaving a hall', () => {
+    for (const c of LAYOUT_CORRIDORS) {
+      const windows = corridorWindows(c.path, c.along);
+      expect(windows.length, `${c.a}-${c.b}`).toBeGreaterThan(0);
+      const [from, to] =
+        c.along === 0 ? [c.path[1], c.path[0]] : [c.path[1], c.path[2]];
+      const u = [to.x - from.x, to.z - from.z];
+      for (const w of windows) {
+        // Square to the along leg, in one of its two walls.
+        expect(w.into[0] * u[0] + w.into[1] * u[1]).toBeCloseTo(0, 9);
+      }
+      const out = windows.filter(
+        (w) => w.into[0] * u[1] - w.into[1] * u[0] > 0,
+      ).length;
+      expect(out * 2).toBe(windows.length);
     }
   });
 });

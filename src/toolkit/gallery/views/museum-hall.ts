@@ -71,7 +71,7 @@ import type {
   MuseumWindow,
 } from '../logic/museum-plan';
 import { MUSEUM_EXHIBITION as BRAND } from '../logic/museum-brand';
-import { CORRIDOR } from '../logic/museum-layout';
+import { CORRIDOR, CORRIDOR_WINDOW } from '../logic/museum-layout';
 import { createPendantLamps } from '../../components/architectural/views/pendant-lamps';
 
 /** A corridor's pendant: its dome's rim, m up, and its size (Lamp Copper's model E). */
@@ -1646,6 +1646,37 @@ export function createMuseumHall(
     });
     run.add(new Mesh(mergeGeometries(floors), m.floor));
     for (const g of floors) g.dispose();
+    // Its windows, white with the sky, in steel frames: a mullion and a
+    // transom, set in the wall's inside face (`corridorWindows`).
+    const { w: ww, sill, head } = CORRIDOR_WINDOW;
+    const panes: BufferGeometry[] = [];
+    const frames: BufferGeometry[] = [];
+    for (const win of c.windows) {
+      const yaw = Math.atan2(win.into[0], win.into[1]);
+      const at = (g: BufferGeometry, x: number, y: number, z = 0) => {
+        g.translate(x, y, z);
+        g.rotateY(yaw);
+        g.translate(win.x + win.into[0] * 0.01, 0, win.z + win.into[1] * 0.01);
+        return g;
+      };
+      const hgt = head - sill;
+      panes.push(at(new PlaneGeometry(ww, hgt), 0, sill + hgt / 2));
+      const bar = 0.06;
+      for (const [w, h, x, y] of [
+        [ww + bar, bar, 0, sill],
+        [ww + bar, bar, 0, head],
+        [ww + bar, bar, 0, sill + hgt * 0.62],
+        [bar, hgt, -ww / 2, sill + hgt / 2],
+        [bar, hgt, ww / 2, sill + hgt / 2],
+        [bar, hgt, 0, sill + hgt / 2],
+      ] as const)
+        frames.push(at(new BoxGeometry(w, h, 0.05), x, y, 0.02));
+    }
+    if (panes.length) {
+      run.add(new Mesh(mergeGeometries(panes), m.mask));
+      run.add(new Mesh(mergeGeometries(frames), m.steel));
+      for (const g of [...panes, ...frames]) g.dispose();
+    }
     // A pendant in each leg (the owner, 2026-10-30: "a pair of industrial
     // lights in each, one in each leg"), the Encabulator's, on its chain
     // from the ceiling, each with a warm light of short reach.

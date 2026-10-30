@@ -182,6 +182,8 @@ export interface LayoutCorridor {
   doorA: LayoutDoor;
   doorB: LayoutDoor;
   path: readonly [P, P, P];
+  /** Which of the path's two legs runs along the ring's side (its walls looking out and in), the other leaving a hall square to it. */
+  along: 0 | 1;
   /** The hand-over's middle, and the way across it towards `b`. */
   handOver: { x: number; z: number; towardB: readonly [number, number] };
 }
@@ -295,6 +297,7 @@ function layCorridors(): LayoutCorridor[] {
       path: aIsInn
         ? [innDoorP, corner, proudDoorP]
         : [proudDoorP, corner, innDoorP],
+      along: aIsInn ? 1 : 0,
       handOver: { ...exit, towardB },
     };
   });
@@ -363,6 +366,56 @@ export function corridorShape(path: readonly [P, P, P]) {
     box({ x: c.x + u2[0] * half, z: c.z + u2[1] * half }, b, CORRIDOR.width),
   ];
   return { walls, floor };
+}
+
+/** A corridor's windows: their width, sill and head, m, and the least pier between and beside them. */
+export const CORRIDOR_WINDOW = {
+  w: 1.6,
+  sill: 1.4,
+  head: 4.4,
+  pier: 1.0,
+} as const;
+
+/**
+ * A corridor's windows (the owner, 2026-10-30: "windows in the corridors
+ * on the sides that face towards the outside or towards the inside, but
+ * never on the sides that are ... orthogonal"): along the leg that runs
+ * along the ring's side (`along`), in both its walls, one looking out of
+ * the building and one into the courtyard, evenly between the corner and
+ * the mouth, a pier clear of each. Each: its middle on the wall's inside
+ * face, and the way into the corridor from it.
+ */
+export function corridorWindows(
+  path: readonly [P, P, P],
+  along: 0 | 1,
+): { x: number; z: number; into: readonly [number, number] }[] {
+  const [from, to] = along === 0 ? [path[1], path[0]] : [path[1], path[2]];
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  const L = Math.hypot(dx, dz);
+  const u = [dx / L, dz / L] as const;
+  const half = CORRIDOR.width / 2;
+  const { w, pier } = CORRIDOR_WINDOW;
+  // From the corner's square to the mouth, a pier clear of each end.
+  const start = half + pier;
+  const room = L - start - pier;
+  const n = Math.max(0, Math.floor((room + pier) / (w + pier)));
+  if (!n) return [];
+  const used = n * w + (n - 1) * pier;
+  const out: { x: number; z: number; into: readonly [number, number] }[] = [];
+  for (let k = 0; k < n; k++) {
+    const s = start + (room - used) / 2 + w / 2 + k * (w + pier);
+    for (const side of [1, -1]) {
+      const nx = -u[1] * side;
+      const nz = u[0] * side;
+      out.push({
+        x: from.x + u[0] * s + nx * half,
+        z: from.z + u[1] * s + nz * half,
+        into: [-nx + 0, -nz + 0],
+      });
+    }
+  }
+  return out;
 }
 
 /** A hall's whole extent, every hall's wall lines. */

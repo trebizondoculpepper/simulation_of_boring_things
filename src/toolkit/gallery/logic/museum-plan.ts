@@ -8,6 +8,7 @@ import {
   LAYOUT_CORRIDORS,
   LAYOUT_WALL,
   corridorShape,
+  corridorWindows,
   layoutBounds,
 } from './museum-layout';
 import type { LayoutCorridor } from './museum-layout';
@@ -547,6 +548,8 @@ export interface HallCorridor {
   ];
   walls: Footprint[];
   floor: Footprint[];
+  /** Its windows, along the leg that runs along the ring (`corridorWindows`). */
+  windows: { x: number; z: number; into: readonly [number, number] }[];
   handOver: { x: number; z: number; toward: readonly [number, number] };
   /** As `door-joins.ts` has it: the hand-over's middle, +z into this hall's side of it. */
   frame: { x: number; z: number; yaw: number };
@@ -567,6 +570,10 @@ export function hallCorridors(id: MuseumHallId): HallCorridor[] {
     const [a, m, b] = c.path.map(local);
     const path = (onward ? [a, m, b] : [b, m, a]) as HallCorridor['path'];
     const { walls, floor } = corridorShape(path);
+    const windows = corridorWindows(
+      path,
+      (onward ? c.along : 1 - c.along) as 0 | 1,
+    );
     const ho = local(c.handOver);
     const tb = ownDirection(id, c.handOver.towardB);
     const toward: readonly [number, number] = onward
@@ -579,6 +586,7 @@ export function hallCorridors(id: MuseumHallId): HallCorridor[] {
       path,
       walls,
       floor,
+      windows,
       handOver: { ...ho, toward },
       frame: { ...ho, yaw: Math.atan2(into[0], into[1]) },
     };
