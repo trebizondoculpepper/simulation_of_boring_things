@@ -551,24 +551,28 @@ const bridgeTheme = (() => {
     fade = seconds;
     partAudio.hold(owner, null);
   };
-  const playlist = musicPlaylist(
-    [
-      {
-        url: new URL(
-          '../../../../resources/sound/music/bridge/boldly-into-the-deep-end.ogg',
-          import.meta.url,
-        ),
-        title: 'Boldly Into the Deep End — Treblo',
-      },
-    ],
-    signal(0.6),
-    () => {},
-  );
+  // A new playlist each time it is played, so it always begins at the top
+  // (the owner, 2026-10-30: after RESET, the theme from its start): a
+  // playlist keeps where it was stopped and would resume there.
+  const playlist = () =>
+    musicPlaylist(
+      [
+        {
+          url: new URL(
+            '../../../../resources/sound/music/bridge/boldly-into-the-deep-end.ogg',
+            import.meta.url,
+          ),
+          title: 'Boldly Into the Deep End — Treblo',
+        },
+      ],
+      signal(0.6),
+      () => {},
+    );
   // The playlist under a fader of its own, so stopping it fades it out.
   const faded: LoopRecipe = (context, out) => {
     const fader = context.createGain();
     fader.connect(out);
-    const inner = playlist(context, fader);
+    const inner = playlist()(context, fader);
     return [
       {
         release: THEME_END_FADE,

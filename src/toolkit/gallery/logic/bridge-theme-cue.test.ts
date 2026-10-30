@@ -76,4 +76,18 @@ describe('the bridge’s theme (the owner, 2026-10-27)', () => {
     b.advance(100);
     expect(b.log).toEqual([]);
   });
+
+  it('begins afresh, its whole length again, when cued after the walker left (RESET, the owner, 2026-10-30)', () => {
+    const { cue, log, advance } = rig();
+    cue.cue(0);
+    advance(30);
+    cue.leave();
+    advance(40);
+    cue.cue(0);
+    expect(log).toEqual(['start@0', 'stop@30', 'start@40']);
+    advance(40 + THEME_LENGTH - 1);
+    expect(log).toHaveLength(3);
+    advance(40 + THEME_LENGTH);
+    expect(log.at(-1)).toBe(`end@${40 + THEME_LENGTH}`);
+  });
 });
