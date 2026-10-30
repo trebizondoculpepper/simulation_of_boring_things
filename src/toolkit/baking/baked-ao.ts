@@ -76,6 +76,8 @@ let worker: Worker | null = null;
 let active: number | null = null;
 let nextId = 1;
 let pausedUntil = 0;
+/** The room the walker is in (`focusRoom`): others' bakes wait behind its. */
+let focused: string | null = null;
 let workerPaused = false;
 const frames: number[] = [];
 
@@ -182,6 +184,7 @@ export function pauseBaking(ms = 1500) {
  * (as neighbours), and a calm moment for the hand-over.
  */
 export function focusRoom(roomId: string) {
+  focused = roomId;
   for (const [id, job] of jobs) {
     job.priority =
       job.roomId === roomId ? BAKE_PRIORITY.current : BAKE_PRIORITY.neighbour;
@@ -250,6 +253,9 @@ function staticKind(
     return 'skip:arrays';
   const material = mesh.material;
   if (Array.isArray(material)) return 'occluder:materials';
+  // Custom shaders (the pools' water, light shafts, caustics): neither.
+  if ((material as { isShaderMaterial?: boolean }).isShaderMaterial)
+    return 'skip:shader';
   // Glass, water, mesh and light shafts: see-through, so neither.
   if (material.transparent || material.alphaTest > 0 || material.opacity < 1)
     return 'skip:see-through';
@@ -362,7 +368,11 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
   const started = performance.now();
   const {
     roomId,
-    priority = BAKE_PRIORITY.current,
+    // The walker's room first; one built ahead (a neighbour through a
+    // doorway, the lift's destination, a museum hall next door) after.
+    priority = focused === null || focused === options.roomId
+      ? BAKE_PRIORITY.current
+      : BAKE_PRIORITY.neighbour,
     unit = 1,
     settings = DEFAULT_BAKE,
   } = options;

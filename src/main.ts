@@ -59,6 +59,7 @@ import {
   prepareRoom,
   setRoomPreparer,
 } from './toolkit/gallery/logic/room-readiness';
+import { focusRoom } from './toolkit/baking/baked-ao';
 import { torch } from './toolkit/controls/logic/torch';
 import { createGameSession } from './toolkit/save/game-session';
 import { GAS_ZONE_IDS } from './game/plant/gas';
@@ -1508,6 +1509,8 @@ const openRoom = async () => {
   }
   const key = keyOf(room);
   current = key;
+  // Its baked occlusion first; the baker still while it settles in.
+  focusRoom(room);
   const loaded = mount(room, start);
   showOnTop(key);
   loaded.root.hidden = false;
@@ -1873,6 +1876,8 @@ const handOver = (to: RoomId, from: RoomId) => {
   stopSeeing(false);
   rooms.get(keyOf(from))?.handle.suspend?.();
   current = keyOf(to);
+  // A hand-over: the baker still a moment, the room walked into first.
+  focusRoom(to);
   showOnTop(keyOf(to));
   entry.handle.enter?.(from, to);
   // Where the walker was, as the doorway carries it, the door with it.
@@ -2093,6 +2098,7 @@ window.addEventListener('pool-plant:room-zone', (event) => {
       old?.handle.suspend?.();
       if (old) old.root.hidden = true;
       current = keyOf(id);
+      focusRoom(id);
       showOnTop(current);
       loaded.root.hidden = false;
       loaded.handle.enter?.(null, id);
