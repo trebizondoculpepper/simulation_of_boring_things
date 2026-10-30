@@ -1,4 +1,6 @@
 import {
+  Box3,
+  Vector3,
   ACESFilmicToneMapping,
   Mesh,
   AmbientLight,
@@ -52,6 +54,17 @@ import {
   startOf,
 } from '../logic/museum-plan';
 import type { MuseumHallId } from '../logic/museum-plan';
+import { lodExempt, quantisedScale, useLowPoly } from '../logic/museum-lod';
+
+/** Each hall's level of detail now: its resolution share and how many components are low poly. */
+type MuseumLod = { scale: number; lowPoly: number; components: number };
+
+/** The museum's level of detail, on `window.museumLod` for the readout. */
+function museumLodState(id: string): MuseumLod {
+  const w = window as unknown as { museumLod?: Record<string, MuseumLod> };
+  w.museumLod ??= {};
+  return (w.museumLod[id] = { scale: 1, lowPoly: 0, components: 0 });
+}
 import { createMuseumHall } from '../views/museum-hall';
 import { projectorWhereabouts } from '../views/caustics-projector';
 import {
@@ -485,35 +498,67 @@ export function startMuseumHallRoom(
   observer.observe(canvas);
   resize();
 
-  // Seen through an archway from the hall walked in (the owner,
-  // 2026-10-29): drawn at a quarter of its resolution, with its exhibit as
-  // its far version, coming clear as the walker nears the archway: half
-  // resolution within 10 m, full and its real exhibit within 5 m. The
-  // owner, 2026-10-29, asked for it to come clear sooner, so the distances
-  // are doubled; and, 2026-10-30, for no blur over it: the far version and
-  // the lower resolution stay.
-  let farExhibit: ReturnType<typeof createFarVersion> | null = null;
+  // Seen through a doorway from the hall walked in (the owner,
+  // 2026-10-30): no blur, drawn at a quarter of its resolution from 5 m
+  // out, full within 2 m of the doorway, eased between (`museum-lod.ts`),
+  // in small steps so the buffers are not resized every frame.
   let seenShare = 1;
-  let seenFar = false;
   const seeFrom = (metres: number | null) => {
-    const share =
-      metres === null ? 1 : metres > 10 ? 0.25 : metres > 5 ? 0.5 : 1;
-    const useFar = metres !== null && metres > 5 && exhibit !== null;
+    const share = metres === null ? 1 : quantisedScale(metres);
     if (share !== seenShare) {
       seenShare = share;
       scaleRatio(renderer, share);
     }
-    if (useFar !== seenFar && exhibit) {
-      seenFar = useFar;
-      if (useFar && !farExhibit) {
-        farExhibit = createFarVersion(exhibit.object, {
-          name: `${id} exhibit`,
-        });
-        exhibit.object.parent?.add(farExhibit.group);
-      }
-      exhibit.object.visible = !useFar;
-      if (farExhibit) farExhibit.group.visible = useFar;
+    lodState.scale = share;
+  };
+  // Each of the exhibit's components (its top-level parts) drawn as its
+  // low-poly version more than 30 m from the eye, back within 28 m (the
+  // owner, 2026-10-30), in this hall whether walked in or seen through.
+  type Lod = {
+    part: Object3D;
+    centre: Vector3;
+    far: ReturnType<typeof createFarVersion> | null;
+    low: boolean;
+  };
+  let lods: Lod[] | null = null;
+  const lodState = museumLodState(id);
+  const eye = new Vector3();
+  let lodClock = 0;
+  const updateLod = (delta: number) => {
+    if (!exhibit) return;
+    lodClock -= delta;
+    if (lodClock > 0) return;
+    lodClock = 0.2;
+    if (!lods) {
+      exhibit.object.updateMatrixWorld(true);
+      // Only the expensive components: signs, banners and architecture
+      // are always drawn as they are (`LOD_EXEMPT`).
+      lods = exhibit.object.children
+        .filter((part) => !lodExempt(part.name))
+        .map((part) => ({
+          part,
+          centre: new Box3().setFromObject(part).getCenter(new Vector3()),
+          far: null,
+          low: false,
+        }));
     }
+    camera.getWorldPosition(eye);
+    let count = 0;
+    for (const l of lods) {
+      const low = useLowPoly(eye.distanceTo(l.centre) / metre, 'own', l.low);
+      if (low !== l.low) {
+        l.low = low;
+        if (low && !l.far) {
+          l.far = createFarVersion(l.part, { name: `${l.part.name} (far)` });
+          l.part.parent?.add(l.far.group);
+        }
+        l.part.visible = !low;
+        if (l.far) l.far.group.visible = low;
+      }
+      if (l.low) count++;
+    }
+    lodState.lowPoly = count;
+    lodState.components = lods.length;
   };
   /** How far the eye drawn under another hall is from this hall's nearest archway, metres. */
   const archwayDistance = () => {
@@ -571,6 +616,7 @@ export function startMuseumHallRoom(
       }
     }
     seeFrom(active ? null : archwayDistance());
+    updateLod(delta);
     if (visual) composer.render(delta);
   });
 
@@ -590,7 +636,7 @@ export function startMuseumHallRoom(
       hall.dispose();
       for (const copy of copies.values()) copy.dispose();
       for (const far of farCopies) far.dispose();
-      farExhibit?.dispose();
+      for (const l of lods ?? []) l.far?.dispose();
       for (const m of copyMaterials) m.dispose();
       shells.dispose();
       shellMaterials.dispose();
