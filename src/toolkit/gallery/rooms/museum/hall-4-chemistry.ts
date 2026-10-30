@@ -60,7 +60,8 @@ import {
   TANK_Z,
   BUND,
   TEE,
-  footprints,
+  STANDS,
+  placedFootprints,
   pipeRuns,
   tankX,
 } from '../../logic/museum-4-layout';
@@ -139,7 +140,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const take = (uses: Map<Object3D, (d?: number) => void>) => {
     for (const [o, use] of uses) parts.uses.set(o, use);
   };
-  const solids = footprints();
+  const solids = placedFootprints();
 
   // ---- The tanks, on their bund ----
   t.box(
@@ -529,6 +530,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     printedShown = 0;
   }
 
+  // Turned half round, along the south wall (layout C, `STANDS`).
+  object.rotation.y = STANDS.turn;
   return {
     object,
     parts,

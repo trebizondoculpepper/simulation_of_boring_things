@@ -3,16 +3,23 @@ import type { LinkId, TankId } from '../../../game/plant/museum-4-lab';
 import { hallColumns, hallInterior, hallOrigin } from './museum-plan';
 
 /**
- * Hall 4's layout (107d), by hand: the visitor comes in from Hall 3 by the
- * west archway and leaves by the east, so the exhibit stands along the
- * street (north) wall, facing south, read left to right with the flow
- * (rule 5): the ten tanks on a bund on the west, the dosing desk with its
+ * Hall 4's layout (107d), by hand: laid out along the north wall, facing
+ * south: the ten tanks on a bund on the west, the dosing desk with its
  * mimic above it and the teleprinter in the middle, the dosing pot and
  * the ideal pool on the east with its readout board on the east wall; the
  * Balance Beam in front of the pool; the lecterns along the visitors'
  * side. Each pipe is one of the schematic's links. Pure; metres in the
  * hall's frame (its middle the origin, y up, north −z).
+ *
+ * Layout C (112, the owner, 2026-10-30: "just put everything that is on
+ * the door side on the opposite side of the hall"): both archways are now
+ * in the north wall, near its ends, so the whole exhibit stands turned
+ * half round about the hall's middle (`STANDS`): along the south wall,
+ * facing north, its readout board on the west wall, the walk along the
+ * north side from archway to archway. Everything here is as laid out; the
+ * exhibit turns it, and `placedFootprints` gives its footprints turned.
  */
+export const STANDS = { turn: Math.PI } as const;
 
 export const INTERIOR = (() => {
   const i = hallInterior('museum4');
@@ -165,4 +172,14 @@ export function footprints() {
     r(ENTRANCE.x, ENTRANCE.z, 1.0, 0.15),
     ...Object.values(LECTERNS).map((l) => r(l.x, l.z, 0.2, 0.2)),
   ];
+}
+
+/** The footprints as the exhibit stands, turned half round (`STANDS`). */
+export function placedFootprints() {
+  return footprints().map((f) => ({
+    minX: -f.maxX,
+    maxX: -f.minX,
+    minZ: -f.maxZ,
+    maxZ: -f.minZ,
+  }));
 }
