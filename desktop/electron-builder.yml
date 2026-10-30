@@ -1,0 +1,58 @@
+# The Pool's desktop packages (mission 111). The version comes from the
+# release tag (`--config.extraMetadata.version=X.Y.Z`), never from this
+# folder's package.json, which stays at 0.0.0. File names carry no
+# version, so the release's `latest/download/` links always fetch the
+# newest. Unsigned until signing is set up (mission 110, stage 4).
+appId: uk.co.teamrocket.thepool
+productName: The Pool
+copyright: Copyright © 2026 Team Rocket Ltd
+directories:
+  output: release
+  buildResources: icons
+files:
+  - build/**/*
+  - package.json
+# The web build, unchanged, served on the app:// protocol (src/main.ts).
+extraResources:
+  - from: ../dist
+    to: game
+asar: true
+icon: icons/icon.png
+publish: null
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: tar.gz
+      arch: [x64]
+  category: Game
+  syncDesktopName: true
+  artifactName: The-Pool-linux-${arch}.${ext}
+appImage:
+  artifactName: The-Pool-linux-x86_64.AppImage
+
+mac:
+  target:
+    - target: dmg
+      arch: [universal]
+    - target: zip
+      arch: [universal]
+  category: public.app-category.simulation-games
+  artifactName: The-Pool-mac-${arch}.${ext}
+  # No Developer ID yet: ad-hoc signed only (Apple silicon will not run
+  # an app with no signature at all).
+  identity: '-'
+  hardenedRuntime: false
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: zip
+      arch: [x64]
+  artifactName: The-Pool-windows-${arch}.${ext}
+nsis:
+  artifactName: The-Pool-windows-${arch}-setup.${ext}
+  oneClick: false
+  allowToChangeInstallationDirectory: true

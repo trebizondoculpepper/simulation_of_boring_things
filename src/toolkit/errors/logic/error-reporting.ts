@@ -3,8 +3,10 @@
  * 2026-10-28: "can I use something like Rollbar or Sentry to catch
  * bugs?"). Every run reports, each under its own environment so they are
  * told apart (the owner, 2026-10-30): `prod` (the releases on itch.io),
- * `pre-release` (GitHub Pages, every push to main) and `dev` (the dev
- * server, or a build served anywhere else, such as a local preview).
+ * `pre-release` (GitHub Pages, every push to main), `desktop` (the
+ * Electron app, which serves a release on its own `app:` protocol;
+ * mission 111) and `dev` (the dev server, or a build served anywhere
+ * else, such as a local preview).
  * The developers' `?dev` panel and automated browsers (the headless
  * checks) never report, so testing does not fill the project's issues.
  * Pure.
@@ -14,13 +16,15 @@
 export const SENTRY_DSN =
   'https://19485fedcae52ee4a192f8ff4f8c7fd6@o516097.ingest.us.sentry.io/4512336297066496';
 
-export type ReportingEnvironment = 'prod' | 'pre-release' | 'dev';
+export type ReportingEnvironment = 'prod' | 'pre-release' | 'desktop' | 'dev';
 
-/** Where a page runs, as Sentry's environment: itch.io's prod, GitHub Pages' pre-release, else dev. */
+/** Where a page runs, as Sentry's environment: itch.io's prod, GitHub Pages' pre-release, the desktop app's desktop, else dev. */
 export function reportingEnvironment(
   host: string,
   production = true,
+  protocol = 'https:',
 ): ReportingEnvironment {
+  if (production && protocol === 'app:') return 'desktop';
   const h = host.toLowerCase();
   if (production && h.endsWith('.github.io')) return 'pre-release';
   // itch.io serves HTML5 games from its own CDN, in an iframe.

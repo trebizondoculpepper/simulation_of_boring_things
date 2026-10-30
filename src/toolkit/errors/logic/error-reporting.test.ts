@@ -21,6 +21,9 @@ describe('error reporting', () => {
     expect(reportingEnvironment('example.com')).toBe('dev');
     // The dev server is dev wherever it is served.
     expect(reportingEnvironment('x.github.io', false)).toBe('dev');
+    // The desktop app serves the release on its own protocol.
+    expect(reportingEnvironment('game', true, 'app:')).toBe('desktop');
+    expect(reportingEnvironment('game', false, 'app:')).toBe('dev');
   });
 
   it('names the room a report came from', () => {

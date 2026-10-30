@@ -85,6 +85,12 @@ jobs:
         run: echo "VITE_BUILD=$(git rev-parse --short HEAD) · $(date -u +'%-d %b %Y')" >> "$GITHUB_ENV"
       # A tagged release is rebuilt at the tag's exact version.
       - run: npm run build -- --release
+      # The desktop jobs below wrap exactly this build.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 7
       # The release's notes are its changelog section; a pre-release
       # version (with a hyphen) is marked as one.
       - name: Publish the GitHub release
@@ -128,3 +134,107 @@ jobs:
             exit 1
           fi
           butler push dist salimfadhley/the-pool:html5 --userversion "${TAG#v}"
+
+  # The desktop app (mission 111): the release's web build in Electron,
+  # packaged on each platform and attached to the GitHub release. File
+  # names carry no version, so releases/latest/download/<name> always
+  # fetches the newest. Unsigned until signing is set up (mission 110,
+  # stage 4). Publishing a release again replaces its files (--clobber).
+  desktop:
+    name: Desktop build (${{ matrix.os }})
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: --linux
+          - os: macos-latest
+            platform: --mac
+          - os: windows-latest
+            platform: --win
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+        working-directory: desktop
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Package the desktop app
+        working-directory: desktop
+        env:
+          # No signing yet: electron-builder must not look for a certificate.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          npm run compile
+          npx electron-builder --config electron-builder.yml --publish never \
+            ${{ matrix.platform }} --config.extraMetadata.version="${TAG#v}"
+      - name: List the files to publish
+        id: files
+        working-directory: desktop/release
+        run: |
+          shopt -s nullglob
+          files=(The-Pool-*.AppImage The-Pool-*.tar.gz The-Pool-*.dmg The-Pool-*.zip The-Pool-*-setup.exe)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "electron-builder made nothing to publish" >&2
+            exit 1
+          fi
+          printf '%s\n' "${files[@]}"
+          if command -v sha256sum > /dev/null; then sha256sum "${files[@]}"; else shasum -a 256 "${files[@]}"; fi > "SHA256SUMS-${{ runner.os }}.txt"
+          {
+            echo 'paths<<EOF'
+            printf 'desktop/release/%s\n' "${files[@]}"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ steps.files.outputs.paths }}
+      - name: Attach the files to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t files <<< "${{ steps.files.outputs.paths }}"
+          gh release upload "$TAG" "${files[@]}" --clobber
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sums-${{ runner.os }}
+          path: desktop/release/SHA256SUMS-${{ runner.os }}.txt
+
+  # One checksum file for every desktop file on the release.
+  checksums:
+    name: Desktop checksums
+    needs: desktop
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sums-*
+          merge-multiple: true
+      - name: Attach SHA256SUMS.txt to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat SHA256SUMS-*.txt | sort -k2 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release upload "$TAG" SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"

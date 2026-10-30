@@ -1,0 +1,20 @@
+{
+  "name": "the-pool-desktop",
+  "version": "0.0.0",
+  "description": "The Pool as a desktop app: the release's web build in Electron (mission 111).",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "author": "Team Rocket Ltd",
+  "type": "module",
+  "main": "build/main.js",
+  "desktopName": "uk.co.teamrocket.thepool.desktop",
+  "scripts": {
+    "compile": "tsc -p tsconfig.json",
+    "start": "npm run compile && electron .",
+    "package": "npm run compile && electron-builder --config electron-builder.yml --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.1.0",
+    "electron-builder": "26.18.1"
+  }
+}

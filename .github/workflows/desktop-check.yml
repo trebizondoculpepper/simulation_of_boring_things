@@ -1,0 +1,63 @@
+name: Desktop check
+
+# Packages the desktop app on every platform from any branch, run by hand
+# (mission 111), to prove the packaging without a release. The files go to
+# the run's artifacts (download them from the run's page, signed in to
+# GitHub), never to a release, a store or itch.io.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Desktop build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: --linux
+          - os: macos-latest
+            platform: --mac
+          - os: windows-latest
+            platform: --win
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm ci
+        working-directory: desktop
+      - name: Package the desktop app
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          npm run compile
+          npx electron-builder --config electron-builder.yml --publish never ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: the-pool-${{ runner.os }}
+          path: |
+            desktop/release/The-Pool-*.AppImage
+            desktop/release/The-Pool-*.tar.gz
+            desktop/release/The-Pool-*.dmg
+            desktop/release/The-Pool-*.zip
+            desktop/release/The-Pool-*-setup.exe
+          if-no-files-found: error
+          retention-days: 7

@@ -34,7 +34,11 @@ export function startErrorReporting() {
   Sentry.init({
     dsn: SENTRY_DSN,
     release: `the-pool@${VERSION}`,
-    environment: reportingEnvironment(location.host, import.meta.env.PROD),
+    environment: reportingEnvironment(
+      location.host,
+      import.meta.env.PROD,
+      location.protocol,
+    ),
     sendDefaultPii: false,
     tracesSampleRate: 0,
     beforeSend(event) {
