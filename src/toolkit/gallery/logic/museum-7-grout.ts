@@ -1,3 +1,5 @@
+import { hallInterior, hallSize } from './museum-plan';
+
 /**
  * Hall 7, "Grout: The Unsung Hero of the Aquatics World" (107k): the
  * hall's words and its plan, pure. Every claim on a plaque is from
@@ -257,7 +259,18 @@ export const yawOf = (n: number) => {
  * way out; 10, the coda, in the north-west corner, past the way out and
  * the bench.
  */
-export const PLACES: Readonly<
+/** The hall's inside half-sizes (grown with Hall 2 in layout C, `museum-layout.ts`). */
+export const HALL7 = (() => {
+  const r = hallInterior('museum7');
+  return {
+    halfX: (r.maxX - r.minX) / 2,
+    halfZ: (r.maxZ - r.minZ) / 2,
+    h: hallSize('museum7').h,
+  };
+})();
+
+/** The plinths as first set out in the 15.4 × 13.4 m hall (107k), scaled to its size now. */
+const SET_OUT: Readonly<
   Record<number, { x: number; z: number; facing: Facing }>
 > = {
   1: { x: 2.45, z: -5.75, facing: 'south' },
@@ -271,6 +284,14 @@ export const PLACES: Readonly<
   9: { x: -6.8, z: 3.2, facing: 'east' },
   10: { x: -6.8, z: -5.8, facing: 'middle' },
 };
+export const PLACES: Readonly<
+  Record<number, { x: number; z: number; facing: Facing }>
+> = Object.fromEntries(
+  Object.entries(SET_OUT).map(([n, p]) => [
+    n,
+    { ...p, x: (p.x * HALL7.halfX) / 7.7, z: (p.z * HALL7.halfZ) / 6.7 },
+  ]),
+);
 
 /** Plinth `n`'s place. */
 export const plinthPlace = (n: number) => PLACES[n];
@@ -304,11 +325,13 @@ export function approachLampAt(n: number, lampY: number) {
   };
 }
 
-/** The hall's inside half-sizes (16 × 14 m cell less its walls). */
-export const HALL7 = { halfX: 7.7, halfZ: 6.7, h: 9.5 } as const;
-
 /** The bench against the west wall, between the way out and the coda's corner, facing east into the hall. */
-export const BENCH = { x: -6.9, z: -3.4, length: 1.6, depth: 0.45 } as const;
+export const BENCH = {
+  x: -HALL7.halfX + 0.8,
+  z: -3.4,
+  length: 1.6,
+  depth: 0.45,
+} as const;
 
 /** The oil-wheel projector, hung high before the 1970s' plinth (5), on its visitor's side, aimed down at its specimen. */
 export const PROJECTOR = (() => {

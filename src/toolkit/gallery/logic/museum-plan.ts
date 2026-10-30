@@ -2,53 +2,47 @@ import type { Footprint } from '../../controls/logic/walk-collision';
 import { LIFT_DOOR } from './lift-doorway';
 import type { LiftPlace } from './lift-doorway';
 import { MUSEUM_EXHIBITION } from './museum-brand';
+import {
+  CORRIDOR_HEIGHT,
+  CORRIDOR_WIDTH,
+  corridorFootprints,
+  layoutCorridor,
+} from '../../components/architectural/logic/corridor-path';
+import type {
+  Heading as CorridorHeading,
+  PlacedPiece,
+} from '../../components/architectural/logic/corridor-path';
+import {
+  HALL_PLACES,
+  LAYOUT_CORRIDORS,
+  LAYOUT_WALL,
+  layoutBounds,
+} from './museum-layout';
+import type { LayoutCorridor } from './museum-layout';
 
 /**
  * The pool science museum (mission 107; the owner, 2026-10-28): a ring of
- * ten halls in a converted warehouse round a courtyard, each hall its
- * own room and scene, joined by open archways knocked through the old
- * brick walls, with no doors. Walking through an archway hands the visitor
- * into the next hall's scene (`door-joins.ts`, `handOver` in
- * `src/main.ts`), as the pool loop's corridors do.
- *
- * The plan (mission 107-1, the owner's layout, 2026-10-28: "the 4x3 room
- * layout, 4 rooms on the long side, 3 on the short", Hall 0 in a corner),
- * north up (x east, z south): four rooms east–west by three north–south,
- * a ring of ten round a courtyard two rooms wide and one deep, the
- * corners counted once:
- *
- * ```
- *   +------+------+------+------+
- *   |  2 ->|  3 ->|  4 ->|  5   |
- *   |  ^   |      |      |  v   |
- *   +------+------+------+------+
- *   |  1   |  courtyard  |  6   |
- *   |  ^   |  (sky only) |  v   |
- *   +------+------+------+------+
- *   |  0   |<- 9  |<- 8  |<- 7  |
- *   |welcome      |      |      |
- *   +------+------+------+------+
- *                street
- * ```
+ * ten halls round a courtyard, each hall its own room and scene. Since
+ * layout C (the owner, 2026-10-30; `museum-layout.ts`, `doc/temp/`) the
+ * halls stand apart, staggered along each side of the ring, and each pair
+ * of neighbours is joined by an L-shaped corridor of the corridor kit,
+ * round the outside of the ring, so no hall can be seen from another.
+ * Each hall builds both its corridors; walking across a corridor's
+ * hand-over line, at its turn, hands the visitor into the next hall's
+ * scene (`handOver` in `src/main.ts`), which builds the same corridor.
  *
  * Hall 0, the welcome, is in the south-west corner: the visit runs north
- * into Hall 1, Hall 2 the north-west corner, east through Halls 3 and 4,
- * Hall 5 the north-east corner, south to Hall 6, Hall 7 the south-east
- * corner, and west through Halls 8 and 9, back into Hall 0. A side hall's
- * archways are in line, at both its ends; a corner hall's on two adjacent
- * walls, the route turning 90° in it.
+ * through Hall 1 to Hall 2 in the north-west corner, east through Halls 3
+ * and 4 to Hall 5, south through Hall 6 to Hall 7, and west through Halls
+ * 8 and 9 back into Hall 0.
  *
- * No hall is turned: each hall's own coordinates are the museum's, moved
- * to the hall's middle (`hallOrigin`), so a heading carries unchanged
- * through every archway, the corners too, and the floor's joints and the
- * walls' brick, laid in the museum's coordinates, line up round every
- * turn. Each wall line carries one brick wall `MUSEUM_WALL` thick,
- * centred on it; both halls at an archway build that wall from the same
- * function and the same coordinates, so nothing changes at the hand-over
- * (the perspective-jump fix, `8656cf1`). The sizes are constants
- * (`MUSEUM_SQUARE`), provisional: the owner will resize them. Halls are
- * found by their number (`hallId`, `hallNumber`), never by coordinates.
- * Pure; metres; y up from the floor.
+ * Each hall keeps its own frame, as its exhibit was built (107-1): its
+ * middle at its origin, x east and z south as first built; Halls 3 and 9
+ * stand turned a quarter in the museum (long north–south), so their own
+ * frame is the museum's turned (`toMuseum`). A hall's "own plan" is its
+ * own frame moved to its place: for a hall not turned, the museum's.
+ * Halls are found by their number (`hallId`, `hallNumber`), never by
+ * coordinates. Pure; metres; y up from the floor.
  */
 
 export type MuseumHallId =
@@ -97,32 +91,22 @@ export function hallId(n: number): MuseumHallId {
 }
 
 /**
- * The building, provisional (the owner, 2026-10-28: "we can resize them
- * later"; question 8 in 107): a grid of rooms `cols` east–west by `rows`
- * north–south, each column `colW[c]` along x and each row `rowD[r]` along
- * z between its wall lines (Hall 0 keeps stage 1's 16 × 14 m), and the
- * height to the roof deck's underside. Non-uniform (the owner, 2026-10-28:
- * "make one room on each side 50% bigger"): column 1 (Halls 3 and 9, the
- * finale) is 24 m wide and the middle row (Halls 1 and 6) 21 m deep.
+ * The halls' height to the roof deck's underside (the owner, 2026-10-28).
+ * Their places and sizes are layout C's (`museum-layout.ts`, the owner,
+ * 2026-10-30): standing apart round a ring, joined by L-shaped corridors.
  */
-export const MUSEUM_SQUARE = {
-  cols: 4,
-  rows: 3,
-  colW: [16, 24, 16, 16],
-  rowD: [14, 21, 14],
-  h: 9.5,
-} as const;
+export const MUSEUM_SQUARE = { h: 9.5 } as const;
 
 /** Hall 0's tiled ceiling: as high as every other hall's (the owner, 2026-10-28: "The rooms on both sides should be the same height"). */
 export const MUSEUM_HALL0 = { h: MUSEUM_SQUARE.h } as const;
 
-/** The doorways into Hall 0: square-headed, tiled room to brick. */
+/** Hall 0's doorways' old size (107-1), kept for its signs: the corridors' doorways are the corridor's own section. */
 export const MUSEUM_DOOR = { w: 2.4, h: 3.0 } as const;
 
 /** The old brick walls: their thickness, centred on each wall line. */
-export const MUSEUM_WALL = 0.6;
+export const MUSEUM_WALL = LAYOUT_WALL;
 
-/** An archway knocked through: its clear width, its springing (where the round head starts), its rise. */
+/** The archways of the ring as it was (107-1), kept for their headers' proportions. */
 export const MUSEUM_ARCH = { w: 3.6, spring: 3.4, rise: 1.8 } as const;
 export const ARCH_CROWN = MUSEUM_ARCH.spring + MUSEUM_ARCH.rise;
 
@@ -134,57 +118,59 @@ export interface Rect {
   maxZ: number;
 }
 
-const sum = (xs: readonly number[]) => xs.reduce((a, b) => a + b, 0);
-const HALF_W = sum(MUSEUM_SQUARE.colW) / 2;
-const HALF_D = sum(MUSEUM_SQUARE.rowD) / 2;
-/** The wall lines' x (west to east) and z (north to south). */
-const X_LINES = MUSEUM_SQUARE.colW.map(
-  (_, c) => -HALF_W + sum(MUSEUM_SQUARE.colW.slice(0, c)),
-);
-const Z_LINES = MUSEUM_SQUARE.rowD.map(
-  (_, r) => -HALF_D + sum(MUSEUM_SQUARE.rowD.slice(0, r)),
-);
-
-/** Each hall's cell, column (0 west) and row (0 north), in the visitor's order round the ring. */
-const CELLS: readonly (readonly [number, number])[] = [
-  [0, 2],
-  [0, 1],
-  [0, 0],
-  [1, 0],
-  [2, 0],
-  [3, 0],
-  [3, 1],
-  [3, 2],
-  [2, 2],
-  [1, 2],
-];
-
-const cellRect = (c: number, r: number): Rect => ({
-  minX: X_LINES[c],
-  maxX: X_LINES[c] + MUSEUM_SQUARE.colW[c],
-  minZ: Z_LINES[r],
-  maxZ: Z_LINES[r] + MUSEUM_SQUARE.rowD[r],
-});
-
-/** Each hall's wall lines (the middles of its walls), in the museum's plan. */
+/**
+ * Each hall's wall lines in its own plan: the museum's plan turned to the
+ * hall's own frame (`HallPlace.turn`) about its middle, so a hall turned
+ * to stand long north–south keeps the frame its exhibit was built in.
+ * For a hall not turned, its own plan is the museum's.
+ */
 const BOUNDS = Object.fromEntries(
-  MUSEUM_HALLS.map((id, n) => [id, cellRect(...CELLS[n])]),
+  MUSEUM_HALLS.map((id, n) => {
+    const p = HALL_PLACES[n];
+    const [w, d] = p.turn % 2 ? [p.d, p.w] : [p.w, p.d];
+    return [
+      id,
+      {
+        minX: p.x - w / 2,
+        maxX: p.x + w / 2,
+        minZ: p.z - d / 2,
+        maxZ: p.z + d / 2,
+      },
+    ];
+  }),
 ) as Record<MuseumHallId, Rect>;
 
-/** The courtyard's wall lines. */
-export const COURTYARD: Rect = {
-  minX: -HALF_W + MUSEUM_SQUARE.colW[0],
-  maxX: HALF_W - MUSEUM_SQUARE.colW[MUSEUM_SQUARE.cols - 1],
-  minZ: -HALF_D + MUSEUM_SQUARE.rowD[0],
-  maxZ: HALF_D - MUSEUM_SQUARE.rowD[MUSEUM_SQUARE.rows - 1],
-};
-/** The whole building's outer wall lines. */
-export const BUILDING: Rect = {
-  minX: -HALF_W,
-  maxX: HALF_W,
-  minZ: -HALF_D,
-  maxZ: HALF_D,
-};
+/** The whole museum's extent, every hall's wall lines. */
+export const BUILDING: Rect = layoutBounds();
+
+/** A direction in a hall's own plan, turned as the hall stands in the museum (Three's turn about y). */
+function standing(
+  id: MuseumHallId,
+  v: readonly [number, number],
+): [number, number] {
+  const q = HALL_PLACES[hallNumber(id)].turn;
+  const a = (q * Math.PI) / 2;
+  const c = Math.round(Math.cos(a));
+  const s = Math.round(Math.sin(a));
+  return [v[0] * c + v[1] * s, -v[0] * s + v[1] * c];
+}
+/** A direction in the museum, into a hall's own plan. */
+function ownDirection(
+  id: MuseumHallId,
+  v: readonly [number, number],
+): [number, number] {
+  const q = HALL_PLACES[hallNumber(id)].turn;
+  const a = (-q * Math.PI) / 2;
+  const c = Math.round(Math.cos(a));
+  const s = Math.round(Math.sin(a));
+  return [v[0] * c + v[1] * s, -v[0] * s + v[1] * c];
+}
+/** A point of the museum's plan, in a hall's own plan. */
+function ownPoint(id: MuseumHallId, x: number, z: number) {
+  const p = HALL_PLACES[hallNumber(id)];
+  const [dx, dz] = ownDirection(id, [x - p.x, z - p.z]);
+  return { x: p.x + dx, z: p.z + dz };
+}
 
 export type Heading = 'north' | 'east' | 'south' | 'west';
 const UNIT: Record<Heading, readonly [number, number]> = {
@@ -193,35 +179,42 @@ const UNIT: Record<Heading, readonly [number, number]> = {
   south: [0, 1],
   west: [-1, 0],
 };
-const headingOf = (dx: number, dz: number): Heading =>
-  Math.abs(dx) > Math.abs(dz)
-    ? dx > 0
-      ? 'east'
-      : 'west'
-    : dz > 0
-      ? 'south'
-      : 'north';
-
 /**
- * Which way the route runs through each hall: the way it leaves, towards
- * the next hall (so a corner hall's runs along its way out, Hall 4's east).
+ * Which way the route ran through each hall as the ring was first built
+ * (107-1), in its own frame: its exhibit is laid out along it.
  */
-export const HALL_HEADING = Object.fromEntries(
-  MUSEUM_HALLS.map((id, n) => {
-    const [c, r] = CELLS[n];
-    const [c2, r2] = CELLS[(n + 1) % RING_SIZE];
-    return [id, headingOf(c2 - c, r2 - r)];
-  }),
-) as Record<MuseumHallId, Heading>;
+export const HALL_HEADING: Record<MuseumHallId, Heading> = {
+  museum0: 'north',
+  museum1: 'north',
+  museum2: 'east',
+  museum3: 'east',
+  museum4: 'east',
+  museum5: 'south',
+  museum6: 'south',
+  museum7: 'west',
+  museum8: 'west',
+  museum9: 'west',
+};
+
+/** Across the route, towards the ring's inside as first built (107-1), in each hall's own frame. */
+const ACROSS: Record<MuseumHallId, readonly [number, number]> = {
+  museum0: [1, 0],
+  museum1: [1, 0],
+  museum2: [0, 1],
+  museum3: [0, 1],
+  museum4: [0, 1],
+  museum5: [-1, 0],
+  museum6: [-1, 0],
+  museum7: [0, -1],
+  museum8: [0, -1],
+  museum9: [0, -1],
+};
 
 /** A hall's shape on the ring: the welcome, a side hall (archways in line), or a corner (the route turns 90°). */
 export type HallKind = 'welcome' | 'side' | 'corner';
 export function hallKind(id: MuseumHallId): HallKind {
   if (id === 'museum0') return 'welcome';
-  const n = hallNumber(id);
-  const [c0, r0] = CELLS[(n + RING_SIZE - 1) % RING_SIZE];
-  const [c2, r2] = CELLS[(n + 1) % RING_SIZE];
-  return c0 === c2 || r0 === r2 ? 'side' : 'corner';
+  return HALL_PLACES[hallNumber(id)].sides.length > 1 ? 'corner' : 'side';
 }
 
 export function hallBounds(id: MuseumHallId): Rect {
@@ -259,20 +252,14 @@ export function hallSize(id: MuseumHallId) {
 /** A hall's point, from its own coordinates to the museum's. */
 export function toMuseum(id: MuseumHallId, x: number, z: number) {
   const o = hallOrigin(id);
-  return { x: x + o.x, z: z + o.z };
+  const [dx, dz] = standing(id, [x, z]);
+  return { x: dx + o.x, z: dz + o.z };
 }
 
 /** The hall's axes: along its route, and across it towards the courtyard. */
 export function hallAxes(id: MuseumHallId) {
   const [ax, az] = UNIT[HALL_HEADING[id]];
-  const o = hallOrigin(id);
-  // Across: the perpendicular that points at the courtyard's middle.
-  let cx = -az;
-  let cz = ax;
-  if (cx * -o.x + cz * -o.z < 0) {
-    cx = -cx;
-    cz = -cz;
-  }
+  const [cx, cz] = ACROSS[id];
   const { w, d } = hallSize(id);
   const length = Math.abs(ax) ? w : d;
   const width = Math.abs(ax) ? d : w;
@@ -482,35 +469,19 @@ export function isMuseumHall(id: string): id is MuseumHallId {
   return (MUSEUM_HALLS as readonly string[]).includes(id);
 }
 
-/** A wall line between two rectangles that share an edge: its axis, its line, and the stretch they share. */
-function sharedEdge(a: Rect, b: Rect) {
-  const eps = 1e-9;
-  const zs = [Math.max(a.minZ, b.minZ), Math.min(a.maxZ, b.maxZ)] as const;
-  const xs = [Math.max(a.minX, b.minX), Math.min(a.maxX, b.maxX)] as const;
-  if (Math.abs(a.maxX - b.minX) < eps && zs[1] > zs[0])
-    return { axis: 'z' as const, line: a.maxX, from: zs[0], to: zs[1] };
-  if (Math.abs(a.minX - b.maxX) < eps && zs[1] > zs[0])
-    return { axis: 'z' as const, line: a.minX, from: zs[0], to: zs[1] };
-  if (Math.abs(a.maxZ - b.minZ) < eps && xs[1] > xs[0])
-    return { axis: 'x' as const, line: a.maxZ, from: xs[0], to: xs[1] };
-  if (Math.abs(a.minZ - b.maxZ) < eps && xs[1] > xs[0])
-    return { axis: 'x' as const, line: a.minZ, from: xs[0], to: xs[1] };
-  return null;
-}
-
-/** One of a hall's archways: the hall beyond, and where it is. */
+/** One of a hall's doorways, into the corridor to the hall beyond. */
 export interface MuseumArch {
   to: MuseumHallId;
   /** Whether it is the way on along the route (else the way back). */
   onward: boolean;
-  /** A round-headed archway knocked through, or Hall 0's square-headed doorway. */
+  /** A square-headed doorway, the corridor's own section (a round-headed archway no more: layout C). */
   kind: 'arch' | 'door';
-  /** Its clear width and its height to the crown (or head). */
+  /** Its clear width and its height to its head. */
   w: number;
   top: number;
-  /** Its wall runs along x or along z. */
+  /** Its wall runs along x or along z (the hall's own plan). */
   axis: 'x' | 'z';
-  /** Its middle, in the museum's plan, on the wall line. */
+  /** Its middle, in the hall's own plan, on the wall line. */
   at: { x: number; z: number };
   /** Into this hall: a unit vector. */
   into: readonly [number, number];
@@ -518,42 +489,124 @@ export interface MuseumArch {
   frame: { x: number; z: number; yaw: number };
 }
 
-/** A hall's archways, each in the middle of the wall it shares with the room beyond: on along the route first, then back. */
-export function hallArches(id: MuseumHallId): MuseumArch[] {
+/** A hall's doorway to a corridor, from the layout's doorway (in the museum), in its own plan. */
+function doorOf(
+  id: MuseumHallId,
+  c: LayoutCorridor,
+  onward: boolean,
+): MuseumArch {
+  const n = hallNumber(id);
+  const d = c.a === n && onward ? c.doorA : c.doorB;
+  const p = HALL_PLACES[n];
+  const out = UNIT[d.side];
+  // Its middle on the wall line, in the museum, then in the hall's own plan.
+  const half = (d.side === 'east' || d.side === 'west' ? p.w : p.d) / 2;
+  const mx = d.side === 'east' || d.side === 'west' ? p.x + out[0] * half : d.u;
+  const mz =
+    d.side === 'north' || d.side === 'south' ? p.z + out[1] * half : d.u;
+  const at = ownPoint(id, mx, mz);
+  const [ox, oz] = ownDirection(id, out);
+  // (+ 0: no negative zero.)
+  const into: readonly [number, number] = [-ox + 0, -oz + 0];
   const o = hallOrigin(id);
-  const mine = BOUNDS[id];
-  const ways = [
-    ...MUSEUM_JOINS.filter(([a]) => a === id).map(([, b]) => ({
-      to: b,
-      onward: true,
-    })),
-    ...MUSEUM_JOINS.filter(([, b]) => b === id).map(([a]) => ({
-      to: a,
-      onward: false,
-    })),
+  return {
+    to: hallId(onward ? c.b : c.a),
+    onward,
+    kind: 'door',
+    w: CORRIDOR_WIDTH,
+    top: CORRIDOR_HEIGHT,
+    axis: ox === 0 ? 'x' : 'z',
+    at,
+    into,
+    frame: {
+      x: at.x - o.x,
+      z: at.z - o.z,
+      yaw: Math.atan2(into[0], into[1]),
+    },
+  };
+}
+
+/** A hall's doorways: the way on first, then the way back. */
+export function hallArches(id: MuseumHallId): MuseumArch[] {
+  const n = hallNumber(id);
+  const k = LAYOUT_CORRIDORS.length;
+  return [
+    doorOf(id, LAYOUT_CORRIDORS[n], true),
+    doorOf(id, LAYOUT_CORRIDORS[(n - 1 + k) % k], false),
   ];
-  return ways.map(({ to, onward }) => {
-    const door = id === 'museum0' || to === 'museum0';
-    const e = sharedEdge(mine, BOUNDS[to]);
-    if (!e) throw new Error(`${id} and ${to} share no wall`);
-    const mid = (e.from + e.to) / 2;
-    const at = e.axis === 'z' ? { x: e.line, z: mid } : { x: mid, z: e.line };
-    const into: readonly [number, number] =
-      e.axis === 'z'
-        ? [Math.sign(o.x - e.line), 0]
-        : [0, Math.sign(o.z - e.line)];
+}
+
+/**
+ * A hall's corridor to a neighbour, in the hall's own coordinates: the
+ * kit's pieces laid from this hall's doorway (`corridor-path.ts`), and
+ * the hand-over, the line across it at its turn where the visitor passes
+ * to the other hall's scene: its middle and the way across it towards
+ * the other hall. Both halls build the same corridor, so nothing moves at
+ * the hand-over (the pool loop's way, `pool-loop.ts`).
+ */
+export interface HallCorridor {
+  to: MuseumHallId;
+  onward: boolean;
+  placed: PlacedPiece[];
+  handOver: { x: number; z: number; toward: readonly [number, number] };
+  /** As `door-joins.ts` has it: the hand-over's middle, +z into this hall's side of it. */
+  frame: { x: number; z: number; yaw: number };
+}
+
+const HEADINGS: readonly (readonly [number, number])[] = [
+  [1, 0],
+  [0, -1],
+  [-1, 0],
+  [0, 1],
+];
+const headingOf = (v: readonly [number, number]) =>
+  HEADINGS.findIndex(
+    (h) => Math.abs(h[0] - v[0]) < 1e-9 && Math.abs(h[1] - v[1]) < 1e-9,
+  ) as CorridorHeading;
+
+export function hallCorridors(id: MuseumHallId): HallCorridor[] {
+  const n = hallNumber(id);
+  const k = LAYOUT_CORRIDORS.length;
+  const o = hallOrigin(id);
+  return [
+    { c: LAYOUT_CORRIDORS[n], onward: true },
+    { c: LAYOUT_CORRIDORS[(n - 1 + k) % k], onward: false },
+  ].map(({ c, onward }) => {
+    // Laid in the museum from a; from b, the same pieces reversed, turns swapped.
+    const { end } = layoutCorridor(c.pieces, c.start);
+    const pieces = onward
+      ? c.pieces
+      : [...c.pieces]
+          .reverse()
+          .map((p) =>
+            p.kind === 'left'
+              ? { kind: 'right' as const }
+              : p.kind === 'right'
+                ? { kind: 'left' as const }
+                : p,
+          );
+    const back = HEADINGS[(end.heading + 2) % 4];
+    const start = onward
+      ? { x: c.start.x, z: c.start.z, v: HEADINGS[c.start.heading] }
+      : { x: end.x, z: end.z, v: back };
+    const s = ownPoint(id, start.x, start.z);
+    const placed = layoutCorridor(pieces, {
+      x: s.x - o.x,
+      z: s.z - o.z,
+      heading: headingOf(ownDirection(id, start.v)),
+    }).placed;
+    const ho = ownPoint(id, c.handOver.x, c.handOver.z);
+    const tb = ownDirection(id, c.handOver.towardB);
+    const toward: readonly [number, number] = onward ? tb : [-tb[0], -tb[1]];
+    const into: readonly [number, number] = [-toward[0], -toward[1]];
     return {
-      to,
+      to: hallId(onward ? c.b : c.a),
       onward,
-      kind: door ? ('door' as const) : ('arch' as const),
-      w: door ? MUSEUM_DOOR.w : MUSEUM_ARCH.w,
-      top: door ? MUSEUM_DOOR.h : ARCH_CROWN,
-      axis: e.axis,
-      at,
-      into,
+      placed,
+      handOver: { x: ho.x - o.x, z: ho.z - o.z, toward },
       frame: {
-        x: at.x - o.x,
-        z: at.z - o.z,
+        x: ho.x - o.x,
+        z: ho.z - o.z,
         yaw: Math.atan2(into[0], into[1]),
       },
     };
@@ -562,9 +615,6 @@ export function hallArches(id: MuseumHallId): MuseumArch[] {
 
 /** What lies beyond a stretch of a hall's wall. */
 export type Beyond = 'street' | 'courtyard' | 'hall';
-
-const inside = (r: Rect, x: number, z: number) =>
-  x > r.minX && x < r.maxX && z > r.minZ && z < r.maxZ;
 
 /** One of a hall's four walls, in the museum's plan. */
 export interface HallWall {
@@ -576,11 +626,33 @@ export interface HallWall {
   to: number;
   /** Out of the hall. */
   out: readonly [number, number];
+  /** What it faces: the street round the ring's outside, the courtyard in its middle, or a neighbour along it. */
+  facing: Beyond;
 }
+
+/**
+ * What each of a hall's walls was built facing (107-1), in its own frame:
+ * the street, the courtyard or a neighbour. The halls now stand apart
+ * (layout C), so this only places their windows, titles and signs, kept
+ * as their exhibits were built (a turned hall's street wall is its own
+ * still, whichever way it stands).
+ */
+const FACING: Record<MuseumHallId, Record<Heading, Beyond>> = {
+  museum0: { north: 'hall', south: 'street', west: 'street', east: 'hall' },
+  museum1: { north: 'hall', south: 'hall', west: 'street', east: 'courtyard' },
+  museum2: { north: 'street', south: 'hall', west: 'street', east: 'hall' },
+  museum3: { north: 'street', south: 'courtyard', west: 'hall', east: 'hall' },
+  museum4: { north: 'street', south: 'courtyard', west: 'hall', east: 'hall' },
+  museum5: { north: 'street', south: 'hall', west: 'hall', east: 'street' },
+  museum6: { north: 'hall', south: 'hall', west: 'courtyard', east: 'street' },
+  museum7: { north: 'hall', south: 'street', west: 'hall', east: 'street' },
+  museum8: { north: 'courtyard', south: 'street', west: 'hall', east: 'hall' },
+  museum9: { north: 'courtyard', south: 'street', west: 'hall', east: 'hall' },
+};
 
 export function hallWalls(id: MuseumHallId): HallWall[] {
   const b = BOUNDS[id];
-  return [
+  const walls: Omit<HallWall, 'facing'>[] = [
     {
       side: 'north',
       axis: 'x',
@@ -614,16 +686,13 @@ export function hallWalls(id: MuseumHallId): HallWall[] {
       out: [1, 0],
     },
   ];
+  return walls.map((w) => ({ ...w, facing: FACING[id][w.side] }));
 }
 
-/** What is beyond a wall at a point along it. */
-export function beyondAt(wall: HallWall, u: number): Beyond {
-  const x = wall.axis === 'x' ? u : wall.line + wall.out[0];
-  const z = wall.axis === 'x' ? wall.line + wall.out[1] : u;
-  if (MUSEUM_HALLS.some((h) => inside(BOUNDS[h], x, z))) return 'hall';
-  if (inside(COURTYARD, x, z)) return 'courtyard';
-  if (!inside(BUILDING, x, z)) return 'street';
-  return 'hall';
+/** What is beyond a wall (anywhere along it: the halls stand apart). */
+export function beyondAt(wall: HallWall, u?: number): Beyond {
+  void u;
+  return wall.facing;
 }
 
 /** A window: its middle along its wall (in the museum's coordinate along it), its width, sill and head; obscured on the street, clear on the courtyard. */
@@ -711,10 +780,9 @@ export function streetWall(id: MuseumHallId): HallWall | null {
 
 /**
  * The hall's walls in plan, for walking, in its own coordinates: each of
- * its four walls, open at its archways; and, at each archway whose hall
- * beyond is not being seen through it, a stop at the wall's middle line,
- * so the visitor waits there until it is (and is handed over as soon as
- * it is crossed). Then its columns, benches and panel.
+ * its four walls, open at its doorways; its corridors' walls, and a stop
+ * across each corridor at its hand-over while the hall beyond is not yet
+ * seen. Then its columns, benches and panel.
  */
 export function hallSolids(
   id: MuseumHallId,
@@ -767,22 +835,25 @@ export function hallSolids(
       const half = c.w / 2;
       out.push(box(wall.axis, wall.line, start, c.u - half, -t, t));
       start = c.u + half;
-      if (c.arch && !seen[c.arch.to]) {
-        // The stop: the far half of the wall's thickness, beyond its middle.
-        const away = wall.axis === 'x' ? -c.arch.into[1] : -c.arch.into[0];
-        out.push(
-          box(
-            wall.axis,
-            wall.line,
-            c.u - half,
-            c.u + half,
-            away < 0 ? -0.4 : 0,
-            away < 0 ? 0 : 0.4,
-          ),
-        );
-      }
     }
     out.push(box(wall.axis, wall.line, start, wall.to + t, -t, t));
+  }
+  // Its corridors' walls; and across each, at its hand-over, a stop while
+  // the hall beyond is not yet seen, so the visitor waits there until it is.
+  for (const c of hallCorridors(id)) {
+    out.push(...corridorFootprints(c.placed));
+    if (seen[c.to]) continue;
+    const { x, z, toward } = c.handOver;
+    const half = CORRIDOR_WIDTH / 2 + 0.3;
+    const a = { x: x + toward[0] * 0.05, z: z + toward[1] * 0.05 };
+    const b = { x: x + toward[0] * 0.45, z: z + toward[1] * 0.45 };
+    const across = [-toward[1], toward[0]];
+    out.push({
+      minX: Math.min(a.x, b.x) - Math.abs(across[0]) * half,
+      maxX: Math.max(a.x, b.x) + Math.abs(across[0]) * half,
+      minZ: Math.min(a.z, b.z) - Math.abs(across[1]) * half,
+      maxZ: Math.max(a.z, b.z) + Math.abs(across[1]) * half,
+    });
   }
   for (const c of hallColumns(id))
     out.push({
@@ -928,76 +999,64 @@ export function hall0Ladder() {
 }
 
 /** Signed distance of a point in front of an archway (into its hall), and along it from its middle. */
-function archLocal(a: MuseumArch, p: { x: number; z: number }) {
-  const dx = p.x - a.frame.x;
-  const dz = p.z - a.frame.z;
-  return {
-    ahead: dx * a.into[0] + dz * a.into[1],
-    side: dx * a.into[1] - dz * a.into[0],
-  };
+/** A point from a corridor's hand-over: how far past it towards the hall beyond, and how far to one side. */
+function handOverLocal(c: HallCorridor, p: { x: number; z: number }) {
+  const dx = p.x - c.handOver.x;
+  const dz = p.z - c.handOver.z;
+  const [tx, tz] = c.handOver.toward;
+  return { ahead: dx * tx + dz * tz, side: dx * tz - dz * tx };
 }
 
 /**
  * The hall the visitor has just walked into, going from `was` to `now`
- * (the hall's own coordinates) across one of its archways' middle lines,
- * within its width: the hand-over.
+ * (the hall's own coordinates) across a corridor's hand-over line, at its
+ * turn, within its width.
  */
 export function crossedInto(
   id: MuseumHallId,
   was: { x: number; z: number },
   now: { x: number; z: number },
 ): MuseumHallId | null {
-  for (const a of hallArches(id)) {
-    const p = archLocal(a, was);
-    const q = archLocal(a, now);
-    if (Math.abs(q.side) >= a.w / 2) continue;
-    if (p.ahead >= 0 && q.ahead < 0) return a.to;
+  for (const c of hallCorridors(id)) {
+    const p = handOverLocal(c, was);
+    const q = handOverLocal(c, now);
+    if (Math.abs(q.side) >= CORRIDOR_WIDTH / 2 + 0.2) continue;
+    if (p.ahead < 0 && q.ahead >= 0) return c.to;
   }
   return null;
 }
 
 /**
- * The archway to see through, of a hall's two (`door-joins.ts` draws one
- * room beyond at a time): the one the visitor is in or about to cross,
- * whichever way they face, so the hand-over is ready; or else the one
- * most nearly ahead. Each archway not seen through shows a plain
- * stand-in of the hall beyond. `yaw` as the controls have it (forward is
- * (sin yaw, −cos yaw)). `current` is kept unless the other is clearly
- * better, so the choice does not flicker.
+ * The hall to see through a corridor (`door-joins.ts` draws one room
+ * beyond at a time): the one whose corridor the visitor is in or whose
+ * doorway is nearest, so it is ready before its doorway comes into view
+ * round the turn. `yaw` is kept for the old signature; no hall is seen
+ * from another hall, only along a corridor.
  */
 export function archToSee(
   id: MuseumHallId,
   pose: { x: number; z: number; yaw: number },
   current: MuseumHallId | null = null,
 ): MuseumHallId | null {
-  const arches = hallArches(id);
-  const near = arches.find((a) => {
-    const l = archLocal(a, pose);
-    return (
-      Math.abs(l.ahead) < MUSEUM_WALL / 2 + 0.9 &&
-      Math.abs(l.side) < a.w / 2 + 0.5
+  const corridors = hallCorridors(id);
+  const doors = hallArches(id);
+  const dist = (to: MuseumHallId) => {
+    const c = corridors.find((k) => k.to === to)!;
+    const a = doors.find((k) => k.to === to)!;
+    return Math.min(
+      Math.hypot(pose.x - c.handOver.x, pose.z - c.handOver.z),
+      Math.hypot(pose.x - a.frame.x, pose.z - a.frame.z),
     );
-  });
-  if (near) return near.to;
-  const fx = Math.sin(pose.yaw);
-  const fz = -Math.cos(pose.yaw);
-  const off = (a: MuseumArch) => {
-    const dx = a.frame.x - pose.x;
-    const dz = a.frame.z - pose.z;
-    const len = Math.hypot(dx, dz) || 1;
-    return Math.acos(Math.max(-1, Math.min(1, (dx * fx + dz * fz) / len)));
   };
-  let best = arches[0];
-  for (const a of arches) if (off(a) < off(best)) best = a;
-  const kept = arches.find((a) => a.to === current);
-  if (kept && kept !== best && off(kept) < off(best) + 0.35) return kept.to;
-  return best.to;
+  const [first, second] = corridors.map((c) => c.to);
+  const best = dist(first) <= dist(second) ? first : second;
+  const other = best === first ? second : first;
+  // Kept unless the other is clearly nearer, so the choice does not flicker.
+  if (current === other && dist(other) < dist(best) + 1) return current;
+  return best;
 }
 
-/** Facing along a unit vector, as the controls have yaw. */
-const yawOf = (v: readonly [number, number]) => Math.atan2(v[0], -v[1]);
-
-/** Where a visitor stands on arriving through an archway from `from` (not seen through): just inside it, facing into the hall. */
+/** Where a visitor stands on arriving through a corridor from `from` (by a link, not walked): just inside its doorway, facing into the hall. */
 export function arrivalFrom(
   id: MuseumHallId,
   from: string | null,
@@ -1010,6 +1069,9 @@ export function arrivalFrom(
     yaw: yawOf(arch.into),
   };
 }
+
+/** Facing along a unit vector, as the controls have yaw. */
+const yawOf = (v: readonly [number, number]) => Math.atan2(v[0], -v[1]);
 
 /** Where a visitor starts in a hall reached by its link: in the first, facing the title wall on the street; elsewhere, inside the archway from the hall before. */
 export function startOf(id: MuseumHallId): {
@@ -1036,122 +1098,6 @@ export function ringDistance(a: MuseumHallId, b: MuseumHallId): number {
 /** A hall's two neighbours on the ring: the hall before it and the hall after it. */
 export function ringNeighbours(id: MuseumHallId): [MuseumHallId, MuseumHallId] {
   return [previousHall(id), nextHall(id)];
-}
-
-/**
- * How much of a hall is drawn, seen from the hall the visitor is in (the
- * owner, 2026-10-28: "The halls adjacent to the one we are in should be
- * rendered, but anything more distant should be rendered as a completely
- * empty space"): the visitor's own hall and its neighbours on the ring in
- * full (dressing, signs and exhibit); every hall further away as its empty
- * component only, at its true place.
- */
-export type HallDetail = 'full' | 'empty';
-export function hallDetail(
-  visitor: MuseumHallId,
-  id: MuseumHallId,
-): HallDetail {
-  return ringDistance(visitor, id) <= 1 ? 'full' : 'empty';
-}
-
-/** The halls drawn in full and those drawn empty, from the hall the visitor is in. */
-export function detailSets(visitor: MuseumHallId) {
-  const full = MUSEUM_HALLS.filter((h) => hallDetail(visitor, h) === 'full');
-  const empty = MUSEUM_HALLS.filter((h) => hallDetail(visitor, h) === 'empty');
-  return { full, empty };
-}
-
-/**
- * Which of the visitor's two neighbours a further hall lies beyond, round
- * the ring the shorter way (the hall opposite, as far either way, counts
- * as onward): `onward` beyond the next hall, `back` beyond the one before.
- * The scene of the visitor's hall shows each side's empty halls through
- * that neighbour's archway, and stops drawing them (keeping only their
- * depth) while the neighbour itself is drawn through it.
- */
-export function ringSide(
-  visitor: MuseumHallId,
-  id: MuseumHallId,
-): 'onward' | 'back' | null {
-  if (id === visitor) return null;
-  const d = (hallNumber(id) - hallNumber(visitor) + RING_SIZE) % RING_SIZE;
-  return d <= RING_SIZE - d ? 'onward' : 'back';
-}
-
-/** An empty hall: its kind, its walls' lines and its archways, for the empty component (`views/museum-empty-hall.ts`). */
-export function emptyHallShape(id: MuseumHallId) {
-  return {
-    id,
-    kind: hallKind(id),
-    bounds: hallBounds(id),
-    h: hallSize(id).h,
-    arches: hallArches(id),
-    walls: hallWalls(id).map((wall) => ({
-      wall,
-      windows: wallWindows(id, wall),
-    })),
-  };
-}
-
-/** Whether two halls share a wall line (an archway's wall), and which. */
-export function sharedWall(a: MuseumHallId, b: MuseumHallId) {
-  return sharedEdge(BOUNDS[a], BOUNDS[b]);
-}
-
-/**
- * How a hall's scene draws one of its two neighbours (the owner,
- * 2026-10-28: "only the rooms adjacent to the room we're in render";
- * anything further seen down the ring is the empty model): `under`, the
- * neighbour's own room drawn through its archway on the canvas underneath
- * (`door-joins.ts`), its empty hall and those beyond it standing aside;
- * `full`, a full copy of the neighbour built into this scene at its true
- * place, so both neighbours are full even when both archways are in view
- * (a corner hall) or the one looked away from is seen; `empty`, its empty
- * hall, when this scene is itself drawn under the visitor's hall
- * (`peekFrom`) and so the neighbour is two halls from the visitor.
- */
-export type NeighbourDraw = 'under' | 'full' | 'empty';
-export function neighbourDraw(
-  id: MuseumHallId,
-  neighbour: MuseumHallId,
-  state: {
-    seen?: Partial<Record<MuseumHallId, boolean>>;
-    peekFrom?: MuseumHallId | null;
-  } = {},
-): NeighbourDraw {
-  if (!ringNeighbours(id).includes(neighbour))
-    throw new Error(`${neighbour} is not next to ${id}`);
-  if (state.seen?.[neighbour]) return 'under';
-  if (state.peekFrom) return 'empty';
-  return 'full';
-}
-
-/**
- * What the visitor in `visitor`, its archway to `looking` drawn through,
- * sees of every hall: its own and the two neighbours in full (one drawn
- * under, the other copied into the visitor's scene), every other hall
- * as its empty model, from whichever scene draws it. The empty model is
- * kept, never dropped, so looking down a side the halls go on.
- */
-export function ringView(
-  visitor: MuseumHallId,
-  looking: MuseumHallId,
-): Record<MuseumHallId, HallDetail> {
-  const out = {} as Record<MuseumHallId, HallDetail>;
-  for (const h of MUSEUM_HALLS) out[h] = 'empty';
-  out[visitor] = 'full';
-  for (const n of ringNeighbours(visitor)) {
-    const here = neighbourDraw(visitor, n, { seen: { [looking]: true } });
-    if (here === 'full' || here === 'under') out[n] = 'full';
-  }
-  // The room drawn under: its far neighbour as its scene draws it.
-  for (const n of ringNeighbours(looking))
-    if (
-      n !== visitor &&
-      neighbourDraw(looking, n, { peekFrom: visitor }) !== 'empty'
-    )
-      out[n] = 'full';
-  return out;
 }
 
 /**
@@ -1238,29 +1184,3 @@ export const HALL0_BANDS = [
   { y: 1.4, h: 0.05, colour: '#5fb3c4' },
   { y: 6.4, h: 0.3, colour: '#1f6f8b' },
 ] as const;
-
-/**
- * How far a neighbour's full copy has faded in, 0 to 1 (the owner,
- * 2026-10-28: the change from the empty model to the full room "fades in
- * as you cross the threshold ... fully rendered when you have walked 1 m
- * into the room, but it fades out as you walk back to the threshold"):
- * the walker's depth into hall `id` past its archway from its other
- * neighbour, the one just left, over 1 m. At that archway's middle line
- * the hall beyond `id` is still as the hall left behind sees it (empty);
- * 1 m in, it is full. In the hall's own coordinates, as `archToSee`.
- * Stepped to twentieths, so a copy is touched only when the change shows.
- */
-export const FADE_DEPTH = 1;
-export function neighbourFade(
-  id: MuseumHallId,
-  neighbour: MuseumHallId,
-  pose: { x: number; z: number },
-): number {
-  const other = ringNeighbours(id).find((n) => n !== neighbour);
-  const arch = hallArches(id).find((a) => a.to === other);
-  if (!arch) return 1;
-  const depth =
-    (pose.x - arch.frame.x) * arch.into[0] +
-    (pose.z - arch.frame.z) * arch.into[1];
-  return Math.round(Math.min(1, Math.max(0, depth / FADE_DEPTH)) * 20) / 20;
-}

@@ -2,36 +2,24 @@ import { describe, expect, it } from 'vite-plus/test';
 import { throughDoor } from './door-joins';
 import { DEV_ROOM_NAMES, ROOMS, resolveRoomId } from './dev-room-links';
 import {
-  COURTYARD,
   HALL_BRIEFS,
   MUSEUM_HALLS,
   MUSEUM_JOINS,
-  MUSEUM_SQUARE,
   MUSEUM_WALL,
-  BUILDING,
   HALL0_BANDS,
   hallInterior,
   insideFaceRuns,
   hallLiftOpening,
   hallLiftPlace,
-  neighbourDraw,
-  neighbourFade,
-  ringView,
   archToSee,
-  detailSets,
-  emptyHallShape,
-  hallDetail,
   hallId,
   hallKind,
   hallNumber,
-  ringDistance,
-  ringNeighbours,
-  ringSide,
   beyondAt,
   crossedInto,
   hallArches,
+  hallCorridors,
   hallAxes,
-  hallBounds,
   hallColumns,
   hallOrigin,
   hallSolids,
@@ -42,7 +30,8 @@ import {
   toMuseum,
   wallWindows,
 } from './museum-plan';
-import type { MuseumHallId, Rect } from './museum-plan';
+import type { MuseumHallId } from './museum-plan';
+import { HALL_PLACES } from './museum-layout';
 import { overlaps } from '../../controls/logic/walk-collision';
 
 const archTo = (from: MuseumHallId, to: MuseumHallId) => {
@@ -50,21 +39,39 @@ const archTo = (from: MuseumHallId, to: MuseumHallId) => {
   if (!a) throw new Error(`${from} has no archway to ${to}`);
   return a;
 };
-const overlapArea = (a: Rect, b: Rect) =>
-  Math.max(0, Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX)) *
-  Math.max(0, Math.min(a.maxZ, b.maxZ) - Math.max(a.minZ, b.minZ));
+const corridorTo = (from: MuseumHallId, to: MuseumHallId) => {
+  const c = hallCorridors(from).find((x) => x.to === to);
+  if (!c) throw new Error(`${from} has no corridor to ${to}`);
+  return c;
+};
+/** A direction in a hall's own coordinates, as it stands in the museum. */
+const standing = (id: MuseumHallId, v: readonly [number, number]) => {
+  const a = toMuseum(id, 0, 0);
+  const b = toMuseum(id, v[0], v[1]);
+  return [b.x - a.x, b.z - a.z] as const;
+};
 
 describe('the pool science museum', () => {
-  it('makes one hall on each side half as big again (the owner, 2026-10-28)', () => {
+  it('makes one hall on each side half as big again (the owner, 2026-10-28), in its own frame', () => {
     const size = (n: number) => {
-      const b = hallBounds(hallId(n));
-      return [b.maxX - b.minX, b.maxZ - b.minZ];
+      const r = hallInterior(hallId(n));
+      return [r.maxX - r.minX + MUSEUM_WALL, r.maxZ - r.minZ + MUSEUM_WALL];
     };
-    expect(size(0)).toEqual([16, 14]);
-    for (const n of [1, 6]) expect(size(n)).toEqual([16, 21]);
-    for (const n of [3, 9]) expect(size(n)).toEqual([24, 14]);
-    for (const n of [2, 4, 5, 7, 8]) expect(size(n)).toEqual([16, 14]);
+    const near = (n: number, w: number, d: number) => {
+      expect(size(n)[0]).toBeCloseTo(w, 9);
+      expect(size(n)[1]).toBeCloseTo(d, 9);
+    };
+    near(0, 16, 14);
+    for (const n of [1, 6]) near(n, 16, 21);
+    for (const n of [3, 9]) near(n, 24, 14);
+    for (const n of [4, 5, 8]) near(n, 16, 14);
+    // Halls 2 and 7 grown 3 m (layout C), so Hall 2's doorways clear its plant.
+    for (const n of [2, 7]) near(n, 19, 17);
+    // Halls 3 and 9 stand turned, long north–south (layout C).
+    expect(HALL_PLACES[3].turn % 2).toBe(1);
+    expect(HALL_PLACES[9].turn % 2).toBe(1);
   });
+
   it('has the welcome and thirteen halls, each reached by its own link and named', () => {
     expect(MUSEUM_HALLS).toHaveLength(10);
     MUSEUM_HALLS.forEach((id, n) => {
@@ -103,39 +110,10 @@ describe('the pool science museum', () => {
     expect(HALL_BRIEFS.museum6.subject).toBe('We Keep Water Moving');
   });
 
-  it('rings the courtyard with ten halls, four by three, tiling the building less the courtyard with nothing overlapping', () => {
-    const area = (r: Rect) => (r.maxX - r.minX) * (r.maxZ - r.minZ);
-    for (const a of MUSEUM_HALLS) {
-      expect(overlapArea(hallBounds(a), COURTYARD)).toBe(0);
-      for (const b of MUSEUM_HALLS)
-        if (a !== b) expect(overlapArea(hallBounds(a), hallBounds(b))).toBe(0);
-    }
-    const ring = MUSEUM_HALLS.reduce(
-      (sum, id) => sum + area(hallBounds(id)),
-      0,
-    );
-    expect(ring).toBeCloseTo(area(BUILDING) - area(COURTYARD), 9);
-    expect(MUSEUM_SQUARE.colW).toEqual([16, 24, 16, 16]);
-    expect(MUSEUM_SQUARE.rowD).toEqual([14, 21, 14]);
-    expect(BUILDING.maxX - BUILDING.minX).toBe(72);
-    expect(BUILDING.maxZ - BUILDING.minZ).toBe(49);
-    expect(COURTYARD.maxX - COURTYARD.minX).toBe(40);
-    expect(COURTYARD.maxZ - COURTYARD.minZ).toBe(21);
-    // Hall 0 in the south-west corner; 2, 5 and 7 the other corners.
-    const corner = (id: MuseumHallId) => {
-      const r = hallBounds(id);
-      return `${r.minZ === BUILDING.minZ ? 'n' : r.maxZ === BUILDING.maxZ ? 's' : '-'}${r.minX === BUILDING.minX ? 'w' : r.maxX === BUILDING.maxX ? 'e' : '-'}`;
-    };
-    expect(corner('museum0')).toBe('sw');
-    expect(corner('museum2')).toBe('nw');
-    expect(corner('museum5')).toBe('ne');
-    expect(corner('museum7')).toBe('se');
-    // The side halls each have a wall onto the courtyard; the corners none.
+  it('stands the halls round the ring (layout C), each with a wall onto the street and the corners two', () => {
     for (const id of MUSEUM_HALLS) {
-      const onto = hallWalls(id).some(
-        (w) => beyondAt(w, (w.from + w.to) / 2) === 'courtyard',
-      );
-      expect(onto, id).toBe(hallKind(id) === 'side');
+      const street = hallWalls(id).filter((w) => beyondAt(w) === 'street');
+      expect(street.length, id).toBe(hallKind(id) === 'side' ? 1 : 2);
     }
     expect(MUSEUM_HALLS.filter((id) => hallKind(id) === 'corner')).toEqual([
       'museum2',
@@ -152,18 +130,16 @@ describe('the pool science museum', () => {
       expect(b).toBe(hallId(n + 1));
       expect(archTo(a, b).onward).toBe(true);
       expect(archTo(b, a).onward).toBe(false);
-      // Rooms that join share a wall.
       expect(hallArches(a).length).toBe(2);
     });
     expect(nextHall('museum9')).toBe('museum0');
     expect(previousHall('museum0')).toBe('museum9');
     expect(previousHall('museum1')).toBe('museum0');
-    // The welcome's are doorways; the rest archways.
-    expect(archTo('museum0', 'museum1').kind).toBe('door');
-    expect(archTo('museum9', 'museum0').kind).toBe('door');
-    expect(archTo('museum2', 'museum3').kind).toBe('arch');
-    // North from the welcome into Hall 1; into the welcome from the east.
-    expect(archTo('museum0', 'museum1').into).toEqual([0, 1]);
+    // Doorways all, into corridors; from the welcome west to Hall 1, and
+    // into it from the east, from Hall 9.
+    for (const id of MUSEUM_HALLS)
+      for (const a of hallArches(id)) expect(a.kind).toBe('door');
+    expect(archTo('museum0', 'museum1').into).toEqual([1, 0]);
     expect(archTo('museum0', 'museum9').into).toEqual([-1, 0]);
     const headings = MUSEUM_HALLS.map((id) => hallAxes(id).along.join(','));
     expect(headings.slice(0, 2)).toEqual(Array(2).fill('0,-1'));
@@ -172,60 +148,68 @@ describe('the pool science museum', () => {
     expect(headings.slice(7)).toEqual(Array(3).fill('-1,0'));
   });
 
-  it('turns the route 90° in every corner and goes straight through every side hall', () => {
-    for (const id of MUSEUM_HALLS) {
-      const [inArch, outArch] = [
-        archTo(id, previousHall(id)),
-        archTo(id, nextHall(id)),
-      ];
-      const dot =
-        inArch.into[0] * outArch.into[0] + inArch.into[1] * outArch.into[1];
-      expect(dot + 0, id).toBe(hallKind(id) === 'side' ? -1 : 0);
-    }
-  });
-
-  it('puts both sides of each doorway at the same place in the museum, facing each other', () => {
+  it('builds each corridor alike in both halls, its hand-over at the same place, facing each other', () => {
     for (const [a, b] of MUSEUM_JOINS) {
-      const near = archTo(a, b);
-      const far = archTo(b, a);
-      expect(near.at).toEqual(far.at);
-      const pa = toMuseum(a, near.frame.x, near.frame.z);
-      const pb = toMuseum(b, far.frame.x, far.frame.z);
+      const near = corridorTo(a, b);
+      const far = corridorTo(b, a);
+      const pa = toMuseum(a, near.handOver.x, near.handOver.z);
+      const pb = toMuseum(b, far.handOver.x, far.handOver.z);
       expect(pa.x).toBeCloseTo(pb.x, 9);
       expect(pa.z).toBeCloseTo(pb.z, 9);
-      expect(Math.cos(near.frame.yaw - far.frame.yaw)).toBeCloseTo(-1, 9);
-      // Into each its own room.
-      const oa = hallOrigin(a);
-      expect(
-        near.into[0] * (oa.x - near.at.x) + near.into[1] * (oa.z - near.at.z),
-      ).toBeGreaterThan(0);
+      const ta = standing(a, near.handOver.toward);
+      const tb = standing(b, far.handOver.toward);
+      expect(ta[0] + tb[0]).toBeCloseTo(0, 9);
+      expect(ta[1] + tb[1]).toBeCloseTo(0, 9);
+      // The same pieces, the other way round.
+      expect(near.placed.map((p) => p.piece.kind)).toEqual(
+        far.placed
+          .map((p) =>
+            p.piece.kind === 'left'
+              ? 'right'
+              : p.piece.kind === 'right'
+                ? 'left'
+                : p.piece.kind,
+          )
+          .reverse(),
+      );
+      const start = toMuseum(a, near.placed[0].x, near.placed[0].z);
+      const door = archTo(a, b);
+      const at = toMuseum(a, door.frame.x, door.frame.z);
+      // It leaves from the doorway, out of the wall's outside face.
+      expect(Math.hypot(start.x - at.x, start.z - at.z)).toBeCloseTo(
+        MUSEUM_WALL / 2,
+        9,
+      );
     }
   });
 
-  it('carries a visitor through every doorway, the corners too, to where they are in the museum, both ways', () => {
+  it('carries a visitor across every hand-over to where they are in the museum, both ways', () => {
     const poses = [
       { x: 0, z: 0, yaw: 0 },
-      { x: 1.2, z: 0.4, yaw: 0.7 },
-      { x: -1.5, z: -0.2, yaw: 3 },
-      { x: 0.3, z: 2.5, yaw: -1.2 },
+      { x: 0.2, z: 0.4, yaw: 0.7 },
+      { x: -0.3, z: -0.2, yaw: 3 },
     ];
     for (const id of MUSEUM_HALLS) {
-      for (const arch of hallArches(id)) {
-        const back = archTo(arch.to, id);
+      for (const c of hallCorridors(id)) {
+        const back = corridorTo(c.to, id);
         for (const offset of poses) {
           const pose = {
-            x: arch.frame.x + offset.x,
-            z: arch.frame.z + offset.z,
+            x: c.frame.x + offset.x,
+            z: c.frame.z + offset.z,
             yaw: offset.yaw,
           };
-          const there = throughDoor(arch.frame, back.frame, pose);
+          const there = throughDoor(c.frame, back.frame, pose);
           const here = toMuseum(id, pose.x, pose.z);
-          const beyond = toMuseum(arch.to, there.x, there.z);
+          const beyond = toMuseum(c.to, there.x, there.z);
           expect(beyond.x).toBeCloseTo(here.x, 9);
           expect(beyond.z).toBeCloseTo(here.z, 9);
-          // Facing the same way: no room is turned, so a heading carries round the corners.
-          expect(Math.cos(there.yaw - pose.yaw)).toBeCloseTo(1, 9);
-          const home = throughDoor(back.frame, arch.frame, there);
+          // Facing the same way in the museum, the turned halls too.
+          const f = (yaw: number) => [Math.sin(yaw), -Math.cos(yaw)] as const;
+          const fh = standing(id, f(pose.yaw));
+          const fb = standing(c.to, f(there.yaw));
+          expect(fh[0]).toBeCloseTo(fb[0], 9);
+          expect(fh[1]).toBeCloseTo(fb[1], 9);
+          const home = throughDoor(back.frame, c.frame, there);
           expect(home.x).toBeCloseTo(pose.x, 9);
           expect(home.z).toBeCloseTo(pose.z, 9);
         }
@@ -233,31 +217,32 @@ describe('the pool science museum', () => {
     }
   });
 
-  it('hands over on crossing a doorway’s middle, and only there', () => {
+  it('hands over on crossing a corridor’s hand-over line, at its turn, and only there', () => {
     for (const id of MUSEUM_HALLS) {
-      for (const arch of hallArches(id)) {
+      for (const c of hallCorridors(id)) {
+        const [tx, tz] = c.handOver.toward;
         const at = (ahead: number, side: number) => ({
-          x: arch.frame.x + arch.into[0] * ahead + arch.into[1] * side,
-          z: arch.frame.z + arch.into[1] * ahead - arch.into[0] * side,
+          x: c.handOver.x + tx * ahead + tz * side,
+          z: c.handOver.z + tz * ahead - tx * side,
         });
-        expect(crossedInto(id, at(0.05, 0.3), at(-0.05, 0.3))).toBe(arch.to);
-        expect(crossedInto(id, at(-0.05, 0.3), at(0.05, 0.3))).toBe(null);
-        expect(crossedInto(id, at(0.05, arch.w), at(-0.05, arch.w))).toBe(null);
+        expect(crossedInto(id, at(-0.05, 0.3), at(0.05, 0.3))).toBe(c.to);
+        expect(crossedInto(id, at(0.05, 0.3), at(-0.05, 0.3))).toBe(null);
+        expect(crossedInto(id, at(-0.05, 1.2), at(0.05, 1.2))).toBe(null);
       }
     }
   });
 
-  it('stops a visitor at a doorway until the room beyond is seen through it', () => {
+  it('stops a visitor at a hand-over until the room beyond is seen along the corridor', () => {
     for (const id of MUSEUM_HALLS) {
-      for (const arch of hallArches(id)) {
+      for (const c of hallCorridors(id)) {
         const beyond = {
-          x: arch.frame.x - arch.into[0] * 0.1,
-          z: arch.frame.z - arch.into[1] * 0.1,
+          x: c.handOver.x + c.handOver.toward[0] * 0.25,
+          z: c.handOver.z + c.handOver.toward[1] * 0.25,
         };
         const blocked = (solids: ReturnType<typeof hallSolids>) =>
           solids.some((s) => overlaps(s, beyond.x, beyond.z, 0.17));
         expect(blocked(hallSolids(id))).toBe(true);
-        expect(blocked(hallSolids(id, { [arch.to]: true }))).toBe(false);
+        expect(blocked(hallSolids(id, { [c.to]: true }))).toBe(false);
       }
     }
   });
@@ -304,85 +289,25 @@ describe('the pool science museum', () => {
       expect(wallWindows('museum0', wall)).toEqual([]);
   });
 
-  it('sees through the doorway the visitor is at, or looking towards', () => {
-    // In Hall 2 (heading north): on north into Hall 3, back south into Hall 1.
-    const id: MuseumHallId = 'museum2';
-    expect(archToSee(id, { x: 0, z: 0, yaw: 0 })).toBe('museum3');
-    expect(archToSee(id, { x: 0, z: 0, yaw: Math.PI })).toBe('museum1');
-    const back = archTo(id, 'museum1');
-    expect(
-      archToSee(id, {
-        x: back.frame.x + back.into[0] * 0.5,
-        z: back.frame.z + back.into[1] * 0.5,
-        yaw: 0,
-      }),
-    ).toBe('museum1');
-    // In the welcome: north to Hall 1, east to Hall 9.
-    expect(archToSee('museum0', { x: 0, z: 0, yaw: 0 })).toBe('museum1');
-    expect(archToSee('museum0', { x: 0, z: 0, yaw: Math.PI / 2 })).toBe(
-      'museum9',
-    );
-  });
-
-  it('draws the visitor’s hall and its neighbours in full and every hall further away empty', () => {
-    for (const visitor of MUSEUM_HALLS) {
-      const { full, empty } = detailSets(visitor);
-      const [back, on] = ringNeighbours(visitor);
-      expect([...full].sort()).toEqual([visitor, back, on].sort());
-      expect(empty).toHaveLength(7);
-      expect(hallDetail(visitor, visitor)).toBe('full');
-      for (const h of empty) {
-        expect(ringDistance(visitor, h)).toBeGreaterThan(1);
-        // Beyond one neighbour or the other, the shorter way.
-        const side = ringSide(visitor, h);
-        const d = (hallNumber(h) - hallNumber(visitor) + 10) % 10;
-        expect(side).toBe(d <= 5 ? 'onward' : 'back');
+  it('sees along the corridor the visitor is in, or the one whose doorway is nearest', () => {
+    for (const id of MUSEUM_HALLS)
+      for (const c of hallCorridors(id)) {
+        expect(
+          archToSee(id, { x: c.handOver.x, z: c.handOver.z, yaw: 0 }),
+        ).toBe(c.to);
+        const door = archTo(id, c.to);
+        expect(
+          archToSee(id, {
+            x: door.frame.x + door.into[0] * 0.5,
+            z: door.frame.z + door.into[1] * 0.5,
+            yaw: 0,
+          }),
+        ).toBe(c.to);
       }
-    }
-    // Two halls down a side: from Hall 1, Halls 0 and 2 full, Hall 3 empty.
-    expect(hallDetail('museum1', 'museum3')).toBe('empty');
-    expect(hallDetail('museum1', 'museum2')).toBe('full');
-    expect(ringDistance('museum0', 'museum9')).toBe(1);
-    expect(ringDistance('museum0', 'museum5')).toBe(5);
-  });
-
-  it('gives every empty hall its kind and its archways, as the full hall has them', () => {
-    for (const id of MUSEUM_HALLS) {
-      const shape = emptyHallShape(id);
-      expect(shape.kind).toBe(hallKind(id));
-      expect(shape.arches.map((a) => a.to).sort()).toEqual(
-        [previousHall(id), nextHall(id)].sort(),
-      );
-      expect(shape.walls).toHaveLength(4);
-    }
   });
 });
 
-describe('the museum’s neighbours and Hall 0’s tiles (107-1, 2026-10-28)', () => {
-  it('draws both neighbours in full and everything further empty, from every hall looking through every archway', () => {
-    for (const visitor of MUSEUM_HALLS)
-      for (const a of hallArches(visitor)) {
-        const view = ringView(visitor, a.to);
-        const full = MUSEUM_HALLS.filter((h) => view[h] === 'full');
-        expect(full.sort()).toEqual(
-          [visitor, ...ringNeighbours(visitor)].sort(),
-        );
-        for (const h of MUSEUM_HALLS)
-          if (ringDistance(visitor, h) > 1) expect(view[h]).toBe('empty');
-      }
-  });
-
-  it('copies the neighbour not drawn under into the scene, and shows it empty from a room drawn under', () => {
-    for (const id of MUSEUM_HALLS) {
-      const [back, on] = ringNeighbours(id);
-      expect(neighbourDraw(id, back)).toBe('full');
-      expect(neighbourDraw(id, on, { seen: { [on]: true } })).toBe('under');
-      expect(neighbourDraw(id, back, { seen: { [on]: true } })).toBe('full');
-      expect(neighbourDraw(id, back, { peekFrom: on })).toBe('empty');
-    }
-    expect(() => neighbourDraw('museum0', 'museum5')).toThrow();
-  });
-
+describe('Hall 0’s tiles (107-1, 2026-10-28)', () => {
   it('runs Hall 0’s cove and bands round its walls, broken at its doorways and windows', () => {
     const inner = hallInterior('museum0');
     const perimeter = 2 * (inner.maxX - inner.minX + inner.maxZ - inner.minZ);
@@ -408,26 +333,6 @@ describe('the museum’s neighbours and Hall 0’s tiles (107-1, 2026-10-28)', (
       perimeter - windows,
       6,
     );
-  });
-});
-
-describe('fading a neighbour in across the threshold (2026-10-28)', () => {
-  it('is empty at the archway from the hall left, full 1 m in, and back again', () => {
-    for (const id of MUSEUM_HALLS)
-      for (const arch of hallArches(id)) {
-        const beyond = ringNeighbours(id).find((n) => n !== arch.to)!;
-        const at = (d: number) => ({
-          x: arch.frame.x + arch.into[0] * d,
-          z: arch.frame.z + arch.into[1] * d,
-        });
-        expect(neighbourFade(id, beyond, at(0))).toBe(0);
-        expect(neighbourFade(id, beyond, at(-0.5))).toBe(0);
-        expect(neighbourFade(id, beyond, at(0.5))).toBe(0.5);
-        expect(neighbourFade(id, beyond, at(1))).toBe(1);
-        expect(neighbourFade(id, beyond, at(3))).toBe(1);
-        // The hall just left stays full.
-        expect(neighbourFade(id, arch.to, at(0.2))).toBe(1);
-      }
   });
 });
 

@@ -1,9 +1,7 @@
 import {
-  Group as GroupClass,
   Box3,
   Vector3,
   ACESFilmicToneMapping,
-  Mesh,
   AmbientLight,
   DirectionalLight,
   HalfFloatType,
@@ -16,7 +14,7 @@ import {
   WebGLRenderTarget,
 } from 'three';
 import { bakeRoomAo } from '../../baking/baked-ao';
-import type { Group, Material, Object3D } from 'three';
+import type { Group, Object3D } from 'three';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -48,13 +46,8 @@ import {
   arrivalFrom,
   crossedInto,
   hallArches,
-  hallOrigin,
+  hallCorridors,
   hallSolids,
-  neighbourDraw,
-  MUSEUM_HALLS,
-  ringDistance,
-  ringSide,
-  ringNeighbours,
   startOf,
 } from '../logic/museum-plan';
 import type { MuseumHallId } from '../logic/museum-plan';
@@ -73,41 +66,6 @@ type MuseumLod = {
   distances?: number[];
 };
 
-const farKit = createPanelKit();
-const farBuilt = new Map<MuseumHallId, Promise<Object3D | null>>();
-
-/**
- * A hall's exhibit as its low-poly version, baked once a page and shared
- * (geometry and materials) by every scene that clones it: no shadows,
- * nothing that moves.
- */
-function beyondExhibit(n: MuseumHallId): Promise<Object3D | null> {
-  let built = farBuilt.get(n);
-  if (!built) {
-    built = (HALL_EXHIBITS[n]?.() ?? Promise.resolve(null)).then((m) => {
-      if (!m) return null;
-      const full = m.buildHallExhibit(farKit);
-      full.reset(localNow());
-      full.update?.(0);
-      const far = createFarVersion(full.object, {
-        minRadius: 0.3,
-        name: `${n} exhibit (beyond)`,
-      });
-      full.parts?.dispose();
-      full.dispose?.();
-      far.group.traverse((obj) => {
-        obj.castShadow = false;
-        obj.receiveShadow = false;
-        obj.updateMatrix();
-        obj.matrixAutoUpdate = false;
-      });
-      return far.group;
-    });
-    farBuilt.set(n, built);
-  }
-  return built;
-}
-
 /** The museum's level of detail, on `window.museumLod` for the readout. */
 function museumLodState(id: string): MuseumLod {
   const w = window as unknown as { museumLod?: Record<string, MuseumLod> };
@@ -116,10 +74,6 @@ function museumLodState(id: string): MuseumLod {
 }
 import { createMuseumHall } from '../views/museum-hall';
 import { projectorWhereabouts } from '../views/caustics-projector';
-import {
-  createEmptyHallMaterials,
-  createRingShells,
-} from '../views/museum-empty-hall';
 import { safetySolids } from '../logic/museum-safety';
 import {
   createPanelKit,
@@ -131,7 +85,6 @@ import { partAudio } from '../../components/core/audio/part-audio';
 import { createInspector } from '../views/inspect-pick';
 import { localNow } from '../logic/museum-time';
 import { HALL_EXHIBITS } from './museum/exhibits';
-import { FarHallPass, setFarLayer } from '../views/far-hall-pass';
 import { createFarVersion } from '../../components/core/views/far-version';
 import { partOf } from './museum/exhibit-carrying';
 import type { CarryingExhibit } from './museum/exhibit-carrying';
@@ -145,13 +98,14 @@ import type { CarryingExhibit } from './museum/exhibit-carrying';
 const MUSEUM_AO_SAMPLES = 3;
 
 /**
- * A room of the pool science museum, PLANTROOMS (mission 107), in its own scene: its
- * archways are doorways the app sees through (`door-joins.ts`), always
- * open, one at a time (the one the visitor is at, or looking towards:
- * `archToSee`); the other shows its hall's empty component, as do the
- * halls beyond (`museum-empty-hall.ts`, 107-1). Crossing an archway's
- * middle line hands the visitor over to the next hall (`handOver` in
- * `src/main.ts`), its eye and zoom carried through. Lazy joints: both
+ * A room of the pool science museum, PLANTROOMS (mission 107), in its own
+ * scene, with its two corridors (layout C, the owner, 2026-10-30: halls
+ * apart, each pair joined by an L-shaped corridor, so no hall is seen
+ * from another). Each corridor's hand-over, at its turn, is a doorway the
+ * app sees through (`door-joins.ts`), one at a time (the corridor the
+ * visitor is in, or nearest: `archToSee`); crossing it hands the visitor
+ * over to the next hall (`handOver` in `src/main.ts`), which builds the
+ * same corridor, its eye and zoom carried through. Lazy joints: both
  * neighbours are built while this hall is shown, so the hand-over is
  * ready, and let go when not next door.
  */
@@ -177,60 +131,11 @@ export function startMuseumHallRoom(
   const hall = createMuseumHall(id);
   hall.group.scale.setScalar(metre);
   scene.add(hall.group);
-  // Every other hall of the ring as its empty component, at its true
-  // place (107-1): the neighbours' seen through their archways until their
-  // full rooms are drawn there, the halls beyond them always empty.
-  const shellMaterials = createEmptyHallMaterials(hall.materials);
-  const shells = createRingShells(id, shellMaterials);
-  const o = hallOrigin(id);
-  shells.group.position.set(-o.x, 0, -o.z);
-  hall.group.add(shells.group);
-  // Baked ambient occlusion: this hall and its exhibit only (each other
-  // hall is baked when built as its own room, next door or walked into).
+  // Baked ambient occlusion: this hall, its corridors and its exhibit.
   hall.group.userData.bakeAo = true;
-  shells.group.userData.bakeAo = false;
-  // Both neighbours in full (the owner, 2026-10-28: "only the rooms
-  // adjacent to the room we're in render"): each a full copy at its true
-  // place, seen while its own room is not drawn through its archway
-  // (`neighbourDraw`), so both are full even when both archways are in
-  // view; shown empty while this hall is itself drawn under another.
-  const copies = new Map(
-    ringNeighbours(id).map((n) => {
-      const copy = createMuseumHall(n, undefined, id);
-      const on = hallOrigin(n);
-      copy.group.position.set(on.x - o.x, 0, on.z - o.z);
-      copy.group.userData.bakeAo = false;
-      hall.group.add(copy.group);
-      return [n, copy] as const;
-    }),
-  );
+  // The hall it is drawn under, while seen through a corridor from it.
   let peekFrom: MuseumHallId | null = null;
-  // Every hall more than one away as its exhibit's low-poly version over
-  // its empty shell (the owner, 2026-10-30, rule 2): baked once a page,
-  // shared by every hall's scene, no shadows, never updated.
-  const beyond = new Map<MuseumHallId, Object3D[]>(
-    ringNeighbours(id).map((n) => [n, []]),
-  );
-  for (const n of MUSEUM_HALLS) {
-    if (ringDistance(id, n) < 2) continue;
-    const side = ringNeighbours(id)[ringSide(id, n) === 'back' ? 0 : 1];
-    void beyondExhibit(n).then((far) => {
-      if (disposed || !far) return;
-      const placed = new GroupClass();
-      placed.add(far.clone());
-      const on = hallOrigin(n);
-      placed.position.set(on.x - o.x, 0, on.z - o.z);
-      placed.updateMatrix();
-      placed.matrixAutoUpdate = false;
-      setFarLayer(placed, true);
-      placed.userData.bakeAo = false;
-      hall.group.add(placed);
-      beyond.get(side)?.push(placed);
-      redraw();
-    });
-  }
-  // The hall's exhibit (107-0), loaded with it; and each neighbour's copy's,
-  // drawn in its reset state and never stepped (rule 1: a hall's time
+  // The hall's exhibit (107-0), loaded with it (rule 1: a hall's time
   // starts when the visitor crosses in).
   const kit = createPanelKit();
   let exhibit: CarryingExhibit | null = null;
@@ -288,116 +193,6 @@ export function startMuseumHallRoom(
         },
       });
   });
-  // A neighbour's exhibit is only ever seen from another hall, so it is
-  // drawn as its far version (the owner, 2026-10-29): flat colours, the
-  // approximate shape, no screens, a handful of draws however many parts.
-  const farCopies: { dispose(): void }[] = [];
-  for (const [n, copy] of copies)
-    void HALL_EXHIBITS[n]?.().then((m) => {
-      if (disposed) return;
-      const built = m.buildHallExhibit(kit);
-      built.reset(localNow());
-      built.update?.(0);
-      const far = createFarVersion(built.object, { name: `${n} exhibit` });
-      built.parts?.dispose();
-      built.dispose?.();
-      farCopies.push(far);
-      // Beside its copy, not in it: still drawn while the copy is hidden
-      // because this hall is itself seen through an archway (rule 2).
-      // (A holder at the copy's place: the far version keeps the
-      // exhibit's own placement within its hall.)
-      const holder = new GroupClass();
-      holder.position.copy(copy.group.position);
-      holder.userData.bakeAo = false;
-      holder.add(far.group);
-      hall.group.add(holder);
-      farOf.set(n, holder);
-      redraw();
-      // It fades in with its hall, on its own materials.
-      const own = far.materials;
-      copyMaterials.push(...own);
-      fadeMaterials.get(n)?.push(
-        ...own.map((mat) => ({
-          mat,
-          opacity: mat.opacity,
-          transparent: mat.transparent,
-        })),
-      );
-      applyFade(n, fade.get(n) ?? 1);
-    });
-  // Each copy's fade (`neighbourFade`), and its materials, gathered once:
-  // while part faded in, they are drawn see-through over its empty hall.
-  const fade = new Map<MuseumHallId, number>();
-  const fadeMaterials = new Map(
-    [...copies].map(([n, copy]) => {
-      const list = new Set<Material & { opacity: number }>();
-      copy.group.traverse((obj) => {
-        if (obj instanceof Mesh)
-          for (const mat of [obj.material].flat() as Material[]) list.add(mat);
-      });
-      return [
-        n,
-        [...list].map((mat) => ({
-          mat,
-          opacity: mat.opacity,
-          transparent: mat.transparent,
-        })),
-      ] as const;
-    }),
-  );
-  const copyMaterials: Material[] = [];
-  const applyFade = (n: MuseumHallId, f: number) => {
-    for (const m of fadeMaterials.get(n) ?? []) {
-      const blend = f < 1 || m.transparent;
-      if (m.mat.transparent !== blend) {
-        m.mat.transparent = blend;
-        m.mat.needsUpdate = true;
-      }
-      m.mat.opacity = m.opacity * f;
-    }
-  };
-  const farOf = new Map<MuseumHallId, Object3D>();
-  const redraw = () => {
-    for (const [n, copy] of copies) {
-      const how = neighbourDraw(id, n, { seen, peekFrom });
-      const f = fade.get(n) ?? 1;
-      copy.group.visible = how === 'full' && f > 0;
-      const far = farOf.get(n);
-      if (far) far.visible = how === 'empty' || (how === 'full' && f > 0);
-      // The halls beyond it, low poly, unless its own room draws them.
-      for (const b of beyond.get(n) ?? []) b.visible = how !== 'under';
-      // What is two or more halls from the walker goes in the far pass:
-      // the halls beyond this neighbour (unless standing aside for its
-      // room), and, while this hall is seen through an archway, its
-      // other neighbour.
-      const shell = shells.parts(n);
-      if (shell) setFarLayer(shell.beyond, how !== 'under');
-      for (const b of beyond.get(n) ?? []) setFarLayer(b, true);
-      const twoAway = how === 'empty' && peekFrom !== null && n !== peekFrom;
-      if (shell) setFarLayer(shell.near, twoAway);
-      // A neighbour copied into this scene is drawn in the same pass: it
-      // is seen only past the walker's back or through a doorway at
-      // least 10 m off, where its own room would be at a quarter too.
-      if (far) setFarLayer(far, twoAway || how === 'full');
-      setFarLayer(copy.group, how === 'full');
-      // The empty hall stays underneath until the copy is fully in.
-      shells.show(n, how === 'full' && f < 1 ? 'empty' : how);
-    }
-  };
-  const fadeTo = (pose: { x: number; z: number }) => {
-    let changed = false;
-    for (const n of copies.keys()) {
-      // No fade in from an empty white hall any more (the owner,
-      // 2026-10-30): a neighbour's copy is always there in full.
-      void pose;
-      const f = 1;
-      if (fade.get(n) === f) continue;
-      fade.set(n, f);
-      applyFade(n, f);
-      changed = true;
-    }
-    if (changed) redraw();
-  };
   const { h } = hallSize(id);
   const axes = hallAxes(id);
   const welcome = id === 'museum0';
@@ -452,12 +247,6 @@ export function startMuseumHallRoom(
   );
   const base = new RenderPass(scene, camera);
   base.clearAlpha = 0;
-  // The halls two or more away first, at their own quarter resolution;
-  // the scene drawn over them, keeping their colour, clearing depth.
-  const farPass = new FarHallPass(scene, camera);
-  composer.addPass(farPass);
-  base.clear = false;
-  base.clearDepth = true;
   composer.addPass(base);
   const ao = new GTAOPass(scene, camera, 1, 1);
   ao.updateGtaoMaterial({
@@ -593,28 +382,29 @@ export function startMuseumHallRoom(
       })
     : null;
 
-  const withdraw = hallArches(id).map((a) => {
+  // Each corridor's hand-over, at its turn, is the doorway the app sees
+  // through to the hall beyond (`door-joins.ts`): both halls build the
+  // corridor, so the hall beyond shows past its own doorway.
+  const withdraw = hallCorridors(id).map((c) => {
     const frame: DoorFrame = {
-      x: a.frame.x * metre,
-      z: a.frame.z * metre,
-      yaw: a.frame.yaw,
+      x: c.frame.x * metre,
+      z: c.frame.z * metre,
+      yaw: c.frame.yaw,
     };
-    return registerJoint(id as RoomId, a.to as RoomId, {
+    return registerJoint(id as RoomId, c.to as RoomId, {
       frame,
       lazy: true,
-      open: () => looking === a.to,
+      open: () => looking === c.to,
       angle: () => 0,
       swingTo: () => {},
-      // No wall is cut: the archway is open already.
+      // No wall is cut: the corridor is open already.
       opening: () => ({ minX: 1e9, maxX: 1e9, minZ: 1e9, maxZ: 1e9 }),
       see: (on) => {
-        seen[a.to] = on;
-        redraw();
+        seen[c.to] = on;
       },
-      // Drawn under hall `a.to`, seen through its archway.
+      // Drawn under hall `c.to`, seen along its corridor.
       peek: (on) => {
-        peekFrom = on ? a.to : peekFrom === a.to ? null : peekFrom;
-        redraw();
+        peekFrom = on ? c.to : peekFrom === c.to ? null : peekFrom;
       },
     });
   });
@@ -641,7 +431,6 @@ export function startMuseumHallRoom(
     if (share !== seenShare) {
       seenShare = share;
       scaleRatio(renderer, share);
-      farPass.shareNow = share;
     }
     lodState.scale = share;
   };
@@ -701,14 +490,12 @@ export function startMuseumHallRoom(
     );
     lodState.components = lods.length;
   };
-  /** How far the eye drawn under another hall is from this hall's nearest archway, metres. */
+  /** How far the eye drawn under another hall is from this hall's doorway from it, metres. */
   const archwayDistance = () => {
     const pose = walk.pose();
     const x = pose.x / metre;
     const z = pose.z / metre;
     return Math.min(
-      // The doorway into the hall walked in, when known (the owner,
-      // 2026-10-30), not whichever is nearest.
       ...hallArches(id)
         .filter((a) => !peekFrom || a.to === peekFrom)
         .map((a) => Math.hypot(x - a.frame.x, z - a.frame.z)),
@@ -744,7 +531,6 @@ export function startMuseumHallRoom(
     if (active) {
       projectorWhereabouts.walkerIn(id, performance.now() / 1000);
       hall.update(delta);
-      copies.get('museum0')?.update(delta);
     } else {
       // Drawn from a neighbour (its real room seen through a doorway): its
       // projector still follows the walker's whereabouts, so it is off
@@ -757,7 +543,6 @@ export function startMuseumHallRoom(
       const pose = walk.pose();
       const now = { x: pose.x / metre, z: pose.z / metre };
       looking = archToSee(id, { ...now, yaw: pose.yaw }, looking);
-      fadeTo(now);
       const into = was && !handing ? crossedInto(id, was, now) : null;
       was = now;
       if (into && seen[into]) {
@@ -791,15 +576,9 @@ export function startMuseumHallRoom(
       disposeKit(kit, hall.group);
       observer.disconnect();
       composer.dispose();
-      farPass.dispose();
       walk.dispose();
       hall.dispose();
-      for (const copy of copies.values()) copy.dispose();
-      for (const far of farCopies) far.dispose();
       for (const l of lods ?? []) l.far?.dispose();
-      for (const m of copyMaterials) m.dispose();
-      shells.dispose();
-      shellMaterials.dispose();
       freeEnvironment();
       renderer.dispose();
     },

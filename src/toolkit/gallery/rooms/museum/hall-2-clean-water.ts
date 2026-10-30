@@ -89,6 +89,7 @@ import {
   OD,
   PLACES,
   PLANT_EDGE_NORTH,
+  PLANT_SHIFT,
   PORTS,
   POOL_SHAPE,
   TANK_SHAPE,
@@ -1317,11 +1318,19 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     footprint(at.x, at.z, 0.2);
   }
 
+  // The L where it stands in the hall grown round it (layout C).
+  object.position.set(PLANT_SHIFT.x, 0, PLANT_SHIFT.z);
+  const placed = solids.map((f) => ({
+    minX: f.minX + PLANT_SHIFT.x,
+    maxX: f.maxX + PLANT_SHIFT.x,
+    minZ: f.minZ + PLANT_SHIFT.z,
+    maxZ: f.maxZ + PLANT_SHIFT.z,
+  }));
   return {
     object,
     parts,
     status: () => (state.pumpRunning ? 'circulating' : 'stopped'),
-    solids: () => solids,
+    solids: () => placed,
     reset,
     update(delta) {
       state = stepHall2(state, flows, delta);

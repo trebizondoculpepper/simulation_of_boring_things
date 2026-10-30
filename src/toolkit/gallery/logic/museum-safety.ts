@@ -336,11 +336,18 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
   if (exit) {
     const wall = wallOf(id, exit);
     const u = uOf(exit);
+    // Whichever side of the doorway has wall for it: a doorway stands near
+    // its wall's end (layout C), and a wall's middle may be kept (Hall 9's
+    // closing words); towards the middle if both.
+    const middle = Math.sign((wall.from + wall.to) / 2 - u) || 1;
+    const fits = (side: number) =>
+      !blocked(id, wall, u + side * (exit.w / 2 + 0.55), 0.2, 2.2, 2.6, taken);
+    const inward = fits(middle) || !fits(-middle) ? middle : -middle;
     // The maintained exit box beside the opening, arrow straight on, at 2.4 m.
     put(
       'exit-box',
       wall,
-      free(wall, u + exit.w / 2 + 0.55, 0.2, 2.2, 2.6),
+      free(wall, u + inward * (exit.w / 2 + 0.55), 0.2, 2.2, 2.6),
       HEIGHTS.exitSign,
       { arrow: 'up' },
     );
@@ -348,7 +355,7 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
     put(
       'call-point',
       wall,
-      free(wall, u - exit.w / 2 - 0.45, 0.06, 1.3, 1.5),
+      free(wall, u - inward * (exit.w / 2 + 0.45), 0.06, 1.3, 1.5),
       HEIGHTS.callPoint,
     );
   }

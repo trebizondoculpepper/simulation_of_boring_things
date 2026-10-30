@@ -24,6 +24,7 @@ import { sandFilterGeometry } from '../../components/plant/logic/sand-filter';
 import { MACHINE_GAP, sizeRoom } from './room-sizer';
 import type { RoomSize } from './room-sizer';
 import { pointAlong } from './source-sink-plumbing';
+import { hallInterior } from './museum-plan';
 
 /**
  * Hall 2's plant, laid out (107b): the schematic's machines placed by hand
@@ -77,9 +78,24 @@ const filterNozzles = sandFilterGeometry(FILTER_SHAPE.dia, FILTER_SHAPE.shell);
 const FILTER_BACK = 0.35 + FILTER_SHAPE.dia / 2;
 const studTop = SOURCE_SHAPE.height + SOURCE_SHAPE.stud;
 
-/** The hall's inside, m (`museum2`, the north-west corner: 15.4 × 13.4 m). */
+/** The hall's inside as first built, m (`museum2`, the north-west corner: 15.4 × 13.4 m), where the L is laid out (`PLANT_SHIFT`). */
 export const HALL_WIDTH = 15.4;
 export const HALL_DEPTH = 13.4;
+
+/**
+ * Where the L, laid out here in the hall as first built (15.4 × 13.4 m,
+ * its middle at the origin), stands in the hall now: layout C grew the hall
+ * 3 m south and east so that its doorways, near its outside walls' ends,
+ * stand clear of the L; the L keeps its place against the north-west
+ * corner, so it moves by the growth, west and north of the hall's middle.
+ */
+export const PLANT_SHIFT = (() => {
+  const r = hallInterior('museum2');
+  return {
+    x: -((r.maxX - r.minX) / 2 - HALL_WIDTH / 2),
+    z: -((r.maxZ - r.minZ) / 2 - HALL_DEPTH / 2),
+  };
+})();
 
 /** The router's room: the hall up to its roof deck's services. */
 export const ROOM = {

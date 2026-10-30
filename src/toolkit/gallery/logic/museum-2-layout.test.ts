@@ -3,6 +3,7 @@ import {
   END_CLEAR,
   LEGS,
   PLACES,
+  PLANT_SHIFT,
   PLANT_LENGTH,
   POINTS,
   ROOM,
@@ -77,20 +78,27 @@ describe('Hall 2’s plant, laid out and plumbed', () => {
     }
   });
 
-  it('fits the corner hall and keeps both archways and the way between them clear', () => {
+  it('fits the corner hall, against its north-west corner, and keeps both doorways and the way between them clear', () => {
     const size = hallSize('museum2');
-    expect(ROOM.halfX * 2).toBeCloseTo(size.w, 6);
-    expect(ROOM.halfZ * 2).toBeCloseTo(size.d, 6);
+    // The hall grown round the L (layout C): the L's corner is the hall's.
+    expect(ROOM.halfX * 2 - 2 * PLANT_SHIFT.x).toBeCloseTo(size.w, 6);
+    expect(ROOM.halfZ * 2 - 2 * PLANT_SHIFT.z).toBeCloseTo(size.d, 6);
     expect(LEGS.west.from).toBeLessThanOrEqual(ROOM.halfZ - END_CLEAR + 1e-6);
     expect(LEGS.north.to).toBeLessThanOrEqual(ROOM.halfX - END_CLEAR + 1e-6);
-    // Each archway's opening, a metre into the hall, is on the visitors' floor.
+    // Each doorway's opening, and 1.5 m into the hall, is on the visitors' floor.
     for (const a of hallArches('museum2')) {
       const along = a.axis === 'x' ? [1, 0] : [0, 1];
-      for (const u of [-a.w / 2, 0, a.w / 2]) {
-        const x = a.frame.x + a.into[0] + along[0] * u;
-        const z = a.frame.z + a.into[1] + along[1] * u;
-        expect(onPlantFloor(x, z), `${a.to} at ${x}, ${z}`).toBe(false);
-      }
+      for (const d of [1, 1.5])
+        for (const u of [-a.w / 2, 0, a.w / 2]) {
+          const x = a.frame.x + a.into[0] * d + along[0] * u - PLANT_SHIFT.x;
+          const z = a.frame.z + a.into[1] * d + along[1] * u - PLANT_SHIFT.z;
+          // The L's floor, within its own corner of the hall (the rest grown round it).
+          const inL =
+            Math.abs(x) <= ROOM.halfX &&
+            Math.abs(z) <= ROOM.halfZ &&
+            onPlantFloor(x, z);
+          expect(inL, `${a.to} at ${x}, ${z}`).toBe(false);
+        }
     }
   });
 

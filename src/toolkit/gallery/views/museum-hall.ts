@@ -26,6 +26,7 @@ import { markComponent } from '../../components/core/views/component-identity';
 import { watchSign } from '../../components/core/views/display-reach';
 import { drawBrandMark } from '../../components/core/views/brand-logo';
 import { brandById } from '../../components/core/logic/brands';
+import { createCorridorRun } from '../../components/architectural/views/corridor';
 import {
   BEAM_DEPTH,
   createServiceCeiling,
@@ -48,6 +49,7 @@ import {
   comingSoonPanel,
   hall0Ladder,
   hallArches,
+  hallCorridors,
   hallLiftOpening,
   hallAxes,
   hallBenches,
@@ -1588,6 +1590,21 @@ export function createMuseumHall(
   arrows.position.y = onDeck;
   plan.add(arrows);
 
+  // Its two corridors (layout C), in its own coordinates: the kit's
+  // section, painted as the halls are; the hall beyond builds the same.
+  const corridorPaint = new MeshStandardMaterial({
+    color: MUSEUM_WALL_GREY,
+    roughness: 0.95,
+    // The kit's turns are lathed, their faces outward for one hand.
+    side: DoubleSide,
+  });
+  disposables.push(corridorPaint);
+  for (const c of hallCorridors(id)) {
+    const run = createCorridorRun(c.placed, corridorPaint);
+    run.name = `Corridor to ${c.to}`;
+    group.add(run);
+  }
+
   // The walls, each as the plan has it; the courtyard and street windows glazed.
   const bars: BufferGeometry[] = [];
   for (const wall of hallWalls(id)) {
@@ -1609,41 +1626,6 @@ export function createMuseumHall(
       ),
     );
     for (const w of windows) glaze(m, wall, w, plan, bars);
-  }
-  // Hall 0's tiles on the face of the wall it shares with Museum 1, the
-  // doorway cut through them: built alike by both rooms.
-  const tiledFace = (wall: HallWall, side: number) => {
-    const shape = new Shape();
-    const from = wall.from + t / 2;
-    const to = wall.to - t / 2;
-    shape.moveTo(from, 0);
-    for (const op of openingsOn(id, wall, viewer)) {
-      const a = op.arch.w / 2;
-      shape.lineTo(op.u - a, 0);
-      shape.lineTo(op.u - a, op.arch.top);
-      shape.lineTo(op.u + a, op.arch.top);
-      shape.lineTo(op.u + a, 0);
-    }
-    shape.lineTo(to, 0);
-    shape.lineTo(to, MUSEUM_HALL0.h);
-    shape.lineTo(from, MUSEUM_HALL0.h);
-    shape.closePath();
-    const face = new Mesh(new ShapeGeometry(shape), m.tile);
-    placeOnLine(face, wall.axis, wall.line, side * (t / 2 + 0.006));
-    if (wall.axis === 'z')
-      face.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
-    else face.rotation.y = side > 0 ? 0 : Math.PI;
-    return face;
-  };
-  for (const wall of hallWalls(id)) {
-    const toWelcome = openingsOn(id, wall, viewer).some(
-      (op) => op.arch.to === 'museum0' || id === 'museum0',
-    );
-    if (!toWelcome) continue;
-    // Its side: towards Hall 0.
-    const towards = id === 'museum0' ? -1 : 1;
-    const out = wall.axis === 'x' ? wall.out[1] : wall.out[0];
-    plan.add(tiledFace(wall, out * towards));
   }
   if (welcome) {
     // Pool-hall trim: coloured bands of tiles and a tiled cove (107-1).
