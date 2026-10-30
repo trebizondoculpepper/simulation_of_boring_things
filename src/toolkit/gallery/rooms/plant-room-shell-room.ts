@@ -87,7 +87,7 @@ import {
 } from '../../components/architectural/logic/door-proximity';
 import { zoneOfRoom } from '../../../game/plant/lighting';
 import { bindRoomPower, roomPowered } from '../views/room-power';
-import { bakeRoomAo, reportFrameTime } from '../../baking/baked-ao';
+import { bakeRoomAo } from '../../baking/baked-ao';
 import type { ServiceRoom } from '../../../game/plant/services';
 
 /**
@@ -155,9 +155,15 @@ export function startPlantRoomShell(
   if (tankDoors) tankDoors.object.userData.bakeAo = false;
   for (const child of rooms.children)
     if (componentOf(child)?.decorative) child.userData.bakeAo ??= true;
+  // Its machines and services too, unmerged: each part carries the
+  // occlusion of its rest pose with it as it moves (the plan's rule for
+  // moving parts); canvas displays are left undarkened.
+  if (machines) machines.group.userData.bakeAo ??= true;
+  if (services) services.group.userData.bakeAo ??= true;
   const bakedAo = bakeRoomAo(rooms, {
     roomId: hall ? `plant_${hall}` : `plant_room_${size}`,
     unit: metre,
+    compile: (object) => renderer.compileAsync(object, camera, scene),
   });
   const supply = machines
     ? (() => {
@@ -533,7 +539,6 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     machines?.setAudible(!canvas.parentElement?.hidden && !walk.following);
     services?.setAudible(!canvas.parentElement?.hidden && !walk.following);
     if (canvas.parentElement?.hidden) return;
-    if (last && visual) reportFrameTime(time - last);
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     walk.update(delta);

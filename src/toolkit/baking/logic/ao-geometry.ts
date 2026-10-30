@@ -9,7 +9,7 @@
  * The baker's version: bumped whenever the bake's method changes, so every
  * bake cached by an older baker misses and is made again.
  */
-export const BAKE_VERSION = 1;
+export const BAKE_VERSION = 4;
 
 /** How a room is baked: part of its cache key, so a change re-bakes. */
 export interface BakeSettings {
@@ -115,6 +115,8 @@ export function subdivideLongEdges(
   soup: TriangleSoup,
   maxEdge: number,
   maxTriangles = 400_000,
+  /** Which triangles may be split (1) and which are kept whole (0); all may, if not given. */
+  mask?: Uint8Array,
 ): TriangleSoup {
   const stride = soup.uvs ? 8 : 6;
   const count = soup.positions.length / 9;
@@ -149,10 +151,17 @@ export function subdivideLongEdges(
   const out: Float64Array[] = [];
   let triangles = count;
   const stack: Float64Array[][] = [];
-  for (let t = count - 1; t >= 0; t--)
+  const whole: boolean[] = [];
+  for (let t = count - 1; t >= 0; t--) {
     stack.push([vertex(t, 0), vertex(t, 1), vertex(t, 2)]);
+    whole.push(Boolean(mask && !mask[t]));
+  }
   while (stack.length) {
     const [a, b, c] = stack.pop()!;
+    if (whole.pop()) {
+      out.push(a, b, c);
+      continue;
+    }
     const ab = long(a, b);
     const bc = long(b, c);
     const ca = long(c, a);
@@ -197,7 +206,10 @@ export function subdivideLongEdges(
       const mrp = mid(r, p);
       children.push([p, mpq, mrp], [mpq, q, r], [mpq, r, mrp]);
     }
-    for (let i = children.length - 1; i >= 0; i--) stack.push(children[i]);
+    for (let i = children.length - 1; i >= 0; i--) {
+      stack.push(children[i]);
+      whole.push(false);
+    }
   }
   const n = out.length;
   const positions = new Float32Array(n * 3);
@@ -210,4 +222,166 @@ export function subdivideLongEdges(
     if (uvs) uvs.set([v[6], v[7]], i * 2);
   }
   return { positions, normals, uvs };
+}
+
+/**
+ * Spread a subdivision mask (`subdivideLongEdges`) across shared long
+ * edges to coplanar neighbours, until it settles: two triangles of one
+ * flat face then split their shared edge alike, so no crack opens between
+ * them. Triangles are consecutive triples of `positions`; `maxEdge` as
+ * for the subdivision. Changes `mask` in place and returns it.
+ */
+export function spreadSubdivision(
+  positions: Float32Array,
+  normals: Float32Array,
+  mask: Uint8Array,
+  maxEdge: number,
+): Uint8Array {
+  const count = positions.length / 9;
+  const key = (i: number) =>
+    `${Math.round(positions[i * 3] * 1e4)},${Math.round(positions[i * 3 + 1] * 1e4)},${Math.round(positions[i * 3 + 2] * 1e4)}`;
+  const edges = new Map<string, number[]>();
+  const edgeKey = (a: number, b: number) => {
+    const ka = key(a);
+    const kb = key(b);
+    return ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+  };
+  const max2 = maxEdge * maxEdge;
+  const long = (a: number, b: number) =>
+    (positions[a * 3] - positions[b * 3]) ** 2 +
+      (positions[a * 3 + 1] - positions[b * 3 + 1]) ** 2 +
+      (positions[a * 3 + 2] - positions[b * 3 + 2]) ** 2 >
+    max2;
+  const triEdges: string[][] = [];
+  for (let t = 0; t < count; t++) {
+    const list: string[] = [];
+    for (const [a, b] of [
+      [0, 1],
+      [1, 2],
+      [2, 0],
+    ]) {
+      const va = t * 3 + a;
+      const vb = t * 3 + b;
+      if (!long(va, vb)) continue;
+      const k = edgeKey(va, vb);
+      list.push(k);
+      let on = edges.get(k);
+      if (!on) edges.set(k, (on = []));
+      on.push(t);
+    }
+    triEdges.push(list);
+  }
+  const normalOf = (t: number) => {
+    let x = 0;
+    let y = 0;
+    let z = 0;
+    for (let k = 0; k < 3; k++) {
+      x += normals[(t * 3 + k) * 3];
+      y += normals[(t * 3 + k) * 3 + 1];
+      z += normals[(t * 3 + k) * 3 + 2];
+    }
+    const l = Math.hypot(x, y, z) || 1;
+    return [x / l, y / l, z / l];
+  };
+  const todo: number[] = [];
+  for (let t = 0; t < count; t++) if (mask[t]) todo.push(t);
+  while (todo.length) {
+    const t = todo.pop()!;
+    const n = normalOf(t);
+    for (const k of triEdges[t])
+      for (const u of edges.get(k)!) {
+        if (mask[u]) continue;
+        const m = normalOf(u);
+        if (n[0] * m[0] + n[1] * m[1] + n[2] * m[2] < 0.99) continue;
+        mask[u] = 1;
+        todo.push(u);
+      }
+  }
+  return mask;
+}
+
+/**
+ * Whether a large triangle needs subdividing, from its sample points'
+ * bakes (corners, edge midpoints, centre; 0–255): not if all are buried
+ * (dark) or all open (light), since the whole face is then alike.
+ */
+export function needsDetail(samples: ArrayLike<number>) {
+  let buried = true;
+  let open = true;
+  for (let i = 0; i < samples.length; i++) {
+    if (samples[i] > 5) buried = false;
+    if (samples[i] < 250) open = false;
+  }
+  return !buried && !open;
+}
+
+/** Rays a vertex for a room of `triangles`: fewer for big rooms, to bake them sooner. */
+export const raysFor = (triangles: number, rays = 32) =>
+  triangles > 20_000 ? Math.min(rays, 16) : rays;
+
+/**
+ * One pass of smoothing over a non-indexed mesh's vertex bakes: each
+ * place takes the mean of itself and its neighbours along the triangles'
+ * edges (vertices at the same place and normal count as one), so a few
+ * rays' noise is evened out. A `buried` place (inside a flange or a wall)
+ * counts for nothing and takes its unburied neighbours' mean, or stays
+ * unoccluded if it has none, so a part's buried end never darkens the
+ * whole of a long face reaching from it. Returns a new array.
+ */
+export function smoothVertexAo(
+  positions: Float32Array,
+  normals: Float32Array,
+  ao: Uint8Array,
+  buried?: Uint8Array,
+): Uint8Array {
+  const n = ao.length;
+  const q = (v: number) => Math.round(v * 1e4);
+  const ids = new Map<string, number>();
+  const idOf = new Int32Array(n);
+  for (let i = 0; i < n; i++) {
+    const k = `${q(positions[i * 3])},${q(positions[i * 3 + 1])},${q(positions[i * 3 + 2])},${Math.round(normals[i * 3] * 100)},${Math.round(normals[i * 3 + 1] * 100)},${Math.round(normals[i * 3 + 2] * 100)}`;
+    let id = ids.get(k);
+    if (id === undefined) ids.set(k, (id = ids.size));
+    idOf[i] = id;
+  }
+  const places = ids.size;
+  const own = new Float64Array(places);
+  const known = new Uint8Array(places);
+  for (let i = 0; i < n; i++) {
+    own[idOf[i]] = ao[i];
+    known[idOf[i]] = buried?.[i] ? 0 : 1;
+  }
+  const sum = new Float64Array(places);
+  const weight = new Float64Array(places);
+  for (let k = 0; k < places; k++)
+    if (known[k]) {
+      sum[k] = own[k];
+      weight[k] = 1;
+    }
+  const seen = new Set<number>();
+  for (let t = 0; t + 2 < n; t += 3)
+    for (const [a, b] of [
+      [t, t + 1],
+      [t + 1, t + 2],
+      [t + 2, t],
+    ]) {
+      const ia = idOf[a];
+      const ib = idOf[b];
+      if (ia === ib) continue;
+      const pair = ia < ib ? ia * places + ib : ib * places + ia;
+      if (seen.has(pair)) continue;
+      seen.add(pair);
+      if (known[ib]) {
+        sum[ia] += own[ib];
+        weight[ia]++;
+      }
+      if (known[ia]) {
+        sum[ib] += own[ia];
+        weight[ib]++;
+      }
+    }
+  const out = new Uint8Array(n);
+  for (let i = 0; i < n; i++)
+    out[i] = weight[idOf[i]] ? Math.round(sum[idOf[i]] / weight[idOf[i]]) : 255;
+  return out;
 }

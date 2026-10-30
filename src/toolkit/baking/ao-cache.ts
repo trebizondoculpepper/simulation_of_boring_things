@@ -4,7 +4,8 @@
  * its geometry changed; within `AO_CACHE_LIMIT`, least recently used
  * evicted first, hubs never (`ao-cache-policy.ts`). Every access is
  * guarded: without IndexedDB (a private window, blocked site data, a full
- * quota) bakes are kept in memory for the session instead.
+ * quota) bakes are kept in memory for the session instead. Used in the
+ * baker's worker, which IndexedDB serves as well as the page.
  */
 import { AO_MEMORY_ROOMS, planEviction } from './logic/ao-cache-policy';
 import type { AoCacheEntryInfo } from './logic/ao-cache-policy';
@@ -12,9 +13,14 @@ import type { AoCacheEntryInfo } from './logic/ao-cache-policy';
 export interface AoCacheEntry extends AoCacheEntryInfo {
   /** One byte a vertex, per receiving mesh. */
   ao: Uint8Array[];
+  /** Per receiving mesh, which of its triangles were subdivided (null: none may be). */
+  masks: (Uint8Array | null)[];
+  /** Where each mesh stood when baked: its world matrix, 16 floats each. */
+  placements: Float32Array;
 }
 
-const DB = 'pool-plant-baked-ao';
+// A new name for the new entries (masks): the old store's bakes are simply never read.
+const DB = 'pool-plant-baked-ao-2';
 const STORE = 'bakes';
 
 const memory = new Map<string, AoCacheEntry>();

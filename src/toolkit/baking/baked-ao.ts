@@ -1,11 +1,13 @@
 /**
  * Baked ambient occlusion in a room (`doc/reports/baked-lighting-and-reflections.md`,
- * the owner, 2026-10-30): the room's static meshes are gathered, their
- * large flat faces subdivided, hashed and looked up in the cache; if not
- * there, baked in the one background worker. Until the bake is ready the
- * room shows no ambient occlusion at all; then the bake fades in over
- * about a second and stays. The occlusion darkens only the ambient
- * (indirect) light, never a lamp's direct light.
+ * the owner, 2026-10-30). The main thread only gathers the room's static
+ * meshes (their own arrays and world matrices) and hands them to the one
+ * background worker (`ao-bake.worker.ts`), which does everything else:
+ * world space, the hash, the cache, subdividing large faces, the BVH, the
+ * rays. Until the bake is ready the room shows no ambient occlusion; then
+ * its geometry and bake are swapped in, a few meshes a frame within a
+ * small budget, and the bake fades in over about a second and stays. It
+ * darkens only the ambient (indirect) light, never a lamp's direct light.
  *
  * A room calls `bakeRoomAo(root, { roomId })` once built. What it bakes:
  * by default the meshes `mergeStatic` made (in its `Merged` holders, never
@@ -17,12 +19,14 @@
 import {
   BufferAttribute,
   BufferGeometry,
+  DoubleSide,
+  Group,
   InstancedMesh,
-  Matrix3,
   Mesh,
   MeshLambertMaterial,
   MeshPhongMaterial,
   MeshStandardMaterial,
+  Sphere,
   Vector3,
 } from 'three';
 import type {
@@ -31,63 +35,64 @@ import type {
   WebGLProgramParametersWithUniforms,
   WebGLRenderer,
 } from 'three';
-import {
-  DEFAULT_BAKE,
-  geometryHash,
-  subdivideLongEdges,
-} from './logic/ao-geometry';
+import { effect } from '@preact/signals-core';
+import { DEFAULT_BAKE } from './logic/ao-geometry';
 import type { BakeSettings } from './logic/ao-geometry';
 import {
   BAKE_PRIORITY,
   createBakeQueue,
   mayBake,
 } from './logic/ao-cache-policy';
-import { loadBake, storeBake } from './ao-cache';
-import { effect } from '@preact/signals-core';
 import { settings as playerSettings } from '../settings/settings-store';
-
-/** Whether the player has ONE-TIME (baked) ambient occlusion chosen. */
-const baking = () => playerSettings.value.aoMode === 'bake';
 import type {
-  BakeMeshPayload,
   BakeReply,
   BakeRequest,
+  BakeTimings,
+  BakedMesh,
 } from './ao-bake-protocol';
 
 /** How long the bake takes to fade in once ready, seconds. */
 export const BAKED_AO_FADE = 1;
+/** Main-thread time a frame for swapping baked geometry in, ms. */
+const APPLY_BUDGET = 2;
+/** Vertices swapped in a frame at most, so their upload to the GPU is spread too. */
+const APPLY_VERTICES = 100_000;
+
+/** Whether the player has ONE-TIME (baked) ambient occlusion chosen. */
+const baking = () => playerSettings.value.aoMode === 'bake';
 
 // ---- The worker and its queue ------------------------------------------------
 
-interface PendingBake {
-  hash: string;
+type Ready = Extract<BakeReply, { type: 'ready' }>;
+interface Job {
   roomId: string;
-  meshes: BakeMeshPayload[];
-  settings: { rays: number; distance: number; bias: number };
-  waiting: ((reply: Extract<BakeReply, { type: 'done' }> | null) => void)[];
+  priority: number;
+  done: (reply: Ready | null) => void;
 }
 
 const queue = createBakeQueue();
-const pending = new Map<string, PendingBake>();
+const jobs = new Map<number, Job>();
 let worker: Worker | null = null;
-let active: { id: number; bake: PendingBake } | null = null;
+let active: number | null = null;
 let nextId = 1;
 let pausedUntil = 0;
 let workerPaused = false;
 const frames: number[] = [];
 
-/** Bakes done this session, for the dev overlay and measurements. */
-export const bakeStats: {
+/** Bakes done this session, for measurements. */
+export const bakeStats: (BakeTimings & {
   roomId: string;
   hash: string;
-  ms: number;
-  bvhMs: number;
-  rays: number;
-  triangles: number;
-  vertices: number;
   cached: boolean;
-}[] = [];
-// For measurements in the browser: every bake this session.
+  /** Main-thread time gathering and handing over, ms, in all and in its longest frame. */
+  gatherMs: number;
+  gatherMaxMs: number;
+  /** Main-thread time swapping the result in, ms, all frames together, and the longest frame's share. */
+  applyMs: number;
+  applyMaxMs: number;
+  /** From asking to shown, ms. */
+  ms: number;
+})[] = [];
 /** The rooms' bakes shown now, latest last (to compare, in the browser). */
 const shownBakes: { setShown(on: boolean): void; roomId: string }[] = [];
 Object.assign(globalThis, {
@@ -102,12 +107,16 @@ function startWorker() {
   });
   worker.addEventListener('message', (event: MessageEvent<BakeReply>) => {
     const reply = event.data;
-    if (!active || reply.id !== active.id) return;
-    const { bake } = active;
-    active = null;
-    pending.delete(bake.hash);
-    for (const w of bake.waiting) w(reply.type === 'done' ? reply : null);
+    const job = jobs.get(reply.id);
+    if (reply.type === 'missed') {
+      if (job) queue.add(String(reply.id), job.priority);
+      pump();
+      return;
+    }
+    if (reply.id === active) active = null;
+    jobs.delete(reply.id);
     if (reply.type === 'error') console.warn('Baked AO failed:', reply.message);
+    job?.done(reply.type === 'ready' ? reply : null);
     pump();
   });
   return worker;
@@ -118,23 +127,17 @@ const send = (message: BakeRequest, transfer: Transferable[] = []) =>
 
 function pump() {
   // Not ONE-TIME: queued bakes wait, none is started.
-  if (active || !baking()) return;
+  if (active !== null || !baking()) return;
   const item = queue.take();
   if (!item) return;
-  const bake = pending.get(item.hash);
-  if (!bake) return pump();
-  active = { id: nextId++, bake };
-  // The geometry is copied to the worker; the room keeps its own.
-  send({
-    type: 'bake',
-    id: active.id,
-    meshes: bake.meshes,
-    settings: bake.settings,
-  });
+  const id = Number(item.hash);
+  if (!jobs.has(id)) return pump();
+  active = id;
+  send({ type: 'bake', id });
   throttle();
 }
 
-/** Pause or resume the worker by the frame budget and hand-overs. */
+/** Pause or resume the worker by the frame budget, hand-overs and the mode. */
 function throttle() {
   const allowed = baking() && mayBake(performance.now(), pausedUntil, frames);
   if (!worker) return;
@@ -148,18 +151,21 @@ effect(() => {
   throttle();
   pump();
 });
-setInterval(() => {
-  if (active) throttle();
-}, 250);
 
-/**
- * A frame's time, ms, from the room drawing it: the baker works only while
- * the recent frames are within budget.
- */
-export function reportFrameTime(ms: number) {
-  frames.push(ms);
-  if (frames.length > 30) frames.shift();
+// Every room's frames, measured here (whatever room draws them): the baker
+// works only while the recent ones are within budget.
+let lastFrame = 0;
+function watchFrames(time: number) {
+  if (lastFrame && document.visibilityState === 'visible') {
+    frames.push(time - lastFrame);
+    if (frames.length > 30) frames.shift();
+  }
+  lastFrame = time;
+  if (active !== null) throttle();
+  requestAnimationFrame(watchFrames);
 }
+if (typeof requestAnimationFrame === 'function')
+  requestAnimationFrame(watchFrames);
 
 /**
  * Hold the baker still for `ms` (a hand-over, a lift arrival, the first
@@ -169,6 +175,43 @@ export function pauseBaking(ms = 1500) {
   pausedUntil = Math.max(pausedUntil, performance.now() + ms);
   frames.length = 0;
   throttle();
+}
+
+/**
+ * The walker is now in `roomId`: its bakes first, everyone else's after
+ * (as neighbours), and a calm moment for the hand-over.
+ */
+export function focusRoom(roomId: string) {
+  for (const [id, job] of jobs) {
+    job.priority =
+      job.roomId === roomId ? BAKE_PRIORITY.current : BAKE_PRIORITY.neighbour;
+    queue.reprioritise(String(id), job.priority);
+  }
+  pauseBaking();
+}
+
+// ---- Swapping results in, a few a frame ------------------------------------
+
+const applying: { work: () => void; vertices: number }[] = [];
+let applyFrame = 0;
+function applySome() {
+  applyFrame = 0;
+  const start = performance.now();
+  let vertices = 0;
+  while (
+    applying.length &&
+    performance.now() - start < APPLY_BUDGET &&
+    (vertices === 0 || vertices + applying[0].vertices <= APPLY_VERTICES)
+  ) {
+    const next = applying.shift()!;
+    vertices += next.vertices;
+    next.work();
+  }
+  if (applying.length) applyFrame = requestAnimationFrame(applySome);
+}
+function later(work: () => void, vertices = 0) {
+  applying.push({ work, vertices });
+  if (!applyFrame) applyFrame = requestAnimationFrame(applySome);
 }
 
 // ---- Gathering a room's static geometry -----------------------------------
@@ -182,89 +225,51 @@ const PATCHABLE = (m: Material) =>
 function staticKind(
   mesh: Mesh,
   root: Object3D,
-): 'receiver' | 'occluder' | null {
-  if (mesh instanceof InstancedMesh) return null;
+): 'receiver' | 'occluder' | `skip:${string}` | `occluder:${string}` {
+  if (mesh instanceof InstancedMesh) return 'skip:instanced';
   let marked: boolean | undefined;
   let merged = false;
   for (let o: Object3D | null = mesh; o; o = o.parent) {
-    if (!o.visible) return null;
-    if (o.userData.bakeAo === false) return null;
+    if (!o.visible) return 'skip:hidden';
+    if (o.userData.bakeAo === false) return 'skip:excluded';
     if (o.userData.bakeAo === true) marked ??= true;
     if (o.name === 'Merged') merged = true;
     if (o === root) break;
   }
-  if (!marked && !merged) return null;
+  if (!marked && !merged) return 'skip:not static';
+  const g = mesh.geometry as BufferGeometry;
+  const position = g.attributes.position as BufferAttribute | undefined;
+  const normal = g.attributes.normal as BufferAttribute | undefined;
+  // Only plain arrays are handed over as they are.
+  if (
+    !position?.isBufferAttribute ||
+    !normal?.isBufferAttribute ||
+    !(position.array instanceof Float32Array) ||
+    !(normal.array instanceof Float32Array)
+  )
+    return 'skip:arrays';
   const material = mesh.material;
-  if (Array.isArray(material)) return 'occluder';
+  if (Array.isArray(material)) return 'occluder:materials';
+  // Glass, water, mesh and light shafts: see-through, so neither.
+  if (material.transparent || material.alphaTest > 0 || material.opacity < 1)
+    return 'skip:see-through';
+  // Displays drawn on a canvas are not darkened: their readouts stay as lit.
+  const map = (material as MeshStandardMaterial).map;
+  if (map && 'isCanvasTexture' in map) return 'occluder:display';
   if (material.transparent || material.userData.live || !PATCHABLE(material))
-    return 'occluder';
+    return `occluder:${material.transparent ? 'transparent' : material.userData.live ? 'live' : material.type}`;
   return 'receiver';
 }
 
-/**
- * A receiver's large faces subdivided in place (so the walls, floors and
- * ceilings have vertices enough to carry occlusion), if its geometry is
- * only positions, normals and uvs; kept as it is otherwise.
- */
-function subdivideInPlace(mesh: Mesh, maxEdge: number) {
-  const g = mesh.geometry as BufferGeometry;
-  if (g.userData.aoSubdivided) return;
-  const names = Object.keys(g.attributes);
-  // (Groups do not matter: a receiver has one material.)
-  if (names.some((n) => !['position', 'normal', 'uv'].includes(n))) return;
-  if (!g.attributes.normal) g.computeVertexNormals();
-  const flat = g.index ? g.toNonIndexed() : g;
-  const uv = flat.attributes.uv as BufferAttribute | undefined;
-  const out = subdivideLongEdges(
-    {
-      positions: flat.attributes.position.array as Float32Array,
-      normals: flat.attributes.normal.array as Float32Array,
-      uvs: uv ? (uv.array as Float32Array) : null,
-    },
-    maxEdge,
+/** Whether a receiver's geometry can be subdivided: nothing to carry but positions, normals and uvs. */
+function subdividable(g: BufferGeometry) {
+  const uv = g.attributes.uv as BufferAttribute | undefined;
+  return (
+    Object.keys(g.attributes).every((n) =>
+      ['position', 'normal', 'uv'].includes(n),
+    ) &&
+    (!uv || uv.array instanceof Float32Array)
   );
-  if (
-    out.positions.length ===
-      (g.attributes.position.array as Float32Array).length &&
-    !g.index
-  ) {
-    g.userData.aoSubdivided = true;
-    return;
-  }
-  const next = new BufferGeometry();
-  next.setAttribute('position', new BufferAttribute(out.positions, 3));
-  next.setAttribute('normal', new BufferAttribute(out.normals, 3));
-  if (out.uvs) next.setAttribute('uv', new BufferAttribute(out.uvs, 2));
-  next.computeBoundingSphere();
-  next.computeBoundingBox();
-  next.userData.aoSubdivided = true;
-  mesh.geometry = next;
-  g.dispose();
-  if (flat !== g) flat.dispose();
-}
-
-function payloadOf(mesh: Mesh, receiver: boolean): BakeMeshPayload {
-  const g = mesh.geometry as BufferGeometry;
-  const position = g.attributes.position;
-  if (!g.attributes.normal) g.computeVertexNormals();
-  const normal = g.attributes.normal;
-  const n = position.count;
-  const positions = new Float32Array(n * 3);
-  const normals = new Float32Array(n * 3);
-  const v = new Vector3();
-  const normalMatrix = new Matrix3().getNormalMatrix(mesh.matrixWorld);
-  for (let i = 0; i < n; i++) {
-    v.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld);
-    positions[i * 3] = v.x;
-    positions[i * 3 + 1] = v.y;
-    positions[i * 3 + 2] = v.z;
-    v.fromBufferAttribute(normal, i).applyMatrix3(normalMatrix).normalize();
-    normals[i * 3] = v.x;
-    normals[i * 3 + 1] = v.y;
-    normals[i * 3 + 2] = v.z;
-  }
-  const index = g.index ? Uint32Array.from(g.index.array) : null;
-  return { positions, normals, index, receiver };
 }
 
 // ---- Applying a bake --------------------------------------------------------
@@ -322,15 +327,38 @@ export interface BakedAoOptions {
   settings?: BakeSettings;
   /** Bake again even if cached (`?bake=fresh`). */
   fresh?: boolean;
+  /**
+   * Compile shaders without blocking (`renderer.compileAsync(object, camera,
+   * scene)`): the baked materials are compiled on stand-ins before they are
+   * swapped in, so their first frame does not stall.
+   */
+  compile?: (object: Object3D) => Promise<unknown>;
 }
+
+export type BakeStat = (typeof bakeStats)[number];
 
 /**
  * Bake `root`'s static meshes' ambient occlusion, or take it from the
  * cache, and fade it in. Returns a handle: `ready` settles once it is
  * shown (with what it cost), `setShown` turns it off and on (to compare),
- * `dispose` drops it (the bake itself goes on into the cache).
+ * `dispose` drops it.
  */
 export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
+  const asked = new URLSearchParams(globalThis.location?.search ?? '').get(
+    'bake',
+  );
+  // `?bake=off`: the room as it was before baking, to compare.
+  if (asked === 'off')
+    return {
+      roomId: options.roomId,
+      hash: '',
+      receivers: 0,
+      skipped: {},
+      ready: Promise.resolve(null as BakeStat | null),
+      setShown() {},
+      strength: 0,
+      dispose() {},
+    };
   const started = performance.now();
   const {
     roomId,
@@ -338,47 +366,30 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
     unit = 1,
     settings = DEFAULT_BAKE,
   } = options;
-  const asked = new URLSearchParams(globalThis.location?.search ?? '').get(
-    'bake',
-  );
   const fresh = options.fresh ?? asked === 'fresh';
-  // `?bake=off`: the room as it was before baking, to compare.
-  if (asked === 'off')
-    return {
-      hash: '',
-      receivers: 0,
-      occluders: 0,
-      vertices: 0,
-      ready: Promise.resolve(null),
-      setShown() {},
-      strength: 0,
-      dispose() {},
-    };
   root.updateMatrixWorld(true);
   const receivers: Mesh[] = [];
-  const meshes: Mesh[] = [];
+  const found: { mesh: Mesh; receiver: boolean }[] = [];
+  // Why each mesh not baked was left out, counted (to look into in the browser).
+  const skipped: Record<string, number> = {};
+  // Only listed here; sorted a few at a time (below).
+  const all: Mesh[] = [];
   root.traverse((o) => {
-    if (!(o instanceof Mesh)) return;
-    const kind = staticKind(o, root);
-    if (!kind) return;
-    meshes.push(o);
-    if (kind === 'receiver') receivers.push(o);
+    if (o instanceof Mesh) all.push(o);
   });
-  // In each mesh's own units: its world scale may be other than one.
-  for (const mesh of receivers)
-    subdivideInPlace(
-      mesh,
-      (settings.maxEdge * unit) / mesh.matrixWorld.getMaxScaleOnAxis(),
-    );
-  const isReceiver = new Set(receivers);
-  const payload = meshes.map((m) => payloadOf(m, isReceiver.has(m)));
-  const hash = geometryHash(payload, settings, unit);
-  const hashMs = performance.now() - started;
+  let sorted = 0;
+  const id = nextId++;
+  let gatherMs = performance.now() - started;
+  let gatherMaxMs = gatherMs;
   const strength = { value: 0 };
   const materials = new Map<Material, Material>();
-  const originals = new Map<Mesh, Material>();
+  const originals = new Map<
+    Mesh,
+    { material: Material; geometry: BufferGeometry }
+  >();
   let disposed = false;
   let shown = true;
+  let applied = false;
   let fadeFrom = 0;
   let raf = 0;
   const fade = () => {
@@ -393,117 +404,275 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
     strength.value = on ? t : 0;
     if (strength.value !== target) raf = requestAnimationFrame(fade);
   };
+  const startFade = () => {
+    fadeFrom = performance.now();
+    strength.value = 0;
+    if (!raf) raf = requestAnimationFrame(fade);
+  };
   // LIVE or OFF in the menu: the bake goes at once; back to ONE-TIME, it fades in.
-  let applied = false;
   let wasBaking = baking();
   const stopFollowing = effect(() => {
     const now = playerSettings.value.aoMode === 'bake';
     if (now === wasBaking) return;
     wasBaking = now;
-    if (!applied) return;
-    fadeFrom = performance.now();
-    strength.value = 0;
-    if (!raf) raf = requestAnimationFrame(fade);
+    if (applied) startFade();
   });
-  const apply = (ao: Uint8Array[]) => {
-    if (disposed) return false;
-    applied = true;
-    if (ao.length !== receivers.length) return false;
-    receivers.forEach((mesh, i) => {
-      const g = mesh.geometry as BufferGeometry;
-      if (g.attributes.position.count !== ao[i].length) return;
-      g.setAttribute('aoBake', new BufferAttribute(ao[i], 1, true));
-      const material = mesh.material as Material;
-      let patched = materials.get(material);
-      if (!patched)
-        materials.set(
-          material,
-          (patched = bakedAoMaterial(material, strength)),
-        );
-      originals.set(mesh, material);
-      mesh.material = patched;
-    });
-    fadeFrom = performance.now();
-    if (!raf) raf = requestAnimationFrame(fade);
-    return true;
+  /** Swap one receiver's geometry and material: no per-vertex work here. */
+  const swap = (mesh: Mesh, baked: BakedMesh) => {
+    // (An empty bake: too small to bake, left as it is.)
+    if (disposed || !baked.ao.length) return;
+    const old = mesh.geometry as BufferGeometry;
+    let geometry: BufferGeometry;
+    if (baked.positions && baked.normals) {
+      geometry = new BufferGeometry();
+      geometry.setAttribute(
+        'position',
+        new BufferAttribute(baked.positions, 3),
+      );
+      geometry.setAttribute('normal', new BufferAttribute(baked.normals, 3));
+      if (baked.uvs)
+        geometry.setAttribute('uv', new BufferAttribute(baked.uvs, 2));
+      if (old.boundingBox) geometry.boundingBox = old.boundingBox.clone();
+    } else {
+      if (old.attributes.position.count !== baked.ao.length) return;
+      // Its own geometry, sharing the arrays (another mesh may share the
+      // old geometry, with a bake of its own): no copying.
+      geometry = new BufferGeometry();
+      for (const [name, attribute] of Object.entries(old.attributes))
+        geometry.setAttribute(name, attribute);
+      geometry.setIndex(old.index);
+      for (const g of old.groups)
+        geometry.addGroup(g.start, g.count, g.materialIndex);
+      geometry.boundingSphere = old.boundingSphere;
+      geometry.boundingBox = old.boundingBox;
+    }
+    geometry.setAttribute('aoBake', new BufferAttribute(baked.ao, 1, true));
+    // Its bounds from the worker, so none are worked out here.
+    if (baked.sphere)
+      geometry.boundingSphere = new Sphere(
+        new Vector3(baked.sphere[0], baked.sphere[1], baked.sphere[2]),
+        baked.sphere[3],
+      );
+    const material = mesh.material as Material;
+    let patched = materials.get(material);
+    if (!patched)
+      materials.set(material, (patched = bakedAoMaterial(material, strength)));
+    if (!originals.has(mesh)) originals.set(mesh, { material, geometry: old });
+    mesh.geometry = geometry;
+    mesh.material = patched;
   };
-  const vertices = receivers.reduce(
-    (s, m) => s + (m.geometry as BufferGeometry).attributes.position.count,
-    0,
-  );
-  const ready = (async () => {
-    const cached = fresh ? null : await loadBake(hash);
-    if (cached) {
-      apply(cached.ao);
-      const stat = {
-        roomId,
-        hash,
-        ms: performance.now() - started,
-        bvhMs: 0,
-        rays: 0,
-        triangles: 0,
-        vertices,
-        cached: true,
-        hashMs,
-      };
-      bakeStats.push(stat);
-      return stat;
+  const ready = new Promise<Ready | null>((resolve) => {
+    jobs.set(id, { roomId, priority, done: resolve });
+  })
+    .then(async (reply) => {
+      // The baked materials compiled first, on stand-ins, without blocking.
+      if (reply && options.compile && !disposed) {
+        const stand = new Group();
+        const tiny = new BufferGeometry();
+        tiny.setAttribute(
+          'position',
+          new BufferAttribute(new Float32Array(9), 3),
+        );
+        tiny.setAttribute(
+          'normal',
+          new BufferAttribute(new Float32Array(9), 3),
+        );
+        tiny.setAttribute('uv', new BufferAttribute(new Float32Array(6), 2));
+        tiny.setAttribute(
+          'aoBake',
+          new BufferAttribute(new Uint8Array(3), 1, true),
+        );
+        for (const mesh of receivers) {
+          const material = mesh.material as Material;
+          let patched = materials.get(material);
+          if (!patched)
+            materials.set(
+              material,
+              (patched = bakedAoMaterial(material, strength)),
+            );
+          const proxy = new Mesh(tiny, patched);
+          // Shadows change the program: as the mesh has them.
+          proxy.receiveShadow = mesh.receiveShadow;
+          proxy.castShadow = mesh.castShadow;
+          stand.add(proxy);
+        }
+        try {
+          await options.compile(stand);
+        } catch {
+          // Compiled on first use instead.
+        }
+        tiny.dispose();
+      }
+      return reply;
+    })
+    .then(
+      (reply) =>
+        new Promise<BakeStat | null>((resolve) => {
+          if (!reply || disposed || reply.meshes.length !== receivers.length)
+            return resolve(null);
+          let applyMs = 0;
+          let applyMaxMs = 0;
+          receivers.forEach((mesh, i) =>
+            later(() => {
+              const t = performance.now();
+              swap(mesh, reply.meshes[i]);
+              const spent = performance.now() - t;
+              applyMs += spent;
+              applyMaxMs = Math.max(applyMaxMs, spent);
+            }, reply.meshes[i].ao.length),
+          );
+          later(() => {
+            applied = true;
+            startFade();
+            const stat: BakeStat = {
+              ...reply.timings,
+              roomId,
+              hash: reply.hash,
+              cached: reply.cached,
+              gatherMs,
+              gatherMaxMs,
+              applyMs,
+              applyMaxMs,
+              ms: performance.now() - started,
+            };
+            bakeStats.push(stat);
+            resolve(stat);
+          });
+        }),
+    );
+  // In three steps a few at a time, each within the frame budget: sort the
+  // meshes; number their geometries (each once however many meshes share
+  // it); copy every geometry into a few packed arrays. Then hand those
+  // over: a handful of transfers, nothing copied again.
+  const numbered = new Map<BufferGeometry, number>();
+  const unique: BufferGeometry[] = [];
+  const offsets: number[] = [];
+  let floats = 0;
+  let uvFloats = 0;
+  let indices = 0;
+  let next = 0;
+  let packed: {
+    positions: Float32Array;
+    normals: Float32Array;
+    uvs: Float32Array;
+    index: Uint32Array;
+  } | null = null;
+  let copied = 0;
+  const gatherSome = () => {
+    if (disposed) return;
+    const start = performance.now();
+    const within = () => performance.now() - start < APPLY_BUDGET;
+    while (sorted < all.length && within()) {
+      const o = all[sorted++];
+      const kind = staticKind(o, root);
+      if (kind !== 'receiver') skipped[kind] = (skipped[kind] ?? 0) + 1;
+      if (kind.startsWith('skip:')) continue;
+      found.push({ mesh: o, receiver: kind === 'receiver' });
+      if (kind === 'receiver') receivers.push(o);
     }
-    if (!receivers.length) return null;
-    let bake = pending.get(hash);
-    if (!bake) {
-      bake = {
-        hash,
-        roomId,
-        meshes: payload,
-        settings: {
-          rays: settings.rays,
-          distance: settings.distance * unit,
-          bias: 0.002 * unit,
-        },
-        waiting: [],
-      };
-      pending.set(hash, bake);
+    while (sorted === all.length && next < found.length && within()) {
+      const g = found[next++].mesh.geometry as BufferGeometry;
+      if (numbered.has(g)) continue;
+      numbered.set(g, unique.length);
+      unique.push(g);
+      const count = g.attributes.position.array.length;
+      const uv = g.attributes.uv as BufferAttribute | undefined;
+      const hasUv = uv?.array instanceof Float32Array;
+      const index = g.index?.array;
+      const hasIndex =
+        index instanceof Uint32Array || index instanceof Uint16Array;
+      offsets.push(
+        floats,
+        count,
+        hasUv ? uvFloats : -1,
+        hasIndex ? indices : -1,
+        hasIndex ? index.length : 0,
+      );
+      floats += count;
+      if (hasUv) uvFloats += (count / 3) * 2;
+      if (hasIndex) indices += index.length;
     }
-    const reply = await new Promise<Extract<
-      BakeReply,
-      { type: 'done' }
-    > | null>((resolve) => {
-      bake.waiting.push(resolve);
-      queue.add(hash, priority);
-      pump();
+    if (next === found.length && sorted === all.length) {
+      packed ??= {
+        positions: new Float32Array(floats),
+        normals: new Float32Array(floats),
+        uvs: new Float32Array(uvFloats),
+        index: new Uint32Array(indices),
+      };
+      while (copied < unique.length && within()) {
+        const g = unique[copied];
+        const o = offsets.slice(copied * 5, copied * 5 + 5);
+        packed.positions.set(g.attributes.position.array as Float32Array, o[0]);
+        packed.normals.set(g.attributes.normal.array as Float32Array, o[0]);
+        if (o[2] >= 0)
+          packed.uvs.set(g.attributes.uv.array as Float32Array, o[2]);
+        if (o[3] >= 0) packed.index.set(g.index!.array, o[3]);
+        copied++;
+      }
+    }
+    const spent = performance.now() - start;
+    gatherMs += spent;
+    gatherMaxMs = Math.max(gatherMaxMs, spent);
+    if (!packed || copied < unique.length) {
+      requestAnimationFrame(gatherSome);
+      return;
+    }
+    const t = performance.now();
+    const geometry = new Int32Array(found.length);
+    const flags = new Uint8Array(found.length);
+    const matrices = new Float32Array(found.length * 16);
+    found.forEach(({ mesh, receiver }, i) => {
+      const g = mesh.geometry as BufferGeometry;
+      geometry[i] = numbered.get(g)!;
+      flags[i] =
+        (receiver ? 1 : 0) |
+        (receiver && subdividable(g) ? 2 : 0) |
+        ((mesh.material as Material).side === DoubleSide ? 4 : 0);
+      matrices.set(mesh.matrixWorld.elements, i * 16);
     });
-    if (!reply) return null;
-    const bytes = reply.ao.reduce((s, a) => s + a.byteLength, 0);
-    void storeBake({ hash, roomId, bytes, lastUsed: Date.now(), ao: reply.ao });
-    apply(reply.ao);
-    const stat = {
+    const message: Extract<BakeRequest, { type: 'prepare' }> = {
+      type: 'prepare',
+      id,
       roomId,
-      hash,
-      ms: reply.ms,
-      bvhMs: reply.bvhMs,
-      rays: reply.rays,
-      triangles: reply.triangles,
-      vertices,
-      cached: false,
-      hashMs,
+      geometries: { ...packed, offsets: Int32Array.from(offsets) },
+      meshes: { geometry, flags, matrices },
+      settings: {
+        distance: settings.distance,
+        maxEdge: settings.maxEdge,
+        unit,
+        rays: settings.rays,
+      },
+      fresh,
     };
-    bakeStats.push(stat);
-    return stat;
-  })();
+    send(message, [
+      packed.positions.buffer,
+      packed.normals.buffer,
+      packed.uvs.buffer,
+      packed.index.buffer,
+      message.geometries.offsets.buffer,
+      geometry.buffer,
+      flags.buffer,
+      matrices.buffer,
+    ]);
+    const handOver = performance.now() - t;
+    gatherMs += handOver;
+    gatherMaxMs = Math.max(gatherMaxMs, handOver);
+  };
+  gatherSome();
   const handle = {
     roomId,
-    hash,
-    receivers: receivers.length,
-    occluders: meshes.length - receivers.length,
-    vertices,
+    /** What it bakes (to look into in the browser). */
+    root,
+    hash: '',
+    get receivers() {
+      return receivers.length;
+    },
+    skipped,
     ready,
     /** Show the bake or not (fading in again when shown). */
     setShown(on: boolean) {
       shown = on;
-      fadeFrom = performance.now();
-      strength.value = 0;
-      if (!raf) raf = requestAnimationFrame(fade);
+      startFade();
     },
     get strength() {
       return strength.value;
@@ -514,7 +683,15 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
       const at = shownBakes.indexOf(handle);
       if (at >= 0) shownBakes.splice(at, 1);
       if (raf) cancelAnimationFrame(raf);
-      for (const [mesh, material] of originals) mesh.material = material;
+      // Its bake goes on into the cache all the same (baking ahead), unshown.
+      const job = jobs.get(id);
+      if (job) job.done = () => {};
+      for (const [mesh, { material, geometry }] of originals) {
+        // (Its own attributes only: shared ones stay with the old geometry.)
+        if (mesh.geometry !== geometry) mesh.geometry.dispose();
+        mesh.material = material;
+        mesh.geometry = geometry;
+      }
       for (const m of materials.values()) m.dispose();
     },
   };

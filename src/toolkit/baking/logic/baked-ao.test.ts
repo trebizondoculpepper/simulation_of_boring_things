@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { DEFAULT_BAKE, geometryHash, subdivideLongEdges } from './ao-geometry';
+import {
+  needsDetail,
+  raysFor,
+  smoothVertexAo,
+  spreadSubdivision,
+  DEFAULT_BAKE,
+  geometryHash,
+  subdivideLongEdges,
+} from './ao-geometry';
 import type { BakeMeshData } from './ao-geometry';
 import {
   createVertexAoJob,
@@ -295,5 +303,53 @@ describe('the bake queue', () => {
     expect(mayBake(100, 200, [])).toBe(false);
     expect(mayBake(300, 200, [16, 17])).toBe(true);
     expect(mayBake(300, 200, [40, 50])).toBe(false);
+  });
+});
+
+describe('subdividing only where it shows', () => {
+  it('keeps masked-off triangles whole', () => {
+    const out = subdivideLongEdges(
+      square(4),
+      0.5,
+      400_000,
+      new Uint8Array([0, 0]),
+    );
+    expect(out.positions.length).toBe(18);
+    const half = subdivideLongEdges(
+      square(4),
+      0.5,
+      400_000,
+      new Uint8Array([1, 0]),
+    );
+    expect(half.positions.length).toBeGreaterThan(18);
+  });
+  it('spreads the mask to the coplanar triangle sharing a long edge', () => {
+    const sq = square(4);
+    const mask = spreadSubdivision(
+      sq.positions,
+      sq.normals,
+      new Uint8Array([1, 0]),
+      0.5,
+    );
+    expect([...mask]).toEqual([1, 1]);
+  });
+  it('leaves a face whole when all its samples are buried or all open', () => {
+    expect(needsDetail([0, 2, 5, 1])).toBe(false);
+    expect(needsDetail([255, 251, 250])).toBe(false);
+    expect(needsDetail([255, 120, 250])).toBe(true);
+  });
+  it('casts fewer rays in big rooms', () => {
+    expect(raysFor(5000)).toBe(32);
+    expect(raysFor(100_000)).toBe(16);
+  });
+  it('evens out noise between neighbours, alike at a shared corner', () => {
+    const sq = square(1);
+    const ao = new Uint8Array([0, 100, 200, 200, 100, 255]);
+    const out = smoothVertexAo(sq.positions, sq.normals, ao);
+    // Corners shared by both triangles (indices 1 and 4, 2 and 3) agree.
+    expect(out[1]).toBe(out[4]);
+    expect(out[2]).toBe(out[3]);
+    expect(out[0]).toBeGreaterThan(0);
+    expect(out[5]).toBeLessThan(255);
   });
 });

@@ -23,7 +23,7 @@ import {
 } from '../../components/core/parts/render-style';
 import { mergeStatic } from '../../components/core/views/merge-static';
 import { createFirstPerson } from '../../controls/input/first-person';
-import { bakeRoomAo, bakeStats, reportFrameTime } from '../../baking/baked-ao';
+import { bakeRoomAo, bakeStats } from '../../baking/baked-ao';
 import { clearBakes } from '../../baking/ao-cache';
 
 /** The room inside, metres. */
@@ -127,7 +127,11 @@ export function startBakedAoRoom(canvas: HTMLCanvasElement) {
   );
   button.userData.bakeAo = false;
 
-  const ao = bakeRoomAo(room, { roomId: 'dev56', unit: m });
+  const ao = bakeRoomAo(room, {
+    roomId: 'dev56',
+    unit: m,
+    compile: (object) => renderer.compileAsync(object, camera, scene),
+  });
   let shown = new URLSearchParams(location.search).get('ao') !== 'off';
   if (!shown) ao.setShown(false);
   uses.set(button, () => {
@@ -211,7 +215,6 @@ export function startBakedAoRoom(canvas: HTMLCanvasElement) {
       return;
     }
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
-    if (last) reportFrameTime(time - last);
     last = time;
     walk.update(delta);
     renderer.render(scene, camera);

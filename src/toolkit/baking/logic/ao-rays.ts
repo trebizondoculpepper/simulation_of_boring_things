@@ -84,6 +84,17 @@ export interface VertexAoInput {
   distance: number;
   /** How far off the surface rays start, scene units (so a face does not hit itself). */
   bias: number;
+  /**
+   * A vertex most of whose rays hit within this, scene units, is buried
+   * (inside a flange, a wall, another part): marked in `buried`, its own
+   * value meaningless (0 if not given).
+   */
+  bury?: number;
+  /**
+   * Seen from either side (a double-sided material, perhaps with its
+   * normals the wrong way): the brighter of its two sides is kept.
+   */
+  twoSided?: boolean;
 }
 
 /**
@@ -99,6 +110,8 @@ export function createVertexAoJob(input: VertexAoInput, cast: CastFirst) {
   const { positions, normals, rays, distance, bias } = input;
   const count = positions.length / 3;
   const result = new Uint8Array(count);
+  const buried = new Uint8Array(count);
+  const bury = input.bury ?? 0;
   const samples = hemisphereSamples(rays);
   // The first vertex of each distinct place-and-normal; the rest copy it.
   const firstOf = new Int32Array(count);
@@ -117,11 +130,13 @@ export function createVertexAoJob(input: VertexAoInput, cast: CastFirst) {
   }
   let next = 0;
   let cast_ = 0;
-  const bakeVertex = (i: number) => {
+  const bakeVertex = (i: number) =>
+    input.twoSided ? Math.max(bakeSide(i, 1), bakeSide(i, -1)) : bakeSide(i, 1);
+  const bakeSide = (i: number, side: number) => {
     const p = i * 3;
-    let nx = normals[p];
-    let ny = normals[p + 1];
-    let nz = normals[p + 2];
+    let nx = normals[p] * side;
+    let ny = normals[p + 1] * side;
+    let nz = normals[p + 2] * side;
     const l = Math.hypot(nx, ny, nz);
     if (!(l > 0)) return 255;
     nx /= l;
@@ -142,6 +157,7 @@ export function createVertexAoJob(input: VertexAoInput, cast: CastFirst) {
     const cs = Math.cos(spin);
     const sn = Math.sin(spin);
     let occluded = 0;
+    let near = 0;
     for (let s = 0; s < rays; s++) {
       const lx = samples[s * 3] * cs - samples[s * 3 + 1] * sn;
       const ly = samples[s * 3] * sn + samples[s * 3 + 1] * cs;
@@ -150,9 +166,15 @@ export function createVertexAoJob(input: VertexAoInput, cast: CastFirst) {
       const dy = t[1] * lx + b[1] * ly + ny * lz;
       const dz = t[2] * lx + b[2] * ly + nz * lz;
       const hit = cast(ox, oy, oz, dx, dy, dz, distance);
-      if (hit !== null) occluded += occlusionFalloff(hit, distance);
+      if (hit !== null) {
+        occluded += occlusionFalloff(hit, distance);
+        if (hit < bury) near++;
+      }
     }
     cast_ += rays;
+    if (near * 2 > rays) {
+      if (side === 1) buried[i] = 1;
+    } else if (side === -1) buried[i] = 0;
     return toAoByte(1 - occluded / rays);
   };
   return {
@@ -171,10 +193,15 @@ export function createVertexAoJob(input: VertexAoInput, cast: CastFirst) {
         result[i] = bakeVertex(i);
       }
       if (next < unique.length) return false;
-      for (let i = 0; i < count; i++) result[i] = result[firstOf[i]];
+      for (let i = 0; i < count; i++) {
+        result[i] = result[firstOf[i]];
+        buried[i] = buried[firstOf[i]];
+      }
       return true;
     },
     /** One byte a vertex, 255 unoccluded; complete once `step` has returned true. */
     result,
+    /** 1 for each vertex found buried (`bury`). */
+    buried,
   };
 }
