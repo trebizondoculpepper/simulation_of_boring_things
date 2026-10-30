@@ -435,11 +435,13 @@ function build(kit: PanelKit, f: SafetyFitting, top: number): Object3D {
         c.fillStyle = '#ffffff';
         c.textAlign = 'left';
         c.textBaseline = 'middle';
+        // On the north wall between the lift and the fire exit (layout C):
+        // the way out to its right, the way into the museum to its left.
         const rows = [
-          ['←', 'Way out, stairs to the ground floor'],
-          ['←', 'Toilets, accessible toilet, baby change'],
-          ['←', 'Cloakroom, café and shop: ground floor'],
-          ['→', 'The exhibition: PLANTROOMS'],
+          ['→', 'Way out, stairs to the ground floor'],
+          ['→', 'Toilets, accessible toilet, baby change'],
+          ['→', 'Cloakroom, café and shop: ground floor'],
+          ['←', 'The exhibition: PLANTROOMS'],
         ];
         rows.forEach(([a, text], i) => {
           const y = h * (0.17 + i * 0.22);
