@@ -922,7 +922,35 @@ export function createDayTankStation(
     legend: 'FILLING',
     drive: fill,
   });
-  fillLamp.object.position.set(ix + 0.1, vy + 0.1, iz + 0.05);
+  // Its FILLING lamp in a one-hole grey control station, held by a strap
+  // and collar on the riser beside the inlet valve it shows (it hung in the
+  // air until 2026-10-30).
+  const lx = ix + 0.1;
+  const ly = vy + 0.1;
+  const lz = iz + 0.05;
+  const strap = t.paint('#6f7275', 0.5);
+  t.box(
+    group,
+    t.paint('#8d9094', 0.6),
+    0.07,
+    0.1,
+    0.05,
+    lx,
+    ly + 0.01,
+    lz - 0.026,
+  );
+  t.cyl(group, strap, 0.026, 0.03, ix, ly + 0.01, iz, 'y', 12);
+  t.box(
+    group,
+    strap,
+    lx - 0.035 - ix,
+    0.025,
+    0.008,
+    (ix + lx - 0.035) / 2,
+    ly + 0.01,
+    iz,
+  );
+  fillLamp.object.position.set(lx, ly, lz);
   fillLamp.object.scale.setScalar(0.6);
   group.add(fillLamp.object);
   parts.add(fillLamp);

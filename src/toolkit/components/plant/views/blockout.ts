@@ -12,7 +12,11 @@ import {
 } from 'three';
 import type { PanelKit } from '../../core/views/eighties-controls';
 import type { BrandId } from '../../core/logic/brands';
-import { createEngravedPlate } from '../../core/views/plant-signs';
+import {
+  createEngravedPlate,
+  createStencilText,
+} from '../../core/views/plant-signs';
+import { wrapOnto } from '../../core/views/wrap-label';
 import { createSectionalTank } from './balance-plant';
 import { createHumanLadder } from '../../architectural/views/human-ladder';
 
@@ -95,6 +99,8 @@ export function createTank(
     label,
     shape = 'sectional',
     brand = 'gorskiy',
+    tag,
+    marking = shape === 'vessel' ? 'stencil' : 'plate',
   }: {
     w: number;
     d: number;
@@ -102,6 +108,14 @@ export function createTank(
     label: string;
     shape?: 'sectional' | 'vessel';
     brand?: BrandId;
+    /** Its tag from the plant register, marked with its name. */
+    tag?: string;
+    /**
+     * How its name is marked: an engraved plate, or stencilled paint on
+     * the shell itself, following a vessel's curve (the default for a
+     * vessel, since 2026-10-30: a flat plate stood off its curve).
+     */
+    marking?: 'plate' | 'stencil';
   },
 ) {
   const group = new Group() as Group & {
@@ -211,12 +225,31 @@ export function createTank(
   manway.position.y = 0.12 + shellH + dome + 0.04;
   group.add(plinth, shell, cap, manway);
   const volume = Math.PI * r * r * shellH;
+  const capacity = `${Math.round(volume * 10) / 10} M3`;
+  const markY = 0.12 + Math.min(1.6, shellH * 0.6);
+  if (marking === 'stencil') {
+    // Sprayed on the shell through a stencil, as a crew marks a tank: its
+    // tag over its name and capacity, the paint following the curve.
+    const text = [tag, label, capacity].filter(Boolean).join('\n');
+    const lines = text.split('\n');
+    const longest = Math.max(...lines.map((l) => l.length));
+    // As big as reads well, but no wider than a third of the way round.
+    const height = Math.min(0.12, (r * 2.1) / (0.72 * longest + 0.4));
+    const paint = createStencilText(kit, text, {
+      height,
+      colour: '#e9e5d3',
+      drips: false,
+    });
+    paint.position.set(0, markY, r);
+    group.add(wrapOnto(paint, [0, 0], r + 0.003));
+    return group;
+  }
   const plate = createEngravedPlate(
     kit,
-    [`${label}  ${Math.round(volume * 10) / 10} m³`],
+    [`${tag ? `${tag}  ` : ''}${label}  ${Math.round(volume * 10) / 10} m³`],
     { colour: 'white', width: Math.min(dia * 0.6, 1.2), height: 0.07 },
   );
-  plate.position.set(0, 0.12 + Math.min(1.6, shellH * 0.6), r + 0.01);
+  plate.position.set(0, markY, r + 0.01);
   group.add(plate);
   return group;
 }

@@ -665,6 +665,7 @@ function modelFor(
       h: item.h,
       label: item.label.toUpperCase(),
       shape: TANKS[kind],
+      tag: INSTALLED_ASSET_IDS[`${room}|${item.key}|${item.label}`]?.tag,
     });
     // A sectional tank is a confined space: its warning on its face, away
     // from its ladder, under its name plate.
