@@ -16,7 +16,6 @@ import {
   bridgeArrival,
   bridgeDoor,
   PLATFORM,
-  inReadyRoomReserve,
   insidePolygon,
   rearStationPlaces,
   roomPolygon,
@@ -114,12 +113,11 @@ describe('the bridge’s light switch (the owner, 2026-10-27)', () => {
       // Along its edge, the way out square to it.
       const along = { x: g.b.x - g.a.x, z: g.b.z - g.a.z };
       expect(along.x * g.out.x + along.z * g.out.z, g.name).toBeCloseTo(0);
-      // Its spill on the floor in the room, not on the ready room's reserve.
+      // Its spill on the floor in the room.
       for (const p of [g.a, g.b]) {
         const x = p.x + g.out.x * GLOW_SPILL;
         const z = p.z + g.out.z * GLOW_SPILL;
         expect(insidePolygon(roomPolygon(), x, z), g.name).toBe(true);
-        expect(inReadyRoomReserve(x, z), g.name).toBe(false);
       }
       expect([STOREY, STOREY + PLATFORM.height], g.name).toContain(g.y);
     }

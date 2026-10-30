@@ -53,9 +53,8 @@ import {
   STATION,
   STOREY,
   bridgeDoor,
-  ENTRY,
-  entryGaps,
-  entryWallPieces,
+  bridgeWallGaps,
+  bridgeWallPieces,
   chairPlace,
   DUTIES,
   REAR_CONSOLE,
@@ -552,10 +551,10 @@ export function createControlRoomPrototype(
       );
       w.rotation.y = -yaw;
     };
-    if (game && i === ENTRY.side) {
-      // The game's west wall, its doorway to the corridor cut through it.
-      // And the freight lift's opening beside the doorway (mission 108).
-      const pieces = entryWallPieces();
+    if (game && bridgeWallGaps(i).length) {
+      // The game's west wall, its doorway to the corridor cut through it;
+      // the east wall, the freight lift's opening (mission 108).
+      const pieces = bridgeWallPieces(i);
       pieces.forEach(([p, q], k) =>
         piece(
           k === 0 ? p - T : p,
@@ -564,7 +563,7 @@ export function createControlRoomPrototype(
           STOREY + H + 0.3,
         ),
       );
-      for (const g of entryGaps())
+      for (const g of bridgeWallGaps(i))
         piece(g.from, g.to, STOREY + g.head, STOREY + H + 0.3);
     } else piece(-T, len + T, STOREY, STOREY + H + 0.3);
     // A skirting of brass, and a fin every 2.4 m raked back toward the top.
@@ -579,13 +578,15 @@ export function createControlRoomPrototype(
       roomGroup,
     );
     sk.rotation.y = -yaw;
-    // Not across the game's doorway.
-    const entry = game && i === ENTRY.side;
+    // Not across the game's doorway, nor the lift's.
+    const gaps = game ? bridgeWallGaps(i) : [];
+    const entry = gaps.length > 0;
     if (entry) sk.visible = false;
     const count = Math.floor(len / 2.4);
     for (let k = 1; k < count; k++) {
       const s = k / count;
-      if (entry && Math.abs(s * len - ENTRY.at) < 1.4) continue;
+      if (gaps.some((g) => s * len > g.from - 1.4 && s * len < g.to + 1.4))
+        continue;
       const px = a.x + (b.x - a.x) * s;
       const pz = a.z + (b.z - a.z) * s;
       const f = box(

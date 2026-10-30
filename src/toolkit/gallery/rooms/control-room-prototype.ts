@@ -150,10 +150,10 @@ export function startBridgeRoom(
     lightsOf: 'control_room',
     powered: roomPowered('control_room'),
     start: bridgeArrival(),
-    // The freight lift's floor-3 landing beside the corridor's doors
-    // (mission 108): always the bridge, whatever the CONTROL ROOM MODE
-    // knob says; its call button on the frame's jamb, the wall beside it
-    // narrow.
+    // The freight lift's floor-3 landing in the middle of the east wall,
+    // facing the corridor's doors across the room (mission 108; the owner,
+    // 2026-10-30): always the bridge, whatever the CONTROL ROOM MODE knob
+    // says.
     extras: ({ kit, parts, rooms, metre, walk }) =>
       installLiftLanding({
         room: 'bridge',
@@ -167,7 +167,6 @@ export function startBridgeRoom(
         store: roomWorld(),
         walk,
         floorY: STOREY,
-        callOn: 'jamb',
         sign: 'GOODS LIFT · 3 CONTROL ROOM',
       }),
   });

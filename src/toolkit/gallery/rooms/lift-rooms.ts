@@ -275,7 +275,7 @@ const FRONT = 0.12;
 
 /**
  * A lift's car (`freight_lift`, or the trial lift's `dev54`): a heavy steel
- * goods car 2.2 m wide, 2.8 m deep and 2.4 m clear, its doorway at the
+ * goods car 2.62 m wide, 2.8 m deep and 2.4 m clear, its doorway at the
  * north end (z 0), its chequer-plate floor, steel walls and buffer rails,
  * a fluorescent fitting, the car's door (centre-opening, four stainless
  * panels, a light curtain down its leading edges; the owner, 2026-10-30:

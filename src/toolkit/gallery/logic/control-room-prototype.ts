@@ -829,63 +829,76 @@ export function bridgeDoorway() {
 /**
  * The freight lift's floor-3 landing (mission 108; the owner, 2026-10-29:
  * "since we don't have a turbo lift, we're going to send the elevator to
- * the bridge as well"): on the west wall, in the stretch kept clear for an
- * elevator beyond the corridor's doors (the light switch is on their other
- * side), its frame's opening `at` metres along the wall from its start;
- * the same goods lift doors as every floor's, a deliberate anachronism.
- * The owner, 2026-10-30: centre-opening four-panel doors, the landing
- * left where it was; the opening (`LIFT_DOOR.clear`) is the widest whose
- * stack fits between the corridor's doorway and the wall's end.
+ * the bridge as well"; 2026-10-30: the lift takes the whole east wall,
+ * side 2, facing the corridor's doors across the room, once kept for a
+ * captain's ready room, whose door, if built, goes on a back wall): in
+ * the middle of the east wall, its frame's opening `at` metres along it
+ * from its start; the same goods lift doors as every floor's, a
+ * deliberate anachronism.
  */
 export const BRIDGE_LIFT = {
-  side: ENTRY.side,
-  at: 5.73,
+  side: 2,
+  at: 0,
   w: LIFT_DOOR.clear + 2 * LIFT_DOOR.frame,
   top: LIFT_DOOR.height + LIFT_DOOR.frame,
 } as const;
 
-/** The lift landing's place on the bridge (`lift-doorway.ts`): on the west wall's inner face, facing into the room; its floor the bridge's (`STOREY`). */
-export function bridgeLiftPlace(): LiftPlace {
+/** The east wall's length, and the lift's place along it (its middle). */
+function bridgeLiftAlong() {
   const [a, b] = sides(roomPolygon())[BRIDGE_LIFT.side];
   const len = Math.hypot(b.x - a.x, b.z - a.z);
+  return { a, b, len, at: len / 2 };
+}
+
+/** The lift landing's place on the bridge (`lift-doorway.ts`): on the east wall's inner face, facing into the room; its floor the bridge's (`STOREY`). */
+export function bridgeLiftPlace(): LiftPlace {
+  const { a, b, len, at } = bridgeLiftAlong();
   const u = { x: (b.x - a.x) / len, z: (b.z - a.z) / len };
   const n = inward(a, b);
   return {
-    x: a.x + u.x * BRIDGE_LIFT.at,
-    z: a.z + u.z * BRIDGE_LIFT.at,
+    x: a.x + u.x * at,
+    z: a.z + u.z * at,
     yaw: Math.atan2(n.x, n.z),
   };
 }
 
 /**
- * The wall pieces along the west wall, round the corridor's doorway and
- * the lift's opening: [from, to] distances along it; and the gaps between
- * them, each with its head's height above the floor.
+ * A wall's openings, in order along it, each with its head's height above
+ * the floor: the corridor's doorway in the west wall (side 5), the lift's
+ * in the east (side 2); none in the others.
  */
-export function entryWallPieces(): [number, number][] {
-  const [a, b] = sides(roomPolygon())[ENTRY.side];
+export function bridgeWallGaps(side: number) {
+  if (side === ENTRY.side) {
+    const half = MAIN_CORRIDOR.opening / 2;
+    return [
+      { from: ENTRY.at - half, to: ENTRY.at + half, head: bridgeDoor().height },
+    ];
+  }
+  if (side === BRIDGE_LIFT.side) {
+    const { at } = bridgeLiftAlong();
+    return [
+      {
+        from: at - BRIDGE_LIFT.w / 2,
+        to: at + BRIDGE_LIFT.w / 2,
+        head: BRIDGE_LIFT.top,
+      },
+    ];
+  }
+  return [];
+}
+
+/** The wall pieces along a wall, round its openings: [from, to] distances along it. */
+export function bridgeWallPieces(side: number): [number, number][] {
+  const [a, b] = sides(roomPolygon())[side];
   const len = Math.hypot(b.x - a.x, b.z - a.z);
   const pieces: [number, number][] = [];
   let start = 0;
-  for (const g of entryGaps()) {
+  for (const g of bridgeWallGaps(side)) {
     pieces.push([start, g.from]);
     start = g.to;
   }
   pieces.push([start, len]);
   return pieces;
-}
-
-/** The west wall's openings: the corridor's doorway and the lift's, in order along it. */
-export function entryGaps() {
-  const half = MAIN_CORRIDOR.opening / 2;
-  return [
-    { from: ENTRY.at - half, to: ENTRY.at + half, head: bridgeDoor().height },
-    {
-      from: BRIDGE_LIFT.at - BRIDGE_LIFT.w / 2,
-      to: BRIDGE_LIFT.at + BRIDGE_LIFT.w / 2,
-      head: BRIDGE_LIFT.top,
-    },
-  ].sort((p, q) => p.from - q.from);
 }
 
 /** Where the walker arrives on the bridge: just inside the doorway, facing into the room. */
@@ -955,14 +968,15 @@ export function protoSolids(
   // them); the prototypes' stand their placeholders out from them.
   const walls = sides(room).flatMap(([a, b], i) => {
     const depth = CONTROL_ROOM.wall + (game ? 0 : placeholderDepth(i));
-    if (!game || i !== ENTRY.side) return bandAlong(a, b, depth, 0.3, -0.3);
-    // The game's west wall, open at its doorway.
+    if (!game || !bridgeWallGaps(i).length)
+      return bandAlong(a, b, depth, 0.3, -0.3);
+    // The game's west wall, open at its doorway; the east, at the lift's.
     const len = Math.hypot(b.x - a.x, b.z - a.z);
     const at = (d: number) => ({
       x: a.x + ((b.x - a.x) * d) / len,
       z: a.z + ((b.z - a.z) * d) / len,
     });
-    return entryWallPieces().flatMap(([p, q]) =>
+    return bridgeWallPieces(i).flatMap(([p, q]) =>
       bandAlong(at(p), at(q), depth, 0.3, -0.3),
     );
   });
@@ -1665,42 +1679,4 @@ export function backWallScreenPlaces() {
       along: [at - s.w / 2, at + s.w / 2] as [number, number],
     };
   });
-}
-
-/**
- * The east wall kept clear for a doorway (the owner, 2026-10-27: "I'll
- * use the east door to open into a Star Trek style captain's ready room.
- * That'll be a future change though. So reserve the east panel that
- * doesn't have anything on it for a doorway in future"): the east side
- * wall (side 2), between its corners' fillets, and `depth` metres of
- * floor before it. Nothing is to be placed there: no panels, screens,
- * stations or chairs. The door and the room are not built yet
- * (`TODO.md`).
- */
-export const READY_ROOM_RESERVE = { side: 2, depth: 1.5 } as const;
-
-/** The reserved east wall: its ends, the way into the room, and the stretch along it kept clear (metres from its start, inside the fillets). */
-export function readyRoomReserve() {
-  const [a, b] = sides(roomPolygon())[READY_ROOM_RESERVE.side];
-  const len = Math.hypot(b.x - a.x, b.z - a.z);
-  return {
-    a,
-    b,
-    n: inward(a, b),
-    along: [CORNER_FILLET, len - CORNER_FILLET] as [number, number],
-  };
-}
-
-/** Whether (x, z) is on the reserved east wall's stretch, within its `depth` of floor before it. */
-export function inReadyRoomReserve(x: number, z: number) {
-  const { a, b, n, along } = readyRoomReserve();
-  const len = Math.hypot(b.x - a.x, b.z - a.z);
-  const s = ((x - a.x) * (b.x - a.x) + (z - a.z) * (b.z - a.z)) / len;
-  const d = (x - a.x) * n.x + (z - a.z) * n.z;
-  return (
-    s >= along[0] &&
-    s <= along[1] &&
-    d >= -CONTROL_ROOM.wall &&
-    d <= READY_ROOM_RESERVE.depth
-  );
 }

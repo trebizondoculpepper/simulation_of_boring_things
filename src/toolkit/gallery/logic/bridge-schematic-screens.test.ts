@@ -5,7 +5,7 @@ import {
   CORNER_FILLET,
   ENTRY,
   PLATFORM,
-  READY_ROOM_RESERVE,
+  BRIDGE_LIFT,
   REAR_CONSOLE,
   REAR_SCREEN,
   REAR_STATIONS,
@@ -18,10 +18,8 @@ import {
   chairPlaces,
   deskScreenPlaces,
   deskSegments,
-  inReadyRoomReserve,
   plaquePlaces,
   protoSolids,
-  readyRoomReserve,
   rearStationPlaces,
   roomPolygon,
   sides,
@@ -178,16 +176,29 @@ describe('the bridge’s back walls (the owner, 2026-10-27)', () => {
   });
 });
 
-describe('the reserve for a captain’s ready room (the owner, 2026-10-27)', () => {
-  it('is the east side wall, which has nothing on it', () => {
-    const { a, b } = readyRoomReserve();
+/** The lift's east wall (the owner, 2026-10-30: it takes the whole wall), and whether (x, z) is on it or within 1.5 m of floor before it. */
+function liftWall() {
+  const [a, b] = sides(roomPolygon())[BRIDGE_LIFT.side];
+  return { a, b, n: inward(a, b) };
+}
+function beforeLiftWall(x: number, z: number) {
+  const { a, b, n } = liftWall();
+  const len = Math.hypot(b.x - a.x, b.z - a.z);
+  const s = ((x - a.x) * (b.x - a.x) + (z - a.z) * (b.z - a.z)) / len;
+  const d = (x - a.x) * n.x + (z - a.z) * n.z;
+  return (
+    s >= CORNER_FILLET && s <= len - CORNER_FILLET && d >= -0.01 && d <= 1.5
+  );
+}
+
+describe('the freight lift’s east wall (mission 108; the owner, 2026-10-30)', () => {
+  it('is the east side wall, which has nothing else on it', () => {
+    const { a, b } = liftWall();
     expect(Math.min(a.x, b.x)).toBeGreaterThan(10);
-    expect(WALL_PANELS.map((p) => p.side)).not.toContain(
-      READY_ROOM_RESERVE.side,
-    );
-    expect(ENTRY.side).not.toBe(READY_ROOM_RESERVE.side);
+    expect(WALL_PANELS.map((p) => p.side)).not.toContain(BRIDGE_LIFT.side);
+    expect(ENTRY.side).not.toBe(BRIDGE_LIFT.side);
     expect(REAR_STATIONS.map((r) => r.side as number)).not.toContain(
-      READY_ROOM_RESERVE.side,
+      BRIDGE_LIFT.side,
     );
   });
 
@@ -226,16 +237,16 @@ describe('the reserve for a captain’s ready room (the owner, 2026-10-27)', () 
     const v = viewscreenPlace();
     things.push(['the viewscreen', v.x, v.z]);
     for (const [name, x, z] of things)
-      expect(inReadyRoomReserve(x, z), name).toBe(false);
+      expect(beforeLiftWall(x, z), name).toBe(false);
   });
 
-  it('keeps the floor before it open, for the door to come', () => {
-    const { a, b, n } = readyRoomReserve();
+  it('keeps the floor before it open, for the lift’s landing', () => {
+    const { a, b, n } = liftWall();
     const mid = {
       x: (a.x + b.x) / 2 + n.x * 0.8,
       z: (a.z + b.z) / 2 + n.z * 0.8,
     };
-    expect(inReadyRoomReserve(mid.x, mid.z)).toBe(true);
+    expect(beforeLiftWall(mid.x, mid.z)).toBe(true);
     expect(
       protoSolids(STOREY, 'bridge', true).some((s) =>
         overlaps(s, mid.x, mid.z, 0.45),

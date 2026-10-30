@@ -21,11 +21,10 @@ export interface LiftPlace {
  */
 export const LIFT_DOOR = {
   /** Clear opening, wide and tall. */
-  // The widest the bridge's west wall takes (the owner, 2026-10-30): its
-  // landing's middle 1.06 m from the corridor's doorway and 1.17 m from
-  // the wall's end, so the stack (three quarters of this and the lap) is
-  // at most 1.06 m; 1.35 m clear stacks 1.04 m. It sets every landing's.
-  clear: 1.35,
+  // As wide as the car takes (the owner, 2026-10-30: up to about 1.8 m
+  // in a car about 2.6 m wide): the stack (three quarters of this and the
+  // lap, 1.31 m) must hide behind the car's front returns.
+  clear: 1.7,
   height: 2.2,
   /** The steel frame's jambs and head, each side. */
   frame: 0.1,
@@ -79,7 +78,7 @@ export function doorPanels(k: number): { fast: number; slow: number } {
  * wide enough for the four-panel doors to stack behind its front returns, a 2000 kg, 26-person goods car; its
  * front returns either side of the doorway as wide as the doors' stack.
  */
-export const LIFT_CAR = { w: 2.2, d: 2.8, h: 2.4 } as const;
+export const LIFT_CAR = { w: 2.62, d: 2.8, h: 2.4 } as const;
 
 /** The walker's half-width given to the light curtain: within this of the doorway, it is held. */
 const CURTAIN_REACH = 0.35;

@@ -20,8 +20,10 @@ import {
 } from './main-corridor';
 import {
   BRIDGE_LIFT,
-  entryGaps,
-  entryWallPieces,
+  CORNER_FILLET,
+  ENTRY,
+  bridgeWallGaps,
+  bridgeWallPieces,
 } from './control-room-prototype';
 import { lightSwitchPlace } from './bridge-lighting';
 import { hallArches, hallLiftOpening, MUSEUM_WALL } from './museum-plan';
@@ -117,23 +119,21 @@ describe('the freight lift’s landings (mission 108)', () => {
     expect(a.x).toBeCloseTo(CORRIDOR_LIFT.x);
     expect(a.z).toBeCloseTo(1.5);
   });
-  it('3: on the bridge’s west wall, clear of the corridor’s doorway and the light switch', () => {
-    const gaps = entryGaps();
-    expect(gaps).toHaveLength(2);
-    expect(gaps[0].to).toBeLessThanOrEqual(gaps[1].from);
-    const lift = gaps.find((g) => g.head === BRIDGE_LIFT.top)!;
+  it('3: in the middle of the bridge’s east wall, the doors stacking behind solid wall within its corner fillets', () => {
+    expect(BRIDGE_LIFT.side).not.toBe(ENTRY.side);
+    const gaps = bridgeWallGaps(BRIDGE_LIFT.side);
+    expect(gaps).toHaveLength(1);
+    const pieces = bridgeWallPieces(BRIDGE_LIFT.side);
+    expect(pieces).toHaveLength(2);
+    const len = pieces[1][1];
+    const at = (gaps[0].from + gaps[0].to) / 2;
+    expect(at).toBeCloseTo(len / 2);
+    expect(at - DOOR_STACK).toBeGreaterThan(CORNER_FILLET);
+    expect(at + DOOR_STACK).toBeLessThan(len - CORNER_FILLET);
+    // The corridor's doorway keeps the west wall to itself.
+    expect(bridgeWallGaps(ENTRY.side)).toHaveLength(1);
     const along = lightSwitchPlace().along;
-    expect(along < lift.from || along > lift.to).toBe(true);
-    // Every piece of wall between the gaps, none across them.
-    const pieces = entryWallPieces();
-    expect(pieces).toHaveLength(3);
-    for (const [p, q] of pieces) expect(q).toBeGreaterThan(p);
-    // The doors' near stack clear of the corridor's doorway.
-    const doorway = gaps.find((g) => g !== lift)!;
-    expect(BRIDGE_LIFT.at - DOOR_STACK).toBeGreaterThan(doorway.to);
-    // And the far stack short of the wall's end.
-    const end = entryWallPieces().at(-1)![1];
-    expect(BRIDGE_LIFT.at + DOOR_STACK).toBeLessThan(end);
+    expect(along).toBeGreaterThan(0);
   });
   it('B2: the doors stack behind solid wall either side', () => {
     const pieces = wallPieces('north');
