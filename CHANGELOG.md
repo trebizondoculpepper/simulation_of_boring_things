@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum: the empty shells of Halls 7 and 8, seen from afar, keep their black-box finish (black walls, floor and roof), not the white halls'.
 - Museum: halls two or more away from the walker are drawn in their own pass at a fixed quarter resolution (`far-hall-pass.ts`), laid behind the scene, so they never take the resolution of the hall they are seen through; a neighbour copied into the scene goes in the same pass, so what lies ahead no longer sharpens and then softens across a hand-over.
 - Museum tiers simplified (the owner, 2026-10-30): a hall next door is always drawn in full detail (no 30 m rule there), its resolution eased by the distance to its doorway; halls two or more away are low poly; the walker's own hall keeps the 30 m rule.
 - Museum: every hall two or more away shows its exhibit low poly in place, never an empty white hall; a neighbour's copy no longer fades in from an empty hall; a neighbour's resolution is judged from the doorway into the hall walked in; far placards drawn with a polygon offset, 4 mm proud, so they do not z-fight.

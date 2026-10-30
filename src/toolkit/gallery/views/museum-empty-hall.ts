@@ -28,6 +28,7 @@ import type {
   NeighbourDraw,
 } from '../logic/museum-plan';
 import {
+  BLACK_BOX,
   FLOOR_TILE,
   hall0PosterGlowGeometry,
   hall0TrimGeometry,
@@ -39,7 +40,7 @@ import {
   wallRun,
   windowShape,
 } from './museum-hall';
-import { HALL0_BANDS, hallBounds } from '../logic/museum-plan';
+import { HALL0_BANDS, hallBounds, isBlackBox } from '../logic/museum-plan';
 import type { MuseumMaterials, Opening } from './museum-hall';
 
 /**
@@ -78,7 +79,8 @@ export type EmptyPart =
   | 'band1'
   | 'band2'
   | 'sticker'
-  | 'glow';
+  | 'glow'
+  | 'black';
 
 export interface EmptyHallMaterials {
   parts: Record<EmptyPart, Material>;
@@ -139,6 +141,10 @@ export function createEmptyHallMaterials(
         emissive: '#3a3833',
         roughness: 0.95,
       }),
+    ),
+    // A black box's matt black walls, floor and roof deck (Halls 7 and 8).
+    black: behind(
+      new MeshStandardMaterial({ color: BLACK_BOX.walls, roughness: 0.95 }),
     ),
     glass: behind(
       new MeshStandardMaterial({
@@ -206,6 +212,8 @@ export function emptyHallParts(
   const shape = emptyHallShape(id);
   const b = shape.bounds;
   const welcome = shape.kind === 'welcome';
+  // A black box keeps its finish seen from afar (the owner, 2026-10-30).
+  const dark = isBlackBox(id);
   const t = MUSEUM_WALL;
   const floor = new PlaneGeometry(b.maxX - b.minX, b.maxZ - b.minZ);
   floor.rotateX(-Math.PI / 2);
@@ -216,11 +224,11 @@ export function emptyHallParts(
   if (!welcome)
     for (let i = 0; i < pos.count; i++)
       uv.setXY(i, pos.getX(i) / FLOOR_TILE, -pos.getZ(i) / FLOOR_TILE);
-  add(parts, welcome ? 'deck' : 'floor', floor);
+  add(parts, dark ? 'black' : welcome ? 'deck' : 'floor', floor);
   const lid = new PlaneGeometry(b.maxX - b.minX - t, b.maxZ - b.minZ - t);
   lid.rotateX(Math.PI / 2);
   lid.translate((b.minX + b.maxX) / 2, shape.h, (b.minZ + b.maxZ) / 2);
-  add(parts, 'ceiling', lid);
+  add(parts, dark ? 'black' : 'ceiling', lid);
   for (const { wall, windows } of shape.walls) {
     if (!builds(wall)) continue;
     const openings: Opening[] = shape.arches
@@ -253,7 +261,9 @@ export function emptyHallParts(
         group.materialIndex === 0
           ? welcome
             ? 'tile'
-            : 'paint'
+            : dark
+              ? 'black'
+              : 'paint'
           : welcome && openings.length === 0
             ? 'tile'
             : 'rawBrick',
