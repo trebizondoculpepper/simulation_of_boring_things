@@ -50,9 +50,9 @@ export function hallTier(
 }
 
 /**
- * Whether a component is drawn low poly: always in a hall beyond the
- * neighbours; elsewhere beyond 30 m, coming back only within 28 m so it
- * does not flicker at the edge.
+ * Whether a component is drawn low poly (the owner, 2026-10-30): always in
+ * a hall two or more away, never in a hall next door; in the walker's own
+ * hall beyond 30 m, coming back only within 28 m so it does not flicker.
  */
 export function useLowPoly(
   distance: number,
@@ -60,6 +60,7 @@ export function useLowPoly(
   wasLow: boolean,
 ): boolean {
   if (tier === 'beyond') return true;
+  if (tier === 'neighbour') return false;
   return wasLow ? distance > LOD_NEAR : distance > LOD_FAR;
 }
 

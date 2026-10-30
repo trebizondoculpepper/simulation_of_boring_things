@@ -632,7 +632,11 @@ export function startMuseumHallRoom(
     camera.getWorldPosition(eye);
     let count = 0;
     for (const l of lods) {
-      const low = useLowPoly(eye.distanceTo(l.centre) / metre, 'own', l.low);
+      const low = useLowPoly(
+        eye.distanceTo(l.centre) / metre,
+        active ? 'own' : 'neighbour',
+        l.low,
+      );
       if (low !== l.low) {
         l.low = low;
         if (low && !l.far) {

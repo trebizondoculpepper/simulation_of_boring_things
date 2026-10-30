@@ -54,8 +54,12 @@ describe('useLowPoly', () => {
   it('goes low beyond 30 m and back within 28 m', () => {
     expect(useLowPoly(29, 'own', false)).toBe(false);
     expect(useLowPoly(31, 'own', false)).toBe(true);
-    expect(useLowPoly(29, 'neighbour', true)).toBe(true);
-    expect(useLowPoly(27, 'neighbour', true)).toBe(false);
+    expect(useLowPoly(29, 'own', true)).toBe(true);
+    expect(useLowPoly(27, 'own', true)).toBe(false);
+  });
+  it('is never low in a hall next door', () => {
+    expect(useLowPoly(80, 'neighbour', false)).toBe(false);
+    expect(useLowPoly(80, 'neighbour', true)).toBe(false);
   });
   it('is always low in a hall beyond the neighbours', () => {
     expect(useLowPoly(1, 'beyond', false)).toBe(true);

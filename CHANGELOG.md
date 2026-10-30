@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum tiers simplified (the owner, 2026-10-30): a hall next door is always drawn in full detail (no 30 m rule there), its resolution eased by the distance to its doorway; halls two or more away are low poly; the walker's own hall keeps the 30 m rule.
 - Museum: every hall two or more away shows its exhibit low poly in place, never an empty white hall; a neighbour's copy no longer fades in from an empty hall; a neighbour's resolution is judged from the doorway into the hall walked in; far placards drawn with a polygon offset, 4 mm proud, so they do not z-fight.
 - Museum, Hall 0: its caustics projector is off when the hall is seen from Hall 1 or Hall 9 and fades up only once the walker enters (the owner, 2026-10-30); Hall 0's own room seen through a doorway never ran its projector's update, so it stayed on.
 
