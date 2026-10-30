@@ -281,29 +281,43 @@ export interface BayPlace {
   wall: 'north' | 'east' | 'south';
 }
 
+/** How many bays on each wall, and the gap between them along it. */
+export const BAYS_ON = { north: 6, east: 3, gap: 0.06 } as const;
+
 /**
- * Where each decade's bay hangs: the first five along the north wall,
- * west to east (left to right, facing it), the rest down the east wall,
- * north to south (left to right, facing it).
+ * Where each decade's bay hangs (layout C, 112: the way on to Hall 6 is
+ * now at the east wall's south end, where the last bays hung): the first
+ * six along the north wall, west to east (left to right, facing it), the
+ * next three down the east wall, north to south, all clear of that
+ * archway, and the last, the 2020s, on the south wall at its east end.
  */
 export function bayPlaces(): BayPlace[] {
-  const north = Math.ceil(DECADES.length / 2);
+  const step = BAY.w + BAYS_ON.gap;
+  const northStart = -((BAYS_ON.north - 1) * step) / 2;
   return DECADES.map((decade, k) => {
-    if (k < north)
+    if (k < BAYS_ON.north)
       return {
         decade,
-        x: -5.0 + k * (BAY.w + 0.25),
+        x: northStart + k * step,
         z: WALL.north,
         yaw: 0,
         wall: 'north' as const,
       };
-    const j = k - north;
+    const j = k - BAYS_ON.north;
+    if (j < BAYS_ON.east)
+      return {
+        decade,
+        x: WALL.east,
+        z: WALL.north + 0.3 + BAY.w / 2 + 0.25 + j * (BAY.w + 0.25),
+        yaw: -Math.PI / 2,
+        wall: 'east' as const,
+      };
     return {
       decade,
-      x: WALL.east,
-      z: -5.0 + j * (BAY.w + 0.25),
-      yaw: -Math.PI / 2,
-      wall: 'east' as const,
+      x: 4.6,
+      z: WALL.south,
+      yaw: Math.PI,
+      wall: 'south' as const,
     };
   });
 }
@@ -339,11 +353,11 @@ export const FUTURE: Decade = {
   ],
 };
 
-/** The future's bay: on the south wall, facing north into the hall, clear of the No running sign (x 1.9) and the east wall. */
+/** The future's bay: on the south wall, facing north into the hall, west of the No running sign (x 1.9), the 2020s' bay east of it (layout C). */
 export function futureBayPlace() {
   return {
     decade: FUTURE,
-    x: 4.6,
+    x: -1.0,
     z: WALL.south,
     yaw: Math.PI,
     wall: 'south' as const,
@@ -385,8 +399,8 @@ export function hall5Entrance() {
     introduction:
       'Before the first swimmer arrives, somebody has already been round the pool. For a hundred years the day has run the same way: open up, empty the skimmers, test the water, take the deliveries, backwash the filters, lock up. The tools changed, from a yellow comparator and a chalkboard to a touch screen and a pager. The skimmer basket did not. Walk the photographs from the 1920s to today, and empty the skimmer yourself.',
     route: [
-      { station: 1, name: 'The 1920s to the 1970s', what: 'north wall' },
-      { station: 2, name: 'The 1980s to today', what: 'east wall' },
+      { station: 1, name: 'The 1920s to the 1980s', what: 'north wall' },
+      { station: 2, name: 'The 1990s to today', what: 'east and south walls' },
       { station: 3, name: 'What’s in the Skimmer?', what: 'the poolside' },
     ],
     reset:
