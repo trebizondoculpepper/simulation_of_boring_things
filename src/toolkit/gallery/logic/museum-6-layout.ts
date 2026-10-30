@@ -41,6 +41,23 @@ import { hallColumns, hallInterior, hallOrigin } from './museum-plan';
  * y up, north −z).
  */
 
+/**
+ * Layout C (112, the owner, 2026-10-30: "in hall 6, we just need to swap
+ * things around so they're on the opposite wall"): both archways are now
+ * at the east end, so the whole plant stands turned half round about the
+ * hall's middle: the trough against the west wall, the showpiece by the
+ * way in at the north, the walk down the east side between the archways.
+ * Everything here is as laid out; the exhibit turns it.
+ */
+export const STANDS = { turn: Math.PI } as const;
+
+/** Footprints as the plant stands, turned half round (`STANDS`). */
+export function turnedHalfRound<
+  F extends { minX: number; maxX: number; minZ: number; maxZ: number },
+>(f: F): F {
+  return { ...f, minX: -f.maxX, maxX: -f.minX, minZ: -f.maxZ, maxZ: -f.minZ };
+}
+
 const interior = (() => {
   const i = hallInterior('museum6');
   const o = hallOrigin('museum6');

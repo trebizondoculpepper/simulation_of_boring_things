@@ -14,7 +14,7 @@ import type { MuseumHallId } from '../../logic/museum-plan';
  * either archway to the other round its exhibit, walls, corridors and
  * safety fittings. Halls join the list as they are done.
  */
-const DONE: readonly MuseumHallId[] = ['museum4'];
+const DONE: readonly MuseumHallId[] = ['museum4', 'museum6'];
 
 beforeEach(stubDocument);
 afterEach(() => vi.unstubAllGlobals());

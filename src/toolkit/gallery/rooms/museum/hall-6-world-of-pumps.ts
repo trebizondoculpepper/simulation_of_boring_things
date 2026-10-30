@@ -74,6 +74,8 @@ import {
   odOf,
   plumbHall6,
   standOf,
+  STANDS,
+  turnedHalfRound,
 } from '../../logic/museum-6-layout';
 import type { PlacedItem } from '../../logic/museum-6-layout';
 import {
@@ -763,6 +765,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   turnTo(families, WEST, 1.6, 6.0, FACE_EAST);
   object.add(still(families));
 
+  // Turned half round, along the west wall (layout C, `STANDS`).
+  object.rotation.y = STANDS.turn;
+  const placed = solids.map(turnedHalfRound);
   return {
     object,
     parts,
@@ -772,7 +777,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         ? 'tank full, pumps locked out'
         : `${Math.round(s.litres)} litres in the tank`;
     },
-    solids: () => solids,
+    solids: () => placed,
     reset,
     update(delta) {
       session = runSession(HALL6_MODEL, session, delta);
