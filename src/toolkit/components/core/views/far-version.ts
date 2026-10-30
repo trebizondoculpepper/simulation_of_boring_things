@@ -55,12 +55,20 @@ export function createFarVersion(
       const own = [mesh.material].flat().map((m) => {
         const copy = m.clone();
         copy.opacity = 1;
+        // Drawn in front of the face it lies on, so a far placard or
+        // label does not fight it at distance (the owner, 2026-10-30).
+        copy.polygonOffset = true;
+        copy.polygonOffsetFactor = -2;
+        copy.polygonOffsetUnits = -4;
         materials.push(copy);
         return copy;
       });
       const sign = new Mesh(geometry, own.length === 1 ? own[0] : own);
       sign.matrixAutoUpdate = false;
       sign.matrix.copy(at);
+      // A flat sign lifted 4 mm off its face along its normal.
+      if (geometry.type === 'PlaneGeometry')
+        sign.matrix.multiply(new Matrix4().makeTranslation(0, 0, 0.004));
       sign.name = `${mesh.name} (far)`;
       signs.push(sign);
       return;

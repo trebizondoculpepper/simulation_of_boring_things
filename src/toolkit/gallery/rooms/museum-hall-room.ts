@@ -1,4 +1,5 @@
 import {
+  Group as GroupClass,
   Box3,
   Vector3,
   ACESFilmicToneMapping,
@@ -49,6 +50,9 @@ import {
   hallOrigin,
   hallSolids,
   neighbourDraw,
+  MUSEUM_HALLS,
+  ringDistance,
+  ringSide,
   neighbourFade,
   ringNeighbours,
   startOf,
@@ -57,7 +61,50 @@ import type { MuseumHallId } from '../logic/museum-plan';
 import { lodExempt, quantisedScale, useLowPoly } from '../logic/museum-lod';
 
 /** Each hall's level of detail now: its resolution share and how many components are low poly. */
-type MuseumLod = { scale: number; lowPoly: number; components: number };
+type MuseumLod = {
+  scale: number;
+  lowPoly: number;
+  components: number;
+  /** The last frame's draw calls, triangles and CPU milliseconds, every pass. */
+  calls?: number;
+  triangles?: number;
+  cpuMs?: number;
+};
+
+const farKit = createPanelKit();
+const farBuilt = new Map<MuseumHallId, Promise<Object3D | null>>();
+
+/**
+ * A hall's exhibit as its low-poly version, baked once a page and shared
+ * (geometry and materials) by every scene that clones it: no shadows,
+ * nothing that moves.
+ */
+function beyondExhibit(n: MuseumHallId): Promise<Object3D | null> {
+  let built = farBuilt.get(n);
+  if (!built) {
+    built = (HALL_EXHIBITS[n]?.() ?? Promise.resolve(null)).then((m) => {
+      if (!m) return null;
+      const full = m.buildHallExhibit(farKit);
+      full.reset(localNow());
+      full.update?.(0);
+      const far = createFarVersion(full.object, {
+        minRadius: 0.3,
+        name: `${n} exhibit (beyond)`,
+      });
+      full.parts?.dispose();
+      full.dispose?.();
+      far.group.traverse((obj) => {
+        obj.castShadow = false;
+        obj.receiveShadow = false;
+        obj.updateMatrix();
+        obj.matrixAutoUpdate = false;
+      });
+      return far.group;
+    });
+    farBuilt.set(n, built);
+  }
+  return built;
+}
 
 /** The museum's level of detail, on `window.museumLod` for the readout. */
 function museumLodState(id: string): MuseumLod {
@@ -150,6 +197,28 @@ export function startMuseumHallRoom(
     }),
   );
   let peekFrom: MuseumHallId | null = null;
+  // Every hall more than one away as its exhibit's low-poly version over
+  // its empty shell (the owner, 2026-10-30, rule 2): baked once a page,
+  // shared by every hall's scene, no shadows, never updated.
+  const beyond = new Map<MuseumHallId, Object3D[]>(
+    ringNeighbours(id).map((n) => [n, []]),
+  );
+  for (const n of MUSEUM_HALLS) {
+    if (ringDistance(id, n) < 2) continue;
+    const side = ringNeighbours(id)[ringSide(id, n) === 'back' ? 0 : 1];
+    void beyondExhibit(n).then((far) => {
+      if (disposed || !far) return;
+      const placed = new GroupClass();
+      placed.add(far.clone());
+      const on = hallOrigin(n);
+      placed.position.set(on.x - o.x, 0, on.z - o.z);
+      placed.updateMatrix();
+      placed.matrixAutoUpdate = false;
+      hall.group.add(placed);
+      beyond.get(side)?.push(placed);
+      redraw();
+    });
+  }
   // The hall's exhibit (107-0), loaded with it; and each neighbour's copy's,
   // drawn in its reset state and never stepped (rule 1: a hall's time
   // starts when the visitor crosses in).
@@ -208,7 +277,16 @@ export function startMuseumHallRoom(
       built.parts?.dispose();
       built.dispose?.();
       farCopies.push(far);
-      copy.group.add(far.group);
+      // Beside its copy, not in it: still drawn while the copy is hidden
+      // because this hall is itself seen through an archway (rule 2).
+      // (A holder at the copy's place: the far version keeps the
+      // exhibit's own placement within its hall.)
+      const holder = new GroupClass();
+      holder.position.copy(copy.group.position);
+      holder.add(far.group);
+      hall.group.add(holder);
+      farOf.set(n, holder);
+      redraw();
       // It fades in with its hall, on its own materials.
       const own = far.materials;
       copyMaterials.push(...own);
@@ -252,11 +330,16 @@ export function startMuseumHallRoom(
       m.mat.opacity = m.opacity * f;
     }
   };
+  const farOf = new Map<MuseumHallId, Object3D>();
   const redraw = () => {
     for (const [n, copy] of copies) {
       const how = neighbourDraw(id, n, { seen, peekFrom });
       const f = fade.get(n) ?? 1;
       copy.group.visible = how === 'full' && f > 0;
+      const far = farOf.get(n);
+      if (far) far.visible = how === 'empty' || (how === 'full' && f > 0);
+      // The halls beyond it, low poly, unless its own room draws them.
+      for (const b of beyond.get(n) ?? []) b.visible = how !== 'under';
       // The empty hall stays underneath until the copy is fully in.
       shells.show(n, how === 'full' && f < 1 ? 'empty' : how);
     }
@@ -622,7 +705,15 @@ export function startMuseumHallRoom(
     }
     seeFrom(active ? null : archwayDistance());
     updateLod(delta);
-    if (visual) composer.render(delta);
+    if (visual) {
+      renderer.info.autoReset = false;
+      renderer.info.reset();
+      const t0 = performance.now();
+      composer.render(delta);
+      lodState.cpuMs = performance.now() - t0;
+      lodState.calls = renderer.info.render.calls;
+      lodState.triangles = renderer.info.render.triangles;
+    }
   });
 
   return Object.assign(
