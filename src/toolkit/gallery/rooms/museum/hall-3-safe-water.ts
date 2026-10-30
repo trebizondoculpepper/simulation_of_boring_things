@@ -75,6 +75,7 @@ import {
   POOL_SHAPE,
   POOL_WATER,
   TANK_SHAPE,
+  WEST,
   interior,
   plumbHall3,
 } from '../../logic/museum-3-layout';
@@ -122,7 +123,6 @@ import type { HallExhibit } from './exhibits';
 
 const SOUTH = interior.maxZ - 0.04;
 const FACE_NORTH = Math.PI;
-const W = interior.minX;
 const E = interior.maxX;
 
 const turnTo = (o: Object3D, x: number, y: number, z: number, yaw: number) => {
@@ -653,13 +653,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     airLit: () => state().airFault,
     weakLit: () => state().storeStrength === WEAK_STRENGTH,
   });
-  turnTo(faults.group, W + 5.0, 0, PLANT_EDGE + 0.4, 0);
+  turnTo(faults.group, WEST + 1.2, 0, PLANT_EDGE + 0.4, 0);
   object.add(
     markComponent(faults.group, { name: `${TAGS['faults']} fault pedestal` }),
   );
   take(faults.parts);
   updates.push(faults.update);
-  footprint(W + 5.0, PLANT_EDGE + 0.4, 0.2);
+  footprint(WEST + 1.2, PLANT_EDGE + 0.4, 0.2);
 
   // ---- The south wall: the mimic, the chemistry board, the entrance, RESET ----
   const board = createMimicBoard(kit, HALL3_MIMIC, {
@@ -773,7 +773,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     1.5,
     paintEntrance(hall3Entrance(), 'Hall 3 · Safe water'),
   );
-  turnTo(entrance, W + 3.0, 1.65, SOUTH, FACE_NORTH);
+  // East of the archway in from Hall 2 (layout C).
+  turnTo(entrance, WEST + 0.8, 1.65, SOUTH, FACE_NORTH);
   object.add(still(entrance));
   const resetSign = createWallPanel(
     kit,
@@ -782,17 +783,17 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     0.56,
     paintResetSign(RESET_SIGN),
   );
-  turnTo(resetSign, W + 5.0, 1.75, SOUTH, FACE_NORTH);
+  turnTo(resetSign, WEST + 2.6, 1.75, SOUTH, FACE_NORTH);
   object.add(still(resetSign));
   const resetButton = createResetPedestal(kit, {
     reset: () => reset(localNow()),
     lit: () => state().sinceReset < 2.5,
   });
-  turnTo(resetButton.group, W + 5.0, 0, SOUTH - 0.45, FACE_NORTH);
+  turnTo(resetButton.group, WEST + 2.6, 0, SOUTH - 0.45, FACE_NORTH);
   object.add(resetButton.group);
   take(resetButton.parts);
   updates.push(resetButton.update);
-  footprint(W + 5.0, SOUTH - 0.45, 0.25);
+  footprint(WEST + 2.6, SOUTH - 0.45, 0.25);
 
   // ---- The placards, before the plant ----
   for (const p of hall3Placards()) {

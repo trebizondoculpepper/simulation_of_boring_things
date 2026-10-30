@@ -84,17 +84,25 @@ export interface MachinePlace {
   y?: number;
 }
 
+/**
+ * Where the plant's west end starts (layout C, 112): both archways are now
+ * at the hall's west end, the way on to Hall 4 in the north wall, so the
+ * hypochlorite and the acid stand east of it, clear of its approach.
+ */
+export const DOOR_CLEAR = 5.0;
+export const WEST = W + DOOR_CLEAR;
+
 /** The middle's place: the sample cell, between the acid's pump and the balance tank. */
-export const MIDDLE_X = (W + 7.6 + (E - 7.6)) / 2;
+export const MIDDLE_X = (WEST + 6.7 + (E - 6.9)) / 2;
 
 /** Each machine's place, west to east. */
 export const PLACES: Record<MachineId, MachinePlace> = {
-  hypoStore: { x: W + 0.7, z: NORTH + 0.6, yaw: 0 },
-  hypoTank: { x: W + 1.8, z: NORTH + 0.6, yaw: 0 },
-  hypoPump: { x: W + 2.9, z: NORTH + 0.7, yaw: 0 },
-  acidStore: { x: W + 4.5, z: NORTH + 0.6, yaw: 0 },
-  acidTank: { x: W + 5.6, z: NORTH + 0.6, yaw: 0 },
-  acidPump: { x: W + 6.7, z: NORTH + 0.7, yaw: 0 },
+  hypoStore: { x: WEST + 0.7, z: NORTH + 0.6, yaw: 0 },
+  hypoTank: { x: WEST + 1.8, z: NORTH + 0.6, yaw: 0 },
+  hypoPump: { x: WEST + 2.9, z: NORTH + 0.7, yaw: 0 },
+  acidStore: { x: WEST + 4.5, z: NORTH + 0.6, yaw: 0 },
+  acidTank: { x: WEST + 5.6, z: NORTH + 0.6, yaw: 0 },
+  acidPump: { x: WEST + 6.7, z: NORTH + 0.7, yaw: 0 },
   sampleCell: { x: MIDDLE_X, z: NORTH, yaw: 0, y: PANEL_Y },
   drain: { x: MIDDLE_X + 0.75, z: NORTH + 0.35, yaw: 0 },
   balanceTank: { x: E - 6.9, z: NORTH + 1.0, yaw: 0 },
@@ -488,17 +496,18 @@ export const fittingOf = (id: string): HallFitting | undefined =>
 export const LECTERN_Z = PLANT_EDGE + 0.4;
 export const LECTERNS: Record<number, number> = {
   1: E - 2.0,
-  2: PLACES.sampleCell.x - 0.95,
-  3: PLACES.sampleCell.x + 1.0,
+  2: PLACES.sampleCell.x + 0.1,
+  3: PLACES.sampleCell.x + 1.2,
   4: PLACES.hypoPump.x,
   5: PLACES.hypoTank.x,
-  6: PLACES.sampleCell.x - 2.1,
-  7: W + 6.7,
+  6: PLACES.sampleCell.x - 1.5,
+  7: PLACES.acidTank.x,
 };
 
 /**
- * The DPD test kit's place on the lecterns' line: just west of its own
- * placard (station 6), clear of every other lectern and column (2026-10-29:
- * it had stood where lectern 2, The sample, moved to).
+ * The DPD test kit's place on the lecterns' line: beside its own placard
+ * (station 6), between it and The sample's, clear of every other lectern
+ * and column (layout C squeezed the middle: the columns stand on this
+ * line at x −6, 0 and 6).
  */
-export const TEST_KIT_X = LECTERNS[6] - 0.8;
+export const TEST_KIT_X = (LECTERNS[6] + LECTERNS[2]) / 2;
