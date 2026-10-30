@@ -1,12 +1,16 @@
-import { bedPasses, filterSizing, stepFilterBed } from './ideal-filter';
-import type { IdealFilterSpec, IdealFilterState } from './ideal-filter';
-import { BIG_FILTER, VALVES, faceFlows } from './five-valve-filter';
-import type { FiveValveFlows, ValveName } from './five-valve-filter';
-import { installedValveByCommandId } from './installed-valves';
-import { circulating } from './pools';
-import type { PoolsState } from './pools';
-import type { PlantServices } from './services';
-import type { MotorsState } from './motor-starters';
+import { bedPasses, filterSizing, stepFilter } from "./ideal-filter";
+import type {
+  FilterPorts,
+  IdealFilterSpec,
+  IdealFilterState,
+} from "./ideal-filter";
+import { BIG_FILTER, VALVES, faceFlows } from "./five-valve-filter";
+import type { FiveValveFlows, ValveName } from "./five-valve-filter";
+import { installedValveByCommandId } from "./installed-valves";
+import { circulating } from "./pools";
+import type { PoolsState } from "./pools";
+import type { PlantServices } from "./services";
+import type { MotorsState } from "./motor-starters";
 
 /**
  * The Olympic plant room's filter battery as its valves stand in the world
@@ -80,11 +84,11 @@ const faceDirt = (dirt: number) =>
   Math.round((dirt / OLYMPIC_DIRT_REF) * BIG_FILTER.dirtRef * 10) / 10;
 
 /** The valves between the battery and the pool: the contact tank's in and out, the UV's in and out. */
-const RETURN = ['PL2-T2-IV1', 'PL2-T2-IV2', 'PL2-UV1-IV1', 'PL2-UV1-IV2'];
+const RETURN = ["PL2-T2-IV1", "PL2-T2-IV2", "PL2-UV1-IV1", "PL2-UV1-IV2"];
 /** Each pump's suction and discharge valves: pump A's, pump B's. */
 const PUMP_PATHS = [
-  ['PL2-P1-IV1', 'PL2-P1-IV3'],
-  ['PL2-P1-IV2', 'PL2-P1-IV4'],
+  ["PL2-P1-IV1", "PL2-P1-IV3"],
+  ["PL2-P1-IV2", "PL2-P1-IV4"],
 ] as const;
 
 /** Whether a valve stands open in the world, by its tag (its normal state if the world has not moved it). */
@@ -92,7 +96,7 @@ function opener(installedValves: Readonly<Record<string, boolean>>) {
   return (tag: string) => {
     const v = installedValveByCommandId(tag);
     if (!v) return false;
-    return installedValves[v.assetId] ?? v.normal === 'open';
+    return installedValves[v.assetId] ?? v.normal === "open";
   };
 }
 
@@ -109,13 +113,25 @@ export interface BatteryFlows {
   pumping: boolean;
   /** Whether the way on to the pool is open: the contact tank's and the UV's valves. */
   returning: boolean;
-  filters: (FiveValveFlows & { riser: number })[];
+  filters: (FiveValveFlows & { riser: number; ports: FilterPorts })[];
   /** Through the pumps' common discharge. */
   discharge: number;
   /** On to the pool, through the filters' outlets. */
   toPool: number;
   /** To waste, by the backwash-out and rinse valves. */
   toWaste: number;
+}
+
+/** A five-valve face's flows as the shared model's ports: V1 inlet, V2 outlet, V3 backwash in, V4 backwash out, V5 rinse. */
+export function facePorts(f: FiveValveFlows | undefined): FilterPorts {
+  const v = (k: ValveName) => Math.max(0, f?.valve[k] ?? 0);
+  return {
+    inlet: v("v1"),
+    outlet: v("v2"),
+    backwashIn: v("v3"),
+    backwashOut: v("v4"),
+    rinse: v("v5"),
+  };
 }
 
 let cache: { key: string; flows: BatteryFlows } | null = null;
@@ -147,8 +163,8 @@ export function olympicBatteryFlows(
         VALVES.map((v, k) => [
           v,
           // With the way on shut, nothing leaves by the outlets.
-          (v !== 'v2' || returning) &&
-          ((v !== 'v4' && v !== 'v5') || wasteOpen) &&
+          (v !== "v2" || returning) &&
+          ((v !== "v4" && v !== "v5") || wasteOpen) &&
           open(`PL2-F${i + 1}-V${k + 1}`)
             ? 1
             : 0,
@@ -156,14 +172,14 @@ export function olympicBatteryFlows(
       ) as Record<ValveName, number>,
   );
   // The pumps' drain (PL2-P1-DV1): their discharge to the backwash drain.
-  const draining = pumping && wasteOpen && open('PL2-P1-DV1');
+  const draining = pumping && wasteOpen && open("PL2-P1-DV1");
   const key = [
     wasteOpen,
     pumping,
     draining,
-    openings.map((o) => VALVES.map((v) => o[v]).join('')).join(','),
-    battery.dirt.map(faceDirt).join(','),
-  ].join('|');
+    openings.map((o) => VALVES.map((v) => o[v]).join("")).join(","),
+    battery.dirt.map(faceDirt).join(","),
+  ].join("|");
   if (cache?.key === key) return cache.flows;
   const filters = openings.map((opening, i) => {
     const f = faceFlows(
@@ -173,7 +189,7 @@ export function olympicBatteryFlows(
       OLYMPIC_HEAD,
     );
     // Up the riser: to the return, less what a backwash sends down it.
-    return { ...f, riser: f.valve.v2 - f.valve.v3 };
+    return { ...f, riser: f.valve.v2 - f.valve.v3, ports: facePorts(f) };
   });
   const flows: BatteryFlows = {
     pumping,
@@ -206,10 +222,10 @@ export function stepOlympicBattery(
 ): OlympicBatteryState {
   if (!(dt > 0)) return battery;
   const beds = battery.dirt.map((_, i) =>
-    stepFilterBed(
+    stepFilter(
       OLYMPIC_FILTER,
       olympicBed(battery, i),
-      flows.filters[i]?.bed ?? 0,
+      flows.filters[i]?.ports ?? facePorts(undefined),
       dirt,
       dt,
     ),
@@ -252,7 +268,7 @@ export function olympicFlowsOf(world: {
   return olympicBatteryFlows(
     world.installedValves,
     world.olympic,
-    circulating(world.pools.pool_02, world.plant, 'pool_02', world.motors),
+    circulating(world.pools.pool_02, world.plant, "pool_02", world.motors),
     !world.wetHall?.inhibit,
   );
 }

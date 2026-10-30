@@ -1,11 +1,11 @@
-import type { LoungeFlows } from './lounge-valves';
+import type { LoungeFlows } from "./lounge-valves";
 import {
   LOUNGE_SIZE,
   bedPasses,
   filterSizing,
-  stepFilterBed,
-} from './ideal-filter';
-import type { IdealFilterState } from './ideal-filter';
+  stepFilter,
+} from "./ideal-filter";
+import type { IdealFilterState } from "./ideal-filter";
 
 /**
  * The lounge's two filter beds, each the ideal filter (`ideal-filter.ts`,
@@ -67,7 +67,7 @@ export function stepLoungeFilters(
 ): LoungeFiltersState {
   if (!(dt > 0)) return s;
   const beds = ([0, 1] as const).map((i) =>
-    stepFilterBed(LOUNGE_SIZE, loungeBed(s, i), flows.filters[i], dirt, dt),
+    stepFilter(LOUNGE_SIZE, loungeBed(s, i), flows.ports[i], dirt, dt),
   );
   return {
     dirt: [beds[0].dirt, beds[1].dirt],
@@ -85,6 +85,6 @@ export const loungePasses = (s: LoungeFiltersState, dirt: number) =>
 /** Each bed's pressure difference in service, bar: its flow's square, and its dirt. */
 export const loungeFilterDp = (s: LoungeFiltersState, flows: LoungeFlows) =>
   s.dirt.map((d, i) => {
-    const q = Math.max(0, flows.filters[i]) / 45;
+    const q = Math.max(0, flows.beds[i]) / 45;
     return LOUNGE_FILTER.cleanDp * q * q * (1 + d / LOUNGE_DIRT_REF);
   });
