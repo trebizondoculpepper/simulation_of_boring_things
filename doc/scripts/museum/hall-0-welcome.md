@@ -8,13 +8,13 @@ Wordmark: PLANTROOMS
 
 Strapline: The real backrooms of the Poolrooms
 
-Tagline: Can YOU find the plant room? #FindThePlantRoom
+Tagline: Lose Yourself in #ThePlantRooms
 
 There is almost nothing we take for granted more than a swimming pool. Its user interface is the simplest there could be: dive in, and the water is simply there, clean, clear and warm.
 
 Behind the tiles lives a world of complexity: pumps, filters, boilers and careful chemistry, working all day and all night to keep it that simple. Come and see it.
 
-Footer, left: THE DYEHOUSE · MUSEUM OF SCIENCE AND WORK
+Footer, left: THE DYEHOUSE · MUSEUM OF SCIENCE AND ENGINEERING
 
 Footer, right: Unlike the Poolrooms, every room here is real, and every machine in it works.
 
@@ -22,7 +22,7 @@ Footer, right: Unlike the Poolrooms, every room here is real, and every machine 
 
 Up the banner: PLANTROOMS
 
-At its foot: #FindThePlantRoom
+At its foot: #ThePlantRooms
 
 ## Welcome panel
 
